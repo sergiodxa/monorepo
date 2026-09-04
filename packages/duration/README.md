@@ -2,13 +2,13 @@
 
 Compile-time-checked duration strings, and the conversions from them to milliseconds and seconds.
 
-## Overview
+## Installation
 
-Lengths of time show up everywhere as bare numbers whose unit is only knowable from context: cache TTLs, session lifetimes, retry backoff, rate limit windows, cron grace periods. Two problems follow. Seconds and milliseconds are both `number`, so a value handed to the wrong API is off by a factor of a thousand and still type-checks; and `60 * 60 * 24 * 7` has to be read carefully every time it appears.
+```bash
+npm add @sdxc/duration
+```
 
-This package fixes both with a template literal type. A duration is written as text — `"5 minutes"`, `"30s"` — and a misspelled unit is a compile error rather than a runtime surprise, so no string parsing library is needed. `toMs()` and `toSeconds()` convert, and `parse()` handles text that only exists at runtime, returning a [`Result`](/packages/result) instead of throwing. A bare `number` is always milliseconds, matching JavaScript time arithmetic, so a seconds-based API cannot silently receive milliseconds.
-
-The scope is deliberately small: a unit table, two conversions, and a parser, with no dependency beyond `@sdxc/result` and no platform API at all — not even `Intl`. Nothing here takes a `Date` or produces text for a reader; date arithmetic and human-readable formatting belong to date-aware APIs, which can depend on this package to accept a `DurationInput` of their own.
+`parse()` reports failures as a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which installs alongside this package.
 
 ## Usage
 
@@ -29,7 +29,7 @@ toMs("5 minuts"); // Type error: "minuts" is not a unit
 
 ### Accepting A Duration In Your Own API
 
-Declare the parameter as `DurationInput` and normalize once, so callers may pass either form and your function states its own unit exactly once.
+Declare the parameter as `DurationInput` and convert once, so callers may pass either form and your function states its own unit exactly once.
 
 ```typescript
 import type { DurationInput } from "@sdxc/duration";
@@ -41,7 +41,7 @@ interface CacheOptions {
 }
 
 function write(key: string, value: string, options: CacheOptions) {
-	return store.put(key, value, { expirationTtl: toSeconds(options.ttl) });
+	return cache.set(key, value, { ttlSeconds: toSeconds(options.ttl) });
 }
 
 write("session", value, { ttl: "30 days" });
@@ -56,10 +56,10 @@ Configuration values and form fields are plain strings, where the compile-time t
 import { parse } from "@sdxc/duration";
 import { isFailure } from "@sdxc/result";
 
-let result = parse(env.SESSION_LIFETIME);
+let result = parse(process.env.SESSION_LIFETIME ?? "");
 
 if (isFailure(result)) {
-	logger.error(result.error.message); // Invalid duration: "7 dayz"
+	console.error(result.error.message); // Invalid duration: "7 dayz"
 	return;
 }
 
@@ -70,17 +70,13 @@ let lifetimeMs = result.data;
 
 ### `toMs(input: DurationInput): number`
 
-Convert a duration to milliseconds, the unit JavaScript time arithmetic and timers count in. A bare number passes through untouched, which keeps existing numeric call sites working.
+Convert a duration to milliseconds, the unit JavaScript time arithmetic and timers count in. A bare number passes through untouched. A value that reaches it behind a cast returns `NaN`; route runtime text through `parse()`, which reports why the text was rejected.
 
-**Parameters:**
-
-- `input`: A `DurationString`, or a number already counted in milliseconds
-
-**Returns:**
-
-- The duration in milliseconds, or `NaN` when the compile-time type was bypassed (a cast or an unchecked runtime value). Use `parse()` for runtime text; it reports why the text was rejected.
-
-**Example:**
+```typescript
+let timeout = toMs("5 minutes");
+// same as
+let timeout = 5 * 60 * 1000;
+```
 
 ```typescript
 let backoff = toMs("250ms"); // 250
@@ -89,17 +85,13 @@ let expiresAt = new Date(Date.now() + toMs("1 hour"));
 
 ### `toSeconds(input: DurationInput): number`
 
-Convert a duration to whole seconds, the unit HTTP cache headers and platform TTLs count in. Separate from `toMs()` so seconds are always handed over deliberately.
+Convert a duration to whole seconds, the unit HTTP cache headers and platform TTLs count in. Rounds to the nearest second with halves rounding up, so `1500` becomes `2` and `1400` becomes `1`. Anything under half a second rounds to `0`, which most seconds-based APIs read as "no caching", so pass at least `"1 second"` when a TTL must be non-zero.
 
-**Parameters:**
-
-- `input`: A `DurationString`, or a number of milliseconds
-
-**Returns:**
-
-- The duration rounded to the nearest whole second, with halves rounding up (`1500` becomes `2`, `1400` becomes `1`). Anything under half a second rounds down to `0`, which most seconds-based APIs read as "no caching", so pass at least `"1 second"` when that matters. `NaN` propagates from `toMs()`.
-
-**Example:**
+```typescript
+let ttl = toSeconds("1 week");
+// same as
+let ttl = Math.round((7 * 24 * 60 * 60 * 1000) / 1000);
+```
 
 ```typescript
 let maxAge = toSeconds("5 minutes"); // 300
@@ -108,19 +100,7 @@ let ttl = toSeconds("1 week"); // 604800
 
 ### `parse(text: string): Result<number, InvalidDurationError>`
 
-Parse duration text into milliseconds. Accepts exactly the forms `DurationString` allows, plus a bare amount read as milliseconds, with surrounding whitespace trimmed.
-
-The grammar is the runtime mirror of the type: a long spelling requires its single space and a short alias requires none, so `"5 m"` and `"5minutes"` are failures. Text a call site could not have written in code is not accepted here either.
-
-**Parameters:**
-
-- `text`: Text to parse, such as an environment variable or a form value
-
-**Returns:**
-
-- A `Success<number>` with the duration in milliseconds, or a `Failure<InvalidDurationError>` naming the rejected text
-
-**Example:**
+Parse duration text into milliseconds, returning a `Success<number>` or a `Failure<InvalidDurationError>` naming the rejected text. It accepts exactly the forms `DurationString` allows, plus a bare amount read as milliseconds, with surrounding whitespace trimmed. The grammar mirrors the type: a long spelling takes its single space and a short alias takes none, so `"5 m"` and `"5minutes"` are failures.
 
 ```typescript
 parse("15 minutes"); // { status: "success", data: 900000 }
@@ -130,9 +110,7 @@ parse("15 minuts"); // { status: "failure", error: InvalidDurationError }
 
 ### `InvalidDurationError`
 
-Error describing text that does not match the duration grammar. It is returned inside a `Failure` and never thrown.
-
-**Properties:**
+Error describing text that fails the duration grammar. It arrives inside a `Failure` value.
 
 - `text`: `string` - The rejected text, kept verbatim and untrimmed for diagnostics
 - `name`: `string` - Always `"InvalidDurationError"`
@@ -146,7 +124,7 @@ Error describing text that does not match the duration grammar. It is returned i
 type DurationString = `${bigint} ${DurationUnit}` | `${bigint}${DurationUnitShort}`;
 ```
 
-A duration written as text: a whole amount plus a unit, either spelled out after a single space or abbreviated with no space. The amount placeholder is `${bigint}` rather than `${number}` because `${number}` also admits `1.5`, `5e3` and `0x10`, and only whole amounts are supported.
+A duration written as text: a whole amount plus a unit, either spelled out after a single space or abbreviated with no space. The amount placeholder is `${bigint}` rather than `${number}` so only whole amounts type-check.
 
 #### `DurationInput`
 
@@ -175,11 +153,11 @@ A unit abbreviated with no space: `ms`, `s`, `m`, `h`, `d`, `w`.
 | Day         | `"1 day"`         | `"30 days"`          | `"30d"`    | 86400000     |
 | Week        | `"1 week"`        | `"2 weeks"`          | `"1w"`     | 604800000    |
 
-Rejected at compile time, and by `parse()` at runtime: fractional and exponent amounts (`"1.5h"`, `"5e3s"`), unit-only text (`"hour"`), the other form's spacing (`"5 m"`, `"5minutes"`), uppercase units (`"30S"`), leading zeros and plus signs (`"05s"`, `"+5s"`), compound durations (`"1 hour 30 minutes"`), and months and years, which have no fixed length.
+An amount may be `0` or negative (`"-5 minutes"` is `-300000`). Rejected at compile time, and by `parse()` at runtime: fractional and exponent amounts (`"1.5h"`, `"5e3s"`), unit-only text (`"hour"`), the other form's spacing (`"5 m"`, `"5minutes"`), uppercase units (`"30S"`), leading zeros and plus signs (`"05s"`, `"+5s"`), compound durations (`"1 hour 30 minutes"`), and months and years, which have no fixed length.
 
 ## Pattern: One Unit Per Boundary
 
-Convert at the boundary that consumes the value, not at the call site that writes it. The caller writes the duration once, in units a reader understands, and each boundary converts to the unit it needs.
+Convert at the boundary that consumes the value, not at the call site that writes it. The caller writes the duration once, and each boundary converts to the unit it needs.
 
 ```typescript
 import type { DurationInput } from "@sdxc/duration";
@@ -217,11 +195,13 @@ function readDuration(name: string, value: string): Result<number, Error> {
 	if (isFailure(result)) return failure(new Error(`${name} is not a duration: ${value}`));
 	return result;
 }
+
+let lifetime = readDuration("SESSION_LIFETIME", process.env.SESSION_LIFETIME ?? "");
 ```
 
 ## Pattern: Strings In Code, Numbers In Storage
 
-Duration strings are for code and configuration. Keep storage and wire formats numeric, converting on the way in and reading the number back out, so a stored value never depends on this package's grammar.
+Duration strings are for code and configuration. Keep storage and wire formats numeric, so a stored value never depends on this package's grammar.
 
 ```typescript
 import type { DurationInput } from "@sdxc/duration";
@@ -230,21 +210,16 @@ import { toMs } from "@sdxc/duration";
 
 async function schedule(job: string, delay: DurationInput) {
 	// the column stores milliseconds, not "5 minutes"
-	await db.insert(jobs).values({ job, runAfterMs: Date.now() + toMs(delay) });
+	await db.jobs.insert({ job, runAfterMs: Date.now() + toMs(delay) });
 }
+
+await schedule("send-digest", "5 minutes");
 ```
 
-## Related Packages
+## License
 
-- [`@sdxc/result`](/packages/result) - The `Result` type `parse()` returns, and the `isFailure`/`isSuccess`/`unwrap` helpers for reading it
+MIT
 
-## Tips
+## Author
 
-1. **Declare `DurationInput`, never `number`** - Accepting the union costs nothing and lets every call site read as a duration; convert inside your function.
-2. **Convert with the unit you need, at the point you need it** - `toMs()` for timers and `Date` arithmetic, `toSeconds()` for cache headers and platform TTLs; never divide by 1000 yourself.
-3. **Use `parse()` for anything that was not written in code** - Environment variables, form fields and stored settings cannot be checked by the compiler, and `parse()` turns a typo into a reported failure.
-4. **Keep the unit list closed** - Each unit multiplies the size of the `DurationString` union, and editor responsiveness degrades before correctness does.
-5. **Reach for a date-aware API for calendar work** - Months and years are absent on purpose: they have no fixed length, so adding a month to a date is not a duration conversion.
-6. **Watch the sub-second floor** - `toSeconds("400ms")` is `0`, which most caches treat as "do not store"; use at least `"1 second"` when a TTL must be non-zero.
-7. **A `NaN` from `toMs()` means the type was bypassed** - It only happens behind a cast or an unchecked value, and is a signal to route that input through `parse()` instead.
-8. **Compute durations as numbers, not as assembled text** - A template built from a variable widens to `` `${number} minutes` `` and is rejected; multiply instead, as in `count * toMs("1 minute")`, since a bare number is already milliseconds.
+[Sergio Xalambrí](https://sergiodxa.com)
