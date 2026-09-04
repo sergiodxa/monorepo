@@ -111,7 +111,7 @@ A commit touches a package when one of its paths is a shipped input of that pack
 
 Touched paths are the ground truth for attribution. With the one-workspace-per-commit convention they agree with the commit scope, and they also catch `chore(deps)` sweeps that edit many manifests at once.
 
-A package is new when its published version is absent or is a `0.0.0-pre.*` bootstrap version. The lookup reads the registry's packument at `https://registry.npmjs.org/<name>`: a 404 means absent, the `latest` dist-tag names the published version, the highest version stands in while no `latest` tag exists (the state after a bootstrap), and every other error aborts the run. `--force` marks every public package as touched, which also carries the run past the tag-at-HEAD exit.
+A package is new when its published version is absent or is a `0.0.0-pre.*` bootstrap version. The lookup reads the registry's packument at `https://registry.npmjs.org/<name>`: the `latest` dist-tag names the published version, the highest version stands in without a `latest` tag, and every other error aborts the run. A 404 falls back to the dist-tags endpoint, `https://registry.npmjs.org/-/package/<name>/dist-tags`, which the registry serves for a freshly created package while its packument still lags; a 404 there too means the package was never published. `--force` marks every public package as touched, which also carries the run past the tag-at-HEAD exit.
 
 ### Cascade
 
@@ -276,7 +276,7 @@ First release.
 1. Checks `npm whoami` for an operator session; `npm login` is run beforehand.
 2. Refuses when any dated version exists, and skips when `0.0.0-pre.1` exists.
 3. Builds and stages the package exactly as a release would, with `version: "0.0.0-pre.1"`. Internal pins take the dependency's latest npm version, which has to exist: dependencies bootstrap first, and a missing one is an error naming it.
-4. Runs `npm publish --tag alpha` from staging with the operator's session, attached to the terminal so npm can confirm the account's second factor in the browser; each package brings one such confirmation. npm requires an explicit tag for a prerelease version, and `alpha` says what the placeholder is; `latest` stays unset until the first dated release, so an install of the bare package name waits for a stable version.
+4. Runs `npm publish --tag alpha` from staging with the operator's session, attached to the terminal so npm can confirm the account's second factor in the browser; each package brings one such confirmation. npm requires an explicit tag for a prerelease version, and `alpha` says what the placeholder is. The registry points `latest` at a package's first version whatever the tag, so the placeholder is installable by bare name until the first dated release moves `latest`.
 5. Prints the trusted-publisher settings to enter under the package's settings on npmjs.com: provider GitHub Actions, organization `sergiodxa`, repository `monorepo`, workflow file `release.yml`, allowed action publish.
 
 The next daily run sees the `0.0.0-pre.*` version, treats the package as new, and publishes the dated version, which becomes `latest`.

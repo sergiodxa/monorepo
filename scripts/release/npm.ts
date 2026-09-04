@@ -70,11 +70,28 @@ export function parsePackument(value: unknown): Result<Published | null, Error> 
 	return success({ version: latest, gitHead: typeof gitHead === "string" ? gitHead : null });
 }
 
-/** The latest version of `name` on npm with its `gitHead`, or `null` when npm has never seen it. */
+/**
+ * The latest version of `name` on npm with its `gitHead`, or `null` when npm has never seen it.
+ * The dist-tags endpoint answers for a package the registry has just created while its
+ * packument still lags behind, so a bootstrapped package is seen from its first minute.
+ */
 export async function viewPackage(name: string): Promise<Result<Published | null, Error>> {
 	let packument = await fetchPackument(name);
 	if (isFailure(packument)) return packument;
-	return packument.data === null ? success(null) : parsePackument(packument.data);
+	if (packument.data !== null) return parsePackument(packument.data);
+	let tags = await fetchDistTags(name);
+	if (isFailure(tags)) return tags;
+	return success(tags.data === null ? null : publishedFromDistTags(tags.data));
+}
+
+/**
+ * What a package's dist-tags alone say it has published: the `latest` version, or the highest
+ * tagged one, with no `gitHead` because tags carry none; `null` for a package without tags.
+ */
+export function publishedFromDistTags(tags: Record<string, string>): Published | null {
+	let versions = Object.values(tags);
+	if (versions.length === 0) return null;
+	return { version: tags.latest ?? highestVersion(versions), gitHead: null };
 }
 
 /** `viewPackage` for every name at once, keyed by name; one failure lists every name that failed. */
@@ -94,16 +111,19 @@ export async function viewPackages(
 	return success(published);
 }
 
-/** Whether `name@version` exists on npm, under any tag. */
+/** Whether `name@version` exists on npm, read from the packument or, while it lags, the dist-tags. */
 export async function versionExists(
 	name: string,
 	version: string,
 ): Promise<Result<boolean, Error>> {
 	let packument = await fetchPackument(name);
 	if (isFailure(packument)) return packument;
-	if (packument.data === null || !isRecord(packument.data)) return success(false);
-	let versions = (packument.data as Packument).versions ?? {};
-	return success(version in versions);
+	if (packument.data !== null && isRecord(packument.data)) {
+		return success(version in ((packument.data as Packument).versions ?? {}));
+	}
+	let tags = await fetchDistTags(name);
+	if (isFailure(tags)) return tags;
+	return success(tags.data !== null && Object.values(tags.data).includes(version));
 }
 
 /**
@@ -165,7 +185,26 @@ export async function publish(
  * no `latest` tag to exist.
  */
 async function fetchPackument(name: string): Promise<Result<unknown, Error>> {
-	let url = `${REGISTRY_URL}/${name.replace("/", "%2F")}`;
+	return registryJson(`${REGISTRY_URL}/${registryPath(name)}`);
+}
+
+/** The package's dist-tags as tag → version, `null` when the registry answers 404. */
+async function fetchDistTags(name: string): Promise<Result<Record<string, string> | null, Error>> {
+	let json = await registryJson(`${REGISTRY_URL}/-/package/${registryPath(name)}/dist-tags`);
+	if (isFailure(json)) return json;
+	if (json.data === null) return success(null);
+	if (!isRecord(json.data)) {
+		return failure(new Error(`Unexpected dist-tags response: ${JSON.stringify(json.data)}`));
+	}
+	let tags: Record<string, string> = {};
+	for (let [tag, version] of Object.entries(json.data)) {
+		if (typeof version === "string") tags[tag] = version;
+	}
+	return success(tags);
+}
+
+/** The JSON the registry serves at `url`, `null` for a 404; any other status is a failure. */
+async function registryJson(url: string): Promise<Result<unknown, Error>> {
 	let response = await wrap(() => fetch(url));
 	if (isFailure(response)) return response;
 	if (response.data.status === 404) return success(null);
@@ -175,6 +214,11 @@ async function fetchPackument(name: string): Promise<Result<unknown, Error>> {
 		);
 	}
 	return wrap(() => response.data.json());
+}
+
+/** `@sdxc/result` as the registry spells it in a path, with the scope separator encoded. */
+function registryPath(name: string): string {
+	return name.replace("/", "%2F");
 }
 
 /** SemVer order for the versions this repository publishes: numeric cores, then pre-release identifiers. */

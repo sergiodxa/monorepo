@@ -2,10 +2,9 @@
 /**
  * First publish for a package npm has never seen: `0.0.0-pre.1` goes out under the `alpha`
  * tag from the operator's own npm session, so the package exists for its trusted publisher to
- * be configured while `latest` waits for the first dated release, which the next daily run
- * publishes because it treats the package as new. npm owns the terminal during each publish,
- * because the account's second factor is confirmed in the browser. `--dry-run` rehearses
- * everything but the upload.
+ * be configured; the next daily run treats the package as new and publishes the dated version
+ * that takes over `latest`. npm owns the terminal during each publish, because the account's
+ * second factor is confirmed in the browser. `--dry-run` rehearses everything but the upload.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -31,7 +30,10 @@ import { REPOSITORY_URL, REPO_ROOT, readPackages, topologicalOrder } from "./wor
 /** The placeholder every package starts with; the daily release still treats it as new. */
 const BOOTSTRAP_VERSION = "0.0.0-pre.1";
 
-/** The dist-tag the placeholder publishes under, so `latest` stays unset until a dated release. */
+/**
+ * The dist-tag the placeholder publishes under, naming it as unstable. The registry points
+ * `latest` at a package's first version whatever the tag; the first dated release moves it.
+ */
 const BOOTSTRAP_TAG = "alpha";
 
 /**

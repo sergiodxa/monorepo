@@ -11,7 +11,7 @@
 import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { highestVersion, parsePackument } from "./npm.js";
+import { highestVersion, parsePackument, publishedFromDistTags } from "./npm.js";
 
 describe("parsePackument", () => {
 	test("reads the latest tag's version and its gitHead", () => {
@@ -44,6 +44,30 @@ describe("parsePackument", () => {
 		expect(isFailure(text)).toBe(true);
 		if (isFailure(text)) expect(text.error.message).toContain("Unexpected registry response");
 		expect(isFailure(nothing)).toBe(true);
+	});
+});
+
+describe("publishedFromDistTags", () => {
+	test("reads the latest tag, which the registry sets on a first publish whatever the tag sent", () => {
+		expect(publishedFromDistTags({ alpha: "0.0.0-pre.1", latest: "0.0.0-pre.1" })).toEqual({
+			version: "0.0.0-pre.1",
+			gitHead: null,
+		});
+		expect(publishedFromDistTags({ latest: "2026.9.4", alpha: "0.0.0-pre.1" })).toEqual({
+			version: "2026.9.4",
+			gitHead: null,
+		});
+	});
+
+	test("falls back to the highest tagged version without a latest tag", () => {
+		expect(publishedFromDistTags({ alpha: "0.0.0-pre.1", beta: "0.0.0-pre.2" })).toEqual({
+			version: "0.0.0-pre.2",
+			gitHead: null,
+		});
+	});
+
+	test("treats a package without tags as never published", () => {
+		expect(publishedFromDistTags({})).toBeNull();
 	});
 });
 
