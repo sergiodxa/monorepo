@@ -52,8 +52,17 @@ jobs:
         with:
           bun-version: ${{ env.BUN_VERSION }}
 
+      # Socket Firewall proxies the registry traffic of the install below and refuses any
+      # version Socket knows to be malware, which a lockfile cannot do on its own: a version
+      # is often flagged days after it was published and pinned. A block surfaces as a
+      # resolution failure from bun, and the firewall step logs the package and the reason.
+      - name: Setup Socket Firewall
+        uses: socketdev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
+        with:
+          mode: firewall-free
+
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: sfw bun install --frozen-lockfile
 
       - name: Generate framework types
         if: matrix.typegen
