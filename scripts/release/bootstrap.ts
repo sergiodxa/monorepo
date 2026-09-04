@@ -3,7 +3,9 @@
  * First publish for a package npm has never seen: `0.0.0-pre.1` goes out under the `alpha`
  * tag from the operator's own npm session, so the package exists for its trusted publisher to
  * be configured while `latest` waits for the first dated release, which the next daily run
- * publishes because it treats the package as new. `--dry-run` rehearses everything but the upload.
+ * publishes because it treats the package as new. npm owns the terminal during each publish,
+ * because the account's second factor is confirmed in the browser. `--dry-run` rehearses
+ * everything but the upload.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -111,7 +113,7 @@ async function main(): Promise<Result<void, Error>> {
 		let built = await buildPackage(pkg, REPO_ROOT, stagingDir, manifest.data);
 		if (isFailure(built)) return built;
 		say(`${dryRun ? "Dry-run publishing" : "Publishing"} ${name}@${BOOTSTRAP_VERSION} as ${user}`);
-		let uploaded = await publish(stagingDir, { dryRun, tag: BOOTSTRAP_TAG });
+		let uploaded = await publish(stagingDir, { dryRun, tag: BOOTSTRAP_TAG, interactive: true });
 		if (isFailure(uploaded)) return uploaded;
 		published.set(name, { version: BOOTSTRAP_VERSION, gitHead: head });
 	}

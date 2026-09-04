@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
 
 import type { Result } from "@sdxc/result";
@@ -89,6 +89,33 @@ export async function run(
 	let result = await wrap(() => pending);
 	if (isFailure(result)) return failure(new CommandError(file, args, result.error));
 	return success(result.data);
+}
+
+/**
+ * Runs `file` with `args` attached to this process's terminal, for a command that has to talk
+ * to the operator itself: npm completes a second-factor challenge in the browser only when it
+ * sees a TTY on stdin and stdout. Both streams reach the terminal directly, so a failure carries
+ * the exit status alone.
+ */
+export async function runInteractive(
+	file: string,
+	args: string[],
+	options: Pick<CommandOptions, "cwd">,
+): Promise<Result<void, CommandError>> {
+	let exit = await wrap(
+		() =>
+			new Promise<number | null>((resolve, reject) => {
+				let child = spawn(file, args, { cwd: options.cwd, stdio: "inherit" });
+				child.on("error", reject);
+				child.on("close", (code) => resolve(code));
+			}),
+	);
+	if (isFailure(exit)) return failure(new CommandError(file, args, exit.error));
+	if (exit.data === 0) return success(undefined);
+	let cause: ChildFailure = Object.assign(new Error(`exit ${exit.data ?? "signal"}`), {
+		code: exit.data,
+	});
+	return failure(new CommandError(file, args, cause));
 }
 
 /**

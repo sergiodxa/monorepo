@@ -276,7 +276,7 @@ First release.
 1. Checks `npm whoami` for an operator session; `npm login` is run beforehand.
 2. Refuses when any dated version exists, and skips when `0.0.0-pre.1` exists.
 3. Builds and stages the package exactly as a release would, with `version: "0.0.0-pre.1"`. Internal pins take the dependency's latest npm version, which has to exist: dependencies bootstrap first, and a missing one is an error naming it.
-4. Runs `npm publish --tag alpha` from staging with the operator's session. npm requires an explicit tag for a prerelease version, and `alpha` says what the placeholder is; `latest` stays unset until the first dated release, so an install of the bare package name waits for a stable version.
+4. Runs `npm publish --tag alpha` from staging with the operator's session, attached to the terminal so npm can confirm the account's second factor in the browser; each package brings one such confirmation. npm requires an explicit tag for a prerelease version, and `alpha` says what the placeholder is; `latest` stays unset until the first dated release, so an install of the bare package name waits for a stable version.
 5. Prints the trusted-publisher settings to enter under the package's settings on npmjs.com: provider GitHub Actions, organization `sergiodxa`, repository `monorepo`, workflow file `release.yml`, allowed action publish.
 
 The next daily run sees the `0.0.0-pre.*` version, treats the package as new, and publishes the dated version, which becomes `latest`.

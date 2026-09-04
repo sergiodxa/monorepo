@@ -18,7 +18,7 @@ import { failure, isFailure, success, wrap } from "@sdxc/result";
 import type { CommandError } from "./command.js";
 import type { Published } from "./plan.js";
 
-import { run } from "./command.js";
+import { run, runInteractive } from "./command.js";
 import { REPO_ROOT, TRUSTED_PUBLISHER } from "./workspace.js";
 
 const OUTPUT_LIMIT = 16 * 1024 * 1024;
@@ -37,6 +37,12 @@ export interface PublishOptions {
 	dryRun: boolean;
 	/** The dist-tag the version publishes under: `latest` for a dated release, another for a placeholder. */
 	tag: string;
+	/**
+	 * Hands npm the terminal, which an operator's session needs: npm completes the account's
+	 * second-factor challenge in the browser only when stdin and stdout are a TTY. A CI publish
+	 * authenticates through OIDC and keeps its output captured.
+	 */
+	interactive?: boolean;
 }
 
 /** The parts of a registry packument the release reads. */
@@ -130,6 +136,17 @@ export async function publish(
 	);
 	if (isFailure(manifest)) return manifest;
 	let args = ["publish", "--tag", options.tag, ...(options.dryRun ? ["--dry-run"] : [])];
+	if (options.interactive === true) {
+		let outcome = await runInteractive("npm", args, { cwd: stagingDir });
+		if (isFailure(outcome)) {
+			return failure(
+				new Error(
+					`npm publish of ${manifest.data.name} failed (${outcome.error.code ?? "signal"}); npm's own report is above`,
+				),
+			);
+		}
+		return success(undefined);
+	}
 	let result = await run("npm", args, {
 		cwd: stagingDir,
 		maxBuffer: OUTPUT_LIMIT,

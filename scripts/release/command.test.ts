@@ -12,7 +12,7 @@ import { describe, expect, test } from "vitest";
 
 import type { CommandOptions } from "./command.js";
 
-import { CommandError, run } from "./command.js";
+import { CommandError, run, runInteractive } from "./command.js";
 
 /** Runs the current Node binary with an inline script, from the repo root. */
 function node(script: string, options: Pick<CommandOptions, "onStderr"> = {}) {
@@ -59,5 +59,34 @@ describe("run", () => {
 		expect(isSuccess(result)).toBe(true);
 		expect(chunks.length).toBeGreaterThan(0);
 		expect(chunks.join("")).toBe("one\ntwo\n");
+	});
+});
+
+describe("runInteractive", () => {
+	test("succeeds on a zero exit with the terminal handed to the child", async () => {
+		let result = await runInteractive(process.execPath, ["-e", "process.exitCode = 0"], {
+			cwd: process.cwd(),
+		});
+
+		expect(isSuccess(result)).toBe(true);
+	});
+
+	test("answers a CommandError carrying the exit status of a failing command", async () => {
+		let result = await runInteractive(process.execPath, ["-e", "process.exitCode = 3"], {
+			cwd: process.cwd(),
+		});
+
+		expect(isFailure(result)).toBe(true);
+		if (!isFailure(result)) return;
+		expect(result.error).toBeInstanceOf(CommandError);
+		expect(result.error.code).toBe(3);
+		expect(result.error.message).toContain("exited with 3");
+	});
+
+	test("answers ENOENT for an executable that does not exist", async () => {
+		let result = await runInteractive("sdxc-release-no-such-command", [], { cwd: process.cwd() });
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) expect(result.error.code).toBe("ENOENT");
 	});
 });
