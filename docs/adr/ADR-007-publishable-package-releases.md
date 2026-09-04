@@ -111,7 +111,7 @@ A commit touches a package when one of its paths is a shipped input of that pack
 
 Touched paths are the ground truth for attribution. With the one-workspace-per-commit convention they agree with the commit scope, and they also catch `chore(deps)` sweeps that edit many manifests at once.
 
-A package is new when its published version is absent or is a `0.0.0-pre.*` bootstrap version. The lookup reads the registry's packument at `https://registry.npmjs.org/<name>`: the `latest` dist-tag names the published version, the highest version stands in without a `latest` tag, and every other error aborts the run. A 404 falls back to the dist-tags endpoint, `https://registry.npmjs.org/-/package/<name>/dist-tags`, which the registry serves for a freshly created package while its packument still lags; a 404 there too means the package was never published. `--force` marks every public package as touched, which also carries the run past the tag-at-HEAD exit.
+A package is new when its published version is absent or is a `0.0.0-pre.*` bootstrap version. The lookup reads the registry's packument at `https://registry.npmjs.org/<name>`: the `latest` dist-tag names the published version, the highest version stands in without a `latest` tag, and every other error aborts the run. A 404 falls back to the dist-tags endpoint, `https://registry.npmjs.org/-/package/<name>/dist-tags`, which the registry serves for a freshly created package while its packument still lags; that endpoint answers only for a session, so it refuses a package the registry does not have with a 401, and a 401 or a 404 there means the package was never published. `--force` marks every public package as touched, which also carries the run past the tag-at-HEAD exit.
 
 ### Cascade
 

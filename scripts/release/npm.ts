@@ -26,6 +26,16 @@ const OUTPUT_LIMIT = 16 * 1024 * 1024;
 /** The registry every public package publishes to; a package's packument lives at `/<name>`. */
 const REGISTRY_URL = "https://registry.npmjs.org";
 
+/** The status the registry answers with for a packument it does not have. */
+const PACKUMENT_ABSENT = [404];
+
+/**
+ * The statuses the dist-tags endpoint answers with for a package it does not have. That
+ * endpoint speaks for a session rather than for the public, so it refuses an unknown package
+ * with a 401 instead of saying it does not exist.
+ */
+const DIST_TAGS_ABSENT = [404, 401];
+
 /** The `npm error code E401` line npm prints on failure, and the first detail line after it. */
 const ERROR_CODE_LINE = /^npm error code (\S+)/m;
 const ERROR_DETAIL_LINE = /^npm error (?!code )(.+)$/m;
@@ -185,12 +195,15 @@ export async function publish(
  * no `latest` tag to exist.
  */
 async function fetchPackument(name: string): Promise<Result<unknown, Error>> {
-	return registryJson(`${REGISTRY_URL}/${registryPath(name)}`);
+	return registryJson(`${REGISTRY_URL}/${registryPath(name)}`, PACKUMENT_ABSENT);
 }
 
-/** The package's dist-tags as tag → version, `null` when the registry answers 404. */
+/** The package's dist-tags as tag → version, `null` when the registry has no package to tag. */
 async function fetchDistTags(name: string): Promise<Result<Record<string, string> | null, Error>> {
-	let json = await registryJson(`${REGISTRY_URL}/-/package/${registryPath(name)}/dist-tags`);
+	let json = await registryJson(
+		`${REGISTRY_URL}/-/package/${registryPath(name)}/dist-tags`,
+		DIST_TAGS_ABSENT,
+	);
 	if (isFailure(json)) return json;
 	if (json.data === null) return success(null);
 	if (!isRecord(json.data)) {
@@ -203,11 +216,14 @@ async function fetchDistTags(name: string): Promise<Result<Record<string, string
 	return success(tags);
 }
 
-/** The JSON the registry serves at `url`, `null` for a 404; any other status is a failure. */
-async function registryJson(url: string): Promise<Result<unknown, Error>> {
+/**
+ * The JSON the registry serves at `url`, `null` for a status in `absent`, which is how that
+ * endpoint says it has no such package; any other status is a failure.
+ */
+async function registryJson(url: string, absent: number[]): Promise<Result<unknown, Error>> {
 	let response = await wrap(() => fetch(url));
 	if (isFailure(response)) return response;
-	if (response.data.status === 404) return success(null);
+	if (absent.includes(response.data.status)) return success(null);
 	if (!response.data.ok) {
 		return failure(
 			new Error(`${url} answered ${response.data.status} ${response.data.statusText}`),
