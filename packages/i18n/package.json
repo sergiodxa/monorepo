@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/i18n",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Language detection, i18next instances and translated-markup components",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

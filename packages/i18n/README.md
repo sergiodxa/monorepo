@@ -1,6 +1,6 @@
 # @sdxc/i18n
 
-Server-side internationalization for Remix fetch-router apps: language detection plus a middleware that publishes a per-request [i18next](https://www.i18next.com) instance on the request context.
+Internationalization for Remix apps: language detection, a middleware that publishes a per-request [i18next](https://www.i18next.com) instance on the request context, and `remix/ui` components that render translations containing markup.
 
 ## Overview
 
