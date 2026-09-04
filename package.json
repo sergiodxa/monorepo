@@ -13,6 +13,8 @@
 		"format:fix": "vp fmt",
 		"lint": "vp lint",
 		"lint:fix": "vp lint --fix",
+		"release": "bun scripts/release/main.ts",
+		"release:bootstrap": "bun scripts/release/bootstrap.ts",
 		"test": "vp test run",
 		"typecheck": "vp check --no-fmt --no-lint",
 		"upgrade": "bun scripts/upgrade-dependencies.ts",

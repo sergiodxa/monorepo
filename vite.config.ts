@@ -112,12 +112,12 @@ export default defineConfig({
 			{
 				/**
 				 * The repo-root `test/` directory: cross-cutting guards that scan every workspace,
-				 * so they belong to no single one.
+				 * so they belong to no single one. Repo tooling under `scripts/` tests here too.
 				 */
 				resolve: { tsconfigPaths: true },
 				test: {
 					name: "root",
-					include: ["test/**/*.test.ts?(x)"],
+					include: ["test/**/*.test.ts?(x)", "scripts/**/*.test.ts"],
 					pool: "threads",
 					testTimeout: 20_000,
 				},
