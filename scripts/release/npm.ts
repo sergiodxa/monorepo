@@ -98,7 +98,9 @@ export async function whoami(): Promise<string | null> {
 }
 
 /**
- * `npm publish` from the staged package, streaming npm's progress to the operator. A failure
+ * `npm publish` from the staged package, streaming npm's progress to the operator. Every
+ * publish names `latest` explicitly: npm demands a tag for a prerelease, and the bootstrap
+ * placeholder is the package's only version until the dated release replaces it. A failure
  * carries npm's error code, and a rejection of the publisher adds the trusted publisher
  * settings the package needs on npmjs.com.
  */
@@ -111,7 +113,8 @@ export async function publish(
 			JSON.parse(await readFile(join(stagingDir, "package.json"), "utf8")) as { name: string },
 	);
 	if (isFailure(manifest)) return manifest;
-	let result = await run("npm", ["publish", ...(options.dryRun ? ["--dry-run"] : [])], {
+	let args = ["publish", "--tag", "latest", ...(options.dryRun ? ["--dry-run"] : [])];
+	let result = await run("npm", args, {
 		cwd: stagingDir,
 		maxBuffer: OUTPUT_LIMIT,
 		onStderr: (chunk) => {
