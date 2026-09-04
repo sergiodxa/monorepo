@@ -78,7 +78,7 @@ export async function buildPackage(
 	await assertExportTargets(stagingDir, manifest);
 }
 
-/** A fresh directory under the OS temp dir, outside the repo so npm runs clear of `devEngines`. */
+/** A fresh directory under the OS temp dir, so a run never leaves build output inside the repo. */
 export async function createStagingRoot(): Promise<string> {
 	return mkdtemp(join(tmpdir(), "sdxc-release-"));
 }

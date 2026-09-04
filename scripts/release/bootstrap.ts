@@ -37,9 +37,7 @@ async function main(): Promise<void> {
 	let dryRun = values["dry-run"] === true;
 	let user = await whoami();
 	if (user === null) {
-		throw new Error(
-			"npm has no logged-in user; run `npm login` from a directory outside the repo, then rerun",
-		);
+		throw new Error("npm has no logged-in user; run `npm login`, then rerun");
 	}
 
 	let packages = await readPackages(REPO_ROOT);

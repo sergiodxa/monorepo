@@ -126,7 +126,7 @@ dry run of exactly what the workflow does; `bun run release --publish` performs 
 - MUST keep `version` in every `package.json` as the `0.0.1` placeholder; the release writes the dated version into the generated publish manifest only, and nothing in the repo reads the field
 - MUST keep a package `private: true` while it only runs under Vite (a `?raw` import, for example) or while its public surface is still moving; remove the flag only when the package is meant for npm consumers
 - MUST, to make a package public: remove `private: true`, add a `description` (taken from the package README, per ADR-017) and a `LICENSE.md`, mark its row in the root README package table with ✅ in the untitled last column, make every package it depends on public first (`test/public-packages.test.ts` names each private dependency it reaches), run `bun run release:bootstrap @sdxc/<name>` from a developer machine so the package exists on npm as `0.0.0-pre.1`, then configure its trusted publisher on npmjs.com (GitHub Actions, `sergiodxa/monorepo`, workflow `release.yml`); the next daily run publishes the dated version
-- MUST run `npm` (`npm login`, `npm whoami`, `npm view`) from a directory outside the repo; the root `devEngines` names Bun as the package manager and npm refuses to run under it
+- MUST keep the `npm` entry beside Bun in the root `devEngines.packageManager`; it is what lets `npm login`, `npm whoami`, `npm view` and the release script's registry reads run inside the repo, while `bun install` stays the only way to install
 
 ### Documentation
 

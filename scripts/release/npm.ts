@@ -1,8 +1,7 @@
 /**
  * The npm registry as the release sees it: what is published, whether a user is logged in, and
- * the publish itself. Every command runs with its cwd outside the repo, because the root
- * manifest's `devEngines` names Bun and npm treats that as a fatal `EBADDEVENGINES` for any
- * command started inside the tree, `view` and `publish` included.
+ * the publish itself. Reads run from the repo root; `publish` runs from the staged package,
+ * because npm packs whatever directory it is started in.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,18 +9,14 @@
 
 import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 
 import type { Published } from "./plan.js";
 
-import { TRUSTED_PUBLISHER } from "./workspace.js";
+import { REPO_ROOT, TRUSTED_PUBLISHER } from "./workspace.js";
 
 const execFileAsync = promisify(execFile);
-
-/** Where `view` and `whoami` run: any directory outside the repo satisfies npm. */
-const NEUTRAL_CWD = tmpdir();
 
 const OUTPUT_LIMIT = 16 * 1024 * 1024;
 
@@ -87,7 +82,7 @@ export async function versionExists(name: string, version: string): Promise<bool
 /** The logged-in npm user, or `null` when this machine holds no npm session. */
 export async function whoami(): Promise<string | null> {
 	try {
-		let { stdout } = await execFileAsync("npm", ["whoami"], { cwd: NEUTRAL_CWD });
+		let { stdout } = await execFileAsync("npm", ["whoami"], { cwd: REPO_ROOT });
 		return stdout.trim() || null;
 	} catch {
 		return null;
@@ -123,7 +118,7 @@ export async function publish(stagingDir: string, options: PublishOptions): Prom
 async function npmOutput(args: string[]): Promise<string> {
 	try {
 		let { stdout } = await execFileAsync("npm", args, {
-			cwd: NEUTRAL_CWD,
+			cwd: REPO_ROOT,
 			maxBuffer: OUTPUT_LIMIT,
 		});
 		return stdout;
