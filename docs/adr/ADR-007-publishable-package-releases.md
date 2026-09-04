@@ -127,6 +127,7 @@ Internal dependencies are pinned exactly in the publish manifest: today's versio
 | A package is already at today's version and `git diff --quiet <gitHead> HEAD -- <shipped paths>` is clean | Skip it as published, the state a rerun after a partial failure finds                                           |
 | A package is already at today's version and the diff reports changes                                      | Fail before any publish with `@sdxc/<name> changed after today's publish; rerun tomorrow`                       |
 | `GITHUB_ACTIONS` is set and a package is absent from npm                                                  | Fail before any publish with `run bun run release:bootstrap @sdxc/<name>, then configure its trusted publisher` |
+| `GITHUB_ACTIONS` is set and the registry refuses the workflow as a member's publisher                     | Fail before any build, naming each refused package with the registry's reason (see Publishing)                  |
 
 Every check in this table runs before the first `npm publish`.
 
@@ -236,7 +237,7 @@ TypeScript finds `./dist/index.d.ts` beside `./dist/index.js` through its standa
 
 ### Publishing
 
-Every member of the set is built before the first publish, so a compile error stops the run ahead of any upload. Publishing then follows the topological order with `npm publish --tag latest` and `cwd` set to the package's staging directory, since a dated version is a stable release; dry-run mode appends `--dry-run` and takes the same code path. Under OIDC the registry attaches provenance to each version on its own.
+In CI, every member's trusted publisher is confirmed before the first build: the run performs the exchange npm itself uses to publish through OIDC, trading the job's GitHub identity token (audience `npm:registry.npmjs.org`) for a short-lived npm token at `https://registry.npmjs.org/-/npm/v1/oidc/token/exchange/package/<name>`, once per member, and discards the tokens. A refusal names the package and the registry's reason, so a missing or mismatched entry on npmjs.com stops the day's release before any sibling ships. Every member of the set is built before the first publish, so a compile error stops the run ahead of any upload. Publishing then follows the topological order with `npm publish --tag latest` and `cwd` set to the package's staging directory, since a dated version is a stable release; dry-run mode appends `--dry-run` and takes the same code path. Under OIDC the registry attaches provenance to each version on its own.
 
 An `E401` or `E404` at publish time is reported with the package name and the trusted-publisher fields to check on npmjs.com: provider GitHub Actions, organization `sergiodxa`, repository `monorepo`, workflow `release.yml`. Packages published before such a failure are at today's version with a clean `gitHead`, so the next run skips them and continues from the failure.
 

@@ -36,6 +36,7 @@ import { createRelease } from "./github.js";
 import { publishManifest } from "./manifest.js";
 import { renderNotes } from "./notes.js";
 import { publish, viewPackages } from "./npm.js";
+import { inGitHubActions, preflightTrustedPublishers } from "./oidc.js";
 import { dependencyPins, isNew, planRelease, releaseVersion } from "./plan.js";
 import {
 	REPOSITORY_PAGE,
@@ -127,6 +128,10 @@ async function main(): Promise<Result<void, Error>> {
 	if (isFailure(skipped)) return skipped;
 	let bootstrapped = assertBootstrapped(plan, published);
 	if (isFailure(bootstrapped)) return bootstrapped;
+	let trusted = await preflightTrustedPublishers(
+		plan.order.filter((name) => !skipped.data.has(name)),
+	);
+	if (isFailure(trusted)) return trusted;
 	say(
 		`Release ${today} (${publishing ? "publishing" : "dry run"}); previous release: ${previousTag ?? "none"}\n`,
 	);
@@ -243,7 +248,7 @@ function assertBootstrapped(
 	plan: ReleasePlan,
 	published: Map<string, Published | null>,
 ): Result<void, Error> {
-	if (process.env.GITHUB_ACTIONS !== "true") return success(undefined);
+	if (!inGitHubActions()) return success(undefined);
 	let missing = plan.members
 		.filter((member) => (published.get(member.name) ?? null) === null)
 		.map(
