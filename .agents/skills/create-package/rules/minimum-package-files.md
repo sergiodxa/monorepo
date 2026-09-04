@@ -48,14 +48,18 @@ Substitute `slugify` for the package name throughout.
 
 Notes on each field, because every one of them is load-bearing:
 
-- **`private: true`** on every package. Nothing here is published to npm; consumers resolve
-  it through the Bun workspace.
-- **`version: "0.0.1"`** — the shared placeholder. It is never bumped, because nothing
-  reads it.
+- **`private: true`** on a new package. Workspace consumers resolve it through Bun either
+  way; the flag comes off once the package is meant for npm consumers, following the
+  publishing steps in `AGENTS.md` and ADR-007 (a `description`, a `LICENSE.md`, the mark in
+  the root README table, a bootstrap publish, a trusted publisher).
+- **`version: "0.0.1"`** — the shared placeholder. The daily release writes the dated
+  version into the generated publish manifest, so nothing in the repo reads or bumps it.
 - **`license: "MIT"`**, matching the `LICENSE.md` next to it.
 - **`type: "module"`** always.
-- **`exports`** ships TypeScript source directly (`./src/index.ts`), not a build output.
-  There is no build step and no `main`, `types`, or `files` field.
+- **`exports`** points at TypeScript source (`./src/index.ts`). Development and tests run
+  that source directly; the release script compiles a published package into `dist/` and
+  rewrites these targets in the generated manifest, so there is no `main`, `types`, or
+  `files` field to maintain.
 - **`typecheck`** gives `tsc`'s second opinion on the workspace. CI runs `vp check`, which
   covers this package either way.
 - **`@types/bun`** as the only devDependency a pure package needs; add `msw` when the
@@ -154,9 +158,9 @@ describe(slugify, () => {
 ```
 
 `describe(slugify, …)` takes the function itself, which is the convention here — the test
-name follows a rename. Use the same specifier form the package's barrel uses: a package
-whose `index.ts` re-exports through `./thing.js` imports through `./index.js` in its tests
-too, so one package never mixes the two.
+name follows a rename. Every relative import carries its `.js` extension — `./index.js`,
+`./thing.js` — because emitted JavaScript keeps specifiers verbatim and Node resolves only
+that form; `test/import-extensions.test.ts` fails on any other.
 
 ### `README.md`
 
@@ -181,7 +185,7 @@ vp check                                 # format, lint, and type check
 
 1. Write the six files, then `bun install` at the repo root
 2. Read version pins off a sibling package, never off this rule
-3. Keep `private: true`, `version: "0.0.1"`, `license: "MIT"`, `type: "module"`, and a `typecheck` script
-4. Point `exports` at TypeScript source; there is no build step and no `main` or `types` field
+3. Start with `private: true`; keep `version: "0.0.1"`, `license: "MIT"`, `type: "module"`, and a `typecheck` script
+4. Point `exports` at TypeScript source with no `main` or `types` field; the release script builds `dist/` for npm
 5. Start every file with the module JSDoc header, `@author` and `@copyright` included, and give every export its own JSDoc
 6. Colocate `*.test.ts` next to the module, import through `./index.js`, and never exclude tests from the tsconfig

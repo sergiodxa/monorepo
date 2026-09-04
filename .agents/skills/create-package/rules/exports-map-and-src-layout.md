@@ -6,15 +6,17 @@ tags: [packages, structure, exports]
 
 # The `exports` Map Is the Public Surface
 
-A package has no `main`, no `types`, no `files`, and no build step. `exports` points
-straight at TypeScript source, and it is the complete list of import paths a consumer may
-write. Everything under `src/` that is not named in the map is internal.
+A package has no `main`, no `types`, and no `files`. `exports` points straight at
+TypeScript source — the release script compiles a published package into `dist/` and
+rewrites these targets in the generated manifest — and it is the complete list of import
+paths a consumer may write. Everything under `src/` that is not named in the map is internal.
 
 ## Why
 
-- **No build step means no drift between what is tested and what is imported.** The
-  consumer resolves `./src/index.ts`, the test imports `./index.js`, and `vp check`
-  type-checks both.
+- **Source-pointing exports mean no drift between what is tested and what is imported.**
+  The workspace consumer resolves `./src/index.ts`, the test imports `./index.js`,
+  `vp check` type-checks both, and the published `dist/` is emitted from that same source
+  at release time.
 - **An `exports` map with one entry per file is not a surface, it is a directory
   listing.** Deliberate entries are what let a package reorganize `src/` without breaking
   a consumer.

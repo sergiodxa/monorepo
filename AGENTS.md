@@ -68,7 +68,9 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
 ## Rules
 
 - MUST use Bun to install dependencies and run scripts; tests execute through Vite+ (`vp test`)
-- MUST follow Conventional Commits for commit messages
+- MUST follow Conventional Commits for commit messages, with the workspace directory name as the scope (`feat(jwt): …`, `fix(uptime): …`)
+- MUST keep every commit inside one package or one app (root and `docs/` files may ride along); a change that spans two workspaces is two commits. Release notes are built from the commits that touch a package, so a cross-workspace commit shows up under every package it touched. Dependency sweeps (`chore(deps): …`) are the accepted exception
+- MUST write the commit title as what changed for a consumer of that workspace, and the body (when present) as the explanation a reader of the release notes needs; both are published verbatim in the daily GitHub Release (ADR-007)
 - MUST commit directly on `main`; never create a branch unless explicitly asked (other sessions commit to `main` concurrently, and an unprompted branch strands their commits)
 - MUST run `bun check` at the repo root before every commit, and `bun check:fix` to apply formatting and autofixes
 - MUST preserve every individual commit when merging into `main` — use a fast-forward merge (`git merge --ff-only`), never squash and never create a merge commit
@@ -111,6 +113,20 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
 - MUST keep `packages/*` app-agnostic: no imports from, or references to, `apps/*` in code or comments
 - MUST keep public blog content package-agnostic: articles and tutorials must not mention internal package names, `@sdxc/*` imports, or `packages/*` paths; use public APIs or local example modules instead
 - MUST write Remix tutorials with Remix v3 route contracts, controllers, middleware context, `remix/data-schema`, and `remix/ui`; do not use React Router route-module exports, `Route.*` types, `useLoaderData`, `useActionData`, React hooks, or top-level `remix` imports unless the post is explicitly about React or legacy React Router
+
+### Publishing
+
+Public packages ship to npm under the `@sdxc` scope through the daily release described in
+[ADR-007](./docs/adr/ADR-007-publishable-package-releases.md): the commits since the previous
+release decide which packages changed, every dependent of a changed package republishes with a
+new exact pin, and the version is the UTC date of the run (`2026.9.4`). `bun run release` is a
+dry run of exactly what the workflow does; `bun run release --publish` performs it.
+
+- MUST write every relative import inside `packages/*` with its `.js` extension (`from "./parse.js"`), tests included; `test/import-extensions.test.ts` fails on any other form, because emitted JavaScript keeps specifiers verbatim and Node resolves only the extension form
+- MUST keep `version` in every `package.json` as the `0.0.1` placeholder; the release writes the dated version into the generated publish manifest only, and nothing in the repo reads the field
+- MUST keep a package `private: true` while it only runs under Vite (a `?raw` import, for example) or while its public surface is still moving; remove the flag only when the package is meant for npm consumers
+- MUST, to make a package public: remove `private: true`, add a `description` (taken from the package README, per ADR-017) and a `LICENSE.md`, mark its row in the root README package table with ✅ in the untitled last column, make every package it depends on public first (`test/public-packages.test.ts` names each private dependency it reaches), run `bun run release:bootstrap @sdxc/<name>` from a developer machine so the package exists on npm as `0.0.0-pre.1`, then configure its trusted publisher on npmjs.com (GitHub Actions, `sergiodxa/monorepo`, workflow `release.yml`); the next daily run publishes the dated version
+- MUST run `npm` (`npm login`, `npm whoami`, `npm view`) from a directory outside the repo; the root `devEngines` names Bun as the package manager and npm refuses to run under it
 
 ### Documentation
 
