@@ -24,7 +24,7 @@ A proposal under this number, dated 2026-06-29, described a per-package publish 
 | Git tags                             | The tag list is empty; the `v*` namespace is free                                                                                                                                                                                               |
 | Package metadata                     | `description` is absent from every manifest, and [ADR-017](./ADR-017-readme-package-description-source-of-truth.md) makes the README's first paragraph its source; `LICENSE.md` is present in 51 packages, with `sample` and `spec` lacking one |
 | `packages/oidc-provider`             | Imports SQL migrations with Vite's `?raw` suffix, which resolves under Vite alone                                                                                                                                                               |
-| Root configuration                   | `devEngines.packageManager` is `bun` 1.3.14 with `onFail: "download"`; `tsconfig.json` sets `types: ["@total-typescript/ts-reset", "bun"]` and every package extends it; `vp check` already type-checks `scripts/`                              |
+| Root configuration                   | `devEngines.packageManager` pins `bun` 1.4.0 with `onFail: "download"`; `tsconfig.json` sets `types: ["@total-typescript/ts-reset", "bun"]` and every package extends it; `vp check` already type-checks `scripts/`                             |
 
 ### Verified Constraints
 
@@ -304,7 +304,7 @@ permissions:
   id-token: write
 
 env:
-  BUN_VERSION: 1.3.14
+  BUN_VERSION: 1.4.0
 
 on:
   schedule:
