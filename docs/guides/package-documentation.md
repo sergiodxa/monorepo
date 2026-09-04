@@ -2,9 +2,13 @@
 
 This document describes how to write README files for packages in this monorepo.
 
+A published package (`private` absent from its `package.json`) follows
+[Public Packages](#public-packages) instead of the structure below — its README
+ships to npmjs.com and is read by people who can see only that one package.
+
 ## Structure
 
-Every package README should follow this structure:
+Every internal package README should follow this structure:
 
 1. **Title** - Package name as heading
 2. **Overview** - Brief description of what the package does and why
@@ -13,6 +17,51 @@ Every package README should follow this structure:
 5. **Patterns** - Common patterns and integration examples
 6. **Related Packages** - Links to related packages in the monorepo
 7. **Tips** - Best practices and recommendations
+
+## Public Packages
+
+The README of a published package is its npm landing page. Write it for a
+stranger who can reach only what npm serves, and keep it short — a reference,
+not an essay.
+
+Structure:
+
+1. **Title** - Package name, then one line saying what it is
+2. **Installation** - `npm add @sdxc/<name>`, plus one line naming any
+   third-party or published companion the consumer also installs
+3. **Usage** - Two to five focused examples, smallest one first
+4. **API** - Every public export, one or two sentences each
+5. **Patterns** - How the exports combine on a real task
+6. **Versioning** - Dated releases, no compatibility promise, pin an exact date
+7. **License** - `MIT`
+8. **Author** - `[Sergio Xalambrí](https://sergiodxa.com)`
+
+Rules:
+
+- Link only to what a reader can open from npm: npmjs.com package pages, MDN,
+  and the documentation of third-party dependencies. Repository links,
+  `/packages/<name>` links, `../<name>/README.md` links, and `docs/adr/` links
+  all break outside the monorepo.
+- Name only published packages. A private `@sdxc/*` dependency stays out of the
+  prose entirely — rewrite the sentence so it stands on its own.
+- Keep examples free of internal vocabulary. Application names, route module
+  paths, and internal symbols mean nothing to the reader; use generic subjects
+  instead.
+- Describe the package as an installed dependency. Commands that only run
+  inside a checkout belong in the repository documentation.
+- Keep the `## Pattern: ...` sections. They show a reader how the exports
+  combine on a real task, which the API reference alone never conveys. Place
+  them after the API reference, and write each one so it stands alone: generic
+  subjects, published dependencies only, and imports included. Skip the
+  `Related Packages` and `Tips` sections.
+- Show what an export stands in for when a longhand teaches the reader
+  something — the raw `Intl` or WebCrypto call, the arithmetic, the try/catch.
+  Where no honest one-line equivalent exists, describe the behavior instead of
+  inventing one.
+- Prefer a sentence over a paragraph, and a code block over a sentence. Drop
+  the `**Parameters:** / **Returns:** / **Example:**` scaffolding wherever a
+  single sentence carries the same information; keep a parameter list only when
+  an options object needs field-by-field explanation.
 
 ## Section Guidelines
 
