@@ -11,9 +11,9 @@ import type { Middleware, RequestContext } from "remix/router";
 
 import { getClientIP } from "@sdxc/get-client-ip";
 import { tooManyRequests } from "@sdxc/http/response/json";
+import { currentLog } from "@sdxc/logger";
 import { isFailure } from "@sdxc/result";
 
-import type { RateLimitError } from "./rate-limit-error.js";
 import type { Adapter, RateLimitDecision } from "./types.js";
 
 import { applyRateLimitHeaders } from "./headers.js";
@@ -27,10 +27,10 @@ const LIMITED_DESCRIPTION = "Rate limit exceeded. Please try again later.";
 /** Key used when no client address is available, so limiting still applies. */
 const UNKNOWN_KEY = "unknown";
 
-/** Logged when an attempt is denied, at info level: this is normal traffic. */
+/** Warning recorded when an attempt is denied: expected traffic, kept visible. */
 const EXCEEDED_EVENT = "rate_limit.exceeded";
 
-/** Logged when the backend could not answer, at error level: this needs attention. */
+/** Recorded when the backend could not answer: a warning when traffic flowed, a failure when it was refused. */
 const UNAVAILABLE_EVENT = "rate_limit.unavailable";
 
 /** Registrations so far, used to give each limiter its own key namespace. */
@@ -42,28 +42,6 @@ let registrations = 0;
  * surface where an uncounted request is worse than a refused one.
  */
 export type FailurePolicy = "open" | "closed";
-
-/**
- * The part of a logger this middleware needs. It is structural so the package
- * reports through whichever logger an app installed on the context, without
- * depending on a logging library itself.
- */
-export interface RateLimitLogger {
-	/**
-	 * Records a routine event, such as a denied attempt.
-	 *
-	 * @param event - Event name, e.g. `rate_limit.exceeded`.
-	 * @param payload - Structured details about the event.
-	 */
-	info(event: string, payload?: Record<string, unknown>): void;
-	/**
-	 * Records a failure event, such as an unreachable backend.
-	 *
-	 * @param event - Event name, e.g. `rate_limit.unavailable`.
-	 * @param payload - Structured details about the failure.
-	 */
-	error(event: string, payload?: Record<string, unknown>): void;
-}
 
 /** Options that configure one rate limit registration. */
 export interface RateLimitMiddlewareOptions {
@@ -95,17 +73,14 @@ export interface RateLimitMiddlewareOptions {
 	onLimit?: (context: RequestContext, decision: RateLimitDecision) => Response | Promise<Response>;
 	/** What to do when the backend cannot answer. Defaults to `"open"`. */
 	failurePolicy?: FailurePolicy;
-	/**
-	 * Resolves the logger for denied attempts and backend failures. Defaults to
-	 * `context.logger` when the app installed one.
-	 */
-	logger?: (context: RequestContext) => RateLimitLogger | undefined;
 }
 
 /**
  * Creates a middleware that limits every request in its scope. It spends the
  * budget before `next()`, so a denial never reaches the handler, and reports
- * the decision on every response, keeping registrations' keys independent.
+ * the decision on every response and on the invocation's log, keeping
+ * registrations' keys independent. The limited key stays out of the log, since
+ * it may carry a token or client identifier.
  *
  * @param options - Adapter, key derivation, and policy; see {@link RateLimitMiddlewareOptions}.
  * @returns A middleware that counts the request and annotates the response.
@@ -125,18 +100,24 @@ export function rateLimit(options: RateLimitMiddlewareOptions): Middleware {
 
 		let key = `${prefix}:${await resolveKey(context, options.key)}`;
 		let result = await adapter.consume(key, await resolveCost(context, options.cost));
-		let logger = options.logger?.(context) ?? contextLogger(context);
+		let log = currentLog();
 
 		if (isFailure(result)) {
-			logger?.error(UNAVAILABLE_EVENT, failurePayload(key, failurePolicy, result.error));
-			if (failurePolicy === "open") return next();
+			let detail = { policy: failurePolicy, backend: result.error.backend };
+			if (failurePolicy === "open") {
+				log?.warn(UNAVAILABLE_EVENT, { ...detail, error: result.error.message });
+				return next();
+			}
+			log?.fail(result.error, { rate_limit: detail });
 			return limitedResponse();
 		}
 
 		let decision = result.data;
+		log?.set({ rate_limit: { limit: decision.limit, remaining: decision.remaining } });
 
 		if (!decision.allowed) {
-			logger?.info(EXCEEDED_EVENT, { key, limit: decision.limit, retryAfter: decision.retryAfter });
+			log?.set({ rate_limit: { limited: true } });
+			log?.warn(EXCEEDED_EVENT, { limit: decision.limit, retry_after_s: decision.retryAfter });
 			let response = options.onLimit ? await options.onLimit(context, decision) : limitedResponse();
 			return applyRateLimitHeaders(response, decision, adapter.window);
 		}
@@ -177,23 +158,6 @@ async function resolveCost(
 }
 
 /**
- * The log payload for an unreachable backend, naming the policy that was applied so
- * the log says whether traffic was let through.
- *
- * @param key - The prefixed key that could not be counted.
- * @param policy - The failure policy in force.
- * @param error - The failure the adapter reported.
- * @returns Structured details for the log entry.
- */
-function failurePayload(
-	key: string,
-	policy: FailurePolicy,
-	error: RateLimitError,
-): Record<string, unknown> {
-	return { key, policy, backend: error.backend, error: error.message };
-}
-
-/**
  * The default response for a denied request: `429` with the OAuth-style error body
  * the protected endpoints already return, so adopting the middleware does not
  * change an existing client contract.
@@ -202,13 +166,4 @@ function failurePayload(
  */
 function limitedResponse(): Response {
 	return tooManyRequests({ error: LIMITED_ERROR, error_description: LIMITED_DESCRIPTION });
-}
-
-/** Reads a logger off the request context, accepting anything that can record both levels. */
-function contextLogger(context: RequestContext): RateLimitLogger | undefined {
-	let candidate: unknown = (context as { logger?: unknown }).logger;
-	if (typeof candidate !== "object" || candidate === null) return undefined;
-	if (!("info" in candidate) || typeof candidate.info !== "function") return undefined;
-	if (!("error" in candidate) || typeof candidate.error !== "function") return undefined;
-	return candidate as RateLimitLogger;
 }

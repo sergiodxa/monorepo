@@ -94,7 +94,6 @@ Creates a middleware that counts the request, refuses it when the budget is gone
 - `options.skip?`: Predicate for requests to let through without counting
 - `options.onLimit?`: Builds the response for a denied request, replacing the default JSON body
 - `options.failurePolicy?`: `"open"` (default) or `"closed"`, applied when the backend cannot answer
-- `options.logger?`: Resolves the logger for denied attempts and backend failures; defaults to `context.logger`
 
 **Returns:**
 

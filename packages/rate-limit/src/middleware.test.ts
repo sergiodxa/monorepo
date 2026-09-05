@@ -8,11 +8,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Log } from "@sdxc/logger";
 import { failure, success } from "@sdxc/result";
 import { RequestContext } from "remix/router";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import type { RateLimitLogger } from "./middleware.js";
 import type { Adapter, RateLimitDecision } from "./types.js";
 
 import { MemoryAdapter } from "./memory.js";
@@ -49,18 +49,22 @@ function createHandler() {
 	};
 }
 
-/** Collects the events a middleware logs, standing in for the app's request logger. */
-function createLogger() {
-	let events: { event: string; payload?: Record<string, unknown> }[] = [];
-	let logger: RateLimitLogger = {
-		info(event, payload) {
-			events.push({ event, payload });
-		},
-		error(event, payload) {
-			events.push({ event, payload });
-		},
-	};
-	return { logger, events };
+/**
+ * Runs the middleware under a log of its own, so a test reads what it recorded off the
+ * emitted record rather than through a logger it installed.
+ */
+async function recorded(
+	fn: () => Response | Promise<Response>,
+): Promise<{ response: Response; record: Record<string, unknown> }> {
+	let records: Record<string, unknown>[] = [];
+	let log = new Log({ kind: "request", sink: (record) => void records.push(record) });
+	let response = await log.run(fn);
+	return { response, record: records[0] ?? {} };
+}
+
+/** The notes the record carries, which is where a middleware's narrative lands. */
+function notesOf(record: Record<string, unknown>): Log.Note[] {
+	return (record.notes ?? []) as Log.Note[];
 }
 
 /** An adapter that records the keys and costs it was asked to spend. */
@@ -265,65 +269,59 @@ describe("rateLimit middleware", () => {
 	});
 
 	test("fails open when the backend cannot answer, and logs it", async () => {
-		let { logger, events } = createLogger();
-		let middleware = rateLimit({ adapter: createFailingAdapter(), logger: () => logger });
+		let middleware = rateLimit({ adapter: createFailingAdapter() });
 		let handler = createHandler();
 
-		let response = await middleware(createClientContext(), handler.next);
+		let { response, record } = await recorded(() =>
+			middleware(createClientContext(), handler.next),
+		);
 
 		expect(handler.calls).toBe(1);
 		expect(response.status).toBe(200);
 		expect(response.headers.get("RateLimit")).toBeNull();
-		expect(events[0]?.event).toBe("rate_limit.unavailable");
-		expect(events[0]?.payload).toMatchObject({ policy: "open", backend: "kv" });
+		expect(notesOf(record)[0]).toMatchObject({
+			name: "rate_limit.unavailable",
+			policy: "open",
+			backend: "kv",
+		});
 	});
 
 	test("fails closed when the registration asks for it", async () => {
-		let { logger, events } = createLogger();
-		let middleware = rateLimit({
-			adapter: createFailingAdapter(),
-			failurePolicy: "closed",
-			logger: () => logger,
-		});
+		let middleware = rateLimit({ adapter: createFailingAdapter(), failurePolicy: "closed" });
 		let handler = createHandler();
 
-		let response = await middleware(createClientContext(), handler.next);
+		let { response, record } = await recorded(() =>
+			middleware(createClientContext(), handler.next),
+		);
 
 		expect(handler.calls).toBe(0);
 		expect(response.status).toBe(429);
 		expect(response.headers.get("RateLimit")).toBeNull();
 		expect(response.headers.get("Retry-After")).toBeNull();
-		expect(events[0]?.payload).toMatchObject({ policy: "closed" });
+		expect(record).toMatchObject({ outcome: "error", "rate_limit.policy": "closed" });
 	});
 
-	test("logs a denied attempt at info level", async () => {
+	test("records a denied attempt as a degraded outcome, with the limit as a field", async () => {
 		vi.setSystemTime(new Date(WINDOW_START));
-		let { logger, events } = createLogger();
 		let middleware = rateLimit({
 			adapter: new MemoryAdapter({ limit: 1, window: "10 seconds" }),
 			prefix: "login",
-			logger: () => logger,
 		});
 
-		await middleware(createClientContext(), async () => new Response());
-		await middleware(createClientContext(), async () => new Response());
+		let allowed = await recorded(() =>
+			middleware(createClientContext(), async () => new Response()),
+		);
+		let denied = await recorded(() =>
+			middleware(createClientContext(), async () => new Response()),
+		);
 
-		expect(events).toHaveLength(1);
-		expect(events[0]?.event).toBe("rate_limit.exceeded");
-		expect(events[0]?.payload).toMatchObject({ key: `login:${CLIENT_IP}`, limit: 1 });
+		expect(notesOf(allowed.record)).toHaveLength(0);
+		expect(allowed.record).toMatchObject({ "rate_limit.limit": 1, outcome: "ok" });
+		expect(denied.record).toMatchObject({ "rate_limit.limited": true, outcome: "degraded" });
+		expect(notesOf(denied.record)[0]).toMatchObject({ name: "rate_limit.exceeded", limit: 1 });
 	});
 
-	test("falls back to the logger the app installed on the context", async () => {
-		let { logger, events } = createLogger();
-		let middleware = rateLimit({ adapter: createFailingAdapter() });
-		let context = Object.assign(createClientContext(), { logger });
-
-		await middleware(context, async () => new Response());
-
-		expect(events[0]?.event).toBe("rate_limit.unavailable");
-	});
-
-	test("runs without a logger, rather than throwing", async () => {
+	test("runs with no log open, rather than throwing", async () => {
 		let middleware = rateLimit({ adapter: createFailingAdapter() });
 
 		let response = await middleware(createClientContext(), async () => new Response("ok"));
