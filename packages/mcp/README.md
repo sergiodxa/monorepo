@@ -269,6 +269,31 @@ function requireOwnMonitor(): ToolMiddleware<InputOf<typeof toolset.monitors.get
 }
 ```
 
+## Logging
+
+The handler writes into the request's own log. When the route runs under `@sdxc/logger`'s
+`log()` middleware, the record every request already emits gains what only the handler
+knows:
+
+| Method                  | Fields                                                               |
+| ----------------------- | -------------------------------------------------------------------- |
+| Every method            | `mcp.method`, `mcp.protocol_version`                                 |
+| `tools/call`            | `mcp.tool`, and `mcp.is_error` once there is a result                |
+| `resources/read`        | `mcp.resource` — the matched pattern                                 |
+| An unexpected exception | `outcome: "error"` with the error's fields, in addition to `onError` |
+
+`mcp.is_error` is `true` for a `ToolError` result, for refused arguments, for a
+`ForbiddenError`, and for an unexpected exception, so one filter finds every call the model
+did not get a clean answer to. Only the last of those fails the log — a `ToolError` is the
+tool answering as designed.
+
+`mcp.resource` records the pattern (`https://…/articles/:slug.md`), never the URI: the URI
+carries the slug, and a field with one value per post grows the index forever.
+
+The enrichment goes through `currentLog()`, so it reaches a bare Worker or a Durable Object
+that opened a log around its own `fetch` just as it reaches a router with `log()` in its
+chain. A host with no log open is served exactly the same, with nothing recorded.
+
 ## `available` — hiding a tool from a caller
 
 `available` decides whether a tool exists for this caller. One it refuses is absent from
@@ -368,3 +393,8 @@ one. It is a long-lived SSE stream the server holds open, which in a Worker mean
 wall-clock and a connection pinned to one isolate — the cost model this design exists to
 avoid. `ttlMs` covers freshness instead. A Durable Object would be the honest home if it is
 ever wanted.
+
+## Related Packages
+
+- [`@sdxc/logger`](/packages/logger) - The request log this handler enriches with the MCP
+  method, tool, and resource

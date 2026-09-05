@@ -12,6 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { currentLog } from "@sdxc/logger";
 import { isFailure } from "@sdxc/result";
 import { createMultiMatcher } from "remix/route-pattern/match";
 
@@ -317,6 +318,8 @@ async function answer(
 		return json(replyError(id, ErrorCode.InvalidParams, metadata.reason), 400);
 	}
 
+	currentLog()?.set({ mcp: { method: body.method, protocol_version: metadata.protocolVersion } });
+
 	if (request.headers.get(PROTOCOL_VERSION_HEADER) !== metadata.protocolVersion) {
 		return json(
 			replyError(
@@ -433,7 +436,8 @@ async function answer(
  * Validates and runs one tool call, mapping each failure to where MCP reports it.
  *
  * An unavailable tool is reported as unknown, so the refusal carries no more than what
- * `tools/list` already told the caller.
+ * `tools/list` already told the caller. The current log, when the host opened one, gains
+ * `mcp.tool` and `mcp.is_error`, and an unexpected exception fails it as well as reaching `onError`.
  */
 async function callTool(
 	ctx: AnyRequestContext,
@@ -453,8 +457,12 @@ async function callTool(
 		return json(replyError(id, ErrorCode.InvalidParams, `Unknown tool: ${name}`), 200);
 	}
 
+	let log = currentLog();
+	log?.set({ mcp: { tool: name } });
+
 	let checked = validateArguments(entry.tool.inputSchema, params?.arguments);
 	if (isFailure(checked)) {
+		log?.set({ mcp: { is_error: true } });
 		return json(
 			replyError(id, ErrorCode.InvalidParams, checked.error.message, {
 				issues: checked.error.issues,
@@ -470,8 +478,10 @@ async function callTool(
 
 	try {
 		let result = await runChain(ctx as ToolContext, chain, entry);
+		log?.set({ mcp: { is_error: result.isError === true } });
 		return json(reply(id, { resultType: "complete", ...result, _meta: meta }), 200);
 	} catch (error) {
+		log?.set({ mcp: { is_error: true } });
 		if (error instanceof InvalidArgumentsError) {
 			return json(
 				replyError(id, ErrorCode.InvalidParams, error.message, { issues: error.issues }),
@@ -482,6 +492,7 @@ async function callTool(
 			return json(replyError(id, ErrorCode.InvalidParams, error.message), 200);
 		}
 
+		log?.fail(error);
 		options.onError?.(error, { method: "tools/call", tool: name });
 		return json(
 			reply(id, {
@@ -548,7 +559,8 @@ function toResult(output: unknown, hasOutputSchema: boolean): CallToolResult {
  * Matches a URI to a mapped resource and reads it.
  *
  * A failure here always becomes a JSON-RPC error, since MCP gives a resource read only
- * that channel to report one.
+ * that channel to report one. The current log records the matched pattern as `mcp.resource`,
+ * keeping the slug the URI carries out of the field index.
  */
 async function readResource(
 	ctx: AnyRequestContext,
@@ -571,6 +583,9 @@ async function readResource(
 
 	let { resource, action } = match.data;
 
+	let log = currentLog();
+	log?.set({ mcp: { resource: resource.pattern } });
+
 	ctx.set(ResourceUri, uri, { property: "uri" });
 	ctx.set(ResourceVariables, match.params, { property: "variables" });
 	ctx.set(CurrentResource, resource.descriptor, { property: "resource" });
@@ -579,6 +594,7 @@ async function readResource(
 	try {
 		output = await action.read(ctx as ResourceContext);
 	} catch (error) {
+		log?.fail(error);
 		options.onError?.(error, { method: "resources/read", uri });
 		return json(replyError(id, ErrorCode.InternalError, "Failed to read the resource"), 200);
 	}
