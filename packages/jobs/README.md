@@ -60,8 +60,7 @@ export default createJobHandler(jobs.checkHttp, async (ctx) => {
 
 `ctx.log` is the run's record, emitted once when the run ends: `set()` a field worth
 querying by, `note()` what is worth reading once a query has found the record, `time()`
-anything with a duration. `ctx.logger`, a batched logger, is still available while
-handlers move their events over.
+anything with a duration.
 
 ### Wiring the worker
 
@@ -371,7 +370,6 @@ handler directly.
 - `init.batchSize`: How many messages share this invocation. Defaults to one
 - `init.log`: Where this job's fields go, a `Log` from `@sdxc/logger`. One is created
   when omitted, under the current log when there is one
-- `init.logger`: A batched logger, for handlers still writing to one. Created when omitted
 - `init.signal`: Aborts when the job's timeout expires. Never aborts when omitted
 
 **Example:**
@@ -388,7 +386,6 @@ let ctx = new JobContext(jobs.clean, { id: "message-1", attempts: 1 });
 - `ctx.batchSize`: How many messages share this invocation
 - `ctx.log`: The run's record — `set()` fields, `note()` breadcrumbs, `time()` durations —
   emitted once when the run ends
-- `ctx.logger`: A batched logger, still available while handlers move to `ctx.log`
 - `ctx.signal`: Aborts when the timeout expires
 
 #### `ctx.ack(reason?: string): never`

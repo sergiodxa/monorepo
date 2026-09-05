@@ -10,7 +10,7 @@
 
 import type { Message, MessageBatch, ScheduledController } from "@cloudflare/workers-types";
 import type { DurationInput } from "@sdxc/duration";
-import type { ConfiguredLogger } from "@sdxc/logger";
+import type { Logger } from "@sdxc/logger";
 import type { JSONValue } from "@sdxc/types";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
@@ -86,7 +86,7 @@ export interface JobDispatcherOptions<Chain extends readonly AnyJobMiddleware[] 
 	 * The worker's logging configuration. Every cron, queue, and job log this dispatcher
 	 * opens carries it; without one they carry no service.
 	 */
-	logger?: ConfiguredLogger;
+	logger?: Logger;
 	/**
 	 * The app's queue write, used by `enqueue` and by the cron trigger. A dispatcher
 	 * without one can still run what the queue delivers, and refuses to enqueue.

@@ -10,7 +10,7 @@
 
 import type { ContextValue } from "remix/router";
 
-import { BatchedLogger, currentLog, Log } from "@sdxc/logger";
+import { currentLog, Log } from "@sdxc/logger";
 
 import type { RetryOptions } from "./errors.js";
 import type { CronExpression } from "./job.js";
@@ -30,8 +30,6 @@ export interface JobContextInit<Input = undefined> {
 	batchSize?: number;
 	/** Where this job's fields go. One is created when omitted. */
 	log?: Log;
-	/** Where this job's events go, while handlers still write to one. Created when omitted. */
-	logger?: BatchedLogger;
 	/** Aborts when the job's timeout expires. Never aborts when omitted. */
 	signal?: AbortSignal;
 }
@@ -75,8 +73,6 @@ export class JobContext<Input = undefined> {
 	 * `time()` anything with a duration. Emitted once, when the run ends.
 	 */
 	readonly log: Log;
-	/** A batched logger, still available while handlers move their events into `log`. */
-	readonly logger: BatchedLogger;
 	/** Aborts when the job's timeout expires; pass it to `fetch`, or read it in a loop. */
 	readonly signal: AbortSignal;
 
@@ -105,7 +101,6 @@ export class JobContext<Input = undefined> {
 					cron: job.cron,
 				},
 			});
-		this.logger = init.logger ?? new BatchedLogger(`job:${job.name}:${init.id}`);
 		this.signal = init.signal ?? new AbortController().signal;
 	}
 

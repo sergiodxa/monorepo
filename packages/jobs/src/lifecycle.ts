@@ -13,7 +13,6 @@ import type { DurationInput } from "@sdxc/duration";
 import type { Log } from "@sdxc/logger";
 
 import { toMs, toSeconds } from "@sdxc/duration";
-import { BatchedLogger } from "@sdxc/logger";
 import { ValidationError } from "@sdxc/validate";
 
 import type { AnyJobContext } from "./context.js";
@@ -205,7 +204,6 @@ function waitForWork(
  */
 export async function runJob(options: RunOptions): Promise<void> {
 	let { job, message } = options;
-	let logger = new BatchedLogger(`job:${job.name}:${message.id}`);
 	let controller = new AbortController();
 
 	let log = openJobLog({
@@ -224,36 +222,31 @@ export async function runJob(options: RunOptions): Promise<void> {
 		input: options.input,
 		batchSize: options.batchSize,
 		log,
-		logger,
 		signal: controller.signal,
 	});
 
-	try {
-		await log.run(async () => {
-			let outcome = await waitForWork(
-				() =>
-					runChain(options.middleware, context, async () => {
-						let handler = await options.handler();
+	await log.run(async () => {
+		let outcome = await waitForWork(
+			() =>
+				runChain(options.middleware, context, async () => {
+					let handler = await options.handler();
 
-						if (handler.job !== job) {
-							throw new Error(
-								`Job "${job.name}" is mapped to a handler written for "${handler.job.name}"`,
-							);
-						}
+					if (handler.job !== job) {
+						throw new Error(
+							`Job "${job.name}" is mapped to a handler written for "${handler.job.name}"`,
+						);
+					}
 
-						await handler(context);
-					}),
-				options.timeout,
-				controller,
-			);
+					await handler(context);
+				}),
+			options.timeout,
+			controller,
+		);
 
-			await settle(endingOf(outcome, controller.signal), message, log, () =>
-				ping(job.monitorId, options.uptime?.()),
-			);
-		});
-	} finally {
-		logger.flush();
-	}
+		await settle(endingOf(outcome, controller.signal), message, log, () =>
+			ping(job.monitorId, options.uptime?.()),
+		);
+	});
 }
 
 /**
