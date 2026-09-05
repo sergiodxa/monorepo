@@ -89,7 +89,7 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
 - MUST NOT deploy before migration, to avoid running old code with an incompatible database schema
 - MUST use `bunx wrangler` when running commands, never use `wrangler` directly
 - MUST use `@sdxc/logger`, never `console.log`
-- MUST use RequestLogger for logging inside worker fetch handlers
+- MUST log through the invocation's log — `ctx.log` in route handlers and job handlers, `currentLog()` anywhere else — and never construct a logger per request; the worker configures one `createLogger()` and attaches it with `log(logger)` at the top of the router's middleware chain and as the job dispatcher's `logger` option (ADR-033)
 - MUST use `@sdxc/jobs` for background jobs
 - MUST validate external/untrusted data (loaders, actions, webhooks, env-derived input) with `remix/data-schema` via `@sdxc/validate`; do not add Zod to new code
 - MUST use `const` only for module-level variables, and `let` for everything else, never use `const` for local variables inside functions or blocks

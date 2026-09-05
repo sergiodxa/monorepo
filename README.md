@@ -89,61 +89,61 @@ Run from the repository root:
 
 ## Packages
 
-| Package                                                         | Description                                                                    |     |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------------ | --- |
-| [api-client](packages/api-client)                               | Base class for clients of a remote HTTP API                                    |     |
-| [arrays](packages/arrays)                                       | Array utility functions                                                        |     |
-| [auth](packages/auth)                                           | OAuth 2.0 and OpenID Connect client for Remix on Cloudflare Workers            |     |
-| [billing](packages/billing)                                     | Vendor-neutral billing with pluggable providers and a webhook endpoint         |     |
-| [blog-engine](packages/blog-engine)                             | Host-agnostic blog engine                                                      |     |
-| [catch-response-middleware](packages/catch-response-middleware) | Router middleware that turns a thrown `Response` into the response             |     |
-| [cloudflare-mocks](packages/cloudflare-mocks)                   | In-memory Cloudflare binding mocks for tests                                   |     |
-| [cron](packages/cron)                                           | Cron schedules with zone-aware occurrences and descriptors                     |     |
-| [crypto](packages/crypto)                                       | WebCrypto primitives: hashing, HMAC, passwords, TOTP, AES-GCM                  | ✅  |
-| [data-table-d1](packages/data-table-d1)                         | Remix Data Table adapter for Cloudflare D1                                     |     |
-| [data-table-sqlstorage](packages/data-table-sqlstorage)         | Remix Data Table adapter for Durable Object SQL                                |     |
-| [dates](packages/dates)                                         | Zone-aware date operations with Intl-only formatting                           | ✅  |
-| [duration](packages/duration)                                   | Typed duration strings converted to milliseconds or seconds                    | ✅  |
-| [get-client-ip](packages/get-client-ip)                         | Extract client IP from requests                                                |     |
-| [highlight](packages/highlight)                                 | Syntax highlighting as tokens, with a Markdoc fence node                       |     |
-| [hostname](packages/hostname)                                   | Hostname parsing and validation utilities                                      |     |
-| [http](packages/http)                                           | HTTP helper utilities                                                          |     |
-| [i18n](packages/i18n)                                           | Language detection, i18next instances and translated-markup components         | ✅  |
-| [icons](packages/icons)                                         | Lucide icons for Remix UI                                                      |     |
-| [iife](packages/iife)                                           | Immediately invoked function helper                                            |     |
-| [jobs](packages/jobs)                                           | Job queue utilities                                                            |     |
-| [jwt](packages/jwt)                                             | JWT payload classes and the keys that sign them                                | ✅  |
-| [kv-cache](packages/kv-cache)                                   | Read-through cache store over Cloudflare KV                                    |     |
-| [location](packages/location)                                   | URL-like path Location class                                                   |     |
-| [logger](packages/logger)                                       | Request-scoped logging                                                         |     |
-| [mail](packages/mail)                                           | Transactional email with pluggable transports                                  |     |
-| [markdown](packages/markdown)                                   | Markdown parsing and Remix UI rendering                                        |     |
-| [mcp](packages/mcp)                                             | MCP servers over stateless Streamable HTTP                                     |     |
-| [oidc-provider](packages/oidc-provider)                         | OIDC/OAuth2 provider engine                                                    |     |
-| [pagination](packages/pagination)                               | Offset and keyset pagination with Link headers                                 |     |
-| [rate-limit](packages/rate-limit)                               | Adapter-based rate limiting with standard headers                              |     |
-| [response](packages/response)                                   | HTTP response utilities                                                        |     |
-| [result](packages/result)                                       | Result type for error handling                                                 | ✅  |
-| [rss](packages/rss)                                             | RSS feed utilities                                                             |     |
-| [sample](packages/sample)                                       | Seeded generation of believable people, places, prose, numbers and identifiers | ✅  |
-| [server-timing](packages/server-timing)                         | Server-Timing measurements written to a response header                        |     |
-| [service-container](packages/service-container)                 | Dependency injection service container                                         |     |
-| [seo](packages/seo)                                             | Canonical URLs, schema.org builders and head metadata                          |     |
-| [session-storage-kv](packages/session-storage-kv)               | Session storage adapter for Cloudflare KV                                      |     |
-| [sitemap](packages/sitemap)                                     | Sitemap generation utilities                                                   |     |
-| [spec](packages/spec)                                           | Executable specification runner for `.spec` files                              | ✅  |
-| [strings](packages/strings)                                     | Inflection, Chicago title case, slugs and grapheme-safe text                   |     |
-| [typeid](packages/typeid)                                       | Type-safe prefixed id utilities                                                |     |
-| [types](packages/types)                                         | Shared TypeScript types                                                        | ✅  |
-| [u](packages/u)                                                 | Tailwind-like Remix UI styling utilities                                       |     |
-| [ui](packages/ui)                                               | Remix v3 UI component library                                                  |     |
-| [ui-router](packages/ui-router)                                 | SPA router for Remix UI apps                                                   |     |
-| [uuid](packages/uuid)                                           | UUID utilities                                                                 |     |
-| [validate](packages/validate)                                   | Standard Schema validation utilities                                           |     |
-| [webhooks](packages/webhooks)                                   | Standard Webhooks signing, verification and replay guards                      |     |
-| [workers-cache](packages/workers-cache)                         | Cloudflare cache tags, purging and cache-status reads                          |     |
-| [xml](packages/xml)                                             | XML generation utilities                                                       |     |
-| [yaml](packages/yaml)                                           | YAML reading and writing over a documented subset                              |     |
+| Package                                                         | Description                                                                         |     |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------- | --- |
+| [api-client](packages/api-client)                               | Base class for clients of a remote HTTP API                                         |     |
+| [arrays](packages/arrays)                                       | Array utility functions                                                             |     |
+| [auth](packages/auth)                                           | OAuth 2.0 and OpenID Connect client for Remix on Cloudflare Workers                 |     |
+| [billing](packages/billing)                                     | Vendor-neutral billing with pluggable providers and a webhook endpoint              |     |
+| [blog-engine](packages/blog-engine)                             | Host-agnostic blog engine                                                           |     |
+| [catch-response-middleware](packages/catch-response-middleware) | Router middleware that turns a thrown `Response` into the response                  |     |
+| [cloudflare-mocks](packages/cloudflare-mocks)                   | In-memory Cloudflare binding mocks for tests                                        |     |
+| [cron](packages/cron)                                           | Cron schedules with zone-aware occurrences and descriptors                          |     |
+| [crypto](packages/crypto)                                       | WebCrypto primitives: hashing, HMAC, passwords, TOTP, AES-GCM                       | ✅  |
+| [data-table-d1](packages/data-table-d1)                         | Remix Data Table adapter for Cloudflare D1                                          |     |
+| [data-table-sqlstorage](packages/data-table-sqlstorage)         | Remix Data Table adapter for Durable Object SQL                                     |     |
+| [dates](packages/dates)                                         | Zone-aware date operations with Intl-only formatting                                | ✅  |
+| [duration](packages/duration)                                   | Typed duration strings converted to milliseconds or seconds                         | ✅  |
+| [get-client-ip](packages/get-client-ip)                         | Extract client IP from requests                                                     |     |
+| [highlight](packages/highlight)                                 | Syntax highlighting as tokens, with a Markdoc fence node                            |     |
+| [hostname](packages/hostname)                                   | Hostname parsing and validation utilities                                           |     |
+| [http](packages/http)                                           | HTTP helper utilities                                                               |     |
+| [i18n](packages/i18n)                                           | Language detection, i18next instances and translated-markup components              | ✅  |
+| [icons](packages/icons)                                         | Lucide icons for Remix UI                                                           |     |
+| [iife](packages/iife)                                           | Immediately invoked function helper                                                 |     |
+| [jobs](packages/jobs)                                           | Job queue utilities                                                                 |     |
+| [jwt](packages/jwt)                                             | JWT payload classes and the keys that sign them                                     | ✅  |
+| [kv-cache](packages/kv-cache)                                   | Read-through cache store over Cloudflare KV                                         |     |
+| [location](packages/location)                                   | URL-like path Location class                                                        |     |
+| [logger](packages/logger)                                       | One wide event per Worker invocation, attached at the router and the job dispatcher |     |
+| [mail](packages/mail)                                           | Transactional email with pluggable transports                                       |     |
+| [markdown](packages/markdown)                                   | Markdown parsing and Remix UI rendering                                             |     |
+| [mcp](packages/mcp)                                             | MCP servers over stateless Streamable HTTP                                          |     |
+| [oidc-provider](packages/oidc-provider)                         | OIDC/OAuth2 provider engine                                                         |     |
+| [pagination](packages/pagination)                               | Offset and keyset pagination with Link headers                                      |     |
+| [rate-limit](packages/rate-limit)                               | Adapter-based rate limiting with standard headers                                   |     |
+| [response](packages/response)                                   | HTTP response utilities                                                             |     |
+| [result](packages/result)                                       | Result type for error handling                                                      | ✅  |
+| [rss](packages/rss)                                             | RSS feed utilities                                                                  |     |
+| [sample](packages/sample)                                       | Seeded generation of believable people, places, prose, numbers and identifiers      | ✅  |
+| [server-timing](packages/server-timing)                         | Server-Timing measurements written to a response header                             |     |
+| [service-container](packages/service-container)                 | Dependency injection service container                                              |     |
+| [seo](packages/seo)                                             | Canonical URLs, schema.org builders and head metadata                               |     |
+| [session-storage-kv](packages/session-storage-kv)               | Session storage adapter for Cloudflare KV                                           |     |
+| [sitemap](packages/sitemap)                                     | Sitemap generation utilities                                                        |     |
+| [spec](packages/spec)                                           | Executable specification runner for `.spec` files                                   | ✅  |
+| [strings](packages/strings)                                     | Inflection, Chicago title case, slugs and grapheme-safe text                        |     |
+| [typeid](packages/typeid)                                       | Type-safe prefixed id utilities                                                     |     |
+| [types](packages/types)                                         | Shared TypeScript types                                                             | ✅  |
+| [u](packages/u)                                                 | Tailwind-like Remix UI styling utilities                                            |     |
+| [ui](packages/ui)                                               | Remix v3 UI component library                                                       |     |
+| [ui-router](packages/ui-router)                                 | SPA router for Remix UI apps                                                        |     |
+| [uuid](packages/uuid)                                           | UUID utilities                                                                      |     |
+| [validate](packages/validate)                                   | Standard Schema validation utilities                                                |     |
+| [webhooks](packages/webhooks)                                   | Standard Webhooks signing, verification and replay guards                           |     |
+| [workers-cache](packages/workers-cache)                         | Cloudflare cache tags, purging and cache-status reads                               |     |
+| [xml](packages/xml)                                             | XML generation utilities                                                            |     |
+| [yaml](packages/yaml)                                           | YAML reading and writing over a documented subset                                   |     |
 
 ## Third-Party Dependencies
 

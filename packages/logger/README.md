@@ -1,483 +1,286 @@
 # @sdxc/logger
 
-Structured logging for Cloudflare Workers and other runtimes.
+One wide event per Worker invocation, attached at the router and the job dispatcher.
 
 ## Overview
 
-This package provides three logging modes:
+Cloudflare already writes one log per invocation — the request, the response, timing, the
+colo — and correlates every `console` call made during it. What it cannot know is what the
+invocation meant: which route matched, which user and team it was for, how many queries it
+ran, how it ended. This package records exactly that, once per invocation, as one flat JSON
+record: every field a scalar under a dotted key, so each is a filter in the log index, plus
+a capped `notes` array for the narrative you read once a query has found the record.
 
-- **Immediate logging (`Logger`)**: Each log call outputs directly to the console
-- **Batched logging (`BatchedLogger`)**: Accumulates all logs from an execution context and outputs them as a single entry when flushed
-- **Request logging (`RequestLogger`)**: A request-scoped logger that groups events into named scopes (middleware, loaders, actions, render) and flushes them as one entry with request/response metadata
-
-Batched logging is designed for Cloudflare Workers to consolidate all logs from a single execution context (request, workflow, cron job) into one log entry. This works well with Cloudflare's logging system which automatically captures request metadata.
-
-Request logging builds on batched logging: each scope is its own batched logger, so parallel work can log independently without interleaving, and the whole request lands in the dashboard as a single searchable entry with Cloudflare, user, and billing context attached.
-
-### Entry points
-
-| Import                    | Exports                                                                           |
-| ------------------------- | --------------------------------------------------------------------------------- |
-| `@sdxc/logger`            | `Logger` (immediate), `logger` singleton, `BatchedLogger`, `RequestLogger`, `Log` |
-| `@sdxc/logger/middleware` | `logger`, the request-logging middleware (also the default export)                |
-| `@sdxc/logger/batched`    | `Logger` (batched)                                                                |
-| `@sdxc/logger/request`    | `Logger` (request-scoped)                                                         |
-
-`BatchedLogger` and `RequestLogger` from the root are aliases of the `Logger` classes exported by the `/batched` and `/request` subpaths. Import from the root when you need more than one of them in the same file.
-
-The package has no runtime dependencies. `remix` is a devDependency only: the middleware imports `Middleware` with `import type`, so nothing from remix survives into the emitted code.
+A worker states its configuration once with `createLogger()` and hands it to the two places
+every invocation passes through: the router's middleware chain, through `log(logger)`, and
+the job dispatcher, through its `logger` option. Anything running inside the invocation —
+a service, a package, a job — reaches the same record through `currentLog()`, which is
+`AsyncLocalStorage` under `nodejs_compat`, so nothing has to be handed the log to enrich it.
 
 ## Usage
 
-### Immediate logging
-
-For anything outside a request or job — service modules, bootstrap code, one-off scripts — use the exported singleton:
+### Configure once
 
 ```typescript
-import { logger } from "@sdxc/logger";
+// bootstrap/logger.ts
+import { createLogger } from "@sdxc/logger";
+import { env } from "cloudflare:workers";
 
-logger.info("app.started");
-logger.error("startup.failed", { reason: "missing config" });
+export const logger = createLogger({
+	service: "uptime",
+	environment: env.ENVIRONMENT,
+	version: env.CF_VERSION_METADATA?.id,
+});
 ```
 
-### Batched logging
-
-For a self-contained unit of work with a known identifier — a queue message, a cron run, a workflow step:
+### Attach at the router
 
 ```typescript
-import { BatchedLogger } from "@sdxc/logger";
+import { log } from "@sdxc/logger/middleware";
+import { createRouter } from "remix/router";
 
-let log = new BatchedLogger("cron:daily-cleanup");
+let router = createRouter({ middleware: [log(logger), session(), database()] });
 
-log.info("cleanup.started");
-let deleted = await deleteExpiredSessions();
-log.info("cleanup.completed", { deleted });
-
-log.flush();
+router.get("/teams/:teamId/monitors", async (ctx) => {
+	ctx.log.set({ team: { id: ctx.params.teamId } });
+	let monitors = await ctx.log.time("db", () => Monitor.list(ctx.database, ctx.params.teamId));
+	ctx.log.set({ monitors: { count: monitors.length } });
+	return Response.json(monitors);
+});
 ```
 
-`flush()` is a no-op when nothing was logged, and picks `console.error` over `console.info` if any entry was an error.
+The record that request emits:
 
-### Request logging
+```jsonc
+{
+	"service": "uptime",
+	"environment": "production",
+	"version": "5f2a…",
+	"kind": "request",
+	"route": "/teams/:teamId/monitors",
+	"http.method": "GET",
+	"http.status": 200,
+	"team.id": "team_…",
+	"db.count": 1,
+	"db.duration_ms": 31.4,
+	"monitors.count": 12,
+	"outcome": "ok",
+	"duration_ms": 84.2,
+}
+```
 
-Add the middleware to your router and every handler logs through `ctx.logger` instead of the console:
+`route` is the pattern, never the path: the middleware substitutes each param's value back
+out of the pathname once the handler has run. `http.method` and `http.status` are recorded
+alongside it; the URL, headers, and colo are already on Cloudflare's own log.
+
+### Attach at the job dispatcher
 
 ```typescript
-// bootstrap/worker.ts
-import { logger } from "@sdxc/logger/middleware";
+import { createJobDispatcher } from "@sdxc/jobs";
 
-let router = createRouter({ middleware: [logger] });
+export const dispatcher = createJobDispatcher({ logger, send, middleware: [database()] });
 ```
 
-Register it as the outermost middleware so every later middleware and handler can reach it. It is also the module's default export, if you prefer `import logger from "@sdxc/logger/middleware"`.
+A cron trigger, a queue batch, and every job in the batch each get a log of their own kind,
+and a handler reads its own as `ctx.log`.
 
-Importing the middleware is also what gives you the type. The `declare module "remix/router"` augmentation that adds `logger` to `RequestContext` ships from the middleware module itself rather than an ambient `.d.ts`, because ambient declarations are not pulled in transitively — a consumer only picks up the type by importing the module it comes with.
+### Any other entry point
 
-### Using scoped loggers
-
-Each scope returns a `BatchedLogger` of its own, so concurrent work never interleaves:
+A host with neither a router nor a dispatcher in front of it opens a log directly:
 
 ```typescript
-// In a middleware
-let log = ctx.logger.middleware("session");
-log.info("session.read", { subject: session.subject });
+export class Tenant extends DurableObject {
+	override fetch(request: Request) {
+		return logger.open("request", { tenant: { id: this.id } }).run(() => this.#app.fetch(request));
+	}
 
-// In a read handler
-let log = ctx.logger.loader("/dashboard/tenants");
-log.info("tenants.loaded", { count: tenants.length });
-
-// In a write handler
-let log = ctx.logger.action("/dashboard/tenants");
-log.error("tenant.create.failed", { error: result.error.message });
-
-// Around rendering
-let log = ctx.logger.render;
-log.info("render.complete");
+	override alarm() {
+		return logger.open("alarm", { tenant: { id: this.id } }).run(() => this.#app.cleanup());
+	}
+}
 ```
 
-Attach request-wide context as you learn it, and it shows up at the top level of the flushed entry:
+`run()` binds the log as current for the body, fails it if the body throws, and emits it
+once the body settles. A router inside that body finds the log current and joins it, so the
+tenant's request produces one record carrying both `tenant.id` and the route.
+
+### From anywhere inside the invocation
 
 ```typescript
-ctx.logger.subject = { id: user.id, email: user.email };
-ctx.logger.profile = { role: membership.role, teamId: team.id };
-ctx.logger.billing = { polarId: customer.polarId, plan: subscription.plan };
+import { currentLog } from "@sdxc/logger";
+
+export async function readThroughCache(key: string) {
+	let hit = await cache.get(key);
+	currentLog()?.inc(hit ? "cache.hit" : "cache.miss");
+	return hit ?? compute(key);
+}
 ```
+
+`currentLog()` is `undefined` outside an invocation, so the `?.` makes the call free in a
+test that opened none.
 
 ## API
 
-### `logger`
+### `createLogger(options: Logger.Options): Logger`
 
-Singleton instance of `Logger` for immediate logging outside of request contexts.
+The worker's configuration. Every log opened through it, or through a `log()` or dispatcher
+it was handed to, carries these values.
 
-```typescript
-import { logger } from "@sdxc/logger";
+- `options.service`: The worker's name, the same on every log so a query can group by it.
+- `options.environment`: Whatever the bootstrap decides the environment is.
+- `options.version`: The deployed version, from the platform's version metadata when the
+  worker binds it.
+- `options.sample`: A `Sample.Options`. Off unless given: every log is written.
+- `options.sink`: Where records go. Defaults to the console; a test collects them instead.
 
-logger.info("app.started");
-```
+### `Logger`
 
-### `Logger` (immediate)
+- `logger.options`: The configuration as given.
+- `logger.open(kind, fields?)`: A `Log` carrying the configuration, for an entry point
+  nothing else wraps.
 
-Immediate logger that outputs each log call directly to the console. Each call emits `{ ...payload, event, timestamp }`.
+### `Log`
 
-```typescript
-import { Logger } from "@sdxc/logger";
+One invocation's record. `new Log(options, fields?)` builds one directly, which a test does
+to hand a handler a log it can read back; everything else opens one through a `Logger`.
 
-let log = new Logger();
+- `log.kind`: `"request" | "cron" | "queue" | "job" | "alarm"`.
+- `log.outcome`: `"ok"` until `warn()` or `fail()` says otherwise.
+- `log.parent`: The log this one was opened under, when it was opened with `child()`.
+- `log.set(fields)`: Merges fields. One level of nesting is accepted and flattened to dotted
+  keys, so `{ user: { id } }` is stored as `user.id`. Values are scalars; an `undefined` is
+  skipped.
+- `log.inc(field, by?)`: Adds to a counter, creating it at zero.
+- `log.time(name, fn)`: Runs `fn` and adds to `${name}.count` and `${name}.duration_ms`
+  however it returns; rethrows what `fn` threw.
+- `log.note(name, fields?)`: A breadcrumb, with its offset in milliseconds from when the
+  log opened. Two hundred are kept; past that `notes.dropped` counts the rest.
+- `log.warn(name, fields?)`: A breadcrumb that degrades the outcome — recorded and kept,
+  without being an alarm.
+- `log.fail(error, fields?)`: Sets the outcome to `error` and records `error.type`,
+  `error.message`, and — when the error carries them — `error.code` and `error.retriable`.
+  The stack is attached when the record is written.
+- `log.child(kind, fields?)`: A log of another kind sharing this one's configuration. When
+  it emits it adds to this log's `${kind}.count` and degrades this log if it did not end
+  `ok`.
+- `log.run(fn)`: Binds this log as the current one for `fn`, fails it if `fn` throws, emits
+  it once `fn` settles, and returns what `fn` returned.
+- `log.emit()`: Writes the record once — `console.log` for `ok`, `console.warn` for
+  `degraded`, `console.error` for `error` — or drops it when the sampler says so. A second
+  call does nothing.
 
-log.info(event: string, payload?: Log.Payload): void
-log.error(event: string, payload?: Log.Payload): void
-```
+### `currentLog(): Log | undefined`
 
-### `Logger` (batched)
+The log of the invocation the call runs inside, or `undefined` outside one.
 
-Available as `BatchedLogger` from `@sdxc/logger` or `Logger` from `@sdxc/logger/batched`. Accumulates log entries and outputs them all at once when flushed.
+### `log(logger?: Logger)` — from `@sdxc/logger/middleware`
 
-```typescript
-import { Logger } from "@sdxc/logger/batched";
+Router middleware publishing the invocation's log as `ctx.log`. When a log is already
+current it is joined, so a request served inside a host's or a dispatcher's log produces one
+record. Otherwise a `request` log opens — carrying `logger`'s configuration when one is
+given — and emits once the response is settled. Either way it records `route` and
+`http.method`, and `http.status` when it opened the log itself.
 
-// Factory method for HTTP requests
-let log = Logger.fromRequest(request);
+Omitting `logger` is for a package that builds its own router and cannot know the worker's
+configuration: its logs carry no `service`, which is the visible sign that the host running
+it has not wrapped its entry point with `logger.open().run()`.
 
-// Or create with a custom identifier
-let log = new Logger("workflow:cleanup:abc123");
-```
+### `CurrentLog` — from `@sdxc/logger/middleware`
 
-#### `Logger.fromRequest(request: Request): Logger`
+The context key `log()` publishes under, for code that reads `ctx.get(CurrentLog)` off a
+request context whose middleware chain it does not know.
 
-Creates a logger with identifier `"METHOD URL"` (e.g. `"POST https://example.com/api/users"`).
+### Types
 
-#### `new Logger(identifier: string)`
-
-Creates a logger with a custom identifier for non-HTTP contexts like workflows or cron jobs.
-
-#### `info(event: string, payload?: Log.Payload): void`
-
-Adds an info-level log entry to the batch.
-
-#### `error(event: string, payload?: Log.Payload): void`
-
-Adds an error-level log entry to the batch.
-
-#### `get events(): Logger.Event[]`
-
-The accumulated entries, each flattened to `{ level, event, ...payload }`.
-
-#### `get hasEvents(): boolean`
-
-Whether anything has been logged yet.
-
-#### `get hasError(): boolean`
-
-Whether any accumulated entry is error-level.
-
-#### `toJSON(): Logger.Output`
-
-Returns `{ timestamp, events }`.
-
-#### `flush(): void`
-
-Outputs all accumulated logs as a single console call and clears the buffer. Does nothing when no events were recorded. Uses `console.error` if any error is present, otherwise `console.info`.
-
-### `Logger.Event` (batched)
-
-Type representing a single event in the batched output:
+#### `Sample.Options`
 
 ```typescript
-type Event = {
-	level: Log.Level;
-	event: string;
-	[key: string]: unknown;
-};
-```
-
-### `Logger` (request)
-
-Available as `RequestLogger` from `@sdxc/logger` or `Logger` from `@sdxc/logger/request`.
-
-```typescript
-class Logger {
-	constructor(request: Request);
-
-	// Context setters
-	set subject(subject: Logger.Subject);
-	set profile(profile: Logger.Profile);
-	set billing(billing: Logger.Billing);
-	set response(response: Response);
-
-	// Scoped loggers (each is an independent BatchedLogger)
-	middleware(name: string): BatchedLogger;
-	loader(id: string): BatchedLogger;
-	action(id: string): BatchedLogger;
-	get render(): BatchedLogger;
-
-	// Unscoped logging (for catch blocks, edge cases)
-	info(event: string, payload?: Record<string, unknown>): void;
-	error(event: string, payload?: Record<string, unknown>): void;
-
-	// Output
-	get identifier(): string; // "METHOD URL STATUS"
-	toJSON(): Logger.Output;
-	flush(): void;
+interface Options {
+	/** Fraction of `ok` logs kept. Defaults to 1: everything. */
+	rate?: number;
+	/** An `ok` log at least this slow is kept whatever the rate. */
+	slowerThanMs?: number;
+	/** An `ok` log is kept whatever the rate when this returns true. */
+	keep?: (fields: Readonly<Record<string, Log.Value>>) => boolean;
 }
 ```
 
-The constructor captures the request method, URL, filtered headers, and Cloudflare `cf` properties, and starts a duration timer. The entry `id` is the `cf-ray` header when present, otherwise a random UUID.
+A `degraded` or `error` log is always written. `rate` applies to `ok` logs only.
 
-`middleware(name)`, `loader(id)`, and `action(id)` are get-or-create: calling them twice with the same key returns the same scoped logger, so a handler can grab its logger in several places without splitting the output. Only one action scope exists per request. `render` is a lazily created scope for work done while producing the response body.
-
-The scope names come from the phases a request goes through: `middleware` for anything in the middleware chain, `loader` for handlers that read, `action` for handlers that write, and `render` for response generation. The `id` you pass is free-form — apps in this repo pass the route path, e.g. `"/dashboard/tenants"`.
-
-`flush()` writes one console entry with `identifier` as the message and `toJSON()` as the payload, using `console.error` if any scope recorded an error. Unlike the batched logger it does not clear its buffer, so call it exactly once per request.
-
-#### Namespace types (request)
+#### `Log.Fields`
 
 ```typescript
-namespace Logger {
-	interface Subject {
-		id: string;
-		[key: string]: unknown;
-	}
-	interface Profile {
-		[key: string]: unknown;
-	}
-	interface Billing {
-		polarId: string;
-		[key: string]: unknown;
-	}
-	interface CloudflareInfo {
-		colo: string;
-		country: string | null;
-		city: string | null;
-		region: string | null;
-		timezone: string;
-		asn: number;
-		asOrganization: string;
-		httpProtocol: string;
-		tlsVersion: string;
-	}
-	interface RequestInfo {
-		url: {
-			protocol: string;
-			hostname: string;
-			pathname: string;
-			search: string;
-		};
-		method: string;
-		headers: Record<string, string>;
-		cf?: CloudflareInfo;
-	}
-	interface ResponseInfo {
-		status: number;
-		headers: Record<string, string>;
-	}
-	interface Event {
-		level: "info" | "error";
-		event: string;
-		[key: string]: unknown;
-	}
-	interface Output {
-		id: string;
-		timestamp: number;
-		duration: number;
-		request: RequestInfo;
-		response?: ResponseInfo;
-		subject?: Subject;
-		profile?: Profile;
-		billing?: Billing;
-		middleware?: Record<string, Event[]>;
-		loaders?: Record<string, Event[]>;
-		action?: { routeId: string; events: Event[] };
-		render?: Event[];
-		events?: Event[];
-	}
+type Value = string | number | boolean | null;
+type Fields = Record<string, Value | undefined | Record<string, Value | undefined>>;
+```
+
+## Pattern: Shared Namespaces From Middleware
+
+The fields a query starts from — who, for which tenant — are known by the middleware that
+resolves them, so set them there and handlers stop repeating it:
+
+```typescript
+export function requireUser(): Middleware {
+	return async (ctx, next) => {
+		let user = await User.fromSession(ctx.session);
+		if (!user) return redirect(routes.login.href());
+		ctx.log.set({ user: { id: user.id, plan: user.plan } });
+		return next();
+	};
 }
 ```
 
-### `logger` (middleware)
+`user`, `team`, `tenant`, `db`, `fetch`, `cache`, `error`, `http`, `job`, and `mcp` mean the
+same thing in every worker, which is what makes a query across workers possible at all.
 
-The request-logging middleware, from `@sdxc/logger/middleware` as either a named or a default export. It is a `Middleware` from `remix/router`.
+## Pattern: Turning Sampling On For One Kind
 
-```typescript
-import { logger } from "@sdxc/logger/middleware";
-
-let router = createRouter({ middleware: [logger] });
-```
-
-For each request it:
-
-- Constructs `new Logger(ctx.request)` from `@sdxc/logger/request` and assigns it to `ctx.logger`
-- On success, assigns the downstream response to `ctx.logger.response` and returns it
-- On a throw, logs `unhandled_error` with `error` (the message, or `String(error)` for non-`Error` throws) and `stack`, then re-throws
-- Calls `ctx.logger.flush()` in a `finally` block, so both paths flush exactly once
-
-The module also declares the `RequestContext` augmentation that types `ctx.logger`, so importing the middleware is what brings the type along with it.
-
-### `Log` namespace
-
-Type definitions shared by the immediate and batched loggers:
+Workers Logs bills per event written, both Cloudflare's and this one. Width costs nothing,
+so the default keeps every log. When a worker's volume approaches the plan's allotment, the
+successful job runs are where the events are, and `keep` confines the rate to them:
 
 ```typescript
-namespace Log {
-	type Payload = Record<string, unknown>;
-	type Level = "info" | "error";
-	type Entry = { level: Level; event: string; payload?: Payload };
-}
+export const logger = createLogger({
+	service: "uptime",
+	sample: { rate: 0.05, keep: ({ kind }) => kind !== "job" },
+});
 ```
 
-## Output format
+Every request is kept, every failed or retried job is kept, and one in twenty successful
+job runs is kept.
 
-A flushed request logger produces one console line plus one JSON payload:
+## Pattern: Testing What A Handler Records
 
-```
-GET https://example.com/app/team-1/monitors 200
-```
-
-```json
-{
-	"id": "abc123-DFW",
-	"timestamp": 123.45,
-	"duration": 145,
-	"request": {
-		"method": "GET",
-		"url": {
-			"protocol": "https:",
-			"hostname": "example.com",
-			"pathname": "/app/team-1/monitors",
-			"search": ""
-		},
-		"headers": { "user-agent": "Mozilla/5.0..." },
-		"cf": {
-			"colo": "DFW",
-			"country": "US",
-			"city": "Austin"
-		}
-	},
-	"response": { "status": 200, "headers": {} },
-	"subject": { "id": "user_123", "email": "..." },
-	"profile": { "role": "admin", "teamId": "team_456" },
-	"billing": { "polarId": "cust_abc", "plan": "pro" },
-	"middleware": {
-		"session": [{ "level": "info", "event": "session.read" }]
-	},
-	"loaders": {
-		"/app/team-1/monitors": [{ "level": "info", "event": "monitors.loaded" }]
-	},
-	"render": [{ "level": "info", "event": "render.complete" }]
-}
-```
-
-Empty scopes are omitted, and `request.cf` is dropped when the request has no Cloudflare properties (local runs, tests).
-
-## Patterns
-
-### Request middleware
-
-Apps that serve HTTP put `logger` from `@sdxc/logger/middleware` at the head of the router's middleware stack and log through `ctx.logger` from there on. Construct a `Logger` from `@sdxc/logger/request` directly only when you are outside a router — a Durable Object, a custom `fetch` handler — and then you own the `response` assignment and the `flush()` in a `finally` yourself.
-
-### Handler logging
+A sink collects records, and a handler under test reads the log it was handed:
 
 ```typescript
-async function handler(ctx: RequestContext) {
-	let log = ctx.logger.loader("/monitors/:id");
+import { Log } from "@sdxc/logger";
 
-	log.info("monitor.load", { monitorId: ctx.params.id });
+test("records the team it served", async () => {
+	let records: Record<string, unknown>[] = [];
+	let log = new Log({ kind: "request", sink: (record) => void records.push(record) });
 
-	let result = await fetchMonitor(ctx.params.id);
+	await log.run(() => handler(contextWith({ log })));
 
-	if (isFailure(result)) {
-		log.error("monitor.load.failed", {
-			monitorId: ctx.params.id,
-			error: result.error.message,
-		});
-		throw new Response("Not found", { status: 404 });
-	}
-
-	return ctx.render(<Monitor monitor={result.data} />);
-}
+	expect(records[0]).toMatchObject({ "team.id": "team_1", outcome: "ok" });
+});
 ```
-
-### Error logging with structured data
-
-```typescript
-async function handler(ctx: RequestContext) {
-	let log = ctx.logger.action("/settings");
-	let formData = await ctx.request.formData();
-
-	try {
-		let result = await processForm(formData);
-
-		if (isFailure(result)) {
-			log.error("form.validation.failed", { errors: result.error.flatten() });
-			return ctx.render(<Settings errors={result.error.flatten()} />);
-		}
-
-		log.info("form.submitted", { id: result.data.id });
-		return ctx.redirect(`/success/${result.data.id}`);
-	} catch (error) {
-		log.error("form.unexpected.error", {
-			message: error instanceof Error ? error.message : String(error),
-			stack: error instanceof Error ? error.stack : undefined,
-		});
-		throw error;
-	}
-}
-```
-
-### Background jobs
-
-`@sdxc/jobs` constructs a `BatchedLogger` per job, named after the job id, and flushes it when the job settles. Inside a job, log through `this.logger`:
-
-```typescript
-export class CleanupJob extends Job {
-	async perform() {
-		this.logger.info("cleanup.started");
-		let deleted = await deleteExpiredSessions();
-		this.logger.info("cleanup.completed", { deleted });
-	}
-}
-```
-
-### Testing
-
-Handlers and jobs that take a logger can be tested with a real `BatchedLogger` — nothing is written to the console until `flush()` is called, and `events` exposes what was recorded:
-
-```typescript
-import { BatchedLogger } from "@sdxc/logger";
-
-let logger = new BatchedLogger("test");
-
-await performWork({ logger });
-
-expect(logger.events).toContainEqual({ level: "info", event: "work.completed" });
-```
-
-## Header filtering
-
-The request logger records only non-sensitive headers.
-
-**Included request headers**: `content-type`, `accept`, `accept-language`, `accept-encoding`, `user-agent`, `referer`, `origin`, `x-forwarded-for`, `x-real-ip`, `x-forwarded-proto`, `x-forwarded-host`, `x-request-id`, `x-correlation-id`
-
-**Excluded request headers**: `authorization`, `cookie`, `x-api-key`, `x-auth-token`, and any containing `secret`, `token`, `key`, `password`, `credential`
-
-**Included response headers**: `content-type`, `content-length`, `content-encoding`, `cache-control`, `etag`, `last-modified`, `location`, `x-request-id`, `cf-ray`, `server-timing`
-
-**Excluded response headers**: `set-cookie` — the value carries session data, but the names alone are what you need to debug session and auth issues, so they are surfaced separately as `set-cookie-names`.
 
 ## Related Packages
 
-- [`@sdxc/jobs`](/packages/jobs) - Constructs a `BatchedLogger` per job execution
-- [`@sdxc/result`](/packages/result) - Result type commonly paired with the logger for error tracking and control flow
+- [`@sdxc/jobs`](/packages/jobs) - Hands the dispatcher the same `Logger` so a cron trigger,
+  a queue batch, and each job run get a log of their own
+- [`@sdxc/mcp`](/packages/mcp) - Enriches the request's log with the MCP method and tool
 
 ## Tips
 
-1. **Use the middleware in HTTP contexts** - `@sdxc/logger/middleware` consolidates every scope of a request into one entry, making it easy to trace a request in Cloudflare's logging dashboard.
-
-2. **Use the singleton logger for module-level code** - Service modules and bootstrap code have no request or job context to log through; import `logger` from `@sdxc/logger` there.
-
-3. **Name scopes after the thing doing the work** - A middleware name or a route path makes the flushed entry readable; a generic name makes every request look the same.
-
-4. **Always include relevant context in log payloads** - Add `userId`, `teamId`, `resourceId`, or other identifiers to help with debugging and filtering logs.
-
-5. **Flush in a `finally` block** - The middleware already does this for requests; if you flush a logger yourself, do the same, since errors are the logs you most want and flushing outside a `finally` loses them exactly when something throws.
-
-6. **Never log credentials** - Header filtering protects the request metadata, not your payloads. Tokens, authorization codes, client secrets, and password material must never reach a log payload.
+1. **Fields for filtering, notes for reading** - if you would ever want to query by it, it
+   is a field. A note is for understanding one record after a query found it.
+2. **Never put an id in a key** - `set({ team: { id } })` is `team.id`; a key built from a
+   value grows the index by one field per value forever.
+3. **Leave the request alone** - method, URL, headers, status, and colo are on Cloudflare's
+   own log. Record what only the code knows.
+4. **`time()` around anything with a duration** - a database call, an outbound fetch, a
+   render. The count and the total arrive in the record with no bookkeeping at the call site.
+5. **A log with no `service` means a host went unwrapped** - find the Durable Object or
+   bare Worker that runs the router and open a log around its entry point.
