@@ -12,7 +12,7 @@ import type { Middleware } from "remix/router";
 import billing from "@sdxc/billing/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { notFound } from "@sdxc/http/response/html";
-import { logger } from "@sdxc/logger/middleware";
+import { log } from "@sdxc/logger/middleware";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
@@ -32,6 +32,8 @@ import { createSessionMiddleware } from "~/app/http/middleware/session";
 import { polar } from "~/app/lib/billing";
 import routes from "~/routes/web";
 
+import { logger } from "./logger";
+
 /**
  * Builds the platform dashboard + marketing router. The worker entry only reaches
  * this on the platform domain; each route group is mapped separately (nested
@@ -48,7 +50,7 @@ export function createDashboardRouter() {
 	 */
 	let middleware: Middleware[] = [
 		headRequests(),
-		logger,
+		log(logger) as Middleware,
 		asyncContext(),
 		renderMiddleware as Middleware,
 		createSessionMiddleware(env.COOKIE_SESSION_SECRET, true),

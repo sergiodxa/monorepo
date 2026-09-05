@@ -86,9 +86,9 @@ export default createController(routes.dashboard.billing, {
 				});
 
 				if (isFailure(session)) {
-					ctx.logger.error("billing.portal_failed", {
+					ctx.log.warn("billing.portal_failed", {
 						code: session.error.code,
-						providerCode: session.error.providerCode,
+						provider_code: session.error.providerCode,
 					});
 
 					return redirect("/dashboard/billing", { status: redirect.Status.SeeOther });
@@ -107,9 +107,9 @@ export default createController(routes.dashboard.billing, {
 			});
 
 			if (isFailure(checkout)) {
-				ctx.logger.error("billing.checkout_failed", {
+				ctx.log.warn("billing.checkout_failed", {
 					code: checkout.error.code,
-					providerCode: checkout.error.providerCode,
+					provider_code: checkout.error.providerCode,
 				});
 
 				return redirect("/dashboard/billing", { status: redirect.Status.SeeOther });

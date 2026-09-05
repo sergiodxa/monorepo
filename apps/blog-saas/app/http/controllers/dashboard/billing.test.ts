@@ -39,7 +39,7 @@ vi.doMock("cloudflare:workers", () => ({
 let { createTestDatabase } = await import("~/app/test/db");
 let Account = (await import("~/app/models/account")).default;
 let BillingCustomer = (await import("~/app/models/billing-customer")).default;
-let { logger } = await import("@sdxc/logger/middleware");
+let { log } = await import("@sdxc/logger/middleware");
 let { default: billing } = await import("./billing");
 
 let harness: TestDatabase;
@@ -73,7 +73,7 @@ function createTestRouter(accountId: string) {
 
 	let router = createRouter({
 		middleware: [
-			logger,
+			log() as Middleware,
 			asyncContext(),
 			renderMiddleware as Middleware,
 			/**

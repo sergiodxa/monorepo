@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { createEnv } from "@sdxc/cloudflare-mocks";
+import { Log } from "@sdxc/logger";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
@@ -85,10 +86,21 @@ function stubAnalytics(rows: Array<{ blogId: string; views: number }>): void {
 }
 
 /** Builds one delivery's context over the test database, the one service this job reads. */
-function createContext() {
-	let ctx = createJobContext(jobs.reportUsage, { id: "message-1", attempts: 1 });
+function createContext(log?: Log) {
+	let ctx = createJobContext(jobs.reportUsage, { id: "message-1", attempts: 1, log });
 	ctx.set(Database, harness.db, { property: "database" });
 	return ctx;
+}
+
+/**
+ * Runs the handler inside a job log that collects its record, the way a dispatcher
+ * would, so a test reads back what the run recorded.
+ */
+async function runRecorded(): Promise<Record<string, unknown>> {
+	let records: Record<string, unknown>[] = [];
+	let log = new Log({ kind: "job", sink: (record) => void records.push(record) });
+	await log.run(() => handler(createContext(log)));
+	return records[0]!;
 }
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
@@ -191,6 +203,39 @@ describe("reportUsage — metered usage idempotency", () => {
 		await handler(createContext());
 		expect(ingested.map((row) => row.external_id)).toContain(`page_views:${blogId}:2026-07-01`);
 		expect(await UsageDaily.findUnreported(harness.db)).toHaveLength(0);
+	});
+
+	test("records the day, the batch, and what the platform accepted", async () => {
+		let { blogId } = await seedBillableBlog();
+		await UsageDaily.record(harness.db, blogId, "2026-07-01", 120);
+		stubAnalytics([]);
+
+		let record = await runRecorded();
+
+		expect(record).toMatchObject({
+			outcome: "ok",
+			"usage.date": expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+			"usage.pending": 1,
+			"usage.reported": 1,
+			"usage.accepted": 1,
+		});
+	});
+
+	test("fails the run's log with the platform's error when the batch is rejected", async () => {
+		let { blogId } = await seedBillableBlog();
+		await UsageDaily.record(harness.db, blogId, "2026-07-01", 120);
+		stubAnalytics([]);
+		ingestAccepts = false;
+
+		let record = await runRecorded();
+
+		expect(record).toMatchObject({
+			outcome: "error",
+			"usage.pending": 1,
+			"error.type": "BillingError",
+			"error.code": expect.any(String),
+		});
+		expect(record).not.toHaveProperty("usage.reported");
 	});
 
 	test("skips a blog whose account has no billing customer", async () => {

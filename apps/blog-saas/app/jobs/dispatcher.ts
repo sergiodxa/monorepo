@@ -12,6 +12,7 @@ import { createJobDispatcher } from "@sdxc/jobs";
 import { env } from "cloudflare:workers";
 
 import jobs from "~/app/jobs";
+import { logger } from "~/bootstrap/logger";
 
 import { database } from "./middleware/database";
 import { hostnames } from "./middleware/hostnames";
@@ -25,6 +26,7 @@ import { provisioner } from "./middleware/provisioner";
  * settle its delivery once the signal aborts.
  */
 export const dispatcher = createJobDispatcher({
+	logger,
 	middleware: [database(), hostnames(), provisioner()],
 	timeout: "10 minutes",
 

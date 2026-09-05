@@ -12,6 +12,8 @@ import { createBlogEngine } from "@sdxc/blog-engine";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { DurableObject } from "cloudflare:workers";
 
+import { logger } from "./logger";
+
 /** Control-plane-pushed tenant configuration, stored in the DO's own SQLite. */
 export interface PlatformMeta {
 	blog_id: string;
@@ -194,13 +196,26 @@ export default class Blog extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
+	 * Serves a request inside a log carrying the tenant, so the engine's own request
+	 * log joins it and one record names both the blog and the route it served.
+	 *
+	 * @param request The incoming request routed to this tenant DO.
+	 * @returns The engine's response, or a lifecycle-gate response (404/410/402).
+	 */
+	override fetch(request: Request): Promise<Response> {
+		return logger
+			.open("request", { tenant: { id: this.#meta?.blog_id } })
+			.run(() => this.serve(request));
+	}
+
+	/**
 	 * Serves a request through the tenant's blog engine after enforcing lifecycle
 	 * gates for unprovisioned, deleted, custom-domain, and suspended tenants.
 	 *
 	 * @param request The incoming request routed to this tenant DO.
 	 * @returns The engine's response, or a lifecycle-gate response (404/410/402).
 	 */
-	override async fetch(request: Request): Promise<Response> {
+	private async serve(request: Request): Promise<Response> {
 		if (!this.#meta || !this.#app) return new Response("Not found", { status: 404 });
 		let meta = this.#meta;
 		let url = new URL(request.url);
@@ -233,10 +248,13 @@ export default class Blog extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * Durable Object alarm handler; fires daily and simply re-arms the next alarm so
-	 * the DO keeps a heartbeat for future housekeeping.
+	 * the DO keeps a heartbeat for future housekeeping. Each firing emits one `alarm`
+	 * log naming the tenant, so a tenant whose heartbeat stopped is one query away.
 	 */
-	override async alarm(): Promise<void> {
-		await this.scheduleAlarm();
+	override alarm(): Promise<void> {
+		return logger
+			.open("alarm", { tenant: { id: this.#meta?.blog_id } })
+			.run(() => this.scheduleAlarm());
 	}
 
 	/** Schedules the daily housekeeping alarm at the next midnight UTC if unset. */

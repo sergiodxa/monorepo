@@ -42,11 +42,13 @@ function usageEventId(blogId: string, date: string): string {
 
 /**
  * Materializes yesterday's page views into `usage_daily`, then reports the unreported
- * blog-days in one batch. A rejected batch leaves every row unreported and logs the
- * reason, so the next run sends the same keys and the platform still counts them once.
+ * blog-days in one batch. A rejected batch leaves every row unreported and fails the
+ * run's log with the platform's error, so the next run sends the same keys and the
+ * platform still counts them once.
  */
 export default createJobHandler(jobs.reportUsage, async (ctx) => {
 	let date = yesterday();
+	ctx.log.set({ usage: { date } });
 
 	for (let row of await queryDailyPageViews(date)) {
 		await UsageDaily.record(ctx.database, row.blogId, date, row.views);
@@ -72,24 +74,17 @@ export default createJobHandler(jobs.reportUsage, async (ctx) => {
 		pending.push(usage.id);
 	}
 
-	if (events.length === 0) return ctx.logger.info("usage.reported", { date, count: 0 });
+	ctx.log.set({ usage: { pending: events.length } });
+	if (events.length === 0) return;
 
 	let ingested = await polar.usage.ingest(events);
 
 	if (isFailure(ingested)) {
-		return ctx.logger.error("usage.ingest_failed", {
-			date,
-			count: events.length,
-			code: ingested.error.code,
-			providerCode: ingested.error.providerCode,
-		});
+		ctx.log.fail(ingested.error, { error: { provider_code: ingested.error.providerCode } });
+		return;
 	}
 
 	for (let id of pending) await UsageDaily.markReported(ctx.database, id);
 
-	ctx.logger.info("usage.reported", {
-		date,
-		count: pending.length,
-		accepted: ingested.data.accepted,
-	});
+	ctx.log.set({ usage: { reported: pending.length, accepted: ingested.data.accepted } });
 });

@@ -21,11 +21,11 @@ const RETENTION_DAYS = 30;
 export default createJobHandler(jobs.purgeDeletedBlogs, async (ctx) => {
 	let cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
 	let expired = await Blog.findDeletedBefore(ctx.database, cutoff);
+	ctx.log.set({ blogs: { cutoff, expired: expired.length } });
 
 	for (let blog of expired) {
 		if (ctx.signal.aborted) ctx.ack("The next purge removes the blogs left.");
 		await ctx.provisioner.purge(blog.id);
+		ctx.log.inc("blogs.purged");
 	}
-
-	ctx.logger.info("blogs.purged", { count: expired.length, cutoff });
 });
