@@ -15,7 +15,7 @@ import type { RemixNode } from "remix/ui";
 
 import billing from "@sdxc/billing/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
-import logger from "@sdxc/logger/middleware";
+import { log } from "@sdxc/logger/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
@@ -36,6 +36,8 @@ import polarWebhook from "~/app/http/controllers/webhooks/polar";
 import { polar } from "~/app/lib/billing";
 import routes from "~/routes/web";
 
+import { logger } from "./logger";
+
 /**
  * Builds the books HTTP router. `headRequests()` leads the middleware chain
  * so a `HEAD` probe reads like its `GET` to later steps, and each route is
@@ -49,7 +51,7 @@ export default function application(provider: Billing = polar) {
 	let globalMiddleware: Middleware[] = [
 		headRequests(),
 		asyncContext(),
-		logger,
+		log(logger) as Middleware,
 		formData() as Middleware,
 
 		/**

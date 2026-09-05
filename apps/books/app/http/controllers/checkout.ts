@@ -38,33 +38,29 @@ const EmailSchema = s.object({ email: s.optional(s.string().pipe(email())) });
 
 /** GET /api/checkout/:type — opens a hosted checkout and redirects the buyer to it. */
 export default createAction(routes.api.checkout, async (ctx) => {
-	let log = ctx.logger;
+	let log = ctx.log;
 
 	let typeParsed = s.parseSafe(TypeSchema, ctx.params);
 
 	if (!typeParsed.success) {
-		log.info("checkout_type_unknown");
+		log.note("checkout.type_unknown");
 		return defaultHandler(ctx);
 	}
 
 	let product = typeParsed.value.type;
+	log.set({ checkout: { product } });
 
 	let emailParsed = s.parseSafe(EmailSchema, {
 		email: ctx.url.searchParams.get("email") ?? undefined,
 	});
 	let customerEmail = emailParsed.success ? emailParsed.value.email : undefined;
-	if (!emailParsed.success) log.info("checkout_email_ignored");
+	if (!emailParsed.success) log.note("checkout.email_ignored");
 
 	/** Only Complete carries a launch campaign; Essentials always sells at list price. */
 	let discount: Discount | undefined;
 
 	if (product === Product.Complete) {
 		let discountResult = await findApplicableDiscount(ctx.billing);
-
-		if (isFailure(discountResult)) {
-			log.info("discount_lookup_failed", { code: discountResult.error.code });
-		}
-
 		discount = isSuccess(discountResult) ? discountResult.data : undefined;
 	}
 
@@ -82,26 +78,18 @@ export default createAction(routes.api.checkout, async (ctx) => {
 	});
 
 	if (isFailure(checkout)) {
-		log.error("checkout_failed", {
-			product,
-			code: checkout.error.code,
-			providerCode: checkout.error.providerCode,
-		});
-
+		log.fail(checkout.error, { billing: { provider_code: checkout.error.providerCode } });
 		return redirect(routes.release.href(), { status: redirect.Status.SeeOther });
 	}
+
+	log.set({ checkout: { id: checkout.data.id } });
 
 	if (checkout.data.url === null) {
-		log.error("checkout_unpayable", { product, checkoutId: checkout.data.id });
+		log.warn("checkout.unpayable");
 		return redirect(routes.release.href(), { status: redirect.Status.SeeOther });
 	}
 
-	log.info("checkout_started", {
-		product,
-		email: customerEmail,
-		checkoutId: checkout.data.id,
-		discountId: discount?.id,
-	});
+	log.note("checkout.started");
 
 	return redirect(checkout.data.url, { status: redirect.Status.SeeOther });
 });

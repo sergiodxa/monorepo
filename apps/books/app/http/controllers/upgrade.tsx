@@ -10,7 +10,7 @@
  */
 
 import type { Billing } from "@sdxc/billing";
-import type { Logger } from "@sdxc/logger/request";
+import type { Log } from "@sdxc/logger";
 import type { RequestContext } from "remix/router";
 
 import { redirect } from "@sdxc/http/response";
@@ -82,10 +82,10 @@ function completeCheckoutUrl(email: string): string {
  *
  * @param billing - The platform to read orders from.
  * @param customerId - The customer whose orders to look through.
- * @param log - The request logger, so an unreadable order list is traceable.
+ * @param log - The request's log, so an unreadable order list is traceable.
  * @returns Whether an Essentials order exists; `false` when the list failed.
  */
-async function ownsEssentials(billing: Billing, customerId: string, log: Logger): Promise<boolean> {
+async function ownsEssentials(billing: Billing, customerId: string, log: Log): Promise<boolean> {
 	let cursor: string | undefined;
 
 	for (let page = 0; page < MAX_ORDER_PAGES; page++) {
@@ -97,9 +97,9 @@ async function ownsEssentials(billing: Billing, customerId: string, log: Logger)
 		});
 
 		if (isFailure(orders)) {
-			log.error("upgrade_order_lookup_failed", {
+			log.warn("upgrade.order_lookup_failed", {
 				code: orders.error.code,
-				providerCode: orders.error.providerCode,
+				provider_code: orders.error.providerCode,
 			});
 
 			return false;
@@ -119,11 +119,11 @@ export const index = createAction(routes.upgrade.index, (ctx) => renderUpgrade(c
 
 /** POST /upgrade — resolves the reader's purchase and sends them to the right checkout. */
 export const action = createAction(routes.upgrade.action, async (ctx) => {
-	let log = ctx.logger;
+	let log = ctx.log;
 	let validation = await validate(ctx.formData, SubscribeSchema);
 
 	if (isFailure(validation)) {
-		log.info("upgrade_validation_failed", { issue: INVALID_EMAIL_MESSAGE });
+		log.note("upgrade.validation_failed");
 		return renderUpgrade(ctx, { error: INVALID_EMAIL_MESSAGE, status: 400 });
 	}
 
@@ -131,14 +131,22 @@ export const action = createAction(routes.upgrade.action, async (ctx) => {
 	let customer = await ctx.billing.customers.findByEmail(email);
 
 	if (isFailure(customer)) {
-		log.info("upgrade_customer_not_found", { email, code: customer.error.code });
+		log.set({ upgrade: { eligible: false } });
+		log.note("upgrade.customer_not_found", { code: customer.error.code });
 		return redirect(completeCheckoutUrl(email), { status: redirect.Status.SeeOther });
 	}
 
 	if (!(await ownsEssentials(ctx.billing, customer.data.id, log))) {
-		log.info("upgrade_order_not_found", { email });
+		log.set({ upgrade: { eligible: false } });
+		log.note("upgrade.order_not_found");
 		return redirect(completeCheckoutUrl(email), { status: redirect.Status.SeeOther });
 	}
+
+	log.set({
+		upgrade: { eligible: true },
+		checkout: { product: Product.Complete },
+		discount: { id: Discounts.UPGRADE, applied: true },
+	});
 
 	let checkout = await ctx.billing.checkouts.create({
 		product: Product.Complete,
@@ -148,22 +156,19 @@ export const action = createAction(routes.upgrade.action, async (ctx) => {
 		allowDiscountCodes: false,
 	});
 
-	if (isFailure(checkout) || checkout.data.url === null) {
-		log.error("upgrade_checkout_failed", {
-			email,
-			code: isFailure(checkout) ? checkout.error.code : "invalid_response",
-			providerCode: isFailure(checkout) ? checkout.error.providerCode : null,
-		});
-
+	if (isFailure(checkout)) {
+		log.fail(checkout.error, { billing: { provider_code: checkout.error.providerCode } });
 		return redirect(completeCheckoutUrl(email), { status: redirect.Status.SeeOther });
 	}
 
-	log.info("checkout_started", {
-		product: Product.Complete,
-		email,
-		checkoutId: checkout.data.id,
-		discountId: Discounts.UPGRADE,
-	});
+	log.set({ checkout: { id: checkout.data.id } });
+
+	if (checkout.data.url === null) {
+		log.warn("checkout.unpayable");
+		return redirect(completeCheckoutUrl(email), { status: redirect.Status.SeeOther });
+	}
+
+	log.note("checkout.started");
 
 	return redirect(checkout.data.url, { status: redirect.Status.SeeOther });
 });

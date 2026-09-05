@@ -12,7 +12,7 @@ import type { Billing, BillingError, Discount } from "@sdxc/billing";
 import type { Result } from "@sdxc/result";
 
 import { supports } from "@sdxc/billing";
-import { logger } from "@sdxc/logger";
+import { currentLog } from "@sdxc/logger";
 import { isFailure, success } from "@sdxc/result";
 
 import { Discounts, Product } from "~/app/data/product";
@@ -62,31 +62,35 @@ export function selectDiscount(discounts: readonly Discount[]): Discount | undef
 export async function findApplicableDiscount(
 	billing: Billing,
 ): Promise<Result<Discount | undefined, BillingError>> {
+	let log = currentLog();
+
 	if (!supports(billing, "discounts")) {
-		logger.info("discount_list_unsupported", { connection: billing.connection });
+		log?.set({ discount: { applied: false } });
+		log?.note("discount.unsupported", { connection: billing.connection });
 		return success(undefined);
 	}
 
 	let listed = await billing.discounts.list({ limit: PAGE_SIZE });
 
 	if (isFailure(listed)) {
-		logger.error("discount_fetch_error", {
+		log?.warn("discount.list_failed", {
 			code: listed.error.code,
-			providerCode: listed.error.providerCode,
+			provider_code: listed.error.providerCode,
 		});
 
 		return listed;
 	}
 
-	logger.info("discount_list_fetched", { count: listed.data.items.length });
-
 	let discount = selectDiscount(listed.data.items);
 
-	if (discount) {
-		logger.info("discount_applied", { discountId: discount.id, name: discount.name });
-	} else {
-		logger.info("discount_not_applicable");
-	}
+	log?.set({
+		discount: {
+			count: listed.data.items.length,
+			applied: discount !== undefined,
+			id: discount?.id,
+			name: discount?.name,
+		},
+	});
 
 	return success(discount);
 }

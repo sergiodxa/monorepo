@@ -33,11 +33,11 @@ const GENERIC_MESSAGE = "Something went wrong, please try again.";
 
 /** POST /api/subscribe — subscribes a visitor and sends them on to the sales page. */
 export default createAction(routes.api.subscribe, async (ctx) => {
-	let log = ctx.logger;
+	let log = ctx.log;
 	let validation = await validate(ctx.formData, SubscribeSchema);
 
 	if (isFailure(validation)) {
-		log.info("subscribe_validation_failed", { issue: INVALID_EMAIL_MESSAGE });
+		log.note("subscribe.validation_failed");
 		return renderHome(ctx, { error: INVALID_EMAIL_MESSAGE, status: 400 });
 	}
 
@@ -50,12 +50,12 @@ export default createAction(routes.api.subscribe, async (ctx) => {
 
 		if (error instanceof ButtondownError) {
 			if (error.code === "subscriber_blocked") {
-				log.info("subscriber_blocked", { email: payload.email });
+				log.set({ subscribe: { result: "rejected", code: error.code } });
 				return renderHome(ctx, { error: BLOCKED_MESSAGE, status: 400 });
 			}
 
 			if (error.code === "email_invalid") {
-				log.info("subscribe_email_invalid", { email: payload.email });
+				log.set({ subscribe: { result: "rejected", code: error.code } });
 				return renderHome(ctx, { error: INVALID_MESSAGE, status: 400 });
 			}
 
@@ -65,12 +65,12 @@ export default createAction(routes.api.subscribe, async (ctx) => {
 			 * the sales page like anyone else.
 			 */
 			if (error.code === "email_already_exists") {
-				log.info("subscribe_already_exists", { email: payload.email });
+				log.set({ subscribe: { result: "already-subscribed" } });
 				return redirect(routes.release.href(), { status: redirect.Status.SeeOther });
 			}
 		}
 
-		log.error("subscribe_error", { email: payload.email, error: error.message });
+		log.fail(error);
 		return renderHome(ctx, { error: GENERIC_MESSAGE, status: 400 });
 	}
 

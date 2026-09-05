@@ -11,7 +11,7 @@
 import type { MemoryBilling, MemoryDelivery } from "@sdxc/billing/providers/memory";
 
 import { BillingWebhook, MemoryWebhookStore } from "@sdxc/billing";
-import { Logger } from "@sdxc/logger/request";
+import { Log } from "@sdxc/logger";
 import { unwrap } from "@sdxc/result";
 import { getServiceContainer } from "@sdxc/service-container";
 import { RequestContext } from "remix/router";
@@ -58,7 +58,7 @@ function deliver(
 
 		let context = new RequestContext(delivery.request);
 		context.billing = billing;
-		context.logger = new Logger(delivery.request);
+		context.log = new Log({ kind: "request", sink() {} });
 
 		return await endpoint.handler(context);
 	});

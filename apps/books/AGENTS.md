@@ -71,9 +71,11 @@ breaks something you cannot see from here:
 - **The newsletter client** comes from the service container (`app/lib/container.ts`),
   resolved per request. It calls the global `fetch` directly — never add an injectable
   `fetch` parameter.
-- **Logging** is `@sdxc/logger`. Keep the existing event names (`user_subscribed`,
-  `order_paid`, `checkout_started`, `discount_applied`, …): dashboards read them. Never
-  log the Buttondown API key or the webhook secret.
+- **Logging** is `@sdxc/logger`, one wide event per request: controllers write through
+  `ctx.log`, services through `currentLog()?.`. Keep the existing field and note names
+  (`subscribe.result`, `checkout.id`, `discount.id`, `order.tagged`, `checkout.started`,
+  `order.paid`, …): dashboards read them. Never log the Buttondown API key or the webhook
+  secret.
 
 ## No client JavaScript
 

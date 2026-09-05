@@ -10,7 +10,7 @@
 
 import type { Result } from "@sdxc/result";
 
-import { logger } from "@sdxc/logger";
+import { currentLog } from "@sdxc/logger";
 import { failure, success } from "@sdxc/result";
 
 import type { SubscribeInput } from "~/app/http/validators/subscribe";
@@ -33,7 +33,12 @@ export async function subscribe(
 	ipAddress: string | null,
 ): Promise<Result<"subscribed" | "already-subscribed", Error>> {
 	try {
-		if (await buttondown.isSubscribed(payload.email)) return success("already-subscribed");
+		let log = currentLog();
+
+		if (await buttondown.isSubscribed(payload.email)) {
+			log?.set({ subscribe: { result: "already-subscribed" } });
+			return success("already-subscribed");
+		}
 
 		await buttondown.subscribe(
 			payload.email,
@@ -41,12 +46,13 @@ export async function subscribe(
 			ipAddress,
 		);
 
-		logger.info("user_subscribed", {
-			channel: "newsletter",
-			email: payload.email,
-			source: payload.source,
-			campaign: payload.campaign,
-			medium: payload.medium,
+		log?.set({
+			subscribe: {
+				result: "subscribed",
+				source: payload.source,
+				campaign: payload.campaign,
+				medium: payload.medium,
+			},
 		});
 
 		return success("subscribed");

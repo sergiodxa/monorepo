@@ -10,7 +10,7 @@
  */
 
 import type { BillingError, Product as CatalogProduct } from "@sdxc/billing";
-import type { Logger } from "@sdxc/logger/request";
+import type { Log } from "@sdxc/logger";
 
 import { ServiceUnavailable } from "@sdxc/http/status-code";
 import { isFailure, isSuccess } from "@sdxc/result";
@@ -67,16 +67,12 @@ function toPriceView(cents: number, off = 0): PriceView {
  * page cannot degrade around: rendering a price as `$0` would sell the book for
  * nothing, so the page is withheld until the platform answers again.
  *
- * @param log - The request logger, so the outage lands in the request's trace.
+ * @param log - The request's log, which the outage fails.
  * @param error - Why the catalog could not be read.
  * @returns A 503 the visitor can retry.
  */
-function priceUnavailable(log: Logger, error: BillingError): Response {
-	log.error("release_prices_unavailable", {
-		code: error.code,
-		providerCode: error.providerCode,
-	});
-
+function priceUnavailable(log: Log, error: BillingError): Response {
+	log.fail(error, { billing: { provider_code: error.providerCode } });
 	return new Response(null, ServiceUnavailable);
 }
 
@@ -92,20 +88,14 @@ function readPriceCents(product: CatalogProduct): number {
 
 /** GET /release — the sales page. */
 export default createAction(routes.release, async (ctx) => {
-	let log = ctx.logger;
-
 	let [essentials, complete, discountResult] = await Promise.all([
 		ctx.billing.catalog.find(Product.Essentials),
 		ctx.billing.catalog.find(Product.Complete),
 		findApplicableDiscount(ctx.billing),
 	]);
 
-	if (isFailure(essentials)) return priceUnavailable(log, essentials.error);
-	if (isFailure(complete)) return priceUnavailable(log, complete.error);
-
-	if (isFailure(discountResult)) {
-		log.info("discount_lookup_failed", { code: discountResult.error.code });
-	}
+	if (isFailure(essentials)) return priceUnavailable(ctx.log, essentials.error);
+	if (isFailure(complete)) return priceUnavailable(ctx.log, complete.error);
 
 	let activeDiscount = isSuccess(discountResult) ? discountResult.data : undefined;
 

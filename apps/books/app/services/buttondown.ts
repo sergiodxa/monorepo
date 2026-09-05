@@ -10,7 +10,7 @@
  */
 
 import { Json } from "@sdxc/http/content-type";
-import { logger } from "@sdxc/logger";
+import { currentLog } from "@sdxc/logger";
 import * as s from "remix/data-schema";
 
 const API_URL = "https://api.buttondown.com";
@@ -113,7 +113,7 @@ export class Buttondown {
 	async isSubscribed(email: string): Promise<boolean> {
 		let response = await this.request("GET", `/v1/subscribers/${email}`);
 		let subscribed = response.ok;
-		logger.info("buttondown_subscriber_check", { email, subscribed });
+		currentLog()?.set({ buttondown: { subscribed } });
 		return subscribed;
 	}
 
@@ -140,13 +140,13 @@ export class Buttondown {
 		});
 
 		if (response.ok) {
-			logger.info("buttondown_subscribe_success", { email });
+			currentLog()?.note("buttondown.subscribe.succeeded");
 			return;
 		}
 
 		let error = s.parse(ErrorBodySchema, await response.json());
 
-		logger.error("buttondown_subscribe_error", { email, code: error.code });
+		currentLog()?.warn("buttondown.subscribe.failed", { code: error.code });
 		throw new ButtondownError(error.detail, error.code);
 	}
 
@@ -162,11 +162,11 @@ export class Buttondown {
 		let response = await this.request("PATCH", `/v1/subscribers/${email}`, { metadata });
 
 		if (response.ok) {
-			logger.info("buttondown_metadata_updated", { email, metadata });
+			currentLog()?.note("buttondown.metadata.updated");
 			return;
 		}
 
-		logger.error("buttondown_metadata_failed", { email });
+		currentLog()?.warn("buttondown.metadata.failed", { status: response.status });
 		throw new Error("Failed to add metadata");
 	}
 
@@ -195,7 +195,7 @@ export class Buttondown {
 		});
 
 		if (response.status === 403) {
-			logger.error("buttondown_forbidden", { status: response.status });
+			currentLog()?.warn("buttondown.forbidden", { status: response.status });
 			throw new Error("Forbidden");
 		}
 

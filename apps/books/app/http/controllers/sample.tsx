@@ -103,7 +103,7 @@ function renderChapter(ctx: RequestContext) {
 		 * Reachable only when the bundled chapter itself is malformed. The reader is already
 		 * subscribed, so the response stays the familiar form, with the error shown inline.
 		 */
-		ctx.logger.error("sample_parse_failed", { error: parsed.error.message });
+		ctx.log.fail(parsed.error);
 		return renderForm(ctx, { error: GENERIC_MESSAGE, status: 500 });
 	}
 
@@ -128,11 +128,11 @@ export const index = createAction(routes.sample.index, (ctx) => renderForm(ctx))
 
 /** POST /sample — subscribes the reader and answers with the chapter. */
 export const action = createAction(routes.sample.action, async (ctx) => {
-	let log = ctx.logger;
+	let log = ctx.log;
 	let validation = await validate(ctx.formData, SubscribeSchema);
 
 	if (isFailure(validation)) {
-		log.info("sample_validation_failed", { issue: INVALID_EMAIL_MESSAGE });
+		log.note("subscribe.validation_failed");
 		return renderForm(ctx, { error: INVALID_EMAIL_MESSAGE, status: 400 });
 	}
 
@@ -141,7 +141,7 @@ export const action = createAction(routes.sample.action, async (ctx) => {
 	let result = await subscribe(buttondown, payload, getClientIP(ctx.request));
 
 	if (isSuccess(result)) {
-		log.info("sample_unlocked", { email: payload.email, subscriber: result.data });
+		log.set({ sample: { unlocked: true } });
 		return renderChapter(ctx);
 	}
 
@@ -149,12 +149,12 @@ export const action = createAction(routes.sample.action, async (ctx) => {
 
 	if (error instanceof ButtondownError) {
 		if (error.code === "subscriber_blocked") {
-			log.info("subscriber_blocked", { email: payload.email });
+			log.set({ subscribe: { result: "rejected", code: error.code } });
 			return renderForm(ctx, { error: BLOCKED_MESSAGE, status: 400 });
 		}
 
 		if (error.code === "email_invalid") {
-			log.info("sample_email_invalid", { email: payload.email });
+			log.set({ subscribe: { result: "rejected", code: error.code } });
 			return renderForm(ctx, { error: INVALID_MESSAGE, status: 400 });
 		}
 
@@ -164,11 +164,11 @@ export const action = createAction(routes.sample.action, async (ctx) => {
 		 * because nothing was created.
 		 */
 		if (error.code === "email_already_exists") {
-			log.info("sample_already_subscribed", { email: payload.email });
+			log.set({ subscribe: { result: "already-subscribed" }, sample: { unlocked: true } });
 			return renderChapter(ctx);
 		}
 	}
 
-	log.error("sample_subscribe_error", { email: payload.email, error: error.message });
+	log.fail(error);
 	return renderForm(ctx, { error: GENERIC_MESSAGE, status: 400 });
 });

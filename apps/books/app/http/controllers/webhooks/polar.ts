@@ -52,36 +52,33 @@ async function buyerEmail(context: RequestContext, customerId: string | null) {
 export const handlers: BillingWebhookHandlers = {
 	/**
 	 * @param event - The paid order, with the package named by our own slug.
-	 * @param context - The request context, for the logger and the platform.
+	 * @param context - The request context, for its log and the platform.
 	 */
 	async "order.paid"(event, context) {
-		let log = context.logger;
+		let log = context.log;
 		let tier = event.order.productSlug === null ? undefined : TIERS[event.order.productSlug];
 
+		log.set({ order: { id: event.order.id, product: event.order.productSlug, tier } });
+
 		if (!tier) {
-			log.info("order_paid_untagged", { orderId: event.order.id });
+			log.note("order.untagged", { reason: "unsold_package" });
 			return;
 		}
 
 		let email = await buyerEmail(context, event.order.customerId);
 
 		if (email === null) {
-			log.info("order_paid_untagged", { orderId: event.order.id });
+			log.note("order.untagged", { reason: "no_customer" });
 			return;
 		}
 
 		let buttondown = getServiceContainer().get(Buttondown);
+		let subscribed = await buttondown.isSubscribed(email);
 
-		if (await buttondown.isSubscribed(email)) {
-			await buttondown.addMetadata(email, { purchase: tier });
-		}
+		if (subscribed) await buttondown.addMetadata(email, { purchase: tier });
 
-		log.info("order_paid", {
-			channel: "payments",
-			email,
-			product: event.order.productSlug,
-			orderId: event.order.id,
-		});
+		log.set({ order: { tagged: subscribed } });
+		log.note("order.paid", { email });
 	},
 };
 
