@@ -5,7 +5,7 @@ section:
   title: API Resources
   order: 5
 order: 6
-lastUpdated: 2026-08-02
+lastUpdated: 2026-09-05
 ---
 
 Cron job monitors track scheduled tasks by receiving pings when jobs complete. If a ping is not received within the expected window, the job is marked as late and alerts are triggered.
@@ -624,6 +624,8 @@ curl "https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123/ping?limit=10&of
 Records a ping for a cron job monitor. Call this endpoint when your scheduled task completes successfully.
 
 Like every other endpoint on this page, it requires an API key: send it as `Authorization: Bearer <key>`. A key reaches only the monitors of the team that owns it—pinging another team's monitor returns `404`, exactly as an id that doesn't exist does, so the endpoint can't be used to discover which ids are real.
+
+Because this URL lives in crontabs and deploy scripts, it also accepts the monitor's plain UUID in place of its `cron_` id, so an address saved before the id got its prefix keeps working. Both forms name the same monitor and share the same rate limit. Use the `cron_` id shown by [List Cron Jobs](#get-apiv1cron-jobs) for anything new.
 
 **Rate Limit:** This endpoint is rate limited to 1 request per minute per cron job. Additional requests within the same minute will be rejected with a `429` error. A separate abuse limit caps how many requests one caller may send for one monitor per minute, whether or not they are accepted; exceeding it also returns `429`, and it applies before the key is checked.
 

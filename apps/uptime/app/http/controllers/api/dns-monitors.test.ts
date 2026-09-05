@@ -9,6 +9,7 @@
  */
 
 import { ServiceContainer } from "@sdxc/service-container";
+import { TypeID } from "@sdxc/typeid";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
@@ -236,7 +237,7 @@ describe("POST /api/v1/dns-monitors", () => {
 		expect(queries).toBe(6);
 
 		let records = await db.findMany(dnsMonitorRecords, {
-			where: { dns_monitor_id: body.data.dnsMonitor.id },
+			where: { dns_monitor_id: TypeID.fromString(body.data.dnsMonitor.id, "dns").toUUID() },
 		});
 		expect(records).toHaveLength(1);
 		expect(records[0]?.value).toBe("1.2.3.4");
@@ -276,7 +277,8 @@ describe("POST /api/v1/dns-monitors", () => {
 		 */
 		expect(body.data.discovery.rejectedLines).toEqual([{ line: 1, reason: "originDirective" }]);
 
-		expect(await DnsMonitorRecord.countByMonitor(db, body.data.dnsMonitor.id)).toBeGreaterThan(1);
+		let dnsMonitorId = TypeID.fromString(body.data.dnsMonitor.id, "dns").toUUID();
+		expect(await DnsMonitorRecord.countByMonitor(db, dnsMonitorId)).toBeGreaterThan(1);
 	});
 
 	/**

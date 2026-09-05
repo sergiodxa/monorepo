@@ -20,8 +20,10 @@ import { createController } from "remix/router";
 import type { SelectStatusPage } from "~/database/schema";
 
 import StatusPage from "~/app/data/status-page";
+import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
+import { encodeId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
 const SLUG_PATTERN = /^[a-z0-9-]+$/;
@@ -29,7 +31,7 @@ const SLUG_PATTERN = /^[a-z0-9-]+$/;
 /** Maps a status-page row to its public camelCase JSON shape. */
 export function serializeStatusPage(page: SelectStatusPage) {
 	return {
-		id: page.id,
+		id: encodeId("sp", page.id),
 		name: page.name,
 		slug: page.slug,
 		title: page.title,
@@ -67,6 +69,7 @@ export const statusPagesRoutes = {
 };
 
 export default createController(statusPagesRoutes, {
+	middleware: [catchValidationError()],
 	actions: {
 		/** GET /api/v1/status-pages — lists the team's status pages. */
 		statusPagesIndex: {

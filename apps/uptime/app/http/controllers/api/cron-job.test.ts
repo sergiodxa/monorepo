@@ -20,6 +20,7 @@ import type { ApiKeyScope, SelectCronJobMonitor, SelectTeam } from "~/database/s
 import ApiKey from "~/app/data/api-key";
 import CronJobMonitor from "~/app/data/cron-job";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { encodeId } from "~/app/services/typed-id";
 import { teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -73,13 +74,19 @@ async function dispatch(db: Db, request: Request) {
 	return container.scope(() => router.fetch(request));
 }
 
-function showRequest(cronJobId: string, headers: Record<string, string> = {}) {
+/**
+ * Each helper takes the stored UUID and encodes it, so a test names a row the way it
+ * created it while the request still carries the `cron_…` identifier the API accepts.
+ */
+function showRequest(id: string, headers: Record<string, string> = {}) {
+	let cronJobId = encodeId("cron", id);
 	return new Request(`https://uptime.test${routes.api.v1.cronJobs.show.href({ cronJobId })}`, {
 		headers,
 	});
 }
 
-function updateRequest(cronJobId: string, body: unknown, headers: Record<string, string> = {}) {
+function updateRequest(id: string, body: unknown, headers: Record<string, string> = {}) {
+	let cronJobId = encodeId("cron", id);
 	return new Request(`https://uptime.test${routes.api.v1.cronJobs.update.href({ cronJobId })}`, {
 		method: "PUT",
 		headers: { "content-type": "application/json", ...headers },
@@ -87,7 +94,8 @@ function updateRequest(cronJobId: string, body: unknown, headers: Record<string,
 	});
 }
 
-function destroyRequest(cronJobId: string, headers: Record<string, string> = {}) {
+function destroyRequest(id: string, headers: Record<string, string> = {}) {
+	let cronJobId = encodeId("cron", id);
 	return new Request(`https://uptime.test${routes.api.v1.cronJobs.destroy.href({ cronJobId })}`, {
 		method: "DELETE",
 		headers,
@@ -105,7 +113,7 @@ describe("GET /api/v1/cron-jobs/:cronJobId", () => {
 
 		expect(response.status).toBe(200);
 		let body = (await response.json()) as { data: { cronJob: { id: string; name: string } } };
-		expect(body.data.cronJob.id).toBe(cronJob.id);
+		expect(body.data.cronJob.id).toBe(encodeId("cron", cronJob.id));
 		expect(body.data.cronJob.name).toBe("Nightly backup");
 	});
 

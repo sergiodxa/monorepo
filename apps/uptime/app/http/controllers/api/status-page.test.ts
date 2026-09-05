@@ -18,6 +18,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { encodeId } from "~/app/services/typed-id";
 import { monitors, statusPageMonitors, statusPages, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -120,7 +121,7 @@ describe("GET /api/v1/status-pages/:statusPageId", () => {
 
 		let response = await dispatch(db, {
 			method: "GET",
-			path: routes.api.v1.statusPages.show.href({ statusPageId: statusPage.id }),
+			path: routes.api.v1.statusPages.show.href({ statusPageId: encodeId("sp", statusPage.id) }),
 			key,
 		});
 
@@ -128,7 +129,7 @@ describe("GET /api/v1/status-pages/:statusPageId", () => {
 		let body = (await response.json()) as {
 			data: { statusPage: { id: string; monitors: string[]; cronJobs: string[] } };
 		};
-		expect(body.data.statusPage.id).toBe(statusPage.id);
+		expect(body.data.statusPage.id).toBe(encodeId("sp", statusPage.id));
 		expect(body.data.statusPage.monitors).toEqual([]);
 		expect(body.data.statusPage.cronJobs).toEqual([]);
 	});
@@ -140,7 +141,7 @@ describe("GET /api/v1/status-pages/:statusPageId", () => {
 
 		let response = await dispatch(db, {
 			method: "GET",
-			path: routes.api.v1.statusPages.show.href({ statusPageId: statusPage.id }),
+			path: routes.api.v1.statusPages.show.href({ statusPageId: encodeId("sp", statusPage.id) }),
 		});
 		expect(response.status).toBe(401);
 	});
@@ -153,7 +154,7 @@ describe("GET /api/v1/status-pages/:statusPageId", () => {
 
 		let response = await dispatch(db, {
 			method: "GET",
-			path: routes.api.v1.statusPages.show.href({ statusPageId: statusPage.id }),
+			path: routes.api.v1.statusPages.show.href({ statusPageId: encodeId("sp", statusPage.id) }),
 			key,
 		});
 		expect(response.status).toBe(403);
@@ -169,7 +170,9 @@ describe("GET /api/v1/status-pages/:statusPageId", () => {
 
 		let response = await dispatch(db, {
 			method: "GET",
-			path: routes.api.v1.statusPages.show.href({ statusPageId: otherStatusPage.id }),
+			path: routes.api.v1.statusPages.show.href({
+				statusPageId: encodeId("sp", otherStatusPage.id),
+			}),
 			key,
 		});
 		expect(response.status).toBe(404);
@@ -185,7 +188,7 @@ describe("PUT /api/v1/status-pages/:statusPageId", () => {
 
 		let response = await dispatch(db, {
 			method: "PUT",
-			path: routes.api.v1.statusPages.update.href({ statusPageId: statusPage.id }),
+			path: routes.api.v1.statusPages.update.href({ statusPageId: encodeId("sp", statusPage.id) }),
 			key,
 			body: { name: "Renamed Status" },
 		});
@@ -207,7 +210,7 @@ describe("PUT /api/v1/status-pages/:statusPageId", () => {
 
 		let response = await dispatch(db, {
 			method: "PUT",
-			path: routes.api.v1.statusPages.update.href({ statusPageId: statusPage.id }),
+			path: routes.api.v1.statusPages.update.href({ statusPageId: encodeId("sp", statusPage.id) }),
 			key,
 			body: { slug: "taken" },
 		});
@@ -227,7 +230,9 @@ describe("PUT /api/v1/status-pages/:statusPageId", () => {
 
 		let response = await dispatch(db, {
 			method: "PUT",
-			path: routes.api.v1.statusPages.update.href({ statusPageId: otherStatusPage.id }),
+			path: routes.api.v1.statusPages.update.href({
+				statusPageId: encodeId("sp", otherStatusPage.id),
+			}),
 			key,
 			body: { name: "Hijacked" },
 		});
@@ -245,7 +250,7 @@ describe("PUT /api/v1/status-pages/:statusPageId", () => {
 
 		let response = await dispatch(db, {
 			method: "PUT",
-			path: routes.api.v1.statusPages.update.href({ statusPageId: statusPage.id }),
+			path: routes.api.v1.statusPages.update.href({ statusPageId: encodeId("sp", statusPage.id) }),
 			key,
 			body: { name: "Hijacked" },
 		});
@@ -262,7 +267,7 @@ describe("DELETE /api/v1/status-pages/:statusPageId", () => {
 
 		let response = await dispatch(db, {
 			method: "DELETE",
-			path: routes.api.v1.statusPages.destroy.href({ statusPageId: statusPage.id }),
+			path: routes.api.v1.statusPages.destroy.href({ statusPageId: encodeId("sp", statusPage.id) }),
 			key,
 		});
 
@@ -280,7 +285,9 @@ describe("DELETE /api/v1/status-pages/:statusPageId", () => {
 
 		let response = await dispatch(db, {
 			method: "DELETE",
-			path: routes.api.v1.statusPages.destroy.href({ statusPageId: otherStatusPage.id }),
+			path: routes.api.v1.statusPages.destroy.href({
+				statusPageId: encodeId("sp", otherStatusPage.id),
+			}),
 			key,
 		});
 
@@ -296,7 +303,7 @@ describe("DELETE /api/v1/status-pages/:statusPageId", () => {
 
 		let response = await dispatch(db, {
 			method: "DELETE",
-			path: routes.api.v1.statusPages.destroy.href({ statusPageId: statusPage.id }),
+			path: routes.api.v1.statusPages.destroy.href({ statusPageId: encodeId("sp", statusPage.id) }),
 			key,
 		});
 		expect(response.status).toBe(403);
@@ -313,14 +320,16 @@ describe("PUT /api/v1/status-pages/:statusPageId/monitors", () => {
 
 		let response = await dispatch(db, {
 			method: "PUT",
-			path: routes.api.v1.statusPages.monitors.href({ statusPageId: statusPage.id }),
+			path: routes.api.v1.statusPages.monitors.href({
+				statusPageId: encodeId("sp", statusPage.id),
+			}),
 			key,
-			body: { monitorIds: [monitor.id], cronJobIds: [] },
+			body: { monitorIds: [encodeId("mon", monitor.id)], cronJobIds: [] },
 		});
 
 		expect(response.status).toBe(200);
 		let body = (await response.json()) as { data: { monitors: string[] } };
-		expect(body.data.monitors).toEqual([monitor.id]);
+		expect(body.data.monitors).toEqual([encodeId("mon", monitor.id)]);
 
 		let attached = await db.findMany(statusPageMonitors, {
 			where: { status_page_id: statusPage.id },
@@ -339,9 +348,11 @@ describe("PUT /api/v1/status-pages/:statusPageId/monitors", () => {
 
 		let response = await dispatch(db, {
 			method: "PUT",
-			path: routes.api.v1.statusPages.monitors.href({ statusPageId: statusPage.id }),
+			path: routes.api.v1.statusPages.monitors.href({
+				statusPageId: encodeId("sp", statusPage.id),
+			}),
 			key,
-			body: { monitorIds: [otherMonitor.id], cronJobIds: [] },
+			body: { monitorIds: [encodeId("mon", otherMonitor.id)], cronJobIds: [] },
 		});
 
 		expect(response.status).toBe(404);
@@ -361,7 +372,9 @@ describe("PUT /api/v1/status-pages/:statusPageId/monitors", () => {
 
 		let response = await dispatch(db, {
 			method: "PUT",
-			path: routes.api.v1.statusPages.monitors.href({ statusPageId: otherStatusPage.id }),
+			path: routes.api.v1.statusPages.monitors.href({
+				statusPageId: encodeId("sp", otherStatusPage.id),
+			}),
 			key,
 			body: { monitorIds: [], cronJobIds: [] },
 		});
@@ -376,7 +389,9 @@ describe("PUT /api/v1/status-pages/:statusPageId/monitors", () => {
 
 		let response = await dispatch(db, {
 			method: "PUT",
-			path: routes.api.v1.statusPages.monitors.href({ statusPageId: statusPage.id }),
+			path: routes.api.v1.statusPages.monitors.href({
+				statusPageId: encodeId("sp", statusPage.id),
+			}),
 			key,
 			body: { monitorIds: [], cronJobIds: [] },
 		});

@@ -20,16 +20,17 @@ import type { InsertTeam, SelectTeam } from "~/database/schema";
 import Team from "~/app/data/team";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
+import { encodeId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
 /** Maps a team row to its public camelCase JSON shape. */
 function serializeTeam(team: SelectTeam) {
 	return {
-		id: team.id,
+		id: encodeId("team", team.id),
 		name: team.name,
 		slug: team.slug,
 		logo: team.logo,
-		ownerId: team.owner_id,
+		ownerId: encodeId("usr", team.owner_id),
 		createdAt: team.created_at,
 		updatedAt: team.updated_at,
 	};

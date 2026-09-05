@@ -17,6 +17,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { encodeId } from "~/app/services/typed-id";
 import { teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -75,7 +76,7 @@ describe("GET /api/v1/team", () => {
 
 		expect(response.status).toBe(200);
 		let body = (await response.json()) as { data: { team: { id: string; name: string } } };
-		expect(body.data.team.id).toBe(team.id);
+		expect(body.data.team.id).toBe(encodeId("team", team.id));
 		expect(body.data.team.name).toBe("Acme");
 	});
 

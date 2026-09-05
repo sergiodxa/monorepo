@@ -10,6 +10,7 @@
  */
 
 import { ServiceContainer } from "@sdxc/service-container";
+import { TypeID } from "@sdxc/typeid";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
@@ -125,7 +126,9 @@ describe("POST /api/v1/api-keys", () => {
 		expect(body.data.apiKey.name).toBe("CI key");
 		expect(body.data.key).toMatch(/^uptime_[0-9a-f]{64}$/);
 
-		let created = await db.findOne(apiKeys, { where: { id: body.data.apiKey.id } });
+		let created = await db.findOne(apiKeys, {
+			where: { id: TypeID.fromString(body.data.apiKey.id, "key").toUUID() },
+		});
 		expect(created?.scopes).toEqual(["monitors:read"]);
 	});
 

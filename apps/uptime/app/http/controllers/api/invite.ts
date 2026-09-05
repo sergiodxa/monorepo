@@ -13,15 +13,17 @@ import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 
 import Invite from "~/app/data/invite";
+import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
+import { typedId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
-const InviteIdParams = s.object({ inviteId: s.string() });
+const InviteIdParams = s.object({ inviteId: typedId("inv") });
 
 /** DELETE /api/v1/invites/:inviteId — revokes a pending invite. */
 export const inviteDestroy = createAction(routes.api.v1.invites.destroy, {
-	middleware: [requireApiKey("invites:write")],
+	middleware: [catchValidationError(), requireApiKey("invites:write")],
 	handler: async (ctx) => {
 		let { inviteId } = s.parse(InviteIdParams, ctx.params);
 		let db = getServiceContainer().get(Database);

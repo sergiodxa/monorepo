@@ -19,6 +19,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { encodeId } from "~/app/services/typed-id";
 import { monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -167,9 +168,10 @@ describe("POST /api/v1/monitors", () => {
 		let body = (await response.json()) as { data: { monitor: { id: string; name: string } } };
 		expect(body.data.monitor.name).toBe("New monitor");
 
-		let created = await db.findOne(monitors, { where: { id: body.data.monitor.id } });
-		expect(created?.team_id).toBe(team.id);
-		expect(created?.url).toBe("https://example.com/health");
+		let created = await db.findOne(monitors, { where: { team_id: team.id } });
+		if (!created) throw new Error("the created monitor row is missing");
+		expect(body.data.monitor.id).toBe(encodeId("mon", created.id));
+		expect(created.url).toBe("https://example.com/health");
 	});
 
 	test("returns 400 for an invalid url", async () => {

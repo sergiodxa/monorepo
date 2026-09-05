@@ -20,6 +20,7 @@ import type { ApiKeyScope, SelectTeam } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import Invite from "~/app/data/invite";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { encodeId } from "~/app/services/typed-id";
 import { teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -57,10 +58,13 @@ async function dispatch(db: Db, request: Request) {
 }
 
 function destroyRequest(inviteId: string, headers: Record<string, string> = {}) {
-	return new Request(`https://uptime.test${routes.api.v1.invites.destroy.href({ inviteId })}`, {
-		method: "DELETE",
-		headers,
-	});
+	return new Request(
+		`https://uptime.test${routes.api.v1.invites.destroy.href({ inviteId: encodeId("inv", inviteId) })}`,
+		{
+			method: "DELETE",
+			headers,
+		},
+	);
 }
 
 describe("DELETE /api/v1/invites/:inviteId", () => {

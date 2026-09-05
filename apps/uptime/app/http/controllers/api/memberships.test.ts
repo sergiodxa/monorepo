@@ -18,6 +18,7 @@ import type { ApiKeyScope } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import { membershipsIndex } from "~/app/http/controllers/api/memberships";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { encodeId } from "~/app/services/typed-id";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -81,7 +82,7 @@ describe("GET /api/v1/memberships", () => {
 			data: { memberships: Array<{ id: string; role: string }> };
 		};
 		expect(body.data.memberships).toHaveLength(1);
-		expect(body.data.memberships[0]?.id).toBe(membership.id);
+		expect(body.data.memberships[0]?.id).toBe(encodeId("mem", membership.id));
 		expect(body.data.memberships[0]?.role).toBe("admin");
 	});
 
@@ -99,7 +100,7 @@ describe("GET /api/v1/memberships", () => {
 		expect(response.status).toBe(200);
 		let body = (await response.json()) as { data: { memberships: Array<{ teamId: string }> } };
 		expect(body.data.memberships).toHaveLength(1);
-		expect(body.data.memberships[0]?.teamId).toBe(team.id);
+		expect(body.data.memberships[0]?.teamId).toBe(encodeId("team", team.id));
 	});
 
 	test("returns 401 with a missing Authorization header", async () => {

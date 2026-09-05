@@ -36,6 +36,7 @@ import { apportionCostByTeam } from "~/app/services/cost";
 import { checkDns } from "~/app/services/dns-check";
 import { HttpCheck } from "~/app/services/http-check";
 import { checkTcpConnection } from "~/app/services/tcp-check";
+import { encodeId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
 /**
@@ -210,6 +211,7 @@ export default createAction(routes.api.v1.ping, {
 		let id = generateUUID();
 		let result = await run(input);
 
+		/** The data point keeps the canonical UUID; the TypeID is the wire format alone. */
 		recordAdhocPing(ctx.billing, {
 			id,
 			team: ctx.apiTeam,
@@ -224,7 +226,7 @@ export default createAction(routes.api.v1.ping, {
 		 */
 		return apiSuccess({
 			ping: {
-				id,
+				id: encodeId("ping", id),
 				type: input.type,
 				status: result.status,
 				responseTimeMs: result.responseTimeMs,

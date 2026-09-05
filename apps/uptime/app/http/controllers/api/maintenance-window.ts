@@ -20,12 +20,14 @@ import type { InsertMaintenanceWindow } from "~/database/schema";
 import MaintenanceWindow from "~/app/data/maintenance-window";
 import { isResolvableScope } from "~/app/data/scope-monitors";
 import { apiScopeFrom, serializeMaintenanceWindow } from "~/app/http/controllers/api/maintenance";
+import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { MONITOR_SCOPE_TYPES } from "~/app/lib/monitor-scope";
 import { apiError, apiSuccess } from "~/app/services/api-response";
+import { typedId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
-const MaintenanceIdParams = s.object({ maintenanceId: s.string() });
+const MaintenanceIdParams = s.object({ maintenanceId: typedId("mnt") });
 
 /** An ISO-8601 date-time string, transformed into epoch milliseconds. */
 const isoDateTime = s
@@ -52,6 +54,7 @@ export const maintenanceWindowRoutes = {
 };
 
 export default createController(maintenanceWindowRoutes, {
+	middleware: [catchValidationError()],
 	actions: {
 		/** GET /api/v1/maintenance/:maintenanceId — a single maintenance window. */
 		maintenanceShow: {
@@ -99,7 +102,7 @@ export default createController(maintenanceWindowRoutes, {
 				 */
 				if (result.data.monitorType !== undefined || result.data.monitorId !== undefined) {
 					let scope = apiScopeFrom(result.data);
-					if (!(await isResolvableScope(db, ctx.apiTeam.id, scope))) {
+					if (scope === null || !(await isResolvableScope(db, ctx.apiTeam.id, scope))) {
 						return apiError("NOT_FOUND", "Monitor not found", NotFound);
 					}
 

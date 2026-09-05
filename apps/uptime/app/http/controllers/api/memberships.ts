@@ -13,6 +13,7 @@ import { createAction } from "remix/router";
 import Team from "~/app/data/team";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiSuccess } from "~/app/services/api-response";
+import { encodeId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
 /** GET /api/v1/memberships — lists the team's memberships. */
@@ -24,9 +25,9 @@ export const membershipsIndex = createAction(routes.api.v1.memberships, {
 
 		return apiSuccess({
 			memberships: memberships.map((membership) => ({
-				id: membership.id,
-				subjectId: membership.subject_id,
-				teamId: membership.team_id,
+				id: encodeId("mem", membership.id),
+				subjectId: encodeId("usr", membership.subject_id),
+				teamId: encodeId("team", membership.team_id),
 				role: membership.role,
 				createdAt: membership.created_at,
 				updatedAt: membership.updated_at,

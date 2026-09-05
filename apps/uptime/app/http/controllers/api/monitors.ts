@@ -22,6 +22,7 @@ import type { SelectMonitor } from "~/database/schema";
 import Monitor from "~/app/data/monitor";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
+import { encodeId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"] as const;
@@ -30,7 +31,7 @@ const LOCATION_HINTS = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "af
 /** Maps a monitor row to its public camelCase JSON shape. */
 function serializeMonitor(monitor: SelectMonitor) {
 	return {
-		id: monitor.id,
+		id: encodeId("mon", monitor.id),
 		name: monitor.name,
 		url: monitor.url,
 		method: monitor.method,

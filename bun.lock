@@ -214,6 +214,7 @@
         "@sdxc/sitemap": "workspace:*",
         "@sdxc/spec": "workspace:*",
         "@sdxc/strings": "workspace:*",
+        "@sdxc/typeid": "workspace:*",
         "@sdxc/u": "workspace:*",
         "@sdxc/ui": "workspace:*",
         "@sdxc/uuid": "workspace:*",

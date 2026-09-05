@@ -23,29 +23,42 @@ import type { AlertConfig, SelectAlert } from "~/database/schema";
 
 import Alert, { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
 import { isResolvableScope } from "~/app/data/scope-monitors";
+import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { DEFAULT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
 import { MONITOR_SCOPE_TYPES, storedMonitorScope } from "~/app/lib/monitor-scope";
 import { apiError, apiSuccess } from "~/app/services/api-response";
+import { decodeMonitorId, encodeId, encodeMonitorId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
 /**
  * The monitor scope a request asks for, resolved from `monitorType`/`monitorId`.
  * A `monitorId` alone resolves to HTTP: that pairing was the API's only scoping
  * before `monitorType` existed, and every client sending one still means that.
+ *
+ * Returns null when the id carries a prefix belonging to another monitor type, which
+ * names a monitor that cannot exist. Reporting that separately is what keeps such a
+ * request from falling back to a null id, since a null id scopes the rule to every
+ * monitor of the type instead of the one that was asked for.
  */
 export function apiScopeFrom(input: {
 	monitorType?: MonitorScopeType;
 	monitorId?: string | null;
-}): MonitorScope {
-	let monitorId = input.monitorId ?? null;
-	return { monitorType: input.monitorType ?? (monitorId === null ? null : "http"), monitorId };
+}): MonitorScope | null {
+	let value = input.monitorId ?? null;
+	let monitorType = input.monitorType ?? (value === null ? null : "http");
+	if (value === null) return { monitorType, monitorId: null };
+
+	let monitorId = decodeMonitorId(monitorType, value);
+	if (monitorId === null) return null;
+	return { monitorType, monitorId };
 }
 
 /** Maps an alert row to a list/get response, stripping webhook URLs and secrets. */
 export function serializeAlertSafe(alert: SelectAlert) {
+	let scope = storedMonitorScope(alert);
 	return {
-		id: alert.id,
+		id: encodeId("alt", alert.id),
 		name: alert.name,
 		notifyOnRecovery: alert.notify_on_recovery,
 		cooldownMinutes: alert.cooldown_minutes,
@@ -57,8 +70,9 @@ export function serializeAlertSafe(alert: SelectAlert) {
 			}),
 			...(alert.config.strategy === "slack" && { channel: alert.config.config.channel }),
 		},
-		monitorType: storedMonitorScope(alert).monitorType,
-		monitorId: alert.monitor_id,
+		monitorType: scope.monitorType,
+		monitorId:
+			scope.monitorId === null ? null : encodeMonitorId(scope.monitorType, scope.monitorId),
 		createdAt: alert.created_at,
 		updatedAt: alert.updated_at,
 	};
@@ -66,13 +80,15 @@ export function serializeAlertSafe(alert: SelectAlert) {
 
 /** Maps an alert row to a create/update response, exposing only the strategy name. */
 export function serializeAlertStrategyOnly(alert: SelectAlert) {
+	let scope = storedMonitorScope(alert);
 	return {
-		id: alert.id,
+		id: encodeId("alt", alert.id),
 		name: alert.name,
 		notifyOnRecovery: alert.notify_on_recovery,
 		cooldownMinutes: alert.cooldown_minutes,
-		monitorType: storedMonitorScope(alert).monitorType,
-		monitorId: alert.monitor_id,
+		monitorType: scope.monitorType,
+		monitorId:
+			scope.monitorId === null ? null : encodeMonitorId(scope.monitorType, scope.monitorId),
 		config: { strategy: alert.config.strategy },
 		createdAt: alert.created_at,
 		updatedAt: alert.updated_at,
@@ -175,6 +191,7 @@ export const alertsRoutes = {
 };
 
 export default createController(alertsRoutes, {
+	middleware: [catchValidationError()],
 	actions: {
 		/** GET /api/v1/alerts — lists the team's alerts with sensitive config stripped. */
 		alertsIndex: {
@@ -211,7 +228,7 @@ export default createController(alertsRoutes, {
 				}
 
 				let scope = apiScopeFrom(result.data);
-				if (!(await isResolvableScope(db, ctx.apiTeam.id, scope))) {
+				if (scope === null || !(await isResolvableScope(db, ctx.apiTeam.id, scope))) {
 					return apiError("NOT_FOUND", "Monitor not found", NotFound);
 				}
 

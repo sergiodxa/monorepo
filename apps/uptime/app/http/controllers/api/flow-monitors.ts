@@ -27,14 +27,16 @@ import type { InsertFlowMonitor, SelectFlowMonitor } from "~/database/schema";
 
 import FlowMonitor from "~/app/data/flow-monitor";
 import TeamDomain from "~/app/data/team-domain";
+import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { MAX_SOURCE_LENGTH } from "~/app/http/validators/flow-monitor";
 import { DEFAULT_FLOW_INTERVAL_SECONDS, FLOW_INTERVALS_SECONDS } from "~/app/lib/pricing";
 import { apiError, apiSuccess, parsePaginationQuery } from "~/app/services/api-response";
 import { inspectFlowSource } from "~/app/services/flow-check";
+import { encodeId, typedId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
-const FlowMonitorIdParams = s.object({ flowMonitorId: s.string() });
+const FlowMonitorIdParams = s.object({ flowMonitorId: typedId("flow") });
 
 /**
  * Maps a flow monitor row to its public camelCase JSON shape.
@@ -44,7 +46,7 @@ const FlowMonitorIdParams = s.object({ flowMonitorId: s.string() });
  */
 function serializeFlowMonitor(monitor: SelectFlowMonitor) {
 	return {
-		id: monitor.id,
+		id: encodeId("flow", monitor.id),
 		name: monitor.name,
 		intervalSeconds: monitor.interval_seconds,
 		isEnabled: monitor.is_enabled,
@@ -89,6 +91,7 @@ export const flowMonitorsRoutes = {
 };
 
 export default createController(flowMonitorsRoutes, {
+	middleware: [catchValidationError()],
 	actions: {
 		/** GET /api/v1/flow-monitors — lists the team's flow monitors. */
 		flowMonitorsIndex: {
@@ -203,7 +206,7 @@ export default createController(flowMonitorsRoutes, {
 
 				return apiSuccess({
 					results: results.map((row) => ({
-						id: row.id,
+						id: encodeId("flowres", row.id),
 						status: row.status,
 						testsTotal: row.tests_total,
 						testsPassed: row.tests_passed,

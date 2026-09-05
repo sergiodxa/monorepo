@@ -12,6 +12,7 @@
  */
 
 import { ServiceContainer } from "@sdxc/service-container";
+import { TypeID } from "@sdxc/typeid";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
@@ -22,6 +23,7 @@ import type { ApiKeyScope, SelectTeam } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import FlowMonitor from "~/app/data/flow-monitor";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { encodeId } from "~/app/services/typed-id";
 import { flowMonitorResults, flowMonitors, teamDomains, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -203,7 +205,9 @@ describe("POST /api/v1/flow-monitors", () => {
 		expect(body.data.flowMonitor.name).toBe("Sign in");
 		expect(body.data.flowMonitor.intervalSeconds).toBe(900);
 
-		let stored = await db.findOne(flowMonitors, { where: { id: body.data.flowMonitor.id } });
+		let stored = await db.findOne(flowMonitors, {
+			where: { id: TypeID.fromString(body.data.flowMonitor.id, "flow").toUUID() },
+		});
 		expect(stored?.source).toContain(SPEC_PASSWORD);
 	});
 
@@ -425,7 +429,7 @@ describe("GET /api/v1/flow-monitors/:flowMonitorId", () => {
 
 		let response = await dispatch(db, {
 			method: "GET",
-			path: routes.api.v1.flowMonitors.show.href({ flowMonitorId: monitor.id }),
+			path: routes.api.v1.flowMonitors.show.href({ flowMonitorId: encodeId("flow", monitor.id) }),
 			key,
 		});
 
@@ -449,7 +453,7 @@ describe("GET /api/v1/flow-monitors/:flowMonitorId", () => {
 
 		let response = await dispatch(db, {
 			method: "GET",
-			path: routes.api.v1.flowMonitors.show.href({ flowMonitorId: monitor.id }),
+			path: routes.api.v1.flowMonitors.show.href({ flowMonitorId: encodeId("flow", monitor.id) }),
 			key,
 		});
 
@@ -468,7 +472,7 @@ describe("PUT /api/v1/flow-monitors/:flowMonitorId", () => {
 
 		let response = await dispatch(db, {
 			method: "PUT",
-			path: routes.api.v1.flowMonitors.update.href({ flowMonitorId: monitor.id }),
+			path: routes.api.v1.flowMonitors.update.href({ flowMonitorId: encodeId("flow", monitor.id) }),
 			key,
 			body: { name: "Sign in and read profile", intervalSeconds: 21_600 },
 		});
@@ -493,7 +497,7 @@ describe("PUT /api/v1/flow-monitors/:flowMonitorId", () => {
 
 		let response = await dispatch(db, {
 			method: "PUT",
-			path: routes.api.v1.flowMonitors.update.href({ flowMonitorId: monitor.id }),
+			path: routes.api.v1.flowMonitors.update.href({ flowMonitorId: encodeId("flow", monitor.id) }),
 			key,
 			body: { source: unverifiedSource() },
 		});
@@ -511,7 +515,7 @@ describe("PUT /api/v1/flow-monitors/:flowMonitorId", () => {
 
 		let response = await dispatch(db, {
 			method: "PUT",
-			path: routes.api.v1.flowMonitors.update.href({ flowMonitorId: monitor.id }),
+			path: routes.api.v1.flowMonitors.update.href({ flowMonitorId: encodeId("flow", monitor.id) }),
 			key,
 			body: { intervalSeconds: 120 },
 		});
@@ -533,7 +537,7 @@ describe("PUT /api/v1/flow-monitors/:flowMonitorId", () => {
 
 		let response = await dispatch(db, {
 			method: "PUT",
-			path: routes.api.v1.flowMonitors.update.href({ flowMonitorId: monitor.id }),
+			path: routes.api.v1.flowMonitors.update.href({ flowMonitorId: encodeId("flow", monitor.id) }),
 			key,
 			body: { name: "Mine now" },
 		});
@@ -563,7 +567,9 @@ describe("DELETE /api/v1/flow-monitors/:flowMonitorId", () => {
 
 		let response = await dispatch(db, {
 			method: "DELETE",
-			path: routes.api.v1.flowMonitors.destroy.href({ flowMonitorId: monitor.id }),
+			path: routes.api.v1.flowMonitors.destroy.href({
+				flowMonitorId: encodeId("flow", monitor.id),
+			}),
 			key,
 		});
 
@@ -589,7 +595,9 @@ describe("DELETE /api/v1/flow-monitors/:flowMonitorId", () => {
 
 		let response = await dispatch(db, {
 			method: "DELETE",
-			path: routes.api.v1.flowMonitors.destroy.href({ flowMonitorId: monitor.id }),
+			path: routes.api.v1.flowMonitors.destroy.href({
+				flowMonitorId: encodeId("flow", monitor.id),
+			}),
 			key,
 		});
 
@@ -632,7 +640,9 @@ describe("GET /api/v1/flow-monitors/:flowMonitorId/results", () => {
 
 		let response = await dispatch(db, {
 			method: "GET",
-			path: routes.api.v1.flowMonitors.results.href({ flowMonitorId: monitor.id }),
+			path: routes.api.v1.flowMonitors.results.href({
+				flowMonitorId: encodeId("flow", monitor.id),
+			}),
 			key,
 		});
 
@@ -673,7 +683,7 @@ describe("GET /api/v1/flow-monitors/:flowMonitorId/results", () => {
 
 		let response = await dispatch(db, {
 			method: "GET",
-			path: `${routes.api.v1.flowMonitors.results.href({ flowMonitorId: monitor.id })}?limit=9999`,
+			path: `${routes.api.v1.flowMonitors.results.href({ flowMonitorId: encodeId("flow", monitor.id) })}?limit=9999`,
 			key,
 		});
 
@@ -692,7 +702,9 @@ describe("GET /api/v1/flow-monitors/:flowMonitorId/results", () => {
 
 		let response = await dispatch(db, {
 			method: "GET",
-			path: routes.api.v1.flowMonitors.results.href({ flowMonitorId: monitor.id }),
+			path: routes.api.v1.flowMonitors.results.href({
+				flowMonitorId: encodeId("flow", monitor.id),
+			}),
 			key,
 		});
 

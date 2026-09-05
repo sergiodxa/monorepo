@@ -18,17 +18,19 @@ import { createController } from "remix/router";
 import type { SelectTeamDomain } from "~/database/schema";
 
 import TeamDomain from "~/app/data/team-domain";
+import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
+import { encodeId, typedId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
 /** Maps a team-domain row to its public camelCase JSON shape. */
 function serializeTeamDomain(domain: SelectTeamDomain) {
 	return {
-		id: domain.id,
+		id: encodeId("dom", domain.id),
 		hostname: domain.hostname,
 		verifiedAt: domain.verified_at,
-		teamId: domain.team_id,
+		teamId: encodeId("team", domain.team_id),
 		createdAt: domain.created_at,
 		updatedAt: domain.updated_at,
 	};
@@ -38,7 +40,7 @@ const CreateTeamDomainSchema = s.object({
 	hostname: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
 });
 
-const DeleteTeamDomainSchema = s.object({ id: s.string() });
+const DeleteTeamDomainSchema = s.object({ id: typedId("dom") });
 
 /** Route leaves this controller handles, grouped for a single `router.map()` call. */
 export const teamDomainsRoutes = {
@@ -48,6 +50,7 @@ export const teamDomainsRoutes = {
 };
 
 export default createController(teamDomainsRoutes, {
+	middleware: [catchValidationError()],
 	actions: {
 		/** GET /api/v1/team-domains — lists the team's domains. */
 		teamDomainsIndex: {

@@ -17,6 +17,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { encodeId } from "~/app/services/typed-id";
 import { tcpMonitorResults, tcpMonitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -107,13 +108,13 @@ describe("GET /api/v1/tcp-monitors/:tcpMonitorId", () => {
 
 		let response = await dispatch(db, {
 			method: "GET",
-			path: routes.api.v1.tcpMonitors.show.href({ tcpMonitorId: monitor.id }),
+			path: routes.api.v1.tcpMonitors.show.href({ tcpMonitorId: encodeId("tcpm", monitor.id) }),
 			key,
 		});
 
 		expect(response.status).toBe(200);
 		let body = (await response.json()) as { data: { monitor: { id: string; host: string } } };
-		expect(body.data.monitor.id).toBe(monitor.id);
+		expect(body.data.monitor.id).toBe(encodeId("tcpm", monitor.id));
 		expect(body.data.monitor.host).toBe("redis.example.com");
 	});
 
@@ -124,7 +125,7 @@ describe("GET /api/v1/tcp-monitors/:tcpMonitorId", () => {
 
 		let response = await dispatch(db, {
 			method: "GET",
-			path: routes.api.v1.tcpMonitors.show.href({ tcpMonitorId: monitor.id }),
+			path: routes.api.v1.tcpMonitors.show.href({ tcpMonitorId: encodeId("tcpm", monitor.id) }),
 		});
 		expect(response.status).toBe(401);
 	});
@@ -137,7 +138,7 @@ describe("GET /api/v1/tcp-monitors/:tcpMonitorId", () => {
 
 		let response = await dispatch(db, {
 			method: "GET",
-			path: routes.api.v1.tcpMonitors.show.href({ tcpMonitorId: monitor.id }),
+			path: routes.api.v1.tcpMonitors.show.href({ tcpMonitorId: encodeId("tcpm", monitor.id) }),
 			key,
 		});
 		expect(response.status).toBe(403);
@@ -153,7 +154,9 @@ describe("GET /api/v1/tcp-monitors/:tcpMonitorId", () => {
 
 		let response = await dispatch(db, {
 			method: "GET",
-			path: routes.api.v1.tcpMonitors.show.href({ tcpMonitorId: otherMonitor.id }),
+			path: routes.api.v1.tcpMonitors.show.href({
+				tcpMonitorId: encodeId("tcpm", otherMonitor.id),
+			}),
 			key,
 		});
 		expect(response.status).toBe(404);
@@ -169,7 +172,7 @@ describe("PUT /api/v1/tcp-monitors/:tcpMonitorId", () => {
 
 		let response = await dispatch(db, {
 			method: "PUT",
-			path: routes.api.v1.tcpMonitors.update.href({ tcpMonitorId: monitor.id }),
+			path: routes.api.v1.tcpMonitors.update.href({ tcpMonitorId: encodeId("tcpm", monitor.id) }),
 			key,
 			body: { name: "Renamed", port: 6380 },
 		});
@@ -192,7 +195,7 @@ describe("PUT /api/v1/tcp-monitors/:tcpMonitorId", () => {
 
 		let response = await dispatch(db, {
 			method: "PUT",
-			path: routes.api.v1.tcpMonitors.update.href({ tcpMonitorId: monitor.id }),
+			path: routes.api.v1.tcpMonitors.update.href({ tcpMonitorId: encodeId("tcpm", monitor.id) }),
 			key,
 			body: { timeoutMs: 999_999 },
 		});
@@ -212,7 +215,9 @@ describe("PUT /api/v1/tcp-monitors/:tcpMonitorId", () => {
 
 		let response = await dispatch(db, {
 			method: "PUT",
-			path: routes.api.v1.tcpMonitors.update.href({ tcpMonitorId: otherMonitor.id }),
+			path: routes.api.v1.tcpMonitors.update.href({
+				tcpMonitorId: encodeId("tcpm", otherMonitor.id),
+			}),
 			key,
 			body: { name: "Hijacked" },
 		});
@@ -230,7 +235,7 @@ describe("PUT /api/v1/tcp-monitors/:tcpMonitorId", () => {
 
 		let response = await dispatch(db, {
 			method: "PUT",
-			path: routes.api.v1.tcpMonitors.update.href({ tcpMonitorId: monitor.id }),
+			path: routes.api.v1.tcpMonitors.update.href({ tcpMonitorId: encodeId("tcpm", monitor.id) }),
 			key,
 			body: { name: "Hijacked" },
 		});
@@ -247,7 +252,7 @@ describe("DELETE /api/v1/tcp-monitors/:tcpMonitorId", () => {
 
 		let response = await dispatch(db, {
 			method: "DELETE",
-			path: routes.api.v1.tcpMonitors.destroy.href({ tcpMonitorId: monitor.id }),
+			path: routes.api.v1.tcpMonitors.destroy.href({ tcpMonitorId: encodeId("tcpm", monitor.id) }),
 			key,
 		});
 
@@ -265,7 +270,9 @@ describe("DELETE /api/v1/tcp-monitors/:tcpMonitorId", () => {
 
 		let response = await dispatch(db, {
 			method: "DELETE",
-			path: routes.api.v1.tcpMonitors.destroy.href({ tcpMonitorId: otherMonitor.id }),
+			path: routes.api.v1.tcpMonitors.destroy.href({
+				tcpMonitorId: encodeId("tcpm", otherMonitor.id),
+			}),
 			key,
 		});
 
@@ -281,7 +288,7 @@ describe("DELETE /api/v1/tcp-monitors/:tcpMonitorId", () => {
 
 		let response = await dispatch(db, {
 			method: "DELETE",
-			path: routes.api.v1.tcpMonitors.destroy.href({ tcpMonitorId: monitor.id }),
+			path: routes.api.v1.tcpMonitors.destroy.href({ tcpMonitorId: encodeId("tcpm", monitor.id) }),
 			key,
 		});
 		expect(response.status).toBe(403);
@@ -299,7 +306,7 @@ describe("GET /api/v1/tcp-monitors/:tcpMonitorId/results", () => {
 
 		let response = await dispatch(db, {
 			method: "GET",
-			path: routes.api.v1.tcpMonitors.results.href({ tcpMonitorId: monitor.id }),
+			path: routes.api.v1.tcpMonitors.results.href({ tcpMonitorId: encodeId("tcpm", monitor.id) }),
 			key,
 		});
 
@@ -322,7 +329,9 @@ describe("GET /api/v1/tcp-monitors/:tcpMonitorId/results", () => {
 
 		let response = await dispatch(db, {
 			method: "GET",
-			path: routes.api.v1.tcpMonitors.results.href({ tcpMonitorId: otherMonitor.id }),
+			path: routes.api.v1.tcpMonitors.results.href({
+				tcpMonitorId: encodeId("tcpm", otherMonitor.id),
+			}),
 			key,
 		});
 		expect(response.status).toBe(404);
@@ -336,7 +345,7 @@ describe("GET /api/v1/tcp-monitors/:tcpMonitorId/results", () => {
 
 		let response = await dispatch(db, {
 			method: "GET",
-			path: routes.api.v1.tcpMonitors.results.href({ tcpMonitorId: monitor.id }),
+			path: routes.api.v1.tcpMonitors.results.href({ tcpMonitorId: encodeId("tcpm", monitor.id) }),
 			key,
 		});
 		expect(response.status).toBe(403);

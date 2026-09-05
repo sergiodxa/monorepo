@@ -19,6 +19,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { encodeId } from "~/app/services/typed-id";
 import { monitorResults, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -119,9 +120,12 @@ describe("GET /api/v1/status", () => {
 		let response = await dispatch(db, key);
 		expect(response.status).toBe(200);
 
-		let body = (await response.json()) as { data: { status: Record<string, unknown> } };
+		let body = (await response.json()) as {
+			data: { status: Record<string, unknown> & { monitors: Array<{ id: string }> } };
+		};
 		expect(body.data.status.overall).toBe("operational");
 		expect(body.data.status.summary).toEqual({ total: 1, up: 1, down: 0, degraded: 0, unknown: 0 });
+		expect(body.data.status.monitors[0]?.id).toBe(encodeId("mon", monitor.id));
 	});
 
 	test("reports partial_outage when some but not all enabled monitors are down", async () => {

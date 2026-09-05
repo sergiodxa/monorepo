@@ -28,12 +28,14 @@ import {
 	serializeAlertSafe,
 	serializeAlertStrategyOnly,
 } from "~/app/http/controllers/api/alerts";
+import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { MONITOR_SCOPE_TYPES } from "~/app/lib/monitor-scope";
 import { apiError, apiSuccess, parsePaginationQuery } from "~/app/services/api-response";
+import { encodeId, encodeMonitorId, typedId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
-const AlertIdParams = s.object({ alertId: s.string() });
+const AlertIdParams = s.object({ alertId: typedId("alt") });
 
 const UpdateAlertSchema = s.object({
 	name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
@@ -52,6 +54,7 @@ export const alertRoutes = {
 };
 
 export default createController(alertRoutes, {
+	middleware: [catchValidationError()],
 	actions: {
 		/** GET /api/v1/alerts/:alertId — a single alert with sensitive config stripped. */
 		alertShow: {
@@ -97,7 +100,7 @@ export default createController(alertRoutes, {
 				 */
 				if (result.data.monitorType !== undefined || result.data.monitorId !== undefined) {
 					let scope = apiScopeFrom(result.data);
-					if (!(await isResolvableScope(db, ctx.apiTeam.id, scope))) {
+					if (scope === null || !(await isResolvableScope(db, ctx.apiTeam.id, scope))) {
 						return apiError("NOT_FOUND", "Monitor not found", NotFound);
 					}
 
@@ -138,9 +141,9 @@ export default createController(alertRoutes, {
 
 				return apiSuccess({
 					events: events.map((event) => ({
-						id: event.id,
-						alertId: event.alert_id,
-						monitorId: event.monitor_id,
+						id: encodeId("evt", event.id),
+						alertId: encodeId("alt", event.alert_id),
+						monitorId: encodeMonitorId(event.monitor_type, event.monitor_id),
 						eventType: event.event_type,
 						status: event.status,
 						sentAt: event.sent_at,

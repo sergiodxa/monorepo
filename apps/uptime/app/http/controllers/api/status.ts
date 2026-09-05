@@ -18,6 +18,7 @@ import type { SelectMonitor } from "~/database/schema";
 import Monitor from "~/app/data/monitor";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiSuccess } from "~/app/services/api-response";
+import { encodeId } from "~/app/services/typed-id";
 import { monitorResults } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -46,7 +47,7 @@ async function statusFor(db: Database, monitor: SelectMonitor): Promise<MonitorS
 	}
 
 	return {
-		id: monitor.id,
+		id: encodeId("mon", monitor.id),
 		name: monitor.name,
 		status,
 		enabled: monitor.enabled_at !== null,

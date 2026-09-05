@@ -20,6 +20,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { encodeId } from "~/app/services/typed-id";
 import { monitorContentChecks, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -136,9 +137,13 @@ describe("GET /api/v1/monitors/:monitorId/content-checks", () => {
 
 		let response = await dispatch(
 			db,
-			request("GET", routes.api.v1.monitors.contentChecks.index.href({ monitorId: monitor.id }), {
-				key,
-			}),
+			request(
+				"GET",
+				routes.api.v1.monitors.contentChecks.index.href({ monitorId: encodeId("mon", monitor.id) }),
+				{
+					key,
+				},
+			),
 		);
 
 		expect(response.status).toBe(200);
@@ -156,9 +161,13 @@ describe("GET /api/v1/monitors/:monitorId/content-checks", () => {
 
 		let response = await dispatch(
 			db,
-			request("GET", routes.api.v1.monitors.contentChecks.index.href({ monitorId: monitor.id }), {
-				key,
-			}),
+			request(
+				"GET",
+				routes.api.v1.monitors.contentChecks.index.href({ monitorId: encodeId("mon", monitor.id) }),
+				{
+					key,
+				},
+			),
 		);
 		expect(response.status).toBe(404);
 	});
@@ -169,7 +178,9 @@ describe("GET /api/v1/monitors/:monitorId/content-checks", () => {
 			db,
 			request(
 				"GET",
-				routes.api.v1.monitors.contentChecks.index.href({ monitorId: crypto.randomUUID() }),
+				routes.api.v1.monitors.contentChecks.index.href({
+					monitorId: encodeId("mon", crypto.randomUUID()),
+				}),
 			),
 		);
 		expect(response.status).toBe(401);
@@ -183,9 +194,13 @@ describe("GET /api/v1/monitors/:monitorId/content-checks", () => {
 
 		let response = await dispatch(
 			db,
-			request("GET", routes.api.v1.monitors.contentChecks.index.href({ monitorId: monitor.id }), {
-				key,
-			}),
+			request(
+				"GET",
+				routes.api.v1.monitors.contentChecks.index.href({ monitorId: encodeId("mon", monitor.id) }),
+				{
+					key,
+				},
+			),
 		);
 		expect(response.status).toBe(403);
 	});
@@ -200,10 +215,16 @@ describe("POST /api/v1/monitors/:monitorId/content-checks", () => {
 
 		let response = await dispatch(
 			db,
-			request("POST", routes.api.v1.monitors.contentChecks.create.href({ monitorId: monitor.id }), {
-				key,
-				body: { type: "contains", value: "ok" },
-			}),
+			request(
+				"POST",
+				routes.api.v1.monitors.contentChecks.create.href({
+					monitorId: encodeId("mon", monitor.id),
+				}),
+				{
+					key,
+					body: { type: "contains", value: "ok" },
+				},
+			),
 		);
 
 		expect(response.status).toBe(201);
@@ -211,9 +232,10 @@ describe("POST /api/v1/monitors/:monitorId/content-checks", () => {
 		expect(body.data.contentCheck.value).toBe("ok");
 
 		let created = await db.findOne(monitorContentChecks, {
-			where: { id: body.data.contentCheck.id },
+			where: { monitor_id: monitor.id },
 		});
-		expect(created?.monitor_id).toBe(monitor.id);
+		if (!created) throw new Error("the created content-check row is missing");
+		expect(body.data.contentCheck.id).toBe(encodeId("chk", created.id));
 	});
 
 	test("returns 400 for an invalid regex", async () => {
@@ -224,10 +246,16 @@ describe("POST /api/v1/monitors/:monitorId/content-checks", () => {
 
 		let response = await dispatch(
 			db,
-			request("POST", routes.api.v1.monitors.contentChecks.create.href({ monitorId: monitor.id }), {
-				key,
-				body: { type: "regex", value: "(" },
-			}),
+			request(
+				"POST",
+				routes.api.v1.monitors.contentChecks.create.href({
+					monitorId: encodeId("mon", monitor.id),
+				}),
+				{
+					key,
+					body: { type: "regex", value: "(" },
+				},
+			),
 		);
 
 		expect(response.status).toBe(400);
@@ -243,10 +271,16 @@ describe("POST /api/v1/monitors/:monitorId/content-checks", () => {
 
 		let response = await dispatch(
 			db,
-			request("POST", routes.api.v1.monitors.contentChecks.create.href({ monitorId: monitor.id }), {
-				key,
-				body: { type: "contains", value: "ok" },
-			}),
+			request(
+				"POST",
+				routes.api.v1.monitors.contentChecks.create.href({
+					monitorId: encodeId("mon", monitor.id),
+				}),
+				{
+					key,
+					body: { type: "contains", value: "ok" },
+				},
+			),
 		);
 		expect(response.status).toBe(404);
 	});
@@ -257,7 +291,9 @@ describe("POST /api/v1/monitors/:monitorId/content-checks", () => {
 			db,
 			request(
 				"POST",
-				routes.api.v1.monitors.contentChecks.create.href({ monitorId: crypto.randomUUID() }),
+				routes.api.v1.monitors.contentChecks.create.href({
+					monitorId: encodeId("mon", crypto.randomUUID()),
+				}),
 				{ body: { type: "contains", value: "ok" } },
 			),
 		);
@@ -272,10 +308,16 @@ describe("POST /api/v1/monitors/:monitorId/content-checks", () => {
 
 		let response = await dispatch(
 			db,
-			request("POST", routes.api.v1.monitors.contentChecks.create.href({ monitorId: monitor.id }), {
-				key,
-				body: { type: "contains", value: "ok" },
-			}),
+			request(
+				"POST",
+				routes.api.v1.monitors.contentChecks.create.href({
+					monitorId: encodeId("mon", monitor.id),
+				}),
+				{
+					key,
+					body: { type: "contains", value: "ok" },
+				},
+			),
 		);
 		expect(response.status).toBe(403);
 	});
@@ -294,8 +336,8 @@ describe("DELETE /api/v1/monitors/:monitorId/content-checks/:contentCheckId", ()
 			request(
 				"DELETE",
 				routes.api.v1.monitors.contentChecks.destroy.href({
-					monitorId: monitor.id,
-					contentCheckId: contentCheck.id,
+					monitorId: encodeId("mon", monitor.id),
+					contentCheckId: encodeId("chk", contentCheck.id),
 				}),
 				{ key },
 			),
@@ -318,8 +360,8 @@ describe("DELETE /api/v1/monitors/:monitorId/content-checks/:contentCheckId", ()
 			request(
 				"DELETE",
 				routes.api.v1.monitors.contentChecks.destroy.href({
-					monitorId: monitor.id,
-					contentCheckId: contentCheck.id,
+					monitorId: encodeId("mon", monitor.id),
+					contentCheckId: encodeId("chk", contentCheck.id),
 				}),
 				{ key },
 			),
@@ -344,8 +386,8 @@ describe("DELETE /api/v1/monitors/:monitorId/content-checks/:contentCheckId", ()
 			request(
 				"DELETE",
 				routes.api.v1.monitors.contentChecks.destroy.href({
-					monitorId: monitor.id,
-					contentCheckId: contentCheck.id,
+					monitorId: encodeId("mon", monitor.id),
+					contentCheckId: encodeId("chk", contentCheck.id),
 				}),
 				{ key },
 			),
@@ -364,8 +406,8 @@ describe("DELETE /api/v1/monitors/:monitorId/content-checks/:contentCheckId", ()
 			request(
 				"DELETE",
 				routes.api.v1.monitors.contentChecks.destroy.href({
-					monitorId: crypto.randomUUID(),
-					contentCheckId: crypto.randomUUID(),
+					monitorId: encodeId("mon", crypto.randomUUID()),
+					contentCheckId: encodeId("chk", crypto.randomUUID()),
 				}),
 			),
 		);
@@ -384,8 +426,8 @@ describe("DELETE /api/v1/monitors/:monitorId/content-checks/:contentCheckId", ()
 			request(
 				"DELETE",
 				routes.api.v1.monitors.contentChecks.destroy.href({
-					monitorId: monitor.id,
-					contentCheckId: contentCheck.id,
+					monitorId: encodeId("mon", monitor.id),
+					contentCheckId: encodeId("chk", contentCheck.id),
 				}),
 				{ key },
 			),

@@ -23,15 +23,17 @@ import { createController } from "remix/router";
 import type { SelectApiKey } from "~/database/schema";
 
 import ApiKey, { MAX_API_KEYS_PER_TEAM } from "~/app/data/api-key";
+import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
+import { encodeId } from "~/app/services/typed-id";
 import { apiKeyScopes } from "~/database/schema";
 import routes from "~/routes/web";
 
 /** Maps an API-key row to its public JSON shape (camelCase fields), omitting the key hash. */
 function serializeApiKey(apiKey: SelectApiKey) {
 	return {
-		id: apiKey.id,
+		id: encodeId("key", apiKey.id),
 		name: apiKey.name,
 		scopes: apiKey.scopes,
 		createdAt: apiKey.created_at,
@@ -61,6 +63,7 @@ export const apiKeysRoutes = {
 };
 
 export default createController(apiKeysRoutes, {
+	middleware: [catchValidationError()],
 	actions: {
 		/** GET /api/v1/api-keys — lists the team's API keys (metadata only). */
 		apiKeysIndex: {

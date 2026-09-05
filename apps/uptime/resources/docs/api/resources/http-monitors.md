@@ -5,7 +5,7 @@ section:
   title: API Resources
   order: 5
 order: 2
-lastUpdated: 2026-02-14
+lastUpdated: 2026-09-05
 ---
 
 HTTP monitors check your websites and APIs for availability, performance, and content validity.
@@ -621,6 +621,10 @@ Returns `204 No Content` with an empty body on success.
 
 Retrieve the check history for a monitor.
 
+A check result's `id` pairs the monitor it belongs to with the minute the check was
+scheduled for, which is what makes each scheduled check appear once. Treat it as an
+opaque string.
+
 ```
 GET /api/v1/monitors/:id/results
 ```
@@ -647,7 +651,7 @@ curl "https://uptime.sergiodxa.com/api/v1/monitors/mon_abc123/results?limit=10&o
 {
 	"data": [
 		{
-			"id": "chk_xyz789",
+			"id": "8e03978e-40d5-43e8-bc93-6894a57f9324:29387451",
 			"monitorId": "mon_abc123",
 			"status": "up",
 			"statusCode": 200,
@@ -656,7 +660,7 @@ curl "https://uptime.sergiodxa.com/api/v1/monitors/mon_abc123/results?limit=10&o
 			"checkedAt": "2026-02-14T12:00:00Z"
 		},
 		{
-			"id": "chk_xyz788",
+			"id": "8e03978e-40d5-43e8-bc93-6894a57f9324:29387450",
 			"monitorId": "mon_abc123",
 			"status": "degraded",
 			"statusCode": 200,
@@ -694,7 +698,7 @@ curl "https://uptime.sergiodxa.com/api/v1/monitors/mon_abc123/results?limit=10&o
 			"items": {
 				"type": "object",
 				"properties": {
-					"id": { "type": "string", "pattern": "^chk_[a-zA-Z0-9]+$" },
+					"id": { "type": "string", "pattern": "^[0-9a-f-]{36}:[0-9]+$" },
 					"monitorId": { "type": "string", "pattern": "^mon_[a-zA-Z0-9]+$" },
 					"status": { "type": "string", "enum": ["up", "degraded", "down"] },
 					"statusCode": { "type": "integer" },

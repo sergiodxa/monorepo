@@ -25,6 +25,7 @@ import type {
 import ApiKey from "~/app/data/api-key";
 import DnsMonitor from "~/app/data/dns-monitor";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { encodeId } from "~/app/services/typed-id";
 import { dnsMonitorRecords, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -101,7 +102,7 @@ function listRequest(dnsMonitorId: string, key?: string): Request {
 	if (key) headers.Authorization = `Bearer ${key}`;
 
 	return new Request(
-		`https://uptime.test${routes.api.v1.dnsMonitors.records.index.href({ dnsMonitorId })}`,
+		`https://uptime.test${routes.api.v1.dnsMonitors.records.index.href({ dnsMonitorId: encodeId("dns", dnsMonitorId) })}`,
 		{ headers },
 	);
 }
@@ -116,7 +117,7 @@ function updateRequest(
 	if (key) headers.Authorization = `Bearer ${key}`;
 
 	return new Request(
-		`https://uptime.test${routes.api.v1.dnsMonitors.records.update.href({ dnsMonitorId, recordId })}`,
+		`https://uptime.test${routes.api.v1.dnsMonitors.records.update.href({ dnsMonitorId: encodeId("dns", dnsMonitorId), recordId: encodeId("dnsrec", recordId) })}`,
 		{ method: "PATCH", headers, body: JSON.stringify(body) },
 	);
 }

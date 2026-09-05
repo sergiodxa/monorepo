@@ -21,13 +21,18 @@ import type { SelectDnsMonitorRecord } from "~/database/schema";
 
 import DnsMonitor from "~/app/data/dns-monitor";
 import DnsMonitorRecord from "~/app/data/dns-monitor-record";
+import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
+import { encodeId, typedId } from "~/app/services/typed-id";
 import { dnsMonitorRecords } from "~/database/schema";
 import routes from "~/routes/web";
 
-const DnsMonitorIdParams = s.object({ dnsMonitorId: s.string() });
-const DnsMonitorRecordParams = s.object({ dnsMonitorId: s.string(), recordId: s.string() });
+const DnsMonitorIdParams = s.object({ dnsMonitorId: typedId("dns") });
+const DnsMonitorRecordParams = s.object({
+	dnsMonitorId: typedId("dns"),
+	recordId: typedId("dnsrec"),
+});
 
 /**
  * The record's enable/decline decision, and nothing else. `unknownKeys: "error"` rejects a
@@ -39,8 +44,8 @@ const UpdateDnsMonitorRecordSchema = s.object({ isEnabled: s.boolean() }, { unkn
 /** Maps a tracked-record row to its public camelCase JSON shape. */
 function serializeDnsMonitorRecord(record: SelectDnsMonitorRecord) {
 	return {
-		id: record.id,
-		dnsMonitorId: record.dns_monitor_id,
+		id: encodeId("dnsrec", record.id),
+		dnsMonitorId: encodeId("dns", record.dns_monitor_id),
 		name: record.name,
 		recordType: record.record_type,
 		value: record.value,
@@ -83,6 +88,7 @@ export const dnsMonitorRecordsRoutes = {
 };
 
 export default createController(dnsMonitorRecordsRoutes, {
+	middleware: [catchValidationError()],
 	actions: {
 		/**
 		 * GET /api/v1/dns-monitors/:dnsMonitorId/records — the monitor's tracked records,

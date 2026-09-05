@@ -27,6 +27,7 @@ import requireApiKey from "~/app/http/middleware/require-api-key";
 import { notifyCronJobResult } from "~/app/services/alerts";
 import { writePingResult } from "~/app/services/analytics";
 import { ingestPings } from "~/app/services/ping-meter";
+import { decodeIdOrUUID } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
 /**
@@ -103,7 +104,12 @@ const limitByCaller: Middleware = (context, next) => {
 		prefix: CALLER_PREFIX,
 		key(ctx) {
 			let params = s.parseSafe(s.object({ cronJobId: s.string() }), ctx.params);
-			let monitor = params.success ? params.value.cronJobId : UNKNOWN_BUCKET;
+			/**
+			 * Both spellings of an id resolve to the UUID before it becomes a bucket, so
+			 * alternating between them spends one budget rather than two.
+			 */
+			let monitor =
+				(params.success ? decodeIdOrUUID("cron", params.value.cronJobId) : null) ?? UNKNOWN_BUCKET;
 			/**
 			 * Only `CF-Connecting-IP`: `X-Forwarded-For` is client-supplied, so keying on
 			 * it would let a caller mint a fresh bucket per request.
@@ -122,7 +128,15 @@ export default createAction(routes.api.cronJobPing, {
 	handler: async (ctx) => {
 		let db = getServiceContainer().get(Database);
 
-		let { cronJobId } = s.parse(s.object({ cronJobId: s.string() }), ctx.params);
+		let params = s.parse(s.object({ cronJobId: s.string() }), ctx.params);
+		/**
+		 * The API hands out `cron_…`, and a crontab written against the older raw UUID
+		 * still names the same monitor, so both reach it. An id in neither form answers
+		 * 404 along with every other id this team cannot ping.
+		 */
+		let cronJobId = decodeIdOrUUID("cron", params.cronJobId);
+		if (cronJobId === null) return notFound({ error: "Not Found" });
+
 		/**
 		 * Scoped to the key's own team: authentication alone says who the caller is,
 		 * not which monitors they may ping. A monitor belonging to someone else

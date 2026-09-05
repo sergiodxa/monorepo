@@ -21,9 +21,11 @@ import type { SelectMaintenanceWindow } from "~/database/schema";
 
 import MaintenanceWindow from "~/app/data/maintenance-window";
 import { isResolvableScope } from "~/app/data/scope-monitors";
+import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { MONITOR_SCOPE_TYPES, storedMonitorScope } from "~/app/lib/monitor-scope";
 import { apiError, apiSuccess } from "~/app/services/api-response";
+import { decodeMonitorId, encodeId, encodeMonitorId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
 /**
@@ -31,22 +33,34 @@ import routes from "~/routes/web";
  *
  * A `monitorId` sent with no `monitorType` resolves to an HTTP monitor, preserving what
  * every client sending only that field has always meant.
+ *
+ * Returns null when the id carries a prefix belonging to another monitor type, which
+ * names a monitor that cannot exist. Reporting that separately is what keeps such a
+ * request from falling back to a null id, since a null id widens the window to every
+ * monitor of the type instead of the one that was asked for.
  */
 export function apiScopeFrom(input: {
 	monitorType?: MonitorScopeType;
 	monitorId?: string | null;
-}): MonitorScope {
-	let monitorId = input.monitorId ?? null;
-	return { monitorType: input.monitorType ?? (monitorId === null ? null : "http"), monitorId };
+}): MonitorScope | null {
+	let value = input.monitorId ?? null;
+	let monitorType = input.monitorType ?? (value === null ? null : "http");
+	if (value === null) return { monitorType, monitorId: null };
+
+	let monitorId = decodeMonitorId(monitorType, value);
+	if (monitorId === null) return null;
+	return { monitorType, monitorId };
 }
 
 /** Maps a maintenance-window row to its public camelCase JSON shape. */
 export function serializeMaintenanceWindow(window: SelectMaintenanceWindow) {
+	let scope = storedMonitorScope(window);
 	return {
-		id: window.id,
-		teamId: window.team_id,
-		monitorType: storedMonitorScope(window).monitorType,
-		monitorId: window.monitor_id,
+		id: encodeId("mnt", window.id),
+		teamId: encodeId("team", window.team_id),
+		monitorType: scope.monitorType,
+		monitorId:
+			scope.monitorId === null ? null : encodeMonitorId(scope.monitorType, scope.monitorId),
 		name: window.name,
 		startsAt: window.starts_at,
 		endsAt: window.ends_at,
@@ -89,6 +103,7 @@ export const maintenanceRoutes = {
 };
 
 export default createController(maintenanceRoutes, {
+	middleware: [catchValidationError()],
 	actions: {
 		/** GET /api/v1/maintenance — lists the team's maintenance windows. */
 		maintenanceIndex: {
@@ -116,7 +131,7 @@ export default createController(maintenanceRoutes, {
 				let db = getServiceContainer().get(Database);
 
 				let scope = apiScopeFrom(result.data);
-				if (!(await isResolvableScope(db, ctx.apiTeam.id, scope))) {
+				if (scope === null || !(await isResolvableScope(db, ctx.apiTeam.id, scope))) {
 					return apiError("NOT_FOUND", "Monitor not found", NotFound);
 				}
 

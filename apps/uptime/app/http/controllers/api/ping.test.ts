@@ -17,6 +17,7 @@ import {
 	createRateLimit,
 } from "@sdxc/cloudflare-mocks";
 import { ServiceContainer } from "@sdxc/service-container";
+import { TypeID } from "@sdxc/typeid";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
@@ -658,7 +659,7 @@ describe("POST /api/v1/ping side effects", () => {
 			{
 				name: "ping",
 				customerExternalId: team.owner_id,
-				externalId: `ping:${data.ping.id}`,
+				externalId: `ping:${TypeID.fromString(data.ping.id, "ping").toUUID()}`,
 				metadata: { teamId: team.id, type: "adhoc" },
 			},
 		]);

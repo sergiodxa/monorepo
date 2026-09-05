@@ -20,20 +20,25 @@ import type { SelectMonitorContentCheck } from "~/database/schema";
 
 import ContentCheck from "~/app/data/content-check";
 import Monitor from "~/app/data/monitor";
+import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
+import { encodeId, typedId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
 const CONTENT_CHECK_TYPES = ["contains", "not_contains", "regex"] as const;
 
-const MonitorIdParams = s.object({ monitorId: s.string() });
-const ContentCheckParams = s.object({ monitorId: s.string(), contentCheckId: s.string() });
+const MonitorIdParams = s.object({ monitorId: typedId("mon") });
+const ContentCheckParams = s.object({
+	monitorId: typedId("mon"),
+	contentCheckId: typedId("chk"),
+});
 
 /** Maps a content-check row to its public camelCase JSON shape. */
 function serializeContentCheck(check: SelectMonitorContentCheck) {
 	return {
-		id: check.id,
-		monitorId: check.monitor_id,
+		id: encodeId("chk", check.id),
+		monitorId: encodeId("mon", check.monitor_id),
 		type: check.type,
 		value: check.value,
 		caseSensitive: check.case_sensitive,
@@ -68,6 +73,7 @@ export const monitorContentChecksRoutes = {
 };
 
 export default createController(monitorContentChecksRoutes, {
+	middleware: [catchValidationError()],
 	actions: {
 		/** GET /api/v1/monitors/:monitorId/content-checks — lists a monitor's content checks. */
 		monitorContentChecksIndex: {

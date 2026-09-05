@@ -19,14 +19,16 @@ import { createController } from "remix/router";
 import type { SelectTcpMonitor } from "~/database/schema";
 
 import TcpMonitor from "~/app/data/tcp-monitor";
+import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
+import { encodeId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
 /** Maps a TCP monitor row to its public camelCase JSON shape. */
 function serializeTcpMonitor(monitor: SelectTcpMonitor) {
 	return {
-		id: monitor.id,
+		id: encodeId("tcpm", monitor.id),
 		name: monitor.name,
 		host: monitor.host,
 		port: monitor.port,
@@ -57,6 +59,7 @@ export const tcpMonitorsRoutes = {
 };
 
 export default createController(tcpMonitorsRoutes, {
+	middleware: [catchValidationError()],
 	actions: {
 		/** GET /api/v1/tcp-monitors — lists the team's TCP monitors. */
 		tcpMonitorsIndex: {

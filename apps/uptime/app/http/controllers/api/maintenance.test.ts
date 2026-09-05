@@ -11,6 +11,7 @@
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
 import { ServiceContainer } from "@sdxc/service-container";
+import { TypeID } from "@sdxc/typeid";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
@@ -20,6 +21,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { encodeId } from "~/app/services/typed-id";
 import { maintenanceWindows, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -207,7 +209,7 @@ describe("POST /api/v1/maintenance", () => {
 		expect(body.data.maintenanceWindow.name).toBe("DB upgrade");
 
 		let created = await db.findOne(maintenanceWindows, {
-			where: { id: body.data.maintenanceWindow.id },
+			where: { id: TypeID.fromString(body.data.maintenanceWindow.id, "mnt").toUUID() },
 		});
 		expect(created?.team_id).toBe(team.id);
 		expect(created?.starts_at).toBe(new Date("2026-08-01T00:00:00.000Z").getTime());
@@ -268,7 +270,7 @@ describe("POST /api/v1/maintenance", () => {
 				key,
 				body: {
 					name: "Scoped window",
-					monitorId: otherMonitor.id,
+					monitorId: encodeId("mon", otherMonitor.id),
 					startsAt: "2026-08-01T00:00:00.000Z",
 					endsAt: "2026-08-01T02:00:00.000Z",
 				},
@@ -292,7 +294,7 @@ describe("POST /api/v1/maintenance", () => {
 				key,
 				body: {
 					name: "Scoped window",
-					monitorId: monitor.id,
+					monitorId: encodeId("mon", monitor.id),
 					startsAt: "2026-08-01T00:00:00.000Z",
 					endsAt: "2026-08-01T02:00:00.000Z",
 				},
@@ -343,7 +345,7 @@ describe("POST /api/v1/maintenance", () => {
 				body: {
 					name: "Wrong table",
 					monitorType: "dns",
-					monitorId: monitor.id,
+					monitorId: encodeId("mon", monitor.id),
 					startsAt: "2026-08-01T00:00:00.000Z",
 					endsAt: "2026-08-01T02:00:00.000Z",
 				},

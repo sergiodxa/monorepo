@@ -20,6 +20,7 @@ import type { ApiKeyScope, SelectTeam } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import Invite from "~/app/data/invite";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { encodeId } from "~/app/services/typed-id";
 import { teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -142,7 +143,7 @@ describe("POST /api/v1/invites", () => {
 		};
 		expect(body.data.invite.email).toBe("new@example.com");
 		expect(body.data.invite.acceptedAt).toBeNull();
-		expect(body.data.invite.teamId).toBe(team.id);
+		expect(body.data.invite.teamId).toBe(encodeId("team", team.id));
 
 		let created = await Invite.findByEmailForTeam(db, team.id, "new@example.com");
 		expect(created).not.toBeNull();

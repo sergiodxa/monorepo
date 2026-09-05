@@ -5,7 +5,7 @@ section:
   title: API Resources
   order: 5
 order: 10
-lastUpdated: 2026-02-14
+lastUpdated: 2026-09-05
 ---
 
 Manage your team settings, memberships, and custom domains for status pages.
@@ -35,7 +35,7 @@ curl https://uptime.sergiodxa.com/api/v1/team \
 	"name": "Acme Inc",
 	"slug": "acme-inc",
 	"logo": "https://cdn.example.com/logos/acme.png",
-	"ownerId": "user_xyz789",
+	"ownerId": "usr_xyz789",
 	"createdAt": "2025-06-15T08:00:00Z",
 	"updatedAt": "2026-01-20T14:30:00Z"
 }
@@ -137,7 +137,7 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/team \
 	"name": "Acme Corporation",
 	"slug": "acme-inc",
 	"logo": "https://cdn.example.com/logos/acme-new.png",
-	"ownerId": "user_xyz789",
+	"ownerId": "usr_xyz789",
 	"createdAt": "2025-06-15T08:00:00Z",
 	"updatedAt": "2026-02-14T10:45:00Z"
 }
@@ -236,7 +236,7 @@ curl https://uptime.sergiodxa.com/api/v1/memberships \
 	"memberships": [
 		{
 			"id": "mem_abc123",
-			"subjectId": "user_xyz789",
+			"subjectId": "usr_xyz789",
 			"teamId": "team_abc123",
 			"role": "owner",
 			"createdAt": "2025-06-15T08:00:00Z",
@@ -244,7 +244,7 @@ curl https://uptime.sergiodxa.com/api/v1/memberships \
 		},
 		{
 			"id": "mem_def456",
-			"subjectId": "user_def456",
+			"subjectId": "usr_def456",
 			"teamId": "team_abc123",
 			"role": "admin",
 			"createdAt": "2025-08-20T14:30:00Z",
@@ -252,7 +252,7 @@ curl https://uptime.sergiodxa.com/api/v1/memberships \
 		},
 		{
 			"id": "mem_ghi789",
-			"subjectId": "user_ghi789",
+			"subjectId": "usr_ghi789",
 			"teamId": "team_abc123",
 			"role": "member",
 			"createdAt": "2026-01-10T11:00:00Z",

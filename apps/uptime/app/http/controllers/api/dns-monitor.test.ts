@@ -20,6 +20,7 @@ import type { ApiKeyScope, SelectDnsMonitor, SelectTeam } from "~/database/schem
 import ApiKey from "~/app/data/api-key";
 import DnsMonitor from "~/app/data/dns-monitor";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { encodeId } from "~/app/services/typed-id";
 import { teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -72,14 +73,14 @@ async function dispatch(db: Db, request: Request) {
 
 function showRequest(dnsMonitorId: string, headers: Record<string, string> = {}) {
 	return new Request(
-		`https://uptime.test${routes.api.v1.dnsMonitors.show.href({ dnsMonitorId })}`,
+		`https://uptime.test${routes.api.v1.dnsMonitors.show.href({ dnsMonitorId: encodeId("dns", dnsMonitorId) })}`,
 		{ headers },
 	);
 }
 
 function updateRequest(dnsMonitorId: string, body: unknown, headers: Record<string, string> = {}) {
 	return new Request(
-		`https://uptime.test${routes.api.v1.dnsMonitors.update.href({ dnsMonitorId })}`,
+		`https://uptime.test${routes.api.v1.dnsMonitors.update.href({ dnsMonitorId: encodeId("dns", dnsMonitorId) })}`,
 		{
 			method: "PUT",
 			headers: { "content-type": "application/json", ...headers },
@@ -90,14 +91,14 @@ function updateRequest(dnsMonitorId: string, body: unknown, headers: Record<stri
 
 function destroyRequest(dnsMonitorId: string, headers: Record<string, string> = {}) {
 	return new Request(
-		`https://uptime.test${routes.api.v1.dnsMonitors.destroy.href({ dnsMonitorId })}`,
+		`https://uptime.test${routes.api.v1.dnsMonitors.destroy.href({ dnsMonitorId: encodeId("dns", dnsMonitorId) })}`,
 		{ method: "DELETE", headers },
 	);
 }
 
 function resultsRequest(dnsMonitorId: string, headers: Record<string, string> = {}) {
 	return new Request(
-		`https://uptime.test${routes.api.v1.dnsMonitors.results.href({ dnsMonitorId })}`,
+		`https://uptime.test${routes.api.v1.dnsMonitors.results.href({ dnsMonitorId: encodeId("dns", dnsMonitorId) })}`,
 		{ headers },
 	);
 }
@@ -113,7 +114,7 @@ describe("GET /api/v1/dns-monitors/:dnsMonitorId", () => {
 
 		expect(response.status).toBe(200);
 		let body = (await response.json()) as { data: { dnsMonitor: { id: string; domain: string } } };
-		expect(body.data.dnsMonitor.id).toBe(monitor.id);
+		expect(body.data.dnsMonitor.id).toBe(encodeId("dns", monitor.id));
 		expect(body.data.dnsMonitor.domain).toBe("example.com");
 	});
 

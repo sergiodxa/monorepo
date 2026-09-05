@@ -19,6 +19,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { encodeId } from "~/app/services/typed-id";
 import { maintenanceWindows, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -139,7 +140,11 @@ describe("GET /api/v1/maintenance/:maintenanceId", () => {
 
 		let response = await dispatch(
 			db,
-			request("GET", routes.api.v1.maintenance.show.href({ maintenanceId: window.id }), { key }),
+			request(
+				"GET",
+				routes.api.v1.maintenance.show.href({ maintenanceId: encodeId("mnt", window.id) }),
+				{ key },
+			),
 		);
 
 		expect(response.status).toBe(200);
@@ -156,7 +161,11 @@ describe("GET /api/v1/maintenance/:maintenanceId", () => {
 
 		let response = await dispatch(
 			db,
-			request("GET", routes.api.v1.maintenance.show.href({ maintenanceId: window.id }), { key }),
+			request(
+				"GET",
+				routes.api.v1.maintenance.show.href({ maintenanceId: encodeId("mnt", window.id) }),
+				{ key },
+			),
 		);
 		expect(response.status).toBe(404);
 	});
@@ -165,7 +174,12 @@ describe("GET /api/v1/maintenance/:maintenanceId", () => {
 		let { db } = createTestDatabase();
 		let response = await dispatch(
 			db,
-			request("GET", routes.api.v1.maintenance.show.href({ maintenanceId: crypto.randomUUID() })),
+			request(
+				"GET",
+				routes.api.v1.maintenance.show.href({
+					maintenanceId: encodeId("mnt", crypto.randomUUID()),
+				}),
+			),
 		);
 		expect(response.status).toBe(401);
 	});
@@ -178,7 +192,11 @@ describe("GET /api/v1/maintenance/:maintenanceId", () => {
 
 		let response = await dispatch(
 			db,
-			request("GET", routes.api.v1.maintenance.show.href({ maintenanceId: window.id }), { key }),
+			request(
+				"GET",
+				routes.api.v1.maintenance.show.href({ maintenanceId: encodeId("mnt", window.id) }),
+				{ key },
+			),
 		);
 		expect(response.status).toBe(403);
 	});
@@ -193,10 +211,14 @@ describe("PUT /api/v1/maintenance/:maintenanceId", () => {
 
 		let response = await dispatch(
 			db,
-			request("PUT", routes.api.v1.maintenance.update.href({ maintenanceId: window.id }), {
-				key,
-				body: { name: "New name", suppressAlerts: false },
-			}),
+			request(
+				"PUT",
+				routes.api.v1.maintenance.update.href({ maintenanceId: encodeId("mnt", window.id) }),
+				{
+					key,
+					body: { name: "New name", suppressAlerts: false },
+				},
+			),
 		);
 
 		expect(response.status).toBe(200);
@@ -219,10 +241,14 @@ describe("PUT /api/v1/maintenance/:maintenanceId", () => {
 
 		let response = await dispatch(
 			db,
-			request("PUT", routes.api.v1.maintenance.update.href({ maintenanceId: window.id }), {
-				key,
-				body: { endsAt: "2026-07-31T00:00:00.000Z" },
-			}),
+			request(
+				"PUT",
+				routes.api.v1.maintenance.update.href({ maintenanceId: encodeId("mnt", window.id) }),
+				{
+					key,
+					body: { endsAt: "2026-07-31T00:00:00.000Z" },
+				},
+			),
 		);
 
 		expect(response.status).toBe(400);
@@ -240,10 +266,14 @@ describe("PUT /api/v1/maintenance/:maintenanceId", () => {
 
 		let response = await dispatch(
 			db,
-			request("PUT", routes.api.v1.maintenance.update.href({ maintenanceId: window.id }), {
-				key,
-				body: { monitorId: otherMonitor.id },
-			}),
+			request(
+				"PUT",
+				routes.api.v1.maintenance.update.href({ maintenanceId: encodeId("mnt", window.id) }),
+				{
+					key,
+					body: { monitorId: otherMonitor.id },
+				},
+			),
 		);
 
 		expect(response.status).toBe(404);
@@ -265,10 +295,14 @@ describe("PUT /api/v1/maintenance/:maintenanceId", () => {
 
 		let response = await dispatch(
 			db,
-			request("PUT", routes.api.v1.maintenance.update.href({ maintenanceId: window.id }), {
-				key,
-				body: { monitorType: "dns" },
-			}),
+			request(
+				"PUT",
+				routes.api.v1.maintenance.update.href({ maintenanceId: encodeId("mnt", window.id) }),
+				{
+					key,
+					body: { monitorType: "dns" },
+				},
+			),
 		);
 
 		expect(response.status).toBe(200);
@@ -289,10 +323,14 @@ describe("PUT /api/v1/maintenance/:maintenanceId", () => {
 
 		let response = await dispatch(
 			db,
-			request("PUT", routes.api.v1.maintenance.update.href({ maintenanceId: window.id }), {
-				key,
-				body: { name: "Renamed" },
-			}),
+			request(
+				"PUT",
+				routes.api.v1.maintenance.update.href({ maintenanceId: encodeId("mnt", window.id) }),
+				{
+					key,
+					body: { name: "Renamed" },
+				},
+			),
 		);
 
 		expect(response.status).toBe(200);
@@ -311,10 +349,14 @@ describe("PUT /api/v1/maintenance/:maintenanceId", () => {
 
 		let response = await dispatch(
 			db,
-			request("PUT", routes.api.v1.maintenance.update.href({ maintenanceId: window.id }), {
-				key,
-				body: { name: "Hijacked" },
-			}),
+			request(
+				"PUT",
+				routes.api.v1.maintenance.update.href({ maintenanceId: encodeId("mnt", window.id) }),
+				{
+					key,
+					body: { name: "Hijacked" },
+				},
+			),
 		);
 
 		expect(response.status).toBe(404);
@@ -328,7 +370,9 @@ describe("PUT /api/v1/maintenance/:maintenanceId", () => {
 			db,
 			request(
 				"PUT",
-				routes.api.v1.maintenance.update.href({ maintenanceId: crypto.randomUUID() }),
+				routes.api.v1.maintenance.update.href({
+					maintenanceId: encodeId("mnt", crypto.randomUUID()),
+				}),
 				{
 					body: { name: "x" },
 				},
@@ -345,10 +389,14 @@ describe("PUT /api/v1/maintenance/:maintenanceId", () => {
 
 		let response = await dispatch(
 			db,
-			request("PUT", routes.api.v1.maintenance.update.href({ maintenanceId: window.id }), {
-				key,
-				body: { name: "x" },
-			}),
+			request(
+				"PUT",
+				routes.api.v1.maintenance.update.href({ maintenanceId: encodeId("mnt", window.id) }),
+				{
+					key,
+					body: { name: "x" },
+				},
+			),
 		);
 		expect(response.status).toBe(403);
 	});
@@ -363,9 +411,13 @@ describe("DELETE /api/v1/maintenance/:maintenanceId", () => {
 
 		let response = await dispatch(
 			db,
-			request("DELETE", routes.api.v1.maintenance.destroy.href({ maintenanceId: window.id }), {
-				key,
-			}),
+			request(
+				"DELETE",
+				routes.api.v1.maintenance.destroy.href({ maintenanceId: encodeId("mnt", window.id) }),
+				{
+					key,
+				},
+			),
 		);
 
 		expect(response.status).toBe(200);
@@ -381,9 +433,13 @@ describe("DELETE /api/v1/maintenance/:maintenanceId", () => {
 
 		let response = await dispatch(
 			db,
-			request("DELETE", routes.api.v1.maintenance.destroy.href({ maintenanceId: window.id }), {
-				key,
-			}),
+			request(
+				"DELETE",
+				routes.api.v1.maintenance.destroy.href({ maintenanceId: encodeId("mnt", window.id) }),
+				{
+					key,
+				},
+			),
 		);
 
 		expect(response.status).toBe(404);
@@ -396,7 +452,9 @@ describe("DELETE /api/v1/maintenance/:maintenanceId", () => {
 			db,
 			request(
 				"DELETE",
-				routes.api.v1.maintenance.destroy.href({ maintenanceId: crypto.randomUUID() }),
+				routes.api.v1.maintenance.destroy.href({
+					maintenanceId: encodeId("mnt", crypto.randomUUID()),
+				}),
 			),
 		);
 		expect(response.status).toBe(401);
@@ -410,9 +468,13 @@ describe("DELETE /api/v1/maintenance/:maintenanceId", () => {
 
 		let response = await dispatch(
 			db,
-			request("DELETE", routes.api.v1.maintenance.destroy.href({ maintenanceId: window.id }), {
-				key,
-			}),
+			request(
+				"DELETE",
+				routes.api.v1.maintenance.destroy.href({ maintenanceId: encodeId("mnt", window.id) }),
+				{
+					key,
+				},
+			),
 		);
 		expect(response.status).toBe(403);
 	});
@@ -427,7 +489,11 @@ describe("POST /api/v1/maintenance/:maintenanceId/end", () => {
 
 		let response = await dispatch(
 			db,
-			request("POST", routes.api.v1.maintenance.end.href({ maintenanceId: window.id }), { key }),
+			request(
+				"POST",
+				routes.api.v1.maintenance.end.href({ maintenanceId: encodeId("mnt", window.id) }),
+				{ key },
+			),
 		);
 
 		expect(response.status).toBe(200);
@@ -449,7 +515,11 @@ describe("POST /api/v1/maintenance/:maintenanceId/end", () => {
 
 		let response = await dispatch(
 			db,
-			request("POST", routes.api.v1.maintenance.end.href({ maintenanceId: window.id }), { key }),
+			request(
+				"POST",
+				routes.api.v1.maintenance.end.href({ maintenanceId: encodeId("mnt", window.id) }),
+				{ key },
+			),
 		);
 
 		expect(response.status).toBe(404);
@@ -461,7 +531,10 @@ describe("POST /api/v1/maintenance/:maintenanceId/end", () => {
 		let { db } = createTestDatabase();
 		let response = await dispatch(
 			db,
-			request("POST", routes.api.v1.maintenance.end.href({ maintenanceId: crypto.randomUUID() })),
+			request(
+				"POST",
+				routes.api.v1.maintenance.end.href({ maintenanceId: encodeId("mnt", crypto.randomUUID()) }),
+			),
 		);
 		expect(response.status).toBe(401);
 	});
@@ -474,7 +547,11 @@ describe("POST /api/v1/maintenance/:maintenanceId/end", () => {
 
 		let response = await dispatch(
 			db,
-			request("POST", routes.api.v1.maintenance.end.href({ maintenanceId: window.id }), { key }),
+			request(
+				"POST",
+				routes.api.v1.maintenance.end.href({ maintenanceId: encodeId("mnt", window.id) }),
+				{ key },
+			),
 		);
 		expect(response.status).toBe(403);
 	});

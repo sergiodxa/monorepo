@@ -21,19 +21,21 @@ import type { InsertMonitor, SelectMonitor } from "~/database/schema";
 
 import AlertEvent from "~/app/data/alert-event";
 import Monitor from "~/app/data/monitor";
+import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess, parsePaginationQuery } from "~/app/services/api-response";
+import { encodeId, encodeMonitorId, typedId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"] as const;
 const LOCATION_HINTS = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"] as const;
 
-const MonitorIdParams = s.object({ monitorId: s.string() });
+const MonitorIdParams = s.object({ monitorId: typedId("mon") });
 
 /** Maps a monitor row to its public camelCase JSON shape. */
 function serializeMonitor(monitor: SelectMonitor) {
 	return {
-		id: monitor.id,
+		id: encodeId("mon", monitor.id),
 		name: monitor.name,
 		url: monitor.url,
 		method: monitor.method,
@@ -79,6 +81,7 @@ export const monitorRoutes = {
 };
 
 export default createController(monitorRoutes, {
+	middleware: [catchValidationError()],
 	actions: {
 		/** GET /api/v1/monitors/:monitorId — a single HTTP monitor. */
 		monitorShow: {
@@ -178,6 +181,12 @@ export default createController(monitorRoutes, {
 
 				return apiSuccess({
 					results: results.map((row) => ({
+						/**
+						 * A check result is keyed by `Monitor.scheduledJobId` — the monitor id and
+						 * the minute the check was scheduled for — which is what lets repeated
+						 * deliveries of one minute's cron collapse onto a single row. That key
+						 * travels as stored, since a TypeID encodes a UUID and this is a pair.
+						 */
 						id: row.id,
 						responseStatus: row.response_status,
 						responseTimeMs: row.response_time_ms,
@@ -203,9 +212,9 @@ export default createController(monitorRoutes, {
 
 				return apiSuccess({
 					events: events.map((event) => ({
-						id: event.id,
-						alertId: event.alert_id,
-						monitorId: event.monitor_id,
+						id: encodeId("evt", event.id),
+						alertId: encodeId("alt", event.alert_id),
+						monitorId: encodeMonitorId(event.monitor_type, event.monitor_id),
 						eventType: event.event_type,
 						status: event.status,
 						sentAt: event.sent_at,

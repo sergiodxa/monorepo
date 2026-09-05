@@ -19,6 +19,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { encodeId } from "~/app/services/typed-id";
 import { alertEvents, alerts, teams } from "~/database/schema";
 
 /**
@@ -98,12 +99,12 @@ describe("GET /api/v1/alerts/:alertId", () => {
 
 		let response = await dispatch(
 			db,
-			req("GET", alertRoutes.alertShow.href({ alertId: alert.id }), key),
+			req("GET", alertRoutes.alertShow.href({ alertId: encodeId("alt", alert.id) }), key),
 		);
 		expect(response.status).toBe(200);
 
 		let body = (await response.json()) as { data: { alert: { id: string; name: string } } };
-		expect(body.data.alert.id).toBe(alert.id);
+		expect(body.data.alert.id).toBe(encodeId("alt", alert.id));
 		expect(body.data.alert.name).toBe("Site down");
 	});
 
@@ -116,7 +117,7 @@ describe("GET /api/v1/alerts/:alertId", () => {
 
 		let response = await dispatch(
 			db,
-			req("GET", alertRoutes.alertShow.href({ alertId: alert.id }), key),
+			req("GET", alertRoutes.alertShow.href({ alertId: encodeId("alt", alert.id) }), key),
 		);
 		expect(response.status).toBe(404);
 	});
@@ -128,7 +129,7 @@ describe("GET /api/v1/alerts/:alertId", () => {
 
 		let response = await dispatch(
 			db,
-			req("GET", alertRoutes.alertShow.href({ alertId: alert.id }), null),
+			req("GET", alertRoutes.alertShow.href({ alertId: encodeId("alt", alert.id) }), null),
 		);
 		expect(response.status).toBe(401);
 	});
@@ -141,7 +142,7 @@ describe("GET /api/v1/alerts/:alertId", () => {
 
 		let response = await dispatch(
 			db,
-			req("GET", alertRoutes.alertShow.href({ alertId: alert.id }), key),
+			req("GET", alertRoutes.alertShow.href({ alertId: encodeId("alt", alert.id) }), key),
 		);
 		expect(response.status).toBe(403);
 	});
@@ -156,7 +157,7 @@ describe("PUT /api/v1/alerts/:alertId", () => {
 
 		let response = await dispatch(
 			db,
-			req("PUT", alertRoutes.alertUpdate.href({ alertId: alert.id }), key, {
+			req("PUT", alertRoutes.alertUpdate.href({ alertId: encodeId("alt", alert.id) }), key, {
 				name: "Renamed",
 				cooldownMinutes: 15,
 			}),
@@ -180,7 +181,9 @@ describe("PUT /api/v1/alerts/:alertId", () => {
 
 		let response = await dispatch(
 			db,
-			req("PUT", alertRoutes.alertUpdate.href({ alertId: alert.id }), key, { name: "" }),
+			req("PUT", alertRoutes.alertUpdate.href({ alertId: encodeId("alt", alert.id) }), key, {
+				name: "",
+			}),
 		);
 		expect(response.status).toBe(400);
 
@@ -199,7 +202,7 @@ describe("PUT /api/v1/alerts/:alertId", () => {
 
 		let response = await dispatch(
 			db,
-			req("PUT", alertRoutes.alertUpdate.href({ alertId: alert.id }), key, {
+			req("PUT", alertRoutes.alertUpdate.href({ alertId: encodeId("alt", alert.id) }), key, {
 				monitorId: crypto.randomUUID(),
 			}),
 		);
@@ -214,7 +217,7 @@ describe("PUT /api/v1/alerts/:alertId", () => {
 
 		let response = await dispatch(
 			db,
-			req("PUT", alertRoutes.alertUpdate.href({ alertId: alert.id }), key, {
+			req("PUT", alertRoutes.alertUpdate.href({ alertId: encodeId("alt", alert.id) }), key, {
 				monitorType: "dns",
 			}),
 		);
@@ -237,7 +240,7 @@ describe("PUT /api/v1/alerts/:alertId", () => {
 
 		await dispatch(
 			db,
-			req("PUT", alertRoutes.alertUpdate.href({ alertId: alert.id }), key, {
+			req("PUT", alertRoutes.alertUpdate.href({ alertId: encodeId("alt", alert.id) }), key, {
 				monitorType: "cron",
 			}),
 		);
@@ -259,7 +262,9 @@ describe("PUT /api/v1/alerts/:alertId", () => {
 
 		await dispatch(
 			db,
-			req("PUT", alertRoutes.alertUpdate.href({ alertId: alert.id }), key, { monitorId: null }),
+			req("PUT", alertRoutes.alertUpdate.href({ alertId: encodeId("alt", alert.id) }), key, {
+				monitorId: null,
+			}),
 		);
 
 		let updated = await db.findOne(alerts, { where: { id: alert.id } });
@@ -276,7 +281,9 @@ describe("PUT /api/v1/alerts/:alertId", () => {
 
 		await dispatch(
 			db,
-			req("PUT", alertRoutes.alertUpdate.href({ alertId: alert.id }), key, { name: "Renamed" }),
+			req("PUT", alertRoutes.alertUpdate.href({ alertId: encodeId("alt", alert.id) }), key, {
+				name: "Renamed",
+			}),
 		);
 
 		let updated = await db.findOne(alerts, { where: { id: alert.id } });
@@ -293,7 +300,9 @@ describe("PUT /api/v1/alerts/:alertId", () => {
 
 		let response = await dispatch(
 			db,
-			req("PUT", alertRoutes.alertUpdate.href({ alertId: alert.id }), key, { name: "Hijacked" }),
+			req("PUT", alertRoutes.alertUpdate.href({ alertId: encodeId("alt", alert.id) }), key, {
+				name: "Hijacked",
+			}),
 		);
 		expect(response.status).toBe(404);
 
@@ -308,7 +317,9 @@ describe("PUT /api/v1/alerts/:alertId", () => {
 
 		let response = await dispatch(
 			db,
-			req("PUT", alertRoutes.alertUpdate.href({ alertId: alert.id }), null, { name: "X" }),
+			req("PUT", alertRoutes.alertUpdate.href({ alertId: encodeId("alt", alert.id) }), null, {
+				name: "X",
+			}),
 		);
 		expect(response.status).toBe(401);
 	});
@@ -321,7 +332,9 @@ describe("PUT /api/v1/alerts/:alertId", () => {
 
 		let response = await dispatch(
 			db,
-			req("PUT", alertRoutes.alertUpdate.href({ alertId: alert.id }), key, { name: "X" }),
+			req("PUT", alertRoutes.alertUpdate.href({ alertId: encodeId("alt", alert.id) }), key, {
+				name: "X",
+			}),
 		);
 		expect(response.status).toBe(403);
 	});
@@ -336,7 +349,7 @@ describe("DELETE /api/v1/alerts/:alertId", () => {
 
 		let response = await dispatch(
 			db,
-			req("DELETE", alertRoutes.alertDestroy.href({ alertId: alert.id }), key),
+			req("DELETE", alertRoutes.alertDestroy.href({ alertId: encodeId("alt", alert.id) }), key),
 		);
 		expect(response.status).toBe(200);
 
@@ -354,7 +367,7 @@ describe("DELETE /api/v1/alerts/:alertId", () => {
 
 		let response = await dispatch(
 			db,
-			req("DELETE", alertRoutes.alertDestroy.href({ alertId: alert.id }), key),
+			req("DELETE", alertRoutes.alertDestroy.href({ alertId: encodeId("alt", alert.id) }), key),
 		);
 		expect(response.status).toBe(404);
 		expect(await db.findOne(alerts, { where: { id: alert.id } })).not.toBeNull();
@@ -367,7 +380,7 @@ describe("DELETE /api/v1/alerts/:alertId", () => {
 
 		let response = await dispatch(
 			db,
-			req("DELETE", alertRoutes.alertDestroy.href({ alertId: alert.id }), null),
+			req("DELETE", alertRoutes.alertDestroy.href({ alertId: encodeId("alt", alert.id) }), null),
 		);
 		expect(response.status).toBe(401);
 	});
@@ -380,7 +393,7 @@ describe("DELETE /api/v1/alerts/:alertId", () => {
 
 		let response = await dispatch(
 			db,
-			req("DELETE", alertRoutes.alertDestroy.href({ alertId: alert.id }), key),
+			req("DELETE", alertRoutes.alertDestroy.href({ alertId: encodeId("alt", alert.id) }), key),
 		);
 		expect(response.status).toBe(403);
 	});
@@ -392,6 +405,7 @@ describe("GET /api/v1/alerts/:alertId/events", () => {
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["alerts:read"]);
 		let alert = await createAlertRow(db, team.id);
+		let monitorId = crypto.randomUUID();
 
 		await db.create(
 			alertEvents,
@@ -399,7 +413,7 @@ describe("GET /api/v1/alerts/:alertId/events", () => {
 				id: crypto.randomUUID(),
 				sent_at: Date.now() - 1000,
 				alert_id: alert.id,
-				monitor_id: "monitor-1",
+				monitor_id: monitorId,
 				event_type: "down",
 				status: "sent",
 				error_message: null,
@@ -415,7 +429,7 @@ describe("GET /api/v1/alerts/:alertId/events", () => {
 				id: crypto.randomUUID(),
 				sent_at: Date.now(),
 				alert_id: alert.id,
-				monitor_id: "monitor-1",
+				monitor_id: monitorId,
 				event_type: "up",
 				status: "sent",
 				error_message: null,
@@ -428,13 +442,13 @@ describe("GET /api/v1/alerts/:alertId/events", () => {
 
 		let response = await dispatch(
 			db,
-			req("GET", alertRoutes.alertEvents.href({ alertId: alert.id }), key),
+			req("GET", alertRoutes.alertEvents.href({ alertId: encodeId("alt", alert.id) }), key),
 		);
 		expect(response.status).toBe(200);
 
 		let body = (await response.json()) as { data: { events: Array<{ id: string }> } };
 		expect(body.data.events).toHaveLength(2);
-		expect(body.data.events[0]?.id).toBe(newer.id);
+		expect(body.data.events[0]?.id).toBe(encodeId("evt", newer.id));
 	});
 
 	test("404s when the alert doesn't belong to the team", async () => {
@@ -446,7 +460,7 @@ describe("GET /api/v1/alerts/:alertId/events", () => {
 
 		let response = await dispatch(
 			db,
-			req("GET", alertRoutes.alertEvents.href({ alertId: alert.id }), key),
+			req("GET", alertRoutes.alertEvents.href({ alertId: encodeId("alt", alert.id) }), key),
 		);
 		expect(response.status).toBe(404);
 	});

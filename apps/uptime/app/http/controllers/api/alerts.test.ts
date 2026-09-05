@@ -21,6 +21,7 @@ import type { ApiKeyScope } from "~/database/schema";
 import { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
 import ApiKey from "~/app/data/api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { encodeId } from "~/app/services/typed-id";
 import { alerts, dnsMonitors, monitors, teams } from "~/database/schema";
 
 /**
@@ -194,7 +195,7 @@ describe("POST /api/v1/alerts", () => {
 
 		let response = await dispatch(
 			db,
-			post(key, emailAlertBody({ monitorId: crypto.randomUUID() })),
+			post(key, emailAlertBody({ monitorId: encodeId("mon", crypto.randomUUID()) })),
 		);
 		expect(response.status).toBe(404);
 		expect(await db.count(alerts, { where: { team_id: team.id } })).toBe(0);
@@ -220,7 +221,10 @@ describe("POST /api/v1/alerts", () => {
 			{ touch: true, returnRow: true },
 		);
 
-		let response = await dispatch(db, post(key, emailAlertBody({ monitorId: monitor.id })));
+		let response = await dispatch(
+			db,
+			post(key, emailAlertBody({ monitorId: encodeId("mon", monitor.id) })),
+		);
 		expect(response.status).toBe(201);
 
 		let created = await db.findOne(alerts, { where: { team_id: team.id } });
@@ -256,7 +260,7 @@ describe("POST /api/v1/alerts", () => {
 
 		let response = await dispatch(
 			db,
-			post(key, emailAlertBody({ monitorType: "dns", monitorId: monitor.id })),
+			post(key, emailAlertBody({ monitorType: "dns", monitorId: encodeId("dns", monitor.id) })),
 		);
 		expect(response.status).toBe(201);
 
@@ -283,7 +287,7 @@ describe("POST /api/v1/alerts", () => {
 
 		let response = await dispatch(
 			db,
-			post(key, emailAlertBody({ monitorType: "dns", monitorId: monitor.id })),
+			post(key, emailAlertBody({ monitorType: "dns", monitorId: encodeId("mon", monitor.id) })),
 		);
 		expect(response.status).toBe(404);
 		expect(await db.count(alerts, { where: { team_id: team.id } })).toBe(0);

@@ -23,6 +23,7 @@ import type { ZoneFileImport } from "~/app/services/zone-file";
 import type { SelectDnsMonitor } from "~/database/schema";
 
 import DnsMonitor, { MAX_DNS_MONITORS_PER_TEAM } from "~/app/data/dns-monitor";
+import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import {
 	DEFAULT_DNS_INTERVAL_SECONDS,
@@ -35,13 +36,14 @@ import {
 	discoveryNames,
 	importDiscovery,
 } from "~/app/services/dns-discovery";
+import { encodeId } from "~/app/services/typed-id";
 import { MAX_ZONE_FILE_BYTES, parseZoneFile } from "~/app/services/zone-file";
 import routes from "~/routes/web";
 
 /** Maps a DNS monitor row to its public camelCase JSON shape. */
 function serializeDnsMonitor(monitor: SelectDnsMonitor) {
 	return {
-		id: monitor.id,
+		id: encodeId("dns", monitor.id),
 		name: monitor.name,
 		domain: monitor.domain,
 		zoneFileImportedAt: monitor.zone_file_imported_at,
@@ -100,6 +102,7 @@ export const dnsMonitorsRoutes = {
 };
 
 export default createController(dnsMonitorsRoutes, {
+	middleware: [catchValidationError()],
 	actions: {
 		/** GET /api/v1/dns-monitors — lists the team's DNS monitors. */
 		dnsMonitorsIndex: {

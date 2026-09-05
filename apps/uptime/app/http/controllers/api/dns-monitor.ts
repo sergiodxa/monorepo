@@ -19,20 +19,22 @@ import { createController } from "remix/router";
 import type { InsertDnsMonitor, SelectDnsMonitor } from "~/database/schema";
 
 import DnsMonitor from "~/app/data/dns-monitor";
+import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import {
 	MAX_DNS_INTERVAL_SECONDS,
 	MIN_DNS_INTERVAL_SECONDS,
 } from "~/app/http/validators/dns-monitor";
 import { apiError, apiSuccess, parsePaginationQuery } from "~/app/services/api-response";
+import { encodeId, typedId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
-const DnsMonitorIdParams = s.object({ dnsMonitorId: s.string() });
+const DnsMonitorIdParams = s.object({ dnsMonitorId: typedId("dns") });
 
 /** Maps a DNS monitor row to its public camelCase JSON shape. */
 function serializeDnsMonitor(monitor: SelectDnsMonitor) {
 	return {
-		id: monitor.id,
+		id: encodeId("dns", monitor.id),
 		name: monitor.name,
 		domain: monitor.domain,
 		zoneFileImportedAt: monitor.zone_file_imported_at,
@@ -68,6 +70,7 @@ export const dnsMonitorRoutes = {
 };
 
 export default createController(dnsMonitorRoutes, {
+	middleware: [catchValidationError()],
 	actions: {
 		/** GET /api/v1/dns-monitors/:dnsMonitorId — a single DNS monitor. */
 		dnsMonitorShow: {
@@ -139,7 +142,7 @@ export default createController(dnsMonitorRoutes, {
 
 				return apiSuccess({
 					results: results.map((row) => ({
-						id: row.id,
+						id: encodeId("res", row.id),
 						status: row.status,
 						recordsChecked: row.records_checked,
 						recordsChanged: row.records_changed,

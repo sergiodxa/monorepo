@@ -21,17 +21,19 @@ import { createController } from "remix/router";
 import type { InsertCronJobMonitor, SelectCronJobMonitor } from "~/database/schema";
 
 import CronJobMonitor from "~/app/data/cron-job";
+import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { isSupportedTimezone, UNKNOWN_TIMEZONE_MESSAGE } from "~/app/lib/timezones";
 import { apiError, apiSuccess } from "~/app/services/api-response";
+import { encodeId, typedId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
-const CronJobIdParams = s.object({ cronJobId: s.string() });
+const CronJobIdParams = s.object({ cronJobId: typedId("cron") });
 
 /** Maps a cron-job monitor row to its public camelCase JSON shape. */
 function serializeCronJob(monitor: SelectCronJobMonitor) {
 	return {
-		id: monitor.id,
+		id: encodeId("cron", monitor.id),
 		name: monitor.name,
 		description: monitor.description,
 		cronExpression: monitor.cron_expression,
@@ -65,6 +67,7 @@ export const cronJobRoutes = {
 };
 
 export default createController(cronJobRoutes, {
+	middleware: [catchValidationError()],
 	actions: {
 		/** GET /api/v1/cron-jobs/:cronJobId — a single cron-job monitor. */
 		cronJobShow: {

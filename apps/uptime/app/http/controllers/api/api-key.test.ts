@@ -19,6 +19,7 @@ import type { ApiKeyScope } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import { apiKeyDestroy } from "~/app/http/controllers/api/api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { encodeId } from "~/app/services/typed-id";
 import { apiKeys, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -58,10 +59,13 @@ async function dispatch(db: Db, request: Request) {
 }
 
 function del(apiKeyId: string, key: string | null) {
-	return new Request(`https://uptime.test${routes.api.v1.apiKeys.destroy.href({ apiKeyId })}`, {
-		method: "DELETE",
-		headers: key ? { Authorization: `Bearer ${key}` } : {},
-	});
+	return new Request(
+		`https://uptime.test${routes.api.v1.apiKeys.destroy.href({ apiKeyId: encodeId("key", apiKeyId) })}`,
+		{
+			method: "DELETE",
+			headers: key ? { Authorization: `Bearer ${key}` } : {},
+		},
+	);
 }
 
 describe("DELETE /api/v1/api-keys/:apiKeyId", () => {

@@ -22,12 +22,14 @@ import CronJobMonitor from "~/app/data/cron-job";
 import Monitor from "~/app/data/monitor";
 import StatusPage from "~/app/data/status-page";
 import { serializeStatusPage } from "~/app/http/controllers/api/status-pages";
+import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
+import { encodeId, typedId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
 const SLUG_PATTERN = /^[a-z0-9-]+$/;
-const StatusPageIdParams = s.object({ statusPageId: s.string() });
+const StatusPageIdParams = s.object({ statusPageId: typedId("sp") });
 
 /** Loads a page plus its curated HTTP-monitor/cron-job id lists. */
 async function loadWithAttachments(db: Database, teamId: string, statusPageId: string) {
@@ -36,8 +38,8 @@ async function loadWithAttachments(db: Database, teamId: string, statusPageId: s
 	let attached = await StatusPage.getAttachedIds(db, statusPageId);
 	return {
 		...serializeStatusPage(statusPage),
-		monitors: attached.monitorIds,
-		cronJobs: attached.cronJobIds,
+		monitors: attached.monitorIds.map((id) => encodeId("mon", id)),
+		cronJobs: attached.cronJobIds.map((id) => encodeId("cron", id)),
 	};
 }
 
@@ -61,8 +63,8 @@ const UpdateStatusPageSchema = s.object({
 });
 
 const UpdateAssociationsSchema = s.object({
-	monitorIds: s.defaulted(s.array(s.string()), []),
-	cronJobIds: s.defaulted(s.array(s.string()), []),
+	monitorIds: s.defaulted(s.array(typedId("mon")), []),
+	cronJobIds: s.defaulted(s.array(typedId("cron")), []),
 });
 
 /** Route leaves this controller handles, grouped for a single `router.map()` call. */
@@ -74,6 +76,7 @@ export const statusPageRoutes = {
 };
 
 export default createController(statusPageRoutes, {
+	middleware: [catchValidationError()],
 	actions: {
 		/** GET /api/v1/status-pages/:statusPageId — a status page with its attachment id lists. */
 		statusPageShow: {
@@ -187,8 +190,8 @@ export default createController(statusPageRoutes, {
 
 				return apiSuccess({
 					statusPage: serializeStatusPage(statusPage),
-					monitors: monitorIds,
-					cronJobs: cronJobIds,
+					monitors: monitorIds.map((id) => encodeId("mon", id)),
+					cronJobs: cronJobIds.map((id) => encodeId("cron", id)),
 				});
 			},
 		},

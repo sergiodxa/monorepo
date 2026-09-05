@@ -19,15 +19,17 @@ import { createController } from "remix/router";
 import type { InsertTcpMonitor, SelectTcpMonitor } from "~/database/schema";
 
 import TcpMonitor from "~/app/data/tcp-monitor";
+import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess, parsePaginationQuery } from "~/app/services/api-response";
+import { encodeId, typedId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
-const TcpMonitorIdParams = s.object({ tcpMonitorId: s.string() });
+const TcpMonitorIdParams = s.object({ tcpMonitorId: typedId("tcpm") });
 
 function serializeTcpMonitor(monitor: SelectTcpMonitor) {
 	return {
-		id: monitor.id,
+		id: encodeId("tcpm", monitor.id),
 		name: monitor.name,
 		host: monitor.host,
 		port: monitor.port,
@@ -60,6 +62,7 @@ export const tcpMonitorRoutes = {
 };
 
 export default createController(tcpMonitorRoutes, {
+	middleware: [catchValidationError()],
 	actions: {
 		/** GET /api/v1/tcp-monitors/:tcpMonitorId — a single TCP monitor. */
 		tcpMonitorShow: {
@@ -136,7 +139,7 @@ export default createController(tcpMonitorRoutes, {
 
 				return apiSuccess({
 					results: results.map((row) => ({
-						id: row.id,
+						id: encodeId("tcpr", row.id),
 						status: row.status,
 						responseTimeMs: row.response_time_ms,
 						errorMessage: row.error_message,

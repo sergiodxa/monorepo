@@ -20,17 +20,19 @@ import { createController } from "remix/router";
 import type { SelectInvite } from "~/database/schema";
 
 import Invite from "~/app/data/invite";
+import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
+import { encodeId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
 /** Maps an invite row to its public camelCase JSON shape. */
 function serializeInvite(invite: SelectInvite) {
 	return {
-		id: invite.id,
+		id: encodeId("inv", invite.id),
 		email: invite.email,
-		senderId: invite.sender_id,
-		teamId: invite.team_id,
+		senderId: encodeId("usr", invite.sender_id),
+		teamId: encodeId("team", invite.team_id),
 		acceptedAt: invite.accepted_at,
 		createdAt: invite.created_at,
 		updatedAt: invite.updated_at,
@@ -46,6 +48,7 @@ export const invitesRoutes = {
 };
 
 export default createController(invitesRoutes, {
+	middleware: [catchValidationError()],
 	actions: {
 		/** GET /api/v1/invites — lists every invite (pending and accepted) for the team. */
 		invitesIndex: {

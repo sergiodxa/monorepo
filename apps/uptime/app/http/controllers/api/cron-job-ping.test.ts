@@ -30,6 +30,7 @@ import CronJobMonitor from "~/app/data/cron-job";
 import { MAIL_FROM } from "~/app/emails/sender";
 import { billedEvents, createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { encodeId } from "~/app/services/typed-id";
 import { cronJobMonitors, cronJobPings, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -309,12 +310,54 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping", () => {
 		expect(pings[0]?.was_on_time).toBeTruthy();
 	});
 
+	/** The form the API hands out, and the one the docs tell a caller to write. */
+	test("records a ping addressed by the monitor's TypeID", async () => {
+		let { db } = createTestDatabase();
+		let { monitor, key } = await createCaller(db);
+
+		let response = await dispatch(db, ping(encodeId("cron", monitor.id), { key }));
+		expect(response.status).toBe(201);
+
+		let pings = await db.findMany(cronJobPings, { where: { cron_job_monitor_id: monitor.id } });
+		expect(pings).toHaveLength(1);
+	});
+
+	/**
+	 * Both spellings name one monitor, so the second is refused by the per-monitor
+	 * window the first opened rather than being served as a separate job.
+	 */
+	test("reads the TypeID and the raw UUID as the same monitor", async () => {
+		let { db } = createTestDatabase();
+		let { monitor, key } = await createCaller(db);
+
+		expect((await dispatch(db, ping(monitor.id, { key }))).status).toBe(201);
+
+		let repeat = await dispatch(db, ping(encodeId("cron", monitor.id), { key }));
+		expect(repeat.status).toBe(429);
+	});
+
 	test("returns 404 for an unknown cron job id", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id);
 
 		let response = await dispatch(db, ping(crypto.randomUUID(), { key }));
+		expect(response.status).toBe(404);
+	});
+
+	test("returns 404 for an id carrying another resource's prefix", async () => {
+		let { db } = createTestDatabase();
+		let { monitor, key } = await createCaller(db);
+
+		let response = await dispatch(db, ping(encodeId("mon", monitor.id), { key }));
+		expect(response.status).toBe(404);
+	});
+
+	test("returns 404 for an id in neither form", async () => {
+		let { db } = createTestDatabase();
+		let { key } = await createCaller(db);
+
+		let response = await dispatch(db, ping("not-an-id", { key }));
 		expect(response.status).toBe(404);
 	});
 

@@ -17,6 +17,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { encodeId } from "~/app/services/typed-id";
 import { teamDomains, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -194,7 +195,7 @@ describe("DELETE /api/v1/team-domains", () => {
 			method: "DELETE",
 			path: routes.api.v1.teamDomains.destroy.href(),
 			key,
-			body: { id: domain.id },
+			body: { id: encodeId("dom", domain.id) },
 		});
 
 		expect(response.status).toBe(200);
@@ -213,7 +214,7 @@ describe("DELETE /api/v1/team-domains", () => {
 			method: "DELETE",
 			path: routes.api.v1.teamDomains.destroy.href(),
 			key,
-			body: { id: otherDomain.id },
+			body: { id: encodeId("dom", otherDomain.id) },
 		});
 
 		expect(response.status).toBe(404);
@@ -245,7 +246,7 @@ describe("DELETE /api/v1/team-domains", () => {
 		let response = await dispatch(db, {
 			method: "DELETE",
 			path: routes.api.v1.teamDomains.destroy.href(),
-			body: { id: domain.id },
+			body: { id: encodeId("dom", domain.id) },
 		});
 		expect(response.status).toBe(401);
 	});
@@ -260,7 +261,7 @@ describe("DELETE /api/v1/team-domains", () => {
 			method: "DELETE",
 			path: routes.api.v1.teamDomains.destroy.href(),
 			key,
-			body: { id: domain.id },
+			body: { id: encodeId("dom", domain.id) },
 		});
 		expect(response.status).toBe(403);
 	});

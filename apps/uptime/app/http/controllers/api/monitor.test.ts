@@ -20,6 +20,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { encodeId } from "~/app/services/typed-id";
 import { alertEvents, monitorResults, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -135,7 +136,9 @@ describe("GET /api/v1/monitors/:monitorId", () => {
 
 		let response = await dispatch(
 			db,
-			request("GET", routes.api.v1.monitors.show.href({ monitorId: monitor.id }), { key }),
+			request("GET", routes.api.v1.monitors.show.href({ monitorId: encodeId("mon", monitor.id) }), {
+				key,
+			}),
 		);
 
 		expect(response.status).toBe(200);
@@ -152,7 +155,9 @@ describe("GET /api/v1/monitors/:monitorId", () => {
 
 		let response = await dispatch(
 			db,
-			request("GET", routes.api.v1.monitors.show.href({ monitorId: monitor.id }), { key }),
+			request("GET", routes.api.v1.monitors.show.href({ monitorId: encodeId("mon", monitor.id) }), {
+				key,
+			}),
 		);
 
 		expect(response.status).toBe(404);
@@ -162,7 +167,10 @@ describe("GET /api/v1/monitors/:monitorId", () => {
 		let { db } = createTestDatabase();
 		let response = await dispatch(
 			db,
-			request("GET", routes.api.v1.monitors.show.href({ monitorId: crypto.randomUUID() })),
+			request(
+				"GET",
+				routes.api.v1.monitors.show.href({ monitorId: encodeId("mon", crypto.randomUUID()) }),
+			),
 		);
 		expect(response.status).toBe(401);
 	});
@@ -175,9 +183,48 @@ describe("GET /api/v1/monitors/:monitorId", () => {
 
 		let response = await dispatch(
 			db,
-			request("GET", routes.api.v1.monitors.show.href({ monitorId: monitor.id }), { key }),
+			request("GET", routes.api.v1.monitors.show.href({ monitorId: encodeId("mon", monitor.id) }), {
+				key,
+			}),
 		);
 		expect(response.status).toBe(403);
+	});
+
+	/**
+	 * The API speaks TypeIDs alone, so the UUID the row is keyed by is not an identifier
+	 * a caller can name it with — an integration holding one from before the cutover is
+	 * told so, rather than being served the monitor behind it.
+	 */
+	test("400s for the raw UUID behind the monitor's id", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["monitors:read"]);
+		let monitor = await createMonitorRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			request("GET", routes.api.v1.monitors.show.href({ monitorId: monitor.id }), { key }),
+		);
+		expect(response.status).toBe(400);
+
+		let body = (await response.json()) as { error: { code: string } };
+		expect(body.error.code).toBe("VALIDATION_ERROR");
+	});
+
+	/** A prefix is what makes an id unusable against the resource it does not name. */
+	test("400s for an id carrying another resource's prefix", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["monitors:read"]);
+		let monitor = await createMonitorRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			request("GET", routes.api.v1.monitors.show.href({ monitorId: encodeId("alt", monitor.id) }), {
+				key,
+			}),
+		);
+		expect(response.status).toBe(400);
 	});
 });
 
@@ -190,10 +237,14 @@ describe("PUT /api/v1/monitors/:monitorId", () => {
 
 		let response = await dispatch(
 			db,
-			request("PUT", routes.api.v1.monitors.update.href({ monitorId: monitor.id }), {
-				key,
-				body: { name: "New name", intervalSeconds: 120 },
-			}),
+			request(
+				"PUT",
+				routes.api.v1.monitors.update.href({ monitorId: encodeId("mon", monitor.id) }),
+				{
+					key,
+					body: { name: "New name", intervalSeconds: 120 },
+				},
+			),
 		);
 
 		expect(response.status).toBe(200);
@@ -213,10 +264,14 @@ describe("PUT /api/v1/monitors/:monitorId", () => {
 
 		let response = await dispatch(
 			db,
-			request("PUT", routes.api.v1.monitors.update.href({ monitorId: monitor.id }), {
-				key,
-				body: { url: "not-a-url" },
-			}),
+			request(
+				"PUT",
+				routes.api.v1.monitors.update.href({ monitorId: encodeId("mon", monitor.id) }),
+				{
+					key,
+					body: { url: "not-a-url" },
+				},
+			),
 		);
 
 		expect(response.status).toBe(400);
@@ -233,10 +288,14 @@ describe("PUT /api/v1/monitors/:monitorId", () => {
 
 		let response = await dispatch(
 			db,
-			request("PUT", routes.api.v1.monitors.update.href({ monitorId: monitor.id }), {
-				key,
-				body: { name: "Hijacked" },
-			}),
+			request(
+				"PUT",
+				routes.api.v1.monitors.update.href({ monitorId: encodeId("mon", monitor.id) }),
+				{
+					key,
+					body: { name: "Hijacked" },
+				},
+			),
 		);
 
 		expect(response.status).toBe(404);
@@ -248,9 +307,13 @@ describe("PUT /api/v1/monitors/:monitorId", () => {
 		let { db } = createTestDatabase();
 		let response = await dispatch(
 			db,
-			request("PUT", routes.api.v1.monitors.update.href({ monitorId: crypto.randomUUID() }), {
-				body: { name: "x" },
-			}),
+			request(
+				"PUT",
+				routes.api.v1.monitors.update.href({ monitorId: encodeId("mon", crypto.randomUUID()) }),
+				{
+					body: { name: "x" },
+				},
+			),
 		);
 		expect(response.status).toBe(401);
 	});
@@ -263,10 +326,14 @@ describe("PUT /api/v1/monitors/:monitorId", () => {
 
 		let response = await dispatch(
 			db,
-			request("PUT", routes.api.v1.monitors.update.href({ monitorId: monitor.id }), {
-				key,
-				body: { name: "x" },
-			}),
+			request(
+				"PUT",
+				routes.api.v1.monitors.update.href({ monitorId: encodeId("mon", monitor.id) }),
+				{
+					key,
+					body: { name: "x" },
+				},
+			),
 		);
 		expect(response.status).toBe(403);
 	});
@@ -281,7 +348,11 @@ describe("DELETE /api/v1/monitors/:monitorId", () => {
 
 		let response = await dispatch(
 			db,
-			request("DELETE", routes.api.v1.monitors.destroy.href({ monitorId: monitor.id }), { key }),
+			request(
+				"DELETE",
+				routes.api.v1.monitors.destroy.href({ monitorId: encodeId("mon", monitor.id) }),
+				{ key },
+			),
 		);
 
 		expect(response.status).toBe(200);
@@ -297,7 +368,11 @@ describe("DELETE /api/v1/monitors/:monitorId", () => {
 
 		let response = await dispatch(
 			db,
-			request("DELETE", routes.api.v1.monitors.destroy.href({ monitorId: monitor.id }), { key }),
+			request(
+				"DELETE",
+				routes.api.v1.monitors.destroy.href({ monitorId: encodeId("mon", monitor.id) }),
+				{ key },
+			),
 		);
 
 		expect(response.status).toBe(404);
@@ -308,7 +383,10 @@ describe("DELETE /api/v1/monitors/:monitorId", () => {
 		let { db } = createTestDatabase();
 		let response = await dispatch(
 			db,
-			request("DELETE", routes.api.v1.monitors.destroy.href({ monitorId: crypto.randomUUID() })),
+			request(
+				"DELETE",
+				routes.api.v1.monitors.destroy.href({ monitorId: encodeId("mon", crypto.randomUUID()) }),
+			),
 		);
 		expect(response.status).toBe(401);
 	});
@@ -321,7 +399,11 @@ describe("DELETE /api/v1/monitors/:monitorId", () => {
 
 		let response = await dispatch(
 			db,
-			request("DELETE", routes.api.v1.monitors.destroy.href({ monitorId: monitor.id }), { key }),
+			request(
+				"DELETE",
+				routes.api.v1.monitors.destroy.href({ monitorId: encodeId("mon", monitor.id) }),
+				{ key },
+			),
 		);
 		expect(response.status).toBe(403);
 	});
@@ -337,7 +419,11 @@ describe("GET /api/v1/monitors/:monitorId/stats", () => {
 
 		let response = await dispatch(
 			db,
-			request("GET", routes.api.v1.monitors.itemStats.href({ monitorId: monitor.id }), { key }),
+			request(
+				"GET",
+				routes.api.v1.monitors.itemStats.href({ monitorId: encodeId("mon", monitor.id) }),
+				{ key },
+			),
 		);
 
 		expect(response.status).toBe(200);
@@ -354,7 +440,11 @@ describe("GET /api/v1/monitors/:monitorId/stats", () => {
 
 		let response = await dispatch(
 			db,
-			request("GET", routes.api.v1.monitors.itemStats.href({ monitorId: monitor.id }), { key }),
+			request(
+				"GET",
+				routes.api.v1.monitors.itemStats.href({ monitorId: encodeId("mon", monitor.id) }),
+				{ key },
+			),
 		);
 		expect(response.status).toBe(404);
 	});
@@ -363,7 +453,10 @@ describe("GET /api/v1/monitors/:monitorId/stats", () => {
 		let { db } = createTestDatabase();
 		let response = await dispatch(
 			db,
-			request("GET", routes.api.v1.monitors.itemStats.href({ monitorId: crypto.randomUUID() })),
+			request(
+				"GET",
+				routes.api.v1.monitors.itemStats.href({ monitorId: encodeId("mon", crypto.randomUUID()) }),
+			),
 		);
 		expect(response.status).toBe(401);
 	});
@@ -376,7 +469,11 @@ describe("GET /api/v1/monitors/:monitorId/stats", () => {
 
 		let response = await dispatch(
 			db,
-			request("GET", routes.api.v1.monitors.itemStats.href({ monitorId: monitor.id }), { key }),
+			request(
+				"GET",
+				routes.api.v1.monitors.itemStats.href({ monitorId: encodeId("mon", monitor.id) }),
+				{ key },
+			),
 		);
 		expect(response.status).toBe(403);
 	});
@@ -393,9 +490,13 @@ describe("GET /api/v1/monitors/:monitorId/results", () => {
 
 		let response = await dispatch(
 			db,
-			request("GET", `${routes.api.v1.monitors.results.href({ monitorId: monitor.id })}?limit=1`, {
-				key,
-			}),
+			request(
+				"GET",
+				`${routes.api.v1.monitors.results.href({ monitorId: encodeId("mon", monitor.id) })}?limit=1`,
+				{
+					key,
+				},
+			),
 		);
 
 		expect(response.status).toBe(200);
@@ -415,7 +516,11 @@ describe("GET /api/v1/monitors/:monitorId/results", () => {
 
 		let response = await dispatch(
 			db,
-			request("GET", routes.api.v1.monitors.results.href({ monitorId: monitor.id }), { key }),
+			request(
+				"GET",
+				routes.api.v1.monitors.results.href({ monitorId: encodeId("mon", monitor.id) }),
+				{ key },
+			),
 		);
 		expect(response.status).toBe(404);
 	});
@@ -424,7 +529,10 @@ describe("GET /api/v1/monitors/:monitorId/results", () => {
 		let { db } = createTestDatabase();
 		let response = await dispatch(
 			db,
-			request("GET", routes.api.v1.monitors.results.href({ monitorId: crypto.randomUUID() })),
+			request(
+				"GET",
+				routes.api.v1.monitors.results.href({ monitorId: encodeId("mon", crypto.randomUUID()) }),
+			),
 		);
 		expect(response.status).toBe(401);
 	});
@@ -437,7 +545,11 @@ describe("GET /api/v1/monitors/:monitorId/results", () => {
 
 		let response = await dispatch(
 			db,
-			request("GET", routes.api.v1.monitors.results.href({ monitorId: monitor.id }), { key }),
+			request(
+				"GET",
+				routes.api.v1.monitors.results.href({ monitorId: encodeId("mon", monitor.id) }),
+				{ key },
+			),
 		);
 		expect(response.status).toBe(403);
 	});
@@ -469,7 +581,11 @@ describe("GET /api/v1/monitors/:monitorId/alert-events", () => {
 
 		let response = await dispatch(
 			db,
-			request("GET", routes.api.v1.monitors.alertEvents.href({ monitorId: monitor.id }), { key }),
+			request(
+				"GET",
+				routes.api.v1.monitors.alertEvents.href({ monitorId: encodeId("mon", monitor.id) }),
+				{ key },
+			),
 		);
 
 		expect(response.status).toBe(200);
@@ -487,7 +603,11 @@ describe("GET /api/v1/monitors/:monitorId/alert-events", () => {
 
 		let response = await dispatch(
 			db,
-			request("GET", routes.api.v1.monitors.alertEvents.href({ monitorId: monitor.id }), { key }),
+			request(
+				"GET",
+				routes.api.v1.monitors.alertEvents.href({ monitorId: encodeId("mon", monitor.id) }),
+				{ key },
+			),
 		);
 		expect(response.status).toBe(404);
 	});
@@ -496,7 +616,12 @@ describe("GET /api/v1/monitors/:monitorId/alert-events", () => {
 		let { db } = createTestDatabase();
 		let response = await dispatch(
 			db,
-			request("GET", routes.api.v1.monitors.alertEvents.href({ monitorId: crypto.randomUUID() })),
+			request(
+				"GET",
+				routes.api.v1.monitors.alertEvents.href({
+					monitorId: encodeId("mon", crypto.randomUUID()),
+				}),
+			),
 		);
 		expect(response.status).toBe(401);
 	});
@@ -509,7 +634,11 @@ describe("GET /api/v1/monitors/:monitorId/alert-events", () => {
 
 		let response = await dispatch(
 			db,
-			request("GET", routes.api.v1.monitors.alertEvents.href({ monitorId: monitor.id }), { key }),
+			request(
+				"GET",
+				routes.api.v1.monitors.alertEvents.href({ monitorId: encodeId("mon", monitor.id) }),
+				{ key },
+			),
 		);
 		expect(response.status).toBe(403);
 	});
