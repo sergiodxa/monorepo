@@ -16,7 +16,7 @@ import { isFailure } from "@sdxc/result";
 import { Session } from "remix/session";
 
 import type { PurgeError } from "./purge-error.js";
-import type { CacheInterface, CachePolicy, CacheTag } from "./types.js";
+import type { CacheInterface, CachePolicy, CacheTag, PurgeIssue } from "./types.js";
 import type { CacheRefusalReason } from "./unsafe-cache-policy-error.js";
 
 import { cacheTag } from "./cache-tag.js";
@@ -56,9 +56,9 @@ const DOWNGRADE_EVENT = "cache.downgraded";
 const DEFERRED_PURGE_FAILED_EVENT = "cache.purge_failed";
 
 /**
- * What to record as the reason a purge failed: the platform's own rejection when the
- * error carries one, since the wrapper's message only restates the tags the note
- * already names.
+ * What to record as the reason a purge failed: the platform's own rejection or
+ * the issues it declined with, since the wrapper's message only restates the
+ * tags the note already names.
  *
  * @param error The failure the purge reported.
  */
@@ -66,6 +66,11 @@ function describePurgeFailure(error: Error): string {
 	let cause = error.cause;
 	if (cause instanceof Error) return cause.message;
 	if (typeof cause === "string") return cause;
+	if (Array.isArray(cause) && cause.length > 0) {
+		return (cause as readonly PurgeIssue[])
+			.map((issue) => `${issue.code}: ${issue.message}`)
+			.join("; ");
+	}
 	return error.message;
 }
 

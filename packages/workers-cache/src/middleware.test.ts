@@ -544,6 +544,31 @@ describe("cache middleware purging", () => {
 		]);
 	});
 
+	test("names the platform's issues when a deferred purge was declined", async () => {
+		let { log, record } = openLog();
+		let recording = createRecordingCache({
+			declineWith: [{ code: 1122, message: "too many tags in one call" }],
+		});
+		let middleware = cacheMiddleware({ cache: recording });
+		let context = makeContext("/posts/1", { method: "POST" });
+
+		await log.run(() =>
+			middleware(context, async () => {
+				context.cache.purgeLater(TAGS.postList());
+				return new Response("ok");
+			}),
+		);
+
+		expect(record().notes).toEqual([
+			expect.objectContaining({
+				level: "warn",
+				name: "cache.purge_failed",
+				tags: "posts",
+				error: "1122: too many tags in one call",
+			}),
+		]);
+	});
+
 	test("swallows a failed deferred purge when no log is current", async () => {
 		let recording = createRecordingCache({ failWith: new Error("edge unavailable") });
 		let middleware = cacheMiddleware({ cache: recording });
