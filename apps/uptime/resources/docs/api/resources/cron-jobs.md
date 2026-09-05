@@ -1,6 +1,6 @@
 ---
 title: Cron Jobs
-description: Create and manage cron job monitors. Record pings and get execution history.
+description: Create and manage cron job monitors, and record pings from your scheduled jobs.
 section:
   title: API Resources
   order: 5
@@ -515,110 +515,6 @@ Returns `204 No Content` on success with an empty response body.
 
 Returns `204 No Content` with an empty response body on success.
 
-## GET /api/v1/cron-jobs/:id/ping
-
-Returns the ping history for a cron job monitor.
-
-### Required Scope
-
-`cron-jobs:read`
-
-### Query Parameters
-
-| Parameter | Type    | Required | Description                           |
-| --------- | ------- | -------- | ------------------------------------- |
-| `limit`   | integer | No       | Number of results (1-100, default 20) |
-| `offset`  | integer | No       | Pagination offset (default 0)         |
-
-### Example Request
-
-#### cURL
-
-```bash
-curl "https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123/ping?limit=10&offset=0" \
-  -H "Authorization: Bearer uptime_your_api_key"
-```
-
-### Response
-
-```json
-{
-	"data": [
-		{
-			"id": "ping_xyz789",
-			"cronJobId": "cron_abc123",
-			"receivedAt": "2026-02-14T07:00:12Z",
-			"status": "on_time"
-		},
-		{
-			"id": "ping_xyz788",
-			"cronJobId": "cron_abc123",
-			"receivedAt": "2026-02-13T07:00:08Z",
-			"status": "on_time"
-		},
-		{
-			"id": "ping_xyz787",
-			"cronJobId": "cron_abc123",
-			"receivedAt": "2026-02-12T07:10:45Z",
-			"status": "late"
-		}
-	],
-	"pagination": {
-		"total": 45,
-		"limit": 10,
-		"offset": 0
-	}
-}
-```
-
-### Possible Errors
-
-| Status | Code             | Description                                 |
-| ------ | ---------------- | ------------------------------------------- |
-| 400    | VALIDATION_ERROR | Invalid query parameters                    |
-| 401    | UNAUTHORIZED     | Missing or invalid API key                  |
-| 403    | FORBIDDEN        | API key doesn't have `cron-jobs:read` scope |
-| 404    | NOT_FOUND        | Cron job not found                          |
-| 429    | RATE_LIMITED     | Too many requests                           |
-| 500    | INTERNAL_ERROR   | Server error                                |
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["data", "pagination"],
-	"properties": {
-		"data": {
-			"type": "array",
-			"items": { "$ref": "#/$defs/ping" }
-		},
-		"pagination": {
-			"type": "object",
-			"required": ["total", "limit", "offset"],
-			"properties": {
-				"total": { "type": "integer", "minimum": 0 },
-				"limit": { "type": "integer", "minimum": 1, "maximum": 100 },
-				"offset": { "type": "integer", "minimum": 0 }
-			}
-		}
-	},
-	"$defs": {
-		"ping": {
-			"type": "object",
-			"required": ["id", "cronJobId", "receivedAt", "status"],
-			"properties": {
-				"id": { "type": "string", "pattern": "^ping_[a-zA-Z0-9]+$" },
-				"cronJobId": { "type": "string", "pattern": "^cron_[a-zA-Z0-9]+$" },
-				"receivedAt": { "type": "string", "format": "date-time" },
-				"status": { "type": "string", "enum": ["on_time", "late"] }
-			}
-		}
-	}
-}
-```
-
 ## POST /api/v1/cron-jobs/:id/ping
 
 Records a ping for a cron job monitor. Call this endpoint when your scheduled task completes successfully.
@@ -646,14 +542,11 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123/ping \
 
 ```json
 {
-	"data": {
-		"id": "ping_xyz790",
-		"cronJobId": "cron_abc123",
-		"receivedAt": "2026-02-14T07:00:12Z",
-		"status": "on_time"
-	}
+	"wasOnTime": true
 }
 ```
+
+Unlike the rest of `/api/v1`, this endpoint answers with the bare object above rather than the `{ data, meta }` envelope, so a shell script can read the result without unwrapping it.
 
 ### Possible Errors
 
@@ -672,24 +565,14 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123/ping \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": ["data"],
+	"required": ["wasOnTime"],
 	"properties": {
-		"data": { "$ref": "#/$defs/ping" }
-	},
-	"$defs": {
-		"ping": {
-			"type": "object",
-			"required": ["id", "cronJobId", "receivedAt", "status"],
-			"properties": {
-				"id": { "type": "string", "pattern": "^ping_[a-zA-Z0-9]+$" },
-				"cronJobId": { "type": "string", "pattern": "^cron_[a-zA-Z0-9]+$" },
-				"receivedAt": { "type": "string", "format": "date-time" },
-				"status": { "type": "string", "enum": ["on_time", "late"] }
-			}
-		}
+		"wasOnTime": { "type": "boolean" }
 	}
 }
 ```
+
+`wasOnTime` is `true` when the ping arrived within the job's grace period, and `false` when it arrived after it — a late ping is still recorded and still answers `201`.
 
 ## Response Fields
 
