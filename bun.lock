@@ -267,6 +267,7 @@
       "dependencies": {
         "@sdxc/api-client": "workspace:*",
         "@sdxc/crypto": "workspace:*",
+        "@sdxc/logger": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/validate": "workspace:*",
         "@sdxc/webhooks": "workspace:*",
@@ -481,6 +482,7 @@
       "dependencies": {
         "@markdoc/markdoc": "^0.5.9",
         "@sdxc/highlight": "workspace:*",
+        "@sdxc/logger": "workspace:*",
         "@sdxc/result": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
@@ -543,6 +545,7 @@
         "@sdxc/duration": "workspace:*",
         "@sdxc/get-client-ip": "workspace:*",
         "@sdxc/http": "workspace:*",
+        "@sdxc/logger": "workspace:*",
         "@sdxc/result": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
@@ -700,6 +703,7 @@
       "name": "@sdxc/workers-cache",
       "version": "0.0.1",
       "dependencies": {
+        "@sdxc/logger": "workspace:*",
         "@sdxc/result": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
