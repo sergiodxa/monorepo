@@ -21,6 +21,7 @@ import { ArticleViewModel } from "~/app/http/view-models/cms/articles";
 import { Post } from "~/app/repositories/post";
 import { ArticlePost } from "~/app/repositories/posts/article";
 import { ArticleSchema } from "~/app/schemas/cms/article";
+import { TAGS } from "~/app/services/cache";
 import { CMSArticlesActionView, CMSArticlesIndexView } from "~/resources/views/cms/articles";
 import routes from "~/routes/web";
 
@@ -102,7 +103,14 @@ export default createController(routes.cms.articles, {
 			if (!id)
 				return redirect(routes.cms.articles.index.href(), { status: redirect.Status.SeeOther });
 
+			// Read before deleting: the public page is cached under its slug, which
+			// only the record carries.
+			let article = await ArticlePost.findById(db, id);
+
 			await ArticlePost.destroy(db, id);
+
+			if (article) ctx.cache.purgeLater(TAGS.post("articles", article.meta.slug));
+
 			return redirect(routes.cms.articles.index.href(), { status: redirect.Status.SeeOther });
 		}),
 
@@ -165,6 +173,10 @@ export default createController(routes.cms.articles, {
 			succeeded(result, "Invalid article form data");
 			let input = ArticleViewModel.input({ data: result.data });
 
+			// Read before writing: an edit that renames the slug leaves the old URL
+			// cached, and only the stored record still knows what it was.
+			let previous = await ArticlePost.findById(db, id);
+
 			let updated = await ArticlePost.update(db, id, {
 				author_id: user.id,
 				published_at: input.published_at,
@@ -175,6 +187,10 @@ export default createController(routes.cms.articles, {
 				let viewProps = ArticleViewModel.notFound({ id });
 				return ctx.render(CMSArticlesActionView, viewProps, { status: 404 });
 			}
+
+			let slugs = new Set([input.meta.slug]);
+			if (previous) slugs.add(previous.meta.slug);
+			ctx.cache.purgeLater(...[...slugs].map((slug) => TAGS.post("articles", slug)));
 
 			return redirect(routes.cms.articles.edit.href({ id }), { status: redirect.Status.SeeOther });
 		}),

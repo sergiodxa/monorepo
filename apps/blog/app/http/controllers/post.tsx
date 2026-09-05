@@ -19,6 +19,7 @@ import { isAdmin } from "~/app/http/middleware/auth";
 import { NotFoundViewModel } from "~/app/http/view-models/not-found";
 import { PostViewModel } from "~/app/http/view-models/post";
 import { Post } from "~/app/repositories/post";
+import { PUBLIC_POST, TAGS } from "~/app/services/cache";
 import { NotFoundView } from "~/resources/views/not-found";
 import { PostView } from "~/resources/views/post";
 import routeMap from "~/routes/web";
@@ -123,7 +124,9 @@ export default createAction(
 			});
 		}
 
-		if (!Post.isPublishedAt(post.post.published_at) && !isAdmin()) {
+		let isPublished = Post.isPublishedAt(post.post.published_at);
+
+		if (!isPublished && !isAdmin()) {
 			if (prefersMarkdown) {
 				if (validation.params.postType === "articles") {
 					return markdown(403, "# Forbidden\n\nThis article is not published yet.\n\n");
@@ -149,11 +152,18 @@ export default createAction(
 
 		let viewModel = PostViewModel.page(post, ctx.request.url, validation.params.contentType);
 
+		// Only a published post is edge-cacheable. An admin previewing a draft reaches
+		// here too, and the middleware would refuse their session anyway, but the draft
+		// stays out of a shared cache on its own terms rather than on that check's.
+		if (isPublished) {
+			ctx.cache(PUBLIC_POST, TAGS.post(validation.params.postType, validation.params.postSlug));
+		}
+
 		if (prefersMarkdown) {
 			return markdown(200, viewModel.markdownBody);
 		}
 
-		return ctx.render(PostView, viewModel);
+		return ctx.render(PostView, viewModel, { headers: { Vary: "Accept" } });
 	}),
 );
 
@@ -196,7 +206,9 @@ function validatePostRequestParams(params: {
 function markdown(status: number, body: string): Response {
 	return new Response(body, {
 		status,
-		headers: { "Content-Type": `${ct.Markdown}; charset=utf-8` },
+		// An extensionless URL picks this body from the `Accept` header, so a shared
+		// cache has to key on it or a browser is served the raw Markdown.
+		headers: { "Content-Type": `${ct.Markdown}; charset=utf-8`, Vary: "Accept" },
 	});
 }
 

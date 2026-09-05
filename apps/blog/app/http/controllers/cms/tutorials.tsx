@@ -21,6 +21,7 @@ import { TutorialViewModel } from "~/app/http/view-models/cms/tutorials";
 import { Post } from "~/app/repositories/post";
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
 import { TutorialSchema } from "~/app/schemas/cms/tutorial";
+import { TAGS } from "~/app/services/cache";
 import { CMSTutorialsActionView, CMSTutorialsIndexView } from "~/resources/views/cms/tutorials";
 import routes from "~/routes/web";
 
@@ -104,7 +105,14 @@ export default createController(routes.cms.tutorials, {
 			if (!id)
 				return redirect(routes.cms.tutorials.index.href(), { status: redirect.Status.SeeOther });
 
+			// Read before deleting: the public page is cached under its slug, which
+			// only the record carries.
+			let tutorial = await TutorialPost.findById(db, id);
+
 			await TutorialPost.destroy(db, id);
+
+			if (tutorial) ctx.cache.purgeLater(TAGS.post("tutorials", tutorial.meta.slug));
+
 			return redirect(routes.cms.tutorials.index.href(), { status: redirect.Status.SeeOther });
 		}),
 
@@ -169,6 +177,10 @@ export default createController(routes.cms.tutorials, {
 			succeeded(result, "Invalid tutorial form data");
 			let input = TutorialViewModel.input({ data: result.data });
 
+			// Read before writing: an edit that renames the slug leaves the old URL
+			// cached, and only the stored record still knows what it was.
+			let previous = await TutorialPost.findById(db, id);
+
 			let updated = await TutorialPost.update(db, id, {
 				author_id: user.id,
 				published_at: input.published_at,
@@ -179,6 +191,10 @@ export default createController(routes.cms.tutorials, {
 				let model = TutorialViewModel.notFound({ id });
 				return ctx.render(CMSTutorialsActionView, model, { status: 404 });
 			}
+
+			let slugs = new Set([input.meta.slug]);
+			if (previous) slugs.add(previous.meta.slug);
+			ctx.cache.purgeLater(...[...slugs].map((slug) => TAGS.post("tutorials", slug)));
 
 			return redirect(routes.cms.tutorials.edit.href({ id }), { status: redirect.Status.SeeOther });
 		}),

@@ -13,6 +13,8 @@ import type { ResolveFrameContext } from "remix/ui/server";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { redirect } from "@sdxc/http/response";
 import { log } from "@sdxc/logger/middleware";
+import workersCache from "@sdxc/workers-cache/middleware";
+import { cache as platformCache } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
@@ -105,6 +107,8 @@ let requireCMSAuth: Middleware = (_ctx, next) => {
  * guards, and the HTML 404 fallback. `headRequests()` runs first so every later
  * middleware sees a plain `GET` and treats a `HEAD` probe as the page request;
  * `log(logger)` follows it and opens the request's wide event around everything else.
+ * `workersCache` sits outside session and auth so its refusal check reads the finished
+ * response, downgrading a public declaration once the visitor turns out to be identified.
  * @param env Worker environment bindings injected into request context.
  * @returns Configured router instance for the worker fetch entrypoint.
  */
@@ -116,6 +120,7 @@ export default function createApplication(env: App.Env) {
 		createNoWWWMiddleware(),
 		createNoTrailingSlashMiddleware(),
 		asyncContext(),
+		workersCache({ cache: () => platformCache }),
 		htmlOnly(session),
 		formData(),
 		methodOverride(),

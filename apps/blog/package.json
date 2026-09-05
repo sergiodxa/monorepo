@@ -33,6 +33,7 @@
 		"@sdxc/u": "workspace:*",
 		"@sdxc/ui": "workspace:*",
 		"@sdxc/validate": "workspace:*",
+		"@sdxc/workers-cache": "workspace:*",
 		"remix": "3.0.0-rc.1"
 	},
 	"devDependencies": {
