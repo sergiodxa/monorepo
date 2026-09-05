@@ -28,10 +28,7 @@ import routes from "~/routes/web";
  * @example
  * router.map(routes.logout, logout);
  */
-export default createAction(routes.logout, async ({ request, logger }) => {
-	let log = logger.action("/logout");
-	log.info("Platform sign-out");
-
+export default createAction(routes.logout, async ({ request, log }) => {
 	let token = getCookie(request.headers.get("Cookie") ?? "", PLATFORM_SESSION_COOKIE);
 	if (token) {
 		let session = await verifySessionToken(token, env.SESSION_SECRET);
@@ -41,10 +38,10 @@ export default createAction(routes.logout, async ({ request, logger }) => {
 					session.subjectId,
 					session.sessionId,
 				);
-				log.info("Platform session revoked", { subjectId: session.subjectId });
+				log.note("session.revoked");
 			} catch (error) {
-				log.error("Failed to revoke platform session", {
-					error: error instanceof Error ? error.message : String(error),
+				log.warn("session.revoke_failed", {
+					reason: error instanceof Error ? error.message : String(error),
 				});
 			}
 		}

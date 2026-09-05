@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Log } from "@sdxc/logger";
+
 import { BillingError } from "@sdxc/billing";
 import { PolarBilling } from "@sdxc/billing/providers/polar";
 import { env } from "cloudflare:workers";
@@ -41,14 +43,14 @@ export let polar = new PolarBilling({
  * repeating the call could help.
  *
  * @param error - The failure a billing call reported.
- * @returns Fields to merge into a log entry.
+ * @returns Flat scalar fields for a note, a warning, or the `billing` namespace of `fail()`.
  * @example
- * log.error("Checkout failed", { tenantId, ...failureFields(checkout.error) });
+ * ctx.log.fail(checkout.error, { billing: failureFields(checkout.error) });
  */
-export function failureFields(error: unknown): Record<string, unknown> {
+export function failureFields(error: unknown): Record<string, Log.Value | undefined> {
 	if (error instanceof BillingError) {
-		return { code: error.code, providerCode: error.providerCode, retryable: error.retryable };
+		return { code: error.code, provider_code: error.providerCode, retryable: error.retryable };
 	}
 
-	return { error: error instanceof Error ? error.message : String(error) };
+	return { reason: error instanceof Error ? error.message : String(error) };
 }

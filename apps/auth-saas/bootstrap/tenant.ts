@@ -18,6 +18,8 @@ import { DurableObject } from "cloudflare:workers";
 import { shouldBlockWhileSuspended, suspendedResponse } from "~/app/lib/entitlement";
 import AnalyticsService from "~/app/services/analytics";
 
+import { logger } from "./logger";
+
 /**
  * Durable Object storage key holding the tenant's suspension flag, kept in the
  * DO's own key-value storage so the entitlement gate stays independent of the
@@ -81,21 +83,41 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Checks the control endpoint first, unconditionally, so a suspended tenant can
-	 * always be un-suspended, then blocks the OIDC/OAuth2 surface while suspended —
-	 * the Management API stays reachable so the control plane can still manage it.
+	 * Opens the request's log with the tenant's id, so the provider's own middleware
+	 * joins it and one record carries both the tenant and the route. Checks the control
+	 * endpoint first, unconditionally, so a suspended tenant can always be un-suspended,
+	 * then blocks the OIDC/OAuth2 surface while suspended — the Management API stays
+	 * reachable so the control plane can still manage it.
 	 *
 	 * @param request - The request forwarded to this tenant DO.
 	 * @returns The control-endpoint response, a `402` when suspended, or the provider's response.
 	 */
-	override async fetch(request: Request) {
-		let pathname = new URL(request.url).pathname;
+	override fetch(request: Request) {
+		return logger.open("request", { tenant: { id: this.tenantId } }).run(async (log) => {
+			let pathname = new URL(request.url).pathname;
 
-		if (pathname === SUSPEND_CONTROL_PATH) return await this.handleSuspendControl(request);
+			if (pathname === SUSPEND_CONTROL_PATH) {
+				let response = await this.handleSuspendControl(request);
+				log.set({ http: { status: response.status } });
+				return response;
+			}
 
-		if (this.#suspended && shouldBlockWhileSuspended(pathname)) return suspendedResponse();
+			if (this.#suspended && shouldBlockWhileSuspended(pathname)) {
+				let response = suspendedResponse();
+				log.note("tenant.suspended").set({ http: { status: response.status } });
+				return response;
+			}
 
-		return this.#provider.fetch(request);
+			return this.#provider.fetch(request);
+		});
+	}
+
+	/**
+	 * The id the control plane addresses this tenant by. Stubs are obtained by name, so
+	 * the name is the tenant id; the hex id stands in for an object reached any other way.
+	 */
+	private get tenantId(): string {
+		return this.ctx.id.name ?? this.ctx.id.toString();
 	}
 
 	/**
@@ -136,13 +158,15 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * Durable Object alarm handler: runs the provider's periodic cleanup and reschedules
-	 * the next daily alarm.
+	 * the next daily alarm, inside an `alarm` log carrying the tenant's id.
 	 *
 	 * @returns A promise that resolves once cleanup and rescheduling complete.
 	 */
-	override async alarm() {
-		await this.#provider.cleanup();
-		await this.scheduleCleanupAlarm();
+	override alarm() {
+		return logger.open("alarm", { tenant: { id: this.tenantId } }).run(async () => {
+			await this.#provider.cleanup();
+			await this.scheduleCleanupAlarm();
+		});
 	}
 
 	/** Schedules the daily cleanup alarm at the next midnight UTC if none is set. */

@@ -22,18 +22,12 @@ export default {
 	 */
 	destroy: createAction(
 		routes.dashboard.tenants.users.grants.destroy,
-		async ({ params, tenant, tenantApi, logger }) => {
-			let log = logger.action(
-				`/dashboard/tenants/${tenant.id}/users/${params.userId}/grants/${params.id}`,
-			);
-
+		async ({ params, tenant, tenantApi, log }) => {
 			await tenantApi.deleteGrant(params.userId, params.id);
 
-			log.info("Grant revoked", {
-				tenantId: tenant.id,
-				userId: params.userId,
-				grantId: params.id,
-			});
+			log
+				.set({ tenant_user: { id: params.userId }, grant: { id: params.id } })
+				.note("tenant_user.grant_revoked");
 
 			return new Response(null, {
 				status: 302,

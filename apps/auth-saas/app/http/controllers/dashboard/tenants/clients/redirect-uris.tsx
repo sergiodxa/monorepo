@@ -25,18 +25,14 @@ let CreateRedirectUriSchema = ds.object({
 export default {
 	new: createAction(
 		routes.dashboard.tenants.clients["redirect-uris"].new,
-		async ({ params, tenant, tenantApi, logger }) => {
+		async ({ params, tenant, tenantApi, log }) => {
 			let ctx = getContext();
-			let log = logger.loader(
-				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/redirect-uris/new`,
-			);
+			log.set({ client: { id: params.clientId } });
 
 			let client = await tenantApi.getClient(params.clientId);
 			if (!client) {
 				return new Response("Client not found", { status: 404 });
 			}
-
-			log.info("New redirect URI form loaded", { tenantId: tenant.id, clientId: params.clientId });
 
 			return ctx.render(
 				<Document
@@ -97,25 +93,23 @@ export default {
 
 	create: createAction(
 		routes.dashboard.tenants.clients["redirect-uris"].create,
-		async ({ formData, params, tenant, tenantApi, logger }) => {
-			let log = logger.action(
-				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/redirect-uris`,
-			);
+		async ({ formData, params, tenant, tenantApi, log }) => {
+			log.set({ client: { id: params.clientId } });
 
 			let body = Object.fromEntries(formData);
 
 			let result = await validate(body, CreateRedirectUriSchema);
 			if (isFailure(result)) {
-				log.info("Redirect URI validation failed", { issues: result.error.issues.length });
+				log.note("redirect_uri.validation_failed", { issues: result.error.issues.length });
 				return new Response("Validation error", { status: 400 });
 			}
 
-			await tenantApi.createRedirectUri(params.clientId, {
+			let { id } = await tenantApi.createRedirectUri(params.clientId, {
 				uri: result.data.uri,
 				environment: result.data.environment,
 			});
 
-			log.info("Redirect URI created", { tenantId: tenant.id, clientId: params.clientId });
+			log.set({ redirect_uri: { id } }).note("redirect_uri.added");
 
 			return new Response(null, {
 				status: 302,
@@ -131,11 +125,8 @@ export default {
 
 	edit: createAction(
 		routes.dashboard.tenants.clients["redirect-uris"].edit,
-		async ({ params, tenant, logger }) => {
-			let log = logger.loader(
-				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/redirect-uris/${params.id}/edit`,
-			);
-			log.info("Redirect URI edit not supported - delete and recreate");
+		async ({ params, tenant, log }) => {
+			log.set({ client: { id: params.clientId }, redirect_uri: { id: params.id } });
 
 			return new Response(null, {
 				status: 302,
@@ -151,11 +142,8 @@ export default {
 
 	update: createAction(
 		routes.dashboard.tenants.clients["redirect-uris"].update,
-		async ({ params, tenant, logger }) => {
-			let log = logger.action(
-				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/redirect-uris/${params.id}`,
-			);
-			log.info("Redirect URI update not supported");
+		async ({ params, tenant, log }) => {
+			log.set({ client: { id: params.clientId }, redirect_uri: { id: params.id } });
 
 			return new Response(null, {
 				status: 302,
@@ -171,18 +159,12 @@ export default {
 
 	destroy: createAction(
 		routes.dashboard.tenants.clients["redirect-uris"].destroy,
-		async ({ params, tenant, tenantApi, logger }) => {
-			let log = logger.action(
-				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/redirect-uris/${params.id}`,
-			);
+		async ({ params, tenant, tenantApi, log }) => {
+			log.set({ client: { id: params.clientId }, redirect_uri: { id: params.id } });
 
 			await tenantApi.deleteRedirectUri(params.clientId, params.id);
 
-			log.info("Redirect URI deleted", {
-				tenantId: tenant.id,
-				clientId: params.clientId,
-				uriId: params.id,
-			});
+			log.note("redirect_uri.deleted");
 
 			return new Response(null, {
 				status: 302,

@@ -28,74 +28,70 @@ let UpdateUserSchema = ds.object({
 });
 
 export default {
-	index: createAction(
-		routes.dashboard.tenants.users.index,
-		async ({ tenant, tenantApi, logger }) => {
-			let ctx = getContext();
-			let log = logger.loader(`/dashboard/tenants/${tenant.id}/users`);
+	index: createAction(routes.dashboard.tenants.users.index, async ({ tenant, tenantApi, log }) => {
+		let ctx = getContext();
 
-			let users = await tenantApi.listUsers();
+		let users = await tenantApi.listUsers();
 
-			log.info("Users listed", { tenantId: tenant.id, count: users.length });
+		log.set({ tenant_users: { count: users.length } });
 
-			return ctx.render(
-				<Document title={`Users - ${tenant.name}`} tenant={tenant}>
-					<h2 mix={[s.pageTitle]}>Users</h2>
-					{users.length === 0 ? (
-						<p mix={[s.muted]}>No users yet.</p>
-					) : (
-						<div mix={[s.tableWrap]}>
-							<table mix={[s.table]}>
-								<thead>
-									<tr mix={[s.theadRow]}>
-										<th mix={[s.th]}>User</th>
-										<th mix={[s.th]}>Email</th>
-										<th mix={[s.th]}>Role</th>
-										<th mix={[s.th]}>Created</th>
+		return ctx.render(
+			<Document title={`Users - ${tenant.name}`} tenant={tenant}>
+				<h2 mix={[s.pageTitle]}>Users</h2>
+				{users.length === 0 ? (
+					<p mix={[s.muted]}>No users yet.</p>
+				) : (
+					<div mix={[s.tableWrap]}>
+						<table mix={[s.table]}>
+							<thead>
+								<tr mix={[s.theadRow]}>
+									<th mix={[s.th]}>User</th>
+									<th mix={[s.th]}>Email</th>
+									<th mix={[s.th]}>Role</th>
+									<th mix={[s.th]}>Created</th>
+								</tr>
+							</thead>
+							<tbody>
+								{users.map((u) => (
+									<tr key={u.id}>
+										<td mix={[s.td]}>
+											<a
+												mix={[s.rowLink]}
+												href={routes.dashboard.tenants.users.show.href({
+													tenantId: tenant.id,
+													id: u.id,
+												})}
+											>
+												{u.display_name ?? u.username}
+											</a>
+										</td>
+										<td mix={[s.td, s.muted]}>
+											{u.email}
+											{u.email_verified_at && (
+												<span mix={[s.verified]} title="Verified">
+													✓
+												</span>
+											)}
+										</td>
+										<td mix={[s.td]}>
+											<RoleBadge role={u.role} />
+										</td>
+										<td mix={[s.td, s.muted]}>{new Date(u.created_at).toLocaleDateString()}</td>
 									</tr>
-								</thead>
-								<tbody>
-									{users.map((u) => (
-										<tr key={u.id}>
-											<td mix={[s.td]}>
-												<a
-													mix={[s.rowLink]}
-													href={routes.dashboard.tenants.users.show.href({
-														tenantId: tenant.id,
-														id: u.id,
-													})}
-												>
-													{u.display_name ?? u.username}
-												</a>
-											</td>
-											<td mix={[s.td, s.muted]}>
-												{u.email}
-												{u.email_verified_at && (
-													<span mix={[s.verified]} title="Verified">
-														✓
-													</span>
-												)}
-											</td>
-											<td mix={[s.td]}>
-												<RoleBadge role={u.role} />
-											</td>
-											<td mix={[s.td, s.muted]}>{new Date(u.created_at).toLocaleDateString()}</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
-					)}
-				</Document>,
-			);
-		},
-	),
+								))}
+							</tbody>
+						</table>
+					</div>
+				)}
+			</Document>,
+		);
+	}),
 
 	show: createAction(
 		routes.dashboard.tenants.users.show,
-		async ({ params, tenant, tenantApi, logger, platformSession }) => {
+		async ({ params, tenant, tenantApi, log, platformSession }) => {
 			let ctx = getContext();
-			let log = logger.loader(`/dashboard/tenants/${tenant.id}/users/${params.id}`);
+			log.set({ tenant_user: { id: params.id } });
 
 			let user = await tenantApi.getUser(params.id);
 			if (!user) {
@@ -107,8 +103,6 @@ export default {
 				tenantApi.listPasskeys(params.id),
 				tenantApi.listGrants(params.id),
 			]);
-
-			log.info("User retrieved", { tenantId: tenant.id, userId: params.id });
 
 			let currentSessionId = tenant.id === "platform" ? platformSession.sessionId : undefined;
 
@@ -318,9 +312,9 @@ export default {
 
 	edit: createAction(
 		routes.dashboard.tenants.users.edit,
-		async ({ params, tenant, tenantApi, logger, request }) => {
+		async ({ params, tenant, tenantApi, log, request }) => {
 			let ctx = getContext();
-			let log = logger.loader(`/dashboard/tenants/${tenant.id}/users/${params.id}/edit`);
+			log.set({ tenant_user: { id: params.id } });
 
 			let user = await tenantApi.getUser(params.id);
 			if (!user) {
@@ -329,8 +323,6 @@ export default {
 
 			let url = new URL(request.url);
 			let errorMessage = url.searchParams.get("error");
-
-			log.info("User edit form loaded", { tenantId: tenant.id, userId: params.id });
 
 			return ctx.render(
 				<Document
@@ -414,14 +406,14 @@ export default {
 
 	update: createAction(
 		routes.dashboard.tenants.users.update,
-		async ({ formData, params, tenant, tenantApi, logger }) => {
-			let log = logger.action(`/dashboard/tenants/${tenant.id}/users/${params.id}`);
+		async ({ formData, params, tenant, tenantApi, log }) => {
+			log.set({ tenant_user: { id: params.id } });
 
 			let body = Object.fromEntries(formData);
 
 			let result = await validate(body, UpdateUserSchema);
 			if (isFailure(result)) {
-				log.info("User update validation failed", { issues: result.error.issues.length });
+				log.note("tenant_user.validation_failed", { issues: result.error.issues.length });
 				return new Response("Validation error", { status: 400 });
 			}
 
@@ -432,7 +424,7 @@ export default {
 					role: result.data.role,
 				});
 
-				log.info("User updated", { tenantId: tenant.id, userId: params.id });
+				log.note("tenant_user.updated");
 
 				return new Response(null, {
 					status: 302,
@@ -445,11 +437,7 @@ export default {
 				});
 			} catch (error) {
 				if (error instanceof TenantApiError && error.status === 400) {
-					log.info("User update failed", {
-						tenantId: tenant.id,
-						userId: params.id,
-						error: error.message,
-					});
+					log.note("tenant_user.update_rejected", { reason: error.message });
 					let errorMessage = encodeURIComponent(error.message);
 					return new Response(null, {
 						status: 302,
@@ -464,6 +452,7 @@ export default {
 						},
 					});
 				}
+				log.fail(error);
 				throw error;
 			}
 		},
@@ -471,12 +460,10 @@ export default {
 
 	destroy: createAction(
 		routes.dashboard.tenants.users.destroy,
-		async ({ params, tenant, tenantApi, logger }) => {
-			let log = logger.action(`/dashboard/tenants/${tenant.id}/users/${params.id}`);
-
+		async ({ params, tenant, tenantApi, log }) => {
 			await tenantApi.deleteUser(params.id);
 
-			log.info("User deleted", { tenantId: tenant.id, userId: params.id });
+			log.set({ tenant_user: { id: params.id } }).note("tenant_user.deleted");
 
 			return new Response(null, {
 				status: 302,

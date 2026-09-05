@@ -9,7 +9,7 @@
 import type { Middleware } from "remix/router";
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
-import { logger } from "@sdxc/logger/middleware";
+import { log } from "@sdxc/logger/middleware";
 import { ServiceContainer } from "@sdxc/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -94,7 +94,7 @@ async function renderBilling(
 
 	let router = createRouter({
 		middleware: [
-			logger,
+			log() as Middleware,
 			asyncContext(),
 			render as Middleware,
 			(ctx, next) => {

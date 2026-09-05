@@ -30,8 +30,7 @@ export default createAction(
 	routes.dashboard.index,
 	inject([Database] as const, async (db) => {
 		let ctx = getContext();
-		let { platformSession, logger } = ctx;
-		let log = logger.loader("/dashboard");
+		let { platformSession, log } = ctx;
 
 		let tenants = await Tenant.listAccessibleBySubject(
 			db,
@@ -39,10 +38,7 @@ export default createAction(
 			platformSession.email,
 		);
 
-		log.info("Dashboard loaded", {
-			subjectId: platformSession.subjectId,
-			tenantCount: tenants.length,
-		});
+		log.set({ tenants: { count: tenants.length } });
 
 		if (tenants.length === 0) {
 			return new Response(null, {

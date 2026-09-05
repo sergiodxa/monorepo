@@ -22,18 +22,12 @@ export default {
 	 */
 	destroy: createAction(
 		routes.dashboard.tenants.users.passkeys.destroy,
-		async ({ params, tenant, tenantApi, logger }) => {
-			let log = logger.action(
-				`/dashboard/tenants/${tenant.id}/users/${params.userId}/passkeys/${params.id}`,
-			);
-
+		async ({ params, tenant, tenantApi, log }) => {
 			await tenantApi.deletePasskey(params.userId, params.id);
 
-			log.info("Passkey deleted", {
-				tenantId: tenant.id,
-				userId: params.userId,
-				passkeyId: params.id,
-			});
+			log
+				.set({ tenant_user: { id: params.userId }, passkey: { id: params.id } })
+				.note("tenant_user.passkey_deleted");
 
 			return new Response(null, {
 				status: 302,

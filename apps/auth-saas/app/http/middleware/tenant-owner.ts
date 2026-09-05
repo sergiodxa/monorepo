@@ -35,7 +35,8 @@ declare module "remix/router" {
 
 /**
  * Middleware that verifies the current user has access to the tenant in the URL.
- * Supports owners, pending owners, and team members.
+ * Supports owners, pending owners, and team members. Records `tenant.id` and
+ * `tenant.role` on the request's log so handlers downstream never repeat them.
  * Must be used after the session middleware.
  *
  * @returns The downstream response when access is granted, or a `400`/`403` response
@@ -60,8 +61,11 @@ export default middleware(async (context, next) => {
 	);
 
 	if (!tenant) {
+		context.log.set({ tenant: { id: tenantId } }).note("tenant.access_denied");
 		return new Response("Access denied", { status: 403 });
 	}
+
+	context.log.set({ tenant: { id: tenant.id, role: tenant.role } });
 
 	context.tenant = {
 		id: tenant.id,

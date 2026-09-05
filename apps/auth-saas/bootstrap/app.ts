@@ -11,7 +11,7 @@
 import type { Middleware, RequestHandler } from "remix/router";
 
 import { headRequests } from "@sdxc/http/middleware/head-requests";
-import logger from "@sdxc/logger/middleware";
+import { log } from "@sdxc/logger/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
@@ -48,6 +48,8 @@ import tenantOwner from "~/app/http/middleware/tenant-owner";
 import trailingSlash from "~/app/http/middleware/trailing-slash";
 import routes from "~/routes/web";
 
+import { logger } from "./logger";
+
 /**
  * Kept as a non-tuple Middleware[] so the router context stays the base
  * RequestContext; `formData()` is cast to Middleware since its value is
@@ -60,7 +62,7 @@ let globalMiddleware: Middleware[] = [
 	 */
 	headRequests(),
 	trailingSlash,
-	logger,
+	log(logger) as Middleware,
 	asyncContext(),
 	render as Middleware,
 	formData() as Middleware,

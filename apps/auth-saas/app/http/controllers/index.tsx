@@ -14,14 +14,12 @@ import routes from "~/routes/web";
 /**
  * Renders the marketing landing page.
  *
- * @param ctx - The request context (provides `render` and `logger`).
+ * @param ctx - The request context (provides `render`).
  * @returns The rendered landing page document response.
  * @example
  * router.map(routes.index, index);
  */
 export default createAction(routes.index, (ctx) => {
-	ctx.logger.loader("/").info("Landing page loaded");
-
 	return ctx.render(
 		<PublicDocument title="Auth SaaS - Authentication as a Service" variant="landing">
 			<LandingPage />

@@ -40,7 +40,8 @@ declare module "remix/router" {
 /**
  * Validates the signed session token, then confirms the session is still live against
  * the platform tenant's session store so a copied token stops working once the user
- * logs out; a token without a `sid` is rejected outright.
+ * logs out; a token without a `sid` is rejected outright. Records `user.id` on the
+ * request's log so handlers downstream never repeat it.
  *
  * @returns The downstream response when authenticated, or a redirect to onboarding
  * (clearing the cookie when the token is invalid/expired).
@@ -48,20 +49,18 @@ declare module "remix/router" {
  * router.map(routes.dashboard.index, { middleware: session, handler });
  */
 export default middleware(async (context, next) => {
-	let log = context.logger.middleware("session");
-
 	let cookies = context.request.headers.get("Cookie") ?? "";
 	let token = getCookie(cookies, PLATFORM_SESSION_COOKIE);
 
 	if (!token) {
-		log.info("No session cookie found, redirecting to onboarding");
+		context.log.note("session.missing");
 		return redirect(routes.onboarding.index.href());
 	}
 
 	let session = await verifySessionToken(token, env.SESSION_SECRET);
 
 	if (!session) {
-		log.info("Invalid or expired session token, clearing session");
+		context.log.note("session.invalid");
 		return redirect(routes.onboarding.index.href(), {
 			headers: {
 				"Set-Cookie": clearSessionCookie(),
@@ -73,7 +72,7 @@ export default middleware(async (context, next) => {
 		new TenantApiService(PLATFORM_TENANT).sessionExists(session.subjectId, sid),
 	);
 	if (!active) {
-		log.info("Platform session revoked or missing sid, clearing session");
+		context.log.note("session.revoked");
 		return redirect(routes.onboarding.index.href(), {
 			headers: {
 				"Set-Cookie": clearSessionCookie(),
@@ -87,7 +86,7 @@ export default middleware(async (context, next) => {
 		sessionId: session.sessionId,
 	};
 
-	log.info("Session validated", { subjectId: session.subjectId });
+	context.log.set({ user: { id: session.subjectId } });
 
 	return next();
 });

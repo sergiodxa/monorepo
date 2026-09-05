@@ -7,21 +7,19 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { Log } from "@sdxc/logger";
 import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { describe, expect, test, vi } from "vitest";
 
 import subscriptionMiddleware from "./subscription";
 
-/** A no-op logger matching the `context.logger.middleware(...)` shape. */
-function fakeLogger() {
-	let log = { error() {}, info() {}, warn() {}, debug() {} };
-	return { middleware: () => log };
-}
-
-/** Builds a request context carrying only what the middleware reads. */
+/**
+ * Builds a request context carrying only what the middleware reads. The log is never
+ * run, so whatever the middleware records stays out of the test output.
+ */
 function buildContext(tenant: { id: string; internal: boolean } | undefined) {
-	return { tenant, logger: fakeLogger() } as never;
+	return { tenant, log: new Log({ kind: "request", sink() {} }) } as never;
 }
 
 /** A `next` that records it ran and returns a sentinel 200 response. */

@@ -22,18 +22,12 @@ export default {
 	 */
 	destroy: createAction(
 		routes.dashboard.tenants.users.sessions.destroy,
-		async ({ params, tenant, tenantApi, logger }) => {
-			let log = logger.action(
-				`/dashboard/tenants/${tenant.id}/users/${params.userId}/sessions/${params.id}`,
-			);
-
+		async ({ params, tenant, tenantApi, log }) => {
 			await tenantApi.deleteUserSession(params.userId, params.id);
 
-			log.info("Session revoked", {
-				tenantId: tenant.id,
-				userId: params.userId,
-				sessionId: params.id,
-			});
+			log
+				.set({ tenant_user: { id: params.userId }, session: { id: params.id } })
+				.note("tenant_user.session_revoked");
 
 			return new Response(null, {
 				status: 302,

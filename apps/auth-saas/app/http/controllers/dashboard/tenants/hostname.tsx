@@ -35,12 +35,11 @@ export default createController(routes.dashboard.tenants.hostname, {
 	actions: {
 		index: inject([Database] as const, async (db) => {
 			let ctx = getContext();
-			let { tenant, logger } = ctx;
-			let log = logger.loader(`/dashboard/tenants/${tenant.id}/hostname`);
+			let { tenant, log } = ctx;
 
 			let hostnames = await Hostname.listByTenant(db, tenant.id);
 
-			log.info("Hostname form loaded", { tenantId: tenant.id, count: hostnames.length });
+			log.set({ hostnames: { count: hostnames.length } });
 
 			let defaultHostname = hostnames.find((h) => Boolean(h.is_default));
 			let customHostnames = hostnames.filter((h) => !h.is_default);
@@ -180,8 +179,7 @@ export default createController(routes.dashboard.tenants.hostname, {
 		 * RP resolving against a hostname that is still valid.
 		 */
 		action: inject([Database] as const, async (db) => {
-			let { request, formData, tenant, tenantApi, logger } = getContext();
-			let log = logger.action(`/dashboard/tenants/${tenant.id}/hostname`);
+			let { request, formData, tenant, tenantApi, log } = getContext();
 
 			let url = new URL(request.url);
 			let actionType = url.searchParams.get("action");
@@ -192,7 +190,7 @@ export default createController(routes.dashboard.tenants.hostname, {
 					let hostname = await Hostname.show(db, hostnameId);
 					if (hostname && hostname.tenant_id === tenant.id && !hostname.is_default) {
 						await Hostname.destroy(db, hostnameId);
-						log.info("Hostname deleted", { tenantId: tenant.id, hostnameId });
+						log.set({ hostname: { id: hostnameId } }).note("hostname.deleted");
 						if (hostname.status === "active") {
 							let remaining = await Hostname.listByTenant(db, tenant.id);
 							let nextIssuer =
@@ -200,10 +198,7 @@ export default createController(routes.dashboard.tenants.hostname, {
 								remaining.find((h) => h.is_default);
 							if (nextIssuer) {
 								await tenantApi.setup({ issuer: nextIssuer.hostname, region: tenant.region });
-								log.info("Tenant issuer reset after hostname deletion", {
-									tenantId: tenant.id,
-									issuer: nextIssuer.hostname,
-								});
+								log.note("tenant.issuer_reset", { issuer: nextIssuer.hostname });
 							}
 						}
 					}
@@ -214,13 +209,12 @@ export default createController(routes.dashboard.tenants.hostname, {
 					let hostname = await Hostname.show(db, hostnameId);
 					if (hostname && hostname.tenant_id === tenant.id) {
 						let refreshed = await Hostname.refresh(db, hostnameId);
-						log.info("Hostname refreshed", { tenantId: tenant.id, hostnameId });
+						log
+							.set({ hostname: { id: hostnameId, status: refreshed.status } })
+							.note("hostname.refreshed");
 						if (!refreshed.is_default && refreshed.status === "active") {
 							await tenantApi.setup({ issuer: refreshed.hostname, region: tenant.region });
-							log.info("Tenant issuer updated to custom hostname", {
-								tenantId: tenant.id,
-								issuer: refreshed.hostname,
-							});
+							log.note("tenant.issuer_updated", { issuer: refreshed.hostname });
 						}
 					}
 				}
@@ -229,13 +223,15 @@ export default createController(routes.dashboard.tenants.hostname, {
 
 				let result = await validate(body, AddHostnameSchema);
 				if (isFailure(result)) {
-					log.info("Hostname validation failed", { issues: result.error.issues.length });
+					log.note("hostname.validation_failed", { issues: result.error.issues.length });
 					return new Response("Validation error", { status: 400 });
 				}
 
+				log.set({ hostname: { name: result.data.hostname } });
+
 				let existing = await Hostname.findByHostname(db, result.data.hostname);
 				if (existing) {
-					log.info("Hostname already exists", { hostname: result.data.hostname });
+					log.note("hostname.exists");
 					return new Response("Hostname already in use", { status: 400 });
 				}
 
@@ -246,17 +242,10 @@ export default createController(routes.dashboard.tenants.hostname, {
 						result.data.hostname,
 						tenant.region as HostMetadata["region"],
 					);
-					log.info("Hostname added via Cloudflare", {
-						tenantId: tenant.id,
-						hostname: result.data.hostname,
-					});
+					log.note("hostname.added");
 				} catch (error) {
+					log.fail(error);
 					if (error instanceof Hostname.CloudflareApiError) {
-						log.error("Cloudflare API error", {
-							tenantId: tenant.id,
-							hostname: result.data.hostname,
-							error: error.message,
-						});
 						return new Response(`Cloudflare error: ${error.message}`, { status: 400 });
 					}
 					throw error;

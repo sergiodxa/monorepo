@@ -32,13 +32,12 @@ let UpdateResourceSchema = ds.object({
 export default {
 	index: createAction(
 		routes.dashboard.tenants.resources.index,
-		async ({ tenant, tenantApi, logger }) => {
+		async ({ tenant, tenantApi, log }) => {
 			let ctx = getContext();
-			let log = logger.loader(`/dashboard/tenants/${tenant.id}/resources`);
 
 			let resources = await tenantApi.listResources();
 
-			log.info("Resources listed", { tenantId: tenant.id, count: resources.length });
+			log.set({ resources: { count: resources.length } });
 
 			return ctx.render(
 				<Document title={`Resources - ${tenant.name}`} tenant={tenant}>
@@ -86,16 +85,14 @@ export default {
 
 	show: createAction(
 		routes.dashboard.tenants.resources.show,
-		async ({ params, tenant, tenantApi, logger }) => {
+		async ({ params, tenant, tenantApi, log }) => {
 			let ctx = getContext();
-			let log = logger.loader(`/dashboard/tenants/${tenant.id}/resources/${params.id}`);
+			log.set({ resource: { id: params.id } });
 
 			let resource = await tenantApi.getResource(params.id);
 			if (!resource) {
 				return new Response("Resource not found", { status: 404 });
 			}
-
-			log.info("Resource retrieved", { tenantId: tenant.id, resourceId: params.id });
 
 			return ctx.render(
 				<Document
@@ -189,10 +186,8 @@ export default {
 		},
 	),
 
-	new: createAction(routes.dashboard.tenants.resources.new, ({ tenant, logger }) => {
+	new: createAction(routes.dashboard.tenants.resources.new, ({ tenant }) => {
 		let ctx = getContext();
-		let log = logger.loader(`/dashboard/tenants/${tenant.id}/resources/new`);
-		log.info("New resource form loaded", { tenantId: tenant.id });
 
 		return ctx.render(
 			<Document
@@ -260,14 +255,12 @@ export default {
 
 	create: createAction(
 		routes.dashboard.tenants.resources.create,
-		async ({ formData, tenant, tenantApi, logger }) => {
-			let log = logger.action(`/dashboard/tenants/${tenant.id}/resources`);
-
+		async ({ formData, tenant, tenantApi, log }) => {
 			let body = Object.fromEntries(formData);
 
 			let result = await validate(body, CreateResourceSchema);
 			if (isFailure(result)) {
-				log.info("Resource creation validation failed", { issues: result.error.issues.length });
+				log.note("resource.validation_failed", { issues: result.error.issues.length });
 				return new Response("Validation error", { status: 400 });
 			}
 
@@ -278,7 +271,7 @@ export default {
 				scopes: [],
 			});
 
-			log.info("Resource created", { tenantId: tenant.id, resourceId: id });
+			log.set({ resource: { id } }).note("resource.created");
 
 			return new Response(null, {
 				status: 302,
@@ -291,16 +284,14 @@ export default {
 
 	edit: createAction(
 		routes.dashboard.tenants.resources.edit,
-		async ({ params, tenant, tenantApi, logger }) => {
+		async ({ params, tenant, tenantApi, log }) => {
 			let ctx = getContext();
-			let log = logger.loader(`/dashboard/tenants/${tenant.id}/resources/${params.id}/edit`);
+			log.set({ resource: { id: params.id } });
 
 			let resource = await tenantApi.getResource(params.id);
 			if (!resource) {
 				return new Response("Resource not found", { status: 404 });
 			}
-
-			log.info("Resource edit form loaded", { tenantId: tenant.id, resourceId: params.id });
 
 			return ctx.render(
 				<Document
@@ -375,14 +366,14 @@ export default {
 
 	update: createAction(
 		routes.dashboard.tenants.resources.update,
-		async ({ formData, params, tenant, tenantApi, logger }) => {
-			let log = logger.action(`/dashboard/tenants/${tenant.id}/resources/${params.id}`);
+		async ({ formData, params, tenant, tenantApi, log }) => {
+			log.set({ resource: { id: params.id } });
 
 			let body = Object.fromEntries(formData);
 
 			let result = await validate(body, UpdateResourceSchema);
 			if (isFailure(result)) {
-				log.info("Resource update validation failed", { issues: result.error.issues.length });
+				log.note("resource.validation_failed", { issues: result.error.issues.length });
 				return new Response("Validation error", { status: 400 });
 			}
 
@@ -392,7 +383,7 @@ export default {
 				description: result.data.description,
 			});
 
-			log.info("Resource updated", { tenantId: tenant.id, resourceId: params.id });
+			log.note("resource.updated");
 
 			return new Response(null, {
 				status: 302,
@@ -408,12 +399,10 @@ export default {
 
 	destroy: createAction(
 		routes.dashboard.tenants.resources.destroy,
-		async ({ params, tenant, tenantApi, logger }) => {
-			let log = logger.action(`/dashboard/tenants/${tenant.id}/resources/${params.id}`);
-
+		async ({ params, tenant, tenantApi, log }) => {
 			await tenantApi.deleteResource(params.id);
 
-			log.info("Resource deleted", { tenantId: tenant.id, resourceId: params.id });
+			log.set({ resource: { id: params.id } }).note("resource.deleted");
 
 			return new Response(null, {
 				status: 302,

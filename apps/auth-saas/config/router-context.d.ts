@@ -3,7 +3,7 @@
  *
  * The platform router's root middleware populates `formData` via a
  * `property: "formData"` transform, augmenting `RequestContext` the same way
- * `db`, `logger`, and session middleware augment it from their own modules.
+ * `db`, `log`, and session middleware augment it from their own modules.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

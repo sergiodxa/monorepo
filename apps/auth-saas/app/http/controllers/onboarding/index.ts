@@ -23,9 +23,7 @@ const DASHBOARD_CLIENT_ID = "dashboard";
  * @example
  * router.map(routes.onboarding.index, onboardingIndex);
  */
-export default createAction(routes.onboarding.index, async ({ request, logger }) => {
-	let log = logger.loader("/onboarding");
-
+export default createAction(routes.onboarding.index, async ({ request, log }) => {
 	let codeVerifier = generateCodeVerifier();
 	let codeChallenge = await generateCodeChallenge(codeVerifier);
 
@@ -46,7 +44,7 @@ export default createAction(routes.onboarding.index, async ({ request, logger })
 	authorizeUrl.searchParams.set("code_challenge", codeChallenge);
 	authorizeUrl.searchParams.set("code_challenge_method", "S256");
 
-	log.info("Redirecting to OAuth authorization", { clientId: DASHBOARD_CLIENT_ID });
+	log.set({ oauth: { client_id: DASHBOARD_CLIENT_ID } }).note("onboarding.authorize_redirect");
 
 	let oauthStateCookie = JSON.stringify({ codeVerifier, state, nonce });
 	let cookieValue = base64UrlEncode(oauthStateCookie);

@@ -55,14 +55,13 @@ const DASHBOARD_CLIENT_ID = "dashboard";
 export default createAction(
 	routes.onboarding.callback,
 	inject([Database] as const, async (db) => {
-		let { request, logger } = getContext();
-		let log = logger.loader("/onboarding/callback");
+		let { request, log } = getContext();
 		let url = new URL(request.url);
 
 		let params = Object.fromEntries(url.searchParams);
 		let result = await validate(params, CallbackSchema);
 		if (isFailure(result)) {
-			log.error("Invalid callback parameters", { issues: result.error.issues });
+			log.warn("onboarding.invalid_params", { issues: result.error.issues.length });
 			return renderError("Invalid callback parameters");
 		}
 
@@ -71,7 +70,7 @@ export default createAction(
 		let cookieHeader = request.headers.get("Cookie") ?? "";
 		let stateMatch = cookieHeader.match(/__oauth_state=([^;]+)/);
 		if (!stateMatch || !stateMatch[1]) {
-			log.error("Missing OAuth state cookie");
+			log.warn("onboarding.state_cookie_missing");
 			return renderError("Session expired. Please try again.");
 		}
 
@@ -80,14 +79,14 @@ export default createAction(
 			OAuthStateSchema,
 		);
 		if (isFailure(oauthStateResult)) {
-			log.error("Invalid OAuth state cookie");
+			log.warn("onboarding.state_cookie_invalid");
 			return renderError("Invalid session state. Please try again.");
 		}
 
 		let { codeVerifier, state: expectedState, nonce: expectedNonce } = oauthStateResult.data;
 
 		if (state !== expectedState) {
-			log.error("State mismatch", { expected: expectedState, received: state });
+			log.warn("onboarding.state_mismatch");
 			return renderError("Security validation failed. Please try again.");
 		}
 
@@ -110,20 +109,23 @@ export default createAction(
 
 		if (!tokenResponse.ok) {
 			let errorText = await tokenResponse.text();
-			log.error("Token exchange failed", { status: tokenResponse.status, error: errorText });
+			log.warn("onboarding.token_exchange_failed", {
+				status: tokenResponse.status,
+				reason: errorText,
+			});
 			return renderError("Authentication failed. Please try again.");
 		}
 
 		let tokenData = (await tokenResponse.json()) as JSONValue;
 		let tokenResult = await validate(tokenData, TokenResponseSchema);
 		if (isFailure(tokenResult)) {
-			log.error("Invalid token response", { issues: tokenResult.error.issues });
+			log.warn("onboarding.token_response_invalid", { issues: tokenResult.error.issues.length });
 			return renderError("Authentication failed. Please try again.");
 		}
 
 		let idToken = tokenResult.data.id_token;
 		if (!idToken) {
-			log.error("No ID token in response");
+			log.warn("onboarding.id_token_missing");
 			return renderError("Authentication failed. Please try again.");
 		}
 
@@ -132,12 +134,12 @@ export default createAction(
 			audience: DASHBOARD_CLIENT_ID,
 		});
 		if (!verifiedIdToken) {
-			log.error("ID token verification failed");
+			log.warn("onboarding.id_token_invalid");
 			return renderError("Authentication failed. Please try again.");
 		}
 
 		if (verifiedIdToken.nonce !== expectedNonce) {
-			log.error("ID token nonce mismatch");
+			log.warn("onboarding.nonce_mismatch");
 			return renderError("Security validation failed. Please try again.");
 		}
 
@@ -147,20 +149,20 @@ export default createAction(
 			tenantSessionId: verifiedIdToken.sessionId ?? undefined,
 		}));
 		if (isFailure(identity)) {
-			log.error("Invalid ID token claims", { error: identity.error.message });
+			log.warn("onboarding.claims_invalid", { reason: identity.error.message });
 			return renderError("Authentication failed. Please try again.");
 		}
 
 		let { subjectId, email, tenantSessionId } = identity.data;
 		if (!email) {
-			log.error("No email in ID token");
+			log.warn("onboarding.email_missing");
 			return renderError("Email is required for authentication.");
 		}
 
+		log.set({ user: { id: subjectId } });
+
 		let resolvedCount = await Tenant.resolvePendingOwnership(db, email, subjectId);
-		if (resolvedCount > 0) {
-			log.info("Resolved pending ownership", { email, count: resolvedCount });
-		}
+		if (resolvedCount > 0) log.note("tenant.ownership_resolved", { count: resolvedCount });
 
 		let sessionToken = await createSessionToken(
 			subjectId,
@@ -169,7 +171,7 @@ export default createAction(
 			tenantSessionId,
 		);
 
-		log.info("Login successful", { subjectId, tenantSessionId });
+		log.note("onboarding.login_completed");
 
 		let headers = new Headers();
 		headers.set("Location", routes.dashboard.index.href());

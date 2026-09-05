@@ -57,10 +57,8 @@ const PLATFORM_TENANT_ID = "platform";
  * router.map(route, { middleware: [tenantOwner, subscription], handler });
  */
 export default middleware(async (context, next) => {
-	let log = context.logger.middleware("subscription");
-
 	if (!context.tenant) {
-		log.error("Subscription middleware used without tenant context");
+		context.log.fail(new Error("Subscription middleware ran without a resolved tenant"));
 		return new Response("Internal error", { status: 500 });
 	}
 
@@ -79,7 +77,7 @@ export default middleware(async (context, next) => {
 	let subscription = await Subscription.findByTenant(db, context.tenant.id);
 
 	if (!subscription) {
-		log.info("No subscription found for tenant", { tenantId: context.tenant.id });
+		context.log.set({ subscription: { status: "none" } }).note("subscription.missing");
 		return redirectToBlocked(context.tenant.id, "no_subscription");
 	}
 
@@ -87,6 +85,8 @@ export default middleware(async (context, next) => {
 	let isActive = ACTIVE_STATUSES.has(status);
 	let isPastDue = WARNING_STATUSES.has(status);
 	let isBlocked = BLOCKED_STATUSES.has(status);
+
+	context.log.set({ subscription: { id: subscription.id, status } });
 
 	context.subscription = {
 		id: subscription.id,
@@ -97,18 +97,11 @@ export default middleware(async (context, next) => {
 	};
 
 	if (isBlocked) {
-		log.info("Access blocked due to subscription status", {
-			tenantId: context.tenant.id,
-			status,
-		});
+		context.log.note("subscription.blocked");
 		return redirectToBlocked(context.tenant.id, status);
 	}
 
-	if (isPastDue) {
-		log.info("Subscription past due, access allowed with warning", {
-			tenantId: context.tenant.id,
-		});
-	}
+	if (isPastDue) context.log.note("subscription.past_due");
 
 	return next();
 });

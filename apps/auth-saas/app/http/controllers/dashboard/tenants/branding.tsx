@@ -36,13 +36,10 @@ export default createController(routes.dashboard.tenants.branding, {
 	middleware: [tenantOwner, subscription],
 
 	actions: {
-		async index({ tenant, tenantApi, subscription, logger }) {
+		async index({ tenant, tenantApi, subscription }) {
 			let ctx = getContext();
-			let log = logger.loader(`/dashboard/tenants/${tenant.id}/branding`);
 
 			let branding = await tenantApi.getBranding();
-
-			log.info("Branding form loaded", { tenantId: tenant.id });
 
 			return ctx.render(
 				<Document
@@ -145,14 +142,12 @@ export default createController(routes.dashboard.tenants.branding, {
 			);
 		},
 
-		async action({ formData, tenant, tenantApi, logger }) {
-			let log = logger.action(`/dashboard/tenants/${tenant.id}/branding`);
-
+		async action({ formData, tenant, tenantApi, log }) {
 			let body = Object.fromEntries(formData);
 
 			let result = await validate(body, UpdateBrandingSchema);
 			if (isFailure(result)) {
-				log.info("Branding update validation failed", { issues: result.error.issues.length });
+				log.note("branding.validation_failed", { issues: result.error.issues.length });
 				return new Response("Validation error", { status: 400 });
 			}
 
@@ -163,7 +158,7 @@ export default createController(routes.dashboard.tenants.branding, {
 				customCss: result.data.customCss || null,
 			});
 
-			log.info("Branding updated", { tenantId: tenant.id });
+			log.note("branding.updated");
 
 			return new Response(null, {
 				status: 302,

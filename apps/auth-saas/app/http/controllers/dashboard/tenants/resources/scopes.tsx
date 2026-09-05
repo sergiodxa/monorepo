@@ -25,18 +25,14 @@ let CreateScopeSchema = ds.object({
 export default {
 	new: createAction(
 		routes.dashboard.tenants.resources.scopes.new,
-		async ({ params, tenant, tenantApi, logger }) => {
+		async ({ params, tenant, tenantApi, log }) => {
 			let ctx = getContext();
-			let log = logger.loader(
-				`/dashboard/tenants/${tenant.id}/resources/${params.resourceId}/scopes/new`,
-			);
+			log.set({ resource: { id: params.resourceId } });
 
 			let resource = await tenantApi.getResource(params.resourceId);
 			if (!resource) {
 				return new Response("Resource not found", { status: 404 });
 			}
-
-			log.info("New scope form loaded", { tenantId: tenant.id, resourceId: params.resourceId });
 
 			return ctx.render(
 				<Document
@@ -100,10 +96,8 @@ export default {
 
 	create: createAction(
 		routes.dashboard.tenants.resources.scopes.create,
-		async ({ formData, params, tenant, tenantApi, logger }) => {
-			let log = logger.action(
-				`/dashboard/tenants/${tenant.id}/resources/${params.resourceId}/scopes`,
-			);
+		async ({ formData, params, tenant, tenantApi, log }) => {
+			log.set({ resource: { id: params.resourceId } });
 
 			let resource = await tenantApi.getResource(params.resourceId);
 			if (!resource) {
@@ -114,7 +108,7 @@ export default {
 
 			let result = await validate(body, CreateScopeSchema);
 			if (isFailure(result)) {
-				log.info("Scope validation failed", { issues: result.error.issues.length });
+				log.note("scope.validation_failed", { issues: result.error.issues.length });
 				return new Response("Validation error", { status: 400 });
 			}
 
@@ -127,11 +121,7 @@ export default {
 				scopes: newScopes,
 			});
 
-			log.info("Scope added", {
-				tenantId: tenant.id,
-				resourceId: params.resourceId,
-				scope: result.data.name,
-			});
+			log.set({ scope: { name: result.data.name } }).note("scope.added");
 
 			return new Response(null, {
 				status: 302,
@@ -147,11 +137,8 @@ export default {
 
 	edit: createAction(
 		routes.dashboard.tenants.resources.scopes.edit,
-		async ({ params, tenant, logger }) => {
-			let log = logger.loader(
-				`/dashboard/tenants/${tenant.id}/resources/${params.resourceId}/scopes/${params.id}/edit`,
-			);
-			log.info("Scope edit not supported - delete and recreate");
+		async ({ params, tenant, log }) => {
+			log.set({ resource: { id: params.resourceId }, scope: { index: params.id } });
 
 			return new Response(null, {
 				status: 302,
@@ -167,11 +154,8 @@ export default {
 
 	update: createAction(
 		routes.dashboard.tenants.resources.scopes.update,
-		async ({ params, tenant, logger }) => {
-			let log = logger.action(
-				`/dashboard/tenants/${tenant.id}/resources/${params.resourceId}/scopes/${params.id}`,
-			);
-			log.info("Scope update not supported");
+		async ({ params, tenant, log }) => {
+			log.set({ resource: { id: params.resourceId }, scope: { index: params.id } });
 
 			return new Response(null, {
 				status: 302,
@@ -187,10 +171,8 @@ export default {
 
 	destroy: createAction(
 		routes.dashboard.tenants.resources.scopes.destroy,
-		async ({ params, tenant, tenantApi, logger }) => {
-			let log = logger.action(
-				`/dashboard/tenants/${tenant.id}/resources/${params.resourceId}/scopes/${params.id}`,
-			);
+		async ({ params, tenant, tenantApi, log }) => {
+			log.set({ resource: { id: params.resourceId }, scope: { index: params.id } });
 
 			let resource = await tenantApi.getResource(params.resourceId);
 			if (!resource) {
@@ -204,11 +186,7 @@ export default {
 				scopes: newScopes,
 			});
 
-			log.info("Scope removed", {
-				tenantId: tenant.id,
-				resourceId: params.resourceId,
-				scopeIndex: params.id,
-			});
+			log.note("scope.deleted");
 
 			return new Response(null, {
 				status: 302,

@@ -74,7 +74,7 @@ afterEach(() => {
 afterAll(() => server.close());
 
 test("reports one event per billing customer, keyed by tenant and day", async () => {
-	await reportMAU({ cron: "0 1 * * *", scheduledTime: Date.now(), noRetry() {} });
+	await reportMAU();
 
 	expect(ingested).toHaveLength(1);
 	expect(ingested[0]?.events).toHaveLength(1);
@@ -96,7 +96,7 @@ test("sends nothing when no tenant with usage is a billing customer", async () =
 		),
 	);
 
-	await reportMAU({ cron: "0 1 * * *", scheduledTime: Date.now(), noRetry() {} });
+	await reportMAU();
 
 	expect(ingested).toHaveLength(0);
 });
@@ -108,7 +108,5 @@ test("fails the run when the platform refuses the batch", async () => {
 		),
 	);
 
-	await expect(
-		reportMAU({ cron: "0 1 * * *", scheduledTime: Date.now(), noRetry() {} }),
-	).rejects.toThrow();
+	await expect(reportMAU()).rejects.toThrow();
 });

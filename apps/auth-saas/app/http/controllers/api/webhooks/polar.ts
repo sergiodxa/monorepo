@@ -77,21 +77,23 @@ export default new BillingWebhook(
  * the endpoint, which asks for a redelivery when the platform said one would help.
  *
  * @param customerId - The customer the delivery was about, or null when it named none.
- * @param context - The request context, for the request-scoped logger.
+ * @param context - The request context, for the request's log.
  */
 async function syncCustomer(customerId: string | null, context: RequestContext): Promise<void> {
-	let log = context.logger.action("/api/webhooks/polar");
+	let log = context.log;
 
 	if (customerId === null) {
-		log.info("Delivery named no customer");
+		log.note("webhook.polar.no_customer");
 		return;
 	}
+
+	log.set({ billing: { customer_id: customerId } });
 
 	let db = getServiceContainer().get(Database);
 	let synced = await Subscription.syncFromBilling(db, { id: customerId });
 
 	if (isFailure(synced)) {
-		log.error("Entitlement sync failed", { customerId, ...failureFields(synced.error) });
+		log.fail(synced.error, { billing: failureFields(synced.error) });
 		throw synced.error;
 	}
 
@@ -99,8 +101,7 @@ async function syncCustomer(customerId: string | null, context: RequestContext):
 		!Subscription.isEntitled(synced.data.status),
 	);
 
-	log.info("Entitlement sync completed", {
-		tenantId: synced.data.tenant_id,
-		status: synced.data.status,
-	});
+	log
+		.set({ tenant: { id: synced.data.tenant_id }, subscription: { status: synced.data.status } })
+		.note("webhook.polar.synced");
 }

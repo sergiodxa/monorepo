@@ -32,13 +32,12 @@ let UpdateClientSchema = ds.object({
 export default {
 	index: createAction(
 		routes.dashboard.tenants.clients.index,
-		async ({ tenant, tenantApi, logger }) => {
+		async ({ tenant, tenantApi, log }) => {
 			let ctx = getContext();
-			let log = logger.loader(`/dashboard/tenants/${tenant.id}/clients`);
 
 			let clients = await tenantApi.listClients();
 
-			log.info("Clients listed", { tenantId: tenant.id, count: clients.length });
+			log.set({ clients: { count: clients.length } });
 
 			return ctx.render(
 				<Document title={`Clients - ${tenant.name}`} tenant={tenant}>
@@ -85,9 +84,9 @@ export default {
 
 	show: createAction(
 		routes.dashboard.tenants.clients.show,
-		async ({ params, tenant, tenantApi, logger }) => {
+		async ({ params, tenant, tenantApi, log }) => {
 			let ctx = getContext();
-			let log = logger.loader(`/dashboard/tenants/${tenant.id}/clients/${params.id}`);
+			log.set({ client: { id: params.id } });
 
 			let client = await tenantApi.getClient(params.id);
 			if (!client) {
@@ -99,8 +98,6 @@ export default {
 				tenantApi.listRedirectUris(params.id),
 				tenantApi.listLogoutUris(params.id),
 			]);
-
-			log.info("Client retrieved", { tenantId: tenant.id, clientId: params.id });
 
 			return ctx.render(
 				<Document
@@ -296,10 +293,8 @@ export default {
 		},
 	),
 
-	new: createAction(routes.dashboard.tenants.clients.new, ({ tenant, logger }) => {
+	new: createAction(routes.dashboard.tenants.clients.new, ({ tenant }) => {
 		let ctx = getContext();
-		let log = logger.loader(`/dashboard/tenants/${tenant.id}/clients/new`);
-		log.info("New client form loaded", { tenantId: tenant.id });
 
 		return ctx.render(
 			<Document
@@ -364,14 +359,12 @@ export default {
 
 	create: createAction(
 		routes.dashboard.tenants.clients.create,
-		async ({ formData, tenant, tenantApi, logger }) => {
-			let log = logger.action(`/dashboard/tenants/${tenant.id}/clients`);
-
+		async ({ formData, tenant, tenantApi, log }) => {
 			let body = Object.fromEntries(formData);
 
 			let result = await validate(body, CreateClientSchema);
 			if (isFailure(result)) {
-				log.info("Client creation validation failed", { issues: result.error.issues.length });
+				log.note("client.validation_failed", { issues: result.error.issues.length });
 				return new Response("Validation error", { status: 400 });
 			}
 
@@ -381,7 +374,7 @@ export default {
 				description: result.data.description,
 			});
 
-			log.info("Client created", { tenantId: tenant.id, clientId: id });
+			log.set({ client: { id } }).note("client.created");
 
 			return new Response(null, {
 				status: 302,
@@ -394,16 +387,14 @@ export default {
 
 	edit: createAction(
 		routes.dashboard.tenants.clients.edit,
-		async ({ params, tenant, tenantApi, logger }) => {
+		async ({ params, tenant, tenantApi, log }) => {
 			let ctx = getContext();
-			let log = logger.loader(`/dashboard/tenants/${tenant.id}/clients/${params.id}/edit`);
+			log.set({ client: { id: params.id } });
 
 			let client = await tenantApi.getClient(params.id);
 			if (!client) {
 				return new Response("Client not found", { status: 404 });
 			}
-
-			log.info("Client edit form loaded", { tenantId: tenant.id, clientId: params.id });
 
 			return ctx.render(
 				<Document
@@ -481,14 +472,14 @@ export default {
 
 	update: createAction(
 		routes.dashboard.tenants.clients.update,
-		async ({ formData, params, tenant, tenantApi, logger }) => {
-			let log = logger.action(`/dashboard/tenants/${tenant.id}/clients/${params.id}`);
+		async ({ formData, params, tenant, tenantApi, log }) => {
+			log.set({ client: { id: params.id } });
 
 			let body = Object.fromEntries(formData);
 
 			let result = await validate(body, UpdateClientSchema);
 			if (isFailure(result)) {
-				log.info("Client update validation failed", { issues: result.error.issues.length });
+				log.note("client.validation_failed", { issues: result.error.issues.length });
 				return new Response("Validation error", { status: 400 });
 			}
 
@@ -498,7 +489,7 @@ export default {
 				type: result.data.type,
 			});
 
-			log.info("Client updated", { tenantId: tenant.id, clientId: params.id });
+			log.note("client.updated");
 
 			return new Response(null, {
 				status: 302,
@@ -514,12 +505,12 @@ export default {
 
 	destroy: createAction(
 		routes.dashboard.tenants.clients.destroy,
-		async ({ params, tenant, tenantApi, logger }) => {
-			let log = logger.action(`/dashboard/tenants/${tenant.id}/clients/${params.id}`);
+		async ({ params, tenant, tenantApi, log }) => {
+			log.set({ client: { id: params.id } });
 
 			await tenantApi.deleteClient(params.id);
 
-			log.info("Client deleted", { tenantId: tenant.id, clientId: params.id });
+			log.note("client.deleted");
 
 			return new Response(null, {
 				status: 302,

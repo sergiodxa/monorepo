@@ -22,6 +22,7 @@ import { ensurePlatformProvisioned, PLATFORM_TENANT } from "~/app/lib/platform-b
 import { checkRateLimit } from "~/app/lib/rate-limit";
 
 import { router } from "./app";
+import { logger } from "./logger";
 import Tenant from "./tenant";
 
 export { Tenant };
@@ -167,17 +168,22 @@ export default {
 	},
 
 	/**
-	 * Cron entry point: runs scheduled jobs within a container scope. Currently triggers
-	 * the daily MAU reporting job at 1:00 AM UTC.
+	 * Cron entry point: opens the trigger's log and runs the matched job inside a
+	 * container scope, so the job reads the log through `currentLog()` and a throw ends
+	 * the record as a failure. The daily MAU report runs at 1:00 AM UTC.
 	 *
 	 * @param controller - The Cloudflare scheduled controller carrying the cron pattern.
 	 * @returns A promise that resolves once the matched job(s) complete.
 	 */
 	async scheduled(controller) {
-		await container.scope(async () => {
-			if (controller.cron === "0 1 * * *") {
-				await reportMAU(controller);
-			}
-		});
+		await logger
+			.open("cron", {
+				cron: { expression: controller.cron, scheduled_at: controller.scheduledTime },
+			})
+			.run(() =>
+				container.scope(async () => {
+					if (controller.cron === "0 1 * * *") await reportMAU();
+				}),
+			);
 	},
 } satisfies ExportedHandler<Cloudflare.Env>;

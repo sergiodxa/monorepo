@@ -30,8 +30,7 @@ export default createController(routes.dashboard.tenants.billing, {
 	actions: {
 		index: inject([Database] as const, async (db) => {
 			let ctx = getContext();
-			let { request, tenant, logger } = ctx;
-			let log = logger.loader(`/dashboard/tenants/${tenant.id}/billing`);
+			let { request, tenant, log } = ctx;
 
 			let url = new URL(request.url);
 			let showSuccess = url.searchParams.get("success") === "true";
@@ -45,17 +44,12 @@ export default createController(routes.dashboard.tenants.billing, {
 			try {
 				mau = await AnalyticsService.queryMAU(tenant.id, month);
 			} catch (error) {
-				log.error("Failed to query MAU", {
-					tenantId: tenant.id,
-					error: error instanceof Error ? error.message : String(error),
+				log.warn("mau.query_failed", {
+					reason: error instanceof Error ? error.message : String(error),
 				});
 			}
 
-			log.info("Billing page loaded", {
-				tenantId: tenant.id,
-				hasSubscription: !!subscription,
-				mau,
-			});
+			log.set({ subscription: { exists: Boolean(subscription) }, mau: { count: mau } });
 
 			let periodStart = subscription?.current_period_start
 				? new Date(subscription.current_period_start).toLocaleDateString()
@@ -206,8 +200,7 @@ export default createController(routes.dashboard.tenants.billing, {
 		}),
 
 		action: inject([Database] as const, async (db) => {
-			let { request, tenant, logger } = getContext();
-			let log = logger.action(`/dashboard/tenants/${tenant.id}/billing`);
+			let { request, tenant, log } = getContext();
 
 			let url = new URL(request.url);
 			let actionType = url.searchParams.get("action");
@@ -216,14 +209,11 @@ export default createController(routes.dashboard.tenants.billing, {
 				let portal = await Subscription.createPortalUrl(db, tenant.id);
 
 				if (isFailure(portal)) {
-					log.error("Failed to create portal session", {
-						tenantId: tenant.id,
-						...failureFields(portal.error),
-					});
+					log.fail(portal.error, { billing: failureFields(portal.error) });
 					return new Response("Failed to open billing portal", { status: 500 });
 				}
 
-				log.info("Redirecting to billing portal", { tenantId: tenant.id });
+				log.note("billing.portal_redirect");
 				return new Response(null, {
 					status: 302,
 					headers: { Location: portal.data },
@@ -245,14 +235,11 @@ export default createController(routes.dashboard.tenants.billing, {
 				);
 
 				if (isFailure(checkout)) {
-					log.error("Failed to create checkout session", {
-						tenantId: tenant.id,
-						...failureFields(checkout.error),
-					});
+					log.fail(checkout.error, { billing: failureFields(checkout.error) });
 					return new Response("Failed to start checkout", { status: 500 });
 				}
 
-				log.info("Redirecting to checkout", { tenantId: tenant.id });
+				log.note("billing.checkout_redirect");
 				return new Response(null, {
 					status: 302,
 					headers: { Location: checkout.data },
@@ -263,14 +250,11 @@ export default createController(routes.dashboard.tenants.billing, {
 				let canceled = await Subscription.cancel(db, tenant.id);
 
 				if (isFailure(canceled)) {
-					log.error("Failed to cancel subscription", {
-						tenantId: tenant.id,
-						...failureFields(canceled.error),
-					});
+					log.fail(canceled.error, { billing: failureFields(canceled.error) });
 					return new Response("Failed to cancel subscription", { status: 500 });
 				}
 
-				log.info("Subscription canceled", { tenantId: tenant.id });
+				log.note("subscription.canceled");
 			}
 
 			return new Response(null, {

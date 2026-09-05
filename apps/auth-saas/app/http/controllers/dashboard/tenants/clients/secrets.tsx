@@ -25,18 +25,14 @@ let CreateSecretSchema = ds.object({
 export default {
 	new: createAction(
 		routes.dashboard.tenants.clients.secrets.new,
-		async ({ params, tenant, tenantApi, logger }) => {
+		async ({ params, tenant, tenantApi, log }) => {
 			let ctx = getContext();
-			let log = logger.loader(
-				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/secrets/new`,
-			);
+			log.set({ client: { id: params.clientId } });
 
 			let client = await tenantApi.getClient(params.clientId);
 			if (!client) {
 				return new Response("Client not found", { status: 404 });
 			}
-
-			log.info("New secret form loaded", { tenantId: tenant.id, clientId: params.clientId });
 
 			return ctx.render(
 				<Document
@@ -98,9 +94,9 @@ export default {
 
 	create: createAction(
 		routes.dashboard.tenants.clients.secrets.create,
-		async ({ formData, params, tenant, tenantApi, logger }) => {
+		async ({ formData, params, tenant, tenantApi, log }) => {
 			let ctx = getContext();
-			let log = logger.action(`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/secrets`);
+			log.set({ client: { id: params.clientId } });
 
 			let client = await tenantApi.getClient(params.clientId);
 			if (!client) {
@@ -111,7 +107,7 @@ export default {
 
 			let result = await validate(body, CreateSecretSchema);
 			if (isFailure(result)) {
-				log.info("Secret creation validation failed", { issues: result.error.issues.length });
+				log.note("secret.validation_failed", { issues: result.error.issues.length });
 				return new Response("Validation error", { status: 400 });
 			}
 
@@ -120,7 +116,7 @@ export default {
 				expiresAt: result.data.expiresAt,
 			});
 
-			log.info("Secret created", { tenantId: tenant.id, clientId: params.clientId, secretId: id });
+			log.set({ secret: { id } }).note("secret.created");
 
 			return ctx.render(
 				<Document title={`Secret Created - ${client.name}`} tenant={tenant}>
@@ -152,11 +148,8 @@ export default {
 
 	edit: createAction(
 		routes.dashboard.tenants.clients.secrets.edit,
-		async ({ params, tenant, logger }) => {
-			let log = logger.loader(
-				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/secrets/${params.id}/edit`,
-			);
-			log.info("Secret edit not supported - secrets cannot be edited");
+		async ({ params, tenant, log }) => {
+			log.set({ client: { id: params.clientId }, secret: { id: params.id } });
 
 			return new Response(null, {
 				status: 302,
@@ -172,11 +165,8 @@ export default {
 
 	update: createAction(
 		routes.dashboard.tenants.clients.secrets.update,
-		async ({ params, tenant, logger }) => {
-			let log = logger.action(
-				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/secrets/${params.id}`,
-			);
-			log.info("Secret update not supported - secrets cannot be edited");
+		async ({ params, tenant, log }) => {
+			log.set({ client: { id: params.clientId }, secret: { id: params.id } });
 
 			return new Response(null, {
 				status: 302,
@@ -192,18 +182,12 @@ export default {
 
 	destroy: createAction(
 		routes.dashboard.tenants.clients.secrets.destroy,
-		async ({ params, tenant, tenantApi, logger }) => {
-			let log = logger.action(
-				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/secrets/${params.id}`,
-			);
+		async ({ params, tenant, tenantApi, log }) => {
+			log.set({ client: { id: params.clientId }, secret: { id: params.id } });
 
 			await tenantApi.deleteSecret(params.clientId, params.id);
 
-			log.info("Secret revoked", {
-				tenantId: tenant.id,
-				clientId: params.clientId,
-				secretId: params.id,
-			});
+			log.note("secret.revoked");
 
 			return new Response(null, {
 				status: 302,

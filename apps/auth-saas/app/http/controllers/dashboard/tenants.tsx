@@ -56,9 +56,8 @@ export default {
 		routes.dashboard.tenants.show,
 		inject([Database] as const, async (db) => {
 			let ctx = getContext();
-			let { params, platformSession, logger } = ctx;
+			let { params, platformSession, log } = ctx;
 			let { id } = ds.parse(ds.object({ id: ds.string() }), params);
-			let log = logger.loader(`/dashboard/tenants/${id}`);
 
 			let tenant = await Tenant.showWithAccess(
 				db,
@@ -70,10 +69,12 @@ export default {
 				return new Response("Not found", { status: 404 });
 			}
 
+			log.set({ tenant: { id } });
+
 			let api = new TenantApiService(id);
 			let [stats, hostnames] = await Promise.all([api.getStats(), Hostname.listByTenant(db, id)]);
 
-			log.info("Tenant detail loaded", { tenantId: id });
+			log.set({ hostnames: { count: hostnames.length } });
 
 			let defaultHostname = hostnames.find((h) => Boolean(h.is_default));
 
@@ -186,8 +187,6 @@ export default {
 		routes.dashboard.tenants.new,
 		inject([] as const, () => {
 			let ctx = getContext();
-			let log = ctx.logger.loader("/dashboard/tenants/new");
-			log.info("New tenant form loaded");
 
 			return ctx.render(
 				<Document
@@ -248,19 +247,18 @@ export default {
 	/**
 	 * Creates the tenant, provisions its default hostname and management
 	 * client, and best-effort creates its Polar subscription — a failure here
-	 * is logged but does not fail tenant creation.
+	 * is recorded on the request log but does not fail tenant creation.
 	 */
 	create: createAction(
 		routes.dashboard.tenants.create,
 		inject([Database] as const, async (db) => {
-			let { formData, platformSession, logger } = getContext();
-			let log = logger.action("/dashboard/tenants");
+			let { formData, platformSession, log } = getContext();
 
 			let body = Object.fromEntries(formData);
 
 			let result = await validate(body, CreateTenantSchema);
 			if (isFailure(result)) {
-				log.info("Tenant creation validation failed", { issues: result.error.issues.length });
+				log.note("tenant.validation_failed", { issues: result.error.issues.length });
 				return getContext().render(
 					<html lang="en">
 						<head>
@@ -288,6 +286,8 @@ export default {
 				region: result.data.region,
 				internal,
 			});
+
+			log.set({ tenant: { id: tenant.id, slug, internal } });
 
 			await Hostname.createDefault(db, tenant.id, slug, env.PLATFORM_DOMAIN);
 
@@ -317,7 +317,7 @@ export default {
 
 			try {
 				if (internal) {
-					log.info("Skipping subscription for internal tenant", { tenantId: tenant.id });
+					log.note("subscription.skipped_internal");
 				} else {
 					let subscription = await Subscription.create(
 						db,
@@ -327,24 +327,14 @@ export default {
 					);
 
 					if (isFailure(subscription)) {
-						log.error("Failed to create subscription", {
-							tenantId: tenant.id,
-							...failureFields(subscription.error),
-						});
-					} else log.info("Subscription created", { tenantId: tenant.id });
+						log.warn("subscription.create_failed", failureFields(subscription.error));
+					} else log.note("subscription.created");
 				}
 			} catch (error) {
-				log.error("Failed to create subscription", {
-					tenantId: tenant.id,
-					error: error instanceof Error ? error.message : String(error),
-				});
+				log.warn("subscription.create_failed", failureFields(error));
 			}
 
-			log.info("Tenant created with management client", {
-				tenantId: tenant.id,
-				slug,
-				managementClientId: managementClient.id,
-			});
+			log.set({ client: { id: managementClient.id } }).note("tenant.created");
 
 			return new Response(null, {
 				status: 302,
@@ -357,9 +347,8 @@ export default {
 		routes.dashboard.tenants.edit,
 		inject([Database] as const, async (db) => {
 			let ctx = getContext();
-			let { params, platformSession, logger } = ctx;
+			let { params, platformSession, log } = ctx;
 			let { id } = ds.parse(ds.object({ id: ds.string() }), params);
-			let log = logger.loader(`/dashboard/tenants/${id}/edit`);
 
 			let tenant = await Tenant.showWithAccess(
 				db,
@@ -371,11 +360,11 @@ export default {
 				return new Response("Not found", { status: 404 });
 			}
 
+			log.set({ tenant: { id } });
+
 			if (tenant.role === "viewer") {
 				return new Response("Forbidden", { status: 403 });
 			}
-
-			log.info("Tenant edit form loaded", { tenantId: id });
 
 			return ctx.render(
 				<Document
@@ -424,9 +413,8 @@ export default {
 	update: createAction(
 		routes.dashboard.tenants.update,
 		inject([Database] as const, async (db) => {
-			let { formData, params, platformSession, logger } = getContext();
+			let { formData, params, platformSession, log } = getContext();
 			let { id } = ds.parse(ds.object({ id: ds.string() }), params);
-			let log = logger.action(`/dashboard/tenants/${id}`);
 
 			let tenant = await Tenant.showWithAccess(
 				db,
@@ -438,6 +426,8 @@ export default {
 				return new Response("Not found", { status: 404 });
 			}
 
+			log.set({ tenant: { id } });
+
 			if (tenant.role === "viewer") {
 				return new Response("Forbidden", { status: 403 });
 			}
@@ -446,13 +436,13 @@ export default {
 
 			let result = await validate(body, UpdateTenantSchema);
 			if (isFailure(result)) {
-				log.info("Tenant update validation failed", { issues: result.error.issues.length });
+				log.note("tenant.validation_failed", { issues: result.error.issues.length });
 				return new Response("Validation error", { status: 400 });
 			}
 
 			await Tenant.update(db, id, { name: result.data.name });
 
-			log.info("Tenant updated", { tenantId: id });
+			log.note("tenant.updated");
 
 			return new Response(null, {
 				status: 302,
