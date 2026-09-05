@@ -19,7 +19,7 @@ export interface RetryOptions extends ErrorOptions {
 	 * by accident.
 	 */
 	delay?: DurationInput;
-	/** Why this delivery is coming back, for the `job.retrying` event. */
+	/** Why this delivery is coming back, for the `job.retry` note on the run's log. */
 	reason?: string;
 }
 

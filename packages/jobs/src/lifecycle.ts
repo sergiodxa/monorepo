@@ -1,8 +1,8 @@
 /**
- * One delivery, start to finish: the log line it opens with, the middleware chain and
- * handler it runs inside a timeout, the monitor ping a completed run sends, and the ack
- * or retry every ending resolves to. Every job reaches the queue through here, whatever
- * triggered it, so one shape covers all of them.
+ * One delivery, start to finish: the job log it opens under the batch's, the middleware
+ * chain and handler it runs inside a timeout, the monitor ping a completed run sends, and
+ * the ack or retry every ending resolves to. Every job reaches the queue through here,
+ * whatever triggered it, so one shape covers all of them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,6 +10,7 @@
 
 import type { Message } from "@cloudflare/workers-types";
 import type { DurationInput } from "@sdxc/duration";
+import type { Log } from "@sdxc/logger";
 
 import { toMs, toSeconds } from "@sdxc/duration";
 import { BatchedLogger } from "@sdxc/logger";
@@ -20,7 +21,7 @@ import type { RunnableJobHandler } from "./handler.js";
 import type { AnyJobDefinition } from "./jobs.js";
 import type { AnyJobMiddleware } from "./middleware.js";
 
-import { JobContext } from "./context.js";
+import { JobContext, openJobLog } from "./context.js";
 import { Ack, NonRetriable, Retry, Timeout } from "./errors.js";
 import { ping, UptimeFetchError, UptimeNetworkError } from "./uptime.js";
 
@@ -49,12 +50,16 @@ export interface RunOptions {
 /** How the work returned, before its ending is read out of it. */
 type Outcome = { status: "done" } | { status: "failed"; error: unknown } | { status: "timeout" };
 
-/** What this delivery ends as. */
+/**
+ * What this delivery ends as. A timeout carries what stopped the run — the ending the
+ * handler threw, the cancelled I/O, or the deadline's own `Timeout` — so the record
+ * names it.
+ */
 type Ending =
 	| { kind: "done" }
 	| { kind: "retry"; delay: DurationInput | undefined; error: Retry }
 	| { kind: "refuse"; error: NonRetriable }
-	| { kind: "timeout"; ack: boolean }
+	| { kind: "timeout"; ack: boolean; error: unknown }
 	| { kind: "failed"; error: unknown };
 
 /**
@@ -72,11 +77,19 @@ function describeCause(cause: unknown): string {
 	}
 }
 
-/** The name and message of a thrown value, whatever it turned out to be. */
-function describeError(error: unknown) {
+/**
+ * The cause a job gave up with, as flat fields beside the failure's own. Validation
+ * issues ride along serialized, so the record still says which field was wrong.
+ * @param cause Value found on `error.cause`, of any shape.
+ */
+function causeFields(cause: unknown): Log.Fields {
+	if (cause === undefined) return {};
 	return {
-		name: error instanceof Error ? error.name : "UnknownError",
-		message: error instanceof Error ? error.message : String(error),
+		error: {
+			cause_type: cause instanceof Error ? cause.name : "UnknownError",
+			cause_message: cause instanceof Error ? cause.message : describeCause(cause),
+			cause_issues: cause instanceof ValidationError ? JSON.stringify(cause.issues) : undefined,
+		},
 	};
 }
 
@@ -95,24 +108,26 @@ function isCancelled(error: unknown, signal: AbortSignal): boolean {
  * aborted signal is read the same way.
  *
  * @param outcome How the work returned.
- * @param signal This run's signal, aborted when its time ran out.
+ * @param signal This run's signal, aborted with a `Timeout` when its time ran out.
  */
 function endingOf(outcome: Outcome, signal: AbortSignal): Ending {
-	if (outcome.status === "timeout") return { kind: "timeout", ack: false };
+	let deadline: unknown = signal.reason;
+
+	if (outcome.status === "timeout") return { kind: "timeout", ack: false, error: deadline };
 	if (outcome.status === "done") {
-		return signal.aborted ? { kind: "timeout", ack: false } : { kind: "done" };
+		return signal.aborted ? { kind: "timeout", ack: false, error: deadline } : { kind: "done" };
 	}
 
 	let error = outcome.error;
 
 	if (error instanceof Ack) {
-		return signal.aborted ? { kind: "timeout", ack: true } : { kind: "done" };
+		return signal.aborted ? { kind: "timeout", ack: true, error: deadline } : { kind: "done" };
 	}
 
 	if (error instanceof Retry) return { kind: "retry", delay: error.delay, error };
 	if (error instanceof NonRetriable) return { kind: "refuse", error };
-	if (error instanceof Timeout) return { kind: "timeout", ack: false };
-	if (isCancelled(error, signal)) return { kind: "timeout", ack: false };
+	if (error instanceof Timeout) return { kind: "timeout", ack: false, error };
+	if (isCancelled(error, signal)) return { kind: "timeout", ack: false, error };
 
 	return { kind: "failed", error };
 }
@@ -181,7 +196,8 @@ function waitForWork(
 }
 
 /**
- * Runs one delivery through the whole lifecycle.
+ * Runs one delivery through the whole lifecycle, inside a `job` log that records how it
+ * ended and counts that ending into the batch's log.
  *
  * @param options The job, its handler, and the message to run it for.
  * @throws Whatever the handler threw that is none of the four endings, so the platform
@@ -192,72 +208,115 @@ export async function runJob(options: RunOptions): Promise<void> {
 	let logger = new BatchedLogger(`job:${job.name}:${message.id}`);
 	let controller = new AbortController();
 
+	let log = openJobLog({
+		job: {
+			name: job.name,
+			id: message.id,
+			attempts: message.attempts,
+			batch_size: options.batchSize,
+			cron: job.cron,
+		},
+	});
+
 	let context = new JobContext(job, {
 		id: message.id,
 		attempts: message.attempts,
 		input: options.input,
 		batchSize: options.batchSize,
+		log,
 		logger,
 		signal: controller.signal,
 	});
 
-	let delivery = { id: message.id, attempts: message.attempts };
-
 	try {
-		logger.info("job.started", delivery);
+		await log.run(async () => {
+			let outcome = await waitForWork(
+				() =>
+					runChain(options.middleware, context, async () => {
+						let handler = await options.handler();
 
-		let outcome = await waitForWork(
-			() =>
-				runChain(options.middleware, context, async () => {
-					let handler = await options.handler();
+						if (handler.job !== job) {
+							throw new Error(
+								`Job "${job.name}" is mapped to a handler written for "${handler.job.name}"`,
+							);
+						}
 
-					if (handler.job !== job) {
-						throw new Error(
-							`Job "${job.name}" is mapped to a handler written for "${handler.job.name}"`,
-						);
-					}
+						await handler(context);
+					}),
+				options.timeout,
+				controller,
+			);
 
-					await handler(context);
-				}),
-			options.timeout,
-			controller,
-		);
-
-		let ending = endingOf(outcome, controller.signal);
-
-		if (ending.kind === "retry") {
-			logger.error("job.retrying", { ...delivery, error: describeError(ending.error) });
-			return retry(message, ending.delay);
-		}
-
-		if (ending.kind === "refuse") return refuse(ending.error, message, logger, delivery);
-
-		if (ending.kind === "timeout") {
-			logger.error("job.timed-out", delivery);
-			return ending.ack ? message.ack() : retry(message, undefined);
-		}
-
-		if (ending.kind === "failed") {
-			logger.error("job.failed", { ...delivery, error: describeError(ending.error) });
-			throw ending.error;
-		}
-
-		try {
-			await ping(job.monitorId, options.uptime?.());
-		} catch (error) {
-			if (error instanceof UptimeFetchError || error instanceof UptimeNetworkError) {
-				logger.info("job.uptime-failed", { ...delivery, error: describeError(error) });
-				message.ack();
-				return;
-			}
-			throw error;
-		}
-
-		message.ack();
-		logger.info("job.completed", delivery);
+			await settle(endingOf(outcome, controller.signal), message, log, () =>
+				ping(job.monitorId, options.uptime?.()),
+			);
+		});
 	} finally {
 		logger.flush();
 	}
+}
+
+/**
+ * Records the ending on the job's log, counts it into the batch's, and settles the
+ * message the way that ending asks. A completed run reports to its monitor first, and a
+ * monitor that cannot be reached leaves the run `done`: the work happened.
+ *
+ * @param ending How the run ended.
+ * @param message The delivery to ack or retry.
+ * @param log The job's log.
+ * @param report Sends the monitor ping.
+ * @throws What the handler threw when it was none of the endings, once it is recorded.
+ */
+async function settle(
+	ending: Ending,
+	message: Message<unknown>,
+	log: Log,
+	report: () => Promise<void>,
+): Promise<void> {
+	if (ending.kind === "retry") {
+		let delay = ending.delay === undefined ? undefined : toSeconds(ending.delay);
+		log.set({ job: { ending: "retry", delay_s: delay } });
+		log.warn("job.retry", { reason: ending.error.message });
+		log.parent?.inc("jobs.retried");
+		return retry(message, ending.delay);
+	}
+
+	if (ending.kind === "refuse") {
+		log.set({ job: { ending: "refuse" } });
+		log.fail(ending.error, causeFields(ending.error.cause));
+		log.parent?.inc("jobs.refused");
+		return message.ack();
+	}
+
+	if (ending.kind === "timeout") {
+		log.set({ job: { ending: "timeout" } });
+		log.fail(ending.error);
+		log.parent?.inc("jobs.timed_out");
+		return ending.ack ? message.ack() : retry(message, undefined);
+	}
+
+	if (ending.kind === "failed") {
+		log.set({ job: { ending: "failed" } });
+		log.fail(ending.error);
+		log.parent?.inc("jobs.failed");
+		throw ending.error;
+	}
+
+	log.set({ job: { ending: "done" } });
+	log.parent?.inc("jobs.done");
+
+	try {
+		await report();
+	} catch (error) {
+		if (error instanceof UptimeFetchError || error instanceof UptimeNetworkError) {
+			log.warn("job.uptime_failed", { error: error.message });
+			message.ack();
+			return;
+		}
+		throw error;
+	}
+
+	message.ack();
 }
 
 /**
@@ -267,37 +326,4 @@ export async function runJob(options: RunOptions): Promise<void> {
  */
 function retry(message: Message<unknown>, delay: DurationInput | undefined): void {
 	message.retry(delay === undefined ? {} : { delaySeconds: toSeconds(delay) });
-}
-
-/**
- * Records a job that cannot succeed and acks its delivery, since a redelivery reaches
- * the same result.
- * @param error What the job gave up with.
- * @param message The delivery to ack.
- * @param logger The job's logger.
- * @param delivery The message id and attempt count every event carries.
- */
-function refuse(
-	error: NonRetriable,
-	message: Message<unknown>,
-	logger: BatchedLogger,
-	delivery: { id: string; attempts: number },
-): void {
-	logger.error("job.non-retriable", {
-		...delivery,
-		error: {
-			...describeError(error),
-			cause:
-				error.cause === undefined
-					? undefined
-					: {
-							name: error.cause instanceof Error ? error.cause.name : "UnknownError",
-							message:
-								error.cause instanceof Error ? error.cause.message : describeCause(error.cause),
-							issues: error.cause instanceof ValidationError ? error.cause.issues : undefined,
-						},
-		},
-	});
-
-	message.ack();
 }

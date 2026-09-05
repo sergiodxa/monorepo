@@ -52,19 +52,27 @@ import { createJobHandler } from "@sdxc/jobs";
 import jobs from "~/app/jobs";
 
 export default createJobHandler(jobs.checkHttp, async (ctx) => {
-	let monitor = await ctx.database.find(ctx.input.monitorId);
-	ctx.logger.info("check.started", { monitorId: monitor.id });
+	let monitor = await ctx.log.time("db", () => ctx.database.find(ctx.input.monitorId));
+	ctx.log.set({ monitor: { id: monitor.id, region: monitor.region } });
+	ctx.log.note("check.started");
 });
 ```
+
+`ctx.log` is the run's record, emitted once when the run ends: `set()` a field worth
+querying by, `note()` what is worth reading once a query has found the record, `time()`
+anything with a duration. `ctx.logger`, a batched logger, is still available while
+handlers move their events over.
 
 ### Wiring the worker
 
 ```typescript
 import { createJobDispatcher } from "@sdxc/jobs";
 
+import { logger } from "~/bootstrap/logger";
 import jobs from "~/app/jobs";
 
 export const dispatcher = createJobDispatcher({
+	logger,
 	send: sendQueueBatch,
 	middleware: [database()],
 	timeout: "5 minutes",
@@ -106,6 +114,48 @@ whatever the app already writes with:
 ```typescript
 await sendQueueBatch([messageBody(jobs.checkHttp, { monitorId: monitor.id })]);
 ```
+
+### What gets logged
+
+Every invocation the dispatcher serves emits one record through the `logger` it was
+given, so a cron trigger, a queue batch, and each job in the batch are each one query
+away. Fields are flat scalars under dotted keys; the kind says which they are.
+
+| Kind    | Opened by                     | Fields                                                                                                                                                                   |
+| ------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `cron`  | `dispatcher.scheduled()`      | `cron.expression`, `cron.scheduled_at`, `jobs.enqueued`                                                                                                                  |
+| `queue` | `dispatcher.queue()`          | `queue.name`, `queue.batch_size`, `job.count`, and one of `jobs.done`, `jobs.retried`, `jobs.refused`, `jobs.failed`, `jobs.timed_out`, `jobs.dead_lettered` per message |
+| `job`   | Each message, under the batch | `job.name`, `job.id`, `job.attempts`, `job.batch_size`, `job.cron` when declared, `job.ending`, and whatever the handler `set()`                                         |
+
+A job log's `outcome` follows its ending: `ok` for `done`, `degraded` for `retry` (with
+`job.delay_s` when a backoff was asked for), `error` for `refuse`, `timeout`, and
+`failed`, each carrying the failure under `error.*`. A message the dispatcher refuses
+before dispatch and a message delivered on the dead-letter queue get a `job` log too,
+ending `refused` (with `job.refusal`) or `dead_letter` (with `job.dead_letter`) and
+keeping the body as `job.body`, so "every job that did not end well today" is one query
+over `kind: "job"` and `outcome`. The batch log degrades when any of its jobs did.
+
+```jsonc
+{
+	"service": "uptime",
+	"kind": "job",
+	"job.name": "checkHttp",
+	"job.id": "…",
+	"job.attempts": 2,
+	"job.batch_size": 80,
+	"job.ending": "retry",
+	"job.delay_s": 300,
+	"monitor.id": "mon_…",
+	"db.count": 1,
+	"db.duration_ms": 12.4,
+	"outcome": "degraded",
+	"duration_ms": 412,
+	"notes": [{ "at": 410.2, "level": "warn", "name": "job.retry", "reason": "Rate limited" }],
+}
+```
+
+A dispatcher built without a `logger` emits the same records, carrying no `service`,
+which is how one under test runs unchanged.
 
 ## API
 
@@ -190,7 +240,8 @@ is what the dispatcher checks the handler was mapped to.
 
 ```typescript
 export default createJobHandler(jobs.clean, async (ctx) => {
-	ctx.logger.info("clean.completed");
+	let removed = await ctx.log.time("db", () => purge(ctx.database));
+	ctx.log.set({ rows: { removed } });
 });
 ```
 
@@ -200,6 +251,9 @@ Builds the registry both worker handlers delegate to.
 
 **Parameters:**
 
+- `options.logger`: The worker's logging configuration, from `createLogger()`. Every
+  cron, queue, and job log this dispatcher opens carries it; without one they carry no
+  service
 - `options.send`: `(bodies: JSONValue[]) => Promise<void>` — the app's queue write, used
   by `enqueue` and by the cron trigger. A dispatcher without one still runs what the
   queue delivers, and refuses to enqueue
@@ -218,7 +272,7 @@ Builds the registry both worker handlers delegate to.
 **Example:**
 
 ```typescript
-export const dispatcher = createJobDispatcher({ middleware: [database()] });
+export const dispatcher = createJobDispatcher({ logger, middleware: [database()] });
 ```
 
 #### `dispatcher.map(job: JobDefinition, load): void`
@@ -264,8 +318,8 @@ await dispatcher.enqueueMany(
 
 #### `dispatcher.queue(batch: MessageBatch): Promise<void>`
 
-Runs every message in the batch concurrently, settling when all of them have. Batches
-from the dead-letter queue are recorded and acked instead.
+Runs every message in the batch concurrently, inside one `queue` log, settling when all
+of them have. Batches from the dead-letter queue are recorded and acked instead.
 
 **Example:**
 
@@ -277,8 +331,8 @@ async queue(batch) {
 
 #### `dispatcher.scheduled(controller: ScheduledController): Promise<void>`
 
-Enqueues every mapped job whose `cron` equals the trigger's, in one write. Runs none of
-them, and loads no handler.
+Enqueues every mapped job whose `cron` equals the trigger's, in one write, inside one
+`cron` log that records how many. Runs none of them, and loads no handler.
 
 **Example:**
 
@@ -315,7 +369,9 @@ handler directly.
 - `init.attempts`: Which delivery of this message this is, counting from one
 - `init.input`: The payload, already parsed against the job's schema
 - `init.batchSize`: How many messages share this invocation. Defaults to one
-- `init.logger`: Where this job's events go. One is created when omitted
+- `init.log`: Where this job's fields go, a `Log` from `@sdxc/logger`. One is created
+  when omitted, under the current log when there is one
+- `init.logger`: A batched logger, for handlers still writing to one. Created when omitted
 - `init.signal`: Aborts when the job's timeout expires. Never aborts when omitted
 
 **Example:**
@@ -330,7 +386,9 @@ let ctx = new JobContext(jobs.clean, { id: "message-1", attempts: 1 });
 - `ctx.name`, `ctx.cron`, `ctx.monitorId`: The job's own declaration
 - `ctx.id`, `ctx.attempts`: The delivery's identifier and delivery count
 - `ctx.batchSize`: How many messages share this invocation
-- `ctx.logger`: A batched logger, flushed as one entry when the job ends
+- `ctx.log`: The run's record — `set()` fields, `note()` breadcrumbs, `time()` durations —
+  emitted once when the run ends
+- `ctx.logger`: A batched logger, still available while handlers move to `ctx.log`
 - `ctx.signal`: Aborts when the timeout expires
 
 #### `ctx.ack(reason?: string): never`
@@ -407,12 +465,15 @@ Each verb throws its own class. `Job` groups them for `instanceof`, and
 `@sdxc/jobs/errors` exports each one individually, which is what a type position
 needs.
 
-| Ending             | Thrown by       | What the dispatcher does                       |
-| ------------------ | --------------- | ---------------------------------------------- |
-| `Job.Ack`          | `ctx.ack()`     | Ping the monitor, ack, log `job.completed`     |
-| `Job.Retry`        | `ctx.retry()`   | Log `job.retrying`, retry, holding for `delay` |
-| `Job.NonRetriable` | `ctx.exit()`    | Log `job.non-retriable`, ack                   |
-| `Job.Timeout`      | `ctx.timeout()` | Log `job.timed-out`, retry, ping nothing       |
+| Ending             | Thrown by       | What the dispatcher does                           | `job.ending` | Outcome    |
+| ------------------ | --------------- | -------------------------------------------------- | ------------ | ---------- |
+| `Job.Ack`          | `ctx.ack()`     | Ping the monitor, ack                              | `done`       | `ok`       |
+| `Job.Retry`        | `ctx.retry()`   | Retry, holding for `delay`; note `job.retry`       | `retry`      | `degraded` |
+| `Job.NonRetriable` | `ctx.exit()`    | Ack; `fail()` the log with the error and its cause | `refuse`     | `error`    |
+| `Job.Timeout`      | `ctx.timeout()` | Retry, ping nothing; `fail()` the log              | `timeout`    | `error`    |
+
+Returning normally ends `done` like `Job.Ack`; anything else thrown ends `failed` with
+outcome `error` and is rethrown so the platform retries the invocation.
 
 **Example:**
 
@@ -538,7 +599,7 @@ export default createJobHandler(jobs.enqueueDueChecks, async (ctx) => {
 		jobs.checkHttp,
 		due.map((m) => ({ monitorId: m.id })),
 	);
-	ctx.logger.info("checks.enqueued", { count: due.length });
+	ctx.log.set({ checks: { enqueued: due.length } });
 });
 ```
 
@@ -549,6 +610,7 @@ queue, no worker, no container.
 
 ```typescript
 import { createJobContext, Job } from "@sdxc/jobs";
+import { Log } from "@sdxc/logger";
 
 import handler from "~/app/jobs/clean";
 import { Database } from "~/app/jobs/middleware/database";
@@ -565,16 +627,27 @@ test("asks for a retry while the API is rate limiting", async () => {
 
 	await expect(handler(ctx)).rejects.toBeInstanceOf(Job.Retry);
 });
+
+test("records the monitor it checked", async () => {
+	let records: Record<string, unknown>[] = [];
+	let log = new Log({ kind: "job", sink: (record) => void records.push(record) });
+	let ctx = createJobContext(jobs.checkHttp, { id: "message-1", attempts: 1, input, log });
+
+	await log.run(() => handler(ctx));
+
+	expect(records[0]).toMatchObject({ "monitor.id": input.monitorId });
+});
 ```
 
 `createJobContext` types the context the way the handler receives it — including whatever
 the app declared its middleware installs. Building one skips that chain, so the test
 populates what the chain would have; `new JobContext(...)` is the untyped equivalent the
-dispatcher itself uses.
+dispatcher itself uses. Handing it a `Log` through `init.log` is how a test reads back
+what the handler recorded.
 
 ## Related Packages
 
-- [`@sdxc/logger`](/packages/logger) - Batched logging, one entry per job
+- [`@sdxc/logger`](/packages/logger) - The `Log` a run records into and the `createLogger()` configuration the dispatcher's logs carry
 - [`@sdxc/duration`](/packages/duration) - The duration strings a retry delay and a timeout take
 - [`@sdxc/validate`](/packages/validate) - Standard Schema validation, used to parse a payload
 - [`@sdxc/cron`](/packages/cron) - Parses the cron a job declares, and rejects one the platform would not accept

@@ -39,6 +39,7 @@ export type {
 	NextFunction,
 } from "./middleware.js";
 export type {
+	DeadLetterReason,
 	HandlerModule,
 	InvalidMessage,
 	JobDispatcher,

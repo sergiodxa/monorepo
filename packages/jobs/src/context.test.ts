@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Log } from "@sdxc/logger";
 import { createContextKey } from "remix/router";
 import { describe, expect, test, vi } from "vitest";
 
@@ -24,6 +25,48 @@ describe("JobContext", () => {
 		expect(ctx.cron).toBe("0 0 * * *");
 		expect(ctx.monitorId).toBe("monitor-1");
 		expect(ctx.batchSize).toBe(1);
+	});
+
+	test("carries the log it was handed", () => {
+		let log = new Log({ kind: "job" });
+		let ctx = new JobContext(map.clean, { id: "message-1", attempts: 1, log });
+
+		expect(ctx.log).toBe(log);
+	});
+
+	test("opens a job log naming the delivery when handed none", () => {
+		let records: Record<string, unknown>[] = [];
+		let ctx = new JobContext(map.clean, { id: "message-1", attempts: 2, batchSize: 3 });
+
+		expect(ctx.log.kind).toBe("job");
+		expect(ctx.log.parent).toBeUndefined();
+
+		let consoleLog = vi.spyOn(console, "log").mockImplementation((record: unknown) => {
+			records.push(record as Record<string, unknown>);
+		});
+		ctx.log.set({ team: { id: "team-1" } });
+		ctx.log.emit();
+		consoleLog.mockRestore();
+
+		expect(records[0]).toMatchObject({
+			kind: "job",
+			"job.name": "clean",
+			"job.id": "message-1",
+			"job.attempts": 2,
+			"job.batch_size": 3,
+			"job.cron": "0 0 * * *",
+			"team.id": "team-1",
+		});
+	});
+
+	test("opens its log under the current one, so a batch counts it", async () => {
+		let batch = new Log({ kind: "queue", sink: () => {} });
+
+		await batch.run(() => {
+			let ctx = new JobContext(map.clean, { id: "message-1", attempts: 1 });
+
+			expect(ctx.log.parent).toBe(batch);
+		});
 	});
 
 	test("reads back a published value, and a key's default when nothing published one", () => {

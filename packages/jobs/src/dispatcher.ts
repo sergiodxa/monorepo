@@ -10,10 +10,11 @@
 
 import type { Message, MessageBatch, ScheduledController } from "@cloudflare/workers-types";
 import type { DurationInput } from "@sdxc/duration";
+import type { ConfiguredLogger } from "@sdxc/logger";
 import type { JSONValue } from "@sdxc/types";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
-import { BatchedLogger } from "@sdxc/logger";
+import { Log } from "@sdxc/logger";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 
@@ -22,6 +23,7 @@ import type { AnyJobHandler, JobHandler, RunnableJobHandler } from "./handler.js
 import type { AnyJobDefinition, EnqueueArgs, EnqueueInput, JobDefinition } from "./jobs.js";
 import type { AnyJobMiddleware, ChainProperties } from "./middleware.js";
 
+import { openJobLog } from "./context.js";
 import { messageBody } from "./jobs.js";
 import { runJob } from "./lifecycle.js";
 
@@ -34,9 +36,41 @@ export type LoadHandler = () => HandlerModule | Promise<HandlerModule>;
 /** Why a message was refused: it named no job, or it failed the job's schema. */
 export type RefusalReason = "unknown-job" | "invalid-input";
 
+/** Why a message is on the dead-letter queue: it was refused, or the platform gave up on it. */
+export type DeadLetterReason = "invalid_message" | "retries_exhausted";
+
 /** The body a refused message is forwarded as, wrapped so its refusal is legible. */
 export interface InvalidMessage {
 	invalid: unknown;
+}
+
+/**
+ * What a refused message's log fails with, so its record ends `error` and names the
+ * refusal as its `error.type` the way a run's ending names the class it threw.
+ */
+class Refused extends Error {
+	override name = "Job.Refused";
+
+	constructor(reason: RefusalReason) {
+		super(
+			reason === "unknown-job"
+				? "Message names no job this dispatcher maps."
+				: "Message body failed the job's schema.",
+		);
+	}
+}
+
+/** What a dead-lettered message's log fails with, for the same reason a refusal has one. */
+class DeadLettered extends Error {
+	override name = "Job.DeadLettered";
+
+	constructor(reason: DeadLetterReason) {
+		super(
+			reason === "invalid_message"
+				? "A refused message reached the dead-letter queue."
+				: "Message exhausted its retries.",
+		);
+	}
 }
 
 /**
@@ -48,6 +82,11 @@ export type SendMessages = (bodies: JSONValue[]) => Promise<void>;
 
 /** What a dispatcher needs beyond the handlers mapped onto it. */
 export interface JobDispatcherOptions<Chain extends readonly AnyJobMiddleware[] = []> {
+	/**
+	 * The worker's logging configuration. Every cron, queue, and job log this dispatcher
+	 * opens carries it; without one they carry no service.
+	 */
+	logger?: ConfiguredLogger;
 	/**
 	 * The app's queue write, used by `enqueue` and by the cron trigger. A dispatcher
 	 * without one can still run what the queue delivers, and refuses to enqueue.
@@ -139,6 +178,19 @@ function typeOf(body: unknown): string | undefined {
 }
 
 /**
+ * A message body as one field. Fields are scalars, so the body a message could not be
+ * dispatched with is kept as its JSON — the one thing worth reading back about it.
+ * @param body The delivered body, of whatever shape.
+ */
+function bodyField(body: unknown): string | undefined {
+	try {
+		return JSON.stringify(body);
+	} catch {
+		return Object.prototype.toString.call(body);
+	}
+}
+
+/**
  * Builds the dispatcher both worker handlers delegate to.
  *
  * @param options The middleware, timeout, and queues this app's jobs run with.
@@ -154,6 +206,16 @@ export function createJobDispatcher<const Chain extends readonly AnyJobMiddlewar
 	 * of racing several; a load that fails is dropped, leaving the next delivery to retry it.
 	 */
 	let resolved = new Map<string, Promise<RunnableJobHandler>>();
+
+	/**
+	 * Opens the log one worker invocation is recorded in, carrying the worker's
+	 * configuration when the dispatcher was given one.
+	 * @param kind Which invocation it records.
+	 * @param fields What is known before any work runs.
+	 */
+	function open(kind: Log.Kind, fields: Log.Fields): Log {
+		return options.logger?.open(kind, fields) ?? new Log({ kind }, fields);
+	}
 
 	/**
 	 * Loads a job's handler, once per isolate. The loader is awaited only after a
@@ -189,21 +251,26 @@ export function createJobDispatcher<const Chain extends readonly AnyJobMiddlewar
 	}
 
 	/**
-	 * Records a message the dispatcher will not dispatch, forwards it, and acks it.
+	 * Records a message the dispatcher will not dispatch as a `job` log that ended
+	 * `refused`, forwards it, and acks it.
 	 * @param message The refused delivery.
 	 * @param reason Which refusal this is.
 	 */
 	async function refuse(message: Message<unknown>, reason: RefusalReason): Promise<void> {
-		let logger = new BatchedLogger(`job:refused:${message.id}`);
-
-		logger.error("queue.invalid_message", {
-			id: message.id,
-			attempts: message.attempts,
-			reason,
-			body: message.body as JSONValue,
+		let log = openJobLog({
+			job: {
+				name: typeOf(message.body),
+				id: message.id,
+				attempts: message.attempts,
+				ending: "refused",
+				refusal: reason,
+				body: bodyField(message.body),
+			},
 		});
 
-		logger.flush();
+		log.fail(new Refused(reason));
+		log.parent?.inc("jobs.refused");
+		log.emit();
 
 		await options.onInvalid?.(message, { invalid: message.body });
 
@@ -211,38 +278,41 @@ export function createJobDispatcher<const Chain extends readonly AnyJobMiddlewar
 	}
 
 	/**
-	 * Records one dead-lettered message and acks it. That queue has no dead-letter
-	 * queue of its own, so anything left unacked here would redeliver forever.
+	 * Records one dead-lettered message as a `job` log that ended `dead_letter`, and acks
+	 * it. That queue has no dead-letter queue of its own, so anything left unacked here
+	 * would redeliver forever.
+	 *
+	 * A refused body arrives wrapped by `onInvalid`; one the platform gave up on arrives
+	 * verbatim. `attempts` counts deliveries of this copy, not the retries that spent the
+	 * original.
+	 *
 	 * @param message The dead-lettered delivery.
 	 */
 	function recordDeadLetter(message: Message<unknown>): void {
-		let logger = new BatchedLogger(`job:dead-letter:${message.id}`);
 		let body = message.body;
+		let wrapped: InvalidMessage | undefined =
+			typeof body === "object" && body !== null && "invalid" in body
+				? (body as InvalidMessage)
+				: undefined;
+		let reason: DeadLetterReason = wrapped === undefined ? "retries_exhausted" : "invalid_message";
+		let payload = wrapped === undefined ? body : wrapped.invalid;
 
-		try {
-			/**
-			 * A refused body arrives wrapped by `onInvalid`; one the platform gave up on
-			 * arrives verbatim. `attempts` counts deliveries of this copy, not the retries
-			 * that spent the original.
-			 */
-			if (typeof body === "object" && body !== null && "invalid" in body) {
-				logger.error("job.dead_letter.invalid_message", {
-					id: message.id,
-					attempts: message.attempts,
-					body: body.invalid as JSONValue,
-				});
-			} else {
-				logger.error("job.dead_letter.retries_exhausted", {
-					id: message.id,
-					attempts: message.attempts,
-					type: typeOf(body) ?? null,
-					body: body as JSONValue,
-				});
-			}
-		} finally {
-			message.ack();
-			logger.flush();
-		}
+		let log = openJobLog({
+			job: {
+				name: typeOf(payload),
+				id: message.id,
+				attempts: message.attempts,
+				ending: "dead_letter",
+				dead_letter: reason,
+				body: bodyField(payload),
+			},
+		});
+
+		log.fail(new DeadLettered(reason));
+		log.parent?.inc("jobs.dead_lettered");
+		log.emit();
+
+		message.ack();
 	}
 
 	/**
@@ -316,28 +386,42 @@ export function createJobDispatcher<const Chain extends readonly AnyJobMiddlewar
 		},
 
 		async scheduled(controller) {
-			let due = [...mapped.values()]
-				.map(({ job }) => job)
-				.filter((job) => job.cron === controller.cron);
+			let log = open("cron", {
+				cron: { expression: controller.cron, scheduled_at: controller.scheduledTime },
+			});
 
-			await send(due.map((job) => messageBody(job)));
+			await log.run(async () => {
+				let due = [...mapped.values()]
+					.map(({ job }) => job)
+					.filter((job) => job.cron === controller.cron);
+
+				await send(due.map((job) => messageBody(job)));
+
+				log.set({ jobs: { enqueued: due.length } });
+			});
 		},
 
 		async queue(batch) {
-			if (options.deadLetterQueue !== undefined && batch.queue === options.deadLetterQueue) {
-				for (let message of batch.messages) recordDeadLetter(message);
-				return;
-			}
+			let log = open("queue", {
+				queue: { name: batch.queue, batch_size: batch.messages.length },
+			});
 
-			let outcomes = await Promise.allSettled(
-				batch.messages.map((message) => dispatch(message, batch.messages.length)),
-			);
+			await log.run(async () => {
+				if (options.deadLetterQueue !== undefined && batch.queue === options.deadLetterQueue) {
+					for (let message of batch.messages) recordDeadLetter(message);
+					return;
+				}
 
-			/**
-			 * The first unexpected failure is re-thrown once every message has had its turn,
-			 * so one job's crash reaches the platform without stopping its batch mates.
-			 */
-			for (let outcome of outcomes) if (outcome.status === "rejected") throw outcome.reason;
+				let outcomes = await Promise.allSettled(
+					batch.messages.map((message) => dispatch(message, batch.messages.length)),
+				);
+
+				/**
+				 * The first unexpected failure is re-thrown once every message has had its turn,
+				 * so one job's crash reaches the platform without stopping its batch mates.
+				 */
+				for (let outcome of outcomes) if (outcome.status === "rejected") throw outcome.reason;
+			});
 		},
 	};
 }

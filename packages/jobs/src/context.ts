@@ -10,7 +10,7 @@
 
 import type { ContextValue } from "remix/router";
 
-import { BatchedLogger } from "@sdxc/logger";
+import { BatchedLogger, currentLog, Log } from "@sdxc/logger";
 
 import type { RetryOptions } from "./errors.js";
 import type { CronExpression } from "./job.js";
@@ -28,10 +28,25 @@ export interface JobContextInit<Input = undefined> {
 	input?: Input;
 	/** How many messages share the invocation this job runs in. Defaults to one. */
 	batchSize?: number;
-	/** Where this job's events go. One is created for the job when omitted. */
+	/** Where this job's fields go. One is created when omitted. */
+	log?: Log;
+	/** Where this job's events go, while handlers still write to one. Created when omitted. */
 	logger?: BatchedLogger;
 	/** Aborts when the job's timeout expires. Never aborts when omitted. */
 	signal?: AbortSignal;
+}
+
+/**
+ * Opens the log one job's run is recorded in. Inside a queue batch it is a child of the
+ * batch's log, so the batch counts it and degrades when it does; anywhere else it stands
+ * alone, which is how a dispatcher under test runs unchanged.
+ *
+ * @param fields What is known about the job before it runs.
+ * @example let log = openJobLog({ job: { name: job.name, id: message.id, attempts: message.attempts } });
+ */
+export function openJobLog(fields: Log.Fields): Log {
+	let batch = currentLog();
+	return batch === undefined ? new Log({ kind: "job" }, fields) : batch.child("job", fields);
 }
 
 /**
@@ -55,6 +70,12 @@ export class JobContext<Input = undefined> {
 	readonly attempts: number;
 	/** How many messages share this invocation, for a job pricing its share of it. */
 	readonly batchSize: number;
+	/**
+	 * This run's record: `set()` a field worth querying by, `note()` what is worth reading,
+	 * `time()` anything with a duration. Emitted once, when the run ends.
+	 */
+	readonly log: Log;
+	/** A batched logger, still available while handlers move their events into `log`. */
 	readonly logger: BatchedLogger;
 	/** Aborts when the job's timeout expires; pass it to `fetch`, or read it in a loop. */
 	readonly signal: AbortSignal;
@@ -73,6 +94,17 @@ export class JobContext<Input = undefined> {
 		this.id = init.id;
 		this.attempts = init.attempts;
 		this.batchSize = init.batchSize ?? 1;
+		this.log =
+			init.log ??
+			openJobLog({
+				job: {
+					name: job.name,
+					id: init.id,
+					attempts: init.attempts,
+					batch_size: this.batchSize,
+					cron: job.cron,
+				},
+			});
 		this.logger = init.logger ?? new BatchedLogger(`job:${job.name}:${init.id}`);
 		this.signal = init.signal ?? new AbortController().signal;
 	}
