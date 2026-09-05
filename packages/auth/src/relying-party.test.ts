@@ -1,7 +1,8 @@
 /**
- * Specs for the browser login flow, driven through a real session middleware and a
- * cookie jar so the transaction travels the way it does in production. Every correlation
- * value, the PKCE derivation, hostile `returnTo` payloads, and step-up are covered.
+ * Specs for the browser login flow, driven through one in-memory session store per
+ * browser so the transaction travels the way it does in production: written by the login
+ * request, read by the callback. Every correlation value, the PKCE derivation, hostile
+ * `returnTo` payloads, and step-up are covered.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,20 +11,12 @@
 import type { DurationInput } from "@sdxc/duration";
 import type { Adapter, RateLimitDecision } from "@sdxc/rate-limit";
 import type { Result } from "@sdxc/result";
-import type { AuthScheme } from "remix/middleware/auth";
 
-import { catchResponse } from "@sdxc/catch-response-middleware";
 import { JWK } from "@sdxc/jwt";
 import { MemoryAdapter, RateLimitError } from "@sdxc/rate-limit";
 import { failure } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { createCookie } from "remix/cookie";
-import { auth } from "remix/middleware/auth";
-import { session } from "remix/middleware/session";
-import { createRouter } from "remix/router";
-import { Session } from "remix/session";
-import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import { AuthError, AuthErrorCode } from "./auth-error.js";
@@ -219,11 +212,27 @@ class UnreachableAdapter implements Adapter {
 	}
 }
 
-/** A browser: one cookie jar, one router, and the real session middleware. */
+/** The store a session middleware would hold for one browser, kept in memory. */
+class MemoryStore implements AuthSession.Store {
+	#values = new Map<string, unknown>();
+
+	get(key: string): unknown {
+		return this.#values.get(key);
+	}
+
+	set(key: string, value: unknown): void {
+		this.#values.set(key, value);
+	}
+
+	unset(key: string): void {
+		this.#values.delete(key);
+	}
+}
+
+/** A browser: one session store, carried between visits the way a cookie carries it. */
 interface Agent {
 	/**
-	 * Visits a route and runs one flow method on its context, carrying the session
-	 * cookie forward the way a browser does.
+	 * Visits a route and runs one flow method on its context.
 	 *
 	 * @param path - The route to visit, query string included.
 	 * @param action - The flow method to run against the request context.
@@ -239,85 +248,33 @@ interface Agent {
 }
 
 /**
- * Builds an agent whose session cookie survives between visits.
+ * Builds an agent whose session survives between visits.
  *
  * @param clientIp - The IP the edge reports for this browser, sent as
  *   `CF-Connecting-IP` so a rate limit keys on it the way it does in production.
  */
 function createAgent(clientIp: string | null = null): Agent {
-	let cookie = createCookie("auth-test", { secrets: ["test-secret"] });
-	let storage = createMemorySessionStorage();
-	let jar: string | null = null;
-	let action: (ctx: RelyingParty.Context) => Promise<unknown> = async () => null;
-	let outcome: { ok: true; value: unknown } | { ok: false; error: unknown } = {
-		ok: true,
-		value: null,
-	};
+	let session = new MemoryStore();
 
-	let router = createRouter({ middleware: [session(cookie, storage)] });
-	let handler = async (ctx: RelyingParty.Context) => {
-		try {
-			outcome = { ok: true, value: await action(ctx) };
-		} catch (error) {
-			outcome = { ok: false, error };
-		}
-		return new Response("done");
-	};
-
-	router.get("/login", handler);
-	router.get("/auth/callback", handler);
-	router.get("/logout", handler);
-	router.get("/probe", handler);
-
-	async function visit(path: string): Promise<void> {
+	function visit(path: string): RelyingParty.Context {
 		let headers = new Headers();
-		if (jar) headers.set("cookie", jar);
 		if (clientIp) headers.set("CF-Connecting-IP", clientIp);
-
-		let response = await router.fetch(new Request(new URL(path, APP_ORIGIN), { headers }));
-		let setCookie = response.headers.get("set-cookie");
-		if (setCookie) jar = setCookie.split(";")[0] ?? jar;
+		return { request: new Request(new URL(path, APP_ORIGIN), { headers }), session };
 	}
 
 	return {
-		async run(path, next) {
-			action = next as (ctx: RelyingParty.Context) => Promise<unknown>;
-			await visit(path);
-			if (!outcome.ok) throw outcome.error;
-			return outcome.value as never;
+		run(path, action) {
+			return action(visit(path));
 		},
-		async attempt(path, next) {
-			action = next;
-			await visit(path);
-			if (outcome.ok) throw new Error(`Expected ${path} to fail, it answered instead`);
-			return outcome.error;
+		async attempt(path, action) {
+			try {
+				await action(visit(path));
+			} catch (error) {
+				return error;
+			}
+			throw new Error(`Expected ${path} to fail, it answered instead`);
 		},
 	};
-}
-
-/**
- * Mounts the login route the way an app does, with `catchResponse()` below the
- * session middleware, so `authorize` answers the request for itself.
- *
- * @param rp - The client whose login route is mounted.
- * @returns Visits `/login` as the browser at `clientIp`.
- */
-function createLoginApp(
-	rp: Pick<RelyingParty<unknown>, "authorize">,
-): (clientIp: string) => Promise<Response> {
-	let cookie = createCookie("auth-test", { secrets: ["test-secret"] });
-	let storage = createMemorySessionStorage();
-
-	let router = createRouter({ middleware: [session(cookie, storage), catchResponse()] });
-	router.get("/login", (ctx) => rp.authorize(ctx));
-
-	return (clientIp) =>
-		router.fetch(
-			new Request(`${APP_ORIGIN}/login`, {
-				headers: { "CF-Connecting-IP": clientIp },
-				redirect: "manual",
-			}),
-		);
 }
 
 /** What the token endpoint saw, for asserting the grant and the client credentials. */
@@ -528,23 +485,13 @@ describe("authorize", () => {
 		expect(params.get("ui_locales")).toBe("es");
 		expect(params.get("login_hint")).toBe("ada@x.com");
 	});
-
-	test("throws when the session middleware has not run", async () => {
-		let rp = createRelyingParty();
-		let router = createRouter({ middleware: [] });
-		router.get("/login", (ctx) => rp.authorize(ctx));
-
-		await expect(router.fetch(new Request(`${APP_ORIGIN}/login`))).rejects.toThrow(
-			/remix\/middleware\/session/,
-		);
-	});
 });
 
 describe("authorize returnTo", () => {
 	/** Reads the transaction the login stored, which never travels to the browser. */
 	async function storedReturnTo(agent: Agent): Promise<unknown> {
 		return agent.run("/probe", async (ctx) => {
-			let stored = ctx.get(Session)?.get(TRANSACTION_SESSION_KEY);
+			let stored = ctx.session.get(TRANSACTION_SESSION_KEY);
 			return (stored as { returnTo?: unknown } | undefined)?.returnTo;
 		});
 	}
@@ -659,7 +606,7 @@ describe("callback", () => {
 		expect(request.body?.get("code")).toBe("code-1");
 		expect(request.body?.get("redirect_uri")).toBe(REDIRECT_URI);
 
-		let auth = await agent.run("/probe", async (ctx) => AuthSession.from(ctx));
+		let auth = await agent.run("/probe", async (ctx) => AuthSession.from(ctx.session));
 		expect(auth?.idToken.subject).toBe("user-1");
 		expect(auth?.expired).toBe(false);
 	});
@@ -1522,13 +1469,13 @@ describe("rateLimit", () => {
 
 		await startLogin(agent, rp);
 		let started = await agent.run("/probe", async (ctx) =>
-			ctx.get(Session)?.get(TRANSACTION_SESSION_KEY),
+			ctx.session.get(TRANSACTION_SESSION_KEY),
 		);
 
 		await agent.attempt("/login", (ctx) => rp.authorize(ctx));
 
 		expect(
-			await agent.run("/probe", async (ctx) => ctx.get(Session)?.get(TRANSACTION_SESSION_KEY)),
+			await agent.run("/probe", async (ctx) => ctx.session.get(TRANSACTION_SESSION_KEY)),
 		).toEqual(started);
 	});
 
@@ -1558,18 +1505,6 @@ describe("rateLimit", () => {
 		expect((thrown as Response).status).toBe(429);
 	});
 
-	test("answers a refused login with a 429 the browser actually receives", async () => {
-		let rp = createRelyingParty({ rateLimit: new MemoryAdapter({ limit: 1, window: "1 minute" }) });
-		let visit = createLoginApp(rp);
-
-		expect((await visit(CLIENT_IP)).status).toBe(303);
-
-		let refused = await visit(CLIENT_IP);
-
-		expect(refused.status).toBe(429);
-		expect(Number(refused.headers.get("Retry-After"))).toBeGreaterThan(0);
-	});
-
 	test("starts a login while the limiter cannot answer, so an outage signs people in", async () => {
 		let agent = createAgent(CLIENT_IP);
 		let rp = createRelyingParty({ rateLimit: new UnreachableAdapter() });
@@ -1595,7 +1530,7 @@ describe("endSession", () => {
 	async function signIn(agent: Agent): Promise<string> {
 		let idToken = await signIdToken({ sid: "session-1" });
 		await agent.run("/probe", async (ctx) =>
-			AuthSession.write(ctx, {
+			AuthSession.write(ctx.session, {
 				idToken,
 				accessToken: await signAccessToken(),
 				refreshToken: "refresh-1",
@@ -1637,7 +1572,7 @@ describe("endSession", () => {
 
 		await agent.run("/logout", (ctx) => rp.endSession(ctx));
 
-		expect(await agent.run("/probe", async (ctx) => AuthSession.from(ctx))).toBeNull();
+		expect(await agent.run("/probe", async (ctx) => AuthSession.from(ctx.session))).toBeNull();
 	});
 
 	test("answers with the URL when the caller sends the browser itself", async () => {
@@ -1804,185 +1739,5 @@ describe("exchangeRefreshToken", () => {
 		let error = await rp.exchangeRefreshToken("refresh-1").catch((thrown) => thrown);
 
 		expect(AuthError.is(error, AuthErrorCode.InvalidToken)).toBe(true);
-	});
-});
-describe("scheme", () => {
-	/**
-	 * A token set the scheme finds in the session, with the expiry a test dictates on
-	 * both the stored record and the access token's own `exp`, which is the claim the
-	 * session reads first.
-	 *
-	 * @param expiresAt - Seconds since the epoch the set lapses at.
-	 * @param refreshToken - The refresh token the grant carried, and `null` for a grant
-	 *   made without `offline_access`, which is a set nothing can renew.
-	 */
-	async function storedTokens(
-		expiresAt: number,
-		refreshToken: string | null = "refresh-1",
-	): Promise<AuthSession.Tokens> {
-		return {
-			idToken: await signIdToken(),
-			accessToken: await signAccessToken({ exp: expiresAt }),
-			refreshToken,
-			expiresAt,
-		};
-	}
-
-	/** What a request resolved to, and whether the scheme left the session signed in. */
-	interface Resolved {
-		/** The auth state `auth()` stored on the request context. */
-		auth: unknown;
-		/** Whether the session still holds a token set once the scheme has run. */
-		signedIn: boolean;
-	}
-
-	/**
-	 * Runs one request through the real session and auth middlewares, seeding the
-	 * session in a middleware ahead of `auth()` so the scheme reads it the way it
-	 * does in production.
-	 *
-	 * @param scheme - The scheme under test.
-	 * @param tokens - The token set to seed, or `null` for a signed-out request.
-	 */
-	async function resolve(
-		scheme: AuthScheme<unknown>,
-		tokens: AuthSession.Tokens | null,
-	): Promise<Resolved> {
-		let cookie = createCookie("auth-test", { secrets: ["test-secret"] });
-		let router = createRouter({
-			middleware: [
-				session(cookie, createMemorySessionStorage()),
-				/**
-				 * Seeds the session before identity is resolved.
-				 *
-				 * @param ctx - The request context the session middleware wrote to.
-				 * @param next - The rest of the chain, `auth()` included.
-				 */
-				(ctx, next) => {
-					if (tokens) AuthSession.write(ctx, tokens);
-					return next();
-				},
-				auth({ schemes: [scheme] }),
-			],
-		});
-
-		router.get("/probe", (ctx) =>
-			Response.json({ auth: ctx.auth, signedIn: AuthSession.from(ctx) !== null }),
-		);
-
-		let response = await router.fetch(new Request(`${APP_ORIGIN}/probe`));
-		return response.json() as Promise<Resolved>;
-	}
-
-	test("skips a request nobody is signed in on", async () => {
-		let rp = createRelyingParty();
-		let scheme = rp.scheme({ verify: (session) => ({ id: session.idToken.subject }) });
-
-		let resolved = await resolve(scheme, null);
-
-		expect(resolved.auth).toEqual({ ok: false });
-	});
-
-	test("resolves the app's identity from a live session", async () => {
-		let rp = createRelyingParty();
-		let scheme = rp.scheme({ verify: (session) => ({ id: session.idToken.subject }) });
-
-		let resolved = await resolve(
-			scheme,
-			await storedTokens(Math.floor(Date.now() / 1000) + ONE_HOUR),
-		);
-
-		expect(resolved.auth).toEqual({
-			ok: true,
-			identity: { id: "user-1" },
-			method: "oidc-session",
-		});
-	});
-
-	test("reports the name the scheme was given", async () => {
-		let rp = createRelyingParty();
-		let scheme = rp.scheme({ name: "sso", verify: () => ({ id: "user-1" }) });
-
-		let resolved = await resolve(
-			scheme,
-			await storedTokens(Math.floor(Date.now() / 1000) + ONE_HOUR),
-		);
-
-		expect(resolved.auth).toMatchObject({ ok: true, method: "sso" });
-	});
-
-	test("renews an access token that has reached its expiry", async () => {
-		let rp = createRelyingParty();
-		let scheme = rp.scheme({ verify: (session) => ({ scopes: session.accessToken.scopes }) });
-
-		stubTokenEndpoint(async () =>
-			HttpResponse.json({
-				token_type: "Bearer",
-				access_token: await signAccessToken({ scope: "openid monitors:write" }),
-				expires_in: ONE_HOUR,
-			}),
-		);
-
-		let resolved = await resolve(scheme, await storedTokens(Math.floor(Date.now() / 1000) - 1));
-
-		expect(resolved.auth).toEqual({
-			ok: true,
-			identity: { scopes: ["openid", "monitors:write"] },
-			method: "oidc-session",
-		});
-	});
-
-	/**
-	 * A grant made without `offline_access` carries no refresh token, so its expiry was
-	 * never renewable. Ending the session over that would sign a person out every hour;
-	 * the claims verified when the set was written still name who is here.
-	 */
-	test("keeps a session with no refresh token signed in past its expiry", async () => {
-		let rp = createRelyingParty();
-		let scheme = rp.scheme({ verify: (session) => ({ id: session.idToken.subject }) });
-		let request = stubTokenEndpoint(() => HttpResponse.json({ error: "invalid_grant" }));
-
-		let resolved = await resolve(
-			scheme,
-			await storedTokens(Math.floor(Date.now() / 1000) - 1, null),
-		);
-
-		expect(resolved.auth).toEqual({
-			ok: true,
-			identity: { id: "user-1" },
-			method: "oidc-session",
-		});
-		expect(resolved.signedIn).toBe(true);
-		expect(request.body).toBeNull();
-	});
-
-	test("signs the request out when the renewal is refused", async () => {
-		let rp = createRelyingParty();
-		let scheme = rp.scheme({ verify: (session) => ({ id: session.idToken.subject }) });
-
-		stubTokenEndpoint(() => HttpResponse.json({ error: "invalid_grant" }, { status: 400 }));
-
-		let resolved = await resolve(scheme, await storedTokens(Math.floor(Date.now() / 1000) - 1));
-
-		expect(resolved.auth).toMatchObject({
-			ok: false,
-			error: { code: "invalid_credentials" },
-		});
-		expect(resolved.signedIn).toBe(false);
-	});
-
-	test("fails the request when the subject resolves to no identity", async () => {
-		let rp = createRelyingParty();
-		let scheme = rp.scheme({ verify: () => null });
-
-		let resolved = await resolve(
-			scheme,
-			await storedTokens(Math.floor(Date.now() / 1000) + ONE_HOUR),
-		);
-
-		expect(resolved.auth).toMatchObject({
-			ok: false,
-			error: { code: "invalid_credentials" },
-		});
 	});
 });

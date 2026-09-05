@@ -7,8 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import * as s from "remix/data-schema";
-import { Session } from "remix/session";
+import * as s from "@remix-run/data-schema";
 
 import { AccessToken } from "./access-token.js";
 import { AuthError, AuthErrorCode } from "./auth-error.js";
@@ -39,39 +38,23 @@ const TOKENS_SCHEMA = s.object({
 });
 
 /**
- * Reads the session a request carries.
- *
- * @param ctx - The request context the session middleware wrote to.
- * @returns The request's session.
- * @throws When the session middleware has not run, since every read and write
- *   here goes through it.
- */
-function readSession(ctx: AuthSession.Context): Session {
-	let session = ctx.get(Session);
-	if (!session) {
-		throw new Error("@sdxc/auth needs remix/middleware/session installed on the router");
-	}
-	return session;
-}
-
-/**
  * A signed-in request's tokens, read through the classes that name their claims.
  *
  * Reads are lazy and memoized, so a route that only needs the subject pays for
  * one token, and the tokens a route does read stay the same objects throughout it.
  *
  * @example
- * let auth = AuthSession.from(ctx);
+ * let auth = AuthSession.from(store);
  * if (auth?.expired) await auth.refresh(rp);
  */
 export class AuthSession {
-	#session: Session;
+	#store: AuthSession.Store;
 	#tokens: AuthSession.Tokens;
 	#idToken: IdToken | null = null;
 	#accessToken: AccessToken | null = null;
 
-	private constructor(session: Session, tokens: AuthSession.Tokens) {
-		this.#session = session;
+	private constructor(store: AuthSession.Store, tokens: AuthSession.Tokens) {
+		this.#store = store;
 		this.#tokens = tokens;
 	}
 
@@ -157,7 +140,7 @@ export class AuthSession {
 		};
 		this.#idToken = null;
 		this.#accessToken = null;
-		this.#session.set(SESSION_KEY, this.#tokens);
+		this.#store.set(SESSION_KEY, this.#tokens);
 
 		return this;
 	}
@@ -180,58 +163,76 @@ export class AuthSession {
 	 * entry in the session — a locale, a flash message — untouched.
 	 */
 	clear(): void {
-		this.#session.unset(SESSION_KEY);
+		this.#store.unset(SESSION_KEY);
 	}
 
 	/**
 	 * Reads the token set a login stored.
 	 *
-	 * @param ctx - The request context the session middleware wrote to.
+	 * @param store - The request's session store.
 	 * @returns The session, or `null` for a request that is signed out.
 	 * @example
-	 * let auth = AuthSession.from(ctx);
+	 * let auth = AuthSession.from(store);
 	 * if (!auth) throw redirect(href("/login"));
 	 */
-	static from(ctx: AuthSession.Context): AuthSession | null {
-		let session = readSession(ctx);
-		let stored = session.get(SESSION_KEY);
+	static from(store: AuthSession.Store): AuthSession | null {
+		let stored = store.get(SESSION_KEY);
 		if (stored === undefined) return null;
 
 		let parsed = s.parseSafe(TOKENS_SCHEMA, stored);
 		if (!parsed.success) return null;
 
-		return new AuthSession(session, parsed.value);
+		return new AuthSession(store, parsed.value);
 	}
 
 	/**
-	 * Stores a token set as the request's session, which is what makes the request
+	 * Stores a token set in the request's session, which is what makes the request
 	 * after it signed in.
 	 *
-	 * @param ctx - The request context the session middleware wrote to.
+	 * @param store - The request's session store.
 	 * @param tokens - The verified token set to persist.
 	 * @returns The session the tokens were written to.
 	 */
-	static write(ctx: AuthSession.Context, tokens: AuthSession.Tokens): AuthSession {
-		let session = readSession(ctx);
-		session.set(SESSION_KEY, { ...tokens });
-		return new AuthSession(session, tokens);
+	static write(store: AuthSession.Store, tokens: AuthSession.Tokens): AuthSession {
+		store.set(SESSION_KEY, { ...tokens });
+		return new AuthSession(store, tokens);
 	}
 }
 
 export namespace AuthSession {
 	/**
-	 * The part of a request context this package reads: the request URL a redirect
-	 * target is measured against, and the session middleware's entry.
+	 * Where a browser's signed-in state lives between requests: the token set under one
+	 * key and the login transaction under another. It is declared structurally, so a
+	 * server-side session object satisfies it as it is and a store over any other
+	 * backing needs only these three reads and writes.
 	 */
-	export interface Context {
-		/** The URL of the current request. */
-		readonly url: URL;
+	export interface Store {
 		/**
-		 * Reads a value the middleware chain stored.
+		 * Reads the value stored under a key, `undefined` when there is none.
 		 *
-		 * @param key - The context key to read.
+		 * @param key - The key to read.
 		 */
-		get(key: typeof Session): Session | undefined;
+		get(key: string): unknown;
+		/**
+		 * Stores a value under a key, replacing what was there.
+		 *
+		 * @param key - The key to write.
+		 * @param value - A JSON-serializable value.
+		 */
+		set(key: string, value: unknown): void;
+		/**
+		 * Drops a key, leaving every other entry as it was.
+		 *
+		 * @param key - The key to drop.
+		 */
+		unset(key: string): void;
+		/**
+		 * Rotates the identifier the store is looked up by, so a login leaves behind the
+		 * id an anonymous visitor arrived with. A store addressed by no id leaves it out.
+		 *
+		 * @param destroy - Whether the record under the old id is dropped as well.
+		 */
+		regenerateId?(destroy?: boolean): void;
 	}
 
 	/** A token set as it is stored, in the strings the provider issued. */

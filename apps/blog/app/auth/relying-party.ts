@@ -43,7 +43,7 @@ export type AuthProfile = Omit<User.AuthProfile, "subjectId">;
  *
  * @param url The current request's URL, which the callback URL is built against.
  * @returns The client the login, callback, logout, and session scheme run through.
- * @example let grant = await relyingParty(ctx.url).callback(ctx);
+ * @example let grant = await relyingParty(ctx.url).callback(contextOf(ctx));
  */
 export function relyingParty(url: URL | string): RelyingParty<AuthProfile> {
 	return new RelyingParty<AuthProfile>(issuer(), {

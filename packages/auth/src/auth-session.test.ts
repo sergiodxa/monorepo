@@ -7,7 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createSession, Session } from "remix/session";
 import { describe, expect, test } from "vitest";
 
 import { AuthError, AuthErrorCode } from "./auth-error.js";
@@ -33,14 +32,26 @@ function token(claims: Record<string, unknown>): string {
 	return `${header}.${payload}.signature`;
 }
 
-/** A request context carrying a session, standing in for the middleware chain. */
-function createContext(session: Session = createSession()): AuthSession.Context {
-	return {
-		url: new URL("https://app.example.com/dashboard"),
-		get(key) {
-			return key === Session ? session : undefined;
-		},
-	};
+/** The store a session middleware would hold for one browser, kept in memory. */
+class MemoryStore implements AuthSession.Store {
+	#values = new Map<string, unknown>();
+
+	get(key: string): unknown {
+		return this.#values.get(key);
+	}
+
+	set(key: string, value: unknown): void {
+		this.#values.set(key, value);
+	}
+
+	unset(key: string): void {
+		this.#values.delete(key);
+	}
+}
+
+/** A fresh store, standing in for the session of a browser that has just arrived. */
+function createStore(): AuthSession.Store {
+	return new MemoryStore();
 }
 
 /** Seconds since the epoch, offset by the given number of seconds. */
@@ -61,93 +72,82 @@ function tokens(overrides: Partial<AuthSession.Tokens> = {}): AuthSession.Tokens
 
 describe("from", () => {
 	test("answers null for a request nobody has signed in on", () => {
-		expect(AuthSession.from(createContext())).toBeNull();
+		expect(AuthSession.from(createStore())).toBeNull();
 	});
 
 	test("answers null for a record that no longer matches the stored shape", () => {
-		let session = createSession();
-		session.set("auth", { idToken: "only-this" });
+		let store = createStore();
+		store.set("auth", { idToken: "only-this" });
 
-		expect(AuthSession.from(createContext(session))).toBeNull();
+		expect(AuthSession.from(store)).toBeNull();
 	});
 
 	test("reads back the token set a login wrote", () => {
-		let ctx = createContext();
+		let store = createStore();
 		let stored = tokens();
-		AuthSession.write(ctx, stored);
+		AuthSession.write(store, stored);
 
-		let auth = AuthSession.from(ctx);
+		let auth = AuthSession.from(store);
 
 		expect(auth?.tokens).toEqual(stored);
 		expect(auth?.refreshToken).toBe("refresh-1");
 	});
 
 	test("reads the tokens through the classes that name their claims", () => {
-		let ctx = createContext();
-		AuthSession.write(ctx, tokens());
+		let store = createStore();
+		AuthSession.write(store, tokens());
 
-		let auth = AuthSession.from(ctx);
+		let auth = AuthSession.from(store);
 
 		expect(auth?.idToken.subject).toBe("user-1");
 		expect(auth?.idToken.name).toBe("Ada Lovelace");
 		expect(auth?.accessToken.has("monitors:read")).toBe(true);
 	});
-
-	test("throws when the session middleware has not run", () => {
-		let ctx: AuthSession.Context = {
-			url: new URL("https://app.example.com/"),
-			get() {
-				return undefined;
-			},
-		};
-
-		expect(() => AuthSession.from(ctx)).toThrow(/remix\/middleware\/session/);
-	});
 });
 
 describe("expired", () => {
 	test("reads false while the stated lifetime is still running", () => {
-		let ctx = createContext();
-		AuthSession.write(ctx, tokens({ expiresAt: epoch(ONE_HOUR) }));
+		let store = createStore();
+		AuthSession.write(store, tokens({ expiresAt: epoch(ONE_HOUR) }));
 
-		expect(AuthSession.from(ctx)?.expired).toBe(false);
+		expect(AuthSession.from(store)?.expired).toBe(false);
 	});
 
 	test("reads true once the stated lifetime has run out", () => {
-		let ctx = createContext();
-		AuthSession.write(ctx, tokens({ expiresAt: epoch(-1) }));
+		let store = createStore();
+		AuthSession.write(store, tokens({ expiresAt: epoch(-1) }));
 
-		expect(AuthSession.from(ctx)?.expired).toBe(true);
+		expect(AuthSession.from(store)?.expired).toBe(true);
 	});
 
 	test("reads true within the reserve, so a token cannot lapse mid-request", () => {
-		let ctx = createContext();
-		AuthSession.write(ctx, tokens({ expiresAt: epoch(5) }));
+		let store = createStore();
+		AuthSession.write(store, tokens({ expiresAt: epoch(5) }));
 
-		expect(AuthSession.from(ctx)?.expired).toBe(true);
+		expect(AuthSession.from(store)?.expired).toBe(true);
 	});
 
 	test("reads the access token's own `exp` where the endpoint stated no lifetime", () => {
-		let ctx = createContext();
+		let store = createStore();
 		AuthSession.write(
-			ctx,
+			store,
 			tokens({
 				accessToken: token({ sub: "user-1", exp: epoch(ONE_HOUR) }),
 				expiresAt: null,
 			}),
 		);
 
-		expect(AuthSession.from(ctx)?.expired).toBe(false);
+		expect(AuthSession.from(store)?.expired).toBe(false);
 	});
 
 	test("reads the access token's own `exp` over a stored lifetime that disagrees", () => {
-		let live = createContext();
+		let live = createStore();
 		AuthSession.write(
 			live,
 			tokens({ accessToken: token({ sub: "user-1", exp: epoch(ONE_HOUR) }), expiresAt: epoch(-1) }),
 		);
 
-		let lapsed = createContext();
+		let lapsed = createStore();
 		AuthSession.write(
 			lapsed,
 			tokens({ accessToken: token({ sub: "user-1", exp: epoch(-1) }), expiresAt: epoch(ONE_HOUR) }),
@@ -158,13 +158,13 @@ describe("expired", () => {
 	});
 
 	test("reads the ID token's `exp` where neither the token nor the endpoint states one", () => {
-		let live = createContext();
+		let live = createStore();
 		AuthSession.write(
 			live,
 			tokens({ idToken: token({ sub: "user-1", exp: epoch(ONE_HOUR) }), expiresAt: null }),
 		);
 
-		let lapsed = createContext();
+		let lapsed = createStore();
 		AuthSession.write(
 			lapsed,
 			tokens({ idToken: token({ sub: "user-1", exp: epoch(-1) }), expiresAt: null }),
@@ -175,26 +175,26 @@ describe("expired", () => {
 	});
 
 	test("reads true for a token set that states no end at all", () => {
-		let ctx = createContext();
-		AuthSession.write(ctx, tokens({ expiresAt: null }));
+		let store = createStore();
+		AuthSession.write(store, tokens({ expiresAt: null }));
 
-		expect(AuthSession.from(ctx)?.expired).toBe(true);
+		expect(AuthSession.from(store)?.expired).toBe(true);
 	});
 
 	test("reads true for an opaque access token the endpoint stated no lifetime for", () => {
-		let ctx = createContext();
-		AuthSession.write(ctx, tokens({ accessToken: "opaque-token", expiresAt: null }));
+		let store = createStore();
+		AuthSession.write(store, tokens({ accessToken: "opaque-token", expiresAt: null }));
 
-		expect(AuthSession.from(ctx)?.expired).toBe(true);
+		expect(AuthSession.from(store)?.expired).toBe(true);
 	});
 });
 
 describe("renewable", () => {
 	test("reads true for a grant that carried a refresh token", () => {
-		let ctx = createContext();
-		AuthSession.write(ctx, tokens());
+		let store = createStore();
+		AuthSession.write(store, tokens());
 
-		expect(AuthSession.from(ctx)?.renewable).toBe(true);
+		expect(AuthSession.from(store)?.renewable).toBe(true);
 	});
 
 	/**
@@ -202,10 +202,10 @@ describe("renewable", () => {
 	 * back, which is a session to read claims from rather than one to sign out.
 	 */
 	test("reads false past its expiry for a grant that carried none", () => {
-		let ctx = createContext();
-		AuthSession.write(ctx, tokens({ refreshToken: null, expiresAt: epoch(-1) }));
+		let store = createStore();
+		AuthSession.write(store, tokens({ refreshToken: null, expiresAt: epoch(-1) }));
 
-		let auth = AuthSession.from(ctx);
+		let auth = AuthSession.from(store);
 
 		expect(auth?.expired).toBe(true);
 		expect(auth?.renewable).toBe(false);
@@ -214,11 +214,11 @@ describe("renewable", () => {
 
 describe("refresh", () => {
 	test("rewrites the session with the renewed tokens", async () => {
-		let ctx = createContext();
-		AuthSession.write(ctx, tokens({ expiresAt: epoch(-1) }));
+		let store = createStore();
+		AuthSession.write(store, tokens({ expiresAt: epoch(-1) }));
 
 		let renewed = token({ sub: "user-1", scope: "openid monitors:write" });
-		let auth = AuthSession.from(ctx);
+		let auth = AuthSession.from(store);
 		await auth?.refresh({
 			async exchangeRefreshToken(refreshToken) {
 				expect(refreshToken).toBe("refresh-1");
@@ -231,7 +231,7 @@ describe("refresh", () => {
 			},
 		});
 
-		let reread = AuthSession.from(ctx);
+		let reread = AuthSession.from(store);
 		expect(reread?.tokens.accessToken).toBe(renewed);
 		expect(reread?.refreshToken).toBe("refresh-2");
 		expect(reread?.expired).toBe(false);
@@ -239,11 +239,11 @@ describe("refresh", () => {
 	});
 
 	test("keeps the stored ID token when the response repeats none", async () => {
-		let ctx = createContext();
+		let store = createStore();
 		let stored = tokens();
-		AuthSession.write(ctx, stored);
+		AuthSession.write(store, stored);
 
-		let auth = AuthSession.from(ctx);
+		let auth = AuthSession.from(store);
 		await auth?.refresh({
 			async exchangeRefreshToken() {
 				return {
@@ -255,14 +255,14 @@ describe("refresh", () => {
 			},
 		});
 
-		expect(AuthSession.from(ctx)?.tokens.idToken).toBe(stored.idToken);
+		expect(AuthSession.from(store)?.tokens.idToken).toBe(stored.idToken);
 	});
 
 	test("keeps the stored refresh token when the provider rotates none", async () => {
-		let ctx = createContext();
-		AuthSession.write(ctx, tokens());
+		let store = createStore();
+		AuthSession.write(store, tokens());
 
-		let auth = AuthSession.from(ctx);
+		let auth = AuthSession.from(store);
 		await auth?.refresh({
 			async exchangeRefreshToken() {
 				return {
@@ -274,15 +274,15 @@ describe("refresh", () => {
 			},
 		});
 
-		expect(AuthSession.from(ctx)?.refreshToken).toBe("refresh-1");
+		expect(AuthSession.from(store)?.refreshToken).toBe("refresh-1");
 	});
 
 	test("takes the reissued ID token when the provider sends one", async () => {
-		let ctx = createContext();
-		AuthSession.write(ctx, tokens());
+		let store = createStore();
+		AuthSession.write(store, tokens());
 		let reissued = token({ sub: "user-1", name: "Ada L" });
 
-		let auth = AuthSession.from(ctx);
+		let auth = AuthSession.from(store);
 		await auth?.refresh({
 			async exchangeRefreshToken() {
 				return {
@@ -294,14 +294,14 @@ describe("refresh", () => {
 			},
 		});
 
-		expect(AuthSession.from(ctx)?.idToken.name).toBe("Ada L");
+		expect(AuthSession.from(store)?.idToken.name).toBe("Ada L");
 	});
 
 	test("throws missing_refresh_token when the grant carried none", async () => {
-		let ctx = createContext();
-		AuthSession.write(ctx, tokens({ refreshToken: null }));
+		let store = createStore();
+		AuthSession.write(store, tokens({ refreshToken: null }));
 
-		let auth = AuthSession.from(ctx);
+		let auth = AuthSession.from(store);
 		let error = await auth
 			?.refresh({
 				async exchangeRefreshToken() {
@@ -316,14 +316,13 @@ describe("refresh", () => {
 
 describe("clear", () => {
 	test("signs the request out and leaves the rest of the session standing", () => {
-		let session = createSession();
-		session.set("locale", "es");
-		let ctx = createContext(session);
-		AuthSession.write(ctx, tokens());
+		let store = createStore();
+		store.set("locale", "es");
+		AuthSession.write(store, tokens());
 
-		AuthSession.from(ctx)?.clear();
+		AuthSession.from(store)?.clear();
 
-		expect(AuthSession.from(ctx)).toBeNull();
-		expect(session.get("locale")).toBe("es");
+		expect(AuthSession.from(store)).toBeNull();
+		expect(store.get("locale")).toBe("es");
 	});
 });

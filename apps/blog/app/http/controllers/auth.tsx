@@ -8,6 +8,7 @@
  */
 
 import { AuthError, AuthErrorCode } from "@sdxc/auth/auth-error";
+import { contextOf } from "@sdxc/auth/remix/context";
 import { redirect } from "@sdxc/http/response";
 import { Location } from "@sdxc/location";
 import { Logger } from "@sdxc/logger";
@@ -89,7 +90,7 @@ export let loginController = createController(routes.auth.login, {
 		 * @returns Redirect to the provider authorization endpoint.
 		 */
 		async action(ctx) {
-			return relyingParty(ctx.url).authorize(ctx, {
+			return relyingParty(ctx.url).authorize(contextOf(ctx), {
 				returnTo: ctx.url.searchParams.get("next"),
 			});
 		},
@@ -141,7 +142,7 @@ export let logoutController = createController(routes.auth.logout, {
 			}
 
 			let ended = await wrap(() =>
-				relyingParty(ctx.url).endSession(ctx, {
+				relyingParty(ctx.url).endSession(contextOf(ctx), {
 					returnTo: routes.feed.href(),
 					redirect: false,
 				}),
@@ -172,7 +173,7 @@ export let callbackAction = createAction(routes.auth.callback, {
 		let ctx = getContext();
 		logger.info("auth.callback.started", { pathname: ctx.url.pathname });
 
-		let result = await wrap(() => relyingParty(ctx.url).callback(ctx));
+		let result = await wrap(() => relyingParty(ctx.url).callback(contextOf(ctx)));
 
 		if (isFailure(result)) {
 			logger.error("auth.callback.failed", {

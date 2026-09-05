@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { contextOf } from "@sdxc/auth/remix/context";
 import { redirect } from "@sdxc/http/response";
 import { isFailure, wrap } from "@sdxc/result";
 import { inject } from "@sdxc/service-container";
@@ -46,7 +47,7 @@ export const login = createController(routes.auth.login, {
 
 		/** POST — starts the flow, remembering the `returnTo` the caller asked for. */
 		async action(ctx) {
-			return relyingParty(ctx.url).authorize(ctx, {
+			return relyingParty(ctx.url).authorize(contextOf(ctx), {
 				returnTo: ctx.url.searchParams.get("returnTo"),
 			});
 		},
@@ -67,7 +68,7 @@ export const callback = createAction(
 		let ctx = getContext();
 
 		let completed = await wrap(async () => {
-			let grant = await relyingParty(ctx.url).callback(ctx);
+			let grant = await relyingParty(ctx.url).callback(contextOf(ctx));
 			let account = await Account.findOrCreateFromProfile(db, {
 				subject: grant.subject,
 				email: grant.profile.email ?? "",
@@ -114,7 +115,7 @@ export const logout = createController(routes.auth.logout, {
 		 */
 		async action(ctx) {
 			let endSession = await wrap(() =>
-				relyingParty(ctx.url).endSession(ctx, {
+				relyingParty(ctx.url).endSession(contextOf(ctx), {
 					returnTo: routes.index.href(),
 					redirect: false,
 				}),

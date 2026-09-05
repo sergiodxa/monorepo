@@ -10,21 +10,14 @@
 import type { DurationString } from "@sdxc/duration";
 import type { JWK, JWT } from "@sdxc/jwt";
 import type { Adapter } from "@sdxc/rate-limit";
-import type {
-	AuthScheme,
-	AuthSchemeAuthenticateResult,
-	AuthSchemeFailure,
-} from "remix/middleware/auth";
 
+import * as s from "@remix-run/data-schema";
 import { Base64, Base64Url, randomToken, sha256, sha384, sha512 } from "@sdxc/crypto";
 import { toSeconds } from "@sdxc/duration";
 import { getClientIP } from "@sdxc/get-client-ip";
 import { Location } from "@sdxc/location";
 import { applyRateLimitHeaders } from "@sdxc/rate-limit";
 import { isFailure, wrap } from "@sdxc/result";
-import * as s from "remix/data-schema";
-import { redirect } from "remix/response/redirect";
-import { Session } from "remix/session";
 
 import type { Issuer } from "./issuer.js";
 
@@ -176,19 +169,12 @@ const TRANSACTION_SCHEMA = s.object({
 const USER_INFO_SCHEMA = s.object({ sub: s.string() }, { unknownKeys: "passthrough" });
 
 /**
- * Reads the session a request carries.
+ * The redirect both flow legs answer with, which a form post and a link reach alike.
  *
- * @param ctx - The request context the session middleware wrote to.
- * @returns The request's session.
- * @throws When the session middleware has not run, which the login flow needs to
- *   keep the transaction on the server.
+ * @param url - Where the browser is sent.
  */
-function readSession(ctx: AuthSession.Context): Session {
-	let session = ctx.get(Session);
-	if (!session) {
-		throw new Error("@sdxc/auth needs remix/middleware/session installed on the router");
-	}
-	return session;
+function seeOther(url: URL): Response {
+	return new Response(null, { status: SEE_OTHER_STATUS, headers: { location: url.toString() } });
 }
 
 /** A high-entropy opaque value, for the three correlation values a login needs. */
@@ -319,7 +305,7 @@ function defaultProfile(claims: JWT.Payload): RelyingParty.Profile {
  * @template profile - What `mapProfile` produces, carried on the `Grant`.
  * @example
  * let rp = new RelyingParty(issuer, { clientId, clientSecret, redirectUri });
- * router.get(routes.auth.login, (ctx) => rp.authorize(ctx, { returnTo }));
+ * let response = await rp.authorize({ request, session }, { returnTo });
  */
 export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession.Client {
 	#issuer: Issuer;
@@ -383,17 +369,16 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	 * refused login leaves it as it was. `returnTo` resolves through `Location.safe`, taking
 	 * the configured fallback for anything naming another origin.
 	 *
-	 * @param ctx - The request context the session middleware wrote to.
+	 * @param ctx - The request and the session store the login is written to.
 	 * @param options - Where to return to, and what to ask the issuer for.
 	 * @returns The `303` redirect to the authorization endpoint.
 	 * @throws {Response} `429` with `Retry-After` when the calling browser's login
-	 *   budget is spent, which `catchResponse()` from `@sdxc/catch-response-middleware`
-	 *   delivers as the reply.
+	 *   budget is spent, for the caller to answer the request with.
 	 * @throws {AuthError} `endpoint_unsupported` when the issuer publishes no
 	 *   authorization endpoint, `reserved_parameter` for an extra parameter the flow
 	 *   writes itself.
 	 * @example
-	 * router.get(routes.auth.login, (ctx) => rp.authorize(ctx, { returnTo }));
+	 * let response = await rp.authorize({ request, session }, { returnTo });
 	 */
 	async authorize(
 		ctx: RelyingParty.Context,
@@ -401,9 +386,8 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	): Promise<Response> {
 		assertUnreserved(options.authorizationParams, RESERVED_AUTHORIZATION_PARAMS);
 
-		await this.#spend(ctx);
+		await this.#spend(ctx.request);
 
-		let session = readSession(ctx);
 		let endpoint = await this.#issuer.authorizationEndpoint();
 
 		let state = correlationToken();
@@ -417,14 +401,14 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 			codeVerifier,
 			nonce,
 			returnTo: Location.safe(options.returnTo, {
-				origin: ctx.url.origin,
+				origin: new URL(ctx.request.url).origin,
 				fallback: this.#fallbackReturnTo,
 			}).toString(),
 			acrValues,
 			maxAge,
 		};
 
-		session.set(TRANSACTION_SESSION_KEY, transaction);
+		ctx.session.set(TRANSACTION_SESSION_KEY, transaction);
 
 		let url = new URL(endpoint);
 		url.searchParams.set("response_type", "code");
@@ -447,27 +431,26 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 			url.searchParams.set(name, value);
 		}
 
-		return redirect(url.toString(), SEE_OTHER_STATUS);
+		return seeOther(url);
 	}
 
 	/**
 	 * Finishes a login and signs the request in. The transaction the callback is correlated
 	 * against is spent the moment it is read, so one login answers exactly one callback.
 	 *
-	 * @param ctx - The request context the callback route received.
+	 * @param ctx - The callback request and the session store the login was written to.
 	 * @returns The verified tokens, the subject, the mapped profile, and where to go.
 	 * @throws {AuthError} `authorization_failed`, `missing_transaction`,
 	 *   `state_mismatch`, `missing_code`, `token_request_failed`,
 	 *   `missing_id_token`, `invalid_token`, `nonce_mismatch`, `at_hash_mismatch`,
 	 *   `acr_not_satisfied`, `max_age_not_satisfied`, or `user_info_failed`.
 	 * @example
-	 * let grant = await rp.callback(ctx);
+	 * let grant = await rp.callback({ request, session });
 	 * return redirect(grant.returnTo);
 	 */
-	async callback(ctx: AuthSession.Context): Promise<RelyingParty.Grant<profile>> {
-		let session = readSession(ctx);
-		let transaction = this.#takeTransaction(session);
-		let params = this.#readCallback(ctx.url.searchParams);
+	async callback(ctx: RelyingParty.Context): Promise<RelyingParty.Grant<profile>> {
+		let transaction = this.#takeTransaction(ctx.session);
+		let params = this.#readCallback(new URL(ctx.request.url).searchParams);
 
 		if (params.error) {
 			throw new AuthError(`The issuer refused the authorization request: ${params.error}`, {
@@ -526,8 +509,8 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 
 		let claims = await this.#resolveClaims(idToken, response.access_token);
 
-		session.regenerateId();
-		AuthSession.write(ctx, {
+		ctx.session.regenerateId?.();
+		AuthSession.write(ctx.session, {
 			idToken: response.id_token,
 			accessToken: response.access_token,
 			refreshToken,
@@ -549,46 +532,46 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	 * Ends the login: drops this package's session state and hands the browser to
 	 * the issuer, whose own session the `id_token_hint` identifies.
 	 *
-	 * @param ctx - The request context the logout route received.
+	 * @param ctx - The logout request and the session store the login lives in.
 	 * @param options - Where to come back to once the issuer has signed the person out.
 	 * @returns The `303` redirect to the end-session endpoint.
 	 * @throws {AuthError} `endpoint_unsupported` when the issuer publishes no
 	 *   end-session endpoint.
 	 * @example
-	 * router.post(routes.auth.logout, (ctx) => rp.endSession(ctx, { returnTo: "/" }));
+	 * let response = await rp.endSession({ request, session }, { returnTo: "/" });
 	 */
 	endSession(
-		ctx: AuthSession.Context,
+		ctx: RelyingParty.Context,
 		options?: RelyingParty.EndSessionOptions & { redirect?: true },
 	): Promise<Response>;
 	/**
 	 * Ends the login and hands back the URL, for a caller that answers the request
 	 * with a form, a page, or a redirect of its own.
 	 *
-	 * @param ctx - The request context the logout route received.
+	 * @param ctx - The logout request and the session store the login lives in.
 	 * @param options - Where to come back to, with `redirect` set to `false`.
 	 * @returns The end-session URL the browser has to reach.
 	 */
 	endSession(
-		ctx: AuthSession.Context,
+		ctx: RelyingParty.Context,
 		options: RelyingParty.EndSessionOptions & { redirect: false },
 	): Promise<URL>;
 	async endSession(
-		ctx: AuthSession.Context,
+		ctx: RelyingParty.Context,
 		options: RelyingParty.EndSessionOptions = {},
 	): Promise<Response | URL> {
-		let session = readSession(ctx);
 		let endpoint = await this.#issuer.endSessionEndpoint();
+		let origin = new URL(ctx.request.url).origin;
 
-		let auth = AuthSession.from(ctx);
+		let auth = AuthSession.from(ctx.session);
 		let hint = auth?.tokens.idToken ?? null;
 
 		auth?.clear();
-		session.unset(TRANSACTION_SESSION_KEY);
-		session.regenerateId(true);
+		ctx.session.unset(TRANSACTION_SESSION_KEY);
+		ctx.session.regenerateId?.(true);
 
 		let returnTo = Location.safe(options.returnTo, {
-			origin: ctx.url.origin,
+			origin,
 			fallback: this.#fallbackReturnTo,
 		});
 
@@ -597,11 +580,11 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 		if (hint) url.searchParams.set("id_token_hint", hint);
 		url.searchParams.set(
 			"post_logout_redirect_uri",
-			new URL(returnTo.toString(), ctx.url.origin).toString(),
+			new URL(returnTo.toString(), origin).toString(),
 		);
 
 		if (options.redirect === false) return url;
-		return redirect(url.toString(), SEE_OTHER_STATUS);
+		return seeOther(url);
 	}
 
 	/**
@@ -665,78 +648,27 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	}
 
 	/**
-	 * An `AuthScheme` for `remix/middleware/auth` that renews an access token past its
-	 * expiry before the app's `verify` runs, signs out a session the provider refuses to
-	 * renew, and keeps one that was never renewable on the claims it was written with.
-	 *
-	 * @param options - The app's `verify`, and the name the scheme reports.
-	 * @returns The scheme to list in `auth({ schemes })`.
-	 * @throws {AuthError} When the issuer cannot serve its own documents, so an outage stays
-	 *   a fault the app answers rather than a person being signed out.
-	 * @example
-	 * rp.scheme({ verify: (auth) => users.getBySubject(auth.idToken.subject) });
-	 */
-	scheme<identity>(options: RelyingParty.SchemeOptions<identity>): AuthScheme<identity> {
-		let authScheme: AuthScheme<identity> = {
-			name: options.name ?? "oidc-session",
-
-			/**
-			 * Resolves the request's stored token set into the identity the app's `verify`
-			 * returns, renewing the set first where it has reached its end.
-			 *
-			 * @param context - The request being authenticated.
-			 * @returns The identity, the rejection, or nothing at all for a signed-out
-			 *   request, which leaves the schemes behind this one their turn.
-			 */
-			authenticate: async (context): Promise<AuthSchemeAuthenticateResult<identity>> => {
-				let auth = AuthSession.from(context);
-				if (!auth) return null;
-
-				if (auth.expired) {
-					let refusal = await this.#renew(auth);
-					if (refusal) return refusal;
-				}
-
-				let identity = await options.verify(auth);
-				if (identity === null || identity === undefined) {
-					return {
-						status: "failure",
-						code: "invalid_credentials",
-						message: "The session's subject resolves to no identity in this app",
-					};
-				}
-
-				return { status: "success", identity };
-			},
-		};
-
-		return authScheme;
-	}
-
-	/**
-	 * Renews a token set past its end, separating the two answers a refusal can carry: the
-	 * provider declining a refresh token ends the session, while a set that carried none to
-	 * present was never renewable, and stays signed in on claims verified when it was written.
+	 * Brings a session whose token set has reached its end forward, separating the two
+	 * answers a refusal can carry: the provider declining the refresh token ends the
+	 * session, while a set that carried none to present was never renewable, and stays
+	 * signed in on claims verified when it was written.
 	 *
 	 * @param auth - The request's session, whose stored set has reached its end.
-	 * @returns The refusal to answer the request with, and `null` where the request goes on
-	 *   signed in — with a renewed set, or with the one it arrived carrying.
+	 * @returns `null` where the request goes on signed in, with a renewed set or with the
+	 *   one it arrived carrying, and the refusal otherwise, the session already cleared.
 	 * @throws When the renewal failed for a reason outside the protocol, so an environment
 	 *   fault reaches the app rather than being read as a session that is over.
+	 * @example
+	 * if (auth.expired && (await rp.renew(auth))) return unauthorized();
 	 */
-	async #renew(auth: AuthSession): Promise<AuthSchemeFailure | null> {
+	async renew(auth: AuthSession): Promise<AuthError | null> {
 		let renewed = await wrap(() => auth.refresh(this));
 		if (!isFailure(renewed)) return null;
 		if (AuthError.is(renewed.error, AuthErrorCode.MissingRefreshToken)) return null;
 		if (!(renewed.error instanceof AuthError)) throw renewed.error;
 
 		auth.clear();
-
-		return {
-			status: "failure",
-			code: "invalid_credentials",
-			message: renewed.error.message,
-		};
+		return renewed.error;
 	}
 
 	/**
@@ -744,14 +676,14 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	 * cannot answer lets the attempt through, so people keep signing in through a limiter
 	 * outage, and the issuer enforces its own limit on every request it sees.
 	 *
-	 * @param ctx - The request context the login starts from.
-	 * @throws {Response} `429` carrying `Retry-After` and the quota fields, which
-	 *   `catchResponse()` answers the request with.
+	 * @param request - The request the login starts from.
+	 * @throws {Response} `429` carrying `Retry-After` and the quota fields, for the
+	 *   caller to answer the request with.
 	 */
-	async #spend(ctx: RelyingParty.Context): Promise<void> {
+	async #spend(request: Request): Promise<void> {
 		if (!this.#rateLimit) return;
 
-		let clientIp = getClientIP(ctx.request) ?? UNKNOWN_CLIENT_IP;
+		let clientIp = getClientIP(request) ?? UNKNOWN_CLIENT_IP;
 		let result = await this.#rateLimit.consume(`${RATE_LIMIT_PREFIX}:${clientIp}`);
 		if (isFailure(result)) return;
 		if (result.data.allowed) return;
@@ -793,10 +725,10 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	 * Reads the transaction and spends it in the same step, so each login is
 	 * answerable by exactly one callback.
 	 *
-	 * @param session - The request's session.
+	 * @param session - The request's session store.
 	 * @returns The transaction, or `null` when the session holds none.
 	 */
-	#takeTransaction(session: Session): RelyingParty.Transaction | null {
+	#takeTransaction(session: AuthSession.Store): RelyingParty.Transaction | null {
 		let stored = session.get(TRANSACTION_SESSION_KEY);
 		session.unset(TRANSACTION_SESSION_KEY);
 		if (stored === undefined) return null;
@@ -1033,13 +965,15 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 
 export namespace RelyingParty {
 	/**
-	 * What starting a login reads from the request context: the session middleware's
-	 * entry, and the request itself, whose edge headers name the browser the login
-	 * is counted against.
+	 * What the three route methods read: the request, whose URL names the origin every
+	 * `returnTo` is held to and whose edge headers name the browser a budget counts, and
+	 * the session store the login transaction and the token set live in between requests.
 	 */
-	export interface Context extends AuthSession.Context {
-		/** Read for the connecting client's IP whenever a budget is configured. */
+	export interface Context {
+		/** The request the route received. */
 		readonly request: Request;
+		/** The store a session middleware, or an app's own layer, holds for this browser. */
+		readonly session: AuthSession.Store;
 	}
 
 	/** How the client presents its secret at the token endpoint. */
@@ -1214,23 +1148,6 @@ export namespace RelyingParty {
 		claims: JWT.Payload;
 		/** The profile the app's own mapping produced. */
 		profile: profile;
-	}
-
-	/** How the scheme turns a signed-in session into the app's identity. */
-	export interface SchemeOptions<identity> {
-		/**
-		 * Resolves the app's identity from the session's tokens.
-		 *
-		 * @param auth - The signed-in session, holding a live access token.
-		 * @returns The identity, or `null` for a subject this app knows nothing about.
-		 */
-		verify(auth: AuthSession): Promise<identity | null | undefined> | identity | null | undefined;
-		/**
-		 * The name reported as `auth.method`.
-		 *
-		 * @default "oidc-session"
-		 */
-		name?: string;
 	}
 
 	/**

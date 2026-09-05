@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { contextOf } from "@sdxc/auth/remix/context";
 import { redirect } from "@sdxc/http/response";
 import { isFailure, wrap } from "@sdxc/result";
 import { border } from "@sdxc/u/color";
@@ -66,7 +67,7 @@ export default createController(routes.logout, {
 		 */
 		async action(ctx) {
 			let ended = await wrap(() =>
-				relyingParty(ctx.url).endSession(ctx, {
+				relyingParty(ctx.url).endSession(contextOf(ctx), {
 					returnTo: routes.home.href(),
 					redirect: false,
 				}),

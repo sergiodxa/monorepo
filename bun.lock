@@ -240,6 +240,7 @@
       "name": "@sdxc/auth",
       "version": "0.0.1",
       "dependencies": {
+        "@remix-run/data-schema": "^0.3.0",
         "@sdxc/catch-response-middleware": "workspace:*",
         "@sdxc/crypto": "workspace:*",
         "@sdxc/duration": "workspace:*",
@@ -248,11 +249,17 @@
         "@sdxc/location": "workspace:*",
         "@sdxc/rate-limit": "workspace:*",
         "@sdxc/result": "workspace:*",
-        "remix": "3.0.0-rc.1",
       },
       "devDependencies": {
         "@sdxc/kv-cache": "workspace:*",
+        "remix": "3.0.0-rc.1",
       },
+      "peerDependencies": {
+        "remix": "3.0.0-rc.1",
+      },
+      "optionalPeers": [
+        "remix",
+      ],
     },
     "packages/billing": {
       "name": "@sdxc/billing",
@@ -494,6 +501,7 @@
       "name": "@sdxc/mcp",
       "version": "0.0.1",
       "dependencies": {
+        "@sdxc/logger": "workspace:*",
         "@sdxc/result": "workspace:*",
         "remix": "3.0.0-rc.1",
       },

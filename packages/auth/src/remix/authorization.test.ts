@@ -19,12 +19,14 @@ import { Session } from "remix/session";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { describe, expect, test } from "vitest";
 
+import { AuthSession } from "../auth-session.js";
+import { Issuer } from "../issuer.js";
+import { RelyingParty } from "../relying-party.js";
+
 import type { Authorization } from "./authorization.js";
 
-import { AuthSession } from "./auth-session.js";
 import { createAuthorization } from "./authorization.js";
-import { Issuer } from "./issuer.js";
-import { RelyingParty } from "./relying-party.js";
+import { sessionOf } from "./context.js";
 
 /** A route under test, which asks its questions of the request out of band. */
 type Handler = () => Response | Promise<Response>;
@@ -110,7 +112,7 @@ function createApp(handler: Handler, stored: AuthSession.Tokens | null = null) {
 
 	/** Stands in for a completed login, so the helpers read what a signed-in request carries. */
 	let signIn: Middleware = (ctx, next) => {
-		if (stored) AuthSession.write(ctx, stored);
+		if (stored) AuthSession.write(sessionOf(ctx), stored);
 		return next();
 	};
 
@@ -400,7 +402,7 @@ describe("authenticated", () => {
 				Response.json({
 					signedIn: authenticated(),
 					recently: authenticated("5m"),
-					expired: AuthSession.from(getContext())?.expired ?? null,
+					expired: AuthSession.from(sessionOf(getContext()))?.expired ?? null,
 				}),
 			stored,
 		);

@@ -8,6 +8,7 @@
  */
 
 import { AuthSession } from "@sdxc/auth/auth-session";
+import { sessionOf } from "@sdxc/auth/remix/context";
 import { getContext } from "remix/middleware/async-context";
 
 import type { Viewer } from "~/app/http/middleware/auth";
@@ -42,7 +43,7 @@ function token(claims: Record<string, unknown>): string {
  * @param expiresAt - Seconds since the epoch both tokens lapse at.
  */
 function write(viewer: Viewer, scopes: string[], expiresAt: number): void {
-	AuthSession.write(getContext(), {
+	AuthSession.write(sessionOf(getContext()), {
 		idToken: token({
 			sub: viewer.id,
 			name: viewer.name,

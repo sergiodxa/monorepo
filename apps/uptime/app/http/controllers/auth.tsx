@@ -13,6 +13,7 @@ import type { Renderer } from "remix/middleware/render";
 import type { RemixNode } from "remix/ui";
 
 import { AuthError, AuthErrorCode } from "@sdxc/auth/auth-error";
+import { contextOf } from "@sdxc/auth/remix/context";
 import { redirect } from "@sdxc/http/response";
 import { Location } from "@sdxc/location";
 import { isFailure, wrap } from "@sdxc/result";
@@ -136,7 +137,9 @@ export default createController(routes.auth, {
 		 */
 		async action(ctx) {
 			let cookieReturnTo = await returnTo.parse(ctx.request.headers.get("Cookie"));
-			let response = await relyingParty(ctx.url).authorize(ctx, { returnTo: cookieReturnTo });
+			let response = await relyingParty(ctx.url).authorize(contextOf(ctx), {
+				returnTo: cookieReturnTo,
+			});
 			response.headers.append("Set-Cookie", await returnTo.serialize("", { maxAge: 0 }));
 			return response;
 		},
@@ -144,7 +147,7 @@ export default createController(routes.auth, {
 		/** GET /auth — completes the OIDC callback and establishes the session. */
 		index: inject([Database] as const, async (db) => {
 			let ctx = getContext();
-			let finished = await wrap(() => relyingParty(ctx.url).callback(ctx));
+			let finished = await wrap(() => relyingParty(ctx.url).callback(contextOf(ctx)));
 
 			if (isFailure(finished)) {
 				let error = finished.error;

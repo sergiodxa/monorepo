@@ -16,10 +16,12 @@ import { isFailure, wrap } from "@sdxc/result";
 import { getContext } from "remix/middleware/async-context";
 import { redirect } from "remix/response/redirect";
 
-import type { AccessToken } from "./access-token.js";
-import type { IdToken } from "./id-token.js";
+import type { AccessToken } from "../access-token.js";
+import type { IdToken } from "../id-token.js";
 
-import { AuthSession } from "./auth-session.js";
+import { AuthSession } from "../auth-session.js";
+
+import { sessionOf } from "./context.js";
 
 /** Where a signed-in visitor lands when an app names no destination of its own. */
 const DEFAULT_SIGNED_IN = "/";
@@ -35,7 +37,7 @@ const DEFAULT_RETURN_TO_PARAM = "returnTo";
  *   router, since every helper here reads the request through them.
  */
 function readAuthSession(): AuthSession | null {
-	return AuthSession.from(getContext());
+	return AuthSession.from(sessionOf(getContext()));
 }
 
 /**
@@ -100,7 +102,7 @@ export function createAuthorization(options: Authorization.Options): Authorizati
 	return {
 		currentSession() {
 			let ctx = getContext();
-			let auth = AuthSession.from(ctx);
+			let auth = AuthSession.from(sessionOf(ctx));
 			if (auth !== null) return auth;
 			throw redirect(loginFor(ctx.url).toString());
 		},

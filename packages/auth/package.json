@@ -8,11 +8,13 @@
 		"./access-token": "./src/access-token.ts",
 		"./auth-error": "./src/auth-error.ts",
 		"./auth-session": "./src/auth-session.ts",
-		"./authorization": "./src/authorization.ts",
 		"./id-token": "./src/id-token.ts",
 		"./issuer": "./src/issuer.ts",
 		"./management-client": "./src/management-client.ts",
 		"./relying-party": "./src/relying-party.ts",
+		"./remix/authorization": "./src/remix/authorization.ts",
+		"./remix/context": "./src/remix/context.ts",
+		"./remix/schemes": "./src/remix/schemes.ts",
 		"./resource-server": "./src/resource-server.ts",
 		"./service-client": "./src/service-client.ts"
 	},
@@ -20,6 +22,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@remix-run/data-schema": "^0.3.0",
 		"@sdxc/catch-response-middleware": "workspace:*",
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/duration": "workspace:*",
@@ -27,10 +30,18 @@
 		"@sdxc/jwt": "workspace:*",
 		"@sdxc/location": "workspace:*",
 		"@sdxc/rate-limit": "workspace:*",
-		"@sdxc/result": "workspace:*",
-		"remix": "3.0.0-rc.1"
+		"@sdxc/result": "workspace:*"
 	},
 	"devDependencies": {
-		"@sdxc/kv-cache": "workspace:*"
+		"@sdxc/kv-cache": "workspace:*",
+		"remix": "3.0.0-rc.1"
+	},
+	"peerDependencies": {
+		"remix": "3.0.0-rc.1"
+	},
+	"peerDependenciesMeta": {
+		"remix": {
+			"optional": true
+		}
 	}
 }

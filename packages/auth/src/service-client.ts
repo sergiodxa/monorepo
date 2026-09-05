@@ -10,10 +10,10 @@
 import type { DurationInput } from "@sdxc/duration";
 import type { Adapter } from "@sdxc/rate-limit";
 
+import * as s from "@remix-run/data-schema";
 import { Base64 } from "@sdxc/crypto";
 import { toSeconds } from "@sdxc/duration";
 import { isFailure, wrap } from "@sdxc/result";
-import * as s from "remix/data-schema";
 
 import type { Issuer } from "./issuer.js";
 

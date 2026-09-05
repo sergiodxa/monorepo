@@ -1,16 +1,11 @@
 /**
  * The role an app plays when someone else calls it: it turns the access token a caller
- * presents into the claims behind it, either as a `remix/middleware/auth` scheme a route
- * reads through `getContext().get(Auth)`, or as a direct call on a token an app holds.
+ * presents into the claims behind it, read off the request's `Authorization` header or
+ * handed over as the bare credential an app holds.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-
-import type { AuthScheme, AuthSchemeFailure } from "remix/middleware/auth";
-import type { RequestContext } from "remix/router";
-
-import { isFailure, wrap } from "@sdxc/result";
 
 import type { Issuer } from "./issuer.js";
 
@@ -23,26 +18,11 @@ const MS_PER_SECOND = 1000;
 /** The authentication scheme name RFC 6750 §2.1 gives bearer credentials. */
 const BEARER = "bearer";
 
-/** The method name the resolved auth state reports for a bearer credential. */
-const DEFAULT_SCHEME_NAME = "bearer";
-
 /** Splits an `Authorization` header into its scheme and the credential after it. */
 const AUTHORIZATION_HEADER = /^(\S+)[ \t]+(\S.*)$/;
 
 /** Matches the three base64url segments of an RFC 7515 §3.1 compact serialization. */
 const COMPACT_JWS = /^[\w-]+\.[\w-]+\.[\w-]+$/;
-
-/**
- * The answer a credential this server declines is reported with. The challenge is the
- * one RFC 6750 §3 pairs with a rejected token, and the middleware forwards it as
- * `WWW-Authenticate` so a client knows to obtain a new one.
- */
-const REJECTED: AuthSchemeFailure = {
-	status: "failure",
-	code: "invalid_credentials",
-	message: "The bearer token was not accepted.",
-	challenge: `Bearer error="invalid_token"`,
-};
 
 /**
  * Reports whether a token's audiences include one this server answers for. Each side
@@ -83,7 +63,7 @@ function readBearerCredential(header: string | null): string | null {
  *
  * @example
  * let api = new ResourceServer(issuer, { audience: clientId, introspection: service });
- * auth({ schemes: [api.scheme({ verify: (token) => ({ clientId: token.clientId }) })] });
+ * let token = await api.verifyRequest(request);
  * @example
  * let token = await api.verifyAccessToken(envelope.accessToken);
  */
@@ -115,53 +95,29 @@ export class ResourceServer {
 	}
 
 	/**
-	 * A `remix/middleware/auth` scheme that resolves the request's bearer token into the
-	 * identity the app's `verify` returns. A request carrying no bearer credential is left
-	 * to the next scheme, and one this server declines stops here with RFC 6750's `401`.
+	 * Resolves the bearer credential a request carries, per RFC 6750 §2.1, into the token
+	 * behind it. A request carrying no bearer credential is another authentication
+	 * method's to answer, so it is told apart from a credential this server declines.
 	 *
-	 * @param options - The app's `verify`, and the method name to report.
-	 * @returns A scheme for `auth({ schemes: [...] })`.
-	 * @throws {AuthError} When the issuer cannot serve its own documents, so an outage
-	 *   stays a fault the app handles.
+	 * @param request - The request being authenticated.
+	 * @returns The token this server accepted, or `null` for a request carrying no
+	 *   bearer credential.
+	 * @throws {AuthError} `invalid_token` when this server declines the credential, and
+	 *   `discovery_failed` or `jwks_failed` when the issuer's documents are unreadable.
 	 * @example
-	 * api.scheme({ verify: (token) => users.getBySubject(token.subject) });
-	 * @example
-	 * api.scheme({ verify: (token) => (token.subject === token.clientId ? service : null) });
+	 * let token = await api.verifyRequest(request);
+	 * if (token === null) return next();
 	 */
-	scheme<identity>(options: ResourceServer.SchemeOptions<identity>): AuthScheme<identity> {
-		return {
-			name: options.name ?? DEFAULT_SCHEME_NAME,
-
-			/**
-			 * Resolves the request's credential and asks the app who is holding it.
-			 *
-			 * @param context - The request being authenticated.
-			 * @returns The identity, the rejection, or nothing at all for a request
-			 *   carrying no bearer credential.
-			 */
-			authenticate: async (context: RequestContext) => {
-				let credential = readBearerCredential(context.headers.get("authorization"));
-				if (credential === null) return null;
-
-				let token = await wrap(() => this.verifyAccessToken(credential));
-
-				if (isFailure(token)) {
-					if (AuthError.is(token.error, AuthErrorCode.InvalidToken)) return REJECTED;
-					throw token.error;
-				}
-
-				let identity = await options.verify(token.data, context);
-				if (identity === null) return REJECTED;
-
-				return { status: "success", identity };
-			},
-		};
+	async verifyRequest(request: Request): Promise<AccessToken | null> {
+		let credential = readBearerCredential(request.headers.get("authorization"));
+		if (credential === null) return null;
+		return await this.verifyAccessToken(credential);
 	}
 
 	/**
 	 * Verifies an access token an app obtained outside a request — a queued job whose
 	 * payload carries one, a connection authenticated once at its upgrade, a fixture. It
-	 * accepts whichever form the issuer hands out and runs every check the scheme runs.
+	 * accepts whichever form the issuer hands out and runs every check `verifyRequest` runs.
 	 *
 	 * @param credential - The access token as presented.
 	 * @returns The token this server accepted.
@@ -311,25 +267,5 @@ export namespace ResourceServer {
 		 * @returns What the issuer says about it.
 		 */
 		introspect(token: string): Promise<Introspection>;
-	}
-
-	/** How the scheme a {@link ResourceServer.scheme} builds is configured. */
-	export interface SchemeOptions<identity> {
-		/**
-		 * Turns a token this server accepted into the identity a route reads, answering
-		 * `null` for a caller the app itself declines.
-		 *
-		 * @param token - The verified or introspected access token.
-		 * @param context - The request being authenticated.
-		 */
-		verify(token: AccessToken, context: RequestContext): identity | null | Promise<identity | null>;
-
-		/**
-		 * The method name the resolved auth state reports, which tells apart two
-		 * resource servers in one app.
-		 *
-		 * @default "bearer"
-		 */
-		name?: string;
 	}
 }

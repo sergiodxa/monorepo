@@ -10,6 +10,7 @@
 import type { RelyingParty } from "@sdxc/auth/relying-party";
 
 import { AuthError, AuthErrorCode } from "@sdxc/auth/auth-error";
+import { contextOf } from "@sdxc/auth/remix/context";
 import { createKVNamespace } from "@sdxc/cloudflare-mocks";
 import { JWK, JWT } from "@sdxc/jwt";
 import { http, HttpResponse } from "msw";
@@ -201,12 +202,12 @@ async function attemptLogin(
 	});
 
 	router.get(routes.auth.login.index, (ctx) =>
-		relyingParty(ctx.url).authorize(ctx, { returnTo: ctx.url.searchParams.get("next") }),
+		relyingParty(ctx.url).authorize(contextOf(ctx), { returnTo: ctx.url.searchParams.get("next") }),
 	);
 
 	router.get(routes.auth.callback, async (ctx) => {
 		try {
-			outcome.grant = await relyingParty(ctx.url).callback(ctx);
+			outcome.grant = await relyingParty(ctx.url).callback(contextOf(ctx));
 		} catch (error) {
 			outcome.error = error;
 		}

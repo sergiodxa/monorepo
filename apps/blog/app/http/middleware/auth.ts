@@ -9,6 +9,7 @@
 
 import type { Middleware } from "remix/router";
 
+import { sessionScheme } from "@sdxc/auth/remix/schemes";
 import { getServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
@@ -35,7 +36,7 @@ let authUserKey = createContextKey<schema.SelectUser | null>();
  */
 export let auth: Middleware = (ctx, next) => {
 	let middleware = createAuthMiddleware({
-		schemes: [relyingParty(ctx.url).scheme({ verify: readSessionUser })],
+		schemes: [sessionScheme(relyingParty(ctx.url), { verify: readSessionUser })],
 	});
 
 	return middleware(ctx, next);

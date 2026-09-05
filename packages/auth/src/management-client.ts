@@ -9,9 +9,9 @@
 
 import type { Result } from "@sdxc/result";
 
+import * as s from "@remix-run/data-schema";
+import { url } from "@remix-run/data-schema/checks";
 import { failure, isFailure, success, wrap } from "@sdxc/result";
-import * as s from "remix/data-schema";
-import { url } from "remix/data-schema/checks";
 
 import { nonJsonMediaType } from "./content-type.js";
 

@@ -10,6 +10,7 @@
 import type { AuthSession } from "@sdxc/auth/auth-session";
 import type { Middleware } from "remix/router";
 
+import { sessionScheme } from "@sdxc/auth/remix/schemes";
 import { getContext } from "remix/middleware/async-context";
 import { auth as createAuthMiddleware, Auth } from "remix/middleware/auth";
 
@@ -52,7 +53,7 @@ function toViewer(auth: AuthSession): Viewer {
  */
 export let auth: Middleware = (ctx, next) => {
 	return createAuthMiddleware({
-		schemes: [relyingParty(ctx.url).scheme({ verify: toViewer })],
+		schemes: [sessionScheme(relyingParty(ctx.url), { verify: toViewer })],
 	})(ctx, next);
 };
 

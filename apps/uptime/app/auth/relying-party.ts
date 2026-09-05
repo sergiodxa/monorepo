@@ -26,7 +26,7 @@ const LOGIN_SCOPES = ["openid", "profile", "email", "offline_access"];
  * destination lands on the dashboard.
  *
  * @param url - The current request's URL, which the callback URL is built against.
- * @example let grant = await relyingParty(ctx.url).callback(ctx);
+ * @example let grant = await relyingParty(ctx.url).callback(contextOf(ctx));
  */
 export function relyingParty(url: URL | string): RelyingParty {
 	return new RelyingParty(issuer(), {

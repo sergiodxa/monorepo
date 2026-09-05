@@ -34,7 +34,7 @@ function issuer(): Issuer {
  * @param url - The current request's URL, which the callback URL is built against.
  * @returns The client the auth routes drive, landing a login that named no destination on
  *   the dashboard.
- * @example let grant = await relyingParty(ctx.url).callback(ctx);
+ * @example let grant = await relyingParty(ctx.url).callback(contextOf(ctx));
  */
 export function relyingParty(url: URL): RelyingParty {
 	return new RelyingParty(issuer(), {

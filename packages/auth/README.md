@@ -1,6 +1,7 @@
 # @sdxc/auth
 
-OAuth 2.0 and OpenID Connect client for Remix on Cloudflare Workers.
+OAuth 2.0 and OpenID Connect client for any runtime that speaks `Request` and `Response`,
+with the Remix wiring one import away.
 
 ## Overview
 
@@ -12,9 +13,15 @@ discovery document and the JWKS are fetched once however many roles an app plays
 `Issuer.for` is what hands that one instance out, so sharing it costs no wiring.
 
 It is a client, not a framework. There is no user table, no account linking, no password
-or 2FA flow, and no client-side JavaScript. What it persists is a token set in a
-`remix/session`; whether a subject becomes a row in the app's database is the app's
-decision, made in code this package calls rather than code it ships.
+or 2FA flow, and no client-side JavaScript. What it persists is a token set in a session
+store the app hands it — a `remix/session` as it is, or anything with `get`, `set`, and
+`unset`; whether a subject becomes a row in the app's database is the app's decision, made
+in code this package calls rather than code it ships.
+
+The classes read the request and that store and nothing else, so they run under any
+router. The pieces that know Remix — reading the session off a `RequestContext`, the two
+`remix/middleware/auth` schemes, and the argument-free authorization helpers — live under
+`@sdxc/auth/remix/*`.
 
 Every ID token is verified — signature against the published keys, then `iss`, `aud`,
 `exp`, the `nonce`, and `at_hash` when the provider sends one. Protocol violations throw
@@ -31,8 +38,10 @@ The package is organized into modules that can be imported independently:
 - `@sdxc/auth/auth-session` - The token set a login leaves in the session
 - `@sdxc/auth/id-token` - The verified ID token and its claims
 - `@sdxc/auth/access-token` - The verified access token and its claims
-- `@sdxc/auth/authorization` - The helpers a route states its authorization decision in
 - `@sdxc/auth/auth-error` - The error every protocol violation arrives as
+- `@sdxc/auth/remix/context` - The session and the flow context, read off a Remix request
+- `@sdxc/auth/remix/schemes` - The two `remix/middleware/auth` schemes
+- `@sdxc/auth/remix/authorization` - The helpers a route states its authorization decision in
 
 ## Usage
 
@@ -74,8 +83,12 @@ let admin = new ManagementClient(service);
 
 ### The Browser Flow Is Three Methods
 
+Each takes the request and the session store as one `{ request, session }` context. Under
+Remix, `contextOf(ctx)` builds that pair from the request context the route received.
+
 ```tsx
 import { AuthSession } from "@sdxc/auth/auth-session";
+import { contextOf, sessionOf } from "@sdxc/auth/remix/context";
 import { redirect } from "remix/response/redirect";
 import { form, get, post, route } from "remix/routes";
 
@@ -99,28 +112,57 @@ let routes = route({
 });
 
 router.get(routes.auth.login, (ctx) =>
-	rp.authorize(ctx, { returnTo: ctx.url.searchParams.get("returnTo") }),
+	rp.authorize(contextOf(ctx), { returnTo: ctx.url.searchParams.get("returnTo") }),
 );
 
 router.get(routes.auth.callback, async (ctx) => {
-	let grant = await rp.callback(ctx);
+	let grant = await rp.callback(contextOf(ctx));
 	await users.findOrCreate(grant.subject, grant.profile);
 	return redirect(grant.returnTo);
 });
 
-router.post(routes.auth.logout, (ctx) => rp.endSession(ctx, { returnTo: "/" }));
+router.post(routes.auth.logout, (ctx) => rp.endSession(contextOf(ctx), { returnTo: "/" }));
 ```
 
 `authorize` mints `state`, the `nonce`, and the PKCE verifier, writes them to the session
 as one transaction, and returns the redirect. `callback` correlates the transaction,
 exchanges the code, verifies the ID token, checks the step-up contract, rotates the
-session id, and writes the token set. `endSession` drops the local session and hands the
-browser to the provider with `id_token_hint`.
+session id where the store rotates ids, and writes the token set. `endSession` drops the
+local session and hands the browser to the provider with `id_token_hint`.
+
+### Outside Remix
+
+The same three calls take any request and any store with `get`, `set`, and `unset`. A
+plain fetch handler over a session library of its own passes them directly:
+
+```typescript
+export default {
+	async fetch(request: Request): Promise<Response> {
+		let session = await sessions.open(request); // the app's own session layer
+		let url = new URL(request.url);
+
+		if (url.pathname === "/auth/login") {
+			return rp.authorize({ request, session }, { returnTo: url.searchParams.get("returnTo") });
+		}
+
+		if (url.pathname === "/auth/callback") {
+			let grant = await rp.callback({ request, session });
+			return Response.redirect(new URL(grant.returnTo, url.origin), 303);
+		}
+
+		let auth = AuthSession.from(session);
+		return auth ? app(request, auth) : rp.authorize({ request, session });
+	},
+};
+```
+
+`authorize` throws a `429` `Response` when a login budget is spent, so a handler outside a
+middleware that delivers thrown responses catches it and returns it.
 
 ### Reading The Session
 
 ```typescript
-let auth = AuthSession.from(ctx); // null when signed out
+let auth = AuthSession.from(sessionOf(ctx)); // null when signed out; AuthSession.from(store) anywhere else
 
 auth.idToken.subject; // the identity anchor, never null
 auth.accessToken.has("reports:write");
@@ -313,6 +355,9 @@ redirect to the authorization endpoint.
 
 **Parameters:**
 
+- `ctx.request`: The request, whose URL names the origin `returnTo` is held to and whose
+  edge headers name the browser a budget counts
+- `ctx.session`: The store the transaction is written to, an `AuthSession.Store`
 - `options.returnTo`: Where to come back to after the login, resolved through
   `Location.safe`
 - `options.scopes`: Scopes for this login, in place of the configured ones
@@ -324,12 +369,13 @@ redirect to the authorization endpoint.
 - `options.authorizationParams`: Extra parameters for this request
 
 **Throws:** a `429` `Response` carrying `Retry-After` when the calling browser's login
-budget is spent, delivered by `catchResponse()`; and `AuthError` with
-`endpoint_unsupported` or `reserved_parameter`.
+budget is spent, for the caller to answer with — under Remix, `catchResponse()` delivers
+it; and `AuthError` with `endpoint_unsupported` or `reserved_parameter`.
 
 #### `rp.callback(ctx): Promise<RelyingParty.Grant<profile>>`
 
-Finishes a login and signs the request in.
+Finishes a login and signs the request in, reading the callback's query string off
+`ctx.request` and the transaction out of `ctx.session`.
 
 **Returns:**
 
@@ -354,8 +400,8 @@ Ends the login locally and hands the browser to the provider's end-session endpo
 `303`.
 
 ```typescript
-await rp.endSession(ctx, { returnTo: "/" }); // Response
-await rp.endSession(ctx, { returnTo: "/", redirect: false }); // URL
+await rp.endSession(contextOf(ctx), { returnTo: "/" }); // Response
+await rp.endSession(contextOf(ctx), { returnTo: "/", redirect: false }); // URL
 ```
 
 **Throws:** `endpoint_unsupported` when the provider publishes no end-session endpoint.
@@ -381,17 +427,20 @@ repeats. This is what satisfies `AuthSession.Client`, so `auth.refresh(rp)` work
 Whether the provider reported that more than one factor took part, testing the configured
 values against `amr` and then `acr`.
 
-#### `rp.scheme(options): AuthScheme<identity>`
+#### `rp.renew(auth: AuthSession): Promise<AuthError | null>`
 
-A `remix/middleware/auth` scheme resolving identity from the session, renewing an expired
-access token first. A session the provider refuses to renew is signed out; one that carries
-no refresh token was never renewable and stays signed in on the claims it was written with.
+Brings a session whose token set has reached its end forward. A session the provider
+refuses to renew is cleared and the refusal is returned; one that carries no refresh token
+was never renewable and stays signed in on the claims it was written with, answering
+`null` like a renewed one does. `sessionScheme` runs it before the app's `verify`, and a
+middleware of any other framework does the same.
 
-**Parameters:**
+```typescript
+if (auth.expired && (await rp.renew(auth))) return new Response(null, { status: 401 });
+```
 
-- `options.verify`: `(auth: AuthSession) => identity | null`
-- `options.name`: The method name the resolved auth state reports (default
-  `"oidc-session"`)
+**Throws:** whatever a renewal failed with outside the protocol, so an environment fault
+reaches the app rather than reading as a session that is over.
 
 #### `rp.issuer`
 
@@ -469,35 +518,26 @@ An API this app exposes to callers holding an access token.
 - `options.acceptUnscopedIntrospection`: Whether a description naming no audience is
   accepted on the issuer's scoping alone (default `false`, so it is refused)
 
-#### `api.scheme(options): AuthScheme<identity>`
+#### `api.verifyRequest(request: Request): Promise<AccessToken | null>`
 
-A `remix/middleware/auth` scheme resolving the request's bearer token into the identity
-the app's `verify` returns.
-
-**Parameters:**
-
-- `options.verify`: `(token: AccessToken, context: RequestContext) => identity | null`
-- `options.name`: The method name the resolved auth state reports (default `"bearer"`)
-
-A request carrying no bearer credential is left to the next scheme. A presented credential
-this server does not accept is reported as a failure carrying RFC 6750's challenge, so the
-request stops with a `401` and `WWW-Authenticate: Bearer error="invalid_token"`.
+Reads the bearer credential off the request's `Authorization` header, per RFC 6750 §2.1,
+and verifies it. A request carrying no bearer credential answers `null`, which is another
+authentication method's to handle; a credential this server declines throws.
 
 ```typescript
-api.scheme({ verify: (token) => users.getBySubject(token.subject) });
-api.scheme({ verify: (token) => (token.issuedToService ? { clientId: token.clientId } : null) });
+let token = await api.verifyRequest(request);
+if (token === null) return next();
 ```
 
-An issuer that cannot serve its own documents surfaces as the `AuthError` it is, so an
-outage stays a fault the app handles rather than a caller reading as if it held a bad
-token.
+**Throws:** `invalid_token` when this server declines the credential; `discovery_failed` or
+`jwks_failed` when the issuer's documents are unreadable, so an outage stays a fault the
+app handles rather than a caller reading as if it held a bad token.
 
 #### `api.verifyAccessToken(credential: string): Promise<AccessToken>`
 
 Verifies an access token that arrived outside a request — a queued job whose payload
 carries one, a connection authenticated once at its upgrade, a fixture. It accepts
-whichever form the issuer hands out and runs every check the scheme runs, so a caller with
-no scheme chain behind it gets the reason rather than a `null`.
+whichever form the issuer hands out and runs every check `verifyRequest` runs.
 
 **Throws:** `invalid_token` when this server declines the credential; `discovery_failed` or
 `jwks_failed` when the issuer's documents are unreadable.
@@ -548,13 +588,14 @@ return result.data;
 A signed-in request's tokens, read through the classes that name their claims. Reads are
 lazy and memoized, so a route that only needs the subject decodes one token.
 
-#### `AuthSession.from(ctx): AuthSession | null`
+#### `AuthSession.from(store): AuthSession | null`
 
-The token set a login stored, and `null` for a request that is signed out.
+The token set a login stored, and `null` for a request that is signed out. `store` is an
+`AuthSession.Store`; under Remix, `sessionOf(ctx)`.
 
-#### `AuthSession.write(ctx, tokens): AuthSession`
+#### `AuthSession.write(store, tokens): AuthSession`
 
-Stores a token set as the request's session, which is what makes the request signed in.
+Stores a token set in the request's session, which is what makes the request signed in.
 
 #### Instance members
 
@@ -637,10 +678,66 @@ A JWT access token, per RFC 9068.
   marks a client acting as itself
 - `token.has(scope)`: Whether one scope was granted, comparing whole values
 
-### `createAuthorization(options): Authorization.Helpers`
+### Remix: `sessionOf`, `contextOf`
 
-Binds the routes and the MFA policy every decision is measured against, and answers with
-the helpers an app re-exports as its own authorization vocabulary.
+From `@sdxc/auth/remix/context`.
+
+#### `sessionOf(ctx): AuthSession.Store`
+
+The session `remix/middleware/session` stored on the request context, which is the store
+every class reads. **Throws** a plain `Error` when the middleware has not run.
+
+#### `contextOf(ctx): RelyingParty.Context`
+
+`{ request: ctx.request, session: sessionOf(ctx) }`, so a route hands its context to
+`authorize`, `callback`, or `endSession` in one call.
+
+### Remix: `sessionScheme`, `bearerScheme`
+
+From `@sdxc/auth/remix/schemes`. Both build an `AuthScheme` for `remix/middleware/auth`.
+
+#### `sessionScheme(rp, options): AuthScheme<identity>`
+
+Resolves identity from the session, running `rp.renew` first where the token set has
+lapsed. A session the provider refuses to renew is signed out and reported as a failure;
+one that carries no refresh token stays signed in on the claims it was written with.
+
+**Parameters:**
+
+- `rp`: The relying party holding the credentials a renewal presents
+- `options.verify`: `(auth: AuthSession) => identity | null`
+- `options.name`: The method name the resolved auth state reports (default
+  `"oidc-session"`)
+
+#### `bearerScheme(api, options): AuthScheme<identity>`
+
+Resolves the request's bearer token through `api.verifyRequest` into the identity the app's
+`verify` returns.
+
+**Parameters:**
+
+- `api`: The resource server whose audiences the token is held to
+- `options.verify`: `(token: AccessToken, context: RequestContext) => identity | null`
+- `options.name`: The method name the resolved auth state reports (default `"bearer"`)
+
+A request carrying no bearer credential is left to the next scheme. A presented credential
+the server declines is reported as a failure carrying RFC 6750's challenge, so the request
+stops with a `401` and `WWW-Authenticate: Bearer error="invalid_token"`. Every other
+`AuthError` propagates, so an issuer outage stays a fault the app handles.
+
+```typescript
+bearerScheme(api, { verify: (token) => users.getBySubject(token.subject) });
+bearerScheme(api, {
+	verify: (token) => (token.issuedToService ? { clientId: token.clientId } : null),
+});
+```
+
+### Remix: `createAuthorization(options): Authorization.Helpers`
+
+From `@sdxc/auth/remix/authorization`. Binds the routes and the MFA policy every decision
+is measured against, and answers with the helpers an app re-exports as its own
+authorization vocabulary. Every helper reads the request through
+`remix/middleware/async-context`, which is why the family lives under `remix/`.
 
 **Parameters:**
 
@@ -748,6 +845,32 @@ nothing else, because an absence is an answer rather than a fault.
 
 ### Types
 
+#### `AuthSession.Store`
+
+Where a browser's signed-in state lives between requests. A `remix/session` `Session`
+satisfies it as it is; a store over anything else needs these three methods, and rotates
+ids through the optional fourth where it has ids to rotate.
+
+```typescript
+interface Store {
+	get(key: string): unknown;
+	set(key: string, value: unknown): void;
+	unset(key: string): void;
+	regenerateId?(destroy?: boolean): void;
+}
+```
+
+#### `RelyingParty.Context`
+
+What `authorize`, `callback`, and `endSession` take. `contextOf(ctx)` builds it under Remix.
+
+```typescript
+interface Context {
+	readonly request: Request;
+	readonly session: AuthSession.Store;
+}
+```
+
 #### `AuthSession.Tokens`
 
 ```typescript
@@ -854,10 +977,11 @@ router serves a browser session and an API caller. The middleware order below is
 load-bearing and covered again under Behavior.
 
 ```typescript
+import { bearerScheme, sessionScheme } from "@sdxc/auth/remix/schemes";
+import { catchResponse } from "@sdxc/catch-response-middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { auth } from "remix/middleware/auth";
 import { session } from "remix/middleware/session";
-import { catchResponse } from "@sdxc/catch-response-middleware";
 import { createRouter } from "remix/router";
 
 let router = createRouter({
@@ -867,19 +991,20 @@ let router = createRouter({
 		catchResponse(),
 		auth({
 			schemes: [
-				rp.scheme({ verify: (auth) => users.getBySubject(auth.idToken.subject) }),
-				api.scheme({ verify: (token) => ({ clientId: token.clientId }) }),
+				sessionScheme(rp, { verify: (auth) => users.getBySubject(auth.idToken.subject) }),
+				bearerScheme(api, { verify: (token) => ({ clientId: token.clientId }) }),
 			],
 		}),
 	],
 });
 ```
 
-`rp.scheme` reads the session, renews an access token that has reached its expiry where a
-refresh token is there to renew it with, and hands the app's `verify` the token set. `api.scheme` reads the `Authorization` header,
-verifies a JWT access token against the cached key set, and falls back to RFC 7662
-introspection for a credential carrying no claims. A route then reads the resolved state
-the way it reads any other scheme's: `getContext().get(Auth)`, then `.ok` and `.identity`.
+`sessionScheme` reads the session, renews an access token that has reached its expiry
+where a refresh token is there to renew it with, and hands the app's `verify` the token
+set. `bearerScheme` reads the `Authorization` header, verifies a JWT access token against
+the cached key set, and falls back to RFC 7662 introspection for a credential carrying no
+claims. A route then reads the resolved state the way it reads any other scheme's:
+`getContext().get(Auth)`, then `.ok` and `.identity`.
 
 ## Pattern: The App's Own Authorization Vocabulary
 
@@ -887,7 +1012,7 @@ Create the helpers once and re-export them, so every route states its decision i
 and the login route is named in one place.
 
 ```typescript
-import { createAuthorization } from "@sdxc/auth/authorization";
+import { createAuthorization } from "@sdxc/auth/remix/authorization";
 
 import { relyingParty } from "~/auth/relying-party";
 
@@ -906,7 +1031,7 @@ verified against the response.
 
 ```typescript
 router.get(routes.auth.stepUp, (ctx) =>
-	rp.authorize(ctx, {
+	rp.authorize(contextOf(ctx), {
 		acrValues: ["urn:example:loa:mfa"],
 		maxAge: "5 minutes",
 		prompt: "login",
@@ -1027,8 +1152,8 @@ Issuer.for(AUTH_ORIGIN, { cache: () => new Cache.KVStore(getEnv("CACHE"), getEnv
    by the provider as one value or as a list — carries any of them.
 8. **A transaction answers exactly one callback** - It is spent the moment it is read, so a
    browser replaying the callback URL gets `missing_transaction` rather than a second
-   sign-in. `callback` also rotates the session id on success, and `endSession` rotates it
-   while dropping the old record.
+   sign-in. Where the store rotates ids, `callback` also rotates the session id on success,
+   and `endSession` rotates it while dropping the old record.
 9. **A stored token set that no longer parses reads as signed out** - The session arrives
    from a cookie and is re-validated on every read, so a record written by an earlier
    version of this package answers `null` from `AuthSession.from` instead of throwing. The
@@ -1070,15 +1195,16 @@ Issuer.for(AUTH_ORIGIN, { cache: () => new Cache.KVStore(getEnv("CACHE"), getEnv
     pointed at that issuer. A description naming no audience is refused, matching the
     local path where `aud` is checked; `acceptUnscopedIntrospection: true` accepts it for
     an issuer whose introspection endpoint is already scoped to this server's tokens.
-17. **A declined token and an unreachable issuer part ways in the scheme** - `invalid_token`
-    becomes the `401` with the challenge, and every other `AuthError` — `discovery_failed`,
+17. **A declined token and an unreachable issuer part ways in `bearerScheme`** -
+    `verifyRequest` throws `invalid_token` for the first, which the scheme turns into the
+    `401` with the challenge, and every other `AuthError` — `discovery_failed`,
     `jwks_failed`, `introspection_failed` — propagates out of `authenticate` instead. A
     provider outage answers as the fault it is rather than as a caller holding a bad
     credential.
 18. **A refused refresh ends the session; a session with no refresh token to spend
-    survives its tokens** - `rp.scheme` reads the two apart by the code on the
+    survives its tokens** - `rp.renew` reads the two apart by the code on the
     `AuthError`. The provider declining a refresh token says this login is over, so the
-    scheme drops the session and reports a scheme failure, and the request gets a `401`
+    session is dropped and `sessionScheme` reports a failure, and the request gets a `401`
     rather than continuing as anonymous with the old token still in the cookie.
     `missing_refresh_token` says instead that the grant was never renewable — no
     `offline_access`, so no refresh token was ever issued — and ending a session over that
@@ -1101,10 +1227,11 @@ Issuer.for(AUTH_ORIGIN, { cache: () => new Cache.KVStore(getEnv("CACHE"), getEnv
     for a refusal, a throttle, a fault, or an unreadable payload. It does still throw
     `AuthError` when the service client cannot obtain a token at all, because that is a
     protocol failure rather than an answer.
-22. **The session middleware is required, and its absence throws a plain `Error`** - Every
-    read and write of the token set and the login transaction goes through
-    `remix/middleware/session`. That failure is a wiring mistake rather than a protocol
-    violation, so it is not an `AuthError` with a code.
+22. **A missing session middleware throws a plain `Error`** - Every read and write of the
+    token set and the login transaction goes through the store, and under Remix
+    `sessionOf` reads that store off the context `remix/middleware/session` wrote to. Its
+    absence is a wiring mistake rather than a protocol violation, so it is not an
+    `AuthError` with a code.
 23. **A provider whose identifier is not a URL is configured with `identifier`** - A
     provider is free to publish a bare host as its `issuer`, and relying parties compare
     that exact string. The constructor's `url` stays the place discovery is fetched from,

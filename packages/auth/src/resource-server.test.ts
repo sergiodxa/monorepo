@@ -1,20 +1,17 @@
 /**
- * Covers what a `ResourceServer` promises each of its callers: the middleware, where a
- * request with no bearer credential is left for the next scheme, and an app calling it
- * directly, where a declined credential is named. Tokens are signed for real.
+ * Covers what a `ResourceServer` promises each of its callers: a request, where one
+ * carrying no bearer credential is told apart from one the server declines, and an app
+ * holding the bare credential, where a declined one is named. Tokens are signed for real.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { JWT } from "@sdxc/jwt";
-import type { AuthScheme } from "remix/middleware/auth";
 
 import { JWK } from "@sdxc/jwt";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
-import { Auth, auth } from "remix/middleware/auth";
-import { RequestContext } from "remix/router";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
 import { AccessToken } from "./access-token.js";
@@ -165,22 +162,18 @@ function sign(claims: JWT.PayloadInput = {}, keys: JWK.KeyPair[] = signing): Pro
 }
 
 /**
- * Runs a scheme through `auth()` against a request carrying the given header, and
- * reports the auth state a route would read.
+ * The request a caller makes, carrying the given `Authorization` header.
  *
- * @param scheme - The scheme under test.
  * @param authorization - The header value, omitted for a request carrying none.
  */
-async function resolve<identity>(scheme: AuthScheme<identity>, authorization?: string) {
+function request(authorization?: string): Request {
 	let headers: Record<string, string> = {};
 	if (authorization !== undefined) headers.authorization = authorization;
-
-	let context = new RequestContext(new Request(`${RESOURCE}/monitors`, { headers }));
-
-	await auth({ schemes: [scheme] })(context, () => Promise.resolve(new Response("ok")));
-
-	return context.get(Auth);
+	return new Request(`${RESOURCE}/monitors`, { headers });
 }
+
+/** The refusal every credential this server declines is named with. */
+const INVALID_TOKEN = { name: "AuthError", code: "invalid_token" };
 
 describe("issuer", () => {
 	test("hands out the provider whose tokens it accepts", () => {
@@ -191,210 +184,154 @@ describe("issuer", () => {
 	});
 });
 
-describe("scheme", () => {
-	test("resolves a bearer token the issuer stands behind into an identity", async () => {
+describe("verifyRequest", () => {
+	test("hands back the token behind a bearer credential the issuer stands behind", async () => {
 		let api = resourceServer();
-		let scheme = api.scheme({ verify: (token) => ({ clientId: token.clientId }) });
 
-		expect(await resolve(scheme, `Bearer ${await sign()}`)).toEqual({
-			ok: true,
-			identity: { clientId: CLIENT_ID },
-			method: "bearer",
-		});
+		let token = await api.verifyRequest(request(`Bearer ${await sign()}`));
+
+		expect(token).toBeInstanceOf(AccessToken);
+		expect(token?.subject).toBe("user-123");
+		expect(token?.clientId).toBe(CLIENT_ID);
 	});
 
-	test("reports the method name it was given", async () => {
+	test("answers null for a request carrying no `Authorization` header", async () => {
 		let api = resourceServer();
-		let scheme = api.scheme({ name: "api", verify: (token) => token.subject });
 
-		expect(await resolve(scheme, `Bearer ${await sign()}`)).toEqual({
-			ok: true,
-			identity: "user-123",
-			method: "api",
-		});
+		expect(await api.verifyRequest(request())).toBeNull();
 	});
 
-	test("leaves a request carrying no `Authorization` header anonymous", async () => {
+	test("answers null for a credential under another authentication method", async () => {
 		let api = resourceServer();
-		let scheme = api.scheme({ verify: (token) => token.subject });
 
-		expect(await resolve(scheme)).toEqual({ ok: false });
+		expect(await api.verifyRequest(request(`Basic ${btoa("user:password")}`))).toBeNull();
 	});
 
-	test("leaves a credential for another authentication scheme anonymous", async () => {
+	test("answers null for a header holding no credential", async () => {
 		let api = resourceServer();
-		let scheme = api.scheme({ verify: (token) => token.subject });
 
-		expect(await resolve(scheme, `Basic ${btoa("user:password")}`)).toEqual({ ok: false });
+		expect(await api.verifyRequest(request("Bearer"))).toBeNull();
+		expect(await api.verifyRequest(request("Bearer   "))).toBeNull();
 	});
 
-	test("leaves a header holding no credential anonymous", async () => {
+	test("names a token signed by a key the issuer does not publish", async () => {
 		let api = resourceServer();
-		let scheme = api.scheme({ verify: (token) => token.subject });
 
-		expect(await resolve(scheme, "Bearer")).toEqual({ ok: false });
-		expect(await resolve(scheme, "Bearer   ")).toEqual({ ok: false });
+		await expect(
+			api.verifyRequest(request(`Bearer ${await sign({}, foreign)}`)),
+		).rejects.toMatchObject(INVALID_TOKEN);
 	});
 
-	test("reports a token signed by a key the issuer does not publish as a failure", async () => {
+	test("names an expired token", async () => {
 		let api = resourceServer();
-		let scheme = api.scheme({ verify: (token) => token.subject });
-
-		expect(await resolve(scheme, `Bearer ${await sign({}, foreign)}`)).toMatchObject({
-			ok: false,
-			error: { code: "invalid_credentials", method: "bearer", challenge: expect.any(String) },
-		});
-	});
-
-	test("reports an expired token as a failure", async () => {
-		let api = resourceServer();
-		let scheme = api.scheme({ verify: (token) => token.subject });
 		let expired = await sign({
 			iat: Math.floor(Date.now() / MS_PER_SECOND) - 7200,
 			exp: Math.floor(Date.now() / MS_PER_SECOND) - 3600,
 		});
 
-		expect(await resolve(scheme, `Bearer ${expired}`)).toMatchObject({
-			ok: false,
-			error: { code: "invalid_credentials" },
-		});
+		await expect(api.verifyRequest(request(`Bearer ${expired}`))).rejects.toMatchObject(
+			INVALID_TOKEN,
+		);
 	});
 
-	test("reports a token issued for another audience as a failure", async () => {
+	test("names a token issued for another audience", async () => {
 		let api = resourceServer();
-		let scheme = api.scheme({ verify: (token) => token.subject });
 
-		expect(await resolve(scheme, `Bearer ${await sign({ aud: "another-client" })}`)).toMatchObject({
-			ok: false,
-			error: { code: "invalid_credentials" },
-		});
+		await expect(
+			api.verifyRequest(request(`Bearer ${await sign({ aud: "another-client" })}`)),
+		).rejects.toMatchObject(INVALID_TOKEN);
 	});
 
-	test("reports a token naming another issuer as a failure", async () => {
+	test("names a token naming another issuer", async () => {
 		let api = resourceServer();
-		let scheme = api.scheme({ verify: (token) => token.subject });
 
-		expect(
-			await resolve(scheme, `Bearer ${await sign({ iss: "https://elsewhere.test" })}`),
-		).toMatchObject({ ok: false, error: { code: "invalid_credentials" } });
+		await expect(
+			api.verifyRequest(request(`Bearer ${await sign({ iss: "https://elsewhere.test" })}`)),
+		).rejects.toMatchObject(INVALID_TOKEN);
 	});
 
-	test("reports a caller the app declines as a failure", async () => {
+	test("names a credential that is neither a JWT nor introspectable", async () => {
 		let api = resourceServer();
-		let scheme = api.scheme({ verify: () => null });
 
-		expect(await resolve(scheme, `Bearer ${await sign()}`)).toMatchObject({
-			ok: false,
-			error: { code: "invalid_credentials" },
-		});
-	});
-
-	test("reports a credential that is neither a JWT nor introspectable as a failure", async () => {
-		let api = resourceServer();
-		let scheme = api.scheme({ verify: (token) => token.subject });
-
-		expect(await resolve(scheme, "Bearer opaque-token")).toMatchObject({
-			ok: false,
-			error: { code: "invalid_credentials" },
-		});
+		await expect(api.verifyRequest(request("Bearer opaque-token"))).rejects.toMatchObject(
+			INVALID_TOKEN,
+		);
 	});
 });
 
 describe("audience", () => {
 	test("accepts an `aud` the provider writes as a single value", async () => {
 		let api = resourceServer({ audience: CLIENT_ID });
-		let scheme = api.scheme({ verify: (token) => token.audience });
 
-		expect(await resolve(scheme, `Bearer ${await sign({ aud: CLIENT_ID })}`)).toEqual({
-			ok: true,
-			identity: CLIENT_ID,
-			method: "bearer",
-		});
+		let token = await api.verifyRequest(request(`Bearer ${await sign({ aud: CLIENT_ID })}`));
+
+		expect(token?.audience).toBe(CLIENT_ID);
 	});
 
 	test("accepts an `aud` the provider writes as a list", async () => {
 		let api = resourceServer({ audience: RESOURCE });
-		let scheme = api.scheme({ verify: (token) => token.audience });
 
-		let token = await sign({ aud: [ISSUER, RESOURCE] });
+		let token = await api.verifyRequest(
+			request(`Bearer ${await sign({ aud: [ISSUER, RESOURCE] })}`),
+		);
 
-		expect(await resolve(scheme, `Bearer ${token}`)).toEqual({
-			ok: true,
-			identity: [ISSUER, RESOURCE],
-			method: "bearer",
-		});
+		expect(token?.audience).toEqual([ISSUER, RESOURCE]);
 	});
 
 	test("accepts a token carrying any one of several configured audiences", async () => {
 		let api = resourceServer({ audience: [CLIENT_ID, RESOURCE] });
-		let scheme = api.scheme({ verify: (token) => token.subject });
 
-		expect(await resolve(scheme, `Bearer ${await sign({ aud: CLIENT_ID })}`)).toMatchObject({
-			ok: true,
-		});
-		expect(
-			await resolve(scheme, `Bearer ${await sign({ aud: [ISSUER, RESOURCE] })}`),
-		).toMatchObject({ ok: true });
+		let person = await api.verifyRequest(request(`Bearer ${await sign({ aud: CLIENT_ID })}`));
+		let service = await api.verifyRequest(
+			request(`Bearer ${await sign({ aud: [ISSUER, RESOURCE] })}`),
+		);
+
+		expect(person).toBeInstanceOf(AccessToken);
+		expect(service).toBeInstanceOf(AccessToken);
 	});
 
-	test("reports a token carrying none of the configured audiences as a failure", async () => {
+	test("names a token carrying none of the configured audiences", async () => {
 		let api = resourceServer({ audience: [CLIENT_ID, RESOURCE] });
-		let scheme = api.scheme({ verify: (token) => token.subject });
 
-		expect(
-			await resolve(scheme, `Bearer ${await sign({ aud: [ISSUER, "https://other.test"] })}`),
-		).toMatchObject({ ok: false, error: { code: "invalid_credentials" } });
+		await expect(
+			api.verifyRequest(request(`Bearer ${await sign({ aud: [ISSUER, "https://other.test"] })}`)),
+		).rejects.toMatchObject(INVALID_TOKEN);
 	});
 });
 
 describe("service callers", () => {
 	test("hands over a client-credentials token whose `sub` names its own client", async () => {
 		let api = resourceServer({ audience: RESOURCE });
-		let scheme = api.scheme({
-			verify: (token) => ({
-				service: token.subject === token.clientId,
-				clientId: token.clientId,
-			}),
-		});
-
-		let token = await sign({
+		let credential = await sign({
 			sub: CLIENT_ID,
 			client_id: CLIENT_ID,
 			aud: [ISSUER, RESOURCE],
 			scope: "monitors:read",
 		});
 
-		expect(await resolve(scheme, `Bearer ${token}`)).toEqual({
-			ok: true,
-			identity: { service: true, clientId: CLIENT_ID },
-			method: "bearer",
-		});
+		let token = await api.verifyRequest(request(`Bearer ${credential}`));
+
+		expect(token?.issuedToService).toBe(true);
+		expect(token?.clientId).toBe(CLIENT_ID);
 	});
 
 	test("hands over an authorization-code token whose `sub` names a person", async () => {
 		let api = resourceServer();
-		let scheme = api.scheme({ verify: (token) => token.subject === token.clientId });
 
-		expect(await resolve(scheme, `Bearer ${await sign()}`)).toEqual({
-			ok: true,
-			identity: false,
-			method: "bearer",
-		});
+		let token = await api.verifyRequest(request(`Bearer ${await sign()}`));
+
+		expect(token?.issuedToService).toBe(false);
 	});
 });
 
 describe("scopes", () => {
-	test("hands `verify` the granted scopes and the question a route asks of them", async () => {
+	test("hands over the granted scopes and the question a route asks of them", async () => {
 		let api = resourceServer();
-		let scheme = api.scheme({
-			verify: (token) => ({ scopes: token.scopes, write: token.has("monitors:write") }),
-		});
 
-		expect(await resolve(scheme, `Bearer ${await sign()}`)).toEqual({
-			ok: true,
-			identity: { scopes: ["monitors:read", "monitors:write"], write: true },
-			method: "bearer",
-		});
+		let token = await api.verifyRequest(request(`Bearer ${await sign()}`));
+
+		expect(token?.scopes).toEqual(["monitors:read", "monitors:write"]);
+		expect(token?.has("monitors:write")).toBe(true);
 	});
 });
 
@@ -415,32 +352,26 @@ describe("introspection", () => {
 		);
 
 		let api = resourceServer({ audience: RESOURCE, introspection: INTROSPECTOR });
-		let scheme = api.scheme({
-			verify: (token) => ({ clientId: token.clientId, read: token.has("monitors:read") }),
-		});
 
-		expect(await resolve(scheme, "Bearer opaque-token")).toEqual({
-			ok: true,
-			identity: { clientId: CLIENT_ID, read: true },
-			method: "bearer",
-		});
+		let token = await api.verifyRequest(request("Bearer opaque-token"));
+
+		expect(token?.clientId).toBe(CLIENT_ID);
+		expect(token?.has("monitors:read")).toBe(true);
 		expect(introspections).toEqual(["opaque-token"]);
 	});
 
-	test("reports an opaque token the issuer reports inactive as a failure", async () => {
+	test("names an opaque token the issuer reports inactive", async () => {
 		server.use(http.post(INTROSPECTION_URL, () => HttpResponse.json({ active: false })));
 
 		let api = resourceServer({ introspection: INTROSPECTOR });
-		let scheme = api.scheme({ verify: (token) => token.subject });
 
-		expect(await resolve(scheme, "Bearer opaque-token")).toMatchObject({
-			ok: false,
-			error: { code: "invalid_credentials" },
-		});
+		await expect(api.verifyRequest(request("Bearer opaque-token"))).rejects.toMatchObject(
+			INVALID_TOKEN,
+		);
 		expect(introspections).toEqual(["opaque-token"]);
 	});
 
-	test("reports an active token described for another audience as a failure", async () => {
+	test("names an active token described for another audience", async () => {
 		server.use(
 			http.post(INTROSPECTION_URL, () =>
 				HttpResponse.json({ active: true, sub: CLIENT_ID, aud: "https://other.test" }),
@@ -448,15 +379,13 @@ describe("introspection", () => {
 		);
 
 		let api = resourceServer({ audience: RESOURCE, introspection: INTROSPECTOR });
-		let scheme = api.scheme({ verify: (token) => token.subject });
 
-		expect(await resolve(scheme, "Bearer opaque-token")).toMatchObject({
-			ok: false,
-			error: { code: "invalid_credentials" },
-		});
+		await expect(api.verifyRequest(request("Bearer opaque-token"))).rejects.toMatchObject(
+			INVALID_TOKEN,
+		);
 	});
 
-	test("reports an active token described by another issuer as a failure", async () => {
+	test("names an active token described by another issuer", async () => {
 		server.use(
 			http.post(INTROSPECTION_URL, () =>
 				HttpResponse.json({
@@ -469,15 +398,13 @@ describe("introspection", () => {
 		);
 
 		let api = resourceServer({ introspection: INTROSPECTOR });
-		let scheme = api.scheme({ verify: (token) => token.subject });
 
-		expect(await resolve(scheme, "Bearer opaque-token")).toMatchObject({
-			ok: false,
-			error: { code: "invalid_credentials" },
-		});
+		await expect(api.verifyRequest(request("Bearer opaque-token"))).rejects.toMatchObject(
+			INVALID_TOKEN,
+		);
 	});
 
-	test("reports an active token described with no audience as a failure", async () => {
+	test("names an active token described with no audience", async () => {
 		server.use(
 			http.post(INTROSPECTION_URL, () =>
 				HttpResponse.json({ active: true, sub: CLIENT_ID, client_id: CLIENT_ID, iss: ISSUER }),
@@ -485,12 +412,10 @@ describe("introspection", () => {
 		);
 
 		let api = resourceServer({ audience: RESOURCE, introspection: INTROSPECTOR });
-		let scheme = api.scheme({ verify: (token) => token.subject });
 
-		expect(await resolve(scheme, "Bearer opaque-token")).toMatchObject({
-			ok: false,
-			error: { code: "invalid_credentials" },
-		});
+		await expect(api.verifyRequest(request("Bearer opaque-token"))).rejects.toMatchObject(
+			INVALID_TOKEN,
+		);
 		expect(introspections).toEqual(["opaque-token"]);
 	});
 
@@ -506,25 +431,20 @@ describe("introspection", () => {
 			introspection: INTROSPECTOR,
 			acceptUnscopedIntrospection: true,
 		});
-		let scheme = api.scheme({ verify: (token) => ({ clientId: token.clientId }) });
 
-		expect(await resolve(scheme, "Bearer opaque-token")).toEqual({
-			ok: true,
-			identity: { clientId: CLIENT_ID },
-			method: "bearer",
-		});
+		let token = await api.verifyRequest(request("Bearer opaque-token"));
+
+		expect(token?.clientId).toBe(CLIENT_ID);
 	});
 
 	test("keeps a JWT the key set rejects away from the introspection endpoint", async () => {
 		server.use(http.post(INTROSPECTION_URL, () => HttpResponse.json({ active: true })));
 
 		let api = resourceServer({ introspection: INTROSPECTOR });
-		let scheme = api.scheme({ verify: (token) => token.subject });
 
-		expect(await resolve(scheme, `Bearer ${await sign({}, foreign)}`)).toMatchObject({
-			ok: false,
-			error: { code: "invalid_credentials" },
-		});
+		await expect(
+			api.verifyRequest(request(`Bearer ${await sign({}, foreign)}`)),
+		).rejects.toMatchObject(INVALID_TOKEN);
 		expect(introspections).toEqual([]);
 	});
 
@@ -532,16 +452,14 @@ describe("introspection", () => {
 		server.use(http.post(INTROSPECTION_URL, () => HttpResponse.json({ active: true })));
 
 		let api = resourceServer({ introspection: INTROSPECTOR });
-		let scheme = api.scheme({ verify: (token) => token.subject });
 		let expired = await sign({
 			iat: Math.floor(Date.now() / MS_PER_SECOND) - 7200,
 			exp: Math.floor(Date.now() / MS_PER_SECOND) - 3600,
 		});
 
-		expect(await resolve(scheme, `Bearer ${expired}`)).toMatchObject({
-			ok: false,
-			error: { code: "invalid_credentials" },
-		});
+		await expect(api.verifyRequest(request(`Bearer ${expired}`))).rejects.toMatchObject(
+			INVALID_TOKEN,
+		);
 		expect(introspections).toEqual([]);
 	});
 });
@@ -668,25 +586,23 @@ describe("verifyAccessToken", () => {
 });
 
 describe("infrastructure failures", () => {
-	test("lets an unreadable key set out of the scheme instead of refusing the caller", async () => {
+	test("reports an unreadable key set as the outage it is instead of refusing the caller", async () => {
 		server.use(http.get(JWKS_URL, () => new HttpResponse(null, { status: 500 })));
 
 		let api = resourceServer();
-		let scheme = api.scheme({ verify: (token) => token.subject });
 
-		await expect(resolve(scheme, `Bearer ${await sign()}`)).rejects.toSatisfy((error: unknown) =>
-			AuthError.is(error, "jwks_failed"),
+		await expect(api.verifyRequest(request(`Bearer ${await sign()}`))).rejects.toSatisfy(
+			(error: unknown) => AuthError.is(error, "jwks_failed"),
 		);
 	});
 
-	test("lets an unreadable discovery document out of the scheme", async () => {
+	test("reports an unreadable discovery document as the outage it is", async () => {
 		server.use(http.get(DISCOVERY_URL, () => new HttpResponse(null, { status: 503 })));
 
 		let api = resourceServer();
-		let scheme = api.scheme({ verify: (token) => token.subject });
 
-		await expect(resolve(scheme, `Bearer ${await sign()}`)).rejects.toSatisfy((error: unknown) =>
-			AuthError.is(error, "discovery_failed"),
+		await expect(api.verifyRequest(request(`Bearer ${await sign()}`))).rejects.toSatisfy(
+			(error: unknown) => AuthError.is(error, "discovery_failed"),
 		);
 	});
 });

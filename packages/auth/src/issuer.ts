@@ -9,10 +9,10 @@
 
 import type { DurationInput } from "@sdxc/duration";
 
+import * as s from "@remix-run/data-schema";
+import { minLength, url } from "@remix-run/data-schema/checks";
 import { JWK } from "@sdxc/jwt";
 import { isFailure, wrap } from "@sdxc/result";
-import * as s from "remix/data-schema";
-import { minLength, url } from "remix/data-schema/checks";
 
 import { AuthError, AuthErrorCode } from "./auth-error.js";
 import { nonJsonMediaType } from "./content-type.js";

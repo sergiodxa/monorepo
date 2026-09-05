@@ -8,6 +8,7 @@
  */
 
 import { AuthSession } from "@sdxc/auth/auth-session";
+import { contextOf, sessionOf } from "@sdxc/auth/remix/context";
 import { createEnv } from "@sdxc/cloudflare-mocks";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -101,7 +102,7 @@ function param(url: URL, name: string): string {
 describe("the dashboard's relying party", () => {
 	test("binds every login to a nonce, a state, and a PKCE challenge", async () => {
 		let { router, visit } = createAgent();
-		router.get("/auth/login", (ctx) => relyingParty(ctx.url).authorize(ctx));
+		router.get("/auth/login", (ctx) => relyingParty(ctx.url).authorize(contextOf(ctx)));
 
 		let response = await visit("/auth/login");
 		let authorize = new URL(response.headers.get("location") ?? "");
@@ -117,7 +118,7 @@ describe("the dashboard's relying party", () => {
 		let { router, visit } = createAgent();
 
 		router.get("/auth/login", (ctx) => {
-			AuthSession.write(ctx, {
+			AuthSession.write(sessionOf(ctx), {
 				idToken: "header.payload.signature",
 				accessToken: "header.payload.signature",
 				refreshToken: null,
@@ -127,7 +128,10 @@ describe("the dashboard's relying party", () => {
 		});
 
 		router.get("/auth/logout", async (ctx) => {
-			let url = await relyingParty(ctx.url).endSession(ctx, { returnTo: "/", redirect: false });
+			let url = await relyingParty(ctx.url).endSession(contextOf(ctx), {
+				returnTo: "/",
+				redirect: false,
+			});
 			return new Response(url.toString());
 		});
 
