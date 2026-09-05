@@ -371,6 +371,14 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	}
 
 	/**
+	 * The provider this client is registered with, so a collaborator verifying a token
+	 * or reaching the provider's other endpoints works against the same one.
+	 */
+	get issuer(): Issuer {
+		return this.#issuer;
+	}
+
+	/**
 	 * Starts a login, spending the browser's budget before the session is touched, so a
 	 * refused login leaves it as it was. `returnTo` resolves through `Location.safe`, taking
 	 * the configured fallback for anything naming another origin.

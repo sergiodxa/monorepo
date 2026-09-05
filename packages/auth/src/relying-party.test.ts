@@ -444,6 +444,19 @@ function callbackPath(params: Record<string, string>): string {
 	return `/auth/callback?${new URLSearchParams(params).toString()}`;
 }
 
+describe("issuer", () => {
+	test("hands out the provider it was registered with", () => {
+		let issuer = createIssuer();
+		let rp = new RelyingParty(issuer, {
+			clientId: CLIENT_ID,
+			clientSecret: CLIENT_SECRET,
+			redirectUri: REDIRECT_URI,
+		});
+
+		expect(rp.issuer).toBe(issuer);
+	});
+});
+
 describe("authorize", () => {
 	test("sends the browser on with a 303, so a form post is followed by a GET", async () => {
 		let agent = createAgent();

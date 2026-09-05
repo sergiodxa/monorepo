@@ -107,6 +107,14 @@ export class ResourceServer {
 	}
 
 	/**
+	 * The provider whose tokens this server accepts, so a collaborator verifying a
+	 * token of its own works against the same one.
+	 */
+	get issuer(): Issuer {
+		return this.#issuer;
+	}
+
+	/**
 	 * A `remix/middleware/auth` scheme that resolves the request's bearer token into the
 	 * identity the app's `verify` returns. A request carrying no bearer credential is left
 	 * to the next scheme, and one this server declines stops here with RFC 6750's `401`.

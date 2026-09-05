@@ -393,6 +393,11 @@ no refresh token was never renewable and stays signed in on the claims it was wr
 - `options.name`: The method name the resolved auth state reports (default
   `"oidc-session"`)
 
+#### `rp.issuer`
+
+The provider this client is registered with, so a collaborator verifying a token or
+reaching the provider's other endpoints works against the same one.
+
 ### `ServiceClient`
 
 A confidential client acting on its own behalf.
@@ -501,6 +506,11 @@ no scheme chain behind it gets the reason rather than a `null`.
 let token = await api.verifyAccessToken(job.payload.accessToken);
 if (!token.has("reports:write")) return;
 ```
+
+#### `api.issuer`
+
+The provider whose tokens this server accepts, so a collaborator verifying a token of its
+own works against the same one.
 
 ### `ManagementClient`
 

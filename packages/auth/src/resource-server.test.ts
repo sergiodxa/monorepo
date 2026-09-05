@@ -182,6 +182,15 @@ async function resolve<identity>(scheme: AuthScheme<identity>, authorization?: s
 	return context.get(Auth);
 }
 
+describe("issuer", () => {
+	test("hands out the provider whose tokens it accepts", () => {
+		let issuer = new Issuer(ISSUER);
+		let server = new ResourceServer(issuer, { audience: CLIENT_ID });
+
+		expect(server.issuer).toBe(issuer);
+	});
+});
+
 describe("scheme", () => {
 	test("resolves a bearer token the issuer stands behind into an identity", async () => {
 		let api = resourceServer();
