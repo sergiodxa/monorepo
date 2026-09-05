@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-04
+**Implemented** - 2026-09-05
 
 ## Background
 
@@ -498,7 +498,19 @@ Emit `{ user: { id, plan } }` and rely on Cloudflare to index nested paths.
 
 ## Current Progress
 
-Nothing implemented. The package is as ADR-004 left it; ADR-044 landed `@sdxc/jobs` with `ctx.logger` as a `BatchedLogger` and its own loggers for refused and dead-lettered messages, which are the integration points Phase 2 replaces.
+- [x] Phase 1: The Package
+- [x] Phase 2: The Packages That Log
+- [x] Phase 3: The Apps
+
+`@sdxc/mail`, `@sdxc/workers-cache`, `@sdxc/rate-limit`, and `@sdxc/billing` joined Phase 2.
+Each read a duck-typed `context.logger` off the request context and offered a `logger`
+option to override it; both are gone, and they enrich the current log through
+`currentLog()` instead. That was not in the plan because the four were not consumers of
+`@sdxc/logger` — they were consumers of a shape the router middleware happened to publish.
+
+The immediate, batched, and request-scoped loggers are deleted, and `@sdxc/jobs` no longer
+carries a `BatchedLogger` on its context. Sampling is configured nowhere: every log is
+written, per §11.
 
 ## Notes
 
