@@ -43,10 +43,12 @@ rather than a hand-written stub — which is what caught `@sdxc/kv-cache` assert
 TTL that a real binding rejects. `node:sqlite` does not exist in workerd, so a test whose
 database comes from `@sdxc/cloudflare-mocks/sqlite` stays on the threads pool.
 
-Nothing runs under `bun test` any more. Where a test needs a Bun-only API — `packages/spec`'s
-`db` plugin connects through Bun's built-in SQL client, which has no Node equivalent — the
-scenario runs in a Bun child process that reports what it observed as JSON, and the
-expectations stay in the Vitest file. `db-e2e-probe.ts` beside `db.test.ts` is the pattern:
+Nothing runs under `bun test` any more — `bunfig.toml` preloads `scripts/reject-bun-test.ts`,
+so typing it prints the Vitest commands and exits rather than pointing Bun's runner at files
+whose `vi` calls its shim does not implement. Where a test needs a Bun-only API —
+`packages/spec`'s `db` plugin connects through Bun's built-in SQL client, which has no Node
+equivalent — the scenario runs in a Bun child process that reports what it observed as JSON,
+and the expectations stay in the Vitest file. `db-e2e-probe.ts` beside `db.test.ts` is the pattern:
 the probe records, the test asserts, so a failure names the expectation rather than a
 subprocess exit code.
 

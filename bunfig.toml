@@ -1,0 +1,4 @@
+# Bun runs no tests here: `bun run test` hands them to Vitest. The preload turns a bare
+# `bun test` into one line of guidance instead of a Bun-runner run over the whole suite.
+[test]
+preload = ["./scripts/reject-bun-test.ts"]

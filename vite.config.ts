@@ -20,6 +20,14 @@ import { defaultExclude } from "vitest/config";
 import { cloudflareWorkersStub } from "./test/cloudflare-workers-plugin.ts";
 
 /**
+ * Wrangler announces every `.dev.vars` file it reads at its `log` level, so each Workers
+ * project puts a `Using secrets defined in …` line in front of the run's results. Raising
+ * the floor to `warn` keeps anything wrong with a binding visible and drops the rest. Set
+ * here rather than in the `test` script so a scoped `vp test run <path>` is quiet too.
+ */
+process.env.WRANGLER_LOG ??= "warn";
+
+/**
  * Executes inside workerd against the real bindings `apps/blog/wrangler.jsonc` declares.
  * Declared outside `projects`: alone here it has no `pool` of its own, and inlining it
  * sidesteps a TS2321 depth error from comparing this shape against every sibling in the array.
