@@ -413,9 +413,9 @@ let result = await billing.customers.create({ email, externalId });
 
 if (isFailure(result)) {
 	if (result.error.code === "conflict") return existing(externalId);
-	context.logger.error("billing.customer_create_failed", {
+	context.log.warn("billing.customer_create_failed", {
 		code: result.error.code,
-		providerCode: result.error.providerCode,
+		provider_code: result.error.providerCode,
 		connection: result.error.connection,
 	});
 }
@@ -476,7 +476,6 @@ The webhook endpoint as a class. It answers `200` to everything it can account f
 - `provider`: The configured platform, which answers whether a delivery is authentic
 - `handlers`: What to do per delivery name, keyed by `BillingEventType`
 - `options.store?`: Where deliveries are recorded; omitting it dispatches every delivery, replays included
-- `options.logger?`: `(context) => WebhookLogger | undefined`; defaults to reading `context.logger`
 - `options.retry?`: `(error, event) => boolean`; defaults to retrying a `BillingError` the platform marked retryable
 
 ##### `endpoint.handler: RequestHandler`
@@ -936,9 +935,9 @@ export default createAction(routes.billing.checkout, async (context) => {
 	});
 
 	if (isFailure(checkout)) {
-		context.logger.error("billing.checkout_failed", {
+		context.log.warn("billing.checkout_failed", {
 			code: checkout.error.code,
-			providerCode: checkout.error.providerCode,
+			provider_code: checkout.error.providerCode,
 		});
 
 		return redirect(routes.billing.index.href(), { status: redirect.Status.SeeOther });

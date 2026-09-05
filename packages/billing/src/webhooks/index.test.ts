@@ -7,13 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Log } from "@sdxc/logger";
 import { unwrap } from "@sdxc/result";
 import { sign } from "@sdxc/webhooks";
 import { createRouter, RequestContext } from "remix/router";
 import { describe, expect, test } from "vitest";
 
 import type { Order, Subscription } from "../core/types.js";
-import type { WebhookLogger } from "../webhooks/index.js";
 
 import { BillingError } from "../core/errors.js";
 import { MemoryBilling } from "../providers/memory/index.js";
@@ -25,24 +25,22 @@ const SECRET = "dGVzdC1zaWduaW5nLXNlY3JldC12YWx1ZQ";
 /** Catalog every delivery here is about: one monthly plan. */
 const CATALOG = { pro: { amount: 4900, currency: "usd", interval: "month" as const } };
 
-/** Records what the endpoint reported, so a test asserts on the event names. */
-class Recorder implements WebhookLogger {
-	readonly events: { level: string; event: string; payload?: Record<string, unknown> }[] = [];
+/**
+ * Runs one delivery under a log of its own, so a test reads what the endpoint recorded
+ * off the emitted record rather than through a logger it installed.
+ */
+async function recorded(
+	fn: () => Response | Promise<Response>,
+): Promise<{ response: Response; record: Record<string, unknown> }> {
+	let records: Record<string, unknown>[] = [];
+	let log = new Log({ kind: "request", sink: (record) => void records.push(record) });
+	let response = await log.run(fn);
+	return { response, record: records[0] ?? {} };
+}
 
-	/** Records an acknowledgement the endpoint made without running a handler. */
-	info(event: string, payload?: Record<string, unknown>): void {
-		this.events.push({ level: "info", event, payload });
-	}
-
-	/** Records a rejected delivery or a handler failure. */
-	error(event: string, payload?: Record<string, unknown>): void {
-		this.events.push({ level: "error", event, payload });
-	}
-
-	/** Every event name reported so far, in order. */
-	get names(): string[] {
-		return this.events.map((entry) => entry.event);
-	}
+/** Every note the record carries, by name and in order. */
+function noteNames(record: Record<string, unknown>): string[] {
+	return ((record.notes ?? []) as Log.Note[]).map((note) => note.name);
 }
 
 /** Buys the plan outright, which is how a test gets an order and a subscription. */
@@ -127,23 +125,18 @@ describe("BillingWebhook", () => {
 		let delivery = await unwrap(forger.webhooks.emit({ type: "order.paid", order }));
 
 		let reached = false;
-		let log = new Recorder();
 
-		let endpoint = new BillingWebhook(
-			billing,
-			{
-				async "order.paid"() {
-					reached = true;
-				},
+		let endpoint = new BillingWebhook(billing, {
+			async "order.paid"() {
+				reached = true;
 			},
-			{ logger: () => log },
-		);
+		});
 
-		let response = await endpoint.handler(context(delivery.request));
+		let { response, record } = await recorded(() => endpoint.handler(context(delivery.request)));
 
 		expect(response.status).toBe(401);
 		expect(reached).toBe(false);
-		expect(log.names).toEqual(["billing.webhook.invalid_signature"]);
+		expect(noteNames(record)).toEqual(["billing.webhook.invalid_signature"]);
 	});
 
 	test("records a forged delivery as invalid, so the trail shows it arrived", async () => {
@@ -203,7 +196,6 @@ describe("BillingWebhook", () => {
 		let { order } = await buy(billing);
 
 		let store = new MemoryWebhookStore();
-		let log = new Recorder();
 		let calls = 0;
 
 		let endpoint = new BillingWebhook(
@@ -213,17 +205,20 @@ describe("BillingWebhook", () => {
 					calls += 1;
 				},
 			},
-			{ store, logger: () => log },
+			{ store },
 		);
 
 		let first = await unwrap(billing.webhooks.emit({ id: "whk_same", type: "order.paid", order }));
 		let second = await unwrap(billing.webhooks.emit({ id: "whk_same", type: "order.paid", order }));
 
 		expect((await endpoint.handler(context(first.request))).status).toBe(200);
-		expect((await endpoint.handler(context(second.request))).status).toBe(200);
 
+		let replay = await recorded(() => endpoint.handler(context(second.request)));
+
+		expect(replay.response.status).toBe(200);
 		expect(calls).toBe(1);
-		expect(log.names).toEqual(["billing.webhook.duplicate"]);
+		expect(replay.record).toMatchObject({ "billing.webhook.duplicate": true });
+		expect(noteNames(replay.record)).toEqual(["billing.webhook.duplicate"]);
 	});
 
 	test("dispatches a redelivery when no store is keeping the trail", async () => {
@@ -251,7 +246,6 @@ describe("BillingWebhook", () => {
 		let { order } = await buy(billing);
 		let delivery = await unwrap(billing.webhooks.emit({ type: "order.refunded", order }));
 
-		let log = new Recorder();
 		let store = new MemoryWebhookStore();
 
 		let endpoint = new BillingWebhook(
@@ -259,13 +253,13 @@ describe("BillingWebhook", () => {
 			{
 				async "order.paid"() {},
 			},
-			{ logger: () => log, store },
+			{ store },
 		);
 
-		let response = await endpoint.handler(context(delivery.request));
+		let { response, record } = await recorded(() => endpoint.handler(context(delivery.request)));
 
 		expect(response.status).toBe(200);
-		expect(log.names).toEqual(["billing.webhook.unhandled"]);
+		expect(noteNames(record)).toEqual(["billing.webhook.unhandled"]);
 		expect((await store.find(delivery.event.id))?.processed).toBe(true);
 	});
 
@@ -300,28 +294,24 @@ describe("BillingWebhook", () => {
 			}),
 		);
 
-		let log = new Recorder();
+		let endpoint = new BillingWebhook(billing, {
+			async "order.paid"() {},
+		});
 
-		let endpoint = new BillingWebhook(
-			billing,
-			{
-				async "order.paid"() {},
-			},
-			{ logger: () => log },
-		);
-
-		let response = await endpoint.handler(
-			context(
-				new Request("https://example.com/webhooks/billing", {
-					method: "POST",
-					headers: signed.headers,
-					body: signed.body,
-				}),
+		let { response, record } = await recorded(() =>
+			endpoint.handler(
+				context(
+					new Request("https://example.com/webhooks/billing", {
+						method: "POST",
+						headers: signed.headers,
+						body: signed.body,
+					}),
+				),
 			),
 		);
 
 		expect(response.status).toBe(200);
-		expect(log.names).toEqual(["billing.webhook.unreadable"]);
+		expect(noteNames(record)).toEqual(["billing.webhook.unreadable"]);
 	});
 
 	test("logs a throwing handler and acknowledges, so the platform stays enabled", async () => {
@@ -329,7 +319,6 @@ describe("BillingWebhook", () => {
 		let { order } = await buy(billing);
 		let delivery = await unwrap(billing.webhooks.emit({ type: "order.paid", order }));
 
-		let log = new Recorder();
 		let store = new MemoryWebhookStore();
 
 		let endpoint = new BillingWebhook(
@@ -339,14 +328,15 @@ describe("BillingWebhook", () => {
 					throw new Error("grant failed");
 				},
 			},
-			{ logger: () => log, store },
+			{ store },
 		);
 
-		let response = await endpoint.handler(context(delivery.request));
+		let { response, record } = await recorded(() => endpoint.handler(context(delivery.request)));
 
 		expect(response.status).toBe(200);
-		expect(log.names).toEqual(["billing.webhook.handler_failed"]);
-		expect(log.events[0]?.payload?.error).toBe("grant failed");
+		expect(noteNames(record)).toEqual(["billing.webhook.handler_failed"]);
+		expect(record.outcome).toBe("degraded");
+		expect((record.notes as Log.Note[])[0]?.error).toBe("grant failed");
 		expect((await store.find(delivery.event.id))?.processed).toBe(false);
 	});
 
@@ -385,19 +375,14 @@ describe("BillingWebhook", () => {
 		expect((await endpoint.handler(context(delivery.request))).status).toBe(503);
 	});
 
-	test("reports through context.logger when the app installed one", async () => {
+	test("answers a delivery unchanged when no log is open to record it", async () => {
 		let billing = new MemoryBilling({ catalog: CATALOG });
 		let { order } = await buy(billing);
 		let delivery = await unwrap(billing.webhooks.emit({ type: "order.paid", order }));
 
-		let log = new Recorder();
-		let ctx = context(delivery.request);
+		let response = await new BillingWebhook(billing, {}).handler(context(delivery.request));
 
-		Object.assign(ctx, { logger: log });
-
-		await new BillingWebhook(billing, {}).handler(ctx);
-
-		expect(log.names).toEqual(["billing.webhook.unhandled"]);
+		expect(response.status).toBe(200);
 	});
 
 	test("mounts as a route action", async () => {

@@ -74,7 +74,6 @@ export type {
 	BillingWebhookHandlers,
 	BillingWebhookOptions,
 	WebhookDelivery,
-	WebhookLogger,
 	WebhookStore,
 } from "./webhooks/index.js";
 

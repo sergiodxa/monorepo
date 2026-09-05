@@ -9,6 +9,7 @@
 
 import type { RequestContext, RequestHandler } from "remix/router";
 
+import { currentLog } from "@sdxc/logger";
 import { isFailure } from "@sdxc/result";
 
 import type { Billing } from "../core/contract.js";
@@ -40,7 +41,7 @@ export type BillingEventOf<Type extends BillingEventType> = Extract<
 
 /**
  * What an app does about one kind of delivery. Throwing reports the failure,
- * which the endpoint logs and turns into a retry when the error is retryable.
+ * which the endpoint records and turns into a retry when the error is retryable.
  */
 export interface BillingWebhookHandler<Type extends BillingEventType> {
 	(event: BillingEventOf<Type>, context: RequestContext): void | Promise<void>;
@@ -104,17 +105,6 @@ export interface WebhookStore {
 	markProcessed(id: string): Promise<void>;
 }
 
-/**
- * The part of a logger the endpoint needs, kept structural so it reports
- * through whichever logger an app already exposes on the context.
- */
-export interface WebhookLogger {
-	/** Records an event that was acknowledged without a handler running. */
-	info(event: string, payload?: Record<string, unknown>): void;
-	/** Records a rejected delivery or a handler failure. */
-	error(event: string, payload?: Record<string, unknown>): void;
-}
-
 /** What an endpoint is configured with beyond its provider and its handlers. */
 export interface BillingWebhookOptions {
 	/**
@@ -122,11 +112,6 @@ export interface BillingWebhookOptions {
 	 * including a replay, so an app without a store makes its handlers idempotent.
 	 */
 	store?: WebhookStore | null;
-	/**
-	 * Resolves the logger the endpoint reports through. Defaults to
-	 * `context.logger` when the app installed one.
-	 */
-	logger?: (context: RequestContext) => WebhookLogger | undefined;
 	/**
 	 * Decides whether a handler failure should be delivered again. Defaults to
 	 * retrying a {@link BillingError} the platform marked retryable, since every
@@ -146,15 +131,6 @@ const RETRY_LATER = 503;
 
 /** Stands in for the object type of a delivery that named no object. */
 const UNNAMED_OBJECT = "unknown";
-
-/** Reads a logger off the request context, accepting anything that can record an event. */
-function contextLogger(context: RequestContext): WebhookLogger | undefined {
-	let candidate: unknown = (context as { logger?: unknown }).logger;
-	if (typeof candidate !== "object" || candidate === null) return undefined;
-	if (!("info" in candidate) || typeof candidate.info !== "function") return undefined;
-	if (!("error" in candidate) || typeof candidate.error !== "function") return undefined;
-	return candidate as WebhookLogger;
-}
 
 /**
  * Whether the same delivery can usefully arrive again: a platform that named a
@@ -235,17 +211,15 @@ export class BillingWebhook {
 
 	#store: WebhookStore | null;
 
-	#logger: (context: RequestContext) => WebhookLogger | undefined;
-
 	#retry: (error: unknown, event: BillingEvent) => boolean;
 
 	/**
-	 * Creates the endpoint at module scope, so a misconfigured store or logger
-	 * surfaces at boot rather than on the first delivery.
+	 * Creates the endpoint at module scope, so a misconfigured store surfaces at
+	 * boot rather than on the first delivery.
 	 *
 	 * @param provider - The configured platform, which answers whether a delivery is authentic.
 	 * @param handlers - What to do per delivery name; see {@link BillingWebhookHandlers}.
-	 * @param options - Store, logger, and retry policy; see {@link BillingWebhookOptions}.
+	 * @param options - Store and retry policy; see {@link BillingWebhookOptions}.
 	 */
 	constructor(
 		provider: Billing,
@@ -255,7 +229,6 @@ export class BillingWebhook {
 		this.#provider = provider;
 		this.#handlers = handlers;
 		this.#store = options.store ?? null;
-		this.#logger = options.logger ?? contextLogger;
 		this.#retry = options.retry ?? retryableFailure;
 
 		this.handler = (context) => this.#respond(context);
@@ -263,15 +236,26 @@ export class BillingWebhook {
 
 	/**
 	 * Reads the body once, since the signature covers the exact bytes received
-	 * and a second read of a consumed request yields nothing.
+	 * and a second read of a consumed request yields nothing. The invocation's
+	 * log gets the delivery, the provider, and the verdict as fields, so a query
+	 * finds every replay or forged delivery a connection received.
 	 */
 	async #respond(context: RequestContext): Promise<Response> {
-		let log = this.#logger(context);
+		let log = currentLog();
 		let rawBody = await context.request.text();
 
 		let reference = this.#provider.webhooks.reference(context.request, rawBody);
 		let valid = await this.#provider.webhooks.verify(context.request, rawBody);
 		let objectType = reference?.object?.type ?? UNNAMED_OBJECT;
+
+		log?.set({
+			"billing.webhook": {
+				provider: this.#provider.connection,
+				delivery: reference?.deliveryId,
+				object: objectType,
+				valid,
+			},
+		});
 
 		// The key is the delivery, never the object: one object produces many
 		// distinct deliveries, and keying on it would drop all but the first.
@@ -279,10 +263,8 @@ export class BillingWebhook {
 			let recorded = await this.#store.find(reference.deliveryId);
 
 			if (recorded !== null && recorded.processed) {
-				log?.info("billing.webhook.duplicate", {
-					delivery: reference.deliveryId,
-					type: objectType,
-				});
+				log?.set({ "billing.webhook": { duplicate: true } });
+				log?.warn("billing.webhook.duplicate", { object: objectType });
 
 				return new Response(null, { status: OK });
 			}
@@ -297,10 +279,7 @@ export class BillingWebhook {
 		}
 
 		if (!valid) {
-			log?.error("billing.webhook.invalid_signature", {
-				connection: this.#provider.connection,
-				delivery: reference?.deliveryId,
-			});
+			log?.warn("billing.webhook.invalid_signature");
 
 			return new Response("invalid signature", { status: UNAUTHORIZED });
 		}
@@ -308,33 +287,33 @@ export class BillingWebhook {
 		let event = await this.#provider.webhooks.event(context.request, rawBody);
 
 		if (isFailure(event)) {
-			log?.error("billing.webhook.unreadable", {
-				connection: this.#provider.connection,
-				delivery: reference?.deliveryId,
-				error: event.error.message,
-			});
+			log?.warn("billing.webhook.unreadable", { error: event.error.message });
 
 			return new Response(null, { status: OK });
 		}
 
-		return this.#dispatch(event.data, reference?.deliveryId ?? null, context, log);
+		return this.#dispatch(event.data, reference?.deliveryId ?? null, context);
 	}
 
 	/**
 	 * Runs the handler for a delivery, acknowledging a name nothing handles so
 	 * the platform keeps the endpoint enabled, and leaving a failed delivery
-	 * unprocessed so the trail shows which handler was wrong.
+	 * unprocessed so the trail shows which handler was wrong. A failure the
+	 * platform will redeliver fails the log, since the request answers `503`;
+	 * one acknowledged with `200` degrades it, since the request itself succeeded.
 	 */
 	async #dispatch(
 		event: BillingEvent,
 		key: string | null,
 		context: RequestContext,
-		log: WebhookLogger | undefined,
 	): Promise<Response> {
+		let log = currentLog();
 		let handler = this.#handlers[event.type] as BillingEventDispatch | undefined;
 
+		log?.set({ "billing.webhook": { event: event.type, handled: handler !== undefined } });
+
 		if (handler === undefined) {
-			log?.info("billing.webhook.unhandled", { delivery: event.id, type: event.type });
+			log?.note("billing.webhook.unhandled", { event: event.type });
 			await this.#settle(key);
 			return new Response(null, { status: OK });
 		}
@@ -342,13 +321,15 @@ export class BillingWebhook {
 		try {
 			await handler(event, context);
 		} catch (error) {
-			log?.error("billing.webhook.handler_failed", {
-				delivery: event.id,
-				type: event.type,
+			if (this.#retry(error, event)) {
+				log?.fail(error, { "billing.webhook": { retried: true } });
+				return new Response(null, { status: RETRY_LATER });
+			}
+
+			log?.warn("billing.webhook.handler_failed", {
+				event: event.type,
 				error: error instanceof Error ? error.message : String(error),
 			});
-
-			if (this.#retry(error, event)) return new Response(null, { status: RETRY_LATER });
 
 			return new Response(null, { status: OK });
 		}

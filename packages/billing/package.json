@@ -19,6 +19,7 @@
 	"dependencies": {
 		"@sdxc/api-client": "workspace:*",
 		"@sdxc/crypto": "workspace:*",
+		"@sdxc/logger": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/validate": "workspace:*",
 		"@sdxc/webhooks": "workspace:*",
