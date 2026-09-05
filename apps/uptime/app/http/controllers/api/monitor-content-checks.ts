@@ -22,9 +22,9 @@ import type { SelectMonitorContentCheck } from "~/database/schema";
 import ContentCheck from "~/app/data/content-check";
 import Monitor from "~/app/data/monitor";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
-import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId, typedId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
