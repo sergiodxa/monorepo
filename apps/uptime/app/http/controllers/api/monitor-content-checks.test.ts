@@ -20,6 +20,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { parseLink } from "~/app/lib/test/paging";
 import { encodeId } from "~/app/services/typed-id";
 import { monitorContentChecks, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -203,6 +204,74 @@ describe("GET /api/v1/monitors/:monitorId/content-checks", () => {
 			),
 		);
 		expect(response.status).toBe(403);
+	});
+});
+
+describe("GET /api/v1/monitors/:monitorId/content-checks paging", () => {
+	test("serves one page and a cursor that walks to the next", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["monitors:read"]);
+		let monitor = await createMonitorRow(db, team.id);
+		await createContentCheckRow(db, monitor.id, { value: "first" });
+		await createContentCheckRow(db, monitor.id, { value: "second" });
+
+		let path = routes.api.v1.monitors.contentChecks.index.href({
+			monitorId: encodeId("mon", monitor.id),
+		});
+		let response = await dispatch(db, request("GET", `${path}?perPage=1`, { key }));
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as {
+			data: { contentChecks: Array<{ value: string }> };
+			meta: { pagination: { total: number } };
+		};
+		expect(body.data.contentChecks).toHaveLength(1);
+		expect(body.meta.pagination.total).toBe(2);
+
+		let next = parseLink(response.headers.get("Link"));
+		expect(next).not.toBeNull();
+
+		let second = await dispatch(db, request("GET", next as string, { key }));
+		let secondBody = (await second.json()) as {
+			data: { contentChecks: Array<{ value: string }> };
+		};
+		expect(secondBody.data.contentChecks).toHaveLength(1);
+		expect(secondBody.data.contentChecks[0]?.value).not.toBe(body.data.contentChecks[0]?.value);
+	});
+
+	test("counts only the checks belonging to the monitor", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["monitors:read"]);
+		let monitor = await createMonitorRow(db, team.id);
+		let otherMonitor = await createMonitorRow(db, team.id);
+		await createContentCheckRow(db, monitor.id);
+		await createContentCheckRow(db, otherMonitor.id);
+
+		let path = routes.api.v1.monitors.contentChecks.index.href({
+			monitorId: encodeId("mon", monitor.id),
+		});
+		let response = await dispatch(db, request("GET", path, { key }));
+
+		let body = (await response.json()) as { meta: { pagination: { total: number } } };
+		expect(body.meta.pagination.total).toBe(1);
+	});
+
+	test("rejects a malformed cursor as a bad request", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["monitors:read"]);
+		let monitor = await createMonitorRow(db, team.id);
+
+		let path = routes.api.v1.monitors.contentChecks.index.href({
+			monitorId: encodeId("mon", monitor.id),
+		});
+		let response = await dispatch(db, request("GET", `${path}?cursor=not-a-cursor`, { key }));
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as { error: { code: string } };
+		expect(body.error.code).toBe("BAD_REQUEST");
 	});
 });
 

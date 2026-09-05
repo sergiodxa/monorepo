@@ -8,7 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BadRequest, NotFound } from "@sdxc/http/status-code";
+import { BadRequest, InternalServerError, NotFound, Ok } from "@sdxc/http/status-code";
+import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
@@ -23,7 +24,8 @@ import AlertEvent from "~/app/data/alert-event";
 import Monitor from "~/app/data/monitor";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { apiError, apiSuccess, parsePaginationQuery } from "~/app/services/api-response";
+import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiPage, NEWEST_FIRST, newestFirst, PAGING } from "~/app/services/pagination";
 import { encodeId, encodeMonitorId, typedId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
@@ -176,24 +178,39 @@ export default createController(monitorRoutes, {
 				let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
 				if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
 
-				let { limit, offset } = parsePaginationQuery(ctx.url, { defaultLimit: 50, maxLimit: 100 });
-				let { results, hasMore } = await Monitor.listResults(db, monitorId, { limit, offset });
+				let params = PAGING.parse(ctx.url.searchParams);
+				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
 
-				return apiSuccess({
-					results: results.map((row) => ({
-						/**
-						 * A check result is keyed by `Monitor.scheduledJobId` — the monitor id and
-						 * the minute the check was scheduled for — which is what lets repeated
-						 * deliveries of one minute's cron collapse onto a single row. That key
-						 * travels as stored, since a TypeID encodes a UUID and this is a pair.
-						 */
-						id: row.id,
-						responseStatus: row.response_status,
-						responseTimeMs: row.response_time_ms,
-						completedAt: row.completed_at,
-						createdAt: row.created_at,
-					})),
-					pagination: { limit, offset, hasMore },
+				let page = await Pagination.byKeyset(Monitor.resultsQuery(db, monitorId), {
+					orderBy: NEWEST_FIRST,
+					cursor: params.data.cursor,
+					limit: params.data.perPage,
+				});
+
+				if (isFailure(page)) {
+					if (page.error instanceof InvalidCursorError) {
+						return apiError("BAD_REQUEST", page.error.message, BadRequest);
+					}
+					return apiError("INTERNAL", page.error.message, InternalServerError);
+				}
+
+				let results = page.data.items.map((row) => ({
+					/**
+					 * A check result is keyed by `Monitor.scheduledJobId` — the monitor id and
+					 * the minute the check was scheduled for — which is what lets repeated
+					 * deliveries of one minute's cron collapse onto a single row. That key
+					 * travels as stored, since a TypeID encodes a UUID and this is a pair.
+					 */
+					id: row.id,
+					responseStatus: row.response_status,
+					responseTimeMs: row.response_time_ms,
+					completedAt: row.completed_at,
+					createdAt: row.created_at,
+				}));
+
+				return apiPage({ results }, page.data, {
+					url: ctx.url,
+					perPage: params.data.perPage,
 				});
 			},
 		},
@@ -207,20 +224,36 @@ export default createController(monitorRoutes, {
 				let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
 				if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
 
-				let { limit } = parsePaginationQuery(ctx.url, { defaultLimit: 50, maxLimit: 200 });
-				let events = await AlertEvent.listByMonitorId(db, monitorId, limit);
+				let params = PAGING.parse(ctx.url.searchParams);
+				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
 
-				return apiSuccess({
-					events: events.map((event) => ({
-						id: encodeId("evt", event.id),
-						alertId: encodeId("alt", event.alert_id),
-						monitorId: encodeMonitorId(event.monitor_type, event.monitor_id),
-						eventType: event.event_type,
-						status: event.status,
-						sentAt: event.sent_at,
-						errorMessage: event.error_message,
-						createdAt: event.created_at,
-					})),
+				let page = await Pagination.byKeyset(AlertEvent.eventsByMonitorQuery(db, monitorId), {
+					orderBy: newestFirst("sent_at"),
+					cursor: params.data.cursor,
+					limit: params.data.perPage,
+				});
+
+				if (isFailure(page)) {
+					if (page.error instanceof InvalidCursorError) {
+						return apiError("BAD_REQUEST", page.error.message, BadRequest);
+					}
+					return apiError("INTERNAL", page.error.message, InternalServerError);
+				}
+
+				let events = page.data.items.map((event) => ({
+					id: encodeId("evt", event.id),
+					alertId: encodeId("alt", event.alert_id),
+					monitorId: encodeMonitorId(event.monitor_type, event.monitor_id),
+					eventType: event.event_type,
+					status: event.status,
+					sentAt: event.sent_at,
+					errorMessage: event.error_message,
+					createdAt: event.created_at,
+				}));
+
+				return apiPage({ events }, page.data, {
+					url: ctx.url,
+					perPage: params.data.perPage,
 				});
 			},
 		},

@@ -93,6 +93,19 @@ describe("StatusPage.listByTeam", () => {
 	});
 });
 
+describe("StatusPage.listByTeamQuery", () => {
+	test("selects the team's status pages and none of another team's", async () => {
+		let { db } = createTestDatabase();
+		let teamA = crypto.randomUUID();
+		let teamB = crypto.randomUUID();
+		let mine = await StatusPage.create(db, teamA, statusPageInput());
+		await StatusPage.create(db, teamB, statusPageInput());
+
+		let rows = await StatusPage.listByTeamQuery(db, teamA).all();
+		expect(rows.map((row) => row.id)).toEqual([mine.id]);
+	});
+});
+
 describe("StatusPage.findByIdForTeam", () => {
 	test("finds a page scoped to its team", async () => {
 		let { db } = createTestDatabase();

@@ -99,6 +99,16 @@ export default class Monitor {
 		});
 	}
 
+	/**
+	 * A team's HTTP monitors, as a query for a paging strategy to finish.
+	 *
+	 * The ordering is left off deliberately: `Pagination.byKeyset()` owns it, because
+	 * it needs the sort keys both to seek and to mint the cursor.
+	 */
+	static listByTeamQuery(db: Database, teamId: string) {
+		return db.query(monitors).where({ team_id: teamId });
+	}
+
 	/** Counts a team's monitors. */
 	static async countByTeam(db: Database, teamId: string) {
 		return await db.count(monitors, { where: { team_id: teamId } });
@@ -198,21 +208,14 @@ export default class Monitor {
 		);
 	}
 
-	/** Lists a monitor's most recent completed results, newest first, with pagination. */
-	static async listResults(
-		db: Database,
-		monitorId: string,
-		options: { limit: number; offset: number },
-	) {
-		let rows = await db.findMany(monitorResults, {
-			where: { monitor_id: monitorId },
-			orderBy: ["created_at", "desc"],
-			limit: options.limit + 1,
-			offset: options.offset,
-		});
-
-		let hasMore = rows.length > options.limit;
-		return { results: hasMore ? rows.slice(0, options.limit) : rows, hasMore };
+	/**
+	 * A monitor's completed results, as a query for a paging strategy to finish.
+	 *
+	 * The ordering is left off deliberately: `Pagination.byKeyset()` owns it, because
+	 * it needs the sort keys both to seek and to mint the cursor.
+	 */
+	static resultsQuery(db: Database, monitorId: string) {
+		return db.query(monitorResults).where({ monitor_id: monitorId });
 	}
 
 	/** Computes total checks, uptime percentage, last-check time, and p99 response time for one monitor. */

@@ -48,6 +48,10 @@ Send these ids back exactly as you received them, in both path segments and requ
 - [Invites](/docs/api/resources/invites) - Send and manage team invitations
 - [API Keys](/docs/api/resources/api-keys) - Create and revoke API keys
 
+## Pagination
+
+Every endpoint that returns a list serves one page at a time and advertises the next in the `Link` header. See [Pagination](/docs/api/pagination) for how to walk a list from end to end.
+
 ## Rate Limits
 
 API requests are subject to rate limiting based on your plan. See [Rate Limits](/docs/api/rate-limits) for details on limits and how to handle rate limit errors.

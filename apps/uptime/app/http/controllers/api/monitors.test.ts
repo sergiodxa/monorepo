@@ -19,6 +19,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { parseLink } from "~/app/lib/test/paging";
 import { encodeId } from "~/app/services/typed-id";
 import { monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -107,6 +108,33 @@ function request(
 	});
 }
 
+describe("GET /api/v1/monitors total", () => {
+	test("counts every monitor on the team, not just the page", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let otherTeam = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["monitors:read"]);
+		await createMonitorRow(db, team.id);
+		await createMonitorRow(db, team.id);
+		await createMonitorRow(db, team.id);
+		// A monitor the key cannot see must not reach the total either.
+		await createMonitorRow(db, otherTeam.id);
+
+		let response = await dispatch(
+			db,
+			request("GET", `${routes.api.v1.monitors.index.href()}?perPage=1`, { key }),
+		);
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as {
+			data: { monitors: unknown[] };
+			meta: { pagination: { total: number; perPage: number } };
+		};
+		expect(body.data.monitors).toHaveLength(1);
+		expect(body.meta.pagination.total).toBe(3);
+	});
+});
+
 describe("GET /api/v1/monitors", () => {
 	test("lists only the calling team's monitors", async () => {
 		let { db } = createTestDatabase();
@@ -123,6 +151,46 @@ describe("GET /api/v1/monitors", () => {
 		let body = (await response.json()) as { data: { monitors: Array<{ name: string }> } };
 		expect(body.data.monitors).toHaveLength(1);
 		expect(body.data.monitors[0]?.name).toBe("Mine");
+	});
+
+	test("serves one page and a cursor that walks to the next", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["monitors:read"]);
+
+		await createMonitorRow(db, team.id, { name: "First" });
+		await createMonitorRow(db, team.id, { name: "Second" });
+
+		let path = routes.api.v1.monitors.index.href();
+		let response = await dispatch(db, request("GET", `${path}?perPage=1`, { key }));
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as { data: { monitors: Array<{ name: string }> } };
+		expect(body.data.monitors).toHaveLength(1);
+
+		// Navigation rides in the headers now, so following the feed means following `Link`.
+		let next = parseLink(response.headers.get("Link"));
+		expect(next).not.toBeNull();
+
+		let second = await dispatch(db, request("GET", next as string, { key }));
+		expect(second.status).toBe(200);
+		let secondBody = (await second.json()) as { data: { monitors: Array<{ name: string }> } };
+		expect(secondBody.data.monitors).toHaveLength(1);
+		// The second page is a different row, which is the whole point of seeking.
+		expect(secondBody.data.monitors[0]?.name).not.toBe(body.data.monitors[0]?.name);
+	});
+
+	test("rejects a malformed cursor as a bad request", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["monitors:read"]);
+
+		let path = routes.api.v1.monitors.index.href();
+		let response = await dispatch(db, request("GET", `${path}?cursor=not-a-cursor`, { key }));
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as { error: { code: string } };
+		expect(body.error.code).toBe("BAD_REQUEST");
 	});
 
 	test("returns 401 with a missing Authorization header", async () => {

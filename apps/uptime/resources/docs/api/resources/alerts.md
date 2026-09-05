@@ -5,7 +5,7 @@ section:
   title: API Resources
   order: 5
 order: 7
-lastUpdated: 2026-08-04
+lastUpdated: 2026-09-05
 ---
 
 Alerts notify you when monitors detect issues. Each team can have up to 10 alerts with different notification strategies: email, webhook, Slack, or Discord.
@@ -26,18 +26,25 @@ Omitting `cooldownMinutes` defaults it to `60` — one hour — matching the def
 
 ## GET /api/v1/alerts
 
-Returns all alerts for your team.
+Returns the alerts for your team. This endpoint is paginated; see [Pagination](/docs/api/pagination) for how to walk the whole list.
 
 ### Required Scope
 
 `alerts:read`
+
+### Query Parameters
+
+| Parameter | Type    | Required | Description                               |
+| --------- | ------- | -------- | ----------------------------------------- |
+| `perPage` | integer | No       | Results per page, 1-200 (default: 50)     |
+| `cursor`  | string  | No       | Page to fetch, taken from a `Link` header |
 
 ### Example Request
 
 #### cURL
 
 ```bash
-curl https://uptime.sergiodxa.com/api/v1/alerts \
+curl "https://uptime.sergiodxa.com/api/v1/alerts?perPage=25" \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -45,37 +52,59 @@ curl https://uptime.sergiodxa.com/api/v1/alerts \
 
 ```json
 {
-	"alerts": [
-		{
-			"id": "alt_abc123",
-			"name": "Email Alert",
-			"strategy": "email",
-			"notifyOnRecovery": true,
-			"cooldownMinutes": 5,
-			"monitorType": null,
-			"monitorId": null,
-			"createdAt": "2026-02-14T10:00:00Z",
-			"updatedAt": "2026-02-14T10:00:00Z"
-		},
-		{
-			"id": "alt_def456",
-			"name": "Slack Notifications",
-			"strategy": "slack",
-			"notifyOnRecovery": true,
-			"cooldownMinutes": 0,
-			"monitorType": "http",
-			"monitorId": "mon_abc123",
-			"createdAt": "2026-02-14T11:00:00Z",
-			"updatedAt": "2026-02-14T11:00:00Z"
+	"data": {
+		"alerts": [
+			{
+				"id": "alt_abc123",
+				"name": "Email Alert",
+				"notifyOnRecovery": true,
+				"cooldownMinutes": 5,
+				"config": {
+					"strategy": "email",
+					"to": "ops@example.com",
+					"subjectPrefix": "[Uptime]"
+				},
+				"monitorType": null,
+				"monitorId": null,
+				"createdAt": 1771070400000,
+				"updatedAt": 1771070400000
+			},
+			{
+				"id": "alt_def456",
+				"name": "Slack Notifications",
+				"notifyOnRecovery": true,
+				"cooldownMinutes": 0,
+				"config": {
+					"strategy": "slack",
+					"channel": "#incidents"
+				},
+				"monitorType": "http",
+				"monitorId": "mon_abc123",
+				"createdAt": 1771074000000,
+				"updatedAt": 1771074000000
+			}
+		]
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z",
+		"pagination": {
+			"next": null,
+			"prev": null,
+			"perPage": 25,
+			"total": 2
 		}
-	]
+	}
 }
 ```
+
+Webhook URLs and secrets stay out of `config`, so a webhook or Discord alert reports only its `strategy`.
 
 ### Possible Errors
 
 | Status | Code           | Description                              |
 | ------ | -------------- | ---------------------------------------- |
+| 400    | BAD_REQUEST    | Invalid or malformed cursor              |
 | 401    | UNAUTHORIZED   | Missing or invalid API key               |
 | 403    | FORBIDDEN      | API key doesn't have `alerts:read` scope |
 | 429    | RATE_LIMITED   | Too many requests                        |
@@ -87,59 +116,111 @@ curl https://uptime.sergiodxa.com/api/v1/alerts \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": ["alerts"],
+	"required": ["data", "meta"],
 	"properties": {
-		"alerts": {
-			"type": "array",
-			"items": {
-				"type": "object",
-				"required": [
-					"id",
-					"name",
-					"strategy",
-					"notifyOnRecovery",
-					"cooldownMinutes",
-					"monitorId",
-					"createdAt",
-					"updatedAt"
-				],
-				"properties": {
-					"id": {
-						"type": "string",
-						"pattern": "^alt_[a-zA-Z0-9]+$"
-					},
-					"name": {
-						"type": "string",
-						"minLength": 1,
-						"maxLength": 100
-					},
-					"strategy": {
-						"type": "string",
-						"enum": ["email", "webhook", "slack", "discord"]
-					},
-					"notifyOnRecovery": {
-						"type": "boolean"
-					},
-					"cooldownMinutes": {
-						"type": "integer",
-						"minimum": 0,
-						"maximum": 1440
-					},
-					"monitorType": {
-						"type": ["string", "null"],
-						"enum": ["http", "dns", "tcp", "cron", null]
-					},
-					"monitorId": {
-						"type": ["string", "null"],
-						"pattern": "^mon_[a-zA-Z0-9]+$"
-					},
-					"createdAt": {
-						"type": "string",
-						"format": "date-time"
-					},
-					"updatedAt": {
-						"type": "string",
-						"format": "date-time"
+		"data": {
+			"type": "object",
+			"required": ["alerts"],
+			"properties": {
+				"alerts": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": [
+							"id",
+							"name",
+							"notifyOnRecovery",
+							"cooldownMinutes",
+							"config",
+							"monitorType",
+							"monitorId",
+							"createdAt",
+							"updatedAt"
+						],
+						"properties": {
+							"id": {
+								"type": "string",
+								"pattern": "^alt_[a-zA-Z0-9]+$"
+							},
+							"name": {
+								"type": "string",
+								"minLength": 1,
+								"maxLength": 255
+							},
+							"notifyOnRecovery": {
+								"type": "boolean"
+							},
+							"cooldownMinutes": {
+								"type": "integer",
+								"minimum": 0,
+								"maximum": 1440
+							},
+							"config": {
+								"type": "object",
+								"required": ["strategy"],
+								"properties": {
+									"strategy": {
+										"type": "string",
+										"enum": ["email", "webhook", "slack", "discord"]
+									},
+									"to": {
+										"type": "string",
+										"format": "email"
+									},
+									"subjectPrefix": {
+										"type": "string"
+									},
+									"channel": {
+										"type": ["string", "null"]
+									}
+								}
+							},
+							"monitorType": {
+								"type": ["string", "null"],
+								"enum": ["http", "dns", "tcp", "cron", null]
+							},
+							"monitorId": {
+								"type": ["string", "null"]
+							},
+							"createdAt": {
+								"type": "integer"
+							},
+							"updatedAt": {
+								"type": "integer"
+							}
+						}
+					}
+				}
+			}
+		},
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": {
+					"type": "string",
+					"format": "uuid"
+				},
+				"timestamp": {
+					"type": "string",
+					"format": "date-time"
+				},
+				"pagination": {
+					"type": "object",
+					"required": ["next", "prev", "perPage"],
+					"properties": {
+						"next": {
+							"type": ["string", "null"]
+						},
+						"prev": {
+							"type": ["string", "null"]
+						},
+						"perPage": {
+							"type": "integer"
+						},
+						"total": {
+							"type": "integer"
+						}
 					}
 				}
 			}
@@ -835,7 +916,7 @@ Returns `204 No Content` with no response body on success.
 
 ## GET /api/v1/alerts/:id/events
 
-Returns the event history for an alert.
+Returns the event history for an alert, newest first. The history is paginated; see [Pagination](/docs/api/pagination) for how to walk further back.
 
 ### Required Scope
 
@@ -843,16 +924,17 @@ Returns the event history for an alert.
 
 ### Query Parameters
 
-| Parameter | Type    | Required | Description                                     |
-| --------- | ------- | -------- | ----------------------------------------------- |
-| `limit`   | integer | No       | Number of events to return, 1-200 (default: 50) |
+| Parameter | Type    | Required | Description                               |
+| --------- | ------- | -------- | ----------------------------------------- |
+| `perPage` | integer | No       | Results per page, 1-200 (default: 50)     |
+| `cursor`  | string  | No       | Page to fetch, taken from a `Link` header |
 
 ### Example Request
 
 #### cURL
 
 ```bash
-curl "https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123/events?limit=10" \
+curl "https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123/events?perPage=10" \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -860,48 +942,65 @@ curl "https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123/events?limit=10" \
 
 ```json
 {
-	"events": [
-		{
-			"id": "evt_abc123",
-			"alertId": "alt_abc123",
-			"monitorId": "mon_def456",
-			"type": "triggered",
-			"status": "delivered",
-			"createdAt": "2026-02-14T10:30:00Z"
-		},
-		{
-			"id": "evt_def456",
-			"alertId": "alt_abc123",
-			"monitorId": "mon_def456",
-			"type": "recovered",
-			"status": "delivered",
-			"createdAt": "2026-02-14T10:35:00Z"
+	"data": {
+		"events": [
+			{
+				"id": "evt_abc123",
+				"alertId": "alt_abc123",
+				"monitorId": "mon_def456",
+				"eventType": "down",
+				"status": "sent",
+				"sentAt": 1771072200000,
+				"errorMessage": null,
+				"createdAt": 1771072200000
+			},
+			{
+				"id": "evt_def456",
+				"alertId": "alt_abc123",
+				"monitorId": "mon_def456",
+				"eventType": "up",
+				"status": "sent",
+				"sentAt": 1771072500000,
+				"errorMessage": null,
+				"createdAt": 1771072500000
+			}
+		]
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z",
+		"pagination": {
+			"next": "eyJkIjoiYWZ0ZXIi",
+			"prev": null,
+			"perPage": 10
 		}
-	]
+	}
 }
 ```
 
 ### Event Fields
 
-| Field       | Type   | Description                                          |
-| ----------- | ------ | ---------------------------------------------------- |
-| `id`        | string | Unique event identifier                              |
-| `alertId`   | string | The alert that was triggered                         |
-| `monitorId` | string | The monitor that caused the event                    |
-| `type`      | string | Event type: `triggered` or `recovered`               |
-| `status`    | string | Delivery status: `pending`, `delivered`, or `failed` |
-| `createdAt` | string | ISO 8601 timestamp of when the event occurred        |
+| Field          | Type           | Description                                                              |
+| -------------- | -------------- | ------------------------------------------------------------------------ |
+| `id`           | string         | Unique event identifier                                                  |
+| `alertId`      | string         | The alert the event belongs to                                           |
+| `monitorId`    | string         | The monitor that caused the event                                        |
+| `eventType`    | string         | What the monitor did: `down`, `up`, or `degraded`                        |
+| `status`       | string         | Delivery outcome: `sent`, `skipped_cooldown`, `skipped_cap`, or `failed` |
+| `sentAt`       | integer        | Unix timestamp in milliseconds of when the notification was sent         |
+| `errorMessage` | string \| null | Why delivery failed, or `null` when it succeeded                         |
+| `createdAt`    | integer        | Unix timestamp in milliseconds of when the event was recorded            |
 
 ### Possible Errors
 
-| Status | Code             | Description                              |
-| ------ | ---------------- | ---------------------------------------- |
-| 400    | VALIDATION_ERROR | Invalid limit parameter                  |
-| 401    | UNAUTHORIZED     | Missing or invalid API key               |
-| 403    | FORBIDDEN        | API key doesn't have `alerts:read` scope |
-| 404    | NOT_FOUND        | Alert not found                          |
-| 429    | RATE_LIMITED     | Too many requests                        |
-| 500    | INTERNAL_ERROR   | Server error                             |
+| Status | Code           | Description                              |
+| ------ | -------------- | ---------------------------------------- |
+| 400    | BAD_REQUEST    | Invalid or malformed cursor              |
+| 401    | UNAUTHORIZED   | Missing or invalid API key               |
+| 403    | FORBIDDEN      | API key doesn't have `alerts:read` scope |
+| 404    | NOT_FOUND      | Alert not found                          |
+| 429    | RATE_LIMITED   | Too many requests                        |
+| 500    | INTERNAL_ERROR | Server error                             |
 
 ### Response Schema
 
@@ -909,37 +1008,85 @@ curl "https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123/events?limit=10" \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": ["events"],
+	"required": ["data", "meta"],
 	"properties": {
-		"events": {
-			"type": "array",
-			"items": {
-				"type": "object",
-				"required": ["id", "alertId", "monitorId", "type", "status", "createdAt"],
-				"properties": {
-					"id": {
-						"type": "string",
-						"pattern": "^evt_[a-zA-Z0-9]+$"
-					},
-					"alertId": {
-						"type": "string",
-						"pattern": "^alt_[a-zA-Z0-9]+$"
-					},
-					"monitorId": {
-						"type": "string",
-						"pattern": "^mon_[a-zA-Z0-9]+$"
-					},
-					"type": {
-						"type": "string",
-						"enum": ["triggered", "recovered"]
-					},
-					"status": {
-						"type": "string",
-						"enum": ["pending", "delivered", "failed"]
-					},
-					"createdAt": {
-						"type": "string",
-						"format": "date-time"
+		"data": {
+			"type": "object",
+			"required": ["events"],
+			"properties": {
+				"events": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": [
+							"id",
+							"alertId",
+							"monitorId",
+							"eventType",
+							"status",
+							"sentAt",
+							"errorMessage",
+							"createdAt"
+						],
+						"properties": {
+							"id": {
+								"type": "string",
+								"pattern": "^evt_[a-zA-Z0-9]+$"
+							},
+							"alertId": {
+								"type": "string",
+								"pattern": "^alt_[a-zA-Z0-9]+$"
+							},
+							"monitorId": {
+								"type": "string"
+							},
+							"eventType": {
+								"type": "string",
+								"enum": ["down", "up", "degraded"]
+							},
+							"status": {
+								"type": "string",
+								"enum": ["sent", "skipped_cooldown", "skipped_cap", "failed"]
+							},
+							"sentAt": {
+								"type": "integer"
+							},
+							"errorMessage": {
+								"type": ["string", "null"]
+							},
+							"createdAt": {
+								"type": "integer"
+							}
+						}
+					}
+				}
+			}
+		},
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": {
+					"type": "string",
+					"format": "uuid"
+				},
+				"timestamp": {
+					"type": "string",
+					"format": "date-time"
+				},
+				"pagination": {
+					"type": "object",
+					"required": ["next", "prev", "perPage"],
+					"properties": {
+						"next": {
+							"type": ["string", "null"]
+						},
+						"prev": {
+							"type": ["string", "null"]
+						},
+						"perPage": {
+							"type": "integer"
+						}
 					}
 				}
 			}

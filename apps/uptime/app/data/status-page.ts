@@ -63,6 +63,16 @@ export default class StatusPage {
 		});
 	}
 
+	/**
+	 * Every status page for a team, as a query for a paging strategy to finish.
+	 *
+	 * The ordering is left off deliberately: `Pagination.byKeyset()` owns it, because
+	 * it needs the sort keys both to seek and to mint the cursor.
+	 */
+	static listByTeamQuery(db: Database, teamId: string) {
+		return db.query(statusPages).where({ team_id: teamId });
+	}
+
 	/** Finds a single status page scoped to a team, or `null` when it doesn't belong to it. */
 	static async findByIdForTeam(db: Database, teamId: string, statusPageId: string) {
 		return await db.findOne(statusPages, { where: { id: statusPageId, team_id: teamId } });

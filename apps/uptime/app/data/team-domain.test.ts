@@ -121,6 +121,19 @@ describe("TeamDomain.listByTeam", () => {
 	});
 });
 
+describe("TeamDomain.listByTeamQuery", () => {
+	test("selects the team's domains and none of another team's", async () => {
+		let { db } = createTestDatabase();
+		let teamA = crypto.randomUUID();
+		let teamB = crypto.randomUUID();
+		let mine = await TeamDomain.create(db, teamA, "acme.example.com");
+		await TeamDomain.create(db, teamB, "other.example.com");
+
+		let rows = await TeamDomain.listByTeamQuery(db, teamA).all();
+		expect(rows.map((row) => row.id)).toEqual([mine.id]);
+	});
+});
+
 describe("TeamDomain.listUnverified", () => {
 	test("lists every unverified domain across every team", async () => {
 		let { db } = createTestDatabase();

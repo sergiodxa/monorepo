@@ -206,6 +206,7 @@
         "@sdxc/logger": "workspace:*",
         "@sdxc/mail": "workspace:*",
         "@sdxc/markdown": "workspace:*",
+        "@sdxc/pagination": "workspace:*",
         "@sdxc/rate-limit": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/seo": "workspace:*",

@@ -214,18 +214,27 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/team \
 
 ## GET /api/v1/memberships
 
-Returns all memberships for the current team.
+Returns the memberships of the current team.
+
+This endpoint is paginated. See [Pagination](/docs/api/pagination) for how to page through the full list.
 
 ### Required Scope
 
 `teams:read`
+
+### Query Parameters
+
+| Parameter | Type    | Required | Description                               |
+| --------- | ------- | -------- | ----------------------------------------- |
+| `perPage` | integer | No       | Results per page, 1-200 (default: 50)     |
+| `cursor`  | string  | No       | Page to fetch, taken from a `Link` header |
 
 ### Example Request
 
 #### cURL
 
 ```bash
-curl https://uptime.sergiodxa.com/api/v1/memberships \
+curl -i "https://uptime.sergiodxa.com/api/v1/memberships?perPage=100" \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -233,51 +242,70 @@ curl https://uptime.sergiodxa.com/api/v1/memberships \
 
 ```json
 {
-	"memberships": [
-		{
-			"id": "mem_abc123",
-			"subjectId": "usr_xyz789",
-			"teamId": "team_abc123",
-			"role": "owner",
-			"createdAt": "2025-06-15T08:00:00Z",
-			"updatedAt": "2025-06-15T08:00:00Z"
-		},
-		{
-			"id": "mem_def456",
-			"subjectId": "usr_def456",
-			"teamId": "team_abc123",
-			"role": "admin",
-			"createdAt": "2025-08-20T14:30:00Z",
-			"updatedAt": "2025-12-01T09:15:00Z"
-		},
-		{
-			"id": "mem_ghi789",
-			"subjectId": "usr_ghi789",
-			"teamId": "team_abc123",
-			"role": "member",
-			"createdAt": "2026-01-10T11:00:00Z",
-			"updatedAt": "2026-01-10T11:00:00Z"
+	"data": {
+		"memberships": [
+			{
+				"id": "mem_abc123",
+				"subjectId": "usr_xyz789",
+				"teamId": "team_abc123",
+				"role": "owner",
+				"createdAt": 1750060800000,
+				"updatedAt": 1750060800000
+			},
+			{
+				"id": "mem_def456",
+				"subjectId": "usr_def456",
+				"teamId": "team_abc123",
+				"role": "admin",
+				"createdAt": 1755700200000,
+				"updatedAt": 1764580500000
+			},
+			{
+				"id": "mem_ghi789",
+				"subjectId": "usr_ghi789",
+				"teamId": "team_abc123",
+				"role": "member",
+				"createdAt": 1768042800000,
+				"updatedAt": 1768042800000
+			}
+		]
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z",
+		"pagination": {
+			"next": "eyJkIjoiYWZ0ZXIi",
+			"prev": null,
+			"perPage": 100,
+			"total": 142
 		}
-	]
+	}
 }
 ```
 
 ### Response Fields
 
-| Field                     | Type   | Description                                             |
-| ------------------------- | ------ | ------------------------------------------------------- |
-| `memberships`             | array  | List of team memberships                                |
-| `memberships[].id`        | string | Unique membership identifier                            |
-| `memberships[].subjectId` | string | User ID of the team member                              |
-| `memberships[].teamId`    | string | Team ID this membership belongs to                      |
-| `memberships[].role`      | string | Member's role: `owner`, `admin`, or `member`            |
-| `memberships[].createdAt` | string | ISO 8601 timestamp when the membership was created      |
-| `memberships[].updatedAt` | string | ISO 8601 timestamp when the membership was last updated |
+| Field                          | Type           | Description                                        |
+| ------------------------------ | -------------- | -------------------------------------------------- |
+| `data.memberships`             | array          | One page of team memberships                       |
+| `data.memberships[].id`        | string         | Unique membership identifier                       |
+| `data.memberships[].subjectId` | string         | User ID of the team member                         |
+| `data.memberships[].teamId`    | string         | Team ID this membership belongs to                 |
+| `data.memberships[].role`      | string         | Member's role: `owner`, `admin`, or `member`       |
+| `data.memberships[].createdAt` | integer        | Unix timestamp in milliseconds of the creation     |
+| `data.memberships[].updatedAt` | integer        | Unix timestamp in milliseconds of the last update  |
+| `meta.requestId`               | string         | Identifier for this request                        |
+| `meta.timestamp`               | string         | ISO 8601 timestamp of the response                 |
+| `meta.pagination.next`         | string \| null | Cursor for the following page, `null` on the last  |
+| `meta.pagination.prev`         | string \| null | Cursor for the preceding page, `null` on the first |
+| `meta.pagination.perPage`      | integer        | Results this page was built with                   |
+| `meta.pagination.total`        | integer        | Memberships matching, across every page            |
 
 ### Possible Errors
 
 | Status | Code           | Description                             |
 | ------ | -------------- | --------------------------------------- |
+| 400    | BAD_REQUEST    | Invalid or malformed cursor             |
 | 401    | UNAUTHORIZED   | Missing or invalid API key              |
 | 403    | FORBIDDEN      | API key doesn't have `teams:read` scope |
 | 429    | RATE_LIMITED   | Too many requests                       |
@@ -289,34 +317,70 @@ curl https://uptime.sergiodxa.com/api/v1/memberships \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": ["memberships"],
+	"required": ["data", "meta"],
 	"properties": {
-		"memberships": {
-			"type": "array",
-			"items": {
-				"type": "object",
-				"required": ["id", "subjectId", "teamId", "role", "createdAt", "updatedAt"],
-				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"subjectId": {
-						"type": "string"
-					},
-					"teamId": {
-						"type": "string"
-					},
-					"role": {
-						"type": "string",
-						"enum": ["owner", "admin", "member"]
-					},
-					"createdAt": {
-						"type": "string",
-						"format": "date-time"
-					},
-					"updatedAt": {
-						"type": "string",
-						"format": "date-time"
+		"data": {
+			"type": "object",
+			"required": ["memberships"],
+			"properties": {
+				"memberships": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": ["id", "subjectId", "teamId", "role", "createdAt", "updatedAt"],
+						"properties": {
+							"id": {
+								"type": "string"
+							},
+							"subjectId": {
+								"type": "string"
+							},
+							"teamId": {
+								"type": "string"
+							},
+							"role": {
+								"type": "string",
+								"enum": ["owner", "admin", "member"]
+							},
+							"createdAt": {
+								"type": "integer"
+							},
+							"updatedAt": {
+								"type": "integer"
+							}
+						}
+					}
+				}
+			}
+		},
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": {
+					"type": "string",
+					"format": "uuid"
+				},
+				"timestamp": {
+					"type": "string",
+					"format": "date-time"
+				},
+				"pagination": {
+					"type": "object",
+					"required": ["next", "prev", "perPage"],
+					"properties": {
+						"next": {
+							"type": ["string", "null"]
+						},
+						"prev": {
+							"type": ["string", "null"]
+						},
+						"perPage": {
+							"type": "integer"
+						},
+						"total": {
+							"type": "integer"
+						}
 					}
 				}
 			}
@@ -327,18 +391,27 @@ curl https://uptime.sergiodxa.com/api/v1/memberships \
 
 ## GET /api/v1/team-domains
 
-Returns all custom domains configured for the team's status pages.
+Returns the custom domains configured for the team's status pages.
+
+Results arrive a page at a time; follow the `Link` header as described in [Pagination](/docs/api/pagination) to reach every domain.
 
 ### Required Scope
 
 `team-domains:read`
+
+### Query Parameters
+
+| Parameter | Type    | Required | Description                               |
+| --------- | ------- | -------- | ----------------------------------------- |
+| `perPage` | integer | No       | Results per page, 1-200 (default: 50)     |
+| `cursor`  | string  | No       | Page to fetch, taken from a `Link` header |
 
 ### Example Request
 
 #### cURL
 
 ```bash
-curl https://uptime.sergiodxa.com/api/v1/team-domains \
+curl -i "https://uptime.sergiodxa.com/api/v1/team-domains?perPage=100" \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -346,40 +419,62 @@ curl https://uptime.sergiodxa.com/api/v1/team-domains \
 
 ```json
 {
-	"domains": [
-		{
-			"id": "dom_abc123",
-			"hostname": "status.acme.com",
-			"teamId": "team_abc123",
-			"createdAt": "2025-09-01T12:00:00Z",
-			"updatedAt": "2025-09-01T12:00:00Z"
-		},
-		{
-			"id": "dom_def456",
-			"hostname": "uptime.acme.io",
-			"teamId": "team_abc123",
-			"createdAt": "2026-01-15T09:30:00Z",
-			"updatedAt": "2026-01-15T09:30:00Z"
+	"data": {
+		"teamDomains": [
+			{
+				"id": "dom_abc123",
+				"hostname": "status.acme.com",
+				"verifiedAt": 1756728000000,
+				"teamId": "team_abc123",
+				"createdAt": 1756641600000,
+				"updatedAt": 1756728000000
+			},
+			{
+				"id": "dom_def456",
+				"hostname": "uptime.acme.io",
+				"verifiedAt": null,
+				"teamId": "team_abc123",
+				"createdAt": 1768469400000,
+				"updatedAt": 1768469400000
+			}
+		]
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z",
+		"pagination": {
+			"next": null,
+			"prev": null,
+			"perPage": 100,
+			"total": 2
 		}
-	]
+	}
 }
 ```
 
 ### Response Fields
 
-| Field                 | Type   | Description                                         |
-| --------------------- | ------ | --------------------------------------------------- |
-| `domains`             | array  | List of team domains                                |
-| `domains[].id`        | string | Unique domain identifier                            |
-| `domains[].hostname`  | string | The custom domain hostname                          |
-| `domains[].teamId`    | string | Team ID this domain belongs to                      |
-| `domains[].createdAt` | string | ISO 8601 timestamp when the domain was added        |
-| `domains[].updatedAt` | string | ISO 8601 timestamp when the domain was last updated |
+| Field                           | Type            | Description                                        |
+| ------------------------------- | --------------- | -------------------------------------------------- |
+| `data.teamDomains`              | array           | One page of team domains                           |
+| `data.teamDomains[].id`         | string          | Unique domain identifier                           |
+| `data.teamDomains[].hostname`   | string          | The custom domain hostname                         |
+| `data.teamDomains[].verifiedAt` | integer \| null | Unix timestamp in milliseconds of the verification |
+| `data.teamDomains[].teamId`     | string          | Team ID this domain belongs to                     |
+| `data.teamDomains[].createdAt`  | integer         | Unix timestamp in milliseconds of the creation     |
+| `data.teamDomains[].updatedAt`  | integer         | Unix timestamp in milliseconds of the last update  |
+| `meta.requestId`                | string          | Identifier for this request                        |
+| `meta.timestamp`                | string          | ISO 8601 timestamp of the response                 |
+| `meta.pagination.next`          | string \| null  | Cursor for the following page, `null` on the last  |
+| `meta.pagination.prev`          | string \| null  | Cursor for the preceding page, `null` on the first |
+| `meta.pagination.perPage`       | integer         | Results this page was built with                   |
+| `meta.pagination.total`         | integer         | Domains matching, across every page                |
 
 ### Possible Errors
 
 | Status | Code           | Description                                    |
 | ------ | -------------- | ---------------------------------------------- |
+| 400    | BAD_REQUEST    | Invalid or malformed cursor                    |
 | 401    | UNAUTHORIZED   | Missing or invalid API key                     |
 | 403    | FORBIDDEN      | API key doesn't have `team-domains:read` scope |
 | 429    | RATE_LIMITED   | Too many requests                              |
@@ -391,32 +486,71 @@ curl https://uptime.sergiodxa.com/api/v1/team-domains \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": ["domains"],
+	"required": ["data", "meta"],
 	"properties": {
-		"domains": {
-			"type": "array",
-			"items": {
-				"type": "object",
-				"required": ["id", "hostname", "teamId", "createdAt", "updatedAt"],
-				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"hostname": {
-						"type": "string",
-						"minLength": 1,
-						"maxLength": 255
-					},
-					"teamId": {
-						"type": "string"
-					},
-					"createdAt": {
-						"type": "string",
-						"format": "date-time"
-					},
-					"updatedAt": {
-						"type": "string",
-						"format": "date-time"
+		"data": {
+			"type": "object",
+			"required": ["teamDomains"],
+			"properties": {
+				"teamDomains": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": ["id", "hostname", "verifiedAt", "teamId", "createdAt", "updatedAt"],
+						"properties": {
+							"id": {
+								"type": "string"
+							},
+							"hostname": {
+								"type": "string",
+								"minLength": 1,
+								"maxLength": 255
+							},
+							"verifiedAt": {
+								"type": ["integer", "null"]
+							},
+							"teamId": {
+								"type": "string"
+							},
+							"createdAt": {
+								"type": "integer"
+							},
+							"updatedAt": {
+								"type": "integer"
+							}
+						}
+					}
+				}
+			}
+		},
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": {
+					"type": "string",
+					"format": "uuid"
+				},
+				"timestamp": {
+					"type": "string",
+					"format": "date-time"
+				},
+				"pagination": {
+					"type": "object",
+					"required": ["next", "prev", "perPage"],
+					"properties": {
+						"next": {
+							"type": ["string", "null"]
+						},
+						"prev": {
+							"type": ["string", "null"]
+						},
+						"perPage": {
+							"type": "integer"
+						},
+						"total": {
+							"type": "integer"
+						}
 					}
 				}
 			}

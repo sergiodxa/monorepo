@@ -10,7 +10,7 @@
 import { Forbidden, Ok, Unauthorized } from "@sdxc/http/status-code";
 import { describe, expect, test } from "vitest";
 
-import { apiError, apiSuccess, parsePaginationQuery } from "~/app/services/api-response";
+import { apiError, apiSuccess } from "~/app/services/api-response";
 
 describe("apiSuccess", () => {
 	test("wraps the payload in a data/meta envelope with a 200 default", async () => {
@@ -32,6 +32,28 @@ describe("apiSuccess", () => {
 		let response = apiSuccess({ deleted: true }, Forbidden);
 		expect(response.status).toBe(Forbidden.status);
 	});
+
+	test("sends the headers a paginated list annotated", () => {
+		let headers = new Headers({ Link: '<https://example.com?cursor=abc>; rel="next"' });
+		let response = apiSuccess({ results: [] }, Ok, { headers });
+		expect(response.headers.get("Link")).toBe('<https://example.com?cursor=abc>; rel="next"');
+	});
+
+	test("carries a page's cursors in meta", async () => {
+		let response = apiSuccess({ results: [] }, Ok, {
+			pagination: { next: "cursor-next", prev: null, perPage: 25 },
+		});
+
+		let body = (await response.json()) as { meta: { pagination: unknown } };
+		expect(body.meta.pagination).toEqual({ next: "cursor-next", prev: null, perPage: 25 });
+	});
+
+	test("omits pagination from meta on a response that is not a page", async () => {
+		let response = apiSuccess({ monitor: { id: "m1" } });
+
+		let body = (await response.json()) as { meta: Record<string, unknown> };
+		expect(body.meta).not.toHaveProperty("pagination");
+	});
 });
 
 describe("apiError", () => {
@@ -41,30 +63,5 @@ describe("apiError", () => {
 
 		let body = (await response.json()) as { error: { code: string; message: string } };
 		expect(body.error).toEqual({ code: "UNAUTHORIZED", message: "Invalid or missing API key" });
-	});
-});
-
-describe("parsePaginationQuery", () => {
-	test("falls back to defaults when limit/offset are absent", () => {
-		let url = new URL("https://example.com/api/v1/monitors/m1/results");
-		expect(parsePaginationQuery(url)).toEqual({ limit: 50, offset: 0 });
-	});
-
-	test("reads valid limit/offset from the query string", () => {
-		let url = new URL("https://example.com/api/v1/monitors/m1/results?limit=10&offset=20");
-		expect(parsePaginationQuery(url)).toEqual({ limit: 10, offset: 20 });
-	});
-
-	test("clamps limit to maxLimit", () => {
-		let url = new URL("https://example.com/api/v1/monitors/m1/results?limit=500");
-		expect(parsePaginationQuery(url, { defaultLimit: 50, maxLimit: 100 })).toEqual({
-			limit: 100,
-			offset: 0,
-		});
-	});
-
-	test("falls back to defaults for non-numeric or negative values", () => {
-		let url = new URL("https://example.com/api/v1/monitors/m1/results?limit=abc&offset=-5");
-		expect(parsePaginationQuery(url)).toEqual({ limit: 50, offset: 0 });
 	});
 });

@@ -106,6 +106,16 @@ describe("Invite.listPendingByTeam", () => {
 	});
 });
 
+describe("Invite.listByTeamQuery", () => {
+	test("selects the team's invites and none of another team's", async () => {
+		let mine = await Invite.create(db, "team-1", "sender-1", "mine@example.com");
+		await Invite.create(db, "team-2", "sender-1", "theirs@example.com");
+
+		let rows = await Invite.listByTeamQuery(db, "team-1").all();
+		expect(rows.map((row) => row.id)).toEqual([mine.id]);
+	});
+});
+
 describe("Invite.accept", () => {
 	test("marks the invite accepted and creates the resulting membership", async () => {
 		let invite = await Invite.create(db, "team-1", "sender-1", "new@example.com");

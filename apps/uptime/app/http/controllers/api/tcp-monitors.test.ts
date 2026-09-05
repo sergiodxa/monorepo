@@ -17,6 +17,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { parseLink } from "~/app/lib/test/paging";
 import { tcpMonitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -99,6 +100,61 @@ describe("GET /api/v1/tcp-monitors", () => {
 		let body = (await response.json()) as { data: { monitors: Array<{ name: string }> } };
 		expect(body.data.monitors).toHaveLength(1);
 		expect(body.data.monitors[0]?.name).toBe("Mine");
+	});
+
+	test("serves one page and a cursor that walks to the next", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["tcp-monitors:read"]);
+		let older = await createTcpMonitorRow(db, team.id, "Older");
+		/**
+		 * Force a distinct `created_at` so the walk is deterministic — two creates in the
+		 * same millisecond would otherwise tie on the leading sort key.
+		 */
+		await db.update(
+			tcpMonitors,
+			older.id,
+			{ created_at: older.created_at - 1000 },
+			{ touch: false },
+		);
+		await createTcpMonitorRow(db, team.id, "Newer");
+
+		let response = await dispatch(db, {
+			method: "GET",
+			path: `${routes.api.v1.tcpMonitors.index.href()}?perPage=1`,
+			key,
+		});
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as { data: { monitors: Array<{ name: string }> } };
+		expect(body.data.monitors).toHaveLength(1);
+		expect(body.data.monitors[0]?.name).toBe("Newer");
+
+		// Navigation rides in the headers now, so following the list means following `Link`.
+		let next = parseLink(response.headers.get("Link"));
+		expect(next).not.toBeNull();
+
+		let second = await dispatch(db, { method: "GET", path: next as string, key });
+		expect(second.status).toBe(200);
+		let secondBody = (await second.json()) as { data: { monitors: Array<{ name: string }> } };
+		expect(secondBody.data.monitors).toHaveLength(1);
+		expect(secondBody.data.monitors[0]?.name).toBe("Older");
+	});
+
+	test("rejects a malformed cursor as a bad request", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["tcp-monitors:read"]);
+
+		let response = await dispatch(db, {
+			method: "GET",
+			path: `${routes.api.v1.tcpMonitors.index.href()}?cursor=not-a-cursor`,
+			key,
+		});
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as { error: { code: string } };
+		expect(body.error.code).toBe("BAD_REQUEST");
 	});
 
 	test("returns 401 for a missing Authorization header", async () => {
@@ -198,5 +254,34 @@ describe("POST /api/v1/tcp-monitors", () => {
 			body: { name: "Redis", host: "redis.example.com", port: 6379 },
 		});
 		expect(response.status).toBe(403);
+	});
+});
+
+describe("GET /api/v1/tcp-monitors total", () => {
+	test("counts every TCP monitor on the team, not just the page", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let otherTeam = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["tcp-monitors:read"]);
+
+		await createTcpMonitorRow(db, team.id, "One");
+		await createTcpMonitorRow(db, team.id, "Two");
+		await createTcpMonitorRow(db, team.id, "Three");
+		// A monitor the key cannot see must not reach the total either.
+		await createTcpMonitorRow(db, otherTeam.id, "Theirs");
+
+		let response = await dispatch(db, {
+			method: "GET",
+			path: `${routes.api.v1.tcpMonitors.index.href()}?perPage=1`,
+			key,
+		});
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as {
+			data: { monitors: unknown[] };
+			meta: { pagination: { total: number } };
+		};
+		expect(body.data.monitors).toHaveLength(1);
+		expect(body.meta.pagination.total).toBe(3);
 	});
 });

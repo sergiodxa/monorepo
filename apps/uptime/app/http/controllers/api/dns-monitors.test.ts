@@ -23,6 +23,7 @@ import ApiKey from "~/app/data/api-key";
 import DnsMonitor, { MAX_DNS_MONITORS_PER_TEAM } from "~/app/data/dns-monitor";
 import DnsMonitorRecord from "~/app/data/dns-monitor-record";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { parseLink } from "~/app/lib/test/paging";
 import { MAX_TRACKED_NAMES_PER_MONITOR } from "~/app/services/dns-discovery";
 import { dnsMonitorRecords, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -96,8 +97,15 @@ async function dispatch(db: Db, request: Request) {
 	return container.scope(() => router.fetch(request));
 }
 
-function indexRequest(headers: Record<string, string> = {}) {
-	return new Request(`https://uptime.test${routes.api.v1.dnsMonitors.index.href()}`, { headers });
+function indexRequest(headers: Record<string, string> = {}, query = "") {
+	return new Request(`https://uptime.test${routes.api.v1.dnsMonitors.index.href()}${query}`, {
+		headers,
+	});
+}
+
+/** Follows a `Link` relation, which comes back as the path and query to request next. */
+function linkRequest(path: string, headers: Record<string, string> = {}) {
+	return new Request(`https://uptime.test${path}`, { headers });
 }
 
 function createRequest(body: unknown, headers: Record<string, string> = {}) {
@@ -156,6 +164,63 @@ describe("GET /api/v1/dns-monitors", () => {
 		let body = (await response.json()) as { data: { dnsMonitors: { name: string }[] } };
 		expect(body.data.dnsMonitors).toHaveLength(1);
 		expect(body.data.dnsMonitors[0]?.name).toBe("Mine");
+	});
+
+	test("serves one page and a cursor that walks to the next", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:read"]);
+
+		await DnsMonitor.create(db, team.id, {
+			name: "First",
+			domain: "first.example.com",
+			interval_seconds: 3600,
+			is_enabled: true,
+		});
+		await DnsMonitor.create(db, team.id, {
+			name: "Second",
+			domain: "second.example.com",
+			interval_seconds: 3600,
+			is_enabled: true,
+		});
+
+		let response = await dispatch(
+			db,
+			indexRequest({ Authorization: `Bearer ${key}` }, "?perPage=1"),
+		);
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as { data: { dnsMonitors: { name: string }[] } };
+		expect(body.data.dnsMonitors).toHaveLength(1);
+
+		// Navigation rides in the headers now, so following the feed means following `Link`.
+		let next = parseLink(response.headers.get("Link"));
+		expect(next).not.toBeNull();
+
+		let second = await dispatch(
+			db,
+			linkRequest(next as string, { Authorization: `Bearer ${key}` }),
+		);
+		expect(second.status).toBe(200);
+		let secondBody = (await second.json()) as { data: { dnsMonitors: { name: string }[] } };
+		expect(secondBody.data.dnsMonitors).toHaveLength(1);
+		// The second page is a different row, which is the whole point of seeking.
+		expect(secondBody.data.dnsMonitors[0]?.name).not.toBe(body.data.dnsMonitors[0]?.name);
+	});
+
+	test("rejects a malformed cursor as a bad request", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:read"]);
+
+		let response = await dispatch(
+			db,
+			indexRequest({ Authorization: `Bearer ${key}` }, "?cursor=not-a-cursor"),
+		);
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as { error: { code: string } };
+		expect(body.error.code).toBe("BAD_REQUEST");
 	});
 
 	test("returns 401 when the Authorization header is missing", async () => {
@@ -484,5 +549,44 @@ describe("POST /api/v1/dns-monitors", () => {
 			createRequest(validDnsMonitorBody(), { Authorization: `Bearer ${key}` }),
 		);
 		expect(response.status).toBe(403);
+	});
+});
+
+describe("GET /api/v1/dns-monitors total", () => {
+	test("counts every DNS monitor on the team, not just the page", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let otherTeam = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:read"]);
+
+		for (let domain of ["one.example.com", "two.example.com", "three.example.com"]) {
+			await DnsMonitor.create(db, team.id, {
+				name: domain,
+				domain,
+				interval_seconds: 3600,
+				is_enabled: true,
+			});
+		}
+
+		// A monitor the key cannot see must not reach the total either.
+		await DnsMonitor.create(db, otherTeam.id, {
+			name: "theirs.example.com",
+			domain: "theirs.example.com",
+			interval_seconds: 3600,
+			is_enabled: true,
+		});
+
+		let response = await dispatch(
+			db,
+			indexRequest({ Authorization: `Bearer ${key}` }, "?perPage=1"),
+		);
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as {
+			data: { dnsMonitors: unknown[] };
+			meta: { pagination: { total: number } };
+		};
+		expect(body.data.dnsMonitors).toHaveLength(1);
+		expect(body.meta.pagination.total).toBe(3);
 	});
 });

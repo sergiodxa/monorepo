@@ -21,6 +21,7 @@ import type { ApiKeyScope } from "~/database/schema";
 import ApiKey, { MAX_API_KEYS_PER_TEAM } from "~/app/data/api-key";
 import apiKeysController, { apiKeysRoutes } from "~/app/http/controllers/api/api-keys";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { parseLink } from "~/app/lib/test/paging";
 import { apiKeys, teams } from "~/database/schema";
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
@@ -61,6 +62,14 @@ function get(key: string | null) {
 	});
 }
 
+/** A GET against an arbitrary path, which is what following a `Link` header takes. */
+function getPath(path: string, key: string) {
+	return new Request(`https://uptime.test${path}`, {
+		method: "GET",
+		headers: { Authorization: `Bearer ${key}` },
+	});
+}
+
 function post(key: string | null, body: unknown) {
 	return new Request(`https://uptime.test${apiKeysRoutes.apiKeysCreate.href()}`, {
 		method: "POST",
@@ -95,6 +104,48 @@ describe("GET /api/v1/api-keys", () => {
 		expect(body.data.apiKeys[0]?.keyHash).toBeUndefined();
 	});
 
+	test("serves one page and a cursor that walks to the next", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["api-keys:read"]);
+		await ApiKey.create(db, team.id, {
+			name: "second key",
+			scopes: ["monitors:read"],
+			expires_at: null,
+		});
+
+		let path = apiKeysRoutes.apiKeysIndex.href();
+		let response = await dispatch(db, getPath(`${path}?perPage=1`, key));
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as { data: { apiKeys: Array<{ name: string }> } };
+		expect(body.data.apiKeys).toHaveLength(1);
+
+		// Navigation rides in the headers now, so following the feed means following `Link`.
+		let next = parseLink(response.headers.get("Link"));
+		expect(next).not.toBeNull();
+
+		let second = await dispatch(db, getPath(next as string, key));
+		expect(second.status).toBe(200);
+		let secondBody = (await second.json()) as { data: { apiKeys: Array<{ name: string }> } };
+		expect(secondBody.data.apiKeys).toHaveLength(1);
+		// The second page is a different row, which is the whole point of seeking.
+		expect(secondBody.data.apiKeys[0]?.name).not.toBe(body.data.apiKeys[0]?.name);
+	});
+
+	test("rejects a malformed cursor as a bad request", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["api-keys:read"]);
+
+		let path = apiKeysRoutes.apiKeysIndex.href();
+		let response = await dispatch(db, getPath(`${path}?cursor=not-a-cursor`, key));
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as { error: { code: string } };
+		expect(body.error.code).toBe("BAD_REQUEST");
+	});
+
 	test("returns 401 for a missing Authorization header", async () => {
 		let { db } = createTestDatabase();
 		let response = await dispatch(db, get(null));
@@ -108,6 +159,44 @@ describe("GET /api/v1/api-keys", () => {
 
 		let response = await dispatch(db, get(key));
 		expect(response.status).toBe(403);
+	});
+});
+
+describe("GET /api/v1/api-keys total", () => {
+	test("counts every key on the team, not just the page", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let otherTeam = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["api-keys:read"]);
+		await ApiKey.create(db, team.id, {
+			name: "second key",
+			scopes: ["monitors:read"],
+			expires_at: null,
+		});
+		await ApiKey.create(db, team.id, {
+			name: "third key",
+			scopes: ["monitors:read"],
+			expires_at: null,
+		});
+		// A key the caller cannot see must not reach the total either.
+		await ApiKey.create(db, otherTeam.id, {
+			name: "not mine",
+			scopes: ["monitors:read"],
+			expires_at: null,
+		});
+
+		let response = await dispatch(
+			db,
+			getPath(`${apiKeysRoutes.apiKeysIndex.href()}?perPage=1`, key),
+		);
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as {
+			data: { apiKeys: unknown[] };
+			meta: { pagination: { total: number } };
+		};
+		expect(body.data.apiKeys).toHaveLength(1);
+		expect(body.meta.pagination.total).toBe(3);
 	});
 });
 

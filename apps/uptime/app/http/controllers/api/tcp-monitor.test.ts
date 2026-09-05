@@ -17,6 +17,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { parseLink } from "~/app/lib/test/paging";
 import { encodeId } from "~/app/services/typed-id";
 import { tcpMonitorResults, tcpMonitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -296,7 +297,7 @@ describe("DELETE /api/v1/tcp-monitors/:tcpMonitorId", () => {
 });
 
 describe("GET /api/v1/tcp-monitors/:tcpMonitorId/results", () => {
-	test("returns paginated check-result history", async () => {
+	test("serves one page and a cursor that walks to the next", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["tcp-monitors:read"]);
@@ -304,19 +305,42 @@ describe("GET /api/v1/tcp-monitors/:tcpMonitorId/results", () => {
 		await createTcpMonitorResultRow(db, monitor.id, 1000);
 		await createTcpMonitorResultRow(db, monitor.id, 2000);
 
-		let response = await dispatch(db, {
-			method: "GET",
-			path: routes.api.v1.tcpMonitors.results.href({ tcpMonitorId: encodeId("tcpm", monitor.id) }),
-			key,
+		let path = routes.api.v1.tcpMonitors.results.href({
+			tcpMonitorId: encodeId("tcpm", monitor.id),
 		});
+		let response = await dispatch(db, { method: "GET", path: `${path}?perPage=1`, key });
 
 		expect(response.status).toBe(200);
-		let body = (await response.json()) as {
-			data: { results: Array<{ checkedAt: number }>; pagination: { hasMore: boolean } };
-		};
-		expect(body.data.results).toHaveLength(2);
+		let body = (await response.json()) as { data: { results: Array<{ checkedAt: number }> } };
+		expect(body.data.results).toHaveLength(1);
 		expect(body.data.results[0]?.checkedAt).toBe(2000);
-		expect(body.data.pagination.hasMore).toBe(false);
+
+		// Navigation rides in the headers now, so following the feed means following `Link`.
+		let next = parseLink(response.headers.get("Link"));
+		expect(next).not.toBeNull();
+
+		let second = await dispatch(db, { method: "GET", path: next as string, key });
+		expect(second.status).toBe(200);
+		let secondBody = (await second.json()) as { data: { results: Array<{ checkedAt: number }> } };
+		expect(secondBody.data.results).toHaveLength(1);
+		// The second page is the older result, which is the whole point of seeking.
+		expect(secondBody.data.results[0]?.checkedAt).toBe(1000);
+	});
+
+	test("rejects a malformed cursor as a bad request", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["tcp-monitors:read"]);
+		let monitor = await createTcpMonitorRow(db, team.id);
+
+		let path = routes.api.v1.tcpMonitors.results.href({
+			tcpMonitorId: encodeId("tcpm", monitor.id),
+		});
+		let response = await dispatch(db, { method: "GET", path: `${path}?cursor=not-a-cursor`, key });
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as { error: { code: string } };
+		expect(body.error.code).toBe("BAD_REQUEST");
 	});
 
 	test("404s when the TCP monitor doesn't belong to the team", async () => {

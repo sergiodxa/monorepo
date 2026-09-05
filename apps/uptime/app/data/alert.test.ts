@@ -15,12 +15,15 @@ import type {
 	DatabaseDriver,
 } from "remix/data-table";
 
+import { Pagination } from "@sdxc/pagination";
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { AlertConfig } from "~/database/schema";
 
 import Alert, { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { NEWEST_FIRST } from "~/app/services/pagination";
 
 /**
  * The SQLite test adapter binds column values as-is, so a plain object bound into a
@@ -145,6 +148,42 @@ describe("Alert.listByTeam", () => {
 
 	test("returns an empty array for a team with no alerts", async () => {
 		expect(await Alert.listByTeam(db, "team-1")).toEqual([]);
+	});
+});
+
+describe("Alert.listByTeamQuery", () => {
+	test("pages a team's alerts newest first", async () => {
+		let first = await Alert.create(db, "team-1", {
+			monitor_id: null,
+			name: "First",
+			config: emailConfig,
+		});
+		let second = await Alert.create(db, "team-1", {
+			monitor_id: null,
+			name: "Second",
+			config: emailConfig,
+		});
+		await Alert.create(db, "team-2", { monitor_id: null, name: "Other team", config: emailConfig });
+
+		/** Backdate the first alert so the ordering assertion rests on a real time gap. */
+		await Alert.updateById(db, first.id, { created_at: Date.now() - 60_000 });
+
+		let page = unwrap(
+			await Pagination.byKeyset(Alert.listByTeamQuery(db, "team-1"), {
+				orderBy: NEWEST_FIRST,
+				limit: 1,
+			}),
+		);
+		expect(page.items.map((alert) => alert.id)).toEqual([second.id]);
+
+		let next = unwrap(
+			await Pagination.byKeyset(Alert.listByTeamQuery(db, "team-1"), {
+				orderBy: NEWEST_FIRST,
+				cursor: page.cursors.next,
+				limit: 1,
+			}),
+		);
+		expect(next.items.map((alert) => alert.id)).toEqual([first.id]);
 	});
 });
 

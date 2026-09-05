@@ -14,16 +14,25 @@ HTTP monitors check your websites and APIs for availability, performance, and co
 
 Retrieve all HTTP monitors for your team.
 
+Monitors arrive a page at a time. See [Pagination](/docs/api/pagination) for how to walk the whole list.
+
 ```
 GET /api/v1/monitors
 ```
 
 **Required scope:** `monitors:read`
 
+### Query Parameters
+
+| Parameter | Type    | Required | Description                               |
+| --------- | ------- | -------- | ----------------------------------------- |
+| `perPage` | integer | No       | Results per page, 1-200 (default: 50)     |
+| `cursor`  | string  | No       | Page to fetch, taken from a `Link` header |
+
 ### cURL
 
 ```bash
-curl https://uptime.sergiodxa.com/api/v1/monitors \
+curl "https://uptime.sergiodxa.com/api/v1/monitors?perPage=50" \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -31,25 +40,40 @@ curl https://uptime.sergiodxa.com/api/v1/monitors \
 
 ```json
 {
-	"data": [
-		{
-			"id": "mon_abc123",
-			"name": "Production API",
-			"url": "https://api.example.com/health",
-			"method": "GET",
-			"expectedStatus": 200,
-			"intervalSeconds": 60,
-			"degradedAfterMs": 5000,
-			"timeoutSeconds": 10,
-			"locationHint": "wnam",
-			"sslMonitoringEnabled": true,
-			"sslExpiryWarningDays": 30,
-			"status": "up",
-			"lastCheckedAt": "2026-02-14T12:00:00Z",
-			"createdAt": "2026-01-01T00:00:00Z",
-			"updatedAt": "2026-01-15T10:30:00Z"
+	"data": {
+		"monitors": [
+			{
+				"id": "mon_abc123",
+				"name": "Production API",
+				"url": "https://api.example.com/health",
+				"method": "GET",
+				"expectedStatus": 200,
+				"intervalSeconds": 60,
+				"degradedAfterMs": 5000,
+				"timeoutSeconds": 10,
+				"locationHint": "wnam",
+				"enabledAt": 1767225600000,
+				"sslMonitoringEnabled": true,
+				"sslExpiryWarningDays": 30,
+				"sslExpiresAt": 1773748800000,
+				"sslIssuer": "Let's Encrypt",
+				"sslStatus": "valid",
+				"sslLastCheckedAt": 1771070400000,
+				"createdAt": 1767225600000,
+				"updatedAt": 1768473000000
+			}
+		]
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z",
+		"pagination": {
+			"next": "eyJkIjoiYWZ0ZXIi",
+			"prev": null,
+			"perPage": 50,
+			"total": 128
 		}
-	]
+	}
 }
 ```
 
@@ -57,6 +81,7 @@ curl https://uptime.sergiodxa.com/api/v1/monitors \
 
 | Status | Code         | Description                          |
 | ------ | ------------ | ------------------------------------ |
+| 400    | BAD_REQUEST  | Invalid or malformed cursor          |
 | 401    | UNAUTHORIZED | Missing or invalid API key           |
 | 403    | FORBIDDEN    | API key doesn't have `monitors:read` |
 
@@ -68,13 +93,35 @@ curl https://uptime.sergiodxa.com/api/v1/monitors \
 	"type": "object",
 	"properties": {
 		"data": {
-			"type": "array",
-			"items": {
-				"$ref": "#/$defs/Monitor"
-			}
+			"type": "object",
+			"properties": {
+				"monitors": {
+					"type": "array",
+					"items": { "$ref": "#/$defs/Monitor" }
+				}
+			},
+			"required": ["monitors"]
+		},
+		"meta": {
+			"type": "object",
+			"properties": {
+				"requestId": { "type": "string", "format": "uuid" },
+				"timestamp": { "type": "string", "format": "date-time" },
+				"pagination": {
+					"type": "object",
+					"properties": {
+						"next": { "type": ["string", "null"] },
+						"prev": { "type": ["string", "null"] },
+						"perPage": { "type": "integer" },
+						"total": { "type": "integer" }
+					},
+					"required": ["next", "prev", "perPage"]
+				}
+			},
+			"required": ["requestId", "timestamp"]
 		}
 	},
-	"required": ["data"],
+	"required": ["data", "meta"],
 	"$defs": {
 		"Monitor": {
 			"type": "object",
@@ -91,12 +138,18 @@ curl https://uptime.sergiodxa.com/api/v1/monitors \
 					"type": "string",
 					"enum": ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"]
 				},
+				"enabledAt": { "type": ["integer", "null"] },
 				"sslMonitoringEnabled": { "type": "boolean" },
 				"sslExpiryWarningDays": { "type": "integer", "minimum": 1, "maximum": 365 },
-				"status": { "type": "string", "enum": ["pending", "up", "degraded", "down"] },
-				"lastCheckedAt": { "type": ["string", "null"], "format": "date-time" },
-				"createdAt": { "type": "string", "format": "date-time" },
-				"updatedAt": { "type": "string", "format": "date-time" }
+				"sslExpiresAt": { "type": ["integer", "null"] },
+				"sslIssuer": { "type": ["string", "null"] },
+				"sslStatus": {
+					"type": ["string", "null"],
+					"enum": ["unknown", "valid", "expiring", "expired", "error", null]
+				},
+				"sslLastCheckedAt": { "type": ["integer", "null"] },
+				"createdAt": { "type": "integer" },
+				"updatedAt": { "type": "integer" }
 			},
 			"required": [
 				"id",
@@ -108,7 +161,9 @@ curl https://uptime.sergiodxa.com/api/v1/monitors \
 				"degradedAfterMs",
 				"timeoutSeconds",
 				"locationHint",
-				"status",
+				"enabledAt",
+				"sslMonitoringEnabled",
+				"sslExpiryWarningDays",
 				"createdAt",
 				"updatedAt"
 			]
@@ -625,6 +680,9 @@ A check result's `id` pairs the monitor it belongs to with the minute the check 
 scheduled for, which is what makes each scheduled check appear once. Treat it as an
 opaque string.
 
+This endpoint is paginated. See [Pagination](/docs/api/pagination) for how to page back
+through the history.
+
 ```
 GET /api/v1/monitors/:id/results
 ```
@@ -633,15 +691,15 @@ GET /api/v1/monitors/:id/results
 
 ### Query Parameters
 
-| Parameter | Type    | Required | Description                            |
-| --------- | ------- | -------- | -------------------------------------- |
-| `limit`   | integer | No       | Results to return, 1-100 (default: 20) |
-| `offset`  | integer | No       | Results to skip (default: 0)           |
+| Parameter | Type    | Required | Description                               |
+| --------- | ------- | -------- | ----------------------------------------- |
+| `perPage` | integer | No       | Results per page, 1-200 (default: 50)     |
+| `cursor`  | string  | No       | Page to fetch, taken from a `Link` header |
 
 ### cURL
 
 ```bash
-curl "https://uptime.sergiodxa.com/api/v1/monitors/mon_abc123/results?limit=10&offset=0" \
+curl "https://uptime.sergiodxa.com/api/v1/monitors/mon_abc123/results?perPage=100" \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -649,30 +707,32 @@ curl "https://uptime.sergiodxa.com/api/v1/monitors/mon_abc123/results?limit=10&o
 
 ```json
 {
-	"data": [
-		{
-			"id": "8e03978e-40d5-43e8-bc93-6894a57f9324:29387451",
-			"monitorId": "mon_abc123",
-			"status": "up",
-			"statusCode": 200,
-			"responseTimeMs": 245,
-			"region": "wnam",
-			"checkedAt": "2026-02-14T12:00:00Z"
-		},
-		{
-			"id": "8e03978e-40d5-43e8-bc93-6894a57f9324:29387450",
-			"monitorId": "mon_abc123",
-			"status": "degraded",
-			"statusCode": 200,
-			"responseTimeMs": 5200,
-			"region": "wnam",
-			"checkedAt": "2026-02-14T11:59:00Z"
+	"data": {
+		"results": [
+			{
+				"id": "8e03978e-40d5-43e8-bc93-6894a57f9324:29387451",
+				"responseStatus": 200,
+				"responseTimeMs": 245,
+				"completedAt": 1771070400000,
+				"createdAt": 1771070400000
+			},
+			{
+				"id": "8e03978e-40d5-43e8-bc93-6894a57f9324:29387450",
+				"responseStatus": 200,
+				"responseTimeMs": 5200,
+				"completedAt": 1771070340000,
+				"createdAt": 1771070340000
+			}
+		]
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z",
+		"pagination": {
+			"next": "eyJkIjoiYWZ0ZXIi",
+			"prev": null,
+			"perPage": 100
 		}
-	],
-	"pagination": {
-		"limit": 10,
-		"offset": 0,
-		"total": 1440
 	}
 }
 ```
@@ -681,6 +741,7 @@ curl "https://uptime.sergiodxa.com/api/v1/monitors/mon_abc123/results?limit=10&o
 
 | Status | Code             | Description                          |
 | ------ | ---------------- | ------------------------------------ |
+| 400    | BAD_REQUEST      | Invalid or malformed cursor          |
 | 400    | VALIDATION_ERROR | Invalid query parameters             |
 | 401    | UNAUTHORIZED     | Missing or invalid API key           |
 | 403    | FORBIDDEN        | API key doesn't have `monitors:read` |
@@ -694,40 +755,188 @@ curl "https://uptime.sergiodxa.com/api/v1/monitors/mon_abc123/results?limit=10&o
 	"type": "object",
 	"properties": {
 		"data": {
-			"type": "array",
-			"items": {
-				"type": "object",
-				"properties": {
-					"id": { "type": "string", "pattern": "^[0-9a-f-]{36}:[0-9]+$" },
-					"monitorId": { "type": "string", "pattern": "^mon_[a-zA-Z0-9]+$" },
-					"status": { "type": "string", "enum": ["up", "degraded", "down"] },
-					"statusCode": { "type": "integer" },
-					"responseTimeMs": { "type": "integer" },
-					"region": { "type": "string" },
-					"checkedAt": { "type": "string", "format": "date-time" }
-				},
-				"required": [
-					"id",
-					"monitorId",
-					"status",
-					"statusCode",
-					"responseTimeMs",
-					"region",
-					"checkedAt"
-				]
-			}
-		},
-		"pagination": {
 			"type": "object",
 			"properties": {
-				"limit": { "type": "integer" },
-				"offset": { "type": "integer" },
-				"total": { "type": "integer" }
+				"results": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"id": { "type": "string", "pattern": "^[0-9a-f-]{36}:[0-9]+$" },
+							"responseStatus": { "type": ["integer", "null"] },
+							"responseTimeMs": { "type": ["integer", "null"] },
+							"completedAt": { "type": ["integer", "null"] },
+							"createdAt": { "type": "integer" }
+						},
+						"required": ["id", "responseStatus", "responseTimeMs", "completedAt", "createdAt"]
+					}
+				}
 			},
-			"required": ["limit", "offset", "total"]
+			"required": ["results"]
+		},
+		"meta": {
+			"type": "object",
+			"properties": {
+				"requestId": { "type": "string", "format": "uuid" },
+				"timestamp": { "type": "string", "format": "date-time" },
+				"pagination": {
+					"type": "object",
+					"properties": {
+						"next": { "type": ["string", "null"] },
+						"prev": { "type": ["string", "null"] },
+						"perPage": { "type": "integer" }
+					},
+					"required": ["next", "prev", "perPage"]
+				}
+			},
+			"required": ["requestId", "timestamp"]
 		}
 	},
-	"required": ["data", "pagination"]
+	"required": ["data", "meta"]
+}
+```
+
+## Get Alert Events
+
+Retrieve the alert delivery history for a monitor.
+
+This endpoint is paginated. See [Pagination](/docs/api/pagination) for how to page back
+through the history.
+
+```
+GET /api/v1/monitors/:id/alert-events
+```
+
+**Required scope:** `alerts:read`
+
+### Query Parameters
+
+| Parameter | Type    | Required | Description                               |
+| --------- | ------- | -------- | ----------------------------------------- |
+| `perPage` | integer | No       | Results per page, 1-200 (default: 50)     |
+| `cursor`  | string  | No       | Page to fetch, taken from a `Link` header |
+
+### cURL
+
+```bash
+curl "https://uptime.sergiodxa.com/api/v1/monitors/mon_abc123/alert-events?perPage=50" \
+  -H "Authorization: Bearer uptime_your_api_key"
+```
+
+### Response
+
+```json
+{
+	"data": {
+		"events": [
+			{
+				"id": "evt_01h455vb4pex5vsknk084sn02q",
+				"alertId": "alt_01h455vb4pex5vsknk084sn031",
+				"monitorId": "mon_abc123",
+				"eventType": "down",
+				"status": "sent",
+				"sentAt": 1771070400000,
+				"errorMessage": null,
+				"createdAt": 1771070400000
+			},
+			{
+				"id": "evt_01h455vb4pex5vsknk084sn02p",
+				"alertId": "alt_01h455vb4pex5vsknk084sn031",
+				"monitorId": "mon_abc123",
+				"eventType": "up",
+				"status": "skipped_cooldown",
+				"sentAt": 1771066800000,
+				"errorMessage": null,
+				"createdAt": 1771066800000
+			}
+		]
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z",
+		"pagination": {
+			"next": "eyJkIjoiYWZ0ZXIi",
+			"prev": null,
+			"perPage": 50
+		}
+	}
+}
+```
+
+**Event types:** `down`, `up`, `degraded`
+
+**Delivery statuses:** `sent`, `skipped_cooldown`, `skipped_cap`, `failed`
+
+### Errors
+
+| Status | Code         | Description                        |
+| ------ | ------------ | ---------------------------------- |
+| 400    | BAD_REQUEST  | Invalid or malformed cursor        |
+| 401    | UNAUTHORIZED | Missing or invalid API key         |
+| 403    | FORBIDDEN    | API key doesn't have `alerts:read` |
+| 404    | NOT_FOUND    | Monitor not found                  |
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"data": {
+			"type": "object",
+			"properties": {
+				"events": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"id": { "type": "string", "pattern": "^evt_[a-zA-Z0-9]+$" },
+							"alertId": { "type": "string", "pattern": "^alt_[a-zA-Z0-9]+$" },
+							"monitorId": { "type": "string" },
+							"eventType": { "type": "string", "enum": ["down", "up", "degraded"] },
+							"status": {
+								"type": "string",
+								"enum": ["sent", "skipped_cooldown", "skipped_cap", "failed"]
+							},
+							"sentAt": { "type": "integer" },
+							"errorMessage": { "type": ["string", "null"] },
+							"createdAt": { "type": "integer" }
+						},
+						"required": [
+							"id",
+							"alertId",
+							"monitorId",
+							"eventType",
+							"status",
+							"sentAt",
+							"errorMessage",
+							"createdAt"
+						]
+					}
+				}
+			},
+			"required": ["events"]
+		},
+		"meta": {
+			"type": "object",
+			"properties": {
+				"requestId": { "type": "string", "format": "uuid" },
+				"timestamp": { "type": "string", "format": "date-time" },
+				"pagination": {
+					"type": "object",
+					"properties": {
+						"next": { "type": ["string", "null"] },
+						"prev": { "type": ["string", "null"] },
+						"perPage": { "type": "integer" }
+					},
+					"required": ["next", "prev", "perPage"]
+				}
+			},
+			"required": ["requestId", "timestamp"]
+		}
+	},
+	"required": ["data", "meta"]
 }
 ```
 
@@ -930,9 +1139,147 @@ curl https://uptime.sergiodxa.com/api/v1/monitors/stats \
 }
 ```
 
+## Backfill Daily Stats
+
+Enqueue a daily-stats aggregation job for your team's monitors.
+
+The job runs in the background, so the response confirms that it was queued rather than
+that it has finished.
+
+```
+POST /api/v1/backfill-daily-stats
+```
+
+**Required scope:** `monitors:write`
+
+### cURL
+
+```bash
+curl https://uptime.sergiodxa.com/api/v1/backfill-daily-stats \
+  -X POST \
+  -H "Authorization: Bearer uptime_your_api_key"
+```
+
+### Response
+
+Returns `202 Accepted` on success.
+
+```json
+{
+	"data": {
+		"status": "queued"
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z"
+	}
+}
+```
+
+### Errors
+
+| Status | Code         | Description                           |
+| ------ | ------------ | ------------------------------------- |
+| 401    | UNAUTHORIZED | Missing or invalid API key            |
+| 403    | FORBIDDEN    | API key doesn't have `monitors:write` |
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"data": {
+			"type": "object",
+			"properties": {
+				"status": { "type": "string", "enum": ["queued"] }
+			},
+			"required": ["status"]
+		},
+		"meta": {
+			"type": "object",
+			"properties": {
+				"requestId": { "type": "string", "format": "uuid" },
+				"timestamp": { "type": "string", "format": "date-time" }
+			},
+			"required": ["requestId", "timestamp"]
+		}
+	},
+	"required": ["data", "meta"]
+}
+```
+
 ## Content Checks
 
 Manage content validation rules for a monitor. Content checks verify that responses contain (or don't contain) specific text or patterns.
+
+### List Content Checks
+
+Retrieve the content checks configured on a monitor.
+
+Content checks arrive a page at a time. See [Pagination](/docs/api/pagination) for how to
+walk the whole list.
+
+```
+GET /api/v1/monitors/:id/content-checks
+```
+
+**Required scope:** `monitors:read`
+
+### Query Parameters
+
+| Parameter | Type    | Required | Description                               |
+| --------- | ------- | -------- | ----------------------------------------- |
+| `perPage` | integer | No       | Results per page, 1-200 (default: 50)     |
+| `cursor`  | string  | No       | Page to fetch, taken from a `Link` header |
+
+### cURL
+
+```bash
+curl "https://uptime.sergiodxa.com/api/v1/monitors/mon_abc123/content-checks?perPage=50" \
+  -H "Authorization: Bearer uptime_your_api_key"
+```
+
+### Response
+
+```json
+{
+	"data": {
+		"contentChecks": [
+			{
+				"id": "chk_01h455vb4pex5vsknk084sn02q",
+				"monitorId": "mon_abc123",
+				"type": "contains",
+				"value": "\"status\":\"ok\"",
+				"caseSensitive": false,
+				"isEnabled": true,
+				"createdAt": 1767225600000,
+				"updatedAt": 1768473000000
+			}
+		]
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z",
+		"pagination": {
+			"next": null,
+			"prev": null,
+			"perPage": 50,
+			"total": 1
+		}
+	}
+}
+```
+
+### Errors
+
+| Status | Code         | Description                          |
+| ------ | ------------ | ------------------------------------ |
+| 400    | BAD_REQUEST  | Invalid or malformed cursor          |
+| 401    | UNAUTHORIZED | Missing or invalid API key           |
+| 403    | FORBIDDEN    | API key doesn't have `monitors:read` |
+| 404    | NOT_FOUND    | Monitor not found                    |
 
 ### Create Content Check
 
@@ -959,6 +1306,68 @@ DELETE /api/v1/monitors/:id/content-checks/:checkId
 **Required scope:** `monitors:write`
 
 See [Content Checks](/docs/concepts/http-monitors#content-checks) for usage details.
+
+### List Content Checks Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"data": {
+			"type": "object",
+			"properties": {
+				"contentChecks": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"id": { "type": "string", "pattern": "^chk_[a-zA-Z0-9]+$" },
+							"monitorId": { "type": "string", "pattern": "^mon_[a-zA-Z0-9]+$" },
+							"type": { "type": "string", "enum": ["contains", "not_contains", "regex"] },
+							"value": { "type": "string" },
+							"caseSensitive": { "type": "boolean" },
+							"isEnabled": { "type": "boolean" },
+							"createdAt": { "type": "integer" },
+							"updatedAt": { "type": "integer" }
+						},
+						"required": [
+							"id",
+							"monitorId",
+							"type",
+							"value",
+							"caseSensitive",
+							"isEnabled",
+							"createdAt",
+							"updatedAt"
+						]
+					}
+				}
+			},
+			"required": ["contentChecks"]
+		},
+		"meta": {
+			"type": "object",
+			"properties": {
+				"requestId": { "type": "string", "format": "uuid" },
+				"timestamp": { "type": "string", "format": "date-time" },
+				"pagination": {
+					"type": "object",
+					"properties": {
+						"next": { "type": ["string", "null"] },
+						"prev": { "type": ["string", "null"] },
+						"perPage": { "type": "integer" },
+						"total": { "type": "integer" }
+					},
+					"required": ["next", "prev", "perPage"]
+				}
+			},
+			"required": ["requestId", "timestamp"]
+		}
+	},
+	"required": ["data", "meta"]
+}
+```
 
 ### Create Content Check Request Body Schema
 

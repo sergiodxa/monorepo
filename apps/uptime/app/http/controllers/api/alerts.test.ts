@@ -21,6 +21,7 @@ import type { ApiKeyScope } from "~/database/schema";
 import { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
 import ApiKey from "~/app/data/api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { parseLink } from "~/app/lib/test/paging";
 import { encodeId } from "~/app/services/typed-id";
 import { alerts, dnsMonitors, monitors, teams } from "~/database/schema";
 
@@ -64,11 +65,27 @@ async function dispatch(db: Db, request: Request) {
 	return container.scope(() => router.fetch(request));
 }
 
-function get(key: string | null) {
-	return new Request(`https://uptime.test${alertsRoutes.alertsIndex.href()}`, {
+function get(key: string | null, href: string = alertsRoutes.alertsIndex.href()) {
+	return new Request(`https://uptime.test${href}`, {
 		method: "GET",
 		headers: key ? { Authorization: `Bearer ${key}` } : {},
 	});
+}
+
+async function createAlertRow(db: Db, teamId: string, name: string) {
+	return await db.create(
+		alerts,
+		{
+			id: crypto.randomUUID(),
+			team_id: teamId,
+			monitor_id: null,
+			name,
+			notify_on_recovery: true,
+			cooldown_minutes: 0,
+			config: { strategy: "email", config: { to: "a@example.com", subjectPrefix: "" } },
+		},
+		{ touch: true, returnRow: true },
+	);
 }
 
 function post(key: string | null, body: unknown) {
@@ -93,32 +110,8 @@ describe("GET /api/v1/alerts", () => {
 		let otherTeam = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["alerts:read"]);
 
-		await db.create(
-			alerts,
-			{
-				id: crypto.randomUUID(),
-				team_id: team.id,
-				monitor_id: null,
-				name: "Mine",
-				notify_on_recovery: true,
-				cooldown_minutes: 0,
-				config: { strategy: "email", config: { to: "a@example.com", subjectPrefix: "" } },
-			},
-			{ touch: true, returnRow: true },
-		);
-		await db.create(
-			alerts,
-			{
-				id: crypto.randomUUID(),
-				team_id: otherTeam.id,
-				monitor_id: null,
-				name: "Not mine",
-				notify_on_recovery: true,
-				cooldown_minutes: 0,
-				config: { strategy: "email", config: { to: "b@example.com", subjectPrefix: "" } },
-			},
-			{ touch: true, returnRow: true },
-		);
+		await createAlertRow(db, team.id, "Mine");
+		await createAlertRow(db, otherTeam.id, "Not mine");
 
 		let response = await dispatch(db, get(key));
 		expect(response.status).toBe(200);
@@ -126,6 +119,48 @@ describe("GET /api/v1/alerts", () => {
 		let body = (await response.json()) as { data: { alerts: Array<{ name: string }> } };
 		expect(body.data.alerts).toHaveLength(1);
 		expect(body.data.alerts[0]?.name).toBe("Mine");
+	});
+
+	test("serves one page and a cursor that walks to the next", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:read"]);
+
+		await createAlertRow(db, team.id, "First");
+		await createAlertRow(db, team.id, "Second");
+
+		let response = await dispatch(db, get(key, `${alertsRoutes.alertsIndex.href()}?perPage=1`));
+		expect(response.status).toBe(200);
+
+		let body = (await response.json()) as { data: { alerts: Array<{ name: string }> } };
+		expect(body.data.alerts).toHaveLength(1);
+
+		// Navigation rides in the headers now, so following the feed means following `Link`.
+		let next = parseLink(response.headers.get("Link"));
+		expect(next).not.toBeNull();
+
+		let second = await dispatch(db, get(key, next as string));
+		expect(second.status).toBe(200);
+
+		let secondBody = (await second.json()) as { data: { alerts: Array<{ name: string }> } };
+		expect(secondBody.data.alerts).toHaveLength(1);
+		// The second page is a different row, which is the whole point of seeking.
+		expect(secondBody.data.alerts[0]?.name).not.toBe(body.data.alerts[0]?.name);
+	});
+
+	test("rejects a malformed cursor as a bad request", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:read"]);
+
+		let response = await dispatch(
+			db,
+			get(key, `${alertsRoutes.alertsIndex.href()}?cursor=not-a-cursor`),
+		);
+		expect(response.status).toBe(400);
+
+		let body = (await response.json()) as { error: { code: string } };
+		expect(body.error.code).toBe("BAD_REQUEST");
 	});
 
 	test("returns 401 for a missing Authorization header", async () => {
@@ -153,6 +188,30 @@ describe("GET /api/v1/alerts", () => {
 
 		let response = await dispatch(db, get(key));
 		expect(response.status).toBe(403);
+	});
+});
+
+describe("GET /api/v1/alerts total", () => {
+	test("counts every alert on the team, not just the page", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let otherTeam = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:read"]);
+		await createAlertRow(db, team.id, "First");
+		await createAlertRow(db, team.id, "Second");
+		await createAlertRow(db, team.id, "Third");
+		// An alert the key cannot see must not reach the total either.
+		await createAlertRow(db, otherTeam.id, "Theirs");
+
+		let response = await dispatch(db, get(key, `${alertsRoutes.alertsIndex.href()}?perPage=1`));
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as {
+			data: { alerts: unknown[] };
+			meta: { pagination: { total: number } };
+		};
+		expect(body.data.alerts).toHaveLength(1);
+		expect(body.meta.pagination.total).toBe(3);
 	});
 });
 

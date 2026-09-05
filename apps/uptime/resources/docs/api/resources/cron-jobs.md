@@ -12,18 +12,25 @@ Cron job monitors track scheduled tasks by receiving pings when jobs complete. I
 
 ## GET /api/v1/cron-jobs
 
-Returns all cron job monitors for your team.
+Returns the cron job monitors for your team. This endpoint is paginated; see [Pagination](/docs/api/pagination) for how to page through the full list.
 
 ### Required Scope
 
 `cron-jobs:read`
+
+### Query Parameters
+
+| Parameter | Type    | Required | Description                               |
+| --------- | ------- | -------- | ----------------------------------------- |
+| `perPage` | integer | No       | Results per page, 1-200 (default: 50)     |
+| `cursor`  | string  | No       | Page to fetch, taken from a `Link` header |
 
 ### Example Request
 
 #### cURL
 
 ```bash
-curl https://uptime.sergiodxa.com/api/v1/cron-jobs \
+curl "https://uptime.sergiodxa.com/api/v1/cron-jobs?perPage=25" \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -31,30 +38,52 @@ curl https://uptime.sergiodxa.com/api/v1/cron-jobs \
 
 ```json
 {
-	"data": [
-		{
-			"id": "cron_abc123",
-			"name": "Daily Backup",
-			"description": "Runs database backup every night",
-			"cronExpression": "0 2 * * *",
-			"gracePeriodSeconds": 300,
-			"timezone": "America/New_York",
-			"status": "healthy",
-			"alertOnLate": true,
-			"lastPingAt": "2026-02-14T07:00:12Z",
-			"nextExpectedAt": "2026-02-15T07:00:00Z",
-			"enabledAt": "2026-01-10T14:30:00Z",
-			"createdAt": "2026-01-10T14:30:00Z",
-			"updatedAt": "2026-02-01T09:15:00Z"
+	"data": {
+		"cronJobs": [
+			{
+				"id": "cron_abc123",
+				"name": "Daily Backup",
+				"description": "Runs database backup every night",
+				"cronExpression": "0 2 * * *",
+				"gracePeriodSeconds": 300,
+				"timezone": "America/New_York",
+				"status": "healthy",
+				"alertOnLate": true,
+				"lastPingAt": 1771052412000,
+				"nextExpectedAt": 1771138800000,
+				"enabledAt": 1768055400000,
+				"createdAt": 1768055400000,
+				"updatedAt": 1770282900000
+			}
+		]
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z",
+		"pagination": {
+			"next": "eyJkIjoiYWZ0ZXIi",
+			"prev": null,
+			"perPage": 25,
+			"total": 34
 		}
-	]
+	}
 }
 ```
+
+The cursors for this page arrive in `meta.pagination`:
+
+| Field                     | Type           | Description                                        |
+| ------------------------- | -------------- | -------------------------------------------------- |
+| `meta.pagination.next`    | string \| null | Cursor for the following page, `null` on the last  |
+| `meta.pagination.prev`    | string \| null | Cursor for the preceding page, `null` on the first |
+| `meta.pagination.perPage` | integer        | Results this page was built with                   |
+| `meta.pagination.total`   | integer        | Cron jobs matching, across every page              |
 
 ### Possible Errors
 
 | Status | Code           | Description                                 |
 | ------ | -------------- | ------------------------------------------- |
+| 400    | BAD_REQUEST    | Invalid or malformed cursor                 |
 | 401    | UNAUTHORIZED   | Missing or invalid API key                  |
 | 403    | FORBIDDEN      | API key doesn't have `cron-jobs:read` scope |
 | 429    | RATE_LIMITED   | Too many requests                           |
@@ -66,11 +95,35 @@ curl https://uptime.sergiodxa.com/api/v1/cron-jobs \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": ["data"],
+	"required": ["data", "meta"],
 	"properties": {
 		"data": {
-			"type": "array",
-			"items": { "$ref": "#/$defs/cronJob" }
+			"type": "object",
+			"required": ["cronJobs"],
+			"properties": {
+				"cronJobs": {
+					"type": "array",
+					"items": { "$ref": "#/$defs/cronJob" }
+				}
+			}
+		},
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": { "type": "string", "format": "uuid" },
+				"timestamp": { "type": "string", "format": "date-time" },
+				"pagination": {
+					"type": "object",
+					"required": ["next", "prev", "perPage"],
+					"properties": {
+						"next": { "type": ["string", "null"] },
+						"prev": { "type": ["string", "null"] },
+						"perPage": { "type": "integer" },
+						"total": { "type": "integer" }
+					}
+				}
+			}
 		}
 	},
 	"$defs": {
@@ -100,11 +153,11 @@ curl https://uptime.sergiodxa.com/api/v1/cron-jobs \
 				"timezone": { "type": "string" },
 				"status": { "type": "string", "enum": ["healthy", "late", "missed", "new"] },
 				"alertOnLate": { "type": "boolean" },
-				"lastPingAt": { "type": ["string", "null"], "format": "date-time" },
-				"nextExpectedAt": { "type": ["string", "null"], "format": "date-time" },
-				"enabledAt": { "type": ["string", "null"], "format": "date-time" },
-				"createdAt": { "type": "string", "format": "date-time" },
-				"updatedAt": { "type": "string", "format": "date-time" }
+				"lastPingAt": { "type": ["integer", "null"] },
+				"nextExpectedAt": { "type": ["integer", "null"] },
+				"enabledAt": { "type": ["integer", "null"] },
+				"createdAt": { "type": "integer" },
+				"updatedAt": { "type": "integer" }
 			}
 		}
 	}
@@ -578,18 +631,18 @@ Unlike the rest of `/api/v1`, this endpoint answers with the bare object above r
 
 All cron job responses include these fields:
 
-| Field                | Type           | Description                                             |
-| -------------------- | -------------- | ------------------------------------------------------- |
-| `id`                 | string         | Unique identifier (prefixed with `cron_`)               |
-| `name`               | string         | Display name                                            |
-| `description`        | string \| null | Optional description                                    |
-| `cronExpression`     | string         | Cron schedule expression                                |
-| `gracePeriodSeconds` | integer        | Seconds to wait before marking late                     |
-| `timezone`           | string         | IANA timezone for the schedule                          |
-| `status`             | string         | Current status: `healthy`, `late`, or `unknown`         |
-| `alertOnLate`        | boolean        | Whether alerts are sent when the job is late            |
-| `lastPingAt`         | string \| null | ISO 8601 timestamp of the last ping, or `null` if never |
-| `nextExpectedAt`     | string \| null | ISO 8601 timestamp of the next expected ping            |
-| `enabledAt`          | string \| null | ISO 8601 timestamp when enabled, or `null` if disabled  |
-| `createdAt`          | string         | ISO 8601 timestamp when created                         |
-| `updatedAt`          | string         | ISO 8601 timestamp when last updated                    |
+| Field                | Type            | Description                                                         |
+| -------------------- | --------------- | ------------------------------------------------------------------- |
+| `id`                 | string          | Unique identifier (prefixed with `cron_`)                           |
+| `name`               | string          | Display name                                                        |
+| `description`        | string \| null  | Optional description                                                |
+| `cronExpression`     | string          | Cron schedule expression                                            |
+| `gracePeriodSeconds` | integer         | Seconds to wait before marking late                                 |
+| `timezone`           | string          | IANA timezone for the schedule                                      |
+| `status`             | string          | Current status: `healthy`, `late`, `missed`, or `new`               |
+| `alertOnLate`        | boolean         | Whether alerts are sent when the job is late                        |
+| `lastPingAt`         | integer \| null | Unix timestamp in milliseconds of the last ping, or `null` if never |
+| `nextExpectedAt`     | integer \| null | Unix timestamp in milliseconds of the next expected ping            |
+| `enabledAt`          | integer \| null | Unix timestamp in milliseconds when enabled, or `null` if disabled  |
+| `createdAt`          | integer         | Unix timestamp in milliseconds when created                         |
+| `updatedAt`          | integer         | Unix timestamp in milliseconds when last updated                    |

@@ -70,6 +70,16 @@ export default class FlowMonitor {
 	}
 
 	/**
+	 * A team's flow monitors, as a query for a paging strategy to finish.
+	 *
+	 * The ordering is left off deliberately: `Pagination.byKeyset()` owns it, because
+	 * it needs the sort keys both to seek and to mint the cursor.
+	 */
+	static listByTeamQuery(db: Database, teamId: string) {
+		return db.query(flowMonitors).where({ team_id: teamId });
+	}
+
+	/**
 	 * Claims every flow monitor whose next check is due as of `scheduledAt`, across every
 	 * team, advancing each one's next due time as it does — see `claimDue` for the semantics
 	 * every monitor type shares.
@@ -116,6 +126,16 @@ export default class FlowMonitor {
 			orderBy: ["checked_at", "desc"],
 			limit,
 		});
+	}
+
+	/**
+	 * A monitor's check results, as a query for a paging strategy to finish.
+	 *
+	 * The ordering is left off deliberately: `Pagination.byKeyset()` owns it, because
+	 * it needs the sort keys both to seek and to mint the cursor.
+	 */
+	static resultsQuery(db: Database, monitorId: string) {
+		return db.query(flowMonitorResults).where({ flow_monitor_id: monitorId });
 	}
 
 	/**

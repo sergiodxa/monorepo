@@ -8,7 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BadRequest, Created } from "@sdxc/http/status-code";
+import { BadRequest, Created, InternalServerError, Ok } from "@sdxc/http/status-code";
+import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
@@ -23,6 +24,7 @@ import Invite from "~/app/data/invite";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
@@ -55,8 +57,31 @@ export default createController(invitesRoutes, {
 			middleware: [requireApiKey("invites:read")],
 			handler: async (ctx) => {
 				let db = getServiceContainer().get(Database);
-				let invites = await Invite.listByTeam(db, ctx.apiTeam.id);
-				return apiSuccess({ invites: invites.map(serializeInvite) });
+
+				let params = PAGING.parse(ctx.url.searchParams);
+				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
+
+				// Chaining returns new queries, so the same one both counts and pages.
+				let query = Invite.listByTeamQuery(db, ctx.apiTeam.id);
+
+				let page = await Pagination.byKeyset(query, {
+					orderBy: NEWEST_FIRST,
+					cursor: params.data.cursor,
+					limit: params.data.perPage,
+				});
+
+				if (isFailure(page)) {
+					if (page.error instanceof InvalidCursorError) {
+						return apiError("BAD_REQUEST", page.error.message, BadRequest);
+					}
+					return apiError("INTERNAL", page.error.message, InternalServerError);
+				}
+
+				return apiPage({ invites: page.data.items.map(serializeInvite) }, page.data, {
+					url: ctx.url,
+					perPage: params.data.perPage,
+					total: await query.count(),
+				});
 			},
 		},
 

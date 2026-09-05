@@ -20,6 +20,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { parseLink } from "~/app/lib/test/paging";
 import { encodeId } from "~/app/services/typed-id";
 import { alertEvents, monitorResults, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -480,7 +481,7 @@ describe("GET /api/v1/monitors/:monitorId/stats", () => {
 });
 
 describe("GET /api/v1/monitors/:monitorId/results", () => {
-	test("returns paginated check-result history", async () => {
+	test("serves one page and a cursor that walks to the next", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["monitors:read"]);
@@ -488,23 +489,53 @@ describe("GET /api/v1/monitors/:monitorId/results", () => {
 		await createMonitorResultRow(db, monitor.id, { response_status: 200 });
 		await createMonitorResultRow(db, monitor.id, { response_status: 500 });
 
-		let response = await dispatch(
-			db,
-			request(
-				"GET",
-				`${routes.api.v1.monitors.results.href({ monitorId: encodeId("mon", monitor.id) })}?limit=1`,
-				{
-					key,
-				},
-			),
-		);
+		let path = routes.api.v1.monitors.results.href({ monitorId: encodeId("mon", monitor.id) });
+		let response = await dispatch(db, request("GET", `${path}?perPage=1`, { key }));
 
 		expect(response.status).toBe(200);
-		let body = (await response.json()) as {
-			data: { results: Array<{ responseStatus: number }>; pagination: { hasMore: boolean } };
-		};
+		let body = (await response.json()) as { data: { results: Array<{ responseStatus: number }> } };
 		expect(body.data.results).toHaveLength(1);
-		expect(body.data.pagination.hasMore).toBe(true);
+
+		// The cursor in the body and the one in the header address the same page.
+		let meta = (
+			(await (await dispatch(db, request("GET", `${path}?perPage=1`, { key }))).json()) as {
+				meta: { pagination: { next: string | null; prev: string | null; perPage: number } };
+			}
+		).meta;
+		expect(meta.pagination.perPage).toBe(1);
+		expect(meta.pagination.prev).toBeNull();
+		expect(parseLink(response.headers.get("Link"))).toContain(
+			encodeURIComponent(meta.pagination.next as string),
+		);
+
+		// Navigation rides in the headers too, so following the feed means following `Link`.
+		let next = parseLink(response.headers.get("Link"));
+		expect(next).not.toBeNull();
+
+		let second = await dispatch(db, request("GET", next as string, { key }));
+		expect(second.status).toBe(200);
+		let secondBody = (await second.json()) as {
+			data: { results: Array<{ responseStatus: number }> };
+		};
+		expect(secondBody.data.results).toHaveLength(1);
+		// The second page is a different row, which is the whole point of seeking.
+		expect(secondBody.data.results[0]?.responseStatus).not.toBe(
+			body.data.results[0]?.responseStatus,
+		);
+	});
+
+	test("rejects a malformed cursor as a bad request", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["monitors:read"]);
+		let monitor = await createMonitorRow(db, team.id);
+
+		let path = routes.api.v1.monitors.results.href({ monitorId: encodeId("mon", monitor.id) });
+		let response = await dispatch(db, request("GET", `${path}?cursor=not-a-cursor`, { key }));
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as { error: { code: string } };
+		expect(body.error.code).toBe("BAD_REQUEST");
 	});
 
 	test("404s when the monitor belongs to another team", async () => {

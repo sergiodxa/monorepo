@@ -54,6 +54,16 @@ export default class ApiKey {
 		});
 	}
 
+	/**
+	 * A team's API keys, as a query for a paging strategy to finish.
+	 *
+	 * The ordering is left off deliberately: `Pagination.byKeyset()` owns it, because
+	 * it needs the sort keys both to seek and to mint the cursor.
+	 */
+	static listByTeamQuery(db: Database, teamId: string) {
+		return db.query(apiKeys).where({ team_id: teamId });
+	}
+
 	/** Finds an API key scoped to a team, or `null` when it doesn't belong to it. */
 	static async findByIdForTeam(db: Database, teamId: string, apiKeyId: string) {
 		return await db.findOne(apiKeys, { where: { id: apiKeyId, team_id: teamId } });

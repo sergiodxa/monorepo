@@ -17,6 +17,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { parseLink } from "~/app/lib/test/paging";
 import { encodeId } from "~/app/services/typed-id";
 import { teamDomains, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -74,6 +75,34 @@ async function dispatch(
 	return container.scope(() => router.fetch(httpRequest));
 }
 
+describe("GET /api/v1/team-domains total", () => {
+	test("counts every domain on the team, not just the page", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let otherTeam = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["team-domains:read"]);
+		await createTeamDomainRow(db, team.id, "one.example.com");
+		await createTeamDomainRow(db, team.id, "two.example.com");
+		await createTeamDomainRow(db, team.id, "three.example.com");
+		// A domain the key cannot see must not reach the total either.
+		await createTeamDomainRow(db, otherTeam.id, "other.example.com");
+
+		let response = await dispatch(db, {
+			method: "GET",
+			path: `${routes.api.v1.teamDomains.index.href()}?perPage=1`,
+			key,
+		});
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as {
+			data: { teamDomains: unknown[] };
+			meta: { pagination: { total: number; perPage: number } };
+		};
+		expect(body.data.teamDomains).toHaveLength(1);
+		expect(body.meta.pagination.total).toBe(3);
+	});
+});
+
 describe("GET /api/v1/team-domains", () => {
 	test("lists only the calling team's domains", async () => {
 		let { db } = createTestDatabase();
@@ -94,6 +123,52 @@ describe("GET /api/v1/team-domains", () => {
 		let body = (await response.json()) as { data: { teamDomains: Array<{ hostname: string }> } };
 		expect(body.data.teamDomains).toHaveLength(1);
 		expect(body.data.teamDomains[0]?.hostname).toBe("acme.example.com");
+	});
+
+	test("serves one page and a cursor that walks to the next", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["team-domains:read"]);
+		await createTeamDomainRow(db, team.id, "first.example.com");
+		await createTeamDomainRow(db, team.id, "second.example.com");
+
+		let response = await dispatch(db, {
+			method: "GET",
+			path: `${routes.api.v1.teamDomains.index.href()}?perPage=1`,
+			key,
+		});
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as { data: { teamDomains: Array<{ hostname: string }> } };
+		expect(body.data.teamDomains).toHaveLength(1);
+
+		// Navigation rides in the headers, so following the feed means following `Link`.
+		let next = parseLink(response.headers.get("Link"));
+		expect(next).not.toBeNull();
+
+		let second = await dispatch(db, { method: "GET", path: next as string, key });
+		expect(second.status).toBe(200);
+		let secondBody = (await second.json()) as {
+			data: { teamDomains: Array<{ hostname: string }> };
+		};
+		expect(secondBody.data.teamDomains).toHaveLength(1);
+		expect(secondBody.data.teamDomains[0]?.hostname).not.toBe(body.data.teamDomains[0]?.hostname);
+	});
+
+	test("rejects a malformed cursor as a bad request", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["team-domains:read"]);
+
+		let response = await dispatch(db, {
+			method: "GET",
+			path: `${routes.api.v1.teamDomains.index.href()}?cursor=not-a-cursor`,
+			key,
+		});
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as { error: { code: string } };
+		expect(body.error.code).toBe("BAD_REQUEST");
 	});
 
 	test("returns 401 for a missing Authorization header", async () => {

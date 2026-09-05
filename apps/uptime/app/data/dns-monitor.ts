@@ -86,6 +86,16 @@ export default class DnsMonitor {
 		});
 	}
 
+	/**
+	 * A team's DNS monitors, as a query for a paging strategy to finish.
+	 *
+	 * The ordering is left off deliberately: `Pagination.byKeyset()` owns it, because
+	 * it needs the sort keys both to seek and to mint the cursor.
+	 */
+	static byTeamQuery(db: Database, teamId: string) {
+		return db.query(dnsMonitors).where({ team_id: teamId });
+	}
+
 	/** Counts a team's DNS monitors, for the {@link MAX_DNS_MONITORS_PER_TEAM} limit. */
 	static async countByTeam(db: Database, teamId: string) {
 		return await db.count(dnsMonitors, { where: { team_id: teamId } });
@@ -137,6 +147,16 @@ export default class DnsMonitor {
 			orderBy: ["checked_at", "desc"],
 			limit,
 		});
+	}
+
+	/**
+	 * A monitor's check results, as a query for a paging strategy to finish.
+	 *
+	 * The ordering is left off deliberately: `Pagination.byKeyset()` owns it, because
+	 * it needs the sort keys both to seek and to mint the cursor.
+	 */
+	static resultsQuery(db: Database, monitorId: string) {
+		return db.query(dnsMonitorResults).where({ dns_monitor_id: monitorId });
 	}
 
 	/**

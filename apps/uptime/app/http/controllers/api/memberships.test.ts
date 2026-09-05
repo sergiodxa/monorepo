@@ -18,6 +18,7 @@ import type { ApiKeyScope } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import { membershipsIndex } from "~/app/http/controllers/api/memberships";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { parseLink } from "~/app/lib/test/paging";
 import { encodeId } from "~/app/services/typed-id";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -68,6 +69,31 @@ function request(method: string, url: string, options: { key?: string } = {}): R
 	return new Request(`https://uptime.test${url}`, { method, headers });
 }
 
+describe("GET /api/v1/memberships total", () => {
+	test("counts every membership on the team, not just the page", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let otherTeam = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["teams:read"]);
+		await createMembershipRow(db, team.id);
+		await createMembershipRow(db, team.id, "admin");
+		await createMembershipRow(db, team.id);
+		// A membership the key cannot see must not reach the total either.
+		await createMembershipRow(db, otherTeam.id);
+
+		let path = routes.api.v1.memberships.href();
+		let response = await dispatch(db, request("GET", `${path}?perPage=1`, { key }));
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as {
+			data: { memberships: unknown[] };
+			meta: { pagination: { total: number; perPage: number } };
+		};
+		expect(body.data.memberships).toHaveLength(1);
+		expect(body.meta.pagination.total).toBe(3);
+	});
+});
+
 describe("GET /api/v1/memberships", () => {
 	test("lists the team's memberships", async () => {
 		let { db } = createTestDatabase();
@@ -101,6 +127,44 @@ describe("GET /api/v1/memberships", () => {
 		let body = (await response.json()) as { data: { memberships: Array<{ teamId: string }> } };
 		expect(body.data.memberships).toHaveLength(1);
 		expect(body.data.memberships[0]?.teamId).toBe(encodeId("team", team.id));
+	});
+
+	test("serves one page and a cursor that walks to the next", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["teams:read"]);
+		await createMembershipRow(db, team.id);
+		await createMembershipRow(db, team.id, "admin");
+
+		let path = routes.api.v1.memberships.href();
+		let response = await dispatch(db, request("GET", `${path}?perPage=1`, { key }));
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as { data: { memberships: Array<{ id: string }> } };
+		expect(body.data.memberships).toHaveLength(1);
+
+		// Navigation rides in the headers, so following the feed means following `Link`.
+		let next = parseLink(response.headers.get("Link"));
+		expect(next).not.toBeNull();
+
+		let second = await dispatch(db, request("GET", next as string, { key }));
+		expect(second.status).toBe(200);
+		let secondBody = (await second.json()) as { data: { memberships: Array<{ id: string }> } };
+		expect(secondBody.data.memberships).toHaveLength(1);
+		expect(secondBody.data.memberships[0]?.id).not.toBe(body.data.memberships[0]?.id);
+	});
+
+	test("rejects a malformed cursor as a bad request", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["teams:read"]);
+
+		let path = routes.api.v1.memberships.href();
+		let response = await dispatch(db, request("GET", `${path}?cursor=not-a-cursor`, { key }));
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as { error: { code: string } };
+		expect(body.error.code).toBe("BAD_REQUEST");
 	});
 
 	test("returns 401 with a missing Authorization header", async () => {

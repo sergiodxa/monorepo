@@ -20,6 +20,7 @@ import type { ApiKeyScope, SelectTeam } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import CronJobMonitor from "~/app/data/cron-job";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { parseLink } from "~/app/lib/test/paging";
 import { teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -58,6 +59,11 @@ async function dispatch(db: Db, request: Request) {
 
 function indexRequest(headers: Record<string, string> = {}) {
 	return new Request(`https://uptime.test${routes.api.v1.cronJobs.index.href()}`, { headers });
+}
+
+/** A GET against an arbitrary path, which is what following a `Link` header takes. */
+function pathRequest(path: string, headers: Record<string, string> = {}) {
+	return new Request(`https://uptime.test${path}`, { headers });
 }
 
 function createRequest(body: unknown, headers: Record<string, string> = {}) {
@@ -130,6 +136,66 @@ describe("GET /api/v1/cron-jobs", () => {
 		expect(body.data.cronJobs[0]?.name).toBe("Mine");
 	});
 
+	test("serves one page and a cursor that walks to the next", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["cron-jobs:read"]);
+
+		await CronJobMonitor.create(db, team.id, {
+			name: "First",
+			description: null,
+			cron_expression: "0 2 * * *",
+			grace_period_seconds: 300,
+			timezone: "UTC",
+			alert_on_late: false,
+			enabled_at: null,
+		});
+		await CronJobMonitor.create(db, team.id, {
+			name: "Second",
+			description: null,
+			cron_expression: "0 3 * * *",
+			grace_period_seconds: 300,
+			timezone: "UTC",
+			alert_on_late: false,
+			enabled_at: null,
+		});
+
+		let path = routes.api.v1.cronJobs.index.href();
+		let auth = { Authorization: `Bearer ${key}` };
+		let response = await dispatch(db, pathRequest(`${path}?perPage=1`, auth));
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as { data: { cronJobs: { name: string }[] } };
+		expect(body.data.cronJobs).toHaveLength(1);
+
+		// Navigation rides in the headers now, so following the feed means following `Link`.
+		let next = parseLink(response.headers.get("Link"));
+		expect(next).not.toBeNull();
+
+		let second = await dispatch(db, pathRequest(next as string, auth));
+		expect(second.status).toBe(200);
+		let secondBody = (await second.json()) as { data: { cronJobs: { name: string }[] } };
+		expect(secondBody.data.cronJobs).toHaveLength(1);
+		// The second page is a different row, which is the whole point of seeking.
+		expect(secondBody.data.cronJobs[0]?.name).not.toBe(body.data.cronJobs[0]?.name);
+	});
+
+	test("rejects a malformed cursor as a bad request", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["cron-jobs:read"]);
+
+		let path = routes.api.v1.cronJobs.index.href();
+		let response = await dispatch(
+			db,
+			pathRequest(`${path}?cursor=not-a-cursor`, { Authorization: `Bearer ${key}` }),
+		);
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as { error: { code: string } };
+		expect(body.error.code).toBe("BAD_REQUEST");
+	});
+
 	test("returns 401 when the Authorization header is missing", async () => {
 		let { db } = createTestDatabase();
 		let response = await dispatch(db, indexRequest());
@@ -149,6 +215,44 @@ describe("GET /api/v1/cron-jobs", () => {
 
 		let response = await dispatch(db, indexRequest({ Authorization: `Bearer ${key}` }));
 		expect(response.status).toBe(403);
+	});
+});
+
+describe("GET /api/v1/cron-jobs total", () => {
+	test("counts every cron job on the team, not just the page", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let otherTeam = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["cron-jobs:read"]);
+
+		let attributes = {
+			description: null,
+			cron_expression: "0 2 * * *",
+			grace_period_seconds: 300,
+			timezone: "UTC",
+			alert_on_late: false,
+			enabled_at: null,
+		};
+		await CronJobMonitor.create(db, team.id, { name: "First", ...attributes });
+		await CronJobMonitor.create(db, team.id, { name: "Second", ...attributes });
+		await CronJobMonitor.create(db, team.id, { name: "Third", ...attributes });
+		// A cron job the key cannot see must not reach the total either.
+		await CronJobMonitor.create(db, otherTeam.id, { name: "Theirs", ...attributes });
+
+		let response = await dispatch(
+			db,
+			pathRequest(`${routes.api.v1.cronJobs.index.href()}?perPage=1`, {
+				Authorization: `Bearer ${key}`,
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as {
+			data: { cronJobs: unknown[] };
+			meta: { pagination: { total: number } };
+		};
+		expect(body.data.cronJobs).toHaveLength(1);
+		expect(body.meta.pagination.total).toBe(3);
 	});
 });
 

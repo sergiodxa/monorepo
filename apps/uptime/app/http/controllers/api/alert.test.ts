@@ -19,6 +19,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { parseLink } from "~/app/lib/test/paging";
 import { encodeId } from "~/app/services/typed-id";
 import { alertEvents, alerts, teams } from "~/database/schema";
 
@@ -63,6 +64,25 @@ async function createAlertRow(db: Db, teamId: string, overrides: Record<string, 
 			notify_on_recovery: true,
 			cooldown_minutes: 0,
 			config: { strategy: "email", config: { to: "ops@example.com", subjectPrefix: "" } },
+			...overrides,
+		},
+		{ touch: true, returnRow: true },
+	);
+}
+
+async function createAlertEventRow(db: Db, alertId: string, overrides: Record<string, unknown>) {
+	return await db.create(
+		alertEvents,
+		{
+			id: crypto.randomUUID(),
+			alert_id: alertId,
+			monitor_id: crypto.randomUUID(),
+			event_type: "up",
+			status: "sent",
+			error_message: null,
+			monitor_type: "http",
+			monitor_name: "Example",
+			snapshot: null,
 			...overrides,
 		},
 		{ touch: true, returnRow: true },
@@ -405,40 +425,9 @@ describe("GET /api/v1/alerts/:alertId/events", () => {
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["alerts:read"]);
 		let alert = await createAlertRow(db, team.id);
-		let monitorId = crypto.randomUUID();
 
-		await db.create(
-			alertEvents,
-			{
-				id: crypto.randomUUID(),
-				sent_at: Date.now() - 1000,
-				alert_id: alert.id,
-				monitor_id: monitorId,
-				event_type: "down",
-				status: "sent",
-				error_message: null,
-				monitor_type: "http",
-				monitor_name: "Example",
-				snapshot: null,
-			},
-			{ touch: true, returnRow: true },
-		);
-		let newer = await db.create(
-			alertEvents,
-			{
-				id: crypto.randomUUID(),
-				sent_at: Date.now(),
-				alert_id: alert.id,
-				monitor_id: monitorId,
-				event_type: "up",
-				status: "sent",
-				error_message: null,
-				monitor_type: "http",
-				monitor_name: "Example",
-				snapshot: null,
-			},
-			{ touch: true, returnRow: true },
-		);
+		await createAlertEventRow(db, alert.id, { sent_at: Date.now() - 1000, event_type: "down" });
+		let newer = await createAlertEventRow(db, alert.id, { sent_at: Date.now() });
 
 		let response = await dispatch(
 			db,
@@ -449,6 +438,49 @@ describe("GET /api/v1/alerts/:alertId/events", () => {
 		let body = (await response.json()) as { data: { events: Array<{ id: string }> } };
 		expect(body.data.events).toHaveLength(2);
 		expect(body.data.events[0]?.id).toBe(encodeId("evt", newer.id));
+	});
+
+	test("serves one page and a cursor that walks to the next", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:read"]);
+		let alert = await createAlertRow(db, team.id);
+
+		await createAlertEventRow(db, alert.id, { sent_at: Date.now() - 1000, event_type: "down" });
+		await createAlertEventRow(db, alert.id, { sent_at: Date.now() });
+
+		let path = alertRoutes.alertEvents.href({ alertId: encodeId("alt", alert.id) });
+		let response = await dispatch(db, req("GET", `${path}?perPage=1`, key));
+		expect(response.status).toBe(200);
+
+		let body = (await response.json()) as { data: { events: Array<{ id: string }> } };
+		expect(body.data.events).toHaveLength(1);
+
+		// Navigation rides in the headers now, so following the feed means following `Link`.
+		let next = parseLink(response.headers.get("Link"));
+		expect(next).not.toBeNull();
+
+		let second = await dispatch(db, req("GET", next as string, key));
+		expect(second.status).toBe(200);
+
+		let secondBody = (await second.json()) as { data: { events: Array<{ id: string }> } };
+		expect(secondBody.data.events).toHaveLength(1);
+		// The second page is a different row, which is the whole point of seeking.
+		expect(secondBody.data.events[0]?.id).not.toBe(body.data.events[0]?.id);
+	});
+
+	test("rejects a malformed cursor as a bad request", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:read"]);
+		let alert = await createAlertRow(db, team.id);
+
+		let path = alertRoutes.alertEvents.href({ alertId: encodeId("alt", alert.id) });
+		let response = await dispatch(db, req("GET", `${path}?cursor=not-a-cursor`, key));
+		expect(response.status).toBe(400);
+
+		let body = (await response.json()) as { error: { code: string } };
+		expect(body.error.code).toBe("BAD_REQUEST");
 	});
 
 	test("404s when the alert doesn't belong to the team", async () => {

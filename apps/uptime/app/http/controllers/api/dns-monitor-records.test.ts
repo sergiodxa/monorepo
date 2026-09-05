@@ -25,6 +25,7 @@ import type {
 import ApiKey from "~/app/data/api-key";
 import DnsMonitor from "~/app/data/dns-monitor";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { parseLink } from "~/app/lib/test/paging";
 import { encodeId } from "~/app/services/typed-id";
 import { dnsMonitorRecords, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -97,14 +98,19 @@ async function dispatch(db: Db, request: Request): Promise<Response> {
 	return container.scope(() => router.fetch(request));
 }
 
-function listRequest(dnsMonitorId: string, key?: string): Request {
+function listRequest(dnsMonitorId: string, key?: string, query = ""): Request {
 	let headers: Record<string, string> = {};
 	if (key) headers.Authorization = `Bearer ${key}`;
 
 	return new Request(
-		`https://uptime.test${routes.api.v1.dnsMonitors.records.index.href({ dnsMonitorId: encodeId("dns", dnsMonitorId) })}`,
+		`https://uptime.test${routes.api.v1.dnsMonitors.records.index.href({ dnsMonitorId: encodeId("dns", dnsMonitorId) })}${query}`,
 		{ headers },
 	);
+}
+
+/** Follows a `Link` relation, which comes back as the path and query to request next. */
+function linkRequest(path: string, key: string): Request {
+	return new Request(`https://uptime.test${path}`, { headers: { Authorization: `Bearer ${key}` } });
 }
 
 function updateRequest(
@@ -178,6 +184,49 @@ describe("GET /api/v1/dns-monitors/:dnsMonitorId/records", () => {
 			status: "new",
 			lastSeenAt: null,
 		});
+	});
+
+	test("serves one page and a cursor that walks to the next", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:read"]);
+		let monitor = await createDnsMonitorRow(db, team.id);
+		await createRecordRow(db, monitor.id, { name: "example.com", record_type: "A" });
+		await createRecordRow(db, monitor.id, {
+			name: "mail.example.com",
+			record_type: "MX",
+			value: "10 mx.example.com",
+		});
+
+		let response = await dispatch(db, listRequest(monitor.id, key, "?perPage=1"));
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as { data: { records: { name: string }[] } };
+		expect(body.data.records).toHaveLength(1);
+		expect(body.data.records[0]?.name).toBe("example.com");
+
+		// Navigation rides in the headers now, so following the list means following `Link`.
+		let next = parseLink(response.headers.get("Link"));
+		expect(next).not.toBeNull();
+
+		let second = await dispatch(db, linkRequest(next as string, key));
+		expect(second.status).toBe(200);
+		let secondBody = (await second.json()) as { data: { records: { name: string }[] } };
+		expect(secondBody.data.records).toHaveLength(1);
+		// The second page picks up where the first stopped, in the same alphabetical walk.
+		expect(secondBody.data.records[0]?.name).toBe("mail.example.com");
+	});
+
+	test("rejects a malformed cursor as a bad request", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:read"]);
+		let monitor = await createDnsMonitorRow(db, team.id);
+
+		let response = await dispatch(db, listRequest(monitor.id, key, "?cursor=not-a-cursor"));
+
+		expect(response.status).toBe(400);
+		expect((await errorBody(response)).error.code).toBe("BAD_REQUEST");
 	});
 
 	test("returns an empty list for a monitor with no records", async () => {
@@ -423,5 +472,31 @@ describe("PATCH /api/v1/dns-monitors/:dnsMonitorId/records/:recordId", () => {
 
 		let stored = await db.findOne(dnsMonitorRecords, { where: { id: record.id } });
 		expect(stored?.is_enabled).toBeTruthy();
+	});
+});
+
+describe("GET /api/v1/dns-monitors/:dnsMonitorId/records total", () => {
+	test("counts every record on the monitor, not just the page", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:read"]);
+		let monitor = await createDnsMonitorRow(db, team.id);
+		let otherMonitor = await createDnsMonitorRow(db, team.id);
+
+		await createRecordRow(db, monitor.id, { value: "192.0.2.1" });
+		await createRecordRow(db, monitor.id, { value: "192.0.2.2" });
+		await createRecordRow(db, monitor.id, { value: "192.0.2.3" });
+		// A record on another monitor must not reach this monitor's total.
+		await createRecordRow(db, otherMonitor.id, { value: "192.0.2.9" });
+
+		let response = await dispatch(db, listRequest(monitor.id, key, "?perPage=1"));
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as {
+			data: { records: unknown[] };
+			meta: { pagination: { total: number } };
+		};
+		expect(body.data.records).toHaveLength(1);
+		expect(body.meta.pagination.total).toBe(3);
 	});
 });

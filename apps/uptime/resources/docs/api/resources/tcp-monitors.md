@@ -5,14 +5,16 @@ section:
   title: API Resources
   order: 5
 order: 4
-lastUpdated: 2026-02-14
+lastUpdated: 2026-09-05
 ---
 
 TCP monitors verify that services are accepting connections on specific ports. Use them to monitor databases, mail servers, game servers, and any TCP-based service.
 
 ## List All TCP Monitors
 
-Retrieve all TCP monitors for your team.
+Retrieve your team's TCP monitors, newest first.
+
+This endpoint is paginated. See [Pagination](/docs/api/pagination) for how to page through the full list.
 
 ```
 GET /api/v1/tcp-monitors
@@ -20,10 +22,17 @@ GET /api/v1/tcp-monitors
 
 **Required scope:** `tcp-monitors:read`
 
+### Query Parameters
+
+| Parameter | Type    | Required | Description                               |
+| --------- | ------- | -------- | ----------------------------------------- |
+| `perPage` | integer | No       | Results per page, 1-200 (default: 50)     |
+| `cursor`  | string  | No       | Page to fetch, taken from a `Link` header |
+
 ### cURL
 
 ```bash
-curl https://uptime.sergiodxa.com/api/v1/tcp-monitors \
+curl -i "https://uptime.sergiodxa.com/api/v1/tcp-monitors?perPage=25" \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -31,22 +40,34 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors \
 
 ```json
 {
-	"data": [
-		{
-			"id": "tcpm_abc123",
-			"name": "PostgreSQL Production",
-			"host": "db.example.com",
-			"port": 5432,
-			"timeoutMs": 5000,
-			"intervalSeconds": 60,
-			"isEnabled": true,
-			"lastCheckedAt": "2026-02-14T12:00:00Z",
-			"lastStatus": "up",
-			"lastResponseTimeMs": 45,
-			"createdAt": "2026-01-15T10:30:00Z",
-			"updatedAt": "2026-02-10T14:20:00Z"
+	"data": {
+		"monitors": [
+			{
+				"id": "tcpm_abc123",
+				"name": "PostgreSQL Production",
+				"host": "db.example.com",
+				"port": 5432,
+				"timeoutMs": 5000,
+				"intervalSeconds": 60,
+				"isEnabled": true,
+				"lastCheckedAt": 1771070400000,
+				"lastStatus": "up",
+				"lastResponseTimeMs": 45,
+				"createdAt": 1768473000000,
+				"updatedAt": 1770733200000
+			}
+		]
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z",
+		"pagination": {
+			"next": "eyJkIjoiYWZ0ZXIi",
+			"prev": null,
+			"perPage": 25,
+			"total": 34
 		}
-	]
+	}
 }
 ```
 
@@ -54,6 +75,7 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors \
 
 | Status | Code         | Description                               |
 | ------ | ------------ | ----------------------------------------- |
+| 400    | BAD_REQUEST  | Invalid or malformed cursor               |
 | 401    | UNAUTHORIZED | Missing or invalid API key                |
 | 403    | FORBIDDEN    | API key missing `tcp-monitors:read` scope |
 
@@ -65,89 +87,92 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors \
 	"type": "object",
 	"properties": {
 		"data": {
-			"type": "array",
-			"items": {
-				"type": "object",
-				"properties": {
-					"id": {
-						"type": "string",
-						"description": "Unique identifier",
-						"pattern": "^tcpm_[a-zA-Z0-9]+$"
-					},
-					"name": {
-						"type": "string",
-						"description": "Monitor name",
-						"minLength": 1,
-						"maxLength": 255
-					},
-					"host": {
-						"type": "string",
-						"description": "Hostname or IP address",
-						"minLength": 1,
-						"maxLength": 255
-					},
-					"port": {
-						"type": "integer",
-						"description": "TCP port number",
-						"minimum": 1,
-						"maximum": 65535
-					},
-					"timeoutMs": {
-						"type": "integer",
-						"description": "Connection timeout in milliseconds",
-						"minimum": 100,
-						"maximum": 60000,
-						"default": 5000
-					},
-					"intervalSeconds": {
-						"type": "integer",
-						"description": "Check interval in seconds",
-						"minimum": 10,
-						"maximum": 86400,
-						"default": 60
-					},
-					"isEnabled": {
-						"type": "boolean",
-						"description": "Whether the monitor is active",
-						"default": true
-					},
-					"lastCheckedAt": {
-						"type": ["string", "null"],
-						"format": "date-time",
-						"description": "Timestamp of the last check"
-					},
-					"lastStatus": {
-						"type": ["string", "null"],
-						"enum": ["up", "down", "timeout", null],
-						"description": "Status from the last check"
-					},
-					"lastResponseTimeMs": {
-						"type": ["integer", "null"],
-						"description": "Response time from the last check in milliseconds"
-					},
-					"createdAt": {
-						"type": "string",
-						"format": "date-time",
-						"description": "Timestamp when the monitor was created"
-					},
-					"updatedAt": {
-						"type": "string",
-						"format": "date-time",
-						"description": "Timestamp when the monitor was last updated"
+			"type": "object",
+			"properties": {
+				"monitors": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"id": {
+								"type": "string",
+								"description": "Unique identifier",
+								"pattern": "^tcpm_[a-zA-Z0-9]+$"
+							},
+							"name": {
+								"type": "string",
+								"description": "Monitor name",
+								"minLength": 1,
+								"maxLength": 255
+							},
+							"host": {
+								"type": "string",
+								"description": "Hostname or IP address",
+								"minLength": 1,
+								"maxLength": 255
+							},
+							"port": {
+								"type": "integer",
+								"description": "TCP port number",
+								"minimum": 1,
+								"maximum": 65535
+							},
+							"timeoutMs": {
+								"type": "integer",
+								"description": "Connection timeout in milliseconds",
+								"minimum": 100,
+								"maximum": 60000,
+								"default": 5000
+							},
+							"intervalSeconds": {
+								"type": "integer",
+								"description": "Check interval in seconds",
+								"minimum": 10,
+								"maximum": 86400,
+								"default": 60
+							},
+							"isEnabled": {
+								"type": "boolean",
+								"description": "Whether the monitor is active",
+								"default": true
+							},
+							"lastCheckedAt": {
+								"type": ["integer", "null"],
+								"description": "When the last check ran, in milliseconds since the epoch"
+							},
+							"lastStatus": {
+								"type": ["string", "null"],
+								"enum": ["up", "down", "timeout", null],
+								"description": "Status from the last check"
+							},
+							"lastResponseTimeMs": {
+								"type": ["integer", "null"],
+								"description": "Response time from the last check in milliseconds"
+							},
+							"createdAt": {
+								"type": "integer",
+								"description": "When the monitor was created, in milliseconds since the epoch"
+							},
+							"updatedAt": {
+								"type": "integer",
+								"description": "When the monitor was last updated, in milliseconds since the epoch"
+							}
+						},
+						"required": [
+							"id",
+							"name",
+							"host",
+							"port",
+							"timeoutMs",
+							"intervalSeconds",
+							"isEnabled",
+							"createdAt",
+							"updatedAt"
+						]
 					}
-				},
-				"required": [
-					"id",
-					"name",
-					"host",
-					"port",
-					"timeoutMs",
-					"intervalSeconds",
-					"isEnabled",
-					"createdAt",
-					"updatedAt"
-				]
-			}
+				}
+			},
+			"required": ["monitors"]
 		}
 	},
 	"required": ["data"]
@@ -745,6 +770,8 @@ Returns `204 No Content` with no response body on success.
 
 Retrieve the connection check history for a TCP monitor.
 
+Results arrive newest first, a page at a time. See [Pagination](/docs/api/pagination) for how to walk the whole history.
+
 ```
 GET /api/v1/tcp-monitors/:id/results
 ```
@@ -753,15 +780,15 @@ GET /api/v1/tcp-monitors/:id/results
 
 ### Query Parameters
 
-| Parameter | Type    | Required | Description                                      |
-| --------- | ------- | -------- | ------------------------------------------------ |
-| `limit`   | integer | No       | Number of results to return (1-200, default: 50) |
-| `offset`  | integer | No       | Number of results to skip (default: 0)           |
+| Parameter | Type    | Required | Description                               |
+| --------- | ------- | -------- | ----------------------------------------- |
+| `perPage` | integer | No       | Results per page, 1-200 (default: 50)     |
+| `cursor`  | string  | No       | Page to fetch, taken from a `Link` header |
 
 ### cURL
 
 ```bash
-curl "https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123/results?limit=10&offset=0" \
+curl -i "https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123/results?perPage=10" \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -769,43 +796,51 @@ curl "https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123/results?limit
 
 ```json
 {
-	"data": [
-		{
-			"id": "tcpr_xyz789",
-			"status": "up",
-			"responseTimeMs": 42,
-			"checkedAt": "2026-02-14T12:00:00Z"
-		},
-		{
-			"id": "tcpr_xyz788",
-			"status": "up",
-			"responseTimeMs": 38,
-			"checkedAt": "2026-02-14T11:59:00Z"
-		},
-		{
-			"id": "tcpr_xyz787",
-			"status": "down",
-			"responseTimeMs": null,
-			"error": "Connection refused",
-			"checkedAt": "2026-02-14T11:58:00Z"
+	"data": {
+		"results": [
+			{
+				"id": "tcpr_xyz789",
+				"status": "up",
+				"responseTimeMs": 42,
+				"errorMessage": null,
+				"checkedAt": 1771070400000
+			},
+			{
+				"id": "tcpr_xyz788",
+				"status": "up",
+				"responseTimeMs": 38,
+				"errorMessage": null,
+				"checkedAt": 1771070340000
+			},
+			{
+				"id": "tcpr_xyz787",
+				"status": "down",
+				"responseTimeMs": null,
+				"errorMessage": "Connection refused",
+				"checkedAt": 1771070280000
+			}
+		]
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z",
+		"pagination": {
+			"next": "eyJkIjoiYWZ0ZXIi",
+			"prev": null,
+			"perPage": 10
 		}
-	],
-	"pagination": {
-		"total": 1440,
-		"limit": 10,
-		"offset": 0
 	}
 }
 ```
 
 ### Errors
 
-| Status | Code             | Description                               |
-| ------ | ---------------- | ----------------------------------------- |
-| 400    | VALIDATION_ERROR | Invalid query parameters                  |
-| 401    | UNAUTHORIZED     | Missing or invalid API key                |
-| 403    | FORBIDDEN        | API key missing `tcp-monitors:read` scope |
-| 404    | NOT_FOUND        | TCP monitor not found                     |
+| Status | Code         | Description                               |
+| ------ | ------------ | ----------------------------------------- |
+| 400    | BAD_REQUEST  | Invalid or malformed cursor               |
+| 401    | UNAUTHORIZED | Missing or invalid API key                |
+| 403    | FORBIDDEN    | API key missing `tcp-monitors:read` scope |
+| 404    | NOT_FOUND    | TCP monitor not found                     |
 
 ### Response Schema
 
@@ -815,56 +850,43 @@ curl "https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123/results?limit
 	"type": "object",
 	"properties": {
 		"data": {
-			"type": "array",
-			"items": {
-				"type": "object",
-				"properties": {
-					"id": {
-						"type": "string",
-						"description": "Unique identifier",
-						"pattern": "^tcpr_[a-zA-Z0-9]+$"
-					},
-					"status": {
-						"type": "string",
-						"enum": ["up", "down", "timeout"],
-						"description": "Result status"
-					},
-					"responseTimeMs": {
-						"type": ["integer", "null"],
-						"description": "Connection time in milliseconds"
-					},
-					"error": {
-						"type": "string",
-						"description": "Error message when status is down or timeout"
-					},
-					"checkedAt": {
-						"type": "string",
-						"format": "date-time",
-						"description": "Timestamp when the check was performed"
-					}
-				},
-				"required": ["id", "status", "checkedAt"]
-			}
-		},
-		"pagination": {
 			"type": "object",
 			"properties": {
-				"total": {
-					"type": "integer",
-					"description": "Total number of results"
-				},
-				"limit": {
-					"type": "integer",
-					"description": "Number of results per page"
-				},
-				"offset": {
-					"type": "integer",
-					"description": "Number of results skipped"
+				"results": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"id": {
+								"type": "string",
+								"description": "Unique identifier",
+								"pattern": "^tcpr_[a-zA-Z0-9]+$"
+							},
+							"status": {
+								"type": "string",
+								"enum": ["up", "down", "timeout"],
+								"description": "Result status"
+							},
+							"responseTimeMs": {
+								"type": ["integer", "null"],
+								"description": "Connection time in milliseconds"
+							},
+							"errorMessage": {
+								"type": ["string", "null"],
+								"description": "Error message when status is down or timeout"
+							},
+							"checkedAt": {
+								"type": "integer",
+								"description": "When the check ran, in milliseconds since the epoch"
+							}
+						},
+						"required": ["id", "status", "checkedAt"]
+					}
 				}
 			},
-			"required": ["total", "limit", "offset"]
+			"required": ["results"]
 		}
 	},
-	"required": ["data", "pagination"]
+	"required": ["data"]
 }
 ```

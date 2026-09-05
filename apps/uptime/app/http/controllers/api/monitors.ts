@@ -8,7 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BadRequest, Created } from "@sdxc/http/status-code";
+import { BadRequest, Created, InternalServerError, Ok } from "@sdxc/http/status-code";
+import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
@@ -22,6 +23,7 @@ import type { SelectMonitor } from "~/database/schema";
 import Monitor from "~/app/data/monitor";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
@@ -79,8 +81,31 @@ export default createController(monitorsRoutes, {
 			middleware: [requireApiKey("monitors:read")],
 			handler: async (ctx) => {
 				let db = getServiceContainer().get(Database);
-				let monitors = await Monitor.listByTeam(db, ctx.apiTeam.id);
-				return apiSuccess({ monitors: monitors.map(serializeMonitor) });
+
+				let params = PAGING.parse(ctx.url.searchParams);
+				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
+
+				// Chaining returns new queries, so the same one both counts and pages.
+				let query = Monitor.listByTeamQuery(db, ctx.apiTeam.id);
+
+				let page = await Pagination.byKeyset(query, {
+					orderBy: NEWEST_FIRST,
+					cursor: params.data.cursor,
+					limit: params.data.perPage,
+				});
+
+				if (isFailure(page)) {
+					if (page.error instanceof InvalidCursorError) {
+						return apiError("BAD_REQUEST", page.error.message, BadRequest);
+					}
+					return apiError("INTERNAL", page.error.message, InternalServerError);
+				}
+
+				return apiPage({ monitors: page.data.items.map(serializeMonitor) }, page.data, {
+					url: ctx.url,
+					perPage: params.data.perPage,
+					total: await query.count(),
+				});
 			},
 		},
 

@@ -20,6 +20,7 @@ import type { ApiKeyScope, SelectDnsMonitor, SelectTeam } from "~/database/schem
 import ApiKey from "~/app/data/api-key";
 import DnsMonitor from "~/app/data/dns-monitor";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { parseLink } from "~/app/lib/test/paging";
 import { encodeId } from "~/app/services/typed-id";
 import { teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -96,11 +97,16 @@ function destroyRequest(dnsMonitorId: string, headers: Record<string, string> = 
 	);
 }
 
-function resultsRequest(dnsMonitorId: string, headers: Record<string, string> = {}) {
+function resultsRequest(dnsMonitorId: string, headers: Record<string, string> = {}, query = "") {
 	return new Request(
-		`https://uptime.test${routes.api.v1.dnsMonitors.results.href({ dnsMonitorId: encodeId("dns", dnsMonitorId) })}`,
+		`https://uptime.test${routes.api.v1.dnsMonitors.results.href({ dnsMonitorId: encodeId("dns", dnsMonitorId) })}${query}`,
 		{ headers },
 	);
+}
+
+/** Follows a `Link` relation, which comes back as the path and query to request next. */
+function linkRequest(path: string, headers: Record<string, string> = {}) {
+	return new Request(`https://uptime.test${path}`, { headers });
 }
 
 describe("GET /api/v1/dns-monitors/:dnsMonitorId", () => {
@@ -354,6 +360,55 @@ describe("GET /api/v1/dns-monitors/:dnsMonitorId/results", () => {
 		expect(body.data.results[0]?.status).toBe("ok");
 		expect(body.data.results[0]?.responseTimeMs).toBe(42);
 		expect(body.data.results[0]?.queriesFailed).toBe(0);
+	});
+
+	test("serves one page and a cursor that walks to the next", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:read"]);
+		let monitor = await createDnsMonitorRow(db, team.id);
+
+		await DnsMonitor.recordCheckResult(db, monitor.id, { status: "ok", responseTimeMs: 42 });
+		await DnsMonitor.recordCheckResult(db, monitor.id, { status: "error", responseTimeMs: 99 });
+
+		let response = await dispatch(
+			db,
+			resultsRequest(monitor.id, { Authorization: `Bearer ${key}` }, "?perPage=1"),
+		);
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as { data: { results: { id: string }[] } };
+		expect(body.data.results).toHaveLength(1);
+
+		// Navigation rides in the headers now, so following the feed means following `Link`.
+		let next = parseLink(response.headers.get("Link"));
+		expect(next).not.toBeNull();
+
+		let second = await dispatch(
+			db,
+			linkRequest(next as string, { Authorization: `Bearer ${key}` }),
+		);
+		expect(second.status).toBe(200);
+		let secondBody = (await second.json()) as { data: { results: { id: string }[] } };
+		expect(secondBody.data.results).toHaveLength(1);
+		// The second page is a different row, which is the whole point of seeking.
+		expect(secondBody.data.results[0]?.id).not.toBe(body.data.results[0]?.id);
+	});
+
+	test("rejects a malformed cursor as a bad request", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:read"]);
+		let monitor = await createDnsMonitorRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			resultsRequest(monitor.id, { Authorization: `Bearer ${key}` }, "?cursor=not-a-cursor"),
+		);
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as { error: { code: string } };
+		expect(body.error.code).toBe("BAD_REQUEST");
 	});
 
 	test("returns 401 when the Authorization header is missing", async () => {

@@ -10,7 +10,8 @@
  */
 
 import { Schedule } from "@sdxc/cron";
-import { BadRequest, Created } from "@sdxc/http/status-code";
+import { BadRequest, Created, InternalServerError, Ok } from "@sdxc/http/status-code";
+import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
@@ -30,6 +31,7 @@ import {
 	UNKNOWN_TIMEZONE_MESSAGE,
 } from "~/app/lib/timezones";
 import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
@@ -84,8 +86,31 @@ export default createController(cronJobsRoutes, {
 			middleware: [requireApiKey("cron-jobs:read")],
 			handler: async (ctx) => {
 				let db = getServiceContainer().get(Database);
-				let cronJobs = await CronJobMonitor.listByTeam(db, ctx.apiTeam.id);
-				return apiSuccess({ cronJobs: cronJobs.map(serializeCronJob) });
+
+				let params = PAGING.parse(ctx.url.searchParams);
+				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
+
+				// Chaining returns new queries, so the same one both counts and pages.
+				let query = CronJobMonitor.listByTeamQuery(db, ctx.apiTeam.id);
+
+				let page = await Pagination.byKeyset(query, {
+					orderBy: NEWEST_FIRST,
+					cursor: params.data.cursor,
+					limit: params.data.perPage,
+				});
+
+				if (isFailure(page)) {
+					if (page.error instanceof InvalidCursorError) {
+						return apiError("BAD_REQUEST", page.error.message, BadRequest);
+					}
+					return apiError("INTERNAL", page.error.message, InternalServerError);
+				}
+
+				return apiPage({ cronJobs: page.data.items.map(serializeCronJob) }, page.data, {
+					url: ctx.url,
+					perPage: params.data.perPage,
+					total: await query.count(),
+				});
 			},
 		},
 

@@ -18,11 +18,12 @@ import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
-import type { ApiKeyScope, SelectTeam } from "~/database/schema";
+import type { ApiKeyScope, InsertFlowMonitorResult, SelectTeam } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import FlowMonitor from "~/app/data/flow-monitor";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { parseLink } from "~/app/lib/test/paging";
 import { encodeId } from "~/app/services/typed-id";
 import { flowMonitorResults, flowMonitors, teamDomains, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -90,6 +91,37 @@ async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]): Prom
 	return key;
 }
 
+/**
+ * Writes a check-result row with the caller's own `checked_at`, so a test that asserts an
+ * order gets one: the recorded path stamps the current millisecond, and two checks written
+ * back to back can share it.
+ */
+async function createResultRow(
+	db: Db,
+	monitorId: string,
+	values: Partial<InsertFlowMonitorResult> & { checked_at: number },
+) {
+	return await db.create(
+		flowMonitorResults,
+		{
+			id: crypto.randomUUID(),
+			flow_monitor_id: monitorId,
+			status: "up",
+			tests_total: 1,
+			tests_passed: 1,
+			tests_failed: 0,
+			requests_made: 1,
+			failed_test: null,
+			failed_at_line: null,
+			failure_detail: null,
+			duration_ms: 100,
+			error_message: null,
+			...values,
+		},
+		{ touch: true, returnRow: true },
+	);
+}
+
 async function dispatch(
 	db: Db,
 	request: { method: string; path: string; key?: string; body?: Record<string, unknown> },
@@ -132,6 +164,46 @@ describe("GET /api/v1/flow-monitors", () => {
 		let body = (await response.json()) as { data: { flowMonitors: { name: string }[] } };
 		expect(body.data.flowMonitors).toHaveLength(1);
 		expect(body.data.flowMonitors[0]?.name).toBe("Mine");
+	});
+
+	test("serves one page and a cursor that walks to the next", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["flow-monitors:read"]);
+
+		await FlowMonitor.create(db, team.id, { name: "First", source: validSource() });
+		await FlowMonitor.create(db, team.id, { name: "Second", source: validSource() });
+
+		let path = routes.api.v1.flowMonitors.index.href();
+		let response = await dispatch(db, { method: "GET", path: `${path}?perPage=1`, key });
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as { data: { flowMonitors: { name: string }[] } };
+		expect(body.data.flowMonitors).toHaveLength(1);
+
+		// Navigation rides in the headers now, so following the feed means following `Link`.
+		let next = parseLink(response.headers.get("Link"));
+		expect(next).not.toBeNull();
+
+		let second = await dispatch(db, { method: "GET", path: next as string, key });
+		expect(second.status).toBe(200);
+		let secondBody = (await second.json()) as { data: { flowMonitors: { name: string }[] } };
+		expect(secondBody.data.flowMonitors).toHaveLength(1);
+		// The second page is a different row, which is the whole point of seeking.
+		expect(secondBody.data.flowMonitors[0]?.name).not.toBe(body.data.flowMonitors[0]?.name);
+	});
+
+	test("rejects a malformed cursor as a bad request", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["flow-monitors:read"]);
+
+		let path = routes.api.v1.flowMonitors.index.href();
+		let response = await dispatch(db, { method: "GET", path: `${path}?cursor=not-a-cursor`, key });
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as { error: { code: string } };
+		expect(body.error.code).toBe("BAD_REQUEST");
 	});
 
 	test("omits the spec source, which carries the flow's credentials", async () => {
@@ -613,29 +685,26 @@ describe("GET /api/v1/flow-monitors/:flowMonitorId/results", () => {
 		let key = await createApiKey(db, team.id, ["flow-monitors:read"]);
 		let monitor = await FlowMonitor.create(db, team.id, { name: "Sign in", source: validSource() });
 
-		await FlowMonitor.recordCheckResult(db, monitor.id, {
+		await createResultRow(db, monitor.id, {
 			status: "up",
-			testsTotal: 2,
-			testsPassed: 2,
-			testsFailed: 0,
-			requestsMade: 3,
-			failedTest: null,
-			failedAtLine: null,
-			failureDetail: null,
-			durationMs: 640,
-			errorMessage: null,
+			tests_total: 2,
+			tests_passed: 2,
+			tests_failed: 0,
+			requests_made: 3,
+			duration_ms: 640,
+			checked_at: 1_000,
 		});
-		await FlowMonitor.recordCheckResult(db, monitor.id, {
+		await createResultRow(db, monitor.id, {
 			status: "down",
-			testsTotal: 2,
-			testsPassed: 1,
-			testsFailed: 1,
-			requestsMade: 2,
-			failedTest: "a member can sign in",
-			failedAtLine: 4,
-			failureDetail: "expected 200, got 500",
-			durationMs: 812,
-			errorMessage: null,
+			tests_total: 2,
+			tests_passed: 1,
+			tests_failed: 1,
+			requests_made: 2,
+			failed_test: "a member can sign in",
+			failed_at_line: 4,
+			failure_detail: "expected 200, got 500",
+			duration_ms: 812,
+			checked_at: 2_000,
 		});
 
 		let response = await dispatch(db, {
@@ -675,19 +744,50 @@ describe("GET /api/v1/flow-monitors/:flowMonitorId/results", () => {
 		});
 	});
 
-	test("clamps limit to the maximum rather than refusing it", async () => {
+	test("serves one page and a cursor that walks to the next", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["flow-monitors:read"]);
 		let monitor = await FlowMonitor.create(db, team.id, { name: "Sign in", source: validSource() });
 
-		let response = await dispatch(db, {
-			method: "GET",
-			path: `${routes.api.v1.flowMonitors.results.href({ flowMonitorId: encodeId("flow", monitor.id) })}?limit=9999`,
-			key,
+		await createResultRow(db, monitor.id, { status: "up", checked_at: 1_000 });
+		await createResultRow(db, monitor.id, { status: "down", checked_at: 2_000 });
+
+		let path = routes.api.v1.flowMonitors.results.href({
+			flowMonitorId: encodeId("flow", monitor.id),
 		});
+		let response = await dispatch(db, { method: "GET", path: `${path}?perPage=1`, key });
 
 		expect(response.status).toBe(200);
+		let body = (await response.json()) as { data: { results: { status: string }[] } };
+		expect(body.data.results).toHaveLength(1);
+
+		// Navigation rides in the headers now, so following the feed means following `Link`.
+		let next = parseLink(response.headers.get("Link"));
+		expect(next).not.toBeNull();
+
+		let second = await dispatch(db, { method: "GET", path: next as string, key });
+		expect(second.status).toBe(200);
+		let secondBody = (await second.json()) as { data: { results: { status: string }[] } };
+		expect(secondBody.data.results).toHaveLength(1);
+		// The second page is a different row, which is the whole point of seeking.
+		expect(secondBody.data.results[0]?.status).not.toBe(body.data.results[0]?.status);
+	});
+
+	test("rejects a malformed cursor as a bad request", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["flow-monitors:read"]);
+		let monitor = await FlowMonitor.create(db, team.id, { name: "Sign in", source: validSource() });
+
+		let path = routes.api.v1.flowMonitors.results.href({
+			flowMonitorId: encodeId("flow", monitor.id),
+		});
+		let response = await dispatch(db, { method: "GET", path: `${path}?cursor=not-a-cursor`, key });
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as { error: { code: string } };
+		expect(body.error.code).toBe("BAD_REQUEST");
 	});
 
 	test("returns 404 for a monitor belonging to another team", async () => {
@@ -709,5 +809,56 @@ describe("GET /api/v1/flow-monitors/:flowMonitorId/results", () => {
 		});
 
 		expect(response.status).toBe(404);
+	});
+});
+
+describe("GET /api/v1/flow-monitors total", () => {
+	test("counts every flow monitor on the team, not just the page", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let otherTeam = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["flow-monitors:read"]);
+
+		await FlowMonitor.create(db, team.id, { name: "One", source: validSource() });
+		await FlowMonitor.create(db, team.id, { name: "Two", source: validSource() });
+		await FlowMonitor.create(db, team.id, { name: "Three", source: validSource() });
+		// A monitor the key cannot see must not reach the total either.
+		await FlowMonitor.create(db, otherTeam.id, { name: "Theirs", source: validSource() });
+
+		let response = await dispatch(db, {
+			method: "GET",
+			path: `${routes.api.v1.flowMonitors.index.href()}?perPage=1`,
+			key,
+		});
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as {
+			data: { flowMonitors: unknown[] };
+			meta: { pagination: { total: number } };
+		};
+		expect(body.data.flowMonitors).toHaveLength(1);
+		expect(body.meta.pagination.total).toBe(3);
+	});
+
+	test("leaves the result history without a total, since counting it is unbounded", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["flow-monitors:read"]);
+		let monitor = await FlowMonitor.create(db, team.id, { name: "Sign in", source: validSource() });
+
+		await createResultRow(db, monitor.id, { checked_at: 1_000 });
+		await createResultRow(db, monitor.id, { checked_at: 2_000 });
+
+		let response = await dispatch(db, {
+			method: "GET",
+			path: `${routes.api.v1.flowMonitors.results.href({
+				flowMonitorId: encodeId("flow", monitor.id),
+			})}?perPage=1`,
+			key,
+		});
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as { meta: { pagination: Record<string, unknown> } };
+		expect(body.meta.pagination).not.toHaveProperty("total");
 	});
 });

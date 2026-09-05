@@ -43,6 +43,16 @@ export default class ContentCheck {
 		return await db.findMany(monitorContentChecks, { where: { monitor_id: monitorId } });
 	}
 
+	/**
+	 * A monitor's content checks, as a query for a paging strategy to finish.
+	 *
+	 * The ordering is left off deliberately: `Pagination.byKeyset()` owns it, because
+	 * it needs the sort keys both to seek and to mint the cursor.
+	 */
+	static byMonitorQuery(db: Database, monitorId: string) {
+		return db.query(monitorContentChecks).where({ monitor_id: monitorId });
+	}
+
 	/** Finds a single content check scoped to its monitor. */
 	static async findByIdForMonitor(db: Database, monitorId: string, contentCheckId: string) {
 		return await db.findOne(monitorContentChecks, {

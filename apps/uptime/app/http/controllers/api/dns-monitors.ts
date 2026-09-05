@@ -9,8 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BadRequest, Created } from "@sdxc/http/status-code";
+import { BadRequest, Created, InternalServerError, Ok } from "@sdxc/http/status-code";
 import { currentLog } from "@sdxc/logger";
+import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
@@ -36,6 +37,7 @@ import {
 	discoveryNames,
 	importDiscovery,
 } from "~/app/services/dns-discovery";
+import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
 import { MAX_ZONE_FILE_BYTES, parseZoneFile } from "~/app/services/zone-file";
 import routes from "~/routes/web";
@@ -104,13 +106,36 @@ export const dnsMonitorsRoutes = {
 export default createController(dnsMonitorsRoutes, {
 	middleware: [catchValidationError()],
 	actions: {
-		/** GET /api/v1/dns-monitors — lists the team's DNS monitors. */
+		/** GET /api/v1/dns-monitors — a page of the team's DNS monitors, newest first. */
 		dnsMonitorsIndex: {
 			middleware: [requireApiKey("dns-monitors:read")],
 			handler: async (ctx) => {
 				let db = getServiceContainer().get(Database);
-				let dnsMonitors = await DnsMonitor.listByTeam(db, ctx.apiTeam.id);
-				return apiSuccess({ dnsMonitors: dnsMonitors.map(serializeDnsMonitor) });
+
+				let params = PAGING.parse(ctx.url.searchParams);
+				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
+
+				// Chaining returns new queries, so the same one both counts and pages.
+				let query = DnsMonitor.byTeamQuery(db, ctx.apiTeam.id);
+
+				let page = await Pagination.byKeyset(query, {
+					orderBy: NEWEST_FIRST,
+					cursor: params.data.cursor,
+					limit: params.data.perPage,
+				});
+
+				if (isFailure(page)) {
+					if (page.error instanceof InvalidCursorError) {
+						return apiError("BAD_REQUEST", page.error.message, BadRequest);
+					}
+					return apiError("INTERNAL", page.error.message, InternalServerError);
+				}
+
+				return apiPage({ dnsMonitors: page.data.items.map(serializeDnsMonitor) }, page.data, {
+					url: ctx.url,
+					perPage: params.data.perPage,
+					total: await query.count(),
+				});
 			},
 		},
 

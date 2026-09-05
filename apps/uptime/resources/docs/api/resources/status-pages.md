@@ -5,25 +5,32 @@ section:
   title: API Resources
   order: 5
 order: 8
-lastUpdated: 2026-02-14
+lastUpdated: 2026-09-05
 ---
 
 Status pages provide a public-facing view of your service health. Associate monitors and cron jobs to display their status to your users.
 
 ## GET /api/v1/status-pages
 
-Returns all status pages for your team.
+Returns the status pages for your team. This endpoint is paginated; see [Pagination](/docs/api/pagination) for how to page through the full list.
 
 ### Required Scope
 
 `status-pages:read`
+
+### Query Parameters
+
+| Parameter | Type    | Required | Description                               |
+| --------- | ------- | -------- | ----------------------------------------- |
+| `perPage` | integer | No       | Results per page, 1-200 (default: 50)     |
+| `cursor`  | string  | No       | Page to fetch, taken from a `Link` header |
 
 ### Example Request
 
 #### cURL
 
 ```bash
-curl https://uptime.sergiodxa.com/api/v1/status-pages \
+curl "https://uptime.sergiodxa.com/api/v1/status-pages?perPage=25" \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -31,30 +38,52 @@ curl https://uptime.sergiodxa.com/api/v1/status-pages \
 
 ```json
 {
-	"statusPages": [
-		{
-			"id": "sp_abc123",
-			"name": "Production Status",
-			"slug": "production-status",
-			"title": "Production Status",
-			"description": "Real-time status of our production services",
-			"logoUrl": "https://example.com/logo.png",
-			"customDomain": "status.example.com",
-			"isPublic": true,
-			"showOverallStatus": true,
-			"createdAt": "2026-02-10T08:00:00Z",
-			"updatedAt": "2026-02-14T12:30:00Z",
-			"monitors": [],
-			"cronJobs": []
+	"data": {
+		"statusPages": [
+			{
+				"id": "sp_abc123",
+				"name": "Production Status",
+				"slug": "production-status",
+				"title": "Production Status",
+				"description": "Real-time status of our production services",
+				"logoUrl": "https://example.com/logo.png",
+				"customDomain": "status.example.com",
+				"isPublic": true,
+				"showOverallStatus": true,
+				"createdAt": 1770710400000,
+				"updatedAt": 1771079400000
+			}
+		]
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z",
+		"pagination": {
+			"next": "eyJkIjoiYWZ0ZXIi",
+			"prev": null,
+			"perPage": 25,
+			"total": 28
 		}
-	]
+	}
 }
 ```
+
+Fetch a single status page to see the monitors and cron jobs attached to it.
+
+The cursors for this page arrive in `meta.pagination`:
+
+| Field                     | Type           | Description                                        |
+| ------------------------- | -------------- | -------------------------------------------------- |
+| `meta.pagination.next`    | string \| null | Cursor for the following page, `null` on the last  |
+| `meta.pagination.prev`    | string \| null | Cursor for the preceding page, `null` on the first |
+| `meta.pagination.perPage` | integer        | Results this page was built with                   |
+| `meta.pagination.total`   | integer        | Status pages matching, across every page           |
 
 ### Possible Errors
 
 | Status | Code           | Description                                    |
 | ------ | -------------- | ---------------------------------------------- |
+| 400    | BAD_REQUEST    | Invalid or malformed cursor                    |
 | 401    | UNAUTHORIZED   | Missing or invalid API key                     |
 | 403    | FORBIDDEN      | API key doesn't have `status-pages:read` scope |
 | 429    | RATE_LIMITED   | Too many requests                              |
@@ -66,12 +95,36 @@ curl https://uptime.sergiodxa.com/api/v1/status-pages \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": ["statusPages"],
+	"required": ["data", "meta"],
 	"properties": {
-		"statusPages": {
-			"type": "array",
-			"items": {
-				"$ref": "#/$defs/statusPage"
+		"data": {
+			"type": "object",
+			"required": ["statusPages"],
+			"properties": {
+				"statusPages": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/statusPage"
+					}
+				}
+			}
+		},
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": { "type": "string", "format": "uuid" },
+				"timestamp": { "type": "string", "format": "date-time" },
+				"pagination": {
+					"type": "object",
+					"required": ["next", "prev", "perPage"],
+					"properties": {
+						"next": { "type": ["string", "null"] },
+						"prev": { "type": ["string", "null"] },
+						"perPage": { "type": "integer" },
+						"total": { "type": "integer" }
+					}
+				}
 			}
 		}
 	},
@@ -89,12 +142,10 @@ curl https://uptime.sergiodxa.com/api/v1/status-pages \
 				"isPublic",
 				"showOverallStatus",
 				"createdAt",
-				"updatedAt",
-				"monitors",
-				"cronJobs"
+				"updatedAt"
 			],
 			"properties": {
-				"id": { "type": "string" },
+				"id": { "type": "string", "pattern": "^sp_[a-zA-Z0-9]+$" },
 				"name": { "type": "string", "minLength": 1, "maxLength": 255 },
 				"slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
 				"title": { "type": "string", "minLength": 1, "maxLength": 255 },
@@ -103,10 +154,8 @@ curl https://uptime.sergiodxa.com/api/v1/status-pages \
 				"customDomain": { "type": ["string", "null"] },
 				"isPublic": { "type": "boolean" },
 				"showOverallStatus": { "type": "boolean" },
-				"createdAt": { "type": "string", "format": "date-time" },
-				"updatedAt": { "type": "string", "format": "date-time" },
-				"monitors": { "type": "array", "items": { "type": "object" } },
-				"cronJobs": { "type": "array", "items": { "type": "object" } }
+				"createdAt": { "type": "integer" },
+				"updatedAt": { "type": "integer" }
 			}
 		}
 	}
@@ -726,7 +775,7 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/status-pages/sp_abc123/monitors 
 | `customDomain`      | string \| null | Custom domain if configured                       |
 | `isPublic`          | boolean        | Whether the page is publicly accessible           |
 | `showOverallStatus` | boolean        | Whether the overall status indicator is displayed |
-| `createdAt`         | string         | ISO 8601 timestamp of creation                    |
-| `updatedAt`         | string         | ISO 8601 timestamp of last update                 |
-| `monitors`          | array          | Associated monitors with their current status     |
-| `cronJobs`          | array          | Associated cron jobs with their current status    |
+| `createdAt`         | integer        | Unix timestamp in milliseconds of creation        |
+| `updatedAt`         | integer        | Unix timestamp in milliseconds of the last update |
+| `monitors`          | array          | Attached monitor IDs, on a single status page     |
+| `cronJobs`          | array          | Attached cron job IDs, on a single status page    |

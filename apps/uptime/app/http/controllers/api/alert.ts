@@ -9,7 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BadRequest, NotFound } from "@sdxc/http/status-code";
+import { BadRequest, InternalServerError, NotFound, Ok } from "@sdxc/http/status-code";
+import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
@@ -31,7 +32,8 @@ import {
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { MONITOR_SCOPE_TYPES } from "~/app/lib/monitor-scope";
-import { apiError, apiSuccess, parsePaginationQuery } from "~/app/services/api-response";
+import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiPage, newestFirst, PAGING } from "~/app/services/pagination";
 import { encodeId, encodeMonitorId, typedId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
@@ -136,20 +138,36 @@ export default createController(alertRoutes, {
 				let alert = await Alert.findByIdForTeam(db, ctx.apiTeam.id, alertId);
 				if (!alert) return apiError("NOT_FOUND", "Alert not found", NotFound);
 
-				let { limit } = parsePaginationQuery(ctx.url, { defaultLimit: 50, maxLimit: 200 });
-				let events = await AlertEvent.listByAlertId(db, alertId, limit);
+				let params = PAGING.parse(ctx.url.searchParams);
+				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
 
-				return apiSuccess({
-					events: events.map((event) => ({
-						id: encodeId("evt", event.id),
-						alertId: encodeId("alt", event.alert_id),
-						monitorId: encodeMonitorId(event.monitor_type, event.monitor_id),
-						eventType: event.event_type,
-						status: event.status,
-						sentAt: event.sent_at,
-						errorMessage: event.error_message,
-						createdAt: event.created_at,
-					})),
+				let page = await Pagination.byKeyset(AlertEvent.eventsByAlertQuery(db, alertId), {
+					orderBy: newestFirst("sent_at"),
+					cursor: params.data.cursor,
+					limit: params.data.perPage,
+				});
+
+				if (isFailure(page)) {
+					if (page.error instanceof InvalidCursorError) {
+						return apiError("BAD_REQUEST", page.error.message, BadRequest);
+					}
+					return apiError("INTERNAL", page.error.message, InternalServerError);
+				}
+
+				let events = page.data.items.map((event) => ({
+					id: encodeId("evt", event.id),
+					alertId: encodeId("alt", event.alert_id),
+					monitorId: encodeMonitorId(event.monitor_type, event.monitor_id),
+					eventType: event.event_type,
+					status: event.status,
+					sentAt: event.sent_at,
+					errorMessage: event.error_message,
+					createdAt: event.created_at,
+				}));
+
+				return apiPage({ events }, page.data, {
+					url: ctx.url,
+					perPage: params.data.perPage,
 				});
 			},
 		},

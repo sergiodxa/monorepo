@@ -97,6 +97,19 @@ describe("isRecurringPatternActive", () => {
 	});
 });
 
+describe("MaintenanceWindow.listByTeamQuery", () => {
+	test("selects the team's windows and none of another team's", async () => {
+		let db = createTestDatabase().db;
+		let now = Date.now();
+		let window = { name: "Window", starts_at: now, ends_at: now + 60_000, monitor_id: null };
+		let mine = await MaintenanceWindow.create(db, "team-1", window);
+		await MaintenanceWindow.create(db, "team-2", window);
+
+		let rows = await MaintenanceWindow.listByTeamQuery(db, "team-1").all();
+		expect(rows.map((row) => row.id)).toEqual([mine.id]);
+	});
+});
+
 describe("MaintenanceWindow.isSuppressing", () => {
 	let db: Database;
 

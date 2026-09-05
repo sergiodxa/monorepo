@@ -5,7 +5,7 @@ section:
   title: API Resources
   order: 5
 order: 3
-lastUpdated: 2026-08-11
+lastUpdated: 2026-09-05
 ---
 
 A DNS monitor watches a **domain**, not a single record. One monitor covers a domain's apex — plus every name declared by a zone file you paste — and sweeps six record types (`A`, `AAAA`, `CNAME`, `MX`, `TXT`, `NS`) at each of them on every check. What it expects is the set of records it discovered, held one row per `(name, type, value)`, so a record appearing beside the ones you already have is reported as an addition rather than hidden inside a changed string.
@@ -113,7 +113,9 @@ Every response on this resource carries the standard envelope — `data` alongsi
 
 ## List All DNS Monitors
 
-Retrieves all DNS monitors for your team.
+Retrieves your team's DNS monitors, newest first.
+
+This endpoint is paginated. See [Pagination](/docs/api/pagination) for how to page through the full list.
 
 ```
 GET /api/v1/dns-monitors
@@ -121,10 +123,17 @@ GET /api/v1/dns-monitors
 
 **Required Scope:** `dns-monitors:read`
 
+### Query Parameters
+
+| Parameter | Type    | Required | Description                               |
+| --------- | ------- | -------- | ----------------------------------------- |
+| `perPage` | integer | No       | Results per page, 1-200 (default: 50)     |
+| `cursor`  | string  | No       | Page to fetch, taken from a `Link` header |
+
 ### cURL
 
 ```bash
-curl https://uptime.sergiodxa.com/api/v1/dns-monitors \
+curl "https://uptime.sergiodxa.com/api/v1/dns-monitors?perPage=25" \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -147,6 +156,16 @@ curl https://uptime.sergiodxa.com/api/v1/dns-monitors \
 				"updatedAt": 1786400000000
 			}
 		]
+	},
+	"meta": {
+		"requestId": "6b1f9d5e-4a2c-4f7e-9a10-2c8d5f3b7e41",
+		"timestamp": "2026-08-11T10:30:00.000Z",
+		"pagination": {
+			"next": "eyJkIjoiYWZ0ZXIi",
+			"prev": null,
+			"perPage": 25,
+			"total": 31
+		}
 	}
 }
 ```
@@ -155,6 +174,7 @@ curl https://uptime.sergiodxa.com/api/v1/dns-monitors \
 
 | Status | Code         | Description                             |
 | ------ | ------------ | --------------------------------------- |
+| 400    | BAD_REQUEST  | Invalid or malformed cursor             |
 | 401    | UNAUTHORIZED | Missing or invalid API key              |
 | 403    | FORBIDDEN    | API key lacks `dns-monitors:read` scope |
 
@@ -498,6 +518,8 @@ curl https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123 \
 
 Retrieves the check history for a DNS monitor: **one row per check of the monitor**, whatever the sweep cost in queries.
 
+Results arrive newest first, a page at a time. See [Pagination](/docs/api/pagination) for how to walk the whole history.
+
 ```
 GET /api/v1/dns-monitors/:dnsMonitorId/results
 ```
@@ -506,14 +528,15 @@ GET /api/v1/dns-monitors/:dnsMonitorId/results
 
 ### Query Parameters
 
-| Parameter | Type    | Required | Description                                      |
-| --------- | ------- | -------- | ------------------------------------------------ |
-| `limit`   | integer | No       | Number of results to return (1-200, default: 50) |
+| Parameter | Type    | Required | Description                               |
+| --------- | ------- | -------- | ----------------------------------------- |
+| `perPage` | integer | No       | Results per page, 1-200 (default: 50)     |
+| `cursor`  | string  | No       | Page to fetch, taken from a `Link` header |
 
 ### cURL
 
 ```bash
-curl "https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123/results?limit=10" \
+curl -i "https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123/results?perPage=10" \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -536,6 +559,15 @@ curl "https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123/results?limit=
 				"checkedAt": 1786430000000
 			}
 		]
+	},
+	"meta": {
+		"requestId": "6b1f9d5e-4a2c-4f7e-9a10-2c8d5f3b7e41",
+		"timestamp": "2026-08-11T10:30:00.000Z",
+		"pagination": {
+			"next": "eyJkIjoiYWZ0ZXIi",
+			"prev": null,
+			"perPage": 10
+		}
 	}
 }
 ```
@@ -546,10 +578,9 @@ A value edited inside a record set holding several values reads as one missing r
 
 ### Errors
 
-`limit` is clamped rather than refused: anything unreadable or below 1 falls back to 50, and anything above 200 is truncated to 200.
-
 | Status | Code         | Description                             |
 | ------ | ------------ | --------------------------------------- |
+| 400    | BAD_REQUEST  | Invalid or malformed cursor             |
 | 401    | UNAUTHORIZED | Missing or invalid API key              |
 | 403    | FORBIDDEN    | API key lacks `dns-monitors:read` scope |
 | 404    | NOT_FOUND    | DNS monitor not found                   |
@@ -645,13 +676,21 @@ GET /api/v1/dns-monitors/:dnsMonitorId/records
 
 **Required Scope:** `dns-monitors:read`
 
-The response is not paginated. A monitor's records are its configuration, not its history,
-and are bounded by the names its zone-file import found.
+Records read alphabetically by `name`, then by `recordType`, then by `value` — the order you
+review a zone in — and arrive a page at a time. See [Pagination](/docs/api/pagination) for how
+to walk the whole table.
+
+### Query Parameters
+
+| Parameter | Type    | Required | Description                               |
+| --------- | ------- | -------- | ----------------------------------------- |
+| `perPage` | integer | No       | Results per page, 1-200 (default: 50)     |
+| `cursor`  | string  | No       | Page to fetch, taken from a `Link` header |
 
 ### cURL
 
 ```bash
-curl "https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123/records" \
+curl -i "https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123/records?perPage=50" \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -695,7 +734,13 @@ curl "https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123/records" \
 	},
 	"meta": {
 		"requestId": "6b1f9d5e-4a2c-4f7e-9a10-2c8d5f3b7e41",
-		"timestamp": "2026-08-11T10:30:00.000Z"
+		"timestamp": "2026-08-11T10:30:00.000Z",
+		"pagination": {
+			"next": "eyJkIjoiYWZ0ZXIi",
+			"prev": null,
+			"perPage": 50,
+			"total": 86
+		}
 	}
 }
 ```
@@ -719,6 +764,7 @@ Timestamps are epoch milliseconds.
 
 | Status | Code         | Description                             |
 | ------ | ------------ | --------------------------------------- |
+| 400    | BAD_REQUEST  | Invalid or malformed cursor             |
 | 401    | UNAUTHORIZED | Missing or invalid API key              |
 | 403    | FORBIDDEN    | API key lacks `dns-monitors:read` scope |
 | 404    | NOT_FOUND    | DNS monitor not found                   |

@@ -14,7 +14,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BadRequest, Created, NotFound } from "@sdxc/http/status-code";
+import { BadRequest, Created, InternalServerError, NotFound, Ok } from "@sdxc/http/status-code";
+import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
@@ -31,8 +32,9 @@ import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { MAX_SOURCE_LENGTH } from "~/app/http/validators/flow-monitor";
 import { DEFAULT_FLOW_INTERVAL_SECONDS, FLOW_INTERVALS_SECONDS } from "~/app/lib/pricing";
-import { apiError, apiSuccess, parsePaginationQuery } from "~/app/services/api-response";
+import { apiError, apiSuccess } from "~/app/services/api-response";
 import { inspectFlowSource } from "~/app/services/flow-check";
+import { apiPage, NEWEST_FIRST, newestFirst, PAGING } from "~/app/services/pagination";
 import { encodeId, typedId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
@@ -98,8 +100,31 @@ export default createController(flowMonitorsRoutes, {
 			middleware: [requireApiKey("flow-monitors:read")],
 			handler: async (ctx) => {
 				let db = getServiceContainer().get(Database);
-				let monitors = await FlowMonitor.listByTeam(db, ctx.apiTeam.id);
-				return apiSuccess({ flowMonitors: monitors.map(serializeFlowMonitor) });
+
+				let params = PAGING.parse(ctx.url.searchParams);
+				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
+
+				// Chaining returns new queries, so the same one both counts and pages.
+				let query = FlowMonitor.listByTeamQuery(db, ctx.apiTeam.id);
+
+				let page = await Pagination.byKeyset(query, {
+					orderBy: NEWEST_FIRST,
+					cursor: params.data.cursor,
+					limit: params.data.perPage,
+				});
+
+				if (isFailure(page)) {
+					if (page.error instanceof InvalidCursorError) {
+						return apiError("BAD_REQUEST", page.error.message, BadRequest);
+					}
+					return apiError("INTERNAL", page.error.message, InternalServerError);
+				}
+
+				return apiPage({ flowMonitors: page.data.items.map(serializeFlowMonitor) }, page.data, {
+					url: ctx.url,
+					perPage: params.data.perPage,
+					total: await query.count(),
+				});
 			},
 		},
 
@@ -201,24 +226,40 @@ export default createController(flowMonitorsRoutes, {
 				let monitor = await FlowMonitor.findByIdForTeam(db, ctx.apiTeam.id, flowMonitorId);
 				if (!monitor) return apiError("NOT_FOUND", "Flow monitor not found", NotFound);
 
-				let { limit } = parsePaginationQuery(ctx.url, { defaultLimit: 50, maxLimit: 200 });
-				let results = await FlowMonitor.listResults(db, flowMonitorId, limit);
+				let params = PAGING.parse(ctx.url.searchParams);
+				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
 
-				return apiSuccess({
-					results: results.map((row) => ({
-						id: encodeId("flowres", row.id),
-						status: row.status,
-						testsTotal: row.tests_total,
-						testsPassed: row.tests_passed,
-						testsFailed: row.tests_failed,
-						requestsMade: row.requests_made,
-						failedTest: row.failed_test,
-						failedAtLine: row.failed_at_line,
-						failureDetail: row.failure_detail,
-						durationMs: row.duration_ms,
-						errorMessage: row.error_message,
-						checkedAt: row.checked_at,
-					})),
+				let page = await Pagination.byKeyset(FlowMonitor.resultsQuery(db, flowMonitorId), {
+					orderBy: newestFirst("checked_at"),
+					cursor: params.data.cursor,
+					limit: params.data.perPage,
+				});
+
+				if (isFailure(page)) {
+					if (page.error instanceof InvalidCursorError) {
+						return apiError("BAD_REQUEST", page.error.message, BadRequest);
+					}
+					return apiError("INTERNAL", page.error.message, InternalServerError);
+				}
+
+				let results = page.data.items.map((row) => ({
+					id: encodeId("flowres", row.id),
+					status: row.status,
+					testsTotal: row.tests_total,
+					testsPassed: row.tests_passed,
+					testsFailed: row.tests_failed,
+					requestsMade: row.requests_made,
+					failedTest: row.failed_test,
+					failedAtLine: row.failed_at_line,
+					failureDetail: row.failure_detail,
+					durationMs: row.duration_ms,
+					errorMessage: row.error_message,
+					checkedAt: row.checked_at,
+				}));
+
+				return apiPage({ results }, page.data, {
+					url: ctx.url,
+					perPage: params.data.perPage,
 				});
 			},
 		},

@@ -11,7 +11,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BadRequest, Created, Forbidden } from "@sdxc/http/status-code";
+import { BadRequest, Created, Forbidden, InternalServerError, Ok } from "@sdxc/http/status-code";
+import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
@@ -26,6 +27,7 @@ import ApiKey, { MAX_API_KEYS_PER_TEAM } from "~/app/data/api-key";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
 import { apiKeyScopes } from "~/database/schema";
 import routes from "~/routes/web";
@@ -70,8 +72,31 @@ export default createController(apiKeysRoutes, {
 			middleware: [requireApiKey("api-keys:read")],
 			handler: async (ctx) => {
 				let db = getServiceContainer().get(Database);
-				let keys = await ApiKey.listByTeam(db, ctx.apiTeam.id);
-				return apiSuccess({ apiKeys: keys.map(serializeApiKey) });
+
+				let params = PAGING.parse(ctx.url.searchParams);
+				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
+
+				// Chaining returns new queries, so the same one both counts and pages.
+				let query = ApiKey.listByTeamQuery(db, ctx.apiTeam.id);
+
+				let page = await Pagination.byKeyset(query, {
+					orderBy: NEWEST_FIRST,
+					cursor: params.data.cursor,
+					limit: params.data.perPage,
+				});
+
+				if (isFailure(page)) {
+					if (page.error instanceof InvalidCursorError) {
+						return apiError("BAD_REQUEST", page.error.message, BadRequest);
+					}
+					return apiError("INTERNAL", page.error.message, InternalServerError);
+				}
+
+				return apiPage({ apiKeys: page.data.items.map(serializeApiKey) }, page.data, {
+					url: ctx.url,
+					perPage: params.data.perPage,
+					total: await query.count(),
+				});
 			},
 		},
 

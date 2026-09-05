@@ -48,6 +48,16 @@ export default class TeamDomain {
 		});
 	}
 
+	/**
+	 * Every domain for a team, as a query for a paging strategy to finish.
+	 *
+	 * The ordering is left off deliberately: `Pagination.byKeyset()` owns it, because
+	 * it needs the sort keys both to seek and to mint the cursor.
+	 */
+	static listByTeamQuery(db: Database, teamId: string) {
+		return db.query(teamDomains).where({ team_id: teamId });
+	}
+
 	/** Lists every domain across every team that has not yet been verified. */
 	static async listUnverified(db: Database) {
 		return await db.findMany(teamDomains, { where: isNull("verified_at") });

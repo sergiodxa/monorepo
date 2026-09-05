@@ -40,6 +40,16 @@ export default class Alert {
 		});
 	}
 
+	/**
+	 * A team's alerts, as a query for a paging strategy to finish.
+	 *
+	 * The ordering is left off deliberately: `Pagination.byKeyset()` owns it, because
+	 * it needs the sort keys both to seek and to mint the cursor.
+	 */
+	static listByTeamQuery(db: Database, teamId: string) {
+		return db.query(alerts).where({ team_id: teamId });
+	}
+
 	/** Counts a team's alerts, for the {@link MAX_ALERTS_PER_TEAM} limit. */
 	static async countByTeam(db: Database, teamId: string) {
 		return await db.count(alerts, { where: { team_id: teamId } });

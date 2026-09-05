@@ -5,7 +5,7 @@ section:
   title: API Resources
   order: 5
 order: 9
-lastUpdated: 2026-08-11
+lastUpdated: 2026-09-05
 ---
 
 Maintenance windows allow you to schedule planned downtime for your monitors. During a maintenance window, alerts can be suppressed and the status page can display a maintenance notice.
@@ -24,18 +24,25 @@ A `monitorId` that does not belong to the team, or that belongs to a different k
 
 ## GET /api/v1/maintenance
 
-Returns a list of all maintenance windows for your team.
+Returns the maintenance windows for your team. This endpoint is paginated; see [Pagination](/docs/api/pagination) for how to page through the full list.
 
 ### Required Scope
 
 `maintenance:read`
+
+### Query Parameters
+
+| Parameter | Type    | Required | Description                               |
+| --------- | ------- | -------- | ----------------------------------------- |
+| `perPage` | integer | No       | Results per page, 1-200 (default: 50)     |
+| `cursor`  | string  | No       | Page to fetch, taken from a `Link` header |
 
 ### Example Request
 
 #### cURL
 
 ```bash
-curl https://uptime.sergiodxa.com/api/v1/maintenance \
+curl "https://uptime.sergiodxa.com/api/v1/maintenance?perPage=25" \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -43,29 +50,51 @@ curl https://uptime.sergiodxa.com/api/v1/maintenance \
 
 ```json
 {
-	"data": [
-		{
-			"id": "mnt_abc123",
-			"teamId": "team_xyz789",
-			"monitorType": "http",
-			"monitorId": "mon_def456",
-			"name": "Database Migration",
-			"startsAt": "2026-02-15T02:00:00Z",
-			"endsAt": "2026-02-15T04:00:00Z",
-			"endedEarlyAt": null,
-			"suppressAlerts": true,
-			"showOnStatusPage": true,
-			"createdAt": "2026-02-14T10:00:00Z",
-			"updatedAt": "2026-02-14T10:00:00Z"
+	"data": {
+		"maintenanceWindows": [
+			{
+				"id": "mnt_abc123",
+				"teamId": "team_xyz789",
+				"monitorType": "http",
+				"monitorId": "mon_def456",
+				"name": "Database Migration",
+				"startsAt": 1771120800000,
+				"endsAt": 1771128000000,
+				"endedEarlyAt": null,
+				"suppressAlerts": true,
+				"showOnStatusPage": true,
+				"createdAt": 1771070400000,
+				"updatedAt": 1771070400000
+			}
+		]
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z",
+		"pagination": {
+			"next": "eyJkIjoiYWZ0ZXIi",
+			"prev": null,
+			"perPage": 25,
+			"total": 31
 		}
-	]
+	}
 }
 ```
+
+The cursors for this page arrive in `meta.pagination`:
+
+| Field                     | Type           | Description                                        |
+| ------------------------- | -------------- | -------------------------------------------------- |
+| `meta.pagination.next`    | string \| null | Cursor for the following page, `null` on the last  |
+| `meta.pagination.prev`    | string \| null | Cursor for the preceding page, `null` on the first |
+| `meta.pagination.perPage` | integer        | Results this page was built with                   |
+| `meta.pagination.total`   | integer        | Maintenance windows matching, across every page    |
 
 ### Possible Errors
 
 | Status | Code           | Description                                   |
 | ------ | -------------- | --------------------------------------------- |
+| 400    | BAD_REQUEST    | Invalid or malformed cursor                   |
 | 401    | UNAUTHORIZED   | Missing or invalid API key                    |
 | 403    | FORBIDDEN      | API key doesn't have `maintenance:read` scope |
 | 429    | RATE_LIMITED   | Too many requests                             |
@@ -77,12 +106,50 @@ curl https://uptime.sergiodxa.com/api/v1/maintenance \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": ["data"],
+	"required": ["data", "meta"],
 	"properties": {
 		"data": {
-			"type": "array",
-			"items": {
-				"$ref": "#/$defs/maintenanceWindow"
+			"type": "object",
+			"required": ["maintenanceWindows"],
+			"properties": {
+				"maintenanceWindows": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/maintenanceWindow"
+					}
+				}
+			}
+		},
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": {
+					"type": "string",
+					"format": "uuid"
+				},
+				"timestamp": {
+					"type": "string",
+					"format": "date-time"
+				},
+				"pagination": {
+					"type": "object",
+					"required": ["next", "prev", "perPage"],
+					"properties": {
+						"next": {
+							"type": ["string", "null"]
+						},
+						"prev": {
+							"type": ["string", "null"]
+						},
+						"perPage": {
+							"type": "integer"
+						},
+						"total": {
+							"type": "integer"
+						}
+					}
+				}
 			}
 		}
 	},
@@ -116,8 +183,7 @@ curl https://uptime.sergiodxa.com/api/v1/maintenance \
 					"enum": ["http", "dns", "tcp", "cron", null]
 				},
 				"monitorId": {
-					"type": ["string", "null"],
-					"pattern": "^mon_[a-zA-Z0-9]+$"
+					"type": ["string", "null"]
 				},
 				"name": {
 					"type": "string",
@@ -125,16 +191,13 @@ curl https://uptime.sergiodxa.com/api/v1/maintenance \
 					"maxLength": 255
 				},
 				"startsAt": {
-					"type": "string",
-					"format": "date-time"
+					"type": "integer"
 				},
 				"endsAt": {
-					"type": "string",
-					"format": "date-time"
+					"type": "integer"
 				},
 				"endedEarlyAt": {
-					"type": ["string", "null"],
-					"format": "date-time"
+					"type": ["integer", "null"]
 				},
 				"suppressAlerts": {
 					"type": "boolean"
@@ -143,12 +206,10 @@ curl https://uptime.sergiodxa.com/api/v1/maintenance \
 					"type": "boolean"
 				},
 				"createdAt": {
-					"type": "string",
-					"format": "date-time"
+					"type": "integer"
 				},
 				"updatedAt": {
-					"type": "string",
-					"format": "date-time"
+					"type": "integer"
 				}
 			}
 		}
@@ -826,17 +887,17 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123/end \
 
 ## Response Fields
 
-| Field              | Type           | Description                                                                     |
-| ------------------ | -------------- | ------------------------------------------------------------------------------- |
-| `id`               | string         | Unique maintenance window identifier                                            |
-| `teamId`           | string         | Team that owns this maintenance window                                          |
-| `monitorType`      | string \| null | Kind of monitor the window is limited to, or `null` if it applies to every kind |
-| `monitorId`        | string \| null | Associated monitor ID, or `null` if applies to all monitors                     |
-| `name`             | string         | Display name of the maintenance window                                          |
-| `startsAt`         | string         | Scheduled start time in ISO 8601 format                                         |
-| `endsAt`           | string         | Scheduled end time in ISO 8601 format                                           |
-| `endedEarlyAt`     | string \| null | Time when maintenance was ended early, or `null`                                |
-| `suppressAlerts`   | boolean        | Whether alerts are suppressed during maintenance                                |
-| `showOnStatusPage` | boolean        | Whether maintenance is displayed on the status page                             |
-| `createdAt`        | string         | Creation timestamp in ISO 8601 format                                           |
-| `updatedAt`        | string         | Last update timestamp in ISO 8601 format                                        |
+| Field              | Type            | Description                                                                     |
+| ------------------ | --------------- | ------------------------------------------------------------------------------- |
+| `id`               | string          | Unique maintenance window identifier                                            |
+| `teamId`           | string          | Team that owns this maintenance window                                          |
+| `monitorType`      | string \| null  | Kind of monitor the window is limited to, or `null` if it applies to every kind |
+| `monitorId`        | string \| null  | Associated monitor ID, or `null` if applies to all monitors                     |
+| `name`             | string          | Display name of the maintenance window                                          |
+| `startsAt`         | integer         | Scheduled start time as a Unix timestamp in milliseconds                        |
+| `endsAt`           | integer         | Scheduled end time as a Unix timestamp in milliseconds                          |
+| `endedEarlyAt`     | integer \| null | When maintenance was ended early, in milliseconds, or `null`                    |
+| `suppressAlerts`   | boolean         | Whether alerts are suppressed during maintenance                                |
+| `showOnStatusPage` | boolean         | Whether maintenance is displayed on the status page                             |
+| `createdAt`        | integer         | Creation time as a Unix timestamp in milliseconds                               |
+| `updatedAt`        | integer         | Last update time as a Unix timestamp in milliseconds                            |

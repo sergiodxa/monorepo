@@ -7,7 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BadRequest, NotFound } from "@sdxc/http/status-code";
+import { BadRequest, InternalServerError, NotFound, Ok } from "@sdxc/http/status-code";
+import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
@@ -25,7 +26,8 @@ import {
 	MAX_DNS_INTERVAL_SECONDS,
 	MIN_DNS_INTERVAL_SECONDS,
 } from "~/app/http/validators/dns-monitor";
-import { apiError, apiSuccess, parsePaginationQuery } from "~/app/services/api-response";
+import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiPage, newestFirst, PAGING } from "~/app/services/pagination";
 import { encodeId, typedId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
@@ -137,22 +139,38 @@ export default createController(dnsMonitorRoutes, {
 				let monitor = await DnsMonitor.findByIdForTeam(db, ctx.apiTeam.id, dnsMonitorId);
 				if (!monitor) return apiError("NOT_FOUND", "DNS monitor not found", NotFound);
 
-				let { limit } = parsePaginationQuery(ctx.url, { defaultLimit: 50, maxLimit: 200 });
-				let results = await DnsMonitor.listResults(db, dnsMonitorId, limit);
+				let params = PAGING.parse(ctx.url.searchParams);
+				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
 
-				return apiSuccess({
-					results: results.map((row) => ({
-						id: encodeId("res", row.id),
-						status: row.status,
-						recordsChecked: row.records_checked,
-						recordsChanged: row.records_changed,
-						recordsMissing: row.records_missing,
-						recordsNew: row.records_new,
-						queriesFailed: row.queries_failed,
-						responseTimeMs: row.response_time_ms,
-						errorMessage: row.error_message,
-						checkedAt: row.checked_at,
-					})),
+				let page = await Pagination.byKeyset(DnsMonitor.resultsQuery(db, dnsMonitorId), {
+					orderBy: newestFirst("checked_at"),
+					cursor: params.data.cursor,
+					limit: params.data.perPage,
+				});
+
+				if (isFailure(page)) {
+					if (page.error instanceof InvalidCursorError) {
+						return apiError("BAD_REQUEST", page.error.message, BadRequest);
+					}
+					return apiError("INTERNAL", page.error.message, InternalServerError);
+				}
+
+				let results = page.data.items.map((row) => ({
+					id: encodeId("res", row.id),
+					status: row.status,
+					recordsChecked: row.records_checked,
+					recordsChanged: row.records_changed,
+					recordsMissing: row.records_missing,
+					recordsNew: row.records_new,
+					queriesFailed: row.queries_failed,
+					responseTimeMs: row.response_time_ms,
+					errorMessage: row.error_message,
+					checkedAt: row.checked_at,
+				}));
+
+				return apiPage({ results }, page.data, {
+					url: ctx.url,
+					perPage: params.data.perPage,
 				});
 			},
 		},

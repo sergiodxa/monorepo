@@ -57,6 +57,16 @@ export default class Invite {
 		});
 	}
 
+	/**
+	 * Every invite for a team, as a query for a paging strategy to finish.
+	 *
+	 * The ordering is left off deliberately: `Pagination.byKeyset()` owns it, because
+	 * it needs the sort keys both to seek and to mint the cursor.
+	 */
+	static listByTeamQuery(db: Database, teamId: string) {
+		return db.query(invites).where({ team_id: teamId });
+	}
+
 	/** Marks an invite accepted and creates the resulting membership. */
 	static async accept(db: Database, inviteId: string, teamId: string, subjectId: string) {
 		await db.update(invites, inviteId, { accepted_at: Date.now() }, { touch: true });

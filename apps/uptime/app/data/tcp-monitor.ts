@@ -103,21 +103,24 @@ export default class TcpMonitor {
 		});
 	}
 
-	/** Lists a monitor's most recent check results, newest first, with offset pagination. */
-	static async listResultsPage(
-		db: Database,
-		monitorId: string,
-		options: { limit: number; offset: number },
-	) {
-		let rows = await db.findMany(tcpMonitorResults, {
-			where: { tcp_monitor_id: monitorId },
-			orderBy: ["checked_at", "desc"],
-			limit: options.limit + 1,
-			offset: options.offset,
-		});
+	/**
+	 * A monitor's check results, as a query for a paging strategy to finish.
+	 *
+	 * The ordering is left off deliberately: `Pagination.byKeyset()` owns it, because
+	 * it needs the sort keys both to seek and to mint the cursor.
+	 */
+	static resultsQuery(db: Database, monitorId: string) {
+		return db.query(tcpMonitorResults).where({ tcp_monitor_id: monitorId });
+	}
 
-		let hasMore = rows.length > options.limit;
-		return { results: hasMore ? rows.slice(0, options.limit) : rows, hasMore };
+	/**
+	 * A team's TCP monitors, as a query for a paging strategy to finish.
+	 *
+	 * The ordering is left off deliberately: `Pagination.byKeyset()` owns it, because
+	 * it needs the sort keys both to seek and to mint the cursor.
+	 */
+	static listByTeamQuery(db: Database, teamId: string) {
+		return db.query(tcpMonitors).where({ team_id: teamId });
 	}
 
 	/**

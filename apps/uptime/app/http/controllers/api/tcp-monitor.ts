@@ -7,7 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BadRequest, NotFound } from "@sdxc/http/status-code";
+import { BadRequest, InternalServerError, NotFound, Ok } from "@sdxc/http/status-code";
+import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
@@ -21,7 +22,8 @@ import type { InsertTcpMonitor, SelectTcpMonitor } from "~/database/schema";
 import TcpMonitor from "~/app/data/tcp-monitor";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { apiError, apiSuccess, parsePaginationQuery } from "~/app/services/api-response";
+import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiPage, newestFirst, PAGING } from "~/app/services/pagination";
 import { encodeId, typedId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
@@ -131,21 +133,33 @@ export default createController(tcpMonitorRoutes, {
 				let monitor = await TcpMonitor.findByIdForTeam(db, ctx.apiTeam.id, tcpMonitorId);
 				if (!monitor) return apiError("NOT_FOUND", "TCP monitor not found", NotFound);
 
-				let { limit, offset } = parsePaginationQuery(ctx.url, { defaultLimit: 50, maxLimit: 200 });
-				let { results, hasMore } = await TcpMonitor.listResultsPage(db, tcpMonitorId, {
-					limit,
-					offset,
+				let params = PAGING.parse(ctx.url.searchParams);
+				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
+
+				let page = await Pagination.byKeyset(TcpMonitor.resultsQuery(db, tcpMonitorId), {
+					orderBy: newestFirst("checked_at"),
+					cursor: params.data.cursor,
+					limit: params.data.perPage,
 				});
 
-				return apiSuccess({
-					results: results.map((row) => ({
-						id: encodeId("tcpr", row.id),
-						status: row.status,
-						responseTimeMs: row.response_time_ms,
-						errorMessage: row.error_message,
-						checkedAt: row.checked_at,
-					})),
-					pagination: { limit, offset, hasMore },
+				if (isFailure(page)) {
+					if (page.error instanceof InvalidCursorError) {
+						return apiError("BAD_REQUEST", page.error.message, BadRequest);
+					}
+					return apiError("INTERNAL", page.error.message, InternalServerError);
+				}
+
+				let results = page.data.items.map((row) => ({
+					id: encodeId("tcpr", row.id),
+					status: row.status,
+					responseTimeMs: row.response_time_ms,
+					errorMessage: row.error_message,
+					checkedAt: row.checked_at,
+				}));
+
+				return apiPage({ results }, page.data, {
+					url: ctx.url,
+					perPage: params.data.perPage,
 				});
 			},
 		},

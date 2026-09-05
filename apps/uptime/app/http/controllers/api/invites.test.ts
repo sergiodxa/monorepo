@@ -20,6 +20,7 @@ import type { ApiKeyScope, SelectTeam } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import Invite from "~/app/data/invite";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { parseLink } from "~/app/lib/test/paging";
 import { encodeId } from "~/app/services/typed-id";
 import { teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -57,8 +58,11 @@ async function dispatch(db: Db, request: Request) {
 	return container.scope(() => router.fetch(request));
 }
 
-function indexRequest(headers: Record<string, string> = {}) {
-	return new Request(`https://uptime.test${routes.api.v1.invites.index.href()}`, { headers });
+function indexRequest(
+	headers: Record<string, string> = {},
+	path: string = routes.api.v1.invites.index.href(),
+) {
+	return new Request(`https://uptime.test${path}`, { headers });
 }
 
 function createRequest(body: unknown, headers: Record<string, string> = {}) {
@@ -104,6 +108,53 @@ describe("GET /api/v1/invites", () => {
 		expect(body.data.invites[0]?.email).toBe("mine@example.com");
 	});
 
+	test("serves one page and a cursor that walks to the next", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["invites:read"]);
+		let auth = { Authorization: `Bearer ${key}` };
+
+		await Invite.create(db, team.id, team.owner_id, "first@example.com");
+		await Invite.create(db, team.id, team.owner_id, "second@example.com");
+
+		let response = await dispatch(
+			db,
+			indexRequest(auth, `${routes.api.v1.invites.index.href()}?perPage=1`),
+		);
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as { data: { invites: { email: string }[] } };
+		expect(body.data.invites).toHaveLength(1);
+
+		// Navigation rides in the headers, so following the feed means following `Link`.
+		let next = parseLink(response.headers.get("Link"));
+		expect(next).not.toBeNull();
+
+		let second = await dispatch(db, indexRequest(auth, next as string));
+		expect(second.status).toBe(200);
+		let secondBody = (await second.json()) as { data: { invites: { email: string }[] } };
+		expect(secondBody.data.invites).toHaveLength(1);
+		expect(secondBody.data.invites[0]?.email).not.toBe(body.data.invites[0]?.email);
+	});
+
+	test("rejects a malformed cursor as a bad request", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["invites:read"]);
+
+		let response = await dispatch(
+			db,
+			indexRequest(
+				{ Authorization: `Bearer ${key}` },
+				`${routes.api.v1.invites.index.href()}?cursor=not-a-cursor`,
+			),
+		);
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as { error: { code: string } };
+		expect(body.error.code).toBe("BAD_REQUEST");
+	});
+
 	test("returns 401 when the Authorization header is missing", async () => {
 		let { db } = createTestDatabase();
 		let response = await dispatch(db, indexRequest());
@@ -123,6 +174,36 @@ describe("GET /api/v1/invites", () => {
 
 		let response = await dispatch(db, indexRequest({ Authorization: `Bearer ${key}` }));
 		expect(response.status).toBe(403);
+	});
+});
+
+describe("GET /api/v1/invites total", () => {
+	test("counts every invite on the team, not just the page", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let otherTeam = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["invites:read"]);
+		await Invite.create(db, team.id, team.owner_id, "first@example.com");
+		await Invite.create(db, team.id, team.owner_id, "second@example.com");
+		await Invite.create(db, team.id, team.owner_id, "third@example.com");
+		// An invite the key cannot see must not reach the total either.
+		await Invite.create(db, otherTeam.id, otherTeam.owner_id, "theirs@example.com");
+
+		let response = await dispatch(
+			db,
+			indexRequest(
+				{ Authorization: `Bearer ${key}` },
+				`${routes.api.v1.invites.index.href()}?perPage=1`,
+			),
+		);
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as {
+			data: { invites: unknown[] };
+			meta: { pagination: { total: number } };
+		};
+		expect(body.data.invites).toHaveLength(1);
+		expect(body.meta.pagination.total).toBe(3);
 	});
 });
 

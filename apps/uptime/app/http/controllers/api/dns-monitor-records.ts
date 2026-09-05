@@ -9,7 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BadRequest, NotFound } from "@sdxc/http/status-code";
+import type { OrderByTuple } from "@sdxc/pagination";
+
+import { BadRequest, InternalServerError, NotFound, Ok } from "@sdxc/http/status-code";
+import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
@@ -24,9 +27,22 @@ import DnsMonitorRecord from "~/app/data/dns-monitor-record";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiPage, PAGING } from "~/app/services/pagination";
 import { encodeId, typedId } from "~/app/services/typed-id";
 import { dnsMonitorRecords } from "~/database/schema";
 import routes from "~/routes/web";
+
+/**
+ * The alphabetical walk this list has always served, since a caller reads it to decide
+ * which records to decline and reads it by name rather than by age. `id` closes the
+ * ordering, giving the seek the unique key a cursor needs.
+ */
+const BY_RECORD_IDENTITY: readonly OrderByTuple[] = [
+	["name", "asc"],
+	["record_type", "asc"],
+	["value", "asc"],
+	["id", "asc"],
+];
 
 const DnsMonitorIdParams = s.object({ dnsMonitorId: typedId("dns") });
 const DnsMonitorRecordParams = s.object({
@@ -91,9 +107,9 @@ export default createController(dnsMonitorRecordsRoutes, {
 	middleware: [catchValidationError()],
 	actions: {
 		/**
-		 * GET /api/v1/dns-monitors/:dnsMonitorId/records — the monitor's tracked records,
-		 * unpaginated since a caller declining records needs the whole list. A monitor scoped
-		 * to another team draws the same 404 as one that doesn't exist, keeping both indistinguishable.
+		 * GET /api/v1/dns-monitors/:dnsMonitorId/records — a page of the monitor's tracked
+		 * records, walked by following the `Link` header. A monitor scoped to another team
+		 * draws the same 404 as one that doesn't exist, keeping both indistinguishable.
 		 */
 		dnsMonitorRecordsIndex: {
 			middleware: [requireApiKey("dns-monitors:read")],
@@ -104,8 +120,30 @@ export default createController(dnsMonitorRecordsRoutes, {
 				let monitor = await DnsMonitor.findByIdForTeam(db, ctx.apiTeam.id, dnsMonitorId);
 				if (!monitor) return apiError("NOT_FOUND", "DNS monitor not found", NotFound);
 
-				let records = await DnsMonitorRecord.listByMonitor(db, dnsMonitorId);
-				return apiSuccess({ records: records.map(serializeDnsMonitorRecord) });
+				let params = PAGING.parse(ctx.url.searchParams);
+				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
+
+				// Chaining returns new queries, so the same one both counts and pages.
+				let query = DnsMonitorRecord.byMonitorQuery(db, dnsMonitorId);
+
+				let page = await Pagination.byKeyset(query, {
+					orderBy: BY_RECORD_IDENTITY,
+					cursor: params.data.cursor,
+					limit: params.data.perPage,
+				});
+
+				if (isFailure(page)) {
+					if (page.error instanceof InvalidCursorError) {
+						return apiError("BAD_REQUEST", page.error.message, BadRequest);
+					}
+					return apiError("INTERNAL", page.error.message, InternalServerError);
+				}
+
+				return apiPage({ records: page.data.items.map(serializeDnsMonitorRecord) }, page.data, {
+					url: ctx.url,
+					perPage: params.data.perPage,
+					total: await query.count(),
+				});
 			},
 		},
 

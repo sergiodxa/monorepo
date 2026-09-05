@@ -21,6 +21,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { parseLink } from "~/app/lib/test/paging";
 import { encodeId } from "~/app/services/typed-id";
 import { maintenanceWindows, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -133,6 +134,33 @@ function request(
 	});
 }
 
+describe("GET /api/v1/maintenance total", () => {
+	test("counts every maintenance window on the team, not just the page", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let otherTeam = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["maintenance:read"]);
+		await createMaintenanceWindowRow(db, team.id);
+		await createMaintenanceWindowRow(db, team.id);
+		await createMaintenanceWindowRow(db, team.id);
+		// A window the key cannot see must not reach the total either.
+		await createMaintenanceWindowRow(db, otherTeam.id);
+
+		let response = await dispatch(
+			db,
+			request("GET", `${routes.api.v1.maintenance.index.href()}?perPage=1`, { key }),
+		);
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as {
+			data: { maintenanceWindows: unknown[] };
+			meta: { pagination: { total: number; perPage: number } };
+		};
+		expect(body.data.maintenanceWindows).toHaveLength(1);
+		expect(body.meta.pagination.total).toBe(3);
+	});
+});
+
 describe("GET /api/v1/maintenance", () => {
 	test("lists only the calling team's maintenance windows", async () => {
 		let { db } = createTestDatabase();
@@ -154,6 +182,49 @@ describe("GET /api/v1/maintenance", () => {
 		};
 		expect(body.data.maintenanceWindows).toHaveLength(1);
 		expect(body.data.maintenanceWindows[0]?.name).toBe("Mine");
+	});
+
+	test("serves one page and a cursor that walks to the next", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["maintenance:read"]);
+
+		await createMaintenanceWindowRow(db, team.id, { name: "First" });
+		await createMaintenanceWindowRow(db, team.id, { name: "Second" });
+
+		let path = routes.api.v1.maintenance.index.href();
+		let response = await dispatch(db, request("GET", `${path}?perPage=1`, { key }));
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as { data: { maintenanceWindows: Array<{ name: string }> } };
+		expect(body.data.maintenanceWindows).toHaveLength(1);
+
+		// Navigation rides in the headers, so following the feed means following `Link`.
+		let next = parseLink(response.headers.get("Link"));
+		expect(next).not.toBeNull();
+
+		let second = await dispatch(db, request("GET", next as string, { key }));
+		expect(second.status).toBe(200);
+		let secondBody = (await second.json()) as {
+			data: { maintenanceWindows: Array<{ name: string }> };
+		};
+		expect(secondBody.data.maintenanceWindows).toHaveLength(1);
+		expect(secondBody.data.maintenanceWindows[0]?.name).not.toBe(
+			body.data.maintenanceWindows[0]?.name,
+		);
+	});
+
+	test("rejects a malformed cursor as a bad request", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["maintenance:read"]);
+
+		let path = routes.api.v1.maintenance.index.href();
+		let response = await dispatch(db, request("GET", `${path}?cursor=not-a-cursor`, { key }));
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as { error: { code: string } };
+		expect(body.error.code).toBe("BAD_REQUEST");
 	});
 
 	test("returns 401 with a missing Authorization header", async () => {

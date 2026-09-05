@@ -18,6 +18,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { parseLink } from "~/app/lib/test/paging";
 import { statusPages, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -86,6 +87,34 @@ async function dispatch(
 	return container.scope(() => router.fetch(httpRequest));
 }
 
+describe("GET /api/v1/status-pages total", () => {
+	test("counts every status page on the team, not just the page", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let otherTeam = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["status-pages:read"]);
+		await createStatusPageRow(db, team.id);
+		await createStatusPageRow(db, team.id);
+		await createStatusPageRow(db, team.id);
+		// A status page the key cannot see must not reach the total either.
+		await createStatusPageRow(db, otherTeam.id);
+
+		let response = await dispatch(db, {
+			method: "GET",
+			path: `${routes.api.v1.statusPages.index.href()}?perPage=1`,
+			key,
+		});
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as {
+			data: { statusPages: unknown[] };
+			meta: { pagination: { total: number; perPage: number } };
+		};
+		expect(body.data.statusPages).toHaveLength(1);
+		expect(body.meta.pagination.total).toBe(3);
+	});
+});
+
 describe("GET /api/v1/status-pages", () => {
 	test("lists only the calling team's status pages", async () => {
 		let { db } = createTestDatabase();
@@ -106,6 +135,50 @@ describe("GET /api/v1/status-pages", () => {
 		let body = (await response.json()) as { data: { statusPages: Array<{ slug: string }> } };
 		expect(body.data.statusPages).toHaveLength(1);
 		expect(body.data.statusPages[0]?.slug).toBe("acme-status");
+	});
+
+	test("serves one page and a cursor that walks to the next", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["status-pages:read"]);
+		await createStatusPageRow(db, team.id, { slug: "first-status" });
+		await createStatusPageRow(db, team.id, { slug: "second-status" });
+
+		let response = await dispatch(db, {
+			method: "GET",
+			path: `${routes.api.v1.statusPages.index.href()}?perPage=1`,
+			key,
+		});
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as { data: { statusPages: Array<{ slug: string }> } };
+		expect(body.data.statusPages).toHaveLength(1);
+
+		// Navigation rides in the headers, so following the feed means following `Link`.
+		let next = parseLink(response.headers.get("Link"));
+		expect(next).not.toBeNull();
+
+		let second = await dispatch(db, { method: "GET", path: next as string, key });
+		expect(second.status).toBe(200);
+		let secondBody = (await second.json()) as { data: { statusPages: Array<{ slug: string }> } };
+		expect(secondBody.data.statusPages).toHaveLength(1);
+		expect(secondBody.data.statusPages[0]?.slug).not.toBe(body.data.statusPages[0]?.slug);
+	});
+
+	test("rejects a malformed cursor as a bad request", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["status-pages:read"]);
+
+		let response = await dispatch(db, {
+			method: "GET",
+			path: `${routes.api.v1.statusPages.index.href()}?cursor=not-a-cursor`,
+			key,
+		});
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as { error: { code: string } };
+		expect(body.error.code).toBe("BAD_REQUEST");
 	});
 
 	test("returns 401 for a missing Authorization header", async () => {

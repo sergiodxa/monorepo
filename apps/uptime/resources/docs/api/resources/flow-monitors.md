@@ -5,7 +5,7 @@ section:
   title: API Resources
   order: 5
 order: 5
-lastUpdated: 2026-08-31
+lastUpdated: 2026-09-05
 ---
 
 A flow monitor asks a question one HTTP check cannot: does a **sequence** still work? It holds a spec — several HTTP requests with assertions between them — and runs it on a schedule. A run makes HTTP requests, parses URLs, and reads JWTs. Nothing else: there is no browser, no page to render, no script of yours to execute.
@@ -106,7 +106,9 @@ Flow monitors are read with `flow-monitors:read` and written with `flow-monitors
 
 ## List All Flow Monitors
 
-Retrieves all flow monitors for your team, most recently created first.
+Retrieves your team's flow monitors, most recently created first.
+
+This endpoint is paginated. See [Pagination](/docs/api/pagination) for how to page through the full list.
 
 ```
 GET /api/v1/flow-monitors
@@ -114,10 +116,17 @@ GET /api/v1/flow-monitors
 
 **Required Scope:** `flow-monitors:read`
 
+### Query Parameters
+
+| Parameter | Type    | Required | Description                               |
+| --------- | ------- | -------- | ----------------------------------------- |
+| `perPage` | integer | No       | Results per page, 1-200 (default: 50)     |
+| `cursor`  | string  | No       | Page to fetch, taken from a `Link` header |
+
 ### cURL
 
 ```bash
-curl https://uptime.sergiodxa.com/api/v1/flow-monitors \
+curl -i "https://uptime.sergiodxa.com/api/v1/flow-monitors?perPage=25" \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -141,17 +150,22 @@ curl https://uptime.sergiodxa.com/api/v1/flow-monitors \
 	},
 	"meta": {
 		"requestId": "6b1f9d5e-4a2c-4f7e-9a10-2c8d5f3b7e41",
-		"timestamp": "2026-08-31T10:30:00.000Z"
+		"timestamp": "2026-08-31T10:30:00.000Z",
+		"pagination": {
+			"next": "eyJkIjoiYWZ0ZXIi",
+			"prev": null,
+			"perPage": 25,
+			"total": 29
+		}
 	}
 }
 ```
-
-The response is not paginated: a team's flow monitors are its configuration, not its history.
 
 ### Errors
 
 | Status | Code         | Description                              |
 | ------ | ------------ | ---------------------------------------- |
+| 400    | BAD_REQUEST  | Invalid or malformed cursor              |
 | 401    | UNAUTHORIZED | Missing or invalid API key               |
 | 403    | FORBIDDEN    | API key lacks `flow-monitors:read` scope |
 
@@ -495,6 +509,8 @@ curl https://uptime.sergiodxa.com/api/v1/flow-monitors/flow_abc123 \
 
 Retrieves the run history for a flow monitor: **one row per run**, however many requests that run made. Newest first.
 
+Runs arrive a page at a time. See [Pagination](/docs/api/pagination) for how to walk the whole history.
+
 ```
 GET /api/v1/flow-monitors/:flowMonitorId/results
 ```
@@ -503,14 +519,15 @@ GET /api/v1/flow-monitors/:flowMonitorId/results
 
 ### Query Parameters
 
-| Parameter | Type    | Required | Description                                      |
-| --------- | ------- | -------- | ------------------------------------------------ |
-| `limit`   | integer | No       | Number of results to return (1-200, default: 50) |
+| Parameter | Type    | Required | Description                               |
+| --------- | ------- | -------- | ----------------------------------------- |
+| `perPage` | integer | No       | Results per page, 1-200 (default: 50)     |
+| `cursor`  | string  | No       | Page to fetch, taken from a `Link` header |
 
 ### cURL
 
 ```bash
-curl "https://uptime.sergiodxa.com/api/v1/flow-monitors/flow_abc123/results?limit=10" \
+curl -i "https://uptime.sergiodxa.com/api/v1/flow-monitors/flow_abc123/results?perPage=10" \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -552,7 +569,12 @@ curl "https://uptime.sergiodxa.com/api/v1/flow-monitors/flow_abc123/results?limi
 	},
 	"meta": {
 		"requestId": "6b1f9d5e-4a2c-4f7e-9a10-2c8d5f3b7e41",
-		"timestamp": "2026-08-31T10:30:00.000Z"
+		"timestamp": "2026-08-31T10:30:00.000Z",
+		"pagination": {
+			"next": "eyJkIjoiYWZ0ZXIi",
+			"prev": null,
+			"perPage": 10
+		}
 	}
 }
 ```
@@ -565,10 +587,9 @@ Only the **first** failure of a run is recorded, in `failedTest`, `failedAtLine`
 
 ### Errors
 
-`limit` is clamped rather than refused: anything unreadable or below 1 falls back to 50, and anything above 200 is truncated to 200.
-
 | Status | Code         | Description                              |
 | ------ | ------------ | ---------------------------------------- |
+| 400    | BAD_REQUEST  | Invalid or malformed cursor              |
 | 401    | UNAUTHORIZED | Missing or invalid API key               |
 | 403    | FORBIDDEN    | API key lacks `flow-monitors:read` scope |
 | 404    | NOT_FOUND    | Flow monitor not found                   |

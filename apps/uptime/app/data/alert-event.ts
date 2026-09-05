@@ -147,21 +147,18 @@ export default class AlertEvent {
 		});
 	}
 
-	/** Lists the most recent alert-delivery events for a single alert, newest first. */
-	static async listByAlertId(db: Database, alertId: string, limit: number) {
-		return await db.findMany(alertEvents, {
-			where: { alert_id: alertId },
-			orderBy: ["sent_at", "desc"],
-			limit,
-		});
+	/**
+	 * One alert's delivery events, as a query for a paging strategy to finish.
+	 *
+	 * The ordering is left off deliberately: `Pagination.byKeyset()` owns it, because
+	 * it needs the sort keys both to seek and to mint the cursor.
+	 */
+	static eventsByAlertQuery(db: Database, alertId: string) {
+		return db.query(alertEvents).where({ alert_id: alertId });
 	}
 
-	/** Lists the most recent alert-delivery events for a single monitor, newest first. */
-	static async listByMonitorId(db: Database, monitorId: string, limit: number) {
-		return await db.findMany(alertEvents, {
-			where: { monitor_id: monitorId },
-			orderBy: ["sent_at", "desc"],
-			limit,
-		});
+	/** One monitor's delivery events, as a query for a paging strategy to finish. */
+	static eventsByMonitorQuery(db: Database, monitorId: string) {
+		return db.query(alertEvents).where({ monitor_id: monitorId });
 	}
 }
