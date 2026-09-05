@@ -2,7 +2,7 @@
  * Router middleware publishing the invocation's log as `ctx.log`. It joins the log already
  * current — a dispatcher's, a host's — or opens a `request` log of its own, and records
  * the route and method once the handler has run, since routes match after router
- * middleware starts. The retiring `logger` middleware stays until every consumer has moved.
+ * middleware starts.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,12 +16,9 @@ import type { Logger } from "./create-logger.js";
 
 import { currentLog } from "./current.js";
 import { Log } from "./log.js";
-import { Logger as RequestLogger } from "./request-logger.js";
 
 declare module "remix/router" {
 	interface RequestContext {
-		/** The request-scoped logger, flushed once the response is settled. */
-		logger: RequestLogger;
 		/** The invocation's log, emitted once the response is settled. */
 		log: Log;
 	}
@@ -114,31 +111,3 @@ export function log(
 		});
 	};
 }
-
-/**
- * Creates a request-scoped `Logger` for each request and flushes it once the request completes.
- *
- * @returns The downstream response, after recording it and flushing logs.
- * @throws Re-throws any downstream error after logging it as `unhandled_error`.
- * @example
- * createRouter({ middleware: [logger] });
- */
-export const logger: Middleware = async (ctx, next) => {
-	ctx.logger = new RequestLogger(ctx.request);
-
-	try {
-		let response = await next();
-		ctx.logger.response = response;
-		return response;
-	} catch (error) {
-		ctx.logger.error("unhandled_error", {
-			error: error instanceof Error ? error.message : String(error),
-			stack: error instanceof Error ? error.stack : undefined,
-		});
-		throw error;
-	} finally {
-		ctx.logger.flush();
-	}
-};
-
-export default logger;
