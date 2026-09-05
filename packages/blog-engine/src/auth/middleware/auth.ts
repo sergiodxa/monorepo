@@ -43,7 +43,7 @@ export const authMiddleware = auth({
 			},
 			invalidate(session) {
 				session.unset(USER_ID_KEY);
-				AuthSession.from(getContext())?.clear();
+				AuthSession.from(session)?.clear();
 			},
 		}),
 	],

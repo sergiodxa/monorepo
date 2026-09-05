@@ -100,6 +100,19 @@ let response = await engine.fetch(request);
   migrations (journaled, idempotent). Runs automatically before the first request
   unless `migrations: "manual"`.
 
+### Logging
+
+The router publishes `ctx.log` through `@sdxc/logger`'s `log()` middleware, so one
+wide event is emitted per request, carrying `route`, `http.method`, and whatever the
+handlers set on it. The host wrapping `fetch` in `logger.open("request").run(...)` is
+what gives those logs a `service`: the engine's middleware joins the log that is
+current, and a log with no `service` is the sign that the host has yet to wrap it.
+
+```typescript
+let logger = createLogger({ service: "blog" });
+return logger.open("request").run(() => engine.fetch(request));
+```
+
 ### `BlogEngineConfig`
 
 | Field         | Type                                                                                    | Description                                                                                                                                                            |

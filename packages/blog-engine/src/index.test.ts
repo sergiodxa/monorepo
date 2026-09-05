@@ -10,6 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
+import { Log } from "@sdxc/logger";
 import { describe, expect, test } from "vitest";
 
 import { createSqliteDatabaseAdapter } from "./shared/test/db.js";
@@ -80,5 +81,21 @@ describe("createBlogEngine — service-container DI over the full fetch path", (
 		let response = await engine.fetch(new Request("https://blog.example.com/sitemap.xml"));
 
 		expect(response.status).toBeLessThan(500);
+	});
+});
+
+describe("createBlogEngine — logging", () => {
+	test("joins the host's log and records the route on it", async () => {
+		let engine = createEngine();
+		let records: Record<string, unknown>[] = [];
+		let host = new Log({ kind: "request", sink: (record) => records.push({ ...record }) });
+
+		let response = await host.run(() =>
+			engine.fetch(new Request("https://blog.example.com/sitemap.xml")),
+		);
+
+		expect(response.status).toBe(200);
+		expect(records).toHaveLength(1);
+		expect(records[0]).toMatchObject({ route: "/sitemap.xml", "http.method": "GET" });
 	});
 });

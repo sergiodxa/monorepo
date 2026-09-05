@@ -9,6 +9,7 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
+import { contextOf } from "@sdxc/auth/remix/context";
 import { redirect } from "@sdxc/http/response";
 import { Location } from "@sdxc/location";
 import { isFailure, wrap } from "@sdxc/result";
@@ -86,7 +87,7 @@ export const login = createController(routes.auth.login, {
 
 		/** POST — starts the flow, remembering only a `next` this blog itself serves. */
 		async action(ctx) {
-			return ctx.relyingParty.authorize(ctx, {
+			return ctx.relyingParty.authorize(contextOf(ctx), {
 				returnTo: safeNext(ctx.url.searchParams.get("next")),
 			});
 		},
@@ -98,10 +99,9 @@ export const callback = createAction(
 	routes.auth.callback,
 	inject([Database] as const, async (db) => {
 		let ctx = getContext();
-		let log = ctx.logger.loader("/auth/callback");
 
 		let completed = await wrap(async () => {
-			let grant = await ctx.relyingParty.callback(ctx);
+			let grant = await ctx.relyingParty.callback(contextOf(ctx));
 			let user = await User.findOrCreateFromAuthProfile(
 				db,
 				toAuthProfile(grant.profile, grant.subject),
@@ -112,13 +112,13 @@ export const callback = createAction(
 		});
 
 		if (isFailure(completed)) {
-			log.error("Login failed", { error: String(completed.error) });
+			ctx.log.warn("auth.login_failed", { reason: String(completed.error) });
 			return redirect(`${routes.auth.login.index.href()}?error=authentication_failed`, {
 				status: redirect.Status.SeeOther,
 			});
 		}
 
-		log.info("Login completed", { userId: completed.data.userId });
+		ctx.log.set({ user: { id: completed.data.userId } }).note("auth.login_completed");
 		return redirect(completed.data.next, { status: redirect.Status.SeeOther });
 	}),
 );
@@ -147,7 +147,7 @@ export const logout = createController(routes.auth.logout, {
 		 */
 		async action(ctx) {
 			let endSession = await wrap(() =>
-				ctx.relyingParty.endSession(ctx, {
+				ctx.relyingParty.endSession(contextOf(ctx), {
 					returnTo: routes.feed.href(),
 					redirect: false,
 				}),
@@ -155,9 +155,7 @@ export const logout = createController(routes.auth.logout, {
 			signOut();
 
 			if (isFailure(endSession)) {
-				ctx.logger.loader("/auth/logout").error("Provider sign-out skipped", {
-					error: String(endSession.error),
-				});
+				ctx.log.warn("auth.provider_signout_skipped", { reason: String(endSession.error) });
 				return redirect(routes.feed.href(), { status: redirect.Status.SeeOther });
 			}
 

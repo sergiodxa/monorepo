@@ -1,15 +1,15 @@
 /**
  * Assembles the engine's request pipeline: the global middleware stack and the
- * route→controller map. A fresh router is built per request (via
- * {@link createEngineRouter}) so the request-scoped logger can be injected.
+ * route→controller map, bound through {@link createEngineRouter} to the session
+ * middleware and OIDC configuration an engine instance holds.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 import type { Issuer } from "@sdxc/auth/issuer";
-import type { Logger } from "@sdxc/logger/request";
 import type { Middleware } from "remix/router";
 
+import { log } from "@sdxc/logger/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
@@ -31,7 +31,6 @@ import typeIndex from "./posts/controllers/type-index.js";
 import roles from "./roles/controllers/cms.js";
 import routes from "./routes.js";
 import settings from "./settings/controllers/cms.js";
-import loggerMiddleware from "./shared/middleware/logger.js";
 import oidcMiddleware from "./shared/middleware/oidc.js";
 import renderMiddleware from "./shared/middleware/render.js";
 import trailingSlash from "./shared/middleware/trailing-slash.js";
@@ -43,7 +42,6 @@ import users from "./users/controllers/cms.js";
 
 /** Dependencies the request pipeline is bound to. */
 export interface EngineRouterDeps {
-	logger: Logger;
 	sessionMiddleware: Middleware;
 	oidc: EngineAuthConfig;
 	/** Held by the engine instance, so a blog reads its provider's documents once. */
@@ -51,16 +49,17 @@ export interface EngineRouterDeps {
 }
 
 /**
- * Builds the engine's fetch-router, fresh per request so the request-scoped
- * logger can be injected. Route groups map in call order — dynamic public
- * routes go last so fixed routes win, and nested `map()` groups throw.
- * @param deps - The request-scoped logger, session middleware, and OIDC config.
+ * Builds the engine's fetch-router. `log()` heads the middleware chain so every
+ * request publishes `ctx.log`, joining the host's log when one is current. Route
+ * groups map in call order — dynamic public routes go last so fixed routes win,
+ * and nested `map()` groups throw.
+ * @param deps - The session middleware and OIDC config.
  * @returns A configured fetch-router ready to handle the request.
  */
 export function createEngineRouter(deps: EngineRouterDeps) {
 	let globalMiddleware: Middleware[] = [
 		trailingSlash,
-		loggerMiddleware(deps.logger),
+		log() as Middleware,
 		oidcMiddleware(deps.oidc, deps.issuer),
 		renderMiddleware as Middleware,
 		asyncContext(),

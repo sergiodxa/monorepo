@@ -1,7 +1,7 @@
 /**
  * Ambient module augmentation declaring the `formData` request-context value the
  * global `formData()` middleware attaches. Kept separate from the middleware modules
- * that own `db`/`logger`/`oidc` because an ambient `.d.ts` is not pulled in
+ * that own `db`/`oidc` because an ambient `.d.ts` is not pulled in
  * transitively by consumers.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

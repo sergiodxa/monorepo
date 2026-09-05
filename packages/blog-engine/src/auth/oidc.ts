@@ -68,7 +68,7 @@ export function createIssuer(config: EngineAuthConfig): Issuer {
  * @param config - The blog's relying-party configuration.
  * @param url - The current request's URL, which the callback URL is built against.
  * @returns The client the login, callback, and logout routes drive.
- * @example let grant = await createRelyingParty(issuer, config, ctx.url).callback(ctx);
+ * @example let grant = await createRelyingParty(issuer, config, ctx.url).callback(contextOf(ctx));
  */
 export function createRelyingParty(
 	issuer: Issuer,

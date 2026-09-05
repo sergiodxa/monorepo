@@ -10,7 +10,6 @@
 import type { DatabaseDriver } from "remix/data-table";
 import type { SessionStorage } from "remix/session";
 
-import { Logger } from "@sdxc/logger/request";
 import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 
@@ -112,15 +111,8 @@ export function createBlogEngine(config: BlogEngineConfig): BlogEngine {
 		async fetch(request) {
 			if (config.migrations !== "manual") await (migrated ??= migrate());
 
-			let logger = new Logger(request);
-			try {
-				let router = createEngineRouter({ logger, sessionMiddleware, oidc, issuer });
-				let response = await container.scope(() => router.fetch(request));
-				logger.response = response;
-				return response;
-			} finally {
-				logger.flush();
-			}
+			let router = createEngineRouter({ sessionMiddleware, oidc, issuer });
+			return container.scope(() => router.fetch(request));
 		},
 	};
 }
