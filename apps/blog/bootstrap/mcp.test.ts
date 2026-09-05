@@ -14,6 +14,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Log } from "@sdxc/logger";
 import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
 import { describe, expect, test } from "vitest";
 
@@ -150,6 +151,26 @@ describe("resource URIs", () => {
 		expect(resourceset.tutorial.href({ slug: "use-fetcher" })).toBe(
 			"https://sergiodxa.com/tutorials/use-fetcher.md",
 		);
+	});
+});
+
+describe("the request log", () => {
+	test("names the method the handler served", async () => {
+		/**
+		 * In production the route's `log()` middleware has the request log open before the
+		 * handler runs; opening one here the same way is what lets the record be read back.
+		 */
+		let records: Array<Record<string, unknown>> = [];
+		let log = new Log({ kind: "request", sink: (record) => void records.push(record) });
+
+		await log.run(() => call("tools/list"));
+
+		expect(records).toHaveLength(1);
+		expect(records[0]).toMatchObject({
+			"mcp.method": "tools/list",
+			"mcp.protocol_version": LATEST_PROTOCOL_VERSION,
+			outcome: "ok",
+		});
 	});
 });
 

@@ -12,6 +12,7 @@ import type { ResolveFrameContext } from "remix/ui/server";
 
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { redirect } from "@sdxc/http/response";
+import { log } from "@sdxc/logger/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
@@ -59,6 +60,7 @@ import mcpRateLimit from "~/app/mcp/rate-limit";
 import { NotFoundView } from "~/resources/views/not-found";
 import routes from "~/routes/web";
 
+import { logger } from "./logger";
 import mcp from "./mcp";
 
 /**
@@ -101,13 +103,15 @@ let requireCMSAuth: Middleware = (_ctx, next) => {
 /**
  * Builds the blog HTTP router with global middleware, route mappings, CMS auth
  * guards, and the HTML 404 fallback. `headRequests()` runs first so every later
- * middleware sees a plain `GET` and treats a `HEAD` probe as the page request.
+ * middleware sees a plain `GET` and treats a `HEAD` probe as the page request;
+ * `log(logger)` follows it and opens the request's wide event around everything else.
  * @param env Worker environment bindings injected into request context.
  * @returns Configured router instance for the worker fetch entrypoint.
  */
 export default function createApplication(env: App.Env) {
 	let globalMiddleware: Array<Middleware<any>> = [
 		headRequests(),
+		log(logger),
 		createEnvMiddleware(env),
 		createNoWWWMiddleware(),
 		createNoTrailingSlashMiddleware(),

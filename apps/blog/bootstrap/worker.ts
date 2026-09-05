@@ -15,17 +15,12 @@ import type { ServiceProvider } from "@sdxc/service-container";
 import { ServiceContainer } from "@sdxc/service-container";
 
 import { DatabaseService } from "~/app/services/database";
-import { LoggerServiceProvider } from "~/app/services/logger";
 import { RedirectsServiceProvider } from "~/app/services/redirects";
 
 import createApplication from "./app";
 
 let container = new ServiceContainer();
-let providers: ServiceProvider[] = [
-	new DatabaseService(),
-	new LoggerServiceProvider(),
-	new RedirectsServiceProvider(),
-];
+let providers: ServiceProvider[] = [new DatabaseService(), new RedirectsServiceProvider()];
 
 for (let provider of providers) provider.register(container);
 

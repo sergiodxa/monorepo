@@ -11,7 +11,6 @@ import { AuthError, AuthErrorCode } from "@sdxc/auth/auth-error";
 import { contextOf } from "@sdxc/auth/remix/context";
 import { redirect } from "@sdxc/http/response";
 import { Location } from "@sdxc/location";
-import { Logger } from "@sdxc/logger";
 import { isFailure, wrap } from "@sdxc/result";
 import { inject } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
@@ -169,16 +168,15 @@ export let callbackAction = createAction(routes.auth.callback, {
 	 * account so the session names a row of this app's own.
 	 * @returns The login view carrying an error, or a 303 redirect once signed in.
 	 */
-	handler: inject([Database, Logger] as const, async (db, logger) => {
+	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
-		logger.info("auth.callback.started", { pathname: ctx.url.pathname });
 
 		let result = await wrap(() => relyingParty(ctx.url).callback(contextOf(ctx)));
 
 		if (isFailure(result)) {
-			logger.error("auth.callback.failed", {
+			ctx.log.warn("auth.callback_failed", {
 				code: result.error instanceof AuthError ? result.error.code : null,
-				providerError: result.error instanceof AuthError ? result.error.providerError : null,
+				provider_error: result.error instanceof AuthError ? result.error.providerError : null,
 			});
 
 			return ctx.render(LoginView, { error: describeFailure(result.error) });
@@ -191,10 +189,7 @@ export let callbackAction = createAction(routes.auth.callback, {
 		});
 
 		login(user);
-		logger.info("auth.callback.completed", {
-			userId: user.id,
-			username: user.username,
-		});
+		ctx.log.set({ user: { id: user.id, username: user.username } }).note("auth.callback_completed");
 
 		let returnTo = Location.safe(grant.returnTo, {
 			fallback: routes.cms.dashboard.href(),
