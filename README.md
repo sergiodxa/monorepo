@@ -92,7 +92,6 @@ Run from the repository root:
 | Package                                                         | Description                                                                         |     |
 | --------------------------------------------------------------- | ----------------------------------------------------------------------------------- | --- |
 | [api-client](packages/api-client)                               | Base class for clients of a remote HTTP API                                         |     |
-| [arrays](packages/arrays)                                       | Array utility functions                                                             |     |
 | [auth](packages/auth)                                           | OAuth 2.0 and OpenID Connect client for Remix on Cloudflare Workers                 |     |
 | [billing](packages/billing)                                     | Vendor-neutral billing with pluggable providers and a webhook endpoint              |     |
 | [blog-engine](packages/blog-engine)                             | Host-agnostic blog engine                                                           |     |
@@ -110,7 +109,6 @@ Run from the repository root:
 | [http](packages/http)                                           | HTTP helper utilities                                                               |     |
 | [i18n](packages/i18n)                                           | Language detection, i18next instances and translated-markup components              | ✅  |
 | [icons](packages/icons)                                         | Lucide icons for Remix UI                                                           |     |
-| [iife](packages/iife)                                           | Immediately invoked function helper                                                 |     |
 | [jobs](packages/jobs)                                           | Job queue utilities                                                                 |     |
 | [jwt](packages/jwt)                                             | JWT payload classes and the keys that sign them                                     | ✅  |
 | [kv-cache](packages/kv-cache)                                   | Read-through cache store over Cloudflare KV                                         |     |

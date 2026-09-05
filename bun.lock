@@ -234,10 +234,6 @@
       "name": "@sdxc/api-client",
       "version": "0.0.1",
     },
-    "packages/arrays": {
-      "name": "@sdxc/arrays",
-      "version": "0.0.0",
-    },
     "packages/auth": {
       "name": "@sdxc/auth",
       "version": "0.0.1",
@@ -422,10 +418,6 @@
         "@types/node": "^26.4.0",
         "lucide-static": "^1.38.0",
       },
-    },
-    "packages/iife": {
-      "name": "@sdxc/iife",
-      "version": "0.0.1",
     },
     "packages/jobs": {
       "name": "@sdxc/jobs",
@@ -1331,8 +1323,6 @@
 
     "@sdxc/api-client": ["@sdxc/api-client@workspace:packages/api-client"],
 
-    "@sdxc/arrays": ["@sdxc/arrays@workspace:packages/arrays"],
-
     "@sdxc/auth": ["@sdxc/auth@workspace:packages/auth"],
 
     "@sdxc/billing": ["@sdxc/billing@workspace:packages/billing"],
@@ -1366,8 +1356,6 @@
     "@sdxc/i18n": ["@sdxc/i18n@workspace:packages/i18n"],
 
     "@sdxc/icons": ["@sdxc/icons@workspace:packages/icons"],
-
-    "@sdxc/iife": ["@sdxc/iife@workspace:packages/iife"],
 
     "@sdxc/jobs": ["@sdxc/jobs@workspace:packages/jobs"],
 
