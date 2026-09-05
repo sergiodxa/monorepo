@@ -27,10 +27,9 @@ Two entry points, for two kinds of caller:
   `context.cache`. This is how request handlers should declare caching; the
   standalone functions above are how jobs invalidate, since they have no request.
 
-> The Workers Cache purge surface is new. Several details here are **assumed**
-> rather than verified against Cloudflare documentation; see
-> [Platform assumptions](#platform-assumptions) before enabling this in
-> production.
+> The Workers Cache surface is new. The purge call matches the generated Worker
+> types, but the tag limits and character rules are still **assumed**; see
+> [Platform assumptions](#platform-assumptions) before raising cache lifetimes.
 
 ## Usage
 
@@ -175,7 +174,7 @@ a runtime import and testable with a double.
 **Parameters:**
 
 - `cache`: The platform cache interface, or a recording double in tests
-- `options`: Exactly one of `{ tags }`, `{ prefix }`, or `{ everything: true }`
+- `options`: Exactly one of `{ tags }`, `{ prefixes }`, or `{ everything: true }`
 
 **Returns:**
 
@@ -190,7 +189,7 @@ options that select nothing all fail without calling the platform.
 
 ```typescript
 await purge(cache, { tags: [TAGS.postList()] });
-await purge(cache, { prefix: "example.com/blog/" });
+await purge(cache, { prefixes: ["example.com/blog/"] });
 await purge(cache, { everything: true }); // incidents, not content writes
 ```
 
@@ -360,7 +359,8 @@ interface PurgeSelector {
 	everything?: boolean;
 }
 
-type PurgeOptions = { tags: readonly CacheTag[] } | { prefix: string } | { everything: true };
+type PurgeOptions =
+	{ tags: readonly CacheTag[] } | { prefixes: readonly string[] } | { everything: true };
 ```
 
 `PurgeOptions` is what a caller writes; `PurgeSelector` is the normalized form
@@ -376,13 +376,14 @@ can assert against the same values the middleware uses.
 
 ## Platform assumptions
 
-Cloudflare's Workers Cache purge API is new and its shape was **not** verified
-against current Cloudflare documentation while this package was written. Every
-assumed value lives in [`src/platform.ts`](./src/platform.ts), and the shape of
-the platform call lives behind `CacheInterface` in
-[`src/types.ts`](./src/types.ts). Those two files are the seam: a correction to
-the real surface changes them and, at most, the adapter an app passes as
-`options.cache`, and nothing else in this package or its callers moves.
+Cloudflare's Workers Cache surface is new. The purge call matches the Worker
+types Wrangler generates, so a binding satisfies `CacheInterface` directly; the
+tag limits and character rules are conservative guesses. Every assumed value
+lives in [`src/platform.ts`](./src/platform.ts), and the shape of the platform
+call lives behind `CacheInterface` in [`src/types.ts`](./src/types.ts). Those two
+files are the seam: a correction to the real surface changes them and, at most,
+the adapter an app passes as `options.cache`, and nothing else in this package or
+its callers moves.
 
 | Surface                        | Status                                                                                                                                      |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -391,7 +392,7 @@ the real surface changes them and, at most, the adapter an app passes as
 | Tag length limit               | **Assumed** at 1024 characters per tag.                                                                                                     |
 | Header length limit            | **Assumed** at 16384 characters for the serialized header.                                                                                  |
 | Tag case sensitivity           | **Assumed** significant: tags are compared byte-for-byte, so `Post:1` and `post:1` are two tags.                                            |
-| Purge API shape                | **Assumed.** `cache.purge({ tags })`, `{ prefix }`, or `{ everything: true }`, returning a promise that rejects on failure.                 |
+| Purge API shape                | **Verified** against the generated Worker types: `cache.purge({ tags, pathPrefixes, purgeEverything })` resolving to `{ success, errors }`. |
 | Purge prefix format            | **Assumed** to include the host, e.g. `example.com/blog/`.                                                                                  |
 | Per-call and per-plan limits   | **Not implemented.** Tags are sent in one call with no chunking, so a per-call tag cap would surface as a platform rejection.               |
 | How the cache reaches a Worker | **Deliberately unanswered.** Binding or execution context, the caller passes whatever it has as `options.cache`.                            |

@@ -43,10 +43,10 @@ describe("purge", () => {
 	test("sends a prefix selector", async () => {
 		let cache = createRecordingCache();
 
-		let result = await purge(cache, { prefix: "example.com/blog/" });
+		let result = await purge(cache, { prefixes: ["example.com/blog/"] });
 
 		expect(isSuccess(result)).toBe(true);
-		expect(cache.purges).toEqual([{ prefix: "example.com/blog/" }]);
+		expect(cache.purges).toEqual([{ pathPrefixes: ["example.com/blog/"] }]);
 	});
 
 	test("sends an everything selector", async () => {
@@ -55,7 +55,7 @@ describe("purge", () => {
 		let result = await purge(cache, { everything: true });
 
 		expect(isSuccess(result)).toBe(true);
-		expect(cache.purges).toEqual([{ everything: true }]);
+		expect(cache.purges).toEqual([{ purgeEverything: true }]);
 	});
 
 	test("fails an empty tag list without calling the platform", async () => {
@@ -71,7 +71,7 @@ describe("purge", () => {
 	test("fails a blank prefix without calling the platform", async () => {
 		let cache = createRecordingCache();
 
-		let result = await purge(cache, { prefix: "   " });
+		let result = await purge(cache, { prefixes: ["   "] });
 
 		expect(isFailure(result)).toBe(true);
 		expect(cache.purges).toEqual([]);
@@ -109,6 +109,20 @@ describe("purge", () => {
 		expect(result.error.message).toContain("post:1");
 		expect(result.error.selector).toEqual({ tags: ["post:1"] });
 		expect(result.error.cause).toBe(rejection);
+	});
+
+	test("reports a declined purge as a failure, though the platform resolved", async () => {
+		let issues = [{ code: 1122, message: "too many tags in one call" }];
+		let cache = createRecordingCache({ declineWith: issues });
+
+		let result = await purge(cache, { tags: [TAGS.post("1")] });
+
+		expect(isFailure(result)).toBe(true);
+		if (!isFailure(result)) return;
+		expect(result.error).toBeInstanceOf(PurgeError);
+		expect(result.error.message).toContain("post:1");
+		expect(result.error.selector).toEqual({ tags: ["post:1"] });
+		expect(result.error.cause).toBe(issues);
 	});
 
 	test("never throws, so a failed purge cannot escape a job's error handling", async () => {

@@ -16,16 +16,16 @@ describe("createRecordingCache", () => {
 		let cache = createRecordingCache();
 
 		await cache.purge({ tags: ["posts"] });
-		await cache.purge({ prefix: "example.com/blog/" });
+		await cache.purge({ pathPrefixes: ["example.com/blog/"] });
 
-		expect(cache.purges).toEqual([{ tags: ["posts"] }, { prefix: "example.com/blog/" }]);
+		expect(cache.purges).toEqual([{ tags: ["posts"] }, { pathPrefixes: ["example.com/blog/"] }]);
 	});
 
 	test("flattens the tags across every tag purge", async () => {
 		let cache = createRecordingCache();
 
 		await cache.purge({ tags: ["post:1", "posts"] });
-		await cache.purge({ everything: true });
+		await cache.purge({ purgeEverything: true });
 		await cache.purge({ tags: ["post:2"] });
 
 		expect(cache.purgedTags).toEqual(["post:1", "posts", "post:2"]);
@@ -50,7 +50,7 @@ describe("createRecordingCache", () => {
 	test("resets recorded calls and any configured failure", async () => {
 		let cache = createRecordingCache({ failWith: new Error("edge unavailable") });
 
-		await expect(cache.purge({ everything: true })).rejects.toThrow("edge unavailable");
+		await expect(cache.purge({ purgeEverything: true })).rejects.toThrow("edge unavailable");
 		cache.reset();
 
 		expect(cache.purges).toEqual([]);

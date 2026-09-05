@@ -40,14 +40,17 @@ function toSelector(options: PurgeOptions): Result<PurgeSelector, PurgeError> {
 		return success({ tags: [...unique] });
 	}
 
-	if ("prefix" in options) {
-		if (options.prefix.trim().length === 0) {
+	if ("prefixes" in options) {
+		if (options.prefixes.length === 0) {
+			return failure(new PurgeError("Cannot purge an empty prefix list; pass at least one prefix"));
+		}
+		if (options.prefixes.some((prefix) => prefix.trim().length === 0)) {
 			return failure(new PurgeError("Cannot purge an empty prefix"));
 		}
-		return success({ prefix: options.prefix });
+		return success({ pathPrefixes: [...options.prefixes] });
 	}
 
-	if (options.everything) return success({ everything: true });
+	if (options.everything) return success({ purgeEverything: true });
 
 	return failure(new PurgeError("Purge options selected nothing to invalidate"));
 }
@@ -61,7 +64,7 @@ function toSelector(options: PurgeOptions): Result<PurgeSelector, PurgeError> {
  */
 function describe(selector: PurgeSelector): string {
 	if (selector.tags) return `tags ${selector.tags.join(", ")}`;
-	if (selector.prefix) return `prefix ${selector.prefix}`;
+	if (selector.pathPrefixes) return `prefixes ${selector.pathPrefixes.join(", ")}`;
 	return "everything";
 }
 
@@ -72,13 +75,13 @@ function describe(selector: PurgeSelector): string {
  * edge reads converging shortly after; reserve `everything` for incident response.
  *
  * @param cache - The platform cache interface, or a double in tests.
- * @param options - Exactly one of tags, a prefix, or everything.
+ * @param options - Exactly one of tags, path prefixes, or everything.
  * @returns Success when the platform accepted the purge, otherwise a `PurgeError`
  * carrying the selector that did not take effect.
  * @example
  * await purge(cache, { tags: [TAGS.post(id), TAGS.postList()] });
  * @example
- * await purge(cache, { prefix: "example.com/blog/" });
+ * await purge(cache, { prefixes: ["example.com/blog/"] });
  * @example
  * await purge(cache, { everything: true }); // incidents only
  */
@@ -90,7 +93,19 @@ export async function purge(
 	if (isFailure(selector)) return selector;
 
 	try {
-		await cache.purge(selector.data);
+		let outcome = await cache.purge(selector.data);
+
+		// A declined purge resolves rather than rejecting, so the outcome decides
+		// the result; treating any resolution as success serves stale content.
+		if (!outcome.success) {
+			return failure(
+				new PurgeError(`Cache purge failed for ${describe(selector.data)}`, {
+					selector: selector.data,
+					cause: outcome.errors,
+				}),
+			);
+		}
+
 		return success(undefined);
 	} catch (error) {
 		return failure(

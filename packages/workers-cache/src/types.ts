@@ -34,15 +34,36 @@ export type CacheStatus = "hit" | "miss" | "expired" | "bypass" | "unknown";
 /**
  * The selector handed to the platform, with exactly one of its fields set. It is
  * the normalized form of {@link PurgeOptions}: tags are deduplicated and
- * validated before they reach here.
+ * validated before they reach here. Field names mirror the platform's own purge
+ * options so a binding can be passed straight in as a {@link CacheInterface}.
  */
 export interface PurgeSelector {
 	/** Tags whose entries should be invalidated. */
 	tags?: string[];
-	/** URL prefix whose entries should be invalidated, e.g. `example.com/blog/`. */
-	prefix?: string;
+	/** URL prefixes whose entries should be invalidated, e.g. `example.com/blog/`. */
+	pathPrefixes?: string[];
 	/** Invalidate every entry; reserved for incident recovery. */
-	everything?: boolean;
+	purgeEverything?: boolean;
+}
+
+/** One problem the platform reported about a purge it declined to apply. */
+export interface PurgeIssue {
+	/** The platform's numeric code for the problem. */
+	code: number;
+	/** The platform's description of the problem. */
+	message: string;
+}
+
+/**
+ * What the platform reports back from a purge. A declined purge resolves with
+ * `success: false` instead of rejecting, so this has to be read to know whether
+ * the entries were invalidated at all.
+ */
+export interface PurgeOutcome {
+	/** Whether the platform applied the purge. */
+	success: boolean;
+	/** What went wrong when it did not; empty once it succeeded. */
+	errors: readonly PurgeIssue[];
 }
 
 /**
@@ -54,9 +75,10 @@ export interface CacheInterface {
 	/**
 	 * Invalidates the entries the selector matches.
 	 *
-	 * @param selector - Exactly one of tags, a prefix, or everything.
+	 * @param selector - Exactly one of tags, path prefixes, or everything.
+	 * @returns The platform's outcome, which reports a refusal without rejecting.
 	 */
-	purge(selector: PurgeSelector): Promise<void>;
+	purge(selector: PurgeSelector): Promise<PurgeOutcome>;
 }
 
 /** Invalidate every entry tagged with any of these tags. */
@@ -65,10 +87,10 @@ export interface PurgeByTags {
 	tags: readonly CacheTag[];
 }
 
-/** Invalidate every entry whose URL starts with this prefix. */
-export interface PurgeByPrefix {
-	/** URL prefix including the host, e.g. `example.com/blog/`. */
-	prefix: string;
+/** Invalidate every entry whose URL starts with one of these prefixes. */
+export interface PurgeByPrefixes {
+	/** Prefixes to invalidate, each including the host; an empty list is a failure rather than a no-op. */
+	prefixes: readonly string[];
 }
 
 /** Invalidate every entry; reserved for incident recovery. */
@@ -78,4 +100,4 @@ export interface PurgeEverything {
 }
 
 /** The three forms a purge can take, one per call. */
-export type PurgeOptions = PurgeByTags | PurgeByPrefix | PurgeEverything;
+export type PurgeOptions = PurgeByTags | PurgeByPrefixes | PurgeEverything;

@@ -13,10 +13,12 @@ export type {
 	CachePolicy,
 	CacheStatus,
 	CacheTag,
-	PurgeByPrefix,
+	PurgeByPrefixes,
 	PurgeByTags,
 	PurgeEverything,
+	PurgeIssue,
 	PurgeOptions,
+	PurgeOutcome,
 	PurgeSelector,
 } from "./types.js";
 export type { CacheTags, TagVocabulary } from "./create-tags.js";
