@@ -1,17 +1,16 @@
 /**
  * Tests the middleware contract: a mailer on the context configured with the app's
  * sender identity, a transport resolved per request when a factory is given, and a
- * deferred queue that flushes only after the handler returned, logging failures to
- * leave a request's already-decided response intact.
+ * deferred queue that flushes only after the handler returned, recording each outcome
+ * on the invocation's log to leave a request's already-decided response intact.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Log } from "@sdxc/logger";
 import { RequestContext } from "remix/router";
 import { describe, expect, test } from "vitest";
-
-import type { MailLogger } from "./middleware.js";
 
 import { MemoryTransport } from "./memory.js";
 import mail from "./middleware.js";
@@ -28,15 +27,12 @@ function createContext(): RequestContext {
 	return new RequestContext(new Request("https://example.com/invites"));
 }
 
-/** Collects the events a middleware logs, standing in for the app's request logger. */
-function createLogger() {
-	let events: { event: string; payload?: Record<string, unknown> }[] = [];
-	let logger: MailLogger = {
-		error(event, payload) {
-			events.push({ event, payload });
-		},
-	};
-	return { logger, events };
+/** Runs `fn` inside an invocation's log and returns the record it emitted. */
+async function recorded(fn: () => unknown): Promise<Record<string, unknown>> {
+	let records: Record<string, unknown>[] = [];
+	let log = new Log({ kind: "request", sink: (record) => void records.push(record) });
+	await log.run(fn);
+	return records[0] ?? {};
 }
 
 describe("mail middleware", () => {
@@ -119,40 +115,47 @@ describe("mail middleware", () => {
 		expect(transport.messages).toHaveLength(1);
 	});
 
-	test("logs a failed deferred send through the logger the options supply", async () => {
-		let { logger, events } = createLogger();
-		let middleware = mail({
-			transport: new MemoryTransport(),
-			from: SENDER,
-			logger: () => logger,
-		});
+	test("records a delivered deferred message on the invocation's log", async () => {
+		let middleware = mail({ transport: new MemoryTransport(), from: SENDER });
 		let context = createContext();
 
-		let response = await middleware(context, async () => {
-			context.email.later({ to: [], subject: "Invalid", text: "Hi" });
-			return new Response("ok");
-		});
+		let record = await recorded(() =>
+			middleware(context, async () => {
+				context.email.later({ to: { email: "a@example.com" }, subject: "Deferred", text: "Hi" });
+				return new Response("ok");
+			}),
+		);
 
-		expect(response.status).toBe(200);
-		expect(events).toHaveLength(1);
-		expect(events[0]?.event).toBe("mail.send_failed");
-		expect(events[0]?.payload?.error).toContain("recipient");
+		expect(record).toMatchObject({ "mail.sent": true, outcome: "ok" });
+		expect(record.notes).toEqual([
+			expect.objectContaining({ level: "info", name: "mail.sent", message_id: expect.any(String) }),
+		]);
 	});
 
-	test("falls back to the logger the app installed on the context", async () => {
-		let { logger, events } = createLogger();
+	test("warns about a failed deferred send without failing the request", async () => {
 		let middleware = mail({ transport: new MemoryTransport(), from: SENDER });
-		let context = Object.assign(createContext(), { logger });
+		let context = createContext();
+		let response: Response | undefined;
 
-		await middleware(context, async () => {
-			context.email.later({ to: [], subject: "Invalid", text: "Hi" });
-			return new Response("ok");
+		let record = await recorded(async () => {
+			response = await middleware(context, async () => {
+				context.email.later({ to: [], subject: "Invalid", text: "Hi" });
+				return new Response("ok");
+			});
 		});
 
-		expect(events).toHaveLength(1);
+		expect(response?.status).toBe(200);
+		expect(record.outcome).toBe("degraded");
+		expect(record.notes).toEqual([
+			expect.objectContaining({
+				level: "warn",
+				name: "mail.send_failed",
+				error: expect.stringContaining("recipient"),
+			}),
+		]);
 	});
 
-	test("drops a deferred failure when no logger is available, rather than throwing", async () => {
+	test("drops a deferred failure when no log is current, rather than throwing", async () => {
 		let middleware = mail({ transport: new MemoryTransport(), from: SENDER });
 		let context = createContext();
 

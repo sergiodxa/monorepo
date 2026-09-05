@@ -2,8 +2,8 @@
  * Remix fetch-router middleware that builds a mailer for the request and
  * publishes it on the request context, so handlers send mail by calling
  * `context.email`, using whichever transport the app configured. Messages
- * queued with `later()` flush after the handler returns, with failures
- * recorded through the logger.
+ * queued with `later()` flush after the handler returns, and each outcome is
+ * recorded on the invocation's log.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,6 +11,7 @@
 
 import type { Middleware, RequestContext } from "remix/router";
 
+import { currentLog } from "@sdxc/logger";
 import { isFailure } from "@sdxc/result";
 
 import type { Address, Transport } from "./types.js";
@@ -31,21 +32,6 @@ declare module "remix/router" {
 	}
 }
 
-/**
- * The part of a logger this middleware needs, kept structural so the package
- * reports deferred-send failures through whichever logger an app already
- * exposes on the context.
- */
-export interface MailLogger {
-	/**
-	 * Records a failure event.
-	 *
-	 * @param event - Event name, e.g. `mail.send_failed`.
-	 * @param payload - Structured details about the failure.
-	 */
-	error(event: string, payload?: Record<string, unknown>): void;
-}
-
 /** Options that configure the mail middleware. */
 export interface MailMiddlewareOptions {
 	/**
@@ -60,26 +46,13 @@ export interface MailMiddlewareOptions {
 	replyTo?: Address | Address[];
 	/** Headers added to every message the request sends. */
 	headers?: Record<string, string>;
-	/**
-	 * Resolves the logger used to report deferred-send failures. Defaults to
-	 * `context.logger` when the app installed one; when no logger is found the
-	 * failures are dropped, because the response has already been produced.
-	 */
-	logger?: (context: RequestContext) => MailLogger | undefined;
-}
-
-/** Reads a logger off the request context, accepting anything that can record an error event. */
-function contextLogger(context: RequestContext): MailLogger | undefined {
-	let candidate: unknown = (context as { logger?: unknown }).logger;
-	if (typeof candidate !== "object" || candidate === null) return undefined;
-	if (!("error" in candidate) || typeof candidate.error !== "function") return undefined;
-	return candidate as MailLogger;
 }
 
 /**
  * Creates a middleware that publishes a request-scoped mailer as `context.email`,
  * resolving a container-based transport once per request. The `later()` queue
- * flushes in a `finally` after `next()`, recording each failure through the logger.
+ * flushes in a `finally` after `next()`; the response is already decided by then,
+ * so a failed deferred send is a warning on the invocation's log rather than an error.
  *
  * @param options - Transport and sender configuration; see {@link MailMiddlewareOptions}.
  * @returns A middleware that populates `context.email`.
@@ -103,10 +76,13 @@ export default function mail(options: MailMiddlewareOptions): Middleware {
 		try {
 			return await next();
 		} finally {
-			let results = await mailer.flush();
-			let logger = options.logger?.(context) ?? contextLogger(context);
-			for (let result of results) {
-				if (isFailure(result)) logger?.error("mail.send_failed", { error: result.error.message });
+			let log = currentLog();
+			for (let result of await mailer.flush()) {
+				if (isFailure(result)) log?.warn("mail.send_failed", { error: result.error.message });
+				else
+					log
+						?.set({ mail: { sent: true } })
+						.note("mail.sent", { message_id: result.data.messageId });
 			}
 		}
 	};

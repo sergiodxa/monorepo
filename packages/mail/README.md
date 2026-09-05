@@ -59,7 +59,7 @@ router.post("/invites", async (context) => {
 		html: "<p>Welcome aboard.</p>",
 	});
 
-	if (isFailure(result)) context.logger.error("mail.send_failed", { error: result.error.message });
+	if (isFailure(result)) context.log.warn("mail.send_failed", { error: result.error.message });
 
 	return new Response(null, { status: 204 });
 });
@@ -544,7 +544,8 @@ Publishes a request-scoped `Mailer` as `context.email` and flushes its deferred 
 - `options.from`: Sender identity for the app
 - `options.replyTo?`: Default reply-to
 - `options.headers?`: Headers added to every message the request sends
-- `options.logger?`: `(context) => MailLogger | undefined`, resolving the logger used for deferred-send failures; defaults to `context.logger`
+
+Once `next()` has resolved the deferred queue flushes, and the middleware enriches the invocation's log from `@sdxc/logger` when one is current: a delivered message sets `mail.sent` and adds a `mail.sent` note carrying the provider's message id, and a failed one is a `mail.send_failed` warning, since the response is already out and the failure has nowhere else to go. With no log current the outcomes are dropped.
 
 The module augments `RequestContext`, so `context.email` is typed in every app that imports the middleware. Despite the name, it is the object that _sends_ mail, not the current user's address.
 
@@ -595,7 +596,7 @@ Emails, services, and tests are untouched, which also makes a switch reversible.
 
 - [`@sdxc/result`](/packages/result) — the `Result` type every send outcome is reported as
 - [`@sdxc/service-container`](/packages/service-container) — where an app registers the provider client a transport is constructed with
-- [`@sdxc/logger`](/packages/logger) — the request logger the middleware reports deferred-send failures through
+- [`@sdxc/logger`](/packages/logger) — the invocation's log the middleware records deferred-send outcomes on
 - [`@sdxc/i18n`](/packages/i18n) — supplies the translator an email class uses for its subject; this package never depends on it
 
 ## Tips

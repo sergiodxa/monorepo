@@ -17,6 +17,7 @@
 	"dependencies": {
 		"@markdoc/markdoc": "^0.5.9",
 		"@sdxc/highlight": "workspace:*",
+		"@sdxc/logger": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"remix": "3.0.0-rc.1"
 	}
