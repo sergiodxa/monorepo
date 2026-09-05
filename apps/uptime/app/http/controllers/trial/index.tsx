@@ -22,7 +22,7 @@ import {
 	MailIcon,
 	NetworkIcon,
 } from "@sdxc/icons";
-import { logger } from "@sdxc/logger";
+import { currentLog } from "@sdxc/logger";
 import { isFailure } from "@sdxc/result";
 import { getServiceContainer } from "@sdxc/service-container";
 import { bg, fg, linearGradient } from "@sdxc/u/color";
@@ -1004,10 +1004,9 @@ export default createController(routes.trial.check, {
 			});
 
 			if (isFailure(grant)) {
-				logger.info("trial.probe_refused", {
-					reason: grant.error.reason,
-					detail: grant.error.detail,
-				});
+				currentLog()
+					?.set({ trial: { probe_refused: true, refusal_reason: grant.error.reason } })
+					.note("trial.probe_refused", { detail: grant.error.detail });
 
 				return renderTrialPage({
 					refusal: {
@@ -1025,7 +1024,7 @@ export default createController(routes.trial.check, {
 			 * challenge, or exhausted budget — never counts as a started check: the two counts
 			 * measure probes that ran against probes that answered.
 			 */
-			trackUrlCheckStarted(ctx.logger, {
+			trackUrlCheckStarted(ctx.log, {
 				hostname: hostnameOf(url),
 				sourcePage: ctx.url.pathname,
 				signedIn: account !== null,
@@ -1046,9 +1045,7 @@ export default createController(routes.trial.check, {
 				 * fails DNS, or times out comes back as an outcome. This fault is ours, so it is
 				 * reported as ours rather than telling the visitor their site is down.
 				 */
-				logger.error("trial.probe_unavailable", {
-					message: error instanceof Error ? error.message : String(error),
-				});
+				currentLog()?.fail(error, { trial: { probe_unavailable: true } });
 
 				return renderTrialPage({
 					refusal: { code: "unavailable", retryAfterSeconds: null },
@@ -1065,7 +1062,7 @@ export default createController(routes.trial.check, {
 				checkedAt: Date.now(),
 			};
 
-			trackUrlCheckCompleted(ctx.logger, {
+			trackUrlCheckCompleted(ctx.log, {
 				hostname: hostnameOf(url),
 				sourcePage: ctx.url.pathname,
 				signedIn: account !== null,

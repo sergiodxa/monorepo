@@ -73,8 +73,8 @@ export default createJobHandler(jobs.checkFlows, async (ctx) => {
 	for (let outcome of settled) {
 		if (!outcome.ok) {
 			errorCount++;
-			ctx.logger.error("job.check_flows.monitor_failed", {
-				monitorId: outcome.item.id,
+			ctx.log.warn("checks.monitor_failed", {
+				"monitor.id": outcome.item.id,
 				error: outcome.error instanceof Error ? outcome.error.message : String(outcome.error),
 			});
 			continue;
@@ -93,9 +93,9 @@ export default createJobHandler(jobs.checkFlows, async (ctx) => {
 		 * recorded, so this logs the drop and lets the sweep continue.
 		 */
 		if (ownerId === undefined) {
-			ctx.logger.error("job.check_flows.unbillable_team", {
-				monitorId: outcome.item.id,
-				teamId: outcome.item.team_id,
+			ctx.log.warn("checks.unbillable_team", {
+				"monitor.id": outcome.item.id,
+				"team.id": outcome.item.team_id,
 			});
 			continue;
 		}
@@ -120,12 +120,14 @@ export default createJobHandler(jobs.checkFlows, async (ctx) => {
 	/** Every ping in one call, so a sweep of twenty flows costs one subrequest. */
 	await ingestPings(polar, pings);
 
-	ctx.logger.info("job.check_flows.completed", {
-		total: monitors.length,
-		successCount,
-		errorCount,
-		notified: notifications.length,
-		ingested: pings.length,
+	ctx.log.set({
+		checks: {
+			total: monitors.length,
+			succeeded: successCount,
+			failed: errorCount,
+			notified: notifications.length,
+			ingested: pings.length,
+		},
 	});
 });
 

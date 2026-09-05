@@ -16,7 +16,7 @@ import { BillingError } from "@sdxc/billing";
 import billing from "@sdxc/billing/middleware";
 import { createEnv, createKVNamespace } from "@sdxc/cloudflare-mocks";
 import { JWK, JWT } from "@sdxc/jwt";
-import logger from "@sdxc/logger/middleware";
+import { log } from "@sdxc/logger/middleware";
 import { failure, unwrap } from "@sdxc/result";
 import { ServiceContainer } from "@sdxc/service-container";
 import { http, HttpResponse } from "msw";
@@ -219,7 +219,7 @@ function createTestRouter(db: ReturnType<typeof createTestDatabase>["db"], sessi
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			logger as Middleware,
+			log() as Middleware,
 			billing({ provider: platform }),
 			seedSession(session),
 			auth as Middleware,

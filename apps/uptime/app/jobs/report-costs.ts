@@ -70,12 +70,13 @@ interface TeamDay {
 
 export default createJobHandler(jobs.reportCosts, async (ctx) => {
 	let day = getYesterdayDateUtc();
+	ctx.log.set({ costs: { day } });
 
 	await recordStorage(ctx);
 
 	let result = await queryAnalytics<Record<string, unknown>>(dailyCostQuery(day));
 	if (isFailure(result)) {
-		ctx.logger.error("job.report_costs.query_failed", { day, error: result.error.message });
+		ctx.log.fail(result.error);
 		return ctx.retry({ cause: result.error });
 	}
 
@@ -98,11 +99,7 @@ export default createJobHandler(jobs.reportCosts, async (ctx) => {
 
 		if (!ownerId) {
 			skippedCents += teamDay.cents;
-			ctx.logger.error("job.report_costs.unreportable_team", {
-				day,
-				teamId,
-				cents: teamDay.cents,
-			});
+			ctx.log.warn("costs.unreportable_team", { "team.id": teamId, cents: teamDay.cents });
 			continue;
 		}
 
@@ -121,38 +118,34 @@ export default createJobHandler(jobs.reportCosts, async (ctx) => {
 
 	if (events.length > 0) {
 		if (!supports(polar, "usage")) {
-			ctx.logger.error("job.report_costs.usage_unsupported", { day });
+			ctx.log.warn("costs.usage_unsupported");
 			return;
 		}
 
 		let ingested = await polar.usage.ingest(events);
 
 		if (isFailure(ingested)) {
-			ctx.logger.error("job.report_costs.ingest_failed", {
-				day,
-				events: events.length,
-				code: ingested.error.code,
-				providerCode: ingested.error.providerCode,
-			});
+			ctx.log.fail(ingested.error, { costs: { events: events.length } });
 			return ctx.retry({ cause: ingested.error });
 		}
 	}
 
-	/**
-	 * Logged at error level on purpose: a growing unattributed or skipped figure means
-	 * real spend is landing on nobody, the number that would otherwise stay invisible
-	 * while per-customer margin quietly stopped adding up.
-	 */
-	if (unattributedCents > 0 || skippedCents > 0) {
-		ctx.logger.error("job.report_costs.unreported", { day, unattributedCents, skippedCents });
-	}
-
-	ctx.logger.info("job.report_costs.completed", {
-		day,
-		teams: byTeam.size,
-		events: events.length,
-		reportedCents,
+	ctx.log.set({
+		costs: {
+			teams: byTeam.size,
+			events: events.length,
+			reported_cents: reportedCents,
+			unattributed_cents: unattributedCents,
+			skipped_cents: skippedCents,
+		},
 	});
+
+	/**
+	 * Degraded on purpose: a growing unattributed or skipped figure means real spend is
+	 * landing on nobody, the number that would otherwise stay invisible while per-customer
+	 * margin quietly stopped adding up.
+	 */
+	if (unattributedCents > 0 || skippedCents > 0) ctx.log.warn("costs.unreported");
 });
 
 /**
@@ -189,7 +182,7 @@ async function recordStorage(ctx: CurrentJobContext): Promise<void> {
 	recordCost("kvStorageGbDay", (gbByTeam.size * KV_MEAN_BYTES_PER_TEAM) / BYTES_PER_GB);
 	apportionCost(gbByTeam);
 
-	ctx.logger.info("job.report_costs.storage_estimated", { teams: gbByTeam.size, d1Gb });
+	ctx.log.set({ costs: { storage_teams: gbByTeam.size, storage_d1_gb: d1Gb } });
 }
 
 /**

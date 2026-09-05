@@ -52,18 +52,14 @@ export default createJobHandler(jobs.deleteAccounts, async (ctx) => {
 			else errorCount++;
 		} catch (error) {
 			errorCount++;
-			ctx.logger.error("job.delete_accounts.request_failed", {
-				subjectId: request.subject_id,
+			ctx.log.warn("accounts.request_failed", {
+				"subject.id": request.subject_id,
 				error: error instanceof Error ? error.message : String(error),
 			});
 		}
 	}
 
-	ctx.logger.info("job.delete_accounts.completed", {
-		total: pending.length,
-		deleted,
-		errorCount,
-	});
+	ctx.log.set({ accounts: { total: pending.length, deleted, failed: errorCount } });
 });
 
 /**
@@ -86,8 +82,8 @@ async function erase(
 		 * stays, nothing was deleted, and the person is still billed for an account that
 		 * still works.
 		 */
-		ctx.logger.error("job.delete_accounts.erasure_failed", {
-			subjectId: request.subject_id,
+		ctx.log.warn("accounts.erasure_failed", {
+			"subject.id": request.subject_id,
 			error: erased.error.message,
 		});
 		return false;
@@ -101,8 +97,8 @@ async function erase(
 	try {
 		await notifyFormerMembers(ctx, mailer, admin, erased.data.deletedTeams);
 	} catch (error) {
-		ctx.logger.error("job.delete_accounts.notify_members_failed", {
-			subjectId: request.subject_id,
+		ctx.log.warn("accounts.notify_members_failed", {
+			"subject.id": request.subject_id,
 			error: error instanceof Error ? error.message : String(error),
 		});
 	}
@@ -119,8 +115,8 @@ async function erase(
 		 * run mails it. That re-run matches nothing left to delete, making a second pass over
 		 * this row safe.
 		 */
-		ctx.logger.error("job.delete_accounts.email_failed", {
-			subjectId: request.subject_id,
+		ctx.log.warn("accounts.email_failed", {
+			"subject.id": request.subject_id,
 			error: sent.error.message,
 		});
 		return false;
@@ -129,11 +125,11 @@ async function erase(
 	/** Last, and only now: this row is the last thing that held the address. */
 	await AccountDeletion.remove(ctx.database, request.subject_id);
 
-	ctx.logger.info("job.delete_accounts.deleted", {
-		subjectId: request.subject_id,
-		teamsDeleted: erased.data.teamsDeleted,
-		membershipsRemoved: erased.data.membershipsRemoved,
-		subscriptionsRevoked: erased.data.subscriptionsRevoked,
+	ctx.log.note("accounts.deleted", {
+		"subject.id": request.subject_id,
+		teams_deleted: erased.data.teamsDeleted,
+		memberships_removed: erased.data.membershipsRemoved,
+		subscriptions_revoked: erased.data.subscriptionsRevoked,
 	});
 
 	return true;
@@ -174,7 +170,7 @@ async function notifyFormerMembers(
 			 */
 			if (!profile) {
 				skipped++;
-				ctx.logger.error("job.delete_accounts.member_profile_missing", { subjectId });
+				ctx.log.warn("accounts.member_profile_missing", { "subject.id": subjectId });
 				continue;
 			}
 
@@ -190,8 +186,8 @@ async function notifyFormerMembers(
 
 			if (isFailure(sent)) {
 				skipped++;
-				ctx.logger.error("job.delete_accounts.member_email_failed", {
-					subjectId,
+				ctx.log.warn("accounts.member_email_failed", {
+					"subject.id": subjectId,
 					error: sent.error.message,
 				});
 				continue;
@@ -201,9 +197,5 @@ async function notifyFormerMembers(
 		}
 	}
 
-	ctx.logger.info("job.delete_accounts.members_notified", {
-		teams: teams.length,
-		notified,
-		skipped,
-	});
+	ctx.log.note("accounts.members_notified", { teams: teams.length, notified, skipped });
 }

@@ -1,9 +1,9 @@
 /**
  * Unit tests for the cost ledger (ADR-007 §3–§6): a unit of work's D1 statements
- * accumulate independently of concurrent units; apportioned quantities split by
- * team weight; the ledger's own write, modelled CPU, and request share land in
- * what it reports; and the reporting query reads back the same `double`
- * positions the writer wrote.
+ * accumulate independently of concurrent units; apportioned quantities split by team
+ * weight; the ledger's own write, modelled CPU, and request share land in what it
+ * reports; the flushed totals reach the invocation's log as `cost.*` fields; and the
+ * reporting query reads back the same `double` positions the writer wrote.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,6 +13,7 @@ import type { AnalyticsEngineMock } from "@sdxc/cloudflare-mocks";
 import type { D1StatementObservation } from "@sdxc/data-table-d1";
 
 import { createAnalyticsEngine, createEnv, createKVNamespace } from "@sdxc/cloudflare-mocks";
+import { Log } from "@sdxc/logger";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 /**
@@ -43,8 +44,6 @@ let {
 	toDailyTeamCost,
 	trackCost,
 } = await import("./cost");
-
-vi.spyOn(console, "error").mockImplementation(() => {});
 
 beforeEach(() => {
 	costs.reset();
@@ -309,6 +308,58 @@ describe("CostLedger self-accounting", () => {
 		).resolves.toBe("done");
 
 		expect(costs.dataPoints).toHaveLength(0);
+	});
+});
+
+describe("CostLedger reporting", () => {
+	/**
+	 * The totals are what a "what did this request cost" query aggregates, so they are
+	 * asserted as flattened `cost.*` fields on the record rather than as a note to read,
+	 * and a resource the work never touched stays absent so the record stays narrow.
+	 */
+	test("puts the flushed totals on the invocation's log as fields", async () => {
+		let records: Record<string, unknown>[] = [];
+		let log = new Log({ kind: "queue", sink: (record) => void records.push(record) });
+
+		let points = await log.run(() =>
+			flushing(async () => {
+				apportionCostByTeam(["team-1"]);
+				recordD1Statement(observation({ rowsRead: 4, rowsWritten: 2, durationMs: 1.5 }));
+				recordCost("emailSent");
+			}),
+		);
+
+		expect(records[0]).toMatchObject({
+			"cost.source": "queue",
+			"cost.attribution": "direct",
+			"cost.teams": 1,
+			"cost.ae_data_points": 1,
+			"cost.worker_requests": 1,
+			"cost.cpu_ms": MODELLED_CPU_MS.queue,
+			"cost.db_statements": 1,
+			"cost.db_rows_read": 4,
+			"cost.db_rows_written": 2,
+			"cost.db_duration_ms": 1.5,
+			"cost.emails_sent": 1,
+		});
+		expect(records[0]?.["cost.cents"]).toBeCloseTo(total(points[0]!), 12);
+		expect(records[0]).not.toHaveProperty("cost.do_requests");
+	});
+
+	test("degrades the invocation rather than failing the work a write could not measure", async () => {
+		vi.spyOn(costs, "writeDataPoint").mockImplementationOnce(() => raise());
+
+		let records: Record<string, unknown>[] = [];
+		let log = new Log({ kind: "queue", sink: (record) => void records.push(record) });
+
+		await log.run(() => flushing(async () => apportionCostByTeam(["team-1"])));
+
+		expect(records[0]).toMatchObject({
+			outcome: "degraded",
+			notes: expect.arrayContaining([
+				expect.objectContaining({ name: "cost.flush_failed", level: "warn", source: "queue" }),
+			]),
+		});
 	});
 });
 

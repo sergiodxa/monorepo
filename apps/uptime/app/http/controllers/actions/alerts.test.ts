@@ -7,7 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BatchedLogger } from "@sdxc/logger";
+import { Log } from "@sdxc/logger";
+import { log } from "@sdxc/logger/middleware";
 import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
@@ -33,18 +34,6 @@ function teamContextMiddleware(team: SelectTeam, membership: SelectMembership): 
 	};
 }
 
-/**
- * Installs a logger the funnel-event assertions can read back, standing in for the request
- * logger middleware. Only the suites that assert on events install it — the rest of this file
- * runs without one, which is itself the check that instrumentation is optional.
- */
-function loggerMiddleware(logger: BatchedLogger): Middleware {
-	return (ctx, next) => {
-		(ctx as unknown as { logger: BatchedLogger }).logger = logger;
-		return next();
-	};
-}
-
 /** Posts a form body to one of the alert actions through the real action, DB, and service container. */
 async function postAlertAction(
 	action: unknown,
@@ -54,20 +43,18 @@ async function postAlertAction(
 	db: ReturnType<typeof createTestDatabase>["db"],
 	body: Record<string, string>,
 	headers: Record<string, string> = {},
-	logger?: BatchedLogger,
+	records: Record<string, unknown>[] = [],
 ) {
 	let container = new ServiceContainer();
 	container.singleton(Database, () => db);
 
-	let router = createRouter({ middleware: [asyncContext(), formData()] });
+	let router = createRouter({ middleware: [asyncContext(), log() as Middleware, formData()] });
 	/**
 	 * Casts `router.map` itself so this helper can map several differently-shaped
 	 * routes without losing type-checking elsewhere.
 	 */
 	(router.map as (target: unknown, handler: unknown) => void)(route, {
-		middleware: logger
-			? [loggerMiddleware(logger), teamContextMiddleware(team, membership)]
-			: [teamContextMiddleware(team, membership)],
+		middleware: [teamContextMiddleware(team, membership)],
 		handler: action,
 	});
 
@@ -78,7 +65,13 @@ async function postAlertAction(
 		headers: { "content-type": "application/x-www-form-urlencoded", ...headers },
 	});
 
-	return container.scope(() => router.fetch(request));
+	/**
+	 * Run inside a log the caller can read back; its sink also keeps the record this
+	 * request emits out of the console.
+	 */
+	let requestLog = new Log({ kind: "request", sink: (record) => void records.push(record) });
+
+	return requestLog.run(() => container.scope(() => router.fetch(request)));
 }
 
 async function createTeamRow(db: ReturnType<typeof createTestDatabase>["db"]) {
@@ -521,16 +514,18 @@ describe("POST /actions/:team/delete-alert", () => {
  * config is a webhook secret or an address, so the event captures only the strategy.
  */
 describe("create-alert funnel event", () => {
-	/** Every alert-configured event the request emitted. */
-	function funnelEvents(logger: BatchedLogger) {
-		return logger.events.filter((event) => event.event === "funnel.alert_configured");
+	/** Every alert-configured note the requests' records carry. */
+	function funnelEvents(records: Record<string, unknown>[]) {
+		return records
+			.flatMap((record) => (record.notes ?? []) as Record<string, unknown>[])
+			.filter((note) => note.name === "funnel.alert_configured");
 	}
 
 	test("reports the strategy, the scope, and the team's alert count", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
-		let logger = new BatchedLogger("test");
+		let records: Record<string, unknown>[] = [];
 
 		await postAlertAction(
 			createAlert,
@@ -540,12 +535,12 @@ describe("create-alert funnel event", () => {
 			db,
 			emailAlertBody(),
 			{},
-			logger,
+			records,
 		);
 
 		let created = await db.findOne(alerts, { where: { team_id: team.id } });
-		expect(funnelEvents(logger)).toHaveLength(1);
-		expect(funnelEvents(logger)[0]).toMatchObject({
+		expect(funnelEvents(records)).toHaveLength(1);
+		expect(funnelEvents(records)[0]).toMatchObject({
 			teamId: team.id,
 			alertId: created?.id ?? "",
 			strategy: "email",
@@ -558,7 +553,7 @@ describe("create-alert funnel event", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
-		let logger = new BatchedLogger("test");
+		let records: Record<string, unknown>[] = [];
 
 		await postAlertAction(
 			createAlert,
@@ -568,7 +563,7 @@ describe("create-alert funnel event", () => {
 			db,
 			emailAlertBody(),
 			{},
-			logger,
+			records,
 		);
 		await postAlertAction(
 			createAlert,
@@ -578,17 +573,17 @@ describe("create-alert funnel event", () => {
 			db,
 			emailAlertBody({ name: "Second" }),
 			{},
-			logger,
+			records,
 		);
 
-		expect(funnelEvents(logger).map((event) => event.alertCount)).toEqual([1, 2]);
+		expect(funnelEvents(records).map((event) => event.alertCount)).toEqual([1, 2]);
 	});
 
 	test("never records the destination, only the strategy that reaches it", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
-		let logger = new BatchedLogger("test");
+		let records: Record<string, unknown>[] = [];
 
 		await postAlertAction(
 			createAlert,
@@ -603,10 +598,10 @@ describe("create-alert funnel event", () => {
 				slack_channel: "#ops",
 			},
 			{},
-			logger,
+			records,
 		);
 
-		let [event] = funnelEvents(logger);
+		let [event] = funnelEvents(records);
 		expect(event).toMatchObject({ strategy: "slack" });
 		for (let value of Object.values(event ?? {})) {
 			if (typeof value !== "string") continue;
@@ -619,7 +614,7 @@ describe("create-alert funnel event", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
-		let logger = new BatchedLogger("test");
+		let records: Record<string, unknown>[] = [];
 
 		await postAlertAction(
 			createAlert,
@@ -629,27 +624,9 @@ describe("create-alert funnel event", () => {
 			db,
 			emailAlertBody({ name: "" }),
 			{},
-			logger,
+			records,
 		);
 
-		expect(funnelEvents(logger)).toHaveLength(0);
-	});
-
-	test("a create with no logger installed still creates the alert", async () => {
-		let { db } = createTestDatabase();
-		let team = await createTeamRow(db);
-		let membership = await createMembershipRow(db, team.id);
-
-		let response = await postAlertAction(
-			createAlert,
-			routes.actions.alert.create,
-			team,
-			membership,
-			db,
-			emailAlertBody(),
-		);
-
-		expect(response.status).toBe(303);
-		expect(await db.findOne(alerts, { where: { team_id: team.id } })).not.toBeNull();
+		expect(funnelEvents(records)).toHaveLength(0);
 	});
 });

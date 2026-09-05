@@ -13,7 +13,7 @@
 
 import { redirect } from "@sdxc/http/response";
 import { notFound, unprocessableEntity } from "@sdxc/http/response/html";
-import { logger } from "@sdxc/logger";
+import { currentLog } from "@sdxc/logger";
 import { isFailure } from "@sdxc/result";
 import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
@@ -152,10 +152,11 @@ export const createDnsMonitor = createAction(routes.actions.monitor.dns.create, 
 	try {
 		await importDiscovery(db, monitor.id, zone.names, zone.records);
 	} catch (error) {
-		logger.error("action.create_dns_monitor.discovery_failed", {
-			monitorId: monitor.id,
-			error: error instanceof Error ? error.message : String(error),
-		});
+		currentLog()
+			?.set({ monitor: { id: monitor.id, type: "dns" } })
+			.warn("dns.discovery_failed", {
+				message: error instanceof Error ? error.message : String(error),
+			});
 	}
 
 	session?.flash("toast", {

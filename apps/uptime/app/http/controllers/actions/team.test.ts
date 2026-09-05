@@ -17,7 +17,7 @@ import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
 import billing from "@sdxc/billing/middleware";
-import logger from "@sdxc/logger/middleware";
+import { log } from "@sdxc/logger/middleware";
 import { unwrap } from "@sdxc/result";
 import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
@@ -112,7 +112,12 @@ async function send(
 	container.instance(Database, db);
 
 	let router = createRouter({
-		middleware: [asyncContext(), logger, billing({ provider: platform }), formData() as Middleware],
+		middleware: [
+			asyncContext(),
+			log() as Middleware,
+			billing({ provider: platform }),
+			formData() as Middleware,
+		],
 	});
 	router.map(route, { middleware: [seedTeam(team, membership)], handler });
 

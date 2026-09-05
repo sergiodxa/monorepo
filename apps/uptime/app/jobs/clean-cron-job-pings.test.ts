@@ -9,7 +9,7 @@
  */
 
 import { createJobContext } from "@sdxc/jobs";
-import { BatchedLogger } from "@sdxc/logger";
+import { Log } from "@sdxc/logger";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import { PING_RETENTION_DAYS } from "~/app/data/cron-job";
@@ -39,12 +39,16 @@ describe("cleanCronJobPings", () => {
 		});
 	}
 
-	async function run(logger = new BatchedLogger("test")) {
-		let ctx = createJobContext(jobs.cleanCronJobPings, { id: "message-1", attempts: 1, logger });
+	/** Runs the handler over a context carrying the test's database, and returns its record. */
+	async function run() {
+		let record: Record<string, unknown> = {};
+		let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
+		let ctx = createJobContext(jobs.cleanCronJobPings, { id: "message-1", attempts: 1, log });
 		ctx.set(Database, db, { property: "database" });
 		await cleanCronJobPings(ctx);
+		log.emit();
 
-		return logger;
+		return record;
 	}
 
 	test("deletes pings older than the retention window and keeps the rest", async () => {
@@ -76,11 +80,9 @@ describe("cleanCronJobPings", () => {
 		let now = Date.now();
 		await seedPing("ping-old", now - (PING_RETENTION_DAYS + 1) * MS_PER_DAY);
 
-		let logger = await run();
+		let record = await run();
 
-		let event = logger.events.find((entry) => entry.event === "job.clean_cron_job_pings.completed");
-		expect(event).toBeDefined();
-		expect(event?.rowsDeleted).toBe(1);
+		expect(record).toMatchObject({ "pings.deleted": 1 });
 	});
 
 	test("nulls source_ip and user_agent on pings past the detail window, keeping the row", async () => {
@@ -114,12 +116,13 @@ describe("cleanCronJobPings", () => {
 		await seedPing("ping-detailed", now - 31 * MS_PER_DAY);
 		await seedPing("ping-fresh", now - 1 * MS_PER_DAY);
 
-		let logger = await run();
+		let record = await run();
 
-		let event = logger.events.find((entry) => entry.event === "job.clean_cron_job_pings.completed");
-		expect(event?.rowsDeleted).toBe(1);
-		expect(event?.rowsRedacted).toBe(1);
-		expect(event?.reachedCeiling).toBe(false);
+		expect(record).toMatchObject({
+			"pings.deleted": 1,
+			"pings.redacted": 1,
+			"pings.reached_ceiling": false,
+		});
 	});
 
 	test("does not redact the same ping again on a later run", async () => {
@@ -127,9 +130,8 @@ describe("cleanCronJobPings", () => {
 		await seedPing("ping-detailed", now - 31 * MS_PER_DAY);
 
 		await run();
-		let logger = await run();
+		let record = await run();
 
-		let event = logger.events.find((entry) => entry.event === "job.clean_cron_job_pings.completed");
-		expect(event?.rowsRedacted).toBe(0);
+		expect(record).toMatchObject({ "pings.redacted": 0 });
 	});
 });

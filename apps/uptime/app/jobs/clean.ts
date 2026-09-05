@@ -75,7 +75,7 @@ const RETAINED_TABLES: readonly RetainedTable[] = [
 	{ table: "alert_events", dateColumn: "sent_at", retentionDays: ALERT_EVENT_RETENTION_DAYS },
 ];
 
-/** One table's line in the completion log. */
+/** One table's swept counts, as the run's record notes them. */
 interface SweptTable {
 	table: string;
 	rowsDeleted: number;
@@ -115,7 +115,16 @@ export default createJobHandler(jobs.clean, async (ctx) => {
 	 */
 	let reachedCeiling = tables.some((entry) => entry.reachedCeiling);
 
-	ctx.logger.info("job.clean.completed", { rowsDeleted, reachedCeiling, tables });
+	ctx.log.set({ rows: { deleted: rowsDeleted }, clean: { reached_ceiling: reachedCeiling } });
+
+	for (let entry of tables) {
+		ctx.log.note("clean.table_swept", {
+			table: entry.table,
+			rows_deleted: entry.rowsDeleted,
+			batches: entry.batches,
+			reached_ceiling: entry.reachedCeiling,
+		});
+	}
 });
 
 /**

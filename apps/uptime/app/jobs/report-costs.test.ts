@@ -13,7 +13,7 @@ import type { AnalyticsEngineMock } from "@sdxc/cloudflare-mocks";
 
 import { BillingError } from "@sdxc/billing";
 import { createAnalyticsEngine, createEnv } from "@sdxc/cloudflare-mocks";
-import { BatchedLogger } from "@sdxc/logger";
+import { Log } from "@sdxc/logger";
 import { failure } from "@sdxc/result";
 import { ServiceContainer } from "@sdxc/service-container";
 import { http, HttpResponse } from "msw";
@@ -80,8 +80,15 @@ type Db = ReturnType<typeof createTestDatabase>["db"];
 
 let db: Db;
 
+/**
+ * The last run's emitted record, at module scope so a run that ended in a retry is still
+ * readable after the throw the test asserts on.
+ */
+let record: Record<string, unknown> = {};
+
 beforeEach(() => {
 	({ db } = createTestDatabase());
+	record = {};
 	costs.reset();
 	ingestMock.mockClear();
 	ingestMock.mockImplementation(realIngest);
@@ -127,15 +134,25 @@ async function createBilledTeam(ownerId: string) {
 }
 
 async function run() {
-	let logger = new BatchedLogger("test");
 	let container = new ServiceContainer();
+	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 
-	let ctx = createJobContext(jobs.reportCosts, { id: "message-1", attempts: 1, logger });
+	let ctx = createJobContext(jobs.reportCosts, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
 
-	await container.scope(() => reportCosts(ctx));
+	/** Emitted however the run ends, so the record of a run that asked for a retry survives it. */
+	try {
+		await container.scope(() => reportCosts(ctx));
+	} finally {
+		log.emit();
+	}
 
-	return logger;
+	return record;
+}
+
+/** One breadcrumb the run left, for the assertions that read a note's own fields. */
+function noteOf(name: string): Log.Note | undefined {
+	return (record.notes as Log.Note[] | undefined)?.find((note) => note.name === name);
 }
 
 describe("reportCosts", () => {
@@ -221,14 +238,12 @@ describe("reportCosts", () => {
 		);
 		serve([costRow(team.id)]);
 
-		let logger = await run();
+		await run();
 
 		expect(ingested()).toHaveLength(0);
-		expect(
-			logger.events.find((entry) => entry.event === "job.report_costs.unreportable_team"),
-		).toBeDefined();
-		let unreported = logger.events.find((entry) => entry.event === "job.report_costs.unreported");
-		expect(unreported?.skippedCents).toBeCloseTo(0.003018, 9);
+		expect(noteOf("costs.unreportable_team")?.["team.id"]).toBe(team.id);
+		expect(noteOf("costs.unreported")).toBeDefined();
+		expect(record["costs.skipped_cents"]).toBeCloseTo(0.003018, 9);
 	});
 
 	test("reports the platform's own unattributed cost as a number instead of an event", async () => {
@@ -269,13 +284,10 @@ describe("reportCosts", () => {
 		}
 		serve([costRow(team.id)]);
 
-		let logger = await run();
+		await run();
 
-		let estimated = logger.events.find(
-			(entry) => entry.event === "job.report_costs.storage_estimated",
-		);
-		expect(estimated?.teams).toBe(1);
-		expect(estimated?.d1Gb).toBeCloseTo((5 * 200) / 1_000_000_000, 12);
+		expect(record).toMatchObject({ "costs.storage_teams": 1 });
+		expect(record["costs.storage_d1_gb"]).toBeCloseTo((5 * 200) / 1_000_000_000, 12);
 	});
 
 	test("asks the queue to redeliver when the cost dataset cannot be read", async () => {
@@ -285,6 +297,7 @@ describe("reportCosts", () => {
 		);
 
 		await expect(run()).rejects.toThrow(Job.Retry);
+		expect(record).toMatchObject({ outcome: "error" });
 	});
 
 	test("asks the queue to redeliver when the platform rejects the batch", async () => {
@@ -295,17 +308,16 @@ describe("reportCosts", () => {
 		);
 
 		await expect(run()).rejects.toThrow(Job.Retry);
+		expect(record).toMatchObject({ outcome: "error", "error.message": "rejected" });
 	});
 
 	test("sends nothing and completes when the day recorded no cost", async () => {
 		serve([]);
 
-		let logger = await run();
+		await run();
 
 		expect(ingested()).toHaveLength(0);
-		expect(
-			logger.events.find((entry) => entry.event === "job.report_costs.completed"),
-		).toBeDefined();
+		expect(record).toMatchObject({ outcome: "ok", "costs.teams": 0, "costs.events": 0 });
 	});
 
 	test("sums every sample-weighted quantity for the reported day", async () => {

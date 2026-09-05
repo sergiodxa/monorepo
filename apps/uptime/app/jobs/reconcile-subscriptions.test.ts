@@ -1,9 +1,8 @@
 /**
  * Unit tests for the `reconcileSubscriptions` job: it repairs drift in both directions (a
  * subscription the platform lists that the projection missed, and a projection row the
- * platform no longer lists), leaves an agreeing projection untouched, logs every repair at
- * error level so a broken delivery stays visible, and drops delivery rows past their
- * retention window.
+ * platform no longer lists), leaves an agreeing projection untouched, records every repair so
+ * a broken delivery stays visible, and drops delivery rows past their retention window.
  *
  * The job imports the configured platform directly, since it runs with no request behind it,
  * so that module is replaced with a real in-memory platform here rather than a client being
@@ -17,7 +16,7 @@ import type { Billing, CustomerRef, EntitlementState } from "@sdxc/billing";
 import type { Result } from "@sdxc/result";
 
 import { createJobContext } from "@sdxc/jobs";
-import { BatchedLogger } from "@sdxc/logger";
+import { Log } from "@sdxc/logger";
 import { success, unwrap } from "@sdxc/result";
 import { getTableName } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -79,13 +78,15 @@ beforeEach(() => {
 });
 
 async function run() {
-	let logger = new BatchedLogger("test");
-	let ctx = createJobContext(jobs.reconcileSubscriptions, { id: "message-1", attempts: 1, logger });
+	let record: Record<string, unknown> = {};
+	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
+	let ctx = createJobContext(jobs.reconcileSubscriptions, { id: "message-1", attempts: 1, log });
 	ctx.set(Database, db, { property: "database" });
 
 	await reconcileSubscriptions(ctx);
 
-	return logger;
+	log.emit();
+	return record;
 }
 
 /** Sells the monitoring product to `ownerId` and answers the subscription that created. */
@@ -152,8 +153,9 @@ async function recordDelivery(id: string, ageDays: number, processed: boolean) {
 	);
 }
 
-function repairedEvent(logger: BatchedLogger) {
-	return logger.events.find((entry) => entry.event === "job.reconcile_subscriptions.repaired");
+/** One breadcrumb the run left, for the assertions that read a note's own fields. */
+function noteOf(record: Record<string, unknown>, name: string): Log.Note | undefined {
+	return (record.notes as Log.Note[] | undefined)?.find((note) => note.name === name);
 }
 
 describe("reconcileSubscriptions", () => {
@@ -161,28 +163,22 @@ describe("reconcileSubscriptions", () => {
 		await subscribe();
 		await projectCurrentState();
 
-		let logger = await run();
+		let record = await run();
 
-		expect(logger.events.filter((entry) => entry.event.endsWith(".repaired"))).toHaveLength(0);
-
-		let completed = logger.events.find(
-			(entry) => entry.event === "job.reconcile_subscriptions.completed",
-		);
-		expect(completed?.repaired).toBe(0);
-		expect(completed?.stored).toBe(1);
+		expect(noteOf(record, "subscriptions.repaired")).toBeUndefined();
+		expect(record).toMatchObject({ "subscriptions.repaired": 0, "subscriptions.stored": 1 });
 	});
 
 	test("records a subscription whose delivery never arrived, and schedules its monitors", async () => {
 		let monitor = await createTeamWithMonitor(null);
 		await subscribe();
 
-		let logger = await run();
+		let record = await run();
 
 		expect(await Subscription.stateFor(db, ownerId)).toBe("active");
 		expect((await db.findOne(monitors, { where: { id: monitor.id } }))?.next_due_at).not.toBeNull();
 
-		expect(repairedEvent(logger)?.entitled).toBe(true);
-		expect(repairedEvent(logger)?.level).toBe("error");
+		expect(noteOf(record, "subscriptions.repaired")?.entitled).toBe(true);
 	});
 
 	test("unschedules the monitors of a row the platform no longer lists", async () => {
@@ -192,11 +188,11 @@ describe("reconcileSubscriptions", () => {
 
 		await unwrap(billing.subscriptions.cancel(subscription.id));
 
-		let logger = await run();
+		let record = await run();
 
 		expect(await Subscription.stateFor(db, ownerId)).toBe("inactive");
 		expect((await db.findOne(monitors, { where: { id: monitor.id } }))?.next_due_at).toBeNull();
-		expect(repairedEvent(logger)?.entitled).toBe(false);
+		expect(noteOf(record, "subscriptions.repaired")?.entitled).toBe(false);
 	});
 
 	test("reports a platform customer that was never linked to a signed-in subject", async () => {
@@ -207,14 +203,10 @@ describe("reconcileSubscriptions", () => {
 			return success({ ...state, externalId: null });
 		};
 
-		let logger = await run();
+		let record = await run();
 
 		expect(await Subscription.listAll(db)).toHaveLength(0);
-		expect(
-			logger.events.find(
-				(entry) => entry.event === "job.reconcile_subscriptions.unlinked_customer",
-			),
-		).toBeDefined();
+		expect(noteOf(record, "subscriptions.unlinked_customer")).toBeDefined();
 	});
 
 	test("drops handled deliveries past the retention window and keeps the rest", async () => {
@@ -222,14 +214,11 @@ describe("reconcileSubscriptions", () => {
 		await recordDelivery("recent-handled", 1, true);
 		await recordDelivery("old-unhandled", RETENTION_DAYS + 10, false);
 
-		let logger = await run();
+		let record = await run();
 
 		let kept = (await db.findMany(billingWebhookDeliveries)).map((row) => row.id).sort();
 		expect(kept).toEqual(["old-unhandled", "recent-handled"]);
 
-		let completed = logger.events.find(
-			(entry) => entry.event === "job.reconcile_subscriptions.completed",
-		);
-		expect(completed?.pruned).toBe(1);
+		expect(record).toMatchObject({ "subscriptions.pruned": 1 });
 	});
 });

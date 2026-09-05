@@ -11,7 +11,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { logger } from "@sdxc/logger";
+import { currentLog } from "@sdxc/logger";
 
 import type { TrialSignupAttribution } from "~/app/data/trial-conversion";
 import type { SelectLead, SelectTrialWatch } from "~/database/schema";
@@ -86,18 +86,12 @@ export async function convertTrialWatches(
 
 		if (watches.length === 0) return;
 
-		logger.info("trial_conversion.completed", {
-			leadId: lead.id,
-			teamId: subject.teamId,
-			claimable: watches.length,
-			converted,
+		currentLog()?.set({
+			team: { id: subject.teamId },
+			trial: { lead_id: lead.id, claimable: watches.length, converted },
 		});
 	} catch (error) {
-		logger.error("trial_conversion.failed", {
-			teamId: subject.teamId,
-			authorId: subject.authorId,
-			error: error instanceof Error ? error.message : String(error),
-		});
+		currentLog()?.fail(error, { trial: { conversion_failed: true } });
 	}
 }
 
@@ -127,10 +121,13 @@ async function recordSignup(
 		});
 
 		if (created) {
-			logger.info("trial_conversion.signup_recorded", {
-				ownerId: subject.authorId,
-				emailsSent: lead.emails_sent,
-				watchCount: watches.length,
+			currentLog()?.set({
+				user: { id: subject.authorId },
+				trial: {
+					signup_recorded: true,
+					emails_sent: lead.emails_sent,
+					watch_count: watches.length,
+				},
 			});
 
 			/**
@@ -138,7 +135,7 @@ async function recordSignup(
 			 * snapshot, so a repeat sign-in cannot double-count an account. Attribution goes in here
 			 * because this is the last request that still holds the anonymous session's copy of it.
 			 */
-			trackAccountCreated(logger, {
+			trackAccountCreated(currentLog(), {
 				ownerId: subject.authorId,
 				fromTrial: true,
 				watchCount: watches.length,
@@ -147,8 +144,8 @@ async function recordSignup(
 			});
 		}
 	} catch (error) {
-		logger.error("trial_conversion.signup_record_failed", {
-			ownerId: subject.authorId,
+		currentLog()?.warn("trial.signup_record_failed", {
+			owner_id: subject.authorId,
 			error: error instanceof Error ? error.message : String(error),
 		});
 	}
@@ -175,9 +172,9 @@ async function convertWatch(
 		await TrialWatch.markConverted(db, watch.id, monitor.id);
 		return true;
 	} catch (error) {
-		logger.error("trial_conversion.watch_failed", {
-			watchId: watch.id,
-			teamId: subject.teamId,
+		currentLog()?.warn("trial.watch_conversion_failed", {
+			watch_id: watch.id,
+			team_id: subject.teamId,
 			error: error instanceof Error ? error.message : String(error),
 		});
 		return false;
@@ -212,15 +209,15 @@ async function carryHistory(
 			});
 		}
 
-		logger.info("trial_conversion.history_carried", {
-			watchId: watch.id,
-			monitorId,
+		currentLog()?.note("trial.history_carried", {
+			watch_id: watch.id,
+			monitor_id: monitorId,
 			checks: results.length,
 		});
 	} catch (error) {
-		logger.error("trial_conversion.history_failed", {
-			watchId: watch.id,
-			monitorId,
+		currentLog()?.warn("trial.history_carry_failed", {
+			watch_id: watch.id,
+			monitor_id: monitorId,
 			error: error instanceof Error ? error.message : String(error),
 		});
 	}

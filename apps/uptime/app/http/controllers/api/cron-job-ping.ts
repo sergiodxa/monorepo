@@ -131,6 +131,8 @@ export default createAction(routes.api.cronJobPing, {
 		let monitor = await CronJobMonitor.findByIdForTeam(db, ctx.apiTeam.id, cronJobId);
 		if (!monitor) return notFound({ error: "Not Found" });
 
+		ctx.log.set({ monitor: { id: monitor.id, type: "cron" } });
+
 		if (monitor.enabled_at === null) return conflict({ error: "Cron job is disabled" });
 
 		if (monitor.last_ping_at !== null && Date.now() - monitor.last_ping_at < RATE_LIMIT_MS) {
@@ -170,10 +172,7 @@ export default createAction(routes.api.cronJobPing, {
 			 * and still answered — a billing gap must not turn a caller's healthy job into a
 			 * failed `curl` — so this only leaves a trace.
 			 */
-			ctx.logger.error("api.cron_job_ping.unbillable_team", {
-				monitorId: monitor.id,
-				teamId: monitor.team_id,
-			});
+			ctx.log.warn("team.unbillable");
 		} else {
 			/**
 			 * Deferred past the response, since this call sits on the path of a caller

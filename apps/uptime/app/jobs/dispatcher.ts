@@ -17,8 +17,10 @@ import jobs from "~/app/jobs";
 import { costLedger } from "~/app/jobs/middleware/cost-ledger";
 import { database } from "~/app/jobs/middleware/database";
 import { sendQueueBatch } from "~/app/lib/queue";
+import { logger } from "~/bootstrap/logger";
 
 export const dispatcher = createJobDispatcher({
+	logger,
 	send: sendQueueBatch,
 	/**
 	 * The ledger is outermost so it counts the database the middleware inside it opens,

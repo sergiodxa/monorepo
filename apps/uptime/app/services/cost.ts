@@ -13,8 +13,9 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
 import type { D1StatementObservation } from "@sdxc/data-table-d1";
+import type { Log } from "@sdxc/logger";
 
-import { logger } from "@sdxc/logger";
+import { currentLog } from "@sdxc/logger";
 import { env } from "cloudflare:workers";
 
 import type { CostQuantities, CostResource, WorkerHandler } from "~/app/lib/cost-rates";
@@ -36,6 +37,28 @@ const COSTS_DATASET = "uptime_costs";
  * every team still gets a counted, non-zero data point.
  */
 const MAX_DATA_POINTS = 250;
+
+/**
+ * Log field each resource's total is reported under, in the dotted lowercase naming the log
+ * index shares across workers. Stated for every resource, since a resource with no name here
+ * would be priced into `cost.cents` while being invisible to the query that explains it.
+ */
+const COST_FIELDS: Record<CostResource, string> = {
+	workerRequest: "worker_requests",
+	workerCpuMs: "cpu_ms",
+	queueOperation: "queue_operations",
+	d1RowRead: "db_rows_read",
+	d1RowWritten: "db_rows_written",
+	d1StorageGbDay: "db_storage_gb_day",
+	kvRead: "kv_reads",
+	kvMutation: "kv_mutations",
+	kvStorageGbDay: "kv_storage_gb_day",
+	doRequest: "do_requests",
+	doDurationMs: "do_duration_ms",
+	aeDataPoint: "ae_data_points",
+	aeQuery: "ae_queries",
+	emailSent: "emails_sent",
+};
 
 /**
  * Stand-in team id for cost no team caused — a dead-letter record, a domain-verification
@@ -148,7 +171,7 @@ export class CostLedger {
 		try {
 			this.#write();
 		} catch (error) {
-			logger.error("cost.flush_failed", {
+			currentLog()?.warn("cost.flush_failed", {
 				source: this.#source,
 				error: error instanceof Error ? error.message : String(error),
 			});
@@ -168,19 +191,58 @@ export class CostLedger {
 
 		let attribution = this.#attribution();
 		let buckets = this.#split();
+		let written = createCostQuantities();
+		let cents = 0;
 
 		for (let [teamId, quantities] of buckets) {
 			quantities.aeDataPoint += 1;
+			let priced = priceCostQuantities(quantities);
+			cents += priced;
+			for (let resource of COST_RESOURCES) written[resource] += quantities[resource];
 
 			env.COSTS.writeDataPoint({
 				indexes: [teamId],
 				blobs: [this.#source, attribution, RATE_CARD_VERSION],
-				doubles: [
-					...COST_RESOURCES.map((resource) => quantities[resource]),
-					priceCostQuantities(quantities),
-				],
+				doubles: [...COST_RESOURCES.map((resource) => quantities[resource]), priced],
 			});
 		}
+
+		this.#report(attribution, buckets.size, cents, written);
+	}
+
+	/**
+	 * Puts the flushed totals on the invocation's log, so what a request or a job cost is
+	 * a query over `cost.*` fields rather than a record to find and read. The quantities
+	 * are the ones written, so they include each team's point and sum back to `cents`.
+	 *
+	 * @param attribution - How the quantities were split.
+	 * @param teams - How many data points the flush wrote.
+	 * @param cents - What those points priced to, summed.
+	 * @param written - Units of every resource the points carry, summed across teams.
+	 */
+	#report(
+		attribution: CostAttribution,
+		teams: number,
+		cents: number,
+		written: CostQuantities,
+	): void {
+		let log = currentLog();
+		if (!log) return;
+
+		let fields: Record<string, Log.Value> = {
+			source: this.#source,
+			attribution,
+			teams,
+			cents,
+			db_statements: this.usage.statements,
+			db_duration_ms: this.usage.durationMs,
+		};
+
+		for (let resource of COST_RESOURCES) {
+			if (written[resource] > 0) fields[COST_FIELDS[resource]] = written[resource];
+		}
+
+		log.set({ cost: fields });
 	}
 
 	/** How this unit of work's quantities were attributed, for the recorded `blob2`. */
@@ -203,7 +265,7 @@ export class CostLedger {
 		let overflows = ranked.length > MAX_DATA_POINTS;
 
 		if (overflows) {
-			logger.error("cost.flush_overflowed", {
+			currentLog()?.warn("cost.flush_overflowed", {
 				source: this.#source,
 				teams: ranked.length,
 				merged: ranked.length - (MAX_DATA_POINTS - 1),

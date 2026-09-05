@@ -17,7 +17,7 @@ import type { QueueMock } from "@sdxc/cloudflare-mocks";
 
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { createJobContext } from "@sdxc/jobs";
-import { BatchedLogger } from "@sdxc/logger";
+import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { ServiceContainer } from "@sdxc/service-container";
@@ -52,22 +52,26 @@ function enqueued(): NotifyMessage[] {
 	return queue.sent.map((message) => message.body);
 }
 
-/** Runs the handler over a context carrying the test's database, as the chain would. */
+/** Runs the handler over a context carrying the test's database, and returns its record. */
 async function runJob(db: Database) {
 	let container = new ServiceContainer();
 	container.singleton(
 		Mailer,
 		() => new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }),
 	);
-	let ctx = createJobContext(jobs.checkCronJobs, {
-		id: "message-1",
-		attempts: 1,
-		logger: new BatchedLogger("test"),
-	});
+	let record: Record<string, unknown> = {};
+	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
+	let ctx = createJobContext(jobs.checkCronJobs, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
 
 	await container.scope(() => checkCronJobs(ctx));
-	return ctx;
+	log.emit();
+	return record;
+}
+
+/** One breadcrumb the run left, for the assertions that read a note's own fields. */
+function noteOf(record: Record<string, unknown>, name: string): Log.Note | undefined {
+	return (record.notes as Log.Note[] | undefined)?.find((note) => note.name === name);
 }
 
 async function seedMonitor(db: Database, overrides: Partial<InsertCronJobMonitor> = {}) {
@@ -142,14 +146,12 @@ describe("checkCronJobs", () => {
 			cron_expression: "not a cron expression",
 		});
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		let untouched = await CronJobMonitor.findById(db, monitor.id);
 		expect(untouched?.next_expected_at).toBeNull();
 		expect(untouched?.status).toBe("healthy");
-		expect(
-			job.logger.events.some((event) => event.event === "job.check_cron_jobs.unschedulable"),
-		).toBe(true);
+		expect(noteOf(record, "monitors.unschedulable")?.["monitor.id"]).toBe(monitor.id);
 	});
 
 	test("leaves a healthy monitor alone while it is still inside its grace period", async () => {
@@ -179,7 +181,7 @@ describe("checkCronJobs", () => {
 			grace_period_seconds: 300,
 		});
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		let updated = await CronJobMonitor.findById(db, monitor.id);
 		expect(updated?.status).toBe("late");
@@ -194,12 +196,11 @@ describe("checkCronJobs", () => {
 			},
 		]);
 
-		let completed = job.logger.events.find(
-			(event) => event.event === "job.check_cron_jobs.completed",
-		);
-		expect(completed?.total).toBe(1);
-		expect(completed?.transitioned).toBe(1);
-		expect(completed?.notified).toBe(1);
+		expect(record).toMatchObject({
+			"checks.total": 1,
+			"checks.transitioned": 1,
+			"checks.notified": 1,
+		});
 	});
 
 	test("records the late transition but enqueues nothing when alert_on_late is off", async () => {
@@ -212,7 +213,7 @@ describe("checkCronJobs", () => {
 			grace_period_seconds: 300,
 		});
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		/**
 		 * The status still moves — `missed` is reached from `late`, so suppressing the
@@ -224,12 +225,11 @@ describe("checkCronJobs", () => {
 		expect(enqueued()).toHaveLength(0);
 		expect(sendBatch).not.toHaveBeenCalled();
 
-		let completed = job.logger.events.find(
-			(event) => event.event === "job.check_cron_jobs.completed",
-		);
-		expect(completed?.transitioned).toBe(1);
-		expect(completed?.notified).toBe(0);
-		expect(completed?.errorCount).toBe(0);
+		expect(record).toMatchObject({
+			"checks.transitioned": 1,
+			"checks.notified": 0,
+			"checks.failed": 0,
+		});
 	});
 
 	test("still enqueues the missed transition of a monitor with alert_on_late off", async () => {
@@ -311,16 +311,13 @@ describe("checkCronJobs", () => {
 			next_expected_at: now + 60_000,
 		});
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		let updated = await CronJobMonitor.findById(db, monitor.id);
 		expect(updated?.status).toBe("healthy");
 		expect(sendBatch).not.toHaveBeenCalled();
 
-		let completed = job.logger.events.find(
-			(event) => event.event === "job.check_cron_jobs.completed",
-		);
-		expect(completed?.transitioned).toBe(0);
+		expect(record).toMatchObject({ "checks.transitioned": 0 });
 	});
 
 	test("excludes an already-missed monitor from the sweep", async () => {
@@ -331,26 +328,20 @@ describe("checkCronJobs", () => {
 			next_expected_at: now - 10 * 60 * 1000,
 		});
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		expect(enqueued()).toHaveLength(0);
-		let completed = job.logger.events.find(
-			(event) => event.event === "job.check_cron_jobs.completed",
-		);
-		expect(completed?.total).toBe(0);
+		expect(record).toMatchObject({ "checks.total": 0 });
 	});
 
 	test("excludes a new monitor with no next_expected_at from the sweep", async () => {
 		let { db } = createTestDatabase();
 		await seedMonitor(db, { status: "new", next_expected_at: null, enabled_at: null });
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		expect(enqueued()).toHaveLength(0);
-		let completed = job.logger.events.find(
-			(event) => event.event === "job.check_cron_jobs.completed",
-		);
-		expect(completed?.total).toBe(0);
+		expect(record).toMatchObject({ "checks.total": 0 });
 	});
 
 	test("transitions every due monitor in one sweep", async () => {
@@ -372,7 +363,7 @@ describe("checkCronJobs", () => {
 			);
 		}
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		expect(
 			enqueued()
@@ -380,9 +371,6 @@ describe("checkCronJobs", () => {
 				.sort(),
 		).toEqual(seeded.map((monitor) => monitor.id).sort());
 
-		let completed = job.logger.events.find(
-			(event) => event.event === "job.check_cron_jobs.completed",
-		);
-		expect(completed?.transitioned).toBe(25);
+		expect(record).toMatchObject({ "checks.transitioned": 25 });
 	});
 });

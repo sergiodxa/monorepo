@@ -95,8 +95,8 @@ export default createJobHandler(jobs.checkTrialWatches, async (ctx) => {
 	for (let outcome of settled) {
 		if (!outcome.ok) {
 			errorCount++;
-			ctx.logger.error("job.check_trial_watches.watch_failed", {
-				watchId: outcome.item.id,
+			ctx.log.warn("trial.watch_failed", {
+				"watch.id": outcome.item.id,
 				error: outcome.error instanceof Error ? outcome.error.message : String(outcome.error),
 			});
 			continue;
@@ -107,12 +107,8 @@ export default createJobHandler(jobs.checkTrialWatches, async (ctx) => {
 		if (outcome.value.wrappedUp) wrappedUp++;
 	}
 
-	ctx.logger.info("job.check_trial_watches.completed", {
-		total: watches.length,
-		probed,
-		changed,
-		wrappedUp,
-		errorCount,
+	ctx.log.set({
+		trial: { watches: watches.length, probed, changed, wrapped_up: wrappedUp, failed: errorCount },
 	});
 });
 
@@ -170,7 +166,7 @@ async function check(
 		await Lead.recordEmailSent(ctx.database, watch.lead_id, now);
 
 		if (firstAlert) {
-			trackFirstTrialAlertSent(ctx.logger, {
+			trackFirstTrialAlertSent(ctx.log, {
 				leadId: watch.lead_id,
 				watchId: watch.id,
 				hostname: hostnameOf(watch.url),
@@ -201,7 +197,7 @@ async function reportFirstCheck(
 		let row = await TrialWatch.findById(ctx.database, watch.id);
 		if (row?.checks_run !== 1) return;
 
-		trackFirstTrialCheckCompleted(ctx.logger, {
+		trackFirstTrialCheckCompleted(ctx.log, {
 			leadId: watch.lead_id,
 			watchId: watch.id,
 			hostname: hostnameOf(watch.url),
@@ -210,8 +206,8 @@ async function reportFirstCheck(
 			succeeded: isHealthyTrialStatus(status),
 		});
 	} catch (error) {
-		ctx.logger.error("job.check_trial_watches.first_check_report_failed", {
-			watchId: watch.id,
+		ctx.log.warn("trial.first_check_report_failed", {
+			"watch.id": watch.id,
 			error: error instanceof Error ? error.message : String(error),
 		});
 	}
@@ -235,10 +231,7 @@ async function expire(
 
 	let lead = await Lead.findById(ctx.database, watch.lead_id);
 	if (!lead) {
-		ctx.logger.error("job.check_trial_watches.lead_missing", {
-			watchId: watch.id,
-			leadId: watch.lead_id,
-		});
+		ctx.log.warn("trial.lead_missing", { "watch.id": watch.id, "lead.id": watch.lead_id });
 		await TrialWatch.finish(ctx.database, watch.id);
 		return DID_NOTHING;
 	}
@@ -269,10 +262,7 @@ async function sendChange(
 ): Promise<boolean> {
 	let lead = await Lead.findById(ctx.database, watch.lead_id);
 	if (!lead) {
-		ctx.logger.error("job.check_trial_watches.lead_missing", {
-			watchId: watch.id,
-			leadId: watch.lead_id,
-		});
+		ctx.log.warn("trial.lead_missing", { "watch.id": watch.id, "lead.id": watch.lead_id });
 		return false;
 	}
 
@@ -295,8 +285,8 @@ async function sendChange(
 	);
 
 	if (isFailure(sent)) {
-		ctx.logger.error("job.check_trial_watches.change_email_failed", {
-			watchId: watch.id,
+		ctx.log.warn("trial.change_email_failed", {
+			"watch.id": watch.id,
 			error: sent.error.message,
 		});
 		return false;
@@ -320,7 +310,7 @@ async function sendSummary(
 ): Promise<boolean> {
 	let row = await TrialWatch.findById(ctx.database, watch.id);
 	if (!row) {
-		ctx.logger.error("job.check_trial_watches.watch_missing", { watchId: watch.id });
+		ctx.log.warn("trial.watch_missing", { "watch.id": watch.id });
 		return false;
 	}
 
@@ -360,8 +350,8 @@ async function sendSummary(
 	);
 
 	if (isFailure(sent)) {
-		ctx.logger.error("job.check_trial_watches.summary_email_failed", {
-			watchId: watch.id,
+		ctx.log.warn("trial.summary_email_failed", {
+			"watch.id": watch.id,
 			error: sent.error.message,
 		});
 		return false;

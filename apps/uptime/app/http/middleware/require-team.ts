@@ -11,6 +11,7 @@
 import type { Middleware } from "remix/router";
 
 import { notFound } from "@sdxc/http/response/html";
+import { currentLog } from "@sdxc/logger";
 import { getServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 
@@ -57,6 +58,13 @@ export let requireTeam: Middleware = async (ctx, next) => {
 	ctx.team = team;
 	ctx.membership = membership;
 	ctx.teams = teams;
+
+	/**
+	 * Attributes the whole invocation to the team it resolved, so a question about one
+	 * team is a filter rather than a scan, and the handlers under this guard record
+	 * only what they alone know.
+	 */
+	currentLog()?.set({ team: { id: team.id, role: membership.role } });
 
 	apportionCostByTeam([team.id]);
 

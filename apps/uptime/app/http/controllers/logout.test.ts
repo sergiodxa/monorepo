@@ -12,7 +12,7 @@ import type { Middleware } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
 import { createEnv, createKVNamespace } from "@sdxc/cloudflare-mocks";
-import logger from "@sdxc/logger/middleware";
+import { log } from "@sdxc/logger/middleware";
 import { ServiceContainer } from "@sdxc/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -123,7 +123,7 @@ function createTestRouter(session: Session) {
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			logger as Middleware,
+			log() as Middleware,
 			(ctx, next) => {
 				ctx.set(Auth, { ok: false });
 				return next();

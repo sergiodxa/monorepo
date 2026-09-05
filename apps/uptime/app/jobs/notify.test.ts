@@ -9,7 +9,7 @@
  */
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
-import { BatchedLogger } from "@sdxc/logger";
+import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { ServiceContainer } from "@sdxc/service-container";
@@ -84,6 +84,13 @@ let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let notify = (await import("./notify")).default;
 let { default: Monitor } = await import("~/app/data/monitor");
 
+/**
+ * The wide event the run under test emitted. It lives out here because a run that asks for
+ * a redelivery leaves the handler throwing, and the record it emitted on the way out is
+ * exactly what that case is about.
+ */
+let record: Record<string, unknown> = {};
+
 /** Runs the handler over a context carrying the test's database, as the chain would. */
 async function runJob(db: Database, input: NotifyInput) {
 	let container = new ServiceContainer();
@@ -92,19 +99,24 @@ async function runJob(db: Database, input: NotifyInput) {
 		() => new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }),
 	);
 
-	let ctx = createJobContext(jobs.notify, {
-		id: "message-1",
-		attempts: 1,
-		input,
-		logger: new BatchedLogger("test"),
-	});
+	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
+	let ctx = createJobContext(jobs.notify, { id: "message-1", attempts: 1, input, log });
 	ctx.set(JobDatabase, db, { property: "database" });
 
-	await container.scope(() => notify(ctx));
-	return ctx;
+	try {
+		await container.scope(() => notify(ctx));
+	} finally {
+		log.emit();
+	}
+}
+
+/** One breadcrumb the run left, for the assertions that read a note's own fields. */
+function noteOf(name: string): Log.Note | undefined {
+	return (record.notes as Log.Note[] | undefined)?.find((note) => note.name === name);
 }
 
 beforeEach(() => {
+	record = {};
 	/** Implementations are reinstated, not just cleared, since a test may replace one. */
 	notifyTcpResultMock.mockReset();
 	notifyTcpResultMock.mockImplementation(recordCall("tcp"));
@@ -132,7 +144,7 @@ describe("notify", () => {
 			last_response_time_ms: 1234,
 		});
 
-		let job = await runJob(db, {
+		await runJob(db, {
 			monitorType: "tcp",
 			monitorId: monitor.id,
 			previousStatus: "up",
@@ -149,9 +161,12 @@ describe("notify", () => {
 			},
 		]);
 
-		let completed = job.logger.events.find((event) => event.event === "job.notify.completed");
-		expect(completed?.monitorType).toBe("tcp");
-		expect(completed?.newStatus).toBe("down");
+		expect(record).toMatchObject({
+			"monitor.id": monitor.id,
+			"monitor.type": "tcp",
+			"notification.previous_status": "up",
+			"notification.status": "down",
+		});
 	});
 
 	/**
@@ -338,7 +353,7 @@ describe("notify", () => {
 	test("acknowledges a monitor that no longer exists", async () => {
 		let { db } = createTestDatabase();
 
-		let job = await runJob(db, {
+		await runJob(db, {
 			monitorType: "tcp",
 			monitorId: "deleted-monitor",
 			previousStatus: "up",
@@ -346,8 +361,8 @@ describe("notify", () => {
 		});
 
 		expect(notifyCalls).toHaveLength(0);
-		let event = job.logger.events.find((event) => event.event === "job.notify.monitor_not_found");
-		expect(event?.monitorId).toBe("deleted-monitor");
+		expect(noteOf("monitors.not_found")).toBeDefined();
+		expect(record).toMatchObject({ "monitor.id": "deleted-monitor" });
 	});
 
 	test("never retries a status the monitor type doesn't have", async () => {
@@ -392,5 +407,7 @@ describe("notify", () => {
 				newStatus: "down",
 			}),
 		).rejects.toBeInstanceOf(Job.Retry);
+
+		expect(record).toMatchObject({ outcome: "error", "error.message": "D1 unavailable" });
 	});
 });

@@ -18,7 +18,7 @@ import type { RemixNode } from "remix/ui";
 import billing from "@sdxc/billing/middleware";
 import { MemoryBilling } from "@sdxc/billing/providers/memory";
 import { createTranslator } from "@sdxc/i18n";
-import logger from "@sdxc/logger/middleware";
+import { log } from "@sdxc/logger/middleware";
 import { unwrap } from "@sdxc/result";
 import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
@@ -101,7 +101,7 @@ async function renderCheckout(
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			logger,
+			log() as Middleware,
 			billing({ provider: platform }),
 			renderWith(createHtmlRenderer) as Middleware,
 		],

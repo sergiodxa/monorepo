@@ -10,9 +10,9 @@
  * live subscriptions is walked, which is the only way to find a customer whose very first
  * delivery never arrived and who therefore has no row to sweep.
  *
- * Every repair is logged at error level on purpose. A nonzero repair count doesn't mean this
- * job failed, it means webhook delivery is broken, which is exactly the failure that would
- * otherwise stay silent until a paying customer's monitors went quiet.
+ * Every repair is recorded, and `subscriptions.repaired` is the number to alert on: a nonzero
+ * count means webhook delivery is broken rather than this job having failed, which is exactly
+ * the failure that would otherwise stay silent until a paying customer's monitors went quiet.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -79,9 +79,9 @@ export default createJobHandler(jobs.reconcileSubscriptions, async (ctx) => {
 			 * The walk is the discovery half only. Losing it costs nothing the owners already in
 			 * the projection need, so the sweep goes on rather than skipping every repair.
 			 */
-			ctx.logger.error("job.reconcile_subscriptions.list_failed", {
+			ctx.log.warn("subscriptions.list_failed", {
 				code: listed.error.code,
-				providerCode: listed.error.providerCode,
+				provider_code: listed.error.providerCode,
 			});
 			break;
 		}
@@ -105,10 +105,10 @@ export default createJobHandler(jobs.reconcileSubscriptions, async (ctx) => {
 		let synced = await syncEntitlements(ctx.database, customer);
 
 		if (isFailure(synced)) {
-			ctx.logger.error("job.reconcile_subscriptions.read_failed", {
+			ctx.log.warn("subscriptions.read_failed", {
 				code: synced.error.code,
-				providerCode: synced.error.providerCode,
-				customer,
+				provider_code: synced.error.providerCode,
+				"customer.id": identify(customer),
 			});
 			continue;
 		}
@@ -118,7 +118,7 @@ export default createJobHandler(jobs.reconcileSubscriptions, async (ctx) => {
 			 * A platform customer with no external id was never linked to a signed-in subject, so
 			 * there is no owner whose monitors this could apply to.
 			 */
-			ctx.logger.error("job.reconcile_subscriptions.unlinked_customer", { customer });
+			ctx.log.warn("subscriptions.unlinked_customer", { "customer.id": identify(customer) });
 			continue;
 		}
 
@@ -139,11 +139,7 @@ export default createJobHandler(jobs.reconcileSubscriptions, async (ctx) => {
 
 		repaired += 1;
 
-		ctx.logger.error("job.reconcile_subscriptions.repaired", {
-			ownerId,
-			entitled,
-			monitors,
-		});
+		ctx.log.note("subscriptions.repaired", { "owner.id": ownerId, entitled, monitors });
 	}
 
 	let pruned = await WebhookDeliveries.prune(
@@ -151,11 +147,15 @@ export default createJobHandler(jobs.reconcileSubscriptions, async (ctx) => {
 		Date.now() - DELIVERY_RETENTION_DAYS * MS_PER_DAY,
 	);
 
-	ctx.logger.info("job.reconcile_subscriptions.completed", {
-		live,
-		stored: stored.length,
-		swept: swept.size,
-		repaired,
-		pruned,
+	ctx.log.set({
+		subscriptions: { live, stored: stored.length, swept: swept.size, repaired, pruned },
 	});
 });
+
+/**
+ * The identifier a customer is named by, whichever arm of the union names it, so one
+ * `customer.id` field answers "which customer" for both.
+ */
+function identify(customer: CustomerRef): string {
+	return "id" in customer ? customer.id : customer.externalId;
+}

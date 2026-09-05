@@ -13,7 +13,7 @@ import type { AnalyticsEngineMock } from "@sdxc/cloudflare-mocks";
 
 import { createAnalyticsEngine, createEnv } from "@sdxc/cloudflare-mocks";
 import { createJobContext } from "@sdxc/jobs";
-import { BatchedLogger } from "@sdxc/logger";
+import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { ServiceContainer } from "@sdxc/service-container";
@@ -83,20 +83,25 @@ let checkTrialWatches = (await import("./check-trial-watches")).default;
 
 let transport = new MemoryTransport();
 
-/** Runs the handler over a context carrying the test's database, as the chain would. */
+/** Runs the handler over a context carrying the test's database, and returns its record. */
 async function runJob(db: Database) {
 	let container = new ServiceContainer();
 	container.singleton(Mailer, () => new Mailer({ transport, from: MAIL_FROM }));
 
-	let ctx = createJobContext(jobs.checkTrialWatches, {
-		id: "message-1",
-		attempts: 1,
-		logger: new BatchedLogger("test"),
-	});
+	let record: Record<string, unknown> = {};
+	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
+	let ctx = createJobContext(jobs.checkTrialWatches, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
 
 	await container.scope(() => checkTrialWatches(ctx));
-	return ctx;
+	log.emit();
+	return record;
+}
+
+/** Every breadcrumb of one kind the run left, for the assertions that read a note's own fields. */
+function notesOf(record: Record<string, unknown>, name: string): Log.Note[] {
+	let notes = (record.notes as Log.Note[] | undefined) ?? [];
+	return notes.filter((note) => note.name === name);
 }
 
 async function seedLead(db: Database, email = "visitor@example.com"): Promise<SelectLead> {
@@ -176,7 +181,7 @@ describe("checkTrialWatches", () => {
 		let watch = await seedWatch(db, lead.id);
 		answering("up", 250);
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		expect(probes).toHaveLength(1);
 		expect(probes[0]?.url).toBe("https://example.com");
@@ -198,12 +203,7 @@ describe("checkTrialWatches", () => {
 		expect(updated?.checks_ok).toBe(1);
 		expect(updated?.max_response_time_ms).toBe(250);
 
-		let completed = job.logger.events.find(
-			(event) => event.event === "job.check_trial_watches.completed",
-		);
-		expect(completed?.total).toBe(1);
-		expect(completed?.probed).toBe(1);
-		expect(completed?.errorCount).toBe(0);
+		expect(record).toMatchObject({ "trial.watches": 1, "trial.probed": 1, "trial.failed": 0 });
 	});
 
 	test("skips a watch whose next hour has not come round yet", async () => {
@@ -249,16 +249,13 @@ describe("checkTrialWatches", () => {
 			};
 		});
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		expect(await TrialWatch.listResults(db, failing.id)).toHaveLength(0);
 		expect(await TrialWatch.listResults(db, healthy.id)).toHaveLength(1);
 
-		let completed = job.logger.events.find(
-			(event) => event.event === "job.check_trial_watches.completed",
-		);
-		expect(completed?.probed).toBe(1);
-		expect(completed?.errorCount).toBe(1);
+		expect(record).toMatchObject({ "trial.probed": 1, "trial.failed": 1 });
+		expect(notesOf(record, "trial.watch_failed")[0]?.["watch.id"]).toBe(failing.id);
 	});
 });
 
@@ -269,7 +266,7 @@ describe("checkTrialWatches change notifications", () => {
 		let watch = await seedWatch(db, lead.id, { last_status: "up" });
 		answering("down", null);
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		expect(sentOf(TrialChangeEmail)).toBe(1);
 		expect(transport.last?.to).toEqual([{ email: "visitor@example.com" }]);
@@ -277,10 +274,7 @@ describe("checkTrialWatches change notifications", () => {
 		let updated = await TrialWatch.findById(db, watch.id);
 		expect(updated?.change_notified_at).not.toBeNull();
 
-		let completed = job.logger.events.find(
-			(event) => event.event === "job.check_trial_watches.completed",
-		);
-		expect(completed?.changed).toBe(1);
+		expect(record).toMatchObject({ "trial.changed": 1 });
 	});
 
 	test("sends nothing on a watch's first ever check", async () => {
@@ -355,7 +349,7 @@ describe("checkTrialWatches wrap-up", () => {
 			max_response_time_ms: 2100,
 		});
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		expect(probes).toHaveLength(0);
 		expect(sentOf(TrialWeeklyDigestEmail)).toBe(1);
@@ -364,11 +358,7 @@ describe("checkTrialWatches wrap-up", () => {
 		expect(updated?.summary_sent_at).not.toBeNull();
 		expect(updated?.next_due_at).toBeNull();
 
-		let completed = job.logger.events.find(
-			(event) => event.event === "job.check_trial_watches.completed",
-		);
-		expect(completed?.wrappedUp).toBe(1);
-		expect(completed?.probed).toBe(0);
+		expect(record).toMatchObject({ "trial.wrapped_up": 1, "trial.probed": 0 });
 	});
 
 	/**
@@ -430,13 +420,11 @@ describe("checkTrialWatches wrap-up", () => {
 		let watch = await seedWatch(db, lead.id, { expires_at: Date.now() - MS_PER_DAY });
 		await db.exec("DELETE FROM leads WHERE id = ?", [lead.id]);
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		expect(transport.messages).toHaveLength(0);
 		expect((await TrialWatch.findById(db, watch.id))?.next_due_at).toBeNull();
-		expect(
-			job.logger.events.find((event) => event.event === "job.check_trial_watches.lead_missing"),
-		).toBeDefined();
+		expect(notesOf(record, "trial.lead_missing")[0]?.["watch.id"]).toBe(watch.id);
 	});
 });
 
@@ -470,9 +458,9 @@ describe("checkTrialWatches metering", () => {
  * neither event may name the URL it is about.
  */
 describe("checkTrialWatches funnel events", () => {
-	/** Every `funnel.*` line of one kind a run emitted. */
-	function funnelEvents(job: { logger: BatchedLogger }, name: string) {
-		return job.logger.events.filter((event) => event.event === `funnel.${name}`);
+	/** Every `funnel.*` breadcrumb of one kind a run left. */
+	function funnelNotes(record: Record<string, unknown>, name: string) {
+		return notesOf(record, `funnel.${name}`);
 	}
 
 	test("reports the first unattended check with its host and outcome", async () => {
@@ -481,11 +469,11 @@ describe("checkTrialWatches funnel events", () => {
 		let watch = await seedWatch(db, lead.id, {}, "https://example.com/health?token=secret");
 		answering("up");
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
-		let events = funnelEvents(job, "first_trial_check_completed");
-		expect(events).toHaveLength(1);
-		expect(events[0]).toMatchObject({
+		let notes = funnelNotes(record, "first_trial_check_completed");
+		expect(notes).toHaveLength(1);
+		expect(notes[0]).toMatchObject({
 			leadId: lead.id,
 			watchId: watch.id,
 			hostname: "example.com",
@@ -500,10 +488,10 @@ describe("checkTrialWatches funnel events", () => {
 		let lead = await seedLead(db);
 		await seedWatch(db, lead.id, {}, "https://example.com/health?token=secret");
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
-		let [event] = funnelEvents(job, "first_trial_check_completed");
-		for (let value of Object.values(event ?? {})) {
+		let [note] = funnelNotes(record, "first_trial_check_completed");
+		for (let value of Object.values(note ?? {})) {
 			if (typeof value !== "string") continue;
 			expect(value).not.toContain("token=secret");
 			expect(value).not.toContain("/health");
@@ -516,9 +504,9 @@ describe("checkTrialWatches funnel events", () => {
 		await seedWatch(db, lead.id);
 		answering("down", null);
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
-		expect(funnelEvents(job, "first_trial_check_completed")[0]).toMatchObject({
+		expect(funnelNotes(record, "first_trial_check_completed")[0]).toMatchObject({
 			status: "down",
 			succeeded: false,
 		});
@@ -533,7 +521,7 @@ describe("checkTrialWatches funnel events", () => {
 		await makeDue(db, watch.id);
 		let second = await runJob(db);
 
-		expect(funnelEvents(second, "first_trial_check_completed")).toHaveLength(0);
+		expect(funnelNotes(second, "first_trial_check_completed")).toHaveLength(0);
 	});
 
 	test("reports the first on-change email with both statuses", async () => {
@@ -542,11 +530,11 @@ describe("checkTrialWatches funnel events", () => {
 		let watch = await seedWatch(db, lead.id, { last_status: "up" });
 		answering("down", null);
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
-		let events = funnelEvents(job, "first_trial_alert_sent");
-		expect(events).toHaveLength(1);
-		expect(events[0]).toMatchObject({
+		let notes = funnelNotes(record, "first_trial_alert_sent");
+		expect(notes).toHaveLength(1);
+		expect(notes[0]).toMatchObject({
 			leadId: lead.id,
 			watchId: watch.id,
 			hostname: "example.com",
@@ -563,7 +551,7 @@ describe("checkTrialWatches funnel events", () => {
 		answering("down", null);
 
 		let first = await runJob(db);
-		expect(funnelEvents(first, "first_trial_alert_sent")).toHaveLength(1);
+		expect(funnelNotes(first, "first_trial_alert_sent")).toHaveLength(1);
 
 		/**
 		 * The change email is capped at one a day, so the stamp has to be backdated for a
@@ -579,7 +567,7 @@ describe("checkTrialWatches funnel events", () => {
 
 		let second = await runJob(db);
 		expect(sentOf(TrialChangeEmail)).toBe(2);
-		expect(funnelEvents(second, "first_trial_alert_sent")).toHaveLength(0);
+		expect(funnelNotes(second, "first_trial_alert_sent")).toHaveLength(0);
 	});
 
 	test("emits no alert event when the send was refused", async () => {
@@ -589,8 +577,8 @@ describe("checkTrialWatches funnel events", () => {
 		await db.exec("DELETE FROM leads WHERE id = ?", [lead.id]);
 		answering("down", null);
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
-		expect(funnelEvents(job, "first_trial_alert_sent")).toHaveLength(0);
+		expect(funnelNotes(record, "first_trial_alert_sent")).toHaveLength(0);
 	});
 });

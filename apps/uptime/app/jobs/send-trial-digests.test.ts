@@ -15,7 +15,7 @@
 import type { Transport } from "@sdxc/mail";
 
 import { createJobContext } from "@sdxc/jobs";
-import { BatchedLogger } from "@sdxc/logger";
+import { Log } from "@sdxc/logger";
 import { Mailer, MailError } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { failure } from "@sdxc/result";
@@ -47,20 +47,22 @@ class RefusingTransport implements Transport {
 	}
 }
 
-/** Runs the handler over a context carrying the test's database, as the chain would. */
-async function runJob(db: Database) {
+/** Runs the handler over a context carrying the test's database, and returns its record. */
+async function runJob(db: Database, options: { transport?: Transport } = {}) {
 	let container = new ServiceContainer();
-	container.singleton(Mailer, () => new Mailer({ transport, from: MAIL_FROM }));
+	container.singleton(
+		Mailer,
+		() => new Mailer({ transport: options.transport ?? transport, from: MAIL_FROM }),
+	);
 
-	let ctx = createJobContext(jobs.sendTrialDigests, {
-		id: "message-1",
-		attempts: 1,
-		logger: new BatchedLogger("test"),
-	});
+	let record: Record<string, unknown> = {};
+	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
+	let ctx = createJobContext(jobs.sendTrialDigests, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
 
 	await container.scope(() => sendTrialDigests(ctx));
-	return ctx;
+	log.emit();
+	return record;
 }
 
 /**
@@ -120,6 +122,11 @@ async function seedResult(
 	);
 }
 
+/** One breadcrumb the run left, for the assertions that read a note's own fields. */
+function noteOf(record: Record<string, unknown>, name: string): Log.Note | undefined {
+	return (record.notes as Log.Note[] | undefined)?.find((note) => note.name === name);
+}
+
 /** Every daily digest the run handed the transport. */
 function digests() {
 	return transport.messages.filter((message) => message.email instanceof TrialDailyDigestEmail);
@@ -139,17 +146,13 @@ describe("sendTrialDigests", () => {
 		await seedWatch(db, lead.id, "https://three.example.com", { last_status: "degraded" });
 		await seedResult(db, first.id, 3, "up");
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		expect(digests()).toHaveLength(1);
 		expect(transport.last?.to).toEqual([{ email: "visitor@example.com" }]);
 		expect(transport.last?.subject).toContain("3");
 
-		let completed = job.logger.events.find(
-			(event) => event.event === "job.send_trial_digests.completed",
-		);
-		expect(completed?.total).toBe(1);
-		expect(completed?.sent).toBe(1);
+		expect(record).toMatchObject({ "digests.total": 1, "digests.sent": 1 });
 	});
 
 	test("sends a lead with no active watch nothing at all", async () => {
@@ -161,14 +164,11 @@ describe("sendTrialDigests", () => {
 			last_status: "up",
 		});
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		expect(transport.messages).toHaveLength(0);
 
-		let completed = job.logger.events.find(
-			(event) => event.event === "job.send_trial_digests.completed",
-		);
-		expect(completed?.total).toBe(0);
+		expect(record).toMatchObject({ "digests.total": 0 });
 	});
 
 	test("sends a lead with no watches at all nothing", async () => {
@@ -227,12 +227,10 @@ describe("sendTrialDigests", () => {
 		let lead = await seedDueLead(db);
 		await seedWatch(db, lead.id, "https://unknown.example.com", { last_status: null });
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		expect(transport.messages).toHaveLength(0);
-		expect(
-			job.logger.events.find((event) => event.event === "job.send_trial_digests.nothing_to_report"),
-		).toBeDefined();
+		expect(noteOf(record, "digests.nothing_to_report")?.["lead.id"]).toBe(lead.id);
 		/** Nothing was sent, so nothing is stamped and tomorrow's run tries again. */
 		expect((await Lead.findById(db, lead.id))?.last_digest_at).toBeNull();
 	});
@@ -276,18 +274,7 @@ describe("sendTrialDigests", () => {
 		let lead = await seedDueLead(db);
 		await seedWatch(db, lead.id, "https://example.com", { last_status: "up" });
 
-		let container = new ServiceContainer();
-		container.singleton(
-			Mailer,
-			() => new Mailer({ transport: new RefusingTransport(), from: MAIL_FROM }),
-		);
-		let ctx = createJobContext(jobs.sendTrialDigests, {
-			id: "message-1",
-			attempts: 1,
-			logger: new BatchedLogger("test"),
-		});
-		ctx.set(JobDatabase, db, { property: "database" });
-		await container.scope(() => sendTrialDigests(ctx));
+		await runJob(db, { transport: new RefusingTransport() });
 
 		let row = await Lead.findById(db, lead.id);
 		expect(row?.emails_sent).toBe(0);
@@ -302,9 +289,10 @@ describe("sendTrialDigests", () => {
  * overstate the only engagement measure this funnel has.
  */
 describe("sendTrialDigests funnel events", () => {
-	/** Every progress-email event a run emitted. */
-	function funnelEvents(job: { logger: BatchedLogger }) {
-		return job.logger.events.filter((event) => event.event === "funnel.trial_progress_email_sent");
+	/** Every progress-email breadcrumb a run left, which is one per accepted send. */
+	function funnelNotes(record: Record<string, unknown>): Log.Note[] {
+		let notes = (record.notes as Log.Note[] | undefined) ?? [];
+		return notes.filter((note) => note.name === "funnel.trial_progress_email_sent");
 	}
 
 	test("reports one event per email, with the target count the email covered", async () => {
@@ -313,10 +301,10 @@ describe("sendTrialDigests funnel events", () => {
 		await seedWatch(db, lead.id, "https://one.example.com", { last_status: "up" });
 		await seedWatch(db, lead.id, "https://two.example.com", { last_status: "up" });
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
-		expect(funnelEvents(job)).toHaveLength(1);
-		expect(funnelEvents(job)[0]).toMatchObject({
+		expect(funnelNotes(record)).toHaveLength(1);
+		expect(funnelNotes(record)[0]).toMatchObject({
 			leadId: lead.id,
 			period: "daily",
 			targets: 2,
@@ -330,9 +318,9 @@ describe("sendTrialDigests funnel events", () => {
 		await seedWatch(db, lead.id, "https://one.example.com", { last_status: "up" });
 		await seedWatch(db, lead.id, "https://two.example.com", { last_status: "down" });
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
-		expect(funnelEvents(job)[0]).toMatchObject({ targets: 2, hadIncident: true });
+		expect(funnelNotes(record)[0]).toMatchObject({ targets: 2, hadIncident: true });
 	});
 
 	test("names no address and no URL, only the lead's opaque id", async () => {
@@ -340,9 +328,9 @@ describe("sendTrialDigests funnel events", () => {
 		let lead = await seedDueLead(db, "reader@example.com");
 		await seedWatch(db, lead.id, "https://private.example.com/admin", { last_status: "up" });
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
-		let [event] = funnelEvents(job);
+		let [event] = funnelNotes(record);
 		expect(event).toBeDefined();
 		for (let value of Object.values(event ?? {})) {
 			if (typeof value !== "string") continue;
@@ -355,9 +343,9 @@ describe("sendTrialDigests funnel events", () => {
 		let { db } = createTestDatabase();
 		await seedDueLead(db);
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
-		expect(funnelEvents(job)).toHaveLength(0);
+		expect(funnelNotes(record)).toHaveLength(0);
 	});
 
 	test("emits nothing when the transport refuses the digest", async () => {
@@ -365,19 +353,8 @@ describe("sendTrialDigests funnel events", () => {
 		let lead = await seedDueLead(db);
 		await seedWatch(db, lead.id, "https://example.com", { last_status: "up" });
 
-		let container = new ServiceContainer();
-		container.singleton(
-			Mailer,
-			() => new Mailer({ transport: new RefusingTransport(), from: MAIL_FROM }),
-		);
-		let ctx = createJobContext(jobs.sendTrialDigests, {
-			id: "message-1",
-			attempts: 1,
-			logger: new BatchedLogger("test"),
-		});
-		ctx.set(JobDatabase, db, { property: "database" });
-		await container.scope(() => sendTrialDigests(ctx));
+		let record = await runJob(db, { transport: new RefusingTransport() });
 
-		expect(funnelEvents(ctx)).toHaveLength(0);
+		expect(funnelNotes(record)).toHaveLength(0);
 	});
 });

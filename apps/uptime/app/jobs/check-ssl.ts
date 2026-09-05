@@ -41,19 +41,21 @@ export default createJobHandler(jobs.checkSsl, async (ctx) => {
 		}
 
 		errorCount++;
-		ctx.logger.error("job.check_ssl.monitor_failed", {
-			monitorId: outcome.item.id,
+		ctx.log.warn("checks.monitor_failed", {
+			"monitor.id": outcome.item.id,
 			error: outcome.error instanceof Error ? outcome.error.message : String(outcome.error),
 		});
 	}
 
 	await enqueueNotifications(notifications);
 
-	ctx.logger.info("job.check_ssl.completed", {
-		total: monitors.length,
-		successCount,
-		errorCount,
-		notified: notifications.length,
+	ctx.log.set({
+		checks: {
+			total: monitors.length,
+			succeeded: successCount,
+			failed: errorCount,
+			notified: notifications.length,
+		},
 	});
 });
 

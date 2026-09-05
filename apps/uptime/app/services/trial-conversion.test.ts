@@ -10,6 +10,7 @@
 
 import type { Database } from "remix/data-table";
 
+import { Log } from "@sdxc/logger";
 import { generateUUID } from "@sdxc/uuid";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -474,28 +475,27 @@ describe("the funnel record", () => {
 });
 
 /**
- * The `funnel.account_created` event, read off the console the immediate logger writes to.
- * The snapshot above is the durable record; this is the per-account line a funnel query
- * reads, and the two have to agree about when an account was created exactly once.
+ * The `funnel.account_created` note, read off the record each sign-in's log emitted. The
+ * snapshot above is the durable record; this is the per-account line a funnel query reads,
+ * and the two have to agree about when an account was created exactly once.
  */
 describe("the account-created funnel event", () => {
-	let logged: Record<string, unknown>[] = [];
+	let records: Record<string, unknown>[] = [];
 
 	beforeEach(() => {
-		logged = [];
-		vi.spyOn(console, "info").mockImplementation((...args: unknown[]) => {
-			let [entry] = args;
-			if (entry && typeof entry === "object") logged.push(entry as Record<string, unknown>);
-		});
+		records = [];
 	});
 
-	afterEach(() => {
-		vi.spyOn(console, "info").mockRestore();
-	});
+	/** Runs one sign-in inside a log of its own and keeps the record it emitted. */
+	async function signIn(body: () => Promise<void>): Promise<void> {
+		await new Log({ kind: "request", sink: (record) => void records.push(record) }).run(body);
+	}
 
-	/** Every `funnel.account_created` line this run emitted. */
+	/** Every `funnel.account_created` note the recorded sign-ins emitted. */
 	function events(): Record<string, unknown>[] {
-		return logged.filter((entry) => entry.event === "funnel.account_created");
+		return records
+			.flatMap((record) => (record.notes ?? []) as Log.Note[])
+			.filter((note) => note.name === "funnel.account_created");
 	}
 
 	test("fires once with the counts and the campaign the sign-in carried", async () => {
@@ -503,16 +503,18 @@ describe("the account-created funnel event", () => {
 		await threeAttempts(lead.id, 30);
 		await Lead.recordEmailSent(db, lead.id);
 
-		await convertTrialWatches(db, {
-			email: EMAIL,
-			teamId: TEAM_ID,
-			authorId: AUTHOR_ID,
-			attribution: {
-				landingPath: "/for/agencies",
-				source: "outreach",
-				campaign: "agencies-august",
-			},
-		});
+		await signIn(() =>
+			convertTrialWatches(db, {
+				email: EMAIL,
+				teamId: TEAM_ID,
+				authorId: AUTHOR_ID,
+				attribution: {
+					landingPath: "/for/agencies",
+					source: "outreach",
+					campaign: "agencies-august",
+				},
+			}),
+		);
 
 		expect(events()).toHaveLength(1);
 		expect(events()[0]).toMatchObject({
@@ -530,7 +532,7 @@ describe("the account-created funnel event", () => {
 		let lead = await createLead();
 		await attempt(lead.id, "https://secret.example/private/path?token=abc", 1);
 
-		await convert();
+		await signIn(convert);
 
 		let [event] = events();
 		expect(event).toBeDefined();
@@ -545,14 +547,14 @@ describe("the account-created funnel event", () => {
 		let lead = await createLead();
 		await attempt(lead.id, "https://example.com", 1);
 
-		await convert();
-		await convert();
+		await signIn(convert);
+		await signIn(convert);
 
 		expect(events()).toHaveLength(1);
 	});
 
 	test("an address that never left a lead emits nothing", async () => {
-		await convert();
+		await signIn(convert);
 
 		expect(events()).toHaveLength(0);
 	});

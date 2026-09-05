@@ -85,14 +85,25 @@ export default createJobHandler(jobs.sendFunnelReport, async (ctx) => {
 	/** Written first and unconditionally: the row outlives every table it was counted from. */
 	await TrialDailyStats.upsertDay(ctx.database, { date, ...counters });
 
+	ctx.log.set({
+		funnel: {
+			date,
+			new_leads: counters.newLeads,
+			urls_checked: counters.urlsChecked,
+			emails_sent: counters.emailsSent,
+			free_signups: counters.freeSignups,
+			paid_conversions: counters.paidConversions,
+		},
+	});
+
 	let to = funnelReportRecipient();
 	if (to === null) {
-		ctx.logger.info("job.send_funnel_report.no_recipient", { date });
+		ctx.log.note("funnel.no_recipient");
 		return;
 	}
 
 	if (isEmptyDay(counters)) {
-		ctx.logger.info("job.send_funnel_report.nothing_to_report", { date });
+		ctx.log.note("funnel.nothing_to_report");
 		return;
 	}
 
@@ -116,11 +127,9 @@ export default createJobHandler(jobs.sendFunnelReport, async (ctx) => {
 	);
 
 	if (isFailure(sent)) {
-		ctx.logger.error("job.send_funnel_report.email_failed", { date, error: sent.error.message });
+		ctx.log.warn("funnel.email_failed", { error: sent.error.message });
 		return;
 	}
-
-	ctx.logger.info("job.send_funnel_report.completed", { date, ...counters });
 });
 
 /** The first day of the trailing window, as the `YYYY-MM-DD` key the totals range over. */

@@ -22,7 +22,8 @@ import type { RemixNode } from "remix/ui";
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
 import { createTranslator } from "@sdxc/i18n";
-import { logger } from "@sdxc/logger";
+import { Log } from "@sdxc/logger";
+import { log } from "@sdxc/logger/middleware";
 import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
@@ -81,6 +82,7 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 		ctx.locale = "en";
 		ctx.i18next = i18nextInstance;
 		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
+		ctx.log.set({ team: { id: team.id } });
 		return next();
 	};
 }
@@ -166,12 +168,13 @@ async function send(
 	team: SelectTeam,
 	membership: SelectMembership,
 	monitorId: string,
+	records: Record<string, unknown>[] = [],
 ): Promise<Response> {
 	let container = new ServiceContainer();
 	container.instance(Database, db);
 
 	let router = createRouter({
-		middleware: [asyncContext(), renderWith(createHtmlRenderer) as Middleware],
+		middleware: [asyncContext(), log() as Middleware, renderWith(createHtmlRenderer) as Middleware],
 	});
 	router.map(routes.app.team.monitors.cards.usage, {
 		middleware: [seedTeam(team, membership)],
@@ -185,7 +188,13 @@ async function send(
 		),
 	);
 
-	return container.scope(() => router.fetch(request));
+	/**
+	 * Run inside a log the caller can read back; its sink also keeps the record this
+	 * request emits out of the console.
+	 */
+	let requestLog = new Log({ kind: "request", sink: (record) => void records.push(record) });
+
+	return requestLog.run(() => container.scope(() => router.fetch(request)));
 }
 
 describe("monitor-card-usage", () => {
@@ -246,23 +255,22 @@ describe("monitor-card-usage", () => {
 		let { sqliteDb, team, membership, monitor } = await createFixture();
 		let db = createRawFailingDatabase(sqliteDb);
 
-		let errors = vi.spyOn(logger, "error").mockImplementation(() => {});
+		let records: Record<string, unknown>[] = [];
+		let response = await send(db, team, membership, monitor.id, records);
+		expect(response.status).toBe(200);
 
-		try {
-			let response = await send(db, team, membership, monitor.id);
-			expect(response.status).toBe(200);
+		let body = await response.text();
+		expect(body).toContain("—");
+		expect(body).toContain("Out of");
 
-			let body = await response.text();
-			expect(body).toContain("—");
-			expect(body).toContain("Out of");
-
-			expect(errors).toHaveBeenCalledWith(
-				"monitor_usage_card.consumed_unavailable",
-				expect.objectContaining({ monitorId: monitor.id, teamId: team.id }),
-			);
-		} finally {
-			errors.mockRestore();
-		}
+		expect(records[0]).toMatchObject({
+			"monitor.id": monitor.id,
+			"team.id": team.id,
+			outcome: "degraded",
+		});
+		expect(records[0]?.notes).toContainEqual(
+			expect.objectContaining({ level: "warn", name: "monitor.usage_consumed_unavailable" }),
+		);
 	});
 
 	/** A non-finite count is treated as unknown, so it renders as unavailable like any other failed count. */
@@ -270,22 +278,19 @@ describe("monitor-card-usage", () => {
 		let { sqliteDb, team, membership, monitor } = await createFixture();
 		let db = createRawFailingDatabase(sqliteDb, [{ consumed: Number.NaN }]);
 
-		let errors = vi.spyOn(logger, "error").mockImplementation(() => {});
+		let records: Record<string, unknown>[] = [];
+		let response = await send(db, team, membership, monitor.id, records);
+		let body = await response.text();
 
-		try {
-			let response = await send(db, team, membership, monitor.id);
-			let body = await response.text();
-
-			expect(body).toContain("—");
-			expect(body).not.toContain("NaN");
-			expect(errors).toHaveBeenCalledWith("monitor_usage_card.consumed_unavailable", {
-				monitorId: monitor.id,
-				teamId: team.id,
+		expect(body).toContain("—");
+		expect(body).not.toContain("NaN");
+		expect(records[0]?.notes).toContainEqual(
+			expect.objectContaining({
+				level: "warn",
+				name: "monitor.usage_consumed_unavailable",
 				message: "non-finite value: NaN",
-			});
-		} finally {
-			errors.mockRestore();
-		}
+			}),
+		);
 	});
 
 	test("404s for a monitor that doesn't belong to the team", async () => {

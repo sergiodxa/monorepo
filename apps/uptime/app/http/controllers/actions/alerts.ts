@@ -119,7 +119,7 @@ export const createAlert = createAction(routes.actions.alert.create, async (ctx)
 	 * could have changed for this team. Only the alert's shape is logged, keeping
 	 * webhook URLs and email addresses out of it.
 	 */
-	trackAlertConfigured(ctx.logger, {
+	trackAlertConfigured(ctx.log, {
 		teamId: ctx.team.id,
 		alertId: alert.id,
 		strategy: result.data.strategy,

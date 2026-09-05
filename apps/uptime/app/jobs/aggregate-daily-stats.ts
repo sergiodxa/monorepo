@@ -57,6 +57,7 @@ interface RawAggregateRow {
 
 export default createJobHandler(jobs.aggregateDailyStats, async (ctx) => {
 	let date = getYesterdayDateUtc();
+	ctx.log.set({ stats: { date } });
 
 	/**
 	 * The roll-up's cost is split by monitors per team (ADR-007 §5): it writes one row
@@ -100,16 +101,13 @@ export default createJobHandler(jobs.aggregateDailyStats, async (ctx) => {
 	});
 	written += await aggregateCron(ctx, date);
 
-	ctx.logger.info("job.aggregate_daily_stats.completed", { date, written });
+	ctx.log.set({ stats: { written } });
 });
 
 async function aggregateHttp(ctx: CurrentJobContext, date: string): Promise<number> {
 	let result = await getHttpDailyAggregate(date);
 	if (isFailure(result)) {
-		ctx.logger.error("job.aggregate_daily_stats.http_failed", {
-			date,
-			error: result.error.message,
-		});
+		ctx.log.warn("stats.http_source_failed", { error: result.error.message });
 		return 0;
 	}
 
@@ -229,10 +227,9 @@ async function writeAll(
 			continue;
 		}
 
-		ctx.logger.error("job.aggregate_daily_stats.write_failed", {
-			monitorId: outcome.item.monitor_id,
-			monitorType: outcome.item.monitor_type,
-			date: outcome.item.date,
+		ctx.log.warn("stats.write_failed", {
+			"monitor.id": outcome.item.monitor_id,
+			"monitor.type": outcome.item.monitor_type,
 			error: outcome.error instanceof Error ? outcome.error.message : String(outcome.error),
 		});
 	}

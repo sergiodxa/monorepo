@@ -53,10 +53,12 @@ export default createJobHandler(jobs.cleanCronJobPings, async (ctx) => {
 		now - PING_DETAIL_RETENTION_DAYS * MS_PER_DAY,
 	);
 
-	ctx.logger.info("job.clean_cron_job_pings.completed", {
-		rowsDeleted: deleted.rowsAffected,
-		rowsRedacted: redacted.rowsAffected,
-		batches: deleted.batches + redacted.batches,
-		reachedCeiling: deleted.reachedCeiling || redacted.reachedCeiling,
+	ctx.log.set({
+		pings: {
+			deleted: deleted.rowsAffected,
+			redacted: redacted.rowsAffected,
+			batches: deleted.batches + redacted.batches,
+			reached_ceiling: deleted.reachedCeiling || redacted.reachedCeiling,
+		},
 	});
 });

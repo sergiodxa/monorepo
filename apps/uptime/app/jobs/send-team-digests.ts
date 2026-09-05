@@ -90,6 +90,7 @@ export async function sendTeamDigests(ctx: CurrentJobContext, period: DigestPeri
 	let now = Date.now();
 	let reported = digestWindow(period, now);
 	let recipients = await TeamDigest.listDue(ctx.database, period, startOfUtcDay(now));
+	ctx.log.set({ digests: { period, due: recipients.length } });
 
 	/**
 	 * The opt-out is applied before anything else is loaded, and that ordering is the point:
@@ -103,9 +104,10 @@ export async function sendTeamDigests(ctx: CurrentJobContext, period: DigestPeri
 	let wanted = recipients.filter((recipient) =>
 		UserPreferences.wants(preferences.get(recipient.subjectId) ?? null, PREFERENCE[period]),
 	);
+	ctx.log.set({ digests: { wanted: wanted.length } });
 
 	if (wanted.length === 0) {
-		ctx.logger.info("job.send_team_digests.nobody_due", { period, due: recipients.length });
+		ctx.log.set({ digests: { teams: 0, sent: 0, skipped: 0, failed: 0 } });
 		return;
 	}
 
@@ -137,9 +139,8 @@ export async function sendTeamDigests(ctx: CurrentJobContext, period: DigestPeri
 	for (let outcome of settled) {
 		if (!outcome.ok) {
 			errorCount++;
-			ctx.logger.error("job.send_team_digests.team_failed", {
-				period,
-				teamId: outcome.item[0],
+			ctx.log.warn("digests.team_failed", {
+				"team.id": outcome.item[0],
 				error: outcome.error instanceof Error ? outcome.error.message : String(outcome.error),
 			});
 			continue;
@@ -160,13 +161,7 @@ export async function sendTeamDigests(ctx: CurrentJobContext, period: DigestPeri
 		),
 	);
 
-	ctx.logger.info("job.send_team_digests.completed", {
-		period,
-		teams: byTeam.size,
-		sent,
-		skipped,
-		errorCount,
-	});
+	ctx.log.set({ digests: { teams: byTeam.size, sent, skipped, failed: errorCount } });
 }
 
 /**
@@ -193,7 +188,7 @@ async function digestTeam(
 
 	/** A team deleted between the query that selected its members and this read. */
 	if (team === null) {
-		ctx.logger.error("job.send_team_digests.team_missing", { teamId: members[0]?.teamId });
+		ctx.log.warn("digests.team_missing", { "team.id": members[0]?.teamId });
 		return { sent: 0, skipped: members.length };
 	}
 
@@ -210,9 +205,8 @@ async function digestTeam(
 	 * monitor (ADR-005), and a monitor disabled mid-run, which `TeamDigest.listDue`'s `EXISTS` misses.
 	 */
 	if (monitors.every((monitor) => monitor.days.length === 0)) {
-		ctx.logger.info("job.send_team_digests.nothing_to_report", {
-			teamId: team.id,
-			period,
+		ctx.log.note("digests.nothing_to_report", {
+			"team.id": team.id,
 			monitors: monitors.length,
 		});
 		return { sent: 0, skipped: members.length };
@@ -238,9 +232,9 @@ async function digestTeam(
 		 */
 		if (!profile) {
 			skipped++;
-			ctx.logger.error("job.send_team_digests.profile_missing", {
-				teamId: team.id,
-				subjectId: member.subjectId,
+			ctx.log.warn("digests.profile_missing", {
+				"team.id": team.id,
+				"subject.id": member.subjectId,
 			});
 			continue;
 		}
@@ -257,9 +251,9 @@ async function digestTeam(
 
 		if (isFailure(result)) {
 			skipped++;
-			ctx.logger.error("job.send_team_digests.email_failed", {
-				teamId: team.id,
-				subjectId: member.subjectId,
+			ctx.log.warn("digests.email_failed", {
+				"team.id": team.id,
+				"subject.id": member.subjectId,
 				error: result.error.message,
 			});
 			continue;

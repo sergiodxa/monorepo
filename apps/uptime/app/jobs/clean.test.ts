@@ -9,7 +9,7 @@
  */
 
 import { createJobContext } from "@sdxc/jobs";
-import { BatchedLogger } from "@sdxc/logger";
+import { Log } from "@sdxc/logger";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import TrialConversion from "~/app/data/trial-conversion";
@@ -87,12 +87,22 @@ describe("clean", () => {
 		});
 	}
 
-	async function run(logger = new BatchedLogger("test")) {
-		let ctx = createJobContext(jobs.clean, { id: "message-1", attempts: 1, logger });
+	/** Runs the handler over a context carrying the test's database, and returns its record. */
+	async function run() {
+		let record: Record<string, unknown> = {};
+		let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
+		let ctx = createJobContext(jobs.clean, { id: "message-1", attempts: 1, log });
 		ctx.set(Database, db, { property: "database" });
 		await clean(ctx);
+		log.emit();
 
-		return logger;
+		return record;
+	}
+
+	/** The breadcrumb each swept table left, in the order the run swept them. */
+	function sweptTables(record: Record<string, unknown>): Log.Note[] {
+		let notes = (record.notes as Log.Note[] | undefined) ?? [];
+		return notes.filter((note) => note.name === "clean.table_swept");
 	}
 
 	test("deletes results completed more than 7 days ago and keeps recent ones", async () => {
@@ -165,11 +175,9 @@ describe("clean", () => {
 		let now = Date.now();
 		await seedResult("result-old", now - 10 * MS_PER_DAY);
 
-		let logger = await run();
+		let record = await run();
 
-		let event = logger.events.find((entry) => entry.event === "job.clean.completed");
-		expect(event).toBeDefined();
-		expect(event?.rowsDeleted).toBe(1);
+		expect(record).toMatchObject({ "rows.deleted": 1 });
 	});
 
 	test("logs a per-table breakdown and whether a sweep hit its ceiling", async () => {
@@ -179,29 +187,26 @@ describe("clean", () => {
 		await seedTcpResult("tcp-old", now - 91 * MS_PER_DAY);
 		await seedAlertEvent("event-old", now - 91 * MS_PER_DAY);
 
-		let logger = await run();
+		let record = await run();
 
-		let event = logger.events.find((entry) => entry.event === "job.clean.completed");
-		expect(event?.rowsDeleted).toBe(4);
-		expect(event?.reachedCeiling).toBe(false);
-		expect(event?.tables).toEqual([
-			{ table: "monitor_results", rowsDeleted: 1, batches: 1, reachedCeiling: false },
-			{ table: "dns_monitor_results", rowsDeleted: 1, batches: 1, reachedCeiling: false },
-			{ table: "tcp_monitor_results", rowsDeleted: 1, batches: 1, reachedCeiling: false },
-			{ table: "flow_monitor_results", rowsDeleted: 0, batches: 1, reachedCeiling: false },
-			{ table: "alert_events", rowsDeleted: 1, batches: 1, reachedCeiling: false },
-			{ table: "trial_watch_results", rowsDeleted: 0, batches: 1, reachedCeiling: false },
-			{ table: "trial_watches", rowsDeleted: 0, batches: 1, reachedCeiling: false },
-			{ table: "leads", rowsDeleted: 0, batches: 1, reachedCeiling: false },
+		expect(record).toMatchObject({ "rows.deleted": 4, "clean.reached_ceiling": false });
+		expect(sweptTables(record)).toMatchObject([
+			{ table: "monitor_results", rows_deleted: 1, batches: 1, reached_ceiling: false },
+			{ table: "dns_monitor_results", rows_deleted: 1, batches: 1, reached_ceiling: false },
+			{ table: "tcp_monitor_results", rows_deleted: 1, batches: 1, reached_ceiling: false },
+			{ table: "flow_monitor_results", rows_deleted: 0, batches: 1, reached_ceiling: false },
+			{ table: "alert_events", rows_deleted: 1, batches: 1, reached_ceiling: false },
+			{ table: "trial_watch_results", rows_deleted: 0, batches: 1, reached_ceiling: false },
+			{ table: "trial_watches", rows_deleted: 0, batches: 1, reached_ceiling: false },
+			{ table: "leads", rows_deleted: 0, batches: 1, reached_ceiling: false },
 		]);
 	});
 
 	test("reports every table even when there is nothing to delete", async () => {
-		let logger = await run();
+		let record = await run();
 
-		let event = logger.events.find((entry) => entry.event === "job.clean.completed");
-		expect(event?.rowsDeleted).toBe(0);
-		expect(event?.tables).toHaveLength(8);
+		expect(record).toMatchObject({ "rows.deleted": 0 });
+		expect(sweptTables(record)).toHaveLength(8);
 	});
 });
 

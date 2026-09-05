@@ -10,7 +10,7 @@
  */
 
 import { BadRequest, Created } from "@sdxc/http/status-code";
-import { logger } from "@sdxc/logger";
+import { currentLog } from "@sdxc/logger";
 import { isFailure } from "@sdxc/result";
 import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
@@ -188,10 +188,11 @@ export default createController(dnsMonitorsRoutes, {
 					imported = discovery.imported;
 					queriesFailed = discovery.queriesFailed;
 				} catch (error) {
-					logger.error("api.dns_monitors.discovery_failed", {
-						monitorId: dnsMonitor.id,
-						error: error instanceof Error ? error.message : String(error),
-					});
+					currentLog()
+						?.set({ monitor: { id: dnsMonitor.id, type: "dns" } })
+						.warn("dns.discovery_failed", {
+							message: error instanceof Error ? error.message : String(error),
+						});
 				}
 
 				return apiSuccess(

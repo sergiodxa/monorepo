@@ -16,7 +16,7 @@ import type { RequestContext, Router } from "remix/router";
 import type { RemixNode } from "remix/ui";
 import type { ResolveFrameContext } from "remix/ui/server";
 
-import { logger } from "@sdxc/logger";
+import { currentLog } from "@sdxc/logger";
 import { createHtmlResponse } from "remix/response/html";
 import { renderToStream } from "remix/ui/server";
 
@@ -37,10 +37,7 @@ export function createHtmlRenderer(ctx: RequestContext) {
 				return resolveFrame(ctx.router, ctx.request, src, target, context);
 			},
 			onError(error) {
-				logger.error("render.stream_failed", {
-					url: ctx.request.url,
-					error: error instanceof Error ? error.message : String(error),
-				});
+				currentLog()?.fail(error, { render: { failed: true } });
 			},
 		});
 

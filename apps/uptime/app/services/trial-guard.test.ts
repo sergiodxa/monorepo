@@ -12,7 +12,7 @@
 import type { RateLimitMock } from "@sdxc/cloudflare-mocks";
 
 import { createEnv, createKVNamespace, createRateLimit } from "@sdxc/cloudflare-mocks";
-import { logger } from "@sdxc/logger";
+import { Log } from "@sdxc/logger";
 import { isFailure } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -137,8 +137,7 @@ function submission(
 
 /**
  * The namespace and the limiter outlive the test that used them, so every test clears
- * yesterday's counter and any spent allowance first. `logger.error` is silenced here too,
- * since the unconfigured-secret case logs by design and a test below asserts on that call.
+ * yesterday's counter and any spent allowance first.
  */
 beforeEach(async () => {
 	let { keys } = await kv.list();
@@ -159,8 +158,6 @@ beforeEach(async () => {
 
 	dnsQueries = [];
 	verifications = [];
-
-	vi.spyOn(logger, "error").mockImplementation(() => {});
 });
 
 describe("isPublicAddress", () => {
@@ -492,9 +489,10 @@ describe("guardTrialProbe", () => {
 
 	test("refuses, loudly, when no secret is configured rather than passing unchallenged", async () => {
 		turnstileSecretKey = undefined;
-		let log = vi.spyOn(logger, "error").mockImplementation(() => {});
+		let records: Record<string, unknown>[] = [];
+		let log = new Log({ kind: "request", sink: (record) => void records.push(record) });
 
-		let result = await guardTrialProbe(submission("example.com"));
+		let result = await log.run(() => guardTrialProbe(submission("example.com")));
 
 		expect(isFailure(result)).toBe(true);
 		if (!isFailure(result)) return;
@@ -505,7 +503,12 @@ describe("guardTrialProbe", () => {
 		expect(result.error.reason).toBe("unavailable");
 		expect(result.error.detail).toBe("turnstile-unconfigured");
 		expect(verifications).toEqual([]);
-		expect(log).toHaveBeenCalledWith("trial_guard.turnstile_unconfigured", expect.anything());
+		expect(records[0]).toMatchObject({
+			outcome: "degraded",
+			notes: expect.arrayContaining([
+				expect.objectContaining({ name: "trial.turnstile_unconfigured", level: "warn" }),
+			]),
+		});
 	});
 
 	test("refuses when the secret is present but empty", async () => {

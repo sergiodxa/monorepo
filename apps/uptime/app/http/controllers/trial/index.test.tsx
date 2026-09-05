@@ -21,6 +21,7 @@ import {
 	createDurableObjectNamespace,
 	createEnv,
 } from "@sdxc/cloudflare-mocks";
+import { Log } from "@sdxc/logger";
 import { failure, success } from "@sdxc/result";
 import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
@@ -111,11 +112,6 @@ let guardTrialProbe = vi.fn(async (_probe: TrialProbeRequest) => guardResult);
 let trialTurnstileSiteKey = vi.fn((): string | null => null);
 
 vi.doMock("~/app/services/trial-guard", () => ({ guardTrialProbe, trialTurnstileSiteKey }));
-
-/** The guard's own logging is noise here; the assertions read the rendered page. */
-vi.doMock("@sdxc/logger", () => ({
-	logger: { info: () => {}, error: () => {}, warn: () => {}, debug: () => {} },
-}));
 
 let { TRIAL_PROBE, TRIAL_WATCH_REPEATED, TRIAL_WATCH_STARTED } =
 	await import("~/app/http/controllers/trial/session");
@@ -627,6 +623,23 @@ describe("POST /try refusals", () => {
 		{ code: "rate-limited", contains: "run another check" },
 		{ code: "budget-exhausted", contains: "every free check we run in a day" },
 	];
+
+	test("records the refusal on the invocation's log, reason and all", async () => {
+		guardResult = failure(new TestRefusal("blocked-target", null, "loopback address"));
+
+		let records: Record<string, unknown>[] = [];
+		let requestLog = new Log({ kind: "request", sink: (record) => void records.push(record) });
+
+		await requestLog.run(() => runTry({ url: "127.0.0.1" }));
+
+		expect(records[0]).toMatchObject({
+			"trial.probe_refused": true,
+			"trial.refusal_reason": "blocked-target",
+		});
+		expect(records[0]?.notes).toContainEqual(
+			expect.objectContaining({ name: "trial.probe_refused", detail: "loopback address" }),
+		);
+	});
 
 	for (let { code, contains } of guardReasons) {
 		test(`explains "${code}" in its own words and never reaches the network`, async () => {

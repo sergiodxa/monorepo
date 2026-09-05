@@ -11,6 +11,7 @@ import type { AuthSession } from "@sdxc/auth/auth-session";
 import type { Middleware } from "remix/router";
 
 import { sessionScheme } from "@sdxc/auth/remix/schemes";
+import { currentLog } from "@sdxc/logger";
 import { getContext } from "remix/middleware/async-context";
 import { auth as createAuthMiddleware, Auth } from "remix/middleware/auth";
 
@@ -54,7 +55,18 @@ function toViewer(auth: AuthSession): Viewer {
 export let auth: Middleware = (ctx, next) => {
 	return createAuthMiddleware({
 		schemes: [sessionScheme(relyingParty(ctx.url), { verify: toViewer })],
-	})(ctx, next);
+	})(ctx, recordViewer);
+
+	/**
+	 * Puts `user.id` on the invocation's record here, the one place that knows who the
+	 * request is for before any handler runs, so the whole record is attributed and the
+	 * handlers under it record only what they alone know.
+	 */
+	function recordViewer() {
+		let viewer = getViewer();
+		if (viewer) currentLog()?.set({ user: { id: viewer.id } });
+		return next();
+	}
 };
 
 export default auth;

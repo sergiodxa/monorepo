@@ -13,7 +13,8 @@ import type { Middleware } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
-import { BatchedLogger } from "@sdxc/logger";
+import { Log } from "@sdxc/logger";
+import { log } from "@sdxc/logger/middleware";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
 import { ServiceContainer } from "@sdxc/service-container";
@@ -97,7 +98,7 @@ async function submit(
 	body: Record<string, string>,
 	session: Session,
 	existing?: ReturnType<typeof createTestDatabase>["db"],
-	logger?: BatchedLogger,
+	records: Record<string, unknown>[] = [],
 ) {
 	let db = existing ?? createTestDatabase().db;
 	let container = new ServiceContainer();
@@ -106,17 +107,13 @@ async function submit(
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			log() as Middleware,
 			((ctx, next) => {
 				ctx.set(Auth, { ok: false });
 				return next();
 			}) as Middleware,
 			((ctx, next) => {
 				ctx.set(Session, session, { property: "session" });
-				/**
-				 * Installed only when a test asks for it. Every other test in this file runs with
-				 * no logger at all, which is what pins that the funnel event is optional.
-				 */
-				if (logger) (ctx as unknown as { logger: BatchedLogger }).logger = logger;
 				return next();
 			}) as Middleware,
 			mail({ transport, from: MAIL_FROM }),
@@ -133,7 +130,12 @@ async function submit(
 		body: new URLSearchParams(body),
 	});
 
-	let response = await container.scope(() => router.fetch(request));
+	/**
+	 * Run inside a log the caller can read back; its sink also keeps the record this
+	 * request emits out of the console.
+	 */
+	let requestLog = new Log({ kind: "request", sink: (record) => void records.push(record) });
+	let response = await requestLog.run(() => container.scope(() => router.fetch(request)));
 
 	return { response, db, session };
 }
@@ -454,28 +456,30 @@ describe("POST /try/lead validation", () => {
  * The event names the host alone, keeping the URL and the address out of the log.
  */
 describe("POST /try/lead funnel event", () => {
-	/** Every trial-monitor-started event the request emitted. */
-	function funnelEvents(logger: BatchedLogger) {
-		return logger.events.filter((event) => event.event === "funnel.trial_monitor_started");
+	/** Every trial-monitor-started note the request's record carries. */
+	function funnelEvents(records: Record<string, unknown>[]) {
+		return records
+			.flatMap((record) => (record.notes ?? []) as Record<string, unknown>[])
+			.filter((note) => note.name === "funnel.trial_monitor_started");
 	}
 
 	test("reports the watch, the host, and the check the visitor was shown", async () => {
 		let session = new Session();
 		session.set(TRIAL_PROBE, probeState({ url: "https://probed.example/health?token=secret" }));
-		let logger = new BatchedLogger("test");
+		let records: Record<string, unknown>[] = [];
 
 		let { db } = await submit(
 			{ email: "reader@example.com", consent: "true" },
 			session,
 			undefined,
-			logger,
+			records,
 		);
 
 		let lead = await Lead.findByEmail(db, "reader@example.com");
 		let watches = await TrialWatch.listByLead(db, lead!.id);
 
-		expect(funnelEvents(logger)).toHaveLength(1);
-		expect(funnelEvents(logger)[0]).toMatchObject({
+		expect(funnelEvents(records)).toHaveLength(1);
+		expect(funnelEvents(records)[0]).toMatchObject({
 			leadId: lead!.id,
 			watchId: watches[0]!.id,
 			hostname: "probed.example",
@@ -488,11 +492,11 @@ describe("POST /try/lead funnel event", () => {
 	test("records a probe the visitor saw fail as one", async () => {
 		let session = new Session();
 		session.set(TRIAL_PROBE, probeState({ status: "down" }));
-		let logger = new BatchedLogger("test");
+		let records: Record<string, unknown>[] = [];
 
-		await submit({ email: "reader@example.com" }, session, undefined, logger);
+		await submit({ email: "reader@example.com" }, session, undefined, records);
 
-		expect(funnelEvents(logger)[0]).toMatchObject({
+		expect(funnelEvents(records)[0]).toMatchObject({
 			immediateCheckSucceeded: false,
 			consented: false,
 		});
@@ -501,11 +505,11 @@ describe("POST /try/lead funnel event", () => {
 	test("names neither the address nor the URL", async () => {
 		let session = new Session();
 		session.set(TRIAL_PROBE, probeState({ url: "https://probed.example/admin?token=secret" }));
-		let logger = new BatchedLogger("test");
+		let records: Record<string, unknown>[] = [];
 
-		await submit({ email: "reader@example.com" }, session, undefined, logger);
+		await submit({ email: "reader@example.com" }, session, undefined, records);
 
-		let [event] = funnelEvents(logger);
+		let [event] = funnelEvents(records);
 		expect(event).toBeDefined();
 		for (let value of Object.values(event ?? {})) {
 			if (typeof value !== "string") continue;
@@ -522,30 +526,19 @@ describe("POST /try/lead funnel event", () => {
 
 		let second = new Session();
 		second.set(TRIAL_PROBE, probeState());
-		let logger = new BatchedLogger("test");
-		await submit({ email: "reader@example.com" }, second, db, logger);
+		let records: Record<string, unknown>[] = [];
+		await submit({ email: "reader@example.com" }, second, db, records);
 
-		expect(funnelEvents(logger)).toHaveLength(0);
+		expect(funnelEvents(records)).toHaveLength(0);
 	});
 
 	test("a rejected address wrote nothing and so reports nothing", async () => {
 		let session = new Session();
 		session.set(TRIAL_PROBE, probeState());
-		let logger = new BatchedLogger("test");
+		let records: Record<string, unknown>[] = [];
 
-		await submit({ email: "not-an-address" }, session, undefined, logger);
+		await submit({ email: "not-an-address" }, session, undefined, records);
 
-		expect(funnelEvents(logger)).toHaveLength(0);
-	});
-
-	test("a submission with no logger installed still opens the watch", async () => {
-		let session = new Session();
-		session.set(TRIAL_PROBE, probeState());
-
-		let { response, db } = await submit({ email: "reader@example.com" }, session);
-
-		expect(response.status).toBe(303);
-		let lead = await Lead.findByEmail(db, "reader@example.com");
-		expect(await TrialWatch.listByLead(db, lead!.id)).toHaveLength(1);
+		expect(funnelEvents(records)).toHaveLength(0);
 	});
 });

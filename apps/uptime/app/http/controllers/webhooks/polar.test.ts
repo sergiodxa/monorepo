@@ -12,7 +12,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import logger from "@sdxc/logger/middleware";
+import type { Middleware } from "remix/router";
+
+import { log } from "@sdxc/logger/middleware";
 import { unwrap } from "@sdxc/result";
 import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
@@ -83,7 +85,7 @@ async function subscribe(externalId: string, product = MONITORING_PRODUCT) {
  * the platform signed — the URL is the only thing the endpoint does not read.
  */
 async function dispatch(delivery: { body: string; headers: Headers }) {
-	let router = createRouter({ middleware: [asyncContext(), logger] });
+	let router = createRouter({ middleware: [asyncContext(), log() as Middleware] });
 	router.map(routes.webhooks.polar, polarWebhook);
 
 	let container = new ServiceContainer();

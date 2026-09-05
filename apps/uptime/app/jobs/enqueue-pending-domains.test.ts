@@ -13,7 +13,7 @@ import type { QueueMock } from "@sdxc/cloudflare-mocks";
 
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { createJobContext } from "@sdxc/jobs";
-import { BatchedLogger } from "@sdxc/logger";
+import { Log } from "@sdxc/logger";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 /**
@@ -43,29 +43,30 @@ describe("enqueuePendingDomains", () => {
 		sendBatch.mockClear();
 	});
 
-	/** Runs the handler over a context carrying the test's database, as the chain would. */
-	async function run(logger: BatchedLogger) {
+	/** Runs the handler over a context carrying the test's database, and returns its record. */
+	async function run() {
+		let record: Record<string, unknown> = {};
+		let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 		let ctx = createJobContext(jobs.enqueuePendingDomains, {
 			id: "message-1",
 			attempts: 1,
-			logger,
+			log,
 		});
 		ctx.set(Database, db, { property: "database" });
 		await enqueuePendingDomains(ctx);
+		log.emit();
+		return record;
 	}
 
 	test("does nothing when there are no unverified domains", async () => {
 		let domain = await TeamDomain.create(db, "team-1", "verified.example.com");
 		await TeamDomain.markVerified(db, domain.id);
 
-		let logger = new BatchedLogger("test");
-
-		await run(logger);
+		let record = await run();
 
 		expect(sendBatch).not.toHaveBeenCalled();
 		expect(queue.sent).toHaveLength(0);
-		let event = logger.events.find((entry) => entry.event === "job.enqueue_pending_domains.none");
-		expect(event).toBeDefined();
+		expect(record).toMatchObject({ "domains.enqueued": 0 });
 	});
 
 	test("batches one verifyDomainOwnership message per unverified domain", async () => {
@@ -74,9 +75,7 @@ describe("enqueuePendingDomains", () => {
 		let verified = await TeamDomain.create(db, "team-1", "verified.example.com");
 		await TeamDomain.markVerified(db, verified.id);
 
-		let logger = new BatchedLogger("test");
-
-		await run(logger);
+		let record = await run();
 
 		expect(sendBatch).toHaveBeenCalledTimes(1);
 		let messages = queue.sent;
@@ -92,9 +91,6 @@ describe("enqueuePendingDomains", () => {
 			expect((message.body as { type: string }).type).toBe("verifyDomainOwnership");
 		}
 
-		let event = logger.events.find(
-			(entry) => entry.event === "job.enqueue_pending_domains.enqueued",
-		);
-		expect(event?.count).toBe(2);
+		expect(record).toMatchObject({ "domains.enqueued": 2 });
 	});
 });

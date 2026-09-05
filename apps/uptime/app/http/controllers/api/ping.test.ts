@@ -101,8 +101,9 @@ vi.doMock("cloudflare:sockets", () => ({
 
 let { default: pingCreate } = await import("./ping");
 
-/** Both guards log through the immediate logger, silenced here so assertions read the response bodies. */
-vi.spyOn(console, "info").mockImplementation(() => {});
+/** Silences whatever a refused request writes, so the assertions read the response bodies. */
+vi.spyOn(console, "log").mockImplementation(() => {});
+vi.spyOn(console, "warn").mockImplementation(() => {});
 vi.spyOn(console, "error").mockImplementation(() => {});
 
 type Db = ReturnType<typeof createTestDatabase>["db"];

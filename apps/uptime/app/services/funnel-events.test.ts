@@ -13,6 +13,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Log } from "@sdxc/logger";
 import { describe, expect, test } from "vitest";
 
 import type { FunnelEventSink } from "~/app/services/funnel-events";
@@ -32,29 +33,41 @@ import {
 	trackUrlCheckStarted,
 } from "~/app/services/funnel-events";
 
-/** One recorded emission, as the sink saw it. */
+/** One recorded emission, as the note on the log carries it. */
 interface Recorded {
 	event: string;
 	payload: Record<string, unknown>;
 }
 
-/** A sink that keeps what it was handed, standing in for a request or job logger. */
+/**
+ * A real log collecting into memory, standing in for the request's or the job's. `recorded()`
+ * emits it and reads the funnel notes back, and `fields()` the flattened record, so a test
+ * calls both once every step it tracks has run.
+ */
 function recordingSink() {
-	let recorded: Recorded[] = [];
+	let records: Record<string, unknown>[] = [];
+	let sink = new Log({ kind: "request", sink: (record) => void records.push(record) });
 
-	let sink: FunnelEventSink = {
-		info(event, payload) {
-			recorded.push({ event, payload: payload ?? {} });
-		},
-	};
+	function fields(): Record<string, unknown> {
+		sink.emit();
+		return records[0] ?? {};
+	}
 
-	return { sink, recorded };
+	function recorded(): Recorded[] {
+		let notes = (fields().notes ?? []) as Log.Note[];
+		return notes.map(({ at: _at, level: _level, name, ...payload }) => ({ event: name, payload }));
+	}
+
+	return { sink, recorded, fields };
 }
 
-/** A sink that fails the way a flushed or disposed logger would. */
+/** A sink that fails the way a disposed log would. */
 const THROWING_SINK: FunnelEventSink = {
-	info() {
-		throw new Error("logger unavailable");
+	set(): never {
+		throw new Error("log unavailable");
+	},
+	note(): never {
+		throw new Error("log unavailable");
 	},
 };
 
@@ -159,7 +172,7 @@ describe("event names", () => {
 			alertCount: 1,
 		});
 
-		expect(recorded.map((entry) => entry.event)).toEqual([
+		expect(recorded().map((entry) => entry.event)).toEqual([
 			"funnel.url_check_started",
 			"funnel.url_check_completed",
 			"funnel.trial_monitor_started",
@@ -183,11 +196,29 @@ describe("event names", () => {
 			monitorCount: 2,
 		});
 
-		expect(recorded[0]?.payload).toEqual({
+		expect(recorded()[0]?.payload).toEqual({
 			teamId: "team_1",
 			authorId: "subject_1",
 			monitorType: "http",
 			monitorCount: 2,
+		});
+	});
+
+	test("writes the step and every property as funnel.* fields, so each is a filter", () => {
+		let { sink, fields } = recordingSink();
+
+		trackSecondMonitorCreated(sink, {
+			teamId: "team_1",
+			authorId: "subject_1",
+			monitorType: "http",
+			monitorCount: 2,
+		});
+
+		expect(fields()).toMatchObject({
+			"funnel.step": "second_monitor_created",
+			"funnel.teamId": "team_1",
+			"funnel.monitorType": "http",
+			"funnel.monitorCount": 2,
 		});
 	});
 
@@ -203,7 +234,7 @@ describe("event names", () => {
 			consented: true,
 		});
 
-		expect(recorded[0]?.payload.hostname).toBe("status.example.co.uk");
+		expect(recorded()[0]?.payload.hostname).toBe("status.example.co.uk");
 	});
 });
 
@@ -237,7 +268,7 @@ describe("no personal data", () => {
 				alertCount: 1,
 			});
 
-			expect(recorded[0]?.payload.strategy).toBe("[redacted]");
+			expect(recorded()[0]?.payload.strategy).toBe("[redacted]");
 		});
 	}
 
@@ -253,7 +284,7 @@ describe("no personal data", () => {
 			responseTimeMs: null,
 		});
 
-		expect(recorded[0]?.payload.hostname).toBe("[redacted]");
+		expect(recorded()[0]?.payload.hostname).toBe("[redacted]");
 	});
 
 	test("no emitted payload of any event contains an address, a URL or a query string", () => {
@@ -336,14 +367,14 @@ describe("no personal data", () => {
 			alertCount: 1,
 		});
 
-		expect(recorded).toHaveLength(10);
+		expect(recorded()).toHaveLength(10);
 
 		/**
 		 * Asserted as "nothing that reaches a log looks like personal data," since the enum
 		 * values these events legitimately carry — `up`, `http`, `daily` — are strings too and
 		 * must survive.
 		 */
-		for (let entry of recorded) {
+		for (let entry of recorded()) {
 			for (let value of Object.values(entry.payload)) {
 				if (typeof value !== "string") continue;
 				expect(value).not.toMatch(/[@\s?#]|:\/\//);
@@ -386,6 +417,6 @@ describe("emitting never throws into the caller", () => {
 			signedIn: false,
 		});
 
-		expect(recorded[0]?.payload).toEqual({ sourcePage: "/try", signedIn: false });
+		expect(recorded()[0]?.payload).toEqual({ sourcePage: "/try", signedIn: false });
 	});
 });

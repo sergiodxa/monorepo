@@ -14,7 +14,7 @@
 import type { Adapter, RateLimiterBinding } from "@sdxc/rate-limit";
 import type { Result } from "@sdxc/result";
 
-import { logger } from "@sdxc/logger";
+import { currentLog } from "@sdxc/logger";
 import { CloudflareAdapter, MemoryAdapter } from "@sdxc/rate-limit";
 import { failure, isFailure, success } from "@sdxc/result";
 import { env } from "cloudflare:workers";
@@ -292,7 +292,7 @@ async function consumeCallerBudget(request: Request): Promise<TrialRefusal | nul
 	let decision = await callerLimiter.consume(`${CALLER_PREFIX}:${address}`);
 
 	if (isFailure(decision)) {
-		logger.error("trial_guard.rate_limit_unavailable", { message: decision.error.message });
+		currentLog()?.warn("rate_limit.unavailable", { error: decision.error.message });
 		return null;
 	}
 
@@ -622,9 +622,7 @@ async function verifyChallenge(
 ): Promise<TrialRefusal | null> {
 	let secret = turnstileSecret();
 	if (secret === undefined) {
-		logger.error("trial_guard.turnstile_unconfigured", {
-			reason: "TURNSTILE_SECRET_KEY is not configured; trial probes cannot be challenged",
-		});
+		currentLog()?.warn("trial.turnstile_unconfigured");
 		return new TrialRefusal("unavailable", "turnstile-unconfigured");
 	}
 
@@ -638,21 +636,21 @@ async function verifyChallenge(
 	try {
 		let response = await fetch(SITEVERIFY_URL, { method: "POST", body });
 		if (!response.ok) {
-			logger.error("trial_guard.turnstile_unavailable", { status: response.status });
+			currentLog()?.warn("trial.turnstile_unavailable", { status: response.status });
 			return new TrialRefusal("failed-challenge", "siteverify-unavailable");
 		}
 
 		let parsed = s.parseSafe(s.object({ success: s.boolean() }), await response.json());
 		if (!parsed.success) {
-			logger.error("trial_guard.turnstile_unreadable");
+			currentLog()?.warn("trial.turnstile_unreadable");
 			return new TrialRefusal("failed-challenge", "siteverify-unreadable");
 		}
 
 		if (parsed.value.success) return null;
 		return new TrialRefusal("failed-challenge", "token-rejected");
 	} catch (error) {
-		logger.error("trial_guard.turnstile_unavailable", {
-			message: error instanceof Error ? error.message : String(error),
+		currentLog()?.warn("trial.turnstile_unavailable", {
+			error: error instanceof Error ? error.message : String(error),
 		});
 		return new TrialRefusal("failed-challenge", "siteverify-unreachable");
 	}
@@ -676,8 +674,8 @@ async function spendDailyBudget(): Promise<Result<number, TrialRefusal>> {
 		let parsed = stored === null ? 0 : Number.parseInt(stored, 10);
 		used = Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 	} catch (error) {
-		logger.error("trial_guard.budget_unreadable", {
-			message: error instanceof Error ? error.message : String(error),
+		currentLog()?.warn("trial.budget_unreadable", {
+			error: error instanceof Error ? error.message : String(error),
 		});
 		return failure(new TrialRefusal("budget-exhausted", "counter-unavailable"));
 	}
@@ -690,8 +688,8 @@ async function spendDailyBudget(): Promise<Result<number, TrialRefusal>> {
 		recordCost("kvMutation");
 		await env.KV.put(key, String(used + 1), { expirationTtl: BUDGET_TTL_SECONDS });
 	} catch (error) {
-		logger.error("trial_guard.budget_unwritable", {
-			message: error instanceof Error ? error.message : String(error),
+		currentLog()?.warn("trial.budget_unwritable", {
+			error: error instanceof Error ? error.message : String(error),
 		});
 	}
 

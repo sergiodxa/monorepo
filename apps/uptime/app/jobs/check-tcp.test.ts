@@ -15,7 +15,7 @@ import type { AnalyticsEngineMock, QueueMock } from "@sdxc/cloudflare-mocks";
 import { BillingError } from "@sdxc/billing";
 import { createAnalyticsEngine, createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { createJobContext } from "@sdxc/jobs";
-import { BatchedLogger } from "@sdxc/logger";
+import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { failure } from "@sdxc/result";
@@ -81,22 +81,26 @@ function enqueued(): NotifyMessage[] {
 	return queue.sent.map((message) => message.body);
 }
 
-/** Runs the handler over a context carrying the test's database, as the chain would. */
+/** Runs the handler over a context carrying the test's database, and returns its record. */
 async function runJob(db: Database) {
 	let container = new ServiceContainer();
 	container.singleton(
 		Mailer,
 		() => new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }),
 	);
-	let ctx = createJobContext(jobs.checkTcp, {
-		id: "message-1",
-		attempts: 1,
-		logger: new BatchedLogger("test"),
-	});
+	let record: Record<string, unknown> = {};
+	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
+	let ctx = createJobContext(jobs.checkTcp, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
 
 	await container.scope(() => checkTcp(ctx));
-	return ctx;
+	log.emit();
+	return record;
+}
+
+/** One breadcrumb the run left, for the assertions that read a note's own fields. */
+function noteOf(record: Record<string, unknown>, name: string): Log.Note | undefined {
+	return (record.notes as Log.Note[] | undefined)?.find((note) => note.name === name);
 }
 
 async function seedMonitor(
@@ -147,7 +151,7 @@ describe("checkTcp", () => {
 			responseTimeMs: null,
 		}));
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		let updated = await TcpMonitor.findByIdForTeam(db, "team-1", monitor.id);
 		expect(updated?.last_status).toBe("down");
@@ -168,11 +172,12 @@ describe("checkTcp", () => {
 			},
 		]);
 
-		let completed = job.logger.events.find((event) => event.event === "job.check_tcp.completed");
-		expect(completed?.total).toBe(1);
-		expect(completed?.successCount).toBe(1);
-		expect(completed?.errorCount).toBe(0);
-		expect(completed?.notified).toBe(1);
+		expect(record).toMatchObject({
+			"checks.total": 1,
+			"checks.succeeded": 1,
+			"checks.failed": 0,
+			"checks.notified": 1,
+		});
 	});
 
 	test("skips monitors with checking disabled", async () => {
@@ -214,14 +219,13 @@ describe("checkTcp", () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db, { last_status: "up", last_response_time_ms: 10 });
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		let results = await TcpMonitor.listResults(db, monitor.id);
 		expect(results).toHaveLength(1);
 		expect(sendBatch).not.toHaveBeenCalled();
 
-		let completed = job.logger.events.find((event) => event.event === "job.check_tcp.completed");
-		expect(completed?.notified).toBe(0);
+		expect(record).toMatchObject({ "checks.notified": 0 });
 	});
 
 	test("carries the monitor's pre-update last_status so the consumer can detect a recovery", async () => {
@@ -251,24 +255,22 @@ describe("checkTcp", () => {
 			return { status: "up", responseTimeMs: 10 };
 		});
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		expect(enqueued().map((message) => message.monitorId)).toEqual([healthy.id]);
 
-		let completed = job.logger.events.find((event) => event.event === "job.check_tcp.completed");
-		expect(completed?.total).toBe(2);
-		expect(completed?.successCount).toBe(1);
-		expect(completed?.errorCount).toBe(1);
+		expect(record).toMatchObject({
+			"checks.total": 2,
+			"checks.succeeded": 1,
+			"checks.failed": 1,
+		});
 
 		/** The failing monitor's cached fields are untouched — recordCheckResult never ran for it. */
 		let failedRow = await TcpMonitor.findByIdForTeam(db, "team-1", failing.id);
 		expect(failedRow?.last_status).toBe("up");
 		expect(failedRow?.last_checked_at).toBeNull();
 
-		let failureEvent = job.logger.events.find(
-			(event) => event.event === "job.check_tcp.monitor_failed",
-		);
-		expect(failureEvent?.monitorId).toBe(failing.id);
+		expect(noteOf(record, "checks.monitor_failed")?.["monitor.id"]).toBe(failing.id);
 	});
 });
 
@@ -344,7 +346,7 @@ describe("checkTcp ping reporting", () => {
 		let second = await seedMonitor(db, { host: "two.example.com" });
 		let third = await seedMonitor(db, { host: "three.example.com" });
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		expect(ingestMock).toHaveBeenCalledTimes(1);
 		let events = ingestedEvents();
@@ -359,8 +361,7 @@ describe("checkTcp ping reporting", () => {
 			metadata: { teamId: "team-1", type: "tcp", monitorId: first.id },
 		});
 
-		let completed = job.logger.events.find((event) => event.event === "job.check_tcp.completed");
-		expect(completed?.ingested).toBe(3);
+		expect(record).toMatchObject({ "checks.ingested": 3 });
 	});
 
 	test("keys each ping on the result row its check wrote", async () => {
@@ -379,22 +380,18 @@ describe("checkTcp ping reporting", () => {
 		let billable = await seedMonitor(db, { host: "billable.example.com" });
 		let orphan = await seedMonitor(db, { host: "orphan.example.com" }, "team-2");
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		expect(ingestedEvents().map((event) => event.metadata?.monitorId)).toEqual([billable.id]);
-		let unbillable = job.logger.events.find(
-			(event) => event.event === "job.check_tcp.unbillable_team",
-		);
-		expect(unbillable?.monitorId).toBe(orphan.id);
-		expect(unbillable?.teamId).toBe("team-2");
+		let unbillable = noteOf(record, "checks.unbillable_team");
+		expect(unbillable?.["monitor.id"]).toBe(orphan.id);
+		expect(unbillable?.["team.id"]).toBe("team-2");
 
 		expect(pingedMonitorIds().sort((a, b) => a.localeCompare(b))).toEqual(
 			[billable.id, orphan.id].sort((a, b) => a.localeCompare(b)),
 		);
 		expect(await TcpMonitor.listResults(db, orphan.id)).toHaveLength(1);
-		let completed = job.logger.events.find((event) => event.event === "job.check_tcp.completed");
-		expect(completed?.successCount).toBe(2);
-		expect(completed?.ingested).toBe(1);
+		expect(record).toMatchObject({ "checks.succeeded": 2, "checks.ingested": 1 });
 	});
 
 	test("a check that threw produces neither a data point nor a ping", async () => {
@@ -431,10 +428,9 @@ describe("checkTcp ping reporting", () => {
 			failure(new BillingError("refused", { code: "invalid_request", connection: "memory" })),
 		);
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		expect(await TcpMonitor.listResults(db, monitor.id)).toHaveLength(1);
-		let completed = job.logger.events.find((event) => event.event === "job.check_tcp.completed");
-		expect(completed?.successCount).toBe(1);
+		expect(record).toMatchObject({ "checks.succeeded": 1 });
 	});
 });

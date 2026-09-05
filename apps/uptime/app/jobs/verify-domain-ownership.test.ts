@@ -11,7 +11,7 @@
  */
 
 import { createJobContext } from "@sdxc/jobs";
-import { BatchedLogger } from "@sdxc/logger";
+import { Log } from "@sdxc/logger";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
@@ -58,6 +58,11 @@ function serveDnsAnswers(answers: Array<{ data: string }> | undefined) {
 	);
 }
 
+/** One breadcrumb the run left, for the assertions that read a note's own fields. */
+function noteOf(record: Record<string, unknown>, name: string): Log.Note | undefined {
+	return (record.notes as Log.Note[] | undefined)?.find((note) => note.name === name);
+}
+
 describe("verifyDomainOwnership", () => {
 	let db: ReturnType<typeof createTestDatabase>["db"];
 
@@ -65,16 +70,21 @@ describe("verifyDomainOwnership", () => {
 		({ db } = createTestDatabase());
 	});
 
-	/** Runs the handler over a context carrying the test's database, as the chain would. */
-	function run(teamDomainId: string, logger = new BatchedLogger("test")) {
+	/** Runs the handler over a context carrying the test's database, and returns its record. */
+	async function run(teamDomainId: string) {
+		let record: Record<string, unknown> = {};
+		let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 		let ctx = createJobContext(jobs.verifyDomainOwnership, {
 			id: "message-1",
 			attempts: 1,
 			input: { teamDomainId },
-			logger,
+			log,
 		});
 		ctx.set(Database, db, { property: "database" });
-		return verifyDomainOwnership(ctx);
+
+		await verifyDomainOwnership(ctx);
+		log.emit();
+		return record;
 	}
 
 	test("does nothing when the domain does not exist", async () => {
@@ -98,9 +108,8 @@ describe("verifyDomainOwnership", () => {
 	test("marks the domain verified when the TXT record matches", async () => {
 		let domain = await TeamDomain.create(db, "team-1", "example.com");
 		serveDnsAnswers([{ data: JSON.stringify(`ping_${domain.id}`) }]);
-		let logger = new BatchedLogger("test");
 
-		await run(domain.id, logger);
+		let record = await run(domain.id);
 
 		let query = new URL(lookups[0]?.url ?? "");
 		expect(query.searchParams.get("name")).toBe("_ping-verification.example.com");
@@ -110,57 +119,47 @@ describe("verifyDomainOwnership", () => {
 		let updated = await TeamDomain.findById(db, domain.id);
 		expect(updated?.verified_at).not.toBeNull();
 
-		let event = logger.events.find(
-			(entry) => entry.event === "job.verify_domain_ownership.verified",
-		);
-		expect(event?.teamDomainId).toBe(domain.id);
+		expect(record).toMatchObject({
+			"domain.id": domain.id,
+			"team.id": "team-1",
+			"domain.verified": true,
+		});
 	});
 
 	test("leaves the domain pending when the TXT record does not match", async () => {
 		let domain = await TeamDomain.create(db, "team-1", "example.com");
 		serveDnsAnswers([{ data: JSON.stringify("some_other_value") }]);
-		let logger = new BatchedLogger("test");
 
-		await run(domain.id, logger);
+		let record = await run(domain.id);
 
 		let updated = await TeamDomain.findById(db, domain.id);
 		expect(updated?.verified_at).toBeNull();
 
-		let event = logger.events.find(
-			(entry) => entry.event === "job.verify_domain_ownership.pending",
-		);
-		expect(event?.teamDomainId).toBe(domain.id);
+		expect(record).toMatchObject({ "domain.id": domain.id, "domain.verified": false });
 	});
 
 	test("leaves the domain pending when there is no Answer at all", async () => {
 		let domain = await TeamDomain.create(db, "team-1", "example.com");
 		serveDnsAnswers(undefined);
-		let logger = new BatchedLogger("test");
 
-		await run(domain.id, logger);
+		let record = await run(domain.id);
 
 		let updated = await TeamDomain.findById(db, domain.id);
 		expect(updated?.verified_at).toBeNull();
 
-		let event = logger.events.find(
-			(entry) => entry.event === "job.verify_domain_ownership.pending",
-		);
-		expect(event).toBeDefined();
+		expect(record).toMatchObject({ "domain.verified": false });
 	});
 
 	test("swallows a DNS lookup failure and logs it instead of throwing", async () => {
 		let domain = await TeamDomain.create(db, "team-1", "example.com");
 		server.use(http.get(DNS_URL, () => HttpResponse.error()));
-		let logger = new BatchedLogger("test");
 
-		await expect(run(domain.id, logger)).resolves.toBeUndefined();
+		/** The run settles instead of throwing, which is what the handler's catch is for. */
+		let record = await run(domain.id);
 
 		let updated = await TeamDomain.findById(db, domain.id);
 		expect(updated?.verified_at).toBeNull();
 
-		let event = logger.events.find(
-			(entry) => entry.event === "job.verify_domain_ownership.lookup_failed",
-		);
-		expect(event?.error).toBe("Failed to fetch");
+		expect(noteOf(record, "domains.lookup_failed")?.error).toBe("Failed to fetch");
 	});
 });

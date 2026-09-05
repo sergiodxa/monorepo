@@ -13,6 +13,7 @@
 import type { Middleware } from "remix/router";
 
 import { Forbidden, Unauthorized } from "@sdxc/http/status-code";
+import { currentLog } from "@sdxc/logger";
 import { getServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 
@@ -72,6 +73,13 @@ export default function requireApiKey(scope: ApiKeyScope): Middleware {
 
 		ctx.apiKey = apiKey;
 		ctx.apiTeam = team;
+
+		/**
+		 * Attributes the invocation to the team whose key paid for it, so a machine
+		 * request is queryable by team exactly like a browser one, and the endpoints
+		 * under this guard record only what they alone know.
+		 */
+		currentLog()?.set({ team: { id: team.id } });
 
 		return next();
 	};

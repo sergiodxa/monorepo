@@ -44,5 +44,5 @@ export default createJobHandler(jobs.enqueueDueChecks, async (ctx) => {
 		})),
 	);
 
-	ctx.logger.info("job.enqueue_due_checks.enqueued", { count: due.length });
+	ctx.log.set({ checks: { enqueued: due.length } });
 });

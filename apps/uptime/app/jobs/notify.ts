@@ -73,15 +73,13 @@ function parseStatuses<const Values extends readonly [string, ...string[]]>(
 
 export default createJobHandler(jobs.notify, async (ctx) => {
 	let mailer = getServiceContainer().get(Mailer);
+	ctx.log.set({ monitor: { id: ctx.input.monitorId, type: ctx.input.monitorType } });
 
 	try {
 		let dispatched = await dispatch(ctx, mailer);
 
 		if (!dispatched) {
-			ctx.logger.info("job.notify.monitor_not_found", {
-				monitorId: ctx.input.monitorId,
-				monitorType: ctx.input.monitorType,
-			});
+			ctx.log.note("monitors.not_found");
 			return;
 		}
 	} catch (error) {
@@ -92,19 +90,12 @@ export default createJobHandler(jobs.notify, async (ctx) => {
 		 * pipeline, so anything reaching here — D1 being unavailable, in practice — is a
 		 * lookup that failed before any decision was made, so a redelivery is the right answer.
 		 */
-		ctx.logger.error("job.notify.failed", {
-			monitorId: ctx.input.monitorId,
-			monitorType: ctx.input.monitorType,
-			error: error instanceof Error ? error.message : String(error),
-		});
+		ctx.log.fail(error);
 		ctx.retry({ cause: error });
 	}
 
-	ctx.logger.info("job.notify.completed", {
-		monitorId: ctx.input.monitorId,
-		monitorType: ctx.input.monitorType,
-		previousStatus: ctx.input.previousStatus,
-		newStatus: ctx.input.newStatus,
+	ctx.log.set({
+		notification: { previous_status: ctx.input.previousStatus, status: ctx.input.newStatus },
 	});
 });
 

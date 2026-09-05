@@ -81,6 +81,8 @@ export default createAction(routes.trial.lead, async (ctx) => {
 		consented: result.data.consent,
 	});
 
+	ctx.log.set({ trial: { lead_id: lead.id } });
+
 	/**
 	 * The cap, and the whole of it: a row here means this normalized pair already
 	 * had its free week, since a watch is deleted thirty days after creation and
@@ -89,6 +91,8 @@ export default createAction(routes.trial.lead, async (ctx) => {
 	let existing = await TrialWatch.findByNormalizedUrl(db, lead.id, probe.url);
 
 	if (existing) {
+		ctx.log.set({ trial: { watch_id: existing.id, repeated: true } });
+
 		let results = await TrialWatch.listResultsBetween(
 			db,
 			existing.id,
@@ -123,11 +127,7 @@ export default createAction(routes.trial.lead, async (ctx) => {
 		);
 
 		if (isFailure(report)) {
-			ctx.logger.error("trial.lead.repeat_report_email_failed", {
-				leadId: lead.id,
-				watchId: existing.id,
-				error: report.error.message,
-			});
+			ctx.log.warn("trial.repeat_report_email_failed", { message: report.error.message });
 		} else {
 			await Lead.recordEmailSent(db, lead.id);
 		}
@@ -151,12 +151,14 @@ export default createAction(routes.trial.lead, async (ctx) => {
 		last_status: probe.status,
 	});
 
+	ctx.log.set({ trial: { watch_id: watch.id, repeated: false } });
+
 	/**
 	 * Emitted from the branch that actually starts a watch: a repeat submission
 	 * earns a report but adds no funnel step. Emitted before the send so a mail
 	 * outage cannot cost the event.
 	 */
-	trackTrialMonitorStarted(ctx.logger, {
+	trackTrialMonitorStarted(ctx.log, {
 		leadId: lead.id,
 		watchId: watch.id,
 		hostname: hostnameOf(probe.url),
@@ -190,10 +192,7 @@ export default createAction(routes.trial.lead, async (ctx) => {
 	);
 
 	if (isFailure(sent)) {
-		ctx.logger.error("trial.lead.confirmation_email_failed", {
-			leadId: lead.id,
-			error: sent.error.message,
-		});
+		ctx.log.warn("trial.confirmation_email_failed", { message: sent.error.message });
 	} else {
 		await Lead.recordEmailSent(db, lead.id);
 	}

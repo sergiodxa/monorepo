@@ -10,7 +10,7 @@
 import type { Billing, UsageEvent } from "@sdxc/billing";
 
 import { supports } from "@sdxc/billing";
-import { logger } from "@sdxc/logger";
+import { currentLog } from "@sdxc/logger";
 import { isFailure } from "@sdxc/result";
 
 import type { PingType } from "~/app/services/analytics";
@@ -40,8 +40,8 @@ export interface BillablePing {
 
 /**
  * Counts one event per ping against the ping meter, batching a whole call's pings into one
- * request. A billing outage must never fail the check that produced the ping: failures log
- * `ping_meter.ingest_failed` and answer `false` so the caller can continue.
+ * request. A billing outage must never fail the check that produced the ping: failures warn
+ * `pings.ingest_failed` and answer `false` so the caller can continue.
  *
  * @param billing - The configured platform.
  * @param pings - The pings to bill. An empty array is a no-op and makes no request.
@@ -51,7 +51,7 @@ export async function ingestPings(billing: Billing, pings: BillablePing[]): Prom
 	if (pings.length === 0) return true;
 
 	if (!supports(billing, "usage")) {
-		logger.error("ping_meter.usage_unsupported", { connection: billing.connection });
+		currentLog()?.warn("pings.usage_unsupported", { connection: billing.connection });
 		return false;
 	}
 
@@ -69,12 +69,12 @@ export async function ingestPings(billing: Billing, pings: BillablePing[]): Prom
 	let ingested = await billing.usage.ingest(events);
 	if (!isFailure(ingested)) return true;
 
-	logger.error("ping_meter.ingest_failed", {
+	currentLog()?.warn("pings.ingest_failed", {
 		code: ingested.error.code,
 		providerCode: ingested.error.providerCode,
 		count: pings.length,
-		teamIds: [...new Set(pings.map((ping) => ping.teamId))],
-		types: [...new Set(pings.map((ping) => ping.type))],
+		teams: new Set(pings.map((ping) => ping.teamId)).size,
+		types: [...new Set(pings.map((ping) => ping.type))].sort().join(","),
 	});
 
 	return false;

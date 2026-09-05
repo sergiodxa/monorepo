@@ -51,8 +51,11 @@ async function apply(ctx: RequestContext, customerId: string | null): Promise<vo
 		 * A delivery about no payer at all names nothing this projection is keyed on, so there
 		 * is no owner whose monitors it could apply to.
 		 */
-		return ctx.logger.error("webhook.polar.unnamed_customer");
+		ctx.log.warn("webhook.polar.unnamed_customer");
+		return;
 	}
+
+	ctx.log.set({ webhook: { customer_id: customerId } });
 
 	let customer: CustomerRef = { id: customerId };
 	let db = getServiceContainer().get(Database);
@@ -65,7 +68,8 @@ async function apply(ctx: RequestContext, customerId: string | null): Promise<vo
 		 * A platform customer with no external id was never linked to a signed-in subject, so
 		 * nothing here can be attributed to an owner.
 		 */
-		return ctx.logger.error("webhook.polar.unlinked_customer", { customerId });
+		ctx.log.warn("webhook.polar.unlinked_customer");
+		return;
 	}
 
 	let { ownerId, applied, entitled, monitors } = synced.data;
@@ -79,12 +83,10 @@ async function apply(ctx: RequestContext, customerId: string | null): Promise<vo
 
 	if (firstPayment) await trackConversion(ctx, db, ownerId, monitors);
 
-	ctx.logger.info("webhook.polar.synced", {
-		ownerId,
-		applied,
-		entitled,
-		monitors,
-		firstPayment,
+	ctx.log.set({
+		user: { id: ownerId },
+		monitor: { count: monitors },
+		webhook: { applied, entitled, first_payment: firstPayment },
 	});
 }
 
@@ -100,7 +102,7 @@ async function trackConversion(
 ): Promise<void> {
 	let conversion = await TrialConversion.findByOwner(db, ownerId);
 
-	trackSubscriptionStarted(ctx.logger, {
+	trackSubscriptionStarted(ctx.log, {
 		ownerId,
 		fromTrial: conversion !== null,
 		monitorCount: monitors,

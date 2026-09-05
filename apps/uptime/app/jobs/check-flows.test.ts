@@ -13,7 +13,7 @@ import type { AnalyticsEngineMock, QueueMock } from "@sdxc/cloudflare-mocks";
 
 import { createAnalyticsEngine, createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { createJobContext } from "@sdxc/jobs";
-import { BatchedLogger } from "@sdxc/logger";
+import { Log } from "@sdxc/logger";
 import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -98,19 +98,18 @@ function enqueued(): NotifyMessage[] {
 	return queue.sent.map((message) => message.body);
 }
 
-/** Runs the handler over a context carrying the test's database, as the chain would. */
+/** Runs the handler over a context carrying the test's database, and returns its record. */
 async function runJob(db: Database) {
 	let container = new ServiceContainer();
 
-	let ctx = createJobContext(jobs.checkFlows, {
-		id: "message-1",
-		attempts: 1,
-		logger: new BatchedLogger("test"),
-	});
+	let record: Record<string, unknown> = {};
+	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
+	let ctx = createJobContext(jobs.checkFlows, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
 
 	await container.scope(() => checkFlows(ctx));
-	return ctx;
+	log.emit();
+	return record;
 }
 
 async function seedMonitor(db: Database, overrides: Partial<InsertFlowMonitor> = {}) {
@@ -137,7 +136,7 @@ describe("checkFlows", () => {
 		let monitor = await seedMonitor(db, { last_status: "up" });
 		runFlowCheckMock.mockImplementation(async () => failing());
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		expect(enqueued()).toEqual([
 			{
@@ -149,9 +148,7 @@ describe("checkFlows", () => {
 			},
 		]);
 
-		let completed = job.logger.events.find((event) => event.event === "job.check_flows.completed");
-		expect(completed?.successCount).toBe(1);
-		expect(completed?.notified).toBe(1);
+		expect(record).toMatchObject({ "checks.succeeded": 1, "checks.notified": 1 });
 	});
 
 	test("enqueues a recovery when a broken flow starts passing again", async () => {
@@ -185,16 +182,14 @@ describe("checkFlows", () => {
 			}),
 		);
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		expect(enqueued()).toEqual([]);
 
 		let [result] = await FlowMonitor.listResults(db, monitor.id);
 		expect(result?.status).toBe("error");
 
-		let completed = job.logger.events.find((event) => event.event === "job.check_flows.completed");
-		expect(completed?.successCount).toBe(1);
-		expect(completed?.notified).toBe(0);
+		expect(record).toMatchObject({ "checks.succeeded": 1, "checks.notified": 0 });
 	});
 
 	test("stays silent on a flow that keeps passing", async () => {

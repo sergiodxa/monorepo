@@ -74,7 +74,7 @@ export default createController(routes.logout, {
 			);
 
 			if (isFailure(ended)) {
-				ctx.logger.error("auth.end_session_failed", { error: ended.error.message });
+				ctx.log.warn("auth.end_session_failed", { message: ended.error.message });
 				ctx.get(Session)?.destroy();
 
 				return redirect(routes.home.href(), {

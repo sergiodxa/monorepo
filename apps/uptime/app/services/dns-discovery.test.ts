@@ -15,7 +15,6 @@ import type { AnalyticsEngineMock, QueueMock } from "@sdxc/cloudflare-mocks";
 
 import { createAnalyticsEngine, createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { createJobContext } from "@sdxc/jobs";
-import { BatchedLogger } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { ServiceContainer } from "@sdxc/service-container";
@@ -420,11 +419,7 @@ describe("scheduled and on-demand checks", () => {
 			() => new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }),
 		);
 
-		let ctx = createJobContext(jobs.checkDns, {
-			id: "message-1",
-			attempts: 1,
-			logger: new BatchedLogger("test"),
-		});
+		let ctx = createJobContext(jobs.checkDns, { id: "message-1", attempts: 1 });
 		ctx.set(JobDatabase, db, { property: "database" });
 		await container.scope(() => checkDns(ctx));
 

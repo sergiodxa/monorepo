@@ -19,7 +19,7 @@ export default createJobHandler(jobs.enqueuePendingDomains, async (ctx) => {
 	let pending = await TeamDomain.listUnverified(ctx.database);
 
 	if (pending.length === 0) {
-		ctx.logger.info("job.enqueue_pending_domains.none", {});
+		ctx.log.set({ domains: { enqueued: 0 } });
 		return;
 	}
 
@@ -34,5 +34,5 @@ export default createJobHandler(jobs.enqueuePendingDomains, async (ctx) => {
 	 */
 	apportionCostByTeam(pending.map((domain) => domain.team_id));
 
-	ctx.logger.info("job.enqueue_pending_domains.enqueued", { count: pending.length });
+	ctx.log.set({ domains: { enqueued: pending.length } });
 });

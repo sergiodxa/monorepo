@@ -22,7 +22,7 @@ import {
 	createQueue,
 } from "@sdxc/cloudflare-mocks";
 import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
-import { BatchedLogger } from "@sdxc/logger";
+import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { failure } from "@sdxc/result";
@@ -116,8 +116,14 @@ function makeContainer() {
 	return container;
 }
 
-/** Builds the context the handler receives, carrying the database its chain would publish. */
+/**
+ * Builds the context the handler receives, carrying the database its chain would publish,
+ * paired with the closer that ends its log and hands back the record. Both are returned
+ * because a delivery that asks for a retry still leaves a record worth reading.
+ */
 function makeContext(db: Database, monitorId: string, options: { jobId?: string } = {}) {
+	let record: Record<string, unknown> = {};
+	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.checkHttp, {
 		id: "message-1",
 		attempts: 1,
@@ -126,17 +132,29 @@ function makeContext(db: Database, monitorId: string, options: { jobId?: string 
 			monitorId,
 			scheduledAt: 1_700_000_000_000,
 		},
-		logger: new BatchedLogger("test"),
+		log,
 	});
 	ctx.set(JobDatabase, db, { property: "database" });
-	return ctx;
+
+	return {
+		ctx,
+		emit: () => {
+			log.emit();
+			return record;
+		},
+	};
 }
 
-/** Runs the job against `db`, returning its logger so callers can assert on events. */
+/** Runs the job against `db`, returning the record its log emitted. */
 async function runJob(db: Database, monitorId: string, options: { jobId?: string } = {}) {
-	let ctx = makeContext(db, monitorId, options);
+	let { ctx, emit } = makeContext(db, monitorId, options);
 	await makeContainer().scope(() => checkHttp(ctx));
-	return ctx.logger;
+	return emit();
+}
+
+/** One breadcrumb the run left, for the assertions that read a note's own fields. */
+function noteOf(record: Record<string, unknown>, name: string): Log.Note | undefined {
+	return (record.notes as Log.Note[] | undefined)?.find((note) => note.name === name);
 }
 
 /**
@@ -339,15 +357,13 @@ describe("checkHttp classification", () => {
 	test("returns early without recording a result when the monitor doesn't exist", async () => {
 		let { db } = createTestDatabase();
 
-		let logger = await runJob(db, "does-not-exist");
+		let record = await runJob(db, "does-not-exist");
 
 		expect(doFetchMock).not.toHaveBeenCalled();
 		expect(
 			await db.findOne(monitorResults, { where: { monitor_id: "does-not-exist" } }),
 		).toBeNull();
-		expect(
-			logger.events.find((entry) => entry.event === "job.check_http.monitor_not_found"),
-		).toBeDefined();
+		expect(noteOf(record, "monitors.not_found")).toBeDefined();
 	});
 });
 
@@ -511,10 +527,10 @@ describe("checkHttp idempotency", () => {
 		let jobId = `${monitor.id}:1700000000000`;
 
 		await runJob(db, monitor.id, { jobId });
-		let logger = await runJob(db, monitor.id, { jobId });
+		let record = await runJob(db, monitor.id, { jobId });
 
 		expect(doFetchMock).toHaveBeenCalledTimes(1);
-		expect(logger.events.find((entry) => entry.event === "job.check_http.duplicate")).toBeDefined();
+		expect(noteOf(record, "checks.duplicate")).toBeDefined();
 	});
 
 	test("a distinct job id for the same monitor records a second result", async () => {
@@ -559,7 +575,7 @@ describe("checkHttp error handling", () => {
 			throw new Error("Durable Object reset because its code was updated");
 		});
 
-		let ctx = makeContext(db, monitor.id, { jobId: `${monitor.id}:1` });
+		let { ctx } = makeContext(db, monitor.id, { jobId: `${monitor.id}:1` });
 
 		await expect(makeContainer().scope(() => checkHttp(ctx))).rejects.toThrow(Job.Retry);
 		expect(await db.findOne(monitorResults, { where: { monitor_id: monitor.id } })).toBeNull();
@@ -575,12 +591,13 @@ describe("checkHttp error handling", () => {
 			},
 		} as unknown as Database;
 
-		let ctx = makeContext(broken, monitor.id, { jobId: `${monitor.id}:1` });
+		let { ctx, emit } = makeContext(broken, monitor.id, { jobId: `${monitor.id}:1` });
 
 		await expect(makeContainer().scope(() => checkHttp(ctx))).rejects.toThrow(Job.Retry);
-		expect(
-			ctx.logger.events.find((entry) => entry.event === "job.check_http.infrastructure_error"),
-		).toBeDefined();
+		expect(emit()).toMatchObject({
+			outcome: "error",
+			"error.message": "D1_ERROR: network connection lost",
+		});
 	});
 
 	test("an alert-dispatch fault doesn't undo or retry a committed result", async () => {
@@ -596,13 +613,11 @@ describe("checkHttp error handling", () => {
 			return await (realFindMany as (...args: unknown[]) => Promise<unknown>)(table, ...rest);
 		}) as typeof db.findMany;
 
-		let logger = await runJob(db, monitor.id);
+		let record = await runJob(db, monitor.id);
 		db.findMany = realFindMany;
 
 		expect(await db.findOne(monitorResults, { where: { monitor_id: monitor.id } })).not.toBeNull();
-		expect(
-			logger.events.find((entry) => entry.event === "job.check_http.alert_failed"),
-		).toBeDefined();
+		expect(noteOf(record, "notifications.alert_failed")).toBeDefined();
 	});
 });
 
@@ -712,11 +727,12 @@ describe("checkHttp Durable Object wall time", () => {
 				}),
 		);
 
-		let logger = await runJob(db, monitor.id);
+		let record = await runJob(db, monitor.id);
 
-		let completed = logger.events.find((entry) => entry.event === "job.check_http.completed");
-		expect(completed?.responseTimeMs).toBe(12);
-		expect(completed?.doWallTimeMs).toBe(37.5);
+		expect(record).toMatchObject({
+			"check.response_time_ms": 12,
+			"check.do_wall_time_ms": 37.5,
+		});
 	});
 
 	test("keeps the wall time of an unreachable probe, which is the expensive case", async () => {
@@ -730,11 +746,10 @@ describe("checkHttp Durable Object wall time", () => {
 				}),
 		);
 
-		let logger = await runJob(db, monitor.id);
+		let record = await runJob(db, monitor.id);
 
-		let completed = logger.events.find((entry) => entry.event === "job.check_http.completed");
-		expect(completed?.responseTimeMs).toBeNull();
-		expect(completed?.doWallTimeMs).toBe(10_000);
+		expect(record["check.response_time_ms"]).toBeNull();
+		expect(record["check.do_wall_time_ms"]).toBe(10_000);
 	});
 
 	test("reports no wall time rather than zero when the object didn't measure one", async () => {
@@ -744,10 +759,9 @@ describe("checkHttp Durable Object wall time", () => {
 			async () => new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } }),
 		);
 
-		let logger = await runJob(db, monitor.id);
+		let record = await runJob(db, monitor.id);
 
-		let completed = logger.events.find((entry) => entry.event === "job.check_http.completed");
-		expect(completed?.doWallTimeMs).toBeNull();
+		expect(record["check.do_wall_time_ms"]).toBeNull();
 	});
 });
 
@@ -975,13 +989,10 @@ describe("checkHttp metering", () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db);
 
-		let logger = await runJob(db, monitor.id);
+		let record = await runJob(db, monitor.id);
 
 		expect(ingestMock).not.toHaveBeenCalled();
-		let unbillable = logger.events.find(
-			(entry) => entry.event === "job.check_http.unbillable_team",
-		);
-		expect(unbillable?.teamId).toBe("team-1");
+		expect(noteOf(record, "checks.unbillable_team")?.["team.id"]).toBe("team-1");
 		expect(await db.findOne(monitorResults, { where: { monitor_id: monitor.id } })).not.toBeNull();
 	});
 
@@ -993,10 +1004,10 @@ describe("checkHttp metering", () => {
 			failure(new BillingError("refused", { code: "invalid_request", connection: "memory" })),
 		);
 
-		let logger = await runJob(db, monitor.id);
+		let record = await runJob(db, monitor.id);
 
 		expect(await db.findOne(monitorResults, { where: { monitor_id: monitor.id } })).not.toBeNull();
-		expect(logger.events.find((entry) => entry.event === "job.check_http.completed")).toBeDefined();
+		expect(record).toMatchObject({ outcome: "ok", "check.status": "up" });
 	});
 
 	test("bills nothing for a check that never committed a result", async () => {

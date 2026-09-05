@@ -13,7 +13,7 @@ import type { QueueMock } from "@sdxc/cloudflare-mocks";
 
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { createJobContext } from "@sdxc/jobs";
-import { BatchedLogger } from "@sdxc/logger";
+import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { ServiceContainer } from "@sdxc/service-container";
@@ -76,7 +76,7 @@ function enqueued(): NotifyMessage[] {
 	return queue.sent.map((message) => message.body);
 }
 
-/** Runs the handler over a context carrying the test's database, as the chain would. */
+/** Runs the handler over a context carrying the test's database, and returns its record. */
 async function runJob(db: Database) {
 	let container = new ServiceContainer();
 	container.singleton(
@@ -84,15 +84,19 @@ async function runJob(db: Database) {
 		() => new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }),
 	);
 
-	let ctx = createJobContext(jobs.checkSsl, {
-		id: "message-1",
-		attempts: 1,
-		logger: new BatchedLogger("test"),
-	});
+	let record: Record<string, unknown> = {};
+	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
+	let ctx = createJobContext(jobs.checkSsl, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
 
 	await container.scope(() => checkSsl(ctx));
-	return ctx;
+	log.emit();
+	return record;
+}
+
+/** One breadcrumb the run left, for the assertions that read a note's own fields. */
+function noteOf(record: Record<string, unknown>, name: string): Log.Note | undefined {
+	return (record.notes as Log.Note[] | undefined)?.find((note) => note.name === name);
 }
 
 async function seedMonitor(db: Database, overrides: Partial<InsertMonitor> = {}) {
@@ -124,7 +128,7 @@ describe("checkSsl", () => {
 
 		calculateSslStatusMock.mockImplementation(() => ({ status: "expiring", daysUntilExpiry: 5 }));
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		let updated = await Monitor.findByIdForTeam(db, "team-1", monitor.id);
 		expect(updated?.ssl_status).toBe("expiring");
@@ -140,11 +144,12 @@ describe("checkSsl", () => {
 			},
 		]);
 
-		let completed = job.logger.events.find((event) => event.event === "job.check_ssl.completed");
-		expect(completed?.total).toBe(1);
-		expect(completed?.successCount).toBe(1);
-		expect(completed?.errorCount).toBe(0);
-		expect(completed?.notified).toBe(1);
+		expect(record).toMatchObject({
+			"checks.total": 1,
+			"checks.succeeded": 1,
+			"checks.failed": 0,
+			"checks.notified": 1,
+		});
 	});
 
 	test("skips monitors without SSL monitoring enabled", async () => {
@@ -210,22 +215,20 @@ describe("checkSsl", () => {
 			return { status: "expired", daysUntilExpiry: -1 };
 		});
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		expect(enqueued().map((message) => message.monitorId)).toEqual([healthy.id]);
 
-		let completed = job.logger.events.find((event) => event.event === "job.check_ssl.completed");
-		expect(completed?.total).toBe(2);
-		expect(completed?.successCount).toBe(1);
-		expect(completed?.errorCount).toBe(1);
+		expect(record).toMatchObject({
+			"checks.total": 2,
+			"checks.succeeded": 1,
+			"checks.failed": 1,
+		});
 
 		/** The failing monitor's cached fields are untouched — updateById never ran for it. */
 		let failedRow = await Monitor.findByIdForTeam(db, "team-1", failing.id);
 		expect(failedRow?.ssl_last_checked_at).toBeNull();
 
-		let failureEvent = job.logger.events.find(
-			(event) => event.event === "job.check_ssl.monitor_failed",
-		);
-		expect(failureEvent?.monitorId).toBe(failing.id);
+		expect(noteOf(record, "checks.monitor_failed")?.["monitor.id"]).toBe(failing.id);
 	});
 });

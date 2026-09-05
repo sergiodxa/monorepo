@@ -34,6 +34,8 @@ import { monitorContentChecks, monitorResults, monitors } from "~/database/schem
 type CheckHttpContext = CurrentJobContext & { readonly input: CheckHttpInput };
 
 export default createJobHandler(jobs.checkHttp, async (ctx) => {
+	ctx.log.set({ monitor: { id: ctx.input.monitorId }, check: { id: ctx.input.id } });
+
 	try {
 		await execute(ctx);
 	} catch (error) {
@@ -42,27 +44,20 @@ export default createJobHandler(jobs.checkHttp, async (ctx) => {
 		 * monitored-endpoint outcomes are classified into a stored result
 		 * before this point, so the queue should redeliver.
 		 */
-		ctx.logger.error("job.check_http.infrastructure_error", {
-			jobId: ctx.input.id,
-			monitorId: ctx.input.monitorId,
-			error: error instanceof Error ? error.message : String(error),
-		});
+		ctx.log.fail(error);
 		ctx.retry({ cause: error });
 	}
 });
 
 async function execute(ctx: CheckHttpContext): Promise<void> {
 	if (await ctx.database.findOne(monitorResults, { where: { id: ctx.input.id } })) {
-		ctx.logger.info("job.check_http.duplicate", {
-			jobId: ctx.input.id,
-			monitorId: ctx.input.monitorId,
-		});
+		ctx.log.note("checks.duplicate");
 		return;
 	}
 
 	let monitor = await ctx.database.findOne(monitors, { where: { id: ctx.input.monitorId } });
 	if (!monitor) {
-		ctx.logger.info("job.check_http.monitor_not_found", { monitorId: ctx.input.monitorId });
+		ctx.log.note("monitors.not_found");
 		return;
 	}
 
@@ -96,10 +91,7 @@ async function execute(ctx: CheckHttpContext): Promise<void> {
 
 	let committed = await record(ctx, outcome);
 	if (!committed) {
-		ctx.logger.info("job.check_http.duplicate", {
-			jobId: ctx.input.id,
-			monitorId: ctx.input.monitorId,
-		});
+		ctx.log.note("checks.duplicate");
 		return;
 	}
 
@@ -116,8 +108,7 @@ async function execute(ctx: CheckHttpContext): Promise<void> {
 			outcome.responseTimeMs,
 		);
 	} catch (error) {
-		ctx.logger.error("job.check_http.status_write_failed", {
-			monitorId: ctx.input.monitorId,
+		ctx.log.warn("monitors.status_write_failed", {
 			error: error instanceof Error ? error.message : String(error),
 		});
 	}
@@ -140,13 +131,13 @@ async function execute(ctx: CheckHttpContext): Promise<void> {
 	 * what the monitored site's users experience, the second is what the
 	 * Durable Object bills for — a lower bound on it, see {@link DO_WALL_TIME_HEADER}.
 	 */
-	ctx.logger.info("job.check_http.completed", {
-		jobId: ctx.input.id,
-		monitorId: ctx.input.monitorId,
-		status,
-		responseStatus: outcome.responseStatus,
-		responseTimeMs: outcome.responseTimeMs,
-		doWallTimeMs: outcome.doWallTimeMs,
+	ctx.log.set({
+		check: {
+			status,
+			response_status: outcome.responseStatus,
+			response_time_ms: outcome.responseTimeMs,
+			do_wall_time_ms: outcome.doWallTimeMs,
+		},
 	});
 }
 
@@ -190,10 +181,7 @@ async function meter(ctx: CheckHttpContext, teamId: string): Promise<void> {
 	 * this is recorded for visibility.
 	 */
 	if (!ownerId) {
-		ctx.logger.error("job.check_http.unbillable_team", {
-			monitorId: ctx.input.monitorId,
-			teamId,
-		});
+		ctx.log.warn("checks.unbillable_team", { "team.id": teamId });
 		return;
 	}
 
@@ -228,8 +216,7 @@ async function notify(
 			responseTimeMs: outcome.responseTimeMs ?? 0,
 		});
 	} catch (error) {
-		ctx.logger.error("job.check_http.alert_failed", {
-			monitorId: monitor.id,
+		ctx.log.warn("notifications.alert_failed", {
 			error: error instanceof Error ? error.message : String(error),
 		});
 	}

@@ -11,7 +11,7 @@ import type { Transport } from "@sdxc/mail";
 
 import { ManagementClient, SubjectNotFoundError } from "@sdxc/auth/management-client";
 import { createJobContext } from "@sdxc/jobs";
-import { BatchedLogger } from "@sdxc/logger";
+import { Log } from "@sdxc/logger";
 import { Mailer, MailError } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { failure, success } from "@sdxc/result";
@@ -82,7 +82,7 @@ function fakeAdmin(): ManagementClient {
 	} as unknown as ManagementClient;
 }
 
-/** Runs one digest, the way a cron trigger's queue message would. */
+/** Runs one digest the way a cron trigger's queue message would, and returns its record. */
 async function runJob(db: Database, period: DigestPeriod, options: { transport?: Transport } = {}) {
 	let container = new ServiceContainer();
 	container.singleton(
@@ -97,15 +97,19 @@ async function runJob(db: Database, period: DigestPeriod, options: { transport?:
 			? ([jobs.sendTeamDailyDigests, sendTeamDailyDigests] as const)
 			: ([jobs.sendTeamWeeklyDigests, sendTeamWeeklyDigests] as const);
 
-	let ctx = createJobContext(job, {
-		id: "message-1",
-		attempts: 1,
-		logger: new BatchedLogger("test"),
-	});
+	let record: Record<string, unknown> = {};
+	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
+	let ctx = createJobContext(job, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
 
 	await container.scope(() => handler(ctx));
-	return ctx;
+	log.emit();
+	return record;
+}
+
+/** One breadcrumb the run left, for the assertions that read a note's own fields. */
+function noteOf(record: Record<string, unknown>, name: string): Log.Note | undefined {
+	return (record.notes as Log.Note[] | undefined)?.find((note) => note.name === name);
 }
 
 async function seedTeam(db: Database, name: string): Promise<SelectTeam> {
@@ -250,19 +254,18 @@ describe("sendTeamDigests period", () => {
 		let monitor = await seedMonitor(db, team.id, "Api");
 		await seedDay(db, monitor.id, utcDay(1), { checks: 10, successful: 10, status: "up" });
 
-		let job = await runJob(db, "daily");
+		let record = await runJob(db, "daily");
 
 		expect(dailyDigests()).toHaveLength(1);
 		expect(weeklyDigests()).toHaveLength(0);
 		expect(transport.last?.to).toEqual([{ email: "ada@example.com" }]);
 		expect(namesTeam(transport.last?.text, "Acme")).toBe(true);
 
-		let completed = job.logger.events.find(
-			(event) => event.event === "job.send_team_digests.completed",
-		);
-		expect(completed?.period).toBe("daily");
-		expect(completed?.sent).toBe(1);
-		expect(completed?.skipped).toBe(0);
+		expect(record).toMatchObject({
+			"digests.period": "daily",
+			"digests.sent": 1,
+			"digests.skipped": 0,
+		});
 	});
 
 	test("sends the weekly digest when the message names that period", async () => {
@@ -346,12 +349,10 @@ describe("sendTeamDigests recipients", () => {
 			{ touch: true, returnRow: true },
 		);
 
-		let job = await runJob(db, "daily");
+		let record = await runJob(db, "daily");
 
 		expect(transport.messages).toHaveLength(0);
-		expect(
-			job.logger.events.find((event) => event.event === "job.send_team_digests.nobody_due"),
-		).toBeDefined();
+		expect(record).toMatchObject({ "digests.wanted": 0, "digests.sent": 0 });
 		expect((await db.find(memberships, membership.id))?.last_daily_digest_at).toBeNull();
 
 		await runJob(db, "weekly");
@@ -367,12 +368,10 @@ describe("sendTeamDigests recipients", () => {
 		let monitor = await seedMonitor(db, team.id, "Api");
 		await seedDay(db, monitor.id, utcDay(1), { checks: 10, successful: 10, status: "up" });
 
-		let job = await runJob(db, "daily");
+		let record = await runJob(db, "daily");
 
 		expect(transport.messages).toHaveLength(0);
-		expect(
-			job.logger.events.find((event) => event.event === "job.send_team_digests.profile_missing"),
-		).toBeDefined();
+		expect(noteOf(record, "digests.profile_missing")?.["subject.id"]).toBe("subject-1");
 		expect((await db.find(memberships, membership.id))?.last_daily_digest_at).toBeNull();
 	});
 });
@@ -443,11 +442,9 @@ describe("sendTeamDigests stamp", () => {
 		let monitor = await seedMonitor(db, team.id, "Api");
 		await seedDay(db, monitor.id, utcDay(1), { checks: 10, successful: 10, status: "up" });
 
-		let job = await runJob(db, "daily", { transport: new RefusingTransport() });
+		let record = await runJob(db, "daily", { transport: new RefusingTransport() });
 
-		expect(
-			job.logger.events.find((event) => event.event === "job.send_team_digests.email_failed"),
-		).toBeDefined();
+		expect(noteOf(record, "digests.email_failed")?.["subject.id"]).toBe("subject-1");
 		expect((await db.find(memberships, membership.id))?.last_daily_digest_at).toBeNull();
 
 		await runJob(db, "daily");
@@ -463,12 +460,10 @@ describe("sendTeamDigests stamp", () => {
 		await seedDay(db, monitor.id, utcDay(1), { checks: 10, successful: 10, status: "up" });
 		disableAfterListDue(db, monitor.id);
 
-		let job = await runJob(db, "daily");
+		let record = await runJob(db, "daily");
 
 		expect(transport.messages).toHaveLength(0);
-		expect(
-			job.logger.events.find((event) => event.event === "job.send_team_digests.nothing_to_report"),
-		).toBeDefined();
+		expect(noteOf(record, "digests.nothing_to_report")?.["team.id"]).toBe(team.id);
 		expect((await db.find(memberships, membership.id))?.last_daily_digest_at).toBeNull();
 	});
 });

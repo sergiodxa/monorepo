@@ -63,8 +63,8 @@ export default createJobHandler(jobs.sendTrialDigests, async (ctx) => {
 	for (let outcome of settled) {
 		if (!outcome.ok) {
 			errorCount++;
-			ctx.logger.error("job.send_trial_digests.lead_failed", {
-				leadId: outcome.item.id,
+			ctx.log.warn("digests.lead_failed", {
+				"lead.id": outcome.item.id,
 				error: outcome.error instanceof Error ? outcome.error.message : String(outcome.error),
 			});
 			continue;
@@ -74,12 +74,7 @@ export default createJobHandler(jobs.sendTrialDigests, async (ctx) => {
 		else skipped++;
 	}
 
-	ctx.logger.info("job.send_trial_digests.completed", {
-		total: leads.length,
-		sent,
-		skipped,
-		errorCount,
-	});
+	ctx.log.set({ digests: { total: leads.length, sent, skipped, failed: errorCount } });
 });
 
 /**
@@ -101,7 +96,7 @@ async function digest(
 	let targets = entries.map((entry) => toTarget(entry, since)).filter((target) => target !== null);
 
 	if (targets.length === 0) {
-		ctx.logger.info("job.send_trial_digests.nothing_to_report", { leadId: lead.id });
+		ctx.log.note("digests.nothing_to_report", { "lead.id": lead.id });
 		return false;
 	}
 
@@ -119,10 +114,7 @@ async function digest(
 	);
 
 	if (isFailure(result)) {
-		ctx.logger.error("job.send_trial_digests.email_failed", {
-			leadId: lead.id,
-			error: result.error.message,
-		});
+		ctx.log.warn("digests.email_failed", { "lead.id": lead.id, error: result.error.message });
 		return false;
 	}
 
@@ -136,7 +128,7 @@ async function digest(
 	 * and whether any of them was unhealthy is the whole of what makes one of these worth
 	 * having opened, and it is the part that cannot be recovered once the lead is deleted.
 	 */
-	trackTrialProgressEmailSent(ctx.logger, {
+	trackTrialProgressEmailSent(ctx.log, {
 		leadId: lead.id,
 		period: "daily",
 		targets: targets.length,

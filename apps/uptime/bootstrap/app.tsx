@@ -17,7 +17,7 @@ import type { Middleware } from "remix/router";
 
 import billing from "@sdxc/billing/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
-import logger from "@sdxc/logger/middleware";
+import { log } from "@sdxc/logger/middleware";
 import { CloudflareTransport } from "@sdxc/mail/cloudflare";
 import mail from "@sdxc/mail/middleware";
 import { env } from "cloudflare:workers";
@@ -229,6 +229,7 @@ import requireUser from "~/app/http/middleware/require-user";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
 import { createHtmlRenderer } from "~/app/http/render";
 import { polar } from "~/app/lib/billing";
+import { logger } from "~/bootstrap/logger";
 import routes from "~/routes/web";
 
 /**
@@ -278,11 +279,11 @@ export default function application(options: application.Options) {
 		 */
 		headRequests(),
 		asyncContext(),
-		logger,
+		log(logger) as Middleware,
 		/**
 		 * Publishes `ctx.email` on every surface, including machine ones — the
-		 * cron-job ping endpoint dispatches alerts too. Sits after the logger so
-		 * failures from its deferred flush queue can still reach `ctx.logger`.
+		 * cron-job ping endpoint dispatches alerts too. Sits after the log so
+		 * failures from its deferred flush queue can still reach `ctx.log`.
 		 */
 		mail({
 			transport: () => new CloudflareTransport(env.EMAIL),

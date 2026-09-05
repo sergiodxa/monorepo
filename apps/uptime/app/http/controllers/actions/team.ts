@@ -71,11 +71,10 @@ export const deleteTeam = createAction(routes.teamAdminActions.team.delete, asyn
 	let cancelled = await Customer.cancelSubscriptions(ctx.billing, ctx.team.owner_id);
 
 	if (isFailure(cancelled)) {
-		ctx.logger.error("team.delete.cancel_failed", {
+		ctx.log.warn("team.subscription_cancel_refused", {
 			code: cancelled.error.code,
-			providerCode: cancelled.error.providerCode,
+			provider_code: cancelled.error.providerCode,
 			connection: cancelled.error.connection,
-			ownerId: ctx.team.owner_id,
 		});
 	}
 

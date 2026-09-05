@@ -10,7 +10,7 @@
  */
 
 import { notFound } from "@sdxc/http/response/html";
-import { logger } from "@sdxc/logger";
+import { currentLog } from "@sdxc/logger";
 import { inject } from "@sdxc/service-container";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
@@ -25,23 +25,18 @@ import Subtitle from "~/resources/components/subtitle";
 import routes from "~/routes/web";
 
 /**
- * Reduces one settled figure to a renderable number, or logs under `event` and
+ * Reduces one settled figure to a renderable number, or warns under `event` and
  * returns `null` for "unavailable". A fulfilled `0` still renders as `0`, while a
- * rejection or a non-finite value is always logged before it renders as a dash.
+ * rejection or a non-finite value is always recorded before it renders as a dash.
  */
-function reportable(
-	result: PromiseSettledResult<number>,
-	event: string,
-	fields: Record<string, string>,
-): number | null {
+function reportable(result: PromiseSettledResult<number>, event: string): number | null {
 	if (result.status === "fulfilled") {
 		if (Number.isFinite(result.value)) return result.value;
-		logger.error(event, { ...fields, message: `non-finite value: ${result.value}` });
+		currentLog()?.warn(event, { message: `non-finite value: ${result.value}` });
 		return null;
 	}
 
-	logger.error(event, {
-		...fields,
+	currentLog()?.warn(event, {
 		message: result.reason instanceof Error ? result.reason.message : String(result.reason),
 	});
 
@@ -58,7 +53,6 @@ function reportable(
  */
 async function getMonitorPingUsage(
 	db: Database,
-	team: { id: string },
 	monitorId: string,
 ): Promise<{ consumed: number | null; estimated: number | null }> {
 	let now = new Date();
@@ -67,11 +61,9 @@ async function getMonitorPingUsage(
 		Monitor.estimateConsumedPingsByMonitor(db, monitorId, now),
 	]);
 
-	let fields = { monitorId, teamId: team.id };
-
 	return {
-		consumed: reportable(consumedResult, "monitor_usage_card.consumed_unavailable", fields),
-		estimated: reportable(estimatedResult, "monitor_usage_card.estimate_unavailable", fields),
+		consumed: reportable(consumedResult, "monitor.usage_consumed_unavailable"),
+		estimated: reportable(estimatedResult, "monitor.usage_estimate_unavailable"),
 	};
 }
 
@@ -85,7 +77,9 @@ export default createAction(routes.app.team.monitors.cards.usage, {
 		let monitor = await Monitor.findByIdForTeam(db, ctx.team.id, monitorId);
 		if (!monitor) return notFound("Not Found");
 
-		let usage = await getMonitorPingUsage(db, ctx.team, monitor.id);
+		ctx.log.set({ monitor: { id: monitor.id, type: "http" } });
+
+		let usage = await getMonitorPingUsage(db, monitor.id);
 
 		return ctx.render(
 			<StatCard

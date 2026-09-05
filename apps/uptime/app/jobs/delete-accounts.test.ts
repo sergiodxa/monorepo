@@ -19,7 +19,7 @@ import {
 	SubjectNotFoundError,
 } from "@sdxc/auth/management-client";
 import { createJobContext } from "@sdxc/jobs";
-import { BatchedLogger } from "@sdxc/logger";
+import { Log } from "@sdxc/logger";
 import { Mailer, MailError } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { failure, isFailure, success, unwrap } from "@sdxc/result";
@@ -169,15 +169,19 @@ async function runJob(db: Database, mailTransport: Transport = transport) {
 	container.singleton(Mailer, () => new Mailer({ transport: mailTransport, from: MAIL_FROM }));
 	container.instance(ManagementClient, fakeAdmin());
 
-	let ctx = createJobContext(jobs.deleteAccounts, {
-		id: "message-1",
-		attempts: 1,
-		logger: new BatchedLogger("test"),
-	});
+	let record: Record<string, unknown> = {};
+	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
+	let ctx = createJobContext(jobs.deleteAccounts, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
 
 	await container.scope(() => deleteAccounts(ctx));
-	return ctx;
+	log.emit();
+	return record;
+}
+
+/** One breadcrumb the run left, for the assertions that read a note's own fields. */
+function noteOf(record: Record<string, unknown>, name: string): Log.Note | undefined {
+	return (record.notes as Log.Note[] | undefined)?.find((note) => note.name === name);
 }
 
 async function createTeamRow(db: Database, overrides: Partial<SelectTeam> = {}) {
@@ -220,10 +224,15 @@ beforeEach(() => {
 describe("deleteAccounts", () => {
 	test("does nothing at all when the queue is empty", async () => {
 		let { db } = createTestDatabase();
-		await runJob(db);
+		let record = await runJob(db);
 
 		expect(listMock).not.toHaveBeenCalled();
 		expect(transport.messages).toHaveLength(0);
+		expect(record).toMatchObject({
+			"accounts.total": 0,
+			"accounts.deleted": 0,
+			"accounts.failed": 0,
+		});
 	});
 
 	test("erases a queued account, mails the confirmation, and only then drops the request", async () => {
@@ -245,7 +254,7 @@ describe("deleteAccounts", () => {
 		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
 		await sell("subject-1");
 
-		await runJob(db);
+		let record = await runJob(db);
 
 		expect(cancelMock).toHaveBeenCalledTimes(1);
 		expect(await heldSubscriptions("subject-1")).toBe(0);
@@ -258,6 +267,17 @@ describe("deleteAccounts", () => {
 
 		/** The request is gone, which is the only thing that says "finished". */
 		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).toBeNull();
+
+		expect(record).toMatchObject({
+			"accounts.total": 1,
+			"accounts.deleted": 1,
+			"accounts.failed": 0,
+		});
+		expect(noteOf(record, "accounts.deleted")).toMatchObject({
+			"subject.id": "subject-1",
+			teams_deleted: 1,
+			subscriptions_revoked: 1,
+		});
 	});
 
 	test("leaves a non-owner's teams standing and removes only their membership", async () => {
@@ -291,13 +311,16 @@ describe("deleteAccounts", () => {
 
 		billing.fail("subscriptions.list");
 
-		await runJob(db);
+		let record = await runJob(db);
 
 		expect(await db.findOne(teams, { where: { id: team.id } })).not.toBeNull();
 		expect(await db.count(memberships, { where: { subject_id: "subject-1" } })).toBe(1);
 		expect(transport.messages).toHaveLength(0);
 		/** Still queued, which is the retry: tomorrow's run tries again. */
 		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).not.toBeNull();
+
+		expect(record).toMatchObject({ "accounts.deleted": 0, "accounts.failed": 1 });
+		expect(noteOf(record, "accounts.erasure_failed")?.["subject.id"]).toBe("subject-1");
 	});
 
 	test("keeps the request when the confirmation cannot be sent, even though the data is gone", async () => {
@@ -414,10 +437,17 @@ describe("deleteAccounts", () => {
 		addresses.set("colleague-2", "two@example.com");
 		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
 
-		await runJob(db);
+		let record = await runJob(db);
 
 		expect(notifiedAddresses(transport.messages)).toEqual(["two@example.com"]);
 		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).toBeNull();
+
+		expect(noteOf(record, "accounts.member_profile_missing")?.["subject.id"]).toBe("colleague-1");
+		expect(noteOf(record, "accounts.members_notified")).toMatchObject({
+			teams: 1,
+			notified: 1,
+			skipped: 1,
+		});
 	});
 
 	test("finishes the deletion when the provider refuses this app's credentials", async () => {
@@ -450,11 +480,14 @@ describe("deleteAccounts", () => {
 		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
 
 		let selective = new SelectiveTransport((message) => message.email instanceof TeamDeletedEmail);
-		await runJob(db, selective);
+		let record = await runJob(db, selective);
 
 		expect(notifiedAddresses(selective.messages)).toEqual(["one@example.com"]);
 		expect(await db.findOne(teams, { where: { id: team.id } })).toBeNull();
 		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).toBeNull();
+
+		expect(noteOf(record, "accounts.member_email_failed")?.["subject.id"]).toBe("colleague-1");
+		expect(record).toMatchObject({ "accounts.deleted": 1, "accounts.failed": 0 });
 	});
 
 	test("one failing request does not stop the others in the queue", async () => {
@@ -473,12 +506,18 @@ describe("deleteAccounts", () => {
 		await sell("subject-1");
 		billing.fail("subscriptions.cancel");
 
-		await runJob(db);
+		let record = await runJob(db);
 
 		expect(await db.findOne(teams, { where: { id: first.id } })).not.toBeNull();
 		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).not.toBeNull();
 
 		expect(await db.findOne(teams, { where: { id: second.id } })).toBeNull();
 		expect(await AccountDeletion.findBySubjectId(db, "subject-2")).toBeNull();
+
+		expect(record).toMatchObject({
+			"accounts.total": 2,
+			"accounts.deleted": 1,
+			"accounts.failed": 1,
+		});
 	});
 });

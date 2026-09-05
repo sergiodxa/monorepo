@@ -16,6 +16,7 @@ import { AuthError, AuthErrorCode } from "@sdxc/auth/auth-error";
 import { contextOf } from "@sdxc/auth/remix/context";
 import { redirect } from "@sdxc/http/response";
 import { Location } from "@sdxc/location";
+import { currentLog } from "@sdxc/logger";
 import { isFailure, wrap } from "@sdxc/result";
 import { inject } from "@sdxc/service-container";
 import { border, fg } from "@sdxc/u/color";
@@ -69,7 +70,7 @@ async function resolveTeam(db: Database, idToken: IdToken) {
 	 */
 	let created = await Team.createTeam(db, idToken);
 
-	trackAccountCreated(getContext().logger, {
+	trackAccountCreated(currentLog(), {
 		ownerId: idToken.subject,
 		fromTrial: false,
 		watchCount: 0,
@@ -152,12 +153,11 @@ export default createController(routes.auth, {
 			if (isFailure(finished)) {
 				let error = finished.error;
 
-				ctx.logger.error("auth.callback_failed", {
-					error: error.message,
-					stack: error.stack,
-					code: error instanceof AuthError ? error.code : undefined,
-					oauthError: ctx.url.searchParams.get("error"),
-					oauthErrorDescription: ctx.url.searchParams.get("error_description"),
+				ctx.log.warn("auth.callback_failed", {
+					code: error instanceof AuthError ? error.code : null,
+					message: error.message,
+					oauth_error: ctx.url.searchParams.get("error"),
+					oauth_error_description: ctx.url.searchParams.get("error_description"),
 				});
 
 				if (AuthError.is(error, AuthErrorCode.MissingIdToken)) {
@@ -170,6 +170,13 @@ export default createController(routes.auth, {
 			let grant = finished.data;
 			let idToken = grant.idToken;
 
+			/**
+			 * Set here rather than by the auth middleware, which ran before this request had
+			 * a session to resolve anybody from, so the record that provisions an account is
+			 * attributed to the subject it provisioned it for.
+			 */
+			ctx.log.set({ user: { id: idToken.subject } });
+
 			let customer = await Customer.provision(ctx.billing, idToken);
 
 			/**
@@ -178,11 +185,10 @@ export default createController(routes.auth, {
 			 * meantime, so a platform outage costs a login nothing.
 			 */
 			if (isFailure(customer)) {
-				ctx.logger.error("auth.customer_provision_failed", {
+				ctx.log.warn("auth.customer_provision_failed", {
 					code: customer.error.code,
-					providerCode: customer.error.providerCode,
+					provider_code: customer.error.providerCode,
 					connection: customer.error.connection,
-					subject: idToken.subject,
 				});
 			}
 

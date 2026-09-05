@@ -1,13 +1,16 @@
 /**
- * Structured `funnel.*` log events for each step between an anonymous URL
- * probe and a paying subscription, so a question about one property — a
- * campaign, a check result — can be answered from the individual event. Every
- * property type carries hostnames and opaque ids only; {@link scrub} redacts
- * any string that looks like an address, URL, or token before it ships.
+ * Structured `funnel.*` records for each step between an anonymous URL probe
+ * and a paying subscription, written onto the invocation's log as `funnel.*`
+ * fields — so a question about one property, a campaign or a check result, is
+ * a query — and as a note carrying the same properties. Every property type
+ * carries hostnames and opaque ids only; {@link scrub} redacts any string
+ * that looks like an address, URL, or token before it ships.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import type { Log } from "@sdxc/logger";
 
 import type { TrialAttribution } from "~/app/http/middleware/attribution";
 import type { MonitorStatus } from "~/database/schema";
@@ -46,13 +49,14 @@ export type FunnelEventName =
 	| "alert_configured";
 
 /**
- * The one method this module needs from a logger, so any caller can pass whatever logger
- * it already holds, `undefined` included: an unrecorded event costs only a missing report
- * line, while the caller's own request completes regardless.
+ * The two methods this module needs from the invocation's log, so any caller can pass the
+ * `ctx.log` or `currentLog()` it already holds, `undefined` included: an unrecorded event
+ * costs only a missing report line, while the caller's own request completes regardless.
  */
-export interface FunnelEventSink {
-	info(event: string, payload?: Record<string, unknown>): void;
-}
+export type FunnelEventSink = Pick<Log, "set" | "note">;
+
+/** What a funnel step may say about itself: scalars only, so every property is a field. */
+type FunnelProperties = Record<string, Log.Value | undefined>;
 
 /** The three campaign fields every event may carry, as they are named in an event. */
 export interface FunnelAttribution {
@@ -112,8 +116,8 @@ export function hostnameOf(url: string): string | null {
  * `undefined` so an absent property stays absent. A backstop behind the property
  * interfaces, for a `string` field added in a hurry; numbers and booleans pass through.
  */
-function scrub(properties: Record<string, unknown>): Record<string, unknown> {
-	let safe: Record<string, unknown> = {};
+function scrub(properties: FunnelProperties): Record<string, Log.Value> {
+	let safe: Record<string, Log.Value> = {};
 
 	for (let [key, value] of Object.entries(properties)) {
 		if (value === undefined) continue;
@@ -130,18 +134,20 @@ function scrub(properties: Record<string, unknown>): Record<string, unknown> {
 }
 
 /**
- * Emits one event, and swallows anything that goes wrong doing so.
- *
- * Every caller here sits on a path a person is waiting on — a form submission, a sign-in, an
- * email send — so measuring a step always leaves that step to succeed or fail on its own.
+ * Records one step as `funnel.step` plus one `funnel.*` field per property, so the record
+ * is queryable by any of them, and as a note so a record carrying two steps keeps both.
+ * Swallows anything that goes wrong doing so: every caller sits on a path a person is
+ * waiting on, so measuring a step always leaves that step to succeed or fail on its own.
  */
 function emit(
 	sink: FunnelEventSink | undefined,
 	event: FunnelEventName,
-	properties: Record<string, unknown>,
+	properties: FunnelProperties,
 ): void {
 	try {
-		sink?.info(`${EVENT_PREFIX}.${event}`, scrub(properties));
+		let safe = scrub(properties);
+		sink?.set({ [EVENT_PREFIX]: { step: event, ...safe } });
+		sink?.note(`${EVENT_PREFIX}.${event}`, safe);
 	} catch {}
 }
 

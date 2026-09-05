@@ -15,7 +15,7 @@
  */
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
-import { BatchedLogger } from "@sdxc/logger";
+import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { ServiceContainer } from "@sdxc/service-container";
@@ -81,14 +81,19 @@ async function runJob() {
 	let container = new ServiceContainer();
 	container.singleton(Mailer, () => new Mailer({ transport, from: MAIL_FROM }));
 
-	let ctx = createJobContext(jobs.sendFunnelReport, {
-		id: "message-1",
-		attempts: 1,
-		logger: new BatchedLogger("test"),
-	});
+	let record: Record<string, unknown> = {};
+	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
+	let ctx = createJobContext(jobs.sendFunnelReport, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
 
 	await container.scope(() => sendFunnelReport(ctx));
+	log.emit();
+	return record;
+}
+
+/** One breadcrumb the run left, for the assertions that read the narrative of a quiet day. */
+function noteOf(record: Record<string, unknown>, name: string): Log.Note | undefined {
+	return (record.notes as Log.Note[] | undefined)?.find((note) => note.name === name);
 }
 
 /** A lead created yesterday, with a watch under it — one submission of the free form. */
@@ -114,9 +119,10 @@ describe("staying quiet", () => {
 		env.FUNNEL_REPORT_TO = undefined;
 		await seedSubmission("ada@example.com");
 
-		await runJob();
+		let record = await runJob();
 
 		expect(reports()).toHaveLength(0);
+		expect(noteOf(record, "funnel.no_recipient")).toBeDefined();
 	});
 
 	test("still writes the day's row when there is nobody to send it to", async () => {
@@ -129,9 +135,10 @@ describe("staying quiet", () => {
 	});
 
 	test("sends nothing on a day when nothing at all happened", async () => {
-		await runJob();
+		let record = await runJob();
 
 		expect(reports()).toHaveLength(0);
+		expect(noteOf(record, "funnel.nothing_to_report")).toBeDefined();
 	});
 
 	test("still writes a row of zeroes for a day when nothing happened", async () => {
@@ -158,12 +165,21 @@ describe("what the day counts", () => {
 	test("counts a submission as one lead and one URL, and its confirmation as one email", async () => {
 		await seedSubmission("ada@example.com");
 
-		await runJob();
+		let record = await runJob();
 
 		let row = await TrialDailyStats.findByDate(db, yesterday());
 		expect(row?.new_leads).toBe(1);
 		expect(row?.urls_checked).toBe(1);
 		expect(row?.emails_sent).toBe(1);
+
+		expect(record).toMatchObject({
+			"funnel.date": yesterday(),
+			"funnel.new_leads": 1,
+			"funnel.urls_checked": 1,
+			"funnel.emails_sent": 1,
+			"funnel.free_signups": 0,
+			"funnel.paid_conversions": 0,
+		});
 	});
 
 	test("counts the digests, change emails and wrap-ups the day's stamps record", async () => {

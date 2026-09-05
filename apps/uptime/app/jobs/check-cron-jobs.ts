@@ -52,19 +52,21 @@ export default createJobHandler(jobs.checkCronJobs, async (ctx) => {
 		}
 
 		errorCount++;
-		ctx.logger.error("job.check_cron_jobs.monitor_failed", {
-			monitorId: outcome.item.id,
+		ctx.log.warn("checks.monitor_failed", {
+			"monitor.id": outcome.item.id,
 			error: outcome.error instanceof Error ? outcome.error.message : String(outcome.error),
 		});
 	}
 
 	await enqueueNotifications(notifications);
 
-	ctx.logger.info("job.check_cron_jobs.completed", {
-		total: monitors.length,
-		transitioned,
-		errorCount,
-		notified: notifications.length,
+	ctx.log.set({
+		checks: {
+			total: monitors.length,
+			transitioned,
+			failed: errorCount,
+			notified: notifications.length,
+		},
 	});
 });
 
@@ -91,17 +93,17 @@ async function evaluate(
 			 * An enabled monitor whose expression no longer parses can never be measured,
 			 * and nothing else in the system says so; logging it here surfaces the problem.
 			 */
-			ctx.logger.error("job.check_cron_jobs.unschedulable", {
-				monitorId: monitor.id,
-				cronExpression: monitor.cron_expression,
+			ctx.log.warn("monitors.unschedulable", {
+				"monitor.id": monitor.id,
+				cron_expression: monitor.cron_expression,
 			});
 			return null;
 		}
 
 		await CronJobMonitor.setNextExpected(ctx.database, monitor.id, repaired);
-		ctx.logger.info("job.check_cron_jobs.repaired_next_expected", {
-			monitorId: monitor.id,
-			nextExpectedAt: repaired,
+		ctx.log.note("monitors.next_expected_repaired", {
+			"monitor.id": monitor.id,
+			next_expected_at: repaired,
 		});
 		return null;
 	}

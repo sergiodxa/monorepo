@@ -82,9 +82,9 @@ export default createJobHandler(jobs.checkTcp, async (ctx) => {
 			 * this drops the event and says so rather than failing the sweep.
 			 */
 			if (ownerId === undefined) {
-				ctx.logger.error("job.check_tcp.unbillable_team", {
-					monitorId: outcome.item.id,
-					teamId: outcome.item.team_id,
+				ctx.log.warn("checks.unbillable_team", {
+					"monitor.id": outcome.item.id,
+					"team.id": outcome.item.team_id,
 				});
 				continue;
 			}
@@ -100,8 +100,8 @@ export default createJobHandler(jobs.checkTcp, async (ctx) => {
 		}
 
 		errorCount++;
-		ctx.logger.error("job.check_tcp.monitor_failed", {
-			monitorId: outcome.item.id,
+		ctx.log.warn("checks.monitor_failed", {
+			"monitor.id": outcome.item.id,
 			error: outcome.error instanceof Error ? outcome.error.message : String(outcome.error),
 		});
 	}
@@ -110,12 +110,14 @@ export default createJobHandler(jobs.checkTcp, async (ctx) => {
 	/** Every ping in one call, so a sweep of eighty monitors costs one subrequest. */
 	await ingestPings(polar, pings);
 
-	ctx.logger.info("job.check_tcp.completed", {
-		total: monitors.length,
-		successCount,
-		errorCount,
-		notified: notifications.length,
-		ingested: pings.length,
+	ctx.log.set({
+		checks: {
+			total: monitors.length,
+			succeeded: successCount,
+			failed: errorCount,
+			notified: notifications.length,
+			ingested: pings.length,
+		},
 	});
 });
 

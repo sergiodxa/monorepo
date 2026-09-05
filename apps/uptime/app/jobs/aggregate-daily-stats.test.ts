@@ -15,7 +15,7 @@
 import type { Result } from "@sdxc/result";
 
 import { createJobContext } from "@sdxc/jobs";
-import { BatchedLogger } from "@sdxc/logger";
+import { Log } from "@sdxc/logger";
 import { failure, success } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -62,17 +62,21 @@ let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let aggregateDailyStats = (await import("./aggregate-daily-stats")).default;
 
-/** Runs the handler over a context carrying the test's database, as the chain would. */
+/** Runs the handler over a context carrying the test's database, and returns its record. */
 async function runJob(db: Database) {
-	let ctx = createJobContext(jobs.aggregateDailyStats, {
-		id: "message-1",
-		attempts: 1,
-		logger: new BatchedLogger("test"),
-	});
+	let record: Record<string, unknown> = {};
+	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
+	let ctx = createJobContext(jobs.aggregateDailyStats, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
 
 	await aggregateDailyStats(ctx);
-	return ctx;
+	log.emit();
+	return record;
+}
+
+/** One breadcrumb the run left, for the assertions that read a note's own fields. */
+function noteOf(record: Record<string, unknown>, name: string): Log.Note | undefined {
+	return (record.notes as Log.Note[] | undefined)?.find((note) => note.name === name);
 }
 
 /**
@@ -129,7 +133,7 @@ describe("aggregateDailyStats", () => {
 			]),
 		);
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		let rows = await db.findMany(monitorDailyStats, {
 			where: { monitor_id: "http-1", monitor_type: "http" },
@@ -142,25 +146,19 @@ describe("aggregateDailyStats", () => {
 		expect(rows[0]!.max_response_time_ms).toBe(341);
 		expect(rows[0]!.status).toBe("degraded");
 
-		let completed = job.logger.events.find(
-			(event) => event.event === "job.aggregate_daily_stats.completed",
-		);
-		expect(completed?.written).toBe(1);
+		expect(record).toMatchObject({ "stats.written": 1 });
 	});
 
 	test("skips HTTP aggregation and writes nothing when the analytics query fails", async () => {
 		let { db } = createTestDatabase();
 		getHttpDailyAggregateMock.mockImplementation(async () => failure(new Error("query failed")));
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		let rows = await db.findMany(monitorDailyStats, { where: { monitor_type: "http" } });
 		expect(rows).toHaveLength(0);
 
-		let failedEvent = job.logger.events.find(
-			(event) => event.event === "job.aggregate_daily_stats.http_failed",
-		);
-		expect(failedEvent?.error).toBe("query failed");
+		expect(noteOf(record, "stats.http_source_failed")?.error).toBe("query failed");
 	});
 
 	test("aggregates DNS results, classifying a monitor's day by success ratio and rounding response times", async () => {
@@ -324,20 +322,13 @@ describe("aggregateDailyStats", () => {
 			),
 		);
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		let written = await db.findMany(monitorDailyStats, { where: { monitor_type: "http" } });
 		expect(written.map((row) => row.monitor_id).sort()).toEqual(["http-1", "http-3"]);
 
-		let completed = job.logger.events.find(
-			(event) => event.event === "job.aggregate_daily_stats.completed",
-		);
-		expect(completed?.written).toBe(2);
-
-		let failedEvent = job.logger.events.find(
-			(event) => event.event === "job.aggregate_daily_stats.write_failed",
-		);
-		expect(failedEvent?.monitorId).toBe("http-2");
+		expect(record).toMatchObject({ "stats.written": 2 });
+		expect(noteOf(record, "stats.write_failed")?.["monitor.id"]).toBe("http-2");
 	});
 
 	test("re-running the job replaces the day's row instead of duplicating it", async () => {

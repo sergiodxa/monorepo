@@ -15,7 +15,7 @@ import type { AnalyticsEngineMock, QueueMock } from "@sdxc/cloudflare-mocks";
 import { BillingError } from "@sdxc/billing";
 import { createAnalyticsEngine, createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { createJobContext } from "@sdxc/jobs";
-import { BatchedLogger } from "@sdxc/logger";
+import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { failure } from "@sdxc/result";
@@ -128,22 +128,31 @@ function enqueued(): NotifyMessage[] {
 	return queue.sent.map((message) => message.body);
 }
 
-/** Runs the handler over a context carrying the test's database, as the chain would. */
+/** Runs the handler over a context carrying the test's database, and returns its record. */
 async function runJob(db: Database) {
 	let container = new ServiceContainer();
 	container.singleton(
 		Mailer,
 		() => new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }),
 	);
-	let ctx = createJobContext(jobs.checkDns, {
-		id: "message-1",
-		attempts: 1,
-		logger: new BatchedLogger("test"),
-	});
+	let record: Record<string, unknown> = {};
+	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
+	let ctx = createJobContext(jobs.checkDns, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
 
 	await container.scope(() => checkDns(ctx));
-	return ctx;
+	log.emit();
+	return record;
+}
+
+/** One breadcrumb the run left, for the assertions that read a note's own fields. */
+function noteOf(record: Record<string, unknown>, name: string): Log.Note | undefined {
+	return (record.notes as Log.Note[] | undefined)?.find((note) => note.name === name);
+}
+
+/** Every breadcrumb of one name the run left, for the assertions that count them. */
+function notesOf(record: Record<string, unknown>, name: string): Log.Note[] {
+	return (record.notes as Log.Note[] | undefined)?.filter((note) => note.name === name) ?? [];
 }
 
 async function seedMonitor(
@@ -232,7 +241,7 @@ describe("checkDns", () => {
 			sweepOf(name, [answered(name, "A", ["5.6.7.8"], 42)]),
 		);
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		expect(sweepDnsNameMock).toHaveBeenCalledWith("example.com");
 
@@ -259,12 +268,13 @@ describe("checkDns", () => {
 			},
 		]);
 
-		let completed = job.logger.events.find((event) => event.event === "job.check_dns.completed");
-		expect(completed?.total).toBe(1);
-		expect(completed?.successCount).toBe(1);
-		expect(completed?.errorCount).toBe(0);
-		expect(completed?.deferredCount).toBe(0);
-		expect(completed?.notified).toBe(1);
+		expect(record).toMatchObject({
+			"checks.total": 1,
+			"checks.succeeded": 1,
+			"checks.failed": 0,
+			"checks.deferred": 0,
+			"checks.notified": 1,
+		});
 	});
 
 	test("skips monitors with checking disabled", async () => {
@@ -311,15 +321,14 @@ describe("checkDns", () => {
 			sweepOf(name, [answered(name, "A", ["1.2.3.4"])]),
 		);
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		let result = await onlyResult(db, monitor.id);
 		expect(result.status).toBe("ok");
 		expect(result.records_checked).toBe(1);
 		expect(sendBatch).not.toHaveBeenCalled();
 
-		let completed = job.logger.events.find((event) => event.event === "job.check_dns.completed");
-		expect(completed?.notified).toBe(0);
+		expect(record).toMatchObject({ "checks.notified": 0 });
 	});
 
 	test("carries the monitor's pre-update last_status so the consumer can detect a recovery", async () => {
@@ -352,24 +361,22 @@ describe("checkDns", () => {
 			});
 
 		try {
-			let job = await runJob(db);
+			let record = await runJob(db);
 
 			expect(enqueued().map((message) => message.monitorId)).toEqual([healthy.id]);
 
-			let completed = job.logger.events.find((event) => event.event === "job.check_dns.completed");
-			expect(completed?.total).toBe(2);
-			expect(completed?.successCount).toBe(1);
-			expect(completed?.errorCount).toBe(1);
+			expect(record).toMatchObject({
+				"checks.total": 2,
+				"checks.succeeded": 1,
+				"checks.failed": 1,
+			});
 
 			/** The failing monitor's cached fields are untouched — recordCheckResult never ran. */
 			let failedRow = await DnsMonitor.findByIdForTeam(db, "team-1", failing.id);
 			expect(failedRow?.last_status).toBeNull();
 			expect(await DnsMonitor.listResults(db, failing.id)).toHaveLength(0);
 
-			let failureEvent = job.logger.events.find(
-				(event) => event.event === "job.check_dns.monitor_failed",
-			);
-			expect(failureEvent?.monitorId).toBe(failing.id);
+			expect(noteOf(record, "checks.monitor_failed")?.["monitor.id"]).toBe(failing.id);
 		} finally {
 			listNames.mockRestore();
 		}
@@ -379,7 +386,7 @@ describe("checkDns", () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db, { domain: "unimported.example.com" });
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		expect(sweepDnsNameMock.mock.calls).toEqual([["unimported.example.com"]]);
 
@@ -387,9 +394,9 @@ describe("checkDns", () => {
 		 * A domain nobody pasted a zone file for legitimately covers its apex and nothing
 		 * else, which is a different situation from an import that produced nothing.
 		 */
-		let event = job.logger.events.find((entry) => entry.event === "job.check_dns.no_tracked_names");
-		expect(event?.monitorId).toBe(monitor.id);
-		expect(event?.zoneFileImported).toBe(false);
+		let note = noteOf(record, "checks.no_tracked_names");
+		expect(note?.["monitor.id"]).toBe(monitor.id);
+		expect(note?.zone_file_imported).toBe(false);
 	});
 });
 
@@ -513,7 +520,7 @@ describe("checkDns query budget", () => {
 		/** Past the cap an import would have refused, which is the only way a monitor gets here. */
 		await seedNames(db, monitor.id, 105, "capped.example.com");
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		expect(sweepDnsNameMock).toHaveBeenCalledTimes(MAX_NAMES_PER_CHECK);
 
@@ -526,10 +533,8 @@ describe("checkDns query budget", () => {
 		expect(result.status).toBe("error");
 		expect(result.records_missing).toBe(0);
 
-		let truncated = job.logger.events.find(
-			(event) => event.event === "job.check_dns.sweep_truncated",
-		);
-		expect(truncated?.monitorId).toBe(monitor.id);
+		let truncated = noteOf(record, "checks.sweep_truncated");
+		expect(truncated?.["monitor.id"]).toBe(monitor.id);
 		expect(truncated?.swept).toBe(MAX_NAMES_PER_CHECK);
 	});
 
@@ -542,7 +547,7 @@ describe("checkDns query budget", () => {
 			monitors.push(monitor);
 		}
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		/**
 		 * 600 queries is 100 names: three monitors are swept, two in full and one truncated,
@@ -550,10 +555,10 @@ describe("checkDns query budget", () => {
 		 */
 		expect(sweepDnsNameMock).toHaveBeenCalledTimes(100);
 
-		let deferred = job.logger.events.filter((event) => event.event === "job.check_dns.deferred");
+		let deferred = notesOf(record, "checks.deferred");
 		expect(deferred).toHaveLength(1);
 
-		let deferredId = deferred[0]?.monitorId;
+		let deferredId = deferred[0]?.["monitor.id"];
 		/** Deferred entirely: no result row, no cached status, and nothing billed for it. */
 		expect(await DnsMonitor.listResults(db, String(deferredId))).toHaveLength(0);
 		let row = await DnsMonitor.findByIdForTeam(db, "team-1", String(deferredId));
@@ -562,11 +567,12 @@ describe("checkDns query budget", () => {
 		expect(row?.next_due_at).not.toBeNull();
 		expect(row!.next_due_at!).toBeLessThanOrEqual(Date.now());
 
-		let completed = job.logger.events.find((event) => event.event === "job.check_dns.completed");
-		expect(completed?.successCount).toBe(3);
-		expect(completed?.deferredCount).toBe(1);
-		expect(completed?.errorCount).toBe(0);
-		expect(completed?.ingested).toBe(0);
+		expect(record).toMatchObject({
+			"checks.succeeded": 3,
+			"checks.deferred": 1,
+			"checks.failed": 0,
+			"checks.ingested": 0,
+		});
 
 		expect(monitors).toHaveLength(4);
 	});
@@ -652,7 +658,7 @@ describe("checkDns ping reporting", () => {
 		let second = await seedMonitor(db, { domain: "two.example.com" });
 		let third = await seedMonitor(db, { domain: "three.example.com" });
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		/** One call, three pings — a sweep of eighty monitors still costs a single subrequest. */
 		expect(ingestMock).toHaveBeenCalledTimes(1);
@@ -668,8 +674,7 @@ describe("checkDns ping reporting", () => {
 			metadata: { teamId: "team-1", type: "dns", monitorId: first.id },
 		});
 
-		let completed = job.logger.events.find((event) => event.event === "job.check_dns.completed");
-		expect(completed?.ingested).toBe(3);
+		expect(record).toMatchObject({ "checks.ingested": 3 });
 	});
 
 	test("keys each ping on the result row its check wrote", async () => {
@@ -693,14 +698,12 @@ describe("checkDns ping reporting", () => {
 		/** A team row that's gone, leaving the ping without a billing customer to charge. */
 		let orphan = await seedMonitor(db, { domain: "orphan.example.com" }, "team-2");
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		expect(ingestedEvents().map((event) => event.metadata?.monitorId)).toEqual([billable.id]);
-		let unbillable = job.logger.events.find(
-			(event) => event.event === "job.check_dns.unbillable_team",
-		);
-		expect(unbillable?.monitorId).toBe(orphan.id);
-		expect(unbillable?.teamId).toBe("team-2");
+		let unbillable = noteOf(record, "checks.unbillable_team");
+		expect(unbillable?.["monitor.id"]).toBe(orphan.id);
+		expect(unbillable?.["team.id"]).toBe("team-2");
 
 		/**
 		 * Its check still ran, was still recorded, and still counts as a success; the missing
@@ -710,9 +713,7 @@ describe("checkDns ping reporting", () => {
 			[billable.id, orphan.id].sort((a, b) => a.localeCompare(b)),
 		);
 		expect(await DnsMonitor.listResults(db, orphan.id)).toHaveLength(1);
-		let completed = job.logger.events.find((event) => event.event === "job.check_dns.completed");
-		expect(completed?.successCount).toBe(2);
-		expect(completed?.ingested).toBe(1);
+		expect(record).toMatchObject({ "checks.succeeded": 2, "checks.ingested": 1 });
 	});
 
 	test("a check that threw produces neither a data point nor a ping", async () => {
@@ -756,10 +757,9 @@ describe("checkDns ping reporting", () => {
 			failure(new BillingError("refused", { code: "invalid_request", connection: "memory" })),
 		);
 
-		let job = await runJob(db);
+		let record = await runJob(db);
 
 		expect(await DnsMonitor.listResults(db, monitor.id)).toHaveLength(1);
-		let completed = job.logger.events.find((event) => event.event === "job.check_dns.completed");
-		expect(completed?.successCount).toBe(1);
+		expect(record).toMatchObject({ "checks.succeeded": 1 });
 	});
 });

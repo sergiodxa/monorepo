@@ -66,7 +66,7 @@ export const createMonitor = createAction(routes.actions.monitor.http.create, as
 	 */
 	let monitorCount = await Monitor.countByTeam(db, ctx.team.id);
 	if (monitorCount === ACTIVATION_MONITOR_COUNT) {
-		trackSecondMonitorCreated(ctx.logger, {
+		trackSecondMonitorCreated(ctx.log, {
 			teamId: ctx.team.id,
 			authorId: viewer.id,
 			monitorType: "http",

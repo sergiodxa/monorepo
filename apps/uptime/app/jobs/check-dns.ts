@@ -133,9 +133,9 @@ export default createJobHandler(jobs.checkDns, async (ctx) => {
 			 * the sweep going.
 			 */
 			if (ownerId === undefined) {
-				ctx.logger.error("job.check_dns.unbillable_team", {
-					monitorId: outcome.item.id,
-					teamId: outcome.item.team_id,
+				ctx.log.warn("checks.unbillable_team", {
+					"monitor.id": outcome.item.id,
+					"team.id": outcome.item.team_id,
 				});
 				continue;
 			}
@@ -156,8 +156,8 @@ export default createJobHandler(jobs.checkDns, async (ctx) => {
 		}
 
 		errorCount++;
-		ctx.logger.error("job.check_dns.monitor_failed", {
-			monitorId: outcome.item.id,
+		ctx.log.warn("checks.monitor_failed", {
+			"monitor.id": outcome.item.id,
 			error: outcome.error instanceof Error ? outcome.error.message : String(outcome.error),
 		});
 	}
@@ -166,13 +166,15 @@ export default createJobHandler(jobs.checkDns, async (ctx) => {
 	/** Every ping in one call, so a sweep of eighty monitors costs one subrequest. */
 	await ingestPings(polar, pings);
 
-	ctx.logger.info("job.check_dns.completed", {
-		total: monitors.length,
-		successCount,
-		errorCount,
-		deferredCount,
-		notified: notifications.length,
-		ingested: pings.length,
+	ctx.log.set({
+		checks: {
+			total: monitors.length,
+			succeeded: successCount,
+			failed: errorCount,
+			deferred: deferredCount,
+			notified: notifications.length,
+			ingested: pings.length,
+		},
 	});
 });
 
@@ -203,10 +205,7 @@ async function check(
 			{ next_due_at: Date.now() },
 			{ touch: true },
 		);
-		ctx.logger.info("job.check_dns.deferred", {
-			monitorId: monitor.id,
-			names: plan.names.length,
-		});
+		ctx.log.note("checks.deferred", { "monitor.id": monitor.id, names: plan.names.length });
 		return { deferred: true };
 	}
 
@@ -217,8 +216,8 @@ async function check(
 	 */
 	let unswept = plan.names.length - granted + plan.overflow;
 	if (unswept > 0) {
-		ctx.logger.info("job.check_dns.sweep_truncated", {
-			monitorId: monitor.id,
+		ctx.log.note("checks.sweep_truncated", {
+			"monitor.id": monitor.id,
 			names: plan.names.length + plan.overflow,
 			swept: granted,
 		});
@@ -270,9 +269,9 @@ async function planFor(ctx: CurrentJobContext, monitor: ClaimedDnsMonitor): Prom
 	let plan = await planDnsCheck(ctx.database, monitor.id, monitor.domain);
 	if (plan.tracked > 0) return plan;
 
-	ctx.logger.info("job.check_dns.no_tracked_names", {
-		monitorId: monitor.id,
-		zoneFileImported: monitor.zone_file_imported_at !== null,
+	ctx.log.note("checks.no_tracked_names", {
+		"monitor.id": monitor.id,
+		zone_file_imported: monitor.zone_file_imported_at !== null,
 	});
 
 	return plan;

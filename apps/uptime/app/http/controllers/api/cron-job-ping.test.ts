@@ -7,9 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Middleware } from "remix/router";
+
 import { BillingError } from "@sdxc/billing";
 import billing from "@sdxc/billing/middleware";
 import { createAnalyticsEngine, createEnv, createRateLimit } from "@sdxc/cloudflare-mocks";
+import { Log } from "@sdxc/logger";
+import { log } from "@sdxc/logger/middleware";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
 import { failure } from "@sdxc/result";
@@ -146,6 +150,7 @@ async function dispatch(db: Db, request: Request) {
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			log() as Middleware,
 			billing({ provider: () => testBilling }),
 			mail({ transport: new MemoryTransport(), from: MAIL_FROM }),
 		],
@@ -155,7 +160,10 @@ async function dispatch(db: Db, request: Request) {
 	let container = new ServiceContainer();
 	container.singleton(Database, () => db);
 
-	let response = await container.scope(() => router.fetch(request));
+	/** Collects the record this request emits, keeping it out of the console. */
+	let requestLog = new Log({ kind: "request", sink() {} });
+
+	let response = await requestLog.run(() => container.scope(() => router.fetch(request)));
 	await Promise.all(deferred.splice(0));
 	return response;
 }

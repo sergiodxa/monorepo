@@ -93,11 +93,10 @@ export default createAction(routes.app.team.checkout, {
 			: await Customer.checkout(ctx.billing, ctx.team, ctx.url);
 
 		if (isFailure(opened)) {
-			ctx.logger.error("billing.hosted_page_failed", {
+			ctx.log.warn("billing.hosted_page_failed", {
 				code: opened.error.code,
-				providerCode: opened.error.providerCode,
+				provider_code: opened.error.providerCode,
 				connection: opened.error.connection,
-				ownerId: ctx.team.owner_id,
 				subscribed: hasActiveSubscription,
 			});
 

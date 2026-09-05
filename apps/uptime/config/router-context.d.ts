@@ -12,7 +12,7 @@ import type { RemixNode } from "remix/ui";
 
 /**
  * `bootstrap/app.tsx` installs `renderWith(createHtmlRenderer)` in its global middleware
- * chain, populating this context the same way `logger`/`team`/`membership`/`language` do
+ * chain, populating this context the same way `log`/`team`/`membership`/`language` do
  * from their own modules — route handlers are typed against the router's plain context.
  */
 declare module "remix/router" {

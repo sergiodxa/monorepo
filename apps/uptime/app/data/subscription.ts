@@ -16,7 +16,7 @@
 import type { EntitlementState } from "@sdxc/billing";
 import type { AnyTable, Database } from "remix/data-table";
 
-import { logger } from "@sdxc/logger";
+import { currentLog } from "@sdxc/logger";
 import { generateUUID } from "@sdxc/uuid";
 import { getTableName } from "remix/data-table";
 
@@ -158,7 +158,7 @@ export default class Subscription {
 		let rows = await db.findMany(subscriptions, { where: { external_customer_id: ownerId } });
 
 		if (rows.length === 0) {
-			logger.info("subscription.state_unknown", { ownerId });
+			currentLog()?.note("subscription.state_unknown", { ownerId });
 			return "unknown";
 		}
 

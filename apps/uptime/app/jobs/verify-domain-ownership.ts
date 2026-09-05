@@ -39,6 +39,7 @@ export default createJobHandler(jobs.verifyDomainOwnership, async (ctx) => {
 	if (!domain || domain.verified_at !== null) return;
 
 	apportionCostByTeam([domain.team_id]);
+	ctx.log.set({ domain: { id: domain.id }, team: { id: domain.team_id } });
 
 	let url = new URL("https://cloudflare-dns.com/dns-query");
 	url.searchParams.set("name", `_ping-verification.${domain.hostname}`);
@@ -50,15 +51,11 @@ export default createJobHandler(jobs.verifyDomainOwnership, async (ctx) => {
 		let expected = JSON.stringify(`ping_${domain.id}`);
 		let verified = (body.Answer ?? []).some((record) => record.data === expected);
 
-		if (verified) {
-			await TeamDomain.markVerified(ctx.database, domain.id);
-			ctx.logger.info("job.verify_domain_ownership.verified", { teamDomainId: domain.id });
-		} else {
-			ctx.logger.info("job.verify_domain_ownership.pending", { teamDomainId: domain.id });
-		}
+		if (verified) await TeamDomain.markVerified(ctx.database, domain.id);
+
+		ctx.log.set({ domain: { verified } });
 	} catch (error) {
-		ctx.logger.error("job.verify_domain_ownership.lookup_failed", {
-			teamDomainId: domain.id,
+		ctx.log.warn("domains.lookup_failed", {
 			error: error instanceof Error ? error.message : String(error),
 		});
 	}
