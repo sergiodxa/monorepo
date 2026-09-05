@@ -290,12 +290,12 @@ export function createOidcRepository(db: Database): OIDC.Repository {
 }
 
 /**
- * Builds the OIDC engine bound to the given database and to the current request's logger,
- * so a failure the engine recovers from lands in that request's log entry; call it from
+ * Builds the OIDC engine bound to the given database and to the current request's log,
+ * so a failure the engine recovers from lands in that request's record; call it from
  * inside a request. The issuer is fixed to {@link ISSUER}, the value relying parties pin.
  *
  * @param db - The database the engine's storage reads and writes through.
  */
 export function createOidcProvider(db: Database): OIDC {
-	return new OIDC(ISSUER, createOidcRepository(db), getContext().logger);
+	return new OIDC(ISSUER, createOidcRepository(db), getContext().log);
 }

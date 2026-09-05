@@ -1,77 +1,41 @@
 /**
- * Test-only reader for what a request actually logged. The request logger batches a whole
- * request and flushes it to one console channel, so a test proving the level an event was
- * recorded at reads that level back out of the flushed entry itself.
+ * Test-only reader for what a request actually recorded. The router joins whatever log is
+ * current when it runs, so a test opens one around its requests and reads back the record
+ * the app wrote into it — outcome, fields and notes — once the work has settled.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-/** One event as the request logger flushed it. */
-export interface LoggedEvent {
-	level: string;
-	event: string;
-	payload?: Record<string, unknown>;
-}
+import { Log } from "@sdxc/logger";
 
-/** The console channels a flush lands on, with the arguments every call carried. */
-export interface FlushedLogs {
-	error: unknown[][];
-	info: unknown[][];
+/** One emitted record: flat scalar fields under dotted keys, plus the `notes` array. */
+export type LogRecord = Readonly<Record<string, unknown>>;
+
+/**
+ * Runs `work` inside a request log and returns what it recorded. Every request `work`
+ * sends joins the same log, so a helper's set-up requests belong outside the call and
+ * only the request under test inside it.
+ *
+ * @param work - The requests to record.
+ * @returns What `work` returned, paired with the record it produced.
+ */
+export async function withLog<T>(work: () => Promise<T>): Promise<[T, LogRecord]> {
+	let records: LogRecord[] = [];
+	let log = new Log({ kind: "request", sink: (record) => void records.push(record) });
+
+	let result = await log.run(work);
+
+	return [result, records[0]!];
 }
 
 /**
- * Runs `work` with both console channels recorded, restoring them even when it throws, so
- * one failed assertion leaves the rest of a file logging where it expects to.
+ * The breadcrumbs a record carries, so an assertion names the note, its level and the
+ * fields written alongside it. An empty list for a record that wrote none.
  *
- * @param work - The requests to record the logs of.
- * @returns What `work` returned, paired with everything it logged.
+ * @param record - A record from {@link withLog}.
  */
-export async function withLogs<T>(work: () => Promise<T>): Promise<[T, FlushedLogs]> {
-	let logs: FlushedLogs = { error: [], info: [] };
-	let original = { error: console.error, info: console.info };
-
-	console.error = (...args: unknown[]) => void logs.error.push(args);
-	console.info = (...args: unknown[]) => void logs.info.push(args);
-
-	try {
-		return [await work(), logs];
-	} finally {
-		console.error = original.error;
-		console.info = original.info;
-	}
-}
-
-/**
- * Every event a captured channel carried, whichever scope of the flushed entry it sat
- * under, so an assertion names the event, its level and the fields it logged. A batched
- * flush spreads a payload onto its entry, so the rest of that entry *is* the payload.
- *
- * @param calls - One channel of a {@link withLogs} capture.
- */
-export function loggedEvents(calls: unknown[][]): LoggedEvent[] {
-	let found: LoggedEvent[] = [];
-
-	function walk(node: unknown): void {
-		if (Array.isArray(node)) {
-			for (let item of node) walk(item);
-			return;
-		}
-
-		if (node === null || typeof node !== "object") return;
-
-		let record = node as Record<string, unknown>;
-
-		let { event, level, ...payload } = record;
-
-		if (typeof event === "string" && typeof level === "string") {
-			found.push({ level, event, payload });
-		}
-
-		for (let value of Object.values(record)) walk(value);
-	}
-
-	walk(calls);
-
-	return found;
+export function notesOf(record: LogRecord): Log.Note[] {
+	let notes = record.notes;
+	return Array.isArray(notes) ? (notes as Log.Note[]) : [];
 }

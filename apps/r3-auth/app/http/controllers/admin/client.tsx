@@ -32,6 +32,7 @@ export default createController(routes.admin.client, {
 		index: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let clientId = ctx.params.clientId!;
+			ctx.log.set({ client: { id: clientId } });
 
 			let [client, authorizedUsers] = await Promise.all([
 				Client.findById(db, clientId),
@@ -39,7 +40,7 @@ export default createController(routes.admin.client, {
 			]);
 
 			if (!client) {
-				ctx.logger.info("admin_client_not_found", { clientId });
+				ctx.log.note("admin.client.not_found");
 				return defaultHandler(ctx);
 			}
 
@@ -98,17 +99,18 @@ export default createController(routes.admin.client, {
 		action: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let clientId = ctx.params.clientId!;
+			ctx.log.set({ client: { id: clientId } });
 
 			let result = await validate(ctx.formData, ClientIntentSchema);
 			if (isFailure(result)) {
-				ctx.logger.error("admin_client_invalid_intent", { clientId });
+				ctx.log.warn("admin.client.intent_invalid");
 				return badRequest({ error: "invalid_intent" });
 			}
 
 			await Grant.deleteByClientId(db, clientId);
 			await Client.delete(db, clientId);
 
-			ctx.logger.info("admin_client_deleted", { clientId });
+			ctx.log.note("admin.client.deleted");
 
 			return redirect(routes.admin.clients.index.href(), { status: redirect.Status.SeeOther });
 		}),

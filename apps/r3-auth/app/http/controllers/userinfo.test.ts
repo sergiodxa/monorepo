@@ -13,7 +13,7 @@ import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
 import { createTestApp, withUnreadableSigningKeys } from "~/app/lib/test/http";
-import { loggedEvents, withLogs } from "~/app/lib/test/logs";
+import { notesOf, withLog } from "~/app/lib/test/logs";
 import { authorizeUrl, exchangeCode, ORIGIN, seed, signIn } from "~/app/lib/test/seed";
 import routes from "~/routes/web";
 
@@ -194,13 +194,13 @@ describe("GET /userinfo", () => {
 
 	/**
 	 * An unreadable key store leaves every token unverifiable, good ones included, so the
-	 * challenge stays the one description a caller earns while the log names the fault at
-	 * the level that pages.
+	 * challenge stays the one description a caller earns while the record fails with the
+	 * fault, the outcome that pages.
 	 */
-	test("logs unreadable signing keys at error behind the same challenge", async () => {
+	test("records unreadable signing keys as a failure behind the same challenge", async () => {
 		let accessToken = await tokenWithScope("openid email");
 
-		let [response, logs] = await withLogs(
+		let [response, record] = await withLog(
 			async () => await withUnreadableSigningKeys(app, async () => await userinfo(accessToken)),
 		);
 
@@ -210,11 +210,9 @@ describe("GET /userinfo", () => {
 			error_description: "Invalid or expired access token",
 		});
 
-		expect(loggedEvents(logs.error)).toContainEqual(
-			expect.objectContaining({ level: "error", event: "userinfo_server_error" }),
-		);
-		expect(loggedEvents(logs.error)).toContainEqual(
-			expect.objectContaining({ level: "error", event: "userinfo_signing_key_failed" }),
+		expect(record).toMatchObject({ outcome: "error", "error.type": "InternalServerError" });
+		expect(notesOf(record)).toContainEqual(
+			expect.objectContaining({ level: "warn", name: "oidc.userinfo.signing_key_failed" }),
 		);
 	});
 });

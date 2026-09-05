@@ -14,7 +14,7 @@ import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
 import { createTestApp } from "~/app/lib/test/http";
-import { loggedEvents, withLogs } from "~/app/lib/test/logs";
+import { withLog } from "~/app/lib/test/logs";
 import {
 	authorizeUrl,
 	exchangeCode,
@@ -223,7 +223,7 @@ describe("a fault in this server", () => {
 			.spyOn(crypto.subtle, "digest")
 			.mockRejectedValue(new Error("digest unavailable"));
 
-		let [response, logs] = await withLogs(
+		let [response, record] = await withLog(
 			async () => await exchangeCode(app, fixtures, { code, code_verifier: VERIFIER }),
 		);
 		digest.mockRestore();
@@ -235,20 +235,22 @@ describe("a fault in this server", () => {
 		});
 		expect(response.headers.get("cache-control")).toBe("no-store");
 
-		expect(loggedEvents(logs.error)).toContainEqual(
-			expect.objectContaining({ level: "error", event: "token_server_error" }),
-		);
+		expect(record).toMatchObject({
+			outcome: "error",
+			"error.type": "InternalServerError",
+			"oidc.grant_type": "authorization_code",
+		});
 	});
 
 	/**
 	 * The same code path with the digest working: a verifier that derives a different
 	 * challenge is the client's own mistake, so it keeps the `400` and the `invalid_grant`
-	 * code RFC 6749 §5.2 names, and stays at the level a refused exchange belongs on.
+	 * code RFC 6749 §5.2 names, and leaves the record's outcome the `ok` a refused exchange is.
 	 */
 	test("a verifier that does not match stays the client's invalid_grant", async () => {
 		let code = await pkceCode();
 
-		let [response, logs] = await withLogs(
+		let [response, record] = await withLog(
 			async () =>
 				await exchangeCode(app, fixtures, {
 					code,
@@ -259,9 +261,7 @@ describe("a fault in this server", () => {
 		expect(response.status).toBe(400);
 		expect(await response.json()).toMatchObject({ error: "invalid_grant" });
 
-		expect(loggedEvents(logs.info)).toContainEqual(
-			expect.objectContaining({ level: "info", event: "token_oauth2_error" }),
-		);
+		expect(record).toMatchObject({ outcome: "ok", "oidc.error": "invalid_grant" });
 	});
 });
 

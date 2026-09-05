@@ -14,18 +14,16 @@ import Session from "~/app/data/session";
 import jobs from "~/app/jobs";
 
 /**
- * Reads the expired ids first so the log line reports what the sweep actually removed,
- * and logs the count alone: a session id stays a live refresh token until it expires.
+ * Reads the expired ids first so the run's record reports what the sweep actually
+ * removed, and records the counts alone: a session id stays a live refresh token until
+ * it expires.
  */
 export default createJobHandler(jobs.cleanExpiredSessions, async (ctx) => {
 	let expiredSessions = await Session.findExpiredSessions(ctx.database);
+	ctx.log.set({ sessions: { expired: expiredSessions.length } });
 
-	if (expiredSessions.length === 0) {
-		ctx.logger.info("job.clean_expired_sessions.no_expired");
-		return;
-	}
+	if (expiredSessions.length === 0) return;
 
 	let deletedCount = await Session.deleteExpiredSessions(ctx.database);
-
-	ctx.logger.info("job.clean_expired_sessions.completed", { deletedCount });
+	ctx.log.set({ sessions: { deleted: deletedCount } });
 });

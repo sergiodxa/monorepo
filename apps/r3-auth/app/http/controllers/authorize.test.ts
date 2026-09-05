@@ -20,7 +20,7 @@ import { AUTH_SERVER_CLIENT_ID } from "~/app/config";
 import Credential from "~/app/data/credential";
 import Subject from "~/app/data/subject";
 import { createTestApp } from "~/app/lib/test/http";
-import { loggedEvents, withLogs } from "~/app/lib/test/logs";
+import { notesOf, withLog } from "~/app/lib/test/logs";
 import {
 	authorizeUrl,
 	exchangeCode,
@@ -585,7 +585,7 @@ describe("a scope this server does not support", () => {
 	 * where it surfaces as the capability quietly missing.
 	 */
 	test("is recorded with the value that was dropped", async () => {
-		let [, logs] = await withLogs(
+		let [, record] = await withLog(
 			async () =>
 				await app.fetch(
 					new Request(authorizeUrl(fixtures, { scope: "openid nonsense" }), {
@@ -594,11 +594,11 @@ describe("a scope this server does not support", () => {
 				),
 		);
 
-		expect(loggedEvents(logs.info)).toContainEqual(
+		expect(notesOf(record)).toContainEqual(
 			expect.objectContaining({
 				level: "info",
-				event: "authz_scope_ignored",
-				payload: expect.objectContaining({ ignored: "nonsense" }),
+				name: "oidc.authorize.scope_ignored",
+				ignored: "nonsense",
 			}),
 		);
 	});

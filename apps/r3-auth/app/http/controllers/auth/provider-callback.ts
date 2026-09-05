@@ -84,31 +84,31 @@ export default createAction(
 	routes.auth.providerCallback,
 	inject([Database, RateLimiters] as const, async (db, limiters) => {
 		let ctx = getContext();
-		ctx.logger.info("oauth_callback_received", { provider: ctx.params.provider });
+		ctx.log.set({ auth: { provider: ctx.params.provider } });
 
 		let limited = await spendRateLimit(limiters.login, getClientIP(ctx.request) ?? "unknown");
 		if (limited) return limited;
 
 		if (ctx.params.provider !== "github") {
-			ctx.logger.info("oauth_invalid_provider", { provider: ctx.params.provider });
+			ctx.log.note("auth.provider.unknown");
 			return badRequest({ message: "Invalid provider" });
 		}
 
 		let authz = getAuthz();
 		if (!authz) {
-			ctx.logger.info("oauth_missing_authz_session");
+			ctx.log.note("auth.provider.authz_missing");
 			return badRequest({ message: "Invalid request" });
 		}
 
 		let identity = await finishGitHubLogin(ctx);
 		if (isFailure(identity)) {
-			ctx.logger.info("oauth_provider_callback_failed", { error: identity.error.code });
+			ctx.log.note("auth.provider.callback_failed", { code: identity.error.code });
 			return await errorResponse(ctx, authz, identity.error);
 		}
 
 		let subject = await resolveGitHubSubject(db, ctx.billing, identity.data);
 		if (isFailure(subject)) {
-			ctx.logger.info("oauth_subject_resolution_failed", { error: subject.error.code });
+			ctx.log.note("auth.provider.subject_unresolved", { code: subject.error.code });
 			return await errorResponse(ctx, authz, subject.error);
 		}
 
@@ -132,14 +132,15 @@ export default createAction(
 		});
 
 		if (isFailure(result)) {
-			ctx.logger.error("oauth_login_failed", { provider: "github", error: result.error.code });
+			ctx.log.warn("auth.provider.login_failed", { code: result.error.code });
 			return await errorResponse(ctx, authz, {
 				code: result.error.code,
 				description: result.error.description,
 			});
 		}
 
-		ctx.logger.info("oauth_login_success", { provider: "github", subjectId: subject.data });
+		ctx.log.set({ subject: { id: subject.data } });
+		ctx.log.note("auth.login_completed");
 
 		await notifyNewSignIn(ctx, db, subject.data);
 

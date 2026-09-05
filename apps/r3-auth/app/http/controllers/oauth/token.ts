@@ -52,21 +52,19 @@ function tokenError(error: unknown): Response {
 	let ctx = getContext();
 
 	if (error instanceof OIDC.InternalServerError) {
-		ctx.logger.error("token_server_error", { error: error.description });
+		ctx.log.fail(error);
 		return serverError();
 	}
 
 	if (error instanceof OIDC.Error) {
-		ctx.logger.info("token_oauth2_error", { code: error.code });
+		ctx.log.set({ oidc: { error: error.code } });
 		return badRequest(
 			{ error: error.code, error_description: error.description },
 			{ headers: NO_STORE_HEADERS },
 		);
 	}
 
-	ctx.logger.error("token_exchange_error", {
-		error: error instanceof Error ? error.message : "Unknown error",
-	});
+	ctx.log.fail(error);
 
 	return serverError();
 }
@@ -83,7 +81,7 @@ export default createAction(
 
 		let result = await validate(ctx.formData, TokenRequestSchema);
 		if (isFailure(result)) {
-			ctx.logger.info("token_request_invalid");
+			ctx.log.set({ oidc: { error: "invalid_request" } });
 			return badRequest(
 				{ error: "invalid_request", error_description: "Invalid request body" },
 				{ headers: NO_STORE_HEADERS },
@@ -92,6 +90,8 @@ export default createAction(
 
 		let body = result.data;
 		let credentials = readClientCredentials(ctx.request.headers, body);
+
+		ctx.log.set({ oidc: { grant_type: body.grant_type } });
 
 		let limited = await spendRateLimit(
 			limiters.token,
@@ -114,7 +114,7 @@ export default createAction(
 					clientSecret: credentials?.clientSecret,
 				});
 
-				ctx.logger.info("token_issued", { grantType: "authorization_code" });
+				ctx.log.note("oidc.token.issued");
 				return ok(tokens, { headers: NO_STORE_HEADERS });
 			}
 
@@ -124,12 +124,12 @@ export default createAction(
 					refreshToken: body.refresh_token,
 				});
 
-				ctx.logger.info("token_issued", { grantType: "refresh_token" });
+				ctx.log.note("oidc.token.issued");
 				return ok(tokens, { headers: NO_STORE_HEADERS });
 			}
 
 			if (!credentials) {
-				ctx.logger.info("token_missing_credentials");
+				ctx.log.set({ oidc: { error: "invalid_client" } });
 				return unauthorized(
 					{
 						error: "invalid_client",
@@ -145,10 +145,8 @@ export default createAction(
 				...credentials,
 			});
 
-			ctx.logger.info("token_issued", {
-				grantType: "client_credentials",
-				clientId: credentials.clientId,
-			});
+			ctx.log.set({ client: { id: credentials.clientId } });
+			ctx.log.note("oidc.token.issued");
 			return ok(tokens, { headers: NO_STORE_HEADERS });
 		} catch (error) {
 			return tokenError(error);

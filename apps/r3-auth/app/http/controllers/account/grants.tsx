@@ -95,27 +95,29 @@ export default createController(routes.account.grants, {
 			let result = await validate(ctx.formData, GrantsIntentSchema);
 
 			if (isFailure(result)) {
-				ctx.logger.info("grant_revoke_invalid", { subjectId: subject.id });
+				ctx.log.note("grant.revoke_invalid");
 				return backToList();
 			}
 
 			let clientId = result.data.clientId;
+			ctx.log.set({ client: { id: clientId } });
 
 			if (clientId === AUTH_SERVER_CLIENT_ID) {
-				ctx.logger.info("grant_revoke_refused_auth_server", { subjectId: subject.id });
+				ctx.log.note("grant.revoke_refused");
 				return backToList();
 			}
 
 			let removed = await Grant.deleteBySubjectAndClient(db, subject.id, clientId);
 
 			if (removed === 0) {
-				ctx.logger.info("grant_revoke_not_found", { subjectId: subject.id, clientId });
+				ctx.log.note("grant.not_found");
 				return backToList();
 			}
 
 			let sessions = await Session.deleteBySubjectAndClient(db, subject.id, clientId);
 
-			ctx.logger.info("grant_revoked", { subjectId: subject.id, clientId, sessions });
+			ctx.log.set({ sessions: { revoked: sessions } });
+			ctx.log.note("grant.revoked");
 
 			return backToList();
 		}),

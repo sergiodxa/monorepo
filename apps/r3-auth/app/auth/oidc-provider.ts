@@ -180,14 +180,18 @@ type BackchannelDelivery = { clientId: string; host: string | null } & (
 export namespace OIDC {
 	/**
 	 * Where the engine reports a failure it recovers from on its own, so a recovery
-	 * that keeps failing stays visible while the request it happened on succeeds.
+	 * that keeps failing stays visible while the request it happened on succeeds. The
+	 * invocation's log satisfies it; a test hands in a recording double.
 	 */
-	export interface Logger {
+	export interface Log {
 		/**
-		 * @param event - Stable event name, matched on when querying logs.
-		 * @param payload - Structured detail about the failure; carries no credential material.
+		 * @param name - Stable dotted event name, matched on when reading a record.
+		 * @param fields - Flat scalar detail about the failure; carries no credential material.
 		 */
-		error(event: string, payload?: Record<string, unknown>): void;
+		warn(
+			name: string,
+			fields?: Record<string, string | number | boolean | null | undefined>,
+		): unknown;
 	}
 
 	/** A person who can sign in, reduced to the identity claims the engine needs. */
@@ -469,12 +473,12 @@ export class OIDC {
 	/**
 	 * @param issuer - The `iss` value written into tokens and compared when verifying them.
 	 * @param repository - Storage and signing keys the engine reads and writes through.
-	 * @param logger - Sink for the failures the engine recovers from while answering a request.
+	 * @param log - Where the failures the engine recovers from while answering a request are recorded.
 	 */
 	constructor(
 		private issuer: string,
 		private repository: OIDC.Repository,
-		private logger: OIDC.Logger,
+		private log: OIDC.Log,
 	) {}
 
 	/**
@@ -610,7 +614,7 @@ export class OIDC {
 		let signingKeys = await wrap(() => this.repository.getSigningKey());
 
 		if (isFailure(signingKeys)) {
-			this.logger.error("introspect_signing_key_failed", {
+			this.log.warn("oidc.introspect.signing_key_failed", {
 				clientId: args.clientId,
 				error: signingKeys.error.message,
 			});
@@ -653,7 +657,7 @@ export class OIDC {
 		let signingKeys = await wrap(() => this.repository.getSigningKey());
 
 		if (isFailure(signingKeys)) {
-			this.logger.error("userinfo_signing_key_failed", { error: signingKeys.error.message });
+			this.log.warn("oidc.userinfo.signing_key_failed", { error: signingKeys.error.message });
 
 			throw new InternalServerError();
 		}
@@ -768,7 +772,7 @@ export class OIDC {
 		);
 
 		if (isFailure(verified)) {
-			this.logger.error("logout_hint_verification_failed", {
+			this.log.warn("oidc.logout.hint_verification_failed", {
 				clientId: requestedClientId,
 				error: verified.error.message,
 			});
@@ -846,7 +850,7 @@ export class OIDC {
 		});
 
 		if (isFailure(issued)) {
-			this.logger.error("authz_code_issue_failed", {
+			this.log.warn("oidc.authorize.code_issue_failed", {
 				clientId: input.clientId,
 				subjectId: input.subjectId,
 				error: issued.error.message,
@@ -942,7 +946,7 @@ export class OIDC {
 		);
 
 		if (isFailure(sessions)) {
-			this.logger.error("backchannel_logout_lookup_failed", {
+			this.log.warn("oidc.logout.backchannel_lookup_failed", {
 				subjectId,
 				error: sessions.error.message,
 			});
@@ -973,9 +977,9 @@ export class OIDC {
 		let signingKeys = await wrap(() => this.repository.getSigningKey());
 
 		if (isFailure(signingKeys)) {
-			this.logger.error("backchannel_logout_signing_failed", {
+			this.log.warn("oidc.logout.backchannel_signing_failed", {
 				subjectId,
-				recipientCount: recipients.length,
+				recipient_count: recipients.length,
 				error: signingKeys.error.message,
 			});
 
@@ -990,7 +994,7 @@ export class OIDC {
 
 		for (let delivery of deliveries) {
 			if (delivery.outcome === "refused") {
-				this.logger.error("backchannel_logout_refused", {
+				this.log.warn("oidc.logout.backchannel_refused", {
 					subjectId,
 					clientId: delivery.clientId,
 					host: delivery.host,
@@ -999,7 +1003,7 @@ export class OIDC {
 			}
 
 			if (delivery.outcome === "unreachable") {
-				this.logger.error("backchannel_logout_unreachable", {
+				this.log.warn("oidc.logout.backchannel_unreachable", {
 					subjectId,
 					clientId: delivery.clientId,
 					host: delivery.host,
@@ -1086,7 +1090,7 @@ export class OIDC {
 			let logoutUrl = wrap(() => new URL(recipient.frontchannelLogoutUri));
 
 			if (isFailure(logoutUrl)) {
-				this.logger.error("frontchannel_logout_uri_invalid", {
+				this.log.warn("oidc.logout.frontchannel_uri_invalid", {
 					clientId: recipient.clientId,
 					error: logoutUrl.error.message,
 				});
@@ -1214,7 +1218,7 @@ export class OIDC {
 				let matches = await CodeChallenge.validate(args.codeVerifier, pkce.challenge, pkce.method);
 
 				if (isFailure(matches)) {
-					this.logger.error("pkce_digest_failed", {
+					this.log.warn("oidc.token.pkce_digest_failed", {
 						clientId,
 						error: matches.error.message,
 					});
@@ -1381,7 +1385,7 @@ export class OIDC {
 
 		let rehashed = await password.hash(plaintext);
 		if (isFailure(rehashed)) {
-			this.logger.error("password_rehash_failed", {
+			this.log.warn("auth.password_rehash_failed", {
 				subjectId,
 				error: rehashed.error.message,
 			});
@@ -1393,7 +1397,7 @@ export class OIDC {
 		);
 
 		if (isFailure(written)) {
-			this.logger.error("password_rehash_write_failed", {
+			this.log.warn("auth.password_rehash_write_failed", {
 				subjectId,
 				error: written.error.message,
 			});

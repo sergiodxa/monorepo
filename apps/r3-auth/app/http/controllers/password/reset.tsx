@@ -132,8 +132,8 @@ async function revokeSessions(ctx: RequestContext, db: Database, subjectId: stri
 	try {
 		await createOidcProvider(db).sendBackchannelLogoutTokens(subjectId);
 	} catch (error) {
-		ctx.logger.error("password_reset_backchannel_failed", {
-			subjectId,
+		ctx.log.warn("password_reset.backchannel_failed", {
+			subject_id: subjectId,
 			error: error instanceof Error ? error.message : "Unknown error",
 		});
 	}
@@ -159,7 +159,7 @@ export default createController(routes.password.reset, {
 
 			let query = await validate(ctx.url.searchParams, ResetTokenQuerySchema);
 			if (isFailure(query)) {
-				ctx.logger.info("password_reset_link_malformed");
+				ctx.log.note("password_reset.link_malformed");
 				return invalidPage(ctx);
 			}
 
@@ -168,7 +168,7 @@ export default createController(routes.password.reset, {
 
 			let subjectId = await peekPasswordResetToken(query.data.token);
 			if (!subjectId) {
-				ctx.logger.info("password_reset_link_unusable");
+				ctx.log.note("password_reset.link_unusable");
 				return invalidPage(ctx);
 			}
 
@@ -190,34 +190,36 @@ export default createController(routes.password.reset, {
 			if (isFailure(result)) {
 				let token = submittedToken(ctx.formData);
 				if (!token) {
-					ctx.logger.info("password_reset_submission_malformed");
+					ctx.log.note("password_reset.submission_malformed");
 					return invalidPage(ctx);
 				}
 
-				ctx.logger.info("password_reset_submission_invalid");
+				ctx.log.note("password_reset.submission_invalid");
 				return resetPage(ctx, token, ctx.i18next.t("password.reset.errors.invalid"));
 			}
 
 			if (result.data.password !== result.data.passwordConfirmation) {
-				ctx.logger.info("password_reset_confirmation_mismatch");
+				ctx.log.note("password_reset.confirmation_mismatch");
 				return resetPage(ctx, result.data.token, ctx.i18next.t("password.reset.errors.mismatch"));
 			}
 
 			let subjectId = await consumePasswordResetToken(result.data.token);
 			if (!subjectId) {
-				ctx.logger.info("password_reset_token_unusable");
+				ctx.log.note("password_reset.token_unusable");
 				return invalidPage(ctx);
 			}
 
+			ctx.log.set({ subject: { id: subjectId } });
+
 			let subject = await Subject.findById(db, subjectId);
 			if (!subject) {
-				ctx.logger.info("password_reset_subject_missing", { subjectId });
+				ctx.log.note("password_reset.subject_missing");
 				return invalidPage(ctx);
 			}
 
 			let hash = await password.hash(result.data.password);
 			if (isFailure(hash)) {
-				ctx.logger.error("password_reset_hash_failed", { subjectId });
+				ctx.log.fail(hash.error);
 				return ctx.render(
 					<DocumentLayout
 						title={ctx.i18next.t("password.invalid.documentTitle")}
@@ -250,7 +252,8 @@ export default createController(routes.password.reset, {
 				}),
 			);
 
-			ctx.logger.info("password_reset_completed", { subjectId, revoked });
+			ctx.log.set({ sessions: { revoked } });
+			ctx.log.note("password_reset.completed");
 
 			return donePage(ctx);
 		}),

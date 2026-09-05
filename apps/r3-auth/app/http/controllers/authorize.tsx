@@ -196,7 +196,8 @@ async function selfRedirect(ctx: RequestContext, db: Database): Promise<Response
 	url.searchParams.set("state", state);
 	url.searchParams.set("scope", SELF_LOGIN_SCOPE);
 
-	ctx.logger.info("authz_self_redirect", { clientId: client.id });
+	ctx.log.set({ client: { id: client.id } });
+	ctx.log.note("oidc.authorize.self_redirect");
 
 	return redirect(url.toString(), { status: redirect.Status.SeeOther });
 }
@@ -212,11 +213,13 @@ export default createController(routes.authorize, {
 			let ctx = getContext();
 
 			let subjectId = currentSubjectId();
+			if (subjectId) ctx.log.set({ subject: { id: subjectId } });
+
 			let result = await validate(ctx.url.searchParams, AuthorizeQuerySchema);
 
 			if (isFailure(result)) {
 				if (subjectId) {
-					ctx.logger.info("authz_already_logged_in", { subjectId });
+					ctx.log.note("oidc.authorize.already_signed_in");
 					return redirect(routes.account.sessions.index.href(), {
 						status: redirect.Status.SeeOther,
 					});
@@ -226,31 +229,30 @@ export default createController(routes.authorize, {
 			}
 
 			let query = result.data;
+			ctx.log.set({ client: { id: query.client_id } });
 
 			let limited = await spendRateLimit(limiters.authorize, getClientIP(ctx.request) ?? "unknown");
 			if (limited) return limited;
 
 			let client = await Client.findById(db, query.client_id);
 			if (!client) {
-				ctx.logger.info("authz_invalid_client", { clientId: query.client_id });
+				ctx.log.note("oidc.authorize.client_unknown");
 				return notFound({ message: "Client not found" });
 			}
 
 			if (client.redirect_uri !== query.redirect_uri) {
-				ctx.logger.info("authz_redirect_uri_mismatch", { clientId: query.client_id });
+				ctx.log.note("oidc.authorize.redirect_uri_mismatch");
 				return notFound({ message: "Invalid redirect URI" });
 			}
 
 			if (query.scope.ignored.length > 0) {
-				ctx.logger.info("authz_scope_ignored", {
-					clientId: client.id,
-					ignored: query.scope.ignored.join(" "),
-				});
+				ctx.log.note("oidc.authorize.scope_ignored", { ignored: query.scope.ignored.join(" ") });
 			}
 
 			let pkce = readPkce(query);
 			if (pkce === null) {
-				ctx.logger.info("authz_unsupported_code_challenge_method", { clientId: client.id });
+				ctx.log.set({ oidc: { error: "invalid_request" } });
+				ctx.log.note("oidc.authorize.code_challenge_method_unsupported");
 				return await errorRedirect(
 					ctx,
 					query,
@@ -260,7 +262,7 @@ export default createController(routes.authorize, {
 			}
 
 			if (query.prompt?.includes("none") && !subjectId) {
-				ctx.logger.info("authz_prompt_none_login_required", { clientId: client.id });
+				ctx.log.set({ oidc: { error: "login_required" } });
 				return await errorRedirect(ctx, query, "login_required", "User is not authenticated");
 			}
 
@@ -281,11 +283,12 @@ export default createController(routes.authorize, {
 				});
 
 				if (code.status === "failure") {
-					ctx.logger.error("authz_sso_code_failed", { subjectId, error: code.error.code });
+					ctx.log.set({ oidc: { error: code.error.code } });
+					ctx.log.warn("oidc.authorize.sso_code_failed");
 					return await errorRedirect(ctx, query, code.error.code, code.error.description);
 				}
 
-				ctx.logger.info("authz_sso_code_generated", { subjectId, clientId: client.id });
+				ctx.log.note("oidc.authorize.sso_code_issued");
 
 				return await authorizationResponse(
 					ctx,
@@ -307,11 +310,12 @@ export default createController(routes.authorize, {
 				codeChallengeMethod: pkce?.method,
 			};
 
-			ctx.logger.info("authz_session_started", { clientId: query.client_id });
+			ctx.log.note("oidc.authorize.session_started");
 			setAuthz(authz);
 
 			if (query.provider === "github") {
-				ctx.logger.info("oauth_login_started", { provider: "github" });
+				ctx.log.set({ auth: { provider: "github" } });
+				ctx.log.note("auth.login_started");
 				return await startGitHubLogin(ctx);
 			}
 
@@ -331,13 +335,15 @@ export default createController(routes.authorize, {
 
 			let authz = getAuthz();
 			if (!authz) {
-				ctx.logger.info("authz_action_missing_session");
+				ctx.log.note("oidc.authorize.authz_missing");
 				return badRequest({ message: "Invalid request" });
 			}
 
+			ctx.log.set({ client: { id: authz.clientId } });
+
 			let result = await validate(ctx.formData, AuthorizeFormSchema);
 			if (isFailure(result)) {
-				ctx.logger.info("authz_action_validation_failed");
+				ctx.log.note("oidc.authorize.form_invalid");
 				return badRequest({ message: "Invalid request" });
 			}
 
@@ -360,7 +366,8 @@ export default createController(routes.authorize, {
 			});
 
 			if (login.status === "failure") {
-				ctx.logger.info("authz_credential_login_failed", { error: login.error.code });
+				ctx.log.set({ oidc: { error: login.error.code } });
+				ctx.log.note("auth.login_refused");
 
 				let client = await Client.findById(db, authz.clientId);
 				if (!client) return badRequest({ message: "Invalid request" });
@@ -368,7 +375,8 @@ export default createController(routes.authorize, {
 				return signInPage(ctx, client, authz, signInErrorMessage(ctx, login.error.code));
 			}
 
-			ctx.logger.info("authz_credential_login_success", { subjectId: login.data.subjectId });
+			ctx.log.set({ subject: { id: login.data.subjectId } });
+			ctx.log.note("auth.login_completed");
 
 			await notifyNewSignIn(ctx, db, login.data.subjectId);
 

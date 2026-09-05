@@ -132,7 +132,7 @@ function verificationUrl(token: string): string {
  * `subjects.email_verified_at` being null and called only for a successful sign-in: mailing
  * whichever address a form supplies on any other outcome would make this an oracle.
  *
- * @param ctx - The request the send is attached to; its mailer, translator and logger.
+ * @param ctx - The request the send is attached to; its mailer, translator and log.
  * @param db - Database the subject's address and verification state are read from.
  * @param subjectId - Subject whose address would be confirmed.
  * @returns Which of the four things happened, so a resend page can say so. A sign-in's
@@ -146,7 +146,7 @@ export async function sendVerificationEmail(
 	try {
 		let subject = await Subject.findById(db, subjectId);
 		if (!subject) {
-			ctx.logger.error("email_verification_subject_missing", { subjectId });
+			ctx.log.warn("email_verification.subject_missing", { subject_id: subjectId });
 			return "failed";
 		}
 
@@ -155,7 +155,7 @@ export async function sendVerificationEmail(
 		let cooldownKey = COOLDOWN_KEY_PREFIX + (await digest(cooldownSubject(subject.email_address)));
 
 		if ((await env.KV.get(cooldownKey)) !== null) {
-			ctx.logger.info("email_verification_suppressed", { subjectId });
+			ctx.log.note("email_verification.suppressed");
 			return "suppressed";
 		}
 
@@ -179,12 +179,12 @@ export async function sendVerificationEmail(
 			}),
 		);
 
-		ctx.logger.info("email_verification_queued", { subjectId });
+		ctx.log.note("email_verification.queued");
 
 		return "sent";
 	} catch (error) {
-		ctx.logger.error("email_verification_failed", {
-			subjectId,
+		ctx.log.warn("email_verification.failed", {
+			subject_id: subjectId,
 			error: error instanceof Error ? error.message : "Unknown error",
 		});
 

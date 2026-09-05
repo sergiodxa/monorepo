@@ -135,13 +135,14 @@ export function requireApiClient(): Middleware {
 		});
 
 		if (!client) {
-			ctx.logger.info("api_unauthorized");
+			ctx.log.note("api.unauthorized");
 			let headers = new Headers();
 			collector.toHeaders(headers);
 			return unauthorized({ error: "Unauthorized" }, { headers });
 		}
 
 		ctx.apiClient = client;
+		ctx.log.set({ client: { id: client.id } });
 
 		let response = await next();
 		collector.toHeaders(response.headers);

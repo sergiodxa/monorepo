@@ -36,29 +36,29 @@ export default createAction(
 		let state = ctx.url.searchParams.get("state");
 
 		if (!code || !state) {
-			ctx.logger.info("auth_callback_missing_params");
+			ctx.log.note("auth.callback.params_missing");
 			return badRequest({ message: "Missing code or state parameter" });
 		}
 
 		let authz = getAuthz();
 		if (!authz) {
-			ctx.logger.info("auth_callback_missing_authz");
+			ctx.log.note("auth.callback.authz_missing");
 			return badRequest({ message: "Invalid request - no authorization session" });
 		}
 
 		if (authz.state !== state) {
-			ctx.logger.info("auth_callback_state_mismatch");
+			ctx.log.note("auth.callback.state_mismatch");
 			return badRequest({ message: "Invalid state parameter" });
 		}
 
 		if (authz.clientId !== AUTH_SERVER_CLIENT_ID) {
-			ctx.logger.info("auth_callback_wrong_client", { clientId: authz.clientId });
+			ctx.log.note("auth.callback.wrong_client", { client_id: authz.clientId });
 			return badRequest({ message: "Invalid client" });
 		}
 
 		let client = await Client.findById(db, AUTH_SERVER_CLIENT_ID);
 		if (!client) {
-			ctx.logger.error("auth_callback_client_not_found");
+			ctx.log.warn("auth.callback.client_missing");
 			return badRequest({ message: "Auth server client not found" });
 		}
 
@@ -72,20 +72,20 @@ export default createAction(
 			});
 
 			if (!("refresh_token" in tokens) || typeof tokens.refresh_token !== "string") {
-				ctx.logger.error("auth_callback_missing_refresh_token");
+				ctx.log.warn("auth.callback.refresh_token_missing");
 				return badRequest({ message: "Failed to exchange authorization code" });
 			}
 
 			unsetAuthz();
 			setTokens(tokens.access_token, tokens.refresh_token);
 
-			ctx.logger.info("auth_callback_success");
+			ctx.log.note("auth.callback.completed");
 
 			return redirect(routes.account.sessions.index.href(), {
 				status: redirect.Status.SeeOther,
 			});
 		} catch (error) {
-			ctx.logger.error("auth_callback_token_exchange_failed", {
+			ctx.log.warn("auth.callback.token_exchange_failed", {
 				error: error instanceof Error ? error.message : "Unknown error",
 			});
 			return badRequest({ message: "Failed to exchange authorization code" });

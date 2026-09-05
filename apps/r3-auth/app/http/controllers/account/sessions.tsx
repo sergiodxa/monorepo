@@ -151,7 +151,7 @@ export default createController(routes.account.sessions, {
 			let result = await validate(ctx.formData, SessionsIntentSchema);
 
 			if (isFailure(result)) {
-				ctx.logger.info("session_revoke_invalid", { subjectId: subject.id });
+				ctx.log.note("session.revoke_invalid");
 				return backToList();
 			}
 
@@ -162,10 +162,8 @@ export default createController(routes.account.sessions, {
 				let others = owned.filter((session) => session.id !== currentSessionId);
 				for (let session of others) await Session.deleteById(db, session.id);
 
-				ctx.logger.info("sessions_revoked_all", {
-					subjectId: subject.id,
-					count: others.length,
-				});
+				ctx.log.set({ sessions: { revoked: others.length } });
+				ctx.log.note("session.revoked_all");
 
 				if (others.length === owned.length) return signOut();
 
@@ -175,12 +173,13 @@ export default createController(routes.account.sessions, {
 			let target = owned.find((session) => session.id === submitted.sessionId);
 
 			if (!target) {
-				ctx.logger.info("session_revoke_not_found", { subjectId: subject.id });
+				ctx.log.note("session.revoke_not_found");
 				return backToList();
 			}
 
 			await Session.deleteById(db, target.id);
-			ctx.logger.info("session_revoked", { subjectId: subject.id });
+			ctx.log.set({ sessions: { revoked: 1 } });
+			ctx.log.note("session.revoked");
 
 			if (target.id === currentSessionId) return signOut();
 

@@ -14,6 +14,7 @@ import { env } from "cloudflare:workers";
 
 import jobs from "~/app/jobs";
 import { database, scope } from "~/app/jobs/middleware/database";
+import { logger } from "~/bootstrap/logger";
 
 /**
  * The registry `bootstrap/worker.ts` hands its batches and triggers to. Both the queue
@@ -21,6 +22,7 @@ import { database, scope } from "~/app/jobs/middleware/database";
  * message is enqueued or a run completes.
  */
 export const dispatcher = createJobDispatcher({
+	logger,
 	middleware: [scope(), database()],
 	send: async (bodies) => {
 		await env.QUEUE.sendBatch(bodies.map((body) => ({ body, contentType: "json" })));

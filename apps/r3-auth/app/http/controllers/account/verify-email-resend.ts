@@ -31,10 +31,7 @@ export default createAction(routes.account.verifyEmailResend, {
 
 		let outcome = await sendVerificationEmail(ctx, db, ctx.subject.id);
 
-		ctx.logger.info("email_verification_resend_requested", {
-			subjectId: ctx.subject.id,
-			outcome,
-		});
+		ctx.log.set({ email_verification: { outcome } });
 
 		let location = new URL(routes.account.profile.href(), ctx.url.origin);
 		location.searchParams.set(RESEND_OUTCOME_PARAM, outcome);

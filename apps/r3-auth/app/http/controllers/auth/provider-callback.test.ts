@@ -20,6 +20,7 @@ import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
 import { createTestApp } from "~/app/lib/test/http";
+import { withLog } from "~/app/lib/test/logs";
 import { authorizeUrl, ORIGIN, REDIRECT_URI, seed } from "~/app/lib/test/seed";
 import { connections, subjects } from "~/database/schema";
 import routes from "~/routes/web";
@@ -398,34 +399,27 @@ describe("GET /auth/:provider/callback", () => {
 	});
 
 	/**
-	 * The request logger flushes through `console.error`, which this runner captures only
-	 * when the function itself is swapped. A log line is the one place an address could
-	 * travel outside the database.
+	 * The record is the one place an address could travel outside the database, so the
+	 * failed mirror degrades it under the subject's id and nothing else.
 	 */
-	test("logs the failed billing mirror by subject id and never by address", async () => {
+	test("records the failed billing mirror by subject id and never by address", async () => {
 		app = await createTestApp({ billing: unavailableBilling() });
 		fixtures = await seed(app);
 
-		let calls: unknown[][] = [];
-		let original = console.error;
-		console.error = (...args: unknown[]) => void calls.push(args);
+		respondWithProfile();
+		let state = await startFlow();
 
-		try {
-			respondWithProfile();
-			await finishFlow({ code: "gh-code", state: await startFlow() });
-		} finally {
-			console.error = original;
-		}
+		let [, record] = await withLog(async () => await finishFlow({ code: "gh-code", state }));
 
 		let subject = await app.db.findOne(subjects, {
 			where: { email_address: GITHUB_PROFILE.email },
 		});
 
-		let logged = JSON.stringify(calls);
+		let recorded = JSON.stringify(record);
 
-		expect(logged).toContain("github_customer_create_failed");
-		expect(logged).toContain(subject!.id);
-		expect(logged).not.toContain(GITHUB_PROFILE.email);
+		expect(record).toMatchObject({ outcome: "degraded", "subject.id": subject!.id });
+		expect(recorded).toContain("auth.provider.customer_create_failed");
+		expect(recorded).not.toContain(GITHUB_PROFILE.email);
 	});
 
 	/**

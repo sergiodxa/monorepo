@@ -80,7 +80,7 @@ export default createController(routes.oidc.logout, {
 
 			let result = await validate(ctx.url.searchParams, LogoutQuerySchema);
 			if (isFailure(result)) {
-				ctx.logger.info("logout_invalid_params");
+				ctx.log.note("oidc.logout.params_invalid");
 				return confirmationPage(ctx);
 			}
 
@@ -90,7 +90,7 @@ export default createController(routes.oidc.logout, {
 			let sessionSubject = accessToken ? getSubjectFromAccessToken(accessToken) : null;
 
 			if (!params.id_token_hint && !sessionSubject) {
-				ctx.logger.info("logout_missing_id_token_hint");
+				ctx.log.note("oidc.logout.hint_missing");
 				return confirmationPage(ctx);
 			}
 
@@ -107,7 +107,8 @@ export default createController(routes.oidc.logout, {
 				});
 			} catch (error) {
 				if (error instanceof OIDC.InvalidRequestError) {
-					ctx.logger.info("logout_rejected", { reason: error.message });
+					ctx.log.set({ oidc: { error: "invalid_request" } });
+					ctx.log.note("oidc.logout.refused", { reason: error.message });
 					return badRequest({ error: "invalid_request", error_description: error.message });
 				}
 
@@ -118,11 +119,14 @@ export default createController(routes.oidc.logout, {
 
 			if (refreshToken) await Session.deleteById(db, refreshToken);
 
-			ctx.logger.info("logout_success", {
-				subjectId: logout.subjectId,
-				backchannelCount: logout.backchannelSessions.length,
-				frontchannelCount: logout.frontchannelUrls.length,
+			ctx.log.set({
+				subject: { id: logout.subjectId },
+				logout: {
+					backchannel_count: logout.backchannelSessions.length,
+					frontchannel_count: logout.frontchannelUrls.length,
+				},
 			});
+			ctx.log.note("oidc.logout.completed");
 
 			unsetTokens();
 
@@ -169,7 +173,8 @@ export default createController(routes.oidc.logout, {
 				}
 
 				await Session.deleteById(db, refreshToken);
-				ctx.logger.info("logout_success", { subjectId });
+				ctx.log.set({ subject: { id: subjectId ?? undefined } });
+				ctx.log.note("oidc.logout.completed");
 				unsetTokens();
 			}
 

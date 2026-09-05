@@ -40,10 +40,11 @@ export default createController(routes.admin.subject, {
 		index: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let subjectId = ctx.params.subjectId!;
+			ctx.log.set({ admin: { subject_id: subjectId } });
 
 			let subject = await Subject.findById(db, subjectId);
 			if (!subject) {
-				ctx.logger.info("admin_subject_not_found", { subjectId });
+				ctx.log.note("admin.subject.not_found");
 				return defaultHandler(ctx);
 			}
 
@@ -52,10 +53,9 @@ export default createController(routes.admin.subject, {
 				Connection.findBySubjectId(db, subjectId),
 			]);
 
-			ctx.logger.info("admin_subject_viewed", {
-				subjectId,
-				sessionsCount: sessions.length,
-				connectionsCount: connections.length,
+			ctx.log.set({
+				sessions: { count: sessions.length },
+				connections: { count: connections.length },
 			});
 
 			let unknown = ctx.i18next.t("admin.subjects.sessions.unknownDevice");
@@ -147,10 +147,11 @@ export default createController(routes.admin.subject, {
 		action: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let subjectId = ctx.params.subjectId!;
+			ctx.log.set({ admin: { subject_id: subjectId } });
 
 			let result = await validate(ctx.formData, SubjectIntentSchema);
 			if (isFailure(result)) {
-				ctx.logger.error("admin_subject_invalid_intent", { subjectId });
+				ctx.log.warn("admin.subject.intent_invalid");
 				return badRequest({ error: "invalid_intent" });
 			}
 
@@ -159,13 +160,15 @@ export default createController(routes.admin.subject, {
 
 			if (intent.intent === "revoke-session") {
 				await Session.deleteById(db, intent.sessionId);
-				ctx.logger.info("admin_subject_session_revoked", { subjectId });
+				ctx.log.set({ sessions: { revoked: 1 } });
+				ctx.log.note("admin.subject.session_revoked");
 				return redirect(here, { status: redirect.Status.SeeOther });
 			}
 
 			if (intent.intent === "revoke-all-sessions") {
 				let revoked = await Session.deleteBySubjectId(db, subjectId);
-				ctx.logger.info("admin_subject_all_sessions_revoked", { subjectId, revoked });
+				ctx.log.set({ sessions: { revoked } });
+				ctx.log.note("admin.subject.sessions_revoked");
 				return redirect(here, { status: redirect.Status.SeeOther });
 			}
 
@@ -173,7 +176,7 @@ export default createController(routes.admin.subject, {
 			await Grant.deleteBySubjectId(db, subjectId);
 			await Subject.delete(db, subjectId);
 
-			ctx.logger.info("admin_subject_deleted", { subjectId });
+			ctx.log.note("admin.subject.deleted");
 
 			return redirect(routes.admin.subjects.href(), { status: redirect.Status.SeeOther });
 		}),

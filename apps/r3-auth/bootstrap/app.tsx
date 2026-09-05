@@ -15,7 +15,7 @@ import type { ResolveFrameContext } from "remix/ui/server";
 
 import billing from "@sdxc/billing/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
-import logger from "@sdxc/logger/middleware";
+import { log } from "@sdxc/logger/middleware";
 import mail from "@sdxc/mail/middleware";
 import { getServiceContainer } from "@sdxc/service-container";
 import { asyncContext } from "remix/middleware/async-context";
@@ -65,6 +65,7 @@ import i18n from "~/app/http/middleware/i18n";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
 import { polar } from "~/app/lib/billing";
 import { MailTransport } from "~/app/services/mail-transport";
+import { logger } from "~/bootstrap/logger";
 import routes from "~/routes/web";
 
 /**
@@ -98,7 +99,7 @@ export default function application(options: application.Options) {
 	let middleware: Middleware[] = [
 		headRequests(),
 		asyncContext(),
-		logger,
+		log(logger) as Middleware,
 		formData() as Middleware,
 		methodOverride(),
 		createSessionMiddleware(

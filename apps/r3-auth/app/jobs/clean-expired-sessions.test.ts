@@ -11,6 +11,7 @@
 import type { Database as DataTableDatabase } from "remix/data-table";
 
 import { createJobContext } from "@sdxc/jobs";
+import { Log } from "@sdxc/logger";
 import { generateUUID } from "@sdxc/uuid";
 import { beforeEach, describe, expect, test } from "vitest";
 
@@ -49,13 +50,20 @@ async function createSession(expiresAt: number): Promise<string> {
 
 /**
  * Runs the sweep against a context carrying the test database, published the way the
- * middleware publishes it: the cast is what stands in for a chain having run.
+ * middleware publishes it: the cast is what stands in for a chain having run. The run is
+ * recorded into a log the caller can read back.
+ *
+ * @returns The record the run emitted.
  */
-async function run(): Promise<void> {
-	let ctx = createJobContext(jobs.cleanExpiredSessions, { id: "message-1", attempts: 1 });
+async function run(): Promise<Record<string, unknown>> {
+	let records: Record<string, unknown>[] = [];
+	let log = new Log({ kind: "job", sink: (record) => void records.push(record) });
+	let ctx = createJobContext(jobs.cleanExpiredSessions, { id: "message-1", attempts: 1, log });
 	ctx.set(Database, db, { property: "database" });
 
-	await handler(ctx);
+	await log.run(() => handler(ctx));
+
+	return records[0]!;
 }
 
 beforeEach(async () => {
@@ -87,10 +95,11 @@ describe("cleanExpiredSessions", () => {
 		let alsoExpired = await createSession(Date.now() - 30 * 24 * 60 * 60 * 1000);
 		let live = await createSession(Date.now() + 60 * 1000);
 
-		await run();
+		let record = await run();
 
 		let remaining = await db.findMany(sessions);
 		expect(remaining.map((row) => row.id)).toEqual([live]);
+		expect(record).toMatchObject({ outcome: "ok", "sessions.expired": 2, "sessions.deleted": 2 });
 		expect(remaining.map((row) => row.id)).not.toContain(expired);
 		expect(remaining.map((row) => row.id)).not.toContain(alsoExpired);
 	});
@@ -98,9 +107,11 @@ describe("cleanExpiredSessions", () => {
 	test("does nothing when no session has expired", async () => {
 		let live = await createSession(Date.now() + 60 * 1000);
 
-		await run();
+		let record = await run();
 
 		expect((await db.findMany(sessions)).map((row) => row.id)).toEqual([live]);
+		expect(record).toMatchObject({ "sessions.expired": 0 });
+		expect(record).not.toHaveProperty("sessions.deleted");
 	});
 
 	test("leaves an empty table alone", async () => {

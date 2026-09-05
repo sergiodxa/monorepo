@@ -6,8 +6,8 @@
  * rolls back the subject when its connection cannot be written — an unconnected
  * subject is unreachable and would block the next attempt on the same address.
  *
- * A failed billing mirror is only logged: nothing is charged at sign-up, so the
- * sign-in it already granted stands regardless.
+ * A failed billing mirror is only recorded on the request's log: nothing is charged at
+ * sign-up, so the sign-in it already granted stands regardless.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,12 +19,12 @@ import type { GitHubAuthProfile } from "remix/auth";
 import type { Database } from "remix/data-table";
 import type { RequestContext } from "remix/router";
 
+import { currentLog } from "@sdxc/logger";
 import { failure, isFailure, success } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
 import { createGitHubAuthProvider, finishExternalAuth, startExternalAuth } from "remix/auth";
 import * as s from "remix/data-schema";
-import { getContext } from "remix/middleware/async-context";
 
 import Connection from "~/app/data/connection";
 import Subject from "~/app/data/subject";
@@ -130,7 +130,7 @@ export async function startGitHubLogin(ctx: RequestContext): Promise<Response> {
 async function isGitHubEmailVerified(accessToken: string, email: string | null): Promise<boolean> {
 	if (!email) return false;
 
-	let logger = getContext().logger;
+	let log = currentLog();
 
 	try {
 		let response = await fetch(GITHUB_USER_EMAILS_ENDPOINT, {
@@ -142,13 +142,13 @@ async function isGitHubEmailVerified(accessToken: string, email: string | null):
 		});
 
 		if (!response.ok) {
-			logger.info("github_emails_unreadable", { status: response.status });
+			log?.note("auth.provider.emails_unreadable", { status: response.status });
 			return false;
 		}
 
 		let parsed = await validate({ emails: await response.json() }, GITHUB_EMAILS_SCHEMA);
 		if (isFailure(parsed)) {
-			logger.info("github_emails_unreadable", { status: response.status });
+			log?.note("auth.provider.emails_unreadable", { status: response.status });
 			return false;
 		}
 
@@ -158,7 +158,7 @@ async function isGitHubEmailVerified(accessToken: string, email: string | null):
 			(entry) => entry.verified && entry.email.toLowerCase() === wanted,
 		);
 	} catch {
-		logger.info("github_emails_request_failed");
+		log?.note("auth.provider.emails_request_failed");
 		return false;
 	}
 }
@@ -207,7 +207,7 @@ function externalIdOf(profile: GitHubProfile): string {
  *
  * @param db - Database the subject and connection are written to.
  * @param billing - Billing platform the subject is mirrored into, best effort; a
- * failed mirror is only logged, since a later lookup by address recovers it.
+ * failed mirror is only recorded, since a later lookup by address recovers it.
  * @param identity - The profile GitHub authenticated and its verification verdict.
  * @returns The subject id to issue an authorization code for.
  */
@@ -216,7 +216,7 @@ export async function resolveGitHubSubject(
 	billing: Billing,
 	identity: GitHubIdentity,
 ): Promise<Result<string, ProviderLoginError>> {
-	let logger = getContext().logger;
+	let log = currentLog();
 	let { profile, emailVerified } = identity;
 	let externalId = externalIdOf(profile);
 
@@ -225,20 +225,21 @@ export async function resolveGitHubSubject(
 		(await Connection.find(db, PROVIDER, String(profile.id)));
 
 	if (connection) {
-		logger.info("github_connection_found", { subjectId: connection.subject_id });
+		log?.set({ subject: { id: connection.subject_id } });
+		log?.note("auth.provider.connection_found");
 		return success(connection.subject_id);
 	}
 
 	let email = profile.email;
 	if (!email) {
-		logger.info("github_email_missing");
+		log?.note("auth.provider.email_missing");
 		return failure(
 			new ProviderLoginError("access_denied", "GitHub did not provide an email address"),
 		);
 	}
 
 	if (await Subject.findByEmail(db, email)) {
-		logger.info("github_email_already_registered");
+		log?.note("auth.provider.email_registered");
 		return failure(
 			new ProviderLoginError(
 				"access_denied",
@@ -259,21 +260,22 @@ export async function resolveGitHubSubject(
 		await Connection.create(db, PROVIDER, externalId, subject.id);
 	} catch {
 		await Subject.delete(db, subject.id);
-		logger.error("github_connection_create_failed", { subjectId: subject.id });
+		log?.warn("auth.provider.connection_create_failed", { subject_id: subject.id });
 		return failure(new ProviderLoginError("server_error", PROVISIONING_FAILED));
 	}
 
 	let customer = await Customer.findOrCreateByEmail(billing, subject);
 
 	if (isFailure(customer)) {
-		logger.error("github_customer_create_failed", {
-			subjectId: subject.id,
+		log?.warn("auth.provider.customer_create_failed", {
+			subject_id: subject.id,
 			code: customer.error.code,
-			providerCode: customer.error.providerCode,
+			provider_code: customer.error.providerCode,
 		});
 	}
 
-	logger.info("github_subject_created", { subjectId: subject.id, emailVerified });
+	log?.set({ subject: { id: subject.id } });
+	log?.note("auth.provider.subject_created", { email_verified: emailVerified });
 
 	return success(subject.id);
 }

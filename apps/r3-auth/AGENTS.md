@@ -71,7 +71,7 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
   `app/data/`; no ORM, no raw SQL in controllers. DB-facing field names stay `snake_case`.
 - MUST resolve services (`Database`, `RateLimiters`) through `@sdxc/service-container`
   with `inject([...])`, and MUST keep request-lifetime values (session, current subject,
-  request logger, locale) in middleware and request context instead.
+  request log, locale) in middleware and request context instead.
 - MUST bill through `@sdxc/billing`: the provider is constructed once in `app/lib/billing.ts`,
   a route reaches it as `ctx.billing`, and anything outside a request imports the instance.
   Every call answers a `@sdxc/result` `Result`, so a caller branches on `isFailure` and logs
@@ -160,9 +160,9 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
   the validated `redirect_uri` with `error`, `error_description`, `state` and `iss`.
 - MUST keep refusals indistinguishable where distinguishing them helps an attacker (missing
   vs. malformed vs. expired token, wrong password vs. unknown address).
-- MUST use `@sdxc/logger` (`ctx.logger` in HTTP handlers and in job handlers alike), never
-  `console.log`, and MUST log event names plus ids only — never token, code, secret or
-  password material.
+- MUST use `@sdxc/logger` (`ctx.log` in HTTP handlers and in job handlers alike,
+  `currentLog()` anywhere else), never `console.log`, and MUST record dotted event names,
+  scalar fields and ids only — never token, code, secret or password material.
 - MUST send `Cache-Control: no-store` (and `Pragma: no-cache`) on token responses and on the
   `form_post` page.
 

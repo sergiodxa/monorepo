@@ -101,10 +101,11 @@ export default createController(routes.admin.clientEdit, {
 		index: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let clientId = ctx.params.clientId!;
+			ctx.log.set({ client: { id: clientId } });
 
 			let client = await Client.findById(db, clientId);
 			if (!client) {
-				ctx.logger.info("admin_client_not_found", { clientId });
+				ctx.log.note("admin.client.not_found");
 				return defaultHandler(ctx);
 			}
 
@@ -125,16 +126,17 @@ export default createController(routes.admin.clientEdit, {
 		action: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let clientId = ctx.params.clientId!;
+			ctx.log.set({ client: { id: clientId } });
 
 			let existing = await Client.findById(db, clientId);
 			if (!existing) {
-				ctx.logger.info("admin_client_not_found", { clientId });
+				ctx.log.note("admin.client.not_found");
 				return defaultHandler(ctx);
 			}
 
 			let result = await validate(ctx.formData, UpdateClientSchema);
 			if (isFailure(result)) {
-				ctx.logger.info("admin_client_update_invalid", { clientId });
+				ctx.log.note("admin.client.update_invalid");
 				return ctx.render(
 					<ClientEditView
 						chrome={chrome(ctx, existing.name, clientId)}
@@ -161,10 +163,7 @@ export default createController(routes.admin.clientEdit, {
 				regenerateSecret: input.regenerateSecret,
 			});
 
-			ctx.logger.info("admin_client_updated", {
-				clientId,
-				secretRotated: input.regenerateSecret,
-			});
+			ctx.log.note("admin.client.updated", { secret_rotated: input.regenerateSecret });
 
 			if (updated.newSecret) {
 				return ctx.render(

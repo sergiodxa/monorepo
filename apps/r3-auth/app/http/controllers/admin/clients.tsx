@@ -99,16 +99,17 @@ export default createController(routes.admin.clients, {
 
 			let result = await validate(ctx.formData, ClientsIntentSchema);
 			if (isFailure(result)) {
-				ctx.logger.error("admin_clients_invalid_intent");
+				ctx.log.warn("admin.client.intent_invalid");
 				return badRequest({ error: "invalid_intent" });
 			}
 
 			let { clientId } = result.data;
+			ctx.log.set({ client: { id: clientId } });
 
 			await Grant.deleteByClientId(db, clientId);
 			await Client.delete(db, clientId);
 
-			ctx.logger.info("admin_client_deleted", { clientId });
+			ctx.log.note("admin.client.deleted");
 
 			return redirect(routes.admin.clients.index.href(), { status: redirect.Status.SeeOther });
 		}),

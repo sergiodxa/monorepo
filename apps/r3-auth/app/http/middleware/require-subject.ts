@@ -47,7 +47,7 @@ export const requireSubject: Middleware = async (ctx, next) => {
 	let refreshToken = getRefreshToken();
 
 	if (!accessToken || !refreshToken) {
-		ctx.logger.info("auth_no_tokens");
+		ctx.log.note("session.tokens_missing");
 		return redirect(routes.authorize.index.href(), { status: redirect.Status.SeeOther });
 	}
 
@@ -55,7 +55,6 @@ export const requireSubject: Middleware = async (ctx, next) => {
 
 	if (isAccessTokenExpiringSoon(accessToken)) {
 		try {
-			ctx.logger.info("auth_refreshing_token");
 			let tokens = await createOidcProvider(db).token({ type: "refresh_token", refreshToken });
 
 			/**
@@ -68,9 +67,9 @@ export const requireSubject: Middleware = async (ctx, next) => {
 
 			accessToken = tokens.access_token;
 			setTokens(tokens.access_token, tokens.refresh_token);
-			ctx.logger.info("auth_token_refreshed");
+			ctx.log.note("session.token_refreshed");
 		} catch (error) {
-			ctx.logger.error("auth_refresh_failed", {
+			ctx.log.warn("session.token_refresh_failed", {
 				error: error instanceof Error ? error.message : "Unknown error",
 			});
 			unsetTokens();
@@ -82,12 +81,13 @@ export const requireSubject: Middleware = async (ctx, next) => {
 	let subject = subjectId ? await Subject.findById(db, subjectId) : null;
 
 	if (!subject) {
-		ctx.logger.info("auth_subject_not_found");
+		ctx.log.note("session.subject_not_found");
 		unsetTokens();
 		return redirect(routes.authorize.index.href(), { status: redirect.Status.SeeOther });
 	}
 
 	ctx.subject = subject;
+	ctx.log.set({ subject: { id: subject.id, role: subject.role } });
 
 	return next();
 };

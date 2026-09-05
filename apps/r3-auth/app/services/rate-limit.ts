@@ -12,9 +12,9 @@ import type { Adapter } from "@sdxc/rate-limit";
 
 import { toSeconds } from "@sdxc/duration";
 import { tooManyRequests } from "@sdxc/http/response/json";
+import { currentLog } from "@sdxc/logger";
 import { applyRateLimitHeaders } from "@sdxc/rate-limit";
 import { isFailure } from "@sdxc/result";
-import { getContext } from "remix/middleware/async-context";
 
 /** Error code a refused request carries. Relying parties may match on it. */
 const LIMITED_ERROR = "too_many_requests";
@@ -24,8 +24,8 @@ const LIMITED_DESCRIPTION = "Rate limit exceeded. Please try again later.";
 
 /**
  * Spends one unit of a limiter's budget for a key, returning a response to
- * send when it's gone. Fails open: a binding that cannot answer is logged and
- * the request proceeds, since a limiter outage must not take down logins.
+ * send when it's gone. Fails open: a binding that cannot answer is recorded as a
+ * warning and the request proceeds, since a limiter outage must not take down logins.
  *
  * @param adapter - The limiter to spend from.
  * @param key - Identity the budget belongs to, such as a client id or a client IP.
@@ -36,17 +36,18 @@ const LIMITED_DESCRIPTION = "Rate limit exceeded. Please try again later.";
  */
 export async function spendRateLimit(adapter: Adapter, key: string): Promise<Response | null> {
 	let result = await adapter.consume(key);
-	let logger = getContext().logger;
+	let log = currentLog();
 
 	if (isFailure(result)) {
-		logger.error("rate_limit_unavailable", { key, error: result.error.message });
+		log?.warn("rate_limit.unavailable", { key, error: result.error.message });
 		return null;
 	}
 
 	let decision = result.data;
 	if (decision.allowed) return null;
 
-	logger.info("rate_limit_exceeded", { key });
+	log?.set({ rate_limit: { exceeded: true } });
+	log?.note("rate_limit.exceeded", { key });
 
 	let response = applyRateLimitHeaders(
 		tooManyRequests({ error: LIMITED_ERROR, error_description: LIMITED_DESCRIPTION }),

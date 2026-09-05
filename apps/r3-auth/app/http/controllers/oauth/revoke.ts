@@ -34,26 +34,28 @@ export default createAction(
 
 		let credentials = credentialsFromHeader(ctx.request.headers);
 		if (!credentials) {
-			ctx.logger.info("revoke_missing_credentials");
+			ctx.log.set({ oidc: { error: "invalid_client" } });
 			return unauthorized(
 				{ error: "invalid_client", error_description: "Missing or invalid client credentials" },
 				{ headers: { "WWW-Authenticate": "Basic" } },
 			);
 		}
 
+		ctx.log.set({ client: { id: credentials.clientId } });
+
 		let limited = await spendRateLimit(limiters.revoke, credentials.clientId);
 		if (limited) return limited;
 
 		let result = await validate(ctx.formData, TokenIntrospectionSchema);
 		if (isFailure(result)) {
-			ctx.logger.info("revoke_invalid_request");
+			ctx.log.set({ oidc: { error: "invalid_request" } });
 			return badRequest({ error: "invalid_request", error_description: "Invalid request body" });
 		}
 
 		let body = result.data;
 
 		if (body.token_type_hint === "access_token") {
-			ctx.logger.info("revoke_access_token_noop", { clientId: credentials.clientId });
+			ctx.log.note("oidc.revoke.access_token_noop");
 			return new Response(null, { status: 200 });
 		}
 
@@ -65,15 +67,12 @@ export default createAction(
 				tokenTypeHint: body.token_type_hint ?? "refresh_token",
 			});
 
-			ctx.logger.info("revoke_success", { clientId: credentials.clientId });
+			ctx.log.note("oidc.revoke.revoked");
 		} catch (error) {
 			if (error instanceof OIDC.Error) {
-				ctx.logger.info("revoke_error", { clientId: credentials.clientId, code: error.code });
+				ctx.log.set({ oidc: { error: error.code } });
 			} else {
-				ctx.logger.error("revoke_unexpected_error", {
-					clientId: credentials.clientId,
-					error: error instanceof Error ? error.message : "Unknown error",
-				});
+				ctx.log.fail(error);
 			}
 		}
 

@@ -45,7 +45,7 @@ export default createAction(
 		let authorization = ctx.request.headers.get("Authorization");
 
 		if (!authorization?.startsWith("Bearer ")) {
-			ctx.logger.info("userinfo_missing_token");
+			ctx.log.note("oidc.userinfo.token_missing");
 			return invalidToken("Missing or invalid access token", REALM);
 		}
 
@@ -55,14 +55,14 @@ export default createAction(
 			});
 
 			if (!subject) {
-				ctx.logger.info("userinfo_subject_not_found");
+				ctx.log.note("oidc.userinfo.subject_not_found");
 				return invalidToken(
 					"Subject not found",
 					`${REALM}, error="invalid_token", error_description="Subject not found"`,
 				);
 			}
 
-			ctx.logger.info("userinfo_success", { subjectId: subject.id });
+			ctx.log.set({ subject: { id: subject.id } });
 
 			let claims: Record<string, unknown> = { sub: subject.id };
 
@@ -80,9 +80,9 @@ export default createAction(
 			return ok(claims);
 		} catch (error) {
 			if (error instanceof OIDC.InternalServerError) {
-				ctx.logger.error("userinfo_server_error", { error: error.description });
+				ctx.log.fail(error);
 			} else {
-				ctx.logger.info("userinfo_invalid_token", {
+				ctx.log.note("oidc.userinfo.token_invalid", {
 					error: error instanceof Error ? error.message : "Unknown error",
 				});
 			}

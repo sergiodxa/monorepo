@@ -101,7 +101,7 @@ export default createController(routes.admin.clientNew, {
 
 			let result = await validate(ctx.formData, CreateClientSchema);
 			if (isFailure(result)) {
-				ctx.logger.info("admin_client_create_invalid");
+				ctx.log.note("admin.client.create_invalid");
 				return ctx.render(
 					<ClientNewView chrome={chrome(ctx)} labels={labels(ctx)} issues={result.error.issues} />,
 					{ status: 400 },
@@ -117,7 +117,8 @@ export default createController(routes.admin.clientNew, {
 				logout_uri: input.logoutUri,
 			});
 
-			ctx.logger.info("admin_client_created", { clientId: client.id });
+			ctx.log.set({ client: { id: client.id } });
+			ctx.log.note("admin.client.created");
 
 			return ctx.render(
 				<ClientNewView

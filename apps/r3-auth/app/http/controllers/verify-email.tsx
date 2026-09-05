@@ -118,14 +118,14 @@ export default createController(routes.verifyEmail, {
 
 			let query = await validate(ctx.url.searchParams, VerifyEmailQuerySchema);
 			if (isFailure(query)) {
-				ctx.logger.info("email_verification_token_malformed");
+				ctx.log.note("email_verification.token_malformed");
 				return outcomePage(ctx, "invalid", 400);
 			}
 
 			let result = await peekVerificationToken(db, query.data.token);
 
 			if (isFailure(result)) {
-				ctx.logger.info("email_verification_token_refused", { reason: result.error.reason });
+				ctx.log.note("email_verification.token_refused", { reason: result.error.reason });
 				return failurePage(ctx, result.error);
 			}
 
@@ -141,18 +141,19 @@ export default createController(routes.verifyEmail, {
 
 			let form = await validate(ctx.formData, VerifyEmailFormSchema);
 			if (isFailure(form)) {
-				ctx.logger.info("email_verification_token_malformed");
+				ctx.log.note("email_verification.token_malformed");
 				return outcomePage(ctx, "invalid", 400);
 			}
 
 			let result = await consumeVerificationToken(db, form.data.token);
 
 			if (isFailure(result)) {
-				ctx.logger.info("email_verification_token_refused", { reason: result.error.reason });
+				ctx.log.note("email_verification.token_refused", { reason: result.error.reason });
 				return failurePage(ctx, result.error);
 			}
 
-			ctx.logger.info("email_verified", { subjectId: result.data.id });
+			ctx.log.set({ subject: { id: result.data.id } });
+			ctx.log.note("email_verification.verified");
 
 			return outcomePage(ctx, "verified", 200);
 		}),

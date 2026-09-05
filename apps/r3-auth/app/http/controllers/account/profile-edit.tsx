@@ -140,7 +140,7 @@ export default createController(routes.account.profileEdit, {
 			let result = await validate(ctx.formData, UpdateProfileSchema);
 
 			if (isFailure(result)) {
-				ctx.logger.info("profile_update_invalid", { subjectId: subject.id });
+				ctx.log.note("profile.update_invalid");
 				return editPage(
 					ctx,
 					subject,
@@ -161,8 +161,7 @@ export default createController(routes.account.profileEdit, {
 					avatar: result.data.avatar,
 				});
 			} catch (error) {
-				ctx.logger.info("profile_update_rejected", {
-					subjectId: subject.id,
+				ctx.log.note("profile.update_rejected", {
 					error: error instanceof Error ? error.message : "Unknown error",
 				});
 
@@ -175,7 +174,7 @@ export default createController(routes.account.profileEdit, {
 				);
 			}
 
-			ctx.logger.info("profile_updated", { subjectId: subject.id });
+			ctx.log.note("profile.updated");
 
 			return redirect(routes.account.profile.href(), { status: redirect.Status.SeeOther });
 		}),

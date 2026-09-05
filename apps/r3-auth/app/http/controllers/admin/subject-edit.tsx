@@ -82,10 +82,11 @@ export default createController(routes.admin.subjectEdit, {
 		index: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let subjectId = ctx.params.subjectId!;
+			ctx.log.set({ admin: { subject_id: subjectId } });
 
 			let subject = await Subject.findById(db, subjectId);
 			if (!subject) {
-				ctx.logger.info("admin_subject_not_found", { subjectId });
+				ctx.log.note("admin.subject.not_found");
 				return defaultHandler(ctx);
 			}
 
@@ -107,16 +108,17 @@ export default createController(routes.admin.subjectEdit, {
 		action: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let subjectId = ctx.params.subjectId!;
+			ctx.log.set({ admin: { subject_id: subjectId } });
 
 			let subject = await Subject.findById(db, subjectId);
 			if (!subject) {
-				ctx.logger.info("admin_subject_not_found", { subjectId });
+				ctx.log.note("admin.subject.not_found");
 				return defaultHandler(ctx);
 			}
 
 			let result = await validate(ctx.formData, UpdateSubjectSchema);
 			if (isFailure(result)) {
-				ctx.logger.info("admin_subject_update_invalid", { subjectId });
+				ctx.log.note("admin.subject.update_invalid");
 				return ctx.render(
 					<SubjectEditView
 						chrome={chrome(ctx, subject.display_name, subjectId)}
@@ -139,7 +141,7 @@ export default createController(routes.admin.subjectEdit, {
 				email_verified_at: input.emailVerified ? (subject.email_verified_at ?? Date.now()) : null,
 			});
 
-			ctx.logger.info("admin_subject_updated", { subjectId, role: input.role });
+			ctx.log.note("admin.subject.updated", { role: input.role });
 
 			return redirect(routes.admin.subject.index.href({ subjectId }), {
 				status: redirect.Status.SeeOther,

@@ -2,7 +2,7 @@
  * Wires up the app-wide dependency-injection container (ADR-008) and registers the
  * services every request, job and queue message resolves from: the D1-backed
  * `Database`, the five rate limiters, the mail transport and the background mailer
- * built on it. Request-lifetime values — session, current subject, request logger —
+ * built on it. Request-lifetime values — session, current subject, request log —
  * belong to middleware and request context.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

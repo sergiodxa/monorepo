@@ -33,11 +33,12 @@ export default createAction(
 		if (limited) return limited;
 
 		if (ctx.params.provider !== "github") {
-			ctx.logger.info("oauth_invalid_provider", { provider: ctx.params.provider });
+			ctx.log.note("auth.provider.unknown", { provider: ctx.params.provider });
 			return redirect(routes.authorize.index.href(), { status: redirect.Status.SeeOther });
 		}
 
-		ctx.logger.info("oauth_login_started", { provider: "github" });
+		ctx.log.set({ auth: { provider: "github" } });
+		ctx.log.note("auth.login_started");
 
 		return await startGitHubLogin(ctx);
 	}),

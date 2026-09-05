@@ -45,21 +45,25 @@ export default createAction(routes.api.subject, {
 		let subjectId = ctx.params.subjectId!;
 		let cacheKey = subjectCacheKey(ctx.apiClient.id, subjectId);
 
+		ctx.log.set({ subject: { id: subjectId } });
+
 		let cached = await collector.measure("cache", "cacheLookup", async () => {
 			return parseCachedSubject(await env.KV.get(cacheKey, "json"));
 		});
 
 		if (cached) {
-			ctx.logger.info("api_subject_cache_hit", { clientId: ctx.apiClient.id, subjectId });
+			ctx.log.inc("cache.hit");
 			return ok({ subject: cached });
 		}
+
+		ctx.log.inc("cache.miss");
 
 		let subject = await collector.measure("db", "findSubjectById", async () => {
 			return await Subject.findById(db, subjectId);
 		});
 
 		if (!subject) {
-			ctx.logger.info("api_subject_not_found", { clientId: ctx.apiClient.id, subjectId });
+			ctx.log.note("api.subject.not_found");
 			return notFound({ error: "Subject not found" });
 		}
 
@@ -70,8 +74,6 @@ export default createAction(routes.api.subject, {
 				expirationTtl: SUBJECT_CACHE_TTL_SECONDS,
 			}),
 		);
-
-		ctx.logger.info("api_subject_served", { clientId: ctx.apiClient.id, subjectId });
 
 		return ok({ subject: payload });
 	}),

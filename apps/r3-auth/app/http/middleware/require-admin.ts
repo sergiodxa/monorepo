@@ -24,7 +24,7 @@ export const requireAdmin: Middleware = (ctx, next) => {
 	/** The role check, run once `requireSubject` has resolved the subject. */
 	return requireSubject(ctx, async () => {
 		if (ctx.subject.role !== "admin") {
-			ctx.logger.info("auth_admin_required", { subjectId: ctx.subject.id });
+			ctx.log.note("session.admin_required");
 			return redirect(routes.account.sessions.index.href(), { status: redirect.Status.SeeOther });
 		}
 

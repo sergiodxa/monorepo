@@ -89,7 +89,7 @@ function resetUrl(token: string): string {
  * the account's own locale since whoever opens the link may not be who submitted
  * the form. Answers identically whether or not the address is registered.
  *
- * @param ctx - The request the form was posted on; its mailer and logger are read from it.
+ * @param ctx - The request the form was posted on; its mailer and log are read from it.
  * @param db - Database the address is resolved against.
  * @param email - The address as submitted; normalized here.
  */
@@ -103,13 +103,13 @@ export async function requestPasswordReset(
 
 		let cooldownDigest = await digest(address);
 		if (!cooldownDigest) {
-			ctx.logger.error("password_reset_digest_failed");
+			ctx.log.warn("password_reset.digest_failed");
 			return;
 		}
 
 		let cooldownKey = `${COOLDOWN_KEY_PREFIX}${cooldownDigest}`;
 		if ((await env.KV.get(cooldownKey)) !== null) {
-			ctx.logger.info("password_reset_suppressed");
+			ctx.log.note("password_reset.suppressed");
 			return;
 		}
 
@@ -119,14 +119,14 @@ export async function requestPasswordReset(
 
 		let subject = await Subject.findByEmail(db, address);
 		if (!subject) {
-			ctx.logger.info("password_reset_unknown_address");
+			ctx.log.note("password_reset.address_unknown");
 			return;
 		}
 
 		let token = randomToken({ bytes: TOKEN_BYTES });
 		let tokenDigest = await digest(token);
 		if (!tokenDigest) {
-			ctx.logger.error("password_reset_digest_failed", { subjectId: subject.id });
+			ctx.log.warn("password_reset.digest_failed", { subject_id: subject.id });
 			return;
 		}
 
@@ -152,11 +152,10 @@ export async function requestPasswordReset(
 			}),
 		);
 
-		ctx.logger.info("password_reset_requested", { subjectId: subject.id });
+		ctx.log.set({ subject: { id: subject.id } });
+		ctx.log.note("password_reset.requested");
 	} catch (error) {
-		ctx.logger.error("password_reset_request_failed", {
-			error: error instanceof Error ? error.message : "Unknown error",
-		});
+		ctx.log.fail(error);
 	}
 }
 

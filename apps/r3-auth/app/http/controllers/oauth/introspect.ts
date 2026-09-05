@@ -37,19 +37,21 @@ export default createAction(
 
 		let credentials = credentialsFromHeader(ctx.request.headers);
 		if (!credentials) {
-			ctx.logger.info("introspect_missing_credentials");
+			ctx.log.set({ oidc: { error: "invalid_client" } });
 			return unauthorized(
 				{ error: "invalid_client", error_description: "Missing or invalid client credentials" },
 				{ headers: { "WWW-Authenticate": "Basic" } },
 			);
 		}
 
+		ctx.log.set({ client: { id: credentials.clientId } });
+
 		let limited = await spendRateLimit(limiters.introspect, credentials.clientId);
 		if (limited) return limited;
 
 		let result = await validate(ctx.formData, TokenIntrospectionSchema);
 		if (isFailure(result)) {
-			ctx.logger.info("introspect_invalid_request");
+			ctx.log.set({ oidc: { error: "invalid_request" } });
 			return badRequest({ error: "invalid_request", error_description: "Invalid request body" });
 		}
 
@@ -61,25 +63,14 @@ export default createAction(
 				tokenTypeHint: result.data.token_type_hint,
 			});
 
-			ctx.logger.info("introspect_success", {
-				clientId: credentials.clientId,
-				active: introspection.active,
-			});
+			ctx.log.set({ oidc: { token_active: introspection.active } });
 
 			return ok(introspection);
 		} catch (error) {
-			if (error instanceof OIDC.InternalServerError) {
-				ctx.logger.error("introspect_server_error", {
-					clientId: credentials.clientId,
-					error: error.description,
-				});
-			} else if (error instanceof OIDC.Error) {
-				ctx.logger.info("introspect_error", { clientId: credentials.clientId, code: error.code });
+			if (error instanceof OIDC.Error && !(error instanceof OIDC.InternalServerError)) {
+				ctx.log.set({ oidc: { error: error.code } });
 			} else {
-				ctx.logger.error("introspect_unexpected_error", {
-					clientId: credentials.clientId,
-					error: error instanceof Error ? error.message : "Unknown error",
-				});
+				ctx.log.fail(error);
 			}
 
 			return ok({ active: false });

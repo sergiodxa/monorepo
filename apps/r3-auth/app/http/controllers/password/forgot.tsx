@@ -102,7 +102,7 @@ export default createController(routes.password.forgot, {
 
 			let result = await validate(ctx.formData, ForgotPasswordSchema);
 			if (isFailure(result)) {
-				ctx.logger.info("password_reset_form_invalid");
+				ctx.log.note("password_reset.form_invalid");
 				return requestPage(
 					ctx,
 					submittedAddress(ctx.formData),
