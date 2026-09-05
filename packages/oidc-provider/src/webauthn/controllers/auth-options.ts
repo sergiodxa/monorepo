@@ -48,12 +48,11 @@ let RequestSchema = s.object({
 export default createAction(
 	routes.webauthn.auth.options,
 	inject([Database] as const, async (db) => {
-		let { formData, request, logger } = getContext();
-		let log = logger.action("/webauthn/auth/options");
+		let { formData, request, log } = getContext();
 
 		let result = await validate(Object.fromEntries(formData), RequestSchema);
 		if (isFailure(result)) {
-			log.info("Invalid request body");
+			log.warn("http.invalid_body");
 			return badRequest({ error: "Invalid request", issues: result.error.issues });
 		}
 
@@ -61,7 +60,7 @@ export default createAction(
 
 		let rateLimit = checkUserRateLimit(email, "authOptions", USER_RATE_LIMITS.authOptions);
 		if (!rateLimit.success) {
-			log.info("Rate limit exceeded for email", { email });
+			log.warn("webauthn.rate_limited", { email });
 			return tooManyRequests({
 				error: "Too many authentication attempts. Please try again later.",
 				retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
@@ -70,13 +69,13 @@ export default createAction(
 
 		let subject = await Subject.findByEmail(db, email);
 		if (!subject) {
-			log.info("Subject not found for authentication");
+			log.warn("subject.not_found");
 			return badRequest({ error: "No passkey found. Please register first." });
 		}
 
 		let passkeys = await Passkey.listForAuthentication(db, subject.id);
 		if (passkeys.length === 0) {
-			log.info("No passkeys found for subject", { subjectId: subject.id });
+			log.warn("webauthn.auth.no_passkeys", { subject_id: subject.id });
 			return badRequest({ error: "No passkey found. Please register first." });
 		}
 
@@ -116,12 +115,11 @@ export default createAction(
 			challenge: new Uint8Array(base64UrlDecode(challenge)),
 		} satisfies GenerateAuthenticationOptionsOpts);
 
-		log.info("Authentication challenge created", {
-			subjectId: subject.id,
-			challengeId,
-			clientId: clientId ?? null,
-			passkeyCount: passkeys.length,
-			hasRedirectUri: !!redirectUri,
+		log.set({ subject: { id: subject.id }, client: { id: clientId } });
+		log.note("webauthn.auth.challenge_created", {
+			challenge_id: challengeId,
+			passkey_count: passkeys.length,
+			has_redirect_uri: !!redirectUri,
 		});
 
 		return ok({

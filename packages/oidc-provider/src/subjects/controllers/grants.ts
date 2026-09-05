@@ -32,13 +32,13 @@ import Subject from "../models/subject.js";
 export const index = createAction(
 	routes.api.subjects.grants.index,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext();
+		let { params, log } = getContext();
 		let { id } = s.parse(s.object({ id: s.string() }), params);
-		let log = logger.loader("/api/subjects/:id/grants");
+		log.set({ subject: { id } });
 
 		let subject = await Subject.show(db, id);
 		if (!subject) {
-			log.info("Subject not found", { subjectId: id });
+			log.warn("subject.not_found");
 			return notFound({ error: "Subject not found" });
 		}
 
@@ -59,7 +59,7 @@ export const index = createAction(
 			};
 		});
 
-		log.info("Grants listed", { subjectId: id, count: grants.length });
+		log.note("admin.subject.grant.listed", { count: grants.length });
 
 		return ok(enrichedGrants);
 	}),
@@ -72,36 +72,34 @@ export const index = createAction(
 export const destroy = createAction(
 	routes.api.subjects.grants.destroy,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext();
+		let { params, log } = getContext();
 		let { id, grantId } = s.parse(s.object({ id: s.string(), grantId: s.string() }), params);
-		let log = logger.action("/api/subjects/:id/grants/:grantId");
+		log.set({ subject: { id } });
 
 		let subject = await Subject.show(db, id);
 		if (!subject) {
-			log.info("Subject not found", { subjectId: id });
+			log.warn("subject.not_found");
 			return notFound({ error: "Subject not found" });
 		}
 
 		let grant = await Grant.show(db, grantId);
 		if (!grant) {
-			log.info("Grant not found", { subjectId: id, grantId });
+			log.warn("admin.subject.grant.not_found", { grant_id: grantId });
 			return notFound({ error: "Grant not found" });
 		}
 
 		if (grant.subject_id !== id) {
-			log.info("Grant does not belong to subject", {
-				subjectId: id,
-				grantId,
+			log.warn("admin.subject.grant.subject_mismatch", {
+				grant_id: grantId,
 			});
 			return notFound({ error: "Grant not found" });
 		}
 
 		try {
 			await Grant.destroy(db, grantId);
-			log.info("Grant revoked", {
-				subjectId: id,
-				grantId,
-				clientId: grant.client_id,
+			log.note("admin.subject.grant.revoked", {
+				grant_id: grantId,
+				client_id: grant.client_id,
 			});
 			return noContent();
 		} catch (error) {

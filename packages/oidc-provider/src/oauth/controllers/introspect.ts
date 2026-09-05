@@ -45,8 +45,7 @@ let IntrospectSchema = s.object({
 export default createAction(
 	routes.oauth.introspect,
 	inject([Database] as const, async (db) => {
-		let { formData, request, logger } = getContext();
-		let log = logger.action("/oauth/introspect");
+		let { formData, request, log } = getContext();
 
 		let basicAuth = parseBasicAuth(request.headers.get("authorization"));
 		let body = Object.fromEntries(formData) as Record<string, unknown>;
@@ -58,19 +57,16 @@ export default createAction(
 
 		let result = await validate(body, IntrospectSchema);
 		if (isFailure(result)) {
-			log.info("Invalid request parameters");
+			log.warn("http.invalid_params");
 			return reject("invalid_request", "Missing or invalid parameters");
 		}
 
 		let { token, token_type_hint, client_id, client_secret } = result.data;
 
-		log.info("Token introspection request", {
-			clientId: client_id,
-			tokenTypeHint: token_type_hint,
-		});
+		log.set({ client: { id: client_id }, oidc: { token_type_hint } });
 
 		if (!client_id || !client_secret) {
-			log.info("Client authentication missing");
+			log.warn("client.auth_required");
 			return reject("invalid_client", "Client authentication required", 401);
 		}
 
@@ -80,13 +76,13 @@ export default createAction(
 		]);
 
 		if (!client) {
-			log.info("Client not found", { clientId: client_id });
+			log.warn("client.not_found");
 			return reject("invalid_client", "Client not found", 401);
 		}
 
 		let secretValid = await Secret.verify(db, client.id, client_secret);
 		if (!secretValid) {
-			log.info("Invalid client credentials", { clientId: client_id });
+			log.warn("client.invalid_credentials");
 			return reject("invalid_client", "Invalid client credentials", 401);
 		}
 
@@ -94,17 +90,17 @@ export default createAction(
 		headers.set("Cache-Control", "no-store");
 
 		if (!issuer) {
-			log.info("Issuer not configured, token inactive", { clientId: client_id });
+			log.warn("tenant.issuer_missing");
 			return ok({ active: false }, { headers });
 		}
 
 		if (token_type_hint !== "access_token") {
 			let session = await Session.show(db, token);
 			if (session && new Date(session.expires_at) > new Date()) {
-				log.info("Refresh token introspected successfully", {
-					clientId: client_id,
-					sessionId: session.id,
-					subjectId: session.subject_id,
+				log.set({ subject: { id: session.subject_id } });
+				log.note("oidc.introspect.active", {
+					token_type: "refresh_token",
+					session_id: session.id,
 				});
 				return ok(
 					{
@@ -125,7 +121,7 @@ export default createAction(
 		try {
 			let signingKeys = await SigningKey.getAll(db);
 			if (signingKeys.length === 0) {
-				log.info("No signing keys configured, token inactive", { clientId: client_id });
+				log.warn("tenant.signing_keys_missing");
 				return ok({ active: false }, { headers });
 			}
 
@@ -139,11 +135,11 @@ export default createAction(
 			// an absent claim is omitted from the response instead of throwing below.
 			let { client_id: tokenClientId, scope } = accessToken.payload;
 
-			log.info("Access token introspected successfully", {
-				clientId: client_id,
-				subjectId: accessToken.subject,
-				scope,
+			log.set({
+				subject: { id: accessToken.subject },
+				oidc: { scope: typeof scope === "string" ? scope : undefined },
 			});
+			log.note("oidc.introspect.active", { token_type: "access_token" });
 
 			return ok(
 				{
@@ -160,7 +156,7 @@ export default createAction(
 				{ headers },
 			);
 		} catch {
-			log.info("Token invalid or expired", { clientId: client_id });
+			log.note("oidc.introspect.inactive");
 			return ok({ active: false }, { headers });
 		}
 	}),

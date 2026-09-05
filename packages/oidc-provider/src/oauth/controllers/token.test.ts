@@ -11,7 +11,7 @@
 import type { SqliteDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 
 import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
-import { Logger } from "@sdxc/logger/request";
+import { log } from "@sdxc/logger/middleware";
 import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
@@ -25,7 +25,6 @@ import Secret from "../../clients/models/secret.js";
 import TenantMeta from "../../management/models/tenant-meta.js";
 import Resource from "../../resources/models/resource.js";
 import routes from "../../routes.js";
-import loggerMiddleware from "../../shared/middleware/logger.js";
 import { createSqliteDatabaseAdapter } from "../../shared/test/db.js";
 import { createSubject } from "../../shared/test/fixtures.js";
 import SigningKey from "../../signing-keys/models/signing-key.js";
@@ -51,7 +50,7 @@ async function postToken(db: Db, params: Record<string, string>): Promise<Respon
 	let container = new ServiceContainer();
 	container.singleton(Database, () => db);
 
-	let middleware = [asyncContext(), loggerMiddleware(new Logger(request)), formData() as never];
+	let middleware = [log(), asyncContext(), formData() as never];
 	let router = createRouter({ middleware });
 	router.map(routes.oauth.token, token);
 

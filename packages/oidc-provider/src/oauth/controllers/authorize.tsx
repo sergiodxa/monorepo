@@ -73,13 +73,12 @@ export default createController(routes.oauth.authorize, {
 
 	actions: {
 		index: inject([Database] as const, async (db) => {
-			let { request, logger } = getContext();
-			let log = logger.loader("/authorize");
+			let { request, log } = getContext();
 			let url = new URL(request.url);
 			let params = Object.fromEntries(url.searchParams);
 
 			if (url.searchParams.size === 0) {
-				log.info("No params provided, redirecting to onboarding");
+				log.note("oidc.authorize.onboarding_redirect");
 				return new Response(null, {
 					status: 302,
 					headers: { Location: "/onboarding" },
@@ -88,7 +87,7 @@ export default createController(routes.oauth.authorize, {
 
 			let result = await validate(params, AuthorizeRequestSchema);
 			if (isFailure(result)) {
-				log.error("Invalid authorization request", { issues: result.error.issues });
+				log.warn("oidc.authorize.invalid_request", { issues: result.error.issues.length });
 				return renderError("Invalid request parameters");
 			}
 
@@ -105,17 +104,18 @@ export default createController(routes.oauth.authorize, {
 
 			let client = await Client.show(db, client_id);
 			if (!client) {
-				log.error("Client not found", { client_id });
+				log.warn("client.not_found", { client_id });
 				return renderError("Invalid client_id");
 			}
 
 			let isValidRedirect = await RedirectUri.validate(db, client_id, redirect_uri);
 			if (!isValidRedirect) {
-				log.error("Invalid redirect_uri", { client_id, redirect_uri });
+				log.warn("oidc.authorize.invalid_redirect_uri", { client_id, redirect_uri });
 				return renderError("Invalid redirect_uri");
 			}
 
-			log.info("Rendering authorization form", { client_id });
+			log.set({ client: { id: client_id } });
+			log.note("oidc.authorize.form_rendered");
 			let body = await renderToString(
 				<LoginForm
 					clientName={client.name}
@@ -134,13 +134,12 @@ export default createController(routes.oauth.authorize, {
 		}),
 
 		action: inject([Database] as const, async (db) => {
-			let { formData, request, logger } = getContext();
-			let log = logger.action("/authorize");
+			let { formData, request, log } = getContext();
 			let body = Object.fromEntries(formData);
 
 			let result = await validate(body, LoginFormSchema);
 			if (isFailure(result)) {
-				log.error("Invalid form submission", { issues: result.error.issues });
+				log.warn("oidc.authorize.invalid_form", { issues: result.error.issues.length });
 				return renderError("Invalid form data");
 			}
 
@@ -160,6 +159,7 @@ export default createController(routes.oauth.authorize, {
 			if (!client) {
 				return renderError("Invalid client");
 			}
+			log.set({ client: { id: client_id } });
 
 			let isValidRedirect = await RedirectUri.validate(db, client_id, redirect_uri);
 			if (!isValidRedirect) {
@@ -174,12 +174,11 @@ export default createController(routes.oauth.authorize, {
 				let allPasskeys = subject ? await Passkey.listBySubject(db, subject.id) : [];
 				let validPasskeys = allPasskeys.filter((p) => p.credential_id);
 
-				log.info("Checking passkeys for email", {
+				log.note("oidc.authorize.passkeys_checked", {
 					email,
-					subjectId: subject?.id,
-					totalPasskeys: allPasskeys.length,
-					validPasskeys: validPasskeys.length,
-					hasCredentialIds: allPasskeys.map((p) => !!p.credential_id),
+					subject_id: subject?.id,
+					total_passkeys: allPasskeys.length,
+					valid_passkeys: validPasskeys.length,
 				});
 
 				if (validPasskeys.length > 0 && subject) {
@@ -210,12 +209,10 @@ export default createController(routes.oauth.authorize, {
 						};
 					});
 
-					log.info("Rendering authentication form", {
+					log.note("oidc.authorize.auth_form_rendered", {
 						email,
-						rpId,
-						credentialCount: allowCredentials.length,
-						credentialIds: allowCredentials.map((c) => c.id.substring(0, 20) + "..."),
-						transports: allowCredentials.map((c) => c.transports),
+						rp_id: rpId,
+						credential_count: allowCredentials.length,
 					});
 
 					let html = await renderToString(

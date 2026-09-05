@@ -52,19 +52,18 @@ let CreateRedirectUriSchema = s.object({
 export const index = createAction(
 	routes.api.clients["redirect-uris"].index,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext();
+		let { params, log } = getContext();
 		let { clientId } = s.parse(s.object({ clientId: s.string() }), params);
-		let log = logger.loader("/api/clients/:clientId/redirect-uris");
+		log.set({ client: { id: clientId } });
 
 		let client = await Client.show(db, clientId);
 		if (!client) {
-			log.info("Client not found", { clientId });
+			log.warn("client.not_found");
 			return notFound({ error: "Client not found" });
 		}
 
 		let redirectUris = await RedirectUri.list(db, clientId);
-		log.info("Redirect URIs listed", {
-			clientId,
+		log.note("admin.client.redirect_uri.listed", {
 			count: redirectUris.length,
 		});
 		return ok(redirectUris.map(normalizeRedirectUri));
@@ -78,27 +77,26 @@ export const index = createAction(
 export const create = createAction(
 	routes.api.clients["redirect-uris"].create,
 	inject([Database] as const, async (db) => {
-		let { params, formData, logger } = getContext();
+		let { params, formData, log } = getContext();
 		let { clientId } = s.parse(s.object({ clientId: s.string() }), params);
-		let log = logger.action("/api/clients/:clientId/redirect-uris");
+		log.set({ client: { id: clientId } });
 
 		let client = await Client.show(db, clientId);
 		if (!client) {
-			log.info("Client not found", { clientId });
+			log.warn("client.not_found");
 			return notFound({ error: "Client not found" });
 		}
 
 		let result = await validate(Object.fromEntries(formData), CreateRedirectUriSchema);
 		if (isFailure(result)) {
-			log.info("Invalid request body", { clientId });
+			log.warn("http.invalid_body");
 			return badRequest({ error: "Invalid request", issues: result.error.issues });
 		}
 
 		let { id } = await RedirectUri.create(db, clientId, result.data.uri, result.data.environment);
 
-		log.info("Redirect URI created", {
-			clientId,
-			redirectUriId: id,
+		log.note("admin.client.redirect_uri.created", {
+			redirect_uri_id: id,
 		});
 		return created({ id });
 	}),
@@ -111,28 +109,26 @@ export const create = createAction(
 export const destroy = createAction(
 	routes.api.clients["redirect-uris"].destroy,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext();
+		let { params, log } = getContext();
 		let { clientId, id } = s.parse(s.object({ clientId: s.string(), id: s.string() }), params);
-		let log = logger.action("/api/clients/:clientId/redirect-uris/:id");
+		log.set({ client: { id: clientId } });
 
 		let client = await Client.show(db, clientId);
 		if (!client) {
-			log.info("Client not found", { clientId });
+			log.warn("client.not_found");
 			return notFound({ error: "Client not found" });
 		}
 
 		try {
 			await RedirectUri.destroy(db, id);
-			log.info("Redirect URI deleted", {
-				clientId,
-				redirectUriId: id,
+			log.note("admin.client.redirect_uri.deleted", {
+				redirect_uri_id: id,
 			});
 			return noContent();
 		} catch (error) {
 			if (error instanceof RecordNotFoundError) {
-				log.info("Redirect URI not found", {
-					clientId,
-					redirectUriId: id,
+				log.warn("admin.client.redirect_uri.not_found", {
+					redirect_uri_id: id,
 				});
 				return notFound({ error: "Redirect URI not found" });
 			}

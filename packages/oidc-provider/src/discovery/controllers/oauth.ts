@@ -26,8 +26,7 @@ import routes from "../../routes.js";
 export default createAction(
 	routes.discover.oauth,
 	inject([Database] as const, async (db) => {
-		let { request, logger } = getContext();
-		let log = logger.loader("/.well-known/oauth-authorization-server");
+		let { request, log } = getContext();
 
 		let issuer = await TenantMeta.getIssuer(db);
 		if (!issuer) issuer = new URL(request.url).host;
@@ -63,7 +62,7 @@ export default createAction(
 			ui_locales_supported: ["en"],
 		};
 
-		log.info("OAuth authorization server metadata served", { issuer: baseUrl });
+		log.note("oidc.discovery.oauth_metadata_served", { issuer: baseUrl });
 
 		return new Response(JSON.stringify(metadata), {
 			status: 200,

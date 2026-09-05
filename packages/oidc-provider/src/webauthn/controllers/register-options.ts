@@ -65,25 +65,24 @@ function isValidEmail(email: string): boolean {
 export default createAction(
 	routes.webauthn.register.options,
 	inject([Database] as const, async (db) => {
-		let { formData, request, logger } = getContext();
-		let log = logger.action("/webauthn/register/options");
+		let { formData, request, log } = getContext();
 
 		let result = await validate(Object.fromEntries(formData), RequestSchema);
 		if (isFailure(result)) {
-			log.info("Invalid request body");
+			log.warn("http.invalid_body");
 			return badRequest({ error: "Invalid request", issues: result.error.issues });
 		}
 
 		let { email, clientId, redirectUri, state, nonce, scope } = result.data;
 
 		if (!isValidEmail(email)) {
-			log.info("Invalid email format", { email });
+			log.warn("webauthn.register.invalid_email", { email });
 			return badRequest({ error: "Invalid email format" });
 		}
 
 		let rateLimit = checkUserRateLimit(email, "registerOptions", USER_RATE_LIMITS.registerOptions);
 		if (!rateLimit.success) {
-			log.info("Rate limit exceeded for email", { email });
+			log.warn("webauthn.rate_limited", { email });
 			return tooManyRequests({
 				error: "Too many registration attempts. Please try again later.",
 				retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
@@ -99,7 +98,7 @@ export default createAction(
 		if (existingSubject) {
 			let existingPasskeys = await Passkey.listBySubject(db, existingSubject.id);
 			if (existingPasskeys.length > 0) {
-				log.info("Subject already has passkey", { subjectId: existingSubject.id });
+				log.warn("webauthn.register.passkey_exists", { subject_id: existingSubject.id });
 				return badRequest({ error: "User already has a passkey. Please sign in instead." });
 			}
 		}
@@ -146,10 +145,10 @@ export default createAction(
 			challenge: new Uint8Array(base64UrlDecode(challenge)),
 		} satisfies GenerateRegistrationOptionsOpts);
 
-		log.info("Registration challenge created", {
-			challengeId,
-			clientId: clientId ?? null,
-			hasRedirectUri: !!redirectUri,
+		log.set({ client: { id: clientId } });
+		log.note("webauthn.register.challenge_created", {
+			challenge_id: challengeId,
+			has_redirect_uri: !!redirectUri,
 		});
 
 		return ok({

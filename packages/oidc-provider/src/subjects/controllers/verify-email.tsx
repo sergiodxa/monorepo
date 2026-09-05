@@ -32,15 +32,14 @@ import Subject from "../models/subject.js";
 export default createAction(
 	routes.verifyEmail,
 	inject([Database] as const, async (db) => {
-		let { request, logger } = getContext();
-		let log = logger.loader("/verify-email");
+		let { request, log } = getContext();
 		let url = new URL(request.url);
 		let token = url.searchParams.get("token");
 
 		let brand = await Brand.show(db);
 
 		if (!token) {
-			log.info("Missing verification token");
+			log.warn("email_verification.token_missing");
 			let body = await renderToString(
 				<VerifyEmailPage brand={brand} status="error" message="Invalid verification link." />,
 			);
@@ -51,7 +50,8 @@ export default createAction(
 			let { subjectId } = await EmailVerificationToken.consume(db, token);
 			await Subject.verifyEmail(db, subjectId);
 
-			log.info("Email verified", { subjectId });
+			log.set({ subject: { id: subjectId } });
+			log.note("email_verification.completed");
 
 			let body = await renderToString(
 				<VerifyEmailPage
@@ -65,13 +65,13 @@ export default createAction(
 			let message = "Verification failed. Please try again.";
 
 			if (error instanceof EmailVerificationToken.ExpiredTokenError) {
-				log.info("Expired verification token");
+				log.warn("email_verification.token_expired");
 				message = "This verification link has expired. Please request a new one.";
 			} else if (error instanceof EmailVerificationToken.InvalidTokenError) {
-				log.info("Invalid verification token");
+				log.warn("email_verification.token_invalid");
 				message = "This verification link is invalid or has already been used.";
 			} else {
-				log.error("Verification failed", { error: String(error) });
+				log.fail(error);
 			}
 
 			let body = await renderToString(

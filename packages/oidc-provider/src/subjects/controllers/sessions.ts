@@ -32,13 +32,13 @@ import Subject from "../models/subject.js";
 export const index = createAction(
 	routes.api.subjects.sessions.index,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext();
+		let { params, log } = getContext();
 		let { id } = s.parse(s.object({ id: s.string() }), params);
-		let log = logger.loader("/api/subjects/:id/sessions");
+		log.set({ subject: { id } });
 
 		let subject = await Subject.show(db, id);
 		if (!subject) {
-			log.info("Subject not found", { subjectId: id });
+			log.warn("subject.not_found");
 			return notFound({ error: "Subject not found" });
 		}
 
@@ -48,7 +48,7 @@ export const index = createAction(
 		let clients = await Client.listByIds(db, clientIds);
 		let clientMap = new Map(clients.map((c) => [c.id, c]));
 
-		log.info("Sessions listed", { subjectId: id, count: sessions.length });
+		log.note("admin.subject.session.listed", { count: sessions.length });
 
 		return ok(
 			sessions.map((session) => {
@@ -74,33 +74,32 @@ export const index = createAction(
 export const destroy = createAction(
 	routes.api.subjects.sessions.destroy,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext();
+		let { params, log } = getContext();
 		let { id, sessionId } = s.parse(s.object({ id: s.string(), sessionId: s.string() }), params);
-		let log = logger.action("/api/subjects/:id/sessions/:sessionId");
+		log.set({ subject: { id } });
 
 		let subject = await Subject.show(db, id);
 		if (!subject) {
-			log.info("Subject not found", { subjectId: id });
+			log.warn("subject.not_found");
 			return notFound({ error: "Subject not found" });
 		}
 
 		let session = await Session.show(db, sessionId);
 		if (!session) {
-			log.info("Session not found", { subjectId: id, sessionId });
+			log.warn("admin.subject.session.not_found", { session_id: sessionId });
 			return notFound({ error: "Session not found" });
 		}
 
 		if (session.subject_id !== id) {
-			log.info("Session does not belong to subject", {
-				subjectId: id,
-				sessionId,
+			log.warn("admin.subject.session.subject_mismatch", {
+				session_id: sessionId,
 			});
 			return notFound({ error: "Session not found" });
 		}
 
 		try {
 			await Session.destroy(db, sessionId);
-			log.info("Session destroyed", { subjectId: id, sessionId });
+			log.note("admin.subject.session.destroyed", { session_id: sessionId });
 			return noContent();
 		} catch (error) {
 			if (error instanceof RecordNotFoundError) {

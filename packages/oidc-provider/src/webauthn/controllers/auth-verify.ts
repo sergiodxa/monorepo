@@ -55,58 +55,58 @@ let RequestSchema = s.object({
 export default createAction(
 	routes.webauthn.auth.verify,
 	inject([Database] as const, async (db) => {
-		let { request, logger, analytics } = getContext();
-		let log = logger.action("/webauthn/auth/verify");
+		let { request, log, analytics } = getContext();
 
 		let body = await safeJsonParse(request);
 		if (isResponse(body)) {
-			log.info("Invalid JSON body");
+			log.warn("http.invalid_json");
 			return body;
 		}
 
 		let result = await validate(body, RequestSchema);
 		if (isFailure(result)) {
-			log.info("Invalid request body");
+			log.warn("http.invalid_body");
 			return badRequest({ error: "Invalid request", issues: result.error.issues });
 		}
 
 		let { challengeId, response } = result.data;
-		log.info("Verifying authentication", { challengeId });
+		log.set({ webauthn: { challenge_id: challengeId } });
 
 		let challenge;
 		try {
 			challenge = await WebAuthnChallenge.consume(db, challengeId);
 		} catch (error) {
 			if (error instanceof WebAuthnChallenge.InvalidChallengeError) {
-				log.info("Invalid challenge", { challengeId });
+				log.warn("webauthn.challenge_invalid");
 				return badRequest({ error: "Invalid challenge" });
 			}
 			if (error instanceof WebAuthnChallenge.ExpiredChallengeError) {
-				log.info("Challenge expired", { challengeId });
+				log.warn("webauthn.challenge_expired");
 				return badRequest({ error: "Challenge expired. Please try again." });
 			}
 			throw error;
 		}
 
 		if (challenge.type !== "authentication") {
-			log.info("Invalid challenge type", { challengeId, type: challenge.type });
+			log.warn("webauthn.challenge_type_mismatch", { type: challenge.type });
 			return badRequest({ error: "Invalid challenge type" });
 		}
 
 		if (!challenge.subject_id) {
-			log.info("Challenge missing subject", { challengeId });
+			log.warn("webauthn.auth.challenge_subject_missing");
 			return badRequest({ error: "Invalid challenge: missing subject" });
 		}
 
 		let subject = await Subject.show(db, challenge.subject_id);
 		if (!subject) {
-			log.info("Subject not found", { subjectId: challenge.subject_id, challengeId });
+			log.warn("subject.not_found", { subject_id: challenge.subject_id });
 			return badRequest({ error: "User not found" });
 		}
+		log.set({ subject: { id: subject.id } });
 
 		let rateLimit = checkUserRateLimit(subject.email, "authVerify", USER_RATE_LIMITS.authVerify);
 		if (!rateLimit.success) {
-			log.info("Rate limit exceeded for subject", { subjectId: subject.id });
+			log.warn("webauthn.rate_limited");
 			return tooManyRequests({
 				error: "Too many authentication attempts. Please try again later.",
 				retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
@@ -120,7 +120,7 @@ export default createAction(
 		 */
 		let passkey = await Passkey.findByCredentialId(db, response.id);
 		if (!passkey || passkey.subject_id !== subject.id) {
-			log.info("Passkey not found or mismatch", { subjectId: subject.id, challengeId });
+			log.warn("webauthn.auth.passkey_mismatch");
 			return badRequest({ error: "Passkey not found" });
 		}
 
@@ -148,16 +148,14 @@ export default createAction(
 				requireUserVerification: false,
 			});
 		} catch (error) {
-			log.info("Authentication verification failed", {
-				subjectId: subject.id,
-				challengeId,
+			log.warn("webauthn.auth.verification_failed", {
 				error: error instanceof Error ? error.message : "Unknown error",
 			});
 			return badRequest({ error: "Authentication failed" });
 		}
 
 		if (!verification.verified || !verification.authenticationInfo) {
-			log.info("Authentication not verified", { subjectId: subject.id, challengeId });
+			log.warn("webauthn.auth.not_verified");
 			return badRequest({ error: "Authentication failed" });
 		}
 
@@ -198,11 +196,8 @@ export default createAction(
 				redirectUrl.searchParams.set("state", challenge.state);
 			}
 
-			log.info("Authentication completed with OAuth flow", {
-				subjectId: subject.id,
-				clientId: challenge.client_id,
-				sessionId,
-			});
+			log.set({ client: { id: challenge.client_id } });
+			log.note("webauthn.auth.completed", { session_id: sessionId, oauth: true });
 
 			return ok({
 				success: true,
@@ -210,7 +205,7 @@ export default createAction(
 			});
 		}
 
-		log.info("Authentication completed", { subjectId: subject.id });
+		log.note("webauthn.auth.completed", { oauth: false });
 
 		return ok({
 			success: true,

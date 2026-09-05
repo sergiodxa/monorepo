@@ -59,46 +59,45 @@ let RequestSchema = s.object({
 export default createAction(
 	routes.webauthn.register.verify,
 	inject([Database] as const, async (db) => {
-		let { request, logger, analytics } = getContext();
-		let log = logger.action("/webauthn/register/verify");
+		let { request, log, analytics } = getContext();
 
 		let body = await safeJsonParse(request);
 		if (isResponse(body)) {
-			log.info("Invalid JSON body");
+			log.warn("http.invalid_json");
 			return body;
 		}
 
 		let result = await validate(body, RequestSchema);
 		if (isFailure(result)) {
-			log.info("Invalid request body");
+			log.warn("http.invalid_body");
 			return badRequest({ error: "Invalid request", issues: result.error.issues });
 		}
 
 		let { challengeId, response } = result.data;
-		log.info("Verifying registration", { challengeId });
+		log.set({ webauthn: { challenge_id: challengeId } });
 
 		let challenge;
 		try {
 			challenge = await WebAuthnChallenge.consume(db, challengeId);
 		} catch (error) {
 			if (error instanceof WebAuthnChallenge.InvalidChallengeError) {
-				log.info("Invalid challenge", { challengeId });
+				log.warn("webauthn.challenge_invalid");
 				return badRequest({ error: "Invalid challenge" });
 			}
 			if (error instanceof WebAuthnChallenge.ExpiredChallengeError) {
-				log.info("Challenge expired", { challengeId });
+				log.warn("webauthn.challenge_expired");
 				return badRequest({ error: "Challenge expired. Please try again." });
 			}
 			throw error;
 		}
 
 		if (challenge.type !== "registration") {
-			log.info("Invalid challenge type", { challengeId, type: challenge.type });
+			log.warn("webauthn.challenge_type_mismatch", { type: challenge.type });
 			return badRequest({ error: "Invalid challenge type" });
 		}
 
 		if (!challenge.email) {
-			log.info("Challenge missing email", { challengeId });
+			log.warn("webauthn.register.challenge_email_missing");
 			return badRequest({ error: "Invalid challenge: missing email" });
 		}
 
@@ -108,7 +107,7 @@ export default createAction(
 			USER_RATE_LIMITS.registerVerify,
 		);
 		if (!rateLimit.success) {
-			log.info("Rate limit exceeded for email", { email: challenge.email });
+			log.warn("webauthn.rate_limited", { email: challenge.email });
 			return tooManyRequests({
 				error: "Too many registration attempts. Please try again later.",
 				retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
@@ -129,15 +128,14 @@ export default createAction(
 				requireUserVerification: false,
 			});
 		} catch (error) {
-			log.info("Passkey verification failed", {
-				challengeId,
+			log.warn("webauthn.register.verification_failed", {
 				error: error instanceof Error ? error.message : "Unknown error",
 			});
 			return badRequest({ error: "Passkey verification failed" });
 		}
 
 		if (!verification.verified || !verification.registrationInfo) {
-			log.info("Passkey verification not verified", { challengeId });
+			log.warn("webauthn.register.not_verified");
 			return badRequest({ error: "Passkey verification failed" });
 		}
 
@@ -145,7 +143,7 @@ export default createAction(
 
 		let existing = await Subject.findByEmail(db, challenge.email);
 		if (existing) {
-			log.info("Registration attempted for existing subject", { subjectId: existing.id });
+			log.warn("webauthn.register.subject_exists", { subject_id: existing.id });
 			return badRequest({
 				error: "An account with this email already exists. Sign in with your email instead.",
 			});
@@ -153,7 +151,8 @@ export default createAction(
 
 		let username = challenge.email.split("@")[0] ?? challenge.email;
 		let subject = await Subject.register(db, { email: challenge.email, username });
-		log.info("Created new subject during registration", { subjectId: subject.id });
+		log.set({ subject: { id: subject.id } });
+		log.note("webauthn.register.subject_created");
 
 		let userAgent = request.headers.get("user-agent");
 		let passkeyName = generatePasskeyName(userAgent);
@@ -169,15 +168,14 @@ export default createAction(
 			name: passkeyName,
 		});
 
-		log.info("Passkey created", {
-			subjectId: subject.id,
-			deviceType: registrationInfo.credentialDeviceType,
-			backedUp: registrationInfo.credentialBackedUp,
+		log.note("webauthn.register.passkey_created", {
+			device_type: registrationInfo.credentialDeviceType,
+			backed_up: registrationInfo.credentialBackedUp,
 		});
 
 		if (!subject.email_verified_at) {
 			await Subject.verifyEmail(db, subject.id);
-			log.info("Email verified via passkey registration", { subjectId: subject.id });
+			log.note("webauthn.register.email_verified");
 		}
 
 		let tenantId = await TenantMeta.getTenantId(db);
@@ -216,11 +214,8 @@ export default createAction(
 				redirectUrl.searchParams.set("state", challenge.state);
 			}
 
-			log.info("Registration completed with OAuth flow", {
-				subjectId: subject.id,
-				clientId: challenge.client_id,
-				sessionId,
-			});
+			log.set({ client: { id: challenge.client_id } });
+			log.note("webauthn.register.completed", { session_id: sessionId, oauth: true });
 
 			return ok({
 				success: true,
@@ -228,7 +223,7 @@ export default createAction(
 			});
 		}
 
-		log.info("Registration completed", { subjectId: subject.id });
+		log.note("webauthn.register.completed", { oauth: false });
 
 		return ok({
 			success: true,

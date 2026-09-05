@@ -25,8 +25,7 @@ import routes from "../../routes.js";
 export default createAction(
 	routes.discover.oidc,
 	inject([Database] as const, async (db) => {
-		let { request, logger } = getContext();
-		let log = logger.loader("/.well-known/openid-configuration");
+		let { request, log } = getContext();
 
 		let issuer = await TenantMeta.getIssuer(db);
 		if (!issuer) issuer = new URL(request.url).host;
@@ -79,7 +78,7 @@ export default createAction(
 			acr_values_supported: ["urn:passkey"],
 		};
 
-		log.info("OpenID configuration served", { issuer: baseUrl });
+		log.note("oidc.discovery.openid_configuration_served", { issuer: baseUrl });
 
 		return new Response(JSON.stringify(configuration), {
 			status: 200,

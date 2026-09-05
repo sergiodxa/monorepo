@@ -25,13 +25,12 @@ import SigningKey from "../../signing-keys/models/signing-key.js";
 export default createAction(
 	routes.discover.jwks,
 	inject([Database] as const, async (db) => {
-		let { logger } = getContext();
-		let log = logger.loader("/.well-known/jwks.json");
+		let { log } = getContext();
 
 		let signingKeys = await SigningKey.getAll(db);
 
 		if (signingKeys.length === 0) {
-			log.info("JWKS served", { keyCount: 0 });
+			log.note("oidc.discovery.jwks_served", { key_count: 0 });
 			return ok(
 				{ keys: [] },
 				{
@@ -45,7 +44,7 @@ export default createAction(
 
 		let jwks = JWK.toJSON(signingKeys);
 
-		log.info("JWKS served", { keyCount: signingKeys.length });
+		log.note("oidc.discovery.jwks_served", { key_count: signingKeys.length });
 
 		return ok(jwks, {
 			headers: {

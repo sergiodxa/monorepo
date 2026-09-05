@@ -26,8 +26,7 @@ import Subject from "../../subjects/models/subject.js";
 export const show = createAction(
 	routes.api.stats,
 	inject([Database] as const, async (db) => {
-		let { logger } = getContext();
-		let log = logger.loader("/api/stats");
+		let { log } = getContext();
 
 		let [totalUsers, totalClients, totalSessions, activeSessions, monthlyActiveUsers] =
 			await Promise.all([
@@ -46,7 +45,7 @@ export const show = createAction(
 			monthly_active_users: monthlyActiveUsers,
 		};
 
-		log.info("Stats retrieved", stats);
+		log.note("admin.stats.retrieved", stats);
 
 		return ok(stats);
 	}),

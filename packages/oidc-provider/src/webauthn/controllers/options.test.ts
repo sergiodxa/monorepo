@@ -12,7 +12,6 @@
 import type { SqliteDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 
 import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
-import { Logger } from "@sdxc/logger/request";
 import { Database } from "remix/data-table";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
@@ -49,8 +48,7 @@ let db: Database;
  * @returns The router's response.
  */
 function fetchThroughProvider(request: Request): Promise<Response> {
-	let logger = new Logger(request);
-	let router = createProviderRouter(db, logger, { internalSecret: "test-secret", analytics });
+	let router = createProviderRouter(db, { internalSecret: "test-secret", analytics });
 	return router.fetch(request);
 }
 

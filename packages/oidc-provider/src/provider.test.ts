@@ -7,7 +7,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { Logger } from "@sdxc/logger/request";
+import { Log } from "@sdxc/logger";
 import { describe, expect, test } from "vitest";
 
 import { createProviderRouter } from "./provider.js";
@@ -28,10 +28,8 @@ let analytics: AnalyticsSink = {
  */
 async function fetchThroughProvider(url: string): Promise<Response> {
 	let { db } = await createTestDatabase();
-	let request = new Request(url);
-	let logger = new Logger(request);
-	let router = createProviderRouter(db, logger, { internalSecret: "test-secret", analytics });
-	return router.fetch(request);
+	let router = createProviderRouter(db, { internalSecret: "test-secret", analytics });
+	return router.fetch(new Request(url));
 }
 
 describe("createProviderRouter — service-container DI over the full fetch path", () => {
@@ -87,5 +85,27 @@ describe("createProviderRouter — service-container DI over the full fetch path
 		);
 
 		expect(response.status).toBeLessThan(500);
+	});
+});
+
+describe("createProviderRouter — logging through the host's log", () => {
+	test("joins the log the host opened and describes the request on it", async () => {
+		let { db } = await createTestDatabase();
+		let router = createProviderRouter(db, { internalSecret: "test-secret", analytics });
+		let records: Record<string, unknown>[] = [];
+
+		await new Log({ kind: "request", service: "auth", sink: (r) => records.push(r) }).run(() =>
+			router.fetch(new Request("https://auth.example.com/.well-known/jwks.json")),
+		);
+
+		expect(records).toHaveLength(1);
+		let [record] = records;
+		expect(record?.service).toBe("auth");
+		expect(record?.route).toBe("/.well-known/jwks.json");
+		expect(record?.["http.method"]).toBe("GET");
+		expect(record?.outcome).toBe("ok");
+		expect(record?.notes).toEqual([
+			expect.objectContaining({ name: "oidc.discovery.jwks_served", key_count: 0 }),
+		]);
 	});
 });

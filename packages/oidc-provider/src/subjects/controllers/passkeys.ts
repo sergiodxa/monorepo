@@ -38,19 +38,19 @@ let UpdatePasskeySchema = s.object({
 export const index = createAction(
 	routes.api.subjects.passkeys.index,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext();
+		let { params, log } = getContext();
 		let { id } = s.parse(s.object({ id: s.string() }), params);
-		let log = logger.loader("/api/subjects/:id/passkeys");
+		log.set({ subject: { id } });
 
 		let subject = await Subject.show(db, id);
 		if (!subject) {
-			log.info("Subject not found", { subjectId: id });
+			log.warn("subject.not_found");
 			return notFound({ error: "Subject not found" });
 		}
 
 		let passkeys = await Passkey.listBySubject(db, id);
 
-		log.info("Passkeys listed", { subjectId: id, count: passkeys.length });
+		log.note("admin.subject.passkey.listed", { count: passkeys.length });
 
 		return ok(
 			passkeys.map((passkey) => ({
@@ -73,39 +73,38 @@ export const index = createAction(
 export const update = createAction(
 	routes.api.subjects.passkeys.update,
 	inject([Database] as const, async (db) => {
-		let { params, request, logger } = getContext();
+		let { params, request, log } = getContext();
 		let { id, passkeyId } = s.parse(s.object({ id: s.string(), passkeyId: s.string() }), params);
-		let log = logger.action("/api/subjects/:id/passkeys/:passkeyId");
+		log.set({ subject: { id } });
 
 		let subject = await Subject.show(db, id);
 		if (!subject) {
-			log.info("Subject not found", { subjectId: id });
+			log.warn("subject.not_found");
 			return notFound({ error: "Subject not found" });
 		}
 
 		let passkey = await Passkey.show(db, passkeyId);
 		if (!passkey) {
-			log.info("Passkey not found", { subjectId: id, passkeyId });
+			log.warn("admin.subject.passkey.not_found", { passkey_id: passkeyId });
 			return notFound({ error: "Passkey not found" });
 		}
 
 		if (passkey.subject_id !== id) {
-			log.info("Passkey does not belong to subject", {
-				subjectId: id,
-				passkeyId,
+			log.warn("admin.subject.passkey.subject_mismatch", {
+				passkey_id: passkeyId,
 			});
 			return notFound({ error: "Passkey not found" });
 		}
 
 		let body = await safeJsonParse(request);
 		if (isResponse(body)) {
-			log.info("Invalid JSON body", { subjectId: id, passkeyId });
+			log.warn("http.invalid_json", { passkey_id: passkeyId });
 			return body;
 		}
 
 		let result = await validate(body, UpdatePasskeySchema);
 		if (isFailure(result)) {
-			log.info("Invalid request body", { subjectId: id, passkeyId });
+			log.warn("http.invalid_body", { passkey_id: passkeyId });
 			return badRequest({ error: "Invalid request", issues: result.error.issues });
 		}
 
@@ -113,13 +112,12 @@ export const update = createAction(
 			await Passkey.rename(db, passkeyId, result.data.name);
 			let updated = await Passkey.show(db, passkeyId);
 			if (!updated) {
-				log.info("Passkey not found after rename", {
-					subjectId: id,
-					passkeyId,
+				log.warn("admin.subject.passkey.not_found", {
+					passkey_id: passkeyId,
 				});
 				return notFound({ error: "Passkey not found" });
 			}
-			log.info("Passkey renamed", { subjectId: id, passkeyId });
+			log.note("admin.subject.passkey.renamed", { passkey_id: passkeyId });
 			return ok({
 				id: updated.id,
 				name: updated.name,
@@ -146,33 +144,32 @@ export const update = createAction(
 export const destroy = createAction(
 	routes.api.subjects.passkeys.destroy,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext();
+		let { params, log } = getContext();
 		let { id, passkeyId } = s.parse(s.object({ id: s.string(), passkeyId: s.string() }), params);
-		let log = logger.action("/api/subjects/:id/passkeys/:passkeyId");
+		log.set({ subject: { id } });
 
 		let subject = await Subject.show(db, id);
 		if (!subject) {
-			log.info("Subject not found", { subjectId: id });
+			log.warn("subject.not_found");
 			return notFound({ error: "Subject not found" });
 		}
 
 		let passkey = await Passkey.show(db, passkeyId);
 		if (!passkey) {
-			log.info("Passkey not found", { subjectId: id, passkeyId });
+			log.warn("admin.subject.passkey.not_found", { passkey_id: passkeyId });
 			return notFound({ error: "Passkey not found" });
 		}
 
 		if (passkey.subject_id !== id) {
-			log.info("Passkey does not belong to subject", {
-				subjectId: id,
-				passkeyId,
+			log.warn("admin.subject.passkey.subject_mismatch", {
+				passkey_id: passkeyId,
 			});
 			return notFound({ error: "Passkey not found" });
 		}
 
 		let allPasskeys = await Passkey.listBySubject(db, id);
 		if (allPasskeys.length === 1) {
-			log.info("Cannot delete only passkey", { subjectId: id, passkeyId });
+			log.warn("admin.subject.passkey.last_passkey", { passkey_id: passkeyId });
 			return badRequest({
 				error: "Cannot delete the only passkey. Add another passkey first.",
 			});
@@ -180,7 +177,7 @@ export const destroy = createAction(
 
 		try {
 			await Passkey.destroy(db, passkeyId);
-			log.info("Passkey deleted", { subjectId: id, passkeyId });
+			log.note("admin.subject.passkey.deleted", { passkey_id: passkeyId });
 			return noContent();
 		} catch (error) {
 			if (error instanceof RecordNotFoundError) {

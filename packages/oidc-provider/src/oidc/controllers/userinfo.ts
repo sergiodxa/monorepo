@@ -51,12 +51,11 @@ function reject(error: string, description: string, status: number = 401) {
 export default createAction(
 	routes.oidc.userinfo,
 	inject([Database] as const, async (db) => {
-		let { request, logger } = getContext();
-		let log = logger.loader("/userinfo");
+		let { request, log } = getContext();
 
 		let authHeader = request.headers.get("authorization");
 		if (!authHeader || !authHeader.startsWith("Bearer ")) {
-			log.info("Missing access token in Authorization header");
+			log.warn("oidc.userinfo.token_missing");
 			return reject("invalid_request", "Missing access token");
 		}
 
@@ -68,12 +67,12 @@ export default createAction(
 		]);
 
 		if (!issuer) {
-			log.error("Issuer not configured");
+			log.fail(new Error("Issuer not configured"));
 			return reject("server_error", "Issuer not configured");
 		}
 
 		if (signingKeys.length === 0) {
-			log.error("No signing keys available");
+			log.fail(new Error("No signing keys available"));
 			return reject("server_error", "No signing keys available");
 		}
 
@@ -84,15 +83,15 @@ export default createAction(
 				algorithms: [JWK.Algorithm.ES256],
 			});
 		} catch {
-			log.info("Access token verification failed");
+			log.warn("oidc.userinfo.token_invalid");
 			return reject("invalid_token", "Access token is invalid or expired");
 		}
 
-		log.info("Access token verified", { subjectId: accessToken.subject });
+		log.set({ subject: { id: accessToken.subject } });
 
 		let subject = await Subject.show(db, accessToken.subject);
 		if (!subject) {
-			log.info("Subject not found", { subjectId: accessToken.subject });
+			log.warn("subject.not_found", { subject_id: accessToken.subject });
 			return reject("invalid_token", "Subject not found");
 		}
 
@@ -115,7 +114,8 @@ export default createAction(
 			}
 		}
 
-		log.info("Userinfo returned", { subjectId: subject.id, scopes: scope });
+		log.set({ oidc: { scope: scope.join(" ") } });
+		log.note("oidc.userinfo.returned");
 
 		return new Response(JSON.stringify(userinfo), {
 			status: 200,

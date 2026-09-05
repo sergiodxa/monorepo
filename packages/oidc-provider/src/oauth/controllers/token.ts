@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Logger } from "@sdxc/logger/batched";
+import type { Log } from "@sdxc/logger";
 
 import { JWK } from "@sdxc/jwt";
 import { isFailure } from "@sdxc/result";
@@ -69,8 +69,7 @@ export default createAction(
 	routes.oauth.token,
 	inject([Database] as const, async (db) => {
 		let ctx = getContext();
-		let { formData, request, logger } = ctx;
-		let log = logger.action("/oauth/token");
+		let { formData, request, log } = ctx;
 		let grantType = formData.get("grant_type");
 
 		let basicAuth = parseBasicAuth(request.headers.get("authorization"));
@@ -93,8 +92,8 @@ export default createAction(
 			return await handleClientCredentials(db, body, log);
 		}
 
-		log.info("Unsupported grant type requested", {
-			grantType: typeof grantType === "string" ? grantType : null,
+		log.warn("oidc.token.unsupported_grant", {
+			grant_type: typeof grantType === "string" ? grantType : null,
 		});
 		return reject("unsupported_grant_type", "The authorization grant type is not supported");
 	}),
@@ -106,16 +105,16 @@ export default createAction(
  * Issues a refresh token only when `offline_access` was requested and granted.
  * @param db - Tenant database instance.
  * @param body - Parsed token request parameters (form body plus Basic-auth creds).
- * @param log - Request-scoped action logger.
+ * @param log - The request's log, which the grant enriches with client, subject, and scope fields.
  * @returns A JSON `Response` with access/ID (and optional refresh) tokens, or an OAuth error `Response`.
  * @throws Rethrows unexpected errors from consuming the authorization code.
  */
-async function handleAuthorizationCode(db: Database, body: Record<string, unknown>, log: Logger) {
-	log.info("Authorization code grant started");
+async function handleAuthorizationCode(db: Database, body: Record<string, unknown>, log: Log) {
+	log.set({ oidc: { grant_type: "authorization_code" } });
 
 	let result = await validate(body, AuthorizationCodeSchema);
 	if (isFailure(result)) {
-		log.info("Invalid request parameters", { grantType: "authorization_code" });
+		log.warn("http.invalid_params");
 		return reject("invalid_request", "Missing or invalid parameters");
 	}
 
@@ -126,35 +125,31 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 		authzData = await AuthorizationCode.consume(db, code);
 	} catch (error) {
 		if (error instanceof AuthorizationCode.AlreadyConsumedError) {
-			log.info("Authorization code already consumed", { grantType: "authorization_code" });
+			log.warn("oidc.token.code_consumed");
 			return reject("invalid_grant", "Authorization code has already been used or is invalid");
 		}
 		if (error instanceof AuthorizationCode.ExpiredCodeError) {
-			log.info("Authorization code expired", { grantType: "authorization_code" });
+			log.warn("oidc.token.code_expired");
 			return reject("invalid_grant", "Authorization code has expired");
 		}
-		log.error("Unexpected error consuming authorization code", {
-			grantType: "authorization_code",
-			error: error instanceof Error ? error.message : String(error),
-		});
+		log.fail(error);
 		throw error;
 	}
 
 	let client = await Client.show(db, authzData.clientId);
 	if (!client) {
-		log.info("Client not found", { clientId: authzData.clientId, grantType: "authorization_code" });
+		log.warn("client.not_found", { client_id: authzData.clientId });
 		return reject("invalid_client", "Client not found", 401);
 	}
+	log.set({ client: { id: client.id, type: client.type } });
 
 	if (authzData.scope.length > 0 && client.allowed_scopes) {
 		let requestedScopes = new ScopeSet(authzData.scope);
 		let allowedScopes = ScopeSet.fromJson(client.allowed_scopes);
 		let invalidScopes = requestedScopes.getInvalidScopes(allowedScopes);
 		if (invalidScopes.length > 0) {
-			log.info("Invalid scopes requested", {
-				clientId: client.id,
-				invalidScopes,
-				grantType: "authorization_code",
+			log.warn("oidc.token.invalid_scope", {
+				invalid_scopes: invalidScopes.join(" "),
 			});
 			return reject("invalid_scope", `Scopes not allowed: ${invalidScopes.join(", ")}`);
 		}
@@ -162,36 +157,27 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 
 	if (client.type === "confidential" || client.type === "m2m") {
 		if (!client_id || !client_secret) {
-			log.info("Client authentication required", {
-				clientId: client.id,
-				clientType: client.type,
-				grantType: "authorization_code",
+			log.warn("client.auth_required", {
+				client_type: client.type,
 			});
 			return reject("invalid_client", "Client authentication required", 401);
 		}
 		if (client_id !== client.id) {
-			log.info("Client ID mismatch", {
-				expectedClientId: client.id,
-				providedClientId: client_id,
-				grantType: "authorization_code",
+			log.warn("client.id_mismatch", {
+				expected_client_id: client.id,
+				provided_client_id: client_id,
 			});
 			return reject("invalid_client", "Client ID mismatch", 401);
 		}
 		let secretValid = await Secret.verify(db, client.id, client_secret);
 		if (!secretValid) {
-			log.info("Invalid client credentials", {
-				clientId: client.id,
-				grantType: "authorization_code",
-			});
+			log.warn("client.invalid_credentials");
 			return reject("invalid_client", "Invalid client credentials", 401);
 		}
 	}
 
 	if (redirect_uri !== authzData.redirectUri) {
-		log.info("Redirect URI mismatch", {
-			clientId: client.id,
-			grantType: "authorization_code",
-		});
+		log.warn("oidc.token.redirect_uri_mismatch");
 		return reject("invalid_grant", "Redirect URI mismatch");
 	}
 
@@ -200,19 +186,13 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 	 * This prevents authorization code interception attacks.
 	 */
 	if (client.type === "public" && !authzData.pkce) {
-		log.info("PKCE required for public clients", {
-			clientId: client.id,
-			grantType: "authorization_code",
-		});
+		log.warn("oidc.token.pkce_required");
 		return reject("invalid_request", "PKCE is required for public clients");
 	}
 
 	if (authzData.pkce) {
 		if (!code_verifier) {
-			log.info("Missing code_verifier for PKCE", {
-				clientId: client.id,
-				grantType: "authorization_code",
-			});
+			log.warn("oidc.token.code_verifier_missing");
 			return reject("invalid_request", "Missing code_verifier");
 		}
 
@@ -222,10 +202,8 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 			authzData.pkce.method,
 		);
 		if (!isValid) {
-			log.info("PKCE validation failed", {
-				clientId: client.id,
-				pkceMethod: authzData.pkce.method,
-				grantType: "authorization_code",
+			log.warn("oidc.token.pkce_failed", {
+				pkce_method: authzData.pkce.method,
 			});
 			return reject("invalid_grant", "PKCE validation failed");
 		}
@@ -239,36 +217,27 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 	]);
 
 	if (!session || new Date(session.expires_at) < new Date()) {
-		log.info("Session expired", {
-			clientId: client.id,
-			sessionId: authzData.sessionId,
-			grantType: "authorization_code",
+		log.warn("oidc.token.session_expired", {
+			session_id: authzData.sessionId,
 		});
 		return reject("invalid_grant", "Session has expired");
 	}
 
 	if (!subject) {
-		log.info("Subject not found", {
-			clientId: client.id,
-			subjectId: authzData.subjectId,
-			grantType: "authorization_code",
+		log.warn("subject.not_found", {
+			subject_id: authzData.subjectId,
 		});
 		return reject("invalid_grant", "Subject not found");
 	}
+	log.set({ subject: { id: subject.id } });
 
 	if (!issuer) {
-		log.info("Issuer not configured", {
-			clientId: client.id,
-			grantType: "authorization_code",
-		});
+		log.fail(new Error("Issuer not configured"));
 		return reject("server_error", "Issuer not configured");
 	}
 
 	if (signingKeys.length === 0) {
-		log.info("No signing keys available", {
-			clientId: client.id,
-			grantType: "authorization_code",
-		});
+		log.fail(new Error("No signing keys available"));
 		return reject("server_error", "No signing keys available");
 	}
 
@@ -303,14 +272,8 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 
 	let issueRefreshToken = authzData.scope.includes("offline_access");
 
-	log.info("Token issued successfully", {
-		clientId: client.id,
-		subjectId: subject.id,
-		sessionId: session.id,
-		grantType: "authorization_code",
-		scope: authzData.scope,
-		refreshToken: issueRefreshToken,
-	});
+	log.set({ oidc: { scope: authzData.scope.join(" "), refresh_token: issueRefreshToken } });
+	log.note("oidc.token.issued", { session_id: session.id });
 
 	return new Response(
 		JSON.stringify({
@@ -332,15 +295,15 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
  * Issues new access and ID tokens using a valid refresh token (session ID).
  * @param db - Tenant database instance.
  * @param body - Parsed token request parameters (form body plus Basic-auth creds).
- * @param log - Request-scoped action logger.
+ * @param log - The request's log, which the grant enriches with client, subject, and scope fields.
  * @returns A JSON `Response` with refreshed tokens, or an OAuth error `Response`.
  */
-async function handleRefreshToken(db: Database, body: Record<string, unknown>, log: Logger) {
-	log.info("Refresh token grant started");
+async function handleRefreshToken(db: Database, body: Record<string, unknown>, log: Log) {
+	log.set({ oidc: { grant_type: "refresh_token" } });
 
 	let result = await validate(body, RefreshTokenSchema);
 	if (isFailure(result)) {
-		log.info("Invalid request parameters", { grantType: "refresh_token" });
+		log.warn("http.invalid_params");
 		return reject("invalid_request", "Missing or invalid parameters");
 	}
 
@@ -348,48 +311,42 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 
 	let session = await Session.show(db, refresh_token);
 	if (!session) {
-		log.info("Invalid or expired refresh token", { grantType: "refresh_token" });
+		log.warn("oidc.token.refresh_token_invalid");
 		return reject("invalid_grant", "Invalid or expired refresh token");
 	}
 
 	if (new Date(session.expires_at) < new Date()) {
-		log.info("Refresh token expired", {
-			sessionId: session.id,
-			clientId: session.client_id,
-			grantType: "refresh_token",
+		log.warn("oidc.token.refresh_token_expired", {
+			session_id: session.id,
+			client_id: session.client_id,
 		});
 		return reject("invalid_grant", "Refresh token has expired");
 	}
 
 	let client = await Client.show(db, session.client_id);
 	if (!client) {
-		log.info("Client not found", { clientId: session.client_id, grantType: "refresh_token" });
+		log.warn("client.not_found", { client_id: session.client_id });
 		return reject("invalid_client", "Client not found", 401);
 	}
+	log.set({ client: { id: client.id, type: client.type } });
 
 	if (client.type === "confidential" || client.type === "m2m") {
 		if (!client_id || !client_secret) {
-			log.info("Client authentication required", {
-				clientId: client.id,
-				clientType: client.type,
-				grantType: "refresh_token",
+			log.warn("client.auth_required", {
+				client_type: client.type,
 			});
 			return reject("invalid_client", "Client authentication required", 401);
 		}
 		if (client_id !== client.id) {
-			log.info("Client ID mismatch", {
-				expectedClientId: client.id,
-				providedClientId: client_id,
-				grantType: "refresh_token",
+			log.warn("client.id_mismatch", {
+				expected_client_id: client.id,
+				provided_client_id: client_id,
 			});
 			return reject("invalid_client", "Client ID mismatch", 401);
 		}
 		let secretValid = await Secret.verify(db, client.id, client_secret);
 		if (!secretValid) {
-			log.info("Invalid client credentials", {
-				clientId: client.id,
-				grantType: "refresh_token",
-			});
+			log.warn("client.invalid_credentials");
 			return reject("invalid_client", "Invalid client credentials", 401);
 		}
 	}
@@ -402,27 +359,20 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 	]);
 
 	if (!subject) {
-		log.info("Subject not found", {
-			clientId: client.id,
-			subjectId: session.subject_id,
-			grantType: "refresh_token",
+		log.warn("subject.not_found", {
+			subject_id: session.subject_id,
 		});
 		return reject("invalid_grant", "Subject not found");
 	}
+	log.set({ subject: { id: subject.id } });
 
 	if (!issuer) {
-		log.info("Issuer not configured", {
-			clientId: client.id,
-			grantType: "refresh_token",
-		});
+		log.fail(new Error("Issuer not configured"));
 		return reject("server_error", "Issuer not configured");
 	}
 
 	if (signingKeys.length === 0) {
-		log.info("No signing keys available", {
-			clientId: client.id,
-			grantType: "refresh_token",
-		});
+		log.fail(new Error("No signing keys available"));
 		return reject("server_error", "No signing keys available");
 	}
 
@@ -450,11 +400,8 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 	);
 	let signedIdToken = await idToken.sign(JWK.Algorithm.ES256, signingKeys);
 
-	log.info("Token refreshed successfully", {
-		clientId: client.id,
-		subjectId: subject.id,
-		sessionId: session.id,
-		grantType: "refresh_token",
+	log.note("oidc.token.refreshed", {
+		session_id: session.id,
 	});
 
 	return new Response(
@@ -478,15 +425,15 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
  * be registered and allow-listed, scoping minted tokens to authorized audiences.
  * @param db - Tenant database instance.
  * @param body - Parsed token request parameters (form body plus Basic-auth creds).
- * @param log - Request-scoped action logger.
+ * @param log - The request's log, which the grant enriches with client, subject, and scope fields.
  * @returns A JSON `Response` with an access token, or an OAuth error `Response`.
  */
-async function handleClientCredentials(db: Database, body: Record<string, unknown>, log: Logger) {
-	log.info("Client credentials grant started");
+async function handleClientCredentials(db: Database, body: Record<string, unknown>, log: Log) {
+	log.set({ oidc: { grant_type: "client_credentials" } });
 
 	let result = await validate(body, ClientCredentialsSchema);
 	if (isFailure(result)) {
-		log.info("Invalid request parameters", { grantType: "client_credentials" });
+		log.warn("http.invalid_params");
 		return reject("invalid_request", "Missing or invalid parameters");
 	}
 
@@ -494,25 +441,21 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 
 	let client = await Client.show(db, client_id);
 	if (!client) {
-		log.info("Client not found", { clientId: client_id, grantType: "client_credentials" });
+		log.warn("client.not_found", { client_id });
 		return reject("invalid_client", "Client not found", 401);
 	}
+	log.set({ client: { id: client.id, type: client.type } });
 
 	if (client.type !== "m2m") {
-		log.info("Unauthorized client type for grant", {
-			clientId: client.id,
-			clientType: client.type,
-			grantType: "client_credentials",
+		log.warn("oidc.token.unauthorized_client", {
+			client_type: client.type,
 		});
 		return reject("unauthorized_client", "Client is not authorized for this grant type");
 	}
 
 	let secretValid = await Secret.verify(db, client.id, client_secret);
 	if (!secretValid) {
-		log.info("Invalid client credentials", {
-			clientId: client.id,
-			grantType: "client_credentials",
-		});
+		log.warn("client.invalid_credentials");
 		return reject("invalid_client", "Invalid client credentials", 401);
 	}
 
@@ -521,10 +464,8 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 		let allowedScopes = ScopeSet.fromJson(client.allowed_scopes);
 		let invalidScopes = requestedScopes.getInvalidScopes(allowedScopes);
 		if (invalidScopes.length > 0) {
-			log.info("Invalid scopes requested", {
-				clientId: client.id,
-				invalidScopes,
-				grantType: "client_credentials",
+			log.warn("oidc.token.invalid_scope", {
+				invalid_scopes: invalidScopes.join(" "),
 			});
 			return reject("invalid_scope", `Scopes not allowed: ${invalidScopes.join(", ")}`);
 		}
@@ -533,18 +474,12 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 	let [issuer, signingKeys] = await Promise.all([TenantMeta.getIssuer(db), SigningKey.getAll(db)]);
 
 	if (!issuer) {
-		log.info("Issuer not configured", {
-			clientId: client.id,
-			grantType: "client_credentials",
-		});
+		log.fail(new Error("Issuer not configured"));
 		return reject("server_error", "Issuer not configured");
 	}
 
 	if (signingKeys.length === 0) {
-		log.info("No signing keys available", {
-			clientId: client.id,
-			grantType: "client_credentials",
-		});
+		log.fail(new Error("No signing keys available"));
 		return reject("server_error", "No signing keys available");
 	}
 
@@ -553,12 +488,12 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 		let allowed = new Set(Client.parseAllowedResources(client));
 		for (let target of resources) {
 			if (!allowed.has(target)) {
-				log.info("Resource not permitted for client", { clientId: client.id, resource: target });
+				log.warn("oidc.token.resource_not_allowed", { resource: target });
 				return reject("invalid_target", `Resource not allowed: ${target}`);
 			}
 			let registered = await Resource.findByIdentifier(db, target);
 			if (!registered) {
-				log.info("Unknown resource requested", { clientId: client.id, resource: target });
+				log.warn("oidc.token.resource_unknown", { resource: target });
 				return reject("invalid_target", `Unknown resource: ${target}`);
 			}
 		}
@@ -576,12 +511,8 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 	});
 	let signedAccessToken = await accessToken.sign(JWK.Algorithm.ES256, signingKeys);
 
-	log.info("Token issued successfully", {
-		clientId: client.id,
-		grantType: "client_credentials",
-		scope: scopeArray,
-		resourceCount: resources.length,
-	});
+	log.set({ oidc: { scope: scopeArray?.join(" "), resource_count: resources.length } });
+	log.note("oidc.token.issued");
 
 	return new Response(
 		JSON.stringify({

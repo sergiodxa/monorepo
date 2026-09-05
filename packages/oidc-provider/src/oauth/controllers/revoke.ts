@@ -40,8 +40,7 @@ let RevokeSchema = s.object({
 export default createAction(
 	routes.oauth.revoke,
 	inject([Database] as const, async (db) => {
-		let { formData, request, logger } = getContext();
-		let log = logger.action("/oauth/revoke");
+		let { formData, request, log } = getContext();
 
 		let basicAuth = parseBasicAuth(request.headers.get("authorization"));
 		let body = Object.fromEntries(formData) as Record<string, unknown>;
@@ -53,37 +52,39 @@ export default createAction(
 
 		let result = await validate(body, RevokeSchema);
 		if (isFailure(result)) {
-			log.info("Validation failed", { reason: "invalid_request" });
+			log.warn("http.invalid_params");
 			return reject("invalid_request", "Missing or invalid parameters");
 		}
 
 		let { token, token_type_hint, client_id, client_secret } = result.data;
 
-		log.info("Token revocation started", {
-			clientId: client_id,
-			tokenTypeHint: token_type_hint ?? "none",
-			authMethod: basicAuth ? "basic" : "body",
+		log.set({
+			client: { id: client_id },
+			oidc: {
+				token_type_hint: token_type_hint ?? "none",
+				auth_method: basicAuth ? "basic" : "body",
+			},
 		});
 
 		if (!client_id || !client_secret) {
-			log.info("Client authentication missing");
+			log.warn("client.auth_required");
 			return reject("invalid_client", "Client authentication required", 401);
 		}
 
 		let client = await Client.show(db, client_id);
 		if (!client) {
-			log.info("Client not found", { clientId: client_id });
+			log.warn("client.not_found");
 			return reject("invalid_client", "Client not found", 401);
 		}
 
 		let secretValid = await Secret.verify(db, client.id, client_secret);
 		if (!secretValid) {
-			log.info("Invalid client secret", { clientId: client.id });
+			log.warn("client.invalid_credentials");
 			return reject("invalid_client", "Invalid client credentials", 401);
 		}
 
 		if (token_type_hint === "access_token") {
-			log.info("Access token revocation skipped (stateless JWT)", { clientId: client.id });
+			log.note("oidc.revoke.skipped", { reason: "stateless_access_token" });
 			return new Response(null, { status: 200 });
 		}
 
@@ -94,22 +95,18 @@ export default createAction(
 			 * This prevents token enumeration attacks.
 			 */
 			if (session.client_id !== client.id) {
-				log.info("Session belongs to different client", {
-					clientId: client.id,
-					sessionClientId: session.client_id,
-					sessionId: session.id,
+				log.warn("oidc.revoke.client_mismatch", {
+					session_client_id: session.client_id,
+					session_id: session.id,
 				});
 				return new Response(null, { status: 200 });
 			}
 
 			await Session.destroy(db, session.id);
-			log.info("Session revoked", {
-				clientId: client.id,
-				sessionId: session.id,
-				subjectId: session.subject_id,
-			});
+			log.set({ subject: { id: session.subject_id } });
+			log.note("oidc.revoke.session_revoked", { session_id: session.id });
 		} else {
-			log.info("Session not found for revocation", { clientId: client.id });
+			log.note("oidc.revoke.session_not_found");
 		}
 
 		return new Response(null, { status: 200 });

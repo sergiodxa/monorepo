@@ -31,9 +31,8 @@ import { Layout } from "./layout.js";
  * rendered HTML document.
  * @returns An HTML `Response` with the tenant status page.
  */
-export default createAction(routes.index, async ({ logger }) => {
+export default createAction(routes.index, async ({ log }) => {
 	let db = getServiceContainer().get(Database);
-	let log = logger.loader("/");
 
 	let [brand, clientCount, subjectCount] = await Promise.all([
 		Brand.show(db),
@@ -41,7 +40,7 @@ export default createAction(routes.index, async ({ logger }) => {
 		Subject.list(db).then((subjects) => subjects.length),
 	]);
 
-	log.info("Tenant home loaded", { clientCount, subjectCount });
+	log.note("home.rendered", { client_count: clientCount, subject_count: subjectCount });
 
 	let body = await renderToString(
 		<TenantHomePage brand={brand} stats={{ clients: clientCount, subjects: subjectCount }} />,

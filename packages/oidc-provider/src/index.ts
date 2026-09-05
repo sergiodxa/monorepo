@@ -11,7 +11,6 @@
 
 import type { DatabaseDriver } from "remix/data-table";
 
-import { Logger } from "@sdxc/logger/request";
 import { Database } from "remix/data-table";
 
 import { runMigrations } from "./database/migrations.js";
@@ -99,15 +98,7 @@ export function createOidcProvider(config: OidcProviderConfig): OidcProvider {
 		cleanup,
 		async fetch(request) {
 			if (config.migrations !== "manual") await (migrated ??= migrate());
-
-			let logger = new Logger(request);
-			try {
-				let response = await createProviderRouter(db, logger, options).fetch(request);
-				logger.response = response;
-				return response;
-			} finally {
-				logger.flush();
-			}
+			return createProviderRouter(db, options).fetch(request);
 		},
 	};
 }

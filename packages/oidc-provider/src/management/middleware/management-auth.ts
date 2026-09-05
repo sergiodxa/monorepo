@@ -30,23 +30,23 @@ import TenantMeta from "../models/tenant-meta.js";
  */
 export default (internalSecret: string) => {
 	return middleware(async (context, next) => {
-		let log = context.logger.middleware("management-auth");
+		let { log } = context;
 		let db = getServiceContainer().get(Database);
 
 		let internalToken = context.request.headers.get("x-internal-token");
 		if (internalToken) {
 			let isValid = await verifyInternalToken(internalToken, internalSecret);
 			if (isValid) {
-				log.info("Internal request authenticated via signed token");
+				log.set({ admin: { auth: "internal_token" } });
 				context.managementClient = null;
 				return next();
 			}
-			log.info("Invalid internal token provided");
+			log.warn("admin.auth.internal_token_invalid");
 		}
 
 		let authHeader = context.request.headers.get("authorization");
 		if (!authHeader || !authHeader.startsWith("Bearer ")) {
-			log.info("Missing or invalid Authorization header");
+			log.warn("admin.auth.header_missing");
 			return unauthorized({
 				error: "invalid_token",
 				error_description: "Missing or invalid access token",
@@ -57,7 +57,7 @@ export default (internalSecret: string) => {
 
 		let issuer = await TenantMeta.getIssuer(db);
 		if (!issuer) {
-			log.error("Issuer not configured");
+			log.fail(new Error("Issuer not configured"));
 			return unauthorized({
 				error: "server_error",
 				error_description: "Server configuration error",
@@ -66,7 +66,7 @@ export default (internalSecret: string) => {
 
 		let signingKeys = await SigningKey.getAll(db);
 		if (signingKeys.length === 0) {
-			log.error("No signing keys available");
+			log.fail(new Error("No signing keys available"));
 			return unauthorized({
 				error: "server_error",
 				error_description: "Server configuration error",
@@ -80,7 +80,7 @@ export default (internalSecret: string) => {
 				algorithms: [JWK.Algorithm.ES256],
 			});
 		} catch (error) {
-			log.info("Invalid access token", {
+			log.warn("admin.auth.token_invalid", {
 				error: error instanceof Error ? error.message : "Unknown",
 			});
 			return unauthorized({
@@ -101,7 +101,7 @@ export default (internalSecret: string) => {
 
 		let client = await Client.show(db, clientId);
 		if (!client) {
-			log.info("Client not found", { clientId });
+			log.warn("client.not_found", { client_id: clientId });
 			return unauthorized({
 				error: "invalid_token",
 				error_description: "Client not found",
@@ -109,7 +109,7 @@ export default (internalSecret: string) => {
 		}
 
 		if (!client.is_management_client) {
-			log.info("Client does not have management API access", { clientId });
+			log.warn("admin.auth.forbidden", { client_id: clientId });
 			return unauthorized({
 				error: "insufficient_scope",
 				error_description: "Client does not have management API access",
@@ -118,7 +118,8 @@ export default (internalSecret: string) => {
 
 		context.managementClient = client;
 
-		log.info("Management API access granted", { clientId: client.id, clientName: client.name });
+		log.set({ admin: { auth: "access_token" }, client: { id: client.id, name: client.name } });
+		log.note("admin.auth.granted");
 
 		return next();
 	});

@@ -41,8 +41,7 @@ const SetupSchema = s.object({
 export const create = createAction(
 	routes.api.setup,
 	inject([Database] as const, async (db) => {
-		let { request, logger } = getContext();
-		let log = logger.action("/api/setup");
+		let { request, log } = getContext();
 
 		let body = (await request.json().catch(() => null)) as JSONValue;
 		let result = await validate(body, SetupSchema);
@@ -61,10 +60,8 @@ export const create = createAction(
 			await TenantMeta.set(db, TenantMeta.KEYS.CREATED_AT, new Date().toISOString());
 		}
 
-		log.info("Tenant setup applied", {
-			tenantId: result.data.tenant_id,
-			issuer: result.data.issuer,
-		});
+		log.set({ tenant: { id: result.data.tenant_id, issuer: result.data.issuer } });
+		log.note("admin.setup.applied");
 
 		return ok({ ok: true });
 	}),

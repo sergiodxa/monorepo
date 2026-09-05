@@ -47,8 +47,11 @@ export default {
 
 ```typescript
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
+import { createLogger } from "@sdxc/logger";
 import { createOidcProvider, type OidcProvider } from "@sdxc/oidc-provider";
 import { DurableObject } from "cloudflare:workers";
+
+const logger = createLogger({ service: "auth" });
 
 export class Tenant extends DurableObject<Env> {
 	#provider: OidcProvider;
@@ -71,7 +74,9 @@ export class Tenant extends DurableObject<Env> {
 	}
 
 	override fetch(request: Request) {
-		return this.#provider.fetch(request);
+		return logger.open("request", { tenant: { id: this.ctx.id.toString() } }).run(() => {
+			return this.#provider.fetch(request);
+		});
 	}
 
 	override async alarm() {
@@ -118,6 +123,17 @@ The provider instance returned by `createOidcProvider`.
 
 Handles one request against the full OIDC surface. Pure Fetch, so it works on
 Workers, Durable Objects, Bun, and Node.
+
+Every request runs through [`@sdxc/logger`](/packages/logger)'s `log()` middleware, at
+the top of the router's chain, which publishes the invocation's log as `ctx.log` and
+emits one record per request: `route`, `http.method`, `http.status`, the `client.id` /
+`subject.id` / `oidc.*` fields the handlers set, and a `notes` narrative
+(`oidc.token.issued`, `client.not_found`, ...). The provider carries no logging
+configuration of its own. A host that wraps `fetch` in
+`logger.open("request").run(() => provider.fetch(request))` has the router join that
+log, so the records carry the host's `service`, `environment`, and `version` (the
+Durable Object example above does this); an unwrapped host still gets one record per
+request, written to the console without a `service`.
 
 #### `provider.migrate(): Promise<{ applied: string[] }>`
 

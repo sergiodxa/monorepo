@@ -66,11 +66,10 @@ let UpdateResourceSchema = s.object({
 export const index = createAction(
 	routes.api.resources.index,
 	inject([Database] as const, async (db) => {
-		let { logger } = getContext();
-		let log = logger.loader("/api/resources");
+		let { log } = getContext();
 		let resources = await Resource.list(db);
 		let result = resources.map(normalizeResource);
-		log.info("Resources listed", { count: result.length });
+		log.note("admin.resource.listed", { count: result.length });
 		return ok(result);
 	}),
 );
@@ -82,15 +81,15 @@ export const index = createAction(
 export const show = createAction(
 	routes.api.resources.show,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext();
+		let { params, log } = getContext();
 		let { id } = s.parse(s.object({ id: s.string() }), params);
-		let log = logger.loader("/api/resources/:id");
+		log.set({ resource: { id } });
 		let resource = await Resource.show(db, id);
 		if (!resource) {
-			log.info("Resource not found", { resourceId: id });
+			log.warn("admin.resource.not_found");
 			return notFound({ error: "Resource not found" });
 		}
-		log.info("Resource retrieved", { resourceId: id });
+		log.note("admin.resource.retrieved");
 		return ok(normalizeResource(resource));
 	}),
 );
@@ -102,23 +101,21 @@ export const show = createAction(
 export const create = createAction(
 	routes.api.resources.create,
 	inject([Database] as const, async (db) => {
-		let { request, logger } = getContext();
-		let log = logger.action("/api/resources");
+		let { request, log } = getContext();
 		let body = await safeJsonParse(request);
 		if (isResponse(body)) {
-			log.info("Invalid JSON body");
+			log.warn("http.invalid_json");
 			return body;
 		}
 
 		let result = await validate(body, CreateResourceSchema);
 		if (isFailure(result)) {
-			log.info("Invalid request body");
+			log.warn("http.invalid_body");
 			return badRequest({ error: "Invalid request", issues: result.error.issues });
 		}
 
 		let { id } = await Resource.create(db, result.data);
-		log.info("Resource created", {
-			resourceId: id,
+		log.note("admin.resource.created", {
 			identifier: result.data.identifier,
 		});
 		return created({ id });
@@ -132,18 +129,18 @@ export const create = createAction(
 export const update = createAction(
 	routes.api.resources.update,
 	inject([Database] as const, async (db) => {
-		let { params, request, logger } = getContext();
+		let { params, request, log } = getContext();
 		let { id } = s.parse(s.object({ id: s.string() }), params);
-		let log = logger.action("/api/resources/:id");
+		log.set({ resource: { id } });
 		let body = await safeJsonParse(request);
 		if (isResponse(body)) {
-			log.info("Invalid JSON body", { resourceId: id });
+			log.warn("http.invalid_json");
 			return body;
 		}
 
 		let result = await validate(body, UpdateResourceSchema);
 		if (isFailure(result)) {
-			log.info("Invalid request body", { resourceId: id });
+			log.warn("http.invalid_body");
 			return badRequest({ error: "Invalid request", issues: result.error.issues });
 		}
 
@@ -151,14 +148,14 @@ export const update = createAction(
 			await Resource.update(db, id, result.data);
 			let resource = await Resource.show(db, id);
 			if (!resource) {
-				log.info("Resource not found after update", { resourceId: id });
+				log.warn("admin.resource.not_found");
 				return notFound({ error: "Resource not found" });
 			}
-			log.info("Resource updated", { resourceId: id });
+			log.note("admin.resource.updated");
 			return ok(normalizeResource(resource));
 		} catch (error) {
 			if (error instanceof RecordNotFoundError) {
-				log.info("Resource not found", { resourceId: id });
+				log.warn("admin.resource.not_found");
 				return notFound({ error: "Resource not found" });
 			}
 			throw error;
@@ -173,16 +170,16 @@ export const update = createAction(
 export const destroy = createAction(
 	routes.api.resources.destroy,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext();
+		let { params, log } = getContext();
 		let { id } = s.parse(s.object({ id: s.string() }), params);
-		let log = logger.action("/api/resources/:id");
+		log.set({ resource: { id } });
 		try {
 			await Resource.destroy(db, id);
-			log.info("Resource deleted", { resourceId: id });
+			log.note("admin.resource.deleted");
 			return noContent();
 		} catch (error) {
 			if (error instanceof RecordNotFoundError) {
-				log.info("Resource not found", { resourceId: id });
+				log.warn("admin.resource.not_found");
 				return notFound({ error: "Resource not found" });
 			}
 			throw error;

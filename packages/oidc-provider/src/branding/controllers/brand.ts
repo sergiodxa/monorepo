@@ -39,12 +39,11 @@ let UpdateBrandSchema = s.object({
 export const show = createAction(
 	routes.api.brand.show,
 	inject([Database] as const, async (db) => {
-		let { logger } = getContext();
-		let log = logger.loader("/api/brand");
+		let { log } = getContext();
 
 		let brand = await Brand.show(db);
 
-		log.info("Brand settings retrieved", { brandId: brand?.id ?? null });
+		log.note("admin.brand.retrieved", { brand_id: brand?.id ?? null });
 
 		return ok(brand);
 	}),
@@ -57,25 +56,24 @@ export const show = createAction(
 export const update = createAction(
 	routes.api.brand.update,
 	inject([Database] as const, async (db) => {
-		let { request, logger } = getContext();
-		let log = logger.action("/api/brand");
+		let { request, log } = getContext();
 
 		let body = await safeJsonParse(request);
 		if (isResponse(body)) {
-			log.info("Invalid JSON body");
+			log.warn("http.invalid_json");
 			return body;
 		}
 
 		let result = await validate(body, UpdateBrandSchema);
 		if (isFailure(result)) {
-			log.info("Brand update validation failed", { issues: result.error.issues.length });
+			log.warn("http.invalid_body", { issues: result.error.issues.length });
 			return badRequest({ error: "Invalid request", issues: result.error.issues });
 		}
 
 		await Brand.update(db, result.data);
 		let brand = await Brand.show(db);
 
-		log.info("Brand settings updated", { brandId: brand?.id ?? null });
+		log.note("admin.brand.updated", { brand_id: brand?.id ?? null });
 
 		return ok(brand);
 	}),

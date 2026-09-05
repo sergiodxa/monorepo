@@ -43,15 +43,14 @@ let LogoutSchema = s.object({
 export default createAction(
 	routes.oidc.logout,
 	inject([Database] as const, async (db) => {
-		let { request, logger } = getContext();
-		let log = logger.loader("/oidc/logout");
+		let { request, log } = getContext();
 
 		let url = new URL(request.url);
 		let params = Object.fromEntries(url.searchParams);
 
 		let result = await validate(params, LogoutSchema);
 		if (isFailure(result)) {
-			log.info("Invalid logout parameters");
+			log.warn("oidc.logout.invalid_params");
 			return reject("invalid_request", "Invalid parameters");
 		}
 
@@ -61,7 +60,7 @@ export default createAction(
 		let clientId: string | undefined;
 
 		if (id_token_hint) {
-			log.info("Processing logout with id_token_hint");
+			log.set({ oidc: { logout_hint: "id_token" } });
 
 			let [issuer, signingKeys] = await Promise.all([
 				TenantMeta.getIssuer(db),
@@ -69,12 +68,12 @@ export default createAction(
 			]);
 
 			if (!issuer) {
-				log.error("Issuer not configured");
+				log.fail(new Error("Issuer not configured"));
 				return reject("server_error", "Issuer not configured");
 			}
 
 			if (signingKeys.length === 0) {
-				log.error("No signing keys available");
+				log.fail(new Error("No signing keys available"));
 				return reject("server_error", "No signing keys available");
 			}
 
@@ -87,23 +86,28 @@ export default createAction(
 				subjectId = idToken.subject;
 				let tokenAudience = idToken.audience;
 
-				log.info("ID token verified", { subjectId, clientId: tokenAudience });
+				log.set({ subject: { id: subjectId } });
+				log.note("oidc.logout.id_token_verified");
 
 				if (client_id && client_id !== tokenAudience) {
-					log.info("Client ID mismatch", { providedClientId: client_id, tokenAudience });
+					log.warn("client.id_mismatch", {
+						provided_client_id: client_id,
+						expected_client_id: tokenAudience,
+					});
 					return reject("invalid_request", "client_id does not match id_token_hint audience");
 				}
 
 				clientId = typeof tokenAudience === "string" ? tokenAudience : tokenAudience?.[0];
+				log.set({ client: { id: clientId } });
 			} catch {
-				log.info("ID token verification failed");
+				log.warn("oidc.logout.id_token_invalid");
 				return reject("invalid_request", "Invalid id_token_hint");
 			}
 		} else if (client_id) {
-			log.info("Processing logout with client_id only", { clientId: client_id });
+			log.set({ oidc: { logout_hint: "client_id" }, client: { id: client_id } });
 			clientId = client_id;
 		} else {
-			log.info("Missing required parameters for logout");
+			log.warn("oidc.logout.params_missing");
 			return reject("invalid_request", "Either id_token_hint or client_id is required");
 		}
 
@@ -119,23 +123,23 @@ export default createAction(
 		]);
 
 		if (clientId && !client) {
-			log.info("Client not found", { clientId });
+			log.warn("client.not_found");
 			return reject("invalid_client", "Client not found");
 		}
 
 		if (post_logout_redirect_uri && clientId) {
 			let isValidUri = logoutUris.some((uri) => uri.uri === post_logout_redirect_uri);
 			if (!isValidUri) {
-				log.info("Invalid post_logout_redirect_uri", { clientId });
+				log.warn("oidc.logout.invalid_redirect_uri");
 				return reject("invalid_request", "Invalid post_logout_redirect_uri");
 			}
 		}
 
 		if (subjectId && subject) {
 			await Session.destroyBySubject(db, subject.id);
-			log.info("Sessions destroyed for subject", { subjectId: subject.id });
+			log.note("oidc.logout.sessions_destroyed");
 		} else if (subjectId) {
-			log.info("Subject not found for session destruction", { subjectId });
+			log.warn("subject.not_found");
 		}
 
 		if (post_logout_redirect_uri) {
@@ -143,11 +147,11 @@ export default createAction(
 			if (state) {
 				redirectUrl.searchParams.set("state", state);
 			}
-			log.info("Logout successful, redirecting", { subjectId, clientId });
+			log.note("oidc.logout.completed", { redirect: true });
 			return Response.redirect(redirectUrl.toString(), 302);
 		}
 
-		log.info("Logout successful, showing success page", { subjectId, clientId });
+		log.note("oidc.logout.completed", { redirect: false });
 
 		return new Response(
 			`<!DOCTYPE html>

@@ -28,12 +28,11 @@ import SigningKey from "../models/signing-key.js";
 export const index = createAction(
 	routes.api["signing-keys"].index,
 	inject([Database] as const, async (db) => {
-		let { logger } = getContext();
-		let log = logger.loader("/api/signing-keys");
+		let { log } = getContext();
 
 		let signingKeys = await SigningKey.list(db);
 
-		log.info("Signing keys listed", { count: signingKeys.length });
+		log.note("admin.signing_key.listed", { count: signingKeys.length });
 
 		return ok(
 			signingKeys.map((key) => ({
@@ -54,12 +53,11 @@ export const index = createAction(
 export const create = createAction(
 	routes.api["signing-keys"].create,
 	inject([Database] as const, async (db) => {
-		let { logger } = getContext();
-		let log = logger.action("/api/signing-keys");
+		let { log } = getContext();
 
 		let keyPair = await SigningKey.generate(db);
 
-		log.info("Signing key created", { keyId: keyPair.id });
+		log.note("admin.signing_key.created", { key_id: keyPair.id });
 
 		return created({
 			id: keyPair.id,
@@ -76,12 +74,11 @@ export const create = createAction(
 export const rotate = createAction(
 	routes.api["signing-keys"].rotate,
 	inject([Database] as const, async (db) => {
-		let { logger } = getContext();
-		let log = logger.action("/api/signing-keys/rotate");
+		let { log } = getContext();
 
 		let keyPair = await SigningKey.rotate(db);
 
-		log.info("Signing key rotated", { newKeyId: keyPair.id });
+		log.note("admin.signing_key.rotated", { key_id: keyPair.id });
 
 		return ok({
 			id: keyPair.id,
@@ -98,21 +95,20 @@ export const rotate = createAction(
 export const destroy = createAction(
 	routes.api["signing-keys"].destroy,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext();
+		let { params, log } = getContext();
 		let { id } = s.parse(s.object({ id: s.string() }), params);
-		let log = logger.action("/api/signing-keys/:id");
 
 		try {
 			await SigningKey.destroy(db, id);
-			log.info("Signing key deleted", { keyId: id });
+			log.note("admin.signing_key.deleted", { key_id: id });
 			return noContent();
 		} catch (error) {
 			if (error instanceof RecordNotFoundError) {
-				log.info("Signing key not found", { keyId: id });
+				log.warn("admin.signing_key.not_found", { key_id: id });
 				return notFound({ error: "Signing key not found" });
 			}
 			if (error instanceof SigningKey.CannotDeleteCurrentKeyError) {
-				log.info("Cannot delete current signing key", { keyId: id });
+				log.warn("admin.signing_key.current_key_protected", { key_id: id });
 				return badRequest({ error: error.message });
 			}
 			throw error;

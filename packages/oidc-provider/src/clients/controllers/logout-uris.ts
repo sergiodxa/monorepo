@@ -54,18 +54,18 @@ let CreateLogoutUriSchema = s.object({
 export const index = createAction(
 	routes.api.clients["logout-uris"].index,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext();
+		let { params, log } = getContext();
 		let { clientId } = s.parse(s.object({ clientId: s.string() }), params);
-		let log = logger.loader("/api/clients/:clientId/logout-uris");
+		log.set({ client: { id: clientId } });
 
 		let client = await Client.show(db, clientId);
 		if (!client) {
-			log.info("Client not found", { clientId });
+			log.warn("client.not_found");
 			return notFound({ error: "Client not found" });
 		}
 
 		let logoutUris = await LogoutUri.list(db, clientId);
-		log.info("Logout URIs listed", { clientId, count: logoutUris.length });
+		log.note("admin.client.logout_uri.listed", { count: logoutUris.length });
 		return ok(logoutUris.map(normalizeLogoutUri));
 	}),
 );
@@ -77,27 +77,26 @@ export const index = createAction(
 export const create = createAction(
 	routes.api.clients["logout-uris"].create,
 	inject([Database] as const, async (db) => {
-		let { params, formData, logger } = getContext();
+		let { params, formData, log } = getContext();
 		let { clientId } = s.parse(s.object({ clientId: s.string() }), params);
-		let log = logger.action("/api/clients/:clientId/logout-uris");
+		log.set({ client: { id: clientId } });
 
 		let client = await Client.show(db, clientId);
 		if (!client) {
-			log.info("Client not found", { clientId });
+			log.warn("client.not_found");
 			return notFound({ error: "Client not found" });
 		}
 
 		let result = await validate(Object.fromEntries(formData), CreateLogoutUriSchema);
 		if (isFailure(result)) {
-			log.info("Invalid request body", { clientId });
+			log.warn("http.invalid_body");
 			return badRequest({ error: "Invalid request", issues: result.error.issues });
 		}
 
 		let { id } = await LogoutUri.create(db, clientId, result.data);
 
-		log.info("Logout URI created", {
-			clientId,
-			logoutUriId: id,
+		log.note("admin.client.logout_uri.created", {
+			logout_uri_id: id,
 			type: result.data.type,
 		});
 		return created({ id });
@@ -111,23 +110,23 @@ export const create = createAction(
 export const destroy = createAction(
 	routes.api.clients["logout-uris"].destroy,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext();
+		let { params, log } = getContext();
 		let { clientId, id } = s.parse(s.object({ clientId: s.string(), id: s.string() }), params);
-		let log = logger.action("/api/clients/:clientId/logout-uris/:id");
+		log.set({ client: { id: clientId } });
 
 		let client = await Client.show(db, clientId);
 		if (!client) {
-			log.info("Client not found", { clientId });
+			log.warn("client.not_found");
 			return notFound({ error: "Client not found" });
 		}
 
 		try {
 			await LogoutUri.destroy(db, id);
-			log.info("Logout URI deleted", { clientId, logoutUriId: id });
+			log.note("admin.client.logout_uri.deleted", { logout_uri_id: id });
 			return noContent();
 		} catch (error) {
 			if (error instanceof RecordNotFoundError) {
-				log.info("Logout URI not found", { clientId, logoutUriId: id });
+				log.warn("admin.client.logout_uri.not_found", { logout_uri_id: id });
 				return notFound({ error: "Logout URI not found" });
 			}
 			throw error;

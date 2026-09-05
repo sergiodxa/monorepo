@@ -30,19 +30,19 @@ import Subject from "../models/subject.js";
 export const index = createAction(
 	routes.api.subjects.connections.index,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext();
+		let { params, log } = getContext();
 		let { id } = s.parse(s.object({ id: s.string() }), params);
-		let log = logger.loader("/api/subjects/:id/connections");
+		log.set({ subject: { id } });
 
 		let subject = await Subject.show(db, id);
 		if (!subject) {
-			log.info("Subject not found", { subjectId: id });
+			log.warn("subject.not_found");
 			return notFound({ error: "Subject not found" });
 		}
 
 		let connections = await Connection.listBySubject(db, id);
 
-		log.info("Connections listed", { subjectId: id, count: connections.length });
+		log.note("admin.subject.connection.listed", { count: connections.length });
 
 		return ok(
 			connections.map((connection) => ({
@@ -63,16 +63,16 @@ export const index = createAction(
 export const destroy = createAction(
 	routes.api.subjects.connections.destroy,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext();
+		let { params, log } = getContext();
 		let { id, connectionId } = s.parse(
 			s.object({ id: s.string(), connectionId: s.string() }),
 			params,
 		);
-		let log = logger.action("/api/subjects/:id/connections/:connectionId");
+		log.set({ subject: { id } });
 
 		let subject = await Subject.show(db, id);
 		if (!subject) {
-			log.info("Subject not found", { subjectId: id });
+			log.warn("subject.not_found");
 			return notFound({ error: "Subject not found" });
 		}
 
@@ -80,18 +80,16 @@ export const destroy = createAction(
 		let connection = connections.find((c) => c.id === connectionId);
 
 		if (!connection) {
-			log.info("Connection not found", {
-				subjectId: id,
-				connectionId,
+			log.warn("admin.subject.connection.not_found", {
+				connection_id: connectionId,
 			});
 			return notFound({ error: "Connection not found" });
 		}
 
 		try {
 			await Connection.destroy(db, connectionId);
-			log.info("Connection deleted", {
-				subjectId: id,
-				connectionId,
+			log.note("admin.subject.connection.deleted", {
+				connection_id: connectionId,
 				provider: connection.provider,
 			});
 			return noContent();

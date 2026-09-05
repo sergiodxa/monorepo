@@ -2,16 +2,16 @@
  * Assembles the OIDC provider's fetch-router: middleware pipeline plus route map.
  *
  * Wires every controller (OAuth, OIDC, discovery, WebAuthn, and the Management
- * API) to its route and scopes each request inside a service container so
- * handlers resolve the correct per-request database via dependency injection.
+ * API) to its route, publishes the invocation's log as `ctx.log`, and scopes each
+ * request inside a service container so handlers resolve the per-request database.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Logger } from "@sdxc/logger/request";
 import type { Middleware, RequestHandler } from "remix/router";
 
+import { log } from "@sdxc/logger/middleware";
 import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
@@ -39,7 +39,6 @@ import * as resources from "./resources/controllers/resources.js";
 import routes from "./routes.js";
 import index from "./shared/home.js";
 import analyticsMiddleware from "./shared/middleware/analytics.js";
-import logger from "./shared/middleware/logger.js";
 import notFound from "./shared/not-found.js";
 import * as signingKeys from "./signing-keys/controllers/signing-keys.js";
 import * as subjectConnections from "./subjects/controllers/connections.js";
@@ -64,16 +63,14 @@ export interface ProviderRouterOptions {
 }
 
 /**
- * Builds the OIDC provider's fetch-router bound to a database, logger, and host options.
+ * Builds the OIDC provider's fetch-router bound to a database and host options.
+ * `log()` runs first and takes no configuration: a host that wraps its entry point in
+ * `logger.open("request").run(...)` has this router join that log, so every record
+ * carries the host's `service`; without a host log, each request opens a bare one.
  * @param db - Database for this tenant/instance.
- * @param requestLogger - Request-scoped logger.
  * @param options - Injected runtime options (internal secret, analytics sink).
  */
-export function createProviderRouter(
-	db: Database,
-	requestLogger: Logger,
-	options: ProviderRouterOptions,
-) {
+export function createProviderRouter(db: Database, options: ProviderRouterOptions) {
 	/**
 	 * Resolves the provider's Database through a service container (ADR-008): registered
 	 * per request with this request's db, its `scope` wraps the router's fetch below, so
@@ -84,12 +81,13 @@ export function createProviderRouter(
 
 	/**
 	 * A non-tuple `Middleware[]` keeps the router context at the base
-	 * `RequestContext`, so controllers type against it; `formData()` is cast
-	 * since its value surfaces through the global `formData` augmentation.
+	 * `RequestContext`, so controllers type against it; `log()` and `formData()`
+	 * are cast since their values surface through the global `log` / `formData`
+	 * augmentations.
 	 */
 	let middleware: Middleware[] = [
+		log() as Middleware,
 		asyncContext(),
-		logger(requestLogger),
 		analyticsMiddleware(options.analytics),
 		formData() as Middleware,
 	];

@@ -40,18 +40,18 @@ let CreateSecretSchema = s.object({
 export const index = createAction(
 	routes.api.clients.secrets.index,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext();
+		let { params, log } = getContext();
 		let { clientId } = s.parse(s.object({ clientId: s.string() }), params);
-		let log = logger.loader("/api/clients/:clientId/secrets");
+		log.set({ client: { id: clientId } });
 
 		let client = await Client.show(db, clientId);
 		if (!client) {
-			log.info("Client not found", { clientId });
+			log.warn("client.not_found");
 			return notFound({ error: "Client not found" });
 		}
 
 		let secrets = await Secret.list(db, clientId);
-		log.info("Secrets listed", { clientId, count: secrets.length });
+		log.note("admin.client.secret.listed", { count: secrets.length });
 		return ok(secrets);
 	}),
 );
@@ -63,19 +63,19 @@ export const index = createAction(
 export const create = createAction(
 	routes.api.clients.secrets.create,
 	inject([Database] as const, async (db) => {
-		let { params, formData, logger } = getContext();
+		let { params, formData, log } = getContext();
 		let { clientId } = s.parse(s.object({ clientId: s.string() }), params);
-		let log = logger.action("/api/clients/:clientId/secrets");
+		log.set({ client: { id: clientId } });
 
 		let client = await Client.show(db, clientId);
 		if (!client) {
-			log.info("Client not found", { clientId });
+			log.warn("client.not_found");
 			return notFound({ error: "Client not found" });
 		}
 
 		let result = await validate(Object.fromEntries(formData), CreateSecretSchema);
 		if (isFailure(result)) {
-			log.info("Invalid request body", { clientId });
+			log.warn("http.invalid_body");
 			return badRequest({ error: "Invalid request", issues: result.error.issues });
 		}
 
@@ -86,7 +86,7 @@ export const create = createAction(
 			result.data.expiresAt,
 		);
 
-		log.info("Secret created", { clientId, secretId: id });
+		log.note("admin.client.secret.created", { secret_id: id });
 
 		return created({
 			id,
@@ -103,23 +103,23 @@ export const create = createAction(
 export const destroy = createAction(
 	routes.api.clients.secrets.destroy,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext();
+		let { params, log } = getContext();
 		let { clientId, id } = s.parse(s.object({ clientId: s.string(), id: s.string() }), params);
-		let log = logger.action("/api/clients/:clientId/secrets/:id");
+		log.set({ client: { id: clientId } });
 
 		let client = await Client.show(db, clientId);
 		if (!client) {
-			log.info("Client not found", { clientId });
+			log.warn("client.not_found");
 			return notFound({ error: "Client not found" });
 		}
 
 		try {
 			await Secret.destroy(db, id);
-			log.info("Secret deleted", { clientId, secretId: id });
+			log.note("admin.client.secret.deleted", { secret_id: id });
 			return noContent();
 		} catch (error) {
 			if (error instanceof RecordNotFoundError) {
-				log.info("Secret not found", { clientId, secretId: id });
+				log.warn("admin.client.secret.not_found", { secret_id: id });
 				return notFound({ error: "Secret not found" });
 			}
 			throw error;
