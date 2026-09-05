@@ -12,6 +12,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/logger": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"remix": "3.0.0-rc.1"
 	}

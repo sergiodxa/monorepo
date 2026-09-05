@@ -11,6 +11,7 @@
 import type { Result } from "@sdxc/result";
 import type { Middleware, RequestContext } from "remix/router";
 
+import { currentLog } from "@sdxc/logger";
 import { isFailure } from "@sdxc/result";
 import { Session } from "remix/session";
 
@@ -48,11 +49,25 @@ export type { CacheRefusalReason } from "./unsafe-cache-policy-error.js";
 
 export { UnsafeCachePolicyError } from "./unsafe-cache-policy-error.js";
 
-/** Log event emitted when a declaration is refused and the response downgraded. */
-const DOWNGRADE_EVENT = "workers_cache.downgraded";
+/** Warning recorded when a declaration is refused and the response downgraded. */
+const DOWNGRADE_EVENT = "cache.downgraded";
 
-/** Log event emitted when a deferred purge failed after the response was produced. */
-const DEFERRED_PURGE_FAILED_EVENT = "workers_cache.deferred_purge_failed";
+/** Warning recorded when a deferred purge failed after the response was produced. */
+const DEFERRED_PURGE_FAILED_EVENT = "cache.purge_failed";
+
+/**
+ * What to record as the reason a purge failed: the platform's own rejection when the
+ * error carries one, since the wrapper's message only restates the tags the note
+ * already names.
+ *
+ * @param error The failure the purge reported.
+ */
+function describePurgeFailure(error: Error): string {
+	let cause = error.cause;
+	if (cause instanceof Error) return cause.message;
+	if (typeof cause === "string") return cause;
+	return error.message;
+}
 
 /** Hosts treated as development when `NODE_ENV` does not say which mode this is. */
 const DEVELOPMENT_HOSTNAMES: ReadonlySet<string> = new Set([
@@ -67,24 +82,6 @@ const DEVELOPMENT_HOSTNAMES: ReadonlySet<string> = new Set([
  * that merely contains the letters is never mistaken for a public one.
  */
 const PUBLIC_DIRECTIVE_PATTERN = /(?:^|[\s,;])public(?:$|[\s,;=])/i;
-
-/** A log function that takes one message, the shape a plain logger exposes. */
-export type CacheLogFunction = (message: string) => void;
-
-/**
- * The minimal logger the middleware reports refusals and deferred failures
- * through. Any request-scoped logger published as `context.logger` with this
- * shape is used as-is, so refusals land in the same stream as the request log.
- */
-export interface CacheLogger {
-	/**
-	 * Writes an error-level event.
-	 *
-	 * @param event - Event name, e.g. `workers_cache.downgraded`.
-	 * @param payload - Structured details about the event.
-	 */
-	error(event: string, payload?: Record<string, unknown>): void;
-}
 
 /** The object form of a declaration, for passing tags as a list. */
 export interface CacheDeclarationOptions {
@@ -146,42 +143,6 @@ export interface WorkersCacheMiddlewareOptions {
  */
 function toResolver(cache: CacheInterface): (context: RequestContext) => CacheInterface {
 	return () => cache;
-}
-
-/**
- * Adapts a plain log function to the structured shape used here, encoding the
- * payload as JSON so no detail is lost when the logger takes only a message.
- *
- * @param log - A log function that accepts one message.
- * @returns A logger that writes events through it.
- */
-function toStructuredLogger(log: CacheLogFunction): CacheLogger {
-	return {
-		error(event: string, payload?: Record<string, unknown>): void {
-			log(payload === undefined ? event : `${event} ${JSON.stringify(payload)}`);
-		},
-	};
-}
-
-/**
- * Reads a structured logger from `context.logger`, or adapts a plain log
- * function found there, the shape a logger middleware installs. The downgrade
- * still applies with no logger present, which is why development throws.
- *
- * @param context - The current request context.
- * @returns A logger, or `undefined` when the request has none.
- */
-function resolveLogger(context: RequestContext): CacheLogger | undefined {
-	let candidate: unknown = Reflect.get(context, "logger");
-
-	if (typeof candidate === "object" && candidate !== null && "error" in candidate) {
-		let write = Reflect.get(candidate, "error");
-		if (typeof write === "function") return candidate as CacheLogger;
-	}
-
-	if (typeof candidate === "function") return toStructuredLogger(candidate as CacheLogFunction);
-
-	return undefined;
 }
 
 /**
@@ -309,18 +270,16 @@ export default function cache(options: WorkersCacheMiddlewareOptions): Middlewar
 
 		/**
 		 * Refuses a declaration: the response is downgraded so nothing stores it,
-		 * the refusal is logged at error level, and development additionally throws
-		 * because the route asked for something unsafe.
+		 * the refusal degrades the invocation's log with `cache.downgraded` set so
+		 * it can be filtered for, and development additionally throws because the
+		 * route asked for something unsafe.
 		 */
 		function refuse(response: Response, reason: CacheRefusalReason): Response {
 			let declaredPolicy = policy ?? "";
 
-			resolveLogger(context)?.error(DOWNGRADE_EVENT, {
-				reason,
-				policy: declaredPolicy,
-				method: context.method,
-				path: context.url.pathname,
-			});
+			currentLog()
+				?.set({ cache: { downgraded: true, refusal: reason } })
+				.warn(DOWNGRADE_EVENT, { reason, policy: declaredPolicy });
 
 			if (isDevelopment(context)) {
 				throw new UnsafeCachePolicyError(reason, declaredPolicy, context.url.pathname);
@@ -343,12 +302,17 @@ export default function cache(options: WorkersCacheMiddlewareOptions): Middlewar
 				return refuse(response, "session-with-public-policy");
 			}
 
+			currentLog()?.set({ cache: { policy, tag_count: tags.size } });
+
 			let headers: [string, string][] = [[CACHE_CONTROL_HEADER, policy]];
 			if (tags.size > 0) headers.push([CACHE_TAG_HEADER, cacheTag([...tags])]);
 			return withHeaders(response, headers);
 		}
 
-		/** Runs the queued purges, logging failures because the response is already out. */
+		/**
+		 * Runs the queued purges. The response is already out, so a failure is a
+		 * warning on the invocation's log naming the tags that stayed cached.
+		 */
 		async function flush(): Promise<void> {
 			if (deferred.size === 0) return;
 
@@ -358,9 +322,9 @@ export default function cache(options: WorkersCacheMiddlewareOptions): Middlewar
 			let result = await purgeCache(cacheInterface, { tags: purged });
 			if (!isFailure(result)) return;
 
-			resolveLogger(context)?.error(DEFERRED_PURGE_FAILED_EVENT, {
-				error: result.error.message,
-				tags: purged,
+			currentLog()?.warn(DEFERRED_PURGE_FAILED_EVENT, {
+				error: describePurgeFailure(result.error),
+				tags: purged.join(","),
 			});
 		}
 

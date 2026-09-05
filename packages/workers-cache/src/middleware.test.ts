@@ -1,8 +1,8 @@
 /**
  * Covers the cache middleware: declaration recording and tag accumulation, the
  * headers written onto the finished response, every row of the refusal table
- * including the development throw, and the awaited and deferred purge paths
- * through a recording cache double.
+ * including the development throw, what each path records on the invocation's
+ * log, and the awaited and deferred purge paths through a recording cache double.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,10 +10,11 @@
 
 import type { RequestContext as Context } from "remix/router";
 
+import { Log } from "@sdxc/logger";
 import { isFailure, isSuccess } from "@sdxc/result";
 import { RequestContext } from "remix/router";
 import { createSession, Session } from "remix/session";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { createTags } from "./create-tags.js";
 import cacheMiddleware from "./middleware.js";
@@ -42,14 +43,14 @@ function makeContext(path = "/posts/1", init: RequestInit = {}): RequestContext 
 	return new RequestContext(new Request(new URL(path, "https://example.com"), init));
 }
 
-/** A structured logger double, matching the shape a request logger publishes. */
-function makeLogger() {
-	return { error: vi.fn((_event: string, _payload?: Record<string, unknown>) => {}) };
-}
-
-/** Publishes a logger on the context the way a logger middleware would. */
-function withLogger(context: RequestContext, logger: unknown): void {
-	Reflect.set(context, "logger", logger);
+/**
+ * Opens an invocation's log whose emitted record a test reads back. `record()` is a call
+ * rather than a property so it is read after the log emits, not when it is destructured.
+ */
+function openLog() {
+	let records: Record<string, unknown>[] = [];
+	let log = new Log({ kind: "request", sink: (record) => void records.push(record) });
+	return { log, record: (): Record<string, unknown> => records[0] ?? {} };
 }
 
 /** Headers that reject mutation, like those on a platform-produced response. */
@@ -99,6 +100,26 @@ describe("cache middleware", () => {
 
 		expect(response.headers.get(CACHE_CONTROL_HEADER)).toBe(PUBLIC_PAGE);
 		expect(response.headers.get(CACHE_TAG_HEADER)).toBe("post:1,posts");
+	});
+
+	test("records the applied policy and tag count on the invocation's log", async () => {
+		let { log, record } = openLog();
+		let middleware = cacheMiddleware({ cache: createRecordingCache() });
+		let context = makeContext();
+
+		await log.run(() =>
+			middleware(context, async () => {
+				context.cache(PUBLIC_PAGE, TAGS.post("1"), TAGS.postList());
+				return new Response("ok");
+			}),
+		);
+
+		expect(record()).toMatchObject({
+			"cache.policy": PUBLIC_PAGE,
+			"cache.tag_count": 2,
+			outcome: "ok",
+		});
+		expect(record().notes).toBeUndefined();
 	});
 
 	test("writes a policy with no tags, which is a legitimate declaration", async () => {
@@ -215,27 +236,33 @@ describe("cache middleware", () => {
 });
 
 describe("cache middleware refusals", () => {
-	test("downgrades and logs when the response carries Set-Cookie", async () => {
-		let logger = makeLogger();
+	test("downgrades and warns when the response carries Set-Cookie", async () => {
+		let { log, record } = openLog();
 		let middleware = cacheMiddleware({ cache: createRecordingCache() });
 		let context = makeContext();
-		withLogger(context, logger);
 
-		let response = await middleware(context, async () => {
-			context.cache(PUBLIC_PAGE, TAGS.postList());
-			return new Response("ok", { headers: { "Set-Cookie": "flash=1; Path=/" } });
-		});
+		let response = await log.run(() =>
+			middleware(context, async () => {
+				context.cache(PUBLIC_PAGE, TAGS.postList());
+				return new Response("ok", { headers: { "Set-Cookie": "flash=1; Path=/" } });
+			}),
+		);
 
 		expect(response.headers.get(CACHE_CONTROL_HEADER)).toBe(NON_CACHEABLE_POLICY);
 		expect(response.headers.has(CACHE_TAG_HEADER)).toBe(false);
-		expect(logger.error).toHaveBeenCalledTimes(1);
-		expect(logger.error.mock.calls[0]?.[0]).toBe("workers_cache.downgraded");
-		expect(logger.error.mock.calls[0]?.[1]).toMatchObject({
-			reason: "set-cookie",
-			policy: PUBLIC_PAGE,
-			method: "GET",
-			path: "/posts/1",
+		expect(record()).toMatchObject({
+			"cache.downgraded": true,
+			"cache.refusal": "set-cookie",
+			outcome: "degraded",
 		});
+		expect(record().notes).toEqual([
+			expect.objectContaining({
+				level: "warn",
+				name: "cache.downgraded",
+				reason: "set-cookie",
+				policy: PUBLIC_PAGE,
+			}),
+		]);
 	});
 
 	test("downgrades when a Set-Cookie is attached after the declaration", async () => {
@@ -260,26 +287,25 @@ describe("cache middleware refusals", () => {
 		expect(response.headers.has(CACHE_TAG_HEADER)).toBe(false);
 	});
 
-	test("downgrades and logs a public policy on a session-bearing request", async () => {
-		let logger = makeLogger();
+	test("downgrades and warns about a public policy on a session-bearing request", async () => {
+		let { log, record } = openLog();
 		let middleware = cacheMiddleware({ cache: createRecordingCache() });
 		let context = makeContext();
-		withLogger(context, logger);
 
 		let session = createSession();
 		session.set("userId", "user_1");
 		context.set(Session, session, { property: "session" });
 
-		let response = await middleware(context, async () => {
-			context.cache(PUBLIC_PAGE, TAGS.postList());
-			return new Response("ok");
-		});
+		let response = await log.run(() =>
+			middleware(context, async () => {
+				context.cache(PUBLIC_PAGE, TAGS.postList());
+				return new Response("ok");
+			}),
+		);
 
 		expect(response.headers.get(CACHE_CONTROL_HEADER)).toBe(NON_CACHEABLE_POLICY);
 		expect(response.headers.has(CACHE_TAG_HEADER)).toBe(false);
-		expect(logger.error.mock.calls[0]?.[1]).toMatchObject({
-			reason: "session-with-public-policy",
-		});
+		expect(record()["cache.refusal"]).toBe("session-with-public-policy");
 	});
 
 	test("keeps a private policy on a session-bearing request", async () => {
@@ -355,34 +381,36 @@ describe("cache middleware refusals", () => {
 	});
 
 	test("emits nothing when no declaration was made", async () => {
-		let logger = makeLogger();
+		let { log, record } = openLog();
 		let middleware = cacheMiddleware({ cache: createRecordingCache() });
 		let context = makeContext();
-		withLogger(context, logger);
 		let handled = new Response("ok", { headers: { "Set-Cookie": "flash=1" } });
 
-		let response = await middleware(context, async () => handled);
+		let response = await log.run(() => middleware(context, async () => handled));
 
 		expect(response).toBe(handled);
 		expect(response.headers.has(CACHE_CONTROL_HEADER)).toBe(false);
 		expect(response.headers.has(CACHE_TAG_HEADER)).toBe(false);
-		expect(logger.error).not.toHaveBeenCalled();
+		expect(Object.keys(record).filter((key) => key.startsWith("cache."))).toEqual([]);
+		expect(record().notes).toBeUndefined();
 	});
 
-	test("throws in development instead of only logging", async () => {
+	test("throws in development instead of only warning", async () => {
 		process.env.NODE_ENV = "development";
-		let logger = makeLogger();
+		let { log, record } = openLog();
 		let middleware = cacheMiddleware({ cache: createRecordingCache() });
 		let context = makeContext();
-		withLogger(context, logger);
 
-		let run = middleware(context, async () => {
-			context.cache(PUBLIC_PAGE, TAGS.postList());
-			return new Response("ok", { headers: { "Set-Cookie": "flash=1" } });
-		});
+		let run = log.run(() =>
+			middleware(context, async () => {
+				context.cache(PUBLIC_PAGE, TAGS.postList());
+				return new Response("ok", { headers: { "Set-Cookie": "flash=1" } });
+			}),
+		);
 
 		await expect(run).rejects.toThrow(UnsafeCachePolicyError);
-		expect(logger.error).toHaveBeenCalledTimes(1);
+		expect(record()["cache.downgraded"]).toBe(true);
+		expect(record().notes).toEqual([expect.objectContaining({ name: "cache.downgraded" })]);
 	});
 
 	test("treats a local host as development when the mode is unset", async () => {
@@ -398,22 +426,7 @@ describe("cache middleware refusals", () => {
 		await expect(run).rejects.toThrow(UnsafeCachePolicyError);
 	});
 
-	test("logs a refusal through a plain log function published on the context", async () => {
-		let log = vi.fn((_message: string) => {});
-		let middleware = cacheMiddleware({ cache: createRecordingCache() });
-		let context = makeContext();
-		withLogger(context, log);
-
-		await middleware(context, async () => {
-			context.cache(PUBLIC_PAGE, TAGS.postList());
-			return new Response("ok", { headers: { "Set-Cookie": "flash=1" } });
-		});
-
-		expect(log).toHaveBeenCalledTimes(1);
-		expect(log.mock.calls[0]?.[0]).toContain("workers_cache.downgraded");
-	});
-
-	test("still downgrades when the request has no logger", async () => {
+	test("still downgrades, without throwing, when no log is current", async () => {
 		let middleware = cacheMiddleware({ cache: createRecordingCache() });
 		let context = makeContext();
 
@@ -506,12 +519,35 @@ describe("cache middleware purging", () => {
 		expect(recording.purges).toEqual([{ tags: ["posts", "post:1"] }]);
 	});
 
-	test("logs a failed deferred purge instead of throwing it", async () => {
-		let logger = makeLogger();
+	test("warns about a failed deferred purge instead of throwing it", async () => {
+		let { log, record } = openLog();
 		let recording = createRecordingCache({ failWith: new Error("edge unavailable") });
 		let middleware = cacheMiddleware({ cache: recording });
 		let context = makeContext("/posts/1", { method: "POST" });
-		withLogger(context, logger);
+
+		let response = await log.run(() =>
+			middleware(context, async () => {
+				context.cache.purgeLater(TAGS.postList());
+				return new Response("ok");
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		expect(record().outcome).toBe("degraded");
+		expect(record().notes).toEqual([
+			expect.objectContaining({
+				level: "warn",
+				name: "cache.purge_failed",
+				tags: "posts",
+				error: expect.stringContaining("edge unavailable"),
+			}),
+		]);
+	});
+
+	test("swallows a failed deferred purge when no log is current", async () => {
+		let recording = createRecordingCache({ failWith: new Error("edge unavailable") });
+		let middleware = cacheMiddleware({ cache: recording });
+		let context = makeContext("/posts/1", { method: "POST" });
 
 		let response = await middleware(context, async () => {
 			context.cache.purgeLater(TAGS.postList());
@@ -519,9 +555,6 @@ describe("cache middleware purging", () => {
 		});
 
 		expect(response.status).toBe(200);
-		expect(logger.error).toHaveBeenCalledTimes(1);
-		expect(logger.error.mock.calls[0]?.[0]).toBe("workers_cache.deferred_purge_failed");
-		expect(logger.error.mock.calls[0]?.[1]).toMatchObject({ tags: ["posts"] });
 	});
 
 	test("flushes deferred purges even when the handler throws", async () => {

@@ -83,7 +83,7 @@ router.post("/posts/:id", async (ctx) => {
 	await posts.update(ctx.params.id, await ctx.formData());
 
 	let result = await ctx.cache.purge(TAGS.post(ctx.params.id), TAGS.postList());
-	if (isFailure(result)) ctx.logger.error("cache.purge_failed", { error: result.error.message });
+	if (isFailure(result)) ctx.log.warn("cache.purge_failed", { error: result.error.message });
 
 	return redirect(`/posts/${ctx.params.id}`);
 });
@@ -93,10 +93,11 @@ Outside a request — a queue consumer, a scheduled handler — pass the cache
 interface directly:
 
 ```typescript
+import { currentLog } from "@sdxc/logger";
 import { purge } from "@sdxc/workers-cache";
 
 let result = await purge(cache, { tags: [TAGS.post(postId), TAGS.postList()] });
-if (isFailure(result)) logger.error("cache.purge_failed", { error: result.error.message });
+if (isFailure(result)) currentLog()?.warn("cache.purge_failed", { error: result.error.message });
 ```
 
 ### Building Headers By Hand
@@ -295,14 +296,14 @@ the declaration and the response — and only then writes `Cache-Control` and
 
 | Condition                                            | Behavior                                                           |
 | ---------------------------------------------------- | ------------------------------------------------------------------ |
-| Response carries `Set-Cookie`                        | Downgrade to `private, no-store`, write no tags, and log           |
-| Request carried a session and the policy is `public` | Downgrade to `private, no-store`, write no tags, and log           |
+| Response carries `Set-Cookie`                        | Downgrade to `private, no-store`, write no tags, and warn          |
+| Request carried a session and the policy is `public` | Downgrade to `private, no-store`, write no tags, and warn          |
 | Method is not `GET` or `HEAD`                        | Emit nothing                                                       |
 | Status is not cacheable                              | Emit nothing                                                       |
 | `context.cache()` was never called                   | Emit nothing, leaving the response exactly as the handler built it |
 
-Downgrades log at error level and throw `UnsafeCachePolicyError` in development,
-since a downgrade means a route asked for something unsafe. That error and its
+Downgrades warn on the invocation's log and throw `UnsafeCachePolicyError` in
+development, since a downgrade means a route asked for something unsafe. That error and its
 `CacheRefusalReason` are exported from `@sdxc/workers-cache/middleware`. The "emit
 nothing" rows are checked first: they leave the response untouched, so there is
 nothing to refuse.
@@ -319,11 +320,14 @@ nothing to refuse.
 - **Development detection** reads `NODE_ENV` when it says which mode this is, and
   otherwise treats a request to `localhost`, `127.0.0.1`, `[::1]`, or `0.0.0.0`
   as development.
-- **Logging** goes to whatever the request publishes as `context.logger`: an
-  object with an `error(event, payload)` method is used as-is, and a plain log
-  function receives the event with its payload encoded as JSON. A request with no
-  logger is still downgraded — the refusal is enforced either way — but has
-  nowhere to report it, which is the reason development throws.
+- **Logging** enriches the invocation's log from `@sdxc/logger` when one is
+  current. An applied declaration sets `cache.policy` and `cache.tag_count`; a
+  refusal sets `cache.downgraded` and `cache.refusal` and records a
+  `cache.downgraded` warning with the reason and the declared policy; a deferred
+  purge that failed records a `cache.purge_failed` warning naming the tags. A
+  request with no log current is still downgraded — the refusal is enforced
+  either way — but has nowhere to report it, which is the reason development
+  throws.
 
 ### Types
 
