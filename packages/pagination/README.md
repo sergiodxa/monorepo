@@ -494,7 +494,7 @@ async function postsIndex(ctx) {
 	});
 
 	if (isFailure(page)) {
-		ctx.logger.error("posts.list_failed", { error: page.error.message });
+		ctx.log.fail(page.error);
 		return ctx.render(<PostListUnavailable />, { status: 500 });
 	}
 
