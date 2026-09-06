@@ -144,6 +144,8 @@ Run from the repository root:
 | [xml](packages/xml)                                             | XML generation utilities                                                            |     |
 | [yaml](packages/yaml)                                           | YAML reading and writing over a documented subset                                   |     |
 
+A ✅ in the last column means the package is published to npm.
+
 ## Third-Party Dependencies
 
 Every external dependency in the repo, and the workspace that declares it. Shared
