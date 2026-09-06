@@ -457,6 +457,13 @@
         "@cloudflare/workers-types": "^5.20260901.1",
       },
     },
+    "packages/lazy-route": {
+      "name": "@sdxc/lazy-route",
+      "version": "0.0.1",
+      "dependencies": {
+        "remix": "3.0.0-rc.1",
+      },
+    },
     "packages/location": {
       "name": "@sdxc/location",
       "version": "0.0.1",
@@ -1364,6 +1371,8 @@
     "@sdxc/jwt": ["@sdxc/jwt@workspace:packages/jwt"],
 
     "@sdxc/kv-cache": ["@sdxc/kv-cache@workspace:packages/kv-cache"],
+
+    "@sdxc/lazy-route": ["@sdxc/lazy-route@workspace:packages/lazy-route"],
 
     "@sdxc/location": ["@sdxc/location@workspace:packages/location"],
 
