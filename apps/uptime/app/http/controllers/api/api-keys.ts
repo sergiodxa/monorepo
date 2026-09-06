@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BadRequest, Created, Forbidden, InternalServerError, Ok } from "@sdxc/http/status-code";
+import { BadRequest, Created, Forbidden, InternalServerError } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { getServiceContainer } from "@sdxc/service-container";
