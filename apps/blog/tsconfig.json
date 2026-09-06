@@ -19,6 +19,7 @@
 			"@total-typescript/ts-reset",
 			"vite/client",
 			"bun",
+			"node",
 			"@cloudflare/vitest-pool-workers/types"
 		],
 		"rootDirs": ["."],
