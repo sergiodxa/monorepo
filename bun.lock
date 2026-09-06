@@ -236,6 +236,14 @@
       "name": "@sdxc/api-client",
       "version": "0.0.1",
     },
+    "packages/atom": {
+      "name": "@sdxc/atom",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+        "@sdxc/xml": "workspace:*",
+      },
+    },
     "packages/auth": {
       "name": "@sdxc/auth",
       "version": "0.0.1",
@@ -1324,6 +1332,8 @@
     "@rolldown/pluginutils": ["@rolldown/pluginutils@1.0.1", "", {}, "sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw=="],
 
     "@sdxc/api-client": ["@sdxc/api-client@workspace:packages/api-client"],
+
+    "@sdxc/atom": ["@sdxc/atom@workspace:packages/atom"],
 
     "@sdxc/auth": ["@sdxc/auth@workspace:packages/auth"],
 

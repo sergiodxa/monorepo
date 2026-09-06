@@ -92,6 +92,7 @@ Run from the repository root:
 | Package                                                         | Description                                                                         |     |
 | --------------------------------------------------------------- | ----------------------------------------------------------------------------------- | --- |
 | [api-client](packages/api-client)                               | Base class for clients of a remote HTTP API                                         |     |
+| [atom](packages/atom)                                           | Atom 1.0 feed parser and builder                                                    |     |
 | [auth](packages/auth)                                           | OAuth 2.0 and OpenID Connect client for Remix on Cloudflare Workers                 |     |
 | [billing](packages/billing)                                     | Vendor-neutral billing with pluggable providers and a webhook endpoint              |     |
 | [blog-engine](packages/blog-engine)                             | Host-agnostic blog engine                                                           |     |
