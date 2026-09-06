@@ -10,7 +10,13 @@
 
 import type { Middleware, RequestContext } from "remix/router";
 
-import { createAction, createController, createRouter } from "remix/router";
+import {
+	createAction,
+	createContextKey,
+	createController,
+	createMiddleware,
+	createRouter,
+} from "remix/router";
 import { form, get as getRoute, route } from "remix/routes";
 import { describe, expect, expectTypeOf, test } from "vitest";
 
@@ -364,5 +370,72 @@ describe("lazy", () => {
 
 		expect(await (await router.fetch(get("/form"))).text()).toBe("rendered");
 		expect(await (await router.fetch(get("/form", { method: "POST" }))).text()).toBe("submitted");
+	});
+
+	test("runs middleware given at the map call before the module's own", async () => {
+		let { steps, step } = tracer();
+
+		let router = createRouter();
+		router.map(
+			ROUTES.form,
+			lazy(
+				async () => ({
+					default: {
+						middleware: [step("controller")],
+						actions: {
+							index: {
+								middleware: [step("action")],
+								handler: () => {
+									steps.push("handler");
+									return new Response("rendered");
+								},
+							},
+							action: () => new Response("submitted"),
+						},
+					},
+				}),
+				[step("guard")],
+			),
+		);
+
+		await router.fetch(get("/form"));
+
+		expect(steps).toEqual(["guard", "controller", "action", "handler"]);
+	});
+
+	test("lets middleware given at the map call answer before the module loads its handler", async () => {
+		let loads = 0;
+
+		let router = createRouter();
+		router.map(
+			ROUTES.home,
+			lazy(async () => {
+				loads += 1;
+				return { default: () => new Response("home") };
+			}, [shortCircuit("denied")]),
+		);
+
+		let response = await router.fetch(get("/"));
+
+		expect(await response.text()).toBe("denied");
+		expect(loads).toBe(1);
+	});
+
+	test("rejects middleware that publishes a context value", () => {
+		let Value = createContextKey<string>();
+
+		let provider = createMiddleware<[Middleware<{ key: typeof Value; value: string }>]>(
+			(context, next) => {
+				context.set(Value, "set");
+				return next();
+			},
+		)[0];
+
+		lazy(
+			async () => ({ default: () => new Response("home") }),
+			// @ts-expect-error -- the loaded handler's type is the module's own, so it cannot
+			// grow to know a value declared here; publish it from the router or the module.
+			[provider],
+		);
 	});
 });

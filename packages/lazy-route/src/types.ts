@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext, RequestHandler } from "remix/router";
+import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
 /** Any request context, since a loaded handler declares the shape it needs. */
 export type AnyContext = RequestContext<any, any>;
@@ -16,6 +16,14 @@ export type AnyContext = RequestContext<any, any>;
 export interface LoadedMiddleware {
 	(context: AnyContext, next: () => Promise<Response>): Response | Promise<Response>;
 }
+
+/**
+ * Middleware declared at the map call rather than inside the module. Typed as a
+ * `Middleware` with no context transform, so a middleware that publishes a context
+ * value is rejected here: the loaded handler's type is the module's own and cannot
+ * grow to know about a value declared at the map call.
+ */
+export type FrontMiddleware = Middleware;
 
 /** A loaded controller, whose actions are keyed by the names of a route map. */
 export interface LoadedController {

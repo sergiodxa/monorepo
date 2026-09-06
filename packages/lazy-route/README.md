@@ -88,7 +88,7 @@ router.map(
 
 ## API
 
-### `lazy(load)`
+### `lazy(load, middleware?)`
 
 Returns a stand-in for the route's module, typed as that module's default export, to
 pass wherever an action or a controller goes.
@@ -97,13 +97,22 @@ pass wherever an action or a controller goes.
 result is reused for every request after that.
 
 ```ts
-function lazy<module>(load: () => Promise<module>): Loaded<module>;
+function lazy<module>(
+	load: () => Promise<module>,
+	middleware?: readonly Middleware[],
+): Loaded<module>;
 ```
 
 The loader may resolve either a module with a `default` export or the handler value
 itself. Anything else — a module whose default export is not a handler, an action
 where the route expects a controller — is rejected at the `router.map()` call, since
 the stand-in carries the module's own type.
+
+`middleware` runs ahead of whatever the module declares, for a chain the composition
+root owns rather than the module. It is typed as middleware with no context transform,
+so a middleware that publishes a context value is rejected: the loaded handler's type
+is the module's own and cannot grow to know a value declared at the map call. Publish
+those from the router's chain, or from inside the module.
 
 ## Patterns
 
@@ -143,4 +152,7 @@ failure for a first-request failure.
 - Defer whole controllers rather than single actions. A controller shares one module,
   so splitting its actions across loaders only multiplies chunks.
 - Keep a route's own middleware in its module rather than at the map call, so it is
-  deferred along with the handler it guards.
+  deferred along with the handler it guards. Where a group of routes shares a guard the
+  composition root should own, pass it as the second argument instead.
+- A stand-in is an object, not a function, so it cannot be the `handler` of an outer
+  action object. Pass the guards to `lazy()` rather than wrapping it.

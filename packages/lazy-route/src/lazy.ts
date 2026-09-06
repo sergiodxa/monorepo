@@ -9,7 +9,13 @@
 
 import type { RequestHandler } from "remix/router";
 
-import type { AnyContext, Loadable, LoadedController, LoadedMiddleware } from "./types.js";
+import type {
+	AnyContext,
+	FrontMiddleware,
+	Loadable,
+	LoadedController,
+	LoadedMiddleware,
+} from "./types.js";
 
 import { runMiddleware } from "./run-middleware.js";
 
@@ -28,10 +34,13 @@ interface Resolved {
  * module's type, and the `middleware` that module declares still runs ahead of it.
  *
  * @param load Returns the module, usually a bare `import()`
+ * @param middleware Guards to run before the module's own, for a chain the composition
+ * root owns rather than the module
  * @returns A stand-in typed as the module's default export, which `router.map()` accepts
  */
 export function lazy<module extends Loadable | { default: Loadable }>(
 	load: () => Promise<module>,
+	middleware: readonly FrontMiddleware[] = [],
 ): Loaded<module> {
 	let pending: Promise<unknown> | undefined;
 
@@ -48,7 +57,7 @@ export function lazy<module extends Loadable | { default: Loadable }>(
 
 		let handler: RequestHandler<AnyContext> = async (context) => {
 			let action = resolveAction(await loaded(), name);
-			return runMiddleware(action.middleware, context, action.handler);
+			return runMiddleware([...middleware, ...action.middleware], context, action.handler);
 		};
 
 		handlers.set(name, handler);
@@ -63,7 +72,7 @@ export function lazy<module extends Loadable | { default: Loadable }>(
 	let stand = {
 		async handler(context: AnyContext): Promise<Response> {
 			let action = resolve(await loaded());
-			return runMiddleware(action.middleware, context, action.handler);
+			return runMiddleware([...middleware, ...action.middleware], context, action.handler);
 		},
 
 		/**

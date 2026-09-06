@@ -86,6 +86,14 @@ backed by it is served without importing again.
 The return type is the type of the module's default export, unchanged, so the route
 checks its params and its request context exactly as a static import did.
 
+A second argument takes middleware to run ahead of whatever the module declares. It
+exists because a stand-in is an object rather than a function, so it cannot be the
+`handler` of an outer action object, and a composition root that owns a group's guards
+would otherwise have to push them into each module. It is typed as middleware with no
+context transform, so a middleware that publishes a context value is rejected there:
+the loaded handler's type is the module's own and cannot grow to know a value declared
+at the map call.
+
 ## Consequences
 
 ### Positive
