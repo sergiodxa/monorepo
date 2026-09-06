@@ -182,7 +182,6 @@
         "@sdxc/result": "workspace:*",
         "@sdxc/u": "workspace:*",
         "@sdxc/ui": "workspace:*",
-        "@sdxc/ui-router": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
       "devDependencies": {
@@ -660,13 +659,6 @@
       "dependencies": {
         "@sdxc/icons": "workspace:*",
         "@sdxc/u": "workspace:*",
-        "remix": "3.0.0-rc.1",
-      },
-    },
-    "packages/ui-router": {
-      "name": "@sdxc/ui-router",
-      "version": "0.0.0",
-      "dependencies": {
         "remix": "3.0.0-rc.1",
       },
     },
@@ -1420,8 +1412,6 @@
     "@sdxc/u": ["@sdxc/u@workspace:packages/u"],
 
     "@sdxc/ui": ["@sdxc/ui@workspace:packages/ui"],
-
-    "@sdxc/ui-router": ["@sdxc/ui-router@workspace:packages/ui-router"],
 
     "@sdxc/uuid": ["@sdxc/uuid@workspace:packages/uuid"],
 

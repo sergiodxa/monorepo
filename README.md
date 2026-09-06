@@ -136,7 +136,6 @@ Run from the repository root:
 | [types](packages/types)                                         | Shared TypeScript types                                                             | ✅  |
 | [u](packages/u)                                                 | Tailwind-like Remix UI styling utilities                                            |     |
 | [ui](packages/ui)                                               | Remix v3 UI component library                                                       |     |
-| [ui-router](packages/ui-router)                                 | SPA router for Remix UI apps                                                        |     |
 | [uuid](packages/uuid)                                           | UUID utilities                                                                      |     |
 | [validate](packages/validate)                                   | Standard Schema validation utilities                                                |     |
 | [webhooks](packages/webhooks)                                   | Standard Webhooks signing, verification and replay guards                           |     |
