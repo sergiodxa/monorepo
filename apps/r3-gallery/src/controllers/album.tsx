@@ -1,56 +1,53 @@
 /**
- * Album route action controller for the gallery. It loads the album, its photos, and
- * an optionally selected photo (from the `photoId` query) in parallel, surfaces any
- * failure as a state message, and renders the album page with the current liked photo
- * ids so the grid and optional overlay can display together.
+ * Album route action controller for the gallery. It loads the album and its photos in
+ * parallel, surfaces either failure as a state message, and renders the album page with
+ * the album's liked photo ids so the grid shows the current like state.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure } from "@sdxc/result";
-import { createAction } from "@sdxc/ui-router";
+import type { Action } from "remix/router";
 
-import { getAlbum, getAlbumPhotos, getPhoto } from "../data/jsonplaceholder";
+import { isFailure } from "@sdxc/result";
+
+import type { AppContext } from "../router";
+
+import { getAlbum, getAlbumPhotos } from "../data/jsonplaceholder";
 import { getLikes } from "../middleware/likes";
 import { routes } from "../routes";
 import { AlbumPage } from "../views/album";
 import { StateMessage } from "../views/state-message";
 
 /**
- * Renders an album and optionally a selected photo overlay.
+ * Renders one album with its photo grid.
  *
  * @param ctx Current album route context.
  * @returns Album route UI or an error state.
  */
-export const renderAlbum = createAction(routes.album, async function renderAlbum(ctx) {
-	let photoId = ctx.url.searchParams.get("photoId");
-	let [album, photos, selectedPhoto] = await Promise.all([
-		getAlbum(ctx.params.id, ctx.signal),
-		getAlbumPhotos(ctx.params.id, ctx.signal),
-		photoId ? getPhoto(photoId, ctx.signal) : Promise.resolve(null),
+export const renderAlbum: Action<typeof routes.album, AppContext> = async function renderAlbum(
+	ctx,
+) {
+	let [album, photos] = await Promise.all([
+		getAlbum(ctx.params.id, ctx.request.signal),
+		getAlbumPhotos(ctx.params.id, ctx.request.signal),
 	]);
 
 	if (isFailure(album)) {
-		return <StateMessage title="Could not load album" message={album.error.message} />;
+		return ctx.render(<StateMessage title="Could not load album" message={album.error.message} />);
 	}
 
 	if (isFailure(photos)) {
-		return <StateMessage title="Could not load photos" message={photos.error.message} />;
-	}
-
-	if (selectedPhoto && isFailure(selectedPhoto)) {
-		return (
-			<StateMessage title="Could not load selected photo" message={selectedPhoto.error.message} />
+		return ctx.render(
+			<StateMessage title="Could not load photos" message={photos.error.message} />,
 		);
 	}
 
-	return (
+	return ctx.render(
 		<AlbumPage
 			album={album.data}
 			photos={photos.data}
-			selectedPhoto={selectedPhoto?.data}
 			likedPhotoIds={getLikes(ctx).list(ctx.params.id)}
-		/>
+		/>,
 	);
-});
+};

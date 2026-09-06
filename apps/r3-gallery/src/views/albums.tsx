@@ -34,14 +34,13 @@ import { hover, when } from "@sdxc/u/state";
 import { translateY } from "@sdxc/u/transform";
 import { fontSize, leading, lineClamp, textDecoration, tracking, weight } from "@sdxc/u/typography";
 import { Button, Form, Header, Heading, Label, NumberField, Toolbar } from "@sdxc/ui";
-import { RouterProvider } from "@sdxc/ui-router";
 import {
 	NUMBER_FIELD_STEP_DOWN_COMMAND,
 	NUMBER_FIELD_STEP_UP_COMMAND,
 	stepper,
 } from "@sdxc/ui/mixins";
 import { panelChrome } from "@sdxc/ui/styles";
-import { on } from "remix/ui";
+import { navigate, on } from "remix/ui";
 
 import type { Album } from "../data/types";
 
@@ -64,13 +63,11 @@ export interface AlbumsPageProps {
  * @returns Album index route UI.
  */
 export function AlbumsPage(handle: Handle<AlbumsPageProps>) {
-	let router = handle.context.get(RouterProvider);
-
 	return () => (
 		<Shell
 			eyebrow="JSONPlaceholder albums"
 			title="Browse quiet little albums"
-			intro="A client-only Remix UI router demo. Pick an album to load its photos without a server render."
+			intro="A client-only Remix SPA demo. Pick an album to load its photos without a server render."
 		>
 			<Toolbar
 				mix={[flexWrap("wrap"), justify("between"), mbe("1.5rem"), p("1rem")]}
@@ -79,7 +76,7 @@ export function AlbumsPage(handle: Handle<AlbumsPageProps>) {
 				<Form
 					method="POST"
 					action={routes.openAlbum.href()}
-					mix={[router.form(), flexRow(), flexWrap("wrap"), items("end")]}
+					mix={[flexRow(), flexWrap("wrap"), items("end")]}
 				>
 					<NumberField>
 						<Label htmlFor="albumId" mix={visuallyHidden()}>
@@ -114,10 +111,7 @@ export function AlbumsPage(handle: Handle<AlbumsPageProps>) {
 
 							if (!album) return;
 
-							void router.submit(
-								{ albumId: album.id },
-								{ method: "POST", action: routes.openAlbum.href() },
-							);
+							void navigate(routes.album.href({ id: String(album.id) }));
 						})}
 					>
 						Surprise me

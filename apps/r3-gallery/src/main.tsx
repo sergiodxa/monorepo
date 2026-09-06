@@ -1,43 +1,46 @@
 /**
- * Client entry point for the gallery app. It builds the UI router, wires every route
- * to its controller action, installs the likes middleware, and mounts the router onto
- * the `#app` element so the single-page gallery boots in the browser.
+ * Client entry point for the gallery app. It maps every route to its controller
+ * action and starts the SPA runtime, which dispatches the current URL and each
+ * later navigation through the router and renders the answering node.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createController, createRouter } from "@sdxc/ui-router";
+import { Text } from "@sdxc/ui";
+import { run } from "remix/spa";
 
+import { Shell } from "./components/shell";
 import { renderAlbum } from "./controllers/album";
 import { renderHome } from "./controllers/home";
 import { likePhoto } from "./controllers/like-photo";
-import { renderNotFound } from "./controllers/not-found";
 import { openAlbum } from "./controllers/open-album";
 import { renderPhoto } from "./controllers/photo";
-import { loadLikes } from "./middleware/likes";
+import { router } from "./router";
 import { routes } from "./routes";
 
 import "./theme.css";
 
-let router = createRouter({
-	defaultElement: renderNotFound,
-	middleware: [loadLikes],
+router.map(routes, {
+	actions: {
+		home: renderHome,
+		openAlbum,
+		album: renderAlbum,
+		likePhoto,
+		photo: renderPhoto,
+	},
 });
 
-router.map(
-	routes,
-	createController(routes, {
-		actions: {
-			home: renderHome,
-			openAlbum,
-			album: renderAlbum,
-			likePhoto,
-			photo: renderPhoto,
-		},
-	}),
-);
+let app = run(router, {
+	fallback: (
+		<Shell
+			eyebrow="JSONPlaceholder albums"
+			title="Loading the gallery"
+			intro="A client-only Remix SPA demo. The first route is on its way."
+		>
+			<Text>Loading...</Text>
+		</Shell>
+	),
+});
 
-let rootElement = document.getElementById("app");
-
-if (rootElement) router.mount(rootElement);
+await app.ready();

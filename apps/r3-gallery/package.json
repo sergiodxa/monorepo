@@ -16,7 +16,6 @@
 		"@sdxc/result": "workspace:*",
 		"@sdxc/u": "workspace:*",
 		"@sdxc/ui": "workspace:*",
-		"@sdxc/ui-router": "workspace:*",
 		"remix": "3.0.0-rc.1"
 	},
 	"devDependencies": {

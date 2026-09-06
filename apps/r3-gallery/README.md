@@ -1,6 +1,6 @@
 # R3 Gallery
 
-Client-only photo gallery SPA built with Vite, Remix UI, and `@sdxc/ui-router`.
+Client-only photo gallery SPA built with Vite, Remix UI, and `remix/spa`.
 
 Production URL: https://r3-gallery.sergiodxa-cloudflare.workers.dev/
 
@@ -18,10 +18,10 @@ Production URL: https://r3-gallery.sergiodxa-cloudflare.workers.dev/
 ## Features
 
 - Lists albums from JSONPlaceholder.
-- Uses `router.form()` and `router.submit()` for album shortcut actions.
+- Jumps to an album from a form post that redirects, or from the mod+k search palette.
 - Shows album photos at `/album/:id`.
-- Likes album photos with `fetcher.form()` and persists likes in `localStorage`.
-- Opens photos over the album grid with masked `/photo/:id` URLs rendered through `Frame`.
+- Likes album photos through the route table and persists likes in `localStorage`.
+- Opens a photo over the album grid in a named `Frame`, so the address bar shows `/photo/:id` while the grid stays mounted.
 - Renders only the photo page when visiting `/photo/:id` directly.
 
 ## Integrations
@@ -30,13 +30,13 @@ Production URL: https://r3-gallery.sergiodxa-cloudflare.workers.dev/
 
 ## Routes
 
-| Route                                       | Description                                                       |
-| ------------------------------------------- | ----------------------------------------------------------------- |
-| `/`                                         | Album list.                                                       |
-| `POST /album`                               | Form action that redirects to the submitted album.                |
-| `/album/:id`                                | Album photo grid, optionally with a modal photo from `?photoId=`. |
-| `POST /album/:albumId/photos/:photoId/like` | Fetcher action that toggles a persisted photo like.               |
-| `/photo/:id`                                | Standalone photo page for direct visits and reloads.              |
+| Route                                       | Description                                                    |
+| ------------------------------------------- | -------------------------------------------------------------- |
+| `/`                                         | Album list.                                                    |
+| `POST /album`                               | Form action that redirects to the submitted album.             |
+| `/album/:id`                                | Album photo grid.                                              |
+| `POST /album/:albumId/photos/:photoId/like` | Toggles a persisted photo like and answers with its new state. |
+| `/photo/:id`                                | Standalone photo page for direct visits and reloads.           |
 
 ## Scripts
 

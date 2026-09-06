@@ -7,8 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Action } from "remix/router";
+
 import { isFailure } from "@sdxc/result";
-import { createAction } from "@sdxc/ui-router";
+
+import type { AppContext } from "../router";
 
 import { getAlbums } from "../data/jsonplaceholder";
 import { routes } from "../routes";
@@ -18,15 +21,17 @@ import { StateMessage } from "../views/state-message";
 /**
  * Renders the home route after loading albums.
  *
- * @param ctx Current home route context, including abort signal.
+ * @param ctx Current home route context.
  * @returns Album index UI or an error state.
  */
-export const renderHome = createAction(routes.home, async function renderHome(ctx) {
-	let albums = await getAlbums(ctx.signal);
+export const renderHome: Action<typeof routes.home, AppContext> = async function renderHome(ctx) {
+	let albums = await getAlbums(ctx.request.signal);
 
 	if (isFailure(albums)) {
-		return <StateMessage title="Could not load albums" message={albums.error.message} />;
+		return ctx.render(
+			<StateMessage title="Could not load albums" message={albums.error.message} />,
+		);
 	}
 
-	return <AlbumsPage albums={albums.data} />;
-});
+	return ctx.render(<AlbumsPage albums={albums.data} />);
+};

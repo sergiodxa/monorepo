@@ -1,15 +1,17 @@
 /**
  * Photo route action controller for the gallery. It fetches a single photo by id from
  * the JSONPlaceholder data layer and renders the standalone photo page, or a
- * state-message error view on failure. It backs direct `/photo/:id` visits and reloads
- * of the masked photo URL.
+ * state-message error view on failure, backing direct `/photo/:id` visits and reloads.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Action } from "remix/router";
+
 import { isFailure } from "@sdxc/result";
-import { createAction } from "@sdxc/ui-router";
+
+import type { AppContext } from "../router";
 
 import { getPhoto } from "../data/jsonplaceholder";
 import { routes } from "../routes";
@@ -22,12 +24,14 @@ import { StateMessage } from "../views/state-message";
  * @param ctx Current photo route context.
  * @returns Standalone photo UI or an error state.
  */
-export const renderPhoto = createAction(routes.photo, async function renderPhoto(ctx) {
-	let photo = await getPhoto(ctx.params.id, ctx.signal);
+export const renderPhoto: Action<typeof routes.photo, AppContext> = async function renderPhoto(
+	ctx,
+) {
+	let photo = await getPhoto(ctx.params.id, ctx.request.signal);
 
 	if (isFailure(photo)) {
-		return <StateMessage title="Could not load photo" message={photo.error.message} />;
+		return ctx.render(<StateMessage title="Could not load photo" message={photo.error.message} />);
 	}
 
-	return <PhotoPage photo={photo.data} />;
-});
+	return ctx.render(<PhotoPage photo={photo.data} />);
+};

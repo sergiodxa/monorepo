@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Context, Middleware } from "@sdxc/ui-router";
+import type { Middleware, RequestContext } from "remix/router";
 
-import { createContextKey } from "@sdxc/ui-router";
+import { createContextKey } from "remix/router";
 
 const LIKES_STORAGE_KEY = "r3-gallery:liked-photos";
 
@@ -42,7 +42,7 @@ export const loadLikes: Middleware = async function loadLikes(ctx, next) {
 };
 
 /** Requires likes storage from middleware, falling back to an empty storage for safety. */
-export function getLikes(ctx: Pick<Context, "get">): LikesStorage {
+export function getLikes(ctx: Pick<RequestContext, "get">): LikesStorage {
 	return ctx.get(Likes) ?? createMemoryLikesStorage();
 }
 

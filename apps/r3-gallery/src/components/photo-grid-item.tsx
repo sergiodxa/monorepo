@@ -1,8 +1,8 @@
 /**
- * PhotoGridItem component for album grids. It renders a photo thumbnail that opens as
- * a masked modal route while preserving the album URL, plus a like form wired to a
- * router fetcher that toggles and reflects liked state optimistically. It exists to
- * make each grid cell an interactive, likeable, deep-linkable photo.
+ * PhotoGridItem component for album grids. It renders a photo thumbnail whose click
+ * reports the photo upward so the album can layer it, plus a like form that toggles
+ * liked state through the router and reflects the answer in place. It exists to make
+ * each grid cell an interactive, likeable, deep-linkable photo.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,59 +19,64 @@ import { fit, height, minHeight, p, width } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { fontSize, leading, lineClamp, textDecoration } from "@sdxc/u/typography";
 import { AspectRatio, Badge, Button, Card, Form } from "@sdxc/ui";
-import { RouterProvider } from "@sdxc/ui-router";
 import { on } from "remix/ui";
 
 import type { Photo } from "../data/types";
 import type { LikeToggleResult } from "../middleware/likes";
 
+import { router } from "../router";
 import { routes } from "../routes";
 import { titleCase } from "../utils/title-case";
 
 /**
- * Props for a photo grid item that opens with a masked URL.
+ * Props for a photo grid item.
  */
 export interface PhotoGridItemProps {
 	liked: boolean;
 	photo: Photo;
+	onOpen(photo: Photo): void;
 }
 
 /**
- * Renders a photo thumbnail link with album-preserving masked navigation.
+ * Renders a photo thumbnail that reports clicks to its album and keeps its own
+ * liked state in sync with the like route's answer.
  *
  * @param handle Component handle carrying one photo.
- * @returns A photo grid link that opens as a modal route.
+ * @returns A photo grid cell with its like control.
  */
 export function PhotoGridItem(handle: Handle<PhotoGridItemProps>) {
-	let router = handle.context.get(RouterProvider);
-	let fetcher = router.getFetcher<LikeToggleResult>(`photo-like:${handle.props.photo.id}`);
-
-	fetcher.addEventListener(
-		"change",
-		() => {
-			void handle.update();
-		},
-		{ signal: handle.signal },
-	);
+	let likedOverride: boolean | undefined;
+	let isPending = false;
 
 	function openPhoto(event: MouseEvent) {
 		event.preventDefault();
+		handle.props.onOpen(handle.props.photo);
+	}
 
-		let albumURL = new URL(
-			routes.album.href({ id: String(handle.props.photo.albumId) }),
-			window.location.href,
-		);
-		albumURL.searchParams.set("photoId", String(handle.props.photo.id));
+	async function toggleLike(likeHref: string) {
+		if (isPending) return;
 
-		void router.navigate(albumURL, {
-			mask: routes.photo.href({ id: String(handle.props.photo.id) }),
-		});
+		isPending = true;
+		await handle.update();
+
+		try {
+			let response = await router.fetch(likeHref, { method: "POST" });
+			let result = (await response.json()) as LikeToggleResult;
+
+			likedOverride = result.liked;
+		} finally {
+			isPending = false;
+			await handle.update();
+		}
 	}
 
 	return () => {
-		let liked =
-			fetcher.data?.photoId === handle.props.photo.id ? fetcher.data.liked : handle.props.liked;
+		let liked = likedOverride ?? handle.props.liked;
 		let photoHref = routes.photo.href({ id: String(handle.props.photo.id) });
+		let likeHref = routes.likePhoto.href({
+			albumId: String(handle.props.photo.albumId),
+			photoId: String(handle.props.photo.id),
+		});
 		let title = titleCase(handle.props.photo.title);
 
 		return (
@@ -127,19 +132,18 @@ export function PhotoGridItem(handle: Handle<PhotoGridItemProps>) {
 				<Card.Footer>
 					<Form
 						method="POST"
-						action={routes.likePhoto.href({
-							albumId: String(handle.props.photo.albumId),
-							photoId: String(handle.props.photo.id),
+						action={likeHref}
+						mix={on<HTMLFormElement, "submit">("submit", (event) => {
+							event.preventDefault();
+							void toggleLike(likeHref);
 						})}
-						mix={fetcher.form()}
 					>
-						<input type="hidden" name="photoId" value={String(handle.props.photo.id)} />
 						<Button
 							type="submit"
 							size="sm"
 							color={liked ? "brand" : "neutral"}
 							variant={liked ? "solid" : "outline"}
-							isPending={fetcher.state !== "idle"}
+							isPending={isPending}
 						>
 							{liked ? "Liked" : "Like"}
 						</Button>

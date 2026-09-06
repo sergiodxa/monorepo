@@ -1,9 +1,7 @@
 /**
- * AlbumPage view for the gallery. It renders one album's photo grid with liked counts
- * and a back link, and, when a photo is selected, layers a modal dialog that loads the
- * photo through a Frame while keeping the grid behind it, plus prev/next arrows and
- * LeftArrow/RightArrow keys for moving between the album's photos. It exists to present
- * an album and its optional photo overlay as a single cohesive route.
+ * AlbumPage view for the gallery. It renders one album's photo grid with liked counts and
+ * a back link, and layers a modal dialog loading the selected photo through a Frame while
+ * the grid stays mounted behind it, with arrow buttons and keys moving between photos.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,8 +30,7 @@ import {
 import { bs, is, mbe, p, width } from "@sdxc/u/size";
 import { translateY } from "@sdxc/u/transform";
 import { Button, LinkButton, Text } from "@sdxc/ui";
-import { RouterProvider } from "@sdxc/ui-router";
-import { Frame, on } from "remix/ui";
+import { Frame, navigate, on } from "remix/ui";
 
 import type { Album, Photo } from "../data/types";
 
@@ -42,14 +39,16 @@ import { Shell } from "../components/shell";
 import { routes } from "../routes";
 import { titleCase } from "../utils/title-case";
 
+/** Names the overlay's frame so a photo navigation targets it and leaves the grid alone. */
+const PHOTO_FRAME = "selected-photo";
+
 /**
- * Props for the album detail grid and optional overlay.
+ * Props for the album detail grid.
  */
 export interface AlbumPageProps {
 	album: Album;
 	photos: Photo[];
 	likedPhotoIds: number[];
-	selectedPhoto?: Photo;
 }
 
 /**
@@ -73,26 +72,35 @@ function overlayArrowMix(side: "start" | "end") {
 }
 
 /**
- * Renders one album and keeps the grid visible behind optional photo overlays.
- * The backdrop's blur uses `raw()` to preserve its existing Safari rendering,
- * and its open state follows router navigation with a single visual panel.
+ * Renders one album and keeps its grid visible behind the photo overlay. The backdrop's
+ * blur uses `raw()` to preserve its existing Safari rendering, and opening a photo reloads
+ * only the overlay's frame while the address bar moves to that photo's own URL.
  *
- * @param handle Component handle carrying album, photos, and optional overlay photo.
+ * @param handle Component handle carrying the album and its photos.
  * @returns Album route UI.
  */
 export function AlbumPage(handle: Handle<AlbumPageProps>) {
-	let router = handle.context.get(RouterProvider);
 	let albumId = String(handle.props.album.id);
+	let selectedPhoto: Photo | undefined;
 
-	function showPhoto(photo: Photo) {
-		let albumURL = new URL(routes.album.href({ id: albumId }), window.location.href);
-		albumURL.searchParams.set("photoId", String(photo.id));
+	/**
+	 * Layers one photo over the grid. The overlay's frame has to be mounted before the
+	 * navigation targets it by name, since an unknown target falls back to the top frame
+	 * and would replace the album with the standalone photo page.
+	 *
+	 * @param photo Photo to show in the overlay.
+	 */
+	async function showPhoto(photo: Photo) {
+		selectedPhoto = photo;
 
-		void router.navigate(albumURL, { mask: routes.photo.href({ id: String(photo.id) }) });
+		await handle.update();
+		await navigate(routes.photo.href({ id: String(photo.id) }), { target: PHOTO_FRAME });
 	}
 
 	function closePhoto() {
-		void router.navigate(routes.album.href({ id: albumId }));
+		selectedPhoto = undefined;
+
+		void navigate(routes.album.href({ id: albumId }));
 	}
 
 	/** `queueTask` never runs in the server renderer, so `document` is always there below. */
@@ -100,23 +108,23 @@ export function AlbumPage(handle: Handle<AlbumPageProps>) {
 		document.addEventListener(
 			"keydown",
 			(event) => {
-				let selectedPhoto = handle.props.selectedPhoto;
 				if (!selectedPhoto) return;
 
+				let selected = selectedPhoto;
 				let photos = handle.props.photos;
-				let index = photos.findIndex((photo) => photo.id === selectedPhoto.id);
+				let index = photos.findIndex((photo) => photo.id === selected.id);
 
 				if (event.key === "ArrowLeft") {
 					let previous = photos[index - 1];
 					if (index > 0 && previous) {
 						event.preventDefault();
-						showPhoto(previous);
+						void showPhoto(previous);
 					}
 				} else if (event.key === "ArrowRight") {
 					let next = photos[index + 1];
 					if (index !== -1 && index < photos.length - 1 && next) {
 						event.preventDefault();
-						showPhoto(next);
+						void showPhoto(next);
 					}
 				}
 			},
@@ -126,9 +134,9 @@ export function AlbumPage(handle: Handle<AlbumPageProps>) {
 
 	return () => {
 		let likedPhotoIds = new Set(handle.props.likedPhotoIds);
-		let selectedPhoto = handle.props.selectedPhoto;
-		let selectedIndex = selectedPhoto
-			? handle.props.photos.findIndex((photo) => photo.id === selectedPhoto.id)
+		let selected = selectedPhoto;
+		let selectedIndex = selected
+			? handle.props.photos.findIndex((photo) => photo.id === selected.id)
 			: -1;
 		let previousPhoto = selectedIndex > 0 ? handle.props.photos[selectedIndex - 1] : undefined;
 		let nextPhoto =
@@ -159,10 +167,15 @@ export function AlbumPage(handle: Handle<AlbumPageProps>) {
 					aria-label={`Photos in ${handle.props.album.title}`}
 				>
 					{handle.props.photos.map((photo) => (
-						<PhotoGridItem key={photo.id} photo={photo} liked={likedPhotoIds.has(photo.id)} />
+						<PhotoGridItem
+							key={photo.id}
+							photo={photo}
+							liked={likedPhotoIds.has(photo.id)}
+							onOpen={showPhoto}
+						/>
 					))}
 				</section>
-				{selectedPhoto ? (
+				{selected ? (
 					<div
 						role="presentation"
 						mix={[
@@ -202,7 +215,7 @@ export function AlbumPage(handle: Handle<AlbumPageProps>) {
 							mix={[
 								overlayArrowMix("start"),
 								on<HTMLButtonElement, "click">("click", () => {
-									if (previousPhoto) showPhoto(previousPhoto);
+									if (previousPhoto) void showPhoto(previousPhoto);
 								}),
 							]}
 						>
@@ -217,7 +230,7 @@ export function AlbumPage(handle: Handle<AlbumPageProps>) {
 							mix={[
 								overlayArrowMix("end"),
 								on<HTMLButtonElement, "click">("click", () => {
-									if (nextPhoto) showPhoto(nextPhoto);
+									if (nextPhoto) void showPhoto(nextPhoto);
 								}),
 							]}
 						>
@@ -227,11 +240,11 @@ export function AlbumPage(handle: Handle<AlbumPageProps>) {
 							mix={width("min(100%, 56rem)")}
 							role="dialog"
 							aria-modal="true"
-							aria-label={`Photo ${selectedPhoto.id}`}
+							aria-label={`Photo ${selected.id}`}
 						>
 							<Frame
-								name="selected-photo"
-								src={routes.photo.href({ id: String(selectedPhoto.id) })}
+								name={PHOTO_FRAME}
+								src={routes.photo.href({ id: String(selected.id) })}
 								fallback={<Text mix={[block(), p("2rem")]}>Loading photo...</Text>}
 							/>
 						</div>

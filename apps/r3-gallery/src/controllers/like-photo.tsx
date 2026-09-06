@@ -1,34 +1,42 @@
 /**
  * Like-photo action controller for the gallery. It validates the album and photo ids
  * from the route params in middleware and then toggles the photo's like via the
- * middleware-provided likes storage, returning the new like state to the fetcher.
+ * middleware-provided likes storage, answering with the new like state as JSON.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createAction } from "@sdxc/ui-router";
+import type { Action } from "remix/router";
+
+import type { LikeToggleResult } from "../middleware/likes";
+import type { AppContext } from "../router";
 
 import { getLikes } from "../middleware/likes";
 import { routes } from "../routes";
 
 /** Toggles one photo like using middleware-provided localStorage state. */
-export const likePhoto = createAction(routes.likePhoto, {
+export const likePhoto: Action<typeof routes.likePhoto, AppContext> = {
 	middleware: [
 		(ctx, next) => {
 			let albumId = Number(ctx.params.albumId);
 			let photoId = Number(ctx.params.photoId);
 
 			if (!Number.isInteger(albumId) || !Number.isInteger(photoId)) {
-				return { photoId, liked: false, likedPhotoIds: [] };
+				return Response.json({
+					photoId,
+					liked: false,
+					likedPhotoIds: [],
+				} satisfies LikeToggleResult);
 			}
 
 			return next();
 		},
 	],
+
 	handler(ctx) {
 		let likes = getLikes(ctx);
 
-		return likes.toggle(ctx.params.albumId, ctx.params.photoId);
+		return Response.json(likes.toggle(ctx.params.albumId, ctx.params.photoId));
 	},
-});
+};
