@@ -14,6 +14,15 @@
 	"observability": {
 		"enabled": true,
 	},
+	// Serves the tagged public pages `app/services/cache.ts` declares, and backs the
+	// purge the CMS runs after a write. `cross_version_cache` stays off so entries
+	// belong to the version that stored them: a deploy then starts on an empty cache,
+	// which makes shipping a fix a way out of a bad page rather than a wait for the
+	// lifetime to expire.
+	"cache": {
+		"enabled": true,
+		"cross_version_cache": false,
+	},
 	"assets": {
 		"directory": "./build/client",
 	},

@@ -147,8 +147,8 @@ export function CMSDashboardView() {
 						) : null}
 
 						<p mix={[fg("neutral")]}>
-							A cached page is served without the site running, so shipping a fix cannot replace
-							one. Clear the cache to force every page to rebuild.
+							Every write clears the pages it changed, and a deploy starts on an empty cache. Clear
+							it by hand to rebuild every page without shipping a new version.
 						</p>
 
 						<div>

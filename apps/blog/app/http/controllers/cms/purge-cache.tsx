@@ -1,8 +1,9 @@
 /**
- * HTTP action that empties the edge cache. It is the operator's escape hatch:
- * a cached page is served without this Worker running, so shipping a fix cannot
- * evict a bad entry and only a purge can. It clears everything rather than a tag
- * because the situation it answers is not knowing which entries are wrong.
+ * HTTP action that empties the edge cache. Writes clear the pages they change
+ * and a deploy starts on an empty cache, so this covers what neither does:
+ * rebuilding every page without shipping a version. It clears everything rather
+ * than a tag because the situation it answers is not knowing which entries are
+ * wrong.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
