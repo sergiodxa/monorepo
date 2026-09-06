@@ -379,6 +379,16 @@
         "@sdxc/result": "workspace:*",
       },
     },
+    "packages/feed": {
+      "name": "@sdxc/feed",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/atom": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/rss": "workspace:*",
+        "@sdxc/xml": "workspace:*",
+      },
+    },
     "packages/get-client-ip": {
       "name": "@sdxc/get-client-ip",
       "version": "0.0.1",
@@ -1356,6 +1366,8 @@
     "@sdxc/dates": ["@sdxc/dates@workspace:packages/dates"],
 
     "@sdxc/duration": ["@sdxc/duration@workspace:packages/duration"],
+
+    "@sdxc/feed": ["@sdxc/feed@workspace:packages/feed"],
 
     "@sdxc/get-client-ip": ["@sdxc/get-client-ip@workspace:packages/get-client-ip"],
 
