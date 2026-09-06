@@ -3,6 +3,10 @@
  * RSS, auth, admin-guarded CMS, and MCP routes onto the fetch router, and provides
  * the streaming HTML renderer and SSR frame resolver used by controllers.
  *
+ * Every route is mapped through `lazy()`, so the URL surface is complete at startup
+ * while each controller is imported by the first request that reaches it. A cold
+ * isolate evaluates what it serves instead of the whole route table.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -12,6 +16,7 @@ import type { ResolveFrameContext } from "remix/ui/server";
 
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { redirect } from "@sdxc/http/response";
+import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import workersCache from "@sdxc/workers-cache/middleware";
 import { cache as platformCache } from "cloudflare:workers";
@@ -25,31 +30,6 @@ import { renderToStream } from "remix/ui/server";
 
 import type { AppContext, BlogRenderer, RenderOptions } from "~/app/http/context";
 
-import articles from "~/app/http/controllers/articles";
-import { callbackAction, loginController, logoutController } from "~/app/http/controllers/auth";
-import bookmarks from "~/app/http/controllers/bookmarks";
-import articlesCMS from "~/app/http/controllers/cms/articles";
-import bookmarksCMS from "~/app/http/controllers/cms/bookmarks";
-import dashboardCMS from "~/app/http/controllers/cms/dashboard";
-import glossaryCMS from "~/app/http/controllers/cms/glossary";
-import purgeCacheCMS from "~/app/http/controllers/cms/purge-cache";
-import redirectsCMS from "~/app/http/controllers/cms/redirects";
-import tutorialsCMS from "~/app/http/controllers/cms/tutorials";
-import colors from "~/app/http/controllers/colors";
-import feed from "~/app/http/controllers/feed";
-import glossary from "~/app/http/controllers/glossary";
-import healthcheck from "~/app/http/controllers/healthcheck";
-import mcpPage, { mcpMarkdownPage } from "~/app/http/controllers/mcp";
-import post from "~/app/http/controllers/post";
-import postRelated from "~/app/http/controllers/post-related";
-import articlesRSS from "~/app/http/controllers/rss/articles";
-import bookmarksRSS from "~/app/http/controllers/rss/bookmarks";
-import feedRSS from "~/app/http/controllers/rss/feed";
-import tutorialsRSS from "~/app/http/controllers/rss/tutorials";
-import sitemap from "~/app/http/controllers/sitemap";
-import sponsor from "~/app/http/controllers/sponsor";
-import tutorials from "~/app/http/controllers/tutorials";
-import wellKnown from "~/app/http/controllers/well-known";
 import auth from "~/app/http/middleware/auth";
 import { isAuthenticated } from "~/app/http/middleware/auth";
 import database from "~/app/http/middleware/database";
@@ -65,7 +45,6 @@ import { NotFoundView } from "~/resources/views/not-found";
 import routes from "~/routes/web";
 
 import { logger } from "./logger";
-import mcp from "./mcp";
 
 /**
  * Paths where a non-`GET` request signals a machine caller, since a reader's browser sends
@@ -103,6 +82,16 @@ let requireCMSAuth: Middleware = (_ctx, next) => {
 	if (isAuthenticated()) return next();
 	return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
 };
+
+/**
+ * The chain every CMS route runs behind. Declared here rather than inside each controller
+ * so the group's guard is one decision: a new CMS route that forgets it is visible at the
+ * map call, and it answers before the controller it protects is ever loaded.
+ */
+const CMS_GUARDS: Middleware[] = [requireCMSAuth, requireAdmin];
+
+/** The same, for the routes that write, which invalidate the shared listing afterwards. */
+const CMS_WRITE_GUARDS: Middleware[] = [...CMS_GUARDS, purgePostList];
 
 /**
  * Builds the blog HTTP router with global middleware, route mappings, CMS auth
@@ -146,74 +135,128 @@ export default function createApplication(env: App.Env) {
 		},
 	});
 
-	router.map(routes.feed, feed);
-	router.map(routes.colors, colors);
-	router.map(routes.sponsor, sponsor);
-	router.map(routes.sitemap, sitemap);
-	router.map(routes.healthcheck, healthcheck);
-	router.map(routes.articles, articles);
-	router.map(routes.tutorials, tutorials);
-	router.map(routes.bookmarks, bookmarks);
-	router.map(routes.glossary, glossary);
-	router.map(routes.post, post);
-	router.map(routes.postRelated, postRelated);
+	router.map(
+		routes.feed,
+		lazy(() => import("~/app/http/controllers/feed")),
+	);
+	router.map(
+		routes.colors,
+		lazy(() => import("~/app/http/controllers/colors")),
+	);
+	router.map(
+		routes.sponsor,
+		lazy(() => import("~/app/http/controllers/sponsor")),
+	);
+	router.map(
+		routes.sitemap,
+		lazy(() => import("~/app/http/controllers/sitemap")),
+	);
+	router.map(
+		routes.healthcheck,
+		lazy(() => import("~/app/http/controllers/healthcheck")),
+	);
+	router.map(
+		routes.articles,
+		lazy(() => import("~/app/http/controllers/articles")),
+	);
+	router.map(
+		routes.tutorials,
+		lazy(() => import("~/app/http/controllers/tutorials")),
+	);
+	router.map(
+		routes.bookmarks,
+		lazy(() => import("~/app/http/controllers/bookmarks")),
+	);
+	router.map(
+		routes.glossary,
+		lazy(() => import("~/app/http/controllers/glossary")),
+	);
+	router.map(
+		routes.post,
+		lazy(() => import("~/app/http/controllers/post")),
+	);
+	router.map(
+		routes.postRelated,
+		lazy(() => import("~/app/http/controllers/post-related")),
+	);
 
 	/**
 	 * The MCP endpoint sits outside every auth guard, keeping the blog freely readable by
 	 * any agent, and resolves its services via `database()` because an MCP tool's handler
 	 * receives only a context to work with.
 	 */
-	router.map(routes.mcpMarkdown, mcpMarkdownPage);
+	router.map(
+		routes.mcpMarkdown,
+		lazy(() => import("~/app/http/controllers/mcp").then((it) => it.mcpMarkdownPage)),
+	);
 	router.map(routes.mcp, {
 		actions: {
-			index: mcpPage,
+			index: lazy(() => import("~/app/http/controllers/mcp")),
 			action: {
 				middleware: [mcpRateLimit(env), database()],
-				handler: (ctx) => mcp.fetch(ctx),
+				/**
+				 * Imported here rather than through `lazy()`, because this action declares
+				 * middleware that publishes context and so has to stay an action object,
+				 * whose `handler` must be a function. The server is built at module scope,
+				 * so deferring the import is what keeps it off a cold start.
+				 */
+				handler: async (ctx) => (await import("./mcp")).default.fetch(ctx),
 			},
 		},
 	});
 
-	router.map(routes.wellKnown, wellKnown);
+	router.map(
+		routes.wellKnown,
+		lazy(() => import("~/app/http/controllers/well-known")),
+	);
 	router.map(routes.rss, {
 		actions: {
-			feed: feedRSS,
-			articles: articlesRSS,
-			tutorials: tutorialsRSS,
-			bookmarks: bookmarksRSS,
+			feed: lazy(() => import("~/app/http/controllers/rss/feed")),
+			articles: lazy(() => import("~/app/http/controllers/rss/articles")),
+			tutorials: lazy(() => import("~/app/http/controllers/rss/tutorials")),
+			bookmarks: lazy(() => import("~/app/http/controllers/rss/bookmarks")),
 		},
 	});
-	router.map(routes.auth.login, loginController);
-	router.map(routes.auth.logout, logoutController);
-	router.map(routes.auth.callback, callbackAction);
-	router.map(routes.cms.dashboard, {
-		middleware: [requireCMSAuth, requireAdmin],
-		handler: dashboardCMS,
-	});
-	router.map(routes.cms.purgeCache, {
-		middleware: [requireCMSAuth, requireAdmin],
-		handler: purgeCacheCMS,
-	});
-	router.map(routes.cms.articles, {
-		middleware: [requireCMSAuth, requireAdmin, purgePostList],
-		actions: articlesCMS.actions,
-	});
-	router.map(routes.cms.tutorials, {
-		middleware: [requireCMSAuth, requireAdmin, purgePostList],
-		actions: tutorialsCMS.actions,
-	});
-	router.map(routes.cms.bookmarks, {
-		middleware: [requireCMSAuth, requireAdmin, purgePostList],
-		actions: bookmarksCMS.actions,
-	});
-	router.map(routes.cms.glossary, {
-		middleware: [requireCMSAuth, requireAdmin, purgePostList],
-		actions: glossaryCMS.actions,
-	});
-	router.map(routes.cms.redirects, {
-		middleware: [requireCMSAuth, requireAdmin],
-		actions: redirectsCMS.actions,
-	});
+	router.map(
+		routes.auth.login,
+		lazy(() => import("~/app/http/controllers/auth").then((it) => it.loginController)),
+	);
+	router.map(
+		routes.auth.logout,
+		lazy(() => import("~/app/http/controllers/auth").then((it) => it.logoutController)),
+	);
+	router.map(
+		routes.auth.callback,
+		lazy(() => import("~/app/http/controllers/auth").then((it) => it.callbackAction)),
+	);
+	router.map(
+		routes.cms.dashboard,
+		lazy(() => import("~/app/http/controllers/cms/dashboard"), CMS_GUARDS),
+	);
+	router.map(
+		routes.cms.purgeCache,
+		lazy(() => import("~/app/http/controllers/cms/purge-cache"), CMS_GUARDS),
+	);
+	router.map(
+		routes.cms.articles,
+		lazy(() => import("~/app/http/controllers/cms/articles"), CMS_WRITE_GUARDS),
+	);
+	router.map(
+		routes.cms.tutorials,
+		lazy(() => import("~/app/http/controllers/cms/tutorials"), CMS_WRITE_GUARDS),
+	);
+	router.map(
+		routes.cms.bookmarks,
+		lazy(() => import("~/app/http/controllers/cms/bookmarks"), CMS_WRITE_GUARDS),
+	);
+	router.map(
+		routes.cms.glossary,
+		lazy(() => import("~/app/http/controllers/cms/glossary"), CMS_WRITE_GUARDS),
+	);
+	router.map(
+		routes.cms.redirects,
+		lazy(() => import("~/app/http/controllers/cms/redirects"), CMS_GUARDS),
+	);
 
 	return router;
 }

@@ -6,6 +6,8 @@ This document defines app-specific rules for `apps/blog`.
 
 - MUST keep the app SSR-only using `remix/ui/server` rendering (`renderToString`) and HTML responses.
 - MUST keep Cloudflare Worker bootstrap in `bootstrap/worker.ts` and router creation in `bootstrap/app.tsx`.
+- MUST map every route through `lazy()` from `@sdxc/lazy-route`, so a cold isolate imports the controllers it serves rather than the whole route table. A new route added with a static import silently puts its module back on every cold start.
+- MUST pass a CMS route's guards as `lazy()`'s second argument (`CMS_GUARDS` / `CMS_WRITE_GUARDS`), never as a `middleware` field wrapping the loader: a stand-in is an object, not a function, so it cannot be an action object's `handler`.
 - MUST use model classes for data access in controllers (avoid ad-hoc DB queries in controllers).
 - MUST treat post publish state as:
   - `published_at === null` => published

@@ -20,6 +20,7 @@
 		"@sdxc/http": "workspace:*",
 		"@sdxc/jwt": "workspace:*",
 		"@sdxc/kv-cache": "workspace:*",
+		"@sdxc/lazy-route": "workspace:*",
 		"@sdxc/location": "workspace:*",
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/markdown": "workspace:*",
