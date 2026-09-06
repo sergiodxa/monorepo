@@ -112,6 +112,7 @@ Run from the repository root:
 | [jobs](packages/jobs)                                           | Job queue utilities                                                                 |     |
 | [jwt](packages/jwt)                                             | JWT payload classes and the keys that sign them                                     | ✅  |
 | [kv-cache](packages/kv-cache)                                   | Read-through cache store over Cloudflare KV                                         |     |
+| [lazy-route](packages/lazy-route)                               | Maps a route to a module imported on the first request that reaches it              | ✅  |
 | [location](packages/location)                                   | URL-like path Location class                                                        |     |
 | [logger](packages/logger)                                       | One wide event per Worker invocation, attached at the router and the job dispatcher |     |
 | [mail](packages/mail)                                           | Transactional email with pluggable transports                                       |     |

@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/lazy-route",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Maps a route to a module imported on the first request that reaches it",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
