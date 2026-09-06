@@ -180,8 +180,14 @@ describe("parseDocument references", () => {
 		]);
 	});
 
-	test("fails on an entity the document never declares", () => {
-		expect(parseError("<r><t>caf&eacute;</t></r>")).toBe("entity not found:&eacute;");
+	test("decodes a named entity from the XHTML sets", () => {
+		expect(parseRoot("<r><t>caf&eacute; &mdash; ferm&eacute;</t></r>").children).toEqual([
+			{ name: "t", attributes: {}, children: ["café — fermé"] },
+		]);
+	});
+
+	test("fails on a name no entity set declares", () => {
+		expect(parseError("<r><t>caf&bogus;</t></r>")).toBe("entity not found:&bogus;");
 	});
 });
 

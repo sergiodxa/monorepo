@@ -1,6 +1,7 @@
 /**
  * Tests reference decoding, covering the five predefined entities, numeric
- * references, and the malformed forms that a caller receives as an error.
+ * references, the XHTML named entity sets, and the malformed forms that a caller
+ * receives as an error.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -57,11 +58,40 @@ describe("decodeEntities", () => {
 		if (isSuccess(result)) expect(result.data).toBe("héllo 😀");
 	});
 
-	test("fails on an entity the document never declares", () => {
+	test("decodes a Latin-1 entity the document never declares", () => {
 		let result = decodeEntities("caf&eacute;");
 
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) expect(result.data).toBe("café");
+	});
+
+	test("decodes the punctuation feeds are written with", () => {
+		let result = decodeEntities("one&nbsp;two&mdash;three&hellip;&rsquo;s &ldquo;four&rdquo;");
+
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result))
+			expect(result.data).toBe("one\u00A0two\u2014three\u2026\u2019s \u201Cfour\u201D");
+	});
+
+	test("decodes entities from the symbol set", () => {
+		let result = decodeEntities("&alpha;&bull;&trade;&rarr;&le;");
+
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) expect(result.data).toBe("\u03B1\u2022\u2122\u2192\u2264");
+	});
+
+	test("resolves a name the XML predefines before the XHTML sets", () => {
+		let result = decodeEntities("&amp;&lt;&gt;");
+
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) expect(result.data).toBe("&<>");
+	});
+
+	test("fails on a name no entity set declares", () => {
+		let result = decodeEntities("a &bogus; b");
+
 		expect(isFailure(result)).toBe(true);
-		if (isFailure(result)) expect(result.error.message).toBe("entity not found:&eacute;");
+		if (isFailure(result)) expect(result.error.message).toBe("entity not found:&bogus;");
 	});
 
 	test("fails on a malformed numeric reference", () => {

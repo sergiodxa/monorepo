@@ -1,7 +1,7 @@
 /**
- * Resolves the entity and character references XML allows inside text nodes and
- * attribute values, and reports an undeclared reference as an error so a caller
- * always receives text that is fully decoded.
+ * Resolves the character references and named entities that appear inside text nodes
+ * and attribute values, covering XML's predefines, numeric forms and the XHTML entity
+ * sets, so a caller always receives text that is fully decoded.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,6 +10,8 @@
 import type { Result } from "@sdxc/result";
 
 import { failure, success } from "@sdxc/result";
+
+import { HTML_ENTITIES } from "./html-entities.js";
 
 /**
  * Matches a complete reference: an ampersand, a run of reference characters and
@@ -65,6 +67,9 @@ export function decodeEntities(value: string): Result<string, Error> {
 
 /**
  * Resolves the text between `&` and `;` into the character it stands for.
+ *
+ * The XHTML sets are consulted after the predefines and after numeric references, so
+ * a document declaring none of them still decodes the prose feeds are written in.
  */
 function resolveReference(reference: string): Result<string, Error> {
 	let predefined = PREDEFINED_ENTITIES[reference];
@@ -79,6 +84,9 @@ function resolveReference(reference: string): Result<string, Error> {
 	if (reference.startsWith("#")) {
 		return failure(new Error(`entity not matching Reference production: &${reference};`));
 	}
+
+	let named = HTML_ENTITIES[reference];
+	if (named) return success(named);
 
 	return failure(new Error(`entity not found:&${reference};`));
 }

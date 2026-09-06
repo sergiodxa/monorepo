@@ -6,7 +6,9 @@ XML parser and serializer for RSS-style feeds.
 
 `@sdxc/xml` parses XML into an `XML` document instance and serializes that instance back into XML text. It is designed for the subset of XML commonly used by RSS and similar feeds: one root element, attributes, nested elements, text nodes, CDATA content, namespace-prefixed names, and XML declarations.
 
-The parser resolves the five entities XML predefines (`&lt;`, `&gt;`, `&amp;`, `&quot;`, `&apos;`) and numeric character references such as `&#8217;`. A named entity from HTML, such as `&nbsp;`, is reported as a parse error, since a DTD is what declares it.
+The parser resolves the five entities XML predefines (`&lt;`, `&gt;`, `&amp;`, `&quot;`, `&apos;`), numeric character references such as `&#8217;`, and the named entities the three XHTML 1.0 entity sets declare — `&nbsp;`, `&mdash;`, `&eacute;` and the other 245. Feeds are written by tools that emit those without declaring a DTD, so resolving them is what lets a real-world document parse at all. A name outside those sets is reported as a parse error.
+
+Serialization escapes only the five predefines, so a document that arrives with `&nbsp;` round-trips as the character itself rather than the name.
 
 ## Usage
 
