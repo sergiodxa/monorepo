@@ -1,0 +1,36 @@
+{
+	"name": "@apps/reader",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"start": "vite preview",
+		"cf:deploy": "bunx wrangler deploy",
+		"cf:typegen": "bunx wrangler types",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/auth": "workspace:*",
+		"@sdxc/data-table-sqlstorage": "workspace:*",
+		"@sdxc/feed": "workspace:*",
+		"@sdxc/http": "workspace:*",
+		"@sdxc/i18n": "workspace:*",
+		"@sdxc/kv-cache": "workspace:*",
+		"@sdxc/lazy-route": "workspace:*",
+		"@sdxc/logger": "workspace:*",
+		"@sdxc/pagination": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/session-storage-kv": "workspace:*",
+		"@sdxc/typeid": "workspace:*",
+		"@sdxc/u": "workspace:*",
+		"@sdxc/ui": "workspace:*",
+		"remix": "3.0.0-rc.1"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "^1.54.2",
+		"@sdxc/cloudflare-mocks": "workspace:*",
+		"vite": "^8.2.2",
+		"wrangler": "^4.127.1"
+	}
+}

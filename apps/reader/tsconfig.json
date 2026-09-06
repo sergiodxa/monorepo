@@ -1,0 +1,29 @@
+{
+	"extends": "../../tsconfig.json",
+	"include": [
+		"app/**/*",
+		"bootstrap/**/*",
+		"config/**/*",
+		"database/**/*",
+		"resources/**/*",
+		"routes/**/*",
+		"vite.config.ts",
+		"worker-configuration.d.ts"
+	],
+	"compilerOptions": {
+		"noEmit": true,
+		"allowImportingTsExtensions": true,
+		"jsx": "react-jsx",
+		"jsxImportSource": "remix/ui",
+		"types": ["@total-typescript/ts-reset", "vite/client", "bun", "node"],
+		"rootDirs": ["."],
+		"paths": {
+			"~/app/*": ["./app/*"],
+			"~/bootstrap/*": ["./bootstrap/*"],
+			"~/config/*": ["./config/*"],
+			"~/database/*": ["./database/*"],
+			"~/resources/*": ["./resources/*"],
+			"~/routes/*": ["./routes/*"]
+		}
+	}
+}

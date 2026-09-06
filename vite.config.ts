@@ -103,6 +103,31 @@ const BLOG_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 	},
 };
 
+/**
+ * Takes its bindings from `apps/reader`'s own wrangler config. Declared apart from
+ * `projects` for the same reason as {@link BLOG_WORKERS_PROJECT}.
+ */
+const READER_WORKERS_PROJECT: TestProjectInlineConfiguration = {
+	root: "apps/reader",
+	plugins: [
+		cloudflareTest({
+			wrangler: { configPath: "./wrangler.jsonc" },
+			/**
+			 * Every binding stays local. The app declares no `remote: true` binding today;
+			 * stating this keeps a future one from opening a proxy session to the real
+			 * account, which needs credentials CI does not have.
+			 */
+			remoteBindings: false,
+		}),
+	],
+	resolve: { tsconfigPaths: true },
+	test: {
+		name: "reader-workers",
+		include: ["**/*.workers.test.ts?(x)"],
+		testTimeout: 20_000,
+	},
+};
+
 export default defineConfig({
 	run: {
 		tasks: {
@@ -271,6 +296,27 @@ export default defineConfig({
 					testTimeout: 20_000,
 				},
 			},
+			{
+				root: "apps/reader",
+				plugins: [cloudflareWorkersStub()],
+				resolve: { tsconfigPaths: true },
+				test: {
+					name: "reader",
+					include: ["**/*.test.ts?(x)"],
+					/**
+					 * `*.workers.test.ts` belongs to `reader-workers`. Vitest's defaults are spread
+					 * back in because naming `exclude` replaces them.
+					 */
+					exclude: [...defaultExclude, "**/*.workers.test.ts?(x)"],
+					pool: "threads",
+					/**
+					 * Not inherited from the top-level `test` block: a project ignores it, so the
+					 * 5s default applies unless set here.
+					 */
+					testTimeout: 20_000,
+				},
+			},
+			READER_WORKERS_PROJECT,
 			{
 				/**
 				 * The one app whose sources live under `src/`, and the one with no Cloudflare

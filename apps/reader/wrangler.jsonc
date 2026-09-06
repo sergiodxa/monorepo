@@ -1,0 +1,42 @@
+{
+	"$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
+	"name": "reader",
+	"main": "./bootstrap/worker.ts",
+	"compatibility_date": "2026-09-02",
+	"compatibility_flags": ["nodejs_compat"],
+	"workers_dev": true,
+	"dev": { "port": 3006 },
+
+	// Smart placement moves the worker close to whatever it spends its latency on. A
+	// reader request reads a person's own subscriptions and marks items read, so the
+	// round trips that matter are to that person's storage rather than to the browser.
+	"placement": { "mode": "smart" },
+
+	"observability": { "enabled": true },
+	"assets": { "directory": "./build/client" },
+
+	// A custom domain rather than a route on an existing zone: sessions are cookies
+	// scoped to this host, and the OAuth client at auth.sergiodxa.com is registered
+	// against the callback URL this hostname builds, so the hostname is part of the
+	// app's identity rather than a placement detail.
+	"routes": [{ "pattern": "reader.sergiodxa.com", "custom_domain": true }],
+
+	// Plain secrets (CLIENT_ID, CLIENT_SECRET, COOKIE_SESSION_SECRET) come from
+	// `.dev.vars` locally and `wrangler secret put` in production; `.env.example`
+	// carries the full list. Only bindings need an entry in this file.
+
+	// Sessions and the OIDC discovery/JWKS cache share one namespace, keyed apart by
+	// prefix. They belong together: both are derived state a cold isolate can rebuild,
+	// so losing the namespace signs everybody out rather than losing anything owned.
+	//
+	// `id` and `preview_id` are placeholders. Create the real namespace with
+	// `bunx wrangler kv namespace create` and paste its id into both fields before the
+	// first deploy — wrangler refuses to deploy against an id the account does not own.
+	"kv_namespaces": [
+		{
+			"binding": "KV",
+			"id": "REPLACE_ME",
+			"preview_id": "REPLACE_ME",
+		},
+	],
+}

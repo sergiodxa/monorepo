@@ -1,0 +1,84 @@
+/**
+ * Auth middleware and the app-wide viewer accessor. The request's stored tokens are the
+ * source of truth: the OIDC session scheme reads them, renews a lapsed access token, and
+ * projects the ID token's claims into the {@link Viewer} that `getViewer()` answers with.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import type { AuthSession } from "@sdxc/auth/auth-session";
+import type { Middleware } from "remix/router";
+
+import { sessionScheme } from "@sdxc/auth/remix/schemes";
+import { currentLog } from "@sdxc/logger";
+import { getContext } from "remix/middleware/async-context";
+import { auth as createAuthMiddleware, Auth } from "remix/middleware/auth";
+
+import { relyingParty } from "~/app/auth/relying-party";
+
+/**
+ * The signed-in reader, as the app names the claims it shows a person back to themselves
+ * with. Every field but `id` is display data, so an absent claim reads as empty text and a
+ * view can print it straight.
+ */
+export interface Viewer {
+	/** OIDC subject id, which every feed subscription this app owns is keyed on. */
+	id: string;
+	name: string;
+	email: string;
+	avatar: string;
+}
+
+/**
+ * Projects the signed-in session's ID token into the viewer shape.
+ *
+ * @param auth - The token set the OIDC session scheme resolved.
+ */
+function toViewer(auth: AuthSession): Viewer {
+	let idToken = auth.idToken;
+
+	return {
+		id: idToken.subject,
+		name: idToken.name ?? "",
+		email: idToken.email ?? "",
+		avatar: idToken.picture ?? "",
+	};
+}
+
+/**
+ * Resolves the viewer from the request's stored token set.
+ *
+ * Built per request because the scheme's relying party is, so the renewal it may run
+ * presents the credentials for the origin the request arrived on.
+ */
+export let auth: Middleware = (ctx, next) => {
+	return createAuthMiddleware({
+		schemes: [sessionScheme(relyingParty(ctx.url), { verify: toViewer })],
+	})(ctx, recordViewer);
+
+	/**
+	 * Puts `user.id` on the invocation's record here, the one place that knows who the
+	 * request is for before any handler runs, so the whole record is attributed and the
+	 * handlers under it record only what they alone know.
+	 */
+	function recordViewer() {
+		let viewer = getViewer();
+		if (viewer) currentLog()?.set({ user: { id: viewer.id } });
+		return next();
+	}
+};
+
+export default auth;
+
+/** The current signed-in reader, or `null` for a request nobody is signed in on. */
+export function getViewer(): Viewer | null {
+	let state = getContext().get(Auth) as { ok: boolean; identity: Viewer };
+	if (!state.ok) return null;
+	return state.identity;
+}
+
+/** True when the request carried a token set the auth middleware could resolve. */
+export function isAuthenticated(): boolean {
+	return getViewer() !== null;
+}
