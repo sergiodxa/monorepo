@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { get, resources, route } from "remix/routes";
+import { get, post, resources, route } from "remix/routes";
 
 /**
  * Typed CMS endpoint helpers; each resource is narrowed to the actions its
@@ -14,6 +14,7 @@ import { get, resources, route } from "remix/routes";
  */
 export default route({
 	dashboard: get("/"),
+	purgeCache: post("/cache/purge"),
 	articles: resources("/articles", { exclude: ["show"] }),
 	tutorials: resources("/tutorials", { exclude: ["show"] }),
 	bookmarks: resources("/bookmarks", { exclude: ["show"] }),

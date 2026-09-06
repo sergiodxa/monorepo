@@ -14,6 +14,7 @@ import { createAction } from "remix/router";
 
 import { FeedViewModel } from "~/app/http/view-models/feed";
 import { Feed } from "~/app/repositories/feed";
+import { PUBLIC_PAGE, TAGS } from "~/app/services/cache";
 import { FeedView } from "~/resources/views/feed";
 import routes from "~/routes/web";
 
@@ -28,6 +29,8 @@ export default createAction(
 		let ctx = getContext();
 		let activity = await Feed.listActivity(db);
 		let model = FeedViewModel.index(activity);
+
+		ctx.cache(PUBLIC_PAGE, TAGS.postList());
 
 		return ctx.render(FeedView, model);
 	}),

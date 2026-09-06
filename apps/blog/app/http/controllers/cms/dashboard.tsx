@@ -33,5 +33,22 @@ export default inject([Database] as const, async function dashboard(database) {
 		GlossaryPost.count(database),
 	]);
 
-	return ctx.render(CMSDashboardView, { stats: { articles, likes, tutorials, glossary } });
+	return ctx.render(CMSDashboardView, {
+		stats: { articles, likes, tutorials, glossary },
+		purgeResult: readPurgeResult(ctx.url),
+	});
 });
+
+/**
+ * Reads the outcome the purge action redirected back with. Anything else in the
+ * parameter renders no banner, so a hand-edited URL cannot claim the cache
+ * cleared when nothing ran.
+ *
+ * @param url The current request URL.
+ * @returns The reported outcome, or `undefined` when there was no purge.
+ */
+function readPurgeResult(url: URL): CMSDashboardView.PurgeResult | undefined {
+	let value = url.searchParams.get("purge");
+	if (value === "ok" || value === "failed") return value;
+	return undefined;
+}

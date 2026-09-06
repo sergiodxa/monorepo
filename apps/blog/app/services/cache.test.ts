@@ -13,7 +13,7 @@ import workersCache from "@sdxc/workers-cache/middleware";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
-import { PUBLIC_POST, TAGS } from "./cache";
+import { PUBLIC_PAGE, TAGS } from "./cache";
 
 /**
  * Serves one post route through the real middleware, registered the way the
@@ -24,7 +24,7 @@ function fetchPost(headers?: HeadersInit) {
 	let router = createRouter({ middleware: [workersCache({ cache: () => cache })] });
 
 	router.get("/articles/hello", (ctx) => {
-		ctx.cache(PUBLIC_POST, TAGS.post("articles", "hello"));
+		ctx.cache(PUBLIC_PAGE, TAGS.post("articles", "hello"));
 		return new Response("post");
 	});
 
@@ -35,13 +35,13 @@ describe("the post cache declaration", () => {
 	test("reaches a reader as a public policy carrying the post's tag", async () => {
 		let response = await fetchPost();
 
-		expect(response.headers.get("Cache-Control")).toBe(PUBLIC_POST);
+		expect(response.headers.get("Cache-Control")).toBe(PUBLIC_PAGE);
 		expect(response.headers.get("Cache-Tag")).toBe("post:articles:hello");
 	});
 
 	test("keeps browsers revalidating, so a purge is never raced by a stale copy", () => {
-		expect(PUBLIC_POST).toContain("max-age=0");
-		expect(PUBLIC_POST).toContain("must-revalidate");
+		expect(PUBLIC_PAGE).toContain("max-age=0");
+		expect(PUBLIC_PAGE).toContain("must-revalidate");
 	});
 
 	test("is refused for an identified visitor, tag included", async () => {

@@ -19,7 +19,7 @@ import { isAdmin } from "~/app/http/middleware/auth";
 import { NotFoundViewModel } from "~/app/http/view-models/not-found";
 import { PostViewModel } from "~/app/http/view-models/post";
 import { Post } from "~/app/repositories/post";
-import { PUBLIC_POST, TAGS } from "~/app/services/cache";
+import { PUBLIC_PAGE, TAGS } from "~/app/services/cache";
 import { NotFoundView } from "~/resources/views/not-found";
 import { PostView } from "~/resources/views/post";
 import routeMap from "~/routes/web";
@@ -156,7 +156,7 @@ export default createAction(
 		// here too, and the middleware would refuse their session anyway, but the draft
 		// stays out of a shared cache on its own terms rather than on that check's.
 		if (isPublished) {
-			ctx.cache(PUBLIC_POST, TAGS.post(validation.params.postType, validation.params.postSlug));
+			ctx.cache(PUBLIC_PAGE, TAGS.post(validation.params.postType, validation.params.postSlug));
 		}
 
 		if (prefersMarkdown) {

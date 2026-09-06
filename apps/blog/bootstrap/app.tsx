@@ -32,6 +32,7 @@ import articlesCMS from "~/app/http/controllers/cms/articles";
 import bookmarksCMS from "~/app/http/controllers/cms/bookmarks";
 import dashboardCMS from "~/app/http/controllers/cms/dashboard";
 import glossaryCMS from "~/app/http/controllers/cms/glossary";
+import purgeCacheCMS from "~/app/http/controllers/cms/purge-cache";
 import redirectsCMS from "~/app/http/controllers/cms/redirects";
 import tutorialsCMS from "~/app/http/controllers/cms/tutorials";
 import colors from "~/app/http/controllers/colors";
@@ -55,6 +56,7 @@ import database from "~/app/http/middleware/database";
 import createEnvMiddleware from "~/app/http/middleware/env";
 import createNoTrailingSlashMiddleware from "~/app/http/middleware/no-trailing-slash";
 import createNoWWWMiddleware from "~/app/http/middleware/no-www";
+import purgePostList from "~/app/http/middleware/purge-post-list";
 import redirects from "~/app/http/middleware/redirects";
 import requireAdmin from "~/app/http/middleware/require-admin";
 import session from "~/app/http/middleware/session";
@@ -188,20 +190,24 @@ export default function createApplication(env: App.Env) {
 		middleware: [requireCMSAuth, requireAdmin],
 		handler: dashboardCMS,
 	});
-	router.map(routes.cms.articles, {
+	router.map(routes.cms.purgeCache, {
 		middleware: [requireCMSAuth, requireAdmin],
+		handler: purgeCacheCMS,
+	});
+	router.map(routes.cms.articles, {
+		middleware: [requireCMSAuth, requireAdmin, purgePostList],
 		actions: articlesCMS.actions,
 	});
 	router.map(routes.cms.tutorials, {
-		middleware: [requireCMSAuth, requireAdmin],
+		middleware: [requireCMSAuth, requireAdmin, purgePostList],
 		actions: tutorialsCMS.actions,
 	});
 	router.map(routes.cms.bookmarks, {
-		middleware: [requireCMSAuth, requireAdmin],
+		middleware: [requireCMSAuth, requireAdmin, purgePostList],
 		actions: bookmarksCMS.actions,
 	});
 	router.map(routes.cms.glossary, {
-		middleware: [requireCMSAuth, requireAdmin],
+		middleware: [requireCMSAuth, requireAdmin, purgePostList],
 		actions: glossaryCMS.actions,
 	});
 	router.map(routes.cms.redirects, {

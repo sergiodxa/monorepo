@@ -16,7 +16,7 @@ import { rounded } from "@sdxc/u/effects";
 import { gap, grid, gridTemplate, repeat } from "@sdxc/u/layout";
 import { m, p } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
-import { Heading, Link } from "@sdxc/ui";
+import { Button, Card, Heading, Link, Modal } from "@sdxc/ui";
 
 import { CMSLayout } from "~/resources/layouts/cms";
 import routes from "~/routes/web";
@@ -35,11 +35,15 @@ export namespace CMSDashboardView {
 		glossary: number;
 	}
 
+	/** How the last purge went, when the operator has just run one. */
+	export type PurgeResult = "ok" | "failed";
+
 	/**
 	 * Model consumed by the dashboard view renderer.
 	 */
 	export interface Props {
 		stats: Stats;
+		purgeResult?: PurgeResult;
 	}
 }
 
@@ -90,7 +94,8 @@ function StatCard(handle: Handle<StatCard.Props>) {
  */
 export function CMSDashboardView() {
 	return ({ model }: { model: CMSDashboardView.Props }) => {
-		let { stats } = model;
+		let { stats, purgeResult } = model;
+		let purgeDialogId = "purge-cache-dialog";
 
 		return (
 			<CMSLayout title="Dashboard" activePath={routes.cms.dashboard.href()}>
@@ -126,6 +131,65 @@ export function CMSDashboardView() {
 							href={routes.cms.glossary.index.href()}
 						/>
 					</div>
+
+					<Card mix={[p(4), grid(), gap(3)]}>
+						<Heading level={2}>Edge cache</Heading>
+
+						{purgeResult ? (
+							<p
+								role="status"
+								mix={[fg(purgeResult === "ok" ? "success" : "danger"), weight("medium")]}
+							>
+								{purgeResult === "ok"
+									? "Cache cleared. Pages rebuild on their next request."
+									: "The cache did not clear. Check the logs before relying on it."}
+							</p>
+						) : null}
+
+						<p mix={[fg("neutral")]}>
+							A cached page is served without the site running, so shipping a fix cannot replace
+							one. Clear the cache to force every page to rebuild.
+						</p>
+
+						<div>
+							<Button
+								type="button"
+								commandfor={purgeDialogId}
+								command="show-modal"
+								color="danger"
+								variant="outline"
+							>
+								Clear the cache
+							</Button>
+						</div>
+
+						<Modal id={purgeDialogId}>
+							<form
+								method={routes.cms.purgeCache.method}
+								action={routes.cms.purgeCache.href()}
+								mix={[grid(), gap(4)]}
+							>
+								<Modal.Description>
+									Clear every cached page? Each one rebuilds on its next request, so the site works
+									harder until the cache refills.
+								</Modal.Description>
+								<Modal.Footer>
+									<Button type="submit" color="danger">
+										Confirm clear
+									</Button>
+									<Button
+										type="button"
+										commandfor={purgeDialogId}
+										command="close"
+										color="neutral"
+										variant="outline"
+									>
+										Cancel
+									</Button>
+								</Modal.Footer>
+							</form>
+						</Modal>
+					</Card>
 				</main>
 			</CMSLayout>
 		);

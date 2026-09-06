@@ -15,6 +15,7 @@ import { createAction } from "remix/router";
 import { isAdmin } from "~/app/http/middleware/auth";
 import { TutorialsViewModel } from "~/app/http/view-models/tutorials";
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
+import { PUBLIC_PAGE, TAGS } from "~/app/services/cache";
 import { TutorialsView } from "~/resources/views/tutorials";
 import routes from "~/routes/web";
 
@@ -30,6 +31,9 @@ export default createAction(
 			includePreview: isAdmin(),
 		});
 		let model = TutorialsViewModel.index(tutorials);
+
+		// An admin's listing carries unpublished posts, so it never reaches a shared cache.
+		if (!isAdmin()) ctx.cache(PUBLIC_PAGE, TAGS.postList());
 
 		return ctx.render(TutorialsView, model);
 	}),
