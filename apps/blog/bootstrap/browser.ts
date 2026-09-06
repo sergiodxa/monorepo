@@ -53,8 +53,13 @@ function trackPendingNavigations() {
 
 trackPendingNavigations();
 
+/**
+ * Modules the runtime may hydrate. Tests sit next to the views they cover and reach for
+ * the server application, so they stay out of the bundle the browser downloads.
+ */
 const clientModules = import.meta.glob([
 	"!../**/*.server.*",
+	"!../**/*.test.*",
 	"../resources/**/*.{ts,tsx}",
 	"../routes/**/*.{ts,tsx}",
 ]);
