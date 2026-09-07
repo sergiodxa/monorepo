@@ -125,7 +125,7 @@ Run from the repository root:
 | [rate-limit](packages/rate-limit)                               | Adapter-based rate limiting with standard headers                                   |     |
 | [response](packages/response)                                   | HTTP response utilities                                                             |     |
 | [result](packages/result)                                       | Result type for error handling                                                      | ✅  |
-| [rss](packages/rss)                                             | RSS feed utilities                                                                  |     |
+| [rss](packages/rss)                                             | RSS 2.0 feed builder and parser                                                     | ✅  |
 | [sample](packages/sample)                                       | Seeded generation of believable people, places, prose, numbers and identifiers      | ✅  |
 | [server-timing](packages/server-timing)                         | Server-Timing measurements written to a response header                             |     |
 | [service-container](packages/service-container)                 | Dependency injection service container                                              |     |

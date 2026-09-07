@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/rss",
-	"version": "0.0.0",
-	"private": true,
+	"version": "0.0.1",
+	"description": "RSS 2.0 feed builder and parser",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

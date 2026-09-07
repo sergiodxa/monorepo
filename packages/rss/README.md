@@ -2,17 +2,26 @@
 
 RSS 2.0 feed builder and parser.
 
-## Overview
+It builds feeds for publishing and reads feeds published by other sites, covering the whole
+set of standard channel and item fields plus the namespaced extensions feeds lean on in
+practice: `atom:link`, `content:encoded`, `dc:creator`, and `slash:comments`. Anything else
+namespaced is preserved rather than discarded, so a feed carrying a custom module survives a
+read and a write unchanged.
 
-`@sdxc/rss` helps you generate RSS 2.0 feeds for publishing and consume existing feeds from other sites.
+## Installation
 
-It supports the complete set of standard channel and item fields, plus common namespaced extensions such as `atom:link`, `content:encoded`, `dc:creator`, and `slash:comments`. It is a good fit for blog feeds, podcasts, bookmarking feeds, aggregators, and any workflow that needs to create, fetch, or transform RSS data.
+```bash
+npm add @sdxc/rss
+```
+
+`RSS.fromXML` takes a document from [`@sdxc/xml`](https://www.npmjs.com/package/@sdxc/xml),
+which installs alongside this package.
 
 ## Usage
 
-### Build a Feed
+### Build A Feed
 
-Create a new feed by defining the channel metadata first, then append items before serializing the final XML.
+Describe the channel first, append items, then serialize.
 
 ```typescript
 import { RSS } from "@sdxc/rss";
@@ -41,9 +50,10 @@ feed.addItem({
 let xml = feed.toString();
 ```
 
-### Parse an Existing Feed
+The namespaces the extensions need are declared for you, so the example above writes
+`xmlns:atom` and `xmlns:content` onto the root element.
 
-When you already have RSS XML as a string, parse it into an `RSS` instance to inspect the channel metadata and items.
+### Read A Feed
 
 ```typescript
 import { RSS } from "@sdxc/rss";
@@ -51,14 +61,21 @@ import { RSS } from "@sdxc/rss";
 let feed = RSS.parse(xml);
 
 console.log(feed.channel.title);
-for (let item of feed.items) {
-	console.log(item.title, item.link);
+for (let item of feed.items) console.log(item.title, item.link);
+```
+
+Parsing throws on a document that is not RSS, so wrap the call where a malformed feed is an
+expected outcome rather than a bug:
+
+```typescript
+try {
+	return RSS.parse(xml);
+} catch (error) {
+	return recordBadFeed(error);
 }
 ```
 
-### Fetch a Feed
-
-Use `RSS.fetch` to download a remote feed and parse it in one step.
+### Fetch A Feed
 
 ```typescript
 import { RSS } from "@sdxc/rss";
@@ -66,41 +83,36 @@ import { RSS } from "@sdxc/rss";
 let feed = await RSS.fetch(new URL("https://example.com/feed.xml"));
 ```
 
+`RSS.fetch` asks the origin not to serve a cached copy, requires the response to be `ok` and
+to carry an XML content type, and throws when either fails.
+
 ## API
 
 ### `new RSS(channel: RSS.Channel)`
 
-Creates a new feed with the provided channel metadata.
-
-Required channel fields:
-
-- `title`
-- `description`
-- `link`
+Creates a feed with the given channel metadata and no items. `title`, `description`, and
+`link` are required.
 
 ### `rss.channel`
 
-Returns the current channel data as a clone. You can also replace it with a new valid `RSS.Channel` value.
+The channel data, as a clone. Assigning a new `RSS.Channel` replaces it and leaves the items
+in place.
 
 ```typescript
-rss.channel = {
-	...rss.channel,
-	description: "Updated description",
-	language: "en-us",
-};
+rss.channel = { ...rss.channel, language: "en-us" };
 ```
 
 ### `rss.items`
 
-Returns the current item list as clones.
+The items, as clones, in the order they were added.
 
 ### `rss.addItem(item: RSS.Item)`
 
-Adds one item to the feed. Each item must include at least a `title` or `description`.
+Appends one item. RSS 2.0 requires at least a `title` or a `description`.
 
 ### `rss.removeItem(guid: string)`
 
-Removes the first item whose guid value matches `guid`.
+Removes the first item whose guid value matches.
 
 ### `rss.toJSON()`
 
@@ -110,75 +122,54 @@ Returns `{ channel, items }` as plain serializable data.
 
 Serializes the feed to RSS 2.0 XML.
 
-### `RSS.parse(source: string)`
+### `RSS.parse(source: string): RSS`
 
-Parses raw RSS XML into an `RSS` instance.
+Parses RSS XML. Throws when the text is not XML, or when its root element is not `rss`.
 
-### `RSS.fetch(input, init?)`
+### `RSS.fromXML(xml: XML): RSS`
 
-Fetches an XML document and parses it as RSS.
+Reads a feed out of an already-parsed document, for a caller that parsed the text for some
+other purpose first.
 
-## Supported RSS Fields
+### `RSS.fetch(input: URL | RequestInfo, init?: RequestInit): Promise<RSS>`
+
+Retrieves a document and parses it.
+
+## Supported Fields
 
 ### Channel
 
-`RSS.Channel` supports the required RSS 2.0 fields plus:
-
-- `language`
-- `copyright`
-- `managingEditor`
-- `webMaster`
-- `pubDate`
-- `lastBuildDate`
-- `category`
-- `generator`
-- `docs`
-- `cloud`
-- `ttl`
-- `image`
-- `rating`
-- `textInput`
-- `skipHours`
-- `skipDays`
+Beyond the required `title`, `description`, and `link`: `language`, `copyright`,
+`managingEditor`, `webMaster`, `pubDate`, `lastBuildDate`, `category`, `generator`, `docs`,
+`cloud`, `ttl`, `image`, `rating`, `textInput`, `skipHours`, and `skipDays`.
 
 ### Item
 
-`RSS.Item` supports:
+At least one of `title` or `description`, plus `link`, `author`, `category`, `comments`,
+`enclosure`, `guid`, `pubDate`, and `source`.
 
-At least one of `title` or `description` is required.
+### Namespaced Extensions
 
-- `title`
-- `link`
-- `description`
-- `author`
-- `category`
-- `comments`
-- `enclosure`
-- `guid`
-- `pubDate`
-- `source`
+The four common modules, from the
+[RSS Best Practices Profile](https://www.rssboard.org/rss-profile), have named fields:
 
-## Namespaced Extensions
+| Field            | Element           |
+| ---------------- | ----------------- |
+| `atomLink`       | `atom:link`       |
+| `contentEncoded` | `content:encoded` |
+| `dcCreator`      | `dc:creator`      |
+| `slashComments`  | `slash:comments`  |
 
-The package also models the common extensions documented in `spec/rss-profile.md`:
-
-- `atom:link` via `atomLink`
-- `content:encoded` via `contentEncoded`
-- `dc:creator` via `dcCreator`
-- `slash:comments` via `slashComments`
-
-Unknown namespaced elements are preserved through `extensions` so feeds can round-trip custom module data.
-
-If you build feeds with custom prefixed elements, declare their namespace on `channel.namespaces`.
+Any other namespaced element round-trips through `extensions`. Declare its namespace on
+`channel.namespaces` when you write one, since a prefix with no declaration in scope cannot
+be serialized.
 
 ```typescript
 let feed = new RSS({
 	title: "Example",
 	description: "Example",
 	link: "https://example.com",
-	namespaces: {
-		media: "http://search.yahoo.com/mrss/",
-	},
+	namespaces: { media: "http://search.yahoo.com/mrss/" },
 	extensions: [
 		{
 			name: "media:rating",
@@ -191,6 +182,37 @@ let feed = new RSS({
 
 ## Notes
 
-1. RSS date fields are preserved as strings; use RFC 822 style values such as `Tue, 14 Apr 2026 09:00:00 GMT`.
-2. `description` and `contentEncoded` are serialized as XML text, so embedded HTML is escaped unless it already arrived through parsed XML.
-3. `guid`, `category`, `enclosure`, and `atomLink` support both a compact single-value form and structured objects when attributes are needed.
+1. Dates are the strings the document holds, so write them in RFC 822 style —
+   `Tue, 14 Apr 2026 09:00:00 GMT`, which is what `Date.prototype.toUTCString` produces.
+2. `description` and `contentEncoded` are written as XML text, so embedded HTML is escaped
+   on the way out and arrives unescaped on the way back in.
+3. `guid`, `category`, `enclosure`, and `atomLink` each accept a bare string for the common
+   case and an object when attributes matter.
+4. Nothing is sanitized. An item's markup is whatever the publisher wrote, and escaping it is
+   the responsibility of whatever renders it.
+
+## Versioning
+
+Releases are dated rather than semantic. A version is the UTC date it was published, written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one release goes out per day.
+
+Those numbers say when, not what: a later date means a later release and carries no compatibility promise. Any release may change or remove an export.
+
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/rss": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)
