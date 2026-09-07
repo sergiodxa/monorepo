@@ -593,8 +593,6 @@
       "version": "0.0.1",
       "dependencies": {
         "@sdxc/duration": "workspace:*",
-        "@sdxc/get-client-ip": "workspace:*",
-        "@sdxc/http": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/result": "workspace:*",
         "remix": "3.0.0-rc.1",

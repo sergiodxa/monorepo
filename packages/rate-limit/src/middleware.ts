@@ -7,25 +7,22 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DurationInput } from "@sdxc/duration";
 import type { Middleware, RequestContext } from "remix/router";
 
-import { getClientIP } from "@sdxc/get-client-ip";
-import { tooManyRequests } from "@sdxc/http/response/json";
 import { currentLog } from "@sdxc/logger";
 import { isFailure } from "@sdxc/result";
 
 import type { Adapter, RateLimitDecision } from "./types.js";
 
 import { applyRateLimitHeaders } from "./headers.js";
+import { tooManyRequests } from "./too-many-requests.js";
 
 /** Error code in the default limited response body. */
 const LIMITED_ERROR = "too_many_requests";
 
 /** Human-readable description in the default limited response body. */
 const LIMITED_DESCRIPTION = "Rate limit exceeded. Please try again later.";
-
-/** Key used when no client address is available, so limiting still applies. */
-const UNKNOWN_KEY = "unknown";
 
 /** Warning recorded when an attempt is denied: expected traffic, kept visible. */
 const EXCEEDED_EVENT = "rate_limit.exceeded";
@@ -48,11 +45,11 @@ export interface RateLimitMiddlewareOptions {
 	/** Backend that counts the attempts and owns the policy. */
 	adapter: Adapter;
 	/**
-	 * Identifier to limit on, e.g. a client id, token id, or tenant id. Defaults to
-	 * the client IP address, falling back to a shared `"unknown"` bucket when the
-	 * request carries no client address.
+	 * Identifier to limit on, e.g. a client id, token id, tenant id, or the connecting
+	 * address. Required, because what a budget belongs to is the policy: a wrong guess
+	 * either lets one caller spend another's or collapses every caller into one bucket.
 	 */
-	key?: (context: RequestContext) => string | Promise<string>;
+	key: (context: RequestContext) => string | Promise<string>;
 	/**
 	 * Namespace for this registration's keys, so two limiters over one backend
 	 * cannot share a counter; defaults to a per-registration name. Pass an explicit
@@ -85,9 +82,10 @@ export interface RateLimitMiddlewareOptions {
  * @param options - Adapter, key derivation, and policy; see {@link RateLimitMiddlewareOptions}.
  * @returns A middleware that counts the request and annotates the response.
  * @example
- * router.use(rateLimit({ adapter: new MemoryAdapter({ limit: 10, window: "10 seconds" }) }));
- * @example
  * router.use(rateLimit({ adapter, prefix: "token", key: (context) => context.get(ClientId) }));
+ * @example
+ * let key = (context) => context.request.headers.get("CF-Connecting-IP") ?? "unknown";
+ * router.use(rateLimit({ adapter, prefix: "public", key }));
  */
 export function rateLimit(options: RateLimitMiddlewareOptions): Middleware {
 	let adapter = options.adapter;
@@ -98,7 +96,7 @@ export function rateLimit(options: RateLimitMiddlewareOptions): Middleware {
 	return async (context, next) => {
 		if (options.skip !== undefined && (await options.skip(context))) return next();
 
-		let key = `${prefix}:${await resolveKey(context, options.key)}`;
+		let key = `${prefix}:${await options.key(context)}`;
 		let result = await adapter.consume(key, await resolveCost(context, options.cost));
 		let log = currentLog();
 
@@ -109,7 +107,7 @@ export function rateLimit(options: RateLimitMiddlewareOptions): Middleware {
 				return next();
 			}
 			log?.fail(result.error, { rate_limit: detail });
-			return limitedResponse();
+			return unavailableResponse();
 		}
 
 		let decision = result.data;
@@ -118,27 +116,13 @@ export function rateLimit(options: RateLimitMiddlewareOptions): Middleware {
 		if (!decision.allowed) {
 			log?.set({ rate_limit: { limited: true } });
 			log?.warn(EXCEEDED_EVENT, { limit: decision.limit, retry_after_s: decision.retryAfter });
-			let response = options.onLimit ? await options.onLimit(context, decision) : limitedResponse();
+			if (options.onLimit === undefined) return limitedResponse(decision, adapter.window);
+			let response = await options.onLimit(context, decision);
 			return applyRateLimitHeaders(response, decision, adapter.window);
 		}
 
 		return applyRateLimitHeaders(await next(), decision, adapter.window);
 	};
-}
-
-/**
- * Derives the identifier to limit on, defaulting to the client address.
- *
- * @param context - The request context.
- * @param key - The configured derivation, when there is one.
- * @returns The unprefixed key.
- */
-async function resolveKey(
-	context: RequestContext,
-	key: RateLimitMiddlewareOptions["key"],
-): Promise<string> {
-	if (key === undefined) return getClientIP(context.request) ?? UNKNOWN_KEY;
-	return await key(context);
 }
 
 /**
@@ -158,12 +142,37 @@ async function resolveCost(
 }
 
 /**
- * The default response for a denied request: `429` with the OAuth-style error body
- * the protected endpoints already return, so adopting the middleware does not
- * change an existing client contract.
+ * The OAuth-style error body the protected endpoints already return, so adopting the
+ * middleware does not change an existing client contract. `onLimit` replaces it.
  *
+ * @returns The body, serialized, with the media type that labels it.
+ */
+function limitedBody(): [string, ResponseInit] {
+	let body = { error: LIMITED_ERROR, error_description: LIMITED_DESCRIPTION };
+	return [JSON.stringify(body), { headers: { "Content-Type": "application/json" } }];
+}
+
+/**
+ * The default response for a denied request, carrying the quota fields the decision
+ * supports.
+ *
+ * @param decision - The denial the adapter answered with.
+ * @param window - The adapter's window, for the policy field.
  * @returns A `429 Too Many Requests` JSON response.
  */
-function limitedResponse(): Response {
-	return tooManyRequests({ error: LIMITED_ERROR, error_description: LIMITED_DESCRIPTION });
+function limitedResponse(decision: RateLimitDecision, window: DurationInput): Response {
+	let [body, init] = limitedBody();
+	return tooManyRequests(decision, window, body, init);
+}
+
+/**
+ * The refusal for a request a closed policy could not count. It carries no quota
+ * fields because no decision was made, which is what distinguishes a backend outage
+ * from an exhausted budget.
+ *
+ * @returns A `429 Too Many Requests` JSON response with no rate limit headers.
+ */
+function unavailableResponse(): Response {
+	let [body, init] = limitedBody();
+	return new Response(body, { ...init, status: 429, statusText: "Too Many Requests" });
 }

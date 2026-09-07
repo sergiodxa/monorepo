@@ -1,7 +1,8 @@
 /**
  * Public surface of the rate limit package: the adapter contract and its four
  * backends, the decision they answer with, and the serialization of that decision
- * into response headers. The route middleware lives behind `./middleware`.
+ * into response headers, plus the builder for the response a denied request gets.
+ * The route middleware lives behind `./middleware`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,6 +16,7 @@ export type { KVAdapterOptions, RateLimitKVNamespace } from "./kv.js";
 export type { DataTableAdapterOptions, RateLimitHitRow } from "./data-table.js";
 
 export { RateLimitError } from "./rate-limit-error.js";
+export { tooManyRequests } from "./too-many-requests.js";
 export { applyRateLimitHeaders, rateLimitHeaders } from "./headers.js";
 export { MemoryAdapter } from "./memory.js";
 export { CloudflareAdapter } from "./cloudflare.js";

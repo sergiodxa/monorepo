@@ -122,7 +122,7 @@ Run from the repository root:
 | [mcp](packages/mcp)                                             | MCP servers over stateless Streamable HTTP                                          |     |
 | [oidc-provider](packages/oidc-provider)                         | OIDC/OAuth2 provider engine                                                         |     |
 | [pagination](packages/pagination)                               | Offset and keyset pagination with Link headers                                      |     |
-| [rate-limit](packages/rate-limit)                               | Adapter-based rate limiting with standard headers                                   |     |
+| [rate-limit](packages/rate-limit)                               | Adapter-based rate limiting with standard response headers                          | ✅  |
 | [response](packages/response)                                   | HTTP response utilities                                                             |     |
 | [result](packages/result)                                       | Result type for error handling                                                      | ✅  |
 | [rss](packages/rss)                                             | RSS 2.0 feed builder and parser                                                     | ✅  |

@@ -22,8 +22,16 @@ import { RateLimitError } from "./rate-limit-error.js";
 /** An instant aligned to a 10 second window, so a case starts at a boundary. */
 const WINDOW_START = 1_700_000_000_000;
 
-/** The client address the default key derivation reads. */
+/** The client address the tests' key derivation reads. */
 const CLIENT_IP = "203.0.113.7";
+
+/**
+ * The key derivation an app supplies now that every registration states one: the
+ * connecting address, with one shared bucket for a request that carries none.
+ */
+function byClientIp(context: RequestContext): string {
+	return context.request.headers.get("CF-Connecting-IP") ?? "unknown";
+}
 
 /** Builds a request context, the object a middleware receives. */
 function createContext(headers: Record<string, string> = {}): RequestContext {
@@ -115,7 +123,10 @@ afterEach(() => {
 describe("rateLimit middleware", () => {
 	test("annotates an allowed response with the quota it saw", async () => {
 		vi.setSystemTime(new Date(WINDOW_START + 3000));
-		let middleware = rateLimit({ adapter: new MemoryAdapter({ limit: 10, window: "10 seconds" }) });
+		let middleware = rateLimit({
+			adapter: new MemoryAdapter({ limit: 10, window: "10 seconds" }),
+			key: byClientIp,
+		});
 
 		let response = await middleware(
 			createClientContext(),
@@ -131,7 +142,10 @@ describe("rateLimit middleware", () => {
 
 	test("answers a denied request with 429, Retry-After, and the error body", async () => {
 		vi.setSystemTime(new Date(WINDOW_START + 3000));
-		let middleware = rateLimit({ adapter: new MemoryAdapter({ limit: 1, window: "10 seconds" }) });
+		let middleware = rateLimit({
+			adapter: new MemoryAdapter({ limit: 1, window: "10 seconds" }),
+			key: byClientIp,
+		});
 		let handler = createHandler();
 
 		await middleware(createClientContext(), handler.next);
@@ -140,6 +154,7 @@ describe("rateLimit middleware", () => {
 		expect(response.status).toBe(429);
 		expect(response.headers.get("Retry-After")).toBe("7");
 		expect(response.headers.get("RateLimit")).toBe("limit=1, remaining=0, reset=7");
+		expect(response.headers.get("Content-Type")).toBe("application/json");
 		expect(await response.json()).toEqual({
 			error: "too_many_requests",
 			error_description: "Rate limit exceeded. Please try again later.",
@@ -147,9 +162,12 @@ describe("rateLimit middleware", () => {
 		expect(handler.calls).toBe(1);
 	});
 
-	test("limits by client address by default", async () => {
+	test("limits by the key the registration derives", async () => {
 		vi.setSystemTime(new Date(WINDOW_START));
-		let middleware = rateLimit({ adapter: new MemoryAdapter({ limit: 1, window: "10 seconds" }) });
+		let middleware = rateLimit({
+			adapter: new MemoryAdapter({ limit: 1, window: "10 seconds" }),
+			key: byClientIp,
+		});
 
 		let first = await middleware(createClientContext("198.51.100.1"), async () => new Response());
 		let second = await middleware(createClientContext("198.51.100.2"), async () => new Response());
@@ -160,17 +178,17 @@ describe("rateLimit middleware", () => {
 		expect(third.status).toBe(429);
 	});
 
-	test("still limits a request that carries no client address", async () => {
+	test("limits on a key's own fallback bucket, so an unidentified caller still spends", async () => {
 		vi.setSystemTime(new Date(WINDOW_START));
 		let adapter = createRecordingAdapter();
-		let middleware = rateLimit({ adapter, prefix: "token" });
+		let middleware = rateLimit({ adapter, prefix: "token", key: byClientIp });
 
 		await middleware(createContext(), async () => new Response());
 
 		expect(adapter.calls[0]?.key).toBe("token:unknown");
 	});
 
-	test("derives the key from the options when one is given", async () => {
+	test("keys on whatever the derivation returns", async () => {
 		let adapter = createRecordingAdapter();
 		let middleware = rateLimit({
 			adapter,
@@ -186,8 +204,8 @@ describe("rateLimit middleware", () => {
 	test("prefixes keys per registration, so two limiters cannot collide", async () => {
 		vi.setSystemTime(new Date(WINDOW_START));
 		let adapter = new MemoryAdapter({ limit: 1, window: "10 seconds" });
-		let first = rateLimit({ adapter });
-		let second = rateLimit({ adapter });
+		let first = rateLimit({ adapter, key: byClientIp });
+		let second = rateLimit({ adapter, key: byClientIp });
 
 		let firstResponse = await first(createClientContext(), async () => new Response());
 		let secondResponse = await second(createClientContext(), async () => new Response());
@@ -211,11 +229,15 @@ describe("rateLimit middleware", () => {
 		let fixed = createRecordingAdapter();
 		let computed = createRecordingAdapter();
 
-		await rateLimit({ adapter: fixed, cost: 5 })(createClientContext(), async () => new Response());
-		await rateLimit({ adapter: computed, cost: (context) => context.url.pathname.length })(
+		await rateLimit({ adapter: fixed, cost: 5, key: byClientIp })(
 			createClientContext(),
 			async () => new Response(),
 		);
+		await rateLimit({
+			adapter: computed,
+			cost: (context) => context.url.pathname.length,
+			key: byClientIp,
+		})(createClientContext(), async () => new Response());
 
 		expect(fixed.calls[0]?.cost).toBe(5);
 		expect(computed.calls[0]?.cost).toBe(6);
@@ -223,7 +245,7 @@ describe("rateLimit middleware", () => {
 
 	test("skip bypasses the limiter entirely", async () => {
 		let adapter = createRecordingAdapter();
-		let middleware = rateLimit({ adapter, skip: () => true });
+		let middleware = rateLimit({ adapter, skip: () => true, key: byClientIp });
 		let handler = createHandler();
 
 		let response = await middleware(createClientContext(), handler.next);
@@ -237,6 +259,7 @@ describe("rateLimit middleware", () => {
 		let adapter = createRecordingAdapter();
 		let middleware = rateLimit({
 			adapter,
+			key: byClientIp,
 			skip: (context) => context.url.pathname === "/health",
 		});
 
@@ -250,6 +273,7 @@ describe("rateLimit middleware", () => {
 		let decisions: RateLimitDecision[] = [];
 		let middleware = rateLimit({
 			adapter: new MemoryAdapter({ limit: 1, window: "10 seconds" }),
+			key: byClientIp,
 			onLimit(_context, decision) {
 				decisions.push(decision);
 				return new Response("<p>slow down</p>", {
@@ -269,7 +293,7 @@ describe("rateLimit middleware", () => {
 	});
 
 	test("fails open when the backend cannot answer, and logs it", async () => {
-		let middleware = rateLimit({ adapter: createFailingAdapter() });
+		let middleware = rateLimit({ adapter: createFailingAdapter(), key: byClientIp });
 		let handler = createHandler();
 
 		let { response, record } = await recorded(() =>
@@ -287,7 +311,11 @@ describe("rateLimit middleware", () => {
 	});
 
 	test("fails closed when the registration asks for it", async () => {
-		let middleware = rateLimit({ adapter: createFailingAdapter(), failurePolicy: "closed" });
+		let middleware = rateLimit({
+			adapter: createFailingAdapter(),
+			failurePolicy: "closed",
+			key: byClientIp,
+		});
 		let handler = createHandler();
 
 		let { response, record } = await recorded(() =>
@@ -306,6 +334,7 @@ describe("rateLimit middleware", () => {
 		let middleware = rateLimit({
 			adapter: new MemoryAdapter({ limit: 1, window: "10 seconds" }),
 			prefix: "login",
+			key: byClientIp,
 		});
 
 		let allowed = await recorded(() =>
@@ -322,7 +351,7 @@ describe("rateLimit middleware", () => {
 	});
 
 	test("runs with no log open, rather than throwing", async () => {
-		let middleware = rateLimit({ adapter: createFailingAdapter() });
+		let middleware = rateLimit({ adapter: createFailingAdapter(), key: byClientIp });
 
 		let response = await middleware(createClientContext(), async () => new Response("ok"));
 
