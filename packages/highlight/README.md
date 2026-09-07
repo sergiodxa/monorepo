@@ -190,8 +190,13 @@ Markdoc node definition for fenced code blocks, exported from `@sdxc/highlight/m
 **Example:**
 
 ````markdown
-```ts {% path="app/routes.ts" title="Route table" %}
-export default [];
+```ts {% path="routes/web.ts" title="Route table" %}
+import { get, route } from "remix/routes";
+
+export default route({
+	home: get("/"),
+	post: get("/:slug"),
+});
 ```
 ````
 
