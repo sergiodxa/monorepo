@@ -112,15 +112,16 @@ export class XML {
 	}
 
 	/**
-	 * Serializes an XML instance or root element into XML text.
+	 * Serializes an XML instance, plain document data, or a root element into XML text.
 	 *
-	 * @param input - The XML instance or root element to serialize
+	 * @param input - The XML instance, document data, or root element to serialize
 	 * @returns A Result containing the XML string or a serialization error
 	 */
-	static stringify(input: XML | XML.Element): Result<string, XMLStringifyError> {
-		if (input instanceof XML) return success(input.toString());
+	static stringify(input: XML | XML.Input): Result<string, XMLStringifyError> {
+		let document = toDocument(input);
+		if (document.status === "failure") return document;
 
-		let result = stringifyDocument({ root: input });
+		let result = stringifyDocument(document.data);
 		if (result.status === "failure") {
 			return failure(new XMLStringifyError(result.error.message));
 		}
@@ -209,4 +210,29 @@ export class XML {
 
 		return roots.map(cloneElement);
 	}
+}
+
+/**
+ * Recognizes the element shape, which is what tells a bare root element apart from
+ * the document that holds one, and what a value arriving from JavaScript is checked
+ * against before anything reads a name off it.
+ */
+function isElement(value: unknown): value is XML.Element {
+	if (typeof value !== "object" || value === null) return false;
+	return typeof (value as XML.Element).name === "string";
+}
+
+/**
+ * Reads the document out of everything `stringify` accepts, wrapping a bare root
+ * element in the document that holds it. An input carrying no root element is the
+ * failure the Result promises, rather than a throw from deeper in serialization.
+ */
+function toDocument(input: XML | XML.Input): Result<XML.Document, XMLStringifyError> {
+	if (input instanceof XML) return success(input.toJSON());
+	if (isElement(input)) return success({ root: input });
+	if (isElement(input.root)) return success(input);
+
+	return failure(
+		new XMLStringifyError("Expected a document carrying a root element, or the element itself."),
+	);
 }

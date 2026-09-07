@@ -250,7 +250,7 @@ describe("XML.stringify", () => {
 		}
 	});
 
-	test("delegates to instance toString when given an XML instance", () => {
+	test("serializes an XML instance", () => {
 		let parsed = XML.parse(
 			`<?xml version="1.0"?><rss version="2.0"><channel><title>Feed</title></channel></rss>`,
 		);
@@ -261,6 +261,58 @@ describe("XML.stringify", () => {
 		expect(isSuccess(serialized)).toBe(true);
 		if (isSuccess(serialized)) {
 			expect(serialized.data).toBe(parsed.data.toString());
+		}
+	});
+
+	test("serializes a document with its declaration", () => {
+		let result = XML.stringify({
+			declaration: { version: "1.0", encoding: "UTF-8" },
+			root: {
+				name: "rss",
+				attributes: { version: "2.0" },
+				children: [{ name: "channel", attributes: {}, children: [] }],
+			},
+		});
+
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) {
+			expect(result.data).toBe(
+				`<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0"><channel/></rss>`,
+			);
+		}
+	});
+
+	test("round-trips the document data toJSON returns", () => {
+		let parsed = XML.parse(
+			`<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Feed</title></channel></rss>`,
+		);
+		if (isFailure(parsed)) throw parsed.error;
+
+		let result = XML.stringify(parsed.data.toJSON());
+
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) expect(result.data).toBe(parsed.data.toString());
+	});
+
+	test("returns a failure when an instance holds a tree XML cannot express", () => {
+		let xml = new XML({ root: { name: "content:encoded", attributes: {}, children: [] } });
+
+		let result = XML.stringify(xml);
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) {
+			expect(result.error).toBeInstanceOf(XMLStringifyError);
+			expect(result.error.message).toContain("Missing namespace declaration");
+		}
+	});
+
+	test("returns a failure when the input is neither a document nor an element", () => {
+		let result = XML.stringify({ declaration: { version: "1.0" } } as unknown as XML.Input);
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) {
+			expect(result.error).toBeInstanceOf(XMLStringifyError);
+			expect(result.error.message).toContain("root element");
 		}
 	});
 

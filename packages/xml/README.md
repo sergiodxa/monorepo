@@ -80,30 +80,31 @@ if (isFailure(result)) throw result.error;
 let source = result.data; // <rss version="2.0"><channel><title>Feed</title></channel></rss>
 ```
 
-A declaration belongs to a document rather than to an element, so build the document to get
-one:
+A declaration belongs to a document rather than to an element, so pass the whole document to
+write one:
 
 ```typescript
-let xml = new XML({
+let result = XML.stringify({
 	declaration: { version: "1.0", encoding: "UTF-8" },
 	root: { name: "rss", attributes: { version: "2.0" } },
 });
 
-xml.toString();
 // <?xml version="1.0" encoding="UTF-8"?>
 // <rss version="2.0"/>
 ```
 
 ### Round-Trip A Document
 
-`toJSON` hands back plain data the `XML` constructor accepts, and `toString` serializes the
-instance in place.
+`toJSON` hands back plain data that both the `XML` constructor and `XML.stringify` accept,
+and `toString` serializes the instance in place.
 
 ```typescript
 let json = xml.toJSON();
-let copy = new XML(json);
 
+let copy = new XML(json);
 let source = copy.toString();
+
+XML.stringify(json); // the same text, as a Result
 ```
 
 ## API
@@ -112,10 +113,10 @@ let source = copy.toString();
 
 Parses XML text into an `XML` instance.
 
-### `XML.stringify(input: XML | XML.Element): Result<string, XMLStringifyError>`
+### `XML.stringify(input: XML | XML.Input): Result<string, XMLStringifyError>`
 
-Serializes an instance, or a bare root element, into XML text. An element carries no
-declaration; pass an instance to write one.
+Serializes an instance, whole document data, or a bare root element into XML text. An element
+carries no declaration; pass a document or an instance to write one.
 
 ```typescript
 XML.stringify({ name: "rss", attributes: { version: "2.0" } });
@@ -156,7 +157,9 @@ The document as plain serializable data.
 
 ### `xml.toString(): string`
 
-The document as XML text.
+The document as XML text. This is the one entry point that throws an `XMLStringifyError`
+rather than returning it, because `toString` has no room for a `Result`; reach for
+`XML.stringify` where a failure is a value you want to handle.
 
 ### `XMLParseError`
 
@@ -171,7 +174,8 @@ prefix with no namespace declared in scope.
 ### Types
 
 Every public type lives in the `XML` namespace: `XML.Declaration`, `XML.Element`,
-`XML.Node`, `XML.Document`, and `XML.Predicate`.
+`XML.Node`, `XML.Document`, `XML.Input`, and `XML.Predicate`. `XML.Input` is what
+`stringify` accepts: a whole `XML.Document` or the root `XML.Element` alone.
 
 ```typescript
 import type { XML } from "@sdxc/xml";
