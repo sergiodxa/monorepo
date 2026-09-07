@@ -17,7 +17,7 @@ let sitemap = new Sitemap();
 
 sitemap.append(new URL("https://example.com/"));
 sitemap.append(new URL("https://example.com/about"));
-sitemap.append(new URL("https://example.com/blog"), new Date("2024-01-15"));
+sitemap.append(new URL("https://example.com/blog"), { updatedAt: new Date("2024-01-15") });
 
 let xml = sitemap.toString();
 // Returns valid XML sitemap
@@ -39,14 +39,14 @@ Creates a new empty sitemap.
 let sitemap = new Sitemap();
 ```
 
-#### `sitemap.append(loc: URL, options?: AppendOptions): void`
+#### `sitemap.append(loc: URL, options?: Sitemap.AppendOptions): void`
 
 Add a URL to the sitemap.
 
 **Parameters:**
 
-- `loc`: The URL to add (must be a `URL` object)
-- `options`: Optional `AppendOptions` object with `lastmod`, `changefreq`, and `priority`
+- `loc`: The URL to add, as a `URL` instance
+- `options`: Optional `Sitemap.AppendOptions` object with `updatedAt`, `frequency`, and `priority`
 
 **Example:**
 
@@ -54,16 +54,19 @@ Add a URL to the sitemap.
 // Simple - just URL
 sitemap.append(new URL("https://example.com/page"));
 
-// With lastmod only
-sitemap.append(new URL("https://example.com/updated"), { lastmod: new Date() });
+// With updatedAt only
+sitemap.append(new URL("https://example.com/updated"), { updatedAt: new Date() });
 
 // With all options
 sitemap.append(new URL("https://example.com/important"), {
-	lastmod: new Date(),
-	changefreq: "weekly",
+	updatedAt: new Date(),
+	frequency: "weekly",
 	priority: 0.8,
 });
 ```
+
+`updatedAt` is serialized as `<lastmod>` and `frequency` as `<changefreq>`, the element
+names the sitemap protocol expects.
 
 #### `sitemap.size: number`
 
@@ -89,7 +92,16 @@ Generate the XML sitemap string.
 
 ```typescript
 let xml = sitemap.toString();
-// <?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">...</urlset>
+// <?xml version="1.0" encoding="UTF-8"?>
+// <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">...</urlset>
+```
+
+An empty sitemap serializes to a self-closing root:
+
+```typescript
+new Sitemap().toString();
+// <?xml version="1.0" encoding="UTF-8"?>
+// <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"/>
 ```
 
 ### Types
@@ -100,126 +112,177 @@ Types are exported via the `Sitemap` namespace:
 import { Sitemap } from "@sdxc/sitemap";
 
 // Access types via namespace
-type URL = Sitemap.URL;
-type ChangeFreq = Sitemap.ChangeFreq;
+type Frequency = Sitemap.Frequency;
+type Entry = Sitemap.Entry;
 type AppendOptions = Sitemap.AppendOptions;
 ```
 
-#### `Sitemap.URL`
+#### `Sitemap.Frequency`
 
 ```typescript
-interface URL {
-	loc: globalThis.URL;
-	lastmod?: Date;
-	changefreq?: ChangeFreq;
-	priority?: number;
-}
+type Frequency = "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
 ```
 
-#### `Sitemap.ChangeFreq`
+#### `Sitemap.Entry`
 
 ```typescript
-type ChangeFreq = "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
+interface Entry {
+	loc: globalThis.URL;
+	updatedAt?: Date;
+	frequency?: Frequency;
+	priority?: number;
+}
 ```
 
 #### `Sitemap.AppendOptions`
 
 ```typescript
 interface AppendOptions {
-	lastmod?: Date;
-	changefreq?: ChangeFreq;
+	updatedAt?: Date;
+	frequency?: Frequency;
 	/** Priority value between 0.0 and 1.0, default is 0.5 */
 	priority?: number;
 }
 ```
 
-## Integration with React Router
+## Integration with Remix
 
 ### Sitemap Route
 
-Create a route that generates a sitemap dynamically:
+Declare the URL alongside the pages it lists, so the sitemap and the links it points at
+come from one route table:
 
 ```typescript
-// app/routes/sitemap[.]xml.ts
-import { Sitemap } from "@sdxc/sitemap";
-import type { Route } from "./+types/sitemap[.]xml";
+// routes/web.ts
+import { get, route } from "remix/routes";
 
-export async function loader({ request }: Route.LoaderArgs) {
-	let baseUrl = new URL(request.url).origin;
+export default route({
+	home: get("/"),
+	about: get("/about"),
+	sitemap: get("/sitemap.xml"),
+	sectionSitemap: get("/sitemap-:section.xml"),
+	post: get("/blog/:slug"),
+});
+```
+
+Build the document in a controller, resolving every entry against the request's own URL so
+one controller serves production and every preview deployment:
+
+```typescript
+// app/http/controllers/sitemap.ts
+import { xml } from "@sdxc/http/response";
+import { Sitemap } from "@sdxc/sitemap";
+import { createAction } from "remix/router";
+
+import routes from "~/routes/web";
+
+export default createAction(routes.sitemap, async ({ url }) => {
 	let sitemap = new Sitemap();
 
-	// Add static pages
-	sitemap.append(new URL("/", baseUrl));
-	sitemap.append(new URL("/about", baseUrl));
-	sitemap.append(new URL("/contact", baseUrl));
+	sitemap.append(new URL(routes.home.href(), url), { priority: 1, frequency: "weekly" });
+	sitemap.append(new URL(routes.about.href(), url), { priority: 0.5, frequency: "yearly" });
 
-	// Add dynamic pages from database
 	let posts = await db.query.posts.findMany({
 		columns: { slug: true, updatedAt: true },
 	});
 
 	for (let post of posts) {
-		sitemap.append(new URL(`/blog/${post.slug}`, baseUrl), post.updatedAt);
+		sitemap.append(new URL(routes.post.href({ slug: post.slug }), url), {
+			updatedAt: post.updatedAt,
+		});
 	}
 
-	return new Response(sitemap.toString(), {
-		headers: {
-			"Content-Type": "application/xml",
-			"Cache-Control": "public, max-age=3600",
-		},
+	return xml(sitemap.toString(), {
+		headers: { "Cache-Control": "public, max-age=3600" },
 	});
-}
+});
+```
+
+Map the controller to its route where the router is assembled:
+
+```typescript
+// bootstrap/app.tsx
+import { createRouter } from "remix/router";
+
+import sitemap from "~/app/http/controllers/sitemap";
+import routes from "~/routes/web";
+
+let router = createRouter();
+
+router.map(routes.sitemap, sitemap);
 ```
 
 ### Sitemap Index
 
-For large sites, create a sitemap index:
+A site past 50,000 URLs splits into one sitemap per section, listed by an index document.
+The index root is `<sitemapindex>` rather than `<urlset>`, so serialize it with
+[`@sdxc/xml`](/packages/xml) and serve each section from its own route:
 
 ```typescript
-import { Sitemap } from "@sdxc/sitemap";
+// app/http/controllers/sitemap.ts
+import { xml } from "@sdxc/http/response";
+import { unwrap } from "@sdxc/result";
+import { XML } from "@sdxc/xml";
+import { createAction } from "remix/router";
 
-export async function loader({ request }: Route.LoaderArgs) {
-	let baseUrl = new URL(request.url).origin;
+import routes from "~/routes/web";
 
-	// Generate sitemap index manually (not covered by this package)
-	let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <sitemap><loc>${baseUrl}/sitemap-pages.xml</loc></sitemap>
-  <sitemap><loc>${baseUrl}/sitemap-blog.xml</loc></sitemap>
-  <sitemap><loc>${baseUrl}/sitemap-products.xml</loc></sitemap>
-</sitemapindex>`;
+const SECTIONS = ["pages", "blog", "products"];
 
-	return new Response(xml, {
-		headers: { "Content-Type": "application/xml" },
-	});
-}
+export default createAction(routes.sitemap, ({ url }) => {
+	let source = unwrap(
+		XML.stringify({
+			declaration: { version: "1.0", encoding: "UTF-8" },
+			root: {
+				name: "sitemapindex",
+				attributes: { xmlns: "http://www.sitemaps.org/schemas/sitemap/0.9" },
+				children: SECTIONS.map((section) => ({
+					name: "sitemap",
+					children: [
+						{
+							name: "loc",
+							children: [new URL(routes.sectionSitemap.href({ section }), url).toString()],
+						},
+					],
+				})),
+			},
+		}),
+	);
+
+	return xml(source);
+});
 ```
 
 ## Pattern: Cached Sitemap
 
-Cache the sitemap to avoid regenerating on every request:
+A sitemap over a full corpus costs a query per section, so serve it from
+[`@sdxc/cache`](/packages/cache) and rebuild it on a miss. Passing `waitUntil` hands the
+write over, so the request that paid for the rebuild returns without waiting on KV:
 
 ```typescript
-import { Sitemap } from "@sdxc/sitemap";
 import { WorkerKVCache } from "@sdxc/cache/worker-kv";
+import { xml } from "@sdxc/http/response";
+import { Sitemap } from "@sdxc/sitemap";
+import { env, waitUntil } from "cloudflare:workers";
+import { createAction } from "remix/router";
 
-export async function loader({ context }: Route.LoaderArgs) {
-	let cache = new WorkerKVCache(context.env.KV, { waitUntil: context.waitUntil });
+import routes from "~/routes/web";
 
-	let xml = await cache.fetch(
+export default createAction(routes.sitemap, async ({ url }) => {
+	let cache = new WorkerKVCache(env.CACHE, { waitUntil });
+
+	let source = await cache.fetch(
 		"sitemap",
 		async () => {
 			let sitemap = new Sitemap();
-			// ... populate sitemap
+			sitemap.append(new URL(routes.home.href(), url));
 			return sitemap.toString();
 		},
-		{ ttl: 3600 }, // Cache for 1 hour
+		{ ttl: "1 hour" },
 	);
 
-	return new Response(xml, {
-		headers: { "Content-Type": "application/xml" },
-	});
-}
+	return xml(source);
+});
 ```
 
 ## Pattern: Multiple Language Sitemaps
@@ -248,8 +311,8 @@ function generateLocalizedSitemap(locale: string, baseUrl: string) {
 
 ## Tips
 
-1. **Use URL objects** - The `loc` parameter must be a `URL` object, not a string
-2. **Lastmod is optional** - Only include it if you track actual modification dates
-3. **Cache in production** - Sitemaps don't need to be generated on every request
+1. **Use URL objects** - Pass `loc` as a `URL` instance
+2. **Set `updatedAt` when you track modification dates** - it emits `<lastmod>` for that entry
+3. **Cache in production** - serve the serialized XML from a cache and rebuild it on a miss
 4. **Limit to 50,000 URLs** - Per sitemap spec, use sitemap index for larger sites
 5. **Include in robots.txt** - Reference your sitemap in robots.txt for discovery
