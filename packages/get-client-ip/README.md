@@ -14,11 +14,15 @@ This package provides a simple utility to extract that header value in Cloudflar
 
 ```typescript
 import { getClientIP } from "@sdxc/get-client-ip";
+import { ok } from "@sdxc/response";
+import { createAction } from "remix/router";
 
-export async function loader({ request }: Route.LoaderArgs) {
-	let ipAddress = getClientIP(request);
-	console.log("Client IP:", ipAddress);
-}
+import routes from "~/routes/web";
+
+/** GET /api/whoami — answers with the caller's own IP address. */
+export default createAction(routes.api.whoami, (ctx) => {
+	return ok({ ip: getClientIP(ctx.request) });
+});
 ```
 
 ## API
@@ -51,54 +55,61 @@ Use the client IP to implement rate limiting:
 
 ```typescript
 import { getClientIP } from "@sdxc/get-client-ip";
+import { ok, tooManyRequests } from "@sdxc/response";
+import { env } from "cloudflare:workers";
+import { createAction } from "remix/router";
 
-export async function loader({ request, context }: Route.LoaderArgs) {
-	let ipAddress = getClientIP(request);
+import routes from "~/routes/web";
 
-	if (ipAddress) {
-		let key = `rate-limit:${ipAddress}`;
-		let requests = await context.cloudflare.env.KV.get(key);
+/** How many requests one IP may spend inside {@link WINDOW_SECONDS}. */
+const LIMIT = 100;
+const WINDOW_SECONDS = 60;
 
-		if (requests && parseInt(requests) > 100) {
-			throw new Response("Too many requests", { status: 429 });
-		}
+/** GET /api/status — serves the status, spending the caller's per-minute budget first. */
+export default createAction(routes.api.status, async (ctx) => {
+	let key = `rate-limit:${getClientIP(ctx.request) ?? "unknown"}`;
+	let spent = Number((await env.KV.get(key)) ?? "0");
 
-		await context.cloudflare.env.KV.put(key, String(parseInt(requests ?? "0") + 1), {
-			expirationTtl: 60,
-		});
-	}
+	if (spent >= LIMIT) return tooManyRequests({ error: "Rate limit exceeded" });
 
-	// Continue with request handling
-}
+	await env.KV.put(key, String(spent + 1), { expirationTtl: WINDOW_SECONDS });
+
+	return ok({ status: "up" });
+});
 ```
+
+A missing header falls back to a shared `unknown` bucket, so a request that arrives without one still spends a budget.
 
 ### Geolocation Logging
 
 Log client IP alongside geolocation data for analytics:
 
-```typescript
+```tsx
 import { getClientIP } from "@sdxc/get-client-ip";
-import { getLoggerFromContext } from "@sdxc/logger";
+import { createAction } from "remix/router";
 
-export async function loader({ request, context }: Route.LoaderArgs) {
-	let logger = getLoggerFromContext(context);
-	let ipAddress = getClientIP(request);
-	let cf = request.cf;
+import DashboardView from "~/resources/views/dashboard";
+import routes from "~/routes/web";
 
-	logger.info("request.received", {
-		ip: ipAddress,
+/** GET /dashboard — records where the visitor connected from, then renders the page. */
+export default createAction(routes.dashboard, (ctx) => {
+	let cf = ctx.request.cf;
+
+	ctx.log.note("request.received", {
+		ip: getClientIP(ctx.request),
 		country: cf?.country,
 		city: cf?.city,
 		region: cf?.region,
 	});
 
-	// Continue with request handling
-}
+	return ctx.render(<DashboardView />);
+});
 ```
 
 ## Related Packages
 
 - [`@sdxc/logger`](../logger/README.md) - For logging client IP with requests
+- [`@sdxc/response`](../response/README.md) - Status helpers such as the `429` a rate limit answers with
 
 ## Tips
 
