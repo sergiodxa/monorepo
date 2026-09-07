@@ -689,20 +689,22 @@ that genuinely differs per user wants `Policies.private()` instead.
 ## Pattern: API Endpoint with Validation
 
 ```typescript
-import { ok, badRequest, notFound } from "@sdxc/http/response/json";
+import { ok, badRequest } from "@sdxc/http/response/json";
+import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import { z } from "zod";
+import * as s from "remix/data-schema";
+import { email, minLength } from "remix/data-schema/checks";
 
-let schema = z.object({
-	email: z.string().email(),
-	name: z.string().min(1),
+let schema = s.object({
+	email: s.string().pipe(email()),
+	name: s.string().pipe(minLength(1)),
 });
 
 export async function handler(request: Request): Promise<Response> {
 	let result = await validate(request, schema);
 
 	if (isFailure(result)) {
-		return badRequest({ errors: result.error });
+		return badRequest({ errors: result.error.issues });
 	}
 
 	let user = await createUser(result.data);
@@ -743,8 +745,8 @@ export async function handler(request: Request): Promise<Response> {
 
 ## Related Packages
 
-- [`@sdxc/response`](/packages/response) - React Router response helpers using `data()`
-- [`@sdxc/validate`](/packages/validate) - Request validation with Zod schemas
+- [`@sdxc/response`](/packages/response) - Status-named `Response` helpers that add an `ok` discriminant to JSON bodies
+- [`@sdxc/validate`](/packages/validate) - Request, `FormData`, and object validation against any Standard Schema, returning a `Result`
 - [`@sdxc/result`](/packages/result) - Result type for error handling
 - [`@sdxc/crypto`](/packages/crypto) - WebCrypto primitives, used for `ETag` digests
 - [`@sdxc/duration`](/packages/duration) - Duration values, used for every cache age
