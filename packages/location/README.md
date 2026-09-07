@@ -207,36 +207,40 @@ return redirect(returnTo);
 Use Location with `redirect()` from `@sdxc/response` to build type-safe redirects:
 
 ```typescript
-import { redirect } from "@sdxc/response";
 import { Location } from "@sdxc/location";
+import { redirect } from "@sdxc/response";
+import { createAction } from "remix/router";
 
-export async function loader({ request }: Route.LoaderArgs) {
-	let session = await getSession(request);
+import routes from "~/routes/web";
+
+export default createAction(routes.dashboard, async (ctx) => {
+	let session = await getSession(ctx.request);
 
 	if (!session) {
 		let location = new Location({
-			pathname: "/login",
-			search: new URLSearchParams({ returnTo: new URL(request.url).pathname }),
+			pathname: routes.login.href(),
+			search: new URLSearchParams({ returnTo: new URL(ctx.request.url).pathname }),
 		});
 
 		throw redirect(location);
 	}
 
 	// ...
-}
+});
 ```
 
-### Usage with href() for dynamic routes
+### Usage with typed route helpers for dynamic routes
 
-Combine Location with `href()` from react-router for type-safe dynamic route building:
+Combine Location with the `href()` method every route in a `remix/routes` route map carries, so a path with params is built from the pattern instead of a string:
 
 ```typescript
-import { href } from "react-router";
 import { Location } from "@sdxc/location";
+
+import routes from "~/routes/web";
 
 // Build a location with a dynamic route path
 let location = new Location({
-	pathname: href("/users/:id", { id: userId }),
+	pathname: routes.users.show.href({ id: userId }),
 	search: new URLSearchParams({ tab: "settings" }),
 });
 
