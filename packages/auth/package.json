@@ -33,7 +33,7 @@
 		"@sdxc/result": "workspace:*"
 	},
 	"devDependencies": {
-		"@sdxc/kv-cache": "workspace:*",
+		"@sdxc/cache": "workspace:*",
 		"remix": "3.0.0-rc.1"
 	},
 	"peerDependencies": {

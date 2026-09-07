@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Cache } from "@sdxc/kv-cache";
+import type { Cache } from "@sdxc/cache";
 
 import { JWK, JWT } from "@sdxc/jwt";
 import { HttpResponse, http } from "msw";
@@ -775,12 +775,14 @@ describe("caching", () => {
 		expect(count(DISCOVERY_URL)).toBe(2);
 	});
 
-	test("accepts a KV-backed store as its cache", () => {
+	test("accepts any cache as its store", () => {
 		/**
-		 * The assignment is the assertion: a `cache` option a KV-backed store cannot be
-		 * passed to fails typechecking here, at the package's own boundary.
+		 * The assignment is the assertion: a `cache` option a cache cannot be passed to
+		 * fails typechecking here, at the package's own boundary. It holds because the
+		 * cache reads a string back as a string, so its generic methods satisfy these
+		 * non-generic ones.
 		 */
-		let accept = (store: Cache.KVStore): Issuer.CacheStore => store;
+		let accept = (store: Cache): Issuer.CacheStore => store;
 
 		expect(accept).toBeTypeOf("function");
 	});

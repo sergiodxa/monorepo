@@ -53,12 +53,12 @@ import { ManagementClient } from "@sdxc/auth/management-client";
 import { RelyingParty } from "@sdxc/auth/relying-party";
 import { ResourceServer } from "@sdxc/auth/resource-server";
 import { ServiceClient } from "@sdxc/auth/service-client";
-import { Cache } from "@sdxc/kv-cache";
+import { WorkerKVCache } from "@sdxc/cache/worker-kv";
 import { env } from "cloudflare:workers";
 
 /** The server every other class talks to. One per issuer, `for` handing it out. */
 let issuer = Issuer.for(env.OIDC_ISSUER, {
-	cache: new Cache.KVStore(env.CACHE, (promise) => ctx.waitUntil(promise)),
+	cache: new WorkerKVCache(env.CACHE, { waitUntil: ctx.waitUntil.bind(ctx) }),
 });
 
 /** Signing a person in through the browser: the login, callback, and logout routes. */
@@ -189,7 +189,7 @@ itself.
 export function issuer(): Issuer {
 	return Issuer.for(AUTH_ORIGIN, {
 		identifier: AUTH_IDENTIFIER,
-		cache: new Cache.KVStore(env.CACHE, (promise) => waitUntil(promise)),
+		cache: new WorkerKVCache(env.CACHE, { waitUntil }),
 	});
 }
 ```
@@ -203,7 +203,7 @@ store belonging to the request making it:
 ```typescript
 Issuer.for(AUTH_ORIGIN, {
 	metadata: AUTH_METADATA,
-	cache: () => new Cache.KVStore(getEnv("CACHE"), getEnv("waitUntil")),
+	cache: () => new WorkerKVCache(getEnv("CACHE"), { waitUntil: getEnv("waitUntil") }),
 });
 ```
 
@@ -1064,9 +1064,9 @@ in-isolate memo, and both client classes count their outbound work against a bud
 
 ```typescript
 import { CloudflareAdapter } from "@sdxc/rate-limit";
-import { Cache } from "@sdxc/kv-cache";
+import { WorkerKVCache } from "@sdxc/cache/worker-kv";
 
-let cache = new Cache.KVStore(env.CACHE, (promise) => ctx.waitUntil(promise));
+let cache = new WorkerKVCache(env.CACHE, { waitUntil: ctx.waitUntil.bind(ctx) });
 
 let issuer = Issuer.for(env.OIDC_ISSUER, { cache, ttl: "1 hour" });
 
@@ -1098,7 +1098,9 @@ arrive with the request states its cache as a factory, so a long-lived instance 
 a `waitUntil` belonging to a request that has already answered:
 
 ```typescript
-Issuer.for(AUTH_ORIGIN, { cache: () => new Cache.KVStore(getEnv("CACHE"), getEnv("waitUntil")) });
+Issuer.for(AUTH_ORIGIN, {
+	cache: () => new WorkerKVCache(getEnv("CACHE"), { waitUntil: getEnv("waitUntil") }),
+});
 ```
 
 ## Behavior
@@ -1254,7 +1256,7 @@ Issuer.for(AUTH_ORIGIN, { cache: () => new Cache.KVStore(getEnv("CACHE"), getEnv
   `JWK` key resolver `Issuer.keys()` answers with
 - [`@sdxc/crypto`](/packages/crypto) - The digests, random tokens, and base64url encoding
   behind PKCE, the correlation values, and `at_hash`
-- [`@sdxc/kv-cache`](/packages/kv-cache) - `Cache.KVStore` satisfies `Issuer.CacheStore`,
+- [`@sdxc/cache`](/packages/cache) - its adapters satisfy `Issuer.CacheStore`,
   so an app supplies the shared tier and this package depends on the shape alone
 - [`@sdxc/rate-limit`](/packages/rate-limit) - The `Adapter` both client classes count
   against

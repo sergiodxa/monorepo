@@ -15,6 +15,7 @@
 	"dependencies": {
 		"@sdxc/auth": "workspace:*",
 		"@sdxc/billing": "workspace:*",
+		"@sdxc/cache": "workspace:*",
 		"@sdxc/cron": "workspace:*",
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/data-table-d1": "workspace:*",
@@ -24,7 +25,6 @@
 		"@sdxc/i18n": "workspace:*",
 		"@sdxc/icons": "workspace:*",
 		"@sdxc/jobs": "workspace:*",
-		"@sdxc/kv-cache": "workspace:*",
 		"@sdxc/location": "workspace:*",
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/mail": "workspace:*",

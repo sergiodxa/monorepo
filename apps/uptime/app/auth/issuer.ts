@@ -8,7 +8,7 @@
  */
 
 import { Issuer } from "@sdxc/auth/issuer";
-import { Cache } from "@sdxc/kv-cache";
+import { WorkerKVCache } from "@sdxc/cache/worker-kv";
 import { env, waitUntil } from "cloudflare:workers";
 
 /** Origin the provider serves its discovery document and every endpoint on. */
@@ -31,6 +31,6 @@ const AUTH_IDENTIFIER = "auth.sergiodxa.com";
 export function issuer(): Issuer {
 	return Issuer.for(AUTH_ORIGIN, {
 		identifier: AUTH_IDENTIFIER,
-		cache: new Cache.KVStore(env.KV, (promise) => waitUntil(promise)),
+		cache: new WorkerKVCache(env.KV, { waitUntil }),
 	});
 }

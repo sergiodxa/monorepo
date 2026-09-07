@@ -39,8 +39,8 @@ A test that would otherwise stand in for a Cloudflare binding belongs in the Wor
 instead: name it `*.workers.test.ts` and it runs inside workerd with real bindings, taken from
 the app's own `wrangler.jsonc` (or, for a package, declared inline in the `packages-workers`
 project). That is how a KV, D1 or R2 assertion gets checked against Cloudflare's implementation
-rather than a hand-written stub — which is what caught `@sdxc/kv-cache` asserting a 30-second KV
-TTL that a real binding rejects. `node:sqlite` does not exist in workerd, so a test whose
+rather than a hand-written stub — which is what caught a cache asserting a 30-second KV TTL that
+a real binding rejects. `node:sqlite` does not exist in workerd, so a test whose
 database comes from `@sdxc/cloudflare-mocks/sqlite` stays on the threads pool.
 
 Nothing runs under `bun test` any more — `bunfig.toml` preloads `scripts/reject-bun-test.ts`,

@@ -160,7 +160,7 @@ function instanceKey(url: string | URL, options: Issuer.Options): string {
  * and every read of it is checked against the issuer it was asked for.
  *
  * @example
- * let issuer = Issuer.for(env.OIDC_ISSUER, { cache: new Cache.KVStore(env.CACHE, waitUntil) });
+ * let issuer = Issuer.for(env.OIDC_ISSUER, { cache: new WorkerKVCache(env.CACHE, { waitUntil }) });
  * let token = await issuer.verifyIdToken(raw, { audience: clientId });
  *
  * @example
@@ -694,7 +694,7 @@ export namespace Issuer {
 
 	/**
 	 * The cache tier an `Issuer` shares with every isolate reading the same issuer.
-	 * `Cache.KVStore` satisfies it, and so does any store keyed by a string.
+	 * Any store keyed by a string satisfies it, a `@sdxc/cache` adapter included.
 	 */
 	export interface CacheStore {
 		/** Reads an entry, or `null` when it is missing or expired. */

@@ -733,7 +733,7 @@ test("caches the response after replying", async () => {
   its generated SQL is covered by the parity tests in this package
 - [`@sdxc/data-table-sqlstorage`](/packages/data-table-sqlstorage) - `DatabaseDriver` over a
   Durable Object `SqlStorage`, including real transaction atomicity
-- [`@sdxc/kv-cache`](/packages/kv-cache) - Caching over a KV namespace
+- [`@sdxc/cache`](/packages/cache) - Caching over a KV namespace or a map
 - [`@sdxc/session-storage-kv`](/packages/session-storage-kv) - Session storage over a KV
   namespace
 

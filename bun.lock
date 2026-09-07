@@ -51,12 +51,12 @@
       "name": "@apps/blog",
       "dependencies": {
         "@sdxc/auth": "workspace:*",
+        "@sdxc/cache": "workspace:*",
         "@sdxc/crypto": "workspace:*",
         "@sdxc/data-table-d1": "workspace:*",
         "@sdxc/highlight": "workspace:*",
         "@sdxc/http": "workspace:*",
         "@sdxc/jwt": "workspace:*",
-        "@sdxc/kv-cache": "workspace:*",
         "@sdxc/lazy-route": "workspace:*",
         "@sdxc/location": "workspace:*",
         "@sdxc/logger": "workspace:*",
@@ -68,6 +68,7 @@
         "@sdxc/service-container": "workspace:*",
         "@sdxc/sitemap": "workspace:*",
         "@sdxc/strings": "workspace:*",
+        "@sdxc/types": "workspace:*",
         "@sdxc/u": "workspace:*",
         "@sdxc/ui": "workspace:*",
         "@sdxc/validate": "workspace:*",
@@ -193,11 +194,11 @@
       "name": "@apps/reader",
       "dependencies": {
         "@sdxc/auth": "workspace:*",
+        "@sdxc/cache": "workspace:*",
         "@sdxc/data-table-sqlstorage": "workspace:*",
         "@sdxc/feed": "workspace:*",
         "@sdxc/http": "workspace:*",
         "@sdxc/i18n": "workspace:*",
-        "@sdxc/kv-cache": "workspace:*",
         "@sdxc/lazy-route": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/pagination": "workspace:*",
@@ -220,6 +221,7 @@
       "dependencies": {
         "@sdxc/auth": "workspace:*",
         "@sdxc/billing": "workspace:*",
+        "@sdxc/cache": "workspace:*",
         "@sdxc/cron": "workspace:*",
         "@sdxc/crypto": "workspace:*",
         "@sdxc/data-table-d1": "workspace:*",
@@ -229,7 +231,6 @@
         "@sdxc/i18n": "workspace:*",
         "@sdxc/icons": "workspace:*",
         "@sdxc/jobs": "workspace:*",
-        "@sdxc/kv-cache": "workspace:*",
         "@sdxc/location": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/mail": "workspace:*",
@@ -285,7 +286,7 @@
         "@sdxc/result": "workspace:*",
       },
       "devDependencies": {
-        "@sdxc/kv-cache": "workspace:*",
+        "@sdxc/cache": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
       "peerDependencies": {
@@ -501,16 +502,6 @@
       "dependencies": {
         "@sdxc/duration": "workspace:*",
         "jose": "^6.2.10",
-      },
-    },
-    "packages/kv-cache": {
-      "name": "@sdxc/kv-cache",
-      "version": "0.0.0",
-      "dependencies": {
-        "@sdxc/duration": "workspace:*",
-      },
-      "devDependencies": {
-        "@cloudflare/workers-types": "^5.20260901.1",
       },
     },
     "packages/lazy-route": {
@@ -1426,8 +1417,6 @@
     "@sdxc/jobs": ["@sdxc/jobs@workspace:packages/jobs"],
 
     "@sdxc/jwt": ["@sdxc/jwt@workspace:packages/jwt"],
-
-    "@sdxc/kv-cache": ["@sdxc/kv-cache@workspace:packages/kv-cache"],
 
     "@sdxc/lazy-route": ["@sdxc/lazy-route@workspace:packages/lazy-route"],
 

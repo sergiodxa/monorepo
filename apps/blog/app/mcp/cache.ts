@@ -14,10 +14,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Cache } from "@sdxc/cache";
 import type { CallToolResult, ToolMiddleware } from "@sdxc/mcp";
+import type { JSONSerialized } from "@sdxc/types";
 
+import { WorkerKVCache } from "@sdxc/cache/worker-kv";
 import { Hex, sha256 } from "@sdxc/crypto";
-import { Cache } from "@sdxc/kv-cache";
 import { isFailure } from "@sdxc/result";
 
 import { getEnv } from "~/app/http/middleware/env";
@@ -33,8 +35,8 @@ const TTL = "5 minutes";
 const PREFIX = "mcp";
 
 /** Opens the KV-backed store, deferring writes so a miss never waits on KV. */
-function store(): Cache.KVStore {
-	return new Cache.KVStore(getEnv("CACHE"), getEnv("waitUntil"));
+function store(): Cache {
+	return new WorkerKVCache(getEnv("CACHE"), { waitUntil: getEnv("waitUntil") });
 }
 
 /**
@@ -68,12 +70,11 @@ export async function cached<T>(
 	name: string,
 	value: unknown,
 	produce: () => Promise<T>,
-): Promise<T> {
+): Promise<JSONSerialized<T>> {
 	let key = await keyFor(name, value);
-	if (key === null) return produce();
+	if (key !== null) return store().fetch(key, produce, { ttl: TTL });
 
-	let text = await store().fetch(key, async () => JSON.stringify(await produce()), { ttl: TTL });
-	return JSON.parse(text) as T;
+	return JSON.parse(JSON.stringify(await produce())) as JSONSerialized<T>;
 }
 
 /**
@@ -90,11 +91,11 @@ export function cacheToolResults(): ToolMiddleware {
 		if (key === null) return next();
 
 		let cache = store();
-		let hit = await cache.read(key);
-		if (hit !== null) return JSON.parse(hit) as CallToolResult;
+		let hit = await cache.read<CallToolResult>(key);
+		if (hit !== null) return hit;
 
 		let result = await next();
-		if (!result.isError) await cache.write(key, JSON.stringify(result), { ttl: TTL });
+		if (!result.isError) await cache.write(key, result, { ttl: TTL });
 		return result;
 	};
 }

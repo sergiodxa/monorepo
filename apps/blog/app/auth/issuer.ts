@@ -8,7 +8,7 @@
  */
 
 import { Issuer } from "@sdxc/auth/issuer";
-import { Cache } from "@sdxc/kv-cache";
+import { WorkerKVCache } from "@sdxc/cache/worker-kv";
 
 import { getEnv } from "~/app/http/middleware/env";
 
@@ -44,6 +44,6 @@ export function issuer(): Issuer {
 	return Issuer.for(AUTH_ORIGIN, {
 		identifier: AUTH_IDENTIFIER,
 		metadata: AUTH_METADATA,
-		cache: () => new Cache.KVStore(getEnv("CACHE"), getEnv("waitUntil")),
+		cache: () => new WorkerKVCache(getEnv("CACHE"), { waitUntil: getEnv("waitUntil") }),
 	});
 }
