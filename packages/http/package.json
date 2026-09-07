@@ -7,7 +7,6 @@
 	"exports": {
 		"./content-type": "./src/content-type.ts",
 		"./status-code": "./src/status-code.ts",
-		"./request": "./src/request.ts",
 		"./response": "./src/response.ts",
 		"./response/json": "./src/response/json.ts",
 		"./response/html": "./src/response/html.ts",

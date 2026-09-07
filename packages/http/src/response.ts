@@ -26,7 +26,6 @@ export function json<T>(body: T, init?: ResponseInit): Response {
 
 /**
  * Creates a Response with plain text content and appropriate Content-Type header.
- * The charset is set to UTF-8 automatically.
  * @param body - The text string to send
  * @param init - Optional response options (status, headers, etc.)
  * @returns A new Response instance with plain text content
@@ -43,7 +42,6 @@ export function text(body: string, init?: ResponseInit): Response {
 
 /**
  * Creates a Response with HTML content and appropriate Content-Type header.
- * The charset is set to UTF-8 automatically.
  * @param body - The HTML string to send
  * @param init - Optional response options (status, headers, etc.)
  * @returns A new Response instance with HTML content
@@ -60,7 +58,6 @@ export function html(body: string, init?: ResponseInit): Response {
 
 /**
  * Creates a Response with CSS content and appropriate Content-Type header.
- * The charset is set to UTF-8 automatically.
  * @param body - The CSS string to send
  * @param init - Optional response options (status, headers, etc.)
  * @returns A new Response instance with CSS content
@@ -77,7 +74,6 @@ export function css(body: string, init?: ResponseInit): Response {
 
 /**
  * Creates a Response with JavaScript content and appropriate Content-Type header.
- * The charset is set to UTF-8 automatically.
  * @param body - The JavaScript string to send
  * @param init - Optional response options (status, headers, etc.)
  * @returns A new Response instance with JavaScript content
@@ -94,7 +90,6 @@ export function javascript(body: string, init?: ResponseInit): Response {
 
 /**
  * Creates a Response with XML content and appropriate Content-Type header.
- * The charset is set to UTF-8 automatically.
  * @param body - The XML string to send
  * @param init - Optional response options (status, headers, etc.)
  * @returns A new Response instance with XML content
@@ -111,7 +106,6 @@ export function xml(body: string, init?: ResponseInit): Response {
 
 /**
  * Creates a Response with CSV content and appropriate Content-Type header.
- * The charset is set to UTF-8 automatically.
  * @param body - The CSV string to send
  * @param init - Optional response options (status, headers, etc.)
  * @returns A new Response instance with CSV content
@@ -128,7 +122,6 @@ export function csv(body: string, init?: ResponseInit): Response {
 
 /**
  * Creates a Response with Markdown content and appropriate Content-Type header.
- * The charset is set to UTF-8 automatically.
  * @param body - The Markdown string to send
  * @param init - Optional response options (status, headers, etc.)
  * @returns A new Response instance with Markdown content

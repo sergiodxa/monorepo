@@ -6,7 +6,6 @@
  */
 
 /**
- * Plain text content type with UTF-8 charset.
  * Used for simple text responses without any formatting.
  * @example
  * headers.set("Content-Type", Text);
@@ -16,7 +15,6 @@
 export const Text = "text/plain" as const;
 
 /**
- * HTML content type with UTF-8 charset.
  * Used for web pages and HTML document responses.
  * @example
  * headers.set("Content-Type", HTML);
@@ -26,7 +24,6 @@ export const Text = "text/plain" as const;
 export const HTML = "text/html" as const;
 
 /**
- * CSS content type with UTF-8 charset.
  * Used for stylesheet responses.
  * @example
  * headers.set("Content-Type", CSS);
@@ -36,7 +33,6 @@ export const HTML = "text/html" as const;
 export const CSS = "text/css" as const;
 
 /**
- * JavaScript content type with UTF-8 charset.
  * Used for JavaScript file responses.
  * @example
  * headers.set("Content-Type", JavaScript);
@@ -46,7 +42,6 @@ export const CSS = "text/css" as const;
 export const JavaScript = "text/javascript" as const;
 
 /**
- * CSV content type with UTF-8 charset.
  * Used for comma-separated values data exports.
  * @example
  * headers.set("Content-Type", CSV);
@@ -56,7 +51,6 @@ export const JavaScript = "text/javascript" as const;
 export const CSV = "text/csv" as const;
 
 /**
- * XML content type with UTF-8 charset (text variant).
  * Used for XML documents intended for human readability.
  * @example
  * headers.set("Content-Type", XML);
@@ -66,7 +60,6 @@ export const CSV = "text/csv" as const;
 export const XML = "text/xml" as const;
 
 /**
- * Markdown content type with UTF-8 charset.
  * Used for Markdown-formatted text responses.
  * @example
  * headers.set("Content-Type", Markdown);
@@ -76,7 +69,6 @@ export const XML = "text/xml" as const;
 export const Markdown = "text/markdown" as const;
 
 /**
- * JSON content type with UTF-8 charset.
  * Used for API responses and requests with structured data.
  * Named `Json` (not `JSON`) to avoid shadowing the global `JSON` object.
  * @example
@@ -87,7 +79,6 @@ export const Markdown = "text/markdown" as const;
 export const Json = "application/json" as const;
 
 /**
- * JSON Lines content type with UTF-8 charset.
  * Used for newline-delimited JSON streaming responses.
  * @example
  * headers.set("Content-Type", JSONLines);
@@ -157,7 +148,6 @@ export const FormURLEncoded = "application/x-www-form-urlencoded" as const;
 export const OctetStream = "application/octet-stream" as const;
 
 /**
- * XML content type with UTF-8 charset (application variant).
  * Used for XML data in API responses and machine processing.
  * @example
  * headers.set("Content-Type", ApplicationXML);

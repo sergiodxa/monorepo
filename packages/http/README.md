@@ -10,7 +10,6 @@ The package is organized into modules that can be imported independently:
 
 - `@sdxc/http/content-type` - Content-Type string constants
 - `@sdxc/http/status-code` - HTTP status code constants
-- `@sdxc/http/request` - Request factory functions
 - `@sdxc/http/response` - Response factory functions
 - `@sdxc/http/response/json` - JSON responses with status codes
 - `@sdxc/http/response/html` - HTML responses with status codes
@@ -84,43 +83,27 @@ export async function handler(request: Request): Promise<Response> {
 }
 ```
 
-### Creating Requests
-
-```typescript
-import { json, formURLEncoded } from "@sdxc/http/request";
-
-// JSON POST request
-let req = json("https://api.example.com/users", { name: "John" });
-
-// JSON PUT request
-let req = json("https://api.example.com/users/1", { name: "Jane" }, { method: "PUT" });
-
-// Form submission
-let req = formURLEncoded("https://api.example.com/login", {
-	username: "john",
-	password: "secret",
-});
-```
-
 ## API
 
 ### `@sdxc/http/content-type`
 
-Content-Type string constants for common MIME types.
+Content-Type string constants for common MIME types. Each is the bare type with no
+`charset` parameter, so it can be compared against a parsed header as well as written
+into one.
 
 #### Text Types
 
-- `Text` - `"text/plain; charset=utf-8"`
-- `HTML` - `"text/html; charset=utf-8"`
-- `CSS` - `"text/css; charset=utf-8"`
-- `JavaScript` - `"text/javascript; charset=utf-8"`
-- `CSV` - `"text/csv; charset=utf-8"`
-- `XML` - `"text/xml; charset=utf-8"`
-- `Markdown` - `"text/markdown; charset=utf-8"`
+- `Text` - `"text/plain"`
+- `HTML` - `"text/html"`
+- `CSS` - `"text/css"`
+- `JavaScript` - `"text/javascript"`
+- `CSV` - `"text/csv"`
+- `XML` - `"text/xml"`
+- `Markdown` - `"text/markdown"`
 
 #### Application Types
 
-- `JSON` - `"application/json; charset=utf-8"`
+- `JSON` - `"application/json"`
 - `PDF` - `"application/pdf"`
 - `ZIP` - `"application/zip"`
 - `FormURLEncoded` - `"application/x-www-form-urlencoded"`
@@ -185,52 +168,6 @@ return Response.json({ error: "Not found" }, NotFound);
 **4xx:** `BadRequest`, `Unauthorized`, `PaymentRequired`, `Forbidden`, `NotFound`, `MethodNotAllowed`, `Conflict`, `Gone`, `UnprocessableEntity`, `TooManyRequests`
 
 **5xx:** `InternalServerError`, `NotImplemented`, `BadGateway`, `ServiceUnavailable`, `GatewayTimeout`
-
-### `@sdxc/http/request`
-
-Request factory functions that set Content-Type headers automatically.
-
-#### `json(url, body, init?): Request`
-
-Creates a Request with JSON body. Defaults to POST method.
-
-```typescript
-import { json } from "@sdxc/http/request";
-
-let req = json("https://api.example.com/users", { name: "John" });
-let req = json("https://api.example.com/users/1", data, { method: "PUT" });
-```
-
-#### `text(url, body, init?): Request`
-
-Creates a Request with plain text body.
-
-#### `xml(url, body, init?): Request`
-
-Creates a Request with XML body.
-
-#### `formData(url, body, init?): Request`
-
-Creates a Request with FormData body. Does not set Content-Type (browser sets it with boundary). Accepts `FormData` or `Record<string, string | Blob>`.
-
-```typescript
-import { formData } from "@sdxc/http/request";
-
-let req = formData("https://api.example.com/upload", { name: "photo", file: imageBlob });
-```
-
-#### `formURLEncoded(url, body, init?): Request`
-
-Creates a Request with URL-encoded form body. Accepts `URLSearchParams` or `Record<string, string>`.
-
-```typescript
-import { formURLEncoded } from "@sdxc/http/request";
-
-let req = formURLEncoded("https://api.example.com/login", {
-	username: "john",
-	password: "secret",
-});
-```
 
 ### `@sdxc/http/response`
 
