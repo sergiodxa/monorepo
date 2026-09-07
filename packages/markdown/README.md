@@ -12,7 +12,7 @@ The package has three entry points, split by what they need to run:
 - `@sdxc/markdown/server` — the server-only pipeline: the `Markdown` parser class, frontmatter extraction and validation, and the highlighter's fence node. Frontmatter is read by [`@sdxc/yaml`](/packages/yaml), over [the subset it documents](#frontmatter-format).
 - `@sdxc/markdown/client` — the renderer, which turns a Markdoc tree into `remix/ui` nodes instead of React DOM elements, including the code-fence UI.
 
-Keeping the split at the entry-point level means the grammars stay out of client bundles and the renderer stays out of loaders and services. The token colors the rendered fences expect live with the tokens, in `@sdxc/highlight/styles.css`.
+Keeping the split at the entry-point level means the grammars stay out of client bundles and the renderer stays out of services and background work. The token colors the rendered fences expect live with the tokens, in `@sdxc/highlight/styles.css`.
 
 ## Usage
 
@@ -85,10 +85,23 @@ A [linked](https://example.com) paragraph with \`code\`.
 
 ### Load a code theme
 
+Link the stylesheet from the document layout's `<head>`, so every page that can
+render a fence carries the token colors:
+
 ```tsx
 import highlightStyles from "@sdxc/highlight/styles.css?url";
+import type { Handle, RemixNode } from "remix/ui";
 
-export let links = () => [{ rel: "stylesheet", href: highlightStyles }];
+export default function DocumentLayout({ props }: Handle<{ children: RemixNode }>) {
+	return () => (
+		<html lang="en">
+			<head>
+				<link rel="stylesheet" href={highlightStyles} data-rmx-key="style-highlight" />
+			</head>
+			<body>{props.children}</body>
+		</html>
+	);
+}
 ```
 
 Declare the `--highlight-*` properties afterwards to spend your own palette on
@@ -241,15 +254,16 @@ still renders when its body opens on two thematic breaks.
 #### Fenced code
 
 Fences are highlighted by [`@sdxc/highlight`](/packages/highlight)'s Markdoc node,
-which `Markdown` registers by default. It reads the fence's `language`, `path` and
-`title`, resolves the language through the highlighter's aliases, tokenizes the
-body, and emits a `Fence` tag the client renderer draws.
+which `Markdown` registers by default. It reads the fence's `language`, plus the
+`path` and `title` written in a Markdoc annotation, resolves the language through
+the highlighter's aliases, tokenizes the body, and emits a `Fence` tag the client
+renderer draws.
 
 **Example:**
 
 ````markdown
-```tsx path="app/root.tsx" title="Root route"
-export default function Root() {}
+```tsx {% path="app/http/controllers/post.tsx" title="Post controller" %}
+export default createAction(routes.posts.show, (ctx) => ctx.render(<PostView />));
 ```
 ````
 
@@ -383,30 +397,40 @@ export function PostPage({ props }: Handle<{ content: unknown }>) {
 }
 ```
 
-### Pattern: Parse in a loader, render in the view
+### Pattern: Parse in a controller, render in a view
 
-Parsing is the server's job and the render tree is plain data, so it crosses the
-loader boundary without the client re-parsing anything.
+Parsing is the server's job and the render tree is plain data, so a controller
+parses the source and passes the tree to the view it renders.
 
-```typescript
+```tsx
 import { Markdown } from "@sdxc/markdown/server";
 import { isFailure } from "@sdxc/result";
+import * as s from "remix/data-schema";
+import { createAction } from "remix/router";
+
+import PostView from "~/resources/views/post";
+import routes from "~/routes/web";
+
+const Params = s.object({ slug: s.string() });
 
 let parser = new Markdown({ frontmatter: schema });
 
-export async function loader({ params }: Route.LoaderArgs) {
-	let raw = await readPost(params.slug);
-	let result = parser.parse(raw);
+/** GET /posts/:slug — parses the post and renders its body. */
+export default createAction(routes.posts.show, async (ctx) => {
+	let { slug } = s.parse(Params, ctx.params);
+	let result = parser.parse(await readPost(slug));
 	if (isFailure(result)) throw result.error;
-	return { post: result.data };
-}
+
+	return ctx.render(<PostView content={result.data.content} />);
+});
 ```
 
 ```tsx
 import { MarkdownView } from "@sdxc/markdown/client";
+import type { Handle } from "remix/ui";
 
-export default function Component({ loaderData }: Route.ComponentProps) {
-	return () => <MarkdownView content={loaderData.post.content} />;
+export default function PostView({ props }: Handle<{ content: unknown }>) {
+	return () => <MarkdownView content={props.content} />;
 }
 ```
 
