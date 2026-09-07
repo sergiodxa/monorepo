@@ -31,12 +31,18 @@ import CronJobMonitor from "~/app/data/cron-job";
 import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestDatabase } from "~/app/lib/test/db";
 
+/** One `notify` message as it travels: the job it names, and the transition under `body`. */
+interface NotifyEnvelope {
+	job: "notify";
+	body: NotifyMessage;
+}
+
 /**
  * The queue the sweep notifies through. It lives at module scope because the module
  * under test captures `env` on import; `beforeEach` empties it to reuse the same
  * instance across tests.
  */
-let queue: QueueMock<NotifyMessage> = createQueue<NotifyMessage>({ name: "notify" });
+let queue: QueueMock<NotifyEnvelope> = createQueue<NotifyEnvelope>({ name: "notify" });
 
 /** Spying on `sendBatch` confirms the send path was actually invoked, beyond what `sent` alone shows. */
 let sendBatch = vi.spyOn(queue, "sendBatch");
@@ -47,8 +53,8 @@ let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let checkCronJobs = (await import("./check-cron-jobs")).default;
 
-/** Every `notify` message body the sweep put on the queue, in order. */
-function enqueued(): NotifyMessage[] {
+/** Every message the sweep put on the queue, in order, each wrapping one transition. */
+function enqueued(): NotifyEnvelope[] {
 	return queue.sent.map((message) => message.body);
 }
 
@@ -188,11 +194,13 @@ describe("checkCronJobs", () => {
 
 		expect(enqueued()).toEqual([
 			{
-				type: "notify",
-				monitorType: "cron",
-				monitorId: monitor.id,
-				previousStatus: "healthy",
-				newStatus: "late",
+				job: "notify",
+				body: {
+					monitorType: "cron",
+					monitorId: monitor.id,
+					previousStatus: "healthy",
+					newStatus: "late",
+				},
 			},
 		]);
 
@@ -246,11 +254,13 @@ describe("checkCronJobs", () => {
 
 		expect(enqueued()).toEqual([
 			{
-				type: "notify",
-				monitorType: "cron",
-				monitorId: monitor.id,
-				previousStatus: "late",
-				newStatus: "missed",
+				job: "notify",
+				body: {
+					monitorType: "cron",
+					monitorId: monitor.id,
+					previousStatus: "late",
+					newStatus: "missed",
+				},
 			},
 		]);
 	});
@@ -270,11 +280,13 @@ describe("checkCronJobs", () => {
 		expect(updated?.status).toBe("missed");
 		expect(enqueued()).toEqual([
 			{
-				type: "notify",
-				monitorType: "cron",
-				monitorId: monitor.id,
-				previousStatus: "healthy",
-				newStatus: "missed",
+				job: "notify",
+				body: {
+					monitorType: "cron",
+					monitorId: monitor.id,
+					previousStatus: "healthy",
+					newStatus: "missed",
+				},
 			},
 		]);
 	});
@@ -294,11 +306,13 @@ describe("checkCronJobs", () => {
 		expect(updated?.status).toBe("missed");
 		expect(enqueued()).toEqual([
 			{
-				type: "notify",
-				monitorType: "cron",
-				monitorId: monitor.id,
-				previousStatus: "late",
-				newStatus: "missed",
+				job: "notify",
+				body: {
+					monitorType: "cron",
+					monitorId: monitor.id,
+					previousStatus: "late",
+					newStatus: "missed",
+				},
 			},
 		]);
 	});
@@ -367,7 +381,7 @@ describe("checkCronJobs", () => {
 
 		expect(
 			enqueued()
-				.map((message) => message.monitorId)
+				.map((message) => message.body.monitorId)
 				.sort(),
 		).toEqual(seeded.map((monitor) => monitor.id).sort());
 

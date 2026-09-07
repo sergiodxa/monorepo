@@ -8,7 +8,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Message } from "@cloudflare/workers-types";
 import type { DurationInput } from "@sdxc/duration";
 import type { Log } from "@sdxc/logger";
 
@@ -19,31 +18,49 @@ import type { AnyJobContext } from "./context.js";
 import type { RunnableJobHandler } from "./handler.js";
 import type { AnyJobDefinition } from "./jobs.js";
 import type { AnyJobMiddleware } from "./middleware.js";
+import type { JobDelivery, Settlement } from "./queue.js";
 
 import { JobContext, openJobLog } from "./context.js";
 import { Ack, NonRetriable, Retry, Timeout } from "./errors.js";
-import { ping, UptimeFetchError, UptimeNetworkError } from "./uptime.js";
 
 /**
  * How long a handler has to end the delivery itself after its timeout aborts the
  * signal, before the dispatcher settles it for them. Sized to unwind, not to keep
  * working: the choice between acking durable work and letting the message come back
  * is the handler's, and only for as long as it takes to make it.
+ *
+ * `onEnd` is bounded by the same span, for the same reason: it runs after the work's
+ * deadline has been cleared, so an unbounded report would hold the delivery open.
  */
 const SETTLE_GRACE = "5 seconds";
+
+/**
+ * What one delivery ended as, for a dispatcher's `onEnd`. A `refuse` is a handler giving
+ * up for good; a `timeout` carries whatever stopped the run, which may be the deadline
+ * itself or the cancelled I/O it aborted.
+ */
+export type JobStatus =
+	| { type: "done" }
+	| { type: "retry"; delay: DurationInput | undefined; error: Retry }
+	| { type: "refuse"; error: NonRetriable }
+	| { type: "timeout"; error: unknown }
+	| { type: "failed"; error: unknown };
+
+/** Runs once a delivery's ending is decided and before it is settled. */
+export type OnJobEnd = (context: AnyJobContext, status: JobStatus) => void | Promise<void>;
 
 /** What one run needs to happen. */
 export interface RunOptions {
 	job: AnyJobDefinition;
 	/** Resolves the handler, which a malformed message never gets far enough to call. */
 	handler: () => Promise<RunnableJobHandler>;
-	message: Message<unknown>;
+	delivery: JobDelivery;
 	/** The payload, already parsed against the job's schema. */
 	input: unknown;
 	batchSize: number;
 	middleware: readonly AnyJobMiddleware[];
 	timeout: DurationInput | undefined;
-	uptime: (() => string | undefined) | undefined;
+	onEnd: OnJobEnd | undefined;
 }
 
 /** How the work returned, before its ending is read out of it. */
@@ -198,34 +215,35 @@ function waitForWork(
  * Runs one delivery through the whole lifecycle, inside a `job` log that records how it
  * ended and counts that ending into the batch's log.
  *
- * @param options The job, its handler, and the message to run it for.
+ * @param options The job, its handler, and the delivery to run it for.
+ * @returns What the delivery ended as, for the caller's backend to apply.
  * @throws Whatever the handler threw that is none of the four endings, so the platform
  * retries the invocation as it does today.
  */
-export async function runJob(options: RunOptions): Promise<void> {
-	let { job, message } = options;
+export async function runJob(options: RunOptions): Promise<Settlement> {
+	let { job, delivery } = options;
 	let controller = new AbortController();
 
 	let log = openJobLog({
 		job: {
 			name: job.name,
-			id: message.id,
-			attempts: message.attempts,
+			id: delivery.id,
+			attempts: delivery.attempts,
 			batch_size: options.batchSize,
 			cron: job.cron,
 		},
 	});
 
 	let context = new JobContext(job, {
-		id: message.id,
-		attempts: message.attempts,
+		id: delivery.id,
+		attempts: delivery.attempts,
 		input: options.input,
 		batchSize: options.batchSize,
 		log,
 		signal: controller.signal,
 	});
 
-	await log.run(async () => {
+	return await log.run(async () => {
 		let outcome = await waitForWork(
 			() =>
 				runChain(options.middleware, context, async () => {
@@ -243,80 +261,136 @@ export async function runJob(options: RunOptions): Promise<void> {
 			controller,
 		);
 
-		await settle(endingOf(outcome, controller.signal), message, log, () =>
-			ping(job.monitorId, options.uptime?.()),
-		);
+		return await settle(endingOf(outcome, controller.signal), context, log, options.onEnd);
 	});
 }
 
 /**
- * Records the ending on the job's log, counts it into the batch's, and settles the
- * message the way that ending asks. A completed run reports to its monitor first, and a
- * monitor that cannot be reached leaves the run `done`: the work happened.
+ * Records the ending on the job's log, counts it into the batch's, runs the dispatcher's
+ * `onEnd`, and answers with what the delivery ends as. The hook runs after the record is
+ * written, so it reads the ending it is being told about, and before the settlement is
+ * returned, so work that has to reach a service is finished by then.
  *
  * @param ending How the run ended.
- * @param message The delivery to ack or retry.
+ * @param context The delivery's context, which the hook receives.
  * @param log The job's log.
- * @param report Sends the monitor ping.
+ * @param onEnd The dispatcher's hook, when it declared one.
+ * @returns The settlement the caller's backend applies.
  * @throws What the handler threw when it was none of the endings, once it is recorded.
  */
 async function settle(
 	ending: Ending,
-	message: Message<unknown>,
+	context: AnyJobContext,
 	log: Log,
-	report: () => Promise<void>,
-): Promise<void> {
+	onEnd: OnJobEnd | undefined,
+): Promise<Settlement> {
+	record(ending, log);
+
+	await report(statusOf(ending), context, log, onEnd);
+
+	if (ending.kind === "failed") throw ending.error;
+
+	return settlementOf(ending);
+}
+
+/**
+ * The ending as the dispatcher's hook is told about it, without the `ack` a timeout carries
+ * for its own settlement.
+ * @param ending How the run ended.
+ */
+function statusOf(ending: Ending): JobStatus {
+	if (ending.kind === "retry") return { type: "retry", delay: ending.delay, error: ending.error };
+	if (ending.kind === "refuse") return { type: "refuse", error: ending.error };
+	if (ending.kind === "timeout") return { type: "timeout", error: ending.error };
+	if (ending.kind === "failed") return { type: "failed", error: ending.error };
+	return { type: "done" };
+}
+
+/**
+ * Writes the ending onto the job's log and counts it into the batch's.
+ * @param ending How the run ended.
+ * @param log The job's log.
+ */
+function record(ending: Ending, log: Log): void {
 	if (ending.kind === "retry") {
-		let delay = ending.delay === undefined ? undefined : toSeconds(ending.delay);
-		log.set({ job: { ending: "retry", delay_s: delay } });
+		log.set({
+			job: {
+				ending: "retry",
+				delay_s: ending.delay === undefined ? undefined : toSeconds(ending.delay),
+			},
+		});
 		log.warn("job.retry", { reason: ending.error.message });
 		log.parent?.inc("jobs.retried");
-		return retry(message, ending.delay);
+		return;
 	}
 
 	if (ending.kind === "refuse") {
 		log.set({ job: { ending: "refuse" } });
 		log.fail(ending.error, causeFields(ending.error.cause));
 		log.parent?.inc("jobs.refused");
-		return message.ack();
+		return;
 	}
 
 	if (ending.kind === "timeout") {
 		log.set({ job: { ending: "timeout" } });
 		log.fail(ending.error);
 		log.parent?.inc("jobs.timed_out");
-		return ending.ack ? message.ack() : retry(message, undefined);
+		return;
 	}
 
 	if (ending.kind === "failed") {
 		log.set({ job: { ending: "failed" } });
 		log.fail(ending.error);
 		log.parent?.inc("jobs.failed");
-		throw ending.error;
+		return;
 	}
 
 	log.set({ job: { ending: "done" } });
 	log.parent?.inc("jobs.done");
+}
 
-	try {
-		await report();
-	} catch (error) {
-		if (error instanceof UptimeFetchError || error instanceof UptimeNetworkError) {
-			log.warn("job.uptime_failed", { error: error.message });
-			message.ack();
-			return;
-		}
-		throw error;
-	}
-
-	message.ack();
+/** How the delivery is settled, once its ending has been recorded. */
+function settlementOf(ending: Ending): Settlement {
+	if (ending.kind === "retry") return { type: "retry", delay: ending.delay };
+	if (ending.kind === "timeout" && !ending.ack) return { type: "retry", delay: undefined };
+	return { type: "ack" };
 }
 
 /**
- * Returns the message to the queue, holding it for as long as the job asked.
- * @param message The delivery to retry.
- * @param delay How long to hold it, when a backoff was asked for.
+ * Runs the dispatcher's hook, bounded and swallowed. Its failure is never the job's failure:
+ * a report that did not land is no reason to redeliver work that did, so anything it throws
+ * is recorded on this run's own log and the ending settles as decided.
+ *
+ * @param status The ending the hook is told about.
+ * @param context The delivery's context.
+ * @param log The job's log, which a hook failure is recorded on.
+ * @param onEnd The hook, when the dispatcher declared one.
  */
-function retry(message: Message<unknown>, delay: DurationInput | undefined): void {
-	message.retry(delay === undefined ? {} : { delaySeconds: toSeconds(delay) });
+async function report(
+	status: JobStatus,
+	context: AnyJobContext,
+	log: Log,
+	onEnd: OnJobEnd | undefined,
+): Promise<void> {
+	if (onEnd === undefined) return;
+
+	let overran: ReturnType<typeof setTimeout> | undefined;
+
+	try {
+		await Promise.race([
+			Promise.resolve(onEnd(context, status)),
+			new Promise<void>((resolve) => {
+				overran = setTimeout(() => {
+					log.warn("job.hook_overran", { after_s: toSeconds(SETTLE_GRACE) });
+					resolve();
+				}, toMs(SETTLE_GRACE));
+			}),
+		]);
+	} catch (error) {
+		log.warn("job.hook_failed", {
+			error: error instanceof Error ? error.message : String(error),
+		});
+	} finally {
+		clearTimeout(overran);
+	}
 }

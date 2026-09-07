@@ -9,25 +9,71 @@
  */
 
 import type { JobDispatcherContext } from "@sdxc/jobs";
+import type { AnyJobDefinition } from "@sdxc/jobs";
 
 import { createJobDispatcher } from "@sdxc/jobs";
+import { createUptimeReporter } from "@sdxc/jobs/uptime";
 import { env } from "cloudflare:workers";
 
 import jobs from "~/app/jobs";
 import { costLedger } from "~/app/jobs/middleware/cost-ledger";
 import { database } from "~/app/jobs/middleware/database";
-import { sendQueueBatch } from "~/app/lib/queue";
+import { jobQueue } from "~/app/lib/queue";
 import { logger } from "~/bootstrap/logger";
+
+/** Reports a completed run to the monitor watching it. The token resolves per call. */
+const uptime = createUptimeReporter({ token: () => env.UPTIME_CRON_API_KEY });
+
+/**
+ * The monitor each job declares, by the name that job is addressed as. Built on first use
+ * rather than at module scope, and read by name rather than through `ctx.of` per job: this
+ * hook covers every monitored job in the map, so one lookup beats fifteen branches.
+ */
+let monitors: Map<string, string> | undefined;
+
+/** Walks the map once, collecting every job that declares a monitor. */
+function monitorFor(name: string): string | undefined {
+	monitors ??= new Map(collect(jobs).map((job) => [job.name, job.meta.monitorId as string]));
+	return monitors.get(name);
+}
+
+/**
+ * Every declared job that carries a monitor, from a map nested as deeply as it is grouped.
+ * @param tree One level of the job map.
+ */
+function collect(tree: object): AnyJobDefinition[] {
+	return Object.values(tree).flatMap((value: AnyJobDefinition | object) => {
+		if ("name" in value && typeof value.name === "string") {
+			let declared = value as AnyJobDefinition;
+			return declared.meta?.monitorId === undefined ? [] : [declared];
+		}
+
+		return collect(value);
+	});
+}
 
 export const dispatcher = createJobDispatcher({
 	logger,
-	send: sendQueueBatch,
+	queue: jobQueue,
+
+	/**
+	 * Reports a completed run to the monitor watching it, when the job declares one. Awaited
+	 * rather than handed to `waitUntil`, so a ping the service refuses reaches this run's
+	 * own record instead of landing nowhere.
+	 */
+	async onEnd(ctx, status) {
+		if (status.type !== "done") return;
+
+		let monitorId = monitorFor(ctx.name);
+		if (monitorId === undefined) return;
+
+		await uptime(monitorId);
+	},
 	/**
 	 * The ledger is outermost so it counts the database the middleware inside it opens,
 	 * along with everything the handler then does through it.
 	 */
 	middleware: [costLedger(), database()],
-	uptime: () => env.UPTIME_CRON_API_KEY,
 	/**
 	 * This worker consumes its own dead-letter queue too (ADR-018), so those batches are
 	 * recorded and acked rather than dispatched.
@@ -37,7 +83,7 @@ export const dispatcher = createJobDispatcher({
 	 * A body matching no job or failing its schema goes straight to the dead-letter queue,
 	 * instead of spending three redeliveries on a payload no redelivery can fix.
 	 */
-	onInvalid: async (_message, body) => {
+	onInvalid: async (_delivery, body) => {
 		await env.DLQ.send(body, { contentType: "json" });
 	},
 });

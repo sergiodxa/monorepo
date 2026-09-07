@@ -24,10 +24,13 @@ export type CronExpression = `${string} ${string} ${string} ${string} ${string}`
 export const leaf: unique symbol = Symbol("jobs.leaf");
 
 /** What a job declares about itself. */
-export interface JobOptions<Schema extends StandardSchemaV1 | undefined = undefined> {
+export interface JobOptions<
+	Schema extends StandardSchemaV1 | undefined = undefined,
+	Meta = undefined,
+> {
 	/**
-	 * Schema for the message payload, parsed before the handler runs. Object schemas
-	 * only: a body is the payload's own fields plus the reserved `type`.
+	 * Schema for the message payload, parsed before the handler runs. The payload travels
+	 * under a key of its own, so any schema serves — an object, or a bare value.
 	 */
 	input?: Schema;
 	/**
@@ -36,14 +39,21 @@ export interface JobOptions<Schema extends StandardSchemaV1 | undefined = undefi
 	 * would accept throws here. Omit for a job that is only ever enqueued explicitly.
 	 */
 	cron?: CronExpression;
-	/** Uptime cron monitor to ping once a run completes. */
-	monitorId?: string;
+	/**
+	 * Anything this job's own callers want to read off it, unconstrained and inferred as
+	 * written. Nothing here reads it: a dispatcher-level hook reaches it through
+	 * `ctx.of(job)`, which is what gives it back this exact type.
+	 *
+	 * @example meta: { monitorId: "74f508a2-…" } satisfies Monitored
+	 */
+	meta?: Meta;
 }
 
 /** One declared job, before `jobs()` gives it its name and its queue. */
 export interface JobLeaf<
 	Schema extends StandardSchemaV1 | undefined = undefined,
-> extends JobOptions<Schema> {
+	Meta = undefined,
+> extends JobOptions<Schema, Meta> {
 	readonly [leaf]: true;
 }
 
@@ -54,9 +64,10 @@ export interface JobLeaf<
  * @returns The leaf to file under the name this job is known by.
  * @example checkHttp: job({ input: s.object({ monitorId: s.string() }) })
  */
-export function job<Schema extends StandardSchemaV1 | undefined = undefined>(
-	options: JobOptions<Schema> = {},
-): JobLeaf<Schema> {
+export function job<
+	Schema extends StandardSchemaV1 | undefined = undefined,
+	const Meta = undefined,
+>(options: JobOptions<Schema, Meta> = {}): JobLeaf<Schema, Meta> {
 	if (options.cron !== undefined) {
 		/**
 		 * Declaring a schedule the platform would reject is a deploy-time mistake, so it

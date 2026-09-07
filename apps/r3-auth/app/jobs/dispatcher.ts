@@ -10,11 +10,16 @@
 import type { JobDispatcherContext } from "@sdxc/jobs";
 
 import { createJobDispatcher } from "@sdxc/jobs";
+import * as cloudflare from "@sdxc/jobs/cloudflare";
+import { createUptimeReporter } from "@sdxc/jobs/uptime";
 import { env } from "cloudflare:workers";
 
 import jobs from "~/app/jobs";
 import { database, scope } from "~/app/jobs/middleware/database";
 import { logger } from "~/bootstrap/logger";
+
+/** Reports a completed run to the monitor watching it. The token resolves per call. */
+const uptime = createUptimeReporter({ token: () => env.UPTIME_CRON_API_KEY });
 
 /**
  * The registry `bootstrap/worker.ts` hands its batches and triggers to. Both the queue
@@ -24,10 +29,20 @@ import { logger } from "~/bootstrap/logger";
 export const dispatcher = createJobDispatcher({
 	logger,
 	middleware: [scope(), database()],
-	send: async (bodies) => {
-		await env.QUEUE.sendBatch(bodies.map((body) => ({ body, contentType: "json" })));
+	queue: cloudflare.queue(() => env.QUEUE),
+
+	/**
+	 * Reports the sweep once it completes. Awaited rather than handed to `waitUntil`, so a
+	 * ping the service refuses reaches this run's own record.
+	 */
+	async onEnd(ctx, status) {
+		if (status.type !== "done") return;
+
+		let sweep = ctx.of(jobs.cleanExpiredSessions);
+		if (sweep === null) return;
+
+		await uptime(sweep.meta.monitorId);
 	},
-	uptime: () => env.UPTIME_CRON_API_KEY,
 });
 
 /**

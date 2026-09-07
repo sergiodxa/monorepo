@@ -7,7 +7,7 @@
  */
 
 import { InvalidCronExpression } from "@sdxc/cron";
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
 import { job, jobs } from "./index.js";
 
@@ -28,11 +28,26 @@ describe("jobs()", () => {
 		expect(map.digests.weekly.name).toBe("digests.weekly");
 	});
 
-	test("carries the schedule and the monitor onto the definition", () => {
-		let map = jobs({ clean: job({ cron: "0 0 * * *", monitorId: "abc" }) });
+	test("carries the schedule and the meta onto the definition", () => {
+		let map = jobs({ clean: job({ cron: "0 0 * * *", meta: { monitorId: "abc" } }) });
 
 		expect(map.clean.cron).toBe("0 0 * * *");
-		expect(map.clean.monitorId).toBe("abc");
+		expect(map.clean.meta.monitorId).toBe("abc");
+	});
+
+	test("infers a declared meta as written, so a read off the map stays narrow", () => {
+		let map = jobs({ clean: job({ meta: { monitorId: "abc", attempts: 3 } }) });
+
+		expectTypeOf(map.clean.meta).toEqualTypeOf<{
+			readonly monitorId: "abc";
+			readonly attempts: 3;
+		}>();
+	});
+
+	test("leaves meta undefined for a job that declares none", () => {
+		let map = jobs({ clean: job({ cron: "0 0 * * *" }) });
+
+		expect(map.clean.meta).toBeUndefined();
 	});
 });
 

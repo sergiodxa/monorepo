@@ -9,6 +9,7 @@
 import type { JobDispatcherContext } from "@sdxc/jobs";
 
 import { createJobDispatcher } from "@sdxc/jobs";
+import * as cloudflare from "@sdxc/jobs/cloudflare";
 import { env } from "cloudflare:workers";
 
 import jobs from "~/app/jobs";
@@ -31,14 +32,10 @@ export const dispatcher = createJobDispatcher({
 	timeout: "10 minutes",
 
 	/**
-	 * Writes the dispatcher's messages to the platform queue. The binding is read here
-	 * rather than at module scope, so importing this module touches no binding.
-	 *
-	 * @param bodies One body per message, each already carrying its job's `type`.
+	 * The platform queue this dispatcher writes through. The binding resolves per call
+	 * rather than at module scope, so importing this module touches none.
 	 */
-	async send(bodies) {
-		await env.QUEUE.sendBatch(bodies.map((body) => ({ body, contentType: "json" })));
-	},
+	queue: cloudflare.queue(() => env.QUEUE),
 });
 
 dispatcher.map(jobs.reportUsage, () => import("~/app/jobs/report-usage"));

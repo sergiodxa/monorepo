@@ -8,6 +8,7 @@
  */
 
 import { Log } from "@sdxc/logger";
+import * as s from "remix/data-schema";
 import { createContextKey } from "remix/router";
 import { describe, expect, test, vi } from "vitest";
 
@@ -15,7 +16,40 @@ import type { NonRetriable, Retry } from "./errors.js";
 
 import { createJobContext, Job, job, JobContext, jobs } from "./index.js";
 
-let map = jobs({ clean: job({ cron: "0 0 * * *", monitorId: "monitor-1" }) });
+let map = jobs({ clean: job({ cron: "0 0 * * *", meta: { monitorId: "monitor-1" } }) });
+
+describe("of()", () => {
+	test("answers with the job's meta and parsed input for a delivery of that job", () => {
+		let ctx = createJobContext(map.clean, { id: "message-1", attempts: 1 });
+
+		expect(ctx.of(map.clean)).toEqual({ input: undefined, meta: { monitorId: "monitor-1" } });
+	});
+
+	test("answers null for a delivery of another job, so nothing reads the wrong meta", () => {
+		let other = jobs({ sweep: job({ meta: { monitorId: "monitor-2" } }) });
+		let ctx = createJobContext(map.clean, { id: "message-1", attempts: 1 });
+
+		expect(ctx.of(other.sweep)).toBeNull();
+	});
+
+	test("carries a job's own parsed payload through", () => {
+		let typed = jobs({ checkHttp: job({ input: s.object({ monitorId: s.string() }) }) });
+		let ctx = createJobContext(typed.checkHttp, {
+			id: "message-1",
+			attempts: 1,
+			input: { monitorId: "m1" },
+		});
+
+		expect(ctx.of(typed.checkHttp)?.input).toEqual({ monitorId: "m1" });
+	});
+
+	test("answers with undefined meta for a job that declared none", () => {
+		let bare = jobs({ bare: job({}) });
+		let ctx = createJobContext(bare.bare, { id: "message-1", attempts: 1 });
+
+		expect(ctx.of(bare.bare)).toEqual({ input: undefined, meta: undefined });
+	});
+});
 
 describe("JobContext", () => {
 	test("carries the job's own declaration", () => {
@@ -23,7 +57,6 @@ describe("JobContext", () => {
 
 		expect(ctx.name).toBe("clean");
 		expect(ctx.cron).toBe("0 0 * * *");
-		expect(ctx.monitorId).toBe("monitor-1");
 		expect(ctx.batchSize).toBe(1);
 	});
 
@@ -108,7 +141,6 @@ describe("createJobContext()", () => {
 		let ctx = createJobContext(map.clean, { id: "message-1", attempts: 1 });
 
 		expect(ctx.name).toBe("clean");
-		expect(ctx.monitorId).toBe("monitor-1");
 	});
 });
 

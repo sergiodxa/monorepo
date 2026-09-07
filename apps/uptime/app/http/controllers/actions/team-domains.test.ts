@@ -28,8 +28,8 @@ import routes from "~/routes/web";
 
 /** The only message these actions enqueue: a request to verify one team domain's ownership. */
 interface VerifyDomainMessage {
-	type: "verifyDomainOwnership";
-	teamDomainId: string;
+	job: "verifyDomainOwnership";
+	body: { teamDomainId: string };
 }
 
 /**
@@ -131,7 +131,7 @@ describe("addDomain", () => {
 		expect(domain).not.toBeNull();
 		expect(domain?.verified_at).toBeNull();
 		expect(queue.sent.map((message) => message.body)).toEqual([
-			{ type: "verifyDomainOwnership", teamDomainId: domain!.id },
+			{ job: "verifyDomainOwnership", body: { teamDomainId: domain!.id } },
 		]);
 	});
 
@@ -261,7 +261,7 @@ describe("retryDomainVerification", () => {
 			routes.app.team.settings.href({ team: team.slug }),
 		);
 		expect(queue.sent.map((message) => message.body)).toEqual([
-			{ type: "verifyDomainOwnership", teamDomainId: domain.id },
+			{ job: "verifyDomainOwnership", body: { teamDomainId: domain.id } },
 		]);
 	});
 

@@ -19,6 +19,7 @@ export type {
 	JobTypes,
 } from "./handler.js";
 export type { CronExpression, JobLeaf, JobOptions } from "./job.js";
+export type { JobStatus, OnJobEnd } from "./lifecycle.js";
 export type {
 	AnyJobDefinition,
 	AnyJobLeaf,
@@ -28,8 +29,19 @@ export type {
 	JobDefinition,
 	JobInput,
 	JobMap,
+	JobOutput,
 	JobTree,
 } from "./jobs.js";
+export type {
+	ClaimOptions,
+	DeadLetterReason,
+	JobDelivery,
+	JobMessage,
+	JobQueue,
+	JobQueueErrorCode,
+	JobQueueErrorOptions,
+	Settlement,
+} from "./queue.js";
 export type {
 	AnyJobMiddleware,
 	ChainProperties,
@@ -39,7 +51,6 @@ export type {
 	NextFunction,
 } from "./middleware.js";
 export type {
-	DeadLetterReason,
 	HandlerModule,
 	InvalidMessage,
 	JobDispatcher,
@@ -47,7 +58,6 @@ export type {
 	JobDispatcherOptions,
 	LoadHandler,
 	RefusalReason,
-	SendMessages,
 } from "./dispatcher.js";
 
 export { JobContext } from "./context.js";
@@ -55,4 +65,5 @@ export { createJobDispatcher } from "./dispatcher.js";
 export { Ending, Job } from "./errors.js";
 export { createJobContext, createJobHandler } from "./handler.js";
 export { job } from "./job.js";
+export { JobQueueError } from "./queue.js";
 export { jobs, messageBody } from "./jobs.js";

@@ -283,12 +283,12 @@ describe("sendTeamDigests period", () => {
 
 	/**
 	 * Two jobs exist so each can report to its own cron-job monitor: a monitor holds one cron
-	 * expression and the dispatcher reads `monitorId` off the job it delivered, so one job
-	 * serving both periods could only ever ping one of them, leaving the other unwatched.
+	 * expression and the dispatcher looks the monitor up from the job it delivered, so one
+	 * job serving both periods could only ever ping one of them, leaving the other unwatched.
 	 */
 	test("gives each schedule its own cron-job monitor to report to", () => {
-		let daily = jobs.sendTeamDailyDigests.monitorId;
-		let weekly = jobs.sendTeamWeeklyDigests.monitorId;
+		let daily = jobs.sendTeamDailyDigests.meta.monitorId;
+		let weekly = jobs.sendTeamWeeklyDigests.meta.monitorId;
 
 		expect(daily).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
 		expect(weekly).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);

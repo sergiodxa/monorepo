@@ -8,23 +8,26 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Message, MessageBatch, ScheduledController } from "@cloudflare/workers-types";
 import type { DurationInput } from "@sdxc/duration";
 import type { Logger } from "@sdxc/logger";
 import type { JSONValue } from "@sdxc/types";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
+import { Schedule } from "@sdxc/cron";
 import { Log } from "@sdxc/logger";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 
 import type { JobContext } from "./context.js";
 import type { AnyJobHandler, JobHandler, RunnableJobHandler } from "./handler.js";
+import type { CronExpression } from "./job.js";
 import type { AnyJobDefinition, EnqueueArgs, EnqueueInput, JobDefinition } from "./jobs.js";
+import type { OnJobEnd } from "./lifecycle.js";
 import type { AnyJobMiddleware, ChainProperties } from "./middleware.js";
+import type { DeadLetterReason, JobDelivery, JobMessage, JobQueue, Settlement } from "./queue.js";
 
 import { openJobLog } from "./context.js";
-import { messageBody } from "./jobs.js";
+import { readMessageBody } from "./jobs.js";
 import { runJob } from "./lifecycle.js";
 
 /** A handler module, however it is reached. */
@@ -35,9 +38,6 @@ export type LoadHandler = () => HandlerModule | Promise<HandlerModule>;
 
 /** Why a message was refused: it named no job, or it failed the job's schema. */
 export type RefusalReason = "unknown-job" | "invalid-input";
-
-/** Why a message is on the dead-letter queue: it was refused, or the platform gave up on it. */
-export type DeadLetterReason = "invalid_message" | "retries_exhausted";
 
 /** The body a refused message is forwarded as, wrapped so its refusal is legible. */
 export interface InvalidMessage {
@@ -73,13 +73,6 @@ class DeadLettered extends Error {
 	}
 }
 
-/**
- * Writes message bodies to the app's queue. A function rather than a `Queue` binding,
- * because the write is rarely only the write: an app that prices its queue operations or
- * chunks a batch at the platform's limit does that here.
- */
-export type SendMessages = (bodies: JSONValue[]) => Promise<void>;
-
 /** What a dispatcher needs beyond the handlers mapped onto it. */
 export interface JobDispatcherOptions<Chain extends readonly AnyJobMiddleware[] = []> {
 	/**
@@ -88,16 +81,31 @@ export interface JobDispatcherOptions<Chain extends readonly AnyJobMiddleware[] 
 	 */
 	logger?: Logger;
 	/**
-	 * The app's queue write, used by `enqueue` and by the cron trigger. A dispatcher
-	 * without one can still run what the queue delivers, and refuses to enqueue.
+	 * The queue this dispatcher enqueues through. A dispatcher without one can still run
+	 * what a backend delivers, and refuses to enqueue.
 	 */
-	send?: SendMessages;
+	queue?: JobQueue;
 	/** Runs around every job, in the order declared. Prefer an inline array. */
 	middleware?: Chain;
 	/** How long a job gets before its `ctx.signal` aborts and the dispatcher stops waiting. */
 	timeout?: DurationInput;
-	/** Resolves the bearer token a monitor ping is sent with. */
-	uptime?: () => string | undefined;
+	/**
+	 * Runs once a delivery's ending is decided and before it is settled, which is what makes
+	 * it the place for work that has to reach a service before the message is acked.
+	 *
+	 * Its failure is never the job's: anything it throws is recorded on that run's own log
+	 * and the ending settles as decided. It runs after the middleware chain has unwound, so
+	 * a value some middleware installed may already be disposed — anything needing a live
+	 * dependency belongs in that middleware's own `finally`.
+	 *
+	 * @example
+	 * async onEnd(ctx, status) {
+	 * 	if (status.type !== "done") return;
+	 * 	let sweep = ctx.of(jobs.cleanExpiredSessions);
+	 * 	if (sweep !== null) await uptime(sweep.meta.monitorId);
+	 * }
+	 */
+	onEnd?: OnJobEnd;
 	/**
 	 * Name of the dead-letter queue this worker also consumes, so batches from it are
 	 * recorded and acked here rather than dispatched.
@@ -105,9 +113,14 @@ export interface JobDispatcherOptions<Chain extends readonly AnyJobMiddleware[] 
 	deadLetterQueue?: string;
 	/**
 	 * Forwards a message the dispatcher refused, already wrapped as `{ invalid: body }`.
-	 * The dispatcher acks it either way — neither refusal survives a redelivery.
+	 * The dispatcher settles it either way — neither refusal survives a redelivery.
 	 */
-	onInvalid?: (message: Message<unknown>, body: InvalidMessage) => void | Promise<void>;
+	onInvalid?: (delivery: JobDelivery, body: InvalidMessage) => void | Promise<void>;
+	/**
+	 * How many attempts a message gets before it is dead-lettered, for a queue whose
+	 * `retries` are this package's to count. Ignored by a backend that counts its own.
+	 */
+	maxAttempts?: number;
 }
 
 /** The registry both worker handlers run through. */
@@ -118,9 +131,9 @@ export interface JobDispatcher<Chain extends readonly AnyJobMiddleware[] = []> {
 	 * @param load A loader for its handler module, or the handler itself.
 	 * @throws When this job's name is already mapped.
 	 */
-	map<Schema extends StandardSchemaV1 | undefined>(
-		job: JobDefinition<Schema>,
-		load: (() => Promise<{ default: JobHandler<Schema> }>) | JobHandler<Schema>,
+	map<Schema extends StandardSchemaV1 | undefined, Meta>(
+		job: JobDefinition<Schema, Meta>,
+		load: (() => Promise<{ default: JobHandler<Schema, Meta> }>) | JobHandler<Schema, Meta>,
 	): void;
 	/**
 	 * Enqueues one message for a job.
@@ -128,8 +141,8 @@ export interface JobDispatcher<Chain extends readonly AnyJobMiddleware[] = []> {
 	 * @param input The payload, typed by that job's own schema.
 	 * @example await dispatcher.enqueue(jobs.checkHttp, { monitorId: monitor.id });
 	 */
-	enqueue<Schema extends StandardSchemaV1 | undefined>(
-		job: JobDefinition<Schema>,
+	enqueue<Schema extends StandardSchemaV1 | undefined, Meta>(
+		job: JobDefinition<Schema, Meta>,
 		...input: EnqueueArgs<Schema>
 	): Promise<void>;
 	/**
@@ -137,14 +150,40 @@ export interface JobDispatcher<Chain extends readonly AnyJobMiddleware[] = []> {
 	 * @param job The job, from the app's map.
 	 * @param inputs One payload per message.
 	 */
-	enqueueMany<Schema extends StandardSchemaV1 | undefined>(
-		job: JobDefinition<Schema>,
+	enqueueMany<Schema extends StandardSchemaV1 | undefined, Meta>(
+		job: JobDefinition<Schema, Meta>,
 		inputs: EnqueueInput<Schema>[],
 	): Promise<void>;
-	/** Enqueues every mapped job this trigger is the schedule for. Runs none of them. */
-	scheduled(controller: ScheduledController): Promise<void>;
-	/** Runs every message in the batch, settling when all of them have. */
-	queue(batch: MessageBatch<unknown>): Promise<void>;
+	/**
+	 * Runs the job one delivery names, whatever handed it over.
+	 * @param delivery The message, already read off the backend.
+	 * @param batchSize How many deliveries share this invocation. Defaults to one.
+	 * @returns What the delivery ended as, for the caller to apply.
+	 */
+	deliver(delivery: JobDelivery, batchSize?: number): Promise<Settlement>;
+	/**
+	 * Runs every delivery that arrived together, inside one `queue` log, settling each
+	 * through `apply` as it finishes rather than when the last one does.
+	 *
+	 * @param deliveries The deliveries this invocation carries.
+	 * @param options Where they came from, and how to settle each.
+	 * @throws The first unexpected failure, once every delivery has had its turn.
+	 */
+	deliverBatch(
+		deliveries: JobDelivery[],
+		options: {
+			/** The queue they were read from, for the record and for recognising a dead letter. */
+			queue?: string;
+			apply: (delivery: JobDelivery, settlement: Settlement) => void;
+		},
+	): Promise<void>;
+	/**
+	 * Enqueues every mapped job that is due, and runs none of them.
+	 *
+	 * @param options The minute being ticked, and the one schedule to limit it to.
+	 * @example await dispatcher.tick({ now: new Date(), only: controller.cron });
+	 */
+	tick(options: { now: Date; only?: CronExpression }): Promise<void>;
 	/** Every job with a handler, for asserting that a map has no leaf nobody runs. */
 	readonly mapped: AnyJobDefinition[];
 	/** The distinct schedules the mapped jobs declare, for asserting against a config. */
@@ -168,13 +207,6 @@ export type JobDispatcherContext<Dispatcher> =
  */
 function isHandler(value: LoadHandler | AnyJobHandler | HandlerModule): value is AnyJobHandler {
 	return typeof value === "function" && "job" in value;
-}
-
-/** Reads the `type` a body names, when it names one at all. */
-function typeOf(body: unknown): string | undefined {
-	if (typeof body !== "object" || body === null) return undefined;
-	if (!("type" in body)) return undefined;
-	return typeof body.type === "string" ? body.type : undefined;
 }
 
 /**
@@ -251,20 +283,20 @@ export function createJobDispatcher<const Chain extends readonly AnyJobMiddlewar
 	}
 
 	/**
-	 * Records a message the dispatcher will not dispatch as a `job` log that ended
-	 * `refused`, forwards it, and acks it.
-	 * @param message The refused delivery.
+	 * Records a delivery the dispatcher will not dispatch as a `job` log that ended `refused`,
+	 * forwards it, and answers with the settlement that takes it out of the queue.
+	 * @param delivery The refused delivery.
 	 * @param reason Which refusal this is.
 	 */
-	async function refuse(message: Message<unknown>, reason: RefusalReason): Promise<void> {
+	async function refuse(delivery: JobDelivery, reason: RefusalReason): Promise<Settlement> {
 		let log = openJobLog({
 			job: {
-				name: typeOf(message.body),
-				id: message.id,
-				attempts: message.attempts,
+				name: readMessageBody(delivery.body).job,
+				id: delivery.id,
+				attempts: delivery.attempts,
 				ending: "refused",
 				refusal: reason,
-				body: bodyField(message.body),
+				body: bodyField(delivery.body),
 			},
 		});
 
@@ -272,9 +304,9 @@ export function createJobDispatcher<const Chain extends readonly AnyJobMiddlewar
 		log.parent?.inc("jobs.refused");
 		log.emit();
 
-		await options.onInvalid?.(message, { invalid: message.body });
+		await options.onInvalid?.(delivery, { invalid: delivery.body });
 
-		message.ack();
+		return { type: "dead-letter", reason: "invalid_message" };
 	}
 
 	/**
@@ -286,10 +318,10 @@ export function createJobDispatcher<const Chain extends readonly AnyJobMiddlewar
 	 * verbatim. `attempts` counts deliveries of this copy, not the retries that spent the
 	 * original.
 	 *
-	 * @param message The dead-lettered delivery.
+	 * @param delivery The dead-lettered delivery.
 	 */
-	function recordDeadLetter(message: Message<unknown>): void {
-		let body = message.body;
+	function recordDeadLetter(delivery: JobDelivery): void {
+		let body = delivery.body;
 		let wrapped: InvalidMessage | undefined =
 			typeof body === "object" && body !== null && "invalid" in body
 				? (body as InvalidMessage)
@@ -299,9 +331,9 @@ export function createJobDispatcher<const Chain extends readonly AnyJobMiddlewar
 
 		let log = openJobLog({
 			job: {
-				name: typeOf(payload),
-				id: message.id,
-				attempts: message.attempts,
+				name: readMessageBody(payload).job,
+				id: delivery.id,
+				attempts: delivery.attempts,
 				ending: "dead_letter",
 				dead_letter: reason,
 				body: bodyField(payload),
@@ -311,54 +343,87 @@ export function createJobDispatcher<const Chain extends readonly AnyJobMiddlewar
 		log.fail(new DeadLettered(reason));
 		log.parent?.inc("jobs.dead_lettered");
 		log.emit();
-
-		message.ack();
 	}
 
 	/**
-	 * Dispatches one message to the job it names.
-	 * @param message The delivery.
-	 * @param batchSize How many messages share this invocation.
+	 * Runs the job one delivery names, answering with what it ended as.
+	 * @param delivery The delivery, already read off the backend.
+	 * @param batchSize How many deliveries share this invocation.
 	 */
-	async function dispatch(message: Message<unknown>, batchSize: number): Promise<void> {
-		let name = typeOf(message.body);
+	async function deliver(delivery: JobDelivery, batchSize: number): Promise<Settlement> {
+		let { job: name, payload } = readMessageBody(delivery.body);
 		let entry = name === undefined ? undefined : mapped.get(name);
 
-		if (entry === undefined) return await refuse(message, "unknown-job");
+		if (entry === undefined) return await refuse(delivery, "unknown-job");
+
+		if (exhausted(delivery)) return { type: "dead-letter", reason: "retries_exhausted" };
 
 		let input: unknown;
 
 		if (entry.job.input !== undefined) {
-			let result = await validate(message.body as JSONValue, entry.job.input);
-			if (isFailure(result)) return await refuse(message, "invalid-input");
+			let result = await validate(payload as JSONValue, entry.job.input);
+			if (isFailure(result)) return await refuse(delivery, "invalid-input");
 			input = result.data;
 		}
 
-		await runJob({
+		return await runJob({
 			job: entry.job,
 			handler: () => handlerFor(entry.job.name, entry.load),
-			message,
+			delivery,
 			input,
 			batchSize,
 			middleware: options.middleware ?? [],
 			timeout: options.timeout,
-			uptime: options.uptime,
+			onEnd: options.onEnd,
 		});
 	}
 
 	/**
-	 * Hands bodies to the app's queue write.
-	 * @param bodies The messages to enqueue.
-	 * @throws When this dispatcher was built without a `send`.
+	 * Hands messages to the queue this dispatcher writes through, raising the backend's own
+	 * failure so a caller that cannot enqueue hears about it.
+	 *
+	 * @param messages The messages to enqueue.
+	 * @throws When this dispatcher was built without a `queue`, or the backend refused.
 	 */
-	async function send(bodies: JSONValue[]): Promise<void> {
-		if (options.send === undefined) {
-			throw new Error("This dispatcher has no `send`, so it cannot enqueue anything");
+	async function send(messages: JobMessage[]): Promise<void> {
+		if (options.queue === undefined) {
+			throw new Error("This dispatcher has no `queue`, so it cannot enqueue anything");
 		}
 
-		if (bodies.length === 0) return;
+		if (messages.length === 0) return;
 
-		await options.send(bodies);
+		unwrap(await options.queue.send(messages));
+	}
+
+	/**
+	 * Whether this delivery has spent the attempts this package allows it. False for a queue
+	 * that counts its own, whatever `maxAttempts` says, so nothing overrules a backend policy.
+	 *
+	 * @param delivery The delivery about to run.
+	 */
+	function exhausted(delivery: JobDelivery): boolean {
+		if (options.queue?.retries !== "core") return false;
+		if (options.maxAttempts === undefined) return false;
+		return delivery.attempts > options.maxAttempts;
+	}
+
+	/**
+	 * The jobs one tick enqueues: those declaring the trigger's own expression when the tick
+	 * names one, and otherwise those whose schedule fires in this minute.
+	 *
+	 * @param now The minute being ticked.
+	 * @param only The single expression the platform delivered, when a platform did.
+	 */
+	function due(now: Date, only: CronExpression | undefined): AnyJobDefinition[] {
+		let jobs = [...mapped.values()].map(({ job }) => job);
+
+		if (only !== undefined) return jobs.filter((job) => job.cron === only);
+
+		return jobs.filter((job) => {
+			if (job.cron === undefined) return false;
+			let schedule = Schedule.parse(job.cron);
+			return isFailure(schedule) ? false : schedule.data.matches(now, { timeZone: "UTC" });
+		});
 	}
 
 	return {
@@ -377,47 +442,54 @@ export function createJobDispatcher<const Chain extends readonly AnyJobMiddlewar
 			return [...crons];
 		},
 
+		async deliver(delivery, batchSize = 1) {
+			return await deliver(delivery, batchSize);
+		},
+
 		async enqueue(job, ...input) {
-			await send([messageBody(job, input[0])]);
+			await send([{ job: job.name, body: input[0] as JSONValue }]);
 		},
 
 		async enqueueMany(job, inputs) {
-			await send(inputs.map((input) => messageBody(job, input)));
+			await send(inputs.map((input) => ({ job: job.name, body: input as JSONValue })));
 		},
 
-		async scheduled(controller) {
+		async tick({ now, only }) {
 			let log = open("cron", {
-				cron: { expression: controller.cron, scheduled_at: controller.scheduledTime },
+				cron: { expression: only, scheduled_at: now.getTime() },
 			});
 
 			await log.run(async () => {
-				let due = [...mapped.values()]
-					.map(({ job }) => job)
-					.filter((job) => job.cron === controller.cron);
+				let jobs = due(now, only);
 
-				await send(due.map((job) => messageBody(job)));
+				await send(jobs.map((job) => ({ job: job.name })));
 
-				log.set({ jobs: { enqueued: due.length } });
+				log.set({ jobs: { enqueued: jobs.length } });
 			});
 		},
 
-		async queue(batch) {
+		async deliverBatch(deliveries, { queue, apply }) {
 			let log = open("queue", {
-				queue: { name: batch.queue, batch_size: batch.messages.length },
+				queue: { name: queue, batch_size: deliveries.length },
 			});
 
 			await log.run(async () => {
-				if (options.deadLetterQueue !== undefined && batch.queue === options.deadLetterQueue) {
-					for (let message of batch.messages) recordDeadLetter(message);
+				if (options.deadLetterQueue !== undefined && queue === options.deadLetterQueue) {
+					for (let delivery of deliveries) {
+						recordDeadLetter(delivery);
+						apply(delivery, { type: "ack" });
+					}
 					return;
 				}
 
 				let outcomes = await Promise.allSettled(
-					batch.messages.map((message) => dispatch(message, batch.messages.length)),
+					deliveries.map(async (delivery) => {
+						apply(delivery, await deliver(delivery, deliveries.length));
+					}),
 				);
 
 				/**
-				 * The first unexpected failure is re-thrown once every message has had its turn,
+				 * The first unexpected failure is re-thrown once every delivery has had its turn,
 				 * so one job's crash reaches the platform without stopping its batch mates.
 				 */
 				for (let outcome of outcomes) if (outcome.status === "rejected") throw outcome.reason;

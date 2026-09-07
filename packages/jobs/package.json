@@ -1,12 +1,17 @@
 {
 	"name": "@sdxc/jobs",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Declared background jobs dispatched over a pluggable queue backend",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
-		"./errors": "./src/errors.ts"
+		"./cloudflare": "./src/adapters/cloudflare.ts",
+		"./conformance": "./src/testing/conformance.ts",
+		"./errors": "./src/errors.ts",
+		"./memory": "./src/adapters/memory.ts",
+		"./queue": "./src/queue.ts",
+		"./uptime": "./src/uptime.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
@@ -24,5 +29,21 @@
 		"@cloudflare/workers-types": "^5.20260901.1",
 		"@sdxc/cloudflare-mocks": "workspace:*",
 		"remix": "3.0.0-rc.1"
+	},
+	"peerDependencies": {
+		"@cloudflare/workers-types": "^5.20260901.1",
+		"remix": "3.0.0-rc.1",
+		"vitest": "^4.0.0"
+	},
+	"peerDependenciesMeta": {
+		"@cloudflare/workers-types": {
+			"optional": true
+		},
+		"remix": {
+			"optional": true
+		},
+		"vitest": {
+			"optional": true
+		}
 	}
 }

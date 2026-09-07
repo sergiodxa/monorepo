@@ -82,13 +82,13 @@ describe("enqueuePendingDomains", () => {
 		expect(messages).toHaveLength(2);
 
 		let teamDomainIds = messages.map(
-			(message) => (message.body as { teamDomainId: string }).teamDomainId,
+			(message) => (message.body as { body: { teamDomainId: string } }).body.teamDomainId,
 		);
 		expect(new Set(teamDomainIds)).toEqual(new Set([first.id, second.id]));
 
 		for (let message of messages) {
 			expect(message.contentType).toBe("json");
-			expect((message.body as { type: string }).type).toBe("verifyDomainOwnership");
+			expect((message.body as { job: string }).job).toBe("verifyDomainOwnership");
 		}
 
 		expect(record).toMatchObject({ "domains.enqueued": 2 });

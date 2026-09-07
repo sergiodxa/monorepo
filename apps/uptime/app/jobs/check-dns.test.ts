@@ -81,12 +81,18 @@ function sweepOf(name: string, outcomes: DnsQueryOutcome[]): DnsNameSweep {
  */
 let sweepDnsNameMock = vi.fn(async (name: string): Promise<DnsNameSweep> => sweepOf(name, []));
 
+/** One `notify` message as it travels: the job it names, and the transition under `body`. */
+interface NotifyEnvelope {
+	job: "notify";
+	body: NotifyMessage;
+}
+
 /**
  * The queue the sweep notifies through and the dataset it reports checks to. Both live at
  * module scope because the module under test captures `env` on import, so `beforeEach`
  * clears them between tests, reusing the instances the import captured.
  */
-let queue: QueueMock<NotifyMessage> = createQueue<NotifyMessage>({ name: "notify" });
+let queue: QueueMock<NotifyEnvelope> = createQueue<NotifyEnvelope>({ name: "notify" });
 let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
 /** A sweep that enqueued nothing is a call that never happened, which `sent` cannot show. */
@@ -123,8 +129,8 @@ let checkDns = (await import("./check-dns")).default;
 let { QUERIES_PER_NAME } = realDnsCheckModule;
 let { MAX_NAMES_PER_CHECK } = await import("~/app/services/dns-discovery");
 
-/** Every `notify` message body the sweep put on the queue, in order. */
-function enqueued(): NotifyMessage[] {
+/** Every message the sweep put on the queue, in order, each wrapping one transition. */
+function enqueued(): NotifyEnvelope[] {
 	return queue.sent.map((message) => message.body);
 }
 
@@ -260,11 +266,13 @@ describe("checkDns", () => {
 
 		expect(enqueued()).toEqual([
 			{
-				type: "notify",
-				monitorType: "dns",
-				monitorId: monitor.id,
-				previousStatus: null,
-				newStatus: "changed",
+				job: "notify",
+				body: {
+					monitorType: "dns",
+					monitorId: monitor.id,
+					previousStatus: null,
+					newStatus: "changed",
+				},
 			},
 		]);
 
@@ -339,11 +347,13 @@ describe("checkDns", () => {
 
 		expect(enqueued()).toEqual([
 			{
-				type: "notify",
-				monitorType: "dns",
-				monitorId: monitor.id,
-				previousStatus: "changed",
-				newStatus: "ok",
+				job: "notify",
+				body: {
+					monitorType: "dns",
+					monitorId: monitor.id,
+					previousStatus: "changed",
+					newStatus: "ok",
+				},
 			},
 		]);
 	});
@@ -363,7 +373,7 @@ describe("checkDns", () => {
 		try {
 			let record = await runJob(db);
 
-			expect(enqueued().map((message) => message.monitorId)).toEqual([healthy.id]);
+			expect(enqueued().map((message) => message.body.monitorId)).toEqual([healthy.id]);
 
 			expect(record).toMatchObject({
 				"checks.total": 2,

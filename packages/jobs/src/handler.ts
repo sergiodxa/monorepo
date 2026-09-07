@@ -49,16 +49,22 @@ export type JobHandlerFunction<Schema extends StandardSchemaV1 | undefined = und
 	context: JobHandlerContext<Schema>,
 ) => Promise<void> | void;
 
-/** The work, paired with the job it was written for. */
-export interface JobHandler<Schema extends StandardSchemaV1 | undefined = undefined> {
+/**
+ * The work, paired with the job it was written for. `Meta` rides along because the job
+ * carries it; nothing about a handler reads it.
+ */
+export interface JobHandler<
+	Schema extends StandardSchemaV1 | undefined = undefined,
+	Meta = unknown,
+> {
 	(context: JobHandlerContext<Schema>): Promise<void> | void;
 	/** The job this handler was created for, which the dispatcher checks it was mapped to. */
-	readonly job: JobDefinition<Schema>;
+	readonly job: JobDefinition<Schema, Meta>;
 }
 
 /** A handler whatever it runs, for the places that hold any of them. */
 // oxlint-disable-next-line typescript/no-explicit-any -- payloads vary per job
-export type AnyJobHandler = JobHandler<any>;
+export type AnyJobHandler = JobHandler<any, any>;
 
 /**
  * How the dispatcher holds a handler once it has accepted one.
@@ -80,10 +86,10 @@ export type RunnableJobHandler = ((context: AnyJobContext) => Promise<void> | vo
  * @returns The handler, carrying the job it belongs to.
  * @example export default createJobHandler(jobs.clean, async ({ logger }) => { … });
  */
-export function createJobHandler<Schema extends StandardSchemaV1 | undefined>(
-	job: JobDefinition<Schema>,
+export function createJobHandler<Schema extends StandardSchemaV1 | undefined, const Meta>(
+	job: JobDefinition<Schema, Meta>,
 	handler: JobHandlerFunction<Schema>,
-): JobHandler<Schema> {
+): JobHandler<Schema, Meta> {
 	return Object.assign((context: JobHandlerContext<Schema>) => handler(context), { job });
 }
 
@@ -102,8 +108,11 @@ export function createJobHandler<Schema extends StandardSchemaV1 | undefined>(
  * ctx.set(Database, await testDatabase(), { property: "database" });
  * await handler(ctx);
  */
-export function createJobContext<Schema extends StandardSchemaV1 | undefined = undefined>(
-	job: JobDefinition<Schema>,
+export function createJobContext<
+	Schema extends StandardSchemaV1 | undefined = undefined,
+	const Meta = undefined,
+>(
+	job: JobDefinition<Schema, Meta>,
 	init: JobContextInit<HandlerInput<Schema>>,
 ): JobHandlerContext<Schema> {
 	return new Context(job, init) as JobHandlerContext<Schema>;

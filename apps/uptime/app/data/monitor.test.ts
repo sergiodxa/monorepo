@@ -43,10 +43,8 @@ import {
 
 /** The message body `Monitor.ping` passes to `env.QUEUE.send(...)`. */
 interface PingQueueMessage {
-	type: string;
-	id: string;
-	monitorId: string;
-	scheduledAt: number;
+	job: string;
+	body: { id: string; monitorId: string; scheduledAt: number };
 }
 
 /**
@@ -322,10 +320,10 @@ describe("Monitor.ping", () => {
 
 		expect(queue.sent).toHaveLength(1);
 		let message = queue.sent[0]?.body;
-		expect(message?.type).toBe("checkHttp");
-		expect(message?.monitorId).toBe(monitorId);
-		expect(message?.id.startsWith(`${monitorId}:manual:`)).toBe(true);
-		expect(typeof message?.scheduledAt).toBe("number");
+		expect(message?.job).toBe("checkHttp");
+		expect(message?.body.monitorId).toBe(monitorId);
+		expect(message?.body.id.startsWith(`${monitorId}:manual:`)).toBe(true);
+		expect(typeof message?.body.scheduledAt).toBe("number");
 	});
 
 	test("enqueues nothing when the team owner is known to be unsubscribed", async () => {
@@ -391,7 +389,7 @@ describe("Monitor.ping", () => {
 		await createActiveSubscription(db, "owner-1");
 		await Monitor.ping(db, monitorId, "owner-1");
 
-		let manualId = queue.sent[0]?.body.id;
+		let manualId = queue.sent[0]?.body.body.id;
 		expect(manualId).not.toBe(Monitor.scheduledJobId(monitorId, scheduledAt));
 		expect(manualId).toContain(":manual:");
 		expect(Monitor.scheduledJobId(monitorId, scheduledAt)).not.toContain(":manual:");
@@ -406,7 +404,7 @@ describe("Monitor.ping", () => {
 		await Monitor.ping(db, monitorId, "owner-1");
 		await Monitor.ping(db, monitorId, "owner-1");
 
-		let [first, second] = queue.sent.map((message) => message.body.id);
+		let [first, second] = queue.sent.map((message) => message.body.body.id);
 		expect(first).not.toBe(second);
 	});
 });

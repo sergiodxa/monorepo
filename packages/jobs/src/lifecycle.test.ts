@@ -1,6 +1,6 @@
 /**
  * Exercises what happens around the handler: the timeout that aborts its signal
- * and stops the dispatcher waiting, the monitor ping a completed run sends, the
+ * and stops the dispatcher waiting, the `onEnd` hook a decided ending runs through, the
  * dead-letter batches the dispatcher records itself, and the errors it does not own —
  * each read back off the job log the run emits.
  *
@@ -8,15 +8,18 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { MessageBatch } from "@cloudflare/workers-types";
+import type { MessageBatch, Queue } from "@cloudflare/workers-types";
 import type { QueueMock } from "@sdxc/cloudflare-mocks";
-import type { JSONValue } from "@sdxc/types";
 
 import { createQueue } from "@sdxc/cloudflare-mocks";
 import { createLogger } from "@sdxc/logger";
+import { isFailure } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
+
+import * as cloudflare from "./adapters/cloudflare.js";
+import { createUptimeReporter } from "./uptime.js";
 
 import { createJobDispatcher, createJobHandler, job, jobs } from "./index.js";
 
@@ -33,42 +36,38 @@ afterEach(() => vi.useRealTimers());
 
 /** Builds a map whose sends land in a recording queue binding, and a logger whose records are collected. */
 function setup() {
-	let queue = createQueue({ name: "ping" }) as QueueMock<unknown>;
+	let binding = createQueue({ name: "ping" }) as QueueMock<unknown>;
+	let queue = cloudflare.queue(() => binding as unknown as Queue);
 	let records: Record<string, unknown>[] = [];
 	let logger = createLogger({ service: "test", sink: (record) => void records.push(record) });
 
 	let map = jobs({
 		clean: job(),
-		watched: job({ monitorId: MONITOR_ID }),
+		watched: job({ meta: { monitorId: MONITOR_ID } }),
 	});
-
-	/** The queue write a dispatcher in these tests is built with. */
-	let send = async (bodies: JSONValue[]) => {
-		await queue.sendBatch(bodies.map((body) => ({ body })));
-	};
 
 	/** The records of one kind, in the order they were emitted. */
 	let ofKind = (kind: string) => records.filter((record) => record.kind === kind);
 
-	return { queue, map, send, logger, records, ofKind };
+	return { binding, queue, map, logger, records, ofKind };
 }
 
 /** Delivers everything pending to the dispatcher, as the worker's `queue` handler would. */
 function consume(
-	queue: QueueMock<unknown>,
+	binding: QueueMock<unknown>,
 	handler: (batch: MessageBatch<unknown>) => Promise<void>,
 ) {
-	return queue.consume((batch) => handler(batch as MessageBatch<unknown>));
+	return binding.consume((batch) => handler(batch as MessageBatch<unknown>));
 }
 
 describe("timeouts", () => {
 	test("aborts the signal and stops waiting for a handler that ignores it", async () => {
-		let { queue, map, send, logger, ofKind } = setup();
+		let { binding, queue, map, logger, ofKind } = setup();
 		let aborted = vi.fn();
 
 		vi.useFakeTimers();
 
-		let dispatcher = createJobDispatcher({ send, logger, timeout: "1 second" });
+		let dispatcher = createJobDispatcher({ queue, logger, timeout: "1 second" });
 		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, (ctx) => {
@@ -79,7 +78,7 @@ describe("timeouts", () => {
 
 		await dispatcher.enqueue(map.clean);
 
-		let running = consume(queue, (batch) => dispatcher.queue(batch));
+		let running = consume(binding, (batch) => cloudflare.worker(dispatcher).queue(batch));
 		await vi.advanceTimersByTimeAsync(1_000);
 		expect(aborted).toHaveBeenCalledTimes(1);
 
@@ -96,11 +95,11 @@ describe("timeouts", () => {
 	});
 
 	test("lets a handler that gives up settle it first", async () => {
-		let { queue, map, send, logger, ofKind } = setup();
+		let { binding, queue, map, logger, ofKind } = setup();
 
 		vi.useFakeTimers();
 
-		let dispatcher = createJobDispatcher({ send, logger, timeout: "1 second" });
+		let dispatcher = createJobDispatcher({ queue, logger, timeout: "1 second" });
 		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, async (ctx) => {
@@ -111,7 +110,7 @@ describe("timeouts", () => {
 
 		await dispatcher.enqueue(map.clean);
 
-		let running = consume(queue, (batch) => dispatcher.queue(batch));
+		let running = consume(binding, (batch) => cloudflare.worker(dispatcher).queue(batch));
 		await vi.advanceTimersByTimeAsync(1_000);
 		let result = await running;
 
@@ -120,16 +119,16 @@ describe("timeouts", () => {
 	});
 
 	test("reports a job that timed itself out", async () => {
-		let { queue, map, send, logger, ofKind } = setup();
+		let { binding, queue, map, logger, ofKind } = setup();
 
-		let dispatcher = createJobDispatcher({ send, logger, timeout: "1 minute" });
+		let dispatcher = createJobDispatcher({ queue, logger, timeout: "1 minute" });
 		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, (ctx) => ctx.timeout("Still fetching")),
 		);
 
 		await dispatcher.enqueue(map.clean);
-		let result = await consume(queue, (batch) => dispatcher.queue(batch));
+		let result = await consume(binding, (batch) => cloudflare.worker(dispatcher).queue(batch));
 
 		expect(result.retried).toHaveLength(1);
 		expect(ofKind("job")[0]).toMatchObject({
@@ -141,9 +140,9 @@ describe("timeouts", () => {
 	});
 
 	test("waits indefinitely when no timeout is configured", async () => {
-		let { queue, map, send, logger } = setup();
+		let { binding, queue, map, logger } = setup();
 
-		let dispatcher = createJobDispatcher({ send, logger });
+		let dispatcher = createJobDispatcher({ queue, logger });
 		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, (ctx) => {
@@ -152,15 +151,15 @@ describe("timeouts", () => {
 		);
 
 		await dispatcher.enqueue(map.clean);
-		let result = await consume(queue, (batch) => dispatcher.queue(batch));
+		let result = await consume(binding, (batch) => cloudflare.worker(dispatcher).queue(batch));
 
 		expect(result.acked).toHaveLength(1);
 	});
 });
 
-describe("the monitor ping", () => {
-	test("reports a completed run to the job's monitor", async () => {
-		let { queue, map, send, logger, ofKind } = setup();
+describe("onEnd", () => {
+	test("reports a completed run before the delivery is settled", async () => {
+		let { binding, queue, map, logger, ofKind } = setup();
 		let pinged = vi.fn();
 
 		server.use(
@@ -170,37 +169,110 @@ describe("the monitor ping", () => {
 			}),
 		);
 
-		let dispatcher = createJobDispatcher({ send, logger, uptime: () => "token-1" });
+		let uptime = createUptimeReporter({ token: () => "token-1" });
+		let dispatcher = createJobDispatcher({
+			queue,
+			logger,
+			async onEnd(ctx, status) {
+				if (status.type !== "done") return;
+				let watched = ctx.of(map.watched);
+				if (watched !== null) await uptime(watched.meta.monitorId);
+			},
+		});
 		dispatcher.map(
 			map.watched,
 			createJobHandler(map.watched, () => {}),
 		);
 
 		await dispatcher.enqueue(map.watched);
-		let result = await consume(queue, (batch) => dispatcher.queue(batch));
+		let result = await consume(binding, (batch) => cloudflare.worker(dispatcher).queue(batch));
 
 		expect(pinged).toHaveBeenCalledWith("Bearer token-1");
 		expect(result.acked).toHaveLength(1);
 		expect(ofKind("job")[0]).toMatchObject({ "job.ending": "done", outcome: "ok" });
 	});
 
-	test("skips the ping when the job names no monitor", async () => {
-		let { queue, map, send, logger } = setup();
+	test("narrows to null for a job the hook does not report, so nothing is sent", async () => {
+		let { binding, queue, map, logger } = setup();
+		let seen: (object | null)[] = [];
 
-		let dispatcher = createJobDispatcher({ send, logger, uptime: () => "token-1" });
+		let dispatcher = createJobDispatcher({
+			queue,
+			logger,
+			onEnd(ctx) {
+				seen.push(ctx.of(map.watched));
+			},
+		});
 		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, () => {}),
 		);
 
 		await dispatcher.enqueue(map.clean);
-		let result = await consume(queue, (batch) => dispatcher.queue(batch));
+		let result = await consume(binding, (batch) => cloudflare.worker(dispatcher).queue(batch));
 
+		expect(seen).toEqual([null]);
 		expect(result.acked).toHaveLength(1);
 	});
 
-	test("acks the message when the ping itself fails, leaving the run done", async () => {
-		let { queue, map, send, logger, ofKind } = setup();
+	test("runs for every ending, carrying what the run ended as", async () => {
+		let { binding, queue, map, logger } = setup();
+		let seen: string[] = [];
+
+		let dispatcher = createJobDispatcher({
+			queue,
+			logger,
+			onEnd(_ctx, status) {
+				seen.push(status.type);
+			},
+		});
+		dispatcher.map(
+			map.clean,
+			createJobHandler(map.clean, (ctx) => ctx.retry({ reason: "not yet" })),
+		);
+
+		await dispatcher.enqueue(map.clean);
+		await consume(binding, (batch) => cloudflare.worker(dispatcher).queue(batch));
+
+		expect(seen).toEqual(["retry"]);
+	});
+
+	test("settles as decided when the hook itself fails, recording the failure", async () => {
+		let { binding, queue, map, logger, ofKind } = setup();
+
+		let dispatcher = createJobDispatcher({
+			queue,
+			logger,
+			onEnd() {
+				throw new Error("the monitor is down");
+			},
+		});
+		dispatcher.map(
+			map.watched,
+			createJobHandler(map.watched, () => {}),
+		);
+
+		await dispatcher.enqueue(map.watched);
+		let result = await consume(binding, (batch) => cloudflare.worker(dispatcher).queue(batch));
+
+		expect(result.acked).toHaveLength(1);
+		expect(result.retried).toHaveLength(0);
+		expect(ofKind("job")[0]).toMatchObject({
+			"job.ending": "done",
+			outcome: "degraded",
+			notes: [
+				expect.objectContaining({
+					level: "warn",
+					name: "job.hook_failed",
+					error: "the monitor is down",
+				}),
+			],
+		});
+		expect(ofKind("queue")[0]).toMatchObject({ "jobs.done": 1 });
+	});
+
+	test("leaves a refused ping as the app's business, so the run stays done", async () => {
+		let { binding, queue, map, logger, ofKind } = setup();
 
 		server.use(
 			http.post(`${UPTIME_URL}/api/v1/cron-jobs/${MONITOR_ID}/ping`, () =>
@@ -208,28 +280,30 @@ describe("the monitor ping", () => {
 			),
 		);
 
-		let dispatcher = createJobDispatcher({ send, logger, uptime: () => "token-1" });
+		let uptime = createUptimeReporter({ token: () => "token-1" });
+		let seen: string[] = [];
+
+		let dispatcher = createJobDispatcher({
+			queue,
+			logger,
+			async onEnd(ctx) {
+				let watched = ctx.of(map.watched);
+				if (watched === null) return;
+				let result = await uptime(watched.meta.monitorId);
+				if (isFailure(result)) seen.push(result.error.code);
+			},
+		});
 		dispatcher.map(
 			map.watched,
 			createJobHandler(map.watched, () => {}),
 		);
 
 		await dispatcher.enqueue(map.watched);
-		let result = await consume(queue, (batch) => dispatcher.queue(batch));
+		let result = await consume(binding, (batch) => cloudflare.worker(dispatcher).queue(batch));
 
+		expect(seen).toEqual(["refused"]);
 		expect(result.acked).toHaveLength(1);
-		expect(ofKind("job")[0]).toMatchObject({
-			"job.ending": "done",
-			outcome: "degraded",
-			notes: [
-				expect.objectContaining({
-					level: "warn",
-					name: "job.uptime_failed",
-					error: "Fetch failed with status 500: nope",
-				}),
-			],
-		});
-		expect(ofKind("queue")[0]).toMatchObject({ "jobs.done": 1 });
+		expect(ofKind("job")[0]).toMatchObject({ "job.ending": "done", outcome: "ok" });
 	});
 });
 
@@ -241,7 +315,7 @@ describe("the dead-letter queue", () => {
 		let dispatcher = createJobDispatcher({ logger, deadLetterQueue: "ping-dlq" });
 
 		await dlq.send({ invalid: { type: "nobodyHome" } });
-		let result = await consume(dlq, (batch) => dispatcher.queue(batch));
+		let result = await consume(dlq, (batch) => cloudflare.worker(dispatcher).queue(batch));
 
 		expect(result.acked).toHaveLength(1);
 		expect(ofKind("job")[0]).toMatchObject({
@@ -267,7 +341,7 @@ describe("the dead-letter queue", () => {
 		let dispatcher = createJobDispatcher({ logger, deadLetterQueue: "ping-dlq" });
 
 		await dlq.send({ type: "clean" });
-		let result = await consume(dlq, (batch) => dispatcher.queue(batch));
+		let result = await consume(dlq, (batch) => cloudflare.worker(dispatcher).queue(batch));
 
 		expect(result.acked).toHaveLength(1);
 		expect(ofKind("job")[0]).toMatchObject({
@@ -282,9 +356,9 @@ describe("the dead-letter queue", () => {
 
 describe("errors the package does not own", () => {
 	test("re-throws so the platform retries the invocation", async () => {
-		let { queue, map, send, logger, ofKind } = setup();
+		let { binding, queue, map, logger, ofKind } = setup();
 
-		let dispatcher = createJobDispatcher({ send, logger });
+		let dispatcher = createJobDispatcher({ queue, logger });
 		dispatcher.map(
 			map.clean,
 			createJobHandler(map.clean, () => {
@@ -294,7 +368,9 @@ describe("errors the package does not own", () => {
 
 		await dispatcher.enqueue(map.clean);
 
-		await expect(consume(queue, (batch) => dispatcher.queue(batch))).rejects.toThrow("boom");
+		await expect(
+			consume(binding, (batch) => cloudflare.worker(dispatcher).queue(batch)),
+		).rejects.toThrow("boom");
 		expect(ofKind("job")[0]).toMatchObject({
 			"job.ending": "failed",
 			outcome: "error",
@@ -303,9 +379,9 @@ describe("errors the package does not own", () => {
 	});
 
 	test("refuses a handler written for a different job", async () => {
-		let { queue, map, send, logger, ofKind } = setup();
+		let { binding, queue, map, logger, ofKind } = setup();
 
-		let dispatcher = createJobDispatcher({ send, logger });
+		let dispatcher = createJobDispatcher({ queue, logger });
 		dispatcher.map(
 			map.clean,
 			createJobHandler(map.watched, () => {}),
@@ -313,9 +389,9 @@ describe("errors the package does not own", () => {
 
 		await dispatcher.enqueue(map.clean);
 
-		await expect(consume(queue, (batch) => dispatcher.queue(batch))).rejects.toThrow(
-			/mapped to a handler written for/,
-		);
+		await expect(
+			consume(binding, (batch) => cloudflare.worker(dispatcher).queue(batch)),
+		).rejects.toThrow(/mapped to a handler written for/);
 		expect(ofKind("job")[0]).toMatchObject({ "job.ending": "failed", outcome: "error" });
 	});
 });

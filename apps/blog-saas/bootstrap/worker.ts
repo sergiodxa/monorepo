@@ -7,6 +7,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import * as cloudflare from "@sdxc/jobs/cloudflare";
 import { env } from "cloudflare:workers";
 
 import { dispatcher } from "~/app/jobs/dispatcher";
@@ -14,6 +15,9 @@ import { container } from "~/app/lib/container";
 
 import { createDashboardRouter } from "./app";
 import Blog from "./tenant";
+
+/** Both job handlers, bound to the dispatcher they delegate to. */
+const handlers = cloudflare.worker(dispatcher);
 
 export { Blog };
 
@@ -190,16 +194,16 @@ export default {
 	 *   expression.
 	 */
 	async scheduled(controller) {
-		await dispatcher.scheduled(controller);
+		await handlers.scheduled(controller);
 	},
 
 	/**
-	 * Queue entrypoint. Runs each delivered message as the job its `type` names, inside
-	 * the dispatcher's middleware chain.
+	 * Queue entrypoint. Runs each delivered message as the job it names, inside the
+	 * dispatcher's middleware chain.
 	 *
 	 * @param batch The delivered messages.
 	 */
 	async queue(batch) {
-		await dispatcher.queue(batch);
+		await handlers.queue(batch);
 	},
 } satisfies ExportedHandler<Cloudflare.Env>;

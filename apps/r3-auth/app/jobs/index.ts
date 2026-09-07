@@ -9,6 +9,11 @@
 
 import { job, jobs } from "@sdxc/jobs";
 
+/** What a job a cron monitor watches declares, so every one of them spells it the same way. */
+interface Monitored {
+	monitorId: string;
+}
+
 export default jobs({
 	/**
 	 * The daily session sweep, at midnight UTC. The cron monitor exists under this id and
@@ -17,6 +22,6 @@ export default jobs({
 	 */
 	cleanExpiredSessions: job({
 		cron: "0 0 * * *",
-		monitorId: "74f508a2-e6e9-4f01-8c25-2884330e7870",
+		meta: { monitorId: "74f508a2-e6e9-4f01-8c25-2884330e7870" } satisfies Monitored,
 	}),
 });

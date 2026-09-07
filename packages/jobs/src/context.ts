@@ -8,13 +8,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { ContextValue } from "remix/router";
 
 import { currentLog, Log } from "@sdxc/logger";
 
 import type { RetryOptions } from "./errors.js";
 import type { CronExpression } from "./job.js";
-import type { AnyJobDefinition } from "./jobs.js";
+import type { AnyJobDefinition, JobDefinition, JobOutput } from "./jobs.js";
 
 import { Ack, NonRetriable, Retry, Timeout } from "./errors.js";
 
@@ -60,8 +61,6 @@ export class JobContext<Input = undefined> {
 	readonly name: string;
 	/** The schedule this job is enqueued on, when it declares one. */
 	readonly cron: CronExpression | undefined;
-	/** The uptime monitor this job reports to, when it declares one. */
-	readonly monitorId: string | undefined;
 	/** The payload, parsed against the job's schema. */
 	readonly input: Input;
 	readonly id: string;
@@ -85,7 +84,6 @@ export class JobContext<Input = undefined> {
 	constructor(job: AnyJobDefinition, init: JobContextInit<Input>) {
 		this.name = job.name;
 		this.cron = job.cron;
-		this.monitorId = job.monitorId;
 		this.input = init.input as Input;
 		this.id = init.id;
 		this.attempts = init.attempts;
@@ -149,6 +147,27 @@ export class JobContext<Input = undefined> {
 	 */
 	timeout(reason?: string): never {
 		throw new Timeout(reason);
+	}
+
+	/**
+	 * This delivery's view of one job: its parsed payload and what it declared as `meta`,
+	 * both with the types that job gave them. Answers `null` when the delivery is for a
+	 * different job, which is how a dispatcher-level hook narrows before reading either.
+	 *
+	 * The name is checked, so this is a narrowing and not an assertion: the type comes
+	 * from the argument while the value comes from whichever job ran.
+	 *
+	 * @param job The job to read this delivery as.
+	 * @returns Its input and meta, or `null` for a delivery of another job.
+	 * @example
+	 * let sweep = ctx.of(jobs.cleanExpiredSessions);
+	 * if (sweep !== null) await uptime(sweep.meta.monitorId);
+	 */
+	of<Schema extends StandardSchemaV1 | undefined, Meta>(
+		job: JobDefinition<Schema, Meta>,
+	): { input: JobOutput<Schema>; meta: Meta } | null {
+		if (job.name !== this.name) return null;
+		return { input: this.input as JobOutput<Schema>, meta: job.meta };
 	}
 
 	/**

@@ -16,12 +16,18 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { NotifyMessage } from "~/app/lib/notify-queue";
 
+/** The envelope one notification lands on the queue as. */
+interface NotifyEnvelope {
+	job: "notify";
+	body: NotifyMessage;
+}
+
 /**
  * The queue the enqueuer sends to. It lives at module scope because the module under test
  * captures `env` on import, and it enforces the platform's 100-message batch ceiling, so
  * a chunking bug fails here as a rejected send rather than as a silently oversized batch.
  */
-let queue: QueueMock<NotifyMessage> = createQueue<NotifyMessage>({ name: "notify" });
+let queue: QueueMock<NotifyEnvelope> = createQueue<NotifyEnvelope>({ name: "notify" });
 
 /** Batch boundaries are not recoverable from the recorded messages, so `sendBatch` is spied on too. */
 let sendBatch = vi.spyOn(queue, "sendBatch");
@@ -39,9 +45,9 @@ function makeMessage(monitorId: string): NotifyMessage {
 	};
 }
 
-/** The body one notification lands on the queue as: its own fields, plus the job's name. */
-function makeBody(monitorId: string) {
-	return { ...makeMessage(monitorId), type: "notify" };
+/** The body one notification lands on the queue as: the job it names, and the transition under it. */
+function makeBody(monitorId: string): NotifyEnvelope {
+	return { job: "notify", body: makeMessage(monitorId) };
 }
 
 beforeEach(() => {
@@ -77,13 +83,12 @@ describe("enqueueNotifications", () => {
 
 		await enqueueNotifications([message]);
 
-		expect(queue.sent.map((sent) => sent.body)).toEqual([{ ...message, type: "notify" }]);
-		expect(Object.keys(queue.sent[0]!.body)).toEqual([
+		expect(queue.sent.map((sent) => sent.body)).toEqual([{ job: "notify", body: message }]);
+		expect(Object.keys(queue.sent[0]!.body.body)).toEqual([
 			"monitorType",
 			"monitorId",
 			"previousStatus",
 			"newStatus",
-			"type",
 		]);
 	});
 

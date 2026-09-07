@@ -133,7 +133,7 @@ describe("scheduled", () => {
 	test("enqueues the sweep on the daily trigger", async () => {
 		await schedule("0 0 * * *");
 		expect(queue.messages.map((message) => message.body)).toEqual([
-			{ type: "cleanExpiredSessions" },
+			{ job: "cleanExpiredSessions" },
 		]);
 	});
 
@@ -149,7 +149,7 @@ describe("queue", () => {
 		let expired = await createSession(Date.now() - 1000);
 		let live = await createSession(Date.now() + 60 * 1000);
 
-		let result = await deliver({ type: "cleanExpiredSessions" });
+		let result = await deliver({ job: "cleanExpiredSessions" });
 
 		let { sessions } = await import("~/database/schema");
 		let remaining = (await db.findMany(sessions)).map((row) => row.id);
@@ -180,7 +180,7 @@ describe("queue", () => {
 	test("processes the valid messages of a mixed batch", async () => {
 		let expired = await createSession(Date.now() - 1000);
 
-		let result = await deliver({ type: "nope" }, { type: "cleanExpiredSessions" });
+		let result = await deliver({ job: "nope" }, { job: "cleanExpiredSessions" });
 
 		let { sessions } = await import("~/database/schema");
 		expect(await db.count(sessions)).toBe(0);

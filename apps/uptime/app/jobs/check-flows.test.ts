@@ -58,12 +58,18 @@ function failing(overrides: Partial<FlowCheckResult> = {}): FlowCheckResult {
 
 let runFlowCheckMock = vi.fn(async (): Promise<FlowCheckResult> => passing());
 
+/** One `notify` message as it travels: the job it names, and the transition under `body`. */
+interface NotifyEnvelope {
+	job: "notify";
+	body: NotifyMessage;
+}
+
 /**
  * The queue the sweep notifies through and the dataset it reports runs to. Both live at
  * module scope because the module under test captures `env` on import, so `beforeEach`
  * clears them between tests, reusing the instances the import captured.
  */
-let queue: QueueMock<NotifyMessage> = createQueue<NotifyMessage>({ name: "notify" });
+let queue: QueueMock<NotifyEnvelope> = createQueue<NotifyEnvelope>({ name: "notify" });
 let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
 vi.doMock("cloudflare:workers", () => ({
@@ -93,8 +99,8 @@ let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let checkFlows = (await import("./check-flows")).default;
 
-/** Every `notify` message body the sweep put on the queue, in order. */
-function enqueued(): NotifyMessage[] {
+/** Every message the sweep put on the queue, in order, each wrapping one transition. */
+function enqueued(): NotifyEnvelope[] {
 	return queue.sent.map((message) => message.body);
 }
 
@@ -140,11 +146,13 @@ describe("checkFlows", () => {
 
 		expect(enqueued()).toEqual([
 			{
-				type: "notify",
-				monitorType: "flow",
-				monitorId: monitor.id,
-				previousStatus: "up",
-				newStatus: "down",
+				job: "notify",
+				body: {
+					monitorType: "flow",
+					monitorId: monitor.id,
+					previousStatus: "up",
+					newStatus: "down",
+				},
 			},
 		]);
 
@@ -159,11 +167,13 @@ describe("checkFlows", () => {
 
 		expect(enqueued()).toEqual([
 			{
-				type: "notify",
-				monitorType: "flow",
-				monitorId: monitor.id,
-				previousStatus: "down",
-				newStatus: "up",
+				job: "notify",
+				body: {
+					monitorType: "flow",
+					monitorId: monitor.id,
+					previousStatus: "down",
+					newStatus: "up",
+				},
 			},
 		]);
 	});
@@ -220,11 +230,13 @@ describe("checkFlows", () => {
 
 		expect(enqueued()).toEqual([
 			{
-				type: "notify",
-				monitorType: "flow",
-				monitorId: monitor.id,
-				previousStatus: "down",
-				newStatus: "down",
+				job: "notify",
+				body: {
+					monitorType: "flow",
+					monitorId: monitor.id,
+					previousStatus: "down",
+					newStatus: "down",
+				},
 			},
 		]);
 	});

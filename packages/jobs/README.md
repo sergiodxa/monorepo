@@ -1,11 +1,26 @@
 # @sdxc/jobs
 
-Background jobs for Cloudflare Queues, declared in one map and run by one dispatcher.
+Background jobs declared in one map, run by one dispatcher, over a queue backend of your
+choosing.
+
+## Installation
+
+```bash
+npm add @sdxc/jobs
+```
+
+Two adapters ship: `@sdxc/jobs/cloudflare` for Cloudflare Queues, and `@sdxc/jobs/memory`
+for tests and for anything running without a platform behind it. Writing a third means
+implementing `JobQueue` from `@sdxc/jobs/queue` and running `@sdxc/jobs/conformance`
+against it.
+
+`@cloudflare/workers-types`, `remix` and `vitest` are optional peers, needed only by the
+Cloudflare adapter, the context's typed key store, and the conformance suite respectively.
 
 ## Overview
 
 A job is declared, not implemented, in the map: its name, the payload it carries, the
-cron it runs on, and the monitor that watches it. The map is declaration and nothing
+cron it runs on, and whatever `meta` its own callers read off it. The map is declaration and nothing
 else — no handler, no queue — so importing it costs its schemas. The handler lives in
 its own module and is loaded only when a message for it arrives.
 
@@ -24,15 +39,15 @@ so one key serves an HTTP middleware and a job middleware alike.
 
 ### Declaring the map
 
-The key is the job's name, and the name is the message `type` — a wire contract, since
-messages enqueued by one deploy are consumed by the next.
+The key is the job's name, and the name is what the message is addressed to — a wire
+contract, since messages enqueued by one deploy are consumed by the next.
 
 ```typescript
 import { job, jobs } from "@sdxc/jobs";
 import * as s from "remix/data-schema";
 
 export default jobs({
-	clean: job({ cron: "0 0 * * *", monitorId: "8f1c…" }),
+	clean: job({ cron: "0 0 * * *", meta: { monitorId: "8f1c…" } }),
 	checkHttp: job({ input: s.object({ monitorId: s.string() }) }),
 	digests: {
 		daily: job({ cron: "0 8 * * *" }),
@@ -66,18 +81,29 @@ anything with a duration.
 
 ```typescript
 import { createJobDispatcher } from "@sdxc/jobs";
+import * as cloudflare from "@sdxc/jobs/cloudflare";
+import { env } from "cloudflare:workers";
 
 import { logger } from "~/bootstrap/logger";
 import jobs from "~/app/jobs";
 
 export const dispatcher = createJobDispatcher({
 	logger,
-	send: sendQueueBatch,
+	queue: cloudflare.queue(() => env.QUEUE),
 	middleware: [database()],
 	timeout: "5 minutes",
-	uptime: () => env.UPTIME_CRON_API_KEY,
+
+	/**
+	 * Runs once the ending is decided and before the delivery is settled, so a report that
+	 * has to reach a service is finished by then.
+	 */
+	async onEnd(ctx, status) {
+		if (status.type !== "done") return;
+		let watched = ctx.of(jobs.clean);
+		if (watched !== null) await uptime(watched.meta.monitorId);
+	},
 	deadLetterQueue: "ping-dlq",
-	onInvalid: (_message, body) => env.DLQ.send(body, { contentType: "json" }),
+	onInvalid: (_delivery, body) => env.DLQ.send(body, { contentType: "json" }),
 });
 
 dispatcher.map(jobs.clean, () => import("~/app/jobs/clean"));
@@ -85,13 +111,16 @@ dispatcher.map(jobs.checkHttp, () => import("~/app/jobs/check-http"));
 ```
 
 ```typescript
+/** Both job handlers, bound to the dispatcher they delegate to. */
+const handlers = cloudflare.worker(dispatcher);
+
 export default {
 	async scheduled(controller) {
-		await dispatcher.scheduled(controller);
+		await handlers.scheduled(controller);
 	},
 
 	async queue(batch) {
-		await dispatcher.queue(batch);
+		await handlers.queue(batch);
 	},
 } satisfies ExportedHandler<Cloudflare.Env>;
 ```
@@ -122,8 +151,8 @@ away. Fields are flat scalars under dotted keys; the kind says which they are.
 
 | Kind    | Opened by                     | Fields                                                                                                                                                                   |
 | ------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `cron`  | `dispatcher.scheduled()`      | `cron.expression`, `cron.scheduled_at`, `jobs.enqueued`                                                                                                                  |
-| `queue` | `dispatcher.queue()`          | `queue.name`, `queue.batch_size`, `job.count`, and one of `jobs.done`, `jobs.retried`, `jobs.refused`, `jobs.failed`, `jobs.timed_out`, `jobs.dead_lettered` per message |
+| `cron`  | `dispatcher.tick()`           | `cron.expression`, `cron.scheduled_at`, `jobs.enqueued`                                                                                                                  |
+| `queue` | `dispatcher.deliverBatch()`   | `queue.name`, `queue.batch_size`, `job.count`, and one of `jobs.done`, `jobs.retried`, `jobs.refused`, `jobs.failed`, `jobs.timed_out`, `jobs.dead_lettered` per message |
 | `job`   | Each message, under the batch | `job.name`, `job.id`, `job.attempts`, `job.batch_size`, `job.cron` when declared, `job.ending`, and whatever the handler `set()`                                         |
 
 A job log's `outcome` follows its ending: `ok` for `done`, `degraded` for `retry` (with
@@ -189,7 +218,9 @@ Declares one job for a map. Holds no handler, so importing a map costs its schem
   matching trigger in `wrangler.jsonc`. Parsed here, so an expression the platform would
   reject throws at declaration; the type is five space-separated fields, so anything
   coarser than that is a compile error. Absent means it is only ever enqueued explicitly
-- `options.monitorId`: Uptime cron monitor to ping once a run completes
+- `options.meta`: Anything this job's own callers read off it, unconstrained and inferred
+  as written. Nothing in the package reads it — a dispatcher-level hook reaches it through
+  `ctx.of(job)`, which gives it back this exact type
 
 **Returns:**
 
@@ -203,7 +234,10 @@ Declares one job for a map. Holds no handler, so importing a map costs its schem
 **Example:**
 
 ```typescript
-let checkHttp = job({ input: s.object({ monitorId: s.string() }), monitorId: "8f1c…" });
+let checkHttp = job({
+	input: s.object({ monitorId: s.string() }),
+	meta: { monitorId: "8f1c…" } satisfies Monitored,
+});
 
 job({ cron: "0 99 * * *" }); // Throws: out-of-range in the hour field at position 2
 job({ cron: "invalid" }); // Type error: not five fields
@@ -211,9 +245,16 @@ job({ cron: "invalid" }); // Type error: not five fields
 
 ### `messageBody(job: JobDefinition, input?): JSONValue`
 
-Builds the body one message carries: the payload's fields plus the `type` that names the
-job. For a call site that sends through the app's own queue helper rather than through
+Builds the body one message carries: the job it names, and the payload beside it under
+`body`. For a call site that sends through the app's own queue helper rather than through
 the dispatcher.
+
+```json
+{ "job": "notify", "body": { "monitorId": "…" } }
+```
+
+A job declaring no payload carries no `body`. The payload keeps a namespace of its own, so
+a job whose input declares a `job` or a `type` field carries it intact.
 
 **Example:**
 
@@ -259,7 +300,12 @@ Builds the registry both worker handlers delegate to.
 - `options.middleware`: Chain every job runs inside, in the order declared
 - `options.timeout`: How long a job gets before `ctx.signal` aborts and the dispatcher
   stops waiting
-- `options.uptime`: `() => string | undefined` — resolves the monitor-ping token
+- `options.onEnd`: `(ctx, status) => void | Promise<void>` — runs once a delivery's ending
+  is decided and before it is settled, which is what makes it the place for work that has
+  to reach a service before the message is acked. Its failure is never the job's: anything
+  it throws is recorded as `job.hook_failed` and the ending settles as decided
+- `options.maxAttempts`: the attempts a message gets before it is dead-lettered, for a
+  queue whose `retries` are this package's to count. Ignored by a backend counting its own
 - `options.deadLetterQueue`: Name of the dead-letter queue this worker also consumes,
   so its batches are recorded and acked here rather than dispatched
 - `options.onInvalid`: Forwards a refused message, already wrapped as `{ invalid: body }`
@@ -315,29 +361,47 @@ await dispatcher.enqueueMany(
 );
 ```
 
-#### `dispatcher.queue(batch: MessageBatch): Promise<void>`
+#### `dispatcher.deliver(delivery: JobDelivery, batchSize?): Promise<Settlement>`
 
-Runs every message in the batch concurrently, inside one `queue` log, settling when all
-of them have. Batches from the dead-letter queue are recorded and acked instead.
+Runs the job one delivery names and answers with what it ended as, for the caller's
+backend to apply. Names no platform, so a test drives it with a plain object.
 
 **Example:**
 
 ```typescript
-async queue(batch) {
-	await dispatcher.queue(batch);
-}
+let settlement = await dispatcher.deliver({ id: "m1", attempts: 1, body: { job: "clean" } });
 ```
 
-#### `dispatcher.scheduled(controller: ScheduledController): Promise<void>`
+#### `dispatcher.deliverBatch(deliveries: JobDelivery[], options): Promise<void>`
 
-Enqueues every mapped job whose `cron` equals the trigger's, in one write, inside one
-`cron` log that records how many. Runs none of them, and loads no handler.
+Runs every delivery that arrived together, inside one `queue` log, settling each through
+`options.apply` as that one finishes rather than when the last one does. Deliveries read
+from the configured `deadLetterQueue` are recorded and acked instead of dispatched.
+
+**Example:**
+
+```typescript
+await dispatcher.deliverBatch(deliveries, {
+	queue: "ping",
+	apply: (delivery, settlement) => settle(delivery, settlement),
+});
+```
+
+#### `dispatcher.tick(options: { now: Date; only?: CronExpression }): Promise<void>`
+
+Enqueues every mapped job that is due, in one write, inside one `cron` log that records
+how many. Runs none of them, and loads no handler.
+
+With `only`, a job is due when it declares that exact expression — the platform has
+already decided which minute this is, so no schedule is evaluated. Without it, a job is
+due when its schedule fires in `now`'s minute, which is what drives a backend that has no
+triggers behind it.
 
 **Example:**
 
 ```typescript
 async scheduled(controller) {
-	await dispatcher.scheduled(controller);
+	await dispatcher.tick({ now: new Date(controller.scheduledTime), only: controller.cron });
 }
 ```
 
@@ -363,7 +427,7 @@ handler directly.
 
 **Parameters:**
 
-- `job`: The job being run, which supplies `name`, `cron`, and `monitorId`
+- `job`: The job being run, which supplies `name`, `cron`, and `meta`
 - `init.id`: The queue message's id
 - `init.attempts`: Which delivery of this message this is, counting from one
 - `init.input`: The payload, already parsed against the job's schema
@@ -381,7 +445,10 @@ let ctx = new JobContext(jobs.clean, { id: "message-1", attempts: 1 });
 #### Properties
 
 - `ctx.input`: The payload, typed by the job's schema
-- `ctx.name`, `ctx.cron`, `ctx.monitorId`: The job's own declaration
+- `ctx.name`, `ctx.cron`: The job's own declaration
+- `ctx.of(job)`: This delivery's view of one job — its parsed `input` and declared `meta`,
+  both with that job's own types — or `null` for a delivery of another job. The name is
+  checked, so it narrows rather than asserts
 - `ctx.id`, `ctx.attempts`: The delivery's identifier and delivery count
 - `ctx.batchSize`: How many messages share this invocation
 - `ctx.log`: The run's record — `set()` fields, `note()` breadcrumbs, `time()` durations —
@@ -516,11 +583,70 @@ declare module "@sdxc/jobs" {
 }
 ```
 
-#### `SendMessages`
+#### `JobQueue`
+
+The backend a dispatcher enqueues through and is delivered from, at
+`@sdxc/jobs/queue`. Every call answers with a `Result`, so no backend call throws.
 
 ```typescript
-type SendMessages = (bodies: JSONValue[]) => Promise<void>;
+interface JobQueue {
+	readonly retries: "backend" | "core";
+	send(messages: JobMessage[]): Promise<Result<void, JobQueueError>>;
+	claim?(options: ClaimOptions): Promise<Result<JobDelivery[], JobQueueError>>;
+	settle?(delivery: JobDelivery, settlement: Settlement): Promise<Result<void, JobQueueError>>;
+}
 ```
+
+`claim` and `settle` are present together on a backend that is pulled, and absent on one
+that pushes deliveries into the dispatcher itself. `retries` says who counts attempts:
+`"backend"` leaves the ceiling where the platform already states it, `"core"` hands it to
+the dispatcher's `maxAttempts`.
+
+Two adapters ship. `@sdxc/jobs/cloudflare` exports `queue` and `worker`;
+`@sdxc/jobs/memory` exports `queue`. Both are reached through a namespace import, since
+`queue` collides with the first local variable holding one.
+
+```typescript
+import * as cloudflare from "@sdxc/jobs/cloudflare";
+
+export const dispatcher = createJobDispatcher({
+	queue: cloudflare.queue(() => env.QUEUE),
+});
+```
+
+```typescript
+// bootstrap/worker.ts
+const handlers = cloudflare.worker(dispatcher);
+
+export default {
+	scheduled: handlers.scheduled,
+	queue: handlers.queue,
+};
+```
+
+#### `createUptimeReporter(options)`
+
+The cron-monitor ping, at `@sdxc/jobs/uptime`. Wired to nothing: a dispatcher's `onEnd`
+calls it, so a service having a bad minute cannot become a reason to redeliver work that
+already succeeded. Bound to a token once, so a call site holds a monitor id and nothing
+else.
+
+```typescript
+import { createUptimeReporter } from "@sdxc/jobs/uptime";
+
+const uptime = createUptimeReporter({ token: () => env.UPTIME_CRON_API_KEY });
+```
+
+It answers with a `Result` rather than throwing, which is what makes discarding the
+outcome an act rather than an oversight. `UptimeError.code` is one of `refused` (the
+service answered and said no), `unreachable` (no answer at all), or `unconfigured` (no
+token resolved, so nothing was sent).
+
+Either call works. Awaited, the ping finishes inside the settlement barrier and a failure
+reaches that run's own record; handed to `waitUntil` from `cloudflare:workers`, the
+delivery settles at once and the outcome lands nowhere, since the record is written before
+the promise resolves. Await it unless a batch is large enough for the round trips to
+matter.
 
 ## Pattern: Middleware That Provides A Database
 
@@ -644,18 +770,18 @@ what the handler recorded.
 
 ## Related Packages
 
-- [`@sdxc/logger`](/packages/logger) - The `Log` a run records into and the `createLogger()` configuration the dispatcher's logs carry
-- [`@sdxc/duration`](/packages/duration) - The duration strings a retry delay and a timeout take
-- [`@sdxc/validate`](/packages/validate) - Standard Schema validation, used to parse a payload
-- [`@sdxc/cron`](/packages/cron) - Parses the cron a job declares, and rejects one the platform would not accept
-- [`@sdxc/cloudflare-mocks`](/packages/cloudflare-mocks) - Queue binding that drives a consumer in tests
+- [`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger) - The `Log` a run records into and the `createLogger()` configuration the dispatcher's logs carry
+- [`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration) - The duration strings a retry delay and a timeout take
+- [`@sdxc/validate`](https://www.npmjs.com/package/@sdxc/validate) - Standard Schema validation, used to parse a payload
+- [`@sdxc/cron`](https://www.npmjs.com/package/@sdxc/cron) - Parses the cron a job declares, and rejects one the platform would not accept
+- [`@sdxc/cloudflare-mocks`](https://www.npmjs.com/package/@sdxc/cloudflare-mocks) - Queue binding that drives a consumer in tests
 
 ## Tips
 
 1. **Spell a cron exactly as its trigger** - A valid expression still fires nothing if
    `wrangler.jsonc` does not name it, and `job()` cannot know that. Assert
    `dispatcher.crons` against the config in a test.
-2. **Treat a map key as a wire contract** - Renaming one renames a message type, and
+2. **Treat a map key as a wire contract** - Renaming one renames a message's address, and
    messages enqueued by the previous deploy are still in flight.
 3. **Map a loader, not a handler** - `() => import(…)` is what keeps job code out of the
    request path's module graph. For the same reason, prefer `messageBody()` plus the

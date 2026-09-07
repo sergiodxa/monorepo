@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import * as cloudflare from "@sdxc/jobs/cloudflare";
 import { env } from "cloudflare:workers";
 
 import { dispatcher } from "~/app/jobs/dispatcher";
@@ -32,6 +33,9 @@ function isProductionHost(request: Request): boolean {
 	let hostname = new URL(request.url).hostname;
 	return hostname === "auth.sergiodxa.com";
 }
+
+/** Both job handlers, bound to the dispatcher they delegate to. */
+const handlers = cloudflare.worker(dispatcher);
 
 export default {
 	/**
@@ -60,7 +64,7 @@ export default {
 	 * @param controller - The trigger being delivered.
 	 */
 	async scheduled(controller) {
-		await dispatcher.scheduled(controller);
+		await handlers.scheduled(controller);
 	},
 
 	/**
@@ -68,6 +72,6 @@ export default {
 	 * @param batch - The messages this delivery carries.
 	 */
 	async queue(batch) {
-		await dispatcher.queue(batch);
+		await handlers.queue(batch);
 	},
 } satisfies ExportedHandler<Cloudflare.Env>;

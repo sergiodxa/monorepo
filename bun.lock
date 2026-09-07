@@ -495,6 +495,16 @@
         "@sdxc/cloudflare-mocks": "workspace:*",
         "remix": "3.0.0-rc.1",
       },
+      "peerDependencies": {
+        "@cloudflare/workers-types": "^5.20260901.1",
+        "remix": "3.0.0-rc.1",
+        "vitest": "^4.0.0",
+      },
+      "optionalPeers": [
+        "@cloudflare/workers-types",
+        "remix",
+        "vitest",
+      ],
     },
     "packages/jwt": {
       "name": "@sdxc/jwt",
@@ -518,13 +528,17 @@
     "packages/logger": {
       "name": "@sdxc/logger",
       "version": "0.0.1",
-      "dependencies": {
-        "remix": "3.0.0-rc.1",
-      },
       "devDependencies": {
         "@cloudflare/workers-types": "^5.20260901.1",
         "@types/node": "^26.4.0",
+        "remix": "3.0.0-rc.1",
       },
+      "peerDependencies": {
+        "remix": "3.0.0-rc.1",
+      },
+      "optionalPeers": [
+        "remix",
+      ],
     },
     "packages/mail": {
       "name": "@sdxc/mail",

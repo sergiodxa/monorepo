@@ -112,7 +112,7 @@ Run from the repository root:
 | [http](packages/http)                                           | HTTP helper utilities                                                                    |     |
 | [i18n](packages/i18n)                                           | Language detection, i18next instances and translated-markup components                   | ✅  |
 | [icons](packages/icons)                                         | Lucide icons for Remix UI                                                                |     |
-| [jobs](packages/jobs)                                           | Job queue utilities                                                                      |     |
+| [jobs](packages/jobs)                                           | Declared background jobs dispatched over a pluggable queue backend                       | ✅  |
 | [jwt](packages/jwt)                                             | JWT payload classes and the keys that sign them                                          | ✅  |
 | [lazy-route](packages/lazy-route)                               | Maps a route to a module imported on the first request that reaches it                   | ✅  |
 | [location](packages/location)                                   | URL-like `Location` class for URL paths without an origin                                | ✅  |

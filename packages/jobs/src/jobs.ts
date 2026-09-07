@@ -1,7 +1,7 @@
 /**
  * `jobs()`, which turns declared leaves into the app's job map. It stamps each leaf with
- * the key it is filed under, which is the message `type` that job is known by. The map is
- * declaration and nothing else: it holds no handler and reaches no queue, so importing it
+ * the key it is filed under, which is the name that job is addressed by on the wire. The
+ * map is declaration and nothing else: it holds no handler and reaches no queue, so importing it
  * costs its schemas, and both the dispatcher and an app's own enqueue helper read from it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -16,8 +16,8 @@ import type { CronExpression, JobLeaf } from "./job.js";
 import { leaf } from "./job.js";
 
 /** A declared job whatever its schema, for the places that hold many at once. */
-// oxlint-disable-next-line typescript/no-explicit-any -- leaves vary by schema
-export type AnyJobLeaf = JobLeaf<any>;
+// oxlint-disable-next-line typescript/no-explicit-any -- leaves vary by schema and meta
+export type AnyJobLeaf = JobLeaf<any, any>;
 
 /** A group of declared jobs, nested as deeply as an app cares to group them. */
 export interface JobTree {
@@ -34,19 +34,28 @@ export type EnqueueArgs<Schema> = Schema extends StandardSchemaV1
 	? [input: EnqueueInput<Schema>]
 	: [];
 
+/** What a handler receives for a job: whatever its schema parsed to. */
+export type JobOutput<Schema> = Schema extends StandardSchemaV1
+	? StandardSchemaV1.InferOutput<Schema>
+	: undefined;
+
 /** One named job, bound to the queue its map was built with. */
-export interface JobDefinition<Schema extends StandardSchemaV1 | undefined = undefined> {
-	/** The message `type`, from the key this job is filed under. */
+export interface JobDefinition<
+	Schema extends StandardSchemaV1 | undefined = undefined,
+	Meta = undefined,
+> {
+	/** The name this job is addressed by on the wire, from the key it is filed under. */
 	readonly name: string;
 	readonly cron: CronExpression | undefined;
-	readonly monitorId: string | undefined;
 	readonly input: Schema | undefined;
+	/** What the leaf declared, `undefined` when it declared none. */
+	readonly meta: Meta;
 }
 
 /** The map `jobs()` returns: the declared shape, with every leaf named and bound. */
 export type JobMap<Tree> = {
-	[Key in keyof Tree]: Tree[Key] extends JobLeaf<infer Schema>
-		? JobDefinition<Schema>
+	[Key in keyof Tree]: Tree[Key] extends JobLeaf<infer Schema, infer Meta>
+		? JobDefinition<Schema, Meta>
 		: JobMap<Tree[Key]>;
 };
 
@@ -60,7 +69,7 @@ export type JobMap<Tree> = {
  * }
  */
 export type JobInput<Definition> =
-	Definition extends JobDefinition<infer Schema> ? EnqueueInput<Schema> : never;
+	Definition extends JobDefinition<infer Schema, infer _Meta> ? EnqueueInput<Schema> : never;
 
 /**
  * What enqueuing one job takes as arguments: its payload, or nothing at all for a job
@@ -72,11 +81,11 @@ export type JobInput<Definition> =
  * }
  */
 export type JobArgs<Definition> =
-	Definition extends JobDefinition<infer Schema> ? EnqueueArgs<Schema> : never;
+	Definition extends JobDefinition<infer Schema, infer _Meta> ? EnqueueArgs<Schema> : never;
 
 /** A definition whatever its schema, for the places that hold many at once. */
-// oxlint-disable-next-line typescript/no-explicit-any -- definitions vary by schema
-export type AnyJobDefinition = JobDefinition<any>;
+// oxlint-disable-next-line typescript/no-explicit-any -- definitions vary by schema and meta
+export type AnyJobDefinition = JobDefinition<any, any>;
 
 /** True for a value `job()` produced, false for a group of them. */
 function isLeaf(value: AnyJobLeaf | JobTree): value is AnyJobLeaf {
@@ -84,17 +93,54 @@ function isLeaf(value: AnyJobLeaf | JobTree): value is AnyJobLeaf {
 }
 
 /**
- * The body one message carries: the payload's own fields, plus the `type` that names the
- * job. `type` is written last, so a payload carrying one of its own cannot misroute the
- * message; the key is reserved. Exported for an app that sends through its own helper
- * rather than through the dispatcher.
+ * The body one message carries: the job it names, and the payload beside it under `body`. The
+ * payload keeps a namespace of its own, so a job whose input declares a `job` or a `type` field
+ * carries it intact. Exported for an app that sends through its own helper rather than the
+ * dispatcher.
  *
  * @param job The job the message is for.
  * @param input The payload, absent for a job that declares no schema.
  * @example await sendQueueBatch([messageBody(jobs.checkHttp, { monitorId })]);
  */
 export function messageBody(job: AnyJobDefinition, input?: unknown): JSONValue {
-	return { ...(input as object), type: job.name } as JSONValue;
+	return envelope(job.name, input);
+}
+
+/**
+ * The envelope itself, named by job rather than by definition, so an adapter serializing a
+ * `JobMessage` and a call site holding a definition write the same wire shape.
+ *
+ * @param job The name the message is addressed to.
+ * @param input The payload, absent for a job that declares no schema.
+ */
+export function envelope(job: string, input?: unknown): JSONValue {
+	if (input === undefined) return { job } as JSONValue;
+	return { job, body: input } as JSONValue;
+}
+
+/** The job a delivered body names, and the payload it carries. */
+export interface DeliveredBody {
+	job: string | undefined;
+	payload: unknown;
+}
+
+/**
+ * Reads a delivered body, accepting the envelope and the flat body that preceded it. A flat body
+ * carries its payload's fields beside `type`, so the body is its own payload; this is what lets a
+ * deploy consume what the one before it enqueued.
+ *
+ * @param body The delivered body, of whatever shape.
+ */
+export function readMessageBody(body: unknown): DeliveredBody {
+	if (typeof body !== "object" || body === null) return { job: undefined, payload: undefined };
+
+	if ("job" in body && typeof body.job === "string") {
+		return { job: body.job, payload: "body" in body ? body.body : undefined };
+	}
+
+	if ("type" in body && typeof body.type === "string") return { job: body.type, payload: body };
+
+	return { job: undefined, payload: undefined };
 }
 
 /**
@@ -106,8 +152,8 @@ function define(name: string, declared: AnyJobLeaf): AnyJobDefinition {
 	return {
 		name,
 		cron: declared.cron,
-		monitorId: declared.monitorId,
 		input: declared.input,
+		meta: declared.meta,
 	};
 }
 

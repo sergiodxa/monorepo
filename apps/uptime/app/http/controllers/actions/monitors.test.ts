@@ -37,10 +37,8 @@ import routes from "~/routes/web";
 
 /** The message `Monitor.ping()` enqueues for an on-demand HTTP check. */
 interface CheckHttpMessage {
-	type: "checkHttp";
-	id: string;
-	monitorId: string;
-	scheduledAt: number;
+	job: "checkHttp";
+	body: { id: string; monitorId: string; scheduledAt: number };
 }
 
 /**
@@ -171,7 +169,7 @@ describe("createMonitor", () => {
 			routes.app.team.monitors.show.href({ team: team.slug, monitorId: created!.id }),
 		);
 		expect(queue.sent).toHaveLength(1);
-		expect(queue.sent[0]!.body.monitorId).toBe(created!.id);
+		expect(queue.sent[0]!.body.body.monitorId).toBe(created!.id);
 	});
 
 	test("redirects back to the form without creating a monitor when the url is invalid", async () => {
@@ -376,7 +374,7 @@ describe("playMonitor", () => {
 			routes.app.team.monitors.show.href({ team: team.slug, monitorId: monitor.id }),
 		);
 		expect(queue.sent).toHaveLength(1);
-		expect(queue.sent[0]!.body.monitorId).toBe(monitor.id);
+		expect(queue.sent[0]!.body.body.monitorId).toBe(monitor.id);
 	});
 
 	test("queues nothing when the team owner is known to be unsubscribed", async () => {
@@ -459,7 +457,7 @@ describe("playMonitor billing", () => {
 		);
 
 		expect(queue.sent).toHaveLength(1);
-		expect(queue.sent[0]!.body.monitorId).toBe(monitor.id);
+		expect(queue.sent[0]!.body.body.monitorId).toBe(monitor.id);
 		expect(await billedEvents(testBilling)).toHaveLength(0);
 	});
 
@@ -566,7 +564,7 @@ describe("playMonitor for a caller asking for JSON", () => {
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({ queued: true, status: "up", checkedAt });
 		expect(queue.sent).toHaveLength(1);
-		expect(queue.sent[0]!.body.monitorId).toBe(monitor.id);
+		expect(queue.sent[0]!.body.body.monitorId).toBe(monitor.id);
 	});
 
 	test("reports that nothing was queued when the team owner is known to be unsubscribed", async () => {

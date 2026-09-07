@@ -10,6 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import * as cloudflare from "@sdxc/jobs/cloudflare";
 import { env } from "cloudflare:workers";
 
 import { GeoFetchDO } from "~/app/do/geo-fetch";
@@ -18,6 +19,9 @@ import { container } from "~/app/lib/container";
 import { CostLedger, countedKv, trackCost } from "~/app/services/cost";
 
 import application from "./app";
+
+/** Both job handlers, bound to the dispatcher they delegate to. */
+const handlers = cloudflare.worker(dispatcher);
 
 export { GeoFetchDO };
 
@@ -57,9 +61,7 @@ export default {
 	 * write are recorded as platform cost, which is what they are.
 	 */
 	async scheduled(controller) {
-		await trackCost(new CostLedger({ handler: "scheduled" }), () =>
-			dispatcher.scheduled(controller),
-		);
+		await trackCost(new CostLedger({ handler: "scheduled" }), () => handlers.scheduled(controller));
 	},
 
 	/**
@@ -67,6 +69,6 @@ export default {
 	 * consumes: `ping` and its dead-letter queue.
 	 */
 	async queue(batch) {
-		await container.scope(() => dispatcher.queue(batch));
+		await container.scope(() => handlers.queue(batch));
 	},
 } satisfies ExportedHandler<Cloudflare.Env>;

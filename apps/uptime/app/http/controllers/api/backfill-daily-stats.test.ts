@@ -87,7 +87,7 @@ describe("POST /api/v1/backfill-daily-stats", () => {
 		expect(body.data.status).toBe("queued");
 
 		expect(queue.sent).toHaveLength(1);
-		expect(queue.sent[0]?.body).toEqual({ type: "aggregateDailyStats" });
+		expect(queue.sent[0]?.body).toEqual({ job: "aggregateDailyStats" });
 		expect(queue.sent[0]?.contentType).toBe("json");
 	});
 

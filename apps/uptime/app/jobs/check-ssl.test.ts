@@ -43,12 +43,18 @@ let calculateSslStatusMock = vi.fn(
 	},
 );
 
+/** One `notify` message as it travels: the job it names, and the transition under `body`. */
+interface NotifyEnvelope {
+	job: "notify";
+	body: NotifyMessage;
+}
+
 /**
  * The queue the sweep notifies through, at module scope because the module
  * under test captures `env` on import, so `beforeEach` empties it rather than
  * re-creating it; the stubbed `env` module's placeholder bindings aren't callable.
  */
-let queue: QueueMock<NotifyMessage> = createQueue<NotifyMessage>({ name: "notify" });
+let queue: QueueMock<NotifyEnvelope> = createQueue<NotifyEnvelope>({ name: "notify" });
 
 /** A sweep that enqueued nothing is a call that never happened, which `sent` cannot show. */
 let sendBatch = vi.spyOn(queue, "sendBatch");
@@ -71,8 +77,8 @@ let checkSsl = (await import("./check-ssl")).default;
  */
 let { default: Monitor } = await import("~/app/data/monitor");
 
-/** Every `notify` message body the sweep put on the queue, in order. */
-function enqueued(): NotifyMessage[] {
+/** Every message the sweep put on the queue, in order, each wrapping one transition. */
+function enqueued(): NotifyEnvelope[] {
 	return queue.sent.map((message) => message.body);
 }
 
@@ -136,11 +142,13 @@ describe("checkSsl", () => {
 
 		expect(enqueued()).toEqual([
 			{
-				type: "notify",
-				monitorType: "ssl",
-				monitorId: monitor.id,
-				previousStatus: "unknown",
-				newStatus: "expiring",
+				job: "notify",
+				body: {
+					monitorType: "ssl",
+					monitorId: monitor.id,
+					previousStatus: "unknown",
+					newStatus: "expiring",
+				},
 			},
 		]);
 
@@ -217,7 +225,7 @@ describe("checkSsl", () => {
 
 		let record = await runJob(db);
 
-		expect(enqueued().map((message) => message.monitorId)).toEqual([healthy.id]);
+		expect(enqueued().map((message) => message.body.monitorId)).toEqual([healthy.id]);
 
 		expect(record).toMatchObject({
 			"checks.total": 2,

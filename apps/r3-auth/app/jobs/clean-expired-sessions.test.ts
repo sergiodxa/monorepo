@@ -87,7 +87,7 @@ beforeEach(async () => {
 
 describe("cleanExpiredSessions", () => {
 	test("keeps the monitor id the cron monitor already watches", () => {
-		expect(jobs.cleanExpiredSessions.monitorId).toBe("74f508a2-e6e9-4f01-8c25-2884330e7870");
+		expect(jobs.cleanExpiredSessions.meta.monitorId).toBe("74f508a2-e6e9-4f01-8c25-2884330e7870");
 	});
 
 	test("deletes expired sessions and keeps live ones", async () => {
