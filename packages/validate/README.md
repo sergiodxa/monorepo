@@ -10,10 +10,14 @@ The validation result is returned as a `Result<T, ValidationError>` type from `@
 
 ## Installation
 
-This package requires `@sdxc/result` and works with any Standard Schema-compliant validation library.
+```bash
+npm add @sdxc/validate
+```
+
+It works with any Standard Schema-compliant validation library, installed alongside it.
 
 ```bash
-bun add remix  # or valibot, arktype, etc.
+npm add remix  # or valibot, arktype, etc.
 ```
 
 ## Usage
@@ -670,8 +674,8 @@ The Standard Schema specification allows this package to work with any compliant
 
 ## Related Packages
 
-- [`@sdxc/result`](/packages/result) - Result type for explicit error handling
-- [`@sdxc/response`](/packages/response) - Semantic helpers that build plain `Response` objects for JSON APIs and redirects
+- [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) - Result type for explicit error handling
+- [`@sdxc/response`](https://www.npmjs.com/package/@sdxc/response) - Semantic helpers that build plain `Response` objects for JSON APIs and redirects
 - [Standard Schema](https://standardschema.dev) - The specification this package implements
 
 ## Tips

@@ -139,7 +139,7 @@ Run from the repository root:
 | [u](packages/u)                                                 | Tailwind-like Remix UI styling utilities                                                 |     |
 | [ui](packages/ui)                                               | Remix v3 UI component library                                                            |     |
 | [uuid](packages/uuid)                                           | UUID utilities                                                                           |     |
-| [validate](packages/validate)                                   | Standard Schema validation utilities                                                     |     |
+| [validate](packages/validate)                                   | Standard Schema validation utilities                                                     | ✅  |
 | [webhooks](packages/webhooks)                                   | Standard Webhooks signing, verification and replay guards                                |     |
 | [workers-cache](packages/workers-cache)                         | Cloudflare cache tags, purging and cache-status reads                                    |     |
 | [xml](packages/xml)                                             | XML parser and serializer for RSS-style feeds                                            | ✅  |

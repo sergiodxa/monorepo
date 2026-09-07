@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/validate",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Standard Schema validation utilities",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
