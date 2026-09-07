@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/catch-response-middleware",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Router middleware that turns a thrown Response into the request's response",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

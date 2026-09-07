@@ -97,7 +97,7 @@ Run from the repository root:
 | [billing](packages/billing)                                     | Vendor-neutral billing with pluggable providers and a webhook endpoint              |     |
 | [blog-engine](packages/blog-engine)                             | Host-agnostic blog engine                                                           |     |
 | [cache](packages/cache)                                         | Cache contract with adapters for memory and Cloudflare KV                           |     |
-| [catch-response-middleware](packages/catch-response-middleware) | Router middleware that turns a thrown `Response` into the response                  |     |
+| [catch-response-middleware](packages/catch-response-middleware) | Router middleware that turns a thrown `Response` into the request's response        | ✅  |
 | [cloudflare-mocks](packages/cloudflare-mocks)                   | In-memory Cloudflare binding mocks for tests                                        |     |
 | [cron](packages/cron)                                           | Cron schedules with zone-aware occurrences and descriptors                          |     |
 | [crypto](packages/crypto)                                       | WebCrypto primitives: hashing, HMAC, passwords, TOTP, AES-GCM                       | ✅  |
