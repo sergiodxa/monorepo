@@ -1,0 +1,24 @@
+{
+	"name": "@sdxc/cache",
+	"version": "0.0.1",
+	"private": true,
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./conformance": "./src/testing/conformance.ts",
+		"./memory": "./src/adapters/memory.ts",
+		"./worker-kv": "./src/adapters/worker-kv.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/duration": "workspace:*",
+		"@sdxc/logger": "workspace:*",
+		"@sdxc/types": "workspace:*"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^5.20260901.1"
+	}
+}

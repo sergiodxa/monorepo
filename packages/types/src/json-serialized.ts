@@ -22,25 +22,43 @@ import type { JSONValue } from "./json-value.js";
  * type Stored = JSONSerialized<{ id: number; publishedAt: Date }>;
  * //   { id: number; publishedAt: string }
  */
-export type JSONSerialized<T> = T extends { toJSON(): infer R }
-	? JSONSerialized<R>
-	: T extends JSONValue
-		? T
-		: T extends readonly unknown[]
-			? { [K in keyof T]: Written<T[K]> }
-			: T extends (...args: never[]) => unknown
-				? never
-				: T extends object
-					? {
-							[K in keyof T as [JSONSerialized<T[K]>] extends [never] ? never : K]: JSONSerialized<
-								T[K]
-							>;
-						}
-					: never;
+export type JSONSerialized<T> = Serialize<T, typeof MAX_DEPTH>;
+
+/**
+ * How many levels of nesting are tracked before the result widens to `JSONValue`.
+ *
+ * The limit is what lets a generic constrained to `JSONSerializable` be passed
+ * through this type at all: both are recursive, and without a bound the compiler
+ * gives up on the pair with TS2589 rather than on a value anybody would cache.
+ */
+const MAX_DEPTH = 9;
+
+/** Counts one level of nesting down, ending at `never` so the recursion stops. */
+type Prev = [never, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+/** {@link JSONSerialized}, carrying the nesting budget it has left. */
+type Serialize<T, D extends number> = [D] extends [never]
+	? JSONValue
+	: T extends { toJSON(): infer R }
+		? Serialize<R, Prev[D]>
+		: T extends JSONValue
+			? T
+			: T extends readonly unknown[]
+				? { [K in keyof T]: Written<T[K], Prev[D]> }
+				: T extends (...args: never[]) => unknown
+					? never
+					: T extends object
+						? {
+								[K in keyof T as [Serialize<T[K], Prev[D]>] extends [never] ? never : K]: Serialize<
+									T[K],
+									Prev[D]
+								>;
+							}
+						: never;
 
 /**
  * An array element, which JSON writes as `null` where the same type in a
  * property position would be left out, since an array cannot drop a slot
  * without changing the length of what is read back.
  */
-type Written<T> = [JSONSerialized<T>] extends [never] ? null : JSONSerialized<T>;
+type Written<T, D extends number> = [Serialize<T, D>] extends [never] ? null : Serialize<T, D>;

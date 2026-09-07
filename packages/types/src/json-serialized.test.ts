@@ -87,6 +87,16 @@ describe("JSONSerialized", () => {
 		expect(JSON.stringify(undefined)).toBeUndefined();
 	});
 
+	test("widens to the JSON value type below the nesting it tracks", () => {
+		/** Wraps `T` in `depth` levels of object nesting. */
+		type Nest<T, Depth extends number, Levels extends 0[] = []> = Levels["length"] extends Depth
+			? T
+			: { deeper: Nest<T, Depth, [...Levels, 0]> };
+
+		expectTypeOf<JSONSerialized<Nest<Date, 8>>>().toEqualTypeOf<Nest<string, 8>>();
+		expectTypeOf<JSONSerialized<Nest<Date, 12>>>().toEqualTypeOf<Nest<JSONValue, 9>>();
+	});
+
 	test("describes the declared shape, which is not the shape that is written", () => {
 		class Money {
 			constructor(private cents: number) {}

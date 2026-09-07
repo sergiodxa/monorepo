@@ -170,6 +170,10 @@ JSONSerialized<Money>; // { readonly dollars: number }
 JSON.stringify(new Money(500)); // {"cents":500}
 ```
 
+It tracks nine levels of nesting and widens to `JSONValue` below that, which is what lets
+a generic constrained to `JSONSerializable` be passed through it — both types are
+recursive, and unbounded the pair exhausts the compiler rather than any real value.
+
 ### `IsAny<T>`
 
 Resolves to `true` when `T` is `any`, and `false` for every other type. Use it to branch on values that type as `any`, such as the result of `JSON.parse`.
