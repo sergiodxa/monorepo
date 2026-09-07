@@ -30,16 +30,24 @@ let userId = input;
 
 ### Validate Request Parameters
 
+`s.parse` turns the matched params into a required `string`, and `assertUUID` narrows that
+string to `UUID`, so everything downstream of the handler receives a typed identifier.
+
 ```typescript
 import { assertUUID } from "@sdxc/uuid";
-import type { Route } from "./+types/users.$userId";
+import * as s from "remix/data-schema";
+import { createAction } from "remix/router";
+import { get, route } from "remix/routes";
 
-export async function loader({ params }: Route.LoaderArgs) {
-	let userId = params.userId ?? "";
+let routes = route({ user: get("/users/:userId") });
+
+/** GET /users/:userId */
+export default createAction(routes.user, (ctx) => {
+	let { userId } = s.parse(s.object({ userId: s.string() }), ctx.params);
 	assertUUID(userId);
 
-	return { userId };
-}
+	return Response.json({ userId });
+});
 ```
 
 ## API
