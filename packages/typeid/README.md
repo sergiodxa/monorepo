@@ -225,19 +225,22 @@ try {
 
 ## Pattern: Parse Route Params Early
 
-Use `TypeID.fromString` near the edge of the application so the rest of the code receives a validated identifier.
+Use `TypeID.fromString` near the edge of the application so the rest of the code receives a validated identifier. The action below answers `user: get("/users/:userId")`, so `ctx.params` carries the raw segment and `TypeID.fromString` turns it into a value the rest of the request can trust.
 
 ```typescript
 import { TypeID } from "@sdxc/typeid";
-import type { Route } from "./+types/users.$userId";
+import * as s from "remix/data-schema";
+import { createAction } from "remix/router";
 
-export async function loader({ params }: Route.LoaderArgs) {
-	let userId = TypeID.fromString(params.userId ?? "", "user");
+import routes from "~/routes/web";
 
-	return {
-		userId: userId.toUUID(),
-	};
-}
+/** GET /users/:userId — resolves the TypeID in the URL to the stored UUID. */
+export default createAction(routes.user, async (ctx) => {
+	let { userId } = s.parse(s.object({ userId: s.string() }), ctx.params);
+	let id = TypeID.fromString(userId, "user");
+
+	return Response.json({ userId: id.toUUID() });
+});
 ```
 
 ## Pattern: Create Prefix-Specific Factories
@@ -279,12 +282,12 @@ function serializeUser(user: UserRecord) {
 
 - [`@sdxc/result`](/packages/result) - Wrap TypeID parsing in explicit success and failure values
 - [`@sdxc/validate`](/packages/validate) - Validate request payloads before converting IDs into domain values
-- [`@sdxc/response`](/packages/response) - Return parsed IDs from loaders and actions with typed response helpers
+- [`@sdxc/response`](/packages/response) - Return parsed IDs from actions and controllers with typed response helpers
 - [`@sdxc/uuid`](/packages/uuid) - Generate UUID values before converting them into TypeIDs
 
 ## Tips
 
-1. **Parse at the boundary** - Convert incoming strings to `TypeID` values in loaders, actions, or request handlers instead of passing raw strings deeper into the app.
+1. **Parse at the boundary** - Convert incoming strings to `TypeID` values in actions, controllers, and middleware, so everything deeper in the app receives a validated identifier.
 2. **Use factories for repeated prefixes** - `typeid("user")` keeps call sites short and avoids repeating prefix strings.
 3. **Keep prefixes stable** - Changing a prefix changes the serialized identifier shape, which can break routes, APIs, and logs.
 4. **Store UUIDs when possible** - TypeIDs are useful at the application boundary, but many databases and integrations still work best with plain UUIDs.
