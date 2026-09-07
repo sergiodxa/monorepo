@@ -8,7 +8,7 @@
  */
 
 import type { DurationInput } from "@sdxc/duration";
-import type { JSONSerializable, JSONSerialized, JSONValue } from "@sdxc/types";
+import type { JSONSerialized, JSONValue } from "@sdxc/types";
 
 /** Expiration a write carries. */
 export interface CacheWriteOptions {
@@ -25,6 +25,11 @@ export interface CacheWriteOptions {
  * Every method degrades rather than throws: a store that cannot answer reads as a
  * miss, so a caller never handles cache failure separately from a cache miss. What
  * a loader throws is the caller's own error and propagates.
+ *
+ * A value is held as JSON, and the caller is trusted to hand over one JSON can
+ * write. The type is not constrained to `JSONSerializable`, because as a constraint
+ * it rejects an ordinary interface and any field typed `unknown` — both of which
+ * cache perfectly well. A value JSON genuinely cannot write throws on write.
  */
 export interface Cache {
 	/**
@@ -34,14 +39,10 @@ export interface Cache {
 	 * and no signature can check it. A stored `null` reads as `null` too, so reach
 	 * for {@link Cache.fetch} where a cached `null` has to count as a hit.
 	 */
-	read<T extends JSONSerializable = JSONValue>(key: string): Promise<JSONSerialized<T> | null>;
+	read<T = JSONValue>(key: string): Promise<JSONSerialized<T> | null>;
 
 	/** Writes an entry, replacing any current value for the key. */
-	write<T extends JSONSerializable>(
-		key: string,
-		value: T,
-		options?: CacheWriteOptions,
-	): Promise<void>;
+	write<T>(key: string, value: T, options?: CacheWriteOptions): Promise<void>;
 
 	/**
 	 * Returns the stored entry, computing and storing it on a miss.
@@ -49,7 +50,7 @@ export interface Cache {
 	 * The value is returned as it reads back, so a hit and a miss answer with the
 	 * same type. A stored `null` is a hit, unlike in {@link Cache.read}.
 	 */
-	fetch<T extends JSONSerializable>(
+	fetch<T>(
 		key: string,
 		load: () => Promise<T>,
 		options?: CacheWriteOptions,

@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { JSONSerializable, JSONSerialized, JSONValue } from "@sdxc/types";
+import type { JSONSerialized, JSONValue } from "@sdxc/types";
 
 import type { Cache, CacheWriteOptions } from "../index.js";
 
@@ -58,23 +58,17 @@ export class WorkerKVCache implements Cache {
 		this.#waitUntil = waitUntil;
 	}
 
-	async read<T extends JSONSerializable = JSONValue>(
-		key: string,
-	): Promise<JSONSerialized<T> | null> {
+	async read<T = JSONValue>(key: string): Promise<JSONSerialized<T> | null> {
 		let text = await this.#load(key);
 		if (text === null) return null;
 		return JSON.parse(text) as JSONSerialized<T>;
 	}
 
-	async write<T extends JSONSerializable>(
-		key: string,
-		value: T,
-		options: CacheWriteOptions = {},
-	): Promise<void> {
+	async write<T>(key: string, value: T, options: CacheWriteOptions = {}): Promise<void> {
 		await this.#store(key, JSON.stringify(value), options);
 	}
 
-	async fetch<T extends JSONSerializable>(
+	async fetch<T>(
 		key: string,
 		load: () => Promise<T>,
 		options: CacheWriteOptions = {},

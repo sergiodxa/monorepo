@@ -2,16 +2,16 @@
 
 ## Status
 
-**Accepted** - 2026-09-06
+**Implemented** - 2026-09-07
 
 Revised twice. First after the instance-bound `Cache<T>` of the original draft was weighed
 against a real call site, which is what moved the type parameter from the instance to each
 method; [The type is per call](#the-type-is-per-call-not-per-instance) records that.
 
-Then again after the package was built, because writing two adapters against the contract found
-three things the design had wrong: `JSONSerialized<T>` needs a depth bound to be usable in a
-signature at all, an error type nothing throws is not worth exporting, and a deferred write needs
-ordering as well as a buffer. Each is marked below.
+Then again after the package was built and its consumers migrated, because writing two adapters and
+moving four call sites onto them found four things the design had wrong: `JSONSerializable` does not
+work as a constraint, `JSONSerialized<T>` needs a depth bound, an error type nothing throws is not
+worth exporting, and a deferred write needs ordering as well as a buffer. Each is marked below.
 
 ## Background
 
@@ -80,13 +80,9 @@ line, which was the whole of what ADR-032 asked for.
 
 ```typescript
 interface Cache {
-	read<T extends JSONSerializable = JSONValue>(key: string): Promise<JSONSerialized<T> | null>;
-	write<T extends JSONSerializable>(
-		key: string,
-		value: T,
-		options?: CacheWriteOptions,
-	): Promise<void>;
-	fetch<T extends JSONSerializable>(
+	read<T = JSONValue>(key: string): Promise<JSONSerialized<T> | null>;
+	write<T>(key: string, value: T, options?: CacheWriteOptions): Promise<void>;
+	fetch<T>(
 		key: string,
 		load: () => Promise<T>,
 		options?: CacheWriteOptions,
@@ -137,10 +133,10 @@ that justifies it, and defaults to `JSONValue` for a caller who would rather nar
 
 ### Values, and why the types are asymmetric
 
-`T` is constrained to `JSONSerializable` and the reads answer with `JSONSerialized<T>`, because a
-cache round trip is not the identity function. A `Date` can be written — `JSON.stringify` knows what
-to do with it — and what comes back is the string it serialized to. Typing both ends as `T` would
-promise a `Date` the caller will never receive.
+The reads answer with `JSONSerialized<T>` rather than `T`, because a cache round trip is not the
+identity function. A `Date` can be written — `JSON.stringify` knows what to do with it — and what
+comes back is the string it serialized to. Typing both ends as `T` would promise a `Date` the caller
+will never receive.
 
 `JSONSerialized<T>` is the missing third member of the family `@sdxc/types` already holds, joining
 `JSONValue` and `JSONSerializable`, and it goes there rather than here: it describes a JSON round
@@ -151,34 +147,50 @@ type JSONSerialized<T> = T extends { toJSON(): infer R }
 	? JSONSerialized<R>
 	: T extends JSONValue
 		? T
-		: T extends readonly (infer E)[]
-			? JSONSerialized<E>[]
-			: T extends object
-				? {
-						[K in keyof T as [JSONSerialized<T[K]>] extends [never] ? never : K]: JSONSerialized<
-							T[K]
-						>;
-					}
-				: never;
+		: T extends readonly unknown[]
+			? { [K in keyof T]: Written<T[K]> }
+			: T extends (...args: never[]) => unknown
+				? never
+				: T extends object
+					? {
+							[K in keyof T as [JSONSerialized<T[K]>] extends [never] ? never : K]: JSONSerialized<
+								T[K]
+							>;
+						}
+					: never;
 ```
 
 It models what `JSON.stringify` does to a value's shape: `toJSON` is applied, arrays map elementwise,
-and a property whose type cannot survive — `undefined`, a function, a symbol — is dropped rather than
-kept as `never`. It does not model the value-level facts a type cannot carry, notably that a cycle
-throws and that `NaN` becomes `null`; those stay the caller's business and are documented as such.
-
-`JSONSerialized<T>` bounds its own recursion at nine levels of nesting and widens to `JSONValue`
-below that. The bound is not a nicety: without it, a method that both constrains `T` to
-`JSONSerializable` and returns `JSONSerialized<T>` is rejected with TS2589, because the compiler
-has to relate two recursive types to each other. Either alone is fine, which is why the first
-draft's declaration-only check did not catch it — a class actually implementing the interface
-does. Bounding the depth is what lets the constraint stay where it earns its place, on `write`
-and `fetch`, rather than being dropped to make the signature compile.
+a property whose type cannot survive is dropped, and an array element that cannot survive becomes
+`null`, since dropping a slot would change the length read back. It does not model the value-level
+facts a type cannot carry, notably that a cycle throws and that `NaN` becomes `null`; those stay the
+caller's business. It bounds its own recursion at nine levels of nesting and widens to `JSONValue`
+below that, which is correct for a self-referential type and, before the constraint was dropped, was
+what let the type appear in these signatures at all.
 
 Because `JSONSerialized<string>` is `string`, a `Cache` satisfies `Issuer.CacheStore` structurally
 with no adapter and no change to `packages/auth`: relating the two signatures, TypeScript infers
 `T = string` from the target's own return type. This was checked against the compiler rather than
-assumed, since a generic method satisfying a non-generic one is not obvious.
+assumed, since a generic method satisfying a non-generic one is not obvious, and `packages/auth`'s
+own test now makes the assertion against `Cache` itself.
+
+### `JSONSerializable` is not usable as a constraint
+
+The design had `T extends JSONSerializable` on `write` and `fetch`, to stop a `Map` or a function
+being handed to a cache. Migrating the consumers is what showed it cannot: `CallToolResult`, the
+type `apps/blog` caches and the reason the typed contract was worth building, fails the constraint
+twice over.
+
+| Why it fails                  | How general the problem is                                                                  |
+| ----------------------------- | ------------------------------------------------------------------------------------------- |
+| It is an `interface`          | TypeScript gives no implicit index signature to an interface, so most named types fail      |
+| `structuredContent?: unknown` | `unknown` is not assignable to anything narrower, and it is how "arbitrary JSON" is spelled |
+
+Both are properties of ordinary, perfectly cacheable types. A constraint that rejects the payload
+the package exists to hold is wrong about the domain rather than protective of it, so the type
+parameters carry no bound. What it was buying is partly recovered anyway: a value JSON cannot write
+throws on the write, which the conformance suite asserts, and `JSONSerialized<T>` of an unwritable
+type is visibly useless at the call site.
 
 ### Adapters
 
@@ -261,7 +273,7 @@ suite is going to sit for a minute. `MemoryCache` therefore covers expiry for th
 ### Phase 1 — Build
 
 - `JSONSerialized<T>` in `@sdxc/types`, with type tests, including that `JSONSerialized<string>` is
-  `string` and that a `Cache` still satisfies `Issuer.CacheStore`.
+  `string`, so a `Cache` still satisfies `Issuer.CacheStore`.
 - `packages/cache`: the contract, the conformance suite, `MemoryCache`, `WorkerKVCache`.
 - `MemoryCache` under Vitest; `WorkerKVCache` under workerd, carrying over the TTL-unit assertions
   from `packages/kv-cache/src/index.workers.test.ts`.
@@ -309,6 +321,8 @@ ADR-032's status becomes **Superseded** by this ADR, so the name it argued for i
   at.
 - **Failures are invisible at the call site** — a persistently unreachable KV namespace reads as a
   cache that never hits, and only the log distinguishes the two.
+- **Nothing stops an unwritable value statically** — the constraint that would have is unusable, so
+  a `Map` handed to `write` type-checks, stores `{}` and reads back `{}`.
 
 ### Neutral
 
