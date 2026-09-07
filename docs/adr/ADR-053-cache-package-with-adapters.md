@@ -4,6 +4,15 @@
 
 **Accepted** - 2026-09-06
 
+Revised twice. First after the instance-bound `Cache<T>` of the original draft was weighed
+against a real call site, which is what moved the type parameter from the instance to each
+method; [The type is per call](#the-type-is-per-call-not-per-instance) records that.
+
+Then again after the package was built, because writing two adapters against the contract found
+three things the design had wrong: `JSONSerialized<T>` needs a depth bound to be usable in a
+signature at all, an error type nothing throws is not worth exporting, and a deferred write needs
+ordering as well as a buffer. Each is marked below.
+
 ## Background
 
 [ADR-032](./ADR-032-kv-cache-package-rename.md) renamed `@sdxc/cache` to `@sdxc/kv-cache` so that
@@ -158,6 +167,14 @@ and a property whose type cannot survive — `undefined`, a function, a symbol �
 kept as `never`. It does not model the value-level facts a type cannot carry, notably that a cycle
 throws and that `NaN` becomes `null`; those stay the caller's business and are documented as such.
 
+`JSONSerialized<T>` bounds its own recursion at nine levels of nesting and widens to `JSONValue`
+below that. The bound is not a nicety: without it, a method that both constrains `T` to
+`JSONSerializable` and returns `JSONSerialized<T>` is rejected with TS2589, because the compiler
+has to relate two recursive types to each other. Either alone is fine, which is why the first
+draft's declaration-only check did not catch it — a class actually implementing the interface
+does. Bounding the depth is what lets the constraint stay where it earns its place, on `write`
+and `fetch`, rather than being dropped to make the signature compile.
+
 Because `JSONSerialized<string>` is `string`, a `Cache` satisfies `Issuer.CacheStore` structurally
 with no adapter and no change to `packages/auth`: relating the two signatures, TypeScript infers
 `T = string` from the target's own return type. This was checked against the compiler rather than
@@ -195,6 +212,13 @@ put settles, so a read on the same instance sees what was just written. The inst
 which is the scope over which read-your-writes is worth anything and the only scope over which it is
 achievable.
 
+A buffer alone is not enough, which running the suite against both write modes is what showed. Two
+deferred puts to one key can land in either order, and a `delete` issued while a put is in flight can
+land before it and be undone by it. So the map holds the in-flight put alongside the value: a second
+write to a key chains after the first, and a delete waits for it. Both are cheap, and without them
+the deferred mode answers differently from the awaited one — which is the whole thing the conformance
+suite is for.
+
 ### Failures degrade to misses
 
 A cache is an optimization, so a store that cannot answer is a miss, not an error: `read` returns
@@ -207,8 +231,13 @@ the value, which is what `fetch` already does. What a `Result` would buy — dis
 from "KV was unreachable" — is an operational question, and the log is where operational questions
 are answered.
 
-The errors are still exported, so a caller who does want to distinguish them can be given a way to
-ask later without a breaking change.
+Two things are not store failures and reach the caller as their own errors: what a loader throws,
+and a value JSON cannot write. Both are the caller's own bug, and swallowing either would hide it.
+
+The package exports no error type. The first draft said it would, so a caller could distinguish an
+unreachable store from a miss later without a breaking change — but nothing throws it, and a class
+nobody constructs is the incidental complexity this design is otherwise careful about. The
+distinction lives on the log, which is where it is acted on.
 
 ### The conformance suite
 
@@ -217,10 +246,15 @@ ask later without a breaking change.
 substitute for `WorkerKVCache` rather than a thing that resembles one.
 
 It asserts the round trip, that a miss is `null`, that `fetch` computes once and stores, that a
-delete is idempotent, that a write replaces, that TTL expiry hides an entry, and that a write is
-readable when it resolves. It asks for no TTL below 60 seconds: KV rejects `expirationTtl` under 60
-with a 400, a limit the current suite already records, and a suite both adapters pass cannot assert
-what one of them is forbidden to do.
+delete is idempotent, that a write replaces, that a write is readable when it resolves, that a stored
+`null` is a hit for `fetch`, and that what a loader throws propagates. It asks for no TTL below 60
+seconds: KV rejects `expirationTtl` under 60 with a 400, a limit the previous suite already records,
+and a suite both adapters pass cannot assert what one of them is forbidden to do.
+
+Expiry is a group of its own, registered only for an adapter that supplies an `expire` hook. An
+adapter whose clock is injectable can be asked to expire an entry; KV can only be waited out, and no
+suite is going to sit for a minute. `MemoryCache` therefore covers expiry for the contract, and
+`WorkerKVCache` is held to the expiry KV itself recorded, read back from the namespace's own listing.
 
 ## Implementation Plan
 
@@ -228,7 +262,7 @@ what one of them is forbidden to do.
 
 - `JSONSerialized<T>` in `@sdxc/types`, with type tests, including that `JSONSerialized<string>` is
   `string` and that a `Cache` still satisfies `Issuer.CacheStore`.
-- `packages/cache`: the contract, the errors, the conformance suite, `MemoryCache`, `WorkerKVCache`.
+- `packages/cache`: the contract, the conformance suite, `MemoryCache`, `WorkerKVCache`.
 - `MemoryCache` under Vitest; `WorkerKVCache` under workerd, carrying over the TTL-unit assertions
   from `packages/kv-cache/src/index.workers.test.ts`.
 - README per the package documentation guide.
