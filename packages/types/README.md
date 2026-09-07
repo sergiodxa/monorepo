@@ -130,6 +130,46 @@ is read back, because the replacement is what a reader receives:
 JSON.parse(JSON.stringify({ at: new Date() })).at; // a string, not a Date
 ```
 
+### `JSONSerialized<T>`
+
+What a `JSONSerializable` type becomes after the round trip. Use it to type the read side
+of a boundary in terms of what was written, instead of widening to `JSONValue` and casting
+back:
+
+```typescript
+type Stored = JSONSerialized<{ id: number; publishedAt: Date }>;
+//   { id: number; publishedAt: string }
+```
+
+It applies `toJSON`, drops a property JSON cannot write, and writes an unwritable array
+element as `null`, since dropping a slot would change the length that is read back:
+
+```typescript
+JSONSerialized<Date>; // string
+JSONSerialized<{ id: number; edit: () => void }>; // { id: number }
+JSONSerialized<undefined[]>; // null[]
+JSONSerialized<[string, Date]>; // [string, string]
+```
+
+A type that already survives the round trip is returned unchanged, so `JSONSerialized<T>`
+is `T` for every `JSONValue`.
+
+It describes the shape rather than the value. A cycle throws, `NaN` and `Infinity` read
+back as `null`, and a property that is inherited rather than owned is kept by the type and
+left out by `JSON.stringify`:
+
+```typescript
+class Money {
+	constructor(private cents: number) {}
+	get dollars() {
+		return this.cents / 100;
+	}
+}
+
+JSONSerialized<Money>; // { readonly dollars: number }
+JSON.stringify(new Money(500)); // {"cents":500}
+```
+
 ### `IsAny<T>`
 
 Resolves to `true` when `T` is `any`, and `false` for every other type. Use it to branch on values that type as `any`, such as the result of `JSON.parse`.
