@@ -104,7 +104,7 @@ Run from the repository root:
 | [data-table-sqlstorage](packages/data-table-sqlstorage)         | Remix Data Table adapter for Durable Object SQL                                     |     |
 | [dates](packages/dates)                                         | Zone-aware date operations with Intl-only formatting                                | ✅  |
 | [duration](packages/duration)                                   | Typed duration strings converted to milliseconds or seconds                         | ✅  |
-| [feed](packages/feed)                                           | One feed API over RSS and Atom, with conditional fetching and autodiscovery         |     |
+| [feed](packages/feed)                                           | One feed API over RSS and Atom, with conditional fetching and autodiscovery         | ✅  |
 | [get-client-ip](packages/get-client-ip)                         | Extract client IP from requests                                                     |     |
 | [highlight](packages/highlight)                                 | Syntax highlighting as tokens, with a Markdoc fence node                            |     |
 | [hostname](packages/hostname)                                   | Hostname parsing and validation utilities                                           |     |

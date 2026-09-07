@@ -2,20 +2,37 @@
 
 One feed API over RSS and Atom, with conditional fetching and autodiscovery.
 
-## Overview
+A feed reader is handed a URL by someone who neither knows nor cares which syndication
+format is behind it. This package closes that gap: it sniffs a document's root element,
+parses it as RSS 2.0 or Atom 1.0, and normalizes both into one shape.
 
-A feed reader is handed a URL by someone who neither knows nor cares which syndication format is behind it. `@sdxc/feed` closes that gap: it sniffs a document's root element, parses it with `@sdxc/rss` or `@sdxc/atom`, and normalizes both into one shape.
+It also owns the two capabilities that are about _fetching_ a feed rather than about either
+format, and so belong to neither parser:
 
-It also owns the two capabilities that are about _fetching a feed_ rather than about either format, and so belong to neither parser:
+- **Conditional requests.** `Feed.fetch` sends the validators you stored and reports a 304
+  without parsing anything, so polling an unchanged feed costs almost nothing.
+- **Autodiscovery.** `Feed.discover` follows a page's `<link rel="alternate">` to the feed it
+  advertises, so someone can paste `example.com` instead of `example.com/feed.xml`.
 
-- **Conditional requests.** `Feed.fetch` sends the validators you stored and reports a 304 without parsing anything, so polling an unchanged feed costs almost nothing.
-- **Autodiscovery.** `Feed.discover` follows a page's `<link rel="alternate">` to the feed it advertises, so someone can paste `example.com` instead of `example.com/feed.xml`.
+The normalized shape is deliberately lossy. Reach past it to
+[`@sdxc/rss`](https://www.npmjs.com/package/@sdxc/rss) or
+[`@sdxc/atom`](https://www.npmjs.com/package/@sdxc/atom) when you need a format's own
+vocabulary.
 
-The normalized shape is deliberately lossy. Reach past this package to `@sdxc/rss` or `@sdxc/atom` when you need a format's own vocabulary.
+## Installation
+
+```bash
+npm add @sdxc/feed
+```
+
+The two parsers, the [`@sdxc/xml`](https://www.npmjs.com/package/@sdxc/xml) layer beneath
+them, and the `Result` every entry point returns, from
+[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), all install alongside this
+package.
 
 ## Usage
 
-### Read a Feed
+### Read A Feed
 
 ```typescript
 import { Feed } from "@sdxc/feed";
@@ -33,9 +50,10 @@ for (let item of feed.items) {
 }
 ```
 
-Passing `url` matters: it is the base relative links resolve against, and the fallback for `feedUrl`.
+Passing `url` matters: it is the base relative links resolve against, and the fallback for
+`feedUrl`.
 
-### Poll a Feed Without Re-downloading It
+### Poll A Feed Without Re-downloading It
 
 ```typescript
 let result = await Feed.fetch(feed.feedUrl, {
@@ -54,11 +72,14 @@ await save(result.data.feed.items);
 await storeValidators(feed.id, result.data.etag, result.data.lastModified);
 ```
 
-`notModified` discriminates the union, so `feed` is `undefined` on that branch and defined on the other with no optional check.
+`notModified` discriminates the union, so `feed` is `undefined` on that branch and defined on
+the other with no optional check.
 
-Store `etag` and `lastModified` from every response and send them back on the next poll. A 304 is allowed to omit them, so whatever you passed in is carried forward rather than dropped.
+Store `etag` and `lastModified` from every response and send them back on the next poll. A
+304 is allowed to omit them, so whatever you passed in is carried forward rather than
+dropped.
 
-### Discover a Feed From a Site
+### Discover A Feed From A Site
 
 ```typescript
 let result = await Feed.discover("https://example.com");
@@ -68,36 +89,55 @@ let [main] = result.data;
 // { url: "https://example.com/feed.xml", type: "application/rss+xml", title: "Main" }
 ```
 
-A URL that is already a feed resolves from that one request, so this is safe to call whether someone pasted a site or a feed.
+A URL that is already a feed resolves from that one request, so this is safe to call whether
+someone pasted a site or a feed.
 
 ## API
 
 ### `Feed.parse(source: string, options?: Feed.ParseOptions)`
 
-Parses XML text in either format. Returns a `Result`.
+Parses XML text in either format.
 
-- `options.url` — the document's own URL: the base for relative links, and the `feedUrl` fallback.
+- `options.url` — the document's own URL: the base for relative links, and the `feedUrl`
+  fallback.
 
 ### `Feed.fromXML(xml: XML, options?: Feed.ParseOptions)`
 
-Reads a feed from an already-parsed `@sdxc/xml` document, for a caller that parsed the text for some other purpose first.
+Reads a feed from an already-parsed document, for a caller that parsed the text for some
+other purpose first.
 
-### `Feed.fetch(input, options?)`
+### `Feed.fetch(input: string | URL, options?: Feed.FetchOptions)`
 
 Retrieves and parses a feed, sending the stored validators as preconditions.
 
 - `options.etag` / `options.lastModified` — sent as `If-None-Match` / `If-Modified-Since`
+- `options.url` — overrides the response URL as the base for relative links
 - `options.headers`, `options.signal` — passed through to the request
 
-Resolves to `Feed.FetchResult`: `{ notModified: false, feed, url, status, etag?, lastModified? }` or `{ notModified: true, feed: undefined, url, status: 304, etag?, lastModified? }`.
+Resolves to a `Feed.FetchResult`: `{ notModified: false, feed, url, status, etag?,
+lastModified? }`, or `{ notModified: true, feed: undefined, url, status: 304, etag?,
+lastModified? }`.
 
-### `Feed.discover(input, options?)`
+### `Feed.discover(input: string | URL, options?: Feed.FetchOptions)`
 
-Finds the feeds a URL leads to. Resolves to `Feed.Discovery[]` in document order, since the first alternate link is conventionally the site's main feed.
+Finds the feeds a URL leads to. Resolves to `Feed.Discovery[]` in document order, since the
+first alternate link is conventionally the site's main feed.
 
-### Instance accessors
+### Instance Accessors
 
-`format`, `title`, `description`, `siteUrl`, `feedUrl`, `language`, `imageUrl`, `updatedAt`, `items`, and `toJSON()`.
+`format`, `title`, `description`, `siteUrl`, `feedUrl`, `language`, `imageUrl`, `updatedAt`,
+`items`, and `toJSON()`.
+
+### Errors
+
+`FeedParseError` reports text that is not XML, or XML that is not a feed. `FeedFormatError`
+reports a document in a format this package does not read, naming it. `FeedFetchError`
+reports a request that failed or answered with an error status.
+
+### Types
+
+`Feed.Format`, `Feed.Item`, `Feed.Author`, `Feed.Enclosure`, `Feed.Data`,
+`Feed.ParseOptions`, `Feed.FetchOptions`, `Feed.FetchResult`, and `Feed.Discovery`.
 
 ## The Normalized Shape
 
@@ -123,21 +163,49 @@ Finds the feeds a URL leads to. Resolves to `Feed.Discovery[]` in document order
 Cross-cutting rules:
 
 - Every URL resolves against `options.url` when it is relative.
-- Dates are `Date` objects. An unparseable date reads as `undefined` rather than an `Invalid Date`, so a consumer that stores or formats one never has to check.
+- Dates are `Date` objects. An unparseable date reads as `undefined` rather than an
+  `Invalid Date`, so a consumer that stores or formats one never has to check.
 - Items keep document order and are deduplicated by `guid`, first occurrence winning.
-- An entry's `guid` is always present, falling back through a chain so an item with no identity of its own still has a stable one.
+- An item's `guid` is always present, falling back through the chain above so an item with no
+  identity of its own still has a stable one.
 
 ## Notes
 
-1. **Nothing is sanitized.** `contentHtml` and `summary` hold exactly what the publisher wrote. Escaping or sanitizing them is the responsibility of whatever renders them.
-2. **Format is sniffed from the root element, never from `Content-Type`.** Feeds are served as `text/xml`, `application/octet-stream`, and worse, so the header is not evidence. `Feed.fetch` accepts any content type for the same reason.
-3. **`Feed.fetch` sets no cache directive.** Asking an origin for a fresh copy is precisely what stops it answering 304, which would defeat the preconditions being sent.
-4. **RSS 1.0 (RDF) is not supported**, and is reported by name rather than as a parse failure.
-5. **Discovery accepts only `application/rss+xml` and `application/atom+xml`.** `text/xml` and `application/xml` are excluded deliberately: they appear on sitemaps and stylesheets, and accepting them would offer documents that are not feeds.
+1. **Nothing is sanitized.** `contentHtml` and `summary` hold exactly what the publisher
+   wrote. Escaping or sanitizing them is the responsibility of whatever renders them.
+2. **Format is sniffed from the root element, never from `Content-Type`.** Feeds are served
+   as `text/xml`, `application/octet-stream`, and worse, so the header is not evidence.
+   `Feed.fetch` accepts any content type for the same reason.
+3. **`Feed.fetch` sets no cache directive.** Asking an origin for a fresh copy is precisely
+   what stops it answering 304, which would defeat the preconditions being sent.
+4. **RSS 1.0 (RDF) is not supported**, and is reported by name rather than as a parse
+   failure.
+5. **Discovery accepts only `application/rss+xml` and `application/atom+xml`.** `text/xml`
+   and `application/xml` are excluded deliberately: they appear on sitemaps and stylesheets,
+   and accepting them would offer documents that are not feeds.
 
-## Related Packages
+## Versioning
 
-- [`@sdxc/rss`](/packages/rss) - The RSS 2.0 parser and builder
-- [`@sdxc/atom`](/packages/atom) - The Atom 1.0 parser and builder
-- [`@sdxc/xml`](/packages/xml) - The XML layer beneath both
-- [`@sdxc/result`](/packages/result) - The `Result` type every entry point returns
+Releases are dated rather than semantic. A version is the UTC date it was published, written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one release goes out per day.
+
+Those numbers say when, not what: a later date means a later release and carries no compatibility promise. Any release may change or remove an export.
+
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/feed": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)

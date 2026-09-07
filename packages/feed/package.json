@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/feed",
 	"version": "0.0.1",
-	"private": true,
+	"description": "One feed API over RSS and Atom, with conditional fetching and autodiscovery",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
