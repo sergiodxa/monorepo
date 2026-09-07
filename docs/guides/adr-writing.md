@@ -160,7 +160,7 @@ Use subsections, tables, and code blocks to organize information:
 | -------------------------- | ---------------------------- |
 | ID token not stored        | `apps/uptime/app/session.ts` |
 | No redirect to auth server | `apps/blog/app/routes/*.tsx` |
-| Wrong URI validation       | `apps/auth/app/modules/*.ts` |
+| Wrong URI validation       | `apps/r3-auth/app/auth/*.ts` |
 ```
 
 ### Decision
@@ -307,7 +307,7 @@ Capture additional context, gotchas, or implementation details:
 
 - All packages are `private: true` since they're workspace-only
 - Use Bun's test runner for consistency with the monorepo
-- The `@sdxc/hooks` package has peer dependencies on React and React Router
+- The `@sdxc/auth` package takes `remix` as an optional peer dependency
 - SSL monitoring relies on manually entered expiry dates (Workers can't read TLS certs)
 - Daily aggregation uses idempotent upserts - safe to run multiple times
 ```
