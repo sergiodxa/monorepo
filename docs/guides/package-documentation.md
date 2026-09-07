@@ -134,7 +134,7 @@ let result = functionName(value1, value2);
 
 Show real-world usage patterns:
 
-- Integration with React Router (loaders, actions, components)
+- Integration with Remix (route tables, controllers, actions)
 - Combining with other packages in the monorepo
 - Common customization scenarios
 - Error handling approaches
@@ -158,7 +158,7 @@ Numbered list of best practices, gotchas, and recommendations. Keep each tip to 
 
 ## Template
 
-```markdown
+```text
 # @sdxc/package-name
 
 One-line description of what this package does.
@@ -251,29 +251,74 @@ field2: number;
 }
 \`\`\`
 
-## Integration with React Router
+## Integration with Remix
 
-### Loader Pattern
+### Route Table
+
+Every URL an app answers is declared once in `routes/web.ts`, so controllers, links, and
+redirects all resolve through `routes.*.href(...)`.
 
 \`\`\`typescript
-import { something } from "@sdxc/package-name";
-import type { Route } from "./+types/route-name";
+import { form, get, route } from "remix/routes";
 
-export async function loader({ request }: Route.LoaderArgs) {
-// Show how to use in a loader
-}
-
-export default function Component({ loaderData }: Route.ComponentProps) {
-// Show how to use loader data
-}
+export default route({
+	dashboard: get("/dashboard"),
+	/** `form()` pairs the settings page's `GET` render with the `POST` that acts on it. */
+	teamSettings: form("/teams/:teamId/settings"),
+});
 \`\`\`
 
 ### Action Pattern
 
-\`\`\`typescript
-export async function action({ request }: Route.ActionArgs) {
-// Show how to use in an action
-}
+A route with a single method maps to one action under `app/http/controllers`.
+
+\`\`\`tsx
+import { something } from "@sdxc/package-name";
+import { createAction } from "remix/router";
+
+import DashboardView from "~/resources/views/dashboard";
+import routes from "~/routes/web";
+
+/** GET /dashboard — show how to use the package in an action. */
+export default createAction(routes.dashboard, async (ctx) => {
+	let result = await something(ctx.request);
+	return ctx.render(<DashboardView result={result} />);
+});
+\`\`\`
+
+### Controller Pattern
+
+A route declared with `form()` maps to a controller whose `index` answers the `GET` and
+whose `action` answers the `POST`. Read path params through a `remix/data-schema` schema,
+so a controller states the shape it needs.
+
+\`\`\`tsx
+import { something } from "@sdxc/package-name";
+import * as s from "remix/data-schema";
+import { redirect } from "remix/response/redirect";
+import { createController } from "remix/router";
+
+import TeamSettingsView from "~/resources/views/team-settings";
+import routes from "~/routes/web";
+
+const ParamsSchema = s.object({ teamId: s.string() });
+
+export default createController(routes.teamSettings, {
+	actions: {
+		/** GET /teams/:teamId/settings — renders the form. */
+		index(ctx) {
+			let { teamId } = s.parse(ParamsSchema, ctx.params);
+			return ctx.render(<TeamSettingsView teamId={teamId} />);
+		},
+
+		/** POST /teams/:teamId/settings — persists the submission and returns to the page. */
+		async action(ctx) {
+			let { teamId } = s.parse(ParamsSchema, ctx.params);
+			await something(await ctx.request.formData());
+			return redirect(routes.teamSettings.index.href({ teamId }));
+		},
+	},
+});
 \`\`\`
 
 ## Pattern: Descriptive Pattern Name
