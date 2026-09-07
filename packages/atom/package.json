@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/atom",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Atom 1.0 feed parser and builder",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
