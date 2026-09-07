@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/logger",
 	"version": "0.0.1",
-	"private": true,
+	"description": "One wide event per Worker invocation, attached at the router and the job dispatcher",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

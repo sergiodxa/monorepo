@@ -24,8 +24,12 @@ declare module "remix/router" {
 	}
 }
 
-/** Reads the invocation's log off a request context whose middleware chain is not known. */
-export const CurrentLog = createContextKey<Log>();
+/**
+ * Reads the invocation's log off a request context whose middleware chain is not known. The
+ * type is written out because `remix/router` keeps the one `createContextKey` returns to
+ * itself, and an exported key needs a nameable type to reach a published declaration file.
+ */
+export const CurrentLog: { defaultValue?: Log } = createContextKey<Log>();
 
 const LOG_PROPERTY = { property: "log" } as const;
 
