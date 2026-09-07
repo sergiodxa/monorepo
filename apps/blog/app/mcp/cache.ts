@@ -20,7 +20,7 @@ import type { JSONSerialized } from "@sdxc/types";
 
 import { WorkerKVCache } from "@sdxc/cache/worker-kv";
 import { Hex, sha256 } from "@sdxc/crypto";
-import { isFailure } from "@sdxc/result";
+import { isFailure, isSuccess } from "@sdxc/result";
 
 import { getEnv } from "~/app/http/middleware/env";
 
@@ -59,7 +59,9 @@ async function keyFor(name: string, value: unknown): Promise<string | null> {
  * Caches a computed value under a key, as JSON.
  *
  * A `null` result is cached like any other, since a missing resource is a stable answer.
- * Caching here is only an optimization: a call still returns a fresh value when no key exists.
+ * Caching here is only an optimization: a call still returns a fresh value when no key exists,
+ * and a store the cache could not reach is absorbed by `fetch`. So a failure means `produce`
+ * itself failed, and it is rethrown as what `produce` threw.
  *
  * @param name What is being cached.
  * @param value The variables the entry is specific to.
@@ -72,9 +74,11 @@ export async function cached<T>(
 	produce: () => Promise<T>,
 ): Promise<JSONSerialized<T>> {
 	let key = await keyFor(name, value);
-	if (key !== null) return store().fetch(key, produce, { ttl: TTL });
+	if (key === null) return JSON.parse(JSON.stringify(await produce())) as JSONSerialized<T>;
 
-	return JSON.parse(JSON.stringify(await produce())) as JSONSerialized<T>;
+	let stored = await store().fetch(key, produce, { ttl: TTL });
+	if (isFailure(stored)) throw stored.error.cause ?? stored.error;
+	return stored.data;
 }
 
 /**
@@ -82,6 +86,9 @@ export async function cached<T>(
  *
  * Only a successful call is cached: `isError` often means a slug that does not exist yet,
  * and storing that would keep answering "not found" for the whole TTL after the post appears.
+ *
+ * A read the store could not answer counts as a miss, which is what a cache being down should
+ * cost: the tool runs.
  *
  * @returns Tool middleware that serves a stored result when one is current.
  */
@@ -92,7 +99,7 @@ export function cacheToolResults(): ToolMiddleware {
 
 		let cache = store();
 		let hit = await cache.read<CallToolResult>(key);
-		if (hit !== null) return hit;
+		if (isSuccess(hit) && hit.data !== null) return hit.data;
 
 		let result = await next();
 		if (!result.isError) await cache.write(key, result, { ttl: TTL });

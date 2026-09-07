@@ -12,7 +12,7 @@ import type { Adapter, RateLimitDecision } from "@sdxc/rate-limit";
 import type { Result } from "@sdxc/result";
 
 import { MemoryAdapter, RateLimitError } from "@sdxc/rate-limit";
-import { failure } from "@sdxc/result";
+import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
@@ -64,13 +64,18 @@ class MemoryStore implements Issuer.CacheStore {
 	entries = new Map<string, { value: string; ttl: DurationInput | undefined }>();
 
 	/** Answers `null` for an absent key, the same as a store whose entry expired. */
-	async read(key: string): Promise<string | null> {
-		return this.entries.get(key)?.value ?? null;
+	async read(key: string): Promise<Result<string | null, Error>> {
+		return success(this.entries.get(key)?.value ?? null);
 	}
 
 	/** Keeps the TTL alongside the value so a test can assert what it was written with. */
-	async write(key: string, value: string, options?: { ttl?: DurationInput }): Promise<void> {
+	async write(
+		key: string,
+		value: string,
+		options?: { ttl?: DurationInput },
+	): Promise<Result<void, Error>> {
 		this.entries.set(key, { value, ttl: options?.ttl });
+		return success(undefined);
 	}
 
 	/** Reads through to `load` on a miss, storing what it produced. */
@@ -78,11 +83,14 @@ class MemoryStore implements Issuer.CacheStore {
 		key: string,
 		load: () => Promise<string>,
 		options?: { ttl?: DurationInput },
-	): Promise<string> {
+	): Promise<Result<string, Error>> {
 		let cached = await this.read(key);
-		if (cached !== null) return cached;
-		let value = await load();
-		await this.write(key, value, options);
+		if (isSuccess(cached) && cached.data !== null) return success(cached.data);
+
+		let value = await wrap(load);
+		if (isFailure(value)) return value;
+
+		await this.write(key, value.data, options);
 		return value;
 	}
 }

@@ -8,8 +8,10 @@
  */
 
 import type { Cache } from "@sdxc/cache";
+import type { Result } from "@sdxc/result";
 
 import { JWK, JWT } from "@sdxc/jwt";
+import { isFailure, isSuccess, success, wrap } from "@sdxc/result";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
@@ -57,8 +59,8 @@ class MemoryCacheStore implements Issuer.CacheStore {
 	 * @param key - Entry to read.
 	 * @returns The stored value, or `null` when nothing is stored there.
 	 */
-	read(key: string): Promise<string | null> {
-		return Promise.resolve(this.entries.get(key) ?? null);
+	read(key: string): Promise<Result<string | null, Error>> {
+		return Promise.resolve(success(this.entries.get(key) ?? null));
 	}
 
 	/**
@@ -67,9 +69,9 @@ class MemoryCacheStore implements Issuer.CacheStore {
 	 * @param key - Entry to write.
 	 * @param value - Value to store.
 	 */
-	write(key: string, value: string): Promise<void> {
+	write(key: string, value: string): Promise<Result<void, Error>> {
 		this.entries.set(key, value);
-		return Promise.resolve();
+		return Promise.resolve(success(undefined));
 	}
 
 	/**
@@ -78,12 +80,14 @@ class MemoryCacheStore implements Issuer.CacheStore {
 	 * @param key - Entry to read.
 	 * @param load - Computes the value when the entry is missing.
 	 */
-	async fetch(key: string, load: () => Promise<string>): Promise<string> {
+	async fetch(key: string, load: () => Promise<string>): Promise<Result<string, Error>> {
 		let cached = await this.read(key);
-		if (cached !== null) return cached;
+		if (isSuccess(cached) && cached.data !== null) return success(cached.data);
 
-		let value = await load();
-		await this.write(key, value);
+		let value = await wrap(load);
+		if (isFailure(value)) return value;
+
+		await this.write(key, value.data);
 		return value;
 	}
 }

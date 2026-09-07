@@ -8,6 +8,7 @@
  */
 
 import type { DurationInput } from "@sdxc/duration";
+import type { Result } from "@sdxc/result";
 
 import * as s from "@remix-run/data-schema";
 import { minLength, url } from "@remix-run/data-schema/checks";
@@ -565,7 +566,7 @@ export class Issuer {
 
 		if (!cache) return;
 
-		await wrap(() => cache.write(key, body, { ttl: this.#ttl }));
+		await cache.write(key, body, { ttl: this.#ttl });
 	}
 
 	/**
@@ -603,6 +604,11 @@ export class Issuer {
 	 * spent once per TTL across every isolate reading the same issuer. A cache stated
 	 * as a factory is resolved here, so the store belongs to the read reaching for it.
 	 *
+	 * A store that failed is rethrown as whatever `load` threw, so a caller catching
+	 * `AuthError` sees the same failure whether or not a cache was in the way. Only a
+	 * failure to produce the document at all reaches here; the store's own troubles
+	 * are the cache's to absorb.
+	 *
 	 * @param key - Where the document is stored.
 	 * @param load - Fetches the document on a miss.
 	 */
@@ -610,7 +616,10 @@ export class Issuer {
 		let cache = typeof this.#cache === "function" ? this.#cache() : this.#cache;
 
 		if (!cache) return await load();
-		return await cache.fetch(key, load, { ttl: this.#ttl });
+
+		let stored = await cache.fetch(key, load, { ttl: this.#ttl });
+		if (isFailure(stored)) throw stored.error.cause ?? stored.error;
+		return stored.data;
 	}
 
 	/**
@@ -695,14 +704,21 @@ export namespace Issuer {
 	/**
 	 * The cache tier an `Issuer` shares with every isolate reading the same issuer.
 	 * Any store keyed by a string satisfies it, a `@sdxc/cache` adapter included.
+	 *
+	 * The error is `Error` rather than a store's own type, so a store answering with
+	 * a narrower one satisfies this without the package depending on it.
 	 */
 	export interface CacheStore {
-		/** Reads an entry, or `null` when it is missing or expired. */
-		read(key: string): Promise<string | null>;
+		/** Reads an entry, succeeding with `null` when it is missing or expired. */
+		read(key: string): Promise<Result<string | null, Error>>;
 		/** Writes an entry, replacing any current value for the key. */
-		write(key: string, value: string, options?: CacheWriteOptions): Promise<void>;
+		write(key: string, value: string, options?: CacheWriteOptions): Promise<Result<void, Error>>;
 		/** Returns the stored entry, computing and storing it on a miss. */
-		fetch(key: string, load: () => Promise<string>, options?: CacheWriteOptions): Promise<string>;
+		fetch(
+			key: string,
+			load: () => Promise<string>,
+			options?: CacheWriteOptions,
+		): Promise<Result<string, Error>>;
 	}
 
 	/**

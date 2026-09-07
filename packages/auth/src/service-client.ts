@@ -378,9 +378,10 @@ export class ServiceClient {
 		if (!this.#cache) return null;
 
 		let entry = await this.#cache.read(key);
-		if (entry === null) return null;
+		if (isFailure(entry) || entry.data === null) return null;
 
-		let document = wrap(() => JSON.parse(entry) as unknown);
+		let text = entry.data;
+		let document = wrap(() => JSON.parse(text) as unknown);
 		if (isFailure(document)) return null;
 
 		let result = s.parseSafe(CACHED_GRANT_SCHEMA, document.data);

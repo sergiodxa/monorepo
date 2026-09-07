@@ -889,15 +889,24 @@ structurally so any store keyed by a string satisfies it.
 
 ```typescript
 interface CacheStore {
-	read(key: string): Promise<string | null>;
-	write(key: string, value: string, options?: { ttl?: DurationInput }): Promise<void>;
+	read(key: string): Promise<Result<string | null, Error>>;
+	write(
+		key: string,
+		value: string,
+		options?: { ttl?: DurationInput },
+	): Promise<Result<void, Error>>;
 	fetch(
 		key: string,
 		load: () => Promise<string>,
 		options?: { ttl?: DurationInput },
-	): Promise<string>;
+	): Promise<Result<string, Error>>;
 }
 ```
+
+The error is `Error` rather than a store's own type, so a store answering with a narrower
+one satisfies this without this package depending on it. A store that fails costs a read of
+the provider and nothing more: the document is fetched instead, and only a failure to fetch
+it reaches the caller, as the `AuthError` it would have thrown with no cache in the way.
 
 #### `Issuer.CacheSource`
 
