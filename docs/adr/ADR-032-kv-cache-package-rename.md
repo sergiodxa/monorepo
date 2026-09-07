@@ -2,7 +2,11 @@
 
 ## Status
 
-**Implemented** - 2026-07-29
+**Superseded** by [ADR-053](./ADR-053-cache-package-with-adapters.md) - 2026-09-07
+
+Implemented 2026-07-29. The rename it argued for stood until the package grew adapters, at which
+point the name described one of them; ADR-053 returns it to `@sdxc/cache` and answers the ambiguity
+below with the adapter's own subpath instead.
 
 ## Background
 
