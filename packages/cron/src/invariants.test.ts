@@ -14,7 +14,6 @@
 import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { Schedule } from "./schedule.js";
 import {
 	ANCHORS,
 	CORPUS_SEED,
@@ -23,13 +22,15 @@ import {
 	UNKNOWN_ZONES,
 	ZONE_CASES,
 	ZONE_SWEEP_EXPRESSIONS,
-} from "./test/corpus.js";
+} from "../test/corpus.js";
 import {
 	expectDescriptorShape,
 	expectOccurrenceInvariants,
 	expectStableNormalization,
 	expectWalksAgree,
-} from "./test/properties.js";
+} from "../test/properties.js";
+
+import { Schedule } from "./schedule.js";
 import { offsetAt } from "./time-zone.js";
 
 /** The generated corpus, drawn once so every block holds the same expressions. */

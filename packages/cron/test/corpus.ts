@@ -8,8 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CronFieldSet } from "../fields.js";
-import type { CronFieldName } from "../types.js";
+import type { CronFieldSet } from "../src/fields.js";
+import type { CronFieldName } from "../src/types.js";
 
 /** Bounds and vocabulary of one cron field, as the enumeration reads them. */
 export interface FieldSpec {
