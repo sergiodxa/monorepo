@@ -21,27 +21,32 @@ bun add remix  # or valibot, arktype, etc.
 ### Basic Example with `remix/data-schema`
 
 ```typescript
+import { badRequest, created } from "@sdxc/response";
+import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import { isSuccess, isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { email, minLength } from "remix/data-schema/checks";
+import { createAction } from "remix/router";
+
+import routes from "~/routes/web";
 
 let schema = s.object({
 	email: s.string().pipe(email()),
 	name: s.string().pipe(minLength(2)),
 });
 
-export async function action({ request }: Route.ActionArgs) {
-	let result = await validate(request, schema);
+/** POST /api/users — creates a user from the submitted body. */
+export default createAction(routes.api.users.create, async (ctx) => {
+	let result = await validate(ctx.request, schema);
 
 	if (isFailure(result)) {
 		return badRequest({ errors: result.error.issues });
 	}
 
 	// TypeScript knows result.data is { email: string, name: string }
-	await saveUser(result.data);
-	return ok({ message: "User created!" });
-}
+	let user = await saveUser(result.data);
+	return created({ user });
+});
 ```
 
 ### With FormData
@@ -62,31 +67,46 @@ if (isSuccess(result)) {
 ### With Request (Form-Encoded)
 
 ```typescript
-export async function action({ request }: Route.ActionArgs) {
+export default createAction(routes.signup.action, async (ctx) => {
 	// Request with Content-Type: application/x-www-form-urlencoded
-	let result = await validate(request, schema);
+	let result = await validate(ctx.request, schema);
 
 	if (isFailure(result)) {
 		return badRequest({ errors: result.error.issues });
 	}
 
 	return ok({ data: result.data });
-}
+});
+```
+
+With the `formData()` middleware installed, the body is already parsed by the time the
+handler runs, so pass `ctx.formData` and leave `ctx.request` untouched:
+
+```typescript
+export default createAction(routes.signup.action, async (ctx) => {
+	let result = await validate(ctx.formData, schema);
+
+	if (isFailure(result)) {
+		return badRequest({ errors: result.error.issues });
+	}
+
+	return ok({ data: result.data });
+});
 ```
 
 ### With Request (JSON)
 
 ```typescript
-export async function action({ request }: Route.ActionArgs) {
+export default createAction(routes.api.users.create, async (ctx) => {
 	// Request with Content-Type: application/json
-	let result = await validate(request, schema);
+	let result = await validate(ctx.request, schema);
 
 	if (isFailure(result)) {
 		return badRequest({ errors: result.error.issues });
 	}
 
 	return ok({ data: result.data });
-}
+});
 ```
 
 ### With Plain Objects
@@ -261,39 +281,43 @@ if (isSuccess(result)) {
 }
 ```
 
-## Integration with React Router
+## Integration with `remix/router`
 
 ### Basic Action
 
 ```typescript
-import { validate } from "@sdxc/validate";
+import { badRequest, created } from "@sdxc/response";
 import { isFailure } from "@sdxc/result";
-import { ok, badRequest } from "@sdxc/response";
+import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import { email, minLength } from "remix/data-schema/checks";
+import { createAction } from "remix/router";
+
+import routes from "~/routes/web";
 
 let schema = s.object({
 	email: s.string().pipe(email()),
 	password: s.string().pipe(minLength(8)),
 });
 
-export async function action({ request }: Route.ActionArgs) {
-	let result = await validate(request, schema);
+/** POST /signup — registers an account. */
+export default createAction(routes.signup.action, async (ctx) => {
+	let result = await validate(ctx.formData, schema);
 
 	if (isFailure(result)) {
 		return badRequest({ errors: result.error.issues });
 	}
 
 	let user = await createUser(result.data);
-	return ok({ user });
-}
+	return created({ user });
+});
 ```
 
 ### With Early Returns
 
 ```typescript
-export async function action({ request }: Route.ActionArgs) {
-	let validation = await validate(request, loginSchema);
+export default createAction(routes.login.action, async (ctx) => {
+	let validation = await validate(ctx.formData, loginSchema);
 	if (isFailure(validation)) {
 		return badRequest({ errors: validation.error.issues });
 	}
@@ -309,38 +333,61 @@ export async function action({ request }: Route.ActionArgs) {
 	}
 
 	return ok({ user: userResult.data });
-}
+});
 ```
 
 ### Displaying Errors in Components
 
-```typescript
-export default function SignupForm({ actionData }: Route.ComponentProps) {
-	return (
-		<Form method="post">
-			<input type="email" name="email" />
-			{actionData?.errors
-				?.filter((issue) => issue.path?.[0] === "email")
-				.map((issue) => (
-					<p key={issue.message} className="error">
-						{issue.message}
-					</p>
-				))}
+A `Form` takes the issues straight off the failed result and hands each field its own
+messages by `name` through component context, so a refused submission re-renders the same
+page with `issues` set and nothing else threaded down:
 
-			<input type="password" name="password" />
-			{actionData?.errors
-				?.filter((issue) => issue.path?.[0] === "password")
-				.map((issue) => (
-					<p key={issue.message} className="error">
-						{issue.message}
-					</p>
-				))}
+```tsx
+import type { Handle } from "remix/ui";
 
-			<button type="submit">Sign Up</button>
+import { redirect } from "@sdxc/response";
+import { isFailure } from "@sdxc/result";
+import { Button, Form, TextField } from "@sdxc/ui";
+import { validate } from "@sdxc/validate";
+import { createController } from "remix/router";
+
+import routes from "~/routes/web";
+
+function SignupPage(handle: Handle<{ issues?: ReadonlyArray<Form.Issue> }>) {
+	return () => (
+		<Form method="post" issues={handle.props.issues}>
+			<TextField label="Email" name="email" type="email" required />
+			<TextField label="Password" name="password" type="password" required />
+			<Button type="submit">Sign Up</Button>
 		</Form>
 	);
 }
+
+export default createController(routes.signup, {
+	actions: {
+		/** GET /signup — the empty form. */
+		index(ctx) {
+			return ctx.render(<SignupPage />);
+		},
+
+		/** POST /signup — registers the account, or re-renders the form with its issues. */
+		async action(ctx) {
+			let result = await validate(ctx.formData, schema);
+
+			if (isFailure(result)) {
+				return ctx.render(<SignupPage issues={result.error.issues} />, { status: 400 });
+			}
+
+			await createUser(result.data);
+			return redirect(routes.dashboard.href(), { status: redirect.Status.SeeOther });
+		},
+	},
+});
 ```
+
+`ValidationError.issues` already matches the `Form.Issue` shape, so the array passes through
+as-is. Each field looks its own messages up by `name`, renders them, marks itself
+`aria-invalid`, and the first invalid field of the render takes focus.
 
 ## Content Type Detection
 
@@ -468,14 +515,17 @@ export let updateUserSchema = s.object({
 ```
 
 ```typescript
-// routes/signup.ts
+// app/http/controllers/signup.ts
 import { validate } from "@sdxc/validate";
+import { createAction } from "remix/router";
+
+import routes from "~/routes/web";
 import { userSchema } from "~/schemas";
 
-export async function action({ request }: Route.ActionArgs) {
-	let result = await validate(request, userSchema);
+export default createAction(routes.signup.action, async (ctx) => {
+	let result = await validate(ctx.formData, userSchema);
 	// ...
-}
+});
 ```
 
 ## Pattern: Custom Error Messages
@@ -621,7 +671,7 @@ The Standard Schema specification allows this package to work with any compliant
 ## Related Packages
 
 - [`@sdxc/result`](/packages/result) - Result type for explicit error handling
-- [`@sdxc/response`](/packages/response) - Type-safe response helpers for React Router
+- [`@sdxc/response`](/packages/response) - Semantic helpers that build plain `Response` objects for JSON APIs and redirects
 - [Standard Schema](https://standardschema.dev) - The specification this package implements
 
 ## Tips
