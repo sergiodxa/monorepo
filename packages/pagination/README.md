@@ -12,7 +12,7 @@ parameters are validated, and one function that writes `Link` and `X-Total-Count
 
 The package returns data and writes headers. It constructs no responses and renders
 nothing, which is why it needs no dependency on the HTTP package: bodies belong to
-`json()` and to the app's own components, and a pager component belongs in the UI
+`Response.json()` and to the app's own components, and a pager component belongs in the UI
 package and consumes `series()`.
 
 Nothing here touches a request context. Pagination is computed from numbers and a
@@ -522,7 +522,7 @@ async function eventsIndex(ctx) {
 
 	if (isFailure(page)) return apiError("INTERNAL", page.error.message);
 
-	return json(page.data.items.map(serializeEvent), {
+	return Response.json(page.data.items.map(serializeEvent), {
 		headers: PAGING.paginate(new Headers(), page.data, { url: ctx.url }),
 	});
 }
@@ -558,7 +558,7 @@ body the resource itself. When a client genuinely needs the numbers in the body,
 serialize the value object rather than rebuilding it:
 
 ```typescript
-return json({ data: page.data.items, meta: page.data.pagination });
+return Response.json({ data: page.data.items, meta: page.data.pagination });
 // meta is the full plain shape, via toJSON()
 ```
 
