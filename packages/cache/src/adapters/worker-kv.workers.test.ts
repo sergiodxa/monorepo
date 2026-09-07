@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { isFailure, unwrap } from "@sdxc/result";
 import { env } from "cloudflare:test";
 import { describe, expect, test } from "vitest";
 
@@ -49,7 +50,7 @@ describe("WorkerKVCache with deferred writes", () => {
 		let handed: Promise<unknown>[] = [];
 		let cache = new WorkerKVCache(env.CACHE, { waitUntil: (promise) => handed.push(promise) });
 
-		await cache.write("deferred:handed", "value");
+		unwrap(await cache.write("deferred:handed", "value"));
 
 		expect(handed).toHaveLength(1);
 	});
@@ -61,9 +62,9 @@ describe("WorkerKVCache with deferred writes", () => {
 		});
 		let cache = new WorkerKVCache(env.CACHE, { waitUntil: () => blocked });
 
-		await cache.write("deferred:early", { id: 1 });
+		unwrap(await cache.write("deferred:early", { id: 1 }));
 
-		expect(await cache.read("deferred:early")).toStrictEqual({ id: 1 });
+		expect(unwrap(await cache.read("deferred:early"))).toStrictEqual({ id: 1 });
 		settle?.();
 	});
 
@@ -71,7 +72,7 @@ describe("WorkerKVCache with deferred writes", () => {
 		let handed: Promise<unknown>[] = [];
 		let cache = new WorkerKVCache(env.CACHE, { waitUntil: (promise) => handed.push(promise) });
 
-		await cache.write("deferred:landed", "value");
+		unwrap(await cache.write("deferred:landed", "value"));
 		await Promise.all(handed);
 
 		expect(await env.CACHE.get("deferred:landed", "text")).toBe(`"value"`);
@@ -81,8 +82,8 @@ describe("WorkerKVCache with deferred writes", () => {
 		let handed: Promise<unknown>[] = [];
 		let cache = new WorkerKVCache(env.CACHE, { waitUntil: (promise) => handed.push(promise) });
 
-		await cache.write("deferred:ordered", "first");
-		await cache.write("deferred:ordered", "second");
+		unwrap(await cache.write("deferred:ordered", "first"));
+		unwrap(await cache.write("deferred:ordered", "second"));
 		await Promise.all(handed);
 
 		expect(await env.CACHE.get("deferred:ordered", "text")).toBe(`"second"`);
@@ -92,8 +93,8 @@ describe("WorkerKVCache with deferred writes", () => {
 		let handed: Promise<unknown>[] = [];
 		let cache = new WorkerKVCache(env.CACHE, { waitUntil: (promise) => handed.push(promise) });
 
-		await cache.write("deferred:removed", "value");
-		await cache.delete("deferred:removed");
+		unwrap(await cache.write("deferred:removed", "value"));
+		unwrap(await cache.delete("deferred:removed"));
 		await Promise.all(handed);
 
 		expect(await env.CACHE.get("deferred:removed", "text")).toBeNull();
@@ -104,7 +105,7 @@ describe("WorkerKVCache expiry", () => {
 	test("passes a numeric ttl through as seconds", async () => {
 		let cache = new WorkerKVCache(env.CACHE);
 
-		await cache.write("ttl:number", "value", { ttl: HOUR_SECONDS });
+		unwrap(await cache.write("ttl:number", "value", { ttl: HOUR_SECONDS }));
 
 		expect(await ttlOf("ttl:number")).toBeCloseTo(HOUR_SECONDS, -Math.log10(TOLERANCE_SECONDS));
 	});
@@ -112,7 +113,7 @@ describe("WorkerKVCache expiry", () => {
 	test("counts a duration string as the same lifetime as its seconds", async () => {
 		let cache = new WorkerKVCache(env.CACHE);
 
-		await cache.write("ttl:duration", "value", { ttl: "1 hour" });
+		unwrap(await cache.write("ttl:duration", "value", { ttl: "1 hour" }));
 
 		expect(await ttlOf("ttl:duration")).toBeCloseTo(HOUR_SECONDS, -Math.log10(TOLERANCE_SECONDS));
 	});
@@ -120,16 +121,35 @@ describe("WorkerKVCache expiry", () => {
 	test("stores no expiry when no ttl is given", async () => {
 		let cache = new WorkerKVCache(env.CACHE);
 
-		await cache.write("ttl:none", "value");
+		unwrap(await cache.write("ttl:none", "value"));
 
 		expect(await ttlOf("ttl:none")).toBeNull();
 	});
 
-	test("leaves the entry unwritten when the ttl is below what KV accepts", async () => {
+	test("reports the entry as unavailable when the ttl is below what KV accepts", async () => {
 		let cache = new WorkerKVCache(env.CACHE);
 
-		await cache.write("ttl:rejected", "value", { ttl: 30 });
+		let written = await cache.write("ttl:rejected", "value", { ttl: 30 });
 
-		expect(await cache.read("ttl:rejected")).toBeNull();
+		expect(isFailure(written) && written.error.code).toBe("unavailable");
+		expect(unwrap(await cache.read("ttl:rejected"))).toBeNull();
+	});
+});
+
+describe("WorkerKVCache over an entry it did not write", () => {
+	test("reports an entry that is not JSON when it is read directly", async () => {
+		let cache = new WorkerKVCache(env.CACHE);
+		await env.CACHE.put("foreign:read", "{oops");
+
+		let result = await cache.read("foreign:read");
+
+		expect(isFailure(result) && result.error.code).toBe("invalid_value");
+	});
+
+	test("recomputes through fetch when the stored entry is not JSON", async () => {
+		let cache = new WorkerKVCache(env.CACHE);
+		await env.CACHE.put("foreign:fetch", "{oops");
+
+		expect(unwrap(await cache.fetch("foreign:fetch", async () => "computed"))).toBe("computed");
 	});
 });

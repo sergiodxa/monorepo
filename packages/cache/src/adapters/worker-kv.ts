@@ -7,11 +7,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Result } from "@sdxc/result";
 import type { JSONSerialized, JSONValue } from "@sdxc/types";
 
-import type { Cache, CacheWriteOptions } from "../index.js";
+import { isFailure, isSuccess, success } from "@sdxc/result";
 
-import { tolerate } from "../lib/tolerate.js";
+import type { Cache, CacheError, CacheWriteOptions } from "../index.js";
+
+import { attempt, attemptLoad } from "../lib/attempt.js";
+import { parse, serialize } from "../lib/json.js";
 import { ttlSeconds } from "../lib/ttl.js";
 
 /** A write handed to `waitUntil`, still in flight. */
@@ -35,8 +39,8 @@ export interface WorkerKVCacheOptions {
  * Reads and writes entries in a KV namespace.
  *
  * KV refuses a TTL under 60 seconds, so a shorter one leaves the entry unwritten
- * and warns on the invocation's log; a caller wanting a shorter lifetime than
- * that wants something other than a cache.
+ * and reports `unavailable`; a caller wanting a shorter lifetime than that wants
+ * something other than a cache.
  */
 export class WorkerKVCache implements Cache {
 	readonly #kv: KVNamespace;
@@ -58,41 +62,57 @@ export class WorkerKVCache implements Cache {
 		this.#waitUntil = waitUntil;
 	}
 
-	async read<T = JSONValue>(key: string): Promise<JSONSerialized<T> | null> {
+	async read<T = JSONValue>(key: string): Promise<Result<JSONSerialized<T> | null, CacheError>> {
 		let text = await this.#load(key);
-		if (text === null) return null;
-		return JSON.parse(text) as JSONSerialized<T>;
+		if (isFailure(text)) return text;
+		if (text.data === null) return success(null);
+		return parse<T>(key, text.data);
 	}
 
-	async write<T>(key: string, value: T, options: CacheWriteOptions = {}): Promise<void> {
-		await this.#store(key, JSON.stringify(value), options);
+	async write<T>(
+		key: string,
+		value: T,
+		options: CacheWriteOptions = {},
+	): Promise<Result<void, CacheError>> {
+		let text = serialize(key, value);
+		if (isFailure(text)) return text;
+		return this.#store(key, text.data, options);
 	}
 
 	async fetch<T>(
 		key: string,
 		load: () => Promise<T>,
 		options: CacheWriteOptions = {},
-	): Promise<JSONSerialized<T>> {
-		let hit = await this.#load(key);
-		if (hit !== null) return JSON.parse(hit) as JSONSerialized<T>;
+	): Promise<Result<JSONSerialized<T>, CacheError>> {
+		let stored = await this.#load(key);
+		if (isSuccess(stored) && stored.data !== null) {
+			let hit = parse<T>(key, stored.data);
+			if (isSuccess(hit)) return hit;
+		}
 
-		let text = JSON.stringify(await load());
-		await this.#store(key, text, options);
-		return JSON.parse(text) as JSONSerialized<T>;
+		let loaded = await attemptLoad(key, load);
+		if (isFailure(loaded)) return loaded;
+
+		let text = serialize(key, loaded.data);
+		if (isFailure(text)) return text;
+
+		await this.#store(key, text.data, options);
+		return parse<T>(key, text.data);
 	}
 
-	async delete(key: string): Promise<void> {
+	async delete(key: string): Promise<Result<void, CacheError>> {
 		let inflight = this.#pending.get(key);
 		this.#pending.delete(key);
 		if (inflight !== undefined) await inflight.settled;
-		await tolerate("cache.delete.failed", key, undefined, () => this.#kv.delete(key));
+
+		return attempt("delete", key, () => this.#kv.delete(key));
 	}
 
 	/** The stored text, from the buffer when a put is still in flight. */
-	async #load(key: string): Promise<string | null> {
+	async #load(key: string): Promise<Result<string | null, CacheError>> {
 		let buffered = this.#pending.get(key);
-		if (buffered !== undefined) return buffered.text;
-		return tolerate("cache.read.failed", key, null, () => this.#kv.get(key, "text"));
+		if (buffered !== undefined) return success(buffered.text);
+		return attempt("read", key, () => this.#kv.get(key, "text"));
 	}
 
 	/**
@@ -100,18 +120,19 @@ export class WorkerKVCache implements Cache {
 	 * deferred, since the buffer answers for it until KV does. A deferred put is
 	 * chained after any put already in flight for the key, so two writes land in order.
 	 */
-	async #store(key: string, text: string, { ttl }: CacheWriteOptions): Promise<void> {
+	async #store(
+		key: string,
+		text: string,
+		{ ttl }: CacheWriteOptions,
+	): Promise<Result<void, CacheError>> {
 		let put = (): Promise<void> => this.#kv.put(key, text, { expirationTtl: ttlSeconds(ttl) });
 
-		if (this.#waitUntil === undefined) {
-			await tolerate("cache.write.failed", key, undefined, put);
-			return;
-		}
+		if (this.#waitUntil === undefined) return attempt("write", key, put);
 
 		let previous = this.#pending.get(key)?.settled;
-		let settled = (previous ?? Promise.resolve()).then(() =>
-			tolerate("cache.write.failed", key, undefined, put),
-		);
+		let settled = (previous ?? Promise.resolve()).then(async () => {
+			await attempt("write", key, put);
+		});
 
 		this.#pending.set(key, { text, settled });
 		this.#waitUntil(
@@ -119,5 +140,7 @@ export class WorkerKVCache implements Cache {
 				if (this.#pending.get(key)?.settled === settled) this.#pending.delete(key);
 			}),
 		);
+
+		return success(undefined);
 	}
 }

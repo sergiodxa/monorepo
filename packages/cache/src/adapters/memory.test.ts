@@ -7,8 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { JSONSerializable } from "@sdxc/types";
-
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { conformance } from "../testing/conformance.js";
@@ -36,35 +35,27 @@ describe("MemoryCache", () => {
 		let cache = new MemoryCache();
 		let value = { tags: ["news"] };
 
-		await cache.write("key", value);
+		unwrap(await cache.write("key", value));
 		value.tags.push("later");
 
-		expect(await cache.read("key")).toStrictEqual({ tags: ["news"] });
+		expect(unwrap(await cache.read("key"))).toStrictEqual({ tags: ["news"] });
 	});
 
 	test("hands back a copy, so a mutation of what was read is not stored", async () => {
 		let cache = new MemoryCache();
-		await cache.write("key", { tags: ["news"] });
+		unwrap(await cache.write("key", { tags: ["news"] }));
 
-		let first = await cache.read<{ tags: string[] }>("key");
+		let first = unwrap(await cache.read<{ tags: string[] }>("key"));
 		first?.tags.push("later");
 
-		expect(await cache.read("key")).toStrictEqual({ tags: ["news"] });
+		expect(unwrap(await cache.read("key"))).toStrictEqual({ tags: ["news"] });
 	});
 
 	test("tells the time with Date.now when no clock is given", async () => {
 		let cache = new MemoryCache();
 
-		await cache.write("key", "value", { ttl: 60 });
+		unwrap(await cache.write("key", "value", { ttl: 60 }));
 
-		expect(await cache.read("key")).toBe("value");
-	});
-
-	test("lets a value JSON cannot write reach the caller as its own error", async () => {
-		let cache = new MemoryCache();
-		let cyclic: JSONSerializable[] = [];
-		cyclic.push(cyclic);
-
-		await expect(cache.write("key", cyclic)).rejects.toThrow(TypeError);
+		expect(unwrap(await cache.read("key"))).toBe("value");
 	});
 });

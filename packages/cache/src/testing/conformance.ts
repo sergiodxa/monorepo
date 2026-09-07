@@ -7,9 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Result } from "@sdxc/result";
+
+import { isSuccess, unwrap } from "@sdxc/result";
 import { describe, expect, test, vi } from "vitest";
 
-import type { Cache } from "../index.js";
+import type { Cache, CacheError } from "../index.js";
 
 /**
  * The shortest TTL the suite asks for. KV refuses anything under 60 seconds, so
@@ -45,50 +48,56 @@ export function conformance({ name, create, expire }: ConformanceOptions): void 
 	/** A key no other test has used, so adapters sharing a store cannot collide. */
 	let key = (): string => `conformance:${crypto.randomUUID()}`;
 
+	/** The error a call answered with, asserting that it answered with one. */
+	let errorOf = <T>(result: Result<T, CacheError>): CacheError => {
+		if (isSuccess(result)) throw new Error("expected a failure, got a success");
+		return result.error;
+	};
+
 	describe(`${name} conformance`, () => {
 		test("reads back what was written", async () => {
 			let cache = await create();
 			let k = key();
 
-			await cache.write(k, { id: 1, tags: ["news"] });
+			unwrap(await cache.write(k, { id: 1, tags: ["news"] }));
 
-			expect(await cache.read(k)).toStrictEqual({ id: 1, tags: ["news"] });
+			expect(unwrap(await cache.read(k))).toStrictEqual({ id: 1, tags: ["news"] });
 		});
 
-		test("reads a key it holds nothing for as a miss", async () => {
+		test("succeeds with null for a key it holds nothing for", async () => {
 			let cache = await create();
 
-			expect(await cache.read(key())).toBeNull();
+			expect(unwrap(await cache.read(key()))).toBeNull();
 		});
 
 		test("is readable as soon as a write resolves", async () => {
 			let cache = await create();
 			let k = key();
 
-			await cache.write(k, "value");
+			unwrap(await cache.write(k, "value"));
 
-			expect(await cache.read(k)).toBe("value");
+			expect(unwrap(await cache.read(k))).toBe("value");
 		});
 
 		test("replaces the value a key already holds", async () => {
 			let cache = await create();
 			let k = key();
 
-			await cache.write(k, "first");
-			await cache.write(k, "second");
+			unwrap(await cache.write(k, "first"));
+			unwrap(await cache.write(k, "second"));
 
-			expect(await cache.read(k)).toBe("second");
+			expect(unwrap(await cache.read(k))).toBe("second");
 		});
 
-		test("removes an entry, and removing a missing one is not an error", async () => {
+		test("removes an entry, and removing a missing one succeeds", async () => {
 			let cache = await create();
 			let k = key();
 
-			await cache.write(k, "value");
-			await cache.delete(k);
-			await cache.delete(k);
+			unwrap(await cache.write(k, "value"));
+			unwrap(await cache.delete(k));
+			unwrap(await cache.delete(k));
 
-			expect(await cache.read(k)).toBeNull();
+			expect(unwrap(await cache.read(k))).toBeNull();
 		});
 
 		test("returns what it holds without computing", async () => {
@@ -96,9 +105,9 @@ export function conformance({ name, create, expire }: ConformanceOptions): void 
 			let k = key();
 			let load = vi.fn(async () => "computed");
 
-			await cache.write(k, "stored");
+			unwrap(await cache.write(k, "stored"));
 
-			expect(await cache.fetch(k, load)).toBe("stored");
+			expect(unwrap(await cache.fetch(k, load))).toBe("stored");
 			expect(load).not.toHaveBeenCalled();
 		});
 
@@ -107,8 +116,8 @@ export function conformance({ name, create, expire }: ConformanceOptions): void 
 			let k = key();
 			let load = vi.fn(async () => "computed");
 
-			expect(await cache.fetch(k, load)).toBe("computed");
-			expect(await cache.fetch(k, load)).toBe("computed");
+			expect(unwrap(await cache.fetch(k, load))).toBe("computed");
+			expect(unwrap(await cache.fetch(k, load))).toBe("computed");
 			expect(load).toHaveBeenCalledTimes(1);
 		});
 
@@ -117,8 +126,8 @@ export function conformance({ name, create, expire }: ConformanceOptions): void 
 			let k = key();
 			let load = async () => ({ at: new Date("2026-09-07T00:00:00.000Z") });
 
-			let miss = await cache.fetch(k, load);
-			let hit = await cache.fetch(k, load);
+			let miss = unwrap(await cache.fetch(k, load));
+			let hit = unwrap(await cache.fetch(k, load));
 
 			expect(miss).toStrictEqual({ at: "2026-09-07T00:00:00.000Z" });
 			expect(hit).toStrictEqual(miss);
@@ -129,29 +138,54 @@ export function conformance({ name, create, expire }: ConformanceOptions): void 
 			let k = key();
 			let load = vi.fn(async () => null);
 
-			expect(await cache.fetch(k, load)).toBeNull();
-			expect(await cache.fetch(k, load)).toBeNull();
+			expect(unwrap(await cache.fetch(k, load))).toBeNull();
+			expect(unwrap(await cache.fetch(k, load))).toBeNull();
 			expect(load).toHaveBeenCalledTimes(1);
 		});
 
-		test("lets what a loader throws reach the caller", async () => {
+		test("reports a failed loader as load_failed, carrying what it threw", async () => {
 			let cache = await create();
-			let failure = new Error("loader failed");
+			let thrown = new Error("loader failed");
 
-			await expect(
-				cache.fetch(key(), async () => {
-					throw failure;
+			let error = errorOf(
+				await cache.fetch(key(), async () => {
+					throw thrown;
 				}),
-			).rejects.toThrow(failure);
+			);
+
+			expect(error.code).toBe("load_failed");
+			expect(error.cause).toBe(thrown);
+		});
+
+		test("reports a value JSON cannot write as invalid_value", async () => {
+			let cache = await create();
+			let cyclic: unknown[] = [];
+			cyclic.push(cyclic);
+
+			expect(errorOf(await cache.write(key(), cyclic)).code).toBe("invalid_value");
+			expect(errorOf(await cache.fetch(key(), async () => cyclic)).code).toBe("invalid_value");
+		});
+
+		test("names the key on every failure it reports", async () => {
+			let cache = await create();
+			let k = key();
+
+			let error = errorOf(
+				await cache.fetch(k, async () => {
+					throw new Error("loader failed");
+				}),
+			);
+
+			expect(error.key).toBe(k);
 		});
 
 		test("keeps an entry written without a ttl", async () => {
 			let cache = await create();
 			let k = key();
 
-			await cache.write(k, "value");
+			unwrap(await cache.write(k, "value"));
 
-			expect(await cache.read(k)).toBe("value");
+			expect(unwrap(await cache.read(k))).toBe("value");
 		});
 
 		if (expire === undefined) return;
@@ -160,20 +194,20 @@ export function conformance({ name, create, expire }: ConformanceOptions): void 
 			let cache = await create();
 			let k = key();
 
-			await cache.write(k, "value", { ttl: MIN_TTL_SECONDS });
+			unwrap(await cache.write(k, "value", { ttl: MIN_TTL_SECONDS }));
 			await expire(MIN_TTL_SECONDS);
 
-			expect(await cache.read(k)).toBeNull();
+			expect(unwrap(await cache.read(k))).toBeNull();
 		});
 
 		test("keeps an entry until its ttl has passed", async () => {
 			let cache = await create();
 			let k = key();
 
-			await cache.write(k, "value", { ttl: MIN_TTL_SECONDS });
+			unwrap(await cache.write(k, "value", { ttl: MIN_TTL_SECONDS }));
 			await expire(MIN_TTL_SECONDS - 1);
 
-			expect(await cache.read(k)).toBe("value");
+			expect(unwrap(await cache.read(k))).toBe("value");
 		});
 
 		test("counts a duration string and its seconds as the same lifetime", async () => {
@@ -181,12 +215,12 @@ export function conformance({ name, create, expire }: ConformanceOptions): void 
 			let seconds = key();
 			let duration = key();
 
-			await cache.write(seconds, "value", { ttl: 60 });
-			await cache.write(duration, "value", { ttl: "1 minute" });
+			unwrap(await cache.write(seconds, "value", { ttl: 60 }));
+			unwrap(await cache.write(duration, "value", { ttl: "1 minute" }));
 			await expire(MIN_TTL_SECONDS);
 
-			expect(await cache.read(seconds)).toBeNull();
-			expect(await cache.read(duration)).toBeNull();
+			expect(unwrap(await cache.read(seconds))).toBeNull();
+			expect(unwrap(await cache.read(duration))).toBeNull();
 		});
 
 		test("recomputes through fetch once the entry has expired", async () => {
@@ -194,9 +228,9 @@ export function conformance({ name, create, expire }: ConformanceOptions): void 
 			let k = key();
 			let load = vi.fn(async () => "computed");
 
-			await cache.fetch(k, load, { ttl: MIN_TTL_SECONDS });
+			unwrap(await cache.fetch(k, load, { ttl: MIN_TTL_SECONDS }));
 			await expire(MIN_TTL_SECONDS);
-			await cache.fetch(k, load, { ttl: MIN_TTL_SECONDS });
+			unwrap(await cache.fetch(k, load, { ttl: MIN_TTL_SECONDS }));
 
 			expect(load).toHaveBeenCalledTimes(2);
 		});

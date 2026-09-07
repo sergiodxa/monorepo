@@ -7,10 +7,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Result } from "@sdxc/result";
 import type { JSONSerialized, JSONValue } from "@sdxc/types";
 
-import type { Cache, CacheWriteOptions } from "../index.js";
+import { isFailure, isSuccess, success } from "@sdxc/result";
 
+import type { Cache, CacheError, CacheWriteOptions } from "../index.js";
+
+import { attemptLoad } from "../lib/attempt.js";
+import { parse, serialize } from "../lib/json.js";
 import { ttlSeconds } from "../lib/ttl.js";
 
 /** Milliseconds in the second a TTL is counted in. */
@@ -51,31 +56,48 @@ export class MemoryCache implements Cache {
 		this.#now = now;
 	}
 
-	async read<T = JSONValue>(key: string): Promise<JSONSerialized<T> | null> {
+	async read<T = JSONValue>(key: string): Promise<Result<JSONSerialized<T> | null, CacheError>> {
 		let text = this.#read(key);
-		if (text === null) return null;
-		return JSON.parse(text) as JSONSerialized<T>;
+		if (text === null) return success(null);
+		return parse<T>(key, text);
 	}
 
-	async write<T>(key: string, value: T, options: CacheWriteOptions = {}): Promise<void> {
-		this.#write(key, JSON.stringify(value), options);
+	async write<T>(
+		key: string,
+		value: T,
+		options: CacheWriteOptions = {},
+	): Promise<Result<void, CacheError>> {
+		let text = serialize(key, value);
+		if (isFailure(text)) return text;
+
+		this.#write(key, text.data, options);
+		return success(undefined);
 	}
 
 	async fetch<T>(
 		key: string,
 		load: () => Promise<T>,
 		options: CacheWriteOptions = {},
-	): Promise<JSONSerialized<T>> {
-		let hit = this.#read(key);
-		if (hit !== null) return JSON.parse(hit) as JSONSerialized<T>;
+	): Promise<Result<JSONSerialized<T>, CacheError>> {
+		let stored = this.#read(key);
+		if (stored !== null) {
+			let hit = parse<T>(key, stored);
+			if (isSuccess(hit)) return hit;
+		}
 
-		let text = JSON.stringify(await load());
-		this.#write(key, text, options);
-		return JSON.parse(text) as JSONSerialized<T>;
+		let loaded = await attemptLoad(key, load);
+		if (isFailure(loaded)) return loaded;
+
+		let text = serialize(key, loaded.data);
+		if (isFailure(text)) return text;
+
+		this.#write(key, text.data, options);
+		return parse<T>(key, text.data);
 	}
 
-	async delete(key: string): Promise<void> {
+	async delete(key: string): Promise<Result<void, CacheError>> {
 		this.#entries.delete(key);
+		return success(undefined);
 	}
 
 	/**

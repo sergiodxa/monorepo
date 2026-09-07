@@ -13,6 +13,12 @@ moving four call sites onto them found four things the design had wrong: `JSONSe
 work as a constraint, `JSONSerialized<T>` needs a depth bound, an error type nothing throws is not
 worth exporting, and a deferred write needs ordering as well as a buffer. Each is marked below.
 
+A third revision reverses the largest of those. The design had every method answer with a plain
+value and degrade a store failure to a miss, against the repository's `@sdxc/result` rule, and that
+deviation was raised for review three times rather than settled. It was settled by overruling it:
+every method answers with a `Result`, and [Nothing throws](#nothing-throws) is what replaced
+"failures degrade to misses". `CacheError` is the error type the second revision had just deleted.
+
 ## Background
 
 [ADR-032](./ADR-032-kv-cache-package-rename.md) renamed `@sdxc/cache` to `@sdxc/kv-cache` so that
@@ -80,14 +86,14 @@ line, which was the whole of what ADR-032 asked for.
 
 ```typescript
 interface Cache {
-	read<T = JSONValue>(key: string): Promise<JSONSerialized<T> | null>;
-	write<T>(key: string, value: T, options?: CacheWriteOptions): Promise<void>;
+	read<T = JSONValue>(key: string): Promise<Result<JSONSerialized<T> | null, CacheError>>;
+	write<T>(key: string, value: T, options?: CacheWriteOptions): Promise<Result<void, CacheError>>;
 	fetch<T>(
 		key: string,
 		load: () => Promise<T>,
 		options?: CacheWriteOptions,
-	): Promise<JSONSerialized<T>>;
-	delete(key: string): Promise<void>;
+	): Promise<Result<JSONSerialized<T>, CacheError>>;
+	delete(key: string): Promise<Result<void, CacheError>>;
 }
 
 interface CacheWriteOptions {
@@ -231,25 +237,35 @@ write to a key chains after the first, and a delete waits for it. Both are cheap
 the deferred mode answers differently from the awaited one — which is the whole thing the conformance
 suite is for.
 
-### Failures degrade to misses
+### Nothing throws
 
-A cache is an optimization, so a store that cannot answer is a miss, not an error: `read` returns
-`null`, `write` returns, and `fetch` computes the value and returns it. Failures are reported through
-`currentLog()` rather than swallowed silently.
+Every method answers with a `Result<_, CacheError>`, and `CacheError.code` is one of three things:
 
-This is a deliberate departure from the repo's `@sdxc/result` rule. A `Result` at these call sites
-would be ceremony with one branch: the caller's only recovery from a failed cache read is to compute
-the value, which is what `fetch` already does. What a `Result` would buy — distinguishing "no entry"
-from "KV was unreachable" — is an operational question, and the log is where operational questions
-are answered.
+| Code            | Means                                                    | Reached by                |
+| --------------- | -------------------------------------------------------- | ------------------------- |
+| `unavailable`   | The store could not be reached, or refused the operation | `read`, `write`, `delete` |
+| `invalid_value` | JSON could not write the value, or read the entry stored | every method              |
+| `load_failed`   | The loader a `fetch` was given failed                    | `fetch`                   |
 
-Two things are not store failures and reach the caller as their own errors: what a loader throws,
-and a value JSON cannot write. Both are the caller's own bug, and swallowing either would hide it.
+`unavailable` is the one a caller can ignore, and that is what the earlier design was reaching for:
+the value is simply not cached, and computing it is the recovery a miss already asks for. What that
+design got wrong was making the ignoring compulsory. A caller that wants to know cannot ask, and two
+paths threw anyway — a loader's error and an unwritable value — so the package neither returned
+`Result`s nor refrained from throwing.
 
-The package exports no error type. The first draft said it would, so a caller could distinguish an
-unreachable store from a miss later without a breaking change — but nothing throws it, and a class
-nobody constructs is the incidental complexity this design is otherwise careful about. The
-distinction lives on the log, which is where it is acted on.
+Store failures are still recorded on the invocation's log, because store health is the package's own
+to report and a caller is expected to discard those failures; a `load_failed` is not logged, because
+it is the caller's and travels in the `Result`. Every failure carries the `key` and the original
+error as `cause`, so a caller that would rather throw rethrows the cause and keeps its own error
+type. That is what both real call sites do, and it is why the migration changed no observable
+behavior: `packages/auth` still throws the same `AuthError` for an unreachable provider, and the
+blog's MCP tools still throw whatever their loader threw.
+
+**`fetch` absorbs everything the store does wrong.** This is the asymmetry that makes the contract
+coherent. An unreachable store, an entry that is not JSON, and a refused write all still answer with
+a value, because `fetch` can compute one. So a `fetch` failure means the value could not be produced
+at all, which is the only thing a caller of `fetch` cannot route around. `read` reports store
+failures because it has nothing else to answer with.
 
 ### The conformance suite
 
@@ -305,6 +321,8 @@ ADR-032's status becomes **Superseded** by this ADR, so the name it argued for i
   misses and expiry.
 - **The cast at every read is gone** — `fetch` infers what comes back from the loader, with no
   annotation and no instance bound to a type.
+- **No cache path throws** — the three failure kinds are one error type with a code, so the
+  `@sdxc/result` rule holds here as it does everywhere else.
 - **One instance per store** — a namespace is served by one cache, whatever mix of types goes into it.
 - **A write means what it says** — `fetch` awaiting `write` now guarantees the value is readable.
 - **A second store is a peer, not a subclass** — a Cache API or D1 adapter implements an interface.
@@ -319,10 +337,10 @@ ADR-032's status becomes **Superseded** by this ADR, so the name it argued for i
 - **`JSONSerialized<T>` is a recursive conditional type** — it is the kind of type that is hard to
   read when it misbehaves, and it will occasionally be wrong at the edges `JSON.stringify` is wrong
   at.
-- **Failures are invisible at the call site** — a persistently unreachable KV namespace reads as a
-  cache that never hits, and only the log distinguishes the two.
 - **Nothing stops an unwritable value statically** — the constraint that would have is unusable, so
-  a `Map` handed to `write` type-checks, stores `{}` and reads back `{}`.
+  a `Map` handed to `write` type-checks and fails at runtime as `invalid_value`.
+- **Every call site unwraps** — a cache read is two lines where it was one, and a caller that only
+  ever wanted to ignore a store failure pays for the choice not to.
 
 ### Neutral
 
@@ -353,10 +371,24 @@ remove the cast — it relocates it to the call site, which is where it is today
 information has already been lost. The blog's MCP cache is the proof: it is a `<T>`-generic function
 wrapped around a string store, reconstructing by hand the typing the store declined to do.
 
-### `Result` on every method
+### Degrade every failure to a miss, returning plain values
 
-Consistent with the repo rule. Rejected for the reason in [Failures degrade to misses](#failures-degrade-to-misses):
-the recovery is unconditional, so the branch has nothing to decide.
+What the first two revisions decided, and what was built before this revision reversed it. The
+argument was that a caller's only recovery from a failed cache read is to compute the value, so a
+`Result` would be a branch with nothing to decide.
+
+Rejected on review. It is true of `unavailable` and false of everything else: a loader that failed
+has no value to offer, and both of those cases threw rather than returning anything, so the design
+was neither Result-returning nor non-throwing. Making the ignoring compulsory also took the choice
+away from the caller — `read` could not distinguish an empty cache from a broken one, which is the
+distinction an operator wants first.
+
+### `Result` only where it carries information
+
+`read`, `write` and `delete` return `Result`; `fetch` keeps returning a value, since it absorbs
+store failures and has one either way. Rejected because `read` and `write` alone already break
+`Issuer.CacheStore`, so it saves no migration, and it leaves a half-`Result` contract — the
+inconsistency the rule exists to remove.
 
 ### Extend `@sdxc/kv-cache` in place
 
@@ -374,3 +406,4 @@ designs indefinitely to avoid touching them.
 - [ADR-022](./ADR-022-http-cache-policies-and-conditional-responses.md) — HTTP response caching
 - [ADR-031](./ADR-031-workers-cache-tags-and-purging-package.md) — edge caching by tag
 - [ADR-027](./ADR-027-duration-package.md) — `DurationInput`, the TTL type
+- [`@sdxc/result`](../../packages/result) — the `Result` every method answers with
