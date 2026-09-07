@@ -1,49 +1,53 @@
 # @sdxc/auth
 
-OAuth 2.0 and OpenID Connect client for any runtime that speaks `Request` and `Response`,
-with the Remix wiring one import away.
+OAuth 2.0 and OpenID Connect client for any runtime that speaks `Request` and `Response`.
 
-## Overview
+Four protocol actors — the browser login, the app acting as itself, the API someone else
+calls, and the provider's own records — share one `Issuer`, so the discovery document and
+the key set are fetched once however many roles an app plays. It is a client, not a
+framework: no user table, no password flow, no client-side JavaScript.
 
-The package covers the client half of OpenID Connect: signing a person in through the
-browser, acting as a service with no person present, verifying a bearer token someone
-presents to this app, and reading the provider's own records. Each of those is a distinct
-actor in the protocol, so each gets a class, and all four share one `Issuer` — the
-discovery document and the JWKS are fetched once however many roles an app plays.
-`Issuer.for` is what hands that one instance out, so sharing it costs no wiring.
+## Installation
 
-It is a client, not a framework. There is no user table, no account linking, no password
-or 2FA flow, and no client-side JavaScript. What it persists is a token set in a session
-store the app hands it — a `remix/session` as it is, or anything with `get`, `set`, and
-`unset`; whether a subject becomes a row in the app's database is the app's decision, made
-in code this package calls rather than code it ships.
+```bash
+npm add @sdxc/auth
+```
 
-The classes read the request and that store and nothing else, so they run under any
-router. The pieces that know Remix — reading the session off a `RequestContext`, the two
-`remix/middleware/auth` schemes, and the argument-free authorization helpers — live under
-`@sdxc/auth/remix/*`.
+The core subpaths need only a runtime with `fetch`. The `@sdxc/auth/remix/*` subpaths need
+[`remix`](https://www.npmjs.com/package/remix) v3, declared as an optional peer
+dependency, so an app on another router installs nothing extra.
 
-Every ID token is verified — signature against the published keys, then `iss`, `aud`,
-`exp`, the `nonce`, and `at_hash` when the provider sends one. Protocol violations throw
-an `AuthError` carrying a documented code; outcomes that are legitimate answers return a
-value instead.
+Twelve entry points, each importable on its own:
 
-The package is organized into modules that can be imported independently:
-
-- `@sdxc/auth/issuer` - The discovery document and JWKS every role shares
-- `@sdxc/auth/relying-party` - Signing a person in through the browser
-- `@sdxc/auth/service-client` - Acting as the app itself, with no person present
-- `@sdxc/auth/resource-server` - Verifying a bearer token an incoming request carries
-- `@sdxc/auth/management-client` - Reading the provider's own records
-- `@sdxc/auth/auth-session` - The token set a login leaves in the session
-- `@sdxc/auth/id-token` - The verified ID token and its claims
-- `@sdxc/auth/access-token` - The verified access token and its claims
-- `@sdxc/auth/auth-error` - The error every protocol violation arrives as
-- `@sdxc/auth/remix/context` - The session and the flow context, read off a Remix request
-- `@sdxc/auth/remix/schemes` - The two `remix/middleware/auth` schemes
-- `@sdxc/auth/remix/authorization` - The helpers a route states its authorization decision in
+- `@sdxc/auth/issuer` — the discovery document and key set every role shares
+- `@sdxc/auth/relying-party` — the browser login, callback, and logout
+- `@sdxc/auth/service-client` — acting as the app itself, with no person present
+- `@sdxc/auth/resource-server` — accepting a bearer token an incoming request carries
+- `@sdxc/auth/management-client` — reading the provider's own subject records
+- `@sdxc/auth/auth-session` — the token set a login leaves in a session store
+- `@sdxc/auth/id-token` — the verified ID token and its claims
+- `@sdxc/auth/access-token` — the verified access token and its claims
+- `@sdxc/auth/auth-error` — the error every protocol violation arrives as
+- `@sdxc/auth/remix/context` — the session and the flow context, read off a request context
+- `@sdxc/auth/remix/schemes` — the two `remix/middleware/auth` schemes
+- `@sdxc/auth/remix/authorization` — the helpers a route states its decision in
 
 ## Usage
+
+### Reading The Session
+
+```typescript
+import { AuthSession } from "@sdxc/auth/auth-session";
+
+let auth = AuthSession.from(session); // null for a signed-out request
+
+auth.idToken.subject; // the identity anchor, never null
+auth.accessToken.has("reports:write");
+auth.expired; // the token set has reached its end, counting a 30-second reserve
+auth.renewable; // a refresh token is there to bring it back
+await auth.refresh(rp); // spends the refresh token, rewrites the session
+auth.clear(); // signs out, leaving every other session entry alone
+```
 
 ### The Four Roles
 
@@ -53,839 +57,111 @@ import { ManagementClient } from "@sdxc/auth/management-client";
 import { RelyingParty } from "@sdxc/auth/relying-party";
 import { ResourceServer } from "@sdxc/auth/resource-server";
 import { ServiceClient } from "@sdxc/auth/service-client";
-import { WorkerKVCache } from "@sdxc/cache/worker-kv";
-import { env } from "cloudflare:workers";
 
-/** The server every other class talks to. One per issuer, `for` handing it out. */
-let issuer = Issuer.for(env.OIDC_ISSUER, {
-	cache: new WorkerKVCache(env.CACHE, { waitUntil: ctx.waitUntil.bind(ctx) }),
-});
+// One instance per configuration, so every role below shares its memos.
+let issuer = Issuer.for("https://auth.example.com");
 
-/** Signing a person in through the browser: the login, callback, and logout routes. */
 let rp = new RelyingParty(issuer, {
-	clientId: env.OIDC_CLIENT_ID,
-	clientSecret: env.OIDC_CLIENT_SECRET,
+	clientId: CLIENT_ID,
+	clientSecret: CLIENT_SECRET,
 	redirectUri: "https://app.example.com/auth/callback",
 });
 
-/** Acting as itself, with no person present: cron jobs, queue consumers, outbound reads. */
-let service = new ServiceClient(issuer, {
-	clientId: env.OIDC_CLIENT_ID,
-	clientSecret: env.OIDC_CLIENT_SECRET,
-});
-
-/** Being called by someone else: verifying the bearer token on an incoming request. */
-let api = new ResourceServer(issuer, { audience: env.OIDC_CLIENT_ID, introspection: service });
-
-/** Reading the provider's own records, with a token the service client issues. */
+let service = new ServiceClient(issuer, { clientId: CLIENT_ID, clientSecret: CLIENT_SECRET });
+let api = new ResourceServer(issuer, { audience: CLIENT_ID, introspection: service });
 let admin = new ManagementClient(service);
 ```
 
 ### The Browser Flow Is Three Methods
 
-Each takes the request and the session store as one `{ request, session }` context. Under
-Remix, `contextOf(ctx)` builds that pair from the request context the route received.
-
-```tsx
-import { AuthSession } from "@sdxc/auth/auth-session";
-import { contextOf, sessionOf } from "@sdxc/auth/remix/context";
-import { redirect } from "remix/response/redirect";
-import { form, get, post, route } from "remix/routes";
-
-/**
- * Declared once and used as the key wherever a route is mapped, so controllers,
- * middleware, and views build every URL through `routes.*.href(...)`. Every later
- * example draws its paths from this table.
- */
-let routes = route({
-	dashboard: get("/dashboard"),
-	/** `form()` pairs the settings page's `GET` render with the `POST` that acts on it. */
-	app: { settings: form("/settings") },
-	auth: {
-		login: get("/auth/login"),
-		callback: get("/auth/callback"),
-		logout: post("/auth/logout"),
-		stepUp: get("/auth/step-up"),
-		confirmPassword: get("/auth/confirm-password"),
-		confirmMfa: get("/auth/confirm-mfa"),
-	},
-});
-
-router.get(routes.auth.login, (ctx) =>
-	rp.authorize(contextOf(ctx), { returnTo: ctx.url.searchParams.get("returnTo") }),
-);
-
-router.get(routes.auth.callback, async (ctx) => {
-	let grant = await rp.callback(contextOf(ctx));
-	await users.findOrCreate(grant.subject, grant.profile);
-	return redirect(grant.returnTo);
-});
-
-router.post(routes.auth.logout, (ctx) => rp.endSession(contextOf(ctx), { returnTo: "/" }));
-```
-
-`authorize` mints `state`, the `nonce`, and the PKCE verifier, writes them to the session
-as one transaction, and returns the redirect. `callback` correlates the transaction,
-exchanges the code, verifies the ID token, checks the step-up contract, rotates the
-session id where the store rotates ids, and writes the token set. `endSession` drops the
-local session and hands the browser to the provider with `id_token_hint`.
-
-### Outside Remix
-
-The same three calls take any request and any store with `get`, `set`, and `unset`. A
-plain fetch handler over a session library of its own passes them directly:
+Each takes the request and a session store as one `{ request, session }` context, so the
+flow runs under any router over any store with `get`, `set`, and `unset`.
 
 ```typescript
 export default {
 	async fetch(request: Request): Promise<Response> {
-		let session = await sessions.open(request); // the app's own session layer
+		let ctx = { request, session: await sessions.open(request) };
 		let url = new URL(request.url);
 
 		if (url.pathname === "/auth/login") {
-			return rp.authorize({ request, session }, { returnTo: url.searchParams.get("returnTo") });
+			return await rp.authorize(ctx, { returnTo: url.searchParams.get("returnTo") });
 		}
 
 		if (url.pathname === "/auth/callback") {
-			let grant = await rp.callback({ request, session });
+			let grant = await rp.callback(ctx);
+			await users.findOrCreate(grant.subject, grant.profile);
 			return Response.redirect(new URL(grant.returnTo, url.origin), 303);
 		}
 
-		let auth = AuthSession.from(session);
-		return auth ? app(request, auth) : rp.authorize({ request, session });
+		return await rp.endSession(ctx, { returnTo: "/" }); // /auth/logout
 	},
 };
 ```
 
-`authorize` throws a `429` `Response` when a login budget is spent, so a handler outside a
-middleware that delivers thrown responses catches it and returns it.
-
-### Reading The Session
-
-```typescript
-let auth = AuthSession.from(sessionOf(ctx)); // null when signed out; AuthSession.from(store) anywhere else
-
-auth.idToken.subject; // the identity anchor, never null
-auth.accessToken.has("reports:write");
-auth.expired; // the token set has reached its end
-auth.renewable; // a refresh token is there to bring it back
-await auth.refresh(rp); // spends the refresh token, rewrites the session
-auth.clear(); // signs out, leaving every other session entry alone
-```
-
-## API
-
-### `Issuer`
-
-An OpenID Connect provider, addressed by its issuer identifier.
-
-#### `Issuer.for(url: string | URL, options?: Issuer.Options): Issuer`
-
-The issuer for a configuration, built on the first ask and handed out on every later one.
-This is the entry point every role reaches for: the documents are read once per isolate
-however many roles, routes, and requests ask for them, and no app has to hold the instance
-itself.
-
-```typescript
-export function issuer(): Issuer {
-	return Issuer.for(AUTH_ORIGIN, {
-		identifier: AUTH_IDENTIFIER,
-		cache: new WorkerKVCache(env.CACHE, { waitUntil }),
-	});
-}
-```
-
-`url`, `identifier`, `ttl`, and `metadata` name the instance, because each of them changes
-what it answers; the cache tier does not, so the store the first ask supplies is the one
-the instance keeps. Where that store is built over per-request values — a `waitUntil`
-belonging to one request among them — state it as a factory, and every read resolves a
-store belonging to the request making it:
-
-```typescript
-Issuer.for(AUTH_ORIGIN, {
-	metadata: AUTH_METADATA,
-	cache: () => new WorkerKVCache(getEnv("CACHE"), { waitUntil: getEnv("waitUntil") }),
-});
-```
-
-**Throws:** `Error` when the URL carries no scheme, the same as the constructor.
-
-#### `new Issuer(url: string | URL, options?: Issuer.Options)`
-
-An instance with memos nothing else shares, for a test or a one-off read.
-
-**Parameters:**
-
-- `url`: Where `/.well-known/openid-configuration` is served from, and the origin every
-  endpoint URL resolves against. It carries a scheme; a string without one throws
-  `discovery_failed` at construction
-- `options.identifier`: The identifier the provider publishes and writes into every
-  token's `iss`, for a provider whose identifier is something other than that URL
-  (defaults to the URL)
-- `options.cache`: A store shared across isolates, so one fetch per TTL serves every
-  isolate reading the same issuer, or a factory resolved on every read where the store is
-  built over per-request values
-- `options.metadata`: A discovery document supplied inline, served in place of the
-  provider's and validated the same way
-- `options.ttl`: How long a fetched document stays in the shared cache (default
-  `"1 hour"`)
-
-#### `issuer.url`
-
-Where the provider serves its documents, as a `URL`. `identifier()` answers with the value
-the provider itself publishes, which is what tokens carry as `iss`.
-
-#### `issuer.metadata(): Promise<Issuer.Metadata>`
-
-The whole discovery document, with every member this package reads validated and the
-document's own `issuer` confirmed to name the issuer it was asked for.
-
-**Throws:** `discovery_failed` when the document cannot be fetched or read;
-`issuer_mismatch` when it names another issuer.
-
-#### `issuer.identifier(): Promise<string>`
-
-The `issuer` value the provider publishes — the string its tokens carry as `iss`, and what
-every verification checks them against.
-
-#### `issuer.keys(): Promise<JWK.KeyResolver>`
-
-The published key set as a resolver, ready to pass as `JWT.verify`'s second argument. It
-picks a key per token from the token's `kid`, so tokens signed by any key the issuer still
-publishes keep verifying across a rotation.
-
-A `kid` the set in hand does not name costs one refetch of the set, past the cache and
-replacing it, so a key the issuer published after the set was read verifies on the spot
-rather than once the cached set expires. Callers meeting the rotation together share that
-one read, and a token naming a key the issuer publishes nowhere is refused after it.
-
-**Throws:** `jwks_failed` when the set cannot be fetched, read, or holds no key — at the
-ask, and at a refetch a resolution spends.
-
-#### `issuer.verifyIdToken(raw, options): Promise<IdToken>`
-
-The verification the browser flow runs, reachable without a relying party. It checks the
-signature against the published key the token's `kid` names, then `iss` against the
-identifier the provider publishes, `aud` against the client the token was issued to, and
-the lifetime claims. An app that only verifies a token — one that arrived from a native
-client, an IdP-initiated flow, or a fixture — needs nothing else.
-
-```typescript
-let idToken = await issuer.verifyIdToken(raw, { audience: CLIENT_ID });
-```
-
-**Parameters:**
-
-- `options.audience`: The client id the token names as its `aud`, or the ids any one of
-  which it may name
-- `options.algorithms`: The signature algorithms accepted, so a token presenting any other
-  one is refused before a key is chosen for it (defaults to every algorithm the published
-  key set supports)
-- `options.clockTolerance`: Seconds of clock skew tolerated on the lifetime claims
-  (default `60`)
-
-The `nonce` and the `at_hash` are held to values only the flow that started the login
-knows, so `rp.callback` is where those two are checked. `rp.verifyIdToken` is this call
-with the relying party's client id, algorithms, and skew filled in.
-
-**Throws:** `invalid_token` when any check on the token fails; `discovery_failed` or
-`jwks_failed` when the issuer's own documents are unreadable.
-
-#### Endpoint accessors
-
-Each reads one member out of the metadata and answers with a `URL`.
-
-```typescript
-await issuer.authorizationEndpoint();
-await issuer.tokenEndpoint();
-await issuer.jwksUri();
-await issuer.userInfoEndpoint();
-await issuer.endSessionEndpoint();
-await issuer.revocationEndpoint();
-await issuer.introspectionEndpoint();
-```
-
-The first three are required members, so they resolve for any conformant provider. The
-last four throw `endpoint_unsupported` when the provider advertises none.
-
-#### Advertised-value accessors
-
-Each answers with the advertised list, empty when the provider publishes none.
-
-```typescript
-await issuer.scopesSupported();
-await issuer.responseTypesSupported();
-await issuer.tokenEndpointAuthMethodsSupported();
-await issuer.acrValuesSupported();
-await issuer.codeChallengeMethodsSupported();
-```
-
-### `RelyingParty<profile>`
-
-A confidential client driving a person's login through the browser.
-
-#### `new RelyingParty(issuer: Issuer, options: RelyingParty.Options<profile>)`
-
-**Parameters:**
-
-- `options.clientId`: The client's identifier at the issuer
-- `options.clientSecret`: The client's secret
-- `options.redirectUri`: Where the provider sends the browser back
-- `options.scopes`: Scopes every login asks for (default `["openid", "profile", "email"]`)
-- `options.clientAuth`: `"client_secret_post"` (default) or `"client_secret_basic"`
-- `options.userInfo`: `"never"` (default), `"always"`, or `"when-missing"`
-- `options.authorizationParams`: Extra parameters on every authorization request
-- `options.tokenParams`: Extra parameters on every token request
-- `options.mapProfile`: `(claims, tokens) => profile`, replacing the default display-claim
-  profile
-- `options.subject`: `(claims) => string`, for an identity anchor that is not `sub`
-- `options.mfa`: The `amr`/`acr` values that count as several factors (default `["mfa"]`)
-- `options.algorithms`: The signature algorithms an ID token may be signed with
-- `options.clockTolerance`: Seconds of skew tolerated against the issuer (default `60`)
-- `options.fallbackReturnTo`: Where a login returns when the requested destination is
-  unusable (default `"/"`)
-- `options.rateLimit`: The adapter the login budget is counted against
-
-**Throws:** `reserved_parameter` when `authorizationParams` or `tokenParams` names a
-parameter the flow writes itself.
-
-#### `rp.authorize(ctx, options?): Promise<Response>`
-
-Starts a login: spends the budget, writes the transaction, and answers with a `303`
-redirect to the authorization endpoint.
-
-**Parameters:**
-
-- `ctx.request`: The request, whose URL names the origin `returnTo` is held to and whose
-  edge headers name the browser a budget counts
-- `ctx.session`: The store the transaction is written to, an `AuthSession.Store`
-- `options.returnTo`: Where to come back to after the login, resolved through
-  `Location.safe`
-- `options.scopes`: Scopes for this login, in place of the configured ones
-- `options.acrValues`: Authentication context classes to ask for, sent as `acr_values`
-- `options.maxAge`: How recently the person must have authenticated, as seconds or a
-  duration string, sent as `max_age`
-- `options.prompt`: `"none"`, `"login"`, `"consent"`, `"select_account"`, or a value the
-  provider defines
-- `options.authorizationParams`: Extra parameters for this request
-
-**Throws:** a `429` `Response` carrying `Retry-After` when the calling browser's login
-budget is spent, for the caller to answer with — under Remix, `catchResponse()` delivers
-it; and `AuthError` with `endpoint_unsupported` or `reserved_parameter`.
-
-#### `rp.callback(ctx): Promise<RelyingParty.Grant<profile>>`
-
-Finishes a login and signs the request in, reading the callback's query string off
-`ctx.request` and the transaction out of `ctx.session`.
-
-**Returns:**
-
-- `grant.idToken`: The verified `IdToken`
-- `grant.accessToken`: The `AccessToken` the grant carried
-- `grant.refreshToken`: The refresh token, or `null`
-- `grant.returnTo`: The sanitized destination the login was started with
-- `grant.subject`: The identity anchor, from `subject(claims)` or from `sub`
-- `grant.claims`: The claim set the flow resolved
-- `grant.profile`: What `mapProfile` produced
-
-**Throws:** `authorization_failed`, `missing_transaction`, `state_mismatch`,
-`missing_code`, `token_request_failed`, `missing_id_token`, `invalid_token`,
-`nonce_mismatch`, `at_hash_mismatch`, `acr_not_satisfied`, `max_age_not_satisfied`, or
-`user_info_failed`. A query string carrying no readable authorization response at all is
-`authorization_failed`, so the diagnosis names the answer that arrived rather than a
-correlation failure standing in for it.
-
-#### `rp.endSession(ctx, options?): Promise<Response | URL>`
-
-Ends the login locally and hands the browser to the provider's end-session endpoint with a
-`303`.
-
-```typescript
-await rp.endSession(contextOf(ctx), { returnTo: "/" }); // Response
-await rp.endSession(contextOf(ctx), { returnTo: "/", redirect: false }); // URL
-```
-
-**Throws:** `endpoint_unsupported` when the provider publishes no end-session endpoint.
-
-#### `rp.verifyIdToken(raw: string): Promise<IdToken>`
-
-Verifies an ID token obtained outside the redirect flow — a native client, an
-IdP-initiated sign-in, a fixture. Every check the callback runs against the token itself,
-without the `nonce` comparison the redirect flow supplies.
-
-It is `issuer.verifyIdToken` with this relying party's client id, algorithms, and skew
-filled in. An app that holds no relying party calls the issuer directly.
-
-**Throws:** `invalid_token`.
-
-#### `rp.exchangeRefreshToken(refreshToken: string): Promise<AuthSession.Refreshed>`
-
-Spends a refresh token on a renewed access token, verifying any ID token the response
-repeats. This is what satisfies `AuthSession.Client`, so `auth.refresh(rp)` works.
-
-#### `rp.mfa(idToken: IdToken): boolean`
-
-Whether the provider reported that more than one factor took part, testing the configured
-values against `amr` and then `acr`.
-
-#### `rp.renew(auth: AuthSession): Promise<AuthError | null>`
-
-Brings a session whose token set has reached its end forward. A session the provider
-refuses to renew is cleared and the refusal is returned; one that carries no refresh token
-was never renewable and stays signed in on the claims it was written with, answering
-`null` like a renewed one does. `sessionScheme` runs it before the app's `verify`, and a
-middleware of any other framework does the same.
-
-```typescript
-if (auth.expired && (await rp.renew(auth))) return new Response(null, { status: 401 });
-```
-
-**Throws:** whatever a renewal failed with outside the protocol, so an environment fault
-reaches the app rather than reading as a session that is over.
-
-#### `rp.issuer`
-
-The provider this client is registered with, so a collaborator verifying a token or
-reaching the provider's other endpoints works against the same one.
-
-### `ServiceClient`
-
-A confidential client acting on its own behalf.
-
-#### `new ServiceClient(issuer: Issuer, options: ServiceClient.Options)`
-
-**Parameters:**
-
-- `options.clientId`, `options.clientSecret`: The client's credentials
-- `options.clientAuth`: `"client_secret_post"` (default) or `"client_secret_basic"`
-- `options.scope`: Scopes every grant asks for
-- `options.tokenParams`: Extra fields on the grant
-- `options.cache`: Where granted tokens are shared across isolates
-- `options.rateLimit`: The budget the grant is counted against, keyed by client id
-- `options.waitUntil`: Lets a revocation finish after the response is sent
-- `options.expirationMargin`: How much of a token's life is kept in reserve (default
-  `"30 seconds"`)
-
-**Throws:** `reserved_parameter` when `tokenParams` names a field the grant owns.
-
-#### `service.token(options?): Promise<string>`
-
-The access token for a resource set, ready for an `Authorization: Bearer` header.
-
-**Parameters:**
-
-- `options.resources`: RFC 8707 resource indicators, each sent as its own `resource` field
-- `options.scope`: Scopes for this token, in place of the configured ones
-
-**Returns:**
-
-- The bearer token, from the isolate memo, the shared cache, or a new grant
-
-**Throws:** `rate_limited`, `token_request_failed`.
+`authorize` mints `state`, the `nonce`, and the PKCE verifier, writes them to the session
+as one transaction, and returns the `303`. `callback` spends that transaction, exchanges
+the code, verifies the ID token, holds the provider to any step-up the login asked for,
+rotates the session id where the store rotates ids, and writes the token set. `endSession`
+drops the local session and hands the browser to the provider with `id_token_hint`.
+
+### Tokens With No Person Present
 
 ```typescript
 let token = await service.token({ resources: ["https://api.example.com"] });
+await fetch(REPORTS_URL, { headers: { authorization: `Bearer ${token}` } });
+
+// And at the far end, in the app being called:
+let presented = await api.verifyRequest(request);
+if (presented === null) return unauthenticated(); // no bearer credential at all
+if (!presented.has("reports:write")) return forbidden();
 ```
 
-#### `service.introspect(token, options?): Promise<ServiceClient.Introspection>`
+One grant is spent per client and resource set however many callers ask at once. A
+compact-serialized token is verified against the published key set, a claimless one over
+RFC 7662 introspection, and both paths end at the same `AccessToken`.
 
-What the issuer says about a token, per RFC 7662. `active: false` is the ordinary reply
-for a token that is unknown, expired, or revoked, so branch on the value rather than
-catching.
+## API
 
-**Throws:** `endpoint_unsupported`, `introspection_failed`, `invalid_token`.
-
-#### `service.revoke(token, options?): Promise<void>`
-
-Asks the issuer to stop honoring a token, per RFC 7009.
-
-**Throws:** `endpoint_unsupported`, `revocation_failed`.
-
-#### `service.clientId` / `service.issuer`
-
-The client this instance authenticates as, and the provider every call goes to.
-
-### `ResourceServer`
-
-An API this app exposes to callers holding an access token.
-
-#### `new ResourceServer(issuer: Issuer, options: ResourceServer.Options)`
-
-**Parameters:**
-
-- `options.audience`: The audiences this server answers for, as one value or a list
-- `options.introspection`: Who describes a credential that carries no claims of its own;
-  supplying one opens the introspection path
-- `options.acceptUnscopedIntrospection`: Whether a description naming no audience is
-  accepted on the issuer's scoping alone (default `false`, so it is refused)
-
-#### `api.verifyRequest(request: Request): Promise<AccessToken | null>`
-
-Reads the bearer credential off the request's `Authorization` header, per RFC 6750 §2.1,
-and verifies it. A request carrying no bearer credential answers `null`, which is another
-authentication method's to handle; a credential this server declines throws.
+### `@sdxc/auth/issuer`
 
 ```typescript
-let token = await api.verifyRequest(request);
-if (token === null) return next();
+Issuer.for(url: string | URL, options?: Issuer.Options): Issuer;
+new Issuer(url: string | URL, options?: Issuer.Options);
+
+issuer.url; // URL — discovery appends `/.well-known/openid-configuration` to it
+issuer.metadata(); // Promise<Issuer.Metadata> — validated, and held to naming this issuer
+issuer.identifier(); // Promise<string> — what the provider's tokens carry as `iss`
+issuer.keys(); // Promise<JWK.KeyResolver> — ready as `JWT.verify`'s second argument
+issuer.verifyIdToken(raw, options); // Promise<IdToken> — for a token that arrived out of band
 ```
 
-**Throws:** `invalid_token` when this server declines the credential; `discovery_failed` or
-`jwks_failed` when the issuer's documents are unreadable, so an outage stays a fault the
-app handles rather than a caller reading as if it held a bad token.
-
-#### `api.verifyAccessToken(credential: string): Promise<AccessToken>`
-
-Verifies an access token that arrived outside a request — a queued job whose payload
-carries one, a connection authenticated once at its upgrade, a fixture. It accepts
-whichever form the issuer hands out and runs every check `verifyRequest` runs.
-
-**Throws:** `invalid_token` when this server declines the credential; `discovery_failed` or
-`jwks_failed` when the issuer's documents are unreadable.
-
-```typescript
-let token = await api.verifyAccessToken(job.payload.accessToken);
-if (!token.has("reports:write")) return;
-```
-
-#### `api.issuer`
-
-The provider whose tokens this server accepts, so a collaborator verifying a token of its
-own works against the same one.
-
-### `ManagementClient`
-
-The provider's management API, read as the client its service client authenticates as.
-
-#### `new ManagementClient(service, options?)`
-
-**Parameters:**
-
-- `service`: The service client every read takes its token and, by default, its origin from
-- `options.baseUrl`: Where the management API is served (default: the service client's
-  issuer URL)
-- `options.resources`: Resource indicators the access token is scoped to (default `[]`)
-
-#### `admin.fetchSubjectById(subjectId): Promise<Result<ManagementClient.Subject, SubjectNotFoundError | ManagementError>>`
-
-Reads one subject by id. The two failures are separate on purpose: an id the provider
-holds no record under is an answer, and a refusal, a throttle, a provider fault, or an
-unreadable payload is a condition that may succeed later.
-
-```typescript
-import { isFailure } from "@sdxc/result";
-import { SubjectNotFoundError } from "@sdxc/auth/management-client";
-
-let result = await admin.fetchSubjectById(subjectId);
-if (isFailure(result)) {
-	if (result.error instanceof SubjectNotFoundError) return null;
-	throw result.error;
-}
-return result.data;
-```
-
-### `AuthSession`
-
-A signed-in request's tokens, read through the classes that name their claims. Reads are
-lazy and memoized, so a route that only needs the subject decodes one token.
-
-#### `AuthSession.from(store): AuthSession | null`
-
-The token set a login stored, and `null` for a request that is signed out. `store` is an
-`AuthSession.Store`; under Remix, `sessionOf(ctx)`.
-
-#### `AuthSession.write(store, tokens): AuthSession`
-
-Stores a token set in the request's session, which is what makes the request signed in.
-
-#### Instance members
-
-- `auth.idToken`: `IdToken`
-- `auth.accessToken`: `AccessToken`
-- `auth.refreshToken`: `string | null`
-- `auth.tokens`: `AuthSession.Tokens`, the strings the provider issued, for a step that
-  sends a token on
-- `auth.expired`: Whether the token set has reached its end, from the access token's own
-  `exp`, then `expires_in`, then the ID token's `exp`, holding back a 30-second reserve. It
-  describes the tokens, not the person: an expired set still names who signed in
-- `auth.renewable`: Whether the set carries a refresh token, which is what `refresh` spends.
-  `expired && !renewable` is a set that is as live as it will get
-- `auth.refresh(client)`: Spends the refresh token and rewrites the session. **Throws**
-  `missing_refresh_token` when the grant carried none
-- `auth.clear()`: Drops this package's session key, leaving every other entry alone
-
-### `IdToken`
-
-A verified ID token, extending `JWT`. Beyond the registered claims the base class covers,
-it names the ones a login turns on:
-
-| Accessor        | Claim                | Answers                                                      |
-| --------------- | -------------------- | ------------------------------------------------------------ |
-| `subject`       | `sub`                | The identity anchor, typed `string` and throwing when absent |
-| `nonce`         | `nonce`              | Binds the token to the login that asked for it               |
-| `authTime`      | `auth_time`          | When the person authenticated, as a `Date`                   |
-| `sessionId`     | `sid`                | The join key between a login and the logout token ending it  |
-| `atHash`        | `at_hash`            | Binds the token to the access token issued beside it         |
-| `amr`           | `amr`                | The authentication methods that took part                    |
-| `acr`           | `acr`                | The authentication context class the provider says it met    |
-| `name`          | `name`               | Display name, under the `profile` scope                      |
-| `email`         | `email`              | Contact and display data, mutable at the provider            |
-| `emailVerified` | `email_verified`     | `false` for an absent claim, and `"true"` normalizes to true |
-| `username`      | `preferred_username` | Display-only and mutable                                     |
-| `picture`       | `picture`            | The avatar as the string the provider sent                   |
-
-Any claim without an accessor reads through by name, so a provider-specific claim is
-available as it was sent.
-
-`subject` is the one accessor that throws rather than answering `null`, and the contract is
-deliberate: OpenID Connect requires `sub` in an ID token, so a token carrying none is
-malformed rather than sparse, and typing it `string` is what lets every call site key a
-record on it directly. Every other accessor answers a legitimately absent claim with `null`
-or `false`, so reading claims off a verified token needs no guard.
-
-A caller that wants one branch for a malformed token wraps the claim reads and branches on
-the failure:
-
-```typescript
-let identity = wrap(() => ({ subjectId: idToken.subject, email: idToken.email }));
-if (isFailure(identity)) return renderError("Authentication failed. Please try again.");
-```
-
-`AUTHENTICATION_METHODS` names the twenty values RFC 8176 §2 registers, keyed so
-autocomplete spells out what the wire abbreviates. `IdToken.AuthenticationMethod` accepts
-those plus any other string, because the registry stays open under Expert Review and
-providers use that room.
-
-```typescript
-import { AUTHENTICATION_METHODS } from "@sdxc/auth/id-token";
-
-let rp = new RelyingParty(issuer, {
-	clientId,
-	clientSecret,
-	redirectUri,
-	mfa: [AUTHENTICATION_METHODS.Mfa, AUTHENTICATION_METHODS.Otp, "urn:example:passkey"],
-});
-```
-
-### `AccessToken`
-
-A JWT access token, per RFC 9068.
-
-- `token.scopes`: The granted scopes as a list, split from the one space-separated string
-  `scope` arrives as
-- `token.clientId`: The `client_id` claim, naming the caller even where `sub` identifies
-  the person it acts for
-- `token.issuedToService`: Whether `sub` equals `client_id`, which is how RFC 9068 §2.2.1
-  marks a client acting as itself
-- `token.has(scope)`: Whether one scope was granted, comparing whole values
-
-### Remix: `sessionOf`, `contextOf`
-
-From `@sdxc/auth/remix/context`.
-
-#### `sessionOf(ctx): AuthSession.Store`
-
-The session `remix/middleware/session` stored on the request context, which is the store
-every class reads. **Throws** a plain `Error` when the middleware has not run.
-
-#### `contextOf(ctx): RelyingParty.Context`
-
-`{ request: ctx.request, session: sessionOf(ctx) }`, so a route hands its context to
-`authorize`, `callback`, or `endSession` in one call.
-
-### Remix: `sessionScheme`, `bearerScheme`
-
-From `@sdxc/auth/remix/schemes`. Both build an `AuthScheme` for `remix/middleware/auth`.
-
-#### `sessionScheme(rp, options): AuthScheme<identity>`
-
-Resolves identity from the session, running `rp.renew` first where the token set has
-lapsed. A session the provider refuses to renew is signed out and reported as a failure;
-one that carries no refresh token stays signed in on the claims it was written with.
-
-**Parameters:**
-
-- `rp`: The relying party holding the credentials a renewal presents
-- `options.verify`: `(auth: AuthSession) => identity | null`
-- `options.name`: The method name the resolved auth state reports (default
-  `"oidc-session"`)
-
-#### `bearerScheme(api, options): AuthScheme<identity>`
-
-Resolves the request's bearer token through `api.verifyRequest` into the identity the app's
-`verify` returns.
-
-**Parameters:**
-
-- `api`: The resource server whose audiences the token is held to
-- `options.verify`: `(token: AccessToken, context: RequestContext) => identity | null`
-- `options.name`: The method name the resolved auth state reports (default `"bearer"`)
-
-A request carrying no bearer credential is left to the next scheme. A presented credential
-the server declines is reported as a failure carrying RFC 6750's challenge, so the request
-stops with a `401` and `WWW-Authenticate: Bearer error="invalid_token"`. Every other
-`AuthError` propagates, so an issuer outage stays a fault the app handles.
-
-```typescript
-bearerScheme(api, { verify: (token) => users.getBySubject(token.subject) });
-bearerScheme(api, {
-	verify: (token) => (token.issuedToService ? { clientId: token.clientId } : null),
-});
-```
-
-### Remix: `createAuthorization(options): Authorization.Helpers`
-
-From `@sdxc/auth/remix/authorization`. Binds the routes and the MFA policy every decision
-is measured against, and answers with the helpers an app re-exports as its own
-authorization vocabulary. Every helper reads the request through
-`remix/middleware/async-context`, which is why the family lives under `remix/`.
-
-**Parameters:**
-
-- `options.login`: Where a signed-out request is sent
-- `options.signedIn`: Where a signed-in request is sent from an anonymous-only page, and
-  where a login returns when its destination is unusable (default `"/"`)
-- `options.returnToParam`: The search parameter carrying the destination (default
-  `"returnTo"`)
-- `options.relyingParty`: `() => MfaPolicy`, read on every `mfa()` call so an app may hand
-  over an instance it builds per request
-
-**Returns:**
-
-| Helper                     | Reads                | Answers                                                  |
-| -------------------------- | -------------------- | -------------------------------------------------------- |
-| `currentSession()`         | `AuthSession`        | The session, or throws a redirect to login               |
-| `anonymous()`              | `AuthSession`        | Throws a redirect when someone is signed in              |
-| `subject()`                | `IdToken.subject`    | The identity anchor, or `null`                           |
-| `scope(name)`              | `AccessToken.scopes` | Whether the client was granted that scope                |
-| `authenticated(duration?)` | `IdToken.authTime`   | Whether anyone is here, authenticated within that window |
-| `mfa()`                    | `IdToken.amr`/`acr`  | Whether more than one factor took part                   |
-
-The split between the two families is a rule, not an accident. **Identity helpers throw**,
-because there is one sensible response to "nobody is here": go and log in.
-**Capability helpers always return a boolean and never throw**, including for an anonymous
-request, where they answer `false`. That is what makes them usable in a view, which a
-throwing helper cannot be.
-
-```tsx
-export const settings = createController(routes.app.settings, {
-	actions: {
-		async index(ctx) {
-			let session = currentSession();
-
-			return ctx.render(
-				<SettingsPage subject={session.idToken.subject}>
-					{scope("account:write") ? <DeleteAccountForm /> : null}
-				</SettingsPage>,
-			);
-		},
-
-		async action(ctx) {
-			currentSession();
-			if (!authenticated("5m")) throw redirect(routes.auth.confirmPassword.href());
-			if (!mfa()) throw redirect(routes.auth.confirmMfa.href());
-			return handleDeletion(ctx);
-		},
-	},
-});
-```
-
-A bare `scope("x");` as a statement authorizes nothing, and no lint rule catches it:
-`no-unused-expressions` assumes a call has side effects and leaves a call statement alone.
-What guards the form is `test/capability-statements.test.ts`, which parses every module in
-the repo and fails on a capability answer a statement drops.
-
-`scope` and an app's own `permission` are orthogonal, and both have to pass. `scope` is
-**delegation** — what the client was allowed to do on the person's behalf, granted at
-consent time and carried by the access token. `permission` is **authorization** — what the
-person may do in this app, which lives in the app's data. An admin driving a read-only
-integration is still refused a delete. This package ships only the first, so everything
-shaped like app data — `currentUser()`, `permission()`, `role()`, `feature()` — stays in
-the app, written over `subject()` and the claims.
-
-### `AuthError`
-
-Thrown when a protocol step cannot be completed safely. Every code means the request has
-to stop, which is why throwing is what makes ignoring one impossible.
-
-- `error.code`: One of `AuthErrorCode`
-- `error.providerError`: The provider's own `error` code, when the failure came from its
-  response
-- `error.providerErrorDescription`: The provider's `error_description`, when it sent one
-- `AuthError.is(error, code)`: A single narrowing test for a catch block
-
-```typescript
-import { AuthError, AuthErrorCode } from "@sdxc/auth/auth-error";
-
-try {
-	let grant = await rp.callback(ctx);
-} catch (error) {
-	if (AuthError.is(error, AuthErrorCode.AcrNotSatisfied)) return renderStepUpRefused();
-	if (AuthError.is(error, AuthErrorCode.MissingTransaction)) return redirect("/auth/login");
-	throw error;
-}
-```
-
-`AuthErrorCode` is closed, so a caller can exhaust every case and a log dashboard groups
-failures by a stable value:
-
-`discovery_failed`, `issuer_mismatch`, `endpoint_unsupported`, `jwks_failed`,
-`missing_transaction`, `state_mismatch`, `nonce_mismatch`, `authorization_failed`,
-`missing_code`, `token_request_failed`, `missing_id_token`, `invalid_token`,
-`at_hash_mismatch`, `acr_not_satisfied`, `max_age_not_satisfied`, `user_info_failed`,
-`missing_refresh_token`, `introspection_failed`, `revocation_failed`, `rate_limited`,
-`reserved_parameter`.
-
-### `ManagementError` and `SubjectNotFoundError`
-
-`ManagementError` carries a `code` from `ManagementErrorCode` — `unauthorized`,
-`rate_limited`, `provider_failed`, `request_failed`, `invalid_response` — and the `status`
-the provider answered with, `null` when it never answered. `ManagementError.is(error, code)`
-narrows a retry decision. `SubjectNotFoundError` carries the requested `subjectId` and
-nothing else, because an absence is an answer rather than a fault.
-
-### Types
-
-#### `AuthSession.Store`
-
-Where a browser's signed-in state lives between requests. A `remix/session` `Session`
-satisfies it as it is; a store over anything else needs these three methods, and rotates
-ids through the optional fourth where it has ids to rotate.
-
-```typescript
-interface Store {
-	get(key: string): unknown;
-	set(key: string, value: unknown): void;
-	unset(key: string): void;
-	regenerateId?(destroy?: boolean): void;
-}
-```
-
-#### `RelyingParty.Context`
-
-What `authorize`, `callback`, and `endSession` take. `contextOf(ctx)` builds it under Remix.
-
-```typescript
-interface Context {
-	readonly request: Request;
-	readonly session: AuthSession.Store;
-}
-```
-
-#### `AuthSession.Tokens`
-
-```typescript
-interface Tokens {
-	idToken: string;
-	accessToken: string;
-	refreshToken: string | null;
-	expiresAt: number | null;
-}
-```
-
-#### `Issuer.CacheStore`
-
-The cache tier an `Issuer` and a `ServiceClient` share across isolates, declared
-structurally so any store keyed by a string satisfies it.
+`for` hands its instance to every later caller asking on the same terms, so the documents
+are read once per isolate; everything but `cache` names the instance, so a value that
+varies per request goes to the constructor instead. `keys` picks a key per token from its
+`kid`, and a `kid` the set in hand lacks costs one refetch, so a rotation verifies within
+the verification that met it.
+
+Each endpoint accessor answers `Promise<URL>`: `authorizationEndpoint`, `tokenEndpoint`,
+and `jwksUri` are required of a provider, while `userInfoEndpoint`, `endSessionEndpoint`,
+`revocationEndpoint`, and `introspectionEndpoint` throw `endpoint_unsupported` when it
+advertises none. Each advertised-value accessor answers `Promise<string[]>`, empty when
+the provider publishes no list: `scopesSupported`, `responseTypesSupported`,
+`tokenEndpointAuthMethodsSupported`, `acrValuesSupported`, and
+`codeChallengeMethodsSupported`.
+
+`Options` takes `identifier`, the `iss` value where it differs from the URL the documents
+are served from; `cache`, a `CacheSource`, omitted keeping documents for the life of the
+instance; `metadata`, a document served in the provider's place and checked the same way;
+and `ttl`, `"1 hour"` by default. `Metadata` is the discovery document in the shape a
+provider publishes it, so one copied from an issuer is accepted unchanged.
+`IdTokenVerification` takes `audience`, the id the token names as `aud` or the ids it may
+name; `algorithms`, defaulting to whatever the key set supports; and `clockTolerance`,
+`60` seconds.
+
+`CacheStore` is the tier an issuer shares with every isolate reading the same provider. Any
+store keyed by a string satisfies it, and every call answers with a `Result` from
+[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), so a store's own troubles
+stay the store's rather than surfacing as a protocol failure.
 
 ```typescript
 interface CacheStore {
@@ -901,89 +177,319 @@ interface CacheStore {
 		options?: { ttl?: DurationInput },
 	): Promise<Result<string, Error>>;
 }
-```
 
-The error is `Error` rather than a store's own type, so a store answering with a narrower
-one satisfies this without this package depending on it. A store that fails costs a read of
-the provider and nothing more: the document is fetched instead, and only a failure to fetch
-it reaches the caller, as the `AuthError` it would have thrown with no cache in the way.
-
-#### `Issuer.CacheSource`
-
-What `options.cache` accepts: a store, or a factory resolved on every read.
-
-```typescript
 type CacheSource = CacheStore | (() => CacheStore);
 ```
 
-A store built over per-request values goes in as the factory arm, so an instance that
-outlives the request resolves one belonging to the read reaching for it.
+`read` succeeds with `null` for an entry that is missing or expired, `fetch` computes and
+stores the entry on a miss, and a write that failed costs the next isolate one read of the
+provider. A `CacheSource` stated as a factory is resolved on every read, so a store built
+over per-request values stays current for an instance that outlives the request.
 
-#### `Issuer.IdTokenVerification`
-
-What an ID token is held to beyond the issuer's own signature and identifier.
+### `@sdxc/auth/relying-party`
 
 ```typescript
-interface IdTokenVerification {
-	audience: string | string[];
-	algorithms?: JWK.Algorithm[];
-	clockTolerance?: number;
+new RelyingParty<profile>(issuer: Issuer, options: RelyingParty.Options<profile>);
+
+rp.authorize(ctx, options?); // Promise<Response> — the 303 to the authorization endpoint
+rp.callback(ctx); // Promise<RelyingParty.Grant<profile>>
+rp.endSession(ctx, options?); // Promise<Response>, or Promise<URL> with `redirect: false`
+rp.verifyIdToken(raw); // Promise<IdToken> — the callback's checks, over a token in hand
+rp.exchangeRefreshToken(refreshToken); // Promise<AuthSession.Refreshed>
+rp.mfa(idToken); // boolean — the configured values against `amr`, then `acr`
+rp.renew(auth); // Promise<AuthError | null>
+rp.issuer; // Issuer
+```
+
+`Options` requires `clientId` and `redirectUri`, and takes `clientSecret`, `scopes`
+(`["openid", "profile", "email"]`), `clientAuth` (`"client_secret_post"` or
+`"client_secret_basic"`), `userInfo` (`"never"`, `"always"`, or `"when-missing"`),
+`authorizationParams`, `tokenParams`, `mapProfile`, `subject`, `mfa` (`["mfa"]`),
+`algorithms`, `clockTolerance` (`60`), `fallbackReturnTo` (`"/"`), and `rateLimit`, a
+`RateLimit`. Naming a parameter the flow writes itself throws `reserved_parameter` at
+construction.
+
+`RateLimit` pairs an [`@sdxc/rate-limit`](https://www.npmjs.com/package/@sdxc/rate-limit)
+`adapter` with a required `key(request)`, which says what one login budget belongs to. It is
+required because only the app knows: the connecting address on a platform that reports one,
+a tenant, a submitted username. Return one shared bucket for a request you cannot identify,
+so an unidentified attempt still spends something.
+
+```typescript
+new RelyingParty(issuer, {
+	clientId,
+	redirectUri,
+	rateLimit: {
+		adapter,
+		key: (request) => request.headers.get("CF-Connecting-IP") ?? "unknown",
+	},
+});
+```
+
+`AuthorizeOptions` takes `returnTo`, `scopes`, `acrValues` (sent as `acr_values`, and
+required of the response), `maxAge` (sent as `max_age`; a number counts seconds), `prompt`,
+and `authorizationParams`. `authorize` spends the browser's budget before the session is
+touched, so a refused login leaves it as it was, and a spent budget throws a `429`
+`Response` for the caller to answer the request with. `returnTo` resolves through
+`Location.safe` from [`@sdxc/location`](https://www.npmjs.com/package/@sdxc/location),
+taking `fallbackReturnTo` for anything naming another origin.
+
+`callback` spends the transaction the moment it reads it, so one login answers exactly one
+callback, and its `Grant` carries `idToken`, `accessToken`, `refreshToken`, `returnTo`,
+`subject`, the resolved `claims`, and the mapped `profile`; every way it can refuse is an
+`AuthError` carrying one of the codes below. `renew` answers `null` where
+the request goes on signed in — with a renewed set, or with a set that carried no refresh
+token to renew — and answers with the refusal, the session already cleared, when the
+provider declines the refresh token.
+
+`Context` is `{ request, session }`; `Profile` is the default mapped profile (`name`,
+`email`, `emailVerified`, `username`, `picture`); `GrantedTokens` is what `mapProfile` is
+handed alongside the claims; `Transaction` is the login in flight, every field
+server-written and compared against the response before the response is believed; and
+`ClientAuth`, `UserInfoMode`, `Prompt`, and `EndSessionOptions` name the unions and the
+`{ returnTo, redirect }` pair above.
+
+### `@sdxc/auth/service-client`
+
+```typescript
+new ServiceClient(issuer: Issuer, options: ServiceClient.Options);
+
+service.token({ resources, scope }); // Promise<string> — a bearer token for one resource set
+service.introspect(token, options?); // Promise<ServiceClient.Introspection>, per RFC 7662
+service.revoke(token, options?); // Promise<void>, per RFC 7009
+service.clientId; // string
+service.issuer; // Issuer
+```
+
+`Options` requires `clientId` and `clientSecret`, and takes `clientAuth`
+(`"client_secret_post"`), `scope`, `tokenParams`, `cache` (an `Issuer.CacheStore`),
+`rateLimit`, `waitUntil`, and `expirationMargin` (`"30 seconds"`), how much of a token's
+life is kept in reserve for the request it authenticates and the skew at the far end.
+
+`token` answers from the isolate, the shared cache, or a new grant; each resource travels
+as its own `resource` field, which is how RFC 8707 §2 scopes one token to several services.
+`Introspection` names the claims and splits the scopes — `active`, `scopes`, `clientId`,
+`subject`, `username`, `tokenType`, `audience`, `issuer`, `issuedAt`, `expiresAt` — where
+`active: false` is the ordinary reply for a token that is unknown, expired, or revoked.
+`revoke` finishes after the response is sent when a `waitUntil` is configured. Both calls
+take `{ tokenType?: "access_token" | "refresh_token" }`, the hint that lets the issuer look
+the token up first.
+
+### `@sdxc/auth/resource-server`
+
+```typescript
+new ResourceServer(issuer: Issuer, options: ResourceServer.Options);
+
+api.verifyRequest(request); // Promise<AccessToken | null> — null: no bearer credential
+api.verifyAccessToken(credential); // Promise<AccessToken> — over a credential in hand
+api.issuer; // Issuer
+
+interface Options {
+	audience: string | string[]; // accepted when the token's `aud` carries any of them
+	introspection?: Introspector; // supplying one opens the introspection path
+	acceptUnscopedIntrospection?: boolean; // false
 }
 ```
 
-#### `RelyingParty.Profile`
+`verifyRequest` reads the bearer credential per RFC 6750 §2.1 and answers `null` for a
+request carrying none, which is another authentication method's to answer; a credential
+this server declines throws `invalid_token`. `verifyAccessToken` runs the same checks over
+a credential an app already holds: a queued job's payload, a fixture.
+`acceptUnscopedIntrospection` suits an issuer whose introspection endpoint answers only for
+tokens this server may honor.
 
-The display claims a login produces by default — the shape `options.mapProfile` answers
-with in its place — each member answering the same nullability its ID-token accessor does.
+An `Introspector` is anything with `introspect(token)` answering a
+`ResourceServer.Introspection` — `active`, `subject`, `clientId`, `scopes`, `audience`,
+`issuer`, `expiresAt` — which a `ServiceClient` satisfies. A single-valued `aud` arrives as
+a one-element list, an absent one as an empty list, every other omitted member as `null`.
 
-```typescript
-interface Profile {
-	name: string | null;
-	email: string | null;
-	emailVerified: boolean;
-	username: string | null;
-	picture: string | null;
-}
-```
-
-#### `ResourceServer.Introspection`
-
-What the issuer says about a token, in the shape a resource server reads.
-`ServiceClient.Introspection` is a superset of it, which is why a service client can be
-passed straight to `introspection`.
+### `@sdxc/auth/management-client`
 
 ```typescript
-interface Introspection {
-	active: boolean;
-	subject: string | null;
-	clientId: string | null;
-	scopes: string[];
-	audience: string[];
-	issuer: string | null;
-	expiresAt: Date | null;
-}
+new ManagementClient(service: ManagementClient.Service, options?: ManagementClient.Options);
+
+admin.fetchSubjectById(subjectId): Promise<
+	Result<ManagementClient.Subject, SubjectNotFoundError | ManagementError>
+>;
 ```
 
-#### `ManagementClient.Subject`
+`Service` is what the client needs of a service client: `issuer.url`, and
+`token({ resources })`. `Options` takes `baseUrl`, for a provider serving its management
+API apart from its OpenID Connect endpoints, and `resources`, the indicators the token is
+scoped to. A `Subject` carries `id`, `createdAt`, `updatedAt`, `displayName`, `avatar`, `role`
+(`"user"` or `"admin"`), `username`, and `emailAddress`, both timestamps already widened
+into `Date`. An id the provider holds no record under fails with `SubjectNotFoundError`,
+which is a definite answer carrying the `subjectId`; a provider that refused, throttled,
+failed, or answered unreadably fails with `ManagementError`, which a later attempt may
+still satisfy. The call throws `AuthError` when the service client cannot obtain a token.
+
+`ManagementError` carries a `code` and the `status` the provider answered with, `null` when
+it never answered, and `ManagementError.is(error, code)` narrows a caught value.
+`ManagementErrorCode` is closed — `unauthorized`, `rate_limited`, `provider_failed`,
+`request_failed`, `invalid_response` — and `ManagementErrorOptions` is what the constructor
+takes.
+
+### `@sdxc/auth/auth-session`
 
 ```typescript
-interface Subject {
-	id: string;
-	createdAt: Date;
-	updatedAt: Date;
-	displayName: string;
-	avatar: string;
-	role: "user" | "admin";
-	username: string;
-	emailAddress: string;
-}
+AuthSession.from(store); // AuthSession | null — re-validated on every read
+AuthSession.write(store, tokens); // AuthSession
+
+auth.idToken; // IdToken, decoded lazily and memoized
+auth.accessToken; // AccessToken, likewise
+auth.refreshToken; // string | null
+auth.tokens; // AuthSession.Tokens — a copy, for a step that sends a token on
+auth.expired; // boolean
+auth.renewable; // boolean
+await auth.refresh(client); // renews and rewrites the session; answers this
+auth.clear(); // drops this package's key alone
 ```
 
-## Pattern: Wiring The Router
+The session arrives from a cookie, so a record written by an older version of this package
+reads as signed out. `expired` describes the tokens rather than the person: a set past its
+end still names who signed in, and a set stating no end at all reads as spent, since
+nothing vouches for it. `refresh` throws `missing_refresh_token` for a set that was never
+renewable.
 
-Both schemes go in one `auth()` registration, tried in the order they are listed, so one
-router serves a browser session and an API caller. The middleware order below is
-load-bearing and covered again under Behavior.
+`Store` is declared structurally — `get(key)`, `set(key, value)`, `unset(key)`, and an
+optional `regenerateId(destroy?)` called on login and logout — so a session object
+satisfies it as it is and a store over any other backing needs only those calls.
+Everything this package persists lives under one key, so every other entry — a locale, a
+flash message — stays the app's own.
+
+`Tokens` is the stored set — `idToken`, `accessToken`, `refreshToken`, and `expiresAt`,
+seconds since the epoch the token endpoint stated and `null` where it stated none — and
+`Refreshed` is what an exchange answers with, where an omitted token keeps the stored one.
+`Client` is what a refresh runs through: anything with
+`exchangeRefreshToken(refreshToken)`, which a `RelyingParty` satisfies.
+
+### `@sdxc/auth/id-token`
+
+`IdToken` extends `JWT` from [`@sdxc/jwt`](https://www.npmjs.com/package/@sdxc/jwt), so
+`IdToken.verify(raw, keys, options)`, `IdToken.decode(raw)`, and the base claim accessors
+are inherited. The OpenID Connect claims arrive named, with their nullability stated.
+
+```typescript
+idToken.subject; // string — `sub`; throws when absent, since such a token is malformed
+idToken.nonce; // string | null — bound to the login that asked for it
+idToken.authTime; // Date | null — survives every token refresh
+idToken.sessionId; // string | null — `sid`
+idToken.atHash; // string | null — verified whenever a provider sends one
+idToken.amr; // IdToken.AuthenticationMethod[] — empty when nothing was reported
+idToken.acr; // string | null
+idToken.name; // string | null
+idToken.email; // string | null
+idToken.emailVerified; // boolean — an absent claim reads as false
+idToken.username; // string | null — `preferred_username`
+idToken.picture; // string | null — as the provider sent it
+```
+
+`email`, `username`, and `picture` are mutable at the provider, so records stay keyed on
+`subject`. `AUTHENTICATION_METHODS` holds the twenty `amr` values RFC 8176 §2 registers,
+keyed by name so autocomplete spells out what the wire abbreviates:
+`AUTHENTICATION_METHODS.Mfa` is `"mfa"`. `AuthenticationMethod` is one such value — those
+twenty, and any other string besides, since RFC 8176 §3 keeps the registry open.
+
+### `@sdxc/auth/access-token`
+
+`AccessToken` is a JWT access token per RFC 9068, extending `JWT` the same way.
+
+```typescript
+token.scopes; // string[] — split from the one space-separated `scope` string
+token.clientId; // string | null — RFC 9068 §2.2's `client_id`
+token.issuedToService; // boolean — `sub` equals `client_id`
+token.has("reports:write"); // boolean — whole-value comparison
+```
+
+The inherited `audience` reads either shape of `aud`: the client id on an
+authorization-code token, and the issuer plus every requested resource on a
+client-credentials one.
+
+### `@sdxc/auth/auth-error`
+
+`AuthError` is every protocol violation in this package. It carries a `code`, and
+`providerError` and `providerErrorDescription` when the failure came from the provider's
+own response; `AuthError.is(error, code)` gives a catch block one narrowing test to branch
+on, and `AuthErrorOptions` is what the constructor takes.
+
+`AuthErrorCode` is closed, so a `switch` over it exhausts: `discovery_failed`,
+`issuer_mismatch`, `endpoint_unsupported`, `jwks_failed`, `missing_transaction`,
+`state_mismatch`, `nonce_mismatch`, `authorization_failed`, `missing_code`,
+`token_request_failed`, `missing_id_token`, `invalid_token`, `at_hash_mismatch`,
+`acr_not_satisfied`, `max_age_not_satisfied`, `user_info_failed`, `missing_refresh_token`,
+`introspection_failed`, `revocation_failed`, `rate_limited`, `reserved_parameter`. Every
+code means the request has to stop; an outcome that is a legitimate answer —
+`active: false`, a session nobody signed in on — is a value rather than a throw.
+
+### `@sdxc/auth/remix/context`
+
+```typescript
+sessionOf(ctx: RequestContextSource): AuthSession.Store;
+contextOf(ctx: RequestContextSource): RelyingParty.Context;
+```
+
+`sessionOf` is the session `remix/middleware/session` stored on the request context, and
+throws when that middleware has not run. `contextOf` pairs it with the request, so a route
+hands its context to the browser flow in one call. `RequestContextSource` is the part both
+reads use — `request`, and `get(Session)` — which every flavor of the router's
+`RequestContext` satisfies.
+
+### `@sdxc/auth/remix/schemes`
+
+```typescript
+sessionScheme<identity>(
+	rp: Pick<RelyingParty<unknown>, "renew">,
+	options: SessionSchemeOptions<identity>, // { verify(auth), name?: "oidc-session" }
+): AuthScheme<identity>;
+
+bearerScheme<identity>(
+	api: Pick<ResourceServer, "verifyRequest">,
+	options: BearerSchemeOptions<identity>, // { verify(token, context), name?: "bearer" }
+): AuthScheme<identity>;
+```
+
+`sessionScheme` resolves the stored token set into the identity `verify` returns, renewing
+a set that has reached its end first; a `verify` answering `null` or `undefined` rejects
+the request. `bearerScheme` resolves the request's bearer token, then asks who is holding
+it, and a declined token stops there with RFC 6750's `401` and a
+`Bearer error="invalid_token"` challenge. Either scheme leaves a request it has nothing to
+say about — signed out, or carrying no bearer credential — to the next one, and lets an
+issuer outage through as a thrown `AuthError`, so an environment fault stays a fault the
+app answers rather than a person being signed out.
+
+### `@sdxc/auth/remix/authorization`
+
+```typescript
+createAuthorization(options: Authorization.Options): Authorization.Helpers;
+```
+
+`Options` takes `login`, where a signed-out request is sent; `signedIn` (`"/"`);
+`returnToParam` (`"returnTo"`); and `relyingParty`, a getter for the `MfaPolicy` holding
+the `amr`/`acr` values that count as several factors, read on every `mfa()` call. The
+helpers read the current request out of band, through `remix/middleware/async-context`, so
+a route or a view asks its question in one word.
+
+```typescript
+currentSession(); // AuthSession — throws a redirect to `login`, carrying where to come back to
+anonymous(); // void — throws a redirect to `signedIn` for a request already signed in
+subject(); // string | null
+scope("reports:write"); // boolean
+authenticated("5 minutes"); // boolean — from `auth_time`; with no argument, asks only who is here
+mfa(); // boolean
+```
+
+The two identity helpers throw a `Response`, which reaches the browser through
+[`@sdxc/catch-response-middleware`](https://www.npmjs.com/package/@sdxc/catch-response-middleware).
+The four capability helpers answer every request with a value, so a view mid-render may
+branch on one directly.
+
+## Pattern: Wiring A Remix Router
+
+Both schemes go in one `auth()` registration and are tried in the order they are listed, so
+one router serves a browser session and an API caller. The middleware order is
+load-bearing: `asyncContext()` is what the authorization helpers read the request through,
+the session middleware has to have run before any scheme reads it, and `catchResponse()`
+sits below both so that a thrown redirect or `429` becomes the reply.
 
 ```typescript
 import { bearerScheme, sessionScheme } from "@sdxc/auth/remix/schemes";
@@ -1008,35 +514,33 @@ let router = createRouter({
 });
 ```
 
-`sessionScheme` reads the session, renews an access token that has reached its expiry
-where a refresh token is there to renew it with, and hands the app's `verify` the token
-set. `bearerScheme` reads the `Authorization` header, verifies a JWT access token against
-the cached key set, and falls back to RFC 7662 introspection for a credential carrying no
-claims. A route then reads the resolved state the way it reads any other scheme's:
-`getContext().get(Auth)`, then `.ok` and `.identity`.
-
-## Pattern: The App's Own Authorization Vocabulary
-
-Create the helpers once and re-export them, so every route states its decision in one word
-and the login route is named in one place.
+Routes hand their context to the flow in one call, and the authorization vocabulary is
+created once and re-exported, so every route states its decision in one word and the login
+route is named in one place.
 
 ```typescript
 import { createAuthorization } from "@sdxc/auth/remix/authorization";
+import { contextOf } from "@sdxc/auth/remix/context";
+import { redirect } from "remix/response/redirect";
 
-import { relyingParty } from "~/auth/relying-party";
+export const { currentSession, anonymous, scope } = createAuthorization({
+	login: routes.auth.login.href(),
+	signedIn: routes.dashboard.href(),
+	relyingParty: () => rp,
+});
 
-export const { currentSession, anonymous, subject, scope, authenticated, mfa } =
-	createAuthorization({
-		login: routes.auth.login.href(),
-		signedIn: routes.dashboard.href(),
-		relyingParty: () => relyingParty(),
-	});
+router.get(routes.auth.login, (ctx) => rp.authorize(contextOf(ctx)));
+router.get(routes.auth.callback, async (ctx) => {
+	let grant = await rp.callback(contextOf(ctx));
+	return redirect(grant.returnTo);
+});
+router.post(routes.auth.logout, (ctx) => rp.endSession(contextOf(ctx), { returnTo: "/" }));
 ```
 
 ## Pattern: Step-Up Authentication
 
-Asking is `authorize`; answering is the ID token. Both halves ship, and the request is
-verified against the response.
+Asking is `authorize`; answering is the ID token. Both halves ship, and the response is
+verified against the request.
 
 ```typescript
 router.get(routes.auth.stepUp, (ctx) =>
@@ -1049,266 +553,90 @@ router.get(routes.auth.stepUp, (ctx) =>
 );
 ```
 
-`acrValues` goes out as `acr_values`, `maxAge` as `max_age`, `prompt: "login"` forces
-re-authentication for a provider that honors neither. Coming back, `acr` carries the
-context class, `amr` the methods that took part, and `auth_time` when it happened.
+Verification is the part that matters. A provider may ignore `acr_values` and answer with a
+token carrying no `acr` at all; reading that as "not MFA" sends the request back to the
+step-up route and loops. So `callback` throws instead — `acr_not_satisfied` when
+`acrValues` was sent and no requested value came back, `max_age_not_satisfied` when
+`maxAge` was sent and `auth_time` is absent or outside the window plus the clock tolerance.
 
-Verification is not optional, and this is the part that matters. A provider may ignore
-`acr_values` and answer with a token carrying no `acr` at all. Reading that as "not MFA"
-sends the request to a step-up route that asks again and loops, so `callback` throws
-instead: `acr_not_satisfied` when `acrValues` was sent and no requested value came back,
-`max_age_not_satisfied` when `maxAge` was sent and `auth_time` is absent or older than the
-window plus the clock tolerance. Against a provider that populates neither claim, a
-step-up request is refused outright rather than silently downgraded.
+`authenticated(duration)` measures from `auth_time`, which survives every token refresh, so
+a long-lived session with a stale authentication — precisely the case step-up exists to
+catch — reads as signed in but not recently authenticated.
 
-`authenticated(duration)` works against any provider that issues `auth_time`, because
-`auth_time` survives every token refresh: a long-lived session with a stale
-authentication — precisely the case step-up exists to catch — reads as authenticated but
-not recently.
+## Pattern: Sharing Documents Across Isolates
 
-## Pattern: Caching And Rate Limiting On Workers
-
-A cold isolate is the normal case on Workers, so both caches have a shared tier under the
-in-isolate memo, and both client classes count their outbound work against a budget.
+A cold isolate is the normal case on a serverless runtime, so both caches have a shared
+tier under the in-isolate memo. `Issuer.for` supplies the in-isolate half, handing the same
+instance and the same memos to every role in the isolate; a `CacheStore` supplies the
+other, so a cold isolate reads the discovery document and the key set from it rather than
+from the provider.
 
 ```typescript
-import { CloudflareAdapter } from "@sdxc/rate-limit";
-import { WorkerKVCache } from "@sdxc/cache/worker-kv";
+import type { Result } from "@sdxc/result";
 
-let cache = new WorkerKVCache(env.CACHE, { waitUntil: ctx.waitUntil.bind(ctx) });
+import { Issuer } from "@sdxc/auth/issuer";
+import { ServiceClient } from "@sdxc/auth/service-client";
+import { toSeconds } from "@sdxc/duration";
+import { success } from "@sdxc/result";
 
-let issuer = Issuer.for(env.OIDC_ISSUER, { cache, ttl: "1 hour" });
+/** A store over any key-value backing; every call answers with a `Result`. */
+let cache = {
+	async read(key): Promise<Result<string | null, Error>> {
+		return success(await store.get(key));
+	},
+	async write(key, value, options = {}): Promise<Result<void, Error>> {
+		await store.put(key, value, { ttl: toSeconds(options.ttl ?? "1 hour") });
+		return success(undefined);
+	},
+	async fetch(key, load, options = {}): Promise<Result<string, Error>> {
+		let stored = await store.get(key);
+		if (stored !== null) return success(stored);
+		let loaded = await load();
+		await this.write(key, loaded, options);
+		return success(loaded);
+	},
+} satisfies Issuer.CacheStore;
 
-let rp = new RelyingParty(issuer, {
-	clientId,
-	clientSecret,
-	redirectUri,
-	rateLimit: new CloudflareAdapter(env.LOGIN_RATE_LIMITER, { limit: 10, window: "1 minute" }),
-});
-
-let service = new ServiceClient(issuer, {
-	clientId,
-	clientSecret,
-	cache,
-	rateLimit: new CloudflareAdapter(env.GRANT_RATE_LIMITER, { limit: 20, window: "1 minute" }),
-	waitUntil: (promise) => ctx.waitUntil(promise),
-});
+let issuer = Issuer.for(AUTH_ORIGIN, { cache, ttl: "1 hour" });
+let service = new ServiceClient(issuer, { clientId, clientSecret, cache });
 ```
 
-The discovery document and the key set are keyed per issuer; a `client_credentials` token
-is keyed per client, resource set, and scope set, with both sets sorted so the order a
-caller writes them in carries no meaning. The login budget is keyed by the client IP, and
-the grant budget by the client id.
+The documents are keyed per issuer; a `client_credentials` token is keyed per client,
+resource set, and scope set, with both sets sorted so the order a caller writes them in
+carries no meaning. An app whose bindings arrive with the request states its cache as a
+factory —
+`cache: () => storeFor(currentEnvironment())` — so an instance that outlives a request
+never holds a value belonging to one that has already answered.
 
-`Issuer.for` is what puts the in-isolate tier under the shared one: it hands the same
-instance, and so the same memos, to every role and every request in the isolate, while each
-read still goes through the `CacheStore` a cold isolate reads from KV. An app whose bindings
-arrive with the request states its cache as a factory, so a long-lived instance never holds
-a `waitUntil` belonging to a request that has already answered:
+Both client classes also count their outbound work against a
+[`@sdxc/rate-limit`](https://www.npmjs.com/package/@sdxc/rate-limit) adapter passed as
+`rateLimit`: the login budget against the key its `RateLimit` derives, the grant budget
+against the client id, which the client already knows. A limiter that cannot answer lets the
+attempt through, so people keep signing in through a limiter outage and the provider still
+enforces its own limit on every request it sees.
 
-```typescript
-Issuer.for(AUTH_ORIGIN, {
-	cache: () => new WorkerKVCache(getEnv("CACHE"), { waitUntil: getEnv("waitUntil") }),
-});
+## Versioning
+
+Releases are dated rather than semantic. A version is the UTC date it was published, written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one release goes out per day.
+
+Those numbers say when, not what: a later date means a later release and carries no compatibility promise. Any release may change or remove an export.
+
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/auth": "2026.9.4"
+	}
+}
 ```
 
-## Behavior
+A caret or tilde range reads the date as major, minor and patch, so it accepts every later release in the same year. An exact version keeps the upgrade yours to schedule.
 
-1. **`catchResponse()` must sit below every response-decorating middleware** - The identity
-   helpers answer an anonymous request by throwing a redirect, `authorize` answers a spent
-   login budget by throwing a `429`, and `remix/router` does not turn a thrown `Response`
-   into the reply on its own. Install `catchResponse()` after the session middleware, never
-   before it: a redirect thrown above the session middleware unwinds past its commit and
-   reaches the browser without its `Set-Cookie`, which loses the login transaction and the
-   `returnTo` with it.
-2. **`userInfo` defaults to `"never"`, and `"when-missing"` means any claim missing** -
-   The ID token is verified, so its claims are trustworthy and a login costs two
-   round-trips rather than three. `"always"` and `"when-missing"` opt into the third.
-   `"when-missing"` spends it unless the ID token carries every one of `name`, `email`,
-   `preferred_username`, and `picture`, so a provider that sends `name` and withholds
-   `email` still resolves a whole claim set — which is what an app matching `email`
-   against an allow-list depends on. Both then need the provider to advertise a
-   `userinfo_endpoint`, and both bind the response to the login by its `sub` — a response
-   naming anyone else is `invalid_token`.
-3. **Reserved parameters are rejected, not merged** - `state`, `client_id`, `redirect_uri`,
-   `response_type`, `scope`, `code_challenge`, `code_challenge_method`, and `nonce` on the
-   authorization request, and `grant_type`, `code`, `code_verifier`, `redirect_uri`,
-   `refresh_token`, `client_id`, and `client_secret` on the token request, belong to the
-   flow. Naming one in `authorizationParams` or `tokenParams` throws
-   `reserved_parameter` — at construction for the configured sets, and per call for the
-   ones `authorize` takes. Silently dropping them would leave callback correlation
-   answering to a caller.
-4. **`returnTo` goes through `Location.safe`, and anything unusable becomes the fallback** -
-   `startsWith("/")` is not the check that does this: `//evil.com`, `/\/evil.com`, and
-   `/\evil.com` all pass it and all resolve to another origin, and `/..//evil.com`
-   normalizes to `//evil.com` while resolution still reports this app's own origin. What
-   reaches the transaction names this origin as both a URL and a pathname; everything else
-   takes `fallbackReturnTo`. The same sanitization runs on `endSession`'s `returnTo` and on
-   the `returnTo` the identity helpers append to a login redirect.
-5. **The rate limiter fails open** - A backend that cannot answer lets the attempt through.
-   The budget exists to keep a flood off the issuer, people keep signing in and scheduled
-   work keeps running through a limiter outage, and the issuer enforces its own limit on
-   every request it sees. The budget is spent before anything else happens, so a refused
-   attempt leaves the session untouched and asks the issuer for nothing.
-6. **The two budgets refuse in two different ways** - A spent login budget is a person at a
-   browser, so `authorize` throws a `429` `Response` carrying `Retry-After` and the quota
-   headers, which `catchResponse()` delivers as the reply. A spent grant budget has no
-   browser behind it, so `ServiceClient.token` throws an `AuthError` with `rate_limited`
-   for the calling job to handle.
-7. **`aud` has two shapes, so `audience` often needs both** - An authorization-code token
-   names the client id it was issued to. A client-credentials token names the issuer
-   alongside every resource it asked for, and marks itself as a service with a `sub` equal
-   to `client_id`, which `AccessToken.issuedToService` reads. A `ResourceServer` reachable
-   by both is configured with both values, and a token is accepted when its `aud` — written
-   by the provider as one value or as a list — carries any of them.
-8. **A transaction answers exactly one callback** - It is spent the moment it is read, so a
-   browser replaying the callback URL gets `missing_transaction` rather than a second
-   sign-in. Where the store rotates ids, `callback` also rotates the session id on success,
-   and `endSession` rotates it while dropping the old record.
-9. **A stored token set that no longer parses reads as signed out** - The session arrives
-   from a cookie and is re-validated on every read, so a record written by an earlier
-   version of this package answers `null` from `AuthSession.from` instead of throwing. The
-   visitor logs in again; nothing has to be migrated.
-10. **A token's own `exp` outranks the `expires_in` beside it** - Both `AuthSession` and
-    `ServiceClient` read the access token's signed `exp` first, because that is the value
-    the resource server enforces and it cannot drift from the lifetime captured at grant
-    time. `expires_in` answers for an opaque token, and a session with neither falls back
-    to the ID token's `exp`, which OpenID Connect requires. Each holds back a reserve —
-    30 seconds for a session, `expirationMargin` for a service token — so a token nearing
-    its end is renewed rather than sent and refused.
-11. **A token whose life nothing states is never reused** - With no `exp`, no `expires_in`
-    and, for a session, no ID-token `exp` either, nothing vouches for the credential:
-    `expired` reads `true` and every `ServiceClient.token()` call runs a fresh grant. A
-    grant whose remaining life minus the expiration margin is under 60 seconds stays in
-    the isolate and is not published to the shared tier, because that is the shortest TTL
-    a KV write accepts.
-12. **The access token from a login is decoded, not verified** - `callback` returns it as
-    the token endpoint sent it over an authenticated back-channel call, so it is read for
-    its claims rather than re-checked. The ID token beside it is fully verified, and
-    `at_hash` binds the two whenever the provider sends one. A token arriving from a
-    _caller_ is a different matter and goes through `ResourceServer`, which verifies.
-13. **An `at_hash` that cannot be checked is refused** - A signature algorithm outside the
-    OpenID Connect Core §3.1.3.6 table leaves the binding uncheckable, and that throws
-    `invalid_token` rather than passing the claim over. A runtime that declines the digest
-    itself is a local fault, so it throws a plain `Error` the way a declined PKCE digest
-    does; the login is refused either way.
-14. **`IdToken.subject` throws when `sub` is absent** - OpenID Connect requires the claim,
-    so the accessor is typed `string` and a malformed token fails loudly at the read. The
-    capability helpers absorb that: they answer `false` or `null` where a stored token no
-    longer yields a claim, which is what lets them promise a boolean to a view that is
-    mid-render.
-15. **A resource server with no introspector declines an opaque credential** - Only a
-    compact-serialized JWT reaches the local verification path. Without `introspection`
-    configured, anything else is a credential this server does not accept, answered with
-    the `401` and the challenge — not passed to the next scheme.
-16. **An introspected token has to name an audience** - RFC 7662 leaves `aud` optional, so
-    an issuer that omits it would otherwise make every active token good at every server
-    pointed at that issuer. A description naming no audience is refused, matching the
-    local path where `aud` is checked; `acceptUnscopedIntrospection: true` accepts it for
-    an issuer whose introspection endpoint is already scoped to this server's tokens.
-17. **A declined token and an unreachable issuer part ways in `bearerScheme`** -
-    `verifyRequest` throws `invalid_token` for the first, which the scheme turns into the
-    `401` with the challenge, and every other `AuthError` — `discovery_failed`,
-    `jwks_failed`, `introspection_failed` — propagates out of `authenticate` instead. A
-    provider outage answers as the fault it is rather than as a caller holding a bad
-    credential.
-18. **A refused refresh ends the session; a session with no refresh token to spend
-    survives its tokens** - `rp.renew` reads the two apart by the code on the
-    `AuthError`. The provider declining a refresh token says this login is over, so the
-    session is dropped and `sessionScheme` reports a failure, and the request gets a `401`
-    rather than continuing as anonymous with the old token still in the cookie.
-    `missing_refresh_token` says instead that the grant was never renewable — no
-    `offline_access`, so no refresh token was ever issued — and ending a session over that
-    would sign a person out every time an access token lapsed. That session stays signed
-    in: `verify` runs on the ID token's claims, which were verified when the set was
-    written, and the signed session cookie's own lifetime is what governs how long the
-    person stays. What it does not promise is a live credential — `auth.expired` still
-    reads `true`, and `auth.accessToken` is past its end, so an outbound call needs a
-    freshly obtained token rather than the stored one. `auth.renewable` is how a route
-    tells the two states apart.
-19. **`revoke` with a `waitUntil` resolves before the call finishes** - The response is
-    sent while the revocation completes in the background, so a refusal reaches the
-    runtime's handler rather than the caller. Omit `waitUntil` where the outcome has to be
-    awaited.
-20. **A failed `Issuer` read is not memoized** - Discovery and the key set are remembered
-    per instance, but a failure clears the memo, so the next call retries instead of
-    replaying the error for the life of the isolate.
-21. **Every management read answers with a `Result`** - `fetchSubjectById` never throws for
-    a provider outcome; it returns `SubjectNotFoundError` for a 404 and `ManagementError`
-    for a refusal, a throttle, a fault, or an unreadable payload. It does still throw
-    `AuthError` when the service client cannot obtain a token at all, because that is a
-    protocol failure rather than an answer.
-22. **A missing session middleware throws a plain `Error`** - Every read and write of the
-    token set and the login transaction goes through the store, and under Remix
-    `sessionOf` reads that store off the context `remix/middleware/session` wrote to. Its
-    absence is a wiring mistake rather than a protocol violation, so it is not an
-    `AuthError` with a code.
-23. **A provider whose identifier is not a URL is configured with `identifier`** - A
-    provider is free to publish a bare host as its `issuer`, and relying parties compare
-    that exact string. The constructor's `url` stays the place discovery is fetched from,
-    and `identifier` states what the document publishes and what tokens carry as `iss`.
-    The identity check then holds the document to that value — byte for byte for an
-    identifier that is not a URL, and normalized for host case and a trailing slash for
-    one that is — so a document naming anything else is still `issuer_mismatch`, and
-    `identifier()` keeps answering with the document's own value, which is what
-    `JWT.verify` is given. Point a fixture at the identifier production publishes: a
-    document naming the URL instead passes locally and fails against the provider.
-24. **`authorize` and `endSession` answer `303`** - A form post reaches both in practice,
-    and `303` is what tells the browser to follow the redirect with a `GET` rather than
-    repeating the post against the issuer. `endSession`'s `{ redirect: false }` hands back
-    the URL for a caller building its own response, and a spent login budget still throws
-    its `429`.
+## License
 
-## Related Packages
+MIT
 
-- [`@sdxc/jwt`](/packages/jwt) - The `JWT` base class both token classes extend, and the
-  `JWK` key resolver `Issuer.keys()` answers with
-- [`@sdxc/crypto`](/packages/crypto) - The digests, random tokens, and base64url encoding
-  behind PKCE, the correlation values, and `at_hash`
-- [`@sdxc/cache`](/packages/cache) - its adapters satisfy `Issuer.CacheStore`,
-  so an app supplies the shared tier and this package depends on the shape alone
-- [`@sdxc/rate-limit`](/packages/rate-limit) - The `Adapter` both client classes count
-  against
-- [`@sdxc/location`](/packages/location) - `Location.safe`, which sanitizes every
-  `returnTo`
-- [`@sdxc/catch-response-middleware`](/packages/catch-response-middleware) - Turns the
-  identity helpers' thrown redirect into the reply
-- [`@sdxc/get-client-ip`](/packages/get-client-ip) - Derives the key the login budget is
-  counted under
-- [`@sdxc/result`](/packages/result) - The `Result` management reads answer with
-- [`@sdxc/duration`](/packages/duration) - The `DurationInput` every TTL, window, and
-  `maxAge` is expressed in
+## Author
 
-## Tips
-
-1. **Share one `Issuer` across every role** - Its documents are memoized per instance and
-   cached per issuer, so building a second instance for the same provider pays the fetch
-   twice.
-2. **Give the `Issuer` a shared cache in production** - Without one the documents live only
-   for the life of the isolate, which on Workers means re-fetching discovery and the JWKS
-   on most requests.
-3. **Key records on `subject`, never on `email` or `username`** - Both are mutable at the
-   provider; `sub` is not, which is the whole reason it is the anchor.
-4. **Pass `metadata` to skip discovery in tests** - An inline document is validated exactly
-   like a fetched one, so a test asserts against the same code path with no HTTP mock for
-   `/.well-known/openid-configuration`.
-5. **Ask `Issuer` what the provider supports before configuring a step-up** -
-   `acrValuesSupported()` and `codeChallengeMethodsSupported()` say what will actually be
-   honored, which beats discovering it from an `acr_not_satisfied` in production.
-6. **Scope service tokens with resource indicators** - The resource set is part of the
-   cache key, so one client hands out a separate cached token per service it calls.
-7. **Use `AuthError.is` rather than reading `code` by hand** - It narrows the type and the
-   code in one test, which keeps a catch block from acting on an unrelated error that
-   happens to carry a `code`.
-8. **Write a capability answer into a condition, never a bare statement** -
-   `test/capability-statements.test.ts` scans the repo's TypeScript for a dropped answer
-   and fails on one, because no lint rule flags a call statement.
-9. **Put the app's vocabulary in the app** - `currentUser()`, `permission()`, and `role()`
-   read app data; build them over `subject()` and the claims so the name tells you which
-   layer you are in.
-10. **In a test, import the module that reads `env` below the `vi.doMock`** - An `Issuer`
-    takes its KV binding the moment it is built, so a static import of the module that
-    builds one runs before `vi.doMock("cloudflare:workers", …)` is installed and the
-    binding arrives as the stub's plain string, failing later with
-    `this.kv.get is not a function`. Reach for the subject with `await import(...)` after
-    the mock instead.
+[Sergio Xalambrí](https://sergiodxa.com)

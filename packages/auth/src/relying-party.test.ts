@@ -194,6 +194,17 @@ function createRelyingParty<profile = RelyingParty.Profile>(
  * A limiter whose backend is down, standing in for the outage a login is asked to
  * keep working through.
  */
+/**
+ * The key derivation an app supplies now that a budget states what it belongs to:
+ * the connecting address, with one shared bucket for a request carrying none.
+ */
+function limiting(adapter: Adapter): RelyingParty.RateLimit {
+	return {
+		adapter,
+		key: (request) => request.headers.get("CF-Connecting-IP") ?? "unknown",
+	};
+}
+
 class UnreachableAdapter implements Adapter {
 	/** Budget the adapter would enforce if it could reach its backend. */
 	readonly limit = 1;
@@ -1415,7 +1426,9 @@ describe("overrides", () => {
 describe("rateLimit", () => {
 	test("starts a login while the budget holds", async () => {
 		let agent = createAgent(CLIENT_IP);
-		let rp = createRelyingParty({ rateLimit: new MemoryAdapter({ limit: 2, window: "1 minute" }) });
+		let rp = createRelyingParty({
+			rateLimit: limiting(new MemoryAdapter({ limit: 2, window: "1 minute" })),
+		});
 
 		let first = await startLogin(agent, rp);
 		let second = await startLogin(agent, rp);
@@ -1426,7 +1439,9 @@ describe("rateLimit", () => {
 
 	test("throws a 429 response once the browser's budget is spent", async () => {
 		let agent = createAgent(CLIENT_IP);
-		let rp = createRelyingParty({ rateLimit: new MemoryAdapter({ limit: 1, window: "1 minute" }) });
+		let rp = createRelyingParty({
+			rateLimit: limiting(new MemoryAdapter({ limit: 1, window: "1 minute" })),
+		});
 
 		await startLogin(agent, rp);
 		let thrown = await agent.attempt("/login", (ctx) => rp.authorize(ctx));
@@ -1437,7 +1452,9 @@ describe("rateLimit", () => {
 
 	test("describes the spent budget in the response's rate limit fields", async () => {
 		let agent = createAgent(CLIENT_IP);
-		let rp = createRelyingParty({ rateLimit: new MemoryAdapter({ limit: 1, window: "1 minute" }) });
+		let rp = createRelyingParty({
+			rateLimit: limiting(new MemoryAdapter({ limit: 1, window: "1 minute" })),
+		});
 
 		await startLogin(agent, rp);
 		let thrown = (await agent.attempt("/login", (ctx) => rp.authorize(ctx))) as Response;
@@ -1451,12 +1468,12 @@ describe("rateLimit", () => {
 	test("asks the issuer for nothing once the browser's budget is spent", async () => {
 		let agent = createAgent(CLIENT_IP);
 		let discovery = stubDiscovery();
-		let rateLimit = new MemoryAdapter({ limit: 1, window: "1 minute" });
+		let adapter = new MemoryAdapter({ limit: 1, window: "1 minute" });
 
-		await startLogin(agent, createDiscoveringRelyingParty({ rateLimit }));
+		await startLogin(agent, createDiscoveringRelyingParty({ rateLimit: limiting(adapter) }));
 		expect(discovery.count).toBe(1);
 
-		let cold = createDiscoveringRelyingParty({ rateLimit });
+		let cold = createDiscoveringRelyingParty({ rateLimit: limiting(adapter) });
 		let thrown = await agent.attempt("/login", (ctx) => cold.authorize(ctx));
 
 		expect((thrown as Response).status).toBe(429);
@@ -1465,7 +1482,9 @@ describe("rateLimit", () => {
 
 	test("leaves the session as it was once the browser's budget is spent", async () => {
 		let agent = createAgent(CLIENT_IP);
-		let rp = createRelyingParty({ rateLimit: new MemoryAdapter({ limit: 1, window: "1 minute" }) });
+		let rp = createRelyingParty({
+			rateLimit: limiting(new MemoryAdapter({ limit: 1, window: "1 minute" })),
+		});
 
 		await startLogin(agent, rp);
 		let started = await agent.run("/probe", async (ctx) =>
@@ -1480,8 +1499,8 @@ describe("rateLimit", () => {
 	});
 
 	test("counts each client IP against a budget of its own", async () => {
-		let rateLimit = new MemoryAdapter({ limit: 1, window: "1 minute" });
-		let rp = createRelyingParty({ rateLimit });
+		let adapter = new MemoryAdapter({ limit: 1, window: "1 minute" });
+		let rp = createRelyingParty({ rateLimit: limiting(adapter) });
 		let spent = createAgent(CLIENT_IP);
 		let fresh = createAgent("198.51.100.7");
 
@@ -1494,9 +1513,24 @@ describe("rateLimit", () => {
 		expect(allowed.get("state")).toMatch(/^[A-Za-z0-9_-]{20,}$/);
 	});
 
-	test("gathers every attempt the edge reports no IP for into one budget", async () => {
-		let rateLimit = new MemoryAdapter({ limit: 1, window: "1 minute" });
-		let rp = createRelyingParty({ rateLimit });
+	test("counts against whatever the key derives, address or not", async () => {
+		let adapter = new MemoryAdapter({ limit: 1, window: "1 minute" });
+		let rp = createRelyingParty({
+			rateLimit: { adapter, key: (request) => request.headers.get("X-Tenant") ?? "none" },
+		});
+		let first = createAgent(CLIENT_IP);
+		let second = createAgent("198.51.100.7");
+
+		await startLogin(first, rp);
+
+		let refused = await second.attempt("/login", (ctx) => rp.authorize(ctx));
+
+		expect((refused as Response).status).toBe(429);
+	});
+
+	test("gathers every attempt the key cannot identify into one budget", async () => {
+		let adapter = new MemoryAdapter({ limit: 1, window: "1 minute" });
+		let rp = createRelyingParty({ rateLimit: limiting(adapter) });
 
 		await startLogin(createAgent(), rp);
 
@@ -1507,7 +1541,7 @@ describe("rateLimit", () => {
 
 	test("starts a login while the limiter cannot answer, so an outage signs people in", async () => {
 		let agent = createAgent(CLIENT_IP);
-		let rp = createRelyingParty({ rateLimit: new UnreachableAdapter() });
+		let rp = createRelyingParty({ rateLimit: limiting(new UnreachableAdapter()) });
 
 		let params = await startLogin(agent, rp);
 

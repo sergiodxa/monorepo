@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/auth",
 	"version": "0.0.1",
-	"private": true,
+	"description": "OAuth 2.0 and OpenID Connect client for any runtime that speaks Request and Response",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
@@ -26,7 +26,6 @@
 		"@sdxc/catch-response-middleware": "workspace:*",
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/duration": "workspace:*",
-		"@sdxc/get-client-ip": "workspace:*",
 		"@sdxc/jwt": "workspace:*",
 		"@sdxc/location": "workspace:*",
 		"@sdxc/rate-limit": "workspace:*",

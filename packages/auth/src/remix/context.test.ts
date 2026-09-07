@@ -128,7 +128,12 @@ describe("contextOf", () => {
 	});
 
 	test("answers a refused login with the 429 the flow throws, delivered by catchResponse", async () => {
-		let rp = createRelyingParty({ rateLimit: new MemoryAdapter({ limit: 1, window: "1 minute" }) });
+		let rp = createRelyingParty({
+			rateLimit: {
+				adapter: new MemoryAdapter({ limit: 1, window: "1 minute" }),
+				key: (request) => request.headers.get("CF-Connecting-IP") ?? "unknown",
+			},
+		});
 		let router = createApp();
 		router.get("/login", (ctx) => rp.authorize(contextOf(ctx)));
 		let visit = createBrowser(router);

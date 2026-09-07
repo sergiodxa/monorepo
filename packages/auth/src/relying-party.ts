@@ -14,9 +14,8 @@ import type { Adapter } from "@sdxc/rate-limit";
 import * as s from "@remix-run/data-schema";
 import { Base64, Base64Url, randomToken, sha256, sha384, sha512 } from "@sdxc/crypto";
 import { toSeconds } from "@sdxc/duration";
-import { getClientIP } from "@sdxc/get-client-ip";
 import { Location } from "@sdxc/location";
-import { applyRateLimitHeaders } from "@sdxc/rate-limit";
+import { tooManyRequests } from "@sdxc/rate-limit";
 import { isFailure, wrap } from "@sdxc/result";
 
 import type { Issuer } from "./issuer.js";
@@ -49,20 +48,11 @@ const DEFAULT_RETURN_TO = "/";
 const RATE_LIMIT_PREFIX = "auth:authorize";
 
 /**
- * Identifies an attempt arriving without an edge-reported IP, so every such
- * attempt is counted against one shared budget.
- */
-const UNKNOWN_CLIENT_IP = "unknown";
-
-/**
  * The status the login and logout redirects carry, per RFC 9110 §15.4.4. A form post
  * starts both, and 303 is what tells the browser to reach the destination with a GET
  * rather than repeating the post against it.
  */
 const SEE_OTHER_STATUS = 303;
-
-/** The status a spent login budget answers a browser with, per RFC 6585 §4. */
-const RATE_LIMITED_STATUS = 429;
 
 /** What a refused login says to the person who asked for it. */
 const RATE_LIMITED_BODY = "Too many sign-in attempts. Try again shortly.";
@@ -323,7 +313,7 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	#algorithms: JWK.Algorithm[] | undefined;
 	#clockTolerance: number;
 	#fallbackReturnTo: string;
-	#rateLimit: Adapter | null;
+	#rateLimit: RelyingParty.RateLimit | null;
 
 	/**
 	 * Binds a client's credentials to one issuer.
@@ -683,19 +673,14 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	async #spend(request: Request): Promise<void> {
 		if (!this.#rateLimit) return;
 
-		let clientIp = getClientIP(request) ?? UNKNOWN_CLIENT_IP;
-		let result = await this.#rateLimit.consume(`${RATE_LIMIT_PREFIX}:${clientIp}`);
+		let { adapter, key } = this.#rateLimit;
+		let result = await adapter.consume(`${RATE_LIMIT_PREFIX}:${await key(request)}`);
 		if (isFailure(result)) return;
 		if (result.data.allowed) return;
 
-		throw applyRateLimitHeaders(
-			new Response(RATE_LIMITED_BODY, {
-				status: RATE_LIMITED_STATUS,
-				headers: { "content-type": "text/plain; charset=utf-8" },
-			}),
-			result.data,
-			this.#rateLimit.window,
-		);
+		throw tooManyRequests(result.data, adapter.window, RATE_LIMITED_BODY, {
+			headers: { "content-type": "text/plain; charset=utf-8" },
+		});
 	}
 
 	/**
@@ -1013,6 +998,19 @@ export namespace RelyingParty {
 		refreshToken: string | null;
 	}
 
+	/** The budget a login start is counted against, and what it is counted per. */
+	export interface RateLimit {
+		/** Backend that counts the attempts and owns the policy. */
+		adapter: Adapter;
+		/**
+		 * What one budget belongs to, derived from the request that starts the login —
+		 * the connecting address on a platform that reports one, a tenant, a submitted
+		 * username. Required, because the wrong answer either lets one caller spend
+		 * another's budget or collapses every caller into a single one.
+		 */
+		key: (request: Request) => string | Promise<string>;
+	}
+
 	/** A client's credentials and the overrides that shape each step of its flow. */
 	export interface Options<profile = Profile> {
 		/** The client identifier registered with the issuer. */
@@ -1084,11 +1082,11 @@ export namespace RelyingParty {
 		 */
 		fallbackReturnTo?: string;
 		/**
-		 * The budget every login start is counted against, keyed by the connecting
-		 * client's IP, which is what keeps a scripted flood of login redirects off the
-		 * issuer. Configuring one makes `authorize` throw a `429` response.
+		 * The budget every login start is counted against, which is what keeps a scripted
+		 * flood of login redirects off the issuer. Configuring one makes `authorize` throw
+		 * a `429` response.
 		 */
-		rateLimit?: Adapter;
+		rateLimit?: RateLimit;
 	}
 
 	/** What one login asks the issuer for, beyond the client's standing options. */
