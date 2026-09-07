@@ -8,7 +8,7 @@ Router middleware that turns a thrown `Response` into the request's response.
 
 A middleware, though, receives `next()` as a promise it can `try`/`catch`, and it may return any `Response` it likes. That is all it takes to recover a thrown one.
 
-The payoff is the React Router idiom: `throw redirect(to)` from anywhere. A helper can end the request without being handed the request context and without the caller having to check its return value:
+The payoff is `throw redirect(to)` from anywhere. A helper can end the request without being handed the request context and without the caller having to check its return value:
 
 ```typescript
 // app/http/current-user.ts
