@@ -142,7 +142,7 @@ Run from the repository root:
 | [validate](packages/validate)                                   | Standard Schema validation utilities                                                |     |
 | [webhooks](packages/webhooks)                                   | Standard Webhooks signing, verification and replay guards                           |     |
 | [workers-cache](packages/workers-cache)                         | Cloudflare cache tags, purging and cache-status reads                               |     |
-| [xml](packages/xml)                                             | XML generation utilities                                                            |     |
+| [xml](packages/xml)                                             | XML parser and serializer for RSS-style feeds                                       | ✅  |
 | [yaml](packages/yaml)                                           | YAML reading and writing over a documented subset                                   |     |
 
 A ✅ in the last column means the package is published to npm.

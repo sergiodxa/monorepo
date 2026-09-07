@@ -2,17 +2,29 @@
 
 XML parser and serializer for RSS-style feeds.
 
-## Overview
+It reads XML text into an `XML` document instance and writes that instance back out. The
+target is the subset of XML feeds actually use: one root element, attributes, nested
+elements, text nodes, CDATA sections, namespace-prefixed names, and an XML declaration.
 
-`@sdxc/xml` parses XML into an `XML` document instance and serializes that instance back into XML text. It is designed for the subset of XML commonly used by RSS and similar feeds: one root element, attributes, nested elements, text nodes, CDATA content, namespace-prefixed names, and XML declarations.
+Real feeds are written by tools that emit `&nbsp;` and `&mdash;` without declaring a DTD,
+so the parser resolves the five entities XML predefines, numeric character references such
+as `&#8217;`, and the 248 named entities the three XHTML 1.0 entity sets declare. A name
+outside those sets is reported as a parse error. Serialization escapes only the five
+predefines, so a document that arrives with `&nbsp;` round-trips as the character itself.
 
-The parser resolves the five entities XML predefines (`&lt;`, `&gt;`, `&amp;`, `&quot;`, `&apos;`), numeric character references such as `&#8217;`, and the named entities the three XHTML 1.0 entity sets declare — `&nbsp;`, `&mdash;`, `&eacute;` and the other 245. Feeds are written by tools that emit those without declaring a DTD, so resolving them is what lets a real-world document parse at all. A name outside those sets is reported as a parse error.
+## Installation
 
-Serialization escapes only the five predefines, so a document that arrives with `&nbsp;` round-trips as the character itself rather than the name.
+```bash
+npm add @sdxc/xml
+```
+
+Parsing and serialization report failures as a `Result` from
+[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which installs alongside this
+package and supplies `isFailure`, `isSuccess`, and `unwrap`.
 
 ## Usage
 
-### Parse RSS-Like XML
+### Parse A Document
 
 ```typescript
 import { isFailure } from "@sdxc/result";
@@ -25,309 +37,210 @@ let result = XML.parse(
 if (isFailure(result)) throw result.error;
 
 let xml = result.data;
-let title = xml.query("channel/title");
+xml.query("channel/title"); // { name: "title", children: ["Feed"] }
 ```
 
-### Serialize XML
+Whitespace-only text nodes are indentation rather than content, so the parser drops them and
+a traversal never has to step over them.
+
+### Traverse A Document
+
+`query` and `queryAll` take a `/`-delimited path rooted at the document's root element;
+`find` and `findAll` take a predicate and walk depth-first.
+
+```typescript
+let channel = xml.query("channel");
+let items = xml.queryAll("channel/item");
+
+let firstLink = xml.find((element) => element.name === "link");
+let allLinks = xml.findAll((element) => element.name === "link");
+```
+
+### Write A Document
+
+`XML.stringify` takes a root element and returns the text for it:
 
 ```typescript
 import { isFailure } from "@sdxc/result";
-import { XML } from "@sdxc/xml";
-
-let result = XML.stringify({
-	declaration: { version: "1.0", encoding: "UTF-8" },
-	root: {
-		name: "rss",
-		attributes: { version: "2.0" },
-		children: [
-			{
-				name: "channel",
-				attributes: {},
-				children: [{ name: "title", attributes: {}, children: ["Feed"] }],
-			},
-		],
-	},
-});
-
-if (isFailure(result)) throw result.error;
-
-let xml = result.data;
-```
-
-### Serialize an XML Instance
-
-```typescript
-import { isFailure } from "@sdxc/result";
-import { XML } from "@sdxc/xml";
-
-let result = XML.parse('<rss version="2.0"><channel><title>Feed</title></channel></rss>');
-if (isFailure(result)) throw result.error;
-
-let xml = result.data;
-let raw = xml.toString();
-```
-
-### Stringify an XML Instance
-
-```typescript
-import { isFailure } from "@sdxc/result";
-import { XML } from "@sdxc/xml";
-
-let parsed = XML.parse('<rss version="2.0"><channel><title>Feed</title></channel></rss>');
-if (isFailure(parsed)) throw parsed.error;
-
-let result = XML.stringify(parsed.data);
-if (isFailure(result)) throw result.error;
-
-let raw = result.data;
-```
-
-## API
-
-### `XML`
-
-Static XML helpers plus instance traversal and serialization methods.
-
-#### `XML.parse(source: string): Result<XML, XMLParseError>`
-
-Parses XML into an `XML` instance. Whitespace-only text nodes used for indentation are dropped.
-
-**Parameters:**
-
-- `source`: Raw XML text.
-
-**Returns:**
-
-- A `Result` containing the parsed `XML` instance or an `XMLParseError`.
-
-**Example:**
-
-```typescript
-import { XML } from "@sdxc/xml";
-
-let result = XML.parse('<rss version="2.0" />');
-```
-
-#### `XML.stringify(input: XML | XML.Element): Result<string, XMLStringifyError>`
-
-Serializes an `XML` instance or a root `XML.Element` into XML text.
-
-**Parameters:**
-
-- `input`: The XML instance, or the root element, to serialize.
-
-**Returns:**
-
-- A `Result` containing the XML string or an `XMLStringifyError`.
-
-**Example:**
-
-```typescript
 import { XML } from "@sdxc/xml";
 
 let result = XML.stringify({
 	name: "rss",
 	attributes: { version: "2.0" },
-	children: [],
+	children: [
+		{
+			name: "channel",
+			children: [{ name: "title", children: ["Feed"] }],
+		},
+	],
 });
+
+if (isFailure(result)) throw result.error;
+
+let source = result.data; // <rss version="2.0"><channel><title>Feed</title></channel></rss>
 ```
+
+A declaration belongs to a document rather than to an element, so build the document to get
+one:
 
 ```typescript
-import { isFailure } from "@sdxc/result";
-import { XML } from "@sdxc/xml";
+let xml = new XML({
+	declaration: { version: "1.0", encoding: "UTF-8" },
+	root: { name: "rss", attributes: { version: "2.0" } },
+});
 
-let parsed = XML.parse('<rss version="2.0"><channel><title>Feed</title></channel></rss>');
-if (isFailure(parsed)) throw parsed.error;
-
-let result = XML.stringify(parsed.data);
+xml.toString();
+// <?xml version="1.0" encoding="UTF-8"?>
+// <rss version="2.0"/>
 ```
 
-#### `xml.declaration: XML.Declaration | undefined`
+### Round-Trip A Document
 
-Returns the parsed XML declaration.
+`toJSON` hands back plain data the `XML` constructor accepts, and `toString` serializes the
+instance in place.
 
-#### `xml.root: XML.Element`
+```typescript
+let json = xml.toJSON();
+let copy = new XML(json);
 
-Returns the root element.
-
-#### `xml.toJSON(): XML.Document`
-
-Returns the XML document as plain serializable data.
-
-```ts
-import { isFailure } from "@sdxc/result";
-import { XML } from "@sdxc/xml";
-
-let result = XML.parse('<rss version="2.0"><channel><title>Feed</title></channel></rss>');
-if (isFailure(result)) throw result.error;
-
-let json = result.data.toJSON();
-let xml = new XML(json);
+let source = copy.toString();
 ```
 
-#### `xml.toString(): string`
+## API
 
-Serializes the current `XML` instance into XML text.
+### `XML.parse(source: string): Result<XML, XMLParseError>`
 
-```ts
-import { isFailure } from "@sdxc/result";
-import { XML } from "@sdxc/xml";
+Parses XML text into an `XML` instance.
 
-let result = XML.parse('<rss version="2.0"><channel><title>Feed</title></channel></rss>');
-if (isFailure(result)) throw result.error;
+### `XML.stringify(input: XML | XML.Element): Result<string, XMLStringifyError>`
 
-let raw = result.data.toString();
+Serializes an instance, or a bare root element, into XML text. An element carries no
+declaration; pass an instance to write one.
+
+```typescript
+XML.stringify({ name: "rss", attributes: { version: "2.0" } });
+// success('<rss version="2.0"/>')
 ```
 
-#### `xml.find(predicate: XML.Predicate): XML.Element | undefined`
+### `new XML(document: XML.Document)`
 
-Returns the first element that matches the predicate in depth-first order.
+Wraps a document that is already plain data, such as one from `toJSON`.
 
-```ts
-import { isFailure } from "@sdxc/result";
-import { XML } from "@sdxc/xml";
+### `xml.declaration: XML.Declaration | undefined`
 
-let result = XML.parse('<rss version="2.0"><channel><title>Feed</title></channel></rss>');
-if (isFailure(result)) throw result.error;
+The parsed XML declaration, when the document carried one.
 
-let title = result.data.find((element) => element.name === "title");
-```
+### `xml.root: XML.Element`
 
-#### `xml.findAll(predicate: XML.Predicate): XML.Element[]`
+The root element.
 
-Returns every element that matches the predicate in depth-first order.
+### `xml.find(predicate: XML.Predicate): XML.Element | undefined`
 
-```ts
-import { isFailure } from "@sdxc/result";
-import { XML } from "@sdxc/xml";
+The first element the predicate accepts, in depth-first order.
 
-let result = XML.parse('<rss version="2.0"><channel><title>Feed</title></channel></rss>');
-if (isFailure(result)) throw result.error;
+### `xml.findAll(predicate: XML.Predicate): XML.Element[]`
 
-let allTitles = result.data.findAll((element) => element.name === "title");
-```
+Every element the predicate accepts, in depth-first order.
 
-#### `xml.query(path: string): XML.Element | undefined`
+### `xml.query(path: string): XML.Element | undefined`
 
-Returns the first element matching a `/`-delimited path such as `channel/item/title`.
+The first element at a `/`-delimited path such as `channel/item/title`.
 
-```ts
-import { isFailure } from "@sdxc/result";
-import { XML } from "@sdxc/xml";
+### `xml.queryAll(path: string): XML.Element[]`
 
-let result = XML.parse('<rss version="2.0"><channel><title>Feed</title></channel></rss>');
-if (isFailure(result)) throw result.error;
+Every element at a `/`-delimited path such as `channel/item`.
 
-let title = result.data.query("channel/title");
-```
+### `xml.toJSON(): XML.Document`
 
-#### `xml.queryAll(path: string): XML.Element[]`
+The document as plain serializable data.
 
-Returns all elements matching a `/`-delimited path such as `channel/item`.
+### `xml.toString(): string`
 
-```ts
-import { isFailure } from "@sdxc/result";
-import { XML } from "@sdxc/xml";
-
-let result = XML.parse('<rss version="2.0"><channel><item>1</item><item>2</item></channel></rss>');
-if (isFailure(result)) throw result.error;
-
-let items = result.data.queryAll("channel/item");
-```
+The document as XML text.
 
 ### `XMLParseError`
 
-Raised when the XML source is malformed or has no valid root element.
+The source is malformed, carries no root element, or names an entity outside the resolved
+sets.
 
 ### `XMLStringifyError`
 
-Raised when the XML tree cannot be expressed as valid XML, such as when a namespace prefix is missing.
+The tree cannot be expressed as valid XML: a name that fails the XML `Name` production, or a
+prefix with no namespace declared in scope.
 
-### `XML` Types
+### Types
 
-All public types are exposed through the `XML` namespace.
-
-#### `XML.Declaration`
-
-```typescript
-type Declaration = XML.Declaration;
-```
-
-#### `XML.Element`
+Every public type lives in the `XML` namespace: `XML.Declaration`, `XML.Element`,
+`XML.Node`, `XML.Document`, and `XML.Predicate`.
 
 ```typescript
-type Element = XML.Element;
+import type { XML } from "@sdxc/xml";
+
+function titleOf(element: XML.Element): string | undefined {
+	let [text] = element.children ?? [];
+	return typeof text === "string" ? text : undefined;
+}
 ```
 
-#### `XML.Node`
+An `XML.Node` is either an `XML.Element` or a string, and a string is always a text node.
+Markup belongs in child elements: a string holding `<p>Hi</p>` serializes as escaped text,
+which is what makes the output parse back into the tree it was given.
 
-```typescript
-type Node = XML.Node;
-```
-
-#### `XML.Document`
-
-```typescript
-type Document = XML.Document;
-```
-
-#### `XML.Predicate`
-
-```typescript
-type Predicate = XML.Predicate;
-```
-
-## Patterns
-
-### Reading RSS Channel Data
+## Pattern: Reading A Feed's Channel
 
 ```typescript
 import { isFailure } from "@sdxc/result";
 import { XML } from "@sdxc/xml";
 
-let result = XML.parse(xml);
+let result = XML.parse(source);
 if (isFailure(result)) throw result.error;
 
-let channel = result.data.query("channel");
-let items = result.data.queryAll("channel/item");
+let xml = result.data;
+
+for (let item of xml.queryAll("channel/item")) {
+	let title = item.children?.find((child) => typeof child !== "string" && child.name === "title");
+}
 ```
 
-### Predicate-Based Traversal
+## Pattern: Preserving Namespaces
+
+A prefix is resolved against the `xmlns:*` attributes in scope, so declare one on the same
+element tree that uses it. Serialization fails on a prefix with no declaration rather than
+writing XML that will not parse.
 
 ```typescript
-import { isFailure } from "@sdxc/result";
-import { XML } from "@sdxc/xml";
-
-let result = XML.parse(xml);
-if (isFailure(result)) throw result.error;
-
-let firstItem = result.data.find((element) => element.name === "item");
-let allLinks = result.data.findAll((element) => element.name === "link");
-```
-
-### Preserving Namespaces During Serialization
-
-```typescript
-import { XML } from "@sdxc/xml";
-
-let result = XML.stringify({
+XML.stringify({
 	name: "rss",
 	attributes: {
 		version: "2.0",
 		"xmlns:content": "http://purl.org/rss/1.0/modules/content/",
 	},
-	children: [{ name: "content:encoded", attributes: {}, children: ["<p>HTML</p>"] }],
+	children: [{ name: "content:encoded", children: ["<p>HTML</p>"] }],
 });
 ```
 
-## Related Packages
+## Versioning
 
-- [`@sdxc/result`](/packages/result) - Result helpers used for parse and stringify failures.
-- [`@sdxc/rss`](/packages/rss) - RSS builder/parser package that can consume XML feed structures.
+Releases are dated rather than semantic. A version is the UTC date it was published, written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one release goes out per day.
 
-## Tips
+Those numbers say when, not what: a later date means a later release and carries no compatibility promise. Any release may change or remove an export.
 
-1. Declare `xmlns:*` attributes on the same element tree where prefixed names are used, otherwise serialization fails.
-2. Treat strings in `children` as text nodes; nested markup must be represented as child elements, not embedded raw XML.
-3. The parser ignores indentation-only text nodes, which keeps RSS-style XML trees easier to traverse.
-4. Element and attribute names are checked against the XML `Name` production before they are written, so serialization produces output that parses back into the tree it was given.
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/xml": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)

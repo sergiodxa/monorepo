@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/xml",
 	"version": "0.0.1",
-	"private": true,
+	"description": "XML parser and serializer for RSS-style feeds",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
