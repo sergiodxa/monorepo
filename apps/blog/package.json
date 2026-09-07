@@ -17,6 +17,7 @@
 		"@sdxc/cache": "workspace:*",
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/data-table-d1": "workspace:*",
+		"@sdxc/get-client-ip": "workspace:*",
 		"@sdxc/highlight": "workspace:*",
 		"@sdxc/http": "workspace:*",
 		"@sdxc/jwt": "workspace:*",

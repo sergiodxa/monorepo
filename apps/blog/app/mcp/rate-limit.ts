@@ -10,6 +10,7 @@
 
 import type { Middleware } from "remix/router";
 
+import { getClientIP } from "@sdxc/get-client-ip";
 import { CloudflareAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 
@@ -26,6 +27,9 @@ const WINDOW = "1 minute";
 
 /** Key namespace, kept stable so counters survive a deploy. */
 const PREFIX = "mcp";
+
+/** Bucket for a request arriving with no address, so it is limited rather than exempt. */
+const UNKNOWN_CALLER = "unknown";
 
 /**
  * Creates middleware spending one caller's budget before the MCP handler runs.
@@ -44,5 +48,6 @@ export default function mcpRateLimit(env: App.Env): Middleware {
 	return rateLimit({
 		adapter: new CloudflareAdapter(binding, { limit: MCP_RATE_LIMIT, window: WINDOW }),
 		prefix: PREFIX,
+		key: (ctx) => getClientIP(ctx.request) ?? UNKNOWN_CALLER,
 	});
 }
