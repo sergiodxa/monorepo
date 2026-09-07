@@ -1,144 +1,96 @@
 # @sdxc/location
 
-A URL-like Location class for building and manipulating URL paths without a full URL.
+URL-like `Location` class for URL paths without an origin.
 
-## Overview
+It keeps the [`URL`](https://developer.mozilla.org/en-US/docs/Web/API/URL) members that describe a path — `pathname`, `search`, `searchParams`, `hash` — and drops the ones that name a server, `origin`, `protocol`, `host`, `port` and `href` among them. A redirect target or a link is then built and mutated without inventing a base URL for it.
 
-Location solves the problem of building and manipulating URL paths when you don't need (or want) a full URL with origin and protocol. It works like the standard `URL` class but without the `origin`, `protocol`, `host`, or `port` - focusing only on the path, search params, and hash.
+## Installation
 
-This is particularly useful for:
+```bash
+npm add @sdxc/location
+```
 
-- Building redirect targets where you only need the path
-- Constructing links in your application
-- Manipulating query parameters without parsing full URLs
+No dependencies, and a single entry point.
 
 ## Usage
+
+### Building A Path
 
 ```typescript
 import { Location } from "@sdxc/location";
 
-// Create a location
-let location = new Location({
-	pathname: "/users/123",
-	search: "page=1&sort=name",
-	hash: "section",
-});
+let location = new Location({ pathname: "/users/123", search: "page=1&sort=name" });
 
-console.log(location.toString()); // "/users/123?page=1&sort=name#section"
+location.toString(); // "/users/123?page=1&sort=name"
 
-// Modify the location
 location.searchParams.set("page", "2");
 location.hash = "details";
 
-console.log(location.toString()); // "/users/123?page=2&sort=name#details"
+location.toString(); // "/users/123?page=2&sort=name#details"
+```
+
+### Validating An Untrusted Redirect Target
+
+A `?returnTo=` value arrives from the browser, so it can name another origin. `Location.safe` answers with the value or with the fallback, never with an attacker's destination.
+
+```typescript
+let returnTo = Location.safe(url.searchParams.get("returnTo"), { fallback: "/dashboard" });
+
+return new Response(null, { status: 302, headers: { Location: returnTo.toString() } });
 ```
 
 ## API
 
-### Constructor
+### `new Location(input)`
 
-#### `new Location(options: Location.Options)`
-
-Creates a new Location instance.
-
-**Parameters:**
-
-- `options.pathname`: The path portion (e.g., "/users/123")
-- `options.search`: Optional search parameters (string or URLSearchParams)
-- `options.hash`: Optional hash/fragment
+Builds a location from a `URL`, another `Location`, or `Location.Options` — `{ pathname: string; search?: string | URLSearchParams; hash?: string }`. An origin on a `URL` input is discarded, and a leading `#` on `hash` is dropped.
 
 ### Properties
 
-#### `pathname: string`
+- `pathname`: the path, read and written verbatim — nothing is normalized or encoded on assignment.
+- `search`: the query string with its leading `?`, or `""` when there are no params. Assigning takes the string with or without the `?` and replaces every param.
+- `searchParams`: the live [`URLSearchParams`](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams) behind `search`, so `set`, `append` and `delete` on it change what `toString()` returns. Read-only as a property; assign `search` to replace the whole query.
+- `hash`: the fragment without its `#`, in both directions. `""` leaves the fragment off the string.
 
-Gets or sets the pathname portion.
+### `location.toString()` / `location.toJSON()`
 
-#### `search: string`
+The path, plus `?search` and `#hash` when either is non-empty. `toJSON` returns the same string, so a location inside `JSON.stringify` serializes as its path.
 
-Gets the search string including the `?` prefix (e.g., `"?page=1"`). Returns an empty string if there are no search params.
+### `Location.from(input)`
 
-#### `searchParams: URLSearchParams`
-
-Gets the search parameters as a URLSearchParams object. Use this for manipulating individual parameters. Different from `search` which returns the string representation with the `?` prefix.
-
-```typescript
-let location = new Location({ pathname: "/users", search: "page=1&sort=name" });
-
-// searchParams gives you URLSearchParams for manipulation
-location.searchParams.set("page", "2");
-location.searchParams.append("filter", "active");
-
-// search gives you the string representation
-console.log(location.search); // "?page=2&sort=name&filter=active"
-```
-
-#### `hash: string`
-
-Gets or sets the hash/fragment (without the `#` prefix).
-
-### Methods
-
-#### `toString(): string`
-
-Returns the complete location as a string.
+Parses a `string | URL | Location`, resolving a relative string against a base URL and then discarding the origin — which normalizes the path. Throws a `TypeError` for anything else.
 
 ```typescript
-let loc = new Location({ pathname: "/users", search: "id=1" });
-loc.toString(); // "/users?id=1"
+Location.from("https://example.com/users?page=1").toString(); // "/users?page=1"
+Location.from("/a/../b").toString(); // "/b"
+Location.from(location); // a clone
 ```
 
-#### `toJSON(): string`
+### `Location.safe(input, options)`
 
-Returns the location as a string (same as `toString()`). Useful for JSON serialization.
+Validates an untrusted redirect target and returns `options.fallback` for anything that could send a browser to another origin. It always returns a usable `Location`, so a caller cannot forward an attacker's value by accident, and a fallback that is itself off-origin degrades to `/`.
 
-### Static Methods
-
-#### `Location.from(input: string | URL | Location): Location`
-
-Creates a Location from a string, URL, or another Location.
-
-```typescript
-let loc1 = Location.from("/users?page=1");
-let loc2 = Location.from(new URL("https://example.com/users?page=1"));
-let loc3 = Location.from(loc1); // Clone
-```
-
-#### `Location.safe(input, options): Location`
-
-Validates an untrusted redirect target - a `?returnTo=` or `?next=` query param - and returns the `fallback` for anything that could send a browser to another origin. It always returns a usable `Location`, so a caller can never forward an attacker's value by accident.
-
-**Parameters:**
-
-- `input`: The untrusted value (`string | URL | Location | null | undefined`)
-- `options.fallback`: The destination used whenever `input` fails validation
-- `options.origin`: Optional origin whose absolute URLs count as our own
+- `input`: the untrusted value, as `string | URL | Location | null | undefined`
+- `options.fallback`: the destination used whenever `input` fails validation
+- `options.origin`: an origin whose absolute URLs count as ours, reduced to their path
 
 ```typescript
 Location.safe("/dashboard?tab=1", { fallback: "/" }).toString(); // "/dashboard?tab=1"
 Location.safe("//evil.com", { fallback: "/" }).toString(); // "/"
-Location.safe("/..//evil.com", { fallback: "/" }).toString(); // "/"
-Location.safe("https://evil.com/x", { fallback: "/" }).toString(); // "/"
 Location.safe(null, { fallback: "/" }).toString(); // "/"
-```
 
-A `startsWith("/")` check is not enough: `//evil.com`, `/\evil.com` and `/..//evil.com` all pass it and still resolve to `https://evil.com`. `Location.safe` resolves the value against a base URL and compares origins instead, then rejects the result unless it is an unambiguous root-relative path.
-
-Rejected: absolute URLs, protocol-relative URLs, backslash variants, non-HTTP schemes such as `javascript:` and `data:`, relative paths with no leading slash, empty values, `null`, `undefined`, and any value carrying raw whitespace or a control character - `new URL` strips those before parsing, so they hide the real destination from string-level checks, and a newline would split the `Location` header.
-
-Preserved: the pathname, search, and hash of a root-relative path, including percent-encoding.
-
-By default only root-relative paths are accepted, because an absolute URL cannot be judged without knowing which origin is ours. Pass `origin` where that is known and matching absolute URLs are reduced to their path:
-
-```typescript
 let options = { fallback: "/", origin: "https://app.example.com" };
-
 Location.safe("https://app.example.com/foo", options).toString(); // "/foo"
 Location.safe("https://evil.com/foo", options).toString(); // "/"
 ```
 
-#### `Location.isSafe(input, options?): boolean`
+A `startsWith("/")` check is not enough: `//evil.com`, `/\evil.com` and `/..//evil.com` all pass it and still resolve to `https://evil.com`. `Location.safe` resolves the value against a base URL and compares origins instead, then rejects the result unless it is an unambiguous root-relative path.
 
-Reports whether an untrusted redirect target stays on our own origin, for callers that branch rather than substitute. It runs the same validation as `Location.safe` and takes the same optional `origin`.
+Rejected: absolute URLs on an origin that was not configured, protocol-relative URLs, backslash variants, non-HTTP schemes such as `javascript:` and `data:`, relative paths with no leading slash, empty values, `null`, `undefined`, and any value carrying whitespace or a control character — `new URL` strips those before parsing, so they hide the real destination from string-level checks, and a newline would split a `Location` header. Preserved: the pathname, search and hash of a root-relative path, including percent-encoding, so `/%2F%2Fevil.com` stays encoded rather than becoming a host.
+
+### `Location.isSafe(input, options?)`
+
+The same validation as a boolean, for a caller that branches rather than substitutes. Takes an `unknown` input and the same optional `origin`.
 
 ```typescript
 Location.isSafe("/dashboard"); // true
@@ -146,118 +98,75 @@ Location.isSafe("//evil.com"); // false
 Location.isSafe("https://app.example.com/foo", { origin: "https://app.example.com" }); // true
 ```
 
-#### `Location.canParse(input: unknown): boolean`
+### `Location.canParse(input)`
 
-Checks if the input can be parsed as a Location.
+Whether `Location.from` would accept the input: a `URL`, a `Location`, or a string that parses as either an absolute URL or a path. Unlike `isSafe`, it says nothing about where the value points.
 
 ```typescript
 Location.canParse("/users"); // true
 Location.canParse("https://example.com"); // true
-Location.canParse(new URL("https://example.com")); // true
 Location.canParse({}); // false
 ```
 
-## Use Cases
+## Pattern: Round-Tripping A Sign-In Return Target
 
-### Building URLs programmatically
-
-```typescript
-let location = new Location({ pathname: "/search" });
-location.searchParams.set("q", "react router");
-location.searchParams.set("page", "1");
-
-return redirect(location);
-```
-
-### Manipulating search parameters
+Carry the path the visitor asked for into the sign-in page as a param, then read it back through `Location.safe` before redirecting. The write side needs no validation; the read side always does, because the value comes back from the browser.
 
 ```typescript
-let location = Location.from(request.url);
-location.searchParams.delete("temp_param");
-location.searchParams.set("updated", "true");
+import { Location } from "@sdxc/location";
 
-return redirect(location);
-```
+let current = Location.from(request.url);
 
-### Creating relative redirects
-
-```typescript
-let location = new Location({
+let signIn = new Location({
 	pathname: "/login",
-	search: { redirect: request.url },
+	search: new URLSearchParams({ returnTo: current.toString() }),
 });
 
-return redirect(location);
-```
-
-### Validating an untrusted redirect target
-
-`redirect()` forwards a string target as-is, which is what makes redirecting to an external URL possible. Run any target that came from the request through `Location.safe` first:
-
-```typescript
-let returnTo = Location.safe(url.searchParams.get("returnTo"), {
+// On the way back, from the sign-in page's own request.
+let returnTo = Location.safe(new URL(request.url).searchParams.get("returnTo"), {
 	fallback: "/dashboard",
 });
-
-return redirect(returnTo);
 ```
 
-### Integration with redirect()
+## Pattern: Editing The Current Request's Query String
 
-Use Location with `redirect()` from `@sdxc/response` to build type-safe redirects:
+Filters, sorting and pagination rewrite one param and keep the rest, which is `Location.from` on the request URL plus a `searchParams` call.
 
 ```typescript
 import { Location } from "@sdxc/location";
-import { redirect } from "@sdxc/response";
-import { createAction } from "remix/router";
 
-import routes from "~/routes/web";
+let location = Location.from("https://example.com/posts?tag=css&cursor=abc");
 
-export default createAction(routes.dashboard, async (ctx) => {
-	let session = await getSession(ctx.request);
+location.searchParams.set("page", "2");
+location.searchParams.delete("cursor");
 
-	if (!session) {
-		let location = new Location({
-			pathname: routes.login.href(),
-			search: new URLSearchParams({ returnTo: new URL(ctx.request.url).pathname }),
-		});
+location.toString(); // "/posts?tag=css&page=2"
+```
 
-		throw redirect(location);
+The origin is gone from the result, so it goes into an `href` or a `Location` header without a second check.
+
+## Versioning
+
+Releases are dated rather than semantic. A version is the UTC date it was published, written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one release goes out per day.
+
+Those numbers say when, not what: a later date means a later release and carries no compatibility promise. Any release may change or remove an export.
+
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/location": "2026.9.4"
 	}
-
-	// ...
-});
+}
 ```
 
-### Usage with typed route helpers for dynamic routes
+A caret or tilde range reads the date as major, minor and patch, so it accepts every later release in the same year. An exact version keeps the upgrade yours to schedule.
 
-Combine Location with the `href()` method every route in a `remix/routes` route map carries, so a path with params is built from the pattern instead of a string:
+## License
 
-```typescript
-import { Location } from "@sdxc/location";
+MIT
 
-import routes from "~/routes/web";
+## Author
 
-// Build a location with a dynamic route path
-let location = new Location({
-	pathname: routes.users.show.href({ id: userId }),
-	search: new URLSearchParams({ tab: "settings" }),
-});
-
-// Use in redirects or links
-return redirect(location);
-```
-
-## Tips
-
-1. **Use `searchParams` for manipulating params, `search` for the string representation** - `searchParams` returns a `URLSearchParams` object for adding, removing, or modifying individual parameters, while `search` gives you the final string with the `?` prefix.
-
-2. **Location automatically handles encoding of search params** - When you use `searchParams.set()` or pass values to the constructor, special characters are automatically URL-encoded.
-
-3. **Never pass a request-supplied redirect target straight to `redirect()`** - `Location.safe` is the only check that holds, and `startsWith("/")` is not one.
-
-4. **Use `Location.from()` to parse existing URLs or paths** - This is the easiest way to create a Location from a request URL, a full URL string, or an existing path that you want to modify.
-
-## Related Packages
-
-- [`@sdxc/response`](../response/README.md) - Uses Location for redirect targets with the `redirect()` function
+[Sergio Xalambrí](https://sergiodxa.com)

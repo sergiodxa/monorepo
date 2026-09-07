@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/location",
 	"version": "0.0.1",
-	"private": true,
+	"description": "URL-like Location class for URL paths without an origin",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
