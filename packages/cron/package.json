@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/cron",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Cron schedules with zone-aware occurrences and descriptors",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

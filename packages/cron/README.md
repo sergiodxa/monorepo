@@ -3,12 +3,18 @@
 Cron expression parsing and time-zone-aware occurrence computation, with `Result`
 failures and descriptions an app can translate.
 
+## Installation
+
+```bash
+npm add @sdxc/cron
+```
+
 ## Overview
 
 Cron expressions are user input: someone types `*/15 * * * *` into a form and the
 product has to say whether it is valid, when the next run is, and what it means. This
 package models that as a `Schedule` value object. Parsing returns a
-[`Result`](/packages/result) carrying the offending field and character index instead
+[`Result`](https://www.npmjs.com/package/@sdxc/result) carrying the offending field and character index instead
 of throwing, so validation composes with the rest of the repository's error handling.
 
 Every occurrence query names its time zone explicitly. A schedule is stored with the
@@ -186,7 +192,7 @@ it, plus the grace period.
 
 - `lastRun`: When the schedule last ran, e.g. the last ping received
 - `options.timeZone`: IANA zone the schedule is evaluated in
-- `options.grace`: A [`DurationInput`](/packages/duration) tolerance; omit for none
+- `options.grace`: A [`DurationInput`](https://www.npmjs.com/package/@sdxc/duration) tolerance; omit for none
 
 **Returns:**
 
@@ -526,8 +532,8 @@ runs in a month, and each one costs a walk of the calendar.
 
 ## Related Packages
 
-- [`@sdxc/result`](/packages/result) - the `Result` type parsing returns
-- [`@sdxc/duration`](/packages/duration) - the `DurationInput` the `grace` option takes
+- [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) - the `Result` type parsing returns
+- [`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration) - the `DurationInput` the `grace` option takes
 
 ## Tips
 
