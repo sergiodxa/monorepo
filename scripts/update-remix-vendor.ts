@@ -1,5 +1,6 @@
 /**
- * Updates docs/vendor and .agents/skills/remix from the Remix main branch.
+ * Updates docs/vendor and .agents/skills/remix from the Remix release the
+ * workspaces pin, so the vendored docs describe the installed version.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,12 +12,13 @@ import { basename, dirname, join, resolve } from "node:path";
 
 import { $ } from "bun";
 
-let REMIX_TARBALL_URL = "https://api.github.com/repos/remix-run/remix/tarball/main";
+let REMIX_TARBALL_BASE = "https://api.github.com/repos/remix-run/remix/tarball";
+let DEPENDENCY_FIELDS = ["dependencies", "devDependencies", "peerDependencies"] as const;
 let ROOT_DIR = resolve(import.meta.dir, "..");
 let VENDOR_DIR = join(ROOT_DIR, "docs", "vendor");
 let SKILLS_DIR = join(ROOT_DIR, ".agents", "skills");
 let TEMP_DIR = join(tmpdir(), "sergiodxa-remix-vendor");
-let TAR_PATH = join(TEMP_DIR, "remix-main.tar.gz");
+let TAR_PATH = join(TEMP_DIR, "remix.tar.gz");
 let EXTRACT_DIR = join(TEMP_DIR, "extract");
 let REMIX_SCOPE_DIR = join(VENDOR_DIR, "@remix-run");
 let REMIX_PACKAGE_DIR = join(VENDOR_DIR, "remix");
@@ -24,11 +26,18 @@ let REMIX_SKILL_DIR = join(SKILLS_DIR, "remix");
 
 interface PackageManifest {
 	name: string;
+	dependencies?: Record<string, string>;
+	devDependencies?: Record<string, string>;
+	peerDependencies?: Record<string, string>;
 }
 
 async function main() {
+	let ref = await resolveRef();
+
+	process.stdout.write(`Vendoring Remix docs from ${ref}\n`);
+
 	await resetTempDir();
-	await downloadTarball();
+	await downloadTarball(ref);
 	await extractTarball();
 
 	let repoRoot = await getExtractedRepoRoot();
@@ -44,13 +53,66 @@ async function main() {
 	await copyRemixSkill(repoRoot);
 }
 
+/**
+ * Resolves the ref to vendor from: the tag for the pinned Remix release, or the
+ * `--ref <ref>` argument to read a branch such as `main` when you want docs for
+ * behavior that has yet to ship.
+ */
+async function resolveRef() {
+	let args = process.argv.slice(2);
+	let index = args.indexOf("--ref");
+	let override = index === -1 ? undefined : args[index + 1];
+
+	if (override) return override;
+
+	return `remix@${await getPinnedRemixVersion()}`;
+}
+
+/**
+ * Reads the Remix version the workspaces pin, rejecting a split so a partial
+ * upgrade cannot vendor docs for a release most of the repository is not on.
+ */
+async function getPinnedRemixVersion() {
+	let versions = new Set<string>();
+
+	for (let folder of ["apps", "packages"]) {
+		let directory = join(ROOT_DIR, folder);
+		let entries = await readdir(directory, { withFileTypes: true });
+
+		for (let entry of entries) {
+			if (!entry.isDirectory()) continue;
+
+			let manifestPath = join(directory, entry.name, "package.json");
+			if (!(await pathExists(manifestPath))) continue;
+
+			let manifest = await readManifest(manifestPath);
+
+			for (let field of DEPENDENCY_FIELDS) {
+				let version = manifest[field]?.remix;
+				if (version) versions.add(version);
+			}
+		}
+	}
+
+	if (versions.size === 0) {
+		throw new Error("Found no workspace pinning remix, so there is no release to vendor");
+	}
+
+	if (versions.size > 1) {
+		let pinned = [...versions].sort().join(", ");
+		throw new Error(`Workspaces pin different remix versions: ${pinned}`);
+	}
+
+	return [...versions][0]!;
+}
+
 async function resetTempDir() {
 	await rm(TEMP_DIR, { recursive: true, force: true });
 	await mkdir(EXTRACT_DIR, { recursive: true });
 }
 
-async function downloadTarball() {
-	let response = await fetch(REMIX_TARBALL_URL, {
+async function downloadTarball(ref: string) {
+	let response = await fetch(`${REMIX_TARBALL_BASE}/${encodeURIComponent(ref)}`, {
 		headers: {
 			"user-agent": "sergiodxa-monorepo-remix-vendor-updater",
 			accept: "application/vnd.github+json",
@@ -58,7 +120,9 @@ async function downloadTarball() {
 	});
 
 	if (!response.ok) {
-		throw new Error(`Failed to download Remix tarball: ${response.status} ${response.statusText}`);
+		throw new Error(
+			`Failed to download Remix tarball for ${ref}: ${response.status} ${response.statusText}`,
+		);
 	}
 
 	let bytes = await response.bytes();
