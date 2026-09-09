@@ -23,6 +23,6 @@
 		"@sdxc/result": "workspace:*",
 		"@sdxc/validate": "workspace:*",
 		"@sdxc/webhooks": "workspace:*",
-		"remix": "3.0.0-rc.1"
+		"remix": "3.0.0-rc.2"
 	}
 }

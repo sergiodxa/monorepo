@@ -19,6 +19,6 @@
 		"@sdxc/data-table-d1": "workspace:*",
 		"@sdxc/data-table-sqlstorage": "workspace:*",
 		"@types/node": "^26.4.0",
-		"remix": "3.0.0-rc.1"
+		"remix": "3.0.0-rc.2"
 	}
 }

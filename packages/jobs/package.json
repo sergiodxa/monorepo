@@ -28,11 +28,11 @@
 	"devDependencies": {
 		"@cloudflare/workers-types": "^5.20260901.1",
 		"@sdxc/cloudflare-mocks": "workspace:*",
-		"remix": "3.0.0-rc.1"
+		"remix": "3.0.0-rc.2"
 	},
 	"peerDependencies": {
 		"@cloudflare/workers-types": "^5.20260901.1",
-		"remix": "3.0.0-rc.1",
+		"remix": "3.0.0-rc.2",
 		"vitest": "^4.0.0"
 	},
 	"peerDependenciesMeta": {

@@ -105,11 +105,11 @@ describe("cross-origin protection", () => {
 		expect(await response.json()).toEqual({ active: false });
 	});
 
-	/** No controller answers /api/*, so its 404 shows cross-origin protection let the request through. */
+	/** Only a GET answers /api/subjects/:subjectId, so the 405 shows cross-origin protection let the POST reach routing. */
 	test("lets a cross-origin POST through to /api/*", async () => {
 		let response = await app.fetch(crossOriginPost("/api/subjects/whoever"));
 
-		expect(response.status).toBe(404);
+		expect(response.status).toBe(405);
 	});
 
 	/** The end-session endpoint's redirect response shows cross-origin protection let the request through. */
@@ -283,12 +283,12 @@ describe("HEAD requests", () => {
 		expect(await head.text()).toBe("");
 	});
 
-	test("still 404s a HEAD to a path whose route has no GET", async () => {
+	test("refuses a HEAD to a path whose route has no GET", async () => {
 		let response = await app.fetch(
 			new Request(`${ORIGIN}${routes.account.verifyEmailResend.href()}`, { method: "HEAD" }),
 		);
 
-		expect(response.status).toBe(404);
+		expect(response.status).toBe(405);
 	});
 
 	test("does not let a HEAD past the session guard", async () => {

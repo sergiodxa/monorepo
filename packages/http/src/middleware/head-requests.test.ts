@@ -72,14 +72,15 @@ describe(headRequests, () => {
 		expect(response.headers.get("Location")).toBe("/page");
 	});
 
-	test("still 404s a HEAD to a route that has no GET", async () => {
+	test("refuses a HEAD to a route that has no GET", async () => {
 		let router = createTestRouter();
 
 		let response = await router.fetch(
 			new Request("https://example.com/submit", { method: "HEAD" }),
 		);
 
-		expect(response.status).toBe(404);
+		expect(response.status).toBe(405);
+		expect(response.headers.get("Allow")).toBe("POST");
 		expect(await response.text()).toBe("");
 	});
 

@@ -30,9 +30,9 @@ describe("HEAD requests", () => {
 		expect(await response.text()).toBe("");
 	});
 
-	test("still 404s a HEAD to a path whose route has no GET", async () => {
+	test("refuses a HEAD to a path whose route has no GET", async () => {
 		let response = await fetchApp("/webhooks/polar", { method: "HEAD" });
 
-		expect(response.status).toBe(404);
+		expect(response.status).toBe(405);
 	});
 });

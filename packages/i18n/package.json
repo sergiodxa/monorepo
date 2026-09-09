@@ -15,6 +15,6 @@
 	"dependencies": {
 		"html-parse-stringify": "^4.0.1",
 		"i18next": "^26.4.1",
-		"remix": "3.0.0-rc.1"
+		"remix": "3.0.0-rc.2"
 	}
 }

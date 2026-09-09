@@ -43,7 +43,7 @@
 		"@sdxc/ui": "workspace:*",
 		"@sdxc/uuid": "workspace:*",
 		"@sdxc/validate": "workspace:*",
-		"remix": "3.0.0-rc.1"
+		"remix": "3.0.0-rc.2"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "^1.54.2",
