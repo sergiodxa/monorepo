@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/html",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Read a served page: parse HTML, then query it by role and accessible name",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

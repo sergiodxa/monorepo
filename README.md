@@ -109,7 +109,7 @@ Run from the repository root:
 | [get-client-ip](packages/get-client-ip)                         | Extract client IP from requests                                                          |     |
 | [highlight](packages/highlight)                                 | Syntax highlighting as tokens, with a Markdoc fence node                                 |     |
 | [hostname](packages/hostname)                                   | Hostname parsing and validation utilities                                                |     |
-| [html](packages/html)                                           | Read a served page: parse HTML, then query it by role and accessible name                |     |
+| [html](packages/html)                                           | Read a served page: parse HTML, then query it by role and accessible name                | ✅  |
 | [http](packages/http)                                           | HTTP helper utilities                                                                    |     |
 | [i18n](packages/i18n)                                           | Language detection, i18next instances and translated-markup components                   | ✅  |
 | [icons](packages/icons)                                         | Lucide icons for Remix UI                                                                |     |
