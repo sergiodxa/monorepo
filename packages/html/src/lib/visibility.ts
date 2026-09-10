@@ -1,13 +1,13 @@
 /**
  * The markup-level visibility rules: `hidden`, `aria-hidden`, a `<template>` and an
- * inline `display`/`visibility` declaration hide an element. A stylesheet is never
- * consulted, so a class hiding an element leaves it visible to this package.
+ * inline `display`/`visibility` declaration hide an element. Every answer comes from
+ * the markup, so a class that hides an element leaves it visible here.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-/** Elements whose contents a browser never lays out, whatever the styles say. */
+/** Elements a browser keeps out of the render tree, whatever the styles say. */
 const NON_RENDERED_TAGS = new Set([
 	"base",
 	"head",

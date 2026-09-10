@@ -1,16 +1,32 @@
 /**
- * Exercises the public surface: parsing a page, reading its head, and addressing
- * its content by role and accessible name, including the ambiguity, visibility
- * and positional rules the package owns.
+ * Exercises the public surface: parsing a page, reading its head, addressing its
+ * content by role and accessible name, narrowing a lookup to the subtree a match
+ * carries, and requesting a page over the network — including the ambiguity,
+ * visibility and positional rules the package owns.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { isFailure, isSuccess } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import { HTML, HTMLAmbiguousMatchError, HTMLNotFoundError, HTMLParseError } from "./index.js";
+import {
+	HTML,
+	HTMLAmbiguousMatchError,
+	HTMLFetchError,
+	HTMLNotFoundError,
+	HTMLParseError,
+} from "./index.js";
+
+/** MSW server intercepting the pages `HTML.fetch` requests. */
+let server = setupServer();
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 /** Parses a source known to be well-formed, so a test reads as a single expression. */
 function parse(source: string): HTML {
@@ -416,5 +432,284 @@ describe("definition", () => {
 
 		expect(isFailure(result)).toBe(true);
 		if (isFailure(result)) expect(result.error.available).toEqual(["Total"]);
+	});
+});
+
+/**
+ * A page whose two forms carry the same field, table and term, so a lookup only
+ * resolves once it is addressed from the form that holds the one it wants.
+ */
+const SCOPED_PAGE = `<!doctype html>
+<html lang="en">
+	<body>
+		<main>
+			<section aria-label="Support">
+				<form aria-label="Donate">
+					<h2>Donate</h2>
+					<label for="donate-tip">Tip amount</label>
+					<input id="donate-tip" name="tip" value="10">
+					<button name="intent" value="give" disabled>Give</button>
+					<table>
+						<thead>
+							<tr><th>Item</th><th>Amount</th></tr>
+						</thead>
+						<tbody>
+							<tr><td>Gift</td><td>$25</td></tr>
+						</tbody>
+					</table>
+					<dl>
+						<dt>Total</dt>
+						<dd>$35</dd>
+					</dl>
+				</form>
+				<form aria-label="Subscribe">
+					<h2>Subscribe</h2>
+					<label for="subscribe-tip">Tip amount</label>
+					<input id="subscribe-tip" name="tip" value="5">
+					<input id="subscribe-email" name="email" value="reader@example.com">
+					<button name="intent" value="give">Give</button>
+					<table>
+						<thead>
+							<tr><th>Item</th><th>Amount</th></tr>
+						</thead>
+						<tbody>
+							<tr><td>Plan</td><td>$9</td></tr>
+						</tbody>
+					</table>
+					<dl>
+						<dt>Total</dt>
+						<dd>$9</dd>
+					</dl>
+				</form>
+			</section>
+		</main>
+	</body>
+</html>`;
+
+/** Addresses a match known to be there, so a test reads as a single expression. */
+function scope(root: HTML | HTML.Element, selector: HTML.Selector): HTML.Element {
+	let result = root.query(selector);
+	if (isFailure(result)) throw result.error;
+	return result.data;
+}
+
+describe("scoped lookups", () => {
+	test("resolves a field inside the form it was addressed from", () => {
+		let doc = parse(SCOPED_PAGE);
+		let page = doc.field("tip");
+		let scoped = scope(doc, { role: "form", name: "Donate" }).field("tip");
+
+		expect(isFailure(page)).toBe(true);
+		if (isFailure(page)) expect(page.error).toBeInstanceOf(HTMLAmbiguousMatchError);
+		expect(isSuccess(scoped)).toBe(true);
+		if (isSuccess(scoped)) expect(scoped.data.value).toBe("10");
+	});
+
+	test("finds a descendant by role and accessible name", () => {
+		let doc = parse(SCOPED_PAGE);
+		let page = doc.query({ role: "button", name: "Give" });
+		let scoped = scope(doc, { role: "form", name: "Donate" }).query({
+			role: "button",
+			name: "Give",
+		});
+
+		expect(isFailure(page)).toBe(true);
+		expect(isSuccess(scoped)).toBe(true);
+		if (isSuccess(scoped)) {
+			expect(scoped.data.tag).toBe("button");
+			expect(scoped.data.disabled).toBe(true);
+		}
+	});
+
+	test("counts its own descendants, so an element outside the scope stays outside", () => {
+		let doc = parse(SCOPED_PAGE);
+		let donate = scope(doc, { role: "form", name: "Donate" });
+
+		expect(doc.queryAll({ role: "button", name: "Give" })).toHaveLength(2);
+		expect(donate.queryAll({ role: "button", name: "Give" })).toHaveLength(1);
+		expect(donate.queryAll({ role: "textbox" }).map((field) => field.value)).toEqual(["10"]);
+	});
+
+	test("scopes to what sits inside it, so a lone form holds an empty list of forms", () => {
+		let doc = parse(SCOPED_PAGE);
+
+		expect(scope(doc, { role: "form", name: "Donate" }).queryAll({ role: "form" })).toEqual([]);
+		expect(scope(doc, { role: "region", name: "Support" }).queryAll({ role: "form" })).toHaveLength(
+			2,
+		);
+	});
+
+	test("reads a cell of the table inside the element", () => {
+		let doc = parse(SCOPED_PAGE);
+		let page = doc.cell({ row: 1, column: 2 });
+		let scoped = scope(doc, { role: "form", name: "Donate" }).cell({ row: 1, column: 2 });
+
+		expect(isFailure(page)).toBe(true);
+		if (isFailure(page)) expect(page.error).toBeInstanceOf(HTMLAmbiguousMatchError);
+		expect(isSuccess(scoped)).toBe(true);
+		if (isSuccess(scoped)) expect(scoped.data.text).toBe("$25");
+	});
+
+	test("reads the definition of a term inside the element", () => {
+		let doc = parse(SCOPED_PAGE);
+		let page = doc.definition("Total");
+		let scoped = scope(doc, { role: "form", name: "Donate" }).definition("Total");
+
+		expect(isFailure(page)).toBe(true);
+		if (isFailure(page)) expect(page.error).toBeInstanceOf(HTMLAmbiguousMatchError);
+		expect(isSuccess(scoped)).toBe(true);
+		if (isSuccess(scoped)) expect(scoped.data.text).toBe("$35");
+	});
+
+	test("names the fields the scope holds when one is missing", () => {
+		let doc = parse(SCOPED_PAGE);
+		let page = doc.field("email");
+		let scoped = scope(doc, { role: "form", name: "Donate" }).field("email");
+
+		expect(isSuccess(page)).toBe(true);
+		expect(isFailure(scoped)).toBe(true);
+		if (isFailure(scoped)) {
+			expect(scoped.error).toBeInstanceOf(HTMLNotFoundError);
+			expect(scoped.error.available).toEqual(["tip", "intent"]);
+			expect(scoped.error.message).toContain("email");
+		}
+	});
+
+	test("names the accessible names the scope holds when a query misses", () => {
+		let result = scope(parse(SCOPED_PAGE), { role: "form", name: "Donate" }).query({
+			role: "heading",
+			name: "Subscribe",
+		});
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) {
+			expect(result.error).toBeInstanceOf(HTMLNotFoundError);
+			expect(result.error.available).toEqual(["Donate"]);
+		}
+	});
+
+	test("narrows once more at every step of a chain", () => {
+		let doc = parse(SCOPED_PAGE);
+		let region = scope(doc, { role: "region", name: "Support" });
+		let form = scope(region, { role: "form", name: "Subscribe" });
+		let result = form.field("tip");
+
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) expect(result.data.value).toBe("5");
+	});
+
+	test("carries the data of the element it matched", () => {
+		let doc = parse(SCOPED_PAGE);
+		let donate = scope(doc, { role: "form", name: "Donate" });
+		let field = donate.query({ role: "textbox", name: "Tip amount" });
+		let button = donate.query({ role: "button", name: "Give" });
+
+		expect(isSuccess(field)).toBe(true);
+		if (isSuccess(field)) {
+			expect(field.data.tag).toBe("input");
+			expect(field.data.role).toBe("textbox");
+			expect(field.data.name).toBe("Tip amount");
+			expect(field.data.text).toBe("");
+			expect(field.data.value).toBe("10");
+			expect(field.data.attributes).toEqual({ id: "donate-tip", name: "tip", value: "10" });
+			expect(field.data.disabled).toBe(false);
+			expect(field.data.position).toBe(1);
+		}
+		expect(isSuccess(button)).toBe(true);
+		if (isSuccess(button)) {
+			expect(button.data.text).toBe("Give");
+			expect(button.data.value).toBe("give");
+			expect(button.data.disabled).toBe(true);
+		}
+	});
+});
+
+/** The page `HTML.fetch` is pointed at. */
+const PAGE_URL = "https://example.com/portfolios";
+
+describe("HTML.fetch", () => {
+	test("parses a text/html response into a queryable document", async () => {
+		server.use(http.get(PAGE_URL, () => HttpResponse.html("<h1>Portfolios</h1>")));
+
+		let result = await HTML.fetch(PAGE_URL);
+
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) {
+			let heading = result.data.query({ role: "heading", name: "Portfolios" });
+			expect(isSuccess(heading)).toBe(true);
+		}
+	});
+
+	test("asks for text/html", async () => {
+		let requests: Headers[] = [];
+		server.use(
+			http.get(PAGE_URL, ({ request }) => {
+				requests.push(request.headers);
+				return HttpResponse.html("<h1>Portfolios</h1>");
+			}),
+		);
+
+		await HTML.fetch(PAGE_URL);
+
+		expect(requests.at(0)?.get("accept")).toBe("text/html");
+	});
+
+	test("keeps an Accept header the caller set", async () => {
+		let requests: Headers[] = [];
+		server.use(
+			http.get(PAGE_URL, ({ request }) => {
+				requests.push(request.headers);
+				return HttpResponse.html("<h1>Portfolios</h1>");
+			}),
+		);
+
+		await HTML.fetch(PAGE_URL, { headers: { Accept: "text/html; charset=utf-8" } });
+
+		expect(requests.at(0)?.get("accept")).toBe("text/html; charset=utf-8");
+	});
+
+	test("names the type a response arrived as when it is another one", async () => {
+		server.use(http.get(PAGE_URL, () => HttpResponse.json({ message: "Signed out" })));
+
+		let result = await HTML.fetch(PAGE_URL);
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) {
+			expect(result.error).toBeInstanceOf(HTMLFetchError);
+			expect(result.error.message).toContain("application/json");
+		}
+	});
+
+	test("reports the status a page answered with when it is an error", async () => {
+		server.use(http.get(PAGE_URL, () => new HttpResponse(null, { status: 404 })));
+
+		let result = await HTML.fetch(PAGE_URL);
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) {
+			expect(result.error).toBeInstanceOf(HTMLFetchError);
+			expect(result.error.message).toContain("404");
+		}
+	});
+
+	test("reports a request the network rejected", async () => {
+		server.use(http.get(PAGE_URL, () => HttpResponse.error()));
+
+		let result = await HTML.fetch(PAGE_URL);
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) {
+			expect(result.error).toBeInstanceOf(HTMLFetchError);
+			expect(result.error.message).toContain("Failed to fetch the page");
+		}
+	});
+
+	test("reports an html response carrying no markup", async () => {
+		server.use(http.get(PAGE_URL, () => HttpResponse.html("")));
+
+		let result = await HTML.fetch(PAGE_URL);
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) expect(result.error).toBeInstanceOf(HTMLParseError);
 	});
 });

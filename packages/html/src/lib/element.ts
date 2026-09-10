@@ -1,42 +1,13 @@
 /**
- * Turns a DOM element into the plain snapshot a query answers with, carrying enough
- * — role, name, text, value, raw attributes — for a caller to assert on without
- * querying the document a second time.
+ * Reads the data a lookup carries off a matched element — its value, its raw
+ * attributes, whether the markup disables it — so a caller can assert on a match
+ * without looking the element up a second time.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { HTML } from "../index.js";
-
-import { accessibleName } from "./name.js";
-import { roleOf } from "./roles.js";
 import { visibleText } from "./text.js";
-
-/**
- * Reads one element as data.
- *
- * @param element - The element a query matched
- * @param position - Its 1-based position among the matches the query considered
- */
-export function snapshot(element: Element, position: number): HTML.Element {
-	let result: HTML.Element = {
-		tag: element.localName.toLowerCase(),
-		name: accessibleName(element),
-		text: visibleText(element),
-		attributes: attributesOf(element),
-		disabled: isDisabled(element),
-		position,
-	};
-
-	let role = roleOf(element);
-	if (role !== undefined) result.role = role;
-
-	let value = valueOf(element);
-	if (value !== undefined) result.value = value;
-
-	return result;
-}
 
 /**
  * Reads a control's value as the markup spells it: the `value` attribute of an

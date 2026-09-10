@@ -1,6 +1,6 @@
 /**
  * Maps an element to the ARIA role a browser exposes it as, so a query addresses a
- * document by role rather than by tag name. An explicit `role` attribute wins, and
+ * document by the role it exposes. An explicit `role` attribute wins, and
  * the contextual cases — a link, a header, a table header — read their surroundings.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -152,7 +152,7 @@ function headerRoleOf(element: Element): string | undefined {
 	return "columnheader";
 }
 
-/** Reports whether a `<header>` or `<footer>` belongs to the page rather than a section. */
+/** Reports whether a `<header>` or `<footer>` belongs to the page as a whole. */
 function isBodyScoped(element: Element): boolean {
 	for (let node = element.parentElement; node; node = node.parentElement) {
 		if (SECTIONING_TAGS.has(node.localName.toLowerCase())) return false;

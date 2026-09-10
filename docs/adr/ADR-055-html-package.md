@@ -55,13 +55,15 @@ notion of what is scrolled into view.
 
 ## Decision
 
-A new workspace package **`@sdxc/html`**: parse a string of HTML into a document, then
-query that document. Read-only, no interaction, no layout.
+A new workspace package **`@sdxc/html`**: retrieve a page, or take a body already in
+hand, parse it into a document, then query that document. Every answer it gives comes
+from the markup the server sent.
 
 ### Shape
 
 ```
-let doc = HTML.parse(source)          // Result<Document, ParseError>
+let page = await HTML.fetch(url)      // Result<HTML, HTMLFetchError | HTMLParseError>
+let doc = HTML.parse(source)          // Result<HTML, HTMLParseError>
 
 doc.title                              // <title> text
 doc.meta("og:title")                   // matches name OR property
@@ -72,10 +74,29 @@ doc.queryAll({ role: "link", name: "Profile" })
 doc.field("tip")                        // by name attribute
 doc.cell({ row: 1, column: 2 })
 doc.definition("Total")                 // the <dd> paired with a <dt>
+
+let form = doc.query({ role: "form", name: "Donate" })
+form.data.field("tip")                  // the same five lookups, over this subtree
 ```
 
-Queries return elements carrying their role, accessible name, value, attributes and
-text — enough for a caller to assert on without re-querying.
+A lookup answers with an element carrying its role, accessible name, value, attributes
+and text, so a caller asserts straight off the answer.
+
+### Retrieval belongs in the package
+
+Every caller opens with the same `fetch`, and the interesting part of that call is what
+to make of a login redirect or a JSON error arriving in place of the page. `HTML.fetch`
+asks for `text/html`, parses the body when that is what arrived, and reports a rejected
+request, an error status or another content type as an `HTMLFetchError` naming what
+came back. A caller holds a parsed page or the reason it could not be read.
+
+### Every match is a scope
+
+A page is read in layers: narrow to the form, then address its fields; narrow to the
+summary panel, then read its rows. So every lookup answers with an element carrying the
+same five lookups over its own subtree: the second question is asked where its answer
+lives, and a name only has to be unique within the section. A scoped lookup fails the
+way an unscoped one does, and its `available` names what the scope holds.
 
 ### Matching rules the package owns
 

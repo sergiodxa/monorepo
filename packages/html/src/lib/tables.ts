@@ -30,8 +30,8 @@ export function rowCells(row: Element): Element[] {
 }
 
 /**
- * Recognizes a row that labels the table rather than holding its data, either by
- * sitting in the head or by carrying header cells alone.
+ * Recognizes a row that labels the table: it sits in the head, or it carries header
+ * cells alone.
  */
 function isHeaderRow(row: Element): boolean {
 	if (row.closest("thead")) return true;

@@ -1,7 +1,7 @@
 /**
  * Reads a string of markup into a document, wrapping a fragment in the skeleton a
  * page carries so a partial response is queried the same way a full one is, and
- * failing when the source carries nothing to query.
+ * failing on a source whose only content is whitespace.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

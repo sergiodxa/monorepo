@@ -1,6 +1,6 @@
 /**
  * Turns a set of matches into one answer: nothing matched, several did, or a
- * position chose among them. Every method routes through here, so ambiguity reads
+ * position chose among them. Every lookup routes through here, so ambiguity reads
  * the same wherever a caller meets it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -9,13 +9,11 @@
 
 import type { Result } from "@sdxc/result";
 
-import { failure, isFailure, success } from "@sdxc/result";
+import { failure, success } from "@sdxc/result";
 
 import type { HTML, HTMLQueryError } from "../index.js";
 
 import { HTMLAmbiguousMatchError, HTMLNotFoundError } from "../index.js";
-
-import { snapshot } from "./element.js";
 
 /** What a resolution needs: the matches, what else was there, and how to name it. */
 export interface Resolution {
@@ -25,19 +23,23 @@ export interface Resolution {
 	at?: HTML.Position | undefined;
 }
 
-/** One resolved match, kept as the element so a caller can keep walking from it. */
+/** One resolved match, kept as the element so a caller can keep looking inside it. */
 export interface Match {
 	element: Element;
 	position: number;
 }
 
+/** Reads an element as the data a report names it by. */
+export type Build = (element: Element, position: number) => HTML.Element;
+
 /**
  * Resolves a match set to the single element a caller asked for.
  *
  * @param resolution - The matches, the surrounding family, and the subject's name
+ * @param build - Reads a candidate, which is what an ambiguity failure carries
  * @returns The element with its 1-based position, or why one could not be chosen
  */
-export function pick(resolution: Resolution): Result<Match, HTMLQueryError> {
+export function pick(resolution: Resolution, build: Build): Result<Match, HTMLQueryError> {
 	let { matched, available, subject, at } = resolution;
 
 	if (matched.length === 0) {
@@ -47,7 +49,7 @@ export function pick(resolution: Resolution): Result<Match, HTMLQueryError> {
 	if (at === undefined) {
 		if (matched.length === 1) return success({ element: matched[0] as Element, position: 1 });
 
-		let candidates = matched.map((element, index) => snapshot(element, index + 1));
+		let candidates = matched.map((element, index) => build(element, index + 1));
 		let message = describeAmbiguity(subject, candidates);
 		return failure(new HTMLAmbiguousMatchError(message, available, candidates));
 	}
@@ -59,13 +61,6 @@ export function pick(resolution: Resolution): Result<Match, HTMLQueryError> {
 	}
 
 	return success({ element: matched[index] as Element, position: index + 1 });
-}
-
-/** Resolves a match set to the element data a query answers with. */
-export function resolve(resolution: Resolution): Result<HTML.Element, HTMLQueryError> {
-	let match = pick(resolution);
-	if (isFailure(match)) return match;
-	return success(snapshot(match.data.element, match.data.position));
 }
 
 /** Keeps the first spelling of each entry, so a report lists what a page carries once. */

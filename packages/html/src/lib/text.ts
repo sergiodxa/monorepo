@@ -65,8 +65,8 @@ export function normalize(value: string): string {
 
 /**
  * Reads the text a person would see inside an element, leaving out what markup
- * hides and separating block boundaries with a space so words never merge across
- * them.
+ * hides and separating block boundaries with a space so each block's words stay their
+ * own.
  */
 export function visibleText(node: Node | null | undefined): string {
 	if (!node) return "";
