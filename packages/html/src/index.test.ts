@@ -1,0 +1,420 @@
+/**
+ * Exercises the public surface: parsing a page, reading its head, and addressing
+ * its content by role and accessible name, including the ambiguity, visibility
+ * and positional rules the package owns.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import { isFailure, isSuccess } from "@sdxc/result";
+import { describe, expect, test } from "vitest";
+
+import { HTML, HTMLAmbiguousMatchError, HTMLNotFoundError, HTMLParseError } from "./index.js";
+
+/** Parses a source known to be well-formed, so a test reads as a single expression. */
+function parse(source: string): HTML {
+	let result = HTML.parse(source);
+	if (isFailure(result)) throw result.error;
+	return result.data;
+}
+
+const PAGE = `<!doctype html>
+<html lang="en">
+	<head>
+		<title>  Invest your money   </title>
+		<meta name="description" content="A page about investing">
+		<meta property="og:title" content="Invest your money">
+		<link rel="canonical" href="https://example.com/portfolios">
+		<link rel="alternate stylesheet" href="/print.css">
+	</head>
+	<body>
+		<header><nav><a href="/profile">Profile</a></nav></header>
+		<main>
+			<h1>Portfolios</h1>
+			<p>Hello <strong>world</strong>!</p>
+			<button>Sign&nbsp;in</button>
+			<button aria-label="Close dialog">×</button>
+			<form>
+				<label for="tip">Tip amount</label>
+				<input id="tip" name="tip" value="10">
+				<textarea name="bio">About me</textarea>
+				<select name="plan">
+					<option value="monthly">Monthly</option>
+					<option value="annual" selected>Annual</option>
+				</select>
+				<input type="radio" name="cadence" value="monthly">
+				<input type="radio" name="cadence" value="annual">
+				<button name="intent" value="save" disabled>Save</button>
+			</form>
+			<table>
+				<thead>
+					<tr><th>Fund</th><th>Share</th></tr>
+				</thead>
+				<tbody>
+					<tr><td>Bonds</td><td>40%</td></tr>
+					<tr><td>Stocks</td><td>60%</td></tr>
+				</tbody>
+			</table>
+			<dl>
+				<dt>Total</dt>
+				<dd>$1,204</dd>
+			</dl>
+		</main>
+		<footer><nav><a href="/profile">Profile</a></nav></footer>
+	</body>
+</html>`;
+
+describe("HTML.parse", () => {
+	test("reads a page into a document", () => {
+		let result = HTML.parse(PAGE);
+
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) expect(result.data).toBeInstanceOf(HTML);
+	});
+
+	test("reads a fragment, so a partial response is queryable", () => {
+		let doc = parse(`<p>Hello <a href="/p">Profile</a></p>`);
+
+		expect(doc.text).toBe("Hello Profile");
+	});
+
+	test("closes an implied paragraph the way a browser does", () => {
+		let doc = parse("<p>one<p>two");
+
+		expect(doc.queryAll({ role: "paragraph" }).map((element) => element.text)).toEqual([
+			"one",
+			"two",
+		]);
+	});
+
+	test("keeps script contents out of the tree as raw text", () => {
+		let doc = parse(`<script>var a = "<b>bold</b>";</script><p>after</p>`);
+
+		expect(doc.text).toBe("after");
+		expect(doc.queryAll({ role: "strong" })).toEqual([]);
+	});
+
+	test("accepts unquoted and bare attributes", () => {
+		let doc = parse("<input name=tip value=10 disabled>");
+		let field = doc.field("tip");
+
+		expect(isSuccess(field)).toBe(true);
+		if (isSuccess(field)) {
+			expect(field.data.value).toBe("10");
+			expect(field.data.disabled).toBe(true);
+		}
+	});
+
+	test("fails on a source carrying no markup", () => {
+		let result = HTML.parse("   ");
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) expect(result.error).toBeInstanceOf(HTMLParseError);
+	});
+});
+
+describe("head reads", () => {
+	test("normalizes the title", () => {
+		expect(parse(PAGE).title).toBe("Invest your money");
+	});
+
+	test("leaves the title undefined when the page carries none", () => {
+		expect(parse("<p>no head here</p>").title).toBeUndefined();
+	});
+
+	test("matches a meta tag by name", () => {
+		let result = parse(PAGE).meta("description");
+
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) expect(result.data).toBe("A page about investing");
+	});
+
+	test("matches a meta tag by property, so og tags are one lookup", () => {
+		let result = parse(PAGE).meta("og:title");
+
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) expect(result.data).toBe("Invest your money");
+	});
+
+	test("names the meta tags a page does carry when one is missing", () => {
+		let result = parse(PAGE).meta("og:image");
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) {
+			expect(result.error).toBeInstanceOf(HTMLNotFoundError);
+			expect(result.error.available).toEqual(["description", "og:title"]);
+			expect(result.error.message).toContain("og:image");
+			expect(result.error.message).toContain("og:title");
+		}
+	});
+
+	test("matches a link when the requested value is one token of rel", () => {
+		let doc = parse(PAGE);
+		let canonical = doc.link("canonical");
+		let alternate = doc.link("stylesheet");
+
+		expect(isSuccess(canonical)).toBe(true);
+		if (isSuccess(canonical)) expect(canonical.data).toBe("https://example.com/portfolios");
+		expect(isSuccess(alternate)).toBe(true);
+		if (isSuccess(alternate)) expect(alternate.data).toBe("/print.css");
+	});
+
+	test("names the rel tokens a page does carry when one is missing", () => {
+		let result = parse(PAGE).link("icon");
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) {
+			expect(result.error.available).toEqual(["canonical", "alternate", "stylesheet"]);
+		}
+	});
+});
+
+describe("visible text", () => {
+	test("keeps an inline element inside its sentence", () => {
+		expect(parse("<p>Hello <strong>world</strong>!</p>").text).toBe("Hello world!");
+	});
+
+	test("separates block elements with a space", () => {
+		expect(parse("<p>one</p><p>two</p>").text).toBe("one two");
+	});
+
+	test("leaves out what markup hides", () => {
+		let doc = parse(
+			`<p>shown</p><p hidden>attribute</p><p aria-hidden="true">aria</p><p style="display: none">inline</p><template><p>template</p></template>`,
+		);
+
+		expect(doc.text).toBe("shown");
+	});
+});
+
+describe("query", () => {
+	test("matches a role and an exact accessible name", () => {
+		let result = parse(PAGE).query({ role: "button", name: "Sign in" });
+
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) {
+			expect(result.data.tag).toBe("button");
+			expect(result.data.name).toBe("Sign in");
+			expect(result.data.position).toBe(1);
+		}
+	});
+
+	test("collapses a non-breaking space in the name it compares", () => {
+		let result = parse("<button>Sign&nbsp;&nbsp;in</button>").query({
+			role: "button",
+			name: "Sign in",
+		});
+
+		expect(isSuccess(result)).toBe(true);
+	});
+
+	test("compares names case-sensitively", () => {
+		let result = parse(PAGE).query({ role: "button", name: "sign in" });
+
+		expect(isFailure(result)).toBe(true);
+	});
+
+	test("takes a substring only when asked", () => {
+		let result = parse(PAGE).query({ role: "button", nameContaining: "ign" });
+
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) expect(result.data.name).toBe("Sign in");
+	});
+
+	test("reads a name from aria-label", () => {
+		let result = parse(PAGE).query({ role: "button", name: "Close dialog" });
+
+		expect(isSuccess(result)).toBe(true);
+	});
+
+	test("reads a name from a label associated by for", () => {
+		let result = parse(PAGE).query({ role: "textbox", name: "Tip amount" });
+
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) expect(result.data.value).toBe("10");
+	});
+
+	test("reports every candidate with its position when a name repeats", () => {
+		let result = parse(PAGE).query({ role: "link", name: "Profile" });
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) {
+			expect(result.error).toBeInstanceOf(HTMLAmbiguousMatchError);
+			if (result.error instanceof HTMLAmbiguousMatchError) {
+				expect(result.error.candidates.map((candidate) => candidate.position)).toEqual([1, 2]);
+			}
+			expect(result.error.message).toContain("2");
+		}
+	});
+
+	test("selects one of several by position", () => {
+		let doc = parse(`<a href="/1">Profile</a><a href="/2">Profile</a><a href="/3">Profile</a>`);
+		let selector = { role: "link", name: "Profile" } as const;
+
+		let first = doc.query({ ...selector, at: "first" });
+		let last = doc.query({ ...selector, at: "last" });
+		let second = doc.query({ ...selector, at: 2 });
+
+		expect(isSuccess(first) && first.data.attributes.href).toBe("/1");
+		expect(isSuccess(last) && last.data.attributes.href).toBe("/3");
+		expect(isSuccess(second) && second.data.attributes.href).toBe("/2");
+		expect(isSuccess(second) && second.data.position).toBe(2);
+	});
+
+	test("fails when an ordinal reaches past the matches", () => {
+		let result = parse(PAGE).query({ role: "heading", at: 2 });
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) expect(result.error).toBeInstanceOf(HTMLNotFoundError);
+	});
+
+	test("names the accessible names present under the role when none matches", () => {
+		let result = parse(PAGE).query({ role: "heading", name: "Funds" });
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) expect(result.error.available).toEqual(["Portfolios"]);
+	});
+
+	test("skips what markup hides, and includes it when asked", () => {
+		let doc = parse(`<button hidden>Sign in</button>`);
+
+		expect(doc.queryAll({ role: "button" })).toEqual([]);
+		expect(doc.queryAll({ role: "button", includeHidden: true })).toHaveLength(1);
+	});
+
+	test("counts matches in document order", () => {
+		let doc = parse(PAGE);
+
+		expect(doc.queryAll({ role: "link" })).toHaveLength(2);
+		expect(doc.queryAll({ role: "row" }).map((row) => row.text)).toEqual([
+			"Fund Share",
+			"Bonds 40%",
+			"Stocks 60%",
+		]);
+	});
+
+	test("carries the attributes as the markup spelled them", () => {
+		let result = parse(PAGE).query({ role: "textbox", name: "Tip amount" });
+
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) {
+			expect(result.data.attributes).toEqual({ id: "tip", name: "tip", value: "10" });
+			expect(result.data.disabled).toBe(false);
+		}
+	});
+});
+
+describe("field", () => {
+	test("addresses an input by its name attribute", () => {
+		let result = parse(PAGE).field("tip");
+
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) expect(result.data.value).toBe("10");
+	});
+
+	test("addresses a textarea by its name attribute", () => {
+		let result = parse(PAGE).field("bio");
+
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) expect(result.data.value).toBe("About me");
+	});
+
+	test("reads the selected option of a select", () => {
+		let result = parse(PAGE).field("plan");
+
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) expect(result.data.value).toBe("annual");
+	});
+
+	test("falls back to the first option when a select marks none", () => {
+		let doc = parse(`<select name="plan"><option value="monthly">M</option></select>`);
+		let result = doc.field("plan");
+
+		expect(isSuccess(result) && result.data.value).toBe("monthly");
+	});
+
+	test("narrows a group sharing one name by value", () => {
+		let result = parse(PAGE).field("cadence", { value: "annual" });
+
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) expect(result.data.attributes.type).toBe("radio");
+	});
+
+	test("reports the group when a shared name is not narrowed", () => {
+		let result = parse(PAGE).field("cadence");
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) expect(result.error).toBeInstanceOf(HTMLAmbiguousMatchError);
+	});
+
+	test("addresses a submit-intent button by name and value", () => {
+		let result = parse(PAGE).field("intent", { value: "save" });
+
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) {
+			expect(result.data.tag).toBe("button");
+			expect(result.data.disabled).toBe(true);
+		}
+	});
+
+	test("names the fields the page does carry when one is missing", () => {
+		let result = parse(PAGE).field("email");
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) {
+			expect(result.error.available).toEqual(["tip", "bio", "plan", "cadence", "intent"]);
+		}
+	});
+});
+
+describe("cell", () => {
+	test("counts body rows from one, header rows excluded", () => {
+		let result = parse(PAGE).cell({ row: 1, column: 2 });
+
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) expect(result.data.text).toBe("40%");
+	});
+
+	test("counts header rows when asked", () => {
+		let result = parse(PAGE).cell({ row: 1, column: 1, includeHeader: true });
+
+		expect(isSuccess(result) && result.data.text).toBe("Fund");
+	});
+
+	test("fails past the last row, naming what the table holds", () => {
+		let result = parse(PAGE).cell({ row: 3, column: 1 });
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) expect(result.error).toBeInstanceOf(HTMLNotFoundError);
+	});
+
+	test("selects among several tables by position", () => {
+		let doc = parse(
+			`<table><tr><td>first</td></tr></table><table><tr><td>second</td></tr></table>`,
+		);
+
+		expect(isFailure(doc.cell({ row: 1, column: 1 }))).toBe(true);
+		let result = doc.cell({ row: 1, column: 1, at: "last" });
+		expect(isSuccess(result) && result.data.text).toBe("second");
+	});
+});
+
+describe("definition", () => {
+	test("reads the definition paired with a term", () => {
+		let result = parse(PAGE).definition("Total");
+
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) {
+			expect(result.data.text).toBe("$1,204");
+			expect(result.data.role).toBe("definition");
+		}
+	});
+
+	test("names the terms the page does carry when one is missing", () => {
+		let result = parse(PAGE).definition("Fees");
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) expect(result.error.available).toEqual(["Total"]);
+	});
+});
