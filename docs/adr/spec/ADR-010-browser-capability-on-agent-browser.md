@@ -18,6 +18,22 @@ decision; every choice forced by shipping is recorded as **v1 provisional** —
 binding on this implementation, invisible to the design record, cheap to
 revisit.
 
+Three decisions below are superseded by
+[ADR-018](./ADR-018-real-browser-e2e-requirements.md). Its §7 replaces §1's
+absolute-URLs-only rule: a target beginning with `/` resolves against a base
+named in the `bases` key of `spec/config.jsonc`, selected with `on "name"`
+where more than one is configured, and a target carrying a scheme still
+ignores every base; the location a spec asserts on is `browser.path` (ADR-018
+§11), while `url` keeps comparing whole URLs. Its §9 replaces §1's
+snapshot-and-`@ref` addressing with one vocabulary shared with the `html`
+namespace — role and accessible name matched exactly with `containing` as the
+opt-in, addressing by field name, and an ambiguous lookup reported as an error
+listing every match, with `first`/`nth n`/`last` to choose one. And ADR-018's
+`fill` verification replaces §1's mapping of `fill` onto the CLI's own for one
+control: `browser.fill` drives a range input itself, through the prototype
+value setter and explicit `input` and `change` events. What each decision was,
+and why, stands below as the record.
+
 ## Context
 
 ADR-009 shipped `fs`, `cli`, and `http` as built-in plugins and named the

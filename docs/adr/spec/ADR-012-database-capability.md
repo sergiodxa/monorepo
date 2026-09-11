@@ -19,6 +19,22 @@ promotes a design-suite **Open** item into a decision; every choice forced by
 shipping is recorded as **v1 provisional** — binding on this implementation,
 invisible to the design record, cheap to revisit.
 
+Two decisions below are superseded by
+[ADR-018](./ADR-018-real-browser-e2e-requirements.md) §10. Connection strings
+live in the `databases` key of `spec/config.jsonc` rather than in
+`DATABASE_URL`, and a spec selects one with `on "name"` where more than one is
+configured — which is also how the two Open Questions below about addressing a
+second database and about naming the variable are answered. With the DSN out
+of the environment, §2's `--allow-env=DATABASE_URL` gate gives way to a `db`
+permission family of its own: `--allow-db`, scopable to a connection name,
+joined by `--allow-host-fs=<prefix>` for the file `db.run_file` reads. And §1's
+single tool is joined by that `db.run_file`, while `params`, the word `one`,
+array literals and numeric path segments answer the parameter-binding and
+row-collection limits §1 and the Open Questions record. `fixture`, which §4's
+example suite uses, leaves the language in ADR-018 §4, where such a suite's
+fixtures become commands. What each decision was, and why, stands below as the
+record.
+
 ## Context
 
 The runtime shipped `fs`, `cli`, `http` (ADR-009), and `browser` (ADR-010) as

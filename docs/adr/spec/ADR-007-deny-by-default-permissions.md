@@ -17,6 +17,23 @@ All `.spec` snippets, CLI invocations, flag spellings, and diagnostic output in 
 **Illustrative** unless the surrounding text says otherwise: the semantics carry the label of the
 paragraph that introduces them; the exact spelling is not frozen.
 
+[ADR-018](./ADR-018-real-browser-e2e-requirements.md) records what the v1 runtime settled inside
+this model, **v1 provisional** and binding on that implementation rather than on this record. Its
+§10 adds a fifth capability family: `db` was gated entirely by `--allow-env=DATABASE_URL` until
+connection strings moved into `spec/config.jsonc`, so the capability takes its own `--allow-db`,
+scopable to configured connection names, with a denial naming that flag in section 9's shape. The
+directory-scoped `--allow-host-fs=<prefix>` of section 2 becomes a grant a tool actually demands:
+`db.run_file` reads a SQL file from the host and requires it alongside `--allow-db`, and a call
+holding neither reports one denial naming both flags. Section 2's clause that environment
+configuration grants no authority is what §7's named `bases` are built to preserve — substituting
+an environment variable into that config needs no grant, because the config is the runner's own
+settings and could have held the literal URL, while `env.get` inside a spec keeps its grant and
+`--allow-net` keys on the **resolved** host, so a denial names the host actually reached. The Open
+Questions below stand as they are asked, the taxonomy and the permissionless criterion included —
+`str`, `spec`, and `html` join the workspace filesystem as permissionless capabilities, which
+gives that question three more cases rather than the criterion it asks for. What this ADR decided,
+and why, stands below as the record.
+
 ## Context
 
 A `.spec` file is a program somebody else may have written. The rest of this suite guarantees it:

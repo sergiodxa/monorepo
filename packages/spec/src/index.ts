@@ -36,6 +36,32 @@ export { parse } from "./parser.js";
 export { createPermissionSet, parseGrants } from "./permissions.js";
 export type { Grant, Grants, PermissionKind, PermissionSet } from "./permissions.js";
 export type { Plugin, RunIdentity, ToolContext, ToolDescriptor, ToolParam } from "./plugin.js";
+export {
+	ambiguousMatch,
+	ASSERTION_PARAMS,
+	describeQuery,
+	FILL_PARAMS,
+	formatCandidates,
+	noMatch,
+	parseAssertion,
+	parseFill,
+	parseQuery,
+	QUERY_PARAMS,
+} from "./plugins/addressing.js";
+export type {
+	Assertion,
+	Candidate,
+	CellAddress,
+	ElementQuery,
+	MatchMode,
+	NearMatches,
+	Ordinal,
+	ParsedQuery,
+	Predicate,
+	PredicateMode,
+	QueryHead,
+	QueryOptions,
+} from "./plugins/addressing.js";
 export { createBrowserPlugin } from "./plugins/browser.js";
 export { createCliPlugin } from "./plugins/cli.js";
 export { createDbPlugin } from "./plugins/db.js";

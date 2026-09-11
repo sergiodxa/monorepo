@@ -25,6 +25,23 @@ settled decision; every choice forced by shipping is recorded as **v1
 provisional**: binding on this implementation, invisible to the design record,
 cheap to revisit.
 
+[ADR-018](./ADR-018-real-browser-e2e-requirements.md) adds two more keys to
+the file this ADR configures, and they are the case that tests the boundary
+drawn below. §7's `bases` and §10's `databases` each map a name to
+`{ env, default }`, selected from a spec with `on "name"` and resolved
+unnamed when exactly one is configured; both resolve when the config loads,
+and neither needs a grant, because the config is the operator's own settings
+and could have held the literal address, where `env.get` inside a spec is a
+different act that keeps its grant. What a spec may then reach is still
+decided at the invocation boundary — `--allow-net` on the resolved host,
+`--allow-db` on the connection name — so declaring an address book leaves
+declare-plus-opt-in exactly as it stands. That same `db` joins the families
+`permissions.allow` may name, which makes section 1's four capability
+families five: `"db"` grants the whole family and `["db", "web"]` scopes it
+to a connection, the form section 1's `["env", "DATABASE_URL"]` example takes
+now that the DSN lives in `databases`. The Open Questions below stand
+unanswered. What each decision was, and why, stands below as the record.
+
 ## Context
 
 ADR-007 made every capability deny-by-default: a `spec run` grants nothing, and

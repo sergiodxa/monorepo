@@ -402,6 +402,17 @@ too thin.
   composes with the explicit permission grants of
   [ADR-007](./ADR-007-deny-by-default-permissions.md) without ever letting
   configuration imply authority.
+  [ADR-018](./ADR-018-real-browser-e2e-requirements.md) §7 answers all three
+  parts for the v1 runtime: the `bases` key of `spec/config.jsonc` is the
+  format, `on "name"` is the selection — with unnamed resolution when exactly
+  one base is configured — and the composition with §4 above turns on who
+  wrote the value. Substituting an environment variable into that config
+  needs no grant, because the config is the runner's own settings and could
+  have held the literal URL, while `env.get` inside a spec keeps its grant and
+  `--allow-net` keys on the **resolved** host, so a denial names the host
+  actually reached; configuration still implies no authority. That answer is
+  v1-provisional and binds one implementation rather than this record, which
+  is why the question stands here as it was asked.
 - **How should compatibility testing against multiple implementations be run
   and reported?** Running one suite against N implementations raises
   questions this suite has not answered: whether that is N independent runs

@@ -22,6 +22,22 @@ dotted reference — it removes the separate obstacle that the landing URL could
 not be bound at all. The choice recorded here is **v1-provisional**: binding on
 this implementation, invisible to the design record, cheap to revisit.
 
+[ADR-018](./ADR-018-real-browser-e2e-requirements.md) §4 widens the rule
+recorded here, and §2 replaces one of its invariants. The zero-argument
+reading holds in **every expression position** — an object entry, an array
+item, a tool argument — rather than on a `let`/`return` right-hand side alone,
+which is what makes ADR-018 §5's `{ nonce: spec.nonce }` resolve; in
+`packages/spec/src/executor.ts` the case (`zeroArgumentCall`) now sits in
+expression evaluation. A bound head is still a reference, so the two readings
+never overlap. That same §4 answers the first Open Question below: a bare path
+admits a zero-parameter **command** as well as an argument-less tool, so
+`let user = create_testing_account` binds what the command produced. And a
+bare identifier in tool-argument position is no longer always a word — ADR-018
+§2 resolves it against the tool's own declaration, so a binding reaches a tool
+directly and a name that is both a declared word and a live binding is an
+`ambiguous-name` error. The second Open Question below is unanswered. What each
+decision was, and why, stands below as the record.
+
 ## Context
 
 [ADR-016](./ADR-016-oauth-oidc-testing-tools.md) closed ADR-015's stated

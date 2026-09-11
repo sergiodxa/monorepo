@@ -92,9 +92,18 @@ is an `ambiguous-name` error before your `call()` runs. The runtime never
 guesses, and the spec's author renames the binding or passes a dotted reference.
 
 If your tool addresses elements the way `html` and `browser` do, spread the
-ready-made fragments from `src/plugins/addressing.ts` — `QUERY_PARAMS`,
-`ASSERTION_PARAMS`, `FILL_PARAMS` — rather than restating that vocabulary, so
-every word in it stays declared.
+ready-made fragments `@sdxc/spec` exports — `QUERY_PARAMS`, `ASSERTION_PARAMS`,
+`FILL_PARAMS` — rather than restating that vocabulary, so every word in it stays
+declared. `parseQuery`, `parseFill` and `parseAssertion` read the arguments those
+fragments describe, and `ambiguousMatch` / `noMatch` render the candidate lists a
+miss reports, so a third namespace answers a lookup the way the two built-in ones
+already do:
+
+```typescript
+import type { ToolDescriptor } from "@sdxc/spec";
+
+import { parseQuery, QUERY_PARAMS } from "@sdxc/spec";
+```
 
 ## What one call receives
 

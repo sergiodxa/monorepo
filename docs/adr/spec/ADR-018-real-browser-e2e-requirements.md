@@ -16,11 +16,18 @@ standalone, free to reference this monorepo's packages, and bound by the design 
 [ADR-008](./ADR-008-environments-and-compatibility.md)) rather than amending it.
 Every choice here is **v1-provisional**.
 
-It closes two prior Open Questions. [ADR-016](./ADR-016-oauth-oidc-testing-tools.md)'s
-first — that a bare scalar binding reaches a tool only through a dotted reference —
-is answered in §2, and [ADR-017](./ADR-017-zero-arg-tool-calls.md)'s first — that a
-bare-path right-hand side admits tools but not argument-less commands — is answered
-in §4.
+It closes two prior Open Questions and answers a third.
+[ADR-016](./ADR-016-oauth-oidc-testing-tools.md)'s first — that a bare scalar binding
+reaches a tool only through a dotted reference — is answered in §2, and
+[ADR-017](./ADR-017-zero-arg-tool-calls.md)'s first — that a bare-path right-hand side
+admits tools but not argument-less commands — is answered in §4. The third belongs to
+the design suite: [ADR-008](./ADR-008-environments-and-compatibility.md) left how
+execution environments are defined and selected open, and §7 answers it with the
+`bases` key of `spec/config.jsonc`, `on "name"` selection, and a permission composition
+under which configuration implies no authority. Answering a question a design ADR left
+open is not amending the design suite: §7 meets the conditions ADR-008 set on any
+answer rather than altering them, and, v1-provisional like every choice here, it binds
+this runtime while the design record keeps the question.
 
 ## Context
 
@@ -374,6 +381,9 @@ Host filesystem paths resolve against the process working directory, the same wa
   role, which is usually the whole diagnosis — and a screenshot plus accessibility-tree
   dump under `--artifacts=<dir>` with the paths printed. The candidate-listing machinery
   is shared with §9's ambiguity error. An `html` failure dumps the parsed document.
+  The directory is runner configuration rather than a capability, so it needs no
+  `--allow-host-fs`: only the caller's own flag names it, a spec cannot reach it or
+  choose where it points, and `spec run <dir>` already takes a path the same way.
 - **Concurrency** stays measured rather than assumed. `spec.nonce` gives every attempt
   its own generated identity, so writes keyed to a generated account are already
   isolated and what remains shared is seeded reference data that tests only read.
