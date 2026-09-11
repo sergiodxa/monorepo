@@ -1,13 +1,11 @@
 /**
  * Redirects service for blog. Wraps the REDIRECTS KV namespace behind the
  * Redirect repository, exposing path lookup, listing, upsert, and delete
- * operations, and registers itself as an application-container singleton.
+ * operations.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-
-import type { Container, ServiceProvider } from "@sdxc/service-container";
 
 import { env } from "cloudflare:workers";
 
@@ -32,9 +30,15 @@ export class RedirectsService {
 	}
 }
 
-/** Registers the redirects service as an application singleton. */
-export class RedirectsServiceProvider implements ServiceProvider {
-	register(container: Container) {
-		container.singleton(RedirectsService, () => new RedirectsService());
-	}
+let instance: RedirectsService | undefined;
+
+/**
+ * Opens the redirect rules the request path is matched against.
+ *
+ * @returns The isolate's service, built on the first call and reused after it.
+ * @example
+ * let rule = await createRedirectsService().findByPath(ctx.url.pathname);
+ */
+export function createRedirectsService(): RedirectsService {
+	return (instance ??= new RedirectsService());
 }

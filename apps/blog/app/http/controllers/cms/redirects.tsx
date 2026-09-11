@@ -10,14 +10,12 @@
 
 import { redirect } from "@sdxc/http/response";
 import { succeeded } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import { Redirect } from "~/app/repositories/redirect";
 import { RedirectSchema } from "~/app/schemas/cms/redirect";
-import { RedirectsService } from "~/app/services/redirects";
+import { createRedirectsService } from "~/app/services/redirects";
 import { CMSRedirectsIndexView, CMSRedirectsNewView } from "~/resources/views/cms/redirects";
 import routes from "~/routes/web";
 
@@ -39,9 +37,8 @@ export default createController(routes.cms.redirects, {
 		 *
 		 * @returns SSR HTML view model for the CMS redirects listing page.
 		 */
-		index: inject([RedirectsService] as const, async (redirectsService) => {
-			let ctx = getContext();
-			let redirects = await redirectsService.findAll();
+		index: async (ctx) => {
+			let redirects = await createRedirectsService().findAll();
 			let items: Array<CMSRedirectsIndexView.Item> = redirects.map((item) => ({
 				from: item.from,
 				to: item.to,
@@ -50,7 +47,7 @@ export default createController(routes.cms.redirects, {
 			}));
 
 			return ctx.render(CMSRedirectsIndexView, { items });
-		}),
+		},
 
 		/**
 		 * Invalid payloads fail fast through `succeeded(...)`, while a blank or non-normalizable
@@ -59,8 +56,7 @@ export default createController(routes.cms.redirects, {
 		 * @param ctx - Request context providing form data extraction and params.
 		 * @returns See Other redirect to `new` on missing paths, otherwise `index`.
 		 */
-		create: inject([RedirectsService] as const, async (redirectsService) => {
-			let ctx = getContext();
+		create: async (ctx) => {
 			let result = await validate(ctx.get(FormData), RedirectSchema);
 			succeeded(result, "Invalid redirect form data");
 
@@ -72,9 +68,9 @@ export default createController(routes.cms.redirects, {
 				return redirect(routes.cms.redirects.new.href(), { status: redirect.Status.SeeOther });
 			}
 
-			await redirectsService.upsert({ from, to, status });
+			await createRedirectsService().upsert({ from, to, status });
 			return redirect(routes.cms.redirects.index.href(), { status: redirect.Status.SeeOther });
-		}),
+		},
 
 		/**
 		 * A malformed or empty `:id` resolves to a plain redirect, so delete links stay idempotent
@@ -83,15 +79,14 @@ export default createController(routes.cms.redirects, {
 		 * @param ctx - Request context exposing route params.
 		 * @returns See Other redirect to the redirects index in all cases.
 		 */
-		destroy: inject([RedirectsService] as const, async (redirectsService) => {
-			let ctx = getContext();
+		destroy: async (ctx) => {
 			let from = getRedirectFromParam(ctx.params.id);
 			if (!from)
 				return redirect(routes.cms.redirects.index.href(), { status: redirect.Status.SeeOther });
 
-			await redirectsService.destroy(from);
+			await createRedirectsService().destroy(from);
 			return redirect(routes.cms.redirects.index.href(), { status: redirect.Status.SeeOther });
-		}),
+		},
 
 		/**
 		 * The live KV redirect count is informational and helps operators gauge namespace usage
@@ -99,15 +94,14 @@ export default createController(routes.cms.redirects, {
 		 *
 		 * @returns SSR HTML view model for the CMS "New Redirect" page.
 		 */
-		new: inject([RedirectsService] as const, async (redirectsService) => {
-			let ctx = getContext();
-			let redirects = await redirectsService.findAll();
+		new: async (ctx) => {
+			let redirects = await createRedirectsService().findAll();
 			return ctx.render(CMSRedirectsNewView, {
 				title: "New Redirect",
 				description: `Current redirect count in KV: ${redirects.length}.`,
 				action: routes.cms.redirects.index.href(),
 			});
-		}),
+		},
 	},
 });
 

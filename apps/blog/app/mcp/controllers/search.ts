@@ -9,7 +9,6 @@
 
 import { createTool } from "@sdxc/mcp";
 
-import { getDatabase } from "~/app/http/middleware/database";
 import toolset from "~/app/mcp/tools";
 import { PostSearch } from "~/app/repositories/search";
 
@@ -20,7 +19,7 @@ import { PostSearch } from "~/app/repositories/search";
  * is a fact the model should act on.
  */
 export default createTool(toolset.searchPosts, async (ctx) => {
-	let results = await PostSearch.query(getDatabase(ctx), {
+	let results = await PostSearch.query(ctx.db, {
 		query: ctx.input.query,
 		kind: ctx.input.kind,
 		tag: ctx.input.tag,

@@ -8,14 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { ServiceProvider } from "@sdxc/service-container";
-
-import { ServiceContainer } from "@sdxc/service-container";
 import { env } from "cloudflare:test";
 import { describe, expect, test } from "vitest";
 
-import { DatabaseService } from "~/app/services/database";
-import { RedirectsServiceProvider } from "~/app/services/redirects";
 import routes from "~/routes/web";
 
 import createApplication from "./app";
@@ -38,17 +33,10 @@ function environment(): App.Env {
 	};
 }
 
-/**
- * Registers the providers and opens a container scope around the request, the way the
- * Worker entrypoint does, since the middleware chain resolves services through it.
- */
+/** Builds the router and sends one request through it, the way the Worker entrypoint does. */
 function fetchPath(path: string, init?: RequestInit) {
-	let container = new ServiceContainer();
-	let providers: ServiceProvider[] = [new DatabaseService(), new RedirectsServiceProvider()];
-	for (let provider of providers) provider.register(container);
-
-	return container.scope(() =>
-		createApplication(environment()).fetch(new Request(new URL(path, "https://blog.test"), init)),
+	return createApplication(environment()).fetch(
+		new Request(new URL(path, "https://blog.test"), init),
 	);
 }
 

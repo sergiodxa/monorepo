@@ -29,7 +29,6 @@
 		"@sdxc/rate-limit": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/rss": "workspace:*",
-		"@sdxc/service-container": "workspace:*",
 		"@sdxc/sitemap": "workspace:*",
 		"@sdxc/strings": "workspace:*",
 		"@sdxc/types": "workspace:*",

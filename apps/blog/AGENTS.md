@@ -27,7 +27,7 @@ This document defines app-specific rules for `apps/blog`.
 - MUST ensure changes pass `bunx tsc -p apps/blog/tsconfig.json`.
 - MUST use namespaces for types only; no runtime values, functions, or classes inside namespaces.
 - MUST receive `ctx` as a handler argument in `app/http/controllers/**/*` (actions, handlers, and inline middleware callbacks) and use that value directly.
-- MUST read database access in HTTP handlers from `@sdxc/service-container` using `inject([Database] as const, ...)`, while keeping `ctx` as the forwarded handler argument.
+- MUST read the database in HTTP handlers from `ctx.db`, published by the global `database()` middleware in `app/http/middleware/database.ts`.
 - MUST keep Cloudflare/environment typing declarations in `config/*.d.ts` (outside `app/`) and include them in app TS config.
 - MUST derive production mode in `bootstrap/worker.ts` from runtime request/environment signals, not `import.meta.env.PROD`.
 
@@ -54,7 +54,6 @@ This document defines app-specific rules for `apps/blog`.
 - MUST NOT bypass `@sdxc/markdown/server` for markdown parsing.
 - MUST NOT use `as any` anywhere in this app (`apps/blog/**/*`), including tests, scripts, controllers, middleware, repositories, views, and config files.
 - MUST NOT call `getContext()` inside controllers when `ctx` is available.
-- MUST NOT read database access from request context with `ctx.get(Database)` in HTTP handlers.
 
 - SHOULD NOT add component-specific color tokens when an existing semantic token can represent the same purpose.
 - SHOULD NOT introduce client hydration requirements for public pages.

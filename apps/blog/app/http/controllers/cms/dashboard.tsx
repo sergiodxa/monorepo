@@ -8,9 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
+import type { AppContext } from "~/app/http/context";
 
 import { ArticlePost } from "~/app/repositories/posts/article";
 import { GlossaryPost } from "~/app/repositories/posts/glossary";
@@ -21,23 +19,22 @@ import { CMSDashboardView } from "~/resources/views/cms/dashboard";
 /**
  * The four content counters resolve in parallel, so the landing page costs a single round
  * of queries.
- * @param ctx Request-scoped dependency container used to resolve `Database`.
+ * @param ctx Request context carrying the database the counters are read from.
  * @returns HTML response for the dashboard with aggregate counters.
  */
-export default inject([Database] as const, async function dashboard(database) {
-	let ctx = getContext();
+export default async function dashboard(ctx: AppContext) {
 	let [articles, tutorials, likes, glossary] = await Promise.all([
-		ArticlePost.count(database),
-		TutorialPost.count(database),
-		LikePost.count(database),
-		GlossaryPost.count(database),
+		ArticlePost.count(ctx.db),
+		TutorialPost.count(ctx.db),
+		LikePost.count(ctx.db),
+		GlossaryPost.count(ctx.db),
 	]);
 
 	return ctx.render(CMSDashboardView, {
 		stats: { articles, likes, tutorials, glossary },
 		purgeResult: readPurgeResult(ctx.url),
 	});
-});
+}
 
 /**
  * Reads the outcome the purge action redirected back with. Anything else in the

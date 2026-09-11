@@ -12,7 +12,6 @@ import type { Database } from "remix/data-table";
 
 import { createToolController, ToolError } from "@sdxc/mcp";
 
-import { getDatabase } from "~/app/http/middleware/database";
 import toolset from "~/app/mcp/tools";
 import { Post } from "~/app/repositories/post";
 import { GlossaryPost } from "~/app/repositories/posts/glossary";
@@ -33,7 +32,7 @@ export default createToolController(toolset.glossary, {
 	actions: {
 		/** Lists every term, alphabetically, so a model can scan for one. */
 		list: async (ctx) => {
-			let entries = await published(getDatabase(ctx));
+			let entries = await published(ctx.db);
 
 			return {
 				total: entries.length,
@@ -45,7 +44,7 @@ export default createToolController(toolset.glossary, {
 
 		/** Reads one term's definition. */
 		get: async (ctx) => {
-			let entries = await published(getDatabase(ctx));
+			let entries = await published(ctx.db);
 			let entry = entries.find((each) => each.meta.slug === ctx.input.slug);
 
 			if (!entry) {

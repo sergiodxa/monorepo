@@ -7,9 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import { FeedViewModel } from "~/app/http/view-models/feed";
@@ -23,15 +20,11 @@ import routes from "~/routes/web";
  * for feed semantics, so this controller renders the activity exactly as they order it.
  * @returns HTML response for the feed page.
  */
-export default createAction(
-	routes.feed,
-	inject([Database] as const, async function feedController(db) {
-		let ctx = getContext();
-		let activity = await Feed.listActivity(db);
-		let model = FeedViewModel.index(activity);
+export default createAction(routes.feed, async function feedController(ctx) {
+	let activity = await Feed.listActivity(ctx.db);
+	let model = FeedViewModel.index(activity);
 
-		ctx.cache(PUBLIC_PAGE, TAGS.postList());
+	ctx.cache(PUBLIC_PAGE, TAGS.postList());
 
-		return ctx.render(FeedView, model);
-	}),
-);
+	return ctx.render(FeedView, model);
+});

@@ -7,11 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Database } from "remix/data-table";
 import type { Middleware } from "remix/router";
 
 import { sessionScheme } from "@sdxc/auth/remix/schemes";
-import { getServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { auth as createAuthMiddleware, Auth } from "remix/middleware/auth";
 import { createContextKey } from "remix/router";
@@ -36,7 +35,7 @@ let authUserKey = createContextKey<schema.SelectUser | null>();
  */
 export let auth: Middleware = (ctx, next) => {
 	let middleware = createAuthMiddleware({
-		schemes: [sessionScheme(relyingParty(ctx.url), { verify: readSessionUser })],
+		schemes: [sessionScheme(relyingParty(ctx.url), { verify: () => readSessionUser(ctx.db) })],
 	});
 
 	return middleware(ctx, next);
@@ -104,11 +103,13 @@ export function logout() {
 /**
  * Reads the account the login recorded, so a handler sees the row as it stands now
  * rather than a copy captured when the person signed in.
+ *
+ * @param db The request's database, taken from the context the middleware runs in.
  */
-function readSessionUser() {
+function readSessionUser(db: Database) {
 	let userId = readSession().get(AUTH_SESSION_USER_ID_KEY);
 	if (typeof userId !== "string") return null;
-	return User.findById(readDatabase(), userId);
+	return User.findById(db, userId);
 }
 
 function readSession() {
@@ -121,10 +122,6 @@ function readSession() {
 	if (!session)
 		throw new Error("Session not found in context. Make sure to use the session middleware.");
 	return session;
-}
-
-function readDatabase() {
-	return getServiceContainer().get(Database);
 }
 
 function resolveCurrentUser() {

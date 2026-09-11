@@ -41,6 +41,7 @@ import redirects from "~/app/http/middleware/redirects";
 import requireAdmin from "~/app/http/middleware/require-admin";
 import session from "~/app/http/middleware/session";
 import mcpRateLimit from "~/app/mcp/rate-limit";
+import { createDatabase } from "~/app/services/database";
 import { NotFoundView } from "~/resources/views/not-found";
 import routes from "~/routes/web";
 
@@ -100,6 +101,8 @@ const CMS_WRITE_GUARDS: Middleware[] = [...CMS_GUARDS, purgePostList];
  * `log(logger)` follows it and opens the request's wide event around everything else.
  * `workersCache` sits outside session and auth so its refusal check reads the finished
  * response, downgrading a public declaration once the visitor turns out to be identified.
+ * `database(createDatabase)` is global, so `ctx.db` is there for a route the app maps and
+ * for a handler behind a route-agnostic boundary alike.
  * @param env Worker environment bindings injected into request context.
  * @returns Configured router instance for the worker fetch entrypoint.
  */
@@ -111,6 +114,7 @@ export default function createApplication(env: App.Env) {
 		createNoWWWMiddleware(),
 		createNoTrailingSlashMiddleware(),
 		asyncContext(),
+		database(createDatabase),
 		workersCache({ cache: () => platformCache }),
 		htmlOnly(session),
 		formData(),
@@ -182,8 +186,8 @@ export default function createApplication(env: App.Env) {
 
 	/**
 	 * The MCP endpoint sits outside every auth guard, keeping the blog freely readable by
-	 * any agent, and resolves its services via `database()` because an MCP tool's handler
-	 * receives only a context to work with.
+	 * any agent, and reads `ctx.db` because an MCP tool's handler receives only a context
+	 * to work with.
 	 */
 	router.map(
 		routes.mcpMarkdown,
@@ -193,7 +197,7 @@ export default function createApplication(env: App.Env) {
 		actions: {
 			index: lazy(() => import("~/app/http/controllers/mcp")),
 			action: {
-				middleware: [mcpRateLimit(env), database()],
+				middleware: [mcpRateLimit(env)],
 				/**
 				 * Imported here rather than through `lazy()`, because this action declares
 				 * middleware that publishes context and so has to stay an action object,

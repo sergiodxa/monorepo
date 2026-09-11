@@ -30,7 +30,7 @@ Smart Placement and Observability are enabled.
 - Server-rendered public articles, tutorials, bookmarks, feeds, and sitemap.
 - CMS layout and authenticated routes for content management.
 - Markdown processing through shared markdown utilities.
-- Service resolution through the shared service container.
+- Request-scoped services published onto the request context by middleware.
 
 ## Routes
 

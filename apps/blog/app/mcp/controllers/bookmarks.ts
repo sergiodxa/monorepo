@@ -10,7 +10,6 @@
 
 import { createTool } from "@sdxc/mcp";
 
-import { getDatabase } from "~/app/http/middleware/database";
 import toolset from "~/app/mcp/tools";
 import { Post } from "~/app/repositories/post";
 import { LikePost } from "~/app/repositories/posts/like";
@@ -21,7 +20,7 @@ import { LikePost } from "~/app/repositories/posts/like";
  * A row with an unparseable date sorts last, so every bookmark still appears in the page.
  */
 export default createTool(toolset.bookmarks, async (ctx) => {
-	let bookmarks = await LikePost.findAll(getDatabase(ctx));
+	let bookmarks = await LikePost.findAll(ctx.db);
 
 	let published = bookmarks
 		.filter((bookmark) => Post.isPublishedAt(bookmark.published_at))

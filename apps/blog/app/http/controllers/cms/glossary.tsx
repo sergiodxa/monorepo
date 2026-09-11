@@ -10,11 +10,8 @@
 
 import { redirect } from "@sdxc/http/response";
 import { succeeded } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { slugify } from "@sdxc/strings";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
@@ -37,12 +34,11 @@ export default createController(routes.cms.glossary, {
 		/**
 		 * Every stored term is listed, each row carrying its own edit and delete endpoint.
 		 *
-		 * @param ctx Request context with dependency container access.
+		 * @param ctx Request context carrying the database.
 		 * @returns CMS glossary index view response.
 		 */
-		index: inject([Database] as const, async (db) => {
-			let ctx = getContext();
-			let glossary = await GlossaryPost.findAll(db);
+		index: async (ctx) => {
+			let glossary = await GlossaryPost.findAll(ctx.db);
 			let items = glossary.map((item) => ({
 				id: item.id,
 				term: item.meta.term,
@@ -52,7 +48,7 @@ export default createController(routes.cms.glossary, {
 			}));
 
 			return ctx.render(CMSGlossaryIndexView, { items });
-		}),
+		},
 
 		/**
 		 * An omitted `slug` is derived from `term` via `slugify`, so every term keeps a stable
@@ -60,8 +56,7 @@ export default createController(routes.cms.glossary, {
 		 * @param ctx Request context containing `FormData` and database bindings.
 		 * @returns Redirect to login, index fallback, or the created term edit route.
 		 */
-		create: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		create: async (ctx) => {
 			let user = getAuthUser();
 			if (!user)
 				return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
@@ -69,7 +64,7 @@ export default createController(routes.cms.glossary, {
 			let result = await validate(ctx.get(FormData), GlossarySchema);
 			succeeded(result, "Invalid glossary form data");
 
-			let created = await GlossaryPost.create(db, {
+			let created = await GlossaryPost.create(ctx.db, {
 				author_id: user.id,
 				meta: {
 					term: result.data.term,
@@ -85,21 +80,20 @@ export default createController(routes.cms.glossary, {
 			return redirect(routes.cms.glossary.edit.href({ id: created.id }), {
 				status: redirect.Status.SeeOther,
 			});
-		}),
+		},
 
 		/**
 		 * @param ctx Request context with route params and database bindings.
 		 * @returns 303 redirect to glossary index, even when `id` is missing.
 		 */
-		destroy: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		destroy: async (ctx) => {
 			let id = ctx.params.id;
 			if (!id)
 				return redirect(routes.cms.glossary.index.href(), { status: redirect.Status.SeeOther });
 
-			await GlossaryPost.destroy(db, id);
+			await GlossaryPost.destroy(ctx.db, id);
 			return redirect(routes.cms.glossary.index.href(), { status: redirect.Status.SeeOther });
-		}),
+		},
 
 		/**
 		 * An absent or unknown `id` answers with a 404 form view in "new" mode so editors stay
@@ -107,10 +101,9 @@ export default createController(routes.cms.glossary, {
 		 * @param ctx Request context with route params and database bindings.
 		 * @returns Edit form view for an existing term, or a 404 fallback form response.
 		 */
-		edit: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		edit: async (ctx) => {
 			let id = ctx.params.id;
-			let glossary = id ? await GlossaryPost.findById(db, id) : null;
+			let glossary = id ? await GlossaryPost.findById(ctx.db, id) : null;
 
 			if (!glossary) {
 				let viewProps = {
@@ -141,7 +134,7 @@ export default createController(routes.cms.glossary, {
 			} satisfies CMSGlossaryActionView.Props;
 
 			return ctx.render(CMSGlossaryActionView, viewProps);
-		}),
+		},
 
 		/**
 		 * The description carries the current glossary size to give operators context while they
@@ -150,9 +143,8 @@ export default createController(routes.cms.glossary, {
 		 * @param ctx Request context with database bindings.
 		 * @returns CMS glossary creation form view.
 		 */
-		new: inject([Database] as const, async (db) => {
-			let ctx = getContext();
-			let total = (await GlossaryPost.findAll(db)).length;
+		new: async (ctx) => {
+			let total = (await GlossaryPost.findAll(ctx.db)).length;
 			let viewProps = {
 				title: "New Glossary",
 				description: `New Glossary form loaded. Current glossary count: ${total}.`,
@@ -163,7 +155,7 @@ export default createController(routes.cms.glossary, {
 			} satisfies CMSGlossaryActionView.Props;
 
 			return ctx.render(CMSGlossaryActionView, viewProps);
-		}),
+		},
 
 		/**
 		 * Missing auth or `id` sends the editor back to the index, while an update against an
@@ -171,8 +163,7 @@ export default createController(routes.cms.glossary, {
 		 * @param ctx Request context containing auth state, params, form data, and database.
 		 * @returns Redirect back to edit page, index fallback, or 404 form view when update target is missing.
 		 */
-		update: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		update: async (ctx) => {
 			let user = getAuthUser();
 			let id = ctx.params.id;
 			if (!user || !id)
@@ -181,7 +172,7 @@ export default createController(routes.cms.glossary, {
 			let result = await validate(ctx.get(FormData), GlossarySchema);
 			succeeded(result, "Invalid glossary form data");
 
-			let updated = await GlossaryPost.update(db, id, {
+			let updated = await GlossaryPost.update(ctx.db, id, {
 				author_id: user.id,
 				meta: {
 					term: result.data.term,
@@ -205,6 +196,6 @@ export default createController(routes.cms.glossary, {
 			}
 
 			return redirect(routes.cms.glossary.edit.href({ id }), { status: redirect.Status.SeeOther });
-		}),
+		},
 	},
 });

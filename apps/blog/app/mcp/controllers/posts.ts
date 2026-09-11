@@ -14,7 +14,6 @@ import { createResource, createToolController, ToolError } from "@sdxc/mcp";
 
 import type { Post as PostTypes } from "~/app/repositories/post";
 
-import { getDatabase } from "~/app/http/middleware/database";
 import { cached } from "~/app/mcp/cache";
 import resourceset from "~/app/mcp/resources";
 import toolset from "~/app/mcp/tools";
@@ -67,11 +66,10 @@ export const postsController = createToolController(toolset.posts, {
 	actions: {
 		/** Lists one collection, newest first, paged. */
 		list: async (ctx) => {
-			let db = getDatabase(ctx);
 			let items =
 				ctx.input.type === "articles"
-					? await ArticlePost.listItems(db, { includePreview: false })
-					: await TutorialPost.listItems(db, { includePreview: false });
+					? await ArticlePost.listItems(ctx.db, { includePreview: false })
+					: await TutorialPost.listItems(ctx.db, { includePreview: false });
 
 			let page = items.slice(ctx.input.offset, ctx.input.offset + ctx.input.limit);
 
@@ -85,7 +83,7 @@ export const postsController = createToolController(toolset.posts, {
 
 		/** Reads one post in full, as the Markdown it was written in. */
 		get: async (ctx) => {
-			let found = await findPublished(getDatabase(ctx), ctx.input.type, ctx.input.slug);
+			let found = await findPublished(ctx.db, ctx.input.type, ctx.input.slug);
 			if (!found) {
 				let noun = ctx.input.type === "articles" ? "article" : "tutorial";
 				throw new ToolError(
@@ -115,7 +113,7 @@ export const postsController = createToolController(toolset.posts, {
 export const articleResource = createResource(resourceset.article, {
 	list: (ctx) =>
 		cached("resources/articles", null, async () => {
-			let articles = await ArticlePost.listItems(getDatabase(ctx), { includePreview: false });
+			let articles = await ArticlePost.listItems(ctx.db, { includePreview: false });
 
 			return articles.map((article) => ({
 				uri: resourceset.article.href({ slug: article.slug }),
@@ -126,7 +124,7 @@ export const articleResource = createResource(resourceset.article, {
 
 	read: (ctx) =>
 		cached("resources/article", ctx.variables, async () => {
-			let found = await findPublished(getDatabase(ctx), "articles", ctx.variables.slug);
+			let found = await findPublished(ctx.db, "articles", ctx.variables.slug);
 			return found?.post.meta.content ?? null;
 		}),
 });
@@ -135,7 +133,7 @@ export const articleResource = createResource(resourceset.article, {
 export const tutorialResource = createResource(resourceset.tutorial, {
 	list: (ctx) =>
 		cached("resources/tutorials", null, async () => {
-			let tutorials = await TutorialPost.listItems(getDatabase(ctx), { includePreview: false });
+			let tutorials = await TutorialPost.listItems(ctx.db, { includePreview: false });
 
 			return tutorials.map((tutorial) => ({
 				uri: resourceset.tutorial.href({ slug: tutorial.slug }),
@@ -146,7 +144,7 @@ export const tutorialResource = createResource(resourceset.tutorial, {
 
 	read: (ctx) =>
 		cached("resources/tutorial", ctx.variables, async () => {
-			let found = await findPublished(getDatabase(ctx), "tutorials", ctx.variables.slug);
+			let found = await findPublished(ctx.db, "tutorials", ctx.variables.slug);
 			return found?.post.meta.content ?? null;
 		}),
 });

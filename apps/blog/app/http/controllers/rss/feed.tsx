@@ -10,9 +10,6 @@
 
 import { xml } from "@sdxc/http/response";
 import { RSS } from "@sdxc/rss";
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import { ArticlePost } from "~/app/repositories/posts/article";
@@ -32,16 +29,15 @@ export default createAction(
 	 * Fetches all RSS-eligible entities, normalizes them into `RSS.Item` records, and serializes XML.
 	 *
 	 * Articles and tutorials respect `Post.isPublishedAt` so future-dated items stay out of the feed.
-	 * @param ctx Request-scoped action context with dependency injection and canonical request URL.
+	 * @param ctx Request context carrying the database and the canonical request URL.
 	 * @returns XML response containing one reverse-chronological RSS feed across all content types.
 	 */
-	inject([Database] as const, async (database) => {
-		let ctx = getContext();
+	async (ctx) => {
 		let [articles, tutorials, likes, glossary] = await Promise.all([
-			ArticlePost.findAll(database, { includePreview: false }),
-			TutorialPost.findAll(database, { includePreview: false }),
-			LikePost.findAll(database),
-			GlossaryPost.findAll(database),
+			ArticlePost.findAll(ctx.db, { includePreview: false }),
+			TutorialPost.findAll(ctx.db, { includePreview: false }),
+			LikePost.findAll(ctx.db),
+			GlossaryPost.findAll(ctx.db),
 		]);
 
 		let rss = new RSS({
@@ -117,5 +113,5 @@ export default createAction(
 		for (let item of items) rss.addItem(item);
 
 		return xml(rss.toString());
-	}),
+	},
 );

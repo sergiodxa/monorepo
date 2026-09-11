@@ -10,10 +10,7 @@
 
 import { redirect } from "@sdxc/http/response";
 import { succeeded } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
@@ -41,12 +38,11 @@ export default createController(routes.cms.tutorials, {
 		 * Preview badges come from `Post.isPublishedAt`, so they match the shared publish
 		 * contract: `null` or a past date is published, a future date is preview.
 		 *
-		 * @param ctx Request-scoped container used to resolve the database connection.
+		 * @param ctx Request context carrying the database.
 		 * @returns HTML response with the tutorials list view-model.
 		 */
-		index: inject([Database] as const, async (db) => {
-			let ctx = getContext();
-			let tutorials = await TutorialPost.findAll(db, { includePreview: true });
+		index: async (ctx) => {
+			let tutorials = await TutorialPost.findAll(ctx.db, { includePreview: true });
 			let sources: Array<TutorialViewModel.SourceIndexItem> = tutorials.map((tutorial) => ({
 				id: tutorial.id,
 				title: tutorial.meta.title,
@@ -57,17 +53,16 @@ export default createController(routes.cms.tutorials, {
 			let items = TutorialViewModel.index({ items: sources });
 
 			return ctx.render(CMSTutorialsIndexView, { items });
-		}),
+		},
 
 		/**
 		 * Unauthenticated callers go to login, and every exit is a See Other redirect so the
 		 * post/redirect/get flow holds and a reload only repeats a read.
 		 *
-		 * @param ctx Request-scoped container that provides submitted form data and database access.
+		 * @param ctx Request context carrying the submitted form data and the database.
 		 * @returns Redirect response to login, tutorials index fallback, or newly created edit page.
 		 */
-		create: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		create: async (ctx) => {
 			let user = getAuthUser();
 			if (!user)
 				return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
@@ -76,7 +71,7 @@ export default createController(routes.cms.tutorials, {
 			succeeded(result, "Invalid tutorial form data");
 			let input = TutorialViewModel.input({ data: result.data });
 
-			let created = await TutorialPost.create(db, {
+			let created = await TutorialPost.create(ctx.db, {
 				author_id: user.id,
 				published_at: input.published_at,
 				meta: input.meta,
@@ -90,7 +85,7 @@ export default createController(routes.cms.tutorials, {
 			return redirect(routes.cms.tutorials.edit.href({ id: created.id }), {
 				status: redirect.Status.SeeOther,
 			});
-		}),
+		},
 
 		/**
 		 * A missing id resolves to the same index redirect as a successful delete, so a malformed
@@ -99,22 +94,21 @@ export default createController(routes.cms.tutorials, {
 		 * @param ctx Request context carrying optional route params and database access.
 		 * @returns Redirect response to the CMS tutorials index.
 		 */
-		destroy: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		destroy: async (ctx) => {
 			let id = ctx.params.id;
 			if (!id)
 				return redirect(routes.cms.tutorials.index.href(), { status: redirect.Status.SeeOther });
 
 			// Read before deleting: the public page is cached under its slug, which
 			// only the record carries.
-			let tutorial = await TutorialPost.findById(db, id);
+			let tutorial = await TutorialPost.findById(ctx.db, id);
 
-			await TutorialPost.destroy(db, id);
+			await TutorialPost.destroy(ctx.db, id);
 
 			if (tutorial) ctx.cache.purgeLater(TAGS.post("tutorials", tutorial.meta.slug));
 
 			return redirect(routes.cms.tutorials.index.href(), { status: redirect.Status.SeeOther });
-		}),
+		},
 
 		/**
 		 * An unknown id renders the action view with a 404 status, keeping CMS layout and
@@ -123,10 +117,9 @@ export default createController(routes.cms.tutorials, {
 		 * @param ctx Request context containing route params and database access.
 		 * @returns HTML response for either the populated edit form or not-found model.
 		 */
-		edit: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		edit: async (ctx) => {
 			let id = ctx.params.id;
-			let tutorial = id ? await TutorialPost.findById(db, id) : null;
+			let tutorial = id ? await TutorialPost.findById(ctx.db, id) : null;
 
 			if (!tutorial) {
 				let model = TutorialViewModel.notFound({ id });
@@ -145,7 +138,7 @@ export default createController(routes.cms.tutorials, {
 			let model = TutorialViewModel.edit({ tutorial: source });
 
 			return ctx.render(CMSTutorialsActionView, model);
-		}),
+		},
 
 		/**
 		 * A dedicated `new` view-model state lets the template reuse the edit action view while
@@ -166,8 +159,7 @@ export default createController(routes.cms.tutorials, {
 		 * @param ctx Request context with route params, form data, and database access.
 		 * @returns Redirect response on success/guard failures, or 404 CMS action view when missing.
 		 */
-		update: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		update: async (ctx) => {
 			let user = getAuthUser();
 			let id = ctx.params.id;
 			if (!user || !id)
@@ -179,9 +171,9 @@ export default createController(routes.cms.tutorials, {
 
 			// Read before writing: an edit that renames the slug leaves the old URL
 			// cached, and only the stored record still knows what it was.
-			let previous = await TutorialPost.findById(db, id);
+			let previous = await TutorialPost.findById(ctx.db, id);
 
-			let updated = await TutorialPost.update(db, id, {
+			let updated = await TutorialPost.update(ctx.db, id, {
 				author_id: user.id,
 				published_at: input.published_at,
 				meta: input.meta,
@@ -197,6 +189,6 @@ export default createController(routes.cms.tutorials, {
 			ctx.cache.purgeLater(...[...slugs].map((slug) => TAGS.post("tutorials", slug)));
 
 			return redirect(routes.cms.tutorials.edit.href({ id }), { status: redirect.Status.SeeOther });
-		}),
+		},
 	},
 });

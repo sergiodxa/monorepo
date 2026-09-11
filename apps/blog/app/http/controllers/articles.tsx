@@ -7,9 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import { isAdmin } from "~/app/http/middleware/auth";
@@ -23,16 +20,12 @@ import routes from "~/routes/web";
  * Serves the public articles index as a server-rendered listing.
  * @returns HTML response for `GET /articles`.
  */
-export default createAction(
-	routes.articles,
-	inject([Database] as const, async (db) => {
-		let ctx = getContext();
-		let articles = await ArticlePost.listItems(db, { includePreview: isAdmin() });
-		let model = ArticlesViewModel.index(articles);
+export default createAction(routes.articles, async (ctx) => {
+	let articles = await ArticlePost.listItems(ctx.db, { includePreview: isAdmin() });
+	let model = ArticlesViewModel.index(articles);
 
-		// An admin's listing carries unpublished posts, so it never reaches a shared cache.
-		if (!isAdmin()) ctx.cache(PUBLIC_PAGE, TAGS.postList());
+	// An admin's listing carries unpublished posts, so it never reaches a shared cache.
+	if (!isAdmin()) ctx.cache(PUBLIC_PAGE, TAGS.postList());
 
-		return ctx.render(ArticlesView, model);
-	}),
-);
+	return ctx.render(ArticlesView, model);
+});

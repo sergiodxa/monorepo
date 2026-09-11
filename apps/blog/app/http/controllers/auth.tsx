@@ -12,9 +12,6 @@ import { contextOf } from "@sdxc/auth/remix/context";
 import { redirect } from "@sdxc/http/response";
 import { Location } from "@sdxc/location";
 import { isFailure, wrap } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction, createController, type Middleware } from "remix/router";
 
 import { relyingParty } from "~/app/auth/relying-party";
@@ -168,9 +165,7 @@ export let callbackAction = createAction(routes.auth.callback, {
 	 * account so the session names a row of this app's own.
 	 * @returns The login view carrying an error, or a 303 redirect once signed in.
 	 */
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
-
+	handler: async (ctx) => {
 		let result = await wrap(() => relyingParty(ctx.url).callback(contextOf(ctx)));
 
 		if (isFailure(result)) {
@@ -183,7 +178,7 @@ export let callbackAction = createAction(routes.auth.callback, {
 		}
 
 		let grant = result.data;
-		let user = await User.findOrCreateFromAuthProfile(db, {
+		let user = await User.findOrCreateFromAuthProfile(ctx.db, {
 			subjectId: grant.subject,
 			...grant.profile,
 		});
@@ -195,5 +190,5 @@ export let callbackAction = createAction(routes.auth.callback, {
 			fallback: routes.cms.dashboard.href(),
 		});
 		return redirect(returnTo, { status: redirect.Status.SeeOther });
-	}),
+	},
 });

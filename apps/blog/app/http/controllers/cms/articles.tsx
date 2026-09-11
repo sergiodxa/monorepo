@@ -10,10 +10,7 @@
 
 import { redirect } from "@sdxc/http/response";
 import { succeeded } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
@@ -42,12 +39,11 @@ export default createController(routes.cms.articles, {
 		 * flag follows `Post.isPublishedAt`: `null` and past timestamps count as published,
 		 * future timestamps as preview.
 		 *
-		 * @param ctx Request-scoped services used to resolve the database client.
+		 * @param ctx Request context carrying the database.
 		 * @returns SSR view response for the article listing page.
 		 */
-		index: inject([Database] as const, async (db) => {
-			let ctx = getContext();
-			let articles = await ArticlePost.findAll(db, { includePreview: true });
+		index: async (ctx) => {
+			let articles = await ArticlePost.findAll(ctx.db, { includePreview: true });
 			let sources: Array<ArticleViewModel.SourceIndexItem> = articles.map((article) => ({
 				id: article.id,
 				title: article.meta.title,
@@ -57,17 +53,16 @@ export default createController(routes.cms.articles, {
 			let items = ArticleViewModel.index({ items: sources });
 
 			return ctx.render(CMSArticlesIndexView, { items });
-		}),
+		},
 
 		/**
 		 * Unauthenticated callers go to login. Both the failure and success paths answer with
 		 * See Other so the browser leaves the mutating endpoint before any reload.
 		 *
-		 * @param ctx Request-scoped access to form data and database services.
+		 * @param ctx Request context carrying the submitted form data and the database.
 		 * @returns Redirect response to login, index, or the edit page for the created article.
 		 */
-		create: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		create: async (ctx) => {
 			let user = getAuthUser();
 			if (!user)
 				return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
@@ -76,7 +71,7 @@ export default createController(routes.cms.articles, {
 			succeeded(result, "Invalid article form data");
 			let input = ArticleViewModel.input({ data: result.data });
 
-			let created = await ArticlePost.create(db, {
+			let created = await ArticlePost.create(ctx.db, {
 				author_id: user.id,
 				published_at: input.published_at,
 				meta: input.meta,
@@ -88,43 +83,41 @@ export default createController(routes.cms.articles, {
 			return redirect(routes.cms.articles.edit.href({ id: created.id }), {
 				status: redirect.Status.SeeOther,
 			});
-		}),
+		},
 
 		/**
 		 * A malformed action URL carrying no id lands the editor back on the index, keeping the
 		 * CMS flow resilient.
 		 *
-		 * @param ctx Request context containing route params and database service.
+		 * @param ctx Request context carrying the route params and the database.
 		 * @returns Redirect response to the CMS article index.
 		 */
-		destroy: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		destroy: async (ctx) => {
 			let id = ctx.params.id;
 			if (!id)
 				return redirect(routes.cms.articles.index.href(), { status: redirect.Status.SeeOther });
 
 			// Read before deleting: the public page is cached under its slug, which
 			// only the record carries.
-			let article = await ArticlePost.findById(db, id);
+			let article = await ArticlePost.findById(ctx.db, id);
 
-			await ArticlePost.destroy(db, id);
+			await ArticlePost.destroy(ctx.db, id);
 
 			if (article) ctx.cache.purgeLater(TAGS.post("articles", article.meta.slug));
 
 			return redirect(routes.cms.articles.index.href(), { status: redirect.Status.SeeOther });
-		}),
+		},
 
 		/**
 		 * An unknown id renders a 404 view inside the CMS shell so editors keep their context
 		 * and learn immediately that the record is gone.
 		 *
-		 * @param ctx Request context with route params and database service.
+		 * @param ctx Request context carrying the route params and the database.
 		 * @returns SSR view response for edit form or not-found state.
 		 */
-		edit: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		edit: async (ctx) => {
 			let id = ctx.params.id;
-			let article = id ? await ArticlePost.findById(db, id) : null;
+			let article = id ? await ArticlePost.findById(ctx.db, id) : null;
 
 			if (!article) {
 				let viewProps = ArticleViewModel.notFound({ id });
@@ -144,7 +137,7 @@ export default createController(routes.cms.articles, {
 			let viewProps = ArticleViewModel.edit({ article: source });
 
 			return ctx.render(CMSArticlesActionView, viewProps);
-		}),
+		},
 
 		/**
 		 * @returns SSR view response for the empty article form.
@@ -159,11 +152,10 @@ export default createController(routes.cms.articles, {
 		 * Requires an authenticated user and a route id; either one missing sends the editor back
 		 * to the index, while an unknown id renders the 404 CMS state in place.
 		 *
-		 * @param ctx Request-scoped access to params, form data, and database services.
+		 * @param ctx Request context carrying the route params, form data, and the database.
 		 * @returns Redirect response for success/guard paths or a 404 edit-state view.
 		 */
-		update: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		update: async (ctx) => {
 			let user = getAuthUser();
 			let id = ctx.params.id;
 			if (!user || !id)
@@ -175,9 +167,9 @@ export default createController(routes.cms.articles, {
 
 			// Read before writing: an edit that renames the slug leaves the old URL
 			// cached, and only the stored record still knows what it was.
-			let previous = await ArticlePost.findById(db, id);
+			let previous = await ArticlePost.findById(ctx.db, id);
 
-			let updated = await ArticlePost.update(db, id, {
+			let updated = await ArticlePost.update(ctx.db, id, {
 				author_id: user.id,
 				published_at: input.published_at,
 				meta: input.meta,
@@ -193,6 +185,6 @@ export default createController(routes.cms.articles, {
 			ctx.cache.purgeLater(...[...slugs].map((slug) => TAGS.post("articles", slug)));
 
 			return redirect(routes.cms.articles.edit.href({ id }), { status: redirect.Status.SeeOther });
-		}),
+		},
 	},
 });

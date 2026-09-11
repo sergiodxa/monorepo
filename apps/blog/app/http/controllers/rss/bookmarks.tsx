@@ -10,9 +10,6 @@
 
 import { xml } from "@sdxc/http/response";
 import { RSS } from "@sdxc/rss";
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import { LikePost } from "~/app/repositories/posts/like";
@@ -29,12 +26,11 @@ export default createAction(
 	/**
 	 * Builds the bookmarks channel and serializes each liked URL as one RSS item.
 	 *
-	 * @param db Database service resolved via dependency injection.
+	 * @param ctx Request context carrying the database and the request URL.
 	 * @returns XML response ready for RSS clients and aggregators.
 	 */
-	inject([Database] as const, async (db) => {
-		let ctx = getContext();
-		let likes = await LikePost.findAll(db);
+	async (ctx) => {
+		let likes = await LikePost.findAll(ctx.db);
 
 		let rss = new RSS({
 			title: "Bookmarks — Sergio Xalambrí",
@@ -53,5 +49,5 @@ export default createAction(
 		}
 
 		return xml(rss.toString());
-	}),
+	},
 );

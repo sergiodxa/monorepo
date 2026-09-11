@@ -8,10 +8,7 @@
  */
 
 import { xml } from "@sdxc/http/response";
-import { inject } from "@sdxc/service-container";
 import { Sitemap } from "@sdxc/sitemap";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import { ArticlePost } from "~/app/repositories/posts/article";
@@ -27,12 +24,11 @@ export default createAction(
 	 * timestamp for each listing page.
 	 * @returns XML response for the sitemap endpoint.
 	 */
-	inject([Database] as const, async function sitemapAction(database) {
-		let ctx = getContext();
+	async function sitemapAction(ctx) {
 		let [articles, tutorials, likes] = await Promise.all([
-			ArticlePost.findAll(database, { includePreview: false }),
-			TutorialPost.findAll(database, { includePreview: false }),
-			LikePost.findAll(database),
+			ArticlePost.findAll(ctx.db, { includePreview: false }),
+			TutorialPost.findAll(ctx.db, { includePreview: false }),
+			LikePost.findAll(ctx.db),
 		]);
 
 		let sitemap = new Sitemap();
@@ -82,5 +78,5 @@ export default createAction(
 		}
 
 		return xml(sitemap.toString());
-	}),
+	},
 );

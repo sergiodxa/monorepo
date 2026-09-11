@@ -10,9 +10,6 @@
 
 import { xml } from "@sdxc/http/response";
 import { RSS } from "@sdxc/rss";
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
@@ -30,12 +27,11 @@ export default createAction(
 	 *
 	 * Item and channel links are absolute against the current request origin so feed
 	 * readers resolve them off-site; optional metadata falls back to stable values.
-	 * @param db Database client used to load published tutorials.
+	 * @param ctx Request context carrying the database and the request URL.
 	 * @returns XML response for feed readers polling the tutorials channel.
 	 */
-	inject([Database] as const, async (db) => {
-		let ctx = getContext();
-		let tutorials = await TutorialPost.findAll(db, { includePreview: false });
+	async (ctx) => {
+		let tutorials = await TutorialPost.findAll(ctx.db, { includePreview: false });
 
 		let rss = new RSS({
 			title: "Tutorials — Sergio Xalambrí",
@@ -58,5 +54,5 @@ export default createAction(
 		}
 
 		return xml(rss.toString());
-	}),
+	},
 );

@@ -10,9 +10,6 @@
 
 import { xml } from "@sdxc/http/response";
 import { RSS } from "@sdxc/rss";
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import { ArticlePost } from "~/app/repositories/posts/article";
@@ -30,12 +27,11 @@ export default createAction(
 	 *
 	 * Articles scheduled in the future are filtered out through `Post.isPublishedAt`.
 	 *
-	 * @param ctx Request context with URL and dependency container access.
+	 * @param ctx Request context carrying the database and the request URL.
 	 * @returns XML response with channel metadata and one item per published article.
 	 */
-	inject([Database] as const, async (db) => {
-		let ctx = getContext();
-		let articles = await ArticlePost.findAll(db, { includePreview: false });
+	async (ctx) => {
+		let articles = await ArticlePost.findAll(ctx.db, { includePreview: false });
 
 		/**
 		 * Channel `link` targets the human-readable articles index page.
@@ -73,5 +69,5 @@ export default createAction(
 		}
 
 		return xml(rss.toString());
-	}),
+	},
 );

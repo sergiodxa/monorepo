@@ -1,48 +1,42 @@
 /**
- * Middleware publishing the request-scoped database into request context, and the reader
- * that takes it back out.
+ * Middleware publishing the app's database into request context, so every handler reads
+ * `ctx.db`.
  *
- * The blog resolves services through `@sdxc/service-container`, which suits a handler whose
- * signature the app controls. A handler behind a route-agnostic boundary — an MCP tool, for
- * instance — receives only a context, so for those the database has to be *in* that
- * context. This middleware puts it there, scoped to just the routes that need it.
+ * A handler behind a route-agnostic boundary — an MCP tool, for instance — receives only a
+ * context to work with, so the database has to be *in* that context. Installing this
+ * globally puts it there for every route, whichever boundary the handler sits behind.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { ContextEntries, Middleware, RequestContext } from "remix/router";
+import type { Database as DataTable } from "remix/data-table";
+import type { Middleware } from "remix/router";
 
-import { getServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
+import { createContextKey } from "remix/router";
 
-/**
- * Creates middleware that stores the container's `Database` in request context.
- *
- * @returns Middleware exposing the database as `ctx.db` and `ctx.get(Database)`.
- * @example
- * router.map(routes.mcp, { middleware: [database()], handler: (ctx) => mcp.fetch(ctx) });
- */
-export default function database(): Middleware {
-	return (ctx, next) => {
-		ctx.set(Database, getServiceContainer().get(Database), { property: "db" });
-		return next();
-	};
+/** Where the request's database lives on the context, published as `ctx.db`. */
+export const Database = createContextKey<DataTable>();
+
+declare module "remix/router" {
+	interface RequestContext {
+		/** The app's database, published by the global `database()` middleware. */
+		db: DataTable;
+	}
 }
 
 /**
- * Reads the database out of request context.
+ * Creates middleware that publishes the database as `ctx.db`.
  *
- * A missing database signals a wiring mistake fixed once at the route, so
- * this throws with a message naming the fix.
- *
- * @param ctx The request context, whatever middleware it has been through.
- * @returns The request-scoped database.
- * @throws {Error} When {@link database} did not run for this route.
+ * @param source Opens the database when a request runs, so the binding it reads is the one
+ * that request was served with, whether the router is built once or per request.
+ * @returns Middleware exposing the database as `ctx.db` and `ctx.get(Database)`.
+ * @example
+ * createRouter({ middleware: [database(createDatabase)] });
  */
-// oxlint-disable-next-line typescript/no-explicit-any -- params are irrelevant to the lookup
-export function getDatabase(ctx: RequestContext<any, ContextEntries>): Database {
-	let db = ctx.get(Database);
-	if (!db) throw new Error("This route is missing its database() middleware");
-	return db;
+export default function database(source: () => DataTable): Middleware {
+	return (ctx, next) => {
+		ctx.set(Database, source(), { property: "db" });
+		return next();
+	};
 }
