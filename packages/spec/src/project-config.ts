@@ -19,6 +19,7 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
+import type { Base, Connection } from "./bases.js";
 import type { ConfigPermissionEntry } from "./permissions.js";
 import type { Plugin } from "./plugin.js";
 import type { LoadedSuite } from "./sources.js";
@@ -32,6 +33,7 @@ const PERMISSION_FAMILIES: ReadonlySet<string> = new Set([
 	"net",
 	"env",
 	"host-fs",
+	"db",
 	"plugins",
 ]);
 
@@ -55,6 +57,10 @@ const BUILT_IN_NAMESPACES: ReadonlySet<string> = new Set([
 	"url",
 	"jwt",
 	"env",
+	"sample",
+	"str",
+	"spec",
+	"html",
 ]);
 
 /**
@@ -82,13 +88,18 @@ export interface PluginDeclaration {
 /**
  * A parsed `spec/config.jsonc`: the suite's project configuration. The
  * `plugins` key lists the plugins a project declares, in file order; the
- * `permissions` key declares the grants that stay inert until `--allow-config`.
+ * `permissions` key declares the grants that stay inert until `--allow-config`;
+ * `bases` and `databases` name the addresses a spec writes `on "…"` against.
  */
 export interface ProjectConfig {
 	/** The declared plugins; empty when no config exists or it declares none. */
 	plugins: PluginDeclaration[];
 	/** The suite's declared permission requirements; inert without `--allow-config`. */
 	permissions: PermissionsConfig;
+	/** The declared bases, already resolved to absolute URLs, in file order. */
+	bases: Base[];
+	/** The declared database connections, already resolved, in file order. */
+	databases: Connection[];
 }
 
 /**
@@ -179,7 +190,7 @@ export async function loadProjectConfig(
 		if (isFailure(parsed)) return parsed;
 		return validateConfig(parsed.data, directory, path);
 	}
-	return success({ plugins: [], permissions: { allow: [] } });
+	return success({ plugins: [], permissions: { allow: [] }, bases: [], databases: [] });
 }
 
 /**
@@ -334,8 +345,15 @@ function validateConfig(
 	}
 	let permissions = validatePermissions(parsed.permissions, path);
 	if (isFailure(permissions)) return permissions;
+	let bases = validateAddressBook(parsed.bases, "bases", path);
+	if (isFailure(bases)) return bases;
+	let databases = validateAddressBook(parsed.databases, "databases", path);
+	if (isFailure(databases)) return databases;
+	let addresses = { bases: bases.data, databases: databases.data };
 	let pluginsField = parsed.plugins;
-	if (pluginsField === undefined) return success({ plugins: [], permissions: permissions.data });
+	if (pluginsField === undefined) {
+		return success({ plugins: [], permissions: permissions.data, ...addresses });
+	}
 	if (!isRecord(pluginsField)) {
 		return failure(
 			new LoadError(
@@ -350,7 +368,117 @@ function validateConfig(
 		if (isFailure(validated)) return validated;
 		plugins.push(validated.data);
 	}
-	return success({ plugins, permissions: permissions.data });
+	return success({ plugins, permissions: permissions.data, ...addresses });
+}
+
+/**
+ * Validate and resolve the `bases` or `databases` key: an object of name →
+ * `{ env, default }`, resolved to the address a spec's `on "name"` reaches.
+ *
+ * @param field - The raw value from the parsed config.
+ * @param key - Which address book this is, deciding the messages and the checks.
+ * @param path - The config file path, for diagnostics.
+ * @returns The resolved entries in file order, or the first one that failed.
+ */
+function validateAddressBook(
+	field: unknown,
+	key: "bases" | "databases",
+	path: string,
+): Result<{ name: string; url: string }[], SpecError> {
+	if (field === undefined) return success([]);
+	if (!isRecord(field)) {
+		return failure(
+			new LoadError(
+				"load-error",
+				`spec/config.jsonc ${path} must map "${key}" to an object of name → { env, default }.`,
+			),
+		);
+	}
+	let entries: { name: string; url: string }[] = [];
+	for (let [name, declaration] of Object.entries(field)) {
+		let resolved = resolveAddress(name, declaration, key, path);
+		if (isFailure(resolved)) return resolved;
+		entries.push({ name, url: resolved.data });
+	}
+	return success(entries);
+}
+
+/**
+ * Resolve one declared address: the environment variable when it holds a
+ * value, the `default` otherwise. Reading the variable here needs no grant —
+ * the config is the operator's own settings and could have held the literal
+ * value, where `env.get` inside a spec is a different act that keeps its grant.
+ *
+ * @param name - The name a spec selects with `on "…"`.
+ * @param declaration - The raw `{ env, default }` value.
+ * @param key - Which address book this entry belongs to.
+ * @param path - The config file path, for diagnostics.
+ * @returns The address the name points at, or why it could not be resolved.
+ */
+function resolveAddress(
+	name: string,
+	declaration: unknown,
+	key: "bases" | "databases",
+	path: string,
+): Result<string, SpecError> {
+	let kind = key === "bases" ? "base" : "database connection";
+	if (!isRecord(declaration)) {
+		return failure(addressError(`The ${kind} "${name}" in ${path} must be an object`, key));
+	}
+	let variable = declaration.env;
+	let fallback = declaration.default;
+	if (variable !== undefined && typeof variable !== "string") {
+		return failure(
+			addressError(`The ${kind} "${name}" in ${path} must map "env" to a variable name`, key),
+		);
+	}
+	if (fallback !== undefined && typeof fallback !== "string") {
+		return failure(
+			addressError(`The ${kind} "${name}" in ${path} must map "default" to a string`, key),
+		);
+	}
+	if (variable === undefined && fallback === undefined) {
+		return failure(
+			addressError(`The ${kind} "${name}" in ${path} declares neither "env" nor "default"`, key),
+		);
+	}
+	let fromEnvironment = variable === undefined ? undefined : process.env[variable];
+	let value = fromEnvironment === undefined || fromEnvironment === "" ? fallback : fromEnvironment;
+	if (value === undefined || value === "") {
+		let unset =
+			variable === undefined
+				? `its "default" is empty`
+				: `$${variable} is unset and it declares no usable "default"`;
+		return failure(addressError(`The ${kind} "${name}" in ${path} has no address: ${unset}`, key));
+	}
+	if (key === "bases" && !isAbsoluteHttpUrl(value)) {
+		return failure(
+			new LoadError(
+				"load-error",
+				`The base "${name}" in ${path} resolves to ${JSON.stringify(value)}, which is not an absolute http(s) URL such as "http://localhost:4000".`,
+			),
+		);
+	}
+	return success(value);
+}
+
+/** A `load-error` for a malformed address declaration, ending in the shape it wants. */
+function addressError(message: string, key: "bases" | "databases"): SpecError {
+	let example =
+		key === "bases"
+			? `{ "env": "FRONTEND_BASE_URL", "default": "http://localhost:4000" }`
+			: `{ "env": "WEB_DATABASE_URL" }`;
+	return new LoadError("load-error", `${message}, e.g. ${example}.`);
+}
+
+/** Whether an address is the absolute http(s) URL a base must resolve to. */
+function isAbsoluteHttpUrl(value: string): boolean {
+	try {
+		let url = new URL(value);
+		return url.protocol === "http:" || url.protocol === "https:";
+	} catch {
+		return false;
+	}
 }
 
 /**
@@ -438,7 +566,7 @@ function validatePermissionEntry(
 function unknownFamily(entry: string, path: string): SpecError {
 	return new SpecError(
 		"usage-error",
-		`spec/config.jsonc ${path} declares an unknown permission family ${entry}: known families are run, net, env, host-fs, plugins.`,
+		`spec/config.jsonc ${path} declares an unknown permission family ${entry}: known families are run, net, env, host-fs, db, plugins.`,
 	);
 }
 

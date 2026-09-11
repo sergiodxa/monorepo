@@ -25,6 +25,8 @@ import type { ToolArg, Value, ValueObject } from "../values.js";
 import type { Workspace } from "../workspace.js";
 
 import { PermissionDeniedError } from "../errors.js";
+import { createPermissionSet } from "../permissions.js";
+import { createToolContext } from "../tool-context.js";
 
 import { createJwtPlugin } from "./jwt.js";
 
@@ -142,13 +144,13 @@ function value(data: Value): ToolArg {
 
 /** A permission set that grants everything, for happy-path verify calls. */
 function allowAll(): PermissionSet {
-	return {
-		checkRun: () => success(undefined),
-		checkNet: () => success(undefined),
-		checkEnv: () => success(undefined),
-		checkHostFs: () => success(undefined),
-		grantedEnvNames: () => [],
-	};
+	return createPermissionSet({
+		run: { mode: "all" },
+		net: { mode: "all" },
+		env: { mode: "all" },
+		hostFs: { mode: "all" },
+		db: { mode: "all" },
+	});
 }
 
 /** A permission set denying net, recording the host and port it was asked about. */
@@ -173,12 +175,12 @@ function stubWorkspace(): Workspace {
 
 /** Build a tool context from a permission set (defaults to allow-all). */
 function buildContext(permissions: PermissionSet = allowAll()): ToolContext {
-	return {
+	return createToolContext({
 		workspace: stubWorkspace(),
 		permissions,
 		random: createRandom("test"),
 		now: new Date("2026-01-01T00:00:00.000Z"),
-	};
+	});
 }
 
 /** Read a result value as an object, failing the test when it is not one. */

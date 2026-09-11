@@ -22,6 +22,8 @@ import type { PermissionKind } from "./permissions.js";
 import type { Plugin } from "./plugin.js";
 import type { SourceFile } from "./source.js";
 
+import { createArtifactStore } from "./artifacts.js";
+import { createBaseSet, createConnectionSet } from "./bases.js";
 import { SpecError } from "./errors.js";
 import { loadSuite } from "./loader.js";
 import { configWouldAdmit, grantsFromConfig, mergeGrants, parseGrants } from "./permissions.js";
@@ -37,8 +39,8 @@ import {
 	pluginGrantAdmits,
 	pluginGrantFromConfig,
 } from "./project-config.js";
-import { reportFatal, reportSuite } from "./reporter.js";
-import { DEFAULT_SEED } from "./run.js";
+import { reportFatal, reportRunHeader, reportSuite } from "./reporter.js";
+import { createRunId, DEFAULT_SEED } from "./run.js";
 import { runSuite } from "./runner.js";
 
 /**
@@ -57,16 +59,22 @@ Usage:
 
 Scheduling:
   --concurrency=N (alias --jobs=N)   Run up to N tests at once (default 1, sequential)
+  --retries=N                        Retry a failing test N more times (default 0)
 
 Generated data:
   --seed=VALUE                       Seed the data sample generates (default: fixed)
   --seed=random                      Draw a seed and print it, to replay with --seed=<it>
+  --run-id=VALUE                     Name this run, replaying the one printed in the header
+
+Diagnostics:
+  --artifacts=DIR                    Write failure screenshots and dumps under DIR
 
 Permissions (denied unless granted):
   --allow-run[=name,...]      Execute processes (scoped to executable names)
   --allow-net[=host[:port]]   Reach the network (scoped to hosts)
   --allow-env[=VAR,...]       Read environment variables (scoped to names)
   --allow-host-fs[=dir,...]   Touch the host filesystem outside the workspace
+  --allow-db[=name,...]       Query databases (scoped to connection names)
   --allow-plugins[=ns,...]    Launch project-declared plugins (from spec/config.jsonc)
   --allow-config              Apply the permissions spec/config.jsonc declares
 `;
@@ -105,14 +113,41 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 	}
 	let { concurrency, remaining: afterConcurrency } = concurrencyParsed.data;
 
-	let seedParsed = parseSeed(afterConcurrency);
+	let retriesParsed = parseRetries(afterConcurrency);
+	if (isFailure(retriesParsed)) {
+		reportFatal(retriesParsed.error, sink);
+		return 2;
+	}
+	let { retries, remaining: afterRetries } = retriesParsed.data;
+
+	let seedParsed = parseSeed(afterRetries);
 	if (isFailure(seedParsed)) {
 		reportFatal(seedParsed.error, sink);
 		return 2;
 	}
-	let { seed, drawn, remaining: afterSeed } = seedParsed.data;
+	let { seed, remaining: afterSeed } = seedParsed.data;
 
-	let pluginParsed = parsePluginGrant(afterSeed);
+	let runIdParsed = peelValueFlag(afterSeed, "--run-id", "--run-id=nightly-42");
+	if (isFailure(runIdParsed)) {
+		reportFatal(runIdParsed.error, sink);
+		return 2;
+	}
+	let runId = runIdParsed.data.value ?? createRunId();
+
+	let artifactsParsed = peelValueFlag(
+		runIdParsed.data.remaining,
+		"--artifacts",
+		"--artifacts=./artifacts",
+	);
+	if (isFailure(artifactsParsed)) {
+		reportFatal(artifactsParsed.error, sink);
+		return 2;
+	}
+	let artifactsDirectory = artifactsParsed.data.value;
+	let artifacts =
+		artifactsDirectory === undefined ? undefined : createArtifactStore(artifactsDirectory);
+
+	let pluginParsed = parsePluginGrant(artifactsParsed.data.remaining);
 	if (isFailure(pluginParsed)) {
 		reportFatal(pluginParsed.error, sink);
 		return 2;
@@ -181,9 +216,22 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 		externalPlugins = connected.data;
 	}
 
-	if (drawn) sink.write(`seed ${seed} (replay with --seed=${seed})\n\n`);
+	let bases = createBaseSet(config.data.bases);
+	let connections = createConnectionSet(config.data.databases);
+	reportRunHeader({ seed, runId, bases: bases.list() }, sink);
 
-	let run = await runSuite({ root, grants, plugins: externalPlugins, concurrency, seed });
+	let run = await runSuite({
+		root,
+		grants,
+		plugins: externalPlugins,
+		concurrency,
+		seed,
+		runId,
+		retries,
+		bases,
+		connections,
+		artifacts,
+	});
 	if (isFailure(run)) {
 		await disposeAll(externalPlugins);
 		reportFatal(run.error, sink);
@@ -293,19 +341,16 @@ function parseConcurrency(
 
 /**
  * Peel `--seed=VALUE` out of an argument list. `--seed=random` draws one, which
- * the caller prints so a run that turned up a bad value can be replayed;
+ * the run header prints so a run that turned up a bad value can be replayed;
  * anything else is taken as written, since text and numbers both name a stream.
  * Omitting the flag keeps the runner's fixed default, so a bare run repeats.
  *
  * @param argv - Arguments after the earlier flags were peeled off.
- * @returns The seed, whether it was drawn, and the remaining arguments.
+ * @returns The seed and the remaining arguments.
  */
-function parseSeed(
-	argv: string[],
-): Result<{ seed: Seed; drawn: boolean; remaining: string[] }, SpecError> {
+function parseSeed(argv: string[]): Result<{ seed: Seed; remaining: string[] }, SpecError> {
 	let remaining: string[] = [];
 	let seed: Seed = DEFAULT_SEED;
-	let drawn = false;
 	for (let argument of argv) {
 		if (argument !== "--seed" && !argument.startsWith("--seed=")) {
 			remaining.push(argument);
@@ -322,13 +367,72 @@ function parseSeed(
 		}
 		if (value === "random") {
 			seed = systemSeed();
-			drawn = true;
 			continue;
 		}
 		seed = /^\d+$/.test(value) ? Number(value) : value;
-		drawn = false;
 	}
-	return success({ seed, drawn, remaining });
+	return success({ seed, remaining });
+}
+
+/**
+ * Peel `--retries=N` out of an argument list: how many further attempts a
+ * failing test gets, zero (the default) meaning a failure is final. A repeated
+ * flag keeps the last value; anything but a non-negative integer is a usage error.
+ *
+ * @param args - The raw CLI arguments after the earlier flags were peeled off.
+ * @returns The retry count and the remaining arguments.
+ */
+function parseRetries(args: string[]): Result<{ retries: number; remaining: string[] }, SpecError> {
+	let retries = 0;
+	let remaining: string[] = [];
+	for (let argument of args) {
+		if (argument !== "--retries" && !argument.startsWith("--retries=")) {
+			remaining.push(argument);
+			continue;
+		}
+		let value = argument === "--retries" ? "" : argument.slice("--retries=".length);
+		if (!/^\d+$/.test(value)) {
+			return failure(
+				new SpecError(
+					"usage-error",
+					`--retries expects a non-negative integer, e.g. --retries=2; got ${JSON.stringify(value)}.`,
+				),
+			);
+		}
+		retries = Number(value);
+	}
+	return success({ retries, remaining });
+}
+
+/**
+ * Peel a `--flag=VALUE` out of an argument list, keeping the last occurrence.
+ * A flag written bare or with an empty value is a usage error naming the shape
+ * it wanted, since every flag parsed this way carries a value that matters.
+ *
+ * @param args - The raw CLI arguments after the earlier flags were peeled off.
+ * @param name - The flag to peel, e.g. `"--run-id"`.
+ * @param example - A complete example of the flag, for the usage error.
+ * @returns The value when the flag was given, plus the remaining arguments.
+ */
+function peelValueFlag(
+	args: string[],
+	name: string,
+	example: string,
+): Result<{ value?: string; remaining: string[] }, SpecError> {
+	let value: string | undefined;
+	let remaining: string[] = [];
+	for (let argument of args) {
+		if (argument !== name && !argument.startsWith(`${name}=`)) {
+			remaining.push(argument);
+			continue;
+		}
+		let given = argument === name ? "" : argument.slice(name.length + 1);
+		if (given === "") {
+			return failure(new SpecError("usage-error", `${name} expects a value, e.g. ${example}.`));
+		}
+		value = given;
+	}
+	return success(value === undefined ? { remaining } : { value, remaining });
 }
 
 /**

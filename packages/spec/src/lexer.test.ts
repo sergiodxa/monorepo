@@ -55,6 +55,12 @@ describe("lex: identifiers and keywords", () => {
 		expect(tokens[2]?.text).toBe("user.email_2");
 	});
 
+	test("a digit segment stays part of the dotted path", () => {
+		let tokens = lexOk("result.rows.0.id");
+		expect(kinds(tokens)).toEqual(["identifier", "eof"]);
+		expect(tokens[0]?.text).toBe("result.rows.0.id");
+	});
+
 	test("a dot merges segments only when adjacent on both sides", () => {
 		expect(lexError("foo. bar").message).toContain('Unexpected character "."');
 		expect(lexError("foo .bar").message).toContain('Unexpected character "."');
@@ -69,9 +75,11 @@ describe("lex: identifiers and keywords", () => {
 
 describe("lex: punctuation and numbers", () => {
 	test("punctuation lexes to its own kinds", () => {
-		expect(kinds(lexOk("{ } ( ) , : ="))).toEqual([
+		expect(kinds(lexOk("{ } [ ] ( ) , : ="))).toEqual([
 			"lbrace",
 			"rbrace",
+			"lbracket",
+			"rbracket",
 			"lparen",
 			"rparen",
 			"comma",

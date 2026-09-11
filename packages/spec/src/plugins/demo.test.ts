@@ -6,47 +6,19 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure, isSuccess, success } from "@sdxc/result";
-import { createRandom } from "@sdxc/sample";
+import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import type { ToolContext } from "../plugin.js";
 import type { Value } from "../values.js";
 
+import { createToolContext } from "../tool-context.js";
+
 import { createDemoPlugin } from "./demo.js";
 
-/** A minimal context: the demo plugin's tools run the same regardless of workspace or grants. */
+/** A default context: the demo plugin's tools run the same whatever it holds. */
 function stubContext(): ToolContext {
-	return {
-		random: createRandom("test"),
-		now: new Date("2026-01-01T00:00:00.000Z"),
-		workspace: {
-			root: "/tmp/spec-demo-test-workspace",
-			resolve(target) {
-				return success(target);
-			},
-			async cleanup() {
-				return undefined;
-			},
-		},
-		permissions: {
-			checkRun() {
-				return success(undefined);
-			},
-			checkNet() {
-				return success(undefined);
-			},
-			checkEnv() {
-				return success(undefined);
-			},
-			checkHostFs() {
-				return success(undefined);
-			},
-			grantedEnvNames() {
-				return [];
-			},
-		},
-	};
+	return createToolContext();
 }
 
 describe("createDemoPlugin", () => {

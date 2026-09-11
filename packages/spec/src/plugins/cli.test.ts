@@ -13,7 +13,7 @@ import { join, resolve as resolvePath } from "node:path";
 
 import type { Result } from "@sdxc/result";
 
-import { failure, isFailure, isSuccess, success } from "@sdxc/result";
+import { isFailure, isSuccess, success } from "@sdxc/result";
 import { createRandom } from "@sdxc/sample";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
@@ -23,6 +23,8 @@ import type { ToolArg, Value } from "../values.js";
 import type { Workspace } from "../workspace.js";
 
 import { PermissionDeniedError } from "../errors.js";
+import { createPermissionSet } from "../permissions.js";
+import { createToolContext } from "../tool-context.js";
 
 import { createCliPlugin } from "./cli.js";
 
@@ -160,12 +162,12 @@ interface StubGrants {
 }
 
 function makeContext(grants: StubGrants = { run: "all" }): ToolContext {
-	return {
+	return createToolContext({
 		workspace: createWorkspaceStub(root),
 		permissions: createPermissionsStub(grants),
 		random: createRandom("test"),
 		now: new Date("2026-01-01T00:00:00.000Z"),
-	};
+	});
 }
 
 /** A workspace stub over a real temp directory; cli only reads its root. */
@@ -183,21 +185,13 @@ function createWorkspaceStub(base: string): Workspace {
 }
 
 function createPermissionsStub(grants: StubGrants): PermissionSet {
-	return {
-		checkRun(executable: string) {
-			if (grants.run === "all") return success(undefined);
-			if (Array.isArray(grants.run) && grants.run.includes(executable)) {
-				return success(undefined);
-			}
-			return failure(
-				new PermissionDeniedError("run", executable, `spec run --allow-run=${executable}`),
-			);
-		},
-		checkNet: () => success(undefined),
-		checkEnv: () => success(undefined),
-		checkHostFs: () => success(undefined),
-		grantedEnvNames: () => grants.envNames ?? [],
-	};
+	return createPermissionSet({
+		run: grants.run === "all" ? { mode: "all" } : { mode: "scoped", scopes: grants.run ?? [] },
+		net: { mode: "all" },
+		env: { mode: "scoped", scopes: [...(grants.envNames ?? [])] },
+		hostFs: { mode: "all" },
+		db: { mode: "all" },
+	});
 }
 
 function value(data: Value): ToolArg {

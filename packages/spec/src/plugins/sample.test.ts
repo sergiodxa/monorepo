@@ -15,10 +15,11 @@ import { createRandom } from "@sdxc/sample";
 import { describe, expect, test } from "vitest";
 
 import type { SpecError } from "../errors.js";
-import type { PermissionSet } from "../permissions.js";
 import type { ToolContext } from "../plugin.js";
 import type { ToolArg, Value, ValueObject } from "../values.js";
 import type { Workspace } from "../workspace.js";
+
+import { createToolContext } from "../tool-context.js";
 
 import { createSamplePlugin } from "./sample.js";
 
@@ -28,17 +29,6 @@ const NOW = new Date("2026-06-15T12:00:00.000Z");
 
 function value(data: Value): ToolArg {
 	return { kind: "value", value: data };
-}
-
-/** A permission set that grants nothing; the sample plugin never asks it anything. */
-function grantNothing(): PermissionSet {
-	return {
-		checkRun: () => success(undefined),
-		checkNet: () => success(undefined),
-		checkEnv: () => success(undefined),
-		checkHostFs: () => success(undefined),
-		grantedEnvNames: () => [],
-	};
 }
 
 /** A workspace stub; sample tools never touch the filesystem. */
@@ -51,12 +41,11 @@ function stubWorkspace(): Workspace {
 }
 
 function buildContext(seed = "test"): ToolContext {
-	return {
+	return createToolContext({
 		workspace: stubWorkspace(),
-		permissions: grantNothing(),
 		random: createRandom(seed),
 		now: NOW,
-	};
+	});
 }
 
 function expectSuccess(result: Result<Value, SpecError>): Value {

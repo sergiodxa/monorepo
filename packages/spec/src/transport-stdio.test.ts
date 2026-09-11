@@ -1,7 +1,8 @@
 /**
  * Tests for the NDJSON stdio transport: the describe handshake and its
- * caching, call round-trips against the real demo plugin, wire error
- * reconstruction, environment stripping, and child lifecycle on failure.
+ * caching, call round-trips against the real demo plugin, the context a
+ * served plugin rebuilds from the wire, wire error reconstruction,
+ * environment stripping, and child lifecycle on failure.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,14 +17,30 @@ import { isFailure, isSuccess, success } from "@sdxc/result";
 import { createRandom } from "@sdxc/sample";
 import { describe, expect, test } from "vitest";
 
+import type { Grants } from "./permissions.js";
 import type { ToolContext } from "./plugin.js";
 import type { Value } from "./values.js";
 
-import { SpecError } from "./errors.js";
+import { createBaseSet, createConnectionSet } from "./bases.js";
+import { PermissionDeniedError, SpecError } from "./errors.js";
+import { createPermissionSet } from "./permissions.js";
+import { createToolContext } from "./tool-context.js";
 import { connectStdioPlugin } from "./transport-stdio.js";
 
 /** The demo plugin's path, resolved from this file's directory. */
 const DEMO_PLUGIN_PATH = path.join(import.meta.dirname, "plugins", "demo.ts");
+
+/** The transport's own path, which a served child imports to answer the wire. */
+const TRANSPORT_PATH = path.join(import.meta.dirname, "transport-stdio.ts");
+
+/** The grants of a run that allowed nothing, which each test widens. */
+const NOTHING_GRANTED: Grants = {
+	run: { mode: "denied" },
+	net: { mode: "denied" },
+	env: { mode: "denied" },
+	hostFs: { mode: "denied" },
+	db: { mode: "denied" },
+};
 
 /**
  * The Bun executable, found on PATH. Every child here is a Bun program, so it
@@ -52,7 +69,7 @@ process.stdin.on("data", (chunk) => {
 			continue;
 		}
 		if (request.tool === "workspace") {
-			process.stdout.write(JSON.stringify({ id: request.id, result: request.workspaceRoot }) + "\\n");
+			process.stdout.write(JSON.stringify({ id: request.id, result: request.context.workspaceRoot }) + "\\n");
 		} else if (request.tool === "env") {
 			process.stdout.write(JSON.stringify({ id: request.id, result: Object.keys(process.env) }) + "\\n");
 		} else if (request.tool === "malformed") {
@@ -66,6 +83,41 @@ process.stdin.on("data", (chunk) => {
 });
 `;
 
+/**
+ * A plugin served through `servePlugin`, whose tools answer from the context
+ * the serving side rebuilt: the run's nonce, a target resolved through the
+ * bases, and a connection the `db` grant has to allow before it is named.
+ */
+const CONTEXT_PLUGIN_SCRIPT = `
+const { servePlugin } = await import(process.argv[1]);
+const { success } = await import("@sdxc/result");
+
+await servePlugin({
+	namespace: "context",
+	describe() {
+		return [
+			{ name: "nonce", summary: "The run's nonce.", kind: "observable", params: [] },
+			{ name: "target", summary: "A target resolved through the run's bases.", kind: "observable", params: [] },
+			{ name: "reach", summary: "The URL of a connection the caller may reach.", kind: "observable", requires: "db", params: [] },
+		];
+	},
+	async call(tool, args, context) {
+		if (tool === "nonce") return success(context.run.nonce);
+		if (tool === "target") {
+			const resolved = context.bases.resolve("/orders");
+			if (resolved.status === "failure") return resolved;
+			return success(resolved.data.href);
+		}
+		const name = args[0].value;
+		const allowed = context.permissions.checkDb(name);
+		if (allowed.status === "failure") return allowed;
+		const connection = context.connections.resolve(name);
+		if (connection.status === "failure") return connection;
+		return success(connection.data.url);
+	},
+});
+`;
+
 /** A child that reports its pid, then idles indefinitely, well past the handshake timeout. */
 const SILENT_PLUGIN_SCRIPT = `
 await Bun.write(process.argv[1], String(process.pid));
@@ -75,9 +127,14 @@ setTimeout(() => {}, 60000);
 /** A child that exits before the handshake completes. */
 const EXITING_PLUGIN_SCRIPT = `process.exit(0);`;
 
-/** A minimal context whose workspace root the transport should forward. */
-function stubContext(root: string): ToolContext {
-	return {
+/**
+ * A caller's context whose parts the transport should forward.
+ *
+ * @param root - The workspace root the child must see.
+ * @param overrides - The rest of the context this call is about.
+ */
+function stubContext(root: string, overrides: Partial<ToolContext> = {}): ToolContext {
+	return createToolContext({
 		random: createRandom("test"),
 		now: new Date("2026-01-01T00:00:00.000Z"),
 		workspace: {
@@ -89,24 +146,8 @@ function stubContext(root: string): ToolContext {
 				return undefined;
 			},
 		},
-		permissions: {
-			checkRun() {
-				return success(undefined);
-			},
-			checkNet() {
-				return success(undefined);
-			},
-			checkEnv() {
-				return success(undefined);
-			},
-			checkHostFs() {
-				return success(undefined);
-			},
-			grantedEnvNames() {
-				return [];
-			},
-		},
-	};
+		...overrides,
+	});
 }
 
 /** Poll a predicate until it holds or the timeout elapses. */
@@ -230,6 +271,71 @@ describe("connectStdioPlugin", () => {
 		);
 		expect(isSuccess(result)).toBe(true);
 		if (isSuccess(result)) expect(result.data).toBe("/tmp/spec-forwarded-root");
+	});
+
+	test("gives a served plugin the run identity and the run's bases", async () => {
+		let connected = await connectStdioPlugin(
+			[BUN_EXECUTABLE, "-e", CONTEXT_PLUGIN_SCRIPT, TRANSPORT_PATH],
+			"context",
+		);
+		expect(isSuccess(connected)).toBe(true);
+		if (!isSuccess(connected)) return;
+		let context = stubContext("/tmp/spec-transport-root", {
+			run: { id: "run-7", attempt: 2, nonce: "run-7-2" },
+			bases: createBaseSet([{ name: "web", url: "https://example.test/api" }]),
+		});
+
+		let nonce = await connected.data.call("nonce", [], context);
+		expect(isSuccess(nonce)).toBe(true);
+		if (isSuccess(nonce)) expect(nonce.data).toBe("run-7-2");
+
+		let target = await connected.data.call("target", [], context);
+		expect(isSuccess(target)).toBe(true);
+		if (isSuccess(target)) expect(target.data).toBe("https://example.test/api/orders");
+	});
+
+	test("gates a served plugin's db tool on the caller's connection grants", async () => {
+		let connected = await connectStdioPlugin(
+			[BUN_EXECUTABLE, "-e", CONTEXT_PLUGIN_SCRIPT, TRANSPORT_PATH],
+			"context",
+		);
+		expect(isSuccess(connected)).toBe(true);
+		if (!isSuccess(connected)) return;
+		let context = stubContext("/tmp/spec-transport-root", {
+			connections: createConnectionSet([
+				{ name: "main", url: "postgres://localhost/main" },
+				{ name: "analytics", url: "postgres://localhost/analytics" },
+			]),
+			permissions: createPermissionSet({
+				...NOTHING_GRANTED,
+				db: { mode: "scoped", scopes: ["main"] },
+			}),
+		});
+
+		let granted = await connected.data.call("reach", [{ kind: "value", value: "main" }], context);
+		expect(isSuccess(granted)).toBe(true);
+		if (isSuccess(granted)) expect(granted.data).toBe("postgres://localhost/main");
+
+		let denied = await connected.data.call(
+			"reach",
+			[{ kind: "value", value: "analytics" }],
+			context,
+		);
+		expect(isFailure(denied)).toBe(true);
+		if (isFailure(denied)) {
+			expect(denied.error.code).toBe("permission-denied");
+			expect(denied.error.message).toContain("analytics");
+			/**
+			 * A denial the reporter cannot print the flag for is a denial nobody can
+			 * act on, so the structured fields cross the wire with the message and the
+			 * error comes back as the class the reporter groups.
+			 */
+			expect(denied.error).toBeInstanceOf(PermissionDeniedError);
+			expect(denied.error.remedy).toBe("spec run --allow-db=analytics");
+			let denial = denied.error as PermissionDeniedError;
+			expect(denial.permission).toBe("db");
+			expect(denial.resource).toBe("analytics");
+		}
 	});
 
 	test("gives the child no environment beyond PATH", async () => {

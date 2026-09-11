@@ -148,8 +148,8 @@ test "supports ES modules" {
 		);
 	});
 
-	test("the ADR-002 fixture definition and fixture-call parse", () => {
-		let file = parseOk(`fixture user {
+	test("the ADR-002 arrangement, as a command called by name, parses", () => {
+		let file = parseOk(`command user {
 	let response = http.post "/test/users" {
 		email: "sergio@example.com"
 	}
@@ -157,15 +157,16 @@ test "supports ES modules" {
 	return response.json
 }
 
-test "uses the fixture" {
+test "uses the command" {
 	given {
-		let user = fixture user
+		let user = user
 	}
 }
 `);
 		let definition = file.definitions[0];
-		if (definition?.kind !== "fixture") throw new Error("expected a fixture definition");
+		if (definition?.kind !== "command") throw new Error("expected a command definition");
 		expect(definition.name).toBe("user");
+		expect(definition.params).toEqual([]);
 		expect(definition.body.statements).toHaveLength(2);
 		let returned = definition.body.statements[1];
 		if (returned?.kind !== "return") throw new Error("expected a return statement");
@@ -174,8 +175,23 @@ test "uses the fixture" {
 
 		let binding = phaseOf(file, "given").statements[0];
 		if (binding?.kind !== "let") throw new Error("expected a let statement");
-		if (binding.value.kind !== "fixture-call") throw new Error("expected a fixture-call rhs");
-		expect(binding.value.name).toBe("user");
+		if (binding.value.kind !== "reference") throw new Error("expected a reference rhs");
+		expect(binding.value.path).toEqual(["user"]);
+	});
+});
+
+describe("parse: the removed fixture notation", () => {
+	test("a fixture definition names command as the replacement", () => {
+		let error = parseError('fixture user {\n\treturn "u"\n}\n');
+		expect(error.message).toContain('"fixture" was removed');
+		expect(error.message).toContain("command user");
+		expect(error.span).toBeDefined();
+	});
+
+	test("a fixture call names the command spelling that replaces it", () => {
+		let error = parseError(inGiven("\t\tlet u = fixture user"));
+		expect(error.message).toContain('"fixture" was removed');
+		expect(error.message).toContain('"user"');
 	});
 });
 
@@ -213,7 +229,7 @@ describe("parse: definitions", () => {
 
 	test("keywords are reserved as definition names", () => {
 		expect(parseError("command test { }").message).toContain("reserved");
-		expect(parseError("fixture given { }").message).toContain("reserved");
+		expect(parseError("command given { }").message).toContain("reserved");
 	});
 
 	test("keywords are reserved as binding and namespace names", () => {
@@ -274,16 +290,27 @@ describe("parse: eventually", () => {
 		expect(statement.withinMs).toBeUndefined();
 	});
 
-	test("eventually is rejected outside then blocks", () => {
+	test("eventually is rejected in given and when blocks and inside itself", () => {
 		expect(parseError('test "t" { given { eventually { expect 1 } } }\n').message).toContain(
-			'only valid directly inside a "then" block',
+			'"eventually" belongs in a "then" block',
 		);
-		expect(parseError("command c { eventually { expect 1 } }\n").message).toContain(
-			'only valid directly inside a "then" block',
+		expect(parseError('test "t" { when { eventually { expect 1 } } }\n').message).toContain(
+			'"eventually" belongs in a "then" block',
 		);
 		expect(
 			parseError('test "t" { then { eventually { eventually { expect 1 } } } }\n').message,
-		).toContain('only valid directly inside a "then" block');
+		).toContain('"eventually" belongs in a "then" block');
+	});
+
+	test("eventually is valid in a command body and in both hooks", () => {
+		let file = parseOk(
+			"command settle { eventually { expect 1 } }\nsetup { eventually { expect 1 } }\nteardown { eventually { expect 1 } }\n",
+		);
+		let command = file.definitions[0];
+		if (command?.kind !== "command") throw new Error("expected a command definition");
+		expect(command.body.statements[0]?.kind).toBe("eventually");
+		expect(file.setup?.body.statements[0]?.kind).toBe("eventually");
+		expect(file.teardown?.body.statements[0]?.kind).toBe("eventually");
 	});
 
 	test("within requires a duration literal", () => {
@@ -458,6 +485,104 @@ describe("parse: object literals", () => {
 	});
 });
 
+describe("parse: hooks and skip", () => {
+	test("setup and teardown hang off the file", () => {
+		let file = parseOk(
+			'setup {\n\twrite "seed.json" "{}"\n}\n\nteardown {\n\tremove "seed.json"\n}\n',
+		);
+		expect(file.setup?.kind).toBe("setup");
+		expect(file.setup?.body.statements).toHaveLength(1);
+		expect(file.teardown?.kind).toBe("teardown");
+		expect(file.teardown?.span.start).toBeGreaterThan(0);
+	});
+
+	test("a file without hooks leaves both unset", () => {
+		let file = parseOk('test "t" { then { expect 1 } }\n');
+		expect(file.setup).toBeUndefined();
+		expect(file.teardown).toBeUndefined();
+	});
+
+	test("a second hook of one kind in a file names the rule", () => {
+		let error = parseError("setup {\n}\n\nsetup {\n}\n");
+		expect(error.message).toContain('"setup" hook appears more than once');
+	});
+
+	test("skip without a reason records an empty one", () => {
+		let file = parseOk('skip test "t" { then { expect 1 } }\n');
+		expect(file.tests[0]?.skip).toBe("");
+		expect(file.tests[0]?.span.start).toBe(0);
+	});
+
+	test("skip with a reason records it verbatim", () => {
+		let file = parseOk('skip "flaky against staging" test "t" { then { expect 1 } }\n');
+		expect(file.tests[0]?.skip).toBe("flaky against staging");
+		expect(file.tests[0]?.title).toBe("t");
+	});
+
+	test("an unskipped test carries no reason at all", () => {
+		let file = parseOk('test "t" { then { expect 1 } }\n');
+		expect(file.tests[0]?.skip).toBeUndefined();
+	});
+
+	test("skip must prefix a test", () => {
+		expect(parseError("skip command c { }\n").message).toContain('"test" after "skip"');
+	});
+});
+
+describe("parse: array literals", () => {
+	test("comma and newline separators are interchangeable", () => {
+		let inline = parseOk(inGiven("\t\tlet a = [ 1, 2 ]"));
+		let multiline = parseOk(inGiven("\t\tlet a = [\n\t\t\t1\n\t\t\t2\n\t\t]"));
+		for (let file of [inline, multiline]) {
+			let statement = phaseOf(file, "given").statements[0];
+			if (statement?.kind !== "let") throw new Error("expected a let statement");
+			if (statement.value.kind !== "array") throw new Error("expected an array rhs");
+			expect(statement.value.items.map((item) => item.kind)).toEqual(["number", "number"]);
+		}
+	});
+
+	test("an empty array literal parses", () => {
+		let file = parseOk(inGiven("\t\tlet a = []"));
+		let statement = phaseOf(file, "given").statements[0];
+		if (statement?.kind !== "let") throw new Error("expected a let statement");
+		if (statement.value.kind !== "array") throw new Error("expected an array rhs");
+		expect(statement.value.items).toEqual([]);
+	});
+
+	test("arrays nest and hold every expression form", () => {
+		let file = parseOk(inGiven('\t\tlet a = [ "s", 1, true, 10s, { k: 1 }, [ 2 ], user.id ]'));
+		let statement = phaseOf(file, "given").statements[0];
+		if (statement?.kind !== "let") throw new Error("expected a let statement");
+		if (statement.value.kind !== "array") throw new Error("expected an array rhs");
+		expect(statement.value.items.map((item) => item.kind)).toEqual([
+			"string",
+			"number",
+			"boolean",
+			"duration",
+			"object",
+			"array",
+			"reference",
+		]);
+	});
+
+	test("an array literal is valid in argument position", () => {
+		let file = parseOk('test "t" { when { db.query "select 1" params [ 1, 2 ] } }\n');
+		let statement = phaseOf(file, "when").statements[0];
+		if (statement?.kind !== "call") throw new Error("expected a call statement");
+		expect(statement.args.map((argument) => argument.kind)).toEqual(["string", "word", "array"]);
+	});
+
+	test("a trailing comma is rejected", () => {
+		expect(parseError(inGiven("\t\tlet a = [ 1, ]")).message).toContain('an array item after ","');
+	});
+
+	test("an unclosed array names the closing bracket", () => {
+		expect(parseError(inGiven("\t\tlet a = [ 1 2 ]")).message).toContain(
+			'"," or a newline between array items',
+		);
+	});
+});
+
 describe("parse: files, comments, and diagnostics", () => {
 	test("comments never affect the tree", () => {
 		let file = parseOk(`# suite comment
@@ -476,7 +601,9 @@ test "t" { # open
 	});
 
 	test("only use, definitions, and tests may appear at the top level", () => {
-		expect(parseError("foo bar\n").message).toContain('"use", "command", "fixture", or "test"');
+		expect(parseError("foo bar\n").message).toContain(
+			'"use", "command", "setup", "teardown", "skip", or "test"',
+		);
 	});
 
 	test("top-level items end at a newline", () => {

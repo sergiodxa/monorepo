@@ -16,6 +16,7 @@ import { failure, isFailure, success } from "@sdxc/result";
 
 import type {
 	ArgumentNode,
+	ArrayNode,
 	BlockNode,
 	CallNode,
 	CommandNode,
@@ -23,7 +24,7 @@ import type {
 	EventuallyNode,
 	ExpectNode,
 	ExpressionNode,
-	FixtureNode,
+	HookNode,
 	LetNode,
 	ObjectEntryNode,
 	ObjectNode,
@@ -54,7 +55,12 @@ const ARGUMENT_START_KINDS: ReadonlySet<TokenKind> = new Set<TokenKind>([
 	"duration",
 	"identifier",
 	"lbrace",
+	"lbracket",
 ]);
+
+/** What to write instead, printed when a file still uses the removed `fixture`. */
+const FIXTURE_REPLACEMENT =
+	'"fixture" was removed from the language: a command takes parameters, performs effects, and returns a value, so it covers everything a fixture did.';
 
 /**
  * Parse a `.spec` file into its AST, lexing it first. The result is either
@@ -159,21 +165,48 @@ export function parse(source: SourceFile): Result<SpecFileNode, ParseError> {
 		expected("a newline after the declaration");
 	}
 
-	/** file = { use | definition | test } */
+	/** file = { use | command | hook | [ skip ] test } */
 	function parseFile(): SpecFileNode {
 		let uses: UseNode[] = [];
 		let definitions: DefinitionNode[] = [];
 		let tests: TestNode[] = [];
+		let hooks = new Map<"setup" | "teardown", HookNode>();
 		skipNewlines();
 		while (!check("eof")) {
 			if (checkKeyword("use")) uses.push(parseUse());
 			else if (checkKeyword("command")) definitions.push(parseCommand());
-			else if (checkKeyword("fixture")) definitions.push(parseFixture());
+			else if (checkKeyword("setup") || checkKeyword("teardown")) {
+				let hook = parseHook();
+				let previous = hooks.get(hook.kind);
+				if (previous) {
+					fail(
+						`The "${hook.kind}" hook appears more than once in this file; a suite has at most one.`,
+						hook.span,
+					);
+				}
+				hooks.set(hook.kind, hook);
+			} else if (checkKeyword("skip")) tests.push(parseSkippedTest());
 			else if (checkKeyword("test")) tests.push(parseTest());
-			else expected('"use", "command", "fixture", or "test" at the top level');
+			else if (checkKeyword("fixture")) {
+				fail(
+					`${FIXTURE_REPLACEMENT} Write "command ${peekName(1)} { … }" instead.`,
+					current().span,
+				);
+			} else expected('"use", "command", "setup", "teardown", "skip", or "test" at the top level');
 			expectTopLevelEnd();
 		}
-		return { path: source.path, uses, definitions, tests };
+		let file: SpecFileNode = { path: source.path, uses, definitions, tests };
+		let setup = hooks.get("setup");
+		let teardown = hooks.get("teardown");
+		if (setup) file.setup = setup;
+		if (teardown) file.teardown = teardown;
+		return file;
+	}
+
+	/** The text of a token ahead of the cursor, for a message that quotes it. */
+	function peekName(offset: number): string {
+		let token = tokens[position + offset];
+		return token && token.kind === "identifier" ? token.text : "NAME";
 	}
 
 	/** use = "use" IDENT */
@@ -205,7 +238,11 @@ export function parse(source: SourceFile): Result<SpecFileNode, ParseError> {
 			}
 			expectKind("rparen", '")" to close the parameter list');
 		}
-		let body = parseBlock(false);
+		/**
+		 * A command may wait for the effect it just caused, which is what makes
+		 * a sequence of calls a substitute for the loop the language has not.
+		 */
+		let body = parseBlock(true);
 		return {
 			kind: "command",
 			name: name.text,
@@ -215,17 +252,23 @@ export function parse(source: SourceFile): Result<SpecFileNode, ParseError> {
 		};
 	}
 
-	/** fixture = "fixture" IDENT block */
-	function parseFixture(): FixtureNode {
-		let keyword = expectKeyword("fixture");
-		let name = expectName("a fixture name");
-		let body = parseBlock(false);
-		return {
-			kind: "fixture",
-			name: name.text,
-			body,
-			span: { start: keyword.span.start, end: body.span.end },
-		};
+	/** hook = ( "setup" | "teardown" ) block */
+	function parseHook(): HookNode {
+		let keyword = advance();
+		let kind: HookNode["kind"] = keyword.keyword === "teardown" ? "teardown" : "setup";
+		let body = parseBlock(true);
+		return { kind, body, span: { start: keyword.span.start, end: body.span.end } };
+	}
+
+	/** skipped-test = "skip" [ STRING ] test */
+	function parseSkippedTest(): TestNode {
+		let keyword = expectKeyword("skip");
+		let reason = check("string") ? stringValue(advance()) : "";
+		if (!checkKeyword("test")) expected('"test" after "skip"');
+		let node = parseTest();
+		node.skip = reason;
+		node.span = { start: keyword.span.start, end: node.span.end };
+		return node;
 	}
 
 	/** test = "test" STRING "{" [ given ] [ when ] [ then ] "}" — ≥1 phase. */
@@ -294,7 +337,10 @@ export function parse(source: SourceFile): Result<SpecFileNode, ParseError> {
 		if (checkKeyword("expect")) return parseExpect();
 		if (checkKeyword("eventually")) {
 			if (!allowEventually) {
-				fail('"eventually" is only valid directly inside a "then" block.', current().span);
+				fail(
+					'"eventually" belongs in a "then" block, a command body, or a setup/teardown hook.',
+					current().span,
+				);
 			}
 			return parseEventually();
 		}
@@ -330,13 +376,10 @@ export function parse(source: SourceFile): Result<SpecFileNode, ParseError> {
 	 */
 	function parseRhs(): RhsNode {
 		if (checkKeyword("fixture")) {
-			let keyword = advance();
-			let name = expectName("a fixture name");
-			return {
-				kind: "fixture-call",
-				name: name.text,
-				span: { start: keyword.span.start, end: name.span.end },
-			};
+			fail(
+				`${FIXTURE_REPLACEMENT} Call the command by name: "${peekName(1)}" alone is its right-hand side.`,
+				current().span,
+			);
 		}
 		if (check("identifier")) {
 			let target = advance();
@@ -376,7 +419,7 @@ export function parse(source: SourceFile): Result<SpecFileNode, ParseError> {
 		return parseExpression();
 	}
 
-	/** expression = literal | object | PATH-as-reference */
+	/** expression = literal | object | array | PATH-as-reference */
 	function parseExpression(): ExpressionNode {
 		let token = current();
 		if (token.kind === "string" || token.kind === "multiline-string") {
@@ -396,11 +439,39 @@ export function parse(source: SourceFile): Result<SpecFileNode, ParseError> {
 			return { kind: "boolean", value: token.keyword === "true", span: token.span };
 		}
 		if (token.kind === "lbrace") return parseObject();
+		if (token.kind === "lbracket") return parseArray();
 		if (token.kind === "identifier") {
 			advance();
 			return referenceFrom(token);
 		}
-		return expected("an expression (a literal, an object, or a reference)");
+		return expected("an expression (a literal, an object, an array, or a reference)");
+	}
+
+	/** array = "[" [ expression { item-sep expression } ] "]" */
+	function parseArray(): ArrayNode {
+		let open = expectKind("lbracket", '"[" to open an array literal');
+		skipNewlines();
+		let items: ExpressionNode[] = [];
+		while (!check("rbracket")) {
+			items.push(parseExpression());
+			let separated = false;
+			if (check("newline")) {
+				skipNewlines();
+				separated = true;
+			}
+			if (check("comma")) {
+				advance();
+				skipNewlines();
+				if (check("rbracket")) expected('an array item after ","');
+				separated = true;
+			}
+			if (check("rbracket")) break;
+			if (!separated) {
+				expected('"," or a newline between array items, or "]" to close the array');
+			}
+		}
+		let close = expectKind("rbracket", '"]" to close the array literal');
+		return { kind: "array", items, span: { start: open.span.start, end: close.span.end } };
 	}
 
 	/** A dotted identifier token as a reference into bindings. */

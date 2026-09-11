@@ -15,10 +15,11 @@ import { createRandom } from "@sdxc/sample";
 import { describe, expect, test } from "vitest";
 
 import type { SpecError } from "../errors.js";
-import type { PermissionSet } from "../permissions.js";
 import type { ToolContext } from "../plugin.js";
 import type { ToolArg, Value } from "../values.js";
 import type { Workspace } from "../workspace.js";
+
+import { createToolContext } from "../tool-context.js";
 
 import { createUrlPlugin } from "./url.js";
 
@@ -32,17 +33,6 @@ function word(name: string): ToolArg {
 	return { kind: "word", word: name };
 }
 
-/** A permission set that grants nothing; the url plugin never asks it anything. */
-function grantNothing(): PermissionSet {
-	return {
-		checkRun: () => success(undefined),
-		checkNet: () => success(undefined),
-		checkEnv: () => success(undefined),
-		checkHostFs: () => success(undefined),
-		grantedEnvNames: () => [],
-	};
-}
-
 /** A workspace stub; url tools never touch the filesystem. */
 function stubWorkspace(): Workspace {
 	return {
@@ -54,12 +44,11 @@ function stubWorkspace(): Workspace {
 
 /** Build a tool context; the url plugin ignores everything but its arguments. */
 function buildContext(): ToolContext {
-	return {
+	return createToolContext({
 		workspace: stubWorkspace(),
-		permissions: grantNothing(),
 		random: createRandom("test"),
 		now: new Date("2026-01-01T00:00:00.000Z"),
-	};
+	});
 }
 
 /** Unwrap a failed result into its error, failing the test on success. */

@@ -11,10 +11,31 @@
 import type { Result } from "@sdxc/result";
 import type { Random } from "@sdxc/sample";
 
+import type { ArtifactStore } from "./artifacts.js";
+import type { BaseSet, ConnectionSet } from "./bases.js";
 import type { SpecError } from "./errors.js";
 import type { PermissionKind, PermissionSet } from "./permissions.js";
 import type { ToolArg, Value } from "./values.js";
 import type { Workspace } from "./workspace.js";
+
+/**
+ * What a run and one attempt of one test are called. Generated data stays
+ * deterministic, so a spec that needs a value no earlier run produced — a
+ * unique email, a unique slug — composes {@link RunIdentity.nonce} into it
+ * explicitly, and the run header prints the id as a replay flag.
+ */
+export interface RunIdentity {
+	/** One per run, shared by every test; `--run-id=` replays it. */
+	id: string;
+	/** Which attempt of this test is running, counting from 1. */
+	attempt: number;
+	/**
+	 * `<id>-<attempt>`: the one value in the runtime that must not reproduce
+	 * across runs. It moves with the attempt so a retry's inserts stay clean
+	 * where the original attempt already wrote a row.
+	 */
+	nonce: string;
+}
 
 /** One declared parameter of a tool, for diagnostics and documentation. */
 export interface ToolParam {
@@ -67,6 +88,17 @@ export interface ToolContext {
 	 * reports or generates a time answers consistently within one test.
 	 */
 	now: Date;
+	/** What this run and this attempt are called; see {@link RunIdentity}. */
+	run: RunIdentity;
+	/** The run's named bases, which every relative target resolves through. */
+	bases: BaseSet;
+	/** The run's named database connections, which `on "…"` selects among. */
+	connections: ConnectionSet;
+	/**
+	 * Where a failure writes what a person needs to see it. Absent unless the
+	 * caller passed `--artifacts=<dir>`, so a plugin checks before writing.
+	 */
+	artifacts?: ArtifactStore;
 }
 
 /**

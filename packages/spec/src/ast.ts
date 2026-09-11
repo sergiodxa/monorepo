@@ -10,16 +10,34 @@
 
 import type { Span } from "./source.js";
 
-/** A parsed `.spec` file: its `use` imports, definitions, and tests. */
+/** A parsed `.spec` file: its `use` imports, definitions, hooks, and tests. */
 export interface SpecFileNode {
 	/** Path the file was loaded from, used in every diagnostic. */
 	path: string;
 	/** Namespaces imported unqualified into this file (file-scoped). */
 	uses: UseNode[];
-	/** Suite-global command and fixture definitions declared here. */
+	/** Suite-global command definitions declared here. */
 	definitions: DefinitionNode[];
 	/** Executable tests declared here, in source order. */
 	tests: TestNode[];
+	/** The suite's `setup` hook, when this file declares it. */
+	setup?: HookNode;
+	/** The suite's `teardown` hook, when this file declares it. */
+	teardown?: HookNode;
+}
+
+/**
+ * `setup { … }` / `teardown { … }` — the suite's once-per-run hooks. At most
+ * one of each may exist across the whole suite, a second being a load error
+ * the way a duplicate definition is.
+ */
+export interface HookNode {
+	/** Which hook this is, deciding when the run executes it. */
+	kind: "setup" | "teardown";
+	/** The statements the hook executes. */
+	body: BlockNode;
+	/** Location of the whole hook. */
+	span: Span;
 }
 
 /** `use fs` — imports one namespace's tools as unqualified names. */
@@ -30,8 +48,12 @@ export interface UseNode {
 	span: Span;
 }
 
-/** A suite-global definition: a reusable command or fixture. */
-export type DefinitionNode = CommandNode | FixtureNode;
+/**
+ * A suite-global definition. Commands absorbed fixtures, so this is a single
+ * node kind today; the alias stays because the executor and registry speak of
+ * "the definition a body belongs to" rather than of commands specifically.
+ */
+export type DefinitionNode = CommandNode;
 
 /** `command login(user) { … }` — reusable behavior composed of statements. */
 export interface CommandNode {
@@ -46,21 +68,15 @@ export interface CommandNode {
 	span: Span;
 }
 
-/** `fixture user { … }` — reusable setup that yields a value via `return`. */
-export interface FixtureNode {
-	kind: "fixture";
-	/** The fixture's suite-global name. */
-	name: string;
-	/** The statements the fixture executes. */
-	body: BlockNode;
-	/** Location of the whole definition. */
-	span: Span;
-}
-
 /** `test "title" { given {…} when {…} then {…} }` — one specification. */
 export interface TestNode {
 	/** The test's human-readable title. */
 	title: string;
+	/**
+	 * Why the test is skipped, set by the `skip` prefix. An empty string is a
+	 * `skip` with no reason given, which the summary still counts as skipped.
+	 */
+	skip?: string;
 	/** Setup phase, when present. */
 	given?: BlockNode;
 	/** Action phase, when present. */
@@ -92,7 +108,7 @@ export interface LetNode {
 	span: Span;
 }
 
-/** `return <rhs>` — ends a fixture/command body, producing a value. */
+/** `return <rhs>` — ends a command or hook body, producing a value. */
 export interface ReturnNode {
 	kind: "return";
 	/** What to evaluate and yield to the caller. */
@@ -101,18 +117,11 @@ export interface ReturnNode {
 }
 
 /**
- * The right-hand side of `let`/`return`: a plain expression, a fixture
- * invocation, or a call expression. Calls are only legal here — never nested
- * inside arguments — which keeps statements linear.
+ * The right-hand side of `let`/`return`: a plain expression or a call
+ * expression. Calls are only legal here — never nested inside arguments —
+ * which keeps statements linear.
  */
-export type RhsNode = ExpressionNode | FixtureCallNode | CallExprNode;
-
-/** `fixture user` in expression position — runs the fixture for its value. */
-export interface FixtureCallNode {
-	kind: "fixture-call";
-	name: string;
-	span: Span;
-}
+export type RhsNode = ExpressionNode | CallExprNode;
 
 /** A value-producing invocation: `run "node" "index.js"` on a `let`/`return`. */
 export interface CallExprNode {
@@ -170,6 +179,7 @@ export type ExpressionNode =
 	| BooleanNode
 	| DurationNode
 	| ObjectNode
+	| ArrayNode
 	| ReferenceNode;
 
 /** A single-line or multiline string literal, already decoded/dedented. */
@@ -217,10 +227,22 @@ export interface ObjectEntryNode {
 	span: Span;
 }
 
+/** `[ a, b ]` — an array literal, the writable form of a list value. */
+export interface ArrayNode {
+	kind: "array";
+	/** The items in source order. */
+	items: ExpressionNode[];
+	span: Span;
+}
+
 /** A dotted reference into bindings: `user`, `result.exit_code`. */
 export interface ReferenceNode {
 	kind: "reference";
-	/** The path segments, e.g. `["result", "exit_code"]`. */
+	/**
+	 * The path segments, e.g. `["result", "exit_code"]`. A segment spelled as
+	 * digits indexes an array element, 0-based, so `result.rows.0.id` reads the
+	 * first row's `id`.
+	 */
 	path: string[];
 	span: Span;
 }

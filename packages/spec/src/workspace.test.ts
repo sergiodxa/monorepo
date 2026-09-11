@@ -13,14 +13,24 @@ import { isAbsolute, join } from "node:path";
 
 import type { Result } from "@sdxc/result";
 
-import { failure, isSuccess, success, unwrap } from "@sdxc/result";
+import { failure, isSuccess, unwrap } from "@sdxc/result";
 import { afterEach, describe, expect, test } from "vitest";
 
-import type { PermissionSet } from "./permissions.js";
+import type { Grants, PermissionSet } from "./permissions.js";
 import type { Workspace } from "./workspace.js";
 
 import { PermissionDeniedError, WorkspaceEscapeError } from "./errors.js";
+import { createPermissionSet } from "./permissions.js";
 import { createWorkspace } from "./workspace.js";
+
+/** The grants of a run that allowed every family, which these tests resolve under. */
+const EVERYTHING_GRANTED: Grants = {
+	run: { mode: "all" },
+	net: { mode: "all" },
+	env: { mode: "all" },
+	hostFs: { mode: "all" },
+	db: { mode: "all" },
+};
 
 /** Workspaces created during a test, removed again by the afterEach hook. */
 const OPEN_WORKSPACES: Workspace[] = [];
@@ -47,20 +57,13 @@ function expectFailure<T, E extends Error>(result: Result<T, E>): E {
 }
 
 /**
- * Build a permission set stub whose checks all pass, with overrides.
+ * Build a permission set that grants every family, with overrides.
  *
  * @param overrides - The members to replace.
- * @returns A stub `PermissionSet`.
+ * @returns A `PermissionSet` a workspace resolves through.
  */
 function stubPermissions(overrides: Partial<PermissionSet> = {}): PermissionSet {
-	return {
-		checkRun: () => success(undefined),
-		checkNet: () => success(undefined),
-		checkEnv: () => success(undefined),
-		checkHostFs: () => success(undefined),
-		grantedEnvNames: () => [],
-		...overrides,
-	};
+	return { ...createPermissionSet(EVERYTHING_GRANTED), ...overrides };
 }
 
 /**

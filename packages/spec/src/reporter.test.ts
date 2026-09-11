@@ -24,7 +24,10 @@ import {
 	ToolError,
 	WorkspaceEscapeError,
 } from "./errors.js";
-import { reportFatal, reportSuite } from "./reporter.js";
+import { reportFatal, reportRunHeader, reportSuite } from "./reporter.js";
+
+/** What every fixture shares: one run id, and nothing skipped or flaky. */
+const RUN_DEFAULTS = { runId: "abc123", skipped: 0, flaky: 0 };
 
 class BufferSink implements Sink {
 	text = "";
@@ -46,6 +49,7 @@ describe(reportSuite, () => {
 	test("reports an all-passing suite with counts and duration", () => {
 		let sink = new BufferSink();
 		let suite: SuiteResult = {
+			...RUN_DEFAULTS,
 			results: [passed("writes a file", 12), passed("reads it back", 8)],
 			passed: 2,
 			failed: 0,
@@ -60,6 +64,7 @@ describe(reportSuite, () => {
 	test("reports the run's wall-clock, not the summed per-test durations", () => {
 		let sink = new BufferSink();
 		let suite: SuiteResult = {
+			...RUN_DEFAULTS,
 			results: [passed("first waiter", 500), passed("second waiter", 500)],
 			passed: 2,
 			failed: 0,
@@ -73,7 +78,13 @@ describe(reportSuite, () => {
 
 	test("reports an empty suite as a lone summary line", () => {
 		let sink = new BufferSink();
-		let suite: SuiteResult = { results: [], passed: 0, failed: 0, wallMs: 0 };
+		let suite: SuiteResult = {
+			...RUN_DEFAULTS,
+			results: [],
+			passed: 0,
+			failed: 0,
+			wallMs: 0,
+		};
 
 		reportSuite(suite, new Map<string, SourceFile>(), sink);
 
@@ -91,6 +102,7 @@ describe(reportSuite, () => {
 		error.span = { start: offset, end: offset + "expect".length };
 		let sink = new BufferSink();
 		let suite: SuiteResult = {
+			...RUN_DEFAULTS,
 			results: [failed("posts json", source.path, error, 57)],
 			passed: 0,
 			failed: 1,
@@ -120,6 +132,7 @@ describe(reportSuite, () => {
 		);
 		let sink = new BufferSink();
 		let suite: SuiteResult = {
+			...RUN_DEFAULTS,
 			results: [failed("compares objects", "spec/values.spec", error, 3)],
 			passed: 0,
 			failed: 1,
@@ -148,6 +161,7 @@ describe(reportSuite, () => {
 		let error = new PermissionDeniedError("run", "node", "spec run --allow-run=node");
 		let sink = new BufferSink();
 		let suite: SuiteResult = {
+			...RUN_DEFAULTS,
 			results: [failed("runs node", "spec/cli.spec", error, 5)],
 			passed: 0,
 			failed: 1,
@@ -180,6 +194,7 @@ describe(reportSuite, () => {
 		error.hint = "re-run with --allow-config to apply the project's declared permissions.";
 		let sink = new BufferSink();
 		let suite: SuiteResult = {
+			...RUN_DEFAULTS,
 			results: [failed("runs echo", "spec/cli.spec", error, 3)],
 			passed: 0,
 			failed: 1,
@@ -212,6 +227,7 @@ describe(reportSuite, () => {
 	test("collapses denials sharing a remedy into one block listing every test", () => {
 		let sink = new BufferSink();
 		let suite: SuiteResult = {
+			...RUN_DEFAULTS,
 			results: [
 				failed(
 					"runs echo",
@@ -263,6 +279,7 @@ describe(reportSuite, () => {
 	test("separates denials with distinct remedies into their own blocks", () => {
 		let sink = new BufferSink();
 		let suite: SuiteResult = {
+			...RUN_DEFAULTS,
 			results: [
 				failed(
 					"spawns a tool",
@@ -321,6 +338,7 @@ describe(reportSuite, () => {
 	test("prints inline failures and passes before the accumulated denial block", () => {
 		let sink = new BufferSink();
 		let suite: SuiteResult = {
+			...RUN_DEFAULTS,
 			results: [
 				failed(
 					"the ledger balances",
@@ -383,6 +401,7 @@ describe(reportSuite, () => {
 		denial.resource = "api.example.com";
 		let sink = new BufferSink();
 		let suite: SuiteResult = {
+			...RUN_DEFAULTS,
 			results: [failed("fetches", "spec/http.spec", error, 2)],
 			passed: 0,
 			failed: 1,
@@ -406,6 +425,7 @@ describe(reportSuite, () => {
 		let error = new SpecError("permission-denied", "Permission denied: net");
 		let sink = new BufferSink();
 		let suite: SuiteResult = {
+			...RUN_DEFAULTS,
 			results: [failed("fetches", "spec/http.spec", error, 2)],
 			passed: 0,
 			failed: 1,
@@ -429,6 +449,7 @@ describe(reportSuite, () => {
 		let error = new WorkspaceEscapeError("../outside.txt");
 		let sink = new BufferSink();
 		let suite: SuiteResult = {
+			...RUN_DEFAULTS,
 			results: [failed("escapes", "spec/fs.spec", error, 1)],
 			passed: 0,
 			failed: 1,
@@ -449,10 +470,107 @@ describe(reportSuite, () => {
 		);
 	});
 
+	test("reports a skipped test apart from the counts, with its reason", () => {
+		let sink = new BufferSink();
+		let suite: SuiteResult = {
+			...RUN_DEFAULTS,
+			results: [
+				passed("runs", 2),
+				{
+					title: "waits on staging",
+					file: "spec/a.spec",
+					status: "skipped",
+					reason: "the staging database is down",
+					durationMs: 0,
+				},
+				{ title: "no reason given", file: "spec/a.spec", status: "skipped", durationMs: 0 },
+			],
+			passed: 1,
+			failed: 0,
+			skipped: 2,
+			wallMs: 2,
+		};
+
+		reportSuite(suite, new Map<string, SourceFile>(), sink);
+
+		expect(sink.text).toBe(
+			[
+				"✓ runs",
+				"○ waits on staging (skipped: the staging database is down)",
+				"○ no reason given (skipped)",
+				"",
+				"1 passed, 0 failed, 2 skipped (2ms)",
+				"",
+			].join("\n"),
+		);
+	});
+
+	test("reports a flaky test with the attempt it settled on and what failed before", () => {
+		let sink = new BufferSink();
+		let suite: SuiteResult = {
+			...RUN_DEFAULTS,
+			results: [
+				{
+					title: "settles late",
+					file: "spec/a.spec",
+					status: "flaky",
+					attempts: [new ToolError("the world was not ready yet")],
+					durationMs: 7,
+				},
+			],
+			passed: 0,
+			failed: 0,
+			flaky: 1,
+			wallMs: 7,
+		};
+
+		reportSuite(suite, new Map<string, SourceFile>(), sink);
+
+		expect(sink.text).toBe(
+			[
+				"✓ settles late (flaky: passed on attempt 2)",
+				"  attempt 1: tool-error: the world was not ready yet",
+				"",
+				"0 passed, 0 failed, 1 flaky (7ms)",
+				"",
+			].join("\n"),
+		);
+	});
+
+	test("prints the artifacts a failing test wrote", () => {
+		let error = new ToolError('no button named "Save"');
+		error.artifacts = ["/tmp/artifacts/save.png", "/tmp/artifacts/save.txt"];
+		let sink = new BufferSink();
+		let suite: SuiteResult = {
+			...RUN_DEFAULTS,
+			results: [failed("clicks save", "spec/ui.spec", error, 4)],
+			passed: 0,
+			failed: 1,
+			wallMs: 4,
+		};
+
+		reportSuite(suite, new Map<string, SourceFile>(), sink);
+
+		expect(sink.text).toBe(
+			[
+				"✗ clicks save (spec/ui.spec)",
+				'  tool-error: no button named "Save"',
+				"",
+				"  Wrote:",
+				"  > /tmp/artifacts/save.png",
+				"  > /tmp/artifacts/save.txt",
+				"",
+				"0 passed, 1 failed (4ms)",
+				"",
+			].join("\n"),
+		);
+	});
+
 	test("keeps a failure between passing tests separated and counted", () => {
 		let error = new ToolError("boom");
 		let sink = new BufferSink();
 		let suite: SuiteResult = {
+			...RUN_DEFAULTS,
 			results: [failed("first", "spec/a.spec", error, 2), passed("second", 1)],
 			passed: 1,
 			failed: 1,
@@ -530,5 +648,42 @@ describe(reportFatal, () => {
 				"",
 			].join("\n"),
 		);
+	});
+});
+
+describe(reportRunHeader, () => {
+	test("prints the seed, the run id, and every resolved base as replay flags", () => {
+		let sink = new BufferSink();
+
+		reportRunHeader(
+			{
+				seed: "checkout",
+				runId: "mtw45t1m",
+				bases: [
+					{ name: "web", url: "http://localhost:4000" },
+					{ name: "work", url: "http://localhost:4020" },
+				],
+			},
+			sink,
+		);
+
+		expect(sink.text).toBe(
+			[
+				"seed checkout (replay with --seed=checkout)",
+				"run mtw45t1m (replay with --run-id=mtw45t1m)",
+				'base "web" \u2192 http://localhost:4000',
+				'base "work" \u2192 http://localhost:4020',
+				"",
+				"",
+			].join("\n"),
+		);
+	});
+
+	test("prints the two replay flags alone when no base is configured", () => {
+		let sink = new BufferSink();
+
+		reportRunHeader({ seed: 12, runId: "r1", bases: [] }, sink);
+
+		expect(sink.text).toBe("seed 12 (replay with --seed=12)\nrun r1 (replay with --run-id=r1)\n\n");
 	});
 });

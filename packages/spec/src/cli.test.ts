@@ -11,7 +11,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { Sink } from "./diagnostics.js";
 
@@ -20,6 +20,7 @@ import { main } from "./cli.js";
 const CREATED_DIRS: string[] = [];
 
 afterEach(async () => {
+	vi.unstubAllEnvs();
 	for (let dir of CREATED_DIRS.splice(0)) {
 		await rm(dir, { recursive: true, force: true });
 	}
@@ -271,12 +272,131 @@ test "reports the address it drew" {
 		expect(output()).toContain("--seed expects a value");
 	});
 
-	test("does not print a seed line when the seed was given", async () => {
+	test("prints the given seed too, so any run's header replays it", async () => {
 		let root = await probeSuite();
 		let { sink, output } = makeSink();
 
 		await main(["run", root, "--seed=fixed"], sink);
 
-		expect(output()).not.toContain("replay with");
+		expect(output()).toContain("seed fixed (replay with --seed=fixed)");
+	});
+});
+
+describe("--run-id", () => {
+	/** A suite whose only test passes, for flags observed through the header. */
+	async function trivialSuite(): Promise<string> {
+		return makeSuiteDir({
+			"trivial.spec": `test "holds" {
+	then {
+		expect 1 1
+	}
+}
+`,
+		});
+	}
+
+	test("the header prints a drawn run id as a replay flag", async () => {
+		let root = await trivialSuite();
+		let first = makeSink();
+		let second = makeSink();
+
+		await main(["run", root], first.sink);
+		await main(["run", root], second.sink);
+
+		let pattern = /run ([a-z0-9]+) \(replay with --run-id=([a-z0-9]+)\)/;
+		let one = pattern.exec(first.output());
+		let two = pattern.exec(second.output());
+		expect(one?.[1]).toBe(one?.[2]);
+		/** The one value in the runtime that must not reproduce across runs. */
+		expect(one?.[1]).not.toBe(two?.[1]);
+	});
+
+	test("replays the given run id verbatim", async () => {
+		let root = await trivialSuite();
+		let { sink, output } = makeSink();
+
+		let code = await main(["run", root, "--run-id=nightly-42"], sink);
+
+		expect(code).toBe(0);
+		expect(output()).toContain("run nightly-42 (replay with --run-id=nightly-42)");
+	});
+
+	test("a run id with no value is a usage error", async () => {
+		let root = await trivialSuite();
+		let { sink, output } = makeSink();
+
+		let code = await main(["run", root, "--run-id"], sink);
+
+		expect(code).toBe(2);
+		expect(output()).toContain("--run-id expects a value");
+	});
+
+	test("a malformed --retries is a usage error", async () => {
+		let root = await trivialSuite();
+		let { sink, output } = makeSink();
+
+		let code = await main(["run", root, "--retries=two"], sink);
+
+		expect(code).toBe(2);
+		expect(output()).toContain("--retries expects a non-negative integer");
+	});
+
+	test("an --artifacts directory with no value is a usage error", async () => {
+		let root = await trivialSuite();
+		let { sink, output } = makeSink();
+
+		let code = await main(["run", root, "--artifacts="], sink);
+
+		expect(code).toBe(2);
+		expect(output()).toContain("--artifacts expects a value");
+	});
+});
+
+describe("bases", () => {
+	test("the header prints each resolved base, environment variable first", async () => {
+		let root = await makeSuiteDir({
+			"config.jsonc": `{
+	"bases": {
+		"web": { "env": "SPEC_CLI_BASE_FIXTURE", "default": "http://localhost:4000" },
+		"work": { "default": "http://localhost:4020" }
+	}
+}
+`,
+			"trivial.spec": `test "holds" {
+	then {
+		expect 1 1
+	}
+}
+`,
+		});
+		let { sink, output } = makeSink();
+		vi.stubEnv("SPEC_CLI_BASE_FIXTURE", "https://staging.example.com");
+
+		let code = await main(["run", root], sink);
+
+		expect(code).toBe(0);
+		expect(output()).toContain(`base "web" → https://staging.example.com`);
+		expect(output()).toContain(`base "work" → http://localhost:4020`);
+	});
+
+	test("a base that resolves to nothing is a load error naming its variable", async () => {
+		let root = await makeSuiteDir({
+			"config.jsonc": `{
+	"bases": { "web": { "env": "SPEC_CLI_MISSING_BASE" } }
+}
+`,
+			"trivial.spec": `test "holds" {
+	then {
+		expect 1 1
+	}
+}
+`,
+		});
+		let { sink, output } = makeSink();
+
+		let code = await main(["run", root], sink);
+
+		expect(code).toBe(2);
+		expect(output()).toContain("SPEC_CLI_MISSING_BASE");
 	});
 });

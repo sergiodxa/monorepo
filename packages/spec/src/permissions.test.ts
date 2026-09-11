@@ -51,6 +51,7 @@ function grants(overrides: Partial<Grants> = {}): Grants {
 		net: { mode: "denied" },
 		env: { mode: "denied" },
 		hostFs: { mode: "denied" },
+		db: { mode: "denied" },
 		...overrides,
 	};
 }
@@ -69,13 +70,14 @@ describe("parseGrants", () => {
 
 	test("a bare flag grants its whole family", () => {
 		let parsed = unwrap(
-			parseGrants(["--allow-run", "--allow-net", "--allow-env", "--allow-host-fs"]),
+			parseGrants(["--allow-run", "--allow-net", "--allow-env", "--allow-host-fs", "--allow-db"]),
 		);
 		expect(parsed.grants).toEqual({
 			run: { mode: "all" },
 			net: { mode: "all" },
 			env: { mode: "all" },
 			hostFs: { mode: "all" },
+			db: { mode: "all" },
 		});
 	});
 
@@ -86,6 +88,7 @@ describe("parseGrants", () => {
 				"--allow-net=example.com:8080",
 				"--allow-env=CI",
 				"--allow-host-fs=/opt/data",
+				"--allow-db=web",
 			]),
 		);
 		expect(parsed.grants).toEqual({
@@ -93,6 +96,7 @@ describe("parseGrants", () => {
 			net: { mode: "scoped", scopes: ["example.com:8080"] },
 			env: { mode: "scoped", scopes: ["CI"] },
 			hostFs: { mode: "scoped", scopes: ["/opt/data"] },
+			db: { mode: "scoped", scopes: ["web"] },
 		});
 	});
 

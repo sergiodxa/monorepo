@@ -18,7 +18,7 @@ import { failure, isSuccess, success } from "@sdxc/result";
 import { PermissionDeniedError, SpecError } from "./errors.js";
 
 /** The permission families v1 knows about. */
-export type PermissionKind = "run" | "net" | "env" | "host-fs";
+export type PermissionKind = "run" | "net" | "env" | "host-fs" | "db";
 
 /**
  * One permission family's grant: denied entirely, granted for everything, or
@@ -37,6 +37,8 @@ export interface Grants {
 	env: Grant;
 	/** Host filesystem outside the workspace: scopes are directory prefixes. */
 	hostFs: Grant;
+	/** Database access: scopes are configured connection names. */
+	db: Grant;
 }
 
 /**
@@ -71,6 +73,8 @@ export interface PermissionSet {
 	 * Granted when the path is inside a granted directory prefix.
 	 */
 	checkHostFs(path: string): Result<undefined, PermissionDeniedError>;
+	/** May the spec reach this configured database connection, by name? */
+	checkDb(connection: string): Result<undefined, PermissionDeniedError>;
 	/**
 	 * The environment variable names the caller granted, for building the
 	 * filtered environment of child processes — subprocesses inherit granted
@@ -85,6 +89,7 @@ const ALLOW_FLAGS = new Map<string, keyof Grants>([
 	["--allow-net", "net"],
 	["--allow-env", "env"],
 	["--allow-host-fs", "hostFs"],
+	["--allow-db", "db"],
 ]);
 
 /**
@@ -104,6 +109,7 @@ export function parseGrants(
 		net: { mode: "denied" },
 		env: { mode: "denied" },
 		hostFs: { mode: "denied" },
+		db: { mode: "denied" },
 	};
 	let remaining: string[] = [];
 	for (let argument of args) {
@@ -199,6 +205,15 @@ export function createPermissionSet(grants: Grants): PermissionSet {
 				new PermissionDeniedError("host-fs", path, `spec run --allow-host-fs=${dirname(resolved)}`),
 			);
 		},
+		checkDb(connection) {
+			if (grants.db.mode === "all") return success(undefined);
+			if (grants.db.mode === "scoped" && grants.db.scopes.includes(connection)) {
+				return success(undefined);
+			}
+			return failure(
+				new PermissionDeniedError("db", connection, `spec run --allow-db=${connection}`),
+			);
+		},
 		grantedEnvNames() {
 			if (grants.env.mode === "all") return Object.keys(process.env);
 			if (grants.env.mode === "scoped") return [...grants.env.scopes];
@@ -213,6 +228,7 @@ const GRANT_KEYS = {
 	net: "net",
 	env: "env",
 	"host-fs": "hostFs",
+	db: "db",
 } as const satisfies Record<PermissionKind, keyof Grants>;
 
 /**
@@ -229,6 +245,7 @@ export function grantsFromConfig(entries: readonly ConfigPermissionEntry[]): Gra
 		net: { mode: "denied" },
 		env: { mode: "denied" },
 		hostFs: { mode: "denied" },
+		db: { mode: "denied" },
 	};
 	for (let entry of entries) {
 		if (entry.family === "plugins") continue;
@@ -275,6 +292,7 @@ export function mergeGrants(base: Grants, extra: Grants): Grants {
 		net: mergeGrant(base.net, extra.net),
 		env: mergeGrant(base.env, extra.env),
 		hostFs: mergeGrant(base.hostFs, extra.hostFs),
+		db: mergeGrant(base.db, extra.db),
 	};
 }
 
@@ -300,6 +318,7 @@ export function grantsAdmit(grants: Grants, permission: PermissionKind, resource
 	if (permission === "run") return isSuccess(set.checkRun(resource));
 	if (permission === "env") return isSuccess(set.checkEnv(resource));
 	if (permission === "host-fs") return isSuccess(set.checkHostFs(resource));
+	if (permission === "db") return isSuccess(set.checkDb(resource));
 	let parsed = splitNetResource(resource);
 	return isSuccess(set.checkNet(parsed.host, parsed.port));
 }

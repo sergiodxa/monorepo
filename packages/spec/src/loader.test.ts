@@ -76,13 +76,13 @@ describe("loadSuite", () => {
 		expect(result.data.files).toHaveLength(1);
 	});
 
-	test("registers commands and fixtures suite-globally across files", async () => {
+	test("registers commands suite-globally across files", async () => {
 		let root = await makeSuiteDir({
 			"commands/login.spec": `command login(name) {
 	let user = name
 }
 `,
-			"fixtures/admin.spec": `fixture admin {
+			"commands/admin.spec": `command admin {
 	return "admin"
 }
 `,
@@ -96,10 +96,48 @@ describe("loadSuite", () => {
 		let login = result.data.commands.get("login");
 		expect(login?.kind).toBe("command");
 		expect(login?.params).toEqual(["name"]);
-		let admin = result.data.fixtures.get("admin");
-		expect(admin?.kind).toBe("fixture");
-		expect(result.data.commands.size).toBe(1);
-		expect(result.data.fixtures.size).toBe(1);
+		expect(result.data.commands.get("admin")?.kind).toBe("command");
+		expect(result.data.commands.size).toBe(2);
+	});
+
+	test("collects the suite's hooks from wherever they are declared", async () => {
+		let root = await makeSuiteDir({
+			"hooks/setup.spec": `setup {
+	let seeded = true
+}
+`,
+			"a.spec": PASSING_TEST,
+		});
+
+		let result = await loadSuite(root);
+
+		expect(isSuccess(result)).toBe(true);
+		if (!isSuccess(result)) throw new Error("expected a success");
+		expect(result.data.setup?.hook.kind).toBe("setup");
+		expect(result.data.setup?.file.path).toBe(join(root, "hooks/setup.spec"));
+		expect(result.data.teardown).toBeUndefined();
+	});
+
+	test("fails with duplicate-definition for a second setup naming both files", async () => {
+		let root = await makeSuiteDir({
+			"a.spec": `setup {
+	let one = 1
+}
+`,
+			"b.spec": `setup {
+	let two = 2
+}
+`,
+		});
+
+		let result = await loadSuite(root);
+
+		expect(isFailure(result)).toBe(true);
+		if (!isFailure(result)) throw new Error("expected a failure");
+		expect(result.error).toBeInstanceOf(LoadError);
+		expect(result.error.code).toBe("duplicate-definition");
+		expect(result.error.message).toContain(join(root, "a.spec"));
+		expect(result.error.message).toContain(join(root, "b.spec"));
 	});
 
 	test("fails with duplicate-definition naming both files for two commands", async () => {
@@ -123,47 +161,6 @@ describe("loadSuite", () => {
 		expect(result.error.message).toContain('"login"');
 		expect(result.error.message).toContain(join(root, "a.spec"));
 		expect(result.error.message).toContain(join(root, "b.spec"));
-	});
-
-	test("fails with duplicate-definition for two fixtures with one name", async () => {
-		let root = await makeSuiteDir({
-			"a.spec": `fixture user {
-	return "one"
-}
-`,
-			"b.spec": `fixture user {
-	return "two"
-}
-`,
-		});
-
-		let result = await loadSuite(root);
-
-		expect(isFailure(result)).toBe(true);
-		if (!isFailure(result)) throw new Error("expected a failure");
-		expect(result.error.code).toBe("duplicate-definition");
-		expect(result.error.message).toContain('"user"');
-	});
-
-	test("fails with duplicate-definition when a command and a fixture share a name", async () => {
-		let root = await makeSuiteDir({
-			"a.spec": `command user {
-	return true
-}
-`,
-			"b.spec": `fixture user {
-	return "value"
-}
-`,
-		});
-
-		let result = await loadSuite(root);
-
-		expect(isFailure(result)).toBe(true);
-		if (!isFailure(result)) throw new Error("expected a failure");
-		expect(result.error.code).toBe("duplicate-definition");
-		expect(result.error.message).toContain("command");
-		expect(result.error.message).toContain("fixture");
 	});
 
 	test("fails with duplicate-definition inside a single file", async () => {

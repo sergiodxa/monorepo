@@ -12,7 +12,7 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isSuccess, success } from "@sdxc/result";
 
-import type { CommandNode, FixtureNode } from "./ast.js";
+import type { CommandNode } from "./ast.js";
 import type { Plugin, ToolDescriptor } from "./plugin.js";
 import type { LoadedSuite } from "./sources.js";
 
@@ -51,8 +51,6 @@ export interface Registry {
 		target: string,
 		uses: readonly string[],
 	): Result<ResolvedCallable, ResolutionError>;
-	/** Resolve `fixture NAME` to its definition. */
-	resolveFixture(name: string): Result<FixtureNode, ResolutionError>;
 	/** Whether a bare name could resolve to anything callable (for `expect`). */
 	isCallable(target: string, uses: readonly string[]): boolean;
 }
@@ -63,7 +61,7 @@ export interface Registry {
  * set is stable for its lifetime, making every later resolution a map lookup.
  *
  * @param plugins - The connected plugins, one namespace each.
- * @param suite - The loaded suite whose commands and fixtures resolve here.
+ * @param suite - The loaded suite whose commands resolve here.
  * @returns The registry the executor consults for every call.
  */
 export function createRegistry(plugins: Plugin[], suite: LoadedSuite): Registry {
@@ -160,32 +158,32 @@ export function createRegistry(plugins: Plugin[], suite: LoadedSuite): Registry 
 		);
 	}
 
-	/** Dispatch on the target's shape: bare, `ns.tool`, or too many dots. */
+	/**
+	 * Dispatch on the target's shape. The first dot separates a namespace from
+	 * a tool name, and everything after it is the name — a namespace may spell
+	 * a tool `fetch.post`, and after `use browser` that same spelling is bare.
+	 */
 	function resolveCallable(
 		target: string,
 		uses: readonly string[],
 	): Result<ResolvedCallable, ResolutionError> {
-		let segments = target.split(".");
-		if (segments.length > 2) {
-			return failure(
-				new ResolutionError(
-					"unknown-name",
-					`Unknown name "${target}": a call target has at most one dot (namespace.tool).`,
-				),
-			);
-		}
-		let [head, tail] = segments;
-		if (head !== undefined && tail !== undefined) return resolveQualified(target, head, tail);
-		return resolveBare(target, uses);
+		let dot = target.indexOf(".");
+		if (dot < 0) return resolveBare(target, uses);
+		let head = target.slice(0, dot);
+		if (namespaces.has(head)) return resolveQualified(target, head, target.slice(dot + 1));
+
+		let bare = resolveBare(target, uses);
+		if (isSuccess(bare) || bare.error.code === "ambiguous-name") return bare;
+		return failure(
+			new ResolutionError(
+				"unknown-name",
+				`Unknown name "${target}": no plugin provides the namespace "${head}", and no namespace imported with \`use\` spells a tool "${target}".`,
+			),
+		);
 	}
 
 	return {
 		resolveCallable,
-		resolveFixture(name) {
-			let fixture = suite.fixtures.get(name);
-			if (fixture) return success(fixture);
-			return failure(new ResolutionError("unknown-name", `Unknown fixture "${name}".`));
-		},
 		isCallable(target, uses) {
 			return isSuccess(resolveCallable(target, uses));
 		},

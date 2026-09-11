@@ -695,6 +695,7 @@
       },
       "dependencies": {
         "@sdxc/duration": "workspace:*",
+        "@sdxc/html": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/sample": "workspace:*",
       },

@@ -1,9 +1,8 @@
 /**
  * The interpreter core of the runtime: executes one test's statements against
  * the suite registry, an isolated workspace, and the caller's grants. Owns
- * scopes, `let`/`return`, command and fixture invocation, and the central
- * permission gate that refuses denied permission families before a plugin
- * ever sees the call.
+ * scopes, `let`/`return`, command invocation, and the central permission gate
+ * that refuses denied permission families before a plugin ever sees the call.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,27 +13,32 @@ import type { Random } from "@sdxc/sample";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
+import type { ArtifactStore } from "./artifacts.js";
 import type {
 	ArgumentNode,
 	CommandNode,
 	DefinitionNode,
 	ExpressionNode,
+	HookNode,
 	ReferenceNode,
 	RhsNode,
 	StatementNode,
 	TestNode,
 } from "./ast.js";
+import type { BaseSet, ConnectionSet } from "./bases.js";
 import type { ExpectationHost } from "./expectation.js";
 import type { Grants, PermissionKind, PermissionSet } from "./permissions.js";
+import type { RunIdentity, ToolDescriptor } from "./plugin.js";
 import type { Registry, ResolvedCallable } from "./registry.js";
 import type { Span } from "./source.js";
 import type { ToolArg, Value, ValueObject } from "./values.js";
 import type { Workspace } from "./workspace.js";
 
 import { PermissionDeniedError, ResolutionError, SpecError, ToolError } from "./errors.js";
-import { executeEventually, executeExpect } from "./expectation.js";
+import { executeEventually, executeExpect, strayNotError } from "./expectation.js";
+import { createToolContext } from "./tool-context.js";
 
-/** How deep command/fixture invocations may nest before a cycle is suspected. */
+/** How deep command invocations may nest before a cycle is suspected. */
 const MAX_CALL_DEPTH = 32;
 
 /** Maps a permission family to its key in the {@link Grants} record. */
@@ -43,6 +47,7 @@ const GRANT_KEYS = {
 	net: "net",
 	env: "env",
 	"host-fs": "hostFs",
+	db: "db",
 } as const satisfies Record<PermissionKind, keyof Grants>;
 
 /**
@@ -64,15 +69,15 @@ export interface ExecutionContext {
 	/** Namespaces imported by the test's file, in `use` order. */
 	uses: readonly string[];
 	/**
-	 * The namespaces imported by the file that DEFINED a command or fixture —
-	 * `use` is file-scoped, so a definition's body resolves bare names against
-	 * its own file's imports, never the caller's.
+	 * The namespaces imported by the file that DEFINED a command — `use` is
+	 * file-scoped, so a definition's body resolves bare names against its own
+	 * file's imports, never the caller's.
 	 */
 	usesFor: (definition: DefinitionNode) => readonly string[];
 	/**
-	 * The path of the file that DEFINED a command or fixture. Errors inside a
-	 * definition's body anchor to the defining file so their spans map onto
-	 * the source text they came from; when absent, errors keep the calling file.
+	 * The path of the file that DEFINED a command. Errors inside a definition's
+	 * body anchor to the defining file so their spans map onto the source text
+	 * they came from; when absent, errors keep the calling file.
 	 */
 	fileFor?: (definition: DefinitionNode) => string | undefined;
 	/**
@@ -83,11 +88,19 @@ export interface ExecutionContext {
 	grants: Grants;
 	/** Path of the file the test lives in, stamped onto every error. */
 	file?: string;
+	/** What this run and this attempt are called; specs read it as `spec.*`. */
+	run?: RunIdentity;
+	/** The run's named bases, which every relative target resolves through. */
+	bases?: BaseSet;
+	/** The run's named database connections, which `on "…"` selects among. */
+	connections?: ConnectionSet;
+	/** Where a failing tool writes what a person needs to see the failure. */
+	artifacts?: ArtifactStore;
 }
 
 /** The per-test execution services plus the current call depth. */
 interface Environment extends ExecutionContext {
-	/** Current command/fixture nesting depth, for the recursion cap. */
+	/** Current command nesting depth, for the recursion cap. */
 	depth: number;
 }
 
@@ -115,6 +128,25 @@ export async function executeTest(
 		let outcome = await executeStatements(phase.statements, scope, environment, false);
 		if (isFailure(outcome)) return outcome;
 	}
+	return success(undefined);
+}
+
+/**
+ * Execute one suite hook body — `setup` or `teardown` — in a scope of its own.
+ * A hook arranges and observes rather than producing a value, so `let`, calls,
+ * `expect` and `eventually` run here while `return` is a usage error.
+ *
+ * @param hook - The hook whose body to run.
+ * @param context - The suite services and grants the hook runs against.
+ * @returns Success when every statement held, otherwise the first failure.
+ */
+export async function executeHook(
+	hook: HookNode,
+	context: ExecutionContext,
+): Promise<Result<undefined, SpecError>> {
+	let environment: Environment = { ...context, depth: 0 };
+	let outcome = await executeStatements(hook.body.statements, new Map(), environment, false);
+	if (isFailure(outcome)) return outcome;
 	return success(undefined);
 }
 
@@ -161,9 +193,7 @@ async function executeStatement(
 	}
 	if (statement.kind === "return") {
 		if (!allowReturn) {
-			return failure(
-				new SpecError("usage-error", "return is only valid inside command and fixture bodies"),
-			);
+			return failure(new SpecError("usage-error", "return is only valid inside a command body"));
 		}
 		let value = await evaluateRhs(statement.value, scope, environment);
 		if (isFailure(value)) return value;
@@ -190,29 +220,24 @@ async function executeStatement(
 	return success({ kind: "completed" });
 }
 
-/** Evaluate a `let`/`return` right-hand side: expression, fixture, or call. */
+/** Evaluate a `let`/`return` right-hand side: an expression or a call. */
 async function evaluateRhs(
 	rhs: RhsNode,
 	scope: Map<string, Value>,
 	environment: Environment,
 ): Promise<Result<Value, SpecError>> {
-	if (rhs.kind === "fixture-call") return runFixture(rhs.name, rhs.span, environment);
 	if (rhs.kind === "call-expr") {
 		return invokeCallable(rhs.target, rhs.args, rhs.span, scope, environment);
 	}
-	if (rhs.kind === "reference") {
-		let call = zeroArgToolCall(rhs, scope, environment);
-		if (call !== undefined) return call;
-	}
-	return evaluateExpression(rhs, scope);
+	return evaluateExpression(rhs, scope, environment);
 }
 
 /**
- * A bare-path `let`/`return` right-hand side normally references the scope;
- * an unbound head may instead name a zero-argument tool, dispatched through
- * the ordinary tool path so the runtime's permission gate still applies.
+ * A bare path normally references the scope; an unbound head may instead name
+ * an argument-less tool or a zero-parameter command, dispatched through the
+ * ordinary call path so the runtime's permission gate still applies.
  */
-function zeroArgToolCall(
+function zeroArgumentCall(
 	reference: ReferenceNode,
 	scope: Map<string, Value>,
 	environment: Environment,
@@ -220,15 +245,28 @@ function zeroArgToolCall(
 	let head = reference.path[0];
 	if (head === undefined || scope.has(head)) return undefined;
 	let resolved = environment.registry.resolveCallable(reference.path.join("."), environment.uses);
-	if (isFailure(resolved) || resolved.data.kind !== "tool") return undefined;
+	if (isFailure(resolved)) return undefined;
+	if (resolved.data.kind === "command") {
+		/**
+		 * A command that declares parameters is still dispatched, so the caller
+		 * reads an arity error naming the command rather than an unknown name.
+		 */
+		return invokeCommand(resolved.data.command, [], reference.span, scope, environment);
+	}
 	if (resolved.data.descriptor.params.some((param) => param.required)) return undefined;
 	return invokeTool(resolved.data, [], reference.span, scope, environment);
 }
 
-function evaluateExpression(
+/**
+ * Evaluate one expression in the scope. The rule is uniform wherever an
+ * expression may appear, so a composed value reads an argument-less tool
+ * inline — `{ nonce: spec.nonce }` — instead of binding it on a line first.
+ */
+async function evaluateExpression(
 	expression: ExpressionNode,
 	scope: Map<string, Value>,
-): Result<Value, SpecError> {
+	environment: Environment,
+): Promise<Result<Value, SpecError>> {
 	if (expression.kind === "string") return success(expression.value);
 	if (expression.kind === "number") return success(expression.value);
 	if (expression.kind === "boolean") return success(expression.value);
@@ -236,19 +274,30 @@ function evaluateExpression(
 	if (expression.kind === "object") {
 		let object: ValueObject = {};
 		for (let entry of expression.entries) {
-			let value = evaluateExpression(entry.value, scope);
+			let value = await evaluateExpression(entry.value, scope, environment);
 			if (isFailure(value)) return value;
 			object[entry.key] = value.data;
 		}
 		return success(object);
 	}
+	if (expression.kind === "array") {
+		let items: Value[] = [];
+		for (let item of expression.items) {
+			let value = await evaluateExpression(item, scope, environment);
+			if (isFailure(value)) return value;
+			items.push(value.data);
+		}
+		return success(items);
+	}
+	let call = zeroArgumentCall(expression, scope, environment);
+	if (call !== undefined) return call;
 	return resolveReference(expression, scope);
 }
 
 /**
- * Resolve a dotted reference: the head segment must be a binding and every
- * further segment a field of the value so far — a miss is an `unknown-name`
- * error, never `null`.
+ * Resolve a dotted reference: the head segment must be a binding, an
+ * all-digits segment indexes an array 0-based, and every other segment is a
+ * field of the value so far — a miss is an `unknown-name` error, never `null`.
  */
 function resolveReference(
 	reference: ReferenceNode,
@@ -270,13 +319,40 @@ function resolveReference(
 	for (let index = 1; index < reference.path.length; index++) {
 		let segment = reference.path[index];
 		if (segment === undefined) continue;
+		let prefix = reference.path.slice(0, index).join(".");
+		if (/^\d+$/.test(segment)) {
+			if (!Array.isArray(current)) {
+				return failure(
+					anchor(
+						new ResolutionError(
+							"unknown-name",
+							`Unknown index ${segment} — "${prefix}" holds ${describeValue(current)}, not an array`,
+						),
+						reference.span,
+					),
+				);
+			}
+			let position = Number(segment);
+			if (position >= current.length) {
+				return failure(
+					anchor(
+						new ResolutionError(
+							"unknown-name",
+							`Unknown index ${segment} — "${prefix}" holds ${current.length} item(s)`,
+						),
+						reference.span,
+					),
+				);
+			}
+			current = current[position] ?? null;
+			continue;
+		}
 		if (
 			typeof current !== "object" ||
 			current === null ||
 			Array.isArray(current) ||
 			!(segment in current)
 		) {
-			let prefix = reference.path.slice(0, index).join(".");
 			return failure(
 				anchor(
 					new ResolutionError(
@@ -290,6 +366,14 @@ function resolveReference(
 		current = current[segment] ?? null;
 	}
 	return success(current);
+}
+
+/** Name a value's shape for a diagnostic, the way a reader would name it. */
+function describeValue(value: Value): string {
+	if (value === null) return "null";
+	if (Array.isArray(value)) return "an array";
+	if (typeof value === "object") return "an object";
+	return `a ${typeof value}`;
 }
 
 /** Resolve a call target and invoke the tool or command it names. */
@@ -309,9 +393,9 @@ async function invokeCallable(
 }
 
 /**
- * Invoke one plugin tool: evaluate the arguments (words stay symbolic), pass
- * the central permission gate, then hand the call to the plugin with the
- * test's workspace and grants.
+ * Invoke one plugin tool: resolve each argument against the tool's declared
+ * parameters, pass the central permission gate, then hand the call to the
+ * plugin with the test's workspace and grants.
  */
 async function invokeTool(
 	tool: Extract<ResolvedCallable, { kind: "tool" }>,
@@ -321,25 +405,95 @@ async function invokeTool(
 	environment: Environment,
 ): Promise<Result<Value, SpecError>> {
 	let toolArgs: ToolArg[] = [];
-	for (let argument of args) {
-		if (argument.kind === "word") {
-			toolArgs.push({ kind: "word", word: argument.word });
-			continue;
-		}
-		let value = evaluateExpression(argument, scope);
-		if (isFailure(value)) return value;
-		toolArgs.push({ kind: "value", value: value.data });
+	for (let index = 0; index < args.length; index++) {
+		let argument = args[index];
+		if (argument === undefined) continue;
+		let resolved = await resolveToolArgument(argument, index, tool.descriptor, scope, environment);
+		if (isFailure(resolved)) return resolved;
+		toolArgs.push(resolved.data);
 	}
 	let gate = gateToolCall(tool, environment);
 	if (isFailure(gate)) return failure(anchor(gate.error, span, environment.file));
-	let result = await tool.plugin.call(tool.descriptor.name, toolArgs, {
+	let result = await tool.plugin.call(
+		tool.descriptor.name,
+		toolArgs,
+		createToolContext(toolContextOverrides(environment)),
+	);
+	if (isFailure(result)) return failure(anchor(result.error, span, environment.file));
+	return result;
+}
+
+/** The parts of a {@link ToolContext} this run actually configured. */
+function toolContextOverrides(environment: Environment): Parameters<typeof createToolContext>[0] {
+	let overrides: Parameters<typeof createToolContext>[0] = {
 		workspace: environment.workspace,
 		permissions: environment.permissions,
 		random: environment.random,
 		now: environment.now,
-	});
-	if (isFailure(result)) return failure(anchor(result.error, span, environment.file));
-	return result;
+	};
+	if (environment.run) overrides.run = environment.run;
+	if (environment.bases) overrides.bases = environment.bases;
+	if (environment.connections) overrides.connections = environment.connections;
+	if (environment.artifacts) overrides.artifacts = environment.artifacts;
+	return overrides;
+}
+
+/**
+ * Decide what a bare identifier in tool-argument position means, which the
+ * tool's own declaration answers: a spelling it declares as a word (by name,
+ * or by the parameter sitting at this position) is a symbol, and anything
+ * else reads the binding of that spelling.
+ */
+async function resolveToolArgument(
+	argument: ArgumentNode,
+	index: number,
+	descriptor: ToolDescriptor,
+	scope: Map<string, Value>,
+	environment: Environment,
+): Promise<Result<ToolArg, SpecError>> {
+	if (argument.kind !== "word") {
+		let value = await evaluateExpression(argument, scope, environment);
+		if (isFailure(value)) return value;
+		return success({ kind: "value", value: value.data });
+	}
+	let named = descriptor.params.some(
+		(param) => param.kind === "word" && param.name === argument.word,
+	);
+	let bound = scope.has(argument.word);
+	if (named && bound) {
+		return failure(
+			anchor(
+				new ResolutionError(
+					"ambiguous-name",
+					`"${argument.word}" is both a word "${descriptor.name}" declares and a binding in scope; the runtime never guesses — rename the binding or pass it as a dotted reference`,
+					[`the word ${argument.word}`, `the binding ${argument.word}`],
+				),
+				argument.span,
+			),
+		);
+	}
+	/**
+	 * A required parameter settles the reading by position, so it never
+	 * collides. Optional parameters cannot: a tool whose options are
+	 * word-tagged (`params <value> on "web" one`) accepts them in any order
+	 * after the required ones, which leaves position saying nothing about what
+	 * an argument this far along was meant to be.
+	 */
+	let positional = descriptor.params[index];
+	if (named || (positional?.kind === "word" && positional.required)) {
+		return success({ kind: "word", word: argument.word });
+	}
+	if (bound) return success({ kind: "value", value: scope.get(argument.word) ?? null });
+	if (argument.word === "not") return failure(strayNotError(argument.span));
+	return failure(
+		anchor(
+			new ResolutionError(
+				"unknown-name",
+				`Unknown name "${argument.word}" — "${descriptor.name}" declares no such word, and nothing is bound under it`,
+			),
+			argument.span,
+		),
+	);
 }
 
 /**
@@ -375,7 +529,7 @@ async function invokeCommand(
 ): Promise<Result<Value, SpecError>> {
 	let values: Value[] = [];
 	for (let argument of args) {
-		let value = evaluateValueArgument(argument, scope);
+		let value = await evaluateValueArgument(argument, scope, environment);
 		if (isFailure(value)) return value;
 		values.push(value.data);
 	}
@@ -400,21 +554,10 @@ async function invokeCommand(
 	return runBody(command, commandScope, span, environment);
 }
 
-/** Run `fixture NAME`: a fresh, empty scope; the body runs on every call. */
-async function runFixture(
-	name: string,
-	span: Span,
-	environment: Environment,
-): Promise<Result<Value, SpecError>> {
-	let resolved = environment.registry.resolveFixture(name);
-	if (isFailure(resolved)) return failure(anchor(resolved.error, span, environment.file));
-	return runBody(resolved.data, new Map(), span, environment);
-}
-
 /**
- * Run a command or fixture body under the recursion cap; a body that never
- * returns produces `null`. Because `use` is file-scoped, the body resolves
- * bare names against the defining file's imports, so its errors anchor there.
+ * Run a command body under the recursion cap; a body that never returns
+ * produces `null`. Because `use` is file-scoped, the body resolves bare names
+ * against the defining file's imports, so its errors anchor there.
  */
 async function runBody(
 	definition: DefinitionNode,
@@ -426,7 +569,7 @@ async function runBody(
 		return failure(
 			anchor(
 				new ToolError(
-					`Call depth exceeded ${MAX_CALL_DEPTH} while invoking ${definition.kind} "${definition.name}" — a command or fixture cycle is suspected`,
+					`Call depth exceeded ${MAX_CALL_DEPTH} while invoking ${definition.kind} "${definition.name}" — a command cycle is suspected`,
 				),
 				span,
 				environment.file,
@@ -451,12 +594,14 @@ async function runBody(
  * bare word reads the binding of the same spelling — words are only symbolic
  * when a tool receives them.
  */
-function evaluateValueArgument(
+async function evaluateValueArgument(
 	argument: ArgumentNode,
 	scope: Map<string, Value>,
-): Result<Value, SpecError> {
-	if (argument.kind !== "word") return evaluateExpression(argument, scope);
+	environment: Environment,
+): Promise<Result<Value, SpecError>> {
+	if (argument.kind !== "word") return evaluateExpression(argument, scope, environment);
 	if (!scope.has(argument.word)) {
+		if (argument.word === "not") return failure(strayNotError(argument.span));
 		return failure(
 			anchor(
 				new ResolutionError(
@@ -477,7 +622,7 @@ function makeHost(scope: Map<string, Value>, environment: Environment): Expectat
 		registry: environment.registry,
 		uses: environment.uses,
 		evaluate(expression) {
-			return evaluateExpression(expression, scope);
+			return evaluateExpression(expression, scope, environment);
 		},
 		callTool(tool, args, span) {
 			return invokeTool(tool, args, span, scope, environment);

@@ -16,10 +16,8 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 import { isFailure, isSuccess, success } from "@sdxc/result";
-import { createRandom } from "@sdxc/sample";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 
-import type { PermissionSet } from "./permissions.js";
 import type { ToolContext } from "./plugin.js";
 import type { Value } from "./values.js";
 import type { Workspace } from "./workspace.js";
@@ -35,6 +33,7 @@ import {
 	planPluginLaunch,
 	pluginGrantFromConfig,
 } from "./project-config.js";
+import { createToolContext } from "./tool-context.js";
 import { connectStdioPlugin } from "./transport-stdio.js";
 
 /** Absolute path of this package, the acceptance runs' working directory. */
@@ -65,19 +64,7 @@ function makeContext(root: string): ToolContext {
 		resolve: (target) => success(target),
 		cleanup: async () => undefined,
 	};
-	let permissions: PermissionSet = {
-		checkRun: () => success(undefined),
-		checkNet: () => success(undefined),
-		checkEnv: () => success(undefined),
-		checkHostFs: () => success(undefined),
-		grantedEnvNames: () => [],
-	};
-	return {
-		workspace,
-		permissions,
-		random: createRandom("test"),
-		now: new Date("2026-01-01T00:00:00.000Z"),
-	};
+	return createToolContext({ workspace });
 }
 
 async function runCli(args: string[]): Promise<{ stdout: string; exitCode: number }> {
@@ -139,6 +126,97 @@ test("loadProjectConfig returns no plugins when no config exists", async () => {
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}
+});
+
+/** Load a config written into a fresh temp directory, then remove it. */
+async function withConfig<T>(text: string, read: (dir: string) => Promise<T>): Promise<T> {
+	let dir = makeTempDir();
+	try {
+		writeFileSync(join(dir, "config.jsonc"), text, "utf8");
+		return await read(dir);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+}
+
+test("loadProjectConfig resolves a base from its environment variable", async () => {
+	vi.stubEnv("SPEC_CONFIG_BASE_FIXTURE", "https://staging.example.com");
+	try {
+		let config = await withConfig(
+			`{ "bases": { "web": { "env": "SPEC_CONFIG_BASE_FIXTURE", "default": "http://localhost:4000" } } }`,
+			loadProjectConfig,
+		);
+		expect(isSuccess(config) && config.data.bases).toEqual([
+			{ name: "web", url: "https://staging.example.com" },
+		]);
+	} finally {
+		vi.unstubAllEnvs();
+	}
+});
+
+test("loadProjectConfig falls back to a base's default when the variable is unset", async () => {
+	let config = await withConfig(
+		`{ "bases": { "web": { "env": "SPEC_CONFIG_UNSET_FIXTURE", "default": "http://localhost:4000" } } }`,
+		loadProjectConfig,
+	);
+
+	expect(isSuccess(config) && config.data.bases).toEqual([
+		{ name: "web", url: "http://localhost:4000" },
+	]);
+});
+
+test("loadProjectConfig fails when a base yields no address, naming its variable", async () => {
+	let config = await withConfig(
+		`{ "bases": { "web": { "env": "SPEC_CONFIG_UNSET_FIXTURE" } } }`,
+		loadProjectConfig,
+	);
+
+	expect(isFailure(config)).toBe(true);
+	if (!isFailure(config)) throw new Error("expected a load failure");
+	expect(config.error.message).toContain("SPEC_CONFIG_UNSET_FIXTURE");
+	expect(config.error.message).toContain('"web"');
+});
+
+test("loadProjectConfig fails when a base declares neither env nor default", async () => {
+	let config = await withConfig(`{ "bases": { "web": {} } }`, loadProjectConfig);
+
+	expect(isFailure(config) && config.error.message).toContain('neither "env" nor "default"');
+});
+
+test("loadProjectConfig fails when a base does not resolve to an absolute http URL", async () => {
+	let config = await withConfig(
+		`{ "bases": { "web": { "default": "localhost:4000" } } }`,
+		loadProjectConfig,
+	);
+
+	expect(isFailure(config) && config.error.message).toContain("absolute http(s) URL");
+});
+
+test("loadProjectConfig resolves a database connection the same way, DSN and all", async () => {
+	vi.stubEnv("SPEC_CONFIG_DSN_FIXTURE", "postgres://localhost/web");
+	try {
+		let config = await withConfig(
+			`{ "databases": { "web": { "env": "SPEC_CONFIG_DSN_FIXTURE" } } }`,
+			loadProjectConfig,
+		);
+		expect(isSuccess(config) && config.data.databases).toEqual([
+			{ name: "web", url: "postgres://localhost/web" },
+		]);
+	} finally {
+		vi.unstubAllEnvs();
+	}
+});
+
+test("loadProjectConfig accepts db among the declared permission families", async () => {
+	let config = await withConfig(
+		`{ "permissions": { "allow": ["db", ["db", "web"]] } }`,
+		loadProjectConfig,
+	);
+
+	expect(isSuccess(config) && config.data.permissions.allow).toEqual([
+		{ family: "db", scopes: [] },
+		{ family: "db", scopes: ["web"] },
+	]);
 });
 
 test("loadProjectConfig parses JSONC and resolves relative command paths", async () => {
@@ -221,6 +299,8 @@ test("planPluginLaunch partitions declarations by the grant", () => {
 			{ namespace: "b", command: ["bun", "b.ts"] },
 		],
 		permissions: { allow: [] },
+		bases: [],
+		databases: [],
 	};
 
 	let all = planPluginLaunch(config, { mode: "all" });

@@ -9,8 +9,12 @@
 
 import type { SpecError } from "./errors.js";
 
-/** How one test ended. */
-export type TestStatus = "passed" | "failed";
+/**
+ * How one test ended. `flaky` is a pass a retry produced, kept apart from
+ * `passed` so retries absorb infrastructure noise without hiding a test on
+ * its way to failing permanently.
+ */
+export type TestStatus = "passed" | "failed" | "skipped" | "flaky";
 
 /** The outcome of executing one test. */
 export interface TestResult {
@@ -22,6 +26,14 @@ export interface TestResult {
 	status: TestStatus;
 	/** The failure that ended the test, when it failed. */
 	error?: SpecError;
+	/**
+	 * The failures of the attempts that did not pass, in attempt order. A
+	 * `flaky` result keeps them so a retry's success still reports what went
+	 * wrong the first time.
+	 */
+	attempts?: SpecError[];
+	/** Why the test was skipped, from the `skip` prefix's optional reason. */
+	reason?: string;
 	/** Wall-clock duration of the test in milliseconds. */
 	durationMs: number;
 }
@@ -34,6 +46,12 @@ export interface SuiteResult {
 	passed: number;
 	/** Count of failed tests. */
 	failed: number;
+	/** Count of tests the `skip` prefix kept from running. */
+	skipped: number;
+	/** Count of tests that failed at least once and then passed on a retry. */
+	flaky: number;
+	/** What this run was called, which `--run-id=` replays. */
+	runId: string;
 	/**
 	 * Wall-clock duration of the whole run in milliseconds, from just before
 	 * the first test starts to just after the last one finishes. Tracks real

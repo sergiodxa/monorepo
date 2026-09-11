@@ -17,16 +17,16 @@ implementation, open at the design level.
 
 ### Tokens
 
-| Token            | Form                                                                                                                                                                      |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| identifier       | `[A-Za-z_][A-Za-z0-9_]*`, optionally joined into a _path_ by `.` with no surrounding whitespace: `run`, `http.post`, `user.email`                                         |
-| keyword          | `use test given when then command fixture let return expect eventually within true false` — reserved; never valid as identifiers                                          |
-| string           | `"…"` on one line; escapes: `\"` `\\` `\n` `\t` `\r`                                                                                                                      |
-| multiline string | `"""` … `"""`; see below                                                                                                                                                  |
-| number           | `-?[0-9]+(\.[0-9]+)?`                                                                                                                                                     |
-| duration         | an integer immediately followed by a unit alias accepted by `@sdxc/duration` (`ms`, `s`, `m`, `h`, `d`, …): `10s`, `500ms`. Lexes as one token; its value is milliseconds |
-| punctuation      | `{` `}` `(` `)` `,` `:` `=`                                                                                                                                               |
-| newline          | statement terminator (see "Newline rules")                                                                                                                                |
+| Token            | Form                                                                                                                                                                                                                                                            |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| identifier       | `[A-Za-z_][A-Za-z0-9_]*`, optionally joined into a _path_ by `.` with no surrounding whitespace: `run`, `http.post`, `user.email`. A segment after the first may be digits alone: `result.rows.0.id`                                                            |
+| keyword          | `use test given when then setup teardown skip command let return expect eventually within true false` — reserved; never valid as identifiers. `fixture` is reserved too and heads no production, so a file that writes it fails with a message naming `command` |
+| string           | `"…"` on one line; escapes: `\"` `\\` `\n` `\t` `\r`                                                                                                                                                                                                            |
+| multiline string | `"""` … `"""`; see below                                                                                                                                                                                                                                        |
+| number           | `-?[0-9]+(\.[0-9]+)?`                                                                                                                                                                                                                                           |
+| duration         | an integer immediately followed by a unit alias accepted by `@sdxc/duration` (`ms`, `s`, `m`, `h`, `d`, …): `10s`, `500ms`. Lexes as one token; its value is milliseconds                                                                                       |
+| punctuation      | `{` `}` `[` `]` `(` `)` `,` `:` `=`                                                                                                                                                                                                                             |
+| newline          | statement terminator (see "Newline rules")                                                                                                                                                                                                                      |
 
 ### Multiline strings
 
@@ -54,27 +54,32 @@ produces the file content `console.log("hello")` followed by a newline.
 
 Newlines terminate statements. They are ignored (treated as insignificant):
 
-- immediately after an opening `{` and immediately before a closing `}`;
+- immediately after an opening `{` or `[`, and immediately before the closing
+  `}` or `]`;
 - inside an object literal, where they separate entries (interchangeable with
+  `,`);
+- inside an array literal, where they separate items (interchangeable with
   `,`);
 - inside a parenthesized parameter list.
 
-An object literal used as an argument therefore lets a statement span lines:
-the statement ends at the newline after the object's closing `}`.
+An object or array literal used as an argument therefore lets a statement span
+lines: the statement ends at the newline after the literal's closing brace or
+bracket.
 
 ## Grammar
 
 ```ebnf
-file        = { use | definition | test } ;
+file        = { use | command | hook | test } ;
 
 use         = "use" IDENT ;
 
-definition  = command | fixture ;
 command     = "command" IDENT [ "(" [ params ] ")" ] block ;
 params      = IDENT { "," IDENT } ;
-fixture     = "fixture" IDENT block ;
 
-test        = "test" STRING "{" [ phase-given ] [ phase-when ] [ phase-then ] "}" ;
+hook        = ( "setup" | "teardown" ) block ;
+
+test        = [ "skip" [ STRING ] ] "test" STRING
+              "{" [ phase-given ] [ phase-when ] [ phase-then ] "}" ;
 phase-given = "given" block ;
 phase-when  = "when" block ;
 phase-then  = "then" block ;
@@ -85,8 +90,7 @@ statement   = let | return | expect | eventually | call ;
 let         = "let" IDENT "=" rhs ;
 return      = "return" rhs ;
 rhs         = call-expr | expression ;
-call-expr   = "fixture" IDENT
-            | PATH argument { argument } ;
+call-expr   = PATH argument { argument } ;
 
 expect      = "expect" argument { argument } ;
 eventually  = "eventually" [ "within" DURATION ] block ;
@@ -97,32 +101,39 @@ argument    = expression | word ;
 word        = IDENT ;                 (* bare identifier in argument position *)
 
 expression  = STRING | MULTILINE | NUMBER | DURATION | "true" | "false"
-            | object | PATH ;         (* PATH as expression is a reference *)
-object      = "{" [ entry { entry-sep entry } ] "}" ;
+            | object | array | PATH ; (* PATH as expression is a reference *)
+object      = "{" [ entry { item-sep entry } ] "}" ;
 entry       = ( IDENT | STRING ) ":" expression ;
-entry-sep   = "," | NEWLINE ;
+array       = "[" [ expression { item-sep expression } ] "]" ;
+item-sep    = "," | NEWLINE ;
 ```
 
 Notes:
 
 - A test must contain at least one phase; phases appear at most once each and
   strictly in `given`, `when`, `then` order. Alternation is a parse error.
-- `eventually` is only valid inside a `then` block (enforced by the parser).
-- A _call expression_ (a tool/command invocation producing a value) is only
-  valid as the entire right-hand side of `let` or `return`. Arguments are
-  literals, references, objects, or words — never nested calls. This keeps
-  every statement linear and diffable.
-- A `PATH` on the right-hand side with arguments is an invocation
-  (`let r = run "node" "index.js"`). With no arguments it is a reference when
-  its head segment is a binding (`let e = user.email`); when the head is not a
-  binding and the path resolves — honoring the file's `use` — to a tool that
-  requires no arguments, it is a zero-argument tool call, so
-  `let current = browser.url` captures that tool's observed value. A binding
-  and a tool never collide here, because a reference requires a bound head, and
-  a path that is neither a binding nor a zero-argument tool is the usual
-  unknown-name error. This refinement is confined to the `let`/`return`
-  right-hand side: a bare path in argument position stays a word (to a tool) or
-  a binding read (to a command / the value form of `expect`), unchanged.
+- `skip` prefixes `test` and takes an optional reason string, which the summary
+  prints. A skipped test is parsed like any other and its body never executes,
+  so the reason is the only thing it contributes to the run.
+- `eventually` is valid inside a `then` block, a command body, and a `setup` or
+  `teardown` hook — everywhere a body may wait for an effect to land. A `given`
+  or `when` block refuses it, and so does another `eventually`.
+- A _call expression_ (a tool/command invocation written with its arguments) is
+  only valid as the entire right-hand side of `let` or `return`. Arguments are
+  literals, references, objects, arrays, or words — never another written call.
+  This keeps every statement linear and diffable.
+- A `PATH` with arguments is an invocation (`let r = run "node" "index.js"`).
+  A `PATH` with no arguments is a reference when its head segment is a binding
+  (`let e = user.email`); when the head is not a binding and the path
+  resolves — honoring the file's `use` — to a zero-parameter command or to a
+  tool that requires no arguments, it is that invocation, so
+  `let current = browser.url` captures the tool's observed value and
+  `let user = create_testing_account` binds what the command produced. That
+  reading holds wherever an expression may appear, so
+  `format "${name}-${nonce}" { name: who.username, nonce: spec.nonce }` reads
+  the tool in the entry where its value belongs. A binding collides with
+  neither, because a reference requires a bound head, and a path that is none
+  of the three is the usual unknown-name error.
 - There is deliberately no `if`, `else`, `while`, `for`, `switch`, or `match`
   production, and no operators: no arithmetic, no boolean logic, no
   comparison syntax. Verification happens through `expect`.
@@ -130,19 +141,21 @@ Notes:
 ## Static rules
 
 - `use NS` imports every tool of namespace `NS` as an unqualified name, for
-  the containing file only (**file-scoped**). A command or fixture body
-  resolves bare names against the imports of the file that defined it, never
-  against the calling file's.
+  the containing file only (**file-scoped**). A command or hook body resolves
+  bare names against the imports of the file that declared it, never against
+  the calling file's.
 - If a bare name matches more than one candidate — two imported namespaces
   exposing the same tool name, or a suite command colliding with an imported
   tool — using that name is an `ambiguous-name` error naming every candidate,
   reported where the name is used; the fully qualified `ns.tool` form is
   always available. The runtime never guesses.
-- Definitions (`command`, `fixture`) may appear in any `.spec` file and are
-  suite-global. The loader parses every file, registers all definitions, then
-  runs tests — so resolution never depends on file order. Two definitions
-  with the same name (across the whole suite) are a `duplicate-definition`
-  load error.
+- Commands may appear in any `.spec` file and are suite-global. The loader
+  parses every file, registers all definitions, then runs tests — so
+  resolution never depends on file order. Two definitions with the same name
+  (across the whole suite) are a `duplicate-definition` load error.
+- A suite has at most one `setup` and one `teardown`, in whichever file
+  declares them. A second of either kind is a `duplicate-definition` load
+  error naming both files.
 - Keywords are reserved everywhere: a command named `test` is a parse error.
 
 ## Evaluation
@@ -150,26 +163,50 @@ Notes:
 - `let` binds a name in the current test's scope. `given`, `when`, and `then`
   share one scope. Rebinding an existing name is a runtime error.
 - References are dotted lookups into bound values: `user.email` reads the
-  `email` field of the binding `user`. A missing binding or field is a
-  runtime error, not `null`.
-- On a `let`/`return` right-hand side, a bare path whose head is not a binding
-  is a zero-argument tool call when it resolves to a tool that needs no
-  arguments (`let current = browser.url`). The call runs through the ordinary
-  tool path, so its permission family is gated exactly as a written call would
-  be — deny-by-default is preserved.
-- Commands execute with a fresh scope containing only their parameters.
-  Fixtures execute with a fresh, empty scope. `return` ends the body and
-  produces the value; a body that never returns produces `null`.
-- `fixture NAME` runs the fixture's body and yields its returned value. v1
-  runs the body on every invocation (no caching, no lifecycle hooks).
-- A _word_ argument is passed to the tool as a symbol, distinct from the
-  string of the same spelling; the tool's descriptor decides what words it
-  accepts (`expect file "x" exists`, `fill textbox "Email" with y`). Only
-  tool calls keep words symbolic: when an argument of a suite command (or of
-  the value form of `expect`) is a bare identifier, it reads the binding of
-  that name instead. To hand a tool a bound value, use a dotted reference
-  (`result.stdout`) — a bare identifier in tool-argument position is always
-  a word.
+  `email` field of the binding `user`. A segment spelled as digits indexes an
+  array element, **0-based**, so `result.rows.0.id` reads the first row's `id`.
+  The addressing vocabulary's ordinals count from 1 instead (`nth 2`,
+  `row 1 column 2`), and the two sit side by side in a real spec. A missing
+  binding, field, or index is a runtime error, not `null`.
+- A bare path whose head is not a binding is an invocation when it resolves to
+  a zero-parameter command (`let user = create_testing_account`) or to a tool
+  that needs no arguments (`let current = browser.url`). The rule is the same
+  in every expression position — a right-hand side, an object entry, an array
+  item, a dotted argument — so `format "${x}" { x: spec.nonce }` reads the tool
+  where its value is wanted. The call runs through the ordinary call path, so a
+  tool's permission family is gated exactly as a written call would be —
+  deny-by-default is preserved — and every `eventually` attempt re-reads it.
+  A **bare identifier** in tool-argument position is settled by the tool's own
+  descriptor instead, below.
+- Commands execute with a fresh scope containing only their parameters, and
+  `setup`/`teardown` with a fresh empty one. `return` ends a command body and
+  produces the value; a body that never returns produces `null`, and a `return`
+  inside a hook is a usage error. A command runs on every call: there is no
+  memoization and no lifecycle, so a value wanted once is bound once.
+- A bare identifier in **tool-argument** position resolves against the tool's
+  own descriptor, in this order:
+
+  1. a **word** when the tool declares a word-kind parameter whose `name` is
+     that spelling (`expect html.meta page.text "og:title" exists`);
+  2. otherwise a **word** when the parameter at that position is word-kind and
+     **required** (`expect file "note.txt" exists`, where `fs.file` declares one
+     required word slot accepting `exists` or `contains`);
+  3. otherwise a **binding read** of that spelling (`browser.open profile`);
+  4. otherwise an `unknown-name` error, saying that the tool declares no such
+     word and that nothing is bound under it.
+
+  A spelling that is both a declared word and a live binding is an
+  `ambiguous-name` error: rename the binding, or pass it as a dotted reference.
+  Required-ness is what makes step 2 safe. A tool's optional options are
+  word-tagged and may be written in any order after the required arguments, so
+  the moment they begin, position says nothing about what an argument was meant
+  to be — `db.query "…" params title on "web"` would otherwise read `title` as
+  the word filling `on`'s slot.
+
+- A word reaches a tool as a symbol, distinct from the string of the same
+  spelling. Only tool calls keep words symbolic: an argument of a suite command,
+  or of the value form of `expect`, reads the binding of that spelling and errors
+  when nothing is bound under it.
 - Duration literals evaluate to a number of milliseconds.
 
 ### Word-tagged tool options
@@ -209,9 +246,38 @@ A call carries at most one body (the bare body, or one of `json`/`form`/`text`),
 at most one `headers` block, and at most one auth option (`bearer` or `basic`);
 a second body, a second `headers`, both `bearer` and `basic`, a body on `GET`, an
 unknown option word, or a tag with no value is a tool error. An explicit
-`headers.authorization` overrides `bearer`/`basic`. The two original forms —
+`headers.authorization` overrides `bearer`/`basic`. The two plain forms —
 `http.get url` and `http.<verb> url <body>` (bare string → text, any other value
-→ JSON) — are unchanged.
+→ JSON) — need no option word at all.
+
+The same mechanism carries the option words of the other namespaces:
+
+```
+http.get "/portfolios" on "web"
+
+db.query "select funds.id from funds where users.email = $1" params email on "web" one
+
+db.query "insert into balances (fund_id, portfolio_balance)" params [ fund.id, amount ] on "backend"
+```
+
+A newline ends the statement, so a call and its option words stay on one line.
+An object or array literal is the exception the newline rules already grant: its
+entries may span lines, so a long argument breaks inside its own brackets.
+
+- `on "<name>"` — which configured base a relative target resolves against
+  (`http`, `browser`, `browser.fetch`), and which configured database connection
+  a query runs against (`db`). Naming none works when exactly one is configured;
+  otherwise the failure lists the names `spec/config.jsonc` declares.
+- `params <value>` — the value bound to `$1`, or an array bound to `$1`, `$2`, …
+  in order.
+- `one` — return the single row, refusing any other row count.
+
+The addressing vocabulary `html` and `browser` share — `field`, `containing`,
+`exactly`, `first` / `nth <n>` / `last`, `row` / `column` / `including header`,
+`exists`, `count`, `value`, `attribute`, `enabled`, `disabled`, `in_viewport`,
+and the `with` of `fill … with` — is this mechanism too, and adds **no
+production**: every one of its words is a word parameter its tools declare,
+which is what makes a bare identifier there a symbol rather than a binding read.
 
 ### `expect`
 
@@ -220,12 +286,30 @@ a name that is both a binding and a tool is an error):
 
 - **Value form** — first argument is a reference or literal:
   `expect A` asserts `A` is truthy; `expect A B` asserts deep structural
-  equality of `A` and `B`.
+  equality of `A` and `B`; `expect A contains B` asserts containment.
 - **Observable form** — first argument names an observable tool:
   `expect file "dist/index.js" exists`,
   `expect file "dist/index.js" contains "console.log"`,
   `expect directory "dist" exists`. The tool evaluates the assertion and
   reports expected/observed on failure.
+
+`contains` is a **substring** when the subject is a string and **membership**
+when it is an array, comparing members with the same structural equality the
+two-argument form uses; any other type is a usage error naming it. The word is
+read this way only in the value form — an observable receives every argument
+after the first, so a tool declaring its own `contains` decides what it means
+there, which is what `expect file "dist/index.js" contains "console.log"` uses.
+
+`not` inverts whichever form follows and is valid **only** as `expect`'s first
+argument; anywhere else it is a usage error explaining that:
+
+```
+expect not page contains "twitter:card"
+expect not html.meta page.text "og:title" exists
+```
+
+Under `not`, an observable that fails with a permission denial still fails the
+statement, so a missing grant is never read as the thing being absent.
 
 ### `eventually`
 
@@ -236,10 +320,13 @@ _observable_ tools are allowed inside; invoking an action tool inside
 `eventually` is a runtime error, because a retried mutation is not a retried
 assertion.
 
+It may stand in a `then` block, a command body, or a `setup`/`teardown` hook.
+A command that waits for the effect it just caused is what makes a sequence of
+calls a substitute for the loop the language does not have.
+
 ## Files and directories
 
 A suite is a directory (conventionally `spec/`) scanned recursively for
-`*.spec` files, in lexicographic path order. `spec/fixtures/` and
-`spec/commands/` are ordinary spec files whose role is conventional — since
-definitions are suite-global and loaded before any test runs, the convention
-is organizational, not semantic.
+`*.spec` files, in lexicographic path order. `spec/commands/` holds ordinary
+spec files whose role is conventional — since definitions are suite-global and
+loaded before any test runs, the convention is organizational, not semantic.

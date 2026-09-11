@@ -4,9 +4,11 @@
  * strictly increasing request ids and in-order replies. The child inherits
  * no environment beyond PATH.
  *
- * `workspaceRoot` crosses the wire so a plugin can resolve its own paths, but
- * scoped permission enforcement over the wire is still an open design
- * question — the host's coarse `requires` gate runs before every call.
+ * The whole tool context crosses as plain data and the serving side rebuilds
+ * it, so a plugin here reads the workspace, run identity, bases and
+ * connections a built-in reads. A permission family whose scopes the context
+ * enumerates — `db`, over the configured connections — crosses exactly; the
+ * open-ended families cross granted, behind the host's `requires` gate.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,13 +22,17 @@ import type { Result } from "@sdxc/result";
 import { failure, isFailure, isSuccess, success } from "@sdxc/result";
 import { createRandom } from "@sdxc/sample";
 
+import type { Base, Connection } from "./bases.js";
 import type { DiagnosticCode } from "./errors.js";
-import type { PermissionSet } from "./permissions.js";
-import type { Plugin, ToolContext, ToolDescriptor } from "./plugin.js";
+import type { Grant, Grants, PermissionKind } from "./permissions.js";
+import type { Plugin, RunIdentity, ToolContext, ToolDescriptor } from "./plugin.js";
 import type { ToolArg, Value } from "./values.js";
 import type { Workspace } from "./workspace.js";
 
+import { createArtifactStore } from "./artifacts.js";
+import { createBaseSet, createConnectionSet } from "./bases.js";
 import { PermissionDeniedError, SpecError, ToolError, WorkspaceEscapeError } from "./errors.js";
+import { createPermissionSet } from "./permissions.js";
 
 /** How long `connectStdioPlugin` waits for the describe reply. */
 const HANDSHAKE_TIMEOUT_MS = 5000;
@@ -57,6 +63,24 @@ interface PluginProcess {
 /** The seed a served plugin's stream opens on. */
 const WIRE_SEED = "spec-plugin";
 
+/** The plain data behind a {@link ToolContext}, as one `call` carries it. */
+interface WireContext {
+	/** The absolute workspace root the test's relative paths resolve inside. */
+	workspaceRoot: string;
+	/** The test's frozen instant, as an ISO timestamp. */
+	now: string;
+	/** What the run and this attempt are called. */
+	run: RunIdentity;
+	/** The configured bases, in config order. */
+	bases: Base[];
+	/** The configured database connections, in config order. */
+	connections: Connection[];
+	/** The grants the far side enforces, as {@link describeContext} derives them. */
+	grants: Grants;
+	/** Where failure artifacts go, absent when the run collects none. */
+	artifactsDirectory?: string;
+}
+
 /** The body of a host→plugin request, before an id is assigned. */
 interface WireRequestBody {
 	method: "describe" | "call";
@@ -64,10 +88,8 @@ interface WireRequestBody {
 	tool?: string;
 	/** The evaluated arguments, for `call` requests. */
 	args?: ToolArg[];
-	/** The absolute workspace root, for `call` requests. */
-	workspaceRoot?: string;
-	/** The test's frozen instant as an ISO timestamp, for `call` requests. */
-	now?: string;
+	/** The caller's context, for `call` requests. */
+	context?: WireContext;
 }
 
 /** A parsed host→plugin request as the serving side sees it. */
@@ -80,16 +102,45 @@ interface WireRequest {
 	tool?: string;
 	/** The call arguments, when present. */
 	args?: ToolArg[];
-	/** The workspace root, when present. */
-	workspaceRoot?: string;
-	/** The test's frozen instant, when present. */
-	now?: string;
+	/** The caller's context, defaulted where the request left a part out. */
+	context: WireContext;
+}
+
+/** The identity a request that carries none falls back to. */
+const UNIDENTIFIED_RUN: RunIdentity = { id: "run", attempt: 1, nonce: "run-1" };
+
+/** The grants a request that carries none falls back to: a run granted nothing. */
+const NOTHING_GRANTED: Grants = {
+	run: { mode: "denied" },
+	net: { mode: "denied" },
+	env: { mode: "denied" },
+	hostFs: { mode: "denied" },
+	db: { mode: "denied" },
+};
+
+/**
+ * A failure as it crosses the wire. The remedy travels with the code because a
+ * denial that cannot name the flag that would grant it is not a denial a reader
+ * can act on, and a plugin's denials are the ones a caller is least able to
+ * guess at.
+ */
+interface WireError {
+	/** The {@link DiagnosticCode}, defaulted to `tool-error` when unknown. */
+	code: string;
+	/** The plugin's own account of the failure. */
+	message: string;
+	/** The permission family a denial required, when it was one. */
+	permission?: string;
+	/** What the spec attempted to reach, when the failure was a denial. */
+	resource?: string;
+	/** The exact `spec run --allow-*` flag that would grant the attempt. */
+	remedy?: string;
+	/** Whether the coarse family gate raised the denial before the resource was known. */
+	familyGate?: boolean;
 }
 
 /** A plugin→host reply: a result or a coded error, never both. */
-type WireReply =
-	| { id: number; result: unknown }
-	| { id: number; error: { code: string; message: string } };
+type WireReply = { id: number; result: unknown } | { id: number; error: WireError };
 
 /** One in-flight request awaiting its reply. */
 interface PendingReply {
@@ -98,7 +149,7 @@ interface PendingReply {
 }
 
 /** The host side of one child's wire: sequenced requests over the pipes. */
-interface Connection {
+interface WireConnection {
 	/** Send one request and await its matching reply. */
 	request(body: WireRequestBody, timeoutMs?: number): Promise<Result<unknown, SpecError>>;
 	/** Kill the child and fail everything still in flight. */
@@ -156,8 +207,7 @@ export async function connectStdioPlugin(
 				method: "call",
 				tool,
 				args,
-				workspaceRoot: context.workspace.root,
-				now: context.now.toISOString(),
+				context: describeContext(context),
 			});
 			if (isFailure(reply)) return reply;
 			return success(reply.data as Value);
@@ -192,15 +242,12 @@ export async function servePlugin(plugin: Plugin): Promise<undefined> {
 			let outcome = await plugin.call(
 				request.tool ?? "",
 				request.args ?? [],
-				createWireContext(request.workspaceRoot ?? "", request.now),
+				createWireContext(request.context),
 			);
 			if (isSuccess(outcome)) {
 				writeReply({ id: request.id, result: outcome.data });
 			} else {
-				writeReply({
-					id: request.id,
-					error: { code: outcome.error.code, message: outcome.error.message },
-				});
+				writeReply({ id: request.id, error: describeWireError(outcome.error) });
 			}
 			continue;
 		}
@@ -248,7 +295,7 @@ async function spawnChild(command: string[]): Promise<PluginProcess> {
 }
 
 /** Wire one spawned child into a request/reply connection. */
-function openConnection(child: PluginProcess): Connection {
+function openConnection(child: PluginProcess): WireConnection {
 	let nextId = 1;
 	let closed = false;
 	let pending = new Map<number, PendingReply>();
@@ -343,16 +390,57 @@ function openConnection(child: PluginProcess): Connection {
 }
 
 /**
- * Build the `ToolContext` the serving side hands its local plugin: relative
- * paths resolve inside the forwarded workspace root and traversal out is
- * refused, while permission checks stay permissive behind the host's gate.
+ * Reduce the caller's context to the plain data a `call` carries.
+ *
+ * A grant crosses as scopes the far side can check for itself, which the `db`
+ * family allows because a query only ever names a configured connection. The
+ * open-ended families cross granted, so the host's `requires` gate and its own
+ * `PermissionSet` remain the ones that refuse a call.
+ *
+ * @param context - The context the host handed this call.
+ * @returns The context as one JSON document.
+ */
+function describeContext(context: ToolContext): WireContext {
+	let wire: WireContext = {
+		workspaceRoot: context.workspace.root,
+		now: context.now.toISOString(),
+		run: context.run,
+		bases: context.bases.list(),
+		connections: context.connections.list(),
+		grants: {
+			run: { mode: "all" },
+			net: { mode: "all" },
+			env: { mode: "all" },
+			hostFs: { mode: "all" },
+			db: grantedConnections(context),
+		},
+	};
+	if (context.artifacts !== undefined) wire.artifactsDirectory = context.artifacts.directory;
+	return wire;
+}
+
+/** The configured connections this caller may reach, as a `db` grant. */
+function grantedConnections(context: ToolContext): Grant {
+	let scopes: string[] = [];
+	for (let connection of context.connections.list()) {
+		if (isSuccess(context.permissions.checkDb(connection.name))) scopes.push(connection.name);
+	}
+	return { mode: "scoped", scopes };
+}
+
+/**
+ * Build the `ToolContext` the serving side hands its local plugin, rebuilding
+ * every part the host sent: relative paths resolve inside the forwarded
+ * workspace root and traversal out is refused, and bases, connections and
+ * grants behave as the host's own.
  *
  * The instant crosses the wire, so a plugin here reads the same time the test
  * started. The stream does not: it opens on a fixed seed, giving a served
  * plugin values that repeat run to run. Carrying the host's stream position
  * across a process boundary waits for a plugin that generates data.
  */
-function createWireContext(workspaceRoot: string, now?: string): ToolContext {
+function createWireContext(wire: WireContext): ToolContext {
+	let workspaceRoot = wire.workspaceRoot;
 	let workspace: Workspace = {
 		root: workspaceRoot,
 		resolve(target) {
@@ -372,29 +460,19 @@ function createWireContext(workspaceRoot: string, now?: string): ToolContext {
 			return undefined;
 		},
 	};
-	let permissions: PermissionSet = {
-		checkRun() {
-			return success(undefined);
-		},
-		checkNet() {
-			return success(undefined);
-		},
-		checkEnv() {
-			return success(undefined);
-		},
-		checkHostFs() {
-			return success(undefined);
-		},
-		grantedEnvNames() {
-			return [];
-		},
-	};
-	return {
+	let context: ToolContext = {
 		workspace,
-		permissions,
+		permissions: createPermissionSet(wire.grants),
 		random: createRandom(WIRE_SEED),
-		now: now === undefined ? new Date() : new Date(now),
+		now: new Date(wire.now),
+		run: wire.run,
+		bases: createBaseSet(wire.bases),
+		connections: createConnectionSet(wire.connections),
 	};
+	if (wire.artifactsDirectory !== undefined) {
+		context.artifacts = createArtifactStore(wire.artifactsDirectory);
+	}
+	return context;
 }
 
 /** Write one reply line to stdout, the serving side's half of the wire. */
@@ -440,17 +518,19 @@ function parseWireReply(line: string): WireReply | null {
 	if (typeof record.id !== "number") return null;
 	if ("error" in record) {
 		if (typeof record.error !== "object" || record.error === null) return null;
-		let wire = record.error as { code?: unknown; message?: unknown };
-		return {
-			id: record.id,
-			error: {
-				code: typeof wire.code === "string" ? wire.code : "tool-error",
-				message:
-					typeof wire.message === "string"
-						? wire.message
-						: "The plugin reported an error without a message",
-			},
+		let wire = record.error as Record<string, unknown>;
+		let error: WireError = {
+			code: typeof wire.code === "string" ? wire.code : "tool-error",
+			message:
+				typeof wire.message === "string"
+					? wire.message
+					: "The plugin reported an error without a message",
 		};
+		if (typeof wire.permission === "string") error.permission = wire.permission;
+		if (typeof wire.resource === "string") error.resource = wire.resource;
+		if (typeof wire.remedy === "string") error.remedy = wire.remedy;
+		if (typeof wire.familyGate === "boolean") error.familyGate = wire.familyGate;
+		return { id: record.id, error };
 	}
 	return { id: record.id, result: record.result ?? null };
 }
@@ -469,8 +549,7 @@ function parseWireRequest(line: string): WireRequest | null {
 		method?: unknown;
 		tool?: unknown;
 		args?: unknown;
-		workspaceRoot?: unknown;
-		now?: unknown;
+		context?: unknown;
 	};
 	if (typeof record.id !== "number" || typeof record.method !== "string") return null;
 	return {
@@ -478,17 +557,69 @@ function parseWireRequest(line: string): WireRequest | null {
 		method: record.method,
 		tool: typeof record.tool === "string" ? record.tool : undefined,
 		args: Array.isArray(record.args) ? (record.args as ToolArg[]) : undefined,
-		workspaceRoot: typeof record.workspaceRoot === "string" ? record.workspaceRoot : undefined,
-		now: typeof record.now === "string" ? record.now : undefined,
+		context: parseWireContext(record.context),
 	};
 }
 
-/** Rebuild a `SpecError` from its wire form, defaulting unknown codes. */
-function reconstructWireError(wire: { code: string; message: string }): SpecError {
+/**
+ * Read the context off a request, defaulting every part the sender left out,
+ * so a host that sends less than the full context still gets a working
+ * plugin rather than one that fails on a missing field.
+ */
+function parseWireContext(value: unknown): WireContext {
+	let record = (typeof value === "object" && value !== null ? value : {}) as Partial<WireContext>;
+	let wire: WireContext = {
+		workspaceRoot: typeof record.workspaceRoot === "string" ? record.workspaceRoot : "",
+		now: typeof record.now === "string" ? record.now : new Date().toISOString(),
+		run: typeof record.run === "object" && record.run !== null ? record.run : UNIDENTIFIED_RUN,
+		bases: Array.isArray(record.bases) ? record.bases : [],
+		connections: Array.isArray(record.connections) ? record.connections : [],
+		grants:
+			typeof record.grants === "object" && record.grants !== null ? record.grants : NOTHING_GRANTED,
+	};
+	if (typeof record.artifactsDirectory === "string") {
+		wire.artifactsDirectory = record.artifactsDirectory;
+	}
+	return wire;
+}
+
+/** Reduce an error to its wire form, keeping what a denial needs to stay actionable. */
+function describeWireError(error: SpecError): WireError {
+	let wire: WireError = { code: error.code, message: error.message };
+	if (error.remedy !== undefined) wire.remedy = error.remedy;
+	if (!(error instanceof PermissionDeniedError)) return wire;
+	wire.permission = error.permission;
+	wire.resource = error.resource;
+	wire.familyGate = error.familyGate;
+	return wire;
+}
+
+/**
+ * Rebuild a `SpecError` from its wire form, defaulting unknown codes. A denial
+ * comes back as a `PermissionDeniedError` so the reporter groups it with the
+ * runtime's own and prints the flag that would grant it.
+ */
+function reconstructWireError(wire: WireError): SpecError {
 	let code: DiagnosticCode = WIRE_CODES.has(wire.code)
 		? (wire.code as DiagnosticCode)
 		: "tool-error";
-	return new SpecError(code, wire.message);
+	if (
+		code === "permission-denied" &&
+		wire.permission !== undefined &&
+		wire.resource !== undefined
+	) {
+		let denial = new PermissionDeniedError(
+			wire.permission as PermissionKind,
+			wire.resource,
+			wire.remedy ?? `spec run --allow-${wire.permission}`,
+			wire.familyGate ?? false,
+		);
+		denial.message = wire.message;
+		return denial;
+	}
+	let error = new SpecError(code, wire.message);
+	if (wire.remedy !== undefined) error.remedy = wire.remedy;
+	return error;
 }
 
 /** Render an unknown thrown value as a one-line message. */

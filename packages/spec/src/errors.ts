@@ -44,6 +44,12 @@ export class SpecError extends Error {
 	 * the permission. Never weakens the primary {@link remedy}.
 	 */
 	hint?: string;
+	/**
+	 * Paths of the files a tool wrote about this failure — a screenshot, an
+	 * accessibility-tree dump, a parsed document — which the reporter prints so
+	 * a person can open them. Present only under `--artifacts=<dir>`.
+	 */
+	artifacts?: string[];
 
 	/**
 	 * @param code - Stable failure category.

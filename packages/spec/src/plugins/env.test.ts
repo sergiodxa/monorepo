@@ -10,7 +10,7 @@
 
 import type { Result } from "@sdxc/result";
 
-import { failure, isFailure, success } from "@sdxc/result";
+import { isFailure, success } from "@sdxc/result";
 import { createRandom } from "@sdxc/sample";
 import { afterEach, describe, expect, test } from "vitest";
 
@@ -21,6 +21,8 @@ import type { ToolArg, Value } from "../values.js";
 import type { Workspace } from "../workspace.js";
 
 import { PermissionDeniedError } from "../errors.js";
+import { createPermissionSet } from "../permissions.js";
+import { createToolContext } from "../tool-context.js";
 
 import { createEnvPlugin } from "./env.js";
 
@@ -46,25 +48,22 @@ function stubWorkspace(): Workspace {
 
 /** A permission set granting only the named variables. */
 function grantEnv(...granted: string[]): PermissionSet {
-	return {
-		checkRun: () => success(undefined),
-		checkNet: () => success(undefined),
-		checkHostFs: () => success(undefined),
-		grantedEnvNames: () => [...granted],
-		checkEnv: (name) => {
-			if (granted.includes(name)) return success(undefined);
-			return failure(new PermissionDeniedError("env", name, `spec run --allow-env=${name}`));
-		},
-	};
+	return createPermissionSet({
+		run: { mode: "denied" },
+		net: { mode: "denied" },
+		env: { mode: "scoped", scopes: [...granted] },
+		hostFs: { mode: "denied" },
+		db: { mode: "denied" },
+	});
 }
 
 function buildContext(permissions: PermissionSet): ToolContext {
-	return {
+	return createToolContext({
 		workspace: stubWorkspace(),
 		permissions,
 		random: createRandom("test"),
 		now: new Date("2026-01-01T00:00:00.000Z"),
-	};
+	});
 }
 
 /** Unwrap a failed result into its error, failing the test on success. */

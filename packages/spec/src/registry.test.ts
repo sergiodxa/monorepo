@@ -10,7 +10,7 @@
 import { isFailure, isSuccess, success } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { BlockNode, CommandNode, FixtureNode } from "./ast.js";
+import type { BlockNode, CommandNode } from "./ast.js";
 import type { Plugin } from "./plugin.js";
 import type { Span } from "./source.js";
 import type { LoadedSuite } from "./sources.js";
@@ -28,18 +28,10 @@ function makeCommand(name: string): CommandNode {
 	return { kind: "command", name, params: [], body: makeBlock(), span: SPAN };
 }
 
-function makeFixture(name: string): FixtureNode {
-	return { kind: "fixture", name, body: makeBlock(), span: SPAN };
-}
-
-function makeSuite(definitions: Array<CommandNode | FixtureNode> = []): LoadedSuite {
+function makeSuite(definitions: CommandNode[] = []): LoadedSuite {
 	let commands = new Map<string, CommandNode>();
-	let fixtures = new Map<string, FixtureNode>();
-	for (let definition of definitions) {
-		if (definition.kind === "command") commands.set(definition.name, definition);
-		else fixtures.set(definition.name, definition);
-	}
-	return { files: [], commands, fixtures };
+	for (let definition of definitions) commands.set(definition.name, definition);
+	return { files: [], commands };
 }
 
 function makePlugin(namespace: string, toolNames: string[]): Plugin {
@@ -100,15 +92,33 @@ describe("createRegistry", () => {
 			expect(result.error.message).toContain("fs.read");
 		});
 
-		test("fails with unknown-name on a target with two or more dots", () => {
-			let registry = createRegistry([makePlugin("fs", ["write"])], makeSuite());
+		/**
+		 * Only the first dot separates the namespace, so a namespace is free to
+		 * spell a tool with a dot of its own — `browser.fetch.post` is the tool
+		 * `fetch.post` of `browser`, not a namespace named `browser.fetch`.
+		 */
+		test("resolves a tool whose own name carries a dot", () => {
+			let browser = makePlugin("browser", ["open", "fetch.post"]);
+			let registry = createRegistry([browser], makeSuite());
 
-			let result = registry.resolveCallable("fs.deep.write", []);
+			let result = registry.resolveCallable("browser.fetch.post", []);
+
+			expect(isSuccess(result)).toBe(true);
+			if (!isSuccess(result)) throw new Error("expected a success");
+			if (result.data.kind !== "tool") throw new Error("expected a tool");
+			expect(result.data.namespace).toBe("browser");
+			expect(result.data.descriptor.name).toBe("fetch.post");
+		});
+
+		test("a dotted tool the namespace does not spell lists what it does", () => {
+			let registry = createRegistry([makePlugin("browser", ["fetch.post"])], makeSuite());
+
+			let result = registry.resolveCallable("browser.fetch.head", []);
 
 			expect(isFailure(result)).toBe(true);
 			if (!isFailure(result)) throw new Error("expected a failure");
 			expect(result.error.code).toBe("unknown-name");
-			expect(result.error.message).toContain("fs.deep.write");
+			expect(result.error.message).toContain("browser.fetch.post");
 		});
 	});
 
@@ -219,30 +229,44 @@ describe("createRegistry", () => {
 
 			expect(isSuccess(result)).toBe(true);
 		});
-	});
 
-	describe("resolveFixture", () => {
-		test("resolves a suite fixture by name", () => {
-			let admin = makeFixture("admin");
-			let registry = createRegistry([], makeSuite([admin]));
+		/** After `use browser` the tool `fetch.post` is written bare, dot and all. */
+		test("resolves a dotted tool name of an imported namespace", () => {
+			let browser = makePlugin("browser", ["fetch.post"]);
+			let registry = createRegistry([browser], makeSuite());
 
-			let result = registry.resolveFixture("admin");
+			let result = registry.resolveCallable("fetch.post", ["browser"]);
 
 			expect(isSuccess(result)).toBe(true);
 			if (!isSuccess(result)) throw new Error("expected a success");
-			expect(result.data).toBe(admin);
+			if (result.data.kind !== "tool") throw new Error("expected a tool");
+			expect(result.data.namespace).toBe("browser");
+			expect(result.data.descriptor.name).toBe("fetch.post");
 		});
 
-		test("fails with unknown-name when the fixture does not exist", () => {
-			let registry = createRegistry([], makeSuite());
+		test("two imported namespaces spelling the same dotted tool are ambiguous", () => {
+			let browser = makePlugin("browser", ["fetch.post"]);
+			let agent = makePlugin("agent", ["fetch.post"]);
+			let registry = createRegistry([browser, agent], makeSuite());
 
-			let result = registry.resolveFixture("admin");
+			let result = registry.resolveCallable("fetch.post", ["browser", "agent"]);
 
 			expect(isFailure(result)).toBe(true);
 			if (!isFailure(result)) throw new Error("expected a failure");
-			expect(result.error).toBeInstanceOf(ResolutionError);
+			expect(result.error.code).toBe("ambiguous-name");
+			expect(result.error.candidates).toEqual(["browser.fetch.post", "agent.fetch.post"]);
+		});
+
+		/** A namespace that exists wins the head, so its own diagnostics apply. */
+		test("a dotted target with an unknown head names the missing namespace", () => {
+			let registry = createRegistry([makePlugin("fs", ["write"])], makeSuite());
+
+			let result = registry.resolveCallable("http.post", ["fs"]);
+
+			expect(isFailure(result)).toBe(true);
+			if (!isFailure(result)) throw new Error("expected a failure");
 			expect(result.error.code).toBe("unknown-name");
-			expect(result.error.message).toContain('"admin"');
+			expect(result.error.message).toContain('"http"');
 		});
 	});
 

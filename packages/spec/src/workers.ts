@@ -11,7 +11,10 @@
 
 export type { Random, Seed } from "@sdxc/sample";
 
+export type { ArtifactStore } from "./artifacts.js";
 export type * from "./ast.js";
+export { createBaseSet, createConnectionSet } from "./bases.js";
+export type { Base, BaseSet, Connection, ConnectionSet } from "./bases.js";
 export type { Sink, SuiteResult, TestResult, TestStatus } from "./diagnostics.js";
 export {
 	ExpectationError,
@@ -30,14 +33,14 @@ export { lex } from "./lexer.js";
 export { parse } from "./parser.js";
 export { createPermissionSet, parseGrants } from "./permissions.js";
 export type { Grant, Grants, PermissionKind, PermissionSet } from "./permissions.js";
-export type { Plugin, ToolContext, ToolDescriptor, ToolParam } from "./plugin.js";
+export type { Plugin, RunIdentity, ToolContext, ToolDescriptor, ToolParam } from "./plugin.js";
 export { createHttpPlugin } from "./plugins/http.js";
 export { createJwtPlugin } from "./plugins/jwt.js";
 export { createSamplePlugin } from "./plugins/sample.js";
 export { createUrlPlugin } from "./plugins/url.js";
 export { createRegistry } from "./registry.js";
 export type { Registry, ResolvedCallable } from "./registry.js";
-export { runTests } from "./run.js";
+export { createRunId, runTests } from "./run.js";
 export type { RunTestsOptions, WorkspaceFactory } from "./run.js";
 export { positionAt } from "./source.js";
 export type { Position, SourceFile, Span } from "./source.js";

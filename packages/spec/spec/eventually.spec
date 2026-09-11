@@ -83,10 +83,10 @@ test "an action inside eventually is a runtime error" {
 	}
 }
 
-test "eventually outside a then block is a parse error" {
+test "eventually inside a when block is a parse error" {
 	given {
 		write "spec/misplaced.spec" """
-			test "eventually is a then-only construct" {
+			test "eventually belongs after the action, not inside it" {
 				when {
 					eventually {
 						expect 1 1
@@ -101,6 +101,6 @@ test "eventually outside a then block is a parse error" {
 	then {
 		# Parse errors are exit 2 — the misuse is rejected before any test runs.
 		expect result.exit_code 2
-		output_contains result.stdout "only valid directly inside a \"then\" block"
+		output_contains result.stdout "belongs in a \"then\" block"
 	}
 }

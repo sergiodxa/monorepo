@@ -9,13 +9,22 @@
 
 import type { Span } from "./source.js";
 
-/** Reserved words; never valid as identifiers, tool names, or definitions. */
+/**
+ * Reserved words; never valid as identifiers, tool names, or definitions.
+ *
+ * `fixture` stays reserved after commands absorbed it, so a suite written
+ * against the older notation fails with a message naming `command` rather
+ * than an unexpected-identifier error.
+ */
 export const KEYWORDS = [
 	"use",
 	"test",
 	"given",
 	"when",
 	"then",
+	"setup",
+	"teardown",
+	"skip",
 	"command",
 	"fixture",
 	"let",
@@ -44,6 +53,8 @@ export type TokenKind =
 	| "keyword"
 	| "lbrace"
 	| "rbrace"
+	| "lbracket"
+	| "rbracket"
 	| "lparen"
 	| "rparen"
 	| "comma"

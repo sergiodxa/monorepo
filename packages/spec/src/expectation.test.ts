@@ -1,8 +1,8 @@
 /**
  * Tests for the assertion module: expect-form resolution (value, observable,
- * ambiguous), truthiness and structural equality, and the eventually retry
- * loop with its observable-only rule. The executor is stubbed by a small
- * typed host.
+ * ambiguous), truthiness, structural equality, `contains`, the `not`
+ * inversion, and the eventually retry loop with its observable-only rule. The
+ * executor is stubbed by a small typed host.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,6 +15,7 @@ import { describe, expect, test } from "vitest";
 
 import type {
 	ArgumentNode,
+	ArrayNode,
 	BlockNode,
 	CallNode,
 	CommandNode,
@@ -35,7 +36,13 @@ import type { Registry, ResolvedCallable } from "./registry.js";
 import type { Span } from "./source.js";
 import type { Value } from "./values.js";
 
-import { ExpectationError, ResolutionError, SpecError, ToolError } from "./errors.js";
+import {
+	ExpectationError,
+	PermissionDeniedError,
+	ResolutionError,
+	SpecError,
+	ToolError,
+} from "./errors.js";
 import {
 	DEFAULT_EVENTUALLY_MS,
 	POLL_INTERVAL_MS,
@@ -65,6 +72,10 @@ function obj(entries: Record<string, ExpressionNode>): ObjectNode {
 
 function ref(...path: string[]): ReferenceNode {
 	return { kind: "reference", path, span: span() };
+}
+
+function arr(...items: ExpressionNode[]): ArrayNode {
+	return { kind: "array", items, span: span() };
 }
 
 function word(value: string): WordNode {
@@ -162,9 +173,6 @@ function makeRegistry(options: { tools?: RegistryTool[]; commands?: string[] } =
 	}
 	return {
 		resolveCallable,
-		resolveFixture(name) {
-			return failure(new ResolutionError("unknown-name", `Unknown fixture "${name}"`));
-		},
 		isCallable(target, uses) {
 			return isSuccess(resolveCallable(target, uses));
 		},
@@ -193,6 +201,15 @@ function evaluateForTest(
 		}
 		return success(value);
 	}
+	if (expression.kind === "array") {
+		let items: Value[] = [];
+		for (let item of expression.items) {
+			let itemValue = evaluateForTest(item, scope);
+			if (isFailure(itemValue)) return itemValue;
+			items.push(itemValue.data);
+		}
+		return success(items);
+	}
 	let head = expression.path[0];
 	if (head === undefined || !scope.has(head)) {
 		return failure(new ResolutionError("unknown-name", `Unknown name "${head ?? ""}"`));
@@ -215,6 +232,8 @@ function evaluateForTest(
 interface HostSetup {
 	host: ExpectationHost;
 	toolCalls: Array<{ tool: string; args: ArgumentNode[] }>;
+	/** Every expression the host was asked to evaluate, in order. */
+	evaluations: ExpressionNode[];
 }
 
 function makeHost(
@@ -223,16 +242,22 @@ function makeHost(
 		registry?: Registry;
 		uses?: readonly string[];
 		onTool?: (tool: string, args: ArgumentNode[]) => Result<Value, SpecError>;
+		/** Stands in for the executor's evaluator when a test needs a live value. */
+		onEvaluate?: (expression: ExpressionNode) => Result<Value, SpecError> | undefined;
 	} = {},
 ): HostSetup {
 	let scope = new Map<string, Value>(Object.entries(options.bindings ?? {}));
 	let toolCalls: Array<{ tool: string; args: ArgumentNode[] }> = [];
+	let evaluations: ExpressionNode[] = [];
 	let onTool = options.onTool ?? (() => success(true as Value));
 	let host: ExpectationHost = {
 		scope,
 		registry: options.registry ?? makeRegistry(),
 		uses: options.uses ?? [],
-		evaluate(expression) {
+		async evaluate(expression) {
+			evaluations.push(expression);
+			let override = options.onEvaluate?.(expression);
+			if (override !== undefined) return override;
 			return evaluateForTest(expression, scope);
 		},
 		async callTool(tool, args) {
@@ -240,7 +265,7 @@ function makeHost(
 			return onTool(tool.descriptor.name, args);
 		},
 	};
-	return { host, toolCalls };
+	return { host, toolCalls, evaluations };
 }
 
 function expectSuccess<T>(result: Result<T, SpecError>): T {
@@ -402,6 +427,25 @@ describe(executeEventually, () => {
 		expect(attempts).toBe(3);
 	});
 
+	/**
+	 * A nested zero-argument call lives in an argument, which the plan keeps as
+	 * a node; every attempt evaluates it again, so a block waiting on a composed
+	 * value reads the world afresh instead of spinning on its first reading.
+	 */
+	test("re-evaluates its arguments on every attempt", async () => {
+		let readings = [1, 2, 3];
+		let { host, evaluations } = makeHost({
+			bindings: { wanted: { n: 3 } },
+			onEvaluate: (expression) => {
+				if (expression.kind !== "object") return undefined;
+				return success({ n: readings.shift() ?? 3 });
+			},
+		});
+		let node = eventuallyStmt(3000, [expectStmt(obj({ n: ref("ns", "nonce") }), ref("wanted"))]);
+		expectSuccess(await executeEventually(node, host));
+		expect(evaluations.filter((expression) => expression.kind === "object")).toHaveLength(3);
+	});
+
 	test("reports the last failure when the deadline expires", async () => {
 		let attempts = 0;
 		let registry = makeRegistry({
@@ -534,5 +578,209 @@ describe(executeEventually, () => {
 		expect(error.message).toContain("not an observable");
 		expect(toolCalls).toHaveLength(0);
 		expect(performance.now() - started).toBeLessThan(1000);
+	});
+});
+
+/** ADR-018 §3: `contains` is substring for strings and membership for arrays. */
+describe("expect A contains B", () => {
+	test("a substring of a string holds", async () => {
+		let { host } = makeHost({ bindings: { page: "<meta name=og:title>" } });
+		expectSuccess(
+			await executeExpect(expectStmt(ref("page"), word("contains"), str("og:title")), host),
+		);
+	});
+
+	test("a missing substring fails carrying both sides", async () => {
+		let { host } = makeHost({ bindings: { page: "<html>" } });
+		let error = expectFailure(
+			await executeExpect(expectStmt(ref("page"), word("contains"), str("og:title")), host),
+		);
+		expect(error).toBeInstanceOf(ExpectationError);
+		if (!(error instanceof ExpectationError)) throw new Error("narrowing");
+		expect(error.expected).toBe("og:title");
+		expect(error.observed).toBe("<html>");
+	});
+
+	test("membership of an array uses structural equality", async () => {
+		let { host } = makeHost({ bindings: { rows: [{ id: 1 }, { id: 2 }] } });
+		expectSuccess(
+			await executeExpect(expectStmt(ref("rows"), word("contains"), obj({ id: num(2) })), host),
+		);
+	});
+
+	test("an absent member fails", async () => {
+		let { host } = makeHost({ bindings: { names: ["a", "b"] } });
+		let error = expectFailure(
+			await executeExpect(expectStmt(ref("names"), word("contains"), str("c")), host),
+		);
+		expect(error.code).toBe("expectation-failed");
+	});
+
+	test("any other observed type is an error naming the type", async () => {
+		let { host } = makeHost({ bindings: { count: 3 } });
+		let error = expectFailure(
+			await executeExpect(expectStmt(ref("count"), word("contains"), num(3)), host),
+		);
+		expect(error.code).toBe("usage-error");
+		expect(error.message).toContain("a number");
+	});
+
+	test("looking for a non-string inside a string names the type", async () => {
+		let { host } = makeHost({ bindings: { page: "abc" } });
+		let error = expectFailure(
+			await executeExpect(expectStmt(ref("page"), word("contains"), num(1)), host),
+		);
+		expect(error.code).toBe("usage-error");
+		expect(error.message).toContain("a number");
+	});
+
+	test("contains takes exactly one value to look for", async () => {
+		let { host } = makeHost({ bindings: { page: "abc" } });
+		let error = expectFailure(await executeExpect(expectStmt(ref("page"), word("contains")), host));
+		expect(error.code).toBe("usage-error");
+	});
+
+	test("an array literal is a valid subject", async () => {
+		let { host } = makeHost();
+		expectSuccess(
+			await executeExpect(expectStmt(arr(str("a"), str("b")), word("contains"), str("b")), host),
+		);
+	});
+
+	test("a tool declaring its own contains word still wins the dispatch", async () => {
+		let registry = makeRegistry({ tools: [{ namespace: "fs", name: "file", kind: "observable" }] });
+		let { host, toolCalls } = makeHost({ registry, uses: ["fs"] });
+		expectSuccess(
+			await executeExpect(expectStmt(word("file"), str("x"), word("contains"), str("y")), host),
+		);
+		expect(toolCalls).toHaveLength(1);
+		expect(toolCalls[0]?.args).toHaveLength(3);
+	});
+});
+
+/** ADR-018 §3: `not` is expect's alone and inverts whichever form follows. */
+describe("expect not", () => {
+	test("it inverts truthiness", async () => {
+		let { host } = makeHost({ bindings: { empty: "" } });
+		expectSuccess(await executeExpect(expectStmt(word("not"), ref("empty")), host));
+	});
+
+	test("a truthy value under not fails naming what it wanted", async () => {
+		let { host } = makeHost({ bindings: { ok: true } });
+		let error = expectFailure(await executeExpect(expectStmt(word("not"), ref("ok")), host));
+		expect(error.code).toBe("expectation-failed");
+		expect(error.message).toContain("falsy");
+	});
+
+	test("it inverts equality", async () => {
+		let { host } = makeHost({ bindings: { a: "x" } });
+		expectSuccess(await executeExpect(expectStmt(word("not"), ref("a"), str("y")), host));
+		let error = expectFailure(
+			await executeExpect(expectStmt(word("not"), ref("a"), str("x")), host),
+		);
+		expect(error.code).toBe("expectation-failed");
+	});
+
+	test("it inverts contains", async () => {
+		let { host } = makeHost({ bindings: { page: "<html>" } });
+		expectSuccess(
+			await executeExpect(
+				expectStmt(word("not"), ref("page"), word("contains"), str("og:title")),
+				host,
+			),
+		);
+		let error = expectFailure(
+			await executeExpect(
+				expectStmt(word("not"), ref("page"), word("contains"), str("html")),
+				host,
+			),
+		);
+		expect(error.code).toBe("expectation-failed");
+	});
+
+	test("an observable that fails passes under not", async () => {
+		let registry = makeRegistry({ tools: [{ namespace: "fs", name: "file", kind: "observable" }] });
+		let { host } = makeHost({
+			registry,
+			uses: ["fs"],
+			onTool: () => failure(new ExpectationError("file missing")),
+		});
+		expectSuccess(
+			await executeExpect(expectStmt(word("not"), word("file"), str("x"), word("exists")), host),
+		);
+	});
+
+	test("an observable returning false passes under not", async () => {
+		let registry = makeRegistry({
+			tools: [{ namespace: "fs", name: "exists", kind: "observable" }],
+		});
+		let { host } = makeHost({ registry, uses: ["fs"], onTool: () => success(false) });
+		expectSuccess(await executeExpect(expectStmt(word("not"), word("exists"), str("x")), host));
+	});
+
+	test("an observable that holds fails under not", async () => {
+		let registry = makeRegistry({ tools: [{ namespace: "fs", name: "file", kind: "observable" }] });
+		let { host } = makeHost({ registry, uses: ["fs"], onTool: () => success(true) });
+		let error = expectFailure(
+			await executeExpect(expectStmt(word("not"), word("file"), str("x")), host),
+		);
+		expect(error.code).toBe("expectation-failed");
+		expect(error.message).toContain("fs.file");
+	});
+
+	test("a denied permission still fails, so a missing grant never reads as absence", async () => {
+		let registry = makeRegistry({ tools: [{ namespace: "fs", name: "file", kind: "observable" }] });
+		let { host } = makeHost({
+			registry,
+			uses: ["fs"],
+			onTool: () =>
+				failure(new PermissionDeniedError("net", "fs.file", "spec run --allow-net", true)),
+		});
+		let error = expectFailure(
+			await executeExpect(expectStmt(word("not"), word("file"), str("x")), host),
+		);
+		expect(error.code).toBe("permission-denied");
+	});
+
+	test("not on its own has nothing to invert", async () => {
+		let { host } = makeHost();
+		let error = expectFailure(await executeExpect(expectStmt(word("not")), host));
+		expect(error.code).toBe("usage-error");
+		expect(error.message).toContain("invert");
+	});
+
+	test("not anywhere but first is a usage error", async () => {
+		let { host } = makeHost({ bindings: { a: 1 } });
+		let error = expectFailure(await executeExpect(expectStmt(ref("a"), word("not")), host));
+		expect(error.code).toBe("usage-error");
+		expect(error.message).toContain("first argument to expect");
+	});
+
+	test("eventually retries an inverted expect until the thing is absent", async () => {
+		let attempts = 0;
+		let registry = makeRegistry({
+			tools: [{ namespace: "fs", name: "exists", kind: "observable" }],
+		});
+		let { host } = makeHost({
+			registry,
+			uses: ["fs"],
+			onTool: () => {
+				attempts += 1;
+				return success(attempts < 3);
+			},
+		});
+		let node = eventuallyStmt(3000, [expectStmt(word("not"), word("exists"), str("gone.txt"))]);
+		expectSuccess(await executeEventually(node, host));
+		expect(attempts).toBe(3);
+	});
+
+	test("an inverted expect that never becomes absent fails at the deadline", async () => {
+		let registry = makeRegistry({
+			tools: [{ namespace: "fs", name: "exists", kind: "observable" }],
+		});
+		let { host } = makeHost({ registry, uses: ["fs"], onTool: () => success(true) });
+		let node = eventuallyStmt(0, [expectStmt(word("not"), word("exists"), str("stays.txt"))]);
+		let error = expectFailure(await executeEventually(node, host));
+		expect(error.code).toBe("expectation-failed");
 	});
 });

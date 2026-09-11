@@ -1,49 +1,48 @@
 use fs
 
-# A fixture defined beside the test that consumes it: a one-off arrangement
+# A command defined beside the test that consumes it: a one-off arrangement
 # kept local. It is still registered suite-globally, so its name is unique
 # across the whole suite even though only this file uses it.
-fixture composition_inline_manifest {
-	# A fixture's value is whatever it returns — here a computed object a test
-	# asserts on field by field.
+command composition_inline_manifest {
+	# A command's value is whatever it returns — here a computed object a test
+	# asserts on field by field. A command that only returns takes no
+	# parameters, so a test binds it by name alone.
 	return { name: "spec", version: "1.0.0", stable: true }
 }
 
-# A command defined in the same file: a reusable setup step. What a test
-# asserts about a command is its EFFECT — here a file left in the workspace —
-# not a returned value, since this command returns nothing.
+# A command with a parameter, run for its EFFECT — here a file left in the
+# workspace — rather than for a value, since this one returns nothing.
 command composition_write_inline_marker(path) {
-	# Box the parameter so a dotted reference hands the real value to the tool;
-	# a bare identifier in tool-argument position is always a symbolic word.
-	let target = { path: path }
-	write target.path "inline-marker"
+	# `write` declares its first parameter as a value, so the bare `path` reads
+	# this command's binding and the tool receives the real string.
+	write path "inline-marker"
 }
 
-test "an in-file fixture returns a value and an in-file command has an effect" {
+test "one command returns a value and another has an effect" {
 	given {
 		# The command runs for its effect: it writes the marker file.
 		composition_write_inline_marker "marker.txt"
 	}
 	when {
-		# The fixture runs for its value: the object it returns.
-		let manifest = fixture composition_inline_manifest
+		# The command runs for its value: the object it returns.
+		let manifest = composition_inline_manifest
 	}
 	then {
-		# The fixture's returned value, asserted directly.
+		# The returned value, asserted directly.
 		expect manifest.name "spec"
 		expect manifest.version "1.0.0"
 		expect manifest.stable true
-		# The command's effect on the workspace.
+		# The other command's effect on the workspace.
 		expect file "marker.txt" exists
 		expect file "marker.txt" contains "inline-marker"
 	}
 }
 
-test "a command composes a cross-file fixture and another command" {
+test "a command composes two cross-file commands" {
 	given {
 		# composition_load_catalog (from spec/commands/) internally calls the
-		# fixture (from spec/fixtures/) and a second command — all resolved by
-		# name across files. The caller sees only the returned text.
+		# seed command and a second command — all resolved by name across
+		# files. The caller sees only the returned text.
 		let returned = composition_load_catalog "catalog.json"
 	}
 	when {
@@ -58,12 +57,12 @@ test "a command composes a cross-file fixture and another command" {
 	}
 }
 
-test "a cross-file fixture is resolvable by name, order-independent" {
+test "a cross-file command is resolvable by name, order-independent" {
 	when {
-		# The fixture is defined in spec/fixtures/; this test uses it with no
+		# The command is defined in spec/commands/; this test uses it with no
 		# import and no path. Definitions load before any test, so it resolves
 		# regardless of the order files happen to load in.
-		let seed = fixture composition_catalog_seed
+		let seed = composition_catalog_seed
 	}
 	then {
 		expect seed.title "Dune"

@@ -23,6 +23,8 @@ import { KEYWORDS } from "./tokens.js";
 const PUNCTUATION: Record<string, TokenKind | undefined> = {
 	"{": "lbrace",
 	"}": "rbrace",
+	"[": "lbracket",
+	"]": "rbracket",
 	"(": "lparen",
 	")": "rparen",
 	",": "comma",
@@ -170,7 +172,11 @@ export function lex(source: SourceFile): Result<Token[], ParseError> {
 		tokens.push({ kind: "number", text: raw, span: { start, end: index }, value: Number(raw) });
 	}
 
-	/** Lex an identifier, a keyword, or a dotted path joined by adjacent dots. */
+	/**
+	 * Lex an identifier, a keyword, or a dotted path joined by adjacent dots.
+	 * A segment after the first may be digits alone, which is how a path
+	 * addresses an array element: `result.rows.0.id`.
+	 */
 	function readIdentifierOrKeyword(): void {
 		let start = index;
 		let segments: string[] = [];
@@ -178,7 +184,8 @@ export function lex(source: SourceFile): Result<Token[], ParseError> {
 			let segmentStart = index;
 			while (isIdentifierPart(text[index] ?? "")) index += 1;
 			segments.push(text.slice(segmentStart, index));
-			if (text[index] === "." && isIdentifierStart(text[index + 1] ?? "")) {
+			let next = text[index + 1] ?? "";
+			if (text[index] === "." && (isIdentifierStart(next) || isDigit(next))) {
 				index += 1;
 				continue;
 			}

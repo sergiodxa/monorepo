@@ -119,9 +119,15 @@ positive expectation in the same block.
 ### 4. Commands absorb fixtures
 
 - `return` in a command body already works; the documentation catches up to it.
-- A bare-path `let`/`return` right-hand side now admits a **zero-parameter command**,
-  not only an argument-less tool, so `let user = create_testing_account` binds what the
-  command produced.
+- A bare path now admits a **zero-parameter command**, not only an argument-less tool,
+  so `let user = create_testing_account` binds what the command produced.
+- **The zero-argument rule holds in every expression position**, not only on a
+  `let`/`return` right-hand side as [ADR-017](./ADR-017-zero-arg-tool-calls.md) confined
+  it. §5's `{ nonce: spec.nonce }` is an object entry, and the same path means the same
+  thing inside an array or an argument. A bound head stays a reference, so nothing is
+  guessed at: the two readings never overlap. This widens ADR-017's scope rather than
+  answering one of its Open Questions, and is what makes §5's identity values usable
+  where a spec actually composes them.
 - `eventually` is valid in any command body, not only in a `then` block. A helper can
   wait for its own effect to land, which is what makes five sequential calls a
   substitute for a loop rather than a race.
@@ -185,6 +191,11 @@ ones, under the identical matching rules of §9 — so a document is addressed o
 and the namespace choice is only about whether a live browser is needed. A requested
 tag that is absent is an error naming the tags that were present, with `exists` for
 deliberate absence.
+
+That parity settles one naming question the head readers raise: `html.link` is the role
+shorthand its `browser` counterpart is, and `html.rel` reads the `href` of a
+`<link rel="…">`, beside `html.title` and `html.meta`. One spelling means one thing in
+both namespaces, so an assertion moved between them cannot quietly change subject.
 
 A structured `html.parse` returning an object was the alternative. Meta names in
 practice are `og:title` and `twitter:card`, and a colon cannot appear in a dotted
@@ -311,11 +322,9 @@ paired with a `term`, which is a genuine role pairing rather than a translated x
 
 ```
 command give_fund_balance(email, amount) {
-	let fund = db.query "select funds.id from funds … where users.email = $1"
-		params email on "web" one
+	let fund = db.query "select funds.id from funds … where users.email = $1" params email on "web" one
 	db.query "delete from balances where fund_id = $1" params fund.id on "backend"
-	db.query "insert into balances (fund_id, portfolio_balance) values ($1, $2)"
-		params [ fund.id, amount ] on "backend"
+	db.query "insert into balances (fund_id, portfolio_balance)" params [ fund.id, amount ] on "backend"
 }
 ```
 
@@ -404,22 +413,52 @@ no `if`" suggests.
 
 ## Open Questions
 
-These are v1-provisional pressure points, and the first four are capability
-verifications rather than design choices — several decisions above assume something of
-`agent-browser` that is unconfirmed.
+These are v1-provisional pressure points. The first five are capability verifications
+rather than design choices — several decisions above assume something of
+`agent-browser` or of Bun's SQL client — and each has been checked against the real
+tool, so what they answer is recorded with them.
 
-- **`HttpOnly` cookie reads.** The logout assertion needs the session cookie's absence,
-  and an `HttpOnly` cookie is invisible to `document.cookie`. If the real jar is not
-  exposed, `browser.cookie` serves the readable cookies a spec keys data on and the
-  logout assertion needs another shape.
-- **Document versus data responses.** `of document` and `of data` assume the session's
-  responses are distinguishable by kind.
-- **Screenshots and accessibility-tree dumps** for the artifacts directory.
-- **`fill` on a range input.** Whether the platform's `input` and `change` events are
-  dispatched decides whether every assertion downstream of a slider reads a live value.
-- **The simple query protocol.** `db.run_file` assumes Bun's SQL client can send an
-  unparsed multi-statement string. Without it, the file goes through `psql` under
-  `--allow-run` and the grant story for seeding changes.
-- **`select` and `dialog`.** Neither a `combobox`/`option` action nor the `dialog` role
-  appears in the target's requirements, yet a suite that fills forms and dismisses
-  modals plausibly wants both. Confirm against the suite rather than adding them blind.
+- **`HttpOnly` cookie reads — verified.** `agent-browser cookies get` returns the real
+  jar, including `httpOnly: true` entries with their values, so `browser.cookie` reads
+  the session cookie and the logout assertion needs no other shape.
+- **Document versus data responses — verified, with two limits.**
+  `network requests --type document` and `--type xhr,fetch` separate the two kinds,
+  each response carrying its status and its response headers, which is what
+  `of document` and `of data` select between. Two things do not follow from that.
+  `Set-Cookie` is exposed on neither kind, because Chrome withholds it from the network
+  log, so a spec reads cookies through `browser.cookie` rather than through a response
+  header. And §8's no-folding rule is reachable on a document response only: a data
+  response arrives through the fetch layer, which has already comma-folded repeated
+  headers, so the array of separate values is unavailable there.
+- **Screenshots and accessibility-tree dumps — verified.**
+  `agent-browser screenshot [path]` writes a PNG, and `snapshot` / `snapshot -i` dumps
+  the tree with refs. Together they are what `--artifacts=<dir>` collects.
+- **`fill` on a range input — the CLI's own `fill` does not satisfy §9.**
+  `agent-browser fill` reports success on a range input while leaving the slider at its
+  midpoint, and dispatches `input` without `change`; repeated fills with different
+  values never move it. `browser.fill` therefore drives a range input itself, through the
+  prototype `value` setter and explicit `input` and `change` events — the prototype setter
+  being what defeats a controlled component's value tracker, so React reads the change.
+  §9's conformance test against a real range input asserts the value moves, both events
+  fire, and a second fill moves it again.
+- **The simple query protocol — verified.** Bun 1.4.0's `sql.unsafe(text)` uses the
+  simple query protocol and applies a multi-statement string whole, on PostgreSQL 16 and
+  on SQLite, including a `$$…$$` dollar-quoted `plpgsql` body with internal semicolons
+  and a string literal containing `;`. Binding parameters switches to the extended
+  protocol, which Postgres refuses for multiple commands, so `db.run_file` never binds —
+  which leaves `psql` and `--allow-run` out of the seeding story entirely.
+- **`select` and `dialog` — answered against a real browser.** `dialog` needs no feature:
+  roles are an open set, and a native `<dialog>` and an explicit `role="dialog"` both
+  address as `dialog`. `select` was worth having and is spelled in the `fill … with`
+  idiom — `browser.select combobox "Plan" with "Annual"` — with the option addressed by
+  the accessible name the list shows, so the matching rule is the vocabulary's rather
+  than the CLI's.
+
+  Confirming `dialog` turned up a defect the ADR had not anticipated: a closed `<dialog>`
+  is hidden by the user-agent stylesheet, which markup cannot see, so
+  `expect not browser.element dialog "…" exists` wrongly reported it present. A browser
+  lookup therefore takes visibility from the rendered page rather than from the markup —
+  the one place `browser` and `html` answer differently, and only because `browser` has a
+  layout to consult. A dropdown's `<option>` elements are the exception, since Chrome
+  reports them as not visible until the popup opens while a person reading the list sees
+  them all.

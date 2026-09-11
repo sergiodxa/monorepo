@@ -19,10 +19,15 @@ import { afterEach, describe, expect, test } from "vitest";
 import type { SuiteResult } from "./diagnostics.js";
 import type { Grants } from "./permissions.js";
 import type { Plugin } from "./plugin.js";
+import type { RunTestsOptions } from "./run.js";
+import type { LoadedSuite } from "./sources.js";
 import type { Value } from "./values.js";
 
 import { PermissionDeniedError, ToolError } from "./errors.js";
+import { createRunId, runTests } from "./run.js";
 import { runSuite } from "./runner.js";
+import { loadSources } from "./sources.js";
+import { createWorkspace } from "./workspace.js";
 
 const CREATED_DIRS: string[] = [];
 
@@ -49,6 +54,7 @@ function deniedGrants(): Grants {
 		net: { mode: "denied" },
 		env: { mode: "denied" },
 		hostFs: { mode: "denied" },
+		db: { mode: "denied" },
 	};
 }
 
@@ -283,6 +289,7 @@ function noGrants(): Grants {
 		net: { mode: "denied" },
 		env: { mode: "denied" },
 		hostFs: { mode: "denied" },
+		db: { mode: "denied" },
 	};
 }
 
@@ -684,5 +691,279 @@ test "second" {
 		let one = await collect(alone);
 
 		expect(one).toEqual([both[1]]);
+	});
+});
+
+/**
+ * A test plugin recording what each call saw of the run: `journal.mark`
+ * records the call's nonce and its first random draw, and `journal.flaky`
+ * additionally fails every attempt before the one it was told to pass on.
+ */
+function createJournalPlugin(passOnAttempt: number): {
+	plugin: Plugin;
+	marks: () => { tool: string; nonce: string; draw: number }[];
+} {
+	let marks: { tool: string; nonce: string; draw: number }[] = [];
+	let plugin: Plugin = {
+		namespace: "journal",
+		describe() {
+			return [
+				{ name: "mark", summary: "Record this call's run identity.", kind: "action", params: [] },
+				{
+					name: "flaky",
+					summary: "Fail until the attempt it was told to pass on.",
+					kind: "action",
+					params: [],
+				},
+			];
+		},
+		async call(tool, _args, context) {
+			marks.push({ tool, nonce: context.run.nonce, draw: context.random.next() });
+			if (tool === "flaky" && context.run.attempt < passOnAttempt) {
+				return failure(new ToolError("the world was not ready yet"));
+			}
+			return success(null);
+		},
+	};
+	return { plugin, marks: () => marks };
+}
+
+/**
+ * Load a suite from source text, then lift the block of the test named
+ * `hookFrom` into the named hook — so these tests pin the runner's lifecycle
+ * against real parsed statements without depending on the hook syntax.
+ */
+async function suiteWithHook(
+	text: string,
+	kind: "setup" | "teardown",
+	hookFrom: string,
+): Promise<LoadedSuite> {
+	let loaded = loadSources([{ path: "spec/lifecycle.spec", text }]);
+	if (isFailure(loaded)) throw new Error(`fixture did not parse: ${loaded.error.message}`);
+	let file = loaded.data.files[0];
+	if (file === undefined) throw new Error("fixture has no file");
+	let donor = file.tests.find((test) => test.title === hookFrom);
+	if (donor?.when === undefined) throw new Error(`no "${hookFrom}" test with a when block`);
+	file.tests = file.tests.filter((test) => test !== donor);
+	loaded.data[kind] = { hook: { kind, body: donor.when, span: donor.span }, file };
+	return loaded.data;
+}
+
+/** Run a hand-assembled suite the way the CLI would, with real workspaces. */
+async function runAssembled(
+	suite: LoadedSuite,
+	plugins: Plugin[],
+	options: Partial<RunTestsOptions> = {},
+): Promise<SuiteResult> {
+	let result = await runTests({
+		suite,
+		plugins,
+		grants: noGrants(),
+		createWorkspace,
+		runId: "r",
+		...options,
+	});
+	if (isFailure(result)) throw new Error(`expected the run to start: ${result.error.message}`);
+	return result.data;
+}
+
+describe("runTests lifecycle", () => {
+	test("a skipped test never executes and is counted apart, with its reason", async () => {
+		let { plugin, marks } = createJournalPlugin(1);
+		let loaded = loadSources([
+			{
+				path: "spec/skipped.spec",
+				text: `use journal
+
+test "runs" {
+	when {
+		journal.mark
+	}
+}
+
+test "does not run" {
+	when {
+		journal.mark
+	}
+}
+`,
+			},
+		]);
+		if (isFailure(loaded)) throw new Error(loaded.error.message);
+		let skipped = loaded.data.files[0]?.tests[1];
+		if (skipped === undefined) throw new Error("fixture has no second test");
+		skipped.skip = "waiting on the staging database";
+
+		let suite = await runAssembled(loaded.data, [plugin]);
+
+		expect(marks()).toHaveLength(1);
+		expect(suite.passed).toBe(1);
+		expect(suite.skipped).toBe(1);
+		expect(suite.results[1]?.status).toBe("skipped");
+		expect(suite.results[1]?.reason).toBe("waiting on the staging database");
+	});
+
+	test("a retry redraws no data, moves the nonce, and reports the test flaky", async () => {
+		let { plugin, marks } = createJournalPlugin(2);
+		let loaded = loadSources([
+			{
+				path: "spec/retried.spec",
+				text: `use journal
+
+test "settles on the second attempt" {
+	when {
+		journal.flaky
+	}
+}
+`,
+			},
+		]);
+		if (isFailure(loaded)) throw new Error(loaded.error.message);
+
+		let suite = await runAssembled(loaded.data, [plugin], { retries: 1 });
+
+		expect(marks().map((mark) => mark.nonce)).toEqual(["r-1", "r-2"]);
+		expect(marks()[0]?.draw).toBe(marks()[1]?.draw);
+		expect(suite.flaky).toBe(1);
+		expect(suite.failed).toBe(0);
+		let result = suite.results[0];
+		expect(result?.status).toBe("flaky");
+		expect(result?.attempts).toHaveLength(1);
+		expect(result?.attempts?.[0]?.message).toContain("the world was not ready yet");
+	});
+
+	test("a test that fails every attempt keeps them all and stays failed", async () => {
+		let { plugin, marks } = createJournalPlugin(99);
+		let loaded = loadSources([
+			{
+				path: "spec/doomed.spec",
+				text: `use journal
+
+test "never settles" {
+	when {
+		journal.flaky
+	}
+}
+`,
+			},
+		]);
+		if (isFailure(loaded)) throw new Error(loaded.error.message);
+
+		let suite = await runAssembled(loaded.data, [plugin], { retries: 2 });
+
+		expect(marks()).toHaveLength(3);
+		expect(suite.failed).toBe(1);
+		expect(suite.flaky).toBe(0);
+		expect(suite.results[0]?.attempts).toHaveLength(3);
+	});
+
+	test("setup runs once before every test, whatever the concurrency", async () => {
+		let { plugin, marks } = createJournalPlugin(1);
+		let suite = await suiteWithHook(
+			`use journal
+
+test "prepare" {
+	when {
+		journal.mark
+	}
+}
+
+test "one" {
+	when {
+		journal.mark
+	}
+}
+
+test "two" {
+	when {
+		journal.mark
+	}
+}
+`,
+			"setup",
+			"prepare",
+		);
+
+		let result = await runAssembled(suite, [plugin], { concurrency: 2 });
+
+		expect(result.passed).toBe(2);
+		expect(marks()).toHaveLength(3);
+		/** The hook's own call comes first, before any test could have marked. */
+		expect(marks()[0]?.nonce).toBe("r-1");
+	});
+
+	test("a failing setup is fatal, reports as a load error, and runs no test", async () => {
+		let { plugin, marks } = createJournalPlugin(99);
+		let suite = await suiteWithHook(
+			`use journal
+
+test "prepare" {
+	when {
+		journal.flaky
+	}
+}
+
+test "never reached" {
+	when {
+		journal.mark
+	}
+}
+`,
+			"setup",
+			"prepare",
+		);
+
+		let result = await runTests({
+			suite,
+			plugins: [plugin],
+			grants: noGrants(),
+			createWorkspace,
+			runId: "r",
+		});
+
+		expect(isFailure(result)).toBe(true);
+		if (!isFailure(result)) throw new Error("expected a fatal failure");
+		expect(result.error.code).toBe("load-error");
+		expect(result.error.message).toContain("setup");
+		expect(marks()).toHaveLength(1);
+	});
+
+	test("teardown runs after a failing suite, and its own failure is reported", async () => {
+		let { plugin, marks } = createJournalPlugin(99);
+		let suite = await suiteWithHook(
+			`use journal
+
+test "clean up" {
+	when {
+		journal.flaky
+	}
+}
+
+test "fails" {
+	when {
+		journal.flaky
+	}
+}
+`,
+			"teardown",
+			"clean up",
+		);
+
+		let result = await runAssembled(suite, [plugin]);
+
+		expect(marks()).toHaveLength(2);
+		expect(result.failed).toBe(2);
+		let teardown = result.results[1];
+		expect(teardown?.title).toBe("teardown");
+		expect(teardown?.error?.message).toContain("the world was not ready yet");
+	});
+});
+
+describe("run identity", () => {
+	test("a drawn run id differs between runs and is URL- and SQL-safe", () => {
+		let ids = new Set(Array.from({ length: 32 }, () => createRunId()));
+
+		expect(ids.size).toBe(32);
+		for (let id of ids) expect(id).toMatch(/^[a-z0-9]+$/);
 	});
 });

@@ -76,3 +76,55 @@ test "denials for different permissions stay in separate groups" {
 		output_contains result.stdout "Permission denied: net (1 test)"
 	}
 }
+
+# The summary always states passed and failed, and states skipped or flaky only
+# when either happened. The trailing "(" is the duration's, so asserting on it
+# proves nothing else was appended to the counts.
+
+test "a run with nothing skipped states passed and failed alone" {
+	given {
+		write "spec/plain.spec" """
+			test "holds" {
+				then {
+					expect 1 1
+				}
+			}
+		"""
+	}
+
+	when {
+		let result = run "spec" "run" "spec"
+	}
+
+	then {
+		expect result.exit_code 0
+		output_contains result.stdout "1 passed, 0 failed ("
+	}
+}
+
+test "a run with a skipped test adds its count to the summary" {
+	given {
+		write "spec/skipping.spec" """
+			skip test "not today" {
+				then {
+					expect 1 1
+				}
+			}
+
+			test "holds" {
+				then {
+					expect 1 1
+				}
+			}
+		"""
+	}
+
+	when {
+		let result = run "spec" "run" "spec"
+	}
+
+	then {
+		expect result.exit_code 0
+		output_contains result.stdout "1 passed, 0 failed, 1 skipped ("
+	}
+}

@@ -206,3 +206,29 @@ test "a malformed permissions entry is a load error naming it" {
 		output_contains result.stdout "bogus"
 	}
 }
+
+test "db is one of the families a config may declare" {
+	given {
+		write "spec/config.jsonc" """
+			{
+				"permissions": { "allow": ["db", ["db", "web"]] }
+			}
+		"""
+		write "spec/any.spec" """
+			test "trivial" {
+				then {
+					expect 1 1
+				}
+			}
+		"""
+	}
+	when {
+		# The declaration is validated as the config loads, so an unknown family
+		# would fail this run at exit 2 whether or not it was opted into.
+		let result = run "spec" "run" "spec" "--allow-config"
+	}
+	then {
+		expect result.exit_code 0
+		output_contains result.stdout "1 passed, 0 failed"
+	}
+}

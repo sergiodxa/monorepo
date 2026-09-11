@@ -39,6 +39,7 @@ function noGrants(): Grants {
 		net: { mode: "denied" },
 		env: { mode: "denied" },
 		hostFs: { mode: "denied" },
+		db: { mode: "denied" },
 	};
 }
 

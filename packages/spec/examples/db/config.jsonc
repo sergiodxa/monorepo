@@ -1,0 +1,10 @@
+{
+	// Two connections, so these examples show `on "name"` choosing between
+	// them. The DSNs come from the environment the operator runs the suite in;
+	// the specs name only "web" and "backend", which is what lets the same
+	// suite run against a laptop's databases and against CI's.
+	"databases": {
+		"web": { "env": "WEB_DATABASE_URL" },
+		"backend": { "env": "BACKEND_DATABASE_URL" },
+	},
+}

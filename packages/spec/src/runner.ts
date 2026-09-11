@@ -15,6 +15,8 @@ import type { Seed } from "@sdxc/sample";
 
 import { isFailure } from "@sdxc/result";
 
+import type { ArtifactStore } from "./artifacts.js";
+import type { BaseSet, ConnectionSet } from "./bases.js";
 import type { BuiltinNamespace } from "./builtins.js";
 import type { SuiteResult } from "./diagnostics.js";
 import type { SpecError } from "./errors.js";
@@ -50,6 +52,19 @@ export interface RunOptions {
 	 * the fixed default that makes two runs produce identical data.
 	 */
 	seed?: Seed;
+	/**
+	 * What this run is called; omit to draw one, or pass the id a previous run
+	 * printed to replay it. See `RunTestsOptions.runId`.
+	 */
+	runId?: string;
+	/** How many further attempts a failing test gets; see `RunTestsOptions.retries`. */
+	retries?: number;
+	/** The run's named bases, from the suite's `spec/config.jsonc`. */
+	bases?: BaseSet;
+	/** The run's named database connections, from the suite's `spec/config.jsonc`. */
+	connections?: ConnectionSet;
+	/** Where a failing test writes its diagnostics; omit to leave them text. */
+	artifacts?: ArtifactStore;
 }
 
 /**
@@ -71,6 +86,11 @@ export async function runSuite(options: RunOptions): Promise<Result<SuiteResult,
 		createWorkspace,
 		concurrency: options.concurrency,
 		seed: options.seed,
+		runId: options.runId,
+		retries: options.retries,
+		bases: options.bases,
+		connections: options.connections,
+		artifacts: options.artifacts,
 		root: options.root,
 	});
 }

@@ -16,9 +16,12 @@ import { createCliPlugin } from "./plugins/cli.js";
 import { createDbPlugin } from "./plugins/db.js";
 import { createEnvPlugin } from "./plugins/env.js";
 import { createFsPlugin } from "./plugins/fs.js";
+import { createHtmlPlugin } from "./plugins/html.js";
 import { createHttpPlugin } from "./plugins/http.js";
 import { createJwtPlugin } from "./plugins/jwt.js";
 import { createSamplePlugin } from "./plugins/sample.js";
+import { createSpecPlugin } from "./plugins/spec.js";
+import { createStrPlugin } from "./plugins/str.js";
 import { createUrlPlugin } from "./plugins/url.js";
 
 /**
@@ -32,11 +35,14 @@ export const BUILTIN_NAMESPACES = [
 	"cli",
 	"http",
 	"browser",
+	"html",
 	"db",
 	"url",
 	"jwt",
 	"env",
 	"sample",
+	"str",
+	"spec",
 ] as const;
 
 /** A built-in namespace's name. */
@@ -48,11 +54,14 @@ const BUILTIN_FACTORIES: Record<BuiltinNamespace, () => Plugin> = {
 	cli: createCliPlugin,
 	http: createHttpPlugin,
 	browser: createBrowserPlugin,
+	html: createHtmlPlugin,
 	db: createDbPlugin,
 	url: createUrlPlugin,
 	jwt: createJwtPlugin,
 	env: createEnvPlugin,
 	sample: createSamplePlugin,
+	str: createStrPlugin,
+	spec: createSpecPlugin,
 };
 
 /**

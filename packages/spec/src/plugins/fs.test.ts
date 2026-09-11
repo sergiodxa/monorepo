@@ -23,6 +23,8 @@ import type { ToolArg, Value } from "../values.js";
 import type { Workspace } from "../workspace.js";
 
 import { ExpectationError, PermissionDeniedError, WorkspaceEscapeError } from "../errors.js";
+import { createPermissionSet } from "../permissions.js";
+import { createToolContext } from "../tool-context.js";
 
 import { createFsPlugin } from "./fs.js";
 
@@ -32,12 +34,12 @@ let context: ToolContext;
 
 beforeEach(async () => {
 	root = await realpath(await mkdtemp(join(tmpdir(), "spec-fs-plugin-")));
-	context = {
+	context = createToolContext({
 		workspace: createWorkspaceStub(root),
 		permissions: createPermissionsStub(),
 		random: createRandom("test"),
 		now: new Date("2026-01-01T00:00:00.000Z"),
-	};
+	});
 });
 
 afterEach(async () => {
@@ -344,15 +346,15 @@ function createWorkspaceStub(base: string): Workspace {
 	};
 }
 
-/** A permission set granting every check, filling the tool context's shape for fs tests. */
+/** A permission set granting every check, so fs tests reach the tool itself. */
 function createPermissionsStub(): PermissionSet {
-	return {
-		checkRun: () => success(undefined),
-		checkNet: () => success(undefined),
-		checkEnv: () => success(undefined),
-		checkHostFs: () => success(undefined),
-		grantedEnvNames: () => [],
-	};
+	return createPermissionSet({
+		run: { mode: "all" },
+		net: { mode: "all" },
+		env: { mode: "all" },
+		hostFs: { mode: "all" },
+		db: { mode: "all" },
+	});
 }
 
 function value(data: Value): ToolArg {

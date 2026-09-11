@@ -16,7 +16,7 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
-import type { CommandNode, FixtureNode, SpecFileNode } from "./ast.js";
+import type { CommandNode, HookNode, SpecFileNode } from "./ast.js";
 import type { SpecError } from "./errors.js";
 
 import { LoadError, ParseError } from "./errors.js";
@@ -40,8 +40,17 @@ export interface LoadedSuite {
 	files: SpecFileNode[];
 	/** Suite-global commands by name, registered across every file. */
 	commands: Map<string, CommandNode>;
-	/** Suite-global fixtures by name, registered across every file. */
-	fixtures: Map<string, FixtureNode>;
+	/**
+	 * The suite's `setup` hook, when one file declares it. It runs once before
+	 * any test, regardless of concurrency, and its failure ends the run.
+	 */
+	setup?: { hook: HookNode; file: SpecFileNode };
+	/**
+	 * The suite's `teardown` hook, when one file declares it. It runs once
+	 * after every test, failures included, which is where a suite removes the
+	 * rows it left behind.
+	 */
+	teardown?: { hook: HookNode; file: SpecFileNode };
 }
 
 /**
@@ -73,8 +82,8 @@ export function loadSources(sources: readonly SpecSource[]): Result<LoadedSuite,
 	}
 
 	let commands = new Map<string, CommandNode>();
-	let fixtures = new Map<string, FixtureNode>();
-	let origins = new Map<string, { kind: "command" | "fixture"; file: string }>();
+	let origins = new Map<string, string>();
+	let suite: LoadedSuite = { files, commands };
 	for (let file of files) {
 		for (let definition of file.definitions) {
 			let previous = origins.get(definition.name);
@@ -82,15 +91,28 @@ export function loadSources(sources: readonly SpecSource[]): Result<LoadedSuite,
 				return failure(
 					new LoadError(
 						"duplicate-definition",
-						`Duplicate definition "${definition.name}": ${previous.kind} in ${previous.file} and ${definition.kind} in ${file.path}.`,
+						`Duplicate definition "${definition.name}": ${definition.kind} in ${previous} and ${definition.kind} in ${file.path}.`,
 					),
 				);
 			}
-			origins.set(definition.name, { kind: definition.kind, file: file.path });
-			if (definition.kind === "command") commands.set(definition.name, definition);
-			else fixtures.set(definition.name, definition);
+			origins.set(definition.name, file.path);
+			commands.set(definition.name, definition);
+		}
+		for (let kind of ["setup", "teardown"] as const) {
+			let hook = file[kind];
+			if (hook === undefined) continue;
+			let previous = suite[kind];
+			if (previous) {
+				return failure(
+					new LoadError(
+						"duplicate-definition",
+						`Duplicate "${kind}" hook: declared in ${previous.file.path} and in ${file.path}. A suite has at most one of each.`,
+					),
+				);
+			}
+			suite[kind] = { hook, file };
 		}
 	}
 
-	return success({ files, commands, fixtures });
+	return success(suite);
 }

@@ -1,12 +1,12 @@
 /**
  * Runs the functional `db` examples (`packages/spec/examples/db/`) through the
- * real `spec` CLI as a child process, against a temp-file SQLite database. This
- * is the connecting acceptance layer the CI-safe `spec/db.spec` meta-tests
- * cannot be: it demonstrates the per-call `DATABASE_URL=… spec run
- * --allow-env=DATABASE_URL` form by placing the connection string in the
- * child's environment and granting exactly that variable. It runs whenever
- * Bun's SQL client has a SQLite driver (so it needs no external server) and
- * skips only when SQLite is unavailable.
+ * real `spec` CLI as a child process, against two temp-file SQLite databases.
+ * This is the connecting acceptance layer the CI-safe `spec/db.spec` meta-tests
+ * cannot be: it demonstrates the whole operator-side form — DSNs supplied to
+ * `examples/db/config.jsonc` through the environment, `--allow-db` scoped to
+ * the connection names, and `--allow-host-fs` for the seed file `db.run_file`
+ * reads. It runs whenever Bun's SQL client has a SQLite driver (so it needs no
+ * external server) and skips only when SQLite is unavailable.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,6 +21,9 @@ import { expect, test } from "vitest";
 
 /** Absolute path of this package, the example run's working directory. */
 const PACKAGE_DIR = resolve(import.meta.dirname, "..");
+
+/** The example suite, as `spec run` is pointed at it and as paths in it read. */
+const SUITE_DIR = join("examples", "db");
 
 /**
  * The Bun executable, found on PATH. The CLI under test is a Bun program, so it
@@ -44,16 +47,30 @@ const SQLITE_AVAILABLE =
 const EXAMPLE_TIMEOUT_MS = 60_000;
 
 test.skipIf(!SQLITE_AVAILABLE)(
-	"the examples/db suite passes through the real CLI against a SQLite database",
+	"the examples/db suite passes through the real CLI against SQLite databases",
 	async () => {
-		let dbPath = join(tmpdir(), `spec-db-example-${process.pid}-${Date.now()}.sqlite`);
+		let stamp = `${process.pid}-${Date.now()}`;
+		let paths = {
+			web: join(tmpdir(), `spec-db-example-${stamp}-web.sqlite`),
+			backend: join(tmpdir(), `spec-db-example-${stamp}-backend.sqlite`),
+		};
 		try {
 			let child = spawn(
 				BUN_EXECUTABLE,
-				[join(PACKAGE_DIR, "src", "cli.ts"), "run", "examples/db", "--allow-env=DATABASE_URL"],
+				[
+					join(PACKAGE_DIR, "src", "cli.ts"),
+					"run",
+					SUITE_DIR,
+					"--allow-db=web,backend",
+					`--allow-host-fs=${join(PACKAGE_DIR, SUITE_DIR)}`,
+				],
 				{
 					cwd: PACKAGE_DIR,
-					env: { ...process.env, DATABASE_URL: `sqlite://${dbPath}` },
+					env: {
+						...process.env,
+						WEB_DATABASE_URL: `sqlite://${paths.web}`,
+						BACKEND_DATABASE_URL: `sqlite://${paths.backend}`,
+					},
 					stdio: ["ignore", "pipe", "pipe"],
 				},
 			);
@@ -76,7 +93,9 @@ test.skipIf(!SQLITE_AVAILABLE)(
 			expect(Number(summary?.[1]), report).toBeGreaterThan(0);
 			expect(Number(summary?.[2]), report).toBe(0);
 		} finally {
-			for (let suffix of ["", "-wal", "-shm"]) rmSync(`${dbPath}${suffix}`, { force: true });
+			for (let path of Object.values(paths)) {
+				for (let suffix of ["", "-wal", "-shm"]) rmSync(`${path}${suffix}`, { force: true });
+			}
 		}
 	},
 	EXAMPLE_TIMEOUT_MS,

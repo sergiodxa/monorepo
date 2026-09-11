@@ -10,18 +10,19 @@
 import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, isSuccess, success, unwrap } from "@sdxc/result";
-import { createRandom } from "@sdxc/sample";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
+import type { Base } from "../bases.js";
 import type { SpecError } from "../errors.js";
 import type { PermissionSet } from "../permissions.js";
 import type { ToolContext } from "../plugin.js";
 import type { ToolArg, Value, ValueObject } from "../values.js";
-import type { Workspace } from "../workspace.js";
 
+import { createBaseSet } from "../bases.js";
 import { PermissionDeniedError } from "../errors.js";
+import { createToolContext } from "../tool-context.js";
 
 import { createHttpPlugin } from "./http.js";
 
@@ -49,6 +50,7 @@ function allowAll(): PermissionSet {
 		checkNet: () => success(undefined),
 		checkEnv: () => success(undefined),
 		checkHostFs: () => success(undefined),
+		checkDb: () => success(undefined),
 		grantedEnvNames: () => [],
 	};
 }
@@ -88,23 +90,9 @@ function allowOnlyPort(granted: number): PermissionSet {
 	};
 }
 
-/** A workspace stub; http tools operate entirely over the network. */
-function stubWorkspace(): Workspace {
-	return {
-		root: "/tmp/spec-http-tests",
-		resolve: (path: string): Result<string, SpecError> => success(path),
-		cleanup: async () => undefined,
-	};
-}
-
 /** Build a tool context from a permission set (defaults to allow-all). */
-function buildContext(permissions: PermissionSet = allowAll()): ToolContext {
-	return {
-		workspace: stubWorkspace(),
-		permissions,
-		random: createRandom("test"),
-		now: new Date("2026-01-01T00:00:00.000Z"),
-	};
+function buildContext(permissions: PermissionSet = allowAll(), bases: Base[] = []): ToolContext {
+	return createToolContext({ permissions, bases: createBaseSet(bases) });
 }
 
 /** Narrow a value to an object, failing the test otherwise. */
@@ -140,8 +128,9 @@ describe(createHttpPlugin.name, () => {
 			expect(tool.kind).toBe("action");
 			expect(tool.requires).toBe("net");
 			expect(tool.params.map((param) => param.name)).toEqual([
-				"url",
+				"target",
 				"body",
+				"on",
 				"headers",
 				"form",
 				"json",
@@ -158,10 +147,12 @@ describe(createHttpPlugin.name, () => {
 				false,
 				false,
 				false,
+				false,
 			]);
 			expect(tool.params.map((param) => param.kind)).toEqual([
 				"value",
 				"value",
+				"word",
 				"word",
 				"word",
 				"word",
@@ -431,13 +422,93 @@ describe(createHttpPlugin.name, () => {
 		expect(auth).toBe("Bearer secret");
 	});
 
-	test("a relative URL is a tool error naming the environments gap", async () => {
+	test("a relative target with no base configured names the config", async () => {
 		let result = await PLUGIN.call("get", [value("/health")], buildContext());
 		let error = unwrapError(result);
 		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain("No base is configured");
+		expect(error.message).toContain("spec/config.jsonc");
+	});
+
+	test("a target that is neither absolute nor rooted suggests the slash", async () => {
+		let result = await PLUGIN.call("get", [value("health")], buildContext());
+		let error = unwrapError(result);
+		expect(error.code).toBe("tool-error");
 		expect(error.message).toContain('"/health"');
-		expect(error.message).toContain("absolute");
-		expect(error.message).toContain("docs/adr/spec/ADR-008");
+	});
+
+	test("a relative target resolves against the only configured base", async () => {
+		SERVER.use(http.get("https://only.test/portfolios", () => HttpResponse.json({ ok: true })));
+		let result = await PLUGIN.call(
+			"get",
+			[value("/portfolios")],
+			buildContext(allowAll(), [{ name: "web", url: "https://only.test" }]),
+		);
+		expect(asObject(unwrap(result)).status).toBe(200);
+	});
+
+	test('`on "name"` selects which base a relative target resolves against', async () => {
+		SERVER.use(http.get("https://work.test/dashboard", () => HttpResponse.json({ ok: true })));
+		let bases: Base[] = [
+			{ name: "web", url: "https://web.test" },
+			{ name: "work", url: "https://work.test" },
+		];
+		let result = await PLUGIN.call(
+			"get",
+			[value("/dashboard"), word("on"), value("work")],
+			buildContext(allowAll(), bases),
+		);
+		expect(asObject(unwrap(result)).status).toBe(200);
+	});
+
+	test("several bases and no `on` is a tool error listing the names", async () => {
+		let bases: Base[] = [
+			{ name: "web", url: "https://web.test" },
+			{ name: "work", url: "https://work.test" },
+		];
+		let error = unwrapError(
+			await PLUGIN.call("get", [value("/dashboard")], buildContext(allowAll(), bases)),
+		);
+		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain('on "web"');
+		expect(error.message).toContain('"web", "work"');
+	});
+
+	test("an absolute target ignores the configured base", async () => {
+		SERVER.use(http.get("https://elsewhere.test/x", () => HttpResponse.json({ ok: true })));
+		let result = await PLUGIN.call(
+			"get",
+			[value("https://elsewhere.test/x")],
+			buildContext(allowAll(), [{ name: "web", url: "https://web.test" }]),
+		);
+		expect(asObject(unwrap(result)).status).toBe(200);
+	});
+
+	/** The grant a denial suggests is only copy-pasteable when it names the resolved host. */
+	test("the net check keys on the resolved host, not the written target", async () => {
+		let calls: { host: string; port: number | undefined }[] = [];
+		let error = unwrapError(
+			await PLUGIN.call(
+				"get",
+				[value("/portfolios")],
+				buildContext(denyNet(calls), [{ name: "web", url: "https://resolved.test:8443" }]),
+			),
+		);
+		expect(error).toBeInstanceOf(PermissionDeniedError);
+		expect(error.remedy).toContain("resolved.test");
+		expect(calls).toEqual([{ host: "resolved.test", port: 8443 }]);
+	});
+
+	test("two `on` selections are a tool error", async () => {
+		let error = unwrapError(
+			await PLUGIN.call(
+				"get",
+				[value("/x"), word("on"), value("web"), word("on"), value("work")],
+				buildContext(),
+			),
+		);
+		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain("at most one `on`");
 	});
 
 	test("a non-http scheme is a tool error", async () => {
@@ -719,7 +790,7 @@ describe(createHttpPlugin.name, () => {
 		let error = unwrapError(result);
 		expect(error.code).toBe("tool-error");
 		expect(error.message).toContain('"query"');
-		expect(error.message).toContain("headers, form, json, text, bearer, basic");
+		expect(error.message).toContain("on, headers, form, json, text, bearer, basic");
 	});
 
 	test("an option word missing its value is a tool error", async () => {

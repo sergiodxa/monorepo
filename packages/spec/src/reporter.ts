@@ -9,6 +9,9 @@
 
 import { readFileSync } from "node:fs";
 
+import type { Seed } from "@sdxc/sample";
+
+import type { Base } from "./bases.js";
 import type { Sink, SuiteResult, TestResult } from "./diagnostics.js";
 import type { SpecError } from "./errors.js";
 import type { SourceFile } from "./source.js";
@@ -75,6 +78,31 @@ interface DenialGroup {
 	tests: AffectedTest[];
 }
 
+/** What the run header announces before the first test result. */
+export interface RunHeader {
+	/** The seed every test's generated data descends from. */
+	seed: Seed;
+	/** What this run is called, which a spec composes into generated identity. */
+	runId: string;
+	/** The bases this run resolved, in config order. */
+	bases: Base[];
+}
+
+/**
+ * Render the run header: the seed and the run id as flags that replay this
+ * exact run, then every address the suite will actually reach. Printed before
+ * the first test result, so a failure is already anchored to its inputs.
+ *
+ * @param header - The run's replay flags and resolved bases.
+ * @param sink - Where the header is written.
+ */
+export function reportRunHeader(header: RunHeader, sink: Sink): void {
+	sink.write(`seed ${header.seed} (replay with --seed=${header.seed})\n`);
+	sink.write(`run ${header.runId} (replay with --run-id=${header.runId})\n`);
+	for (let base of header.bases) sink.write(`base "${base.name}" → ${base.url}\n`);
+	sink.write("\n");
+}
+
 /**
  * Render a finished suite: a status line per test, denials sharing a remedy
  * collapsed into one block naming the grant and its affected tests, and a
@@ -95,6 +123,20 @@ export function reportSuite(
 	for (let result of suite.results) {
 		if (result.status === "passed") {
 			sink.write(`✓ ${result.title}\n`);
+			separated = false;
+			continue;
+		}
+		if (result.status === "skipped") {
+			sink.write(`○ ${result.title}${skipSuffix(result.reason)}\n`);
+			separated = false;
+			continue;
+		}
+		if (result.status === "flaky") {
+			let failed = result.attempts ?? [];
+			sink.write(`✓ ${result.title} (flaky: passed on attempt ${failed.length + 1})\n`);
+			for (let [index, error] of failed.entries()) {
+				sink.write(`${DETAIL_INDENT}attempt ${index + 1}: ${error.code}: ${error.message}\n`);
+			}
 			separated = false;
 			continue;
 		}
@@ -126,7 +168,25 @@ export function reportSuite(
 		separated = true;
 	}
 	if (!separated) sink.write("\n");
-	sink.write(`${suite.passed} passed, ${suite.failed} failed (${Math.round(suite.wallMs)}ms)\n`);
+	sink.write(`${summaryCounts(suite)} (${Math.round(suite.wallMs)}ms)\n`);
+}
+
+/**
+ * The summary's counts. Passed and failed are always stated, since a run
+ * reports them even at zero; skipped and flaky appear only when they happened,
+ * so a summary never asks a reader to notice two zeroes to learn nothing.
+ */
+function summaryCounts(suite: SuiteResult): string {
+	let parts = [`${suite.passed} passed`, `${suite.failed} failed`];
+	if (suite.skipped > 0) parts.push(`${suite.skipped} skipped`);
+	if (suite.flaky > 0) parts.push(`${suite.flaky} flaky`);
+	return parts.join(", ");
+}
+
+/** How a skipped test's line ends: with its reason when the `skip` gave one. */
+function skipSuffix(reason: string | undefined): string {
+	if (reason === undefined || reason === "") return " (skipped)";
+	return ` (skipped: ${reason})`;
 }
 
 /**
@@ -172,8 +232,9 @@ function failureLocation(result: TestResult, sources: Map<string, SourceFile>): 
 function detailLines(error: SpecError): string[] {
 	let denial = denialBlock(error);
 	if (denial !== undefined) {
-		if (error.hint !== undefined) return [...denial, "", error.hint];
-		return denial;
+		let lines = error.hint === undefined ? [...denial] : [...denial, "", error.hint];
+		pushArtifacts(lines, error);
+		return lines;
 	}
 	let lines = [`${error.code}: ${error.message}`];
 	let comparison = error as SpecError & ComparisonFields;
@@ -181,7 +242,18 @@ function detailLines(error: SpecError): string[] {
 	if (comparison.observed !== undefined) pushLabeledValue(lines, "observed", comparison.observed);
 	if (error.remedy !== undefined) lines.push(`remedy: ${error.remedy}`);
 	if (error.hint !== undefined) lines.push(error.hint);
+	pushArtifacts(lines, error);
 	return lines;
+}
+
+/**
+ * Append the files a tool wrote about this failure, one path per line, so a
+ * person reading the report has the screenshot or the dump to open next.
+ */
+function pushArtifacts(lines: string[], error: SpecError): void {
+	if (error.artifacts === undefined || error.artifacts.length === 0) return;
+	lines.push("", "Wrote:");
+	for (let path of error.artifacts) lines.push(`> ${path}`);
 }
 
 /**

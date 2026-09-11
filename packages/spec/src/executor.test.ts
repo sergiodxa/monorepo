@@ -1,7 +1,8 @@
 /**
- * Tests for the executor: scope rules, command/fixture invocation, tool
- * dispatch with the central permission gate, and error anchoring. Every
- * dependency is a typed in-memory stub; no real plugin is involved.
+ * Tests for the executor: scope rules, command invocation, descriptor-driven
+ * argument resolution, tool dispatch with the central permission gate, and
+ * error anchoring. Every dependency is a typed in-memory stub; no real plugin
+ * is involved.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,6 +16,7 @@ import { describe, expect, test } from "vitest";
 
 import type {
 	ArgumentNode,
+	ArrayNode,
 	BlockNode,
 	BooleanNode,
 	CallExprNode,
@@ -24,8 +26,7 @@ import type {
 	EventuallyNode,
 	ExpectNode,
 	ExpressionNode,
-	FixtureCallNode,
-	FixtureNode,
+	HookNode,
 	LetNode,
 	NumberNode,
 	ObjectNode,
@@ -39,14 +40,14 @@ import type {
 } from "./ast.js";
 import type { ExecutionContext } from "./executor.js";
 import type { Grants, PermissionKind, PermissionSet } from "./permissions.js";
-import type { Plugin, ToolDescriptor } from "./plugin.js";
+import type { Plugin, ToolDescriptor, ToolParam } from "./plugin.js";
 import type { Registry, ResolvedCallable } from "./registry.js";
 import type { Span } from "./source.js";
 import type { ToolArg, Value } from "./values.js";
 import type { Workspace } from "./workspace.js";
 
 import { ExpectationError, PermissionDeniedError, ResolutionError, SpecError } from "./errors.js";
-import { executeTest } from "./executor.js";
+import { executeHook, executeTest } from "./executor.js";
 
 /** Build a span; tests that assert spans pass distinctive offsets. */
 function span(start = 0, end = 0): Span {
@@ -81,6 +82,10 @@ function ref(...path: string[]): ReferenceNode {
 	return { kind: "reference", path, span: span() };
 }
 
+function arr(...items: ExpressionNode[]): ArrayNode {
+	return { kind: "array", items, span: span() };
+}
+
 function word(value: string): WordNode {
 	return { kind: "word", word: value, span: span() };
 }
@@ -99,10 +104,6 @@ function callStmt(target: string, ...args: ArgumentNode[]): CallNode {
 
 function callExpr(target: string, ...args: ArgumentNode[]): CallExprNode {
 	return { kind: "call-expr", target, args, span: span() };
-}
-
-function fixtureCall(name: string): FixtureCallNode {
-	return { kind: "fixture-call", name, span: span() };
 }
 
 function expectStmt(...args: ArgumentNode[]): ExpectNode {
@@ -137,18 +138,24 @@ function commandNode(name: string, params: string[], statements: StatementNode[]
 	return { kind: "command", name, params, body: blk(statements), span: span() };
 }
 
-function fixtureNode(name: string, statements: StatementNode[]): FixtureNode {
-	return { kind: "fixture", name, body: blk(statements), span: span() };
+function hookNode(kind: HookNode["kind"], statements: StatementNode[]): HookNode {
+	return { kind, body: blk(statements), span: span() };
 }
 
 function descriptor(
 	name: string,
 	kind: "action" | "observable",
 	requires?: PermissionKind,
+	params: ToolParam[] = [],
 ): ToolDescriptor {
-	let base: ToolDescriptor = { name, summary: `the ${name} tool`, kind, params: [] };
+	let base: ToolDescriptor = { name, summary: `the ${name} tool`, kind, params };
 	if (requires !== undefined) base.requires = requires;
 	return base;
+}
+
+/** A declared parameter, spelled the way a plugin descriptor spells one. */
+function param(name: string, kind: "value" | "word", required = true): ToolParam {
+	return { name, kind, required, summary: `the ${name} parameter` };
 }
 
 interface StubTool {
@@ -180,12 +187,9 @@ function makePlugin(
 	return { plugin, calls };
 }
 
-function makeRegistry(
-	options: { tools?: StubTool[]; commands?: CommandNode[]; fixtures?: FixtureNode[] } = {},
-): Registry {
+function makeRegistry(options: { tools?: StubTool[]; commands?: CommandNode[] } = {}): Registry {
 	let tools = options.tools ?? [];
 	let commands = new Map((options.commands ?? []).map((command) => [command.name, command]));
-	let fixtures = new Map((options.fixtures ?? []).map((fixture) => [fixture.name, fixture]));
 	function resolveCallable(
 		target: string,
 		uses: readonly string[],
@@ -230,11 +234,6 @@ function makeRegistry(
 	}
 	return {
 		resolveCallable,
-		resolveFixture(name) {
-			let fixture = fixtures.get(name);
-			if (fixture) return success(fixture);
-			return failure(new ResolutionError("unknown-name", `Unknown fixture "${name}"`));
-		},
 		isCallable(target, uses) {
 			return isSuccess(resolveCallable(target, uses));
 		},
@@ -267,6 +266,9 @@ function makePermissions(): PermissionSet {
 		checkHostFs() {
 			return success(undefined);
 		},
+		checkDb() {
+			return success(undefined);
+		},
 		grantedEnvNames() {
 			return [];
 		},
@@ -279,6 +281,7 @@ function makeGrants(overrides: Partial<Grants> = {}): Grants {
 		net: { mode: "denied" },
 		env: { mode: "denied" },
 		hostFs: { mode: "denied" },
+		db: { mode: "denied" },
 		...overrides,
 	};
 }
@@ -331,7 +334,7 @@ describe(executeTest, () => {
 		let node = makeTest({ when: [retStmt(str("x"))] });
 		let error = expectFailure(await executeTest(node, makeContext()));
 		expect(error.code).toBe("usage-error");
-		expect(error.message).toContain("command and fixture bodies");
+		expect(error.message).toContain("inside a command body");
 	});
 
 	test("an unbound reference is an unknown-name error with the reference's span", async () => {
@@ -379,7 +382,14 @@ describe(executeTest, () => {
 		let recorded = makePlugin("fs", () => success(true));
 		let registry = makeRegistry({
 			tools: [
-				{ namespace: "fs", descriptor: descriptor("check", "observable"), plugin: recorded.plugin },
+				{
+					namespace: "fs",
+					descriptor: descriptor("check", "observable", undefined, [
+						param("path", "value"),
+						param("assertion", "word"),
+					]),
+					plugin: recorded.plugin,
+				},
 			],
 		});
 		let node = makeTest({ when: [callStmt("check", str("a.txt"), word("exists"))] });
@@ -470,27 +480,37 @@ describe(executeTest, () => {
 		expect(recorded.calls).toHaveLength(0);
 	});
 
-	test("fixture calls yield the fixture's returned value", async () => {
+	test("a zero-parameter command on a bare-path rhs yields its returned value", async () => {
 		let registry = makeRegistry({
-			fixtures: [fixtureNode("user", [retStmt(obj({ name: str("n") }))])],
+			commands: [commandNode("user", [], [retStmt(obj({ name: str("n") }))])],
 		});
 		let node = makeTest({
-			given: [letStmt("u", fixtureCall("user"))],
+			given: [letStmt("u", ref("user"))],
 			verify: [expectStmt(ref("u", "name"), str("n"))],
 		});
 		expectSuccess(await executeTest(node, makeContext({ registry })));
 	});
 
-	test("a fixture that never returns yields null", async () => {
-		let registry = makeRegistry({ fixtures: [fixtureNode("empty", [])] });
+	test("a command that never returns yields null", async () => {
+		let registry = makeRegistry({ commands: [commandNode("empty", [], [])] });
 		let node = makeTest({
-			given: [letStmt("v", fixtureCall("empty"))],
+			given: [letStmt("v", ref("empty"))],
 			verify: [expectStmt(ref("v"))],
 		});
 		let error = expectFailure(await executeTest(node, makeContext({ registry })));
 		expect(error).toBeInstanceOf(ExpectationError);
 		if (!(error instanceof ExpectationError)) throw new Error("narrowing");
 		expect(error.observed).toBeNull();
+	});
+
+	test("a command with parameters on a bare-path rhs is an arity error", async () => {
+		let registry = makeRegistry({
+			commands: [commandNode("greet", ["name"], [retStmt(ref("name"))])],
+		});
+		let node = makeTest({ given: [letStmt("v", ref("greet"))] });
+		let error = expectFailure(await executeTest(node, makeContext({ registry })));
+		expect(error.code).toBe("usage-error");
+		expect(error.message).toContain("expects 1");
 	});
 
 	test("recursive commands hit the call depth cap", async () => {
@@ -643,7 +663,14 @@ describe(executeTest, () => {
 		let recorded = makePlugin("fs", () => success(true));
 		let registry = makeRegistry({
 			tools: [
-				{ namespace: "fs", descriptor: descriptor("file", "observable"), plugin: recorded.plugin },
+				{
+					namespace: "fs",
+					descriptor: descriptor("file", "observable", undefined, [
+						param("path", "value"),
+						param("assertion", "word"),
+					]),
+					plugin: recorded.plugin,
+				},
 			],
 		});
 		let node = makeTest({ verify: [expectStmt(word("file"), str("x"), word("exists"))] });
@@ -722,8 +749,8 @@ describe(executeTest, () => {
 			expect(recorded.calls).toEqual([{ tool: "now", args: [] }]);
 		});
 
-		test("a zero-arg tool value is capturable from a return inside a fixture", async () => {
-			let recorded = makePlugin("ns", () => success("from-fixture"));
+		test("a zero-arg tool value is capturable from a return inside a command", async () => {
+			let recorded = makePlugin("ns", () => success("from-command"));
 			let registry = makeRegistry({
 				tools: [
 					{
@@ -732,11 +759,11 @@ describe(executeTest, () => {
 						plugin: recorded.plugin,
 					},
 				],
-				fixtures: [fixtureNode("landing", [retStmt(ref("ns", "thing"))])],
+				commands: [commandNode("landing", [], [retStmt(ref("ns", "thing"))])],
 			});
 			let node = makeTest({
-				given: [letStmt("v", fixtureCall("landing"))],
-				verify: [expectStmt(ref("v"), str("from-fixture"))],
+				given: [letStmt("v", ref("landing"))],
+				verify: [expectStmt(ref("v"), str("from-command"))],
 			});
 			expectSuccess(await executeTest(node, makeContext({ registry, uses: ["ns"] })));
 			expect(recorded.calls).toEqual([{ tool: "thing", args: [] }]);
@@ -805,5 +832,364 @@ describe(executeTest, () => {
 			expect(error.resource).toBe("browser.url");
 			expect(recorded.calls).toHaveLength(0);
 		});
+	});
+});
+/**
+ * ADR-018 §5: the rule that admits `browser.url` on a right-hand side holds
+ * wherever an expression may appear, so a composed value —
+ * `format "${name}-${nonce}" { name: who.username, nonce: spec.nonce }` —
+ * reads the tool inline instead of binding it on a line of its own first.
+ */
+describe("a zero-argument call nested in an expression", () => {
+	/** An `ns.nonce` tool handing out the given values in order, one per call. */
+	function nonceTool(values: Value[]): { registry: Registry; calls: RecordedPlugin["calls"] } {
+		let next = 0;
+		let recorded = makePlugin("ns", () => {
+			let value = values[Math.min(next, values.length - 1)] ?? null;
+			next++;
+			return success(value);
+		});
+		let registry = makeRegistry({
+			tools: [
+				{ namespace: "ns", descriptor: descriptor("nonce", "observable"), plugin: recorded.plugin },
+			],
+			commands: [commandNode("wrap", ["v"], [retStmt(ref("v"))])],
+		});
+		return { registry, calls: recorded.calls };
+	}
+
+	test("an object entry invokes the tool and holds its value", async () => {
+		let { registry, calls } = nonceTool(["r1-1"]);
+		let node = makeTest({
+			when: [letStmt("payload", obj({ name: str("marta"), nonce: ref("ns", "nonce") }))],
+			verify: [expectStmt(ref("payload", "nonce"), str("r1-1"))],
+		});
+		expectSuccess(await executeTest(node, makeContext({ registry, uses: ["ns"] })));
+		expect(calls).toEqual([{ tool: "nonce", args: [] }]);
+	});
+
+	test("an array item invokes the tool and holds its value", async () => {
+		let { registry } = nonceTool(["r1-1"]);
+		let node = makeTest({
+			when: [letStmt("parts", arr(str("user"), ref("ns", "nonce")))],
+			verify: [expectStmt(ref("parts", "1"), str("r1-1"))],
+		});
+		expectSuccess(await executeTest(node, makeContext({ registry, uses: ["ns"] })));
+	});
+
+	test("nesting composes, so a path inside an object inside an array resolves", async () => {
+		let { registry } = nonceTool(["r1-1"]);
+		let node = makeTest({
+			when: [letStmt("rows", arr(obj({ nonce: ref("ns", "nonce") })))],
+			verify: [expectStmt(ref("rows", "0", "nonce"), str("r1-1"))],
+		});
+		expectSuccess(await executeTest(node, makeContext({ registry, uses: ["ns"] })));
+	});
+
+	test("a dotted path in tool-argument position is the tool's observed value", async () => {
+		let recorded = makePlugin("ns", (tool) => success(tool === "nonce" ? "r1-1" : true));
+		let registry = makeRegistry({
+			tools: [
+				{ namespace: "ns", descriptor: descriptor("nonce", "observable"), plugin: recorded.plugin },
+				{
+					namespace: "ns",
+					descriptor: descriptor("act", "action", undefined, [param("value", "value")]),
+					plugin: recorded.plugin,
+				},
+			],
+		});
+		let node = makeTest({ when: [callStmt("ns.act", ref("ns", "nonce"))] });
+		expectSuccess(await executeTest(node, makeContext({ registry, uses: ["ns"] })));
+		expect(recorded.calls).toEqual([
+			{ tool: "nonce", args: [] },
+			{ tool: "act", args: [{ kind: "value", value: "r1-1" }] },
+		]);
+	});
+
+	test("a command argument is the nested call's value, bound to the parameter", async () => {
+		let { registry, calls } = nonceTool(["r1-1"]);
+		let node = makeTest({
+			when: [letStmt("v", callExpr("wrap", ref("ns", "nonce")))],
+			verify: [expectStmt(ref("v"), str("r1-1"))],
+		});
+		expectSuccess(await executeTest(node, makeContext({ registry, uses: ["ns"] })));
+		expect(calls).toEqual([{ tool: "nonce", args: [] }]);
+	});
+
+	test("a bound head inside an object stays a reference and never calls the tool", async () => {
+		let { registry, calls } = nonceTool(["tool-value"]);
+		let node = makeTest({
+			given: [letStmt("nonce", str("bound-value"))],
+			when: [letStmt("payload", obj({ nonce: ref("nonce") }))],
+			verify: [expectStmt(ref("payload", "nonce"), str("bound-value"))],
+		});
+		expectSuccess(await executeTest(node, makeContext({ registry, uses: ["ns"] })));
+		expect(calls).toHaveLength(0);
+	});
+
+	test("a nested path that resolves to nothing is still the unknown-name error", async () => {
+		let { registry } = nonceTool(["r1-1"]);
+		let node = makeTest({ when: [letStmt("payload", obj({ nonce: ref("ns", "missing") }))] });
+		let error = expectFailure(await executeTest(node, makeContext({ registry, uses: ["ns"] })));
+		expect(error.code).toBe("unknown-name");
+	});
+
+	test("a nested tool that requires an argument is not auto-invoked", async () => {
+		let recorded = makePlugin("ns", () => success("x"));
+		let registry = makeRegistry({
+			tools: [
+				{
+					namespace: "ns",
+					descriptor: descriptor("needs", "observable", undefined, [param("a", "value")]),
+					plugin: recorded.plugin,
+				},
+			],
+		});
+		let node = makeTest({ when: [letStmt("payload", obj({ a: ref("ns", "needs") }))] });
+		let error = expectFailure(await executeTest(node, makeContext({ registry, uses: ["ns"] })));
+		expect(error.code).toBe("unknown-name");
+		expect(recorded.calls).toHaveLength(0);
+	});
+
+	test("a nested call runs through the permission gate, so a denied family refuses", async () => {
+		let recorded = makePlugin("browser", () => success("http://localhost/cb"));
+		let registry = makeRegistry({
+			tools: [
+				{
+					namespace: "browser",
+					descriptor: descriptor("url", "observable", "net"),
+					plugin: recorded.plugin,
+				},
+			],
+		});
+		let node = makeTest({ when: [letStmt("payload", obj({ at: ref("browser", "url") }))] });
+		let error = expectFailure(
+			await executeTest(node, makeContext({ registry, uses: ["browser"], grants: makeGrants() })),
+		);
+		expect(error).toBeInstanceOf(PermissionDeniedError);
+		if (!(error instanceof PermissionDeniedError)) throw new Error("narrowing");
+		expect(error.permission).toBe("net");
+		expect(error.resource).toBe("browser.url");
+		expect(recorded.calls).toHaveLength(0);
+	});
+
+	/**
+	 * `eventually` resolves each statement's form once, so a nested call has to
+	 * be invoked by the attempt rather than captured by the plan; otherwise a
+	 * block waiting on a composed value would spin on its first reading.
+	 */
+	test("every eventually attempt re-invokes the nested call", async () => {
+		let { registry, calls } = nonceTool([1, 2, 3]);
+		let node = makeTest({
+			verify: [
+				eventuallyStmt(3000, [expectStmt(obj({ n: ref("ns", "nonce") }), obj({ n: num(3) }))]),
+			],
+		});
+		expectSuccess(await executeTest(node, makeContext({ registry, uses: ["ns"] })));
+		expect(calls).toHaveLength(3);
+	});
+});
+
+/**
+ * ADR-018 §2: a bare identifier handed to a tool means whatever the tool's
+ * descriptor says it means, so a binding reaches a tool without the wrapper
+ * object the language previously demanded.
+ */
+describe("bare identifiers in tool-argument position", () => {
+	/** A tool that records what it received, with the given declared parameters. */
+	function toolTest(params: ToolParam[]): { registry: Registry; calls: RecordedPlugin["calls"] } {
+		let recorded = makePlugin("ns", () => success(true));
+		let registry = makeRegistry({
+			tools: [
+				{
+					namespace: "ns",
+					descriptor: descriptor("act", "action", undefined, params),
+					plugin: recorded.plugin,
+				},
+			],
+		});
+		return { registry, calls: recorded.calls };
+	}
+
+	test("a spelling the tool declares as a word stays a word", async () => {
+		let { registry, calls } = toolTest([param("path", "value"), param("recursive", "word", false)]);
+		let node = makeTest({ when: [callStmt("ns.act", str("dir"), word("recursive"))] });
+		expectSuccess(await executeTest(node, makeContext({ registry })));
+		expect(calls[0]?.args[1]).toEqual({ kind: "word", word: "recursive" });
+	});
+
+	test("a word-kind parameter at this position makes any spelling a word", async () => {
+		let { registry, calls } = toolTest([param("path", "value"), param("assertion", "word")]);
+		let node = makeTest({ when: [callStmt("ns.act", str("note.txt"), word("exists"))] });
+		expectSuccess(await executeTest(node, makeContext({ registry })));
+		expect(calls[0]?.args[1]).toEqual({ kind: "word", word: "exists" });
+	});
+
+	test("an undeclared spelling reads the binding of that name", async () => {
+		let { registry, calls } = toolTest([param("target", "value")]);
+		let node = makeTest({
+			given: [letStmt("profile", str("/sergio"))],
+			when: [callStmt("ns.act", word("profile"))],
+		});
+		expectSuccess(await executeTest(node, makeContext({ registry })));
+		expect(calls[0]?.args).toEqual([{ kind: "value", value: "/sergio" }]);
+	});
+
+	test("a binding of any shape reaches the tool whole", async () => {
+		let { registry, calls } = toolTest([param("target", "value")]);
+		let node = makeTest({
+			given: [letStmt("user", obj({ email: str("e@example.com") }))],
+			when: [callStmt("ns.act", word("user"))],
+		});
+		expectSuccess(await executeTest(node, makeContext({ registry })));
+		expect(calls[0]?.args).toEqual([{ kind: "value", value: { email: "e@example.com" } }]);
+	});
+
+	test("a declared word that is also bound is ambiguous, naming both readings", async () => {
+		let { registry, calls } = toolTest([param("path", "value"), param("recursive", "word", false)]);
+		let node = makeTest({
+			given: [letStmt("recursive", bool(true))],
+			when: [callStmt("ns.act", str("dir"), word("recursive"))],
+		});
+		let error = expectFailure(await executeTest(node, makeContext({ registry })));
+		expect(error).toBeInstanceOf(ResolutionError);
+		expect(error.code).toBe("ambiguous-name");
+		expect(error.message).toContain("recursive");
+		expect(calls).toHaveLength(0);
+	});
+
+	test("a word-kind parameter at this position wins over a binding, unambiguously", async () => {
+		let { registry, calls } = toolTest([param("path", "value"), param("assertion", "word")]);
+		let node = makeTest({
+			given: [letStmt("exists", str("bound")), letStmt("p", str("note.txt"))],
+			when: [callStmt("ns.act", word("p"), word("exists"))],
+		});
+		expectSuccess(await executeTest(node, makeContext({ registry })));
+		expect(calls[0]?.args).toEqual([
+			{ kind: "value", value: "note.txt" },
+			{ kind: "word", word: "exists" },
+		]);
+	});
+
+	test("a spelling that is neither declared nor bound is an unknown name", async () => {
+		let { registry, calls } = toolTest([param("target", "value")]);
+		let node = makeTest({ when: [callStmt("ns.act", word("nowhere"))] });
+		let error = expectFailure(await executeTest(node, makeContext({ registry })));
+		expect(error.code).toBe("unknown-name");
+		expect(error.message).toContain("nowhere");
+		expect(calls).toHaveLength(0);
+	});
+
+	test("a stray not in tool-argument position names where not belongs", async () => {
+		let { registry } = toolTest([param("target", "value")]);
+		let node = makeTest({ when: [callStmt("ns.act", word("not"))] });
+		let error = expectFailure(await executeTest(node, makeContext({ registry })));
+		expect(error.code).toBe("usage-error");
+		expect(error.message).toContain("first argument to expect");
+	});
+});
+
+describe("array literals and numeric path segments", () => {
+	test("an array literal evaluates item by item, nesting included", async () => {
+		let node = makeTest({
+			given: [letStmt("id", num(7)), letStmt("params", arr(ref("id"), str("x"), arr(bool(true))))],
+			verify: [expectStmt(ref("params"), arr(num(7), str("x"), arr(bool(true))))],
+		});
+		expectSuccess(await executeTest(node, makeContext()));
+	});
+
+	test("an array literal is a valid tool argument", async () => {
+		let recorded = makePlugin("db", () => success(null));
+		let registry = makeRegistry({
+			tools: [
+				{
+					namespace: "db",
+					descriptor: descriptor("query", "action", undefined, [
+						param("sql", "value"),
+						param("params", "word", false),
+					]),
+					plugin: recorded.plugin,
+				},
+			],
+		});
+		let node = makeTest({
+			given: [letStmt("id", num(3))],
+			when: [callStmt("db.query", str("select 1"), word("params"), arr(ref("id"), num(9)))],
+		});
+		expectSuccess(await executeTest(node, makeContext({ registry })));
+		expect(recorded.calls[0]?.args[2]).toEqual({ kind: "value", value: [3, 9] });
+	});
+
+	test("a digit segment indexes an array 0-based", async () => {
+		let node = makeTest({
+			given: [letStmt("result", obj({ rows: arr(obj({ id: num(1) }), obj({ id: num(2) })) }))],
+			verify: [expectStmt(ref("result", "rows", "0", "id"), num(1))],
+		});
+		expectSuccess(await executeTest(node, makeContext()));
+	});
+
+	test("an out-of-range index is an unknown name naming what was there", async () => {
+		let node = makeTest({
+			given: [letStmt("result", obj({ rows: arr(obj({ id: num(1) })) }))],
+			when: [letStmt("missing", ref("result", "rows", "3"))],
+		});
+		let error = expectFailure(await executeTest(node, makeContext()));
+		expect(error.code).toBe("unknown-name");
+		expect(error.message).toContain("1 item");
+	});
+
+	test("a digit segment against a non-array names the type it found", async () => {
+		let node = makeTest({
+			given: [letStmt("result", obj({ rows: str("not a list") }))],
+			when: [letStmt("missing", ref("result", "rows", "0"))],
+		});
+		let error = expectFailure(await executeTest(node, makeContext()));
+		expect(error.code).toBe("unknown-name");
+		expect(error.message).toContain("a string");
+	});
+});
+
+describe(executeHook, () => {
+	test("a hook body runs let, calls, and expect in its own scope", async () => {
+		let recorded = makePlugin("fs", () => success(null));
+		let registry = makeRegistry({
+			tools: [
+				{
+					namespace: "fs",
+					descriptor: descriptor("write", "action", undefined, [
+						param("path", "value"),
+						param("content", "value"),
+					]),
+					plugin: recorded.plugin,
+				},
+			],
+		});
+		let hook = hookNode("setup", [
+			letStmt("path", str("seed.json")),
+			callStmt("write", word("path"), str("{}")),
+			expectStmt(ref("path"), str("seed.json")),
+		]);
+		expectSuccess(await executeHook(hook, makeContext({ registry, uses: ["fs"] })));
+		expect(recorded.calls[0]?.args).toEqual([
+			{ kind: "value", value: "seed.json" },
+			{ kind: "value", value: "{}" },
+		]);
+	});
+
+	test("a failing statement ends the hook and carries its span", async () => {
+		let reference = ref("missing");
+		reference.span = { start: 11, end: 18 };
+		let hook = hookNode("teardown", [letStmt("v", reference)]);
+		let error = expectFailure(await executeHook(hook, makeContext({ file: "spec/a.spec" })));
+		expect(error.code).toBe("unknown-name");
+		expect(error.span).toEqual({ start: 11, end: 18 });
+		expect(error.file).toBe("spec/a.spec");
+	});
+
+	test("return is a usage error inside a hook", async () => {
+		let hook = hookNode("setup", [retStmt(str("x"))]);
+		let error = expectFailure(await executeHook(hook, makeContext()));
+		expect(error.code).toBe("usage-error");
+		expect(error.message).toContain("inside a command body");
 	});
 });
