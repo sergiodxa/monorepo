@@ -25,9 +25,7 @@ uses to accept path-only targets.
 
 ```tsx
 import { conflict, created } from "@sdxc/response";
-import { getServiceContainer } from "@sdxc/service-container";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 
 import Monitor from "~/app/data/monitor";
@@ -38,12 +36,11 @@ const Body = s.object({ url: s.string(), name: s.string() });
 /** POST /api/v1/monitors — registers a monitor for the team. */
 export default createAction(routes.api.v1.monitors.create, async (ctx) => {
 	let input = s.parse(Body, await ctx.request.json());
-	let db = getServiceContainer().get(Database);
 
-	let existing = await Monitor.findByUrl(db, input.url);
+	let existing = await Monitor.findByUrl(ctx.db, input.url);
 	if (existing) return conflict({ error: "That URL is already monitored" });
 
-	let monitor = await Monitor.create(db, input);
+	let monitor = await Monitor.create(ctx.db, input);
 	return created({ monitor });
 });
 ```
