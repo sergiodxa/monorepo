@@ -227,9 +227,8 @@ export default {
 } satisfies ExportedHandler<Cloudflare.Env>;
 ```
 
-Once the app resolves services through `@sdxc/service-container`, the body becomes
-`return await container.scope(async () => application().fetch(request))` so each request
-gets its own resolution scope.
+Services the app depends on reach a handler through middleware that publishes them onto the
+request context (ADR-057), so this body stays as it is however many services the app grows.
 
 ### `bootstrap/app.tsx`
 

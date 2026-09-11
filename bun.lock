@@ -35,7 +35,6 @@
         "@sdxc/oidc-provider": "workspace:*",
         "@sdxc/response": "workspace:*",
         "@sdxc/result": "workspace:*",
-        "@sdxc/service-container": "workspace:*",
         "@sdxc/types": "workspace:*",
         "@sdxc/validate": "workspace:*",
         "remix": "3.0.0-rc.2",
@@ -66,7 +65,6 @@
         "@sdxc/rate-limit": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/rss": "workspace:*",
-        "@sdxc/service-container": "workspace:*",
         "@sdxc/sitemap": "workspace:*",
         "@sdxc/strings": "workspace:*",
         "@sdxc/types": "workspace:*",
@@ -96,7 +94,6 @@
         "@sdxc/jobs": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/result": "workspace:*",
-        "@sdxc/service-container": "workspace:*",
         "@sdxc/types": "workspace:*",
         "@sdxc/validate": "workspace:*",
         "remix": "3.0.0-rc.2",
@@ -121,7 +118,6 @@
         "@sdxc/response": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/seo": "workspace:*",
-        "@sdxc/service-container": "workspace:*",
         "@sdxc/u": "workspace:*",
         "@sdxc/ui": "workspace:*",
         "@sdxc/validate": "workspace:*",
@@ -161,7 +157,6 @@
         "@sdxc/rate-limit": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/server-timing": "workspace:*",
-        "@sdxc/service-container": "workspace:*",
         "@sdxc/session-storage-kv": "workspace:*",
         "@sdxc/u": "workspace:*",
         "@sdxc/ui": "workspace:*",
@@ -240,7 +235,6 @@
         "@sdxc/rate-limit": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/seo": "workspace:*",
-        "@sdxc/service-container": "workspace:*",
         "@sdxc/session-storage-kv": "workspace:*",
         "@sdxc/sitemap": "workspace:*",
         "@sdxc/spec": "workspace:*",
@@ -321,7 +315,6 @@
         "@sdxc/markdown": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/rss": "workspace:*",
-        "@sdxc/service-container": "workspace:*",
         "@sdxc/sitemap": "workspace:*",
         "@sdxc/validate": "workspace:*",
         "remix": "3.0.0-rc.2",
@@ -590,7 +583,6 @@
         "@sdxc/jwt": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/result": "workspace:*",
-        "@sdxc/service-container": "workspace:*",
         "@sdxc/types": "workspace:*",
         "@sdxc/validate": "workspace:*",
         "@simplewebauthn/server": "^13.3.3",
@@ -664,14 +656,6 @@
       "name": "@sdxc/server-timing",
       "version": "0.0.1",
     },
-    "packages/service-container": {
-      "name": "@sdxc/service-container",
-      "version": "0.0.1",
-      "devDependencies": {
-        "@types/node": "^26.4.0",
-        "remix": "3.0.0-rc.2",
-      },
-    },
     "packages/session-storage-kv": {
       "name": "@sdxc/session-storage-kv",
       "version": "0.0.0",
@@ -682,7 +666,7 @@
     },
     "packages/sitemap": {
       "name": "@sdxc/sitemap",
-      "version": "0.0.0",
+      "version": "0.0.1",
       "dependencies": {
         "@sdxc/result": "workspace:*",
         "@sdxc/xml": "workspace:*",
@@ -1474,8 +1458,6 @@
     "@sdxc/seo": ["@sdxc/seo@workspace:packages/seo"],
 
     "@sdxc/server-timing": ["@sdxc/server-timing@workspace:packages/server-timing"],
-
-    "@sdxc/service-container": ["@sdxc/service-container@workspace:packages/service-container"],
 
     "@sdxc/session-storage-kv": ["@sdxc/session-storage-kv@workspace:packages/session-storage-kv"],
 

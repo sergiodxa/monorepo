@@ -129,7 +129,6 @@ Run from the repository root:
 | [rss](packages/rss)                                             | RSS 2.0 feed builder and parser                                                          | ✅  |
 | [sample](packages/sample)                                       | Seeded generation of believable people, places, prose, numbers and identifiers           | ✅  |
 | [server-timing](packages/server-timing)                         | Server-Timing measurements written to a response header                                  |     |
-| [service-container](packages/service-container)                 | Dependency injection service container                                                   |     |
 | [seo](packages/seo)                                             | Canonical URLs, schema.org builders and head metadata                                    |     |
 | [session-storage-kv](packages/session-storage-kv)               | Session storage adapter for Cloudflare KV                                                |     |
 | [sitemap](packages/sitemap)                                     | Sitemap generation and parsing                                                           | ✅  |
@@ -169,7 +168,7 @@ repeats it. `@sdxc/*` workspace dependencies are listed under [Packages](#packag
 | `@total-typescript/tsconfig`      | Root                                                                                                                    | The base tsconfig every workspace extends.                            |
 | `@total-typescript/ts-reset`      | Root                                                                                                                    | Tightens the built-in library types.                                  |
 | `@types/bun`                      | Root                                                                                                                    | Bun globals, and it supplies `@types/node` in turn.                   |
-| `@types/node`                     | `pkmn`, `cloudflare-mocks`, `icons`, `service-container`, `uuid`                                                        | Declared where a tsconfig names `node` in its `types`.                |
+| `@types/node`                     | `pkmn`, `cloudflare-mocks`, `icons`, `uuid`                                                                             | Declared where a tsconfig names `node` in its `types`.                |
 | `jose`                            | `jwt`                                                                                                                   | Signs and verifies JWTs and JWKS.                                     |
 | `@simplewebauthn/server`          | `oidc-provider`                                                                                                         | Passkey registration and authentication.                              |
 | `@polar-sh/sdk`                   | `polar`                                                                                                                 | Client for the Polar billing API.                                     |
