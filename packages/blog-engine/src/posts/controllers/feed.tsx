@@ -5,9 +5,6 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import { PostType } from "../../post-types/models/post-type.js";
@@ -19,39 +16,35 @@ import { createMetaCodec } from "../models/meta-codec.js";
 import { Post } from "../models/post.js";
 
 /** Home feed: recent published posts across every visible post type. */
-export default createAction(
-	routes.feed,
-	inject([Database] as const, async (db) => {
-		let ctx = getContext();
-		let [chrome, types] = await Promise.all([loadSiteChrome(db), PostType.findVisible(db)]);
+export default createAction(routes.feed, async (ctx) => {
+	let [chrome, types] = await Promise.all([loadSiteChrome(ctx.db), PostType.findVisible(ctx.db)]);
 
-		let postsByType = await Promise.all(
-			types.map(async (type) => ({
-				type,
-				posts: await Post.findManyForType(db, type.name, createMetaCodec(type), { limit: 20 }),
-			})),
-		);
+	let postsByType = await Promise.all(
+		types.map(async (type) => ({
+			type,
+			posts: await Post.findManyForType(ctx.db, type.name, createMetaCodec(type), { limit: 20 }),
+		})),
+	);
 
-		let items: PostListItem[] = [];
-		for (let { type, posts } of postsByType) {
-			for (let post of posts) {
-				if (!Post.isPublished(post.published_at)) continue;
-				items.push({
-					title: post.meta.title || "(untitled)",
-					href: `/${type.path}/${post.slug}`,
-					publishedAt: post.published_at,
-					excerpt: excerptFor(type, post.meta),
-				});
-			}
+	let items: PostListItem[] = [];
+	for (let { type, posts } of postsByType) {
+		for (let post of posts) {
+			if (!Post.isPublished(post.published_at)) continue;
+			items.push({
+				title: post.meta.title || "(untitled)",
+				href: `/${type.path}/${post.slug}`,
+				publishedAt: post.published_at,
+				excerpt: excerptFor(type, post.meta),
+			});
 		}
-		items.sort(
-			(a, b) => (Date.parse(b.publishedAt ?? "") || 0) - (Date.parse(a.publishedAt ?? "") || 0),
-		);
+	}
+	items.sort(
+		(a, b) => (Date.parse(b.publishedAt ?? "") || 0) - (Date.parse(a.publishedAt ?? "") || 0),
+	);
 
-		return ctx.render(
-			<Layout title={chrome.siteTitle} {...chrome}>
-				<PostList items={items.slice(0, 20)} />
-			</Layout>,
-		);
-	}),
-);
+	return ctx.render(
+		<Layout title={chrome.siteTitle} {...chrome}>
+			<PostList items={items.slice(0, 20)} />
+		</Layout>,
+	);
+});

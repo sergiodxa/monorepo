@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Database } from "remix/data-table";
+
 import { redirect } from "@sdxc/http/response";
 import { badRequest, notFound } from "@sdxc/http/response/html";
-import { inject } from "@sdxc/service-container";
 import * as ds from "remix/data-schema";
-import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
@@ -160,11 +160,10 @@ const RouteParams = ds.object({ id: ds.string() });
 export default createController(routes.cms.roles, {
 	middleware: [requirePermission("roles.manage")],
 	actions: {
-		index: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		index: async (ctx) => {
 			let [{ user, permissions, siteTitle }, roles] = await Promise.all([
-				chrome(db),
-				Role.findAll(db),
+				chrome(ctx.db),
+				Role.findAll(ctx.db),
 			]);
 			return ctx.render(
 				<CmsLayout
@@ -202,51 +201,47 @@ export default createController(routes.cms.roles, {
 					</table>
 				</CmsLayout>,
 			);
-		}),
+		},
 
-		new: inject([Database] as const, async (db) => {
-			return renderForm(db, undefined, "New Role");
-		}),
+		new: async (ctx) => {
+			return renderForm(ctx.db, undefined, "New Role");
+		},
 
-		create: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		create: async (ctx) => {
 			try {
-				await Role.create(db, readForm(ctx.formData));
+				await Role.create(ctx.db, readForm(ctx.formData));
 			} catch (error) {
-				return renderForm(db, undefined, "New Role", String((error as Error).message));
+				return renderForm(ctx.db, undefined, "New Role", String((error as Error).message));
 			}
 			return redirect("/cms/roles", { status: redirect.Status.SeeOther });
-		}),
+		},
 
-		edit: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		edit: async (ctx) => {
 			let { id } = ds.parse(RouteParams, ctx.params);
-			let role = await Role.findById(db, id);
+			let role = await Role.findById(ctx.db, id);
 			if (!role) return notFound("Not found");
-			return renderForm(db, role, `Edit ${role.label}`);
-		}),
+			return renderForm(ctx.db, role, `Edit ${role.label}`);
+		},
 
-		update: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		update: async (ctx) => {
 			let { id } = ds.parse(RouteParams, ctx.params);
 			try {
-				await Role.update(db, id, readForm(ctx.formData));
+				await Role.update(ctx.db, id, readForm(ctx.formData));
 			} catch (error) {
-				let role = await Role.findById(db, id);
-				return renderForm(db, role ?? undefined, "Edit Role", String((error as Error).message));
+				let role = await Role.findById(ctx.db, id);
+				return renderForm(ctx.db, role ?? undefined, "Edit Role", String((error as Error).message));
 			}
 			return redirect("/cms/roles", { status: redirect.Status.SeeOther });
-		}),
+		},
 
-		destroy: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		destroy: async (ctx) => {
 			let { id } = ds.parse(RouteParams, ctx.params);
 			try {
-				await Role.destroy(db, id);
+				await Role.destroy(ctx.db, id);
 			} catch (error) {
 				return badRequest(String((error as Error).message));
 			}
 			return redirect("/cms/roles", { status: redirect.Status.SeeOther });
-		}),
+		},
 	},
 });

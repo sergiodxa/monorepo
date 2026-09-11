@@ -7,9 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { redirect } from "@sdxc/http/response";
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import { getAuthUser, getPermissions } from "../../auth/middleware/auth.js";
@@ -24,14 +21,13 @@ import { Settings } from "../models/settings.js";
 export default createController(routes.cms.settings, {
 	middleware: [requirePermission("settings.manage")],
 	actions: {
-		index: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		index: async (ctx) => {
 			let user = getAuthUser();
 			let permissions = await getPermissions();
 			let [title, description, language] = await Promise.all([
-				Settings.siteTitle(db),
-				Settings.siteDescription(db),
-				Settings.language(db),
+				Settings.siteTitle(ctx.db),
+				Settings.siteDescription(ctx.db),
+				Settings.language(ctx.db),
 			]);
 
 			return ctx.render(
@@ -80,15 +76,18 @@ export default createController(routes.cms.settings, {
 					</form>
 				</CmsLayout>,
 			);
-		}),
+		},
 
-		action: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		action: async (ctx) => {
 			let formData = ctx.formData;
-			await Settings.set(db, "site_title", fieldText(formData, "site_title").trim() || "My Blog");
-			await Settings.set(db, "site_description", fieldText(formData, "site_description"));
-			await Settings.set(db, "language", fieldText(formData, "language", "en").trim() || "en");
+			await Settings.set(
+				ctx.db,
+				"site_title",
+				fieldText(formData, "site_title").trim() || "My Blog",
+			);
+			await Settings.set(ctx.db, "site_description", fieldText(formData, "site_description"));
+			await Settings.set(ctx.db, "language", fieldText(formData, "language", "en").trim() || "en");
 			return redirect("/cms/settings", { status: redirect.Status.SeeOther });
-		}),
+		},
 	},
 });

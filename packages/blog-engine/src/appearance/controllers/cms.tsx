@@ -9,9 +9,6 @@
 import type { RemixNode } from "remix/ui";
 
 import { redirect } from "@sdxc/http/response";
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import { getAuthUser, getPermissions } from "../../auth/middleware/auth.js";
@@ -51,14 +48,13 @@ function selectField(name: string, value: string, options: string[]): RemixNode 
 export default createController(routes.cms.appearance, {
 	middleware: [requirePermission("appearance.manage")],
 	actions: {
-		index: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		index: async (ctx) => {
 			let user = getAuthUser();
 			let permissions = await getPermissions();
 			let [stored, customCss, siteTitle] = await Promise.all([
-				Settings.theme(db),
-				Settings.customCss(db),
-				Settings.siteTitle(db),
+				Settings.theme(ctx.db),
+				Settings.customCss(ctx.db),
+				Settings.siteTitle(ctx.db),
 			]);
 			let theme = resolveTheme(stored);
 
@@ -133,10 +129,9 @@ export default createController(routes.cms.appearance, {
 					</form>
 				</CmsLayout>,
 			);
-		}),
+		},
 
-		action: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		action: async (ctx) => {
 			let formData = ctx.formData;
 			let get = (key: string, fallback: string) =>
 				fieldText(formData, key, fallback).trim() || fallback;
@@ -152,9 +147,13 @@ export default createController(routes.cms.appearance, {
 				measure: get("measure", DEFAULT_THEME.measure),
 			};
 
-			await Settings.set(db, "theme", theme);
-			await Settings.set(db, "custom_css", fieldText(formData, "custom_css").slice(0, 32 * 1024));
+			await Settings.set(ctx.db, "theme", theme);
+			await Settings.set(
+				ctx.db,
+				"custom_css",
+				fieldText(formData, "custom_css").slice(0, 32 * 1024),
+			);
 			return redirect("/cms/appearance", { status: redirect.Status.SeeOther });
-		}),
+		},
 	},
 });

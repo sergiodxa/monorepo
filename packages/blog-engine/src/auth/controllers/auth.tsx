@@ -13,9 +13,6 @@ import { contextOf } from "@sdxc/auth/remix/context";
 import { redirect } from "@sdxc/http/response";
 import { Location } from "@sdxc/location";
 import { isFailure, wrap } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction, createController } from "remix/router";
 
 import routes from "../../routes.js";
@@ -95,33 +92,28 @@ export const login = createController(routes.auth.login, {
 });
 
 /** GET /auth/callback — completes the flow and establishes the local session. */
-export const callback = createAction(
-	routes.auth.callback,
-	inject([Database] as const, async (db) => {
-		let ctx = getContext();
+export const callback = createAction(routes.auth.callback, async (ctx) => {
+	let completed = await wrap(async () => {
+		let grant = await ctx.relyingParty.callback(contextOf(ctx));
+		let user = await User.findOrCreateFromAuthProfile(
+			ctx.db,
+			toAuthProfile(grant.profile, grant.subject),
+			{ admins: ctx.oidc.admins, bootstrapFirstAdmin: ctx.oidc.bootstrapFirstAdmin },
+		);
+		signIn(user);
+		return { userId: user.id, next: grant.returnTo };
+	});
 
-		let completed = await wrap(async () => {
-			let grant = await ctx.relyingParty.callback(contextOf(ctx));
-			let user = await User.findOrCreateFromAuthProfile(
-				db,
-				toAuthProfile(grant.profile, grant.subject),
-				{ admins: ctx.oidc.admins, bootstrapFirstAdmin: ctx.oidc.bootstrapFirstAdmin },
-			);
-			signIn(user);
-			return { userId: user.id, next: grant.returnTo };
+	if (isFailure(completed)) {
+		ctx.log.warn("auth.login_failed", { reason: String(completed.error) });
+		return redirect(`${routes.auth.login.index.href()}?error=authentication_failed`, {
+			status: redirect.Status.SeeOther,
 		});
+	}
 
-		if (isFailure(completed)) {
-			ctx.log.warn("auth.login_failed", { reason: String(completed.error) });
-			return redirect(`${routes.auth.login.index.href()}?error=authentication_failed`, {
-				status: redirect.Status.SeeOther,
-			});
-		}
-
-		ctx.log.set({ user: { id: completed.data.userId } }).note("auth.login_completed");
-		return redirect(completed.data.next, { status: redirect.Status.SeeOther });
-	}),
-);
+	ctx.log.set({ user: { id: completed.data.userId } }).note("auth.login_completed");
+	return redirect(completed.data.next, { status: redirect.Status.SeeOther });
+});
 
 /** `/auth/logout` — sign-out confirmation (GET) and session teardown (POST). */
 export const logout = createController(routes.auth.logout, {

@@ -6,14 +6,13 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import type { Database } from "remix/data-table";
 import type { Handle, RemixNode } from "remix/ui";
 
 import { redirect } from "@sdxc/http/response";
 import { badRequest, forbidden, notFound } from "@sdxc/http/response/html";
-import { inject } from "@sdxc/service-container";
 import * as ds from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import { getAuthUser, getPermissions } from "../../auth/middleware/auth.js";
@@ -277,10 +276,9 @@ const PostParams = ds.object({ typeName: ds.string(), id: ds.string() });
 export default createController(routes.cms.posts, {
 	middleware: [requirePermission("posts.create")],
 	actions: {
-		index: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		index: async (ctx) => {
 			let { typeName } = ds.parse(TypeParams, ctx.params);
-			let type = await requireType(db, typeName);
+			let type = await requireType(ctx.db, typeName);
 			if (!type) return notFound("Unknown post type");
 			let user = getAuthUser();
 			if (!user) return forbidden("Forbidden");
@@ -288,8 +286,8 @@ export default createController(routes.cms.posts, {
 
 			let codec = createMetaCodec(type);
 			let [posts, siteTitle] = await Promise.all([
-				Post.findManyForType(db, type.name, codec),
-				Settings.siteTitle(db),
+				Post.findManyForType(ctx.db, type.name, codec),
+				Settings.siteTitle(ctx.db),
 			]);
 
 			return ctx.render(
@@ -337,20 +335,19 @@ export default createController(routes.cms.posts, {
 					</table>
 				</CmsLayout>,
 			);
-		}),
+		},
 
-		new: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		new: async (ctx) => {
 			let { typeName } = ds.parse(TypeParams, ctx.params);
-			let type = await requireType(db, typeName);
+			let type = await requireType(ctx.db, typeName);
 			if (!type) return notFound("Unknown post type");
 			let user = getAuthUser();
 			let permissions = await getPermissions();
 			if (!user) return forbidden("Forbidden");
-			let siteTitle = await Settings.siteTitle(db);
+			let siteTitle = await Settings.siteTitle(ctx.db);
 			return ctx.render(
 				renderForm(
-					db,
+					ctx.db,
 					type,
 					{
 						canPublish: permissions.has("posts.publish"),
@@ -360,24 +357,23 @@ export default createController(routes.cms.posts, {
 					siteTitle,
 				),
 			);
-		}),
+		},
 
-		create: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		create: async (ctx) => {
 			let { formData } = ctx;
 			let { typeName } = ds.parse(TypeParams, ctx.params);
-			let type = await requireType(db, typeName);
+			let type = await requireType(ctx.db, typeName);
 			if (!type) return notFound("Unknown post type");
 			let user = getAuthUser();
 			let permissions = await getPermissions();
 			if (!user) return forbidden("Forbidden");
 
 			let meta = readMeta(formData, type);
-			let siteTitle = await Settings.siteTitle(db);
+			let siteTitle = await Settings.siteTitle(ctx.db);
 			if (!meta.title) {
 				return ctx.render(
 					renderForm(
-						db,
+						ctx.db,
 						type,
 						{
 							canPublish: permissions.has("posts.publish"),
@@ -394,33 +390,32 @@ export default createController(routes.cms.posts, {
 			let publishedAt = permissions.has("posts.publish") ? parsePublishedAt(formData) : null;
 
 			await Post.createForType(
-				db,
+				ctx.db,
 				type.name,
 				{ slug, author_id: user.id, published_at: publishedAt, meta },
 				createMetaCodec(type),
 			);
 			return redirect(`/cms/types/${type.name}/posts`, { status: redirect.Status.SeeOther });
-		}),
+		},
 
-		edit: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		edit: async (ctx) => {
 			let { typeName, id } = ds.parse(PostParams, ctx.params);
-			let type = await requireType(db, typeName);
+			let type = await requireType(ctx.db, typeName);
 			if (!type) return notFound("Unknown post type");
 			let user = getAuthUser();
 			let permissions = await getPermissions();
 			if (!user) return forbidden("Forbidden");
 
 			let codec = createMetaCodec(type);
-			let post = await Post.findByIdForType(db, type.name, id, codec);
+			let post = await Post.findByIdForType(ctx.db, type.name, id, codec);
 			if (!post) return notFound("Not found");
 			if (!permissions.has("posts.edit_any") && post.author_id !== user.id)
 				return forbidden("Forbidden");
 
-			let siteTitle = await Settings.siteTitle(db);
+			let siteTitle = await Settings.siteTitle(ctx.db);
 			return ctx.render(
 				renderForm(
-					db,
+					ctx.db,
 					type,
 					{
 						canPublish: permissions.has("posts.publish"),
@@ -436,20 +431,19 @@ export default createController(routes.cms.posts, {
 					siteTitle,
 				),
 			);
-		}),
+		},
 
-		update: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		update: async (ctx) => {
 			let { formData } = ctx;
 			let { typeName, id } = ds.parse(PostParams, ctx.params);
-			let type = await requireType(db, typeName);
+			let type = await requireType(ctx.db, typeName);
 			if (!type) return notFound("Unknown post type");
 			let user = getAuthUser();
 			let permissions = await getPermissions();
 			if (!user) return forbidden("Forbidden");
 
 			let codec = createMetaCodec(type);
-			let existing = await Post.findByIdForType(db, type.name, id, codec);
+			let existing = await Post.findByIdForType(ctx.db, type.name, id, codec);
 			if (!existing) return notFound("Not found");
 			if (!permissions.has("posts.edit_any") && existing.author_id !== user.id)
 				return forbidden("Forbidden");
@@ -461,28 +455,33 @@ export default createController(routes.cms.posts, {
 				? parsePublishedAt(formData)
 				: existing.published_at;
 
-			await Post.updateForType(db, type.name, id, { slug, published_at: publishedAt, meta }, codec);
+			await Post.updateForType(
+				ctx.db,
+				type.name,
+				id,
+				{ slug, published_at: publishedAt, meta },
+				codec,
+			);
 			return redirect(`/cms/types/${type.name}/posts`, { status: redirect.Status.SeeOther });
-		}),
+		},
 
-		destroy: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		destroy: async (ctx) => {
 			let { typeName, id } = ds.parse(PostParams, ctx.params);
-			let type = await requireType(db, typeName);
+			let type = await requireType(ctx.db, typeName);
 			if (!type) return notFound("Unknown post type");
 			let user = getAuthUser();
 			let permissions = await getPermissions();
 			if (!user) return forbidden("Forbidden");
 
-			let post = await Post.findById(db, id);
+			let post = await Post.findById(ctx.db, id);
 			if (!post || post.type !== type.name) return notFound("Not found");
 			let canDelete =
 				permissions.has("posts.delete_any") ||
 				(permissions.has("posts.delete_own") && post.author_id === user.id);
 			if (!canDelete) return forbidden("Forbidden");
 
-			await Post.destroy(db, id);
+			await Post.destroy(ctx.db, id);
 			return redirect(`/cms/types/${type.name}/posts`, { status: redirect.Status.SeeOther });
-		}),
+		},
 	},
 });

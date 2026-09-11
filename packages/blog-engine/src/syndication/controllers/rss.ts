@@ -6,11 +6,11 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import type { Database } from "remix/data-table";
+
 import { RSS } from "@sdxc/rss";
-import { inject } from "@sdxc/service-container";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import { PostType, type PostTypeDefinition } from "../../post-types/models/post-type.js";
@@ -54,47 +54,39 @@ function xmlResponse(body: string): Response {
 }
 
 /** Global feed `/rss.xml`: published posts across all visible types. */
-export const feedRss = createAction(
-	routes.rss,
-	inject([Database] as const, async (db) => {
-		let ctx = getContext();
-		let origin = new URL(ctx.request.url).origin;
-		let [siteTitle, description, types] = await Promise.all([
-			Settings.siteTitle(db),
-			Settings.siteDescription(db),
-			PostType.findVisible(db),
-		]);
+export const feedRss = createAction(routes.rss, async (ctx) => {
+	let origin = new URL(ctx.request.url).origin;
+	let [siteTitle, description, types] = await Promise.all([
+		Settings.siteTitle(ctx.db),
+		Settings.siteDescription(ctx.db),
+		PostType.findVisible(ctx.db),
+	]);
 
-		let items: RSS.Item[] = [];
-		for (let type of types) items.push(...(await itemsForType(db, origin, type)));
+	let items: RSS.Item[] = [];
+	for (let type of types) items.push(...(await itemsForType(ctx.db, origin, type)));
 
-		let rss = new RSS({ title: siteTitle, description, link: origin });
-		for (let item of items) rss.addItem(item);
-		return xmlResponse(rss.toString());
-	}),
-);
+	let rss = new RSS({ title: siteTitle, description, link: origin });
+	for (let item of items) rss.addItem(item);
+	return xmlResponse(rss.toString());
+});
 
 /** Per-type feed `/:typePath.rss`. */
-export const typeRss = createAction(
-	routes.typeRss,
-	inject([Database] as const, async (db) => {
-		let ctx = getContext();
-		let { typePath } = s.parse(s.object({ typePath: s.string() }), ctx.params);
-		let type = await PostType.findByPath(db, typePath);
-		if (!type || !type.visible) return renderNotFound(ctx);
+export const typeRss = createAction(routes.typeRss, async (ctx) => {
+	let { typePath } = s.parse(s.object({ typePath: s.string() }), ctx.params);
+	let type = await PostType.findByPath(ctx.db, typePath);
+	if (!type || !type.visible) return renderNotFound(ctx);
 
-		let origin = new URL(ctx.request.url).origin;
-		let [siteTitle, items] = await Promise.all([
-			Settings.siteTitle(db),
-			itemsForType(db, origin, type),
-		]);
+	let origin = new URL(ctx.request.url).origin;
+	let [siteTitle, items] = await Promise.all([
+		Settings.siteTitle(ctx.db),
+		itemsForType(ctx.db, origin, type),
+	]);
 
-		let rss = new RSS({
-			title: `${siteTitle} — ${type.label}`,
-			description: type.description,
-			link: `${origin}/${type.path}`,
-		});
-		for (let item of items) rss.addItem(item);
-		return xmlResponse(rss.toString());
-	}),
-);
+	let rss = new RSS({
+		title: `${siteTitle} — ${type.label}`,
+		description: type.description,
+		link: `${origin}/${type.path}`,
+	});
+	for (let item of items) rss.addItem(item);
+	return xmlResponse(rss.toString());
+});

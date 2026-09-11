@@ -74,7 +74,7 @@ await this.app.migrate();
 ### `createBlogEngine(config: BlogEngineConfig): BlogEngine`
 
 Creates a blog engine bound to injected storage and secrets. The config object is
-the entire public boundary — the internal router, container, and repositories stay
+the entire public boundary — the internal router, middleware, and repositories stay
 private.
 
 **Parameters:**
@@ -160,9 +160,9 @@ the last admin cannot be demoted or deleted.
 1. **URLs derive from the request** — OAuth `redirect_uri`, RSS, sitemap, and
    canonical links all come from `request.url`, so one build serves any hostname and
    custom-domain activation needs no engine reconfiguration.
-2. **`remix` is shared with the host** — container/context keys are class-identity
-   based, so the engine and its host must resolve the same `remix` copy (Bun
-   workspace hoisting makes this true).
+2. **`remix` is shared with the host** — request-context keys are identity based, so
+   the engine and its host must resolve the same `remix` copy (Bun workspace hoisting
+   makes this true).
 3. **Sessions need no KV** — they default to a SQL-backed store over the engine's own
    `sessions` table; inject `session.storage` only if you want KV.
 4. **Use `migrations: "manual"` inside a Durable Object** and call `migrate()` in

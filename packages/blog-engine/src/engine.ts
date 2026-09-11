@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import type { Issuer } from "@sdxc/auth/issuer";
+import type { Database } from "remix/data-table";
 import type { Middleware } from "remix/router";
 
 import { log } from "@sdxc/logger/middleware";
@@ -31,6 +32,7 @@ import typeIndex from "./posts/controllers/type-index.js";
 import roles from "./roles/controllers/cms.js";
 import routes from "./routes.js";
 import settings from "./settings/controllers/cms.js";
+import { database } from "./shared/middleware/database.js";
 import oidcMiddleware from "./shared/middleware/oidc.js";
 import renderMiddleware from "./shared/middleware/render.js";
 import trailingSlash from "./shared/middleware/trailing-slash.js";
@@ -42,6 +44,8 @@ import users from "./users/controllers/cms.js";
 
 /** Dependencies the request pipeline is bound to. */
 export interface EngineRouterDeps {
+	/** Published as `ctx.db`, which is how every controller reads this blog's data. */
+	db: Database;
 	sessionMiddleware: Middleware;
 	oidc: EngineAuthConfig;
 	/** Held by the engine instance, so a blog reads its provider's documents once. */
@@ -49,15 +53,17 @@ export interface EngineRouterDeps {
 }
 
 /**
- * Builds the engine's fetch-router. `log()` heads the middleware chain so every
- * request publishes `ctx.log`, joining the host's log when one is current. Route
+ * Builds the engine's fetch-router. `database()` heads the middleware chain so every
+ * handler, the 404 fall-through included, reads `ctx.db`, and `log()` follows it so
+ * every request publishes `ctx.log`, joining the host's log when one is current. Route
  * groups map in call order — dynamic public routes go last so fixed routes win,
  * and nested `map()` groups throw.
- * @param deps - The session middleware and OIDC config.
+ * @param deps - The database, session middleware, and OIDC config.
  * @returns A configured fetch-router ready to handle the request.
  */
 export function createEngineRouter(deps: EngineRouterDeps) {
 	let globalMiddleware: Middleware[] = [
+		database(() => deps.db),
 		trailingSlash,
 		log() as Middleware,
 		oidcMiddleware(deps.oidc, deps.issuer),

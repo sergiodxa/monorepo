@@ -21,7 +21,6 @@
 		"@sdxc/markdown": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/rss": "workspace:*",
-		"@sdxc/service-container": "workspace:*",
 		"@sdxc/sitemap": "workspace:*",
 		"@sdxc/validate": "workspace:*",
 		"remix": "3.0.0-rc.2"

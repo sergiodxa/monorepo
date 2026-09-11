@@ -10,7 +10,6 @@
 import type { DatabaseDriver } from "remix/data-table";
 import type { SessionStorage } from "remix/session";
 
-import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 
 import type { OIDCMetadata } from "./auth/oidc.js";
@@ -89,8 +88,6 @@ export interface BlogEngine {
  */
 export function createBlogEngine(config: BlogEngineConfig): BlogEngine {
 	let db = new Database(config.database);
-	let container = new ServiceContainer();
-	container.instance(Database, db);
 	let sessionMiddleware = createSessionMiddleware({
 		db,
 		secret: config.session.secret,
@@ -111,8 +108,8 @@ export function createBlogEngine(config: BlogEngineConfig): BlogEngine {
 		async fetch(request) {
 			if (config.migrations !== "manual") await (migrated ??= migrate());
 
-			let router = createEngineRouter({ sessionMiddleware, oidc, issuer });
-			return container.scope(() => router.fetch(request));
+			let router = createEngineRouter({ db, sessionMiddleware, oidc, issuer });
+			return router.fetch(request);
 		},
 	};
 }

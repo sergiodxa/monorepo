@@ -8,9 +8,6 @@
  */
 import type { RequestContext } from "remix/router";
 
-import { getServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-
 import { Layout } from "./components/layout.js";
 import { loadSiteChrome } from "./site.js";
 
@@ -22,7 +19,7 @@ import { loadSiteChrome } from "./site.js";
  * @returns A 404 HTML response.
  */
 export async function renderNotFound(ctx: RequestContext): Promise<Response> {
-	let chrome = await loadSiteChrome(getServiceContainer().get(Database));
+	let chrome = await loadSiteChrome(ctx.db);
 	return ctx.render(
 		<Layout title="Not found" {...chrome}>
 			<h1>Not found</h1>

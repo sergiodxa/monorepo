@@ -7,12 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Database } from "remix/data-table";
+
 import { redirect } from "@sdxc/http/response";
 import { badRequest, notFound } from "@sdxc/http/response/html";
-import { inject } from "@sdxc/service-container";
 import * as ds from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import { getAuthUser, getPermissions } from "../../auth/middleware/auth.js";
@@ -43,12 +42,11 @@ const RouteParams = ds.object({ id: ds.string() });
 export default createController(routes.cms.users, {
 	middleware: [requirePermission("users.manage")],
 	actions: {
-		index: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		index: async (ctx) => {
 			let [{ user, permissions, siteTitle }, users, roles] = await Promise.all([
-				chrome(db),
-				User.findAll(db),
-				Role.findAll(db),
+				chrome(ctx.db),
+				User.findAll(ctx.db),
+				Role.findAll(ctx.db),
 			]);
 			let roleName = new Map(roles.map((role) => [role.id, role.label]));
 
@@ -83,16 +81,15 @@ export default createController(routes.cms.users, {
 					</table>
 				</CmsLayout>,
 			);
-		}),
+		},
 
-		edit: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		edit: async (ctx) => {
 			let { id } = ds.parse(RouteParams, ctx.params);
 			let [{ user, permissions, siteTitle }, target, roles, users] = await Promise.all([
-				chrome(db),
-				User.findById(db, id),
-				Role.findAll(db),
-				User.findAll(db),
+				chrome(ctx.db),
+				User.findById(ctx.db, id),
+				Role.findAll(ctx.db),
+				User.findAll(ctx.db),
 			]);
 			if (!target) return notFound("Not found");
 
@@ -150,41 +147,39 @@ export default createController(routes.cms.users, {
 					</form>
 				</CmsLayout>,
 			);
-		}),
+		},
 
-		update: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		update: async (ctx) => {
 			let { id } = ds.parse(RouteParams, ctx.params);
 			let roleId = fieldText(ctx.formData, "role_id");
 			try {
-				await User.changeRole(db, id, roleId);
+				await User.changeRole(ctx.db, id, roleId);
 			} catch (error) {
 				return badRequest(String((error as Error).message));
 			}
 			return redirect("/cms/users", { status: redirect.Status.SeeOther });
-		}),
+		},
 
-		destroy: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		destroy: async (ctx) => {
 			let { id } = ds.parse(RouteParams, ctx.params);
-			let target = await User.findById(db, id);
+			let target = await User.findById(ctx.db, id);
 			if (!target) return notFound("Not found");
 
-			let postCount = await Post.countByAuthor(db, target.id);
+			let postCount = await Post.countByAuthor(ctx.db, target.id);
 			let reassignTo = fieldText(ctx.formData, "reassign_to").trim();
 			try {
 				if (postCount > 0) {
-					if (reassignTo) await Post.reassignAuthor(db, target.id, reassignTo);
+					if (reassignTo) await Post.reassignAuthor(ctx.db, target.id, reassignTo);
 					else {
-						let posts = await db.findMany(Post.table, { where: { author_id: target.id } });
-						for (let post of posts) await Post.destroy(db, post.id);
+						let posts = await ctx.db.findMany(Post.table, { where: { author_id: target.id } });
+						for (let post of posts) await Post.destroy(ctx.db, post.id);
 					}
 				}
-				await User.destroy(db, target.id);
+				await User.destroy(ctx.db, target.id);
 			} catch (error) {
 				return badRequest(String((error as Error).message));
 			}
 			return redirect("/cms/users", { status: redirect.Status.SeeOther });
-		}),
+		},
 	},
 });

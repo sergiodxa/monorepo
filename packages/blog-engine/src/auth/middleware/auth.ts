@@ -7,8 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { AuthSession } from "@sdxc/auth/auth-session";
-import { getServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { auth, Auth, createSessionAuthScheme } from "remix/middleware/auth";
 import { createContextKey } from "remix/router";
@@ -38,8 +36,8 @@ export const authMiddleware = auth({
 				let id = session.get(USER_ID_KEY);
 				return typeof id === "string" ? id : null;
 			},
-			verify(userId) {
-				return User.findById(getServiceContainer().get(Database), userId);
+			verify(userId, ctx) {
+				return User.findById(ctx.db, userId);
 			},
 			invalidate(session) {
 				session.unset(USER_ID_KEY);
@@ -81,9 +79,7 @@ export async function getPermissions(): Promise<Set<Permission>> {
 	if (ctx.has(permissionsKey)) return ctx.get(permissionsKey) ?? new Set<Permission>();
 
 	let user = getAuthUser();
-	let permissions = user
-		? await Role.permissionsFor(getServiceContainer().get(Database), user.role_id)
-		: new Set<Permission>();
+	let permissions = user ? await Role.permissionsFor(ctx.db, user.role_id) : new Set<Permission>();
 	ctx.set(permissionsKey, permissions);
 	return permissions;
 }

@@ -1,10 +1,9 @@
 /**
- * Integration smoke test that drives `createBlogEngine(...).fetch()` end-to-end
- * through the service-container DI the engine wires per request. It guards the
- * regression fixed in 8f8cb73 where a per-request `Database` registered via
- * `container.instance(Database, db)` was invisible inside
- * `container.scope(() => router.fetch())`, throwing `ServiceNotFoundError` on every
- * request that resolved `Database` via `inject`.
+ * Integration smoke test that drives `createBlogEngine(...).fetch()` end-to-end. It
+ * guards the wiring that carries the engine's database from `createBlogEngine` to a
+ * controller: the `database()` middleware at the head of the router's chain, and the
+ * `ctx.db` every handler reads. A handler reached with no database on the context
+ * fails at the first query, so only the full `fetch` path proves the two connect.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -34,8 +33,8 @@ let metadata: OIDCMetadata = {
 
 /**
  * Builds the real blog engine over an in-memory database adapter (migrations run
- * lazily on first request) and drives a GET request through the same `fetch`
- * path production traffic takes via `container.scope(() => router.fetch())`.
+ * lazily on first request) and drives a GET request through the same `fetch` path
+ * production traffic takes.
  */
 function createEngine() {
 	let sqliteDb = openDatabase(":memory:");
@@ -52,8 +51,8 @@ function createEngine() {
 	});
 }
 
-describe("createBlogEngine — service-container DI over the full fetch path", () => {
-	test("resolves Database inside the request scope for the sitemap endpoint", async () => {
+describe("createBlogEngine — the database over the full fetch path", () => {
+	test("reads the database from the context for the sitemap endpoint", async () => {
 		let engine = createEngine();
 		let response = await engine.fetch(new Request("https://blog.example.com/sitemap.xml"));
 
@@ -63,7 +62,7 @@ describe("createBlogEngine — service-container DI over the full fetch path", (
 		expect(body).toContain("https://blog.example.com/");
 	});
 
-	test("resolves Database inside the request scope for the home feed", async () => {
+	test("reads the database from the context for the home feed", async () => {
 		let engine = createEngine();
 		let response = await engine.fetch(new Request("https://blog.example.com/"));
 
@@ -72,15 +71,15 @@ describe("createBlogEngine — service-container DI over the full fetch path", (
 	});
 
 	/**
-	 * The original bug surfaced as an uncaught `ServiceNotFoundError` bubbling
-	 * to a 500, so any 2xx/3xx/4xx response demonstrates the fix — only a 500
-	 * indicates the regression.
+	 * The 404 fall-through renders the site chrome from the database like any other
+	 * page, so an unmapped route proves the middleware covers the default handler.
 	 */
-	test("does not fail with a 500 from a broken DI path", async () => {
+	test("reads the database from the context for the 404 fall-through", async () => {
 		let engine = createEngine();
-		let response = await engine.fetch(new Request("https://blog.example.com/sitemap.xml"));
+		let response = await engine.fetch(new Request("https://blog.example.com/nothing-here"));
 
-		expect(response.status).toBeLessThan(500);
+		expect(response.status).toBe(404);
+		expect(response.headers.get("content-type")).toContain("text/html");
 	});
 });
 
