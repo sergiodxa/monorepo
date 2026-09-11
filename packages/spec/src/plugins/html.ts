@@ -261,22 +261,42 @@ const READ: Assertion = { kind: "read" };
  * and none requires a grant.
  */
 export function createHtmlPlugin(): Plugin {
+	/**
+	 * The documents most recently parsed, by the source that produced them. A
+	 * test asserts many times over one response, and parsing is the expensive
+	 * part of answering, so re-reading the same markup per assertion would make
+	 * a page's size cost what the number of assertions multiplies it to. The
+	 * cache holds a few entries rather than one so concurrent tests do not evict
+	 * each other, and a document answers lookups without mutating, so sharing
+	 * one between callers is safe.
+	 */
+	let documents = new Map<string, HTML>();
 	return {
 		namespace: "html",
 		describe() {
 			return HTML_TOOLS;
 		},
 		async call(tool, args, context) {
-			let answered = answer(tool, args);
+			let answered = answer(tool, args, documents);
 			if (isSuccess(answered)) return answered;
 			return failure(await record(answered.error, tool, args, context));
+		},
+		async dispose() {
+			documents.clear();
 		},
 	};
 }
 
+/** How many parsed documents stay cached; older ones are dropped in insertion order. */
+const CACHED_DOCUMENTS = 4;
+
 /** Dispatch one call over the parsed document. */
-function answer(tool: string, args: ToolArg[]): Result<Value, SpecError> {
-	let document = parse(tool, args);
+function answer(
+	tool: string,
+	args: ToolArg[],
+	documents: Map<string, HTML>,
+): Result<Value, SpecError> {
+	let document = parse(tool, args, documents);
 	if (isFailure(document)) return document;
 	let doc = document.data;
 
@@ -309,8 +329,15 @@ function answer(tool: string, args: ToolArg[]): Result<Value, SpecError> {
 	}
 }
 
-/** Parse the source every tool takes first, refusing anything but markup. */
-function parse(tool: string, args: ToolArg[]): Result<HTML, SpecError> {
+/**
+ * Parse the source every tool takes first, refusing anything but markup, and
+ * answer from the cache when this markup was already read.
+ */
+function parse(
+	tool: string,
+	args: ToolArg[],
+	documents: Map<string, HTML>,
+): Result<HTML, SpecError> {
 	let source = args[0];
 	if (source === undefined || source.kind !== "value" || typeof source.value !== "string") {
 		return failure(
@@ -319,12 +346,19 @@ function parse(tool: string, args: ToolArg[]): Result<HTML, SpecError> {
 			),
 		);
 	}
+	let cached = documents.get(source.value);
+	if (cached !== undefined) return success(cached);
 	let document = HTML.parse(source.value);
 	if (isFailure(document)) {
 		return failure(
 			new ToolError(`html.${tool} could not parse the source: ${document.error.message}`),
 		);
 	}
+	if (documents.size >= CACHED_DOCUMENTS) {
+		let [oldest] = documents.keys();
+		if (oldest !== undefined) documents.delete(oldest);
+	}
+	documents.set(source.value, document.data);
 	return success(document.data);
 }
 

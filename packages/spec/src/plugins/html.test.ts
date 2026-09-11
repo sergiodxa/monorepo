@@ -10,8 +10,9 @@
 
 import type { Result } from "@sdxc/result";
 
+import { HTML } from "@sdxc/html";
 import { isFailure } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import type { ArtifactStore } from "../artifacts.js";
 import type { SpecError } from "../errors.js";
@@ -430,6 +431,26 @@ describe("an expected value on an element", () => {
 		// `html.heading src "Portfolios"` addresses, it does not compare.
 		expect(await ok("heading", value("Portfolios"))).toBe("Portfolios");
 		expect(await ok("heading", value("Portfolios"), value("Portfolios"))).toBe(true);
+	});
+});
+
+describe("parsing", () => {
+	test("one source is parsed once however many times it is read", async () => {
+		// A test asserts many times over one response, so re-reading the markup
+		// per assertion would make a page's size cost what the assertions
+		// multiply it to — which is the whole of what a large page costs.
+		let plugin = createHtmlPlugin();
+		let parse = vi.spyOn(HTML, "parse");
+		try {
+			for (let index = 0; index < 5; index++) {
+				await plugin.call("title", [value(PAGE)], createToolContext());
+			}
+			expect(parse).toHaveBeenCalledTimes(1);
+			await plugin.call("title", [value("<p>another</p>")], createToolContext());
+			expect(parse).toHaveBeenCalledTimes(2);
+		} finally {
+			parse.mockRestore();
+		}
 	});
 });
 
