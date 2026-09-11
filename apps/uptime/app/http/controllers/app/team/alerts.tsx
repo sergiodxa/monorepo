@@ -6,14 +6,11 @@
  */
 
 import { BellIcon, BellPlusIcon, HistoryIcon, PlusIcon } from "@sdxc/icons";
-import { inject } from "@sdxc/service-container";
 import { fg } from "@sdxc/u/color";
 import { hstack } from "@sdxc/u/layout";
 import { hover } from "@sdxc/u/state";
 import { fontSize, textDecoration } from "@sdxc/u/typography";
 import { Empty, LinkButton, Table } from "@sdxc/ui";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import type { SelectAlert } from "~/database/schema";
@@ -31,12 +28,11 @@ import routes from "~/routes/web";
 /** GET /app/:team/alerts — the team's alerts list. */
 export default createAction(routes.app.team.alerts.index, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let alerts = await Alert.listByTeam(db, ctx.team.id);
+		let alerts = await Alert.listByTeam(ctx.db, ctx.team.id);
 		let atLimit = alerts.length >= MAX_ALERTS_PER_TEAM;
 
 		/**
@@ -44,7 +40,7 @@ export default createAction(routes.app.team.alerts.index, {
 		 * unique across every monitor type, so keying on id alone is enough for
 		 * {@link storedMonitorScope}'s resolved scope to look up its name.
 		 */
-		let scopeGroups = await listScopeMonitors(db, ctx.team.id);
+		let scopeGroups = await listScopeMonitors(ctx.db, ctx.team.id);
 		let monitorNamesById = new Map(
 			scopeGroups.flatMap((group) => group.monitors.map((monitor) => [monitor.id, monitor.name])),
 		);
@@ -181,5 +177,5 @@ export default createAction(routes.app.team.alerts.index, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });

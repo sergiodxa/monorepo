@@ -11,8 +11,6 @@
 
 import type { Middleware, RequestHandler } from "remix/router";
 
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
@@ -22,6 +20,7 @@ import { describe, expect, test } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { createHtmlRenderer } from "~/app/http/render";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -222,6 +221,7 @@ async function createHarness(options: createHarness.Options = {}) {
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			database(() => db),
 			seedTeam(team, membership),
 			i18n,
 			renderWith(createHtmlRenderer) as Middleware,
@@ -233,9 +233,6 @@ async function createHarness(options: createHarness.Options = {}) {
 	map(routes.app.team.dnsMonitors.cards.results, options.results ?? cardResults);
 	map(routes.app.team.dnsMonitors.cards.checkHistory, cardCheckHistory);
 	map(routes.app.team.dnsMonitors.cards.uptimeHistory, cardUptimeHistory);
-
-	let container = new ServiceContainer();
-	container.instance(Database, db);
 
 	return {
 		db,
@@ -251,7 +248,7 @@ async function createHarness(options: createHarness.Options = {}) {
 				),
 			);
 
-			return await container.scope(() => router.fetch(request));
+			return await router.fetch(request);
 		},
 	};
 }

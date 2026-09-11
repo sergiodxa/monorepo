@@ -10,11 +10,8 @@
  */
 
 import { notFound } from "@sdxc/http/response/html";
-import { inject } from "@sdxc/service-container";
 import { overflowX } from "@sdxc/u/overflow";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import MonitorDailyStats from "~/app/data/monitor-daily-stats";
@@ -31,14 +28,13 @@ import routes from "~/routes/web";
  */
 export default createAction(routes.app.team.tcpMonitors.cards.uptimeHistory, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
 
-		let monitor = await TcpMonitor.findByIdForTeam(db, ctx.team.id, monitorId);
+		let monitor = await TcpMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
 		if (!monitor) return notFound("Not Found");
 
-		let dailyStats = await MonitorDailyStats.listRecentDays(db, monitor.id, "tcp");
+		let dailyStats = await MonitorDailyStats.listRecentDays(ctx.db, monitor.id, "tcp");
 
 		let labels = {
 			daysAgo: ctx.i18next.t("statusPage.uptimeBar.daysAgo"),
@@ -65,5 +61,5 @@ export default createAction(routes.app.team.tcpMonitors.cards.uptimeHistory, {
 				</div>
 			</section>,
 		);
-	}),
+	},
 });

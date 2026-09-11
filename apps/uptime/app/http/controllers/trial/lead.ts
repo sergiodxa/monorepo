@@ -11,9 +11,7 @@
 
 import { redirect } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
@@ -67,10 +65,9 @@ export default createAction(routes.trial.lead, async (ctx) => {
 		return renderTrialPage({ probe, leadError: true });
 	}
 
-	let db = getServiceContainer().get(Database);
 	let locale = toSupportedLanguage(ctx.locale);
 
-	let lead = await Lead.upsertByEmail(db, {
+	let lead = await Lead.upsertByEmail(ctx.db, {
 		email: result.data.email,
 		/**
 		 * Always absent: the form now asks only for email and consent, and every message
@@ -88,13 +85,13 @@ export default createAction(routes.trial.lead, async (ctx) => {
 	 * had its free week, since a watch is deleted thirty days after creation and
 	 * can only be found within that window.
 	 */
-	let existing = await TrialWatch.findByNormalizedUrl(db, lead.id, probe.url);
+	let existing = await TrialWatch.findByNormalizedUrl(ctx.db, lead.id, probe.url);
 
 	if (existing) {
 		ctx.log.set({ trial: { watch_id: existing.id, repeated: true } });
 
 		let results = await TrialWatch.listResultsBetween(
-			db,
+			ctx.db,
 			existing.id,
 			existing.created_at,
 			existing.expires_at,
@@ -129,7 +126,7 @@ export default createAction(routes.trial.lead, async (ctx) => {
 		if (isFailure(report)) {
 			ctx.log.warn("trial.repeat_report_email_failed", { message: report.error.message });
 		} else {
-			await Lead.recordEmailSent(db, lead.id);
+			await Lead.recordEmailSent(ctx.db, lead.id);
 		}
 
 		/**
@@ -141,7 +138,7 @@ export default createAction(routes.trial.lead, async (ctx) => {
 		return back;
 	}
 
-	let watch = await TrialWatch.create(db, lead.id, {
+	let watch = await TrialWatch.create(ctx.db, lead.id, {
 		url: probe.url,
 		/**
 		 * The status the visitor just saw, so change detection has a baseline from the very
@@ -194,7 +191,7 @@ export default createAction(routes.trial.lead, async (ctx) => {
 	if (isFailure(sent)) {
 		ctx.log.warn("trial.confirmation_email_failed", { message: sent.error.message });
 	} else {
-		await Lead.recordEmailSent(db, lead.id);
+		await Lead.recordEmailSent(ctx.db, lead.id);
 	}
 
 	session?.set(TRIAL_WATCH_STARTED, probe.url);

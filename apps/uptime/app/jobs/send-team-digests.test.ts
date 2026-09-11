@@ -7,15 +7,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { ManagementClient } from "@sdxc/auth/management-client";
 import type { Transport } from "@sdxc/mail";
 
-import { ManagementClient, SubjectNotFoundError } from "@sdxc/auth/management-client";
+import { SubjectNotFoundError } from "@sdxc/auth/management-client";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { Mailer, MailError } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { failure, success } from "@sdxc/result";
-import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
@@ -28,7 +28,9 @@ import { MAIL_FROM } from "~/app/emails/sender";
 import { TeamDailyDigestEmail } from "~/app/emails/team-daily-digest";
 import { TeamWeeklyDigestEmail } from "~/app/emails/team-weekly-digest";
 import jobs from "~/app/jobs";
+import { Admin as JobAdmin } from "~/app/jobs/middleware/admin";
 import { Database as JobDatabase } from "~/app/jobs/middleware/database";
+import { Mailer as JobMailer } from "~/app/jobs/middleware/mailer";
 import sendTeamDailyDigests from "~/app/jobs/send-team-daily-digests";
 import sendTeamWeeklyDigests from "~/app/jobs/send-team-weekly-digests";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -84,13 +86,6 @@ function fakeAdmin(): ManagementClient {
 
 /** Runs one digest the way a cron trigger's queue message would, and returns its record. */
 async function runJob(db: Database, period: DigestPeriod, options: { transport?: Transport } = {}) {
-	let container = new ServiceContainer();
-	container.singleton(
-		Mailer,
-		() => new Mailer({ transport: options.transport ?? transport, from: MAIL_FROM }),
-	);
-	container.instance(ManagementClient, fakeAdmin());
-
 	/** The period picks the job and its handler, exactly as the dispatcher's routing does. */
 	let [job, handler] =
 		period === "daily"
@@ -101,8 +96,12 @@ async function runJob(db: Database, period: DigestPeriod, options: { transport?:
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(job, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	ctx.set(JobMailer, new Mailer({ transport: options.transport ?? transport, from: MAIL_FROM }), {
+		property: "mailer",
+	});
+	ctx.set(JobAdmin, fakeAdmin(), { property: "admin" });
 
-	await container.scope(() => handler(ctx));
+	await handler(ctx);
 	log.emit();
 	return record;
 }

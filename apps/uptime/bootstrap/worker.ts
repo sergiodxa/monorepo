@@ -1,7 +1,7 @@
 /**
  * Cloudflare Worker entry point for the uptime app. Its `fetch` handler resolves
- * the session cookie secret, opens a service-container scope, builds the application
- * router, and forwards the request to it. Its `scheduled` and `queue` handlers hand the
+ * the session cookie secret, builds the application router, and forwards the request
+ * to it. Its `scheduled` and `queue` handlers hand the
  * trigger and the batch to the job dispatcher, which owns routing, validation and the
  * lifecycle for both the work queue and its dead-letter queue. Re-exports the `GeoFetchDO`
  * Durable Object class its binding needs.
@@ -15,7 +15,6 @@ import { env } from "cloudflare:workers";
 
 import { GeoFetchDO } from "~/app/do/geo-fetch";
 import { dispatcher } from "~/app/jobs/dispatcher";
-import { container } from "~/app/lib/container";
 import { CostLedger, countedKv, trackCost } from "~/app/services/cost";
 
 import application from "./app";
@@ -35,24 +34,19 @@ function isSecureHost(request: Request): boolean {
 }
 
 export default {
-	/**
-	 * Handles incoming Worker requests by opening a container scope and forwarding the
-	 * request to the app router.
-	 */
+	/** Handles incoming Worker requests by forwarding them to the app router. */
 	async fetch(request: Request) {
-		return await container.scope(async () => {
-			let app = application({
-				kv: countedKv(env.KV),
-				cookieSecret: env.COOKIE_SESSION_SECRET,
-				secure: isSecureHost(request),
-			});
-			/**
-			 * Which team a request is for is settled downstream — `requireTeam` for the app,
-			 * the status-page controller for a public one — so the ledger opens unattributed and
-			 * is told once resolved. One that never resolves (a marketing page, a 404) is platform cost.
-			 */
-			return await trackCost(new CostLedger({ handler: "fetch" }), () => app.fetch(request));
+		let app = application({
+			kv: countedKv(env.KV),
+			cookieSecret: env.COOKIE_SESSION_SECRET,
+			secure: isSecureHost(request),
 		});
+		/**
+		 * Which team a request is for is settled downstream — `requireTeam` for the app,
+		 * the status-page controller for a public one — so the ledger opens unattributed and
+		 * is told once resolved. One that never resolves (a marketing page, a 404) is platform cost.
+		 */
+		return await trackCost(new CostLedger({ handler: "fetch" }), () => app.fetch(request));
 	},
 
 	/**
@@ -69,6 +63,6 @@ export default {
 	 * consumes: `ping` and its dead-letter queue.
 	 */
 	async queue(batch) {
-		await container.scope(() => handlers.queue(batch));
+		await handlers.queue(batch);
 	},
 } satisfies ExportedHandler<Cloudflare.Env>;

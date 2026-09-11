@@ -9,11 +9,9 @@
 import { BadRequest, Created, InternalServerError, NotFound } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
-import { Database } from "remix/data-table";
 import { createController } from "remix/router";
 
 import type { SelectTeamDomain } from "~/database/schema";
@@ -58,13 +56,11 @@ export default createController(teamDomainsRoutes, {
 		teamDomainsIndex: {
 			middleware: [requireApiKey("team-domains:read")],
 			handler: async (ctx) => {
-				let db = getServiceContainer().get(Database);
-
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
 
 				// Chaining returns new queries, so the same one both counts and pages.
-				let query = TeamDomain.listByTeamQuery(db, ctx.apiTeam.id);
+				let query = TeamDomain.listByTeamQuery(ctx.db, ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {
 					orderBy: NEWEST_FIRST,
@@ -100,8 +96,7 @@ export default createController(teamDomainsRoutes, {
 					);
 				}
 
-				let db = getServiceContainer().get(Database);
-				let teamDomain = await TeamDomain.create(db, ctx.apiTeam.id, result.data.hostname);
+				let teamDomain = await TeamDomain.create(ctx.db, ctx.apiTeam.id, result.data.hostname);
 				return apiSuccess({ teamDomain: serializeTeamDomain(teamDomain) }, Created);
 			},
 		},
@@ -119,11 +114,10 @@ export default createController(teamDomainsRoutes, {
 					);
 				}
 
-				let db = getServiceContainer().get(Database);
-				let teamDomain = await TeamDomain.findByIdForTeam(db, ctx.apiTeam.id, result.data.id);
+				let teamDomain = await TeamDomain.findByIdForTeam(ctx.db, ctx.apiTeam.id, result.data.id);
 				if (!teamDomain) return apiError("NOT_FOUND", "Team domain not found", NotFound);
 
-				await TeamDomain.deleteById(db, result.data.id);
+				await TeamDomain.deleteById(ctx.db, result.data.id);
 				return apiSuccess({ deleted: true });
 			},
 		},

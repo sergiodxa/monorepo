@@ -23,8 +23,6 @@ import {
 } from "@sdxc/cloudflare-mocks";
 import { Log } from "@sdxc/logger";
 import { failure, success } from "@sdxc/result";
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
@@ -45,6 +43,7 @@ import type {
 } from "~/app/services/trial-guard";
 import type { SelectTeam } from "~/database/schema";
 
+import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { BASE_PRICE_USD } from "~/app/lib/pricing";
 import {
@@ -204,12 +203,11 @@ async function signIn(subscription: "active" | "revoked" | "unknown"): Promise<A
  */
 async function dispatch(request: Request, session: Session, actor?: Actor) {
 	let db = actor?.db ?? createTestDatabase().db;
-	let container = new ServiceContainer();
-	container.instance(Database, db);
 
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			database(() => db),
 			billing({ provider: () => testBilling }) as Middleware,
 			((ctx, next) => {
 				if (actor === undefined) ctx.set(Auth, { ok: false });
@@ -227,7 +225,7 @@ async function dispatch(request: Request, session: Session, actor?: Actor) {
 	});
 	router.map(routes.trial.check, trialCheck);
 
-	let response = await container.scope(() => router.fetch(request));
+	let response = await router.fetch(request);
 	await Promise.all(deferred.splice(0));
 
 	return { response, session, body: await response.text() };

@@ -11,10 +11,8 @@
 import { redirect } from "@sdxc/http/response";
 import { notFound } from "@sdxc/http/response/html";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import { waitUntil } from "cloudflare:workers";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
@@ -48,8 +46,7 @@ export const createTcpMonitor = createAction(routes.actions.monitor.tcp.create, 
 		});
 	}
 
-	let db = getServiceContainer().get(Database);
-	let monitor = await TcpMonitor.create(db, ctx.team.id, result.data);
+	let monitor = await TcpMonitor.create(ctx.db, ctx.team.id, result.data);
 
 	session?.flash("toast", { intent: "success", message: `TCP monitor "${monitor.name}" created.` });
 	return redirect(
@@ -75,12 +72,11 @@ export const updateTcpMonitor = createAction(routes.actions.monitor.tcp.update, 
 		);
 	}
 
-	let db = getServiceContainer().get(Database);
 	let { monitor_id, ...values } = result.data;
-	let existing = await TcpMonitor.findByIdForTeam(db, ctx.team.id, monitor_id);
+	let existing = await TcpMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitor_id);
 	if (!existing) return notFound("Not Found");
 
-	await TcpMonitor.updateById(db, monitor_id, values);
+	await TcpMonitor.updateById(ctx.db, monitor_id, values);
 
 	session?.flash("toast", { intent: "success", message: "TCP monitor updated." });
 	return redirect(
@@ -100,11 +96,10 @@ export const deleteTcpMonitor = createAction(routes.actions.monitor.tcp.delete, 
 		});
 	}
 
-	let db = getServiceContainer().get(Database);
-	let existing = await TcpMonitor.findByIdForTeam(db, ctx.team.id, result.data.monitor_id);
+	let existing = await TcpMonitor.findByIdForTeam(ctx.db, ctx.team.id, result.data.monitor_id);
 	if (!existing) return notFound("Not Found");
 
-	await TcpMonitor.deleteById(db, result.data.monitor_id);
+	await TcpMonitor.deleteById(ctx.db, result.data.monitor_id);
 
 	session?.flash("toast", {
 		intent: "success",
@@ -130,8 +125,7 @@ export const checkTcpMonitor = createAction(routes.actions.monitor.tcp.check, as
 		});
 	}
 
-	let db = getServiceContainer().get(Database);
-	let monitor = await TcpMonitor.findByIdForTeam(db, ctx.team.id, result.data.monitor_id);
+	let monitor = await TcpMonitor.findByIdForTeam(ctx.db, ctx.team.id, result.data.monitor_id);
 	if (!monitor) return notFound("Not Found");
 
 	/**
@@ -139,7 +133,7 @@ export const checkTcpMonitor = createAction(routes.actions.monitor.tcp.check, as
 	 * gets their check — refusing a paying customer over an inconclusive lookup is the worse
 	 * mistake. The same reading every other manual check takes.
 	 */
-	if ((await Subscription.stateFor(db, ctx.team.owner_id)) === "inactive") {
+	if ((await Subscription.stateFor(ctx.db, ctx.team.owner_id)) === "inactive") {
 		session?.flash("toast", {
 			intent: "error",
 			message: ctx.i18next.t("actions.checks.subscriptionRequired"),
@@ -151,7 +145,7 @@ export const checkTcpMonitor = createAction(routes.actions.monitor.tcp.check, as
 	}
 
 	let checkResult = await checkTcpConnection(monitor.host, monitor.port, monitor.timeout_ms);
-	let resultId = await TcpMonitor.recordCheckResult(db, monitor.id, checkResult);
+	let resultId = await TcpMonitor.recordCheckResult(ctx.db, monitor.id, checkResult);
 
 	/**
 	 * Written here, at the same point the scheduled sweep writes it, so a manual and a
@@ -184,7 +178,7 @@ export const checkTcpMonitor = createAction(routes.actions.monitor.tcp.check, as
 	);
 
 	await notifyTcpResult(
-		db,
+		ctx.db,
 		ctx.email,
 		monitor,
 		monitor.last_status as TcpCheckStatus | null,

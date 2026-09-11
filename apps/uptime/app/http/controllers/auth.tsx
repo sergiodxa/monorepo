@@ -9,6 +9,7 @@
 
 import type { IdToken } from "@sdxc/auth/id-token";
 import type { i18n } from "@sdxc/i18n";
+import type { Database } from "remix/data-table";
 import type { Renderer } from "remix/middleware/render";
 import type { RemixNode } from "remix/ui";
 
@@ -18,15 +19,12 @@ import { redirect } from "@sdxc/http/response";
 import { Location } from "@sdxc/location";
 import { currentLog } from "@sdxc/logger";
 import { isFailure, wrap } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { flex, flexCol, gap, items } from "@sdxc/u/layout";
 import { m, minBs, p } from "@sdxc/u/size";
 import { hover } from "@sdxc/u/state";
 import { fontSize, textAlign, textDecoration } from "@sdxc/u/typography";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 import { Session } from "remix/session";
 
@@ -146,8 +144,7 @@ export default createController(routes.auth, {
 		},
 
 		/** GET /auth — completes the OIDC callback and establishes the session. */
-		index: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		index: async (ctx) => {
 			let finished = await wrap(() => relyingParty(ctx.url).callback(contextOf(ctx)));
 
 			if (isFailure(finished)) {
@@ -192,14 +189,14 @@ export default createController(routes.auth, {
 				});
 			}
 
-			let team = await resolveTeam(db, idToken);
+			let team = await resolveTeam(ctx.db, idToken);
 
 			/**
 			 * Runs after the team exists and before the redirect, so its monitors land in
 			 * the team that redirect will already show. The service always resolves
 			 * normally, so sign-in completes regardless of the conversion outcome.
 			 */
-			await convertTrialWatches(db, {
+			await convertTrialWatches(ctx.db, {
 				email: idToken.email ?? "",
 				teamId: team.id,
 				authorId: idToken.subject,
@@ -214,8 +211,8 @@ export default createController(routes.auth, {
 			let target = Location.safe(grant.returnTo, { fallback: routes.app.index.href() });
 			return redirect(target, {
 				status: redirect.Status.SeeOther,
-				headers: await languageHeaders(db, idToken.subject),
+				headers: await languageHeaders(ctx.db, idToken.subject),
 			});
-		}),
+		},
 	},
 });

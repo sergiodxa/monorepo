@@ -17,7 +17,6 @@ import { createAnalyticsEngine, createEnv, createQueue } from "@sdxc/cloudflare-
 import { createJobContext } from "@sdxc/jobs";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
-import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -110,6 +109,7 @@ let {
 } = await import("./dns-discovery");
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let checkDns = (await import("~/app/jobs/check-dns")).default;
 
 async function seedMonitor(db: Database, domain: string, teamId = "team-1") {
@@ -413,15 +413,12 @@ describe("scheduled and on-demand checks", () => {
 			{ touch: false },
 		);
 
-		let container = new ServiceContainer();
-		container.singleton(
-			Mailer,
-			() => new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }),
-		);
-
 		let ctx = createJobContext(jobs.checkDns, { id: "message-1", attempts: 1 });
 		ctx.set(JobDatabase, db, { property: "database" });
-		await container.scope(() => checkDns(ctx));
+		ctx.set(JobMailer, new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }), {
+			property: "mailer",
+		});
+		await checkDns(ctx);
 
 		let run = await runDnsCheck(db, onDemand.id, onDemand.domain);
 

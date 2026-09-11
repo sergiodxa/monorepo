@@ -12,8 +12,6 @@
 import type { Middleware } from "remix/router";
 
 import i18next from "@sdxc/i18n/middleware";
-import { getServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 
@@ -43,13 +41,13 @@ const resolvedFromDatabase = new WeakMap<Request, string>();
  * {@link supportedLanguages} since the detector discards a bad value silently.
  */
 async function findLocale(request: Request): Promise<string | null> {
-	if (!getContext().has(Auth)) return null;
+	let ctx = getContext();
+	if (!ctx.has(Auth)) return null;
 
 	let viewer = getViewer();
 	if (!viewer) return null;
 
-	let db = getServiceContainer().get(Database);
-	let preferences = await UserPreferences.findBySubjectId(db, viewer.id);
+	let preferences = await UserPreferences.findBySubjectId(ctx.db, viewer.id);
 
 	let stored = preferences?.preferred_language;
 	if (!stored) return null;

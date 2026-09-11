@@ -13,8 +13,6 @@ import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
 import { createTranslator } from "@sdxc/i18n";
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
@@ -25,6 +23,7 @@ import { describe, expect, test } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
 import { memberships, teams } from "~/database/schema";
@@ -113,20 +112,21 @@ describe("app/team/dashboard", () => {
 		let { db, team, membership } = await createFixture();
 
 		let router = createRouter({
-			middleware: [asyncContext(), renderWith(createHtmlRenderer) as Middleware],
+			middleware: [
+				asyncContext(),
+				database(() => db),
+				renderWith(createHtmlRenderer) as Middleware,
+			],
 		});
 		router.map(routes.app.team.dashboard.index, {
 			middleware: [seedTeam(team, membership)],
 			handler: (dashboardModule.default as { handler: RequestHandler<any> }).handler,
 		});
 
-		let container = new ServiceContainer();
-		container.instance(Database, db);
-
 		let request = new Request(
 			new URL(routes.app.team.dashboard.index.href({ team: team.slug }), "https://uptime.test"),
 		);
-		let response = await container.scope(() => router.fetch(request));
+		let response = await router.fetch(request);
 
 		expect(response.status).toBe(200);
 
@@ -143,20 +143,21 @@ describe("app/team/dashboard", () => {
 		let { db, team, membership } = await createFixture();
 
 		let router = createRouter({
-			middleware: [asyncContext(), renderWith(createHtmlRenderer) as Middleware],
+			middleware: [
+				asyncContext(),
+				database(() => db),
+				renderWith(createHtmlRenderer) as Middleware,
+			],
 		});
 		router.map(routes.app.team.dashboard.index, {
 			middleware: [seedTeam(team, membership)],
 			handler: (dashboardModule.default as { handler: RequestHandler<any> }).handler,
 		});
 
-		let container = new ServiceContainer();
-		container.instance(Database, db);
-
 		let request = new Request(
 			new URL(routes.app.team.dashboard.index.href({ team: team.slug }), "https://uptime.test"),
 		);
-		let body = await (await container.scope(() => router.fetch(request))).text();
+		let body = await (await router.fetch(request)).text();
 
 		let markers = frameMarkers(body);
 		let quickPing = markers.get("dashboard-quick-ping");
@@ -182,20 +183,21 @@ describe("app/team/dashboard", () => {
 		let { db, team, membership } = await createFixture();
 
 		let router = createRouter({
-			middleware: [asyncContext(), renderWith(createHtmlRenderer) as Middleware],
+			middleware: [
+				asyncContext(),
+				database(() => db),
+				renderWith(createHtmlRenderer) as Middleware,
+			],
 		});
 		router.map(routes.app.team.dashboard.index, {
 			middleware: [seedTeam(team, membership)],
 			handler: (dashboardModule.default as { handler: RequestHandler<any> }).handler,
 		});
 
-		let container = new ServiceContainer();
-		container.instance(Database, db);
-
 		let request = new Request(
 			new URL(routes.app.team.dashboard.index.href({ team: team.slug }), "https://uptime.test"),
 		);
-		let body = await (await container.scope(() => router.fetch(request))).text();
+		let body = await (await router.fetch(request)).text();
 
 		expect(body).toContain("block-size: 2.5rem");
 	});
@@ -204,20 +206,21 @@ describe("app/team/dashboard", () => {
 		let { db, team, membership } = await createFixture();
 
 		let router = createRouter({
-			middleware: [asyncContext(), renderWith(createHtmlRenderer) as Middleware],
+			middleware: [
+				asyncContext(),
+				database(() => db),
+				renderWith(createHtmlRenderer) as Middleware,
+			],
 		});
 		router.map(routes.app.team.dashboard.index, {
 			middleware: [seedTeam(team, membership)],
 			handler: (dashboardModule.default as { handler: RequestHandler<any> }).handler,
 		});
 
-		let container = new ServiceContainer();
-		container.instance(Database, db);
-
 		let request = new Request(
 			new URL(routes.app.team.dashboard.index.href({ team: team.slug }), "https://uptime.test"),
 		);
-		let response = await container.scope(() => router.fetch(request));
+		let response = await router.fetch(request);
 
 		expect(response.headers.get("Set-Cookie")).toContain("uptime:dashboard-tab");
 	});

@@ -22,7 +22,6 @@ import {
 	TriangleAlertIcon,
 } from "@sdxc/icons";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { combine, raw } from "@sdxc/u/general";
@@ -33,8 +32,6 @@ import { hover } from "@sdxc/u/state";
 import { fontSize, textAlign, textDecoration, weight } from "@sdxc/u/typography";
 import { Badge, Empty } from "@sdxc/ui";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import type { ServiceStatus } from "~/app/services/status-page";
@@ -146,303 +143,298 @@ function publicName(displayName: string | null, fallback: string): string {
  * cost to the team that owns the page (ADR-007 §5); its title and description
  * render as the team wrote them, carrying no translation.
  */
-export default createAction(
-	routes.statusPage,
-	inject([Database] as const, async (db) => {
-		let ctx = getContext();
-		let { slug } = s.parse(s.object({ slug: s.string() }), ctx.params);
+export default createAction(routes.statusPage, async (ctx) => {
+	let { slug } = s.parse(s.object({ slug: s.string() }), ctx.params);
 
-		let page = await StatusPage.findBySlugPublic(db, slug);
-		if (!page) return notFound("Not Found");
+	let page = await StatusPage.findBySlugPublic(ctx.db, slug);
+	if (!page) return notFound("Not Found");
 
-		apportionCostByTeam([page.team_id]);
+	apportionCostByTeam([page.team_id]);
 
-		let attachments = await StatusPage.listAttachments(db, page.id);
+	let attachments = await StatusPage.listAttachments(ctx.db, page.id);
 
-		let [allMonitors, allDnsMonitors, allTcpMonitors, allFlowMonitors, allCronJobs, httpSummaries] =
-			await Promise.all([
-				Monitor.listByTeam(db, page.team_id),
-				DnsMonitor.listByTeam(db, page.team_id),
-				TcpMonitor.listByTeam(db, page.team_id),
-				/**
-				 * Projected to `id`/`name`/`last_status` in the query itself: a flow's spec source
-				 * holds the credentials it signs in with, and this page renders to the world.
-				 */
-				StatusPage.listPublicFlowMonitors(db, page.team_id),
-				CronJobMonitor.listByTeam(db, page.team_id),
-				getTeamHttpSummaries(page.team_id),
-			]);
-
-		let healthByMonitorId = new Map(
-			isFailure(httpSummaries)
-				? []
-				: httpSummaries.data.map((summary) => [summary.monitorId, summary.health]),
-		);
-		let monitorsById = new Map(allMonitors.map((monitor) => [monitor.id, monitor]));
-		let dnsMonitorsById = new Map(allDnsMonitors.map((monitor) => [monitor.id, monitor]));
-		let tcpMonitorsById = new Map(allTcpMonitors.map((monitor) => [monitor.id, monitor]));
-		let flowMonitorsById = new Map(allFlowMonitors.map((monitor) => [monitor.id, monitor]));
-		let cronJobsById = new Map(allCronJobs.map((monitor) => [monitor.id, monitor]));
-
-		let [httpServices, dnsServices, tcpServices, flowServices] = await Promise.all([
-			Promise.all(
-				attachments.monitors
-					.flatMap((row) => {
-						let monitor = monitorsById.get(row.monitor_id);
-						return monitor ? [{ displayName: row.display_name, monitor }] : [];
-					})
-					.map(async ({ displayName, monitor }) => ({
-						kind: "http" as const,
-						id: monitor.id,
-						name: publicName(displayName, monitor.name),
-						status: deriveHttpStatus(healthByMonitorId.get(monitor.id) ?? "pending"),
-						days: await MonitorDailyStats.listRecentDays(db, monitor.id, "http"),
-					})),
-			),
-			Promise.all(
-				attachments.dnsMonitors
-					.flatMap((row) => {
-						let monitor = dnsMonitorsById.get(row.dns_monitor_id);
-						return monitor ? [{ displayName: row.display_name, monitor }] : [];
-					})
-					.map(async ({ displayName, monitor }) => ({
-						kind: "dns" as const,
-						id: monitor.id,
-						name: publicName(displayName, monitor.name),
-						status: deriveDnsStatus(monitor.last_status),
-						days: await MonitorDailyStats.listRecentDays(db, monitor.id, "dns"),
-					})),
-			),
-			Promise.all(
-				attachments.tcpMonitors
-					.flatMap((row) => {
-						let monitor = tcpMonitorsById.get(row.tcp_monitor_id);
-						return monitor ? [{ displayName: row.display_name, monitor }] : [];
-					})
-					.map(async ({ displayName, monitor }) => ({
-						kind: "tcp" as const,
-						id: monitor.id,
-						name: publicName(displayName, monitor.name),
-						status: deriveTcpStatus(monitor.last_status),
-						days: await MonitorDailyStats.listRecentDays(db, monitor.id, "tcp"),
-					})),
-			),
-			Promise.all(
-				attachments.flowMonitors
-					.flatMap((row) => {
-						let monitor = flowMonitorsById.get(row.flow_monitor_id);
-						return monitor ? [{ displayName: row.display_name, monitor }] : [];
-					})
-					.map(async ({ displayName, monitor }) => ({
-						kind: "flow" as const,
-						id: monitor.id,
-						name: publicName(displayName, monitor.name),
-						status: deriveFlowStatus(monitor.last_status),
-						days: await MonitorDailyStats.listRecentDays(db, monitor.id, "flow"),
-					})),
-			),
+	let [allMonitors, allDnsMonitors, allTcpMonitors, allFlowMonitors, allCronJobs, httpSummaries] =
+		await Promise.all([
+			Monitor.listByTeam(ctx.db, page.team_id),
+			DnsMonitor.listByTeam(ctx.db, page.team_id),
+			TcpMonitor.listByTeam(ctx.db, page.team_id),
+			/**
+			 * Projected to `id`/`name`/`last_status` in the query itself: a flow's spec source
+			 * holds the credentials it signs in with, and this page renders to the world.
+			 */
+			StatusPage.listPublicFlowMonitors(ctx.db, page.team_id),
+			CronJobMonitor.listByTeam(ctx.db, page.team_id),
+			getTeamHttpSummaries(page.team_id),
 		]);
 
-		let cronServices = attachments.cronJobs
-			.flatMap((row) => {
-				let monitor = cronJobsById.get(row.cron_job_monitor_id);
-				return monitor ? [{ displayName: row.display_name, monitor }] : [];
-			})
-			.map(({ displayName, monitor }) => ({
-				kind: "cron" as const,
-				id: monitor.id,
-				name: publicName(displayName, monitor.name),
-				cronExpression: monitor.cron_expression,
-				lastPingAt: monitor.last_ping_at,
-				status: deriveCronStatus(monitor.status),
-			}));
+	let healthByMonitorId = new Map(
+		isFailure(httpSummaries)
+			? []
+			: httpSummaries.data.map((summary) => [summary.monitorId, summary.health]),
+	);
+	let monitorsById = new Map(allMonitors.map((monitor) => [monitor.id, monitor]));
+	let dnsMonitorsById = new Map(allDnsMonitors.map((monitor) => [monitor.id, monitor]));
+	let tcpMonitorsById = new Map(allTcpMonitors.map((monitor) => [monitor.id, monitor]));
+	let flowMonitorsById = new Map(allFlowMonitors.map((monitor) => [monitor.id, monitor]));
+	let cronJobsById = new Map(allCronJobs.map((monitor) => [monitor.id, monitor]));
 
-		let overallStatus = computeOverallStatus([
-			...httpServices.map((service) => service.status),
-			...dnsServices.map((service) => service.status),
-			...tcpServices.map((service) => service.status),
-			...flowServices.map((service) => service.status),
-			...cronServices.map((service) => service.status),
-		]);
+	let [httpServices, dnsServices, tcpServices, flowServices] = await Promise.all([
+		Promise.all(
+			attachments.monitors
+				.flatMap((row) => {
+					let monitor = monitorsById.get(row.monitor_id);
+					return monitor ? [{ displayName: row.display_name, monitor }] : [];
+				})
+				.map(async ({ displayName, monitor }) => ({
+					kind: "http" as const,
+					id: monitor.id,
+					name: publicName(displayName, monitor.name),
+					status: deriveHttpStatus(healthByMonitorId.get(monitor.id) ?? "pending"),
+					days: await MonitorDailyStats.listRecentDays(ctx.db, monitor.id, "http"),
+				})),
+		),
+		Promise.all(
+			attachments.dnsMonitors
+				.flatMap((row) => {
+					let monitor = dnsMonitorsById.get(row.dns_monitor_id);
+					return monitor ? [{ displayName: row.display_name, monitor }] : [];
+				})
+				.map(async ({ displayName, monitor }) => ({
+					kind: "dns" as const,
+					id: monitor.id,
+					name: publicName(displayName, monitor.name),
+					status: deriveDnsStatus(monitor.last_status),
+					days: await MonitorDailyStats.listRecentDays(ctx.db, monitor.id, "dns"),
+				})),
+		),
+		Promise.all(
+			attachments.tcpMonitors
+				.flatMap((row) => {
+					let monitor = tcpMonitorsById.get(row.tcp_monitor_id);
+					return monitor ? [{ displayName: row.display_name, monitor }] : [];
+				})
+				.map(async ({ displayName, monitor }) => ({
+					kind: "tcp" as const,
+					id: monitor.id,
+					name: publicName(displayName, monitor.name),
+					status: deriveTcpStatus(monitor.last_status),
+					days: await MonitorDailyStats.listRecentDays(ctx.db, monitor.id, "tcp"),
+				})),
+		),
+		Promise.all(
+			attachments.flowMonitors
+				.flatMap((row) => {
+					let monitor = flowMonitorsById.get(row.flow_monitor_id);
+					return monitor ? [{ displayName: row.display_name, monitor }] : [];
+				})
+				.map(async ({ displayName, monitor }) => ({
+					kind: "flow" as const,
+					id: monitor.id,
+					name: publicName(displayName, monitor.name),
+					status: deriveFlowStatus(monitor.last_status),
+					days: await MonitorDailyStats.listRecentDays(ctx.db, monitor.id, "flow"),
+				})),
+		),
+	]);
 
-		let barServices = [...httpServices, ...dnsServices, ...tcpServices, ...flowServices];
-		let isEmpty = barServices.length === 0 && cronServices.length === 0;
-		let BannerIcon = BANNER_ICON[overallStatus];
+	let cronServices = attachments.cronJobs
+		.flatMap((row) => {
+			let monitor = cronJobsById.get(row.cron_job_monitor_id);
+			return monitor ? [{ displayName: row.display_name, monitor }] : [];
+		})
+		.map(({ displayName, monitor }) => ({
+			kind: "cron" as const,
+			id: monitor.id,
+			name: publicName(displayName, monitor.name),
+			cronExpression: monitor.cron_expression,
+			lastPingAt: monitor.last_ping_at,
+			status: deriveCronStatus(monitor.status),
+		}));
 
-		let bannerLabel: Record<ServiceStatus, string> = {
-			operational: ctx.i18next.t("statusPage.banner.operational"),
-			degraded: ctx.i18next.t("statusPage.banner.degraded"),
-			down: ctx.i18next.t("statusPage.banner.down"),
-			unknown: ctx.i18next.t("statusPage.banner.operational"),
-		};
-		let statusLabel: Record<ServiceStatus, string> = {
-			operational: ctx.i18next.t("statusPage.status.operational"),
-			degraded: ctx.i18next.t("statusPage.status.degraded"),
-			down: ctx.i18next.t("statusPage.status.down"),
-			unknown: ctx.i18next.t("statusPage.status.unknown"),
-		};
-		let uptimeBarLabels = {
-			daysAgo: ctx.i18next.t("statusPage.uptimeBar.daysAgo"),
-			today: ctx.i18next.t("statusPage.uptimeBar.today"),
-			legend: {
-				full: ctx.i18next.t("statusPage.uptimeBar.legend.full"),
-				partial: ctx.i18next.t("statusPage.uptimeBar.legend.partial"),
-				down: ctx.i18next.t("statusPage.uptimeBar.legend.down"),
-				noData: ctx.i18next.t("statusPage.uptimeBar.legend.noData"),
-			},
-		};
-		let formatUptime = (percentage: string) =>
-			ctx.i18next.t("statusPage.uptimeBar.tooltip.uptime", { percentage });
+	let overallStatus = computeOverallStatus([
+		...httpServices.map((service) => service.status),
+		...dnsServices.map((service) => service.status),
+		...tcpServices.map((service) => service.status),
+		...flowServices.map((service) => service.status),
+		...cronServices.map((service) => service.status),
+	]);
 
-		/**
-		 * The moment the page reports as its own, rounded down to the start of the
-		 * current {@link CACHE_WINDOW_MS}. Rounding ties the reported time to the
-		 * data's freshness window, keeping a repeat viewer's `ETag` stable within it.
-		 */
-		let renderedAt = new Date(Math.floor(Date.now() / CACHE_WINDOW_MS) * CACHE_WINDOW_MS);
+	let barServices = [...httpServices, ...dnsServices, ...tcpServices, ...flowServices];
+	let isEmpty = barServices.length === 0 && cronServices.length === 0;
+	let BannerIcon = BANNER_ICON[overallStatus];
 
-		let response = await ctx.render(
-			<DocumentLayout
-				title={page.title}
-				locale={ctx.locale}
-				seo={{
-					description: page.description ?? page.title,
-					canonical: SEO.canonical(ctx.url),
-				}}
-			>
-				<main mix={[maxIs("640px"), m(0, "auto"), p("40px", "20px")]}>
-					<div mix={[vstack({ align: "center", gap: "4px" }), textAlign("center"), mbe("32px")]}>
-						{page.logo_url && (
-							<img src={page.logo_url} alt={page.name} width={64} height={64} mix={[mbe("12px")]} />
-						)}
-						<h1 mix={[m(0, 0, "4px", 0), fontSize("1.875rem"), weight(700)]}>{page.title}</h1>
-						{page.description && (
-							<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>{page.description}</p>
-						)}
-					</div>
+	let bannerLabel: Record<ServiceStatus, string> = {
+		operational: ctx.i18next.t("statusPage.banner.operational"),
+		degraded: ctx.i18next.t("statusPage.banner.degraded"),
+		down: ctx.i18next.t("statusPage.banner.down"),
+		unknown: ctx.i18next.t("statusPage.banner.operational"),
+	};
+	let statusLabel: Record<ServiceStatus, string> = {
+		operational: ctx.i18next.t("statusPage.status.operational"),
+		degraded: ctx.i18next.t("statusPage.status.degraded"),
+		down: ctx.i18next.t("statusPage.status.down"),
+		unknown: ctx.i18next.t("statusPage.status.unknown"),
+	};
+	let uptimeBarLabels = {
+		daysAgo: ctx.i18next.t("statusPage.uptimeBar.daysAgo"),
+		today: ctx.i18next.t("statusPage.uptimeBar.today"),
+		legend: {
+			full: ctx.i18next.t("statusPage.uptimeBar.legend.full"),
+			partial: ctx.i18next.t("statusPage.uptimeBar.legend.partial"),
+			down: ctx.i18next.t("statusPage.uptimeBar.legend.down"),
+			noData: ctx.i18next.t("statusPage.uptimeBar.legend.noData"),
+		},
+	};
+	let formatUptime = (percentage: string) =>
+		ctx.i18next.t("statusPage.uptimeBar.tooltip.uptime", { percentage });
 
-					{page.show_overall_status && (
-						<div
-							mix={[
-								hstack({ align: "center", justify: "center", gap: "10px" }),
-								p("14px", "18px"),
-								rounded("8px"),
-								border({ color: "transparent", width: 1 }),
-								weight(600),
-								mbe("24px"),
-								BANNER_MIX[overallStatus],
-							]}
-						>
-							<BannerIcon size={22} />
-							<span>{bannerLabel[overallStatus]}</span>
-						</div>
+	/**
+	 * The moment the page reports as its own, rounded down to the start of the
+	 * current {@link CACHE_WINDOW_MS}. Rounding ties the reported time to the
+	 * data's freshness window, keeping a repeat viewer's `ETag` stable within it.
+	 */
+	let renderedAt = new Date(Math.floor(Date.now() / CACHE_WINDOW_MS) * CACHE_WINDOW_MS);
+
+	let response = await ctx.render(
+		<DocumentLayout
+			title={page.title}
+			locale={ctx.locale}
+			seo={{
+				description: page.description ?? page.title,
+				canonical: SEO.canonical(ctx.url),
+			}}
+		>
+			<main mix={[maxIs("640px"), m(0, "auto"), p("40px", "20px")]}>
+				<div mix={[vstack({ align: "center", gap: "4px" }), textAlign("center"), mbe("32px")]}>
+					{page.logo_url && (
+						<img src={page.logo_url} alt={page.name} width={64} height={64} mix={[mbe("12px")]} />
 					)}
+					<h1 mix={[m(0, 0, "4px", 0), fontSize("1.875rem"), weight(700)]}>{page.title}</h1>
+					{page.description && (
+						<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>{page.description}</p>
+					)}
+				</div>
 
-					{isEmpty ? (
-						<Empty>
-							<Empty.Description>{ctx.i18next.t("statusPage.empty.description")}</Empty.Description>
-						</Empty>
-					) : (
-						<>
-							{barServices.map((service) => (
-								<div
-									key={`${service.kind}-${service.id}`}
-									mix={[
-										vstack({ gap: "8px" }),
-										p("16px"),
-										rounded("8px"),
-										border({ color: "neutral.border", width: 1 }),
-										raw({ background: "#ffffff" }),
-										mbe("12px"),
-										dark(bg("neutral.tint")),
-									]}
-								>
-									<div mix={[hstack({ align: "center", gap: "12px" })]}>
-										<CardStatusIcon status={service.status} />
-										<strong>{service.name}</strong>
-										<Badge {...badgeVariant(BADGE_TONE[service.status])}>
-											{statusLabel[service.status]}
-										</Badge>
-									</div>
-									{service.kind === "dns" && (
-										<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-											{ctx.i18next.t("statusPage.dns.coverage")}
-										</p>
-									)}
-									<UptimeBar
-										days={service.days}
-										labels={uptimeBarLabels}
-										formatUptime={formatUptime}
-									/>
+				{page.show_overall_status && (
+					<div
+						mix={[
+							hstack({ align: "center", justify: "center", gap: "10px" }),
+							p("14px", "18px"),
+							rounded("8px"),
+							border({ color: "transparent", width: 1 }),
+							weight(600),
+							mbe("24px"),
+							BANNER_MIX[overallStatus],
+						]}
+					>
+						<BannerIcon size={22} />
+						<span>{bannerLabel[overallStatus]}</span>
+					</div>
+				)}
+
+				{isEmpty ? (
+					<Empty>
+						<Empty.Description>{ctx.i18next.t("statusPage.empty.description")}</Empty.Description>
+					</Empty>
+				) : (
+					<>
+						{barServices.map((service) => (
+							<div
+								key={`${service.kind}-${service.id}`}
+								mix={[
+									vstack({ gap: "8px" }),
+									p("16px"),
+									rounded("8px"),
+									border({ color: "neutral.border", width: 1 }),
+									raw({ background: "#ffffff" }),
+									mbe("12px"),
+									dark(bg("neutral.tint")),
+								]}
+							>
+								<div mix={[hstack({ align: "center", gap: "12px" })]}>
+									<CardStatusIcon status={service.status} />
+									<strong>{service.name}</strong>
+									<Badge {...badgeVariant(BADGE_TONE[service.status])}>
+										{statusLabel[service.status]}
+									</Badge>
 								</div>
-							))}
+								{service.kind === "dns" && (
+									<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
+										{ctx.i18next.t("statusPage.dns.coverage")}
+									</p>
+								)}
+								<UptimeBar
+									days={service.days}
+									labels={uptimeBarLabels}
+									formatUptime={formatUptime}
+								/>
+							</div>
+						))}
 
-							{cronServices.length > 0 && (
-								<>
-									{barServices.length > 0 && <h2>{ctx.i18next.t("statusPage.cronJobs.title")}</h2>}
-									{cronServices.map((service) => (
-										<div
-											key={service.id}
+						{cronServices.length > 0 && (
+							<>
+								{barServices.length > 0 && <h2>{ctx.i18next.t("statusPage.cronJobs.title")}</h2>}
+								{cronServices.map((service) => (
+									<div
+										key={service.id}
+										mix={[
+											vstack({ gap: "8px" }),
+											p("16px"),
+											rounded("8px"),
+											border({ color: "neutral.border", width: 1 }),
+											raw({ background: "#ffffff" }),
+											mbe("12px"),
+											dark(bg("neutral.tint")),
+										]}
+									>
+										<div mix={[hstack({ align: "center", gap: "12px" })]}>
+											<CardStatusIcon status={service.status} />
+											<strong>{service.name}</strong>
+											<Badge {...badgeVariant(BADGE_TONE[service.status])}>
+												{statusLabel[service.status]}
+											</Badge>
+										</div>
+										<p
 											mix={[
-												vstack({ gap: "8px" }),
-												p("16px"),
-												rounded("8px"),
-												border({ color: "neutral.border", width: 1 }),
-												raw({ background: "#ffffff" }),
-												mbe("12px"),
-												dark(bg("neutral.tint")),
+												hstack({ align: "center", gap: "4px" }),
+												fontSize("0.8125rem"),
+												fg("neutral.muted"),
 											]}
 										>
-											<div mix={[hstack({ align: "center", gap: "12px" })]}>
-												<CardStatusIcon status={service.status} />
-												<strong>{service.name}</strong>
-												<Badge {...badgeVariant(BADGE_TONE[service.status])}>
-													{statusLabel[service.status]}
-												</Badge>
-											</div>
-											<p
-												mix={[
-													hstack({ align: "center", gap: "4px" }),
-													fontSize("0.8125rem"),
-													fg("neutral.muted"),
-												]}
-											>
-												<ClockIcon size={12} />
-												<span>
-													{ctx.i18next.t("statusPage.cronJobs.schedule")}:{" "}
-													<code>{service.cronExpression}</code>
-												</span>
-											</p>
-											<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-												{ctx.i18next.t("statusPage.cronJobs.lastPing")}:{" "}
-												{service.lastPingAt
-													? new Date(service.lastPingAt).toLocaleString()
-													: ctx.i18next.t("statusPage.cronJobs.never")}
-											</p>
-										</div>
-									))}
-								</>
-							)}
-						</>
-					)}
+											<ClockIcon size={12} />
+											<span>
+												{ctx.i18next.t("statusPage.cronJobs.schedule")}:{" "}
+												<code>{service.cronExpression}</code>
+											</span>
+										</p>
+										<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
+											{ctx.i18next.t("statusPage.cronJobs.lastPing")}:{" "}
+											{service.lastPingAt
+												? new Date(service.lastPingAt).toLocaleString()
+												: ctx.i18next.t("statusPage.cronJobs.never")}
+										</p>
+									</div>
+								))}
+							</>
+						)}
+					</>
+				)}
 
-					<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-						{ctx.i18next.t("statusPage.footer.lastUpdated", { date: renderedAt.toLocaleString() })}{" "}
-						·{" "}
-						<a
-							href={routes.home.href()}
-							mix={[fg("brand"), textDecoration("none"), hover(textDecoration("underline"))]}
-						>
-							{ctx.i18next.t("statusPage.footer.poweredBy")}
-						</a>
-					</p>
-				</main>
-			</DocumentLayout>,
-		);
+				<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
+					{ctx.i18next.t("statusPage.footer.lastUpdated", { date: renderedAt.toLocaleString() })} ·{" "}
+					<a
+						href={routes.home.href()}
+						mix={[fg("brand"), textDecoration("none"), hover(textDecoration("underline"))]}
+					>
+						{ctx.i18next.t("statusPage.footer.poweredBy")}
+					</a>
+				</p>
+			</main>
+		</DocumentLayout>,
+	);
 
-		return await withCachePolicy(ctx.request, response);
-	}),
-);
+	return await withCachePolicy(ctx.request, response);
+});
 
 /**
  * Gives a rendered page its HTTP cache policy and answers a still-current

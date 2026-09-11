@@ -8,12 +8,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
 import healthcheck from "~/app/http/controllers/healthcheck";
+import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import routes from "~/routes/web";
 
@@ -34,14 +33,11 @@ function withFailingCount(db: Db): Db {
 }
 
 async function dispatch(db: Db) {
-	let router = createRouter();
+	let router = createRouter({ middleware: [database(() => db)] });
 	router.map(routes.healthcheck, healthcheck);
 
-	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
-
 	let request = new Request(`https://example.com${routes.healthcheck.href()}`);
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 describe("GET /healthcheck", () => {

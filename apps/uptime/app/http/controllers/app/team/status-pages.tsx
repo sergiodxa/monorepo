@@ -6,13 +6,10 @@
  */
 
 import { FileTextIcon, PlusIcon } from "@sdxc/icons";
-import { inject } from "@sdxc/service-container";
 import { fg } from "@sdxc/u/color";
 import { hover } from "@sdxc/u/state";
 import { textDecoration } from "@sdxc/u/typography";
 import { Badge, Empty, LinkButton, Table } from "@sdxc/ui";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import StatusPage from "~/app/data/status-page";
@@ -27,15 +24,14 @@ import routes from "~/routes/web";
 /** GET /app/:team/status-pages — the team's status pages list. */
 export default createAction(routes.app.team.statusPages.index, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let pages = await StatusPage.listByTeam(db, ctx.team.id);
+		let pages = await StatusPage.listByTeam(ctx.db, ctx.team.id);
 		let attachedCounts = await Promise.all(
 			pages.map(async (page) => {
-				let ids = await StatusPage.getAttachedIds(db, page.id);
+				let ids = await StatusPage.getAttachedIds(ctx.db, page.id);
 				return (
 					ids.monitorIds.length +
 					ids.dnsMonitorIds.length +
@@ -158,5 +154,5 @@ export default createAction(routes.app.team.statusPages.index, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });

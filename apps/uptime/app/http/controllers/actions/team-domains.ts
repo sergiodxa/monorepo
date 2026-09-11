@@ -10,10 +10,8 @@
 import { redirect } from "@sdxc/http/response";
 import { badRequest, notFound } from "@sdxc/http/response/html";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import { waitUntil } from "cloudflare:workers";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
@@ -39,15 +37,14 @@ export const addDomain = createAction(routes.teamAdminActions.domain.add, async 
 		});
 	}
 
-	let db = getServiceContainer().get(Database);
 	let { hostname } = result.data;
 
-	let existing = await TeamDomain.findByHostnameForTeam(db, ctx.team.id, hostname);
+	let existing = await TeamDomain.findByHostnameForTeam(ctx.db, ctx.team.id, hostname);
 	if (existing && existing.verified_at !== null) {
 		return badRequest(`${hostname} is already verified for this team.`);
 	}
 
-	let domain = existing ?? (await TeamDomain.create(db, ctx.team.id, hostname));
+	let domain = existing ?? (await TeamDomain.create(ctx.db, ctx.team.id, hostname));
 	waitUntil(enqueue(jobs.verifyDomainOwnership, { teamDomainId: domain.id }));
 
 	session?.flash("toast", {
@@ -70,11 +67,10 @@ export const removeDomain = createAction(routes.teamAdminActions.domain.remove, 
 		});
 	}
 
-	let db = getServiceContainer().get(Database);
-	let domain = await TeamDomain.findByIdForTeam(db, ctx.team.id, result.data.domain_id);
+	let domain = await TeamDomain.findByIdForTeam(ctx.db, ctx.team.id, result.data.domain_id);
 	if (!domain) return notFound("Not Found");
 
-	await TeamDomain.deleteById(db, domain.id);
+	await TeamDomain.deleteById(ctx.db, domain.id);
 
 	session?.flash("toast", { intent: "success", message: `${domain.hostname} removed.` });
 	return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {
@@ -95,8 +91,7 @@ export const retryDomainVerification = createAction(
 			});
 		}
 
-		let db = getServiceContainer().get(Database);
-		let domain = await TeamDomain.findByIdForTeam(db, ctx.team.id, result.data.domain_id);
+		let domain = await TeamDomain.findByIdForTeam(ctx.db, ctx.team.id, result.data.domain_id);
 		if (!domain) return notFound("Not Found");
 
 		if (domain.verified_at === null) {

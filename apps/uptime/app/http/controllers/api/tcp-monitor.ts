@@ -10,11 +10,9 @@
 import { BadRequest, InternalServerError, NotFound } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
-import { Database } from "remix/data-table";
 import { createController } from "remix/router";
 
 import type { InsertTcpMonitor, SelectTcpMonitor } from "~/database/schema";
@@ -71,8 +69,7 @@ export default createController(tcpMonitorRoutes, {
 			middleware: [requireApiKey("tcp-monitors:read")],
 			handler: async (ctx) => {
 				let { tcpMonitorId } = s.parse(TcpMonitorIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let monitor = await TcpMonitor.findByIdForTeam(db, ctx.apiTeam.id, tcpMonitorId);
+				let monitor = await TcpMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, tcpMonitorId);
 				if (!monitor) return apiError("NOT_FOUND", "TCP monitor not found", NotFound);
 				return apiSuccess({ monitor: serializeTcpMonitor(monitor) });
 			},
@@ -83,8 +80,7 @@ export default createController(tcpMonitorRoutes, {
 			middleware: [requireApiKey("tcp-monitors:write")],
 			handler: async (ctx) => {
 				let { tcpMonitorId } = s.parse(TcpMonitorIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let existing = await TcpMonitor.findByIdForTeam(db, ctx.apiTeam.id, tcpMonitorId);
+				let existing = await TcpMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, tcpMonitorId);
 				if (!existing) return apiError("NOT_FOUND", "TCP monitor not found", NotFound);
 
 				let result = await validate(ctx.request, UpdateTcpMonitorSchema);
@@ -105,7 +101,7 @@ export default createController(tcpMonitorRoutes, {
 					changes.interval_seconds = result.data.intervalSeconds;
 				if (result.data.isEnabled !== undefined) changes.is_enabled = result.data.isEnabled;
 
-				let monitor = await TcpMonitor.updateById(db, tcpMonitorId, changes);
+				let monitor = await TcpMonitor.updateById(ctx.db, tcpMonitorId, changes);
 				return apiSuccess({ monitor: serializeTcpMonitor(monitor) });
 			},
 		},
@@ -115,11 +111,10 @@ export default createController(tcpMonitorRoutes, {
 			middleware: [requireApiKey("tcp-monitors:write")],
 			handler: async (ctx) => {
 				let { tcpMonitorId } = s.parse(TcpMonitorIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let existing = await TcpMonitor.findByIdForTeam(db, ctx.apiTeam.id, tcpMonitorId);
+				let existing = await TcpMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, tcpMonitorId);
 				if (!existing) return apiError("NOT_FOUND", "TCP monitor not found", NotFound);
 
-				await TcpMonitor.deleteById(db, tcpMonitorId);
+				await TcpMonitor.deleteById(ctx.db, tcpMonitorId);
 				return apiSuccess({ deleted: true });
 			},
 		},
@@ -129,14 +124,13 @@ export default createController(tcpMonitorRoutes, {
 			middleware: [requireApiKey("tcp-monitors:read")],
 			handler: async (ctx) => {
 				let { tcpMonitorId } = s.parse(TcpMonitorIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let monitor = await TcpMonitor.findByIdForTeam(db, ctx.apiTeam.id, tcpMonitorId);
+				let monitor = await TcpMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, tcpMonitorId);
 				if (!monitor) return apiError("NOT_FOUND", "TCP monitor not found", NotFound);
 
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
 
-				let page = await Pagination.byKeyset(TcpMonitor.resultsQuery(db, tcpMonitorId), {
+				let page = await Pagination.byKeyset(TcpMonitor.resultsQuery(ctx.db, tcpMonitorId), {
 					orderBy: newestFirst("checked_at"),
 					cursor: params.data.cursor,
 					limit: params.data.perPage,

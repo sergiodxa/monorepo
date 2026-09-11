@@ -18,9 +18,7 @@ import {
 	createDurableObjectNamespace,
 	createEnv,
 } from "@sdxc/cloudflare-mocks";
-import { ServiceContainer } from "@sdxc/service-container";
 import { createCookie } from "remix/cookie";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { session } from "remix/middleware/session";
@@ -35,6 +33,7 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectTeam } from "~/database/schema";
 
 import { auth } from "~/app/http/middleware/auth";
+import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { signIn } from "~/app/lib/test/auth";
 import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/lib/test/billing";
@@ -149,6 +148,7 @@ function createTestRouter(db: Db) {
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			database(() => db),
 			billing({ provider: () => testBilling }),
 			session(sessionCookie, sessionStorage),
 			(_ctx, next) => {
@@ -170,10 +170,7 @@ function createTestRouter(db: Db) {
 		});
 	});
 
-	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
-
-	return { router, container };
+	return router;
 }
 
 /** The `Cookie` header a browser would send back, from a response's `Set-Cookie`s. */
@@ -190,7 +187,7 @@ function cookieHeader(response: Response): string {
  * flash only readable one request after it was written, exactly how the dashboard reads it.
  */
 async function dispatch(db: Db, team: SelectTeam, url: string) {
-	let { router, container } = createTestRouter(db);
+	let router = createTestRouter(db);
 
 	let request = new Request(
 		new URL(routes.actions.runPing.href({ team: team.slug }), "https://uptime.test"),
@@ -201,13 +198,11 @@ async function dispatch(db: Db, team: SelectTeam, url: string) {
 		},
 	);
 
-	let response = await container.scope(() => router.fetch(request));
+	let response = await router.fetch(request);
 	await Promise.all(deferred.splice(0));
 
-	let read = await container.scope(() =>
-		router.fetch(
-			new Request("https://uptime.test/flashed", { headers: { Cookie: cookieHeader(response) } }),
-		),
+	let read = await router.fetch(
+		new Request("https://uptime.test/flashed", { headers: { Cookie: cookieHeader(response) } }),
 	);
 
 	return { response, flashed: (await read.json()) as FlashedState };

@@ -15,9 +15,7 @@
 
 import { redirect } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
@@ -59,9 +57,8 @@ export const importMonitors = createAction(routes.actions.monitor.http.import, a
 
 	let plan = parseMonitorImportList(result.data.urls);
 
-	let db = getServiceContainer().get(Database);
 	for (let candidate of plan.accepted) {
-		await Monitor.create(db, ctx.team.id, viewer.id, {
+		await Monitor.create(ctx.db, ctx.team.id, viewer.id, {
 			name: candidate.name,
 			url: candidate.url,
 			interval_seconds: result.data.interval_seconds,

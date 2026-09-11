@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
@@ -19,16 +20,15 @@ import {
 	createQueue,
 } from "@sdxc/cloudflare-mocks";
 import { createTranslator } from "@sdxc/i18n";
-import { ServiceContainer } from "@sdxc/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { renderToStream } from "remix/ui/server";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
+import { database } from "~/app/http/middleware/database";
 import { SEO } from "~/app/lib/seo";
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
@@ -125,11 +125,8 @@ async function createFixture() {
 
 /** Sends a GET request through a minimal router mapping the public status page route. */
 async function get(db: Database, slug: string, headers?: HeadersInit): Promise<Response> {
-	let container = new ServiceContainer();
-	container.instance(Database, db);
-
 	let router = createRouter({
-		middleware: [asyncContext(), renderWith(createHtmlRenderer) as Middleware],
+		middleware: [asyncContext(), database(() => db), renderWith(createHtmlRenderer) as Middleware],
 	});
 	router.map(routes.statusPage, {
 		middleware: [seedLocale()],
@@ -140,7 +137,7 @@ async function get(db: Database, slug: string, headers?: HeadersInit): Promise<R
 		headers,
 	});
 
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 /** Creates a public status page with no monitors attached, for the cache-header cases. */

@@ -10,10 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { inject } from "@sdxc/service-container";
 import { Button } from "@sdxc/ui";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import TeamDomain from "~/app/data/team-domain";
@@ -30,12 +27,11 @@ import routes from "~/routes/web";
 /** GET /app/:team/flows/new — the new flow monitor form. */
 export default createAction(routes.app.team.flowMonitors.new, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let verifiedDomains = await TeamDomain.verifiedHostnamesForTeam(db, ctx.team.id);
+		let verifiedDomains = await TeamDomain.verifiedHostnamesForTeam(ctx.db, ctx.team.id);
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · New flow monitor`}>
@@ -90,5 +86,5 @@ export default createAction(routes.app.team.flowMonitors.new, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });

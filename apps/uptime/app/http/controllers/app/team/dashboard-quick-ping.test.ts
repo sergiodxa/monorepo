@@ -9,14 +9,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
 import { createTranslator } from "@sdxc/i18n";
-import { ServiceContainer } from "@sdxc/service-container";
 import { createCookie } from "remix/cookie";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
@@ -31,6 +30,7 @@ import type { QuickPingError, QuickPingResult } from "~/app/http/controllers/act
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
 import { memberships, teams } from "~/database/schema";
@@ -147,6 +147,7 @@ async function render(
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			database(() => db),
 			session(sessionCookie, sessionStorage),
 			renderWith(createHtmlRenderer) as Middleware,
 		],
@@ -161,9 +162,6 @@ async function render(
 		handler: quickPing.handler,
 	});
 
-	let container = new ServiceContainer();
-	container.instance(Database, db);
-
 	let headers = new Headers();
 	if (cookie !== undefined) headers.set("Cookie", cookie);
 
@@ -172,7 +170,7 @@ async function render(
 		{ headers },
 	);
 
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 /** An `up` result, as the action stores one — a fresh id each time, as the action mints one. */

@@ -8,11 +8,9 @@
 
 import { BadRequest } from "@sdxc/http/status-code";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
-import { Database } from "remix/data-table";
 import { createController } from "remix/router";
 
 import type { InsertTeam, SelectTeam } from "~/database/schema";
@@ -79,8 +77,7 @@ export default createController(teamRoutes, {
 				if (result.data.name !== undefined) changes.name = result.data.name;
 				if (result.data.logoUrl !== undefined) changes.logo = result.data.logoUrl;
 
-				let db = getServiceContainer().get(Database);
-				let team = await Team.updateById(db, ctx.apiTeam.id, changes);
+				let team = await Team.updateById(ctx.db, ctx.apiTeam.id, changes);
 				return apiSuccess({ team: serializeTeam(team) });
 			},
 		},

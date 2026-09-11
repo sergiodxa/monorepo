@@ -19,7 +19,6 @@ import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { failure } from "@sdxc/result";
-import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -125,6 +124,7 @@ vi.doMock("~/app/services/dns-check", () => ({
 
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let checkDns = (await import("./check-dns")).default;
 let { QUERIES_PER_NAME } = realDnsCheckModule;
 let { MAX_NAMES_PER_CHECK } = await import("~/app/services/dns-discovery");
@@ -136,17 +136,15 @@ function enqueued(): NotifyEnvelope[] {
 
 /** Runs the handler over a context carrying the test's database, and returns its record. */
 async function runJob(db: Database) {
-	let container = new ServiceContainer();
-	container.singleton(
-		Mailer,
-		() => new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }),
-	);
 	let record: Record<string, unknown> = {};
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.checkDns, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	ctx.set(JobMailer, new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }), {
+		property: "mailer",
+	});
 
-	await container.scope(() => checkDns(ctx));
+	await checkDns(ctx);
 	log.emit();
 	return record;
 }

@@ -16,11 +16,9 @@ import {
 	createEnv,
 	createRateLimit,
 } from "@sdxc/cloudflare-mocks";
-import { ServiceContainer } from "@sdxc/service-container";
 import { TypeID } from "@sdxc/typeid";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
@@ -29,6 +27,7 @@ import type { GeoFetchDO } from "~/app/do/geo-fetch";
 import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
+import { database } from "~/app/http/middleware/database";
 import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
 import {
@@ -184,12 +183,9 @@ async function dispatch(
 	request: { key?: string; body?: Record<string, unknown> | unknown[] },
 ) {
 	let router = createRouter({
-		middleware: [asyncContext(), billing({ provider: () => testBilling })],
+		middleware: [asyncContext(), database(() => db), billing({ provider: () => testBilling })],
 	});
 	router.map(routes.api.v1.ping, pingCreate);
-
-	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
 
 	let headers: Record<string, string> = { "content-type": "application/json" };
 	if (request.key !== undefined) headers.Authorization = `Bearer ${request.key}`;
@@ -200,7 +196,7 @@ async function dispatch(
 		body: JSON.stringify(request.body ?? {}),
 	});
 
-	let response = await container.scope(() => router.fetch(httpRequest));
+	let response = await router.fetch(httpRequest);
 	await Promise.all(deferred.splice(0));
 	return response;
 }

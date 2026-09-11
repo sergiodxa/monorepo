@@ -12,6 +12,7 @@
  */
 
 import type { Billing, Checkout } from "@sdxc/billing";
+import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
@@ -20,8 +21,6 @@ import { MemoryBilling } from "@sdxc/billing/providers/memory";
 import { createTranslator } from "@sdxc/i18n";
 import { log } from "@sdxc/logger/middleware";
 import { unwrap } from "@sdxc/result";
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
@@ -32,6 +31,7 @@ import { describe, expect, test, vi } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { database } from "~/app/http/middleware/database";
 import { createActiveSubscription, createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
@@ -101,6 +101,7 @@ async function renderCheckout(
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			database(() => db),
 			log() as Middleware,
 			billing({ provider: platform }),
 			renderWith(createHtmlRenderer) as Middleware,
@@ -111,14 +112,11 @@ async function renderCheckout(
 		handler: (checkoutModule.default as { handler: RequestHandler<any> }).handler,
 	});
 
-	let container = new ServiceContainer();
-	container.instance(Database, db);
-
 	let request = new Request(
 		new URL(routes.app.team.checkout.href({ team: team.slug }), "https://uptime.test"),
 		{ redirect: "manual" },
 	);
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 /** The maps the platform keeps its state in, for the one checkout no method lists back. */

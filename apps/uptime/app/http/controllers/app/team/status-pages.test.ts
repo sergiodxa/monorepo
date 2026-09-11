@@ -10,12 +10,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
 import { createTranslator } from "@sdxc/i18n";
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
@@ -26,6 +25,7 @@ import { describe, expect, test } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
 import { memberships, statusPages, teams } from "~/database/schema";
@@ -103,11 +103,8 @@ async function get(
 	team: SelectTeam,
 	membership: SelectMembership,
 ): Promise<Response> {
-	let container = new ServiceContainer();
-	container.instance(Database, db);
-
 	let router = createRouter({
-		middleware: [asyncContext(), renderWith(createHtmlRenderer) as Middleware],
+		middleware: [asyncContext(), database(() => db), renderWith(createHtmlRenderer) as Middleware],
 	});
 	router.map(routes.app.team.statusPages.index, {
 		middleware: [seedTeam(team, membership)],
@@ -118,7 +115,7 @@ async function get(
 		new URL(routes.app.team.statusPages.index.href({ team: team.slug }), "https://uptime.test"),
 	);
 
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 describe("GET /app/:team/status-pages", () => {

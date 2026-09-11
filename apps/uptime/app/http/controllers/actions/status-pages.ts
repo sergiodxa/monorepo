@@ -10,9 +10,7 @@
 import { redirect } from "@sdxc/http/response";
 import { notFound } from "@sdxc/http/response/html";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
@@ -39,7 +37,6 @@ export const createStatusPage = createAction(routes.actions.statusPage.create, a
 		});
 	}
 
-	let db = getServiceContainer().get(Database);
 	let {
 		monitor_ids,
 		dns_monitor_ids,
@@ -51,7 +48,7 @@ export const createStatusPage = createAction(routes.actions.statusPage.create, a
 		...values
 	} = result.data;
 
-	if (await StatusPage.isSlugTaken(db, values.slug)) {
+	if (await StatusPage.isSlugTaken(ctx.db, values.slug)) {
 		session?.flash("toast", {
 			intent: "error",
 			message: `Slug "${values.slug}" is already taken.`,
@@ -61,7 +58,7 @@ export const createStatusPage = createAction(routes.actions.statusPage.create, a
 		});
 	}
 
-	let page = await StatusPage.create(db, ctx.team.id, {
+	let page = await StatusPage.create(ctx.db, ctx.team.id, {
 		...values,
 		description: description || null,
 		logo_url: logo_url || null,
@@ -69,11 +66,11 @@ export const createStatusPage = createAction(routes.actions.statusPage.create, a
 	});
 
 	await Promise.all([
-		StatusPage.setMonitors(db, page.id, monitor_ids),
-		StatusPage.setDnsMonitors(db, page.id, dns_monitor_ids),
-		StatusPage.setTcpMonitors(db, page.id, tcp_monitor_ids),
-		StatusPage.setFlowMonitors(db, page.id, flow_monitor_ids),
-		StatusPage.setCronJobs(db, page.id, cron_job_ids),
+		StatusPage.setMonitors(ctx.db, page.id, monitor_ids),
+		StatusPage.setDnsMonitors(ctx.db, page.id, dns_monitor_ids),
+		StatusPage.setTcpMonitors(ctx.db, page.id, tcp_monitor_ids),
+		StatusPage.setFlowMonitors(ctx.db, page.id, flow_monitor_ids),
+		StatusPage.setCronJobs(ctx.db, page.id, cron_job_ids),
 	]);
 
 	session?.flash("toast", { intent: "success", message: `Status page "${page.name}" created.` });
@@ -99,7 +96,6 @@ export const updateStatusPage = createAction(routes.actions.statusPage.update, a
 		);
 	}
 
-	let db = getServiceContainer().get(Database);
 	let {
 		status_page_id,
 		monitor_ids,
@@ -112,10 +108,10 @@ export const updateStatusPage = createAction(routes.actions.statusPage.update, a
 		...values
 	} = result.data;
 
-	let existing = await StatusPage.findByIdForTeam(db, ctx.team.id, status_page_id);
+	let existing = await StatusPage.findByIdForTeam(ctx.db, ctx.team.id, status_page_id);
 	if (!existing) return notFound("Not Found");
 
-	if (await StatusPage.isSlugTaken(db, values.slug, status_page_id)) {
+	if (await StatusPage.isSlugTaken(ctx.db, values.slug, status_page_id)) {
 		session?.flash("toast", {
 			intent: "error",
 			message: `Slug "${values.slug}" is already taken.`,
@@ -126,18 +122,18 @@ export const updateStatusPage = createAction(routes.actions.statusPage.update, a
 		);
 	}
 
-	await StatusPage.updateById(db, status_page_id, {
+	await StatusPage.updateById(ctx.db, status_page_id, {
 		...values,
 		description: description || null,
 		logo_url: logo_url || null,
 	});
 
 	await Promise.all([
-		StatusPage.setMonitors(db, status_page_id, monitor_ids),
-		StatusPage.setDnsMonitors(db, status_page_id, dns_monitor_ids),
-		StatusPage.setTcpMonitors(db, status_page_id, tcp_monitor_ids),
-		StatusPage.setFlowMonitors(db, status_page_id, flow_monitor_ids),
-		StatusPage.setCronJobs(db, status_page_id, cron_job_ids),
+		StatusPage.setMonitors(ctx.db, status_page_id, monitor_ids),
+		StatusPage.setDnsMonitors(ctx.db, status_page_id, dns_monitor_ids),
+		StatusPage.setTcpMonitors(ctx.db, status_page_id, tcp_monitor_ids),
+		StatusPage.setFlowMonitors(ctx.db, status_page_id, flow_monitor_ids),
+		StatusPage.setCronJobs(ctx.db, status_page_id, cron_job_ids),
 	]);
 
 	session?.flash("toast", { intent: "success", message: "Status page updated." });
@@ -157,11 +153,10 @@ export const deleteStatusPage = createAction(routes.actions.statusPage.delete, a
 		});
 	}
 
-	let db = getServiceContainer().get(Database);
-	let existing = await StatusPage.findByIdForTeam(db, ctx.team.id, result.data.status_page_id);
+	let existing = await StatusPage.findByIdForTeam(ctx.db, ctx.team.id, result.data.status_page_id);
 	if (!existing) return notFound("Not Found");
 
-	await StatusPage.deleteById(db, result.data.status_page_id);
+	await StatusPage.deleteById(ctx.db, result.data.status_page_id);
 
 	session?.flash("toast", {
 		intent: "success",

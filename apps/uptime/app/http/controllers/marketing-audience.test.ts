@@ -12,8 +12,6 @@ import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
@@ -21,6 +19,7 @@ import { createRouter } from "remix/router";
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 
+import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import {
 	BASE_PRICE_USD,
@@ -48,12 +47,11 @@ function createTestRenderer(): Renderer<RemixNode> {
 /** Dispatches a real GET request to `/for/:slug` as an anonymous visitor. */
 async function getAudience(slug: string) {
 	let { db } = createTestDatabase();
-	let container = new ServiceContainer();
-	container.instance(Database, db);
 
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			database(() => db),
 			(ctx, next) => {
 				ctx.set(Auth, { ok: false });
 				return next();
@@ -65,7 +63,7 @@ async function getAudience(slug: string) {
 	router.map(routes.marketing.audience, marketingAudience);
 
 	let request = new Request(`https://uptime.test${routes.marketing.audience.href({ slug })}`);
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 describe("GET /for/:slug", () => {

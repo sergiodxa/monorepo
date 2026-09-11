@@ -11,9 +11,7 @@
 import { redirect } from "@sdxc/http/response";
 import { badRequest, notFound } from "@sdxc/http/response/html";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
@@ -40,9 +38,8 @@ export const updateTeam = createAction(routes.teamAdminActions.team.update, asyn
 		});
 	}
 
-	let db = getServiceContainer().get(Database);
 	let { name, logo } = result.data;
-	await Team.updateById(db, ctx.team.id, { name, logo: logo || null });
+	await Team.updateById(ctx.db, ctx.team.id, { name, logo: logo || null });
 
 	session?.flash("toast", { intent: "success", message: "Team updated." });
 	return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {
@@ -61,8 +58,6 @@ export const deleteTeam = createAction(routes.teamAdminActions.team.delete, asyn
 		return badRequest('Type "DELETE" to confirm.');
 	}
 
-	let db = getServiceContainer().get(Database);
-
 	/**
 	 * A refused cancellation is logged rather than raised: the team and its data go either
 	 * way, and leaving a subscription running is recoverable from the platform's own dashboard
@@ -78,7 +73,7 @@ export const deleteTeam = createAction(routes.teamAdminActions.team.delete, asyn
 		});
 	}
 
-	await Team.deleteById(db, ctx.team.id);
+	await Team.deleteById(ctx.db, ctx.team.id);
 
 	return redirect(routes.home.href(), { status: redirect.Status.SeeOther });
 });
@@ -98,9 +93,8 @@ export const removeMember = createAction(routes.teamAdminActions.member.remove, 
 		return badRequest("The team owner can't be removed.");
 	}
 
-	let db = getServiceContainer().get(Database);
-	await Team.removeMembership(db, ctx.team.id, result.data.subject_id);
-	await Invite.deleteByTeamAndEmail(db, ctx.team.id, result.data.email);
+	await Team.removeMembership(ctx.db, ctx.team.id, result.data.subject_id);
+	await Invite.deleteByTeamAndEmail(ctx.db, ctx.team.id, result.data.email);
 
 	session?.flash("toast", { intent: "success", message: "Member removed." });
 	return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {
@@ -123,11 +117,10 @@ export const changeRole = createAction(routes.teamAdminActions.member.changeRole
 		return badRequest("The team owner's role can't be changed.");
 	}
 
-	let db = getServiceContainer().get(Database);
-	let membership = await Team.findMembership(db, ctx.team.id, result.data.subject_id);
+	let membership = await Team.findMembership(ctx.db, ctx.team.id, result.data.subject_id);
 	if (!membership) return notFound("Not Found");
 
-	await Team.setRole(db, ctx.team.id, result.data.subject_id, result.data.role);
+	await Team.setRole(ctx.db, ctx.team.id, result.data.subject_id, result.data.role);
 
 	session?.flash("toast", { intent: "success", message: "Role updated." });
 	return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {

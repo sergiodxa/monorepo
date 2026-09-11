@@ -11,10 +11,8 @@
 import { BadRequest, Created, InternalServerError, NotFound } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
 import { createController } from "remix/router";
 
 import type { MonitorScope, MonitorScopeType } from "~/app/lib/monitor-scope";
@@ -111,13 +109,11 @@ export default createController(maintenanceRoutes, {
 		maintenanceIndex: {
 			middleware: [requireApiKey("maintenance:read")],
 			handler: async (ctx) => {
-				let db = getServiceContainer().get(Database);
-
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
 
 				// Chaining returns new queries, so the same one both counts and pages.
-				let query = MaintenanceWindow.listByTeamQuery(db, ctx.apiTeam.id);
+				let query = MaintenanceWindow.listByTeamQuery(ctx.db, ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {
 					orderBy: NEWEST_FIRST,
@@ -157,14 +153,12 @@ export default createController(maintenanceRoutes, {
 					);
 				}
 
-				let db = getServiceContainer().get(Database);
-
 				let scope = apiScopeFrom(result.data);
-				if (scope === null || !(await isResolvableScope(db, ctx.apiTeam.id, scope))) {
+				if (scope === null || !(await isResolvableScope(ctx.db, ctx.apiTeam.id, scope))) {
 					return apiError("NOT_FOUND", "Monitor not found", NotFound);
 				}
 
-				let window = await MaintenanceWindow.create(db, ctx.apiTeam.id, {
+				let window = await MaintenanceWindow.create(ctx.db, ctx.apiTeam.id, {
 					monitor_type: scope.monitorType,
 					monitor_id: scope.monitorId,
 					name: result.data.name,

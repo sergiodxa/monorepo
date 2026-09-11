@@ -9,11 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { ManagementClient } from "@sdxc/auth/management-client";
 import type { NormalizedMessage, Transport } from "@sdxc/mail";
 import type { Database } from "remix/data-table";
 
 import {
-	ManagementClient,
 	ManagementError,
 	ManagementErrorCode,
 	SubjectNotFoundError,
@@ -23,7 +23,6 @@ import { Log } from "@sdxc/logger";
 import { Mailer, MailError } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { failure, isFailure, success, unwrap } from "@sdxc/result";
-import { ServiceContainer } from "@sdxc/service-container";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { SelectTeam } from "~/database/schema";
@@ -32,7 +31,9 @@ import AccountDeletion from "~/app/data/account-deletion";
 import { MAIL_FROM } from "~/app/emails/sender";
 import { TeamDeletedEmail } from "~/app/emails/team-deleted";
 import jobs from "~/app/jobs";
+import { Admin as JobAdmin } from "~/app/jobs/middleware/admin";
 import { Database as JobDatabase } from "~/app/jobs/middleware/database";
+import { Mailer as JobMailer } from "~/app/jobs/middleware/mailer";
 import { MONITORING_PRODUCT } from "~/app/lib/billing";
 import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -165,16 +166,16 @@ async function heldSubscriptions(subjectId: string): Promise<number> {
 }
 
 async function runJob(db: Database, mailTransport: Transport = transport) {
-	let container = new ServiceContainer();
-	container.singleton(Mailer, () => new Mailer({ transport: mailTransport, from: MAIL_FROM }));
-	container.instance(ManagementClient, fakeAdmin());
-
 	let record: Record<string, unknown> = {};
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.deleteAccounts, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	ctx.set(JobMailer, new Mailer({ transport: mailTransport, from: MAIL_FROM }), {
+		property: "mailer",
+	});
+	ctx.set(JobAdmin, fakeAdmin(), { property: "admin" });
 
-	await container.scope(() => deleteAccounts(ctx));
+	await deleteAccounts(ctx);
 	log.emit();
 	return record;
 }

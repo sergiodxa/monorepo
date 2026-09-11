@@ -10,7 +10,6 @@
  */
 
 import { notFound } from "@sdxc/http/response/html";
-import { inject } from "@sdxc/service-container";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
@@ -18,8 +17,6 @@ import { fontSize } from "@sdxc/u/typography";
 import { AlertDialog, Button, Input, Label, LinkButton, Switch, TextField } from "@sdxc/ui";
 import { fieldStackLayout } from "@sdxc/ui/styles";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import MaintenanceWindow from "~/app/data/maintenance-window";
@@ -48,16 +45,15 @@ function toDatetimeLocal(epochMs: number): string {
 /** GET /app/:team/maintenance/:windowId/edit — a maintenance window's edit form. */
 export default createAction(routes.app.team.maintenanceWindows.edit, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let { windowId } = s.parse(s.object({ windowId: s.string() }), ctx.params);
-		let window = await MaintenanceWindow.findByIdForTeam(db, ctx.team.id, windowId);
+		let window = await MaintenanceWindow.findByIdForTeam(ctx.db, ctx.team.id, windowId);
 		if (!window) return notFound("Not Found");
 
-		let scopeGroups = await listScopeMonitors(db, ctx.team.id);
+		let scopeGroups = await listScopeMonitors(ctx.db, ctx.team.id);
 		let isActive =
 			window.ended_early_at === null && MaintenanceWindow.isActiveAt(window, Date.now());
 		let heading = ctx.i18next.t("page.editMaintenance.header.title", { name: window.name });
@@ -307,5 +303,5 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });

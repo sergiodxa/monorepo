@@ -1,6 +1,6 @@
 /**
  * Job middleware that opens the app's database and publishes it on the context, so a
- * handler reads `ctx.database` and names no container, and a test hands one in instead.
+ * handler reads `ctx.database`, and a test hands one in instead.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,7 +11,7 @@ import type { Database as DataTable } from "remix/data-table";
 
 import { createContextKey } from "remix/router";
 
-import { createDatabase } from "~/app/lib/container";
+import { createDatabase } from "~/app/lib/database";
 
 /** Where a job's database lives on the context, installed as `ctx.database`. */
 export const Database = createContextKey<DataTable>();

@@ -8,8 +8,6 @@
  */
 
 import { redirect } from "@sdxc/http/response";
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 
 import Team from "~/app/data/team";
@@ -20,16 +18,16 @@ import routes from "~/routes/web";
 /** GET /app — redirects to the viewer's team. */
 export default createAction(routes.app.index, {
 	middleware: [requireUser],
-	handler: inject([Database] as const, async (db) => {
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let teams = await Team.listBySubjectId(db, viewer.id);
+		let teams = await Team.listBySubjectId(ctx.db, viewer.id);
 		let firstTeam = teams[0];
 		if (!firstTeam) throw new Error(`Viewer ${viewer.id} has no team membership`);
 
 		return redirect(routes.app.team.index.href({ team: firstTeam.slug }), {
 			status: redirect.Status.SeeOther,
 		});
-	}),
+	},
 });

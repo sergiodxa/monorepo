@@ -13,11 +13,9 @@ import { Schedule } from "@sdxc/cron";
 import { BadRequest, Created, InternalServerError } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
-import { Database } from "remix/data-table";
 import { createController } from "remix/router";
 
 import type { SelectCronJobMonitor } from "~/database/schema";
@@ -85,13 +83,11 @@ export default createController(cronJobsRoutes, {
 		cronJobsIndex: {
 			middleware: [requireApiKey("cron-jobs:read")],
 			handler: async (ctx) => {
-				let db = getServiceContainer().get(Database);
-
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
 
 				// Chaining returns new queries, so the same one both counts and pages.
-				let query = CronJobMonitor.listByTeamQuery(db, ctx.apiTeam.id);
+				let query = CronJobMonitor.listByTeamQuery(ctx.db, ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {
 					orderBy: NEWEST_FIRST,
@@ -136,8 +132,7 @@ export default createController(cronJobsRoutes, {
 					return apiError("VALIDATION_ERROR", schedule.error.message, BadRequest);
 				}
 
-				let db = getServiceContainer().get(Database);
-				let cronJob = await CronJobMonitor.create(db, ctx.apiTeam.id, {
+				let cronJob = await CronJobMonitor.create(ctx.db, ctx.apiTeam.id, {
 					name: result.data.name,
 					description: result.data.description ?? null,
 					cron_expression: schedule.data.toString(),

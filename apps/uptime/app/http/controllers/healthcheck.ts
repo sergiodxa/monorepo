@@ -8,22 +8,17 @@
  */
 
 import { ok, serviceUnavailable } from "@sdxc/http/response/json";
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 
 import { teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /** GET /healthcheck — verifies D1 connectivity. */
-export default createAction(
-	routes.healthcheck,
-	inject([Database] as const, async (db) => {
-		try {
-			await db.count(teams);
-			return ok({ status: "ok" });
-		} catch {
-			return serviceUnavailable({ status: "error" });
-		}
-	}),
-);
+export default createAction(routes.healthcheck, async (ctx) => {
+	try {
+		await ctx.db.count(teams);
+		return ok({ status: "ok" });
+	} catch {
+		return serviceUnavailable({ status: "error" });
+	}
+});

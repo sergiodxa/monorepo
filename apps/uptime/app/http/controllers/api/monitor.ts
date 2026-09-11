@@ -11,11 +11,9 @@
 import { BadRequest, InternalServerError, NotFound } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
-import { Database } from "remix/data-table";
 import { createController } from "remix/router";
 
 import type { InsertMonitor, SelectMonitor } from "~/database/schema";
@@ -90,8 +88,7 @@ export default createController(monitorRoutes, {
 			middleware: [requireApiKey("monitors:read")],
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MonitorIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
+				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
 				if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
 				return apiSuccess({ monitor: serializeMonitor(monitor) });
 			},
@@ -102,8 +99,7 @@ export default createController(monitorRoutes, {
 			middleware: [requireApiKey("monitors:write")],
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MonitorIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let existing = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
+				let existing = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
 				if (!existing) return apiError("NOT_FOUND", "Monitor not found", NotFound);
 
 				let result = await validate(ctx.request, UpdateMonitorSchema);
@@ -136,7 +132,7 @@ export default createController(monitorRoutes, {
 				if (result.data.sslExpiryWarningDays !== undefined)
 					changes.ssl_expiry_warning_days = result.data.sslExpiryWarningDays;
 
-				let monitor = await Monitor.updateById(db, monitorId, changes);
+				let monitor = await Monitor.updateById(ctx.db, monitorId, changes);
 				return apiSuccess({ monitor: serializeMonitor(monitor) });
 			},
 		},
@@ -146,11 +142,10 @@ export default createController(monitorRoutes, {
 			middleware: [requireApiKey("monitors:write")],
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MonitorIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let existing = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
+				let existing = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
 				if (!existing) return apiError("NOT_FOUND", "Monitor not found", NotFound);
 
-				await Monitor.deleteById(db, monitorId);
+				await Monitor.deleteById(ctx.db, monitorId);
 				return apiSuccess({ deleted: true });
 			},
 		},
@@ -160,11 +155,10 @@ export default createController(monitorRoutes, {
 			middleware: [requireApiKey("monitors:read")],
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MonitorIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
+				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
 				if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
 
-				let stats = await Monitor.getStatsById(db, monitorId);
+				let stats = await Monitor.getStatsById(ctx.db, monitorId);
 				return apiSuccess({ stats });
 			},
 		},
@@ -174,14 +168,13 @@ export default createController(monitorRoutes, {
 			middleware: [requireApiKey("monitors:read")],
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MonitorIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
+				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
 				if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
 
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
 
-				let page = await Pagination.byKeyset(Monitor.resultsQuery(db, monitorId), {
+				let page = await Pagination.byKeyset(Monitor.resultsQuery(ctx.db, monitorId), {
 					orderBy: NEWEST_FIRST,
 					cursor: params.data.cursor,
 					limit: params.data.perPage,
@@ -220,14 +213,13 @@ export default createController(monitorRoutes, {
 			middleware: [requireApiKey("alerts:read")],
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MonitorIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
+				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
 				if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
 
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
 
-				let page = await Pagination.byKeyset(AlertEvent.eventsByMonitorQuery(db, monitorId), {
+				let page = await Pagination.byKeyset(AlertEvent.eventsByMonitorQuery(ctx.db, monitorId), {
 					orderBy: newestFirst("sent_at"),
 					cursor: params.data.cursor,
 					limit: params.data.perPage,

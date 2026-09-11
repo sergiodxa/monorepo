@@ -14,7 +14,6 @@ import { formatDateTime, formatDuration, formatRelative } from "@sdxc/dates";
 import { notFound } from "@sdxc/http/response/html";
 import { IntlProvider } from "@sdxc/i18n/ui";
 import { PencilIcon } from "@sdxc/icons";
-import { inject } from "@sdxc/service-container";
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { flex, flexWrap, gap, items, justify } from "@sdxc/u/layout";
@@ -23,8 +22,6 @@ import { m, mbe, p } from "@sdxc/u/size";
 import { fontSize, leading, weight } from "@sdxc/u/typography";
 import { Badge, Empty, Link, LinkButton, Table } from "@sdxc/ui";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 import { Fragment } from "remix/ui";
 
@@ -58,21 +55,20 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
  */
 export default createAction(routes.app.team.cronJobs.show, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
-		let monitor = await CronJobMonitor.findByIdForTeam(db, ctx.team.id, monitorId);
+		let monitor = await CronJobMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
 		if (!monitor) return notFound("Not Found");
 
-		let pings = await CronJobMonitor.listPings(db, monitor.id);
+		let pings = await CronJobMonitor.listPings(ctx.db, monitor.id);
 		let pingUrl = new URL(
 			routes.api.cronJobPing.href({ cronJobId: monitor.id }),
 			ctx.request.url,
 		).toString();
-		let dailyStats = await MonitorDailyStats.listRecentDays(db, monitor.id, "cron");
+		let dailyStats = await MonitorDailyStats.listRecentDays(ctx.db, monitor.id, "cron");
 
 		let totalPings = pings.length;
 		let onTimeCount = pings.filter((ping) => ping.was_on_time).length;
@@ -299,7 +295,7 @@ export default createAction(routes.app.team.cronJobs.show, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });
 
 namespace Section {

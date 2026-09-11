@@ -9,12 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { inject } from "@sdxc/service-container";
 import { vstack } from "@sdxc/u/layout";
 import { Button, Input, Label, Switch, TextField } from "@sdxc/ui";
 import { fieldStackLayout } from "@sdxc/ui/styles";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import { listScopeMonitors } from "~/app/data/scope-monitors";
@@ -32,12 +29,11 @@ import routes from "~/routes/web";
 /** GET /app/:team/maintenance/new — the new maintenance-window form. */
 export default createAction(routes.app.team.maintenanceWindows.new, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let scopeGroups = await listScopeMonitors(db, ctx.team.id);
+		let scopeGroups = await listScopeMonitors(ctx.db, ctx.team.id);
 
 		/** Shares its field copy with the edit page by reading the same maintenance-window form namespace. */
 		let t = ctx.i18next.getFixedT(null, "translation", "page.maintenanceWindows.form.fields");
@@ -163,5 +159,5 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });

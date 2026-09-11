@@ -9,12 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
 import { createTranslator } from "@sdxc/i18n";
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
@@ -26,6 +25,7 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { OptionalEmail, SelectMembership, SelectTeam } from "~/database/schema";
 
 import AccountDeletion from "~/app/data/account-deletion";
+import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
 import { memberships, optionalEmails, teams, userPreferences } from "~/database/schema";
@@ -125,20 +125,17 @@ function selectedValues(body: string, name: string): string[] {
 
 async function renderAccount(db: Database, team: SelectTeam, membership: SelectMembership) {
 	let router = createRouter({
-		middleware: [asyncContext(), renderWith(createHtmlRenderer) as Middleware],
+		middleware: [asyncContext(), database(() => db), renderWith(createHtmlRenderer) as Middleware],
 	});
 	router.map(routes.app.team.account, {
 		middleware: [seedTeam(team, membership)],
 		handler: (accountModule.default as { handler: RequestHandler<any> }).handler,
 	});
 
-	let container = new ServiceContainer();
-	container.instance(Database, db);
-
 	let request = new Request(
 		new URL(routes.app.team.account.href({ team: team.slug }), "https://uptime.test"),
 	);
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 describe("account page", () => {

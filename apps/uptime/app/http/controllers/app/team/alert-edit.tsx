@@ -10,15 +10,12 @@
  */
 
 import { notFound } from "@sdxc/http/response/html";
-import { inject } from "@sdxc/service-container";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { fontSize } from "@sdxc/u/typography";
 import { AlertDialog, Button, Input, LinkButton, Switch, TextField } from "@sdxc/ui";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import Alert from "~/app/data/alert";
@@ -44,16 +41,15 @@ const DELETE_ALERT_DESCRIPTION_ID = "delete-alert-description";
 /** GET /app/:team/alerts/:alertId/edit — an alert's edit form. */
 export default createAction(routes.app.team.alerts.edit, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let { alertId } = s.parse(s.object({ alertId: s.string() }), ctx.params);
-		let alert = await Alert.findByIdForTeam(db, ctx.team.id, alertId);
+		let alert = await Alert.findByIdForTeam(ctx.db, ctx.team.id, alertId);
 		if (!alert) return notFound("Not Found");
 
-		let scopeGroups = await listScopeMonitors(db, ctx.team.id);
+		let scopeGroups = await listScopeMonitors(ctx.db, ctx.team.id);
 
 		/** Same fixed namespace the create page reads, so both pages label fields identically. */
 		let t = ctx.i18next.getFixedT(null, "translation", "page.alerts.form.fields");
@@ -227,5 +223,5 @@ export default createAction(routes.app.team.alerts.edit, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });

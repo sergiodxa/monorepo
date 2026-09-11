@@ -14,8 +14,6 @@
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Session as SessionType } from "remix/session";
 
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
@@ -27,6 +25,7 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectTeam } from "~/database/schema";
 
 import AccountDeletion from "~/app/data/account-deletion";
+import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { memberships, optionalEmails, teams, userPreferences } from "~/database/schema";
 import routes from "~/routes/web";
@@ -67,8 +66,8 @@ function viewerMiddleware(
 type LooseRouterMap = (target: unknown, handler: unknown) => void;
 
 /**
- * Posts a form body to one of the account-page actions through the real action, DB, and service
- * container. A field's value may be a list, since one switch left on posts one repeated `emails`
+ * Posts a form body to one of the account-page actions through the real action and a real
+ * database. A field's value may be a list, since one switch left on posts one repeated `emails`
  * field, serialized because Bun can't read an empty `URLSearchParams` stream.
  */
 async function postAccountAction(
@@ -84,10 +83,7 @@ async function postAccountAction(
 		session?: ReturnType<typeof createFakeSession>;
 	} = {},
 ) {
-	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
-
-	let router = createRouter({ middleware: [asyncContext(), formData()] });
+	let router = createRouter({ middleware: [asyncContext(), database(() => db), formData()] });
 	(router.map as LooseRouterMap)(route, {
 		middleware: [viewerMiddleware(viewer, options.session)],
 		handler: action,
@@ -104,7 +100,7 @@ async function postAccountAction(
 		headers: { "content-type": "application/x-www-form-urlencoded", ...headers },
 	});
 
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 function createViewer(overrides: Partial<Viewer> = {}): Viewer {

@@ -7,9 +7,7 @@
  */
 
 import { BadRequest, NotFound } from "@sdxc/http/status-code";
-import { getServiceContainer } from "@sdxc/service-container";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 
 import Invite from "~/app/data/invite";
@@ -26,14 +24,13 @@ export const inviteDestroy = createAction(routes.api.v1.invites.destroy, {
 	middleware: [catchValidationError(), requireApiKey("invites:write")],
 	handler: async (ctx) => {
 		let { inviteId } = s.parse(InviteIdParams, ctx.params);
-		let db = getServiceContainer().get(Database);
-		let invite = await Invite.findByIdForTeam(db, ctx.apiTeam.id, inviteId);
+		let invite = await Invite.findByIdForTeam(ctx.db, ctx.apiTeam.id, inviteId);
 		if (!invite) return apiError("NOT_FOUND", "Invite not found", NotFound);
 		if (invite.accepted_at !== null) {
 			return apiError("VALIDATION_ERROR", "This invite was already accepted.", BadRequest);
 		}
 
-		await Invite.revoke(db, inviteId);
+		await Invite.revoke(ctx.db, inviteId);
 		return apiSuccess({ deleted: true });
 	},
 });

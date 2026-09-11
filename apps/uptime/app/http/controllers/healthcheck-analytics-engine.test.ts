@@ -13,11 +13,10 @@
  */
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { createRouter } from "remix/router";
 import { describe, expect, test, vi } from "vitest";
 
+import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import routes from "~/routes/web";
 
@@ -29,14 +28,11 @@ describe("GET /healthcheck/analytics-engine", () => {
 	test("returns 503 when the PING_RESULTS binding is not configured", async () => {
 		let { db } = createTestDatabase();
 
-		let router = createRouter();
+		let router = createRouter({ middleware: [database(() => db)] });
 		router.map(routes.healthcheckAnalyticsEngine, healthcheckAnalyticsEngine);
 
-		let container = new ServiceContainer();
-		container.singleton(Database, () => db);
-
 		let request = new Request(`https://example.com${routes.healthcheckAnalyticsEngine.href()}`);
-		let response = await container.scope(() => router.fetch(request));
+		let response = await router.fetch(request);
 
 		expect(response.status).toBe(503);
 		expect(await response.json()).toEqual({

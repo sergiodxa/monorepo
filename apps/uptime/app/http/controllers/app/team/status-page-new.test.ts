@@ -19,8 +19,6 @@ import {
 	createQueue,
 } from "@sdxc/cloudflare-mocks";
 import { createTranslator } from "@sdxc/i18n";
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
@@ -31,6 +29,7 @@ import { describe, expect, test, vi } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
 import { flowMonitors, memberships, monitors, teams } from "~/database/schema";
@@ -127,11 +126,12 @@ describe("GET /app/:team/status-pages/new", () => {
 	test("renders the create status page form", async () => {
 		let { db, team, membership } = await createFixture();
 
-		let container = new ServiceContainer();
-		container.instance(Database, db);
-
 		let router = createRouter({
-			middleware: [asyncContext(), renderWith(createHtmlRenderer) as Middleware],
+			middleware: [
+				asyncContext(),
+				database(() => db),
+				renderWith(createHtmlRenderer) as Middleware,
+			],
 		});
 		router.map(routes.app.team.statusPages.new, {
 			middleware: [seedTeam(team, membership)],
@@ -141,7 +141,7 @@ describe("GET /app/:team/status-pages/new", () => {
 		let request = new Request(
 			new URL(routes.app.team.statusPages.new.href({ team: team.slug }), "https://uptime.test"),
 		);
-		let response = await container.scope(() => router.fetch(request));
+		let response = await router.fetch(request);
 
 		expect(response.status).toBe(200);
 		let body = await response.text();
@@ -164,11 +164,12 @@ describe("GET /app/:team/status-pages/new", () => {
 			{ touch: true, returnRow: true },
 		);
 
-		let container = new ServiceContainer();
-		container.instance(Database, db);
-
 		let router = createRouter({
-			middleware: [asyncContext(), renderWith(createHtmlRenderer) as Middleware],
+			middleware: [
+				asyncContext(),
+				database(() => db),
+				renderWith(createHtmlRenderer) as Middleware,
+			],
 		});
 		router.map(routes.app.team.statusPages.new, {
 			middleware: [seedTeam(team, membership)],
@@ -178,7 +179,7 @@ describe("GET /app/:team/status-pages/new", () => {
 		let request = new Request(
 			new URL(routes.app.team.statusPages.new.href({ team: team.slug }), "https://uptime.test"),
 		);
-		let response = await container.scope(() => router.fetch(request));
+		let response = await router.fetch(request);
 		let body = await response.text();
 
 		expect(body).toContain("Sign in and load the dashboard");
@@ -189,11 +190,12 @@ describe("GET /app/:team/status-pages/new", () => {
 	test("posts every field to the create action from one form", async () => {
 		let { db, team, membership } = await createFixture();
 
-		let container = new ServiceContainer();
-		container.instance(Database, db);
-
 		let router = createRouter({
-			middleware: [asyncContext(), renderWith(createHtmlRenderer) as Middleware],
+			middleware: [
+				asyncContext(),
+				database(() => db),
+				renderWith(createHtmlRenderer) as Middleware,
+			],
 		});
 		router.map(routes.app.team.statusPages.new, {
 			middleware: [seedTeam(team, membership)],
@@ -203,7 +205,7 @@ describe("GET /app/:team/status-pages/new", () => {
 		let request = new Request(
 			new URL(routes.app.team.statusPages.new.href({ team: team.slug }), "https://uptime.test"),
 		);
-		let response = await container.scope(() => router.fetch(request));
+		let response = await router.fetch(request);
 		let body = await response.text();
 
 		expect(body).toContain(
@@ -231,11 +233,12 @@ describe("GET /app/:team/status-pages/new", () => {
 			{ touch: true, returnRow: true },
 		);
 
-		let container = new ServiceContainer();
-		container.instance(Database, db);
-
 		let router = createRouter({
-			middleware: [asyncContext(), renderWith(createHtmlRenderer) as Middleware],
+			middleware: [
+				asyncContext(),
+				database(() => db),
+				renderWith(createHtmlRenderer) as Middleware,
+			],
 		});
 		router.map(routes.app.team.statusPages.new, {
 			middleware: [seedTeam(team, membership)],
@@ -245,7 +248,7 @@ describe("GET /app/:team/status-pages/new", () => {
 		let request = new Request(
 			new URL(routes.app.team.statusPages.new.href({ team: team.slug }), "https://uptime.test"),
 		);
-		let response = await container.scope(() => router.fetch(request));
+		let response = await router.fetch(request);
 		let body = await response.text();
 
 		/** The select-all control drives the list by id, so the two ids must stay in step. */
@@ -261,11 +264,12 @@ describe("GET /app/:team/status-pages/new", () => {
 	test("keeps two rhythms: fields from the card, grouped switches tighter", async () => {
 		let { db, team, membership } = await createFixture();
 
-		let container = new ServiceContainer();
-		container.instance(Database, db);
-
 		let router = createRouter({
-			middleware: [asyncContext(), renderWith(createHtmlRenderer) as Middleware],
+			middleware: [
+				asyncContext(),
+				database(() => db),
+				renderWith(createHtmlRenderer) as Middleware,
+			],
 		});
 		router.map(routes.app.team.statusPages.new, {
 			middleware: [seedTeam(team, membership)],
@@ -275,7 +279,7 @@ describe("GET /app/:team/status-pages/new", () => {
 		let request = new Request(
 			new URL(routes.app.team.statusPages.new.href({ team: team.slug }), "https://uptime.test"),
 		);
-		let body = await (await container.scope(() => router.fetch(request))).text();
+		let body = await (await router.fetch(request)).text();
 
 		/**
 		 * The card states the field rhythm once via a single gap rule, since a

@@ -9,8 +9,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
@@ -19,6 +17,7 @@ import type { ApiKeyScope, SelectDnsMonitor, SelectTeam } from "~/database/schem
 
 import ApiKey from "~/app/data/api-key";
 import DnsMonitor from "~/app/data/dns-monitor";
+import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { parseLink } from "~/app/lib/test/paging";
 import { encodeId } from "~/app/services/typed-id";
@@ -63,13 +62,10 @@ async function createDnsMonitorRow(
 }
 
 async function dispatch(db: Db, request: Request) {
-	let router = createRouter({ middleware: [asyncContext()] });
+	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
 	router.map(dnsMonitorRoutes, dnsMonitorController);
 
-	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
-
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 function showRequest(dnsMonitorId: string, headers: Record<string, string> = {}) {

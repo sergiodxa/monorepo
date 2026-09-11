@@ -12,11 +12,9 @@
 import { BadRequest, InternalServerError, NotFound } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
-import { Database } from "remix/data-table";
 import { createController } from "remix/router";
 
 import type { InsertAlert } from "~/database/schema";
@@ -63,8 +61,7 @@ export default createController(alertRoutes, {
 			middleware: [requireApiKey("alerts:read")],
 			handler: async (ctx) => {
 				let { alertId } = s.parse(AlertIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let alert = await Alert.findByIdForTeam(db, ctx.apiTeam.id, alertId);
+				let alert = await Alert.findByIdForTeam(ctx.db, ctx.apiTeam.id, alertId);
 				if (!alert) return apiError("NOT_FOUND", "Alert not found", NotFound);
 				return apiSuccess({ alert: serializeAlertSafe(alert) });
 			},
@@ -75,8 +72,7 @@ export default createController(alertRoutes, {
 			middleware: [requireApiKey("alerts:write")],
 			handler: async (ctx) => {
 				let { alertId } = s.parse(AlertIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let existing = await Alert.findByIdForTeam(db, ctx.apiTeam.id, alertId);
+				let existing = await Alert.findByIdForTeam(ctx.db, ctx.apiTeam.id, alertId);
 				if (!existing) return apiError("NOT_FOUND", "Alert not found", NotFound);
 
 				let result = await validate(ctx.request, UpdateAlertSchema);
@@ -102,7 +98,7 @@ export default createController(alertRoutes, {
 				 */
 				if (result.data.monitorType !== undefined || result.data.monitorId !== undefined) {
 					let scope = apiScopeFrom(result.data);
-					if (scope === null || !(await isResolvableScope(db, ctx.apiTeam.id, scope))) {
+					if (scope === null || !(await isResolvableScope(ctx.db, ctx.apiTeam.id, scope))) {
 						return apiError("NOT_FOUND", "Monitor not found", NotFound);
 					}
 
@@ -110,7 +106,7 @@ export default createController(alertRoutes, {
 					changes.monitor_id = scope.monitorId;
 				}
 
-				let alert = await Alert.updateById(db, alertId, changes);
+				let alert = await Alert.updateById(ctx.db, alertId, changes);
 				return apiSuccess({ alert: serializeAlertStrategyOnly(alert) });
 			},
 		},
@@ -120,11 +116,10 @@ export default createController(alertRoutes, {
 			middleware: [requireApiKey("alerts:write")],
 			handler: async (ctx) => {
 				let { alertId } = s.parse(AlertIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let existing = await Alert.findByIdForTeam(db, ctx.apiTeam.id, alertId);
+				let existing = await Alert.findByIdForTeam(ctx.db, ctx.apiTeam.id, alertId);
 				if (!existing) return apiError("NOT_FOUND", "Alert not found", NotFound);
 
-				await Alert.deleteById(db, alertId);
+				await Alert.deleteById(ctx.db, alertId);
 				return apiSuccess({ deleted: true });
 			},
 		},
@@ -134,14 +129,13 @@ export default createController(alertRoutes, {
 			middleware: [requireApiKey("alerts:read")],
 			handler: async (ctx) => {
 				let { alertId } = s.parse(AlertIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let alert = await Alert.findByIdForTeam(db, ctx.apiTeam.id, alertId);
+				let alert = await Alert.findByIdForTeam(ctx.db, ctx.apiTeam.id, alertId);
 				if (!alert) return apiError("NOT_FOUND", "Alert not found", NotFound);
 
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
 
-				let page = await Pagination.byKeyset(AlertEvent.eventsByAlertQuery(db, alertId), {
+				let page = await Pagination.byKeyset(AlertEvent.eventsByAlertQuery(ctx.db, alertId), {
 					orderBy: newestFirst("sent_at"),
 					cursor: params.data.cursor,
 					limit: params.data.perPage,

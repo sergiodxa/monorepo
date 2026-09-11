@@ -12,8 +12,6 @@ import type { Middleware } from "remix/router";
 
 import { notFound } from "@sdxc/http/response/html";
 import { currentLog } from "@sdxc/logger";
-import { getServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
@@ -41,18 +39,17 @@ declare module "remix/router" {
  */
 export let requireTeam: Middleware = async (ctx, next) => {
 	let idOrSlug = ctx.params.team!;
-	let db = getServiceContainer().get(Database);
 
 	let viewer = getViewer();
 	if (!viewer) return notFound("Not Found");
 
 	let [team, teams] = await Promise.all([
-		Team.findByIdOrSlug(db, idOrSlug),
-		Team.listBySubjectId(db, viewer.id),
+		Team.findByIdOrSlug(ctx.db, idOrSlug),
+		Team.listBySubjectId(ctx.db, viewer.id),
 	]);
 	if (!team) return notFound("Not Found");
 
-	let membership = await Team.findMembership(db, team.id, viewer.id);
+	let membership = await Team.findMembership(ctx.db, team.id, viewer.id);
 	if (!membership) return notFound("Not Found");
 
 	ctx.team = team;

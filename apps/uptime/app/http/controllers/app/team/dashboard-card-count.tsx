@@ -11,13 +11,10 @@
 import type { Handle } from "remix/ui";
 
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { flex, flexWrap, gap, items } from "@sdxc/u/layout";
 import { mbs } from "@sdxc/u/size";
 import { Badge } from "@sdxc/ui";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import type { BadgeTone } from "~/resources/components/badge";
@@ -72,12 +69,11 @@ function Breakdown(handle: Handle<Breakdown.Props>) {
  */
 export default createAction(routes.app.team.dashboard.cards.count, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let { resource } = s.parse(s.object({ resource: s.enum_(RESOURCES) }), ctx.params);
 
 		if (resource === "dns") {
-			let dnsMonitors = await DnsMonitor.listByTeam(db, ctx.team.id);
+			let dnsMonitors = await DnsMonitor.listByTeam(ctx.db, ctx.team.id);
 			let dnsCounts = {
 				total: dnsMonitors.length,
 				ok: dnsMonitors.filter((monitor) => monitor.last_status === "ok").length,
@@ -127,7 +123,7 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 		}
 
 		if (resource === "tcp") {
-			let tcpMonitors = await TcpMonitor.listByTeam(db, ctx.team.id);
+			let tcpMonitors = await TcpMonitor.listByTeam(ctx.db, ctx.team.id);
 			let tcpCounts = {
 				total: tcpMonitors.length,
 				up: tcpMonitors.filter((monitor) => monitor.last_status === "up").length,
@@ -171,7 +167,7 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 		}
 
 		if (resource === "flow") {
-			let flowMonitors = await FlowMonitor.listByTeam(db, ctx.team.id);
+			let flowMonitors = await FlowMonitor.listByTeam(ctx.db, ctx.team.id);
 			let flowCounts = {
 				total: flowMonitors.length,
 				up: flowMonitors.filter((monitor) => monitor.last_status === "up").length,
@@ -226,7 +222,7 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 		}
 
 		if (resource === "cron-jobs") {
-			let cronJobMonitors = await CronJobMonitor.listByTeam(db, ctx.team.id);
+			let cronJobMonitors = await CronJobMonitor.listByTeam(ctx.db, ctx.team.id);
 			let cronCounts = {
 				total: cronJobMonitors.length,
 				healthy: cronJobMonitors.filter((monitor) => monitor.status === "healthy").length,
@@ -276,7 +272,7 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 		}
 
 		let [monitors, summaries] = await Promise.all([
-			Monitor.listByTeam(db, ctx.team.id),
+			Monitor.listByTeam(ctx.db, ctx.team.id),
 			getTeamHttpSummaries(ctx.team.id),
 		]);
 		let summaryList = isFailure(summaries) ? [] : summaries.data;
@@ -318,5 +314,5 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 				}
 			/>,
 		);
-	}),
+	},
 });

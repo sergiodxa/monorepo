@@ -12,15 +12,12 @@
 
 import { notFound } from "@sdxc/http/response/html";
 import { PencilIcon, PlayIcon, RefreshCwIcon } from "@sdxc/icons";
-import { inject } from "@sdxc/service-container";
 import { fg } from "@sdxc/u/color";
 import { flex, flexWrap, gap, items, vstack } from "@sdxc/u/layout";
 import { is, m, mbe, mbs } from "@sdxc/u/size";
 import { fontSize, nowrap, overflowWrap } from "@sdxc/u/typography";
 import { Badge, Button, Empty, LinkButton, Table } from "@sdxc/ui";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 import { Frame } from "remix/ui";
 
@@ -67,16 +64,15 @@ function recordStateTone(record: SelectDnsMonitorRecord): BadgeTone {
  */
 export default createAction(routes.app.team.dnsMonitors.show, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
-		let monitor = await DnsMonitor.findByIdForTeam(db, ctx.team.id, monitorId);
+		let monitor = await DnsMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
 		if (!monitor) return notFound("Not Found");
 
-		let records = await DnsMonitorRecord.listByMonitor(db, monitor.id);
+		let records = await DnsMonitorRecord.listByMonitor(ctx.db, monitor.id);
 		let watchedCount = records.filter((record) => record.is_enabled).length;
 
 		return ctx.render(
@@ -297,5 +293,5 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });

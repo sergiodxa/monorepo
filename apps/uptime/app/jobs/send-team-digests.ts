@@ -9,14 +9,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { ManagementClient } from "@sdxc/auth/management-client";
 import type { TFunction } from "@sdxc/i18n";
 import type { CurrentJobContext } from "@sdxc/jobs";
+import type { Mailer } from "@sdxc/mail";
 
-import { ManagementClient } from "@sdxc/auth/management-client";
 import { subDays, toDayKey } from "@sdxc/dates";
-import { Mailer } from "@sdxc/mail";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 
 import type { DigestPeriod, DigestRecipient, TeamDigestMonitor } from "~/app/data/team-digest";
 import type { TeamDigestMonitor as MonitorReport } from "~/app/emails/shared/team-digest";
@@ -76,13 +75,10 @@ interface TeamDigestContext {
 /**
  * Mails every due member of every due team their digest for `period`.
  *
- * @param ctx - The running job, for its database and its log.
+ * @param ctx - The running job, for its database, mailer, management client and log.
  * @param period - Which digest this run sends, and therefore which window and which stamp.
  */
 export async function sendTeamDigests(ctx: CurrentJobContext, period: DigestPeriod): Promise<void> {
-	let mailer = getServiceContainer().get(Mailer);
-	let admin = getServiceContainer().get(ManagementClient);
-
 	/**
 	 * One instant for the whole run, so the window every digest reports, the bound every
 	 * membership was selected against, and the stamp each one receives all agree.
@@ -115,13 +111,13 @@ export async function sendTeamDigests(ctx: CurrentJobContext, period: DigestPeri
 	let [teams, profiles] = await Promise.all([
 		Team.findByIds(ctx.database, [...byTeam.keys()]),
 		resolveSubjects(
-			admin,
+			ctx.admin,
 			wanted.map((recipient) => recipient.subjectId),
 		),
 	]);
 
 	let settled = await mapWithConcurrency([...byTeam], ([teamId, members]) =>
-		digestTeam(ctx, mailer, {
+		digestTeam(ctx, ctx.mailer, {
 			period,
 			window: reported,
 			now,

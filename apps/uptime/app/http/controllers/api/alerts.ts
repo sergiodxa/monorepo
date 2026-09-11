@@ -12,11 +12,9 @@
 import { BadRequest, Created, InternalServerError, NotFound } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
-import { Database } from "remix/data-table";
 import { createController } from "remix/router";
 
 import type { MonitorScope, MonitorScopeType } from "~/app/lib/monitor-scope";
@@ -199,13 +197,11 @@ export default createController(alertsRoutes, {
 		alertsIndex: {
 			middleware: [requireApiKey("alerts:read")],
 			handler: async (ctx) => {
-				let db = getServiceContainer().get(Database);
-
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
 
 				// Chaining returns new queries, so the same one both counts and pages.
-				let query = Alert.listByTeamQuery(db, ctx.apiTeam.id);
+				let query = Alert.listByTeamQuery(ctx.db, ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {
 					orderBy: NEWEST_FIRST,
@@ -232,9 +228,7 @@ export default createController(alertsRoutes, {
 		alertsCreate: {
 			middleware: [requireApiKey("alerts:write")],
 			handler: async (ctx) => {
-				let db = getServiceContainer().get(Database);
-
-				let existingCount = await Alert.countByTeam(db, ctx.apiTeam.id);
+				let existingCount = await Alert.countByTeam(ctx.db, ctx.apiTeam.id);
 				if (existingCount >= MAX_ALERTS_PER_TEAM) {
 					return apiError(
 						"LIMIT_EXCEEDED",
@@ -253,7 +247,7 @@ export default createController(alertsRoutes, {
 				}
 
 				let scope = apiScopeFrom(result.data);
-				if (scope === null || !(await isResolvableScope(db, ctx.apiTeam.id, scope))) {
+				if (scope === null || !(await isResolvableScope(ctx.db, ctx.apiTeam.id, scope))) {
 					return apiError("NOT_FOUND", "Monitor not found", NotFound);
 				}
 
@@ -262,7 +256,7 @@ export default createController(alertsRoutes, {
 				 * (see `CreateAlertValues`'s comment); the runtime shape is still guaranteed by
 				 * that same schema, so this restates it for `buildConfig`'s exhaustive switch.
 				 */
-				let alert = await Alert.create(db, ctx.apiTeam.id, {
+				let alert = await Alert.create(ctx.db, ctx.apiTeam.id, {
 					name: result.data.name,
 					monitor_type: scope.monitorType,
 					monitor_id: scope.monitorId,

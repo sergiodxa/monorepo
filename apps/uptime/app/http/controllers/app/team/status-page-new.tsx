@@ -15,7 +15,6 @@
  */
 
 import { IntlProvider } from "@sdxc/i18n/ui";
-import { inject } from "@sdxc/service-container";
 import { vstack } from "@sdxc/u/layout";
 import { fontSize, weight } from "@sdxc/u/typography";
 import {
@@ -29,8 +28,6 @@ import {
 	TextField,
 } from "@sdxc/ui";
 import { fieldStackLayout } from "@sdxc/ui/styles";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import CronJobMonitor from "~/app/data/cron-job";
@@ -64,17 +61,16 @@ const CRON_JOBS_GROUP_ID = "status-page-cron-jobs-group";
 /** GET /app/:team/status-pages/new — the new status-page form. */
 export default createAction(routes.app.team.statusPages.new, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let [monitors, dnsMonitors, tcpMonitors, flowMonitors, cronJobs] = await Promise.all([
-			Monitor.listByTeam(db, ctx.team.id),
-			DnsMonitor.listByTeam(db, ctx.team.id),
-			TcpMonitor.listByTeam(db, ctx.team.id),
-			FlowMonitor.listByTeam(db, ctx.team.id),
-			CronJobMonitor.listByTeam(db, ctx.team.id),
+			Monitor.listByTeam(ctx.db, ctx.team.id),
+			DnsMonitor.listByTeam(ctx.db, ctx.team.id),
+			TcpMonitor.listByTeam(ctx.db, ctx.team.id),
+			FlowMonitor.listByTeam(ctx.db, ctx.team.id),
+			CronJobMonitor.listByTeam(ctx.db, ctx.team.id),
 		]);
 
 		let t = ctx.i18next.getFixedT(null, "translation", "page.statusPages.form.fields");
@@ -312,5 +308,5 @@ export default createAction(routes.app.team.statusPages.new, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });

@@ -8,11 +8,10 @@
  */
 
 import type { CurrentJobContext } from "@sdxc/jobs";
+import type { Mailer } from "@sdxc/mail";
 
 import { createJobHandler } from "@sdxc/jobs";
-import { Mailer } from "@sdxc/mail";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 
 import type { TrialWatchDigestEntry } from "~/app/data/trial-watch";
 import type { TrialStats } from "~/app/emails/shared/trial";
@@ -39,7 +38,6 @@ const MS_PER_HOUR = 60 * 60 * 1000;
 const DIGEST_WINDOW_HOURS = 24;
 
 export default createJobHandler(jobs.sendTrialDigests, async (ctx) => {
-	let mailer = getServiceContainer().get(Mailer);
 	/**
 	 * One instant for the whole run, so the window every digest reports and the stamp every
 	 * lead receives agree with the query that selected them.
@@ -54,7 +52,7 @@ export default createJobHandler(jobs.sendTrialDigests, async (ctx) => {
 	 * account, since naming a team id here would misattribute it as `direct` spend.
 	 */
 
-	let settled = await mapWithConcurrency(leads, (lead) => digest(ctx, mailer, lead, now));
+	let settled = await mapWithConcurrency(leads, (lead) => digest(ctx, ctx.mailer, lead, now));
 
 	let sent = 0;
 	let skipped = 0;

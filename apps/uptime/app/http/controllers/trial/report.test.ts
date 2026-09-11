@@ -12,8 +12,6 @@ import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
@@ -22,6 +20,7 @@ import { describe, expect, test } from "vitest";
 
 import type { InsertTrialWatch, MonitorStatus } from "~/database/schema";
 
+import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { trialWatchResults, trialWatches } from "~/database/schema";
@@ -102,18 +101,18 @@ async function seedResult(
 
 /** Dispatches one GET at the report URL for `token`. */
 async function visit(db: Db, token: string) {
-	let container = new ServiceContainer();
-	container.instance(Database, db);
-
 	let router = createRouter({
-		middleware: [asyncContext(), i18n as Middleware, renderWith(createTestRenderer) as Middleware],
+		middleware: [
+			asyncContext(),
+			database(() => db),
+			i18n as Middleware,
+			renderWith(createTestRenderer) as Middleware,
+		],
 	});
 	router.map(routes.trial.report, report);
 
 	let href = routes.trial.report.href({ token });
-	let response = await container.scope(() =>
-		router.fetch(new Request(`https://uptime.test${href}`)),
-	);
+	let response = await router.fetch(new Request(`https://uptime.test${href}`));
 
 	return { response, body: await response.text() };
 }

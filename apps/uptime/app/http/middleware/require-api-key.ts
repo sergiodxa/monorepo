@@ -14,8 +14,6 @@ import type { Middleware } from "remix/router";
 
 import { Forbidden, Unauthorized } from "@sdxc/http/status-code";
 import { currentLog } from "@sdxc/logger";
-import { getServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 
 import type { ApiKeyScope, SelectApiKey, SelectTeam } from "~/database/schema";
 
@@ -53,19 +51,18 @@ export default function requireApiKey(scope: ApiKeyScope): Middleware {
 		let key = match?.[1] ?? null;
 		if (!key) return apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
 
-		let db = getServiceContainer().get(Database);
 		let keyHash = await hashApiKey(key);
-		let apiKey = await ApiKey.findByHash(db, keyHash);
+		let apiKey = await ApiKey.findByHash(ctx.db, keyHash);
 		if (!apiKey) return apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
 
 		if (apiKey.expires_at !== null && apiKey.expires_at < Date.now()) {
 			return apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
 		}
 
-		let team = await Team.findByIdOrSlug(db, apiKey.team_id);
+		let team = await Team.findByIdOrSlug(ctx.db, apiKey.team_id);
 		if (!team) return apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
 
-		await ApiKey.touchLastUsedAt(db, apiKey.id);
+		await ApiKey.touchLastUsedAt(ctx.db, apiKey.id);
 
 		if (!apiKey.scopes.includes(scope)) {
 			return apiError("FORBIDDEN", `API key does not have ${scope} scope`, Forbidden);

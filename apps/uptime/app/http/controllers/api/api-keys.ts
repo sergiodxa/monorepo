@@ -14,11 +14,9 @@
 import { BadRequest, Created, Forbidden, InternalServerError } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
-import { Database } from "remix/data-table";
 import { createController } from "remix/router";
 
 import type { SelectApiKey } from "~/database/schema";
@@ -71,13 +69,11 @@ export default createController(apiKeysRoutes, {
 		apiKeysIndex: {
 			middleware: [requireApiKey("api-keys:read")],
 			handler: async (ctx) => {
-				let db = getServiceContainer().get(Database);
-
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
 
 				// Chaining returns new queries, so the same one both counts and pages.
-				let query = ApiKey.listByTeamQuery(db, ctx.apiTeam.id);
+				let query = ApiKey.listByTeamQuery(ctx.db, ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {
 					orderBy: NEWEST_FIRST,
@@ -104,9 +100,7 @@ export default createController(apiKeysRoutes, {
 		apiKeysCreate: {
 			middleware: [requireApiKey("api-keys:write")],
 			handler: async (ctx) => {
-				let db = getServiceContainer().get(Database);
-
-				let existingCount = await ApiKey.countByTeam(db, ctx.apiTeam.id);
+				let existingCount = await ApiKey.countByTeam(ctx.db, ctx.apiTeam.id);
 				if (existingCount >= MAX_API_KEYS_PER_TEAM) {
 					return apiError("LIMIT_EXCEEDED", "API key limit reached for this team", BadRequest);
 				}
@@ -135,7 +129,7 @@ export default createController(apiKeysRoutes, {
 					);
 				}
 
-				let { record, key } = await ApiKey.create(db, ctx.apiTeam.id, {
+				let { record, key } = await ApiKey.create(ctx.db, ctx.apiTeam.id, {
 					name: result.data.name,
 					scopes: result.data.scopes,
 					expires_at: result.data.expiresAt ?? null,

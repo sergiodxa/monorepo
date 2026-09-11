@@ -11,10 +11,8 @@
 
 import { redirect } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { generateUUID } from "@sdxc/uuid";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
@@ -117,8 +115,7 @@ export const runPing = createAction(routes.actions.runPing, {
 		 * `stateFor`: an owner whose subscription state can't be determined still
 		 * gets their check, matching the manual "run check" button.
 		 */
-		let db = getServiceContainer().get(Database);
-		if ((await Subscription.stateFor(db, ctx.team.owner_id)) === "inactive") {
+		if ((await Subscription.stateFor(ctx.db, ctx.team.owner_id)) === "inactive") {
 			session?.set(QUICK_PING_RESULT, { kind: "error", id, code: "subscriptionRequired" });
 			return back;
 		}

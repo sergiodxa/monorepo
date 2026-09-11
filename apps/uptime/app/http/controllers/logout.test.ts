@@ -13,10 +13,8 @@ import type { RemixNode } from "remix/ui";
 
 import { createEnv, createKVNamespace } from "@sdxc/cloudflare-mocks";
 import { log } from "@sdxc/logger/middleware";
-import { ServiceContainer } from "@sdxc/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
@@ -25,6 +23,7 @@ import { Session } from "remix/session";
 import { renderToString } from "remix/ui/server";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
+import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import routes from "~/routes/web";
 
@@ -117,12 +116,11 @@ function seedSession(session: Session): Middleware {
  */
 function createTestRouter(session: Session) {
 	let { db } = createTestDatabase();
-	let container = new ServiceContainer();
-	container.instance(Database, db);
 
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			database(() => db),
 			log() as Middleware,
 			(ctx, next) => {
 				ctx.set(Auth, { ok: false });
@@ -135,24 +133,24 @@ function createTestRouter(session: Session) {
 	});
 	router.map(routes.logout, logoutController);
 
-	return { container, router };
+	return router;
 }
 
 /** Runs POST /logout against a session, the way the confirmation page's form does. */
 function postLogout(session: Session) {
-	let { container, router } = createTestRouter(session);
+	let router = createTestRouter(session);
 	let request = new Request(`https://uptime.test${routes.logout.action.href()}`, {
 		method: "POST",
 	});
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 describe("GET /logout", () => {
 	test("renders the sign-out confirmation page", async () => {
-		let { container, router } = createTestRouter(new Session());
+		let router = createTestRouter(new Session());
 
 		let request = new Request(`https://uptime.test${routes.logout.index.href()}`);
-		let response = await container.scope(() => router.fetch(request));
+		let response = await router.fetch(request);
 
 		expect(response.status).toBe(200);
 		let body = await response.text();
@@ -162,10 +160,10 @@ describe("GET /logout", () => {
 	});
 
 	test("marks the sign-out form as a document submission", async () => {
-		let { container, router } = createTestRouter(new Session());
+		let router = createTestRouter(new Session());
 
 		let request = new Request(`https://uptime.test${routes.logout.index.href()}`);
-		let response = await container.scope(() => router.fetch(request));
+		let response = await router.fetch(request);
 		let body = await response.text();
 
 		let form = body.match(new RegExp(`<form[^>]*action="${routes.logout.action.href()}"[^>]*>`));

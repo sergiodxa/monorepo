@@ -9,14 +9,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { ManagementClient } from "@sdxc/auth/management-client";
+import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-import { ManagementClient, SubjectNotFoundError } from "@sdxc/auth/management-client";
+import { SubjectNotFoundError } from "@sdxc/auth/management-client";
 import { createTranslator } from "@sdxc/i18n";
 import { failure } from "@sdxc/result";
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
@@ -29,6 +29,8 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import Invite from "~/app/data/invite";
 import TeamDomain from "~/app/data/team-domain";
+import { admin } from "~/app/http/middleware/admin";
+import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
 import { memberships, teams } from "~/database/schema";
@@ -89,28 +91,29 @@ async function createFixture() {
 }
 
 async function renderSettings(db: Database, team: SelectTeam, membership: SelectMembership) {
+	let fakeAdmin = {
+		fetchSubjectById: vi.fn(async (subjectId: string) =>
+			failure(new SubjectNotFoundError(subjectId)),
+		),
+	} as unknown as ManagementClient;
+
 	let router = createRouter({
-		middleware: [asyncContext(), renderWith(createHtmlRenderer) as Middleware],
+		middleware: [
+			asyncContext(),
+			database(() => db),
+			admin(() => fakeAdmin),
+			renderWith(createHtmlRenderer) as Middleware,
+		],
 	});
 	router.map(routes.app.team.settings, {
 		middleware: [seedTeam(team, membership)],
 		handler: (settingsModule.default as { handler: RequestHandler<any> }).handler,
 	});
 
-	let container = new ServiceContainer();
-	container.instance(Database, db);
-
-	let admin = {
-		fetchSubjectById: vi.fn(async (subjectId: string) =>
-			failure(new SubjectNotFoundError(subjectId)),
-		),
-	} as unknown as ManagementClient;
-	container.instance(ManagementClient, admin);
-
 	let request = new Request(
 		new URL(routes.app.team.settings.href({ team: team.slug }), "https://uptime.test"),
 	);
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 describe("settings page", () => {

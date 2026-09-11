@@ -15,8 +15,6 @@ import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
@@ -26,6 +24,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 
+import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { BASE_PRICE_USD, formatPings, formatUsd, INCLUDED_PINGS } from "~/app/lib/pricing";
 import { findClaimViolations } from "~/app/lib/public-claims";
@@ -70,12 +69,11 @@ function seedAuth(viewer: Viewer | null): Middleware {
  */
 async function getHome(viewer: Viewer | null) {
 	let { db } = createTestDatabase();
-	let container = new ServiceContainer();
-	container.instance(Database, db);
 
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			database(() => db),
 			seedAuth(viewer),
 			i18n as Middleware,
 			renderWith(createTestRenderer) as Middleware,
@@ -84,7 +82,7 @@ async function getHome(viewer: Viewer | null) {
 	router.map(routes.home, home);
 
 	let request = new Request(`https://uptime.test${routes.home.href()}`);
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 beforeEach(() => {

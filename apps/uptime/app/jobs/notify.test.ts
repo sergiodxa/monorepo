@@ -12,7 +12,6 @@ import { createEnv } from "@sdxc/cloudflare-mocks";
 import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
-import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -81,6 +80,7 @@ vi.doMock("~/app/services/alerts", () => ({
 let { Job, createJobContext } = await import("@sdxc/jobs");
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let notify = (await import("./notify")).default;
 let { default: Monitor } = await import("~/app/data/monitor");
 
@@ -93,18 +93,15 @@ let record: Record<string, unknown> = {};
 
 /** Runs the handler over a context carrying the test's database, as the chain would. */
 async function runJob(db: Database, input: NotifyInput) {
-	let container = new ServiceContainer();
-	container.singleton(
-		Mailer,
-		() => new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }),
-	);
-
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.notify, { id: "message-1", attempts: 1, input, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	ctx.set(JobMailer, new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }), {
+		property: "mailer",
+	});
 
 	try {
-		await container.scope(() => notify(ctx));
+		await notify(ctx);
 	} finally {
 		log.emit();
 	}

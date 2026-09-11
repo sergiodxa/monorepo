@@ -10,9 +10,7 @@
 import { redirect } from "@sdxc/http/response";
 import { notFound } from "@sdxc/http/response/html";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
@@ -40,9 +38,8 @@ export const updateSsl = createAction(routes.actions.monitor.http.updateSsl, asy
 		);
 	}
 
-	let db = getServiceContainer().get(Database);
 	let { monitor_id, ssl_expires_at, ...values } = result.data;
-	let existing = await Monitor.findByIdForTeam(db, ctx.team.id, monitor_id);
+	let existing = await Monitor.findByIdForTeam(ctx.db, ctx.team.id, monitor_id);
 	if (!existing) return notFound("Not Found");
 
 	let expiresAt = ssl_expires_at ? new Date(ssl_expires_at).getTime() : null;
@@ -50,7 +47,7 @@ export const updateSsl = createAction(routes.actions.monitor.http.updateSsl, asy
 		? calculateSslStatus(expiresAt, values.ssl_expiry_warning_days)
 		: { status: "unknown" as const };
 
-	await Monitor.updateById(db, monitor_id, {
+	await Monitor.updateById(ctx.db, monitor_id, {
 		ssl_monitoring_enabled: values.ssl_monitoring_enabled,
 		ssl_expiry_warning_days: values.ssl_expiry_warning_days,
 		ssl_expires_at: expiresAt,

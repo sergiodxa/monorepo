@@ -8,11 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ServiceContainer } from "@sdxc/service-container";
 import { TypeID } from "@sdxc/typeid";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
@@ -22,6 +20,7 @@ import type { ApiKeyScope, SelectTeam } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import DnsMonitor, { MAX_DNS_MONITORS_PER_TEAM } from "~/app/data/dns-monitor";
 import DnsMonitorRecord from "~/app/data/dns-monitor-record";
+import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { parseLink } from "~/app/lib/test/paging";
 import { MAX_TRACKED_NAMES_PER_MONITOR } from "~/app/services/dns-discovery";
@@ -88,13 +87,10 @@ async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]): Prom
 }
 
 async function dispatch(db: Db, request: Request) {
-	let router = createRouter({ middleware: [asyncContext()] });
+	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
 	router.map(dnsMonitorsRoutes, dnsMonitorsController);
 
-	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
-
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 function indexRequest(headers: Record<string, string> = {}, query = "") {

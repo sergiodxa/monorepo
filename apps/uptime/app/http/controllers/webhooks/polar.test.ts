@@ -16,13 +16,12 @@ import type { Middleware } from "remix/router";
 
 import { log } from "@sdxc/logger/middleware";
 import { unwrap } from "@sdxc/result";
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import Subscription from "~/app/data/subscription";
+import { database } from "~/app/http/middleware/database";
 import { MONITORING_PRODUCT, PING_METER } from "~/app/lib/billing";
 import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -85,20 +84,17 @@ async function subscribe(externalId: string, product = MONITORING_PRODUCT) {
  * the platform signed — the URL is the only thing the endpoint does not read.
  */
 async function dispatch(delivery: { body: string; headers: Headers }) {
-	let router = createRouter({ middleware: [asyncContext(), log() as Middleware] });
+	let router = createRouter({
+		middleware: [asyncContext(), database(() => db), log() as Middleware],
+	});
 	router.map(routes.webhooks.polar, polarWebhook);
 
-	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
-
-	return await container.scope(() =>
-		router.fetch(
-			new Request(`https://uptime.test${routes.webhooks.polar.href()}`, {
-				method: "POST",
-				headers: delivery.headers,
-				body: delivery.body,
-			}),
-		),
+	return await router.fetch(
+		new Request(`https://uptime.test${routes.webhooks.polar.href()}`, {
+			method: "POST",
+			headers: delivery.headers,
+			body: delivery.body,
+		}),
 	);
 }
 

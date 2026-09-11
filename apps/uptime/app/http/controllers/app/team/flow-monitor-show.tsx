@@ -17,15 +17,12 @@ import { formatDateTime, formatRelative } from "@sdxc/dates";
 import { notFound } from "@sdxc/http/response/html";
 import { IntlProvider } from "@sdxc/i18n/ui";
 import { PencilIcon } from "@sdxc/icons";
-import { inject } from "@sdxc/service-container";
 import { flex, flexWrap, gap, hidden, items } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
 import { mbe } from "@sdxc/u/size";
 import { nowrap } from "@sdxc/u/typography";
 import { Badge, LinkButton } from "@sdxc/ui";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 import { Frame } from "remix/ui";
 
@@ -57,13 +54,12 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
  */
 export default createAction(routes.app.team.flowMonitors.show, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
-		let monitor = await FlowMonitor.findByIdForTeam(db, ctx.team.id, monitorId);
+		let monitor = await FlowMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
 		if (!monitor) return notFound("Not Found");
 
 		return ctx.render(
@@ -175,5 +171,5 @@ export default createAction(routes.app.team.flowMonitors.show, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });

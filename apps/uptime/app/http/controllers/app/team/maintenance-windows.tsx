@@ -6,13 +6,10 @@
  */
 
 import { PlusIcon, WrenchIcon } from "@sdxc/icons";
-import { inject } from "@sdxc/service-container";
 import { fg } from "@sdxc/u/color";
 import { hover } from "@sdxc/u/state";
 import { textDecoration } from "@sdxc/u/typography";
 import { Badge, Empty, LinkButton, Table } from "@sdxc/ui";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import type { SelectMaintenanceWindow } from "~/database/schema";
@@ -31,18 +28,17 @@ import routes from "~/routes/web";
 /** GET /app/:team/maintenance — the team's maintenance windows list. */
 export default createAction(routes.app.team.maintenanceWindows.index, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let windows = await MaintenanceWindow.listByTeam(db, ctx.team.id);
+		let windows = await MaintenanceWindow.listByTeam(ctx.db, ctx.team.id);
 		/**
 		 * A scope's monitor id is unique across every type, so one map keyed by id
 		 * resolves every row's name, matching what {@link storedMonitorScope}
 		 * already determined for that row.
 		 */
-		let scopeGroups = await listScopeMonitors(db, ctx.team.id);
+		let scopeGroups = await listScopeMonitors(ctx.db, ctx.team.id);
 		let monitorNamesById = new Map(
 			scopeGroups.flatMap((group) => group.monitors.map((monitor) => [monitor.id, monitor.name])),
 		);
@@ -200,5 +196,5 @@ export default createAction(routes.app.team.maintenanceWindows.index, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });

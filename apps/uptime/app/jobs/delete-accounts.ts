@@ -9,13 +9,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { ManagementClient } from "@sdxc/auth/management-client";
 import type { CurrentJobContext } from "@sdxc/jobs";
+import type { Mailer } from "@sdxc/mail";
 
-import { ManagementClient } from "@sdxc/auth/management-client";
 import { createJobHandler } from "@sdxc/jobs";
-import { Mailer } from "@sdxc/mail";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 
 import type { DeletedTeamNotice } from "~/app/services/account-erasure";
 import type { SelectAccountDeletion } from "~/database/schema";
@@ -32,10 +31,6 @@ import { recordCost } from "~/app/services/cost";
 import { resolveSubjects } from "~/app/services/subjects";
 
 export default createJobHandler(jobs.deleteAccounts, async (ctx) => {
-	let mailer = getServiceContainer().get(Mailer);
-	/** Only ever used to turn a former member's subject id into an address to notify. */
-	let admin = getServiceContainer().get(ManagementClient);
-
 	let pending = await AccountDeletion.listPending(ctx.database);
 
 	let deleted = 0;
@@ -48,7 +43,7 @@ export default createJobHandler(jobs.deleteAccounts, async (ctx) => {
 	 */
 	for (let request of pending) {
 		try {
-			if (await erase(ctx, mailer, admin, request)) deleted++;
+			if (await erase(ctx, ctx.mailer, ctx.admin, request)) deleted++;
 			else errorCount++;
 		} catch (error) {
 			errorCount++;

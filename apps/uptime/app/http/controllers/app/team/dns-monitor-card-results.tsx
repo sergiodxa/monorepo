@@ -10,11 +10,8 @@
  */
 
 import { notFound } from "@sdxc/http/response/html";
-import { inject } from "@sdxc/service-container";
 import { flex, flexWrap, gap } from "@sdxc/u/layout";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import DnsMonitor from "~/app/data/dns-monitor";
@@ -26,14 +23,13 @@ import routes from "~/routes/web";
 /** GET /app/:team/dns/:monitorId/cards/results — the monitor's result-derived stats, fragment-only. */
 export default createAction(routes.app.team.dnsMonitors.cards.results, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
 
-		let monitor = await DnsMonitor.findByIdForTeam(db, ctx.team.id, monitorId);
+		let monitor = await DnsMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
 		if (!monitor) return notFound("Not Found");
 
-		let results = await DnsMonitor.listResults(db, monitor.id);
+		let results = await DnsMonitor.listResults(ctx.db, monitor.id);
 
 		let totalChecks = results.length;
 		let okChecks = results.filter((result) => result.status === "ok").length;
@@ -51,5 +47,5 @@ export default createAction(routes.app.team.dnsMonitors.cards.results, {
 				/>
 			</div>,
 		);
-	}),
+	},
 });

@@ -9,7 +9,6 @@
  */
 
 import { redirect } from "@sdxc/http/response";
-import { inject } from "@sdxc/service-container";
 import { border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { flex, flexCol, gap, items } from "@sdxc/u/layout";
@@ -17,8 +16,6 @@ import { m, minBs, p } from "@sdxc/u/size";
 import { hover } from "@sdxc/u/state";
 import { fontSize, textAlign, textDecoration } from "@sdxc/u/typography";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import Invite from "~/app/data/invite";
@@ -30,13 +27,12 @@ import routes from "~/routes/web";
 /** GET /invite/:inviteId — accepts a team invite for the signed-in account. */
 export default createAction(routes.invite, {
 	middleware: [requireUser],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let { inviteId } = s.parse(s.object({ inviteId: s.string() }), ctx.params);
-		let invite = await Invite.findById(db, inviteId);
+		let invite = await Invite.findById(ctx.db, inviteId);
 
 		let renderError = (message: string) =>
 			ctx.render(
@@ -78,10 +74,10 @@ export default createAction(routes.invite, {
 			);
 		}
 
-		await Invite.accept(db, invite.id, invite.team_id, viewer.id);
+		await Invite.accept(ctx.db, invite.id, invite.team_id, viewer.id);
 
 		return redirect(routes.app.team.dashboard.index.href({ team: invite.team_id }), {
 			status: redirect.Status.SeeOther,
 		});
-	}),
+	},
 });

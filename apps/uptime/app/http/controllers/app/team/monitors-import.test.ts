@@ -9,12 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-import { ServiceContainer } from "@sdxc/service-container";
 import { createCookie } from "remix/cookie";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
@@ -30,6 +29,7 @@ import type { MonitorImportReport } from "~/app/http/validators/monitor-import";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { MONITOR_IMPORT_REPORT } from "~/app/http/controllers/actions/monitors-import";
+import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { memberships, teams } from "~/database/schema";
@@ -104,11 +104,8 @@ async function send(
 	membership: SelectMembership,
 	report?: MonitorImportReport,
 ): Promise<Response> {
-	let container = new ServiceContainer();
-	container.instance(Database, db);
-
 	let router = createRouter({
-		middleware: [asyncContext(), session(sessionCookie, sessionStorage)],
+		middleware: [asyncContext(), database(() => db), session(sessionCookie, sessionStorage)],
 	});
 	router.map(routes.app.team.monitorsImport, {
 		middleware: [seedTeam(team, membership), i18n, renderWith(createHtmlRenderer) as Middleware],
@@ -126,15 +123,11 @@ async function send(
 
 	let cookie = "";
 	if (report) {
-		let flashed = await container.scope(() =>
-			router.fetch(new Request("https://uptime.test/flash", { method: "POST" })),
-		);
+		let flashed = await router.fetch(new Request("https://uptime.test/flash", { method: "POST" }));
 		cookie = cookieHeader(flashed);
 	}
 
-	return container.scope(() =>
-		router.fetch(new Request(url, cookie ? { headers: { Cookie: cookie } } : undefined)),
-	);
+	return router.fetch(new Request(url, cookie ? { headers: { Cookie: cookie } } : undefined));
 }
 
 describe("monitorsImport", () => {

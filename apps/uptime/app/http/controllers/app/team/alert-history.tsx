@@ -6,12 +6,9 @@
  */
 
 import { BellIcon, HistoryIcon } from "@sdxc/icons";
-import { inject } from "@sdxc/service-container";
 import { fg } from "@sdxc/u/color";
 import { fontSize } from "@sdxc/u/typography";
 import { Badge, Empty, LinkButton, Table } from "@sdxc/ui";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import type { BadgeTone } from "~/resources/components/badge";
@@ -47,14 +44,13 @@ const EVENT_TYPE_BADGE_TONE: Record<string, BadgeTone> = {
 /** GET /app/:team/alert-history — the team's alert delivery history. */
 export default createAction(routes.app.team.alerts.history, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let alerts = await Alert.listByTeam(db, ctx.team.id);
+		let alerts = await Alert.listByTeam(ctx.db, ctx.team.id);
 		let alertsById = new Map(alerts.map((alert) => [alert.id, alert]));
-		let events = await AlertEvent.listByAlertIds(db, [...alertsById.keys()], HISTORY_LIMIT);
+		let events = await AlertEvent.listByAlertIds(ctx.db, [...alertsById.keys()], HISTORY_LIMIT);
 
 		return ctx.render(
 			<DocumentLayout
@@ -156,5 +152,5 @@ export default createAction(routes.app.team.alerts.history, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });

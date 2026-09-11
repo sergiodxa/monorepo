@@ -13,11 +13,9 @@ import { redirect } from "@sdxc/http/response";
 import { notFound } from "@sdxc/http/response/html";
 import { ok } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
@@ -55,16 +53,15 @@ export const createMonitor = createAction(routes.actions.monitor.http.create, as
 		});
 	}
 
-	let db = getServiceContainer().get(Database);
-	let monitor = await Monitor.create(db, ctx.team.id, viewer.id, result.data);
-	await Monitor.ping(db, monitor.id, ctx.team.owner_id);
+	let monitor = await Monitor.create(ctx.db, ctx.team.id, viewer.id, result.data);
+	await Monitor.ping(ctx.db, monitor.id, ctx.team.owner_id);
 
 	/**
 	 * Counted after creation, so the number is the team's total including this one, and
 	 * compared for equality rather than `>=` so the event fires exactly once per team no
 	 * matter how many monitors they go on to add.
 	 */
-	let monitorCount = await Monitor.countByTeam(db, ctx.team.id);
+	let monitorCount = await Monitor.countByTeam(ctx.db, ctx.team.id);
 	if (monitorCount === ACTIVATION_MONITOR_COUNT) {
 		trackSecondMonitorCreated(ctx.log, {
 			teamId: ctx.team.id,
@@ -100,12 +97,11 @@ export const updateMonitor = createAction(routes.actions.monitor.http.update, as
 		);
 	}
 
-	let db = getServiceContainer().get(Database);
 	let { monitor_id, ...changes } = result.data;
-	let existing = await Monitor.findByIdForTeam(db, ctx.team.id, monitor_id);
+	let existing = await Monitor.findByIdForTeam(ctx.db, ctx.team.id, monitor_id);
 	if (!existing) return notFound("Not Found");
 
-	await Monitor.updateById(db, monitor_id, changes);
+	await Monitor.updateById(ctx.db, monitor_id, changes);
 
 	session?.flash("toast", { intent: "success", message: "Monitor updated." });
 	return redirect(
@@ -131,11 +127,10 @@ export const deleteMonitor = createAction(routes.actions.monitor.http.delete, as
 		return notFound("Not Found");
 	}
 
-	let db = getServiceContainer().get(Database);
-	let existing = await Monitor.findByIdForTeam(db, ctx.team.id, result.data.monitor_id);
+	let existing = await Monitor.findByIdForTeam(ctx.db, ctx.team.id, result.data.monitor_id);
 	if (!existing) return notFound("Not Found");
 
-	await Monitor.deleteById(db, result.data.monitor_id);
+	await Monitor.deleteById(ctx.db, result.data.monitor_id);
 
 	session?.flash("toast", { intent: "success", message: `Monitor "${existing.name}" deleted.` });
 	return redirect(routes.app.team.monitors.index.href({ team: ctx.team.slug }), {
@@ -157,11 +152,10 @@ export const playMonitor = createAction(routes.actions.monitor.http.play, async 
 		});
 	}
 
-	let db = getServiceContainer().get(Database);
-	let monitor = await Monitor.findByIdForTeam(db, ctx.team.id, result.data.monitor_id);
+	let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.team.id, result.data.monitor_id);
 	if (!monitor) return notFound("Not Found");
 
-	let queued = await Monitor.ping(db, monitor.id, ctx.team.owner_id);
+	let queued = await Monitor.ping(ctx.db, monitor.id, ctx.team.owner_id);
 
 	/**
 	 * A JSON caller is a hydrated page that won't navigate, so the outcome goes in the

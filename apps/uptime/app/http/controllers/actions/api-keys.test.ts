@@ -7,8 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter, type Middleware } from "remix/router";
@@ -16,6 +14,7 @@ import { describe, expect, test } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { apiKeys, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -45,7 +44,7 @@ function toSearchParams(body: Record<string, string | string[]>): URLSearchParam
 	return params;
 }
 
-/** Posts a form body to one of the API-key actions through the real action, DB, and service container. */
+/** Posts a form body to one of the API-key actions through the real action and a real database. */
 async function postApiKeyAction(
 	action: unknown,
 	route: { method: string; href: (params: { team: string }) => string },
@@ -54,10 +53,7 @@ async function postApiKeyAction(
 	db: ReturnType<typeof createTestDatabase>["db"],
 	body: Record<string, string | string[]>,
 ) {
-	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
-
-	let router = createRouter({ middleware: [asyncContext(), formData()] });
+	let router = createRouter({ middleware: [asyncContext(), database(() => db), formData()] });
 	/**
 	 * Casts `router.map` itself so this helper can map several differently-shaped
 	 * routes without losing type-checking elsewhere.
@@ -74,7 +70,7 @@ async function postApiKeyAction(
 		headers: { "content-type": "application/x-www-form-urlencoded" },
 	});
 
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 async function createTeamRow(db: ReturnType<typeof createTestDatabase>["db"]) {

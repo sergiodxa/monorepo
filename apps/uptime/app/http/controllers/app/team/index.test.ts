@@ -9,8 +9,6 @@
 
 import type { Middleware, RequestHandler } from "remix/router";
 
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { createRouter } from "remix/router";
@@ -19,6 +17,7 @@ import { describe, expect, test } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -64,10 +63,7 @@ describe("app/team/index", () => {
 	test("redirects to the team's dashboard", async () => {
 		let { db, team, membership } = await createFixture();
 
-		let container = new ServiceContainer();
-		container.instance(Database, db);
-
-		let router = createRouter({ middleware: [asyncContext()] });
+		let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
 		router.map(routes.app.team.index, {
 			middleware: [seedTeam(team, membership)],
 			handler: (indexModule.default as { handler: RequestHandler<any> }).handler,
@@ -76,7 +72,7 @@ describe("app/team/index", () => {
 		let request = new Request(
 			new URL(routes.app.team.index.href({ team: team.slug }), "https://uptime.test"),
 		);
-		let response = await container.scope(() => router.fetch(request));
+		let response = await router.fetch(request);
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(

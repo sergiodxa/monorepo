@@ -11,11 +11,9 @@
 import { BadRequest, Created, InternalServerError } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
-import { Database } from "remix/data-table";
 import { createController } from "remix/router";
 
 import type { SelectInvite } from "~/database/schema";
@@ -56,13 +54,11 @@ export default createController(invitesRoutes, {
 		invitesIndex: {
 			middleware: [requireApiKey("invites:read")],
 			handler: async (ctx) => {
-				let db = getServiceContainer().get(Database);
-
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
 
 				// Chaining returns new queries, so the same one both counts and pages.
-				let query = Invite.listByTeamQuery(db, ctx.apiTeam.id);
+				let query = Invite.listByTeamQuery(ctx.db, ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {
 					orderBy: NEWEST_FIRST,
@@ -98,9 +94,8 @@ export default createController(invitesRoutes, {
 					);
 				}
 
-				let db = getServiceContainer().get(Database);
 				let invite = await Invite.create(
-					db,
+					ctx.db,
 					ctx.apiTeam.id,
 					ctx.apiTeam.owner_id,
 					result.data.email,

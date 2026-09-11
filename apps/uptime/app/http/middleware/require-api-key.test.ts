@@ -10,14 +10,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
+import { database } from "~/app/http/middleware/database";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { apiKeys, teams } from "~/database/schema";
@@ -48,7 +47,7 @@ async function seedApiKey(
 }
 
 async function dispatch(db: Db, scope: ApiKeyScope, headers: Record<string, string> = {}) {
-	let router = createRouter();
+	let router = createRouter({ middleware: [database(() => db)] });
 
 	router.get("/test", {
 		middleware: [requireApiKey(scope)],
@@ -57,11 +56,8 @@ async function dispatch(db: Db, scope: ApiKeyScope, headers: Record<string, stri
 		},
 	});
 
-	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
-
 	let request = new Request("https://example.com/test", { headers });
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 describe("requireApiKey", () => {

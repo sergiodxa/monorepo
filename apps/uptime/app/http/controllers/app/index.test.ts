@@ -10,8 +10,6 @@
 
 import type { Middleware } from "remix/router";
 
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { createRouter } from "remix/router";
@@ -19,6 +17,7 @@ import { describe, expect, test } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 
+import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -36,14 +35,13 @@ function seedAuth(viewer: Viewer | null): Middleware {
 
 /** Dispatches a real GET request to `/app` for the given signed-in state. */
 async function getAppIndex(db: ReturnType<typeof createTestDatabase>["db"], viewer: Viewer | null) {
-	let container = new ServiceContainer();
-	container.instance(Database, db);
-
-	let router = createRouter({ middleware: [asyncContext(), seedAuth(viewer)] });
+	let router = createRouter({
+		middleware: [asyncContext(), database(() => db), seedAuth(viewer)],
+	});
 	router.map(routes.app.index, appIndex);
 
 	let request = new Request(`https://uptime.test${routes.app.index.href()}`);
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 let VIEWER: Viewer = { id: "user-1", name: "Ada Lovelace", email: "ada@example.com", avatar: "" };

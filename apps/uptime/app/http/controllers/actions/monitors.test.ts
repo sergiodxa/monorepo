@@ -12,6 +12,7 @@
  */
 
 import type { QueueMock } from "@sdxc/cloudflare-mocks";
+import type { Database } from "remix/data-table";
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
@@ -19,8 +20,6 @@ import billing from "@sdxc/billing/middleware";
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { Log } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
@@ -30,6 +29,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { database } from "~/app/http/middleware/database";
 import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { memberships, monitors, teams } from "~/database/schema";
@@ -117,12 +117,10 @@ async function send(
 	params: Record<string, string>,
 	records: Record<string, unknown>[] = [],
 ): Promise<Response> {
-	let container = new ServiceContainer();
-	container.instance(Database, db);
-
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			database(() => db),
 			log() as Middleware,
 			billing({ provider: () => testBilling }) as Middleware,
 			formData() as Middleware,
@@ -142,7 +140,7 @@ async function send(
 	 */
 	let requestLog = new Log({ kind: "request", sink: (record) => void records.push(record) });
 
-	return requestLog.run(() => container.scope(() => router.fetch(request)));
+	return requestLog.run(() => router.fetch(request));
 }
 
 describe("createMonitor", () => {
@@ -505,10 +503,9 @@ describe("playMonitor for a caller asking for JSON", () => {
 		membership: SelectMembership,
 		monitorId: string,
 	): Promise<Response> {
-		let container = new ServiceContainer();
-		container.instance(Database, db);
-
-		let router = createRouter({ middleware: [asyncContext(), formData() as Middleware] });
+		let router = createRouter({
+			middleware: [asyncContext(), database(() => db), formData() as Middleware],
+		});
 		router.map(routes.actions.monitor.http.play, {
 			middleware: [seedTeam(team, membership)],
 			handler: playMonitor as RequestHandler<any>,
@@ -526,7 +523,7 @@ describe("playMonitor for a caller asking for JSON", () => {
 			},
 		);
 
-		return container.scope(() => router.fetch(request));
+		return router.fetch(request);
 	}
 
 	/** Creates one monitor for `team`, optionally with a check outcome already cached on it. */

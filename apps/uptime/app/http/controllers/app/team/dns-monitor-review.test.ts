@@ -10,12 +10,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-import { ServiceContainer } from "@sdxc/service-container";
 import { createCookie } from "remix/cookie";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
@@ -29,6 +28,7 @@ import { describe, expect, test } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { InsertDnsMonitorRecord, SelectMembership, SelectTeam } from "~/database/schema";
 
+import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
@@ -150,11 +150,8 @@ async function send(
 	monitorId: string,
 	report?: DnsZoneFileReport,
 ): Promise<Response> {
-	let container = new ServiceContainer();
-	container.instance(Database, db);
-
 	let router = createRouter({
-		middleware: [asyncContext(), session(sessionCookie, sessionStorage)],
+		middleware: [asyncContext(), database(() => db), session(sessionCookie, sessionStorage)],
 	});
 	router.map(routes.app.team.dnsMonitors.review, {
 		middleware: [seedTeam(team, membership), i18n, renderWith(createHtmlRenderer) as Middleware],
@@ -172,15 +169,11 @@ async function send(
 
 	let cookie = "";
 	if (report) {
-		let flashed = await container.scope(() =>
-			router.fetch(new Request("https://uptime.test/flash", { method: "POST" })),
-		);
+		let flashed = await router.fetch(new Request("https://uptime.test/flash", { method: "POST" }));
 		cookie = cookieHeader(flashed);
 	}
 
-	return container.scope(() =>
-		router.fetch(new Request(url, cookie ? { headers: { Cookie: cookie } } : undefined)),
-	);
+	return router.fetch(new Request(url, cookie ? { headers: { Cookie: cookie } } : undefined));
 }
 
 describe("dnsMonitorReview", () => {

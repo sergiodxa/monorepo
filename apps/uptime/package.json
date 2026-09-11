@@ -33,7 +33,6 @@
 		"@sdxc/rate-limit": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/seo": "workspace:*",
-		"@sdxc/service-container": "workspace:*",
 		"@sdxc/session-storage-kv": "workspace:*",
 		"@sdxc/sitemap": "workspace:*",
 		"@sdxc/spec": "workspace:*",

@@ -16,8 +16,6 @@ import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
@@ -27,6 +25,7 @@ import { describe, expect, test } from "vitest";
 
 import Lead from "~/app/data/lead";
 import TrialWatch from "~/app/data/trial-watch";
+import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
 import routes from "~/routes/web";
@@ -61,12 +60,10 @@ async function createFixture() {
 
 /** Dispatches one request at the unsubscribe URL, with the method the test cares about. */
 async function visit(db: Db, token: string, method: "GET" | "POST") {
-	let container = new ServiceContainer();
-	container.instance(Database, db);
-
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			database(() => db),
 			((ctx, next) => {
 				ctx.set(Auth, { ok: false });
 				return next();
@@ -82,9 +79,7 @@ async function visit(db: Db, token: string, method: "GET" | "POST") {
 			? routes.trial.unsubscribe.index.href({ token })
 			: routes.trial.unsubscribe.action.href({ token });
 
-	let response = await container.scope(() =>
-		router.fetch(new Request(`https://uptime.test${href}`, { method })),
-	);
+	let response = await router.fetch(new Request(`https://uptime.test${href}`, { method }));
 
 	return { response, body: await response.text() };
 }

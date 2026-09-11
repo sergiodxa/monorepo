@@ -9,7 +9,6 @@
  */
 
 import { DownloadIcon, LogOutIcon, PlusIcon, Trash2Icon } from "@sdxc/icons";
-import { inject } from "@sdxc/service-container";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, border, borderEdge, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
@@ -20,8 +19,6 @@ import { is, m, maxIs, mi, p } from "@sdxc/u/size";
 import { hover, when } from "@sdxc/u/state";
 import { font, fontSize, textAlign, textDecoration, weight } from "@sdxc/u/typography";
 import { AlertDialog, Button, Description, Empty, Select, Switch, Table } from "@sdxc/ui";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import type { OptionalEmail } from "~/database/schema";
@@ -105,16 +102,15 @@ function confirmationInput() {
 /** GET /app/:team/account — the signed-in user's account settings. */
 export default createAction(routes.app.team.account, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let [memberships, preferences, plan, queuedDeletion] = await Promise.all([
-			Team.listWithRoleBySubjectId(db, viewer.id),
-			UserPreferences.findBySubjectId(db, viewer.id),
-			planAccountErasure(db, viewer.id),
-			AccountDeletion.findBySubjectId(db, viewer.id),
+			Team.listWithRoleBySubjectId(ctx.db, viewer.id),
+			UserPreferences.findBySubjectId(ctx.db, viewer.id),
+			planAccountErasure(ctx.db, viewer.id),
+			AccountDeletion.findBySubjectId(ctx.db, viewer.id),
 		]);
 
 		let preferredLanguage = preferences?.preferred_language ?? null;
@@ -779,5 +775,5 @@ export default createAction(routes.app.team.account, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });

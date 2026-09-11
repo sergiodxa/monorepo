@@ -9,8 +9,6 @@
 
 import { Log } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter, type Middleware } from "remix/router";
@@ -18,6 +16,7 @@ import { describe, expect, test } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { alerts, dnsMonitors, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -34,7 +33,7 @@ function teamContextMiddleware(team: SelectTeam, membership: SelectMembership): 
 	};
 }
 
-/** Posts a form body to one of the alert actions through the real action, DB, and service container. */
+/** Posts a form body to one of the alert actions through the real action and a real database. */
 async function postAlertAction(
 	action: unknown,
 	route: { method: string; href: (params: { team: string }) => string },
@@ -45,10 +44,9 @@ async function postAlertAction(
 	headers: Record<string, string> = {},
 	records: Record<string, unknown>[] = [],
 ) {
-	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
-
-	let router = createRouter({ middleware: [asyncContext(), log() as Middleware, formData()] });
+	let router = createRouter({
+		middleware: [asyncContext(), database(() => db), log() as Middleware, formData()],
+	});
 	/**
 	 * Casts `router.map` itself so this helper can map several differently-shaped
 	 * routes without losing type-checking elsewhere.
@@ -71,7 +69,7 @@ async function postAlertAction(
 	 */
 	let requestLog = new Log({ kind: "request", sink: (record) => void records.push(record) });
 
-	return requestLog.run(() => container.scope(() => router.fetch(request)));
+	return requestLog.run(() => router.fetch(request));
 }
 
 async function createTeamRow(db: ReturnType<typeof createTestDatabase>["db"]) {

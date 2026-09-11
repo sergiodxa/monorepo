@@ -16,8 +16,10 @@ import { createUptimeReporter } from "@sdxc/jobs/uptime";
 import { env } from "cloudflare:workers";
 
 import jobs from "~/app/jobs";
+import { admin } from "~/app/jobs/middleware/admin";
 import { costLedger } from "~/app/jobs/middleware/cost-ledger";
 import { database } from "~/app/jobs/middleware/database";
+import { mailer } from "~/app/jobs/middleware/mailer";
 import { jobQueue } from "~/app/lib/queue";
 import { logger } from "~/bootstrap/logger";
 
@@ -73,7 +75,7 @@ export const dispatcher = createJobDispatcher({
 	 * The ledger is outermost so it counts the database the middleware inside it opens,
 	 * along with everything the handler then does through it.
 	 */
-	middleware: [costLedger(), database()],
+	middleware: [costLedger(), database(), mailer(), admin()],
 	/**
 	 * This worker consumes its own dead-letter queue too (ADR-018), so those batches are
 	 * recorded and acked rather than dispatched.

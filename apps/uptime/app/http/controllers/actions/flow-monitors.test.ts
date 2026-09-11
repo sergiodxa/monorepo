@@ -10,6 +10,7 @@
  */
 
 import type { AnalyticsEngineMock } from "@sdxc/cloudflare-mocks";
+import type { Database } from "remix/data-table";
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
@@ -17,10 +18,8 @@ import billing from "@sdxc/billing/middleware";
 import { createAnalyticsEngine, createEnv } from "@sdxc/cloudflare-mocks";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
-import { ServiceContainer } from "@sdxc/service-container";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
@@ -29,6 +28,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
+import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -147,13 +147,11 @@ async function send(
 	params: Record<string, string>,
 	headers: Record<string, string> = {},
 ): Promise<Response> {
-	let container = new ServiceContainer();
-	container.instance(Database, db);
-
 	/** `i18n` because the entitlement refusal's message resolves from a locale key. */
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			database(() => db),
 			billing({ provider: () => testBilling }),
 			formData() as Middleware,
 			i18n,
@@ -168,7 +166,7 @@ async function send(
 		body: new URLSearchParams(params).toString(),
 	});
 
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 describe("createFlowMonitor", () => {

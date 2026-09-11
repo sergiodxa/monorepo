@@ -6,13 +6,10 @@
  */
 
 import { ClockIcon, PlusIcon } from "@sdxc/icons";
-import { inject } from "@sdxc/service-container";
 import { fg } from "@sdxc/u/color";
 import { hover } from "@sdxc/u/state";
 import { textDecoration } from "@sdxc/u/typography";
 import { Badge, Empty, LinkButton, Table } from "@sdxc/ui";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import type { BadgeTone } from "~/resources/components/badge";
@@ -37,12 +34,11 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 /** GET /app/:team/cron-jobs — the team's cron-job monitors list. */
 export default createAction(routes.app.team.cronJobs.index, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let monitors = await CronJobMonitor.listByTeam(db, ctx.team.id);
+		let monitors = await CronJobMonitor.listByTeam(ctx.db, ctx.team.id);
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · ${ctx.i18next.t("page.cronJobs.header.title")}`}>
@@ -144,5 +140,5 @@ export default createAction(routes.app.team.cronJobs.index, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });

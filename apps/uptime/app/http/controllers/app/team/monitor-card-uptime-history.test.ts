@@ -9,12 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
@@ -26,6 +25,7 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import MonitorDailyStats from "~/app/data/monitor-daily-stats";
+import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { memberships, monitors, teams } from "~/database/schema";
@@ -104,10 +104,7 @@ async function send(
 	membership: SelectMembership,
 	monitorId: string,
 ): Promise<Response> {
-	let container = new ServiceContainer();
-	container.instance(Database, db);
-
-	let router = createRouter({ middleware: [asyncContext()] });
+	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
 	router.map(routes.app.team.monitors.cards.uptimeHistory, {
 		middleware: [seedTeam(team, membership), i18n, renderWith(createHtmlRenderer) as Middleware],
 		handler: monitorCardUptimeHistory.handler,
@@ -120,7 +117,7 @@ async function send(
 		),
 	);
 
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 describe("monitor-card-uptime-history", () => {

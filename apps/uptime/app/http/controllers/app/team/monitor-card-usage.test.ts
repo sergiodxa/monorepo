@@ -24,7 +24,6 @@ import { createEnv } from "@sdxc/cloudflare-mocks";
 import { createTranslator } from "@sdxc/i18n";
 import { Log } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
-import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -36,6 +35,7 @@ import { describe, expect, test, vi } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectMonitor, SelectTeam } from "~/database/schema";
 
+import { database } from "~/app/http/middleware/database";
 import { createActiveSubscription } from "~/app/lib/test/billing";
 import { createSqliteDatabaseAdapter, createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
@@ -170,11 +170,13 @@ async function send(
 	monitorId: string,
 	records: Record<string, unknown>[] = [],
 ): Promise<Response> {
-	let container = new ServiceContainer();
-	container.instance(Database, db);
-
 	let router = createRouter({
-		middleware: [asyncContext(), log() as Middleware, renderWith(createHtmlRenderer) as Middleware],
+		middleware: [
+			asyncContext(),
+			database(() => db),
+			log() as Middleware,
+			renderWith(createHtmlRenderer) as Middleware,
+		],
 	});
 	router.map(routes.app.team.monitors.cards.usage, {
 		middleware: [seedTeam(team, membership)],
@@ -194,7 +196,7 @@ async function send(
 	 */
 	let requestLog = new Log({ kind: "request", sink: (record) => void records.push(record) });
 
-	return requestLog.run(() => container.scope(() => router.fetch(request)));
+	return requestLog.run(() => router.fetch(request));
 }
 
 describe("monitor-card-usage", () => {

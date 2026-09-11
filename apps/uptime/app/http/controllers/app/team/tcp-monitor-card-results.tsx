@@ -14,13 +14,10 @@
  */
 
 import { notFound } from "@sdxc/http/response/html";
-import { inject } from "@sdxc/service-container";
 import { flex, flexWrap, gap } from "@sdxc/u/layout";
 import { mbe } from "@sdxc/u/size";
 import { Badge, Empty, Table } from "@sdxc/ui";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 import { Fragment } from "remix/ui";
 
@@ -42,14 +39,13 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 /** GET /app/:team/tcp/:monitorId/cards/results — the monitor's result-derived stats and result table, fragment-only. */
 export default createAction(routes.app.team.tcpMonitors.cards.results, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
 
-		let monitor = await TcpMonitor.findByIdForTeam(db, ctx.team.id, monitorId);
+		let monitor = await TcpMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
 		if (!monitor) return notFound("Not Found");
 
-		let results = await TcpMonitor.listResults(db, monitor.id);
+		let results = await TcpMonitor.listResults(ctx.db, monitor.id);
 
 		let totalChecks = results.length;
 		let upChecks = results.filter((result) => result.status === "up").length;
@@ -129,5 +125,5 @@ export default createAction(routes.app.team.tcpMonitors.cards.results, {
 				</section>
 			</Fragment>,
 		);
-	}),
+	},
 });

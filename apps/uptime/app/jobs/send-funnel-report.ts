@@ -11,9 +11,7 @@
 
 import { toDayKey, subDays } from "@sdxc/dates";
 import { createJobHandler } from "@sdxc/jobs";
-import { Mailer } from "@sdxc/mail";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { env } from "cloudflare:workers";
 
 import type { TrialDailyCounters } from "~/app/data/trial-daily-stats";
@@ -53,7 +51,6 @@ function funnelReportRecipient(): string | null {
  * billed.
  */
 export default createJobHandler(jobs.sendFunnelReport, async (ctx) => {
-	let mailer = getServiceContainer().get(Mailer);
 	let date = getYesterdayDateUtc();
 	let { start, end } = utcDayBounds(date);
 
@@ -110,7 +107,7 @@ export default createJobHandler(jobs.sendFunnelReport, async (ctx) => {
 	let totals = await TrialDailyStats.totalsBetween(ctx.database, startOfTotals(date), date);
 
 	recordCost("emailSent");
-	let sent = await mailer.send(
+	let sent = await ctx.mailer.send(
 		new FunnelReportEmail({
 			to,
 			date,

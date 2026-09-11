@@ -7,8 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
@@ -16,6 +14,7 @@ import { describe, expect, test } from "vitest";
 import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
+import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { parseLink } from "~/app/lib/test/paging";
 import { encodeId } from "~/app/services/typed-id";
@@ -82,11 +81,8 @@ async function dispatch(
 	db: Db,
 	request: { method: string; path: string; key?: string; body?: Record<string, unknown> },
 ) {
-	let router = createRouter({ middleware: [asyncContext()] });
+	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
 	router.map(tcpMonitorRoutes, tcpMonitorController);
-
-	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
 
 	let headers: Record<string, string> = { "content-type": "application/json" };
 	if (request.key !== undefined) headers.Authorization = `Bearer ${request.key}`;
@@ -97,7 +93,7 @@ async function dispatch(
 		body: request.body !== undefined ? JSON.stringify(request.body) : undefined,
 	});
 
-	return container.scope(() => router.fetch(httpRequest));
+	return router.fetch(httpRequest);
 }
 
 describe("GET /api/v1/tcp-monitors/:tcpMonitorId", () => {

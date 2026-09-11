@@ -10,11 +10,9 @@
 import { BadRequest, InternalServerError, NotFound } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
-import { Database } from "remix/data-table";
 import { createController } from "remix/router";
 
 import type { InsertDnsMonitor, SelectDnsMonitor } from "~/database/schema";
@@ -79,8 +77,7 @@ export default createController(dnsMonitorRoutes, {
 			middleware: [requireApiKey("dns-monitors:read")],
 			handler: async (ctx) => {
 				let { dnsMonitorId } = s.parse(DnsMonitorIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let monitor = await DnsMonitor.findByIdForTeam(db, ctx.apiTeam.id, dnsMonitorId);
+				let monitor = await DnsMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, dnsMonitorId);
 				if (!monitor) return apiError("NOT_FOUND", "DNS monitor not found", NotFound);
 				return apiSuccess({ dnsMonitor: serializeDnsMonitor(monitor) });
 			},
@@ -91,8 +88,7 @@ export default createController(dnsMonitorRoutes, {
 			middleware: [requireApiKey("dns-monitors:write")],
 			handler: async (ctx) => {
 				let { dnsMonitorId } = s.parse(DnsMonitorIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let existing = await DnsMonitor.findByIdForTeam(db, ctx.apiTeam.id, dnsMonitorId);
+				let existing = await DnsMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, dnsMonitorId);
 				if (!existing) return apiError("NOT_FOUND", "DNS monitor not found", NotFound);
 
 				let result = await validate(ctx.request, UpdateDnsMonitorSchema);
@@ -111,7 +107,7 @@ export default createController(dnsMonitorRoutes, {
 					changes.interval_seconds = result.data.intervalSeconds;
 				if (result.data.isEnabled !== undefined) changes.is_enabled = result.data.isEnabled;
 
-				let monitor = await DnsMonitor.updateById(db, dnsMonitorId, changes);
+				let monitor = await DnsMonitor.updateById(ctx.db, dnsMonitorId, changes);
 				return apiSuccess({ dnsMonitor: serializeDnsMonitor(monitor) });
 			},
 		},
@@ -121,11 +117,10 @@ export default createController(dnsMonitorRoutes, {
 			middleware: [requireApiKey("dns-monitors:write")],
 			handler: async (ctx) => {
 				let { dnsMonitorId } = s.parse(DnsMonitorIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let existing = await DnsMonitor.findByIdForTeam(db, ctx.apiTeam.id, dnsMonitorId);
+				let existing = await DnsMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, dnsMonitorId);
 				if (!existing) return apiError("NOT_FOUND", "DNS monitor not found", NotFound);
 
-				await DnsMonitor.deleteById(db, dnsMonitorId);
+				await DnsMonitor.deleteById(ctx.db, dnsMonitorId);
 				return apiSuccess({ deleted: true });
 			},
 		},
@@ -135,14 +130,13 @@ export default createController(dnsMonitorRoutes, {
 			middleware: [requireApiKey("dns-monitors:read")],
 			handler: async (ctx) => {
 				let { dnsMonitorId } = s.parse(DnsMonitorIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let monitor = await DnsMonitor.findByIdForTeam(db, ctx.apiTeam.id, dnsMonitorId);
+				let monitor = await DnsMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, dnsMonitorId);
 				if (!monitor) return apiError("NOT_FOUND", "DNS monitor not found", NotFound);
 
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
 
-				let page = await Pagination.byKeyset(DnsMonitor.resultsQuery(db, dnsMonitorId), {
+				let page = await Pagination.byKeyset(DnsMonitor.resultsQuery(ctx.db, dnsMonitorId), {
 					orderBy: newestFirst("checked_at"),
 					cursor: params.data.cursor,
 					limit: params.data.perPage,

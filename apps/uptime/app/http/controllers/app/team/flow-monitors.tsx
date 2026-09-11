@@ -15,15 +15,12 @@
 
 import { formatDateTime, formatRelative } from "@sdxc/dates";
 import { EyeIcon, PencilIcon, PlusIcon, TrashIcon, WorkflowIcon } from "@sdxc/icons";
-import { inject } from "@sdxc/service-container";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { fg } from "@sdxc/u/color";
 import { flex, items } from "@sdxc/u/layout";
 import { hover } from "@sdxc/u/state";
 import { nowrap, textDecoration } from "@sdxc/u/typography";
 import { AlertDialog, Badge, Button, Empty, LinkButton, Menu, Table } from "@sdxc/ui";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import type { BadgeTone } from "~/resources/components/badge";
@@ -55,12 +52,11 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
  */
 export default createAction(routes.app.team.flowMonitors.index, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let monitors = await FlowMonitor.listByTeam(db, ctx.team.id);
+		let monitors = await FlowMonitor.listByTeam(ctx.db, ctx.team.id);
 		let newHref = routes.app.team.flowMonitors.new.href({ team: ctx.team.slug });
 
 		return ctx.render(
@@ -266,5 +262,5 @@ export default createAction(routes.app.team.flowMonitors.index, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });

@@ -13,7 +13,6 @@ import type { TFunction } from "@sdxc/i18n";
 
 import { formatDate, formatDateTime } from "@sdxc/dates";
 import { notFound } from "@sdxc/http/response/html";
-import { getServiceContainer } from "@sdxc/service-container";
 import { bg, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
@@ -23,7 +22,6 @@ import { bs, m, maxIs, mi, minIs, p, pbe, pbs, pi } from "@sdxc/u/size";
 import { fontSize, leading, textAlign, weight, wordBreak } from "@sdxc/u/typography";
 import { Card, Heading, HeadingScope, LinkButton, Text } from "@sdxc/ui";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 
 import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
@@ -157,8 +155,7 @@ export default createAction(routes.trial.report, async (ctx) => {
 	let t = ctx.i18next.t;
 	let locale = ctx.locale;
 
-	let db = getServiceContainer().get(Database);
-	let watch = await TrialWatch.findByReportToken(db, token);
+	let watch = await TrialWatch.findByReportToken(ctx.db, token);
 
 	/**
 	 * A token this database never issued and one whose watch has since been swept are the same
@@ -169,7 +166,12 @@ export default createAction(routes.trial.report, async (ctx) => {
 
 	let now = Date.now();
 	let period = reportPeriod(watch, now);
-	let results = await TrialWatch.listResultsBetween(db, watch.id, period.from, watch.expires_at);
+	let results = await TrialWatch.listResultsBetween(
+		ctx.db,
+		watch.id,
+		period.from,
+		watch.expires_at,
+	);
 
 	let stats = watchStats(watch);
 	let incidents = incidentsFrom(results);

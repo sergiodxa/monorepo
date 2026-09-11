@@ -20,9 +20,7 @@ import {
 	createEnv,
 } from "@sdxc/cloudflare-mocks";
 import { createTranslator } from "@sdxc/i18n";
-import { ServiceContainer } from "@sdxc/service-container";
 import { createCookie } from "remix/cookie";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
@@ -37,6 +35,7 @@ import type { GeoFetchDO } from "~/app/do/geo-fetch";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { database } from "~/app/http/middleware/database";
 import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
@@ -201,6 +200,7 @@ async function createHarness() {
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			database(() => db),
 			billing({ provider: createTestBilling() }),
 			session(sessionCookie, sessionStorage),
 			formData(),
@@ -219,9 +219,6 @@ async function createHarness() {
 	map(routes.actions.runPing, { ...mapped, handler: runPing.handler });
 	map(routes.app.team.dashboard.index, { ...mapped, handler: dashboard.handler });
 	map(routes.app.team.dashboard.quickPing, { ...mapped, handler: quickPing.handler });
-
-	let container = new ServiceContainer();
-	container.instance(Database, db);
 
 	let jar = new Map<string, string>();
 	let cookie = "";
@@ -244,7 +241,7 @@ async function createHarness() {
 				},
 			);
 
-			let response = await container.scope(() => router.fetch(request));
+			let response = await router.fetch(request);
 			await Promise.all(deferred.splice(0));
 			cookie = updateJar(jar, response);
 
@@ -258,7 +255,7 @@ async function createHarness() {
 				{ headers: { cookie } },
 			);
 
-			let response = await container.scope(() => router.fetch(request));
+			let response = await router.fetch(request);
 			cookie = updateJar(jar, response);
 
 			return response;

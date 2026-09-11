@@ -10,6 +10,7 @@
  */
 
 import type { AnalyticsEngineMock } from "@sdxc/cloudflare-mocks";
+import type { Database } from "remix/data-table";
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
@@ -17,8 +18,6 @@ import billing from "@sdxc/billing/middleware";
 import { createAnalyticsEngine, createEnv } from "@sdxc/cloudflare-mocks";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
@@ -27,6 +26,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
+import { database } from "~/app/http/middleware/database";
 import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { memberships, tcpMonitorResults, tcpMonitors, teams } from "~/database/schema";
@@ -140,12 +140,10 @@ async function send(
 	method: string,
 	params: Record<string, string>,
 ): Promise<Response> {
-	let container = new ServiceContainer();
-	container.instance(Database, db);
-
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			database(() => db),
 			billing({ provider: () => testBilling }),
 			formData() as Middleware,
 			mail({ transport: new MemoryTransport(), from: MAIL_FROM }),
@@ -159,7 +157,7 @@ async function send(
 		body: new URLSearchParams(params).toString(),
 	});
 
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 describe("createTcpMonitor", () => {

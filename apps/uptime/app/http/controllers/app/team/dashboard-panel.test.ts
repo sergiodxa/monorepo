@@ -20,10 +20,8 @@ import {
 	createQueue,
 } from "@sdxc/cloudflare-mocks";
 import { createTranslator } from "@sdxc/i18n";
-import { ServiceContainer } from "@sdxc/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
@@ -34,6 +32,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi 
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
 import { dnsMonitors, memberships, monitors, teams } from "~/database/schema";
@@ -126,15 +125,12 @@ async function fetchPanel(
 	type: string,
 ): Promise<Response> {
 	let router = createRouter({
-		middleware: [asyncContext(), renderWith(createHtmlRenderer) as Middleware],
+		middleware: [asyncContext(), database(() => db), renderWith(createHtmlRenderer) as Middleware],
 	});
 	router.map(routes.app.team.dashboard.panel, {
 		middleware: [seedTeam(team, membership)],
 		handler: (dashboardPanelModule.default as { handler: RequestHandler<any> }).handler,
 	});
-
-	let container = new ServiceContainer();
-	container.instance(Database, db);
 
 	let request = new Request(
 		new URL(
@@ -143,7 +139,7 @@ async function fetchPanel(
 		),
 	);
 
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 let SQL_URL = "https://api.cloudflare.com/client/v4/accounts/acct-1/analytics_engine/sql";

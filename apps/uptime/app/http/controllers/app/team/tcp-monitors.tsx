@@ -8,13 +8,10 @@
  */
 
 import { NetworkIcon, PlusIcon } from "@sdxc/icons";
-import { inject } from "@sdxc/service-container";
 import { fg } from "@sdxc/u/color";
 import { hover } from "@sdxc/u/state";
 import { textDecoration } from "@sdxc/u/typography";
 import { Badge, Empty, LinkButton, Table } from "@sdxc/ui";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import type { BadgeTone } from "~/resources/components/badge";
@@ -37,12 +34,11 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 /** GET /app/:team/tcp — the team's TCP monitors list. */
 export default createAction(routes.app.team.tcpMonitors.index, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let monitors = await TcpMonitor.listByTeam(db, ctx.team.id);
+		let monitors = await TcpMonitor.listByTeam(ctx.db, ctx.team.id);
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · TCP monitors`}>
@@ -157,5 +153,5 @@ export default createAction(routes.app.team.tcpMonitors.index, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });

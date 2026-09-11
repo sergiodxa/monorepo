@@ -11,9 +11,7 @@
 import { redirect } from "@sdxc/http/response";
 import { badRequest, notFound } from "@sdxc/http/response/html";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
@@ -33,15 +31,13 @@ export const createApiKey = createAction(routes.teamAdminActions.apiKey.create, 
 		});
 	}
 
-	let db = getServiceContainer().get(Database);
-
-	let count = await ApiKey.countByTeam(db, ctx.team.id);
+	let count = await ApiKey.countByTeam(ctx.db, ctx.team.id);
 	if (count >= MAX_API_KEYS_PER_TEAM) {
 		return badRequest(`A team can have at most ${MAX_API_KEYS_PER_TEAM} API keys.`);
 	}
 
 	let { name, scopes, expires_at } = result.data;
-	let { record, key } = await ApiKey.create(db, ctx.team.id, { name, scopes, expires_at });
+	let { record, key } = await ApiKey.create(ctx.db, ctx.team.id, { name, scopes, expires_at });
 
 	session?.flash("newApiKey", { name: record.name, key });
 	return redirect(routes.app.team.apiKeys.index.href({ team: ctx.team.slug }), {
@@ -60,11 +56,10 @@ export const deleteApiKey = createAction(routes.teamAdminActions.apiKey.delete, 
 		});
 	}
 
-	let db = getServiceContainer().get(Database);
-	let apiKey = await ApiKey.findByIdForTeam(db, ctx.team.id, result.data.api_key_id);
+	let apiKey = await ApiKey.findByIdForTeam(ctx.db, ctx.team.id, result.data.api_key_id);
 	if (!apiKey) return notFound("Not Found");
 
-	await ApiKey.deleteById(db, apiKey.id);
+	await ApiKey.deleteById(ctx.db, apiKey.id);
 
 	session?.flash("toast", { intent: "success", message: `API key "${apiKey.name}" deleted.` });
 	return redirect(routes.app.team.apiKeys.index.href({ team: ctx.team.slug }), {

@@ -10,10 +10,7 @@
  */
 
 import { notFound } from "@sdxc/http/response/html";
-import { inject } from "@sdxc/service-container";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import Monitor from "~/app/data/monitor";
@@ -27,14 +24,13 @@ import routes from "~/routes/web";
 /** GET /app/:team/monitors/:monitorId/cards/uptime — the monitor's uptime-percentage stat card, fragment-only. */
 export default createAction(routes.app.team.monitors.cards.uptime, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
 
-		let monitor = await Monitor.findByIdForTeam(db, ctx.team.id, monitorId);
+		let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
 		if (!monitor) return notFound("Not Found");
 
-		let dailyStats = await MonitorDailyStats.listRecentDays(db, monitor.id, "http");
+		let dailyStats = await MonitorDailyStats.listRecentDays(ctx.db, monitor.id, "http");
 		let totalChecks = dailyStats.reduce((sum, day) => sum + day.total_checks, 0);
 		let successfulChecks = dailyStats.reduce((sum, day) => sum + day.successful_checks, 0);
 		let uptimePercent = totalChecks > 0 ? Math.round((successfulChecks / totalChecks) * 100) : null;
@@ -50,5 +46,5 @@ export default createAction(routes.app.team.monitors.cards.uptime, {
 				}
 			/>,
 		);
-	}),
+	},
 });

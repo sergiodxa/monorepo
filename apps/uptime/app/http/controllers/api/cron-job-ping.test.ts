@@ -17,8 +17,6 @@ import { log } from "@sdxc/logger/middleware";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
 import { failure } from "@sdxc/result";
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -28,6 +26,7 @@ import type { ApiKeyScope } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import CronJobMonitor from "~/app/data/cron-job";
 import { MAIL_FROM } from "~/app/emails/sender";
+import { database } from "~/app/http/middleware/database";
 import { billedEvents, createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { encodeId } from "~/app/services/typed-id";
@@ -151,6 +150,7 @@ async function dispatch(db: Db, request: Request) {
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			database(() => db),
 			log() as Middleware,
 			billing({ provider: () => testBilling }),
 			mail({ transport: new MemoryTransport(), from: MAIL_FROM }),
@@ -158,13 +158,10 @@ async function dispatch(db: Db, request: Request) {
 	});
 	router.map(routes.api.cronJobPing, cronJobPing);
 
-	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
-
 	/** Collects the record this request emits, keeping it out of the console. */
 	let requestLog = new Log({ kind: "request", sink() {} });
 
-	let response = await requestLog.run(() => container.scope(() => router.fetch(request)));
+	let response = await requestLog.run(() => router.fetch(request));
 	await Promise.all(deferred.splice(0));
 	return response;
 }

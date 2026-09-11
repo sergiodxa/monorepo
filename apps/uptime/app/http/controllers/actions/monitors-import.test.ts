@@ -11,12 +11,11 @@
  */
 
 import type { QueueMock } from "@sdxc/cloudflare-mocks";
+import type { Database } from "remix/data-table";
 import type { Middleware } from "remix/router";
 
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
-import { ServiceContainer } from "@sdxc/service-container";
 import { createCookie } from "remix/cookie";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
@@ -30,6 +29,7 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { MonitorImportReport } from "~/app/http/validators/monitor-import";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { MAX_IMPORT_LINES } from "~/app/http/validators/monitor-import";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -117,12 +117,10 @@ async function submit(
 	membership: SelectMembership,
 	body: Record<string, string>,
 ): Promise<{ response: Response; flashed: FlashedState }> {
-	let container = new ServiceContainer();
-	container.instance(Database, db);
-
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			database(() => db),
 			session(sessionCookie, sessionStorage),
 			seedTeam(team, membership),
 			i18n,
@@ -148,13 +146,11 @@ async function submit(
 		},
 	);
 
-	let response = await container.scope(() => router.fetch(request));
-	let read = await container.scope(() =>
-		router.fetch(
-			new Request("https://uptime.test/flashed", {
-				headers: { Cookie: cookieHeader(response) },
-			}),
-		),
+	let response = await router.fetch(request);
+	let read = await router.fetch(
+		new Request("https://uptime.test/flashed", {
+			headers: { Cookie: cookieHeader(response) },
+		}),
 	);
 
 	return { response, flashed: (await read.json()) as FlashedState };

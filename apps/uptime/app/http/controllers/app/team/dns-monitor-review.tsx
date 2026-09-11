@@ -13,7 +13,6 @@ import type { Handle } from "remix/ui";
 
 import { notFound } from "@sdxc/http/response/html";
 import { IntlProvider } from "@sdxc/i18n/ui";
-import { inject } from "@sdxc/service-container";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { fg } from "@sdxc/u/color";
 import { block, hstack, vstack } from "@sdxc/u/layout";
@@ -22,8 +21,6 @@ import { maxBs, maxIs } from "@sdxc/u/size";
 import { fontSize, overflowWrap } from "@sdxc/u/typography";
 import { Alert, Button, Checkbox, Description, LinkButton, Table } from "@sdxc/ui";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
@@ -200,16 +197,15 @@ function groupRecords(records: readonly SelectDnsMonitorRecord[]): RecordGroups 
  */
 export default createAction(routes.app.team.dnsMonitors.review, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
-		let monitor = await DnsMonitor.findByIdForTeam(db, ctx.team.id, monitorId);
+		let monitor = await DnsMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
 		if (!monitor) return notFound("Not Found");
 
-		let records = await DnsMonitorRecord.listByMonitor(db, monitor.id);
+		let records = await DnsMonitorRecord.listByMonitor(ctx.db, monitor.id);
 
 		let session = ctx.get(Session);
 		let toast = session?.get("toast") as Toast | undefined;
@@ -373,5 +369,5 @@ export default createAction(routes.app.team.dnsMonitors.review, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });

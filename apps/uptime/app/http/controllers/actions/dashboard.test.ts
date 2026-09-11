@@ -9,8 +9,6 @@
 
 import type { RequestHandler } from "remix/router";
 
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
@@ -18,6 +16,7 @@ import { describe, expect, test } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -34,19 +33,16 @@ function teamContextMiddleware(team: SelectTeam, membership: SelectMembership | 
 }
 
 /**
- * Posts a `set-dashboard-tab` form body through the real action, DB, and
- * service container, using `teamContextMiddleware` in place of
- * `setDashboardTab`'s own `requireUser`/`requireTeam` chain.
+ * Posts a `set-dashboard-tab` form body through the real action and a real database,
+ * using `teamContextMiddleware` in place of `setDashboardTab`'s own
+ * `requireUser`/`requireTeam` chain.
  */
 async function postSetDashboardTab(
 	db: ReturnType<typeof createTestDatabase>["db"],
 	team: SelectTeam,
 	body: Record<string, string>,
 ) {
-	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
-
-	let router = createRouter({ middleware: [asyncContext(), formData()] });
+	let router = createRouter({ middleware: [asyncContext(), database(() => db), formData()] });
 	router.map(routes.actions.setDashboardTab, {
 		middleware: [teamContextMiddleware(team, null) as never],
 		handler: (setDashboardTab as { handler: RequestHandler }).handler,
@@ -61,7 +57,7 @@ async function postSetDashboardTab(
 		},
 	);
 
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 /** Inserts a minimal team row. */

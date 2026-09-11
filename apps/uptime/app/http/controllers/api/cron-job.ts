@@ -11,11 +11,9 @@
 import { Schedule } from "@sdxc/cron";
 import { BadRequest, NotFound } from "@sdxc/http/status-code";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
-import { Database } from "remix/data-table";
 import { createController } from "remix/router";
 
 import type { InsertCronJobMonitor, SelectCronJobMonitor } from "~/database/schema";
@@ -74,8 +72,7 @@ export default createController(cronJobRoutes, {
 			middleware: [requireApiKey("cron-jobs:read")],
 			handler: async (ctx) => {
 				let { cronJobId } = s.parse(CronJobIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let cronJob = await CronJobMonitor.findByIdForTeam(db, ctx.apiTeam.id, cronJobId);
+				let cronJob = await CronJobMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, cronJobId);
 				if (!cronJob) return apiError("NOT_FOUND", "Cron job not found", NotFound);
 				return apiSuccess({ cronJob: serializeCronJob(cronJob) });
 			},
@@ -90,8 +87,7 @@ export default createController(cronJobRoutes, {
 			middleware: [requireApiKey("cron-jobs:write")],
 			handler: async (ctx) => {
 				let { cronJobId } = s.parse(CronJobIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let existing = await CronJobMonitor.findByIdForTeam(db, ctx.apiTeam.id, cronJobId);
+				let existing = await CronJobMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, cronJobId);
 				if (!existing) return apiError("NOT_FOUND", "Cron job not found", NotFound);
 
 				let result = await validate(ctx.request, UpdateCronJobSchema);
@@ -134,7 +130,7 @@ export default createController(cronJobRoutes, {
 					);
 				}
 
-				let cronJob = await CronJobMonitor.updateById(db, cronJobId, changes);
+				let cronJob = await CronJobMonitor.updateById(ctx.db, cronJobId, changes);
 				return apiSuccess({ cronJob: serializeCronJob(cronJob) });
 			},
 		},
@@ -144,11 +140,10 @@ export default createController(cronJobRoutes, {
 			middleware: [requireApiKey("cron-jobs:write")],
 			handler: async (ctx) => {
 				let { cronJobId } = s.parse(CronJobIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let existing = await CronJobMonitor.findByIdForTeam(db, ctx.apiTeam.id, cronJobId);
+				let existing = await CronJobMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, cronJobId);
 				if (!existing) return apiError("NOT_FOUND", "Cron job not found", NotFound);
 
-				await CronJobMonitor.deleteById(db, cronJobId);
+				await CronJobMonitor.deleteById(ctx.db, cronJobId);
 				return apiSuccess({ deleted: true });
 			},
 		},

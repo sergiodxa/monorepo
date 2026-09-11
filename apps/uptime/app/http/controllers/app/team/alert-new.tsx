@@ -9,11 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { inject } from "@sdxc/service-container";
 import { vstack } from "@sdxc/u/layout";
 import { Button, Input, Switch, TextField } from "@sdxc/ui";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import { listScopeMonitors } from "~/app/data/scope-monitors";
@@ -38,12 +35,11 @@ import routes from "~/routes/web";
  */
 export default createAction(routes.app.team.alerts.new, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let scopeGroups = await listScopeMonitors(db, ctx.team.id);
+		let scopeGroups = await listScopeMonitors(ctx.db, ctx.team.id);
 
 		let t = ctx.i18next.getFixedT(null, "translation", "page.alerts.form.fields");
 
@@ -144,5 +140,5 @@ export default createAction(routes.app.team.alerts.new, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });

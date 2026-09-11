@@ -10,10 +10,7 @@
  */
 
 import { notFound, ok } from "@sdxc/http/response/json";
-import { inject } from "@sdxc/service-container";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import Monitor from "~/app/data/monitor";
@@ -24,13 +21,12 @@ import routes from "~/routes/web";
 /** GET /app/:team/monitors/:monitorId/run-status — the monitor's last check outcome, as JSON. */
 export default createAction(routes.app.team.monitors.runStatus, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
 
-		let monitor = await Monitor.findByIdForTeam(db, ctx.team.id, monitorId);
+		let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
 		if (!monitor) return notFound({ error: "Not Found" });
 
 		return ok({ status: monitor.last_status, checkedAt: monitor.last_checked_at });
-	}),
+	},
 });

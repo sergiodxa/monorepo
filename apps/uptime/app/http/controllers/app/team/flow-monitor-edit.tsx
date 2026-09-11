@@ -15,15 +15,12 @@
  */
 
 import { notFound } from "@sdxc/http/response/html";
-import { inject } from "@sdxc/service-container";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { fontSize } from "@sdxc/u/typography";
 import { AlertDialog, Button, LinkButton } from "@sdxc/ui";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import FlowMonitor from "~/app/data/flow-monitor";
@@ -44,16 +41,15 @@ const DELETE_DIALOG_ID = "delete-flow-monitor";
 /** GET /app/:team/flows/:monitorId/edit — a flow monitor's edit form. */
 export default createAction(routes.app.team.flowMonitors.edit, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
-		let monitor = await FlowMonitor.findByIdForTeam(db, ctx.team.id, monitorId);
+		let monitor = await FlowMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
 		if (!monitor) return notFound("Not Found");
 
-		let verifiedDomains = await TeamDomain.verifiedHostnamesForTeam(db, ctx.team.id);
+		let verifiedDomains = await TeamDomain.verifiedHostnamesForTeam(ctx.db, ctx.team.id);
 		let listHref = routes.app.team.flowMonitors.index.href({ team: ctx.team.slug });
 		let showHref = routes.app.team.flowMonitors.show.href({
 			team: ctx.team.slug,
@@ -179,5 +175,5 @@ export default createAction(routes.app.team.flowMonitors.edit, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });

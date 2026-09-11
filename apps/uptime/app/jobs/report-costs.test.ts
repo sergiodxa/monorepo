@@ -15,7 +15,6 @@ import { BillingError } from "@sdxc/billing";
 import { createAnalyticsEngine, createEnv } from "@sdxc/cloudflare-mocks";
 import { Log } from "@sdxc/logger";
 import { failure } from "@sdxc/result";
-import { ServiceContainer } from "@sdxc/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
@@ -134,7 +133,6 @@ async function createBilledTeam(ownerId: string) {
 }
 
 async function run() {
-	let container = new ServiceContainer();
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 
 	let ctx = createJobContext(jobs.reportCosts, { id: "message-1", attempts: 1, log });
@@ -142,7 +140,7 @@ async function run() {
 
 	/** Emitted however the run ends, so the record of a run that asked for a retry survives it. */
 	try {
-		await container.scope(() => reportCosts(ctx));
+		await reportCosts(ctx);
 	} finally {
 		log.emit();
 	}

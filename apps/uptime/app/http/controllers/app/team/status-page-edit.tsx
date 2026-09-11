@@ -10,7 +10,6 @@
 
 import { notFound } from "@sdxc/http/response/html";
 import { IntlProvider } from "@sdxc/i18n/ui";
-import { inject } from "@sdxc/service-container";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
@@ -29,8 +28,6 @@ import {
 } from "@sdxc/ui";
 import { fieldStackLayout } from "@sdxc/ui/styles";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import CronJobMonitor from "~/app/data/cron-job";
@@ -67,23 +64,22 @@ const CRON_JOBS_GROUP_ID = "status-page-cron-jobs-group";
 /** GET /app/:team/status-pages/:statusPageId/edit — a status page's edit form. */
 export default createAction(routes.app.team.statusPages.edit, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let { statusPageId } = s.parse(s.object({ statusPageId: s.string() }), ctx.params);
-		let page = await StatusPage.findByIdForTeam(db, ctx.team.id, statusPageId);
+		let page = await StatusPage.findByIdForTeam(ctx.db, ctx.team.id, statusPageId);
 		if (!page) return notFound("Not Found");
 
 		let [monitors, dnsMonitors, tcpMonitors, flowMonitors, cronJobs, attachedIds] =
 			await Promise.all([
-				Monitor.listByTeam(db, ctx.team.id),
-				DnsMonitor.listByTeam(db, ctx.team.id),
-				TcpMonitor.listByTeam(db, ctx.team.id),
-				FlowMonitor.listByTeam(db, ctx.team.id),
-				CronJobMonitor.listByTeam(db, ctx.team.id),
-				StatusPage.getAttachedIds(db, statusPageId),
+				Monitor.listByTeam(ctx.db, ctx.team.id),
+				DnsMonitor.listByTeam(ctx.db, ctx.team.id),
+				TcpMonitor.listByTeam(ctx.db, ctx.team.id),
+				FlowMonitor.listByTeam(ctx.db, ctx.team.id),
+				CronJobMonitor.listByTeam(ctx.db, ctx.team.id),
+				StatusPage.getAttachedIds(ctx.db, statusPageId),
 			]);
 
 		/**
@@ -414,5 +410,5 @@ export default createAction(routes.app.team.statusPages.edit, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });

@@ -9,6 +9,7 @@
  */
 
 import type { TFunction } from "@sdxc/i18n";
+import type { Database } from "remix/data-table";
 import type { Handle, RemixNode } from "remix/ui";
 
 import {
@@ -24,7 +25,6 @@ import {
 } from "@sdxc/icons";
 import { currentLog } from "@sdxc/logger";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { bg, fg, linearGradient } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { listStyle } from "@sdxc/u/general";
@@ -67,7 +67,6 @@ import {
 	TextField,
 } from "@sdxc/ui";
 import { generateUUID } from "@sdxc/uuid";
-import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 import { Session } from "remix/session";
@@ -901,13 +900,13 @@ interface TrialAccount {
  * Answers `null` for an anonymous visitor without touching the database, which is what
  * keeps the free path exactly as cheap as it was before this page knew about accounts.
  *
+ * @param db - The request's database.
  * @returns The viewer's standing, or `null` when nobody is signed in.
  */
-async function resolveTrialAccount(): Promise<TrialAccount | null> {
+async function resolveTrialAccount(db: Database): Promise<TrialAccount | null> {
 	let viewer = getViewer();
 	if (viewer === null) return null;
 
-	let db = getServiceContainer().get(Database);
 	let [team] = await Team.listBySubjectId(db, viewer.id);
 	if (team === undefined) return { team: null, billedTeam: null };
 
@@ -988,7 +987,7 @@ export default createController(routes.trial.check, {
 			 */
 			session?.unset(TRIAL_PROBE);
 
-			let account = await resolveTrialAccount();
+			let account = await resolveTrialAccount(ctx.db);
 			let billedTeam = account?.billedTeam ?? null;
 
 			if (billedTeam !== null) {

@@ -12,9 +12,7 @@ import { Schedule } from "@sdxc/cron";
 import { redirect } from "@sdxc/http/response";
 import { notFound } from "@sdxc/http/response/html";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
@@ -58,8 +56,7 @@ export const createCronJob = createAction(routes.actions.cronJob.create, async (
 		});
 	}
 
-	let db = getServiceContainer().get(Database);
-	let monitor = await CronJobMonitor.create(db, ctx.team.id, {
+	let monitor = await CronJobMonitor.create(ctx.db, ctx.team.id, {
 		...values,
 		cron_expression: schedule.data.toString(),
 		description: description || null,
@@ -98,8 +95,7 @@ export const updateCronJob = createAction(routes.actions.cronJob.update, async (
 
 	let { monitor_id, description, is_enabled, ...values } = result.data;
 
-	let db = getServiceContainer().get(Database);
-	let existing = await CronJobMonitor.findByIdForTeam(db, ctx.team.id, monitor_id);
+	let existing = await CronJobMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitor_id);
 	if (!existing) return notFound("Not Found");
 
 	let schedule = Schedule.parse(values.cron_expression);
@@ -119,7 +115,7 @@ export const updateCronJob = createAction(routes.actions.cronJob.update, async (
 	let scheduleChanged =
 		existing.cron_expression !== cronExpression || existing.timezone !== values.timezone;
 
-	await CronJobMonitor.updateById(db, monitor_id, {
+	await CronJobMonitor.updateById(ctx.db, monitor_id, {
 		...values,
 		cron_expression: cronExpression,
 		description: description || null,
@@ -152,11 +148,10 @@ export const deleteCronJob = createAction(routes.actions.cronJob.delete, async (
 		});
 	}
 
-	let db = getServiceContainer().get(Database);
-	let existing = await CronJobMonitor.findByIdForTeam(db, ctx.team.id, result.data.monitor_id);
+	let existing = await CronJobMonitor.findByIdForTeam(ctx.db, ctx.team.id, result.data.monitor_id);
 	if (!existing) return notFound("Not Found");
 
-	await CronJobMonitor.deleteById(db, result.data.monitor_id);
+	await CronJobMonitor.deleteById(ctx.db, result.data.monitor_id);
 
 	session?.flash("toast", {
 		intent: "success",

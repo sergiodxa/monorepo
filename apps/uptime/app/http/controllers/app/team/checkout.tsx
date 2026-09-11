@@ -11,15 +11,12 @@ import type { Handle } from "remix/ui";
 
 import { redirect } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { vstack } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
 import { pb, pi } from "@sdxc/u/size";
 import { fontSize, textAlign } from "@sdxc/u/typography";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import type { Viewer } from "~/app/http/middleware/auth";
@@ -77,8 +74,7 @@ function BillingNotice(handle: Handle<BillingNotice.Props>) {
  */
 export default createAction(routes.app.team.checkout, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
@@ -86,7 +82,7 @@ export default createAction(routes.app.team.checkout, {
 			return notice(ctx.i18next.t("page.billing.ownerOnly"), viewer);
 		}
 
-		let hasActiveSubscription = await Subscription.isActive(db, ctx.team.owner_id);
+		let hasActiveSubscription = await Subscription.isActive(ctx.db, ctx.team.owner_id);
 
 		let opened = hasActiveSubscription
 			? await Customer.portal(ctx.billing, ctx.team, ctx.url)
@@ -127,5 +123,5 @@ export default createAction(routes.app.team.checkout, {
 				</DocumentLayout>,
 			);
 		}
-	}),
+	},
 });

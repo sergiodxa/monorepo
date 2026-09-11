@@ -8,11 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Database } from "remix/data-table";
 import type { Middleware, RequestHandler } from "remix/router";
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
@@ -20,6 +19,7 @@ import { describe, expect, test, vi } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -79,10 +79,9 @@ async function send(
 	membership: SelectMembership,
 	params: Record<string, string>,
 ): Promise<Response> {
-	let container = new ServiceContainer();
-	container.instance(Database, db);
-
-	let router = createRouter({ middleware: [asyncContext(), formData() as Middleware] });
+	let router = createRouter({
+		middleware: [asyncContext(), database(() => db), formData() as Middleware],
+	});
 	router.map(routes.actions.monitor.http.updateSsl, {
 		middleware: [seedTeam(team, membership)],
 		handler: updateSsl as RequestHandler<any>,
@@ -97,7 +96,7 @@ async function send(
 		},
 	);
 
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 describe("updateSsl", () => {

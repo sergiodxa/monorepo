@@ -9,12 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Database } from "remix/data-table";
+
 import { notFound } from "@sdxc/http/response/html";
 import { currentLog } from "@sdxc/logger";
-import { inject } from "@sdxc/service-container";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import Monitor from "~/app/data/monitor";
@@ -70,16 +69,15 @@ async function getMonitorPingUsage(
 /** GET /app/:team/monitors/:monitorId/cards/usage — the monitor's ping-usage stat card, fragment-only. */
 export default createAction(routes.app.team.monitors.cards.usage, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
 
-		let monitor = await Monitor.findByIdForTeam(db, ctx.team.id, monitorId);
+		let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
 		if (!monitor) return notFound("Not Found");
 
 		ctx.log.set({ monitor: { id: monitor.id, type: "http" } });
 
-		let usage = await getMonitorPingUsage(db, monitor.id);
+		let usage = await getMonitorPingUsage(ctx.db, monitor.id);
 
 		return ctx.render(
 			<StatCard
@@ -98,5 +96,5 @@ export default createAction(routes.app.team.monitors.cards.usage, {
 				}
 			/>,
 		);
-	}),
+	},
 });

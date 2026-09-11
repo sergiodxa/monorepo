@@ -10,7 +10,6 @@
 
 import type { RemixNode } from "remix/ui";
 
-import { ManagementClient } from "@sdxc/auth/management-client";
 import {
 	BadgeMinusIcon,
 	ExternalLinkIcon,
@@ -20,7 +19,6 @@ import {
 	UserMinusIcon,
 	UserPlusIcon,
 } from "@sdxc/icons";
-import { inject } from "@sdxc/service-container";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, border, borderEdge, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
@@ -51,17 +49,17 @@ import {
 	wordBreak,
 } from "@sdxc/u/typography";
 import { AlertDialog, Button, Empty, LinkButton, Table } from "@sdxc/ui";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import Invite from "~/app/data/invite";
 import Team from "~/app/data/team";
 import TeamDomain from "~/app/data/team-domain";
+import { admin } from "~/app/http/middleware/admin";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireRole from "~/app/http/middleware/require-role";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import { createManagementClient } from "~/app/lib/management-client";
 import { resolveSubjects } from "~/app/services/subjects";
 import Avatar from "~/resources/components/avatar";
 import Field from "~/resources/components/field";
@@ -157,20 +155,19 @@ function textInput() {
  * own trailing margin spaces the danger-zone confirmation input from the footer below.
  */
 export default createAction(routes.app.team.settings, {
-	middleware: [requireUser, requireTeam, requireRole("admin")],
-	handler: inject([Database, ManagementClient] as const, async (db, admin) => {
-		let ctx = getContext();
+	middleware: [requireUser, requireTeam, requireRole("admin"), admin(createManagementClient)],
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let [members, pendingInvites, domains] = await Promise.all([
-			Team.listMembersByTeam(db, ctx.team.id),
-			Invite.listPendingByTeam(db, ctx.team.id),
-			TeamDomain.listByTeam(db, ctx.team.id),
+			Team.listMembersByTeam(ctx.db, ctx.team.id),
+			Invite.listPendingByTeam(ctx.db, ctx.team.id),
+			TeamDomain.listByTeam(ctx.db, ctx.team.id),
 		]);
 
 		let subjectsById = await resolveSubjects(
-			admin,
+			ctx.admin,
 			members.map((member) => member.subject_id),
 		);
 
@@ -1051,5 +1048,5 @@ export default createAction(routes.app.team.settings, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });

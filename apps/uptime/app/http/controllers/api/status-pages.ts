@@ -11,11 +11,9 @@
 import { BadRequest, Created, InternalServerError } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
-import { Database } from "remix/data-table";
 import { createController } from "remix/router";
 
 import type { SelectStatusPage } from "~/database/schema";
@@ -77,13 +75,11 @@ export default createController(statusPagesRoutes, {
 		statusPagesIndex: {
 			middleware: [requireApiKey("status-pages:read")],
 			handler: async (ctx) => {
-				let db = getServiceContainer().get(Database);
-
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
 
 				// Chaining returns new queries, so the same one both counts and pages.
-				let query = StatusPage.listByTeamQuery(db, ctx.apiTeam.id);
+				let query = StatusPage.listByTeamQuery(ctx.db, ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {
 					orderBy: NEWEST_FIRST,
@@ -119,12 +115,11 @@ export default createController(statusPagesRoutes, {
 					);
 				}
 
-				let db = getServiceContainer().get(Database);
-				if (await StatusPage.isSlugTaken(db, result.data.slug)) {
+				if (await StatusPage.isSlugTaken(ctx.db, result.data.slug)) {
 					return apiError("VALIDATION_ERROR", "Slug is already in use", BadRequest);
 				}
 
-				let statusPage = await StatusPage.create(db, ctx.apiTeam.id, {
+				let statusPage = await StatusPage.create(ctx.db, ctx.apiTeam.id, {
 					name: result.data.name,
 					slug: result.data.slug,
 					title: result.data.title ?? result.data.name,

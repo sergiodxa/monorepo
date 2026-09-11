@@ -19,7 +19,6 @@ import { Log } from "@sdxc/logger";
 import { Mailer, MailError } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { failure } from "@sdxc/result";
-import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
@@ -31,6 +30,7 @@ import { MAIL_FROM } from "~/app/emails/sender";
 import { TrialDailyDigestEmail } from "~/app/emails/trial-daily-digest";
 import jobs from "~/app/jobs";
 import { Database as JobDatabase } from "~/app/jobs/middleware/database";
+import { Mailer as JobMailer } from "~/app/jobs/middleware/mailer";
 import sendTrialDigests from "~/app/jobs/send-trial-digests";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { leads, trialWatches } from "~/database/schema";
@@ -49,18 +49,15 @@ class RefusingTransport implements Transport {
 
 /** Runs the handler over a context carrying the test's database, and returns its record. */
 async function runJob(db: Database, options: { transport?: Transport } = {}) {
-	let container = new ServiceContainer();
-	container.singleton(
-		Mailer,
-		() => new Mailer({ transport: options.transport ?? transport, from: MAIL_FROM }),
-	);
-
 	let record: Record<string, unknown> = {};
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.sendTrialDigests, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	ctx.set(JobMailer, new Mailer({ transport: options.transport ?? transport, from: MAIL_FROM }), {
+		property: "mailer",
+	});
 
-	await container.scope(() => sendTrialDigests(ctx));
+	await sendTrialDigests(ctx);
 	log.emit();
 	return record;
 }

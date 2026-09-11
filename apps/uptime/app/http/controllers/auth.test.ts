@@ -18,10 +18,8 @@ import { createEnv, createKVNamespace } from "@sdxc/cloudflare-mocks";
 import { JWK, JWT } from "@sdxc/jwt";
 import { log } from "@sdxc/logger/middleware";
 import { failure, unwrap } from "@sdxc/result";
-import { ServiceContainer } from "@sdxc/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
@@ -34,6 +32,7 @@ import Lead from "~/app/data/lead";
 import TrialWatch from "~/app/data/trial-watch";
 import UserPreferences from "~/app/data/user-preferences";
 import { language as languageCookie, returnTo } from "~/app/http/cookies";
+import { database } from "~/app/http/middleware/database";
 import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { monitors, teamDomains, teams } from "~/database/schema";
@@ -207,18 +206,16 @@ function seedSession(session: Session): Middleware {
 }
 
 /**
- * Builds a minimal router mapping the whole `/auth` controller with a fresh service container
- * and its own billing platform, so what a sign-in provisioned can be read back from it.
+ * Builds a minimal router mapping the whole `/auth` controller against its own database and
+ * billing platform, so what a sign-in provisioned can be read back from it.
  */
 function createTestRouter(db: ReturnType<typeof createTestDatabase>["db"], session: Session) {
-	let container = new ServiceContainer();
-	container.instance(Database, db);
-
 	let platform = createTestBilling();
 
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			database(() => db),
 			log() as Middleware,
 			billing({ provider: platform }),
 			seedSession(session),
@@ -229,7 +226,7 @@ function createTestRouter(db: ReturnType<typeof createTestDatabase>["db"], sessi
 	});
 	router.map(routes.auth, authController);
 
-	return { container, platform, router };
+	return { platform, router };
 }
 
 /** One browser: a session that carries across both legs of a login. */
@@ -255,7 +252,7 @@ interface Agent {
  */
 function createAgent(db: ReturnType<typeof createTestDatabase>["db"]): Agent {
 	let session = new Session();
-	let { container, platform, router } = createTestRouter(db, session);
+	let { platform, router } = createTestRouter(db, session);
 
 	return {
 		session,
@@ -271,7 +268,7 @@ function createAgent(db: ReturnType<typeof createTestDatabase>["db"]): Agent {
 				method: "POST",
 				headers,
 			});
-			return await container.scope(() => router.fetch(request));
+			return await router.fetch(request);
 		},
 
 		transaction() {
@@ -290,7 +287,7 @@ function createAgent(db: ReturnType<typeof createTestDatabase>["db"]): Agent {
 		},
 
 		async visit(request) {
-			return await container.scope(() => router.fetch(request));
+			return await router.fetch(request);
 		},
 
 		tokens() {
@@ -549,10 +546,10 @@ describe("GET /auth", () => {
 
 	test("renders the sign-in-failed page when the provider refuses the authorization request", async () => {
 		let { db } = createTestDatabase();
-		let { container, router } = createTestRouter(db, new Session());
+		let { router } = createTestRouter(db, new Session());
 
 		let request = new Request(`https://uptime.test${routes.auth.index.href()}?error=access_denied`);
-		let response = await container.scope(() => router.fetch(request));
+		let response = await router.fetch(request);
 
 		expect(response.status).toBe(400);
 		let body = await response.text();

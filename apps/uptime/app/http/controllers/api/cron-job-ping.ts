@@ -15,10 +15,8 @@ import type { Middleware } from "remix/router";
 import { conflict, created, notFound, tooManyRequests } from "@sdxc/http/response/json";
 import { CloudflareAdapter, MemoryAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
-import { getServiceContainer } from "@sdxc/service-container";
 import { env, waitUntil } from "cloudflare:workers";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 
 import CronJobMonitor from "~/app/data/cron-job";
@@ -126,8 +124,6 @@ const limitByCaller: Middleware = (context, next) => {
 export default createAction(routes.api.cronJobPing, {
 	middleware: [limitByCaller, requireApiKey("cron-jobs:ping")],
 	handler: async (ctx) => {
-		let db = getServiceContainer().get(Database);
-
 		let params = s.parse(s.object({ cronJobId: s.string() }), ctx.params);
 		/**
 		 * The API hands out `cron_…`, and a crontab written against the older raw UUID
@@ -142,7 +138,7 @@ export default createAction(routes.api.cronJobPing, {
 		 * not which monitors they may ping. A monitor belonging to someone else
 		 * answers 404 rather than 403, so ids can't be discovered by probing.
 		 */
-		let monitor = await CronJobMonitor.findByIdForTeam(db, ctx.apiTeam.id, cronJobId);
+		let monitor = await CronJobMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, cronJobId);
 		if (!monitor) return notFound({ error: "Not Found" });
 
 		ctx.log.set({ monitor: { id: monitor.id, type: "cron" } });
@@ -159,7 +155,7 @@ export default createAction(routes.api.cronJobPing, {
 				: monitor.next_expected_at + monitor.grace_period_seconds * 1000;
 		let wasOnTime = deadline === null || Date.now() <= deadline;
 
-		let pingId = await CronJobMonitor.recordPing(db, monitor, wasOnTime, {
+		let pingId = await CronJobMonitor.recordPing(ctx.db, monitor, wasOnTime, {
 			sourceIp:
 				ctx.request.headers.get("CF-Connecting-IP") ?? ctx.request.headers.get("X-Forwarded-For"),
 			userAgent: ctx.request.headers.get("User-Agent"),
@@ -178,7 +174,7 @@ export default createAction(routes.api.cronJobPing, {
 			responseTimeMs: 0,
 		});
 
-		let ownerIds = await Team.ownerIdsByTeamIds(db, [monitor.team_id]);
+		let ownerIds = await Team.ownerIdsByTeamIds(ctx.db, [monitor.team_id]);
 		let ownerId = ownerIds.get(monitor.team_id);
 		if (ownerId === undefined) {
 			/**
@@ -207,7 +203,7 @@ export default createAction(routes.api.cronJobPing, {
 		}
 
 		await notifyCronJobResult(
-			db,
+			ctx.db,
 			ctx.email,
 			monitor,
 			monitor.status,

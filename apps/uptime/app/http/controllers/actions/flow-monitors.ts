@@ -12,10 +12,8 @@ import { redirect } from "@sdxc/http/response";
 import { notFound } from "@sdxc/http/response/html";
 import { ok } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import { waitUntil } from "cloudflare:workers";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
@@ -48,15 +46,14 @@ export const createFlowMonitor = createAction(routes.actions.monitor.flow.create
 		return redirect(newHref, { status: redirect.Status.SeeOther });
 	}
 
-	let db = getServiceContainer().get(Database);
-	let verifiedDomains = await TeamDomain.verifiedHostnamesForTeam(db, ctx.team.id);
+	let verifiedDomains = await TeamDomain.verifiedHostnamesForTeam(ctx.db, ctx.team.id);
 	let inspection = inspectFlowSource(result.data.source, verifiedDomains);
 	if (!inspection.ok) {
 		session?.flash("toast", { intent: "error", message: inspection.message });
 		return redirect(newHref, { status: redirect.Status.SeeOther });
 	}
 
-	let monitor = await FlowMonitor.create(db, ctx.team.id, {
+	let monitor = await FlowMonitor.create(ctx.db, ctx.team.id, {
 		name: result.data.name,
 		source: result.data.source,
 		is_enabled: result.data.is_enabled,
@@ -90,9 +87,8 @@ export const updateFlowMonitor = createAction(routes.actions.monitor.flow.update
 		);
 	}
 
-	let db = getServiceContainer().get(Database);
 	let { monitor_id, interval_seconds, ...values } = result.data;
-	let existing = await FlowMonitor.findByIdForTeam(db, ctx.team.id, monitor_id);
+	let existing = await FlowMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitor_id);
 	if (!existing) return notFound("Not Found");
 
 	let showHref = routes.app.team.flowMonitors.show.href({
@@ -104,14 +100,14 @@ export const updateFlowMonitor = createAction(routes.actions.monitor.flow.update
 		monitorId: monitor_id,
 	});
 
-	let verifiedDomains = await TeamDomain.verifiedHostnamesForTeam(db, ctx.team.id);
+	let verifiedDomains = await TeamDomain.verifiedHostnamesForTeam(ctx.db, ctx.team.id);
 	let inspection = inspectFlowSource(values.source, verifiedDomains);
 	if (!inspection.ok) {
 		session?.flash("toast", { intent: "error", message: inspection.message });
 		return redirect(editHref, { status: redirect.Status.SeeOther });
 	}
 
-	await FlowMonitor.updateById(db, monitor_id, {
+	await FlowMonitor.updateById(ctx.db, monitor_id, {
 		...values,
 		interval_seconds: Number(interval_seconds),
 	});
@@ -130,11 +126,10 @@ export const deleteFlowMonitor = createAction(routes.actions.monitor.flow.delete
 		return redirect(listHref, { status: redirect.Status.SeeOther });
 	}
 
-	let db = getServiceContainer().get(Database);
-	let existing = await FlowMonitor.findByIdForTeam(db, ctx.team.id, result.data.monitor_id);
+	let existing = await FlowMonitor.findByIdForTeam(ctx.db, ctx.team.id, result.data.monitor_id);
 	if (!existing) return notFound("Not Found");
 
-	await FlowMonitor.deleteById(db, result.data.monitor_id);
+	await FlowMonitor.deleteById(ctx.db, result.data.monitor_id);
 
 	session?.flash("toast", {
 		intent: "success",
@@ -155,8 +150,7 @@ export const checkFlowMonitor = createAction(routes.actions.monitor.flow.check, 
 
 	if (isFailure(result)) return redirect(listHref, { status: redirect.Status.SeeOther });
 
-	let db = getServiceContainer().get(Database);
-	let monitor = await FlowMonitor.findByIdForTeam(db, ctx.team.id, result.data.monitor_id);
+	let monitor = await FlowMonitor.findByIdForTeam(ctx.db, ctx.team.id, result.data.monitor_id);
 	if (!monitor) return notFound("Not Found");
 
 	let showHref = routes.app.team.flowMonitors.show.href({
@@ -169,7 +163,7 @@ export const checkFlowMonitor = createAction(routes.actions.monitor.flow.check, 
 	 * refusing a paying customer over an inconclusive lookup is the worse mistake — the same
 	 * reading every other manual check takes.
 	 */
-	if ((await Subscription.stateFor(db, ctx.team.owner_id)) === "inactive") {
+	if ((await Subscription.stateFor(ctx.db, ctx.team.owner_id)) === "inactive") {
 		if (wantsJson(ctx.request)) {
 			return ok({
 				status: null,
@@ -190,9 +184,9 @@ export const checkFlowMonitor = createAction(routes.actions.monitor.flow.check, 
 		return redirect(showHref, { status: redirect.Status.SeeOther });
 	}
 
-	let verifiedDomains = await TeamDomain.verifiedHostnamesForTeam(db, ctx.team.id);
+	let verifiedDomains = await TeamDomain.verifiedHostnamesForTeam(ctx.db, ctx.team.id);
 	let checkResult = await runFlowCheck({ source: monitor.source, verifiedDomains });
-	let resultId = await FlowMonitor.recordCheckResult(db, monitor.id, checkResult);
+	let resultId = await FlowMonitor.recordCheckResult(ctx.db, monitor.id, checkResult);
 
 	/**
 	 * Written here, between the history row and the meter, exactly where the sweep writes it, so a

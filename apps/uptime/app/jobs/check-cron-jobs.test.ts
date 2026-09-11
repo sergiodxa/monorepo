@@ -20,7 +20,6 @@ import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
-import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -51,6 +50,7 @@ vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }
 
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let checkCronJobs = (await import("./check-cron-jobs")).default;
 
 /** Every message the sweep put on the queue, in order, each wrapping one transition. */
@@ -60,17 +60,15 @@ function enqueued(): NotifyEnvelope[] {
 
 /** Runs the handler over a context carrying the test's database, and returns its record. */
 async function runJob(db: Database) {
-	let container = new ServiceContainer();
-	container.singleton(
-		Mailer,
-		() => new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }),
-	);
 	let record: Record<string, unknown> = {};
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.checkCronJobs, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	ctx.set(JobMailer, new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }), {
+		property: "mailer",
+	});
 
-	await container.scope(() => checkCronJobs(ctx));
+	await checkCronJobs(ctx);
 	log.emit();
 	return record;
 }

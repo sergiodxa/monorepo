@@ -12,15 +12,12 @@
 
 import { IntlProvider } from "@sdxc/i18n/ui";
 import { KeyIcon, PlusIcon } from "@sdxc/icons";
-import { inject } from "@sdxc/service-container";
 import { border } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { pb, pi } from "@sdxc/u/size";
 import { textAlign } from "@sdxc/u/typography";
 import { Badge, Button, Empty, LinkButton, Table } from "@sdxc/ui";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
@@ -47,12 +44,11 @@ interface NewApiKey {
  */
 export default createAction(routes.app.team.apiKeys.index, {
 	middleware: [requireUser, requireTeam, requireRole("admin")],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let apiKeys = await ApiKey.listByTeam(db, ctx.team.id);
+		let apiKeys = await ApiKey.listByTeam(ctx.db, ctx.team.id);
 		let newApiKey = ctx.get(Session)?.get("newApiKey") as NewApiKey | undefined;
 
 		return ctx.render(
@@ -195,5 +191,5 @@ export default createAction(routes.app.team.apiKeys.index, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });

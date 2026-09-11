@@ -10,11 +10,10 @@
  */
 
 import type { CurrentJobContext } from "@sdxc/jobs";
+import type { Mailer } from "@sdxc/mail";
 
 import { createJobHandler } from "@sdxc/jobs";
-import { Mailer } from "@sdxc/mail";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 
 import type { ClaimedTrialWatch } from "~/app/data/trial-watch";
 import type { HttpCheckResult } from "~/app/services/http-check";
@@ -69,7 +68,6 @@ interface CheckedWatch {
 const DID_NOTHING: CheckedWatch = { probed: false, changed: false, wrappedUp: false };
 
 export default createJobHandler(jobs.checkTrialWatches, async (ctx) => {
-	let mailer = getServiceContainer().get(Mailer);
 	/**
 	 * One instant for the whole sweep, matching the claim's own, so "has this watch expired"
 	 * and "was today's change email already sent" agree with the timestamps written to both
@@ -85,7 +83,7 @@ export default createJobHandler(jobs.checkTrialWatches, async (ctx) => {
 	 * attribution, keeping it distinguishable from a team's own direct spend.
 	 */
 
-	let settled = await mapWithConcurrency(watches, (watch) => check(ctx, mailer, watch, now));
+	let settled = await mapWithConcurrency(watches, (watch) => check(ctx, ctx.mailer, watch, now));
 
 	let probed = 0;
 	let changed = 0;

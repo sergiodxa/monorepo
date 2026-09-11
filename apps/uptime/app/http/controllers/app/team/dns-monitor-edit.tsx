@@ -12,15 +12,12 @@
  */
 
 import { notFound } from "@sdxc/http/response/html";
-import { inject } from "@sdxc/service-container";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { fontSize } from "@sdxc/u/typography";
 import { AlertDialog, Button, Description, LinkButton, TextArea } from "@sdxc/ui";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import DnsMonitor from "~/app/data/dns-monitor";
@@ -45,13 +42,12 @@ const DELETE_DIALOG_ID = "delete-dns-monitor";
  */
 export default createAction(routes.app.team.dnsMonitors.edit, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
-		let monitor = await DnsMonitor.findByIdForTeam(db, ctx.team.id, monitorId);
+		let monitor = await DnsMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
 		if (!monitor) return notFound("Not Found");
 
 		let showHref = routes.app.team.dnsMonitors.show.href({
@@ -216,5 +212,5 @@ export default createAction(routes.app.team.dnsMonitors.edit, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });

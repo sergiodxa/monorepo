@@ -9,10 +9,8 @@
 import { redirect } from "@sdxc/http/response";
 import { notFound, unprocessableEntity } from "@sdxc/http/response/html";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { generateUUID } from "@sdxc/uuid";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
@@ -44,18 +42,17 @@ export const createContentCheck = createAction(
 			});
 		}
 
-		let db = getServiceContainer().get(Database);
 		let { monitor_id, type, value, case_sensitive } = result.data;
 
-		let monitor = await Monitor.findByIdForTeam(db, ctx.team.id, monitor_id);
+		let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.team.id, monitor_id);
 		if (!monitor) return notFound("Not Found");
 
-		let existingCount = await db.count(monitorContentChecks, { where: { monitor_id } });
+		let existingCount = await ctx.db.count(monitorContentChecks, { where: { monitor_id } });
 		if (existingCount >= MAX_CONTENT_CHECKS_PER_MONITOR) {
 			return unprocessableEntity("A monitor supports at most 10 content checks.");
 		}
 
-		await db.create(
+		await ctx.db.create(
 			monitorContentChecks,
 			{
 				id: generateUUID(),
@@ -90,16 +87,15 @@ export const deleteContentCheck = createAction(
 			});
 		}
 
-		let db = getServiceContainer().get(Database);
 		let { monitor_id, content_check_id } = result.data;
 
-		let monitor = await Monitor.findByIdForTeam(db, ctx.team.id, monitor_id);
+		let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.team.id, monitor_id);
 		if (!monitor) return notFound("Not Found");
 
-		let check = await ContentCheck.findByIdForMonitor(db, monitor_id, content_check_id);
+		let check = await ContentCheck.findByIdForMonitor(ctx.db, monitor_id, content_check_id);
 		if (!check) return notFound("Not Found");
 
-		await db.delete(monitorContentChecks, content_check_id);
+		await ctx.db.delete(monitorContentChecks, content_check_id);
 
 		ctx.get(Session)?.flash("toast", { intent: "success", message: "Content check removed." });
 		return redirect(

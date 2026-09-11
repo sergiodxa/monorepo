@@ -12,9 +12,7 @@
 import { redirect } from "@sdxc/http/response";
 import { badRequest, notFound } from "@sdxc/http/response/html";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
@@ -41,15 +39,15 @@ export const createInvite = createAction(routes.teamAdminActions.invite.create, 
 		});
 	}
 
-	let db = getServiceContainer().get(Database);
 	let { email } = result.data;
 
-	let existing = await Invite.findByEmailForTeam(db, ctx.team.id, email);
+	let existing = await Invite.findByEmailForTeam(ctx.db, ctx.team.id, email);
 	if (existing && existing.accepted_at !== null) {
 		return badRequest(`${email} already accepted an invite to this team.`);
 	}
 
-	let invite = existing ?? (await Invite.create(db, ctx.team.id, ctx.membership.subject_id, email));
+	let invite =
+		existing ?? (await Invite.create(ctx.db, ctx.team.id, ctx.membership.subject_id, email));
 
 	let url = new URL(routes.invite.href({ inviteId: invite.id }), ctx.request.url).toString();
 
@@ -82,12 +80,11 @@ export const revokeInvite = createAction(routes.teamAdminActions.invite.revoke, 
 		});
 	}
 
-	let db = getServiceContainer().get(Database);
-	let invite = await Invite.findByIdForTeam(db, ctx.team.id, result.data.invite_id);
+	let invite = await Invite.findByIdForTeam(ctx.db, ctx.team.id, result.data.invite_id);
 	if (!invite) return notFound("Not Found");
 	if (invite.accepted_at !== null) return badRequest("This invite was already accepted.");
 
-	await Invite.revoke(db, invite.id);
+	await Invite.revoke(ctx.db, invite.id);
 
 	session?.flash("toast", { intent: "success", message: `Invite to ${invite.email} revoked.` });
 	return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {

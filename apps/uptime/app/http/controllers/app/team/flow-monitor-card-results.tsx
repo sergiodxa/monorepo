@@ -18,7 +18,6 @@ import type { Handle } from "remix/ui";
 
 import { formatDateTime, formatRelative } from "@sdxc/dates";
 import { notFound } from "@sdxc/http/response/html";
-import { inject } from "@sdxc/service-container";
 import { bg, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
@@ -28,8 +27,6 @@ import { m, mbe, p, pb, pie, pis } from "@sdxc/u/size";
 import { font, fontSize, nowrap, overflowWrap, weight, whiteSpace } from "@sdxc/u/typography";
 import { Badge, Empty, Table } from "@sdxc/ui";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 import { Fragment } from "remix/ui";
 
@@ -52,14 +49,13 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 /** GET /app/:team/flows/:monitorId/cards/results — a flow's run-derived stats, source and runs. */
 export default createAction(routes.app.team.flowMonitors.cards.results, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
 
-		let monitor = await FlowMonitor.findByIdForTeam(db, ctx.team.id, monitorId);
+		let monitor = await FlowMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
 		if (!monitor) return notFound("Not Found");
 
-		let results = await FlowMonitor.listResults(db, monitor.id);
+		let results = await FlowMonitor.listResults(ctx.db, monitor.id);
 		let last = results[0];
 
 		let totalRuns = results.length;
@@ -196,7 +192,7 @@ export default createAction(routes.app.team.flowMonitors.cards.results, {
 				</section>
 			</Fragment>,
 		);
-	}),
+	},
 });
 
 namespace SourceListing {

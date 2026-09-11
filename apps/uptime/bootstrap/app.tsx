@@ -1,7 +1,7 @@
 /**
  * Assembles the uptime fetch-router: the global middleware stack (async
- * context, logging, mail, form data, method override, session, auth,
- * language resolution, first-touch attribution, cross-origin protection,
+ * context, logging, the database, mail, form data, method override, session,
+ * auth, language resolution, first-touch attribution, cross-origin protection,
  * HTML rendering) followed by every route mapped to its controller. Shared
  * by the worker and any other runtime entry point.
  *
@@ -222,6 +222,7 @@ import trust from "~/app/http/controllers/trust";
 import polarWebhook from "~/app/http/controllers/webhooks/polar";
 import { attribution } from "~/app/http/middleware/attribution";
 import auth from "~/app/http/middleware/auth";
+import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import requireRole from "~/app/http/middleware/require-role";
 import requireTeam from "~/app/http/middleware/require-team";
@@ -229,6 +230,7 @@ import requireUser from "~/app/http/middleware/require-user";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
 import { createHtmlRenderer } from "~/app/http/render";
 import { polar } from "~/app/lib/billing";
+import { createDatabase } from "~/app/lib/database";
 import { logger } from "~/bootstrap/logger";
 import routes from "~/routes/web";
 
@@ -280,6 +282,11 @@ export default function application(options: application.Options) {
 		headRequests(),
 		asyncContext(),
 		log(logger) as Middleware,
+		/**
+		 * Publishes `ctx.db` on every surface. The session, the auth guard and every
+		 * controller below read from it, so it leads the chain that reaches storage.
+		 */
+		database(createDatabase),
 		/**
 		 * Publishes `ctx.email` on every surface, including machine ones — the
 		 * cron-job ping endpoint dispatches alerts too. Sits after the log so

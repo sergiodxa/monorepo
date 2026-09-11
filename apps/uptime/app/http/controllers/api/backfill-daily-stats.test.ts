@@ -10,13 +10,13 @@
  */
 
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
+
+import { database } from "~/app/http/middleware/database";
 
 /**
  * The queue the endpoint enqueues onto, kept at module scope since the controller
@@ -54,13 +54,10 @@ async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]) {
 }
 
 async function dispatch(db: Db, request: Request) {
-	let router = createRouter({ middleware: [asyncContext()] });
+	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
 	router.map(routes.api.v1.backfillDailyStats, backfillDailyStatsCreate);
 
-	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
-
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 function post(key: string | null) {

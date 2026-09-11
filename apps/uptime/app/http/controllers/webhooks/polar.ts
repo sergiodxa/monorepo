@@ -22,8 +22,7 @@ import type { RequestContext } from "remix/router";
 
 import { BillingWebhook } from "@sdxc/billing";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
+import { getContext } from "remix/middleware/async-context";
 
 import TrialConversion from "~/app/data/trial-conversion";
 import WebhookDeliveries from "~/app/data/webhook-delivery";
@@ -38,7 +37,7 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
  * The delivery log, opened per call from the request's own database so the endpoint costs no
  * connection at module scope and its statements land on the request's cost ledger.
  */
-const deliveries = new WebhookDeliveries(() => getServiceContainer().get(Database));
+const deliveries = new WebhookDeliveries(() => getContext().db);
 
 /**
  * Re-reads the customer the delivery named and writes what the platform says, then records a
@@ -58,8 +57,7 @@ async function apply(ctx: RequestContext, customerId: string | null): Promise<vo
 	ctx.log.set({ webhook: { customer_id: customerId } });
 
 	let customer: CustomerRef = { id: customerId };
-	let db = getServiceContainer().get(Database);
-	let synced = await syncEntitlements(db, customer);
+	let synced = await syncEntitlements(ctx.db, customer);
 
 	if (isFailure(synced)) throw synced.error;
 
@@ -79,9 +77,9 @@ async function apply(ctx: RequestContext, customerId: string | null): Promise<vo
 	 * `paid_at` is null, so monthly renewals can't move the conversion instant; a missing trial
 	 * row is a routine no-op.
 	 */
-	let firstPayment = entitled && (await TrialConversion.markPaid(db, ownerId));
+	let firstPayment = entitled && (await TrialConversion.markPaid(ctx.db, ownerId));
 
-	if (firstPayment) await trackConversion(ctx, db, ownerId, monitors);
+	if (firstPayment) await trackConversion(ctx, ownerId, monitors);
 
 	ctx.log.set({
 		user: { id: ownerId },
@@ -96,11 +94,10 @@ async function apply(ctx: RequestContext, customerId: string | null): Promise<vo
  */
 async function trackConversion(
 	ctx: RequestContext,
-	db: Database,
 	ownerId: string,
 	monitors: number,
 ): Promise<void> {
-	let conversion = await TrialConversion.findByOwner(db, ownerId);
+	let conversion = await TrialConversion.findByOwner(ctx.db, ownerId);
 
 	trackSubscriptionStarted(ctx.log, {
 		ownerId,

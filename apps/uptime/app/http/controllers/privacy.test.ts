@@ -13,8 +13,6 @@ import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
@@ -24,6 +22,7 @@ import { describe, expect, test } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 
+import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { SEO } from "~/app/lib/seo";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -57,12 +56,11 @@ function seedAuth(viewer: Viewer | null): Middleware {
  */
 async function getPrivacy(viewer: Viewer | null) {
 	let { db } = createTestDatabase();
-	let container = new ServiceContainer();
-	container.instance(Database, db);
 
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			database(() => db),
 			seedAuth(viewer),
 			i18n as Middleware,
 			renderWith(createTestRenderer) as Middleware,
@@ -71,7 +69,7 @@ async function getPrivacy(viewer: Viewer | null) {
 	router.map(routes.legal.privacy, privacy);
 
 	let request = new Request(`https://uptime.test${routes.legal.privacy.href()}`);
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 describe("GET /privacy", () => {

@@ -13,11 +13,9 @@ import { BadRequest, Created, InternalServerError } from "@sdxc/http/status-code
 import { currentLog } from "@sdxc/logger";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
-import { Database } from "remix/data-table";
 import { createController } from "remix/router";
 
 import type { ZoneFileImport } from "~/app/services/zone-file";
@@ -110,13 +108,11 @@ export default createController(dnsMonitorsRoutes, {
 		dnsMonitorsIndex: {
 			middleware: [requireApiKey("dns-monitors:read")],
 			handler: async (ctx) => {
-				let db = getServiceContainer().get(Database);
-
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
 
 				// Chaining returns new queries, so the same one both counts and pages.
-				let query = DnsMonitor.byTeamQuery(db, ctx.apiTeam.id);
+				let query = DnsMonitor.byTeamQuery(ctx.db, ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {
 					orderBy: NEWEST_FIRST,
@@ -143,14 +139,12 @@ export default createController(dnsMonitorsRoutes, {
 		dnsMonitorsCreate: {
 			middleware: [requireApiKey("dns-monitors:write")],
 			handler: async (ctx) => {
-				let db = getServiceContainer().get(Database);
-
 				/**
 				 * Checked before anything is parsed: one check sweeps every tracked name of every monitor
 				 * a team owns, so an unbounded collection is a cost problem before it is an untidy one, and
 				 * a key cannot use this endpoint to walk around the web flow's cap.
 				 */
-				let existingCount = await DnsMonitor.countByTeam(db, ctx.apiTeam.id);
+				let existingCount = await DnsMonitor.countByTeam(ctx.db, ctx.apiTeam.id);
 				if (existingCount >= MAX_DNS_MONITORS_PER_TEAM) {
 					return apiError(
 						"LIMIT_EXCEEDED",
@@ -196,7 +190,7 @@ export default createController(dnsMonitorsRoutes, {
 					);
 				}
 
-				let dnsMonitor = await DnsMonitor.create(db, ctx.apiTeam.id, {
+				let dnsMonitor = await DnsMonitor.create(ctx.db, ctx.apiTeam.id, {
 					name: result.data.name,
 					domain: result.data.domain,
 					zone_file_imported_at: zoneFile === null ? null : Date.now(),
@@ -212,7 +206,12 @@ export default createController(dnsMonitorsRoutes, {
 				let imported = 0;
 				let queriesFailed = 0;
 				try {
-					let discovery = await importDiscovery(db, dnsMonitor.id, names, zoneFile?.records ?? []);
+					let discovery = await importDiscovery(
+						ctx.db,
+						dnsMonitor.id,
+						names,
+						zoneFile?.records ?? [],
+					);
 					imported = discovery.imported;
 					queriesFailed = discovery.queriesFailed;
 				} catch (error) {

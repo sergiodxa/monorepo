@@ -9,9 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
+import type { Database } from "remix/data-table";
+
 import { createAction } from "remix/router";
 
 import Monitor from "~/app/data/monitor";
@@ -45,10 +44,8 @@ async function getPingUsage(
 /** GET /app/:team/dashboard/cards/usage — the ping-usage stat card, fragment-only. */
 export default createAction(routes.app.team.dashboard.cards.usage, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
-
-		let { consumed, usage } = await getPingUsage(db, ctx.team);
+	handler: async (ctx) => {
+		let { consumed, usage } = await getPingUsage(ctx.db, ctx.team);
 
 		if (consumed === null && usage === null) {
 			return ctx.render(
@@ -81,5 +78,5 @@ export default createAction(routes.app.team.dashboard.cards.usage, {
 				}
 			/>,
 		);
-	}),
+	},
 });

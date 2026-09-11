@@ -6,12 +6,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Database } from "remix/data-table";
+
 import { redirect } from "@sdxc/http/response";
 import { notFound } from "@sdxc/http/response/html";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
@@ -59,10 +59,9 @@ export const createMaintenanceWindow = createAction(
 			});
 		}
 
-		let db = getServiceContainer().get(Database);
 		let { scope: submittedScope, ...values } = result.data;
 
-		let scope = await resolveSubmittedScope(db, ctx.team.id, submittedScope);
+		let scope = await resolveSubmittedScope(ctx.db, ctx.team.id, submittedScope);
 		if (!scope) {
 			session?.flash("toast", {
 				intent: "error",
@@ -73,7 +72,7 @@ export const createMaintenanceWindow = createAction(
 			});
 		}
 
-		let window = await MaintenanceWindow.create(db, ctx.team.id, {
+		let window = await MaintenanceWindow.create(ctx.db, ctx.team.id, {
 			...values,
 			monitor_type: scope.monitorType,
 			monitor_id: scope.monitorId,
@@ -108,12 +107,11 @@ export const updateMaintenanceWindow = createAction(
 			);
 		}
 
-		let db = getServiceContainer().get(Database);
 		let { window_id, scope: submittedScope, ...values } = result.data;
-		let existing = await MaintenanceWindow.findByIdForTeam(db, ctx.team.id, window_id);
+		let existing = await MaintenanceWindow.findByIdForTeam(ctx.db, ctx.team.id, window_id);
 		if (!existing) return notFound("Not Found");
 
-		let scope = await resolveSubmittedScope(db, ctx.team.id, submittedScope);
+		let scope = await resolveSubmittedScope(ctx.db, ctx.team.id, submittedScope);
 		if (!scope) {
 			session?.flash("toast", {
 				intent: "error",
@@ -126,7 +124,7 @@ export const updateMaintenanceWindow = createAction(
 			);
 		}
 
-		await MaintenanceWindow.updateById(db, window_id, {
+		await MaintenanceWindow.updateById(ctx.db, window_id, {
 			...values,
 			monitor_type: scope.monitorType,
 			monitor_id: scope.monitorId,
@@ -152,11 +150,14 @@ export const deleteMaintenanceWindow = createAction(
 			});
 		}
 
-		let db = getServiceContainer().get(Database);
-		let existing = await MaintenanceWindow.findByIdForTeam(db, ctx.team.id, result.data.window_id);
+		let existing = await MaintenanceWindow.findByIdForTeam(
+			ctx.db,
+			ctx.team.id,
+			result.data.window_id,
+		);
 		if (!existing) return notFound("Not Found");
 
-		await MaintenanceWindow.deleteById(db, result.data.window_id);
+		await MaintenanceWindow.deleteById(ctx.db, result.data.window_id);
 
 		session?.flash("toast", {
 			intent: "success",
@@ -181,11 +182,14 @@ export const endMaintenanceWindow = createAction(
 			});
 		}
 
-		let db = getServiceContainer().get(Database);
-		let existing = await MaintenanceWindow.findByIdForTeam(db, ctx.team.id, result.data.window_id);
+		let existing = await MaintenanceWindow.findByIdForTeam(
+			ctx.db,
+			ctx.team.id,
+			result.data.window_id,
+		);
 		if (!existing) return notFound("Not Found");
 
-		await MaintenanceWindow.endEarly(db, result.data.window_id);
+		await MaintenanceWindow.endEarly(ctx.db, result.data.window_id);
 
 		session?.flash("toast", { intent: "success", message: `Ended "${existing.name}" early.` });
 		return redirect(routes.app.team.maintenanceWindows.index.href({ team: ctx.team.slug }), {

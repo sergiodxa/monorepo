@@ -18,7 +18,6 @@ import { createEnv } from "@sdxc/cloudflare-mocks";
 import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
-import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -56,6 +55,7 @@ vi.doMock("cloudflare:workers", () => ({
 let { createJobContext } = await import("@sdxc/jobs");
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let sendFunnelReport = (await import("~/app/jobs/send-funnel-report")).default;
 
 let db: Database;
@@ -78,15 +78,13 @@ function duringYesterday(): number {
 }
 
 async function runJob() {
-	let container = new ServiceContainer();
-	container.singleton(Mailer, () => new Mailer({ transport, from: MAIL_FROM }));
-
 	let record: Record<string, unknown> = {};
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.sendFunnelReport, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	ctx.set(JobMailer, new Mailer({ transport, from: MAIL_FROM }), { property: "mailer" });
 
-	await container.scope(() => sendFunnelReport(ctx));
+	await sendFunnelReport(ctx);
 	log.emit();
 	return record;
 }

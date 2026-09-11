@@ -22,7 +22,6 @@ import {
 	ShieldCheckIcon,
 	ShieldXIcon,
 } from "@sdxc/icons";
-import { inject } from "@sdxc/service-container";
 import { border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { flex, flexWrap, gap, grid, gridTemplate, items, justify } from "@sdxc/u/layout";
@@ -30,7 +29,6 @@ import { m, mbe, mbs, p } from "@sdxc/u/size";
 import { fontSize, weight } from "@sdxc/u/typography";
 import { Badge, LinkButton } from "@sdxc/ui";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 import { Fragment, Frame } from "remix/ui";
@@ -58,13 +56,12 @@ import routes from "~/routes/web";
  */
 export default createAction(routes.app.team.monitors.show, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
-		let monitor = await Monitor.findByIdForTeam(db, ctx.team.id, monitorId);
+		let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
 		if (!monitor) return notFound("Not Found");
 
 		return ctx.render(
@@ -168,7 +165,7 @@ export default createAction(routes.app.team.monitors.show, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });
 
 const SSL_TONE: Record<SslStatus, BadgeTone> = {

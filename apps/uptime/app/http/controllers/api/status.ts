@@ -9,8 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { getServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
+import type { Database } from "remix/data-table";
+
 import { createAction } from "remix/router";
 
 import type { SelectMonitor } from "~/database/schema";
@@ -60,9 +60,8 @@ async function statusFor(db: Database, monitor: SelectMonitor): Promise<MonitorS
 export const statusShow = createAction(routes.api.v1.status, {
 	middleware: [requireApiKey("monitors:read")],
 	handler: async (ctx) => {
-		let db = getServiceContainer().get(Database);
-		let monitors = await Monitor.listByTeam(db, ctx.apiTeam.id);
-		let monitorStatuses = await Promise.all(monitors.map((monitor) => statusFor(db, monitor)));
+		let monitors = await Monitor.listByTeam(ctx.db, ctx.apiTeam.id);
+		let monitorStatuses = await Promise.all(monitors.map((monitor) => statusFor(ctx.db, monitor)));
 
 		let enabledMonitors = monitorStatuses.filter((monitor) => monitor.enabled);
 		let downMonitors = enabledMonitors.filter((monitor) => monitor.status === "down");

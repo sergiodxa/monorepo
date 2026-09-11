@@ -15,9 +15,7 @@
 import { redirect } from "@sdxc/http/response";
 import { badRequest, notFound } from "@sdxc/http/response/html";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
@@ -44,8 +42,7 @@ export const createTeam = createAction(routes.accountActions.createTeam, async (
 		return badRequest("Enter a team name.");
 	}
 
-	let db = getServiceContainer().get(Database);
-	let team = await Team.createAdditional(db, viewer.id, result.data.name);
+	let team = await Team.createAdditional(ctx.db, viewer.id, result.data.name);
 
 	return redirect(routes.app.team.dashboard.index.href({ team: team.slug }), {
 		status: redirect.Status.SeeOther,
@@ -66,11 +63,10 @@ export const leaveTeam = createAction(routes.accountActions.leaveTeam, async (ct
 		});
 	}
 
-	let db = getServiceContainer().get(Database);
-	let membership = await Team.findMembership(db, result.data.team_id, viewer.id);
+	let membership = await Team.findMembership(ctx.db, result.data.team_id, viewer.id);
 	if (!membership) return notFound("Not Found");
 
-	let team = await Team.findByIdOrSlug(db, result.data.team_id);
+	let team = await Team.findByIdOrSlug(ctx.db, result.data.team_id);
 	if (!team) return notFound("Not Found");
 
 	if (team.owner_id === viewer.id) return badRequest("The team owner can't leave the team.");
@@ -78,7 +74,7 @@ export const leaveTeam = createAction(routes.accountActions.leaveTeam, async (ct
 		return badRequest("Admins must be demoted to a member before leaving.");
 	}
 
-	await Team.removeMembership(db, result.data.team_id, viewer.id);
+	await Team.removeMembership(ctx.db, result.data.team_id, viewer.id);
 
 	session?.flash("toast", { intent: "success", message: `Left "${team.name}".` });
 	return redirect(routes.home.href(), { status: redirect.Status.SeeOther });
@@ -99,8 +95,7 @@ export const updateEmails = createAction(routes.accountActions.updateEmails, asy
 	let wanted = new Set(result.data.emails);
 	let unsubscribed = optionalEmails.filter((email) => !wanted.has(email));
 
-	let db = getServiceContainer().get(Database);
-	await UserPreferences.setUnsubscribedEmails(db, viewer.id, unsubscribed);
+	await UserPreferences.setUnsubscribedEmails(ctx.db, viewer.id, unsubscribed);
 
 	let session = ctx.get(Session);
 	session?.flash("toast", { intent: "success", message: "Email preferences saved." });
@@ -115,14 +110,13 @@ export const updateEmails = createAction(routes.accountActions.updateEmails, asy
  * so the browser's `no-store` response is the only copy of this sensitive document —
  * there is nothing to schedule, store, or later revoke.
  */
-export const exportData = createAction(routes.accountActions.exportData, async () => {
+export const exportData = createAction(routes.accountActions.exportData, async (ctx) => {
 	let viewer = getViewer();
 	if (!viewer) throw new Error("requireUser must run before this handler");
 
-	let db = getServiceContainer().get(Database);
 	let now = new Date();
 	let document = await buildAccountExport(
-		db,
+		ctx.db,
 		{ id: viewer.id, name: viewer.name, email: viewer.email },
 		now,
 	);
@@ -150,8 +144,7 @@ export const requestDeletion = createAction(routes.accountActions.requestDeletio
 		return badRequest('Type "DELETE" to confirm.');
 	}
 
-	let db = getServiceContainer().get(Database);
-	await AccountDeletion.enqueue(db, viewer.id, viewer.email);
+	await AccountDeletion.enqueue(ctx.db, viewer.id, viewer.email);
 
 	ctx.get(Session)?.destroy();
 
@@ -167,8 +160,7 @@ export const cancelDeletion = createAction(routes.accountActions.cancelDeletion,
 	let viewer = getViewer();
 	if (!viewer) throw new Error("requireUser must run before this handler");
 
-	let db = getServiceContainer().get(Database);
-	await AccountDeletion.remove(db, viewer.id);
+	await AccountDeletion.remove(ctx.db, viewer.id);
 
 	let session = ctx.get(Session);
 	session?.flash("toast", { intent: "success", message: "Account deletion cancelled." });
@@ -188,8 +180,7 @@ export const updateLanguage = createAction(routes.accountActions.updateLanguage,
 		return badRequest("Invalid language.");
 	}
 
-	let db = getServiceContainer().get(Database);
-	await UserPreferences.setLanguage(db, viewer.id, result.data.language);
+	await UserPreferences.setLanguage(ctx.db, viewer.id, result.data.language);
 
 	let headers = new Headers();
 	headers.set("Set-Cookie", await languageCookie.serialize(result.data.language ?? ""));

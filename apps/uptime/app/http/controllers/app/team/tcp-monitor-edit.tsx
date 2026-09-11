@@ -12,15 +12,12 @@
  */
 
 import { notFound } from "@sdxc/http/response/html";
-import { inject } from "@sdxc/service-container";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { fontSize } from "@sdxc/u/typography";
 import { AlertDialog, Button, LinkButton } from "@sdxc/ui";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import TcpMonitor from "~/app/data/tcp-monitor";
@@ -40,13 +37,12 @@ const DELETE_DIALOG_ID = "delete-tcp-monitor";
 /** GET /app/:team/tcp/:monitorId/edit — a TCP monitor's edit form. */
 export default createAction(routes.app.team.tcpMonitors.edit, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
-		let monitor = await TcpMonitor.findByIdForTeam(db, ctx.team.id, monitorId);
+		let monitor = await TcpMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
 		if (!monitor) return notFound("Not Found");
 
 		let showHref = routes.app.team.tcpMonitors.show.href({
@@ -170,5 +166,5 @@ export default createAction(routes.app.team.tcpMonitors.edit, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });

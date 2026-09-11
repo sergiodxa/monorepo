@@ -11,10 +11,7 @@
 
 import { Trans } from "@sdxc/i18n/ui";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { Empty } from "@sdxc/ui";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import Monitor from "~/app/data/monitor";
@@ -28,11 +25,9 @@ import routes from "~/routes/web";
 /** GET /app/:team/dashboard/cards/slowest-endpoint — the slowest-endpoint stat card, fragment-only. */
 export default createAction(routes.app.team.dashboard.cards.slowestEndpoint, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
-
+	handler: async (ctx) => {
 		let [monitors, summaries] = await Promise.all([
-			Monitor.listByTeam(db, ctx.team.id),
+			Monitor.listByTeam(ctx.db, ctx.team.id),
 			getTeamHttpSummaries(ctx.team.id),
 		]);
 
@@ -84,5 +79,5 @@ export default createAction(routes.app.team.dashboard.cards.slowestEndpoint, {
 				}
 			/>,
 		);
-	}),
+	},
 });

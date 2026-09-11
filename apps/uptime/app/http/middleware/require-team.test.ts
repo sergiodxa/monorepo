@@ -9,9 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ServiceContainer } from "@sdxc/service-container";
 import { createCookie } from "remix/cookie";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { session } from "remix/middleware/session";
 import { createRouter } from "remix/router";
@@ -19,6 +17,7 @@ import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { describe, expect, test } from "vitest";
 
 import { auth, type Viewer } from "~/app/http/middleware/auth";
+import { database } from "~/app/http/middleware/database";
 import requireTeam from "~/app/http/middleware/require-team";
 import { signIn } from "~/app/lib/test/auth";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -57,6 +56,7 @@ async function dispatch(db: Db, idOrSlug: string, viewer?: Viewer) {
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			database(() => db),
 			session(cookie, storage),
 			(_ctx, next) => {
 				if (viewer) signIn(viewer);
@@ -73,11 +73,8 @@ async function dispatch(db: Db, idOrSlug: string, viewer?: Viewer) {
 		},
 	});
 
-	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
-
 	let request = new Request(`https://example.com/${idOrSlug}`);
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 describe("requireTeam", () => {

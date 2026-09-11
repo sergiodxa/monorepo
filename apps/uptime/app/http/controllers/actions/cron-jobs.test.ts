@@ -8,8 +8,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter, type Middleware } from "remix/router";
@@ -17,6 +15,7 @@ import { describe, expect, test } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { cronJobMonitors, memberships, teams } from "~/database/schema";
@@ -34,9 +33,9 @@ function teamContextMiddleware(team: SelectTeam, membership: SelectMembership): 
 }
 
 /**
- * Posts a form body to one of the cron-job actions through the real action, DB,
- * and service container, including `i18n` since the actions flash translated
- * toasts and need `ctx.i18next` present when the router runs.
+ * Posts a form body to one of the cron-job actions through the real action and a real
+ * database, including `i18n` since the actions flash translated toasts and need
+ * `ctx.i18next` present when the router runs.
  */
 async function postCronJobAction(
 	action: unknown,
@@ -47,10 +46,7 @@ async function postCronJobAction(
 	body: Record<string, string>,
 	headers: Record<string, string> = {},
 ) {
-	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
-
-	let router = createRouter({ middleware: [asyncContext(), formData(), i18n] });
+	let router = createRouter({ middleware: [asyncContext(), database(() => db), formData(), i18n] });
 	/**
 	 * Casts `router.map` itself so this helper can map several differently-shaped
 	 * routes without losing type-checking elsewhere.
@@ -67,7 +63,7 @@ async function postCronJobAction(
 		headers: { "content-type": "application/x-www-form-urlencoded", ...headers },
 	});
 
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 async function createTeamRow(db: ReturnType<typeof createTestDatabase>["db"]) {

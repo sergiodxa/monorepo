@@ -9,8 +9,6 @@
  */
 
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test, vi } from "vitest";
@@ -18,6 +16,7 @@ import { describe, expect, test, vi } from "vitest";
 import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
+import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { encodeId } from "~/app/services/typed-id";
 import { monitorResults, monitors, teams } from "~/database/schema";
@@ -92,11 +91,8 @@ async function createMonitorResultRow(
 }
 
 async function dispatch(db: Db, key?: string) {
-	let router = createRouter({ middleware: [asyncContext()] });
+	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
 	router.map(routes.api.v1.status, statusShow);
-
-	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
 
 	let headers: Record<string, string> = {};
 	if (key !== undefined) headers.Authorization = `Bearer ${key}`;
@@ -106,7 +102,7 @@ async function dispatch(db: Db, key?: string) {
 		headers,
 	});
 
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 describe("GET /api/v1/status", () => {

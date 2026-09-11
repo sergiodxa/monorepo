@@ -26,7 +26,6 @@ import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { failure } from "@sdxc/result";
-import { ServiceContainer } from "@sdxc/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
@@ -104,17 +103,8 @@ vi.doMock("~/app/lib/billing", () => ({ ...realBillingModule, polar: billing }))
 let { Job, createJobContext } = await import("@sdxc/jobs");
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let checkHttp = (await import("./check-http")).default;
-
-/** Builds a container with a mailer that records instead of sending. */
-function makeContainer() {
-	let container = new ServiceContainer();
-	container.singleton(
-		Mailer,
-		() => new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }),
-	);
-	return container;
-}
 
 /**
  * Builds the context the handler receives, carrying the database its chain would publish,
@@ -135,6 +125,9 @@ function makeContext(db: Database, monitorId: string, options: { jobId?: string 
 		log,
 	});
 	ctx.set(JobDatabase, db, { property: "database" });
+	ctx.set(JobMailer, new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }), {
+		property: "mailer",
+	});
 
 	return {
 		ctx,
@@ -148,7 +141,7 @@ function makeContext(db: Database, monitorId: string, options: { jobId?: string 
 /** Runs the job against `db`, returning the record its log emitted. */
 async function runJob(db: Database, monitorId: string, options: { jobId?: string } = {}) {
 	let { ctx, emit } = makeContext(db, monitorId, options);
-	await makeContainer().scope(() => checkHttp(ctx));
+	await checkHttp(ctx);
 	return emit();
 }
 
@@ -577,7 +570,7 @@ describe("checkHttp error handling", () => {
 
 		let { ctx } = makeContext(db, monitor.id, { jobId: `${monitor.id}:1` });
 
-		await expect(makeContainer().scope(() => checkHttp(ctx))).rejects.toThrow(Job.Retry);
+		await expect(checkHttp(ctx)).rejects.toThrow(Job.Retry);
 		expect(await db.findOne(monitorResults, { where: { monitor_id: monitor.id } })).toBeNull();
 		expect(pingResults.dataPoints).toHaveLength(0);
 	});
@@ -593,7 +586,7 @@ describe("checkHttp error handling", () => {
 
 		let { ctx, emit } = makeContext(broken, monitor.id, { jobId: `${monitor.id}:1` });
 
-		await expect(makeContainer().scope(() => checkHttp(ctx))).rejects.toThrow(Job.Retry);
+		await expect(checkHttp(ctx)).rejects.toThrow(Job.Retry);
 		expect(emit()).toMatchObject({
 			outcome: "error",
 			"error.message": "D1_ERROR: network connection lost",

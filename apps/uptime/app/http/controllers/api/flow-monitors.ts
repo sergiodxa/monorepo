@@ -14,14 +14,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Database } from "remix/data-table";
+
 import { BadRequest, Created, InternalServerError, NotFound } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
-import { Database } from "remix/data-table";
 import { createController } from "remix/router";
 
 import type { InsertFlowMonitor, SelectFlowMonitor } from "~/database/schema";
@@ -99,13 +99,11 @@ export default createController(flowMonitorsRoutes, {
 		flowMonitorsIndex: {
 			middleware: [requireApiKey("flow-monitors:read")],
 			handler: async (ctx) => {
-				let db = getServiceContainer().get(Database);
-
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
 
 				// Chaining returns new queries, so the same one both counts and pages.
-				let query = FlowMonitor.listByTeamQuery(db, ctx.apiTeam.id);
+				let query = FlowMonitor.listByTeamQuery(ctx.db, ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {
 					orderBy: NEWEST_FIRST,
@@ -141,11 +139,10 @@ export default createController(flowMonitorsRoutes, {
 					);
 				}
 
-				let db = getServiceContainer().get(Database);
-				let refusal = await refuseUnreachableSource(db, ctx.apiTeam.id, result.data.source);
+				let refusal = await refuseUnreachableSource(ctx.db, ctx.apiTeam.id, result.data.source);
 				if (refusal) return refusal;
 
-				let monitor = await FlowMonitor.create(db, ctx.apiTeam.id, {
+				let monitor = await FlowMonitor.create(ctx.db, ctx.apiTeam.id, {
 					name: result.data.name,
 					source: result.data.source,
 					interval_seconds: result.data.intervalSeconds,
@@ -161,8 +158,7 @@ export default createController(flowMonitorsRoutes, {
 			middleware: [requireApiKey("flow-monitors:read")],
 			handler: async (ctx) => {
 				let { flowMonitorId } = s.parse(FlowMonitorIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let monitor = await FlowMonitor.findByIdForTeam(db, ctx.apiTeam.id, flowMonitorId);
+				let monitor = await FlowMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, flowMonitorId);
 				if (!monitor) return apiError("NOT_FOUND", "Flow monitor not found", NotFound);
 				return apiSuccess({ flowMonitor: serializeFlowMonitor(monitor) });
 			},
@@ -173,8 +169,7 @@ export default createController(flowMonitorsRoutes, {
 			middleware: [requireApiKey("flow-monitors:write")],
 			handler: async (ctx) => {
 				let { flowMonitorId } = s.parse(FlowMonitorIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let existing = await FlowMonitor.findByIdForTeam(db, ctx.apiTeam.id, flowMonitorId);
+				let existing = await FlowMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, flowMonitorId);
 				if (!existing) return apiError("NOT_FOUND", "Flow monitor not found", NotFound);
 
 				let result = await validate(ctx.request, UpdateFlowMonitorSchema);
@@ -187,7 +182,7 @@ export default createController(flowMonitorsRoutes, {
 				}
 
 				if (result.data.source !== undefined) {
-					let refusal = await refuseUnreachableSource(db, ctx.apiTeam.id, result.data.source);
+					let refusal = await refuseUnreachableSource(ctx.db, ctx.apiTeam.id, result.data.source);
 					if (refusal) return refusal;
 				}
 
@@ -198,7 +193,7 @@ export default createController(flowMonitorsRoutes, {
 					changes.interval_seconds = result.data.intervalSeconds;
 				if (result.data.isEnabled !== undefined) changes.is_enabled = result.data.isEnabled;
 
-				let monitor = await FlowMonitor.updateById(db, flowMonitorId, changes);
+				let monitor = await FlowMonitor.updateById(ctx.db, flowMonitorId, changes);
 				return apiSuccess({ flowMonitor: serializeFlowMonitor(monitor) });
 			},
 		},
@@ -208,11 +203,10 @@ export default createController(flowMonitorsRoutes, {
 			middleware: [requireApiKey("flow-monitors:write")],
 			handler: async (ctx) => {
 				let { flowMonitorId } = s.parse(FlowMonitorIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let existing = await FlowMonitor.findByIdForTeam(db, ctx.apiTeam.id, flowMonitorId);
+				let existing = await FlowMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, flowMonitorId);
 				if (!existing) return apiError("NOT_FOUND", "Flow monitor not found", NotFound);
 
-				await FlowMonitor.deleteById(db, flowMonitorId);
+				await FlowMonitor.deleteById(ctx.db, flowMonitorId);
 				return apiSuccess({ deleted: true });
 			},
 		},
@@ -222,14 +216,13 @@ export default createController(flowMonitorsRoutes, {
 			middleware: [requireApiKey("flow-monitors:read")],
 			handler: async (ctx) => {
 				let { flowMonitorId } = s.parse(FlowMonitorIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let monitor = await FlowMonitor.findByIdForTeam(db, ctx.apiTeam.id, flowMonitorId);
+				let monitor = await FlowMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, flowMonitorId);
 				if (!monitor) return apiError("NOT_FOUND", "Flow monitor not found", NotFound);
 
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
 
-				let page = await Pagination.byKeyset(FlowMonitor.resultsQuery(db, flowMonitorId), {
+				let page = await Pagination.byKeyset(FlowMonitor.resultsQuery(ctx.db, flowMonitorId), {
 					orderBy: newestFirst("checked_at"),
 					cursor: params.data.cursor,
 					limit: params.data.perPage,

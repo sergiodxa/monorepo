@@ -12,8 +12,6 @@
 import type { CurrentJobContext } from "@sdxc/jobs";
 
 import { createJobHandler } from "@sdxc/jobs";
-import { Mailer } from "@sdxc/mail";
-import { getServiceContainer } from "@sdxc/service-container";
 
 import type { CheckHttpInput } from "~/app/jobs";
 import type { HttpProbeOutcome } from "~/app/services/http-check";
@@ -209,8 +207,7 @@ async function notify(
 	status: MonitorStatus,
 ): Promise<void> {
 	try {
-		let mailer = getServiceContainer().get(Mailer);
-		await notifyHttpResult(ctx.database, mailer, monitor, previousStatus, {
+		await notifyHttpResult(ctx.database, ctx.mailer, monitor, previousStatus, {
 			status,
 			responseStatus: outcome.responseStatus ?? 0,
 			responseTimeMs: outcome.responseTimeMs ?? 0,

@@ -9,8 +9,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
@@ -19,6 +17,7 @@ import type { ApiKeyScope, SelectTeam } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import Invite from "~/app/data/invite";
+import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { encodeId } from "~/app/services/typed-id";
 import { teams } from "~/database/schema";
@@ -48,13 +47,10 @@ async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]): Prom
 }
 
 async function dispatch(db: Db, request: Request) {
-	let router = createRouter({ middleware: [asyncContext()] });
+	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
 	router.map(routes.api.v1.invites.destroy, inviteDestroy);
 
-	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
-
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 function destroyRequest(inviteId: string, headers: Record<string, string> = {}) {

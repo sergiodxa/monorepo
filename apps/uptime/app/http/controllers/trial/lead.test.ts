@@ -17,8 +17,6 @@ import { Log } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
@@ -40,6 +38,7 @@ import {
 	TRIAL_WATCH_REPEATED,
 	TRIAL_WATCH_STARTED,
 } from "~/app/http/controllers/trial/session";
+import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
 import routes from "~/routes/web";
@@ -101,12 +100,11 @@ async function submit(
 	records: Record<string, unknown>[] = [],
 ) {
 	let db = existing ?? createTestDatabase().db;
-	let container = new ServiceContainer();
-	container.instance(Database, db);
 
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			database(() => db),
 			log() as Middleware,
 			((ctx, next) => {
 				ctx.set(Auth, { ok: false });
@@ -135,7 +133,7 @@ async function submit(
 	 * request emits out of the console.
 	 */
 	let requestLog = new Log({ kind: "request", sink: (record) => void records.push(record) });
-	let response = await requestLog.run(() => container.scope(() => router.fetch(request)));
+	let response = await requestLog.run(() => router.fetch(request));
 
 	return { response, db, session };
 }

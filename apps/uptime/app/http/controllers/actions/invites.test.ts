@@ -7,14 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Database } from "remix/data-table";
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
 import { createTranslator } from "@sdxc/i18n";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
@@ -24,6 +23,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
 import { TeamInviteEmail } from "~/app/emails/team-invite";
+import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
 import { invites, memberships, teams } from "~/database/schema";
@@ -87,11 +87,13 @@ async function send(
 	method: string,
 	params: Record<string, string>,
 ): Promise<Response> {
-	let container = new ServiceContainer();
-	container.instance(Database, db);
-
 	let router = createRouter({
-		middleware: [asyncContext(), formData() as Middleware, mail({ transport, from: MAIL_FROM })],
+		middleware: [
+			asyncContext(),
+			database(() => db),
+			formData() as Middleware,
+			mail({ transport, from: MAIL_FROM }),
+		],
 	});
 	router.map(route, {
 		middleware: [seedTeam(team, membership)],
@@ -104,7 +106,7 @@ async function send(
 		body: new URLSearchParams(params).toString(),
 	});
 
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 describe("createInvite", () => {

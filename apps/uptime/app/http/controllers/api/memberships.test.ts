@@ -7,8 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
@@ -17,6 +15,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { membershipsIndex } from "~/app/http/controllers/api/memberships";
+import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { parseLink } from "~/app/lib/test/paging";
 import { encodeId } from "~/app/services/typed-id";
@@ -53,13 +52,10 @@ async function createMembershipRow(db: Db, teamId: string, role: "member" | "adm
 }
 
 async function dispatch(db: Db, request: Request): Promise<Response> {
-	let router = createRouter({ middleware: [asyncContext()] });
+	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
 	router.map(routes.api.v1.memberships, membershipsIndex);
 
-	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
-
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 function request(method: string, url: string, options: { key?: string } = {}): Request {

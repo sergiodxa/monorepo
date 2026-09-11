@@ -13,14 +13,13 @@
  */
 
 import type { MemoryBilling } from "@sdxc/billing/providers/memory";
+import type { Database } from "remix/data-table";
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
 import billing from "@sdxc/billing/middleware";
 import { log } from "@sdxc/logger/middleware";
 import { unwrap } from "@sdxc/result";
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
@@ -28,6 +27,7 @@ import { describe, expect, test, vi } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { database } from "~/app/http/middleware/database";
 import { MONITORING_PRODUCT } from "~/app/lib/billing";
 import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -108,12 +108,10 @@ async function send(
 	method: string,
 	params: Record<string, string>,
 ): Promise<Response> {
-	let container = new ServiceContainer();
-	container.instance(Database, db);
-
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			database(() => db),
 			log() as Middleware,
 			billing({ provider: platform }),
 			formData() as Middleware,
@@ -127,7 +125,7 @@ async function send(
 		body: new URLSearchParams(params).toString(),
 	});
 
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 describe("updateTeam", () => {

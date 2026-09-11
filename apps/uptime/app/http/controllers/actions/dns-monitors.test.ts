@@ -16,10 +16,8 @@ import billing from "@sdxc/billing/middleware";
 import { createAnalyticsEngine, createEnv } from "@sdxc/cloudflare-mocks";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
-import { ServiceContainer } from "@sdxc/service-container";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter, type Middleware } from "remix/router";
@@ -29,6 +27,7 @@ import type { DnsRecordType } from "~/app/data/dns-monitor-record";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
+import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -149,7 +148,7 @@ function teamContextMiddleware(team: SelectTeam, membership: SelectMembership): 
 	};
 }
 
-/** Posts a form body to one of the DNS monitor actions through the real action, DB, and service container. */
+/** Posts a form body to one of the DNS monitor actions through the real action and a real database. */
 async function postDnsMonitorAction(
 	action: unknown,
 	route: { method: string; href: (params: { team: string }) => string },
@@ -159,12 +158,10 @@ async function postDnsMonitorAction(
 	body: Record<string, string> | URLSearchParams,
 	headers: Record<string, string> = {},
 ) {
-	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
-
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			database(() => db),
 			billing({ provider: () => testBilling }),
 			formData(),
 			mail({ transport: new MemoryTransport(), from: MAIL_FROM }),
@@ -187,7 +184,7 @@ async function postDnsMonitorAction(
 		headers: { "content-type": "application/x-www-form-urlencoded", ...headers },
 	});
 
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 async function createTeamRow(db: ReturnType<typeof createTestDatabase>["db"]) {

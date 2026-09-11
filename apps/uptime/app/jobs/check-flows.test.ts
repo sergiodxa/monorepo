@@ -14,7 +14,6 @@ import type { AnalyticsEngineMock, QueueMock } from "@sdxc/cloudflare-mocks";
 import { createAnalyticsEngine, createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
-import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -106,14 +105,12 @@ function enqueued(): NotifyEnvelope[] {
 
 /** Runs the handler over a context carrying the test's database, and returns its record. */
 async function runJob(db: Database) {
-	let container = new ServiceContainer();
-
 	let record: Record<string, unknown> = {};
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.checkFlows, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
 
-	await container.scope(() => checkFlows(ctx));
+	await checkFlows(ctx);
 	log.emit();
 	return record;
 }

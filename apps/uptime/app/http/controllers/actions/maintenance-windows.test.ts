@@ -8,11 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Database } from "remix/data-table";
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
@@ -20,6 +19,7 @@ import { describe, expect, test } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { dnsMonitors, maintenanceWindows, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -73,10 +73,9 @@ async function send(
 	method: string,
 	params: Record<string, string>,
 ): Promise<Response> {
-	let container = new ServiceContainer();
-	container.instance(Database, db);
-
-	let router = createRouter({ middleware: [asyncContext(), formData() as Middleware] });
+	let router = createRouter({
+		middleware: [asyncContext(), database(() => db), formData() as Middleware],
+	});
 	router.map(route, { middleware: [seedTeam(team, membership)], handler });
 
 	let request = new Request(new URL(route.href({ team: team.slug }), "https://uptime.test"), {
@@ -85,7 +84,7 @@ async function send(
 		body: new URLSearchParams(params).toString(),
 	});
 
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 describe("createMaintenanceWindow", () => {

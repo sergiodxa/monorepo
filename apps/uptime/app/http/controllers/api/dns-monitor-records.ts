@@ -10,14 +10,14 @@
  */
 
 import type { OrderByTuple } from "@sdxc/pagination";
+import type { Database } from "remix/data-table";
 
 import { BadRequest, InternalServerError, NotFound } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
-import { and, Database, eq } from "remix/data-table";
+import { and, eq } from "remix/data-table";
 import { createController } from "remix/router";
 
 import type { SelectDnsMonitorRecord } from "~/database/schema";
@@ -115,16 +115,15 @@ export default createController(dnsMonitorRecordsRoutes, {
 			middleware: [requireApiKey("dns-monitors:read")],
 			handler: async (ctx) => {
 				let { dnsMonitorId } = s.parse(DnsMonitorIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
 
-				let monitor = await DnsMonitor.findByIdForTeam(db, ctx.apiTeam.id, dnsMonitorId);
+				let monitor = await DnsMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, dnsMonitorId);
 				if (!monitor) return apiError("NOT_FOUND", "DNS monitor not found", NotFound);
 
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
 
 				// Chaining returns new queries, so the same one both counts and pages.
-				let query = DnsMonitorRecord.byMonitorQuery(db, dnsMonitorId);
+				let query = DnsMonitorRecord.byMonitorQuery(ctx.db, dnsMonitorId);
 
 				let page = await Pagination.byKeyset(query, {
 					orderBy: BY_RECORD_IDENTITY,
@@ -156,12 +155,11 @@ export default createController(dnsMonitorRecordsRoutes, {
 			middleware: [requireApiKey("dns-monitors:write")],
 			handler: async (ctx) => {
 				let { dnsMonitorId, recordId } = s.parse(DnsMonitorRecordParams, ctx.params);
-				let db = getServiceContainer().get(Database);
 
-				let monitor = await DnsMonitor.findByIdForTeam(db, ctx.apiTeam.id, dnsMonitorId);
+				let monitor = await DnsMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, dnsMonitorId);
 				if (!monitor) return apiError("NOT_FOUND", "DNS monitor not found", NotFound);
 
-				let existing = await findRecordForMonitor(db, dnsMonitorId, recordId);
+				let existing = await findRecordForMonitor(ctx.db, dnsMonitorId, recordId);
 				if (!existing) return apiError("NOT_FOUND", "DNS record not found", NotFound);
 
 				let result = await validate(ctx.request, UpdateDnsMonitorRecordSchema);
@@ -169,9 +167,9 @@ export default createController(dnsMonitorRecordsRoutes, {
 					return apiError("VALIDATION_ERROR", validationMessage(result.error.issues), BadRequest);
 				}
 
-				await DnsMonitorRecord.setEnabled(db, dnsMonitorId, [recordId], result.data.isEnabled);
+				await DnsMonitorRecord.setEnabled(ctx.db, dnsMonitorId, [recordId], result.data.isEnabled);
 
-				let record = await findRecordForMonitor(db, dnsMonitorId, recordId);
+				let record = await findRecordForMonitor(ctx.db, dnsMonitorId, recordId);
 				if (!record) return apiError("NOT_FOUND", "DNS record not found", NotFound);
 
 				return apiSuccess({ record: serializeDnsMonitorRecord(record) });

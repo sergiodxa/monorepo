@@ -7,13 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Database } from "remix/data-table";
+
 import { BadRequest, NotFound } from "@sdxc/http/status-code";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
-import { Database } from "remix/data-table";
 import { createController } from "remix/router";
 
 import type { InsertStatusPage } from "~/database/schema";
@@ -83,8 +83,7 @@ export default createController(statusPageRoutes, {
 			middleware: [requireApiKey("status-pages:read")],
 			handler: async (ctx) => {
 				let { statusPageId } = s.parse(StatusPageIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let statusPage = await loadWithAttachments(db, ctx.apiTeam.id, statusPageId);
+				let statusPage = await loadWithAttachments(ctx.db, ctx.apiTeam.id, statusPageId);
 				if (!statusPage) return apiError("NOT_FOUND", "Status page not found", NotFound);
 				return apiSuccess({ statusPage });
 			},
@@ -95,8 +94,7 @@ export default createController(statusPageRoutes, {
 			middleware: [requireApiKey("status-pages:write")],
 			handler: async (ctx) => {
 				let { statusPageId } = s.parse(StatusPageIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let existing = await StatusPage.findByIdForTeam(db, ctx.apiTeam.id, statusPageId);
+				let existing = await StatusPage.findByIdForTeam(ctx.db, ctx.apiTeam.id, statusPageId);
 				if (!existing) return apiError("NOT_FOUND", "Status page not found", NotFound);
 
 				let result = await validate(ctx.request, UpdateStatusPageSchema);
@@ -110,7 +108,7 @@ export default createController(statusPageRoutes, {
 
 				if (
 					result.data.slug !== undefined &&
-					(await StatusPage.isSlugTaken(db, result.data.slug, existing.id))
+					(await StatusPage.isSlugTaken(ctx.db, result.data.slug, existing.id))
 				) {
 					return apiError("VALIDATION_ERROR", "Slug is already in use", BadRequest);
 				}
@@ -128,9 +126,10 @@ export default createController(statusPageRoutes, {
 				if (result.data.showOverallStatus !== undefined)
 					changes.show_overall_status = result.data.showOverallStatus;
 
-				if (Object.keys(changes).length > 0) await StatusPage.updateById(db, statusPageId, changes);
+				if (Object.keys(changes).length > 0)
+					await StatusPage.updateById(ctx.db, statusPageId, changes);
 
-				let statusPage = await loadWithAttachments(db, ctx.apiTeam.id, statusPageId);
+				let statusPage = await loadWithAttachments(ctx.db, ctx.apiTeam.id, statusPageId);
 				if (!statusPage)
 					return apiError("INTERNAL_ERROR", "Failed to load updated status page", BadRequest);
 				return apiSuccess({ statusPage });
@@ -142,11 +141,10 @@ export default createController(statusPageRoutes, {
 			middleware: [requireApiKey("status-pages:write")],
 			handler: async (ctx) => {
 				let { statusPageId } = s.parse(StatusPageIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let existing = await StatusPage.findByIdForTeam(db, ctx.apiTeam.id, statusPageId);
+				let existing = await StatusPage.findByIdForTeam(ctx.db, ctx.apiTeam.id, statusPageId);
 				if (!existing) return apiError("NOT_FOUND", "Status page not found", NotFound);
 
-				await StatusPage.deleteById(db, statusPageId);
+				await StatusPage.deleteById(ctx.db, statusPageId);
 				return apiSuccess({ deleted: true });
 			},
 		},
@@ -156,8 +154,7 @@ export default createController(statusPageRoutes, {
 			middleware: [requireApiKey("status-pages:write")],
 			handler: async (ctx) => {
 				let { statusPageId } = s.parse(StatusPageIdParams, ctx.params);
-				let db = getServiceContainer().get(Database);
-				let statusPage = await StatusPage.findByIdForTeam(db, ctx.apiTeam.id, statusPageId);
+				let statusPage = await StatusPage.findByIdForTeam(ctx.db, ctx.apiTeam.id, statusPageId);
 				if (!statusPage) return apiError("NOT_FOUND", "Status page not found", NotFound);
 
 				let result = await validate(ctx.request, UpdateAssociationsSchema);
@@ -172,21 +169,21 @@ export default createController(statusPageRoutes, {
 				let { monitorIds, cronJobIds } = result.data;
 
 				if (monitorIds.length > 0) {
-					let found = await Monitor.findManyByIdsForTeam(db, ctx.apiTeam.id, monitorIds);
+					let found = await Monitor.findManyByIdsForTeam(ctx.db, ctx.apiTeam.id, monitorIds);
 					if (found.length !== monitorIds.length) {
 						return apiError("NOT_FOUND", "One or more monitors not found", NotFound);
 					}
 				}
 
 				if (cronJobIds.length > 0) {
-					let found = await CronJobMonitor.findManyByIdsForTeam(db, ctx.apiTeam.id, cronJobIds);
+					let found = await CronJobMonitor.findManyByIdsForTeam(ctx.db, ctx.apiTeam.id, cronJobIds);
 					if (found.length !== cronJobIds.length) {
 						return apiError("NOT_FOUND", "One or more cron jobs not found", NotFound);
 					}
 				}
 
-				await StatusPage.setMonitors(db, statusPageId, monitorIds);
-				await StatusPage.setCronJobs(db, statusPageId, cronJobIds);
+				await StatusPage.setMonitors(ctx.db, statusPageId, monitorIds);
+				await StatusPage.setCronJobs(ctx.db, statusPageId, cronJobIds);
 
 				return apiSuccess({
 					statusPage: serializeStatusPage(statusPage),

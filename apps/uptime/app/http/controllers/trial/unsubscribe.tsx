@@ -16,13 +16,11 @@
 
 import type { RemixNode } from "remix/ui";
 
-import { getServiceContainer } from "@sdxc/service-container";
 import { vstack } from "@sdxc/u/layout";
 import { m, maxIs, mi, minBs, p } from "@sdxc/u/size";
 import { textAlign } from "@sdxc/u/typography";
 import { Button, Card, Heading, LinkButton, Text } from "@sdxc/ui";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
@@ -94,9 +92,8 @@ export default createController(routes.trial.unsubscribe, {
 			let { token } = s.parse(ParamsSchema, ctx.params);
 			let t = ctx.i18next.t;
 
-			let db = getServiceContainer().get(Database);
-			let lead = await Lead.findByUnsubscribeToken(db, token);
-			if (lead) await Lead.forget(db, lead.id);
+			let lead = await Lead.findByUnsubscribeToken(ctx.db, token);
+			if (lead) await Lead.forget(ctx.db, lead.id);
 
 			return renderPage(
 				t("page.unsubscribe.done.title"),

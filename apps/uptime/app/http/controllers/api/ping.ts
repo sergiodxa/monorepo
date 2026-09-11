@@ -14,13 +14,11 @@ import { BadRequest, PaymentRequired } from "@sdxc/http/status-code";
 import { CloudflareAdapter, MemoryAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { generateUUID } from "@sdxc/uuid";
 import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 
 import type { ContentCheckRule } from "~/app/data/content-check";
@@ -186,14 +184,12 @@ export default createAction(routes.api.v1.ping, {
 			);
 		}
 
-		let db = getServiceContainer().get(Database);
-
 		/**
 		 * Reads via `stateFor`: an owner whose subscription state can't be determined fails
 		 * open and gets their ping, matching what the manual "run check" button does —
 		 * refusing a paying customer over an inconclusive lookup is the worse mistake.
 		 */
-		if ((await Subscription.stateFor(db, ctx.apiTeam.owner_id)) === "inactive") {
+		if ((await Subscription.stateFor(ctx.db, ctx.apiTeam.owner_id)) === "inactive") {
 			return apiError(
 				"SUBSCRIPTION_REQUIRED",
 				"An active subscription is required to run a ping",

@@ -17,8 +17,6 @@ import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
@@ -28,6 +26,7 @@ import { afterAll, describe, expect, test } from "vitest";
 
 import type { MarketingContent } from "~/resources/content/marketing";
 
+import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { comparisons } from "~/resources/content/marketing";
@@ -52,12 +51,11 @@ function createTestRenderer(): Renderer<RemixNode> {
  */
 async function getComparison(slug: string) {
 	let { db } = createTestDatabase();
-	let container = new ServiceContainer();
-	container.instance(Database, db);
 
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			database(() => db),
 			(ctx, next) => {
 				ctx.set(Auth, { ok: false });
 				return next();
@@ -69,7 +67,7 @@ async function getComparison(slug: string) {
 	router.map(routes.marketing.comparison, marketingComparison);
 
 	let request = new Request(`https://uptime.test${routes.marketing.comparison.href({ slug })}`);
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 /** A comparison record with exactly the fields {@link MarketingContent.ComparisonPage} requires. */

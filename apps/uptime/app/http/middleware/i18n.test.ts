@@ -9,9 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ServiceContainer } from "@sdxc/service-container";
 import { createCookie } from "remix/cookie";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { session } from "remix/middleware/session";
 import { createRouter } from "remix/router";
@@ -21,6 +19,7 @@ import { describe, expect, test } from "vitest";
 import UserPreferences from "~/app/data/user-preferences";
 import { language } from "~/app/http/cookies";
 import { auth, type Viewer } from "~/app/http/middleware/auth";
+import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { signIn } from "~/app/lib/test/auth";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -59,6 +58,7 @@ async function dispatch(db: Db, options: { viewer?: Viewer; headers?: HeadersIni
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			database(() => db),
 			session(cookie, storage),
 			(_ctx, next) => {
 				if (options.viewer) signIn(options.viewer);
@@ -71,11 +71,8 @@ async function dispatch(db: Db, options: { viewer?: Viewer; headers?: HeadersIni
 
 	router.get("/", (ctx) => Response.json({ locale: ctx.locale }));
 
-	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
-
 	let request = new Request("https://example.com/", { headers: options.headers });
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 /** The `language` cookie the response asks the browser to store, if it asks for one. */

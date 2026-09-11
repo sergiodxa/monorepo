@@ -10,11 +10,10 @@
  */
 
 import type { CurrentJobContext } from "@sdxc/jobs";
+import type { Mailer } from "@sdxc/mail";
 import type { Database } from "remix/data-table";
 
 import { createJobHandler, Job } from "@sdxc/jobs";
-import { Mailer } from "@sdxc/mail";
-import { getServiceContainer } from "@sdxc/service-container";
 import * as s from "remix/data-schema";
 
 import type { NotifyInput } from "~/app/jobs";
@@ -72,11 +71,10 @@ function parseStatuses<const Values extends readonly [string, ...string[]]>(
 }
 
 export default createJobHandler(jobs.notify, async (ctx) => {
-	let mailer = getServiceContainer().get(Mailer);
 	ctx.log.set({ monitor: { id: ctx.input.monitorId, type: ctx.input.monitorType } });
 
 	try {
-		let dispatched = await dispatch(ctx, mailer);
+		let dispatched = await dispatch(ctx, ctx.mailer);
 
 		if (!dispatched) {
 			ctx.log.note("monitors.not_found");

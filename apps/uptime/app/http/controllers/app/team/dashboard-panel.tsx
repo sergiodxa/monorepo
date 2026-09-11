@@ -13,7 +13,6 @@ import type { Handle } from "remix/ui";
 
 import { ActivityIcon, ClockIcon, GlobeIcon, NetworkIcon, PlusIcon } from "@sdxc/icons";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { fg } from "@sdxc/u/color";
 import { absolute, flex, insBe, insBs, insIe, items, justify, relative } from "@sdxc/u/layout";
 import { is, mbe } from "@sdxc/u/size";
@@ -21,8 +20,6 @@ import { hover } from "@sdxc/u/state";
 import { textDecoration } from "@sdxc/u/typography";
 import { Badge, Empty, LinkButton, Table, Tabs } from "@sdxc/ui";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 import { link } from "remix/ui";
 
@@ -588,8 +585,7 @@ function CronJobsTable(handle: Handle<CronJobsTable.Props>) {
 /** GET /app/:team/dashboard/panel/:type — one monitor-type table, fragment-only. */
 export default createAction(routes.app.team.dashboard.panel, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let { type } = s.parse(s.object({ type: s.enum_(DASHBOARD_TABS) }), ctx.params);
 		let headers = { "Cache-Control": CACHE_CONTROL };
 
@@ -605,7 +601,7 @@ export default createAction(routes.app.team.dashboard.panel, {
 		let refreshToken = String(Date.now());
 
 		if (type === "dns") {
-			let dnsMonitors = await DnsMonitor.listByTeam(db, ctx.team.id);
+			let dnsMonitors = await DnsMonitor.listByTeam(ctx.db, ctx.team.id);
 			return ctx.render(
 				<DashboardPanel
 					tab="dns"
@@ -634,7 +630,7 @@ export default createAction(routes.app.team.dashboard.panel, {
 		}
 
 		if (type === "tcp") {
-			let tcpMonitors = await TcpMonitor.listByTeam(db, ctx.team.id);
+			let tcpMonitors = await TcpMonitor.listByTeam(ctx.db, ctx.team.id);
 			return ctx.render(
 				<DashboardPanel
 					tab="tcp"
@@ -668,7 +664,7 @@ export default createAction(routes.app.team.dashboard.panel, {
 		}
 
 		if (type === "cron-jobs") {
-			let cronJobMonitors = await CronJobMonitor.listByTeam(db, ctx.team.id);
+			let cronJobMonitors = await CronJobMonitor.listByTeam(ctx.db, ctx.team.id);
 			let cronJobRows: CronJobRow[] = cronJobMonitors.map((monitor) => ({
 				monitor,
 				schedule: describeSchedule(monitor.cron_expression, {
@@ -709,7 +705,7 @@ export default createAction(routes.app.team.dashboard.panel, {
 		}
 
 		let [monitors, summaries, sparklines] = await Promise.all([
-			Monitor.listByTeam(db, ctx.team.id),
+			Monitor.listByTeam(ctx.db, ctx.team.id),
 			getTeamHttpSummaries(ctx.team.id),
 			getTeamHttpSparklines(ctx.team.id),
 		]);
@@ -756,5 +752,5 @@ export default createAction(routes.app.team.dashboard.panel, {
 			/>,
 			{ headers },
 		);
-	}),
+	},
 });

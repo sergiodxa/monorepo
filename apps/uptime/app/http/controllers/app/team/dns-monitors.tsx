@@ -10,14 +10,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Database } from "remix/data-table";
+
 import { GlobeIcon, PlusIcon } from "@sdxc/icons";
-import { inject } from "@sdxc/service-container";
 import { fg } from "@sdxc/u/color";
 import { hover } from "@sdxc/u/state";
 import { textDecoration } from "@sdxc/u/typography";
 import { Badge, Empty, LinkButton, Table } from "@sdxc/ui";
-import { Database, getTableName } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
+import { getTableName } from "remix/data-table";
 import { createAction } from "remix/router";
 
 import type { BadgeTone } from "~/resources/components/badge";
@@ -86,14 +86,13 @@ async function countRecords(
  */
 export default createAction(routes.app.team.dnsMonitors.index, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let monitors = await DnsMonitor.listByTeam(db, ctx.team.id);
+		let monitors = await DnsMonitor.listByTeam(ctx.db, ctx.team.id);
 		let counts = await countRecords(
-			db,
+			ctx.db,
 			monitors.map((monitor) => monitor.id),
 		);
 
@@ -214,5 +213,5 @@ export default createAction(routes.app.team.dnsMonitors.index, {
 				</AppShell>
 			</DocumentLayout>,
 		);
-	}),
+	},
 });

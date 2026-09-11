@@ -7,9 +7,7 @@
  */
 
 import { NotFound } from "@sdxc/http/status-code";
-import { getServiceContainer } from "@sdxc/service-container";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 
 import ApiKey from "~/app/data/api-key";
@@ -26,11 +24,10 @@ export const apiKeyDestroy = createAction(routes.api.v1.apiKeys.destroy, {
 	middleware: [catchValidationError(), requireApiKey("api-keys:write")],
 	handler: async (ctx) => {
 		let { apiKeyId } = s.parse(ApiKeyIdParams, ctx.params);
-		let db = getServiceContainer().get(Database);
-		let existing = await ApiKey.findByIdForTeam(db, ctx.apiTeam.id, apiKeyId);
+		let existing = await ApiKey.findByIdForTeam(ctx.db, ctx.apiTeam.id, apiKeyId);
 		if (!existing) return apiError("NOT_FOUND", "API key not found", NotFound);
 
-		await ApiKey.deleteById(db, apiKeyId);
+		await ApiKey.deleteById(ctx.db, apiKeyId);
 		return apiSuccess({ deleted: true });
 	},
 });
