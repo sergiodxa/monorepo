@@ -199,5 +199,5 @@ must be written to survive partial application.
 - [ADR-050](../ADR-050-html-named-entities-in-xml-parsing.md) — entity decoding this depends on
 - [ADR-051](../ADR-051-atom-package.md) — Atom parsing
 - [ADR-052](../ADR-052-feed-facade-package.md) — the feed façade the app consumes
-- [ADR-008](../ADR-008-service-container-for-remix-v3.md) — service resolution in Remix v3 apps
+- [ADR-057](../ADR-057-request-context-instead-of-a-service-container.md) — service resolution in Remix v3 apps, which supersedes the ADR-008 container this plan was written against
 - [ADR-049](../ADR-049-deferred-route-module-loading.md) — the lazy route mapping this app uses

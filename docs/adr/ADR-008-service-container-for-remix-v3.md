@@ -2,7 +2,11 @@
 
 ## Status
 
-**Proposed** - 2026-06-30
+**Superseded** by [ADR-057](./ADR-057-request-context-instead-of-a-service-container.md) - 2026-09-11
+
+Originally proposed 2026-06-30 and adopted across eight workspaces. ADR-057 records what three
+months of use settled: the container carried one service in practice, and Remix v3's own request
+context carries it with one mechanism instead of two.
 
 ## Background
 
