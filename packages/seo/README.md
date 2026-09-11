@@ -462,7 +462,6 @@ belongs in `robots.txt`, not here.
 
 - [`@sdxc/sitemap`](/packages/sitemap) - XML sitemaps, the crawl-side sibling of this metadata
 - [`@sdxc/rss`](/packages/rss) - RSS feeds, built from the same absolute URLs
-- [`@sdxc/service-container`](/packages/service-container) - Registration for the one configured instance
 
 ## Tips
 
