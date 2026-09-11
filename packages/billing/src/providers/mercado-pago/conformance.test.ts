@@ -1,12 +1,12 @@
 /**
- * The shared conformance suite pointed at a real Mercado Pago account. It
- * stays skipped because every assertion in it creates payers, opens hosted
- * pages, and reads plans back, which needs live sandbox credentials and a
- * dashboard where the two products below already exist.
+ * The shared conformance suite pointed at a real Mercado Pago account, which is
+ * the run that proves this provider maps live payloads: every assertion in it
+ * creates payers, opens hosted pages, and reads plans back.
  *
- * Enable it by supplying `MERCADO_PAGO_ACCESS_TOKEN` for a test account, then
- * creating a monthly `preapproval_plan` priced in ARS and another priced in
- * CLP, and naming their identifiers in the catalog below.
+ * Run it by supplying `MERCADO_PAGO_ACCESS_TOKEN` for a test account, then
+ * creating a monthly `preapproval_plan` priced at 100.50 ARS and another priced
+ * at 5000 CLP, and naming their identifiers in `MERCADO_PAGO_ARS_PLAN` and
+ * `MERCADO_PAGO_CLP_PLAN`. The suite skips while any of the three is unset.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,7 +20,7 @@ import { capabilityConformance, conformance } from "../../testing/conformance.js
 
 import { MercadoPagoBilling } from "./index.js";
 
-/** The sandbox credential the suite bills against when it is enabled. */
+/** The sandbox credential the suite bills against. */
 const ACCESS_TOKEN = process.env["MERCADO_PAGO_ACCESS_TOKEN"] ?? "";
 
 /** The recurring plan the suite subscribes to, as the sandbox dashboard issued it. */
@@ -28,6 +28,9 @@ const ARS_PLAN = process.env["MERCADO_PAGO_ARS_PLAN"] ?? "";
 
 /** The recurring plan priced with no minor unit, which is the rounding assertion. */
 const CLP_PLAN = process.env["MERCADO_PAGO_CLP_PLAN"] ?? "";
+
+/** Whether the environment names the credential and both plans. */
+const CONFIGURED = [ACCESS_TOKEN, ARS_PLAN, CLP_PLAN].every((value) => value !== "");
 
 /** Minor units the ARS plan is expected to charge. */
 const ARS_AMOUNT = 10_050;
@@ -53,7 +56,7 @@ const CONFORMANCE_OPTIONS: ConformanceOptions = {
 	zeroDecimal: { slug: "andes", amount: CLP_AMOUNT, currency: "clp" },
 };
 
-describe.skip("MercadoPagoBilling conformance against a sandbox account", () => {
+describe.skipIf(!CONFIGURED)("MercadoPagoBilling conformance against a sandbox account", () => {
 	conformance(CONFORMANCE_OPTIONS);
 	capabilityConformance(CONFORMANCE_OPTIONS);
 });
