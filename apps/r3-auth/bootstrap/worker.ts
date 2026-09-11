@@ -1,9 +1,8 @@
 /**
- * Cloudflare Worker entry point for the authorization server. Its `fetch` handler
- * opens a service-container scope, builds the application router, and forwards the
- * request to it, so everything a request touches resolves its dependencies from the
- * same scope. `scheduled` and `queue` delegate to the job dispatcher, which opens a
- * scope of its own around every job it runs.
+ * Cloudflare Worker entry point for the authorization server. Its `fetch` handler builds
+ * the application router and forwards the request to it, so everything a request touches
+ * reads its dependencies off the context that router publishes them on. `scheduled` and
+ * `queue` delegate to the job dispatcher, which publishes a job's own.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,7 +12,6 @@ import * as cloudflare from "@sdxc/jobs/cloudflare";
 import { env } from "cloudflare:workers";
 
 import { dispatcher } from "~/app/jobs/dispatcher";
-import { container } from "~/app/lib/container";
 
 import application from "./app";
 
@@ -39,23 +37,21 @@ const handlers = cloudflare.worker(dispatcher);
 
 export default {
 	/**
-	 * Serves an HTTP request inside a container scope.
+	 * Serves an HTTP request through the application router.
 	 * @param request - The inbound request.
 	 * @returns The router's response.
 	 */
 	async fetch(request: Request) {
-		return await container.scope(async () => {
-			let production = isProductionHost(request);
+		let production = isProductionHost(request);
 
-			let app = application({
-				kv: env.KV,
-				cookieSecret: env.COOKIE_SESSION_SECRET,
-				secure: production,
-				cookieDomain: production ? PRODUCTION_COOKIE_DOMAIN : undefined,
-			});
-
-			return await app.fetch(request);
+		let app = application({
+			kv: env.KV,
+			cookieSecret: env.COOKIE_SESSION_SECRET,
+			secure: production,
+			cookieDomain: production ? PRODUCTION_COOKIE_DOMAIN : undefined,
 		});
+
+		return await app.fetch(request);
 	},
 
 	/**

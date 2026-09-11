@@ -16,11 +16,8 @@ import { getClientIP } from "@sdxc/get-client-ip";
 import { redirect } from "@sdxc/http/response";
 import { badRequest, notFound } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { generateUUID } from "@sdxc/uuid";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import type { OIDC } from "~/app/auth/oidc-provider";
@@ -44,7 +41,6 @@ import { getSubjectFromAccessToken } from "~/app/services/access-token-claims";
 import { sendVerificationEmail } from "~/app/services/email-verification";
 import { startGitHubLogin } from "~/app/services/github-login";
 import { spendRateLimit } from "~/app/services/rate-limit";
-import RateLimiters from "~/app/services/rate-limiters";
 import { notifyNewSignIn } from "~/app/services/sign-in-alert";
 import DocumentLayout from "~/resources/layouts/document";
 import AuthorizeView from "~/resources/views/authorize";
@@ -183,8 +179,8 @@ function signInPage(ctx: RequestContext, client: SelectClient, authz: AuthzState
  * authorization request for it, and redirects to itself carrying that request, so a
  * bare `/authorize` reaches the account area through the same flow relying parties use.
  */
-async function selfRedirect(ctx: RequestContext, db: Database): Promise<Response> {
-	let client = await Client.ensureAuthServerClient(db, ctx.url);
+async function selfRedirect(ctx: RequestContext): Promise<Response> {
+	let client = await Client.ensureAuthServerClient(ctx.db, ctx.url);
 	let state = generateUUID();
 
 	setAuthz({ clientId: client.id, state, redirectUri: client.redirect_uri });
@@ -209,9 +205,7 @@ export default createController(routes.authorize, {
 		 * a code (SSO) or renders the sign-in page. Redirect URIs match the registration
 		 * exactly, and the IP budget is spent on the first request carrying parameters.
 		 */
-		index: inject([Database, RateLimiters] as const, async (db, limiters) => {
-			let ctx = getContext();
-
+		index: async (ctx) => {
 			let subjectId = currentSubjectId();
 			if (subjectId) ctx.log.set({ subject: { id: subjectId } });
 
@@ -225,16 +219,19 @@ export default createController(routes.authorize, {
 					});
 				}
 
-				return await selfRedirect(ctx, db);
+				return await selfRedirect(ctx);
 			}
 
 			let query = result.data;
 			ctx.log.set({ client: { id: query.client_id } });
 
-			let limited = await spendRateLimit(limiters.authorize, getClientIP(ctx.request) ?? "unknown");
+			let limited = await spendRateLimit(
+				ctx.limiters.authorize,
+				getClientIP(ctx.request) ?? "unknown",
+			);
 			if (limited) return limited;
 
-			let client = await Client.findById(db, query.client_id);
+			let client = await Client.findById(ctx.db, query.client_id);
 			if (!client) {
 				ctx.log.note("oidc.authorize.client_unknown");
 				return notFound({ message: "Client not found" });
@@ -269,7 +266,7 @@ export default createController(routes.authorize, {
 			let forceLogin = query.prompt?.includes("login") ?? false;
 
 			if (subjectId && !forceLogin) {
-				let code = await createOidcProvider(db).generateAuthzCode({
+				let code = await createOidcProvider(ctx.db).generateAuthzCode({
 					subjectId,
 					clientId: client.id,
 					ip: getClientIP(ctx.request),
@@ -320,17 +317,15 @@ export default createController(routes.authorize, {
 			}
 
 			return signInPage(ctx, client, authz);
-		}),
+		},
 
 		/**
 		 * POST /authorize — signs a person in with email and password, then answers the
 		 * authorization request parked in their session. A refusal logs the error code
 		 * alone. This server's own client keeps its parked request for its callback.
 		 */
-		action: inject([Database, RateLimiters] as const, async (db, limiters) => {
-			let ctx = getContext();
-
-			let limited = await spendRateLimit(limiters.login, getClientIP(ctx.request) ?? "unknown");
+		action: async (ctx) => {
+			let limited = await spendRateLimit(ctx.limiters.login, getClientIP(ctx.request) ?? "unknown");
 			if (limited) return limited;
 
 			let authz = getAuthz();
@@ -347,7 +342,7 @@ export default createController(routes.authorize, {
 				return badRequest({ message: "Invalid request" });
 			}
 
-			let login = await createOidcProvider(db).loginWithCredential({
+			let login = await createOidcProvider(ctx.db).loginWithCredential({
 				email: result.data.email,
 				password: result.data.password,
 				name: result.data.name,
@@ -369,7 +364,7 @@ export default createController(routes.authorize, {
 				ctx.log.set({ oidc: { error: login.error.code } });
 				ctx.log.note("auth.login_refused");
 
-				let client = await Client.findById(db, authz.clientId);
+				let client = await Client.findById(ctx.db, authz.clientId);
 				if (!client) return badRequest({ message: "Invalid request" });
 
 				return signInPage(ctx, client, authz, signInErrorMessage(ctx, login.error.code));
@@ -378,9 +373,9 @@ export default createController(routes.authorize, {
 			ctx.log.set({ subject: { id: login.data.subjectId } });
 			ctx.log.note("auth.login_completed");
 
-			await notifyNewSignIn(ctx, db, login.data.subjectId);
+			await notifyNewSignIn(ctx, ctx.db, login.data.subjectId);
 
-			await sendVerificationEmail(ctx, db, login.data.subjectId);
+			await sendVerificationEmail(ctx, ctx.db, login.data.subjectId);
 
 			if (authz.clientId !== AUTH_SERVER_CLIENT_ID) unsetAuthz();
 
@@ -390,6 +385,6 @@ export default createController(routes.authorize, {
 				login.data.params,
 				login.data.responseMode,
 			);
-		}),
+		},
 	},
 });

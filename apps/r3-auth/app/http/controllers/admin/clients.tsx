@@ -11,10 +11,7 @@
 import { redirect } from "@sdxc/http/response";
 import { badRequest } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import Client from "~/app/data/client";
@@ -35,13 +32,12 @@ export default createController(routes.admin.clients, {
 	middleware: [requireAdmin],
 	actions: {
 		/** GET /admin/clients — renders one page of clients with their row actions. */
-		index: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		index: async (ctx) => {
 			let page = readPageNumber(ctx.url);
 
 			let [clients, totalCount] = await Promise.all([
-				Client.findAll(db, { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
-				Client.count(db),
+				Client.findAll(ctx.db, { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
+				Client.count(ctx.db),
 			]);
 
 			let chrome = toChrome(ctx, {
@@ -91,12 +87,10 @@ export default createController(routes.admin.clients, {
 					}}
 				/>,
 			);
-		}),
+		},
 
 		/** POST /admin/clients — deletes the client a row's confirmation named. */
-		action: inject([Database] as const, async (db) => {
-			let ctx = getContext();
-
+		action: async (ctx) => {
 			let result = await validate(ctx.formData, ClientsIntentSchema);
 			if (isFailure(result)) {
 				ctx.log.warn("admin.client.intent_invalid");
@@ -106,12 +100,12 @@ export default createController(routes.admin.clients, {
 			let { clientId } = result.data;
 			ctx.log.set({ client: { id: clientId } });
 
-			await Grant.deleteByClientId(db, clientId);
-			await Client.delete(db, clientId);
+			await Grant.deleteByClientId(ctx.db, clientId);
+			await Client.delete(ctx.db, clientId);
 
 			ctx.log.note("admin.client.deleted");
 
 			return redirect(routes.admin.clients.index.href(), { status: redirect.Status.SeeOther });
-		}),
+		},
 	},
 });

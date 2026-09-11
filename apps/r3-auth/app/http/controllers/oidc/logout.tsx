@@ -14,10 +14,7 @@ import type { RequestContext } from "remix/router";
 import { redirect } from "@sdxc/http/response";
 import { badRequest } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import { OIDC } from "~/app/auth/oidc-provider";
@@ -75,9 +72,7 @@ export default createController(routes.oidc.logout, {
 		 * request leaves the subject undetermined. Back-channel delivery uses recipient
 		 * lists captured before the sessions were deleted; a refused request answers 400.
 		 */
-		index: inject([Database] as const, async (db) => {
-			let ctx = getContext();
-
+		index: async (ctx) => {
 			let result = await validate(ctx.url.searchParams, LogoutQuerySchema);
 			if (isFailure(result)) {
 				ctx.log.note("oidc.logout.params_invalid");
@@ -95,7 +90,7 @@ export default createController(routes.oidc.logout, {
 			}
 
 			let logout: Awaited<ReturnType<OIDC["logout"]>>;
-			let provider = createOidcProvider(db);
+			let provider = createOidcProvider(ctx.db);
 
 			try {
 				logout = await provider.logout({
@@ -117,7 +112,7 @@ export default createController(routes.oidc.logout, {
 
 			await provider.deliverBackchannelLogoutTokens(logout.subjectId, logout.backchannelSessions);
 
-			if (refreshToken) await Session.deleteById(db, refreshToken);
+			if (refreshToken) await Session.deleteById(ctx.db, refreshToken);
 
 			ctx.log.set({
 				subject: { id: logout.subjectId },
@@ -152,16 +147,14 @@ export default createController(routes.oidc.logout, {
 				status: redirect.Status.SeeOther,
 				headers: CLEAR_SITE_DATA,
 			});
-		}),
+		},
 
 		/**
 		 * POST /oidc/logout — signs the person out of this server itself and sends them
 		 * back to the authorization endpoint. Back-channel tokens reach every relying
 		 * party, sent while the session rows they are derived from still exist.
 		 */
-		action: inject([Database] as const, async (db) => {
-			let ctx = getContext();
-
+		action: async (ctx) => {
 			let accessToken = getAccessToken();
 			let refreshToken = getRefreshToken();
 
@@ -169,10 +162,10 @@ export default createController(routes.oidc.logout, {
 				let subjectId = getSubjectFromAccessToken(accessToken);
 
 				if (subjectId) {
-					await createOidcProvider(db).sendBackchannelLogoutTokens(subjectId);
+					await createOidcProvider(ctx.db).sendBackchannelLogoutTokens(subjectId);
 				}
 
-				await Session.deleteById(db, refreshToken);
+				await Session.deleteById(ctx.db, refreshToken);
 				ctx.log.set({ subject: { id: subjectId ?? undefined } });
 				ctx.log.note("oidc.logout.completed");
 				unsetTokens();
@@ -184,6 +177,6 @@ export default createController(routes.oidc.logout, {
 				status: redirect.Status.SeeOther,
 				headers: CLEAR_SITE_DATA,
 			});
-		}),
+		},
 	},
 });

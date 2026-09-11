@@ -12,10 +12,7 @@ import type { RequestContext } from "remix/router";
 
 import { redirect } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import Session from "~/app/data/session";
@@ -42,9 +39,9 @@ const CLEAR_COOKIES: HeadersInit = { "Clear-Site-Data": '"cookies"' };
  */
 const NO_STORE: HeadersInit = { "Cache-Control": "no-store, private" };
 
-async function sessionsPage(ctx: RequestContext, db: Database): Promise<Response> {
+async function sessionsPage(ctx: RequestContext): Promise<Response> {
 	let subject = ctx.subject;
-	let sessions = await Session.findBySubjectId(db, subject.id);
+	let sessions = await Session.findBySubjectId(ctx.db, subject.id);
 	let currentSessionId = getRefreshToken();
 
 	return await ctx.render(
@@ -134,17 +131,16 @@ export default createController(routes.account.sessions, {
 	middleware: [requireSubject],
 	actions: {
 		/** GET /account/sessions — lists the subject's live sessions. */
-		index: inject([Database] as const, async (db) => {
-			return await sessionsPage(getContext(), db);
-		}),
+		index: async (ctx) => {
+			return await sessionsPage(ctx);
+		},
 
 		/**
 		 * POST /account/sessions — revokes one session, or every session but this one. Both
 		 * branches touch only the guard's subject's rows; any other id gets the same answer
 		 * a stale one does. The browser signs out once no row is left that can refresh.
 		 */
-		action: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		action: async (ctx) => {
 			let subject = ctx.subject;
 			let currentSessionId = getRefreshToken();
 
@@ -156,11 +152,11 @@ export default createController(routes.account.sessions, {
 			}
 
 			let submitted = result.data;
-			let owned = await Session.findBySubjectId(db, subject.id);
+			let owned = await Session.findBySubjectId(ctx.db, subject.id);
 
 			if (submitted.intent === "revoke-all") {
 				let others = owned.filter((session) => session.id !== currentSessionId);
-				for (let session of others) await Session.deleteById(db, session.id);
+				for (let session of others) await Session.deleteById(ctx.db, session.id);
 
 				ctx.log.set({ sessions: { revoked: others.length } });
 				ctx.log.note("session.revoked_all");
@@ -177,16 +173,16 @@ export default createController(routes.account.sessions, {
 				return backToList();
 			}
 
-			await Session.deleteById(db, target.id);
+			await Session.deleteById(ctx.db, target.id);
 			ctx.log.set({ sessions: { revoked: 1 } });
 			ctx.log.note("session.revoked");
 
 			if (target.id === currentSessionId) return signOut();
 
-			let remaining = await Session.findBySubjectId(db, subject.id);
+			let remaining = await Session.findBySubjectId(ctx.db, subject.id);
 			if (remaining.length === 0) return signOut();
 
 			return backToList();
-		}),
+		},
 	},
 });

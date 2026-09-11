@@ -12,10 +12,7 @@ import type { RequestContext } from "remix/router";
 
 import { redirect } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import Client from "~/app/data/client";
@@ -98,12 +95,11 @@ export default createController(routes.admin.clientEdit, {
 	middleware: [requireAdmin],
 	actions: {
 		/** GET /admin/clients/:clientId/edit — renders the form filled from the stored row. */
-		index: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		index: async (ctx) => {
 			let clientId = ctx.params.clientId!;
 			ctx.log.set({ client: { id: clientId } });
 
-			let client = await Client.findById(db, clientId);
+			let client = await Client.findById(ctx.db, clientId);
 			if (!client) {
 				ctx.log.note("admin.client.not_found");
 				return defaultHandler(ctx);
@@ -117,18 +113,17 @@ export default createController(routes.admin.clientEdit, {
 					detailHref={routes.admin.client.index.href({ clientId })}
 				/>,
 			);
-		}),
+		},
 
 		/**
 		 * POST /admin/clients/:clientId/edit — persists the edit, then either reveals a
 		 * rotated secret or returns to the detail page.
 		 */
-		action: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		action: async (ctx) => {
 			let clientId = ctx.params.clientId!;
 			ctx.log.set({ client: { id: clientId } });
 
-			let existing = await Client.findById(db, clientId);
+			let existing = await Client.findById(ctx.db, clientId);
 			if (!existing) {
 				ctx.log.note("admin.client.not_found");
 				return defaultHandler(ctx);
@@ -150,7 +145,7 @@ export default createController(routes.admin.clientEdit, {
 			}
 
 			let input = result.data;
-			let updated = await Client.update(db, clientId, {
+			let updated = await Client.update(ctx.db, clientId, {
 				name: input.name,
 				description: input.description,
 				logo_url: input.logoUrl,
@@ -180,6 +175,6 @@ export default createController(routes.admin.clientEdit, {
 			return redirect(routes.admin.client.index.href({ clientId }), {
 				status: redirect.Status.SeeOther,
 			});
-		}),
+		},
 	},
 });

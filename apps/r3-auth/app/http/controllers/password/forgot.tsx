@@ -15,16 +15,13 @@ import type { RequestContext } from "remix/router";
 
 import { getClientIP } from "@sdxc/get-client-ip";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import { ForgotPasswordSchema } from "~/app/http/validators/password";
 import { requestPasswordReset } from "~/app/services/password-reset";
 import { spendRateLimit } from "~/app/services/rate-limit";
-import RateLimiters from "~/app/services/rate-limiters";
 import DocumentLayout from "~/resources/layouts/document";
 import ForgotPasswordView from "~/resources/views/password/forgot";
 import PasswordNoticeView from "~/resources/views/password/notice";
@@ -94,10 +91,8 @@ export default createController(routes.password.forgot, {
 		 * otherwise; {@link requestPasswordReset} returns nothing, so there is no outcome here to
 		 * branch on. Its per-address cooldown bounds mail; the shared IP budget bounds callers.
 		 */
-		action: inject([Database, RateLimiters] as const, async (db, limiters) => {
-			let ctx = getContext();
-
-			let limited = await spendRateLimit(limiters.login, getClientIP(ctx.request) ?? "unknown");
+		action: async (ctx) => {
+			let limited = await spendRateLimit(ctx.limiters.login, getClientIP(ctx.request) ?? "unknown");
 			if (limited) return limited;
 
 			let result = await validate(ctx.formData, ForgotPasswordSchema);
@@ -110,9 +105,9 @@ export default createController(routes.password.forgot, {
 				);
 			}
 
-			await requestPasswordReset(ctx, db, result.data.email);
+			await requestPasswordReset(ctx, ctx.db, result.data.email);
 
 			return sentPage(ctx);
-		}),
+		},
 	},
 });

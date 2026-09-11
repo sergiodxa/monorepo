@@ -10,10 +10,7 @@
 import { redirect } from "@sdxc/http/response";
 import { badRequest } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import Client from "~/app/data/client";
@@ -29,14 +26,13 @@ export default createController(routes.admin.client, {
 	middleware: [requireAdmin],
 	actions: {
 		/** GET /admin/clients/:clientId — renders the registration and its consent count. */
-		index: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		index: async (ctx) => {
 			let clientId = ctx.params.clientId!;
 			ctx.log.set({ client: { id: clientId } });
 
 			let [client, authorizedUsers] = await Promise.all([
-				Client.findById(db, clientId),
-				Grant.countByClientId(db, clientId),
+				Client.findById(ctx.db, clientId),
+				Grant.countByClientId(ctx.db, clientId),
 			]);
 
 			if (!client) {
@@ -89,15 +85,14 @@ export default createController(routes.admin.client, {
 					}}
 				/>,
 			);
-		}),
+		},
 
 		/**
 		 * POST /admin/clients/:clientId — deletes this client and every consent for it.
 		 * Grants go first, so a deletion interrupted halfway leaves every remaining grant
 		 * pointing at a client that still exists.
 		 */
-		action: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		action: async (ctx) => {
 			let clientId = ctx.params.clientId!;
 			ctx.log.set({ client: { id: clientId } });
 
@@ -107,12 +102,12 @@ export default createController(routes.admin.client, {
 				return badRequest({ error: "invalid_intent" });
 			}
 
-			await Grant.deleteByClientId(db, clientId);
-			await Client.delete(db, clientId);
+			await Grant.deleteByClientId(ctx.db, clientId);
+			await Client.delete(ctx.db, clientId);
 
 			ctx.log.note("admin.client.deleted");
 
 			return redirect(routes.admin.clients.index.href(), { status: redirect.Status.SeeOther });
-		}),
+		},
 	},
 });

@@ -56,14 +56,13 @@ because every message goes to a subject's own address, so the recipient set is t
 each turn an ordinary send into a refusal at send time. `remote: true` means a `wrangler dev`
 send is a **real** send, which bills and delivers like production.
 
-Mail is sent through two mailers over the same transport, registered once as
-`MailTransport` in `app/lib/container.ts`:
+Mail is sent through two mailers over the same transport, opened once in `app/lib/mail.ts`:
 
 - **request-scoped** — `ctx.email`, published by `@sdxc/mail`'s middleware in
   `bootstrap/app.tsx`. Its `later()` queue is flushed after the response, so a failed send
   is logged and cannot change what the person sees.
-- **background** — the `Mailer` registered in `app/lib/container.ts`, for a queue message or
-  a scheduled sweep, where there is no request and therefore no `ctx.email`.
+- **background** — `createMailer()` from `app/lib/mail.ts`, for a queue message or a
+  scheduled sweep, where there is no request and therefore no `ctx.email`.
 
 The sender identity lives in `app/emails/sender.ts`:
 `Auth <no-reply@auth.sergiodxa.com>`, replies to `hello@sergiodxa.com`. It is **not** an

@@ -11,7 +11,6 @@
 import type { Database as DataTableDatabase } from "remix/data-table";
 
 import { createEnv, createExecutionContext, createQueue } from "@sdxc/cloudflare-mocks";
-import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 /** The queue the cron produces into. */
@@ -41,6 +40,12 @@ vi.doMock("cloudflare:workers", () => ({
 		context.waitUntil(promise);
 	},
 }));
+
+/**
+ * Hands every job the database this file seeds, read at call time so each test's own
+ * database is the one the sweep under test sweeps.
+ */
+vi.doMock("~/app/lib/database", () => ({ createDatabase: () => db }));
 
 /**
  * The worker under test, imported once here at module scope. It reaches the
@@ -82,16 +87,10 @@ beforeEach(async () => {
 	context = createExecutionContext();
 
 	let { createTestDatabase } = await import("~/app/lib/test/db");
-	let { container } = await import("~/app/lib/container");
 	let Client = (await import("~/app/data/client")).default;
 	let Subject = (await import("~/app/data/subject")).default;
 
 	db = createTestDatabase().db;
-	/**
-	 * Replaces the D1-backed registration, so the worker under test resolves
-	 * this database through the same container it opens a scope on.
-	 */
-	container.singleton(Database, () => db);
 
 	let client = await Client.create(db, {
 		name: "Client App",

@@ -7,9 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import Subject from "~/app/data/subject";
@@ -27,13 +24,12 @@ import routes from "~/routes/web";
 export default createAction(routes.admin.subjects, {
 	middleware: [requireAdmin],
 	/** Renders one page of subjects with links to each account's detail and edit pages. */
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let page = readPageNumber(ctx.url);
 
 		let [subjects, totalCount] = await Promise.all([
-			Subject.findAll(db, { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
-			Subject.count(db),
+			Subject.findAll(ctx.db, { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
+			Subject.count(ctx.db),
 		]);
 
 		let chrome = toChrome(ctx, {
@@ -77,5 +73,5 @@ export default createAction(routes.admin.subjects, {
 				}}
 			/>,
 		);
-	}),
+	},
 });

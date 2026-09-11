@@ -12,10 +12,7 @@
 import type { RequestContext } from "remix/router";
 
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import type { VerificationError } from "~/app/services/email-verification";
@@ -113,16 +110,14 @@ export default createController(routes.verifyEmail, {
 		 * malformed-token log keeps the token out, since any part of it there could let
 		 * someone verify an address.
 		 */
-		index: inject([Database] as const, async (db) => {
-			let ctx = getContext();
-
+		index: async (ctx) => {
 			let query = await validate(ctx.url.searchParams, VerifyEmailQuerySchema);
 			if (isFailure(query)) {
 				ctx.log.note("email_verification.token_malformed");
 				return outcomePage(ctx, "invalid", 400);
 			}
 
-			let result = await peekVerificationToken(db, query.data.token);
+			let result = await peekVerificationToken(ctx.db, query.data.token);
 
 			if (isFailure(result)) {
 				ctx.log.note("email_verification.token_refused", { reason: result.error.reason });
@@ -130,22 +125,20 @@ export default createController(routes.verifyEmail, {
 			}
 
 			return confirmPage(ctx, query.data.token);
-		}),
+		},
 
 		/**
 		 * POST /verify-email — spends the token and stamps the column. This is the only
 		 * request that writes anything, and a form is the only thing that issues it.
 		 */
-		action: inject([Database] as const, async (db) => {
-			let ctx = getContext();
-
+		action: async (ctx) => {
 			let form = await validate(ctx.formData, VerifyEmailFormSchema);
 			if (isFailure(form)) {
 				ctx.log.note("email_verification.token_malformed");
 				return outcomePage(ctx, "invalid", 400);
 			}
 
-			let result = await consumeVerificationToken(db, form.data.token);
+			let result = await consumeVerificationToken(ctx.db, form.data.token);
 
 			if (isFailure(result)) {
 				ctx.log.note("email_verification.token_refused", { reason: result.error.reason });
@@ -156,6 +149,6 @@ export default createController(routes.verifyEmail, {
 			ctx.log.note("email_verification.verified");
 
 			return outcomePage(ctx, "verified", 200);
-		}),
+		},
 	},
 });

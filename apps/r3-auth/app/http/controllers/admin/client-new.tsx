@@ -10,9 +10,7 @@
 import type { RequestContext } from "remix/router";
 
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
@@ -96,9 +94,7 @@ export default createController(routes.admin.clientNew, {
 		 * A validation failure re-renders the form with the issues addressed per field, so
 		 * nothing the administrator typed is lost.
 		 */
-		action: inject([Database] as const, async (db) => {
-			let ctx = getContext();
-
+		action: async (ctx) => {
 			let result = await validate(ctx.formData, CreateClientSchema);
 			if (isFailure(result)) {
 				ctx.log.note("admin.client.create_invalid");
@@ -109,7 +105,7 @@ export default createController(routes.admin.clientNew, {
 			}
 
 			let input = result.data;
-			let client = await Client.create(db, {
+			let client = await Client.create(ctx.db, {
 				name: input.name,
 				description: input.description,
 				logo_url: input.logoUrl,
@@ -134,6 +130,6 @@ export default createController(routes.admin.clientNew, {
 					}}
 				/>,
 			);
-		}),
+		},
 	},
 });

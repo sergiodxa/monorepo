@@ -1,8 +1,8 @@
 /**
  * The five rate limiters protecting the OAuth, authorization and login surfaces, each
  * wrapping the Cloudflare binding declared for it together with that binding's limit
- * and window. Grouped into one service so the container hands out a single value and
- * every endpoint spends from the budget meant for it.
+ * and window. Grouped into one value so a request carries all five and every endpoint
+ * spends from the budget meant for it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -11,9 +11,7 @@
 import { getClientIP } from "@sdxc/get-client-ip";
 import { badRequest, internalServerError, ok, unauthorized } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
@@ -22,7 +20,6 @@ import { createOidcProvider } from "~/app/auth/repository";
 import { TokenRequestSchema } from "~/app/http/validators/oauth";
 import { readClientCredentials } from "~/app/services/client-credentials";
 import { spendRateLimit } from "~/app/services/rate-limit";
-import RateLimiters from "~/app/services/rate-limiters";
 import routes from "~/routes/web";
 
 /**
@@ -74,82 +71,77 @@ function tokenError(error: unknown): Response {
  * callers are server-to-server, so their budget is spent per client; browser-driven
  * grants are budgeted per address, all an unauthenticated code exchange offers.
  */
-export default createAction(
-	routes.oauth.token,
-	inject([Database, RateLimiters] as const, async (db, limiters) => {
-		let ctx = getContext();
+export default createAction(routes.oauth.token, async (ctx) => {
+	let result = await validate(ctx.formData, TokenRequestSchema);
+	if (isFailure(result)) {
+		ctx.log.set({ oidc: { error: "invalid_request" } });
+		return badRequest(
+			{ error: "invalid_request", error_description: "Invalid request body" },
+			{ headers: NO_STORE_HEADERS },
+		);
+	}
 
-		let result = await validate(ctx.formData, TokenRequestSchema);
-		if (isFailure(result)) {
-			ctx.log.set({ oidc: { error: "invalid_request" } });
-			return badRequest(
-				{ error: "invalid_request", error_description: "Invalid request body" },
-				{ headers: NO_STORE_HEADERS },
+	let body = result.data;
+	let credentials = readClientCredentials(ctx.request.headers, body);
+
+	ctx.log.set({ oidc: { grant_type: body.grant_type } });
+
+	let limited = await spendRateLimit(
+		ctx.limiters.token,
+		body.grant_type === "client_credentials" && credentials
+			? credentials.clientId
+			: (getClientIP(ctx.request) ?? "unknown"),
+	);
+	if (limited) return limited;
+
+	let oidc = createOidcProvider(ctx.db);
+
+	try {
+		if (body.grant_type === "authorization_code") {
+			let tokens = await oidc.token({
+				type: "authorization_code",
+				code: body.code,
+				codeVerifier: body.code_verifier,
+				redirectUri: body.redirect_uri,
+				clientId: credentials?.clientId,
+				clientSecret: credentials?.clientSecret,
+			});
+
+			ctx.log.note("oidc.token.issued");
+			return ok(tokens, { headers: NO_STORE_HEADERS });
+		}
+
+		if (body.grant_type === "refresh_token") {
+			let tokens = await oidc.token({
+				type: "refresh_token",
+				refreshToken: body.refresh_token,
+			});
+
+			ctx.log.note("oidc.token.issued");
+			return ok(tokens, { headers: NO_STORE_HEADERS });
+		}
+
+		if (!credentials) {
+			ctx.log.set({ oidc: { error: "invalid_client" } });
+			return unauthorized(
+				{
+					error: "invalid_client",
+					error_description: "Missing or invalid client credentials",
+				},
+				{ headers: { ...NO_STORE_HEADERS, "WWW-Authenticate": "Basic" } },
 			);
 		}
 
-		let body = result.data;
-		let credentials = readClientCredentials(ctx.request.headers, body);
+		let tokens = await oidc.token({
+			type: "client_credentials",
+			resource: body.resource,
+			...credentials,
+		});
 
-		ctx.log.set({ oidc: { grant_type: body.grant_type } });
-
-		let limited = await spendRateLimit(
-			limiters.token,
-			body.grant_type === "client_credentials" && credentials
-				? credentials.clientId
-				: (getClientIP(ctx.request) ?? "unknown"),
-		);
-		if (limited) return limited;
-
-		let oidc = createOidcProvider(db);
-
-		try {
-			if (body.grant_type === "authorization_code") {
-				let tokens = await oidc.token({
-					type: "authorization_code",
-					code: body.code,
-					codeVerifier: body.code_verifier,
-					redirectUri: body.redirect_uri,
-					clientId: credentials?.clientId,
-					clientSecret: credentials?.clientSecret,
-				});
-
-				ctx.log.note("oidc.token.issued");
-				return ok(tokens, { headers: NO_STORE_HEADERS });
-			}
-
-			if (body.grant_type === "refresh_token") {
-				let tokens = await oidc.token({
-					type: "refresh_token",
-					refreshToken: body.refresh_token,
-				});
-
-				ctx.log.note("oidc.token.issued");
-				return ok(tokens, { headers: NO_STORE_HEADERS });
-			}
-
-			if (!credentials) {
-				ctx.log.set({ oidc: { error: "invalid_client" } });
-				return unauthorized(
-					{
-						error: "invalid_client",
-						error_description: "Missing or invalid client credentials",
-					},
-					{ headers: { ...NO_STORE_HEADERS, "WWW-Authenticate": "Basic" } },
-				);
-			}
-
-			let tokens = await oidc.token({
-				type: "client_credentials",
-				resource: body.resource,
-				...credentials,
-			});
-
-			ctx.log.set({ client: { id: credentials.clientId } });
-			ctx.log.note("oidc.token.issued");
-			return ok(tokens, { headers: NO_STORE_HEADERS });
-		} catch (error) {
-			return tokenError(error);
-		}
-	}),
-);
+		ctx.log.set({ client: { id: credentials.clientId } });
+		ctx.log.note("oidc.token.issued");
+		return ok(tokens, { headers: NO_STORE_HEADERS });
+	} catch (error) {
+		return tokenError(error);
+	}
+});

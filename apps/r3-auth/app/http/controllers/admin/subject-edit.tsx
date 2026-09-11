@@ -12,10 +12,7 @@ import type { RequestContext } from "remix/router";
 
 import { redirect } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import Subject from "~/app/data/subject";
@@ -79,12 +76,11 @@ export default createController(routes.admin.subjectEdit, {
 	middleware: [requireAdmin],
 	actions: {
 		/** GET /admin/subjects/:subjectId/edit — renders the form filled from the stored row. */
-		index: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		index: async (ctx) => {
 			let subjectId = ctx.params.subjectId!;
 			ctx.log.set({ admin: { subject_id: subjectId } });
 
-			let subject = await Subject.findById(db, subjectId);
+			let subject = await Subject.findById(ctx.db, subjectId);
 			if (!subject) {
 				ctx.log.note("admin.subject.not_found");
 				return defaultHandler(ctx);
@@ -98,19 +94,18 @@ export default createController(routes.admin.subjectEdit, {
 					detailHref={routes.admin.subject.index.href({ subjectId })}
 				/>,
 			);
-		}),
+		},
 
 		/**
 		 * POST /admin/subjects/:subjectId/edit — persists the edit and returns to the
 		 * detail page. The verified checkbox round trips: ticking it stamps the
 		 * verification time, clearing it drops the stamp.
 		 */
-		action: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		action: async (ctx) => {
 			let subjectId = ctx.params.subjectId!;
 			ctx.log.set({ admin: { subject_id: subjectId } });
 
-			let subject = await Subject.findById(db, subjectId);
+			let subject = await Subject.findById(ctx.db, subjectId);
 			if (!subject) {
 				ctx.log.note("admin.subject.not_found");
 				return defaultHandler(ctx);
@@ -133,7 +128,7 @@ export default createController(routes.admin.subjectEdit, {
 
 			let input = result.data;
 
-			await Subject.update(db, subjectId, {
+			await Subject.update(ctx.db, subjectId, {
 				display_name: input.displayName,
 				username: input.username,
 				avatar: input.avatar,
@@ -146,6 +141,6 @@ export default createController(routes.admin.subjectEdit, {
 			return redirect(routes.admin.subject.index.href({ subjectId }), {
 				status: redirect.Status.SeeOther,
 			});
-		}),
+		},
 	},
 });

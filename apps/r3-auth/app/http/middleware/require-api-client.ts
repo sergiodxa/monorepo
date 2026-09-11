@@ -9,15 +9,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Database } from "remix/data-table";
 import type { Middleware } from "remix/router";
 
 import { unauthorized } from "@sdxc/http/response/json";
 import { JWK } from "@sdxc/jwt";
 import { TimingCollector } from "@sdxc/server-timing";
-import { getServiceContainer } from "@sdxc/service-container";
 import { env, waitUntil } from "cloudflare:workers";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
 
 import AccessToken from "~/app/auth/values/access-token";
 import { ISSUER } from "~/app/config";
@@ -63,11 +62,15 @@ function clientCacheKey(clientId: string): string {
  * token carries the relying party's client id as its audience. The resolved client stays
  * cached in KV for a week, so a deleted client keeps answering that long.
  *
+ * @param collector - Where each step's duration is recorded for `Server-Timing`.
+ * @param request - The request whose bearer token names the client.
+ * @param db - Where a client missing from the cache is looked up.
  * @returns The calling client, or `null` for a missing, malformed or unverifiable token.
  */
 async function resolveClient(
 	collector: TimingCollector,
 	request: Request,
+	db: Database,
 ): Promise<ApiClient | null> {
 	let authorization = request.headers.get("Authorization");
 	if (!authorization) return null;
@@ -106,7 +109,7 @@ async function resolveClient(
 	}
 
 	let client = await collector.measure("db", "authorize.findClientById", async () => {
-		return await Client.findById(getServiceContainer().get(Database), clientId);
+		return await Client.findById(db, clientId);
 	});
 
 	if (!client) return null;
@@ -131,7 +134,7 @@ export function requireApiClient(): Middleware {
 		ctx.timing = collector;
 
 		let client = await collector.measure("auth", "authorize", async () => {
-			return await resolveClient(collector, ctx.request);
+			return await resolveClient(collector, ctx.request, ctx.db);
 		});
 
 		if (!client) {

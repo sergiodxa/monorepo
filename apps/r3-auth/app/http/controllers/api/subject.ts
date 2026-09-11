@@ -9,10 +9,7 @@
  */
 
 import { notFound, ok } from "@sdxc/http/response/json";
-import { inject } from "@sdxc/service-container";
 import { env, waitUntil } from "cloudflare:workers";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import Subject from "~/app/data/subject";
@@ -39,8 +36,7 @@ function subjectCacheKey(clientId: string, subjectId: string): string {
  */
 export default createAction(routes.api.subject, {
 	middleware: [requireApiClient()],
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
+	handler: async (ctx) => {
 		let collector = ctx.timing;
 		let subjectId = ctx.params.subjectId!;
 		let cacheKey = subjectCacheKey(ctx.apiClient.id, subjectId);
@@ -59,7 +55,7 @@ export default createAction(routes.api.subject, {
 		ctx.log.inc("cache.miss");
 
 		let subject = await collector.measure("db", "findSubjectById", async () => {
-			return await Subject.findById(db, subjectId);
+			return await Subject.findById(ctx.db, subjectId);
 		});
 
 		if (!subject) {
@@ -76,5 +72,5 @@ export default createAction(routes.api.subject, {
 		);
 
 		return ok({ subject: payload });
-	}),
+	},
 });

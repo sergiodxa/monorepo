@@ -14,9 +14,6 @@ import type { RequestContext } from "remix/router";
 import { getClientIP } from "@sdxc/get-client-ip";
 import { badRequest } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import type { AuthzState } from "~/app/http/middleware/session";
@@ -28,7 +25,6 @@ import { authorizationResponse } from "~/app/http/responses/authorization-respon
 import { sendVerificationEmail } from "~/app/services/email-verification";
 import { finishGitHubLogin, resolveGitHubSubject } from "~/app/services/github-login";
 import { spendRateLimit } from "~/app/services/rate-limit";
-import RateLimiters from "~/app/services/rate-limiters";
 import { notifyNewSignIn } from "~/app/services/sign-in-alert";
 import routes from "~/routes/web";
 
@@ -80,83 +76,79 @@ async function errorResponse(
  * relying party. The parked authorization request is read before the exchange, and
  * cleared once answered unless this server's own client still needs it downstream.
  */
-export default createAction(
-	routes.auth.providerCallback,
-	inject([Database, RateLimiters] as const, async (db, limiters) => {
-		let ctx = getContext();
-		ctx.log.set({ auth: { provider: ctx.params.provider } });
+export default createAction(routes.auth.providerCallback, async (ctx) => {
+	ctx.log.set({ auth: { provider: ctx.params.provider } });
 
-		let limited = await spendRateLimit(limiters.login, getClientIP(ctx.request) ?? "unknown");
-		if (limited) return limited;
+	let limited = await spendRateLimit(ctx.limiters.login, getClientIP(ctx.request) ?? "unknown");
+	if (limited) return limited;
 
-		if (ctx.params.provider !== "github") {
-			ctx.log.note("auth.provider.unknown");
-			return badRequest({ message: "Invalid provider" });
-		}
+	if (ctx.params.provider !== "github") {
+		ctx.log.note("auth.provider.unknown");
+		return badRequest({ message: "Invalid provider" });
+	}
 
-		let authz = getAuthz();
-		if (!authz) {
-			ctx.log.note("auth.provider.authz_missing");
-			return badRequest({ message: "Invalid request" });
-		}
+	let authz = getAuthz();
+	if (!authz) {
+		ctx.log.note("auth.provider.authz_missing");
+		return badRequest({ message: "Invalid request" });
+	}
 
-		let identity = await finishGitHubLogin(ctx);
-		if (isFailure(identity)) {
-			ctx.log.note("auth.provider.callback_failed", { code: identity.error.code });
-			return await errorResponse(ctx, authz, identity.error);
-		}
+	let identity = await finishGitHubLogin(ctx);
+	if (isFailure(identity)) {
+		ctx.log.note("auth.provider.callback_failed", { code: identity.error.code });
+		return await errorResponse(ctx, authz, identity.error);
+	}
 
-		let subject = await resolveGitHubSubject(db, ctx.billing, identity.data);
-		if (isFailure(subject)) {
-			ctx.log.note("auth.provider.subject_unresolved", { code: subject.error.code });
-			return await errorResponse(ctx, authz, subject.error);
-		}
+	let subject = await resolveGitHubSubject(ctx.db, ctx.billing, identity.data);
+	if (isFailure(subject)) {
+		ctx.log.note("auth.provider.subject_unresolved", { code: subject.error.code });
+		return await errorResponse(ctx, authz, subject.error);
+	}
 
-		let oidc = createOidcProvider(db);
-		let opBrowserState = oidc.generateOpBrowserState();
+	let oidc = createOidcProvider(ctx.db);
+	let opBrowserState = oidc.generateOpBrowserState();
 
-		let result = await oidc.loginWithProvider({
-			subjectId: subject.data,
-			clientId: authz.clientId,
-			ip: getClientIP(ctx.request),
-			ua: ctx.request.headers.get("user-agent"),
-			redirectUri: authz.redirectUri,
-			state: authz.state,
-			nonce: authz.nonce,
-			scope: authz.scope,
-			opBrowserState,
-			responseMode: authz.responseMode,
-			pkce: authz.codeChallenge
-				? { challenge: authz.codeChallenge, method: authz.codeChallengeMethod ?? "S256" }
-				: null,
+	let result = await oidc.loginWithProvider({
+		subjectId: subject.data,
+		clientId: authz.clientId,
+		ip: getClientIP(ctx.request),
+		ua: ctx.request.headers.get("user-agent"),
+		redirectUri: authz.redirectUri,
+		state: authz.state,
+		nonce: authz.nonce,
+		scope: authz.scope,
+		opBrowserState,
+		responseMode: authz.responseMode,
+		pkce: authz.codeChallenge
+			? { challenge: authz.codeChallenge, method: authz.codeChallengeMethod ?? "S256" }
+			: null,
+	});
+
+	if (isFailure(result)) {
+		ctx.log.warn("auth.provider.login_failed", { code: result.error.code });
+		return await errorResponse(ctx, authz, {
+			code: result.error.code,
+			description: result.error.description,
 		});
+	}
 
-		if (isFailure(result)) {
-			ctx.log.warn("auth.provider.login_failed", { code: result.error.code });
-			return await errorResponse(ctx, authz, {
-				code: result.error.code,
-				description: result.error.description,
-			});
-		}
+	ctx.log.set({ subject: { id: subject.data } });
+	ctx.log.note("auth.login_completed");
 
-		ctx.log.set({ subject: { id: subject.data } });
-		ctx.log.note("auth.login_completed");
+	await notifyNewSignIn(ctx, ctx.db, subject.data);
 
-		await notifyNewSignIn(ctx, db, subject.data);
+	await sendVerificationEmail(ctx, ctx.db, subject.data);
 
-		await sendVerificationEmail(ctx, db, subject.data);
+	if (authz.clientId !== AUTH_SERVER_CLIENT_ID) unsetAuthz();
 
-		if (authz.clientId !== AUTH_SERVER_CLIENT_ID) unsetAuthz();
+	let response = await authorizationResponse(
+		ctx,
+		result.data.redirectUri,
+		result.data.params,
+		result.data.responseMode,
+	);
 
-		let response = await authorizationResponse(
-			ctx,
-			result.data.redirectUri,
-			result.data.params,
-			result.data.responseMode,
-		);
+	response.headers.append("Set-Cookie", opBrowserStateCookie(opBrowserState));
 
-		response.headers.append("Set-Cookie", opBrowserStateCookie(opBrowserState));
-
-		return response;
-	}),
-);
+	return response;
+});

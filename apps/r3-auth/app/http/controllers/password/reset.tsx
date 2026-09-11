@@ -11,16 +11,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
 import type { RequestContext } from "remix/router";
 
 import { password } from "@sdxc/crypto";
 import { getClientIP } from "@sdxc/get-client-ip";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database as DatabaseKey } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import { createOidcProvider } from "~/app/auth/repository";
@@ -33,7 +29,6 @@ import { unsetTokens } from "~/app/http/middleware/session";
 import { ResetPasswordSchema, ResetTokenQuerySchema } from "~/app/http/validators/password";
 import { consumePasswordResetToken, peekPasswordResetToken } from "~/app/services/password-reset";
 import { spendRateLimit } from "~/app/services/rate-limit";
-import RateLimiters from "~/app/services/rate-limiters";
 import DocumentLayout from "~/resources/layouts/document";
 import PasswordNoticeView from "~/resources/views/password/notice";
 import ResetPasswordView from "~/resources/views/password/reset";
@@ -128,9 +123,9 @@ function donePage(ctx: RequestContext): Response | Promise<Response> {
  *
  * @returns How many sessions were revoked, for the log line.
  */
-async function revokeSessions(ctx: RequestContext, db: Database, subjectId: string) {
+async function revokeSessions(ctx: RequestContext, subjectId: string) {
 	try {
-		await createOidcProvider(db).sendBackchannelLogoutTokens(subjectId);
+		await createOidcProvider(ctx.db).sendBackchannelLogoutTokens(subjectId);
 	} catch (error) {
 		ctx.log.warn("password_reset.backchannel_failed", {
 			subject_id: subjectId,
@@ -138,7 +133,7 @@ async function revokeSessions(ctx: RequestContext, db: Database, subjectId: stri
 		});
 	}
 
-	return await Session.deleteBySubjectId(db, subjectId);
+	return await Session.deleteBySubjectId(ctx.db, subjectId);
 }
 
 /** The token a refused submission should be re-offered with, or `null` when it sent none. */
@@ -154,16 +149,14 @@ export default createController(routes.password.reset, {
 		 * otherwise; the token survives a read, so reloading is safe. The shape check runs first, so
 		 * only a plausible token spends from the IP budget sign-in shares.
 		 */
-		index: inject([RateLimiters] as const, async (limiters) => {
-			let ctx = getContext();
-
+		index: async (ctx) => {
 			let query = await validate(ctx.url.searchParams, ResetTokenQuerySchema);
 			if (isFailure(query)) {
 				ctx.log.note("password_reset.link_malformed");
 				return invalidPage(ctx);
 			}
 
-			let limited = await spendRateLimit(limiters.login, getClientIP(ctx.request) ?? "unknown");
+			let limited = await spendRateLimit(ctx.limiters.login, getClientIP(ctx.request) ?? "unknown");
 			if (limited) return limited;
 
 			let subjectId = await peekPasswordResetToken(query.data.token);
@@ -173,17 +166,15 @@ export default createController(routes.password.reset, {
 			}
 
 			return resetPage(ctx, query.data.token, null);
-		}),
+		},
 
 		/**
 		 * POST /password/reset — spends the link, writes the new hash, revokes every session, and
 		 * notifies the subject. Consuming the token before deriving the hash keeps that cost for
 		 * callers who held a live link; a confirmation mismatch gets its own message.
 		 */
-		action: inject([DatabaseKey, RateLimiters] as const, async (db, limiters) => {
-			let ctx = getContext();
-
-			let limited = await spendRateLimit(limiters.login, getClientIP(ctx.request) ?? "unknown");
+		action: async (ctx) => {
+			let limited = await spendRateLimit(ctx.limiters.login, getClientIP(ctx.request) ?? "unknown");
 			if (limited) return limited;
 
 			let result = await validate(ctx.formData, ResetPasswordSchema);
@@ -211,7 +202,7 @@ export default createController(routes.password.reset, {
 
 			ctx.log.set({ subject: { id: subjectId } });
 
-			let subject = await Subject.findById(db, subjectId);
+			let subject = await Subject.findById(ctx.db, subjectId);
 			if (!subject) {
 				ctx.log.note("password_reset.subject_missing");
 				return invalidPage(ctx);
@@ -238,9 +229,9 @@ export default createController(routes.password.reset, {
 				);
 			}
 
-			await Credential.setVerifiedPassword(db, subjectId, hash.data, Date.now());
+			await Credential.setVerifiedPassword(ctx.db, subjectId, hash.data, Date.now());
 
-			let revoked = await revokeSessions(ctx, db, subjectId);
+			let revoked = await revokeSessions(ctx, subjectId);
 
 			unsetTokens();
 
@@ -256,6 +247,6 @@ export default createController(routes.password.reset, {
 			ctx.log.note("password_reset.completed");
 
 			return donePage(ctx);
-		}),
+		},
 	},
 });

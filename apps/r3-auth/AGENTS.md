@@ -45,8 +45,8 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
 - MUST NOT change the refresh-token semantics: **`sessions.id` IS the refresh token**.
   Rotation, revocation and the account area's session list all follow from that.
 - MUST keep the D1 schema frozen — the database is shared with the worker serving
-  production — and MUST keep timestamp columns as integers holding epoch milliseconds (the
-  container's `Database` sets `now: () => Date.now()` for exactly this reason).
+  production — and MUST keep timestamp columns as integers holding epoch milliseconds
+  (`createDatabase()` sets `now: () => Date.now()` for exactly this reason).
 - MUST keep the KV key shapes shared with that worker interchangeable: `authz-code:<code>`
   (10 min), `clients:<clientId>` and `clients:<clientId>:subjects:<subjectId>` (7 days).
   Own sessions live under `session:` and are this app's alone.
@@ -69,9 +69,11 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
   validator module under `app/http/validators/`. Zod MUST NOT be added back.
 - MUST persist through `remix/data-table` (`@sdxc/data-table-d1` in production) from
   `app/data/`; no ORM, no raw SQL in controllers. DB-facing field names stay `snake_case`.
-- MUST resolve services (`Database`, `RateLimiters`) through `@sdxc/service-container`
-  with `inject([...])`, and MUST keep request-lifetime values (session, current subject,
-  request log, locale) in middleware and request context instead.
+- MUST reach the database and the rate limiters off the request context — `ctx.db` and
+  `ctx.limiters`, published by the global middleware in `bootstrap/app.tsx` — and MUST keep
+  every other request-lifetime value (session, current subject, request log, locale) in
+  middleware and request context the same way. A job reads `ctx.database`. A service
+  nothing substitutes is a module function under `app/lib/` that the caller imports.
 - MUST bill through `@sdxc/billing`: the provider is constructed once in `app/lib/billing.ts`,
   a route reaches it as `ctx.billing`, and anything outside a request imports the instance.
   Every call answers a `@sdxc/result` `Result`, so a caller branches on `isFailure` and logs
@@ -189,7 +191,9 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
 - Configuration
   - `routes/web.ts` <- Registry of every URL this server answers
   - `app/config.ts` <- Issuer, token TTLs, scopes, and the discovery document
-  - `app/lib/container.ts` <- Service registrations
+  - `app/lib/database.ts` <- The D1 connection every request and job reads
+  - `app/lib/mail.ts` <- The transport both mailers deliver through
+  - `app/lib/rate-limiters.ts` <- The five limiter bindings, wrapped in their policies
 - Auth core
   - `app/auth/oidc-provider.ts` <- The storage-agnostic OAuth/OIDC engine
   - `app/auth/repository.ts` <- The engine's storage binding (data-table + KV)

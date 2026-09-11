@@ -7,9 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import Client from "~/app/data/client";
@@ -27,13 +24,11 @@ export default createAction(routes.admin.dashboard, {
 	 * The dashboard is the root of the admin area, so its breadcrumb trail is empty and
 	 * the heading stands alone.
 	 */
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
-
+	handler: async (ctx) => {
 		let [clients, subjects, activeSessions] = await Promise.all([
-			Client.count(db),
-			Subject.count(db),
-			Session.countActive(db),
+			Client.count(ctx.db),
+			Subject.count(ctx.db),
+			Session.countActive(ctx.db),
 		]);
 
 		let chrome = toChrome(ctx, {
@@ -65,5 +60,5 @@ export default createAction(routes.admin.dashboard, {
 				}}
 			/>,
 		);
-	}),
+	},
 });

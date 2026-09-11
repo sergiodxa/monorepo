@@ -8,9 +8,6 @@
  */
 
 import { ok, unauthorized } from "@sdxc/http/response/json";
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import { OIDC } from "~/app/auth/oidc-provider";
@@ -38,59 +35,55 @@ function invalidToken(description: string, challenge: string): Response {
  * `sub` is unconditional per OIDC Core §5.4; every other claim is gated on the scope the
  * access token was issued with. A fault here answers the same challenge, named in the log.
  */
-export default createAction(
-	routes.userinfo,
-	inject([Database] as const, async (db) => {
-		let ctx = getContext();
-		let authorization = ctx.request.headers.get("Authorization");
+export default createAction(routes.userinfo, async (ctx) => {
+	let authorization = ctx.request.headers.get("Authorization");
 
-		if (!authorization?.startsWith("Bearer ")) {
-			ctx.log.note("oidc.userinfo.token_missing");
-			return invalidToken("Missing or invalid access token", REALM);
-		}
+	if (!authorization?.startsWith("Bearer ")) {
+		ctx.log.note("oidc.userinfo.token_missing");
+		return invalidToken("Missing or invalid access token", REALM);
+	}
 
-		try {
-			let { subject, scope } = await createOidcProvider(db).userinfo({
-				accessToken: authorization.slice("Bearer ".length),
-			});
+	try {
+		let { subject, scope } = await createOidcProvider(ctx.db).userinfo({
+			accessToken: authorization.slice("Bearer ".length),
+		});
 
-			if (!subject) {
-				ctx.log.note("oidc.userinfo.subject_not_found");
-				return invalidToken(
-					"Subject not found",
-					`${REALM}, error="invalid_token", error_description="Subject not found"`,
-				);
-			}
-
-			ctx.log.set({ subject: { id: subject.id } });
-
-			let claims: Record<string, unknown> = { sub: subject.id };
-
-			if (scope.includes("email")) {
-				claims.email = subject.emailAddress;
-				claims.email_verified = subject.emailVerifiedAt !== null;
-			}
-
-			if (scope.includes("profile")) {
-				claims.name = subject.displayName;
-				claims.preferred_username = subject.username;
-				claims.picture = subject.avatar;
-			}
-
-			return ok(claims);
-		} catch (error) {
-			if (error instanceof OIDC.InternalServerError) {
-				ctx.log.fail(error);
-			} else {
-				ctx.log.note("oidc.userinfo.token_invalid", {
-					error: error instanceof Error ? error.message : "Unknown error",
-				});
-			}
-
+		if (!subject) {
+			ctx.log.note("oidc.userinfo.subject_not_found");
 			return invalidToken(
-				"Invalid or expired access token",
-				`${REALM}, error="invalid_token", error_description="The access token is invalid or has expired"`,
+				"Subject not found",
+				`${REALM}, error="invalid_token", error_description="Subject not found"`,
 			);
 		}
-	}),
-);
+
+		ctx.log.set({ subject: { id: subject.id } });
+
+		let claims: Record<string, unknown> = { sub: subject.id };
+
+		if (scope.includes("email")) {
+			claims.email = subject.emailAddress;
+			claims.email_verified = subject.emailVerifiedAt !== null;
+		}
+
+		if (scope.includes("profile")) {
+			claims.name = subject.displayName;
+			claims.preferred_username = subject.username;
+			claims.picture = subject.avatar;
+		}
+
+		return ok(claims);
+	} catch (error) {
+		if (error instanceof OIDC.InternalServerError) {
+			ctx.log.fail(error);
+		} else {
+			ctx.log.note("oidc.userinfo.token_invalid", {
+				error: error instanceof Error ? error.message : "Unknown error",
+			});
+		}
+
+		return invalidToken(
+			"Invalid or expired access token",
+			`${REALM}, error="invalid_token", error_description="The access token is invalid or has expired"`,
+		);
+	}
+});

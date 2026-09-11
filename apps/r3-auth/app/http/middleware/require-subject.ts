@@ -11,8 +11,6 @@
 import type { Middleware } from "remix/router";
 
 import { redirect } from "@sdxc/http/response";
-import { getServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 
 import type { SelectSubject } from "~/database/schema";
 
@@ -51,11 +49,12 @@ export const requireSubject: Middleware = async (ctx, next) => {
 		return redirect(routes.authorize.index.href(), { status: redirect.Status.SeeOther });
 	}
 
-	let db = getServiceContainer().get(Database);
-
 	if (isAccessTokenExpiringSoon(accessToken)) {
 		try {
-			let tokens = await createOidcProvider(db).token({ type: "refresh_token", refreshToken });
+			let tokens = await createOidcProvider(ctx.db).token({
+				type: "refresh_token",
+				refreshToken,
+			});
 
 			/**
 			 * The grant must answer with both tokens; anything short of that signals an
@@ -78,7 +77,7 @@ export const requireSubject: Middleware = async (ctx, next) => {
 	}
 
 	let subjectId = getSubjectFromAccessToken(accessToken);
-	let subject = subjectId ? await Subject.findById(db, subjectId) : null;
+	let subject = subjectId ? await Subject.findById(ctx.db, subjectId) : null;
 
 	if (!subject) {
 		ctx.log.note("session.subject_not_found");

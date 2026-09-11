@@ -13,9 +13,7 @@ import type { RequestContext } from "remix/router";
 
 import { redirect } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
@@ -133,8 +131,7 @@ export default createController(routes.account.profileEdit, {
 		 * so the update always lands on that person's own row. `username` is unique, so a
 		 * failed save comes back on the form as a taken username, correctable in place.
 		 */
-		action: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		action: async (ctx) => {
 			let subject = ctx.subject;
 
 			let result = await validate(ctx.formData, UpdateProfileSchema);
@@ -155,7 +152,7 @@ export default createController(routes.account.profileEdit, {
 			}
 
 			try {
-				await Subject.update(db, subject.id, {
+				await Subject.update(ctx.db, subject.id, {
 					display_name: result.data.displayName,
 					username: result.data.username,
 					avatar: result.data.avatar,
@@ -177,7 +174,7 @@ export default createController(routes.account.profileEdit, {
 			ctx.log.note("profile.updated");
 
 			return redirect(routes.account.profile.href(), { status: redirect.Status.SeeOther });
-		}),
+		},
 	},
 });
 

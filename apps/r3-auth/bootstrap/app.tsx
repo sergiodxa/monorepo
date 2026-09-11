@@ -9,6 +9,7 @@
  */
 
 import type { Billing } from "@sdxc/billing";
+import type { Database as DataTable } from "remix/data-table";
 import type { Middleware, RequestContext, Router } from "remix/router";
 import type { RemixNode } from "remix/ui";
 import type { ResolveFrameContext } from "remix/ui/server";
@@ -17,7 +18,6 @@ import billing from "@sdxc/billing/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { log } from "@sdxc/logger/middleware";
 import mail from "@sdxc/mail/middleware";
-import { getServiceContainer } from "@sdxc/service-container";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
@@ -26,6 +26,9 @@ import { renderWith } from "remix/middleware/render";
 import { createHtmlResponse } from "remix/response/html";
 import { createRouter } from "remix/router";
 import { renderToStream } from "remix/ui/server";
+
+import type { MailTransport } from "~/app/services/mail-transport";
+import type Limiters from "~/app/services/rate-limiters";
 
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 import grants from "~/app/http/controllers/account/grants";
@@ -61,10 +64,14 @@ import verifyEmail from "~/app/http/controllers/verify-email";
 import jwks from "~/app/http/controllers/well-known/jwks";
 import oauthAuthorizationServer from "~/app/http/controllers/well-known/oauth-authorization-server";
 import openidConfiguration from "~/app/http/controllers/well-known/openid-configuration";
+import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
+import { rateLimiters } from "~/app/http/middleware/rate-limiters";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
 import { polar } from "~/app/lib/billing";
-import { MailTransport } from "~/app/services/mail-transport";
+import { createDatabase } from "~/app/lib/database";
+import { createMailTransport } from "~/app/lib/mail";
+import { createRateLimiters } from "~/app/lib/rate-limiters";
 import { logger } from "~/bootstrap/logger";
 import routes from "~/routes/web";
 
@@ -87,6 +94,12 @@ namespace application {
 		cookieDomain?: string;
 		/** Billing platform published on every request; defaults to the configured Polar organization. */
 		billing?: Billing;
+		/** Database published on every request; defaults to this worker's own D1 connection. */
+		db?: DataTable;
+		/** Limiters every protected endpoint spends from; defaults to this worker's own bindings. */
+		limiters?: Limiters;
+		/** How mail leaves the worker; defaults to this worker's own transport. */
+		mailTransport?: MailTransport;
 	}
 }
 
@@ -99,6 +112,8 @@ export default function application(options: application.Options) {
 	let middleware: Middleware[] = [
 		headRequests(),
 		asyncContext(),
+		database(() => options.db ?? createDatabase()),
+		rateLimiters(() => options.limiters ?? createRateLimiters()),
 		log(logger) as Middleware,
 		formData() as Middleware,
 		methodOverride(),
@@ -111,7 +126,7 @@ export default function application(options: application.Options) {
 		i18n,
 		billing({ provider: options.billing ?? polar }),
 		mail({
-			transport: () => getServiceContainer().get(MailTransport),
+			transport: () => options.mailTransport ?? createMailTransport(),
 			from: MAIL_FROM,
 			replyTo: MAIL_REPLY_TO,
 		}),

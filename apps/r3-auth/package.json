@@ -28,7 +28,6 @@
 		"@sdxc/rate-limit": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/server-timing": "workspace:*",
-		"@sdxc/service-container": "workspace:*",
 		"@sdxc/session-storage-kv": "workspace:*",
 		"@sdxc/u": "workspace:*",
 		"@sdxc/ui": "workspace:*",

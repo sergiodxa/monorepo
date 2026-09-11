@@ -1,6 +1,6 @@
 /**
  * Test-only database helper: applies every migration in `database/migrations/` to a fresh
- * in-memory SQLite database and wraps it the way the container wraps the production one.
+ * in-memory SQLite database and wraps it the way `app/lib/database.ts` wraps the real one.
  * Models, jobs, middleware and controllers therefore run against the same SQL engine and
  * schema production uses.
  *
@@ -89,8 +89,8 @@ function migrationsDirectory(): string {
 
 /**
  * Creates an in-memory database with every migration applied, configured exactly as the
- * container configures the production one, including the epoch-ms `now()` that keeps
- * written timestamps in step with the integers live rows hold.
+ * production connection is, including the epoch-ms `now()` that keeps written timestamps
+ * in step with the integers live rows hold.
  *
  * @returns The `db` handle and the underlying SQLite instance.
  * @example

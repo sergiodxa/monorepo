@@ -1,7 +1,7 @@
 /**
  * Test-only harness for driving the whole app over HTTP: in-memory Cloudflare bindings, a
- * migrated database, a container holding the same services production registers, and a
- * cookie-keeping client that exercises a multi-step flow the way a browser would. The
+ * migrated database, the services production runs on handed to the real composition root,
+ * and a cookie-keeping client that exercises a multi-step flow the way a browser would. The
  * `cloudflare:workers` mock installs here, before the application import, so every module
  * capturing `env` at load time captures these bindings.
  *
@@ -14,15 +14,12 @@ import type { Database } from "remix/data-table";
 
 import { MemoryBilling } from "@sdxc/billing/providers/memory";
 import { createKVNamespace, createR2Bucket, createRateLimit } from "@sdxc/cloudflare-mocks";
-import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
-import { ServiceContainer } from "@sdxc/service-container";
 import { KVSessionStorage } from "@sdxc/session-storage-kv";
 import { createCookie } from "remix/cookie";
 import { vi } from "vitest";
 
-import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
-import { MailTransport } from "~/app/services/mail-transport";
+import type { MailTransport } from "~/app/services/mail-transport";
 
 /** Requests a limiter allows per window when a test does not ask for a smaller budget. */
 const DEFAULT_RATE_LIMIT = 1000;
@@ -100,12 +97,10 @@ async function loadModules() {
 		import("~/bootstrap/app"),
 		import("~/app/services/rate-limiters"),
 		import("~/app/lib/test/db"),
-		import("remix/data-table"),
-	]).then(([app, rateLimiters, db, dataTable]) => ({
+	]).then(([app, rateLimiters, db]) => ({
 		application: app.default,
 		RateLimiters: rateLimiters.default,
 		createTestDatabase: db.createTestDatabase,
-		DatabaseKey: dataTable.Database,
 	}));
 
 	return await modules;
@@ -117,7 +112,6 @@ let modules:
 			application: (typeof import("~/bootstrap/app"))["default"];
 			RateLimiters: (typeof import("~/app/services/rate-limiters"))["default"];
 			createTestDatabase: (typeof import("~/app/lib/test/db"))["createTestDatabase"];
-			DatabaseKey: (typeof import("remix/data-table"))["Database"];
 	  }>
 	| undefined;
 
@@ -129,7 +123,7 @@ export interface TestApp {
 	 * whole global middleware chain — the real session, logging and rendering path.
 	 */
 	router: ReturnType<Awaited<ReturnType<typeof loadModules>>["application"]>;
-	/** The migrated in-memory database every controller resolves. */
+	/** The migrated in-memory database every controller reads as `ctx.db`. */
 	db: Database;
 	/** The KV namespace backing sessions and authorization codes. */
 	kv: ReturnType<typeof createKVNamespace>;
@@ -138,14 +132,14 @@ export interface TestApp {
 	/** The billing platform this instance bills against, so a test reads back what it provisioned. */
 	billing: Billing;
 	/**
-	 * The recording transport both mailers deliver through, so a test asserts on the
-	 * messages the app actually produced. Stays empty when a test option supplies a
+	 * The recording transport this instance's mail is delivered through, so a test asserts
+	 * on the messages the app actually produced. Stays empty when a test option supplies a
 	 * different transport.
 	 */
 	mail: MemoryTransport;
 	/**
-	 * Sends a request through the router inside a container scope, carrying cookies
-	 * from previous responses so a session survives across calls.
+	 * Sends a request through the router, carrying cookies from previous responses so a
+	 * session survives across calls.
 	 */
 	fetch(request: Request): Promise<Response>;
 	/** Discards stored cookies, which is how a test starts as a different visitor. */
@@ -192,11 +186,12 @@ export async function withUnreadableSigningKeys<T>(
 
 /**
  * Builds an app instance with fresh KV and R2 bindings, kept in a local reference so it
- * keeps its own storage once a later call points the shared bindings elsewhere, and
- * registers mail under production's key so a test exercises the real mailer path.
+ * keeps its own storage once a later call points the shared bindings elsewhere, and hands
+ * the composition root its database, limiters and transport so a test drives the real
+ * middleware chain against storage it can read back.
  */
 export async function createTestApp(options: TestAppOptions = {}): Promise<TestApp> {
-	let { application, RateLimiters, createTestDatabase, DatabaseKey } = await loadModules();
+	let { application, RateLimiters, createTestDatabase } = await loadModules();
 
 	let appKv = createKVNamespace();
 	let appR2 = createR2Bucket();
@@ -206,27 +201,16 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
 
 	let { db } = createTestDatabase();
 
-	let container = new ServiceContainer();
-	container.singleton(DatabaseKey, () => db);
-
 	let recorder = new MemoryTransport();
-	let transport: MailTransport = options.mailTransport ?? recorder;
-	container.singleton(MailTransport, () => transport);
-	container.singleton(
-		Mailer,
-		() => new Mailer({ transport, from: MAIL_FROM, replyTo: MAIL_REPLY_TO }),
-	);
-	container.singleton(
-		RateLimiters,
-		() =>
-			new RateLimiters({
-				token: createRateLimit({ limit: options.limits?.token ?? DEFAULT_RATE_LIMIT }),
-				introspect: createRateLimit({ limit: options.limits?.introspect ?? DEFAULT_RATE_LIMIT }),
-				revoke: createRateLimit({ limit: options.limits?.revoke ?? DEFAULT_RATE_LIMIT }),
-				authorize: createRateLimit({ limit: options.limits?.authorize ?? DEFAULT_RATE_LIMIT }),
-				login: createRateLimit({ limit: options.limits?.login ?? DEFAULT_RATE_LIMIT }),
-			}),
-	);
+	let mailTransport: MailTransport = options.mailTransport ?? recorder;
+
+	let limiters = new RateLimiters({
+		token: createRateLimit({ limit: options.limits?.token ?? DEFAULT_RATE_LIMIT }),
+		introspect: createRateLimit({ limit: options.limits?.introspect ?? DEFAULT_RATE_LIMIT }),
+		revoke: createRateLimit({ limit: options.limits?.revoke ?? DEFAULT_RATE_LIMIT }),
+		authorize: createRateLimit({ limit: options.limits?.authorize ?? DEFAULT_RATE_LIMIT }),
+		login: createRateLimit({ limit: options.limits?.login ?? DEFAULT_RATE_LIMIT }),
+	});
 
 	let billing = options.billing ?? new MemoryBilling();
 
@@ -235,6 +219,9 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
 		cookieSecret: COOKIE_SECRET,
 		secure: false,
 		billing,
+		db,
+		limiters,
+		mailTransport,
 	});
 	let cookies = new Map<string, string>();
 
@@ -277,7 +264,7 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
 				);
 			}
 
-			let response = await container.scope(() => router.fetch(request));
+			let response = await router.fetch(request);
 
 			for (let header of response.headers.getSetCookie()) {
 				let pair = header.split(";")[0];

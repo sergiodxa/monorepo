@@ -12,10 +12,7 @@ import type { RequestContext } from "remix/router";
 
 import { redirect } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import { AUTH_SERVER_CLIENT_ID } from "~/app/config";
@@ -29,9 +26,9 @@ import AccountLayout from "~/resources/layouts/account";
 import GrantsView from "~/resources/views/account/grants";
 import routes from "~/routes/web";
 
-async function grantsPage(ctx: RequestContext, db: Database): Promise<Response> {
+async function grantsPage(ctx: RequestContext): Promise<Response> {
 	let subject = ctx.subject;
-	let grants = await Grant.findBySubjectId(db, subject.id);
+	let grants = await Grant.findBySubjectId(ctx.db, subject.id);
 
 	return await ctx.render(
 		<AccountLayout
@@ -79,17 +76,16 @@ export default createController(routes.account.grants, {
 	middleware: [requireSubject],
 	actions: {
 		/** GET /account/grants — lists the clients this subject has authorized. */
-		index: inject([Database] as const, async (db) => {
-			return await grantsPage(getContext(), db);
-		}),
+		index: async (ctx) => {
+			return await grantsPage(ctx);
+		},
 
 		/**
 		 * POST /account/grants — withdraws one consent, then the sessions it produced; with
 		 * no interactive transactions, that order leaves at worst sessions that expire on
 		 * their own. This server's own registration stays: it carries the current session.
 		 */
-		action: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		action: async (ctx) => {
 			let subject = ctx.subject;
 
 			let result = await validate(ctx.formData, GrantsIntentSchema);
@@ -107,20 +103,20 @@ export default createController(routes.account.grants, {
 				return backToList();
 			}
 
-			let removed = await Grant.deleteBySubjectAndClient(db, subject.id, clientId);
+			let removed = await Grant.deleteBySubjectAndClient(ctx.db, subject.id, clientId);
 
 			if (removed === 0) {
 				ctx.log.note("grant.not_found");
 				return backToList();
 			}
 
-			let sessions = await Session.deleteBySubjectAndClient(db, subject.id, clientId);
+			let sessions = await Session.deleteBySubjectAndClient(ctx.db, subject.id, clientId);
 
 			ctx.log.set({ sessions: { revoked: sessions } });
 			ctx.log.note("grant.revoked");
 
 			return backToList();
-		}),
+		},
 	},
 });
 

@@ -9,9 +9,6 @@
  */
 
 import { redirect } from "@sdxc/http/response";
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import requireSubject from "~/app/http/middleware/require-subject";
@@ -26,10 +23,8 @@ export default createAction(routes.account.verifyEmailResend, {
 	 * the page can report it. The query carries it because it describes the request that
 	 * just happened and names an outcome alone, which is safe in a history entry.
 	 */
-	handler: inject([Database] as const, async (db) => {
-		let ctx = getContext();
-
-		let outcome = await sendVerificationEmail(ctx, db, ctx.subject.id);
+	handler: async (ctx) => {
+		let outcome = await sendVerificationEmail(ctx, ctx.db, ctx.subject.id);
 
 		ctx.log.set({ email_verification: { outcome } });
 
@@ -39,5 +34,5 @@ export default createAction(routes.account.verifyEmailResend, {
 		return redirect(`${location.pathname}${location.search}`, {
 			status: redirect.Status.SeeOther,
 		});
-	}),
+	},
 });

@@ -15,7 +15,7 @@ import { createUptimeReporter } from "@sdxc/jobs/uptime";
 import { env } from "cloudflare:workers";
 
 import jobs from "~/app/jobs";
-import { database, scope } from "~/app/jobs/middleware/database";
+import { database } from "~/app/jobs/middleware/database";
 import { logger } from "~/bootstrap/logger";
 
 /** Reports a completed run to the monitor watching it. The token resolves per call. */
@@ -28,7 +28,7 @@ const uptime = createUptimeReporter({ token: () => env.UPTIME_CRON_API_KEY });
  */
 export const dispatcher = createJobDispatcher({
 	logger,
-	middleware: [scope(), database()],
+	middleware: [database()],
 	queue: cloudflare.queue(() => env.QUEUE),
 
 	/**

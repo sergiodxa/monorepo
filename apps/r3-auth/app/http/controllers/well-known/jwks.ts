@@ -8,8 +8,6 @@
  */
 
 import { ok } from "@sdxc/http/response/json";
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 
 import { createOidcProvider } from "~/app/auth/repository";
@@ -19,7 +17,6 @@ import routes from "~/routes/web";
  * GET /.well-known/jwks.json — the public keys. Only public key material is serialized
  * here; the private half stays in the key store the provider reads from.
  */
-export default createAction(
-	routes.wellKnown.jwks,
-	inject([Database] as const, async (db) => ok(await createOidcProvider(db).jwks)),
+export default createAction(routes.wellKnown.jwks, async (ctx) =>
+	ok(await createOidcProvider(ctx.db).jwks),
 );

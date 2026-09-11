@@ -11,10 +11,7 @@
 import { redirect } from "@sdxc/http/response";
 import { badRequest } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import Connection from "~/app/data/connection";
@@ -37,20 +34,19 @@ export default createController(routes.admin.subject, {
 	middleware: [requireAdmin],
 	actions: {
 		/** GET /admin/subjects/:subjectId — renders the profile, sessions and links. */
-		index: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		index: async (ctx) => {
 			let subjectId = ctx.params.subjectId!;
 			ctx.log.set({ admin: { subject_id: subjectId } });
 
-			let subject = await Subject.findById(db, subjectId);
+			let subject = await Subject.findById(ctx.db, subjectId);
 			if (!subject) {
 				ctx.log.note("admin.subject.not_found");
 				return defaultHandler(ctx);
 			}
 
 			let [sessions, connections] = await Promise.all([
-				Session.findBySubjectId(db, subjectId),
-				Connection.findBySubjectId(db, subjectId),
+				Session.findBySubjectId(ctx.db, subjectId),
+				Connection.findBySubjectId(ctx.db, subjectId),
 			]);
 
 			ctx.log.set({
@@ -137,15 +133,14 @@ export default createController(routes.admin.subject, {
 					}}
 				/>,
 			);
-		}),
+		},
 
 		/**
 		 * POST /admin/subjects/:subjectId — deletes the account, or revokes one or all of
 		 * its sessions. A delete removes sessions and grants first, so an interrupted run
 		 * leaves every remaining row pointing at a subject that still exists.
 		 */
-		action: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		action: async (ctx) => {
 			let subjectId = ctx.params.subjectId!;
 			ctx.log.set({ admin: { subject_id: subjectId } });
 
@@ -159,26 +154,26 @@ export default createController(routes.admin.subject, {
 			let here = routes.admin.subject.index.href({ subjectId });
 
 			if (intent.intent === "revoke-session") {
-				await Session.deleteById(db, intent.sessionId);
+				await Session.deleteById(ctx.db, intent.sessionId);
 				ctx.log.set({ sessions: { revoked: 1 } });
 				ctx.log.note("admin.subject.session_revoked");
 				return redirect(here, { status: redirect.Status.SeeOther });
 			}
 
 			if (intent.intent === "revoke-all-sessions") {
-				let revoked = await Session.deleteBySubjectId(db, subjectId);
+				let revoked = await Session.deleteBySubjectId(ctx.db, subjectId);
 				ctx.log.set({ sessions: { revoked } });
 				ctx.log.note("admin.subject.sessions_revoked");
 				return redirect(here, { status: redirect.Status.SeeOther });
 			}
 
-			await Session.deleteBySubjectId(db, subjectId);
-			await Grant.deleteBySubjectId(db, subjectId);
-			await Subject.delete(db, subjectId);
+			await Session.deleteBySubjectId(ctx.db, subjectId);
+			await Grant.deleteBySubjectId(ctx.db, subjectId);
+			await Subject.delete(ctx.db, subjectId);
 
 			ctx.log.note("admin.subject.deleted");
 
 			return redirect(routes.admin.subjects.href(), { status: redirect.Status.SeeOther });
-		}),
+		},
 	},
 });
