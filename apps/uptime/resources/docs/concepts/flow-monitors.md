@@ -5,7 +5,7 @@ section:
   title: Concepts
   order: 2
 order: 5
-lastUpdated: 2026-09-10
+lastUpdated: 2026-09-11
 ---
 
 A flow monitor runs a **multi-step API check**. An HTTP monitor asks one question — did this URL answer the way it should? A flow monitor asks whether a sequence still works: that signing in returns a token, that the token is accepted by the endpoint it authorises, and that the endpoint answers with the data it is supposed to.
@@ -549,31 +549,36 @@ There are **no regions** — a flow runs once, from one place. There are also **
 
 ## Limits on a Run
 
-Three caps apply to each run:
+Four caps apply to each run:
 
 | Cap           | Limit                                       |
 | ------------- | ------------------------------------------- |
 | Wall clock    | 30 seconds                                  |
 | HTTP requests | 20, counted across every test in the source |
+| Response size | 1,048,576 bytes per response                |
 | Source length | 20,000 characters                           |
 
 Only HTTP requests count against the request cap. `url`, `jwt.decode`, `sample`, `html`, `str` and `spec` calls are free — they reach nothing, answering from the values they are handed or from the run's own identity. (`jwt.verify` fetches the issuer's JWKS, so it does make a request.)
 
-Both runtime caps are checked before each request the flow makes, so a run that has spent its budget stops at the next request it tries to send, and reports why:
+The time and request caps are checked before each request the flow makes, so a run that has spent its budget stops at the next request it tries to send, and reports why:
 
 > This flow ran out of time: a run may take at most 30000ms.
 
 > This flow made too many requests: a run may make at most 20.
 
-Both produce **Error**, not Down. A flow that outgrew its budget is a monitor problem, not an outage, and it should not page anyone as though your service were down.
+The response cap applies to each response on its own — twenty responses just under it are fine — and is enforced while the body arrives, so an endpoint that answers with a megabyte and a half is refused rather than read:
+
+> http.get response from https://app.example.com/report is 1572864 bytes; this run reads at most 1048576 bytes of a response body
+
+Each of the three produces **Error**, not Down. A flow that outgrew its budget is a monitor problem, not an outage, and it should not page anyone as though your service were down. Point a flow at the endpoint or page you want to assert on rather than at a bulk export, and the cap stays out of the way: a megabyte covers a server-rendered page and a JSON payload with room to spare.
 
 ## Monitor Statuses
 
-| Status    | Meaning                                                                                                                                               |
-| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Up**    | Every test passed.                                                                                                                                    |
-| **Down**  | A test failed — an assertion did not hold. Your service answered, and it answered wrongly.                                                            |
-| **Error** | The flow could not run: the source will not parse, a host is not covered by a verified domain, the run ran out of time, or it made too many requests. |
+| Status    | Meaning                                                                                                                                                                                 |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Up**    | Every test passed.                                                                                                                                                                      |
+| **Down**  | A test failed — an assertion did not hold. Your service answered, and it answered wrongly.                                                                                              |
+| **Error** | The flow could not run: the source will not parse, a host is not covered by a verified domain, the run ran out of time, it made too many requests, or a response was too large to read. |
 
 **Error is deliberately not an outage.** It is the app failing to find out, which is a different fact from your service being down. Keeping the two apart is what stops a mistyped source from paging your on-call, and it is why the pass rate on the monitor's page is computed over passing and failing runs only, excluding errors. A run that never happened is not evidence either way.
 

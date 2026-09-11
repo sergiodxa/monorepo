@@ -167,6 +167,17 @@ nothing to authorize. This path is for test harnesses and tooling that embed the
 runtime; the CLI cannot load an in-process plugin, because it has no code from
 you to run.
 
+### Host policy belongs in the factory
+
+A bound the host sets rather than the spec — how much of a response to read, how
+long to wait, how large a payload to accept — is an argument to the factory, not
+a tool parameter. `createHttpPlugin({ maxResponseBytes })` is the built-in
+example: the embedder running untrusted specs in a bounded isolate caps it, the
+CLI leaves it open, and a spec cannot raise it because it was never part of the
+call. Enforce such a bound while the resource is being consumed rather than
+after, and report passing it as a `ToolError`: nothing was refused on authority
+grounds, so a permission denial would name a flag that does not exist.
+
 ## 2. External plugins over stdio (language-agnostic)
 
 The CLI loads plugins as **external processes**: any executable that speaks the

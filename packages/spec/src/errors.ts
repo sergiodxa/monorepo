@@ -181,6 +181,33 @@ export class ToolError extends SpecError {
 }
 
 /**
+ * A response body the host's cap would not let the plugin read. A host that
+ * sets a cap usually reports the refusal apart from an ordinary failure, so the
+ * size travels as a field rather than only inside the message.
+ */
+export class ResponseTooLargeError extends ToolError {
+	/** The most bytes of a body this run reads. */
+	limit: number;
+	/**
+	 * What arrived, when the response declared it. Absent when the body was
+	 * refused mid-stream, where passing the cap is all that is known.
+	 */
+	declared?: number;
+
+	/**
+	 * @param message - What was refused, the cap, and how much arrived.
+	 * @param limit - The most bytes of a body this run reads.
+	 * @param declared - The size the response declared, when it declared one.
+	 */
+	constructor(message: string, limit: number, declared?: number) {
+		super(message);
+		this.name = "ResponseTooLargeError";
+		this.limit = limit;
+		if (declared !== undefined) this.declared = declared;
+	}
+}
+
+/**
  * A path that would leave the isolated workspace without a host-filesystem
  * grant — reported distinctly from permission denials so traversal attempts
  * are visible as what they are.

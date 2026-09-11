@@ -435,6 +435,10 @@ A request carries at most one body (the bare body, or one of `json`, `form`,
 body, a body on a `GET`, both `bearer` and `basic`, or an unknown tag is an
 error, and an explicit `headers.authorization` wins over `bearer` and `basic`.
 
+A response body is read whole, which is what the CLI wants. An embedder running
+untrusted specs in a bounded runtime caps it instead — see
+[`createHttpPlugin`](#createhttpplugin-options).
+
 ### Named bases — where a relative target points
 
 `http`, `browser`, and `browser.fetch` address a running app by path, and
@@ -1335,6 +1339,27 @@ let outcome = await runTests({
 	createWorkspace: createNoFilesystemWorkspace,
 });
 ```
+
+### `createHttpPlugin(options?)`
+
+`maxResponseBytes` caps how much of any one response body the `http` tools will
+read. Omitted — which is what `runSuite` and the CLI use — reads whatever
+arrives; set it when a run is untrusted and the runtime's memory is bounded,
+since a parsed document costs many times its source.
+
+```ts
+import { createHttpPlugin } from "@sdxc/spec/workers";
+
+let http = createHttpPlugin({ maxResponseBytes: 1_048_576 });
+```
+
+The cap is enforced as the body arrives, not after it is buffered: a
+`content-length` past the cap refuses before a byte is read, and because that
+header is a hint a server may omit, the bytes are counted as they stream and the
+stream is cancelled the moment the count passes the cap. The refusal is an
+ordinary tool error naming the cap and what arrived, so the statement that asked
+fails and the spec reports it like any other tool failure. It bounds one
+response at a time and says nothing about a run's total.
 
 ### Entry points
 

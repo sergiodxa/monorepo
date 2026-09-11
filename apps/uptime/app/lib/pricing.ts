@@ -75,6 +75,15 @@ export const FLOW_RUN_TIMEOUT_MS = 30_000;
 export const FLOW_RUN_MAX_REQUESTS = 20;
 
 /**
+ * How much of one response a run reads, 1 MiB. Parsing a page's markup costs
+ * about 25 times the source — a 4 MB body becomes roughly 92 MB — against an
+ * isolate with 128 MB, so a single unbounded response would end the run for
+ * every monitor sharing it. A megabyte covers a server-rendered page and a
+ * JSON payload with room to spare.
+ */
+export const FLOW_RUN_MAX_RESPONSE_BYTES = 1_048_576;
+
+/**
  * Is this a selectable flow interval? A caller who asks for 60 seconds gets a
  * false result immediately, surfacing the unsupported value where it's chosen.
  */

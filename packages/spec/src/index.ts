@@ -23,6 +23,7 @@ export {
 	ParseError,
 	PermissionDeniedError,
 	ResolutionError,
+	ResponseTooLargeError,
 	SpecError,
 	ToolError,
 	WorkspaceEscapeError,
@@ -69,6 +70,7 @@ export { createEnvPlugin } from "./plugins/env.js";
 export { createFsPlugin } from "./plugins/fs.js";
 export { createHtmlPlugin } from "./plugins/html.js";
 export { createHttpPlugin } from "./plugins/http.js";
+export type { HttpPluginOptions } from "./plugins/http.js";
 export { createJwtPlugin } from "./plugins/jwt.js";
 export { createSamplePlugin } from "./plugins/sample.js";
 export { createSpecPlugin } from "./plugins/spec.js";

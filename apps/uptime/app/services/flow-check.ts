@@ -2,8 +2,8 @@
  * Runs a customer's executable spec and reports what it concluded (ADR-027).
  *
  * Decides three things itself: which capabilities exist (`http`, `url`, `jwt`, `sample`,
- * `html`, `str` and `spec` only), which hosts a verified domain covers, and how many requests
- * and how much time a run gets before it is cut off.
+ * `html`, `str` and `spec` only), which hosts a verified domain covers, and how many
+ * requests, how much time, and how large a response a run gets before it is cut off.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -39,13 +39,18 @@ import {
 	loadSources,
 	parseGrants,
 	positionAt,
+	ResponseTooLargeError,
 	runTests,
 	ToolError,
 } from "@sdxc/spec/workers";
 
 import type { FlowStatus } from "~/database/schema";
 
-import { FLOW_RUN_MAX_REQUESTS, FLOW_RUN_TIMEOUT_MS } from "~/app/lib/pricing";
+import {
+	FLOW_RUN_MAX_REQUESTS,
+	FLOW_RUN_MAX_RESPONSE_BYTES,
+	FLOW_RUN_TIMEOUT_MS,
+} from "~/app/lib/pricing";
 
 /** The path a flow's single source is reported under. Shown in failure detail. */
 const SOURCE_PATH = "flow.spec";
@@ -112,13 +117,14 @@ export async function runFlowCheck(input: FlowCheckInput): Promise<FlowCheckResu
 	let budget = createRequestBudget({
 		maxRequests: input.maxRequests ?? FLOW_RUN_MAX_REQUESTS,
 		timeoutMs: input.timeoutMs ?? FLOW_RUN_TIMEOUT_MS,
+		maxResponseBytes: FLOW_RUN_MAX_RESPONSE_BYTES,
 	});
 
 	let startedAt = Date.now();
 	let outcome = await runTests({
 		suite: loaded.data,
 		plugins: [
-			budget.wrap(createHttpPlugin()),
+			budget.wrap(createHttpPlugin({ maxResponseBytes: FLOW_RUN_MAX_RESPONSE_BYTES })),
 			createUrlPlugin(),
 			createJwtPlugin(),
 			createSamplePlugin(),
@@ -168,12 +174,12 @@ const MISCONFIGURED = new Set(["permission-denied", "unknown-name", "ambiguous-n
  * Which status a completed run reports.
  *
  * Checked ahead of the failing test's own error code, so a run cut off for exceeding one of
- * its caps is treated as a monitor problem to fix. Both caps read the same way to a customer
- * — the run was stopped before it could answer — so both keep the flow out of outage history
+ * its caps is treated as a monitor problem to fix. Every cap reads the same way to a customer
+ * — the run was stopped before it could answer — so each keeps the flow out of outage history
  * and away from the alert path.
  *
  * @param failed - The first failing test, or `undefined` when every test passed.
- * @param exhausted - Whether the run was cut off for running past its time or request cap.
+ * @param exhausted - Whether the run was cut off for passing its time, request or size cap.
  */
 function statusOf(failed: TestResult | undefined, exhausted: boolean): FlowStatus {
 	if (failed === undefined) return "up";
@@ -414,9 +420,14 @@ function* fromExpression(expression: ExpressionNode): Generator<string> {
 /**
  * Wraps the `http` plugin so a run's cost is bounded before it starts: it may make at most
  * `maxRequests` calls, and none at all past `deadline`, each refusal failing the statement
- * that asked so the test reports it as an ordinary `ToolError`.
+ * that asked so the test reports it as an ordinary `ToolError`. The plugin enforces
+ * `maxResponseBytes` itself, and a refusal under it counts here as the run being cut off.
  */
-function createRequestBudget(limits: { maxRequests: number; timeoutMs: number }): {
+function createRequestBudget(limits: {
+	maxRequests: number;
+	timeoutMs: number;
+	maxResponseBytes: number;
+}): {
 	wrap(plugin: Plugin): Plugin;
 	spent(): number;
 	exhausted(): boolean;
@@ -455,11 +466,24 @@ function createRequestBudget(limits: { maxRequests: number; timeoutMs: number })
 						);
 					}
 					spent += 1;
-					return await plugin.call(tool, args, context);
+					let result = await plugin.call(tool, args, context);
+					if (isFailure(result) && refusedForSize(result.error)) {
+						exhausted = true;
+					}
+					return result;
 				},
 			};
 		},
 	};
+}
+
+/**
+ * Did the plugin refuse a response for passing the size cap? The refusal
+ * carries its own type, so this reads a field rather than the wording of a
+ * message this app does not own.
+ */
+function refusedForSize(error: SpecError): boolean {
+	return error instanceof ResponseTooLargeError;
 }
 
 /** A result for a run that could not be performed, with the counters all zero. */

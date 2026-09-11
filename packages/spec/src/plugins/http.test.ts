@@ -1,7 +1,7 @@
 /**
  * Tests for the built-in `http` plugin: request/response shaping per verb,
- * the net permission gate with port derivation, and the absolute-URL rule —
- * all against a real MSW server.
+ * the net permission gate with port derivation, the absolute-URL rule, and the
+ * host's response-size cap — all against a real MSW server.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,13 +21,17 @@ import type { ToolContext } from "../plugin.js";
 import type { ToolArg, Value, ValueObject } from "../values.js";
 
 import { createBaseSet } from "../bases.js";
-import { PermissionDeniedError } from "../errors.js";
+import { PermissionDeniedError, ResponseTooLargeError } from "../errors.js";
 import { createToolContext } from "../tool-context.js";
 
 import { createHttpPlugin } from "./http.js";
 
 const SERVER = setupServer();
 const PLUGIN = createHttpPlugin();
+
+/** The cap the size tests run under, small enough to write bodies around it. */
+const CAP = 1024;
+const CAPPED = createHttpPlugin({ maxResponseBytes: CAP });
 
 beforeAll(() => SERVER.listen({ onUnhandledRequest: "error" }));
 afterEach(() => SERVER.resetHandlers());
@@ -1024,5 +1028,90 @@ describe(createHttpPlugin.name, () => {
 		);
 		let error = unwrapError(result);
 		expect(error.code).toBe("tool-error");
+	});
+});
+
+describe("the response size cap", () => {
+	/** A body of `bytes` single-byte characters. */
+	function body(bytes: number): string {
+		return "a".repeat(bytes);
+	}
+
+	/**
+	 * Serve a body with no `content-length`, by handing it over as a stream —
+	 * which is what makes the streaming count, rather than the header, the only
+	 * thing that can refuse it.
+	 */
+	function streamed(text: string): HttpResponse<ReadableStream<Uint8Array>> {
+		let bytes = new TextEncoder().encode(text);
+		return new HttpResponse(
+			new ReadableStream<Uint8Array>({
+				start(controller) {
+					controller.enqueue(bytes);
+					controller.close();
+				},
+			}),
+			{ headers: { "content-type": "text/plain" } },
+		);
+	}
+
+	test("a body under the cap is read as usual", async () => {
+		SERVER.use(http.get("https://api.example.com/small", () => HttpResponse.text(body(512))));
+		let result = await CAPPED.call("get", [value("https://api.example.com/small")], buildContext());
+		expect(asString(asObject(unwrap(result)).text)).toHaveLength(512);
+	});
+
+	test("a body of exactly the cap is read", async () => {
+		SERVER.use(http.get("https://api.example.com/exact", () => HttpResponse.text(body(CAP))));
+		let result = await CAPPED.call("get", [value("https://api.example.com/exact")], buildContext());
+		expect(asString(asObject(unwrap(result)).text)).toHaveLength(CAP);
+	});
+
+	test("a content-length past the cap is refused before the body is read", async () => {
+		SERVER.use(http.get("https://api.example.com/declared", () => HttpResponse.text(body(4096))));
+		let error = unwrapError(
+			await CAPPED.call("get", [value("https://api.example.com/declared")], buildContext()),
+		);
+		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain("is 4096 bytes");
+		expect(error.message).toContain(`at most ${CAP} bytes`);
+		/**
+		 * A host reports this refusal apart from an ordinary failure, so the
+		 * cap and the declared size travel as fields rather than only as text.
+		 */
+		expect(error).toBeInstanceOf(ResponseTooLargeError);
+		let refusal = error as ResponseTooLargeError;
+		expect(refusal.limit).toBe(CAP);
+		expect(refusal.declared).toBe(4096);
+	});
+
+	test("a response with no content-length carries none, so only the count can refuse it", async () => {
+		SERVER.use(http.get("https://api.example.com/streamed", () => streamed(body(4096))));
+		let result = await PLUGIN.call(
+			"get",
+			[value("https://api.example.com/streamed")],
+			buildContext(),
+		);
+		let data = asObject(unwrap(result));
+		expect(asObject(data.headers)["content-length"]).toBeUndefined();
+		expect(asString(data.text)).toHaveLength(4096);
+	});
+
+	test("an over-cap body with no content-length is refused by the streaming count", async () => {
+		SERVER.use(http.get("https://api.example.com/streamed", () => streamed(body(4096))));
+		let error = unwrapError(
+			await CAPPED.call("get", [value("https://api.example.com/streamed")], buildContext()),
+		);
+		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain(`more than ${CAP} bytes`);
+		expect(error).toBeInstanceOf(ResponseTooLargeError);
+		/** Refused mid-stream, so passing the cap is all that is known. */
+		expect((error as ResponseTooLargeError).declared).toBeUndefined();
+	});
+
+	test("the default plugin reads a body larger than any cap", async () => {
+		SERVER.use(http.get("https://api.example.com/huge", () => HttpResponse.text(body(200_000))));
+		let result = await PLUGIN.call("get", [value("https://api.example.com/huge")], buildContext());
+		expect(asString(asObject(unwrap(result)).text)).toHaveLength(200_000);
 	});
 });

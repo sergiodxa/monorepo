@@ -5,6 +5,8 @@
  * selects; every request then checks the `net` grant against the *resolved*
  * host and port, so the grant a denial suggests is the one that would work.
  * The rest of the call is the shared request grammar (`request-options.ts`).
+ * A host may also cap how much of a response body the plugin will read, which
+ * it enforces while the body arrives rather than after it is buffered.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,7 +21,7 @@ import type { PermissionSet } from "../permissions.js";
 import type { Plugin, ToolContext, ToolDescriptor } from "../plugin.js";
 import type { ToolArg, Value, ValueObject } from "../values.js";
 
-import { ToolError } from "../errors.js";
+import { ResponseTooLargeError, ToolError } from "../errors.js";
 
 import type { HttpVerb } from "./request-options.js";
 
@@ -34,12 +36,26 @@ import {
 /** How many redirect hops one request may follow before it is refused. */
 const MAX_REDIRECTS = 10;
 
+/** Host policy for the `http` plugin, chosen where the plugin is constructed. */
+export interface HttpPluginOptions {
+	/**
+	 * The most a single response body may be, in bytes. Omitted reads whatever
+	 * arrives, which is what a trusted host such as the CLI wants; a host running
+	 * untrusted specs in a bounded isolate sets it so one response cannot exhaust
+	 * the memory a later parse needs.
+	 */
+	maxResponseBytes?: number;
+}
+
 /**
  * Create the built-in `http` plugin (namespace `"http"`). Tools take a target
  * and optional body, resolve the target through the run's bases, check the
  * `net` permission for the resolved host and port, then fetch.
+ *
+ * @param options - Host policy; `maxResponseBytes` caps each response body.
  */
-export function createHttpPlugin(): Plugin {
+export function createHttpPlugin(options: HttpPluginOptions = {}): Plugin {
+	let maxResponseBytes = options.maxResponseBytes;
 	return {
 		namespace: "http",
 		describe() {
@@ -51,7 +67,7 @@ export function createHttpPlugin(): Plugin {
 					new ToolError(`http has no tool "${tool}"; available tools: ${HTTP_VERBS.join(", ")}`),
 				);
 			}
-			return await request(tool, args, context);
+			return await request(tool, args, context, maxResponseBytes);
 		},
 	};
 }
@@ -80,6 +96,7 @@ async function request(
 	verb: HttpVerb,
 	args: ToolArg[],
 	context: ToolContext,
+	maxResponseBytes: number | undefined,
 ): Promise<Result<Value, SpecError>> {
 	let label = `http.${verb}`;
 	let parsedArgs = readRequestArgs(label, args);
@@ -95,7 +112,7 @@ async function request(
 	if (isFailure(init)) return init;
 	let allowed = context.permissions.checkNet(target.data.hostname, portOf(target.data));
 	if (isFailure(allowed)) return allowed;
-	return await perform(verb, target.data, init.data, context.permissions);
+	return await perform(verb, target.data, init.data, context.permissions, maxResponseBytes);
 }
 
 /**
@@ -136,6 +153,7 @@ async function perform(
 	url: URL,
 	init: RequestInit,
 	permissions: PermissionSet,
+	maxResponseBytes: number | undefined,
 ): Promise<Result<Value, SpecError>> {
 	let current = url;
 	for (let redirects = 0; ; redirects++) {
@@ -149,7 +167,7 @@ async function perform(
 		}
 		let location = response.headers.get("location");
 		if (!isRedirectStatus(response.status) || location === null) {
-			return await shapeResponse(verb, current, response);
+			return await shapeResponse(verb, current, response, maxResponseBytes);
 		}
 		if (redirects >= MAX_REDIRECTS) {
 			return failure(
@@ -168,30 +186,104 @@ async function perform(
 }
 
 /**
- * Shape one final (non-redirect) response into the tool's result value.
+ * Shape one final (non-redirect) response into the tool's result value. The
+ * body is read under the host's cap first, so an oversized response never
+ * reaches the decode or the JSON parse.
  */
 async function shapeResponse(
 	verb: HttpVerb,
 	url: URL,
 	response: Response,
+	maxResponseBytes: number | undefined,
 ): Promise<Result<Value, SpecError>> {
-	let text: string;
-	try {
-		text = await response.text();
-	} catch (error) {
-		return failure(
-			new ToolError(`http.${verb} request to ${url.href} failed: ${describeFailure(error)}`),
-		);
-	}
+	let text = await readBody(verb, url, response, maxResponseBytes);
+	if (isFailure(text)) return text;
 	let headers: ValueObject = {};
 	for (let [name, value] of response.headers) headers[name.toLowerCase()] = value;
 	return success({
 		status: response.status,
 		ok: response.ok,
 		headers,
-		text,
-		json: parseJson(text),
+		text: text.data,
+		json: parseJson(text.data),
 	});
+}
+
+/**
+ * Read a response body as text, refusing anything past `limit` bytes.
+ *
+ * A `content-length` that already exceeds the cap refuses before a byte is
+ * read; because that header is a hint a server may omit or misstate, the bytes
+ * are counted as they arrive too, and the stream is cancelled the moment the
+ * count passes the cap rather than measured once it is all in memory.
+ *
+ * @returns The decoded body, or a tool error naming the cap.
+ */
+async function readBody(
+	verb: HttpVerb,
+	url: URL,
+	response: Response,
+	limit: number | undefined,
+): Promise<Result<string, SpecError>> {
+	if (limit === undefined) {
+		try {
+			return success(await response.text());
+		} catch (error) {
+			return failure(readFailed(verb, url, error));
+		}
+	}
+	let declared = response.headers.get("content-length");
+	if (declared !== null) {
+		let length = Number(declared);
+		if (Number.isFinite(length) && length > limit) {
+			return failure(tooLarge(verb, url, limit, length));
+		}
+	}
+	let body = response.body;
+	if (body === null) return success("");
+	let reader = body.getReader();
+	let decoder = new TextDecoder();
+	let read = 0;
+	let text = "";
+	try {
+		for (;;) {
+			let chunk = await reader.read();
+			if (chunk.done) break;
+			read += chunk.value.byteLength;
+			if (read > limit) {
+				await reader.cancel().catch(() => undefined);
+				return failure(tooLarge(verb, url, limit, undefined));
+			}
+			text += decoder.decode(chunk.value, { stream: true });
+		}
+	} catch (error) {
+		return failure(readFailed(verb, url, error));
+	}
+	return success(text + decoder.decode());
+}
+
+/**
+ * The refusal for a response past the cap, naming both the cap and how much
+ * arrived — an exact count when the server declared one, and otherwise the
+ * fact that the stream had already passed the cap when it was cut off.
+ */
+function tooLarge(
+	verb: HttpVerb,
+	url: URL,
+	limit: number,
+	declared: number | undefined,
+): ResponseTooLargeError {
+	let arrived = declared === undefined ? `more than ${limit}` : `${declared}`;
+	return new ResponseTooLargeError(
+		`http.${verb} response from ${url.href} is ${arrived} bytes; this run reads at most ${limit} bytes of a response body`,
+		limit,
+		declared,
+	);
+}
+
+/** The failure for a body that could not be read off the wire. */
+function readFailed(verb: HttpVerb, url: URL, error: unknown): ToolError {
+	return new ToolError(`http.${verb} request to ${url.href} failed: ${describeFailure(error)}`);
 }
 
 /** The redirect statuses a default fetch would transparently follow. */

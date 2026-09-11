@@ -48,7 +48,11 @@ export const BUILTIN_NAMESPACES = [
 /** A built-in namespace's name. */
 export type BuiltinNamespace = (typeof BUILTIN_NAMESPACES)[number];
 
-/** How each built-in namespace is constructed. */
+/**
+ * How each built-in namespace is constructed. Every factory is called with no
+ * arguments, so a built-in gets its own defaults — `http` reads a response body
+ * whole, which is what a trusted host running its own specs wants.
+ */
 const BUILTIN_FACTORIES: Record<BuiltinNamespace, () => Plugin> = {
 	fs: createFsPlugin,
 	cli: createCliPlugin,

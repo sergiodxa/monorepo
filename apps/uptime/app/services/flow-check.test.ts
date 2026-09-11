@@ -16,6 +16,7 @@ import { HttpResponse, delay, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
+import { FLOW_RUN_MAX_RESPONSE_BYTES } from "~/app/lib/pricing";
 import { resolveAllowedHosts, runFlowCheck, specHosts } from "~/app/services/flow-check";
 
 const DOMAIN = "example.test";
@@ -262,6 +263,29 @@ describe("runFlowCheck", () => {
 		expect(result.status).toBe("error");
 		expect(result.requestsMade).toBe(2);
 		expect(result.failureDetail).toContain("too many requests");
+	});
+
+	test("a run refuses a response past the size cap, and reports that as an error", async () => {
+		server.use(
+			http.get(`${ORIGIN}/huge`, () =>
+				HttpResponse.text("a".repeat(FLOW_RUN_MAX_RESPONSE_BYTES + 1)),
+			),
+		);
+
+		let result = await runFlowCheck({
+			source: [
+				"use http",
+				'test "reads a page that is far too large" {',
+				"\twhen {",
+				`\t\tlet page = http.get "${ORIGIN}/huge"`,
+				"\t}",
+				"}",
+			].join("\n"),
+			verifiedDomains: [DOMAIN],
+		});
+
+		expect(result.status).toBe("error");
+		expect(result.failureDetail).toContain(`at most ${FLOW_RUN_MAX_RESPONSE_BYTES} bytes`);
 	});
 
 	test("a run past its deadline stops, and reports that as an error", async () => {
