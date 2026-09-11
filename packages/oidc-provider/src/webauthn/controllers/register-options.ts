@@ -11,15 +11,12 @@
 
 import { badRequest, ok, tooManyRequests } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import {
 	generateRegistrationOptions,
 	type GenerateRegistrationOptionsOpts,
 } from "@simplewebauthn/server";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import TenantMeta from "../../management/models/tenant-meta.js";
@@ -62,98 +59,95 @@ function isValidEmail(email: string): boolean {
  * abuse.
  * @returns A JSON `Response` with `{ challengeId, options }`, or an error `Response`.
  */
-export default createAction(
-	routes.webauthn.register.options,
-	inject([Database] as const, async (db) => {
-		let { formData, request, log } = getContext();
+export default createAction(routes.webauthn.register.options, async (ctx) => {
+	let { formData, request, log } = ctx;
 
-		let result = await validate(Object.fromEntries(formData), RequestSchema);
-		if (isFailure(result)) {
-			log.warn("http.invalid_body");
-			return badRequest({ error: "Invalid request", issues: result.error.issues });
+	let result = await validate(Object.fromEntries(formData), RequestSchema);
+	if (isFailure(result)) {
+		log.warn("http.invalid_body");
+		return badRequest({ error: "Invalid request", issues: result.error.issues });
+	}
+
+	let { email, clientId, redirectUri, state, nonce, scope } = result.data;
+
+	if (!isValidEmail(email)) {
+		log.warn("webauthn.register.invalid_email", { email });
+		return badRequest({ error: "Invalid email format" });
+	}
+
+	let rateLimit = checkUserRateLimit(email, "registerOptions", USER_RATE_LIMITS.registerOptions);
+	if (!rateLimit.success) {
+		log.warn("webauthn.rate_limited", { email });
+		return tooManyRequests({
+			error: "Too many registration attempts. Please try again later.",
+			retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
+		});
+	}
+
+	/**
+	 * Existing subjects are looked up only to catch an email that already has
+	 * a passkey; the subject record is created during verification, since
+	 * verify rejects an email that already resolves to a subject.
+	 */
+	let existingSubject = await Subject.findByEmail(ctx.db, email);
+	if (existingSubject) {
+		let existingPasskeys = await Passkey.listBySubject(ctx.db, existingSubject.id);
+		if (existingPasskeys.length > 0) {
+			log.warn("webauthn.register.passkey_exists", { subject_id: existingSubject.id });
+			return badRequest({ error: "User already has a passkey. Please sign in instead." });
 		}
+	}
 
-		let { email, clientId, redirectUri, state, nonce, scope } = result.data;
+	let issuer = await TenantMeta.getIssuer(ctx.db);
+	let rpId = issuer ? new URL(`https://${issuer}`).hostname : new URL(request.url).hostname;
+	let rpName = rpId;
 
-		if (!isValidEmail(email)) {
-			log.warn("webauthn.register.invalid_email", { email });
-			return badRequest({ error: "Invalid email format" });
-		}
+	/**
+	 * A fresh random WebAuthn user handle bound to this challenge, uncorrelated
+	 * with the email per WebAuthn guidance; the authenticator stores it for a
+	 * discoverable credential.
+	 */
+	let {
+		id: challengeId,
+		challenge,
+		userId,
+	} = await WebAuthnChallenge.createForRegistration(ctx.db, {
+		email,
+		clientId,
+		redirectUri,
+		state,
+		nonce,
+		scope,
+	});
 
-		let rateLimit = checkUserRateLimit(email, "registerOptions", USER_RATE_LIMITS.registerOptions);
-		if (!rateLimit.success) {
-			log.warn("webauthn.rate_limited", { email });
-			return tooManyRequests({
-				error: "Too many registration attempts. Please try again later.",
-				retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
-			});
-		}
+	let displayName = existingSubject?.display_name ?? email;
 
+	let registrationOptions = await generateRegistrationOptions({
+		rpName,
+		rpID: rpId,
+		userName: email,
+		userDisplayName: displayName,
+		userID: new Uint8Array(base64UrlDecode(userId)),
+		attestationType: "none",
+		authenticatorSelection: {
+			residentKey: "preferred",
+			userVerification: "preferred",
+		},
 		/**
-		 * Existing subjects are looked up only to catch an email that already has
-		 * a passkey; the subject record is created during verification, since
-		 * verify rejects an email that already resolves to a subject.
+		 * Copied into a Uint8Array backed by a plain ArrayBuffer to satisfy
+		 * the `@simplewebauthn/server` `BufferSource` typing.
 		 */
-		let existingSubject = await Subject.findByEmail(db, email);
-		if (existingSubject) {
-			let existingPasskeys = await Passkey.listBySubject(db, existingSubject.id);
-			if (existingPasskeys.length > 0) {
-				log.warn("webauthn.register.passkey_exists", { subject_id: existingSubject.id });
-				return badRequest({ error: "User already has a passkey. Please sign in instead." });
-			}
-		}
+		challenge: new Uint8Array(base64UrlDecode(challenge)),
+	} satisfies GenerateRegistrationOptionsOpts);
 
-		let issuer = await TenantMeta.getIssuer(db);
-		let rpId = issuer ? new URL(`https://${issuer}`).hostname : new URL(request.url).hostname;
-		let rpName = rpId;
+	log.set({ client: { id: clientId } });
+	log.note("webauthn.register.challenge_created", {
+		challenge_id: challengeId,
+		has_redirect_uri: !!redirectUri,
+	});
 
-		/**
-		 * A fresh random WebAuthn user handle bound to this challenge, uncorrelated
-		 * with the email per WebAuthn guidance; the authenticator stores it for a
-		 * discoverable credential.
-		 */
-		let {
-			id: challengeId,
-			challenge,
-			userId,
-		} = await WebAuthnChallenge.createForRegistration(db, {
-			email,
-			clientId,
-			redirectUri,
-			state,
-			nonce,
-			scope,
-		});
-
-		let displayName = existingSubject?.display_name ?? email;
-
-		let registrationOptions = await generateRegistrationOptions({
-			rpName,
-			rpID: rpId,
-			userName: email,
-			userDisplayName: displayName,
-			userID: new Uint8Array(base64UrlDecode(userId)),
-			attestationType: "none",
-			authenticatorSelection: {
-				residentKey: "preferred",
-				userVerification: "preferred",
-			},
-			/**
-			 * Copied into a Uint8Array backed by a plain ArrayBuffer to satisfy
-			 * the `@simplewebauthn/server` `BufferSource` typing.
-			 */
-			challenge: new Uint8Array(base64UrlDecode(challenge)),
-		} satisfies GenerateRegistrationOptionsOpts);
-
-		log.set({ client: { id: clientId } });
-		log.note("webauthn.register.challenge_created", {
-			challenge_id: challengeId,
-			has_redirect_uri: !!redirectUri,
-		});
-
-		return ok({
-			challengeId,
-			options: registrationOptions,
-		});
-	}),
-);
+	return ok({
+		challengeId,
+		options: registrationOptions,
+	});
+});

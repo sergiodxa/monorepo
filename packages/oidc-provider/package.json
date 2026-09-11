@@ -16,7 +16,6 @@
 		"@sdxc/jwt": "workspace:*",
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/result": "workspace:*",
-		"@sdxc/service-container": "workspace:*",
 		"@sdxc/types": "workspace:*",
 		"@sdxc/validate": "workspace:*",
 		"@simplewebauthn/server": "^13.3.3",

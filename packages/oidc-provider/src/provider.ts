@@ -2,18 +2,17 @@
  * Assembles the OIDC provider's fetch-router: middleware pipeline plus route map.
  *
  * Wires every controller (OAuth, OIDC, discovery, WebAuthn, and the Management
- * API) to its route, publishes the invocation's log as `ctx.log`, and scopes each
- * request inside a service container so handlers resolve the per-request database.
+ * API) to its route, publishes the invocation's log as `ctx.log`, and publishes the
+ * host's database as `ctx.db` so handlers read the tenant they are answering for.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Database } from "remix/data-table";
 import type { Middleware, RequestHandler } from "remix/router";
 
 import { log } from "@sdxc/logger/middleware";
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
@@ -39,6 +38,7 @@ import * as resources from "./resources/controllers/resources.js";
 import routes from "./routes.js";
 import index from "./shared/home.js";
 import analyticsMiddleware from "./shared/middleware/analytics.js";
+import database from "./shared/middleware/database.js";
 import notFound from "./shared/not-found.js";
 import * as signingKeys from "./signing-keys/controllers/signing-keys.js";
 import * as subjectConnections from "./subjects/controllers/connections.js";
@@ -64,7 +64,7 @@ export interface ProviderRouterOptions {
 
 /**
  * Builds the OIDC provider's fetch-router bound to a database and host options.
- * `log()` runs first and takes no configuration: a host that wraps its entry point in
+ * `log()` takes no configuration: a host that wraps its entry point in
  * `logger.open("request").run(...)` has this router join that log, so every record
  * carries the host's `service`; without a host log, each request opens a bare one.
  * @param db - Database for this tenant/instance.
@@ -72,20 +72,13 @@ export interface ProviderRouterOptions {
  */
 export function createProviderRouter(db: Database, options: ProviderRouterOptions) {
 	/**
-	 * Resolves the provider's Database through a service container (ADR-008): registered
-	 * per request with this request's db, its `scope` wraps the router's fetch below, so
-	 * controllers/helpers reach the correct tenant db via inject/getServiceContainer.
-	 */
-	let container = new ServiceContainer();
-	container.instance(Database, db);
-
-	/**
 	 * A non-tuple `Middleware[]` keeps the router context at the base
 	 * `RequestContext`, so controllers type against it; `log()` and `formData()`
 	 * are cast since their values surface through the global `log` / `formData`
 	 * augmentations.
 	 */
 	let middleware: Middleware[] = [
+		database(() => db),
 		log() as Middleware,
 		asyncContext(),
 		analyticsMiddleware(options.analytics),
@@ -164,14 +157,5 @@ export function createProviderRouter(db: Database, options: ProviderRouterOption
 	router.map(routes.api.brand, { middleware: management, actions: brand });
 	router.map(routes.api["signing-keys"], { middleware: management, actions: signingKeys });
 
-	/**
-	 * Runs every request inside the container scope so `getServiceContainer()` /
-	 * `inject(...)` resolve the request's registered services. Exposes only `fetch`,
-	 * scoped to this request's container, matching what the caller in index.ts uses.
-	 */
-	return {
-		fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
-			return container.scope(() => router.fetch(input, init));
-		},
-	};
+	return router;
 }

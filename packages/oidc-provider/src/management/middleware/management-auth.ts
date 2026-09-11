@@ -11,8 +11,6 @@
 
 import { unauthorized } from "@sdxc/http/response/json";
 import { JWK } from "@sdxc/jwt";
-import { getServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 
 import Client from "../../clients/models/client.js";
 import AccessToken from "../../oauth/values/access-token.js";
@@ -30,8 +28,7 @@ import TenantMeta from "../models/tenant-meta.js";
  */
 export default (internalSecret: string) => {
 	return middleware(async (context, next) => {
-		let { log } = context;
-		let db = getServiceContainer().get(Database);
+		let { log, db } = context;
 
 		let internalToken = context.request.headers.get("x-internal-token");
 		if (internalToken) {

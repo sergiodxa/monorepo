@@ -12,11 +12,8 @@
 import { noContent } from "@sdxc/http/response";
 import { badRequest, notFound, ok } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import routes from "../../routes.js";
@@ -35,155 +32,146 @@ let UpdatePasskeySchema = s.object({
  * `GET /api/subjects/:id/passkeys` — lists a subject's passkeys.
  * @returns A JSON `Response` with the passkeys, or `notFound` if the subject is missing.
  */
-export const index = createAction(
-	routes.api.subjects.passkeys.index,
-	inject([Database] as const, async (db) => {
-		let { params, log } = getContext();
-		let { id } = s.parse(s.object({ id: s.string() }), params);
-		log.set({ subject: { id } });
+export const index = createAction(routes.api.subjects.passkeys.index, async (ctx) => {
+	let { params, log } = ctx;
+	let { id } = s.parse(s.object({ id: s.string() }), params);
+	log.set({ subject: { id } });
 
-		let subject = await Subject.show(db, id);
-		if (!subject) {
-			log.warn("subject.not_found");
-			return notFound({ error: "Subject not found" });
-		}
+	let subject = await Subject.show(ctx.db, id);
+	if (!subject) {
+		log.warn("subject.not_found");
+		return notFound({ error: "Subject not found" });
+	}
 
-		let passkeys = await Passkey.listBySubject(db, id);
+	let passkeys = await Passkey.listBySubject(ctx.db, id);
 
-		log.note("admin.subject.passkey.listed", { count: passkeys.length });
+	log.note("admin.subject.passkey.listed", { count: passkeys.length });
 
-		return ok(
-			passkeys.map((passkey) => ({
-				id: passkey.id,
-				name: passkey.name,
-				deviceType: passkey.device_type,
-				backedUp: passkey.backed_up,
-				transports: passkey.transports ? passkey.transports.split(",") : [],
-				createdAt: toIsoString(passkey.created_at),
-				lastUsedAt: toIsoStringOptional(passkey.last_used_at),
-			})),
-		);
-	}),
-);
+	return ok(
+		passkeys.map((passkey) => ({
+			id: passkey.id,
+			name: passkey.name,
+			deviceType: passkey.device_type,
+			backedUp: passkey.backed_up,
+			transports: passkey.transports ? passkey.transports.split(",") : [],
+			createdAt: toIsoString(passkey.created_at),
+			lastUsedAt: toIsoStringOptional(passkey.last_used_at),
+		})),
+	);
+});
 
 /**
  * `PUT /api/subjects/:id/passkeys/:passkeyId` — renames one of a subject's passkeys.
  * @returns A JSON `Response` with the updated passkey, or an error `Response`.
  */
-export const update = createAction(
-	routes.api.subjects.passkeys.update,
-	inject([Database] as const, async (db) => {
-		let { params, request, log } = getContext();
-		let { id, passkeyId } = s.parse(s.object({ id: s.string(), passkeyId: s.string() }), params);
-		log.set({ subject: { id } });
+export const update = createAction(routes.api.subjects.passkeys.update, async (ctx) => {
+	let { params, request, log } = ctx;
+	let { id, passkeyId } = s.parse(s.object({ id: s.string(), passkeyId: s.string() }), params);
+	log.set({ subject: { id } });
 
-		let subject = await Subject.show(db, id);
-		if (!subject) {
-			log.warn("subject.not_found");
-			return notFound({ error: "Subject not found" });
-		}
+	let subject = await Subject.show(ctx.db, id);
+	if (!subject) {
+		log.warn("subject.not_found");
+		return notFound({ error: "Subject not found" });
+	}
 
-		let passkey = await Passkey.show(db, passkeyId);
-		if (!passkey) {
-			log.warn("admin.subject.passkey.not_found", { passkey_id: passkeyId });
-			return notFound({ error: "Passkey not found" });
-		}
+	let passkey = await Passkey.show(ctx.db, passkeyId);
+	if (!passkey) {
+		log.warn("admin.subject.passkey.not_found", { passkey_id: passkeyId });
+		return notFound({ error: "Passkey not found" });
+	}
 
-		if (passkey.subject_id !== id) {
-			log.warn("admin.subject.passkey.subject_mismatch", {
+	if (passkey.subject_id !== id) {
+		log.warn("admin.subject.passkey.subject_mismatch", {
+			passkey_id: passkeyId,
+		});
+		return notFound({ error: "Passkey not found" });
+	}
+
+	let body = await safeJsonParse(request);
+	if (isResponse(body)) {
+		log.warn("http.invalid_json", { passkey_id: passkeyId });
+		return body;
+	}
+
+	let result = await validate(body, UpdatePasskeySchema);
+	if (isFailure(result)) {
+		log.warn("http.invalid_body", { passkey_id: passkeyId });
+		return badRequest({ error: "Invalid request", issues: result.error.issues });
+	}
+
+	try {
+		await Passkey.rename(ctx.db, passkeyId, result.data.name);
+		let updated = await Passkey.show(ctx.db, passkeyId);
+		if (!updated) {
+			log.warn("admin.subject.passkey.not_found", {
 				passkey_id: passkeyId,
 			});
 			return notFound({ error: "Passkey not found" });
 		}
-
-		let body = await safeJsonParse(request);
-		if (isResponse(body)) {
-			log.warn("http.invalid_json", { passkey_id: passkeyId });
-			return body;
+		log.note("admin.subject.passkey.renamed", { passkey_id: passkeyId });
+		return ok({
+			id: updated.id,
+			name: updated.name,
+			deviceType: updated.device_type,
+			backedUp: updated.backed_up,
+			transports: updated.transports ? updated.transports.split(",") : [],
+			createdAt: toIsoString(updated.created_at),
+			lastUsedAt: toIsoStringOptional(updated.last_used_at),
+		});
+	} catch (error) {
+		if (error instanceof RecordNotFoundError) {
+			return notFound({ error: "Passkey not found" });
 		}
-
-		let result = await validate(body, UpdatePasskeySchema);
-		if (isFailure(result)) {
-			log.warn("http.invalid_body", { passkey_id: passkeyId });
-			return badRequest({ error: "Invalid request", issues: result.error.issues });
-		}
-
-		try {
-			await Passkey.rename(db, passkeyId, result.data.name);
-			let updated = await Passkey.show(db, passkeyId);
-			if (!updated) {
-				log.warn("admin.subject.passkey.not_found", {
-					passkey_id: passkeyId,
-				});
-				return notFound({ error: "Passkey not found" });
-			}
-			log.note("admin.subject.passkey.renamed", { passkey_id: passkeyId });
-			return ok({
-				id: updated.id,
-				name: updated.name,
-				deviceType: updated.device_type,
-				backedUp: updated.backed_up,
-				transports: updated.transports ? updated.transports.split(",") : [],
-				createdAt: toIsoString(updated.created_at),
-				lastUsedAt: toIsoStringOptional(updated.last_used_at),
-			});
-		} catch (error) {
-			if (error instanceof RecordNotFoundError) {
-				return notFound({ error: "Passkey not found" });
-			}
-			throw error;
-		}
-	}),
-);
+		throw error;
+	}
+});
 
 /**
  * `DELETE /api/subjects/:id/passkeys/:passkeyId` — deletes one of a subject's passkeys.
  * Guarantees the subject keeps at least one passkey.
  * @returns A `204 No Content` `Response`, or an error `Response`.
  */
-export const destroy = createAction(
-	routes.api.subjects.passkeys.destroy,
-	inject([Database] as const, async (db) => {
-		let { params, log } = getContext();
-		let { id, passkeyId } = s.parse(s.object({ id: s.string(), passkeyId: s.string() }), params);
-		log.set({ subject: { id } });
+export const destroy = createAction(routes.api.subjects.passkeys.destroy, async (ctx) => {
+	let { params, log } = ctx;
+	let { id, passkeyId } = s.parse(s.object({ id: s.string(), passkeyId: s.string() }), params);
+	log.set({ subject: { id } });
 
-		let subject = await Subject.show(db, id);
-		if (!subject) {
-			log.warn("subject.not_found");
-			return notFound({ error: "Subject not found" });
-		}
+	let subject = await Subject.show(ctx.db, id);
+	if (!subject) {
+		log.warn("subject.not_found");
+		return notFound({ error: "Subject not found" });
+	}
 
-		let passkey = await Passkey.show(db, passkeyId);
-		if (!passkey) {
-			log.warn("admin.subject.passkey.not_found", { passkey_id: passkeyId });
+	let passkey = await Passkey.show(ctx.db, passkeyId);
+	if (!passkey) {
+		log.warn("admin.subject.passkey.not_found", { passkey_id: passkeyId });
+		return notFound({ error: "Passkey not found" });
+	}
+
+	if (passkey.subject_id !== id) {
+		log.warn("admin.subject.passkey.subject_mismatch", {
+			passkey_id: passkeyId,
+		});
+		return notFound({ error: "Passkey not found" });
+	}
+
+	let allPasskeys = await Passkey.listBySubject(ctx.db, id);
+	if (allPasskeys.length === 1) {
+		log.warn("admin.subject.passkey.last_passkey", { passkey_id: passkeyId });
+		return badRequest({
+			error: "Cannot delete the only passkey. Add another passkey first.",
+		});
+	}
+
+	try {
+		await Passkey.destroy(ctx.db, passkeyId);
+		log.note("admin.subject.passkey.deleted", { passkey_id: passkeyId });
+		return noContent();
+	} catch (error) {
+		if (error instanceof RecordNotFoundError) {
 			return notFound({ error: "Passkey not found" });
 		}
-
-		if (passkey.subject_id !== id) {
-			log.warn("admin.subject.passkey.subject_mismatch", {
-				passkey_id: passkeyId,
-			});
-			return notFound({ error: "Passkey not found" });
-		}
-
-		let allPasskeys = await Passkey.listBySubject(db, id);
-		if (allPasskeys.length === 1) {
-			log.warn("admin.subject.passkey.last_passkey", { passkey_id: passkeyId });
-			return badRequest({
-				error: "Cannot delete the only passkey. Add another passkey first.",
-			});
-		}
-
-		try {
-			await Passkey.destroy(db, passkeyId);
-			log.note("admin.subject.passkey.deleted", { passkey_id: passkeyId });
-			return noContent();
-		} catch (error) {
-			if (error instanceof RecordNotFoundError) {
-				return notFound({ error: "Passkey not found" });
-			}
-			throw error;
-		}
-	}),
-);
+		throw error;
+	}
+});

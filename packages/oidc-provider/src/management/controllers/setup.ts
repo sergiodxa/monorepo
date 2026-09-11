@@ -12,11 +12,8 @@ import type { JSONValue } from "@sdxc/types";
 
 import { badRequest, ok } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import routes from "../../routes.js";
@@ -38,31 +35,28 @@ const SetupSchema = s.object({
  * management-auth middleware allows this before an issuer exists yet.
  * @returns A JSON `Response` `{ ok: true }` on success, or a `badRequest` on invalid payload.
  */
-export const create = createAction(
-	routes.api.setup,
-	inject([Database] as const, async (db) => {
-		let { request, log } = getContext();
+export const create = createAction(routes.api.setup, async (ctx) => {
+	let { request, log } = ctx;
 
-		let body = (await request.json().catch(() => null)) as JSONValue;
-		let result = await validate(body, SetupSchema);
-		if (isFailure(result)) {
-			return badRequest({ error: "invalid_request", error_description: "Invalid setup payload" });
-		}
+	let body = (await request.json().catch(() => null)) as JSONValue;
+	let result = await validate(body, SetupSchema);
+	if (isFailure(result)) {
+		return badRequest({ error: "invalid_request", error_description: "Invalid setup payload" });
+	}
 
-		await TenantMeta.setTenantId(db, result.data.tenant_id);
-		await TenantMeta.setIssuer(db, result.data.issuer);
-		if (result.data.region) {
-			await TenantMeta.set(db, TenantMeta.KEYS.REGION, result.data.region);
-		}
+	await TenantMeta.setTenantId(ctx.db, result.data.tenant_id);
+	await TenantMeta.setIssuer(ctx.db, result.data.issuer);
+	if (result.data.region) {
+		await TenantMeta.set(ctx.db, TenantMeta.KEYS.REGION, result.data.region);
+	}
 
-		let createdAt = await TenantMeta.get(db, TenantMeta.KEYS.CREATED_AT);
-		if (!createdAt) {
-			await TenantMeta.set(db, TenantMeta.KEYS.CREATED_AT, new Date().toISOString());
-		}
+	let createdAt = await TenantMeta.get(ctx.db, TenantMeta.KEYS.CREATED_AT);
+	if (!createdAt) {
+		await TenantMeta.set(ctx.db, TenantMeta.KEYS.CREATED_AT, new Date().toISOString());
+	}
 
-		log.set({ tenant: { id: result.data.tenant_id, issuer: result.data.issuer } });
-		log.note("admin.setup.applied");
+	log.set({ tenant: { id: result.data.tenant_id, issuer: result.data.issuer } });
+	log.note("admin.setup.applied");
 
-		return ok({ ok: true });
-	}),
-);
+	return ok({ ok: true });
+});

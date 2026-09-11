@@ -10,9 +10,6 @@
 
 import { json } from "@sdxc/http/response";
 import { JWK } from "@sdxc/jwt";
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import TenantMeta from "../../management/models/tenant-meta.js";
@@ -48,78 +45,75 @@ function reject(error: string, description: string, status: number = 401) {
  * Returns claims about the authenticated end-user based on the access token scope.
  * @returns A JSON `Response` of user claims, or an OAuth error `Response`.
  */
-export default createAction(
-	routes.oidc.userinfo,
-	inject([Database] as const, async (db) => {
-		let { request, log } = getContext();
+export default createAction(routes.oidc.userinfo, async (ctx) => {
+	let { request, log } = ctx;
 
-		let authHeader = request.headers.get("authorization");
-		if (!authHeader || !authHeader.startsWith("Bearer ")) {
-			log.warn("oidc.userinfo.token_missing");
-			return reject("invalid_request", "Missing access token");
-		}
+	let authHeader = request.headers.get("authorization");
+	if (!authHeader || !authHeader.startsWith("Bearer ")) {
+		log.warn("oidc.userinfo.token_missing");
+		return reject("invalid_request", "Missing access token");
+	}
 
-		let token = authHeader.slice(7);
+	let token = authHeader.slice(7);
 
-		let [issuer, signingKeys] = await Promise.all([
-			TenantMeta.getIssuer(db),
-			SigningKey.getAll(db),
-		]);
+	let [issuer, signingKeys] = await Promise.all([
+		TenantMeta.getIssuer(ctx.db),
+		SigningKey.getAll(ctx.db),
+	]);
 
-		if (!issuer) {
-			log.fail(new Error("Issuer not configured"));
-			return reject("server_error", "Issuer not configured");
-		}
+	if (!issuer) {
+		log.fail(new Error("Issuer not configured"));
+		return reject("server_error", "Issuer not configured");
+	}
 
-		if (signingKeys.length === 0) {
-			log.fail(new Error("No signing keys available"));
-			return reject("server_error", "No signing keys available");
-		}
+	if (signingKeys.length === 0) {
+		log.fail(new Error("No signing keys available"));
+		return reject("server_error", "No signing keys available");
+	}
 
-		let accessToken;
-		try {
-			accessToken = await AccessToken.verify(token, signingKeys, {
-				issuer: `https://${issuer}`,
-				algorithms: [JWK.Algorithm.ES256],
-			});
-		} catch {
-			log.warn("oidc.userinfo.token_invalid");
-			return reject("invalid_token", "Access token is invalid or expired");
-		}
-
-		log.set({ subject: { id: accessToken.subject } });
-
-		let subject = await Subject.show(db, accessToken.subject);
-		if (!subject) {
-			log.warn("subject.not_found", { subject_id: accessToken.subject });
-			return reject("invalid_token", "Subject not found");
-		}
-
-		let scope = accessToken.scope?.split(" ") ?? ["openid"];
-
-		let userinfo: Record<string, unknown> = {
-			sub: subject.id,
-		};
-
-		if (scope.includes("email")) {
-			userinfo.email = subject.email;
-			userinfo.email_verified = subject.email_verified_at !== null;
-		}
-
-		if (scope.includes("profile")) {
-			userinfo.name = subject.display_name ?? subject.username;
-			userinfo.preferred_username = subject.username;
-			if (subject.avatar_url) {
-				userinfo.picture = subject.avatar_url;
-			}
-		}
-
-		log.set({ oidc: { scope: scope.join(" ") } });
-		log.note("oidc.userinfo.returned");
-
-		return new Response(JSON.stringify(userinfo), {
-			status: 200,
-			headers: { "Content-Type": "application/json" },
+	let accessToken;
+	try {
+		accessToken = await AccessToken.verify(token, signingKeys, {
+			issuer: `https://${issuer}`,
+			algorithms: [JWK.Algorithm.ES256],
 		});
-	}),
-);
+	} catch {
+		log.warn("oidc.userinfo.token_invalid");
+		return reject("invalid_token", "Access token is invalid or expired");
+	}
+
+	log.set({ subject: { id: accessToken.subject } });
+
+	let subject = await Subject.show(ctx.db, accessToken.subject);
+	if (!subject) {
+		log.warn("subject.not_found", { subject_id: accessToken.subject });
+		return reject("invalid_token", "Subject not found");
+	}
+
+	let scope = accessToken.scope?.split(" ") ?? ["openid"];
+
+	let userinfo: Record<string, unknown> = {
+		sub: subject.id,
+	};
+
+	if (scope.includes("email")) {
+		userinfo.email = subject.email;
+		userinfo.email_verified = subject.email_verified_at !== null;
+	}
+
+	if (scope.includes("profile")) {
+		userinfo.name = subject.display_name ?? subject.username;
+		userinfo.preferred_username = subject.username;
+		if (subject.avatar_url) {
+			userinfo.picture = subject.avatar_url;
+		}
+	}
+
+	log.set({ oidc: { scope: scope.join(" ") } });
+	log.note("oidc.userinfo.returned");
+
+	return new Response(JSON.stringify(userinfo), {
+		status: 200,
+		headers: { "Content-Type": "application/json" },
+	});
+});

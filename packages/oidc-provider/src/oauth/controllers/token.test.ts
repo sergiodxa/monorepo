@@ -1,9 +1,9 @@
 /**
- * Drives the real `/oauth/token` controller end-to-end (through the same
- * asyncContext + form-data middleware and service-container DI the provider wires
- * in production) to cover two security invariants: RFC 8707 `allowed_resources`
- * enforcement on the client_credentials grant, and refresh-token gating so a
- * refresh token is issued only when `offline_access` was granted.
+ * Drives the real `/oauth/token` controller end-to-end (through the same database,
+ * asyncContext and form-data middleware the provider wires in production) to cover two
+ * security invariants: RFC 8707 `allowed_resources` enforcement on the
+ * client_credentials grant, and refresh-token gating so a refresh token is issued only
+ * when `offline_access` was granted.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,7 +12,6 @@ import type { SqliteDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 
 import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { log } from "@sdxc/logger/middleware";
-import { ServiceContainer } from "@sdxc/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
@@ -25,6 +24,7 @@ import Secret from "../../clients/models/secret.js";
 import TenantMeta from "../../management/models/tenant-meta.js";
 import Resource from "../../resources/models/resource.js";
 import routes from "../../routes.js";
+import database from "../../shared/middleware/database.js";
 import { createSqliteDatabaseAdapter } from "../../shared/test/db.js";
 import { createSubject } from "../../shared/test/fixtures.js";
 import SigningKey from "../../signing-keys/models/signing-key.js";
@@ -36,9 +36,8 @@ import token from "./token.js";
 type Db = Database;
 
 /**
- * POSTs a form-urlencoded body to the token endpoint through a minimal router
- * that reuses the production middleware chain, registering `db` as a singleton
- * so the request-scoped `inject([Database])` call inside the handler resolves it.
+ * POSTs a form-urlencoded body to the token endpoint through a minimal router that
+ * reuses the production middleware chain, handing the handler this test's database.
  */
 async function postToken(db: Db, params: Record<string, string>): Promise<Response> {
 	let request = new Request("https://auth.example.com/oauth/token", {
@@ -47,14 +46,11 @@ async function postToken(db: Db, params: Record<string, string>): Promise<Respon
 		body: new URLSearchParams(params),
 	});
 
-	let container = new ServiceContainer();
-	container.singleton(Database, () => db);
-
-	let middleware = [log(), asyncContext(), formData() as never];
+	let middleware = [database(() => db), log(), asyncContext(), formData() as never];
 	let router = createRouter({ middleware });
 	router.map(routes.oauth.token, token);
 
-	return container.scope(() => router.fetch(request));
+	return router.fetch(request);
 }
 
 describe("POST /oauth/token — allowed_resources enforcement", () => {

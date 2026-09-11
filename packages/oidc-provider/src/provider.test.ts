@@ -1,8 +1,7 @@
 /**
  * Integration smoke test that drives `createProviderRouter(...).fetch()` end-to-end
- * through the service-container DI the provider wires per request. Guards the
- * regression where a per-request `Database` registered via `container.instance`
- * was invisible to `inject` inside `container.scope(() => router.fetch())`.
+ * over the database the host hands in. Guards the regression where a handler
+ * answered a request without reaching the tenant's storage at all.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,8 +22,8 @@ let analytics: AnalyticsSink = {
 
 /**
  * Builds the real provider router over an in-memory database with migrations
- * applied and drives a GET request through its full `fetch` path — the same
- * `container.scope(() => router.fetch())` the host uses in production.
+ * applied and drives a GET request through the same `fetch` path the host uses
+ * in production.
  */
 async function fetchThroughProvider(url: string): Promise<Response> {
 	let { db } = await createTestDatabase();
@@ -32,12 +31,12 @@ async function fetchThroughProvider(url: string): Promise<Response> {
 	return router.fetch(new Request(url));
 }
 
-describe("createProviderRouter — service-container DI over the full fetch path", () => {
-	test("resolves Database inside the request scope for the OAuth metadata endpoint", async () => {
+describe("createProviderRouter — the database over the full fetch path", () => {
+	test("reads the database on the request context for the OAuth metadata endpoint", async () => {
 		/**
-		 * The oauth-authorization-server handler is wrapped in `inject([Database])`
-		 * and reads it via `TenantMeta.getIssuer`, so a working response proves the
-		 * per-request Database resolved inside `container.scope`.
+		 * The oauth-authorization-server handler reads `ctx.db` via
+		 * `TenantMeta.getIssuer`, so a working response proves the host's database
+		 * reached the handler.
 		 */
 		let response = await fetchThroughProvider(
 			"https://auth.example.com/.well-known/oauth-authorization-server",
@@ -53,7 +52,7 @@ describe("createProviderRouter — service-container DI over the full fetch path
 		expect(body.jwks_uri).toBe("https://auth.example.com/.well-known/jwks.json");
 	});
 
-	test("resolves Database inside the request scope for the OpenID configuration endpoint", async () => {
+	test("reads the database on the request context for the OpenID configuration endpoint", async () => {
 		let response = await fetchThroughProvider(
 			"https://auth.example.com/.well-known/openid-configuration",
 		);
@@ -63,10 +62,10 @@ describe("createProviderRouter — service-container DI over the full fetch path
 		expect(body.issuer).toBe("https://auth.example.com");
 	});
 
-	test("resolves Database inside the request scope for the JWKS endpoint", async () => {
+	test("reads the database on the request context for the JWKS endpoint", async () => {
 		/**
-		 * The jwks handler injects Database and calls `SigningKey.getAll(db)`; with a
-		 * fresh DB it returns an empty key set — proving the query ran under DI.
+		 * The jwks handler calls `SigningKey.getAll(ctx.db)`; with a fresh DB it
+		 * returns an empty key set, proving the query ran against the host's database.
 		 */
 		let response = await fetchThroughProvider("https://auth.example.com/.well-known/jwks.json");
 
@@ -75,10 +74,10 @@ describe("createProviderRouter — service-container DI over the full fetch path
 		expect(Array.isArray(body.keys)).toBe(true);
 	});
 
-	test("does not fail with a 500 from a broken DI path", async () => {
+	test("does not fail with a 500 from a missing database", async () => {
 		/**
-		 * The original bug surfaced as an uncaught ServiceNotFoundError bubbling to
-		 * a 500; a status below 500 here confirms the DI path resolved cleanly.
+		 * The original bug surfaced as an uncaught error bubbling to a 500; a status
+		 * below 500 here confirms the handler had the database it asked for.
 		 */
 		let response = await fetchThroughProvider(
 			"https://auth.example.com/.well-known/oauth-authorization-server",

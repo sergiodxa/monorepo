@@ -11,15 +11,12 @@
 
 import { badRequest, ok, tooManyRequests } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import {
 	generateAuthenticationOptions,
 	type GenerateAuthenticationOptionsOpts,
 } from "@simplewebauthn/server";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import TenantMeta from "../../management/models/tenant-meta.js";
@@ -45,86 +42,83 @@ let RequestSchema = s.object({
  * Rate-limited per email to prevent brute force attacks.
  * @returns A JSON `Response` with `{ challengeId, options }`, or an error `Response`.
  */
-export default createAction(
-	routes.webauthn.auth.options,
-	inject([Database] as const, async (db) => {
-		let { formData, request, log } = getContext();
+export default createAction(routes.webauthn.auth.options, async (ctx) => {
+	let { formData, request, log } = ctx;
 
-		let result = await validate(Object.fromEntries(formData), RequestSchema);
-		if (isFailure(result)) {
-			log.warn("http.invalid_body");
-			return badRequest({ error: "Invalid request", issues: result.error.issues });
-		}
+	let result = await validate(Object.fromEntries(formData), RequestSchema);
+	if (isFailure(result)) {
+		log.warn("http.invalid_body");
+		return badRequest({ error: "Invalid request", issues: result.error.issues });
+	}
 
-		let { email, clientId, redirectUri, state, nonce, scope } = result.data;
+	let { email, clientId, redirectUri, state, nonce, scope } = result.data;
 
-		let rateLimit = checkUserRateLimit(email, "authOptions", USER_RATE_LIMITS.authOptions);
-		if (!rateLimit.success) {
-			log.warn("webauthn.rate_limited", { email });
-			return tooManyRequests({
-				error: "Too many authentication attempts. Please try again later.",
-				retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
-			});
-		}
-
-		let subject = await Subject.findByEmail(db, email);
-		if (!subject) {
-			log.warn("subject.not_found");
-			return badRequest({ error: "No passkey found. Please register first." });
-		}
-
-		let passkeys = await Passkey.listForAuthentication(db, subject.id);
-		if (passkeys.length === 0) {
-			log.warn("webauthn.auth.no_passkeys", { subject_id: subject.id });
-			return badRequest({ error: "No passkey found. Please register first." });
-		}
-
-		let issuer = await TenantMeta.getIssuer(db);
-		let rpId = issuer ? new URL(`https://${issuer}`).hostname : new URL(request.url).hostname;
-
-		let { id: challengeId, challenge } = await WebAuthnChallenge.createForAuthentication(db, {
-			subjectId: subject.id,
-			clientId,
-			redirectUri,
-			state,
-			nonce,
-			scope,
+	let rateLimit = checkUserRateLimit(email, "authOptions", USER_RATE_LIMITS.authOptions);
+	if (!rateLimit.success) {
+		log.warn("webauthn.rate_limited", { email });
+		return tooManyRequests({
+			error: "Too many authentication attempts. Please try again later.",
+			retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
 		});
+	}
 
-		/**
-		 * Uses each passkey's WebAuthn credential_id, the identifier authenticators
-		 * match during the ceremony; listForAuthentication already excludes rows
-		 * without one, so passkeys predating migration 0006 cannot authenticate.
-		 */
-		let allowCredentials = passkeys.map((passkey) => ({
-			id: passkey.credential_id!,
-			type: "public-key" as const,
-			transports: passkey.transports
-				? (passkey.transports.split(",") as AuthenticatorTransport[])
-				: undefined,
-		}));
+	let subject = await Subject.findByEmail(ctx.db, email);
+	if (!subject) {
+		log.warn("subject.not_found");
+		return badRequest({ error: "No passkey found. Please register first." });
+	}
 
-		/**
-		 * The challenge is copied into a Uint8Array backed by a plain ArrayBuffer
-		 * to satisfy the current @simplewebauthn BufferSource typing.
-		 */
-		let authenticationOptions = await generateAuthenticationOptions({
-			rpID: rpId,
-			allowCredentials,
-			userVerification: "preferred",
-			challenge: new Uint8Array(base64UrlDecode(challenge)),
-		} satisfies GenerateAuthenticationOptionsOpts);
+	let passkeys = await Passkey.listForAuthentication(ctx.db, subject.id);
+	if (passkeys.length === 0) {
+		log.warn("webauthn.auth.no_passkeys", { subject_id: subject.id });
+		return badRequest({ error: "No passkey found. Please register first." });
+	}
 
-		log.set({ subject: { id: subject.id }, client: { id: clientId } });
-		log.note("webauthn.auth.challenge_created", {
-			challenge_id: challengeId,
-			passkey_count: passkeys.length,
-			has_redirect_uri: !!redirectUri,
-		});
+	let issuer = await TenantMeta.getIssuer(ctx.db);
+	let rpId = issuer ? new URL(`https://${issuer}`).hostname : new URL(request.url).hostname;
 
-		return ok({
-			challengeId,
-			options: authenticationOptions,
-		});
-	}),
-);
+	let { id: challengeId, challenge } = await WebAuthnChallenge.createForAuthentication(ctx.db, {
+		subjectId: subject.id,
+		clientId,
+		redirectUri,
+		state,
+		nonce,
+		scope,
+	});
+
+	/**
+	 * Uses each passkey's WebAuthn credential_id, the identifier authenticators
+	 * match during the ceremony; listForAuthentication already excludes rows
+	 * without one, so passkeys predating migration 0006 cannot authenticate.
+	 */
+	let allowCredentials = passkeys.map((passkey) => ({
+		id: passkey.credential_id!,
+		type: "public-key" as const,
+		transports: passkey.transports
+			? (passkey.transports.split(",") as AuthenticatorTransport[])
+			: undefined,
+	}));
+
+	/**
+	 * The challenge is copied into a Uint8Array backed by a plain ArrayBuffer
+	 * to satisfy the current @simplewebauthn BufferSource typing.
+	 */
+	let authenticationOptions = await generateAuthenticationOptions({
+		rpID: rpId,
+		allowCredentials,
+		userVerification: "preferred",
+		challenge: new Uint8Array(base64UrlDecode(challenge)),
+	} satisfies GenerateAuthenticationOptionsOpts);
+
+	log.set({ subject: { id: subject.id }, client: { id: clientId } });
+	log.note("webauthn.auth.challenge_created", {
+		challenge_id: challengeId,
+		passkey_count: passkeys.length,
+		has_redirect_uri: !!redirectUri,
+	});
+
+	return ok({
+		challengeId,
+		options: authenticationOptions,
+	});
+});

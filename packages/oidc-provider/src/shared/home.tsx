@@ -11,8 +11,6 @@
 import type { Handle } from "remix/ui";
 
 import { ok } from "@sdxc/http/response/html";
-import { getServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { createAction } from "remix/router";
 import { css } from "remix/ui";
 import { renderToString } from "remix/ui/server";
@@ -31,13 +29,13 @@ import { Layout } from "./layout.js";
  * rendered HTML document.
  * @returns An HTML `Response` with the tenant status page.
  */
-export default createAction(routes.index, async ({ log }) => {
-	let db = getServiceContainer().get(Database);
+export default createAction(routes.index, async (ctx) => {
+	let { log } = ctx;
 
 	let [brand, clientCount, subjectCount] = await Promise.all([
-		Brand.show(db),
-		Client.list(db).then((clients) => clients.length),
-		Subject.list(db).then((subjects) => subjects.length),
+		Brand.show(ctx.db),
+		Client.list(ctx.db).then((clients) => clients.length),
+		Subject.list(ctx.db).then((subjects) => subjects.length),
 	]);
 
 	log.note("home.rendered", { client_count: clientCount, subject_count: subjectCount });

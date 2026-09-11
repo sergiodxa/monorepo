@@ -43,7 +43,7 @@ let db: Database;
 
 /**
  * Drives a request through the real provider router bound to the shared test `db`,
- * exercising the same per-request container scope as production.
+ * exercising the same middleware chain as production.
  * @param request - The request to dispatch.
  * @returns The router's response.
  */

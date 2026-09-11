@@ -13,11 +13,9 @@ import type { Log } from "@sdxc/logger";
 
 import { JWK } from "@sdxc/jwt";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import Client from "../../clients/models/client.js";
@@ -65,39 +63,35 @@ let ClientCredentialsSchema = s.object({
  * dispatching by `grant_type` (form body or Basic auth) to the matching handler.
  * @returns A JSON token `Response`, or an OAuth error `Response`.
  */
-export default createAction(
-	routes.oauth.token,
-	inject([Database] as const, async (db) => {
-		let ctx = getContext();
-		let { formData, request, log } = ctx;
-		let grantType = formData.get("grant_type");
+export default createAction(routes.oauth.token, async (ctx) => {
+	let { formData, request, log } = ctx;
+	let grantType = formData.get("grant_type");
 
-		let basicAuth = parseBasicAuth(request.headers.get("authorization"));
-		let body = Object.fromEntries(formData);
+	let basicAuth = parseBasicAuth(request.headers.get("authorization"));
+	let body = Object.fromEntries(formData);
 
-		if (basicAuth) {
-			body.client_id = basicAuth.clientId;
-			body.client_secret = basicAuth.clientSecret;
-		}
+	if (basicAuth) {
+		body.client_id = basicAuth.clientId;
+		body.client_secret = basicAuth.clientSecret;
+	}
 
-		if (grantType === "authorization_code") {
-			return await handleAuthorizationCode(db, body, log);
-		}
+	if (grantType === "authorization_code") {
+		return await handleAuthorizationCode(ctx.db, body, log);
+	}
 
-		if (grantType === "refresh_token") {
-			return await handleRefreshToken(db, body, log);
-		}
+	if (grantType === "refresh_token") {
+		return await handleRefreshToken(ctx.db, body, log);
+	}
 
-		if (grantType === "client_credentials") {
-			return await handleClientCredentials(db, body, log);
-		}
+	if (grantType === "client_credentials") {
+		return await handleClientCredentials(ctx.db, body, log);
+	}
 
-		log.warn("oidc.token.unsupported_grant", {
-			grant_type: typeof grantType === "string" ? grantType : null,
-		});
-		return reject("unsupported_grant_type", "The authorization grant type is not supported");
-	}),
-);
+	log.warn("oidc.token.unsupported_grant", {
+		grant_type: typeof grantType === "string" ? grantType : null,
+	});
+	return reject("unsupported_grant_type", "The authorization grant type is not supported");
+});
 
 /**
  * Handles the authorization_code grant type (RFC 6749 Section 4.1.3).

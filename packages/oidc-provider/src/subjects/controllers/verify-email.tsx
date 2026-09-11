@@ -12,9 +12,6 @@
 import type { Handle } from "remix/ui";
 
 import { ok } from "@sdxc/http/response/html";
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 import { css } from "remix/ui";
 import { renderToString } from "remix/ui/server";
@@ -29,58 +26,55 @@ import Subject from "../models/subject.js";
  * `GET /verify-email` action that consumes the token and renders the result page.
  * @returns An HTML `Response` with the success or error verification page.
  */
-export default createAction(
-	routes.verifyEmail,
-	inject([Database] as const, async (db) => {
-		let { request, log } = getContext();
-		let url = new URL(request.url);
-		let token = url.searchParams.get("token");
+export default createAction(routes.verifyEmail, async (ctx) => {
+	let { request, log } = ctx;
+	let url = new URL(request.url);
+	let token = url.searchParams.get("token");
 
-		let brand = await Brand.show(db);
+	let brand = await Brand.show(ctx.db);
 
-		if (!token) {
-			log.warn("email_verification.token_missing");
-			let body = await renderToString(
-				<VerifyEmailPage brand={brand} status="error" message="Invalid verification link." />,
-			);
-			return ok(body);
+	if (!token) {
+		log.warn("email_verification.token_missing");
+		let body = await renderToString(
+			<VerifyEmailPage brand={brand} status="error" message="Invalid verification link." />,
+		);
+		return ok(body);
+	}
+
+	try {
+		let { subjectId } = await EmailVerificationToken.consume(ctx.db, token);
+		await Subject.verifyEmail(ctx.db, subjectId);
+
+		log.set({ subject: { id: subjectId } });
+		log.note("email_verification.completed");
+
+		let body = await renderToString(
+			<VerifyEmailPage
+				brand={brand}
+				status="success"
+				message="Your email has been verified successfully. You can now close this window."
+			/>,
+		);
+		return ok(body);
+	} catch (error) {
+		let message = "Verification failed. Please try again.";
+
+		if (error instanceof EmailVerificationToken.ExpiredTokenError) {
+			log.warn("email_verification.token_expired");
+			message = "This verification link has expired. Please request a new one.";
+		} else if (error instanceof EmailVerificationToken.InvalidTokenError) {
+			log.warn("email_verification.token_invalid");
+			message = "This verification link is invalid or has already been used.";
+		} else {
+			log.fail(error);
 		}
 
-		try {
-			let { subjectId } = await EmailVerificationToken.consume(db, token);
-			await Subject.verifyEmail(db, subjectId);
-
-			log.set({ subject: { id: subjectId } });
-			log.note("email_verification.completed");
-
-			let body = await renderToString(
-				<VerifyEmailPage
-					brand={brand}
-					status="success"
-					message="Your email has been verified successfully. You can now close this window."
-				/>,
-			);
-			return ok(body);
-		} catch (error) {
-			let message = "Verification failed. Please try again.";
-
-			if (error instanceof EmailVerificationToken.ExpiredTokenError) {
-				log.warn("email_verification.token_expired");
-				message = "This verification link has expired. Please request a new one.";
-			} else if (error instanceof EmailVerificationToken.InvalidTokenError) {
-				log.warn("email_verification.token_invalid");
-				message = "This verification link is invalid or has already been used.";
-			} else {
-				log.fail(error);
-			}
-
-			let body = await renderToString(
-				<VerifyEmailPage brand={brand} status="error" message={message} />,
-			);
-			return ok(body);
-		}
-	}),
-);
+		let body = await renderToString(
+			<VerifyEmailPage brand={brand} status="error" message={message} />,
+		);
+		return ok(body);
+	}
+});
 
 interface VerifyEmailPageProps {
 	brand: Awaited<ReturnType<typeof Brand.show>>;

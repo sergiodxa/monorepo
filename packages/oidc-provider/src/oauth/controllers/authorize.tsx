@@ -13,11 +13,8 @@ import type { Handle } from "remix/ui";
 
 import { ok } from "@sdxc/http/response/html";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 import { css } from "remix/ui";
 import { renderToString } from "remix/ui/server";
@@ -72,8 +69,8 @@ export default createController(routes.oauth.authorize, {
 	middleware: [],
 
 	actions: {
-		index: inject([Database] as const, async (db) => {
-			let { request, log } = getContext();
+		index: async (ctx) => {
+			let { request, log } = ctx;
 			let url = new URL(request.url);
 			let params = Object.fromEntries(url.searchParams);
 
@@ -102,13 +99,13 @@ export default createController(routes.oauth.authorize, {
 				login_hint,
 			} = result.data;
 
-			let client = await Client.show(db, client_id);
+			let client = await Client.show(ctx.db, client_id);
 			if (!client) {
 				log.warn("client.not_found", { client_id });
 				return renderError("Invalid client_id");
 			}
 
-			let isValidRedirect = await RedirectUri.validate(db, client_id, redirect_uri);
+			let isValidRedirect = await RedirectUri.validate(ctx.db, client_id, redirect_uri);
 			if (!isValidRedirect) {
 				log.warn("oidc.authorize.invalid_redirect_uri", { client_id, redirect_uri });
 				return renderError("Invalid redirect_uri");
@@ -131,10 +128,10 @@ export default createController(routes.oauth.authorize, {
 				/>,
 			);
 			return ok(body);
-		}),
+		},
 
-		action: inject([Database] as const, async (db) => {
-			let { formData, request, log } = getContext();
+		action: async (ctx) => {
+			let { formData, request, log } = ctx;
 			let body = Object.fromEntries(formData);
 
 			let result = await validate(body, LoginFormSchema);
@@ -155,23 +152,23 @@ export default createController(routes.oauth.authorize, {
 				action,
 			} = result.data;
 
-			let client = await Client.show(db, client_id);
+			let client = await Client.show(ctx.db, client_id);
 			if (!client) {
 				return renderError("Invalid client");
 			}
 			log.set({ client: { id: client_id } });
 
-			let isValidRedirect = await RedirectUri.validate(db, client_id, redirect_uri);
+			let isValidRedirect = await RedirectUri.validate(ctx.db, client_id, redirect_uri);
 			if (!isValidRedirect) {
 				return renderError("Invalid redirect_uri");
 			}
 
-			let issuer = await TenantMeta.getIssuer(db);
+			let issuer = await TenantMeta.getIssuer(ctx.db);
 			let rpId = issuer ? new URL(`https://${issuer}`).hostname : new URL(request.url).hostname;
 
 			if (action === "check_email") {
-				let subject = await Subject.findByEmail(db, email);
-				let allPasskeys = subject ? await Passkey.listBySubject(db, subject.id) : [];
+				let subject = await Subject.findByEmail(ctx.db, email);
+				let allPasskeys = subject ? await Passkey.listBySubject(ctx.db, subject.id) : [];
 				let validPasskeys = allPasskeys.filter((p) => p.credential_id);
 
 				log.note("oidc.authorize.passkeys_checked", {
@@ -182,18 +179,21 @@ export default createController(routes.oauth.authorize, {
 				});
 
 				if (validPasskeys.length > 0 && subject) {
-					let { id: challengeId, challenge } = await WebAuthnChallenge.createForAuthentication(db, {
-						subjectId: subject.id,
-						clientId: client_id,
-						redirectUri: redirect_uri,
-						state,
-						nonce,
-						scope,
-						pkce:
-							code_challenge && code_challenge_method
-								? { challenge: code_challenge, method: code_challenge_method as "S256" | "plain" }
-								: undefined,
-					});
+					let { id: challengeId, challenge } = await WebAuthnChallenge.createForAuthentication(
+						ctx.db,
+						{
+							subjectId: subject.id,
+							clientId: client_id,
+							redirectUri: redirect_uri,
+							state,
+							nonce,
+							scope,
+							pkce:
+								code_challenge && code_challenge_method
+									? { challenge: code_challenge, method: code_challenge_method as "S256" | "plain" }
+									: undefined,
+						},
+					);
 
 					let allowCredentials = validPasskeys.map((p) => {
 						let transports = p.transports
@@ -231,7 +231,7 @@ export default createController(routes.oauth.authorize, {
 						id: challengeId,
 						challenge,
 						userId,
-					} = await WebAuthnChallenge.createForRegistration(db, {
+					} = await WebAuthnChallenge.createForRegistration(ctx.db, {
 						email,
 						clientId: client_id,
 						redirectUri: redirect_uri,
@@ -275,7 +275,7 @@ export default createController(routes.oauth.authorize, {
 				/>,
 			);
 			return ok(html);
-		}),
+		},
 	},
 });
 

@@ -11,11 +11,8 @@
 import { noContent } from "@sdxc/http/response";
 import { badRequest, created, notFound, ok } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import routes from "../../routes.js";
@@ -69,153 +66,138 @@ let UpdateClientSchema = s.object({
  * `GET /api/clients` — lists all registered clients.
  * @returns A JSON `Response` with the array of clients.
  */
-export const index = createAction(
-	routes.api.clients.index,
-	inject([Database] as const, async (db) => {
-		let { log } = getContext();
-		let list = await Client.list(db);
-		log.note("admin.client.listed", { count: list.length });
-		return ok(list.map(normalizeClient));
-	}),
-);
+export const index = createAction(routes.api.clients.index, async (ctx) => {
+	let { log } = ctx;
+	let list = await Client.list(ctx.db);
+	log.note("admin.client.listed", { count: list.length });
+	return ok(list.map(normalizeClient));
+});
 
 /**
  * `GET /api/clients/:id` — retrieves a single client.
  * @returns A JSON `Response` with the client, or `notFound`.
  */
-export const show = createAction(
-	routes.api.clients.show,
-	inject([Database] as const, async (db) => {
-		let { params, log } = getContext();
-		let { id } = s.parse(s.object({ id: s.string() }), params);
-		log.set({ client: { id } });
-		let client = await Client.show(db, id);
-		if (client) {
-			log.note("admin.client.retrieved");
-			return ok(normalizeClient(client));
-		}
-		log.warn("client.not_found");
-		return notFound({ error: "Client not found" });
-	}),
-);
+export const show = createAction(routes.api.clients.show, async (ctx) => {
+	let { params, log } = ctx;
+	let { id } = s.parse(s.object({ id: s.string() }), params);
+	log.set({ client: { id } });
+	let client = await Client.show(ctx.db, id);
+	if (client) {
+		log.note("admin.client.retrieved");
+		return ok(normalizeClient(client));
+	}
+	log.warn("client.not_found");
+	return notFound({ error: "Client not found" });
+});
 
 /**
  * `POST /api/clients` — creates a new client from a validated JSON body.
  * @returns A JSON `Response` with the new client `id`, or an error `Response`.
  */
-export const create = createAction(
-	routes.api.clients.create,
-	inject([Database] as const, async (db) => {
-		let { request, log } = getContext();
-		let body = await safeJsonParse(request);
-		if (isResponse(body)) {
-			log.warn("http.invalid_json");
-			return body;
+export const create = createAction(routes.api.clients.create, async (ctx) => {
+	let { request, log } = ctx;
+	let body = await safeJsonParse(request);
+	if (isResponse(body)) {
+		log.warn("http.invalid_json");
+		return body;
+	}
+
+	let result = await validate(body, CreateClientSchema);
+	if (isFailure(result)) {
+		log.warn("http.invalid_body");
+		return badRequest({ error: "Invalid request", issues: result.error.issues });
+	}
+
+	let data = result.data;
+
+	try {
+		let { id } = await Client.create(ctx.db, {
+			name: data.name,
+			type: data.type,
+			description: data.description,
+			logoUrl: data.logoUrl,
+			allowedScopes: data.allowedScopes,
+			allowedResources: data.allowedResources,
+			isManagementClient: data.isManagementClient,
+		});
+
+		log.note("admin.client.created", { type: data.type });
+		return created({ id });
+	} catch (error) {
+		if (error instanceof Client.InvalidLogoUrlError) {
+			log.warn("admin.client.invalid_logo_url", { error: error.message });
+			return badRequest({ error: error.message });
 		}
-
-		let result = await validate(body, CreateClientSchema);
-		if (isFailure(result)) {
-			log.warn("http.invalid_body");
-			return badRequest({ error: "Invalid request", issues: result.error.issues });
-		}
-
-		let data = result.data;
-
-		try {
-			let { id } = await Client.create(db, {
-				name: data.name,
-				type: data.type,
-				description: data.description,
-				logoUrl: data.logoUrl,
-				allowedScopes: data.allowedScopes,
-				allowedResources: data.allowedResources,
-				isManagementClient: data.isManagementClient,
-			});
-
-			log.note("admin.client.created", { type: data.type });
-			return created({ id });
-		} catch (error) {
-			if (error instanceof Client.InvalidLogoUrlError) {
-				log.warn("admin.client.invalid_logo_url", { error: error.message });
-				return badRequest({ error: error.message });
-			}
-			throw error;
-		}
-	}),
-);
+		throw error;
+	}
+});
 
 /**
  * `PATCH/PUT /api/clients/:id` — updates a client from a validated JSON body.
  * @returns A JSON `Response` with the updated client, or an error `Response`.
  */
-export const update = createAction(
-	routes.api.clients.update,
-	inject([Database] as const, async (db) => {
-		let { params, request, log } = getContext();
-		let { id } = s.parse(s.object({ id: s.string() }), params);
-		log.set({ client: { id } });
-		let body = await safeJsonParse(request);
-		if (isResponse(body)) {
-			log.warn("http.invalid_json");
-			return body;
+export const update = createAction(routes.api.clients.update, async (ctx) => {
+	let { params, request, log } = ctx;
+	let { id } = s.parse(s.object({ id: s.string() }), params);
+	log.set({ client: { id } });
+	let body = await safeJsonParse(request);
+	if (isResponse(body)) {
+		log.warn("http.invalid_json");
+		return body;
+	}
+
+	let result = await validate(body, UpdateClientSchema);
+	if (isFailure(result)) {
+		log.warn("http.invalid_body");
+		return badRequest({ error: "Invalid request", issues: result.error.issues });
+	}
+
+	let data = result.data;
+
+	try {
+		await Client.update(ctx.db, id, {
+			name: data.name,
+			type: data.type,
+			description: data.description,
+			logoUrl: data.logoUrl,
+			allowedScopes: data.allowedScopes,
+			allowedResources: data.allowedResources,
+			isManagementClient: data.isManagementClient,
+		});
+
+		let client = await Client.show(ctx.db, id);
+		log.note("admin.client.updated");
+		return ok(client ? normalizeClient(client) : null);
+	} catch (error) {
+		if (error instanceof RecordNotFoundError) {
+			log.warn("client.not_found");
+			return notFound({ error: "Client not found" });
 		}
-
-		let result = await validate(body, UpdateClientSchema);
-		if (isFailure(result)) {
-			log.warn("http.invalid_body");
-			return badRequest({ error: "Invalid request", issues: result.error.issues });
+		if (error instanceof Client.InvalidLogoUrlError) {
+			log.warn("admin.client.invalid_logo_url", { error: error.message });
+			return badRequest({ error: error.message });
 		}
-
-		let data = result.data;
-
-		try {
-			await Client.update(db, id, {
-				name: data.name,
-				type: data.type,
-				description: data.description,
-				logoUrl: data.logoUrl,
-				allowedScopes: data.allowedScopes,
-				allowedResources: data.allowedResources,
-				isManagementClient: data.isManagementClient,
-			});
-
-			let client = await Client.show(db, id);
-			log.note("admin.client.updated");
-			return ok(client ? normalizeClient(client) : null);
-		} catch (error) {
-			if (error instanceof RecordNotFoundError) {
-				log.warn("client.not_found");
-				return notFound({ error: "Client not found" });
-			}
-			if (error instanceof Client.InvalidLogoUrlError) {
-				log.warn("admin.client.invalid_logo_url", { error: error.message });
-				return badRequest({ error: error.message });
-			}
-			throw error;
-		}
-	}),
-);
+		throw error;
+	}
+});
 
 /**
  * `DELETE /api/clients/:id` — deletes a client.
  * @returns A `204 No Content` `Response`, or `notFound`.
  */
-export const destroy = createAction(
-	routes.api.clients.destroy,
-	inject([Database] as const, async (db) => {
-		let { params, log } = getContext();
-		let { id } = s.parse(s.object({ id: s.string() }), params);
-		log.set({ client: { id } });
-		try {
-			await Client.destroy(db, id);
-			log.note("admin.client.deleted");
-			return noContent();
-		} catch (error) {
-			if (error instanceof RecordNotFoundError) {
-				log.warn("client.not_found");
-				return notFound({ error: "Client not found" });
-			}
-			throw error;
+export const destroy = createAction(routes.api.clients.destroy, async (ctx) => {
+	let { params, log } = ctx;
+	let { id } = s.parse(s.object({ id: s.string() }), params);
+	log.set({ client: { id } });
+	try {
+		await Client.destroy(ctx.db, id);
+		log.note("admin.client.deleted");
+		return noContent();
+	} catch (error) {
+		if (error instanceof RecordNotFoundError) {
+			log.warn("client.not_found");
+			return notFound({ error: "Client not found" });
 		}
-	}),
-);
+		throw error;
+	}
+});

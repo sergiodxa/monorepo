@@ -9,9 +9,6 @@
  */
 
 import { ok } from "@sdxc/http/response/json";
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import Client from "../../clients/models/client.js";
@@ -23,30 +20,27 @@ import Subject from "../../subjects/models/subject.js";
  * `GET /api/stats` action returning aggregate tenant usage counts as JSON.
  * @returns A JSON `Response` with user, client, and session statistics.
  */
-export const show = createAction(
-	routes.api.stats,
-	inject([Database] as const, async (db) => {
-		let { log } = getContext();
+export const show = createAction(routes.api.stats, async (ctx) => {
+	let { log } = ctx;
 
-		let [totalUsers, totalClients, totalSessions, activeSessions, monthlyActiveUsers] =
-			await Promise.all([
-				Subject.count(db),
-				Client.count(db),
-				Session.count(db),
-				Session.countActive(db),
-				Session.countMonthlyActiveUsers(db),
-			]);
+	let [totalUsers, totalClients, totalSessions, activeSessions, monthlyActiveUsers] =
+		await Promise.all([
+			Subject.count(ctx.db),
+			Client.count(ctx.db),
+			Session.count(ctx.db),
+			Session.countActive(ctx.db),
+			Session.countMonthlyActiveUsers(ctx.db),
+		]);
 
-		let stats = {
-			total_users: totalUsers,
-			total_clients: totalClients,
-			total_sessions: totalSessions,
-			active_sessions: activeSessions,
-			monthly_active_users: monthlyActiveUsers,
-		};
+	let stats = {
+		total_users: totalUsers,
+		total_clients: totalClients,
+		total_sessions: totalSessions,
+		active_sessions: activeSessions,
+		monthly_active_users: monthlyActiveUsers,
+	};
 
-		log.note("admin.stats.retrieved", stats);
+	log.note("admin.stats.retrieved", stats);
 
-		return ok(stats);
-	}),
-);
+	return ok(stats);
+});
