@@ -23,9 +23,8 @@ export interface FakeButtondownOptions {
 }
 
 /**
- * A {@link Buttondown} stand-in. Extends the real class so it satisfies the
- * container's class key, and every overridden method answers from the
- * scripted state below.
+ * A {@link Buttondown} stand-in. Extends the real class so it passes anywhere one
+ * is expected, and every overridden method answers from the scripted state below.
  */
 export class FakeButtondown extends Buttondown {
 	/** Addresses passed to `subscribe`, in order. */
@@ -64,4 +63,32 @@ export class FakeButtondown extends Buttondown {
 	override async addMetadata(email: string, metadata: Record<string, string>): Promise<void> {
 		this.tagged.push({ email, metadata });
 	}
+}
+
+/** The client the app is handed while a test has one installed. */
+let installed: FakeButtondown | undefined;
+
+/**
+ * Installs the client the app opens for the rest of the test, for a suite that mocks
+ * `~/app/lib/buttondown` with {@link installedButtondown}.
+ *
+ * @param client - The fake the controllers under test should reach.
+ * @returns The same client, so a caller can install and keep it in one expression.
+ * @example let buttondown = installButtondown(new FakeButtondown());
+ */
+export function installButtondown(client: FakeButtondown): FakeButtondown {
+	installed = client;
+	return client;
+}
+
+/**
+ * Hands out the installed client, standing in for the module that opens a real one.
+ *
+ * @returns The client the test installed.
+ * @throws {Error} When the test reached the newsletter without installing one.
+ * @example vi.mock("~/app/lib/buttondown", () => ({ buttondown: installedButtondown }));
+ */
+export function installedButtondown(): FakeButtondown {
+	if (!installed) throw new Error("Install a FakeButtondown with installButtondown() first");
+	return installed;
 }

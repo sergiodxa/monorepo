@@ -7,21 +7,27 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
-import { FakeButtondown } from "~/app/lib/test/buttondown";
+import { FakeButtondown, installButtondown } from "~/app/lib/test/buttondown";
 import { fetchApp } from "~/app/lib/test/router";
-import { Buttondown } from "~/app/services/buttondown";
+
+/**
+ * Hands the controllers under test the client each one installs. The module is imported
+ * inside the factory because `vi.mock` is hoisted above this file's own imports.
+ */
+vi.mock("~/app/lib/buttondown", async () => {
+	let { installedButtondown } = await import("~/app/lib/test/buttondown");
+	return { buttondown: installedButtondown };
+});
 
 /** The chapter's first heading, which only the unlocked page renders. */
 const CHAPTER_HEADING = "OAuth2 in Simple Terms";
 
 function submit(buttondown: FakeButtondown, email: string) {
-	return fetchApp("/sample", {
-		method: "POST",
-		body: new URLSearchParams({ email }),
-		services: [[Buttondown, buttondown]],
-	});
+	installButtondown(buttondown);
+
+	return fetchApp("/sample", { method: "POST", body: new URLSearchParams({ email }) });
 }
 
 describe("GET /sample", () => {

@@ -14,15 +14,15 @@ import { getClientIP } from "@sdxc/get-client-ip";
 import { renderToRemix } from "@sdxc/markdown/client";
 import { Markdown } from "@sdxc/markdown/server";
 import { isFailure, isSuccess } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import { INVALID_EMAIL_MESSAGE, SubscribeSchema } from "~/app/http/validators/subscribe";
 import { readAttribution } from "~/app/lib/attribution";
+import { buttondown } from "~/app/lib/buttondown";
 import { seo } from "~/app/lib/seo";
-import { Buttondown, ButtondownError } from "~/app/services/buttondown";
+import { ButtondownError } from "~/app/services/buttondown";
 import { subscribe } from "~/app/services/subscribe";
 import chapterSource from "~/resources/content/sample.md?raw";
 import DocumentLayout from "~/resources/layouts/document";
@@ -137,8 +137,7 @@ export const action = createAction(routes.sample.action, async (ctx) => {
 	}
 
 	let payload = validation.data;
-	let buttondown = getServiceContainer().get(Buttondown);
-	let result = await subscribe(buttondown, payload, getClientIP(ctx.request));
+	let result = await subscribe(buttondown(), payload, getClientIP(ctx.request));
 
 	if (isSuccess(result)) {
 		log.set({ sample: { unlocked: true } });

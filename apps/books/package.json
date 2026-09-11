@@ -21,7 +21,6 @@
 		"@sdxc/response": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/seo": "workspace:*",
-		"@sdxc/service-container": "workspace:*",
 		"@sdxc/u": "workspace:*",
 		"@sdxc/ui": "workspace:*",
 		"@sdxc/validate": "workspace:*",

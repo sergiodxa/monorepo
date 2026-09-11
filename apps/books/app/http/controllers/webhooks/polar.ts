@@ -13,11 +13,10 @@ import type { RequestContext } from "remix/router";
 
 import { BillingWebhook } from "@sdxc/billing";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 
 import { Product } from "~/app/data/product";
 import { polar } from "~/app/lib/billing";
-import { Buttondown } from "~/app/services/buttondown";
+import { buttondown } from "~/app/lib/buttondown";
 
 /** The Buttondown metadata values that drive purchase segmentation. */
 const TIERS: Record<string, string> = {
@@ -72,10 +71,10 @@ export const handlers: BillingWebhookHandlers = {
 			return;
 		}
 
-		let buttondown = getServiceContainer().get(Buttondown);
-		let subscribed = await buttondown.isSubscribed(email);
+		let newsletter = buttondown();
+		let subscribed = await newsletter.isSubscribed(email);
 
-		if (subscribed) await buttondown.addMetadata(email, { purchase: tier });
+		if (subscribed) await newsletter.addMetadata(email, { purchase: tier });
 
 		log.set({ order: { tagged: subscribed } });
 		log.note("order.paid", { email });

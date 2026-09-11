@@ -11,13 +11,13 @@
 import { getClientIP } from "@sdxc/get-client-ip";
 import { redirect } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
 import { renderHome } from "~/app/http/controllers/home";
 import { INVALID_EMAIL_MESSAGE, SubscribeSchema } from "~/app/http/validators/subscribe";
-import { Buttondown, ButtondownError } from "~/app/services/buttondown";
+import { buttondown } from "~/app/lib/buttondown";
+import { ButtondownError } from "~/app/services/buttondown";
 import { subscribe } from "~/app/services/subscribe";
 import routes from "~/routes/web";
 
@@ -42,8 +42,7 @@ export default createAction(routes.api.subscribe, async (ctx) => {
 	}
 
 	let payload = validation.data;
-	let buttondown = getServiceContainer().get(Buttondown);
-	let result = await subscribe(buttondown, payload, getClientIP(ctx.request));
+	let result = await subscribe(buttondown(), payload, getClientIP(ctx.request));
 
 	if (isFailure(result)) {
 		let error = result.error;

@@ -9,11 +9,19 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
-import { FakeButtondown } from "~/app/lib/test/buttondown";
+import { FakeButtondown, installButtondown } from "~/app/lib/test/buttondown";
 import { fetchApp } from "~/app/lib/test/router";
-import { Buttondown } from "~/app/services/buttondown";
+
+/**
+ * Hands the controllers under test the client each one installs. The module is imported
+ * inside the factory because `vi.mock` is hoisted above this file's own imports.
+ */
+vi.mock("~/app/lib/buttondown", async () => {
+	let { installedButtondown } = await import("~/app/lib/test/buttondown");
+	return { buttondown: installedButtondown };
+});
 
 /**
  * Posts the subscribe form against a scripted newsletter client. The body is
@@ -26,12 +34,9 @@ function submit(
 	attribution: Record<string, string> = {},
 ) {
 	let body = new URLSearchParams({ email, ...attribution });
+	installButtondown(buttondown);
 
-	return fetchApp("/api/subscribe", {
-		method: "POST",
-		body,
-		services: [[Buttondown, buttondown]],
-	});
+	return fetchApp("/api/subscribe", { method: "POST", body });
 }
 
 describe("POST /api/subscribe", () => {

@@ -13,17 +13,23 @@ import type { MemoryBilling, MemoryDelivery } from "@sdxc/billing/providers/memo
 import { BillingWebhook, MemoryWebhookStore } from "@sdxc/billing";
 import { Log } from "@sdxc/logger";
 import { unwrap } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
 import { RequestContext } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { Product } from "~/app/data/product";
 import { handlers } from "~/app/http/controllers/webhooks/polar";
-import { container } from "~/app/lib/container";
 import { memoryBilling, purchase } from "~/app/lib/test/billing";
-import { FakeButtondown } from "~/app/lib/test/buttondown";
+import { FakeButtondown, installButtondown } from "~/app/lib/test/buttondown";
 import { fetchApp } from "~/app/lib/test/router";
-import { Buttondown } from "~/app/services/buttondown";
+
+/**
+ * Hands the controllers under test the client each one installs. The module is imported
+ * inside the factory because `vi.mock` is hoisted above this file's own imports.
+ */
+vi.mock("~/app/lib/buttondown", async () => {
+	let { installedButtondown } = await import("~/app/lib/test/buttondown");
+	return { buttondown: installedButtondown };
+});
 
 /** A third-party origin, standing in for the platform's webhook delivery. */
 const FOREIGN_ORIGIN = "https://api.polar.sh";
@@ -35,9 +41,7 @@ const BUYER = "buyer@example.com";
 const FOREIGN_SECRET = "YW5vdGhlci1zaWduaW5nLXNlY3JldA";
 
 /**
- * Answers one delivery through the app's own handlers, inside the container
- * scope the worker opens, so the newsletter client resolves the way it does in
- * production.
+ * Answers one delivery through the app's own handlers.
  *
  * @param billing - The platform the delivery came from and is verified against.
  * @param buttondown - The newsletter client the handler tags through.
@@ -45,23 +49,20 @@ const FOREIGN_SECRET = "YW5vdGhlci1zaWduaW5nLXNlY3JldA";
  * @param store - Where deliveries are recorded, for a redelivery under test.
  * @returns The endpoint's response.
  */
-function deliver(
+async function deliver(
 	billing: MemoryBilling,
 	buttondown: FakeButtondown,
 	delivery: MemoryDelivery,
 	store?: MemoryWebhookStore,
 ): Promise<Response> {
+	installButtondown(buttondown);
+
 	let endpoint = new BillingWebhook(billing, handlers, { store });
+	let context = new RequestContext(delivery.request);
+	context.billing = billing;
+	context.log = new Log({ kind: "request", sink() {} });
 
-	return container.scope(async () => {
-		getServiceContainer().instance(Buttondown, buttondown);
-
-		let context = new RequestContext(delivery.request);
-		context.billing = billing;
-		context.log = new Log({ kind: "request", sink() {} });
-
-		return await endpoint.handler(context);
-	});
+	return await endpoint.handler(context);
 }
 
 /** Buys a package and signs the paid-order delivery the platform would send for it. */
@@ -187,7 +188,6 @@ describe("cross-origin protection", () => {
 			method: "POST",
 			headers: { origin: FOREIGN_ORIGIN },
 			body: new URLSearchParams({ email: "reader@example.com" }),
-			services: [[Buttondown, new FakeButtondown()]],
 		});
 
 		expect(response.status).toBe(403);
