@@ -132,7 +132,7 @@ Run from the repository root:
 | [service-container](packages/service-container)                 | Dependency injection service container                                                   |     |
 | [seo](packages/seo)                                             | Canonical URLs, schema.org builders and head metadata                                    |     |
 | [session-storage-kv](packages/session-storage-kv)               | Session storage adapter for Cloudflare KV                                                |     |
-| [sitemap](packages/sitemap)                                     | Sitemap generation and parsing                                                           |     |
+| [sitemap](packages/sitemap)                                     | Sitemap generation and parsing                                                           | ✅  |
 | [spec](packages/spec)                                           | Executable specification runner for `.spec` files                                        | ✅  |
 | [strings](packages/strings)                                     | Inflection, Chicago title case, slugs and grapheme-safe text                             |     |
 | [typeid](packages/typeid)                                       | Type-safe prefixed id utilities                                                          |     |

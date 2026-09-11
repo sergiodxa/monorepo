@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/sitemap",
-	"version": "0.0.0",
-	"private": true,
+	"version": "0.0.1",
+	"description": "Read and write the sitemap protocol: collect URLs, or fetch a published sitemap",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
