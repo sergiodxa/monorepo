@@ -595,7 +595,6 @@ Emails, services, and tests are untouched, which also makes a switch reversible.
 ## Related Packages
 
 - [`@sdxc/result`](/packages/result) — the `Result` type every send outcome is reported as
-- [`@sdxc/service-container`](/packages/service-container) — where an app registers the provider client a transport is constructed with
 - [`@sdxc/logger`](/packages/logger) — the invocation's log the middleware records deferred-send outcomes on
 - [`@sdxc/i18n`](/packages/i18n) — supplies the translator an email class uses for its subject; this package never depends on it
 
