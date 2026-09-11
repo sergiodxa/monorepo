@@ -249,7 +249,12 @@ describe("readPackages", () => {
 
 		expect(packages.length).toBeGreaterThan(40);
 		expect(spec?.dir).toBe("spec");
-		expect(spec?.dependencies).toEqual(["@sdxc/duration", "@sdxc/result", "@sdxc/sample"]);
+		expect(spec?.dependencies).toEqual([
+			"@sdxc/duration",
+			"@sdxc/html",
+			"@sdxc/result",
+			"@sdxc/sample",
+		]);
 		expect(spec?.shippedPaths).toContain("packages/spec/src");
 	});
 
