@@ -1,9 +1,9 @@
 /**
  * Runs a customer's executable spec and reports what it concluded (ADR-027).
  *
- * Decides three things itself: which capabilities exist (`http`, `url`, `jwt` and `sample`
- * only), which hosts a verified domain covers, and how many requests and how much time a run
- * gets before it is cut off.
+ * Decides three things itself: which capabilities exist (`http`, `url`, `jwt`, `sample`,
+ * `html`, `str` and `spec` only), which hosts a verified domain covers, and how many requests
+ * and how much time a run gets before it is cut off.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,10 +28,13 @@ import type {
 import { randomToken } from "@sdxc/crypto";
 import { failure, isFailure } from "@sdxc/result";
 import {
+	createHtmlPlugin,
 	createHttpPlugin,
 	createJwtPlugin,
 	createNoFilesystemWorkspace,
 	createSamplePlugin,
+	createSpecPlugin,
+	createStrPlugin,
 	createUrlPlugin,
 	loadSources,
 	parseGrants,
@@ -119,6 +122,13 @@ export async function runFlowCheck(input: FlowCheckInput): Promise<FlowCheckResu
 			createUrlPlugin(),
 			createJwtPlugin(),
 			createSamplePlugin(),
+			/**
+			 * Unbudgeted: each answers from the arguments it is handed or from the run's own
+			 * identity, so none of them can spend a request or reach a host.
+			 */
+			createHtmlPlugin(),
+			createStrPlugin(),
+			createSpecPlugin(),
 		],
 		grants: grants.data.grants,
 		createWorkspace: createNoFilesystemWorkspace,

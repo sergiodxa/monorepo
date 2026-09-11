@@ -5,7 +5,7 @@ section:
   title: Concepts
   order: 2
 order: 5
-lastUpdated: 2026-08-31
+lastUpdated: 2026-09-10
 ---
 
 A flow monitor runs a **multi-step API check**. An HTTP monitor asks one question — did this URL answer the way it should? A flow monitor asks whether a sequence still works: that signing in returns a token, that the token is accepted by the endpoint it authorises, and that the endpoint answers with the data it is supposed to.
@@ -18,12 +18,12 @@ The source is written in an executable-spec language: `test` blocks that arrange
 
 These limits are stated first because a flow monitor is only as useful as your understanding of what it covers. None of them are oversights — they are the shape of the feature.
 
-- **There is no browser.** Nothing clicks, fills in a form field, runs JavaScript or renders a page. A flow drives HTTP requests. A check that depends on what a page looks like is not something a flow can answer.
+- **There is no browser.** Nothing clicks, fills in a form field, runs JavaScript or lays a page out. A flow drives HTTP requests; [`html`](#html) reads the markup a request answered with, so a flow can assert on the page your server rendered — the heading it carries, the button it offers — but not on what that page becomes once a browser has run it.
 - **A flow can bring new data on every run.** [`sample`](#sample) gives it a fresh name, address or identifier per check, which is what a sign-up flow needs. A flow that signs _in_ still needs a fixed account you keep for the purpose, since the credential has to exist before the run.
-- **There is no branching and no computation.** No conditionals, no loops, no arithmetic, no string building. A flow is a straight line of requests and assertions.
-- **Assertions are equality and truthiness only.** There is no substring match, no regular expression, no comparison and no numeric range.
+- **There is no branching and no arithmetic.** No conditionals, no loops, no sums. [`str.format`](#str) fills a template's holes, which is the whole of composition; a flow is otherwise a straight line of requests and assertions.
+- **`expect` is equality and truthiness only.** There is no regular expression, no comparison and no numeric range. The [`html`](#html) readers take a `containing` clause of their own, which is where substring matching lives.
 - **The only retry vocabulary is `eventually`, and it cannot retry a request.** See [Waiting for something to become true](#waiting-for-something-to-become-true).
-- **There is no file access, no shell and no database access.** The four tools below are the whole vocabulary.
+- **There is no file access, no shell and no database access.** The seven namespaces below are the whole vocabulary.
 - **The fastest interval is 15 minutes.** A flow makes several requests and costs accordingly. If you need to know within a minute that something broke, put an HTTP monitor on the endpoint the flow depends on — that is what 1-minute resolution is for — and let the flow cover the sequence.
 
 ## Verified Domains
@@ -139,7 +139,7 @@ let code = url.query at.url "code"
 
 ## Tools
 
-Four namespaces are available. There is nothing else.
+Seven namespaces are available. There is nothing else.
 
 ### http
 
@@ -260,6 +260,91 @@ Generated addresses are always on `example.com`, `example.org` or `example.net`,
 
 A generated value is a step, like a request: it belongs in `given` or `when`.
 
+### html
+
+Reads a page the way a person reads it, from the markup a request answered with. Every tool takes the HTML as its first argument — in practice `response.text` — and answers from that string alone. Nothing is fetched and nothing is rendered.
+
+```
+let page = http.get "https://app.example.com/status"
+expect html.title page.text "Status"
+expect html.heading page.text "All systems operational"
+```
+
+Four tools read the document as a whole:
+
+| Tool                        | Reads                                           |
+| --------------------------- | ----------------------------------------------- |
+| `html.title <source>`       | The `<title>`                                   |
+| `html.text <source>`        | The text a reader would see, markup stripped    |
+| `html.meta <source> <name>` | A meta tag's `content`, by `name` or `property` |
+| `html.rel <source> <rel>`   | A `<link>`'s `href`, by one token of its `rel`  |
+
+The rest address one element by its **role and accessible name** — what a screen reader would call it — rather than by a CSS selector, so a flow keeps passing when the markup around the thing changes:
+
+| Tool                                       | Addresses                                              |
+| ------------------------------------------ | ------------------------------------------------------ |
+| `html.element <source> <role> <name>`      | Any ARIA role, or the word `field` by `name` attribute |
+| `html.heading <source> <name> [level <n>]` | A heading, optionally at a level                       |
+| `html.link <source> <name>`                | A link                                                 |
+| `html.button <source> <name>`              | A button                                               |
+| `html.checkbox <source> <name> [checked]`  | A checkbox, and whether it is ticked                   |
+| `html.cell <source> row <n> column <n>`    | A table cell, counting from 1 over body rows           |
+| `html.definition <source> <term>`          | The definition paired with a term                      |
+
+Called bare, a lookup returns the element's text, which you bind and assert on. A trailing word narrows or asserts instead:
+
+| Word                        | Effect                                                   |
+| --------------------------- | -------------------------------------------------------- |
+| `containing "<text>"`       | Matches part of a name, or asserts part of a value       |
+| `exactly "<text>"`          | Asserts the whole value                                  |
+| `exists`                    | Reports presence as `true` or `false` instead of failing |
+| `count <n>`                 | Asserts how many elements match                          |
+| `first`, `last`, `nth <n>`  | Picks one of several matches                             |
+| `value "<text>"`            | Asserts a control's value                                |
+| `attribute <name> "<text>"` | Asserts a raw markup attribute                           |
+| `enabled`, `disabled`       | Asserts the element's state                              |
+
+```
+use http
+use html
+
+test "the pricing page still offers the Pro plan" {
+	when {
+		let page = http.get "https://app.example.com/pricing"
+	}
+	then {
+		expect page.status 200
+		expect html.heading page.text "Pricing" level 1
+		expect html.link page.text "Start a Pro trial" exists
+		expect html.text page.text containing "per month"
+	}
+}
+```
+
+A lookup that matches nothing fails with what the document did hold under the same lookup, and a lookup that matches several asks which one you meant — so a failing flow tells you what changed rather than that a selector missed.
+
+### str
+
+`str.format <template> <values…>` fills a template's `${…}` holes. Holes are `${0}`, `${1}` by argument position, or `${name}` by the keys of a single object; `{{` writes a literal `${`. Every hole has to be filled and every argument has to be used, so a template and its arguments cannot drift apart quietly.
+
+```
+let path = str.format "https://api.example.com/v1/orders/${0}" created.json.id
+let greeting = str.format "Hi ${name}, you are on ${plan}" { name: who.first_name, plan: "pro" }
+```
+
+This is the only string building there is. A URL built this way is still checked against your verified domains when the request is sent, so composing an address does not widen where a flow can go.
+
+### spec
+
+What this run is called. `spec.run_id` is the identifier every test in the run shares, `spec.attempt` is which attempt of the test is running, and `spec.nonce` is the two joined — the value to compose into something that has to be new on every check.
+
+```
+let nonce = spec.nonce
+let email = str.format "signup-${0}@example.com" nonce
+```
+
+`sample` gives you plausible data that repeats for a given seed; `spec.nonce` gives you a value no earlier run produced. Reach for it when a flow needs an identifier that has to be unique rather than merely realistic.
+
 ## Assertions
 
 `expect` has three forms.
@@ -284,7 +369,7 @@ expect session.json.token
 expect url.host "https://app.example.com/callback"
 ```
 
-The `url` tools and `jwt.decode` are read-only and can be used this way. `http.get` and its siblings, and `jwt.verify`, are actions and cannot. In practice you will bind a read-only result with `let` and use the two-value form, which says more:
+The `url` tools, `jwt.decode`, and every `html` and `spec` tool are read-only and can be used this way. `http.get` and its siblings, `jwt.verify`, and `str.format` are actions and cannot. In practice you will bind a read-only result with `let` and use the two-value form, which says more:
 
 ```
 let landed = url.host granted.json.redirect_to
@@ -472,7 +557,7 @@ Three caps apply to each run:
 | HTTP requests | 20, counted across every test in the source |
 | Source length | 20,000 characters                           |
 
-Only HTTP requests count against the request cap. `url`, `jwt.decode` and `sample` calls are free — they reach nothing. (`jwt.verify` fetches the issuer's JWKS, so it does make a request.)
+Only HTTP requests count against the request cap. `url`, `jwt.decode`, `sample`, `html`, `str` and `spec` calls are free — they reach nothing, answering from the values they are handed or from the run's own identity. (`jwt.verify` fetches the issuer's JWKS, so it does make a request.)
 
 Both runtime caps are checked before each request the flow makes, so a run that has spent its budget stops at the next request it tries to send, and reports why:
 

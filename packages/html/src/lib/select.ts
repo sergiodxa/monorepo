@@ -15,9 +15,11 @@ import type { HTML, HTMLQueryError } from "../index.js";
 
 import { HTMLAmbiguousMatchError, HTMLNotFoundError } from "../index.js";
 
+import type { DOMElement } from "./dom.js";
+
 /** What a resolution needs: the matches, what else was there, and how to name it. */
 export interface Resolution {
-	matched: Element[];
+	matched: DOMElement[];
 	available: string[];
 	subject: string;
 	at?: HTML.Position | undefined;
@@ -25,12 +27,12 @@ export interface Resolution {
 
 /** One resolved match, kept as the element so a caller can keep looking inside it. */
 export interface Match {
-	element: Element;
+	element: DOMElement;
 	position: number;
 }
 
 /** Reads an element as the data a report names it by. */
-export type Build = (element: Element, position: number) => HTML.Element;
+export type Build = (element: DOMElement, position: number) => HTML.Element;
 
 /**
  * Resolves a match set to the single element a caller asked for.
@@ -47,7 +49,7 @@ export function pick(resolution: Resolution, build: Build): Result<Match, HTMLQu
 	}
 
 	if (at === undefined) {
-		if (matched.length === 1) return success({ element: matched[0] as Element, position: 1 });
+		if (matched.length === 1) return success({ element: matched[0] as DOMElement, position: 1 });
 
 		let candidates = matched.map((element, index) => build(element, index + 1));
 		let message = describeAmbiguity(subject, candidates);
@@ -60,7 +62,7 @@ export function pick(resolution: Resolution, build: Build): Result<Match, HTMLQu
 		return failure(new HTMLNotFoundError(message, available));
 	}
 
-	return success({ element: matched[index] as Element, position: index + 1 });
+	return success({ element: matched[index] as DOMElement, position: index + 1 });
 }
 
 /** Keeps the first spelling of each entry, so a report lists what a page carries once. */

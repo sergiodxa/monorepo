@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DOMElement, DOMStyle } from "./dom.js";
+
 /** Elements a browser keeps out of the render tree, whatever the styles say. */
 const NON_RENDERED_TAGS = new Set([
 	"base",
@@ -29,12 +31,12 @@ export function isNonRendered(tag: string): boolean {
  * Reports whether the markup hides an element, itself or through an ancestor. An
  * `<input type="hidden">` counts, since it renders nothing regardless of styles.
  */
-export function isHidden(element: Element): boolean {
+export function isHidden(element: DOMElement): boolean {
 	if (element.localName.toLowerCase() === "input") {
 		if (element.getAttribute("type")?.toLowerCase() === "hidden") return true;
 	}
 
-	for (let node: Element | null = element; node; node = node.parentElement) {
+	for (let node: DOMElement | null = element; node; node = node.parentElement) {
 		if (node.hasAttribute("hidden")) return true;
 		if (node.getAttribute("aria-hidden") === "true") return true;
 		if (isNonRendered(node.localName.toLowerCase())) return true;
@@ -49,18 +51,18 @@ export function isHidden(element: Element): boolean {
  * only style source the package has and what accessible-name computation consults
  * when it decides a subtree is hidden.
  */
-export function inlineStyle(element: Element): CSSStyleDeclaration {
+export function inlineStyle(element: DOMElement): DOMStyle {
 	let declarations = parseStyle(element.getAttribute("style"));
 
 	return {
 		getPropertyValue(property: string) {
 			return declarations.get(property) ?? "";
 		},
-	} as CSSStyleDeclaration;
+	};
 }
 
 /** Applies the two inline declarations that take an element out of the render tree. */
-function hiddenByStyle(element: Element): boolean {
+function hiddenByStyle(element: DOMElement): boolean {
 	let declarations = parseStyle(element.getAttribute("style"));
 	if (declarations.get("display") === "none") return true;
 	let visibility = declarations.get("visibility");

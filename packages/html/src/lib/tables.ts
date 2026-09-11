@@ -6,6 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DOMElement } from "./dom.js";
+
 /** Tags that carry a row's cells. */
 const CELL_TAGS = new Set(["td", "th"]);
 
@@ -16,7 +18,7 @@ const CELL_TAGS = new Set(["td", "th"]);
  * @param table - The table to read
  * @param includeHeader - Whether header rows count toward the row numbers
  */
-export function tableRows(table: Element, includeHeader: boolean): Element[] {
+export function tableRows(table: DOMElement, includeHeader: boolean): DOMElement[] {
 	let rows = Array.from(table.querySelectorAll("tr")).filter(
 		(row) => row.closest("table") === table,
 	);
@@ -25,7 +27,7 @@ export function tableRows(table: Element, includeHeader: boolean): Element[] {
 }
 
 /** Lists the cells a row carries, header cells included, in document order. */
-export function rowCells(row: Element): Element[] {
+export function rowCells(row: DOMElement): DOMElement[] {
 	return Array.from(row.children).filter((cell) => CELL_TAGS.has(cell.localName.toLowerCase()));
 }
 
@@ -33,7 +35,7 @@ export function rowCells(row: Element): Element[] {
  * Recognizes a row that labels the table: it sits in the head, or it carries header
  * cells alone.
  */
-function isHeaderRow(row: Element): boolean {
+function isHeaderRow(row: DOMElement): boolean {
 	if (row.closest("thead")) return true;
 	let cells = rowCells(row);
 	if (cells.length === 0) return false;

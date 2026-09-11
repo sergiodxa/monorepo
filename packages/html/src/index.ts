@@ -11,6 +11,8 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
+import type { DOMElement, DOMParent } from "./lib/dom.js";
+
 import { definitionFor } from "./lib/definitions.js";
 import { attributesOf, isDisabled, valueOf } from "./lib/element.js";
 import { accessibleName } from "./lib/name.js";
@@ -146,10 +148,10 @@ export namespace HTML {
  * the document, so parse once and hold the instance.
  */
 export class HTML {
-	#root: ParentNode;
+	#root: DOMParent;
 
 	/** Holds a parsed document; `HTML.parse` is how a caller obtains one. */
-	private constructor(root: ParentNode) {
+	private constructor(root: DOMParent) {
 		this.#root = root;
 	}
 
@@ -213,7 +215,7 @@ export class HTML {
 
 	/** The text a reader would see, drawn from the elements markup keeps visible. */
 	get text(): string {
-		return visibleText(this.#root as unknown as Node);
+		return visibleText(this.#root);
 	}
 
 	/**
@@ -323,13 +325,13 @@ class Found implements HTML.Element {
 	readonly disabled: boolean;
 	readonly position: number;
 
-	#element: Element;
+	#element: DOMElement;
 
 	/**
 	 * @param element - The matched element
 	 * @param position - Its 1-based position among the matches the lookup considered
 	 */
-	constructor(element: Element, position: number) {
+	constructor(element: DOMElement, position: number) {
 		this.#element = element;
 		this.tag = element.localName.toLowerCase();
 		this.role = roleOf(element);
@@ -368,12 +370,12 @@ class Found implements HTML.Element {
 }
 
 /** Reads a matched element, which is what every lookup answers with. */
-function found(element: Element, position: number): HTML.Element {
+function found(element: DOMElement, position: number): HTML.Element {
 	return new Found(element, position);
 }
 
 /** Addresses one element inside a root by role and accessible name. */
-function queryIn(root: ParentNode, selector: HTML.Selector): Result<HTML.Element, HTMLQueryError> {
+function queryIn(root: DOMParent, selector: HTML.Selector): Result<HTML.Element, HTMLQueryError> {
 	let { family, matched } = candidatesIn(root, selector);
 
 	let match = pick(
@@ -391,13 +393,13 @@ function queryIn(root: ParentNode, selector: HTML.Selector): Result<HTML.Element
 }
 
 /** Lists every element inside a root the selector matches, in document order. */
-function queryAllIn(root: ParentNode, selector: HTML.Selector): HTML.Element[] {
+function queryAllIn(root: DOMParent, selector: HTML.Selector): HTML.Element[] {
 	return candidatesIn(root, selector).matched.map((element, index) => found(element, index + 1));
 }
 
 /** Addresses a control inside a root by its `name` attribute. */
 function fieldIn(
-	root: ParentNode,
+	root: DOMParent,
 	name: string,
 	options: HTML.FieldOptions,
 ): Result<HTML.Element, HTMLQueryError> {
@@ -425,7 +427,7 @@ function fieldIn(
 
 /** Reads a cell of a table inside a root, by row and column. */
 function cellIn(
-	root: ParentNode,
+	root: DOMParent,
 	selector: HTML.CellSelector,
 ): Result<HTML.Element, HTMLQueryError> {
 	let tables = elementsIn(root, selector).filter((element) => roleOf(element) === "table");
@@ -459,7 +461,7 @@ function cellIn(
 
 /** Reads the definition paired with a term inside a root. */
 function definitionIn(
-	root: ParentNode,
+	root: DOMParent,
 	term: string,
 	options: HTML.Options,
 ): Result<HTML.Element, HTMLQueryError> {
@@ -490,9 +492,9 @@ function definitionIn(
  * name, since the wider set is what a miss reports as present.
  */
 function candidatesIn(
-	root: ParentNode,
+	root: DOMParent,
 	selector: HTML.Selector,
-): { family: Element[]; matched: Element[] } {
+): { family: DOMElement[]; matched: DOMElement[] } {
 	let elements = elementsIn(root, selector);
 
 	let family =
@@ -520,7 +522,7 @@ function candidatesIn(
  * Lists the elements a lookup may reach inside a root: the descendants a browser
  * renders, and what markup hides only when the caller asks for it.
  */
-function elementsIn(root: ParentNode, options: HTML.Options): Element[] {
+function elementsIn(root: DOMParent, options: HTML.Options): DOMElement[] {
 	let includeHidden = options.includeHidden === true;
 
 	return Array.from(root.querySelectorAll("*")).filter((element) => {

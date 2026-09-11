@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DOMElement } from "./dom.js";
+
 /** Roles that depend only on the tag name. */
 const TAG_ROLES = new Map<string, string>([
 	["address", "group"],
@@ -91,7 +93,7 @@ const LIST_TAGS = new Set(["menu", "ol", "ul"]);
  * Resolves the role a query matches against, absent when the element carries none
  * — an `<input type="hidden">`, a password field, a `<div>` used as a wrapper.
  */
-export function roleOf(element: Element): string | undefined {
+export function roleOf(element: DOMElement): string | undefined {
 	let explicit = element.getAttribute("role")?.trim().split(/\s+/u).at(0);
 	if (explicit) return explicit;
 
@@ -130,7 +132,7 @@ export function roleOf(element: Element): string | undefined {
 }
 
 /** Reads the dropdown form of a `<select>`, which is the one exposed as a combobox. */
-function isDropdown(element: Element): boolean {
+function isDropdown(element: DOMElement): boolean {
 	if (element.hasAttribute("multiple")) return false;
 	let size = Number(element.getAttribute("size") ?? "1");
 	return !Number.isFinite(size) || size <= 1;
@@ -140,7 +142,7 @@ function isDropdown(element: Element): boolean {
  * Chooses between the two header roles: an explicit `scope` decides, and otherwise a
  * row made only of header cells labels columns while a lone header cell labels its row.
  */
-function headerRoleOf(element: Element): string | undefined {
+function headerRoleOf(element: DOMElement): string | undefined {
 	if (!element.closest("table")) return undefined;
 
 	let scope = element.getAttribute("scope")?.toLowerCase();
@@ -153,7 +155,7 @@ function headerRoleOf(element: Element): string | undefined {
 }
 
 /** Reports whether a `<header>` or `<footer>` belongs to the page as a whole. */
-function isBodyScoped(element: Element): boolean {
+function isBodyScoped(element: DOMElement): boolean {
 	for (let node = element.parentElement; node; node = node.parentElement) {
 		if (SECTIONING_TAGS.has(node.localName.toLowerCase())) return false;
 	}
@@ -162,7 +164,7 @@ function isBodyScoped(element: Element): boolean {
 }
 
 /** Reads the attributes that give a `<section>` an accessible name, and so a region role. */
-function isNamed(element: Element): boolean {
+function isNamed(element: DOMElement): boolean {
 	if (element.getAttribute("aria-label")?.trim()) return true;
 	if (element.getAttribute("aria-labelledby")?.trim()) return true;
 	return Boolean(element.getAttribute("title")?.trim());

@@ -6,12 +6,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DOMElement } from "./dom.js";
+
 /**
  * Finds the definition a term is paired with, absent when the term carries none.
  *
  * @param term - The element exposed as a term
  */
-export function definitionFor(term: Element): Element | undefined {
+export function definitionFor(term: DOMElement): DOMElement | undefined {
 	for (let node = term.nextElementSibling; node; node = node.nextElementSibling) {
 		let tag = node.localName.toLowerCase();
 		if (tag === "dd") return node;

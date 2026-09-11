@@ -9,12 +9,14 @@
 import { parseHTML } from "linkedom";
 import { describe, expect, test } from "vitest";
 
+import type { DOMElement } from "./dom.js";
+
 import { roleOf } from "./roles.js";
 
 /** Parses a fragment and returns the element the `#subject` id marks. */
-function subject(markup: string): Element {
+function subject(markup: string): DOMElement {
 	let { document } = parseHTML(`<!doctype html><html><body>${markup}</body></html>`);
-	return document.querySelector("#subject") as unknown as Element;
+	return document.querySelector("#subject") as unknown as DOMElement;
 }
 
 describe("roleOf", () => {

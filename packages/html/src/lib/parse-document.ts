@@ -14,6 +14,8 @@ import { parseHTML } from "linkedom";
 
 import { HTMLParseError } from "../index.js";
 
+import type { DOMDocument } from "./dom.js";
+
 import { visibleText } from "./text.js";
 
 /** Elements a document always carries, whose presence alone says nothing was parsed. */
@@ -25,8 +27,8 @@ const SKELETON_TAGS = new Set(["body", "head", "html"]);
  * @param source - The markup to read, a full page or a fragment of one
  * @returns The document, or the failure a source carrying no markup produces
  */
-export function parseDocument(source: string): Result<Document, HTMLParseError> {
-	let document = parseHTML(wrap(source)).document as unknown as Document;
+export function parseDocument(source: string): Result<DOMDocument, HTMLParseError> {
+	let document = parseHTML(wrap(source)).document as unknown as DOMDocument;
 
 	let elements = Array.from(document.querySelectorAll("*")).filter((element) => {
 		return !SKELETON_TAGS.has(element.localName.toLowerCase());

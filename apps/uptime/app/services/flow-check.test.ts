@@ -65,6 +65,50 @@ function signUpFlow(): string {
 	].join("\n");
 }
 
+/** A server-rendered status page, the shape an `html` flow reads. */
+const PAGE = [
+	"<!doctype html>",
+	"<html><head><title>Status</title>",
+	'<meta name="og:title" content="Status">',
+	'<link rel="canonical" href="https://cdn.example.test/status">',
+	"</head>",
+	"<body><h1>All systems operational</h1>",
+	'<a href="/incidents">Past incidents</a>',
+	'<button type="button">Refresh</button>',
+	"</body></html>",
+].join("");
+
+/** Serves {@link PAGE}, or whatever markup a case wants in its place. */
+function servePage(markup: string = PAGE): void {
+	server.use(
+		http.get(
+			`${ORIGIN}/status`,
+			() => new HttpResponse(markup, { headers: { "content-type": "text/html" } }),
+		),
+	);
+}
+
+/** A flow that fetches the status page and reads it the way a person would. */
+function readsPageFlow(): string {
+	return [
+		"use http",
+		"use html",
+		'test "the status page still says what it should" {',
+		"	when {",
+		`		let page = http.get "${ORIGIN}/status"`,
+		"	}",
+		"	then {",
+		"		expect page.status 200",
+		'		expect html.title page.text "Status"',
+		'		expect html.heading page.text "All systems operational" level 1',
+		'		expect html.link page.text "Past incidents" exists',
+		'		expect html.button page.text "Refresh" exists',
+		'		expect html.text page.text containing "operational"',
+		"	}",
+		"}",
+	].join("\n");
+}
+
 /** Answers every sign-up and keeps the address each one carried. */
 function captureSignUps(): string[] {
 	let seen: string[] = [];
@@ -319,6 +363,131 @@ describe("generated data", () => {
 		await runFlowCheck({ source: signUpFlow(), verifiedDomains: [DOMAIN], seed: "fixed" });
 
 		expect(seen[0]).toBe(seen[1]);
+	});
+});
+
+describe("reading a page", () => {
+	test("a flow fetches a page and asserts on what it renders", async () => {
+		servePage();
+
+		let result = await runFlowCheck({ source: readsPageFlow(), verifiedDomains: [DOMAIN] });
+
+		expect(result.failureDetail).toBeNull();
+		expect(result.status).toBe("up");
+	});
+
+	test("reading a page costs nothing against the request cap", async () => {
+		servePage();
+
+		let result = await runFlowCheck({ source: readsPageFlow(), verifiedDomains: [DOMAIN] });
+
+		expect(result.requestsMade).toBe(1);
+	});
+
+	test("a page that lost the heading is down, and the detail names what it held instead", async () => {
+		servePage(PAGE.replace("All systems operational", "Everything is on fire"));
+
+		let result = await runFlowCheck({ source: readsPageFlow(), verifiedDomains: [DOMAIN] });
+
+		expect(result.status).toBe("down");
+		expect(result.failureDetail).toContain("Everything is on fire");
+	});
+
+	test("markup a flow writes out itself reaches nothing, so its links name no host", () => {
+		expect(
+			specHosts(
+				[
+					"use html",
+					'test "reads a page it wrote" {',
+					"\tthen {",
+					`\t\texpect html.rel "${PAGE}" "canonical" exists`,
+					"\t}",
+					"}",
+				].join("\n"),
+			),
+		).toEqual([]);
+	});
+});
+
+describe("composing a value", () => {
+	test("a flow composes this run's nonce into an address no earlier run used", async () => {
+		let seen = captureSignUps();
+
+		let source = [
+			"use http",
+			"use str",
+			"use spec",
+			'test "a visitor signs up with an address unique to this check" {',
+			"\tgiven {",
+			"\t\tlet nonce = spec.nonce",
+			'\t\tlet email = str.format "signup-${0}@example.com" nonce',
+			"\t}",
+			"\twhen {",
+			`\t\tlet created = http.post "${ORIGIN}/signup" { email: email }`,
+			"\t}",
+			"\tthen {",
+			"\t\texpect created.status 201",
+			"\t}",
+			"}",
+		].join("\n");
+
+		await runFlowCheck({ source, verifiedDomains: [DOMAIN] });
+		await runFlowCheck({ source, verifiedDomains: [DOMAIN] });
+
+		expect(seen[0]).toMatch(/^signup-.+@example\.com$/);
+		expect(seen[0]).not.toBe(seen[1]);
+	});
+
+	test("composing costs nothing against the request cap", async () => {
+		captureSignUps();
+
+		let result = await runFlowCheck({
+			source: [
+				"use http",
+				"use str",
+				'test "formats before it posts" {',
+				"\tgiven {",
+				'\t\tlet email = str.format "who-${0}@example.com" "one"',
+				'\t\tlet again = str.format "who-${0}@example.com" "two"',
+				"\t}",
+				"\twhen {",
+				`\t\tlet created = http.post "${ORIGIN}/signup" { email: email, other: again }`,
+				"\t}",
+				"\tthen {",
+				"\t\texpect created.status 201",
+				"\t}",
+				"}",
+			].join("\n"),
+			verifiedDomains: [DOMAIN],
+		});
+
+		expect(result.requestsMade).toBe(1);
+	});
+
+	test("a URL composed from a response still faces the net gate, so composition reaches nowhere new", async () => {
+		server.use(
+			http.get(`${ORIGIN}/config`, () =>
+				HttpResponse.json({ base: "https://elsewhere.example.com" }),
+			),
+		);
+
+		let result = await runFlowCheck({
+			source: [
+				"use http",
+				"use str",
+				'test "follows a base the response chose" {',
+				"\twhen {",
+				`\t\tlet config = http.get "${ORIGIN}/config"`,
+				'\t\tlet target = str.format "${0}/admin" config.json.base',
+				"\t\tlet taken = http.get target",
+				"\t}",
+				"}",
+			].join("\n"),
+			verifiedDomains: [DOMAIN],
+		});
+
+		expect(result.status).toBe("error");
+		expect(result.failureDetail).toContain("elsewhere.example.com");
 	});
 });
 

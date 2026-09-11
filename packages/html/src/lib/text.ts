@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DOMElement, DOMNode } from "./dom.js";
+
 import { isHidden, isNonRendered } from "./visibility.js";
 
 /**
@@ -68,13 +70,13 @@ export function normalize(value: string): string {
  * hides and separating block boundaries with a space so each block's words stay their
  * own.
  */
-export function visibleText(node: Node | null | undefined): string {
+export function visibleText(node: DOMNode | null | undefined): string {
 	if (!node) return "";
 	return normalize(collect(node));
 }
 
 /** Walks a subtree in document order, accumulating the text its children carry. */
-function collect(node: Node): string {
+function collect(node: DOMNode): string {
 	let text = "";
 
 	for (let child of Array.from(node.childNodes)) {
@@ -85,7 +87,7 @@ function collect(node: Node): string {
 
 		if (child.nodeType !== ELEMENT_NODE) continue;
 
-		let element = child as Element;
+		let element = child as DOMElement;
 		let tag = element.localName.toLowerCase();
 		if (isNonRendered(tag) || isHidden(element)) continue;
 		if (tag === "br") {

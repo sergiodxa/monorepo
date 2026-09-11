@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DOMElement } from "./dom.js";
+
 import { visibleText } from "./text.js";
 
 /**
@@ -14,7 +16,7 @@ import { visibleText } from "./text.js";
  * input, the text of a textarea, and the value of the option a select marks as
  * selected, which is the first one when the markup marks none.
  */
-export function valueOf(element: Element): string | undefined {
+export function valueOf(element: DOMElement): string | undefined {
 	switch (element.localName.toLowerCase()) {
 		case "input":
 			return element.getAttribute("value") ?? "";
@@ -34,14 +36,14 @@ export function valueOf(element: Element): string | undefined {
  * Reports whether the markup disables a control, through its own attribute, an
  * `aria-disabled` claim, or the disabled `<fieldset>` it sits in.
  */
-export function isDisabled(element: Element): boolean {
+export function isDisabled(element: DOMElement): boolean {
 	if (element.hasAttribute("disabled")) return true;
 	if (element.getAttribute("aria-disabled") === "true") return true;
 	return Boolean(element.closest("fieldset[disabled]"));
 }
 
 /** Reads every attribute as the markup spelled it, so a caller asserts on raw values. */
-export function attributesOf(element: Element): Record<string, string> {
+export function attributesOf(element: DOMElement): Record<string, string> {
 	let attributes: Record<string, string> = {};
 	for (let attribute of Array.from(element.attributes)) {
 		attributes[attribute.name] = attribute.value;
@@ -50,7 +52,7 @@ export function attributesOf(element: Element): Record<string, string> {
 }
 
 /** Applies a select's submitted value, which falls back to an option's own text. */
-function selectedValue(element: Element): string | undefined {
+function selectedValue(element: DOMElement): string | undefined {
 	let options = Array.from(element.querySelectorAll("option"));
 	let selected = options.find((option) => option.hasAttribute("selected")) ?? options.at(0);
 	if (!selected) return undefined;
