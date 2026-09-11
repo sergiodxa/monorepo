@@ -684,6 +684,7 @@
       "name": "@sdxc/sitemap",
       "version": "0.0.0",
       "dependencies": {
+        "@sdxc/result": "workspace:*",
         "@sdxc/xml": "workspace:*",
       },
     },

@@ -1,14 +1,19 @@
 # @sdxc/sitemap
 
-XML sitemap generator for SEO optimization.
+XML sitemap reader and writer, following the [sitemaps.org protocol](https://www.sitemaps.org/protocol.html).
 
 ## Overview
 
-This package provides a simple class for building XML sitemaps following the [sitemaps.org protocol](https://www.sitemaps.org/protocol.html). Use it to generate sitemaps for search engine crawlers.
+The `Sitemap` class goes in both directions. Collect URLs and serialize them as the XML a
+search engine crawler expects, or read a published sitemap — the one request that gives you
+the list of pages a site says it has, with the dates that say which are worth revisiting.
 
-The `Sitemap` class collects URLs and outputs valid XML that can be served as a response or written to a file.
+Reading answers with the same class writing produces, so one type covers both directions and
+the element names and value rules have one implementation.
 
 ## Usage
+
+Build a document:
 
 ```typescript
 import { Sitemap } from "@sdxc/sitemap";
@@ -23,11 +28,33 @@ let xml = sitemap.toString();
 // Returns valid XML sitemap
 ```
 
+Read a published one:
+
+```typescript
+import { isFailure } from "@sdxc/result";
+import { Sitemap } from "@sdxc/sitemap";
+
+let result = await Sitemap.fetch("https://example.com/sitemap.xml");
+if (isFailure(result)) throw result.error;
+
+let sitemap = result.data;
+
+sitemap.kind; // "urlset"
+sitemap.size; // 128
+
+for (let entry of sitemap.entries) {
+	entry.loc; // URL
+	entry.updatedAt; // Date | undefined
+	entry.frequency; // Sitemap.Frequency | undefined
+	entry.priority; // number | undefined
+}
+```
+
 ## API
 
 ### `Sitemap`
 
-A class for building XML sitemaps.
+A class for building XML sitemaps and for reading published ones.
 
 #### `new Sitemap()`
 
@@ -68,6 +95,107 @@ sitemap.append(new URL("https://example.com/important"), {
 `updatedAt` is serialized as `<lastmod>` and `frequency` as `<changefreq>`, the element
 names the sitemap protocol expects.
 
+#### `Sitemap.parse(xml: XML): Result<Sitemap, SitemapParseError>`
+
+Read a parsed document as a sitemap. Takes an [`XML`](/packages/xml) instance rather than
+source text, so a caller that starts from a string parses it first and reads an
+`XMLParseError` from the layer that produced it.
+
+The root element decides what arrived: `<urlset>` and `<sitemapindex>` are sitemaps, and
+every other root is the failure. That is also the content check — a host that answers an
+unknown path with its own not-found template fails here, with a message naming the root.
+
+**Example:**
+
+```typescript
+import { isFailure } from "@sdxc/result";
+import { Sitemap } from "@sdxc/sitemap";
+import { XML } from "@sdxc/xml";
+
+let xml = XML.parse(source);
+if (isFailure(xml)) throw xml.error;
+
+let sitemap = Sitemap.parse(xml.data);
+```
+
+Rows survive what individual fields do not:
+
+- An entry without a `<loc>` that parses as an absolute URL is skipped, and the rest of the
+  document is kept — one malformed row costs a caller that row.
+- An unreadable `<lastmod>` leaves `updatedAt` undefined and keeps the entry. `<lastmod>` is
+  [W3C Datetime](https://www.w3.org/TR/NOTE-datetime), so `2026-09-11` and
+  `2026-09-11T14:32:00+02:00` both read.
+- A `<changefreq>` outside the protocol's enum and a `<priority>` outside 0.0–1.0 are
+  ignored, so what a consumer reads is what `append` accepts.
+- `image:`, `video:`, `news:` and `xhtml:link` children are dropped. A consumer that wants
+  image or hreflang metadata parses the document with [`@sdxc/xml`](/packages/xml) and reads
+  those elements itself.
+
+#### `Sitemap.fetch(input, init?): Promise<Result<Sitemap, SitemapFetchError | SitemapParseError | XMLParseError>>`
+
+Retrieve one sitemap and parse it. Takes what `fetch` takes — a URL, a string, or a
+`Request`, plus request options — and reports a refused request or an error status as a
+`SitemapFetchError` naming what came back.
+
+The body is read whenever the response is `ok`, and `Content-Type` plays no part: sitemaps
+arrive as `application/xml`, as `text/xml` and as `text/plain`, and the root element is the
+check that answers whether one arrived.
+
+**Example:**
+
+```typescript
+let result = await Sitemap.fetch("https://example.com/sitemap.xml", {
+	headers: { "User-Agent": "example-crawler" },
+});
+```
+
+One call retrieves one document. Walking an index means looping over its entries, so how
+many children to fetch and how fast stays the caller's budget:
+
+```typescript
+import { isFailure } from "@sdxc/result";
+import { Sitemap } from "@sdxc/sitemap";
+
+let index = await Sitemap.fetch("https://example.com/sitemap.xml");
+if (isFailure(index)) throw index.error;
+
+let pages: URL[] = [];
+
+for (let entry of index.data.entries) {
+	let child = await Sitemap.fetch(entry.loc);
+	if (isFailure(child)) continue;
+	for (let page of child.data.entries) pages.push(page.loc);
+}
+```
+
+A `.xml.gz` sitemap served as `application/gzip` carries a gzip member in the body. Pipe the
+response through a `DecompressionStream("gzip")` and hand the text to `Sitemap.parse`.
+
+#### `sitemap.kind: Sitemap.Kind`
+
+Which document this instance carries: `"urlset"` for one listing pages, `"index"` for one
+listing other sitemaps. A sitemap built by appending is always a `"urlset"`; a parsed one
+carries whichever root it was read from, and `toString()` writes that root back, so an index
+that is read, filtered and re-serialized stays a `<sitemapindex>`.
+
+**Example:**
+
+```typescript
+if (sitemap.kind === "index") {
+	// every entry.loc is another sitemap to fetch
+}
+```
+
+#### `sitemap.entries: Set<Sitemap.Entry>`
+
+The entries themselves, as the live set, whether they were appended or parsed.
+
+**Example:**
+
+```typescript
+let recent = [...sitemap.entries].filter((entry) => entry.updatedAt);
+```
+
 #### `sitemap.size: number`
 
 Get the number of URLs in the sitemap.
@@ -104,6 +232,18 @@ new Sitemap().toString();
 // <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"/>
 ```
 
+### Errors
+
+#### `SitemapParseError`
+
+A document is not a sitemap. The message names the root element that arrived, so an HTML
+error page served under a `200` reports itself as `received <html>`.
+
+#### `SitemapFetchError`
+
+A sitemap could not be retrieved: the request was refused, or the response carried an error
+status. The message names what came back.
+
 ### Types
 
 Types are exported via the `Sitemap` namespace:
@@ -113,6 +253,7 @@ import { Sitemap } from "@sdxc/sitemap";
 
 // Access types via namespace
 type Frequency = Sitemap.Frequency;
+type Kind = Sitemap.Kind;
 type Entry = Sitemap.Entry;
 type AppendOptions = Sitemap.AppendOptions;
 ```
@@ -121,6 +262,12 @@ type AppendOptions = Sitemap.AppendOptions;
 
 ```typescript
 type Frequency = "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
+```
+
+#### `Sitemap.Kind`
+
+```typescript
+type Kind = "urlset" | "index";
 ```
 
 #### `Sitemap.Entry`
@@ -304,9 +451,31 @@ function generateLocalizedSitemap(locale: string, baseUrl: string) {
 }
 ```
 
+## Pattern: Auditing a Published Sitemap
+
+A sitemap is one request for the list of pages a site claims to publish, which makes it the
+starting point for a crawl that checks those pages actually answer:
+
+```typescript
+import { isFailure } from "@sdxc/result";
+import { Sitemap } from "@sdxc/sitemap";
+
+let result = await Sitemap.fetch("https://example.com/sitemap.xml");
+if (isFailure(result)) throw result.error;
+
+let stale = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+
+for (let entry of result.data.entries) {
+	if (entry.updatedAt && entry.updatedAt > stale) continue;
+	let response = await fetch(entry.loc, { method: "HEAD" });
+	if (!response.ok) console.warn(`${entry.loc} answered ${response.status}`);
+}
+```
+
 ## Related Packages
 
 - [`@sdxc/rss`](/packages/rss) - RSS feed generation
+- [`@sdxc/xml`](/packages/xml) - the XML tree `Sitemap.parse` reads and `toString` writes
 - [`@sdxc/cache`](/packages/cache) - cache for sitemap caching
 
 ## Tips
@@ -316,3 +485,4 @@ function generateLocalizedSitemap(locale: string, baseUrl: string) {
 3. **Cache in production** - serve the serialized XML from a cache and rebuild it on a miss
 4. **Limit to 50,000 URLs** - Per sitemap spec, use sitemap index for larger sites
 5. **Include in robots.txt** - Reference your sitemap in robots.txt for discovery
+6. **Check `kind` before reading entries** - an `"index"` lists sitemaps and a `"urlset"` lists pages
