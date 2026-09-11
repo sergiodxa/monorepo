@@ -10,6 +10,7 @@
  */
 
 import type { Billing } from "@sdxc/billing";
+import type { Transport } from "@sdxc/mail";
 import type { Database } from "remix/data-table";
 
 import { MemoryBilling } from "@sdxc/billing/providers/memory";
@@ -18,8 +19,6 @@ import { MemoryTransport } from "@sdxc/mail/memory";
 import { KVSessionStorage } from "@sdxc/session-storage-kv";
 import { createCookie } from "remix/cookie";
 import { vi } from "vitest";
-
-import type { MailTransport } from "~/app/services/mail-transport";
 
 /** Requests a limiter allows per window when a test does not ask for a smaller budget. */
 const DEFAULT_RATE_LIMIT = 1000;
@@ -56,7 +55,7 @@ export interface TestAppOptions {
 	 * one, so a test reads what the app actually sent; pass a transport that fails to
 	 * exercise a send path's behaviour when delivery is refused.
 	 */
-	mailTransport?: MailTransport;
+	mailTransport?: Transport;
 }
 
 /** Secrets read from `env` at call time, given values no real provider would accept. */
@@ -202,7 +201,7 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
 	let { db } = createTestDatabase();
 
 	let recorder = new MemoryTransport();
-	let mailTransport: MailTransport = options.mailTransport ?? recorder;
+	let mailTransport: Transport = options.mailTransport ?? recorder;
 
 	let limiters = new RateLimiters({
 		token: createRateLimit({ limit: options.limits?.token ?? DEFAULT_RATE_LIMIT }),

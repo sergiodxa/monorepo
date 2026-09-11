@@ -9,6 +9,7 @@
  */
 
 import type { Billing } from "@sdxc/billing";
+import type { Transport } from "@sdxc/mail";
 import type { Database as DataTable } from "remix/data-table";
 import type { Middleware, RequestContext, Router } from "remix/router";
 import type { RemixNode } from "remix/ui";
@@ -27,7 +28,6 @@ import { createHtmlResponse } from "remix/response/html";
 import { createRouter } from "remix/router";
 import { renderToStream } from "remix/ui/server";
 
-import type { MailTransport } from "~/app/services/mail-transport";
 import type Limiters from "~/app/services/rate-limiters";
 
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
@@ -99,7 +99,7 @@ namespace application {
 		/** Limiters every protected endpoint spends from; defaults to this worker's own bindings. */
 		limiters?: Limiters;
 		/** How mail leaves the worker; defaults to this worker's own transport. */
-		mailTransport?: MailTransport;
+		mailTransport?: Transport;
 	}
 }
 

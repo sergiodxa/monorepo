@@ -7,16 +7,16 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Transport } from "@sdxc/mail";
+
 import { Mailer } from "@sdxc/mail";
 import { CloudflareTransport } from "@sdxc/mail/cloudflare";
 import { env } from "cloudflare:workers";
 
-import type { MailTransport } from "~/app/services/mail-transport";
-
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 
 /** The isolate's transport, opened by whichever send path reaches it first. */
-let transport: MailTransport | undefined;
+let transport: Transport | undefined;
 
 /**
  * Opens the transport every message is delivered through.
@@ -25,7 +25,7 @@ let transport: MailTransport | undefined;
  * @example
  * mail({ transport: createMailTransport, from: MAIL_FROM });
  */
-export function createMailTransport(): MailTransport {
+export function createMailTransport(): Transport {
 	return (transport ??= new CloudflareTransport(env.EMAIL));
 }
 
@@ -39,6 +39,6 @@ export function createMailTransport(): MailTransport {
  * @example
  * await createMailer().send({ to, subject, html });
  */
-export function createMailer(mailTransport: MailTransport = createMailTransport()): Mailer {
+export function createMailer(mailTransport: Transport = createMailTransport()): Mailer {
 	return new Mailer({ transport: mailTransport, from: MAIL_FROM, replyTo: MAIL_REPLY_TO });
 }
