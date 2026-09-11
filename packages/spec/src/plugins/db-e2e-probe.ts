@@ -22,7 +22,7 @@ import type { Result } from "@sdxc/result";
 import { isFailure } from "@sdxc/result";
 
 import type { SpecError } from "../errors.js";
-import type { Plugin, ToolContext } from "../plugin.js";
+import type { Plugin } from "../plugin.js";
 import type { ToolArg, Value, ValueObject } from "../values.js";
 
 import { createConnectionSet } from "../bases.js";

@@ -78,10 +78,10 @@ describe(createSpecPlugin.name, () => {
 
 	test("the three tools agree: the nonce joins the run id and the attempt", async () => {
 		let context = contextFor(secondAttempt());
-		let id = unwrap(await PLUGIN.call("run_id", [], context));
-		let attempt = unwrap(await PLUGIN.call("attempt", [], context));
-		let nonce = unwrap(await PLUGIN.call("nonce", [], context));
-		expect(nonce).toBe(`${String(id)}-${String(attempt)}`);
+		let run = secondAttempt();
+		expect(unwrap(await PLUGIN.call("run_id", [], context))).toBe(run.id);
+		expect(unwrap(await PLUGIN.call("attempt", [], context))).toBe(run.attempt);
+		expect(unwrap(await PLUGIN.call("nonce", [], context))).toBe(`${run.id}-${run.attempt}`);
 	});
 
 	test("two reads within one attempt return the same nonce", async () => {

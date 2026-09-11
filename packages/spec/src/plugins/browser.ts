@@ -985,7 +985,7 @@ async function sessionFetch(
  */
 function fetchScript(target: URL, init: RequestInit): string {
 	let headers: Record<string, string> = {
-		...((init.headers as Record<string, string> | undefined) ?? {}),
+		...(init.headers as Record<string, string> | undefined),
 		[FETCH_MARKER_HEADER]: "1",
 	};
 	let request: Record<string, unknown> = {

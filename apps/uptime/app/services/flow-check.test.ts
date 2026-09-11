@@ -354,22 +354,37 @@ describe("specHosts", () => {
 		).toEqual(["app.example.test:8443"]);
 	});
 
-	test("reaches a URL held in a fixture's returned object", () => {
+	test("reaches a URL held in a command's returned object", () => {
 		expect(
 			specHosts(
 				[
-					"fixture endpoints {",
+					"command endpoints {",
 					'\treturn { health: "https://fixtured.example.test/health" }',
 					"}",
-					'test "uses the fixture" {',
+					'test "uses the command" {',
 					"\twhen {",
-					"\t\tlet where = fixture endpoints",
+					"\t\tlet where = endpoints",
 					"\t\tlet response = http.get where.health",
 					"\t}",
 					"}",
 				].join("\n"),
 			),
 		).toEqual(["fixtured.example.test"]);
+	});
+
+	test("reaches a URL held in an array literal", () => {
+		expect(
+			specHosts(
+				[
+					'test "uses an array" {',
+					"\twhen {",
+					'\t\tlet targets = [ "https://listed.example.test/health" ]',
+					"\t\tlet response = http.get targets.0",
+					"\t}",
+					"}",
+				].join("\n"),
+			),
+		).toEqual(["listed.example.test"]);
 	});
 
 	test("a URL in a comment names nothing, because a comment is not a literal", () => {

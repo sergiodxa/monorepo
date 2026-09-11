@@ -174,7 +174,7 @@ function statusOf(failed: TestResult | undefined, exhausted: boolean): FlowStatu
 
 /**
  * Every host a spec's text names, collected from every string literal that parses as an
- * absolute HTTP URL — including one reached through a fixture or a `let`-bound field —
+ * absolute HTTP URL — including one reached through a command or a `let`-bound field —
  * since {@link resolveAllowedHosts} checks each one against a verified domain.
  *
  * @param source - The spec text.
@@ -365,7 +365,6 @@ function* fromStatement(statement: StatementNode): Generator<string> {
  * @yields Each string literal's decoded value.
  */
 function* fromRhs(rhs: RhsNode): Generator<string> {
-	if (rhs.kind === "fixture-call") return;
 	if (rhs.kind === "call-expr") {
 		for (let argument of rhs.args) yield* fromArgument(argument);
 		return;
@@ -395,6 +394,10 @@ function* fromExpression(expression: ExpressionNode): Generator<string> {
 	}
 	if (expression.kind === "object") {
 		for (let entry of expression.entries) yield* fromExpression(entry.value);
+		return;
+	}
+	if (expression.kind === "array") {
+		for (let item of expression.items) yield* fromExpression(item);
 	}
 }
 
