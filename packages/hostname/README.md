@@ -12,10 +12,9 @@ live in `apps/auth-saas` and `apps/blog-saas` into a single client.
 Every API response is validated with [`remix/data-schema`](https://remix.run)
 before it is returned, so a malformed or unexpected Cloudflare payload throws a
 typed `HostnameApiError` instead of silently producing `undefined` fields. The
-client is an instance class configured through its constructor, which keeps it
-constructor-injectable via [`@sdxc/service-container`](/packages/service-container)
-(ADR-008) and free of any `cloudflare:workers` `env` coupling — callers pass the
-zone id, API token, and platform domain in explicitly.
+client is an instance class configured through its constructor, which keeps it free
+of any `cloudflare:workers` `env` coupling — callers pass the zone id, API token,
+and platform domain in explicitly.
 
 Cloudflare cannot filter custom hostnames by `custom_metadata`, so the client
 tags each hostname with an entity id under a configurable metadata key
@@ -243,26 +242,35 @@ interface HostnameClientOptions {
 }
 ```
 
-## Pattern: Service-container registration (ADR-008)
+## Pattern: One client published on the context
 
-Register the client as a singleton constructed from `env`, then resolve it in jobs
-and controllers instead of constructing it ad hoc.
+Build the client once from `env` and publish it from middleware, so jobs and controllers
+read it off the context they already have instead of constructing one ad hoc.
 
 ```typescript
-import { HostnameClient } from "@sdxc/hostname";
-import { ServiceContainer } from "@sdxc/service-container";
-import { env } from "cloudflare:workers";
+import type { Middleware } from "remix/router";
 
-container.singleton(
-	HostnameClient,
-	() =>
-		new HostnameClient({
+import { HostnameClient } from "@sdxc/hostname";
+import { env } from "cloudflare:workers";
+import { createContextKey } from "remix/router";
+
+export const Hostnames = createContextKey<HostnameClient>();
+
+let client: HostnameClient | undefined;
+
+export function hostnames(): Middleware {
+	return (ctx, next) => {
+		client ??= new HostnameClient({
 			apiToken: env.CF_API_TOKEN,
 			zoneId: env.CF_ZONE_ID,
 			platformDomain: env.PLATFORM_DOMAIN,
 			metadataKey: "blog_id",
-		}),
-);
+		});
+
+		ctx.set(Hostnames, client, { property: "hostnames" });
+		return next();
+	};
+}
 ```
 
 ## Pattern: Wrapping in an app model
@@ -290,10 +298,6 @@ await db.create(Hostname.table, {
 	validation_txt_value: record?.value ?? null,
 });
 ```
-
-## Related Packages
-
-- [`@sdxc/service-container`](/packages/service-container) - DI container the client is registered with (ADR-008)
 
 ## Tips
 
