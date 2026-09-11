@@ -11,8 +11,6 @@ import type { RequestContext } from "remix/router";
 
 import { BillingWebhook } from "@sdxc/billing";
 import { isFailure } from "@sdxc/result";
-import { getServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 
 import { failureFields, polar } from "~/app/lib/billing";
 import Subscription from "~/app/models/subscription";
@@ -77,7 +75,7 @@ export default new BillingWebhook(
  * the endpoint, which asks for a redelivery when the platform said one would help.
  *
  * @param customerId - The customer the delivery was about, or null when it named none.
- * @param context - The request context, for the request's log.
+ * @param context - The request context, for the request's database and log.
  */
 async function syncCustomer(customerId: string | null, context: RequestContext): Promise<void> {
 	let log = context.log;
@@ -89,8 +87,7 @@ async function syncCustomer(customerId: string | null, context: RequestContext):
 
 	log.set({ billing: { customer_id: customerId } });
 
-	let db = getServiceContainer().get(Database);
-	let synced = await Subscription.syncFromBilling(db, { id: customerId });
+	let synced = await Subscription.syncFromBilling(context.db, { id: customerId });
 
 	if (isFailure(synced)) {
 		log.fail(synced.error, { billing: failureFields(synced.error) });

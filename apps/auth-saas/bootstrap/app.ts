@@ -1,8 +1,8 @@
 /**
  * Builds the platform dashboard's fetch-router: assembles the global middleware chain
- * (trailing-slash, logging, async context, rendering, form data, method override) and
- * maps every public, onboarding, dashboard, and tenant-scoped route to its controller
- * with the appropriate auth/subscription middleware.
+ * (trailing-slash, logging, async context, database, rendering, form data, method
+ * override) and maps every public, onboarding, dashboard, and tenant-scoped route to its
+ * controller with the appropriate auth/subscription middleware.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -40,12 +40,14 @@ import logout from "~/app/http/controllers/logout";
 import notFound from "~/app/http/controllers/not-found";
 import onboardingCallback from "~/app/http/controllers/onboarding/callback";
 import onboardingIndex from "~/app/http/controllers/onboarding/index";
+import { database } from "~/app/http/middleware/database";
 import render from "~/app/http/middleware/render";
 import requireTenantRole from "~/app/http/middleware/require-tenant-role";
 import session from "~/app/http/middleware/session";
 import subscription from "~/app/http/middleware/subscription";
 import tenantOwner from "~/app/http/middleware/tenant-owner";
 import trailingSlash from "~/app/http/middleware/trailing-slash";
+import { createDatabase } from "~/app/lib/database";
 import routes from "~/routes/web";
 
 import { logger } from "./logger";
@@ -64,6 +66,7 @@ let globalMiddleware: Middleware[] = [
 	trailingSlash,
 	log(logger) as Middleware,
 	asyncContext(),
+	database(createDatabase),
 	render as Middleware,
 	formData() as Middleware,
 	methodOverride(),
@@ -72,10 +75,10 @@ let globalMiddleware: Middleware[] = [
 /**
  * The platform dashboard router, configured with the global middleware chain and a
  * 404 default handler. Routes are registered onto it below; the worker entry calls
- * `router.fetch(request)` inside a container scope.
+ * `router.fetch(request)`.
  *
  * @example
- * return await container.scope(() => router.fetch(request));
+ * return await router.fetch(request);
  */
 export const router = createRouter({
 	middleware: globalMiddleware,

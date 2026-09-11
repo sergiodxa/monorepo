@@ -7,9 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import Tenant from "~/app/models/tenant";
@@ -26,50 +23,46 @@ import routes from "~/routes/web";
  * @example
  * router.map(routes.dashboard.index, { middleware: dashboard, handler: dashboardIndex });
  */
-export default createAction(
-	routes.dashboard.index,
-	inject([Database] as const, async (db) => {
-		let ctx = getContext();
-		let { platformSession, log } = ctx;
+export default createAction(routes.dashboard.index, async (ctx) => {
+	let { db, platformSession, log } = ctx;
 
-		let tenants = await Tenant.listAccessibleBySubject(
-			db,
-			platformSession.subjectId,
-			platformSession.email,
-		);
+	let tenants = await Tenant.listAccessibleBySubject(
+		db,
+		platformSession.subjectId,
+		platformSession.email,
+	);
 
-		log.set({ tenants: { count: tenants.length } });
+	log.set({ tenants: { count: tenants.length } });
 
-		if (tenants.length === 0) {
-			return new Response(null, {
-				status: 302,
-				headers: { Location: routes.dashboard.tenants.new.href() },
-			});
-		}
+	if (tenants.length === 0) {
+		return new Response(null, {
+			status: 302,
+			headers: { Location: routes.dashboard.tenants.new.href() },
+		});
+	}
 
-		return ctx.render(
-			<Document title="Dashboard">
-				<div mix={[s.header]}>
-					<h2 mix={[s.pageTitle]} style="margin:0">
-						Your Tenants
-					</h2>
-					<a mix={[s.button]} href={routes.dashboard.tenants.new.href()}>
-						New Tenant
-					</a>
-				</div>
+	return ctx.render(
+		<Document title="Dashboard">
+			<div mix={[s.header]}>
+				<h2 mix={[s.pageTitle]} style="margin:0">
+					Your Tenants
+				</h2>
+				<a mix={[s.button]} href={routes.dashboard.tenants.new.href()}>
+					New Tenant
+				</a>
+			</div>
 
-				<ul mix={[s.listSpaced]}>
-					{tenants.map((t) => (
-						<li mix={[s.listCard]} key={t.id}>
-							<a mix={[s.linkPlain]} href={routes.dashboard.tenants.show.href({ id: t.id })}>
-								<h3 mix={[s.cardTitle]}>{t.name}</h3>
-								<p mix={[s.mutedSmall]}>{t.slug}</p>
-								<StatusBadge status={t.status} />
-							</a>
-						</li>
-					))}
-				</ul>
-			</Document>,
-		);
-	}),
-);
+			<ul mix={[s.listSpaced]}>
+				{tenants.map((t) => (
+					<li mix={[s.listCard]} key={t.id}>
+						<a mix={[s.linkPlain]} href={routes.dashboard.tenants.show.href({ id: t.id })}>
+							<h3 mix={[s.cardTitle]}>{t.name}</h3>
+							<p mix={[s.mutedSmall]}>{t.slug}</p>
+							<StatusBadge status={t.status} />
+						</a>
+					</li>
+				))}
+			</ul>
+		</Document>,
+	);
+});

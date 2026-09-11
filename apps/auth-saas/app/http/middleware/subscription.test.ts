@@ -7,9 +7,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Database } from "remix/data-table";
+
 import { Log } from "@sdxc/logger";
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { describe, expect, test, vi } from "vitest";
 
 import subscriptionMiddleware from "./subscription";
@@ -18,8 +18,8 @@ import subscriptionMiddleware from "./subscription";
  * Builds a request context carrying only what the middleware reads. The log is never
  * run, so whatever the middleware records stays out of the test output.
  */
-function buildContext(tenant: { id: string; internal: boolean } | undefined) {
-	return { tenant, log: new Log({ kind: "request", sink() {} }) } as never;
+function buildContext(tenant: { id: string; internal: boolean } | undefined, db?: Database) {
+	return { tenant, db, log: new Log({ kind: "request", sink() {} }) } as never;
 }
 
 /** A `next` that records it ran and returns a sentinel 200 response. */
@@ -28,8 +28,8 @@ function passthroughNext() {
 }
 
 /**
- * Runs the middleware inside a container scope with `Database` bound to a fake
- * whose `findOne` returns the given subscription row (or null).
+ * Runs the middleware against a database whose `findOne` returns the given
+ * subscription row (or null).
  */
 async function runWithSubscription(
 	tenant: { id: string; internal: boolean },
@@ -41,23 +41,19 @@ async function runWithSubscription(
 		},
 	} as unknown as Database;
 
-	let container = new ServiceContainer();
-	container.instance(Database, fakeDb);
 	let next = passthroughNext();
 
-	let response = await container.scope(() =>
-		subscriptionMiddleware(buildContext(tenant), next as never),
-	);
+	let response = await subscriptionMiddleware(buildContext(tenant, fakeDb), next as never);
 	return { response, next };
 }
 
 describe("subscription middleware — exemptions", () => {
 	test("exempts the platform tenant without a database lookup", async () => {
-		let container = new ServiceContainer();
 		let next = passthroughNext();
 
-		let response = await container.scope(() =>
-			subscriptionMiddleware(buildContext({ id: "platform", internal: false }), next as never),
+		let response = await subscriptionMiddleware(
+			buildContext({ id: "platform", internal: false }),
+			next as never,
 		);
 
 		expect(next).toHaveBeenCalledTimes(1);
@@ -65,11 +61,11 @@ describe("subscription middleware — exemptions", () => {
 	});
 
 	test("exempts an internal tenant without a database lookup", async () => {
-		let container = new ServiceContainer();
 		let next = passthroughNext();
 
-		let response = await container.scope(() =>
-			subscriptionMiddleware(buildContext({ id: "tenant-1", internal: true }), next as never),
+		let response = await subscriptionMiddleware(
+			buildContext({ id: "tenant-1", internal: true }),
+			next as never,
 		);
 
 		expect(next).toHaveBeenCalledTimes(1);
@@ -79,12 +75,9 @@ describe("subscription middleware — exemptions", () => {
 
 describe("subscription middleware — guards", () => {
 	test("returns 500 when there is no tenant context", async () => {
-		let container = new ServiceContainer();
 		let next = passthroughNext();
 
-		let response = await container.scope(() =>
-			subscriptionMiddleware(buildContext(undefined), next as never),
-		);
+		let response = await subscriptionMiddleware(buildContext(undefined), next as never);
 
 		expect(next).not.toHaveBeenCalled();
 		expect(response.status).toBe(500);

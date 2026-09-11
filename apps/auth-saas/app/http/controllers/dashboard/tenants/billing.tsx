@@ -9,9 +9,6 @@
 
 import { Location } from "@sdxc/location";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import tenantOwner from "~/app/http/middleware/tenant-owner";
@@ -28,9 +25,8 @@ export default createController(routes.dashboard.tenants.billing, {
 	middleware: [tenantOwner],
 
 	actions: {
-		index: inject([Database] as const, async (db) => {
-			let ctx = getContext();
-			let { request, tenant, log } = ctx;
+		index: async (ctx) => {
+			let { db, request, tenant, log } = ctx;
 
 			let url = new URL(request.url);
 			let showSuccess = url.searchParams.get("success") === "true";
@@ -197,10 +193,10 @@ export default createController(routes.dashboard.tenants.billing, {
 					)}
 				</Document>,
 			);
-		}),
+		},
 
-		action: inject([Database] as const, async (db) => {
-			let { request, tenant, log } = getContext();
+		action: async (ctx) => {
+			let { db, request, tenant, log } = ctx;
 
 			let url = new URL(request.url);
 			let actionType = url.searchParams.get("action");
@@ -263,7 +259,7 @@ export default createController(routes.dashboard.tenants.billing, {
 					Location: routes.dashboard.tenants.billing.index.href({ tenantId: tenant.id }),
 				},
 			});
-		}),
+		},
 	},
 });
 

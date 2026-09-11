@@ -9,8 +9,6 @@
  */
 
 import { Location } from "@sdxc/location";
-import { getServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 
 import middleware from "~/app/lib/middleware";
 import Subscription from "~/app/models/subscription";
@@ -73,8 +71,7 @@ export default middleware(async (context, next) => {
 		return next();
 	}
 
-	let db = getServiceContainer().get(Database);
-	let subscription = await Subscription.findByTenant(db, context.tenant.id);
+	let subscription = await Subscription.findByTenant(context.db, context.tenant.id);
 
 	if (!subscription) {
 		context.log.set({ subscription: { status: "none" } }).note("subscription.missing");

@@ -9,11 +9,8 @@
 
 import { Location } from "@sdxc/location";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import * as ds from "remix/data-schema";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import type { HostMetadata } from "~/app/lib/host-metadata";
@@ -33,9 +30,8 @@ export default createController(routes.dashboard.tenants.hostname, {
 	middleware: [tenantOwner],
 
 	actions: {
-		index: inject([Database] as const, async (db) => {
-			let ctx = getContext();
-			let { tenant, log } = ctx;
+		index: async (ctx) => {
+			let { db, tenant, log } = ctx;
 
 			let hostnames = await Hostname.listByTenant(db, tenant.id);
 
@@ -171,15 +167,15 @@ export default createController(routes.dashboard.tenants.hostname, {
 					</section>
 				</Document>,
 			);
-		}),
+		},
 
 		/**
 		 * Deleting or activating a hostname can change which one is canonical, so
 		 * the tenant issuer is re-pointed to keep discovery, tokens, and WebAuthn
 		 * RP resolving against a hostname that is still valid.
 		 */
-		action: inject([Database] as const, async (db) => {
-			let { request, formData, tenant, tenantApi, log } = getContext();
+		action: async (ctx) => {
+			let { db, request, formData, tenant, tenantApi, log } = ctx;
 
 			let url = new URL(request.url);
 			let actionType = url.searchParams.get("action");
@@ -258,6 +254,6 @@ export default createController(routes.dashboard.tenants.hostname, {
 					Location: routes.dashboard.tenants.hostname.index.href({ tenantId: tenant.id }),
 				},
 			});
-		}),
+		},
 	},
 });

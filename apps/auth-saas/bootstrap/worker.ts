@@ -15,7 +15,6 @@ import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
 
 import { reportMAU } from "~/app/jobs/report-mau";
-import { container } from "~/app/lib/container";
 import { HostMetadataSchema } from "~/app/lib/host-metadata";
 import { HOSTNAME_CACHE_TTL, hostnameCacheKey } from "~/app/lib/hostname-cache";
 import { ensurePlatformProvisioned, PLATFORM_TENANT } from "~/app/lib/platform-bootstrap";
@@ -147,7 +146,7 @@ export default {
 				await ensurePlatformProvisioned(undefined, env.PLATFORM_DOMAIN);
 				return await forwardToTenant(request, { tenantId: PLATFORM_TENANT });
 			}
-			return await container.scope(() => router.fetch(request));
+			return await router.fetch(request);
 		}
 
 		let hostMetadata = request.cf?.hostMetadata;
@@ -168,9 +167,9 @@ export default {
 	},
 
 	/**
-	 * Cron entry point: opens the trigger's log and runs the matched job inside a
-	 * container scope, so the job reads the log through `currentLog()` and a throw ends
-	 * the record as a failure. The daily MAU report runs at 1:00 AM UTC.
+	 * Cron entry point: opens the trigger's log and runs the matched job inside it, so the
+	 * job reads the log through `currentLog()` and a throw ends the record as a failure.
+	 * The daily MAU report runs at 1:00 AM UTC.
 	 *
 	 * @param controller - The Cloudflare scheduled controller carrying the cron pattern.
 	 * @returns A promise that resolves once the matched job(s) complete.
@@ -180,10 +179,8 @@ export default {
 			.open("cron", {
 				cron: { expression: controller.cron, scheduled_at: controller.scheduledTime },
 			})
-			.run(() =>
-				container.scope(async () => {
-					if (controller.cron === "0 1 * * *") await reportMAU();
-				}),
-			);
+			.run(async () => {
+				if (controller.cron === "0 1 * * *") await reportMAU();
+			});
 	},
 } satisfies ExportedHandler<Cloudflare.Env>;

@@ -11,11 +11,9 @@
 import type { JSONValue } from "@sdxc/types";
 
 import { isFailure, wrap } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
 import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
-import { Database } from "remix/data-table";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
@@ -52,135 +50,132 @@ const DASHBOARD_CLIENT_ID = "dashboard";
  * signature, issuer, audience, and nonce against the keys the platform provider
  * publishes, so only a valid, unreplayed token can establish a platform session.
  */
-export default createAction(
-	routes.onboarding.callback,
-	inject([Database] as const, async (db) => {
-		let { request, log } = getContext();
-		let url = new URL(request.url);
+export default createAction(routes.onboarding.callback, async (ctx) => {
+	let { db, request, log } = ctx;
+	let url = new URL(request.url);
 
-		let params = Object.fromEntries(url.searchParams);
-		let result = await validate(params, CallbackSchema);
-		if (isFailure(result)) {
-			log.warn("onboarding.invalid_params", { issues: result.error.issues.length });
-			return renderError("Invalid callback parameters");
-		}
+	let params = Object.fromEntries(url.searchParams);
+	let result = await validate(params, CallbackSchema);
+	if (isFailure(result)) {
+		log.warn("onboarding.invalid_params", { issues: result.error.issues.length });
+		return renderError("Invalid callback parameters");
+	}
 
-		let { code, state } = result.data;
+	let { code, state } = result.data;
 
-		let cookieHeader = request.headers.get("Cookie") ?? "";
-		let stateMatch = cookieHeader.match(/__oauth_state=([^;]+)/);
-		if (!stateMatch || !stateMatch[1]) {
-			log.warn("onboarding.state_cookie_missing");
-			return renderError("Session expired. Please try again.");
-		}
+	let cookieHeader = request.headers.get("Cookie") ?? "";
+	let stateMatch = cookieHeader.match(/__oauth_state=([^;]+)/);
+	if (!stateMatch || !stateMatch[1]) {
+		log.warn("onboarding.state_cookie_missing");
+		return renderError("Session expired. Please try again.");
+	}
 
-		let oauthStateResult = await validate(
-			JSON.parse(base64UrlDecode(stateMatch[1])) as JSONValue,
-			OAuthStateSchema,
-		);
-		if (isFailure(oauthStateResult)) {
-			log.warn("onboarding.state_cookie_invalid");
-			return renderError("Invalid session state. Please try again.");
-		}
+	let oauthStateResult = await validate(
+		JSON.parse(base64UrlDecode(stateMatch[1])) as JSONValue,
+		OAuthStateSchema,
+	);
+	if (isFailure(oauthStateResult)) {
+		log.warn("onboarding.state_cookie_invalid");
+		return renderError("Invalid session state. Please try again.");
+	}
 
-		let { codeVerifier, state: expectedState, nonce: expectedNonce } = oauthStateResult.data;
+	let { codeVerifier, state: expectedState, nonce: expectedNonce } = oauthStateResult.data;
 
-		if (state !== expectedState) {
-			log.warn("onboarding.state_mismatch");
-			return renderError("Security validation failed. Please try again.");
-		}
+	if (state !== expectedState) {
+		log.warn("onboarding.state_mismatch");
+		return renderError("Security validation failed. Please try again.");
+	}
 
-		let baseUrl = `${url.protocol}//${url.host}`;
-		let tokenUrl = new URL("/oauth/token", baseUrl);
+	let baseUrl = `${url.protocol}//${url.host}`;
+	let tokenUrl = new URL("/oauth/token", baseUrl);
 
-		let tokenResponse = await fetch(tokenUrl.toString(), {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/x-www-form-urlencoded",
-			},
-			body: new URLSearchParams({
-				grant_type: "authorization_code",
-				code,
-				redirect_uri: `${baseUrl}/onboarding/callback`,
-				client_id: DASHBOARD_CLIENT_ID,
-				code_verifier: codeVerifier,
-			}),
+	let tokenResponse = await fetch(tokenUrl.toString(), {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/x-www-form-urlencoded",
+		},
+		body: new URLSearchParams({
+			grant_type: "authorization_code",
+			code,
+			redirect_uri: `${baseUrl}/onboarding/callback`,
+			client_id: DASHBOARD_CLIENT_ID,
+			code_verifier: codeVerifier,
+		}),
+	});
+
+	if (!tokenResponse.ok) {
+		let errorText = await tokenResponse.text();
+		log.warn("onboarding.token_exchange_failed", {
+			status: tokenResponse.status,
+			reason: errorText,
 		});
+		return renderError("Authentication failed. Please try again.");
+	}
 
-		if (!tokenResponse.ok) {
-			let errorText = await tokenResponse.text();
-			log.warn("onboarding.token_exchange_failed", {
-				status: tokenResponse.status,
-				reason: errorText,
-			});
-			return renderError("Authentication failed. Please try again.");
-		}
+	let tokenData = (await tokenResponse.json()) as JSONValue;
+	let tokenResult = await validate(tokenData, TokenResponseSchema);
+	if (isFailure(tokenResult)) {
+		log.warn("onboarding.token_response_invalid", { issues: tokenResult.error.issues.length });
+		return renderError("Authentication failed. Please try again.");
+	}
 
-		let tokenData = (await tokenResponse.json()) as JSONValue;
-		let tokenResult = await validate(tokenData, TokenResponseSchema);
-		if (isFailure(tokenResult)) {
-			log.warn("onboarding.token_response_invalid", { issues: tokenResult.error.issues.length });
-			return renderError("Authentication failed. Please try again.");
-		}
+	let idToken = tokenResult.data.id_token;
+	if (!idToken) {
+		log.warn("onboarding.id_token_missing");
+		return renderError("Authentication failed. Please try again.");
+	}
 
-		let idToken = tokenResult.data.id_token;
-		if (!idToken) {
-			log.warn("onboarding.id_token_missing");
-			return renderError("Authentication failed. Please try again.");
-		}
+	let verifiedIdToken = await verifyIdToken(idToken, {
+		origin: baseUrl,
+		audience: DASHBOARD_CLIENT_ID,
+	});
+	if (!verifiedIdToken) {
+		log.warn("onboarding.id_token_invalid");
+		return renderError("Authentication failed. Please try again.");
+	}
 
-		let verifiedIdToken = await verifyIdToken(idToken, {
-			origin: baseUrl,
-			audience: DASHBOARD_CLIENT_ID,
-		});
-		if (!verifiedIdToken) {
-			log.warn("onboarding.id_token_invalid");
-			return renderError("Authentication failed. Please try again.");
-		}
+	if (verifiedIdToken.nonce !== expectedNonce) {
+		log.warn("onboarding.nonce_mismatch");
+		return renderError("Security validation failed. Please try again.");
+	}
 
-		if (verifiedIdToken.nonce !== expectedNonce) {
-			log.warn("onboarding.nonce_mismatch");
-			return renderError("Security validation failed. Please try again.");
-		}
+	let identity = wrap(() => ({
+		subjectId: verifiedIdToken.subject,
+		email: verifiedIdToken.email,
+		tenantSessionId: verifiedIdToken.sessionId ?? undefined,
+	}));
+	if (isFailure(identity)) {
+		log.warn("onboarding.claims_invalid", { reason: identity.error.message });
+		return renderError("Authentication failed. Please try again.");
+	}
 
-		let identity = wrap(() => ({
-			subjectId: verifiedIdToken.subject,
-			email: verifiedIdToken.email,
-			tenantSessionId: verifiedIdToken.sessionId ?? undefined,
-		}));
-		if (isFailure(identity)) {
-			log.warn("onboarding.claims_invalid", { reason: identity.error.message });
-			return renderError("Authentication failed. Please try again.");
-		}
+	let { subjectId, email, tenantSessionId } = identity.data;
+	if (!email) {
+		log.warn("onboarding.email_missing");
+		return renderError("Email is required for authentication.");
+	}
 
-		let { subjectId, email, tenantSessionId } = identity.data;
-		if (!email) {
-			log.warn("onboarding.email_missing");
-			return renderError("Email is required for authentication.");
-		}
+	log.set({ user: { id: subjectId } });
 
-		log.set({ user: { id: subjectId } });
+	let resolvedCount = await Tenant.resolvePendingOwnership(db, email, subjectId);
+	if (resolvedCount > 0) log.note("tenant.ownership_resolved", { count: resolvedCount });
 
-		let resolvedCount = await Tenant.resolvePendingOwnership(db, email, subjectId);
-		if (resolvedCount > 0) log.note("tenant.ownership_resolved", { count: resolvedCount });
+	let sessionToken = await createSessionToken(
+		subjectId,
+		email,
+		env.SESSION_SECRET,
+		tenantSessionId,
+	);
 
-		let sessionToken = await createSessionToken(
-			subjectId,
-			email,
-			env.SESSION_SECRET,
-			tenantSessionId,
-		);
+	log.note("onboarding.login_completed");
 
-		log.note("onboarding.login_completed");
+	let headers = new Headers();
+	headers.set("Location", routes.dashboard.index.href());
+	headers.append("Set-Cookie", createSessionCookie(sessionToken, !import.meta.env.DEV));
+	headers.append("Set-Cookie", `__oauth_state=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
 
-		let headers = new Headers();
-		headers.set("Location", routes.dashboard.index.href());
-		headers.append("Set-Cookie", createSessionCookie(sessionToken, !import.meta.env.DEV));
-		headers.append("Set-Cookie", `__oauth_state=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
-
-		return new Response(null, { status: 302, headers });
-	}),
-);
+	return new Response(null, { status: 302, headers });
+});
 
 /**
  * Renders the onboarding authentication-error page as a `remix/ui` document with a

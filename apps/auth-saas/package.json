@@ -28,7 +28,6 @@
 		"@sdxc/oidc-provider": "workspace:*",
 		"@sdxc/response": "workspace:*",
 		"@sdxc/result": "workspace:*",
-		"@sdxc/service-container": "workspace:*",
 		"@sdxc/types": "workspace:*",
 		"@sdxc/validate": "workspace:*",
 		"remix": "3.0.0-rc.2"

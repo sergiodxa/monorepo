@@ -6,18 +6,18 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Database } from "remix/data-table";
 import type { Middleware } from "remix/router";
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
 import { log } from "@sdxc/logger/middleware";
-import { ServiceContainer } from "@sdxc/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
+import { database } from "~/app/http/middleware/database";
 import render from "~/app/http/middleware/render";
 import BillingCustomer from "~/app/models/billing-customer";
 import Tenant from "~/app/models/tenant";
@@ -89,13 +89,13 @@ async function renderBilling(
 	subscription: Record<string, unknown> | null,
 	customer: Record<string, unknown> | null = null,
 ): Promise<string> {
-	let container = new ServiceContainer();
-	container.instance(Database, fakeDatabase(subscription, customer));
+	let db = fakeDatabase(subscription, customer);
 
 	let router = createRouter({
 		middleware: [
 			log() as Middleware,
 			asyncContext(),
+			database(() => db),
 			render as Middleware,
 			(ctx, next) => {
 				ctx.platformSession = { subjectId: SUBJECT_ID, email: "owner@example.com" };
@@ -108,7 +108,7 @@ async function renderBilling(
 	let request = new Request(
 		`https://auth.test${routes.dashboard.tenants.billing.index.href({ tenantId: TENANT_ID })}`,
 	);
-	let response = await container.scope(() => router.fetch(request));
+	let response = await router.fetch(request);
 	return await response.text();
 }
 
