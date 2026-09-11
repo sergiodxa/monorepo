@@ -11,7 +11,6 @@ import * as cloudflare from "@sdxc/jobs/cloudflare";
 import { env } from "cloudflare:workers";
 
 import { dispatcher } from "~/app/jobs/dispatcher";
-import { container } from "~/app/lib/container";
 
 import { createDashboardRouter } from "./app";
 import Blog from "./tenant";
@@ -169,7 +168,7 @@ export default {
 			);
 			if (asset.ok) return asset;
 
-			return container.scope(() => createDashboardRouter().fetch(request));
+			return createDashboardRouter().fetch(request);
 		}
 
 		if (hostname.endsWith(`.${env.PLATFORM_DOMAIN}`)) {

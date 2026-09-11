@@ -6,23 +6,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 import type { JobMiddleware } from "@sdxc/jobs";
+import type { Database as DataTable } from "remix/data-table";
 
-import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
-import { env } from "cloudflare:workers";
-import { Database as DataTable } from "remix/data-table";
 import { createContextKey } from "remix/router";
+
+import { createDatabase } from "~/app/lib/database";
 
 /** The control-plane database, published as `ctx.database`. */
 export const Database = createContextKey<DataTable>();
-
-/**
- * Opens the control-plane database over the D1 binding.
- *
- * @returns A database reading and writing `PLATFORM_DB`.
- */
-export function createDatabase(): DataTable {
-	return new DataTable(createD1DatabaseAdapter(env.PLATFORM_DB));
-}
 
 /**
  * Publishes the control-plane database for the job about to run.

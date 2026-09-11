@@ -10,9 +10,6 @@
 import { contextOf } from "@sdxc/auth/remix/context";
 import { redirect } from "@sdxc/http/response";
 import { isFailure, wrap } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createAction, createController } from "remix/router";
 
 import { relyingParty } from "~/app/auth/relying-party";
@@ -62,29 +59,24 @@ export const login = createController(routes.auth.login, {
  * @returns A redirect to the login's destination, or back to `/auth/login` when the
  *   callback answers no login this session started.
  */
-export const callback = createAction(
-	routes.auth.callback,
-	inject([Database] as const, async (db) => {
-		let ctx = getContext();
-
-		let completed = await wrap(async () => {
-			let grant = await relyingParty(ctx.url).callback(contextOf(ctx));
-			let account = await Account.findOrCreateFromProfile(db, {
-				subject: grant.subject,
-				email: grant.profile.email ?? "",
-				displayName: grant.profile.name,
-			});
-			setAccountId(account.id);
-			return grant.returnTo;
+export const callback = createAction(routes.auth.callback, async (ctx) => {
+	let completed = await wrap(async () => {
+		let grant = await relyingParty(ctx.url).callback(contextOf(ctx));
+		let account = await Account.findOrCreateFromProfile(ctx.db, {
+			subject: grant.subject,
+			email: grant.profile.email ?? "",
+			displayName: grant.profile.name,
 		});
+		setAccountId(account.id);
+		return grant.returnTo;
+	});
 
-		if (isFailure(completed)) {
-			return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
-		}
+	if (isFailure(completed)) {
+		return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
+	}
 
-		return redirect(completed.data, { status: redirect.Status.SeeOther });
-	}),
-);
+	return redirect(completed.data, { status: redirect.Status.SeeOther });
+});
 
 /**
  * `/auth/logout` controller: renders the sign-out confirmation on `GET` and, on `POST`,

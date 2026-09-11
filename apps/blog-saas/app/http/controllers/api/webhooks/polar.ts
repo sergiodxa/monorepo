@@ -7,31 +7,24 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Database } from "remix/data-table";
+
 import { BillingWebhook } from "@sdxc/billing";
-import { getServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 
 import { polar } from "~/app/lib/billing";
-import { BlogProvisioner } from "~/app/services/blog-provisioner";
+import { createProvisioner } from "~/app/lib/provisioner";
 import { syncEntitlements } from "~/app/services/entitlements";
 import { deliveries } from "~/app/services/webhook-deliveries";
 
 /**
- * Runs the entitlement sync for the customer a delivery named, resolving the
- * control-plane services from the scope the request already opened.
+ * Runs the entitlement sync for the customer a delivery named.
  *
+ * @param db The control-plane database the projection is written into.
  * @param customerId The platform's customer id, or `null` when the delivery named none.
  * @returns A promise resolving once the projection is written.
  */
-function sync(customerId: string | null): Promise<void> {
-	let container = getServiceContainer();
-
-	return syncEntitlements(
-		polar,
-		container.get(Database),
-		container.get(BlogProvisioner),
-		customerId,
-	);
+function sync(db: Database, customerId: string | null): Promise<void> {
+	return syncEntitlements(polar, db, createProvisioner(db), customerId);
 }
 
 /**
@@ -41,28 +34,28 @@ function sync(customerId: string | null): Promise<void> {
 export default new BillingWebhook(
 	polar,
 	{
-		async "checkout.completed"(event) {
-			await sync(event.checkout.customerId);
+		async "checkout.completed"(event, ctx) {
+			await sync(ctx.db, event.checkout.customerId);
 		},
 
-		async "order.paid"(event) {
-			await sync(event.order.customerId);
+		async "order.paid"(event, ctx) {
+			await sync(ctx.db, event.order.customerId);
 		},
 
-		async "subscription.activated"(event) {
-			await sync(event.subscription.customerId);
+		async "subscription.activated"(event, ctx) {
+			await sync(ctx.db, event.subscription.customerId);
 		},
 
-		async "subscription.updated"(event) {
-			await sync(event.subscription.customerId);
+		async "subscription.updated"(event, ctx) {
+			await sync(ctx.db, event.subscription.customerId);
 		},
 
-		async "subscription.canceled"(event) {
-			await sync(event.subscription.customerId);
+		async "subscription.canceled"(event, ctx) {
+			await sync(ctx.db, event.subscription.customerId);
 		},
 
-		async "subscription.revoked"(event) {
-			await sync(event.subscription.customerId);
+		async "subscription.revoked"(event, ctx) {
+			await sync(ctx.db, event.subscription.customerId);
 		},
 	},
 	{ store: deliveries },

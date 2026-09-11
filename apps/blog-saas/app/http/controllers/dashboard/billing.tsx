@@ -9,9 +9,6 @@
 import { supports } from "@sdxc/billing";
 import { redirect } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
-import { inject } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
-import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import { getAccountId } from "~/app/http/middleware/session";
@@ -33,14 +30,13 @@ import routes from "~/routes/web";
  */
 export default createController(routes.dashboard.billing, {
 	actions: {
-		index: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		index: async (ctx) => {
 			let accountId = getAccountId();
 			if (!accountId) return redirect("/auth/login", { status: redirect.Status.SeeOther });
 
 			let [customer, subscription] = await Promise.all([
-				BillingCustomer.findDefault(db, accountId),
-				Subscription.findByAccount(db, accountId),
+				BillingCustomer.findDefault(ctx.db, accountId),
+				Subscription.findByAccount(ctx.db, accountId),
 			]);
 
 			return ctx.render(
@@ -69,15 +65,14 @@ export default createController(routes.dashboard.billing, {
 					</form>
 				</Page>,
 			);
-		}),
+		},
 
-		action: inject([Database] as const, async (db) => {
-			let ctx = getContext();
+		action: async (ctx) => {
 			let accountId = getAccountId();
 			if (!accountId) return redirect("/auth/login", { status: redirect.Status.SeeOther });
 
 			let origin = new URL(ctx.request.url).origin;
-			let customer = await BillingCustomer.findDefault(db, accountId);
+			let customer = await BillingCustomer.findDefault(ctx.db, accountId);
 
 			if (customer && supports(ctx.billing, "portal")) {
 				let session = await ctx.billing.portal.create({
@@ -97,7 +92,7 @@ export default createController(routes.dashboard.billing, {
 				return redirect(session.data.url, { status: redirect.Status.SeeOther });
 			}
 
-			let account = await Account.findById(db, accountId);
+			let account = await Account.findById(ctx.db, accountId);
 
 			let checkout = await ctx.billing.checkouts.create({
 				product: PRO_PRODUCT,
@@ -120,6 +115,6 @@ export default createController(routes.dashboard.billing, {
 			}
 
 			return redirect(checkout.data.url, { status: redirect.Status.SeeOther });
-		}),
+		},
 	},
 });

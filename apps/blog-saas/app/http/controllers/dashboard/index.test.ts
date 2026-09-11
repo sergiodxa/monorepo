@@ -9,13 +9,12 @@
 import type { Middleware } from "remix/router";
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { Session } from "remix/session";
 import { describe, expect, test, vi } from "vitest";
 
+import { database } from "~/app/http/middleware/database";
 import renderMiddleware from "~/app/http/middleware/render";
 import { createTestDatabase } from "~/app/test/db";
 import routes from "~/routes/web";
@@ -37,8 +36,6 @@ const ACCOUNT_ID = "account-1";
  */
 function createTestRouter() {
 	let { db, sqliteDb } = createTestDatabase();
-	let container = new ServiceContainer();
-	container.instance(Database, db);
 
 	let session = new Session();
 	session.set("accountId", ACCOUNT_ID);
@@ -46,6 +43,7 @@ function createTestRouter() {
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
+			database(() => db),
 			renderMiddleware as Middleware,
 			(ctx, next) => {
 				ctx.set(Session, session, { property: "session" });
@@ -55,15 +53,15 @@ function createTestRouter() {
 	});
 	router.map(routes.dashboard.index, dashboardIndex);
 
-	return { container, router, sqliteDb };
+	return { router, sqliteDb };
 }
 
 describe("GET /dashboard", () => {
 	test("marks the sign-out form as a document submission", async () => {
-		let { container, router, sqliteDb } = createTestRouter();
+		let { router, sqliteDb } = createTestRouter();
 
 		let request = new Request(`https://blog.test${routes.dashboard.index.href()}`);
-		let response = await container.scope(() => router.fetch(request));
+		let response = await router.fetch(request);
 		let body = await response.text();
 		sqliteDb.close();
 

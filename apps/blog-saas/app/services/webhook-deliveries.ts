@@ -1,15 +1,15 @@
 /**
  * The delivery store the billing webhook endpoint records through, backed by the
- * control-plane database. It is built at module scope beside the endpoint, so the
- * database is resolved per call, once a request has a scope to resolve it from.
+ * control-plane database. It is built at module scope beside the endpoint, so it reads
+ * the database off the context of the request it is recording for.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 import type { WebhookDelivery as Delivery, WebhookStore } from "@sdxc/billing";
+import type { Database } from "remix/data-table";
 
-import { getServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
+import { getContext } from "remix/middleware/async-context";
 
 import WebhookDelivery from "~/app/models/webhook-delivery";
 
@@ -46,8 +46,9 @@ class ControlPlaneWebhookStore implements WebhookStore {
 		await WebhookDelivery.markProcessed(this.#database, id);
 	}
 
+	/** The store contract takes no context, so the running request's supplies it. */
 	get #database(): Database {
-		return getServiceContainer().get(Database);
+		return getContext().db;
 	}
 }
 

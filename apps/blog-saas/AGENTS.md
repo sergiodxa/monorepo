@@ -38,8 +38,11 @@ a relative path is only for a sibling inside the same directory.
 - `routes/web.ts` — dashboard + marketing routes.
 - `app/http/controllers/` — marketing, health, auth (OIDC vs the sso tenant),
   `dashboard/*`, and the billing webhook endpoint.
-- `app/lib/billing.ts` — the configured billing platform, built once and reached from
-  routes as `context.billing` and from jobs by importing it.
+- `app/http/middleware/` — the router's own middleware, including `database()`, which
+  publishes the control-plane database as `context.db` for every controller.
+- `app/lib/` — the app's services, one module apiece: `billing.ts` (the configured
+  billing platform, reached from routes as `context.billing` and from jobs by importing
+  it), `database.ts`, `hostnames.ts`, and `provisioner.ts`.
 - `app/models/` — control-plane rows: Account, BillingCustomer, Blog, Hostname,
   Subscription, UsageDaily, WebhookDelivery.
 - `app/services/` — BlogProvisioner (lifecycle + DO RPC + KV), HostnameService

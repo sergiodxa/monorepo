@@ -27,9 +27,11 @@ import blogs, { domain, restore, usage } from "~/app/http/controllers/dashboard/
 import dashboardIndex from "~/app/http/controllers/dashboard/index";
 import health from "~/app/http/controllers/health";
 import index from "~/app/http/controllers/index";
+import { database } from "~/app/http/middleware/database";
 import renderMiddleware from "~/app/http/middleware/render";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
 import { polar } from "~/app/lib/billing";
+import { createDatabase } from "~/app/lib/database";
 import routes from "~/routes/web";
 
 import { logger } from "./logger";
@@ -52,6 +54,7 @@ export function createDashboardRouter() {
 		headRequests(),
 		log(logger) as Middleware,
 		asyncContext(),
+		database(createDatabase),
 		renderMiddleware as Middleware,
 		createSessionMiddleware(env.COOKIE_SESSION_SECRET, true),
 		/**

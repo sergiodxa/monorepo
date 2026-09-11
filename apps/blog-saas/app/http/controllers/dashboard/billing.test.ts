@@ -1,5 +1,3 @@
-import type { MemoryBilling as MemoryBillingType } from "@sdxc/billing/providers/memory";
-import type { Database as DatabaseType } from "remix/data-table";
 /**
  * Tests the billing page's markup and its one control: the form stays a document
  * submission, because a frame navigation resolved with `fetch` cannot follow the
@@ -9,14 +7,14 @@ import type { Database as DatabaseType } from "remix/data-table";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { MemoryBilling as MemoryBillingType } from "@sdxc/billing/providers/memory";
+import type { Database as DatabaseType } from "remix/data-table";
 import type { Middleware } from "remix/router";
 
 import billingMiddleware from "@sdxc/billing/middleware";
 import { MemoryBilling } from "@sdxc/billing/providers/memory";
 import { createEnv } from "@sdxc/cloudflare-mocks";
 import { unwrap } from "@sdxc/result";
-import { ServiceContainer } from "@sdxc/service-container";
-import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { Session } from "remix/session";
@@ -24,6 +22,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { TestDatabase } from "~/app/test/db";
 
+import { database } from "~/app/http/middleware/database";
 import renderMiddleware from "~/app/http/middleware/render";
 import routes from "~/routes/web";
 
@@ -43,13 +42,10 @@ let { log } = await import("@sdxc/logger/middleware");
 let { default: billing } = await import("./billing");
 
 let harness: TestDatabase;
-let container: ServiceContainer;
 let platform: MemoryBillingType;
 
 beforeEach(() => {
 	harness = createTestDatabase();
-	container = new ServiceContainer();
-	container.instance(Database, harness.db);
 	platform = new MemoryBilling({
 		catalog: { pro: { amount: 2900, currency: "usd", interval: "month" } },
 	});
@@ -75,6 +71,7 @@ function createTestRouter(accountId: string) {
 		middleware: [
 			log() as Middleware,
 			asyncContext(),
+			database(() => harness.db),
 			renderMiddleware as Middleware,
 			/**
 			 * Publishes the session the dashboard guards read, in place of the signed-cookie
@@ -114,7 +111,7 @@ describe("GET /dashboard/billing", () => {
 		let router = createTestRouter(await seedAccount(harness.db));
 
 		let request = new Request(`https://blog.test${routes.dashboard.billing.index.href()}`);
-		let response = await container.scope(() => router.fetch(request));
+		let response = await router.fetch(request);
 		let body = await response.text();
 
 		let form = body.match(
@@ -128,7 +125,7 @@ describe("POST /dashboard/billing", () => {
 	test("sends an account with no customer to a hosted checkout", async () => {
 		let router = createTestRouter(await seedAccount(harness.db));
 
-		let response = await container.scope(() => router.fetch(submission()));
+		let response = await router.fetch(submission());
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toContain("/checkout/");
@@ -142,7 +139,7 @@ describe("POST /dashboard/billing", () => {
 		await BillingCustomer.link(harness.db, accountId, platform.connection, customer.id);
 		let router = createTestRouter(accountId);
 
-		let response = await container.scope(() => router.fetch(submission()));
+		let response = await router.fetch(submission());
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(`https://memory.test/portal/${customer.id}`);
@@ -153,7 +150,7 @@ describe("POST /dashboard/billing", () => {
 		await BillingCustomer.link(harness.db, accountId, platform.connection, "cus_missing");
 		let router = createTestRouter(accountId);
 
-		let response = await container.scope(() => router.fetch(submission()));
+		let response = await router.fetch(submission());
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(routes.dashboard.billing.index.href());
