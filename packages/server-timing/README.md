@@ -2,23 +2,17 @@
 
 Server-Timing measurements collected per request and written to a response header.
 
-## Overview
-
 When a response is slow, the interesting question is _which part_ was slow. The
-[`Server-Timing`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Server-Timing)
-header answers it: the server reports named, timed segments of its own work, and every
-browser's network panel shows them alongside the transfer timings. No agent, no tracing
-backend, no sampling — the measurements ride along on the response that produced them.
+[`Server-Timing`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Server-Timing)
+header answers it, and every browser's network panel shows the segments alongside the
+transfer timings. A `TimingCollector` lives for one request, `measure` wraps each operation
+worth timing, and `toHeaders` renders what it collected into the header's syntax.
 
-This package is the small amount of bookkeeping that makes the header practical. A
-`TimingCollector` lives for one request, `measure` wraps each operation worth timing, and
-`toHeaders` renders everything collected into the header's syntax. Getting that syntax
-right by hand is fiddly — quoting descriptions, dropping empty fields, joining entries —
-and getting it wrong makes the whole header unparseable, so it is done once here.
+## Installation
 
-Nothing in the package can fail: a measurement either completes or it does not, and an
-operation's own rejection passes straight through. There is no `Result`, no error type,
-and no runtime dependency of any kind.
+```bash
+npm add @sdxc/server-timing
+```
 
 ## Usage
 
@@ -30,7 +24,7 @@ import { TimingCollector } from "@sdxc/server-timing";
 let collector = new TimingCollector();
 
 let user = await collector.measure("db", "findUserById", async () => {
-	return await User.findById(db, userId);
+	return await findUserById(userId);
 });
 
 return new Response(JSON.stringify(user), { headers: collector.toHeaders() });
@@ -39,30 +33,32 @@ return new Response(JSON.stringify(user), { headers: collector.toHeaders() });
 
 ### Time Several Operations
 
-Every `measure` call adds one entry, in the order the calls completed. Reuse the `name`
-to group related operations and vary the description to tell them apart.
+Every `measure` call adds one entry, in the order the calls completed. Reuse the `name` to
+group related operations and vary the description to tell them apart:
 
 ```typescript
 let collector = new TimingCollector();
 
 let session = await collector.measure("auth", "authorize", () => authorize(request));
-let cached = await collector.measure("cache", "lookup", () => kv.get(key, "json"));
-let rows = await collector.measure("db", "listPosts", () => Post.list(db));
+let cached = await collector.measure("cache", "lookup", () => cache.get(key));
+let rows = await collector.measure("db", "listPosts", () => listPosts());
 
 collector.toString();
 // auth;desc="authorize";dur=4.10, cache;desc="lookup";dur=1.02, db;desc="listPosts";dur=8.77
 ```
 
+The name is the grouping key you scan for in a network panel, so keep it short and stable
+and put the varying part in the description. Both halves reach every client that reads the
+response, which makes them names to choose as deliberately as any public API.
+
 ### Annotate A Response On The Way Out
 
-Because `toHeaders` writes into an existing `Headers` object, a middleware can collect
-timings for the whole request and stamp them on whatever response comes back — including
-the one it produces itself when it refuses the request.
+`toHeaders` writes into an existing `Headers` object, so a response that already exists
+picks up the measurements taken while it was produced:
 
 ```typescript
-let collector = new TimingCollector();
+let response = await handle(request);
 
-let response = await next();
 collector.toHeaders(response.headers);
 
 return response;
@@ -70,110 +66,130 @@ return response;
 
 ## API
 
-### `TimingCollector`
+### `new TimingCollector()`
 
-A request-scoped set of measurements. Construct one per request: sharing a collector
-across requests mixes one caller's timings into another's header.
+An empty, request-scoped set of measurements. Construct one per request, since a collector
+shared between requests reports one caller's timings in another caller's header.
 
-#### `new TimingCollector()`
+### `collector.measure<T>(name: string, description: string, fn: () => Promise<T>): Promise<T>`
 
-Creates an empty collector. Takes no arguments.
+Times `fn` and returns whatever it resolves to, unchanged. `name` groups the measurement
+(`db`, `cache`, `auth`) and `description` says which particular operation it was.
 
-#### `collector.measure<T>(name: string, description: string, fn: () => Promise<T>): Promise<T>`
-
-Times an async operation and records the result.
-
-**Parameters:**
-
-- `name`: Metric name, grouping the measurement (`db`, `cache`, `auth`)
-- `description`: Detail about this particular measurement, usually the operation
-- `fn`: The operation to time
-
-**Returns:**
-
-- Whatever `fn` resolves to, unchanged.
+```typescript
+let user = await collector.measure("db", "findUserById", () => findUserById(id));
+```
 
 The measurement is recorded whether `fn` resolves or rejects, and a rejection is re-thrown
 untouched — a call that failed slowly is exactly the one worth seeing in the header.
 
-**Example:**
+### `collector.toString(): string`
 
-```typescript
-let user = await collector.measure("db", "findUserById", () => User.findById(db, id));
-```
-
-#### `collector.toString(): string`
-
-Renders every measurement as the header's value.
-
-**Returns:**
-
-- The comma-separated entries, or an empty string if nothing was measured.
-
-**Example:**
+Renders every measurement as the header's value: the entries comma-separated, or an empty
+string when nothing was measured.
 
 ```typescript
 collector.toString(); // 'db;desc="findUserById";dur=12.34'
 ```
 
-#### `collector.toHeaders(headers?: Headers): Headers`
+An entry carries `dur` once it has a duration above zero, and a duration is rounded to two
+decimals. Some server runtimes advance the clock only across I/O, so timing an I/O call is
+what produces a duration to read.
 
-Writes the measurements onto a `Headers` object as a single `Server-Timing` header.
+### `collector.toHeaders(headers?: Headers): Headers`
 
-**Parameters:**
-
-- `headers`: Headers to write to. A fresh `Headers` is created when omitted
-
-**Returns:**
-
-- The same `Headers` object, so the call can be used as an expression.
-
-It sets rather than appends, so the collector owns the header on whatever response it is
-given: a `Server-Timing` set upstream is overwritten, not merged. Calling it twice on the
-same headers replaces the previous value rather than emitting the measurements twice.
-
-**Example:**
+Writes the measurements onto a `Headers` object as a single `Server-Timing` header and
+returns that same object, so the call reads as an expression. A fresh `Headers` is created
+when none is given.
 
 ```typescript
 return new Response(body, { headers: collector.toHeaders() });
 ```
 
-## Pattern: A Timed Request Middleware
+It sets rather than appends, so the collector owns the header on whatever headers it is
+given: a `Server-Timing` written upstream is replaced, and calling it twice on the same
+object leaves one copy of the measurements.
 
-Publish the collector on the request context so handlers can add their own measurements to
-the same header, then write it after the handler has answered.
+## Pattern: Timing A Whole Request
+
+A wrapper around the handler gives every request a collector and stamps the header once the
+handler has answered, which is late enough to include the handler's own measurements:
 
 ```typescript
-declare module "remix/router" {
-	interface RequestContext {
-		timing: TimingCollector;
-	}
-}
+import { TimingCollector } from "@sdxc/server-timing";
 
-export function withTiming(): Middleware {
-	return async (ctx, next) => {
-		ctx.timing = new TimingCollector();
+export function withTiming(
+	handler: (request: Request, timing: TimingCollector) => Promise<Response>,
+) {
+	return async (request: Request) => {
+		let timing = new TimingCollector();
 
-		// Written after the handler has answered, so its own measurements are included.
-		let response = await next();
-		ctx.timing.toHeaders(response.headers);
+		let response = await handler(request, timing);
 
-		return response;
+		return new Response(response.body, {
+			status: response.status,
+			statusText: response.statusText,
+			headers: timing.toHeaders(new Headers(response.headers)),
+		});
 	};
 }
 ```
 
-Note that a response the handler did not construct itself may have immutable headers. Wrap
-it in a new `Response` first if that is a possibility.
+Copying into a new `Response` keeps this working for the responses whose headers are
+immutable, such as the one a redirect helper or an upstream `fetch` hands back. Where the
+response is one you constructed yourself, `timing.toHeaders(response.headers)` is enough.
 
-## Related Packages
+## Pattern: Measuring Inside The Code That Does The Work
 
-- [`@sdxc/logger`](/packages/logger) - Request-scoped logging, which also reports `server-timing` when it is present on a response
+Passing the collector down lets a helper contribute its own entries to the same header,
+which is how a single response ends up attributing the work across the layers that did it:
 
-## Tips
+```typescript
+import { TimingCollector } from "@sdxc/server-timing";
 
-1. **One collector per request** - The collector is mutable request state, not a singleton; a shared one leaks timings between callers.
-2. **Measure I/O, not computation** - Some server runtimes freeze `performance.now()` between I/O operations, so a measurement around pure computation can legitimately read as `0`.
-3. **Keep names short and stable** - The name is the grouping key you will scan for in a network panel; put the varying part in the description.
-4. **Avoid quotes in descriptions** - Descriptions are emitted inside double quotes, so keep them to plain identifiers and prose rather than embedding punctuation the header's grammar cares about.
-5. **The header is public** - Anything measured is visible to every client, so name internal systems no more precisely than you would in a public API.
+async function loadDashboard(userId: string, timing: TimingCollector) {
+	let user = await timing.measure("db", "findUserById", () => findUserById(userId));
+	let feed = await timing.measure("cache", "feed", () => cache.get(`feed:${userId}`));
+
+	return { user, feed };
+}
+
+let timing = new TimingCollector();
+let data = await loadDashboard(userId, timing);
+
+return Response.json(data, { headers: timing.toHeaders() });
+// Server-Timing: db;desc="findUserById";dur=12.34, cache;desc="feed";dur=1.02
+```
+
+Timings nest the way the calls do: wrapping `loadDashboard` itself in a `measure` adds an
+entry covering both, recorded after the two it contains.
+
+## Versioning
+
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
+
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
+
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/server-timing": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)

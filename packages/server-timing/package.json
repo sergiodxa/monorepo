@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/server-timing",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Server-Timing measurements collected per request and written to a response header",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
