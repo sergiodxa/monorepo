@@ -214,7 +214,7 @@ describe("packageFromManifest", () => {
 		let example = packageFromManifest("highlight", {
 			name: "@sdxc/highlight",
 			exports: { ".": "./src/index.ts", "./styles.css": "./styles.css" },
-			dependencies: { "@sdxc/result": "workspace:*", "@markdoc/markdoc": "^0.5.9" },
+			dependencies: { "@sdxc/result": "workspace:*", remix: "3.0.0-rc.2" },
 			devDependencies: { "@sdxc/types": "workspace:*" },
 		});
 
