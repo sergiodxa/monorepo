@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/webhooks",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Sign and verify Standard Webhooks deliveries, reporting every failure as a typed value",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
