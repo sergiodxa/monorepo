@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/mail",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Transport-agnostic transactional email with pluggable transports and remix/ui rendering",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
