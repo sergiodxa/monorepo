@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/u",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Utility-first styling for remix/ui, composed from small, terse mixins",
 	"license": "MIT",
 	"type": "module",
 	"sideEffects": false,

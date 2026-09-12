@@ -1,30 +1,27 @@
 # @sdxc/u
 
-A utility-first styling layer for `remix/ui`, composed from small, terse mixins.
+Utility-first styling for `remix/ui`, composed from small, terse mixins.
 
-## Overview
-
-Every export is a `remix/ui` mixin factory: `u.p(4)`, `u.bg("brand.tint")`, `u.hover(u.border("brand"))`. Each one drops directly into a `mix` prop, and wrapper utilities like `u.hover()` and `u.at()` compose with any other utility to build responsive, stateful styles:
+Every export is a `remix/ui` mixin factory that drops straight into a `mix` prop, and the
+wrappers compose with any other utility to build responsive, stateful styles:
 
 ```tsx
 <div mix={[u.p(4), u.bg(), u.at("md", [u.p(6), u.hover(u.border("brand"))])]} />
 ```
 
-Not every export is a mixin. A handful are plain string resolvers — `u.var()`, `u.calc()`, `u.env()`, the three gradient builders, and the token resolvers at the `@sdxc/u/tokens` subpath — which return a CSS value string to hand to a utility rather than something that goes in a `mix` array. Each entry below says which it is.
+The utilities cover CSS primitives across thirteen families, plus composed patterns like
+`u.surface()` and `u.hstack()`. Logical properties are the default, each with a physical
+counterpart for the values that must not flip with writing mode.
 
-The package covers CSS primitives across thirteen families — layout, size, color, typography, effects, overflow, stacking, transform, animation, state, responsive, accessibility, and general escape hatches — plus a set of composed patterns that pick several declarations together: `u.surface()` chooses a background, foreground, and border as a matching set; `u.hstack()`/`u.vstack()`/`u.zstack()` build the three common stacks; `u.circle()`, `u.squircle()`, `u.truncate()`, and `u.translucent()` bundle the multi-declaration recipes worth having a name.
-
-Four CSS properties take a _list_ or a _function stack_ rather than a single value — `transform`, `filter`, `backdrop-filter`, and `box-shadow` — so a naive utility per function would silently overwrite its siblings. Each of those families instead writes its own `--ui-*` custom property plus one byte-identical composite declaration, which is why `u.rotate()` and `u.scaleX()`, or `u.blur()` and `u.grayscale()`, or `u.shadow()` and `u.ringShadow()`, all combine instead of the last call winning. The relevant entries spell out the mechanism.
-
-Three conventions are worth knowing up front. **Logical properties are the default**: `u.is()`/`u.bs()` for sizing, `u.pi()`/`u.pb()` for padding, `u.insIs()` for insets — each has a physical counterpart (`u.width()`, `u.paddingLeft()`, `u.insLeft()`) documented as the deliberate exception for when a value must not flip with writing mode. And **accessibility gating is opt-in per utility**: `u.ring()` only ever shows on `:focus-visible` and `u.translucent()` gates its blur behind `prefers-reduced-transparency`, while the bare primitives they compose (`u.outline()`, `u.backdropBlur()`) apply unconditionally.
-
-## Usage
-
-### Install
+## Installation
 
 ```bash
-bun add @sdxc/u
+npm add @sdxc/u
 ```
+
+Every utility returns a `remix/ui` mixin, so [`remix`](https://www.npmjs.com/package/remix) installs alongside this package.
+
+## Usage
 
 ### Import
 
@@ -17250,27 +17247,32 @@ import * as u from "@sdxc/u";
 
 Undoing a clamp is one of the few genuine `u.raw()` cases left: `u.lineClamp()` takes a line count and has no "off" value, so the reset has to name the underlying properties.
 
-## Related Packages
+## Versioning
 
-- [`@sdxc/ui`](/packages/ui) - A component library built on `remix/ui` that styles its components through `css()` mixins and pairs naturally with these lower-level utilities.
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
 
-## Tips
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
 
-1. **Prefer the namespace import for application code** - `import * as u from "@sdxc/u"` reads clearly at call sites (`u.p(4)`, `u.hover(...)`) and still tree-shakes down to only the utilities actually referenced.
-2. **Reach for a wrapper before hand-rolling a selector or at-rule** - `u.when()`, `u.not()`, `u.hover()` and friends, `u.at()`, `u.media()`, and `u.supports()` all compose with any other utility; there's rarely a reason to write a raw nested selector by hand.
-3. **`u.at()` is for layout, `u.media()` is the escape hatch** - default to container queries for responsive layout so a component adapts to the space it's actually given; reach for `u.media()` only for real viewport or user-preference queries like `prefers-contrast`.
-4. **Token extension is additive only** - declaration merging can add a new name to `ColorPalettes`, `Radii`, and the rest, but it can't remove or override a built-in one — there's no way to "disable" a default token name through the type system.
-5. **`u.surface()` chooses background, foreground, and border together** - reach for it instead of composing `u.bg()`/`u.fg()`/`u.border()` by hand whenever a surface needs to preserve contrast by construction.
-6. **Accessibility gating is opt-in per utility, not automatic everywhere** - `u.translucent()` gates its blur behind `prefers-reduced-transparency` and `u.ring()` only ever shows on `:focus-visible`, but primitives like `u.backdropBlur()` apply unconditionally; reach for the gated pattern by name when it matters.
-7. **Name the container you intend to query** - `u.at()`/`u.atMax()` without a name bind to whichever ancestor container is nearest, which silently changes the moment another component establishes one in between; pairing `u.container(NAME)` on the root with `u.at(size, NAME, ...)` in each part keeps the query pinned to the box it was written against.
-8. **`u.startingStyle()` has to repeat the selector that reveals the element** - the entry values only apply where the shown state matches, so a wrapper like `u.startingStyle(u.open(...))` (or a `u.when()` naming the same `[open]`/`:popover-open` branch) is what actually animates; a bare `u.startingStyle(u.opacity(0))` on an element that enters from `display: none` compiles fine and does nothing.
-9. **`u.safeAreaPadding()` is deliberately physical, and its neighbors should be too** - notch and home-indicator geometry doesn't flip with writing mode, so pair it with `u.insLeft()`/`u.insRight()` on the same element; reaching for `u.insIs()`/`u.insIe()` alongside it puts the reserved padding on the opposite edge under a right-to-left writing direction.
-10. **Fold a variant table with `u.combine()` rather than writing each branch out** - mapping tone or state names through `u.data()`/`u.when()` and combining the result yields one mixin whose branches are all siblings, which is also the only way to build branches from a list — neither a CSS selector nor a custom property name can be parameterized by a loop of its own.
-11. **`u.strokeWidth()` is unitless where every other width utility is pixels** - `u.strokeWidth(1)` means one SVG user unit, not `1px`, because a `px` suffix would make the stroke scale with the viewport instead of the drawing's own coordinate system; reach for `u.vectorEffect("non-scaling-stroke")` when a hairline needs to stay a hairline through a transform.
-12. **Transition `u.scaleProperty()`, not `u.scale()`** - the standalone `scale` property animates on its own without contending with whatever else composes into `transform`, which is why entry and press animations name `scale` in their property list and reset it with `u.scaleProperty("none")` rather than a bare `1`.
-13. **Snap type goes on the container, snap alignment on the items** - `u.scrollSnapType()` on the scroll container and `u.scrollSnapAlign()` on each child; either one alone does nothing, which is the most common way a carousel ends up not snapping. Add `u.scrollPadding()` so the snap position clears a sticky header or the container's own padding.
-14. **`u.shadow()` and `u.ringShadow()` now stack, but a raw `box-shadow` erases both** - they write separate slots of one composite declaration, so a ring and an elevation shadow coexist. A `u.raw({ boxShadow: "..." })` on the same element replaces the whole composite and silently drops the other layer; write the slot custom property directly instead.
-15. **Put motion behind `u.motionSafe()`, not `u.motionReduce()`** - wrapping the animation means the reduced-motion case is the unwrapped baseline, so forgetting the wrapper fails safe with no animation. The inverse form ships an ungated animation whenever you forget to add the override.
-16. **`u.transformStyle()` and `u.perspective()` belong on the parent, and clipping defeats them** - the 3D context has to be established above the rotating faces. On that same parent, an `overflow` other than `visible`, a filter, a mask, or an opacity below 1 all force the subtree back to flat, so put the radius and `u.clip()` on the faces instead.
-17. **Anchor positioning needs both halves** - `u.anchorName()` on the element being anchored to, `u.positionAnchor()` on the positioned one. With only one of them, `u.positionArea()` quietly falls back to ordinary absolute positioning against the nearest positioned ancestor, which usually looks almost right and is the hardest version to debug.
-18. **`u.overflowWrap()` is for long URLs, `u.wordBreak()` is not** - `overflow-wrap` breaks a word only when it would otherwise overflow, leaving prose intact; `word-break: break-all` breaks at any character and mangles it. Both need a bounded inline size to do anything, and only `u.overflowWrap("anywhere")` also lets a flex or grid item shrink below its longest word.
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/u": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)
