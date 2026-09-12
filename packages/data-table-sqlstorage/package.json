@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/data-table-sqlstorage",
 	"version": "0.0.0",
-	"private": true,
+	"description": "A remix/data-table database driver backed by a Cloudflare Durable Object's SQL storage",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
