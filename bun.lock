@@ -332,6 +332,7 @@
       "dependencies": {
         "@sdxc/duration": "workspace:*",
         "@sdxc/logger": "workspace:*",
+        "@sdxc/result": "workspace:*",
         "@sdxc/types": "workspace:*",
       },
       "devDependencies": {
@@ -431,13 +432,13 @@
       "version": "0.0.1",
       "dependencies": {
         "@sdxc/markdown": "workspace:*",
-        "remix": "3.0.0-rc.2",
       },
     },
     "packages/hostname": {
       "name": "@sdxc/hostname",
       "version": "0.0.1",
       "dependencies": {
+        "@sdxc/api-client": "workspace:*",
         "remix": "3.0.0-rc.2",
       },
     },
