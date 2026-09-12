@@ -170,9 +170,9 @@ export class TypeID<const prefix extends string> {
 	 * @throws {InvalidUUIDLengthError} If the UUID does not have 36 characters.
 	 * @throws {InvalidUUIDTypeError} If the UUID is not a string.
 	 * @example
-	 * let userId = TypeID.fromUUID("user", "550e8400-e29b-41d4-a716-446655440000");
+	 * let userId = TypeID.fromUUID("user", "01890a5d-ac96-774b-bcce-b302099a8057");
 	 * userId.toString();
-	 * // "user_01arz3ndektsv4rrffq69g5fav"
+	 * // "user_01h455vb4pex5vsknk084sn02q"
 	 */
 	static fromUUID<const prefix extends string>(prefix: prefix, uuid: UUID) {
 		let suffix = encode(uuid);

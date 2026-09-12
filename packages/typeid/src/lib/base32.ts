@@ -35,8 +35,8 @@ const SUFFIX_LENGTH = 26;
  * @throws {InvalidUUIDLengthError} If the UUID does not have 36 characters.
  * @throws {InvalidUUIDTypeError} If the UUID is not a string.
  * @example
- * let suffix = encode("550e8400-e29b-41d4-a716-446655440000");
- * // "01arz3ndektsv4rrffq69g5fav"
+ * let suffix = encode("01890a5d-ac96-774b-bcce-b302099a8057");
+ * // "01h455vb4pex5vsknk084sn02q"
  */
 export function encode(string: string): Base32 {
 	assertUUID(string);
@@ -64,8 +64,8 @@ export function encode(string: string): Base32 {
  * @throws {InvalidUUIDLengthError} If decoded content has an invalid UUID length.
  * @throws {InvalidUUIDTypeError} If decoded content is not a string UUID value.
  * @example
- * let uuid = decode("01arz3ndektsv4rrffq69g5fav" as Base32);
- * // "550e8400-e29b-41d4-a716-446655440000"
+ * let uuid = decode("01h455vb4pex5vsknk084sn02q" as Base32);
+ * // "01890a5d-ac96-774b-bcce-b302099a8057"
  */
 export function decode(base32: Base32): string {
 	let value = 0n;
