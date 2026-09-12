@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/http",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Response builders, content negotiation, and HTTP caching for the Fetch API",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
