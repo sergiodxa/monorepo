@@ -6,14 +6,14 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
-		"./markdoc": "./src/markdoc.ts",
+		"./markdown": "./src/markdown.ts",
 		"./styles.css": "./styles.css"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@markdoc/markdoc": "^0.5.9",
+		"@sdxc/markdown": "workspace:*",
 		"remix": "3.0.0-rc.2"
 	}
 }

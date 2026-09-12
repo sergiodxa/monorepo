@@ -1,6 +1,6 @@
 # @sdxc/highlight
 
-Syntax highlighting as tokens, with a Markdoc node for fenced code and a stylesheet keyed to the tokens it produces.
+Syntax highlighting as tokens, with entry points that paint the code blocks of a parsed document and a stylesheet keyed to the tokens it produces.
 
 ## Overview
 
@@ -8,7 +8,7 @@ A highlighter's real output is not markup — it is a sequence of runs, each lab
 
 There is no global registry and no import order to get right. A grammar is a value that a module exports, and a grammar built on another imports it and merges with [`compose`](#composeparts-arrayrecordstring-rule-grammar). `Token.Type` is a closed union of twenty members, small enough that one stylesheet paints all of it and a palette can map over it exhaustively; a grammar picks the nearest member rather than introducing its own. A language with no grammar is not a failure — it comes back as a single `plain` token holding the whole input, the same shape every other language produces.
 
-The package splits by dependency. The root entry has none: it is the scanner, the grammars, and the token model. `@sdxc/highlight/markdoc` adds the fence node and depends on [Markdoc](https://markdoc.dev), so a caller that only tokenizes never resolves it. `@sdxc/highlight/styles.css` is the selector layer, one rule per token type, each reading a custom property so a consumer restyles by declaring properties rather than by restating selectors.
+The package splits by dependency. The root entry has none: it is the scanner, the grammars, and the token model. `@sdxc/highlight/markdown` adds the walk visitor and depends on [`@sdxc/markdown`](/packages/markdown), so a caller that only tokenizes resolves it not at all. `@sdxc/highlight/styles.css` is the selector layer, one rule per token type, each reading a custom property so a consumer restyles by declaring properties rather than by restating selectors.
 
 ## Usage
 
@@ -59,13 +59,13 @@ let markup = highlight('let name = "x";', "ts");
 // '<span class="token keyword">let</span> name <span class="token operator">=</span> …'
 ```
 
-### Highlighting Markdown Fences
+### Painting A Parsed Document
 
 ```typescript
-import { fence } from "@sdxc/highlight/markdoc";
-import Markdoc from "@markdoc/markdoc";
+import { highlight } from "@sdxc/highlight/markdown";
+import { Markdown } from "@sdxc/markdown";
 
-let tree = Markdoc.transform(Markdoc.parse(source), { nodes: { fence } });
+let painted = Markdown.walk(document, highlight);
 ```
 
 ## API
@@ -183,22 +183,25 @@ import { compose } from "@sdxc/highlight";
 export const tsx: Grammar = compose(elements, typescript);
 ```
 
-### `fence`
+### `highlight` (from `@sdxc/highlight/markdown`)
 
-Markdoc node definition for fenced code blocks, exported from `@sdxc/highlight/markdoc`. Register it as `nodes.fence` and fences highlight during `Markdoc.transform`: it reads the fence's `language`, `path` and `title`, resolves the language, tokenizes the body, and emits a `Fence` tag for a renderer to draw. This package draws nothing — the renderer decides whether a path gets a header, a block gets a copy button, or lines get numbers.
+A [`Markdown.walk`](/packages/markdown) visitor holding one `code` handler, so a document paints in the pass that walks it. The handler resolves the language the block names, tokenizes its body, and returns a copy of the node carrying both; a block that names no language, as an indented block never does, is painted as `plain`. The node keeps its `content`, `attributes` and `position`, so a painted document writes back as the markdown it came from, and visitors merge, so one walk paints and rewrites at once.
 
 **Example:**
 
-````markdown
-```ts {% path="routes/web.ts" title="Route table" %}
-import { get, route } from "remix/routes";
+```typescript
+import { highlight } from "@sdxc/highlight/markdown";
+import { Markdown } from "@sdxc/markdown";
 
-export default route({
-	home: get("/"),
-	post: get("/:slug"),
+let result = Markdown.walk(document, {
+	...highlight,
+	link(node) {
+		return { ...node, href: canonical(node.href) };
+	},
 });
 ```
-````
+
+Every handler here is synchronous, so the walk returns a `Result` directly and a painting pass inside a render path is never awaited.
 
 ### Types
 
@@ -255,6 +258,20 @@ interface Attributes {
 ```
 
 What a `Fence` tag carries. Tokens rather than markup, so a renderer emits its own elements.
+
+#### `Markdown.Code["tokens"]`
+
+```typescript
+declare module "@sdxc/markdown" {
+	namespace Markdown {
+		interface Code {
+			tokens?: Token[];
+		}
+	}
+}
+```
+
+The field `@sdxc/highlight/markdown` declares and fills: the runs of the block's body, in source order, covering its `content` exactly once. It is optional because a document that no walk painted has none, and it is derived data — a serializer writes the fields a parser produced, so `tokens` survives a round trip through the document and not through the text.
 
 ## Pattern: Painting Tokens Without A Stylesheet
 
