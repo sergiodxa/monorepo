@@ -1,6 +1,7 @@
 /**
- * Renders a highlighted code fence as a `<pre>` block with an optional header
- * showing the file path and title.
+ * Draws a code block as a `<pre>` with an optional header for the file path and
+ * title an annotation wrote. Painted runs arrive as tokens and become spans a
+ * stylesheet colours; plain source renders as the text it is.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -8,20 +9,30 @@
 
 /* @jsxImportSource remix/ui */
 
-import type { Token } from "@sdxc/highlight";
 import type { Handle } from "remix/ui";
 
 import { css } from "remix/ui";
 
 /**
- * Groups Remix code fence types under the component namespace.
+ * Groups the code fence's types under the component name.
  */
 export namespace Fence {
 	/**
-	 * Describes the highlighted code block and optional header metadata.
+	 * One painted run of source. The shape is structural so a document painted
+	 * elsewhere renders here without this package knowing who painted it.
+	 */
+	export interface Token {
+		type: string;
+		value: string;
+	}
+
+	/**
+	 * `content` is the source as written, drawn whenever `tokens` is empty, so a
+	 * document that was never painted still shows its code.
 	 */
 	export interface Props {
 		tokens: Token[];
+		content: string;
 		language: string;
 		path?: string;
 		title?: string;
@@ -29,10 +40,10 @@ export namespace Fence {
 }
 
 /**
- * Creates a Remix renderer for highlighted code fences.
+ * Renders a code block, headed by whatever metadata the fence carried.
  */
 export function Fence({ props }: Handle<Fence.Props>) {
-	let { tokens, language, path, title } = props;
+	let { tokens, content, language, path, title } = props;
 	let hasHeader = Boolean(path || title);
 
 	return () => (
@@ -95,15 +106,17 @@ export function Fence({ props }: Handle<Fence.Props>) {
 				)}
 
 				<code className={`language-${language}`}>
-					{tokens.map((token, index) =>
-						token.type === "plain" ? (
-							token.value
-						) : (
-							<span key={index} className={`token ${token.type}`}>
-								{token.value}
-							</span>
-						),
-					)}
+					{tokens.length > 0
+						? tokens.map((token, index) =>
+								token.type === "plain" ? (
+									token.value
+								) : (
+									<span key={index} className={`token ${token.type}`}>
+										{token.value}
+									</span>
+								),
+							)
+						: content}
 				</code>
 			</pre>
 		</div>

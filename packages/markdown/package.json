@@ -6,15 +6,14 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
-		"./server": "./src/server/index.ts",
-		"./client": "./src/client/index.tsx"
+		"./html": "./src/html/index.ts",
+		"./plain": "./src/plain/index.ts",
+		"./remix": "./src/remix/index.tsx"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@markdoc/markdoc": "^0.5.9",
-		"@sdxc/highlight": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/yaml": "workspace:*",
 		"@standard-schema/spec": "^1.1.0",

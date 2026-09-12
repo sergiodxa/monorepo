@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-11
+**Accepted** - 2026-09-12
 
 ## Background
 
@@ -88,7 +88,7 @@ has called it since. Writing frontmatter back out is its first real caller.
 `@sdxc/markdown` parses and serializes GitHub Flavored Markdown itself, over a
 first-party AST, and Markdoc is removed.
 
-The package has three entry points. The root is the format; each of the others is one
+The package has four entry points. The root is the format; each of the others is one
 thing you do _with_ a parsed document, named for what it produces:
 
 ```ts
@@ -104,6 +104,9 @@ class Markdown {
 
 // @sdxc/markdown/plain — plain text
 toPlainText(node, options?): string;
+
+// @sdxc/markdown/html — static HTML
+toHTML(node, options?): string;
 
 // @sdxc/markdown/remix — Remix UI nodes (needs the UI runtime)
 toRemix(document, options?): RemixNode;
@@ -149,9 +152,23 @@ entry point.
 
 For `/remix` that split is load-bearing — putting `toRemix` on the class would drag the
 UI runtime into every bundle that parses, undoing the separation the entry points exist
-for. `/plain` needs nothing, and is its own entry for symmetry and for room to grow:
-plain-text extraction has its own options today and will grow more, and none of them
+for. `/plain` and `/html` need nothing, and are their own entries for symmetry and for
+room to grow: each has options of its own today and will grow more, and none of them
 belong on the surface of the format.
+
+`/html` is the renderer for a response that carries markup rather than a component tree —
+a feed item, a syndicated body, a page served to a client with no UI runtime. It emits
+plain semantic elements and adds a `md-` class only where HTML has no element that says
+what the node is: `md-alert` with its kind, `md-code`, `md-table`, `md-task`,
+`md-footnotes`, `md-variable`. Styling is the consumer's, through those classes and
+through the `id` and `class` an annotation writes, which the renderer passes into the
+markup. Raw HTML is escaped here exactly as it is in `/remix`, which is what makes the
+output safe to serve for content the renderer did not vet.
+
+It is a separate renderer from the HTML printer the conformance suite carries. That one
+follows the specification, where raw HTML passes through untouched; this one follows this
+package's own rule, where nothing raw ever becomes markup. Sharing them would mean one of
+the two lying about what it is for.
 
 The rule that falls out is worth stating, because the next capability will have to obey
 it: `Markdown` is the format, an entry point is named for what it produces, and importing
@@ -840,9 +857,13 @@ no consumer moves until the fourth is green:
    through `toRemix` and the snapshots are diffed; a difference is either a bug or an
    intended gain, and either is written down. The same files run the idempotency property
    and the formatter fixed point.
-5. **Weight.** The built root entry has a size budget of 45 KB minified, asserted in CI
-   the way the numbers in the Context were measured. A parser, a serializer, and a walker
-   of this scope land between 30 and 60 KB, and the claim below is net of that.
+5. **Weight.** The built root entry has a size budget asserted in CI, measured the way the
+   numbers in the Context were. The estimate here was 45 KB, against a guess that a parser,
+   a serializer and a walker of this scope land between 30 and 60 KB. Measured, the entry
+   is **66.2 KB minified / 20.8 KB gzipped**, so the budget is set at 66 KB — a ratchet just
+   above what shipped rather than a target to grow into. Roughly two thirds of it is the
+   block and inline phases; the rest is the serializer, the walk, and the YAML reader and
+   writer the class's statics keep reachable. The saving below is net of the real figure.
 
 ### Out of scope
 
@@ -1220,8 +1241,10 @@ anyone outside the repository. The order still matters for bisecting:
 
 ### Positive
 
-- The server entry drops roughly 149 KB minified of Markdoc and gains a parser held to a
-  45 KB budget, so the net saving is above 100 KB and is asserted rather than estimated.
+- The format entry weighs 66.2 KB minified / 20.8 KB gzipped where the server entry it
+  replaces weighed 181.1 KB / 59.0 KB, a saving of **114.9 KB minified and 38.2 KB
+  gzipped**, asserted in CI rather than estimated. The parser came in above the 45 KB this
+  document guessed at, and still well under what it removed.
 - `content: unknown` becomes `document: Markdown.Document`, checked from the parse
   boundary through the payload to the view. The renderer's `$$mdtype` sniffing and
   attribute coercion go away.
@@ -1438,6 +1461,53 @@ closing a math span. `{% $name %}` needs none of that: `{%` never begins prose, 
 braces already carry annotations so the serializer already escapes them, and it is the
 form Markdoc authors write today. The cost is six more characters per hole, in content
 that has written none so far.
+
+## Notes
+
+### What the suite measured
+
+**Conformance.** CommonMark 0.31.2: **648 of 652**. GitHub Flavored Markdown: **658 of 672**.
+Both floors are asserted, so they can only go up. Every example still short of one is a
+divergence this document chose:
+
+- **One entity example, in each suite.** `entities.ts` ships the three XHTML 1.0 sets,
+  253 names packed into a 2.2 KB string, rather than HTML5's roughly eighteen hundred.
+  `&Dcaron;` and its neighbours stay literal. That is the weight decision, and it costs
+  exactly one example.
+- **Three autolink examples, in each suite.** A bare URL and a bare email become links,
+  because the dialect is GitHub's. Plain CommonMark expects text, and the GFM extension
+  examples expect the links — the same inputs, two right answers, and this package gives
+  GitHub's.
+- **Nine emphasis examples, in the GFM suite only.** The vendored GFM specification is
+  pinned to CommonMark 0.29, which flattened `****foo****` to one `strong` node; 0.31.2
+  nests it as two. The parser matches 0.31.2, and every one of those nine inputs passes in
+  the CommonMark suite. Spec drift, not a defect.
+- **The one `tagfilter` example.** Raw HTML renders as escaped text everywhere, so nothing
+  raw ever becomes markup for the filter to catch. The guarantee is stronger than the one
+  the extension describes, and it reads differently.
+
+**The corpus.** All thirty-six content files parse, round-trip idempotently, and write back
+to a fixed point of `vp fmt`. Against the snapshot of the previous pipeline, the rendered
+output is identical for thirty-three of the thirty-six once the one intended markup change
+is normalized: a fenced block now renders as `<pre><code class="language-…">` where the
+previous parser emitted `<pre data-language="…">`. Of the three that still differ, two are
+shapes of the printer used for the comparison — `<hr />` against `<hr>`, and the newline the
+specification puts before a list nested in a tight item. The third is a gain: a bare URL in
+the flow-monitor documentation is now a link.
+
+**Weight.** Measured above, in "The suite lands first".
+
+### Frontmatter is a mapping
+
+One rule the design did not anticipate, settled while implementing. A file opens with a
+frontmatter block only when the delimited text parses as a YAML **mapping**. A block holding
+a scalar, a sequence, or nothing is a document that opens on a thematic break, and its lines
+belong to the body — which is what lets `---\nFoo\n---\nBar\n---` read as the two setext
+headings CommonMark says it is. A block YAML outright rejects is still the loud failure this
+document asks for, since a malformed block is one an author meant to write.
+
+With a schema the outcome is unchanged either way: a block that is not a mapping validates
+against `{}`, exactly as an absent one does.
 
 ## References
 

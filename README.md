@@ -107,7 +107,7 @@ Run from the repository root:
 | [duration](packages/duration)                                   | Typed duration strings converted to milliseconds or seconds                              | ✅  |
 | [feed](packages/feed)                                           | One feed API over RSS and Atom, with conditional fetching and autodiscovery              | ✅  |
 | [get-client-ip](packages/get-client-ip)                         | Extract client IP from requests                                                          |     |
-| [highlight](packages/highlight)                                 | Syntax highlighting as tokens, with a Markdoc fence node                                 |     |
+| [highlight](packages/highlight)                                 | Syntax highlighting as tokens, with a markdown visitor that paints code blocks           |     |
 | [hostname](packages/hostname)                                   | Hostname parsing and validation utilities                                                |     |
 | [html](packages/html)                                           | Read a served page: parse HTML, then query it by role and accessible name                | ✅  |
 | [http](packages/http)                                           | HTTP helper utilities                                                                    |     |
@@ -119,7 +119,7 @@ Run from the repository root:
 | [location](packages/location)                                   | URL-like `Location` class for URL paths without an origin                                | ✅  |
 | [logger](packages/logger)                                       | One wide event per Worker invocation, attached at the router and the job dispatcher      | ✅  |
 | [mail](packages/mail)                                           | Transactional email with pluggable transports                                            |     |
-| [markdown](packages/markdown)                                   | Markdown parsing and Remix UI rendering                                                  |     |
+| [markdown](packages/markdown)                                   | GitHub Flavored Markdown: parse to a typed AST, transform it, write it back              |     |
 | [mcp](packages/mcp)                                             | MCP servers over stateless Streamable HTTP                                               |     |
 | [oidc-provider](packages/oidc-provider)                         | OIDC/OAuth2 provider engine                                                              |     |
 | [pagination](packages/pagination)                               | Offset and keyset pagination with Link headers                                           |     |
@@ -172,7 +172,6 @@ repeats it. `@sdxc/*` workspace dependencies are listed under [Packages](#packag
 | `jose`                            | `jwt`                                                                                                                   | Signs and verifies JWTs and JWKS.                                     |
 | `@simplewebauthn/server`          | `oidc-provider`                                                                                                         | Passkey registration and authentication.                              |
 | `@polar-sh/sdk`                   | `polar`                                                                                                                 | Client for the Polar billing API.                                     |
-| `@markdoc/markdoc`                | `highlight`, `mail`, `markdown`                                                                                         | Parses Markdown into a renderable tree.                               |
 | `@standard-schema/spec`           | `markdown`, `validate`, `webhooks`                                                                                      | The `StandardSchemaV1` interface, as types only.                      |
 | `i18next`                         | `i18n`                                                                                                                  | Translation lookup and interpolation.                                 |
 | `html-parse-stringify`            | `i18n`                                                                                                                  | Parses the tag AST inside a translation string.                       |
