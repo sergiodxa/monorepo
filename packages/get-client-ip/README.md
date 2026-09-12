@@ -1,120 +1,170 @@
 # @sdxc/get-client-ip
 
-Utility to get the client's IP address from a Cloudflare Workers request.
+Read the client IP from a Cloudflare Workers request.
 
-## Overview
+A request that reaches a Worker has already crossed Cloudflare's network, and every proxy
+along the way is another hop that could have rewritten the source address. Cloudflare
+settles it by attaching
+[`CF-Connecting-IP`](https://developers.cloudflare.com/fundamentals/reference/http-headers/#cf-connecting-ip),
+a header carrying the address the connection actually came from. This package reads that
+header, so the one name worth remembering is the function rather than the header spelling.
 
-Getting the real client IP address in web applications can be challenging due to proxies, load balancers, and CDNs sitting between users and your server. Each layer can obscure the original IP.
+## Installation
 
-Cloudflare solves this by adding the `CF-Connecting-IP` header to every request passing through their network. This header always contains the original client IP address, regardless of how many proxies the request traversed.
+```bash
+npm add @sdxc/get-client-ip
+```
 
-This package provides a simple utility to extract that header value in Cloudflare Workers environments.
+The rate-limit pattern below answers with a status helper from
+[`@sdxc/response`](https://www.npmjs.com/package/@sdxc/response), which you install only if
+you want those helpers.
 
 ## Usage
 
+### Read The Caller's Address
+
 ```typescript
 import { getClientIP } from "@sdxc/get-client-ip";
-import { ok } from "@sdxc/response";
-import { createAction } from "remix/router";
 
-import routes from "~/routes/web";
-
-/** GET /api/whoami — answers with the caller's own IP address. */
-export default createAction(routes.api.whoami, (ctx) => {
-	return ok({ ip: getClientIP(ctx.request) });
-});
+export function GET(request: Request) {
+	let ip = getClientIP(request);
+	return Response.json({ ip });
+}
 ```
+
+### Handle A Request Without The Header
+
+The header arrives on every request Cloudflare routes, so it is absent exactly when
+something else served the request — a local dev server, a test, another host. Name the
+fallback and the rest of the handler stops caring:
+
+```typescript
+import { getClientIP } from "@sdxc/get-client-ip";
+
+export function GET(request: Request) {
+	let ip = getClientIP(request) ?? "unknown";
+	return Response.json({ ip });
+}
+```
+
+### Pair It With Cloudflare's Geolocation
+
+A Worker request also carries a `cf` object with the location Cloudflare resolved for that
+same connection, so the address and where it came from read together:
+
+```typescript
+import { getClientIP } from "@sdxc/get-client-ip";
+
+export function GET(request: Request) {
+	return Response.json({
+		ip: getClientIP(request),
+		country: request.cf?.country,
+		city: request.cf?.city,
+		region: request.cf?.region,
+	});
+}
+```
+
+`request.cf` is typed by
+[`@cloudflare/workers-types`](https://www.npmjs.com/package/@cloudflare/workers-types),
+listed in the `types` of a Workers `tsconfig.json`.
 
 ## API
 
 ### `getClientIP(request: Request): string | null`
 
-Gets the client's IP address from a Cloudflare Workers request.
+Returns the value of the request's `CF-Connecting-IP` header, or `null` when the header is
+absent. IPv4 and IPv6 both come back as the text Cloudflare sent, and a header repeated
+across several lines reads as one comma-joined string, the way `Headers.get` reports any
+repeated header.
 
-Reads the `CF-Connecting-IP` header which Cloudflare automatically adds to all requests with the client's IP address.
+```typescript
+getClientIP(request); // "203.0.113.42"
+```
 
-**Parameters:**
+Longhand, this is `request.headers.get("CF-Connecting-IP")` — the value of the export is
+that the header name is written once, in a place a typo shows up as a failing test rather
+than as a `null` at runtime.
 
-- `request`: The incoming Request object
+## Pattern: Rate Limiting Per Client
 
-**Returns:**
-
-- The client's IP address as a string, or `null` if not available
-
-## How it works
-
-Cloudflare automatically adds the `CF-Connecting-IP` header to all requests passing through their network. This header contains the original client IP address, even if the request has passed through proxies or load balancers.
-
-This is the recommended way to get client IP addresses in Cloudflare Workers applications.
-
-## Patterns
-
-### Rate Limiting
-
-Use the client IP to implement rate limiting:
+The address is the bucket key, so a counter in a KV namespace gives one budget per caller
+per window:
 
 ```typescript
 import { getClientIP } from "@sdxc/get-client-ip";
 import { ok, tooManyRequests } from "@sdxc/response";
-import { env } from "cloudflare:workers";
-import { createAction } from "remix/router";
 
-import routes from "~/routes/web";
-
-/** How many requests one IP may spend inside {@link WINDOW_SECONDS}. */
+/** How many requests one address may spend inside the window. */
 const LIMIT = 100;
 const WINDOW_SECONDS = 60;
 
-/** GET /api/status — serves the status, spending the caller's per-minute budget first. */
-export default createAction(routes.api.status, async (ctx) => {
-	let key = `rate-limit:${getClientIP(ctx.request) ?? "unknown"}`;
-	let spent = Number((await env.KV.get(key)) ?? "0");
+export default {
+	async fetch(request: Request, env: { KV: KVNamespace }) {
+		let key = `rate-limit:${getClientIP(request) ?? "unknown"}`;
+		let spent = Number((await env.KV.get(key)) ?? "0");
 
-	if (spent >= LIMIT) return tooManyRequests({ error: "Rate limit exceeded" });
+		if (spent >= LIMIT) return tooManyRequests({ error: "Rate limit exceeded" });
 
-	await env.KV.put(key, String(spent + 1), { expirationTtl: WINDOW_SECONDS });
+		await env.KV.put(key, String(spent + 1), { expirationTtl: WINDOW_SECONDS });
 
-	return ok({ status: "up" });
-});
+		return ok({ status: "up" });
+	},
+};
 ```
 
-A missing header falls back to a shared `unknown` bucket, so a request that arrives without one still spends a budget.
+Every request that arrives without the header shares the `unknown` bucket, which keeps the
+budget finite for traffic that reached the Worker some other way.
 
-### Geolocation Logging
+## Pattern: Attaching The Address To A Log Line
 
-Log client IP alongside geolocation data for analytics:
+Logging the address turns a stack trace into something you can correlate across requests:
 
-```tsx
+```typescript
 import { getClientIP } from "@sdxc/get-client-ip";
-import { createAction } from "remix/router";
 
-import DashboardView from "~/resources/views/dashboard";
-import routes from "~/routes/web";
+export async function GET(request: Request) {
+	let url = new URL(request.url);
 
-/** GET /dashboard — records where the visitor connected from, then renders the page. */
-export default createAction(routes.dashboard, (ctx) => {
-	let cf = ctx.request.cf;
-
-	ctx.log.note("request.received", {
-		ip: getClientIP(ctx.request),
-		country: cf?.country,
-		city: cf?.city,
-		region: cf?.region,
+	console.log("request.received", {
+		ip: getClientIP(request),
+		path: url.pathname,
+		method: request.method,
 	});
 
-	return ctx.render(<DashboardView />);
-});
+	return new Response("OK");
+}
 ```
 
-## Related Packages
+An IP address is personal data in many jurisdictions. Decide what retention applies before
+a log line like this outlives the request that produced it.
 
-- [`@sdxc/logger`](../logger/README.md) - For logging client IP with requests
-- [`@sdxc/response`](../response/README.md) - Status helpers such as the `429` a rate limit answers with
+## Versioning
 
-## Tips
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
 
-1. **Always check for null** - The `CF-Connecting-IP` header might not be present in local development or non-Cloudflare environments. Always handle the `null` case gracefully.
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
 
-2. **Only works in Cloudflare Workers environments** - This package relies on Cloudflare-specific headers. It won't work in other hosting environments unless you configure your proxy to forward similar headers.
+Depend on one exact date, and move it when you are ready to take the change:
 
-3. **Consider privacy implications when logging IP addresses** - IP addresses are personally identifiable information (PII) in many jurisdictions. Ensure you have appropriate privacy policies, data retention limits, and legal basis before storing or logging IP addresses.
+```json
+{
+	"dependencies": {
+		"@sdxc/get-client-ip": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)
