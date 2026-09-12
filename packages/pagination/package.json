@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/pagination",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Offset and keyset pagination with parameter parsing and Link headers",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
