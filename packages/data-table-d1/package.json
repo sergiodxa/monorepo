@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/data-table-d1",
 	"version": "0.0.0",
-	"private": true,
+	"description": "A remix/data-table DatabaseDriver backed by Cloudflare D1",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

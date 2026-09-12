@@ -2,92 +2,176 @@
 
 A `remix/data-table` `DatabaseDriver` backed by Cloudflare D1.
 
-## Overview
+`remix/data-table` models reach a database through a `DatabaseDriver`. This package
+implements that interface over a [Cloudflare D1](https://developers.cloudflare.com/d1/)
+binding, compiling each operation to SQLite-dialect SQL and normalizing the response
+shapes D1 returns, so models, queries and raw statements run inside a Worker.
 
-[`remix/data-table`](https://github.com/remix-run/remix) models talk to a database
-through a `DatabaseDriver`. This package implements that adapter over a Cloudflare
-D1 binding, so `remix/data-table` models, queries, and migrations run against D1 in
-a Worker.
+## Installation
 
-SQL is generated with SQLite semantics to match D1. `RETURNING` and upserts are
-enabled by default. It was extracted from `apps/auth-saas` so self-hosted workers
-and other D1-backed apps can share one adapter (see
-[ADR-011](/docs/adr/ADR-011-oidc-provider-engine-package.md)).
+```bash
+npm add @sdxc/data-table-d1
+```
 
-> [!WARNING]
-> **Transactions are not atomic on D1.** D1 has no interactive transactions (no
-> SQL `BEGIN`/`COMMIT`/`ROLLBACK`), and its only atomic primitive, `db.batch()`,
-> requires every statement up front and defers all results — which is incompatible
-> with the `remix/data-table` adapter contract that each statement return its rows
-> and `RETURNING` output synchronously inside the `transaction()` callback. As a
-> result, `db.transaction(...)` on this adapter runs each statement immediately and
-> **each one commits on its own**; if a later statement throws, the earlier writes
-> are already persisted and are **not** rolled back. Savepoints are unsupported.
->
-> Do not rely on `transaction()` for atomicity here. Express multi-row writes that
-> must be all-or-nothing as a **single** SQL statement instead — for example
-> `createMany()` (a single multi-row `INSERT`), one `UPDATE`/`DELETE`, or
-> `INSERT ... ON CONFLICT` (upsert). If you need real cross-statement atomicity,
-> run inside a Durable Object with
-> [`@sdxc/data-table-sqlstorage`](/packages/data-table-sqlstorage), whose SQLite
-> backend does support atomic transactions.
+The driver is built for [`remix`](https://www.npmjs.com/package/remix), which supplies the
+`Database`, `table` and `column` values every example here uses, and it installs alongside
+this package.
 
 ## Usage
 
-### Basic Example
+### Query A Table
+
+```typescript
+import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
+import { column as c, Database, table } from "remix/data-table";
+
+let users = table({
+	name: "users",
+	columns: { id: c.integer().primaryKey(), email: c.varchar(255) },
+});
+
+export default {
+	async fetch(request, env) {
+		let db = new Database(createD1DatabaseAdapter(env.DB));
+		return Response.json(await db.findMany(users));
+	},
+} satisfies ExportedHandler<Env>;
+```
+
+`c.json()` columns are stringified on the way in and parsed on the way back, and
+`c.boolean()` columns read back as `true`, `false` or `null` rather than SQLite's `1` and
+`0` — on a `select` and on a `RETURNING` row alike.
+
+### Run A Raw Statement
+
+```typescript
+let db = new Database(createD1DatabaseAdapter(env.DB));
+
+let read = await db.exec("SELECT email FROM users WHERE id = ?", [2]);
+read.rows; // [{ email: "two@example.com" }]
+
+let write = await db.exec("DELETE FROM users WHERE id = ? RETURNING id, email", [2]);
+write.rows; // the deleted rows
+write.affectedRows; // 1
+```
+
+The SQL text decides how the statement is read back: one that starts with `SELECT`, `WITH`
+or `PRAGMA` yields rows, and so does any statement carrying a `RETURNING` clause. Every
+other write reports `affectedRows` alone.
+
+### Observe What Each Statement Costs
+
+```typescript
+let db = new Database(
+	createD1DatabaseAdapter(env.DB, {
+		onStatement({ kind, table, rowsRead, rowsWritten, durationMs }) {
+			console.log(kind, table, rowsRead, rowsWritten, durationMs);
+		},
+	}),
+);
+```
+
+The numbers come from the `meta` D1 already returns with every response, so observing them
+costs no extra statement and no extra billable operation.
+
+## API
+
+### `createD1DatabaseAdapter(db: D1Database, options?): DatabaseDriver`
+
+Builds the driver you hand to `new Database(...)`. `db` is the D1 binding to execute
+against, such as `env.DB`.
+
+`options`:
+
+- `capabilities`: Overrides for the driver's feature flags, as a
+  `Partial<DatabaseCapabilities>` from `remix/data-table`. By default `returning`, `upsert`
+  and `transactionalDdl` are `true`, and `savepoints` and `migrationLock` are `false`.
+- `onStatement`: A `D1StatementObserver` called once per executed statement.
+
+### `D1StatementObserver`
+
+The function `onStatement` takes: it receives one `D1StatementObservation` and returns
+nothing. It runs on the hot path, once per statement, so keep it cheap; anything it throws
+is swallowed rather than failing the statement it was measuring.
+
+### `D1StatementObservation`
+
+What one executed statement cost, as D1 itself reported it.
+
+```typescript
+interface D1StatementObservation {
+	/** Operation kind the statement came from (`select`, `insert`, `raw`, …). */
+	kind: DataManipulationOperation["kind"];
+	/** Table the operation targets, or `undefined` for a raw statement. */
+	table: string | undefined;
+	/** Rows D1 read from tables and indexes, 0 when unreported. */
+	rowsRead: number;
+	/** Rows D1 wrote to tables and indexes, 0 when unreported. */
+	rowsWritten: number;
+	/** Milliseconds D1 reports for the statement, 0 when unreported. */
+	durationMs: number;
+}
+```
+
+A statement that throws is not reported, since D1 returns no `meta` for it, and neither are
+the driver's own schema probes. A count is `0` whenever D1 omits the matching `meta` field,
+rather than being estimated.
+
+### Transactions
+
+D1 commits each statement on its own, the moment it runs. `db.transaction(...)` therefore
+gives a scope rather than atomicity: a statement that succeeded before a later one threw
+stays in the database. That immediacy is also what makes `create` and `update` able to
+return their `RETURNING` row inside the callback.
+
+Express an all-or-nothing write as a single SQL statement — `createMany()`, one
+`UPDATE`/`DELETE`, or an upsert — and see
+[Pattern: Making A Multi-Row Write Atomic](#pattern-making-a-multi-row-write-atomic). For
+cross-statement atomicity, a Durable Object's SQLite storage supports it, through
+[`@sdxc/data-table-sqlstorage`](https://www.npmjs.com/package/@sdxc/data-table-sqlstorage).
+
+### Schema And Unsupported Operations
+
+`executeScript(sql)` runs a DDL script, which covers applying a schema at boot;
+[`wrangler d1 migrations apply`](https://developers.cloudflare.com/d1/reference/migrations/)
+owns versioned schema changes. Savepoints and `wipe()` throw, and `close()` is a no-op,
+since the Worker runtime owns the binding's lifetime.
+
+## Pattern: Making A Multi-Row Write Atomic
+
+One statement is the unit D1 commits, so a write that must land completely is written as
+one statement. `createMany()` compiles to a single multi-row `INSERT`:
+
+```typescript
+await db.createMany(members, [
+	{ id: 1, team: "core" },
+	{ id: 2, team: "core" },
+]);
+```
+
+A raw write with `RETURNING` extends that to work a queue claims, because the same statement
+both moves the rows and reports exactly which ones this caller won, with no read-then-write
+race:
+
+```typescript
+let claimed = await db.exec("UPDATE jobs SET run_at = run_at + ? WHERE run_at <= ? RETURNING id", [
+	interval,
+	now,
+]);
+```
+
+The typed builder cannot express this, since its changes are bound values rather than SQL
+expressions. `affectedRows` reads the same with the clause as without it.
+
+## Pattern: Attributing Rows Read And Written Per Query
+
+Cloudflare's analytics report usage per database. `onStatement` reports it per statement, so
+an app can attribute row counts to the query or unit of work that caused them:
 
 ```typescript
 import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
 import { Database } from "remix/data-table";
 
-export default {
-	async fetch(request, env) {
-		let db = new Database(createD1DatabaseAdapter(env.DB));
-		let users = await db.findMany(usersTable);
-		return Response.json(users);
-	},
-} satisfies ExportedHandler<Env>;
-```
-
-## API
-
-### `createD1DatabaseAdapter(db: D1Database, options?: D1AdapterOptions): DatabaseDriver`
-
-Creates a `remix/data-table` `DatabaseDriver` that executes against a Cloudflare
-D1 binding.
-
-**Parameters:**
-
-- `db`: The D1 binding to execute SQL against (e.g. `env.DB`).
-- `options.capabilities`: Optional overrides for the adapter's feature flags
-  (`Partial<DatabaseCapabilities>` from `remix/data-table`). Defaults: `returning`,
-  `upsert`, and `transactionalDdl` are `true`; `savepoints` and `migrationLock` are
-  `false`.
-- `options.onStatement`: Optional `D1StatementObserver` called after every executed
-  statement with `{ kind, table, rowsRead, rowsWritten, durationMs }`, taken from the
-  `meta` D1 already returns. See the pattern below.
-
-**Returns:**
-
-- A `DatabaseDriver` you pass to `new Database(...)`.
-
-**Example:**
-
-```typescript
-let adapter = createD1DatabaseAdapter(env.DB);
-let db = new Database(adapter);
-```
-
-## Pattern: Attributing D1 rows read and written per query
-
-Every D1 response carries `meta.rows_read`, `meta.rows_written`, and `meta.duration`,
-and the adapter already reads `meta` to normalise `affectedRows`/`insertId`.
-`onStatement` hands those numbers to the caller instead of discarding them, so an app
-can attribute row counts to the query or unit of work that caused them — a breakdown
-per _query_, which Cloudflare's per-_database_ analytics cannot give. It costs no
-extra statement and no extra billable operation:
-
-```typescript
 let usage = { statements: 0, rowsRead: 0, rowsWritten: 0 };
 
 let db = new Database(
@@ -101,17 +185,13 @@ let db = new Database(
 );
 ```
 
-Keep the observer cheap: it runs once per statement, on the hot path. It is allowed
-to throw — the adapter swallows anything it throws rather than failing the statement
-it was measuring — but a throwing observer records nothing. Statements that throw are
-not reported (D1 returns no `meta` for them), and neither are the adapter's own
-schema probes (`hasTable`, `hasColumn`, `executeScript`). Row counts are `0` whenever
-D1 omits the corresponding `meta` field rather than being estimated.
+Accumulating into a per-request object and logging it once at the end turns the same hook
+into a cost breakdown per endpoint, which is what a cost regression needs to be found.
 
-## Pattern: Caching the database per isolate
+## Pattern: Reusing The Driver Across Requests
 
-`new Database()` is cheap, but the binding is stable for the isolate, so build the
-adapter once and reuse it across requests:
+The binding is stable for the lifetime of an isolate, so build the driver once and let every
+request on that isolate share it:
 
 ```typescript
 import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
@@ -122,46 +202,52 @@ let db: Database | null = null;
 export default {
 	async fetch(request, env) {
 		db ??= new Database(createD1DatabaseAdapter(env.DB));
-		return Response.json(await db.findMany(usersTable));
+		return Response.json(await db.findMany(users));
 	},
 } satisfies ExportedHandler<Env>;
 ```
 
-## Pattern: Self-hosting `@sdxc/oidc-provider` on D1
+## Pattern: Handing The Driver To A Host-Agnostic Library
 
-The adapter is what lets the host-agnostic provider run on a plain Worker; the host
-injects it and the provider only ever sees the `DatabaseDriver` interface:
+A library that takes a `DatabaseDriver` rather than opening its own connection runs wherever
+the host can supply one. The host builds the driver and injects it, and the library sees only
+the interface:
 
 ```typescript
 import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
-import { createOidcProvider } from "@sdxc/oidc-provider";
 
-let provider = createOidcProvider({
-	database: createD1DatabaseAdapter(env.DB),
-	internalSecret: await env.INTERNAL_SECRET.get(),
-});
+let engine = createEngine({ database: createD1DatabaseAdapter(env.DB) });
 ```
 
-## Related Packages
+Swapping the host means swapping that one line, so the same library code runs on D1 in a
+Worker and on another SQLite-backed driver elsewhere.
 
-- [`@sdxc/data-table-sqlstorage`](/packages/data-table-sqlstorage) - The same adapter for a Durable Object `SqlStorage`
-- [`@sdxc/oidc-provider`](/packages/oidc-provider) - Host-agnostic OIDC provider that consumes this adapter
+## Versioning
 
-## Tips
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
 
-1. **Prefer `RETURNING` over insert ids** - `returning` is enabled by default; rely on it rather than D1's `last_row_id` where possible.
-2. **Transactions are not atomic; savepoints are unsupported** - D1 has no `BEGIN`/`COMMIT`/`ROLLBACK`, so `transaction()` does not roll back on failure (see the warning above). Make all-or-nothing writes a single SQL statement, and don't rely on nested savepoints.
-3. **A raw write with `RETURNING` yields its rows** - `db.exec()` decides whether to read rows back by inspecting the SQL, so `UPDATE ... RETURNING` and `DELETE ... RETURNING` return `rows` as well as `affectedRows`. This is what makes an atomic claim expressible - a single statement that both computes per-row values and reports which rows it touched, with no read-then-write race:
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
 
-   ```ts
-   // Claims due rows and reports exactly the ones this caller won.
-   let claimed = await db.exec(
-   	`UPDATE jobs SET run_at = run_at + interval WHERE run_at <= ? RETURNING id`,
-   	[now],
-   );
-   ```
+Depend on one exact date, and move it when you are ready to take the change:
 
-   The typed builder cannot express this, because its `changes` are bound values rather than SQL expressions. `affectedRows` is identical to what the same statement reports without the clause.
+```json
+{
+	"dependencies": {
+		"@sdxc/data-table-d1": "2026.9.4"
+	}
+}
+```
 
-4. **Apply migrations with `wrangler d1 migrations apply`** - Use D1's own migration tooling (or the adapter's `executeScript` at boot) rather than expecting the adapter to journal schema changes.
-5. **Reuse the adapter** - Build it once per isolate instead of per request.
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)
