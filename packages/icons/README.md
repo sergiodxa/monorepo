@@ -1,16 +1,27 @@
 # @sdxc/icons
 
-[Lucide](https://lucide.dev) icons as `remix/ui` components, mirroring how `lucide-react` exposes icons for React.
+[Lucide](https://lucide.dev) icons as `remix/ui` components, one tree-shakeable export per
+icon.
 
-## Overview
+Lucide publishes its icons as framework-agnostic data — a list of SVG tag and attribute
+pairs per icon. This package turns that data into components ahead of time and ships them,
+so an icon is a plain import with no codegen step of your own, and a bundler drops the ~1700
+icons you never name. The prop contract matches
+[`lucide-react`](https://www.npmjs.com/package/lucide-react): the same defaults, the same
+prop names, the same `aria-hidden` fallback.
 
-Lucide ships its raw icon data (SVG tag/attribute pairs, framework-agnostic) through `lucide-static`. This package turns that data into one `remix/ui` component per icon — the same shape as `lucide-react`'s per-icon modules — so each icon is its own importable, tree-shakeable export instead of a single bundle containing all 1700+ icons.
+## Installation
 
-Icons are generated ahead of time by `scripts/generate-icons.ts` and checked into `src/icons/`, rather than resolved at runtime, so consumers get plain `remix/ui` components with no codegen step of their own. Each icon component follows the `Handle<Props>` pattern (see `remix/ui`'s [component docs](https://www.npmjs.com/package/remix)) and renders an `<svg>` with the same defaults, prop names, and `aria-hidden` fallback behavior as `lucide-react`'s `Icon`.
+```bash
+npm add @sdxc/icons
+```
+
+Every icon is a `remix/ui` component, so [`remix`](https://www.npmjs.com/package/remix)
+installs alongside this package and renders them.
 
 ## Usage
 
-### Basic Example
+### Render An Icon
 
 ```tsx
 import { HeartIcon } from "@sdxc/icons";
@@ -25,81 +36,98 @@ function LikeButton() {
 }
 ```
 
-### Customizing color and stroke width
+Every icon in the [Lucide catalog](https://lucide.dev/icons/) is exported as
+`<PascalCaseName>Icon`, so `activity` is `ActivityIcon` and `circle-alert` is
+`CircleAlertIcon`.
+
+### Size, Color And Stroke
 
 ```tsx
 import { CircleAlertIcon } from "@sdxc/icons";
 
 function ErrorBanner() {
-	return () => <CircleAlertIcon color="crimson" strokeWidth={1.5} className="banner-icon" />;
+	return () => <CircleAlertIcon size={32} color="crimson" strokeWidth={1.5} className="banner" />;
 }
 ```
 
-### Accessible icons
+`color` sets the stroke and defaults to `currentColor`, so an icon inherits the surrounding
+text color until you say otherwise. A `className` is appended to the `lucide` and
+`lucide-<name>` classes the icon always carries.
 
-By default, icons render with `aria-hidden="true"` since they're usually paired with visible text. Pass an accessible name to make one stand alone:
+### Name An Icon For Assistive Technology
+
+An icon renders with `aria-hidden="true"`, which is what you want beside visible text. An
+`aria-*` attribute or a `role` replaces that fallback and gives the icon its own name:
 
 ```tsx
 import { TrashIcon } from "@sdxc/icons";
 
 function DeleteButton() {
 	return () => (
-		<button aria-label="Delete">
-			<TrashIcon />
+		<button>
+			<TrashIcon aria-label="Delete" />
 		</button>
 	);
 }
 ```
 
-### Rendering an icon by name
+### Render An Icon Chosen At Runtime
 
-When the icon isn't known until runtime — driven by a CMS field, a config value, or user data — use `<Icon name />` instead of importing a specific icon component. `name` is typechecked against every icon in the catalog:
+When the icon arrives as data — a content field, a config value, a row in a database — render
+`<Icon name />`. The `name` prop is typed as the union of every icon in the catalog, so a
+misspelling is a compile error:
 
 ```tsx
+import type { IconName } from "@sdxc/icons";
+import type { Handle } from "remix/ui";
+
 import { Icon } from "@sdxc/icons";
 
-function NavLink({ props }: Handle<{ iconName: IconName; label: string }>) {
+interface NavLinkProps {
+	icon: IconName;
+	label: string;
+	href: string;
+}
+
+function NavLink({ props }: Handle<NavLinkProps>) {
 	return () => (
-		<a href="/">
-			<Icon name={props.iconName} size={18} />
+		<a href={props.href}>
+			<Icon name={props.icon} size={18} />
 			{props.label}
 		</a>
 	);
 }
 ```
 
-`<Icon />` builds the component on demand by calling `createLucideIcon(name, ...)` against the matching entry in a generated `registry.ts`, rather than lazily `import()`-ing icons — see [Why `<Icon />` isn't lazy-loaded](#pattern-why-icon--isnt-lazy-loaded) below for why that's the right tradeoff here.
-
 ## API
 
-### `<IconName>Icon`
+### `<PascalCaseName>Icon`
 
-Every icon in the [Lucide catalog](https://lucide.dev/icons/) is exported as `<PascalCaseName>Icon`, e.g. `activity` → `ActivityIcon`, `circle-alert` → `CircleAlertIcon`.
+One component per Lucide icon, each its own module. It renders a 24x24 `<svg>` with Lucide's
+default attributes and the icon's own elements inside.
 
-**Props (`LucideProps`):**
+Props, as `LucideProps`:
 
-- `size?`: `number | string` - Width and height. Defaults to `24`.
-- `color?`: `string` - Stroke color. Defaults to `"currentColor"`.
-- `strokeWidth?`: `number | string` - Stroke width in the icon's 24x24 viewBox units. Defaults to `2`.
-- `absoluteStrokeWidth?`: `boolean` - When `true`, scales `strokeWidth` against `size` so the rendered stroke stays visually constant across sizes.
-- Any other `<svg>` prop (`className`, `mix`, `aria-*`, `style`, etc.) - Passed through to the root `<svg>` element.
-
-**Example:**
+- `size?`: `number | string` — width and height, defaulting to `24`.
+- `color?`: `string` — stroke color, defaulting to `"currentColor"`.
+- `strokeWidth?`: `number | string` — stroke width in the 24x24 viewBox's units, defaulting
+  to `2`.
+- `absoluteStrokeWidth?`: `boolean` — scales `strokeWidth` against `size`, so a stroke stays
+  visually the same weight across icons rendered at different sizes.
+- Every other `<svg>` prop — `className`, `style`, `aria-*`, `mix` — reaches the root
+  element untouched.
 
 ```tsx
 <ActivityIcon size={32} color="teal" absoluteStrokeWidth />
 ```
 
+Children render inside the `<svg>`, after the icon's own elements, which is where an extra
+`<title>` or decoration belongs.
+
 ### `Icon`
 
-Renders any Lucide icon by name. Internally, it maps `name` to its export in `registry.ts` via `iconExportNames`, then calls `createLucideIcon(name, node)` to build the component and renders it with the rest of the props.
-
-**Props (`IconProps`):**
-
-- `name`: `IconName` - The icon to render, e.g. `"circle-alert"`. Typechecked against every icon in the catalog.
-- Everything from `LucideProps` (`size`, `color`, `strokeWidth`, `absoluteStrokeWidth`, and any other `<svg>` prop) - Forwarded to the resolved icon component.
-
-**Example:**
+Renders the icon matching `name` and forwards the rest of its props to it. `IconProps` is
+`LucideProps` plus `name: IconName`.
 
 ```tsx
 <Icon name="heart" size={16} color="red" />
@@ -107,22 +135,14 @@ Renders any Lucide icon by name. Internally, it maps `name` to its export in `re
 
 ### `iconExportNames`
 
-Maps every icon's public kebab-case name (`"circle-alert"`) to its export name in `registry.ts` (`"circleAlert"`) — a valid `export const` can't contain hyphens, and a handful of names (`"delete"`, `"import"`, `"package"`) also get a `Node` suffix to dodge JS reserved words. Declared `as const`, so indexing it with an `IconName` is fully typechecked with no casts. Exported in case you need to enumerate icon names yourself (e.g. building an icon picker) via `Object.keys(iconExportNames)`.
+An object mapping every icon's kebab-case name (`"circle-alert"`) to the identifier its data
+is stored under (`"circleAlert"`). `Object.keys(iconExportNames)` is the full catalog, which
+is what an icon picker enumerates.
 
 ### `createLucideIcon(iconName: string, iconNode: IconNode): Component`
 
-Builds a `remix/ui` icon component from a Lucide icon name and its node data. Used internally by every generated icon in `src/icons/`; reach for it directly only when adding an icon that Lucide doesn't ship yet.
-
-**Parameters:**
-
-- `iconName`: Lucide's kebab-case icon name (e.g. `"circle-alert"`), used to build the `lucide-<name>` class.
-- `iconNode`: The icon's SVG child elements as `[tag, attrs]` tuples, e.g. `[["path", { d: "..." }]]`.
-
-**Returns:**
-
-- A `remix/ui` component that renders the icon as an `<svg>`.
-
-**Example:**
+Builds an icon component from a name and its SVG node data, giving a drawing of your own the
+same props, defaults and classes as every shipped icon.
 
 ```typescript
 import { createLucideIcon } from "@sdxc/icons";
@@ -132,66 +152,146 @@ let CustomIcon = createLucideIcon("custom", [["path", { d: "M4 4h16v16H4z" }]]);
 
 ### Types
 
-#### `IconNode`
-
 ```typescript
 type IconNode = ReadonlyArray<readonly [tag: string, attrs: Record<string, string | number>]>;
-```
 
-#### `LucideProps`
-
-```typescript
 interface LucideProps extends Props<"svg"> {
 	size?: number | string;
 	color?: string;
 	strokeWidth?: number | string;
 	absoluteStrokeWidth?: boolean;
 }
+
+interface IconProps extends LucideProps {
+	name: IconName;
+}
+
+/** The union of every Lucide icon name. */
+type IconName = keyof typeof iconExportNames;
 ```
 
-#### `IconName`
+## Pattern: Building An Icon Picker
 
-```typescript
-type IconName = keyof typeof iconExportNames; // the union of every Lucide icon name
+`iconExportNames` carries the catalog and `<Icon />` renders any entry of it, so a picker is
+a list of keys and one component:
+
+```tsx
+import type { IconName } from "@sdxc/icons";
+import type { Handle } from "remix/ui";
+
+import { Icon, iconExportNames } from "@sdxc/icons";
+
+let names = Object.keys(iconExportNames) as IconName[];
+
+function IconPicker({ props }: Handle<{ query: string }>) {
+	return () => (
+		<ul>
+			{names
+				.filter((name) => name.includes(props.query))
+				.slice(0, 60)
+				.map((name) => (
+					<li>
+						<button value={name}>
+							<Icon name={name} size={20} />
+							{name}
+						</button>
+					</li>
+				))}
+		</ul>
+	);
+}
 ```
 
-## Pattern: How `<Icon />` stays typesafe with kebab-case names
+The same keys are what a stored icon name validates against, so a value round-trips from the
+picker through your database and back into `<Icon name />`.
 
-`registry.ts` has one named export per icon (`export const circleAlert = [...] satisfies IconNode;`) so `src/icons/<name>.ts` can import only the one constant it needs, and so `<Icon />` can `import * as registry from "./registry.js"` and get a fully-typed namespace object back. But a public `name` like `"circle-alert"` can't be used as an export name — hyphens aren't valid in identifiers — so `Icon` looks up the corresponding registry key through `iconExportNames`:
+## Pattern: Keeping Icons Out Of The Client Bundle
 
-```typescript
-let IconComponent = createLucideIcon(name, registry[iconExportNames[name]]);
+`<Icon />` reaches the whole catalog's data, because it resolves a name that only exists at
+render time. Server-rendered components never ship their code to the browser, so that
+catalog costs the page nothing: `<Icon name />` is the right call anywhere the server draws
+the markup.
+
+A component wrapped in `clientEntry` is bundled for the browser, and there the specific
+import is what you want — it carries one icon's data:
+
+```tsx
+import type { Handle } from "remix/ui";
+
+import { HeartIcon } from "@sdxc/icons";
+import { clientEntry, on } from "remix/ui";
+
+export let LikeButton = clientEntry(
+	"/assets/like-button.js#LikeButton",
+	function LikeButton(handle: Handle<{ label: string }>) {
+		let liked = false;
+
+		return () => (
+			<button
+				mix={[
+					on("click", () => {
+						liked = !liked;
+						handle.update();
+					}),
+				]}
+			>
+				<HeartIcon size={16} color={liked ? "crimson" : "currentColor"} />
+				{handle.props.label}
+			</button>
+		);
+	},
+);
 ```
 
-Because `iconExportNames` is declared `as const`, `iconExportNames[name]` resolves to the exact union of registry export names for `name: IconName`, and indexing `registry` with that union typechecks with no casts — TypeScript narrows `registry[iconExportNames[name]]` down to `IconNode` on its own.
+An island that genuinely needs a data-driven icon can take the resolved component as a prop
+from its server-rendered parent, which keeps the choice on the server and the bundle at one
+icon.
 
-## Pattern: Why `<Icon />` isn't lazy-loaded
+## Pattern: Adding An Icon Lucide Doesn't Ship
 
-It's tempting to make `<Icon name />` dynamically `import()` only the requested icon's module, code-splitting the other ~1700 icons out of the bundle. That doesn't work with how `remix/ui` renders on the server: `renderToStream`/`renderToString` call a component's setup function once and read only its returned render output — any work scheduled through `handle.queueTask()` (which is how you'd kick off and await a dynamic import) is discarded rather than awaited, so a lazily-loaded icon would never resolve during SSR and would permanently render whatever fallback you gave it.
+A brand mark or a product glyph becomes a component through the same factory the catalog
+uses, so it accepts `size`, `color` and `strokeWidth` and sits beside Lucide icons without a
+second set of rules:
 
-`<Icon />` instead keeps `registry.ts` — every icon's raw SVG node data, as plain arrays — always loaded, and calls `createLucideIcon` to build the requested icon's component synchronously on each render. This is the actually-scalable choice for this framework: server-rendered (non-`clientEntry`) components never ship their code to the client at all, so keeping every icon's data in the server's module graph costs nothing in the browser, and the data itself (plain tag/attribute tuples, no component closures) is far lighter than 1700 pre-built components would be.
+```tsx
+import { createLucideIcon } from "@sdxc/icons";
 
-The one case to avoid: don't render `<Icon name />` inside a `clientEntry`-wrapped component. Since `clientEntry` components _do_ get bundled for the browser, doing so would ship all ~1700 icons' node data to the client for that entry point. Use a specific `<XyzIcon />` import instead inside client-hydrated islands.
-
-## Pattern: Regenerating icons after a `lucide-static` upgrade
-
-Lucide adds and renames icons over time. Bump `lucide-static` in `package.json`, install, then regenerate every icon module from the updated icon data:
-
-```bash
-bun install
-bun run --cwd packages/icons generate
-bun format:fix
+export let SparkIcon = createLucideIcon("spark", [
+	["path", { d: "M12 2v6" }],
+	["path", { d: "m16 6-4 4-4-4" }],
+	["circle", { cx: "12", cy: "16", r: "4" }],
+]);
 ```
 
-This clears and rewrites `src/icons/`, `src/registry.ts`, `src/icon-names.ts`, and `src/index.ts` from the currently installed `lucide-static` version — do not hand-edit those files.
+Draw the paths against a 24x24 viewBox with a stroke width of 2 and no fill, the geometry
+every Lucide icon is authored in, and the icon scales with the rest of them.
 
-## Related Packages
+## Versioning
 
-- [`@sdxc/markdown/remix`](/packages/markdown) - Renders a parsed markdown document as `remix/ui` components, the same component model icons use here.
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
 
-## Tips
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
 
-1. **Import only what you use** - Each icon is its own module (`sideEffects: false`), so bundlers tree-shake unused icons as long as you import by name from `@sdxc/icons` rather than a wildcard.
-2. **Icons are stateless** - `createLucideIcon` never calls `handle.update()`, so an icon's props are read fresh on every render; there's no internal state to worry about.
-3. **Don't edit generated files** - Everything under `src/icons/`, `src/registry.ts`, `src/icon-names.ts`, and `src/index.ts` is overwritten by `bun run generate`; add new/custom icons via `createLucideIcon` in your own app code instead.
-4. **Prefer a specific `<XyzIcon />` when you know the icon at code time** - `<Icon name />` is for genuinely dynamic, data-driven icon names; a direct import is simpler and reads better everywhere else.
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/icons": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)
