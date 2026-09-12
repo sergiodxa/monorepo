@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/markdown",
 	"version": "0.0.1",
-	"private": true,
+	"description": "GitHub Flavored Markdown: parse to a typed AST, transform it, write it back",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
