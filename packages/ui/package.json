@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/ui",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Styled, accessible remix/ui components rendered as server HTML",
 	"license": "MIT",
 	"type": "module",
 	"sideEffects": false,
