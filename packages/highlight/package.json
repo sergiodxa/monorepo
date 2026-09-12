@@ -13,7 +13,6 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@sdxc/markdown": "workspace:*",
-		"remix": "3.0.0-rc.2"
+		"@sdxc/markdown": "workspace:*"
 	}
 }
