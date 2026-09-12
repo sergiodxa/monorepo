@@ -1,31 +1,31 @@
 /**
- * Shared markdown parsing for post bodies: a single configured `@sdxc/markdown/server`
- * parser and the {@link parseMarkdown} helper returning a Markdoc render tree (or
- * `null`). Kept in one place so every post type highlights and parses identically.
+ * Shared markdown parsing for post bodies: the {@link parseMarkdown} helper reads a
+ * field's source into a document whose fences are already painted. Kept in one place
+ * so every post type parses and highlights identically.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { Markdown } from "@sdxc/markdown/server";
+import { highlight } from "@sdxc/highlight/markdown";
+import { Markdown } from "@sdxc/markdown";
 import { isFailure } from "@sdxc/result";
-import * as s from "remix/data-schema";
 
 /**
- * Shared markdown parser, with highlighted fences. Post bodies carry no frontmatter,
- * so a permissive schema is used.
- */
-const parser = new Markdown({ frontmatter: s.object({}) });
-
-/**
- * Parses markdown source into a Markdoc render tree, or `null` when empty or
- * invalid. The tree's shape stays opaque here since only the client-side renderer
- * interprets it, so the return type stays `unknown`, which already admits `null`.
+ * Parses markdown source into a document carrying the tokens a fence renders with.
+ * Empty source, and source the parser stops on, both come back as `null`, so a
+ * caller draws its own note in place of an article with nothing in it.
+ *
  * @param raw - Markdown source.
- * @returns The parsed content tree, or `null`.
+ * @returns The parsed document, or `null`.
  */
-export function parseMarkdown(raw: string): unknown {
+export function parseMarkdown(raw: string): Markdown.Document | null {
 	if (!raw.trim()) return null;
-	let result = parser.parse(raw);
-	if (isFailure(result)) return null;
-	return result.data.content;
+
+	let parsed = Markdown.parse(raw);
+	if (isFailure(parsed)) return null;
+
+	let highlighted = Markdown.walk(parsed.data.document, highlight);
+	if (isFailure(highlighted)) return null;
+
+	return highlighted.data;
 }

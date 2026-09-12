@@ -173,9 +173,9 @@ export const errorText = css({ color: "#b91c1c", marginBottom: "1rem" });
 export const RESET_CSS = "*,*::before,*::after{box-sizing:border-box}";
 
 /**
- * Typography defaults for markdown-rendered content-flow elements (chiefly
- * `MarkdownView`'s output), applied as a global rule set; chrome and components are
- * styled with the `css()` mixins above.
+ * Typography defaults for markdown-rendered content-flow elements, applied as a
+ * global rule set so a rendered document inherits them wherever it lands; chrome
+ * and components are styled with the `css()` mixins above.
  */
 export const CONTENT_CSS = [
 	"a{color:var(--ui-accent)}a:hover{color:var(--ui-accent-hover)}",

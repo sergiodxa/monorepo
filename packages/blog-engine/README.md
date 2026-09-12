@@ -152,7 +152,7 @@ the last admin cannot be demoted or deleted.
 - [`@sdxc/data-table-d1`](/packages/data-table-d1) — D1 adapter for self-hosting
 - [`@sdxc/data-table-sqlstorage`](/packages/data-table-sqlstorage) — Durable Object adapter
 - [`@sdxc/auth`](/packages/auth) — the OIDC client behind the admin panel's login
-- [`@sdxc/markdown/server`](/packages/markdown) — markdown parsing for post content
+- [`@sdxc/markdown`](/packages/markdown) — markdown parsing and rendering for post content
 - [`@sdxc/oidc-provider`](/packages/oidc-provider) — the OIDC provider the SaaS authenticates against
 
 ## Tips

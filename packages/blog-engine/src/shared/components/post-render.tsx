@@ -8,7 +8,7 @@
  */
 import type { Handle } from "remix/ui";
 
-import { MarkdownView } from "@sdxc/markdown/client";
+import { toRemix } from "@sdxc/markdown/remix";
 
 import type { PostTypeDefinition } from "../../post-types/models/post-type.js";
 import type { PostMetaValues } from "../../posts/models/meta-codec.js";
@@ -97,8 +97,8 @@ export function FieldValue(handle: Handle<{ kind: string; value: unknown }>) {
 	return () => {
 		let { kind, value } = handle.props;
 		if (kind === "markdown") {
-			let content = parseMarkdown(typeof value === "string" ? value : "");
-			return content ? <MarkdownView content={content} /> : <></>;
+			let document = parseMarkdown(typeof value === "string" ? value : "");
+			return document ? <>{toRemix(document)}</> : <></>;
 		}
 		if (kind === "url") {
 			let url = asText(value);
