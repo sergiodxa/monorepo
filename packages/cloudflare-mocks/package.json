@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/cloudflare-mocks",
 	"version": "0.0.1",
-	"private": true,
+	"description": "In-memory, behavior-accurate Cloudflare binding mocks for tests",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

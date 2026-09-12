@@ -1,31 +1,25 @@
 # @sdxc/cloudflare-mocks
 
-In-memory, behavior-accurate implementations of the Cloudflare bindings used across this monorepo, for tests and local tooling.
+In-memory, behavior-accurate Cloudflare binding mocks for tests.
 
-## Overview
+Storage bindings really store, and SQL bindings really run SQL through the runtime's own
+SQLite, so a malformed statement or a constraint violation fails in the test rather than in
+production. Every factory returns an isolated instance typed against the matching platform
+interface, so a mock that drifts from the platform's shape fails typecheck.
 
-Tests that touch storage usually have no choice but to replace the module that reads it,
-because there is no in-memory KV namespace, D1 database, queue, or Durable Object store to
-hand the code under test. That makes tests assert on calls instead of outcomes, and it hides
-whole bug classes: a mock that returns canned rows cannot notice that the SQL was malformed.
+## Installation
 
-This package supplies the missing piece. Storage bindings really store: KV honours
-expiration, metadata, and cursor-paginated prefix listing, and `createD1Database()` /
-`createSqlStorage()` run SQL through the runtime's own SQLite, so a bad statement, a
-constraint violation, or a value that should have been JSON-encoded fails exactly where it
-would in production. Message and event bindings record what a Worker sent
-and, for queues, drive a consumer with the platform's `ack`/`retry` rules.
+```bash
+npm add -D @sdxc/cloudflare-mocks
+```
 
-Every factory returns a value typed against the corresponding interface from
-[`@cloudflare/workers-types`](https://github.com/cloudflare/workerd/tree/main/npm/workers-types),
-so a mock that drifts from the platform's shape fails typecheck rather than at runtime.
-Mocks are constructed per call and never shared at module level, so no test can inherit
-another's state and no cleanup step can be forgotten. The package is `private` and belongs
-in `devDependencies`.
+The binding interfaces come from
+[`@cloudflare/workers-types`](https://www.npmjs.com/package/@cloudflare/workers-types), which
+installs alongside this package.
 
 ## Usage
 
-### Storage that really stores
+### Storage That Really Stores
 
 ```typescript
 import { createD1Database, createKVNamespace } from "@sdxc/cloudflare-mocks";
@@ -43,25 +37,25 @@ let result = await db.prepare("INSERT INTO users VALUES (?, ?)").bind(1, "ada@ex
 result.meta.changes; // 1, reported by SQLite
 ```
 
-### Recording what a Worker sent
+### Recording What A Worker Sent
 
 ```typescript
 import { createQueue } from "@sdxc/cloudflare-mocks";
 
-let queue = createQueue<{ type: string; monitorId: string }>();
-await producer.send({ type: "check-http", monitorId: "abc" });
+let queue = createQueue<{ type: string; id: string }>();
+await queue.send({ type: "refresh", id: "abc" });
 
-expect(queue.messages).toHaveLength(1);
+queue.messages.length; // 1
 
 // Drive the consumer, then assert on what it decided.
 await queue.consume(async (batch) => {
 	for (let message of batch.messages) message.retry();
 });
 
-expect(queue.messages[0]?.attempts).toBe(1);
+queue.messages[0]?.attempts; // 1
 ```
 
-### Assembling an env
+### Assembling An Env
 
 ```typescript
 import {
@@ -76,15 +70,16 @@ let env = createEnv<Env>({
 	CACHE: createKVNamespace(),
 	QUEUE: createQueue(),
 });
+
+env.MAILER; // throws: env.MAILER was not provided to createEnv()
 ```
 
 Reading a binding that was not supplied throws by name, so a forgotten binding fails at the
-access that needed it rather than surfacing later as `undefined is not a function`.
+access that needed it rather than surfacing later as `undefined is not a function`. Bindings
+are copied by property descriptor, so a binding defined as a getter is re-read on every access
+and a test can swap what it resolves to between cases.
 
-Bindings are copied by property descriptor, not by spread, so a binding defined as a getter
-is re-read on every access and a test can swap what it resolves to between cases.
-
-### Deferred work
+### Deferred Work
 
 ```typescript
 import { createExecutionContext } from "@sdxc/cloudflare-mocks";
@@ -96,22 +91,20 @@ await ctx.settled(); // awaits every waitUntil promise, including nested ones
 
 ## API
 
+Every factory returns isolated state, so calling one in `beforeEach` removes any need for a
+cleanup step. When a binding has to live at module scope because the code under test captured
+`env` on import, call `reset()` in `beforeEach` instead — every stateful factory has one.
+
 ### `createKVNamespace(options?: KVNamespaceMockOptions): KVNamespace`
 
 An in-memory Workers KV namespace with real `get`, `put`, `delete`, `list`, and
 `getWithMetadata` semantics: value decoding per `type` (`text`, `json`, `arrayBuffer`,
-`stream`), bulk reads by key array, absolute and TTL expiration, metadata round-tripping,
-and cursor-paginated prefix listing.
+`stream`), bulk reads by key array, absolute and TTL expiration, metadata round-tripping, and
+cursor-paginated prefix listing. Adds `reset()`.
 
-**Parameters:**
-
-- `options.now`: Clock in milliseconds since the epoch, used to evaluate expiration
-
-**Returns:**
-
-- A `KVNamespaceMock`: a `KVNamespace` backed by an isolated map, plus `reset()`
-
-**Example:**
+`options.now` is a clock in milliseconds since the epoch. Because the mock enforces the
+platform's 60 second `expirationTtl` floor, an injected clock is the only way to observe
+expiry without waiting a real minute:
 
 ```typescript
 let clock = 0;
@@ -122,34 +115,23 @@ clock += 61_000;
 await kv.get("key"); // null
 ```
 
-Because the mock enforces the platform's 60 second `expirationTtl` floor, an injected clock
-is the only way to observe expiry without waiting a real minute.
-
 ### `createD1Database(options?: D1DatabaseMockOptions): D1Database`
 
-A `D1Database` over a fresh in-memory SQLite database. `prepare().bind().all()/run()/
-first()/raw()` all execute real SQL and report `meta` from the engine: `changes`,
+A `D1Database` over a fresh in-memory SQLite database. `prepare().bind().all()`, `run()`,
+`first()`, and `raw()` all execute real SQL and report `meta` from the engine: `changes`,
 `rows_read`, `rows_written`, `last_row_id`, `changed_db`, `size_after`, and `duration`.
 Statements autocommit individually, exactly as D1's do, and `batch()` is the one atomic
 primitive — it wraps every statement in a real transaction and rolls the whole batch back on
 failure.
 
-**Parameters:**
-
-- `options.filename`: SQLite file to open; defaults to `:memory:`
-
-**Returns:**
-
-- A `D1DatabaseMock`: a `D1Database` whose SQL really runs, plus `reset()`, which drops
-  every table, index, view, and trigger so a migration can be applied again
-
-**Example:**
+`options.filename` is the SQLite file to open, `:memory:` by default. Adds `reset()`, which
+drops every table, index, view, and trigger so a migration can be applied again.
 
 ```typescript
 let db = createD1Database();
 await db.exec("CREATE TABLE posts (id INTEGER PRIMARY KEY, title TEXT)");
 
-await expect(db.prepare("SELCT * FROM posts").all()).rejects.toThrow();
+await db.prepare("SELCT * FROM posts").all(); // rejects: the typo is real SQL, and it fails
 ```
 
 ### `createSqlStorage(options?: SqlStorageMockOptions): SqlStorage`
@@ -157,17 +139,8 @@ await expect(db.prepare("SELCT * FROM posts").all()).rejects.toThrow();
 A Durable Object `SqlStorage` over a fresh in-memory SQLite database. `exec` runs
 synchronously and returns a single-pass cursor with `toArray`, `one`, `next`, `raw`,
 `columnNames`, `rowsRead`, and `rowsWritten`. `BEGIN`/`COMMIT`/`ROLLBACK` and `SAVEPOINT`
-work, so transaction atomicity can be tested for real.
-
-**Parameters:**
-
-- `options.filename`: SQLite file to open; defaults to `:memory:`
-
-**Returns:**
-
-- A `SqlStorage` binding whose SQL really runs
-
-**Example:**
+work, so transaction atomicity can be tested for real. `options.filename` behaves as it does
+for D1.
 
 ```typescript
 let sql = createSqlStorage();
@@ -177,27 +150,38 @@ sql.exec("INSERT INTO counters VALUES (?, ?)", "hits", 1);
 sql.exec("SELECT value FROM counters WHERE name = ?", "hits").one(); // { value: 1 }
 ```
 
+`MockSqlStorageCursor` and `MockSqlStorageStatement` are exported as well, so a test can
+assert a cursor's identity when it needs to.
+
+### `createR2Bucket(): R2BucketMock`
+
+An in-memory `R2Bucket`. Writes compute a real MD5 etag and verify any checksum the caller
+supplied; reads honor `range` (offset/length, `suffix`, or a `Range` header) and `onlyIf`,
+returning the object without a body when a condition fails. `list` implements `prefix`,
+`delimiter` grouping into `delimitedPrefixes`, `limit`, `cursor`, `startAfter`, and `include`.
+Multipart uploads buffer parts and assemble them in part-number order on `complete`. Exposes
+`keys` and `reset()` alongside the binding surface.
+
+```typescript
+let bucket = createR2Bucket();
+await bucket.put("posts/a.md", "# Hello", { httpMetadata: { contentType: "text/markdown" } });
+
+let object = await bucket.get("posts/a.md", { range: { offset: 0, length: 1 } });
+await object?.text(); // "#"
+```
+
 ### `createQueue<Body>(options?: QueueMockOptions): QueueMock<Body>`
 
-A `Queue` that records sends and can drive a consumer.
-
-**Parameters:**
-
-- `options.name`: Queue name reported to consumers as `batch.queue`
-- `options.maxBatchSize`: Deliveries per `consume()` pass; defaults to 10
-- `options.maxRetries`: Retries before a message is dead-lettered; defaults to 3
-
-**Returns:**
-
-- A `QueueMock` with `messages` (pending), `sent` (full history), `deadLetter`,
-  `consume()`, and `reset()`
+A `Queue` that records sends and can drive a consumer. `options.name` is reported to consumers
+as `batch.queue`, `options.maxBatchSize` is the deliveries per `consume()` pass (10 by
+default), and `options.maxRetries` is the retry budget before a message is dead-lettered (3 by
+default). Exposes `messages` (pending), `sent` (full history), `deadLetter`, `consume()`, and
+`reset()`.
 
 `consume(handler, options?)` delivers one batch and then applies the handler's decisions:
 messages the handler neither acked nor retried are acked, and when the handler throws every
 unacked message is retried and the error is rethrown so the test sees it. It resolves to
 `{ delivered, acked, retried, deadLettered }`.
-
-**Example:**
 
 ```typescript
 let queue = createQueue<{ id: string }>({ maxRetries: 1 });
@@ -210,15 +194,14 @@ result.deadLettered; // the message, now past its retry budget
 ```
 
 `options.context` covers the handler that does its real work in `waitUntil`. Such a handler
-has decided nothing by the time it returns, so without draining that work first the pass
-would ack on its behalf and hide whether it ever acked:
+has decided nothing by the time it returns, so draining that work first is what lets the pass
+read the ack it eventually makes:
 
 ```typescript
 let ctx = createExecutionContext();
 let queue = createQueue<{ id: string }>();
 await queue.send({ id: "a" });
 
-// The Worker defers the job, and the ack with it.
 let result = await queue.consume(
 	(batch) => {
 		for (let message of batch.messages) ctx.waitUntil(run(message).then(() => message.ack()));
@@ -229,62 +212,16 @@ let result = await queue.consume(
 result.acked; // the message, because its deferred work ran first
 ```
 
-Anything with a `settled(): Promise<void>` works, so a Worker calling the module-level
+Anything with a `settled(): Promise<void>` works, so a Worker calling a module-level
 `waitUntil` can pass whatever collects those promises instead of an execution context.
-
-### `createAnalyticsEngine(): AnalyticsEngineMock`
-
-An `AnalyticsEngineDataset` that records every `writeDataPoint` call.
-
-**Returns:**
-
-- An `AnalyticsEngineMock` exposing `dataPoints`, each a detached copy of what was written,
-  plus `reset()`
-
-`writeDataPoint` is fire-and-forget on the platform, so an over-budget data point is lost
-silently in production. This mock throws instead: more than 20 blobs, more than 20 doubles,
-more than one index, blobs over 5 KiB combined, or an index over 96 bytes all fail.
-
-### `createRateLimit(options?: RateLimitMockOptions): RateLimitMock`
-
-A `RateLimit` binding with real per-key counters over a fixed window.
-
-**Parameters:**
-
-- `options.limit`: Requests allowed per window; defaults to 100
-- `options.period`: Window length in seconds, `10` or `60`; defaults to 60
-- `options.now`: Clock in milliseconds since the epoch, so a test can roll the window over
-
-**Returns:**
-
-- A `RateLimitMock` with `limit()`, plus `count(key)` and `reset()` for assertions
-
-**Example:**
-
-```typescript
-let limiter = createRateLimit({ limit: 2 });
-
-await limiter.limit({ key: "ip" }); // { success: true }
-await limiter.limit({ key: "ip" }); // { success: true }
-await limiter.limit({ key: "ip" }); // { success: false }
-```
 
 ### `createSendEmail(options?: SendEmailMockOptions): SendEmailMock`
 
-A `SendEmail` binding that records messages instead of delivering them. It accepts both
-shapes the platform accepts — a raw MIME `EmailMessage` and the field-based builder — and
-normalizes them into one `SentEmailRecord` with recipients flattened to plain addresses.
-
-**Parameters:**
-
-- `options.verifiedDestinations`: When set, sending to an address outside the list throws,
-  the way the platform rejects unverified destinations
-
-**Returns:**
-
-- A `SendEmailMock` exposing `messages` and `reset()`
-
-**Example:**
+A `SendEmail` binding that records messages instead of delivering them. It accepts both shapes
+the platform accepts — a raw MIME `EmailMessage` and the field-based builder — and normalizes
+them into one `SentEmailRecord` with recipients flattened to plain addresses. With
+`options.verifiedDestinations` set, sending to an address outside the list throws, the way the
+platform rejects unverified destinations. Exposes `messages` and `reset()`.
 
 ```typescript
 let mailer = createSendEmail({ verifiedDestinations: ["user@example.com"] });
@@ -294,58 +231,55 @@ await mailer.send({ from: "noreply@example.com", to: "user@example.com", subject
 mailer.messages[0]?.subject; // "Hi"
 ```
 
-### `createR2Bucket(): R2BucketMock`
+### `createAnalyticsEngine(): AnalyticsEngineMock`
 
-An in-memory `R2Bucket`. Writes compute a real MD5 etag and verify any checksum the caller
-supplied; reads honour `range` (offset/length, `suffix`, or a `Range` header) and `onlyIf`,
-returning the object without a body when a condition fails. `list` implements `prefix`,
-`delimiter` grouping into `delimitedPrefixes`, `limit`, `cursor`, `startAfter`, and
-`include`. Multipart uploads buffer parts and assemble them in part-number order on
-`complete`.
+An `AnalyticsEngineDataset` that records every `writeDataPoint` call, exposing `dataPoints`
+(each a detached copy of what was written) and `reset()`. `writeDataPoint` is fire-and-forget
+on the platform, so an over-budget data point is lost silently in production; this mock throws
+instead. More than 20 blobs, more than 20 doubles, more than one index, blobs over 5 KiB
+combined, or an index over 96 bytes all fail.
 
-**Returns:**
+### `createRateLimit(options?: RateLimitMockOptions): RateLimitMock`
 
-- An `R2BucketMock` exposing `keys` and `reset()` alongside the binding surface
-
-**Example:**
+A `RateLimit` binding with real per-key counters over a fixed window. `options.limit` is the
+requests allowed per window (100 by default), `options.period` the window length in seconds,
+`10` or `60` (60 by default), and `options.now` a clock in milliseconds so a test can roll the
+window over. Adds `count(key)` and `reset()` for assertions.
 
 ```typescript
-let bucket = createR2Bucket();
-await bucket.put("posts/a.md", "# Hello", { httpMetadata: { contentType: "text/markdown" } });
+let limiter = createRateLimit({ limit: 2 });
 
-let object = await bucket.get("posts/a.md", { range: { offset: 0, length: 1 } });
-await object?.text(); // "#"
+await limiter.limit({ key: "ip" }); // { success: true }
+await limiter.limit({ key: "ip" }); // { success: true }
+await limiter.limit({ key: "ip" }); // { success: false }
 ```
 
-### `createExecutionContext<Props>(options?): ExecutionContextMock<Props>`
+### `createSecretsStoreSecret(options?: SecretsStoreSecretMockOptions): SecretsStoreSecretMock`
 
-An `ExecutionContext` that records deferred work.
+A `SecretsStoreSecret` whose answer can be switched between tests. `options.name` is used in
+the not-found error, and `options.value` is what `get()` resolves with; omitted, the secret
+reads as missing. Exposes `reads`, `set()`, `fail()`, and `reset()`.
 
-**Parameters:**
+The value is only reachable through an awaited `get()`, exactly as the platform requires, so
+code that treats the binding as a string fails here rather than in production. `reads` is what
+lets a test prove the secret was read lazily, at its point of use.
 
-- `options.props`: Value exposed as `ctx.props`
+```typescript
+let token = createSecretsStoreSecret({ name: "API_TOKEN", value: "sk_live_1" });
+let env = createEnv<Env>({ API_TOKEN: token });
 
-**Returns:**
+await env.API_TOKEN.get(); // "sk_live_1"
 
-- An `ExecutionContextMock` with `waitUntilPromises`, `passedThroughOnException`, and
-  `settled()`
+token.fail(); // the store cannot answer
+await env.API_TOKEN.get(); // rejects: Secret "API_TOKEN" not found
+```
 
-`settled()` awaits every registered promise, including promises registered while it is
-awaiting, and rejects with the first failure so broken background work fails the test.
-
-### `createDurableObjectState<Props>(options?): DurableObjectStateMock<Props>`
+### `createDurableObjectState<Props>(options?: DurableObjectStateMockOptions<Props>): DurableObjectStateMock<Props>`
 
 A `DurableObjectState` usable directly as a Durable Object constructor argument.
-
-**Parameters:**
-
-- `options.name`: Name the id reports
-- `options.id`: Hex id string
-- `options.props`: Value exposed as `state.props`
-
-**Returns:**
-
-- A `DurableObjectStateMock` with `waitUntilPromises`, `abortReason`, and `settled()`
+`options.name` is the name the id reports, `options.id` a hex id string, and `options.props`
+the value exposed as `state.props`. Exposes `waitUntilPromises`, `abortReason`, and
+`settled()`.
 
 `storage` implements `get`/`put`/`delete`/`list`/`deleteAll` with real ordering and bounds,
 `transaction` with rollback on throw and on `rollback()`, `transactionSync` covering both SQL
@@ -353,8 +287,6 @@ and key-value writes, alarms, the synchronous `storage.kv` API over the same sto
 SQL-backed `storage.sql`. Values are structured-cloned on write and read, so a stored object
 cannot be mutated through the reference the caller kept. `blockConcurrencyWhile` serializes
 overlapping callers.
-
-**Example:**
 
 ```typescript
 let state = createDurableObjectState({ name: "tenant-1" });
@@ -364,70 +296,49 @@ await object.increment();
 await state.storage.get<number>("count"); // 1
 ```
 
-### `createDurableObjectNamespace<T>(createStub): DurableObjectNamespaceMock<T>`
+### `createDurableObjectNamespace<T>(createStub: DurableObjectStubFactory): DurableObjectNamespaceMock<T>`
 
-A `DurableObjectNamespace` that routes names to stubs the caller supplies.
+A `DurableObjectNamespace` that routes names to stubs the caller supplies. `createStub` builds
+the object a name routes to: return a handler for a stub that only answers `fetch`, or an
+object for one that also exposes RPC methods. Exposes `names` (distinct, resolved so far),
+`resolutions` (every resolution with its placement), and `reset()`.
 
-**Parameters:**
-
-- `createStub`: Builds the object a name routes to. Return a handler for a stub that only
-  answers `fetch`, or an object for one that also exposes RPC methods
-
-**Returns:**
-
-- A `DurableObjectNamespaceMock` with `names` (distinct, resolved so far), `resolutions`
-  (every resolution with its placement), and `reset()`
-
-A name resolves to the same stub every time, which is the property the platform guarantees
-and the one code under test relies on when it addresses an object by name from more than one
-place. Ids carry the name they were derived from, so `idFromName` then `get` reaches the same
-object as `getByName`.
-
-Placement is the one thing a caller decides that cannot be read back off the stub, so
-`resolutions` records it. `jurisdiction()` returns a view over the same objects that tags
-what it resolves, and an id minted under one jurisdiction is refused by a view scoped to
-another, exactly as the platform refuses it — which is the mistake sharding code actually
-makes, deriving the id from the unscoped binding and resolving it through a scoped one:
+A name resolves to the same stub every time, which is the property the platform guarantees and
+the one code under test relies on when it addresses an object by name from more than one place.
+Ids carry the name they were derived from, so `idFromName` then `get` reaches the same object
+as `getByName`. Pass the branded Durable Object type as `T` — usually inferred from the `Env`
+the binding is assigned into — to have RPC methods typed on the stub.
 
 ```typescript
-let shards = createDurableObjectNamespace(() => async () => new Response("ok"));
+let shards = createDurableObjectNamespace((name) => async () => Response.json({ name }));
+let env = createEnv<Env>({ SHARDS: shards });
 
+await (await shards.getByName("acme").fetch("https://do/")).json(); // { name: "acme" }
+shards.names; // ["acme"]
+```
+
+Placement is the one thing a caller decides that cannot be read back off the stub, so
+`resolutions` records it. `jurisdiction()` returns a view over the same objects that tags what
+it resolves, and an id minted under one jurisdiction is refused by a view scoped to another,
+exactly as the platform refuses it — which is the mistake sharding code actually makes,
+deriving the id from the unscoped binding and resolving it through a scoped one:
+
+```typescript
 shards.jurisdiction("eu").getByName("tenant-1", { locationHint: "weur" });
 
 shards.resolutions; // [{ name: "tenant-1", locationHint: "weur", jurisdiction: "eu" }]
 ```
 
-Pass the branded Durable Object type as `T` — usually inferred from the `Env` the binding is
-assigned into — to have RPC methods typed on the stub.
-
-**Example:**
-
-```typescript
-let blogs = createDurableObjectNamespace((name) => async () => Response.json({ name }));
-let env = createEnv<Env>({ BLOG: blogs });
-
-await (await blogs.getByName("acme").fetch("https://do/")).json(); // { name: "acme" }
-blogs.names; // ["acme"]
-```
-
 ### `createFetcher(handler: FetcherHandler): FetcherMock`
 
-A `Fetcher` for a service binding or the static-asset binding, backed by a handler.
-
-**Parameters:**
-
-- `handler`: Produces the response for each request, receiving a real `Request`
-
-**Returns:**
-
-- A `FetcherMock` with `requests` (what it was asked for) and `reset()`
+A `Fetcher` for a service binding or the static-asset binding, backed by a handler that
+produces the response for each request. Exposes `requests` (what it was asked for) and
+`reset()`.
 
 Every call is normalized to a `Request` whatever the caller passed, so assertions on method,
 path, and headers read the same as they would against the deployed Worker. A request is
 recorded before the handler runs, so a handler that throws still leaves evidence of the call.
 `connect()` throws: raw sockets have no in-memory equivalent.
-
-**Example:**
 
 ```typescript
 let assets = createFetcher(() => new Response(null, { status: 404 }));
@@ -437,61 +348,26 @@ await env.ASSETS.fetch("https://example.com/logo.png");
 assets.requests[0]?.url; // "https://example.com/logo.png"
 ```
 
-### `createSecretsStoreSecret(options?): SecretsStoreSecretMock`
+### `createExecutionContext<Props>(options?: ExecutionContextMockOptions<Props>): ExecutionContextMock<Props>`
 
-A `SecretsStoreSecret` whose answer can be switched between tests.
+An `ExecutionContext` that records deferred work, with `options.props` exposed as `ctx.props`.
+Exposes `waitUntilPromises`, `passedThroughOnException`, `aborted`, `abortReason`, and
+`settled()`.
 
-**Parameters:**
+`settled()` awaits every registered promise, including promises registered while it is
+awaiting, and rejects with the first failure so broken background work fails the test.
 
-- `options.name`: Secret name, used in the not-found error
-- `options.value`: Value `get()` resolves with; omitted, the secret reads as missing
+### `createEnv<Env>(bindings, options?: EnvMockOptions): Env`
 
-**Returns:**
-
-- A `SecretsStoreSecretMock` with `reads`, `set()`, `fail()`, and `reset()`
-
-The value is only reachable through an awaited `get()`, exactly as the platform requires, so
-code that treats the binding as a string fails here rather than in production. `reads` is what
-lets a test prove the secret was not read eagerly at wiring time.
-
-**Example:**
-
-```typescript
-let token = createSecretsStoreSecret({ name: "API_TOKEN", value: "sk_live_1" });
-let env = createEnv<Env>({ API_TOKEN: token });
-
-await env.API_TOKEN.get(); // "sk_live_1"
-
-token.fail(); // the store cannot answer
-await env.API_TOKEN.get(); // throws: Secret "API_TOKEN" not found
-```
-
-### `createEnv<Env>(bindings, options?): Env`
-
-Builds the `env` object a Worker expects from the bindings a test supplies. Pass the app's
-generated binding type as the type argument to have the bindings checked against it.
-
-**Parameters:**
-
-- `bindings`: Bindings to expose, keyed by binding name; a getter is carried over as a
-  getter and evaluated on each read
-- `options.strict`: Whether reading an unsupplied binding throws; defaults to `true`
-
-**Returns:**
-
-- An object usable as a Worker's `env`
-
-**Example:**
-
-```typescript
-let env = createEnv<Env>({ CACHE: createKVNamespace() });
-
-env.DB; // throws: env.DB was not provided to createEnv()
-```
+Builds the `env` object a Worker expects from the bindings a test supplies, keyed by binding
+name. Pass the generated binding type as the type argument to have the bindings checked
+against it. `options.strict` decides whether reading an unsupplied binding throws, and defaults
+to `true`; pass `false` only when the code under test genuinely treats a binding as optional.
 
 ### Types
 
-#### `QueueMessageRecord<Body>`
+`QueueMessageRecord<Body>`, `QueueConsumeResult<Body>`, and `SentEmailRecord` are the shapes
+assertions read:
 
 ```typescript
 interface QueueMessageRecord<Body = unknown> {
@@ -502,22 +378,14 @@ interface QueueMessageRecord<Body = unknown> {
 	contentType?: QueueContentType;
 	delaySeconds?: number;
 }
-```
 
-#### `QueueConsumeResult<Body>`
-
-```typescript
 interface QueueConsumeResult<Body = unknown> {
 	delivered: QueueMessageRecord<Body>[];
 	acked: QueueMessageRecord<Body>[];
 	retried: QueueMessageRecord<Body>[];
 	deadLettered: QueueMessageRecord<Body>[];
 }
-```
 
-#### `SentEmailRecord`
-
-```typescript
 interface SentEmailRecord {
 	messageId: string;
 	from: string;
@@ -534,129 +402,80 @@ interface SentEmailRecord {
 }
 ```
 
-`MockSqlStorageCursor` and `MockSqlStorageStatement` are exported as well, so a test can
-assert a cursor's identity if it needs to.
+Each factory's options and mock interfaces are exported under the matching names, so
+`createRateLimit` takes a `RateLimitMockOptions` and returns a `RateLimitMock`.
 
-## SQLite driver
+## SQLite Engine
 
-`createD1Database()` and `createSqlStorage()` run real SQL, so the package needs a SQLite
-engine — and Bun and Node ship different ones that cannot resolve each other: `bun:sqlite`
-does not exist under Node, and Bun cannot resolve `node:sqlite`.
+`createD1Database()` and `createSqlStorage()` run real SQL, and Bun and Node ship different
+built-in SQLite modules that cannot resolve each other. The `@sdxc/cloudflare-mocks/sqlite`
+subpath resolves to whichever the current runtime has through the `bun` export condition, so
+the same test file runs under either without the other's module appearing in its graph.
 
-`@sdxc/cloudflare-mocks/sqlite` resolves to whichever the current runtime has, through the
-`bun` export condition, so the same test file works under `bun test` and under Vitest without
-either module appearing in the other's module graph. Both implementations satisfy one narrow
-interface covering only what the mocks call; the Node one normalizes a missed `get()` to
-`null` and reports an empty column list where `node:sqlite` throws, so the two behave
-identically at the call sites.
+Both implementations satisfy one narrow interface, and the Node side normalizes the
+differences that would otherwise change results between runners: a missed `get()` reads as
+`null`, a statement with no result columns reports an empty column list, integral bindings are
+bound as INTEGER so integer division truncates, and bindings passed as a single array are
+flattened to a positional list. Both enable SQLite's legacy double-quoted string literals, so
+an identifier that does not resolve degrades to a string — worth knowing when a query returns a
+column name where you expected a value.
 
-Both enable SQLite's legacy double-quoted string literals, because `bun:sqlite` does and the
-two runners have to agree. An identifier that does not resolve therefore degrades to a string
-rather than raising — which is how `20250520185608` in the uptime migrations copies
-`"subject_id"` out of a table whose column is `user_id` without failing. Worth knowing when a
-query returns a column name where you expected a value.
-
-The Node side also binds integral numbers as INTEGER rather than REAL. `node:sqlite` maps
-every JS number to REAL, which turns `?/60000` into float division where `bun:sqlite` and the
-production SQLite engines truncate — so code relying on integer division would compute
-different results per runner while its tests stayed green. Bindings passed as a single array
-are flattened to a positional list for the same reason: Bun accepts that spelling and Node
-reads it as named parameters.
-
-Nothing outside this package should import either implementation directly.
-
-## Where the mock is more permissive than the platform
+## Where A Mock Is More Permissive Than The Platform
 
 A mock is not the platform. These are the differences that matter, so a test that passes here
 is not mistaken for a guarantee about production.
 
-**D1**
+**D1.** The engine is a local SQLite build, so anything SQLite accepts and D1 rejects passes
+here: unsupported SQL, `ATTACH`, extension functions, and larger result sets than D1 returns.
+A batch's atomicity comes from a SQLite transaction rather than from D1's own batching. Size
+and time limits — database size, statement duration, response size, bound parameter count —
+are unenforced, `withSession()` is a pass-through that advances a synthetic bookmark, `run()`
+and `all()` resolve to the same `D1Result`, `exec()` splits scripts on statement boundaries
+rather than newlines, and `dump()` throws.
 
-- **SQLite is not D1.** The engine is a local SQLite build, so anything SQLite accepts and D1
-  rejects will pass here: unsupported SQL, `ATTACH`, extension functions, and larger result
-  sets than D1 will return.
-- **`batch()` uses a real transaction.** Statements outside a batch autocommit individually
-  like D1's, and there are still no interactive transactions, but the atomicity a batch gets
-  comes from SQLite rather than from D1's own batching.
-- **No size or time limits.** D1 caps database size, statement duration, response size, and
-  the number of bound parameters. None of that is enforced.
-- **No replication.** `withSession()` is a pass-through that advances a synthetic bookmark;
-  there are no read replicas and no consistency window to observe.
-- **`run()` returns rows.** Both `run()` and `all()` resolve to the same `D1Result`.
-- **`exec()` splits on semicolons.** D1 splits scripts by newline; this splits on statement
-  boundaries, ignoring semicolons inside literals and comments.
-- **`dump()` throws.** The deprecated alpha-only dump is not implemented.
+**Durable Object SQL and storage.** Booleans are folded to `1`/`0` where the platform takes
+only `null`, numbers, strings, and byte buffers. A statement with no result columns and no
+bindings runs as a whole `;`-separated script, so a migration executes in full. Key and value
+sizes and the storage quota are unenforced. `setAlarm` records a time and the test calls the
+object's `alarm()` handler itself, which is what makes the timing assertable. Bookmarks are
+placeholder strings, and WebSocket hibernation is bookkeeping: sockets, tags, auto-response
+pairs, and the event timeout are recorded, and nothing hibernates.
 
-**Durable Object SQL and storage**
+**KV.** A key disappears the instant its expiration passes, where the platform is eventually
+consistent and may serve a stale value for a short window. A `put` is visible to the next
+`get`, with no propagation delay and no `cacheTtl` behavior; `cacheStatus` is always `null`.
+Keys sort by JavaScript string comparison rather than UTF-8 byte order, which differs for some
+non-BMP keys.
 
-- **Booleans are accepted.** Durable Object SQL takes only `null`, numbers, strings, and byte
-  buffers; this folds booleans to `1`/`0` for convenience.
-- **`exec` runs scripts.** A statement with no result columns and no bindings runs as a whole
-  `;`-separated script, so a migration executes in full instead of silently dropping
-  everything after the first statement.
-- **No key or value size limits, and no storage quota.**
-- **Alarms never fire.** `setAlarm` records a time; a test calls the object's `alarm()`
-  handler itself, which is what makes the timing assertable.
-- **Bookmarks are synthetic.** `getCurrentBookmark`, `getBookmarkForTime`, and
-  `onNextSessionRestoreBookmark` return placeholder strings and restore nothing.
-- **WebSocket hibernation is bookkeeping only.** Sockets, tags, auto-response pairs, and the
-  event timeout are recorded; nothing hibernates and no auto-response is ever sent.
+**R2.** Only `md5` is verified; a supplied `sha1`/`sha256`/`sha384`/`sha512` is accepted as
+given. `ssecKey` is ignored and `ssecKeyMd5` is never reported. Multipart parts may be any
+size, `storageClass` is stored verbatim, and `Range` header parsing covers a single `bytes=`
+range.
 
-**KV**
+**Queues, Analytics Engine, rate limiting, email.** Delivery is manual: `delaySeconds` is
+recorded, and nothing is delivered until `consume()` is called. Rate limiting uses a fixed
+window keyed on the clock, so it approximates the platform's algorithm. Email is recorded
+rather than sent, and a raw MIME message's body is captured as text.
 
-- **Expiration is exact and immediate.** A key disappears the instant its expiration passes,
-  whereas the platform is eventually consistent and may serve an expired or stale value for a
-  short window.
-- **Reads are immediately consistent.** A `put` is visible to the next `get`, with no
-  propagation delay and no `cacheTtl` behavior; `cacheStatus` is always `null`.
-- **List order is UTF-16.** Keys sort by JavaScript string comparison rather than by UTF-8
-  byte order, which differs for some non-BMP keys.
+**Namespaces, fetchers, and secrets.** A namespace routes; the object behind a name is whatever
+the caller supplied, so pair it with `createDurableObjectState` to exercise the object itself.
+A `locationHint` and a `jurisdiction` are recorded on `resolutions` while every object lives in
+the same process. `idFromName` produces an id whose string form is the name rather than the
+platform's opaque 64-hex-digit id. `Fetcher.connect()` throws, and
+`createSecretsStoreSecret` models one binding's read, with no store, rotation, or caching
+window.
 
-**R2**
+**Absent.** Reading `ExecutionContext.exports`, `ExecutionContext.tracing`,
+`DurableObjectState.exports`, or `DurableObjectState.facets` throws, because none has an
+in-memory equivalent. Hyperdrive, Vectorize, Workers AI, and Browser Rendering have no mock.
 
-- **Only MD5 is computed.** A supplied `sha1`/`sha256`/`sha384`/`sha512` is accepted without
-  being verified; only `md5` is checked.
-- **No SSE-C.** `ssecKey` is ignored and `ssecKeyMd5` is never reported.
-- **No part-size rules, storage classes, or lifecycle.** Multipart parts may be any size, and
-  `storageClass` is stored verbatim without being validated.
-- **`Range` header parsing is limited** to a single `bytes=` range.
-
-**Queues, Analytics Engine, rate limiting, email**
-
-- **Delivery is manual.** `delaySeconds` is recorded but never waited on, and nothing is
-  delivered until `consume()` is called.
-- **Rate limiting uses a fixed window** keyed on the clock, so it approximates rather than
-  reproduces the platform's algorithm.
-- **Email is never sent, and MIME is never parsed.** A raw message's body is captured as text.
-
-**Durable Object namespaces, fetchers, and secrets**
-
-- **A namespace routes; it does not host.** The object behind a name is whatever the caller
-  supplied, so nothing here exercises Durable Object lifecycle, placement, or concurrency.
-  Pair it with `createDurableObjectState` to test the object itself.
-- **Placement is recorded, not honoured.** A `locationHint` and a `jurisdiction` are logged
-  on `resolutions` so a test can assert them, but every object lives in the same process.
-- **Ids are their names.** `idFromName` produces an id whose string form is the name, rather
-  than the platform's opaque 64-hex-digit id, so a test that parses an id sees a different
-  shape.
-- **`Fetcher.connect()` throws.** Raw sockets have no in-memory equivalent.
-- **A secret is a value, not a store.** `createSecretsStoreSecret` models one binding's read;
-  there is no store, no rotation, and no caching window.
-
-**Not implemented at all**
-
-Reading `ExecutionContext.exports`, `ExecutionContext.tracing`, `DurableObjectState.exports`,
-or `DurableObjectState.facets` throws, because none of them has an in-memory equivalent.
-Bindings this monorepo does not use — Hyperdrive, Vectorize, Workers AI, Browser Rendering —
-are absent by design; add one when code starts needing it.
-
-## Pattern: testing a repository against real SQL
+## Pattern: Testing A Repository Against Real SQL
 
 The point of a SQL-backed mock is that generated SQL is covered by ordinary unit tests.
 
 ```typescript
 import { createD1Database } from "@sdxc/cloudflare-mocks";
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 
 test("finds a user by email", async () => {
 	let binding = createD1Database();
@@ -670,31 +489,36 @@ test("finds a user by email", async () => {
 });
 ```
 
-## Pattern: testing a producer and its consumer together
+`db.exec()` accepts a `;`-separated script, so a migration file can be applied as it stands.
+
+## Pattern: Testing A Producer And Its Consumer Together
 
 ```typescript
 import { createEnv, createKVNamespace, createQueue } from "@sdxc/cloudflare-mocks";
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 
-test("a failed check is retried", async () => {
-	let queue = createQueue<CheckJob>();
-	let env = createEnv<Env>({ CHECKS: queue, CACHE: createKVNamespace() });
+test("a failed job is retried", async () => {
+	let queue = createQueue<Job>();
+	let env = createEnv<Env>({ JOBS: queue, CACHE: createKVNamespace() });
 
-	await scheduleChecks(env);
+	await scheduleJobs(env);
 	expect(queue.messages).toHaveLength(1);
 
-	await expect(queue.consume((batch) => handleChecks(batch, env))).rejects.toThrow();
+	await expect(queue.consume((batch) => handleJobs(batch, env))).rejects.toThrow();
 
 	// The handler failed, so the message is back with one attempt spent.
 	expect(queue.messages[0]?.attempts).toBe(1);
 });
 ```
 
-## Pattern: testing a Durable Object by construction
+Asynchronous bindings reject rather than throwing synchronously, matching the platform, so an
+expected failure reads as `await expect(…).rejects`.
+
+## Pattern: Testing A Durable Object By Construction
 
 ```typescript
 import { createDurableObjectState, createEnv } from "@sdxc/cloudflare-mocks";
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 
 test("counts within a window", async () => {
 	let state = createDurableObjectState({ name: "tenant-1" });
@@ -708,11 +532,11 @@ test("counts within a window", async () => {
 });
 ```
 
-## Pattern: asserting on background work
+## Pattern: Asserting On Background Work
 
 ```typescript
 import { createExecutionContext, createKVNamespace } from "@sdxc/cloudflare-mocks";
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 
 test("caches the response after replying", async () => {
 	let cache = createKVNamespace();
@@ -727,35 +551,35 @@ test("caches the response after replying", async () => {
 });
 ```
 
-## Related Packages
+Awaiting `settled()` is also what surfaces a rejected `waitUntil` promise, which is otherwise
+silent.
 
-- [`@sdxc/data-table-d1`](/packages/data-table-d1) - `DatabaseDriver` over a `D1Database`;
-  its generated SQL is covered by the parity tests in this package
-- [`@sdxc/data-table-sqlstorage`](/packages/data-table-sqlstorage) - `DatabaseDriver` over a
-  Durable Object `SqlStorage`, including real transaction atomicity
-- [`@sdxc/cache`](/packages/cache) - Caching over a KV namespace or a map
-- [`@sdxc/session-storage-kv`](/packages/session-storage-kv) - Session storage over a KV
-  namespace
+## Versioning
 
-## Tips
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
 
-1. **Construct a mock per test** - every factory returns isolated state, so a fresh call in
-   `beforeEach` removes any need for a cleanup step. When a binding has to live at module
-   scope because the code under test captured `env` on import, call `reset()` in
-   `beforeEach` instead — every stateful factory has one.
-2. **Inject a clock to test time** - `createKVNamespace` and `createRateLimit` accept `now`;
-   this is the only way to observe KV expiry, since the real 60 second `expirationTtl` floor
-   is enforced.
-3. **Create your schema through the binding** - `db.exec("CREATE TABLE …")` on the D1 mock and
-   `sql.exec(…)` on the SqlStorage mock accept `;`-separated scripts, so a migration file can
-   be applied as-is.
-4. **Let `createEnv` be strict** - the default throw on an unsupplied binding names the
-   binding; only pass `{ strict: false }` when the code genuinely treats one as optional.
-5. **Always `await ctx.settled()`** - a `waitUntil` promise that rejects is silent otherwise,
-   and `settled()` surfaces it as a test failure.
-6. **Expect errors as rejections** - the asynchronous bindings reject rather than throwing
-   synchronously, matching the platform, so use `await expect(…).rejects`.
-7. **Read the permissiveness list before trusting a passing test** - D1 on SQLite will accept
-   plenty that D1 rejects, and no size or time limit is enforced anywhere.
-8. **Keep the scope narrow** - this package implements binding interfaces and nothing else;
-   request builders, factories, and assertion helpers belong elsewhere.
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
+
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"devDependencies": {
+		"@sdxc/cloudflare-mocks": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)
