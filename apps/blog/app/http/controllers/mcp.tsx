@@ -61,7 +61,7 @@ export default createAction(routes.mcp.index, async (ctx) => {
 		title: page.frontmatter.title,
 		description: page.frontmatter.description,
 		activePath: routes.mcp.index.href(),
-		content: page.content,
+		document: page.document,
 		markdownHref: routes.mcpMarkdown.href(),
 		locale: page.locale,
 	};

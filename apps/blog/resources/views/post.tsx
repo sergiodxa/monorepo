@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { MarkdownView } from "@sdxc/markdown/client";
+import { toRemix } from "@sdxc/markdown/remix";
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { basis, contents, flexWrap, gap, grid, grow, hstack, shrink } from "@sdxc/u/layout";
@@ -110,10 +110,8 @@ export function PostView() {
 							minIs(0),
 						]}
 					>
-						{model.post.content ? (
-							<Typeset preset="reading">
-								<MarkdownView content={model.post.content} />
-							</Typeset>
+						{model.post.document ? (
+							<Typeset preset="reading">{toRemix(model.post.document)}</Typeset>
 						) : (
 							<p mix={[m(0)]}>No content.</p>
 						)}

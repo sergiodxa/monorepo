@@ -1,26 +1,15 @@
 /**
- * View model for public post pages. Maps loaded article and tutorial payloads into the
- * normalized page contract, handling post-type branching, canonical URL selection,
- * Open Graph/Twitter meta generation, and markdown parsing into a render tree. It
- * centralizes this logic so the post controller stays focused on request handling.
+ * View model for public post pages. It maps article and tutorial payloads into the one
+ * page contract the post route renders, so post-type branching, canonical URL selection,
+ * meta generation, and markdown parsing stay out of the controller.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Markdown as MarkdownType } from "@sdxc/markdown/server";
-
-import { Markdown } from "@sdxc/markdown/server";
+import { highlight } from "@sdxc/highlight/markdown";
+import { Markdown } from "@sdxc/markdown";
 import { succeeded } from "@sdxc/result";
-import * as s from "remix/data-schema";
-
-type MarkdownContent = MarkdownType.Parsed<Record<string, never>>["content"];
-
-/**
- * Shared markdown parser built with an empty frontmatter schema: post sources
- * carry body content only, so the markdown body is the whole contract.
- */
-let markdown = new Markdown({ frontmatter: s.object({}) });
 
 /**
  * Type contracts used to build the post page view model.
@@ -45,8 +34,8 @@ export namespace PostViewModel {
 		meta: Array<{ property: string; content: string }>;
 		post: {
 			title: string;
-			/** Parsed markdown render tree; `null` when source content is empty. */
-			content: MarkdownContent | null;
+			/** The body as a parsed document; `null` when the post carries no source. */
+			document: Markdown.Document | null;
 			slug: string;
 			typePath: "articles" | "tutorials";
 			/** Small label shown above the title to identify post kind. */
@@ -146,10 +135,7 @@ export class PostViewModel {
 			let excerpt = post.meta.excerpt ?? "";
 			let postUrl = new URL(`/articles/${slug}`, requestUrl).toString();
 			let canonical = post.meta.canonical_url || postUrl;
-			let content = this.parseMarkdownContent(
-				post.meta.content || "",
-				"Failed to parse article content",
-			);
+			let document = this.parseBody(post.meta.content || "", "Failed to parse article content");
 
 			return {
 				title,
@@ -168,7 +154,7 @@ export class PostViewModel {
 				],
 				post: {
 					title,
-					content,
+					document,
 					slug,
 					typePath: loadedPost.postType,
 					eyebrow: "Article",
@@ -185,10 +171,7 @@ export class PostViewModel {
 		let slug = post.meta.slug;
 		let excerpt = post.meta.excerpt ?? "";
 		let postUrl = new URL(`/tutorials/${slug}`, requestUrl).toString();
-		let content = this.parseMarkdownContent(
-			post.meta.content || "",
-			"Failed to parse tutorial content",
-		);
+		let document = this.parseBody(post.meta.content || "", "Failed to parse tutorial content");
 
 		return {
 			title,
@@ -207,7 +190,7 @@ export class PostViewModel {
 			],
 			post: {
 				title,
-				content,
+				document,
 				slug,
 				typePath: loadedPost.postType,
 				eyebrow: "Tutorial",
@@ -220,18 +203,23 @@ export class PostViewModel {
 	}
 
 	/**
-	 * Parses raw markdown into an AST and enforces parse success.
-	 *
-	 * Throws through `succeeded(...)` on failure so the page model is built only
-	 * from fully parsed content.
+	 * Parses a post body into a document whose fences carry the tokens they render
+	 * with. A source the parser stops on throws through `succeeded(...)`, so a page
+	 * is built from a document that parsed whole or from none at all.
 	 *
 	 * @param content Raw markdown text from persisted post metadata.
-	 * @param message Failure message used when parse result is unsuccessful.
-	 * @returns Parsed markdown AST content, or `null` for empty content.
+	 * @param message Failure message used when the source will not parse.
+	 * @returns The parsed document, or `null` when the post carries no source.
 	 */
-	private static parseMarkdownContent(content: string, message: string): MarkdownContent | null {
-		let parsed = markdown.parse(content || "");
+	private static parseBody(content: string, message: string): Markdown.Document | null {
+		if (!content.trim()) return null;
+
+		let parsed = Markdown.parse(content);
 		succeeded(parsed, message);
-		return parsed.data.content;
+
+		let highlighted = Markdown.walk(parsed.data.document, highlight);
+		succeeded(highlighted, message);
+
+		return highlighted.data;
 	}
 }

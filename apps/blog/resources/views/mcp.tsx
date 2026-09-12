@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Markdown as MarkdownType } from "@sdxc/markdown/server";
+import type { Markdown } from "@sdxc/markdown";
 
-import { MarkdownView } from "@sdxc/markdown/client";
+import { toRemix } from "@sdxc/markdown/remix";
 import { bg, border } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { contents, flexWrap, gap, grid, hstack, shrink } from "@sdxc/u/layout";
@@ -29,8 +29,8 @@ export namespace McpView {
 		title: string;
 		description: string;
 		activePath: string;
-		/** The page's own render tree, parsed from its Markdown source. */
-		content: MarkdownType.Parsed<{ title: string; description: string }>["content"];
+		/** The page's body, parsed from its Markdown source. */
+		document: Markdown.Document;
 		/** Where the same page is served as Markdown. */
 		markdownHref: string;
 		/** BCP 47 tag for the language this page is written in. */
@@ -79,9 +79,7 @@ export function McpView() {
 						minIs(0),
 					]}
 				>
-					<Typeset preset="reading">
-						<MarkdownView content={model.content} />
-					</Typeset>
+					<Typeset preset="reading">{toRemix(model.document)}</Typeset>
 				</article>
 			</main>
 		</BlogLayout>

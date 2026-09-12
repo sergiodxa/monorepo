@@ -51,7 +51,7 @@ This document defines app-specific rules for `apps/blog`.
 - MUST NOT use direct `#hex` colors, or any raw color literal, in `resources/**/*.tsx`.
 - MUST NOT hoist a `mix` array or a style object to a module-level constant; write `mix` inline at the call site and accept the repetition, extracting a Handle-pattern component instead when markup genuinely repeats.
 - MUST NOT reintroduce app-local copies of components the design system already ships (button, input, select, modal).
-- MUST NOT bypass `@sdxc/markdown/server` for markdown parsing.
+- MUST NOT bypass `@sdxc/markdown` for markdown parsing, or `@sdxc/markdown/remix` for rendering one.
 - MUST NOT use `as any` anywhere in this app (`apps/blog/**/*`), including tests, scripts, controllers, middleware, repositories, views, and config files.
 - MUST NOT call `getContext()` inside controllers when `ctx` is available.
 
@@ -115,5 +115,5 @@ This document defines app-specific rules for `apps/blog`.
   - `app/repositories/posts/tutorial.ts`
   - `app/repositories/posts/like.ts`
 - Markdown integration
-  - `packages/markdown/src/server/index.ts`
-  - `packages/markdown/src/client/remix/index.tsx`
+  - `packages/markdown/src/index.ts`
+  - `packages/markdown/src/remix/index.tsx`

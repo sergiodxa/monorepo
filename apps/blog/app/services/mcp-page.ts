@@ -10,10 +10,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Markdown as MarkdownType } from "@sdxc/markdown/server";
 import type { Result } from "@sdxc/result";
 
-import { Markdown } from "@sdxc/markdown/server";
+import { highlight } from "@sdxc/highlight/markdown";
+import { Markdown } from "@sdxc/markdown";
 import { failure, isFailure, success } from "@sdxc/result";
 import * as s from "remix/data-schema";
 
@@ -33,9 +33,6 @@ const frontmatterSchema = s.object({ title: s.string(), description: s.string() 
 /** Metadata every language's file declares. */
 export type McpPageFrontmatter = s.InferOutput<typeof frontmatterSchema>;
 
-/** Parser shared by both files. */
-const markdown = new Markdown({ frontmatter: frontmatterSchema });
-
 /**
  * The bundled sources, keyed by path.
  *
@@ -51,10 +48,10 @@ const sources = import.meta.glob<string>("../../resources/content/mcp/*.md", {
 export interface McpPage {
 	locale: McpPageLocale;
 	frontmatter: McpPageFrontmatter;
-	/** The body content alone, for serving as Markdown. */
+	/** The body alone, written back from the document, for serving as Markdown. */
 	body: string;
-	/** The body as a render tree, for the HTML view. */
-	content: MarkdownType.Parsed<McpPageFrontmatter>["content"];
+	/** The body as a document, for the HTML view. */
+	document: Markdown.Document;
 }
 
 /** Reports whether a string is exactly one of the languages the page is written in. */
@@ -111,8 +108,12 @@ export function resolveMcpPageLocale(url: URL, acceptLanguage: string | null): M
  * A locale missing its source file surfaces as a 500 error naming the locale, keeping a
  * mismatch between the locale list and the bundled files diagnosable.
  *
+ * The Markdown a reader asks for is written back from the document rather than sliced out
+ * of the file, so both formats say the same thing: an agent reading the body reads what
+ * the page rendered.
+ *
  * @param locale The language to load.
- * @returns The parsed page, or the parse error when the file's frontmatter is wrong.
+ * @returns The parsed page, or the error when its source will not read.
  * @example
  * let page = await loadMcpPage("es");
  */
@@ -122,16 +123,19 @@ export async function loadMcpPage(locale: McpPageLocale): Promise<Result<McpPage
 
 	let raw = await load();
 
-	let parsed = markdown.parse(raw);
+	let parsed = Markdown.parse(raw, { frontmatter: frontmatterSchema });
 	if (isFailure(parsed)) return parsed;
 
-	let split = Markdown.frontmatter(raw, frontmatterSchema);
-	if (isFailure(split)) return split;
+	let body = Markdown.stringify(parsed.data.document);
+	if (isFailure(body)) return body;
+
+	let highlighted = Markdown.walk(parsed.data.document, highlight);
+	if (isFailure(highlighted)) return highlighted;
 
 	return success({
 		locale,
 		frontmatter: parsed.data.frontmatter,
-		body: split.data.content,
-		content: parsed.data.content,
+		body: body.data,
+		document: highlighted.data,
 	});
 }
