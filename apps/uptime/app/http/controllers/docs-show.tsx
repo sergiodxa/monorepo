@@ -1,16 +1,15 @@
 /**
- * `/docs/*slug` controller. Resolves the wildcard slug to a doc file, parses
- * its Markdoc content and frontmatter, and renders the frontmatter title,
- * description, and last-updated date above the content from
- * `@sdxc/markdown/client`'s `renderToRemix`, composed directly into the
- * shared `DocsLayout` sidebar chrome. The frontmatter description doubles as
- * the page's `<head>` meta/Open Graph description.
+ * `/docs/*slug` serves one documentation page. Its frontmatter supplies the title,
+ * description and last-updated date drawn above the body, so a doc carries its own
+ * chrome, and the description doubles as the page's meta and Open Graph description.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { renderToRemix } from "@sdxc/markdown/client";
+import { highlight } from "@sdxc/highlight/markdown";
+import { Markdown } from "@sdxc/markdown";
+import { toRemix } from "@sdxc/markdown/remix";
 import { isFailure } from "@sdxc/result";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
@@ -21,7 +20,7 @@ import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import { SEO } from "~/app/lib/seo";
-import { getDocLoader, listDocs, markdown } from "~/app/services/docs";
+import { getDocLoader, listDocs, MARKDOWN_OPTIONS } from "~/app/services/docs";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -98,10 +97,34 @@ export default createAction(routes.docs.show, async (ctx) => {
 	if (!docLoader) return renderNotFound();
 
 	let content = await docLoader.loader();
-	let result = markdown.parse(content);
-	if (isFailure(result)) return renderNotFound();
 
-	let { content: parsedContent, frontmatter } = result.data;
+	let parsed = Markdown.parse(content, MARKDOWN_OPTIONS);
+	if (isFailure(parsed)) {
+		ctx.log.warn("docs.parse_failed", {
+			file: docLoader.path,
+			line: parsed.error.position?.start.line ?? null,
+			message: parsed.error.message,
+		});
+		return renderNotFound();
+	}
+
+	let { document, frontmatter } = parsed.data;
+	let painted = Markdown.walk(document, highlight);
+
+	/**
+	 * Token colors are decoration, so a visitor that gives up costs the page its
+	 * highlighting and keeps its prose, with the line the walk stood on recorded
+	 * for whoever reads the log.
+	 */
+	if (isFailure(painted)) {
+		ctx.log.warn("docs.highlight_failed", {
+			file: docLoader.path,
+			line: painted.error.position?.start.line ?? null,
+			message: painted.error.message,
+		});
+	}
+
+	let body = isFailure(painted) ? document : painted.data;
 
 	return ctx.render(
 		<DocumentLayout
@@ -139,7 +162,7 @@ export default createAction(routes.docs.show, async (ctx) => {
 						)}
 					</header>
 
-					{renderToRemix(parsedContent)}
+					{toRemix(body)}
 				</article>
 			</DocsLayout>
 		</DocumentLayout>,

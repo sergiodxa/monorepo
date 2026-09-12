@@ -1,9 +1,8 @@
 /**
- * Tests the `/docs/*slug` controller. A real slug (backed by Markdown under
- * `resources/docs/**`) renders its parsed Markdoc content inside the shared
- * `DocsLayout` chrome, with a canonical link and frontmatter description in
- * `<head>`. An unknown slug renders the router's shared not-found page,
- * reserving the canonical link for indexable pages.
+ * Tests the `/docs/*slug` controller. A real slug renders its document inside the
+ * shared `DocsLayout` chrome, with a canonical link and the doc's own frontmatter
+ * description in `<head>`; an unknown slug renders the not-found page, which keeps
+ * the canonical link reserved for indexable pages.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -105,6 +104,15 @@ describe("GET /docs/*slug", () => {
 		expect(body).toContain(`href="${routes.docs.index.href()}"`);
 		expect(body).not.toContain('href="/docs/api"');
 		expect(body).not.toContain('href="/docs/api/resources"');
+	});
+
+	test("paints the code fences a doc carries", async () => {
+		let response = await getDocsShow("api/resources/http-monitors");
+
+		expect(response.status).toBe(200);
+		let body = await response.text();
+		expect(body).toContain('class="language-bash"');
+		expect(body).toContain('class="token ');
 	});
 
 	test("renders the signed-out dashboard CTA as a sign-in button", async () => {

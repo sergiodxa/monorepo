@@ -12,7 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Markdown } from "@sdxc/markdown/server";
+import { Markdown } from "@sdxc/markdown";
 import { isSuccess } from "@sdxc/result";
 import * as s from "remix/data-schema";
 
@@ -29,8 +29,11 @@ const frontmatterSchema = s.object({
 
 export type DocFrontmatter = s.InferOutput<typeof frontmatterSchema>;
 
-/** Shared parser for every doc file's frontmatter + Markdoc body. */
-export const markdown = new Markdown({ frontmatter: frontmatterSchema });
+/**
+ * Hoisted so the index's frontmatter-only reads and the page's full parse agree on
+ * the schema every doc file is held to.
+ */
+export const MARKDOWN_OPTIONS = { frontmatter: frontmatterSchema } satisfies Markdown.Options;
 
 const docFileLoaders = import.meta.glob<string>("../../resources/docs/**/*.md", {
 	query: "?raw",
@@ -54,10 +57,7 @@ export async function listDocs(): Promise<DocSection[]> {
 
 	for (let [filePath, loadContent] of Object.entries(docFileLoaders)) {
 		let content = await loadContent();
-		let result = Markdown.frontmatter<DocFrontmatter, typeof frontmatterSchema>(
-			content,
-			frontmatterSchema,
-		);
+		let result = Markdown.frontmatter(content, MARKDOWN_OPTIONS);
 		if (!isSuccess(result)) continue;
 
 		let urlPath = filePath.replace("../../resources/docs/", "/docs/").replace(/\.md$/, "");
