@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/yaml",
 	"version": "0.0.1",
-	"private": true,
+	"description": "YAML reading and writing over a documented subset, shaped after the built-in JSON object",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

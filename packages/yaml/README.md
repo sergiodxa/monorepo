@@ -2,37 +2,44 @@
 
 YAML reading and writing over a documented subset, shaped after the built-in `JSON` object.
 
-## Overview
+`parse` turns YAML text into JavaScript values and `stringify` writes them back out, named
+after their
+[`JSON`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON)
+counterparts and exported one by one, so importing the reader leaves the serializer out of
+the bundle. Where `JSON` throws, both halves return a `Result`.
 
-`@sdxc/yaml` parses YAML text into JavaScript values and writes JavaScript values back
-out as YAML. The two functions are named after their `JSON` counterparts and exported
-one by one, so `import * as YAML from "@sdxc/yaml"` gives you the familiar `YAML.parse`
-and `YAML.stringify`, while `import { parse } from "@sdxc/yaml"` gives you the reader
-alone. Where `JSON` throws, this returns a [`Result`](/packages/result), the way every
-other parser in this repository reports failure.
+The covered subset is block mappings and sequences, plain and quoted scalars, flow
+collections, block scalars and comments. Anchors, aliases, merge keys, tags and
+multi-document sources are parse failures, named as such rather than silently misread.
 
-Exporting them separately is what keeps the writer out of a bundle that only reads:
-`@sdxc/markdown` imports `parse` for frontmatter, and the serializer — a third of the
-package — is dropped from every Worker that ships it. Both import forms shake the same,
-so reaching for the namespace costs nothing.
+## Installation
 
-The package covers a subset of [YAML 1.2](https://yaml.org/spec/1.2.2/) rather than the
-whole language: block mappings and sequences, plain and quoted scalars, flow
-collections, literal and folded block scalars, and comments. Anchors, aliases, merge
-keys, tags, explicit keys and multi-document sources are parse failures, named as such
-instead of silently misread. Scalars resolve by the
-[YAML 1.2 core schema](https://yaml.org/spec/1.2.2/#103-core-schema), so a date arrives
-as text, `yes` stays the string `"yes"`, and only `true` and `false` become booleans.
+```bash
+npm add @sdxc/yaml
+```
 
-Both halves cover the same subset, which makes the round trip a property the package
-holds itself to: `YAML.parse(YAML.stringify(value))` returns the value it started from,
-including the `NaN` and infinities JSON cannot write. The serializer picks the notation
-that reads back unchanged — a plain scalar where that is unambiguous, a literal block
-for text spanning lines, and double quotes otherwise.
+Both halves report their outcome as a `Result` from
+[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which is where `isFailure`
+and `isSuccess` come from. It installs alongside this package.
 
 ## Usage
 
-### Parse YAML text
+### Read A Document
+
+```typescript
+import { isFailure } from "@sdxc/result";
+import { parse } from "@sdxc/yaml";
+
+let result = parse("title: API Keys\norder: 3\n");
+if (isFailure(result)) throw result.error;
+
+let data = result.data; // { title: "API Keys", order: 3 }
+```
+
+The value is `unknown`, which is the honest type for text read off a file. A source holding
+no nodes — empty, blank, or only comments — reads as `null`.
+
+### Read Nested Collections
 
 ```typescript
 import { isFailure } from "@sdxc/result";
@@ -44,15 +51,24 @@ section:
   title: Team & Settings
   order: 3
 tags: [remix, workers]
+lastUpdated: 2026-08-02
 `);
 
 if (isFailure(result)) throw result.error;
 
 let data = result.data;
-// { title: "API Keys", section: { title: "Team & Settings", order: 3 }, tags: ["remix", "workers"] }
+// {
+//   title: "API Keys",
+//   section: { title: "Team & Settings", order: 3 },
+//   tags: ["remix", "workers"],
+//   lastUpdated: "2026-08-02",
+// }
 ```
 
-### Write a value as YAML
+`lastUpdated` comes back as a string: the core schema has no timestamp type, so a date is
+text on the way in and text on the way back out.
+
+### Write A Value
 
 ```typescript
 import { isFailure } from "@sdxc/result";
@@ -76,7 +92,10 @@ console.log(result.data);
 //   - workers
 ```
 
-### Reach for both under one name
+The output is block style, ending in a line break. An empty mapping or sequence is written
+in the flow style, as `{}` and `[]`.
+
+### Reach For Both Under One Name
 
 ```typescript
 import * as YAML from "@sdxc/yaml";
@@ -85,23 +104,16 @@ let written = YAML.stringify({ title: "Hello" });
 let read = YAML.parse("title: Hello\n");
 ```
 
+Both import forms shake the same, so reaching for the namespace costs nothing.
+
 ## API
 
 ### `parse(source: string): Result<unknown, YAMLParseError>`
 
-Parses YAML source into the value it describes. The result is `unknown`: hand it to a
-[Standard Schema](https://standardschema.dev) validator to give it a type.
-
-**Parameters:**
-
-- `source`: YAML source text
-
-**Returns:**
-
-- `success`: The value the source describes, `null` for a source holding no nodes
-- `failure`: `YAMLParseError`
-
-**Example:**
+Parses YAML source into the value it describes, answering `null` for a source holding no
+nodes. The result is `unknown`: hand it to a
+[Standard Schema](https://standardschema.dev) validator to give it a type. Source that
+falls outside the subset is a `YAMLParseError` carrying the line it stopped on.
 
 ```typescript
 let result = parse("title: Hello\norder: 1\n");
@@ -114,22 +126,14 @@ let data = result.data; // { title: "Hello", order: 1 }
 
 Writes a value as a YAML document in the block style, ending in a line break.
 
-Values follow `JSON.stringify`: a `toJSON` method is used where a value has one, an
-`undefined` object entry is dropped, and an `undefined` array entry becomes `null`. A
-function and a symbol are treated the same way. `NaN` and the infinities, which JSON
-writes as `null`, become `.nan`, `.inf` and `-.inf`.
+Values follow
+[`JSON.stringify`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify):
+a `toJSON` method is used where a value has one, an `undefined` object entry is dropped, and
+an `undefined` array entry becomes `null`. A function and a symbol are treated the same way.
+`NaN` and the infinities, which JSON writes as `null`, become `.nan`, `.inf` and `-.inf`. A
+circular structure and a `bigint` are a `YAMLStringifyError`.
 
-**Parameters:**
-
-- `value`: The value to write
-- `options.indent`: Spaces each nesting level adds; defaults to `2`
-
-**Returns:**
-
-- `success`: The YAML text
-- `failure`: `YAMLStringifyError`, for a circular structure or a `bigint`
-
-**Example:**
+`options.indent` is how many spaces each nesting level adds, and defaults to `2`.
 
 ```typescript
 let result = stringify({ tags: ["remix"] }, { indent: 4 });
@@ -140,23 +144,14 @@ let text = result.data; // "tags:\n    - remix\n"
 
 ### `YAMLParseError`
 
-Error returned in the failure branch of `parse`.
-
-**Properties:**
-
-- `name`: `"YAMLParseError"`
-- `line`: `number` — the line parsing stopped on, counting from 1
-- `message`: The reason, with the line appended
+The error in the failure branch of `parse`. `line` is the line parsing stopped on, counting
+from 1, and the message is the reason with that line appended.
 
 ### `YAMLStringifyError`
 
-Error returned in the failure branch of `stringify`.
-
-**Properties:**
-
-- `name`: `"YAMLStringifyError"`
-- `path`: `string` — path to the offending value, as `items.0.parent`; empty at the root
-- `message`: The reason, with the path appended
+The error in the failure branch of `stringify`. `path` points at the offending value, as
+`items.0.parent`, and is empty at the document root; the message is the reason with that
+path appended.
 
 ### Types
 
@@ -168,7 +163,7 @@ interface StringifyOptions {
 }
 ```
 
-### The supported subset
+### The Supported Subset
 
 | Supported                                                               | Example                   |
 | ----------------------------------------------------------------------- | ------------------------- |
@@ -183,23 +178,24 @@ interface StringifyOptions {
 | Everything else scalar-shaped resolves to a string                      | `lastUpdated: 2026-08-02` |
 
 Reported as a failure rather than guessed at: anchors, aliases and merge keys; tags;
-explicit keys (`? `); quoted values spanning lines; multi-document sources; tab
-indentation. A plain scalar opening on a character YAML reserves — `@`, `` ` ``, `%`,
-`,`, `]`, `}` — is a failure too, as it is in YAML.
+explicit keys (`? `); directives; duplicate keys in one mapping; quoted values spanning
+lines; multi-document sources; tab indentation. A plain scalar opening on a character YAML
+reserves — `@`, `` ` ``, `%`, `,`, `]`, `}` — is a failure too, as it is in YAML.
 
-## Pattern: Validating parsed YAML with a schema
+## Pattern: Validating Parsed YAML With A Schema
 
 `parse` answers `unknown`, which is the honest type for text from a file. Pair it with a
-schema to get a typed value and one failure branch for both steps.
+[Standard Schema](https://standardschema.dev) validator to get a typed value and one failure
+branch for both steps. Any library implementing the specification works, so the schema can
+come from whichever one an application already uses:
 
 ```typescript
+import type { StandardSchemaV1 } from "@standard-schema/spec";
+
 import { isFailure } from "@sdxc/result";
 import { parse } from "@sdxc/yaml";
-import * as s from "remix/data-schema";
 
-let schema = s.object({ title: s.string(), order: s.number() });
-
-export function readConfig(source: string) {
+export function readConfig<T>(source: string, schema: StandardSchemaV1<unknown, T>) {
 	let parsed = parse(source);
 	if (isFailure(parsed)) return parsed;
 
@@ -207,11 +203,12 @@ export function readConfig(source: string) {
 }
 ```
 
-## Pattern: Round-tripping a document
+## Pattern: Round-Tripping A Document
 
-Reading a file, changing one value, and writing it back stays lossless for everything
-the subset covers. Comments and the original formatting are not part of the value, so
-they do not survive the trip.
+Reading a document, changing one value, and writing it back stays lossless for everything
+the subset covers. Comments and the original formatting belong to the text rather than the
+value, so the document that comes out carries the values it went in with and the
+serializer's own layout:
 
 ```typescript
 import { isFailure } from "@sdxc/result";
@@ -226,19 +223,54 @@ export function bumpOrder(source: string) {
 }
 ```
 
-## Related Packages
+Writing a document through `stringify` is what keeps the quoting right: it picks the
+notation that reads back unchanged, which hand-written text has to get right itself.
 
-- [`@sdxc/result`](/packages/result) - The success/failure type both halves return
-- [`@sdxc/xml`](/packages/xml) - The same parse/serialize split for XML
-- [`@sdxc/markdown`](/packages/markdown) - Reads document frontmatter through this package
-- [`@sdxc/highlight`](/packages/highlight) - Tokenizes YAML for display, which is a separate job from reading it
+## Pattern: Diagnosing A Bad File
 
-## Tips
+Both errors carry where the failure was, which is what makes a rejected file fixable
+without re-reading it. `line` points at a source line, and `path` at a value inside the
+structure being written:
 
-1. **Import the half you use** - `import { parse }` leaves the serializer out of the bundle; reach for `import * as YAML` when you want both under one name, which shakes the same.
-2. **Type the result with a schema** - `parse` answers `unknown` on purpose; a validator is what turns text from a file into a typed value.
-3. **Expect a string for a date** - The core schema does not resolve timestamps, so `2026-08-02` arrives as text and stays text on the way back out.
-4. **Do not count on comments surviving a round trip** - A comment is not part of the value, so writing a parsed document back drops it.
-5. **Reach for the round trip, not hand-written YAML** - `stringify` picks the quoting that reads back unchanged, which hand-written text has to get right itself.
-6. **Read `line` and `path` off the errors** - Both carry where the failure was, which is what makes a bad file diagnosable without re-reading it.
-7. **Keep anchors out of authored files** - They are a parse failure here; repeating the value is what this subset asks for.
+```typescript
+import { isFailure } from "@sdxc/result";
+import { parse } from "@sdxc/yaml";
+
+let result = parse(source);
+
+if (isFailure(result)) {
+	let { line, message } = result.error;
+	console.error(`${filename}:${line} ${message}`);
+	console.error(source.split("\n")[line - 1]);
+}
+```
+
+## Versioning
+
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
+
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
+
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/yaml": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)
