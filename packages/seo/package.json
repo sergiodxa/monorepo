@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/seo",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Canonical URLs, typed schema.org structured data and head metadata",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
