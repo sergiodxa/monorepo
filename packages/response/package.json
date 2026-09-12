@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/response",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Semantic helpers that build Response objects for JSON APIs and redirects",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

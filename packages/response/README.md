@@ -1,178 +1,162 @@
 # @sdxc/response
 
-Semantic helpers that build real `Response` objects for JSON APIs and redirects.
+Semantic helpers that build [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)
+objects for JSON APIs and redirects.
 
-## Overview
+Each helper is a named wrapper over
+[`Response.json()`](https://developer.mozilla.org/en-US/docs/Web/API/Response/json_static)
+with the [status code](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status)
+baked in, so a handler says what it means — `notFound({ error })` rather than
+`Response.json(body, { status: 404 })` at every call site. Success helpers merge `ok: true`
+into the body and error helpers merge `ok: false`, giving a client one field to branch on.
 
-Every helper in this package is a thin, named wrapper over `Response.json()` with the
-status code baked in, so a handler says what it means (`notFound({ ... })`) instead of
-repeating `Response.json(body, { status: 404 })` at every call site.
+## Installation
 
-The one thing the helpers add on top of the platform is a discriminant: success helpers
-merge `ok: true` into the body, error helpers merge `ok: false`. A client that parses the
-JSON can branch on a single field it can always count on, without inspecting the status
-code first, and TypeScript narrows the parsed body from that same field.
+```bash
+npm add @sdxc/response
+```
 
-The return value is a plain `Response`. It can be returned straight out of a
-`remix/router` controller, handed to any fetch handler, or asserted on in a test
-with `response.status` and `await response.json()`. Nothing here is tied to a framework;
-the package's only dependency is [`@sdxc/location`](/packages/location), which `redirect`
-uses to accept path-only targets.
+`redirect` accepts path-only targets through
+[`@sdxc/location`](https://www.npmjs.com/package/@sdxc/location), which installs alongside
+this package.
 
 ## Usage
 
-### In a controller
+### Answer With JSON
 
-```tsx
-import { conflict, created } from "@sdxc/response";
-import * as s from "remix/data-schema";
-import { createAction } from "remix/router";
+```typescript
+import { notFound, ok } from "@sdxc/response";
 
-import Monitor from "~/app/data/monitor";
-import routes from "~/routes/web";
+let article = await findArticle(slug);
+if (!article) return notFound({ error: "Article not found" });
 
-const Body = s.object({ url: s.string(), name: s.string() });
-
-/** POST /api/v1/monitors — registers a monitor for the team. */
-export default createAction(routes.api.v1.monitors.create, async (ctx) => {
-	let input = s.parse(Body, await ctx.request.json());
-
-	let existing = await Monitor.findByUrl(ctx.db, input.url);
-	if (existing) return conflict({ error: "That URL is already monitored" });
-
-	let monitor = await Monitor.create(ctx.db, input);
-	return created({ monitor });
-});
+return ok({ article });
 ```
 
-`created({ monitor })` is a `201` whose body is `{ monitor: {...}, ok: true }`, with
-`Content-Type: application/json;charset=utf-8`.
+`ok({ article })` is the response `Response.json({ article, ok: true }, { status: 200 })`
+builds, and `notFound({ error })` the one with `status: 404` and `ok: false`.
 
-### From the caller's side
+### Read One Back
 
-Because the helpers return responses, a test or a fetch client reads them the same way it
+The return value is a plain `Response`, so a test or a fetch client reads it the way it
 reads any other HTTP response:
 
 ```typescript
-let response = created({ monitor: { id: "mon_1" } });
+import { created } from "@sdxc/response";
+
+let response = created({ article: { id: "art_1" } });
 
 response.status; // 201
-response.headers.get("Content-Type"); // "application/json;charset=utf-8"
-await response.json(); // { monitor: { id: "mon_1" }, ok: true }
+response.headers.get("Content-Type"); // the JSON type Response.json() sets
+await response.json(); // { article: { id: "art_1" }, ok: true }
 ```
 
-### Discriminating success from failure
+### Redirect
 
 ```typescript
-let response = await fetch("/api/v1/monitors", { method: "POST", body });
+import { redirect } from "@sdxc/response";
+
+return redirect("/login");
+// 307, Location: /login, null body
+
+return redirect("/articles", { status: redirect.Status.SeeOther });
+// 303, Location: /articles
+```
+
+### Discriminate Success From Failure
+
+```typescript
+let response = await fetch("/api/articles", { method: "POST", body });
 let result = await response.json();
 
-if (result.ok) console.log(result.monitor);
+if (result.ok) console.log(result.article);
 else console.error(result.error);
 ```
 
 ## API
 
-Every JSON helper has the same shape:
+### The Shared Shape
+
+Every JSON helper takes the same two arguments:
 
 ```typescript
-function helper<T>(input: T, init?: Init): Response;
-
-type Init = Omit<ResponseInit, "status" | "statusText">;
+function helper<T>(input: T, init?: Omit<ResponseInit, "status" | "statusText">): Response;
 ```
 
-`input` is spread into the response body alongside the `ok` discriminant, and `init` is
-forwarded to the `Response` for headers and other options. `status` and `statusText` are
-omitted from `Init` on purpose: the helper owns the status, and a caller that wants a
-different one should reach for a different helper.
+`input` is spread into the body alongside the `ok` discriminant, and `init` is forwarded to
+the `Response` for headers and other options. `status` and `statusText` are omitted from
+`init` because the helper owns the status — a different status means a different helper.
+`ok` is merged after `input`, so the discriminant is always the one the helper stands for.
 
-### Success responses (2xx)
+### Success Responses
 
 Success helpers merge `ok: true` into the body.
 
-#### `ok<T>(input: T, init?: Init): Response`
+#### `ok<T>(input: T, init?): Response`
 
-A `200` response. The default answer for a read, or for a write whose result the client
-wants back.
+A `200`. The default answer for a read, or for a write whose result the client wants back.
 
 ```typescript
-return ok({ monitors: await Monitor.listForTeam(db, teamId) });
-// 200 { monitors: [...], ok: true }
+return ok({ articles }, { headers: { "Cache-Control": "public, max-age=60" } });
+// 200 { articles: [...], ok: true }
 ```
 
-#### `created<T>(input: T, init?: Init): Response`
+#### `created<T>(input: T, init?): Response`
 
-A `201` response, for when the request created a resource. Pair it with a `Location`
-header pointing at the new resource when there is a URL for it.
+A `201`, for a request that created a resource. Pair it with a `Location` header when the
+new resource has a URL.
 
 ```typescript
-let apiKey = await ApiKey.create(db, input);
-return created({ apiKey }, { headers: { Location: `/api/v1/api-keys/${apiKey.id}` } });
-// 201 { apiKey: {...}, ok: true }
+return created({ article }, { headers: { Location: `/articles/${article.id}` } });
+// 201 { article: {...}, ok: true }
 ```
 
-#### `accepted<T>(input: T, init?: Init): Response`
+#### `accepted<T>(input: T, init?): Response`
 
-A `202` response, for work that was queued rather than finished. Return whatever the
-client needs to follow up, such as a job id.
+A `202`, for work that was queued rather than finished. Return whatever the client needs to
+follow up, such as a job id.
 
 ```typescript
-let job = await queue.enqueue("backfill-daily-stats", { monitorId });
 return accepted({ jobId: job.id });
 // 202 { jobId: "job_1", ok: true }
 ```
 
-#### `noContent(init?: Init): Response`
+#### `noContent(init?): Response`
 
-A `204` response with a `null` body.
+A `204` — `new Response(null, { status: 204 })`, with `init` merged in for headers.
 
-This is the one helper that does not go through `Response.json()`. A `204` means "no
-representation", and the platform forbids a body on one — constructing it with
-`Response.json()` would attach a JSON payload and throw. So there is no `ok` field to
-merge into either: the status alone carries the outcome.
+This is the one helper that skips `Response.json()`. A `204` means "no representation" and
+the platform forbids a body on one, so there is no `ok` field to merge either: the status
+alone carries the outcome.
 
 ```typescript
-await ApiKey.deleteById(db, apiKeyId);
+await deleteArticle(id);
 return noContent();
 // 204, response.body === null
 ```
 
-`init` still applies, so headers pass through:
-
-```typescript
-return noContent({ headers: { "Clear-Site-Data": '"*"' } });
-```
-
-### Redirects (3xx)
+### Redirects
 
 #### `redirect(target: URL | Location | string, init?: redirect.Init): Response`
 
-A redirect response with the `Location` header set to `target` and a `null` body.
+A redirect whose `Location` header is `target` and whose body is `null` — the longhand is
+`new Response(null, { status, headers: { Location } })`. The status defaults to
+`redirect.Status.Temporary` (`307`).
 
-**Parameters:**
-
-- `target`: a `URL`, a [`Location`](/packages/location), or a string path. Anything
-  `Location.canParse` rejects throws `Invalid redirect target`.
-- `init`: headers and other response options, plus an optional `status` restricted to
-  `redirect.Status`.
-
-**Returns:**
-
-- A `3xx` `Response`. The status defaults to `redirect.Status.Temporary` (307).
-
-**Example:**
+`target` is a `URL`, a string path, or a
+[`Location`](https://www.npmjs.com/package/@sdxc/location); anything `Location.canParse`
+rejects throws `Invalid redirect target`.
 
 ```typescript
-return redirect("/login");
-// 307, Location: /login
+import { Location } from "@sdxc/location";
+import { redirect } from "@sdxc/response";
 
-return redirect(new URL("/dashboard", ctx.request.url));
+redirect(new URL("/dashboard", request.url));
 
-let location = new Location({ pathname: "/monitors", search: "status=down&page=1" });
-return redirect(location);
-// 307, Location: /monitors?status=down&page=1
+redirect(new Location({ pathname: "/articles", search: "status=draft&page=1" }));
+// 307, Location: /articles?status=draft&page=1
 
-return redirect("/logout", {
+redirect("/logout", {
 	status: redirect.Status.SeeOther,
 	headers: { "Set-Cookie": "session=; Max-Age=0" },
 });
@@ -180,262 +164,151 @@ return redirect("/logout", {
 
 #### `redirect.Status`
 
-An enum of the three redirect statuses worth using:
+An enum of the three redirect statuses worth using.
 
-| Member      | Status | Behaviour                                        |
-| ----------- | ------ | ------------------------------------------------ |
-| `SeeOther`  | `303`  | Always turns the follow-up request into a `GET`  |
-| `Temporary` | `307`  | Preserves the method — a `POST` stays a `POST`   |
-| `Permanent` | `308`  | Preserves the method, and is cached as permanent |
+| Member      | Status                                                                          | Behavior                                         |
+| ----------- | ------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `SeeOther`  | [`303`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/303) | Turns the follow-up request into a `GET`         |
+| `Temporary` | [`307`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/307) | Preserves the method — a `POST` stays a `POST`   |
+| `Permanent` | [`308`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/308) | Preserves the method, and is cached as permanent |
 
-Redirect after a successful `POST` with `303`. The default `307` replays the same method
-at the new location, so a browser that re-follows the redirect submits the form again;
-`303` forces the `GET` that the POST-Redirect-GET pattern depends on.
-
-Numeric literals work too — `{ status: 303 }` is the same as
-`{ status: redirect.Status.SeeOther }` — but the enum reads better at the call site.
-
-### Client error responses (4xx)
-
-Error helpers merge `ok: false` into the body. Their signature is identical to the success
-helpers; only the status differs.
-
-#### `badRequest<T>(input: T, init?: Init): Response`
-
-`400`. The request itself is malformed — unparseable body, wrong shape, missing required
-field.
-
-```typescript
-if (!ctx.request.headers.get("Content-Type")?.includes("application/json")) {
-	return badRequest({ error: "Request body must be JSON" });
-}
-// 400 { error: "Request body must be JSON", ok: false }
-```
-
-#### `unauthorized<T>(input: T, init?: Init): Response`
-
-`401`. The caller is not authenticated. Send the `WWW-Authenticate` challenge alongside it
-when the endpoint takes a bearer token.
-
-```typescript
-return unauthorized(
-	{ error: "invalid_token" },
-	{ headers: { "WWW-Authenticate": `Bearer realm="${ISSUER}"` } },
-);
-```
-
-#### `paymentRequired<T>(input: T, init?: Init): Response`
-
-`402`. The account needs to pay or upgrade before it can do this.
-
-#### `forbidden<T>(input: T, init?: Init): Response`
-
-`403`. The caller is authenticated but not allowed. Use this when they are known and
-denied; use `unauthorized` when they are unknown.
-
-#### `notFound<T>(input: T, init?: Init): Response`
-
-`404`. No such resource. Also the right answer when a resource exists but the caller has
-no business knowing it does.
-
-```typescript
-let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
-if (!monitor) return notFound({ error: "Monitor not found" });
-```
-
-#### `methodNotAllowed<T>(input: T, init?: Init): Response`
-
-`405`. The path exists but not for this HTTP method. Pair it with an `Allow` header.
-
-#### `notAcceptable<T>(input: T, init?: Init): Response`
-
-`406`. Nothing the endpoint can produce satisfies the request's `Accept` header.
-
-#### `conflict<T>(input: T, init?: Init): Response`
-
-`409`. The request contradicts the current state — a duplicate record, a concurrent edit.
-
-#### `gone<T>(input: T, init?: Init): Response`
-
-`410`. The resource existed and was deliberately removed. Prefer it over `404` when the
-removal is known and permanent, such as a retired endpoint.
-
-#### `preconditionFailed<T>(input: T, init?: Init): Response`
-
-`412`. A conditional header (`If-Match`, `If-Unmodified-Since`) did not hold — the usual
-answer for a failed optimistic-concurrency check.
-
-#### `requestEntityTooLarge<T>(input: T, init?: Init): Response`
-
-`413`. The body or upload is over the size limit.
-
-#### `unsupportedMediaType<T>(input: T, init?: Init): Response`
-
-`415`. The request's `Content-Type` is not one the endpoint accepts.
-
-#### `unprocessableEntity<T>(input: T, init?: Init): Response`
-
-`422`. The request parsed fine but failed validation or a business rule. Prefer it over
-`400` for field-level errors, and return them keyed by field so the client can attach each
-message to its input.
-
-```typescript
-let result = await validate(ctx.request, CreateMonitorSchema);
-if (isFailure(result)) {
-	return unprocessableEntity({ issues: result.error.issues.map((issue) => issue.message) });
-}
-// 422 { issues: ["Invalid URL"], ok: false }
-```
-
-#### `tooManyRequests<T>(input: T, init?: Init): Response`
-
-`429`. The caller is rate limited. Send `Retry-After` so they know when to come back.
-
-```typescript
-return tooManyRequests({ error: "Rate limit exceeded" }, { headers: { "Retry-After": "60" } });
-```
-
-### Server error responses (5xx)
-
-These also merge `ok: false`.
-
-#### `internalServerError<T>(input: T, init?: Init): Response`
-
-`500`. Something broke that is not the caller's fault. Log the detail; return a message
-that gives an attacker nothing.
-
-#### `notImplemented<T>(input: T, init?: Init): Response`
-
-`501`. The endpoint exists but the functionality is not built.
-
-#### `badGateway<T>(input: T, init?: Init): Response`
-
-`502`. An upstream service answered with something unusable.
-
-#### `serviceUnavailable<T>(input: T, init?: Init): Response`
-
-`503`. Temporarily down — maintenance, an overloaded dependency, a tripped circuit
-breaker. Send `Retry-After` when there is a credible estimate.
-
-#### `gatewayTimeout<T>(input: T, init?: Init): Response`
-
-`504`. An upstream service took too long.
-
-### Types
-
-#### `Init`
-
-```typescript
-type Init = Omit<ResponseInit, "status" | "statusText">;
-```
+Redirect after a successful `POST` with `303`: the default `307` replays the same method at
+the new location, and `303` forces the `GET` that post-redirect-get depends on. Numeric
+literals work too — `{ status: 303 }` is `{ status: redirect.Status.SeeOther }` — and the
+enum reads better at the call site.
 
 #### `redirect.Init`
 
 ```typescript
-namespace redirect {
-	type Init = Omit<ResponseInit, "status" | "statusText"> & {
-		status?: redirect.Status;
-	};
-}
+type Init = Omit<ResponseInit, "status" | "statusText"> & {
+	status?: redirect.Status;
+};
 ```
 
-## Patterns
+### Client Error Responses
 
-### Narrowing the parsed body
+Error helpers merge `ok: false` into the body and share the signature of the success
+helpers; only the status differs. So `conflict({ error })` is
+`Response.json({ error, ok: false }, { status: 409 })`.
 
-The `ok` field is typed as a literal (`true` on success helpers, `false` on error ones),
-so a union of the bodies an endpoint can return narrows on a single check:
+| Helper                  | Status | Use it when                                                                      |
+| ----------------------- | ------ | -------------------------------------------------------------------------------- |
+| `badRequest`            | `400`  | The request itself is malformed — unparseable body, wrong shape, missing field   |
+| `unauthorized`          | `401`  | The caller is unknown; send a `WWW-Authenticate` challenge alongside it          |
+| `paymentRequired`       | `402`  | The account needs to pay or upgrade before it can do this                        |
+| `forbidden`             | `403`  | The caller is known and denied                                                   |
+| `notFound`              | `404`  | No such resource, or the caller has no business knowing one exists               |
+| `methodNotAllowed`      | `405`  | The path exists but not for this method; pair it with an `Allow` header          |
+| `notAcceptable`         | `406`  | Nothing the endpoint produces satisfies the request's `Accept` header            |
+| `conflict`              | `409`  | The request contradicts current state — a duplicate record, a concurrent edit    |
+| `preconditionFailed`    | `412`  | A conditional header did not hold, such as a failed optimistic-concurrency check |
+| `gone`                  | `410`  | The resource was deliberately and permanently removed                            |
+| `requestEntityTooLarge` | `413`  | The body or upload is over the size limit                                        |
+| `unsupportedMediaType`  | `415`  | The request's `Content-Type` is not one the endpoint accepts                     |
+| `unprocessableEntity`   | `422`  | The request parsed fine and failed validation or a business rule                 |
+| `tooManyRequests`       | `429`  | The caller is rate limited; send `Retry-After` so they know when to come back    |
 
 ```typescript
-type CreateMonitor = { monitor: Monitor; ok: true } | { error: string; ok: false };
+return unauthorized(
+	{ error: "invalid_token" },
+	{ headers: { "WWW-Authenticate": `Bearer realm="${issuer}"` } },
+);
 
-let result: CreateMonitor = await response.json();
+return unprocessableEntity({ issues: issues.map((issue) => issue.message) });
+// 422 { issues: ["Invalid URL"], ok: false }
 
-if (result.ok) return result.monitor;
+return tooManyRequests({ error: "Rate limit exceeded" }, { headers: { "Retry-After": "60" } });
+```
+
+Reach for `422` over `400` for field-level errors, and key them by field so the client can
+attach each message to its input: `400` says the request was unreadable, `422` says it was
+read and rejected.
+
+### Server Error Responses
+
+These also merge `ok: false`.
+
+| Helper                | Status | Use it when                                                              |
+| --------------------- | ------ | ------------------------------------------------------------------------ |
+| `internalServerError` | `500`  | Something broke that is not the caller's fault                           |
+| `notImplemented`      | `501`  | The endpoint exists and the functionality is not built                   |
+| `badGateway`          | `502`  | An upstream service answered with something unusable                     |
+| `serviceUnavailable`  | `503`  | Temporarily down — maintenance, an overloaded dependency, a tripped fuse |
+| `gatewayTimeout`      | `504`  | An upstream service took too long                                        |
+
+Log the detail behind a `500` and return a message that gives an attacker nothing. Send
+`Retry-After` with a `503` when there is a credible estimate.
+
+## Pattern: Narrowing The Parsed Body
+
+The `ok` field is typed as a literal — `true` on the success helpers, `false` on the error
+ones — so a union of the bodies an endpoint can return narrows on a single check:
+
+```typescript
+type CreateArticle = { article: Article; ok: true } | { error: string; ok: false };
+
+let result: CreateArticle = await response.json();
+
+if (result.ok) return result.article;
 throw new Error(result.error);
 ```
 
-That check works regardless of which status the endpoint chose, which is what makes it
-worth merging the field at all — the client does not have to keep a list of which statuses
-are failures.
+That check holds regardless of which status the endpoint chose, which is what makes the
+field worth merging: the client keeps no list of which statuses are failures.
 
-### Asserting on responses in tests
+## Pattern: Asserting On Responses In Tests
 
-Helpers return responses, so tests read the status and body directly instead of reaching
-into a framework-specific wrapper:
+Helpers return responses, so a test reads the status and the body directly:
 
 ```typescript
-test("rejects a duplicate URL", async () => {
+import { expect, test } from "vitest";
+
+test("rejects a duplicate slug", async () => {
 	let response = await app.fetch(new Request(url, { method: "POST", body }));
 
 	expect(response.status).toBe(409);
-	expect(await response.json()).toEqual({ error: "That URL is already monitored", ok: false });
+	expect(await response.json()).toEqual({ error: "That slug is taken", ok: false });
 });
 ```
 
-### Caching a read
+## Pattern: Post-Redirect-Get After A Form Submission
 
-`init` reaches the underlying `Response`, so cache headers ride along with the body:
-
-```typescript
-return ok({ status }, { headers: { "Cache-Control": "public, max-age=60" } });
-```
-
-### Post-redirect-get after a form submission
+A browser that reloads after a `307` resubmits the form, because `307` preserves the
+method. Answer a successful submission with `303` so the follow-up is a `GET`:
 
 ```typescript
-await Monitor.create(db, input);
-return redirect(routes.monitors.index.href(), { status: redirect.Status.SeeOther });
+import { redirect } from "@sdxc/response";
+
+await createArticle(input);
+return redirect(`/articles/${input.slug}`, { status: redirect.Status.SeeOther });
 ```
 
-## Related Packages
+## Versioning
 
-- [`@sdxc/location`](/packages/location) - path-only URL builder accepted by `redirect`
-- [`@sdxc/result`](/packages/result) - Result type for the error handling that precedes an
-  error response
-- [`@sdxc/validate`](/packages/validate) - validation failures that map onto
-  `unprocessableEntity`
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
 
-## Tips
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
 
-1. **Pick the status, not the wrapper** - the helper name is the documentation; reserve
-   `internalServerError` for genuine bugs rather than using it as a catch-all.
-2. **`422` over `400` for validation** - `400` says the request was unreadable, `422` says
-   it was read and rejected.
-3. **`303` after a `POST`** - the default `307` preserves the method and can resubmit the
-   form; `303` is what makes post-redirect-get work.
-4. **Don't hand-merge `ok`** - the helpers add it; passing `ok` in `input` only fights the
-   spread that follows it.
-5. **`204` carries no body** - if there is anything to say, use `ok()` instead.
+Depend on one exact date, and move it when you are ready to take the change:
 
-## Status Code Reference
+```json
+{
+	"dependencies": {
+		"@sdxc/response": "2026.9.4"
+	}
+}
+```
 
-| Helper                  | Status | Body                      |
-| ----------------------- | ------ | ------------------------- |
-| `ok`                    | `200`  | `{ ...input, ok: true }`  |
-| `created`               | `201`  | `{ ...input, ok: true }`  |
-| `accepted`              | `202`  | `{ ...input, ok: true }`  |
-| `noContent`             | `204`  | `null`                    |
-| `redirect`              | `307`  | `null`, `Location` header |
-| `badRequest`            | `400`  | `{ ...input, ok: false }` |
-| `unauthorized`          | `401`  | `{ ...input, ok: false }` |
-| `paymentRequired`       | `402`  | `{ ...input, ok: false }` |
-| `forbidden`             | `403`  | `{ ...input, ok: false }` |
-| `notFound`              | `404`  | `{ ...input, ok: false }` |
-| `methodNotAllowed`      | `405`  | `{ ...input, ok: false }` |
-| `notAcceptable`         | `406`  | `{ ...input, ok: false }` |
-| `conflict`              | `409`  | `{ ...input, ok: false }` |
-| `gone`                  | `410`  | `{ ...input, ok: false }` |
-| `preconditionFailed`    | `412`  | `{ ...input, ok: false }` |
-| `requestEntityTooLarge` | `413`  | `{ ...input, ok: false }` |
-| `unsupportedMediaType`  | `415`  | `{ ...input, ok: false }` |
-| `unprocessableEntity`   | `422`  | `{ ...input, ok: false }` |
-| `tooManyRequests`       | `429`  | `{ ...input, ok: false }` |
-| `internalServerError`   | `500`  | `{ ...input, ok: false }` |
-| `notImplemented`        | `501`  | `{ ...input, ok: false }` |
-| `badGateway`            | `502`  | `{ ...input, ok: false }` |
-| `serviceUnavailable`    | `503`  | `{ ...input, ok: false }` |
-| `gatewayTimeout`        | `504`  | `{ ...input, ok: false }` |
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
 
-`redirect` also accepts `303` (`redirect.Status.SeeOther`) and `308`
-(`redirect.Status.Permanent`); `307` is the default.
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)
