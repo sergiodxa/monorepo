@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/highlight",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Syntax highlighting that returns tokens rather than markup, with a markdown walk visitor and a stylesheet keyed to the token types",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

@@ -1,18 +1,27 @@
 # @sdxc/highlight
 
-Syntax highlighting as tokens, with entry points that paint the code blocks of a parsed document and a stylesheet keyed to the tokens it produces.
+Syntax highlighting that returns tokens rather than markup, with a markdown walk visitor and
+a stylesheet keyed to the token types.
 
-## Overview
+A highlighter's real output is a sequence of runs, each labelled with what it is. Markup is
+one way to render that, and the wrong way when the renderer builds a component tree, so this
+package returns the tokens and a caller renders them however it renders anything else. A
+grammar is a plain value a module exports: no global registry, no import order to get right.
 
-A highlighter's real output is not markup — it is a sequence of runs, each labelled with what it is. Markup is one way to render that, and it is the wrong way when the renderer builds a component tree: a string of `<span>`s handed to a JSX runtime arrives escaped, as its own source, and a string handed to `innerHTML` moves the escaping obligation onto whoever assembled it. So this package returns tokens, and a caller renders them however it renders anything else.
+## Installation
 
-There is no global registry and no import order to get right. A grammar is a value that a module exports, and a grammar built on another imports it and merges with [`compose`](#composeparts-arrayrecordstring-rule-grammar). `Token.Type` is a closed union of twenty members, small enough that one stylesheet paints all of it and a palette can map over it exhaustively; a grammar picks the nearest member rather than introducing its own. A language with no grammar is not a failure — it comes back as a single `plain` token holding the whole input, the same shape every other language produces.
+```bash
+npm add @sdxc/highlight
+```
 
-The package splits by dependency. The root entry has none: it is the scanner, the grammars, and the token model. `@sdxc/highlight/markdown` adds the walk visitor and depends on [`@sdxc/markdown`](/packages/markdown), so a caller that only tokenizes resolves it not at all. `@sdxc/highlight/styles.css` is the selector layer, one rule per token type, each reading a custom property so a consumer restyles by declaring properties rather than by restating selectors.
+The root entry has no dependencies. `@sdxc/highlight/markdown` walks a document from
+[`@sdxc/markdown`](https://www.npmjs.com/package/@sdxc/markdown), whose walk reports its
+outcome as a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result);
+both install alongside this package when you use that entry.
 
 ## Usage
 
-### Basic Example
+### Tokenize Source
 
 ```typescript
 import { tokenize } from "@sdxc/highlight";
@@ -28,9 +37,11 @@ let tokens = tokenize("let x = 1;", "ts");
 // ]
 ```
 
-The language arrives as an author wrote it on a fence, so `tokenize` resolves aliases itself — `ts`, `js`, `sh`, `yml`, `jsonc`, `gql` land on the grammar that serves them, and `text`, `txt` and `dotenv` land on `plain`.
+The language arrives as an author wrote it on a fence, so `tokenize` resolves aliases itself
+— `ts`, `js`, `sh`, `yml`, `jsonc` and `gql` land on the grammar that serves them, and
+`text`, `txt` and `dotenv` land on `plain`.
 
-### Rendering Tokens
+### Render Tokens
 
 Map them. Nothing about a token needs interpreting:
 
@@ -48,7 +59,7 @@ Map them. Nothing about a token needs interpreting:
 </code>
 ```
 
-### Rendering Markup
+### Render Markup
 
 When a caller needs a string rather than elements:
 
@@ -59,31 +70,33 @@ let markup = highlight('let name = "x";', "ts");
 // '<span class="token keyword">let</span> name <span class="token operator">=</span> …'
 ```
 
-### Painting A Parsed Document
+Every value is escaped, `plain` included, so the result is safe inside a `<pre><code>`.
+
+### Paint A Parsed Document
 
 ```typescript
 import { highlight } from "@sdxc/highlight/markdown";
 import { Markdown } from "@sdxc/markdown";
+import { isFailure } from "@sdxc/result";
 
 let painted = Markdown.walk(document, highlight);
+if (isFailure(painted)) throw painted.error;
+
+for (let node of painted.data.children) {
+	if (node.type === "code") node.tokens; // Token[]
+}
 ```
+
+Every handler this visitor holds is synchronous, so the walk answers with a `Result` rather
+than a promise, and a painting pass inside a render path is never awaited.
 
 ## API
 
 ### `tokenize(code: string, language: string): Token[]`
 
-Tokenizes source as a language.
-
-**Parameters:**
-
-- `code`: Source to highlight
-- `language`: Language name or alias, as written on a fence
-
-**Returns:**
-
-- The tokens, in source order, covering the input exactly once. A language with no grammar yields one `plain` token holding the whole input, and empty source yields an empty list.
-
-**Example:**
+Tokenizes source as a language, resolving aliases first. The tokens arrive in source order
+and cover the input exactly once. A language with no grammar yields one `plain` token
+holding the whole input, and empty source yields an empty list.
 
 ```typescript
 let tokens = tokenize("SELECT 1", "sql");
@@ -92,36 +105,19 @@ let covered = tokens.map((token) => token.value).join("") === "SELECT 1"; // alw
 
 ### `highlight(code: string, language: string): string`
 
-Highlights source into `<span class="token …">` markup, escaping every value it writes, `plain` included.
-
-**Parameters:**
-
-- `code`: Source to highlight
-- `language`: Language name or alias, as written on a fence
-
-**Returns:**
-
-- Markup safe to place inside a `<pre><code>`
-
-**Example:**
+Highlights source into `<span class="token …">` markup, escaping every value it writes.
+This is the form for callers that need a string; a caller rendering components maps
+`tokenize` instead.
 
 ```typescript
-let markup = highlight("<b>&</b>", "hcl"); // "&lt;b&gt;&amp;&lt;/b&gt;"
+highlight("<b>&</b>", "hcl"); // "&lt;b&gt;&amp;&lt;/b&gt;"
 ```
 
 ### `normalizeLanguage(language: string): string`
 
-Resolves what a fence wrote to the name a grammar answers to, lowercasing it and following an alias when one applies. The result is a name to display and to look up, not a promise that a grammar exists.
-
-**Parameters:**
-
-- `language`: Language as written on the fence
-
-**Returns:**
-
-- The resolved language name, or the lowercased input when no alias applies
-
-**Example:**
+Resolves what a fence wrote to the name a grammar answers to, lowercasing it and following
+an alias when one applies. The result is a name to display and to look up, not a promise
+that a grammar exists.
 
 ```typescript
 normalizeLanguage("SH"); // "bash"
@@ -129,65 +125,51 @@ normalizeLanguage("txt"); // "plain"
 normalizeLanguage("hcl"); // "hcl" — no grammar, and still a usable class name
 ```
 
-### `languages`
+### `languages: Record<string, Grammar>`
 
-Every grammar, by the name it registers under: `bash`, `css`, `diff`, `graphql`, `html`, `http`, `javascript`, `json`, `jsx`, `markdown`, `plain`, `python`, `ruby`, `sql`, `tsx`, `typescript`, `yaml`.
-
-`html` also serves the `xml`, `svg`, `rss`, `atom`, `mathml` and `erb` aliases, since it is general markup rather than a list of known element names.
-
-**Example:**
+Every grammar, by the name it registers under: `bash`, `css`, `diff`, `graphql`, `html`,
+`http`, `javascript`, `json`, `jsx`, `markdown`, `plain`, `python`, `ruby`, `sql`, `tsx`,
+`typescript`, `yaml`. `html` also serves the `xml`, `svg`, `rss`, `atom`, `mathml` and `erb`
+aliases, since it is general markup rather than a list of known element names.
 
 ```typescript
-let painted = Object.hasOwn(languages, normalizeLanguage("toml")); // false
+Object.hasOwn(languages, normalizeLanguage("toml")); // false
 ```
 
 ### `scan(code: string, grammar: Grammar): Token[]`
 
-Scans source with a grammar directly, skipping the registry and the alias table. Adjacent runs of the same type arrive merged, so the output is the same whether a grammar spells a construct as one rule or several.
-
-**Parameters:**
-
-- `code`: Source to scan
-- `grammar`: The language to scan it as
-
-**Returns:**
-
-- The tokens, in source order, covering the input exactly once
-
-**Example:**
+Scans source with a grammar directly, skipping the registry and the alias table. Adjacent
+runs of the same type arrive merged, so the output is the same whether a grammar spells a
+construct as one rule or several.
 
 ```typescript
 import { scan } from "@sdxc/highlight";
-import { ini } from "./ini";
+
+import { ini } from "./ini.js";
 
 let tokens = scan("[server]\nport = 8080\n", ini);
 ```
 
 ### `compose(...parts: Array<Record<string, Rule[]>>): Grammar`
 
-Merges grammars into one, mode by mode, so a language built on another states that as an import. The earlier part's rules are tried first, which is how a JSX tag wins over a TypeScript comparison on the same `<`. A part with no `main` of its own merges the same way, which is how a set of modes lifted off another grammar joins one.
-
-**Parameters:**
-
-- `parts`: The grammars and mode sets to merge, in priority order
-
-**Returns:**
-
-- A grammar holding every mode any part defines
-
-**Example:**
+Merges grammars into one, mode by mode, so a language built on another states that as an
+import. The earlier part's rules are tried first, which is how a JSX tag wins over a
+TypeScript comparison on the same `<`. A part with no `main` of its own merges the same way,
+which is how a set of modes lifted off another grammar joins one.
 
 ```typescript
 import { compose } from "@sdxc/highlight";
 
-export const tsx: Grammar = compose(elements, typescript);
+export let tsx = compose(elements, typescript);
 ```
 
 ### `highlight` (from `@sdxc/highlight/markdown`)
 
-A [`Markdown.walk`](/packages/markdown) visitor holding one `code` handler, so a document paints in the pass that walks it. The handler resolves the language the block names, tokenizes its body, and returns a copy of the node carrying both; a block that names no language, as an indented block never does, is painted as `plain`. The node keeps its `content`, `attributes` and `position`, so a painted document writes back as the markdown it came from, and visitors merge, so one walk paints and rewrites at once.
-
-**Example:**
+A `Markdown.Visitor` holding one `code` handler, so a document paints in the pass that walks
+it. The handler resolves the language the block names, tokenizes its body, and returns a
+copy of the node carrying both; a block that names no language, as an indented block never
+does, is painted as `plain`. The node keeps its `content`, `attributes` and `position`, and
+visitors merge, so one walk paints and rewrites at once.
 
 ```typescript
 import { highlight } from "@sdxc/highlight/markdown";
@@ -201,7 +183,15 @@ let result = Markdown.walk(document, {
 });
 ```
 
-Every handler here is synchronous, so the walk returns a `Result` directly and a painting pass inside a render path is never awaited.
+### `@sdxc/highlight/styles.css`
+
+The selector layer: one rule per token type, each reading a custom property named
+`--highlight-<type>`. It sets colour and nothing else, and ships light and dark defaults, so
+loading it alone already paints.
+
+```typescript
+import "@sdxc/highlight/styles.css";
+```
 
 ### Types
 
@@ -218,9 +208,14 @@ interface Token {
 
 The twenty kinds of run a grammar can name:
 
-`attr-name`, `attr-value`, `boolean`, `builtin`, `class-name`, `comment`, `constant`, `deleted`, `function`, `inserted`, `keyword`, `number`, `operator`, `plain`, `property`, `punctuation`, `regex`, `string`, `tag`, `variable`.
+`attr-name`, `attr-value`, `boolean`, `builtin`, `class-name`, `comment`, `constant`,
+`deleted`, `function`, `inserted`, `keyword`, `number`, `operator`, `plain`, `property`,
+`punctuation`, `regex`, `string`, `tag`, `variable`.
 
-`builtin` is for names the language itself provides, `class-name` for types and classes, `property` for a key of any kind, `tag` for a markup tag name and a CSS selector, `variable` for a sigil-marked name, `inserted` and `deleted` for the two sides of a diff, and `plain` for everything no rule claimed.
+`builtin` is for names the language itself provides, `class-name` for types and classes,
+`property` for a key of any kind, `tag` for a markup tag name and a CSS selector, `variable`
+for a sigil-marked name, `inserted` and `deleted` for the two sides of a diff, and `plain`
+for everything no rule claimed.
 
 #### `Rule`
 
@@ -233,7 +228,10 @@ interface Rule {
 }
 ```
 
-`match` carries the sticky flag, so it matches where the scanner is rather than searching ahead. `push` and `pop` move the mode stack, and a rule uses one or the other.
+`match` carries the [sticky
+flag](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/sticky),
+so it matches where the scanner is rather than searching ahead. `push` and `pop` move the
+mode stack, and a rule uses one or the other.
 
 #### `Grammar`
 
@@ -244,20 +242,9 @@ interface Grammar {
 }
 ```
 
-`main` is where scanning starts. Every other entry is a context a rule pushes onto the stack — a template literal's interpolation, a markup tag's attributes, the body of an embedded language.
-
-#### `fence.Attributes`
-
-```typescript
-interface Attributes {
-	tokens: Token[];
-	language: string;
-	path?: string;
-	title?: string;
-}
-```
-
-What a `Fence` tag carries. Tokens rather than markup, so a renderer emits its own elements.
+`main` is where scanning starts. Every other entry is a context a rule pushes onto the stack
+— a template literal's interpolation, a markup tag's attributes, the body of an embedded
+language.
 
 #### `Markdown.Code["tokens"]`
 
@@ -271,13 +258,18 @@ declare module "@sdxc/markdown" {
 }
 ```
 
-The field `@sdxc/highlight/markdown` declares and fills: the runs of the block's body, in source order, covering its `content` exactly once. It is optional because a document that no walk painted has none, and it is derived data — a serializer writes the fields a parser produced, so `tokens` survives a round trip through the document and not through the text.
+The field `@sdxc/highlight/markdown` declares and fills: the runs of the block's body, in
+source order, covering its `content` exactly once. It is optional because a document that no
+walk painted has none, and it is derived data — a serializer writes the fields a parser
+produced, so `tokens` survives a round trip through the document and not through the text.
 
 ## Pattern: Painting Tokens Without A Stylesheet
 
-An email has no stylesheet to load, so the colour has to be inline. Key the palette by the type union and the compiler checks it covers every member, which is what keeps a type added upstream from silently rendering unpainted:
+An email client has no stylesheet to load, so the colour has to be inline. Key the palette by
+the type union and the compiler checks it covers every member, which is what keeps a type
+added upstream from silently rendering unpainted:
 
-```typescript
+```tsx
 import type { Token } from "@sdxc/highlight";
 
 const COLORS: Record<Token.Type, string | undefined> = {
@@ -298,23 +290,24 @@ function paint(tokens: Token[]) {
 
 ## Pattern: Theming The Stylesheet
 
-Load the selector layer, then declare the properties for the roles you have an opinion about. The rest keep the defaults:
+Load the selector layer, then declare the properties for the roles you have an opinion about.
+The rest keep the defaults:
 
-```tsx
-import highlightStyles from "@sdxc/highlight/styles.css?url";
-
-export let links = () => [{ rel: "stylesheet", href: highlightStyles }];
+```typescript
+import "@sdxc/highlight/styles.css";
 ```
 
 ```css
 :root {
-	--highlight-comment: var(--ui-neutral-fg);
-	--highlight-keyword: var(--ui-color-brand-800);
-	--highlight-string: var(--ui-brand-fg);
+	--highlight-comment: #8b949e;
+	--highlight-keyword: #ff7b72;
+	--highlight-string: #a5d6ff;
 }
 ```
 
-The stylesheet sets colour and nothing else. A block's padding, border and radius belong to the page around it, as does any weight or face a theme spends on a role — a bold keyword, an italic comment — which a consumer adds with its own rules on the same classes.
+The stylesheet sets colour and nothing else. A block's padding, border and radius belong to
+the page around it, as does any weight or face a theme spends on a role — a bold keyword, an
+italic comment — which a consumer adds with its own rules on the same classes.
 
 ## Pattern: Writing A Grammar
 
@@ -323,7 +316,7 @@ A grammar is a record of modes, each a list of rules tried in order at the curso
 ```typescript
 import type { Grammar } from "@sdxc/highlight";
 
-export const ini: Grammar = {
+export let ini: Grammar = {
 	main: [
 		{ type: "comment", match: /[#;][^\n]*/y },
 		{ type: "tag", match: /\[[^\]\n]*\]/y },
@@ -334,30 +327,56 @@ export const ini: Grammar = {
 };
 ```
 
-Anything no rule claims accumulates into a `plain` run, so a grammar is complete from its first rule and grows by claiming more. Rule order is priority: a comment rule goes above the operator rule that would otherwise claim its opening `/`.
+Anything no rule claims accumulates into a `plain` run, so a grammar is complete from its
+first rule and grows by claiming more. Rule order is priority: a comment rule goes above the
+operator rule that would otherwise claim its opening `/`.
 
-Nesting is a mode. A rule with `push` enters one and a rule with `pop` leaves it, which is how a template literal's `${…}` returns to being a string, and how a `<script>` body highlights as JavaScript and then stops at `</script>`. A construct that nests inside itself pushes its own mode again, so the brace that closes it is the one that matched:
+Nesting is a mode. A rule with `push` enters one and a rule with `pop` leaves it, which is how
+a template literal's `${…}` returns to being a string, and how a `<script>` body highlights as
+JavaScript and then stops at `</script>`. A construct that nests inside itself pushes its own
+mode again, so the brace that closes it is the one that matched:
 
 ```typescript
-interpolation: [
+let interpolation: Rule[] = [
 	{ type: "punctuation", match: /\}/y, pop: true },
 	{ type: "punctuation", match: /\{/y, push: "interpolation" },
 	...expression,
 ];
 ```
 
-Four properties are checked for every rule of every registered grammar by `src/lexer.test.ts`, so a new grammar inherits the tests: the pattern is sticky and not global, it matches at least one character, any mode it pushes exists, and its type is one of the twenty.
+Keep every pattern linear — no quantifier inside another quantifier over the same characters
+— so that highlighting a block costs what the block is long. Reach for a mode before a
+lookahead: a construct that spans a region is a mode, and lookarounds decide what a single
+character means, like whether a `/` divides or opens a regular expression. And pick the
+nearest existing token type; a grammar that wants a twenty-first one usually wants `builtin`,
+`property` or `constant`.
 
-## Related Packages
+## Versioning
 
-- [`@sdxc/markdown`](/packages/markdown) - Registers the fence node, and renders its `Fence` tag into Remix UI nodes
-- [`@sdxc/mail`](/packages/mail) - Registers the same node, and paints its tokens inline for an inbox
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
 
-## Tips
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
 
-1. **Prefer tokens to markup** - `highlight()` exists for callers that need a string; a caller rendering components maps `tokenize()` and emits elements, which keeps escaping out of the contract entirely.
-2. **Check the language, do not guard it** - Every language tokenizes, so there is no unknown-language branch to write. Use `languages` and `normalizeLanguage` when the question is whether a fence will be painted, not whether it will render.
-3. **Keep every pattern linear** - No quantifier inside another quantifier over the same characters. The point of scanning at a fixed position is that highlighting a fence cannot cost more than the fence is long.
-4. **Order rules by specificity** - The first rule that matches at the cursor wins, so a keyword rule belongs above the identifier rule that would claim the same word.
-5. **Reach for a mode before a lookahead** - A construct that spans a region — a string body, a tag's attributes, an embedded language — is a mode. Lookarounds are for deciding what a single character means, like whether a `/` divides or opens a regular expression.
-6. **Pick the nearest existing type** - The union is closed so that one stylesheet can paint every language. A grammar that wants a twenty-first type usually wants `builtin`, `property` or `constant`.
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/highlight": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)
