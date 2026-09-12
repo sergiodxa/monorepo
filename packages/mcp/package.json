@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/mcp",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Model Context Protocol servers as remix/router actions, served over stateless Streamable HTTP",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
