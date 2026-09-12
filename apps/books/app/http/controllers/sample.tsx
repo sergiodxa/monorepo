@@ -8,11 +8,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Result } from "@sdxc/result";
 import type { RequestContext } from "remix/router";
 
 import { getClientIP } from "@sdxc/get-client-ip";
-import { renderToRemix } from "@sdxc/markdown/client";
-import { Markdown } from "@sdxc/markdown/server";
+import { highlight } from "@sdxc/highlight/markdown";
+import { Markdown } from "@sdxc/markdown";
+import { toRemix } from "@sdxc/markdown/remix";
 import { isFailure, isSuccess } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
@@ -43,26 +45,36 @@ const BLOCKED_MESSAGE =
 const INVALID_MESSAGE = "Invalid email address. \nPlease try with another email address.";
 const GENERIC_MESSAGE = "Something went wrong, please try again.";
 
+/** Logged beside a failure's line so a malformed chapter names the file to open. */
+const CHAPTER_FILE = "resources/content/sample.md";
+
+/** The chapter opens straight into prose, so the block it may carry is an empty one. */
+const MARKDOWN_OPTIONS = { frontmatter: s.object({}) } satisfies Markdown.Options;
+
 /**
- * The parsed chapter, memoized per isolate after the first request needs it.
+ * The chapter, parsed and painted once per isolate.
  *
- * Parsing at module load runs in the Workers global scope, which forbids the
- * async I/O the Markdown transform needs and fails validation at deploy time.
+ * The first request that needs it does the work, because the Workers global scope
+ * is reserved for imports and deploy validation holds a module-load parse to that.
  */
-let chapter: ReturnType<Markdown<ReturnType<typeof chapterSchema>>["parse"]> | undefined;
-
-/** The chapter is plain markdown, yet the parser still requires a schema for it. */
-function chapterSchema() {
-	return s.object({});
-}
+let chapter: Result<Markdown.Document, Markdown.ParseError | Markdown.WalkError> | undefined;
 
 /**
- * Parses the chapter, or returns the parse already done in this isolate.
+ * Reads and paints the chapter, or hands back the work already done in this isolate.
  *
- * @returns The parse result, success or failure.
+ * @returns The painted document, or the failure that stopped it.
  */
 function readChapter() {
-	chapter ??= new Markdown({ frontmatter: chapterSchema() }).parse(chapterSource);
+	if (chapter) return chapter;
+
+	let parsed = Markdown.parse(chapterSource, MARKDOWN_OPTIONS);
+
+	if (isFailure(parsed)) {
+		chapter = parsed;
+		return chapter;
+	}
+
+	chapter = Markdown.walk(parsed.data.document, highlight);
 	return chapter;
 }
 
@@ -101,9 +113,12 @@ function renderChapter(ctx: RequestContext) {
 	if (isFailure(parsed)) {
 		/**
 		 * Reachable only when the bundled chapter itself is malformed. The reader is already
-		 * subscribed, so the response stays the familiar form, with the error shown inline.
+		 * subscribed, so the response stays the familiar form, with the error shown inline,
+		 * while the log keeps the file and the line an author has to open.
 		 */
-		ctx.log.fail(parsed.error);
+		ctx.log.fail(parsed.error, {
+			chapter: { file: CHAPTER_FILE, line: parsed.error.position?.start.line },
+		});
 		return renderForm(ctx, { error: GENERIC_MESSAGE, status: 500 });
 	}
 
@@ -117,7 +132,7 @@ function renderChapter(ctx: RequestContext) {
 			<SampleView
 				action={routes.sample.action.href()}
 				attribution={readAttribution(ctx.url.searchParams)}
-				chapter={renderToRemix(parsed.data.content)}
+				chapter={toRemix(parsed.data)}
 			/>
 		</DocumentLayout>,
 	);
