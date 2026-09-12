@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/billing",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Vendor-neutral billing: one provider contract every payment platform is reached through, plus a webhook endpoint that verifies and deduplicates deliveries",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

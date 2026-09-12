@@ -1,100 +1,95 @@
 # @sdxc/billing
 
-Vendor-neutral billing: our own models, one provider contract every platform is reached through, a middleware that publishes `context.billing`, and a webhook endpoint that verifies, deduplicates and dispatches deliveries.
+Vendor-neutral billing: one provider contract every payment platform is reached through, plus a
+webhook endpoint that verifies and deduplicates deliveries.
 
-## Overview
+Code is written against `Customer`, `Subscription`, `Order`, `Checkout` and
+`EntitlementState`, and a platform is reached through the `Billing` contract, so a vendor's
+name appears in one import and one construction site rather than in every service, column and
+handler.
 
-Billing spelled out per app means re-deciding the same things at every call site: which client to resolve, what a failure looks like, which vendor identifier a column holds, and what a webhook handler is allowed to trust. This package makes each of those one decision. Apps program against the models in this package — `Customer`, `Subscription`, `Order`, `Checkout`, `EntitlementState` — and reach a platform through the `Billing` contract, so a vendor's name appears in one import and one construction site per app rather than in every service, column, and handler.
+Nothing here throws: every method answers a `Result`, and a `find*` that matches nothing
+answers a `not_found` failure rather than `null`. Purchases are hosted links only — checkout
+and portal hand back a URL, so no card data passes through this package.
 
-Every operation hangs off the instance, grouped by resource: `billing.customers.create()`, `billing.checkouts.create()`, `billing.entitlements.of()`. That shape is deliberate — some billing call sites are cron jobs rather than routes, so the API cannot depend on a request context. A provider is constructed once at module scope; a route reads that same object from `context.billing` and a job imports it directly.
+## Installation
 
-Nothing here throws. Every method returns a [`Result`](/packages/result) carrying a `BillingError` on the failure side, and a `find*` that matches nothing answers a `not_found` failure rather than `null`, so a missing record is a branch the compiler makes you take. Purchases are hosted links only: checkout and portal hand back a URL and the route performs the redirect, so no card data passes through this package or the app around it.
+```bash
+npm add @sdxc/billing
+```
 
-Capability groups vary by platform. `portal`, `discounts`, `usage` and `meters` are optional properties on the contract, checked with `supports()`, which narrows the group inside the branch. A platform that lacks one leaves the property absent rather than stubbing it — Mercado Pago has none of the first three.
-
-### Entry points
-
-| Entry                                  | Contents                                                                           |
-| -------------------------------------- | ---------------------------------------------------------------------------------- |
-| `@sdxc/billing`                        | The models, the `Billing` contract, `BillingError`, `supports()`, `BillingWebhook` |
-| `@sdxc/billing/middleware`             | The router middleware publishing `context.billing`, plus `requireEntitlement()`    |
-| `@sdxc/billing/providers/polar`        | `PolarBilling`, which answers every group                                          |
-| `@sdxc/billing/providers/stripe`       | `StripeBilling`, a deliberately narrow provider                                    |
-| `@sdxc/billing/providers/mercado-pago` | `MercadoPagoBilling`, a payment processor rather than a merchant of record         |
-| `@sdxc/billing/providers/memory`       | `MemoryBilling`, a full in-memory platform for tests                               |
-| `@sdxc/billing/conformance`            | The shared suite every provider must pass, plus one suite per optional capability  |
-
-Providers live behind their own subpaths and are never re-exported from the root, so a bundle resolves only the provider an app imports. The conformance suite imports `vitest`, so it stays out of the root entry too.
+Every call reports through a `Result` from
+[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which is where `isFailure`,
+`isSuccess` and `unwrap` come from; it installs alongside this package. The middleware and the
+webhook endpoint mount into a [`remix`](https://www.npmjs.com/package/remix) fetch router, and
+the conformance entry registers [Vitest](https://vitest.dev) tests.
 
 ## Usage
 
-### Constructing a provider
+### Construct A Provider
 
-A provider is a class, built once at module scope. Nothing reaches the network in the constructor, so an instance costs no startup work and can be imported anywhere:
+A provider is a class, built once at module scope. Nothing reaches the network in the
+constructor, so an instance costs no startup work and can be imported anywhere:
 
 ```typescript
 import type { Billing } from "@sdxc/billing";
 
 import { PolarBilling } from "@sdxc/billing/providers/polar";
-import { env } from "cloudflare:workers";
 
-export let billing: Billing = new PolarBilling({
-	accessToken: () => env.POLAR_ACCESS_TOKEN,
-	webhookSecret: env.POLAR_WEBHOOK_SECRET,
+export let polar: Billing = new PolarBilling({
+	accessToken: () => readSecret("POLAR_ACCESS_TOKEN"),
+	webhookSecret: () => readSecret("POLAR_WEBHOOK_SECRET"),
 	products: { pro: "019...", team: "019..." },
 	meters: { pings: "019..." },
-	features: { flow_monitors: "019..." },
+	features: { reports: "019..." },
 });
 ```
 
-Products, meters, and features are configured as our own slugs mapped to the platform's ids, which is what keeps a vendor identifier out of every call site: a checkout is opened for `"pro"`, and a subscription read reports `productSlug: "pro"`.
+Products, meters and features are configured as your own slugs mapped to the platform's ids,
+which is what keeps a vendor identifier out of every call site: a checkout is opened for
+`"pro"`, and a subscription read answers `productSlug: "pro"`.
 
-Annotate the export as `Billing` rather than letting it infer the concrete class. It keeps the rest of the app written against the contract, so changing platform is this one line, and it is what makes `supports()` usable: a concrete `PolarBilling` statically has `usage`, so a guard against it narrows its own false branch away and the compiler rejects the code inside. Reach for the concrete type only where an app deliberately depends on one platform's extras through `native`.
+Annotate the export as `Billing` rather than letting it infer the concrete class. It keeps the
+rest of the code written against the contract, and it is what makes `supports()` usable: a
+concrete `PolarBilling` statically has `usage`, so a guard against it narrows its own false
+branch away. A job outside a request imports this same module-scope instance, so there is no
+second construction and no second configuration.
 
-### Configuring a credential
+### Open A Hosted Checkout
 
-Every credential option — an access token, an API key, a signing secret — is a `Secret`, which is the value itself or a function resolving it:
-
-```typescript
-export type Secret = string | (() => string | Promise<string>);
-```
-
-The function form is what lets a credential live in a store that is only readable with an `await`, since the constructor runs at module scope where nothing can be awaited:
-
-```typescript
-import { PolarBilling } from "@sdxc/billing/providers/polar";
-import { env } from "cloudflare:workers";
-
-export let polar = new PolarBilling({
-	accessToken: () => env.POLAR_ACCESS_TOKEN.get(),
-	webhookSecret: () => env.POLAR_WEBHOOK_SECRET.get(),
-	products: { pro: "019..." },
-});
-```
-
-The function is called on the first use that needs the credential and the answer is remembered, so reading it costs one await for the life of the instance however many calls follow. A read that fails is not remembered, so a store that was briefly unavailable is asked again and the instance can still bill later.
-
-While a signing secret is unset, empty, or unreadable, verification answers `false` rather than throwing, so an endpoint keeps returning a status the platform accepts instead of the `500` it disables an endpoint over.
-
-### Registering the middleware
-
-The middleware is a default export, so the importing app names it. The convention is to name the middleware for the capability and the instance for the backend, which reads as the sentence it is:
-
-```typescript
-import billing from "@sdxc/billing/middleware";
-import { createRouter } from "remix/router";
-
-import { polar } from "~/app/services/billing";
-
-let router = createRouter({
-	middleware: [billing({ provider: polar })],
-});
-```
-
-Handlers then bill without knowing which platform is configured:
+The package answers a link; the route owns the redirect. A session with no `url` is no longer
+payable, so that is checked before redirecting:
 
 ```typescript
 import { isFailure } from "@sdxc/result";
+import { redirect } from "remix/response/redirect";
+
+let checkout = await polar.checkouts.create({
+	product: "pro",
+	customer: { id: customerId },
+	returnTo: "https://example.com/billing/thanks",
+	allowDiscountCodes: false,
+	idempotencyKey: `checkout_${attemptId}`,
+});
+
+if (isFailure(checkout) || checkout.data.url === null) {
+	return new Response(null, { status: 502 });
+}
+
+return redirect(checkout.data.url, { status: redirect.Status.SeeOther });
+```
+
+### Bill Through The Router Middleware
+
+The middleware is a default export, so the importing module names it. It publishes the
+configured provider as `context.billing`, typed by an augmentation the module itself declares:
+
+```typescript
+import billing from "@sdxc/billing/middleware";
+import { isFailure } from "@sdxc/result";
+import { createRouter } from "remix/router";
+
+let router = createRouter({ middleware: [billing({ provider: polar })] });
 
 router.get("/billing/subscription", async (context) => {
 	let state = await context.billing.entitlements.of({ id: customerId });
@@ -105,108 +100,11 @@ router.get("/billing/subscription", async (context) => {
 });
 ```
 
-### Billing from a job
+### Test Without A Platform
 
-A job has no request context, so it imports the same instance the middleware publishes. There is no second construction and no second configuration:
-
-```typescript
-import { supports } from "@sdxc/billing";
-import { Job } from "@sdxc/jobs";
-import { isFailure } from "@sdxc/result";
-
-import { billing } from "~/app/services/billing";
-
-export class IngestUsageJob extends Job {
-	async perform(): Promise<void> {
-		if (!supports(billing, "usage")) return;
-
-		let result = await billing.usage.ingest([
-			{ name: "pings", customer: { externalId: "u_1" }, externalId: "ping_2026_09_02" },
-		]);
-
-		if (isFailure(result)) throw new Job.RetryError(result.error.message);
-
-		this.logger.info("billing.usage.ingested", { accepted: result.data.accepted });
-	}
-}
-```
-
-### Asking whether a platform has a capability
-
-`portal`, `discounts`, `usage` and `meters` may be absent. `supports()` is a type guard, so the group is non-optional inside the branch:
-
-```typescript
-import { supports } from "@sdxc/billing";
-import { isFailure } from "@sdxc/result";
-
-if (!supports(context.billing, "meters")) return new Response(null, { status: 404 });
-
-let reading = await context.billing.meters.quantities({
-	meter: "pings",
-	customer: { id: customerId },
-	from: startOfMonth,
-	to: now,
-	interval: "day",
-});
-
-if (isFailure(reading)) return new Response(null, { status: 502 });
-
-return Response.json({ quantity: reading.data.quantity });
-```
-
-### Opening a hosted checkout
-
-The package returns a link; the route redirects to it:
-
-```typescript
-import { redirect } from "@sdxc/http/response";
-import { isFailure } from "@sdxc/result";
-
-let checkout = await context.billing.checkouts.create({
-	product: "pro",
-	customer: { id: customerId },
-	returnTo: "https://example.com/billing/thanks",
-	allowDiscountCodes: false,
-	idempotencyKey: `checkout_${orderAttemptId}`,
-});
-
-if (isFailure(checkout) || checkout.data.url === null) {
-	return new Response(null, { status: 502 });
-}
-
-return redirect(checkout.data.url, { status: redirect.Status.SeeOther });
-```
-
-### The webhook endpoint
-
-`BillingWebhook` is constructed at module scope and mounted as a route. It reads the body once, verifies the signature, records the delivery with the verdict, skips a replay that already ran, and hands a narrowed event to the handler keyed by its type:
-
-```typescript
-import { BillingWebhook } from "@sdxc/billing";
-
-import { polar } from "~/app/services/billing";
-import { syncEntitlements } from "~/app/services/entitlements";
-import { deliveries } from "~/app/services/webhook-store";
-
-export default new BillingWebhook(
-	polar,
-	{
-		async "order.paid"(event) {
-			await syncEntitlements(event.order.customerId);
-		},
-		async "subscription.canceled"(event) {
-			await syncEntitlements(event.subscription.customerId);
-		},
-	},
-	{ store: deliveries },
-);
-```
-
-An event names what changed, not what the new state is. A handler re-reads the entitlement snapshot rather than applying the payload as a diff, because deliveries arrive out of order, are replayed, and carry whatever API version the platform sent them under.
-
-### Testing without a platform
-
-`MemoryBilling` is a full implementation of the contract, not a mock: it passes the same conformance suite the real providers do, so state a call writes is state the next call reads.
+`MemoryBilling` is a full implementation of the contract, not a mock: it passes the same
+conformance suite the network-backed providers do, so state a call writes is state the next
+call reads.
 
 ```typescript
 import { MemoryBilling } from "@sdxc/billing/providers/memory";
@@ -214,7 +112,7 @@ import { unwrap } from "@sdxc/result";
 
 let billing = new MemoryBilling({
 	catalog: {
-		pro: { amount: 4900, currency: "usd", interval: "month", features: { flow_monitors: true } },
+		pro: { amount: 4900, currency: "usd", interval: "month", features: { reports: true } },
 	},
 });
 
@@ -232,11 +130,24 @@ expect(checkout.orderId).not.toBeNull();
 
 ## API
 
-### `@sdxc/billing`
+Providers live behind their own subpaths and are never re-exported from the root, so a bundle
+resolves only the provider that is imported. The conformance suite imports `vitest`, so it
+stays out of the root entry too.
 
-#### `Billing`
+| Entry                                  | Contents                                                                           |
+| -------------------------------------- | ---------------------------------------------------------------------------------- |
+| `@sdxc/billing`                        | The models, the `Billing` contract, `BillingError`, `supports()`, `BillingWebhook` |
+| `@sdxc/billing/middleware`             | The router middleware publishing `context.billing`, plus `requireEntitlement()`    |
+| `@sdxc/billing/providers/polar`        | `PolarBilling`, which answers every group                                          |
+| `@sdxc/billing/providers/stripe`       | `StripeBilling`, a deliberately narrow provider                                    |
+| `@sdxc/billing/providers/mercado-pago` | `MercadoPagoBilling`, a payment processor rather than a merchant of record         |
+| `@sdxc/billing/providers/memory`       | `MemoryBilling`, a full in-memory platform for tests                               |
+| `@sdxc/billing/conformance`            | The shared suite every provider passes, plus one suite per optional capability     |
 
-The provider contract. One instance carries every operation, grouped by resource, so a job and a route use the same object.
+### `Billing`
+
+The provider contract: one instance carrying every operation, grouped by resource, so a job and
+a route use the same object.
 
 ```typescript
 interface Billing {
@@ -250,258 +161,211 @@ interface Billing {
 	readonly orders: OrderApi;
 	readonly webhooks: WebhookApi;
 
+	/** Present only on a platform that hosts a payer-facing management page. */
 	readonly portal?: PortalApi;
+	/** Present only on a platform whose API exposes its coupons. */
 	readonly discounts?: DiscountApi;
+	/** Present only on a platform that accepts usage. */
 	readonly usage?: UsageApi;
+	/** Present only on a platform that meters. */
 	readonly meters?: MeterApi;
 
 	readonly native: unknown;
 }
 ```
 
-`connection` names a configured credential set rather than a vendor, since one vendor can hold several accounts, and it is the value stored beside every provider id an app keeps. `native` is the underlying HTTP client, for the endpoints the contract does not model; it is `unknown`, so reaching it is a deliberate cast.
+`connection` names a configured credential set rather than a vendor, since one vendor holds
+several accounts, and it is the value to store beside every provider id you keep. `native` is
+the underlying client, for the endpoints the contract does not model; it is `unknown`, so
+reaching it is a deliberate cast.
 
-#### `CustomerApi`
+### The resource groups
 
-```typescript
-customers.create(input: CreateCustomerInput): Promise<Result<Customer, BillingError>>
-customers.update(customer: CustomerRef, input: UpdateCustomerInput): Promise<Result<Customer, BillingError>>
-customers.find(customer: CustomerRef): Promise<Result<Customer, BillingError>>
-customers.findByEmail(email: string): Promise<Result<Customer, BillingError>>
-customers.list(query?: ListCustomersQuery): Promise<Result<Page<Customer>, BillingError>>
-```
-
-`create` takes `{ email, externalId, name?, metadata? }`. `externalId` is required: it is our own subject id, the join key that makes a customer re-resolvable, and platforms treat it as immutable once set. A taken `externalId` reports `conflict`.
-
-`UpdateCustomerInput` is `{ email?, name?, externalId?, metadata? }`. Naming `externalId` adopts a platform customer that carries none — the record a support agent or an import created — and a record already holding a different one reports `conflict`, since the join key does not move.
-
-`ListCustomersQuery` is `{ email?, limit?, cursor? }`.
-
-#### `CatalogApi`
+Every method answers a `Result<T, BillingError>`.
 
 ```typescript
-catalog.find(slug: string): Promise<Result<Product, BillingError>>
-catalog.list(query?: ListProductsQuery): Promise<Result<Page<Product>, BillingError>>
-```
+customers.create(input: CreateCustomerInput)
+customers.update(customer: CustomerRef, input: UpdateCustomerInput)
+customers.find(customer: CustomerRef)
+customers.findByEmail(email: string)
+customers.list(query?: { email?, limit?, cursor? })
 
-Read-only, and addressed by our own slugs. Products and prices are created in the platform's dashboard, so nothing here writes one. `ListProductsQuery` is `{ archived?, limit?, cursor? }`; archived products stay readable because old orders point at them.
+catalog.find(slug: string)
+catalog.list(query?: { archived?, limit?, cursor? })
 
-#### `CheckoutApi`
+checkouts.create(input: CreateCheckoutInput)
+checkouts.find(checkout: string)
+checkouts.finish(checkout: string)
 
-```typescript
-checkouts.create(input: CreateCheckoutInput): Promise<Result<Checkout, BillingError>>
-checkouts.find(checkout: string): Promise<Result<Checkout, BillingError>>
-checkouts.finish(checkout: string): Promise<Result<Checkout, BillingError>>
-```
+subscriptions.find(subscription: string)
+subscriptions.list(query?: { customer?, product?, status?, limit?, cursor? })
+subscriptions.cancel(subscription: string, options?: { atPeriodEnd?: boolean })
 
-`CreateCheckoutInput` is `{ product, customer?, email?, returnTo?, discount?, quantity?, metadata?, allowDiscountCodes?, idempotencyKey? }`. Omitting `customer` lets the hosted page collect the buyer's identity, which is what a sale to someone with no account yet needs.
+entitlements.of(customer: CustomerRef)
 
-`allowDiscountCodes: false` closes the code field on the hosted page, which is what keeps a typed code off a price a campaign already discounted. Polar sends it as `allow_discount_codes` and Stripe as `allow_promotion_codes`; Stripe refuses a session that both applies a `discount` and collects a code, so that pair answers `unsupported`, and Mercado Pago answers `unsupported` for `true` because its hosted page has no code field to open.
+orders.find(order: string)
+orders.list(query?: { customer?, product?, subscription?, limit?, cursor? })
 
-`idempotencyKey` correlates a retried open with the first attempt, and what a platform does with it differs: Stripe and Mercado Pago carry it as an idempotency header, so a double-submitted form answers the same session, while Polar reads no such header and records it in the session's metadata as `idempotency_key`. On a platform of the second kind the second session is attributable but not prevented, so a caller that needs one session per attempt keys its own store on the same value.
+portal.create(input: { customer: CustomerRef; returnTo?: string })
 
-`finish` is the call a return route makes for a customer who has just come back from the hosted page. It is separate from `find` because a delivery from the platform and a customer standing in front of you differ in trust and in who is waiting.
+discounts.find(discount: string)
+discounts.findByCode(code: string)
+discounts.list(query?: { product?, limit?, cursor? })
 
-#### `PortalApi` (optional)
+usage.ingest(events: readonly UsageEvent[])
+usage.list(query?: { customer?, name?, from?, to?, limit?, cursor? })
 
-```typescript
-portal.create(input: CreatePortalInput): Promise<Result<PortalSession, BillingError>>
-```
+meters.quantities(query: { meter, customer?, from, to, interval })
 
-`CreatePortalInput` is `{ customer, returnTo? }`. Upgrades, downgrades, cancellations and payment-method changes all happen on the hosted page, which is what keeps proration the platform's problem. Present only on a platform that hosts a payer-facing page.
-
-#### `SubscriptionApi`
-
-```typescript
-subscriptions.find(subscription: string): Promise<Result<Subscription, BillingError>>
-subscriptions.list(query?: ListSubscriptionsQuery): Promise<Result<Page<Subscription>, BillingError>>
-subscriptions.cancel(subscription: string, options?: { atPeriodEnd?: boolean }): Promise<Result<Subscription, BillingError>>
-```
-
-There is no `create`: a subscription comes into existence when a checkout completes, and an app learns of it from an event. `ListSubscriptionsQuery` is `{ customer?, product?, status?, limit?, cursor? }`.
-
-`cancel` is the one write every platform in scope offers, which is why it is a contract method rather than something only the hosted portal can do. `atPeriodEnd: true` on a platform that can only cancel immediately answers `unsupported` instead of pretending the paid period will be honoured.
-
-A row billing a product outside the configured `products` is skipped by `list` and logged, so one plan sold elsewhere in the organization costs that row rather than the whole page. `find` reports it as a failure, because a caller asking for one subscription by id is asking about exactly that record.
-
-#### `EntitlementApi`
-
-```typescript
-entitlements.of(customer: CustomerRef): Promise<Result<EntitlementState, BillingError>>
-```
-
-The sync primitive: one call answering everything a customer holds right now. An app writes the snapshot into its own tables and requests read those, so the platform stays off the request path.
-
-#### `OrderApi`
-
-```typescript
-orders.find(order: string): Promise<Result<Order, BillingError>>
-orders.list(query?: ListOrdersQuery): Promise<Result<Page<Order>, BillingError>>
-```
-
-`ListOrdersQuery` is `{ customer?, product?, subscription?, limit?, cursor? }`.
-
-An `Order` names the buyer three ways — `customerId`, `customerEmail`, `customerExternalId` — because a paid record carries them and an `order.paid` handler that has to fulfil a sale would otherwise read the customer back to learn an address it was already sent.
-
-`list` and `find` split on an unconfigured product the same way subscriptions do: the page carries on past the row and logs it, while a read by id reports the failure.
-
-#### `DiscountApi` (optional)
-
-```typescript
-discounts.find(discount: string): Promise<Result<Discount, BillingError>>
-discounts.findByCode(code: string): Promise<Result<Discount, BillingError>>
-discounts.list(query?: ListDiscountsQuery): Promise<Result<Page<Discount>, BillingError>>
-```
-
-Discounts are created in the platform's dashboard. `findByCode` turns a code typed into our own form into the id `checkouts.create({ discount })` accepts. `ListDiscountsQuery` is `{ product?, limit?, cursor? }`. Present only on a platform whose API exposes its coupons.
-
-`productSlugs` carries the scope entries this connection has a slug for, and an empty array still means every product, so an entry configured elsewhere is dropped from the scope rather than widening it. A discount whose whole scope is unconfigured applies to nothing here: `find` reports it, because a caller asked for exactly that record, while `list` and `findByCode` skip it and log it, so one unrelated dashboard campaign cannot take down a sales page's campaign lookup.
-
-#### `UsageApi` (optional)
-
-```typescript
-usage.ingest(events: readonly UsageEvent[]): Promise<Result<UsageIngest, BillingError>>
-usage.list(query?: ListUsageQuery): Promise<Result<Page<UsageRecord>, BillingError>>
-```
-
-`ingest` answers `{ accepted }`, counting a resent `externalId` once. Chunking to the platform's per-request limit happens inside the provider, so a caller hands over the whole array. `list` is the read-back a reconciliation uses to see what the platform actually counted; `ListUsageQuery` is `{ customer?, name?, from?, to?, limit?, cursor? }`.
-
-#### `MeterApi` (optional)
-
-```typescript
-meters.quantities(query: MeterQuantityQuery): Promise<Result<MeterQuantity, BillingError>>
-```
-
-`MeterQuantityQuery` is `{ meter, customer?, from, to, interval }`. The window and the bucket width are all required rather than defaulted, because a default chosen inside a provider would make the same query mean different things on two platforms.
-
-#### `WebhookApi`
-
-The three narrow questions an endpoint asks its provider. Verification stays per-platform because signing schemes differ; deduplication, persistence and dispatch are the same everywhere and live in `BillingWebhook`.
-
-```typescript
 webhooks.verify(request: Request, rawBody: string): Promise<boolean>
 webhooks.reference(request: Request, rawBody: string): WebhookReference | null
-webhooks.event(request: Request, rawBody: string): Promise<Result<BillingEvent, BillingError>>
+webhooks.event(request: Request, rawBody: string)
 ```
 
-`WebhookReference` is `{ deliveryId, object: { id, type } | null }`. The delivery id and the object are separate because a platform sends several distinct deliveries about one object, and deduplicating on the object would drop all but the first. `event` is asynchronous because a platform whose delivery carries only an identifier has to read the object back before it can say what happened.
+**Customers are joined on your own id.** `CreateCustomerInput` is
+`{ email, externalId, name?, metadata? }`, and `externalId` is required because it is the key
+that makes a customer re-resolvable; platforms treat it as immutable once set, so a taken one
+answers `conflict`. `UpdateCustomerInput` is `{ email?, name?, externalId?, metadata? }`,
+where naming `externalId` adopts a platform customer that carries none.
 
-#### `BillingError`
+**The catalog and the discounts are read-only, addressed by your own slugs.** Products, prices
+and coupons are created in the platform's dashboard; archived products stay readable because
+old orders point at them, and `findByCode` turns a code typed into your own form into the id
+`checkouts.create({ discount })` accepts.
 
-The single failure type inside every billing `Result`.
+**A purchase is a hosted link.** `CreateCheckoutInput` is
+`{ product, customer?, email?, returnTo?, discount?, quantity?, metadata?, allowDiscountCodes?, idempotencyKey? }`.
+Omitting `customer` lets the hosted page collect the buyer's identity, which is what a sale to
+someone with no account yet needs, and `allowDiscountCodes: false` closes the code field on
+that page. `finish` is the call a return route makes for a customer who has just come back from
+it — separate from `find` because a delivery from the platform and a customer standing in front
+of you differ in trust and in who is waiting.
 
-**Properties:**
+**`idempotencyKey` correlates a retried open with the first attempt.** A platform with an
+idempotency header answers the same session for it, so a double-submitted form bills once; a
+platform with none records it on the session, which makes the second session attributable
+without preventing it, so a caller wanting one session per attempt keys its own store on the
+same value.
 
-- `code`: `BillingErrorCode` — the normalized reason a caller branches on
-- `connection`: the configured credential set the failing call was made against
-- `providerCode`: the platform's own code, or `null`, for logs and support tickets
-- `retryable`: whether repeating the call is safe; always `false` for `unknown`
-- `retryAfter`: seconds the platform asked the caller to wait, or `null`
+**Nothing creates a subscription.** One comes into existence when a checkout completes and is
+announced by an event. `cancel` is the one write every platform in scope offers, and
+`atPeriodEnd: true` on a platform that can only cancel immediately answers `unsupported`.
 
-`BillingErrorCode` is `not_found`, `invalid_request`, `unauthenticated`, `forbidden`, `conflict`, `rate_limited`, `invalid_response`, `unsupported`, `not_implemented`, or `unknown`. Three of those are worth reading closely:
+**`entitlements.of` is the sync primitive.** One call answers everything a customer holds right
+now: write that snapshot into your own tables and have requests read those, so the platform
+stays off the request path. An `Order` likewise names the buyer three ways — `customerId`,
+`customerEmail` and `customerExternalId` — so an `order.paid` handler fulfilling a sale needs
+no second read to learn an address it was already sent.
 
-- **`unknown`** is a timeout or a 5xx: the operation may or may not have taken effect, so recovery is a reconciliation against the platform rather than a retry. `retryable` is never `true` for it.
-- **`invalid_response`** is a 2xx in a shape these models cannot express. The platform is fine and our mapping is not, so it must not send a caller into reconciliation.
-- **`unsupported`** means the platform cannot do this at all; **`not_implemented`** means this provider has not done it yet.
+**A row naming an unconfigured product costs that row, not the page.** A list skips it and logs
+`billing.skipped_row`, so one plan sold elsewhere in the organization does not take down the
+read; `find` reports it as a failure, because a caller asking for one record by id is asking
+about exactly that record.
 
-Only `rate_limited` is retryable by default. A provider may override `retryable` when it knows better.
+**`usage.ingest` answers `{ accepted }`,** counting a resent `externalId` once, and chunks to
+the platform's per-request limit inside the provider, so a caller hands over the whole array.
+`usage.list` reads back what the platform actually counted. A meter read states its own window:
+`from`, `to` and `interval` are all required, because a default chosen inside a provider would
+make the same query mean different things on two platforms.
+
+**`webhooks` asks three narrow questions.** Verification stays per-platform because signing
+schemes differ; deduplication, persistence and dispatch live in `BillingWebhook`.
+`WebhookReference` is `{ deliveryId, object: { id, type } | null }`: the delivery id and the
+object are separate because a platform sends several distinct deliveries about one object, and
+deduplicating on the object would drop all but the first.
+
+### `BillingError`
+
+The single failure type inside every billing `Result`. It carries `code`, the `connection` the
+failing call was made against, the platform's own `providerCode` (or `null`), whether a repeat
+is `retryable`, and the `retryAfter` seconds the platform asked for (or `null`).
+
+`BillingErrorCode` is `not_found`, `invalid_request`, `unauthenticated`, `forbidden`,
+`conflict`, `rate_limited`, `invalid_response`, `unsupported`, `not_implemented` or `unknown`.
+Only `rate_limited` is retryable by default, and a provider may override `retryable` when it
+knows better. Four codes are worth reading closely:
+
+- `unknown` is a timeout or a 5xx: the operation may or may not have taken effect, so recovery
+  is a reconciliation read against the platform. `retryable` is never `true` for it.
+- `invalid_response` is a 2xx in a shape these models cannot express — the platform is fine and
+  the mapping is not, so it must not send a caller into reconciliation.
+- `unsupported` means the platform cannot do this at all.
+- `not_implemented` means this provider has not done it yet.
+
+### `supports(billing: Billing, capability: OptionalCapability): boolean`
+
+Narrows an optional resource group to present, so code reading that group typechecks only
+against a platform that has it. `OptionalCapability` is derived from which contract properties
+are optional, and `OPTIONAL_CAPABILITIES` is the array of all four — `"discounts"`,
+`"meters"`, `"portal"`, `"usage"` — which the conformance run iterates.
 
 ```typescript
+import { supports } from "@sdxc/billing";
 import { isFailure } from "@sdxc/result";
 
-let result = await billing.customers.create({ email, externalId });
+if (!supports(polar, "meters")) return new Response(null, { status: 404 });
 
-if (isFailure(result)) {
-	if (result.error.code === "conflict") return existing(externalId);
-	context.log.warn("billing.customer_create_failed", {
-		code: result.error.code,
-		provider_code: result.error.providerCode,
-		connection: result.error.connection,
-	});
-}
+let reading = await polar.meters.quantities({
+	meter: "pings",
+	customer: { id: customerId },
+	from: startOfMonth,
+	to: now,
+	interval: "day",
+});
+
+if (isFailure(reading)) return new Response(null, { status: 502 });
+
+return Response.json({ quantity: reading.data.quantity });
 ```
 
-#### `supports(billing: Billing, capability: OptionalCapability): boolean`
+### `minorUnitDigits(currency: Currency): number`
 
-Narrows an optional resource group to present, so code that reads a group typechecks only against a platform that has it.
+Digits after the decimal separator for an ISO 4217 code in any letter case: `0` for JPY and
+CLP, `3` for BHD and KWD, `2` for everything outside the exception table. Dividing every
+`Money` by 100 instead turns ¥5,000 into ¥50 and 5.000 KWD into 500 KWD.
 
-**Parameters:**
+### `DEFAULT_PAGE_SIZE`
 
-- `billing`: The configured provider to ask
-- `capability`: One of `"discounts"`, `"meters"`, `"portal"`, `"usage"`
+The `20` items a list answers when a caller names no `limit`, shared by every provider so one
+call returns the same amount of work whichever platform is configured.
 
-**Returns:**
+### `BillingWebhook`
 
-- Whether the provider implements it, narrowing the group when it does
+The webhook endpoint as a class, constructed at module scope with
+`new BillingWebhook(provider, handlers, options?)`. `options.store` is where deliveries are
+recorded — omitting it dispatches every delivery, replays included — and `options.retry` is
+`(error, event) => boolean`, defaulting to retrying a `BillingError` the platform marked
+retryable. `endpoint.handler` is a `RequestHandler` bound to the instance, so the instance
+itself satisfies the router's action object form and mounts directly.
 
-**Example:**
+One request, in order: read the body once, ask the provider for the delivery reference and the
+signature verdict, and — with a store configured — answer `200` at once for a delivery already
+recorded as processed, otherwise record it with its `valid` verdict before anything trusts it.
+An unproven delivery then answers `401` and stops. An authentic delivery whose body cannot be
+normalized is logged and acknowledged. Otherwise the event goes to the handler keyed by its
+type; a name with no handler is logged and acknowledged, and a handler that throws answers
+`503` when `retry` says the delivery can usefully arrive again and `200` when it cannot. Only a
+delivery whose handler ran to completion is marked processed, so the trail shows which handler
+was wrong.
 
-```typescript
-if (supports(billing, "portal")) {
-	let session = await billing.portal.create({ customer: { id } });
-}
-```
-
-`OPTIONAL_CAPABILITIES` is the array of all four, which is what the conformance run iterates. `OptionalCapability` is derived from which contract properties are optional, so the list follows the contract rather than a hand-maintained copy of it.
-
-#### `minorUnitDigits(currency: Currency): number`
-
-How many decimal places one unit of a currency divides into.
-
-**Parameters:**
-
-- `currency`: ISO 4217 alphabetic code, in any letter case
-
-**Returns:**
-
-- Digits after the decimal separator: `0` for JPY and CLP, `3` for BHD and KWD, `2` for everything outside the exception table
-
-**Example:**
+`401` is the only closed door. Everything else is acknowledged, because an error response is
+how a platform decides an endpoint is broken and stops calling it.
 
 ```typescript
-minorUnitDigits("jpy"); // 0
-minorUnitDigits("kwd"); // 3
-```
-
-Formatting an amount without asking this is the bug: dividing every `Money` by 100 turns ¥5,000 into ¥50 and 5.000 KWD into 500 KWD.
-
-#### `BillingWebhook`
-
-The webhook endpoint as a class. It answers `200` to everything it can account for, because an error response is how a platform decides an endpoint is broken and stops calling it.
-
-##### `new BillingWebhook(provider: Billing, handlers: BillingWebhookHandlers, options?: BillingWebhookOptions)`
-
-**Parameters:**
-
-- `provider`: The configured platform, which answers whether a delivery is authentic
-- `handlers`: What to do per delivery name, keyed by `BillingEventType`
-- `options.store?`: Where deliveries are recorded; omitting it dispatches every delivery, replays included
-- `options.retry?`: `(error, event) => boolean`; defaults to retrying a `BillingError` the platform marked retryable
-
-##### `endpoint.handler: RequestHandler`
-
-Answers one delivery. It is bound to the instance, so the instance itself satisfies the router's action object form and mounts directly.
-
-What one request does, in order: read the body once, ask the provider for the delivery reference and the signature verdict, and — when a store is configured and the delivery names an id — return `200` immediately if that id is already recorded as processed, otherwise record it with its `valid` verdict before anything trusts it. An unproven delivery then answers `401` and stops. An authentic delivery whose body cannot be normalized is logged and acknowledged with `200`. Otherwise the event goes to the handler keyed by its type; a name with no handler is logged and acknowledged, and a handler that throws answers `503` when `retry` says the delivery can usefully arrive again and `200` when it cannot. Only a delivery whose handler ran to completion is marked processed, so the trail shows which handler was wrong.
-
-`401` is the only closed door. Everything else is acknowledged, which is why an unrecognized event type is neither dropped nor failed.
-
-##### Handler types
-
-```typescript
-type BillingEventType = BillingEvent["type"];
-type BillingEventOf<Type extends BillingEventType> = /* the event narrowed to that name */;
-
 type BillingWebhookHandlers = {
-	[Type in BillingEventType]?: (event: BillingEventOf<Type>, context: RequestContext) => void | Promise<void>;
+	[Type in BillingEventType]?: (
+		event: BillingEventOf<Type>,
+		context: RequestContext,
+	) => void | Promise<void>;
 };
 ```
 
-The handler map is derived from the event union, so a misspelled key is a type error and a handler keyed `"order.paid"` reaches `event.order` and nothing else.
+The map is derived from the event union, so a misspelled key is a type error and a handler
+keyed `"order.paid"` reaches `event.order` and nothing else.
 
-#### `WebhookStore`
+### `WebhookStore` and `MemoryWebhookStore`
 
-Where deliveries are kept, so idempotency has a durable key while the table stays the app's own.
+Where deliveries are kept, so idempotency has a durable key while the table stays yours.
 
 ```typescript
 interface WebhookStore {
@@ -513,231 +377,86 @@ interface WebhookStore {
 interface WebhookDelivery {
 	id: string;
 	type: string;
+	/** The body exactly as received, so a replay runs against the same bytes. */
 	payload: string;
 	valid: boolean;
 	processed: boolean;
 }
 ```
 
-`payload` is the body exactly as received, so a replay runs against the same bytes the signature covered. `valid` and `processed` are separate fields because a forged delivery is worth keeping as evidence and an unprocessed one is worth retrying.
-
-#### `MemoryWebhookStore`
-
-An in-process `WebhookStore` for tests, plus a `deliveries` getter returning every recorded row in arrival order, so a test drives a redelivery without standing up a table.
-
-### Types
-
-#### `Money` and `Cost`
-
-```typescript
-interface Money {
-	/** Minor units, always an integer. */
-	amount: number;
-	currency: Currency;
-}
-
-interface Cost {
-	/** Minor units as a plain decimal string, e.g. `"0.003476700"`. */
-	amount: string;
-	currency: Currency;
-}
-```
-
-Amounts a customer is charged are integer minor units, so no rounding happens in transit — but minor units are not always cents. `500` is five dollars and also five hundred yen; ask `minorUnitDigits()` rather than assuming two decimals.
-
-Usage costs are a decimal string instead of a number, because per-unit infrastructure costs fall below `1e-6`, where a JavaScript number formats as exponential notation and a platform's parser rejects it.
-
-#### `CustomerRef`
-
-```typescript
-type CustomerRef = { id: string } | { externalId: string };
-```
-
-A union, so a call naming neither identifier is a compile error. A provider whose platform stores no reference field of its own answers `unsupported` for the `externalId` arm — Mercado Pago does, because resolving our subject id there would mean scanning the merchant's whole payer list. An app on such a platform keeps the subject-to-provider-id mapping in its own table and names the customer by `id`.
-
-#### `Page<T>`
-
-```typescript
-interface Page<T> {
-	items: T[];
-	cursor: string | null;
-}
-```
-
-A page holding fewer than `limit` items is **not** necessarily the last one: a provider that filters a platform page client-side hands back a short page with more behind it. Only `cursor === null` ends a list. Lists answer 20 items when a caller names no `limit`, the same on every provider, so one call returns the same amount of work whichever platform is configured.
-
-#### `EntitlementState`
-
-```typescript
-interface EntitlementState {
-	customerId: string | null;
-	externalId: string | null;
-	products: string[];
-	features: Readonly<Record<string, boolean>>;
-	meters: MeterBalance[];
-	subscriptions: EntitlementSubscription[];
-	readAt: Date;
-	providerData: Readonly<Record<string, unknown>>;
-}
-```
-
-`products` and the keys of `features` are our own slugs. `readAt` is when the platform answered, so a projection can record how fresh it is. `MeterBalance` is `{ meter, credited, consumed, balance }`, and `balance` is what a limit check compares against.
-
-`EntitlementSubscription` is `{ subscriptionId, productSlug, status, currentPeriodStart?, currentPeriodEnd, cancelAtPeriodEnd }`. Every provider fills both period dates, so a projection that stores the period needs no second `subscriptions.find()`; the start stays optional so an app writing a snapshot of its own states only what it holds.
-
-A snapshot names only what this connection is configured to sell. An active subscription to a product outside the configured `products` is skipped rather than failing the read, so one unrelated product elsewhere in the organization costs that row instead of turning every sync into a retry loop. A skipped row is logged as `billing.skipped_row` through `console.warn`, since a list that carried on is otherwise indistinguishable from one the platform never held the row in.
-
-#### `BillingEvent`
-
-```typescript
-type BillingEvent = { id: string; raw: unknown } & BillingEventPayload;
-```
-
-`BillingEventPayload` names `customer.created`, `customer.updated`, `checkout.completed`, `subscription.activated`, `subscription.updated`, `subscription.canceled`, `subscription.revoked`, `order.paid`, `order.refunded`, and `unrecognized`. An authentic delivery outside that vocabulary arrives as `{ type: "unrecognized", providerType }`, which is what makes an event type the platform adds a no-op here rather than a failing endpoint the platform disables. `raw` travels on every event, so a platform-specific handler and a normalized one can coexist.
-
-#### `providerData`
-
-Every model carries the provider's own payload for that object as `providerData`. Nothing in this package interprets it. Where an app keeps a projection of provider state, keeping this beside the normalized columns is what makes a later mapping change re-derivable.
-
-#### `Secret`
-
-```typescript
-type Secret = string | (() => string | Promise<string>);
-```
-
-The type of every credential option on every provider: the value, or a function resolving it on first use. The function is called once and its answer remembered for the life of the instance, and a failed read is not remembered. See [Configuring a credential](#configuring-a-credential).
+`valid` and `processed` are separate fields because a forged delivery is worth keeping as
+evidence and an unprocessed one is worth retrying. `MemoryWebhookStore` is an in-process
+implementation with a `deliveries` getter answering every recorded row in arrival order, so a
+test drives a redelivery without standing up a table.
 
 ### `@sdxc/billing/middleware`
 
-#### `billing(options: BillingMiddlewareOptions): Middleware` (default export)
+`billing(options)` is the default export. It publishes the configured provider as
+`context.billing`, augmenting `RequestContext` from the imported module so the property is
+typed wherever the middleware is used. `options.provider` is a `Billing` or a
+`(context) => Billing` factory for a connection that varies by tenant, resolved once per
+request. `options.entitlements` is `(context) => EntitlementSnapshot | null | Promise<…>`,
+supplying the projection `requireEntitlement()` gates on; it is called only on a route that
+guards, and only once per request.
 
-Publishes the configured provider as `context.billing`. The module augments `RequestContext`, so `context.billing` is typed in every app that imports the middleware.
+`requireEntitlement(feature, options?)` admits a request only when that projection grants
+`feature`, so the decision comes from your own tables. `options.onDenied` is
+`(context, feature) => Response | Promise<Response>`, which is where an upgrade prompt or a
+redirect to a pricing page belongs; omitting it answers `403`. It throws when the billing
+middleware ran without an `entitlements` option, and it publishes the snapshot it decided on as
+`context.entitlements`, so the handler behind it reads the same projection rather than loading
+it twice. `Entitlements` is exported as the context key for code preferring
+`context.get(Entitlements)`.
 
-**Parameters:**
-
-- `options.provider`: A `Billing`, or a `(context) => Billing` factory when the connection varies by tenant
-- `options.entitlements?`: `(context) => EntitlementSnapshot | null | Promise<...>`, supplying the projection `requireEntitlement()` gates on
-
-**Example:**
-
-```typescript
-import billing from "@sdxc/billing/middleware";
-
-let router = createRouter({ middleware: [billing({ provider: polar })] });
-```
-
-It is a default export, so the importing app names it and never needs an alias. The factory form is resolved once per request; a provider built from a module-level binding needs no factory at all.
-
-`entitlements` is called only on a route that guards, and only once per request, so an app pays for the read where it gates.
-
-#### `requireEntitlement(feature: string, options?: RequireEntitlementOptions): Middleware`
-
-Admits a request only when the projection grants `feature`. The decision comes from the app's own tables, so the platform stays off the request path.
-
-**Parameters:**
-
-- `feature`: Our own feature slug, as a product's `features` flags name it
-- `options.onDenied?`: `(context, feature) => Response | Promise<Response>`, which is where a redirect to a pricing page belongs; omitting it answers `403`
-
-**Returns:**
-
-- A middleware that admits entitled requests and publishes the snapshot it read as `context.entitlements`
-
-**Throws:**
-
-- When the billing middleware ran without an `entitlements` option
-
-**Example:**
-
-```typescript
-import { requireEntitlement } from "@sdxc/billing/middleware";
-
-let flowsAction = createAction(routes.flows, {
-	middleware: [requireEntitlement("flow_monitors")],
-	handler(context) {
-		return Response.json({ products: context.entitlements.products });
-	},
-});
-```
-
-A handler behind the guard reads `context.entitlements` rather than loading the projection a second time. `Entitlements` is exported as the context key for code that prefers `context.get(Entitlements)`.
-
-#### `EntitlementSnapshot`
-
-```typescript
-interface EntitlementSnapshot {
-	products: readonly string[];
-	features: Readonly<Record<string, boolean>>;
-}
-```
-
-An `EntitlementState` read back from a platform satisfies this as-is, which is what lets an app project the snapshot into its own tables and feed either shape to the guard.
+`EntitlementSnapshot` is `{ products: readonly string[]; features: Readonly<Record<string, boolean>> }`,
+which an `EntitlementState` read back from a platform satisfies as-is.
 
 ### `@sdxc/billing/providers/polar`
 
-#### `PolarBilling`
+`PolarBilling` is a configured [Polar](https://polar.sh) organization, answering every group in
+the contract — `portal`, `discounts`, `usage` and `meters` included — over Polar's REST API.
+`native` is the client itself, so its verb methods reach any endpoint the contract omits.
 
-A configured Polar organization, answering every group in the contract — `portal`, `discounts`, `usage` and `meters` included — over Polar's REST API, pinned to a dated API version.
-
-##### `new PolarBilling(options: PolarBillingOptions)`
-
-**Parameters:**
-
-- `options.accessToken`: `Secret` — organization access token, or a function resolving one
-- `options.webhookSecret?`: `Secret` — signing secret for this endpoint's deliveries, exactly as Polar issued it; verification fails closed without it, which is what an app that mounts no webhook route wants
-- `options.products?`: Polar product id per our own slug, which is how a call site names a product; an app that only mirrors customers configures none, and every read addressing a product then reports the slug as unknown
-- `options.meters?`: Polar meter id per our own meter slug
-- `options.features?`: Polar benefit id per our own feature slug
-- `options.connection?`: Code stored beside every id this instance issues; defaults to `"polar"`
-- `options.sandbox?`: Bill against Polar's sandbox, which shares no token and no identifier with production
-
-`native` is the client itself, so its verb methods reach any Polar endpoint the contract omits.
+`new PolarBilling(options)` takes `accessToken` (a `Secret`; the organization access token),
+`webhookSecret?` (a `Secret`, exactly as Polar issued it), `products?` and `meters?` and
+`features?` (Polar ids keyed by your own slugs), `connection?` (default `"polar"`) and
+`sandbox?` (Polar's sandbox, which shares no token and no identifier with production).
+Configuring no products suits an instance that only mirrors customers; every read addressing a
+product then reports the slug as unknown.
 
 ### `@sdxc/billing/providers/stripe`
 
-#### `StripeBilling`
+`StripeBilling` reaches [Stripe](https://stripe.com) over its REST API and answers `customers`,
+`catalog`, `checkouts`, `portal`, `subscriptions`, `entitlements`, `orders` and `webhooks`,
+declaring none of the optional groups. It is deliberately narrow — it exists to prove the
+contract is a shape a second platform fits rather than one platform's API — and `orders.find`,
+`orders.list` and `customers.list` answer `not_implemented`.
 
-Stripe over its REST API, pinned to a Stripe API version. It answers `customers`, `catalog`, `checkouts`, `portal`, `subscriptions`, `entitlements`, `orders` and `webhooks`, and declares none of the optional groups.
-
-##### `new StripeBilling(options: StripeBillingOptions)`
-
-**Parameters:**
-
-- `options.secretKey`: `Secret` — secret API key every request is authenticated with
-- `options.catalog`: `Record<string, { product, price }>` keyed by our own slugs
-- `options.webhookSecret?`: `Secret` — endpoint signing secret; verification fails closed without it
-- `options.meters?`: Stripe meter ids per our own meter slugs, for resolving a metered price back to a slug
-- `options.portalConfiguration?`: Portal configuration a session is opened against
-- `options.connection?`: Defaults to `"stripe"`
-- `options.externalIdKey?`: Metadata key our own customer identifier is stored under; defaults to `"external_id"`
-- `options.baseURL?`: Defaults to `https://api.stripe.com/v1/`
-
-This provider is deliberately narrow. It exists to prove the contract is a shape a second platform fits rather than one platform's API, and `orders.find`, `orders.list` and `customers.list` answer `not_implemented` on purpose.
+`new StripeBilling(options)` takes `secretKey` (a `Secret`), `catalog`
+(`Record<string, { product, price }>` keyed by your own slugs), `webhookSecret?` (a `Secret`),
+`meters?` (Stripe meter ids per your own meter slugs), `portalConfiguration?`, `connection?`
+(default `"stripe"`), `externalIdKey?` (the metadata key your own customer identifier is stored
+under, default `"external_id"`) and `baseURL?` (default `https://api.stripe.com/v1/`).
 
 ### `@sdxc/billing/providers/mercado-pago`
 
-#### `MercadoPagoBilling`
+`MercadoPagoBilling` is one configured [Mercado Pago](https://www.mercadopago.com) account,
+answering `customers`, `catalog`, `checkouts`, `subscriptions`, `entitlements`, `orders` and
+`webhooks`, and declaring no optional group at all. Mercado Pago is a payment processor rather
+than a merchant of record, so tax registration, invoicing, remittance and disputes stay yours
+and are handled outside this package.
 
-One configured Mercado Pago account. It answers `customers`, `catalog`, `checkouts`, `subscriptions`, `entitlements`, `orders` and `webhooks`, and declares no optional group at all — no hosted portal, no discount reads, no usage, no meters.
-
-##### `new MercadoPagoBilling(options: MercadoPagoBillingOptions)`
-
-**Parameters:**
-
-- `options.accessToken`: `Secret` — the account's access token, or a function resolving it
-- `options.products?`: What each of our slugs sells, as a one-time or a recurring entry
-- `options.webhookSecret?`: `Secret` — the application's webhook signing secret; deliveries fail closed while it is unset
-- `options.notificationURL?`: Where the platform posts deliveries for the checkouts this instance opens
-- `options.backURLs?`: `{ success?, failure?, pending? }`, where a hosted page returns a buyer when a call names no destination
-- `options.connection?`: Defaults to `"mercado-pago"`
-
-A configured product is one of two shapes, because the platform stores no product object for a one-time sale:
+`new MercadoPagoBilling(options)` takes `accessToken` (a `Secret`), `products?`,
+`webhookSecret?` (a `Secret`), `notificationURL?` (where the platform posts deliveries for the
+checkouts this instance opens), `backURLs?` (`{ success?, failure?, pending? }`) and
+`connection?` (default `"mercado-pago"`). A configured product takes one of two shapes, because
+the platform stores no product object for a one-time sale:
 
 ```typescript
 import { MercadoPagoBilling } from "@sdxc/billing/providers/mercado-pago";
 
 let mercadoPago = new MercadoPagoBilling({
-	accessToken: env.MERCADO_PAGO_ACCESS_TOKEN,
+	accessToken: () => readSecret("MERCADO_PAGO_ACCESS_TOKEN"),
 	products: {
 		pro: { kind: "recurring", plan: "2c93808..." },
 		book: { kind: "one_time", name: "The book", price: { amount: 10_050, currency: "ars" } },
@@ -745,250 +464,167 @@ let mercadoPago = new MercadoPagoBilling({
 });
 ```
 
-A recurring sale names a stored plan and reads its price back, so a price change in the dashboard needs no deployment. A one-time sale is priced in configuration, since a hosted checkout carries its line items inline.
-
-Two contract answers are specific to this platform: `customers.find({ externalId })` reports `unsupported`, and `subscriptions.cancel(id, { atPeriodEnd: true })` reports `unsupported` because the platform ends an authorization at once.
+A recurring sale names a stored plan and reads its price back, so a price change in the
+dashboard needs no deployment; a one-time sale is priced in configuration, since a hosted
+checkout carries its line items inline. Two answers are specific to this platform:
+`customers.find({ externalId })` reports `unsupported`, because the stored payer carries your
+reference in metadata but exposes no filter for it, and
+`subscriptions.cancel(id, { atPeriodEnd: true })` reports `unsupported` because the platform
+ends an authorization at once.
 
 ### `@sdxc/billing/providers/memory`
 
-#### `MemoryBilling`
+`MemoryBilling` is a billing platform held in memory, implementing every group including all
+four optional ones, and passing the conformance suite. `new MemoryBilling(options?)` takes
+`catalog?` (`Record<string, MemoryProductSeed>`), `discounts?` (`MemoryDiscountSeed[]`),
+`faults?` (failures armed from the first call), `webhookSecret?` (a base64 secret emitted
+deliveries are signed with) and `connection?` (default `"memory"`).
 
-A billing platform held in memory, implementing every group including all four optional ones. It is a full implementation that passes the conformance suite, so a test asserts on the outcome of a flow it drove rather than on a mocked SDK module.
+`MemoryProductSeed` is
+`{ amount, currency?, name?, description?, interval?, meter?, features?, credits?, archived? }`:
+naming a `meter` prices it as metered, an `interval` as recurring, and neither as a one-time
+sale, while `credits` grants meter balances to a customer holding the product.
+`MemoryDiscountSeed` is
+`{ id?, code?, name?, percentage?, amount?, currency?, products?, maxRedemptions?, redemptions?, startsAt?, endsAt? }`,
+so a seeded campaign can start part-way through its window and its redemptions.
 
-##### `new MemoryBilling(options?: MemoryBillingOptions)`
+Beyond the contract it adds five calls:
 
-**Parameters:**
+- `seed(catalog)` adds products, replacing any sharing a slug.
+- `fail(target, code?)` arms a failure on a group, such as `"customers"`, or on one method,
+  such as `"subscriptions.list"`, checked on every call from then on; `code` defaults to
+  `"unknown"`, a method-level fault wins over one armed on its group, and the target type is
+  derived from the contract's own groups so a misspelled one is a compile error.
+- `heal(target?)` takes an armed failure away; omitting the target disarms everything.
+- `with(overrides)` answers the platform a call site sees with the named groups answered by
+  something else. It is a plain object rather than the instance, so every group it does not
+  name still answers from memory, and naming an optional group as `undefined` leaves it absent,
+  which is how a `supports()` guard's false branch gets exercised.
+- `webhooks.emit(payload)` signs and answers `{ request, body, headers, event }` for an event
+  without sending it anywhere, so a test drives a real endpoint through a real signature check.
+  `payload` is a `BillingEventPayload` plus an optional `id`; omitting the id issues one, and
+  reusing one models a redelivery.
 
-- `options.catalog?`: `Record<string, MemoryProductSeed>` — products to start with, keyed by slug
-- `options.discounts?`: `MemoryDiscountSeed[]` — discounts a checkout can apply
-- `options.faults?`: Failures armed from the first call, keyed by the group or method they cover
-- `options.webhookSecret?`: Base64 secret emitted deliveries are signed with, so a test can point an endpoint at the same value it configures for a real provider
-- `options.connection?`: Defaults to `"memory"`
-
-`MemoryProductSeed` is `{ amount, currency?, name?, description?, interval?, meter?, features?, credits?, archived? }`. Naming a `meter` prices it as metered, an `interval` as recurring, and neither as a one-time sale. `credits` grants meter balances to a customer holding the product.
-
-`MemoryDiscountSeed` is `{ id?, code?, name?, percentage?, amount?, currency?, products?, maxRedemptions?, redemptions?, startsAt?, endsAt? }`, so a seeded campaign can start part-way through its window and part-way through its redemptions.
-
-##### `billing.seed(catalog: Record<string, MemoryProductSeed>): void`
-
-Adds products, replacing any sharing a slug, so a test can price what it is about to sell without constructing another provider.
-
-##### `billing.fail(target: MemoryFaultTarget, code?: BillingErrorCode): void`
-
-Arms a failure on a group or one method of it, checked on every call from then on, so a test drives the path an outage takes without building a second provider.
-
-**Parameters:**
-
-- `target`: A group, such as `"customers"`, or `"group.method"` for a single call, such as `"subscriptions.list"`. The type is derived from the contract's own groups, so a misspelled target is a compile error
-- `code`: The `BillingErrorCode` the armed calls report; defaults to `"unknown"`
-
-A method-level fault wins over one armed on its group. `webhooks` takes no fault, since its questions answer a verdict rather than a `Result`.
-
-##### `billing.heal(target?: MemoryFaultTarget): void`
-
-Takes an armed failure away, so the call answers from memory again. Omitting the target disarms everything.
-
-##### `billing.with(overrides: MemoryBillingOverrides): Billing`
-
-The platform a call site sees, with the named groups answered by something else — for a call a test wants to record, or a snapshot only a real platform could hold. It is a plain object rather than the instance, so every group it does not name still answers from memory, and naming an optional group as `undefined` leaves it absent, which is how a `supports()` guard's false branch gets exercised.
-
-```typescript
-let portalless = billing.with({ portal: undefined });
-
-expect(supports(portalless, "portal")).toBe(false);
-```
-
-##### `billing.checkouts.finish(id)`
-
-Settles an open session, because a customer coming back from this provider's hosted page is a customer who paid: it provisions the customer, the order, and any subscription the price implies. This is how a test gets a real order and subscription to assert on.
-
-##### `billing.webhooks.emit(payload: MemoryEmitEvent): Promise<Result<MemoryDelivery, BillingError>>`
-
-Signs and returns a delivery for an event without sending it anywhere, so a test drives a real endpoint through a real signature check.
-
-**Parameters:**
-
-- `payload`: A `BillingEventPayload` plus an optional `id`; omitting the id issues one, and reusing one models a redelivery. It accepts every object the models permit, an order naming no customer included
-
-**Returns:**
-
-- `{ request, body, headers, event }`, where `request` is the inbound request an endpoint receives
-
-**Example:**
-
-```typescript
-let delivery = await unwrap(billing.webhooks.emit({ type: "order.paid", order }));
-let response = await endpoint.handler(new RequestContext(delivery.request));
-```
-
-`native` on this provider is the maps it keeps its state in, for an assertion no contract method covers.
+`checkouts.finish` settles an open session here, because a customer coming back from this
+provider's hosted page is a customer who paid: it provisions the customer, the order, and any
+subscription the price implies, which is how a test gets a real order to assert on.
 
 ### `@sdxc/billing/conformance`
 
-The suite that says what a provider is, registered as Vitest tests against whatever the caller constructs. The required core asserts only what every platform genuinely has — including in its fixtures, so nothing in it arranges state through an optional capability — and each optional group has its own function.
+The suite that says what a provider is, registered as Vitest tests against whatever the caller
+constructs.
 
-#### `conformance(options: ConformanceOptions): void`
+`conformance(options)` registers the required core: the connection and `native` are stated, a
+customer round-trips by both identifiers, a missing customer is `not_found`, the catalog reads
+by your own slugs, a zero-decimal currency survives without being scaled, a hosted checkout
+opens and reads back, the entitlement snapshot answers, lists page one at a time and a cursor
+walk reaches every record, orders and subscriptions report as pages of these models, cancelling
+a subscription nobody holds is `not_found`, and an unproven delivery fails closed while an
+unreadable payload reports `invalid_request`.
 
-The required core: the connection and `native` are stated, a customer round-trips by both identifiers, a missing customer is `not_found`, the catalog reads by our own slugs, a zero-decimal currency survives without being scaled, a hosted checkout opens and reads back, the entitlement snapshot answers, lists page one at a time and a cursor walk reaches every record, orders and subscriptions report as pages of our models, cancelling a subscription nobody holds is `not_found`, and an unproven delivery fails closed while an unreadable payload reports `invalid_request`.
+`portalConformance`, `discountConformance`, `usageConformance` and `meterConformance` are one
+suite per optional group; register only the ones the provider declares.
+`capabilityConformance(options)` asks the capability question in both directions: a declared
+group must answer a real call without reporting `unsupported` or `not_implemented`, and an
+undeclared one must actually be absent, which is what stops a provider from declaring a
+capability it stubs.
 
-#### `portalConformance`, `discountConformance`, `usageConformance`, `meterConformance`
+`ConformanceOptions` is `name` (which labels the registered suites), `create()` (builds the
+provider under test, called for every test so mutable state starts clean), `subscription` (a
+recurring product in the catalog, as `{ slug, amount, currency, priceId? }`), `zeroDecimal` (a
+product priced in a currency with no minor units, so a provider that assumes cents fails here),
+`meter?` (required of a provider declaring the `meters` group), `missing?` (ids the platform
+accepts the shape of and holds no record for; defaults to a fresh UUID per call) and `email?()`
+(builds an unused address; defaults to a unique one per call).
 
-One suite per optional group. Register only the ones the provider declares.
-
-#### `capabilityConformance(options: ConformanceOptions): void`
-
-Asks the capability question in both directions: a declared group must answer a real call without reporting `unsupported` or `not_implemented`, and an undeclared one must actually be absent. That is what stops a provider from declaring a capability it stubs — the compiler covers the call site, and only this covers the provider.
-
-#### `ConformanceOptions`
-
-**Parameters:**
-
-- `name`: Provider name, which labels the registered suites
-- `create()`: Builds the provider under test; called for every test, so mutable state starts clean
-- `subscription`: A recurring product in the catalog, as `{ slug, amount, currency, priceId? }`
-- `zeroDecimal`: A product priced in a currency with no minor units, so a provider that assumes cents fails here
-- `meter?`: Meter to ask about; required of a provider declaring the `meters` group
-- `missing?`: Ids the platform accepts the shape of and holds no record for; defaults to a fresh UUID per call
-- `email?()`: Builds an unused address; defaults to a unique one per call
-
-**Example:**
+### Types
 
 ```typescript
-import { capabilityConformance, conformance, portalConformance } from "@sdxc/billing/conformance";
-import { MemoryBilling } from "@sdxc/billing/providers/memory";
+/** An amount a customer is charged. `amount` is integer minor units. */
+interface Money {
+	amount: number;
+	currency: Currency;
+}
 
-let options = {
-	name: "MemoryBilling",
-	create: () => new MemoryBilling({ catalog: CATALOG }),
-	subscription: { slug: "pro", amount: 4900, currency: "usd" },
-	zeroDecimal: { slug: "tokyo", amount: 5000, currency: "jpy" },
-	meter: "pings",
-};
+/** A usage cost. `amount` is minor units as a plain decimal string, e.g. `"0.003476700"`. */
+interface Cost {
+	amount: string;
+	currency: Currency;
+}
 
-conformance(options);
-portalConformance(options);
-capabilityConformance(options);
+type CustomerRef = { id: string } | { externalId: string };
+
+interface Page<T> {
+	items: T[];
+	cursor: string | null;
+}
+
+type BillingEvent = { id: string; raw: unknown } & BillingEventPayload;
+
+type Secret = string | (() => string | Promise<string>);
 ```
 
-## Pattern: One provider, two call sites
+**Minor units are not always cents.** `500` is five dollars and also five hundred yen, so ask
+`minorUnitDigits()` rather than assuming two decimals. A usage cost is a decimal string
+instead, because per-unit infrastructure costs fall below `1e-6`, where a JavaScript number
+formats as exponential notation and a platform's parser rejects it.
 
-The instance is a module-scope export. A route reads it from the context and a job imports it, so both bill against the same configuration and the same connection code:
+**`CustomerRef` is a union,** so a call naming neither identifier is a compile error. A provider
+whose platform stores no reference field of its own answers `unsupported` for the `externalId`
+arm; on such a platform, keep the subject-to-provider-id mapping in your own table and name the
+customer by `id`.
 
-```typescript
-// app/services/billing.ts
-import { PolarBilling } from "@sdxc/billing/providers/polar";
-import { env } from "cloudflare:workers";
+**A short page is not the last page.** A provider filtering a platform page client-side hands
+back a page holding fewer than `limit` items with more behind it, so only `cursor === null`
+ends a list.
 
-export let polar = new PolarBilling({
-	accessToken: () => env.POLAR_ACCESS_TOKEN,
-	webhookSecret: env.POLAR_WEBHOOK_SECRET,
-	products: { pro: "019..." },
-	meters: { pings: "019..." },
-});
-```
+**`EntitlementState` is what a projection stores:**
+`{ customerId, externalId, products, features, meters, subscriptions, readAt, providerData }`.
+`products` and the keys of `features` are your own slugs, `readAt` is when the platform
+answered, `MeterBalance` is `{ meter, credited, consumed, balance }` where `balance` is what a
+limit check compares against, and `EntitlementSubscription` is
+`{ subscriptionId, productSlug, status, currentPeriodStart?, currentPeriodEnd, cancelAtPeriodEnd }`
+with both period dates filled, so storing the period needs no second `subscriptions.find()`.
 
-```typescript
-// bootstrap/app.ts
-import billing from "@sdxc/billing/middleware";
-import { createRouter } from "remix/router";
+**`BillingEventPayload` names** `customer.created`, `customer.updated`, `checkout.completed`,
+`subscription.activated`, `subscription.updated`, `subscription.canceled`,
+`subscription.revoked`, `order.paid`, `order.refunded`, and `unrecognized`. An authentic
+delivery outside that vocabulary arrives as `{ type: "unrecognized", providerType }`, which is
+what makes an event type the platform adds a no-op here rather than a failing endpoint the
+platform disables. `raw` travels on every event, so a platform-specific handler and a
+normalized one can coexist.
 
-import checkout from "~/app/http/controllers/billing/checkout";
-import webhook from "~/app/http/controllers/billing/webhook";
-import { polar } from "~/app/services/billing";
-import routes from "~/routes/web";
+**`Secret` is the type of every credential option.** The function form is what lets a credential
+live in a store only readable with an `await`, since a constructor at module scope can await
+nothing; it is called on the first use that needs the credential and its answer is remembered
+for the life of the instance, while a read that fails is not remembered, so a store that was
+briefly unavailable is asked again. While a signing secret is unset, empty or unreadable,
+verification answers `false` rather than throwing, so an endpoint keeps answering a status the
+platform accepts instead of the `500` it disables an endpoint over.
 
-let router = createRouter({
-	middleware: [billing({ provider: polar })],
-});
+**Every model carries `providerData`,** the provider's own payload for that object. Nothing in
+this package interprets it. Where you keep a projection of provider state, storing this beside
+the normalized columns is what makes a later mapping change re-derivable.
 
-router.map(routes.billing.checkout, checkout);
-router.map(routes.billing.webhook, webhook);
-```
+## Pattern: Syncing Entitlements From Webhooks
 
-The middleware is named for the capability and the instance for the backend, which is what makes `billing({ provider: polar })` read as a sentence and keeps the vendor's name to one import.
-
-## Pattern: A checkout controller that redirects
-
-The package hands back a link and the route owns the redirect. A session with no `url` is no longer payable, so that is checked before redirecting rather than after:
-
-```typescript
-import { redirect } from "@sdxc/http/response";
-import { isFailure } from "@sdxc/result";
-import * as s from "remix/data-schema";
-import { createAction } from "remix/router";
-
-import { requireCustomer } from "~/app/services/billing-customer";
-import routes from "~/routes/web";
-
-let CheckoutSchema = s.object({ product: s.string() });
-
-/** POST /billing/checkout — opens a hosted session and sends the customer to it. */
-export default createAction(routes.billing.checkout, async (context) => {
-	let input = s.parse(CheckoutSchema, await context.request.formData());
-	let customer = await requireCustomer(context);
-
-	let checkout = await context.billing.checkouts.create({
-		product: input.product,
-		customer: { id: customer.providerCustomerId },
-		returnTo: new URL(routes.billing.thanks.href(), context.url).toString(),
-		idempotencyKey: `checkout_${customer.subjectId}_${input.product}`,
-	});
-
-	if (isFailure(checkout)) {
-		context.log.warn("billing.checkout_failed", {
-			code: checkout.error.code,
-			provider_code: checkout.error.providerCode,
-		});
-
-		return redirect(routes.billing.index.href(), { status: redirect.Status.SeeOther });
-	}
-
-	if (checkout.data.url === null) {
-		return redirect(routes.billing.index.href(), { status: redirect.Status.SeeOther });
-	}
-
-	return redirect(checkout.data.url, { status: redirect.Status.SeeOther });
-});
-```
-
-The same shape covers the portal, behind a `supports()` check because not every platform has one:
+The endpoint is built at module scope and mounted like any other action, since its bound
+`handler` satisfies the router's action object form:
 
 ```typescript
-if (!supports(context.billing, "portal")) return notFound();
-
-let session = await context.billing.portal.create({ customer: { id: customerId } });
-if (isFailure(session)) return serverError();
-
-return redirect(session.data.url, { status: redirect.Status.SeeOther });
-```
-
-## Pattern: The webhook route
-
-The endpoint is built at module scope and mounted like any other action. It satisfies the router's action object form through its bound `handler`, so the instance itself is what gets mapped:
-
-```typescript
-// routes/web.ts
-import { get, post, route } from "remix/routes";
-
-export default route({
-	billing: {
-		index: get("/billing"),
-		thanks: get("/billing/thanks"),
-		checkout: post("/billing/checkout"),
-		webhook: post("/webhooks/billing"),
-	},
-});
-```
-
-```typescript
-// app/http/controllers/billing/webhook.ts
 import { BillingWebhook } from "@sdxc/billing";
+import { isFailure } from "@sdxc/result";
 
-import { polar } from "~/app/services/billing";
-import { syncEntitlements } from "~/app/services/entitlements";
-import { deliveries } from "~/app/services/webhook-store";
+/** Re-reads what a customer holds and writes it into our own tables. */
+async function syncEntitlements(customerId: string | null): Promise<void> {
+	if (customerId === null) return;
 
-/** POST /webhooks/billing — verifies, records and dispatches one delivery. */
+	let state = await polar.entitlements.of({ id: customerId });
+	if (isFailure(state)) throw state.error;
+
+	await writeProjection(customerId, state.data);
+}
+
 export default new BillingWebhook(
 	polar,
 	{
@@ -1012,117 +648,111 @@ export default new BillingWebhook(
 );
 ```
 
-Every handler here does the same thing, and that is the point: it re-reads the entitlement snapshot for the customer the event named instead of applying the payload as a diff. Deliveries arrive out of order, are replayed, and carry whatever API version the platform sent them under, so the payload is a hint that something changed and the snapshot is the state.
+Every handler does the same thing, and that is the point: it re-reads the snapshot for the
+customer the event named instead of applying the payload as a diff. Deliveries arrive out of
+order, are replayed, and carry whatever API version the platform sent them under, so the
+payload is a hint that something changed and the snapshot is the state. Throwing reports a
+failure: the endpoint logs it, answers `503` when the error is retryable so the platform
+delivers again, and leaves the delivery unprocessed either way.
+
+Deliveries get missed, so a periodic reconciliation is part of adopting this package. The same
+sweep is what resolves an operation that answered `unknown`, where it may or may not have taken
+effect:
 
 ```typescript
-// app/services/entitlements.ts
 import { isFailure } from "@sdxc/result";
 
-import { polar } from "~/app/services/billing";
+for (let row of await readStaleProjections()) {
+	let state = await polar.entitlements.of({ id: row.providerCustomerId });
+	if (isFailure(state)) continue;
 
-/** Re-reads what a customer holds and writes it into our own tables. */
-export async function syncEntitlements(customerId: string | null): Promise<void> {
-	if (customerId === null) return;
-
-	let state = await polar.entitlements.of({ id: customerId });
-	if (isFailure(state)) throw state.error;
-
-	await writeProjection(customerId, state.data);
+	await writeProjection(row.providerCustomerId, state.data);
 }
 ```
 
-Throwing from a handler is how a failure is reported: the endpoint logs it, answers `503` when the error is retryable so the platform delivers again, and leaves the delivery unprocessed either way.
+## Pattern: Gating A Route On An Entitlement
 
-Registering handlers for only some event names is normal. An unhandled name and an `unrecognized` type are both logged and acknowledged with `200`, so the platform keeps the endpoint enabled and an event type the vendor adds is a no-op here rather than an outage.
+The gate reads your own projection, never the platform mid-request. Configure the reader once
+on the middleware and apply the guard per route:
 
-## Pattern: A cron job that ingests usage
+```typescript
+import billing from "@sdxc/billing/middleware";
+import { createRouter } from "remix/router";
 
-Some billing happens with no request in sight. The job imports the provider, checks the capability, and branches on `retryable` rather than catching:
+let router = createRouter({
+	middleware: [
+		billing({
+			provider: polar,
+			entitlements: async (context) => {
+				let team = context.session.get("teamId");
+				if (team === undefined) return null;
+
+				return readProjection(team);
+			},
+		}),
+	],
+});
+```
+
+```typescript
+import { requireEntitlement } from "@sdxc/billing/middleware";
+import { redirect } from "remix/response/redirect";
+
+router.get("/app/reports", [requireEntitlement("reports", { onDenied })], (context) => {
+	return Response.json({ products: context.entitlements.products });
+});
+
+function onDenied(): Response {
+	return redirect("/pricing", { status: redirect.Status.SeeOther });
+}
+```
+
+`onDenied` receives the request context, so a denied request can equally render an upgrade
+prompt in place, keeping the visitor at the URL they asked for. Without it a denied request
+answers `403`.
+
+## Pattern: Reporting Usage From A Scheduled Job
+
+Some billing happens with no request in sight. The job imports the module-scope provider,
+checks the capability, and branches on `retryable` rather than catching:
 
 ```typescript
 import { supports } from "@sdxc/billing";
-import { Job } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
-
-import { polar } from "~/app/services/billing";
 
 /** Hourly: reports the pings each team consumed since the last run. */
-export class ReportUsageJob extends Job {
-	static override monitorId = "…";
+export async function reportUsage(): Promise<void> {
+	if (!supports(polar, "usage")) return;
 
-	async perform(): Promise<void> {
-		if (!supports(billing, "usage")) {
-			return this.logger.info("billing.usage.unsupported", { connection: billing.connection });
-		}
+	let consumption = await readConsumptionSinceLastRun();
 
-		let consumption = await readConsumptionSinceLastRun();
+	let result = await polar.usage.ingest(
+		consumption.map((row) => ({
+			name: "pings",
+			customer: { externalId: row.teamId },
+			externalId: `pings_${row.teamId}_${row.hour}`,
+			timestamp: row.at,
+			cost: { amount: row.cost, currency: "usd" },
+		})),
+	);
 
-		let result = await billing.usage.ingest(
-			consumption.map((row) => ({
-				name: "pings",
-				customer: { externalId: row.teamId },
-				externalId: `pings_${row.teamId}_${row.hour}`,
-				timestamp: row.at,
-				cost: { amount: row.cost, currency: "usd" },
-			})),
-		);
-
-		if (isFailure(result)) {
-			if (result.error.retryable) throw new Job.RetryError(result.error.message);
-			throw new Job.NonRetriableError(result.error.message);
-		}
-
-		this.logger.info("billing.usage.ingested", { accepted: result.data.accepted });
-	}
+	if (isFailure(result) && result.error.retryable) throw result.error;
 }
 ```
 
-Chunking to the platform's per-request limit happens inside the provider, so the whole array goes in one call. Every event carries an `externalId` derived from our own row, which is what makes a resend free: a repeated key is counted once, and `accepted` excludes it.
+Chunking to the platform's per-request limit happens inside the provider, so the whole array
+goes in one call. Every event carries an `externalId` derived from your own row, which is what
+makes a resend free: a repeated key is counted once, and `accepted` excludes it.
 
-## Pattern: Reconciling what the webhooks missed
+## Pattern: Walking A List To The End
 
-Deliveries get missed, so a periodic reconciliation is expected rather than optional. It is also the only recovery from an `unknown` failure, where an operation may or may not have taken effect:
-
-```typescript
-import { Job } from "@sdxc/jobs";
-import { isFailure } from "@sdxc/result";
-
-import { polar } from "~/app/services/billing";
-
-/** Nightly: re-reads every entitlement projection older than the sweep window. */
-export class ReconcileBillingJob extends Job {
-	async perform(): Promise<void> {
-		let stale = await readStaleProjections();
-
-		for (let row of stale) {
-			let state = await polar.entitlements.of({ id: row.providerCustomerId });
-
-			if (isFailure(state)) {
-				this.logger.error("billing.reconcile_failed", {
-					code: state.error.code,
-					customer: row.providerCustomerId,
-				});
-				continue;
-			}
-
-			await writeProjection(row.providerCustomerId, state.data);
-		}
-	}
-}
-```
-
-The same loop is what resolves a `usage.ingest` that answered `unknown`: `usage.list({ customer, name, from, to })` reads back what the platform actually counted, and the event's own `externalId` is what identifies our attempt in it.
-
-## Pattern: Walking a list to the end
-
-A short page is not the last page. Follow the cursor until it is `null`, and cap the walk so a populated account cannot hang a job:
+A short page is not the last page. Follow the cursor until it is `null`, and cap the walk so a
+populated account cannot hang a job:
 
 ```typescript
 import type { Subscription } from "@sdxc/billing";
 
 import { isFailure } from "@sdxc/result";
-
-import { polar } from "~/app/services/billing";
 
 /** Pages a walk follows before it gives up, so a large account cannot hang the job. */
 let MAX_PAGES = 50;
@@ -1141,61 +771,10 @@ for (let page = 0; page < MAX_PAGES; page++) {
 }
 ```
 
-## Pattern: Gating a route on an entitlement
+## Pattern: Testing A Billing Flow
 
-The gate reads the app's own projection, never the platform mid-request. Configure the reader once on the middleware and apply the guard per action:
-
-```typescript
-// bootstrap/app.ts
-let router = createRouter({
-	middleware: [
-		billing({
-			provider: polar,
-			entitlements: async (context) => {
-				let team = context.session.get("teamId");
-				if (team === undefined) return null;
-
-				return readProjection(team);
-			},
-		}),
-	],
-});
-```
-
-```typescript
-// app/http/controllers/flows.tsx
-import { requireEntitlement } from "@sdxc/billing/middleware";
-import { redirect } from "@sdxc/http/response";
-import { createAction } from "remix/router";
-
-import routes from "~/routes/web";
-
-/** GET /app/flows — the flow monitor list, behind the feature that sells it. */
-export default createAction(routes.app.flows, {
-	middleware: [
-		requireEntitlement("flow_monitors", {
-			onDenied: (context, feature) =>
-				context.render(<UpgradePrompt feature={feature} team={context.team} />),
-		}),
-	],
-
-	handler(context) {
-		return context.render(<FlowList products={context.entitlements.products} />);
-	},
-});
-```
-
-`onDenied` receives the request context, so a denied request can answer with an upgrade prompt rendered at the URL the visitor asked for, keeping them where they were. It can equally redirect:
-
-```typescript
-onDenied: () => redirect(routes.pricing.href(), { status: redirect.Status.SeeOther });
-```
-
-Without `onDenied` a denied request answers `403`. The guard publishes the snapshot it decided on as `context.entitlements`, so the handler behind it reads the same projection rather than loading it twice.
-
-## Pattern: Testing a billing flow
-
-Drive `MemoryBilling` through the flow and assert on what it produced. Nothing is mocked, so a change to the contract shows up here rather than in a stale double:
+Drive `MemoryBilling` through the flow and assert on what it produced. Nothing is mocked, so a
+change to the contract shows up here rather than in a stale double:
 
 ```typescript
 import { BillingWebhook, MemoryWebhookStore } from "@sdxc/billing";
@@ -1207,7 +786,7 @@ import { expect, test } from "vitest";
 test("a paid order grants the feature it sells", async () => {
 	let billing = new MemoryBilling({
 		catalog: {
-			pro: { amount: 4900, currency: "usd", interval: "month", features: { flow_monitors: true } },
+			pro: { amount: 4900, currency: "usd", interval: "month", features: { reports: true } },
 		},
 	});
 
@@ -1246,95 +825,83 @@ test("a paid order grants the feature it sells", async () => {
 });
 ```
 
-## Pattern: Testing the degraded path
-
-A platform that is unreachable, rate-limited, or refusing one group is a path worth a test, and `MemoryBilling` arms it on the instance the test is already using. Nothing is wrapped, so the object under test stays the same object:
+A platform that is unreachable, rate-limited or refusing one group is a path worth a test, and
+`MemoryBilling` arms it on the instance the test already holds:
 
 ```typescript
-import { MemoryBilling } from "@sdxc/billing/providers/memory";
-import { isFailure } from "@sdxc/result";
-import { expect, test } from "vitest";
+billing.fail("entitlements.of", "unknown");
 
-import { syncEntitlements } from "~/app/services/entitlements";
+expect(isFailure(await billing.entitlements.of({ id: customer.id }))).toBe(true);
 
-test("leaves the projection alone when the snapshot cannot be read", async () => {
-	let billing = new MemoryBilling({ catalog: CATALOG });
-	let customer = await unwrap(billing.customers.create({ email, externalId: "u_1" }));
-
-	billing.fail("entitlements.of", "unknown");
-
-	expect(isFailure(await syncEntitlements(billing, customer.id))).toBe(true);
-	expect(await readProjection("u_1")).toBeNull();
-
-	billing.heal("entitlements.of");
-
-	expect(isFailure(await syncEntitlements(billing, customer.id))).toBe(false);
-});
+billing.heal("entitlements.of");
 ```
 
-Arm a whole group when the test is about an outage — `billing.fail("customers")` — and one method when it is about a single read, since a method-level fault wins over its group's. A test that needs a group to answer something rather than fail, or to be absent entirely, asks for `billing.with({ ... })` instead.
+Arm a whole group when the test is about an outage, and one method when it is about a single
+read, since a method-level fault wins over its group's. A test that needs a group to answer
+something else, or to be absent entirely, asks for `billing.with({ … })` instead.
 
-## Pattern: Writing a new provider
+## Pattern: Writing A Provider
 
-Implement `Billing`, then register the conformance suites for the required core plus every group the platform actually has:
+Implement `Billing`, then register the conformance suites for the required core plus every
+group the platform actually has:
 
 ```typescript
 import { capabilityConformance, conformance, portalConformance } from "@sdxc/billing/conformance";
+import { describe } from "vitest";
 
-import { AcmeBilling } from "./index";
+import { AcmeBilling } from "./acme.js";
 
 let options = {
 	name: "AcmeBilling",
 	create: () =>
 		new AcmeBilling({
-			apiKey: process.env["ACME_TEST_KEY"] ?? "",
+			apiKey: () => readSecret("ACME_TEST_KEY"),
 			catalog: { pro: "prod_pro", tokyo: "prod_tokyo" },
 		}),
 	subscription: { slug: "pro", amount: 4900, currency: "usd" },
 	zeroDecimal: { slug: "tokyo", amount: 5000, currency: "jpy" },
 };
 
-describe.skip("AcmeBilling against a sandbox account", () => {
+describe("AcmeBilling against a sandbox account", () => {
 	conformance(options);
 	portalConformance(options);
 	capabilityConformance(options);
 });
 ```
 
-Type every credential option as `Secret` and read it through `secretReader` from `src/core/secret.ts`, so a new provider is configurable from a secret store the way the others are, and read a signing secret with `verificationSecret` so an unreadable one leaves a delivery unproven instead of failing the endpoint.
+Type every credential option as `Secret`, so a new provider is configurable from a secret store
+the way the others are, and answer `false` from `webhooks.verify` when that secret is
+unreadable, so an unproven delivery leaves the endpoint answering a status the platform
+accepts. Declare an optional group only where the platform genuinely has it:
+`capabilityConformance` asserts a declared group against a real call and an undeclared one
+against its own absence.
 
-`MemoryBilling` is the template to read while writing one: it implements every group, and it is the provider the suite runs against in CI, which is what keeps the suite itself honest.
+## Versioning
 
-## Related Packages
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
 
-- [`@sdxc/result`](/packages/result) — the `Result` every billing call reports through
-- [`@sdxc/api-client`](/packages/api-client) — the HTTP client base class the network-backed providers extend
-- [`@sdxc/webhooks`](/packages/webhooks) — Standard Webhooks signing and verification, used by the providers whose platform follows it
-- [`@sdxc/crypto`](/packages/crypto) — the HMAC primitives behind a provider's own signature scheme
-- [`@sdxc/validate`](/packages/validate) — validates a platform's response before any mapping runs
-- [`@sdxc/jobs`](/packages/jobs) — the base class for the ingestion and reconciliation jobs that bill outside a request
-- [`@sdxc/logger`](/packages/logger) — the request logger the webhook endpoint reports through when an app installs one
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
 
-## Tips
+Depend on one exact date, and move it when you are ready to take the change:
 
-1. **Branch on the `Result`, never on a thrown error** — nothing here throws, so a `try`/`catch` around a billing call catches only your own bugs.
-2. **Read `not_found` as an answer** — a `find*` reports a missing record as a failure rather than `null`, which is what stops a missing customer from becoming a null dereference three lines later.
-3. **Never retry an `unknown`** — the operation may already have taken effect, so recovery is a reconciliation read against the platform, and `retryable` is never `true` for it.
-4. **Construct the provider once, at module scope** — the constructor touches no network, and one instance is what lets a route and a job bill against the same configuration.
-5. **Hand a credential in as a function when it lives in a secret store** — the constructor cannot await, so the function form is what defers that read to the first call and keeps it to one await for the life of the instance.
-6. **Ask `supports()` before reaching an optional group** — `portal`, `discounts`, `usage` and `meters` may be absent, and the guard is what makes the code typecheck as well as run.
-7. **Store the connection beside every provider id** — one vendor can hold several accounts, and `connection` is what says which credential set issued the id you are looking at.
-8. **Ask `minorUnitDigits()` before formatting money** — dividing by 100 unconditionally is wrong for JPY and CLP, which have no minor units, and for BHD and KWD, which have three.
-9. **Keep a usage cost a string** — `Cost.amount` is a decimal string because per-unit costs fall below `1e-6`, where a number formats as exponential notation and a platform rejects it.
-10. **Follow the cursor, not the item count** — a page shorter than `limit` is not necessarily the last, so only `cursor === null` ends a list.
-11. **Re-read state in a webhook handler** — the payload says something changed, and `entitlements.of()` says what is true now; applying a payload as a diff is how out-of-order deliveries corrupt a projection.
-12. **Run a reconciliation job** — deliveries get missed, so a periodic sweep re-reading the snapshot is part of adopting this package rather than an optimization.
-13. **Give a store to the webhook endpoint** — without one, every delivery dispatches, replays included, so the handlers themselves have to be idempotent.
-14. **Send an `externalId` with every usage event** — it is the idempotency key, so a resent batch is counted once and a failed ingest can be retried safely.
-15. **Arm a fault rather than hand-rolling a refusing provider** — `billing.fail("customers")` and `billing.heal()` make one group or one method fail on the instance a test already drives, so nothing has to spread a provider into a partial copy of it.
-16. **Read the buyer off the order** — an `order.paid` delivery already carries `customerEmail` and `customerExternalId`, so fulfilment needs no second read.
-17. **Watch for `billing.skipped_row` in the logs** — a snapshot and every list carry on past a product this connection is not configured with, so a projection that is missing a record has this line behind it.
-18. **Use `MemoryBilling` rather than mocking an SDK** — it is a full implementation that passes the same conformance suite, so it fails when the contract changes instead of quietly drifting.
-19. **The Stripe provider is not adopted by anything** — it exists to prove the contract fits a second platform, and its `orders` group answers `not_implemented` on purpose, so treat it as a starting point rather than a supported backend.
-20. **No conformance suite has run against a real sandbox yet** — every remote suite is written and skipped pending credentials, so a provider's mapping of live payloads is unverified until that run happens.
-21. **Mercado Pago leaves the app as the seller of record** — it is a payment processor rather than a merchant of record, so tax registration, invoicing obligations, remittance, and disputes belong to the app and are handled outside this package.
+```json
+{
+	"dependencies": {
+		"@sdxc/billing": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)
