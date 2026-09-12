@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/typeid",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Type-safe TypeID values: a UUID and the prefix that names what it identifies",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

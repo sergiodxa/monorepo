@@ -1,293 +1,289 @@
 # @sdxc/typeid
 
-Type-safe TypeID helpers for working with prefixed UUID strings.
+Type-safe TypeID values: a UUID and the prefix that names what it identifies.
 
-## Overview
+A TypeID is one string carrying both halves of an identifier:
+`user_01h455vb4pex5vsknk084sn02q` says which resource it points at and which UUID it stands
+for, so a log line or a URL segment reads as the thing it identifies, and an id from the
+wrong table stops being a lookup that silently finds nothing.
 
-`@sdxc/typeid` wraps UUIDs in a small `TypeID` class so application code can keep the resource type close to the identifier itself. A `user` UUID becomes a string like `user_01h455vb4pex5vsknk084sn02q`, which is easier to route, log, and validate than a bare UUID.
+The encoding follows the
+[TypeID specification](https://github.com/jetify-com/typeid/tree/main/spec), and values sort
+the way the UUIDs behind them sort, so a UUIDv7 id stays time-ordered once it is prefixed.
 
-The package follows the [TypeID specification](https://github.com/jetify-com/typeid/tree/main/spec) for prefix validation and Base32 suffix encoding. It supports parsing existing TypeID strings, generating new values from UUIDs, and converting a TypeID back to its UUID form.
+## Installation
+
+```bash
+npm add @sdxc/typeid
+```
+
+UUIDs come from [`@sdxc/uuid`](https://www.npmjs.com/package/@sdxc/uuid), which installs
+alongside this package: `generateUUID` produces the values `TypeID.fromUUID` takes, and
+`toUUID()` hands them back.
 
 ## Usage
 
-### Basic Example
+### Create One From A UUID
 
 ```typescript
-import { TypeID, typeid } from "@sdxc/typeid";
+import { TypeID } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
 
-let uuid = generateUUID();
+let userId = TypeID.fromUUID("user", generateUUID());
 
-let userId = TypeID.fromUUID("user", uuid);
-
-userId.prefix;
-// "user"
-
-userId.toUUID();
-// "550e8400-e29b-41d4-a716-446655440000"
-
-userId.toString();
-// "user_..."
-
-let createPostId = typeid("post");
-let postId = createPostId(generateUUID());
+userId.prefix; // "user"
+userId.toString(); // "user_01h455vb4pex5vsknk084sn02q"
+userId.toUUID(); // "01890a5d-ac96-774b-bcce-b302099a8057"
 ```
 
-### Parse an Existing TypeID
+The prefix is a literal type, so `userId` is a `TypeID<"user">` and a function that asks
+for one refuses a `TypeID<"post">`.
+
+### Parse One Back
 
 ```typescript
 import { TypeID } from "@sdxc/typeid";
 
-let value = TypeID.fromString("user_01h455vb4pex5vsknk084sn02q", "user");
+let userId = TypeID.fromString("user_01h455vb4pex5vsknk084sn02q", "user");
 
-let prefix = value.prefix;
-let uuid = value.toUUID();
+userId.prefix; // "user"
+userId.suffix; // "01h455vb4pex5vsknk084sn02q"
+userId.toUUID(); // "01890a5d-ac96-774b-bcce-b302099a8057"
 ```
+
+The second argument is the prefix you expect. Passing it turns a `post_` id arriving where
+a user id belongs into a `PrefixMismatchError` at the edge of the system, rather than a
+query that returns nothing several layers deeper.
+
+### Check A String Without Catching
+
+```typescript
+import { TypeID } from "@sdxc/typeid";
+
+TypeID.isValid("user_01h455vb4pex5vsknk084sn02q", "user"); // true
+TypeID.isValid("user_01h455vb4pex5vsknk084sn02q", "org"); // false
+TypeID.isValid("user_nope"); // false
+```
+
+## Format Rules
+
+**A prefix is lowercase ASCII letters and underscores, at most 63 characters**, and it
+starts and ends with a letter. `User`, `user1` and `_user` are each an
+`InvalidPrefixError`.
+
+**The last underscore is the separator.** `user_profile_01h455vb4pex5vsknk084sn02q` parses
+as the prefix `user_profile`, so a multi-word prefix needs no escaping.
+
+**The suffix is exactly 26 Crockford Base32 characters**, drawn from
+`0123456789abcdefghjkmnpqrstvwxyz` — no `i`, `l`, `o` or `u`, so the characters that look
+alike cannot both appear. A suffix whose first character exceeds `7` would decode past 128
+bits and is an `InvalidBase32StringError`.
+
+**A prefix is optional.** A bare 26-character suffix parses with an empty prefix and
+serializes back without a separator, which is how the specification writes an untyped id.
+
+**Every parse failure is a `TypeIdError`**, so one `instanceof` check covers the whole
+package while the individual classes say which rule was broken. A malformed UUID handed to
+`TypeID.fromUUID` reports itself through the error classes of `@sdxc/uuid` instead, from
+the layer that validated it.
 
 ## API
 
-### `TypeID<prefix>`
+### `TypeID.fromUUID(prefix: prefix, uuid: UUID): TypeID<prefix>`
 
-Represents a parsed or generated TypeID.
+Encodes a UUID under a prefix. The `UUID` type comes from `@sdxc/uuid`, so a string that
+was never validated as a UUID stops at the type level.
 
-#### `new TypeID(prefix: prefix, suffix: Base32)`
+### `TypeID.fromString(value: string, prefix?: prefix): TypeID<prefix>`
 
-Creates a TypeID from a validated prefix and Base32 suffix.
+Parses a TypeID string, throwing on any value the [format rules](#format-rules) refuse.
+Passing `prefix` also requires the parsed prefix to match it.
 
-**Parameters:**
+### `TypeID.isValid(value: string, prefix?: prefix): boolean`
 
-- `prefix`: The TypeID prefix, such as `user` or `post`
-- `suffix`: The 26-character Base32 UUID suffix
+Whether `value` parses, and whether its prefix matches `prefix` when one is given. The
+same checks as `fromString`, reported as a boolean.
 
-#### `typeId.prefix`
+### `new TypeID(prefix: prefix, suffix: Base32)`
 
-The prefix stored in the TypeID.
+Pairs a prefix with a suffix that is already encoded — the value `suffix` reports back.
+Rebinding an existing id to another prefix is what this constructor is for; a UUID or a
+string goes through `fromUUID` or `fromString`.
 
-**Returns:**
+```typescript
+let anonymousId = new TypeID("anon", userId.suffix);
+```
 
-- The typed prefix string
+### `typeId.prefix: prefix`
 
-#### `typeId.suffix`
+The prefix this value carries, typed as the literal it was created with.
 
-The encoded Base32 suffix.
+### `typeId.suffix: Base32`
 
-**Returns:**
+The 26-character Base32 suffix, without the prefix or separator.
 
-- The 26-character TypeID suffix
+### `typeId.toUUID(): UUID`
 
-#### `typeId.toUUID(): UUID`
+Decodes the suffix back to the canonical UUID string, which is the form a UUID column
+stores.
 
-Decodes the suffix back to a UUID string.
+### `typeId.toString(): string`
 
-**Returns:**
+The canonical string, `prefix_suffix`. A value with an empty prefix serializes to the
+suffix alone.
 
-- A UUID string
+### `typeid(prefix: prefix): (uuid: UUID) => TypeID<prefix>`
 
-**Example:**
+Binds a prefix once and returns a function that encodes UUIDs under it, so call sites name
+the factory instead of repeating the prefix string.
+
+```typescript
+let createUserId = typeid("user");
+
+let userId = createUserId(generateUUID()); // TypeID<"user">
+```
+
+### Errors
+
+The error classes ship from `@sdxc/typeid/errors`, and all of them extend `TypeIdError`.
+
+```typescript
+import { PrefixMismatchError, TypeIdError } from "@sdxc/typeid/errors";
+```
+
+#### `TypeIdError`
+
+The base class for everything this package throws.
+
+#### `InvalidPrefixError`
+
+A prefix breaks the prefix rules. The message repeats the prefix that arrived.
+
+#### `PrefixMismatchError`
+
+A TypeID parsed cleanly but carries a different prefix than the one asked for. The message
+names both.
+
+#### `EmptyPrefixError`
+
+A value carries a separator with nothing before it, such as `_01h455vb4pex5vsknk084sn02q`.
+
+#### `MissingSeparatorError`
+
+A value is longer than a bare suffix yet has no separator, so a prefix was intended and
+lost.
+
+#### `InvalidSuffixLengthError`
+
+A suffix is not 26 characters. The message names the length that arrived.
+
+#### `InvalidBase32CharacterError`
+
+A suffix contains a character outside the Base32 alphabet, such as the `i` that an `l`
+often becomes when an id is retyped.
+
+#### `InvalidBase32StringError`
+
+A suffix is 26 valid characters yet decodes past 128 bits, so no UUID can hold it.
+
+## Pattern: Parse At The Boundary
+
+Convert the string into a `TypeID` where the request arrives, and everything deeper
+receives a value whose prefix has already been checked:
 
 ```typescript
 import { TypeID } from "@sdxc/typeid";
 
-let value = TypeID.fromString("user_01h455vb4pex5vsknk084sn02q");
-let uuid = value.toUUID();
-```
+export async function GET(request: Request) {
+	let { pathname } = new URL(request.url);
+	let segment = pathname.split("/").at(-1) ?? "";
 
-#### `typeId.toString(): string`
-
-Serializes the TypeID back into its string form.
-
-**Returns:**
-
-- A TypeID string, with the prefix omitted only when the prefix is empty
-
-**Example:**
-
-```typescript
-import { TypeID } from "@sdxc/typeid";
-
-let value = TypeID.fromUUID("user", crypto.randomUUID());
-let stringValue = value.toString();
-```
-
-### `TypeID.fromString<const prefix extends string>(value: string, prefix?: prefix): TypeID<prefix>`
-
-Parses a TypeID string and optionally enforces the expected prefix.
-
-**Parameters:**
-
-- `value`: The incoming TypeID string
-- `prefix`: Optional expected prefix to enforce during parsing
-
-**Returns:**
-
-- A `TypeID<prefix>` instance
-
-**Example:**
-
-```typescript
-import { TypeID } from "@sdxc/typeid";
-
-let value = TypeID.fromString("user_01h455vb4pex5vsknk084sn02q", "user");
-```
-
-### `TypeID.fromUUID<const prefix extends string>(prefix: prefix, uuid: UUID): TypeID<prefix>`
-
-Builds a TypeID from an existing UUID.
-
-**Parameters:**
-
-- `prefix`: The prefix to apply to the TypeID
-- `uuid`: The UUID to encode
-
-**Returns:**
-
-- A `TypeID<prefix>` instance
-
-**Example:**
-
-```typescript
-import { TypeID } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid";
-
-let value = TypeID.fromUUID("org", generateUUID());
-```
-
-### `TypeID.isValid<const prefix extends string>(value: string, prefix?: prefix): boolean`
-
-Checks whether a string is a valid TypeID and optionally enforces a specific prefix.
-
-**Parameters:**
-
-- `value`: The incoming TypeID string
-- `prefix`: Optional expected prefix to enforce during validation
-
-**Returns:**
-
-- `true` when the value is valid (and the prefix matches when provided), otherwise `false`
-
-**Example:**
-
-```typescript
-import { TypeID } from "@sdxc/typeid";
-
-TypeID.isValid("user_01h455vb4pex5vsknk084sn02q", "user");
-// true
-
-TypeID.isValid("user_01h455vb4pex5vsknk084sn02q", "org");
-// false
-```
-
-### `typeid<prefix extends string>(prefix: prefix): (uuid: UUID) => TypeID<prefix>`
-
-Creates a small factory for a single prefix.
-
-**Parameters:**
-
-- `prefix`: The prefix to lock into the returned factory
-
-**Returns:**
-
-- A function that accepts a UUID and returns a `TypeID<prefix>`
-
-**Example:**
-
-```typescript
-import { typeid } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid";
-
-let createInvoiceId = typeid("invoice");
-let invoiceId = createInvoiceId(generateUUID());
-```
-
-### `@sdxc/typeid/errors`
-
-The package also exports its TypeID-specific error classes from a dedicated entrypoint.
-
-**Example:**
-
-```typescript
-import { InvalidPrefixError, TypeIdError } from "@sdxc/typeid/errors";
-
-try {
-	// ...parse or create TypeIDs
-} catch (error) {
-	if (error instanceof InvalidPrefixError) {
-		// handle invalid prefix
+	if (!TypeID.isValid(segment, "user")) {
+		return new Response("Not found", { status: 404 });
 	}
 
-	if (error instanceof TypeIdError) {
-		// handle any TypeID-related error
-	}
+	let user = await findUser(TypeID.fromString(segment, "user").toUUID());
+
+	return Response.json(user);
 }
 ```
 
-## Patterns
+`isValid` answers the routing question and `fromString` produces the value, so a wrong
+prefix becomes a `404` instead of a query for an id that belongs to another table.
 
-## Pattern: Parse Route Params Early
+## Pattern: One Factory Per Resource
 
-Use `TypeID.fromString` near the edge of the application so the rest of the code receives a validated identifier. The action below answers `user: get("/users/:userId")`, so `ctx.params` carries the raw segment and `TypeID.fromString` turns it into a value the rest of the request can trust.
-
-```typescript
-import { TypeID } from "@sdxc/typeid";
-import * as s from "remix/data-schema";
-import { createAction } from "remix/router";
-
-import routes from "~/routes/web";
-
-/** GET /users/:userId — resolves the TypeID in the URL to the stored UUID. */
-export default createAction(routes.user, async (ctx) => {
-	let { userId } = s.parse(s.object({ userId: s.string() }), ctx.params);
-	let id = TypeID.fromString(userId, "user");
-
-	return Response.json({ userId: id.toUUID() });
-});
-```
-
-## Pattern: Create Prefix-Specific Factories
-
-Use `typeid()` when one module creates many identifiers of the same type.
+A module of prefix-bound factories keeps every prefix string in one file, and each factory
+returns its own type:
 
 ```typescript
 import { typeid } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
 
-let createUserId = typeid("user");
-let createSessionId = typeid("session");
+export let createUserId = typeid("user");
+export let createSessionId = typeid("session");
+export let createInvoiceId = typeid("invoice");
 
-let userId = createUserId(generateUUID());
-let sessionId = createSessionId(generateUUID());
+let userId = createUserId(generateUUID()); // TypeID<"user">
+let sessionId = createSessionId(generateUUID()); // TypeID<"session">
 ```
 
-## Pattern: Store UUIDs, Expose TypeIDs
+Because the return types differ, a function that takes a `TypeID<"user">` rejects a
+session id before the code runs.
 
-Use TypeIDs at the boundaries of the system and plain UUIDs internally when your database already stores UUID columns.
+## Pattern: Store UUIDs, Serve TypeIDs
+
+A UUID column stays a UUID column. The prefix is applied on the way out and stripped on
+the way in, so the database keeps its native type while every id the outside world sees
+says what it is:
 
 ```typescript
 import { TypeID } from "@sdxc/typeid";
+import type { UUID } from "@sdxc/uuid";
 
-interface UserRecord {
-	id: string;
+interface UserRow {
+	id: UUID;
 	email: string;
 }
 
-function serializeUser(user: UserRecord) {
-	return {
-		id: TypeID.fromUUID("user", user.id).toString(),
-		email: user.email,
-	};
+function serialize(user: UserRow) {
+	return { id: TypeID.fromUUID("user", user.id).toString(), email: user.email };
+}
+
+function deserialize(id: string): UUID {
+	return TypeID.fromString(id, "user").toUUID();
 }
 ```
 
-## Related Packages
+The pair is symmetric, so an id that made a round trip through a client comes back as the
+same UUID it left as.
 
-- [`@sdxc/result`](/packages/result) - Wrap TypeID parsing in explicit success and failure values
-- [`@sdxc/validate`](/packages/validate) - Validate request payloads before converting IDs into domain values
-- [`@sdxc/response`](/packages/response) - Return parsed IDs from actions and controllers with typed response helpers
-- [`@sdxc/uuid`](/packages/uuid) - Generate UUID values before converting them into TypeIDs
+## Versioning
 
-## Tips
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
 
-1. **Parse at the boundary** - Convert incoming strings to `TypeID` values in actions, controllers, and middleware, so everything deeper in the app receives a validated identifier.
-2. **Use factories for repeated prefixes** - `typeid("user")` keeps call sites short and avoids repeating prefix strings.
-3. **Keep prefixes stable** - Changing a prefix changes the serialized identifier shape, which can break routes, APIs, and logs.
-4. **Store UUIDs when possible** - TypeIDs are useful at the application boundary, but many databases and integrations still work best with plain UUIDs.
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
+
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/typeid": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)
