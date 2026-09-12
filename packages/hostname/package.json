@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/hostname",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Cloudflare for SaaS custom-hostname client: register, poll and delete customer domains",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

@@ -1,215 +1,162 @@
 # @sdxc/hostname
 
-Cloudflare for SaaS custom-hostname client for the platform apps.
+Cloudflare for SaaS custom-hostname client: register, poll and delete customer domains.
 
-## Overview
+A SaaS that lets customers bring their own domain registers each one as a
+[custom hostname](https://developers.cloudflare.com/cloudflare-for-platforms/cloudflare-for-saas/domain-support/)
+on a Cloudflare zone, hands the customer a DNS TXT record to prove ownership, and waits for
+the certificate to issue. This package is that conversation with the API: one client bound to
+one zone, with every response validated before it is returned.
 
-This package wraps the [Cloudflare custom hostnames API](https://developers.cloudflare.com/cloudflare-for-platforms/cloudflare-for-saas/domain-support/)
-so tenant/blog apps can register, poll, and delete customer domains without each
-one re-implementing the HTTP calls. It consolidates the two copies that used to
-live in `apps/auth-saas` and `apps/blog-saas` into a single client.
+## Installation
 
-Every API response is validated with [`remix/data-schema`](https://remix.run)
-before it is returned, so a malformed or unexpected Cloudflare payload throws a
-typed `HostnameApiError` instead of silently producing `undefined` fields. The
-client is an instance class configured through its constructor, which keeps it free
-of any `cloudflare:workers` `env` coupling — callers pass the zone id, API token,
-and platform domain in explicitly.
+```bash
+npm add @sdxc/hostname
+```
 
-Cloudflare cannot filter custom hostnames by `custom_metadata`, so the client
-tags each hostname with an entity id under a configurable metadata key
-(`tenant_id` for auth-saas, `blog_id` for blog-saas) and filters client-side when
-listing. The metadata key is the only per-app difference, so nothing about the
-data stored on Cloudflare changes when an app adopts this package.
+The client needs a Cloudflare API token allowed to edit the zone's custom hostnames, plus
+the id of that zone.
 
 ## Usage
 
-### Basic Example
+### Register A Customer Domain
 
 ```typescript
 import { HostnameClient } from "@sdxc/hostname";
-import { env } from "cloudflare:workers";
 
 let client = new HostnameClient({
-	apiToken: env.CF_API_TOKEN,
-	zoneId: env.CF_ZONE_ID,
-	platformDomain: env.PLATFORM_DOMAIN,
-	metadataKey: "tenant_id",
+	apiToken: process.env.CF_API_TOKEN,
+	zoneId: process.env.CF_ZONE_ID,
+	metadataKey: "account_id",
 });
 
-// Register a customer domain (DV/TXT SSL validation).
-let result = await client.create("blog.example.com", tenantId, "wnam");
+let hostname = await client.create("www.customer.example", accountId);
 
-if (HostnameClient.isPendingValidation(result)) {
-	let record = HostnameClient.getValidationTxtRecord(result);
-	// Show `record.name` / `record.value` to the customer to add as a DNS TXT.
+let record = HostnameClient.getValidationTxtRecord(hostname);
+if (record) {
+	record.name; // TXT record name the customer adds to their DNS
+	record.value; // TXT record value
 }
 ```
 
-### Polling for activation
+`create` asks for DV certificates validated over TXT, so the record above is what the
+customer publishes to prove they own the domain.
+
+### Poll Until It Goes Live
 
 ```typescript
-let latest = await client.status(hostnameId);
-if (HostnameClient.isActive(latest)) {
-	// Both the hostname and its SSL certificate are active.
+let latest = await client.status(hostname.id);
+
+HostnameClient.isActive(latest); // hostname and certificate are both active
+HostnameClient.getStatusMessage(latest); // "Pending DNS validation"
+```
+
+`getStatusMessage` turns the two status fields into one sentence you can show the
+customer, including the first validation error when Cloudflare reports one.
+
+### Find And Remove A Domain
+
+```typescript
+let existing = await client.getByName("www.customer.example");
+let owned = await client.listByEntity(accountId);
+
+if (existing) await client.delete(existing.id);
+```
+
+`getByName` asks Cloudflare for that one hostname, while `listByEntity` reads every page of
+the zone and keeps the hostnames tagged with the entity id.
+
+### Handle A Failed Call
+
+```typescript
+import { HostnameApiError, HostnameClient } from "@sdxc/hostname";
+
+try {
+	await client.delete(id);
+} catch (error) {
+	if (error instanceof HostnameApiError && error.statusCode === 404) {
+		// the hostname is already gone
+	} else throw error;
 }
 ```
 
 ## API
 
-### `HostnameClient`
+### `new HostnameClient(options: HostnameClientOptions)`
 
-Instance client for the Cloudflare custom hostnames API.
+A client bound to one Cloudflare zone. `apiToken` and `zoneId` are required;
+`platformDomain` is the apex `createDefaultSubdomain` builds on, and `metadataKey` is the
+`custom_metadata` key that tags the owning entity, defaulting to `"tenant_id"`.
 
-#### `new HostnameClient(options: HostnameClientOptions)`
+### `client.create(hostname: string, entityId: string, region?: string): Promise<HostnameResult>`
 
-Creates a client bound to a single Cloudflare zone.
+Registers a custom hostname with DV/TXT SSL validation and a minimum TLS version of 1.2,
+storing `entityId` under the configured metadata key. `region` is a location hint kept in
+`custom_metadata.region`, defaulting to `"wnam"`.
 
-**Parameters:**
+### `client.status(id: string): Promise<HostnameResult>`
 
-- `options.apiToken`: Cloudflare API token with custom-hostname edit permission
-- `options.zoneId`: Cloudflare zone id that owns the custom hostnames
-- `options.platformDomain?`: Platform apex used by `createDefaultSubdomain` (e.g. `auth.sergiodxa.com`)
-- `options.metadataKey?`: `custom_metadata` key that tags the owning entity; defaults to `"tenant_id"`
+Reads one custom hostname by its Cloudflare id, which is how activation and certificate
+progress are polled.
 
-#### `client.create(hostname: string, entityId: string, region?: string): Promise<HostnameResult>`
+### `client.getByName(hostname: string): Promise<HostnameResult | null>`
 
-Creates a custom hostname tagged with `{ [metadataKey]: entityId, region }` and DV/TXT SSL validation.
+Looks a custom hostname up by the domain itself, answering `null` when the zone carries no
+such hostname.
 
-**Parameters:**
+### `client.listByEntity(entityId: string): Promise<HostnameResult[]>`
 
-- `hostname`: The hostname to create
-- `entityId`: Owning-entity id stored under the configured metadata key
-- `region?`: DO location hint stored in `custom_metadata.region` (defaults to `"wnam"`)
+Every custom hostname tagged with that entity id. Cloudflare filters on hostname rather than
+on `custom_metadata`, so this walks the zone's pages and matches the metadata key itself.
 
-**Returns:**
+### `client.delete(id: string): Promise<void>`
 
-- The created hostname as a `HostnameResult`
+Removes a custom hostname from the zone.
 
-**Example:**
+### `client.refresh(id: string): Promise<HostnameResult>`
 
-```typescript
-let result = await client.create("blog.example.com", tenantId, "wnam");
-```
+Re-arms DV/TXT validation for a hostname and returns it with the current validation records,
+which is what issues a fresh TXT record when the customer never published the first one.
 
-#### `client.status(id: string): Promise<HostnameResult>`
+### `client.createDefaultSubdomain(slug: string): string`
 
-Fetches the current status of a custom hostname by its Cloudflare id.
+The slug's subdomain under the configured `platformDomain` — `createDefaultSubdomain("acme")`
+is `"acme.saas.example"`. A subdomain of your own apex is served by the zone already, so it
+needs no custom hostname. Calling this without a `platformDomain` throws a `TypeError`.
 
-**Parameters:**
+### `HostnameClient.isActive(result: HostnameResult): boolean`
 
-- `id`: The hostname id
+Whether both the hostname status and the SSL status read `"active"`, which is the point the
+domain serves traffic.
 
-**Returns:**
+### `HostnameClient.isPendingValidation(result: HostnameResult): boolean`
 
-- The hostname as a `HostnameResult`
+Whether the hostname is still `"pending"` or the certificate is `"pending_validation"`, so
+the customer still has DNS work to do.
 
-#### `client.getByName(hostname: string): Promise<HostnameResult | null>`
+### `HostnameClient.getValidationTxtRecord(result: HostnameResult): { name: string; value: string } | null`
 
-Looks up a custom hostname by its hostname string.
+The TXT record the customer publishes, available while the certificate is
+`pending_validation` and `null` otherwise.
 
-**Parameters:**
+### `HostnameClient.getStatusMessage(result: HostnameResult): string`
 
-- `hostname`: The hostname string to look up
-
-**Returns:**
-
-- The matching `HostnameResult`, or `null` when none matches
-
-#### `client.listByEntity(entityId: string): Promise<HostnameResult[]>`
-
-Lists every custom hostname owned by an entity. Fetches all pages and filters client-side on the configured metadata key.
-
-**Parameters:**
-
-- `entityId`: The owning-entity id to filter by
-
-**Returns:**
-
-- The matching hostnames
-
-#### `client.delete(id: string): Promise<void>`
-
-Deletes a custom hostname.
-
-**Parameters:**
-
-- `id`: The hostname id to delete
-
-#### `client.refresh(id: string): Promise<HostnameResult>`
-
-Re-triggers SSL validation for a hostname to obtain fresh validation records.
-
-**Parameters:**
-
-- `id`: The hostname id to refresh
-
-**Returns:**
-
-- The refreshed `HostnameResult`
-
-#### `client.createDefaultSubdomain(slug: string): string`
-
-Builds the default subdomain for a slug under the configured `platformDomain`. Default subdomains do not need a custom hostname because they already live under the platform zone.
-
-**Parameters:**
-
-- `slug`: The entity slug
-
-**Returns:**
-
-- The full subdomain, e.g. `"acme.auth.sergiodxa.com"`
-
-**Example:**
-
-```typescript
-client.createDefaultSubdomain("acme"); // "acme.auth.sergiodxa.com"
-```
-
-#### `HostnameClient.isActive(result: HostnameResult): boolean`
-
-Returns `true` only when both the hostname status and SSL status are `"active"`.
-
-#### `HostnameClient.isPendingValidation(result: HostnameResult): boolean`
-
-Returns `true` when the hostname is `"pending"` or the SSL is `"pending_validation"`.
-
-#### `HostnameClient.getValidationTxtRecord(result: HostnameResult): { name: string; value: string } | null`
-
-Returns the DNS TXT record required for validation, or `null` when validation is not pending or no record is available.
-
-#### `HostnameClient.getStatusMessage(result: HostnameResult): string`
-
-Builds a human-readable status string (e.g. `"Pending DNS validation"`, `"Active"`, `"Validation failed: …"`).
+One human-readable line for the current state: `"Active"`, a pending stage such as
+`"SSL certificate being issued"`, or `"Validation failed: …"` carrying Cloudflare's first
+validation error.
 
 ### `HostnameApiError`
 
-Error thrown when a Cloudflare request fails or a response fails schema validation.
-
-**Properties:**
-
-- `statusCode`: `number` - HTTP status code from the API response
-- `errors?`: `Array<{ code: number; message: string }>` - Cloudflare error details, when present
-- `name`: always `"CloudflareApiError"`
-
-**Example:**
-
-```typescript
-try {
-	await client.create(hostname, tenantId);
-} catch (error) {
-	if (error instanceof HostnameApiError && error.statusCode === 404) {
-		// Already gone — treat as success.
-	}
-}
-```
+Thrown when Cloudflare answers with an error or with a payload that fails validation.
+`statusCode` is the HTTP status, `errors` carries Cloudflare's own `{ code, message }`
+entries when the response had them, and `name` is `"CloudflareApiError"`.
 
 ### Types
 
 #### `HostnameResult`
 
-Normalized result carrying both the flat validation fields (used by polling jobs)
-and a nested `ssl` view / `hostname` / `createdAt` (used by the D1-backed models).
+What every call answers with: the validation fields flattened for status screens, plus a
+nested `ssl` view of the same data.
 
 ```typescript
 interface HostnameResult {
@@ -225,11 +172,14 @@ interface HostnameResult {
 	region: string | null;
 	ssl: {
 		status: string | null;
-		validationRecords: Array<{ txt_name: string; txt_value: string }>;
+		validationRecords: SSLValidationRecord[];
 		validationErrors: Array<{ message: string }>;
 	};
 }
 ```
+
+`validationTxtName` and `validationTxtValue` read the first SSL validation record, falling
+back to the ownership-verification record Cloudflare returns instead for some hostnames.
 
 #### `HostnameClientOptions`
 
@@ -242,67 +192,123 @@ interface HostnameClientOptions {
 }
 ```
 
-## Pattern: One client published on the context
+#### `SSLValidationRecord`
 
-Build the client once from `env` and publish it from middleware, so jobs and controllers
-read it off the context they already have instead of constructing one ad hoc.
+One DV record as Cloudflare names it: `{ txt_name: string; txt_value: string }`.
+
+#### `CustomHostname`
+
+The raw hostname object as the API returns it — `id`, `hostname`, `status`, `ssl`, and the
+optional `custom_metadata`, `ownership_verification` and `created_at` fields.
+
+## Pattern: Walking A Customer Through Setup
+
+Registration and activation are two moments separated by the customer editing their DNS, so
+the flow is one `create` that yields a record to display, then `status` on a schedule until
+it goes live:
 
 ```typescript
-import type { Middleware } from "remix/router";
-
 import { HostnameClient } from "@sdxc/hostname";
-import { env } from "cloudflare:workers";
-import { createContextKey } from "remix/router";
 
-export const Hostnames = createContextKey<HostnameClient>();
+let client = new HostnameClient({
+	apiToken: process.env.CF_API_TOKEN,
+	zoneId: process.env.CF_ZONE_ID,
+	metadataKey: "account_id",
+});
 
-let client: HostnameClient | undefined;
+export async function startDomainSetup(accountId: string, domain: string) {
+	let result = await client.create(domain, accountId);
+	let record = HostnameClient.getValidationTxtRecord(result);
 
-export function hostnames(): Middleware {
-	return (ctx, next) => {
-		client ??= new HostnameClient({
-			apiToken: env.CF_API_TOKEN,
-			zoneId: env.CF_ZONE_ID,
-			platformDomain: env.PLATFORM_DOMAIN,
-			metadataKey: "blog_id",
-		});
-
-		ctx.set(Hostnames, client, { property: "hostnames" });
-		return next();
+	return {
+		id: result.id,
+		message: HostnameClient.getStatusMessage(result),
+		instructions: record && `Add a TXT record ${record.name} with the value ${record.value}`,
 	};
+}
+
+export async function checkDomainSetup(id: string) {
+	let result = await client.status(id);
+	if (HostnameClient.isActive(result)) return { live: true };
+	return { live: false, message: HostnameClient.getStatusMessage(result) };
 }
 ```
 
-## Pattern: Wrapping in an app model
+A customer who let the record expire before publishing it gets a new one from
+`client.refresh(id)`, which returns the hostname with fresh validation records.
 
-Apps keep their own D1-backed model and delegate the Cloudflare side to the client,
-translating results into local rows.
+## Pattern: Mirroring Hostnames In Your Own Database
+
+Cloudflare holds the certificate state and your database holds everything around it, so a
+row is written from the result of the call that created the hostname and updated from each
+poll:
 
 ```typescript
-let client = new HostnameClient({
-	apiToken: env.CF_API_TOKEN,
-	zoneId: env.CF_ZONE_ID,
-	metadataKey: "tenant_id",
-});
+import { HostnameClient } from "@sdxc/hostname";
 
-let cf = await client.create(hostname, tenantId, region);
-let record = HostnameClient.getValidationTxtRecord(cf);
+let result = await client.create(domain, accountId, "weur");
+let record = HostnameClient.getValidationTxtRecord(result);
 
-await db.create(Hostname.table, {
-	id: cf.id,
-	tenant_id: tenantId,
-	hostname: cf.hostname,
-	status: cf.status === "active" ? "active" : "pending_validation",
-	ssl_status: cf.sslStatus,
-	validation_txt_name: record?.name ?? null,
-	validation_txt_value: record?.value ?? null,
+await db.domains.insert({
+	id: result.id,
+	accountId,
+	hostname: result.hostname,
+	status: result.status,
+	sslStatus: result.sslStatus,
+	validationTxtName: record?.name ?? null,
+	validationTxtValue: record?.value ?? null,
+	createdAt: result.createdAt,
 });
 ```
 
-## Tips
+`listByEntity(accountId)` reads the same set back from Cloudflare, which is what reconciles
+the rows after a write that never landed.
 
-1. **Pass the right `metadataKey`** - auth-saas uses `"tenant_id"`, blog-saas uses `"blog_id"`; mismatching it breaks `listByEntity` filtering and the stored metadata the worker reads to route domains.
-2. **`platformDomain` is only for default subdomains** - it is optional and unused by the API calls; `createDefaultSubdomain` throws a `TypeError` if you call it without one.
-3. **Static helpers take a `HostnameResult`** - `isActive`, `isPendingValidation`, `getValidationTxtRecord`, and `getStatusMessage` are pure and never hit the network.
-4. **Catch `HostnameApiError` and inspect `statusCode`** - a `404` on `delete` usually means the hostname is already gone and can be treated as success.
-5. **`listByEntity` fetches every page** - it exists because Cloudflare cannot filter by `custom_metadata`; prefer `getByName` when you already know the hostname.
+## Pattern: One Client Per Zone
+
+The client holds configuration rather than connections, so a module that builds it once and
+exports it gives every caller the same zone and the same metadata key:
+
+```typescript
+import { HostnameClient } from "@sdxc/hostname";
+
+export let hostnames = new HostnameClient({
+	apiToken: process.env.CF_API_TOKEN,
+	zoneId: process.env.CF_ZONE_ID,
+	platformDomain: "saas.example",
+	metadataKey: "account_id",
+});
+```
+
+The metadata key belongs here because `create` writes it and `listByEntity` filters on it:
+one place to set it keeps those two agreeing.
+
+## Versioning
+
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
+
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
+
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/hostname": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)
