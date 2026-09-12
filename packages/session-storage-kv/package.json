@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/session-storage-kv",
 	"version": "0.0.0",
-	"private": true,
+	"description": "A remix/session SessionStorage backed by a Cloudflare Workers KV store",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
