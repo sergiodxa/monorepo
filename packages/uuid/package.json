@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/uuid",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Validate, assert and generate UUIDs behind a branded UUID type",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
