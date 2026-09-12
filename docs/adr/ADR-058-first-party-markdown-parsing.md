@@ -33,7 +33,7 @@ Across the thirty-six content files in the repository — 450 KB of uptime docum
 blog content, and the book sample — there is not one `{%` annotation. The census reads:
 twenty-five files with tables, twenty-seven with fences, fourteen with ordered lists,
 five with block quotes, one nested list, one autolink, and zero images, raw HTML blocks,
-reference definitions, task lists, or footnotes.
+reference definitions, task lists, footnotes, math spans, or emoji shortcodes.
 
 The only Markdoc syntax the repository has ever used is the fence annotation that
 `@sdxc/highlight` reads for `path` and `title`, and that appears solely in the two
@@ -80,8 +80,8 @@ discriminated union the compiler checks.
 
 ### ADR-047 wrote a serializer with no consumer
 
-`YAML.stringify` shipped because a format package owes both halves, and nothing has
-called it since. Writing frontmatter back out is its first real caller.
+`@sdxc/yaml`'s `stringify` shipped because a format package owes both halves, and nothing
+has called it since. Writing frontmatter back out is its first real caller.
 
 ## Decision
 
@@ -97,9 +97,9 @@ class Markdown {
 	private constructor();
 
 	static parse(source, options?): Result<Markdown.Parsed<FM>, MarkdownParseError>;
-	static frontmatter(source, schema?): Result<Markdown.Frontmatter<FM>, MarkdownParseError>;
+	static frontmatter(source, options?): Result<Markdown.Frontmatter<FM>, MarkdownParseError>;
 	static stringify(document, options?): Result<string, MarkdownStringifyError>;
-	static walk<V>(node, visitor: V): Markdown.Walked<V>; // Result, or Promise<Result>
+	static walk<N, V>(node: N, visitor: V): Markdown.Walked<V, N>; // Result, or Promise<Result>
 }
 
 // @sdxc/markdown/plain — plain text
@@ -131,8 +131,9 @@ let doc: Markdown.Document = result.data.document; // type
 `export const Markdown = { parse, stringify }` merges with a type-only namespace too, so
 that is not the deciding argument. The class wins on two points: the private constructor
 states in the type system that there is nothing to construct, and `@sdxc/sitemap` already
-reads its format through `Sitemap.parse` and `Sitemap.fetch`, so a reader who knows one
-package knows this one.
+reads its format through the static `Sitemap.parse` and `Sitemap.fetch`, so the shape of
+the entry is one a reader here already knows — even though that class also has instances
+and this one never does.
 
 The cost is that a bundle calling only `Markdown.parse` still carries `Markdown.stringify`
 and the serializer behind it, because the class references every static. ADR-047 declined
@@ -200,11 +201,24 @@ if (isFailure(result)) throw result.error;
 let { frontmatter, document } = result.data;
 ```
 
-`frontmatter` is typed from the schema. Without a schema it is `unknown`, as
-`@sdxc/yaml` read it.
+`Markdown.frontmatter` takes the same `Options`, reads only the schema from it, and stops
+after the block without building the AST. An index page over a hundred posts reads a
+hundred titles without parsing a hundred bodies. One options object serves both calls, so
+an app hoists it once.
 
-`Markdown.frontmatter` stops after the block and never builds the AST. An index page over
-a hundred posts reads a hundred titles without parsing a hundred bodies.
+What the frontmatter half yields depends on two things, whether the file opens with a
+block and whether the options carry a schema:
+
+| Block   | Schema | `frontmatter` is                                                       |
+| ------- | ------ | ---------------------------------------------------------------------- |
+| present | yes    | the schema's output, or a failure carrying its issues and the position |
+| present | no     | the YAML value as read, typed `unknown`                                |
+| absent  | yes    | the schema run against `{}`, so a required field fails at line 1       |
+| absent  | no     | `{}`                                                                   |
+
+A block the YAML parser rejects is a failure, not an empty object: the error carries the
+YAML error as its `cause` and a position offset into the file, so a stray tab in the
+frontmatter names its line. That is the quiet failure the current path has, made loud.
 
 ### The AST is plain data
 
@@ -214,27 +228,59 @@ parsed document be cached in KV, sent in a payload, or diffed in a test.
 
 ```ts
 export namespace Markdown {
+	/** 1-based line and column, 0-based offset, all into the source as written, frontmatter included. */
+	export interface Point {
+		line: number;
+		column: number;
+		offset: number;
+	}
+
+	export interface Position {
+		start: Point;
+		end: Point;
+	}
+
+	/**
+	 * Literal values only. `#id` writes `id`, `.a .b` writes `class: "a b"`, a bare key
+	 * writes `true`, and `{42}` and `{true}` write the number and the boolean.
+	 */
+	export type Attributes = Record<string, string | number | boolean>;
+
 	export interface Document {
 		type: "document";
 		children: Block[];
+		position: Position;
 	}
 
+	/** Every block carries `attributes`, because an annotation may sit above any block. */
 	export interface Heading {
 		type: "heading";
 		level: 1 | 2 | 3 | 4 | 5 | 6;
-		/** From a `{% %}` annotation; `{}` when the heading carries none. */
 		attributes: Attributes;
 		children: Inline[];
 		position: Position;
 	}
 
-	export interface Fence {
-		type: "fence";
+	/** Fenced or indented. Indented code has no `language` and empty `attributes`. */
+	export interface Code {
+		type: "code";
 		language?: string;
 		content: string;
 		attributes: Attributes;
-		/** Attached by a highlighting visitor. Derived, so `Markdown.stringify` re-emits `content`. */
-		tokens?: Token[];
+		position: Position;
+	}
+
+	export interface InlineCode {
+		type: "inlineCode";
+		value: string;
+		position: Position;
+	}
+
+	export interface Table {
+		type: "table";
+		align: Array<"left" | "center" | "right" | null>;
+		attributes: Attributes;
+		children: TableRow[];
 		position: Position;
 	}
 
@@ -243,27 +289,64 @@ export namespace Markdown {
 		name: string;
 		attributes: Attributes;
 		/** Parsed as markdown, so a tag's children are nodes, not a string. */
-		children: Array<Block | Inline>;
+		children: Block[] | Inline[];
 		position: Position;
 	}
 
 	export interface Alert {
 		type: "alert";
 		kind: "note" | "tip" | "important" | "warning" | "caution";
+		attributes: Attributes;
 		children: Block[];
 		position: Position;
+	}
+
+	export type Node = Document | Block | Inline;
+	export type Parent = Extract<Node, { children: unknown[] }>;
+}
+```
+
+The full union. `document` is the root and belongs to neither column, so a `Block[]` can
+never hold a nested document:
+
+| Blocks                                                                                                                                               | Inline                                                                                                                                           |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `heading` `paragraph` `code` `list` `listItem` `blockquote` `alert` `table` `tableRow` `tableCell` `thematicBreak` `html` `footnoteDefinition` `tag` | `text` `emphasis` `strong` `strikethrough` `inlineCode` `link` `image` `softBreak` `hardBreak` `inlineHtml` `footnoteReference` `variable` `tag` |
+
+Every `type` names exactly one interface. Code spans are `inlineCode` and inline HTML is
+`inlineHtml`, so `Extract<Node, { type: K }>` always narrows to one shape — which is what
+makes a visitor handler's argument typed without a second `switch`. The one name in both
+columns is `tag`, and it is one interface: a tag is block-level or inline depending on
+where it is written, and its `children` say which.
+
+Two node types for one construct is a cost, so there is one block `code` node for fenced
+and indented code alike, and there is no `autolink`: `<https://example.com>` and a bare
+URL both parse to a `link` whose text equals its `href`, which is also how the serializer
+knows to write one back in angle brackets.
+
+Two CommonMark constructs exist in the source and not in the tree. A link reference
+definition is consumed at parse time and every reference to it becomes a `link`, so a
+document serializes back with inline links. Footnotes keep both halves — a
+`footnoteDefinition` block and a `footnoteReference` inline — because a renderer draws
+them in two places, and `toRemix` collects the definitions into a trailing list on a
+second pass.
+
+The AST is closed to the parser and open to visitors. A package that attaches data to a
+node declares the field itself, through the namespace the class already merges with:
+
+```ts
+declare module "@sdxc/markdown" {
+	namespace Markdown {
+		interface Code {
+			tokens?: Token[];
+		}
 	}
 }
 ```
 
-The full union:
-
-| Blocks                                                                                                                                                                  | Inline                                                                                                                                                 |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `document` `heading` `paragraph` `fence` `code` `list` `listItem` `blockquote` `alert` `table` `tableRow` `tableCell` `thematicBreak` `html` `footnoteDefinition` `tag` | `text` `emphasis` `strong` `strikethrough` `code` `link` `image` `autolink` `softBreak` `hardBreak` `html` `footnoteReference` `variable` `math` `tag` |
-
-`tag` appears in both, because a tag is block-level or inline depending on where it is
-written.
+`@sdxc/markdown` never sees that type, and `Markdown.stringify` never writes it: the
+serializer emits only the fields the parser produces, so anything a visitor attaches is
+derived data that survives a round trip through the document and not through the text.
 
 ### `Markdown.walk` is the only transform mechanism
 
@@ -272,19 +355,38 @@ document — highlighting, variable resolution, link rewriting, section strippin
 is a `Markdown.walk`, and it never mutates:
 
 ```ts
-Markdown.walk(node, visitor: Markdown.Visitor): Result<Markdown.Document, MarkdownWalkError>;
+Markdown.walk<N extends Markdown.Node, V extends Markdown.Visitor>(node: N, visitor: V): Markdown.Walked<V, N>;
 ```
 
 #### The visitor is an object, not a function
 
 It is a plain object with one **optional** handler per node type, keyed by the type's
-name:
+name. What a handler may return is typed by the category of the node it handles, so a
+`paragraph` handler cannot splice inline nodes into a block slot:
 
 ```ts
 export namespace Markdown {
+	/** The category a node of type `K` belongs to; `tag` belongs to both. */
+	type Category<K extends Node["type"]> =
+		| (K extends Block["type"] ? Block : never)
+		| (K extends Inline["type"] ? Inline : never)
+		| (K extends "document" ? Document : never);
+
+	export type Visited<K extends Node["type"]> = Category<K> | Category<K>[] | null | undefined;
+
 	export type Visitor = {
-		[K in Node["type"]]?: (node: Extract<Node, { type: K }>, parent: Node | null) => Visited;
+		[K in Node["type"]]?: (
+			node: Extract<Node, { type: K }>,
+			parent: Parent | null,
+		) => Visited<K> | Promise<Visited<K>>;
 	};
+
+	/** A `Result` when no handler can return a promise; a `Promise` of one otherwise. */
+	export type Walked<V extends Visitor, N extends Node = Document> = [
+		Extract<ReturnType<NonNullable<V[keyof V]>>, Promise<unknown>>,
+	] extends [never]
+		? Result<N, MarkdownWalkError>
+		: Promise<Result<N, MarkdownWalkError>>;
 }
 ```
 
@@ -300,9 +402,16 @@ types it cares about. What a handler returns decides what happens to that node:
 | a promise of any of the above | makes the whole walk asynchronous             |
 
 The walk is top-down: a handler sees a node before its children, and the children of
-whatever it returned are walked next. A handler is never re-applied to its own output, so
-a `fence` handler returning a `fence` terminates rather than looping, and a removed node's
+whatever it returned are walked next. **No handler runs on a replacement node itself** —
+neither the one that produced it nor another in the same visitor — only on its children.
+So a `code` handler returning a `code` terminates rather than looping, a `variable`
+handler's `text` is not handed to a `text` handler in the same walk, and a removed node's
 children are not visited at all.
+
+The root is exempt from removal and splicing. A handler on the node the walk started from
+may return a replacement of the same category or nothing; `null` or an array there is a
+`MarkdownWalkError`, because a walk over a document has to hand back a document. The
+return type is generic on the input, so walking a `heading` gives back a `heading`.
 
 Subtrees no handler touched are reused by reference, so a walk that changes one heading
 copies one spine and nothing else.
@@ -312,22 +421,28 @@ argument typed: inside `link(node)`, `node.href` exists and the compiler knows i
 narrowing to write.
 
 Being an object also makes a visitor a **value** — it can be named, exported from another
-package, and merged. That is the whole mechanism behind the highlighter's `fences`:
+package, and merged. That is the whole mechanism behind the highlighter's `highlight`:
 
 ```ts
 // @sdxc/highlight/markdown
-export const fences: Markdown.Visitor = {
-	fence(node) {
+export const highlight = {
+	code(node) {
 		let language = normalizeLanguage(node.language ?? "plain");
 		return { ...node, language, tokens: tokenize(node.content, language) };
 	},
-};
+} satisfies Markdown.Visitor;
 ```
 
 ```ts
 // `anchors` is another visitor — the consumer's own, or another package's.
-Markdown.walk(document, { ...fences, ...anchors });
+Markdown.walk(document, { ...highlight, ...anchors });
 ```
+
+An exported visitor is declared with `satisfies`, never with a type annotation. `const
+highlight: Markdown.Visitor = …` would widen every handler's return type to the full
+`Visited<K> | Promise<Visited<K>>`, and `Walked` would then read the walk as asynchronous.
+`satisfies` checks the shape and keeps the literal's own return types, which is what the
+sync-or-async decision below reads.
 
 #### A visitor that throws is a failure, not an exception
 
@@ -340,13 +455,19 @@ whether the parser rejected it or a visitor did.
 being visited, which is the part a bare `throw` loses: the failure names the line the
 visitor was standing on.
 
+The trade is that a bug in a handler — a `TypeError` on a field that was never there —
+arrives on the same branch as a document the handler rejected on purpose. A caller that
+discards failures wholesale, `if (isFailure(result)) return null`, discards its own bugs
+with them. The cause is always the original value, so a caller that throws on an
+unfamiliar `cause` and handles a familiar one keeps both.
+
 #### A visitor may be asynchronous
 
 A handler can return a promise, and then the walk returns one. The promise wraps the
 `Result`, so awaiting gives back the same shape a synchronous walk returns directly:
 
 ```ts
-let painted = Markdown.walk(doc, fences); // Result<Document, …>
+let painted = Markdown.walk(doc, highlight); // Result<Document, …>
 let enriched = await Markdown.walk(doc, {
 	async link(node) {
 		return { ...node, title: await fetchTitle(node.href) };
@@ -361,11 +482,18 @@ failure through the same `Result` rather than past it.
 `unwrap(Markdown.walk(doc, visitor))` reads the same either way and the async case needs
 one `await` at the front.
 
-The decision is made by the **visitor**, not by a node: if any handler's declared return
-type includes a promise, the whole walk is asynchronous and the return type says so; if
-none does, the walk is synchronous and nothing has to be awaited. That is what keeps a
-highlighting pass usable inside a render path while a pass that fetches link titles, reads
-image dimensions, or resolves a transclusion from KV is possible at all.
+The decision is made twice, by the same information. At the type level `Walked<V>` reads
+the visitor's handler return types: if any includes a promise the walk is typed
+asynchronous, otherwise synchronous, so a highlighting pass inside a render path is never
+awaited. At run time the walk starts synchronously and switches to a promise chain the
+moment a handler returns a thenable, finishing the traversal inside it. The two agree as
+long as the visitor's types are honest; a handler typed synchronous that returns a promise
+through an `any` hands the caller a promise typed as a `Result`, which is the ordinary
+hazard of `any` and not one the walk can close.
+
+That is what keeps a highlighting pass usable inside a render path while a pass that
+fetches link titles, reads image dimensions, or resolves a transclusion from KV is
+possible at all.
 
 One mechanism either way. Without it the choice is a second `walkAsync` beside the first,
 or making every caller await a pass that never waits for anything.
@@ -374,10 +502,18 @@ or making every caller await a pass that never waits for anything.
 
 Two syntaxes, because they do two different things.
 
-An **annotation** attaches attributes to a node that already exists. It is
+An **annotation** attaches attributes to a block that already exists. It is
 `{% key="value" %}`, it supports `#id` and `.class` shorthands, and it goes on the same
-line for blocks with a single-line opener and on its own line above for the rest. A blank
-line between the annotation and its block is allowed, because `vp fmt` inserts one:
+line for blocks with a single-line opener — a heading, a fence — and on its own line above
+for the rest. A blank line between the annotation and its block is allowed, because
+`vp fmt` inserts one. Every block carries `attributes`, so any block can be annotated; an
+annotation with no block after it is a parse error at its own line, and two annotations
+above one block merge, the lower one winning a repeated key.
+
+The same delimiters carry one more thing: `{% $name %}` is a **variable**, described
+below. The `$` is what tells the two apart at the first character inside the braces — an
+annotation's contents are attributes, and a bare `wide` there is the boolean attribute
+`wide`, so a variable needs a mark no attribute can start with.
 
 ````md
 ## Installing the agent {% #install .lead %}
@@ -393,6 +529,11 @@ export default createAction(routes.posts.show, (ctx) => ctx.render(<PostView />)
 | Free | 5        |
 ````
 
+Attribute values are literals — `key="string"`, `key={42}`, `key={true}`, and a bare
+`key` for `true` — in annotations and tags alike. A variable is never an attribute value,
+because a tag's attribute schema runs at parse time and a value that is not yet known
+cannot be validated then; keeping variables in text keeps validation where the position is.
+
 A **tag** creates a node that has no markdown syntax. It is written as an element,
 because that is the syntax the content already reaches for and the one an author reading
 the raw file understands:
@@ -407,13 +548,11 @@ Press <kbd>Cmd</kbd> then <kbd>K</kbd> to search.
 <video src="/demo.mp4" autoplay />
 ```
 
-Attributes read like JSX: `key="string"`, `key={42}`, `key={true}`, `key={$variable}`,
-and a bare `key` for `true`.
-
-Only **registered** names become tags. An unregistered `<div>` stays raw HTML, exactly as
-GitHub treats it, so the departure from CommonMark is scoped to names the app opted into.
-Registering a tag declares its attribute schema, which is what makes a bad attribute a
-parse error with a line number instead of a rendering surprise:
+Only **registered** names become tags. An unregistered `<div>` stays raw HTML under
+CommonMark's own HTML block and inline HTML rules, exactly as GitHub treats it, so the
+departure from CommonMark is scoped to names the app opted into. Registering a tag declares
+its attribute schema, which is what makes a bad attribute a parse error with a line number
+instead of a rendering surprise:
 
 ```ts
 const options = {
@@ -441,11 +580,65 @@ false }` and `{ inline: true, void: true }` to be read as a pair before either m
 anything. One field names the parser's behaviour directly, and each value is the answer to
 the only question the parser has to ask before it reads what follows the opening tag.
 
-Placement is not declared, because it does not have to be. A tag written inside a line is
-an inline node and one written on its own line is a block node — position answers that
-without ambiguity. What position _cannot_ answer is how to parse the children, since the
-parser has to know before it has finished reading them, which is why `content` is declared
-and placement is inferred.
+Placement is not declared, because the source decides it, by the rules below.
+
+#### How a tag is read
+
+This is the one place the dialect leaves CommonMark, so it gets the same treatment the
+spec gives an HTML block: rules with examples, each of which is a test.
+
+1. **A registered opening tag alone on its line opens a block tag.** Whitespace around it
+   is allowed; anything else on the line, and the tag is inline. This is CommonMark's own
+   rule for an HTML block of type 7, applied to a registered name.
+
+   ```md
+   <callout type="info">
+   A block tag: its children are blocks.
+   </callout>
+
+   A paragraph with <callout type="info">an inline callout</callout> in it.
+   ```
+
+   The first `callout` is a block whose children are one paragraph. The second is an
+   inline tag whose children are inline nodes, and its `content` is `"blocks"`, so it is
+   a parse error naming the line: a tag whose children are blocks has nowhere to put them
+   inside a line. An `"inline"` tag written alone on a line is a block-level tag whose
+   children parse as inline — `<kbd>Cmd</kbd>` on its own line is not wrapped in a
+   paragraph.
+
+2. **A block tag is a container block, like a block quote.** Its children run to a
+   closing tag alone on its line at the same container level. Inside a list item or a
+   block quote every child line carries the container's prefix, and so does the closing
+   line:
+
+   ```md
+   > <callout type="note">
+   > Quoted, and inside the quote.
+   > </callout>
+   ```
+
+   The closer's position is found after block structure is known, which settles the
+   hard cases without a special rule for each. A fenced code block inside the tag is
+   opaque, so a `</callout>` written in it is code, not a closer. Tags nest by name, so
+   an inner `<callout>` claims the first `</callout>` and the outer keeps the second.
+
+3. **An inline tag closes in the same paragraph.** `<kbd>Cmd</kbd>` opens and closes
+   within a line or across soft breaks of one paragraph; a paragraph ending with an
+   inline tag still open is a parse error at the opener.
+
+4. **The written form has to agree with `content`.** A `"none"` tag is written
+   self-closing, `<video … />`; the same name written with a closing tag is a parse error
+   at the opener. A `"blocks"` or `"inline"` tag written self-closing yields the tag with
+   no children, which is legal and occasionally useful.
+
+5. **An unclosed block tag is a parse error at its opener.** Reaching the end of the
+   file, or the end of the enclosing container, with a tag still open never silently
+   swallows the rest of the document as its children.
+
+6. **Attributes read like JSX, and are validated before the children are parsed.**
+   `key="string"`, `key={42}`, `key={true}`, and a bare `key` for `true`. The declared
+   schema runs on the opening tag, so a bad attribute is reported at the opener even when
+   the children are long.
 
 Inside a tag's children, markdown parses normally — which is the whole point, and the one
 place this dialect deliberately leaves CommonMark, where an HTML block swallows its
@@ -453,9 +646,18 @@ content as text.
 
 ### Variables are a visitor, not a feature
 
-`$name` in text and `{$name}` in an attribute parse to a `variable` node carrying that
-name. Parsing stops there: nothing is substituted, so one parsed document serves every
-render, and resolution is a `Markdown.walk` the caller writes.
+`{% $name %}` in text parses to a `variable` node carrying that name. The name is a
+letter or underscore followed by letters, digits, or underscores; whitespace inside the
+braces is free. It is always inline — alone on its own line it is a paragraph holding one
+variable, never an annotation — and inside a code span or a fence nothing is a variable.
+A bare `$` anywhere is prose, so `$5/month` and `US$100` need no thought and no escape.
+Parsing stops there: nothing is substituted, so one parsed document serves every render,
+and resolution is a `Markdown.walk` the caller writes.
+
+The delimiters are the ones Markdoc authors already write for a variable, which is the
+syntax this content was nominally written in until now, and they make a variable
+impossible to read as anything else: `{%` never begins prose, so a reader of the raw file
+sees a hole where a value will go.
 
 There is no variables option anywhere in the package. The values are the caller's own
 object, and the visitor is how they meet the document:
@@ -479,7 +681,7 @@ walk turns it into the failure branch with the node's position attached:
 ```ts
 let result = Markdown.walk(parsed.document, {
 	variable(node) {
-		if (!(node.name in variables)) throw new Error(`Unresolved $${node.name}`);
+		if (!(node.name in variables)) throw new Error(`Unresolved variable ${node.name}`);
 		return { type: "text", value: String(variables[node.name]), position: node.position };
 	},
 });
@@ -499,16 +701,18 @@ document can be rendered per tenant, per locale, or per plan from one parse.
 
 ```ts
 import { Markdown } from "@sdxc/markdown";
-import { fences } from "@sdxc/highlight/markdown";
+import { highlight } from "@sdxc/highlight/markdown";
 
-let result = Markdown.walk(parsed.document, fences);
+let result = Markdown.walk(parsed.document, highlight);
 ```
 
-`fences` is the visitor shown above — an object with one `fence` handler, returning the
-node with `tokens` attached. It ships from `@sdxc/highlight`, not from this package, which
-is the whole point —
-`@sdxc/markdown` has no highlighting entry point, no dependency on the highlighter, and
-nothing in it knows that fences can be painted.
+`highlight` is the visitor shown above — an object with one `code` handler, returning the
+node with `tokens` attached. It ships from `@sdxc/highlight`, not from this package, and so
+does the `tokens` field: the highlighter declares it on `Markdown.Code` through the module
+augmentation shown earlier, so `@sdxc/markdown` has no highlighting entry point, no
+dependency on the highlighter, and no field in its own source that knows fences can be
+painted. An indented code block reaches the handler with no `language`, and is painted as
+plain.
 
 The arrow was always this way round. `@sdxc/highlight` exports a Markdoc node schema from
 `@sdxc/highlight/markdoc` today, because Markdoc is the parser it adapts to; it will export
@@ -522,22 +726,22 @@ runs one pass instead of three:
 
 ```ts
 let result = Markdown.walk(parsed.document, {
-	...fences,
+	...highlight,
 	link(node) {
 		return { ...node, href: canonical(node.href) };
 	},
 });
 ```
 
-`Markdown.stringify` ignores `tokens` because the fence still carries its `content`, so a
-highlighted document serializes back to the markdown it came from.
+`Markdown.stringify` ignores `tokens` because it emits only what the parser produces, and
+the code block still carries its `content`, so a highlighted document serializes back to
+the markdown it came from.
 
 ### GitHub Flavored Markdown is the baseline
 
 If GitHub renders it in a `.md` file, this parses it: everything in CommonMark, plus the
-GFM spec's tables, task lists, strikethrough, literal autolinks, and disallowed raw HTML,
-plus GitHub's documented extensions — alerts, footnotes, math, emoji shortcodes, and
-heading anchors.
+GFM spec's tables, task lists, strikethrough, and literal autolinks, plus two of GitHub's
+documented extensions — alerts and footnotes.
 
 Alerts are a node, not a styled block quote, so a renderer can draw one without pattern
 matching on its first line:
@@ -546,6 +750,40 @@ matching on its first line:
 > [!WARNING]
 > Deleting a monitor also deletes its history.
 ```
+
+Three GitHub behaviours are deliberately not the parser's:
+
+- **Math.** The census has zero `$…$` spans, and GitHub's delimiter rules — no space
+  after the opener, none before the closer, no digit after it — are a second inline
+  grammar over the most common currency character in prose. A visitor over `text` nodes
+  can add it for content that wants it.
+- **Emoji shortcodes.** GitHub replaces only names it knows, so parsing `:tada:` means
+  shipping the table of roughly eighteen hundred names, which is the weight this ADR
+  exists to remove. A visitor over `text` nodes from another package can add them.
+- **Heading anchors.** GitHub derives an `id` from the heading text at render time. That is
+  a renderer's or a visitor's decision — the table of contents in the usage below slugifies
+  in the caller — so the parser attaches only the `id` an annotation writes.
+
+Raw HTML is parsed as CommonMark says — an `html` block or an `inlineHtml` node holding
+the source text — and `toRemix` renders both **as text**, escaped, so a stray `<div>` shows
+as written rather than becoming an element. That makes GFM's tagfilter, which is a
+render-time rule about `<script>` and friends, unnecessary here: nothing raw ever becomes
+markup. `Markdown.stringify` writes both back verbatim.
+
+### The parser follows the reference strategy
+
+First-party does not mean novel. The parser takes the two-phase strategy the CommonMark
+specification describes in its appendix: block structure first, line by line, opening and
+closing container blocks and collecting the lines of each leaf; then inline parsing over
+each leaf's text with the delimiter stack for emphasis, links, and code spans. Every
+hand-written markdown parser is wrong first at emphasis delimiter runs, link destinations,
+backtick spans, and list continuation, and every one of those has a published algorithm
+in that appendix and a few hundred examples in the spec that check it.
+
+A block tag is a container block in the first phase, which is what gives rules 2 and 5
+above for free: fences inside it are opaque because fences are leaves the first phase
+already closed, and nesting by name is the container stack doing what it does for block
+quotes.
 
 ### The round trip is the contract
 
@@ -561,18 +799,61 @@ Markdown.stringify(Markdown.parse(Markdown.stringify(Markdown.parse(src)))) ===
 	Markdown.stringify(Markdown.parse(src));
 ```
 
-Given `{ frontmatter }`, `Markdown.stringify` writes the block through `YAML.stringify` and
-prepends it, so a document read, transformed, and written back comes out whole.
+The property has to hold for a **transformed** document too, not only a parsed one, and
+that is where the serializer earns its keep: a `text` node is whatever a visitor put in
+it. So the serializer escapes, in text, every character that would otherwise begin a
+construct — CommonMark's set, `*` `_` `` ` `` `[` `]` `\` and the line-leading `#`, `>`,
+`+`, `-`, `=`, and `digit.`, plus `|` inside a table cell — and the two this dialect
+adds: `{%` and `<`. Escaping `<` unconditionally is what lets the serializer know nothing
+about which tag names are registered, and escaping `{%` covers annotations and variables
+at once. A variable resolved to the text `{% $9 %}` writes as `\{% $9 %}`, and a text
+node holding `<callout>` writes as `\<callout>`, so the next parse reads the same tree.
+
+Two normalizers never agree by accident, and the repository already has one: `vp fmt`
+formats every content file. So the serializer's output is a fixed point of the formatter,
+and that is a test, not a claim — formatting `Markdown.stringify(Markdown.parse(file))`
+for each of the thirty-six files changes nothing. A file written back through this package
+and then formatted by the repository stays written.
+
+Given `{ frontmatter }`, `Markdown.stringify` writes the block through `@sdxc/yaml`'s
+`stringify` and prepends it, so a document read, transformed, and written back comes out
+whole. That branch is the only one that can fail — a frontmatter value YAML cannot write —
+and it is why the method returns a `Result`; a document alone always serializes.
+
+### The suite lands first
+
+The present safety net is twenty-eight tests, twenty-one of them for `toPlainText`. The
+engine cannot be swapped under that, so the parser lands behind these, in this order, and
+no consumer moves until the fourth is green:
+
+1. **Conformance.** The CommonMark spec's `spec.json` and the GFM spec's examples, vendored
+   under `docs/vendor`, run as one table-driven test. The examples compare HTML, so the
+   test suite carries a small HTML printer over the AST that exists for this purpose and
+   is never exported. The pass count is asserted, so it can only go up.
+2. **Pathological inputs.** The CommonMark repository's list of inputs that make careless
+   parsers quadratic — nested brackets, unclosed emphasis runs, backtick strings — with a
+   time bound on each.
+3. **The dialect.** Every numbered rule above and every example in this document is a
+   test, including the failure positions.
+4. **The corpus.** The current pipeline's rendered output for the thirty-six content files
+   is snapshotted before any consumer changes. The new pipeline renders the same files
+   through `toRemix` and the snapshots are diffed; a difference is either a bug or an
+   intended gain, and either is written down. The same files run the idempotency property
+   and the formatter fixed point.
+5. **Weight.** The built root entry has a size budget of 45 KB minified, asserted in CI
+   the way the numbers in the Context were measured. A parser, a serializer, and a walker
+   of this scope land between 30 and 60 KB, and the claim below is net of that.
 
 ### Out of scope
 
 - **Repository-context autolinking.** `@mention`, `#123`, and bare commit SHAs need a
   repository to resolve against. An app that wants them adds a `Markdown.walk` over `text` nodes;
   the parser does not guess.
-- **Rendering a fence's language.** A `mermaid` or `geojson` fence parses as a fence with
-  that language. Drawing it is the renderer's job, through `components`.
+- **Rendering a fence's language.** A `mermaid` or `geojson` fence parses as a code block
+  with that language. Drawing it is the renderer's job, through `components`.
 - **Markdoc's template language.** Functions, conditionals, partials, and slots. No
   consumer has ever used one, and `Markdown.walk` covers the cases that motivated them.
+- **Math, emoji shortcodes, and derived heading anchors.** See the baseline above.
 - **A concrete syntax tree.** See the round trip above.
 
 ## Usage
@@ -583,7 +864,7 @@ The whole path, replacing what the docs controller does today:
 
 ```tsx
 import { Markdown } from "@sdxc/markdown";
-import { fences } from "@sdxc/highlight/markdown";
+import { highlight } from "@sdxc/highlight/markdown";
 import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import * as coerce from "remix/data-schema/coerce";
@@ -602,7 +883,7 @@ export default createAction(routes.docs.show, async (ctx) => {
 
 	let { frontmatter, document } = result.data;
 
-	let highlighted = Markdown.walk(document, fences);
+	let highlighted = Markdown.walk(document, highlight);
 	if (isFailure(highlighted)) throw highlighted.error;
 
 	return ctx.render(<DocView title={frontmatter.title} document={highlighted.data} />);
@@ -631,10 +912,12 @@ export default function DocView({ props }: Handle<DocView.Props>) {
 ```ts
 import { Markdown } from "@sdxc/markdown";
 
+const options = { frontmatter: Frontmatter } satisfies Markdown.Options;
+
 let entries = await Promise.all(
 	slugs.map(async (slug) => {
-		let result = Markdown.frontmatter(await readDoc(slug), Frontmatter);
-		if (isFailure(result)) return null;
+		let result = Markdown.frontmatter(await readDoc(slug), options);
+		if (isFailure(result)) throw result.error; // a bad file is a build error, not a missing post
 		return { slug, ...result.data.frontmatter };
 	}),
 );
@@ -695,8 +978,8 @@ throughout, so the HTML response can render the original in the same request.
 Returning `null` removes a node, and returning an array replaces one node with many:
 
 ```ts
-// Strip every fence from the copy an excerpt is built from.
-let prose = unwrap(Markdown.walk(document, { fence: () => null }));
+// Strip every code block from the copy an excerpt is built from.
+let prose = unwrap(Markdown.walk(document, { code: () => null }));
 
 // Turn each thematic break into a labelled divider a status page draws.
 let sectioned = unwrap(
@@ -772,7 +1055,7 @@ Supply the components where the document is rendered:
 ```tsx
 function Callout({ props }: Handle<{ type: string; children: RemixNode }>) {
 	return () => (
-		<aside mix={[css({ borderLeft: "3px solid", padding: "0.75rem 1rem" })]} data-type={props.type}>
+		<aside mix={css({ borderLeft: "3px solid", padding: "0.75rem 1rem" })} data-type={props.type}>
 			{props.children}
 		</aside>
 	);
@@ -783,7 +1066,8 @@ toRemix(document, { components: { callout: Callout, kbd: Kbd, video: Video } });
 
 `**history**` inside the callout arrives as a `strong` node, so it renders as
 `<strong>history</strong>` nested inside whatever `Callout` draws. A tag's children are
-markdown all the way down, including other tags.
+markdown all the way down, including other tags. A tag with no component renders its
+children and nothing else, so a missing component drops the chrome and keeps the content.
 
 ### Variables, resolved per render
 
@@ -791,12 +1075,13 @@ One parse, many renders. The status page documentation is written once and resol
 tenant:
 
 ```md
-# Status page for $team
+# Status page for {% $team %}
 
-Your page is live at $domain. Visitors on the **$plan** plan see $retention of history.
+Your page is live at {% $domain %}. Visitors on the **{% $plan %}** plan see
+{% $retention %} of history.
 
 <callout type="info">
-Upgrade to raise the limit above $limit monitors.
+Upgrade to raise the limit above {% $limit %} monitors.
 </callout>
 ```
 
@@ -814,7 +1099,7 @@ const variables: Record<string, string | number> = {
 let document = Markdown.walk(cachedDocument, {
 	variable(node) {
 		let value = variables[node.name];
-		if (value === undefined) throw new Error(`Unresolved $${node.name}`);
+		if (value === undefined) throw new Error(`Unresolved variable ${node.name}`);
 		return { type: "text", value: String(value), position: node.position };
 	},
 });
@@ -824,7 +1109,7 @@ return ctx.render(<DocView document={document.data} />);
 ```
 
 The parsed document goes in the cache once; the variables change every request. A
-document that still carries `variable` nodes serializes back with `$team` intact, so the
+document that still carries `variable` nodes serializes back with `{% $team %}` intact, so the
 markdown an agent fetches is the template, not one tenant's copy.
 
 ### GitHub alerts
@@ -855,7 +1140,7 @@ let summary = excerpt(text, { length: 200 });
 let minutes = Math.ceil(wordCount(text) / 200);
 
 // The search index wants the code too.
-let indexed = toPlainText(document, { fences: true });
+let indexed = toPlainText(document, { code: true });
 ```
 
 It takes the AST rather than a source string, so a caller that has already parsed does
@@ -868,14 +1153,17 @@ The AST is the contract, so an email renders the same parsed document the page d
 
 ```ts
 let { document } = unwrap(Markdown.parse(body, { frontmatter: Frontmatter }));
-let highlighted = unwrap(Markdown.walk(document, fences));
+let highlighted = unwrap(Markdown.walk(document, highlight));
 
 let page = toRemix(highlighted); // @sdxc/markdown/remix
-let email = toMail(highlighted); // @sdxc/mail's renderer, over the same union
+let email = <Markdown document={highlighted} />; // @sdxc/mail/markdown
 ```
 
-`@sdxc/mail` stops importing Markdoc and switches its tag-name checks for a `switch` on
-`node.type` the compiler can prove exhaustive.
+`@sdxc/mail`'s markdown component takes a source string today and parses it itself,
+because handing it a Markdoc tree would still make the caller depend on the parser that
+produced it. A plain-data AST with a public type dissolves that reason: the component
+takes a `Markdown.Document`, stops importing Markdoc and the parser both, and switches its
+tag-name checks for a `switch` on `node.type` the compiler can prove exhaustive.
 
 ### Lint content in CI
 
@@ -892,34 +1180,48 @@ Markdown.walk(document, {
 		if (node.href.startsWith("http://"))
 			problems.push(`${file}:${node.position.start.line} insecure link`);
 	},
-	fence(node) {
-		if (!node.language)
-			problems.push(`${file}:${node.position.start.line} fence without a language`);
+	code(node) {
+		if (node.language === undefined)
+			problems.push(`${file}:${node.position.start.line} code block without a language`);
 	},
 });
 ```
 
 ### What each consumer changes
 
-| Consumer             | Change                                                                                                                   |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `apps/uptime` docs   | `new Markdown(...).parse(source)` becomes `Markdown.parse(source, options)`; highlight with `Markdown.walk(doc, fences)` |
-| `apps/blog` posts    | Same, plus `<MarkdownView>` becomes `toRemix`, and `content: unknown` becomes `document: Markdown.Document`              |
-| `apps/blog` MCP page | One `Markdown.parse` instead of `parse` plus `Markdown.frontmatter`; `Markdown.stringify` for the markdown response      |
-| `apps/books` sample  | Same as uptime                                                                                                           |
-| `@sdxc/blog-engine`  | `parseMarkdown` returns a typed document instead of `unknown`                                                            |
-| `@sdxc/highlight`    | `src/markdoc.ts` becomes `src/markdown.ts`: the Markdoc node schema becomes a `fences` walk visitor                      |
-| `@sdxc/mail`         | Renders the first-party union; drops the Markdoc import                                                                  |
+| Consumer             | Change                                                                                                                             |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/uptime` docs   | `new Markdown(...).parse(source)` becomes `Markdown.parse(source, options)`; highlight with `Markdown.walk(doc, highlight)`        |
+| `apps/blog` posts    | Same, plus `<MarkdownView>` becomes `toRemix`, and `content: unknown` becomes `document: Markdown.Document`                        |
+| `apps/blog` MCP page | One `Markdown.parse` instead of `parse` plus `Markdown.frontmatter`; `Markdown.stringify` for the markdown response                |
+| `apps/books` sample  | Same as uptime                                                                                                                     |
+| `@sdxc/blog-engine`  | `parseMarkdown` returns a typed document instead of `unknown`                                                                      |
+| `@sdxc/highlight`    | `src/markdoc.ts` becomes `src/markdown.ts`: the Markdoc node schema becomes the `highlight` visitor plus the `tokens` augmentation |
+| `@sdxc/mail`         | The markdown component takes a `Markdown.Document` instead of a source string; drops Markdoc and the parser                        |
 
 The MCP page is the clearest gain: it parses the frontmatter twice today, once through
 `parse` and once through the old `Markdown.frontmatter`, because the parser returns a tree but
 not the body it came from.
 
+### Landing order
+
+All three packages are private, so every consumer can move in one change without breaking
+anyone outside the repository. The order still matters for bisecting:
+
+1. The parser, serializer, and walk, with the suite above green and the corpus snapshots
+   recorded from the current pipeline.
+2. `@sdxc/highlight/markdown`, the visitor and the augmentation, beside the Markdoc entry
+   it will replace.
+3. `@sdxc/markdown/remix` and `/plain` over the new tree, diffed against the snapshots.
+4. The four apps and `@sdxc/blog-engine`.
+5. `@sdxc/mail`, then the Markdoc entry of the highlighter, then the dependency itself.
+
 ## Consequences
 
 ### Positive
 
-- The server entry drops roughly 149 KB minified, 82% of its weight.
+- The server entry drops roughly 149 KB minified of Markdoc and gains a parser held to a
+  45 KB budget, so the net saving is above 100 KB and is asserted rather than estimated.
 - `content: unknown` becomes `document: Markdown.Document`, checked from the parse
   boundary through the payload to the view. The renderer's `$$mdtype` sniffing and
   attribute coercion go away.
@@ -932,40 +1234,48 @@ not the body it came from.
 - A visitor may be asynchronous, so a pass can fetch link titles, read image dimensions, or
   resolve a transclusion from KV. A synchronous visitor still returns a document directly,
   so nothing that does not wait has to be awaited.
-- Parse errors carry positions, so a bad annotation names a line instead of failing
-  quietly the way the current frontmatter path does.
-- `YAML.stringify` gets its first caller, closing ADR-047.
+- Parse errors carry positions, so a bad annotation, an unclosed tag, or an unreadable
+  frontmatter block names a line instead of failing quietly the way the current
+  frontmatter path does.
+- `@sdxc/mail` renders a document it did not have to parse, and stops depending on any
+  parser at all.
+- `@sdxc/yaml`'s `stringify` gets its first caller, closing ADR-047.
 
 ### Negative
 
 - A markdown parser is the largest parser in the repository. Emphasis delimiter runs,
   link destinations, backtick spans, and list continuation are where hand-written
-  markdown parsers are wrong, and they will be wrong here first.
-- The present safety net is twenty-eight tests, twenty-one of them for `toPlainText`.
-  The engine cannot be swapped under that, so the test suite has to land before the
-  parser does.
+  markdown parsers are wrong, and following the reference strategy and passing the spec
+  examples is the mitigation, not a guarantee.
+- The suite has to land before the parser does, and the conformance and corpus tests are
+  most of the work of the change.
 - `<tag>` children parsing as markdown departs from CommonMark. It is scoped to
   registered names, but a document is no longer portable to a renderer that does not know
   the tag.
 - Every consumer changes at once. The AST is the public shape and there is no adapter
   that makes the old tree and the new one interchangeable.
+- A bug thrown inside a visitor arrives as a `Result` failure, so a caller that discards
+  failures discards bugs; the `cause` is preserved for the caller that looks.
 
 ### Neutral
 
 - The fence annotation stays `{% path="…" title="…" %}`, so existing content and both
   package READMEs are unaffected.
 - `Markdown.stringify` normalizes rather than preserving the source, so a file written back
-  differs from the file read even when nothing changed. Content in the repository is
-  formatted by `vp fmt` already, which normalizes it the same way.
+  can differ from the file read. Its output is a fixed point of `vp fmt`, tested over the
+  corpus, so a written file stays put under the repository's own formatting.
 - `@sdxc/markdown` no longer depends on `@sdxc/highlight` at all. Highlighting becomes a
-  visitor the highlighter ships, which makes `Markdown.walk` a published extension point
-  rather than an internal mechanism.
+  visitor the highlighter ships, plus a field it declares on the code node through module
+  augmentation, which makes `Markdown.walk` and the merged namespace published extension
+  points rather than internal mechanisms.
 - `MarkdownView` goes away with no replacement component. Views call `toRemix` and own the
   markup around it, which is what every consumer already does.
 - The `Markdown` class stays, but stops being instantiated: its constructor becomes private
   and every operation becomes static. Per-app configuration moves from a constructor
   argument to an options object the app hoists to module scope, so it is data rather than
   an instance.
+- Raw HTML in content renders as visible text. The corpus has none, and an author who
+  wants an element registers a tag for it.
 
 ## Alternatives Considered
 
@@ -1025,8 +1335,8 @@ Rejected. Free functions read worse at the call site once there are five of them
 `export const Markdown = Object.assign({}, { parse, stringify })` does merge with a
 type-only `namespace Markdown`, so it is a real option, but `Object.assign` is an
 indirection around an object literal and neither form can say that there is nothing to
-construct. A class with a private constructor says exactly that, and matches how
-`@sdxc/sitemap` is already read.
+construct. A class with a private constructor says exactly that, and its static entries
+read the way `@sdxc/sitemap`'s already do.
 
 ### 9. A `Markdown.resolve` for variables
 
@@ -1060,7 +1370,7 @@ document.
 
 An object keyed by type narrows for free, runs a handler only where one exists, and is a
 value that can be named, exported by another package, and merged with `...`. The
-highlighter shipping `fences` is only possible in the object form.
+highlighter shipping `highlight` is only possible in the object form.
 
 ### 12. `inline` and `void` booleans on a tag definition
 
@@ -1072,7 +1382,7 @@ what the parser needs is the answer to one question — what, if anything, comes
 opening tag and the closing one.
 
 `content: "blocks" | "inline" | "none"` answers exactly that in one field, and placement
-drops out of the definition entirely because position already settles it.
+drops out of the definition entirely because the source settles it by the rules above.
 
 ### 13. A separate `Markdown.walkAsync`
 
@@ -1084,6 +1394,51 @@ highlighting walk inside a render path never has to be awaited.
 Making the single `walk` always asynchronous was rejected for the same reason from the
 other side: it would put an `await` in front of every pass that never waits for anything.
 
+### 14. A variable as an attribute value
+
+Rejected. A tag's attribute schema runs at parse time so that a bad attribute is an error
+with a position, and a variable is a value that does not exist yet at parse time. Either
+the schema skips variable-valued attributes, which makes it a partial check, or it runs
+again after resolution, which moves validation into every caller's visitor. Variables in
+text cover every case the content has asked for, and an attribute that has to vary per
+render is a tag the renderer can vary.
+
+### 15. Math and emoji shortcodes in the baseline
+
+Rejected. Inline math is a second delimiter grammar over `$`, the character prose uses
+most after punctuation, with rules about neighbouring whitespace and digits that readers
+of the raw file cannot see. Emoji shortcodes need a table of roughly eighteen hundred
+names to know which `:word:` to replace, which is the kind of weight this ADR removes.
+Both are visitors another package can ship over `text` nodes, and neither appears in the
+corpus.
+
+### 16. Separate `fence` and `code` block nodes, and an `autolink` beside `link`
+
+Rejected. A fenced and an indented code block are one construct with one rendering, so a
+highlighter that handled only fences would leave indented code unpainted for no reason an
+author could see. A bare URL and a bracketed link are one construct too; the serializer
+knows to write angle brackets when the text equals the destination. One node type per
+construct is what keeps `toRemix` and every visitor from having to know two names for one
+thing.
+
+### 17. A `tokens` field on the code node, in this package
+
+Rejected. It would make the format's own types name the highlighter's `Token`, and a
+package that claims no dependency on the highlighter cannot import one, even as a type.
+Module augmentation through the merged namespace lets the highlighter declare the field it
+attaches, and the rule that the serializer writes only parser-produced fields makes every
+such field derived by definition.
+
+### 18. A bare `$name` for variables
+
+Rejected. It needs an identifier rule to keep `$5/month` and `US$100` as prose, an escape
+for the literal case, and it collides with GitHub's math delimiters — in
+`live at $domain. Visitors on the **$plan**` GitHub's rules read the second `$` as
+closing a math span. `{% $name %}` needs none of that: `{%` never begins prose, the
+braces already carry annotations so the serializer already escapes them, and it is the
+form Markdoc authors write today. The cost is six more characters per hole, in content
+that has written none so far.
+
 ## References
 
 - ADR-042: First-Party Syntax Highlighting
@@ -1092,6 +1447,7 @@ other side: it would put an `await` in front of every pass that never waits for 
 - ADR-050: HTML Named Entities in XML Parsing
 - ADR-055: HTML Package
 - ADR-056: Sitemap Parsing
-- [CommonMark Specification](https://spec.commonmark.org/)
+- [CommonMark Specification](https://spec.commonmark.org/), including Appendix A, "A
+  parsing strategy", and the `spec.json` example set
 - [GitHub Flavored Markdown Specification](https://github.github.com/gfm/)
 - [GitHub: Basic writing and formatting syntax](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax)
