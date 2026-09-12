@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/api-client",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Base class for clients of a remote HTTP API: one origin, path-relative verb methods, shared hooks",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
