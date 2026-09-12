@@ -11,6 +11,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/api-client": "workspace:*",
 		"remix": "3.0.0-rc.2"
 	}
 }

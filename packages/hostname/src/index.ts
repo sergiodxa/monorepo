@@ -10,7 +10,11 @@
  */
 import type { Schema } from "remix/data-schema";
 
+import { APIClient } from "@sdxc/api-client";
 import * as s from "remix/data-schema";
+
+/** Origin every Cloudflare REST call is sent to. */
+let API_ORIGIN = "https://api.cloudflare.com";
 
 /** Schema for SSL validation DNS TXT records. */
 let SSLValidationRecordSchema = s.object({
@@ -166,6 +170,21 @@ export interface HostnameClientOptions {
 	metadataKey?: string;
 }
 
+/** Carries the zone token on every call to Cloudflare's API. */
+class CloudflareAPI extends APIClient {
+	private apiToken: string;
+
+	constructor(apiToken: string) {
+		super(new URL(API_ORIGIN));
+		this.apiToken = apiToken;
+	}
+
+	protected override async before(request: Request): Promise<Request> {
+		request.headers.set("Authorization", `Bearer ${this.apiToken}`);
+		return request;
+	}
+}
+
 /**
  * Client for managing Cloudflare for SaaS custom hostnames.
  *
@@ -185,8 +204,8 @@ export interface HostnameClientOptions {
  * ```
  */
 export class HostnameClient {
-	/** Cloudflare API token. */
-	private apiToken: string;
+	/** Authorized transport for Cloudflare's API. */
+	private api: CloudflareAPI;
 	/** Cloudflare zone ID. */
 	private zoneId: string;
 	/** Platform apex for default subdomains. */
@@ -198,48 +217,27 @@ export class HostnameClient {
 	 * @param options - Client configuration.
 	 */
 	constructor(options: HostnameClientOptions) {
-		this.apiToken = options.apiToken;
+		this.api = new CloudflareAPI(options.apiToken);
 		this.zoneId = options.zoneId;
 		this.platformDomain = options.platformDomain;
 		this.metadataKey = options.metadataKey ?? "tenant_id";
 	}
 
-	/** Base URL for this client's Cloudflare custom hostnames endpoint. */
-	private get baseUrl(): string {
-		return `https://api.cloudflare.com/client/v4/zones/${this.zoneId}/custom_hostnames`;
-	}
-
-	/** Authorization headers for Cloudflare API requests. */
-	private headers(): HeadersInit {
-		return {
-			Authorization: `Bearer ${this.apiToken}`,
-			"Content-Type": "application/json",
-		};
+	/** Path of this zone's custom-hostnames collection. */
+	private get collection(): string {
+		return `/client/v4/zones/${this.zoneId}/custom_hostnames`;
 	}
 
 	/**
-	 * Makes an authenticated request to the Cloudflare API with schema validation.
-	 * @param method - HTTP method.
-	 * @param path - API path (appended to the base URL unless it starts with `http`).
-	 * @param schema - Schema to validate the response against.
-	 * @param body - Optional request body serialized as JSON.
-	 * @returns The validated response payload.
-	 * @throws {HostnameApiError} When the API returns an error or the response fails validation.
+	 * Reads a response body, raising Cloudflare's error envelope as a thrown error.
+	 *
+	 * Cloudflare reports a failure inside the payload rather than through the status alone,
+	 * so the body is read even for the calls that have nothing else to return.
+	 * @param response - Response to read.
+	 * @returns The decoded payload.
+	 * @throws {HostnameApiError} When the payload reports a failure.
 	 */
-	private async request<Input, Output>(
-		method: string,
-		path: string,
-		schema: Schema<Input, Output>,
-		body?: unknown,
-	): Promise<Output> {
-		let url = path.startsWith("http") ? path : `${this.baseUrl}${path}`;
-
-		let response = await fetch(url, {
-			method,
-			headers: this.headers(),
-			body: body ? JSON.stringify(body) : undefined,
-		});
-
+	private async read(response: Response): Promise<unknown> {
 		let data: unknown = await response.json();
 
 		let errorResult = s.parseSafe(ErrorResponseSchema, data);
@@ -247,6 +245,22 @@ export class HostnameClient {
 			let message = errorResult.value.errors[0]?.message ?? "Unknown error";
 			throw new HostnameApiError(message, response.status, errorResult.value.errors);
 		}
+
+		return data;
+	}
+
+	/**
+	 * Reads a response body and validates it against the shape the caller expects.
+	 * @param response - Response to read.
+	 * @param schema - Schema the payload has to match.
+	 * @returns The validated payload.
+	 * @throws {HostnameApiError} When the API returns an error or the response fails validation.
+	 */
+	private async parse<Input, Output>(
+		response: Response,
+		schema: Schema<Input, Output>,
+	): Promise<Output> {
+		let data = await this.read(response);
 
 		let result = s.parseSafe(schema, data);
 		if (!result.success) {
@@ -257,26 +271,6 @@ export class HostnameClient {
 		}
 
 		return result.value;
-	}
-
-	/**
-	 * Makes an authenticated request that does not return a meaningful body.
-	 * @param method - HTTP method.
-	 * @param path - API path (appended to the base URL unless it starts with `http`).
-	 * @throws {HostnameApiError} When the API returns an error.
-	 */
-	private async requestVoid(method: string, path: string): Promise<void> {
-		let url = path.startsWith("http") ? path : `${this.baseUrl}${path}`;
-
-		let response = await fetch(url, { method, headers: this.headers() });
-
-		let data: unknown = await response.json();
-
-		let errorResult = s.parseSafe(ErrorResponseSchema, data);
-		if (errorResult.success) {
-			let message = errorResult.value.errors[0]?.message ?? "Unknown error";
-			throw new HostnameApiError(message, response.status, errorResult.value.errors);
-		}
 	}
 
 	/**
@@ -323,17 +317,21 @@ export class HostnameClient {
 	 * ```
 	 */
 	async create(hostname: string, entityId: string, region?: string): Promise<HostnameResult> {
-		let response = await this.request("POST", "", SingleResponseSchema, {
-			hostname,
-			ssl: {
-				method: "txt",
-				type: "dv",
-				settings: { min_tls_version: "1.2" },
-			},
-			custom_metadata: { [this.metadataKey]: entityId, region: region ?? "wnam" },
+		let response = await this.api.post(this.collection, {
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				hostname,
+				ssl: {
+					method: "txt",
+					type: "dv",
+					settings: { min_tls_version: "1.2" },
+				},
+				custom_metadata: { [this.metadataKey]: entityId, region: region ?? "wnam" },
+			}),
 		});
 
-		return this.toResult(response.result);
+		let payload = await this.parse(response, SingleResponseSchema);
+		return this.toResult(payload.result);
 	}
 
 	/**
@@ -343,8 +341,9 @@ export class HostnameClient {
 	 * @throws {HostnameApiError} When the API returns an error.
 	 */
 	async status(id: string): Promise<HostnameResult> {
-		let response = await this.request("GET", `/${id}`, SingleResponseSchema);
-		return this.toResult(response.result);
+		let response = await this.api.get(`${this.collection}/${id}`);
+		let payload = await this.parse(response, SingleResponseSchema);
+		return this.toResult(payload.result);
 	}
 
 	/**
@@ -354,12 +353,11 @@ export class HostnameClient {
 	 * @throws {HostnameApiError} When the API returns an error.
 	 */
 	async getByName(hostname: string): Promise<HostnameResult | null> {
-		let response = await this.request(
-			"GET",
-			`?hostname=${encodeURIComponent(hostname)}`,
-			ListResponseSchema,
+		let response = await this.api.get(
+			`${this.collection}?hostname=${encodeURIComponent(hostname)}`,
 		);
-		let first = response.result[0];
+		let payload = await this.parse(response, ListResponseSchema);
+		let first = payload.result[0];
 		return first ? this.toResult(first) : null;
 	}
 
@@ -378,13 +376,14 @@ export class HostnameClient {
 		let hasMore = true;
 
 		while (hasMore) {
-			let response = await this.request("GET", `?page=${page}&per_page=50`, ListResponseSchema);
+			let response = await this.api.get(`${this.collection}?page=${page}&per_page=50`);
+			let payload = await this.parse(response, ListResponseSchema);
 
-			all.push(...response.result);
+			all.push(...payload.result);
 
 			if (
-				response.result_info.page >= response.result_info.total_pages ||
-				response.result.length === 0
+				payload.result_info.page >= payload.result_info.total_pages ||
+				payload.result.length === 0
 			) {
 				hasMore = false;
 			} else {
@@ -403,7 +402,7 @@ export class HostnameClient {
 	 * @throws {HostnameApiError} When the API returns an error.
 	 */
 	async delete(id: string): Promise<void> {
-		await this.requestVoid("DELETE", `/${id}`);
+		await this.read(await this.api.delete(`${this.collection}/${id}`));
 	}
 
 	/**
@@ -413,10 +412,13 @@ export class HostnameClient {
 	 * @throws {HostnameApiError} When the API returns an error.
 	 */
 	async refresh(id: string): Promise<HostnameResult> {
-		let response = await this.request("PATCH", `/${id}`, SingleResponseSchema, {
-			ssl: { method: "txt", type: "dv" },
+		let response = await this.api.patch(`${this.collection}/${id}`, {
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ ssl: { method: "txt", type: "dv" } }),
 		});
-		return this.toResult(response.result);
+
+		let payload = await this.parse(response, SingleResponseSchema);
+		return this.toResult(payload.result);
 	}
 
 	/**
