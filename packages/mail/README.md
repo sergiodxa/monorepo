@@ -10,19 +10,19 @@ Delivery is a value rather than an exception. `Mailer.send()` returns a [`Result
 
 An email can be a plain `Message` object or an `Email` class. The class form keeps a recipient, a subject, and a body together with the data they were derived from, which makes the directory holding them the inventory of what an app can send. The package has no i18n dependency: a subject reaches it as a string that the application has already translated for the recipient, so nothing here resolves locales.
 
-Bodies are `remix/ui` trees. `render()` serializes one with `renderToString` and derives the plain-text alternative from the same tree, so every message ships both parts without a second authoring step. An unbranded layout kit covers the constraints mail clients impose: table layout, inline styles, and no external stylesheet. Markdown, with highlighted code fences, renders through the same kit from a separate entry point.
+Bodies are `remix/ui` trees. `render()` serializes one with `renderToString` and derives the plain-text alternative from the same tree, so every message ships both parts without a second authoring step. An unbranded layout kit covers the constraints mail clients impose: table layout, inline styles, and no external stylesheet. A parsed markdown document renders through the same kit from a separate entry point, code fences highlighted.
 
 ### Entry points
 
 | Entry                   | Contents                                                                            |
 | ----------------------- | ----------------------------------------------------------------------------------- |
 | `@sdxc/mail`            | Contracts, `Mailer`, `render()`, `buildMimeMessage()`, the `Email` contract and kit |
-| `@sdxc/mail/markdown`   | `Markdown` and `CodeBlock`, which carry a parser and a highlighter                  |
+| `@sdxc/mail/markdown`   | `Markdown` and `CodeBlock`, which draw a parsed document through the kit            |
 | `@sdxc/mail/memory`     | `MemoryTransport`, the recording fake for tests                                     |
 | `@sdxc/mail/cloudflare` | `CloudflareTransport`, for the Workers email sending binding                        |
 | `@sdxc/mail/middleware` | The router middleware that publishes `context.email`                                |
 
-Transports are separate subpaths and are never re-exported from the root, so importing one never pulls another's runtime-specific import into a bundle: a build for a non-Workers context that never imports `@sdxc/mail/cloudflare` never resolves a platform type. `@sdxc/mail/markdown` is split off for the same reason and a different cost: Markdoc and the highlighter are the only heavy dependencies here, and most mail is not markdown.
+Transports are separate subpaths and are never re-exported from the root, so importing one never pulls another's runtime-specific import into a bundle: a build for a non-Workers context that never imports `@sdxc/mail/cloudflare` never resolves a platform type. `@sdxc/mail/markdown` is split off for the same reason and a different cost: the highlighter is the only heavy dependency here, and most mail is not markdown.
 
 The MIME builder is the exception to that split: it ships from the root rather than from a transport subpath, because it is plain string assembly with no runtime-specific import. Both shipped transports hand structured fields to their destination, so neither needs it; it exists for a transport whose provider takes a raw message, and for `MemoryTransport` to record the wire form a test wants to assert on.
 
@@ -426,25 +426,35 @@ interface SentMessage {
 
 ### `@sdxc/mail/markdown`
 
-Markdown as an email body, and the highlighted code block it renders fences with. Behind its own entry point because it carries the only heavy dependencies in the package — Markdoc and the highlighter — and most mail is not markdown.
+Markdown as an email body, and the highlighted code block it renders fences with. Behind its own entry point because the highlighter is the only heavy dependency in the package, and most mail is not markdown.
 
-Both build a component tree rather than an HTML string, which is why neither is a thin wrapper over an existing renderer: Markdoc renders to HTML and `remix/ui` escapes a text node, so a string of markup would arrive in the inbox as its own source. The tree is walked here instead, and every node comes out as a component from the kit with its styles already inline. Fences are highlighted during the transform by [`@sdxc/highlight`](/packages/highlight)'s Markdoc node, which hands this renderer tokens rather than markup for the same reason.
+Both build a component tree rather than an HTML string, which is why neither is a thin wrapper over an existing renderer: `remix/ui` escapes a text node, so a string of markup would arrive in the inbox as its own source. The parsed document is walked here instead, and every node comes out as a component from the kit with its styles already inline.
 
 #### `Markdown`
 
-Renders markdown through the layout kit.
+Renders a parsed document through the layout kit.
 
-**Props:** `children` (the markdown source)
+**Props:** `document` (a `Markdown.Document` from [`@sdxc/markdown`](/packages/markdown))
 
 ```tsx
+import { highlight } from "@sdxc/highlight/markdown";
 import { Markdown } from "@sdxc/mail/markdown";
+import { Markdown as Doc } from "@sdxc/markdown";
+import { unwrap } from "@sdxc/result";
+
+let { document } = unwrap(Doc.parse(notes));
+let painted = unwrap(Doc.walk(document, highlight));
 
 <Email.Layout title="Release notes">
-	<Markdown>{notes}</Markdown>
+	<Markdown document={painted} />
 </Email.Layout>;
 ```
 
-The mapping is deliberately lossy, because markdown can express things an inbox cannot lay out and the honest response is to render the content in a form that reads rather than one that half-works. Headings stop at level three, which is as many sizes as fit inside a card before the smallest is body copy again. Anything with no email-safe counterpart keeps its content and loses its box. Loose list items lose the paragraph markdown wraps them in, whose bottom margin would otherwise turn a five-item list into five separated blocks.
+Parsing stays with the caller, so a document parsed once renders in an inbox and on a page, and mail that carries no markdown pays for no parser.
+
+The mapping is deliberately lossy, because markdown can express things an inbox cannot lay out and the honest response is to render the content in a form that reads rather than one that half-works. Headings stop at level three, which is as many sizes as fit inside a card before the smallest is body copy again. A table becomes a real `<table>` an inbox lays out, an alert becomes a block quote labelled with its kind, and a footnote's body becomes a labelled block under the prose that points at it. Loose list items lose the paragraph markdown wraps them in, whose bottom margin would otherwise turn a five-item list into five separated blocks. An unresolved `{% $name %}` hole renders as itself, so a missing value is visible in the message rather than silent.
+
+Raw HTML, block and inline alike, arrives as escaped text. An inbox reads what the author wrote and renders none of it as markup, which keeps a document from any source safe to send.
 
 #### `CodeBlock`
 
@@ -452,7 +462,7 @@ A fenced block of code, highlighted, inside a single-cell table — a `<pre>` wi
 
 **Props:** `code`, `language?`, `tokens?`
 
-The twenty token types collapse to six colours — comment, keyword, string, number, function, punctuation — which is enough for code to read as code in a notification, and few enough that the dark half stays six rules. The map is keyed by the type union, so a type added upstream is a compile error rather than an unpainted run. Rendered through `Markdown`, the fence node has already tokenized and the `tokens` prop carries its work; given `code` alone, the block tokenizes itself. An unknown language renders unpainted rather than failing.
+The twenty token types collapse to six colours — comment, keyword, string, number, function, punctuation — which is enough for code to read as code in a notification, and few enough that the dark half stays six rules. The map is keyed by the type union, so a type added upstream is a compile error rather than an unpainted run. A document painted by [`@sdxc/highlight`](/packages/highlight) carries its runs on the code node, and `Markdown` passes them straight through as `tokens`; given `code` alone, the block tokenizes itself. An unknown language renders unpainted rather than failing.
 
 ### `@sdxc/mail/memory`
 
@@ -597,6 +607,8 @@ Emails, services, and tests are untouched, which also makes a switch reversible.
 - [`@sdxc/result`](/packages/result) — the `Result` type every send outcome is reported as
 - [`@sdxc/logger`](/packages/logger) — the invocation's log the middleware records deferred-send outcomes on
 - [`@sdxc/i18n`](/packages/i18n) — supplies the translator an email class uses for its subject; this package never depends on it
+- [`@sdxc/markdown`](/packages/markdown) — parses the document the markdown entry point renders
+- [`@sdxc/highlight`](/packages/highlight) — paints the code blocks that document carries
 
 ## Tips
 

@@ -1,20 +1,18 @@
 /**
  * Markdown as an email body, and the highlighted code block it renders fences with.
  *
- * A separate entry point keeps Markdoc and the highlighter out of mail bundles that
- * carry no markdown.
+ * A separate entry point keeps the highlighter out of mail bundles that carry no markdown.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RenderableTreeNode, Tag } from "@markdoc/markdoc";
 import type { Token } from "@sdxc/highlight";
+import type {} from "@sdxc/highlight/markdown";
+import type { Markdown as Ast } from "@sdxc/markdown";
 import type { Handle, RemixNode } from "remix/ui";
 
-import Markdoc from "@markdoc/markdoc";
 import { tokenize } from "@sdxc/highlight";
-import { fence } from "@sdxc/highlight/markdoc";
 
 import { CODE_COLOR, CodeInline, Heading, Hr, Img, Link, MONO_FAMILY, Text } from "./components.js";
 
@@ -47,6 +45,9 @@ const TOKENS: Record<Token.Type, { color: string; class: string } | undefined> =
 	plain: undefined,
 };
 
+/** Hairline colour around a data table's cells, matching the kit's own rules. */
+const TABLE_BORDER_COLOR = "#e4e4e7";
+
 /** One highlighted run, as a coloured span or as bare text where nothing paints it. */
 function highlight(tokens: Token[]): RemixNode {
 	return tokens.map((token, index) => {
@@ -67,7 +68,7 @@ export namespace CodeBlock {
 		code: string;
 		/** Language to highlight as; an unknown one still renders, left unpainted. */
 		language?: string;
-		/** Already-highlighted runs, as the fence node produces them. */
+		/** Already-highlighted runs, as a painted document carries them. */
 		tokens?: Token[];
 	}
 }
@@ -112,136 +113,131 @@ export function CodeBlock(handle: Handle<CodeBlock.Props>) {
 	};
 }
 
-/** A Markdoc tag node, distinct from the string and nullish values `RenderableTreeNode` also allows. */
-function isTag(node: RenderableTreeNode): node is Tag {
-	return typeof node === "object" && node !== null && "name" in node;
+/** An image's alternative text is inline content in the source and an attribute in the markup. */
+function textOf(nodes: Array<Ast.Block | Ast.Inline>): string {
+	return nodes.map(textOfNode).join("");
 }
 
-/** Flattens a node's markup down to plain text, for attributes like `alt` that accept text only. */
-function textOf(node: RenderableTreeNode): string {
-	if (node === null || node === undefined || typeof node === "boolean") return "";
-	if (typeof node === "string" || typeof node === "number") return String(node);
-	if (Array.isArray(node)) return node.map(textOf).join("");
-	if (isTag(node)) return (node.children ?? []).map(textOf).join("");
-	return "";
+/** Reads the prose out of one node, a break becoming the space it stands for. */
+function textOfNode(node: Ast.Block | Ast.Inline): string {
+	switch (node.type) {
+		case "text":
+		case "inlineCode":
+		case "inlineHtml":
+		case "html":
+			return node.value;
+		case "code":
+			return node.content;
+		case "softBreak":
+		case "hardBreak":
+			return " ";
+		case "variable":
+			return `{% $${node.name} %}`;
+		case "footnoteReference":
+			return `[${node.identifier}]`;
+		case "thematicBreak":
+			return "";
+		default:
+			return textOf([...node.children]);
+	}
 }
 
-/** Reads an attribute that should be a string, for a tree whose attributes are `any`. */
-function attr(tag: Tag, name: string): string | undefined {
-	let value = tag.attributes?.[name];
-	return typeof value === "string" ? value : undefined;
+/** Renders a run of nodes in order, which is what every parent does with its children. */
+function children(nodes: Array<Ast.Block | Ast.Inline>): RemixNode {
+	return nodes.map(convert);
+}
+
+/** Each cell takes the alignment of the column it sits in, which the table carries once. */
+function convertRow(node: Ast.TableRow, key: number, align: Ast.Table["align"]): RemixNode {
+	return (
+		<tr key={key}>
+			{node.children.map((cell, index) =>
+				convertCell(cell, index, node.header, align[index] ?? null),
+			)}
+		</tr>
+	);
+}
+
+/** A header row's cells are the column headings, so they carry the weight a reader scans for. */
+function convertCell(
+	node: Ast.TableCell,
+	key: number,
+	header: boolean,
+	align: "left" | "center" | "right" | null,
+): RemixNode {
+	let style = `padding:8px 12px;border:1px solid ${TABLE_BORDER_COLOR};font-family:inherit;font-size:14px;line-height:1.4;text-align:${align ?? "left"};vertical-align:top;`;
+
+	if (header) {
+		return (
+			<th key={key} class="mail-rule" style={`${style}font-weight:600;`}>
+				{children(node.children)}
+			</th>
+		);
+	}
+
+	return (
+		<td key={key} class="mail-rule" style={style}>
+			{children(node.children)}
+		</td>
+	);
 }
 
 /**
- * Turns one Markdoc node into email components.
+ * Turns one node into email components.
  *
  * Content an inbox cannot lay out still renders, in whatever form reads: an
  * ordered list becomes a real `<ol>`, so its plain-text conversion numbers each item.
  */
-function convert(node: RenderableTreeNode, key: number): RemixNode {
-	if (node === null || node === undefined || typeof node === "boolean") return null;
-	if (typeof node === "string" || typeof node === "number") return node;
-	if (Array.isArray(node)) return node.map(convert);
-	if (!isTag(node)) return null;
-
-	let children = (node.children ?? []).map(convert);
-
-	switch (node.name) {
-		case "h1":
-			return <Heading key={key}>{children}</Heading>;
-		case "h2":
-			return (
-				<Heading key={key} level={2}>
-					{children}
-				</Heading>
-			);
-		case "h3":
-		case "h4":
-		case "h5":
-		case "h6":
+function convert(node: Ast.Block | Ast.Inline, key: number): RemixNode {
+	switch (node.type) {
+		case "heading": {
+			if (node.level === 1) return <Heading key={key}>{children(node.children)}</Heading>;
+			if (node.level === 2) {
+				return (
+					<Heading key={key} level={2}>
+						{children(node.children)}
+					</Heading>
+				);
+			}
 			return (
 				<Heading key={key} level={3}>
-					{children}
+					{children(node.children)}
 				</Heading>
 			);
-
-		case "p":
-			return <Text key={key}>{children}</Text>;
-
-		case "a": {
-			let href = attr(node, "href");
-			if (!href) return children;
-			return (
-				<Link key={key} href={href}>
-					{children}
-				</Link>
-			);
 		}
 
-		case "strong":
-			return (
-				<strong key={key} style="font-weight:600;">
-					{children}
-				</strong>
-			);
-		case "em":
-			return (
-				<em key={key} style="font-style:italic;">
-					{children}
-				</em>
-			);
-		case "s":
-			return (
-				<s key={key} style="text-decoration:line-through;">
-					{children}
-				</s>
-			);
+		case "paragraph":
+			return <Text key={key}>{children(node.children)}</Text>;
 
 		case "code":
-			return <CodeInline key={key}>{children}</CodeInline>;
-
-		case "Fence": {
-			let tokens = node.attributes?.tokens;
 			return (
-				<CodeBlock
-					key={key}
-					code={textOf(node)}
-					language={attr(node, "language")}
-					tokens={Array.isArray(tokens) ? (tokens as Token[]) : undefined}
-				/>
+				<CodeBlock key={key} code={node.content} language={node.language} tokens={node.tokens} />
 			);
-		}
 
-		case "hr":
-			return <Hr key={key} />;
-
-		case "img": {
-			let src = attr(node, "src");
-			if (!src) return null;
-			return <Img key={key} src={src} alt={attr(node, "alt") ?? ""} gap={16} />;
-		}
-
-		case "ul":
+		case "list": {
+			if (node.ordered) {
+				return (
+					<ol
+						key={key}
+						start={node.start}
+						style="margin:0 0 16px;padding:0 0 0 20px;list-style-type:decimal;"
+					>
+						{children(node.children)}
+					</ol>
+				);
+			}
 			return (
 				<ul key={key} style="margin:0 0 16px;padding:0 0 0 20px;list-style-type:disc;">
-					{children}
+					{children(node.children)}
 				</ul>
 			);
+		}
 
-		case "ol":
-			return (
-				<ol key={key} style="margin:0 0 16px;padding:0 0 0 20px;list-style-type:decimal;">
-					{children}
-				</ol>
-			);
-
-		case "li":
+		case "listItem":
 			return (
 				<li key={key} style="margin:0 0 6px;font-family:inherit;line-height:1.6;">
-					{(node.children ?? []).map((child, index) =>
-						isTag(child) && child.name === "p"
-							? (child.children ?? []).map(convert)
-							: convert(child, index),
+					{node.children.map((child, index) =>
+						child.type === "paragraph" ? children(child.children) : convert(child, index),
 					)}
 				</li>
 			);
@@ -253,34 +249,128 @@ function convert(node: RenderableTreeNode, key: number): RemixNode {
 					class="mail-rule"
 					style="margin:0 0 16px;padding:0 0 0 16px;border-left:3px solid #e4e4e7;"
 				>
-					{children}
+					{children(node.children)}
 				</blockquote>
 			);
 
-		default:
-			return children;
+		case "alert":
+			return (
+				<blockquote
+					key={key}
+					class="mail-rule"
+					style="margin:0 0 16px;padding:0 0 0 16px;border-left:3px solid #e4e4e7;"
+				>
+					<Text size={13} muted>
+						{node.kind.toUpperCase()}
+					</Text>
+					{children(node.children)}
+				</blockquote>
+			);
+
+		case "table":
+			return (
+				<table
+					key={key}
+					width="100%"
+					cellPadding="0"
+					cellSpacing="0"
+					style="width:100%;margin:0 0 16px;border-collapse:collapse;"
+				>
+					<tbody>{node.children.map((row, index) => convertRow(row, index, node.align))}</tbody>
+				</table>
+			);
+
+		case "tableRow":
+			return convertRow(node, key, []);
+
+		case "tableCell":
+			return convertCell(node, key, false, null);
+
+		case "thematicBreak":
+			return <Hr key={key} />;
+
+		case "html":
+		case "inlineHtml":
+			return node.value;
+
+		case "footnoteDefinition":
+			return (
+				<div key={key} style="margin:0 0 16px;font-family:inherit;font-size:14px;line-height:1.6;">
+					<strong style="font-weight:600;">{`[${node.identifier}] `}</strong>
+					{children(node.children)}
+				</div>
+			);
+
+		case "tag":
+			return children([...node.children]);
+
+		case "text":
+			return node.value;
+
+		case "emphasis":
+			return (
+				<em key={key} style="font-style:italic;">
+					{children(node.children)}
+				</em>
+			);
+
+		case "strong":
+			return (
+				<strong key={key} style="font-weight:600;">
+					{children(node.children)}
+				</strong>
+			);
+
+		case "strikethrough":
+			return (
+				<s key={key} style="text-decoration:line-through;">
+					{children(node.children)}
+				</s>
+			);
+
+		case "inlineCode":
+			return <CodeInline key={key}>{node.value}</CodeInline>;
+
+		case "link":
+			return (
+				<Link key={key} href={node.href}>
+					{children(node.children)}
+				</Link>
+			);
+
+		case "image":
+			return <Img key={key} src={node.src} alt={textOf(node.children)} gap={16} />;
+
+		case "softBreak":
+			return "\n";
+
+		case "hardBreak":
+			return <br key={key} />;
+
+		case "footnoteReference":
+			return <sup key={key} style="font-size:0.75em;line-height:1;">{`[${node.identifier}]`}</sup>;
+
+		case "variable":
+			return `{% $${node.name} %}`;
 	}
 }
 
 export namespace Markdown {
 	/** Props accepted by {@link Markdown}. */
 	export interface Props {
-		/** The markdown source. */
-		children: string;
+		/** The document to render; its code blocks arrive painted when the caller painted them. */
+		document: Ast.Document;
 	}
 }
 
 /**
- * Renders markdown as an email body, using the layout kit for every element.
+ * Renders a parsed document as an email body, using the layout kit for every element.
  *
- * Parsing happens here because a pre-parsed Markdoc tree would still depend on this
- * package's parser to produce it, the exact dependency the subpath exists to contain.
+ * The document arrives parsed, so a caller holding one pays for no parser here, and the
+ * same tree an inbox receives is the tree a page renders.
  *
- * @example <Markdown>{`# Release notes\n\nWe shipped **digests**.`}</Markdown>
+ * @example <Markdown document={notes} />
  */
 export function Markdown(handle: Handle<Markdown.Props>) {
-	return () => {
-		let tree = Markdoc.transform(Markdoc.parse(handle.props.children), { nodes: { fence } });
-		return <>{convert(tree, 0)}</>;
-	};
+	return () => <>{children(handle.props.document.children)}</>;
 }
