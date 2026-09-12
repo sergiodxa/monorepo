@@ -16,6 +16,7 @@
 	"dependencies": {
 		"@sdxc/duration": "workspace:*",
 		"@sdxc/logger": "workspace:*",
+		"@sdxc/result": "workspace:*",
 		"@sdxc/types": "workspace:*"
 	},
 	"devDependencies": {
