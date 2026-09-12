@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/workers-cache",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Cache tags, purging and cache-status reads for Cloudflare Workers Cache",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

@@ -1,136 +1,117 @@
 # @sdxc/workers-cache
 
-Cache tags, purging, and cache-status reading for responses served through Cloudflare's Workers Cache.
+Cache tags, purging and cache-status reads for Cloudflare Workers Cache.
 
-## Overview
+Freshness is standard HTTP:
+[`Cache-Control`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Cache-Control)
+and [`ETag`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/ETag) are
+specified, so any runtime can write them. Invalidation is not: tagging a response uses a
+`Cache-Tag` header no specification defines, and clearing entries means calling
+[purge](https://developers.cloudflare.com/cache/how-to/purge-cache/) on the platform's own
+cache object.
 
-Freshness is standard HTTP: `Cache-Control`, `ETag`, and `304` are specified, so
-they belong to an HTTP package that any runtime can use. Invalidation is not.
-Tagging a response uses a `Cache-Tag` header that no specification defines, and
-clearing entries means calling a purge method on the platform's cache object.
-This package holds that vendor half: a typed tag vocabulary, the `Cache-Tag`
-header, purging, cache-status inspection, and a `remix/router` middleware
-that applies all of it.
+This package holds that vendor half — a typed tag vocabulary, the serializer, purging, a
+cache-status reader, a recording double for tests, and a `remix/router` middleware that
+applies all of it.
 
-Anything importing this package is Cloudflare-specific by construction, which is
-the point: the HTTP layer stays specification-only and this package holds the
-vocabulary that would not survive a move to another CDN. Policies are opaque
-here — a `Cache-Control` string comes in from the caller and is written through
-unchanged, so there is no dependency in either direction between the two.
+## Installation
 
-Two entry points, for two kinds of caller:
+```bash
+npm add @sdxc/workers-cache
+```
 
-- `@sdxc/workers-cache` — tags, `cacheTag()`, `purge()`, `cacheStatus()`, and a
-  recording cache double. Request handlers, queue consumers, scheduled handlers,
-  and anything assembling headers by hand can use these.
-- `@sdxc/workers-cache/middleware` — the middleware that publishes a callable
-  `context.cache`. This is how request handlers should declare caching; the
-  standalone functions above are how jobs invalidate, since they have no request.
-
-> The Workers Cache surface is new. The purge call matches the generated Worker
-> types, but the tag limits and character rules are still **assumed**; see
-> [Platform assumptions](#platform-assumptions) before raising cache lifetimes.
+Every purge reports its outcome as a `Result` from
+[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which is where `isFailure`
+comes from, and the middleware entry point is built for the router in
+[`remix`](https://www.npmjs.com/package/remix). Both install alongside this package, as does
+[`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger), which the middleware enriches
+when an invocation log is current.
 
 ## Usage
 
-### Declaring A Tag Vocabulary
+### Declare A Tag Vocabulary
 
-Declare the tags an app's content model needs once, as functions rather than
-strings, so the response header and the later purge cannot drift apart:
+Write the tags a content model needs once, as functions rather than strings, so the response
+header and the purge that clears it cannot drift apart:
 
 ```typescript
 import { createTags } from "@sdxc/workers-cache";
 
-export const TAGS = createTags({
+export let TAGS = createTags({
 	post: (id: string) => `post:${id}`,
-	postsByType: (type: string) => `posts:${type}`,
+	postsByAuthor: (author: string) => `posts:${author}`,
 	postList: () => "posts",
 });
 
 TAGS.post("123"); // "post:123", branded as a CacheTag
 ```
 
-Every produced tag is validated, so an invalid tag throws where it was written
-instead of being dropped silently at the edge.
+Every builder validates what it produced, so a tag the platform would drop throws where it
+was written instead of disappearing at the edge.
 
-### Caching A Response From A Handler
-
-```typescript
-import cache from "@sdxc/workers-cache/middleware";
-
-let router = createRouter({
-	middleware: [cache({ cache: (ctx) => ctx.cacheBinding })],
-});
-
-router.get("/posts/:id", async (ctx) => {
-	let post = await posts.find(ctx.params.id);
-	ctx.cache(PUBLIC_PAGE, TAGS.post(post.id), TAGS.postList());
-	return html(render(post));
-});
-```
-
-`PUBLIC_PAGE` is a plain `Cache-Control` string built by your HTTP layer and
-imported from an app module of named policies. The middleware never chooses it.
-
-### Invalidating After A Write
-
-Inside a request, purge through the context — the cache interface was already
-resolved by the middleware:
-
-```typescript
-router.post("/posts/:id", async (ctx) => {
-	await posts.update(ctx.params.id, await ctx.formData());
-
-	let result = await ctx.cache.purge(TAGS.post(ctx.params.id), TAGS.postList());
-	if (isFailure(result)) ctx.log.warn("cache.purge_failed", { error: result.error.message });
-
-	return redirect(`/posts/${ctx.params.id}`);
-});
-```
-
-Outside a request — a queue consumer, a scheduled handler — pass the cache
-interface directly:
-
-```typescript
-import { currentLog } from "@sdxc/logger";
-import { purge } from "@sdxc/workers-cache";
-
-let result = await purge(cache, { tags: [TAGS.post(postId), TAGS.postList()] });
-if (isFailure(result)) currentLog()?.warn("cache.purge_failed", { error: result.error.message });
-```
-
-### Building Headers By Hand
+### Tag A Response
 
 ```typescript
 import { cacheTag } from "@sdxc/workers-cache";
 
-let headers = new Headers({
-	"Cache-Control": PUBLIC_PAGE,
-	"Cache-Tag": cacheTag([TAGS.post(post.id), TAGS.postList()]),
+let response = new Response(body, {
+	headers: {
+		"Cache-Control": "public, max-age=86400",
+		"Cache-Tag": cacheTag([TAGS.post(post.id), TAGS.postList()]),
+	},
 });
 ```
 
+`cacheTag` keeps the order you wrote and collapses repeats, so two participants naming the
+same tag produce one header entry.
+
+### Invalidate By Tag
+
+```typescript
+import { isFailure } from "@sdxc/result";
+import { purge } from "@sdxc/workers-cache";
+
+let result = await purge(cache, { tags: [TAGS.post(post.id), TAGS.postList()] });
+if (isFailure(result)) throw result.error;
+```
+
+`cache` is whatever platform cache object the caller holds — a binding, or anything else
+that answers `purge(selector)`. It is a parameter rather than a global, which is what keeps
+this package free of a runtime import and testable with a double.
+
+### Declare Caching From A Request Handler
+
+```typescript
+import cache from "@sdxc/workers-cache/middleware";
+import { createRouter } from "remix/router";
+
+let router = createRouter({ middleware: [cache({ cache: (ctx) => ctx.cacheBinding })] });
+
+router.get("/posts/:id", async (ctx) => {
+	let post = await findPost(ctx.params.id);
+	ctx.cache("public, max-age=86400", TAGS.post(post.id), TAGS.postList());
+	return html(render(post));
+});
+
+router.post("/posts/:id", async (ctx) => {
+	await updatePost(ctx.params.id, await ctx.request.formData());
+	await ctx.cache.purge(TAGS.post(ctx.params.id), TAGS.postList());
+	return redirect(`/posts/${ctx.params.id}`);
+});
+```
+
+`ctx.cache()` records intent and writes nothing itself. The headers land on the finished
+response after the handler returns, which is what lets the middleware inspect that response
+before agreeing to cache it.
+
 ## API
 
-### `createTags(vocabulary: TagVocabulary): CacheTags<Vocabulary>`
+### `createTags(vocabulary)`
 
-Wraps each builder in a validating one and narrows its return type to a branded
-`CacheTag`, so only a vocabulary can produce a value where a tag is expected.
-
-**Parameters:**
-
-- `vocabulary`: Named builders returning the raw tag string
-
-**Returns:**
-
-- The same names and parameters, returning validated tags
-
-**Throws:**
-
-- `CacheTagError`, from a builder, when the tag it produced is empty, longer than
-  `MAX_TAG_LENGTH`, not printable ASCII, or contains a space, comma, or `"`
-
-**Example:**
+Wraps each builder in a validating one and narrows its return type to a branded `CacheTag`,
+so only a vocabulary can produce a value where a tag is expected. A builder throws
+`CacheTagError` when the tag it produced is empty, longer than `MAX_TAG_LENGTH`, outside
+printable ASCII, or contains a space, a comma or a `"`.
 
 ```typescript
 let TAGS = createTags({ post: (id: string) => `post:${id}` });
@@ -140,26 +121,11 @@ TAGS.post("a b"); // throws CacheTagError
 
 ### `cacheTag(tags: readonly CacheTag[]): string`
 
-Serializes a tag list into a `Cache-Tag` header value, keeping the order the
-caller wrote and collapsing repeats.
-
-**Parameters:**
-
-- `tags`: Tags from a vocabulary
-
-**Returns:**
-
-- The comma-separated header value
-
-**Throws:**
-
-- `CacheTagError` when the list is empty, holds a tag the platform would reject,
-  or serializes beyond `MAX_CACHE_TAG_HEADER_LENGTH`
-
-An empty list is rejected rather than serialized to an empty header, because an
-empty `Cache-Tag` reads as tagged while purging nothing.
-
-**Example:**
+Serializes a tag list into a `Cache-Tag` header value, preserving caller order and dropping
+repeats. It throws `CacheTagError` when the list is empty, holds a tag the platform would
+reject, or serializes beyond `MAX_CACHE_TAG_HEADER_LENGTH`. An empty list is rejected rather
+than written as an empty header, because an empty `Cache-Tag` reads as tagged while purging
+nothing.
 
 ```typescript
 cacheTag([TAGS.post("1"), TAGS.postList()]); // "post:1,posts"
@@ -167,25 +133,10 @@ cacheTag([TAGS.post("1"), TAGS.postList()]); // "post:1,posts"
 
 ### `purge(cache: CacheInterface, options: PurgeOptions): Promise<Result<void, PurgeError>>`
 
-Invalidates entries by tag, by URL prefix, or entirely. The cache interface is
-the first argument rather than a global, which is what keeps this package free of
-a runtime import and testable with a double.
-
-**Parameters:**
-
-- `cache`: The platform cache interface, or a recording double in tests
-- `options`: Exactly one of `{ tags }`, `{ prefixes }`, or `{ everything: true }`
-
-**Returns:**
-
-- Success when the platform accepted the purge, otherwise a `PurgeError` carrying
-  the `selector` that did not take effect and the platform error as `cause`
-
-Purging is eventually consistent: success means the request was accepted, not
-that the next read misses. An empty tag list, a blank prefix, an invalid tag, and
-options that select nothing all fail without calling the platform.
-
-**Example:**
+Invalidates entries by tag, by URL prefix, or entirely. Success means the platform accepted
+the purge; purging is eventually consistent, so the next read is not guaranteed to miss. An
+empty tag list, a blank prefix, an invalid tag, and options selecting nothing all fail
+without calling the platform.
 
 ```typescript
 await purge(cache, { tags: [TAGS.postList()] });
@@ -193,19 +144,15 @@ await purge(cache, { prefixes: ["example.com/blog/"] });
 await purge(cache, { everything: true }); // incidents, not content writes
 ```
 
+A platform that declines a purge resolves rather than rejecting, so the outcome it reports
+decides the result: a declined purge comes back as a `PurgeError` carrying the selector that
+stayed stale and the platform's issues as `cause`.
+
 ### `cacheStatus(response: Response): CacheStatus`
 
-Reads how the platform treated a response, as `"hit" | "miss" | "expired" |
-"bypass" | "unknown"`.
-
-**Parameters:**
-
-- `response`: A response received from the platform edge
-
-**Returns:**
-
-- The normalized status; an absent or unrecognized header value reads as
-  `"unknown"` rather than being reported as a miss
+Reads how the platform treated a response, from the `cf-cache-status` header, as one of
+`"hit" | "miss" | "expired" | "bypass" | "unknown"`. An absent or unrecognized value reads as
+`"unknown"` rather than being reported as a miss.
 
 | Header value                                  | Status    |
 | --------------------------------------------- | --------- |
@@ -215,26 +162,12 @@ Reads how the platform treated a response, as `"hit" | "miss" | "expired" |
 | `BYPASS`, `DYNAMIC`                           | `bypass`  |
 | anything else, or no header                   | `unknown` |
 
-**Example:**
-
-```typescript
-cacheStatus(response); // "hit"
-```
-
 ### `createRecordingCache(options?: RecordingCacheOptions): RecordingCache`
 
-A cache interface that records purges instead of calling a platform.
-
-**Parameters:**
-
-- `options.failWith`: When set, every purge rejects with this error
-
-**Returns:**
-
-- A `CacheInterface` exposing `purges` (selectors in call order), `purgedTags`
-  (tags flattened across tag purges), `failWith(error)`, and `reset()`
-
-**Example:**
+A `CacheInterface` that records purges instead of calling a platform. The returned object
+exposes `purges` (every selector in call order), `purgedTags` (tags flattened across tag
+purges), `failWith(error)` and `declineWith(issues)` to arm a rejection or a refusal, and
+`reset()`. `options.failWith` and `options.declineWith` arm the same behavior up front.
 
 ```typescript
 let cache = createRecordingCache();
@@ -242,208 +175,178 @@ await purge(cache, { tags: [TAGS.postList()] });
 cache.purgedTags; // ["posts"]
 ```
 
-### `cache(options: WorkersCacheMiddlewareOptions): Middleware`
+### Constants
 
-Default export of `@sdxc/workers-cache/middleware`. Publishes a callable
-`context.cache` that also carries `purge` and `purgeLater`.
+`CACHE_TAG_HEADER`, `CACHE_CONTROL_HEADER` and `CACHE_STATUS_HEADER` are the header names
+this package reads and writes. `MAX_TAG_LENGTH` (1024) and `MAX_CACHE_TAG_HEADER_LENGTH`
+(16384) are the size limits a tag and a serialized header are held to.
+`NON_CACHEABLE_POLICY` is the `private, no-store` value a refused declaration is downgraded
+to. `CACHEABLE_METHODS` holds `GET` and `HEAD`; `CACHEABLE_STATUS_CODES` holds `200`, `203`,
+`204`, `206`, `300`, `301`, `302`, `304`, `307`, `308`, `404`, `405`, `410`, `414` and
+`501`. They are exported so tests and logs assert against the same values the middleware
+uses.
 
-**Parameters:**
+### Errors
 
-- `options.cache`: The platform cache interface, or a `(context) => CacheInterface`
-  resolver. This is the whole option set: the factory takes **no policy**, which
-  is what makes it safe to register once on a router — a route that never calls
-  `context.cache()` is left untouched, so no route inherits a caching decision it
-  did not make, and two actions in one controller can still choose different
-  lifetimes.
+#### `CacheTagError`
 
-**Returns:**
+A tag the platform would reject, or a tag list that cannot be serialized. The rejected tag
+stays on the error as `tag`, quoted in the message so whitespace remains visible.
 
-- A middleware that publishes `context.cache` and writes the declared headers
-  onto the finished response
+#### `PurgeError`
 
-The interface is resolved from the value or the resolver and closed over, so
-nothing downstream passes it again: `context.cache.purge()` takes tags and only
-tags.
-
-#### `context.cache(policy, ...tags)` / `context.cache({ policy, tags })`
-
-Records intent; it mutates nothing itself. Tags accumulate across every call in
-the request into one `Cache-Tag` header, so a controller-scoped middleware and
-its handler both contribute instead of overwriting each other. The policy is
-replaced by the most recent declaration, since only one lifetime can be written.
-The object form takes the same policy with tags as a list.
-
-#### `context.cache.purge(...tags): Promise<Result<void, PurgeError>>`
-
-Awaits the platform call and returns the outcome, because a write action usually
-redirects to the page it just invalidated and a deferred purge would race the
-follow-up request.
-
-#### `context.cache.purgeLater(...tags): void`
-
-Queues a purge that runs after the response is produced, for invalidations whose
-freshness nobody is about to observe. Failures are logged, never thrown.
-
-### Headers Are Written After `next()`
-
-`context.cache()` only records. After `next()` resolves, the middleware inspects
-the finished response — including headers added by middleware that ran between
-the declaration and the response — and only then writes `Cache-Control` and
-`Cache-Tag`. That ordering is what makes the refusal checks below possible.
-
-### The Refusal Table
-
-| Condition                                            | Behavior                                                           |
-| ---------------------------------------------------- | ------------------------------------------------------------------ |
-| Response carries `Set-Cookie`                        | Downgrade to `private, no-store`, write no tags, and warn          |
-| Request carried a session and the policy is `public` | Downgrade to `private, no-store`, write no tags, and warn          |
-| Method is not `GET` or `HEAD`                        | Emit nothing                                                       |
-| Status is not cacheable                              | Emit nothing                                                       |
-| `context.cache()` was never called                   | Emit nothing, leaving the response exactly as the handler built it |
-
-Downgrades warn on the invocation's log and throw `UnsafeCachePolicyError` in
-development, since a downgrade means a route asked for something unsafe. That error and its
-`CacheRefusalReason` are exported from `@sdxc/workers-cache/middleware`. The "emit
-nothing" rows are checked first: they leave the response untouched, so there is
-nothing to refuse.
-
-- **Cacheable statuses** are `200`, `203`, `204`, `206`, `300`, `301`, `302`,
-  `304`, `307`, `308`, `404`, `405`, `410`, `414`, and `501`.
-- **`public` detection** matches the directive as its own token in the policy
-  string, so `max-age=60` is never mistaken for a public policy.
-- **Session detection** uses the session published by an upstream session
-  middleware when there is one: data in it means the request is identified, an
-  untouched session means it is not. Without that middleware the request's
-  cookies are all the middleware can look at, so any cookie makes a `public`
-  policy a refusal.
-- **Development detection** reads `NODE_ENV` when it says which mode this is, and
-  otherwise treats a request to `localhost`, `127.0.0.1`, `[::1]`, or `0.0.0.0`
-  as development.
-- **Logging** enriches the invocation's log from `@sdxc/logger` when one is
-  current. An applied declaration sets `cache.policy` and `cache.tag_count`; a
-  refusal sets `cache.downgraded` and `cache.refusal` and records a
-  `cache.downgraded` warning with the reason and the declared policy; a deferred
-  purge that failed records a `cache.purge_failed` warning naming the tags. A
-  request with no log current is still downgraded — the refusal is enforced
-  either way — but has nowhere to report it, which is the reason development
-  throws.
+A purge that did not take effect. `selector` carries what the call meant to invalidate, so a
+log line names the tags or prefixes still serving stale content, and `cause` carries the
+platform's own rejection.
 
 ### Types
 
-#### `CacheTag`
-
 ```typescript
 type CacheTag = string & { readonly [CACHE_TAG_BRAND]: true };
-```
 
-A validated tag. Only a vocabulary built by `createTags()` produces one, so a
-renamed or mistyped tag is a compile error at the purge call.
+type CachePolicy = string;
 
-#### `CacheInterface`
-
-```typescript
-interface CacheInterface {
-	purge(selector: PurgeSelector): Promise<void>;
-}
-```
-
-The only platform surface this package calls. Defined here rather than imported,
-which is why `purge()` takes it as a parameter.
-
-#### `PurgeSelector` and `PurgeOptions`
-
-```typescript
-interface PurgeSelector {
-	tags?: string[];
-	prefix?: string;
-	everything?: boolean;
-}
+type CacheStatus = "hit" | "miss" | "expired" | "bypass" | "unknown";
 
 type PurgeOptions =
 	{ tags: readonly CacheTag[] } | { prefixes: readonly string[] } | { everything: true };
+
+interface PurgeSelector {
+	tags?: string[];
+	pathPrefixes?: string[];
+	purgeEverything?: boolean;
+}
+
+interface PurgeIssue {
+	code: number;
+	message: string;
+}
+
+interface PurgeOutcome {
+	success: boolean;
+	errors: readonly PurgeIssue[];
+}
+
+interface CacheInterface {
+	purge(selector: PurgeSelector): Promise<PurgeOutcome>;
+}
 ```
 
-`PurgeOptions` is what a caller writes; `PurgeSelector` is the normalized form
-handed to the platform, with tags validated and deduplicated and exactly one
-field set.
+`PurgeOptions` is what a caller writes; `PurgeSelector` is the normalized form handed to the
+platform, with tags validated and deduplicated and exactly one field set. Its field names
+mirror the platform's own purge options, so a
+[Workers Cache](https://developers.cloudflare.com/workers/runtime-apis/cache/) binding
+satisfies `CacheInterface` directly. `CacheTag` carries a type-only brand, so only a
+vocabulary built by `createTags()` produces one and a renamed tag is a compile error at the
+purge call.
+`CacheTags<Vocabulary>` and `TagVocabulary` describe what `createTags` takes and returns, and
+`PurgeByTags`, `PurgeByPrefixes` and `PurgeEverything` are the three members of
+`PurgeOptions` under their own names.
 
-#### Constants
+### `cache(options: WorkersCacheMiddlewareOptions): Middleware`
 
-`CACHE_TAG_HEADER`, `CACHE_CONTROL_HEADER`, `CACHE_STATUS_HEADER`,
-`MAX_TAG_LENGTH`, `MAX_CACHE_TAG_HEADER_LENGTH`, `NON_CACHEABLE_POLICY`,
-`CACHEABLE_METHODS`, and `CACHEABLE_STATUS_CODES` are exported so tests and logs
-can assert against the same values the middleware uses.
+Default export of `@sdxc/workers-cache/middleware`. It publishes a callable `context.cache`
+and writes the declared headers onto the finished response.
 
-## Platform assumptions
+`options.cache` is the whole option set: a `CacheInterface`, or a
+`(context) => CacheInterface` resolver read off the request. The factory takes **no policy**,
+which is what makes registering it once on a router safe — a route that never calls
+`context.cache()` is left untouched, so no route inherits a lifetime it did not choose, and
+two handlers can pick different ones. The interface is resolved and closed over, so
+`context.cache.purge()` takes tags and only tags.
 
-Cloudflare's Workers Cache surface is new. The purge call matches the Worker
-types Wrangler generates, so a binding satisfies `CacheInterface` directly; the
-tag limits and character rules are conservative guesses. Every assumed value
-lives in [`src/platform.ts`](./src/platform.ts), and the shape of the platform
-call lives behind `CacheInterface` in [`src/types.ts`](./src/types.ts). Those two
-files are the seam: a correction to the real surface changes them and, at most,
-the adapter an app passes as `options.cache`, and nothing else in this package or
-its callers moves.
+#### `context.cache(policy, ...tags)` / `context.cache({ policy, tags })`
 
-| Surface                        | Status                                                                                                                                      |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Cache-Tag` header name        | **Assumed.** Comma-separated list, one header, written with `set` so the middleware is its only writer.                                     |
-| Tag character set              | **Assumed.** Printable ASCII, excluding space, `,`, and `"`. Non-ASCII is rejected rather than encoded, so a tag never changes on the wire. |
-| Tag length limit               | **Assumed** at 1024 characters per tag.                                                                                                     |
-| Header length limit            | **Assumed** at 16384 characters for the serialized header.                                                                                  |
-| Tag case sensitivity           | **Assumed** significant: tags are compared byte-for-byte, so `Post:1` and `post:1` are two tags.                                            |
-| Purge API shape                | **Verified** against the generated Worker types: `cache.purge({ tags, pathPrefixes, purgeEverything })` resolving to `{ success, errors }`. |
-| Purge prefix format            | **Assumed** to include the host, e.g. `example.com/blog/`.                                                                                  |
-| Per-call and per-plan limits   | **Not implemented.** Tags are sent in one call with no chunking, so a per-call tag cap would surface as a platform rejection.               |
-| How the cache reaches a Worker | **Deliberately unanswered.** Binding or execution context, the caller passes whatever it has as `options.cache`.                            |
-| `cf-cache-status` header       | **Assumed** as the status header, with the value vocabulary in the table above.                                                             |
-| Enablement                     | **Out of scope.** Workers Cache is turned on in each app's `wrangler.jsonc`, alongside the infrastructure decision it represents.           |
+Records intent. Tags accumulate across every call in the request into one `Cache-Tag`
+header, so a router-scoped middleware and its handler both contribute instead of overwriting
+each other. The policy is replaced by the most recent declaration, since only one lifetime
+can be written.
 
-Verify these before raising cache lifetimes, and treat a purge that reports
-success but invalidates nothing as evidence that one of the rows above is wrong.
+#### `context.cache.purge(...tags): Promise<Result<void, PurgeError>>`
 
-## Pattern: Named Policies In An App Module
+Awaits the platform call and returns the outcome, because a write action usually redirects
+to the page it just invalidated and a deferred purge would race the follow-up request.
 
-The middleware carries no policy, so shared lifetimes belong in an app module of
-named constants. Those are plain values, so jobs and hand-built responses reuse
-the same ones a handler declares.
+#### `context.cache.purgeLater(...tags): void`
+
+Queues a purge that runs once the response has been produced, for invalidations nobody is
+about to observe. Failures are logged, never thrown.
+
+#### Refusals
+
+After `next()` resolves, the middleware inspects the finished response — including headers
+added between the declaration and the response — and only then writes anything:
+
+| Condition                                                                 | Behavior                                                  |
+| ------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Response carries `Set-Cookie`                                             | Downgrade to `private, no-store`, write no tags, and warn |
+| Request carried a session and the policy is `public`                      | Downgrade to `private, no-store`, write no tags, and warn |
+| Method is `GET` or `HEAD` and the status is cacheable, with a declaration | Write `Cache-Control` and `Cache-Tag`                     |
+| Anything else                                                             | Leave the response exactly as the handler built it        |
+
+A downgrade warns on the current log and throws `UnsafeCachePolicyError` in development,
+since it means a route asked for something unsafe. That error and its `CacheRefusalReason`
+(`"set-cookie" | "session-with-public-policy"`) are exported from
+`@sdxc/workers-cache/middleware`, alongside the `CacheDeclaration`,
+`CacheDeclarationOptions` and `WorkersCacheMiddlewareOptions` types.
+
+The `public` directive is matched as its own token, so `max-age=60` is never mistaken for a
+public policy. A session published by an upstream session middleware is the precise signal
+for whether a request is identified; without one, any cookie makes a `public` policy a
+refusal. Development is read from `NODE_ENV` when it says which mode this is, and otherwise
+from a request to `localhost`, `127.0.0.1`, `[::1]` or `0.0.0.0`.
+
+## Pattern: Named Policies In One Module
+
+The middleware carries no policy, so shared lifetimes belong in a module of named constants.
+Those are plain strings, so jobs and hand-built responses reuse the same ones a handler
+declares. Any builder produces them; this one comes from
+[`@sdxc/http`](https://www.npmjs.com/package/@sdxc/http):
 
 ```typescript
-// app/http/cache.ts
-export const PUBLIC_PAGE = policy({
+import { policy } from "@sdxc/http/cache";
+
+export let PUBLIC_PAGE = policy({
 	visibility: "public",
 	maxAge: "1 day",
 	staleWhileRevalidate: "1 week",
-});
-export const SHORT_LIVED = policy({ visibility: "public", maxAge: "5 minutes" });
+}).toString();
+
+export let SHORT_LIVED = policy({ visibility: "public", maxAge: "5 minutes" }).toString();
 ```
 
 ```typescript
-// Two actions in one controller, two lifetimes, one middleware registration.
+// Two handlers, two lifetimes, one middleware registration.
 ctx.cache(PUBLIC_PAGE, TAGS.post(post.id), TAGS.postList());
 ctx.cache(SHORT_LIVED, TAGS.postList());
 ```
 
 ## Pattern: A Group Tag From A Middleware
 
-A router- or controller-scoped middleware can contribute a tag that applies to
-every response in its group, so one purge invalidates all of it. Tags accumulate,
-so the handler's own tags survive.
+A middleware scoped to a group of routes can contribute a tag that applies to every response
+in that group, so one purge invalidates all of it. Tags accumulate, so the handler's own tags
+survive:
 
 ```typescript
+import type { Middleware } from "remix/router";
+
 let tenantTag: Middleware = (ctx, next) => {
 	ctx.cache(PUBLIC_PAGE, TAGS.tenant(ctx.tenant.id));
 	return next();
 };
 ```
 
-Note that `remix/router` has no nested routes: accumulation happens along a
-middleware chain and within a handler, never up a route tree.
+Accumulation happens along a middleware chain and within a handler, since the router has no
+nested routes to accumulate up.
 
 ## Pattern: Testing A Cached Route
 
+The recording cache stands in for the platform, so a test asserts on the headers a route
+emits and the selectors it purged with no binding and no network:
+
 ```typescript
-import { cacheStatus, createRecordingCache } from "@sdxc/workers-cache";
+import { isFailure } from "@sdxc/result";
+import { cacheStatus, createRecordingCache, purge } from "@sdxc/workers-cache";
 
 let cache = createRecordingCache();
 let response = await router.fetch(new Request("https://example.com/posts/1"));
@@ -453,45 +356,44 @@ expect(response.headers.get("Cache-Tag")).toBe("post:1,posts");
 expect(cacheStatus(response)).toBe("unknown"); // no edge in a test
 ```
 
-The double also covers the failure path, which is the one a content write depends
-on:
+The double also covers the two failure paths a content write depends on — a platform that
+rejects, and one that declines the purge while resolving:
 
 ```typescript
 let cache = createRecordingCache({ failWith: new Error("edge unavailable") });
-let result = await purge(cache, { tags: [TAGS.postList()] });
+expect(isFailure(await purge(cache, { tags: [TAGS.postList()] }))).toBe(true);
 
-expect(isFailure(result)).toBe(true);
+cache.reset();
+cache.declineWith([{ code: 1122, message: "rate limited" }]);
+expect(isFailure(await purge(cache, { tags: [TAGS.postList()] }))).toBe(true);
 ```
 
-## Related Packages
+## Versioning
 
-- [`@sdxc/result`](/packages/result) - The `Result` every purge returns, so a
-  failed invalidation is a value the caller has to handle
-- [`@sdxc/http`](/packages/http) - Specification-level HTTP helpers, including the
-  `Cache-Control` policies passed into a declaration; it has no dependency on
-  this package and this package has none on it
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
 
-## Tips
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
 
-1. **Register the middleware outside anything that writes the response** - its
-   refusal checks inspect whatever response reaches it, so a session middleware
-   that attaches a cookie further out would let a `public` policy through.
-2. **Emit tags from the first cached response** - a response cached before a tag
-   existed cannot be purged by that tag, so tags are cheap to add and expensive
-   to retrofit.
-3. **Every tag is a commitment** - a tag nothing purges is worse than no tag,
-   because it suggests coverage that does not exist.
-4. **Prefer at least one tag on anything that can change** - a policy with no
-   tags is legitimate, but only expiry or a broad purge can clear it.
-5. **Raise lifetimes only after purging is verified end to end** - long lifetimes
-   are safe because invalidation is explicit, not because expiry is long.
-6. **Use `purge()` in jobs and `context.cache.purge()` in handlers** - the
-   standalone function exists for callers with no request; reaching for it inside
-   a handler means threading a platform object that the middleware already holds.
-7. **Keep `purgeLater()` for invalidations nobody is about to observe** - the
-   awaited form is the default precisely because a redirect races a deferred
-   purge.
-8. **Purging everything is an incident tool** - it is in the API for recovery,
-   not for content writes.
-9. **Log `cacheStatus()` per request** - hit rate is only observable if something
-   records it, and a deploy that halves it is otherwise invisible.
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/workers-cache": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)
