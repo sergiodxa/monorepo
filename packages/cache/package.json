@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/cache",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Cache contract with adapters for memory and Cloudflare KV",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

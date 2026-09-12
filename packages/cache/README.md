@@ -2,11 +2,20 @@
 
 Cache contract with adapters for memory and Cloudflare KV.
 
+One interface covers read, write, fetch and delete, and an adapter binds it to a store — an
+in-process map for tests, Workers KV in production. Nothing throws: every call answers with a
+`Result`, and each method takes the value's type on its own, so one instance serves a whole
+namespace whatever mix of types goes into it.
+
 ## Installation
 
 ```bash
 npm add @sdxc/cache
 ```
+
+Every call answers with a `Result` from
+[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which is where `isFailure` and
+`isSuccess` come from. It installs alongside this package.
 
 ## Usage
 
@@ -48,8 +57,9 @@ let cache = new MemoryCache();
 
 ## Nothing throws
 
-Every method answers with a `Result<_, CacheError>` from [`@sdxc/result`](/packages/result),
-and `CacheError.code` says which of three things happened:
+Every method answers with a `Result<_, CacheError>` from
+[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), and `CacheError.code` says
+which of three things happened:
 
 | Code            | Means                                                    | Reached by                |
 | --------------- | -------------------------------------------------------- | ------------------------- |
@@ -59,9 +69,9 @@ and `CacheError.code` says which of three things happened:
 
 `unavailable` is the one a caller can ignore: the value is simply not cached, and computing
 it is the same recovery a miss asks for. A store failure is also recorded on the
-invocation's log through [`@sdxc/logger`](/packages/logger), so discarding one still leaves
-a trace — store health is the package's own to report. A `load_failed` is not logged,
-because it is the caller's and travels in the `Result`.
+invocation's log through [`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger), so
+discarding one still leaves a trace — store health is the package's own to report. A
+`load_failed` is not logged, because it is the caller's and travels in the `Result`.
 
 Every failure carries the `key` it happened on, and the original error as `cause`. So a
 caller that would rather throw rethrows the cause and keeps its own error type:
@@ -224,9 +234,12 @@ test("reads the posts once", async () => {
 
 ## Versioning
 
-Releases are dated rather than semantic. A version is the UTC date it was published, written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one release goes out per day.
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
 
-Those numbers say when, not what: a later date means a later release and carries no compatibility promise. Any release may change or remove an export.
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
 
 Depend on one exact date, and move it when you are ready to take the change:
 
@@ -238,7 +251,8 @@ Depend on one exact date, and move it when you are ready to take the change:
 }
 ```
 
-A caret or tilde range reads the date as major, minor and patch, so it accepts every later release in the same year. An exact version keeps the upgrade yours to schedule.
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
 
 ## License
 
