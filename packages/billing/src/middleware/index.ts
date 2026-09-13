@@ -78,7 +78,8 @@ export interface RequireEntitlementOptions {
  * The snapshot a passing guard resolved, so a handler behind it reads the same
  * projection the gate decided on rather than loading it a second time.
  */
-export const Entitlements = createContextKey<EntitlementSnapshot>();
+export const Entitlements: { defaultValue?: EntitlementSnapshot } =
+	createContextKey<EntitlementSnapshot>();
 
 /** Where the middleware leaves the app's projection reader for the guard to call. */
 const EntitlementReader = createContextKey<EntitlementSource>();
