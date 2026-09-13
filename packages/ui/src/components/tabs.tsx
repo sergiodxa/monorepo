@@ -11,6 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { UtilityMixin } from "@sdxc/u";
 import type { SizeValue, SpacingValue } from "@sdxc/u/tokens";
 import type { Handle, Props as TagProps } from "remix/ui";
 
@@ -193,7 +194,7 @@ export function tabIndicatorMix(
 	orientation: Tabs.Orientation,
 	activeIndex: number,
 	tabSize: SizeValue,
-) {
+): UtilityMixin {
 	let size = boxLength(tabSize);
 	let offset = `calc((${size} + ${spacing(LIST_GAP)}) * ${activeIndex})`;
 

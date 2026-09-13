@@ -3,8 +3,10 @@
  * re-exported so `import * as u from "@sdxc/u"` carries the whole surface
  * while `import { bg, p } from "@sdxc/u"` still tree-shakes down to just those
  * utilities. The token-name interfaces ship here too, since declaration
- * merging (`declare module "@sdxc/u"`) targets this module specifier. Pure
- * token resolvers live at the `@sdxc/u/tokens` subpath.
+ * merging (`declare module "@sdxc/u"`) targets this module specifier, and the
+ * mixin types every utility's signature names ship here so a dependent can
+ * write out the type of a function that returns one. Pure token resolvers
+ * live at the `@sdxc/u/tokens` subpath.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,6 +16,7 @@ export * from "./animation/index.js";
 export * from "./color/index.js";
 export * from "./effects/index.js";
 export * from "./general/index.js";
+export type { UtilityInput, UtilityMixin } from "./internal/descriptor.js";
 export * from "./layout/index.js";
 export * from "./overflow/index.js";
 export * from "./responsive/index.js";

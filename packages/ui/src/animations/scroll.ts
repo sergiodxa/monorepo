@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { UtilityMixin } from "@sdxc/u";
 import type { CSSMixinDescriptor } from "remix/ui";
 
 import { animation, keyframes } from "@sdxc/u/animation";
@@ -316,7 +317,9 @@ function scrollFadeMask(direction: string, startStop: string, endStop: string): 
  * 	{attachments}
  * </Attachment.Group>
  */
-export function scrollFade<node extends Element = Element>(options: ScrollFade.Options = {}) {
+export function scrollFade<node extends Element = Element>(
+	options: ScrollFade.Options = {},
+): UtilityMixin<node> {
 	let axis = options.axis ?? DEFAULT_SCROLL_FADE_AXIS;
 	let size = options.size ?? DEFAULT_SCROLL_FADE_SIZE;
 	let direction = SCROLL_FADE_AXIS_DIRECTION[axis];
