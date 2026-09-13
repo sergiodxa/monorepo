@@ -51,19 +51,22 @@ export type ResourceContext<Variables = ResourceVariableValues> = AnyRequestCont
 };
 
 /** Context key holding a call's validated arguments, exposed as `ctx.input`. */
-export const ToolInput = createContextKey<Record<string, unknown>>();
+export const ToolInput: { defaultValue?: Record<string, unknown> } =
+	createContextKey<Record<string, unknown>>();
 
 /** Context key holding the tool being called, exposed as `ctx.tool`. */
-export const CurrentTool = createContextKey<ToolDescriptor>();
+export const CurrentTool: { defaultValue?: ToolDescriptor } = createContextKey<ToolDescriptor>();
 
 /** Context key holding the requested URI, exposed as `ctx.uri`. */
-export const ResourceUri = createContextKey<string>();
+export const ResourceUri: { defaultValue?: string } = createContextKey<string>();
 
 /** Context key holding the captured URI variables, exposed as `ctx.variables`. */
-export const ResourceVariables = createContextKey<ResourceVariableValues>();
+export const ResourceVariables: { defaultValue?: ResourceVariableValues } =
+	createContextKey<ResourceVariableValues>();
 
 /** Context key holding the resource being read, exposed as `ctx.resource`. */
-export const CurrentResource = createContextKey<ResourceDescriptor>();
+export const CurrentResource: { defaultValue?: ResourceDescriptor } =
+	createContextKey<ResourceDescriptor>();
 
 /** True when the value is already a request context; false for a bare request. */
 export function isRequestContext(value: Request | AnyRequestContext): value is AnyRequestContext {
