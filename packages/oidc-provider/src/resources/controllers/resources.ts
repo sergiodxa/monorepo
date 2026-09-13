@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Action } from "remix/router";
+
 import { noContent } from "@sdxc/http/response";
 import { badRequest, created, notFound, ok } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
@@ -60,111 +62,126 @@ let UpdateResourceSchema = s.object({
  * `GET /api/resources` — lists all resources with parsed scopes.
  * @returns A JSON `Response` with the array of resources.
  */
-export const index = createAction(routes.api.resources.index, async (ctx) => {
-	let { log } = ctx;
-	let resources = await Resource.list(ctx.db);
-	let result = resources.map(normalizeResource);
-	log.note("admin.resource.listed", { count: result.length });
-	return ok(result);
-});
+export const index: Action<typeof routes.api.resources.index> = createAction(
+	routes.api.resources.index,
+	async (ctx) => {
+		let { log } = ctx;
+		let resources = await Resource.list(ctx.db);
+		let result = resources.map(normalizeResource);
+		log.note("admin.resource.listed", { count: result.length });
+		return ok(result);
+	},
+);
 
 /**
  * `GET /api/resources/:id` — retrieves a single resource.
  * @returns A JSON `Response` with the resource, or `notFound`.
  */
-export const show = createAction(routes.api.resources.show, async (ctx) => {
-	let { params, log } = ctx;
-	let { id } = s.parse(s.object({ id: s.string() }), params);
-	log.set({ resource: { id } });
-	let resource = await Resource.show(ctx.db, id);
-	if (!resource) {
-		log.warn("admin.resource.not_found");
-		return notFound({ error: "Resource not found" });
-	}
-	log.note("admin.resource.retrieved");
-	return ok(normalizeResource(resource));
-});
-
-/**
- * `POST /api/resources` — creates a resource from a validated JSON body.
- * @returns A JSON `Response` with the new resource `id`, or an error `Response`.
- */
-export const create = createAction(routes.api.resources.create, async (ctx) => {
-	let { request, log } = ctx;
-	let body = await safeJsonParse(request);
-	if (isResponse(body)) {
-		log.warn("http.invalid_json");
-		return body;
-	}
-
-	let result = await validate(body, CreateResourceSchema);
-	if (isFailure(result)) {
-		log.warn("http.invalid_body");
-		return badRequest({ error: "Invalid request", issues: result.error.issues });
-	}
-
-	let { id } = await Resource.create(ctx.db, result.data);
-	log.note("admin.resource.created", {
-		identifier: result.data.identifier,
-	});
-	return created({ id });
-});
-
-/**
- * `PATCH/PUT /api/resources/:id` — updates a resource from a validated JSON body.
- * @returns A JSON `Response` with the updated resource, or an error `Response`.
- */
-export const update = createAction(routes.api.resources.update, async (ctx) => {
-	let { params, request, log } = ctx;
-	let { id } = s.parse(s.object({ id: s.string() }), params);
-	log.set({ resource: { id } });
-	let body = await safeJsonParse(request);
-	if (isResponse(body)) {
-		log.warn("http.invalid_json");
-		return body;
-	}
-
-	let result = await validate(body, UpdateResourceSchema);
-	if (isFailure(result)) {
-		log.warn("http.invalid_body");
-		return badRequest({ error: "Invalid request", issues: result.error.issues });
-	}
-
-	try {
-		await Resource.update(ctx.db, id, result.data);
+export const show: Action<typeof routes.api.resources.show> = createAction(
+	routes.api.resources.show,
+	async (ctx) => {
+		let { params, log } = ctx;
+		let { id } = s.parse(s.object({ id: s.string() }), params);
+		log.set({ resource: { id } });
 		let resource = await Resource.show(ctx.db, id);
 		if (!resource) {
 			log.warn("admin.resource.not_found");
 			return notFound({ error: "Resource not found" });
 		}
-		log.note("admin.resource.updated");
+		log.note("admin.resource.retrieved");
 		return ok(normalizeResource(resource));
-	} catch (error) {
-		if (error instanceof RecordNotFoundError) {
-			log.warn("admin.resource.not_found");
-			return notFound({ error: "Resource not found" });
+	},
+);
+
+/**
+ * `POST /api/resources` — creates a resource from a validated JSON body.
+ * @returns A JSON `Response` with the new resource `id`, or an error `Response`.
+ */
+export const create: Action<typeof routes.api.resources.create> = createAction(
+	routes.api.resources.create,
+	async (ctx) => {
+		let { request, log } = ctx;
+		let body = await safeJsonParse(request);
+		if (isResponse(body)) {
+			log.warn("http.invalid_json");
+			return body;
 		}
-		throw error;
-	}
-});
+
+		let result = await validate(body, CreateResourceSchema);
+		if (isFailure(result)) {
+			log.warn("http.invalid_body");
+			return badRequest({ error: "Invalid request", issues: result.error.issues });
+		}
+
+		let { id } = await Resource.create(ctx.db, result.data);
+		log.note("admin.resource.created", {
+			identifier: result.data.identifier,
+		});
+		return created({ id });
+	},
+);
+
+/**
+ * `PATCH/PUT /api/resources/:id` — updates a resource from a validated JSON body.
+ * @returns A JSON `Response` with the updated resource, or an error `Response`.
+ */
+export const update: Action<typeof routes.api.resources.update> = createAction(
+	routes.api.resources.update,
+	async (ctx) => {
+		let { params, request, log } = ctx;
+		let { id } = s.parse(s.object({ id: s.string() }), params);
+		log.set({ resource: { id } });
+		let body = await safeJsonParse(request);
+		if (isResponse(body)) {
+			log.warn("http.invalid_json");
+			return body;
+		}
+
+		let result = await validate(body, UpdateResourceSchema);
+		if (isFailure(result)) {
+			log.warn("http.invalid_body");
+			return badRequest({ error: "Invalid request", issues: result.error.issues });
+		}
+
+		try {
+			await Resource.update(ctx.db, id, result.data);
+			let resource = await Resource.show(ctx.db, id);
+			if (!resource) {
+				log.warn("admin.resource.not_found");
+				return notFound({ error: "Resource not found" });
+			}
+			log.note("admin.resource.updated");
+			return ok(normalizeResource(resource));
+		} catch (error) {
+			if (error instanceof RecordNotFoundError) {
+				log.warn("admin.resource.not_found");
+				return notFound({ error: "Resource not found" });
+			}
+			throw error;
+		}
+	},
+);
 
 /**
  * `DELETE /api/resources/:id` — deletes a resource.
  * @returns A `204 No Content` `Response`, or `notFound`.
  */
-export const destroy = createAction(routes.api.resources.destroy, async (ctx) => {
-	let { params, log } = ctx;
-	let { id } = s.parse(s.object({ id: s.string() }), params);
-	log.set({ resource: { id } });
-	try {
-		await Resource.destroy(ctx.db, id);
-		log.note("admin.resource.deleted");
-		return noContent();
-	} catch (error) {
-		if (error instanceof RecordNotFoundError) {
-			log.warn("admin.resource.not_found");
-			return notFound({ error: "Resource not found" });
+export const destroy: Action<typeof routes.api.resources.destroy> = createAction(
+	routes.api.resources.destroy,
+	async (ctx) => {
+		let { params, log } = ctx;
+		let { id } = s.parse(s.object({ id: s.string() }), params);
+		log.set({ resource: { id } });
+		try {
+			await Resource.destroy(ctx.db, id);
+			log.note("admin.resource.deleted");
+			return noContent();
+		} catch (error) {
+			if (error instanceof RecordNotFoundError) {
+				log.warn("admin.resource.not_found");
+				return notFound({ error: "Resource not found" });
+			}
+			throw error;
 		}
-		throw error;
-	}
-});
+	},
+);

@@ -9,6 +9,7 @@
  */
 
 import type { JSONValue } from "@sdxc/types";
+import type { Action } from "remix/router";
 
 import { badRequest, ok } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
@@ -35,28 +36,31 @@ const SetupSchema = s.object({
  * management-auth middleware allows this before an issuer exists yet.
  * @returns A JSON `Response` `{ ok: true }` on success, or a `badRequest` on invalid payload.
  */
-export const create = createAction(routes.api.setup, async (ctx) => {
-	let { request, log } = ctx;
+export const create: Action<typeof routes.api.setup> = createAction(
+	routes.api.setup,
+	async (ctx) => {
+		let { request, log } = ctx;
 
-	let body = (await request.json().catch(() => null)) as JSONValue;
-	let result = await validate(body, SetupSchema);
-	if (isFailure(result)) {
-		return badRequest({ error: "invalid_request", error_description: "Invalid setup payload" });
-	}
+		let body = (await request.json().catch(() => null)) as JSONValue;
+		let result = await validate(body, SetupSchema);
+		if (isFailure(result)) {
+			return badRequest({ error: "invalid_request", error_description: "Invalid setup payload" });
+		}
 
-	await TenantMeta.setTenantId(ctx.db, result.data.tenant_id);
-	await TenantMeta.setIssuer(ctx.db, result.data.issuer);
-	if (result.data.region) {
-		await TenantMeta.set(ctx.db, TenantMeta.KEYS.REGION, result.data.region);
-	}
+		await TenantMeta.setTenantId(ctx.db, result.data.tenant_id);
+		await TenantMeta.setIssuer(ctx.db, result.data.issuer);
+		if (result.data.region) {
+			await TenantMeta.set(ctx.db, TenantMeta.KEYS.REGION, result.data.region);
+		}
 
-	let createdAt = await TenantMeta.get(ctx.db, TenantMeta.KEYS.CREATED_AT);
-	if (!createdAt) {
-		await TenantMeta.set(ctx.db, TenantMeta.KEYS.CREATED_AT, new Date().toISOString());
-	}
+		let createdAt = await TenantMeta.get(ctx.db, TenantMeta.KEYS.CREATED_AT);
+		if (!createdAt) {
+			await TenantMeta.set(ctx.db, TenantMeta.KEYS.CREATED_AT, new Date().toISOString());
+		}
 
-	log.set({ tenant: { id: result.data.tenant_id, issuer: result.data.issuer } });
-	log.note("admin.setup.applied");
+		log.set({ tenant: { id: result.data.tenant_id, issuer: result.data.issuer } });
+		log.note("admin.setup.applied");
 
-	return ok({ ok: true });
-});
+		return ok({ ok: true });
+	},
+);

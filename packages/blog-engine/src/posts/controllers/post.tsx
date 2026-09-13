@@ -1,3 +1,5 @@
+import type { Action } from "remix/router";
+
 /**
  * Public post detail controller for `/:typePath/:slug`: renders one published post's
  * title, date, and fields. Drafts, scheduled posts, and unknown/hidden types fall
@@ -19,7 +21,7 @@ import { createMetaCodec } from "../models/meta-codec.js";
 import { Post } from "../models/post.js";
 
 /** Public post detail: `/:typePath/:slug`. Drafts and scheduled posts are hidden. */
-export default createAction(routes.post, async (ctx) => {
+const postController: Action<typeof routes.post> = createAction(routes.post, async (ctx) => {
 	let { typePath, slug } = s.parse(
 		s.object({ typePath: s.string(), slug: s.string() }),
 		ctx.params,
@@ -46,3 +48,5 @@ export default createAction(routes.post, async (ctx) => {
 		</Layout>,
 	);
 });
+
+export default postController;

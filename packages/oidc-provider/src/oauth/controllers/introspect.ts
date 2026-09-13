@@ -9,6 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Action } from "remix/router";
+
 import { ok } from "@sdxc/http/response/json";
 import { JWK } from "@sdxc/jwt";
 import { isFailure } from "@sdxc/result";
@@ -39,119 +41,124 @@ let IntrospectSchema = s.object({
  * Returns token metadata including subject, client, expiration, and scope.
  * @returns A JSON `Response` with `{ active: boolean, ... }`, or an OAuth error `Response`.
  */
-export default createAction(routes.oauth.introspect, async (ctx) => {
-	let { formData, request, log } = ctx;
+const introspectController: Action<typeof routes.oauth.introspect> = createAction(
+	routes.oauth.introspect,
+	async (ctx) => {
+		let { formData, request, log } = ctx;
 
-	let basicAuth = parseBasicAuth(request.headers.get("authorization"));
-	let body = Object.fromEntries(formData) as Record<string, unknown>;
+		let basicAuth = parseBasicAuth(request.headers.get("authorization"));
+		let body = Object.fromEntries(formData) as Record<string, unknown>;
 
-	if (basicAuth) {
-		body.client_id = basicAuth.clientId;
-		body.client_secret = basicAuth.clientSecret;
-	}
-
-	let result = await validate(body, IntrospectSchema);
-	if (isFailure(result)) {
-		log.warn("http.invalid_params");
-		return reject("invalid_request", "Missing or invalid parameters");
-	}
-
-	let { token, token_type_hint, client_id, client_secret } = result.data;
-
-	log.set({ client: { id: client_id }, oidc: { token_type_hint } });
-
-	if (!client_id || !client_secret) {
-		log.warn("client.auth_required");
-		return reject("invalid_client", "Client authentication required", 401);
-	}
-
-	let [client, issuer] = await Promise.all([
-		Client.show(ctx.db, client_id),
-		TenantMeta.getIssuer(ctx.db),
-	]);
-
-	if (!client) {
-		log.warn("client.not_found");
-		return reject("invalid_client", "Client not found", 401);
-	}
-
-	let secretValid = await Secret.verify(ctx.db, client.id, client_secret);
-	if (!secretValid) {
-		log.warn("client.invalid_credentials");
-		return reject("invalid_client", "Invalid client credentials", 401);
-	}
-
-	let headers = new Headers();
-	headers.set("Cache-Control", "no-store");
-
-	if (!issuer) {
-		log.warn("tenant.issuer_missing");
-		return ok({ active: false }, { headers });
-	}
-
-	if (token_type_hint !== "access_token") {
-		let session = await Session.show(ctx.db, token);
-		if (session && new Date(session.expires_at) > new Date()) {
-			log.set({ subject: { id: session.subject_id } });
-			log.note("oidc.introspect.active", {
-				token_type: "refresh_token",
-				session_id: session.id,
-			});
-			return ok(
-				{
-					active: true,
-					sub: session.subject_id,
-					client_id: session.client_id,
-					exp: Math.floor(new Date(session.expires_at).getTime() / 1000),
-					iat: Math.floor(new Date(session.created_at).getTime() / 1000),
-					iss: `https://${issuer}`,
-					aud: session.client_id,
-					token_type: "Bearer",
-				},
-				{ headers },
-			);
+		if (basicAuth) {
+			body.client_id = basicAuth.clientId;
+			body.client_secret = basicAuth.clientSecret;
 		}
-	}
 
-	try {
-		let signingKeys = await SigningKey.getAll(ctx.db);
-		if (signingKeys.length === 0) {
-			log.warn("tenant.signing_keys_missing");
+		let result = await validate(body, IntrospectSchema);
+		if (isFailure(result)) {
+			log.warn("http.invalid_params");
+			return reject("invalid_request", "Missing or invalid parameters");
+		}
+
+		let { token, token_type_hint, client_id, client_secret } = result.data;
+
+		log.set({ client: { id: client_id }, oidc: { token_type_hint } });
+
+		if (!client_id || !client_secret) {
+			log.warn("client.auth_required");
+			return reject("invalid_client", "Client authentication required", 401);
+		}
+
+		let [client, issuer] = await Promise.all([
+			Client.show(ctx.db, client_id),
+			TenantMeta.getIssuer(ctx.db),
+		]);
+
+		if (!client) {
+			log.warn("client.not_found");
+			return reject("invalid_client", "Client not found", 401);
+		}
+
+		let secretValid = await Secret.verify(ctx.db, client.id, client_secret);
+		if (!secretValid) {
+			log.warn("client.invalid_credentials");
+			return reject("invalid_client", "Invalid client credentials", 401);
+		}
+
+		let headers = new Headers();
+		headers.set("Cache-Control", "no-store");
+
+		if (!issuer) {
+			log.warn("tenant.issuer_missing");
 			return ok({ active: false }, { headers });
 		}
 
-		let accessToken = await AccessToken.verify(token, signingKeys, {
-			issuer: `https://${issuer}`,
-			algorithms: [JWK.Algorithm.ES256],
-		});
+		if (token_type_hint !== "access_token") {
+			let session = await Session.show(ctx.db, token);
+			if (session && new Date(session.expires_at) > new Date()) {
+				log.set({ subject: { id: session.subject_id } });
+				log.note("oidc.introspect.active", {
+					token_type: "refresh_token",
+					session_id: session.id,
+				});
+				return ok(
+					{
+						active: true,
+						sub: session.subject_id,
+						client_id: session.client_id,
+						exp: Math.floor(new Date(session.expires_at).getTime() / 1000),
+						iat: Math.floor(new Date(session.created_at).getTime() / 1000),
+						iss: `https://${issuer}`,
+						aud: session.client_id,
+						token_type: "Bearer",
+					},
+					{ headers },
+				);
+			}
+		}
 
-		// Reading these two off the payload keeps a token that carries no scope, or one
-		// minted before the client_id claim existed, active for its remaining lifetime:
-		// an absent claim is omitted from the response instead of throwing below.
-		let { client_id: tokenClientId, scope } = accessToken.payload;
+		try {
+			let signingKeys = await SigningKey.getAll(ctx.db);
+			if (signingKeys.length === 0) {
+				log.warn("tenant.signing_keys_missing");
+				return ok({ active: false }, { headers });
+			}
 
-		log.set({
-			subject: { id: accessToken.subject },
-			oidc: { scope: typeof scope === "string" ? scope : undefined },
-		});
-		log.note("oidc.introspect.active", { token_type: "access_token" });
+			let accessToken = await AccessToken.verify(token, signingKeys, {
+				issuer: `https://${issuer}`,
+				algorithms: [JWK.Algorithm.ES256],
+			});
 
-		return ok(
-			{
-				active: true,
-				sub: accessToken.subject,
-				client_id: tokenClientId,
-				exp: accessToken.expirationTime,
-				iat: Math.floor(accessToken.issuedAt.getTime() / 1000),
-				iss: accessToken.issuer,
-				aud: accessToken.audience,
-				token_type: "Bearer",
-				scope,
-			},
-			{ headers },
-		);
-	} catch {
-		log.note("oidc.introspect.inactive");
-		return ok({ active: false }, { headers });
-	}
-});
+			// Reading these two off the payload keeps a token that carries no scope, or one
+			// minted before the client_id claim existed, active for its remaining lifetime:
+			// an absent claim is omitted from the response instead of throwing below.
+			let { client_id: tokenClientId, scope } = accessToken.payload;
+
+			log.set({
+				subject: { id: accessToken.subject },
+				oidc: { scope: typeof scope === "string" ? scope : undefined },
+			});
+			log.note("oidc.introspect.active", { token_type: "access_token" });
+
+			return ok(
+				{
+					active: true,
+					sub: accessToken.subject,
+					client_id: tokenClientId,
+					exp: accessToken.expirationTime,
+					iat: Math.floor(accessToken.issuedAt.getTime() / 1000),
+					iss: accessToken.issuer,
+					aud: accessToken.audience,
+					token_type: "Bearer",
+					scope,
+				},
+				{ headers },
+			);
+		} catch {
+			log.note("oidc.introspect.inactive");
+			return ok({ active: false }, { headers });
+		}
+	},
+);
+
+export default introspectController;

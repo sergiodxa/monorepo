@@ -9,6 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Action } from "remix/router";
+
 import { noContent } from "@sdxc/http/response";
 import { notFound, ok } from "@sdxc/http/response/json";
 import * as s from "remix/data-schema";
@@ -26,77 +28,83 @@ import Subject from "../models/subject.js";
  * Client lookups run in a single batched query to avoid N+1 requests.
  * @returns A JSON `Response` with the sessions, or `notFound` if the subject is missing.
  */
-export const index = createAction(routes.api.subjects.sessions.index, async (ctx) => {
-	let { params, log } = ctx;
-	let { id } = s.parse(s.object({ id: s.string() }), params);
-	log.set({ subject: { id } });
+export const index: Action<typeof routes.api.subjects.sessions.index> = createAction(
+	routes.api.subjects.sessions.index,
+	async (ctx) => {
+		let { params, log } = ctx;
+		let { id } = s.parse(s.object({ id: s.string() }), params);
+		log.set({ subject: { id } });
 
-	let subject = await Subject.show(ctx.db, id);
-	if (!subject) {
-		log.warn("subject.not_found");
-		return notFound({ error: "Subject not found" });
-	}
+		let subject = await Subject.show(ctx.db, id);
+		if (!subject) {
+			log.warn("subject.not_found");
+			return notFound({ error: "Subject not found" });
+		}
 
-	let sessions = await Session.listBySubject(ctx.db, id);
+		let sessions = await Session.listBySubject(ctx.db, id);
 
-	let clientIds = [...new Set(sessions.map((session) => session.client_id))];
-	let clients = await Client.listByIds(ctx.db, clientIds);
-	let clientMap = new Map(clients.map((c) => [c.id, c]));
+		let clientIds = [...new Set(sessions.map((session) => session.client_id))];
+		let clients = await Client.listByIds(ctx.db, clientIds);
+		let clientMap = new Map(clients.map((c) => [c.id, c]));
 
-	log.note("admin.subject.session.listed", { count: sessions.length });
+		log.note("admin.subject.session.listed", { count: sessions.length });
 
-	return ok(
-		sessions.map((session) => {
-			let client = clientMap.get(session.client_id);
-			return {
-				id: session.id,
-				client: client ? { id: client.id, name: client.name } : null,
-				ip: session.ip,
-				userAgent: session.user_agent,
-				expiresAt: toIsoString(session.expires_at),
-				createdAt: toIsoString(session.created_at),
-				updatedAt: toIsoString(session.updated_at),
-			};
-		}),
-	);
-});
+		return ok(
+			sessions.map((session) => {
+				let client = clientMap.get(session.client_id);
+				return {
+					id: session.id,
+					client: client ? { id: client.id, name: client.name } : null,
+					ip: session.ip,
+					userAgent: session.user_agent,
+					expiresAt: toIsoString(session.expires_at),
+					createdAt: toIsoString(session.created_at),
+					updatedAt: toIsoString(session.updated_at),
+				};
+			}),
+		);
+	},
+);
 
 /**
  * `DELETE /api/subjects/:id/sessions/:sessionId` — revokes one of a subject's sessions.
  * @returns A `204 No Content` `Response`, or `notFound` if the subject or session is missing.
  */
-export const destroy = createAction(routes.api.subjects.sessions.destroy, async (ctx) => {
-	let { params, log } = ctx;
-	let { id, sessionId } = s.parse(s.object({ id: s.string(), sessionId: s.string() }), params);
-	log.set({ subject: { id } });
+export const destroy: Action<typeof routes.api.subjects.sessions.destroy> = createAction(
+	routes.api.subjects.sessions.destroy,
+	async (ctx) => {
+		let { params, log } = ctx;
+		let { id, sessionId } = s.parse(s.object({ id: s.string(), sessionId: s.string() }), params);
+		log.set({ subject: { id } });
 
-	let subject = await Subject.show(ctx.db, id);
-	if (!subject) {
-		log.warn("subject.not_found");
-		return notFound({ error: "Subject not found" });
-	}
+		let subject = await Subject.show(ctx.db, id);
+		if (!subject) {
+			log.warn("subject.not_found");
+			return notFound({ error: "Subject not found" });
+		}
 
-	let session = await Session.show(ctx.db, sessionId);
-	if (!session) {
-		log.warn("admin.subject.session.not_found", { session_id: sessionId });
-		return notFound({ error: "Session not found" });
-	}
-
-	if (session.subject_id !== id) {
-		log.warn("admin.subject.session.subject_mismatch", {
-			session_id: sessionId,
-		});
-		return notFound({ error: "Session not found" });
-	}
-
-	try {
-		await Session.destroy(ctx.db, sessionId);
-		log.note("admin.subject.session.destroyed", { session_id: sessionId });
-		return noContent();
-	} catch (error) {
-		if (error instanceof RecordNotFoundError) {
+		let session = await Session.show(ctx.db, sessionId);
+		if (!session) {
+			log.warn("admin.subject.session.not_found", { session_id: sessionId });
 			return notFound({ error: "Session not found" });
 		}
-		throw error;
-	}
-});
+
+		if (session.subject_id !== id) {
+			log.warn("admin.subject.session.subject_mismatch", {
+				session_id: sessionId,
+			});
+			return notFound({ error: "Session not found" });
+		}
+
+		try {
+			await Session.destroy(ctx.db, sessionId);
+			log.note("admin.subject.session.destroyed", { session_id: sessionId });
+			return noContent();
+		} catch (error) {
+			if (error instanceof RecordNotFoundError) {
+				return notFound({ error: "Session not found" });
+			}
+			throw error;
+		}
+	},
+);

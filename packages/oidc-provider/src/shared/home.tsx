@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Action } from "remix/router";
 import type { Handle } from "remix/ui";
 
 import { ok } from "@sdxc/http/response/html";
@@ -29,7 +30,7 @@ import { Layout } from "./layout.js";
  * rendered HTML document.
  * @returns An HTML `Response` with the tenant status page.
  */
-export default createAction(routes.index, async (ctx) => {
+const homeController: Action<typeof routes.index> = createAction(routes.index, async (ctx) => {
 	let { log } = ctx;
 
 	let [brand, clientCount, subjectCount] = await Promise.all([
@@ -45,6 +46,8 @@ export default createAction(routes.index, async (ctx) => {
 	);
 	return ok(body);
 });
+
+export default homeController;
 
 interface TenantHomePageProps {
 	brand: Awaited<ReturnType<typeof Brand.show>>;

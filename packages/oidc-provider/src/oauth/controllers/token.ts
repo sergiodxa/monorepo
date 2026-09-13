@@ -10,6 +10,7 @@
  */
 
 import type { Log } from "@sdxc/logger";
+import type { Action } from "remix/router";
 
 import { JWK } from "@sdxc/jwt";
 import { isFailure } from "@sdxc/result";
@@ -63,35 +64,40 @@ let ClientCredentialsSchema = s.object({
  * dispatching by `grant_type` (form body or Basic auth) to the matching handler.
  * @returns A JSON token `Response`, or an OAuth error `Response`.
  */
-export default createAction(routes.oauth.token, async (ctx) => {
-	let { formData, request, log } = ctx;
-	let grantType = formData.get("grant_type");
+const tokenController: Action<typeof routes.oauth.token> = createAction(
+	routes.oauth.token,
+	async (ctx) => {
+		let { formData, request, log } = ctx;
+		let grantType = formData.get("grant_type");
 
-	let basicAuth = parseBasicAuth(request.headers.get("authorization"));
-	let body = Object.fromEntries(formData);
+		let basicAuth = parseBasicAuth(request.headers.get("authorization"));
+		let body = Object.fromEntries(formData);
 
-	if (basicAuth) {
-		body.client_id = basicAuth.clientId;
-		body.client_secret = basicAuth.clientSecret;
-	}
+		if (basicAuth) {
+			body.client_id = basicAuth.clientId;
+			body.client_secret = basicAuth.clientSecret;
+		}
 
-	if (grantType === "authorization_code") {
-		return await handleAuthorizationCode(ctx.db, body, log);
-	}
+		if (grantType === "authorization_code") {
+			return await handleAuthorizationCode(ctx.db, body, log);
+		}
 
-	if (grantType === "refresh_token") {
-		return await handleRefreshToken(ctx.db, body, log);
-	}
+		if (grantType === "refresh_token") {
+			return await handleRefreshToken(ctx.db, body, log);
+		}
 
-	if (grantType === "client_credentials") {
-		return await handleClientCredentials(ctx.db, body, log);
-	}
+		if (grantType === "client_credentials") {
+			return await handleClientCredentials(ctx.db, body, log);
+		}
 
-	log.warn("oidc.token.unsupported_grant", {
-		grant_type: typeof grantType === "string" ? grantType : null,
-	});
-	return reject("unsupported_grant_type", "The authorization grant type is not supported");
-});
+		log.warn("oidc.token.unsupported_grant", {
+			grant_type: typeof grantType === "string" ? grantType : null,
+		});
+		return reject("unsupported_grant_type", "The authorization grant type is not supported");
+	},
+);
+
+export default tokenController;
 
 /**
  * Handles the authorization_code grant type (RFC 6749 Section 4.1.3).

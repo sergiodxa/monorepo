@@ -1,3 +1,5 @@
+import type { Action } from "remix/router";
+
 /**
  * Public per-type index controller for `/:typePath`: lists a visible post type's
  * published posts. Unknown or hidden types fall through to the themed 404.
@@ -18,7 +20,7 @@ import { createMetaCodec } from "../models/meta-codec.js";
 import { Post } from "../models/post.js";
 
 /** Public per-type index: `/:typePath` lists published posts of that type. */
-export default createAction(routes.typeIndex, async (ctx) => {
+const typeIndex: Action<typeof routes.typeIndex> = createAction(routes.typeIndex, async (ctx) => {
 	let { typePath } = s.parse(s.object({ typePath: s.string() }), ctx.params);
 	let type = await PostType.findByPath(ctx.db, typePath);
 	if (!type || !type.visible) return renderNotFound(ctx);
@@ -42,3 +44,5 @@ export default createAction(routes.typeIndex, async (ctx) => {
 		</Layout>,
 	);
 });
+
+export default typeIndex;

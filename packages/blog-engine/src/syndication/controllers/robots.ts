@@ -1,3 +1,5 @@
+import type { Action } from "remix/router";
+
 /**
  * Controller for `/robots.txt`, allowing all crawlers and pointing them at the
  * sitemap. The sitemap URL is derived from the request origin so it works on any host
@@ -12,8 +14,13 @@ import { createAction } from "remix/router";
 import routes from "../../routes.js";
 
 /** Serves `/robots.txt` pointing crawlers at the sitemap (URL derived per request). */
-export default createAction(routes.robots, async ({ request }) => {
-	let origin = new URL(request.url).origin;
-	let body = `User-agent: *\nAllow: /\nSitemap: ${origin}/sitemap.xml\n`;
-	return text(body);
-});
+const robotsController: Action<typeof routes.robots> = createAction(
+	routes.robots,
+	async ({ request }) => {
+		let origin = new URL(request.url).origin;
+		let body = `User-agent: *\nAllow: /\nSitemap: ${origin}/sitemap.xml\n`;
+		return text(body);
+	},
+);
+
+export default robotsController;

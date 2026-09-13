@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Action } from "remix/router";
+
 import { badRequest, ok } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
@@ -33,39 +35,45 @@ let UpdateBrandSchema = s.object({
  * `GET /api/brand` — returns the tenant's branding configuration.
  * @returns A JSON `Response` with the branding record (defaults applied).
  */
-export const show = createAction(routes.api.brand.show, async (ctx) => {
-	let { log } = ctx;
+export const show: Action<typeof routes.api.brand.show> = createAction(
+	routes.api.brand.show,
+	async (ctx) => {
+		let { log } = ctx;
 
-	let brand = await Brand.show(ctx.db);
+		let brand = await Brand.show(ctx.db);
 
-	log.note("admin.brand.retrieved", { brand_id: brand?.id ?? null });
+		log.note("admin.brand.retrieved", { brand_id: brand?.id ?? null });
 
-	return ok(brand);
-});
+		return ok(brand);
+	},
+);
 
 /**
  * `PUT /api/brand` — updates branding from a validated JSON body.
  * @returns A JSON `Response` with the updated branding record, or an error `Response`.
  */
-export const update = createAction(routes.api.brand.update, async (ctx) => {
-	let { request, log } = ctx;
+export const update: Action<typeof routes.api.brand.update> = createAction(
+	routes.api.brand.update,
+	async (ctx) => {
+		let { request, log } = ctx;
 
-	let body = await safeJsonParse(request);
-	if (isResponse(body)) {
-		log.warn("http.invalid_json");
-		return body;
-	}
+		let body = await safeJsonParse(request);
+		if (isResponse(body)) {
+			log.warn("http.invalid_json");
+			return body;
+		}
 
-	let result = await validate(body, UpdateBrandSchema);
-	if (isFailure(result)) {
-		log.warn("http.invalid_body", { issues: result.error.issues.length });
-		return badRequest({ error: "Invalid request", issues: result.error.issues });
-	}
+		let result = await validate(body, UpdateBrandSchema);
+		if (isFailure(result)) {
+			log.warn("http.invalid_body", { issues: result.error.issues.length });
+			return badRequest({ error: "Invalid request", issues: result.error.issues });
+		}
 
-	await Brand.update(ctx.db, result.data);
-	let brand = await Brand.show(ctx.db);
+		await Brand.update(ctx.db, result.data);
+		let brand = await Brand.show(ctx.db);
 
-	log.note("admin.brand.updated", { brand_id: brand?.id ?? null });
+		log.note("admin.brand.updated", { brand_id: brand?.id ?? null });
 
-	return ok(brand);
-});
+		return ok(brand);
+	},
+);

@@ -8,6 +8,7 @@
  */
 
 import type { Database } from "remix/data-table";
+import type { Action } from "remix/router";
 
 import { RSS } from "@sdxc/rss";
 import * as s from "remix/data-schema";
@@ -54,7 +55,7 @@ function xmlResponse(body: string): Response {
 }
 
 /** Global feed `/rss.xml`: published posts across all visible types. */
-export const feedRss = createAction(routes.rss, async (ctx) => {
+export const feedRss: Action<typeof routes.rss> = createAction(routes.rss, async (ctx) => {
 	let origin = new URL(ctx.request.url).origin;
 	let [siteTitle, description, types] = await Promise.all([
 		Settings.siteTitle(ctx.db),
@@ -71,7 +72,7 @@ export const feedRss = createAction(routes.rss, async (ctx) => {
 });
 
 /** Per-type feed `/:typePath.rss`. */
-export const typeRss = createAction(routes.typeRss, async (ctx) => {
+export const typeRss: Action<typeof routes.typeRss> = createAction(routes.typeRss, async (ctx) => {
 	let { typePath } = s.parse(s.object({ typePath: s.string() }), ctx.params);
 	let type = await PostType.findByPath(ctx.db, typePath);
 	if (!type || !type.visible) return renderNotFound(ctx);

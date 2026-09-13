@@ -9,6 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Action } from "remix/router";
+
 import { JWK } from "@sdxc/jwt";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
@@ -37,119 +39,121 @@ let LogoutSchema = s.object({
  * Destroys all sessions for the subject identified by the id_token_hint.
  * @returns A redirect `Response` to the post-logout URI, an HTML logged-out page, or an OAuth error `Response`.
  */
-export default createAction(routes.oidc.logout, async (ctx) => {
-	let { request, log } = ctx;
+const logoutController: Action<typeof routes.oidc.logout> = createAction(
+	routes.oidc.logout,
+	async (ctx) => {
+		let { request, log } = ctx;
 
-	let url = new URL(request.url);
-	let params = Object.fromEntries(url.searchParams);
+		let url = new URL(request.url);
+		let params = Object.fromEntries(url.searchParams);
 
-	let result = await validate(params, LogoutSchema);
-	if (isFailure(result)) {
-		log.warn("oidc.logout.invalid_params");
-		return reject("invalid_request", "Invalid parameters");
-	}
-
-	let { id_token_hint, post_logout_redirect_uri, client_id, state } = result.data;
-
-	let subjectId: string | undefined;
-	let clientId: string | undefined;
-
-	if (id_token_hint) {
-		log.set({ oidc: { logout_hint: "id_token" } });
-
-		let [issuer, signingKeys] = await Promise.all([
-			TenantMeta.getIssuer(ctx.db),
-			SigningKey.getAll(ctx.db),
-		]);
-
-		if (!issuer) {
-			log.fail(new Error("Issuer not configured"));
-			return reject("server_error", "Issuer not configured");
+		let result = await validate(params, LogoutSchema);
+		if (isFailure(result)) {
+			log.warn("oidc.logout.invalid_params");
+			return reject("invalid_request", "Invalid parameters");
 		}
 
-		if (signingKeys.length === 0) {
-			log.fail(new Error("No signing keys available"));
-			return reject("server_error", "No signing keys available");
-		}
+		let { id_token_hint, post_logout_redirect_uri, client_id, state } = result.data;
 
-		try {
-			let idToken = await IdToken.verify(id_token_hint, signingKeys, {
-				issuer: `https://${issuer}`,
-				algorithms: [JWK.Algorithm.ES256],
-			});
+		let subjectId: string | undefined;
+		let clientId: string | undefined;
 
-			subjectId = idToken.subject;
-			let tokenAudience = idToken.audience;
+		if (id_token_hint) {
+			log.set({ oidc: { logout_hint: "id_token" } });
 
-			log.set({ subject: { id: subjectId } });
-			log.note("oidc.logout.id_token_verified");
+			let [issuer, signingKeys] = await Promise.all([
+				TenantMeta.getIssuer(ctx.db),
+				SigningKey.getAll(ctx.db),
+			]);
 
-			if (client_id && client_id !== tokenAudience) {
-				log.warn("client.id_mismatch", {
-					provided_client_id: client_id,
-					expected_client_id: tokenAudience,
-				});
-				return reject("invalid_request", "client_id does not match id_token_hint audience");
+			if (!issuer) {
+				log.fail(new Error("Issuer not configured"));
+				return reject("server_error", "Issuer not configured");
 			}
 
-			clientId = typeof tokenAudience === "string" ? tokenAudience : tokenAudience?.[0];
-			log.set({ client: { id: clientId } });
-		} catch {
-			log.warn("oidc.logout.id_token_invalid");
-			return reject("invalid_request", "Invalid id_token_hint");
+			if (signingKeys.length === 0) {
+				log.fail(new Error("No signing keys available"));
+				return reject("server_error", "No signing keys available");
+			}
+
+			try {
+				let idToken = await IdToken.verify(id_token_hint, signingKeys, {
+					issuer: `https://${issuer}`,
+					algorithms: [JWK.Algorithm.ES256],
+				});
+
+				subjectId = idToken.subject;
+				let tokenAudience = idToken.audience;
+
+				log.set({ subject: { id: subjectId } });
+				log.note("oidc.logout.id_token_verified");
+
+				if (client_id && client_id !== tokenAudience) {
+					log.warn("client.id_mismatch", {
+						provided_client_id: client_id,
+						expected_client_id: tokenAudience,
+					});
+					return reject("invalid_request", "client_id does not match id_token_hint audience");
+				}
+
+				clientId = typeof tokenAudience === "string" ? tokenAudience : tokenAudience?.[0];
+				log.set({ client: { id: clientId } });
+			} catch {
+				log.warn("oidc.logout.id_token_invalid");
+				return reject("invalid_request", "Invalid id_token_hint");
+			}
+		} else if (client_id) {
+			log.set({ oidc: { logout_hint: "client_id" }, client: { id: client_id } });
+			clientId = client_id;
+		} else {
+			log.warn("oidc.logout.params_missing");
+			return reject("invalid_request", "Either id_token_hint or client_id is required");
 		}
-	} else if (client_id) {
-		log.set({ oidc: { logout_hint: "client_id" }, client: { id: client_id } });
-		clientId = client_id;
-	} else {
-		log.warn("oidc.logout.params_missing");
-		return reject("invalid_request", "Either id_token_hint or client_id is required");
-	}
 
-	let clientPromise = clientId ? Client.show(ctx.db, clientId) : Promise.resolve(null);
-	let logoutUrisPromise =
-		post_logout_redirect_uri && clientId ? LogoutUri.list(ctx.db, clientId) : Promise.resolve([]);
-	let subjectPromise = subjectId ? Subject.show(ctx.db, subjectId) : Promise.resolve(null);
+		let clientPromise = clientId ? Client.show(ctx.db, clientId) : Promise.resolve(null);
+		let logoutUrisPromise =
+			post_logout_redirect_uri && clientId ? LogoutUri.list(ctx.db, clientId) : Promise.resolve([]);
+		let subjectPromise = subjectId ? Subject.show(ctx.db, subjectId) : Promise.resolve(null);
 
-	let [client, logoutUris, subject] = await Promise.all([
-		clientPromise,
-		logoutUrisPromise,
-		subjectPromise,
-	]);
+		let [client, logoutUris, subject] = await Promise.all([
+			clientPromise,
+			logoutUrisPromise,
+			subjectPromise,
+		]);
 
-	if (clientId && !client) {
-		log.warn("client.not_found");
-		return reject("invalid_client", "Client not found");
-	}
-
-	if (post_logout_redirect_uri && clientId) {
-		let isValidUri = logoutUris.some((uri) => uri.uri === post_logout_redirect_uri);
-		if (!isValidUri) {
-			log.warn("oidc.logout.invalid_redirect_uri");
-			return reject("invalid_request", "Invalid post_logout_redirect_uri");
+		if (clientId && !client) {
+			log.warn("client.not_found");
+			return reject("invalid_client", "Client not found");
 		}
-	}
 
-	if (subjectId && subject) {
-		await Session.destroyBySubject(ctx.db, subject.id);
-		log.note("oidc.logout.sessions_destroyed");
-	} else if (subjectId) {
-		log.warn("subject.not_found");
-	}
-
-	if (post_logout_redirect_uri) {
-		let redirectUrl = new URL(post_logout_redirect_uri);
-		if (state) {
-			redirectUrl.searchParams.set("state", state);
+		if (post_logout_redirect_uri && clientId) {
+			let isValidUri = logoutUris.some((uri) => uri.uri === post_logout_redirect_uri);
+			if (!isValidUri) {
+				log.warn("oidc.logout.invalid_redirect_uri");
+				return reject("invalid_request", "Invalid post_logout_redirect_uri");
+			}
 		}
-		log.note("oidc.logout.completed", { redirect: true });
-		return Response.redirect(redirectUrl.toString(), 302);
-	}
 
-	log.note("oidc.logout.completed", { redirect: false });
+		if (subjectId && subject) {
+			await Session.destroyBySubject(ctx.db, subject.id);
+			log.note("oidc.logout.sessions_destroyed");
+		} else if (subjectId) {
+			log.warn("subject.not_found");
+		}
 
-	return new Response(
-		`<!DOCTYPE html>
+		if (post_logout_redirect_uri) {
+			let redirectUrl = new URL(post_logout_redirect_uri);
+			if (state) {
+				redirectUrl.searchParams.set("state", state);
+			}
+			log.note("oidc.logout.completed", { redirect: true });
+			return Response.redirect(redirectUrl.toString(), 302);
+		}
+
+		log.note("oidc.logout.completed", { redirect: false });
+
+		return new Response(
+			`<!DOCTYPE html>
 <html>
 <head><title>Logged Out</title></head>
 <body>
@@ -157,9 +161,12 @@ export default createAction(routes.oidc.logout, async (ctx) => {
 <p>You have been logged out of the application.</p>
 </body>
 </html>`,
-		{
-			status: 200,
-			headers: { "Content-Type": "text/html" },
-		},
-	);
-});
+			{
+				status: 200,
+				headers: { "Content-Type": "text/html" },
+			},
+		);
+	},
+);
+
+export default logoutController;

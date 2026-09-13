@@ -9,6 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Action } from "remix/router";
+
 import { badRequest, ok, tooManyRequests } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
@@ -53,176 +55,181 @@ let RequestSchema = s.object({
  * passkey; rate-limited per email, and success implicitly verifies ownership.
  * @returns A JSON `Response` with a redirect (OAuth flow) or subject info, or an error `Response`.
  */
-export default createAction(routes.webauthn.register.verify, async (ctx) => {
-	let { request, log, analytics } = ctx;
+const registerVerifyController: Action<typeof routes.webauthn.register.verify> = createAction(
+	routes.webauthn.register.verify,
+	async (ctx) => {
+		let { request, log, analytics } = ctx;
 
-	let body = await safeJsonParse(request);
-	if (isResponse(body)) {
-		log.warn("http.invalid_json");
-		return body;
-	}
-
-	let result = await validate(body, RequestSchema);
-	if (isFailure(result)) {
-		log.warn("http.invalid_body");
-		return badRequest({ error: "Invalid request", issues: result.error.issues });
-	}
-
-	let { challengeId, response } = result.data;
-	log.set({ webauthn: { challenge_id: challengeId } });
-
-	let challenge;
-	try {
-		challenge = await WebAuthnChallenge.consume(ctx.db, challengeId);
-	} catch (error) {
-		if (error instanceof WebAuthnChallenge.InvalidChallengeError) {
-			log.warn("webauthn.challenge_invalid");
-			return badRequest({ error: "Invalid challenge" });
+		let body = await safeJsonParse(request);
+		if (isResponse(body)) {
+			log.warn("http.invalid_json");
+			return body;
 		}
-		if (error instanceof WebAuthnChallenge.ExpiredChallengeError) {
-			log.warn("webauthn.challenge_expired");
-			return badRequest({ error: "Challenge expired. Please try again." });
+
+		let result = await validate(body, RequestSchema);
+		if (isFailure(result)) {
+			log.warn("http.invalid_body");
+			return badRequest({ error: "Invalid request", issues: result.error.issues });
 		}
-		throw error;
-	}
 
-	if (challenge.type !== "registration") {
-		log.warn("webauthn.challenge_type_mismatch", { type: challenge.type });
-		return badRequest({ error: "Invalid challenge type" });
-	}
+		let { challengeId, response } = result.data;
+		log.set({ webauthn: { challenge_id: challengeId } });
 
-	if (!challenge.email) {
-		log.warn("webauthn.register.challenge_email_missing");
-		return badRequest({ error: "Invalid challenge: missing email" });
-	}
+		let challenge;
+		try {
+			challenge = await WebAuthnChallenge.consume(ctx.db, challengeId);
+		} catch (error) {
+			if (error instanceof WebAuthnChallenge.InvalidChallengeError) {
+				log.warn("webauthn.challenge_invalid");
+				return badRequest({ error: "Invalid challenge" });
+			}
+			if (error instanceof WebAuthnChallenge.ExpiredChallengeError) {
+				log.warn("webauthn.challenge_expired");
+				return badRequest({ error: "Challenge expired. Please try again." });
+			}
+			throw error;
+		}
 
-	let rateLimit = checkUserRateLimit(
-		challenge.email,
-		"registerVerify",
-		USER_RATE_LIMITS.registerVerify,
-	);
-	if (!rateLimit.success) {
-		log.warn("webauthn.rate_limited", { email: challenge.email });
-		return tooManyRequests({
-			error: "Too many registration attempts. Please try again later.",
-			retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
-		});
-	}
+		if (challenge.type !== "registration") {
+			log.warn("webauthn.challenge_type_mismatch", { type: challenge.type });
+			return badRequest({ error: "Invalid challenge type" });
+		}
 
-	let issuer = await TenantMeta.getIssuer(ctx.db);
-	let rpId = issuer ? new URL(`https://${issuer}`).hostname : new URL(request.url).hostname;
-	let origin = new URL(request.url).origin;
+		if (!challenge.email) {
+			log.warn("webauthn.register.challenge_email_missing");
+			return badRequest({ error: "Invalid challenge: missing email" });
+		}
 
-	let verification;
-	try {
-		verification = await verifyRegistrationResponse({
-			response: response as Parameters<typeof verifyRegistrationResponse>[0]["response"],
-			expectedChallenge: challenge.challenge,
-			expectedOrigin: origin,
-			expectedRPID: rpId,
-			requireUserVerification: false,
-		});
-	} catch (error) {
-		log.warn("webauthn.register.verification_failed", {
-			error: error instanceof Error ? error.message : "Unknown error",
-		});
-		return badRequest({ error: "Passkey verification failed" });
-	}
+		let rateLimit = checkUserRateLimit(
+			challenge.email,
+			"registerVerify",
+			USER_RATE_LIMITS.registerVerify,
+		);
+		if (!rateLimit.success) {
+			log.warn("webauthn.rate_limited", { email: challenge.email });
+			return tooManyRequests({
+				error: "Too many registration attempts. Please try again later.",
+				retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
+			});
+		}
 
-	if (!verification.verified || !verification.registrationInfo) {
-		log.warn("webauthn.register.not_verified");
-		return badRequest({ error: "Passkey verification failed" });
-	}
+		let issuer = await TenantMeta.getIssuer(ctx.db);
+		let rpId = issuer ? new URL(`https://${issuer}`).hostname : new URL(request.url).hostname;
+		let origin = new URL(request.url).origin;
 
-	let { registrationInfo } = verification;
+		let verification;
+		try {
+			verification = await verifyRegistrationResponse({
+				response: response as Parameters<typeof verifyRegistrationResponse>[0]["response"],
+				expectedChallenge: challenge.challenge,
+				expectedOrigin: origin,
+				expectedRPID: rpId,
+				requireUserVerification: false,
+			});
+		} catch (error) {
+			log.warn("webauthn.register.verification_failed", {
+				error: error instanceof Error ? error.message : "Unknown error",
+			});
+			return badRequest({ error: "Passkey verification failed" });
+		}
 
-	let existing = await Subject.findByEmail(ctx.db, challenge.email);
-	if (existing) {
-		log.warn("webauthn.register.subject_exists", { subject_id: existing.id });
-		return badRequest({
-			error: "An account with this email already exists. Sign in with your email instead.",
-		});
-	}
+		if (!verification.verified || !verification.registrationInfo) {
+			log.warn("webauthn.register.not_verified");
+			return badRequest({ error: "Passkey verification failed" });
+		}
 
-	let username = challenge.email.split("@")[0] ?? challenge.email;
-	let subject = await Subject.register(ctx.db, { email: challenge.email, username });
-	log.set({ subject: { id: subject.id } });
-	log.note("webauthn.register.subject_created");
+		let { registrationInfo } = verification;
 
-	let userAgent = request.headers.get("user-agent");
-	let passkeyName = generatePasskeyName(userAgent);
+		let existing = await Subject.findByEmail(ctx.db, challenge.email);
+		if (existing) {
+			log.warn("webauthn.register.subject_exists", { subject_id: existing.id });
+			return badRequest({
+				error: "An account with this email already exists. Sign in with your email instead.",
+			});
+		}
 
-	await Passkey.create(ctx.db, {
-		subjectId: subject.id,
-		credentialId: registrationInfo.credential.id,
-		publicKey: Buffer.from(registrationInfo.credential.publicKey).toString("base64"),
-		counter: registrationInfo.credential.counter,
-		deviceType: registrationInfo.credentialDeviceType,
-		backedUp: registrationInfo.credentialBackedUp,
-		transports: response.response.transports?.join(",") ?? null,
-		name: passkeyName,
-	});
+		let username = challenge.email.split("@")[0] ?? challenge.email;
+		let subject = await Subject.register(ctx.db, { email: challenge.email, username });
+		log.set({ subject: { id: subject.id } });
+		log.note("webauthn.register.subject_created");
 
-	log.note("webauthn.register.passkey_created", {
-		device_type: registrationInfo.credentialDeviceType,
-		backed_up: registrationInfo.credentialBackedUp,
-	});
+		let userAgent = request.headers.get("user-agent");
+		let passkeyName = generatePasskeyName(userAgent);
 
-	if (!subject.email_verified_at) {
-		await Subject.verifyEmail(ctx.db, subject.id);
-		log.note("webauthn.register.email_verified");
-	}
-
-	let tenantId = await TenantMeta.getTenantId(ctx.db);
-	if (tenantId) {
-		analytics.trackRegistration(tenantId, subject.id);
-		analytics.trackAuthentication(tenantId, subject.id);
-	}
-
-	if (challenge.client_id && challenge.redirect_uri) {
-		let sessionId = await Session.create(ctx.db, {
+		await Passkey.create(ctx.db, {
 			subjectId: subject.id,
-			clientId: challenge.client_id,
-			ip: request.headers.get("cf-connecting-ip"),
-			userAgent: request.headers.get("user-agent"),
+			credentialId: registrationInfo.credential.id,
+			publicKey: Buffer.from(registrationInfo.credential.publicKey).toString("base64"),
+			counter: registrationInfo.credential.counter,
+			deviceType: registrationInfo.credentialDeviceType,
+			backedUp: registrationInfo.credentialBackedUp,
+			transports: response.response.transports?.join(",") ?? null,
+			name: passkeyName,
 		});
 
-		let code = await AuthorizationCode.create(ctx.db, {
-			clientId: challenge.client_id,
-			subjectId: subject.id,
-			sessionId,
-			redirectUri: challenge.redirect_uri,
-			scope: challenge.scope?.split(" "),
-			nonce: challenge.nonce ?? undefined,
-			pkce:
-				challenge.pkce_challenge && challenge.pkce_method
-					? {
-							challenge: challenge.pkce_challenge,
-							method: challenge.pkce_method === "plain" ? "plain" : "S256",
-						}
-					: undefined,
+		log.note("webauthn.register.passkey_created", {
+			device_type: registrationInfo.credentialDeviceType,
+			backed_up: registrationInfo.credentialBackedUp,
 		});
 
-		let redirectUrl = new URL(challenge.redirect_uri);
-		redirectUrl.searchParams.set("code", code);
-		if (challenge.state) {
-			redirectUrl.searchParams.set("state", challenge.state);
+		if (!subject.email_verified_at) {
+			await Subject.verifyEmail(ctx.db, subject.id);
+			log.note("webauthn.register.email_verified");
 		}
 
-		log.set({ client: { id: challenge.client_id } });
-		log.note("webauthn.register.completed", { session_id: sessionId, oauth: true });
+		let tenantId = await TenantMeta.getTenantId(ctx.db);
+		if (tenantId) {
+			analytics.trackRegistration(tenantId, subject.id);
+			analytics.trackAuthentication(tenantId, subject.id);
+		}
+
+		if (challenge.client_id && challenge.redirect_uri) {
+			let sessionId = await Session.create(ctx.db, {
+				subjectId: subject.id,
+				clientId: challenge.client_id,
+				ip: request.headers.get("cf-connecting-ip"),
+				userAgent: request.headers.get("user-agent"),
+			});
+
+			let code = await AuthorizationCode.create(ctx.db, {
+				clientId: challenge.client_id,
+				subjectId: subject.id,
+				sessionId,
+				redirectUri: challenge.redirect_uri,
+				scope: challenge.scope?.split(" "),
+				nonce: challenge.nonce ?? undefined,
+				pkce:
+					challenge.pkce_challenge && challenge.pkce_method
+						? {
+								challenge: challenge.pkce_challenge,
+								method: challenge.pkce_method === "plain" ? "plain" : "S256",
+							}
+						: undefined,
+			});
+
+			let redirectUrl = new URL(challenge.redirect_uri);
+			redirectUrl.searchParams.set("code", code);
+			if (challenge.state) {
+				redirectUrl.searchParams.set("state", challenge.state);
+			}
+
+			log.set({ client: { id: challenge.client_id } });
+			log.note("webauthn.register.completed", { session_id: sessionId, oauth: true });
+
+			return ok({
+				success: true,
+				redirect: redirectUrl.toString(),
+			});
+		}
+
+		log.note("webauthn.register.completed", { oauth: false });
 
 		return ok({
 			success: true,
-			redirect: redirectUrl.toString(),
+			subjectId: subject.id,
+			email: subject.email,
 		});
-	}
+	},
+);
 
-	log.note("webauthn.register.completed", { oauth: false });
-
-	return ok({
-		success: true,
-		subjectId: subject.id,
-		email: subject.email,
-	});
-});
+export default registerVerifyController;

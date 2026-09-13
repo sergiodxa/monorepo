@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Action } from "remix/router";
+
 import { ok } from "@sdxc/http/response/json";
 import { createAction } from "remix/router";
 
@@ -20,7 +22,7 @@ import Subject from "../../subjects/models/subject.js";
  * `GET /api/stats` action returning aggregate tenant usage counts as JSON.
  * @returns A JSON `Response` with user, client, and session statistics.
  */
-export const show = createAction(routes.api.stats, async (ctx) => {
+export const show: Action<typeof routes.api.stats> = createAction(routes.api.stats, async (ctx) => {
 	let { log } = ctx;
 
 	let [totalUsers, totalClients, totalSessions, activeSessions, monthlyActiveUsers] =

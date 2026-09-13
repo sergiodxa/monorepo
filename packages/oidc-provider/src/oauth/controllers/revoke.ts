@@ -9,6 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Action } from "remix/router";
+
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
@@ -34,75 +36,80 @@ let RevokeSchema = s.object({
  * Revokes refresh tokens (sessions); access tokens expire naturally as JWTs.
  * @returns An empty `200` `Response` on success, or an OAuth error `Response` for bad client auth.
  */
-export default createAction(routes.oauth.revoke, async (ctx) => {
-	let { formData, request, log } = ctx;
+const revokeController: Action<typeof routes.oauth.revoke> = createAction(
+	routes.oauth.revoke,
+	async (ctx) => {
+		let { formData, request, log } = ctx;
 
-	let basicAuth = parseBasicAuth(request.headers.get("authorization"));
-	let body = Object.fromEntries(formData) as Record<string, unknown>;
+		let basicAuth = parseBasicAuth(request.headers.get("authorization"));
+		let body = Object.fromEntries(formData) as Record<string, unknown>;
 
-	if (basicAuth) {
-		body.client_id = basicAuth.clientId;
-		body.client_secret = basicAuth.clientSecret;
-	}
+		if (basicAuth) {
+			body.client_id = basicAuth.clientId;
+			body.client_secret = basicAuth.clientSecret;
+		}
 
-	let result = await validate(body, RevokeSchema);
-	if (isFailure(result)) {
-		log.warn("http.invalid_params");
-		return reject("invalid_request", "Missing or invalid parameters");
-	}
+		let result = await validate(body, RevokeSchema);
+		if (isFailure(result)) {
+			log.warn("http.invalid_params");
+			return reject("invalid_request", "Missing or invalid parameters");
+		}
 
-	let { token, token_type_hint, client_id, client_secret } = result.data;
+		let { token, token_type_hint, client_id, client_secret } = result.data;
 
-	log.set({
-		client: { id: client_id },
-		oidc: {
-			token_type_hint: token_type_hint ?? "none",
-			auth_method: basicAuth ? "basic" : "body",
-		},
-	});
+		log.set({
+			client: { id: client_id },
+			oidc: {
+				token_type_hint: token_type_hint ?? "none",
+				auth_method: basicAuth ? "basic" : "body",
+			},
+		});
 
-	if (!client_id || !client_secret) {
-		log.warn("client.auth_required");
-		return reject("invalid_client", "Client authentication required", 401);
-	}
+		if (!client_id || !client_secret) {
+			log.warn("client.auth_required");
+			return reject("invalid_client", "Client authentication required", 401);
+		}
 
-	let client = await Client.show(ctx.db, client_id);
-	if (!client) {
-		log.warn("client.not_found");
-		return reject("invalid_client", "Client not found", 401);
-	}
+		let client = await Client.show(ctx.db, client_id);
+		if (!client) {
+			log.warn("client.not_found");
+			return reject("invalid_client", "Client not found", 401);
+		}
 
-	let secretValid = await Secret.verify(ctx.db, client.id, client_secret);
-	if (!secretValid) {
-		log.warn("client.invalid_credentials");
-		return reject("invalid_client", "Invalid client credentials", 401);
-	}
+		let secretValid = await Secret.verify(ctx.db, client.id, client_secret);
+		if (!secretValid) {
+			log.warn("client.invalid_credentials");
+			return reject("invalid_client", "Invalid client credentials", 401);
+		}
 
-	if (token_type_hint === "access_token") {
-		log.note("oidc.revoke.skipped", { reason: "stateless_access_token" });
-		return new Response(null, { status: 200 });
-	}
-
-	let session = await Session.show(ctx.db, token);
-	if (session) {
-		/**
-		 * Per RFC 7009, return 200 even if the token belongs to a different client.
-		 * This prevents token enumeration attacks.
-		 */
-		if (session.client_id !== client.id) {
-			log.warn("oidc.revoke.client_mismatch", {
-				session_client_id: session.client_id,
-				session_id: session.id,
-			});
+		if (token_type_hint === "access_token") {
+			log.note("oidc.revoke.skipped", { reason: "stateless_access_token" });
 			return new Response(null, { status: 200 });
 		}
 
-		await Session.destroy(ctx.db, session.id);
-		log.set({ subject: { id: session.subject_id } });
-		log.note("oidc.revoke.session_revoked", { session_id: session.id });
-	} else {
-		log.note("oidc.revoke.session_not_found");
-	}
+		let session = await Session.show(ctx.db, token);
+		if (session) {
+			/**
+			 * Per RFC 7009, return 200 even if the token belongs to a different client.
+			 * This prevents token enumeration attacks.
+			 */
+			if (session.client_id !== client.id) {
+				log.warn("oidc.revoke.client_mismatch", {
+					session_client_id: session.client_id,
+					session_id: session.id,
+				});
+				return new Response(null, { status: 200 });
+			}
 
-	return new Response(null, { status: 200 });
-});
+			await Session.destroy(ctx.db, session.id);
+			log.set({ subject: { id: session.subject_id } });
+			log.note("oidc.revoke.session_revoked", { session_id: session.id });
+		} else {
+			log.note("oidc.revoke.session_not_found");
+		}
+
+		return new Response(null, { status: 200 });
+	},
+);
+
+export default revokeController;

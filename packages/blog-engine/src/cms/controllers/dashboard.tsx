@@ -1,3 +1,5 @@
+import type { Action } from "remix/router";
+
 /**
  * The CMS dashboard controller at `/cms`: the admin home showing a per-type post
  * count table and quick links. Open to any authenticated user (anonymous requests
@@ -17,47 +19,52 @@ import { Settings } from "../../settings/models/settings.js";
 import { CmsLayout } from "../../shared/components/cms-layout.js";
 import * as s from "../../shared/components/styles.js";
 
-export default createAction(routes.cms.dashboard, async (ctx) => {
-	let user = getAuthUser();
-	if (!user) {
-		return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
-	}
-	let [permissions, siteTitle, types] = await Promise.all([
-		getPermissions(),
-		Settings.siteTitle(ctx.db),
-		PostType.findAll(ctx.db),
-	]);
+const dashboardController: Action<typeof routes.cms.dashboard> = createAction(
+	routes.cms.dashboard,
+	async (ctx) => {
+		let user = getAuthUser();
+		if (!user) {
+			return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
+		}
+		let [permissions, siteTitle, types] = await Promise.all([
+			getPermissions(),
+			Settings.siteTitle(ctx.db),
+			PostType.findAll(ctx.db),
+		]);
 
-	let rows = await Promise.all(
-		types.map(async (type) => ({ type, count: await Post.count(ctx.db, type.name) })),
-	);
+		let rows = await Promise.all(
+			types.map(async (type) => ({ type, count: await Post.count(ctx.db, type.name) })),
+		);
 
-	return ctx.render(
-		<CmsLayout
-			title="Dashboard"
-			siteTitle={siteTitle}
-			userLabel={user.display_name || user.email}
-			permissions={permissions}
-		>
-			<p>Welcome, {user.display_name || user.email}.</p>
-			<table mix={[s.table]}>
-				<thead>
-					<tr>
-						<th mix={[s.cell]}>Post type</th>
-						<th mix={[s.cell]}>Posts</th>
-					</tr>
-				</thead>
-				<tbody>
-					{rows.map(({ type, count }) => (
-						<tr key={type.id}>
-							<td mix={[s.cell]}>
-								<a href={`/cms/types/${type.name}/posts`}>{type.label}</a>
-							</td>
-							<td mix={[s.cell]}>{count}</td>
+		return ctx.render(
+			<CmsLayout
+				title="Dashboard"
+				siteTitle={siteTitle}
+				userLabel={user.display_name || user.email}
+				permissions={permissions}
+			>
+				<p>Welcome, {user.display_name || user.email}.</p>
+				<table mix={[s.table]}>
+					<thead>
+						<tr>
+							<th mix={[s.cell]}>Post type</th>
+							<th mix={[s.cell]}>Posts</th>
 						</tr>
-					))}
-				</tbody>
-			</table>
-		</CmsLayout>,
-	);
-});
+					</thead>
+					<tbody>
+						{rows.map(({ type, count }) => (
+							<tr key={type.id}>
+								<td mix={[s.cell]}>
+									<a href={`/cms/types/${type.name}/posts`}>{type.label}</a>
+								</td>
+								<td mix={[s.cell]}>{count}</td>
+							</tr>
+						))}
+					</tbody>
+				</table>
+			</CmsLayout>,
+		);
+	},
+);
+
+export default dashboardController;

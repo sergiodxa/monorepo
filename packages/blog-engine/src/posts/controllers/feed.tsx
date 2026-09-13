@@ -5,6 +5,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Action } from "remix/router";
+
 import { createAction } from "remix/router";
 
 import { PostType } from "../../post-types/models/post-type.js";
@@ -16,7 +18,7 @@ import { createMetaCodec } from "../models/meta-codec.js";
 import { Post } from "../models/post.js";
 
 /** Home feed: recent published posts across every visible post type. */
-export default createAction(routes.feed, async (ctx) => {
+const feedController: Action<typeof routes.feed> = createAction(routes.feed, async (ctx) => {
 	let [chrome, types] = await Promise.all([loadSiteChrome(ctx.db), PostType.findVisible(ctx.db)]);
 
 	let postsByType = await Promise.all(
@@ -48,3 +50,5 @@ export default createAction(routes.feed, async (ctx) => {
 		</Layout>,
 	);
 });
+
+export default feedController;

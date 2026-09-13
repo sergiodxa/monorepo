@@ -16,13 +16,13 @@ import { css } from "remix/ui";
  * in a `:root` block); the CMS admin mixins use a fixed palette.
  */
 
-export const container = css({
+export const container: CSSMixinDescriptor = css({
 	maxWidth: "var(--blog-measure)",
 	margin: "0 auto",
 	padding: "calc(var(--blog-spacing) * 2) var(--blog-spacing)",
 });
 
-export const body = css({
+export const body: CSSMixinDescriptor = css({
 	margin: "0",
 	background: "var(--ui-bg)",
 	color: "var(--ui-fg)",
@@ -31,7 +31,7 @@ export const body = css({
 	lineHeight: "1.6",
 });
 
-export const siteHeader = css({
+export const siteHeader: CSSMixinDescriptor = css({
 	display: "flex",
 	flexWrap: "wrap",
 	gap: "var(--blog-spacing)",
@@ -40,16 +40,19 @@ export const siteHeader = css({
 	borderBottom: "1px solid var(--ui-border)",
 });
 
-export const siteTitle = css({
+export const siteTitle: CSSMixinDescriptor = css({
 	fontWeight: "700",
 	fontSize: "1.25rem",
 	color: "var(--ui-fg)",
 	textDecoration: "none",
 });
 
-export const navLink = css({ marginLeft: "var(--blog-spacing)", color: "var(--ui-accent)" });
+export const navLink: CSSMixinDescriptor = css({
+	marginLeft: "var(--blog-spacing)",
+	color: "var(--ui-accent)",
+});
 
-export const footer = css({
+export const footer: CSSMixinDescriptor = css({
 	marginTop: "calc(var(--blog-spacing) * 3)",
 	paddingTop: "var(--blog-spacing)",
 	borderTop: "1px solid var(--ui-border)",
@@ -57,13 +60,13 @@ export const footer = css({
 	fontSize: "0.875rem",
 });
 
-export const postList = css({ listStyle: "none", padding: "0" });
-export const postListItem = css({
+export const postList: CSSMixinDescriptor = css({ listStyle: "none", padding: "0" });
+export const postListItem: CSSMixinDescriptor = css({
 	padding: "var(--blog-spacing) 0",
 	borderBottom: "1px solid var(--ui-border)",
 });
-export const meta = css({ color: "var(--ui-muted)", fontSize: "0.875rem" });
-export const tag = css({
+export const meta: CSSMixinDescriptor = css({ color: "var(--ui-muted)", fontSize: "0.875rem" });
+export const tag: CSSMixinDescriptor = css({
 	display: "inline-block",
 	padding: "0.1em 0.5em",
 	borderRadius: "var(--blog-radius)",
@@ -71,20 +74,24 @@ export const tag = css({
 	fontSize: "0.85em",
 });
 
-export const cmsShell = css({
+export const cmsShell: CSSMixinDescriptor = css({
 	display: "grid",
 	gridTemplateColumns: "220px 1fr",
 	minHeight: "100vh",
 });
-export const cmsBody = css({
+export const cmsBody: CSSMixinDescriptor = css({
 	margin: "0",
 	fontFamily: "system-ui, sans-serif",
 	color: "#111827",
 	background: "#f9fafb",
 	lineHeight: "1.5",
 });
-export const cmsSide = css({ background: "#111827", color: "#e5e7eb", padding: "1rem" });
-export const cmsSideLink = css({
+export const cmsSide: CSSMixinDescriptor = css({
+	background: "#111827",
+	color: "#e5e7eb",
+	padding: "1rem",
+});
+export const cmsSideLink: CSSMixinDescriptor = css({
 	display: "block",
 	color: "#d1d5db",
 	textDecoration: "none",
@@ -92,22 +99,26 @@ export const cmsSideLink = css({
 	borderRadius: "0.375rem",
 	"&:hover": { background: "#1f2937", color: "#fff" },
 });
-export const cmsMain = css({ padding: "1.5rem 2rem", maxWidth: "60rem" });
-export const cmsUser = css({ marginTop: "1.5rem", fontSize: "0.8rem", color: "#9ca3af" });
+export const cmsMain: CSSMixinDescriptor = css({ padding: "1.5rem 2rem", maxWidth: "60rem" });
+export const cmsUser: CSSMixinDescriptor = css({
+	marginTop: "1.5rem",
+	fontSize: "0.8rem",
+	color: "#9ca3af",
+});
 
-export const table = css({ width: "100%", borderCollapse: "collapse" });
-export const cell = css({
+export const table: CSSMixinDescriptor = css({ width: "100%", borderCollapse: "collapse" });
+export const cell: CSSMixinDescriptor = css({
 	textAlign: "left",
 	padding: "0.5rem",
 	borderBottom: "1px solid #e5e7eb",
 });
-export const label = css({
+export const label: CSSMixinDescriptor = css({
 	display: "block",
 	margin: "0.75rem 0 0.25rem",
 	fontWeight: "600",
 	fontSize: "0.875rem",
 });
-export const control = css({
+export const control: CSSMixinDescriptor = css({
 	width: "100%",
 	padding: "0.5rem",
 	border: "1px solid #d1d5db",
@@ -128,8 +139,12 @@ export function mixFor<Node extends EventTarget>(
 }
 
 /** {@link control} re-typed for `<select>` (see {@link mixFor}). */
-export const selectControl = mixFor<HTMLSelectElement>(control);
-export const textarea = css({
+export const selectControl: MixinDescriptor<
+	HTMLSelectElement,
+	CSSMixinDescriptor["args"],
+	ElementProps
+> = mixFor<HTMLSelectElement>(control);
+export const textarea: CSSMixinDescriptor = css({
 	width: "100%",
 	padding: "0.5rem",
 	border: "1px solid #d1d5db",
@@ -138,7 +153,7 @@ export const textarea = css({
 	minHeight: "12rem",
 	fontFamily: "ui-monospace, monospace",
 });
-export const button = css({
+export const button: CSSMixinDescriptor = css({
 	display: "inline-block",
 	background: "#2563eb",
 	color: "#fff",
@@ -149,25 +164,29 @@ export const button = css({
 	textDecoration: "none",
 	font: "inherit",
 });
-export const buttonSecondary = css({ background: "#6b7280" });
-export const buttonDanger = css({ background: "#dc2626" });
-export const notice = css({
+export const buttonSecondary: CSSMixinDescriptor = css({ background: "#6b7280" });
+export const buttonDanger: CSSMixinDescriptor = css({ background: "#dc2626" });
+export const notice: CSSMixinDescriptor = css({
 	background: "#fef3c7",
 	border: "1px solid #fde68a",
 	padding: "0.75rem",
 	borderRadius: "0.375rem",
 	marginBottom: "1rem",
 });
-export const help = css({ color: "#6b7280", fontSize: "0.8rem", margin: "0.25rem 0 0" });
+export const help: CSSMixinDescriptor = css({
+	color: "#6b7280",
+	fontSize: "0.8rem",
+	margin: "0.25rem 0 0",
+});
 
-export const authBody = css({
+export const authBody: CSSMixinDescriptor = css({
 	fontFamily: "system-ui, sans-serif",
 	maxWidth: "24rem",
 	margin: "6rem auto",
 	padding: "0 1rem",
 	textAlign: "center",
 });
-export const errorText = css({ color: "#b91c1c", marginBottom: "1rem" });
+export const errorText: CSSMixinDescriptor = css({ color: "#b91c1c", marginBottom: "1rem" });
 
 /** Universal reset injected once (box-sizing only; everything else is a mixin). */
 export const RESET_CSS = "*,*::before,*::after{box-sizing:border-box}";

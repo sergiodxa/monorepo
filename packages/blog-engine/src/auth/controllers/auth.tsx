@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Action, Controller } from "remix/router";
 import type { Handle, RemixNode } from "remix/ui";
 
 import { contextOf } from "@sdxc/auth/remix/context";
@@ -62,7 +63,7 @@ export function safeNext(value: string | null | undefined): string | undefined {
 }
 
 /** `/auth/login` — renders the sign-in screen (GET) and starts the flow (POST). */
-export const login = createController(routes.auth.login, {
+export const login: Controller<typeof routes.auth.login> = createController(routes.auth.login, {
 	actions: {
 		/** GET — the sign-in screen, carrying any usable `next` into its form action. */
 		async index(ctx) {
@@ -92,31 +93,34 @@ export const login = createController(routes.auth.login, {
 });
 
 /** GET /auth/callback — completes the flow and establishes the local session. */
-export const callback = createAction(routes.auth.callback, async (ctx) => {
-	let completed = await wrap(async () => {
-		let grant = await ctx.relyingParty.callback(contextOf(ctx));
-		let user = await User.findOrCreateFromAuthProfile(
-			ctx.db,
-			toAuthProfile(grant.profile, grant.subject),
-			{ admins: ctx.oidc.admins, bootstrapFirstAdmin: ctx.oidc.bootstrapFirstAdmin },
-		);
-		signIn(user);
-		return { userId: user.id, next: grant.returnTo };
-	});
-
-	if (isFailure(completed)) {
-		ctx.log.warn("auth.login_failed", { reason: String(completed.error) });
-		return redirect(`${routes.auth.login.index.href()}?error=authentication_failed`, {
-			status: redirect.Status.SeeOther,
+export const callback: Action<typeof routes.auth.callback> = createAction(
+	routes.auth.callback,
+	async (ctx) => {
+		let completed = await wrap(async () => {
+			let grant = await ctx.relyingParty.callback(contextOf(ctx));
+			let user = await User.findOrCreateFromAuthProfile(
+				ctx.db,
+				toAuthProfile(grant.profile, grant.subject),
+				{ admins: ctx.oidc.admins, bootstrapFirstAdmin: ctx.oidc.bootstrapFirstAdmin },
+			);
+			signIn(user);
+			return { userId: user.id, next: grant.returnTo };
 		});
-	}
 
-	ctx.log.set({ user: { id: completed.data.userId } }).note("auth.login_completed");
-	return redirect(completed.data.next, { status: redirect.Status.SeeOther });
-});
+		if (isFailure(completed)) {
+			ctx.log.warn("auth.login_failed", { reason: String(completed.error) });
+			return redirect(`${routes.auth.login.index.href()}?error=authentication_failed`, {
+				status: redirect.Status.SeeOther,
+			});
+		}
+
+		ctx.log.set({ user: { id: completed.data.userId } }).note("auth.login_completed");
+		return redirect(completed.data.next, { status: redirect.Status.SeeOther });
+	},
+);
 
 /** `/auth/logout` — sign-out confirmation (GET) and session teardown (POST). */
-export const logout = createController(routes.auth.logout, {
+export const logout: Controller<typeof routes.auth.logout> = createController(routes.auth.logout, {
 	actions: {
 		/** GET — the sign-out confirmation, which posts to end the session. */
 		async index(ctx) {

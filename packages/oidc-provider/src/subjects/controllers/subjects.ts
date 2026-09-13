@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Action } from "remix/router";
+
 import { noContent } from "@sdxc/http/response";
 import { badRequest, conflict, created, notFound, ok } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
@@ -45,139 +47,157 @@ let ImportSubjectSchema = s.object({
  * `GET /api/subjects` — lists all subjects.
  * @returns A JSON `Response` with the array of subjects.
  */
-export const index = createAction(routes.api.subjects.index, async (ctx) => {
-	let { log } = ctx;
-	let subjects = await Subject.list(ctx.db);
-	log.note("admin.subject.listed", { count: subjects.length });
-	return ok(subjects);
-});
+export const index: Action<typeof routes.api.subjects.index> = createAction(
+	routes.api.subjects.index,
+	async (ctx) => {
+		let { log } = ctx;
+		let subjects = await Subject.list(ctx.db);
+		log.note("admin.subject.listed", { count: subjects.length });
+		return ok(subjects);
+	},
+);
 
 /**
  * `GET /api/subjects/:id` — retrieves a single subject.
  * @returns A JSON `Response` with the subject, or `notFound`.
  */
-export const show = createAction(routes.api.subjects.show, async (ctx) => {
-	let { params, log } = ctx;
-	let { id } = s.parse(s.object({ id: s.string() }), params);
-	log.set({ subject: { id } });
-	let subject = await Subject.show(ctx.db, id);
-	if (!subject) {
-		log.warn("subject.not_found");
-		return notFound({ error: "Subject not found" });
-	}
-	log.note("admin.subject.retrieved");
-	return ok(subject);
-});
+export const show: Action<typeof routes.api.subjects.show> = createAction(
+	routes.api.subjects.show,
+	async (ctx) => {
+		let { params, log } = ctx;
+		let { id } = s.parse(s.object({ id: s.string() }), params);
+		log.set({ subject: { id } });
+		let subject = await Subject.show(ctx.db, id);
+		if (!subject) {
+			log.warn("subject.not_found");
+			return notFound({ error: "Subject not found" });
+		}
+		log.note("admin.subject.retrieved");
+		return ok(subject);
+	},
+);
 
 /**
  * `POST /api/subjects` — imports a subject, preserving its id and timestamps.
  * @returns A JSON `Response` with the imported subject, `conflict` on duplicate, or an error `Response`.
  */
-export const create = createAction(routes.api.subjects.create, async (ctx) => {
-	let { request, log } = ctx;
-	let body = await safeJsonParse(request);
-	if (isResponse(body)) {
-		log.warn("http.invalid_json");
-		return body;
-	}
-
-	let result = await validate(body, ImportSubjectSchema);
-	if (isFailure(result)) {
-		log.warn("http.invalid_body");
-		return badRequest({ error: "Invalid request", issues: result.error.issues });
-	}
-
-	try {
-		let subject = await Subject.import(ctx.db, result.data);
-		log.note("admin.subject.imported");
-		return created(subject);
-	} catch (error) {
-		if (error instanceof Subject.ConflictError) {
-			log.warn("admin.subject.import_conflict", { error: error.message });
-			return conflict({ error: error.message });
+export const create: Action<typeof routes.api.subjects.create> = createAction(
+	routes.api.subjects.create,
+	async (ctx) => {
+		let { request, log } = ctx;
+		let body = await safeJsonParse(request);
+		if (isResponse(body)) {
+			log.warn("http.invalid_json");
+			return body;
 		}
-		throw error;
-	}
-});
+
+		let result = await validate(body, ImportSubjectSchema);
+		if (isFailure(result)) {
+			log.warn("http.invalid_body");
+			return badRequest({ error: "Invalid request", issues: result.error.issues });
+		}
+
+		try {
+			let subject = await Subject.import(ctx.db, result.data);
+			log.note("admin.subject.imported");
+			return created(subject);
+		} catch (error) {
+			if (error instanceof Subject.ConflictError) {
+				log.warn("admin.subject.import_conflict", { error: error.message });
+				return conflict({ error: error.message });
+			}
+			throw error;
+		}
+	},
+);
 
 /**
  * `PATCH/PUT /api/subjects/:id` — updates a subject's profile.
  * @returns A JSON `Response` with the updated subject, or an error `Response`.
  */
-export const update = createAction(routes.api.subjects.update, async (ctx) => {
-	let { params, request, log } = ctx;
-	let { id } = s.parse(s.object({ id: s.string() }), params);
-	log.set({ subject: { id } });
-	let body = await safeJsonParse(request);
-	if (isResponse(body)) {
-		log.warn("http.invalid_json");
-		return body;
-	}
-
-	let result = await validate(body, UpdateSubjectSchema);
-	if (isFailure(result)) {
-		log.warn("http.invalid_body");
-		return badRequest({ error: "Invalid request", issues: result.error.issues });
-	}
-
-	try {
-		await Subject.update(ctx.db, id, result.data);
-		let subject = await Subject.show(ctx.db, id);
-		log.note("admin.subject.updated");
-		return ok(subject);
-	} catch (error) {
-		if (error instanceof RecordNotFoundError) {
-			log.warn("subject.not_found");
-			return notFound({ error: "Subject not found" });
+export const update: Action<typeof routes.api.subjects.update> = createAction(
+	routes.api.subjects.update,
+	async (ctx) => {
+		let { params, request, log } = ctx;
+		let { id } = s.parse(s.object({ id: s.string() }), params);
+		log.set({ subject: { id } });
+		let body = await safeJsonParse(request);
+		if (isResponse(body)) {
+			log.warn("http.invalid_json");
+			return body;
 		}
-		if (error instanceof Subject.UsernameAlreadyTakenError) {
-			log.warn("admin.subject.username_taken", {
-				username: result.data.username,
-			});
-			return badRequest({ error: error.message });
+
+		let result = await validate(body, UpdateSubjectSchema);
+		if (isFailure(result)) {
+			log.warn("http.invalid_body");
+			return badRequest({ error: "Invalid request", issues: result.error.issues });
 		}
-		throw error;
-	}
-});
+
+		try {
+			await Subject.update(ctx.db, id, result.data);
+			let subject = await Subject.show(ctx.db, id);
+			log.note("admin.subject.updated");
+			return ok(subject);
+		} catch (error) {
+			if (error instanceof RecordNotFoundError) {
+				log.warn("subject.not_found");
+				return notFound({ error: "Subject not found" });
+			}
+			if (error instanceof Subject.UsernameAlreadyTakenError) {
+				log.warn("admin.subject.username_taken", {
+					username: result.data.username,
+				});
+				return badRequest({ error: error.message });
+			}
+			throw error;
+		}
+	},
+);
 
 /**
  * `DELETE /api/subjects/:id` — deletes a subject.
  * @returns A `204 No Content` `Response`, or `notFound`.
  */
-export const destroy = createAction(routes.api.subjects.destroy, async (ctx) => {
-	let { params, log } = ctx;
-	let { id } = s.parse(s.object({ id: s.string() }), params);
-	log.set({ subject: { id } });
-	try {
-		await Subject.destroy(ctx.db, id);
-		log.note("admin.subject.deleted");
-		return noContent();
-	} catch (error) {
-		if (error instanceof RecordNotFoundError) {
-			log.warn("subject.not_found");
-			return notFound({ error: "Subject not found" });
+export const destroy: Action<typeof routes.api.subjects.destroy> = createAction(
+	routes.api.subjects.destroy,
+	async (ctx) => {
+		let { params, log } = ctx;
+		let { id } = s.parse(s.object({ id: s.string() }), params);
+		log.set({ subject: { id } });
+		try {
+			await Subject.destroy(ctx.db, id);
+			log.note("admin.subject.deleted");
+			return noContent();
+		} catch (error) {
+			if (error instanceof RecordNotFoundError) {
+				log.warn("subject.not_found");
+				return notFound({ error: "Subject not found" });
+			}
+			throw error;
 		}
-		throw error;
-	}
-});
+	},
+);
 
 /**
  * `POST /api/subjects/:id/verify-email` — marks a subject's email as verified.
  * @returns A JSON `Response` confirming verification, or `notFound`.
  */
-export const verifyEmail = createAction(routes.api.subjects.verifyEmail, async (ctx) => {
-	let { params, log } = ctx;
-	let { id } = s.parse(s.object({ id: s.string() }), params);
-	log.set({ subject: { id } });
-	try {
-		await Subject.verifyEmail(ctx.db, id);
-		log.note("admin.subject.email_verified");
-		return ok({ message: "Email verified" });
-	} catch (error) {
-		if (error instanceof RecordNotFoundError) {
-			log.warn("subject.not_found");
-			return notFound({ error: "Subject not found" });
+export const verifyEmail: Action<typeof routes.api.subjects.verifyEmail> = createAction(
+	routes.api.subjects.verifyEmail,
+	async (ctx) => {
+		let { params, log } = ctx;
+		let { id } = s.parse(s.object({ id: s.string() }), params);
+		log.set({ subject: { id } });
+		try {
+			await Subject.verifyEmail(ctx.db, id);
+			log.note("admin.subject.email_verified");
+			return ok({ message: "Email verified" });
+		} catch (error) {
+			if (error instanceof RecordNotFoundError) {
+				log.warn("subject.not_found");
+				return notFound({ error: "Subject not found" });
+			}
+			throw error;
 		}
-		throw error;
-	}
-});
+	},
+);
