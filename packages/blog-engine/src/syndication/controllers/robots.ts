@@ -1,5 +1,3 @@
-import type { Action } from "remix/router";
-
 /**
  * Controller for `/robots.txt`, allowing all crawlers and pointing them at the
  * sitemap. The sitemap URL is derived from the request origin so it works on any host
@@ -8,6 +6,8 @@ import type { Action } from "remix/router";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Action } from "remix/router";
+
 import { text } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 

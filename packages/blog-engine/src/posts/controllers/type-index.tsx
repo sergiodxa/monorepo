@@ -1,5 +1,3 @@
-import type { Action } from "remix/router";
-
 /**
  * Public per-type index controller for `/:typePath`: lists a visible post type's
  * published posts. Unknown or hidden types fall through to the themed 404.
@@ -7,6 +5,8 @@ import type { Action } from "remix/router";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Action } from "remix/router";
+
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 

@@ -1,5 +1,3 @@
-import type { Action } from "remix/router";
-
 /**
  * Controller for `/assets/:file`, serving the engine's small set of self-hosted
  * static assets (currently just the highlighting stylesheet) with immutable caching,
@@ -8,6 +6,8 @@ import type { Action } from "remix/router";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Action } from "remix/router";
+
 import { css } from "@sdxc/http/response";
 import { notFound } from "@sdxc/http/response/html";
 import { createAction } from "remix/router";

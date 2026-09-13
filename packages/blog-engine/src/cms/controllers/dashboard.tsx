@@ -1,5 +1,3 @@
-import type { Action } from "remix/router";
-
 /**
  * The CMS dashboard controller at `/cms`: the admin home showing a per-type post
  * count table and quick links. Open to any authenticated user (anonymous requests
@@ -8,6 +6,8 @@ import type { Action } from "remix/router";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Action } from "remix/router";
+
 import { redirect } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 

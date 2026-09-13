@@ -1,5 +1,3 @@
-import type { Action } from "remix/router";
-
 /**
  * Controller for `/sitemap.xml`, listing the home page, each visible type index, and
  * every published post (with its last-modified date) so search engines can crawl the
@@ -8,6 +6,8 @@ import type { Action } from "remix/router";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Action } from "remix/router";
+
 import { Sitemap } from "@sdxc/sitemap";
 import { createAction } from "remix/router";
 

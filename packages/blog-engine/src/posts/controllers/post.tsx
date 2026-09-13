@@ -1,5 +1,3 @@
-import type { Action } from "remix/router";
-
 /**
  * Public post detail controller for `/:typePath/:slug`: renders one published post's
  * title, date, and fields. Drafts, scheduled posts, and unknown/hidden types fall
@@ -8,6 +6,8 @@ import type { Action } from "remix/router";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Action } from "remix/router";
+
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
