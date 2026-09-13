@@ -15,7 +15,7 @@ import type { Middleware } from "remix/router";
 import { createContextKey } from "remix/router";
 
 /** Where the database lives on a request context, and the key a test reads it back from. */
-export const Database = createContextKey<DataTable>();
+export const Database: { defaultValue?: DataTable } = createContextKey<DataTable>();
 
 /**
  * Reaches consuming projects through their own compilation of this

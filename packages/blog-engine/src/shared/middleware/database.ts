@@ -13,7 +13,7 @@ import type { Middleware } from "remix/router";
 import { createContextKey } from "remix/router";
 
 /** Where a request's database lives on the context, installed as `ctx.db`. */
-export const Database = createContextKey<DataTable>();
+export const Database: { defaultValue?: DataTable } = createContextKey<DataTable>();
 
 /**
  * Publishes the blog's database for the request about to run. Takes a factory so the
