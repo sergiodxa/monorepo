@@ -1,0 +1,10 @@
+{
+	"extends": "../../../tsconfig.json",
+	// The codegen script lives under its own tsconfig so the package's covers `src`
+	// alone, which lets the release build compile the package with `src` as the
+	// rootDir. It keeps the node and bun types the script is written against.
+	"include": ["**/*"],
+	"compilerOptions": {
+		"types": ["bun", "node"]
+	}
+}
