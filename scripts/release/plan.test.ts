@@ -18,6 +18,7 @@ import { packageFromManifest } from "./workspace.js";
 interface FixtureOptions {
 	isPrivate?: boolean;
 	devDependencies?: string[];
+	peerDependencies?: string[];
 }
 
 interface PlanOptions {
@@ -36,8 +37,14 @@ function pkg(dir: string, dependencies: string[] = [], options: FixtureOptions =
 		devDependencies: Object.fromEntries(
 			(options.devDependencies ?? []).map((name) => [`@sdxc/${name}`, "workspace:*"]),
 		),
+		peerDependencies: Object.fromEntries(
+			(options.peerDependencies ?? []).map((name) => [`@sdxc/${name}`, "workspace:*"]),
+		),
 	});
 }
+
+/** A package whose only internal edge is an optional peer, the shape a host package supplies. */
+const HOST = pkg("host", [], { peerDependencies: ["duration"] });
 
 /** The starter chain plus a private package and a devDependency-only dependent. */
 const PACKAGES = [
@@ -181,6 +188,21 @@ describe("planRelease", () => {
 		}
 	});
 
+	test("cascades through a workspace peer, shipping the package that declares it", () => {
+		let result = unwrap(
+			planRelease({
+				packages: [...PACKAGES, HOST],
+				touched: new Set(["@sdxc/duration"]),
+				published: allPublished({ "@sdxc/host": { version: "2026.9.1", gitHead: null } }),
+				force: false,
+				version: "2026.9.3",
+			}),
+		);
+
+		expect(result.order).toContain("@sdxc/host");
+		expect(result.order.indexOf("@sdxc/duration")).toBeLessThan(result.order.indexOf("@sdxc/host"));
+	});
+
 	test("fails on a dependency cycle among the members, naming it", () => {
 		let result = planRelease({
 			packages: [pkg("a", ["b"]), pkg("b", ["a"])],
@@ -212,6 +234,25 @@ describe("dependencyPins", () => {
 			"@sdxc/result": "2026.8.30",
 			"@sdxc/sample": "2026.9.3",
 		});
+	});
+
+	test("pins a workspace peer exactly as it pins a dependency", () => {
+		expect(unwrap(dependencyPins(HOST, ["@sdxc/host"], "2026.9.3", allPublished()))).toEqual({
+			"@sdxc/duration": "2026.9.1",
+		});
+		expect(
+			unwrap(dependencyPins(HOST, ["@sdxc/host", "@sdxc/duration"], "2026.9.3", allPublished())),
+		).toEqual({
+			"@sdxc/duration": "2026.9.3",
+		});
+	});
+
+	test("refuses a workspace peer that is neither a member nor on npm", () => {
+		let published = allPublished({ "@sdxc/duration": null });
+		let result = dependencyPins(HOST, ["@sdxc/host"], "2026.9.3", published);
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) expect(result.error.message).toContain("@sdxc/duration");
 	});
 
 	test("refuses a dependency that is neither a member nor on npm", () => {

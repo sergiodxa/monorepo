@@ -65,6 +65,7 @@ export interface PackageManifest {
 	scripts?: Record<string, string>;
 	dependencies?: Record<string, string>;
 	devDependencies?: Record<string, string>;
+	peerDependencies?: Record<string, string>;
 	publishConfig?: Record<string, unknown>;
 	repository?: Repository;
 	gitHead?: string;
@@ -73,8 +74,8 @@ export interface PackageManifest {
 
 /**
  * What the graph walks need from a package: its visibility and the internal packages it
- * depends on at runtime. `dependencies` holds names from `dependencies` only, because a
- * devDependency never reaches a consumer and so never cascades a release.
+ * depends on at runtime. `dependencies` merges `dependencies` and `peerDependencies`, the two
+ * a consumer's install resolves, so a change to either cascades a release.
  */
 export interface DependencyNode {
 	name: string;
@@ -140,11 +141,21 @@ export function packageFromManifest(dir: string, manifest: PackageManifest): Pac
 		name: manifest.name,
 		manifest,
 		isPrivate: manifest.private === true,
-		dependencies: Object.keys(manifest.dependencies ?? {}).filter((name) =>
-			name.startsWith(WORKSPACE_SCOPE),
-		),
+		dependencies: workspaceDependencies(manifest),
 		shippedPaths: [...shippedPaths],
 	};
+}
+
+/**
+ * The internal packages a consumer of `manifest` installs alongside it: every `@sdxc/*` name
+ * under `dependencies` or `peerDependencies`, listed once, dependencies first.
+ */
+function workspaceDependencies(manifest: PackageManifest): string[] {
+	let names = new Set([
+		...Object.keys(manifest.dependencies ?? {}),
+		...Object.keys(manifest.peerDependencies ?? {}),
+	]);
+	return [...names].filter((name) => name.startsWith(WORKSPACE_SCOPE));
 }
 
 /**

@@ -47,6 +47,15 @@ function pkg(dir: string, dependencies: string[] = [], isPrivate = false): Packa
 	});
 }
 
+/** A workspace package named `@sdxc/<dir>` whose only internal edge is a peer on `@sdxc/<peer>`. */
+function peerOf(dir: string, peer: string): Package {
+	return packageFromManifest(dir, {
+		name: `@sdxc/${dir}`,
+		exports: { ".": "./src/index.ts" },
+		peerDependencies: { [`@sdxc/${peer}`]: "workspace:*" },
+	});
+}
+
 /** The eight starter packages exactly as they depend on one another. */
 const STARTER = [
 	pkg("types"),
@@ -122,6 +131,12 @@ describe("closeOverDependents", () => {
 		expect(closeOverDependents(["@sdxc/result"], graph).has("@sdxc/internal")).toBe(false);
 	});
 
+	test("follows a workspace peer exactly as it follows a dependency", () => {
+		let graph = [...STARTER, peerOf("host", "duration")];
+
+		expect(closeOverDependents(["@sdxc/duration"], graph).has("@sdxc/host")).toBe(true);
+	});
+
 	test("keeps the seeds themselves, except private ones", () => {
 		let graph = [...STARTER, pkg("internal", [], true)];
 
@@ -155,6 +170,15 @@ describe("topologicalOrder", () => {
 		expect(unwrap(topologicalOrder(["@sdxc/spec", "@sdxc/sample"], STARTER))).toEqual([
 			"@sdxc/sample",
 			"@sdxc/spec",
+		]);
+	});
+
+	test("places a workspace peer before the package that declares it", () => {
+		let graph = [...STARTER, peerOf("host", "duration")];
+
+		expect(unwrap(topologicalOrder(["@sdxc/host", "@sdxc/duration"], graph))).toEqual([
+			"@sdxc/duration",
+			"@sdxc/host",
 		]);
 	});
 
@@ -230,6 +254,28 @@ describe("packageFromManifest", () => {
 			"packages/highlight/styles.css",
 		]);
 	});
+
+	test("collects the workspace peers beside the dependencies and drops the external ones", () => {
+		let example = packageFromManifest("flags", {
+			name: "@sdxc/flags",
+			exports: { ".": "./src/index.ts" },
+			dependencies: { "@sdxc/result": "workspace:*" },
+			peerDependencies: { "@sdxc/jobs": "workspace:*", remix: "3.0.0-rc.2", vitest: "^4.0.0" },
+		});
+
+		expect(example.dependencies).toEqual(["@sdxc/result", "@sdxc/jobs"]);
+	});
+
+	test("lists a package declared as both a dependency and a peer once", () => {
+		let example = packageFromManifest("flags", {
+			name: "@sdxc/flags",
+			exports: { ".": "./src/index.ts" },
+			dependencies: { "@sdxc/result": "workspace:*" },
+			peerDependencies: { "@sdxc/result": "workspace:*" },
+		});
+
+		expect(example.dependencies).toEqual(["@sdxc/result"]);
+	});
 });
 
 describe("readPackages", () => {
@@ -256,6 +302,13 @@ describe("readPackages", () => {
 			"@sdxc/sample",
 		]);
 		expect(spec?.shippedPaths).toContain("packages/spec/src");
+	});
+
+	test("reads a workspace peer as a dependency of the package that declares it", async () => {
+		let packages = await unwrap(readPackages(ROOT));
+		let flags = packages.find((member) => member.name === "@sdxc/flags");
+
+		expect(flags?.dependencies).toContain("@sdxc/jobs");
 	});
 
 	test("skips a directory without a manifest", async () => {

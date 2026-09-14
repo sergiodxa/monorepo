@@ -38,8 +38,8 @@ export interface PublishOptions {
 
 /**
  * The manifest to publish for `pkg`: a new object, so the workspace manifest is untouched.
- * A TypeScript target outside `src/`, a workspace dependency without a pin, and anything
- * workspace-only that would survive into the registry copy are each a failure.
+ * A TypeScript target outside `src/`, a workspace dependency or peer without a pin, and
+ * anything workspace-only that would survive into the registry copy are each a failure.
  */
 export function publishManifest(
 	pkg: Package,
@@ -65,6 +65,11 @@ export function publishManifest(
 		let dependencies = pinDependencies(pkg.name, source.dependencies, options.pins);
 		if (isFailure(dependencies)) return dependencies;
 		output.dependencies = dependencies.data;
+	}
+	if (source.peerDependencies !== undefined) {
+		let peerDependencies = pinDependencies(pkg.name, source.peerDependencies, options.pins);
+		if (isFailure(peerDependencies)) return peerDependencies;
+		output.peerDependencies = peerDependencies.data;
 	}
 	output.gitHead = options.gitHead;
 	output.publishConfig = { access: "public" };
@@ -141,7 +146,10 @@ function binTarget(target: string): Result<string, Error> {
 	return success(built.data.startsWith("./") ? built.data.slice(2) : built.data);
 }
 
-/** Workspace ranges become their exact pins; every external range is published as written. */
+/**
+ * Workspace ranges become their exact pins; every external range is published as written.
+ * Serves `dependencies` and `peerDependencies` alike, since a consumer's install resolves both.
+ */
 function pinDependencies(
 	name: string,
 	dependencies: Record<string, string>,

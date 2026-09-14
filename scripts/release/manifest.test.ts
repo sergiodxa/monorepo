@@ -149,6 +149,58 @@ describe("publishManifest", () => {
 		if (isFailure(result)) expect(result.error.message).toContain("@sdxc/duration");
 	});
 
+	test("replaces a workspace peer with the exact pin and keeps external peer ranges", () => {
+		let peerDependencies = {
+			"@sdxc/result": "workspace:*",
+			"@sdxc/types": "workspace:^",
+			remix: "3.0.0-rc.2",
+			vitest: "^4.0.0",
+		};
+
+		expect(publish({ peerDependencies }).peerDependencies).toEqual({
+			"@sdxc/result": "2026.9.3",
+			"@sdxc/types": "2026.9.1",
+			remix: "3.0.0-rc.2",
+			vitest: "^4.0.0",
+		});
+	});
+
+	test("refuses a workspace peer without a pin, optional or not", () => {
+		let peerDependencies = { "@sdxc/duration": "workspace:*" };
+		let required = attempt({ peerDependencies });
+		let optional = attempt({
+			peerDependencies,
+			peerDependenciesMeta: { "@sdxc/duration": { optional: true } },
+		});
+
+		expect(isFailure(required)).toBe(true);
+		if (isFailure(required)) expect(required.error.message).toContain("@sdxc/duration");
+		expect(isFailure(optional)).toBe(true);
+		if (isFailure(optional)) expect(optional.error.message).toContain("@sdxc/duration");
+	});
+
+	test("carries peerDependenciesMeta through the rewrite unchanged", () => {
+		let peerDependenciesMeta = {
+			"@sdxc/result": { optional: true },
+			vitest: { optional: true },
+		};
+		let output = publish({
+			peerDependencies: { "@sdxc/result": "workspace:*", vitest: "^4.0.0" },
+			peerDependenciesMeta,
+		});
+
+		expect(output.peerDependenciesMeta).toEqual(peerDependenciesMeta);
+	});
+
+	test("leaves no workspace range anywhere for the publishable check to catch", () => {
+		let output = publish({
+			dependencies: { "@sdxc/result": "workspace:*" },
+			peerDependencies: { "@sdxc/types": "workspace:^" },
+		});
+
+		expect(JSON.stringify(output)).not.toContain("workspace:");
+	});
+
 	test("injects version, gitHead, public access and the repository directory", () => {
 		let output = publish();
 
@@ -163,7 +215,10 @@ describe("publishManifest", () => {
 	});
 
 	test("leaves the workspace manifest untouched", () => {
-		let source = manifest({ dependencies: { "@sdxc/result": "workspace:*" } });
+		let source = manifest({
+			dependencies: { "@sdxc/result": "workspace:*" },
+			peerDependencies: { "@sdxc/types": "workspace:*" },
+		});
 		let copy = structuredClone(source);
 
 		publishManifest(packageFromManifest("example", source), OPTIONS);
