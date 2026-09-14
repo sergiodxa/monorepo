@@ -1,0 +1,251 @@
+---
+title: Events
+description: Specification defining event semantics
+toc_max_heading_level: 4
+---
+
+# 5. Events
+
+[![hardening](https://img.shields.io/static/v1?label=Status&message=hardening&color=yellow)](https://github.com/open-feature/spec/tree/main/specification#hardening)
+
+## Overview
+
+`Events` allow consumers (_application integrator_, _application author_, _integration author_) to react to state changes in the provider or underlying flag management system, such as flag definition changes, provider readiness, or error conditions. A provider may emit events or run a callback indicating that it received a certain event, optionally providing data associated with that event. Handlers registered on the `client` or the global `API` are then invoked with this data.
+
+The data that providers supply in event payloads may include a list of `flag keys` changed, error messages, and possibly updated flag values.
+
+```mermaid
+graph
+    P(Provider) -->|emit event| A[API]
+    A -->|run handlers| AH("API (global) event handlers")
+    A --> C[Client]
+    C -->|run handlers| CH(Client event handlers)
+```
+
+The `domain` of a provider constitutes a logical scope for events.
+Clients associated with a particular provider through a `domain` run event handlers only when that provider emits events.
+
+see: [domain](../glossary.md#domain)
+
+### 5.1. Provider events
+
+#### Requirement 5.1.1
+
+> The `feature provider` interface **MUST** define a mechanism for signaling the occurrence of one of a set of events, including `PROVIDER_READY`, `PROVIDER_ERROR`, `PROVIDER_CONFIGURATION_CHANGED`, `PROVIDER_STALE`, `PROVIDER_RECONCILING`, and `PROVIDER_CONTEXT_CHANGED`, with a `provider event details` payload.
+
+Providers must emit events to signal all state transitions, including those resulting from lifecycle methods (initialize, reconciliation).
+The SDK derives provider status from these events.
+Providers can emit spontaneous events without defining lifecycle methods.
+Providers that define `initialize` or `on context changed` must support event emission; see [provider status](./02-providers.md#28-provider-status).
+
+If available, native event-emitter or observable/observer language constructs can be used.
+
+When a provider is unable to evaluate flags (perhaps due to loss of connection with a remote service) the provider can signal this by emitting a `PROVIDER_ERROR` event.
+When it recovers, it can emit a `PROVIDER_READY` event.
+If the error state is irrecoverable, the `PROVIDER_FATAL` error code can be used.
+If a provider caches rules-sets or previously evaluated flags, and such states cannot be considered up-to-date, the provider can signal this by emitting a `PROVIDER_STALE` event.
+
+see: [provider event types](../types.md#provider-events), [`event details`](../types.md#provider-event-details), [events handlers and context reconciliation](#event-handlers-and-context-reconciliation)
+
+#### Requirement 5.1.2
+
+> When a `provider` signals the occurrence of a particular `event`, the associated `client` and `API` event handlers **MUST** run.
+
+Client event handlers respect the dynamic binding of clients to providers via `domains`.
+Client event handlers run when the associated provider emits an event.
+
+see: [provider event types](./../types.md#provider-events) and [event handlers](#52-event-handlers).
+
+#### Requirement 5.1.3
+
+> When a `provider` signals the occurrence of a particular `event`, event handlers on clients which are not associated with that provider **MUST NOT** run.
+
+Client event handlers respect the dynamic binding of clients to providers via `domains`.
+Client event handlers do not run when an unassociated provider emits an event.
+
+see [setting a provider](./01-flag-evaluation.md#setting-a-provider), [domain](../glossary.md#domain) for details.
+
+#### Requirement 5.1.4
+
+> `PROVIDER_ERROR` events **SHOULD** populate the `provider event details`'s `error message` field.
+
+The error message field should contain an informative message as to the nature of the error.
+
+See [event metadata](../types.md#provider-event-details)
+
+#### Requirement 5.1.5
+
+> `PROVIDER_ERROR` events **SHOULD** populate the `provider event details`'s `error code` field.
+
+See [event metadata](../types.md#provider-event-details)
+
+### 5.2. Event handlers
+
+#### Requirement 5.2.1
+
+> The `client` **MUST** provide a function for associating `handler functions` with a particular `provider event type`.
+
+```java
+  // run the myClientOnReadyHandler function when the PROVIDER_READY event is fired
+  client.addHandler(ProviderEvents.Ready, myClientOnReadyHandler);
+```
+
+see: [provider events](#51-provider-events), [`provider event types`](../types.md#provider-events)
+
+#### Requirement 5.2.2
+
+> The `API` **MUST** provide a function for associating `handler functions` with a particular `provider event type`.
+
+```java
+  // run the myGlobalErrorHandler function when the PROVIDER_READY event is fired
+  OpenFeature.addHandler(ProviderEvents.Error, myGlobalErrorHandler);
+```
+
+see: [provider events](#51-provider-events), [`provider event types`](../types.md#provider-events)
+
+#### Requirement 5.2.3
+
+> The `event details` **MUST** contain the `provider name` associated with the event.
+
+The `provider name` indicates the provider from which the event originated.
+This is especially relevant for global event handlers used for general monitoring, such as alerting on provider errors.
+
+See [setting a provider](./01-flag-evaluation.md#setting-a-provider), [creating clients](./01-flag-evaluation.md#creating-clients).
+
+#### Requirement 5.2.4
+
+> The `handler function` **MUST** accept an `event details` parameter.
+
+see: [`event details`](../types.md#event-details)
+
+#### Requirement 5.2.5
+
+> If a `handler function` terminates abnormally, other `handler functions` **MUST** run.
+
+#### Requirement 5.2.6
+
+> Event handlers **MUST** persist across `provider` changes.
+
+If the underlying provider is changed, existing client and API event handlers will still fire.
+This means that the order of provider configuration and event handler addition is independent.
+
+#### Requirement 5.2.7
+
+> The `API` and `client` **MUST** provide a function allowing the removal of event handlers.
+
+```java
+  // remove an existing handler for a PROVIDER_CONFIGURATION_CHANGED event
+  client.removeHandler(ProviderEvents.ConfigurationChanged, myClientOnChangedHandler);
+```
+
+### Event handlers and initialization
+
+The provider signals successful or failed initialization by emitting `PROVIDER_READY` or `PROVIDER_ERROR` events respectively.
+_Application authors_ and _application integrators_ use these events to wait for proper initialization of the provider and to do basic monitoring and error handling.
+
+#### Requirement 5.3.1
+
+> When the provider emits `PROVIDER_READY`, associated `PROVIDER_READY` handlers **MUST** run.
+
+See [provider initialization](./02-providers.md#24-initialization) and [setting a provider](./01-flag-evaluation.md#setting-a-provider).
+
+#### Requirement 5.3.2
+
+> When the provider emits `PROVIDER_ERROR`, associated `PROVIDER_ERROR` handlers **MUST** run.
+
+A failed initialization could represent an unrecoverable error, such as bad credentials or a missing file.
+A failed initialization could also represent a transient error.
+A provider which maintains a persistent connection to a remote `flag management system` may attempt to reconnect, and emit `PROVIDER_READY` after a failed initialization.
+
+See [provider initialization](./02-providers.md#24-initialization) and [setting a provider](./01-flag-evaluation.md#setting-a-provider).
+
+#### Requirement 5.3.3
+
+> Handlers attached after the provider is already in the associated state, **MUST** run immediately.
+
+Handlers may be attached at any point in the application lifecycle.
+Handlers should run immediately if the provider is already in the associated state.
+For instance, _application authors_ may attach readiness handlers to be confident that the system is ready to evaluate flags.
+If such handlers are attached after the provider underlying the client has already been initialized, they should run immediately.
+In multi-threaded environments, implementations should ensure that running a handler immediately upon registration does not result in out-of-order event processing (e.g. by holding a lock on the event queue).
+
+See [provider initialization](./02-providers.md#24-initialization), [setting a provider](./01-flag-evaluation.md#setting-a-provider).
+
+### Event handlers and context reconciliation
+
+Providers built to conform to the static context paradigm feature two additional events: `PROVIDER_RECONCILING` and `PROVIDER_CONTEXT_CHANGED`.
+When the provider is reconciling its internal state (the `on context changed` function is running and not yet terminated), the provider emits `PROVIDER_RECONCILING`.
+This can be particularly useful for displaying loading indicators while the [evaluation context](./03-evaluation-context.md) is being reconciled.
+
+If the `on context changed` function terminates normally, the provider emits `PROVIDER_CONTEXT_CHANGED`; otherwise it emits `PROVIDER_ERROR`.
+The `PROVIDER_CONTEXT_CHANGED` is used to signal that the associated context has been changed, and flags should be re-evaluated.
+This can be particularly useful for triggering UI repaints in multiple components when one component updates the [evaluation context](./03-evaluation-context.md).
+
+```mermaid
+---
+title: Provider context reconciliation 
+---
+stateDiagram-v2
+    direction TB
+    READY --> READY:emit(PROVIDER_CONTEXT_CHANGED)*
+    READY --> RECONCILING:emit(PROVIDER_RECONCILING)
+    RECONCILING --> READY:emit(PROVIDER_CONTEXT_CHANGED)
+    RECONCILING --> ERROR:emit(PROVIDER_ERROR)
+```
+
+\* Implementations may allow for providers to reconcile synchronously, in which case no `PROVIDER_RECONCILING` event is emitted.
+
+#### Condition 5.3.4
+
+[![hardening](https://img.shields.io/static/v1?label=Status&message=hardening&color=yellow)](https://github.com/open-feature/spec/tree/main/specification#hardening)
+
+> The implementation uses the static-context paradigm.
+
+see: [static-context paradigm](../glossary.md#static-context-paradigm)
+
+##### Conditional Requirement 5.3.4.1
+
+> While the provider's `on context changed` function is executing, associated `RECONCILING` handlers **MUST** run.
+
+The provider must emit `PROVIDER_RECONCILING` while it is reconciling its state.
+In languages with asynchronous semantics, the emission of this event can be skipped if the `on context changed` function of the provider in question executes synchronously.
+
+see: [provider event types](../types.md#provider-events), [provider events](#51-provider-events), [provider context reconciliation](02-providers.md#26-provider-context-reconciliation)
+
+##### Conditional Requirement 5.3.4.2
+
+> If the provider's `on context changed` function terminates normally, and no other invocations have yet to terminate, associated `PROVIDER_CONTEXT_CHANGED` handlers **MUST** run.
+
+The provider emits `PROVIDER_CONTEXT_CHANGED` upon successful reconciliation; the SDK runs the associated handlers when it receives the event, satisfying this requirement.
+If `on context changed` is invoked simultaneously or in quick succession, the provider should emit `PROVIDER_CONTEXT_CHANGED` only after the last reentrant invocation terminates normally, to avoid spurious updates from intermediate reconciliations.
+
+see: [provider event types](../types.md#provider-events), [provider events](#51-provider-events), [provider context reconciliation](02-providers.md#26-provider-context-reconciliation)
+
+##### Conditional Requirement 5.3.4.3
+
+> If the provider's `on context changed` function terminates abnormally, and no other invocations have yet to terminate, associated `PROVIDER_ERROR` handlers **MUST** run.
+
+The provider emits `PROVIDER_ERROR` upon failed reconciliation; the SDK runs the associated handlers when it receives the event, satisfying this requirement.
+If `on context changed` is invoked simultaneously or in quick succession, the provider should emit `PROVIDER_ERROR` only after the last reentrant invocation terminates abnormally, to avoid spurious updates from intermediate reconciliations.
+
+see: [provider event types](../types.md#provider-events), [provider events](#51-provider-events), [provider context reconciliation](02-providers.md#26-provider-context-reconciliation)
+
+#### Requirement 5.3.5
+
+> When a provider emits an event, the SDK **MUST** update the `provider status` to the status associated with that event **before** invoking any event handlers for that event, so that handlers observe a consistent status.
+
+The SDK derives provider status entirely from events emitted by the provider.
+The table below summarizes the association between events and provider status:
+
+| Event                            | Associated Status                           |
+| -------------------------------- | ------------------------------------------- |
+| `PROVIDER_READY`                 | `READY`                                     |
+| `PROVIDER_STALE`                 | `STALE`                                     |
+| `PROVIDER_ERROR`                 | `ERROR`/`FATAL`*                            |
+| `PROVIDER_CONFIGURATION_CHANGED` | N/A (provider remains in its current state) |
+| `PROVIDER_CONTEXT_CHANGED`       | `READY`                                     |
+| `PROVIDER_RECONCILING`           | `RECONCILING`                               |
+
+\* If the `error code` associated with the error indicates `PROVIDER_FATAL`, the state is set to `FATAL`
+
+see: [provider lifecycle management](01-flag-evaluation.md#17-provider-lifecycle-management), [provider status](../types.md#provider-status), [error codes](../types.md#error-code)
