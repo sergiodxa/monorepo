@@ -1,0 +1,16 @@
+{
+	"name": "@sdxc/semver",
+	"version": "0.0.1",
+	"description": "SemVer 2.0.0 parsing, precedence ordering and range-free version comparisons",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*"
+	}
+}
