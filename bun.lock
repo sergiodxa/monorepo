@@ -8,6 +8,7 @@
         "@cloudflare/vitest-pool-workers": "^0.21.3",
         "@sdxc/markdown": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "@sdxc/semver": "workspace:*",
         "@sdxc/spec": "workspace:*",
         "@total-typescript/ts-reset": "^0.6.1",
         "@total-typescript/tsconfig": "^1.0.4",
@@ -664,6 +665,13 @@
         "@sdxc/dates": "workspace:*",
         "@sdxc/duration": "workspace:*",
         "@sdxc/jwt": "workspace:*",
+      },
+    },
+    "packages/semver": {
+      "name": "@sdxc/semver",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
       },
     },
     "packages/seo": {
@@ -1475,6 +1483,8 @@
     "@sdxc/rss": ["@sdxc/rss@workspace:packages/rss"],
 
     "@sdxc/sample": ["@sdxc/sample@workspace:packages/sample"],
+
+    "@sdxc/semver": ["@sdxc/semver@workspace:packages/semver"],
 
     "@sdxc/seo": ["@sdxc/seo@workspace:packages/seo"],
 
