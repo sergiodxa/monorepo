@@ -1,8 +1,9 @@
 /**
  * Tests for the worker's cron and queue handlers: the cron enqueues the
  * sweep only for its own expression, and the queue acks a body it cannot
- * read on the first try, since a schema mismatch persists across
- * redeliveries.
+ * read on the first try — writing it to the dead-letter queue, since a
+ * schema mismatch persists across redeliveries — while a batch arriving on
+ * that queue is recorded and acked.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,6 +17,9 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 /** The queue the cron produces into. */
 let queue = createQueue({ name: "auth" });
 
+/** The queue a refused body is written to, and the second one this worker consumes. */
+let dlq = createQueue({ name: "auth-dlq" });
+
 /** Collects the work the worker defers, so a test can await what it started. */
 let context = createExecutionContext();
 
@@ -26,6 +30,7 @@ let context = createExecutionContext();
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		QUEUE: queue,
+		DLQ: dlq,
 		/**
 		 * Undefined here so the job skips its uptime ping, keeping every test
 		 * in this file off the network.
@@ -59,17 +64,28 @@ let subjectId: string;
 let clientId: string;
 
 /**
- * Delivers a batch to the worker's queue handler and reports each message's
- * disposition. Hands `context` to `consume` so the pass waits for the
- * sweep's `waitUntil` ack to land before reading dispositions.
+ * Delivers a batch to the worker's queue handler from whichever of the two
+ * queues it consumes and reports each message's disposition. Hands `context`
+ * to `consume` so the pass waits for the sweep's `waitUntil` ack to land
+ * before reading dispositions.
  */
-async function deliver(...bodies: unknown[]) {
-	for (let body of bodies) await queue.send(body);
+async function deliverFrom(binding: typeof queue, bodies: unknown[]) {
+	for (let body of bodies) await binding.send(body);
 
-	return queue.consume(
+	return binding.consume(
 		(batch) => worker.queue?.(batch as unknown as Parameters<NonNullable<typeof worker.queue>>[0]),
 		{ context },
 	);
+}
+
+/** Delivers a batch on the work queue, the way a message the cron enqueued arrives. */
+async function deliver(...bodies: unknown[]) {
+	return await deliverFrom(queue, bodies);
+}
+
+/** Delivers a batch on the dead-letter queue, the way an exhausted message arrives. */
+async function deliverDeadLettered(...bodies: unknown[]) {
+	return await deliverFrom(dlq, bodies);
 }
 
 async function schedule(cron: string) {
@@ -84,6 +100,7 @@ async function schedule(cron: string) {
 
 beforeEach(async () => {
 	queue.reset();
+	dlq.reset();
 	context = createExecutionContext();
 
 	let { createTestDatabase } = await import("~/app/lib/test/db");
@@ -173,6 +190,25 @@ describe("queue", () => {
 		let result = await deliver(null, "cleanExpiredSessions", 7, { nope: true });
 
 		expect(result.acked).toHaveLength(4);
+		expect(result.retried).toHaveLength(0);
+	});
+
+	test("writes a body naming no job to the dead-letter queue, wrapped", async () => {
+		let result = await deliver({ job: "nope" });
+
+		expect(dlq.messages.map((message) => message.body)).toEqual([{ invalid: { job: "nope" } }]);
+		expect(result.acked).toHaveLength(1);
+		expect(result.retried).toHaveLength(0);
+	});
+
+	test("records a dead-lettered batch and acks it rather than running the job it names", async () => {
+		let expired = await createSession(Date.now() - 1000);
+
+		let result = await deliverDeadLettered({ job: "cleanExpiredSessions" });
+
+		let { sessions } = await import("~/database/schema");
+		expect((await db.findMany(sessions)).map((row) => row.id)).toEqual([expired]);
+		expect(result.acked).toHaveLength(1);
 		expect(result.retried).toHaveLength(0);
 	});
 

@@ -32,8 +32,16 @@ function isProductionHost(request: Request): boolean {
 	return hostname === "auth.sergiodxa.com";
 }
 
-/** Both job handlers, bound to the dispatcher they delegate to. */
-const handlers = cloudflare.worker(dispatcher);
+/**
+ * Both job handlers, bound to the dispatcher they delegate to. This worker consumes its own
+ * dead-letter queue as well, so a batch from there is recorded and acked rather than
+ * dispatched, and a body no redelivery could make readable is written there at once, leaving
+ * the work queue's three deliveries for the failures that another attempt does fix.
+ */
+const handlers = cloudflare.worker(dispatcher, {
+	deadLetterQueue: "auth-dlq",
+	deadLetter: () => env.DLQ,
+});
 
 export default {
 	/**
@@ -64,7 +72,8 @@ export default {
 	},
 
 	/**
-	 * Runs the job each queued message names, settling once every one of them has.
+	 * Runs the job each queued message names, settling once every one of them has. Serves
+	 * both queues this worker consumes, the work queue and its dead-letter queue.
 	 * @param batch - The messages this delivery carries.
 	 */
 	async queue(batch) {

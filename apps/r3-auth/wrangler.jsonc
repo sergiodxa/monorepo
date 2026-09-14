@@ -69,9 +69,24 @@
 	// worker that held this role must release it before a deploy declaring it here is
 	// accepted — deploying that one first is what makes this deploy possible, not a
 	// courtesy.
+	//
+	// `auth-dlq` holds what the queue above gives up on, and this worker consumes it so those
+	// bodies are recorded and acked. The sweep is one message a day: without somewhere for a
+	// message that spends its three deliveries to land, a failing night is a night the expired
+	// sessions stay, and the only trace is the absence of a run. The retry ceiling is spelled
+	// out here because it is the sweep's whole budget, and it belongs beside the queue it
+	// governs. `DLQ` names the same queue as a producer so a body the dispatcher can never
+	// read is written there in one step, while the three deliveries stay available for the
+	// failures a retry does fix.
 	"queues": {
-		"consumers": [{ "queue": "auth" }],
-		"producers": [{ "binding": "QUEUE", "queue": "auth" }],
+		"consumers": [
+			{ "queue": "auth", "dead_letter_queue": "auth-dlq", "max_retries": 3 },
+			{ "queue": "auth-dlq" },
+		],
+		"producers": [
+			{ "binding": "QUEUE", "queue": "auth" },
+			{ "binding": "DLQ", "queue": "auth-dlq" },
+		],
 	},
 
 	// Enqueues the expired-session sweep at midnight UTC. Paired with the consumer above:
