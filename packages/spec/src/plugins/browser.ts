@@ -35,7 +35,7 @@ import type { Workspace } from "../workspace.js";
 import { ExpectationError, ToolError } from "../errors.js";
 import { formatValue } from "../values.js";
 
-import type { Assertion, ElementQuery, MatchMode, Predicate, QueryOptions } from "./addressing.js";
+import type { Assertion, ElementQuery, Predicate, QueryOptions } from "./addressing.js";
 import type { HttpVerb } from "./request-options.js";
 
 import {
@@ -760,18 +760,14 @@ async function setCookie(
 async function cookie(args: ToolArg[], session: string): Promise<Result<Value, SpecError>> {
 	let name = stringArg(args, 0, "cookie", "name");
 	if (isFailure(name)) return name;
+	let assertion = parseAssertion("browser.cookie", args, 1, "exact");
+	if (isFailure(assertion)) return assertion;
 	let response = await runBrowser(["cookies", "get"], session);
 	if (isFailure(response)) return response;
 	let jar = readCookies(response.data);
-	return observeValue(
-		"cookie",
-		args,
-		1,
-		"exact",
-		`cookie ${formatValue(name.data)}`,
-		jar.get(name.data),
-		[...jar.keys()],
-	);
+	return assert("cookie", `cookie ${formatValue(name.data)}`, jar.get(name.data), assertion.data, [
+		...jar.keys(),
+	]);
 }
 
 /** Every cookie the session's jar holds, by name, in the order it reported them. */
@@ -1405,10 +1401,12 @@ async function checkbox(
  * page rather than the markup, so what CSS hides stays out of it.
  */
 async function text(args: ToolArg[], session: string): Promise<Result<Value, SpecError>> {
+	let assertion = parseAssertion("browser.text", args, 0, "substring");
+	if (isFailure(assertion)) return assertion;
 	let response = await runBrowser(["get", "text", "body"], session);
 	if (isFailure(response)) return response;
 	let visible = typeof response.data.text === "string" ? response.data.text : "";
-	return observeValue("text", args, 0, "substring", "visible text", visible);
+	return assert("text", "visible text", visible, assertion.data);
 }
 
 /** `browser.url|path|title […]` — one string the session already carries. */
@@ -1417,16 +1415,18 @@ async function reading(
 	args: ToolArg[],
 	session: string,
 ): Promise<Result<Value, SpecError>> {
+	let assertion = parseAssertion(`browser.${tool}`, args, 0, "exact");
+	if (isFailure(assertion)) return assertion;
 	if (tool === "title") {
 		let response = await runBrowser(["get", "title"], session);
 		if (isFailure(response)) return response;
 		let title = typeof response.data.title === "string" ? response.data.title : "";
-		return observeValue(tool, args, 0, "exact", "page title", title);
+		return assert(tool, "page title", title, assertion.data);
 	}
 	let current = await location(tool, session);
 	if (isFailure(current)) return current;
 	let observed = tool === "path" ? current.data.pathname : current.data.href;
-	return observeValue(tool, args, 0, "exact", tool === "path" ? "path" : "current URL", observed);
+	return assert(tool, tool === "path" ? "path" : "current URL", observed, assertion.data);
 }
 
 /**
@@ -1440,6 +1440,8 @@ async function urlParameter(
 ): Promise<Result<Value, SpecError>> {
 	let name = stringArg(args, 0, tool, "name");
 	if (isFailure(name)) return name;
+	let assertion = parseAssertion(`browser.${tool}`, args, 1, "exact");
+	if (isFailure(assertion)) return assertion;
 	let current = await location(tool, session);
 	if (isFailure(current)) return current;
 	let parameters =
@@ -1447,13 +1449,11 @@ async function urlParameter(
 			? current.data.searchParams
 			: new URLSearchParams(current.data.hash.replace(/^#/, ""));
 	let observed = parameters.get(name.data);
-	return observeValue(
+	return assert(
 		tool,
-		args,
-		1,
-		"exact",
 		`${tool} parameter ${formatValue(name.data)}`,
 		observed ?? undefined,
+		assertion.data,
 		[...new Set(parameters.keys())],
 	);
 }
@@ -1477,28 +1477,15 @@ async function location(tool: string, session: string): Promise<Result<URL, Spec
  * Answer a value-reading observable: hand the value back, report its presence,
  * or assert on it. An absent value is a failed expectation naming what the
  * session holds instead, since `exists` is how a spec asks for the absence.
+ *
+ * @param available - Every value the session does hold, named when none matched.
  */
-function observeValue(
-	tool: string,
-	args: ToolArg[],
-	index: number,
-	fallback: MatchMode,
-	label: string,
-	observed: string | undefined,
-	available: readonly string[] = [],
-): Result<Value, SpecError> {
-	let assertion = parseAssertion(`browser.${tool}`, args, index, fallback);
-	if (isFailure(assertion)) return assertion;
-	return assert(tool, label, observed, assertion.data, available);
-}
-
-/** Hold the assertion against the value the session carried. */
 function assert(
 	tool: string,
 	label: string,
 	observed: string | undefined,
 	assertion: Assertion,
-	available: readonly string[],
+	available: readonly string[] = [],
 ): Result<Value, SpecError> {
 	if (assertion.kind === "exists") return success(observed !== undefined);
 	if (observed === undefined) {
