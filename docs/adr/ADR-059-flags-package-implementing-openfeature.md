@@ -1076,13 +1076,14 @@ exists.
 
 ## Current Progress
 
-- [ ] Phase 1: Vocabulary And Conformance Ledger
-- [ ] Phase 2: The Evaluation Path
-- [ ] Phase 3: Hooks, Events And Lifecycle
-- [ ] Phase 4: Providers And Their Suite
-- [ ] Phase 5: Specification Suites
-- [ ] Phase 6: Middleware And Adoption
-- [ ] Phase 7: The Catalog
+- [x] Phase 1: Vocabulary And Conformance Ledger
+- [x] Phase 2: The Evaluation Path
+- [x] Phase 3: Hooks, Events And Lifecycle
+- [x] Phase 4: Providers And Their Suite
+- [x] Phase 5: Specification Suites
+- [ ] Phase 6: Middleware And Adoption — the middleware and the README are in; no app has
+      adopted the package, which waits on a provider against a real flag system
+- [x] Phase 7: The Catalog
 
 ## Notes
 

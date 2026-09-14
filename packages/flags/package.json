@@ -1,0 +1,45 @@
+{
+	"name": "@sdxc/flags",
+	"version": "0.0.1",
+	"description": "Feature flag evaluation implementing the OpenFeature specification",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./client": "./src/client/index.ts",
+		"./catalog": "./src/catalog/index.ts",
+		"./provider": "./src/provider/index.ts",
+		"./provider/noop": "./src/provider/noop.ts",
+		"./provider/memory": "./src/provider/memory.ts",
+		"./conformance": "./src/testing/conformance.ts",
+		"./middleware": "./src/middleware/index.ts",
+		"./middleware/router": "./src/middleware/router.ts",
+		"./middleware/dispatcher": "./src/middleware/dispatcher.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/logger": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/types": "workspace:*",
+		"@sdxc/validate": "workspace:*",
+		"@standard-schema/spec": "^1.1.0"
+	},
+	"peerDependencies": {
+		"@sdxc/jobs": "*",
+		"remix": "3.0.0-rc.2",
+		"vitest": "^4.0.0"
+	},
+	"peerDependenciesMeta": {
+		"@sdxc/jobs": {
+			"optional": true
+		},
+		"remix": {
+			"optional": true
+		},
+		"vitest": {
+			"optional": true
+		}
+	}
+}

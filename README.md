@@ -106,6 +106,7 @@ Run from the repository root:
 | [dates](packages/dates)                                         | Zone-aware date operations with Intl-only formatting                                     | ✅  |
 | [duration](packages/duration)                                   | Typed duration strings converted to milliseconds or seconds                              | ✅  |
 | [feed](packages/feed)                                           | One feed API over RSS and Atom, with conditional fetching and autodiscovery              | ✅  |
+| [flags](packages/flags)                                         | Feature flag evaluation implementing the OpenFeature specification                       | ✅  |
 | [get-client-ip](packages/get-client-ip)                         | Read the client IP from a Cloudflare Workers request                                     | ✅  |
 | [highlight](packages/highlight)                                 | Syntax highlighting as tokens, with a markdown visitor that paints code blocks           | ✅  |
 | [hostname](packages/hostname)                                   | Cloudflare for SaaS custom-hostname client: register, poll and delete customer domains   | ✅  |
