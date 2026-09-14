@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { JSONPrimitive } from "./json-primitive.js";
+
 /**
  * A value that survives `JSON.stringify` and comes back from `JSON.parse`
  * identical. The round trip is the contract: a `Date` is excluded because it
@@ -17,10 +19,4 @@
  * @example
  * let array: JSONValue = [1, 2, 3];
  */
-export type JSONValue =
-	| string
-	| number
-	| boolean
-	| null
-	| JSONValue[]
-	| { [key: string]: JSONValue };
+export type JSONValue = JSONPrimitive | JSONValue[] | { [key: string]: JSONValue };

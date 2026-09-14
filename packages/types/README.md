@@ -87,12 +87,29 @@ type User = ResolvedType<typeof fetchUser>;
 type User = Awaited<ReturnType<typeof fetchUser>>;
 ```
 
-### `JSONValue`
+### `JSONPrimitive`
 
-Any JSON-serializable value. The union recurses into itself, so it is the one type here with no shorthand to expand — writing it inline means writing it out in full:
+A JSON value that holds no other value — the four scalars, without the arrays and objects that nest them:
 
 ```typescript
-type JSONValue = string | number | boolean | null | JSONValue[] | { [key: string]: JSONValue };
+type JSONPrimitive = string | number | boolean | null;
+```
+
+Take it where a value is compared, indexed or used as a key, so the signature says a structure has no meaning there:
+
+```typescript
+function eq(field: string, value: JSONPrimitive): Condition;
+
+eq("plan", "pro"); // fine
+eq("plan", { tier: "pro" }); // Error: an object is not a JSONPrimitive
+```
+
+### `JSONValue`
+
+Any JSON-serializable value: a `JSONPrimitive` at the leaves, and the arrays and objects that nest them to any depth.
+
+```typescript
+type JSONValue = JSONPrimitive | JSONValue[] | { [key: string]: JSONValue };
 ```
 
 Reach for it as a generic bound. As a parameter type it widens the argument to the whole union and the caller loses their shape; as a constraint it only rules values out:
