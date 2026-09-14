@@ -76,18 +76,6 @@ export const dispatcher = createJobDispatcher({
 	 * along with everything the handler then does through it.
 	 */
 	middleware: [costLedger(), database(), mailer(), admin()],
-	/**
-	 * This worker consumes its own dead-letter queue too (ADR-018), so those batches are
-	 * recorded and acked rather than dispatched.
-	 */
-	deadLetterQueue: "ping-dlq",
-	/**
-	 * A body matching no job or failing its schema goes straight to the dead-letter queue,
-	 * instead of spending three redeliveries on a payload no redelivery can fix.
-	 */
-	onInvalid: async (_delivery, body) => {
-		await env.DLQ.send(body, { contentType: "json" });
-	},
 });
 
 dispatcher.map(jobs.enqueueDueChecks, () => import("~/app/jobs/enqueue-due-checks"));
