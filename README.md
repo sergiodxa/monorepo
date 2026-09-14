@@ -129,6 +129,7 @@ Run from the repository root:
 | [result](packages/result)                                       | Result type for error handling                                                           | ✅  |
 | [rss](packages/rss)                                             | RSS 2.0 feed builder and parser                                                          | ✅  |
 | [sample](packages/sample)                                       | Seeded generation of believable people, places, prose, numbers and identifiers           | ✅  |
+| [semver](packages/semver)                                       | SemVer 2.0.0 parsing, precedence ordering and range-free version comparisons             | ✅  |
 | [server-timing](packages/server-timing)                         | Server-Timing measurements written to a response header                                  | ✅  |
 | [seo](packages/seo)                                             | Canonical URLs, schema.org builders and head metadata                                    | ✅  |
 | [session-storage-kv](packages/session-storage-kv)               | Session storage adapter for Cloudflare KV                                                | ✅  |
