@@ -1,0 +1,37 @@
+{
+	"name": "@sdxc/flags-engine",
+	"version": "0.0.1",
+	"description": "Flag evaluation engine: typed targeting rules, percentage splits and pluggable stores",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./store": "./src/store/index.ts",
+		"./store/memory": "./src/store/memory.ts",
+		"./store/worker-kv": "./src/store/worker-kv.ts",
+		"./conformance": "./src/testing/conformance.ts",
+		"./provider": "./src/provider/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/duration": "workspace:*",
+		"@sdxc/flags": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/semver": "workspace:*",
+		"@sdxc/types": "workspace:*",
+		"remix": "3.0.0-rc.2"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^5.20260901.1"
+	},
+	"peerDependencies": {
+		"vitest": "^4.0.0"
+	},
+	"peerDependenciesMeta": {
+		"vitest": {
+			"optional": true
+		}
+	}
+}

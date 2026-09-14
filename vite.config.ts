@@ -43,7 +43,7 @@ const PACKAGES_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 			miniflare: {
 				compatibilityDate: "2025-04-07",
 				compatibilityFlags: ["nodejs_compat"],
-				kvNamespaces: ["CACHE"],
+				kvNamespaces: ["CACHE", "FLAGS"],
 				d1Databases: ["DB"],
 			},
 		}),

@@ -445,6 +445,27 @@
         "vitest",
       ],
     },
+    "packages/flags-engine": {
+      "name": "@sdxc/flags-engine",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/duration": "workspace:*",
+        "@sdxc/flags": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/semver": "workspace:*",
+        "@sdxc/types": "workspace:*",
+        "remix": "3.0.0-rc.2",
+      },
+      "devDependencies": {
+        "@cloudflare/workers-types": "^5.20260901.1",
+      },
+      "peerDependencies": {
+        "vitest": "^4.0.0",
+      },
+      "optionalPeers": [
+        "vitest",
+      ],
+    },
     "packages/get-client-ip": {
       "name": "@sdxc/get-client-ip",
       "version": "0.0.1",
@@ -1439,6 +1460,8 @@
     "@sdxc/feed": ["@sdxc/feed@workspace:packages/feed"],
 
     "@sdxc/flags": ["@sdxc/flags@workspace:packages/flags"],
+
+    "@sdxc/flags-engine": ["@sdxc/flags-engine@workspace:packages/flags-engine"],
 
     "@sdxc/get-client-ip": ["@sdxc/get-client-ip@workspace:packages/get-client-ip"],
 
