@@ -29,9 +29,9 @@ the two share one path: a cron delivery enqueues a message and returns, so a sch
 job gets the same middleware, timeout, logging, retries, and dead-letter queue as any
 other. Nothing runs inside the `scheduled` handler.
 
-The shape mirrors the way this repository routes HTTP — a map of addressable
-definitions, a runtime that maps handlers onto them, and middleware that publishes
-values into a typed context. Context keys come from
+The shape is the one an HTTP router has: a map of addressable definitions, a runtime
+that maps handlers onto them, and middleware that publishes values into a typed context.
+Context keys come from
 [`remix/router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router),
 so one key serves an HTTP middleware and a job middleware alike.
 
@@ -52,7 +52,6 @@ export default jobs({
 	digests: {
 		daily: job({ cron: "0 8 * * *" }),
 		weekly: job({ cron: "0 9 * * 1" }),
-		},
 	},
 });
 ```
@@ -102,8 +101,6 @@ export const dispatcher = createJobDispatcher({
 		let watched = ctx.of(jobs.clean);
 		if (watched !== null) await uptime(watched.meta.monitorId);
 	},
-	deadLetterQueue: "ping-dlq",
-	onInvalid: (_delivery, body) => env.DLQ.send(body, { contentType: "json" }),
 });
 
 dispatcher.map(jobs.clean, () => import("~/app/jobs/clean"));
@@ -112,7 +109,10 @@ dispatcher.map(jobs.checkHttp, () => import("~/app/jobs/check-http"));
 
 ```typescript
 /** Both job handlers, bound to the dispatcher they delegate to. */
-const handlers = cloudflare.worker(dispatcher);
+const handlers = cloudflare.worker(dispatcher, {
+	deadLetterQueue: "ping-dlq",
+	deadLetter: () => env.DLQ,
+});
 
 export default {
 	async scheduled(controller) {
@@ -199,7 +199,7 @@ Builds the app's job map, naming every leaf after the key it is filed under.
 **Returns:**
 
 - The same shape, with every leaf a `JobDefinition` that knows its name, schedule,
-  monitor, and schema
+  schema, and `meta`
 
 **Example:**
 
@@ -213,7 +213,9 @@ Declares one job for a map. Holds no handler, so importing a map costs its schem
 
 **Parameters:**
 
-- `options.input`: Object schema parsed before the handler runs. Absent means no payload
+- `options.input`: Schema the payload is parsed against before the handler runs. The
+  payload travels under a key of its own, so an object schema and a bare value both
+  serve. Absent means no payload
 - `options.cron`: Cron expression this job is enqueued on, spelled exactly as the
   matching trigger in `wrangler.jsonc`. Parsed here, so an expression the platform would
   reject throws at declaration; the type is five space-separated fields, so anything
@@ -294,25 +296,24 @@ Builds the registry both worker handlers delegate to.
 - `options.logger`: The worker's logging configuration, from `createLogger()`. Every
   cron, queue, and job log this dispatcher opens carries it; without one they carry no
   service
-- `options.send`: `(bodies: JSONValue[]) => Promise<void>` — the app's queue write, used
-  by `enqueue` and by the cron trigger. A dispatcher without one still runs what the
-  queue delivers, and refuses to enqueue
+- `options.queue`: The backend this dispatcher enqueues through, from
+  `@sdxc/jobs/cloudflare`, `@sdxc/jobs/memory`, or an adapter of your own. A dispatcher
+  without one still runs what a backend delivers, and throws when asked to enqueue
 - `options.middleware`: Chain every job runs inside, in the order declared
 - `options.timeout`: How long a job gets before `ctx.signal` aborts and the dispatcher
   stops waiting
 - `options.onEnd`: `(ctx, status) => void | Promise<void>` — runs once a delivery's ending
   is decided and before it is settled, which is what makes it the place for work that has
   to reach a service before the message is acked. Its failure is never the job's: anything
-  it throws is recorded as `job.hook_failed` and the ending settles as decided
+  it throws is recorded as `job.hook_failed`, and running past the settle grace is recorded
+  as `job.hook_overran`, with the ending settling as decided either way
 - `options.maxAttempts`: the attempts a message gets before it is dead-lettered, for a
   queue whose `retries` are this package's to count. Ignored by a backend counting its own
-- `options.deadLetterQueue`: Name of the dead-letter queue this worker also consumes,
-  so its batches are recorded and acked here rather than dispatched
-- `options.onInvalid`: Forwards a refused message, already wrapped as `{ invalid: body }`
 
 **Returns:**
 
-- A dispatcher with `map`, `queue`, `scheduled`, and `crons`
+- A dispatcher with `map`, `enqueue`, `enqueueMany`, `deliver`, `deliverBatch`, `tick`,
+  `mapped`, and `crons`
 
 **Example:**
 
@@ -375,14 +376,16 @@ let settlement = await dispatcher.deliver({ id: "m1", attempts: 1, body: { job: 
 #### `dispatcher.deliverBatch(deliveries: JobDelivery[], options): Promise<void>`
 
 Runs every delivery that arrived together, inside one `queue` log, settling each through
-`options.apply` as that one finishes rather than when the last one does. Deliveries read
-from the configured `deadLetterQueue` are recorded and acked instead of dispatched.
+`options.apply` as that one finishes rather than when the last one does. With
+`deadLettered`, every delivery is recorded and acked instead of dispatched — which queue
+a batch arrived on is the backend's to know, so the backend is the one that says so.
 
 **Example:**
 
 ```typescript
 await dispatcher.deliverBatch(deliveries, {
 	queue: "ping",
+	deadLettered: batch.queue === "ping-dlq",
 	apply: (delivery, settlement) => settle(delivery, settlement),
 });
 ```
@@ -403,6 +406,17 @@ triggers behind it.
 async scheduled(controller) {
 	await dispatcher.tick({ now: new Date(controller.scheduledTime), only: controller.cron });
 }
+```
+
+#### `dispatcher.mapped: JobDefinition[]`
+
+Every job a handler was mapped onto, for asserting that a map has no leaf nobody runs.
+
+**Example:**
+
+```typescript
+let names = new Set(dispatcher.mapped.map((job) => job.name));
+expect([...names]).toEqual(expect.arrayContaining(["clean", "checkHttp"]));
 ```
 
 #### `dispatcher.crons: string[]`
@@ -427,7 +441,8 @@ handler directly.
 
 **Parameters:**
 
-- `job`: The job being run, which supplies `name`, `cron`, and `meta`
+- `job`: The job being run, which supplies `name` and `cron`, and types what `ctx.of()`
+  answers
 - `init.id`: The queue message's id
 - `init.attempts`: Which delivery of this message this is, counting from one
 - `init.input`: The payload, already parsed against the job's schema
@@ -488,8 +503,8 @@ if (team === null) ctx.exit("Team no longer exists");
 
 #### `ctx.timeout(reason?: string): never`
 
-Gives up because time ran out: the delivery is retried and no monitor is told the job
-ran. Throws `Timeout`.
+Gives up because time ran out: the delivery is retried, and the run is reported as one
+that never finished. Throws `Timeout`.
 
 #### `ctx.get(key: ContextKey): value | undefined`
 
@@ -531,13 +546,15 @@ needs.
 
 | Ending             | Thrown by       | What the dispatcher does                           | `job.ending` | Outcome    |
 | ------------------ | --------------- | -------------------------------------------------- | ------------ | ---------- |
-| `Job.Ack`          | `ctx.ack()`     | Ping the monitor, ack                              | `done`       | `ok`       |
+| `Job.Ack`          | `ctx.ack()`     | Ack the delivery                                   | `done`       | `ok`       |
 | `Job.Retry`        | `ctx.retry()`   | Retry, holding for `delay`; note `job.retry`       | `retry`      | `degraded` |
 | `Job.NonRetriable` | `ctx.exit()`    | Ack; `fail()` the log with the error and its cause | `refuse`     | `error`    |
-| `Job.Timeout`      | `ctx.timeout()` | Retry, ping nothing; `fail()` the log              | `timeout`    | `error`    |
+| `Job.Timeout`      | `ctx.timeout()` | Retry; `fail()` the log                            | `timeout`    | `error`    |
 
 Returning normally ends `done` like `Job.Ack`; anything else thrown ends `failed` with
-outcome `error` and is rethrown so the platform retries the invocation.
+outcome `error` and is rethrown so the platform retries the invocation. An ending decided
+once the timeout has aborted the signal is recorded as `timeout` whatever it was:
+`ctx.ack()` still acks the delivery, and returning normally lets the message come back.
 
 **Example:**
 
@@ -565,7 +582,10 @@ handler chose without naming each.
 #### `JobMiddleware<Effect>`
 
 ```typescript
-type JobMiddleware<Effect> = (ctx: JobContext, next: () => Promise<void>) => Promise<void>;
+type JobMiddleware<Effect extends ContextEffect = EmptyContextEffect> = (
+	ctx: JobContext,
+	next: () => Promise<void>,
+) => void | Promise<void>;
 ```
 
 The `Effect` names what the middleware publishes — `{ key, value, property }` — which is
@@ -602,9 +622,20 @@ that pushes deliveries into the dispatcher itself. `retries` says who counts att
 `"backend"` leaves the ceiling where the platform already states it, `"core"` hands it to
 the dispatcher's `maxAttempts`.
 
+`worker(dispatcher, options)` takes the two things only a backend can answer for: the
+`deadLetterQueue` it also consumes, whose batches it has the dispatcher record and ack
+rather than dispatch, and the `deadLetter` binding a refused body is written to. That
+write is what gets a message no redelivery can fix onto that queue, since this platform
+reaches a dead-letter queue only by exhausting retries. A worker given neither dispatches
+every batch it receives and acks a refused body where it stands.
+
 Two adapters ship. `@sdxc/jobs/cloudflare` exports `queue` and `worker`;
 `@sdxc/jobs/memory` exports `queue`. Both are reached through a namespace import, since
 `queue` collides with the first local variable holding one.
+
+A memory queue adds what a test drives it with: `drain(deliver)` runs everything
+claimable and answers with what each delivery ended as, `messages` and `deadLettered`
+read back what it still holds, and `reset()` empties both.
 
 ```typescript
 import * as cloudflare from "@sdxc/jobs/cloudflare";
@@ -624,7 +655,7 @@ export default {
 };
 ```
 
-#### `createUptimeReporter(options)`
+### `createUptimeReporter(options)`
 
 The cron-monitor ping, at `@sdxc/jobs/uptime`. Wired to nothing: a dispatcher's `onEnd`
 calls it, so a service having a bad minute cannot become a reason to redeliver work that
@@ -692,7 +723,7 @@ export default createJobHandler(jobs.sendTeamDailyDigests, (ctx) => sendTeamDige
 export default createJobHandler(jobs.sendTeamWeeklyDigests, (ctx) => sendTeamDigests(ctx, "week"));
 ```
 
-Each leaf keeps its own monitor and its own loader, so one schedule failing is one
+Each leaf keeps its own `meta` and its own loader, so one schedule failing is one
 monitor alerting.
 
 ## Pattern: Cooperative Cancellation
@@ -774,6 +805,7 @@ what the handler recorded.
 - [`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration) - The duration strings a retry delay and a timeout take
 - [`@sdxc/validate`](https://www.npmjs.com/package/@sdxc/validate) - Standard Schema validation, used to parse a payload
 - [`@sdxc/cron`](https://www.npmjs.com/package/@sdxc/cron) - Parses the cron a job declares, and rejects one the platform would not accept
+- [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) - The `Result` every queue call and every ping answers with
 - [`@sdxc/cloudflare-mocks`](https://www.npmjs.com/package/@sdxc/cloudflare-mocks) - Queue binding that drives a consumer in tests
 
 ## Tips
@@ -795,5 +827,6 @@ what the handler recorded.
    redelivery, so acking and recording beats spending the retries.
 7. **Pass `ctx.signal` to every fetch** - It is what makes a timeout cancel work rather
    than merely stop waiting for it.
-8. **Let a monitor mean what it says** - A run that timed out pings nothing, so a
-   monitor alerting is evidence the job really stopped completing.
+8. **Let a monitor mean what it says** - Ping from `onEnd` only for a `done` status, so
+   a run that timed out pings nothing and a monitor alerting is evidence the job really
+   stopped completing.

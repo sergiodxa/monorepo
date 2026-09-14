@@ -312,10 +312,12 @@ describe("the dead-letter queue", () => {
 		let dlq = createQueue({ name: "ping-dlq" }) as QueueMock<unknown>;
 		let { logger, ofKind } = setup();
 
-		let dispatcher = createJobDispatcher({ logger, deadLetterQueue: "ping-dlq" });
+		let dispatcher = createJobDispatcher({ logger });
 
 		await dlq.send({ invalid: { type: "nobodyHome" } });
-		let result = await consume(dlq, (batch) => cloudflare.worker(dispatcher).queue(batch));
+		let result = await consume(dlq, (batch) =>
+			cloudflare.worker(dispatcher, { deadLetterQueue: "ping-dlq" }).queue(batch),
+		);
 
 		expect(result.acked).toHaveLength(1);
 		expect(ofKind("job")[0]).toMatchObject({
@@ -338,10 +340,12 @@ describe("the dead-letter queue", () => {
 		let dlq = createQueue({ name: "ping-dlq" }) as QueueMock<unknown>;
 		let { logger, ofKind } = setup();
 
-		let dispatcher = createJobDispatcher({ logger, deadLetterQueue: "ping-dlq" });
+		let dispatcher = createJobDispatcher({ logger });
 
 		await dlq.send({ type: "clean" });
-		let result = await consume(dlq, (batch) => cloudflare.worker(dispatcher).queue(batch));
+		let result = await consume(dlq, (batch) =>
+			cloudflare.worker(dispatcher, { deadLetterQueue: "ping-dlq" }).queue(batch),
+		);
 
 		expect(result.acked).toHaveLength(1);
 		expect(ofKind("job")[0]).toMatchObject({

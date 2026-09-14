@@ -68,6 +68,42 @@ export class JobQueueError extends Error {
 	}
 }
 
+/** The body a refused message is forwarded to a dead-letter queue as. */
+export interface InvalidMessage {
+	invalid: unknown;
+}
+
+/**
+ * Wraps a body no redelivery can fix, for a backend that reaches its dead-letter queue by
+ * being written to rather than by being asked. The wrapper is what tells a refusal from a
+ * message the backend itself gave up on, since both arrive on the same queue.
+ *
+ * @param body The delivered body the dispatcher refused.
+ */
+export function invalidMessage(body: unknown): InvalidMessage {
+	return { invalid: body };
+}
+
+/** One dead-lettered message: why it is here, and the body it carried before it was wrapped. */
+export interface DeadLetter {
+	reason: DeadLetterReason;
+	body: unknown;
+}
+
+/**
+ * Reads a dead-lettered body. A refused one arrives wrapped by whatever forwarded it; one a
+ * backend gave up on arrives verbatim, which is what tells the two apart.
+ *
+ * @param body The delivered body, of whatever shape.
+ */
+export function readDeadLetter(body: unknown): DeadLetter {
+	if (typeof body === "object" && body !== null && "invalid" in body) {
+		return { reason: "invalid_message", body: (body as InvalidMessage).invalid };
+	}
+
+	return { reason: "retries_exhausted", body };
+}
+
 /** One message to enqueue: the job it is addressed to, and the payload it carries. */
 export interface JobMessage {
 	job: string;

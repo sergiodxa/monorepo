@@ -74,18 +74,18 @@ describe("queue()", () => {
 		expect(result.acked).toHaveLength(1);
 	});
 
-	test("refuses a body naming no mapped job, forwarding it wrapped", async () => {
-		let { binding, logger } = setup();
-		let onInvalid = vi.fn();
+	test("refuses a body naming no mapped job, asking for it to be dead-lettered", async () => {
+		let { logger } = setup();
 
-		let dispatcher = createJobDispatcher({ onInvalid, logger });
+		let dispatcher = createJobDispatcher({ logger });
 
-		await binding.send({ type: "nobodyHome" });
-		let result = await consume(binding, (batch) => cloudflare.worker(dispatcher).queue(batch));
+		let settlement = await dispatcher.deliver({
+			id: "m1",
+			attempts: 1,
+			body: { type: "nobodyHome" },
+		});
 
-		expect(onInvalid).toHaveBeenCalledTimes(1);
-		expect(onInvalid.mock.calls[0]?.[1]).toEqual({ invalid: { type: "nobodyHome" } });
-		expect(result.acked).toHaveLength(1);
+		expect(settlement).toEqual({ type: "dead-letter", reason: "invalid_message" });
 	});
 
 	test("refuses a body that fails the job's schema without loading its handler", async () => {

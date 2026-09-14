@@ -29,6 +29,7 @@ import type { DeadLetterReason, JobDelivery, JobMessage, JobQueue, Settlement } 
 import { openJobLog } from "./context.js";
 import { readMessageBody } from "./jobs.js";
 import { runJob } from "./lifecycle.js";
+import { readDeadLetter } from "./queue.js";
 
 /** A handler module, however it is reached. */
 export type HandlerModule = AnyJobHandler | { default: AnyJobHandler };
@@ -38,11 +39,6 @@ export type LoadHandler = () => HandlerModule | Promise<HandlerModule>;
 
 /** Why a message was refused: it named no job, or it failed the job's schema. */
 export type RefusalReason = "unknown-job" | "invalid-input";
-
-/** The body a refused message is forwarded as, wrapped so its refusal is legible. */
-export interface InvalidMessage {
-	invalid: unknown;
-}
 
 /**
  * What a refused message's log fails with, so its record ends `error` and names the
@@ -107,16 +103,6 @@ export interface JobDispatcherOptions<Chain extends readonly AnyJobMiddleware[] 
 	 */
 	onEnd?: OnJobEnd;
 	/**
-	 * Name of the dead-letter queue this worker also consumes, so batches from it are
-	 * recorded and acked here rather than dispatched.
-	 */
-	deadLetterQueue?: string;
-	/**
-	 * Forwards a message the dispatcher refused, already wrapped as `{ invalid: body }`.
-	 * The dispatcher settles it either way — neither refusal survives a redelivery.
-	 */
-	onInvalid?: (delivery: JobDelivery, body: InvalidMessage) => void | Promise<void>;
-	/**
 	 * How many attempts a message gets before it is dead-lettered, for a queue whose
 	 * `retries` are this package's to count. Ignored by a backend that counts its own.
 	 */
@@ -166,15 +152,21 @@ export interface JobDispatcher<Chain extends readonly AnyJobMiddleware[] = []> {
 	 * through `apply` as it finishes rather than when the last one does.
 	 *
 	 * @param deliveries The deliveries this invocation carries.
-	 * @param options Where they came from, and how to settle each.
+	 * @param options Where they came from, whether that was a dead-letter queue, and how to
+	 * settle each.
 	 * @throws The first unexpected failure, once every delivery has had its turn.
 	 */
 	deliverBatch(
 		deliveries: JobDelivery[],
 		options: {
-			/** The queue they were read from, for the record and for recognising a dead letter. */
+			/** The queue they were read from, for the record. */
 			queue?: string;
-			apply: (delivery: JobDelivery, settlement: Settlement) => void;
+			/**
+			 * Whether these arrived on a dead-letter queue, in which case they are recorded and
+			 * acked rather than dispatched. The backend is the one that knows.
+			 */
+			deadLettered?: boolean;
+			apply: (delivery: JobDelivery, settlement: Settlement) => void | Promise<void>;
 		},
 	): Promise<void>;
 	/**
@@ -284,11 +276,11 @@ export function createJobDispatcher<const Chain extends readonly AnyJobMiddlewar
 
 	/**
 	 * Records a delivery the dispatcher will not dispatch as a `job` log that ended `refused`,
-	 * forwards it, and answers with the settlement that takes it out of the queue.
+	 * and answers with the settlement that takes it out of the queue.
 	 * @param delivery The refused delivery.
 	 * @param reason Which refusal this is.
 	 */
-	async function refuse(delivery: JobDelivery, reason: RefusalReason): Promise<Settlement> {
+	function refuse(delivery: JobDelivery, reason: RefusalReason): Settlement {
 		let log = openJobLog({
 			job: {
 				name: readMessageBody(delivery.body).job,
@@ -304,8 +296,6 @@ export function createJobDispatcher<const Chain extends readonly AnyJobMiddlewar
 		log.parent?.inc("jobs.refused");
 		log.emit();
 
-		await options.onInvalid?.(delivery, { invalid: delivery.body });
-
 		return { type: "dead-letter", reason: "invalid_message" };
 	}
 
@@ -314,20 +304,14 @@ export function createJobDispatcher<const Chain extends readonly AnyJobMiddlewar
 	 * it. That queue has no dead-letter queue of its own, so anything left unacked here
 	 * would redeliver forever.
 	 *
-	 * A refused body arrives wrapped by `onInvalid`; one the platform gave up on arrives
-	 * verbatim. `attempts` counts deliveries of this copy, not the retries that spent the
-	 * original.
+	 * A refused body arrives wrapped by whatever forwarded it; one the backend gave up on
+	 * arrives verbatim. `attempts` counts deliveries of this copy, not the retries that spent
+	 * the original.
 	 *
 	 * @param delivery The dead-lettered delivery.
 	 */
 	function recordDeadLetter(delivery: JobDelivery): void {
-		let body = delivery.body;
-		let wrapped: InvalidMessage | undefined =
-			typeof body === "object" && body !== null && "invalid" in body
-				? (body as InvalidMessage)
-				: undefined;
-		let reason: DeadLetterReason = wrapped === undefined ? "retries_exhausted" : "invalid_message";
-		let payload = wrapped === undefined ? body : wrapped.invalid;
+		let { reason, body: payload } = readDeadLetter(delivery.body);
 
 		let log = openJobLog({
 			job: {
@@ -354,7 +338,7 @@ export function createJobDispatcher<const Chain extends readonly AnyJobMiddlewar
 		let { job: name, payload } = readMessageBody(delivery.body);
 		let entry = name === undefined ? undefined : mapped.get(name);
 
-		if (entry === undefined) return await refuse(delivery, "unknown-job");
+		if (entry === undefined) return refuse(delivery, "unknown-job");
 
 		if (exhausted(delivery)) return { type: "dead-letter", reason: "retries_exhausted" };
 
@@ -362,7 +346,7 @@ export function createJobDispatcher<const Chain extends readonly AnyJobMiddlewar
 
 		if (entry.job.input !== undefined) {
 			let result = await validate(payload as JSONValue, entry.job.input);
-			if (isFailure(result)) return await refuse(delivery, "invalid-input");
+			if (isFailure(result)) return refuse(delivery, "invalid-input");
 			input = result.data;
 		}
 
@@ -468,23 +452,23 @@ export function createJobDispatcher<const Chain extends readonly AnyJobMiddlewar
 			});
 		},
 
-		async deliverBatch(deliveries, { queue, apply }) {
+		async deliverBatch(deliveries, { queue, deadLettered, apply }) {
 			let log = open("queue", {
 				queue: { name: queue, batch_size: deliveries.length },
 			});
 
 			await log.run(async () => {
-				if (options.deadLetterQueue !== undefined && queue === options.deadLetterQueue) {
+				if (deadLettered === true) {
 					for (let delivery of deliveries) {
 						recordDeadLetter(delivery);
-						apply(delivery, { type: "ack" });
+						await apply(delivery, { type: "ack" });
 					}
 					return;
 				}
 
 				let outcomes = await Promise.allSettled(
 					deliveries.map(async (delivery) => {
-						apply(delivery, await deliver(delivery, deliveries.length));
+						await apply(delivery, await deliver(delivery, deliveries.length));
 					}),
 				);
 

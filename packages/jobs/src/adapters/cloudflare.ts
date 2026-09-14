@@ -17,7 +17,7 @@ import type { JobDispatcher } from "../dispatcher.js";
 import type { JobDelivery, JobMessage, JobQueue, Settlement } from "../queue.js";
 
 import { envelope } from "../jobs.js";
-import { JobQueueError } from "../queue.js";
+import { invalidMessage, JobQueueError } from "../queue.js";
 
 /** Most messages a single `sendBatch` accepts. */
 const BATCH_LIMIT = 100;
@@ -27,6 +27,24 @@ const MAX_DELAY_SECONDS = 43_200;
 
 /** What {@link worker} needs of a dispatcher: the batch entry, and the tick. */
 export type JobWorkerTarget = Pick<JobDispatcher, "deliverBatch" | "tick">;
+
+/** What {@link worker} needs beyond the dispatcher, for a worker that owns its dead letters. */
+export interface WorkerOptions {
+	/**
+	 * Name of the dead-letter queue this worker also consumes, spelled as the consumer in
+	 * `wrangler.jsonc` names it. A batch from it is recorded and acked rather than dispatched,
+	 * since that queue has no dead-letter queue of its own to fall through to.
+	 */
+	deadLetterQueue?: string;
+	/**
+	 * Resolves the binding a refused message is written to. This platform reaches a dead-letter
+	 * queue only by exhausting retries, so a body no redelivery can fix gets there by being
+	 * sent there; without a binding it is acked where it stands.
+	 *
+	 * @example deadLetter: () => env.DLQ
+	 */
+	deadLetter?: () => Queue;
+}
 
 /** The two handlers a worker delegates its cron and queue deliveries to. */
 export interface WorkerHandlers {
@@ -45,18 +63,30 @@ function deliveryOf(message: Message<unknown>): JobDelivery {
 }
 
 /**
- * Settles one message the way the run asked. A dead-lettered delivery is acked, because this
- * platform's dead-letter queue is reached by exhausting retries rather than by asking, and a
- * refused body has already been forwarded by the dispatcher.
+ * Settles one message the way the run asked, writing a refused body to the dead-letter queue
+ * first when this worker was given one: the platform reaches that queue by exhausting retries,
+ * so a message that can never succeed would otherwise spend three deliveries to get there.
+ *
+ * The write is awaited before the ack, so a dead-letter queue that refuses it leaves the
+ * message unacked and the batch is redelivered rather than the body being lost.
  *
  * @param message The delivery to settle.
  * @param settlement What the run ended as.
+ * @param deadLetter Resolves the dead-letter binding, when this worker consumes one.
  */
-function apply(message: Message<unknown>, settlement: Settlement): void {
+async function apply(
+	message: Message<unknown>,
+	settlement: Settlement,
+	deadLetter: (() => Queue) | undefined,
+): Promise<void> {
 	if (settlement.type === "retry") {
 		let delay = settlement.delay;
 		message.retry(delay === undefined ? {} : { delaySeconds: toSeconds(delay) });
 		return;
+	}
+
+	if (settlement.type === "dead-letter" && settlement.reason === "invalid_message") {
+		await deadLetter?.().send(invalidMessage(message.body), { contentType: "json" });
 	}
 
 	message.ack();
@@ -122,9 +152,10 @@ export function queue(binding: () => Queue): JobQueue {
  * it has no part in.
  *
  * @param dispatcher The dispatcher both handlers delegate to.
+ * @param options The dead-letter queue this worker consumes and writes to, when it has one.
  * @example export default { ...cloudflare.worker(dispatcher) };
  */
-export function worker(dispatcher: JobWorkerTarget): WorkerHandlers {
+export function worker(dispatcher: JobWorkerTarget, options: WorkerOptions = {}): WorkerHandlers {
 	return {
 		async queue(batch) {
 			let deliveries = batch.messages.map(deliveryOf);
@@ -132,9 +163,10 @@ export function worker(dispatcher: JobWorkerTarget): WorkerHandlers {
 
 			await dispatcher.deliverBatch(deliveries, {
 				queue: batch.queue,
-				apply(delivery, settlement) {
+				deadLettered: batch.queue === options.deadLetterQueue,
+				async apply(delivery, settlement) {
 					let message = messages.get(delivery.id);
-					if (message !== undefined) apply(message, settlement);
+					if (message !== undefined) await apply(message, settlement, options.deadLetter);
 				},
 			});
 		},

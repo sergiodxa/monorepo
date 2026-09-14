@@ -34,7 +34,9 @@ export type {
 } from "./jobs.js";
 export type {
 	ClaimOptions,
+	DeadLetter,
 	DeadLetterReason,
+	InvalidMessage,
 	JobDelivery,
 	JobMessage,
 	JobQueue,
@@ -52,7 +54,6 @@ export type {
 } from "./middleware.js";
 export type {
 	HandlerModule,
-	InvalidMessage,
 	JobDispatcher,
 	JobDispatcherContext,
 	JobDispatcherOptions,
