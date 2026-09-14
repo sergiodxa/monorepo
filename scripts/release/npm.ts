@@ -14,6 +14,7 @@ import { join } from "node:path";
 import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success, wrap } from "@sdxc/result";
+import { compare } from "@sdxc/semver";
 
 import type { CommandError } from "./command.js";
 import type { Published } from "./plan.js";
@@ -141,7 +142,7 @@ export async function versionExists(
  * any dated release and `pre.2` above `pre.1`.
  */
 export function highestVersion(versions: string[]): string {
-	return [...versions].sort(compareVersions).at(-1) ?? "";
+	return [...versions].sort(compare).at(-1) ?? "";
 }
 
 /** The logged-in npm user, or `null` when this machine holds no npm session. */
@@ -235,35 +236,6 @@ async function registryJson(url: string, absent: number[]): Promise<Result<unkno
 /** `@sdxc/result` as the registry spells it in a path, with the scope separator encoded. */
 function registryPath(name: string): string {
 	return name.replace("/", "%2F");
-}
-
-/** SemVer order for the versions this repository publishes: numeric cores, then pre-release identifiers. */
-function compareVersions(a: string, b: string): number {
-	let [coreA = "", preA] = a.split("-", 2);
-	let [coreB = "", preB] = b.split("-", 2);
-	let partsA = coreA.split(".").map(Number);
-	let partsB = coreB.split(".").map(Number);
-	for (let index = 0; index < 3; index += 1) {
-		let difference = (partsA[index] ?? 0) - (partsB[index] ?? 0);
-		if (difference !== 0) return difference;
-	}
-	if (preA === undefined || preB === undefined)
-		return (preA === undefined ? 1 : 0) - (preB === undefined ? 1 : 0);
-	return comparePrerelease(preA.split("."), preB.split("."));
-}
-
-/** Dot-separated pre-release identifiers compare numerically when both are numbers, as strings otherwise. */
-function comparePrerelease(a: string[], b: string[]): number {
-	for (let index = 0; index < Math.max(a.length, b.length); index += 1) {
-		let left = a[index];
-		let right = b[index];
-		if (left === undefined) return -1;
-		if (right === undefined) return 1;
-		let numeric = /^\d+$/.test(left) && /^\d+$/.test(right);
-		let difference = numeric ? Number(left) - Number(right) : left.localeCompare(right);
-		if (difference !== 0) return difference;
-	}
-	return 0;
 }
 
 /**
