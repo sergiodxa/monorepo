@@ -8,12 +8,17 @@
  * reader has reached the end of what is on screen, which is what makes the plain links a
  * default rather than something hidden and restored.
  *
+ * A frame given the address of the page it holds also says so in the address bar as the
+ * reader passes through it, so reloading resumes where they had read to rather than at the
+ * top of a list they have already walked.
+ *
  * Vendored from the `lazy-frames` demo in the Remix repository, which publishes no module
- * to import. Three things differ from the original: the branch that paused descendant CSS
- * animations while the frame sat off screen is gone, since nothing here animates; the
- * frame's own loading state falls back to `children`, because the links a reader can
- * follow themselves are the right thing to leave standing while their replacement is in
- * the air; and `children` is one node rather than many, which is what that default needs.
+ * to import. Three things differ from the original: the second observer, which the demo
+ * used to pause descendant CSS animations while the frame sat off screen, reports which
+ * page is on screen instead; the frame's own loading state falls back to `children`,
+ * because the links a reader can follow themselves are the right thing to leave standing
+ * while their replacement is in the air; and `children` is one node rather than many,
+ * which is what that default needs.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,6 +27,13 @@
 import type { Handle, RemixElement } from "remix/ui";
 
 import { clientEntry, Frame, ref } from "remix/ui";
+
+/**
+ * The band at the top of the viewport a page has to reach into to be the one being read.
+ * The root is shrunk from the bottom to leave it, so what a frame reports is a crossing of
+ * that band rather than anything measured on every scroll tick.
+ */
+const READING_BAND = "0px 0px -90% 0px";
 
 /**
  * Declared as a `type` to satisfy the serializable-props constraint a client entry's
@@ -35,6 +47,16 @@ export type LazyFrameProps = {
 	/** What stands in while the frame is in the air; defaults to {@link children}. */
 	fallback?: RemixElement | string | number | boolean | null;
 	/**
+	 * The address of the page this frame holds, which the address bar carries while the
+	 * reader is reading it. Omit for a frame whose content is not a place of its own.
+	 */
+	url?: string;
+	/**
+	 * The address of the page this frame sits in, which the address bar goes back to when
+	 * the reader scrolls up out of this one. Read alongside {@link url}.
+	 */
+	parentUrl?: string;
+	/**
 	 * What the server sends, and what a browser running no script keeps. One node rather
 	 * than the original's whole `RemixNode`, since it doubles as the frame's own loading
 	 * state and a frame takes one.
@@ -42,12 +64,64 @@ export type LazyFrameProps = {
 	children?: RemixElement | string | number | boolean | null;
 };
 
+/** One mounted frame that knows where it sits, and whether the reader is in it. */
+interface Reading {
+	/** How deeply nested the frame is, which orders one page of a list against another. */
+	depth: number;
+	url: string;
+	parentUrl: string;
+	isReading: boolean;
+}
+
+/**
+ * Every mounted frame that knows the address of the page it holds. Module scope, so the
+ * frames of one list — which nest one inside the next — settle between them which page the
+ * reader is actually in rather than each answering for itself and the last to fire winning.
+ */
+const reading = new Map<Element, Reading>();
+
+/** How deeply `node` sits in the document, which is what orders one frame against another. */
+function depthOf(node: Element): number {
+	let depth = 0;
+	for (let parent = node.parentElement; parent !== null; parent = parent.parentElement) depth += 1;
+	return depth;
+}
+
+/**
+ * Writes the page the reader is in into the address bar.
+ *
+ * The frames of a list nest, so every page above the one being read is still on screen; the
+ * deepest of them is the one the reader is actually in. With none of them reached, the
+ * reader is in the page the shallowest frame sits in, which is the top of the list.
+ *
+ * It replaces rather than pushes: a page scrolled past is not somewhere a reader asked to
+ * go, and an entry for each of them would turn Back into a walk up their own scrolling.
+ */
+function markPlace(): void {
+	let deepest: Reading | null = null;
+	let shallowest: Reading | null = null;
+
+	for (let entry of reading.values()) {
+		if (shallowest === null || entry.depth < shallowest.depth) shallowest = entry;
+		if (entry.isReading && (deepest === null || entry.depth > deepest.depth)) deepest = entry;
+	}
+
+	let place = deepest?.url ?? shallowest?.parentUrl;
+	if (place === undefined) return;
+
+	let target = new URL(place, location.href);
+	if (target.href === location.href) return;
+
+	history.replaceState(history.state, "", target.href);
+}
+
 /**
  * Defers mounting a Frame until its stable host approaches the viewport.
  *
  * `children` render on the server and before intersection. Once observed, the Frame mounts
  * and its own fallback covers the network request. Once mounted, the Frame remains in the
- * document when it leaves the viewport.
+ * document when it leaves the viewport. Set `url` and `parentUrl` to have the frame report
+ * which page the reader is in as they scroll through it.
  */
 export const LazyFrame = clientEntry(
 	"/resources/components/lazy-frame.tsx#LazyFrame",
@@ -70,8 +144,52 @@ export const LazyFrame = clientEntry(
 				{ rootMargin: handle.props.rootMargin ?? "320px 0px" },
 			);
 
+			let placeObserver: IntersectionObserver | undefined;
+
+			/**
+			 * Armed first, and torn down by a listener registered in the same breath, so fetching
+			 * the next page is what this mixin has done by the time it goes on to anything else.
+			 * Reporting which page is being read is a nicety on top of a list that continues;
+			 * whatever becomes of it below, the reader keeps scrolling into more posts.
+			 */
 			loadObserver.observe(node);
-			signal.addEventListener("abort", () => loadObserver.disconnect(), { once: true });
+
+			signal.addEventListener(
+				"abort",
+				() => {
+					loadObserver.disconnect();
+					placeObserver?.disconnect();
+					reading.delete(node);
+				},
+				{ once: true },
+			);
+
+			let { parentUrl, url } = handle.props;
+
+			if (url !== undefined && parentUrl !== undefined) {
+				reading.set(node, { depth: depthOf(node), url, parentUrl, isReading: false });
+
+				/**
+				 * A frame reaches from the first row of its page to the end of the list, so it
+				 * crosses the band above once the reader passes the row it begins with, and stops
+				 * crossing it when they scroll back above that row.
+				 */
+				placeObserver = new IntersectionObserver(
+					(entries) => {
+						if (signal.aborted) return;
+
+						let entry = reading.get(node);
+						let isReading = entries.some((crossing) => crossing.isIntersecting);
+						if (!entry || entry.isReading === isReading) return;
+
+						entry.isReading = isReading;
+						markPlace();
+					},
+					{ rootMargin: READING_BAND },
+				);
+
+				placeObserver.observe(node);
+			}
 		});
 
 		return () => (

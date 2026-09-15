@@ -1,7 +1,8 @@
 /**
  * Browser entry point. It registers a module-scoped i18next instance so any independently
  * hydrated island can translate without an `IntlProvider` above it, then runs remix/ui's
- * client runtime against the globbed resource and route modules.
+ * client runtime against the globbed resource and route modules and reports whatever fails
+ * to come up.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -65,7 +66,7 @@ const CLIENT_MODULES = import.meta.glob([
 	"../routes/**/*.{ts,tsx}",
 ]);
 
-run({
+let runtime = run({
 	/** Resolves a hydrated island's module and named export from the URL the server wrote. */
 	async loadModule(moduleUrl, exportName) {
 		let pathname = new URL(moduleUrl, location.origin).pathname;
@@ -122,4 +123,13 @@ run({
 
 		return response;
 	},
+});
+
+/**
+ * An island that throws on its way up leaves the server's own markup standing, which is
+ * the same thing a reader sees when there is no script to run at all. Saying so is what
+ * tells a page that chose the plain links apart from one whose enhancement fell over.
+ */
+runtime.addEventListener("error", (event) => {
+	console.error("A client entry failed to hydrate", event.error);
 });

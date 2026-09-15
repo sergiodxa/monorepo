@@ -15,6 +15,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
 import type { Router } from "remix/router";
 
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -24,6 +27,7 @@ import type { UserStore } from "~/database/user-do";
 
 import { createTestRouter, fetchRoute, VIEWER } from "~/app/lib/test/controller";
 import { createUserStoreDouble } from "~/app/lib/test/store";
+import * as lazyFrameModule from "~/resources/components/lazy-frame";
 import routes from "~/routes/web";
 
 let store = createUserStoreDouble();
@@ -374,6 +378,32 @@ describe("paging into a frame", () => {
 		expect(body).toContain('"exportName":"LazyFrame"');
 	});
 
+	/**
+	 * Every other assertion here is about the addresses the island carries. This one is
+	 * about the island itself, which is a file path and an export name written into the
+	 * page as text and resolved by the browser hours later. Get either wrong and the page
+	 * still renders, still carries the right addresses, and still passes every test above
+	 * — the enhancement simply never comes up, and the reader is left with the plain links
+	 * and no sign that anything was meant to replace them.
+	 */
+	test("names an island by a module and an export that are really there", async () => {
+		queued("older-cursor");
+
+		let body = await (await get(routes.reading.href())).text();
+
+		let moduleUrl = body.match(/"moduleUrl":"([^"]+)"/)?.[1];
+		let exportName = body.match(/"exportName":"([^"]+)"/)?.[1];
+
+		expect(moduleUrl).toBe("/resources/components/lazy-frame.tsx");
+		expect(exportName).toBe("LazyFrame");
+
+		/** The browser reads that address against the app's root, so this reads it the same way. */
+		let file = fileURLToPath(new URL(`../../..${moduleUrl}`, import.meta.url));
+		expect(existsSync(file)).toBe(true);
+
+		expect(Reflect.get(lazyFrameModule, String(exportName))).toBeTypeOf("function");
+	});
+
 	test("defers nothing at the end of the queue, and says the list has one", async () => {
 		queued(null);
 
@@ -382,6 +412,28 @@ describe("paging into a frame", () => {
 		expect(body).not.toContain('"exportName":"LazyFrame"');
 		expect(body).not.toContain("Older posts");
 		expect(readsAs(body)).toContain("You have reached the end.");
+	});
+
+	test("hands the frame the two addresses that say where the reader is", async () => {
+		queued("older-cursor");
+
+		let body = await (await get(`${routes.reading.href()}?q=remix&show=unread`)).text();
+
+		/** The page the frame holds, which the address bar carries once the reader is in it. */
+		expect(body).toContain('"url":"/reading?q=remix&show=unread&cursor=older-cursor&from=2"');
+		/** And this one, which it goes back to when they scroll above it: the queue itself. */
+		expect(body).toContain('"parentUrl":"/reading?q=remix&show=unread"');
+	});
+
+	test("says a page below the first is a place of its own, and carries the narrowing", async () => {
+		queued("deeper-cursor");
+
+		let body = await (
+			await get(`${routes.reading.href()}?q=remix&cursor=older-cursor&from=26&frame=1`)
+		).text();
+
+		expect(body).toContain('"parentUrl":"/reading?q=remix&cursor=older-cursor&from=26"');
+		expect(body).toContain('"url":"/reading?q=remix&cursor=deeper-cursor&from=27"');
 	});
 
 	test("numbers the first page from its first row", async () => {

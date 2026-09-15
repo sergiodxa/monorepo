@@ -147,6 +147,11 @@ export namespace Timeline {
 		 * the link is a page to navigate to, this is a piece to write into this one.
 		 */
 		continueSrc?: string | null;
+		/**
+		 * This page's own address, which the address bar carries while the reader is reading
+		 * it, so reloading resumes here rather than at the top of a list already walked.
+		 */
+		pageUrl?: string;
 	}
 }
 
@@ -300,7 +305,7 @@ function NewerLink(handle: Handle<{ href: string; label: string }>) {
 /** Renders one page of posts, and whatever carries the reader on from the end of it. */
 export default function Timeline(handle: Handle<Timeline.Props>) {
 	return () => {
-		let { continueSrc = null, copy, cursors, entries, returnTo, start } = handle.props;
+		let { continueSrc = null, copy, cursors, entries, pageUrl, returnTo, start } = handle.props;
 
 		/**
 		 * One row without a source would pull its time out of the column every other row's
@@ -429,7 +434,12 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 				 * rows of one page meet the rows of the next with nothing between them.
 				 */}
 				{continueSrc && cursors.next ? (
-					<LazyFrame src={continueSrc}>
+					/**
+					 * The frame carries both addresses: the page it holds, which the reader is in
+					 * once they pass its first row, and this one, which they are back in when they
+					 * scroll above it.
+					 */
+					<LazyFrame src={continueSrc} url={cursors.next} parentUrl={pageUrl}>
 						<OlderLink href={cursors.next} label={copy.older} />
 					</LazyFrame>
 				) : (

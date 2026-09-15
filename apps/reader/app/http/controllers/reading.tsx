@@ -355,6 +355,16 @@ export async function renderReadingQueue(
 	 */
 	let start = startFrom(ctx.url.searchParams, isStaleCursor);
 
+	/**
+	 * This page's own address, which the reader's browser carries while they are reading it.
+	 * The newest page is the plain address: a reader at the top of their queue is looking at
+	 * the queue rather than at a place inside it.
+	 */
+	let pageUrl =
+		cursor === null || isStaleCursor
+			? here
+			: queueUrl(view, cursor, start === null ? {} : { [FROM_PARAM]: String(start) });
+
 	/** What the page below this one is told about where it begins, when this page can say. */
 	let below: Record<string, string> =
 		start === null ? {} : { [FROM_PARAM]: String(start + entries.length) };
@@ -403,6 +413,7 @@ export async function renderReadingQueue(
 					entries={entries}
 					start={start}
 					continueSrc={continueSrc}
+					pageUrl={pageUrl}
 					copy={listCopy}
 					returnTo={returnTo}
 					cursors={{ next: older, prev: null }}
@@ -638,6 +649,7 @@ export async function renderReadingQueue(
 						entries={entries}
 						start={start}
 						continueSrc={continueSrc}
+						pageUrl={pageUrl}
 						copy={listCopy}
 						returnTo={returnTo}
 						cursors={{
