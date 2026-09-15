@@ -236,6 +236,7 @@ let tokenLimiter = rateLimit({
 let loginLimiter = rateLimit({
 	adapter: new CloudflareAdapter(env.LOGIN_RATE_LIMITER, { limit: 10, window: "10 seconds" }),
 	prefix: "login",
+	key: (context) => context.request.headers.get("CF-Connecting-IP") ?? "unknown",
 });
 ```
 
@@ -248,7 +249,12 @@ The default is fail open, so a storage outage cannot lock every client out. A su
 ```typescript
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 
-rateLimit({ adapter, prefix: "credentials", failurePolicy: "closed" });
+rateLimit({
+	adapter,
+	prefix: "credentials",
+	key: (context) => context.request.headers.get("CF-Connecting-IP") ?? "unknown",
+	failurePolicy: "closed",
+});
 ```
 
 Either way the outage is logged as `rate_limit.unavailable` with the backend and the policy that was applied, so the log says whether traffic was let through. A fail-closed refusal carries no rate limit headers, because there is no decision to describe.
