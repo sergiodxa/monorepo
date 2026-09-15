@@ -33,6 +33,12 @@ import routes from "~/routes/web";
  */
 const READ_OPACITY = 70;
 
+/**
+ * The marker down a card's leading edge. Read cards carry it too, in transparent, so
+ * marking a post recolours the edge rather than reflowing the text beside it.
+ */
+const UNREAD_EDGE_WIDTH = 3;
+
 /** Edge of the read mark, sized to the label a small button would have carried instead. */
 const ICON_SIZE = 16;
 
@@ -222,9 +228,20 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 							<Card
 								mix={[
 									p(4),
-									entry.isRead
-										? [opacity(READ_OPACITY), hover(opacity(100)), focusWithin(opacity(100))]
-										: borderEdge("inline-start", { color: "brand.solid", width: 3 }),
+									/**
+									 * Every card carries the edge, so only its colour changes between the two
+									 * states and a post keeps its place on the page when it is marked. It is
+									 * neutral rather than the accent, which this app spends on links.
+									 */
+									borderEdge("inline-start", {
+										color: entry.isRead ? "transparent" : "neutral.emphasis",
+										width: UNREAD_EDGE_WIDTH,
+									}),
+									entry.isRead && [
+										opacity(READ_OPACITY),
+										hover(opacity(100)),
+										focusWithin(opacity(100)),
+									],
 								]}
 							>
 								<article mix={[vstack({ gap: 2 })]}>
