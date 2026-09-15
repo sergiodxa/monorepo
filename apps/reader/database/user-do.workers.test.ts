@@ -47,8 +47,8 @@ describe("the USER binding", () => {
 	test("answers every request that raced the boot, because the constructor gates them", async () => {
 		let stub = env.USER.getByName(subject());
 
-		// All four reach a cold object at once, so each one queries tables the migration
-		// is still creating unless `blockConcurrencyWhile` holds them until it finishes.
+		// All four reach a cold object at once, while the migration is still creating the
+		// tables they query; `blockConcurrencyWhile` is what holds them until it has.
 		let [stored, feeds, queue, timeline] = await Promise.all([
 			stub.getSettings(),
 			stub.listFeeds(),

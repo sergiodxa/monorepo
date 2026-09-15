@@ -15,7 +15,13 @@
 		"allowImportingTsExtensions": true,
 		"jsx": "react-jsx",
 		"jsxImportSource": "remix/ui",
-		"types": ["@total-typescript/ts-reset", "vite/client", "bun", "node"],
+		"types": [
+			"@total-typescript/ts-reset",
+			"@cloudflare/vitest-pool-workers/types",
+			"vite/client",
+			"bun",
+			"node"
+		],
 		"rootDirs": ["."],
 		"paths": {
 			"~/app/*": ["./app/*"],
