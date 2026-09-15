@@ -13,10 +13,11 @@ import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
 
+import { chrome, forgetRailFeeds } from "~/app/http/controllers/chrome";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/database/user-do";
-import AppLayout from "~/resources/layouts/app";
+import AppLayout, { pageNote } from "~/resources/layouts/app";
 import routes from "~/routes/web";
 
 /** Status for a post this reader has nothing stored for. */
@@ -64,6 +65,9 @@ export default createAction(routes.items.read, {
 
 		let marked = await userStore(viewer.id).markRead(itemId, read);
 
+		/** The rail counts this post among its feed's unread, so it is dropped as the reader moves it rather than a moment later. */
+		await forgetRailFeeds(viewer.id);
+
 		if (marked) {
 			return redirect(localPath(returnTo), { status: redirect.Status.SeeOther });
 		}
@@ -72,18 +76,10 @@ export default createAction(routes.items.read, {
 			<AppLayout
 				documentTitle={ctx.i18next.t("items.read.title")}
 				heading={ctx.i18next.t("items.read.title")}
-				current="reading"
 				locale={ctx.locale}
-				nav={{
-					label: ctx.i18next.t("nav.label"),
-					reading: ctx.i18next.t("nav.reading"),
-					feeds: ctx.i18next.t("nav.feeds"),
-					search: ctx.i18next.t("nav.search"),
-					settings: ctx.i18next.t("nav.settings"),
-					logout: ctx.i18next.t("nav.logout"),
-				}}
+				{...await chrome(ctx)}
 			>
-				<Alert color="warning">
+				<Alert color="warning" mix={pageNote()}>
 					<Alert.Content>
 						<Alert.Description>{ctx.i18next.t("items.read.notFound")}</Alert.Description>
 					</Alert.Content>

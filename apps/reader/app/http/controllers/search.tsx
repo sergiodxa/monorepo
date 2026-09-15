@@ -17,23 +17,20 @@
 
 import { parsePageParams } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
-import { flex, gap, items, vstack } from "@sdxc/u/layout";
-import { maxIs, p } from "@sdxc/u/size";
-import { Alert, Button, Card, Empty, HeadingScope, LinkButton, Text, TextField } from "@sdxc/ui";
+import { vstack } from "@sdxc/u/layout";
+import { Alert, Empty, HeadingScope, LinkButton, Text } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
 import type { UserStore } from "~/database/user-do";
 
+import { chrome } from "~/app/http/controllers/chrome";
 import { timelineEntries } from "~/app/http/controllers/timeline-entries";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/database/user-do";
-import AppLayout, { PAGE_COLUMN } from "~/resources/layouts/app";
+import AppLayout, { pageNote, SEARCH_PARAM } from "~/resources/layouts/app";
 import Timeline from "~/resources/views/timeline";
 import routes from "~/routes/web";
-
-/** The search box's own parameter, and the name the form's field submits under. */
-const QUERY_PARAM = "q";
 
 /**
  * The URL of one page of results. The query rides along with the cursor, so following
@@ -44,7 +41,7 @@ const QUERY_PARAM = "q";
  * @param cursor - The boundary the store minted, or `null` for the first page.
  */
 function searchPage(query: string, cursor: string | null): string {
-	let params = new URLSearchParams({ [QUERY_PARAM]: query });
+	let params = new URLSearchParams({ [SEARCH_PARAM]: query });
 	if (cursor !== null) params.set("cursor", cursor);
 	return `${routes.search.href()}?${params}`;
 }
@@ -63,7 +60,7 @@ export default createAction(routes.search, {
 		 * words is part of what somebody searched for. Trimming decides one thing only:
 		 * whether anything was searched for at all, so a box holding spaces reads as empty.
 		 */
-		let query = ctx.url.searchParams.get(QUERY_PARAM) ?? "";
+		let query = ctx.url.searchParams.get(SEARCH_PARAM) ?? "";
 		let hasQuery = query.trim().length > 0;
 
 		/**
@@ -116,55 +113,12 @@ export default createAction(routes.search, {
 			<AppLayout
 				documentTitle={ctx.i18next.t("search.title")}
 				heading={ctx.i18next.t("search.heading")}
-				/**
-				 * Search reaches the posts of every followed feed, which is the reading surface,
-				 * and the navigation offers no tab of its own to mark.
-				 */
-				current="search"
 				locale={ctx.locale}
-				nav={{
-					label: ctx.i18next.t("nav.label"),
-					reading: ctx.i18next.t("nav.reading"),
-					feeds: ctx.i18next.t("nav.feeds"),
-					search: ctx.i18next.t("nav.search"),
-					settings: ctx.i18next.t("nav.settings"),
-					logout: ctx.i18next.t("nav.logout"),
-				}}
+				{...await chrome(ctx)}
 			>
 				<div mix={[vstack({ gap: 6 })]}>
-					{/** The results take the window; one field asking for a few words does not. */}
-					<Card mix={[p(4), maxIs(PAGE_COLUMN)]}>
-						<form
-							method="get"
-							action={routes.search.href()}
-							mix={[vstack({ gap: 3, align: "stretch" })]}
-						>
-							{/**
-							 * The query goes back into the box so the next search edits the last one. It
-							 * arrives as an attribute value, which the renderer escapes quote and all, so
-							 * a search for markup stays a string rather than becoming one.
-							 */}
-							<TextField
-								type="search"
-								name={QUERY_PARAM}
-								label={ctx.i18next.t("search.label")}
-								placeholder={ctx.i18next.t("search.placeholder")}
-								defaultValue={query}
-								autoComplete="off"
-							/>
-
-							{/**
-							 * Under the field and at the start of the row, so it sits beneath the words it
-							 * submits rather than a card's width away from them.
-							 */}
-							<div mix={[flex(), items("center"), gap(2)]}>
-								<Button type="submit">{ctx.i18next.t("search.submit")}</Button>
-							</div>
-						</form>
-					</Card>
-
 					{isStaleCursor && (
-						<Alert color="warning">
+						<Alert color="warning" mix={pageNote()}>
 							<Alert.Description>{ctx.i18next.t("timeline.badCursor")}</Alert.Description>
 							<Alert.Action>
 								<LinkButton

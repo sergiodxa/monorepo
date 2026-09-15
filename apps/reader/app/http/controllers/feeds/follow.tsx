@@ -15,6 +15,7 @@ import { createAction } from "remix/router";
 
 import type { UserStore } from "~/database/user-do";
 
+import { forgetRailFeeds } from "~/app/http/controllers/chrome";
 import { renderFeedsPage } from "~/app/http/controllers/feeds/index";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
@@ -48,6 +49,9 @@ export default createAction(routes.feeds.follow, {
 		let url = submitted.success ? submitted.value.url : "";
 
 		let followed = await store.followFeed(url);
+
+		/** The rail lists this feed now. */
+		if (followed.ok) await forgetRailFeeds(viewer.id);
 
 		if (followed.ok) {
 			return redirect(routes.feeds.index.href(), { status: redirect.Status.SeeOther });

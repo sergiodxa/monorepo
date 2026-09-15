@@ -21,20 +21,14 @@ import { bg, borderEdge, colorMix, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { flex, flexWrap, gap, grow, items, shrink, vstack } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
-import { maxIs, mbs, minIs, mis, p, pb, pi } from "@sdxc/u/size";
+import { maxIs, mbs, minIs, mis, p, pb } from "@sdxc/u/size";
 import { hover } from "@sdxc/u/state";
 import { color } from "@sdxc/u/tokens";
 import { nowrap, text, textAlign, textDecoration, truncate, weight } from "@sdxc/u/typography";
 import { Badge, Button, Card, Empty, TextField } from "@sdxc/ui";
 
-import { PAGE_COLUMN, pageBleed } from "~/resources/layouts/app";
+import { listBleed, listRowGutter, PAGE_COLUMN } from "~/resources/layouts/app";
 import routes from "~/routes/web";
-
-/**
- * The follow form's own id, which its submit names from outside it. Fixed rather than
- * generated: one page renders one follow form.
- */
-const FOLLOW_FORM_ID = "follow-feed";
 
 /**
  * The fill a row takes under the pointer: the rule between rows thinned until it reads as
@@ -57,6 +51,12 @@ const CHECKED_COLUMN = "6rem";
 
 /** What a feed nobody has checked yet shows where a date would be. */
 const NO_DATE = "—";
+
+/**
+ * The follow form's own id, which its submit names from outside it. Fixed rather than
+ * generated: one page renders one follow form.
+ */
+const FOLLOW_FORM_ID = "follow-feed";
 
 export namespace FeedList {
 	/** One followed feed, with every label already resolved to the text that is printed. */
@@ -183,18 +183,17 @@ export default function FeedList(handle: Handle<FeedList.Props>) {
 					</Empty>
 				) : (
 					/**
-					 * A row carries its own inline padding, so on a screen no wider than the page's
-					 * column the list takes the gutter back: the names keep their place and the rules
-					 * between rows run the full width of the screen.
+					 * The list takes the page's gutter back and each row spends it inside itself, so
+					 * the names keep their place while the rules between rows and the fill under the
+					 * pointer run the full width of the pane.
 					 */
-					<ul mix={[p(0), pageBleed()]}>
+					<ul mix={[p(0), listBleed()]}>
 						{entries.map((entry) => (
 							<li
 								key={entry.id}
 								mix={[
 									pb(2),
-									pi(2),
-									rounded("md"),
+									listRowGutter(),
 									borderEdge("block-end", { color: "neutral.border", width: 1 }),
 									hover(bg(ROW_HOVER)),
 								]}

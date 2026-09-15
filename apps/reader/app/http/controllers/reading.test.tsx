@@ -160,9 +160,13 @@ describe("GET /reading", () => {
 		 * The two rings, read off the class the icon set stamps on every glyph, which
 		 * outlives a redraw of the strokes inside it. The page holds both states now, so the
 		 * mark names the one a post is in rather than offering to finish it.
+		 *
+		 * Counted inside the list: the header's filters wear the same two rings, since what
+		 * they narrow the page to is what a row's mark says about the post beside it.
 		 */
-		expect(body.match(/class="lucide lucide-circle"/g)).toHaveLength(1);
-		expect(body.match(/class="lucide lucide-circle-check"/g)).toHaveLength(1);
+		let list = body.slice(body.indexOf("<ol"), body.indexOf("</ol>"));
+		expect(list.match(/class="lucide lucide-circle"/g)).toHaveLength(1);
+		expect(list.match(/class="lucide lucide-circle-check"/g)).toHaveLength(1);
 		expect(body).not.toContain("lucide-undo");
 	});
 
@@ -311,7 +315,7 @@ describe("filtering the queue", () => {
 		expect(body).toMatch(/<a href="\/reading\?show=unread" aria-current="page"/);
 		expect(body).toContain('<a href="/reading" data-color');
 		expect(body).toContain('<a href="/reading?show=read" data-color');
-		/** Exactly one link in the row is the page being read, and so is one in the header. */
+		/** Exactly one filter is the view being read, and one section is the page it is on. */
 		expect(body.match(/aria-current="page"/g)).toHaveLength(2);
 	});
 
@@ -384,13 +388,15 @@ describe("marking the whole queue read", () => {
 		});
 	}
 
-	test("offers the sweep on the queue's own line, above the posts", async () => {
+	test("offers the sweep in the header, beside the name of the page it clears", async () => {
 		queued();
 
 		let body = await (await get(routes.reading.href())).text();
 
-		let headingRow = body.slice(body.indexOf("<h1"), body.indexOf("<ol"));
-		expect(headingRow).toContain("Mark everything read");
+		let header = body.slice(body.indexOf("<h1"), body.indexOf("<ol"));
+		expect(header).toContain("Mark everything read");
+		/** The words are there for a wide row and the mark stands for them on a narrow one. */
+		expect(header).toContain("lucide-check-check");
 	});
 
 	test("posts the sweep rather than linking it, so nothing follows it by accident", async () => {

@@ -27,12 +27,13 @@ import type { FeedStatus } from "~/database/schema";
 import type { UserStore } from "~/database/user-do";
 import type { FeedList as FeedListTypes } from "~/resources/views/feed-list";
 
+import { chrome } from "~/app/http/controllers/chrome";
 import { FAILED_PARAM, FRESH_PARAM, SWEPT_PARAM } from "~/app/http/controllers/feeds/refresh-all";
 import { exactDate, shortDate } from "~/app/http/controllers/timeline-entries";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/database/user-do";
-import AppLayout from "~/resources/layouts/app";
+import AppLayout, { pageNote } from "~/resources/layouts/app";
 import FeedList from "~/resources/views/feed-list";
 import routes from "~/routes/web";
 
@@ -153,7 +154,7 @@ export namespace FeedsPage {
  * asked for them was refused; omit for a page rendered from the newest end.
  * @example return renderFeedsPage(ctx, page.feeds, { error: null, value: null });
  */
-export function renderFeedsPage(
+export async function renderFeedsPage(
 	ctx: FeedsPage.Context,
 	feeds: UserStore.FeedSummary[],
 	submission: FeedsPage.Submission,
@@ -205,23 +206,15 @@ export function renderFeedsPage(
 		<AppLayout
 			documentTitle={ctx.i18next.t("feeds.index.title")}
 			heading={ctx.i18next.t("feeds.index.heading")}
-			current="feeds"
 			locale={ctx.locale}
-			nav={{
-				label: ctx.i18next.t("nav.label"),
-				reading: ctx.i18next.t("nav.reading"),
-				feeds: ctx.i18next.t("nav.feeds"),
-				search: ctx.i18next.t("nav.search"),
-				settings: ctx.i18next.t("nav.settings"),
-				logout: ctx.i18next.t("nav.logout"),
-			}}
+			{...await chrome(ctx)}
 		>
 			{/**
 			 * Above the list, next to the control that produced it, so the answer to a sweep is
 			 * the first thing on the page the reader was returned to.
 			 */}
 			{note && (
-				<Alert color={note.color}>
+				<Alert color={note.color} mix={pageNote()}>
 					<Alert.Description>{note.message}</Alert.Description>
 				</Alert>
 			)}
@@ -231,7 +224,7 @@ export function renderFeedsPage(
 			 * that is gone reads why these feeds are the ones under it.
 			 */}
 			{staleCursor && (
-				<Alert color="warning">
+				<Alert color="warning" mix={pageNote()}>
 					<Alert.Description>{ctx.i18next.t("timeline.badCursor")}</Alert.Description>
 					<Alert.Action>
 						<LinkButton
@@ -301,7 +294,7 @@ export default createAction(routes.feeds.index, {
 		if (!page.ok)
 			throw new Error("The first page of the subscription list decodes without a cursor");
 
-		return renderFeedsPage(ctx, page.feeds, { error: null, value: null }, undefined, {
+		return await renderFeedsPage(ctx, page.feeds, { error: null, value: null }, undefined, {
 			cursors: page.cursors,
 			staleCursor,
 		});

@@ -185,9 +185,13 @@ describe("GET /feeds/:feedId", () => {
 		/**
 		 * The ring the unread post wears and the ticked ring the read one wears, each read
 		 * off the class the icon set stamps on it, which outlives a redraw of its strokes.
+		 *
+		 * Counted inside the list: the header's mark-this-feed-read carries the ticked ring
+		 * too, which is the same thing said about every post at once.
 		 */
-		expect(body.match(/class="lucide lucide-circle"/g)).toHaveLength(1);
-		expect(body.match(/class="lucide lucide-circle-check"/g)).toHaveLength(1);
+		let list = body.slice(body.indexOf("<ol"), body.indexOf("</ol>"));
+		expect(list.match(/class="lucide lucide-circle"/g)).toHaveLength(1);
+		expect(list.match(/class="lucide lucide-circle-check"/g)).toHaveLength(1);
 	});
 
 	test("walks the feed with hrefs carrying the cursor it was given", async () => {
@@ -281,9 +285,9 @@ describe("GET /feeds/:feedId", () => {
 
 		let body = await (await get(routes.feeds.show.href({ feedId: FEED_ID }))).text();
 
-		/** The actions sit beside the heading, inside the row the two share. */
-		let headingRow = body.slice(body.indexOf("<h1"), body.indexOf("<ol"));
-		expect(headingRow).toContain("Unfollow");
+		/** The actions sit beside the page's name, inside the header row the two share. */
+		let header = body.slice(body.indexOf("<h1"), body.indexOf("<ol"));
+		expect(header).toContain("Unfollow");
 		expect(body.indexOf("Unfollow")).toBeLessThan(body.indexOf("Markdown and the"));
 	});
 
@@ -401,13 +405,18 @@ describe("marking a feed read", () => {
 
 		expect(body).toContain(`action="${routes.feeds.read.href({ feedId: FEED_ID })}"`);
 
-		/** The three actions share the heading's row, above the posts and in reading order. */
-		let headingRow = body.slice(body.indexOf("<h1"), body.indexOf("<ol"));
-		expect(headingRow).toContain("Check now");
-		expect(headingRow).toContain("Mark this feed read");
-		expect(headingRow).toContain("Unfollow");
-		expect(headingRow.indexOf("Check now")).toBeLessThan(headingRow.indexOf("Mark this feed read"));
-		expect(headingRow.indexOf("Mark this feed read")).toBeLessThan(headingRow.indexOf("Unfollow"));
+		/** The three actions share the header's row with the feed's name, in reading order. */
+		let header = body.slice(body.indexOf("<h1"), body.indexOf("<ol"));
+		expect(header).toContain("Check now");
+		expect(header).toContain("Mark this feed read");
+		expect(header).toContain("Unfollow");
+		expect(header.indexOf("Check now")).toBeLessThan(header.indexOf("Mark this feed read"));
+		expect(header.indexOf("Mark this feed read")).toBeLessThan(header.indexOf("Unfollow"));
+
+		/** Each one carries its own mark, which is what it says on a row too narrow for words. */
+		expect(header).toContain("lucide-refresh-cw");
+		expect(header).toContain("lucide-circle-check");
+		expect(header).toContain("lucide-unlink");
 	});
 
 	test("posts the mark rather than linking it, so nothing follows it by accident", async () => {

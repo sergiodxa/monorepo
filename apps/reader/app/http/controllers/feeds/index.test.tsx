@@ -93,8 +93,71 @@ describe("GET /feeds", () => {
 		expect(response.status).toBe(200);
 		let body = await response.text();
 		expect(body).toContain(">Feeds</title>");
-		expect(body).toContain("Reading");
-		expect(body).toContain("Settings");
+
+		/** Every section is reachable from every page, and the page names itself as the one. */
+		expect(body).toContain(`<a href="${routes.reading.href()}"`);
+		expect(body).toContain(`<a href="${routes.search.href()}"`);
+		expect(body).toContain(`<a href="${routes.settings.index.href()}"`);
+		expect(body).toMatch(
+			new RegExp(`<a href="${routes.feeds.index.href()}"[^>]*aria-current="page"`),
+		);
+	});
+
+	test("lists the followed feeds in the rail, by name and with what is waiting", async () => {
+		store.listFeeds.mockResolvedValue({
+			ok: true,
+			feeds: [
+				feed({ id: "feed-z", title: "Zebra Weekly", unreadCount: 2 }),
+				feed({ id: "feed-a", title: "ábaco", unreadCount: 0 }),
+				feed({ id: "feed-m", title: "Middle Post", unreadCount: 7 }),
+			],
+			cursors: { next: null, prev: null },
+		});
+
+		let body = await getFeeds(VIEWER).then((response) => response.text());
+
+		/** The chrome is drawn before the page, so the rail is everything ahead of `main`. */
+		let rail = body.slice(0, body.indexOf("<main"));
+
+		/**
+		 * Ordered by the words rather than by the bytes, so an accented name sorts among the
+		 * letter it is read as rather than after every unaccented one.
+		 */
+		expect(rail.indexOf("ábaco")).toBeLessThan(rail.indexOf("Middle Post"));
+		expect(rail.indexOf("Middle Post")).toBeLessThan(rail.indexOf("Zebra Weekly"));
+
+		/** Each name leads to that feed's own page. */
+		expect(rail).toContain(`<a href="${routes.feeds.show.href({ feedId: "feed-m" })}"`);
+
+		/** A count where something is waiting, said in full for anyone listening. */
+		expect(rail).toContain("7 unread");
+		expect(rail).toContain("2 unread");
+
+		/** And nothing at all where a feed is read through, rather than a column of zeroes. */
+		expect(rail).not.toContain("0 unread");
+	});
+
+	test("puts the way out behind the reader's own menu", async () => {
+		let body = await getFeeds(VIEWER).then((response) => response.text());
+
+		/**
+		 * A trigger naming the surface it opens, and the surface itself carrying `popover`:
+		 * the browser opens and closes it, which is what lets a page shipping almost no
+		 * script hold a menu at all.
+		 */
+		let trigger = /<button[^>]*commandfor="user-menu"[^>]*>/.exec(body)?.[0];
+		expect(trigger).toContain('command="toggle-popover"');
+		expect(body).toMatch(/<div[^>]*id="user-menu"[^>]*popover/);
+
+		/** The reader is named where the menu is opened from, and placed by their address inside it. */
+		expect(body).toContain(VIEWER.name);
+		expect(body).toContain(VIEWER.email);
+
+		/**
+		 * Leaving is a link to the page that asks first, so nothing is signed out by a click
+		 * on a menu row.
+		 */
+		expect(body).toContain(`<a href="${routes.logout.index.href()}"`);
 		expect(body).toContain("Sign out");
 	});
 
@@ -245,7 +308,6 @@ describe("GET /feeds", () => {
 		expect(submit?.[0], "a submit names that form").toBeTruthy();
 		expect(submit?.[0]).toContain('type="submit"');
 	});
-
 	test("asks the store for the page the cursor names", async () => {
 		await getFeeds(VIEWER, `${routes.feeds.index.href()}?cursor=older-cursor`);
 
@@ -375,7 +437,12 @@ describe("GET /feeds", () => {
 
 		let body = await getFeeds(VIEWER).then((response) => response.text());
 
-		expect(body.indexOf("Check every feed")).toBeLessThan(body.indexOf("Example Blog"));
+		/**
+		 * Read inside the page's own content: the rail lists the followed feeds as well, and
+		 * it is drawn before the page, so the whole document says a feed's name first.
+		 */
+		let page = body.slice(body.indexOf("<main"), body.indexOf("</main>"));
+		expect(page.indexOf("Check every feed")).toBeLessThan(page.indexOf("Example Blog"));
 	});
 });
 

@@ -66,7 +66,9 @@ export default {
 		reading: "Reading",
 		feeds: "Feeds",
 		search: "Search",
+		subscriptions: "Followed feeds",
 		settings: "Settings",
+		account: "Your account",
 		logout: "Sign out",
 	},
 
@@ -76,7 +78,6 @@ export default {
 		heading: "Search",
 		label: "Search your posts",
 		placeholder: "What are you looking for?",
-		submit: "Search",
 		resultsFor: "Posts matching “{{query}}”.",
 		results_one: "{{count}} post matches “{{query}}”.",
 		results_other: "{{count}} posts match “{{query}}”.",

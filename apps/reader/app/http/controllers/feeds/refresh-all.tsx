@@ -21,6 +21,7 @@
 import { redirect } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
+import { forgetRailFeeds } from "~/app/http/controllers/chrome";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/database/user-do";
@@ -48,6 +49,9 @@ export default createAction(routes.feeds.refreshAll, {
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let result = await userStore(viewer.id).checkAllFeedsNow();
+
+		/** The posts this brought in are the ones the rail counts, and the reader pressed for them. */
+		await forgetRailFeeds(viewer.id);
 
 		let query = new URLSearchParams({
 			[SWEPT_PARAM]: String(result.checked),

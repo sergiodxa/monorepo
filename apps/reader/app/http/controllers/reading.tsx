@@ -22,21 +22,24 @@
 
 import type { i18n } from "@sdxc/i18n";
 
+import { CheckCheckIcon } from "@sdxc/icons";
 import { parsePageParams } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { flex, gap, items, vstack } from "@sdxc/u/layout";
 import { Alert, Button, Confirm, Empty, HeadingScope, LinkButton } from "@sdxc/ui";
 import { createAction } from "remix/router";
+import { attrs } from "remix/ui";
 
 import type { UserStore } from "~/database/user-do";
 
+import { chrome } from "~/app/http/controllers/chrome";
 import { MARKED_PARAM } from "~/app/http/controllers/read-all";
 import { timelineEntries } from "~/app/http/controllers/timeline-entries";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/database/user-do";
 import ScrollPaging from "~/resources/components/scroll-paging";
-import AppLayout, { AppNavLink } from "~/resources/layouts/app";
+import AppLayout, { ActionLabel, AppNavLink, pageNote } from "~/resources/layouts/app";
 import Timeline from "~/resources/views/timeline";
 import routes from "~/routes/web";
 
@@ -134,6 +137,9 @@ function filterLabel(i18next: i18n, readState: UserStore.ReadState): string {
 	return i18next.t("reading.filter.all");
 }
 
+/** Edge of the marks the header's own controls are drawn with, sized to the words beside them. */
+const ACTION_ICON_SIZE = 16;
+
 /** The `id` the mark-everything-read prompt answers to, which its trigger names in `commandfor`. */
 const MARK_ALL_PROMPT_ID = "mark-all-read";
 
@@ -222,7 +228,7 @@ export default createAction(routes.reading, {
 				 * them; a queue with nothing in it has nothing to clear, so that offer waits for
 				 * posts while the filters stay, which is how a reader leaves an empty view.
 				 */
-				headingActions={
+				actions={
 					<>
 						<nav
 							aria-label={ctx.i18next.t("reading.filter.label")}
@@ -240,27 +246,32 @@ export default createAction(routes.reading, {
 
 						{entries.length > 0 && (
 							<Button
+								/**
+								 * The app's own colour rather than the warning one: a sweep takes nothing
+								 * away. Every post it touches is still here and the read filter beside this
+								 * is where they are found, so the red is left for unfollowing, which does
+								 * delete what it names.
+								 */
 								commandfor={MARK_ALL_PROMPT_ID}
 								command="show-modal"
-								color="danger"
+								color="brand"
 								variant="ghost"
 								size="sm"
+								aria-label={ctx.i18next.t("timeline.markAllRead.submit")}
+								title={ctx.i18next.t("timeline.markAllRead.submit")}
 							>
-								{ctx.i18next.t("timeline.markAllRead.submit")}
+								{/**
+								 * A second tick for the second reach: a row's own mark ticks one post and
+								 * this ticks every post the queue holds.
+								 */}
+								<CheckCheckIcon size={ACTION_ICON_SIZE} />
+								<ActionLabel>{ctx.i18next.t("timeline.markAllRead.submit")}</ActionLabel>
 							</Button>
 						)}
 					</>
 				}
-				current="reading"
 				locale={ctx.locale}
-				nav={{
-					label: ctx.i18next.t("nav.label"),
-					reading: ctx.i18next.t("nav.reading"),
-					feeds: ctx.i18next.t("nav.feeds"),
-					search: ctx.i18next.t("nav.search"),
-					settings: ctx.i18next.t("nav.settings"),
-					logout: ctx.i18next.t("nav.logout"),
-				}}
+				{...await chrome(ctx)}
 			>
 				<div mix={[vstack({ gap: 6 })]}>
 					{/**
@@ -279,6 +290,15 @@ export default createAction(routes.reading, {
 						<HeadingScope level={2}>
 							<Confirm
 								id={MARK_ALL_PROMPT_ID}
+								color="brand"
+								/**
+								 * The sweep is left to the browser to navigate, so the page it answers with
+								 * arrives as a new document and this prompt goes with the old one. A patched
+								 * page keeps the state a reader owns — an open `dialog`, a typed-in field —
+								 * which is the right call nearly everywhere and the wrong one for a prompt
+								 * whose whole purpose is to be finished with.
+								 */
+								parts={{ form: [attrs({ "data-rmx-document": "" })] }}
 								title={ctx.i18next.t("timeline.markAllRead.title")}
 								description={ctx.i18next.t("timeline.markAllRead.confirm")}
 								confirmLabel={ctx.i18next.t("timeline.markAllRead.submit")}
@@ -289,13 +309,13 @@ export default createAction(routes.reading, {
 					)}
 
 					{note && (
-						<Alert color={note.color}>
+						<Alert color={note.color} mix={pageNote()}>
 							<Alert.Description>{ctx.i18next.t(note.key, note.options)}</Alert.Description>
 						</Alert>
 					)}
 
 					{isStaleCursor && (
-						<Alert color="warning">
+						<Alert color="warning" mix={pageNote()}>
 							<Alert.Description>{ctx.i18next.t("timeline.badCursor")}</Alert.Description>
 							<Alert.Action>
 								<LinkButton

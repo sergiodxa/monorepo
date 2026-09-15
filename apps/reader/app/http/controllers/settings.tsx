@@ -28,13 +28,14 @@ import { createController } from "remix/router";
 
 import type { UserStore } from "~/database/user-do";
 
+import { chrome } from "~/app/http/controllers/chrome";
 import { FILE_FIELD, IMPORTED_PARAM } from "~/app/http/controllers/feeds/import";
 import { exactDate, shortDate } from "~/app/http/controllers/timeline-entries";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { REFRESH_INTERVALS } from "~/database/schema";
 import { userStore } from "~/database/user-do";
-import AppLayout, { PAGE_COLUMN } from "~/resources/layouts/app";
+import AppLayout, { PAGE_COLUMN, pageNote } from "~/resources/layouts/app";
 import routes from "~/routes/web";
 
 /**
@@ -165,7 +166,7 @@ function importNote(
  * @param settings - The reader's stored preferences, or `null` before a sign-in wrote them.
  * @param error - Why the last submission was refused, or `null` for a page nobody submitted.
  */
-function settingsPage(
+async function settingsPage(
 	ctx: RequestContext,
 	settings: UserStore.Settings | null,
 	error: string | null,
@@ -195,23 +196,15 @@ function settingsPage(
 		<AppLayout
 			documentTitle={ctx.i18next.t("settings.title")}
 			heading={ctx.i18next.t("settings.heading")}
-			current="settings"
 			locale={ctx.locale}
-			nav={{
-				label: ctx.i18next.t("nav.label"),
-				reading: ctx.i18next.t("nav.reading"),
-				feeds: ctx.i18next.t("nav.feeds"),
-				search: ctx.i18next.t("nav.search"),
-				settings: ctx.i18next.t("nav.settings"),
-				logout: ctx.i18next.t("nav.logout"),
-			}}
+			{...await chrome(ctx)}
 		>
 			{/**
 			 * A sentence in a box is still a sentence, so the news keeps the measure the page is
 			 * read in rather than running the width of a window.
 			 */}
 			{ctx.url.searchParams.has(SAVED_PARAM) && (
-				<Alert color="success" mix={[maxIs(PAGE_COLUMN)]}>
+				<Alert color="success" mix={[maxIs(PAGE_COLUMN), ...pageNote()]}>
 					<Alert.Content>
 						<Alert.Description>{ctx.i18next.t("settings.refresh.saved")}</Alert.Description>
 					</Alert.Content>
@@ -277,7 +270,7 @@ function settingsPage(
 			</form>
 
 			{transfer && (
-				<Alert color={transfer.color} mix={[maxIs(PAGE_COLUMN)]}>
+				<Alert color={transfer.color} mix={[maxIs(PAGE_COLUMN), ...pageNote()]}>
 					<Alert.Content>
 						<Alert.Description>{transfer.message}</Alert.Description>
 					</Alert.Content>
@@ -405,7 +398,7 @@ export default createController(routes.settings, {
 			/** The guard has already answered an anonymous request, so this holds a reader's id. */
 			if (!viewer) return redirect(routes.home.href(), { status: redirect.Status.SeeOther });
 
-			return settingsPage(ctx, await userStore(viewer.id).getSettings(), null);
+			return await settingsPage(ctx, await userStore(viewer.id).getSettings(), null);
 		},
 
 		/**
@@ -430,7 +423,7 @@ export default createController(routes.settings, {
 				});
 			}
 
-			return settingsPage(
+			return await settingsPage(
 				ctx,
 				await store.getSettings(),
 				ctx.i18next.t("settings.refresh.invalid"),

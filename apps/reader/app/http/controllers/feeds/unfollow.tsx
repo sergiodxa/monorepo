@@ -17,6 +17,7 @@ import { LinkButton, Text } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
+import { chrome, forgetRailFeeds } from "~/app/http/controllers/chrome";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/database/user-do";
@@ -36,6 +37,9 @@ export default createAction(routes.feeds.unfollow, {
 		let { feedId } = s.parse(Params, ctx.params);
 		let unfollowed = await userStore(viewer.id).unfollowFeed(feedId);
 
+		/** The rail no longer lists this feed. */
+		await forgetRailFeeds(viewer.id);
+
 		if (unfollowed) {
 			return redirect(routes.feeds.index.href(), { status: redirect.Status.SeeOther });
 		}
@@ -43,20 +47,7 @@ export default createAction(routes.feeds.unfollow, {
 		let title = ctx.i18next.t("feeds.show.notFound.title");
 
 		return ctx.render(
-			<AppLayout
-				documentTitle={title}
-				heading={title}
-				current="feeds"
-				locale={ctx.locale}
-				nav={{
-					label: ctx.i18next.t("nav.label"),
-					reading: ctx.i18next.t("nav.reading"),
-					feeds: ctx.i18next.t("nav.feeds"),
-					search: ctx.i18next.t("nav.search"),
-					settings: ctx.i18next.t("nav.settings"),
-					logout: ctx.i18next.t("nav.logout"),
-				}}
-			>
+			<AppLayout documentTitle={title} heading={title} locale={ctx.locale} {...await chrome(ctx)}>
 				<div mix={[vstack({ gap: 4, align: "start" })]}>
 					<Text mix={[text("sm"), leading("relaxed"), fg("neutral.muted"), maxIs("42rem")]}>
 						{ctx.i18next.t("feeds.show.notFound.description")}

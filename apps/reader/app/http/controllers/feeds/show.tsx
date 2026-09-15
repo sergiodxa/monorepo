@@ -11,20 +11,23 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { CircleCheckIcon, RefreshCwIcon, UnlinkIcon } from "@sdxc/icons";
 import { parsePageParams } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { vstack } from "@sdxc/u/layout";
 import { Alert, Button, Confirm, Empty, HeadingScope, LinkButton } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
+import { attrs } from "remix/ui";
 
+import { chrome } from "~/app/http/controllers/chrome";
 import { MARKED_PARAM } from "~/app/http/controllers/feeds/read";
 import { CHECKED_PARAM } from "~/app/http/controllers/feeds/refresh";
 import { timelineEntries } from "~/app/http/controllers/timeline-entries";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/database/user-do";
-import AppLayout from "~/resources/layouts/app";
+import AppLayout, { ActionLabel, pageNote } from "~/resources/layouts/app";
 import Timeline from "~/resources/views/timeline";
 import routes from "~/routes/web";
 
@@ -87,6 +90,9 @@ function markNote(marked: string | null): Note | null {
 	return { key: "timeline.markedRead", options: { count }, color: "success" };
 }
 
+/** Edge of the marks the header's own controls are drawn with, sized to the words beside them. */
+const ACTION_ICON_SIZE = 16;
+
 /** GET /feeds/:feedId — one feed and its posts. */
 export default createAction(routes.feeds.show, {
 	middleware: [requireUser],
@@ -97,15 +103,6 @@ export default createAction(routes.feeds.show, {
 		let { feedId } = s.parse(s.object({ feedId: s.string() }), ctx.params);
 		let store = userStore(viewer.id);
 
-		let nav = {
-			label: ctx.i18next.t("nav.label"),
-			reading: ctx.i18next.t("nav.reading"),
-			feeds: ctx.i18next.t("nav.feeds"),
-			search: ctx.i18next.t("nav.search"),
-			settings: ctx.i18next.t("nav.settings"),
-			logout: ctx.i18next.t("nav.logout"),
-		};
-
 		let feed = await store.getFeed(feedId);
 
 		if (!feed) {
@@ -113,9 +110,8 @@ export default createAction(routes.feeds.show, {
 				<AppLayout
 					documentTitle={ctx.i18next.t("feeds.show.notFound.title")}
 					heading={ctx.i18next.t("feeds.show.notFound.title")}
-					current="feeds"
 					locale={ctx.locale}
-					nav={nav}
+					{...await chrome(ctx)}
 				>
 					{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
 					<HeadingScope level={2}>
@@ -176,16 +172,26 @@ export default createAction(routes.feeds.show, {
 				 * On the feed's own line, so acting on the whole feed costs a click rather than a
 				 * scroll past every post it ever published.
 				 */
-				headingActions={
+				actions={
 					<>
 						{/**
 						 * A `POST` rather than a link: checking a feed reaches out to its origin and
 						 * writes what came back, which is not something a prefetcher should do by
-						 * following a URL.
+						 * following a URL. The mark rides inside the form's own submit, so what a
+						 * reader presses is still the button that sends it.
 						 */}
 						<form method="post" action={routes.feeds.refresh.href({ feedId })}>
-							<Button type="submit" color="neutral" variant="ghost" size="sm">
-								{ctx.i18next.t("feeds.check.submit")}
+							<Button
+								type="submit"
+								color="neutral"
+								variant="ghost"
+								size="sm"
+								aria-label={ctx.i18next.t("feeds.check.submit")}
+								title={ctx.i18next.t("feeds.check.submit")}
+							>
+								{/** The arrows a page is fetched again with, which is what this asks for. */}
+								<RefreshCwIcon size={ACTION_ICON_SIZE} />
+								<ActionLabel>{ctx.i18next.t("feeds.check.submit")}</ActionLabel>
 							</Button>
 						</form>
 
@@ -198,8 +204,17 @@ export default createAction(routes.feeds.show, {
 						 * one, and every post it touches keeps its own way back to unread.
 						 */}
 						<form method="post" action={routes.feeds.read.href({ feedId })}>
-							<Button type="submit" color="neutral" variant="ghost" size="sm">
-								{ctx.i18next.t("timeline.markFeedRead")}
+							<Button
+								type="submit"
+								color="neutral"
+								variant="ghost"
+								size="sm"
+								aria-label={ctx.i18next.t("timeline.markFeedRead")}
+								title={ctx.i18next.t("timeline.markFeedRead")}
+							>
+								{/** The mark a row wears once it is read, here worn by the whole feed. */}
+								<CircleCheckIcon size={ACTION_ICON_SIZE} />
+								<ActionLabel>{ctx.i18next.t("timeline.markFeedRead")}</ActionLabel>
 							</Button>
 						</form>
 
@@ -209,8 +224,12 @@ export default createAction(routes.feeds.show, {
 							color="danger"
 							variant="ghost"
 							size="sm"
+							aria-label={ctx.i18next.t("feeds.unfollow.submit")}
+							title={ctx.i18next.t("feeds.unfollow.submit")}
 						>
-							{ctx.i18next.t("feeds.unfollow.submit")}
+							{/** The tie between this reader and the feed, drawn as the broken link it becomes. */}
+							<UnlinkIcon size={ACTION_ICON_SIZE} />
+							<ActionLabel>{ctx.i18next.t("feeds.unfollow.submit")}</ActionLabel>
 						</Button>
 					</>
 				}
@@ -220,9 +239,8 @@ export default createAction(routes.feeds.show, {
 						? { href: feed.siteUrl, label: ctx.i18next.t("feeds.show.visitSite") }
 						: undefined
 				}
-				current="feeds"
 				locale={ctx.locale}
-				nav={nav}
+				{...await chrome(ctx)}
 			>
 				<div mix={[vstack({ gap: 6 })]}>
 					{/**
@@ -238,6 +256,14 @@ export default createAction(routes.feeds.show, {
 					<HeadingScope level={2}>
 						<Confirm
 							id={unfollowPromptId(feedId)}
+							/**
+							 * Letting go of a feed is left to the browser to navigate, so the list it
+							 * answers with arrives as a new document and this prompt goes with the old
+							 * one. A patched page keeps the state a reader owns — an open `dialog`, a
+							 * typed-in field — which is the right call nearly everywhere and the wrong
+							 * one for a prompt whose whole purpose is to be finished with.
+							 */
+							parts={{ form: [attrs({ "data-rmx-document": "" })] }}
 							title={ctx.i18next.t("feeds.unfollow.title")}
 							description={ctx.i18next.t("feeds.unfollow.confirm", { title: feed.title })}
 							confirmLabel={ctx.i18next.t("feeds.unfollow.submit")}
@@ -250,13 +276,13 @@ export default createAction(routes.feeds.show, {
 					</HeadingScope>
 
 					{note && (
-						<Alert color={note.color}>
+						<Alert color={note.color} mix={pageNote()}>
 							<Alert.Description>{ctx.i18next.t(note.key, note.options)}</Alert.Description>
 						</Alert>
 					)}
 
 					{isStaleCursor && (
-						<Alert color="warning">
+						<Alert color="warning" mix={pageNote()}>
 							<Alert.Description>{ctx.i18next.t("timeline.badCursor")}</Alert.Description>
 							<Alert.Action>
 								<LinkButton

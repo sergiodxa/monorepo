@@ -182,12 +182,22 @@ describe("GET /search", () => {
 		expect(body).not.toContain("Search your reading");
 	});
 
-	test("puts what was typed back in the box", async () => {
+	test("puts what was typed back in the rail's box, which is the only one", async () => {
 		let body = await (await get(searchFor("markdown"))).text();
 
-		expect(body).toContain('value="markdown"');
-		expect(body).toContain('name="q"');
-		expect(body).toContain("Search your posts");
+		/**
+		 * The box lives in the chrome now, so refining a search edits the words already in it
+		 * rather than retyping them into a second field the page used to carry.
+		 */
+		let rail = body.slice(0, body.indexOf("<main"));
+		expect(rail).toContain('name="q"');
+		expect(rail).toContain('value="markdown"');
+		expect(rail).toContain("Search your posts");
+
+		/** The page itself holds results and nothing that asks for them again. */
+		let page = body.slice(body.indexOf("<main"), body.indexOf("</main>"));
+		expect(page).not.toContain("<form");
+		expect(page).not.toContain('name="q"');
 	});
 
 	test("offers a result read and unread alike as a state, not a step", async () => {
@@ -250,7 +260,7 @@ describe("GET /search", () => {
 		let body = await (await get(searchFor(query))).text();
 
 		expect(store.searchPosts).toHaveBeenCalledWith(query, { cursor: null });
-		/** Neither the count that echoes it nor the box that holds it opens an element. */
+		/** Neither the count that echoes it nor the rail's box that holds it opens an element. */
 		expect(body).not.toContain("<script>alert(");
 		expect(body).toContain("&lt;script&gt;alert(");
 		expect(body).toContain("&quot;pwned&quot;");

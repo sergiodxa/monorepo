@@ -65,7 +65,9 @@ export default {
 		reading: "Lectura",
 		feeds: "Feeds",
 		search: "Buscar",
+		subscriptions: "Feeds que sigues",
 		settings: "Preferencias",
+		account: "Tu cuenta",
 		logout: "Cerrar sesión",
 	},
 
@@ -75,7 +77,6 @@ export default {
 		heading: "Buscar",
 		label: "Busca en tus entradas",
 		placeholder: "¿Qué estás buscando?",
-		submit: "Buscar",
 		resultsFor: "Entradas que coinciden con «{{query}}».",
 		results_one: "{{count}} entrada coincide con «{{query}}».",
 		results_other: "{{count}} entradas coinciden con «{{query}}».",

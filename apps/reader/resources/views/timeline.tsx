@@ -49,7 +49,7 @@ import {
 } from "@sdxc/u/typography";
 import { Button, Text } from "@sdxc/ui";
 
-import { pageBleed } from "~/resources/layouts/app";
+import { listBleed, listRowGutter } from "~/resources/layouts/app";
 import OutboundMark from "~/resources/views/outbound-mark";
 import routes from "~/routes/web";
 
@@ -256,18 +256,17 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 		return (
 			<div>
 				{/**
-				 * A row carries its own inline padding, so on a screen no wider than the page's
-				 * column the list takes the gutter back: the words keep their place and the rules
-				 * between rows run the full width of the screen.
+				 * The list takes the page's gutter back and each row spends it inside itself, so the
+				 * words keep their place while the rules between rows and the fill under the pointer
+				 * run the full width of the pane.
 				 */}
-				<ol id={listId} mix={[p(0), pageBleed()]}>
+				<ol id={listId} mix={[p(0), listBleed()]}>
 					{entries.map((entry) => (
 						<li
 							key={entry.id}
 							mix={[
 								pb(1),
-								pi(2),
-								rounded("md"),
+								listRowGutter(),
 								borderEdge("block-end", { color: "neutral.border", width: 1 }),
 								hover(bg(ROW_HOVER)),
 							]}

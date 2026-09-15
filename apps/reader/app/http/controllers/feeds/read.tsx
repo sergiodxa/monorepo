@@ -16,6 +16,7 @@ import { redirect } from "@sdxc/http/response";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
+import { forgetRailFeeds } from "~/app/http/controllers/chrome";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/database/user-do";
@@ -41,6 +42,9 @@ export default createAction(routes.feeds.read, {
 
 		let { feedId } = s.parse(Params, ctx.params);
 		let marked = await userStore(viewer.id).markFeedRead(feedId);
+
+		/** The rail counts this feed's unread, and the reader is being returned to the page beside it. */
+		await forgetRailFeeds(viewer.id);
 
 		let query = new URLSearchParams({ [MARKED_PARAM]: String(marked) });
 

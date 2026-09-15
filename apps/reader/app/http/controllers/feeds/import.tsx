@@ -29,6 +29,7 @@ import { parse } from "@sdxc/opml";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
+import { forgetRailFeeds } from "~/app/http/controllers/chrome";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/database/user-do";
@@ -103,6 +104,9 @@ export default createAction(routes.feeds.import, {
 		if (feedUrls.length === 0) return toSettings("empty");
 
 		let result = await userStore(viewer.id).importFeeds(feedUrls);
+
+		/** The rail lists whatever the file brought in. */
+		await forgetRailFeeds(viewer.id);
 
 		return toSettings("done", {
 			added: result.added,
