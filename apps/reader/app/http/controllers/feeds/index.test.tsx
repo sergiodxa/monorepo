@@ -232,6 +232,21 @@ describe("GET /feeds", () => {
 		expect(body).not.toContain("You already follow that feed.");
 		expect(body).not.toContain('value="https://');
 	});
+	/**
+	 * The submit sits outside the form it submits, so that association is what makes
+	 * following work at all — and nothing on screen would show it had stopped.
+	 */
+	test("binds the follow submit to the form it sits outside of", async () => {
+		let body = await getFeeds(VIEWER).then((response) => response.text());
+
+		let formId = body.match(/<form[^>]*id="([^"]+)"[^>]*action="\/feeds"/)?.[1];
+		expect(formId, "the follow form carries an id").toBeTruthy();
+
+		let submit = body.match(new RegExp(`<button[^>]*form="${formId}"[^>]*>`));
+		expect(submit?.[0], "a submit names that form").toBeTruthy();
+		expect(submit?.[0]).toContain('type="submit"');
+	});
+
 	test("asks the store for the page the cursor names", async () => {
 		await getFeeds(VIEWER, `${routes.feeds.index.href()}?cursor=older-cursor`);
 

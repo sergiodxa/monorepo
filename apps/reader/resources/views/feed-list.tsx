@@ -15,13 +15,19 @@ import type { Handle } from "remix/ui";
 
 import { fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { flex, flexWrap, gap, grow, items, self, vstack } from "@sdxc/u/layout";
+import { flex, flexWrap, gap, grow, items, vstack } from "@sdxc/u/layout";
 import { maxIs, p } from "@sdxc/u/size";
 import { hover } from "@sdxc/u/state";
 import { leading, text, textDecoration, weight } from "@sdxc/u/typography";
 import { Badge, Button, Card, Empty, Text, TextField } from "@sdxc/ui";
 
 import routes from "~/routes/web";
+
+/**
+ * The follow form's own id, which its submit names from outside it. Fixed rather than
+ * generated: one page renders one follow form.
+ */
+const FOLLOW_FORM_ID = "follow-feed";
 
 export namespace FeedList {
 	/** One followed feed, with every label already resolved to the text that is printed. */
@@ -95,11 +101,7 @@ export default function FeedList(handle: Handle<FeedList.Props>) {
 				 */}
 				<Card mix={[p(4)]}>
 					<div mix={[vstack({ gap: 3, align: "stretch" })]}>
-						<form
-							method="post"
-							action={routes.feeds.follow.href()}
-							mix={[vstack({ gap: 3, align: "stretch" })]}
-						>
+						<form id={FOLLOW_FORM_ID} method="post" action={routes.feeds.follow.href()}>
 							<TextField
 								type="url"
 								name="url"
@@ -111,26 +113,32 @@ export default function FeedList(handle: Handle<FeedList.Props>) {
 								required
 								autoComplete="url"
 							/>
-
-							<Button type="submit" mix={[self("end")]}>
-								{follow.submit}
-							</Button>
 						</form>
 
 						{/**
-						 * Quiet and small against the solid submit above it, since following a feed is
-						 * what a reader opens this page to do and checking the ones they have is the
-						 * thing they reach for occasionally.
+						 * Both actions on one row under the field, reading left to right in the order a
+						 * reader wants them: following is why they opened this page, checking is the
+						 * occasional errand, so the second is quiet against the first rather than
+						 * stranded at the other end of the card.
+						 *
+						 * The submit sits outside its own form and names it, which is what lets the two
+						 * share a row: a form cannot nest inside another.
 						 *
 						 * A sweep reaches out to every origin the reader follows, so it is submitted
-						 * rather than followed: a prefetcher and a mail scanner walk links of their own
-						 * accord.
+						 * rather than followed — a prefetcher and a mail scanner walk links of their
+						 * own accord.
 						 */}
-						<form method="post" action={routes.feeds.refreshAll.href()}>
-							<Button type="submit" color="neutral" variant="ghost" size="sm">
-								{checkAll}
+						<div mix={[flex(), items("center"), flexWrap("wrap"), gap(2)]}>
+							<Button type="submit" form={FOLLOW_FORM_ID}>
+								{follow.submit}
 							</Button>
-						</form>
+
+							<form method="post" action={routes.feeds.refreshAll.href()}>
+								<Button type="submit" color="neutral" variant="ghost" size="sm">
+									{checkAll}
+								</Button>
+							</form>
+						</div>
 					</div>
 				</Card>
 
