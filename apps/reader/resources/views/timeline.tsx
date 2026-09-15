@@ -221,10 +221,15 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 						<li key={entry.id} mix={[vstack({ gap: 0 })]}>
 							{/**
 							 * A read card dims whole — title, byline, summary, border and control
-							 * together — and gives up the accent edge that marks an unread one, so the
-							 * two states differ everywhere rather than in one shade of heading. Pointing
-							 * at a read card or tabbing into it restores its full contrast, which is
-							 * when a reader is reading it rather than scanning past it.
+							 * together — and trades the accent edge for the card's own border colour, so
+							 * the two states differ in more than one shade of heading.
+							 *
+							 * The title's weight is deliberately not one of those differences. A heavier
+							 * face is a wider one, so switching it rewrites every glyph on the line and
+							 * the title reflows under the reader's eye at the moment they mark a post.
+							 *
+							 * Pointing at a read card or tabbing into it restores its full contrast,
+							 * which is when a reader is reading it rather than scanning past it.
 							 */}
 							<Card
 								mix={[
@@ -249,7 +254,7 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 												minIs(0),
 												overflowWrap("anywhere"),
 												text("lg"),
-												weight(entry.isRead ? "normal" : "semibold"),
+												weight("semibold"),
 												leading("snug"),
 											]}
 										>
