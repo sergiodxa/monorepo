@@ -13,7 +13,7 @@
 import type { Handle } from "remix/ui";
 
 import { fg } from "@sdxc/u/color";
-import { flex, flexWrap, gap, items, vstack } from "@sdxc/u/layout";
+import { flex, flexWrap, gap, items, self, vstack } from "@sdxc/u/layout";
 import { maxIs, p } from "@sdxc/u/size";
 import { hover } from "@sdxc/u/state";
 import { leading, text, textDecoration, weight } from "@sdxc/u/typography";
@@ -69,11 +69,16 @@ export default function FeedList(handle: Handle<FeedList.Props>) {
 
 		return (
 			<div mix={[vstack({ gap: 6 })]}>
+				{/**
+				 * The field spans the card so its hint and its refusal are the width of the input
+				 * they belong to, and the submit sits at the end of the row under it, where a form
+				 * puts the thing that finishes it.
+				 */}
 				<Card mix={[p(4)]}>
 					<form
 						method="post"
 						action={routes.feeds.follow.href()}
-						mix={[flex(), items("end"), flexWrap("wrap"), gap(3)]}
+						mix={[vstack({ gap: 3, align: "stretch" })]}
 					>
 						<TextField
 							type="url"
@@ -85,10 +90,11 @@ export default function FeedList(handle: Handle<FeedList.Props>) {
 							errorMessage={follow.error ?? undefined}
 							required
 							autoComplete="url"
-							mix={[maxIs("28rem")]}
 						/>
 
-						<Button type="submit">{follow.submit}</Button>
+						<Button type="submit" mix={[self("end")]}>
+							{follow.submit}
+						</Button>
 					</form>
 				</Card>
 

@@ -1,6 +1,7 @@
 /**
  * Single-feed controller for `GET /feeds/:feedId`: one feed's posts, read and unread
- * alike, newest first, with the way to stop following it underneath them.
+ * alike, newest first, headed by the feed's name — which is the link to the site behind
+ * it — and, on that same line, the way to stop following it.
  *
  * The feed is looked up in the reader's own storage, so a feed somebody else follows is
  * as absent here as one nobody does, and both answer `404`.
@@ -11,11 +12,8 @@
 
 import { parsePageParams } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
-import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
-import { hover } from "@sdxc/u/state";
-import { text, textDecoration } from "@sdxc/u/typography";
-import { Alert, Button, Empty, HeadingScope, LinkButton, Text } from "@sdxc/ui";
+import { Alert, Button, Confirm, Empty, HeadingScope, LinkButton } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -36,6 +34,16 @@ import routes from "~/routes/web";
 function feedPage(feedId: string, cursor: string | null): string | null {
 	if (cursor === null) return null;
 	return `${routes.feeds.show.href({ feedId })}?${new URLSearchParams({ cursor })}`;
+}
+
+/**
+ * The `id` the unfollow prompt answers to, which its trigger names in `commandfor`. It
+ * carries the feed so the value is the page's alone.
+ *
+ * @param feedId - The feed the prompt would stop following.
+ */
+function unfollowPromptId(feedId: string): string {
+	return `unfollow-${feedId}`;
 }
 
 /** GET /feeds/:feedId — one feed and its posts. */
@@ -133,25 +141,55 @@ export default createAction(routes.feeds.show, {
 			<AppLayout
 				documentTitle={feed.title}
 				heading={feed.title}
+				/**
+				 * On the feed's own line, so stopping following it costs a click rather than a
+				 * scroll past every post it ever published.
+				 */
+				headingActions={
+					<Button
+						commandfor={unfollowPromptId(feedId)}
+						command="show-modal"
+						color="danger"
+						variant="ghost"
+						size="sm"
+					>
+						{ctx.i18next.t("feeds.unfollow.submit")}
+					</Button>
+				}
+				/** The feed's name is the link to the site behind it, for a feed that names one. */
+				headingLink={
+					feed.siteUrl
+						? { href: feed.siteUrl, label: ctx.i18next.t("feeds.show.visitSite") }
+						: undefined
+				}
 				current="feeds"
 				locale={ctx.locale}
 				nav={nav}
 			>
 				<div mix={[vstack({ gap: 6 })]}>
-					{feed.siteUrl && (
-						<a
-							href={feed.siteUrl}
-							rel="noreferrer"
-							mix={[
-								text("sm"),
-								fg("brand"),
-								textDecoration("none"),
-								hover(textDecoration("underline")),
-							]}
-						>
-							{ctx.i18next.t("feeds.show.visitSite")}
-						</a>
-					)}
+					{/**
+					 * The warning the reader has to read before the feed goes, kept off the page
+					 * itself: the prompt is a native `dialog` the trigger opens through Invoker
+					 * Commands, so the sentence costs nothing until it is the thing being decided.
+					 *
+					 * Level 2, since the layout's own page heading is the document's only `h1`.
+					 *
+					 * The confirmation posts `_method`, since a browser form sends `GET` and `POST`
+					 * alone and `methodOverride()` reads the declared `DELETE` back out of it.
+					 */}
+					<HeadingScope level={2}>
+						<Confirm
+							id={unfollowPromptId(feedId)}
+							title={ctx.i18next.t("feeds.unfollow.title")}
+							description={ctx.i18next.t("feeds.unfollow.confirm", { title: feed.title })}
+							confirmLabel={ctx.i18next.t("feeds.unfollow.submit")}
+							cancelLabel={ctx.i18next.t("feeds.unfollow.cancel")}
+							form={{
+								action: routes.feeds.unfollow.href({ feedId }),
+								fields: <input type="hidden" name="_method" value="DELETE" />,
+							}}
+						/>
+					</HeadingScope>
 
 					{isStaleCursor && (
 						<Alert color="warning">
@@ -172,6 +210,8 @@ export default createAction(routes.feeds.show, {
 					{entries.length > 0 ? (
 						<Timeline
 							entries={entries}
+							/** This page holds a feed's posts read and unread alike, so the mark is a state. */
+							readAction="toggle"
 							copy={{
 								markRead: ctx.i18next.t("timeline.markRead"),
 								markUnread: ctx.i18next.t("timeline.markUnread"),
@@ -196,26 +236,6 @@ export default createAction(routes.feeds.show, {
 							</Empty>
 						</HeadingScope>
 					)}
-
-					{/**
-					 * A `POST` carrying the method the route is declared with, since a browser form
-					 * sends `GET` and `POST` alone and `methodOverride()` reads the field back out.
-					 */}
-					<form
-						method="post"
-						action={routes.feeds.unfollow.href({ feedId })}
-						mix={[vstack({ gap: 3, align: "start" })]}
-					>
-						<input type="hidden" name="_method" value="DELETE" />
-
-						<Text mix={[text("sm"), fg("neutral.muted")]}>
-							{ctx.i18next.t("feeds.unfollow.confirm", { title: feed.title })}
-						</Text>
-
-						<Button type="submit" color="danger" variant="outline" size="sm">
-							{ctx.i18next.t("feeds.unfollow.submit")}
-						</Button>
-					</form>
 				</div>
 			</AppLayout>,
 		);

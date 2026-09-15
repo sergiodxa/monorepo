@@ -126,6 +126,8 @@ export default createAction(routes.reading, {
 					{entries.length > 0 ? (
 						<Timeline
 							entries={entries}
+							/** The queue holds what is left to read, so the mark carries a post out of it. */
+							readAction="complete"
 							copy={{
 								markRead: ctx.i18next.t("timeline.markRead"),
 								markUnread: ctx.i18next.t("timeline.markUnread"),

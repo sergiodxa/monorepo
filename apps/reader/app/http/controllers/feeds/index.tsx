@@ -74,7 +74,8 @@ export function renderFeedsPage(
 	submission: FeedsPage.Submission,
 	init?: ResponseInit,
 ) {
-	let dates = new Intl.DateTimeFormat(ctx.locale);
+	/** The same style the timelines print a publication date in, so one app prints one date. */
+	let dates = new Intl.DateTimeFormat(ctx.locale, { dateStyle: "medium" });
 
 	let entries = feeds.map((feed): FeedListTypes.Entry => {
 		let statusKey = feed.lastStatus ? FAILURE_STATUS_KEYS[feed.lastStatus] : undefined;

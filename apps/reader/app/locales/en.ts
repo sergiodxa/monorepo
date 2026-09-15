@@ -147,6 +147,8 @@ export default {
 		unfollow: {
 			title: "Unfollow a feed",
 			submit: "Unfollow",
+			/** Backs out of the prompt, leaving the feed followed. */
+			cancel: "Cancel",
 			confirm: "Stop following {{title}}? Its posts, and what you have read of them, go with it.",
 		},
 

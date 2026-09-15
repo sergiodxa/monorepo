@@ -1,7 +1,7 @@
 /**
  * Tests `GET /reading`: the guard that keeps it to signed-in readers, the queue it renders
- * from what the store answered, the links that walk it, the two ways an empty queue reads,
- * and a cursor the store no longer decodes.
+ * from what the store answered, the mark that carries a post out of it, the links that
+ * walk it, the two ways an empty queue reads, and a cursor the store no longer decodes.
  *
  * Every assertion is against rendered English copy rather than a translation key, since a
  * key-name assertion passes for a page whose copy was never written.
@@ -68,6 +68,15 @@ function get(path: string, viewer: Viewer | null = VIEWER): Promise<Response> {
 	return fetchRoute(router, path);
 }
 
+/**
+ * The copy a reader sees, with the markup carrying it stripped out. A title whose last
+ * word travels with its outbound mark is split across elements, and what matters is that
+ * the words still read as one line.
+ */
+function readsAs(html: string): string {
+	return html.replace(/<[^>]*>/g, "");
+}
+
 beforeEach(() => {
 	store = createUserStoreDouble();
 });
@@ -96,8 +105,8 @@ describe("GET /reading", () => {
 		expect(response.status).toBe(200);
 
 		let body = await response.text();
-		expect(body).toContain("Markdown and the web");
-		expect(body).toContain("Release candidate two");
+		expect(readsAs(body)).toContain("Markdown and the web");
+		expect(readsAs(body)).toContain("Release candidate two");
 		expect(body).toContain("Daring Fireball");
 		expect(body).toContain("Remix Changelog");
 		expect(body).toContain("by John Gruber");
@@ -117,7 +126,24 @@ describe("GET /reading", () => {
 		expect(body).toContain(`action="${routes.items.read.href({ itemId: "item-1" })}"`);
 		expect(body).toContain('name="read" value="true"');
 		expect(body).toContain(`name="returnTo" value="${routes.reading.href()}?cursor=page-2"`);
-		expect(body).toContain("Mark as read");
+		/** The mark is the whole control, so the words reach a reader through these two. */
+		expect(body).toContain('aria-label="Mark as read"');
+		expect(body).toContain('title="Mark as read"');
+	});
+
+	test("marks a queued post with the tick that carries it out, not a state ring", async () => {
+		store.readingQueue.mockResolvedValue({
+			ok: true,
+			items: [item({ id: "item-1" })],
+			feeds: FEEDS,
+			cursors: { next: null, prev: null },
+		});
+
+		let body = await (await get(routes.reading.href())).text();
+
+		/** The bare tick the completing mark draws, and the ring a toggling one would. */
+		expect(body).toContain('d="M4.5 12.5 9.5 17.5 19.5 6.5"');
+		expect(body).not.toContain('<circle cx="12" cy="12" r="8"');
 	});
 
 	test("reads the cursor off the query string", async () => {
@@ -193,6 +219,6 @@ describe("GET /reading", () => {
 		let body = await response.text();
 		expect(body).toContain("That page of posts is no longer there.");
 		expect(body).toContain("Back to the newest");
-		expect(body).toContain("Markdown and the web");
+		expect(readsAs(body)).toContain("Markdown and the web");
 	});
 });

@@ -1,7 +1,8 @@
 /**
  * Tests `GET /feeds/:feedId`: the guard, the feed a reader does not follow, the posts and
  * paging links of one they do, the empty feed, a cursor the store no longer decodes, and
- * the unfollow form that reaches a `DELETE` route through a browser `POST`.
+ * the unfollow prompt that reaches a `DELETE` route through a browser `POST` — including
+ * that it sits above the posts, where a reader finds it without scrolling past them.
  *
  * Every assertion is against rendered English copy rather than a translation key, since a
  * key-name assertion passes for a page whose copy was never written.
@@ -71,6 +72,15 @@ function get(path: string, viewer: Viewer | null = VIEWER): Promise<Response> {
 	return fetchRoute(router, path);
 }
 
+/**
+ * The copy a reader sees, with the markup carrying it stripped out. A title whose last
+ * word travels with its outbound mark is split across elements, and what matters is that
+ * the words still read as one line.
+ */
+function readsAs(html: string): string {
+	return html.replace(/<[^>]*>/g, "");
+}
+
 beforeEach(() => {
 	store = createUserStoreDouble();
 });
@@ -97,7 +107,7 @@ describe("GET /feeds/:feedId", () => {
 		expect(store.feedTimeline).not.toHaveBeenCalled();
 	});
 
-	test("heads the page with the feed's title and links out to its site", async () => {
+	test("heads the page with the feed's title, which links out to its site", async () => {
 		store.getFeed.mockResolvedValue(FEED);
 
 		let response = await get(routes.feeds.show.href({ feedId: FEED_ID }));
@@ -105,17 +115,25 @@ describe("GET /feeds/:feedId", () => {
 
 		let body = await response.text();
 		expect(body).toContain(">Daring Fireball</title>");
-		expect(body).toContain("<h1");
-		expect(body).toContain("Daring Fireball");
-		expect(body).toContain("Visit site");
-		expect(body).toContain('href="https://daringfireball.net"');
+
+		let heading = body.slice(body.indexOf("<h1"), body.indexOf("</h1>"));
+		expect(heading).toContain('href="https://daringfireball.net"');
+		expect(heading).toContain("Daring Fireball");
+		/** Named for a reader who meets the link without seeing the outbound mark beside it. */
+		expect(heading).toContain("Visit site");
+		/** Leaving the app opens a tab of its own, so the reading position survives it. */
+		expect(heading).toContain('target="_blank"');
+		expect(heading).toContain('rel="noopener noreferrer"');
 	});
 
-	test("leaves out the site link for a feed that names no site", async () => {
+	test("heads a feed that names no site with plain, unlinked text", async () => {
 		store.getFeed.mockResolvedValue({ ...FEED, siteUrl: null });
 
 		let body = await (await get(routes.feeds.show.href({ feedId: FEED_ID }))).text();
+		let heading = body.slice(body.indexOf("<h1"), body.indexOf("</h1>"));
 
+		expect(heading).toContain("Daring Fireball");
+		expect(heading).not.toContain("<a");
 		expect(body).not.toContain("Visit site");
 	});
 
@@ -133,15 +151,34 @@ describe("GET /feeds/:feedId", () => {
 
 		let body = await (await get(routes.feeds.show.href({ feedId: FEED_ID }))).text();
 
-		expect(body).toContain("Markdown and the web");
-		expect(body).toContain("An older one");
+		expect(readsAs(body)).toContain("Markdown and the web");
+		expect(readsAs(body)).toContain("An older one");
 		expect(body).toContain("by John Gruber");
 		expect(body).toContain("Published Jan 2, 2026");
-		expect(body).toContain("Mark as read");
-		expect(body).toContain("Mark as unread");
+		/** The mark is the whole control, so the words reach a reader through these two. */
+		expect(body).toContain('aria-label="Mark as read"');
+		expect(body).toContain('title="Mark as read"');
+		expect(body).toContain('aria-label="Mark as unread"');
+		expect(body).toContain('title="Mark as unread"');
 		expect(body).toContain(
 			`name="returnTo" value="${routes.feeds.show.href({ feedId: FEED_ID })}"`,
 		);
+	});
+
+	test("marks a feed's posts with the ring that says which state each is in", async () => {
+		store.getFeed.mockResolvedValue(FEED);
+		store.feedTimeline.mockResolvedValue({
+			ok: true,
+			items: [item({ id: "item-1" }), item({ id: "item-2", readAt: Date.UTC(2026, 0, 3, 12) })],
+			feeds: [FEED_REF],
+			cursors: { next: null, prev: null },
+		});
+
+		let body = await (await get(routes.feeds.show.href({ feedId: FEED_ID }))).text();
+
+		/** The ring both posts wear, and the tick only the read one adds to it. */
+		expect(body.match(/<circle cx="12" cy="12" r="8"/g)).toHaveLength(2);
+		expect(body).toContain('d="m8.5 12 2.5 2.5 4.5-5"');
 	});
 
 	test("walks the feed with hrefs carrying the cursor it was given", async () => {
@@ -197,7 +234,7 @@ describe("GET /feeds/:feedId", () => {
 		let body = await response.text();
 		expect(body).toContain("That page of posts is no longer there.");
 		expect(body).toContain("Back to the newest");
-		expect(body).toContain("Markdown and the web");
+		expect(readsAs(body)).toContain("Markdown and the web");
 	});
 
 	test("offers the unfollow form, naming the feed and overriding the method", async () => {
@@ -210,5 +247,61 @@ describe("GET /feeds/:feedId", () => {
 		expect(body).toContain('name="_method" value="DELETE"');
 		expect(body).toContain("Stop following Daring Fireball?");
 		expect(body).toContain("Unfollow");
+		expect(body).toContain("Cancel");
+	});
+
+	test("puts unfollowing behind a prompt rather than a bare submit", async () => {
+		store.getFeed.mockResolvedValue(FEED);
+
+		let body = await (await get(routes.feeds.show.href({ feedId: FEED_ID }))).text();
+
+		expect(body).toContain(`commandfor="unfollow-${FEED_ID}"`);
+		expect(body).toContain('command="show-modal"');
+		expect(body).toContain(`id="unfollow-${FEED_ID}"`);
+		expect(body).toContain('role="alertdialog"');
+	});
+
+	test("puts the unfollow control on the feed's own line, above the posts", async () => {
+		store.getFeed.mockResolvedValue(FEED);
+		store.feedTimeline.mockResolvedValue({
+			ok: true,
+			items: [item({ id: "item-1", title: "Markdown and the web" })],
+			feeds: [FEED_REF],
+			cursors: { next: null, prev: null },
+		});
+
+		let body = await (await get(routes.feeds.show.href({ feedId: FEED_ID }))).text();
+
+		/** The actions sit beside the heading, inside the row the two share. */
+		let headingRow = body.slice(body.indexOf("<h1"), body.indexOf("<ol"));
+		expect(headingRow).toContain("Unfollow");
+		expect(body.indexOf("Unfollow")).toBeLessThan(body.indexOf("Markdown and the"));
+	});
+
+	test("marks a post's title as leaving the app, and leaves an address-less one plain", async () => {
+		store.getFeed.mockResolvedValue({ ...FEED, siteUrl: null });
+		store.feedTimeline.mockResolvedValue({
+			ok: true,
+			items: [
+				item({ id: "item-1", title: "Markdown and the web" }),
+				item({ id: "item-2", title: "Nowhere to go", url: null }),
+			],
+			feeds: [FEED_REF],
+			cursors: { next: null, prev: null },
+		});
+
+		let body = await (await get(routes.feeds.show.href({ feedId: FEED_ID }))).text();
+		let [, linked, plain] = body.slice(body.indexOf("<ol"), body.indexOf("</ol>")).split("<li");
+
+		expect(linked).toContain('target="_blank"');
+		expect(linked).toContain('rel="noopener noreferrer"');
+		/** The first stroke of the outbound mark, which only a link that leaves wears. */
+		expect(linked).toContain('d="M13 5h6v6"');
+		/** The last word and the mark travel as one, so a wrap never strands the mark. */
+		expect(linked).toContain("web<svg");
+
+		expect(plain).toContain("Nowhere to go");
+		expect(plain).not.toContain("<a ");
+		expect(plain).not.toContain('d="M13 5h6v6"');
 	});
 });

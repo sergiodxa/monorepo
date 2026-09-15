@@ -147,6 +147,8 @@ export default {
 		unfollow: {
 			title: "Dejar de seguir un feed",
 			submit: "Dejar de seguir",
+			/** Backs out of the prompt, leaving the feed followed. */
+			cancel: "Cancelar",
 			confirm:
 				"¿Dejar de seguir {{title}}? Sus entradas, y lo que hayas leído de ellas, se van con él.",
 		},

@@ -28,7 +28,9 @@ let { default: feeds } = await import("./index");
 const CHECKED_AT = Date.UTC(2026, 0, 15, 12);
 
 /** How the page prints {@link CHECKED_AT}, resolved the same way the controller resolves it. */
-const CHECKED_ON = new Intl.DateTimeFormat("en").format(new Date(CHECKED_AT));
+const CHECKED_ON = new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(
+	new Date(CHECKED_AT),
+);
 
 /**
  * A healthy followed feed, which a test bends to the one thing it is about.
@@ -101,6 +103,8 @@ describe("GET /feeds", () => {
 		expect(body).toContain("Example Blog");
 		expect(body).toContain("Posts from the example blog.");
 		expect(body).toContain(`Checked ${CHECKED_ON}`);
+		/** Spelled out, so the check reads the way a post's publication date does. */
+		expect(body).toContain("Checked Jan 15, 2026");
 		expect(body).toContain(routes.feeds.show.href({ feedId: feed().id }));
 	});
 
