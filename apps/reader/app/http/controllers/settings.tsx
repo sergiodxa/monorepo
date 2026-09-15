@@ -15,8 +15,9 @@ import type { RequestContext } from "remix/router";
 
 import { redirect } from "@sdxc/http/response";
 import { border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
 import { flex, flexWrap, gap, items, vstack } from "@sdxc/u/layout";
-import { m, p, pb } from "@sdxc/u/size";
+import { m, maxIs, p, pb } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
 import {
 	Alert,
@@ -24,7 +25,7 @@ import {
 	Card,
 	Description,
 	FieldError,
-	FileTrigger,
+	Label,
 	Heading,
 	LinkButton,
 	RadioGroup,
@@ -56,6 +57,9 @@ const UNPROCESSABLE_STATUS = 422;
 /** Ties the radio group's accessible name and hint to the legend and description on screen. */
 const LEGEND_ID = "settings-refresh-legend";
 const DESCRIPTION_ID = "settings-refresh-description";
+
+/** Ties the import field to the label naming it. */
+const IMPORT_FILE_ID = "settings-import-file";
 
 /** Ties the file picker to the passage saying what it is asking for. */
 const IMPORT_DESCRIPTION_ID = "settings-import-description";
@@ -263,8 +267,10 @@ function settingsPage(
 						{ctx.i18next.t("feeds.transfer.legend")}
 					</Heading>
 
+					{/** Outlined rather than quiet: a bare label reads as a sentence, not as the
+					 * control that hands a reader a file. */}
 					<div mix={[flex()]}>
-						<LinkButton href={routes.feeds.export.href()} color="neutral" variant="ghost" size="sm">
+						<LinkButton href={routes.feeds.export.href()} color="neutral" variant="outline">
 							{ctx.i18next.t("feeds.transfer.export")}
 						</LinkButton>
 					</div>
@@ -283,28 +289,45 @@ function settingsPage(
 						method="post"
 						action={routes.feeds.import.href()}
 						encType="multipart/form-data"
-						mix={[vstack({ gap: 2, align: "stretch" })]}
+						mix={[vstack({ gap: 2, align: "start" })]}
 					>
-						<div mix={[flex(), items("center"), flexWrap("wrap"), gap(2)]}>
-							<FileTrigger
-								name={FILE_FIELD}
-								accept={IMPORT_ACCEPT}
-								color="neutral"
-								variant="outline"
-								size="sm"
-								aria-describedby={IMPORT_DESCRIPTION_ID}
-							>
-								{ctx.i18next.t("feeds.transfer.import.label")}
-							</FileTrigger>
-
-							<Button type="submit" color="neutral" variant="outline" size="sm">
-								{ctx.i18next.t("feeds.transfer.import.submit")}
-							</Button>
-						</div>
-
-						<Description id={IMPORT_DESCRIPTION_ID} mix={[text("xs")]}>
+						{/** Ahead of the controls, so it is read before a file is chosen rather than
+						 * after. */}
+						<Description id={IMPORT_DESCRIPTION_ID}>
 							{ctx.i18next.t("feeds.transfer.import.description")}
 						</Description>
+
+						<div mix={[flex(), items("end"), flexWrap("wrap"), gap(3)]}>
+							{/**
+							 * A native file input rather than a styled trigger. The trigger hides the
+							 * input behind a button-like label, so nothing on the page says which file
+							 * was chosen — and without script there is nothing to say it with. The
+							 * platform's own control names the file it holds.
+							 */}
+							<div mix={[vstack({ gap: 1, align: "start" })]}>
+								<Label htmlFor={IMPORT_FILE_ID}>
+									{ctx.i18next.t("feeds.transfer.import.label")}
+								</Label>
+
+								<input
+									id={IMPORT_FILE_ID}
+									type="file"
+									name={FILE_FIELD}
+									accept={IMPORT_ACCEPT}
+									aria-describedby={IMPORT_DESCRIPTION_ID}
+									mix={[
+										maxIs("100%"),
+										p(2),
+										rounded("md"),
+										border("neutral.border"),
+										text("sm"),
+										fg("neutral.emphasis"),
+									]}
+								/>
+							</div>
+
+							<Button type="submit">{ctx.i18next.t("feeds.transfer.import.submit")}</Button>
+						</div>
 					</form>
 				</div>
 			</Card>

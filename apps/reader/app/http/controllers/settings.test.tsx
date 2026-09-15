@@ -261,6 +261,21 @@ describe("what an import returns here with", () => {
 		expect(body).not.toContain("could not be read as OPML");
 	});
 
+	/**
+	 * A styled trigger hides the input, so nothing says which file was chosen and there is
+	 * no script here to say it. The platform's own control names the file it holds.
+	 */
+	test("offers a real file input, labelled and typed as one", async () => {
+		let body = await afterImport({});
+
+		let input = body.match(/<input[^>]*type="file"[^>]*>/)?.[0];
+		expect(input, "the import field is a file input").toBeTruthy();
+		expect(input).toContain('name="file"');
+
+		let id = input?.match(/id="([^"]+)"/)?.[1];
+		expect(body).toContain(`for="${id}"`);
+	});
+
 	test("names the transfer section, so the controls below it are not unlabelled", async () => {
 		let body = await afterImport({});
 
