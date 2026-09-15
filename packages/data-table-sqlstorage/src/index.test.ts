@@ -16,6 +16,8 @@ import { DatabaseSync } from "node:sqlite";
 import { column as c, Database, table } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
+import { splitSqlStatements } from "./sql-script.js";
+
 import { createSQLStorageDatabaseAdapter } from "./index.js";
 
 import type { SQLInputValue } from "node:sqlite";
@@ -195,6 +197,74 @@ describe("createSQLStorageDatabaseAdapter", () => {
 		expect(result.rows).toEqual([{ name: "posts_title" }]);
 	});
 
+	test("executeScript keeps a comment's semicolon out of the split, so the DDL behind it runs", async () => {
+		await adapter.executeScript(`
+			-- The ordering the subscription list reads in: it pages by keyset on (created_at, id),
+			-- and that seek is a seek only while an index carries both keys, in that order.
+			CREATE TABLE feeds (id INTEGER PRIMARY KEY, created_at TEXT NOT NULL);
+			CREATE INDEX feeds_subscription_idx ON feeds (created_at, id);
+		`);
+
+		let result = await db.exec("SELECT name FROM sqlite_master WHERE type = ?", ["index"]);
+
+		expect(result.rows).toEqual([{ name: "feeds_subscription_idx" }]);
+	});
+
+	test("executeScript stores a string literal holding a semicolon whole", async () => {
+		await adapter.executeScript(`
+			CREATE TABLE labels (id INTEGER PRIMARY KEY, label TEXT NOT NULL);
+			INSERT INTO labels (id, label) VALUES (1, 'first; second');
+		`);
+
+		let result = await db.exec("SELECT label FROM labels");
+
+		expect(result.rows).toEqual([{ label: "first; second" }]);
+	});
+
+	test("executeScript creates a trigger whose body carries its own semicolons", async () => {
+		await adapter.executeScript(`
+			CREATE TABLE totals (id INTEGER PRIMARY KEY, n INTEGER NOT NULL, note TEXT);
+			INSERT INTO totals (id, n, note) VALUES (1, 0, 'start');
+			CREATE TABLE events (id INTEGER PRIMARY KEY, label TEXT NOT NULL);
+			CREATE TRIGGER events_counted AFTER INSERT ON events BEGIN
+				UPDATE totals SET n = CASE WHEN n < 10 THEN n + 1 ELSE n END;
+				UPDATE totals SET note = 'seen; noted';
+			END;
+		`);
+
+		await db.exec("INSERT INTO events (id, label) VALUES (1, ?)", ["first"]);
+
+		let result = await db.exec("SELECT n, note FROM totals");
+
+		expect(result.rows).toEqual([{ n: 1, note: "seen; noted" }]);
+	});
+
+	test("executeScript reads a BEGIN inside a literal or a comment as neither", async () => {
+		await adapter.executeScript(`
+			-- BEGIN; the platform refuses that statement, and this is a comment.
+			CREATE TABLE notes (id INTEGER PRIMARY KEY, body TEXT NOT NULL);
+			INSERT INTO notes (id, body) VALUES (1, 'BEGIN; COMMIT');
+		`);
+
+		let result = await db.exec("SELECT body FROM notes");
+
+		expect(result.rows).toEqual([{ body: "BEGIN; COMMIT" }]);
+	});
+
+	test("executeScript hands a real BEGIN to the platform, which refuses it", async () => {
+		await expect(
+			adapter.executeScript("BEGIN; CREATE TABLE notes (id INTEGER PRIMARY KEY)"),
+		).rejects.toThrow(/state\.storage\.transaction/);
+	});
+
+	test("executeScript names an unterminated literal instead of running a fragment of it", async () => {
+		await expect(
+			adapter.executeScript(
+				"CREATE TABLE notes (id INTEGER PRIMARY KEY);\nINSERT INTO notes VALUES ('oops);",
+			),
+		).rejects.toThrow(/unterminated string literal opened on line 2/);
+	});
+
 	test("db.exec() with a raw SELECT returns rows", async () => {
 		await db.create(users, { id: 1, email: "one@example.com" });
 		await db.create(users, { id: 2, email: "two@example.com" });
@@ -266,5 +336,126 @@ describe("createSQLStorageDatabaseAdapter", () => {
 
 		let updated = await db.update(flags, 1, { enabled: true });
 		expect(updated.enabled).toBe(true);
+	});
+});
+
+describe("splitSqlStatements", () => {
+	test("splits a script on the semicolons that terminate its statements", () => {
+		expect(splitSqlStatements("SELECT 1; SELECT 2")).toEqual(["SELECT 1", "SELECT 2"]);
+	});
+
+	test("keeps a final statement that carries no trailing semicolon", () => {
+		expect(splitSqlStatements("SELECT 1;\nSELECT 2")).toEqual(["SELECT 1", "SELECT 2"]);
+	});
+
+	test("yields nothing for the empty statements a doubled semicolon leaves", () => {
+		expect(splitSqlStatements("SELECT 1;;\n  ; ")).toEqual(["SELECT 1"]);
+	});
+
+	test("keeps a semicolon inside a single-quoted literal", () => {
+		expect(splitSqlStatements("INSERT INTO t VALUES ('first; second')")).toEqual([
+			"INSERT INTO t VALUES ('first; second')",
+		]);
+	});
+
+	test("reads a doubled quote as an escape rather than the end of the literal", () => {
+		expect(splitSqlStatements("INSERT INTO t VALUES ('it''s; here'); SELECT 1")).toEqual([
+			"INSERT INTO t VALUES ('it''s; here')",
+			"SELECT 1",
+		]);
+	});
+
+	test("keeps a semicolon inside a double-quoted identifier", () => {
+		expect(splitSqlStatements('SELECT "a;b" FROM t; SELECT 1')).toEqual([
+			'SELECT "a;b" FROM t',
+			"SELECT 1",
+		]);
+	});
+
+	test("reads a doubled double quote as an escape inside an identifier", () => {
+		expect(splitSqlStatements('SELECT "a""b;c" FROM t; SELECT 1')).toEqual([
+			'SELECT "a""b;c" FROM t',
+			"SELECT 1",
+		]);
+	});
+
+	test("keeps a semicolon inside a backtick-quoted identifier", () => {
+		expect(splitSqlStatements("SELECT `a;b` FROM t; SELECT 1")).toEqual([
+			"SELECT `a;b` FROM t",
+			"SELECT 1",
+		]);
+	});
+
+	test("keeps a semicolon inside a bracketed identifier", () => {
+		expect(splitSqlStatements("SELECT [a;b] FROM t; SELECT 1")).toEqual([
+			"SELECT [a;b] FROM t",
+			"SELECT 1",
+		]);
+	});
+
+	test("keeps a semicolon inside a line comment, with the statement it introduces", () => {
+		let script =
+			"-- pages by keyset on (created_at, id); sorting is the cost\nCREATE INDEX i ON t (a)";
+
+		expect(splitSqlStatements(script)).toEqual([script]);
+	});
+
+	test("keeps a semicolon inside a block comment", () => {
+		expect(splitSqlStatements("/* a; b */ SELECT 1; SELECT 2")).toEqual([
+			"/* a; b */ SELECT 1",
+			"SELECT 2",
+		]);
+	});
+
+	test("drops a fragment that holds only comments and whitespace", () => {
+		expect(splitSqlStatements("SELECT 1;\n-- done\n")).toEqual(["SELECT 1"]);
+	});
+
+	test("keeps a CREATE TRIGGER whole, body semicolons and CASE included", () => {
+		let trigger =
+			"CREATE TRIGGER t AFTER INSERT ON x BEGIN\n" +
+			"\tUPDATE y SET n = CASE WHEN n < 10 THEN n + 1 ELSE n END;\n" +
+			"\tUPDATE y SET note = 'seen; noted';\n" +
+			"END";
+
+		expect(splitSqlStatements(trigger + ";\nSELECT 1")).toEqual([trigger, "SELECT 1"]);
+	});
+
+	test("reads the statement after a trigger as its own", () => {
+		expect(
+			splitSqlStatements(
+				"CREATE TRIGGER t AFTER INSERT ON x BEGIN UPDATE y SET n = 1; END; DROP TABLE z",
+			),
+		).toEqual(["CREATE TRIGGER t AFTER INSERT ON x BEGIN UPDATE y SET n = 1; END", "DROP TABLE z"]);
+	});
+
+	test("reads a BEGIN outside a trigger as the statement it is", () => {
+		expect(splitSqlStatements("BEGIN; SELECT 1")).toEqual(["BEGIN", "SELECT 1"]);
+	});
+
+	test("names an unterminated string literal and the line it opened on", () => {
+		expect(() => splitSqlStatements("SELECT 1;\nINSERT INTO t VALUES ('oops);\n")).toThrow(
+			/unterminated string literal opened on line 2/,
+		);
+	});
+
+	test("names an unterminated bracketed identifier", () => {
+		expect(() => splitSqlStatements("SELECT [a FROM t")).toThrow(
+			/unterminated bracketed identifier opened on line 1/,
+		);
+	});
+
+	test("names an unterminated block comment", () => {
+		expect(() => splitSqlStatements("SELECT 1;\n/* note\nSELECT 2")).toThrow(
+			/unterminated block comment opened on line 2/,
+		);
+	});
+
+	test("names a trigger body that never closes with END", () => {
+		expect(() =>
+			splitSqlStatements(
+				"CREATE TABLE x (id INTEGER);\nCREATE TRIGGER t AFTER INSERT ON x BEGIN\n\tUPDATE y SET n = 1;\n",
+			),
+		).toThrow(/CREATE TRIGGER body opened on line 2 that never closes with END/);
 	});
 });

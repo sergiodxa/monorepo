@@ -18,6 +18,8 @@ import type {
 
 import { getTableColumnDefinitions, getTableName, getTablePrimaryKey } from "remix/data-table";
 
+import { splitSqlStatements } from "./sql-script.js";
+
 /** What a caller reaching for a transaction is told the platform offers instead. */
 let transactionsUnsupportedMessage =
 	"Durable Object SQL storage has no transaction statements. Every write an object makes " +
@@ -104,8 +106,19 @@ export function createSQLStorageDatabaseAdapter(
 			};
 		},
 
+		/**
+		 * Runs a multi-statement script one statement at a time, which is what `SqlStorage`'s
+		 * one-statement-per-call `exec` takes.
+		 *
+		 * The script is cut on the semicolons that terminate a statement, so one sitting in a
+		 * string literal, a quoted identifier, a comment or a `CREATE TRIGGER` body stays
+		 * where its author put it.
+		 * @param sql The whole script, statements separated by `;`.
+		 * @throws When a quoted run, a block comment or a trigger body in the script never
+		 * closes, naming what is open and the line it opened on.
+		 */
 		async executeScript(sql: string): Promise<void> {
-			for (let statement of splitStatements(sql)) {
+			for (let statement of splitSqlStatements(sql)) {
 				db.exec(statement);
 			}
 		},
@@ -712,19 +725,6 @@ function collectColumns(rows: Record<string, unknown>[]): string[] {
 	}
 
 	return columns;
-}
-
-/**
- * Splits a multi-statement SQL script into individual statements.
- *
- * `SqlStorage.exec` executes a single statement per call, so migration-style
- * scripts must be split before execution.
- */
-function splitStatements(sql: string): string[] {
-	return sql
-		.split(";")
-		.map((statement) => statement.trim())
-		.filter((statement) => statement.length > 0);
 }
 
 function normalizeStatementValues(values: unknown[]): SqlStorageValue[] {

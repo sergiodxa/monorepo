@@ -142,8 +142,9 @@ worth knowing:
 
 - `beginTransaction()`, and every commit, rollback and savepoint method, always rejects. The
   error names `ctx.storage.transactionSync()` as the API the platform offers instead.
-- `executeScript(sql)` runs a multi-statement script by splitting it on `;` and executing
-  each statement in turn, which is what SQL storage's one-statement-per-call `exec` needs.
+- `executeScript(sql)` runs a multi-statement script one statement at a time, which is what
+  SQL storage's one-statement-per-call `exec` needs. It cuts the script on the semicolons
+  that terminate a statement; see below for what that covers.
 - `wipe()` always rejects. The Durable Object owns its database's lifecycle, so a clean
   slate comes from migrating down or deleting the object's storage.
 
@@ -177,6 +178,35 @@ export class Tenant extends DurableObject {
 than wrapping it. A migration declared as requiring transactional DDL is refused by name
 before anything runs, which is what keeps a half-applied schema from being mistaken for a
 rolled-back one.
+
+### Where A Script Is Cut
+
+A semicolon ends a statement everywhere except inside a string literal, a quoted identifier
+— double-quoted, backtick-quoted or `[bracketed]`, each with its doubled-delimiter escape —
+a `--` line comment, a `/* */` block comment, and a `CREATE TRIGGER` body. So all of this
+runs as its author wrote it, and a comment explaining a migration is free to use prose
+punctuation:
+
+```sql
+-- Pages by keyset on (created_at, id); the seek is a seek only while an index carries both.
+CREATE INDEX feeds_subscription_idx ON feeds (created_at, id);
+INSERT INTO settings (label) VALUES ('first; second');
+CREATE TRIGGER counted AFTER INSERT ON events BEGIN
+	UPDATE totals SET n = CASE WHEN n < 10 THEN n + 1 ELSE n END;
+END;
+```
+
+A trigger arrives at `exec` whole, so its body semicolons stay inside it and the `BEGIN`
+that opens it reads as the trigger's own rather than as the transaction statement the
+platform refuses. `CASE … END` inside a body nests, so the trigger ends at the `END` that
+matches its `BEGIN`.
+
+Fragments holding only whitespace or comments yield no statement, so a doubled `;;` and a
+closing `-- done` are both fine, and a final statement needs no trailing semicolon.
+
+A script whose string literal, quoted identifier, block comment or trigger body never closes
+is refused before any statement runs, with an error naming what is open and the line it
+opened on — a truncated script fails whole rather than applying the part that parsed.
 
 ## Pattern: Hosting A Storage-Agnostic Library Inside A Durable Object
 
