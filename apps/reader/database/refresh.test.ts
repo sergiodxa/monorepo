@@ -20,7 +20,7 @@ import type { InsertFeedItem, SelectFeed, SelectFeedItem } from "~/database/sche
 import { feedItems, feeds } from "~/database/schema";
 
 import { runMigrations } from "./migrations";
-import { pruneFeed, refreshDueFeeds, refreshFeed } from "./refresh";
+import { MAX_CONTENT_LENGTH, pruneFeed, refreshDueFeeds, refreshFeed } from "./refresh";
 
 /** The epoch milliseconds every test measures against, threaded rather than mocked. */
 const NOW = 1_800_000_000_000;
@@ -251,6 +251,32 @@ describe("refreshFeed", () => {
 
 		expect(outcome).toEqual({ status: "ok", inserted: 1, updated: 0 });
 		expect((await storedItems()).map((item) => item.guid).sort()).toEqual(["g1", "g2"]);
+	});
+
+	test("mints a post id carrying the type it identifies", async () => {
+		let feed = await storeFeed();
+		serve(FEED_URL, [{ guid: "g1" }]);
+
+		await refreshFeed(db, feed, { now: NOW });
+
+		/** A `:itemId` in a URL names the same thing whichever path stored the post. */
+		expect((await loadItem("g1")).id).toMatch(/^item_[\da-z]{26}$/);
+	});
+
+	test("cuts a body past the cap and keeps hashing the cut one", async () => {
+		let feed = await storeFeed();
+		serve(FEED_URL, [{ guid: "g1", description: "a".repeat(MAX_CONTENT_LENGTH + 1000) }]);
+		await refreshFeed(db, feed, { now: NOW });
+
+		expect((await loadItem("g1")).content).toHaveLength(MAX_CONTENT_LENGTH);
+
+		/** The second poll re-hashes the same cut body, so the post reads as unchanged. */
+		let writes = watchWrites();
+		let outcome = await refreshFeed(db, await loadFeed(), { now: NOW + HOUR });
+		expect(writes.itemWrites()).toEqual([]);
+		writes.restore();
+
+		expect(outcome).toEqual({ status: "ok", inserted: 0, updated: 0 });
 	});
 
 	test("updates an edited entry while leaving read_at, id and published_at alone", async () => {

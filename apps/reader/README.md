@@ -13,10 +13,10 @@ From the repo root: `bun check` (format, lint and type check in one pass) and `b
 
 ## Cloudflare Services
 
-| Service        | Binding | Purpose                                             |
-| -------------- | ------- | --------------------------------------------------- |
-| KV             | `KV`    | Session storage and the OIDC discovery/JWKS cache   |
-| Durable Object | `USER`  | One object per reader: settings, feeds and posts    |
+| Service        | Binding | Purpose                                           |
+| -------------- | ------- | ------------------------------------------------- |
+| KV             | `KV`    | Session storage and the OIDC discovery/JWKS cache |
+| Durable Object | `USER`  | One object per reader: settings, feeds and posts  |
 
 Each `USER` object is addressed by the reader's OIDC subject and keeps its own SQLite,
 migrated at boot. It schedules its own refresh through an alarm, so how often a reader's

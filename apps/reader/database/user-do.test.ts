@@ -22,12 +22,16 @@ import type { UserStore } from "./user-do";
 import { UserDO } from "./user-do";
 
 /**
- * The refresh path is driven from here rather than exercised, so the alarm's own
+ * The refresh run is driven from here rather than exercised, so the alarm's own
  * guarantees — that it resolves however the run went, and re-arms either way — are what
- * these assertions read.
+ * these assertions read. Everything else the module exports stays real, since the row a
+ * follow writes is built out of it.
  */
 let refreshDueFeeds = vi.hoisted(() => vi.fn());
-vi.mock("~/database/refresh", () => ({ refreshDueFeeds }));
+vi.mock("~/database/refresh", async (importOriginal) => ({
+	...(await importOriginal<typeof import("~/database/refresh")>()),
+	refreshDueFeeds,
+}));
 
 const FEED_URL = "https://example.com/feed.xml";
 const SITE_URL = "https://example.com/";
@@ -204,6 +208,16 @@ describe("followFeed", () => {
 			failureCount: 0,
 		});
 		expect(result.feed.id.startsWith("feed_")).toBe(true);
+	});
+
+	test("stores a post under an id of the shape every path mints", async () => {
+		let { user } = await createReaderWithFeed();
+
+		let page = await user.readingQueue();
+		expect(page.ok).toBe(true);
+		if (!page.ok) return;
+
+		expect(page.items.every((item) => /^item_[\da-z]{26}$/.test(item.id))).toBe(true);
 	});
 
 	test("counts the unread posts beside each feed", async () => {
@@ -407,5 +421,32 @@ describe("alarm", () => {
 		expect(await state.storage.getAlarm()).toBeGreaterThan(Date.now() + HOUR_MS - 5_000);
 
 		failures.mockRestore();
+	});
+});
+
+describe("the first refresh after a follow", () => {
+	/**
+	 * The one assertion that holds the two write paths to the same digest. A follow and a
+	 * refresh each build the row that stores a post; the moment they project or hash a
+	 * different set of fields, an untouched feed re-writes every post it carries on the very
+	 * next poll, and a reader's list churns without a single error anywhere.
+	 */
+	test("writes no post, because a follow and a refresh hash the same fields", async () => {
+		let { refreshDueFeeds: run } =
+			await vi.importActual<typeof import("~/database/refresh")>("~/database/refresh");
+		refreshDueFeeds.mockImplementation(run);
+
+		let { state, user } = await createReaderWithFeed();
+
+		let exec = vi.spyOn(state.storage.sql, "exec");
+		await user.alarm();
+		let writes = exec.mock.calls
+			.map(([statement]) => String(statement))
+			.filter((statement) => /feed_items/.test(statement))
+			.filter((statement) => /^\s*(insert|update|delete)/i.test(statement));
+		exec.mockRestore();
+
+		expect(writes).toEqual([]);
+		expect(titles(await user.readingQueue())).toHaveLength(5);
 	});
 });

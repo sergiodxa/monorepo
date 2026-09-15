@@ -112,6 +112,8 @@ export default {
 			neverChecked: "Not checked yet",
 			failing_one: "The last check failed",
 			failing_other: "The last {{count}} checks failed",
+			/** How many checks failed and what the last one recorded, read as one badge. */
+			failingBecause: "{{failures}} — {{reason}}",
 		},
 
 		follow: {

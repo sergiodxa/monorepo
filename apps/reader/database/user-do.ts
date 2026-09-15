@@ -29,7 +29,14 @@ import type {
 } from "~/database/schema";
 
 import { runMigrations } from "~/database/migrations";
-import { refreshDueFeeds } from "~/database/refresh";
+import {
+	chunked,
+	digest,
+	displayableOf,
+	insertChunkSize,
+	publishedAt,
+	refreshDueFeeds,
+} from "~/database/refresh";
 import { feedItems, feeds, REFRESH_INTERVALS, settings } from "~/database/schema";
 
 /** The row `settings` holds, which the `CHECK` on its primary key keeps to exactly one. */
@@ -53,20 +60,8 @@ const DEFAULT_PAGE_LIMIT = 50;
 /** The largest page a caller may ask for, so one call cannot read the whole timeline. */
 const MAX_PAGE_LIMIT = 100;
 
-/**
- * Posts one insert statement carries. A Durable Object statement binds at most 100
- * parameters and a post writes thirteen columns, so seven rows fit with room to spare.
- */
-const ITEMS_PER_INSERT = 7;
-
 /** Ids one `IN` list carries, held under the same 100-parameter ceiling. */
 const IDS_PER_LOOKUP = 90;
-
-/**
- * The longest body a post keeps. An object's row is capped at 2 MB, and a publisher who
- * inlines a whole book still leaves room for every other column of the row.
- */
-const MAX_CONTENT_LENGTH = 1_000_000;
 
 /**
  * The ordering both timelines read in, spelled once and shared. A cursor records the
@@ -370,7 +365,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 				{ returnRow: true },
 			);
 
-			for (let batch of chunked(rows, ITEMS_PER_INSERT)) {
+			for (let batch of chunked(rows, insertChunkSize())) {
 				await tx.createMany(feedItems, batch);
 			}
 
@@ -631,74 +626,25 @@ function normalizeFeedUrl(input: string): string | null {
 
 /**
  * One parsed entry as the row that stores it. Ids are TypeIDs so a post's identity says
- * what it identifies wherever it is read, and `published_at` falls back to first-seen so
- * the column the timeline sorts on is total.
+ * what it identifies wherever it is read, and the projection, the digest and the date
+ * fallback are the refresh path's own, so the first poll after this reads nothing as edited.
  */
 async function itemRow(feedId: string, entry: Feed.Item, now: number): Promise<InsertFeedItem> {
-	let displayable = {
-		title: entry.title ?? entry.url ?? entry.guid,
-		url: entry.url ?? null,
-		summary: entry.summary ?? null,
-		content: capContent(entry.contentHtml),
-		author: entry.author?.name ?? null,
-	};
-
-	let published = entry.publishedAt?.getTime();
+	let displayable = displayableOf(entry);
 
 	return {
 		id: TypeID.fromUUID("item", generateUUID()).toString(),
 		feed_id: feedId,
 		guid: entry.guid,
 		...displayable,
-		published_at: published === undefined || Number.isNaN(published) ? now : published,
+		published_at: publishedAt(entry, now),
 		content_hash: await digest(displayable),
 		read_at: null,
 	};
-}
-
-/** A body trimmed to what one row holds, leaving the rest of the columns their room. */
-function capContent(content: string | undefined): string | null {
-	if (content === undefined) return null;
-	return content.length > MAX_CONTENT_LENGTH ? content.slice(0, MAX_CONTENT_LENGTH) : content;
-}
-
-/**
- * The digest of what a reader sees, taken over the same fields in the same order a
- * refresh takes it over, so the first poll after a subscription reads every post as
- * unchanged. `published_at` stays out of it: feeds that re-date their entries on every
- * poll exist, and one of them would otherwise read as a publisher editing everything.
- */
-async function digest(displayable: {
-	title: string;
-	url: string | null;
-	summary: string | null;
-	content: string | null;
-	author: string | null;
-}): Promise<string> {
-	let source = JSON.stringify([
-		displayable.title,
-		displayable.url,
-		displayable.summary,
-		displayable.content,
-		displayable.author,
-	]);
-
-	let hashed = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(source));
-
-	return [...new Uint8Array(hashed)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 /** The page size a caller asked for, held between one post and {@link MAX_PAGE_LIMIT}. */
 function pageLimit(limit: number | undefined): number {
 	if (limit === undefined || !Number.isFinite(limit)) return DEFAULT_PAGE_LIMIT;
 	return Math.min(Math.max(Math.trunc(limit), 1), MAX_PAGE_LIMIT);
-}
-
-/** Splits a batch into runs of `size`, the last one holding whatever is left. */
-function chunked<value>(values: readonly value[], size: number): value[][] {
-	let batches: value[][] = [];
-	for (let index = 0; index < values.length; index += size) {
-		batches.push(values.slice(index, index + size));
-	}
-	return batches;
 }

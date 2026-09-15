@@ -11,6 +11,7 @@ import type { Database } from "remix/data-table";
 
 import { Feed, FeedFetchError } from "@sdxc/feed";
 import { isFailure } from "@sdxc/result";
+import { TypeID } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
 import { and, eq, getTableColumns, isNull, lt, lte, notNull, or } from "remix/data-table";
 
@@ -58,6 +59,20 @@ const MAX_BACKOFF_MS = 24 * 60 * 60 * 1000;
 
 /** Bound parameters one SQL storage statement accepts, which is what chunks an insert. */
 const MAX_BOUND_PARAMETERS = 100;
+
+/**
+ * The longest body a stored post keeps. A Durable Object's row is capped at 2 MB, so a
+ * publisher who inlines a whole book still leaves every other column of the row its room.
+ * {@link displayableOf} applies it, which is what keeps a cut body hashing the same twice.
+ */
+export const MAX_CONTENT_LENGTH = 1_000_000;
+
+/**
+ * The longest summary a stored post keeps. Its own cap rather than the body's, so the two
+ * together still leave the row room: a summary is a paragraph even when a publisher sends
+ * a chapter.
+ */
+export const MAX_SUMMARY_LENGTH = 100_000;
 
 /**
  * The status behind a failed retrieval. `Feed.fetch` reports an error status and an
@@ -109,8 +124,12 @@ export interface RefreshRunOptions {
 	retention?: number;
 }
 
-/** The fields a reader sees, which is exactly what `content_hash` is taken over. */
-interface Displayable {
+/**
+ * The fields a reader sees, and the whole of what `content_hash` is taken over. A
+ * publication date stays out of it deliberately: feeds that re-date every entry on every
+ * poll exist, and one of them would otherwise read as a publisher editing everything.
+ */
+export interface Displayable {
 	title: string;
 	url: string | null;
 	summary: string | null;
@@ -429,7 +448,7 @@ async function classify(
 
 		if (stored === undefined) {
 			inserts.push({
-				id: generateUUID(),
+				id: TypeID.fromUUID("item", generateUUID()).toString(),
 				feed_id: feed.id,
 				guid: entry.guid,
 				...displayable,
@@ -460,35 +479,47 @@ async function classify(
 }
 
 /**
- * The fields a reader sees, resolved to what the row will hold. A publisher who titles
- * nothing still gets something to click on, falling back through the entry's link to the
- * identity it always carries.
+ * The fields a reader sees, resolved to what the row will hold. Build every stored post
+ * from this, on any path: a publisher who titles nothing still gets something to click on,
+ * and a body past {@link MAX_CONTENT_LENGTH} is cut here so it is hashed as it is stored.
+ *
+ * @param entry - One entry of a parsed feed document.
  */
-function displayableOf(entry: Feed.Item): Displayable {
+export function displayableOf(entry: Feed.Item): Displayable {
+	let content = entry.contentHtml ?? null;
+
+	let summary = entry.summary ?? null;
+
 	return {
 		title: entry.title ?? entry.url ?? entry.guid,
 		url: entry.url ?? null,
-		summary: entry.summary ?? null,
-		content: entry.contentHtml ?? null,
+		summary: summary === null ? null : summary.slice(0, MAX_SUMMARY_LENGTH),
+		content: content === null ? null : content.slice(0, MAX_CONTENT_LENGTH),
 		author: entry.author?.name ?? null,
 	};
 }
 
 /**
- * When a post was published, falling back to first-seen so the column stays total. A feed
- * that jitters its dates re-dates nothing: this runs only for an entry being inserted.
+ * When a post was published, falling back to `now` so the column the timeline sorts on is
+ * total. Call it for an entry being inserted: a stored post keeps the date it was written
+ * with, so a feed that jitters its dates re-dates nothing.
+ *
+ * @param entry - One entry of a parsed feed document.
+ * @param now - Epoch milliseconds the entry is first seen at.
  */
-function publishedAt(entry: Feed.Item, now: number): number {
+export function publishedAt(entry: Feed.Item, now: number): number {
 	let published = entry.publishedAt?.getTime();
 	return published === undefined || Number.isNaN(published) ? now : published;
 }
 
 /**
- * The digest of what a reader sees. `published_at` stays out of it, so a feed that
- * re-dates its entries on every poll — and they exist — does not read as one editing
- * every post forever.
+ * The digest that tells an edited post from an unchanged one, which is what `content_hash`
+ * holds. Take it over a {@link displayableOf} projection on every path that writes a post,
+ * so the first poll after a subscription reads every post it already stored as unchanged.
+ *
+ * @param displayable - The fields the row will hold, as {@link displayableOf} resolved them.
  */
-async function digest(displayable: Displayable): Promise<string> {
+export async function digest(displayable: Displayable): Promise<string> {
 	let source = JSON.stringify([
 		displayable.title,
 		displayable.url,
@@ -502,14 +533,24 @@ async function digest(displayable: Displayable): Promise<string> {
 	return [...new Uint8Array(hashed)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-/** Rows one insert statement fits, derived from the schema so it follows a new column. */
-function insertChunkSize(): number {
+/**
+ * Rows one insert statement fits, derived from the schema so it follows a new column.
+ * Call it from any path inserting posts: a Durable Object statement binds at most
+ * {@link MAX_BOUND_PARAMETERS} parameters, and a batch sized by hand stops being right
+ * the day a column is added.
+ */
+export function insertChunkSize(): number {
 	let columns = Object.keys(getTableColumns(feedItems)).length;
 	return Math.max(1, Math.floor(MAX_BOUND_PARAMETERS / columns));
 }
 
-/** Splits a batch into runs of `size`, the last one holding whatever is left. */
-function chunked<value>(values: value[], size: number): value[][] {
+/**
+ * Splits a batch into runs of `size`, the last one holding whatever is left.
+ *
+ * @param values - The batch to split.
+ * @param size - The largest run to produce.
+ */
+export function chunked<value>(values: readonly value[], size: number): value[][] {
 	let chunks: value[][] = [];
 	for (let index = 0; index < values.length; index += size) {
 		chunks.push(values.slice(index, index + size));

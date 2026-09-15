@@ -111,6 +111,8 @@ export default {
 			neverChecked: "Aún sin revisar",
 			failing_one: "La última revisión falló",
 			failing_other: "Las últimas {{count}} revisiones fallaron",
+			/** How many checks failed and what the last one recorded, read as one badge. */
+			failingBecause: "{{failures}}: {{reason}}",
 		},
 
 		follow: {

@@ -98,10 +98,12 @@ export function renderFeedsPage(
 							date: dates.format(new Date(feed.lastFetchedAt)),
 						}),
 
-			/** How many checks have failed and what the last one recorded, read as one badge. */
 			failureLabel:
 				isFailing && statusKey
-					? `${ctx.i18next.t("feeds.index.failing", { count: feed.failureCount })} — ${ctx.i18next.t(statusKey)}`
+					? ctx.i18next.t("feeds.index.failingBecause", {
+							failures: ctx.i18next.t("feeds.index.failing", { count: feed.failureCount }),
+							reason: ctx.i18next.t(statusKey),
+						})
 					: null,
 		};
 	});
