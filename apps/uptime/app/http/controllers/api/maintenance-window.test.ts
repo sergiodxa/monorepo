@@ -20,6 +20,7 @@ import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { encodeId } from "~/app/services/typed-id";
 import { maintenanceWindows, monitors, teams } from "~/database/schema";
+import { maintenanceWindowRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
 
 /**
@@ -29,7 +30,7 @@ import routes from "~/routes/web";
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
-let { default: maintenanceWindowController, maintenanceWindowRoutes } =
+let { default: maintenanceWindowController } =
 	await import("~/app/http/controllers/api/maintenance-window");
 
 type Db = ReturnType<typeof createTestDatabase>["db"];

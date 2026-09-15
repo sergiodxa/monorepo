@@ -33,7 +33,7 @@ import { MONITOR_SCOPE_TYPES } from "~/app/lib/monitor-scope";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import { apiPage, newestFirst, PAGING } from "~/app/services/pagination";
 import { encodeId, encodeMonitorId, typedId } from "~/app/services/typed-id";
-import routes from "~/routes/web";
+import { alertRoutes } from "~/routes/api-groups";
 
 const AlertIdParams = s.object({ alertId: typedId("alt") });
 
@@ -44,14 +44,6 @@ const UpdateAlertSchema = s.object({
 	monitorType: s.optional(s.enum_(MONITOR_SCOPE_TYPES)),
 	monitorId: s.optional(s.nullable(s.string())),
 });
-
-/** Route leaves this controller handles, grouped for a single `router.map()` call. */
-export const alertRoutes = {
-	alertShow: routes.api.v1.alerts.show,
-	alertUpdate: routes.api.v1.alerts.update,
-	alertDestroy: routes.api.v1.alerts.destroy,
-	alertEvents: routes.api.v1.alerts.events,
-};
 
 export default createController(alertRoutes, {
 	middleware: [catchValidationError()],

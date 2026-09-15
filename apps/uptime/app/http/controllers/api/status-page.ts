@@ -26,7 +26,7 @@ import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import { encodeId, typedId } from "~/app/services/typed-id";
-import routes from "~/routes/web";
+import { statusPageRoutes } from "~/routes/api-groups";
 
 const SLUG_PATTERN = /^[a-z0-9-]+$/;
 const StatusPageIdParams = s.object({ statusPageId: typedId("sp") });
@@ -66,14 +66,6 @@ const UpdateAssociationsSchema = s.object({
 	monitorIds: s.defaulted(s.array(typedId("mon")), []),
 	cronJobIds: s.defaulted(s.array(typedId("cron")), []),
 });
-
-/** Route leaves this controller handles, grouped for a single `router.map()` call. */
-export const statusPageRoutes = {
-	statusPageShow: routes.api.v1.statusPages.show,
-	statusPageUpdate: routes.api.v1.statusPages.update,
-	statusPageDestroy: routes.api.v1.statusPages.destroy,
-	statusPageMonitors: routes.api.v1.statusPages.monitors,
-};
 
 export default createController(statusPageRoutes, {
 	middleware: [catchValidationError()],

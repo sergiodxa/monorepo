@@ -231,6 +231,7 @@
         "@sdxc/i18n": "workspace:*",
         "@sdxc/icons": "workspace:*",
         "@sdxc/jobs": "workspace:*",
+        "@sdxc/lazy-route": "workspace:*",
         "@sdxc/location": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/mail": "workspace:*",

@@ -30,7 +30,7 @@ import { apiError, apiSuccess } from "~/app/services/api-response";
 import { apiPage, PAGING } from "~/app/services/pagination";
 import { encodeId, typedId } from "~/app/services/typed-id";
 import { dnsMonitorRecords } from "~/database/schema";
-import routes from "~/routes/web";
+import { dnsMonitorRecordsRoutes } from "~/routes/api-groups";
 
 /**
  * The alphabetical walk this list has always served, since a caller reads it to decide
@@ -96,12 +96,6 @@ function validationMessage(issues: readonly { message: string; path?: readonly u
 		})
 		.join(", ");
 }
-
-/** Route leaves this controller handles, grouped for a single `router.map()` call. */
-export const dnsMonitorRecordsRoutes = {
-	dnsMonitorRecordsIndex: routes.api.v1.dnsMonitors.records.index,
-	dnsMonitorRecordUpdate: routes.api.v1.dnsMonitors.records.update,
-};
 
 export default createController(dnsMonitorRecordsRoutes, {
 	middleware: [catchValidationError()],

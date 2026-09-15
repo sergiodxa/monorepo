@@ -22,9 +22,10 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { parseLink } from "~/app/lib/test/paging";
 import { encodeId } from "~/app/services/typed-id";
 import { teams } from "~/database/schema";
+import { invitesRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
 
-let { default: invitesController, invitesRoutes } = await import("./invites");
+let { default: invitesController } = await import("./invites");
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 

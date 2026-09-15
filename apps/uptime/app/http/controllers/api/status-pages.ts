@@ -24,7 +24,7 @@ import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
-import routes from "~/routes/web";
+import { statusPagesRoutes } from "~/routes/api-groups";
 
 const SLUG_PATTERN = /^[a-z0-9-]+$/;
 
@@ -61,12 +61,6 @@ const CreateStatusPageSchema = s.object({
 	isPublic: s.defaulted(s.boolean(), true),
 	showOverallStatus: s.defaulted(s.boolean(), true),
 });
-
-/** Route leaves this controller handles, grouped for a single `router.map()` call. */
-export const statusPagesRoutes = {
-	statusPagesIndex: routes.api.v1.statusPages.index,
-	statusPagesCreate: routes.api.v1.statusPages.create,
-};
 
 export default createController(statusPagesRoutes, {
 	middleware: [catchValidationError()],

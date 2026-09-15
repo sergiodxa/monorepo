@@ -25,6 +25,7 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { parseLink } from "~/app/lib/test/paging";
 import { encodeId } from "~/app/services/typed-id";
 import { flowMonitorResults, flowMonitors, teamDomains, teams } from "~/database/schema";
+import { flowMonitorsRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
 
 const DOMAIN = "example.test";
@@ -33,7 +34,7 @@ const ORIGIN = `https://app.${DOMAIN}`;
 /** The password a login flow writes into its spec, and the reason `source` never comes back. */
 const SPEC_PASSWORD = "hunter2-in-the-spec";
 
-let { default: flowMonitorsController, flowMonitorsRoutes } = await import("./flow-monitors");
+let { default: flowMonitorsController } = await import("./flow-monitors");
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 

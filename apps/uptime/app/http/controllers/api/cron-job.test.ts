@@ -21,9 +21,10 @@ import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { encodeId } from "~/app/services/typed-id";
 import { teams } from "~/database/schema";
+import { cronJobRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
 
-let { default: cronJobController, cronJobRoutes } = await import("./cron-job");
+let { default: cronJobController } = await import("./cron-job");
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 

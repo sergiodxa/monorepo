@@ -19,9 +19,10 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { parseLink } from "~/app/lib/test/paging";
 import { encodeId } from "~/app/services/typed-id";
 import { tcpMonitorResults, tcpMonitors, teams } from "~/database/schema";
+import { tcpMonitorRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
 
-let { default: tcpMonitorController, tcpMonitorRoutes } = await import("./tcp-monitor");
+let { default: tcpMonitorController } = await import("./tcp-monitor");
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 

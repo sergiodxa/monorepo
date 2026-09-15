@@ -24,7 +24,7 @@ import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId, typedId } from "~/app/services/typed-id";
-import routes from "~/routes/web";
+import { monitorContentChecksRoutes } from "~/routes/api-groups";
 
 const CONTENT_CHECK_TYPES = ["contains", "not_contains", "regex"] as const;
 
@@ -64,13 +64,6 @@ const CreateContentCheckSchema = s
 			return false;
 		}
 	}, "Invalid regular expression");
-
-/** Route leaves this controller handles, grouped for a single `router.map()` call. */
-export const monitorContentChecksRoutes = {
-	monitorContentChecksIndex: routes.api.v1.monitors.contentChecks.index,
-	monitorContentChecksCreate: routes.api.v1.monitors.contentChecks.create,
-	monitorContentCheckDestroy: routes.api.v1.monitors.contentChecks.destroy,
-};
 
 export default createController(monitorContentChecksRoutes, {
 	middleware: [catchValidationError()],

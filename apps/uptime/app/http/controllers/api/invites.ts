@@ -24,7 +24,7 @@ import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
-import routes from "~/routes/web";
+import { invitesRoutes } from "~/routes/api-groups";
 
 /** Maps an invite row to its public camelCase JSON shape. */
 function serializeInvite(invite: SelectInvite) {
@@ -40,12 +40,6 @@ function serializeInvite(invite: SelectInvite) {
 }
 
 const CreateInviteSchema = s.object({ email: s.string().pipe(checks.email()) });
-
-/** Route leaves this controller handles, grouped for a single `router.map()` call. */
-export const invitesRoutes = {
-	invitesIndex: routes.api.v1.invites.index,
-	invitesCreate: routes.api.v1.invites.create,
-};
 
 export default createController(invitesRoutes, {
 	middleware: [catchValidationError()],

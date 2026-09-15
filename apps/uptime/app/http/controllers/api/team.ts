@@ -19,7 +19,7 @@ import Team from "~/app/data/team";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import { encodeId } from "~/app/services/typed-id";
-import routes from "~/routes/web";
+import { teamRoutes } from "~/routes/api-groups";
 
 /** Maps a team row to its public camelCase JSON shape. */
 function serializeTeam(team: SelectTeam) {
@@ -43,12 +43,6 @@ const UpdateTeamSchema = s
 		(value) => value.name !== undefined || value.logoUrl !== undefined,
 		"At least one field must be provided",
 	);
-
-/** Route leaves this controller handles, grouped for a single `router.map()` call. */
-export const teamRoutes = {
-	teamShow: routes.api.v1.teamShow,
-	teamUpdate: routes.api.v1.teamUpdate,
-};
 
 export default createController(teamRoutes, {
 	actions: {

@@ -26,7 +26,7 @@ import { MONITOR_SCOPE_TYPES, storedMonitorScope } from "~/app/lib/monitor-scope
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { decodeMonitorId, encodeId, encodeMonitorId } from "~/app/services/typed-id";
-import routes from "~/routes/web";
+import { maintenanceRoutes } from "~/routes/api-groups";
 
 /**
  * The scope a request asks for, derived from the two fields that express it.
@@ -95,12 +95,6 @@ const CreateMaintenanceSchema = s
 		showOnStatusPage: s.defaulted(s.boolean(), true),
 	})
 	.refine((value) => value.endsAt > value.startsAt, "endsAt must be after startsAt");
-
-/** Route leaves this controller handles, grouped for a single `router.map()` call. */
-export const maintenanceRoutes = {
-	maintenanceIndex: routes.api.v1.maintenance.index,
-	maintenanceCreate: routes.api.v1.maintenance.create,
-};
 
 export default createController(maintenanceRoutes, {
 	middleware: [catchValidationError()],

@@ -23,6 +23,7 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { parseLink } from "~/app/lib/test/paging";
 import { encodeId } from "~/app/services/typed-id";
 import { alerts, dnsMonitors, monitors, teams } from "~/database/schema";
+import { alertsRoutes } from "~/routes/api-groups";
 
 /**
  * `~/app/data/monitor`, imported transitively for `monitorId` validation,
@@ -31,7 +32,7 @@ import { alerts, dnsMonitors, monitors, teams } from "~/database/schema";
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
-let { default: alertsController, alertsRoutes } = await import("./alerts");
+let { default: alertsController } = await import("./alerts");
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 

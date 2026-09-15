@@ -23,7 +23,7 @@ import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
-import routes from "~/routes/web";
+import { tcpMonitorsRoutes } from "~/routes/api-groups";
 
 /** Maps a TCP monitor row to its public camelCase JSON shape. */
 function serializeTcpMonitor(monitor: SelectTcpMonitor) {
@@ -51,12 +51,6 @@ const CreateTcpMonitorSchema = s.object({
 	intervalSeconds: s.defaulted(s.number().pipe(checks.min(60), checks.max(86_400)), 60),
 	isEnabled: s.defaulted(s.boolean(), true),
 });
-
-/** Route leaves this controller handles, grouped for a single `router.map()` call. */
-export const tcpMonitorsRoutes = {
-	tcpMonitorsIndex: routes.api.v1.tcpMonitors.index,
-	tcpMonitorsCreate: routes.api.v1.tcpMonitors.create,
-};
 
 export default createController(tcpMonitorsRoutes, {
 	middleware: [catchValidationError()],

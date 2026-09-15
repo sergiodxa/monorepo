@@ -38,7 +38,7 @@ import {
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
 import { MAX_ZONE_FILE_BYTES, parseZoneFile } from "~/app/services/zone-file";
-import routes from "~/routes/web";
+import { dnsMonitorsRoutes } from "~/routes/api-groups";
 
 /** Maps a DNS monitor row to its public camelCase JSON shape. */
 function serializeDnsMonitor(monitor: SelectDnsMonitor) {
@@ -94,12 +94,6 @@ function serializeDiscovery(
 		duplicateLines: zoneFile?.duplicates.map((duplicate) => duplicate.line) ?? [],
 	};
 }
-
-/** Route leaves this controller handles, grouped for a single `router.map()` call. */
-export const dnsMonitorsRoutes = {
-	dnsMonitorsIndex: routes.api.v1.dnsMonitors.index,
-	dnsMonitorsCreate: routes.api.v1.dnsMonitors.create,
-};
 
 export default createController(dnsMonitorsRoutes, {
 	middleware: [catchValidationError()],

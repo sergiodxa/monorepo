@@ -23,7 +23,7 @@ import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import { apiPage, newestFirst, PAGING } from "~/app/services/pagination";
 import { encodeId, typedId } from "~/app/services/typed-id";
-import routes from "~/routes/web";
+import { tcpMonitorRoutes } from "~/routes/api-groups";
 
 const TcpMonitorIdParams = s.object({ tcpMonitorId: typedId("tcpm") });
 
@@ -52,14 +52,6 @@ const UpdateTcpMonitorSchema = s.object({
 	intervalSeconds: s.optional(s.number().pipe(checks.min(60), checks.max(86_400))),
 	isEnabled: s.optional(s.boolean()),
 });
-
-/** Route leaves this controller handles, grouped for a single `router.map()` call. */
-export const tcpMonitorRoutes = {
-	tcpMonitorShow: routes.api.v1.tcpMonitors.show,
-	tcpMonitorUpdate: routes.api.v1.tcpMonitors.update,
-	tcpMonitorDestroy: routes.api.v1.tcpMonitors.destroy,
-	tcpMonitorResults: routes.api.v1.tcpMonitors.results,
-};
 
 export default createController(tcpMonitorRoutes, {
 	middleware: [catchValidationError()],

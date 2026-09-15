@@ -5,9 +5,13 @@
  * HTML rendering) followed by every route mapped to its controller. Shared
  * by the worker and any other runtime entry point.
  *
- * The SSR renderer lives in `~/app/http/render` so tests can reach it
- * directly — the controllers mounted here pull in bundler-only globs that
- * block any test from importing this module.
+ * Every route is mapped through `lazy()`, so the URL surface is complete at
+ * startup while each controller arrives with the first request that reaches it.
+ * A cold isolate evaluates the handful of modules it serves instead of the whole
+ * route table, which here spans the marketing site, the signed-in app, and the API.
+ *
+ * The SSR renderer lives in `~/app/http/render` so tests can reach it directly,
+ * without building a router to get at it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,6 +22,7 @@ import type { Middleware } from "remix/router";
 import billing from "@sdxc/billing/middleware";
 import featureFlags from "@sdxc/flags/middleware/router";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
+import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import { CloudflareTransport } from "@sdxc/mail/cloudflare";
 import mail from "@sdxc/mail/middleware";
@@ -30,197 +35,7 @@ import { renderWith } from "remix/middleware/render";
 import { createController, createRouter } from "remix/router";
 
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
-import {
-	cancelDeletion,
-	createTeam,
-	exportData,
-	leaveTeam,
-	requestDeletion,
-	updateEmails,
-	updateLanguage,
-} from "~/app/http/controllers/actions/account";
-import { createAlert, deleteAlert, updateAlert } from "~/app/http/controllers/actions/alerts";
-import { createApiKey, deleteApiKey } from "~/app/http/controllers/actions/api-keys";
-import {
-	createContentCheck,
-	deleteContentCheck,
-} from "~/app/http/controllers/actions/content-checks";
-import {
-	createCronJob,
-	deleteCronJob,
-	updateCronJob,
-} from "~/app/http/controllers/actions/cron-jobs";
-import { setDashboardTab } from "~/app/http/controllers/actions/dashboard";
-import {
-	checkDnsMonitor,
-	createDnsMonitor,
-	deleteDnsMonitor,
-	importDnsMonitorZoneFile,
-	reviewDnsMonitor,
-	toggleDnsMonitorRecord,
-	updateDnsMonitor,
-} from "~/app/http/controllers/actions/dns-monitors";
-import {
-	checkFlowMonitor,
-	createFlowMonitor,
-	deleteFlowMonitor,
-	updateFlowMonitor,
-} from "~/app/http/controllers/actions/flow-monitors";
-import { createInvite, revokeInvite } from "~/app/http/controllers/actions/invites";
-import {
-	createMaintenanceWindow,
-	deleteMaintenanceWindow,
-	endMaintenanceWindow,
-	updateMaintenanceWindow,
-} from "~/app/http/controllers/actions/maintenance-windows";
-import {
-	createMonitor,
-	deleteMonitor,
-	playMonitor,
-	updateMonitor,
-} from "~/app/http/controllers/actions/monitors";
-import { importMonitors } from "~/app/http/controllers/actions/monitors-import";
-import { runPing } from "~/app/http/controllers/actions/ping";
-import { updateSsl } from "~/app/http/controllers/actions/ssl";
-import {
-	createStatusPage,
-	deleteStatusPage,
-	updateStatusPage,
-} from "~/app/http/controllers/actions/status-pages";
-import {
-	checkTcpMonitor,
-	createTcpMonitor,
-	deleteTcpMonitor,
-	updateTcpMonitor,
-} from "~/app/http/controllers/actions/tcp-monitors";
-import {
-	changeRole,
-	deleteTeam,
-	removeMember,
-	updateTeam,
-} from "~/app/http/controllers/actions/team";
-import {
-	addDomain,
-	removeDomain,
-	retryDomainVerification,
-} from "~/app/http/controllers/actions/team-domains";
-import alertController, { alertRoutes } from "~/app/http/controllers/api/alert";
-import alertsController, { alertsRoutes } from "~/app/http/controllers/api/alerts";
-import { apiKeyDestroy } from "~/app/http/controllers/api/api-key";
-import apiKeysController, { apiKeysRoutes } from "~/app/http/controllers/api/api-keys";
-import { backfillDailyStatsCreate } from "~/app/http/controllers/api/backfill-daily-stats";
-import cronJobController, { cronJobRoutes } from "~/app/http/controllers/api/cron-job";
-import cronJobPing from "~/app/http/controllers/api/cron-job-ping";
-import cronJobsController, { cronJobsRoutes } from "~/app/http/controllers/api/cron-jobs";
-import dnsMonitorController, { dnsMonitorRoutes } from "~/app/http/controllers/api/dns-monitor";
-import dnsMonitorRecordsController, {
-	dnsMonitorRecordsRoutes,
-} from "~/app/http/controllers/api/dns-monitor-records";
-import dnsMonitorsController, { dnsMonitorsRoutes } from "~/app/http/controllers/api/dns-monitors";
-import flowMonitorsController, {
-	flowMonitorsRoutes,
-} from "~/app/http/controllers/api/flow-monitors";
-import { inviteDestroy } from "~/app/http/controllers/api/invite";
-import invitesController, { invitesRoutes } from "~/app/http/controllers/api/invites";
-import maintenanceController, { maintenanceRoutes } from "~/app/http/controllers/api/maintenance";
-import maintenanceWindowController, {
-	maintenanceWindowRoutes,
-} from "~/app/http/controllers/api/maintenance-window";
-import { membershipsIndex } from "~/app/http/controllers/api/memberships";
-import monitorController, { monitorRoutes } from "~/app/http/controllers/api/monitor";
-import monitorContentChecksController, {
-	monitorContentChecksRoutes,
-} from "~/app/http/controllers/api/monitor-content-checks";
-import monitorsController, { monitorsRoutes } from "~/app/http/controllers/api/monitors";
-import pingCreate from "~/app/http/controllers/api/ping";
-import { statusShow } from "~/app/http/controllers/api/status";
-import statusPageApiController, { statusPageRoutes } from "~/app/http/controllers/api/status-page";
-import statusPagesController, { statusPagesRoutes } from "~/app/http/controllers/api/status-pages";
-import tcpMonitorController, { tcpMonitorRoutes } from "~/app/http/controllers/api/tcp-monitor";
-import tcpMonitorsController, { tcpMonitorsRoutes } from "~/app/http/controllers/api/tcp-monitors";
-import teamController, { teamRoutes } from "~/app/http/controllers/api/team";
-import teamDomainsController, { teamDomainsRoutes } from "~/app/http/controllers/api/team-domains";
-import appIndex from "~/app/http/controllers/app/index";
-import account from "~/app/http/controllers/app/team/account";
-import alertEdit from "~/app/http/controllers/app/team/alert-edit";
-import alertHistory from "~/app/http/controllers/app/team/alert-history";
-import alertNew from "~/app/http/controllers/app/team/alert-new";
-import alerts from "~/app/http/controllers/app/team/alerts";
-import apiKeyNew from "~/app/http/controllers/app/team/api-key-new";
-import apiKeys from "~/app/http/controllers/app/team/api-keys";
-import checkout from "~/app/http/controllers/app/team/checkout";
-import cronJobEdit from "~/app/http/controllers/app/team/cron-job-edit";
-import cronJobNew from "~/app/http/controllers/app/team/cron-job-new";
-import cronJobShow from "~/app/http/controllers/app/team/cron-job-show";
-import cronJobs from "~/app/http/controllers/app/team/cron-jobs";
-import teamDashboard from "~/app/http/controllers/app/team/dashboard";
-import dashboardCardCount from "~/app/http/controllers/app/team/dashboard-card-count";
-import dashboardCardSlowestEndpoint from "~/app/http/controllers/app/team/dashboard-card-slowest-endpoint";
-import dashboardCardUptime from "~/app/http/controllers/app/team/dashboard-card-uptime";
-import dashboardCardUsage from "~/app/http/controllers/app/team/dashboard-card-usage";
-import dashboardPanel from "~/app/http/controllers/app/team/dashboard-panel";
-import dashboardQuickPing from "~/app/http/controllers/app/team/dashboard-quick-ping";
-import dnsMonitorCardCheckHistory from "~/app/http/controllers/app/team/dns-monitor-card-check-history";
-import dnsMonitorCardResults from "~/app/http/controllers/app/team/dns-monitor-card-results";
-import dnsMonitorCardUptimeHistory from "~/app/http/controllers/app/team/dns-monitor-card-uptime-history";
-import dnsMonitorEdit from "~/app/http/controllers/app/team/dns-monitor-edit";
-import dnsMonitorNew from "~/app/http/controllers/app/team/dns-monitor-new";
-import dnsMonitorReview from "~/app/http/controllers/app/team/dns-monitor-review";
-import dnsMonitorShow from "~/app/http/controllers/app/team/dns-monitor-show";
-import dnsMonitors from "~/app/http/controllers/app/team/dns-monitors";
-import flowMonitorCardResults from "~/app/http/controllers/app/team/flow-monitor-card-results";
-import flowMonitorEdit from "~/app/http/controllers/app/team/flow-monitor-edit";
-import flowMonitorNew from "~/app/http/controllers/app/team/flow-monitor-new";
-import flowMonitorShow from "~/app/http/controllers/app/team/flow-monitor-show";
-import flowMonitors from "~/app/http/controllers/app/team/flow-monitors";
-import httpMonitors from "~/app/http/controllers/app/team/http-monitors";
-import teamIndex from "~/app/http/controllers/app/team/index";
-import maintenanceWindowEdit from "~/app/http/controllers/app/team/maintenance-window-edit";
-import maintenanceWindowNew from "~/app/http/controllers/app/team/maintenance-window-new";
-import maintenanceWindows from "~/app/http/controllers/app/team/maintenance-windows";
-import monitorCardP99ResponseTime from "~/app/http/controllers/app/team/monitor-card-p99-response-time";
-import monitorCardSlowestResult from "~/app/http/controllers/app/team/monitor-card-slowest-result";
-import monitorCardUptime from "~/app/http/controllers/app/team/monitor-card-uptime";
-import monitorCardUptimeHistory from "~/app/http/controllers/app/team/monitor-card-uptime-history";
-import monitorCardUsage from "~/app/http/controllers/app/team/monitor-card-usage";
-import monitorEdit from "~/app/http/controllers/app/team/monitor-edit";
-import monitorNew from "~/app/http/controllers/app/team/monitor-new";
-import monitorRunStatus from "~/app/http/controllers/app/team/monitor-run-status";
-import monitorShow from "~/app/http/controllers/app/team/monitor-show";
-import monitorsImport from "~/app/http/controllers/app/team/monitors-import";
-import settings from "~/app/http/controllers/app/team/settings";
-import statusPageEdit from "~/app/http/controllers/app/team/status-page-edit";
-import statusPageNew from "~/app/http/controllers/app/team/status-page-new";
-import statusPages from "~/app/http/controllers/app/team/status-pages";
-import tcpMonitorCardResults from "~/app/http/controllers/app/team/tcp-monitor-card-results";
-import tcpMonitorCardUptimeHistory from "~/app/http/controllers/app/team/tcp-monitor-card-uptime-history";
-import tcpMonitorEdit from "~/app/http/controllers/app/team/tcp-monitor-edit";
-import tcpMonitorNew from "~/app/http/controllers/app/team/tcp-monitor-new";
-import tcpMonitorShow from "~/app/http/controllers/app/team/tcp-monitor-show";
-import tcpMonitors from "~/app/http/controllers/app/team/tcp-monitors";
-import authController from "~/app/http/controllers/auth";
 import defaultHandler from "~/app/http/controllers/default-handler";
-import docsIndex from "~/app/http/controllers/docs-index";
-import docsShow from "~/app/http/controllers/docs-show";
-import healthcheck from "~/app/http/controllers/healthcheck";
-import healthcheckAnalyticsEngine from "~/app/http/controllers/healthcheck-analytics-engine";
-import home from "~/app/http/controllers/home";
-import inviteController from "~/app/http/controllers/invite";
-import logoutController from "~/app/http/controllers/logout";
-import marketingAudience from "~/app/http/controllers/marketing-audience";
-import marketingComparison from "~/app/http/controllers/marketing-comparison";
-import marketingFeature from "~/app/http/controllers/marketing-feature";
-import marketingUseCase from "~/app/http/controllers/marketing-use-case";
-import privacy from "~/app/http/controllers/privacy";
-import sitemap from "~/app/http/controllers/sitemap";
-import statusPageController from "~/app/http/controllers/status-page";
-import terms from "~/app/http/controllers/terms";
-import trialCheck from "~/app/http/controllers/trial/index";
-import trialLead from "~/app/http/controllers/trial/lead";
-import trialReport from "~/app/http/controllers/trial/report";
-import trialUnsubscribe from "~/app/http/controllers/trial/unsubscribe";
-import trust from "~/app/http/controllers/trust";
-import polarWebhook from "~/app/http/controllers/webhooks/polar";
 import { attribution } from "~/app/http/middleware/attribution";
 import auth, { getViewer } from "~/app/http/middleware/auth";
 import { database } from "~/app/http/middleware/database";
@@ -234,6 +49,29 @@ import { polar } from "~/app/lib/billing";
 import { createDatabase } from "~/app/lib/database";
 import { flags } from "~/app/lib/flags";
 import { logger } from "~/bootstrap/logger";
+import {
+	alertRoutes,
+	alertsRoutes,
+	apiKeysRoutes,
+	cronJobRoutes,
+	cronJobsRoutes,
+	dnsMonitorRecordsRoutes,
+	dnsMonitorRoutes,
+	dnsMonitorsRoutes,
+	flowMonitorsRoutes,
+	invitesRoutes,
+	maintenanceRoutes,
+	maintenanceWindowRoutes,
+	monitorContentChecksRoutes,
+	monitorRoutes,
+	monitorsRoutes,
+	statusPageRoutes,
+	statusPagesRoutes,
+	tcpMonitorRoutes,
+	tcpMonitorsRoutes,
+	teamDomainsRoutes,
+	teamRoutes,
+} from "~/routes/api-groups";
 import routes from "~/routes/web";
 
 /**
@@ -344,7 +182,9 @@ export default function application(options: application.Options) {
 		/**
 		 * Renders the translated 404 page for unmatched paths. A path under
 		 * {@link MACHINE_PATH_PREFIXES} lands here too; since `htmlOnly` skipped it
-		 * earlier, this resolves the language itself before rendering.
+		 * earlier, this resolves the language itself before rendering. Imported
+		 * eagerly, unlike every mapped controller: a request that matches no route
+		 * ends here, so deferring it would only delay the response it already owes.
 		 */
 		defaultHandler(context) {
 			if (!isMachinePath(context.url.pathname)) return defaultHandler(context);
@@ -352,117 +192,379 @@ export default function application(options: application.Options) {
 		},
 	});
 
-	router.map(routes.home, home);
-	router.map(routes.healthcheck, healthcheck);
-	router.map(routes.healthcheckAnalyticsEngine, healthcheckAnalyticsEngine);
-	router.map(routes.auth, authController);
-	router.map(routes.logout, logoutController);
-	router.map(routes.statusPage, statusPageController);
-	router.map(routes.invite, inviteController);
+	router.map(
+		routes.home,
+		lazy(() => import("~/app/http/controllers/home")),
+	);
+	router.map(
+		routes.healthcheck,
+		lazy(() => import("~/app/http/controllers/healthcheck")),
+	);
+	router.map(
+		routes.healthcheckAnalyticsEngine,
+		lazy(() => import("~/app/http/controllers/healthcheck-analytics-engine")),
+	);
+	router.map(
+		routes.auth,
+		lazy(() => import("~/app/http/controllers/auth")),
+	);
+	router.map(
+		routes.logout,
+		lazy(() => import("~/app/http/controllers/logout")),
+	);
+	router.map(
+		routes.statusPage,
+		lazy(() => import("~/app/http/controllers/status-page")),
+	);
+	router.map(
+		routes.invite,
+		lazy(() => import("~/app/http/controllers/invite")),
+	);
 
 	/**
 	 * Public try-it surface: outside every auth guard since using it needs no
 	 * account. Each leaf guards itself instead — `trial-guard.ts` for
 	 * `trial.check`'s POST, an unguessable URL token for `trial.unsubscribe`.
 	 */
-	router.map(routes.trial.check, trialCheck);
-	router.map(routes.trial.lead, trialLead);
-	router.map(routes.trial.unsubscribe, trialUnsubscribe);
-	router.map(routes.trial.report, trialReport);
+	router.map(
+		routes.trial.check,
+		lazy(() => import("~/app/http/controllers/trial/index")),
+	);
+	router.map(
+		routes.trial.lead,
+		lazy(() => import("~/app/http/controllers/trial/lead")),
+	);
+	router.map(
+		routes.trial.unsubscribe,
+		lazy(() => import("~/app/http/controllers/trial/unsubscribe")),
+	);
+	router.map(
+		routes.trial.report,
+		lazy(() => import("~/app/http/controllers/trial/report")),
+	);
 
-	router.map(routes.marketing.feature, marketingFeature);
-	router.map(routes.marketing.audience, marketingAudience);
-	router.map(routes.marketing.useCase, marketingUseCase);
-	router.map(routes.marketing.comparison, marketingComparison);
-	router.map(routes.trust, trust);
-	router.map(routes.legal.privacy, privacy);
-	router.map(routes.legal.terms, terms);
-	router.map(routes.docs.index, docsIndex);
-	router.map(routes.docs.show, docsShow);
-	router.map(routes.sitemap, sitemap);
+	router.map(
+		routes.marketing.feature,
+		lazy(() => import("~/app/http/controllers/marketing-feature")),
+	);
+	router.map(
+		routes.marketing.audience,
+		lazy(() => import("~/app/http/controllers/marketing-audience")),
+	);
+	router.map(
+		routes.marketing.useCase,
+		lazy(() => import("~/app/http/controllers/marketing-use-case")),
+	);
+	router.map(
+		routes.marketing.comparison,
+		lazy(() => import("~/app/http/controllers/marketing-comparison")),
+	);
+	router.map(
+		routes.trust,
+		lazy(() => import("~/app/http/controllers/trust")),
+	);
+	router.map(
+		routes.legal.privacy,
+		lazy(() => import("~/app/http/controllers/privacy")),
+	);
+	router.map(
+		routes.legal.terms,
+		lazy(() => import("~/app/http/controllers/terms")),
+	);
+	router.map(
+		routes.docs.index,
+		lazy(() => import("~/app/http/controllers/docs-index")),
+	);
+	router.map(
+		routes.docs.show,
+		lazy(() => import("~/app/http/controllers/docs-show")),
+	);
+	router.map(
+		routes.sitemap,
+		lazy(() => import("~/app/http/controllers/sitemap")),
+	);
 
 	/**
 	 * Each controller bakes its own `requireUser`/`requireTeam` (and, where
-	 * noted, `requireRole`) chain into its `createAction` call, so `router.map()`
-	 * takes its default export directly, with no `RequestHandler` cast needed.
+	 * noted, `requireRole`) chain into its `createAction` call, so `lazy()`
+	 * takes its module directly, with no guards passed alongside it.
 	 */
-	router.map(routes.app.index, appIndex);
-	router.map(routes.app.team.index, teamIndex);
-	router.map(routes.app.team.dashboard.index, teamDashboard);
-	router.map(routes.app.team.dashboard.panel, dashboardPanel);
-	router.map(routes.app.team.dashboard.quickPing, dashboardQuickPing);
-	router.map(routes.app.team.dashboard.cards.usage, dashboardCardUsage);
-	router.map(routes.app.team.dashboard.cards.uptime, dashboardCardUptime);
-	router.map(routes.app.team.dashboard.cards.slowestEndpoint, dashboardCardSlowestEndpoint);
-	router.map(routes.app.team.dashboard.cards.count, dashboardCardCount);
-	router.map(routes.app.team.monitorsImport, monitorsImport);
-	router.map(routes.app.team.monitors.index, httpMonitors);
-	router.map(routes.app.team.monitors.new, monitorNew);
-	router.map(routes.app.team.monitors.show, monitorShow);
-	router.map(routes.app.team.monitors.edit, monitorEdit);
-	router.map(routes.app.team.monitors.cards.usage, monitorCardUsage);
-	router.map(routes.app.team.monitors.cards.slowestResult, monitorCardSlowestResult);
-	router.map(routes.app.team.monitors.cards.uptime, monitorCardUptime);
-	router.map(routes.app.team.monitors.cards.uptimeHistory, monitorCardUptimeHistory);
-	router.map(routes.app.team.monitors.cards.p99ResponseTime, monitorCardP99ResponseTime);
-	router.map(routes.app.team.monitors.runStatus, monitorRunStatus);
-	router.map(routes.app.team.dnsMonitors.index, dnsMonitors);
-	router.map(routes.app.team.dnsMonitors.new, dnsMonitorNew);
-	router.map(routes.app.team.dnsMonitors.show, dnsMonitorShow);
-	router.map(routes.app.team.dnsMonitors.edit, dnsMonitorEdit);
-	router.map(routes.app.team.dnsMonitors.review, dnsMonitorReview);
-	router.map(routes.app.team.dnsMonitors.cards.uptimeHistory, dnsMonitorCardUptimeHistory);
-	router.map(routes.app.team.dnsMonitors.cards.results, dnsMonitorCardResults);
-	router.map(routes.app.team.dnsMonitors.cards.checkHistory, dnsMonitorCardCheckHistory);
-	router.map(routes.app.team.flowMonitors.index, flowMonitors);
-	router.map(routes.app.team.flowMonitors.new, flowMonitorNew);
-	router.map(routes.app.team.flowMonitors.show, flowMonitorShow);
-	router.map(routes.app.team.flowMonitors.edit, flowMonitorEdit);
-	router.map(routes.app.team.flowMonitors.cards.results, flowMonitorCardResults);
-	router.map(routes.app.team.tcpMonitors.index, tcpMonitors);
-	router.map(routes.app.team.tcpMonitors.new, tcpMonitorNew);
-	router.map(routes.app.team.tcpMonitors.show, tcpMonitorShow);
-	router.map(routes.app.team.tcpMonitors.edit, tcpMonitorEdit);
-	router.map(routes.app.team.tcpMonitors.cards.uptimeHistory, tcpMonitorCardUptimeHistory);
-	router.map(routes.app.team.tcpMonitors.cards.results, tcpMonitorCardResults);
-	router.map(routes.app.team.cronJobs.index, cronJobs);
-	router.map(routes.app.team.cronJobs.new, cronJobNew);
-	router.map(routes.app.team.cronJobs.show, cronJobShow);
-	router.map(routes.app.team.cronJobs.edit, cronJobEdit);
-	router.map(routes.app.team.alerts.index, alerts);
-	router.map(routes.app.team.alerts.new, alertNew);
-	router.map(routes.app.team.alerts.edit, alertEdit);
-	router.map(routes.app.team.alerts.history, alertHistory);
-	router.map(routes.app.team.maintenanceWindows.index, maintenanceWindows);
-	router.map(routes.app.team.maintenanceWindows.new, maintenanceWindowNew);
-	router.map(routes.app.team.maintenanceWindows.edit, maintenanceWindowEdit);
-	router.map(routes.app.team.statusPages.index, statusPages);
-	router.map(routes.app.team.statusPages.new, statusPageNew);
-	router.map(routes.app.team.statusPages.edit, statusPageEdit);
-	router.map(routes.app.team.settings, settings);
-	router.map(routes.app.team.account, account);
-	router.map(routes.app.team.apiKeys.index, apiKeys);
-	router.map(routes.app.team.apiKeys.new, apiKeyNew);
-	router.map(routes.app.team.checkout, checkout);
+	router.map(
+		routes.app.index,
+		lazy(() => import("~/app/http/controllers/app/index")),
+	);
+	router.map(
+		routes.app.team.index,
+		lazy(() => import("~/app/http/controllers/app/team/index")),
+	);
+	router.map(
+		routes.app.team.dashboard.index,
+		lazy(() => import("~/app/http/controllers/app/team/dashboard")),
+	);
+	router.map(
+		routes.app.team.dashboard.panel,
+		lazy(() => import("~/app/http/controllers/app/team/dashboard-panel")),
+	);
+	router.map(
+		routes.app.team.dashboard.quickPing,
+		lazy(() => import("~/app/http/controllers/app/team/dashboard-quick-ping")),
+	);
+	router.map(
+		routes.app.team.dashboard.cards.usage,
+		lazy(() => import("~/app/http/controllers/app/team/dashboard-card-usage")),
+	);
+	router.map(
+		routes.app.team.dashboard.cards.uptime,
+		lazy(() => import("~/app/http/controllers/app/team/dashboard-card-uptime")),
+	);
+	router.map(
+		routes.app.team.dashboard.cards.slowestEndpoint,
+		lazy(() => import("~/app/http/controllers/app/team/dashboard-card-slowest-endpoint")),
+	);
+	router.map(
+		routes.app.team.dashboard.cards.count,
+		lazy(() => import("~/app/http/controllers/app/team/dashboard-card-count")),
+	);
+	router.map(
+		routes.app.team.monitorsImport,
+		lazy(() => import("~/app/http/controllers/app/team/monitors-import")),
+	);
+	router.map(
+		routes.app.team.monitors.index,
+		lazy(() => import("~/app/http/controllers/app/team/http-monitors")),
+	);
+	router.map(
+		routes.app.team.monitors.new,
+		lazy(() => import("~/app/http/controllers/app/team/monitor-new")),
+	);
+	router.map(
+		routes.app.team.monitors.show,
+		lazy(() => import("~/app/http/controllers/app/team/monitor-show")),
+	);
+	router.map(
+		routes.app.team.monitors.edit,
+		lazy(() => import("~/app/http/controllers/app/team/monitor-edit")),
+	);
+	router.map(
+		routes.app.team.monitors.cards.usage,
+		lazy(() => import("~/app/http/controllers/app/team/monitor-card-usage")),
+	);
+	router.map(
+		routes.app.team.monitors.cards.slowestResult,
+		lazy(() => import("~/app/http/controllers/app/team/monitor-card-slowest-result")),
+	);
+	router.map(
+		routes.app.team.monitors.cards.uptime,
+		lazy(() => import("~/app/http/controllers/app/team/monitor-card-uptime")),
+	);
+	router.map(
+		routes.app.team.monitors.cards.uptimeHistory,
+		lazy(() => import("~/app/http/controllers/app/team/monitor-card-uptime-history")),
+	);
+	router.map(
+		routes.app.team.monitors.cards.p99ResponseTime,
+		lazy(() => import("~/app/http/controllers/app/team/monitor-card-p99-response-time")),
+	);
+	router.map(
+		routes.app.team.monitors.runStatus,
+		lazy(() => import("~/app/http/controllers/app/team/monitor-run-status")),
+	);
+	router.map(
+		routes.app.team.dnsMonitors.index,
+		lazy(() => import("~/app/http/controllers/app/team/dns-monitors")),
+	);
+	router.map(
+		routes.app.team.dnsMonitors.new,
+		lazy(() => import("~/app/http/controllers/app/team/dns-monitor-new")),
+	);
+	router.map(
+		routes.app.team.dnsMonitors.show,
+		lazy(() => import("~/app/http/controllers/app/team/dns-monitor-show")),
+	);
+	router.map(
+		routes.app.team.dnsMonitors.edit,
+		lazy(() => import("~/app/http/controllers/app/team/dns-monitor-edit")),
+	);
+	router.map(
+		routes.app.team.dnsMonitors.review,
+		lazy(() => import("~/app/http/controllers/app/team/dns-monitor-review")),
+	);
+	router.map(
+		routes.app.team.dnsMonitors.cards.uptimeHistory,
+		lazy(() => import("~/app/http/controllers/app/team/dns-monitor-card-uptime-history")),
+	);
+	router.map(
+		routes.app.team.dnsMonitors.cards.results,
+		lazy(() => import("~/app/http/controllers/app/team/dns-monitor-card-results")),
+	);
+	router.map(
+		routes.app.team.dnsMonitors.cards.checkHistory,
+		lazy(() => import("~/app/http/controllers/app/team/dns-monitor-card-check-history")),
+	);
+	router.map(
+		routes.app.team.flowMonitors.index,
+		lazy(() => import("~/app/http/controllers/app/team/flow-monitors")),
+	);
+	router.map(
+		routes.app.team.flowMonitors.new,
+		lazy(() => import("~/app/http/controllers/app/team/flow-monitor-new")),
+	);
+	router.map(
+		routes.app.team.flowMonitors.show,
+		lazy(() => import("~/app/http/controllers/app/team/flow-monitor-show")),
+	);
+	router.map(
+		routes.app.team.flowMonitors.edit,
+		lazy(() => import("~/app/http/controllers/app/team/flow-monitor-edit")),
+	);
+	router.map(
+		routes.app.team.flowMonitors.cards.results,
+		lazy(() => import("~/app/http/controllers/app/team/flow-monitor-card-results")),
+	);
+	router.map(
+		routes.app.team.tcpMonitors.index,
+		lazy(() => import("~/app/http/controllers/app/team/tcp-monitors")),
+	);
+	router.map(
+		routes.app.team.tcpMonitors.new,
+		lazy(() => import("~/app/http/controllers/app/team/tcp-monitor-new")),
+	);
+	router.map(
+		routes.app.team.tcpMonitors.show,
+		lazy(() => import("~/app/http/controllers/app/team/tcp-monitor-show")),
+	);
+	router.map(
+		routes.app.team.tcpMonitors.edit,
+		lazy(() => import("~/app/http/controllers/app/team/tcp-monitor-edit")),
+	);
+	router.map(
+		routes.app.team.tcpMonitors.cards.uptimeHistory,
+		lazy(() => import("~/app/http/controllers/app/team/tcp-monitor-card-uptime-history")),
+	);
+	router.map(
+		routes.app.team.tcpMonitors.cards.results,
+		lazy(() => import("~/app/http/controllers/app/team/tcp-monitor-card-results")),
+	);
+	router.map(
+		routes.app.team.cronJobs.index,
+		lazy(() => import("~/app/http/controllers/app/team/cron-jobs")),
+	);
+	router.map(
+		routes.app.team.cronJobs.new,
+		lazy(() => import("~/app/http/controllers/app/team/cron-job-new")),
+	);
+	router.map(
+		routes.app.team.cronJobs.show,
+		lazy(() => import("~/app/http/controllers/app/team/cron-job-show")),
+	);
+	router.map(
+		routes.app.team.cronJobs.edit,
+		lazy(() => import("~/app/http/controllers/app/team/cron-job-edit")),
+	);
+	router.map(
+		routes.app.team.alerts.index,
+		lazy(() => import("~/app/http/controllers/app/team/alerts")),
+	);
+	router.map(
+		routes.app.team.alerts.new,
+		lazy(() => import("~/app/http/controllers/app/team/alert-new")),
+	);
+	router.map(
+		routes.app.team.alerts.edit,
+		lazy(() => import("~/app/http/controllers/app/team/alert-edit")),
+	);
+	router.map(
+		routes.app.team.alerts.history,
+		lazy(() => import("~/app/http/controllers/app/team/alert-history")),
+	);
+	router.map(
+		routes.app.team.maintenanceWindows.index,
+		lazy(() => import("~/app/http/controllers/app/team/maintenance-windows")),
+	);
+	router.map(
+		routes.app.team.maintenanceWindows.new,
+		lazy(() => import("~/app/http/controllers/app/team/maintenance-window-new")),
+	);
+	router.map(
+		routes.app.team.maintenanceWindows.edit,
+		lazy(() => import("~/app/http/controllers/app/team/maintenance-window-edit")),
+	);
+	router.map(
+		routes.app.team.statusPages.index,
+		lazy(() => import("~/app/http/controllers/app/team/status-pages")),
+	);
+	router.map(
+		routes.app.team.statusPages.new,
+		lazy(() => import("~/app/http/controllers/app/team/status-page-new")),
+	);
+	router.map(
+		routes.app.team.statusPages.edit,
+		lazy(() => import("~/app/http/controllers/app/team/status-page-edit")),
+	);
+	router.map(
+		routes.app.team.settings,
+		lazy(() => import("~/app/http/controllers/app/team/settings")),
+	);
+	router.map(
+		routes.app.team.account,
+		lazy(() => import("~/app/http/controllers/app/team/account")),
+	);
+	router.map(
+		routes.app.team.apiKeys.index,
+		lazy(() => import("~/app/http/controllers/app/team/api-keys")),
+	);
+	router.map(
+		routes.app.team.apiKeys.new,
+		lazy(() => import("~/app/http/controllers/app/team/api-key-new")),
+	);
+	router.map(
+		routes.app.team.checkout,
+		lazy(() => import("~/app/http/controllers/app/team/checkout")),
+	);
 
 	/**
 	 * Each leaf group gets its own `router.map()`/`createController()` call — a
 	 * nested `routes.actions` key types as `never` for `createController()`. The
-	 * `[requireUser, requireTeam]` chain repeats inline so TypeScript can infer context.
+	 * `[requireUser, requireTeam]` chain repeats inline so TypeScript can infer context,
+	 * and it answers an unauthorized request before the action's module is loaded.
+	 *
+	 * A group's actions come from several modules, so each one names its own loader.
+	 * The ones sharing a module also share its chunk, imported once for whichever
+	 * action is submitted first.
 	 */
 	router.map(
 		routes.actions.monitor.http,
 		createController(routes.actions.monitor.http, {
 			middleware: [requireUser, requireTeam],
 			actions: {
-				create: createMonitor,
-				update: updateMonitor,
-				delete: deleteMonitor,
-				play: playMonitor,
-				import: importMonitors,
-				updateSsl,
-				createContentCheck,
-				deleteContentCheck,
+				create: lazy(() =>
+					import("~/app/http/controllers/actions/monitors").then((it) => it.createMonitor),
+				),
+				update: lazy(() =>
+					import("~/app/http/controllers/actions/monitors").then((it) => it.updateMonitor),
+				),
+				delete: lazy(() =>
+					import("~/app/http/controllers/actions/monitors").then((it) => it.deleteMonitor),
+				),
+				play: lazy(() =>
+					import("~/app/http/controllers/actions/monitors").then((it) => it.playMonitor),
+				),
+				import: lazy(() =>
+					import("~/app/http/controllers/actions/monitors-import").then((it) => it.importMonitors),
+				),
+				updateSsl: lazy(() =>
+					import("~/app/http/controllers/actions/ssl").then((it) => it.updateSsl),
+				),
+				createContentCheck: lazy(() =>
+					import("~/app/http/controllers/actions/content-checks").then(
+						(it) => it.createContentCheck,
+					),
+				),
+				deleteContentCheck: lazy(() =>
+					import("~/app/http/controllers/actions/content-checks").then(
+						(it) => it.deleteContentCheck,
+					),
+				),
 			},
 		}),
 	);
@@ -471,13 +573,31 @@ export default function application(options: application.Options) {
 		createController(routes.actions.monitor.dns, {
 			middleware: [requireUser, requireTeam],
 			actions: {
-				create: createDnsMonitor,
-				update: updateDnsMonitor,
-				delete: deleteDnsMonitor,
-				check: checkDnsMonitor,
-				review: reviewDnsMonitor,
-				toggleRecord: toggleDnsMonitorRecord,
-				importZoneFile: importDnsMonitorZoneFile,
+				create: lazy(() =>
+					import("~/app/http/controllers/actions/dns-monitors").then((it) => it.createDnsMonitor),
+				),
+				update: lazy(() =>
+					import("~/app/http/controllers/actions/dns-monitors").then((it) => it.updateDnsMonitor),
+				),
+				delete: lazy(() =>
+					import("~/app/http/controllers/actions/dns-monitors").then((it) => it.deleteDnsMonitor),
+				),
+				check: lazy(() =>
+					import("~/app/http/controllers/actions/dns-monitors").then((it) => it.checkDnsMonitor),
+				),
+				review: lazy(() =>
+					import("~/app/http/controllers/actions/dns-monitors").then((it) => it.reviewDnsMonitor),
+				),
+				toggleRecord: lazy(() =>
+					import("~/app/http/controllers/actions/dns-monitors").then(
+						(it) => it.toggleDnsMonitorRecord,
+					),
+				),
+				importZoneFile: lazy(() =>
+					import("~/app/http/controllers/actions/dns-monitors").then(
+						(it) => it.importDnsMonitorZoneFile,
+					),
+				),
 			},
 		}),
 	);
@@ -486,10 +606,18 @@ export default function application(options: application.Options) {
 		createController(routes.actions.monitor.tcp, {
 			middleware: [requireUser, requireTeam],
 			actions: {
-				create: createTcpMonitor,
-				update: updateTcpMonitor,
-				delete: deleteTcpMonitor,
-				check: checkTcpMonitor,
+				create: lazy(() =>
+					import("~/app/http/controllers/actions/tcp-monitors").then((it) => it.createTcpMonitor),
+				),
+				update: lazy(() =>
+					import("~/app/http/controllers/actions/tcp-monitors").then((it) => it.updateTcpMonitor),
+				),
+				delete: lazy(() =>
+					import("~/app/http/controllers/actions/tcp-monitors").then((it) => it.deleteTcpMonitor),
+				),
+				check: lazy(() =>
+					import("~/app/http/controllers/actions/tcp-monitors").then((it) => it.checkTcpMonitor),
+				),
 			},
 		}),
 	);
@@ -498,10 +626,18 @@ export default function application(options: application.Options) {
 		createController(routes.actions.monitor.flow, {
 			middleware: [requireUser, requireTeam],
 			actions: {
-				create: createFlowMonitor,
-				update: updateFlowMonitor,
-				delete: deleteFlowMonitor,
-				check: checkFlowMonitor,
+				create: lazy(() =>
+					import("~/app/http/controllers/actions/flow-monitors").then((it) => it.createFlowMonitor),
+				),
+				update: lazy(() =>
+					import("~/app/http/controllers/actions/flow-monitors").then((it) => it.updateFlowMonitor),
+				),
+				delete: lazy(() =>
+					import("~/app/http/controllers/actions/flow-monitors").then((it) => it.deleteFlowMonitor),
+				),
+				check: lazy(() =>
+					import("~/app/http/controllers/actions/flow-monitors").then((it) => it.checkFlowMonitor),
+				),
 			},
 		}),
 	);
@@ -509,14 +645,34 @@ export default function application(options: application.Options) {
 		routes.actions.cronJob,
 		createController(routes.actions.cronJob, {
 			middleware: [requireUser, requireTeam],
-			actions: { create: createCronJob, update: updateCronJob, delete: deleteCronJob },
+			actions: {
+				create: lazy(() =>
+					import("~/app/http/controllers/actions/cron-jobs").then((it) => it.createCronJob),
+				),
+				update: lazy(() =>
+					import("~/app/http/controllers/actions/cron-jobs").then((it) => it.updateCronJob),
+				),
+				delete: lazy(() =>
+					import("~/app/http/controllers/actions/cron-jobs").then((it) => it.deleteCronJob),
+				),
+			},
 		}),
 	);
 	router.map(
 		routes.actions.alert,
 		createController(routes.actions.alert, {
 			middleware: [requireUser, requireTeam],
-			actions: { create: createAlert, update: updateAlert, delete: deleteAlert },
+			actions: {
+				create: lazy(() =>
+					import("~/app/http/controllers/actions/alerts").then((it) => it.createAlert),
+				),
+				update: lazy(() =>
+					import("~/app/http/controllers/actions/alerts").then((it) => it.updateAlert),
+				),
+				delete: lazy(() =>
+					import("~/app/http/controllers/actions/alerts").then((it) => it.deleteAlert),
+				),
+			},
 		}),
 	);
 	router.map(
@@ -524,10 +680,26 @@ export default function application(options: application.Options) {
 		createController(routes.actions.maintenanceWindow, {
 			middleware: [requireUser, requireTeam],
 			actions: {
-				create: createMaintenanceWindow,
-				update: updateMaintenanceWindow,
-				delete: deleteMaintenanceWindow,
-				end: endMaintenanceWindow,
+				create: lazy(() =>
+					import("~/app/http/controllers/actions/maintenance-windows").then(
+						(it) => it.createMaintenanceWindow,
+					),
+				),
+				update: lazy(() =>
+					import("~/app/http/controllers/actions/maintenance-windows").then(
+						(it) => it.updateMaintenanceWindow,
+					),
+				),
+				delete: lazy(() =>
+					import("~/app/http/controllers/actions/maintenance-windows").then(
+						(it) => it.deleteMaintenanceWindow,
+					),
+				),
+				end: lazy(() =>
+					import("~/app/http/controllers/actions/maintenance-windows").then(
+						(it) => it.endMaintenanceWindow,
+					),
+				),
 			},
 		}),
 	);
@@ -535,7 +707,17 @@ export default function application(options: application.Options) {
 		routes.actions.statusPage,
 		createController(routes.actions.statusPage, {
 			middleware: [requireUser, requireTeam],
-			actions: { create: createStatusPage, update: updateStatusPage, delete: deleteStatusPage },
+			actions: {
+				create: lazy(() =>
+					import("~/app/http/controllers/actions/status-pages").then((it) => it.createStatusPage),
+				),
+				update: lazy(() =>
+					import("~/app/http/controllers/actions/status-pages").then((it) => it.updateStatusPage),
+				),
+				delete: lazy(() =>
+					import("~/app/http/controllers/actions/status-pages").then((it) => it.deleteStatusPage),
+				),
+			},
 		}),
 	);
 	/**
@@ -543,9 +725,15 @@ export default function application(options: application.Options) {
 	 * own `createAction()` call, the same pattern the `app.team.*` page
 	 * controllers above use — a single `Route` takes middleware only via `createAction()`.
 	 */
-	router.map(routes.actions.setDashboardTab, setDashboardTab);
+	router.map(
+		routes.actions.setDashboardTab,
+		lazy(() => import("~/app/http/controllers/actions/dashboard").then((it) => it.setDashboardTab)),
+	);
 	/** `runPing` is a single `Route` too, so it carries the same self-contained chain. */
-	router.map(routes.actions.runPing, runPing);
+	router.map(
+		routes.actions.runPing,
+		lazy(() => import("~/app/http/controllers/actions/ping").then((it) => it.runPing)),
+	);
 
 	/**
 	 * A separate group from `actions` above (see `routes/web.ts`'s docblock on
@@ -556,21 +744,42 @@ export default function application(options: application.Options) {
 		routes.teamAdminActions.team,
 		createController(routes.teamAdminActions.team, {
 			middleware: [requireUser, requireTeam, requireRole("admin")],
-			actions: { update: updateTeam, delete: deleteTeam },
+			actions: {
+				update: lazy(() =>
+					import("~/app/http/controllers/actions/team").then((it) => it.updateTeam),
+				),
+				delete: lazy(() =>
+					import("~/app/http/controllers/actions/team").then((it) => it.deleteTeam),
+				),
+			},
 		}),
 	);
 	router.map(
 		routes.teamAdminActions.member,
 		createController(routes.teamAdminActions.member, {
 			middleware: [requireUser, requireTeam, requireRole("admin")],
-			actions: { remove: removeMember, changeRole },
+			actions: {
+				remove: lazy(() =>
+					import("~/app/http/controllers/actions/team").then((it) => it.removeMember),
+				),
+				changeRole: lazy(() =>
+					import("~/app/http/controllers/actions/team").then((it) => it.changeRole),
+				),
+			},
 		}),
 	);
 	router.map(
 		routes.teamAdminActions.invite,
 		createController(routes.teamAdminActions.invite, {
 			middleware: [requireUser, requireTeam, requireRole("admin")],
-			actions: { create: createInvite, revoke: revokeInvite },
+			actions: {
+				create: lazy(() =>
+					import("~/app/http/controllers/actions/invites").then((it) => it.createInvite),
+				),
+				revoke: lazy(() =>
+					import("~/app/http/controllers/actions/invites").then((it) => it.revokeInvite),
+				),
+			},
 		}),
 	);
 	router.map(
@@ -578,9 +787,17 @@ export default function application(options: application.Options) {
 		createController(routes.teamAdminActions.domain, {
 			middleware: [requireUser, requireTeam, requireRole("admin")],
 			actions: {
-				add: addDomain,
-				remove: removeDomain,
-				retryVerification: retryDomainVerification,
+				add: lazy(() =>
+					import("~/app/http/controllers/actions/team-domains").then((it) => it.addDomain),
+				),
+				remove: lazy(() =>
+					import("~/app/http/controllers/actions/team-domains").then((it) => it.removeDomain),
+				),
+				retryVerification: lazy(() =>
+					import("~/app/http/controllers/actions/team-domains").then(
+						(it) => it.retryDomainVerification,
+					),
+				),
 			},
 		}),
 	);
@@ -588,7 +805,14 @@ export default function application(options: application.Options) {
 		routes.teamAdminActions.apiKey,
 		createController(routes.teamAdminActions.apiKey, {
 			middleware: [requireUser, requireTeam, requireRole("admin")],
-			actions: { create: createApiKey, delete: deleteApiKey },
+			actions: {
+				create: lazy(() =>
+					import("~/app/http/controllers/actions/api-keys").then((it) => it.createApiKey),
+				),
+				delete: lazy(() =>
+					import("~/app/http/controllers/actions/api-keys").then((it) => it.deleteApiKey),
+				),
+			},
 		}),
 	);
 
@@ -601,13 +825,27 @@ export default function application(options: application.Options) {
 		createController(routes.accountActions, {
 			middleware: [requireUser],
 			actions: {
-				createTeam,
-				leaveTeam,
-				updateLanguage,
-				updateEmails,
-				exportData,
-				requestDeletion,
-				cancelDeletion,
+				createTeam: lazy(() =>
+					import("~/app/http/controllers/actions/account").then((it) => it.createTeam),
+				),
+				leaveTeam: lazy(() =>
+					import("~/app/http/controllers/actions/account").then((it) => it.leaveTeam),
+				),
+				updateLanguage: lazy(() =>
+					import("~/app/http/controllers/actions/account").then((it) => it.updateLanguage),
+				),
+				updateEmails: lazy(() =>
+					import("~/app/http/controllers/actions/account").then((it) => it.updateEmails),
+				),
+				exportData: lazy(() =>
+					import("~/app/http/controllers/actions/account").then((it) => it.exportData),
+				),
+				requestDeletion: lazy(() =>
+					import("~/app/http/controllers/actions/account").then((it) => it.requestDeletion),
+				),
+				cancelDeletion: lazy(() =>
+					import("~/app/http/controllers/actions/account").then((it) => it.cancelDeletion),
+				),
 			},
 		}),
 	);
@@ -617,60 +855,151 @@ export default function application(options: application.Options) {
 	 * middleware bakes in a per-caller budget; see its controller's docblock
 	 * for the full authorization rationale.
 	 */
-	router.map(routes.api.cronJobPing, cronJobPing);
+	router.map(
+		routes.api.cronJobPing,
+		lazy(() => import("~/app/http/controllers/api/cron-job-ping")),
+	);
 
 	/**
 	 * Inbound webhooks, gated by `MACHINE_PATH_PREFIXES` above: the sender
 	 * proves itself with a signature over the request body, verified by each
 	 * controller before acting — standing in for the auth guard and `cop`.
 	 */
-	router.map(routes.webhooks.polar, polarWebhook);
+	router.map(
+		routes.webhooks.polar,
+		lazy(() => import("~/app/http/controllers/webhooks/polar")),
+	);
 
 	/**
 	 * Bearer-API-key-gated REST API. Each file with 2+ actions wires through one
-	 * `createController()` call keyed by its own route-map object, so same-
-	 * resource methods can scope differently via each action's own `middleware`.
+	 * `createController()` call keyed by its own route-map object, declared in
+	 * `routes/api-groups.ts` so mapping a group here leaves its controller unloaded.
 	 */
-	router.map(routes.api.v1.status, statusShow);
-	router.map(routes.api.v1.backfillDailyStats, backfillDailyStatsCreate);
-	router.map(routes.api.v1.ping, pingCreate);
+	router.map(
+		routes.api.v1.status,
+		lazy(() => import("~/app/http/controllers/api/status").then((it) => it.statusShow)),
+	);
+	router.map(
+		routes.api.v1.backfillDailyStats,
+		lazy(() =>
+			import("~/app/http/controllers/api/backfill-daily-stats").then(
+				(it) => it.backfillDailyStatsCreate,
+			),
+		),
+	);
+	router.map(
+		routes.api.v1.ping,
+		lazy(() => import("~/app/http/controllers/api/ping")),
+	);
 
-	router.map(monitorsRoutes, monitorsController);
-	router.map(monitorRoutes, monitorController);
-	router.map(monitorContentChecksRoutes, monitorContentChecksController);
+	router.map(
+		monitorsRoutes,
+		lazy(() => import("~/app/http/controllers/api/monitors")),
+	);
+	router.map(
+		monitorRoutes,
+		lazy(() => import("~/app/http/controllers/api/monitor")),
+	);
+	router.map(
+		monitorContentChecksRoutes,
+		lazy(() => import("~/app/http/controllers/api/monitor-content-checks")),
+	);
 
-	router.map(dnsMonitorsRoutes, dnsMonitorsController);
-	router.map(dnsMonitorRoutes, dnsMonitorController);
-	router.map(dnsMonitorRecordsRoutes, dnsMonitorRecordsController);
+	router.map(
+		dnsMonitorsRoutes,
+		lazy(() => import("~/app/http/controllers/api/dns-monitors")),
+	);
+	router.map(
+		dnsMonitorRoutes,
+		lazy(() => import("~/app/http/controllers/api/dns-monitor")),
+	);
+	router.map(
+		dnsMonitorRecordsRoutes,
+		lazy(() => import("~/app/http/controllers/api/dns-monitor-records")),
+	);
 
-	router.map(tcpMonitorsRoutes, tcpMonitorsController);
-	router.map(tcpMonitorRoutes, tcpMonitorController);
+	router.map(
+		tcpMonitorsRoutes,
+		lazy(() => import("~/app/http/controllers/api/tcp-monitors")),
+	);
+	router.map(
+		tcpMonitorRoutes,
+		lazy(() => import("~/app/http/controllers/api/tcp-monitor")),
+	);
 
-	router.map(flowMonitorsRoutes, flowMonitorsController);
+	router.map(
+		flowMonitorsRoutes,
+		lazy(() => import("~/app/http/controllers/api/flow-monitors")),
+	);
 
-	router.map(cronJobsRoutes, cronJobsController);
-	router.map(cronJobRoutes, cronJobController);
+	router.map(
+		cronJobsRoutes,
+		lazy(() => import("~/app/http/controllers/api/cron-jobs")),
+	);
+	router.map(
+		cronJobRoutes,
+		lazy(() => import("~/app/http/controllers/api/cron-job")),
+	);
 
-	router.map(alertsRoutes, alertsController);
-	router.map(alertRoutes, alertController);
+	router.map(
+		alertsRoutes,
+		lazy(() => import("~/app/http/controllers/api/alerts")),
+	);
+	router.map(
+		alertRoutes,
+		lazy(() => import("~/app/http/controllers/api/alert")),
+	);
 
-	router.map(maintenanceRoutes, maintenanceController);
-	router.map(maintenanceWindowRoutes, maintenanceWindowController);
+	router.map(
+		maintenanceRoutes,
+		lazy(() => import("~/app/http/controllers/api/maintenance")),
+	);
+	router.map(
+		maintenanceWindowRoutes,
+		lazy(() => import("~/app/http/controllers/api/maintenance-window")),
+	);
 
-	router.map(statusPagesRoutes, statusPagesController);
-	router.map(statusPageRoutes, statusPageApiController);
+	router.map(
+		statusPagesRoutes,
+		lazy(() => import("~/app/http/controllers/api/status-pages")),
+	);
+	router.map(
+		statusPageRoutes,
+		lazy(() => import("~/app/http/controllers/api/status-page")),
+	);
 
-	router.map(invitesRoutes, invitesController);
-	router.map(routes.api.v1.invites.destroy, inviteDestroy);
+	router.map(
+		invitesRoutes,
+		lazy(() => import("~/app/http/controllers/api/invites")),
+	);
+	router.map(
+		routes.api.v1.invites.destroy,
+		lazy(() => import("~/app/http/controllers/api/invite").then((it) => it.inviteDestroy)),
+	);
 
-	router.map(routes.api.v1.memberships, membershipsIndex);
+	router.map(
+		routes.api.v1.memberships,
+		lazy(() => import("~/app/http/controllers/api/memberships").then((it) => it.membershipsIndex)),
+	);
 
-	router.map(teamRoutes, teamController);
+	router.map(
+		teamRoutes,
+		lazy(() => import("~/app/http/controllers/api/team")),
+	);
 
-	router.map(teamDomainsRoutes, teamDomainsController);
+	router.map(
+		teamDomainsRoutes,
+		lazy(() => import("~/app/http/controllers/api/team-domains")),
+	);
 
-	router.map(apiKeysRoutes, apiKeysController);
-	router.map(routes.api.v1.apiKeys.destroy, apiKeyDestroy);
+	router.map(
+		apiKeysRoutes,
+		lazy(() => import("~/app/http/controllers/api/api-keys")),
+	);
+	router.map(
+		routes.api.v1.apiKeys.destroy,
+		lazy(() => import("~/app/http/controllers/api/api-key").then((it) => it.apiKeyDestroy)),
+	);
 
 	return router;
 }

@@ -22,7 +22,7 @@ import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId, typedId } from "~/app/services/typed-id";
-import routes from "~/routes/web";
+import { teamDomainsRoutes } from "~/routes/api-groups";
 
 /** Maps a team-domain row to its public camelCase JSON shape. */
 function serializeTeamDomain(domain: SelectTeamDomain) {
@@ -41,13 +41,6 @@ const CreateTeamDomainSchema = s.object({
 });
 
 const DeleteTeamDomainSchema = s.object({ id: typedId("dom") });
-
-/** Route leaves this controller handles, grouped for a single `router.map()` call. */
-export const teamDomainsRoutes = {
-	teamDomainsIndex: routes.api.v1.teamDomains.index,
-	teamDomainsCreate: routes.api.v1.teamDomains.create,
-	teamDomainsDestroy: routes.api.v1.teamDomains.destroy,
-};
 
 export default createController(teamDomainsRoutes, {
 	middleware: [catchValidationError()],

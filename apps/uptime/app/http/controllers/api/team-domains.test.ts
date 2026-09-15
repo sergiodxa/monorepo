@@ -19,9 +19,10 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { parseLink } from "~/app/lib/test/paging";
 import { encodeId } from "~/app/services/typed-id";
 import { teamDomains, teams } from "~/database/schema";
+import { teamDomainsRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
 
-let { default: teamDomainsController, teamDomainsRoutes } = await import("./team-domains");
+let { default: teamDomainsController } = await import("./team-domains");
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 

@@ -29,7 +29,7 @@ import { MONITOR_SCOPE_TYPES, storedMonitorScope } from "~/app/lib/monitor-scope
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { decodeMonitorId, encodeId, encodeMonitorId } from "~/app/services/typed-id";
-import routes from "~/routes/web";
+import { alertsRoutes } from "~/routes/api-groups";
 
 /**
  * The monitor scope a request asks for, resolved from `monitorType`/`monitorId`.
@@ -183,12 +183,6 @@ function buildConfig(values: CreateAlertValues): AlertConfig {
 			return { strategy: "discord", config: { webhookUrl: values.webhookUrl } };
 	}
 }
-
-/** Route leaves this controller handles, grouped for a single `router.map()` call. */
-export const alertsRoutes = {
-	alertsIndex: routes.api.v1.alerts.index,
-	alertsCreate: routes.api.v1.alerts.create,
-};
 
 export default createController(alertsRoutes, {
 	middleware: [catchValidationError()],

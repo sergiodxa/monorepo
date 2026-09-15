@@ -24,7 +24,7 @@ import requireApiKey from "~/app/http/middleware/require-api-key";
 import { isSupportedTimezone, UNKNOWN_TIMEZONE_MESSAGE } from "~/app/lib/timezones";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import { encodeId, typedId } from "~/app/services/typed-id";
-import routes from "~/routes/web";
+import { cronJobRoutes } from "~/routes/api-groups";
 
 const CronJobIdParams = s.object({ cronJobId: typedId("cron") });
 
@@ -56,13 +56,6 @@ const UpdateCronJobSchema = s.object({
 	alertOnLate: s.optional(s.boolean()),
 	enabled: s.optional(s.boolean()),
 });
-
-/** Route leaves this controller handles, grouped for a single `router.map()` call. */
-export const cronJobRoutes = {
-	cronJobShow: routes.api.v1.cronJobs.show,
-	cronJobUpdate: routes.api.v1.cronJobs.update,
-	cronJobDestroy: routes.api.v1.cronJobs.destroy,
-};
 
 export default createController(cronJobRoutes, {
 	middleware: [catchValidationError()],

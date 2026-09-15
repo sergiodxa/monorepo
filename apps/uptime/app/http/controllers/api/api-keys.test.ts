@@ -17,11 +17,12 @@ import { describe, expect, test } from "vitest";
 import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey, { MAX_API_KEYS_PER_TEAM } from "~/app/data/api-key";
-import apiKeysController, { apiKeysRoutes } from "~/app/http/controllers/api/api-keys";
+import apiKeysController from "~/app/http/controllers/api/api-keys";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { parseLink } from "~/app/lib/test/paging";
 import { apiKeys, teams } from "~/database/schema";
+import { apiKeysRoutes } from "~/routes/api-groups";
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 

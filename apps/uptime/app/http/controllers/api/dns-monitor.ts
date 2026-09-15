@@ -27,7 +27,7 @@ import {
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import { apiPage, newestFirst, PAGING } from "~/app/services/pagination";
 import { encodeId, typedId } from "~/app/services/typed-id";
-import routes from "~/routes/web";
+import { dnsMonitorRoutes } from "~/routes/api-groups";
 
 const DnsMonitorIdParams = s.object({ dnsMonitorId: typedId("dns") });
 
@@ -60,14 +60,6 @@ const UpdateDnsMonitorSchema = s.object({
 	),
 	isEnabled: s.optional(s.boolean()),
 });
-
-/** Route leaves this controller handles, grouped for a single `router.map()` call. */
-export const dnsMonitorRoutes = {
-	dnsMonitorShow: routes.api.v1.dnsMonitors.show,
-	dnsMonitorUpdate: routes.api.v1.dnsMonitors.update,
-	dnsMonitorDestroy: routes.api.v1.dnsMonitors.destroy,
-	dnsMonitorResults: routes.api.v1.dnsMonitors.results,
-};
 
 export default createController(dnsMonitorRoutes, {
 	middleware: [catchValidationError()],

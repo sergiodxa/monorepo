@@ -21,6 +21,7 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { parseLink } from "~/app/lib/test/paging";
 import { encodeId } from "~/app/services/typed-id";
 import { monitors, teams } from "~/database/schema";
+import { monitorsRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
 
 /**
@@ -30,8 +31,7 @@ import routes from "~/routes/web";
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
-let { default: monitorsController, monitorsRoutes } =
-	await import("~/app/http/controllers/api/monitors");
+let { default: monitorsController } = await import("~/app/http/controllers/api/monitors");
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 

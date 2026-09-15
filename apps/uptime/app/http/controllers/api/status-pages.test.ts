@@ -19,9 +19,10 @@ import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { parseLink } from "~/app/lib/test/paging";
 import { statusPages, teams } from "~/database/schema";
+import { statusPagesRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
 
-let { default: statusPagesController, statusPagesRoutes } = await import("./status-pages");
+let { default: statusPagesController } = await import("./status-pages");
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 

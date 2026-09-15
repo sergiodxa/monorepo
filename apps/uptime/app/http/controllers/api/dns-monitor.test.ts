@@ -22,9 +22,10 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { parseLink } from "~/app/lib/test/paging";
 import { encodeId } from "~/app/services/typed-id";
 import { teams } from "~/database/schema";
+import { dnsMonitorRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
 
-let { default: dnsMonitorController, dnsMonitorRoutes } = await import("./dns-monitor");
+let { default: dnsMonitorController } = await import("./dns-monitor");
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 

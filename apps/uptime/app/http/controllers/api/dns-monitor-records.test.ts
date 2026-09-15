@@ -27,10 +27,10 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { parseLink } from "~/app/lib/test/paging";
 import { encodeId } from "~/app/services/typed-id";
 import { dnsMonitorRecords, teams } from "~/database/schema";
+import { dnsMonitorRecordsRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
 
-let { default: dnsMonitorRecordsController, dnsMonitorRecordsRoutes } =
-	await import("./dns-monitor-records");
+let { default: dnsMonitorRecordsController } = await import("./dns-monitor-records");
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 

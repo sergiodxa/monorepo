@@ -18,9 +18,10 @@ import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { encodeId } from "~/app/services/typed-id";
 import { teams } from "~/database/schema";
+import { teamRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
 
-let { default: teamController, teamRoutes } = await import("./team");
+let { default: teamController } = await import("./team");
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 

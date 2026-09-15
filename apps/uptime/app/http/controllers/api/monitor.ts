@@ -25,7 +25,7 @@ import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, newestFirst, PAGING } from "~/app/services/pagination";
 import { encodeId, encodeMonitorId, typedId } from "~/app/services/typed-id";
-import routes from "~/routes/web";
+import { monitorRoutes } from "~/routes/api-groups";
 
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"] as const;
 const LOCATION_HINTS = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"] as const;
@@ -69,16 +69,6 @@ const UpdateMonitorSchema = s.object({
 	sslMonitoringEnabled: s.optional(s.boolean()),
 	sslExpiryWarningDays: s.optional(s.number().pipe(checks.min(1), checks.max(365))),
 });
-
-/** Route leaves this controller handles, grouped for a single `router.map()` call. */
-export const monitorRoutes = {
-	monitorShow: routes.api.v1.monitors.show,
-	monitorUpdate: routes.api.v1.monitors.update,
-	monitorDestroy: routes.api.v1.monitors.destroy,
-	monitorStats: routes.api.v1.monitors.itemStats,
-	monitorResults: routes.api.v1.monitors.results,
-	monitorAlertEvents: routes.api.v1.monitors.alertEvents,
-};
 
 export default createController(monitorRoutes, {
 	middleware: [catchValidationError()],

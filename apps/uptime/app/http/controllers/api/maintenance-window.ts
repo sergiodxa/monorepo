@@ -23,7 +23,7 @@ import requireApiKey from "~/app/http/middleware/require-api-key";
 import { MONITOR_SCOPE_TYPES } from "~/app/lib/monitor-scope";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import { typedId } from "~/app/services/typed-id";
-import routes from "~/routes/web";
+import { maintenanceWindowRoutes } from "~/routes/api-groups";
 
 const MaintenanceIdParams = s.object({ maintenanceId: typedId("mnt") });
 
@@ -42,14 +42,6 @@ const UpdateMaintenanceSchema = s.object({
 	suppressAlerts: s.optional(s.boolean()),
 	showOnStatusPage: s.optional(s.boolean()),
 });
-
-/** Route leaves this controller handles, grouped for a single `router.map()` call. */
-export const maintenanceWindowRoutes = {
-	maintenanceShow: routes.api.v1.maintenance.show,
-	maintenanceUpdate: routes.api.v1.maintenance.update,
-	maintenanceDestroy: routes.api.v1.maintenance.destroy,
-	maintenanceEnd: routes.api.v1.maintenance.end,
-};
 
 export default createController(maintenanceWindowRoutes, {
 	middleware: [catchValidationError()],

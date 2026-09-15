@@ -23,7 +23,7 @@ import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
-import routes from "~/routes/web";
+import { monitorsRoutes } from "~/routes/api-groups";
 
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"] as const;
 const LOCATION_HINTS = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"] as const;
@@ -64,13 +64,6 @@ const CreateMonitorSchema = s.object({
 	sslMonitoringEnabled: s.defaulted(s.boolean(), false),
 	sslExpiryWarningDays: s.defaulted(s.number().pipe(checks.min(1), checks.max(365)), 30),
 });
-
-/** Route leaves this controller handles, grouped for a single `router.map()` call. */
-export const monitorsRoutes = {
-	monitorsIndex: routes.api.v1.monitors.index,
-	monitorsCreate: routes.api.v1.monitors.create,
-	monitorsStats: routes.api.v1.monitors.stats,
-};
 
 export default createController(monitorsRoutes, {
 	actions: {

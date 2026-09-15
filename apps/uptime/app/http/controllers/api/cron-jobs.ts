@@ -31,7 +31,7 @@ import {
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
-import routes from "~/routes/web";
+import { cronJobsRoutes } from "~/routes/api-groups";
 
 /** Maps a cron-job monitor row to its public camelCase JSON shape. */
 function serializeCronJob(monitor: SelectCronJobMonitor) {
@@ -69,12 +69,6 @@ const CreateCronJobSchema = s.object({
 	alertOnLate: s.defaulted(s.boolean(), false),
 	enabled: s.defaulted(s.boolean(), true),
 });
-
-/** Route leaves this controller handles, grouped for a single `router.map()` call. */
-export const cronJobsRoutes = {
-	cronJobsIndex: routes.api.v1.cronJobs.index,
-	cronJobsCreate: routes.api.v1.cronJobs.create,
-};
 
 export default createController(cronJobsRoutes, {
 	middleware: [catchValidationError()],

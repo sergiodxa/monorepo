@@ -11,6 +11,8 @@ Rules are written following RFC 2119, which defines the keywords "MUST", "MUST N
 - MUST use `getContext` from `remix/middleware/async-context` to access the request context outside controllers.
 - MUST use `ctx` argument of controller actions for request context access inside controllers.
 - MUST keep Cloudflare Worker bootstrap in `bootstrap/worker.ts` and application bootstrap in `bootstrap/app.tsx`.
+- MUST map every route through `lazy()` from `@sdxc/lazy-route`, so a cold isolate imports the controllers it serves rather than the whole route table. A new route added with a static import silently puts its module back on every cold start.
+- MUST declare an API controller's route map in `routes/api-groups.ts` and import it from there, so `bootstrap/app.tsx` can map the group while the controller behind it stays unloaded.
 - MUST keep DB-facing fields in `snake_case` (`author_id`, `published_at`, `created_at`, etc.).
 - MUST read database access from request context with `ctx.get(Database)` in HTTP handlers.
 - MUST review generated migration SQL before committing it, since the generator re-emits index definitions that were previously dropped on purpose.
@@ -32,6 +34,7 @@ Reference files are examples of good code that agents can refer to when performi
   - `bootstrap/app.tsx` <- Mapping of routes to controllers and global middleware
 - Configuration
   - `routes/web.ts` <- Registry of routes
+  - `routes/api-groups.ts` <- Route maps grouping the API leaves each controller handles
 - HTTP Layer
   - `app/http/controllers/default-handler.tsx` <- 404 handler for unmapped routes
   - `app/http/middleware/database.ts` <- Middleware to store database instance in the request context

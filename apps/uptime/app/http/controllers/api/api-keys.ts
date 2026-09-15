@@ -28,7 +28,7 @@ import { apiError, apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
 import { apiKeyScopes } from "~/database/schema";
-import routes from "~/routes/web";
+import { apiKeysRoutes } from "~/routes/api-groups";
 
 /** Maps an API-key row to its public JSON shape (camelCase fields), omitting the key hash. */
 function serializeApiKey(apiKey: SelectApiKey) {
@@ -55,12 +55,6 @@ const CreateApiKeySchema = s.object({
 			.transform((value: string) => new Date(value).getTime()),
 	),
 });
-
-/** Route leaves this controller handles, grouped for a single `router.map()` call. */
-export const apiKeysRoutes = {
-	apiKeysIndex: routes.api.v1.apiKeys.index,
-	apiKeysCreate: routes.api.v1.apiKeys.create,
-};
 
 export default createController(apiKeysRoutes, {
 	middleware: [catchValidationError()],

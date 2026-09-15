@@ -25,6 +25,7 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { parseLink } from "~/app/lib/test/paging";
 import { MAX_TRACKED_NAMES_PER_MONITOR } from "~/app/services/dns-discovery";
 import { dnsMonitorRecords, teams } from "~/database/schema";
+import { dnsMonitorsRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
 
 const DOH_URL = "https://cloudflare-dns.com/dns-query";
@@ -63,7 +64,7 @@ function stubResolver(bodies: Record<string, DohBody> = {}) {
 	);
 }
 
-let { default: dnsMonitorsController, dnsMonitorsRoutes } = await import("./dns-monitors");
+let { default: dnsMonitorsController } = await import("./dns-monitors");
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 

@@ -36,7 +36,7 @@ import { apiError, apiSuccess } from "~/app/services/api-response";
 import { inspectFlowSource } from "~/app/services/flow-check";
 import { apiPage, NEWEST_FIRST, newestFirst, PAGING } from "~/app/services/pagination";
 import { encodeId, typedId } from "~/app/services/typed-id";
-import routes from "~/routes/web";
+import { flowMonitorsRoutes } from "~/routes/api-groups";
 
 const FlowMonitorIdParams = s.object({ flowMonitorId: typedId("flow") });
 
@@ -81,16 +81,6 @@ const UpdateFlowMonitorSchema = s.object({
 	intervalSeconds: s.optional(IntervalSecondsSchema),
 	isEnabled: s.optional(s.boolean()),
 });
-
-/** Route leaves this controller handles, grouped for a single `router.map()` call. */
-export const flowMonitorsRoutes = {
-	flowMonitorsIndex: routes.api.v1.flowMonitors.index,
-	flowMonitorsCreate: routes.api.v1.flowMonitors.create,
-	flowMonitorShow: routes.api.v1.flowMonitors.show,
-	flowMonitorUpdate: routes.api.v1.flowMonitors.update,
-	flowMonitorDestroy: routes.api.v1.flowMonitors.destroy,
-	flowMonitorResults: routes.api.v1.flowMonitors.results,
-};
 
 export default createController(flowMonitorsRoutes, {
 	middleware: [catchValidationError()],

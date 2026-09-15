@@ -19,6 +19,7 @@ import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { encodeId } from "~/app/services/typed-id";
 import { monitors, statusPageMonitors, statusPages, teams } from "~/database/schema";
+import { statusPageRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
 
 /**
@@ -31,7 +32,7 @@ vi.doMock("cloudflare:workers", () => ({
 	waitUntil: (promise: Promise<unknown>) => promise,
 }));
 
-let { default: statusPageController, statusPageRoutes } = await import("./status-page");
+let { default: statusPageController } = await import("./status-page");
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 
