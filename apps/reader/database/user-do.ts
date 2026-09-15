@@ -342,45 +342,51 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let feedId = TypeID.fromUUID("feed", generateUUID()).toString();
 		let rows = await Promise.all(document.items.map((item) => itemRow(feedId, item, now)));
 
-		let created = await this.#db.transaction(async (tx) => {
-			let row = await tx.create(
-				feeds,
-				{
-					id: feedId,
-					feed_url: feedUrl,
-					site_url: document.siteUrl ?? null,
-					title: document.title,
-					description: document.description ?? null,
-					language: document.language ?? null,
-					image_url: document.imageUrl ?? null,
-					etag: retrieved.data.etag ?? null,
-					last_modified: retrieved.data.lastModified ?? null,
-					last_fetched_at: now,
-					last_status: "ok",
-					last_http_status: retrieved.data.status,
-					last_error: null,
-					failure_count: 0,
-					next_attempt_at: null,
-				},
-				{ returnRow: true },
-			);
+		/**
+		 * Written straight through rather than inside a transaction scope. A Durable Object
+		 * refuses `BEGIN` and `SAVEPOINT` outright, and has no need of them: every write a
+		 * turn makes is coalesced into one atomic commit and discarded together if the turn
+		 * throws. Nothing below awaits anything outside storage, so the feed and its posts
+		 * land together or not at all.
+		 */
+		let created = await this.#db.create(
+			feeds,
+			{
+				id: feedId,
+				feed_url: feedUrl,
+				site_url: document.siteUrl ?? null,
+				title: document.title,
+				description: document.description ?? null,
+				language: document.language ?? null,
+				image_url: document.imageUrl ?? null,
+				etag: retrieved.data.etag ?? null,
+				last_modified: retrieved.data.lastModified ?? null,
+				last_fetched_at: now,
+				last_status: "ok",
+				last_http_status: retrieved.data.status,
+				last_error: null,
+				failure_count: 0,
+				next_attempt_at: null,
+			},
+			{ returnRow: true },
+		);
 
-			for (let batch of chunked(rows, insertChunkSize())) {
-				await tx.createMany(feedItems, batch);
-			}
-
-			return row;
-		});
+		for (let batch of chunked(rows, insertChunkSize())) {
+			await this.#db.createMany(feedItems, batch);
+		}
 
 		return { ok: true, feed: toFeedSummary(created, rows.length), items: rows.length };
 	}
 
-	/** Drops a subscription and every post behind it. `false` when it was not followed. */
-	unfollowFeed(feedId: string): Promise<boolean> {
-		return this.#db.transaction(async (tx) => {
-			await tx.deleteMany(feedItems, { where: { feed_id: feedId } });
-			return tx.delete(feeds, { id: feedId });
-		});
+	/**
+	 * Drops a subscription and every post behind it. `false` when it was not followed.
+	 *
+	 * The posts go first, so a turn that fails between the two deletes leaves the feed
+	 * still followed rather than its posts orphaned under a feed that is gone.
+	 */
+	async unfollowFeed(feedId: string): Promise<boolean> {
+		await this.#db.deleteMany(feedItems, { where: { feed_id: feedId } });
+		return await this.#db.delete(feeds, { id: feedId });
 	}
 
 	/** The unread posts across every followed feed, newest first. */
