@@ -10,6 +10,7 @@
 import type { Database } from "remix/data-table";
 
 import { Feed, FeedFetchError } from "@sdxc/feed";
+import { HTML } from "@sdxc/html";
 import { isFailure } from "@sdxc/result";
 import { TypeID } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
@@ -61,18 +62,22 @@ const MAX_BACKOFF_MS = 24 * 60 * 60 * 1000;
 const MAX_BOUND_PARAMETERS = 100;
 
 /**
- * The longest body a stored post keeps. A Durable Object's row is capped at 2 MB, so a
- * publisher who inlines a whole book still leaves every other column of the row its room.
- * {@link displayableOf} applies it, which is what keeps a cut body hashing the same twice.
- */
-export const MAX_CONTENT_LENGTH = 1_000_000;
-
-/**
- * The longest summary a stored post keeps. Its own cap rather than the body's, so the two
- * together still leave the row room: a summary is a paragraph even when a publisher sends
- * a chapter.
+ * The longest summary a stored post keeps. A Durable Object's row is capped at 2 MB, so a
+ * publisher who sends a chapter where a paragraph belongs still leaves every other column
+ * of the row its room. {@link displayableOf} applies it, which is what keeps a cut summary
+ * hashing the same twice.
  */
 export const MAX_SUMMARY_LENGTH = 100_000;
+
+/**
+ * The longest excerpt derived from a post's body. It is about two sentences, which is
+ * what a timeline entry reads as under its title: enough of the opening to tell whether
+ * the post is worth clicking, short enough that every entry stays the same size.
+ */
+export const EXCERPT_LENGTH = 280;
+
+/** Closes an excerpt, so the passage reads as shortened rather than as a stopped sentence. */
+const EXCERPT_MARKER = "…";
 
 /**
  * The status behind a failed retrieval. `Feed.fetch` reports an error status and an
@@ -133,7 +138,6 @@ export interface Displayable {
 	title: string;
 	url: string | null;
 	summary: string | null;
-	content: string | null;
 	author: string | null;
 }
 
@@ -481,22 +485,51 @@ async function classify(
 /**
  * The fields a reader sees, resolved to what the row will hold. Build every stored post
  * from this, on any path: a publisher who titles nothing still gets something to click on,
- * and a body past {@link MAX_CONTENT_LENGTH} is cut here so it is hashed as it is stored.
+ * and a summary past {@link MAX_SUMMARY_LENGTH} is cut here so it is hashed as it is stored.
  *
  * @param entry - One entry of a parsed feed document.
  */
 export function displayableOf(entry: Feed.Item): Displayable {
-	let content = entry.contentHtml ?? null;
-
-	let summary = entry.summary ?? null;
-
 	return {
 		title: entry.title ?? entry.url ?? entry.guid,
 		url: entry.url ?? null,
-		summary: summary === null ? null : summary.slice(0, MAX_SUMMARY_LENGTH),
-		content: content === null ? null : content.slice(0, MAX_CONTENT_LENGTH),
+		summary: summaryOf(entry),
 		author: entry.author?.name ?? null,
 	};
+}
+
+/**
+ * The text a post is stored with. Most RSS publishes a bare `<description>`, which a feed
+ * reports as the body with no summary beside it, so an excerpt of that body is what gives
+ * those posts a line to read under their title and the one field that moves when such a
+ * publisher rewrites one.
+ *
+ * Posts stored before this gain a summary, so the first poll reads each as edited and
+ * rewrites it — the same one-time pass per feed the narrowed digest is already due.
+ */
+function summaryOf(entry: Feed.Item): string | null {
+	if (entry.summary !== undefined) return entry.summary.slice(0, MAX_SUMMARY_LENGTH);
+	if (entry.contentHtml === undefined) return null;
+	return excerptOf(entry.contentHtml);
+}
+
+/**
+ * An excerpt of a body, as the text a reader is shown: the markup's visible text, so tags
+ * and entities resolve the way a browser resolves them, cut at the last whole word inside
+ * {@link EXCERPT_LENGTH}. A body of markup alone leaves the post its title to stand on.
+ */
+function excerptOf(html: string): string | null {
+	let parsed = HTML.parse(html);
+	if (isFailure(parsed)) return null;
+
+	let text = parsed.data.text;
+	if (text.length === 0) return null;
+	if (text.length <= EXCERPT_LENGTH) return text;
+
+	let cut = text.slice(0, EXCERPT_LENGTH);
+	let lastSpace = cut.lastIndexOf(" ");
+
+	return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd()}${EXCERPT_MARKER}`;
 }
 
 /**
@@ -524,7 +557,6 @@ export async function digest(displayable: Displayable): Promise<string> {
 		displayable.title,
 		displayable.url,
 		displayable.summary,
-		displayable.content,
 		displayable.author,
 	]);
 

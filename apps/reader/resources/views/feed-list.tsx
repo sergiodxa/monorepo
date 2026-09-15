@@ -1,7 +1,8 @@
 /**
- * The list of followed feeds, and the form that follows another one. Both the feed index
- * and the failed follow render it: a refused URL is answered with the page it was
- * submitted from, carrying the reason, so the list and the form stay one piece of markup.
+ * The list of followed feeds, the form that follows another one, the control that checks
+ * them all, and the links that walk the list a page at a time. Both the feed index and the
+ * failed follow render it: a refused URL is answered with the page it was submitted from,
+ * carrying the reason, so the list and the form stay one piece of markup.
  *
  * Every string arrives translated and every date arrives formatted, so the dictionary and
  * the request's language stay with the controller.
@@ -13,7 +14,8 @@
 import type { Handle } from "remix/ui";
 
 import { fg } from "@sdxc/u/color";
-import { flex, flexWrap, gap, items, self, vstack } from "@sdxc/u/layout";
+import { rounded } from "@sdxc/u/effects";
+import { flex, flexWrap, gap, grow, items, self, vstack } from "@sdxc/u/layout";
 import { maxIs, p } from "@sdxc/u/size";
 import { hover } from "@sdxc/u/state";
 import { leading, text, textDecoration, weight } from "@sdxc/u/typography";
@@ -55,47 +57,81 @@ export namespace FeedList {
 		description: string;
 	}
 
+	/** Where the subscriptions either side of this page live, and what the links to them read. */
+	export interface Paging {
+		/** The page of newer subscriptions, or `null` on the newest one. */
+		newer: string | null;
+		/** The page of older subscriptions, or `null` on the oldest one. */
+		older: string | null;
+		newerLabel: string;
+		olderLabel: string;
+	}
+
 	export interface Props {
 		entries: Entry[];
 		follow: FollowCopy;
 		empty: EmptyCopy;
+		/** Names the sweep of every followed feed. */
+		checkAll: string;
+		paging: Paging;
 	}
 }
 
-/** Renders the follow form, then either the followed feeds or the note that there are none. */
+/**
+ * Renders the follow form and the sweep of every feed, then either the followed feeds or
+ * the note that there are none, then the links to the pages either side of this one.
+ */
 export default function FeedList(handle: Handle<FeedList.Props>) {
 	return () => {
-		let { empty, entries, follow } = handle.props;
+		let { checkAll, empty, entries, follow, paging } = handle.props;
 
 		return (
 			<div mix={[vstack({ gap: 6 })]}>
 				{/**
-				 * The field spans the card so its hint and its refusal are the width of the input
-				 * they belong to, and the submit sits at the end of the row under it, where a form
-				 * puts the thing that finishes it.
+				 * Both ways of acting on the collection sit above it, so neither costs a scroll past
+				 * every feed the reader follows. The field spans the card so its hint and its
+				 * refusal are the width of the input they belong to, and the submit sits at the end
+				 * of the row under it, where a form puts the thing that finishes it.
 				 */}
 				<Card mix={[p(4)]}>
-					<form
-						method="post"
-						action={routes.feeds.follow.href()}
-						mix={[vstack({ gap: 3, align: "stretch" })]}
-					>
-						<TextField
-							type="url"
-							name="url"
-							label={follow.label}
-							description={follow.description}
-							placeholder={follow.placeholder}
-							defaultValue={follow.value ?? undefined}
-							errorMessage={follow.error ?? undefined}
-							required
-							autoComplete="url"
-						/>
+					<div mix={[vstack({ gap: 3, align: "stretch" })]}>
+						<form
+							method="post"
+							action={routes.feeds.follow.href()}
+							mix={[vstack({ gap: 3, align: "stretch" })]}
+						>
+							<TextField
+								type="url"
+								name="url"
+								label={follow.label}
+								description={follow.description}
+								placeholder={follow.placeholder}
+								defaultValue={follow.value ?? undefined}
+								errorMessage={follow.error ?? undefined}
+								required
+								autoComplete="url"
+							/>
 
-						<Button type="submit" mix={[self("end")]}>
-							{follow.submit}
-						</Button>
-					</form>
+							<Button type="submit" mix={[self("end")]}>
+								{follow.submit}
+							</Button>
+						</form>
+
+						{/**
+						 * Quiet and small against the solid submit above it, since following a feed is
+						 * what a reader opens this page to do and checking the ones they have is the
+						 * thing they reach for occasionally.
+						 *
+						 * A sweep reaches out to every origin the reader follows, so it is submitted
+						 * rather than followed: a prefetcher and a mail scanner walk links of their own
+						 * accord.
+						 */}
+						<form method="post" action={routes.feeds.refreshAll.href()}>
+							<Button type="submit" color="neutral" variant="ghost" size="sm">
+								{checkAll}
+							</Button>
+						</form>
+					</div>
 				</Card>
 
 				{entries.length === 0 ? (
@@ -148,6 +184,44 @@ export default function FeedList(handle: Handle<FeedList.Props>) {
 							</li>
 						))}
 					</ul>
+				)}
+
+				{(paging.newer ?? paging.older) && (
+					<nav mix={[flex(), items("center"), gap(3), p(2, 0)]}>
+						{paging.newer && (
+							<a
+								href={paging.newer}
+								rel="prev"
+								mix={[
+									p(2, 3),
+									rounded("md"),
+									fg("brand"),
+									textDecoration("none"),
+									hover(textDecoration("underline")),
+								]}
+							>
+								{paging.newerLabel}
+							</a>
+						)}
+
+						<span aria-hidden="true" mix={[grow()]} />
+
+						{paging.older && (
+							<a
+								href={paging.older}
+								rel="next"
+								mix={[
+									p(2, 3),
+									rounded("md"),
+									fg("brand"),
+									textDecoration("none"),
+									hover(textDecoration("underline")),
+								]}
+							>
+								{paging.olderLabel}
+							</a>
+						)}
+					</nav>
 				)}
 			</div>
 		);

@@ -13,6 +13,7 @@
 
 import type { Handle } from "remix/ui";
 
+import { CheckIcon, CircleCheckIcon, CircleIcon, Undo2Icon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { borderEdge, fg } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
@@ -95,44 +96,23 @@ export namespace Timeline {
 }
 
 /**
- * The mark the control wears, drawn on the 24-unit grid at the stroke the library's own
- * icons use so every mark on a page belongs to one set.
+ * The mark the control wears, which is one glyph of the app's icon set so every mark on a
+ * page belongs together.
  *
  * A toggling surface draws the state: an empty ring for a post still to read, a ticked
- * one for a post already read. A completing surface draws the move instead: a tick to
- * carry a post out of the queue, and the arrow that brings one back.
+ * one for a post already read, so the two differ in outline rather than in shade alone. A
+ * completing surface draws the move instead: a tick to carry a post out of the queue, and
+ * the arrow that brings one back.
  */
 function ReadMark(handle: Handle<{ action: Timeline.ReadAction; isRead: boolean }>) {
 	return () => {
 		let { action, isRead } = handle.props;
 
-		return (
-			<svg
-				aria-hidden="true"
-				viewBox="0 0 24 24"
-				width={ICON_SIZE}
-				height={ICON_SIZE}
-				fill="none"
-				stroke="currentColor"
-				strokeWidth="2"
-				strokeLinecap="round"
-				strokeLinejoin="round"
-			>
-				{action === "toggle" ? (
-					<>
-						<circle cx="12" cy="12" r="8" />
-						{isRead && <path d="m8.5 12 2.5 2.5 4.5-5" />}
-					</>
-				) : isRead ? (
-					<>
-						<path d="M4 8h11a5 5 0 0 1 0 10H8" />
-						<path d="m8 4-4 4 4 4" />
-					</>
-				) : (
-					<path d="M4.5 12.5 9.5 17.5 19.5 6.5" />
-				)}
-			</svg>
-		);
+		if (action === "toggle") {
+			return isRead ? <CircleCheckIcon size={ICON_SIZE} /> : <CircleIcon size={ICON_SIZE} />;
+		}
+
+		return isRead ? <Undo2Icon size={ICON_SIZE} /> : <CheckIcon size={ICON_SIZE} />;
 	};
 }
 

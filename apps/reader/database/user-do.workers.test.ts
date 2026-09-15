@@ -165,6 +165,76 @@ describe("the USER binding", () => {
 });
 
 /**
+ * The methods the signed-in surface calls before a reader has followed anything. Every one
+ * of them can be the first call an object ever answers, so what is asserted here is that
+ * they cross the RPC boundary and run against the schema the migration tag gives the class.
+ */
+describe("a reader who follows nothing yet", () => {
+	test("counts no subscriptions and exports none", async () => {
+		let stub = env.USER.getByName(subject());
+
+		expect(await stub.countFeeds()).toBe(0);
+		expect(await stub.exportFeeds()).toEqual([]);
+	});
+
+	test("clears an empty queue and reports the nothing it cleared", async () => {
+		let name = subject();
+		let stub = env.USER.getByName(name);
+
+		expect(await stub.markAllRead()).toBe(0);
+		expect(await stub.markFeedRead("feed_00000000000000000000000000")).toBe(0);
+	});
+
+	test("searches an object whose table the drop migration has already run against", async () => {
+		let stub = env.USER.getByName(subject());
+
+		// The column the body was stored in is gone here, so a search that reads `summary`
+		// is what says the migration ran and left the table the statement expects.
+		let found: UserStore.TimelineResult = await stub.searchPosts("anything");
+
+		expect(found).toEqual({ ok: true, items: [], feeds: [], cursors: { next: null, prev: null } });
+
+		expect(await stub.searchPosts("   ")).toEqual({
+			ok: true,
+			items: [],
+			feeds: [],
+			cursors: { next: null, prev: null },
+		});
+	});
+
+	test("carries a bad feed cursor back as an empty page rather than an error", async () => {
+		let stub = env.USER.getByName(subject());
+
+		expect(await stub.listFeeds({ cursor: "not-a-cursor" })).toEqual({
+			feeds: [],
+			cursors: { next: null, prev: null },
+		});
+
+		expect(await stub.searchPosts("anything", { cursor: "not-a-cursor" })).toEqual({
+			ok: false,
+			reason: "bad-cursor",
+		});
+	});
+
+	test("sweeps nothing and still records that the reader is up to date", async () => {
+		let name = subject();
+		let stub = env.USER.getByName(name);
+
+		expect(await stub.checkAllFeedsNow()).toEqual({
+			checked: 0,
+			withNewPosts: 0,
+			inserted: 0,
+			failed: 0,
+		});
+
+		let stored = await stub.getSettings();
+
+		expect(stored?.subject).toBe(name);
+		expect(stored?.lastRefreshedAt).toBeGreaterThan(0);
+	});
+});
+
+/**
  * There is no sign-up step, so a reader is created by whichever call reached their object
  * first. A session outlives a deploy, which leaves readers holding objects that the feeds
  * they follow wrote and that no sign-in ever provisioned — so every settings path has to

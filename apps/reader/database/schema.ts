@@ -91,7 +91,6 @@ export const feedItems = table({
 		title: c.text(),
 		url: c.text().nullable(),
 		summary: c.text().nullable(),
-		content: c.text().nullable(),
 		author: c.text().nullable(),
 		/**
 		 * Written on insert and never updated. It leads the timeline's ordering, so

@@ -42,6 +42,11 @@ interface Entry {
 	guid: string;
 	title: string;
 	published: string;
+	/**
+	 * A `content:encoded` body. A feed publishing both is what leaves `description` the
+	 * summary it was written to be, which is the post text a search looks through.
+	 */
+	content?: string;
 }
 
 /** Five posts a day apart, newest last, so ordering assertions have something to sort. */
@@ -54,19 +59,22 @@ const ENTRIES: Entry[] = [
 ];
 
 /** Builds the RSS 2.0 document the origin answers with. */
-function rss(entries: Entry[]): string {
+function rss(entries: Entry[], title = "Example"): string {
 	let items = entries
 		.map(
 			(entry) =>
 				`<item><guid isPermaLink="false">${entry.guid}</guid><title>${entry.title}</title>` +
 				`<link>https://example.com/${entry.guid}</link>` +
-				`<pubDate>${entry.published}</pubDate><description>About ${entry.title}</description></item>`,
+				`<pubDate>${entry.published}</pubDate><description>About ${entry.title}</description>` +
+				(entry.content === undefined ? "" : `<content:encoded>${entry.content}</content:encoded>`) +
+				`</item>`,
 		)
 		.join("");
 
 	return (
-		`<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>` +
-		`<title>Example</title><link>https://example.com</link>` +
+		`<?xml version="1.0" encoding="UTF-8"?>` +
+		`<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel>` +
+		`<title>${title}</title><link>https://example.com</link>` +
 		`<description>An example feed</description>${items}</channel></rss>`
 	);
 }
@@ -111,6 +119,25 @@ async function createReaderWithFeed() {
 	if (!followed.ok) throw new Error(`following failed: ${followed.reason}`);
 
 	return { state, user, feed: followed.feed };
+}
+
+/**
+ * Follows another origin, so a test has more than one subscription to sweep, export or
+ * page through. The host names both the URL and the feed's title, so a page of feeds says
+ * which one it holds.
+ */
+async function followAnother(
+	user: UserDO,
+	host: string,
+	entries: Entry[] = ENTRIES,
+): Promise<UserStore.FeedSummary> {
+	let url = `https://${host}/feed.xml`;
+	server.use(http.get(url, () => HttpResponse.xml(rss(entries, host))));
+
+	let followed = await user.followFeed(url);
+	if (!followed.ok) throw new Error(`following ${url} failed: ${followed.reason}`);
+
+	return followed.feed;
 }
 
 /** The titles of a page, which is what ordering and read-state assertions compare. */
@@ -564,6 +591,379 @@ describe("unfollowFeed", () => {
 	});
 });
 
+describe("countFeeds", () => {
+	test("counts the subscriptions a reader holds", async () => {
+		let { user } = await createReaderWithFeed();
+
+		expect(await user.countFeeds()).toBe(1);
+
+		await followAnother(user, "b.example");
+
+		expect(await user.countFeeds()).toBe(2);
+	});
+
+	test("answers zero for an object no sign-in has provisioned", async () => {
+		let { user } = await createUser("sub-unprovisioned");
+
+		// What tells an empty queue apart from an empty subscription list is asked on the
+		// first page a reader sees, which can be the first call their object ever answers.
+		expect(await user.countFeeds()).toBe(0);
+	});
+});
+
+describe("checkAllFeedsNow", () => {
+	/** A sixth post, as an origin that published while the reader was away serves it. */
+	const PUBLISHED: Entry = {
+		guid: "f",
+		title: "Sixth",
+		published: "Sat, 06 Sep 2025 10:00:00 GMT",
+	};
+
+	test("reaches every followed feed and reports the sweep as a whole", async () => {
+		let { user } = await createReaderWithFeed();
+		await followAnother(user, "b.example");
+
+		server.use(http.get(FEED_URL, () => HttpResponse.xml(rss([...ENTRIES, PUBLISHED]))));
+
+		expect(await user.checkAllFeedsNow()).toEqual({
+			checked: 2,
+			withNewPosts: 1,
+			inserted: 1,
+			failed: 0,
+		});
+
+		expect(titles(await user.readingQueue({ limit: 1 }))).toEqual(["Sixth"]);
+	});
+
+	test("reads past a backoff window, which is what a reader is asking about", async () => {
+		let { user, feed } = await createReaderWithFeed();
+
+		server.use(http.get(FEED_URL, () => new HttpResponse(null, { status: 503 })));
+		await user.checkFeedNow(feed.id);
+
+		// The failure above put the next attempt minutes out, and sweeping now reads past it.
+		server.use(http.get(FEED_URL, () => HttpResponse.xml(rss([...ENTRIES, PUBLISHED]))));
+
+		expect(await user.checkAllFeedsNow()).toEqual({
+			checked: 1,
+			withNewPosts: 1,
+			inserted: 1,
+			failed: 0,
+		});
+	});
+
+	test("counts a feed whose origin refused without taking the sweep down", async () => {
+		let { user } = await createReaderWithFeed();
+		await followAnother(user, "b.example");
+
+		server.use(http.get(FEED_URL, () => HttpResponse.error()));
+
+		await expect(user.checkAllFeedsNow()).resolves.toEqual({
+			checked: 1,
+			withNewPosts: 0,
+			inserted: 0,
+			failed: 1,
+		});
+
+		expect(titles(await user.readingQueue())).toHaveLength(10);
+	});
+
+	test("stamps the run the way the alarm does, on an object no sign-in has reached", async () => {
+		let { user } = await createUser("sub-unprovisioned");
+
+		expect(await user.getSettings()).toBeNull();
+
+		expect(await user.checkAllFeedsNow()).toEqual({
+			checked: 0,
+			withNewPosts: 0,
+			inserted: 0,
+			failed: 0,
+		});
+
+		expect((await user.getSettings())?.lastRefreshedAt).toBeGreaterThan(0);
+	});
+});
+
+describe("markFeedRead and markAllRead", () => {
+	test("clears one feed's unread posts and leaves another's alone", async () => {
+		let { user, feed } = await createReaderWithFeed();
+		let other = await followAnother(user, "b.example");
+
+		expect(await user.markFeedRead(feed.id)).toBe(5);
+
+		expect((await user.getFeed(feed.id))?.unreadCount).toBe(0);
+		expect((await user.getFeed(other.id))?.unreadCount).toBe(5);
+
+		// The posts are read rather than gone, so the feed's own timeline still holds them.
+		expect(titles(await user.feedTimeline(feed.id))).toHaveLength(5);
+
+		expect(await user.markFeedRead(feed.id)).toBe(0);
+	});
+
+	test("clears every feed at once", async () => {
+		let { user } = await createReaderWithFeed();
+		await followAnother(user, "b.example");
+
+		expect(await user.markAllRead()).toBe(10);
+		expect(titles(await user.readingQueue())).toEqual([]);
+	});
+
+	test("reports nothing to clear for a reader with nothing unread", async () => {
+		let { user } = await createUser("sub-unprovisioned");
+
+		expect(await user.markAllRead()).toBe(0);
+		expect(await user.markFeedRead("feed_missing")).toBe(0);
+	});
+});
+
+describe("searchPosts", () => {
+	/** Titles holding the characters a `LIKE` pattern would otherwise read as wildcards. */
+	const WILDCARDS: Entry[] = [
+		{ guid: "w1", title: "Growth of 50% this quarter", published: "Mon, 01 Sep 2025 10:00:00 GMT" },
+		{ guid: "w2", title: "Growth of 50 this quarter", published: "Tue, 02 Sep 2025 10:00:00 GMT" },
+		{ guid: "w3", title: "Snake_case naming", published: "Wed, 03 Sep 2025 10:00:00 GMT" },
+		{ guid: "w4", title: "Snake case naming", published: "Thu, 04 Sep 2025 10:00:00 GMT" },
+	];
+
+	test("answers the posts whose title carries the text, newest first", async () => {
+		let { user } = await createReaderWithFeed();
+
+		expect(titles(await user.searchPosts("ir"))).toEqual(["Third", "First"]);
+	});
+
+	test("looks through the summary a publisher wrote as well as the title", async () => {
+		let { user } = await createUser();
+		await user.ensureUser(SUBJECT);
+
+		await followAnother(user, "b.example", [
+			{
+				guid: "s1",
+				title: "Untitled",
+				published: "Mon, 01 Sep 2025 10:00:00 GMT",
+				content: "The full body",
+			},
+		]);
+
+		expect(titles(await user.searchPosts("About Untitled"))).toEqual(["Untitled"]);
+	});
+
+	test("matches nothing for a search box holding only space", async () => {
+		let { user } = await createReaderWithFeed();
+
+		for (let query of ["", "   ", "\t\n"]) {
+			let page = await user.searchPosts(query);
+
+			expect(titles(page)).toEqual([]);
+			expect(cursors(page)).toEqual({ next: null, prev: null });
+		}
+	});
+
+	test("looks for a wildcard character rather than reading it as one", async () => {
+		let { user } = await createUser();
+		await user.ensureUser(SUBJECT);
+		await followAnother(user, "b.example", WILDCARDS);
+
+		expect(titles(await user.searchPosts("50%"))).toEqual(["Growth of 50% this quarter"]);
+		expect(titles(await user.searchPosts("Snake_case"))).toEqual(["Snake_case naming"]);
+
+		// The escape character itself is only a character somebody can search for.
+		expect(titles(await user.searchPosts("\\"))).toEqual([]);
+	});
+
+	test("pages forward and back through the cursors it minted", async () => {
+		let { user } = await createReaderWithFeed();
+
+		let first = await user.searchPosts("h", { limit: 2 });
+		expect(titles(first)).toEqual(["Fifth", "Fourth"]);
+		expect(cursors(first).prev).toBeNull();
+
+		let second = await user.searchPosts("h", { limit: 2, cursor: cursors(first).next });
+		expect(titles(second)).toEqual(["Third"]);
+		expect(cursors(second).next).toBeNull();
+
+		let back = await user.searchPosts("h", { limit: 2, cursor: cursors(second).prev });
+		expect(titles(back)).toEqual(["Fifth", "Fourth"]);
+	});
+
+	test("reports a cursor it cannot decode rather than answering the first page", async () => {
+		let { user } = await createReaderWithFeed();
+
+		expect(await user.searchPosts("First", { cursor: "not-a-cursor" })).toEqual({
+			ok: false,
+			reason: "bad-cursor",
+		});
+	});
+
+	test("answers nothing on an object no sign-in has provisioned", async () => {
+		let { user } = await createUser("sub-unprovisioned");
+
+		expect(titles(await user.searchPosts("anything"))).toEqual([]);
+	});
+});
+
+describe("exportFeeds", () => {
+	test("carries every subscription in the shape a document writes", async () => {
+		let { user } = await createReaderWithFeed();
+		await followAnother(user, "b.example");
+
+		expect(await user.exportFeeds()).toEqual(
+			expect.arrayContaining([
+				{ title: "Example", feedUrl: FEED_URL, siteUrl: SITE_URL },
+				{ title: "b.example", feedUrl: "https://b.example/feed.xml", siteUrl: SITE_URL },
+			]),
+		);
+
+		expect(await user.exportFeeds()).toHaveLength(2);
+	});
+
+	test("answers nothing for an object no sign-in has provisioned", async () => {
+		let { user } = await createUser("sub-unprovisioned");
+
+		expect(await user.exportFeeds()).toEqual([]);
+	});
+});
+
+describe("importFeeds", () => {
+	/** Serves `count` origins, named so a test can address each of them. */
+	function serveMany(count: number): string[] {
+		return Array.from({ length: count }, (_unused, index) => {
+			let url = `https://feed-${index}.example/feed.xml`;
+			server.use(http.get(url, () => HttpResponse.xml(rss(ENTRIES, `Feed ${index}`))));
+			return url;
+		});
+	}
+
+	test("follows every URL a document names", async () => {
+		let { user } = await createUser();
+		await user.ensureUser(SUBJECT);
+
+		let urls = serveMany(3);
+
+		expect(await user.importFeeds(urls)).toEqual({
+			added: 3,
+			alreadyFollowing: 0,
+			failed: [],
+		});
+
+		expect(await user.countFeeds()).toBe(3);
+	});
+
+	test("leaves the rest followed when some of them cannot be retrieved", async () => {
+		let { user } = await createUser();
+		await user.ensureUser(SUBJECT);
+
+		let reachable = serveMany(8);
+		let refused = ["https://down.example/feed.xml", "https://gone.example/feed.xml"];
+
+		server.use(http.get(refused[0] ?? "", () => HttpResponse.error()));
+		server.use(http.get(refused[1] ?? "", () => new HttpResponse(null, { status: 404 })));
+
+		let result = await user.importFeeds([...reachable, ...refused]);
+
+		expect(result.added).toBe(8);
+		expect(result.alreadyFollowing).toBe(0);
+		expect([...result.failed].sort()).toEqual([...refused].sort());
+
+		expect(await user.countFeeds()).toBe(8);
+	});
+
+	test("counts a feed already followed rather than following it twice", async () => {
+		let { user } = await createReaderWithFeed();
+
+		expect(await user.importFeeds([FEED_URL])).toEqual({
+			added: 0,
+			alreadyFollowing: 1,
+			failed: [],
+		});
+
+		expect(await user.countFeeds()).toBe(1);
+	});
+
+	test("names one subscription for a document listing the same URL twice", async () => {
+		let { user } = await createUser();
+		await user.ensureUser(SUBJECT);
+
+		expect(await user.importFeeds([FEED_URL, FEED_URL, FEED_URL])).toEqual({
+			added: 1,
+			alreadyFollowing: 0,
+			failed: [],
+		});
+
+		expect(await user.countFeeds()).toBe(1);
+	});
+
+	test("reports a URL that is not one, without reaching for it", async () => {
+		let { user } = await createUser();
+		await user.ensureUser(SUBJECT);
+
+		expect(await user.importFeeds(["not a url at all", "mailto:reader@example.com"])).toEqual({
+			added: 0,
+			alreadyFollowing: 0,
+			failed: ["not a url at all", "mailto:reader@example.com"],
+		});
+	});
+
+	test("follows against an object no sign-in has provisioned", async () => {
+		let { user } = await createUser("sub-unprovisioned");
+
+		// An import is a reader's first act as often as not, and it can reach an object no
+		// sign-in ever wrote a settings row into.
+		expect(await user.importFeeds([FEED_URL])).toEqual({
+			added: 1,
+			alreadyFollowing: 0,
+			failed: [],
+		});
+
+		expect((await user.getSettings())?.subject).toBe("sub-unprovisioned");
+	});
+});
+
+describe("listFeeds", () => {
+	test("pages forward and back through the cursors it minted", async () => {
+		let { user } = await createReaderWithFeed();
+		await followAnother(user, "b.example");
+		await followAnother(user, "c.example");
+
+		let first = await user.listFeeds({ limit: 2 });
+		expect(first.feeds).toHaveLength(2);
+		expect(first.cursors.prev).toBeNull();
+
+		let second = await user.listFeeds({ limit: 2, cursor: first.cursors.next });
+		expect(second.feeds).toHaveLength(1);
+		expect(second.cursors.next).toBeNull();
+
+		// Every subscription is served once across the two pages, which is the whole point
+		// of seeking rather than counting an offset into a list a follow can grow.
+		let paged = [...first.feeds, ...second.feeds].map((feed) => feed.id);
+		expect(new Set(paged).size).toBe(3);
+		expect(paged).toHaveLength(3);
+
+		let back = await user.listFeeds({ limit: 2, cursor: second.cursors.prev });
+		expect(back.feeds.map((feed) => feed.id)).toEqual(first.feeds.map((feed) => feed.id));
+	});
+
+	test("counts the unread posts on a page it seeked to", async () => {
+		let { user } = await createReaderWithFeed();
+		await followAnother(user, "b.example");
+
+		let page = await user.listFeeds({ limit: 1 });
+		let second = await user.listFeeds({ limit: 1, cursor: page.cursors.next });
+
+		expect(second.feeds.map((feed) => feed.unreadCount)).toEqual([5]);
+	});
+
+	test("answers an empty page for a cursor it cannot decode", async () => {
+		let { user } = await createReaderWithFeed();
+
+		// The shape a caller receives has no room to report a refusal, and answering the
+		// first page under a `next` link would read as the reader's place having moved.
+		expect(await user.listFeeds({ cursor: "not-a-cursor" })).toEqual({
+			feeds: [],
+			cursors: { next: null, prev: null },
+		});
+	});
+});
+
 describe("alarm", () => {
 	test("stamps the run and comes back for the reader's interval", async () => {
 		let { state, user } = await createUser();
@@ -626,5 +1026,59 @@ describe("the first refresh after a follow", () => {
 
 		expect(writes).toEqual([]);
 		expect(titles(await user.readingQueue())).toHaveLength(5);
+	});
+
+	/**
+	 * Dropping a field from the digest leaves every hash already stored taken over a wider
+	 * projection than the next one, so the first poll after it reads every post as edited
+	 * and writes an update for each. That one-time churn is only bearable if it moves
+	 * nothing a reader or a cursor rests on.
+	 */
+	test("rewrites every post without moving read state, ids or publication dates", async () => {
+		let { refreshDueFeeds: run } =
+			await vi.importActual<typeof import("~/database/refresh")>("~/database/refresh");
+		refreshDueFeeds.mockImplementation(run);
+
+		let { state, user } = await createReaderWithFeed();
+
+		let queue = await user.readingQueue({ limit: 1 });
+		let newest = queue.ok ? queue.items[0] : undefined;
+		expect(newest).toBeDefined();
+		if (newest === undefined) return;
+
+		await user.markRead(newest.id);
+
+		let before = await user.feedTimeline(newest.feedId);
+		expect(before.ok).toBe(true);
+		if (!before.ok) return;
+
+		// Every stored hash was taken over a projection the running code no longer builds.
+		state.storage.sql.exec("UPDATE feed_items SET content_hash = 'over-a-wider-projection'");
+
+		await user.alarm();
+
+		let after = await user.feedTimeline(newest.feedId);
+		expect(after.ok).toBe(true);
+		if (!after.ok) return;
+
+		expect(after.items).toEqual(before.items);
+		expect(after.items.filter((item) => item.readAt !== null)).toHaveLength(1);
+
+		// The churn is real: every post was re-hashed, and settles after this one poll.
+		let hashes = [
+			...state.storage.sql.exec<{ content_hash: string }>("SELECT content_hash FROM feed_items"),
+		].map((row) => row.content_hash);
+
+		expect(hashes.every((hash) => hash !== "over-a-wider-projection")).toBe(true);
+
+		let settled = vi.spyOn(state.storage.sql, "exec");
+		await user.alarm();
+		let writes = settled.mock.calls
+			.map(([statement]) => String(statement))
+			.filter((statement) => /feed_items/.test(statement))
+			.filter((statement) => /^\s*(insert|update|delete)/i.test(statement));
+		settled.mockRestore();
+
+		expect(writes).toEqual([]);
 	});
 });

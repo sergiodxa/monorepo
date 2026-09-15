@@ -52,6 +52,7 @@ export default createAction(routes.feeds.unfollow, {
 					label: ctx.i18next.t("nav.label"),
 					reading: ctx.i18next.t("nav.reading"),
 					feeds: ctx.i18next.t("nav.feeds"),
+					search: ctx.i18next.t("nav.search"),
 					settings: ctx.i18next.t("nav.settings"),
 					logout: ctx.i18next.t("nav.logout"),
 				}}

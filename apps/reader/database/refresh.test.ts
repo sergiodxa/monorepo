@@ -20,7 +20,13 @@ import type { InsertFeedItem, SelectFeed, SelectFeedItem } from "~/database/sche
 import { feedItems, feeds } from "~/database/schema";
 
 import { runMigrations } from "./migrations";
-import { MAX_CONTENT_LENGTH, pruneFeed, refreshDueFeeds, refreshFeed } from "./refresh";
+import {
+	EXCERPT_LENGTH,
+	MAX_SUMMARY_LENGTH,
+	pruneFeed,
+	refreshDueFeeds,
+	refreshFeed,
+} from "./refresh";
 
 /** The epoch milliseconds every test measures against, threaded rather than mocked. */
 const NOW = 1_800_000_000_000;
@@ -55,6 +61,11 @@ interface Entry {
 	description?: string;
 	pubDate?: string;
 	link?: string;
+	/**
+	 * A `content:encoded` body. A feed publishing both is what leaves `description` the
+	 * summary it was written to be, which is the only field of a post's text that is stored.
+	 */
+	content?: string;
 }
 
 /** An RSS 2.0 document carrying `entries`, which is what the origins answer with. */
@@ -65,17 +76,23 @@ function rss(entries: Entry[]): string {
 			<title>${entry.title ?? "A post"}</title>
 			<link>${entry.link ?? `https://example.com/${entry.guid}`}</link>
 			<description>${entry.description ?? "The body"}</description>
+			${entry.content === undefined ? "" : `<content:encoded>${entry.content}</content:encoded>`}
 			<pubDate>${entry.pubDate ?? "Tue, 01 Sep 2026 00:00:00 GMT"}</pubDate>
 		</item>`,
 	);
 
 	return `<?xml version="1.0" encoding="UTF-8"?>
-		<rss version="2.0"><channel>
+		<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel>
 			<title>Example</title>
 			<link>https://example.com</link>
 			<description>An example feed</description>
 			${items.join("\n")}
 		</channel></rss>`;
+}
+
+/** Wraps a body in CDATA, which is how a feed carries markup through an XML element. */
+function cdata(body: string): string {
+	return `<![CDATA[${body}]]>`;
 }
 
 /** Answers `url` with a document built from `entries`. */
@@ -130,7 +147,6 @@ async function storeItem(values: InsertFeedItem & { id: string }): Promise<void>
 			title: "A post",
 			url: null,
 			summary: null,
-			content: null,
 			author: null,
 			published_at: NOW,
 			content_hash: "hash",
@@ -263,14 +279,16 @@ describe("refreshFeed", () => {
 		expect((await loadItem("g1")).id).toMatch(/^item_[\da-z]{26}$/);
 	});
 
-	test("cuts a body past the cap and keeps hashing the cut one", async () => {
+	test("cuts a summary past the cap and keeps hashing the cut one", async () => {
 		let feed = await storeFeed();
-		serve(FEED_URL, [{ guid: "g1", description: "a".repeat(MAX_CONTENT_LENGTH + 1000) }]);
+		serve(FEED_URL, [
+			{ guid: "g1", description: "a".repeat(MAX_SUMMARY_LENGTH + 1000), content: "The full body" },
+		]);
 		await refreshFeed(db, feed, { now: NOW });
 
-		expect((await loadItem("g1")).content).toHaveLength(MAX_CONTENT_LENGTH);
+		expect((await loadItem("g1")).summary).toHaveLength(MAX_SUMMARY_LENGTH);
 
-		/** The second poll re-hashes the same cut body, so the post reads as unchanged. */
+		/** The second poll re-hashes the same cut summary, so the post reads as unchanged. */
 		let writes = watchWrites();
 		let outcome = await refreshFeed(db, await loadFeed(), { now: NOW + HOUR });
 		expect(writes.itemWrites()).toEqual([]);
@@ -279,21 +297,117 @@ describe("refreshFeed", () => {
 		expect(outcome).toEqual({ status: "ok", inserted: 0, updated: 0 });
 	});
 
-	test("updates an edited entry while leaving read_at, id and published_at alone", async () => {
+	test("reads a description-only entry as an excerpt of text, markup and all resolved", async () => {
 		let feed = await storeFeed();
-		serve(FEED_URL, [{ guid: "g1", title: "First draft", description: "A typo" }]);
+		serve(FEED_URL, [
+			{ guid: "g1", description: cdata("<p>An opening line. <strong>Then</strong> a second.</p>") },
+		]);
+
+		await refreshFeed(db, feed, { now: NOW });
+
+		expect((await loadItem("g1")).summary).toBe("An opening line. Then a second.");
+	});
+
+	test("resolves the entities a body carries into the characters they stand for", async () => {
+		let feed = await storeFeed();
+		serve(FEED_URL, [
+			{ guid: "g1", description: cdata("<p>Tea &amp; toast, the caf&#8217;s own.</p>") },
+		]);
+
+		await refreshFeed(db, feed, { now: NOW });
+
+		expect((await loadItem("g1")).summary).toBe("Tea & toast, the caf’s own.");
+	});
+
+	test("keeps the summary a publisher wrote when the entry carries a body of its own", async () => {
+		let feed = await storeFeed();
+		serve(FEED_URL, [
+			{
+				guid: "g1",
+				description: "The publisher's own words.",
+				content: cdata("<p>A body far longer than the summary beside it.</p>"),
+			},
+		]);
+
+		await refreshFeed(db, feed, { now: NOW });
+
+		expect((await loadItem("g1")).summary).toBe("The publisher's own words.");
+	});
+
+	test("cuts an excerpt at a word boundary and marks where it was cut", async () => {
+		let feed = await storeFeed();
+		let opening = "word ".repeat(55);
+		serve(FEED_URL, [{ guid: "g1", description: `${opening}supercalifragilisticexpialidocious` }]);
+
+		await refreshFeed(db, feed, { now: NOW });
+
+		let summary = (await loadItem("g1")).summary ?? "";
+		expect(summary).toBe(`${opening.trimEnd()}…`);
+		expect(summary.length).toBeLessThanOrEqual(EXCERPT_LENGTH + 1);
+	});
+
+	test("stores no summary for an entry carrying neither a body nor one", async () => {
+		let feed = await storeFeed();
+		server.use(
+			http.get(FEED_URL, () =>
+				HttpResponse.xml(`<?xml version="1.0"?>
+					<rss version="2.0"><channel>
+						<title>Example</title><link>https://example.com</link><description>d</description>
+						<item><guid isPermaLink="false">g1</guid><title>Bare</title></item>
+					</channel></rss>`),
+			),
+		);
+
+		await refreshFeed(db, feed, { now: NOW });
+
+		expect((await loadItem("g1")).summary).toBeNull();
+	});
+
+	test("notices a rewritten body in a feed that publishes only a description", async () => {
+		let feed = await storeFeed();
+		serve(FEED_URL, [{ guid: "g1", description: "The first version of the body." }]);
 		await refreshFeed(db, feed, { now: NOW });
 
 		await db.updateMany(feedItems, { read_at: NOW + 1 }, { where: { guid: "g1" }, touch: false });
 		let before = await loadItem("g1");
 
-		serve(FEED_URL, [{ guid: "g1", title: "First draft", description: "The typo, fixed" }]);
+		serve(FEED_URL, [{ guid: "g1", description: "The body, rewritten by the publisher." }]);
 		let outcome = await refreshFeed(db, await loadFeed(), { now: NOW + HOUR });
 
 		expect(outcome).toEqual({ status: "ok", inserted: 0, updated: 1 });
 
 		let after = await loadItem("g1");
-		expect(after.content).toContain("The typo, fixed");
+		expect(after.summary).toBe("The body, rewritten by the publisher.");
+		expect(after.content_hash).not.toBe(before.content_hash);
+		expect(after.id).toBe(before.id);
+		expect(after.published_at).toBe(before.published_at);
+		expect(after.read_at).toBe(NOW + 1);
+	});
+
+	test("updates an edited entry while leaving read_at, id and published_at alone", async () => {
+		let feed = await storeFeed();
+		serve(FEED_URL, [
+			{ guid: "g1", title: "First draft", description: "A typo", content: "The full body" },
+		]);
+		await refreshFeed(db, feed, { now: NOW });
+
+		await db.updateMany(feedItems, { read_at: NOW + 1 }, { where: { guid: "g1" }, touch: false });
+		let before = await loadItem("g1");
+
+		serve(FEED_URL, [
+			{
+				guid: "g1",
+				title: "First draft",
+				description: "The typo, fixed",
+				content: "The full body",
+			},
+		]);
+		let outcome = await refreshFeed(db, await loadFeed(), { now: NOW + HOUR });
+
+		expect(outcome).toEqual({ status: "ok", inserted: 0, updated: 1 });
+
+		let after = await loadItem("g1");
+		expect(after.summary).toContain("The typo, fixed");
 		expect(after.content_hash).not.toBe(before.content_hash);
 		expect(after.id).toBe(before.id);
 		expect(after.published_at).toBe(before.published_at);

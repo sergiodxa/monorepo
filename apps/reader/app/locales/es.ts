@@ -64,6 +64,7 @@ export default {
 		label: "Secciones",
 		reading: "Lectura",
 		feeds: "Feeds",
+		search: "Buscar",
 		settings: "Preferencias",
 		logout: "Cerrar sesión",
 	},
@@ -75,6 +76,7 @@ export default {
 		label: "Busca en tus entradas",
 		placeholder: "¿Qué estás buscando?",
 		submit: "Buscar",
+		resultsFor: "Entradas que coinciden con «{{query}}».",
 		results_one: "{{count}} entrada coincide con «{{query}}».",
 		results_other: "{{count}} entradas coinciden con «{{query}}».",
 		none: {
@@ -99,7 +101,17 @@ export default {
 		byAuthor: "por {{author}}",
 		badCursor: "Esa página de entradas ya no existe.",
 		restart: "Volver a lo más reciente",
-		markAllRead: "Marcar todo como leído",
+		/**
+		 * Marking a whole queue read is one sweep with no undo, so the trigger opens a
+		 * prompt carrying the warning rather than acting on the first click.
+		 */
+		markAllRead: {
+			submit: "Marcar todo como leído",
+			title: "Marcar todo como leído",
+			confirm:
+				"¿Marcar como leídas todas las entradas sin leer, de todos los feeds que sigues? Aquí no queda registro de cuáles estaban sin leer, así que no se puede deshacer.",
+			cancel: "Cancelar",
+		},
 		markFeedRead: "Marcar este feed como leído",
 		markedRead_one: "{{count}} entrada marcada como leída.",
 		markedRead_other: "{{count}} entradas marcadas como leídas.",
@@ -182,7 +194,11 @@ export default {
 
 		/** Carrying subscriptions to and from another reader. */
 		transfer: {
+			/** Names the section on the settings page that carries subscriptions in and out. */
+			legend: "Llevarte tus suscripciones",
 			export: "Descargar como OPML",
+			/** The exported document's own title, which the receiving reader shows. */
+			documentTitle: "Suscripciones de Reader",
 			import: {
 				label: "Archivo OPML",
 				description: "Una lista de suscripciones exportada de otro lector.",
@@ -195,6 +211,8 @@ export default {
 				failed_other: "No se pudieron obtener {{count}}.",
 				empty: "Ese archivo no lista ningún feed.",
 				unreadable: "No se pudo leer ese archivo como OPML.",
+				tooLarge:
+					"Ese archivo es más grande de lo que esta aplicación lee. Una lista de suscripciones ocupa unos cientos de kilobytes como mucho.",
 				missing: "Elige un archivo OPML para importar.",
 			},
 		},

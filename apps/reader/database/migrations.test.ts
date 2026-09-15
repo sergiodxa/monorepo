@@ -33,8 +33,12 @@ function queryPlan(query: string): string {
 }
 
 describe("runMigrations", () => {
-	test("applies the initial migration", async () => {
-		expect((await migrate()).applied).toEqual(["0001-init"]);
+	test("applies every migration, in the order they are journaled", async () => {
+		expect((await migrate()).applied).toEqual([
+			"0001-init",
+			"0002-drop-item-content",
+			"0003-feed-list-index",
+		]);
 	});
 
 	test("does nothing on a database already migrated", async () => {
@@ -59,6 +63,7 @@ describe("runMigrations", () => {
 			"feed_items",
 			"reader_migrations",
 			"feeds_feed_url_idx",
+			"feeds_subscription_idx",
 			"feed_items_feed_guid_idx",
 			"feed_items_timeline_idx",
 			"feed_items_feed_timeline_idx",
@@ -66,6 +71,31 @@ describe("runMigrations", () => {
 		]) {
 			expect(names, `${name} exists`).toContain(name);
 		}
+	});
+
+	test("leaves a post no body column, which nothing read back", async () => {
+		await migrate();
+
+		let columns = [...sql.exec<{ name: string }>(`PRAGMA table_info(feed_items)`)].map(
+			(row) => row.name,
+		);
+
+		expect(columns).not.toContain("content");
+
+		// The summary is the one piece of a post's text a reader is shown, so it stays where
+		// the body went, and the timeline still has something to render under a title.
+		expect(columns).toContain("summary");
+	});
+
+	test("keeps every index the body column was dropped around", async () => {
+		await migrate();
+
+		let plan = queryPlan(
+			`SELECT id, feed_id, title FROM feed_items WHERE read_at IS NULL
+			 ORDER BY published_at DESC, id DESC LIMIT 50`,
+		);
+
+		expect(plan).toContain("feed_items_unread_timeline_idx");
 	});
 });
 
@@ -131,6 +161,18 @@ describe("query plans", () => {
 		);
 
 		expect(plan).toContain("feed_items_timeline_idx");
+		expect(plan).not.toContain("USE TEMP B-TREE FOR ORDER BY");
+	});
+
+	test("answers the subscription list from an index, without sorting", async () => {
+		await migrate();
+
+		let plan = queryPlan(
+			`SELECT id, title, created_at FROM feeds
+			 ORDER BY created_at DESC, id DESC LIMIT 50`,
+		);
+
+		expect(plan).toContain("feeds_subscription_idx");
 		expect(plan).not.toContain("USE TEMP B-TREE FOR ORDER BY");
 	});
 

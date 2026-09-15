@@ -47,7 +47,7 @@ const PAGE_GUTTER = 6;
 
 export namespace AppLayout {
 	/** Which navigation link is the page being rendered. */
-	export type Page = "reading" | "feeds" | "settings";
+	export type Page = "reading" | "feeds" | "search" | "settings";
 
 	/** Where a heading points when the thing it names lives outside the app. */
 	export interface HeadingLink {
@@ -66,6 +66,7 @@ export namespace AppLayout {
 		label: string;
 		reading: string;
 		feeds: string;
+		search: string;
 		settings: string;
 		logout: string;
 	}
@@ -161,6 +162,11 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 								href={routes.feeds.index.href()}
 								label={nav.feeds}
 								isCurrent={current === "feeds"}
+							/>
+							<AppNavLink
+								href={routes.search.href()}
+								label={nav.search}
+								isCurrent={current === "search"}
 							/>
 							<AppNavLink
 								href={routes.settings.index.href()}

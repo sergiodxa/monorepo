@@ -57,13 +57,15 @@ export default createAction(routes.feeds.follow, {
 		 * The whole feed page comes back with the refusal against the field, so the reader
 		 * corrects the address where they typed it and keeps sight of what they follow.
 		 */
-		let { feeds } = await store.listFeeds();
+		let page = await store.listFeeds();
 
 		return renderFeedsPage(
 			ctx,
-			feeds,
+			page.feeds,
 			{ error: ctx.i18next.t(FOLLOW_ERROR_KEYS[followed.reason]), value: url },
 			UnprocessableEntity,
+			/** Carried through, so a refused address does not cost the reader their paging. */
+			page.cursors,
 		);
 	},
 });

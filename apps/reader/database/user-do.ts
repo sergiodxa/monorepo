@@ -8,7 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { KeysetQuery } from "@sdxc/pagination";
+import type { KeysetQuery, OrderByTuple, OrderDirection } from "@sdxc/pagination";
+import type { Predicate, SqlStatement } from "remix/data-table";
 
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { Feed, FeedFetchError } from "@sdxc/feed";
@@ -17,7 +18,7 @@ import { isFailure } from "@sdxc/result";
 import { TypeID } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
 import { DurableObject, env } from "cloudflare:workers";
-import { and, Database, inList, isNull } from "remix/data-table";
+import { and, Database, getTableColumns, inList, isNull, rawSql, sql } from "remix/data-table";
 
 import type {
 	FeedStatus,
@@ -73,6 +74,35 @@ const NEWEST_FIRST = [
 	["published_at", "desc"],
 	["id", "desc"],
 ] as const;
+
+/**
+ * The ordering the subscription list reads in, spelled once beside the timeline's own.
+ * A cursor carries the column names it was minted for, so one list's cursor is refused
+ * by the other rather than seeking on a column that means something else there.
+ */
+const NEWEST_SUBSCRIPTION_FIRST = [
+	["created_at", "desc"],
+	["id", "desc"],
+] as const;
+
+/**
+ * Feeds one on-demand run talks to at once. It paces a run by the slowest origin rather
+ * than by the sum of them, while keeping a reader's object, which has one thread, from
+ * opening a socket per feed — the same bound the scheduled refresh works under.
+ */
+const ON_DEMAND_CONCURRENCY = 6;
+
+/**
+ * The character that takes a wildcard's meaning away inside a `LIKE` pattern, so a reader
+ * searching for a title holding `%` or `_` is looking for those characters.
+ */
+const LIKE_ESCAPE = "\\";
+
+/**
+ * The comparisons a keyset seek is spelled with, which is the whole grammar
+ * {@link Pagination.byKeyset} builds out of an ordering and hands to a query.
+ */
+const SEEK_OPERATORS: Record<string, string> = { eq: "=", gt: ">", lt: "<" };
 
 /**
  * Unread posts per feed, as the feed list shows them. Grouping wants an index led by
@@ -319,64 +349,186 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * How many feeds the reader follows, which is what tells an empty queue apart from an
 	 * empty subscription list without reading a page of feeds to count it.
 	 */
-	countFeeds(): Promise<number> {
-		throw new Error("UserDO.countFeeds is not implemented");
+	async countFeeds(): Promise<number> {
+		return await this.#db.count(feeds);
 	}
 
 	/** Checks every followed feed now, reporting what the sweep as a whole found. */
-	checkAllFeedsNow(): Promise<UserStore.CheckAllResult> {
-		throw new Error("UserDO.checkAllFeedsNow is not implemented");
+	async checkAllFeedsNow(): Promise<UserStore.CheckAllResult> {
+		let result: UserStore.CheckAllResult = {
+			checked: 0,
+			withNewPosts: 0,
+			inserted: 0,
+			failed: 0,
+		};
+
+		try {
+			/**
+			 * Every followed feed, `next_attempt_at` and all. That column is a backoff floor
+			 * holding the alarm off an origin that has been failing, and a person asking to
+			 * check now is the one case it was never meant to hold back.
+			 *
+			 * Stalest first, so a sweep cut short by the object's own deadline has still
+			 * reached the feeds that had waited longest.
+			 */
+			let followed = await this.#db.findMany(feeds, {
+				orderBy: [
+					["last_fetched_at", "asc"],
+					["id", "asc"],
+				],
+			});
+
+			let now = Date.now();
+
+			await inParallel(followed, async (feed) => {
+				let outcome = await refreshFeed(this.#db, feed, { now });
+
+				if (outcome.status !== "ok" && outcome.status !== "not_modified") {
+					result.failed += 1;
+					return;
+				}
+
+				result.checked += 1;
+				if (outcome.status === "not_modified") return;
+
+				result.inserted += outcome.inserted;
+				if (outcome.inserted > 0) result.withNewPosts += 1;
+			});
+
+			// A reader's own sweep brings their posts up to date exactly as the scheduled one
+			// does, so the settings page reports it the same way rather than reading stale.
+			await this.#stampRefreshed(now);
+		} catch (error) {
+			/**
+			 * Reported rather than rejected, for the reason the alarm resolves: a reader who
+			 * asked gets the count of what did get through, and a caller rendering a page is
+			 * not taken down because one origin was unreachable.
+			 */
+			console.error("reader sweep of every feed failed", error);
+		}
+
+		return result;
 	}
 
-	/** Marks every unread post of one feed read, and reports how many that was. */
-	markFeedRead(_feedId: string): Promise<number> {
-		throw new Error("UserDO.markFeedRead is not implemented");
+	/**
+	 * Marks every unread post of one feed read, and reports how many that was.
+	 *
+	 * One statement rather than a page read and a row written per post, so clearing a feed
+	 * a reader let pile up costs the same as clearing one they are caught up on.
+	 */
+	async markFeedRead(feedId: string): Promise<number> {
+		let written = await this.#db.updateMany(
+			feedItems,
+			{ read_at: Date.now() },
+			{ where: and({ feed_id: feedId }, isNull("read_at")) },
+		);
+
+		return written.affectedRows ?? 0;
 	}
 
 	/** Marks every unread post read across every feed, and reports how many that was. */
-	markAllRead(): Promise<number> {
-		throw new Error("UserDO.markAllRead is not implemented");
+	async markAllRead(): Promise<number> {
+		let written = await this.#db.updateMany(
+			feedItems,
+			{ read_at: Date.now() },
+			{ where: isNull("read_at") },
+		);
+
+		return written.affectedRows ?? 0;
 	}
 
 	/**
 	 * Posts whose title or summary contain `query`, newest first, paged like a timeline.
 	 * A blank query matches nothing rather than everything: it is an empty search box.
 	 */
-	searchPosts(
-		_query: string,
-		_options?: UserStore.TimelineOptions,
+	async searchPosts(
+		query: string,
+		options: UserStore.TimelineOptions = {},
 	): Promise<UserStore.TimelineResult> {
-		throw new Error("UserDO.searchPosts is not implemented");
+		let pattern = likePattern(query);
+		if (pattern === null) {
+			return { ok: true, items: [], feeds: [], cursors: { next: null, prev: null } };
+		}
+
+		let search = new SearchQuery(this.#db, { pattern, seek: [], orderBy: [], limit: null });
+
+		return await this.#page(search, options);
 	}
 
 	/** Every subscription, in the shape an export writes them. */
-	exportFeeds(): Promise<UserStore.FeedExport[]> {
-		throw new Error("UserDO.exportFeeds is not implemented");
+	async exportFeeds(): Promise<UserStore.FeedExport[]> {
+		// The whole list, unpaged: a document holding some of a reader's subscriptions is
+		// one they would restore an incomplete library from.
+		let rows = await this.#db.findMany(feeds, {
+			orderBy: [
+				["created_at", "desc"],
+				["id", "desc"],
+			],
+		});
+
+		return rows.map((row) => ({
+			title: row.title,
+			feedUrl: row.feed_url,
+			siteUrl: row.site_url,
+		}));
 	}
 
 	/**
 	 * Follows each URL that is not already followed, and reports what became of the rest.
 	 * One unreachable feed in a document of fifty leaves the other forty-nine followed.
 	 */
-	importFeeds(_feedUrls: string[]): Promise<UserStore.ImportResult> {
-		throw new Error("UserDO.importFeeds is not implemented");
+	async importFeeds(feedUrls: string[]): Promise<UserStore.ImportResult> {
+		let result: UserStore.ImportResult = { added: 0, alreadyFollowing: 0, failed: [] };
+
+		// A document listing the same URL twice names one subscription, and the second pass
+		// would otherwise race the first into the unique index on `feed_url`.
+		let requested = [...new Set(feedUrls)];
+
+		await inParallel(requested, async (feedUrl) => {
+			try {
+				let followed = await this.followFeed(feedUrl);
+
+				if (followed.ok) result.added += 1;
+				else if (followed.reason === "already-following") result.alreadyFollowing += 1;
+				else result.failed.push(feedUrl);
+			} catch {
+				// Whatever went wrong belongs to this URL alone, so the rest of the document
+				// still lands and the reader is told which one did not.
+				result.failed.push(feedUrl);
+			}
+		});
+
+		return result;
 	}
 
 	/** One page of followed feeds, newest subscription first, each with its unread count. */
-	async listFeeds(_options?: UserStore.TimelineOptions): Promise<UserStore.FeedPage> {
-		let [rows, unread] = await Promise.all([
-			this.#db.findMany(feeds, {
-				orderBy: [
-					["created_at", "desc"],
-					["id", "desc"],
-				],
+	async listFeeds(options: UserStore.TimelineOptions = {}): Promise<UserStore.FeedPage> {
+		let [page, unread] = await Promise.all([
+			Pagination.byKeyset(this.#db.query(feeds), {
+				orderBy: NEWEST_SUBSCRIPTION_FIRST,
+				cursor: options.cursor,
+				limit: pageLimit(options.limit),
 			}),
 			this.#unreadCounts(),
 		]);
 
+		if (isFailure(page)) {
+			/**
+			 * A cursor minted under an older ordering leaves this page nothing to answer
+			 * with, and the shape a caller receives has no room to say why. An empty list
+			 * with no links is the honest answer: serving the first page under a `next`
+			 * link would read as the reader's place having quietly moved.
+			 */
+			if (page.error instanceof InvalidCursorError) {
+				return { feeds: [], cursors: { next: null, prev: null } };
+			}
+
+			throw page.error;
+		}
+
 		return {
-			feeds: rows.map((row) => toFeedSummary(row, unread.get(row.id) ?? 0)),
-			cursors: { next: null, prev: null },
+			feeds: page.data.items.map((row) => toFeedSummary(row, unread.get(row.id) ?? 0)),
+			cursors: page.data.cursors,
 		};
 	}
 
@@ -732,6 +884,183 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 		return counts;
 	}
+}
+
+/** Everything one composed search statement is built from. */
+interface SearchState {
+	/** The `LIKE` pattern, already escaped, that both searched columns are matched against. */
+	pattern: string;
+	/** Seek predicates the pager composed, which narrow the match to one page. */
+	seek: readonly Predicate[];
+	/** The ordering the pager owns, which is also what it mints cursors from. */
+	orderBy: readonly OrderByTuple[];
+	/** Posts the statement reads, or `null` before the pager has set one. */
+	limit: number | null;
+}
+
+/**
+ * A post search, as a query {@link Pagination.byKeyset} can seek, order and limit.
+ *
+ * The match is a `LIKE` carrying an `ESCAPE` clause, which is what lets somebody search
+ * for a post whose title holds `%` or `_` instead of having those characters read as
+ * wildcards. The query builder's own operators emit no such clause, so the statement is
+ * spelled out here and the pager's seek predicate is folded into it: one page, one read.
+ *
+ * It costs a scan of the reader's posts. A match that may begin anywhere in the text is
+ * one no index answers, so the timeline index serves the ordering and nothing else.
+ */
+class SearchQuery implements KeysetQuery<TimelineRow, Predicate, string> {
+	#db: Database;
+	#state: SearchState;
+
+	/**
+	 * @param db - The reader's database.
+	 * @param state - The pattern to match, and whatever the pager has composed so far.
+	 */
+	constructor(db: Database, state: SearchState) {
+		this.#db = db;
+		this.#state = state;
+	}
+
+	where(input: Predicate): SearchQuery {
+		return new SearchQuery(this.#db, { ...this.#state, seek: [...this.#state.seek, input] });
+	}
+
+	orderBy(column: string, direction: OrderDirection): SearchQuery {
+		return new SearchQuery(this.#db, {
+			...this.#state,
+			orderBy: [...this.#state.orderBy, [column, direction]],
+		});
+	}
+
+	limit(value: number): SearchQuery {
+		return new SearchQuery(this.#db, { ...this.#state, limit: value });
+	}
+
+	async all(): Promise<TimelineRow[]> {
+		let { rows = [] } = await this.#db.exec(searchStatement(this.#state));
+		return rows.map(toTimelineRow);
+	}
+}
+
+/** The statement one page of a search runs as. */
+function searchStatement(state: SearchState): SqlStatement {
+	let pattern = state.pattern;
+
+	let match = sql`("title" like ${pattern} escape ${LIKE_ESCAPE} or "summary" like ${pattern} escape ${LIKE_ESCAPE})`;
+	let where = state.seek.reduce((left, right) => sql`${left} and ${seekSql(right)}`, match);
+
+	// The pager appends the ordering it owns before reading, and the fallback keeps a
+	// statement built without one reading the way a search is defined to.
+	let ordering = state.orderBy.length === 0 ? NEWEST_FIRST : state.orderBy;
+	let orderBy = ordering
+		.map(([column, direction]) => `${quoteColumn(column)} ${direction === "asc" ? "asc" : "desc"}`)
+		.join(", ");
+
+	return sql`select "id", "feed_id", "title", "url", "summary", "author", "published_at", "read_at"
+		from feed_items
+		where ${where}
+		order by ${rawSql(orderBy)}
+		limit ${state.limit ?? DEFAULT_PAGE_LIMIT}`;
+}
+
+/**
+ * One seek predicate as SQL. `Pagination.byKeyset` builds these out of the ordering it was
+ * given, so the comparisons and the `and`/`or` nesting below are the whole of what arrives.
+ */
+function seekSql(predicate: Predicate): SqlStatement {
+	if (predicate.type === "logical") {
+		let parts = predicate.predicates.map(seekSql);
+		let joiner = predicate.operator === "and" ? " and " : " or ";
+
+		return rawSql(
+			`(${parts.map((part) => part.text).join(joiner)})`,
+			parts.flatMap((part) => part.values),
+		);
+	}
+
+	if (predicate.type === "comparison" && predicate.valueType === "value") {
+		let operator = SEEK_OPERATORS[predicate.operator];
+
+		if (operator !== undefined) {
+			return rawSql(`${quoteColumn(predicate.column)} ${operator} ?`, [predicate.value]);
+		}
+	}
+
+	throw new Error("a search page seeks on comparisons of its ordering columns alone");
+}
+
+/**
+ * One column of `feed_items` as a SQL identifier. It accepts only a name the table
+ * declares, so a statement written by hand cannot reach a column the schema has dropped.
+ */
+function quoteColumn(column: string): string {
+	if (!(column in getTableColumns(feedItems))) {
+		throw new Error(`feed_items declares no column named "${column}"`);
+	}
+
+	return `"${column}"`;
+}
+
+/** One row of the search statement, read back into the shape a timeline page is built from. */
+function toTimelineRow(row: Record<string, unknown>): TimelineRow {
+	let { feed_id: feedId, published_at: publishedAt, read_at: readAt } = row;
+
+	return {
+		id: typeof row.id === "string" ? row.id : "",
+		feed_id: typeof feedId === "string" ? feedId : "",
+		title: typeof row.title === "string" ? row.title : "",
+		url: typeof row.url === "string" ? row.url : null,
+		summary: typeof row.summary === "string" ? row.summary : null,
+		author: typeof row.author === "string" ? row.author : null,
+		published_at: typeof publishedAt === "number" ? publishedAt : 0,
+		read_at: typeof readAt === "number" ? readAt : null,
+	};
+}
+
+/**
+ * What somebody typed, as a `LIKE` pattern that looks for exactly that text. The escape
+ * character is escaped first, so escaping a wildcard afterwards cannot be undone by it.
+ *
+ * @param query - The text somebody typed into the search box.
+ * @returns The pattern to match, or `null` when the box held nothing but space.
+ */
+function likePattern(query: string): string | null {
+	let trimmed = query.trim();
+	if (trimmed.length === 0) return null;
+
+	let escaped = trimmed
+		.replaceAll(LIKE_ESCAPE, LIKE_ESCAPE + LIKE_ESCAPE)
+		.replaceAll("%", `${LIKE_ESCAPE}%`)
+		.replaceAll("_", `${LIKE_ESCAPE}_`);
+
+	return `%${escaped}%`;
+}
+
+/**
+ * Runs `work` over every value, {@link ON_DEMAND_CONCURRENCY} of them at a time.
+ *
+ * Whatever one value's turn did stops there, so the worker that took it carries on to the
+ * next rather than retiring with the queue half read.
+ *
+ * @param values - What to work through.
+ * @param work - What one value's turn does.
+ */
+async function inParallel<value>(
+	values: readonly value[],
+	work: (value: value) => Promise<void>,
+): Promise<void> {
+	let next = 0;
+
+	let workers = Array.from({ length: Math.min(ON_DEMAND_CONCURRENCY, values.length) }, async () => {
+		while (next < values.length) {
+			let value = values[next++];
+			if (value === undefined) return;
+			await work(value).catch(() => undefined);
+		}
+	});
+
+	await Promise.allSettled(workers);
 }
 
 /**

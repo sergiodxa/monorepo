@@ -65,6 +65,7 @@ export default {
 		label: "Sections",
 		reading: "Reading",
 		feeds: "Feeds",
+		search: "Search",
 		settings: "Settings",
 		logout: "Sign out",
 	},
@@ -76,6 +77,7 @@ export default {
 		label: "Search your posts",
 		placeholder: "What are you looking for?",
 		submit: "Search",
+		resultsFor: "Posts matching “{{query}}”.",
 		results_one: "{{count}} post matches “{{query}}”.",
 		results_other: "{{count}} posts match “{{query}}”.",
 		none: {
@@ -100,7 +102,17 @@ export default {
 		byAuthor: "by {{author}}",
 		badCursor: "That page of posts is no longer there.",
 		restart: "Back to the newest",
-		markAllRead: "Mark everything read",
+		/**
+		 * Marking a whole queue read is one sweep with no undo, so the trigger opens a
+		 * prompt carrying the warning rather than acting on the first click.
+		 */
+		markAllRead: {
+			submit: "Mark everything read",
+			title: "Mark everything read",
+			confirm:
+				"Mark every unread post read, across every feed you follow? Nothing here records what was unread, so this cannot be undone.",
+			cancel: "Cancel",
+		},
 		markFeedRead: "Mark this feed read",
 		markedRead_one: "{{count}} post marked read.",
 		markedRead_other: "{{count}} posts marked read.",
@@ -182,7 +194,11 @@ export default {
 
 		/** Carrying subscriptions to and from another reader. */
 		transfer: {
+			/** Names the section on the settings page that carries subscriptions in and out. */
+			legend: "Carrying your subscriptions",
 			export: "Download as OPML",
+			/** The exported document's own title, which the receiving reader shows. */
+			documentTitle: "Reader subscriptions",
 			import: {
 				label: "OPML file",
 				description: "A subscription list exported from another reader.",
@@ -195,6 +211,8 @@ export default {
 				failed_other: "{{count}} could not be retrieved.",
 				empty: "That file lists no feeds.",
 				unreadable: "That file could not be read as OPML.",
+				tooLarge:
+					"That file is larger than this app will read. A subscription list is a few hundred kilobytes at most.",
 				missing: "Choose an OPML file to import.",
 			},
 		},

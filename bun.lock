@@ -195,11 +195,13 @@
         "@sdxc/cache": "workspace:*",
         "@sdxc/data-table-sqlstorage": "workspace:*",
         "@sdxc/feed": "workspace:*",
+        "@sdxc/html": "workspace:*",
         "@sdxc/http": "workspace:*",
         "@sdxc/i18n": "workspace:*",
         "@sdxc/icons": "workspace:*",
         "@sdxc/lazy-route": "workspace:*",
         "@sdxc/logger": "workspace:*",
+        "@sdxc/opml": "workspace:*",
         "@sdxc/pagination": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/session-storage-kv": "workspace:*",
@@ -639,6 +641,14 @@
       "devDependencies": {
         "@cloudflare/workers-types": "^5.20260901.1",
         "@sdxc/cloudflare-mocks": "workspace:*",
+      },
+    },
+    "packages/opml": {
+      "name": "@sdxc/opml",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+        "@sdxc/xml": "workspace:*",
       },
     },
     "packages/pagination": {
@@ -1499,6 +1509,8 @@
     "@sdxc/mcp": ["@sdxc/mcp@workspace:packages/mcp"],
 
     "@sdxc/oidc-provider": ["@sdxc/oidc-provider@workspace:packages/oidc-provider"],
+
+    "@sdxc/opml": ["@sdxc/opml@workspace:packages/opml"],
 
     "@sdxc/pagination": ["@sdxc/pagination@workspace:packages/pagination"],
 

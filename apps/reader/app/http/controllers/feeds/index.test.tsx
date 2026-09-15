@@ -1,7 +1,9 @@
 /**
  * Tests `GET /feeds`: the guard that keeps it to signed-in readers, the chrome it renders
  * inside, and the labels it resolves for each followed feed — the unread count in both its
- * singular and plural forms, the last check, and what a struggling feed has to report.
+ * singular and plural forms, the last check, and what a struggling feed has to report. Then
+ * the links that walk the list a page at a time, the sweep of every feed, and the sentence
+ * the sweep returns here to report.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -57,11 +59,12 @@ function feed(overrides: Partial<UserStore.FeedSummary> = {}): UserStore.FeedSum
  * Requests the feed list as `viewer`.
  *
  * @param viewer - Who the request is signed in as, or `null` for an anonymous one.
+ * @param url - The page of the list being asked for; defaults to the newest one.
  */
-function getFeeds(viewer: typeof VIEWER | null) {
+function getFeeds(viewer: typeof VIEWER | null, url = routes.feeds.index.href()) {
 	let router = createTestRouter(viewer);
 	router.map(routes.feeds.index, feeds);
-	return fetchRoute(router, routes.feeds.index.href());
+	return fetchRoute(router, url);
 }
 
 beforeEach(() => {
@@ -211,5 +214,159 @@ describe("GET /feeds", () => {
 		expect(body).toContain(`action="${routes.feeds.follow.href()}"`);
 		expect(body).not.toContain("You already follow that feed.");
 		expect(body).not.toContain('value="https://');
+	});
+	test("asks the store for the page the cursor names", async () => {
+		await getFeeds(VIEWER, `${routes.feeds.index.href()}?cursor=older-cursor`);
+
+		expect(store.listFeeds).toHaveBeenCalledWith({ cursor: "older-cursor" });
+	});
+
+	test("walks to the pages either side of this one", async () => {
+		store.listFeeds.mockResolvedValue({
+			feeds: [feed()],
+			cursors: { next: "older-cursor", prev: "newer-cursor" },
+		});
+
+		let body = await getFeeds(VIEWER).then((response) => response.text());
+
+		expect(body).toContain(`href="${routes.feeds.index.href()}?cursor=newer-cursor"`);
+		expect(body).toContain("Newer subscriptions");
+		expect(body).toContain(`href="${routes.feeds.index.href()}?cursor=older-cursor"`);
+		expect(body).toContain("Older subscriptions");
+	});
+
+	test("offers no way back from the newest subscriptions", async () => {
+		store.listFeeds.mockResolvedValue({
+			feeds: [feed()],
+			cursors: { next: "older-cursor", prev: null },
+		});
+
+		let body = await getFeeds(VIEWER).then((response) => response.text());
+
+		expect(body).not.toContain("Newer subscriptions");
+		expect(body).toContain("Older subscriptions");
+	});
+
+	test("offers no way on from the oldest subscriptions", async () => {
+		store.listFeeds.mockResolvedValue({
+			feeds: [feed()],
+			cursors: { next: null, prev: "newer-cursor" },
+		});
+
+		let body = await getFeeds(VIEWER).then((response) => response.text());
+
+		expect(body).toContain("Newer subscriptions");
+		expect(body).not.toContain("Older subscriptions");
+	});
+
+	test("pages nowhere when the whole list fits on one page", async () => {
+		store.listFeeds.mockResolvedValue({ feeds: [feed()], cursors: { next: null, prev: null } });
+
+		let body = await getFeeds(VIEWER).then((response) => response.text());
+
+		expect(body).not.toContain("Newer subscriptions");
+		expect(body).not.toContain("Older subscriptions");
+		expect(body).not.toContain("cursor=");
+	});
+
+	test("submits a sweep of every feed rather than linking to one", async () => {
+		let body = await getFeeds(VIEWER).then((response) => response.text());
+
+		expect(body).toContain(`<form method="post" action="${routes.feeds.refreshAll.href()}">`);
+		expect(body).toContain("Check every feed");
+		/** A link is what a prefetcher follows, and this one reaches out to every origin. */
+		expect(body).not.toContain(`href="${routes.feeds.refreshAll.href()}"`);
+	});
+
+	test("leaves carrying subscriptions in and out to the settings page", async () => {
+		let body = await getFeeds(VIEWER).then((response) => response.text());
+
+		expect(body).not.toContain(`href="${routes.feeds.export.href()}"`);
+		expect(body).not.toContain("Download as OPML");
+		expect(body).not.toContain(`action="${routes.feeds.import.href()}"`);
+		expect(body).not.toContain("multipart/form-data");
+		expect(body).not.toContain('type="file"');
+		expect(body).not.toContain("OPML file");
+	});
+
+	test("offers the sweep above the feeds it acts on", async () => {
+		store.listFeeds.mockResolvedValue({ feeds: [feed()], cursors: { next: null, prev: null } });
+
+		let body = await getFeeds(VIEWER).then((response) => response.text());
+
+		expect(body.indexOf("Check every feed")).toBeLessThan(body.indexOf("Example Blog"));
+	});
+});
+
+describe("GET /feeds after a sweep", () => {
+	/**
+	 * Requests the list the way a finished sweep returns the reader to it.
+	 *
+	 * @param counts - What the sweep reported, in the order the redirect carries them.
+	 */
+	function afterSweep(counts: { swept: number; fresh: number; failed: number }) {
+		let query = new URLSearchParams({
+			swept: String(counts.swept),
+			fresh: String(counts.fresh),
+			failed: String(counts.failed),
+		});
+
+		return getFeeds(VIEWER, `${routes.feeds.index.href()}?${query}`).then((response) =>
+			response.text(),
+		);
+	}
+
+	test("says nothing on a list nobody was returned to", async () => {
+		let body = await getFeeds(VIEWER).then((response) => response.text());
+
+		expect(body).not.toContain("Checked");
+		expect(body).not.toContain("No feed had anything new.");
+	});
+
+	test("counts what the sweep reached and what it brought back", async () => {
+		let body = await afterSweep({ swept: 12, fresh: 3, failed: 0 });
+
+		expect(body).toContain("Checked 12 feeds.");
+		expect(body).toContain("3 feeds had new posts.");
+		expect(body).not.toContain("could not be reached.");
+	});
+
+	test("says so when a sweep found nothing new", async () => {
+		let body = await afterSweep({ swept: 12, fresh: 0, failed: 0 });
+
+		expect(body).toContain("Checked 12 feeds.");
+		expect(body).toContain("No feed had anything new.");
+	});
+
+	test("reports the feeds it could not reach alongside the ones it did", async () => {
+		let body = await afterSweep({ swept: 9, fresh: 2, failed: 3 });
+
+		expect(body).toContain("Checked 9 feeds.");
+		expect(body).toContain("2 feeds had new posts.");
+		expect(body).toContain("3 feeds could not be reached.");
+	});
+
+	test("counts a single feed in the singular", async () => {
+		let body = await afterSweep({ swept: 1, fresh: 1, failed: 1 });
+
+		expect(body).toContain("Checked 1 feed.");
+		expect(body).toContain("1 feed had new posts.");
+		expect(body).toContain("1 feed could not be reached.");
+	});
+
+	test("reports a sweep of a list that follows nothing", async () => {
+		let body = await afterSweep({ swept: 0, fresh: 0, failed: 0 });
+
+		expect(body).toContain("Checked 0 feeds.");
+		expect(body).toContain("No feed had anything new.");
+	});
+
+	test("reports nothing for counts that are not counts", async () => {
+		let body = await getFeeds(VIEWER, `${routes.feeds.index.href()}?swept=lots`).then((response) =>
+			response.text(),
+		);
+
+		expect(body).not.toContain("Checked");
+		expect(body).not.toContain("No feed had anything new.");
 	});
 });

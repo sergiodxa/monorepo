@@ -1,7 +1,8 @@
 /**
  * Single-feed controller for `GET /feeds/:feedId`: one feed's posts, read and unread
  * alike, newest first, headed by the feed's name — which is the link to the site behind
- * it — and, on that same line, the way to stop following it.
+ * it — and, on that same line, the ways to act on the feed as a whole: check it now, take
+ * its unread posts out of the queue, and stop following it.
  *
  * The feed is looked up in the reader's own storage, so a feed somebody else follows is
  * as absent here as one nobody does, and both answer `404`.
@@ -17,6 +18,7 @@ import { Alert, Button, Confirm, Empty, HeadingScope, LinkButton } from "@sdxc/u
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
+import { MARKED_PARAM } from "~/app/http/controllers/feeds/read";
 import { CHECKED_PARAM } from "~/app/http/controllers/feeds/refresh";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
@@ -47,6 +49,14 @@ function unfollowPromptId(feedId: string): string {
 	return `unfollow-${feedId}`;
 }
 
+/** One line of copy the page says an action's outcome in, and the tone it wears. */
+interface Note {
+	key: string;
+	/** Interpolation the copy reads, which is the count its plural form selects on. */
+	options?: { count: number };
+	color: "success" | "warning" | "neutral";
+}
+
 /**
  * The copy and tone for the outcome a check-now redirect carries, or `null` when this is
  * an ordinary visit. `missing` needs no entry: a feed the reader does not follow renders
@@ -54,11 +64,26 @@ function unfollowPromptId(feedId: string): string {
  *
  * @param checked - The redirect's `checked` parameter, as it arrived.
  */
-function checkNote(checked: string | null): { key: string; color: "success" | "warning" } | null {
+function checkNote(checked: string | null): Note | null {
 	if (checked === "new") return { key: "feeds.check.new", color: "success" };
 	if (checked === "none") return { key: "feeds.check.none", color: "success" };
 	if (checked === "failed") return { key: "feeds.check.failed", color: "warning" };
 	return null;
+}
+
+/**
+ * The copy and tone for the outcome a mark-feed-read redirect carries, or `null` when
+ * this is an ordinary visit. Only a run of decimal digits is a count, so a parameter
+ * somebody typed by hand reports nothing rather than a number read out of it.
+ *
+ * @param marked - The redirect's `marked` parameter, as it arrived.
+ */
+function markNote(marked: string | null): Note | null {
+	if (marked === null || !/^\d+$/.test(marked)) return null;
+
+	let count = Number(marked);
+	if (count === 0) return { key: "timeline.nothingToMark", color: "neutral" };
+	return { key: "timeline.markedRead", options: { count }, color: "success" };
 }
 
 /** GET /feeds/:feedId — one feed and its posts. */
@@ -75,6 +100,7 @@ export default createAction(routes.feeds.show, {
 			label: ctx.i18next.t("nav.label"),
 			reading: ctx.i18next.t("nav.reading"),
 			feeds: ctx.i18next.t("nav.feeds"),
+			search: ctx.i18next.t("nav.search"),
 			settings: ctx.i18next.t("nav.settings"),
 			logout: ctx.i18next.t("nav.logout"),
 		};
@@ -126,7 +152,14 @@ export default createAction(routes.feeds.show, {
 		if (!page.ok) page = await store.feedTimeline(feedId, { cursor: null });
 		if (!page.ok) throw new Error("The first page of a timeline decodes without a cursor");
 
-		let note = checkNote(ctx.url.searchParams.get(CHECKED_PARAM));
+		/**
+		 * Each action redirects here carrying its own parameter and no other, so the page has
+		 * one outcome to report and one line to report it in. A URL arriving with both was
+		 * assembled by hand, and the marking is the one that moved posts, so it speaks.
+		 */
+		let note =
+			markNote(ctx.url.searchParams.get(MARKED_PARAM)) ??
+			checkNote(ctx.url.searchParams.get(CHECKED_PARAM));
 		let publishedFormat = new Intl.DateTimeFormat(ctx.locale, { dateStyle: "medium" });
 
 		/** Read outside the mapping below, which is a closure and so widens `feed` again. */
@@ -158,7 +191,7 @@ export default createAction(routes.feeds.show, {
 				documentTitle={feed.title}
 				heading={feed.title}
 				/**
-				 * On the feed's own line, so stopping following it costs a click rather than a
+				 * On the feed's own line, so acting on the whole feed costs a click rather than a
 				 * scroll past every post it ever published.
 				 */
 				headingActions={
@@ -171,6 +204,20 @@ export default createAction(routes.feeds.show, {
 						<form method="post" action={routes.feeds.refresh.href({ feedId })}>
 							<Button type="submit" color="neutral" variant="ghost" size="sm">
 								{ctx.i18next.t("feeds.check.submit")}
+							</Button>
+						</form>
+
+						{/**
+						 * A `POST` rather than a link, for the reason the check is one: a prefetcher or
+						 * a mail scanner follows a `GET`, and following this one would take a feed out of
+						 * a reader's queue without them asking for it.
+						 *
+						 * It submits on the first click. The reach is a single feed, the page names which
+						 * one, and every post it touches keeps its own way back to unread.
+						 */}
+						<form method="post" action={routes.feeds.read.href({ feedId })}>
+							<Button type="submit" color="neutral" variant="ghost" size="sm">
+								{ctx.i18next.t("timeline.markFeedRead")}
 							</Button>
 						</form>
 
@@ -222,7 +269,7 @@ export default createAction(routes.feeds.show, {
 
 					{note && (
 						<Alert color={note.color}>
-							<Alert.Description>{ctx.i18next.t(note.key)}</Alert.Description>
+							<Alert.Description>{ctx.i18next.t(note.key, note.options)}</Alert.Description>
 						</Alert>
 					)}
 

@@ -1,7 +1,8 @@
 /**
  * Tests the `/settings` controller: the guard on the page, the cadence form it renders from
  * the reader's stored preferences, the redirect a save answers with, and the refusal a
- * cadence outside the offered set earns.
+ * cadence outside the offered set earns. Then the transfer section, and the sentence each
+ * outcome an import returns here with is reported as.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -150,5 +151,134 @@ describe("POST /settings", () => {
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(routes.home.href());
 		expect(store.setRefreshInterval).not.toHaveBeenCalled();
+	});
+});
+
+describe("the transfer section", () => {
+	test("offers the subscription list as a download", async () => {
+		let body = await (await fetchRoute(createRouter(VIEWER), routes.settings.index.href())).text();
+
+		expect(body).toContain(`href="${routes.feeds.export.href()}"`);
+		expect(body).toContain("Download as OPML");
+	});
+
+	test("uploads an OPML document in the encoding that carries its bytes", async () => {
+		let body = await (await fetchRoute(createRouter(VIEWER), routes.settings.index.href())).text();
+
+		expect(body).toContain(
+			`<form method="post" action="${routes.feeds.import.href()}" enctype="multipart/form-data"`,
+		);
+		expect(body).toContain('type="file"');
+		expect(body).toContain('name="file"');
+		expect(body).toContain('accept=".opml,.xml,application/xml,text/xml"');
+		expect(body).toContain("OPML file");
+		expect(body).toContain("A subscription list exported from another reader.");
+		expect(body).toContain("Import");
+	});
+
+	test("leaves the picker optional, since the hidden input is one no reader can focus", async () => {
+		let body = await (await fetchRoute(createRouter(VIEWER), routes.settings.index.href())).text();
+
+		expect(/<input[^>]*type="file"[^>]*\brequired\b/.test(body)).toBe(false);
+	});
+
+	test("ties the picker to the passage saying what it asks for", async () => {
+		let body = await (await fetchRoute(createRouter(VIEWER), routes.settings.index.href())).text();
+
+		let describedBy = /<input[^>]*type="file"[^>]*aria-describedby="([^"]+)"/.exec(body)?.[1];
+
+		expect(describedBy).toBeDefined();
+		expect(body).toContain(`id="${describedBy}"`);
+	});
+});
+
+describe("what an import returns here with", () => {
+	/**
+	 * Requests the page the way a finished import returns the reader to it.
+	 *
+	 * @param query - The outcome and counts the redirect carries.
+	 */
+	function afterImport(query: Record<string, string>) {
+		let url = `${routes.settings.index.href()}?${new URLSearchParams(query)}`;
+		return fetchRoute(createRouter(VIEWER), url).then((response) => response.text());
+	}
+
+	test("says nothing on a page nobody was returned to", async () => {
+		let body = await (await fetchRoute(createRouter(VIEWER), routes.settings.index.href())).text();
+
+		expect(body).not.toContain("Followed");
+		expect(body).not.toContain("That file lists no feeds.");
+		expect(body).not.toContain("Choose an OPML file to import.");
+	});
+
+	test("counts what an import followed and what it already followed", async () => {
+		let body = await afterImport({ imported: "done", added: "2", following: "1", failed: "0" });
+
+		expect(body).toContain("Followed 2 new feeds.");
+		expect(body).toContain("1 was already followed.");
+		expect(body).not.toContain("could not be retrieved.");
+	});
+
+	test("reads a partial import as a success, with its failures alongside", async () => {
+		let body = await afterImport({ imported: "done", added: "47", following: "0", failed: "3" });
+
+		expect(body).toContain("Followed 47 new feeds.");
+		expect(body).toContain("3 could not be retrieved.");
+		expect(body).not.toContain("was already followed.");
+		expect(body).not.toContain("That file could not be read as OPML.");
+	});
+
+	test("counts a single followed feed in the singular", async () => {
+		let body = await afterImport({ imported: "done", added: "1", following: "0", failed: "0" });
+
+		expect(body).toContain("Followed 1 new feed.");
+	});
+
+	test("reads a count that did not arrive as none of them", async () => {
+		let body = await afterImport({ imported: "done" });
+
+		expect(body).toContain("Followed 0 new feeds.");
+		expect(body).not.toContain("was already followed.");
+		expect(body).not.toContain("could not be retrieved.");
+	});
+
+	test("reports a document that lists no feeds", async () => {
+		let body = await afterImport({ imported: "empty" });
+
+		expect(body).toContain("That file lists no feeds.");
+	});
+
+	test("reports a file that could not be read", async () => {
+		let body = await afterImport({ imported: "unreadable" });
+
+		expect(body).toContain("That file could not be read as OPML.");
+	});
+
+	test("says a file is past the size this reads, rather than calling it unreadable", async () => {
+		let body = await afterImport({ imported: "too-large" });
+
+		expect(body).toContain("larger than this app will read");
+		expect(body).not.toContain("could not be read as OPML");
+	});
+
+	test("names the transfer section, so the controls below it are not unlabelled", async () => {
+		let body = await afterImport({});
+
+		expect(body).toContain("Carrying your subscriptions");
+	});
+
+	test("asks for a file when the form arrived without one", async () => {
+		let body = await afterImport({ imported: "missing" });
+
+		expect(body).toContain("Choose an OPML file to import.");
+	});
+
+	test("reports nothing for an outcome it has no sentence for", async () => {
+		let body = await afterImport({ imported: "somethingelse" });
+
+		expect(body).not.toContain("Followed");
+		expect(body).not.toContain("That file lists no feeds.");
+		expect(body).not.toContain("That file could not be read as OPML.");
+		expect(body).not.toContain("Choose an OPML file to import.");
 	});
 });

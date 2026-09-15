@@ -1,6 +1,8 @@
 /**
  * Reading-queue controller for `GET /reading`: the unread posts across every followed
- * feed, newest first, and the app's landing spot after sign-in.
+ * feed, newest first, and the app's landing spot after sign-in. On the queue's own line
+ * sits the way to clear the whole of it at once, for a reader far enough behind that
+ * starting fresh beats working through the backlog.
  *
  * The store answers with posts and, beside them, the feeds those posts came from. Turning
  * that into the byline a reader sees happens here, where the dictionary and the request's
@@ -13,9 +15,10 @@
 import { parsePageParams } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { vstack } from "@sdxc/u/layout";
-import { Alert, Empty, HeadingScope, LinkButton } from "@sdxc/ui";
+import { Alert, Button, Confirm, Empty, HeadingScope, LinkButton } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
+import { MARKED_PARAM } from "~/app/http/controllers/read-all";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/database/user-do";
@@ -32,6 +35,32 @@ import routes from "~/routes/web";
 function queuePage(cursor: string | null): string | null {
 	if (cursor === null) return null;
 	return `${routes.reading.href()}?${new URLSearchParams({ cursor })}`;
+}
+
+/** The `id` the mark-everything-read prompt answers to, which its trigger names in `commandfor`. */
+const MARK_ALL_PROMPT_ID = "mark-all-read";
+
+/** One line of copy the page says an action's outcome in, and the tone it wears. */
+interface Note {
+	key: string;
+	/** Interpolation the copy reads, which is the count its plural form selects on. */
+	options?: { count: number };
+	color: "success" | "neutral";
+}
+
+/**
+ * The copy and tone for the outcome a mark-everything-read redirect carries, or `null`
+ * when this is an ordinary visit. Only a run of decimal digits is a count, so a parameter
+ * somebody typed by hand reports nothing rather than a number read out of it.
+ *
+ * @param marked - The redirect's `marked` parameter, as it arrived.
+ */
+function markNote(marked: string | null): Note | null {
+	if (marked === null || !/^\d+$/.test(marked)) return null;
+
+	let count = Number(marked);
+	if (count === 0) return { key: "timeline.nothingToMark", color: "neutral" };
+	return { key: "timeline.markedRead", options: { count }, color: "success" };
 }
 
 /** GET /reading — the unread queue. */
@@ -92,21 +121,75 @@ export default createAction(routes.reading, {
 		 */
 		let hasFeeds = items.length === 0 ? (await store.countFeeds()) > 0 : true;
 
+		let note = markNote(ctx.url.searchParams.get(MARKED_PARAM));
+
 		return ctx.render(
 			<AppLayout
 				documentTitle={ctx.i18next.t("reading.title")}
 				heading={ctx.i18next.t("reading.heading")}
+				/**
+				 * On the queue's own line, acting on what the heading names and staying in reach
+				 * however far down the list a reader has read. It has that row to itself, so a hand
+				 * going for a post's own mark or for the older-posts link lands nowhere near it.
+				 *
+				 * A queue with nothing in it has nothing to clear, so the offer waits for posts.
+				 */
+				headingActions={
+					entries.length > 0 ? (
+						<Button
+							commandfor={MARK_ALL_PROMPT_ID}
+							command="show-modal"
+							color="danger"
+							variant="ghost"
+							size="sm"
+						>
+							{ctx.i18next.t("timeline.markAllRead.submit")}
+						</Button>
+					) : undefined
+				}
 				current="reading"
 				locale={ctx.locale}
 				nav={{
 					label: ctx.i18next.t("nav.label"),
 					reading: ctx.i18next.t("nav.reading"),
 					feeds: ctx.i18next.t("nav.feeds"),
+					search: ctx.i18next.t("nav.search"),
 					settings: ctx.i18next.t("nav.settings"),
 					logout: ctx.i18next.t("nav.logout"),
 				}}
 			>
 				<div mix={[vstack({ gap: 6 })]}>
+					{/**
+					 * The warning the reader reads before the queue goes, kept off the page itself: the
+					 * prompt is a native `dialog` the trigger opens through Invoker Commands, so the
+					 * sentence costs nothing until it is the thing being decided. One sweep takes every
+					 * unread post and nothing here records which they were, so the prompt is the whole
+					 * of the undo this offers.
+					 *
+					 * Level 2, since the layout's own page heading is the document's only `h1`.
+					 *
+					 * The route answers `POST`, which is what a browser form sends, so the confirmation
+					 * submits its own method and carries no override field.
+					 */}
+					{entries.length > 0 && (
+						<HeadingScope level={2}>
+							<Confirm
+								id={MARK_ALL_PROMPT_ID}
+								title={ctx.i18next.t("timeline.markAllRead.title")}
+								description={ctx.i18next.t("timeline.markAllRead.confirm")}
+								confirmLabel={ctx.i18next.t("timeline.markAllRead.submit")}
+								cancelLabel={ctx.i18next.t("timeline.markAllRead.cancel")}
+								form={{ action: routes.readAll.href() }}
+							/>
+						</HeadingScope>
+					)}
+
+					{note && (
+						<Alert color={note.color}>
+							<Alert.Description>{ctx.i18next.t(note.key, note.options)}</Alert.Description>
+						</Alert>
+					)}
+
 					{isStaleCursor && (
 						<Alert color="warning">
 							<Alert.Description>{ctx.i18next.t("timeline.badCursor")}</Alert.Description>

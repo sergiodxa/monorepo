@@ -124,6 +124,7 @@ Run from the repository root:
 | [markdown](packages/markdown)                                   | GitHub Flavored Markdown: parse to a typed AST, transform it, write it back              | ✅  |
 | [mcp](packages/mcp)                                             | MCP servers over stateless Streamable HTTP                                               | ✅  |
 | [oidc-provider](packages/oidc-provider)                         | OIDC/OAuth2 provider engine                                                              |     |
+| [opml](packages/opml)                                           | Read and write OPML subscription lists                                                   |     |
 | [pagination](packages/pagination)                               | Offset and keyset pagination with Link headers                                           | ✅  |
 | [rate-limit](packages/rate-limit)                               | Adapter-based rate limiting with standard response headers                               | ✅  |
 | [response](packages/response)                                   | Response builders for JSON APIs and redirects                                            | ✅  |
