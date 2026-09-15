@@ -83,13 +83,20 @@ beforeEach(() => {
 	server.use(http.get(FEED_URL, () => HttpResponse.xml(rss(ENTRIES))));
 });
 
+/** The reader every test builds its object as, unless it names another. */
+const SUBJECT = "sub-1";
+
 /**
  * Builds a reader's object and waits out the boot. The runtime holds requests behind the
  * constructor's `blockConcurrencyWhile`; a test calls methods directly, so it takes its
  * own turn at the same gate to stand where a request would.
  */
-async function createUser(): Promise<{ state: DurableObjectStateMock; user: UserDO }> {
-	let state = createDurableObjectState();
+async function createUser(
+	subject = SUBJECT,
+): Promise<{ state: DurableObjectStateMock; user: UserDO }> {
+	// Named the way `getByName` names a real object, because the object provisions its own
+	// settings row from the name it was addressed by rather than from a passed argument.
+	let state = createDurableObjectState({ name: subject });
 	let user = new UserDO(state, env);
 	await state.blockConcurrencyWhile(async () => undefined);
 	return { state, user };
@@ -98,7 +105,7 @@ async function createUser(): Promise<{ state: DurableObjectStateMock; user: User
 /** Builds a signed-in reader following the example feed, which is where most tests start. */
 async function createReaderWithFeed() {
 	let { state, user } = await createUser();
-	await user.ensureUser("sub-1");
+	await user.ensureUser(SUBJECT);
 
 	let followed = await user.followFeed(FEED_URL);
 	if (!followed.ok) throw new Error(`following failed: ${followed.reason}`);
@@ -159,6 +166,56 @@ describe("ensureUser", () => {
 	});
 });
 
+/**
+ * A reader is created by whichever call reached their object first, since there is no
+ * sign-up step, and a session outlives a deploy — so an object can hold the feeds somebody
+ * follows while no sign-in has ever written their settings row.
+ */
+describe("an object no sign-in has provisioned", () => {
+	test("follows a feed and reports the retrieval under the subject it was named with", async () => {
+		let { user } = await createUser("sub-unprovisioned");
+
+		let followed = await user.followFeed(FEED_URL);
+		expect(followed.ok).toBe(true);
+
+		expect(await user.getSettings()).toMatchObject({
+			subject: "sub-unprovisioned",
+			refreshIntervalHours: 1,
+		});
+	});
+
+	test("arms the schedule on the follow, so the subscription is actually swept", async () => {
+		let { state, user } = await createUser("sub-unprovisioned");
+
+		expect(await state.storage.getAlarm()).toBeNull();
+
+		await user.followFeed(FEED_URL);
+
+		expect(await state.storage.getAlarm()).toBeGreaterThan(Date.now());
+	});
+
+	test("saves a cadence instead of failing on the row nothing wrote", async () => {
+		let { user } = await createUser("sub-unprovisioned");
+
+		expect(await user.getSettings()).toBeNull();
+
+		expect(await user.setRefreshInterval(6)).toEqual({
+			ok: true,
+			settings: { subject: "sub-unprovisioned", refreshIntervalHours: 6, lastRefreshedAt: null },
+		});
+	});
+
+	test("raises where it was reached when the object carries no name to write", async () => {
+		let state = createDurableObjectState();
+		let user = new UserDO(state, env);
+		await state.blockConcurrencyWhile(async () => undefined);
+
+		// An id built from a raw string or minted unique carries no name, and the rows are
+		// keyed on the reader's subject, so there is nothing to provision the row as.
+		await expect(user.setRefreshInterval(6)).rejects.toThrow("must be addressed by name");
+	});
+});
+
 describe("setRefreshInterval", () => {
 	test("reports a cadence the schema would refuse instead of throwing", async () => {
 		let { user } = await createUser();
@@ -208,6 +265,14 @@ describe("followFeed", () => {
 			failureCount: 0,
 		});
 		expect(result.feed.id.startsWith("feed_")).toBe(true);
+	});
+
+	test("records the retrieval, so a new reader is not told their feeds were never checked", async () => {
+		let { user } = await createReaderWithFeed();
+
+		// Following retrieves the feed and stores what it carried, which is exactly what a
+		// scheduled sweep does; the settings page would otherwise report none until one ran.
+		expect((await user.getSettings())?.lastRefreshedAt).toBeGreaterThan(0);
 	});
 
 	test("stores a post under an id of the shape every path mints", async () => {
@@ -332,6 +397,41 @@ describe("checkFeedNow", () => {
 
 		expect(await user.checkFeedNow(feed.id)).toEqual({ ok: true, inserted: 1, updated: 0 });
 		expect((await user.getFeed(feed.id))?.failureCount).toBe(0);
+	});
+
+	test("records the check, so the reader is told when their posts were last brought up", async () => {
+		let { user, feed } = await createReaderWithFeed();
+		publishOne();
+
+		let before = (await user.getSettings())?.lastRefreshedAt ?? 0;
+
+		await user.checkFeedNow(feed.id);
+
+		expect((await user.getSettings())?.lastRefreshedAt).toBeGreaterThanOrEqual(before);
+		expect((await user.getSettings())?.lastRefreshedAt).toBeGreaterThan(0);
+	});
+
+	test("records a 304 too, since the stored copy is the current one", async () => {
+		let { user, feed } = await createReaderWithFeed();
+		server.use(http.get(FEED_URL, () => new HttpResponse(null, { status: 304 })));
+
+		await user.checkFeedNow(feed.id);
+
+		expect((await user.getSettings())?.lastRefreshedAt).toBeGreaterThan(0);
+	});
+
+	test("records nothing for a check that never reached the origin", async () => {
+		let { user, feed } = await createReaderWithFeed();
+
+		server.use(http.get(FEED_URL, () => HttpResponse.error()));
+
+		// The follow that set this reader up stamped, so this is a number rather than null
+		// and a stamp written again would move it.
+		let before = (await user.getSettings())?.lastRefreshedAt;
+		expect(before).toBeGreaterThan(0);
+
+		expect(await user.checkFeedNow(feed.id)).toEqual({ ok: false, reason: "check-failed" });
+		expect((await user.getSettings())?.lastRefreshedAt).toBe(before);
 	});
 
 	test("reports a feed this reader does not follow rather than throwing", async () => {

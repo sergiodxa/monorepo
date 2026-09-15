@@ -249,21 +249,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * reader.
 	 */
 	async ensureUser(subject: string): Promise<UserStore.Settings> {
-		let stored = await this.#db.find(settings, { id: SETTINGS_ID });
-
-		let row =
-			stored ??
-			(await this.#db.create(
-				settings,
-				{
-					id: SETTINGS_ID,
-					subject,
-					refresh_interval_hours: DEFAULT_INTERVAL_HOURS,
-					last_refreshed_at: null,
-				},
-				{ returnRow: true },
-			));
-
+		let row = await this.#settingsRow(subject);
 		await this.#scheduleRefresh();
 
 		return toSettings(row);
@@ -281,6 +267,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 */
 	async setRefreshInterval(hours: number): Promise<UserStore.IntervalResult> {
 		if (!isRefreshInterval(hours)) return { ok: false, reason: "invalid-interval" };
+
+		await this.#settingsRow();
 
 		let row = await this.#db.update(
 			settings,
@@ -393,6 +381,15 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			await this.#db.createMany(feedItems, batch);
 		}
 
+		// Following a feed retrieves it, so the reader has posts as current as a sweep
+		// would have left them and the settings page says so rather than reporting none.
+		await this.#stampRefreshed(now);
+
+		// A reader can reach this with a session older than the sign-in step that arms the
+		// schedule, and a subscription nothing ever sweeps stays as stale as the day it was
+		// followed. Arming here holds whatever alarm is already set.
+		await this.#scheduleRefresh();
+
 		return { ok: true, feed: toFeedSummary(created, rows.length), items: rows.length };
 	}
 
@@ -416,15 +413,20 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		 * check now is the one case it was never meant to hold back: a feed that has been
 		 * failing is exactly the one they come here to ask about.
 		 */
-		let outcome = await refreshFeed(this.#db, feed, { now: Date.now() });
+		let now = Date.now();
+		let outcome = await refreshFeed(this.#db, feed, { now });
 
-		if (outcome.status === "ok") {
-			return { ok: true, inserted: outcome.inserted, updated: outcome.updated };
+		if (outcome.status !== "ok" && outcome.status !== "not_modified") {
+			return { ok: false, reason: "check-failed" };
 		}
+
+		// The origin answered, so this reader's copy is current as of now — a 304 included,
+		// which says the stored copy was already the current one.
+		await this.#stampRefreshed(now);
 
 		if (outcome.status === "not_modified") return { ok: true, inserted: 0, updated: 0 };
 
-		return { ok: false, reason: "check-failed" };
+		return { ok: true, inserted: outcome.inserted, updated: outcome.updated };
 	}
 
 	/**
@@ -482,11 +484,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 				let run = await refreshDueFeeds(this.#db, { now: Date.now() });
 				remaining = run.remaining;
 
-				await this.#db.updateMany(
-					settings,
-					{ last_refreshed_at: Date.now() },
-					{ where: { id: SETTINGS_ID } },
-				);
+				await this.#stampRefreshed(Date.now());
 			} finally {
 				/**
 				 * A run that left feeds behind comes back in a minute rather than an
@@ -498,6 +496,60 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		} catch (error) {
 			console.error("reader refresh alarm failed", error);
 		}
+	}
+
+	/**
+	 * The reader's settings row, written on first use when nothing has written it yet.
+	 *
+	 * Every path that touches settings comes through here, so the row's existence stops
+	 * depending on which entry point reached the object first. A session outlives a
+	 * deploy and there is no sign-up step, so a reader can hold an object that following
+	 * a feed created and no sign-in ever provisioned: reading their cadence answered
+	 * nothing, writing it failed on the missing row, and stamping a refresh matched none.
+	 *
+	 * @param subject - The reader this object holds, for a caller that already knows it.
+	 */
+	async #settingsRow(subject: string = this.#subject()): Promise<SelectSettings> {
+		let stored = await this.#db.find(settings, { id: SETTINGS_ID });
+		if (stored !== null) return stored;
+
+		return await this.#db.create(
+			settings,
+			{
+				id: SETTINGS_ID,
+				subject,
+				refresh_interval_hours: DEFAULT_INTERVAL_HOURS,
+				last_refreshed_at: null,
+			},
+			{ returnRow: true },
+		);
+	}
+
+	/**
+	 * The reader this object holds, which is the name it was addressed by.
+	 *
+	 * Only an id built from a raw hex string or minted unique carries no name, and this
+	 * object's rows are keyed on the reader's subject, so such an id leaves nothing to
+	 * write one as. That is a mistake in how the object was reached rather than news
+	 * about the reader, so it is raised where it was made.
+	 */
+	#subject(): string {
+		let name = this.ctx.id.name;
+
+		if (name === undefined) {
+			throw new Error("UserDO must be addressed by name: its rows are keyed on that subject");
+		}
+
+		return name;
+	}
+
+	/**
+	 * Records that this reader's posts were just brought up to date, which is what the
+	 * settings page reports back to them.
+	 */
+	async #stampRefreshed(now: number): Promise<void> {
+		await this.#settingsRow();
+		await this.#db.update(settings, { id: SETTINGS_ID }, { last_refreshed_at: now });
 	}
 
 	/**

@@ -163,3 +163,73 @@ describe("the USER binding", () => {
 		expect(rearmed).toBeLessThanOrEqual(Date.now() + 24 * HOUR_MS);
 	});
 });
+
+/**
+ * There is no sign-up step, so a reader is created by whichever call reached their object
+ * first. A session outlives a deploy, which leaves readers holding objects that the feeds
+ * they follow wrote and that no sign-in ever provisioned — so every settings path has to
+ * work on an object that `ensureUser` has never run against.
+ */
+describe("a reader whose settings row was never written", () => {
+	test("is named by the subject its object was addressed with", async () => {
+		let name = subject();
+
+		// The object provisions its own row from this, so it is asserted against the real
+		// runtime rather than trusted from the optional `name` on the type.
+		let addressed = await runInDurableObject(
+			env.USER.getByName(name),
+			(_instance, state) => state.id.name,
+		);
+
+		expect(addressed).toBe(name);
+	});
+
+	test("saves a cadence rather than failing on the missing row", async () => {
+		let name = subject();
+		let stub = env.USER.getByName(name);
+
+		expect(await stub.getSettings()).toBeNull();
+
+		let result: UserStore.IntervalResult = await stub.setRefreshInterval(6);
+
+		expect(result).toEqual({
+			ok: true,
+			settings: { subject: name, refreshIntervalHours: 6, lastRefreshedAt: null },
+		});
+
+		expect(await env.USER.getByName(name).getSettings()).toEqual({
+			subject: name,
+			refreshIntervalHours: 6,
+			lastRefreshedAt: null,
+		});
+	});
+
+	test("records a refresh run, which needs the row the run itself writes", async () => {
+		let name = subject();
+		let stub = env.USER.getByName(name);
+
+		// The alarm owns the sweep's own stamp, and it follows no feeds here, so what this
+		// asserts is that a sweep from an unprovisioned object leaves a settings row behind.
+		await runInDurableObject(stub, (instance) => instance.alarm());
+
+		let stored = await stub.getSettings();
+
+		expect(stored?.subject).toBe(name);
+		expect(stored?.lastRefreshedAt).toBeGreaterThan(0);
+	});
+
+	test("arms the schedule on a sign-in that arrives after the row already exists", async () => {
+		let name = subject();
+		let stub = env.USER.getByName(name);
+
+		await stub.setRefreshInterval(24);
+
+		// The row is already there, so this stands for the reader's next sign-in: it keeps
+		// the cadence they chose rather than resetting them to the default.
+		expect(await stub.ensureUser(name)).toEqual({
+			subject: name,
+			refreshIntervalHours: 24,
+			lastRefreshedAt: null,
+		});
+	});
+});
