@@ -1,33 +1,72 @@
 /**
- * Unfollow controller for `DELETE /feeds/:feedId`. It will drop the reader's subscription
- * and the unread items behind it; for now it renders the page's heading alone, so the
- * route, the guard, and the layout are exercised end to end.
+ * Unfollow controller for `DELETE /feeds/:feedId`. It drops the reader's subscription and
+ * every post behind it, then sends them back to the list, which is the page that no longer
+ * shows the feed. It is reached from a form posting `_method=DELETE`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import { redirect } from "@sdxc/http/response";
+import { NotFound } from "@sdxc/http/status-code";
+import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
-import { maxIs, mi, p } from "@sdxc/u/size";
-import { Heading } from "@sdxc/ui";
+import { maxIs } from "@sdxc/u/size";
+import { leading, text } from "@sdxc/u/typography";
+import { LinkButton, Text } from "@sdxc/ui";
+import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
+import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import DocumentLayout from "~/resources/layouts/document";
+import { userStore } from "~/database/user-do";
+import AppLayout from "~/resources/layouts/app";
 import routes from "~/routes/web";
+
+/** The path this route matches, which carries the subscription to drop. */
+const Params = s.object({ feedId: s.string() });
 
 /** DELETE /feeds/:feedId — unfollows a feed. */
 export default createAction(routes.feeds.unfollow, {
 	middleware: [requireUser],
-	handler(ctx) {
-		let title = ctx.i18next.t("feeds.unfollow.title");
+	handler: async (ctx) => {
+		let viewer = getViewer();
+		if (!viewer) throw new Error("requireUser must run before this handler");
+
+		let { feedId } = s.parse(Params, ctx.params);
+		let unfollowed = await userStore(viewer.id).unfollowFeed(feedId);
+
+		if (unfollowed) {
+			return redirect(routes.feeds.index.href(), { status: redirect.Status.SeeOther });
+		}
+
+		let title = ctx.i18next.t("feeds.show.notFound.title");
 
 		return ctx.render(
-			<DocumentLayout title={title} locale={ctx.locale}>
-				<main mix={[vstack({ gap: 6 }), maxIs("48rem"), mi("auto"), p(8)]}>
-					<Heading level={1}>{title}</Heading>
-				</main>
-			</DocumentLayout>,
+			<AppLayout
+				documentTitle={title}
+				heading={title}
+				current="feeds"
+				locale={ctx.locale}
+				nav={{
+					label: ctx.i18next.t("nav.label"),
+					reading: ctx.i18next.t("nav.reading"),
+					feeds: ctx.i18next.t("nav.feeds"),
+					settings: ctx.i18next.t("nav.settings"),
+					logout: ctx.i18next.t("nav.logout"),
+				}}
+			>
+				<div mix={[vstack({ gap: 4, align: "start" })]}>
+					<Text mix={[text("sm"), leading("relaxed"), fg("neutral.muted"), maxIs("42rem")]}>
+						{ctx.i18next.t("feeds.show.notFound.description")}
+					</Text>
+
+					<LinkButton href={routes.feeds.index.href()} color="neutral" variant="outline">
+						{ctx.i18next.t("feeds.show.notFound.back")}
+					</LinkButton>
+				</div>
+			</AppLayout>,
+			NotFound,
 		);
 	},
 });

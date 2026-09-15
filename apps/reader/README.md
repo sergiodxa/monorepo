@@ -13,9 +13,14 @@ From the repo root: `bun check` (format, lint and type check in one pass) and `b
 
 ## Cloudflare Services
 
-| Service | Binding | Purpose                                           |
-| ------- | ------- | ------------------------------------------------- |
-| KV      | `KV`    | Session storage and the OIDC discovery/JWKS cache |
+| Service        | Binding | Purpose                                             |
+| -------------- | ------- | --------------------------------------------------- |
+| KV             | `KV`    | Session storage and the OIDC discovery/JWKS cache   |
+| Durable Object | `USER`  | One object per reader: settings, feeds and posts    |
+
+Each `USER` object is addressed by the reader's OIDC subject and keeps its own SQLite,
+migrated at boot. It schedules its own refresh through an alarm, so how often a reader's
+feeds are checked is a preference rather than a deployment setting.
 
 Observability is enabled. The KV namespace id in `wrangler.jsonc` is a placeholder:
 create the namespace with `bunx wrangler kv namespace create` and paste its id into both
@@ -24,8 +29,10 @@ create the namespace with `bunx wrangler kv namespace create` and paste its id i
 ## Features
 
 - Sign-in through the OpenID Connect provider at auth.sergiodxa.com
-- A reading queue of the unread items across every followed feed
-- Follow and unfollow RSS and Atom feeds
+- A reading queue of the unread items across every followed feed, paged by a cursor
+- Follow a feed by its own address or by the address of a site that advertises one
+- Unfollow a feed, which takes its posts with it
+- A refresh schedule of your own choosing, from hourly to daily
 - Interface in English and Spanish, resolved per request
 
 ## Integrations

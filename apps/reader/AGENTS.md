@@ -4,13 +4,25 @@ reader is a Cloudflare Worker serving an RSS and Atom feed reader. A person sign
 through the OpenID Connect provider, follows feeds, and works through the unread items
 those feeds produce.
 
+Each reader's settings, feeds and posts live in a Durable Object of their own, addressed
+by their OIDC subject. That is what makes the reading queue one indexed query over one
+person's rows rather than a merge across feeds, and what puts the refresh schedule beside
+the data it refreshes.
+
 ## Rules
 
 Rules follow RFC 2119: "MUST", "MUST NOT", "SHOULD", "SHOULD NOT", and "MAY" in uppercase
 indicate requirement levels.
 
 - MUST keep the Cloudflare Worker bootstrap in `bootstrap/worker.ts` and the router
-  assembly in `bootstrap/app.tsx`; no other module may touch a Cloudflare-specific API.
+  assembly in `bootstrap/app.tsx`. Two other places reach for a Cloudflare API and no
+  more: `database/user-do.ts`, which is a Durable Object and so is one by definition, and
+  the `app/auth/` clients, which read their credentials off the environment.
+- MUST reach a reader's data through `userStore(subject)` and the RPC methods of
+  `database/user-do.ts`. Three things never cross that boundary: a `Result`, whose error
+  subclass the platform drops so an `instanceof` is always false on the far side; a
+  `Date`, for the reason every stored timestamp is an integer; and a thrown failure where
+  a discriminated union would let the caller tell one refusal from another.
 - MUST map every route through `lazy(() => import(...))` from `@sdxc/lazy-route`, so the
   URL surface is complete at startup while a cold isolate evaluates only the controller
   the request reached.
@@ -48,5 +60,12 @@ indicate requirement levels.
   - `app/http/controllers/auth.tsx` <- OIDC authorization redirect and callback
   - `app/http/controllers/default-handler.tsx` <- 404 handler for unmapped routes
   - `app/http/middleware/require-user.ts` <- Guard for the signed-in surface
+- Storage
+  - `database/user-do.ts` <- The per-reader Durable Object and the RPC surface it answers
+  - `database/refresh.ts` <- Retrieving feeds and folding what came back into a reader's posts
+  - `database/schema.ts` <- The tables, mirroring `database/migrations/` exactly
 - Rendering
   - `resources/layouts/document.tsx` <- The html/head/body shell every page composes into
+  - `resources/layouts/app.tsx` <- The chrome every signed-in page wears
+  - `resources/views/timeline.tsx` <- The post list both reading surfaces render
+  - `resources/views/feed-list.tsx` <- The feed list and the form that follows another

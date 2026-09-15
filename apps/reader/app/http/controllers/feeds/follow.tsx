@@ -1,33 +1,69 @@
 /**
- * Follow controller for `POST /feeds`. It will discover the feed behind a submitted URL and
- * subscribe the reader to it; for now it renders the page's heading alone, so the route,
- * the guard, and the layout are exercised end to end.
+ * Follow controller for `POST /feeds`. It hands the submitted address to the reader's
+ * store, which discovers the feed behind it and subscribes them. A subscription answers
+ * with a redirect, so refreshing the feed list never submits the address a second time.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { vstack } from "@sdxc/u/layout";
-import { maxIs, mi, p } from "@sdxc/u/size";
-import { Heading } from "@sdxc/ui";
+import { redirect } from "@sdxc/http/response";
+import { UnprocessableEntity } from "@sdxc/http/status-code";
+import * as s from "remix/data-schema";
+import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
 
+import type { UserStore } from "~/database/user-do";
+
+import { renderFeedsPage } from "~/app/http/controllers/feeds/index";
+import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import DocumentLayout from "~/resources/layouts/document";
+import { userStore } from "~/database/user-do";
 import routes from "~/routes/web";
+
+/**
+ * The submitted form. An absent or non-text field reads as the empty string, which the
+ * store refuses as an address exactly as it refuses a reader's typo, so one branch
+ * answers both.
+ */
+const FollowForm = f.object({ url: f.field(s.defaulted(s.string(), "")) });
+
+/** The `feeds.follow.error.*` key explaining each way the store can refuse an address. */
+const FOLLOW_ERROR_KEYS: Record<UserStore.FollowFailure, string> = {
+	"invalid-url": "feeds.follow.error.invalidUrl",
+	"not-found": "feeds.follow.error.notFound",
+	unreachable: "feeds.follow.error.unreachable",
+	"already-following": "feeds.follow.error.alreadyFollowing",
+};
 
 /** POST /feeds — follows a feed. */
 export default createAction(routes.feeds.follow, {
 	middleware: [requireUser],
-	handler(ctx) {
-		let title = ctx.i18next.t("feeds.follow.title");
+	handler: async (ctx) => {
+		let viewer = getViewer();
+		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		return ctx.render(
-			<DocumentLayout title={title} locale={ctx.locale}>
-				<main mix={[vstack({ gap: 6 }), maxIs("48rem"), mi("auto"), p(8)]}>
-					<Heading level={1}>{title}</Heading>
-				</main>
-			</DocumentLayout>,
+		let store = userStore(viewer.id);
+		let submitted = s.parseSafe(FollowForm, ctx.formData);
+		let url = submitted.success ? submitted.value.url : "";
+
+		let followed = await store.followFeed(url);
+
+		if (followed.ok) {
+			return redirect(routes.feeds.index.href(), { status: redirect.Status.SeeOther });
+		}
+
+		/**
+		 * The whole feed page comes back with the refusal against the field, so the reader
+		 * corrects the address where they typed it and keeps sight of what they follow.
+		 */
+		let feeds = await store.listFeeds();
+
+		return renderFeedsPage(
+			ctx,
+			feeds,
+			{ error: ctx.i18next.t(FOLLOW_ERROR_KEYS[followed.reason]), value: url },
+			UnprocessableEntity,
 		);
 	},
 });
