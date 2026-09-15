@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/crypto",
 	"version": "0.0.1",
-	"description": "WebCrypto primitives: hashing, HMAC, passwords, TOTP, AES-GCM",
+	"description": "Web Crypto primitives — hashing, HMAC, tokens, TOTP, AES-GCM — plus scrypt passwords",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

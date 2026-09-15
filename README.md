@@ -100,7 +100,7 @@ Run from the repository root:
 | [catch-response-middleware](packages/catch-response-middleware) | Router middleware that turns a thrown `Response` into the request's response             | ✅  |
 | [cloudflare-mocks](packages/cloudflare-mocks)                   | In-memory Cloudflare binding mocks for tests                                             | ✅  |
 | [cron](packages/cron)                                           | Cron schedules with zone-aware occurrences and descriptors                               | ✅  |
-| [crypto](packages/crypto)                                       | WebCrypto primitives: hashing, HMAC, passwords, TOTP, AES-GCM                            | ✅  |
+| [crypto](packages/crypto)                                       | Web Crypto primitives — hashing, HMAC, tokens, TOTP, AES-GCM — plus scrypt passwords     | ✅  |
 | [data-table-d1](packages/data-table-d1)                         | Remix Data Table adapter for Cloudflare D1                                               | ✅  |
 | [data-table-sqlstorage](packages/data-table-sqlstorage)         | Remix Data Table adapter for Durable Object SQL                                          | ✅  |
 | [dates](packages/dates)                                         | Zone-aware date operations with Intl-only formatting                                     | ✅  |
