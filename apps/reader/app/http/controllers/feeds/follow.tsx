@@ -56,16 +56,21 @@ export default createAction(routes.feeds.follow, {
 		/**
 		 * The whole feed page comes back with the refusal against the field, so the reader
 		 * corrects the address where they typed it and keeps sight of what they follow.
+		 *
+		 * The newest subscriptions are the ones it comes back with: the form posts here with
+		 * no cursor, so a refused address is answered from the end of the list a new
+		 * subscription would appear at, and a cursor is never in play to go stale beside it.
 		 */
 		let page = await store.listFeeds();
+		if (!page.ok)
+			throw new Error("The first page of the subscription list decodes without a cursor");
 
 		return renderFeedsPage(
 			ctx,
 			page.feeds,
 			{ error: ctx.i18next.t(FOLLOW_ERROR_KEYS[followed.reason]), value: url },
 			UnprocessableEntity,
-			/** Carried through, so a refused address does not cost the reader their paging. */
-			page.cursors,
+			{ cursors: page.cursors },
 		);
 	},
 });

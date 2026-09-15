@@ -152,6 +152,12 @@ function cursors(result: UserStore.TimelineResult): { next: string | null; prev:
 	return result.cursors;
 }
 
+/** One page of the subscription list, narrowed to the feeds and cursors it answered with. */
+function listing(result: UserStore.FeedPage): Extract<UserStore.FeedPage, { ok: true }> {
+	if (!result.ok) throw new Error(`expected a page, got ${result.reason}`);
+	return result;
+}
+
 describe("ensureUser", () => {
 	test("creates the reader's row on a first sign-in", async () => {
 		let { user } = await createUser();
@@ -315,7 +321,7 @@ describe("followFeed", () => {
 	test("counts the unread posts beside each feed", async () => {
 		let { user, feed } = await createReaderWithFeed();
 
-		expect((await user.listFeeds()).feeds).toEqual([{ ...feed, unreadCount: 5 }]);
+		expect(listing(await user.listFeeds()).feeds).toEqual([{ ...feed, unreadCount: 5 }]);
 		expect(await user.getFeed(feed.id)).toEqual({ ...feed, unreadCount: 5 });
 		expect(await user.getFeed("feed_missing")).toBeNull();
 	});
@@ -329,7 +335,7 @@ describe("followFeed", () => {
 			feedId: feed.id,
 		});
 
-		expect((await user.listFeeds()).feeds).toHaveLength(1);
+		expect(listing(await user.listFeeds()).feeds).toHaveLength(1);
 	});
 
 	test("refuses something that is not an HTTP URL", async () => {
@@ -579,7 +585,7 @@ describe("unfollowFeed", () => {
 
 		expect(await user.unfollowFeed(feed.id)).toBe(true);
 
-		expect((await user.listFeeds()).feeds).toEqual([]);
+		expect(listing(await user.listFeeds()).feeds).toEqual([]);
 		expect(await user.getFeed(feed.id)).toBeNull();
 		expect(titles(await user.readingQueue())).toEqual([]);
 		expect(titles(await user.feedTimeline(feed.id))).toEqual([]);
@@ -924,11 +930,11 @@ describe("listFeeds", () => {
 		await followAnother(user, "b.example");
 		await followAnother(user, "c.example");
 
-		let first = await user.listFeeds({ limit: 2 });
+		let first = listing(await user.listFeeds({ limit: 2 }));
 		expect(first.feeds).toHaveLength(2);
 		expect(first.cursors.prev).toBeNull();
 
-		let second = await user.listFeeds({ limit: 2, cursor: first.cursors.next });
+		let second = listing(await user.listFeeds({ limit: 2, cursor: first.cursors.next }));
 		expect(second.feeds).toHaveLength(1);
 		expect(second.cursors.next).toBeNull();
 
@@ -938,7 +944,7 @@ describe("listFeeds", () => {
 		expect(new Set(paged).size).toBe(3);
 		expect(paged).toHaveLength(3);
 
-		let back = await user.listFeeds({ limit: 2, cursor: second.cursors.prev });
+		let back = listing(await user.listFeeds({ limit: 2, cursor: second.cursors.prev }));
 		expect(back.feeds.map((feed) => feed.id)).toEqual(first.feeds.map((feed) => feed.id));
 	});
 
@@ -946,20 +952,34 @@ describe("listFeeds", () => {
 		let { user } = await createReaderWithFeed();
 		await followAnother(user, "b.example");
 
-		let page = await user.listFeeds({ limit: 1 });
-		let second = await user.listFeeds({ limit: 1, cursor: page.cursors.next });
+		let page = listing(await user.listFeeds({ limit: 1 }));
+		let second = listing(await user.listFeeds({ limit: 1, cursor: page.cursors.next }));
 
 		expect(second.feeds.map((feed) => feed.unreadCount)).toEqual([5]);
 	});
 
-	test("answers an empty page for a cursor it cannot decode", async () => {
+	test("reports a cursor it cannot decode rather than answering an empty page", async () => {
 		let { user } = await createReaderWithFeed();
 
-		// The shape a caller receives has no room to report a refusal, and answering the
-		// first page under a `next` link would read as the reader's place having moved.
+		// An empty list is what a reader who follows nothing gets, so a refused cursor says
+		// so instead and leaves the caller to decide what a reader lands on.
 		expect(await user.listFeeds({ cursor: "not-a-cursor" })).toEqual({
-			feeds: [],
-			cursors: { next: null, prev: null },
+			ok: false,
+			reason: "bad-cursor",
+		});
+	});
+
+	test("reports a cursor minted for the timeline's own ordering", async () => {
+		let { user } = await createReaderWithFeed();
+
+		let queue = await user.readingQueue({ limit: 1 });
+		if (!queue.ok) throw new Error("the first page of a timeline decodes without a cursor");
+
+		// A post's cursor records the columns it was minted for, which mean something else
+		// in a list of subscriptions, so following one here reads as a stale place.
+		expect(await user.listFeeds({ cursor: queue.cursors.next })).toEqual({
+			ok: false,
+			reason: "bad-cursor",
 		});
 	});
 });

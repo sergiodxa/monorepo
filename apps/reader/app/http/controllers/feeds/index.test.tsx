@@ -99,7 +99,11 @@ describe("GET /feeds", () => {
 	});
 
 	test("lists a followed feed with its title, description and last check", async () => {
-		store.listFeeds.mockResolvedValue({ feeds: [feed()], cursors: { next: null, prev: null } });
+		store.listFeeds.mockResolvedValue({
+			ok: true,
+			feeds: [feed()],
+			cursors: { next: null, prev: null },
+		});
 
 		let body = await getFeeds(VIEWER).then((response) => response.text());
 
@@ -113,6 +117,7 @@ describe("GET /feeds", () => {
 
 	test("says a feed has never been checked when nothing has fetched it", async () => {
 		store.listFeeds.mockResolvedValue({
+			ok: true,
 			feeds: [feed({ lastFetchedAt: null, lastStatus: null })],
 			cursors: { next: null, prev: null },
 		});
@@ -125,6 +130,7 @@ describe("GET /feeds", () => {
 
 	test("counts a single unread post in the singular", async () => {
 		store.listFeeds.mockResolvedValue({
+			ok: true,
 			feeds: [feed({ unreadCount: 1 })],
 			cursors: { next: null, prev: null },
 		});
@@ -136,6 +142,7 @@ describe("GET /feeds", () => {
 
 	test("counts several unread posts in the plural", async () => {
 		store.listFeeds.mockResolvedValue({
+			ok: true,
 			feeds: [feed({ unreadCount: 3 })],
 			cursors: { next: null, prev: null },
 		});
@@ -147,6 +154,7 @@ describe("GET /feeds", () => {
 
 	test("says a feed is all read when nothing in it is unread", async () => {
 		store.listFeeds.mockResolvedValue({
+			ok: true,
 			feeds: [feed({ unreadCount: 0 })],
 			cursors: { next: null, prev: null },
 		});
@@ -159,6 +167,7 @@ describe("GET /feeds", () => {
 
 	test("says how many checks failed and what the last one recorded", async () => {
 		store.listFeeds.mockResolvedValue({
+			ok: true,
 			feeds: [feed({ failureCount: 2, lastStatus: "http_error" })],
 			cursors: { next: null, prev: null },
 		});
@@ -171,6 +180,7 @@ describe("GET /feeds", () => {
 
 	test("reports a single failed check in the singular, naming the reason", async () => {
 		store.listFeeds.mockResolvedValue({
+			ok: true,
 			feeds: [feed({ failureCount: 1, lastStatus: "network_error" })],
 			cursors: { next: null, prev: null },
 		});
@@ -183,6 +193,7 @@ describe("GET /feeds", () => {
 
 	test("reports nothing against a feed whose last check succeeded", async () => {
 		store.listFeeds.mockResolvedValue({
+			ok: true,
 			feeds: [feed({ failureCount: 0, lastStatus: "not_modified" })],
 			cursors: { next: null, prev: null },
 		});
@@ -193,7 +204,7 @@ describe("GET /feeds", () => {
 	});
 
 	test("invites a reader who follows nothing, and still offers the form", async () => {
-		store.listFeeds.mockResolvedValue({ feeds: [], cursors: { next: null, prev: null } });
+		store.listFeeds.mockResolvedValue({ ok: true, feeds: [], cursors: { next: null, prev: null } });
 
 		let response = await getFeeds(VIEWER);
 
@@ -204,10 +215,16 @@ describe("GET /feeds", () => {
 		expect(body).toContain("Feed or site address");
 		expect(body).toContain('name="url"');
 		expect(body).toContain("Follow");
+		/** Nothing was refused, so the empty list is the whole of what the page has to say. */
+		expect(body).not.toContain("no longer there");
 	});
 
 	test("renders the follow form with no error and nothing filled in", async () => {
-		store.listFeeds.mockResolvedValue({ feeds: [feed()], cursors: { next: null, prev: null } });
+		store.listFeeds.mockResolvedValue({
+			ok: true,
+			feeds: [feed()],
+			cursors: { next: null, prev: null },
+		});
 
 		let body = await getFeeds(VIEWER).then((response) => response.text());
 
@@ -223,6 +240,7 @@ describe("GET /feeds", () => {
 
 	test("walks to the pages either side of this one", async () => {
 		store.listFeeds.mockResolvedValue({
+			ok: true,
 			feeds: [feed()],
 			cursors: { next: "older-cursor", prev: "newer-cursor" },
 		});
@@ -237,6 +255,7 @@ describe("GET /feeds", () => {
 
 	test("offers no way back from the newest subscriptions", async () => {
 		store.listFeeds.mockResolvedValue({
+			ok: true,
 			feeds: [feed()],
 			cursors: { next: "older-cursor", prev: null },
 		});
@@ -249,6 +268,7 @@ describe("GET /feeds", () => {
 
 	test("offers no way on from the oldest subscriptions", async () => {
 		store.listFeeds.mockResolvedValue({
+			ok: true,
 			feeds: [feed()],
 			cursors: { next: null, prev: "newer-cursor" },
 		});
@@ -259,8 +279,51 @@ describe("GET /feeds", () => {
 		expect(body).not.toContain("Older subscriptions");
 	});
 
+	test("answers a cursor the store refuses with the newest subscriptions and a note", async () => {
+		store.listFeeds.mockImplementation(
+			async (options: UserStore.TimelineOptions = {}): Promise<UserStore.FeedPage> => {
+				if (options.cursor) return { ok: false, reason: "bad-cursor" };
+				return { ok: true, feeds: [feed()], cursors: { next: null, prev: null } };
+			},
+		);
+
+		let response = await getFeeds(VIEWER, `${routes.feeds.index.href()}?cursor=rotten`);
+		expect(response.status).toBe(200);
+
+		let body = await response.text();
+		expect(body).toContain("That page is no longer there.");
+		expect(body).toContain("Back to the newest");
+		expect(body).toContain(`href="${routes.feeds.index.href()}"`);
+
+		/** The feeds the reader follows, rather than the invitation somebody following none reads. */
+		expect(body).toContain("Example Blog");
+		expect(body).not.toContain("You follow nothing yet");
+
+		expect(store.listFeeds).toHaveBeenCalledWith({ cursor: "rotten" });
+		expect(store.listFeeds).toHaveBeenCalledWith({ cursor: null });
+	});
+
+	test("says nothing about a stale cursor on a page the store answered", async () => {
+		store.listFeeds.mockResolvedValue({
+			ok: true,
+			feeds: [feed()],
+			cursors: { next: "older-cursor", prev: "newer-cursor" },
+		});
+
+		let body = await getFeeds(VIEWER, `${routes.feeds.index.href()}?cursor=older-cursor`).then(
+			(response) => response.text(),
+		);
+
+		expect(body).not.toContain("no longer there");
+		expect(body).not.toContain("Back to the newest");
+	});
+
 	test("pages nowhere when the whole list fits on one page", async () => {
-		store.listFeeds.mockResolvedValue({ feeds: [feed()], cursors: { next: null, prev: null } });
+		store.listFeeds.mockResolvedValue({
+			ok: true,
+			feeds: [feed()],
+			cursors: { next: null, prev: null },
+		});
 
 		let body = await getFeeds(VIEWER).then((response) => response.text());
 
@@ -290,7 +353,11 @@ describe("GET /feeds", () => {
 	});
 
 	test("offers the sweep above the feeds it acts on", async () => {
-		store.listFeeds.mockResolvedValue({ feeds: [feed()], cursors: { next: null, prev: null } });
+		store.listFeeds.mockResolvedValue({
+			ok: true,
+			feeds: [feed()],
+			cursors: { next: null, prev: null },
+		});
 
 		let body = await getFeeds(VIEWER).then((response) => response.text());
 

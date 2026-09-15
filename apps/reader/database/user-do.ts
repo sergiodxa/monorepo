@@ -215,11 +215,18 @@ export namespace UserStore {
 		| { ok: true; feed: FeedSummary; items: number }
 		| { ok: false; reason: FollowFailure; feedId: string | null };
 
-	/** One page of the subscription list, paged the way a long timeline is. */
-	export interface FeedPage {
-		feeds: FeedSummary[];
-		cursors: { next: string | null; prev: string | null };
-	}
+	/**
+	 * One page of the subscription list, paged the way a long timeline is. A cursor that no
+	 * longer decodes is reported rather than answered with an empty page, which a reader who
+	 * follows fifty feeds would read as following none.
+	 */
+	export type FeedPage =
+		| {
+				ok: true;
+				feeds: FeedSummary[];
+				cursors: { next: string | null; prev: string | null };
+		  }
+		| { ok: false; reason: "bad-cursor" };
 
 	/** What a sweep of every followed feed got through. */
 	export interface CheckAllResult {
@@ -514,19 +521,16 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 		if (isFailure(page)) {
 			/**
-			 * A cursor minted under an older ordering leaves this page nothing to answer
-			 * with, and the shape a caller receives has no room to say why. An empty list
-			 * with no links is the honest answer: serving the first page under a `next`
-			 * link would read as the reader's place having quietly moved.
+			 * A cursor the reader's browser carried from an older ordering is news about the
+			 * request; anything else here is a broken query, which belongs to whoever wrote
+			 * it rather than to the person reading.
 			 */
-			if (page.error instanceof InvalidCursorError) {
-				return { feeds: [], cursors: { next: null, prev: null } };
-			}
-
+			if (page.error instanceof InvalidCursorError) return { ok: false, reason: "bad-cursor" };
 			throw page.error;
 		}
 
 		return {
+			ok: true,
 			feeds: page.data.items.map((row) => toFeedSummary(row, unread.get(row.id) ?? 0)),
 			cursors: page.data.cursors,
 		};

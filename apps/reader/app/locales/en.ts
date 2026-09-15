@@ -100,7 +100,7 @@ export default {
 		openPost: "Open post",
 		publishedOn: "Published {{date}}",
 		byAuthor: "by {{author}}",
-		badCursor: "That page of posts is no longer there.",
+		badCursor: "That page is no longer there.",
 		restart: "Back to the newest",
 		/**
 		 * Marking a whole queue read is one sweep with no undo, so the trigger opens a

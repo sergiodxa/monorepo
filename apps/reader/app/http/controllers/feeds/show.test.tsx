@@ -236,7 +236,7 @@ describe("GET /feeds/:feedId", () => {
 		expect(response.status).toBe(200);
 
 		let body = await response.text();
-		expect(body).toContain("That page of posts is no longer there.");
+		expect(body).toContain("That page is no longer there.");
 		expect(body).toContain("Back to the newest");
 		expect(readsAs(body)).toContain("Markdown and the web");
 	});

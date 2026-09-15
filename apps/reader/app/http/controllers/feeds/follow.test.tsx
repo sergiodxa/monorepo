@@ -46,11 +46,16 @@ const FOLLOWED: UserStore.FeedSummary = {
  *
  * @param viewer - Who the request is signed in as, or `null` for an anonymous one.
  * @param url - The address typed into the follow form.
+ * @param path - Where the form was posted to; defaults to the route's own path.
  */
-function postFollow(viewer: typeof VIEWER | null, url = SUBMITTED_URL) {
+function postFollow(
+	viewer: typeof VIEWER | null,
+	url = SUBMITTED_URL,
+	path = routes.feeds.follow.href(),
+) {
 	let router = createTestRouter(viewer);
 	router.map(routes.feeds.follow, follow);
-	return fetchRoute(router, routes.feeds.follow.href(), { url });
+	return fetchRoute(router, path, { url });
 }
 
 /**
@@ -60,7 +65,11 @@ function postFollow(viewer: typeof VIEWER | null, url = SUBMITTED_URL) {
  */
 async function refusedBody(reason: UserStore.FollowFailure) {
 	store.followFeed.mockResolvedValue({ ok: false, reason, feedId: null });
-	store.listFeeds.mockResolvedValue({ feeds: [FOLLOWED], cursors: { next: null, prev: null } });
+	store.listFeeds.mockResolvedValue({
+		ok: true,
+		feeds: [FOLLOWED],
+		cursors: { next: null, prev: null },
+	});
 
 	let response = await postFollow(VIEWER);
 
@@ -137,5 +146,34 @@ describe("POST /feeds", () => {
 		expect(body).toContain("Already Followed");
 		expect(body).toContain("Feed or site address");
 		expect(store.listFeeds).toHaveBeenCalled();
+	});
+
+	test("answers a refusal from the newest subscriptions, whatever the URL carried", async () => {
+		store.followFeed.mockResolvedValue({ ok: false, reason: "unreachable", feedId: null });
+		store.listFeeds.mockImplementation(
+			async (options: UserStore.TimelineOptions = {}): Promise<UserStore.FeedPage> => {
+				if (options.cursor) return { ok: false, reason: "bad-cursor" };
+				return { ok: true, feeds: [FOLLOWED], cursors: { next: null, prev: null } };
+			},
+		);
+
+		let response = await postFollow(
+			VIEWER,
+			SUBMITTED_URL,
+			`${routes.feeds.follow.href()}?cursor=rotten`,
+		);
+
+		expect(response.status).toBe(422);
+
+		/**
+		 * The form names the route without a query, so the page a refusal comes back on is
+		 * the end of the list a new subscription would appear at, with no place to go stale.
+		 */
+		expect(store.listFeeds).toHaveBeenCalledWith();
+
+		let body = await response.text();
+		expect(body).toContain("That address could not be reached.");
+		expect(body).toContain("Already Followed");
+		expect(body).not.toContain("no longer there");
 	});
 });

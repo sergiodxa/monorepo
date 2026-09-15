@@ -20,7 +20,7 @@ import type { RemixNode } from "remix/ui";
 
 import { parsePageParams } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
-import { Alert } from "@sdxc/ui";
+import { Alert, LinkButton } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
 import type { FeedStatus } from "~/database/schema";
@@ -122,6 +122,20 @@ export namespace FeedsPage {
 		/** The submitted address, put back so a typo is corrected rather than retyped. */
 		value: string | null;
 	}
+
+	/** Where in the subscription list this page sits, and how the reader arrived at it. */
+	export interface Listing {
+		/**
+		 * The boundaries the store minted for this page; omit to render it with no paging
+		 * links, which is what a page rendered from the newest end wants.
+		 */
+		cursors?: { next: string | null; prev: string | null };
+		/**
+		 * Whether the reader asked for a page whose cursor the store refused, which these
+		 * subscriptions are the newest end of rather than the page that was asked for.
+		 */
+		staleCursor?: boolean;
+	}
 }
 
 /**
@@ -134,8 +148,8 @@ export namespace FeedsPage {
  * @param feeds - One page of the feeds the reader follows, newest subscription first.
  * @param submission - The refusal to show against the follow field, and the value to restore.
  * @param init - Response status and headers; omit for the plain `200` the list is served with.
- * @param cursors - The boundaries the store minted for this page; omit to render it with no
- * paging links, which is what a page rendered from the newest end wants.
+ * @param listing - Where these subscriptions sit in the list, and whether the cursor that
+ * asked for them was refused; omit for a page rendered from the newest end.
  * @example return renderFeedsPage(ctx, page.feeds, { error: null, value: null });
  */
 export function renderFeedsPage(
@@ -143,8 +157,10 @@ export function renderFeedsPage(
 	feeds: UserStore.FeedSummary[],
 	submission: FeedsPage.Submission,
 	init?: ResponseInit,
-	cursors: UserStore.FeedPage["cursors"] = { next: null, prev: null },
+	listing: FeedsPage.Listing = {},
 ) {
+	let { cursors = { next: null, prev: null }, staleCursor = false } = listing;
+
 	/** The same style the timelines print a publication date in, so one app prints one date. */
 	let dates = new Intl.DateTimeFormat(ctx.locale, { dateStyle: "medium" });
 
@@ -207,6 +223,26 @@ export function renderFeedsPage(
 				</Alert>
 			)}
 
+			{/**
+			 * Above the subscriptions it explains, so a reader who followed a link to a page
+			 * that is gone reads why these feeds are the ones under it.
+			 */}
+			{staleCursor && (
+				<Alert color="warning">
+					<Alert.Description>{ctx.i18next.t("timeline.badCursor")}</Alert.Description>
+					<Alert.Action>
+						<LinkButton
+							href={routes.feeds.index.href()}
+							color="neutral"
+							variant="outline"
+							size="sm"
+						>
+							{ctx.i18next.t("timeline.restart")}
+						</LinkButton>
+					</Alert.Action>
+				</Alert>
+			)}
+
 			<FeedList
 				entries={entries}
 				follow={{
@@ -249,8 +285,22 @@ export default createAction(routes.feeds.index, {
 		let params = parsePageParams(ctx.url.searchParams);
 		let cursor = isFailure(params) ? null : params.data.cursor;
 
-		let page = await userStore(viewer.id).listFeeds({ cursor });
+		let store = userStore(viewer.id);
+		let page = await store.listFeeds({ cursor });
 
-		return renderFeedsPage(ctx, page.feeds, { error: null, value: null }, undefined, page.cursors);
+		/**
+		 * A cursor the store no longer decodes leaves the reader holding a place that is
+		 * gone, so the newest subscriptions are shown with a note saying where they landed —
+		 * an empty list would tell somebody who follows fifty feeds that they follow none.
+		 */
+		let staleCursor = !page.ok;
+		if (!page.ok) page = await store.listFeeds({ cursor: null });
+		if (!page.ok)
+			throw new Error("The first page of the subscription list decodes without a cursor");
+
+		return renderFeedsPage(ctx, page.feeds, { error: null, value: null }, undefined, {
+			cursors: page.cursors,
+			staleCursor,
+		});
 	},
 });

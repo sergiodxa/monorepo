@@ -232,7 +232,7 @@ describe("GET /search", () => {
 		expect(response.status).toBe(200);
 
 		let body = await response.text();
-		expect(body).toContain("That page of posts is no longer there.");
+		expect(body).toContain("That page is no longer there.");
 		expect(body).toContain("Back to the newest");
 		/** Starting over keeps the search, rather than dropping the reader on an empty box. */
 		expect(body).toContain('href="/search?q=markdown"');

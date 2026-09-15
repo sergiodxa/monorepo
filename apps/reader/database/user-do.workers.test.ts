@@ -57,7 +57,7 @@ describe("the USER binding", () => {
 		]);
 
 		expect(stored).toBeNull();
-		expect(feeds.feeds).toEqual([]);
+		expect(feeds).toEqual({ ok: true, feeds: [], cursors: { next: null, prev: null } });
 		expect(queue).toEqual({
 			ok: true,
 			items: [],
@@ -202,12 +202,12 @@ describe("a reader who follows nothing yet", () => {
 		});
 	});
 
-	test("carries a bad feed cursor back as an empty page rather than an error", async () => {
+	test("carries a bad cursor back as a refusal rather than an error", async () => {
 		let stub = env.USER.getByName(subject());
 
 		expect(await stub.listFeeds({ cursor: "not-a-cursor" })).toEqual({
-			feeds: [],
-			cursors: { next: null, prev: null },
+			ok: false,
+			reason: "bad-cursor",
 		});
 
 		expect(await stub.searchPosts("anything", { cursor: "not-a-cursor" })).toEqual({

@@ -99,7 +99,7 @@ export default {
 		openPost: "Abrir entrada",
 		publishedOn: "Publicada el {{date}}",
 		byAuthor: "por {{author}}",
-		badCursor: "Esa página de entradas ya no existe.",
+		badCursor: "Esa página ya no existe.",
 		restart: "Volver a lo más reciente",
 		/**
 		 * Marking a whole queue read is one sweep with no undo, so the trigger opens a

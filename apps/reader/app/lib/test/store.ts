@@ -43,6 +43,7 @@ export const EMPTY_TIMELINE: UserStore.TimelineResult = {
 
 /** An empty subscription list, which is what a store answers before anything is followed. */
 export const EMPTY_FEED_PAGE: UserStore.FeedPage = {
+	ok: true,
 	feeds: [],
 	cursors: { next: null, prev: null },
 };
