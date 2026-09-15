@@ -1,0 +1,16 @@
+{
+	"name": "@sdxc/json-feed",
+	"version": "0.0.1",
+	"description": "JSON Feed 1.1 builder and parser",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*"
+	}
+}
