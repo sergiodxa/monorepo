@@ -305,3 +305,71 @@ describe("GET /feeds/:feedId", () => {
 		expect(plain).not.toContain('d="M13 5h6v6"');
 	});
 });
+
+describe("checking a feed now", () => {
+	test("offers the check alongside the way to unfollow", async () => {
+		store.getFeed.mockResolvedValue(FEED);
+
+		let body = await get(routes.feeds.show.href({ feedId: FEED_ID })).then((r) => r.text());
+
+		expect(body).toContain(`action="${routes.feeds.refresh.href({ feedId: FEED_ID })}"`);
+		expect(body).toContain("Check now");
+	});
+
+	test("posts the check rather than linking it, so nothing follows it by accident", async () => {
+		store.getFeed.mockResolvedValue(FEED);
+
+		let body = await get(routes.feeds.show.href({ feedId: FEED_ID })).then((r) => r.text());
+		let form = body.match(
+			new RegExp(`<form[^>]*action="${routes.feeds.refresh.href({ feedId: FEED_ID })}"[^>]*>`),
+		);
+
+		expect(form?.[0]).toContain('method="post"');
+	});
+
+	test("says so when the check brought posts in", async () => {
+		store.getFeed.mockResolvedValue(FEED);
+
+		let body = await get(`${routes.feeds.show.href({ feedId: FEED_ID })}?checked=new`).then((r) =>
+			r.text(),
+		);
+
+		expect(readsAs(body)).toContain("New posts arrived.");
+	});
+
+	test("says so when there was nothing new", async () => {
+		store.getFeed.mockResolvedValue(FEED);
+
+		let body = await get(`${routes.feeds.show.href({ feedId: FEED_ID })}?checked=none`).then((r) =>
+			r.text(),
+		);
+
+		expect(readsAs(body)).toContain("Nothing new since the last check.");
+	});
+
+	test("says the feed could not be reached, and that the schedule will retry", async () => {
+		store.getFeed.mockResolvedValue(FEED);
+
+		let body = await get(`${routes.feeds.show.href({ feedId: FEED_ID })}?checked=failed`).then(
+			(r) => r.text(),
+		);
+
+		expect(readsAs(body)).toContain("could not be reached just now");
+		expect(readsAs(body)).toContain("next scheduled check will try again");
+	});
+
+	test("reports nothing on an ordinary visit, or on a value it does not know", async () => {
+		store.getFeed.mockResolvedValue(FEED);
+
+		let plain = await get(routes.feeds.show.href({ feedId: FEED_ID })).then((r) => r.text());
+		let bogus = await get(`${routes.feeds.show.href({ feedId: FEED_ID })}?checked=wat`).then((r) =>
+			r.text(),
+		);
+
+		for (let body of [plain, bogus]) {
+			expect(readsAs(body)).not.toContain("New posts arrived.");
+			expect(readsAs(body)).not.toContain("Nothing new since the last check.");
+			expect(readsAs(body)).not.toContain("could not be reached just now");
+		}
+	});
+});

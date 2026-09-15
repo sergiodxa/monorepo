@@ -176,7 +176,7 @@ describe("GET /feeds", () => {
 		expect(response.status).toBe(200);
 		let body = await response.text();
 		expect(body).toContain("You follow nothing yet");
-		expect(body).toContain("Paste a feed address below");
+		expect(body).toContain("Paste a feed address above");
 		expect(body).toContain("Feed or site address");
 		expect(body).toContain('name="url"');
 		expect(body).toContain("Follow");

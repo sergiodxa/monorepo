@@ -17,6 +17,7 @@ import { Alert, Button, Confirm, Empty, HeadingScope, LinkButton } from "@sdxc/u
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
+import { CHECKED_PARAM } from "~/app/http/controllers/feeds/refresh";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/database/user-do";
@@ -44,6 +45,20 @@ function feedPage(feedId: string, cursor: string | null): string | null {
  */
 function unfollowPromptId(feedId: string): string {
 	return `unfollow-${feedId}`;
+}
+
+/**
+ * The copy and tone for the outcome a check-now redirect carries, or `null` when this is
+ * an ordinary visit. `missing` needs no entry: a feed the reader does not follow renders
+ * the not-found page above, which never reaches this.
+ *
+ * @param checked - The redirect's `checked` parameter, as it arrived.
+ */
+function checkNote(checked: string | null): { key: string; color: "success" | "warning" } | null {
+	if (checked === "new") return { key: "feeds.check.new", color: "success" };
+	if (checked === "none") return { key: "feeds.check.none", color: "success" };
+	if (checked === "failed") return { key: "feeds.check.failed", color: "warning" };
+	return null;
 }
 
 /** GET /feeds/:feedId — one feed and its posts. */
@@ -111,6 +126,7 @@ export default createAction(routes.feeds.show, {
 		if (!page.ok) page = await store.feedTimeline(feedId, { cursor: null });
 		if (!page.ok) throw new Error("The first page of a timeline decodes without a cursor");
 
+		let note = checkNote(ctx.url.searchParams.get(CHECKED_PARAM));
 		let publishedFormat = new Intl.DateTimeFormat(ctx.locale, { dateStyle: "medium" });
 
 		/** Read outside the mapping below, which is a closure and so widens `feed` again. */
@@ -146,15 +162,28 @@ export default createAction(routes.feeds.show, {
 				 * scroll past every post it ever published.
 				 */
 				headingActions={
-					<Button
-						commandfor={unfollowPromptId(feedId)}
-						command="show-modal"
-						color="danger"
-						variant="ghost"
-						size="sm"
-					>
-						{ctx.i18next.t("feeds.unfollow.submit")}
-					</Button>
+					<>
+						{/**
+						 * A `POST` rather than a link: checking a feed reaches out to its origin and
+						 * writes what came back, which is not something a prefetcher should do by
+						 * following a URL.
+						 */}
+						<form method="post" action={routes.feeds.refresh.href({ feedId })}>
+							<Button type="submit" color="neutral" variant="ghost" size="sm">
+								{ctx.i18next.t("feeds.check.submit")}
+							</Button>
+						</form>
+
+						<Button
+							commandfor={unfollowPromptId(feedId)}
+							command="show-modal"
+							color="danger"
+							variant="ghost"
+							size="sm"
+						>
+							{ctx.i18next.t("feeds.unfollow.submit")}
+						</Button>
+					</>
 				}
 				/** The feed's name is the link to the site behind it, for a feed that names one. */
 				headingLink={
@@ -190,6 +219,12 @@ export default createAction(routes.feeds.show, {
 							}}
 						/>
 					</HeadingScope>
+
+					{note && (
+						<Alert color={note.color}>
+							<Alert.Description>{ctx.i18next.t(note.key)}</Alert.Description>
+						</Alert>
+					)}
 
 					{isStaleCursor && (
 						<Alert color="warning">

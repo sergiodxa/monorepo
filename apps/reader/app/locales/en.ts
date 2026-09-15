@@ -103,7 +103,7 @@ export default {
 			heading: "Feeds",
 			empty: {
 				title: "You follow nothing yet",
-				description: "Paste a feed address below, or the address of a site that publishes one.",
+				description: "Paste a feed address above, or the address of a site that publishes one.",
 			},
 			unread_one: "{{count}} unread",
 			unread_other: "{{count}} unread",
@@ -142,6 +142,14 @@ export default {
 				description: "You do not follow a feed with that address.",
 				back: "Back to your feeds",
 			},
+		},
+
+		/** What asking for a feed to be checked on the spot reports back. */
+		check: {
+			submit: "Check now",
+			new: "New posts arrived.",
+			none: "Nothing new since the last check.",
+			failed: "That feed could not be reached just now. The next scheduled check will try again.",
 		},
 
 		unfollow: {

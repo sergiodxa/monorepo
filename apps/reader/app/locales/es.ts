@@ -102,7 +102,7 @@ export default {
 			heading: "Feeds",
 			empty: {
 				title: "Todavía no sigues nada",
-				description: "Pega aquí abajo la dirección de un feed, o la de un sitio que publique uno.",
+				description: "Pega aquí arriba la dirección de un feed, o la de un sitio que publique uno.",
 			},
 			unread_one: "{{count}} sin leer",
 			unread_other: "{{count}} sin leer",
@@ -142,6 +142,15 @@ export default {
 				description: "No sigues ningún feed con esa dirección.",
 				back: "Volver a tus feeds",
 			},
+		},
+
+		/** What asking for a feed to be checked on the spot reports back. */
+		check: {
+			submit: "Revisar ahora",
+			new: "Llegaron entradas nuevas.",
+			none: "Nada nuevo desde la última revisión.",
+			failed:
+				"No se pudo llegar a ese feed ahora mismo. La próxima revisión programada lo intentará de nuevo.",
 		},
 
 		unfollow: {
