@@ -1,13 +1,11 @@
 /**
- * Tests for the SqlStorage `DatabaseDriver`, focused on transaction atomicity.
+ * Tests for the SqlStorage `DatabaseDriver`, focused on the guarantee it actually offers:
+ * statements that take effect one at a time, and no transaction scope to hide behind.
  *
- * Durable Object `SqlStorage` runs synchronously and is not available in the test
- * runner, so these tests drive the real adapter through a small `SqlStorage`-shaped
- * shim over an in-memory `node:sqlite` database. The shim implements the exact surface
- * the adapter touches (`exec(query, ...bindings)` returning a cursor with
- * `toArray()` and `rowsWritten`), so `createSQLStorageDatabaseAdapter` runs
- * unmodified against an in-memory SQLite database that supports real
- * `BEGIN`/`COMMIT`/`ROLLBACK`.
+ * Durable Object `SqlStorage` is not available in the test runner, so these drive the real
+ * adapter through a small `SqlStorage`-shaped shim over an in-memory `node:sqlite`
+ * database. The shim refuses transaction-control statements exactly as the platform does,
+ * so SQL the driver must never emit fails here rather than in a deployed object.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,17 +20,33 @@ import { createSQLStorageDatabaseAdapter } from "./index.js";
 
 import type { SQLInputValue } from "node:sqlite";
 
+/** Leading keywords of the statements a Durable Object's SQL storage rejects. */
+let transactionKeywords = new Set(["BEGIN", "COMMIT", "ROLLBACK", "SAVEPOINT", "RELEASE"]);
+
+/** The message the Durable Objects runtime raises for a transaction-control statement. */
+let transactionStatementMessage =
+	"To execute a transaction, please use the state.storage.transaction() or " +
+	"state.storage.transactionSync() APIs instead of the SQL BEGIN TRANSACTION or SAVEPOINT " +
+	"statements.";
+
 /**
  * Minimal `SqlStorage`-shaped wrapper over a `node:sqlite` database.
  *
- * Only the members the adapter uses are implemented; every `exec` runs the
- * statement immediately and reports the rows written via SQLite's `changes()`.
+ * Only the members the adapter uses are implemented; every `exec` runs the statement
+ * immediately, reports the rows written via SQLite's `changes()`, and refuses a
+ * transaction-control statement the way the platform refuses it.
  * @param db Open `node:sqlite` database.
  * @returns An object matching the `SqlStorage` surface consumed by the adapter.
  */
 function createSqlStorageShim(db: DatabaseSync): SqlStorage {
 	return {
 		exec(query: string, ...bindings: unknown[]) {
+			let keyword = /^[A-Za-z_]+/.exec(query.trim());
+
+			if (keyword && transactionKeywords.has(keyword[0].toUpperCase())) {
+				throw new Error(transactionStatementMessage);
+			}
+
 			let rows = db.prepare(query).all(...(bindings as SQLInputValue[])) as Record<
 				string,
 				unknown
@@ -74,7 +88,7 @@ let flags = table({
 
 /**
  * Builds a fresh in-memory database, adapter, and `remix/data-table` handle.
- * @returns The `remix/data-table` `db` and the raw `node:sqlite` instance.
+ * @returns The adapter, the `remix/data-table` `db`, and the raw `node:sqlite` instance.
  */
 function setup() {
 	let sqlite = new DatabaseSync(":memory:");
@@ -83,103 +97,102 @@ function setup() {
 	let adapter = createSQLStorageDatabaseAdapter(createSqlStorageShim(sqlite));
 	let db = new Database(adapter);
 
-	return { db, sqlite };
+	return { adapter, db, sqlite };
+}
+
+/**
+ * Runs a promise to its rejection.
+ * @param promise Work expected to fail.
+ * @returns The error it failed with.
+ */
+async function rejection(promise: Promise<unknown>): Promise<Error> {
+	try {
+		await promise;
+	} catch (error) {
+		return error instanceof Error ? error : new Error(String(error));
+	}
+
+	throw new Error("Expected the promise to reject");
 }
 
 describe("createSQLStorageDatabaseAdapter", () => {
+	let adapter: ReturnType<typeof setup>["adapter"];
 	let db: ReturnType<typeof setup>["db"];
 
 	beforeEach(() => {
-		db = setup().db;
+		({ adapter, db } = setup());
 	});
 
-	test("advertises savepoint support", () => {
-		let adapter = createSQLStorageDatabaseAdapter(
-			createSqlStorageShim(new DatabaseSync(":memory:")),
-		);
-		expect(adapter.capabilities.savepoints).toBe(true);
+	test("advertises no savepoints and no transactional DDL", () => {
+		expect(adapter.capabilities.savepoints).toBe(false);
+		expect(adapter.capabilities.transactionalDdl).toBe(false);
 	});
 
-	test("commits every write when the transaction succeeds", async () => {
-		await db.transaction(async (tx) => {
-			await tx.create(users, { id: 1, email: "first@example.com" });
-			await tx.create(users, { id: 2, email: "second@example.com" });
-		});
-
-		expect(await db.count(users)).toBe(2);
-	});
-
-	test("rolls back the first write when a later statement throws", async () => {
-		let boom = new Error("second statement failed");
-
+	test("rejects a transaction scope, naming what the platform offers instead", async () => {
 		let promise = db.transaction(async (tx) => {
 			await tx.create(users, { id: 1, email: "first@example.com" });
-			throw boom;
 		});
 
-		await expect(promise).rejects.toBe(boom);
+		await expect(promise).rejects.toThrow(/no transaction statements/);
+	});
+
+	test("makes no write at all when a transaction scope is refused", async () => {
+		await expect(
+			db.transaction(async (tx) => {
+				await tx.create(users, { id: 1, email: "first@example.com" });
+			}),
+		).rejects.toThrow();
 
 		expect(await db.count(users)).toBe(0);
 	});
 
-	test("rolls back when a later statement violates a constraint", async () => {
-		await db.create(users, { id: 1, email: "existing@example.com" });
+	test("rejects every commit, rollback and savepoint method too", async () => {
+		let token = { id: "tx_1" };
 
-		let promise = db.transaction(async (tx) => {
-			await tx.create(users, { id: 2, email: "second@example.com" });
-			await tx.create(users, { id: 1, email: "conflict@example.com" });
-		});
+		await expect(adapter.commitTransaction(token)).rejects.toThrow(/no transaction statements/);
+		await expect(adapter.rollbackTransaction(token)).rejects.toThrow(/no transaction statements/);
+		await expect(adapter.createSavepoint(token, "sp_1")).rejects.toThrow(
+			/no transaction statements/,
+		);
+		await expect(adapter.rollbackToSavepoint(token, "sp_1")).rejects.toThrow(
+			/no transaction statements/,
+		);
+		await expect(adapter.releaseSavepoint(token, "sp_1")).rejects.toThrow(
+			/no transaction statements/,
+		);
+	});
 
-		await expect(promise).rejects.toThrow();
+	test("emits no transaction statement of its own, so ordinary writes land", async () => {
+		await db.create(users, { id: 1, email: "first@example.com" });
+		await db.create(users, { id: 2, email: "second@example.com" });
+
+		expect(await db.count(users)).toBe(2);
+	});
+
+	test("leaves earlier writes in place when a later one fails, having opened no scope", async () => {
+		await db.create(users, { id: 1, email: "first@example.com" });
+
+		await expect(db.create(users, { id: 1, email: "conflict@example.com" })).rejects.toThrow();
 
 		expect(await db.count(users)).toBe(1);
-		expect(await db.findOne(users, { where: { id: 2 } })).toBeNull();
 	});
 
-	test("keeps writes from separate committed transactions", async () => {
-		await db.transaction(async (tx) => {
-			await tx.create(users, { id: 1, email: "first@example.com" });
-		});
+	test("hands a transaction statement straight to the platform, which refuses it", async () => {
+		let begun = await rejection(db.exec("BEGIN"));
+		expect(String(begun.cause)).toContain("state.storage.transaction");
 
-		let promise = db.transaction(async (tx) => {
-			await tx.create(users, { id: 2, email: "second@example.com" });
-			throw new Error("fail");
-		});
-		await expect(promise).rejects.toThrow();
-
-		await db.transaction(async (tx) => {
-			await tx.create(users, { id: 3, email: "third@example.com" });
-		});
-
-		let rows = await db.findMany(users, { orderBy: ["id"] });
-		expect(rows.map((row) => row.id)).toEqual([1, 3]);
+		let saved = await rejection(db.exec("SAVEPOINT sp_1"));
+		expect(String(saved.cause)).toContain("state.storage.transaction");
 	});
 
-	test("nested transactions roll back independently via savepoints", async () => {
-		await db.transaction(async (tx) => {
-			await tx.create(users, { id: 1, email: "outer@example.com" });
+	test("executeScript applies a whole migration without wrapping it in a transaction", async () => {
+		await adapter.executeScript(
+			"CREATE TABLE posts (id INTEGER PRIMARY KEY, title TEXT); CREATE INDEX posts_title ON posts (title)",
+		);
 
-			let inner = tx.transaction(async (nested) => {
-				await nested.create(users, { id: 2, email: "inner@example.com" });
-				throw new Error("inner fail");
-			});
-			await expect(inner).rejects.toThrow();
-		});
+		let result = await db.exec("SELECT name FROM sqlite_master WHERE type = ?", ["index"]);
 
-		let rows = await db.findMany(users, { orderBy: ["id"] });
-		expect(rows.map((row) => row.id)).toEqual([1]);
-	});
-
-	test("reads and RETURNING writes inside a transaction return live results", async () => {
-		let created = await db.transaction(async (tx) => {
-			let row = await tx.create(users, { id: 7, email: "seven@example.com" }, { returnRow: true });
-			let count = await tx.count(users);
-			expect(count).toBe(1);
-			return row;
-		});
-
-		expect(created.id).toBe(7);
-		expect(created.email).toBe("seven@example.com");
+		expect(result.rows).toEqual([{ name: "posts_title" }]);
 	});
 
 	test("db.exec() with a raw SELECT returns rows", async () => {

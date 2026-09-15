@@ -14,20 +14,32 @@ import type {
 	DatabaseCapabilities,
 	DatabaseDriver,
 	TableRef,
-	TransactionOptions,
-	TransactionToken,
 } from "remix/data-table";
 
 import { getTableColumnDefinitions, getTableName, getTablePrimaryKey } from "remix/data-table";
 
+/** What a caller reaching for a transaction is told the platform offers instead. */
+let transactionsUnsupportedMessage =
+	"Durable Object SQL storage has no transaction statements. Every write an object makes " +
+	"within one turn of its event loop is coalesced into a single atomic commit, so a scope " +
+	"that never awaits network I/O is already atomic; wrap synchronous work in " +
+	"ctx.storage.transactionSync() when it must also cover key-value writes.";
+
 interface SqlStorageAdapterOptions {
-	capabilities?: Partial<DatabaseCapabilities>;
+	/**
+	 * Overrides for the flags a `SqlStorage` handle can honour. `savepoints` and
+	 * `transactionalDdl` stay `false`, because the platform rejects the statements
+	 * either one would need.
+	 */
+	capabilities?: Partial<Pick<DatabaseCapabilities, "returning" | "upsert" | "migrationLock">>;
 }
 
 /**
  * Creates a `DatabaseDriver` backed by a Cloudflare Durable Object `SqlStorage`.
- * `SqlStorage` runs `BEGIN`/`COMMIT`/`ROLLBACK`/`SAVEPOINT` synchronously, so
- * transactions commit or roll back atomically and nesting uses savepoints.
+ *
+ * The driver issues no transaction-control statements, which the platform rejects in favour
+ * of its own write coalescing, so `db.transaction()` rejects and every statement a caller
+ * issues takes effect on its own.
  * @param db `SqlStorage` handle used to execute SQL.
  * @param options Optional capability overrides for adapter feature flags.
  * @returns A `DatabaseDriver` implementation for `SqlStorage`.
@@ -36,23 +48,14 @@ export function createSQLStorageDatabaseAdapter(
 	db: SqlStorage,
 	options?: SqlStorageAdapterOptions,
 ): DatabaseDriver {
-	let transactions = new Set<string>();
-	let transactionCounter = 0;
-
-	function assertTransaction(token: TransactionToken): void {
-		if (!transactions.has(token.id)) {
-			throw new Error("Unknown transaction token: " + token.id);
-		}
-	}
-
 	return {
 		dialect: "sqlite",
 
 		capabilities: {
 			returning: options?.capabilities?.returning ?? true,
-			savepoints: options?.capabilities?.savepoints ?? true,
+			savepoints: false,
 			upsert: options?.capabilities?.upsert ?? true,
-			transactionalDdl: options?.capabilities?.transactionalDdl ?? true,
+			transactionalDdl: false,
 			migrationLock: options?.capabilities?.migrationLock ?? false,
 		},
 
@@ -101,21 +104,13 @@ export function createSQLStorageDatabaseAdapter(
 			};
 		},
 
-		async executeScript(sql: string, transaction?: TransactionToken): Promise<void> {
-			if (transaction) {
-				assertTransaction(transaction);
-			}
-
+		async executeScript(sql: string): Promise<void> {
 			for (let statement of splitStatements(sql)) {
 				db.exec(statement);
 			}
 		},
 
-		async hasTable(table: TableRef, transaction?: TransactionToken): Promise<boolean> {
-			if (transaction) {
-				assertTransaction(transaction);
-			}
-
+		async hasTable(table: TableRef): Promise<boolean> {
 			let schema = table.schema ? quoteIdentifier(table.schema) + "." : "";
 			let cursor = db.exec(
 				"select 1 as exists from " + schema + "sqlite_master where type = ? and name = ? limit 1",
@@ -126,15 +121,7 @@ export function createSQLStorageDatabaseAdapter(
 			return cursor.toArray().length > 0;
 		},
 
-		async hasColumn(
-			table: TableRef,
-			column: string,
-			transaction?: TransactionToken,
-		): Promise<boolean> {
-			if (transaction) {
-				assertTransaction(transaction);
-			}
-
+		async hasColumn(table: TableRef, column: string): Promise<boolean> {
 			let schema = table.schema ? quoteIdentifier(table.schema) + "." : "";
 			let cursor = db.exec("pragma " + schema + "table_info(" + quoteIdentifier(table.name) + ")");
 
@@ -142,79 +129,55 @@ export function createSQLStorageDatabaseAdapter(
 		},
 
 		/**
-		 * Opens a real SQLite transaction with `BEGIN` so every statement issued
-		 * within the scope commits or rolls back as a single atomic unit.
-		 * @param options Transaction hints; `read uncommitted` toggles the matching
-		 * pragma before the transaction begins.
-		 * @returns A token identifying the open transaction.
+		 * Always rejects. A Durable Object commits every write a turn made as one unit, so
+		 * atomicity comes from staying inside the turn rather than from a transaction scope.
+		 * @throws Always, explaining what the platform offers instead.
 		 */
-		async beginTransaction(options?: TransactionOptions): Promise<TransactionToken> {
-			if (options?.isolationLevel === "read uncommitted") {
-				db.exec("PRAGMA read_uncommitted = true");
-			}
-
-			db.exec("BEGIN");
-
-			transactionCounter += 1;
-			let token = { id: "tx_" + String(transactionCounter) };
-			transactions.add(token.id);
-
-			return token;
+		async beginTransaction(): Promise<never> {
+			throw new Error(transactionsUnsupportedMessage);
 		},
 
 		/**
-		 * Commits the open transaction with `COMMIT`, persisting every buffered
-		 * statement atomically.
-		 * @param token Token returned by {@link beginTransaction}.
+		 * Always rejects, because no token is ever issued to commit.
+		 * @throws Always, explaining what the platform offers instead.
 		 */
-		async commitTransaction(token: TransactionToken): Promise<void> {
-			assertTransaction(token);
-			db.exec("COMMIT");
-			transactions.delete(token.id);
+		async commitTransaction(): Promise<never> {
+			throw new Error(transactionsUnsupportedMessage);
 		},
 
 		/**
-		 * Rolls back the open transaction with `ROLLBACK`, discarding every statement
-		 * issued within the scope so no partial state is persisted.
-		 * @param token Token returned by {@link beginTransaction}.
+		 * Always rejects, because no token is ever issued to roll back.
+		 * @throws Always, explaining what the platform offers instead.
 		 */
-		async rollbackTransaction(token: TransactionToken): Promise<void> {
-			assertTransaction(token);
-			db.exec("ROLLBACK");
-			transactions.delete(token.id);
+		async rollbackTransaction(): Promise<never> {
+			throw new Error(transactionsUnsupportedMessage);
 		},
 
 		/**
-		 * Creates a named savepoint inside the open transaction, enabling nested
-		 * transactions to roll back independently.
-		 * @param token Token returned by {@link beginTransaction}.
-		 * @param name Savepoint name.
+		 * Always rejects, and `capabilities.savepoints` is `false` so a nested scope is
+		 * refused before it gets here.
+		 * @throws Always, explaining what the platform offers instead.
 		 */
-		async createSavepoint(token: TransactionToken, name: string): Promise<void> {
-			assertTransaction(token);
-			db.exec("SAVEPOINT " + quoteIdentifier(name));
+		async createSavepoint(): Promise<never> {
+			throw new Error(transactionsUnsupportedMessage);
 		},
 
 		/**
-		 * Rolls back to a previously created savepoint, discarding statements issued
-		 * after it while keeping the enclosing transaction open.
-		 * @param token Token returned by {@link beginTransaction}.
-		 * @param name Savepoint name to roll back to.
+		 * Always rejects, and `capabilities.savepoints` is `false` so a nested scope is
+		 * refused before it gets here.
+		 * @throws Always, explaining what the platform offers instead.
 		 */
-		async rollbackToSavepoint(token: TransactionToken, name: string): Promise<void> {
-			assertTransaction(token);
-			db.exec("ROLLBACK TO SAVEPOINT " + quoteIdentifier(name));
+		async rollbackToSavepoint(): Promise<never> {
+			throw new Error(transactionsUnsupportedMessage);
 		},
 
 		/**
-		 * Releases a previously created savepoint, merging its statements into the
-		 * enclosing transaction.
-		 * @param token Token returned by {@link beginTransaction}.
-		 * @param name Savepoint name to release.
+		 * Always rejects, and `capabilities.savepoints` is `false` so a nested scope is
+		 * refused before it gets here.
+		 * @throws Always, explaining what the platform offers instead.
 		 */
-		async releaseSavepoint(token: TransactionToken, name: string): Promise<void> {
-			assertTransaction(token);
-			db.exec("RELEASE SAVEPOINT " + quoteIdentifier(name));
+		async releaseSavepoint(): Promise<never> {
+			throw new Error(transactionsUnsupportedMessage);
 		},
 
 		/**

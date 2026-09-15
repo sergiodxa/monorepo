@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { createSqlStorage } from "./sql-storage.js";
+import { createSqlStorageBinding } from "./sql-storage.js";
 
 /** Options for {@link createDurableObjectState}. */
 export interface DurableObjectStateMockOptions<Props> {
@@ -45,7 +45,8 @@ export function createDurableObjectState<Props = unknown>(
 	options?: DurableObjectStateMockOptions<Props>,
 ): DurableObjectStateMock<Props> {
 	let entries = new Map<string, unknown>();
-	let sql = createSqlStorage();
+	let sqlBinding = createSqlStorageBinding();
+	let sql = sqlBinding.sql;
 	let alarm: number | null = null;
 	let sockets = new Map<WebSocket, string[]>();
 	let autoResponse: WebSocketRequestResponsePair | null = null;
@@ -256,14 +257,10 @@ export function createDurableObjectState<Props = unknown>(
 		 */
 		transactionSync<T>(closure: () => T): T {
 			let snapshot = new Map(entries);
-			sql.exec("BEGIN");
 
 			try {
-				let result = closure();
-				sql.exec("COMMIT");
-				return result;
+				return sqlBinding.transactionSync(closure);
 			} catch (error) {
-				sql.exec("ROLLBACK");
 				entries = snapshot;
 				throw error;
 			}

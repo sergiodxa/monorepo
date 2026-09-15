@@ -138,9 +138,7 @@ await db.prepare("SELCT * FROM posts").all(); // rejects: the typo is real SQL, 
 
 A Durable Object `SqlStorage` over a fresh in-memory SQLite database. `exec` runs
 synchronously and returns a single-pass cursor with `toArray`, `one`, `next`, `raw`,
-`columnNames`, `rowsRead`, and `rowsWritten`. `BEGIN`/`COMMIT`/`ROLLBACK` and `SAVEPOINT`
-work, so transaction atomicity can be tested for real. `options.filename` behaves as it does
-for D1.
+`columnNames`, `rowsRead`, and `rowsWritten`. `options.filename` behaves as it does for D1.
 
 ```typescript
 let sql = createSqlStorage();
@@ -149,6 +147,25 @@ sql.exec("INSERT INTO counters VALUES (?, ?)", "hits", 1);
 
 sql.exec("SELECT value FROM counters WHERE name = ?", "hits").one(); // { value: 1 }
 ```
+
+`BEGIN`, `COMMIT`, `ROLLBACK`, `SAVEPOINT`, `RELEASE` and `ROLLBACK TO` throw the runtime's
+own error, exactly as a Durable Object rejects them, so code reaching for a SQL transaction
+fails in the test rather than on deploy:
+
+```typescript
+sql.exec("BEGIN");
+// throws: To execute a transaction, please use the state.storage.transaction() or
+// state.storage.transactionSync() APIs instead of the SQL BEGIN TRANSACTION or
+// SAVEPOINT statements. …
+```
+
+A statement is matched on the keyword it opens with, upper or lower case, after any leading
+whitespace and comments, and every statement of a `;`-separated script is checked. The split
+honors strings, quoted identifiers and comments, so a migration that mentions one of those
+words inside a literal or a table name runs as written.
+
+`ctx.storage.transactionSync(callback)` is the atomicity the platform offers in its place,
+and `createDurableObjectState()` implements it across both SQL and key-value storage.
 
 `MockSqlStorageCursor` and `MockSqlStorageStatement` are exported as well, so a test can
 assert a cursor's identity when it needs to.
@@ -435,7 +452,10 @@ rather than newlines, and `dump()` throws.
 
 **Durable Object SQL and storage.** Booleans are folded to `1`/`0` where the platform takes
 only `null`, numbers, strings, and byte buffers. A statement with no result columns and no
-bindings runs as a whole `;`-separated script, so a migration executes in full. Key and value
+bindings runs as a whole `;`-separated script, so a migration executes in full. Transaction
+control is refused on the keyword a statement opens with, where the platform refuses it from
+its parser, so a form that parses to a transaction without opening with one of those keywords
+passes here. Key and value
 sizes and the storage quota are unenforced. `setAlarm` records a time and the test calls the
 object's `alarm()` handler itself, which is what makes the timing assertable. Bookmarks are
 placeholder strings, and WebSocket hibernation is bookkeeping: sockets, tags, auto-response

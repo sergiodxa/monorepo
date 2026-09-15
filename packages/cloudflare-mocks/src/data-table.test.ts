@@ -156,41 +156,32 @@ describe("createSqlStorage with the SqlStorage data-table adapter", () => {
 		expect(await db.count(users)).toBe(1);
 	});
 
-	test("rolls back every write when a transaction throws", async () => {
-		let boom = new Error("second statement failed");
-
+	test("refuses a transaction scope, because the platform has no statement for one", async () => {
 		let promise = db.transaction(async (tx) => {
 			await tx.create(users, { id: 1, email: "first@example.com" });
-			throw boom;
 		});
 
-		await expect(promise).rejects.toBe(boom);
+		await expect(promise).rejects.toThrow(/no transaction statements/);
+
+		/**
+		 * The scope is refused before any statement runs. If this ever reads 1 the adapter
+		 * has started opening a scope the platform rejects, which would make tests pass
+		 * against behavior production does not have.
+		 */
 		expect(await db.count(users)).toBe(0);
 	});
 
-	test("nested transactions roll back independently via savepoints", async () => {
-		await db.transaction(async (tx) => {
-			await tx.create(users, { id: 1, email: "outer@example.com" });
+	test("leaves earlier writes in place when a later one fails, having opened no scope", async () => {
+		await db.create(users, { id: 1, email: "first@example.com" });
 
-			let inner = tx.transaction(async (nested) => {
-				await nested.create(users, { id: 2, email: "inner@example.com" });
-				throw new Error("inner fail");
-			});
-			await expect(inner).rejects.toThrow();
-		});
+		await expect(db.create(users, { id: 1, email: "conflict@example.com" })).rejects.toThrow();
 
-		let rows = await db.findMany(users, { orderBy: ["id"] });
-		expect(rows.map((row) => row.id)).toEqual([1]);
+		expect(await db.count(users)).toBe(1);
 	});
 
-	test("reads issued inside a transaction observe that transaction's writes", async () => {
-		let created = await db.transaction(async (tx) => {
-			let row = await tx.create(users, { id: 7, email: "seven@example.com" }, { returnRow: true });
-			expect(await tx.count(users)).toBe(1);
-			return row;
-		});
-
-		expect(created.id).toBe(7);
+	test("refuses a transaction statement issued as raw SQL", async () => {
+		await expect(db.exec("BEGIN")).rejects.toThrow();
+		await expect(db.exec("SAVEPOINT sp_1")).rejects.toThrow();
 	});
 
 	test("raw SELECT returns rows and raw DELETE reports affectedRows", async () => {

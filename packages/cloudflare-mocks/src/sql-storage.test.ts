@@ -1,7 +1,7 @@
 /**
  * Tests for the Durable Object `SqlStorage` mock: synchronous execution, single-pass
- * cursor semantics, real `BEGIN`/`ROLLBACK` and savepoint atomicity, and rejection of
- * unsupported binding value types.
+ * cursor semantics, refusal of the transaction-control statements the platform refuses,
+ * and rejection of unsupported binding value types.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -83,31 +83,41 @@ describe("createSqlStorage", () => {
 		expect(read.rowsRead).toBe(2);
 	});
 
-	test("rolls back a transaction issued as SQL", () => {
-		sql.exec("BEGIN");
-		sql.exec("INSERT INTO users (id, email) VALUES (1, 'a@example.com')");
-		sql.exec("ROLLBACK");
-
-		expect(sql.exec("SELECT COUNT(*) AS total FROM users").one().total).toBe(0);
+	test.each([
+		"BEGIN",
+		"BEGIN TRANSACTION",
+		"BEGIN IMMEDIATE",
+		"COMMIT",
+		"ROLLBACK",
+		"ROLLBACK TO SAVEPOINT sp_1",
+		"SAVEPOINT sp_1",
+		"RELEASE SAVEPOINT sp_1",
+		"RELEASE sp_1",
+	])("refuses %s the way the runtime refuses it", (statement) => {
+		expect(() => sql.exec(statement)).toThrow(/use the state\.storage\.transaction\(\)/);
 	});
 
-	test("commits a transaction issued as SQL", () => {
-		sql.exec("BEGIN");
-		sql.exec("INSERT INTO users (id, email) VALUES (1, 'a@example.com')");
-		sql.exec("COMMIT");
-
-		expect(sql.exec("SELECT COUNT(*) AS total FROM users").one().total).toBe(1);
+	test("matches the keyword whatever its case, leading whitespace, or leading comment", () => {
+		expect(() => sql.exec("  begin  ")).toThrow(/write coalescing/);
+		expect(() => sql.exec("-- open the scope\nBeGiN")).toThrow(/write coalescing/);
+		expect(() => sql.exec("/* open the scope */ commit")).toThrow(/write coalescing/);
 	});
 
-	test("rolls back to a savepoint without discarding the outer transaction", () => {
-		sql.exec("BEGIN");
-		sql.exec("INSERT INTO users (id, email) VALUES (1, 'outer@example.com')");
-		sql.exec('SAVEPOINT "inner"');
-		sql.exec("INSERT INTO users (id, email) VALUES (2, 'inner@example.com')");
-		sql.exec('ROLLBACK TO SAVEPOINT "inner"');
-		sql.exec("COMMIT");
+	test("refuses a transaction statement anywhere inside a script, not only at its head", () => {
+		expect(() => sql.exec("CREATE TABLE a (x INTEGER); BEGIN; CREATE TABLE b (y INTEGER)")).toThrow(
+			/write coalescing/,
+		);
+	});
 
-		expect(sql.exec("SELECT id FROM users").toArray()).toEqual([{ id: 1 }]);
+	test("runs a migration that mentions a transaction keyword in a string or identifier", () => {
+		sql.exec(`
+			-- begin the schema
+			CREATE TABLE "begin" (id INTEGER PRIMARY KEY, note TEXT DEFAULT 'commit; rollback');
+			INSERT INTO "begin" (id, note) VALUES (1, 'savepoint; release');
+			CREATE INDEX release_idx ON "begin" (note);
+		`);
+
+		expect(sql.exec('SELECT note FROM "begin"').one().note).toBe("savepoint; release");
 	});
 
 	test("runs a multi-statement script rather than dropping everything after the first", () => {
