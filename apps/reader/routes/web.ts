@@ -13,7 +13,7 @@ import { del, form, get, post, route } from "remix/routes";
  * The app's route map. Each leaf carries `.href(params)` for building a URL and is the key
  * `bootstrap/app.tsx` maps a controller onto.
  *
- * @example routes.feeds.show.href({ feedId: "01J..." });
+ * @example routes.feed.href({ feed: "01J..." });
  */
 export default route({
 	home: get("/"),
@@ -24,37 +24,44 @@ export default route({
 	/** GET = the confirmation page ("index"), POST = destroys the session ("action"). */
 	logout: form("/logout"),
 
-	/** The unread queue across every followed feed, and the app's landing spot after sign-in. */
+	/**
+	 * Every post from every followed feed, and the app's landing spot after sign-in. The
+	 * header's controls narrow it in place: `show` picks a read state, `q` a set of words,
+	 * and the two compose, so a reader searching inside their unread posts is one URL.
+	 */
 	reading: get("/reading"),
 
 	/** Takes every unread post out of the queue at once. */
 	readAll: post("/reading/read"),
 
-	/** Posts matching what the reader typed, across every feed they follow. */
-	search: get("/search"),
+	/**
+	 * One feed's posts, and the ways to act on that feed. It lives under the queue because
+	 * it is the same list narrowed to one publisher, and no `GET` answers `/reading/read`,
+	 * so the pattern the two share never decides between them.
+	 */
+	feed: get("/reading/:feed"),
 
+	/**
+	 * The subscriptions themselves. Nothing here renders a page: a reader meets their feeds
+	 * in the rail and one feed on {@link reading}'s own surface, so these are the addresses
+	 * the forms on those surfaces act against.
+	 */
 	feeds: {
-		index: get("/feeds"),
-		show: get("/feeds/:feedId"),
-		/**
-		 * Shares its path with `feeds.index` and separates on method, so following a feed
-		 * posts to the collection it joins and the list URL stays the one bookmarkable page.
-		 */
+		/** Follows whatever feed an address leads to, posting to the collection it joins. */
 		follow: post("/feeds"),
 		unfollow: del("/feeds/:feedId"),
 		/** Its own path rather than a `POST` on the feed, so a form can reach it directly. */
 		refresh: post("/feeds/:feedId/refresh"),
 		/**
 		 * Checks every followed feed. A `POST` on the collection, mirroring the way
-		 * `refresh` reads on one feed, and no `GET` answers this path so the pattern it
-		 * shares with `show` never decides between them.
+		 * `refresh` reads on one feed.
 		 */
 		refreshAll: post("/feeds/refresh"),
 		/** Takes one feed's unread posts out of the queue, leaving every other feed alone. */
 		read: post("/feeds/:feedId/read"),
 		/**
 		 * The subscription list as OPML, for carrying it to another reader. A path of its
-		 * own rather than a segment under `/feeds`, which `show` would read as a feed id.
+		 * own rather than a segment under `/feeds`, which `unfollow` would read as a feed id.
 		 */
 		export: get("/feeds.opml"),
 		/** Subscribes to every feed in an uploaded OPML document. */

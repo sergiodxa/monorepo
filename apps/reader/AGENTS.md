@@ -68,4 +68,4 @@ indicate requirement levels.
   - `resources/layouts/document.tsx` <- The html/head/body shell every page composes into
   - `resources/layouts/app.tsx` <- The chrome every signed-in page wears
   - `resources/views/timeline.tsx` <- The post list both reading surfaces render
-  - `resources/views/feed-list.tsx` <- The feed list and the form that follows another
+  - `resources/components/lazy-frame.tsx` <- Fetches the page below one as a reader reaches it

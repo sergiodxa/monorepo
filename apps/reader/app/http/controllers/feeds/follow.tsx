@@ -1,7 +1,11 @@
 /**
  * Follow controller for `POST /feeds`. It hands the submitted address to the reader's
  * store, which discovers the feed behind it and subscribes them. A subscription answers
- * with a redirect, so refreshing the feed list never submits the address a second time.
+ * with a redirect, so refreshing the queue never submits the address a second time.
+ *
+ * The form lives in the reading queue's header, and a form posts its own fields rather
+ * than the address it was sent from, so it carries how that queue was narrowed and this
+ * hands it back — whether the address was taken or refused.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,18 +20,25 @@ import { createAction } from "remix/router";
 import type { UserStore } from "~/database/user-do";
 
 import { forgetRailFeeds } from "~/app/http/controllers/chrome";
-import { renderFeedsPage } from "~/app/http/controllers/feeds/index";
+import { queueUrl, queueViewOf, SHOW_PARAM } from "~/app/http/controllers/queue-view";
+import { renderReadingQueue } from "~/app/http/controllers/reading";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/database/user-do";
+import { SEARCH_PARAM } from "~/resources/layouts/app";
 import routes from "~/routes/web";
 
 /**
- * The submitted form. An absent or non-text field reads as the empty string, which the
- * store refuses as an address exactly as it refuses a reader's typo, so one branch
- * answers both.
+ * The submitted form: the address, and the narrowing the queue this was sent from is
+ * reading under. An absent or non-text field reads as the empty string, which the store
+ * refuses as an address exactly as it refuses a reader's typo, so one branch answers both,
+ * and which the queue reads as no narrowing at all.
  */
-const FollowForm = f.object({ url: f.field(s.defaulted(s.string(), "")) });
+const FollowForm = f.object({
+	url: f.field(s.defaulted(s.string(), "")),
+	[SEARCH_PARAM]: f.field(s.defaulted(s.string(), "")),
+	[SHOW_PARAM]: f.field(s.defaulted(s.string(), "")),
+});
 
 /** The `feeds.follow.error.*` key explaining each way the store can refuse an address. */
 const FOLLOW_ERROR_KEYS: Record<UserStore.FollowFailure, string> = {
@@ -46,35 +57,39 @@ export default createAction(routes.feeds.follow, {
 
 		let store = userStore(viewer.id);
 		let submitted = s.parseSafe(FollowForm, ctx.formData);
+
 		let url = submitted.success ? submitted.value.url : "";
+
+		/**
+		 * Rebuilt from the two fields rather than from a whole address somebody submitted, so
+		 * what comes back is a queue of this app's and never wherever a posted URL pointed.
+		 */
+		let view = queueViewOf(
+			submitted.success ? submitted.value[SEARCH_PARAM] : "",
+			submitted.success ? submitted.value[SHOW_PARAM] : "",
+		);
 
 		let followed = await store.followFeed(url);
 
-		/** The rail lists this feed now. */
-		if (followed.ok) await forgetRailFeeds(viewer.id);
-
 		if (followed.ok) {
-			return redirect(routes.feeds.index.href(), { status: redirect.Status.SeeOther });
+			/** The sidebar lists this feed now. */
+			await forgetRailFeeds(viewer.id);
+
+			return redirect(queueUrl(view), { status: redirect.Status.SeeOther });
 		}
 
 		/**
-		 * The whole feed page comes back with the refusal against the field, so the reader
-		 * corrects the address where they typed it and keeps sight of what they follow.
-		 *
-		 * The newest subscriptions are the ones it comes back with: the form posts here with
-		 * no cursor, so a refused address is answered from the end of the list a new
-		 * subscription would appear at, and a cursor is never in play to go stale beside it.
+		 * The queue comes back carrying the refusal and the address that earned it, so the
+		 * reader reads why, corrects what they typed, and keeps the posts they were reading
+		 * under them. The field has no room beneath it for a sentence, so the queue reports
+		 * it where it reports every other outcome and the field points at that note by name.
 		 */
-		let page = await store.listFeeds();
-		if (!page.ok)
-			throw new Error("The first page of the subscription list decodes without a cursor");
-
-		return renderFeedsPage(
+		return renderReadingQueue(
 			ctx,
-			page.feeds,
+			view,
+			null,
 			{ error: ctx.i18next.t(FOLLOW_ERROR_KEYS[followed.reason]), value: url },
 			UnprocessableEntity,
-			{ cursors: page.cursors },
 		);
 	},
 });

@@ -26,7 +26,7 @@ let { default: refresh } = await import("./refresh");
 const FEED_ID = "01J0FEED0000000000000000A1";
 
 /** Where a check returns the reader to, before the outcome is appended to it. */
-const FEED_PATH = routes.feeds.show.href({ feedId: FEED_ID });
+const FEED_PATH = routes.feed.href({ feed: FEED_ID });
 
 /**
  * Posts the check-now form for {@link FEED_ID} as `viewer`.

@@ -21,7 +21,6 @@ export interface UserStoreDouble {
 	checkAllFeedsNow: ReturnType<typeof vi.fn>;
 	markFeedRead: ReturnType<typeof vi.fn>;
 	markAllRead: ReturnType<typeof vi.fn>;
-	searchPosts: ReturnType<typeof vi.fn>;
 	exportFeeds: ReturnType<typeof vi.fn>;
 	importFeeds: ReturnType<typeof vi.fn>;
 	getFeed: ReturnType<typeof vi.fn>;
@@ -41,12 +40,8 @@ export const EMPTY_TIMELINE: UserStore.TimelineResult = {
 	cursors: { next: null, prev: null },
 };
 
-/** An empty subscription list, which is what a store answers before anything is followed. */
-export const EMPTY_FEED_PAGE: UserStore.FeedPage = {
-	ok: true,
-	feeds: [],
-	cursors: { next: null, prev: null },
-};
+/** No subscriptions, which is what a store answers before anything is followed. */
+export const NO_FEEDS: UserStore.FeedSummary[] = [];
 
 /** The preferences a reader has before they change any of them. */
 export const DEFAULT_SETTINGS: UserStore.Settings = {
@@ -68,7 +63,7 @@ export function createUserStoreDouble(): UserStoreDouble {
 		ensureUser: vi.fn(async () => DEFAULT_SETTINGS),
 		getSettings: vi.fn(async () => DEFAULT_SETTINGS),
 		setRefreshInterval: vi.fn(async () => ({ ok: true, settings: DEFAULT_SETTINGS })),
-		listFeeds: vi.fn(async () => EMPTY_FEED_PAGE),
+		listFeeds: vi.fn(async () => NO_FEEDS),
 		countFeeds: vi.fn(async () => 0),
 		checkAllFeedsNow: vi.fn(async () => ({
 			checked: 0,
@@ -78,7 +73,6 @@ export function createUserStoreDouble(): UserStoreDouble {
 		})),
 		markFeedRead: vi.fn(async () => 0),
 		markAllRead: vi.fn(async () => 0),
-		searchPosts: vi.fn(async () => EMPTY_TIMELINE),
 		exportFeeds: vi.fn(async () => []),
 		importFeeds: vi.fn(async () => ({ added: 0, alreadyFollowing: 0, failed: [] })),
 		getFeed: vi.fn(async () => null),

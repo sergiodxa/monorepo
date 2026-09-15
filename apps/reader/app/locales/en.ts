@@ -60,35 +60,22 @@ export default {
 		cta: "Sign out",
 	},
 
-	/** The toolbar every signed-in page wears. */
+	/** The sidebar every signed-in page wears. */
 	nav: {
 		label: "Sections",
 		reading: "Reading",
 		feeds: "Feeds",
-		search: "Search",
 		subscriptions: "Followed feeds",
+		openSidebar: "Show feeds and search",
 		settings: "Settings",
 		account: "Your account",
 		logout: "Sign out",
 	},
 
-	/** Searching the posts of every followed feed. */
+	/** The box the sidebar searches every followed feed's posts from. */
 	search: {
-		title: "Search",
-		heading: "Search",
 		label: "Search your posts",
 		placeholder: "What are you looking for?",
-		resultsFor: "Posts matching “{{query}}”.",
-		results_one: "{{count}} post matches “{{query}}”.",
-		results_other: "{{count}} posts match “{{query}}”.",
-		none: {
-			title: "Nothing matches",
-			description: "No post in any feed you follow contains those words.",
-		},
-		prompt: {
-			title: "Search your reading",
-			description: "Type what you remember of a post's title or summary.",
-		},
 	},
 
 	/** Shared by both timelines, which offer the same way through a long list of posts. */
@@ -108,21 +95,25 @@ export default {
 		 * prompt carrying the warning rather than acting on the first click.
 		 */
 		markAllRead: {
-			submit: "Mark everything read",
+			/** Short enough for a row of controls, and still saying how far the sweep reaches. */
+			submit: "Mark all read",
 			title: "Mark everything read",
 			confirm:
 				"Mark every unread post read, across every feed you follow? Nothing here records what was unread, so this cannot be undone.",
 			cancel: "Cancel",
 		},
-		markFeedRead: "Mark this feed read",
+		markFeedRead: "Mark feed read",
+		/** Said where the list stops, so it is known to have an end rather than to go on. */
+		end: "You have reached the end.",
 		markedRead_one: "{{count}} post marked read.",
 		markedRead_other: "{{count}} posts marked read.",
 		nothingToMark: "There was nothing unread to mark.",
 	},
 
 	reading: {
-		title: "Reading",
 		heading: "Reading",
+		/** The same queue, narrowed to words somebody typed, which the heading says back. */
+		headingFor: "Reading about “{{query}}”",
 		/** Which of the queue's posts the page holds, named beside the heading. */
 		filter: {
 			label: "Show",
@@ -148,44 +139,40 @@ export default {
 				description: "Posts collect here as you open them or mark them read.",
 			},
 		},
+		/**
+		 * A search that found nothing says so about the words rather than about the queue,
+		 * and under a filter it says which of the two came up empty, since widening the
+		 * filter is what a reader does next.
+		 */
+		found: {
+			all: {
+				title: "Nothing matches",
+				description: "No post in any feed you follow contains those words.",
+			},
+			unread: {
+				title: "Nothing unread matches",
+				description: "Every post containing those words has been read. Try All.",
+			},
+			read: {
+				title: "Nothing read matches",
+				description: "No post you have read contains those words. Try All.",
+			},
+		},
 		noFeeds: {
 			title: "Nothing to read yet",
-			description: "Follow a site that publishes RSS or Atom and its posts land here.",
-			cta: "Follow your first feed",
-		},
-		/** Said at the end of the list, where the next page arrives as the reader scrolls. */
-		paging: {
-			loading: "Loading older posts…",
-			failed: "Those posts could not be loaded.",
-			retry: "Try again",
-			end: "You have reached the end.",
+			description:
+				"Paste a feed address, or the address of a site that publishes one, into the box above.",
 		},
 	},
 
 	feeds: {
-		index: {
-			title: "Feeds",
-			heading: "Feeds",
-			empty: {
-				title: "You follow nothing yet",
-				description: "Paste a feed address above, or the address of a site that publishes one.",
-			},
-			unread_one: "{{count}} unread",
-			unread_other: "{{count}} unread",
-			checked: "Checked {{date}}",
-			neverChecked: "Not checked yet",
-			failing_one: "The last check failed",
-			failing_other: "The last {{count}} checks failed",
-			/** How many checks failed and what the last one recorded, read as one badge. */
-			failingBecause: "{{failures}} — {{reason}}",
-		},
+		/** How many of a feed's posts are waiting, said beside its name in the sidebar. */
+		unread_one: "{{count}} unread",
+		unread_other: "{{count}} unread",
 
 		follow: {
-			title: "Follow a feed",
 			label: "Feed or site address",
-			description: "A feed address, or a site that advertises one.",
-			placeholder: "https://example.com",
-			submit: "Follow",
+			placeholder: "Follow a feed or site…",
 			error: {
 				invalidUrl: "That is not an address this app can fetch. Use one starting http or https.",
 				notFound: "Nothing at that address publishes an RSS or Atom feed.",
@@ -197,6 +184,12 @@ export default {
 		show: {
 			title: "Feed",
 			visitSite: "Visit site",
+			checked: "Checked {{date}}",
+			neverChecked: "Not checked yet",
+			failing_one: "The last check failed",
+			failing_other: "The last {{count}} checks failed",
+			/** How many checks failed and what the last one recorded, read as one badge. */
+			failingBecause: "{{failures}} — {{reason}}",
 			empty: {
 				title: "No posts yet",
 				description: "This feed has published nothing since you started following it.",
@@ -204,13 +197,14 @@ export default {
 			notFound: {
 				title: "Feed not found",
 				description: "You do not follow a feed with that address.",
-				back: "Back to your feeds",
+				back: "Back to your reading",
 			},
 		},
 
-		/** Checking every followed feed at once, from the subscription list. */
+		/** Checking every followed feed at once, from the reading queue. */
 		checkAll: {
-			submit: "Check every feed",
+			/** Said against the feed page's own "Check feed", so the reach of each is plain. */
+			submit: "Check all",
 			done_one: "Checked {{count}} feed.",
 			done_other: "Checked {{count}} feeds.",
 			newPosts_one: "{{count}} feed had new posts.",
@@ -245,15 +239,9 @@ export default {
 			},
 		},
 
-		/** Paging the subscription list, which is long once a reader follows enough. */
-		paging: {
-			newer: "Newer subscriptions",
-			older: "Older subscriptions",
-		},
-
 		/** What asking for a feed to be checked on the spot reports back. */
 		check: {
-			submit: "Check now",
+			submit: "Check feed",
 			new: "New posts arrived.",
 			none: "Nothing new since the last check.",
 			failed: "That feed could not be reached just now. The next scheduled check will try again.",
@@ -297,6 +285,12 @@ export default {
 		interval_other: "Every {{count}} hours",
 		lastRefreshed: "Last checked {{date}}",
 		neverRefreshed: "Not checked yet",
+	},
+
+	/** What stands in for a part of a page that did not load. */
+	frame: {
+		failed: "This part of the page did not load.",
+		retry: "Reload",
 	},
 
 	notFound: {

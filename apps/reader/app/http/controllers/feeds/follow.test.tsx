@@ -1,7 +1,8 @@
 /**
- * Tests `POST /feeds`: the guard, the redirect a subscription answers with, and each way
- * the store refuses an address — every refusal coming back as the feed page it was
- * submitted from, carrying its own message and the address still in the field.
+ * Tests `POST /feeds`: the guard, the redirect a subscription answers with, each way the
+ * store refuses an address — every refusal coming back as the reading queue it was
+ * submitted from, reporting why above the list with the address still in the field — and
+ * the narrowing that queue was being read under, which the form carries either way.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,7 +28,7 @@ let { default: follow } = await import("./follow");
 /** The address every test submits, and the one a refusal is expected to put back. */
 const SUBMITTED_URL = "https://example.com/blog";
 
-/** A followed feed, so a refusal is shown against the list it was submitted from. */
+/** A followed feed, which the sidebar beside the refusal lists. */
 const FOLLOWED: UserStore.FeedSummary = {
 	id: "01J0FEED0000000000000000A1",
 	feedUrl: "https://already.example.com/feed.xml",
@@ -42,20 +43,15 @@ const FOLLOWED: UserStore.FeedSummary = {
 };
 
 /**
- * Submits `url` to the follow action as `viewer`.
+ * Submits the follow form as `viewer`.
  *
  * @param viewer - Who the request is signed in as, or `null` for an anonymous one.
- * @param url - The address typed into the follow form.
- * @param path - Where the form was posted to; defaults to the route's own path.
+ * @param fields - What the form carries: the address, and the queue's own narrowing.
  */
-function postFollow(
-	viewer: typeof VIEWER | null,
-	url = SUBMITTED_URL,
-	path = routes.feeds.follow.href(),
-) {
+function postFollow(viewer: typeof VIEWER | null, fields: Record<string, string> = {}) {
 	let router = createTestRouter(viewer);
 	router.map(routes.feeds.follow, follow);
-	return fetchRoute(router, path, { url });
+	return fetchRoute(router, routes.feeds.follow.href(), { url: SUBMITTED_URL, ...fields });
 }
 
 /**
@@ -65,11 +61,7 @@ function postFollow(
  */
 async function refusedBody(reason: UserStore.FollowFailure) {
 	store.followFeed.mockResolvedValue({ ok: false, reason, feedId: null });
-	store.listFeeds.mockResolvedValue({
-		ok: true,
-		feeds: [FOLLOWED],
-		cursors: { next: null, prev: null },
-	});
+	store.listFeeds.mockResolvedValue([FOLLOWED]);
 
 	let response = await postFollow(VIEWER);
 
@@ -100,13 +92,29 @@ describe("POST /feeds", () => {
 		expect(store.followFeed).toHaveBeenCalledWith(SUBMITTED_URL);
 	});
 
-	test("redirects to the feed list so a refresh does not follow it twice", async () => {
+	test("redirects to the queue so a refresh does not follow it twice", async () => {
 		store.followFeed.mockResolvedValue({ ok: true, feed: FOLLOWED, items: 12 });
 
 		let response = await postFollow(VIEWER);
 
 		expect(response.status).toBe(303);
-		expect(response.headers.get("location")).toBe(routes.feeds.index.href());
+		expect(response.headers.get("location")).toBe(routes.reading.href());
+	});
+
+	test("returns the reader to the queue as they had narrowed it", async () => {
+		store.followFeed.mockResolvedValue({ ok: true, feed: FOLLOWED, items: 12 });
+
+		let response = await postFollow(VIEWER, { q: "remix", show: "unread" });
+
+		expect(response.headers.get("location")).toBe(`${routes.reading.href()}?q=remix&show=unread`);
+	});
+
+	test("builds that queue from the two fields alone, never from an address submitted", async () => {
+		store.followFeed.mockResolvedValue({ ok: true, feed: FOLLOWED, items: 12 });
+
+		let response = await postFollow(VIEWER, { show: "https://elsewhere.example.com" });
+
+		expect(response.headers.get("location")).toBe(routes.reading.href());
 	});
 
 	test("explains an address that is not one this app can fetch", async () => {
@@ -139,41 +147,44 @@ describe("POST /feeds", () => {
 		expect(body).toContain(`value="${SUBMITTED_URL}"`);
 	});
 
-	test("answers a refusal with the whole feed page it was submitted from", async () => {
-		let body = await refusedBody("unreachable");
+	test("ties the field to the refusal, which has no room to sit beneath it", async () => {
+		let body = await refusedBody("not-found");
 
-		expect(body).toContain(">Feeds</title>");
-		expect(body).toContain("Already Followed");
-		expect(body).toContain("Feed or site address");
-		expect(store.listFeeds).toHaveBeenCalled();
+		/** The note reports above the list, where the queue reports every other outcome. */
+		expect(body).toContain('id="follow-feed-error"');
+		expect(body).toContain('aria-invalid="true"');
+		expect(body).toContain('aria-describedby="follow-feed-error"');
+		expect(body).toContain('data-color="danger"');
 	});
 
-	test("answers a refusal from the newest subscriptions, whatever the URL carried", async () => {
+	test("answers a refusal with the whole queue it was submitted from", async () => {
 		store.followFeed.mockResolvedValue({ ok: false, reason: "unreachable", feedId: null });
-		store.listFeeds.mockImplementation(
-			async (options: UserStore.TimelineOptions = {}): Promise<UserStore.FeedPage> => {
-				if (options.cursor) return { ok: false, reason: "bad-cursor" };
-				return { ok: true, feeds: [FOLLOWED], cursors: { next: null, prev: null } };
-			},
-		);
+		store.listFeeds.mockResolvedValue([FOLLOWED]);
+		store.countFeeds.mockResolvedValue(1);
 
-		let response = await postFollow(
-			VIEWER,
-			SUBMITTED_URL,
-			`${routes.feeds.follow.href()}?cursor=rotten`,
-		);
+		let response = await postFollow(VIEWER, { q: "remix", show: "unread" });
+		let body = await response.text();
 
 		expect(response.status).toBe(422);
-
-		/**
-		 * The form names the route without a query, so the page a refusal comes back on is
-		 * the end of the list a new subscription would appear at, with no place to go stale.
-		 */
-		expect(store.listFeeds).toHaveBeenCalledWith();
-
-		let body = await response.text();
+		/** The queue is read back as it was narrowed, so the posts under the field are theirs. */
+		expect(store.readingQueue).toHaveBeenCalledWith({
+			cursor: null,
+			readState: "unread",
+			query: "remix",
+			limit: 25,
+		});
 		expect(body).toContain("That address could not be reached.");
+		/** And the sidebar, the heading and the filters are the queue's own. */
 		expect(body).toContain("Already Followed");
+		expect(body).toContain("Reading about “remix”");
+		expect(body).toContain('href="/reading?q=remix&amp;show=read"');
+	});
+
+	test("reports the refusal and nothing a redirect would have carried", async () => {
+		let body = await refusedBody("unreachable");
+
+		expect(body).not.toContain("marked read.");
+		expect(body).not.toContain("Checked");
 		expect(body).not.toContain("no longer there");
 	});
 });

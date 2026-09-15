@@ -64,7 +64,7 @@ export default createAction(routes.feeds.refresh, {
 
 		let query = new URLSearchParams({ [CHECKED_PARAM]: checked(result) });
 
-		return redirect(`${routes.feeds.show.href({ feedId })}?${query}`, {
+		return redirect(`${routes.feed.href({ feed: feedId })}?${query}`, {
 			status: redirect.Status.SeeOther,
 		});
 	},

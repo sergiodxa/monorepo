@@ -1,8 +1,12 @@
 /**
- * Single-feed controller for `GET /feeds/:feedId`: one feed's posts, read and unread
+ * Single-feed controller for `GET /reading/:feed`: one feed's posts, read and unread
  * alike, newest first, headed by the feed's name — which is the link to the site behind
  * it — and, on that same line, the ways to act on the feed as a whole: check it now, take
  * its unread posts out of the queue, and stop following it.
+ *
+ * It sits under the queue because it is the same list narrowed to one publisher. What that
+ * publisher says about itself and how its last checks went are here too: a reader looks at
+ * a feed's health while they are looking at the feed.
  *
  * The feed is looked up in the reader's own storage, so a feed somebody else follows is
  * as absent here as one nobody does, and both answer `404`.
@@ -14,20 +18,25 @@
 import { CircleCheckIcon, RefreshCwIcon, UnlinkIcon } from "@sdxc/icons";
 import { parsePageParams } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
-import { vstack } from "@sdxc/u/layout";
-import { Alert, Button, Confirm, Empty, HeadingScope, LinkButton } from "@sdxc/ui";
+import { fg } from "@sdxc/u/color";
+import { flex, flexWrap, gap, items, vstack } from "@sdxc/u/layout";
+import { maxIs } from "@sdxc/u/size";
+import { text } from "@sdxc/u/typography";
+import { Alert, Badge, Button, Confirm, Empty, HeadingScope, LinkButton, Text } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 import { attrs } from "remix/ui";
 
+import type { FeedStatus } from "~/database/schema";
+
 import { chrome } from "~/app/http/controllers/chrome";
 import { MARKED_PARAM } from "~/app/http/controllers/feeds/read";
 import { CHECKED_PARAM } from "~/app/http/controllers/feeds/refresh";
-import { timelineEntries } from "~/app/http/controllers/timeline-entries";
+import { exactDate, shortDate, timelineEntries } from "~/app/http/controllers/timeline-entries";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/database/user-do";
-import AppLayout, { ActionLabel, pageNote } from "~/resources/layouts/app";
+import AppLayout, { ActionLabel, PAGE_COLUMN, pageNote } from "~/resources/layouts/app";
 import Timeline from "~/resources/views/timeline";
 import routes from "~/routes/web";
 
@@ -40,7 +49,7 @@ import routes from "~/routes/web";
  */
 function feedPage(feedId: string, cursor: string | null): string | null {
 	if (cursor === null) return null;
-	return `${routes.feeds.show.href({ feedId })}?${new URLSearchParams({ cursor })}`;
+	return `${routes.feed.href({ feed: feedId })}?${new URLSearchParams({ cursor })}`;
 }
 
 /**
@@ -93,14 +102,25 @@ function markNote(marked: string | null): Note | null {
 /** Edge of the marks the header's own controls are drawn with, sized to the words beside them. */
 const ACTION_ICON_SIZE = 16;
 
-/** GET /feeds/:feedId — one feed and its posts. */
-export default createAction(routes.feeds.show, {
+/**
+ * The `feeds.status.*` key naming each outcome that counts as a failed check. A refresh
+ * that recorded `ok` or `not_modified` succeeded, and a success resets the failure count,
+ * so those two outcomes leave a feed with nothing to report.
+ */
+const FAILURE_STATUS_KEYS: Partial<Record<FeedStatus, string>> = {
+	http_error: "feeds.status.http_error",
+	network_error: "feeds.status.network_error",
+	parse_error: "feeds.status.parse_error",
+};
+
+/** GET /reading/:feed — one feed, its health and its posts. */
+export default createAction(routes.feed, {
 	middleware: [requireUser],
 	async handler(ctx) {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let { feedId } = s.parse(s.object({ feedId: s.string() }), ctx.params);
+		let { feed: feedId } = s.parse(s.object({ feed: s.string() }), ctx.params);
 		let store = userStore(viewer.id);
 
 		let feed = await store.getFeed(feedId);
@@ -121,7 +141,7 @@ export default createAction(routes.feeds.show, {
 								{ctx.i18next.t("feeds.show.notFound.description")}
 							</Empty.Description>
 							<Empty.Action>
-								<LinkButton href={routes.feeds.index.href()} size="sm">
+								<LinkButton href={routes.reading.href()} size="sm">
 									{ctx.i18next.t("feeds.show.notFound.back")}
 								</LinkButton>
 							</Empty.Action>
@@ -163,6 +183,28 @@ export default createAction(routes.feeds.show, {
 		 * says nothing; the author is what tells one of this feed's posts from another.
 		 */
 		let entries = timelineEntries(ctx, page.items, null);
+
+		/**
+		 * What the publisher says this feed is, and how the last checks of it went. A reader
+		 * asks after a feed's health while they are looking at the feed, so it is read here
+		 * rather than off a list of every feed they follow.
+		 */
+		let statusKey = feed.lastStatus ? FAILURE_STATUS_KEYS[feed.lastStatus] : undefined;
+
+		let failureLabel =
+			feed.failureCount > 0 && statusKey
+				? ctx.i18next.t("feeds.show.failingBecause", {
+						failures: ctx.i18next.t("feeds.show.failing", { count: feed.failureCount }),
+						reason: ctx.i18next.t(statusKey),
+					})
+				: null;
+
+		let checkedLabel =
+			feed.lastFetchedAt === null
+				? ctx.i18next.t("feeds.show.neverChecked")
+				: ctx.i18next.t("feeds.show.checked", {
+						date: shortDate(feed.lastFetchedAt, ctx.locale, Date.now()),
+					});
 
 		return ctx.render(
 			<AppLayout
@@ -275,6 +317,42 @@ export default createAction(routes.feeds.show, {
 						/>
 					</HeadingScope>
 
+					{/**
+					 * Under the name it describes and above the posts it explains: what the feed says it
+					 * is, when it was last looked at, and what the last looks recorded. A feed that is
+					 * fine says only the first two, so a badge on this line means something is wrong.
+					 */}
+					<div mix={[vstack({ gap: 1 }), maxIs(PAGE_COLUMN)]}>
+						{feed.description && <Text>{feed.description}</Text>}
+
+						<div
+							mix={[
+								flex(),
+								items("center"),
+								flexWrap("wrap"),
+								gap(2),
+								text("xs"),
+								fg("neutral.muted"),
+							]}
+						>
+							{failureLabel && (
+								<Badge color="danger" variant="secondary">
+									{failureLabel}
+								</Badge>
+							)}
+
+							<span
+								title={
+									feed.lastFetchedAt === null
+										? undefined
+										: exactDate(feed.lastFetchedAt, ctx.locale)
+								}
+							>
+								{checkedLabel}
+							</span>
+						</div>
+					</div>
+
 					{note && (
 						<Alert color={note.color} mix={pageNote()}>
 							<Alert.Description>{ctx.i18next.t(note.key, note.options)}</Alert.Description>
@@ -286,7 +364,7 @@ export default createAction(routes.feeds.show, {
 							<Alert.Description>{ctx.i18next.t("timeline.badCursor")}</Alert.Description>
 							<Alert.Action>
 								<LinkButton
-									href={routes.feeds.show.href({ feedId })}
+									href={routes.feed.href({ feed: feedId })}
 									color="neutral"
 									variant="outline"
 									size="sm"
@@ -306,6 +384,7 @@ export default createAction(routes.feeds.show, {
 								read: ctx.i18next.t("timeline.read"),
 								newer: ctx.i18next.t("timeline.newer"),
 								older: ctx.i18next.t("timeline.older"),
+								end: ctx.i18next.t("timeline.end"),
 							}}
 							returnTo={ctx.url.pathname + ctx.url.search}
 							cursors={{

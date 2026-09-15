@@ -27,7 +27,7 @@ let { default: read } = await import("./read");
 const FEED_ID = "01J0FEED0000000000000000A1";
 
 /** Where clearing a feed returns the reader to, before the count is appended to it. */
-const FEED_PATH = routes.feeds.show.href({ feedId: FEED_ID });
+const FEED_PATH = routes.feed.href({ feed: FEED_ID });
 
 /**
  * Posts the mark-feed-read form for {@link FEED_ID} as `viewer`.

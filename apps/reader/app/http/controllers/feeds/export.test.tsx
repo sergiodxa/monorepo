@@ -117,12 +117,12 @@ describe("GET /feeds.opml", () => {
 		]);
 	});
 
-	test("titles the document the way the app names the subscription list", async () => {
+	test("titles the document so the reader it is carried to knows what it is", async () => {
 		store.exportFeeds.mockResolvedValue(FEEDS);
 
 		let response = await getExport(VIEWER);
 
-		expect(await response.text()).toContain("<title>Feeds</title>");
+		expect(await response.text()).toContain("<title>Reader subscriptions</title>");
 	});
 
 	test("gives a reader who follows nothing a document listing nothing", async () => {

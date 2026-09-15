@@ -48,7 +48,7 @@ export default createAction(routes.feeds.read, {
 
 		let query = new URLSearchParams({ [MARKED_PARAM]: String(marked) });
 
-		return redirect(`${routes.feeds.show.href({ feedId })}?${query}`, {
+		return redirect(`${routes.feed.href({ feed: feedId })}?${query}`, {
 			status: redirect.Status.SeeOther,
 		});
 	},

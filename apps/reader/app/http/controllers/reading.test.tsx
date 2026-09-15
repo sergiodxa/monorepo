@@ -1,10 +1,12 @@
 /**
- * Tests `GET /reading`: the guard that keeps it to signed-in readers, the queue it renders
- * from what the store answered, the filter naming which of its posts the page holds, the
- * mark that says whether one has been read, the links that walk it and carry the filter
- * with them, what an empty queue says under each filter, a cursor the store no longer
- * decodes, the enhancement that fetches the next page as the reader scrolls, and the
- * prompt standing between a reader and clearing the whole queue at once.
+ * Tests `GET /reading`, which is the app's only list of posts: the guard that keeps it to
+ * signed-in readers, the queue it renders from what the store answered, the filter naming
+ * which of its posts the page holds, the words a reader narrows it by and the two of those
+ * composing, the mark that says whether a post has been read, the links that walk the queue
+ * carrying both narrowings, what an empty queue says under each of them, a cursor the store
+ * no longer decodes, the enhancement that fetches the next page as the reader scrolls, the
+ * two subscription-wide controls the header carries, and the prompt standing between a
+ * reader and clearing the whole queue at once.
  *
  * Every assertion is against rendered English copy rather than a translation key, since a
  * key-name assertion passes for a page whose copy was never written.
@@ -176,6 +178,7 @@ describe("GET /reading", () => {
 		expect(store.readingQueue).toHaveBeenCalledWith({
 			cursor: "page-2",
 			readState: "all",
+			query: "",
 			limit: 25,
 		});
 	});
@@ -190,7 +193,8 @@ describe("GET /reading", () => {
 
 		let body = await (await get(routes.reading.href())).text();
 
-		expect(body).toContain(`href="${routes.reading.href()}?cursor=older-cursor"`);
+		/** The older link carries where the page it leads to begins, which is past this row. */
+		expect(body).toContain(`href="${routes.reading.href()}?cursor=older-cursor&amp;from=2"`);
 		expect(body).toContain(`href="${routes.reading.href()}?cursor=newer-cursor"`);
 		expect(body).toContain("Older posts");
 		expect(body).toContain("Newer posts");
@@ -210,12 +214,13 @@ describe("GET /reading", () => {
 		expect(body).not.toContain("Newer posts");
 	});
 
-	test("invites a reader who follows nothing to follow their first feed", async () => {
+	test("points a reader who follows nothing at the box that follows one", async () => {
 		let body = await (await get(routes.reading.href())).text();
 
 		expect(body).toContain("Nothing to read yet");
-		expect(body).toContain("Follow your first feed");
-		expect(body).toContain(`href="${routes.feeds.index.href()}"`);
+		expect(readsAs(body)).toContain("into the box above");
+		/** The box it names is on this page, so there is nowhere to send them. */
+		expect(body).toContain(`action="${routes.feeds.follow.href()}"`);
 		expect(body).not.toContain("You are all caught up");
 	});
 
@@ -276,6 +281,7 @@ describe("filtering the queue", () => {
 		expect(store.readingQueue).toHaveBeenCalledWith({
 			cursor: null,
 			readState: "all",
+			query: "",
 			limit: 25,
 		});
 	});
@@ -285,6 +291,7 @@ describe("filtering the queue", () => {
 		expect(store.readingQueue).toHaveBeenLastCalledWith({
 			cursor: null,
 			readState: "unread",
+			query: "",
 			limit: 25,
 		});
 
@@ -292,6 +299,7 @@ describe("filtering the queue", () => {
 		expect(store.readingQueue).toHaveBeenLastCalledWith({
 			cursor: null,
 			readState: "read",
+			query: "",
 			limit: 25,
 		});
 	});
@@ -303,6 +311,7 @@ describe("filtering the queue", () => {
 		expect(store.readingQueue).toHaveBeenCalledWith({
 			cursor: null,
 			readState: "all",
+			query: "",
 			limit: 25,
 		});
 	});
@@ -324,8 +333,10 @@ describe("filtering the queue", () => {
 
 		let body = await (await get(`${routes.reading.href()}?show=read`)).text();
 
-		expect(body).toContain(`href="${routes.reading.href()}?cursor=older-cursor&amp;show=read"`);
-		expect(body).toContain(`href="${routes.reading.href()}?cursor=newer-cursor&amp;show=read"`);
+		expect(body).toContain(
+			`href="${routes.reading.href()}?show=read&amp;cursor=older-cursor&amp;from=2"`,
+		);
+		expect(body).toContain(`href="${routes.reading.href()}?show=read&amp;cursor=newer-cursor"`);
 	});
 
 	test("offers the filters on an empty queue, which is how a reader leaves one", async () => {
@@ -339,41 +350,94 @@ describe("filtering the queue", () => {
 	});
 });
 
-describe("paging on scroll", () => {
-	test("hands the enhancement the list to grow and the page to grow it with", async () => {
+describe("paging into a frame", () => {
+	/** A page of the queue with an older page behind it. */
+	function queued(next: string | null) {
 		store.readingQueue.mockResolvedValue({
 			ok: true,
 			items: [item({ id: "item-1" })],
 			feeds: FEEDS,
-			cursors: { next: "older-cursor", prev: null },
+			cursors: { next, prev: null },
 		});
+	}
+
+	test("sends the link a reader walks the queue with, and defers the page behind it", async () => {
+		queued("older-cursor");
 
 		let body = await (await get(routes.reading.href())).text();
 
-		expect(body).toContain('<ol id="reading-queue"');
-		expect(body).toContain('"listId":"reading-queue"');
-		expect(body).toContain(`"next":"${routes.reading.href()}?cursor=older-cursor"`);
-
-		/**
-		 * The link is sent whatever the browser does with it, and is what carries a reader
-		 * whose script never runs.
-		 */
-		expect(body).toContain(`href="${routes.reading.href()}?cursor=older-cursor"`);
+		/** The link is what the server sends and what a browser running no script keeps. */
+		expect(body).toContain(`href="${routes.reading.href()}?cursor=older-cursor&amp;from=2"`);
 		expect(body).toContain("Older posts");
+		/** And the piece that replaces it is the same page asked for as a fragment. */
+		expect(body).toContain(`"src":"/reading?cursor=older-cursor&from=2&frame=1"`);
+		expect(body).toContain('"exportName":"LazyFrame"');
 	});
 
-	test("enhances nothing at the end of the queue, where there is no page to fetch", async () => {
-		store.readingQueue.mockResolvedValue({
-			ok: true,
-			items: [item({ id: "item-1" })],
-			feeds: FEEDS,
-			cursors: { next: null, prev: "newer-cursor" },
-		});
+	test("defers nothing at the end of the queue, and says the list has one", async () => {
+		queued(null);
 
 		let body = await (await get(routes.reading.href())).text();
 
-		expect(body).not.toContain("scroll-paging");
-		expect(body).not.toContain("Loading older posts");
+		expect(body).not.toContain('"exportName":"LazyFrame"');
+		expect(body).not.toContain("Older posts");
+		expect(readsAs(body)).toContain("You have reached the end.");
+	});
+
+	test("numbers the first page from its first row", async () => {
+		queued("older-cursor");
+
+		let body = await (await get(routes.reading.href())).text();
+
+		expect(body).toContain('<ol start="1"');
+	});
+
+	test("answers a frame with the rows alone, numbered on from the page above", async () => {
+		queued("deeper-cursor");
+
+		let response = await get(`${routes.reading.href()}?cursor=older-cursor&from=26&frame=1`);
+		let body = await response.text();
+
+		expect(response.status).toBe(200);
+		/** A fragment is written into a document that already has one, so it opens none. */
+		expect(body).not.toContain("<!DOCTYPE");
+		expect(body).not.toContain("<html");
+		expect(body).not.toContain("Mark all read");
+		expect(body).toContain('<ol start="26"');
+		/** And it ends with the frame that carries the reader on from it. */
+		expect(body).toContain(`"src":"/reading?cursor=deeper-cursor&from=27&frame=1"`);
+	});
+
+	test("numbers from one for a cursor followed with nothing saying how far in it is", async () => {
+		queued("older-cursor");
+
+		let body = await (await get(`${routes.reading.href()}?cursor=older-cursor`)).text();
+
+		/** A cursor records where to read from and not how far in that is, so it says nothing. */
+		expect(body).not.toContain("<ol start=");
+		/** And the page below it cannot be numbered either, so it is asked for without one. */
+		expect(body).toContain(`"src":"/reading?cursor=older-cursor&frame=1"`);
+	});
+
+	test("stops a frame whose cursor the store no longer decodes, rather than starting again", async () => {
+		store.readingQueue.mockImplementation(
+			async (options: UserStore.ReadingQueueOptions): Promise<UserStore.TimelineResult> => {
+				if (options.cursor) return { ok: false, reason: "bad-cursor" };
+				return {
+					ok: true,
+					items: [item({ id: "item-1" })],
+					feeds: FEEDS,
+					cursors: { next: null, prev: null },
+				};
+			},
+		);
+
+		let body = await (await get(`${routes.reading.href()}?cursor=rotten&frame=1`)).text();
+
+		expect(body).toContain("That page is no longer there.");
+		expect(body).toContain("Back to the newest");
+		/** Rather than the newest page appearing again underneath itself. */
+		expect(body).not.toContain("<ol");
 	});
 });
 
@@ -465,5 +529,224 @@ describe("marking the whole queue read", () => {
 			expect(readsAs(body)).not.toContain("marked read.");
 			expect(readsAs(body)).not.toContain("There was nothing unread to mark.");
 		}
+	});
+});
+
+describe("searching the queue", () => {
+	/** A page of the queue with a post on it, whichever narrowing is asking for it. */
+	function queued(cursors: { next: string | null; prev: string | null }) {
+		store.readingQueue.mockResolvedValue({
+			ok: true,
+			items: [item({ id: "item-1", title: "Markdown and the web" })],
+			feeds: FEEDS,
+			cursors,
+		});
+	}
+
+	test("hands the store the words exactly as they were typed", async () => {
+		await get(`${routes.reading.href()}?q=${encodeURIComponent("  markdown  and  the  web  ")}`);
+
+		expect(store.readingQueue).toHaveBeenCalledWith({
+			cursor: null,
+			readState: "all",
+			query: "  markdown  and  the  web  ",
+			limit: 25,
+		});
+	});
+
+	test("says in the heading what the queue was narrowed to", async () => {
+		queued({ next: null, prev: null });
+
+		let body = await (await get(`${routes.reading.href()}?q=remix`)).text();
+
+		expect(readsAs(body)).toContain("Reading about “remix”");
+	});
+
+	test("prints what a reader searched for as text, whatever they typed", async () => {
+		queued({ next: null, prev: null });
+
+		let query = '<img src=x onerror="alert(1)">';
+		let body = await (await get(`${routes.reading.href()}?q=${encodeURIComponent(query)}`)).text();
+
+		/**
+		 * The heading prints the query as a text node, which the renderer escapes, so the
+		 * reader is shown the characters they typed and the document gains no element.
+		 */
+		expect(body).toContain("&lt;img src=x onerror=");
+		expect(body).not.toContain("<img src=x");
+		/** Nor does putting it back in the search box open the attribute holding it. */
+		expect(body).not.toMatch(/value="[^"]*"[^>]*onerror/);
+	});
+
+	test("composes the words with the filter, which is the whole point of one surface", async () => {
+		queued({ next: null, prev: null });
+
+		let body = await (await get(`${routes.reading.href()}?q=remix&show=unread`)).text();
+
+		expect(store.readingQueue).toHaveBeenCalledWith({
+			cursor: null,
+			readState: "unread",
+			query: "remix",
+			limit: 25,
+		});
+
+		/** Every filter keeps the words, so choosing one never drops the other. */
+		expect(body).toContain('href="/reading?q=remix"');
+		expect(body).toContain('href="/reading?q=remix&amp;show=read"');
+		expect(body).toMatch(/<a href="\/reading\?q=remix&amp;show=unread" aria-current="page"/);
+	});
+
+	test("carries both narrowings through the links that page the queue", async () => {
+		queued({ next: "older-cursor", prev: "newer-cursor" });
+
+		let body = await (await get(`${routes.reading.href()}?q=remix&show=unread`)).text();
+
+		expect(body).toContain(
+			'href="/reading?q=remix&amp;show=unread&amp;cursor=older-cursor&amp;from=2"',
+		);
+		expect(body).toContain('href="/reading?q=remix&amp;show=unread&amp;cursor=newer-cursor"');
+		/** And the piece the frame fetches under the reader is the same page. */
+		expect(body).toContain(
+			'"src":"/reading?q=remix&show=unread&cursor=older-cursor&from=2&frame=1"',
+		);
+	});
+
+	test("narrows nothing for a box holding only space", async () => {
+		queued({ next: null, prev: null });
+
+		let body = await (await get(`${routes.reading.href()}?q=${encodeURIComponent("   ")}`)).text();
+
+		/** The heading says the queue rather than claiming a search nobody made. */
+		expect(readsAs(body)).toContain("Reading");
+		expect(readsAs(body)).not.toContain("Reading about");
+		expect(body).toContain('href="/reading?show=unread"');
+	});
+
+	test("says of an empty result which of the two narrowings came up empty", async () => {
+		store.countFeeds.mockResolvedValue(1);
+
+		let all = await (await get(`${routes.reading.href()}?q=remix`)).text();
+		let unread = await (await get(`${routes.reading.href()}?q=remix&show=unread`)).text();
+		let read = await (await get(`${routes.reading.href()}?q=remix&show=read`)).text();
+
+		expect(all).toContain("Nothing matches");
+		expect(readsAs(all)).toContain("No post in any feed you follow contains those words.");
+
+		expect(unread).toContain("Nothing unread matches");
+		expect(read).toContain("Nothing read matches");
+
+		/** A search that found nothing never reads as a queue that holds nothing. */
+		for (let body of [all, unread, read]) expect(body).not.toContain("Nothing here yet");
+	});
+
+	test("puts the words back in the box, so refining a search edits them", async () => {
+		queued({ next: null, prev: null });
+
+		let body = await (await get(`${routes.reading.href()}?q=remix`)).text();
+
+		expect(body).toContain('name="q"');
+		expect(body).toContain('value="remix"');
+		/** The box is keyed on the page it was drawn for, so a stale query never survives. */
+		expect(body).toContain('data-rmx-key="sidebar-search:/reading?remix"');
+	});
+
+	test("submits the box to the queue itself, which is now the only list of posts", async () => {
+		let body = await (await get(routes.reading.href())).text();
+
+		expect(body).toContain(`<form method="get" action="${routes.reading.href()}"`);
+	});
+});
+
+describe("acting on every feed at once", () => {
+	test("offers the sweep of every feed in the header, as a button rather than a link", async () => {
+		let body = await (await get(routes.reading.href())).text();
+
+		let form = body.match(new RegExp(`<form[^>]*action="${routes.feeds.refreshAll.href()}"[^>]*>`));
+		expect(form?.[0]).toContain('method="post"');
+		expect(body).toContain('aria-label="Check all"');
+		/** The arrows a page is fetched again with stand for the words on a narrow row. */
+		expect(body).toContain("lucide-refresh-cw");
+		expect(body).not.toContain(`href="${routes.feeds.refreshAll.href()}"`);
+	});
+
+	test("offers one field to follow another feed, named without taking width to say so", async () => {
+		let body = await (await get(routes.reading.href())).text();
+
+		expect(body).toContain(
+			`<form id="follow-feed" method="post" action="${routes.feeds.follow.href()}"`,
+		);
+		expect(body).toContain('<label for="follow-feed-url"');
+		expect(body).toContain("Feed or site address");
+		expect(body).toContain('placeholder="Follow a feed or site…"');
+		/** The return key sends it, so no submit takes room on the row. */
+		expect(body).not.toContain('<button type="submit" form="follow-feed"');
+	});
+
+	test("carries the narrowing back with every form in the header", async () => {
+		store.readingQueue.mockResolvedValue({
+			ok: true,
+			items: [item({ id: "item-1" })],
+			feeds: FEEDS,
+			cursors: { next: null, prev: null },
+		});
+
+		let body = await (await get(`${routes.reading.href()}?q=remix&show=unread`)).text();
+
+		expect(body.match(/<input type="hidden" name="q" value="remix" \/>/g)).toHaveLength(3);
+		expect(body.match(/<input type="hidden" name="show" value="unread" \/>/g)).toHaveLength(3);
+	});
+
+	test("reports what a sweep of every feed got through", async () => {
+		store.countFeeds.mockResolvedValue(1);
+
+		let body = await (await get(`${routes.reading.href()}?swept=4&fresh=2&failed=0`)).text();
+
+		expect(readsAs(body)).toContain("Checked 4 feeds.");
+		expect(readsAs(body)).toContain("2 feeds had new posts.");
+		expect(readsAs(body)).not.toContain("could not be reached");
+	});
+
+	test("says nothing was new rather than counting to zero, and names what failed", async () => {
+		store.countFeeds.mockResolvedValue(1);
+
+		let quiet = await (await get(`${routes.reading.href()}?swept=3&fresh=0&failed=0`)).text();
+		let broken = await (await get(`${routes.reading.href()}?swept=3&fresh=1&failed=2`)).text();
+
+		expect(readsAs(quiet)).toContain("No feed had anything new.");
+		expect(readsAs(broken)).toContain("2 feeds could not be reached.");
+	});
+
+	test("reports nothing on an ordinary visit, or on a value that is not a count", async () => {
+		store.countFeeds.mockResolvedValue(1);
+
+		let plain = await (await get(routes.reading.href())).text();
+		let bogus = await (await get(`${routes.reading.href()}?swept=lots`)).text();
+
+		for (let body of [plain, bogus]) expect(readsAs(body)).not.toContain("Checked");
+	});
+});
+
+describe("the sidebar beside the queue", () => {
+	test("lists every feed the reader follows, with nothing capping the list", async () => {
+		store.listFeeds.mockResolvedValue(
+			Array.from({ length: 40 }, (_unused, index) => ({
+				id: `feed-${index}`,
+				feedUrl: `https://example.com/${index}.xml`,
+				siteUrl: null,
+				title: `Feed ${String(index).padStart(2, "0")}`,
+				description: null,
+				imageUrl: null,
+				lastFetchedAt: null,
+				lastStatus: null,
+				failureCount: 0,
+				unreadCount: index,
+			})),
+		);
+
+		let body = await (await get(routes.reading.href())).text();
+
+		expect(body).toContain(`href="${routes.feed.href({ feed: "feed-0" })}"`);
+		expect(body).toContain(`href="${routes.feed.href({ feed: "feed-39" })}"`);
+		expect(body).toContain("Feed 39");
 	});
 });

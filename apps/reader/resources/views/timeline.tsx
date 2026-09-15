@@ -1,8 +1,15 @@
 /**
- * The list of posts every reading surface renders, and the pair of links that walk it. The
- * queue, a single feed and a search differ in which posts they hold and in nothing about
- * how one is shown, so the markup lives here and each controller supplies the page it is
- * showing.
+ * The list of posts every reading surface renders, and the links that walk it. The queue
+ * and a single feed differ in which posts they hold and in nothing about how one is shown,
+ * so the markup lives here and each controller supplies the page it is showing.
+ *
+ * A long list continues by fetching the next page into a frame below this one, and that
+ * page ends with a frame of its own, so a reader scrolling walks the list without asking
+ * for each page in turn. Each page is an ordered list starting where the one above it
+ * stopped, rather than rows folded into a list that is already open, so the positions the
+ * numbers carry stay true however many pages have arrived.
+ *
+ * The links are what the frame replaces, and what a browser running no script keeps.
  *
  * A post is one row: the mark that changes what has been read, the title, who it came
  * from, and when. Reading a list of posts is scanning it, and a row that takes one line
@@ -22,20 +29,10 @@ import { CircleCheckIcon, CircleIcon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, borderEdge, colorMix, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import {
-	flex,
-	gap,
-	grow,
-	inline,
-	inlineFlex,
-	items,
-	justify,
-	relative,
-	shrink,
-} from "@sdxc/u/layout";
+import { flex, gap, grow, inline, inlineFlex, items, relative, shrink } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
 import { bs, is, maxIs, mbs, minIs, mis, p, pb, pi } from "@sdxc/u/size";
-import { hover, when } from "@sdxc/u/state";
+import { hover } from "@sdxc/u/state";
 import { color } from "@sdxc/u/tokens";
 import {
 	leading,
@@ -49,6 +46,7 @@ import {
 } from "@sdxc/u/typography";
 import { Button, Text } from "@sdxc/ui";
 
+import LazyFrame from "~/resources/components/lazy-frame";
 import { listBleed, listRowGutter } from "~/resources/layouts/app";
 import OutboundMark from "~/resources/views/outbound-mark";
 import routes from "~/routes/web";
@@ -125,20 +123,30 @@ export namespace Timeline {
 		read: string;
 		newer: string;
 		older: string;
+		/** Said where the list stops, so it is known to have an end rather than to go on. */
+		end: string;
 	}
 
 	export interface Props {
 		entries: Entry[];
 		copy: Copy;
 		/**
-		 * The `id` the list of rows answers to, which a paging enhancement names to append
-		 * the pages it fetches into. Left off a surface that pages by its links alone.
+		 * The position of this page's first row in the list as a whole, or `null` for a page
+		 * that cannot say: a cursor records where to read from and not how far in that is, so
+		 * a page reached by its cursor alone counts from one like any other list.
 		 */
-		listId?: string;
+		start?: number | null;
 		/** The page the mark-read form returns to, which is the page being rendered. */
 		returnTo: string;
 		/** The URL of the page holding older and newer posts, or `null` at either end. */
 		cursors: { next: string | null; prev: string | null };
+		/**
+		 * Where the page below this one is fetched from as the reader reaches the end of this
+		 * one, or `null` for a surface walked by its links alone. It is that page's own
+		 * address asked for as a fragment, which is a different URL from the link beside it:
+		 * the link is a page to navigate to, this is a piece to write into this one.
+		 */
+		continueSrc?: string | null;
 	}
 }
 
@@ -242,10 +250,57 @@ function ReadToggle(
 	};
 }
 
-/** Renders one page of posts and the links to the pages either side of it. */
+/**
+ * The way to the page below this one, which is what a reader walks the list with and what
+ * that page replaces once it has arrived under them.
+ *
+ * It is drawn with an inline style rather than with the app's own mixins, which is the one
+ * place in this app that is true: the link travels to the browser inside a client entry's
+ * serialized props, and the runtime accepts only plain values there. Everything the link
+ * needs is a declaration, so nothing is lost but the underline a pointer would draw.
+ */
+function OlderLink(handle: Handle<{ href: string; label: string }>) {
+	return () => (
+		<nav style="display: flex; justify-content: flex-end; padding-block: 0.75rem;">
+			<a
+				href={handle.props.href}
+				rel="next"
+				style="padding: 0.5rem 0.75rem; border-radius: var(--ui-radius-md, 0.375rem); color: var(--ui-brand-fg); text-decoration: none;"
+			>
+				{handle.props.label}
+			</a>
+		</nav>
+	);
+}
+
+/**
+ * The way back to the page above this one, which only a page reached by following one has.
+ * It sits above the rows, where the posts it leads to are.
+ */
+function NewerLink(handle: Handle<{ href: string; label: string }>) {
+	return () => (
+		<nav mix={[flex(), items("center"), p(3, 0)]}>
+			<a
+				href={handle.props.href}
+				rel="prev"
+				mix={[
+					p(2, 3),
+					rounded("md"),
+					fg("brand"),
+					textDecoration("none"),
+					hover(textDecoration("underline")),
+				]}
+			>
+				{handle.props.label}
+			</a>
+		</nav>
+	);
+}
+
+/** Renders one page of posts, and whatever carries the reader on from the end of it. */
 export default function Timeline(handle: Handle<Timeline.Props>) {
 	return () => {
-		let { copy, cursors, entries, listId, returnTo } = handle.props;
+		let { continueSrc = null, copy, cursors, entries, returnTo, start } = handle.props;
 
 		/**
 		 * One row without a source would pull its time out of the column every other row's
@@ -255,12 +310,14 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 
 		return (
 			<div>
+				{cursors.prev && <NewerLink href={cursors.prev} label={copy.newer} />}
+
 				{/**
 				 * The list takes the page's gutter back and each row spends it inside itself, so the
 				 * words keep their place while the rules between rows and the fill under the pointer
 				 * run the full width of the pane.
 				 */}
-				<ol id={listId} mix={[p(0), listBleed()]}>
+				<ol start={start ?? undefined} mix={[p(0), listBleed()]}>
 					{entries.map((entry) => (
 						<li
 							key={entry.id}
@@ -361,49 +418,33 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 					))}
 				</ol>
 
-				{(cursors.prev ?? cursors.next) && (
-					<nav mix={[flex(), items("center"), gap(3), p(3, 0)]}>
-						{cursors.prev && (
-							<a
-								href={cursors.prev}
-								rel="prev"
-								mix={[
-									p(2, 3),
-									rounded("md"),
-									fg("brand"),
-									textDecoration("none"),
-									hover(textDecoration("underline")),
-								]}
-							>
-								{copy.newer}
-							</a>
-						)}
+				{/**
+				 * The list is closed before whatever follows it, so the page that arrives below
+				 * opens a list of its own numbered from where this one stopped. Rows fetched into
+				 * a list already open would be nested inside it rather than beside its own.
+				 *
+				 * The link is what the frame holds rather than what sits beside it: the server
+				 * sends the link, a browser running no script keeps it, and the page it leads to
+				 * takes its place the moment it arrives — so the two never stand together and the
+				 * rows of one page meet the rows of the next with nothing between them.
+				 */}
+				{continueSrc && cursors.next ? (
+					<LazyFrame src={continueSrc}>
+						<OlderLink href={cursors.next} label={copy.older} />
+					</LazyFrame>
+				) : (
+					cursors.next && <OlderLink href={cursors.next} label={copy.older} />
+				)}
 
-						<span aria-hidden="true" mix={[grow()]} />
-
-						{cursors.next && (
-							<a
-								href={cursors.next}
-								rel="next"
-								mix={[
-									p(2, 3),
-									rounded("md"),
-									fg("brand"),
-									textDecoration("none"),
-									hover(textDecoration("underline")),
-									justify("end"),
-									/**
-									 * A paging enhancement marks this link while it is the one fetching pages,
-									 * which leaves the words off a list already growing under the reader. Focus
-									 * brings them back, so tabbing past the last row still reaches the next page.
-									 */
-									when("&[data-paging]:not(:focus-visible)", visuallyHidden()),
-								]}
-							>
-								{copy.older}
-							</a>
-						)}
-					</nav>
+				{/**
+				 * Where the list stops, said in words. A reader scrolling reaches it the way they
+				 * reach any other row, and one listening is told the list has an end rather than
+				 * being left to keep asking.
+				 */}
+				{cursors.next === null && entries.length > 0 && (
+					<Text role="status" mix={[p(3, 0), text("sm"), fg("neutral.muted")]}>
+						{copy.end}
+					</Text>
 				)}
 			</div>
 		);

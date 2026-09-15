@@ -8,7 +8,8 @@
  * are named once however many surfaces lead back to them.
  *
  * The rail is on every page, so its list would be a second read of the reader's object on
- * every request — including the pages with no other reason to open it. It is kept in KV
+ * every request — including the pages with no other reason to open it. It holds every feed
+ * a reader follows, since the rail is now the whole of the subscription list. It is kept in KV
  * instead, holding the three fields a rail row draws and nothing else. A cache is a second
  * place the truth lives, so this one is written to be wrong only in ways nobody notices:
  * every change a reader makes themselves clears it as they make it, and what arrives behind
@@ -30,16 +31,6 @@ import type { AppLayout } from "~/resources/layouts/app";
 import { getViewer } from "~/app/http/middleware/auth";
 import { userStore } from "~/database/user-do";
 import { SEARCH_PARAM } from "~/resources/layouts/app";
-
-/**
- * How many feeds the rail draws. A rail is read by running an eye down it, which stops
- * being possible some way before a long subscription list ends; past this the Feeds heading
- * is the way to the whole of it, which is what that heading is a link for.
- *
- * A reader following more than this sees the ones their store lists first, which is the
- * most recently followed — the ones they are still deciding about.
- */
-const RAIL_FEED_LIMIT = 20;
 
 /**
  * How long a reader's cached rail list stands.
@@ -68,7 +59,7 @@ export interface ChromeContext {
 }
 
 /**
- * One feed as the cache holds it: the three fields a rail row is drawn from and nothing
+ * One feed as the cache holds it: the four fields a sidebar row is drawn from and nothing
  * else. Anything more would make this a second copy of the subscription list, which is the
  * shape a cache rots in.
  */
@@ -76,6 +67,8 @@ interface CachedFeed {
 	id: string;
 	title: string;
 	unreadCount: number;
+	/** The mark the publisher puts on their own feed, or `null` for one that puts none. */
+	imageUrl: string | null;
 }
 
 /** Where a reader's rail list is kept. */
@@ -104,26 +97,38 @@ export async function forgetRailFeeds(subject: string): Promise<void> {
  * object where it does not.
  *
  * @param subject - The reader whose subscriptions are being drawn.
- * @returns The rail's feeds, or none of them when neither the cache nor the object answers,
- * since a rail missing its list is a page a reader can still read and act on.
+ * @returns Every feed the reader follows, or none of them when neither the cache nor the
+ * object answers, since a rail missing its list is a page a reader can still read and act on.
  */
 async function railFeeds(subject: string): Promise<CachedFeed[]> {
 	let cached = await railCache().fetch<CachedFeed[]>(
 		railKey(subject),
 		async () => {
-			let page = await userStore(subject).listFeeds({ limit: RAIL_FEED_LIMIT });
-			if (!page.ok) return [];
+			let followed = await userStore(subject).listFeeds();
 
-			return page.feeds.map((feed) => ({
+			return followed.map((feed) => ({
 				id: feed.id,
 				title: feed.title,
 				unreadCount: feed.unreadCount,
+				imageUrl: feed.imageUrl,
 			}));
 		},
 		{ ttl: RAIL_TTL },
 	);
 
-	return isFailure(cached) ? [] : cached.data;
+	if (isFailure(cached)) return [];
+
+	/**
+	 * Read field by field rather than trusted whole: an entry written before a field was
+	 * added is still in KV until it expires, and a row drawn from one is a row a reader
+	 * sees. Anything the entry does not carry reads as a feed without it.
+	 */
+	return cached.data.map((feed) => ({
+		id: feed.id,
+		title: feed.title,
+		unreadCount: feed.unreadCount,
+		imageUrl: typeof feed.imageUrl === "string" ? feed.imageUrl : null,
+	}));
 }
 
 /**
@@ -176,10 +181,10 @@ export async function chrome(ctx: ChromeContext): Promise<{
 			label: ctx.i18next.t("nav.label"),
 			reading: ctx.i18next.t("nav.reading"),
 			feeds: ctx.i18next.t("nav.feeds"),
-			search: ctx.i18next.t("nav.search"),
 			searchLabel: ctx.i18next.t("search.label"),
 			searchPlaceholder: ctx.i18next.t("search.placeholder"),
 			subscriptions: ctx.i18next.t("nav.subscriptions"),
+			openSidebar: ctx.i18next.t("nav.openSidebar"),
 			settings: ctx.i18next.t("nav.settings"),
 			account: ctx.i18next.t("nav.account"),
 			logout: ctx.i18next.t("nav.logout"),
@@ -193,11 +198,10 @@ export async function chrome(ctx: ChromeContext): Promise<{
 		feeds: sortByTitle(await railFeeds(viewer.id), ctx.locale).map((feed) => ({
 			id: feed.id,
 			title: feed.title,
+			imageUrl: feed.imageUrl,
 			unreadCount: feed.unreadCount,
 			unreadLabel:
-				feed.unreadCount > 0
-					? ctx.i18next.t("feeds.index.unread", { count: feed.unreadCount })
-					: null,
+				feed.unreadCount > 0 ? ctx.i18next.t("feeds.unread", { count: feed.unreadCount }) : null,
 		})),
 	};
 }

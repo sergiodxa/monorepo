@@ -41,7 +41,7 @@ export default createAction(routes.feeds.unfollow, {
 		await forgetRailFeeds(viewer.id);
 
 		if (unfollowed) {
-			return redirect(routes.feeds.index.href(), { status: redirect.Status.SeeOther });
+			return redirect(routes.reading.href(), { status: redirect.Status.SeeOther });
 		}
 
 		let title = ctx.i18next.t("feeds.show.notFound.title");
@@ -53,7 +53,7 @@ export default createAction(routes.feeds.unfollow, {
 						{ctx.i18next.t("feeds.show.notFound.description")}
 					</Text>
 
-					<LinkButton href={routes.feeds.index.href()} color="neutral" variant="outline">
+					<LinkButton href={routes.reading.href()} color="neutral" variant="outline">
 						{ctx.i18next.t("feeds.show.notFound.back")}
 					</LinkButton>
 				</div>

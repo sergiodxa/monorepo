@@ -59,35 +59,22 @@ export default {
 		cta: "Cerrar sesión",
 	},
 
-	/** The toolbar every signed-in page wears. */
+	/** The sidebar every signed-in page wears. */
 	nav: {
 		label: "Secciones",
 		reading: "Lectura",
 		feeds: "Feeds",
-		search: "Buscar",
 		subscriptions: "Feeds que sigues",
+		openSidebar: "Mostrar feeds y búsqueda",
 		settings: "Preferencias",
 		account: "Tu cuenta",
 		logout: "Cerrar sesión",
 	},
 
-	/** Searching the posts of every followed feed. */
+	/** The box the sidebar searches every followed feed's posts from. */
 	search: {
-		title: "Buscar",
-		heading: "Buscar",
 		label: "Busca en tus entradas",
 		placeholder: "¿Qué estás buscando?",
-		resultsFor: "Entradas que coinciden con «{{query}}».",
-		results_one: "{{count}} entrada coincide con «{{query}}».",
-		results_other: "{{count}} entradas coinciden con «{{query}}».",
-		none: {
-			title: "No hay coincidencias",
-			description: "Ninguna entrada de los feeds que sigues contiene esas palabras.",
-		},
-		prompt: {
-			title: "Busca en tus lecturas",
-			description: "Escribe lo que recuerdes del título o del resumen de una entrada.",
-		},
 	},
 
 	/** Shared by both timelines, which offer the same way through a long list of posts. */
@@ -107,21 +94,25 @@ export default {
 		 * prompt carrying the warning rather than acting on the first click.
 		 */
 		markAllRead: {
-			submit: "Marcar todo como leído",
+			/** Short enough for a row of controls, and still saying how far the sweep reaches. */
+			submit: "Marcar todo leído",
 			title: "Marcar todo como leído",
 			confirm:
 				"¿Marcar como leídas todas las entradas sin leer, de todos los feeds que sigues? Aquí no queda registro de cuáles estaban sin leer, así que no se puede deshacer.",
 			cancel: "Cancelar",
 		},
-		markFeedRead: "Marcar este feed como leído",
+		markFeedRead: "Marcar feed leído",
+		/** Said where the list stops, so it is known to have an end rather than to go on. */
+		end: "Has llegado al final.",
 		markedRead_one: "{{count}} entrada marcada como leída.",
 		markedRead_other: "{{count}} entradas marcadas como leídas.",
 		nothingToMark: "No había nada sin leer que marcar.",
 	},
 
 	reading: {
-		title: "Lectura",
 		heading: "Lectura",
+		/** The same queue, narrowed to words somebody typed, which the heading says back. */
+		headingFor: "Leyendo sobre «{{query}}»",
 		/** Which of the queue's posts the page holds, named beside the heading. */
 		filter: {
 			label: "Mostrar",
@@ -147,44 +138,40 @@ export default {
 				description: "Las entradas se acumulan aquí según las abres o las marcas como leídas.",
 			},
 		},
+		/**
+		 * A search that found nothing says so about the words rather than about the queue,
+		 * and under a filter it says which of the two came up empty, since widening the
+		 * filter is what a reader does next.
+		 */
+		found: {
+			all: {
+				title: "No hay coincidencias",
+				description: "Ninguna entrada de los feeds que sigues contiene esas palabras.",
+			},
+			unread: {
+				title: "Nada sin leer coincide",
+				description: "Ya has leído todas las entradas que contienen esas palabras. Prueba Todas.",
+			},
+			read: {
+				title: "Nada leído coincide",
+				description: "Ninguna entrada que hayas leído contiene esas palabras. Prueba Todas.",
+			},
+		},
 		noFeeds: {
 			title: "Todavía no hay nada que leer",
-			description: "Sigue un sitio que publique RSS o Atom y sus entradas aparecerán aquí.",
-			cta: "Sigue tu primer feed",
-		},
-		/** Said at the end of the list, where the next page arrives as the reader scrolls. */
-		paging: {
-			loading: "Cargando entradas más antiguas…",
-			failed: "No se pudieron cargar esas entradas.",
-			retry: "Reintentar",
-			end: "Has llegado al final.",
+			description:
+				"Pega en la caja de arriba la dirección de un feed, o la de un sitio que publique uno.",
 		},
 	},
 
 	feeds: {
-		index: {
-			title: "Feeds",
-			heading: "Feeds",
-			empty: {
-				title: "Todavía no sigues nada",
-				description: "Pega aquí arriba la dirección de un feed, o la de un sitio que publique uno.",
-			},
-			unread_one: "{{count}} sin leer",
-			unread_other: "{{count}} sin leer",
-			checked: "Revisado el {{date}}",
-			neverChecked: "Aún sin revisar",
-			failing_one: "La última revisión falló",
-			failing_other: "Las últimas {{count}} revisiones fallaron",
-			/** How many checks failed and what the last one recorded, read as one badge. */
-			failingBecause: "{{failures}}: {{reason}}",
-		},
+		/** How many of a feed's posts are waiting, said beside its name in the sidebar. */
+		unread_one: "{{count}} sin leer",
+		unread_other: "{{count}} sin leer",
 
 		follow: {
-			title: "Seguir un feed",
 			label: "Dirección del feed o del sitio",
-			description: "La dirección de un feed, o la de un sitio que anuncie uno.",
-			placeholder: "https://ejemplo.com",
-			submit: "Seguir",
+			placeholder: "Sigue un feed o un sitio…",
 			error: {
 				invalidUrl:
 					"Esa no es una dirección que esta aplicación pueda pedir. Usa una que empiece por http o https.",
@@ -197,6 +184,12 @@ export default {
 		show: {
 			title: "Feed",
 			visitSite: "Ir al sitio",
+			checked: "Revisado el {{date}}",
+			neverChecked: "Aún sin revisar",
+			failing_one: "La última revisión falló",
+			failing_other: "Las últimas {{count}} revisiones fallaron",
+			/** How many checks failed and what the last one recorded, read as one badge. */
+			failingBecause: "{{failures}}: {{reason}}",
 			empty: {
 				title: "Todavía no hay entradas",
 				description: "Este feed no ha publicado nada desde que empezaste a seguirlo.",
@@ -204,13 +197,14 @@ export default {
 			notFound: {
 				title: "Feed no encontrado",
 				description: "No sigues ningún feed con esa dirección.",
-				back: "Volver a tus feeds",
+				back: "Volver a tu lectura",
 			},
 		},
 
-		/** Checking every followed feed at once, from the subscription list. */
+		/** Checking every followed feed at once, from the reading queue. */
 		checkAll: {
-			submit: "Revisar todos los feeds",
+			/** Said against the feed page's own "Revisar feed", so the reach of each is plain. */
+			submit: "Revisar todos",
 			done_one: "Se revisó {{count}} feed.",
 			done_other: "Se revisaron {{count}} feeds.",
 			newPosts_one: "{{count}} feed tenía entradas nuevas.",
@@ -245,15 +239,9 @@ export default {
 			},
 		},
 
-		/** Paging the subscription list, which is long once a reader follows enough. */
-		paging: {
-			newer: "Suscripciones más recientes",
-			older: "Suscripciones más antiguas",
-		},
-
 		/** What asking for a feed to be checked on the spot reports back. */
 		check: {
-			submit: "Revisar ahora",
+			submit: "Revisar feed",
 			new: "Llegaron entradas nuevas.",
 			none: "Nada nuevo desde la última revisión.",
 			failed:
@@ -299,6 +287,12 @@ export default {
 		interval_other: "Cada {{count}} horas",
 		lastRefreshed: "Revisado por última vez el {{date}}",
 		neverRefreshed: "Aún sin revisar",
+	},
+
+	/** What stands in for a part of a page that did not load. */
+	frame: {
+		failed: "Esta parte de la página no se cargó.",
+		retry: "Recargar",
 	},
 
 	notFound: {

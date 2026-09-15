@@ -60,7 +60,7 @@ describe("POST /items/:itemId/read", () => {
 	});
 
 	test("marks the post unread", async () => {
-		let feedPath = routes.feeds.show.href({ feedId: "01J0FEED00000000000000000" });
+		let feedPath = routes.feed.href({ feed: "01J0FEED00000000000000000" });
 
 		let response = await markRead(createRouter(VIEWER), { read: "false", returnTo: feedPath });
 

@@ -29,11 +29,11 @@ create the namespace with `bunx wrangler kv namespace create` and paste its id i
 ## Features
 
 - Sign-in through the OpenID Connect provider at auth.sergiodxa.com
-- A reading queue of the unread items across every followed feed, paged by a cursor
+- One list of every post across every followed feed, which continues as you scroll it
+- The same list narrowed to what is read or unread, to words you searched for, or to both
 - Follow a feed by its own address or by the address of a site that advertises one
 - Unfollow a feed, which takes its posts with it
 - A refresh schedule of your own choosing, from hourly to daily, or a check on demand
-- Search across the posts of every feed you follow
 - Mark one feed or the whole queue read at once
 - Import and export your subscriptions as OPML
 - Interface in English and Spanish, resolved per request
@@ -56,14 +56,14 @@ create the namespace with `bunx wrangler kv namespace create` and paste its id i
 
 | Route                    | Description                                     |
 | ------------------------ | ----------------------------------------------- |
-| `/reading`               | The unread queue across every feed              |
+| `/reading`               | Every post, narrowed by `show` and by `q`       |
 | `/reading/read`          | `POST` takes every unread post out of it        |
-| `/search`                | Posts matching what you typed, across all feeds |
-| `/feeds`                 | `GET` lists feeds, `POST` follows one           |
+| `/reading/:feed`         | One feed, its health and its posts              |
+| `/feeds`                 | `POST` follows a feed                           |
 | `/feeds/refresh`         | `POST` checks every feed now                    |
 | `/feeds.opml`            | Your subscriptions as OPML                      |
 | `/feeds/import`          | `POST` follows everything in an OPML file       |
-| `/feeds/:feedId`         | `GET` shows a feed, `DELETE` unfollows          |
+| `/feeds/:feedId`         | `DELETE` unfollows a feed                       |
 | `/feeds/:feedId/refresh` | `POST` checks that feed now                     |
 | `/feeds/:feedId/read`    | `POST` marks that feed's posts read             |
 | `/items/:itemId/read`    | Marks an item read                              |

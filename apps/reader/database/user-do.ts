@@ -85,16 +85,6 @@ const NEWEST_FIRST = [
 ] as const;
 
 /**
- * The ordering the subscription list reads in, spelled once beside the timeline's own.
- * A cursor carries the column names it was minted for, so one list's cursor is refused
- * by the other rather than seeking on a column that means something else there.
- */
-const NEWEST_SUBSCRIPTION_FIRST = [
-	["created_at", "desc"],
-	["id", "desc"],
-] as const;
-
-/**
  * Feeds one on-demand run talks to at once. It paces a run by the slowest origin rather
  * than by the sum of them, while keeping a reader's object, which has one thread, from
  * opening a socket per feed — the same bound the scheduled refresh works under.
@@ -210,6 +200,12 @@ export namespace UserStore {
 		 * offers no filter shows the queue a reader still has ahead of them.
 		 */
 		readState?: ReadState;
+		/**
+		 * Words a post's title or summary has to contain, which narrow the page alongside
+		 * {@link readState}. Text holding nothing but space narrows nothing, so an empty
+		 * search box reads as the whole queue.
+		 */
+		query?: string;
 	}
 
 	/**
@@ -241,19 +237,6 @@ export namespace UserStore {
 	export type FollowResult =
 		| { ok: true; feed: FeedSummary; items: number }
 		| { ok: false; reason: FollowFailure; feedId: string | null };
-
-	/**
-	 * One page of the subscription list, paged the way a long timeline is. A cursor that no
-	 * longer decodes is reported rather than answered with an empty page, which a reader who
-	 * follows fifty feeds would read as following none.
-	 */
-	export type FeedPage =
-		| {
-				ok: true;
-				feeds: FeedSummary[];
-				cursors: { next: string | null; prev: string | null };
-		  }
-		| { ok: false; reason: "bad-cursor" };
 
 	/** What a sweep of every followed feed got through. */
 	export interface CheckAllResult {
@@ -471,24 +454,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		return written.affectedRows ?? 0;
 	}
 
-	/**
-	 * Posts whose title or summary contain `query`, newest first, paged like a timeline.
-	 * A blank query matches nothing rather than everything: it is an empty search box.
-	 */
-	async searchPosts(
-		query: string,
-		options: UserStore.TimelineOptions = {},
-	): Promise<UserStore.TimelineResult> {
-		let pattern = likePattern(query);
-		if (pattern === null) {
-			return { ok: true, items: [], feeds: [], cursors: { next: null, prev: null } };
-		}
-
-		let search = new SearchQuery(this.#db, { pattern, seek: [], orderBy: [], limit: null });
-
-		return await this.#page(search, options);
-	}
-
 	/** Every subscription, in the shape an export writes them. */
 	async exportFeeds(): Promise<UserStore.FeedExport[]> {
 		// The whole list, unpaged: a document holding some of a reader's subscriptions is
@@ -535,32 +500,30 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		return result;
 	}
 
-	/** One page of followed feeds, newest subscription first, each with its unread count. */
-	async listFeeds(options: UserStore.TimelineOptions = {}): Promise<UserStore.FeedPage> {
-		let [page, unread] = await Promise.all([
-			Pagination.byKeyset(this.#db.query(feeds), {
-				orderBy: NEWEST_SUBSCRIPTION_FIRST,
-				cursor: options.cursor,
-				limit: pageLimit(options.limit),
+	/**
+	 * Every followed feed in the order their names read, each with its unread count.
+	 *
+	 * Unpaged, because the one place a reader meets this list is the rail, which draws all
+	 * of it and scrolls within its own column. A page of it would be a rail that stops
+	 * partway down somebody's subscriptions with no way on.
+	 */
+	async listFeeds(): Promise<UserStore.FeedSummary[]> {
+		let [rows, unread] = await Promise.all([
+			/**
+			 * The names, in order, so an eye running down the rail finds a feed by its name.
+			 * Bytes are what SQLite compares, which the index carries; the reader's own
+			 * language orders what comes back, where the request's locale is.
+			 */
+			this.#db.findMany(feeds, {
+				orderBy: [
+					["title", "asc"],
+					["id", "asc"],
+				],
 			}),
 			this.#unreadCounts(),
 		]);
 
-		if (isFailure(page)) {
-			/**
-			 * A cursor the reader's browser carried from an older ordering is news about the
-			 * request; anything else here is a broken query, which belongs to whoever wrote
-			 * it rather than to the person reading.
-			 */
-			if (page.error instanceof InvalidCursorError) return { ok: false, reason: "bad-cursor" };
-			throw page.error;
-		}
-
-		return {
-			ok: true,
-			feeds: page.data.items.map((row) => toFeedSummary(row, unread.get(row.id) ?? 0)),
-			cursors: page.data.cursors,
-		};
+		return rows.map((row) => toFeedSummary(row, unread.get(row.id) ?? 0));
 	}
 
 	/** One followed feed, or `null` when this reader does not follow it. */
@@ -710,17 +673,31 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * The posts across every followed feed, newest first, narrowed to the read state the
-	 * caller chooses. It answers the unread ones when they choose none.
+	 * caller chooses and to the words they searched for. It answers the unread ones when
+	 * they choose no state, and every post when they search for nothing.
 	 *
 	 * Each state is served by an index of its own, so paging the read posts of a reader
-	 * who has read years of them costs what paging the unread ones does.
+	 * who has read years of them costs what paging the unread ones does. A search rides on
+	 * those same indexes for its ordering and matches the text off the row, which is what
+	 * lets the two narrowings compose into one read.
 	 *
 	 * @param options - Which posts to page, where to page from, and how much of it.
 	 * @example let page = await userStore(viewer.id).readingQueue({ readState: "all" });
+	 * @example let found = await userStore(viewer.id).readingQueue({ query: "remix" });
 	 */
 	readingQueue(options: UserStore.ReadingQueueOptions = {}): Promise<UserStore.TimelineResult> {
+		let readState = options.readState ?? "unread";
+		let pattern = likePattern(options.query ?? "");
+
+		if (pattern !== null) {
+			return this.#page(
+				new SearchQuery(this.#db, { pattern, readState, seek: [], orderBy: [], limit: null }),
+				options,
+			);
+		}
+
 		let timeline = this.#timeline();
-		let narrowing = readStateWhere(options.readState ?? "unread");
+		let narrowing = readStateWhere(readState);
 
 		return this.#page(narrowing === null ? timeline : timeline.where(narrowing), options);
 	}
@@ -933,6 +910,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 interface SearchState {
 	/** The `LIKE` pattern, already escaped, that both searched columns are matched against. */
 	pattern: string;
+	/** Which posts the match is narrowed to, spelled beside it in the same statement. */
+	readState: UserStore.ReadState;
 	/** Seek predicates the pager composed, which narrow the match to one page. */
 	seek: readonly Predicate[];
 	/** The ordering the pager owns, which is also what it mints cursors from. */
@@ -991,7 +970,9 @@ function searchStatement(state: SearchState): SqlStatement {
 	let pattern = state.pattern;
 
 	let match = sql`("title" like ${pattern} escape ${LIKE_ESCAPE} or "summary" like ${pattern} escape ${LIKE_ESCAPE})`;
-	let where = state.seek.reduce((left, right) => sql`${left} and ${seekSql(right)}`, match);
+	let narrowed = readStateSql(state.readState);
+	let matched = narrowed === null ? match : sql`${match} and ${narrowed}`;
+	let where = state.seek.reduce((left, right) => sql`${left} and ${seekSql(right)}`, matched);
 
 	// The pager appends the ordering it owns before reading, and the fallback keeps a
 	// statement built without one reading the way a search is defined to.
@@ -1215,6 +1196,21 @@ async function itemRow(feedId: string, entry: Feed.Item, now: number): Promise<I
 function readStateWhere(readState: UserStore.ReadState): Predicate<"read_at"> | null {
 	if (readState === "unread") return isNull("read_at");
 	if (readState === "read") return notNull("read_at");
+
+	return null;
+}
+
+/**
+ * What one read state narrows a hand-written statement by, or `null` for the state that
+ * narrows nothing. It is the clause {@link readStateWhere} builds as a predicate, spelled
+ * out in SQL because the search statement composes its own text rather than going through
+ * the query builder, and both spellings match the partial index that serves them.
+ *
+ * @param readState - Which posts the caller asked for.
+ */
+function readStateSql(readState: UserStore.ReadState): SqlStatement | null {
+	if (readState === "unread") return rawSql(`"read_at" is null`);
+	if (readState === "read") return rawSql(`"read_at" is not null`);
 
 	return null;
 }

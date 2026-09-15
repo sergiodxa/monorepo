@@ -13,16 +13,29 @@
  */
 
 import { redirect } from "@sdxc/http/response";
+import * as s from "remix/data-schema";
+import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
 
 import { forgetRailFeeds } from "~/app/http/controllers/chrome";
+import { queueUrl, queueViewOf, SHOW_PARAM } from "~/app/http/controllers/queue-view";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/database/user-do";
+import { SEARCH_PARAM } from "~/resources/layouts/app";
 import routes from "~/routes/web";
 
 /** The query parameter the queue reads the number of posts marked read out of. */
 export const MARKED_PARAM = "marked";
+
+/**
+ * The narrowing the queue this was pressed from is reading under, which a form carries in
+ * its own fields. Either one absent reads as no narrowing, which is the whole queue.
+ */
+const SweepForm = f.object({
+	[SEARCH_PARAM]: f.field(s.defaulted(s.string(), "")),
+	[SHOW_PARAM]: f.field(s.defaulted(s.string(), "")),
+});
 
 /**
  * POST /reading/read — empties the reading queue and reports back on the queue itself.
@@ -32,18 +45,23 @@ export const MARKED_PARAM = "marked";
  */
 export default createAction(routes.readAll, {
 	middleware: [requireUser],
-	handler: async () => {
+	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
+		let submitted = s.parseSafe(SweepForm, ctx.formData);
+
+		let view = queueViewOf(
+			submitted.success ? submitted.value[SEARCH_PARAM] : "",
+			submitted.success ? submitted.value[SHOW_PARAM] : "",
+		);
+
 		let marked = await userStore(viewer.id).markAllRead();
 
-		/** Every count the rail draws has just gone to nothing. */
+		/** Every count the sidebar draws has just gone to nothing. */
 		await forgetRailFeeds(viewer.id);
 
-		let query = new URLSearchParams({ [MARKED_PARAM]: String(marked) });
-
-		return redirect(`${routes.reading.href()}?${query}`, {
+		return redirect(queueUrl(view, null, { [MARKED_PARAM]: String(marked) }), {
 			status: redirect.Status.SeeOther,
 		});
 	},

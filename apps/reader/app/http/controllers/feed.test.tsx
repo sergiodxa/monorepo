@@ -1,5 +1,5 @@
 /**
- * Tests `GET /feeds/:feedId`: the guard, the feed a reader does not follow, the posts and
+ * Tests `GET /reading/:feed`: the guard, the feed a reader does not follow, the posts and
  * paging links of one they do, the empty feed, a cursor the store no longer decodes, the
  * unfollow prompt that reaches a `DELETE` route through a browser `POST` — including that
  * it sits above the posts, where a reader finds it without scrolling past them — and the
@@ -26,7 +26,7 @@ import routes from "~/routes/web";
 let store = createUserStoreDouble();
 vi.doMock("~/database/user-do", () => ({ userStore: () => store }));
 
-let { default: show } = await import("./show");
+let { default: feed } = await import("./feed");
 
 const FEED_ID = "feed-df";
 
@@ -69,7 +69,7 @@ function item(overrides: Partial<UserStore.Item> & Pick<UserStore.Item, "id">): 
 /** Dispatches a real `GET` to `path` as `viewer`, through the feed controller alone. */
 function get(path: string, viewer: Viewer | null = VIEWER): Promise<Response> {
 	let router: Router = createTestRouter(viewer);
-	router.map(routes.feeds.show, show);
+	router.map(routes.feed, feed);
 	return fetchRoute(router, path);
 }
 
@@ -86,9 +86,9 @@ beforeEach(() => {
 	store = createUserStoreDouble();
 });
 
-describe("GET /feeds/:feedId", () => {
+describe("GET /reading/:feed", () => {
 	test("sends an anonymous visitor home", async () => {
-		let response = await get(routes.feeds.show.href({ feedId: FEED_ID }), null);
+		let response = await get(routes.feed.href({ feed: FEED_ID }), null);
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(routes.home.href());
@@ -96,22 +96,22 @@ describe("GET /feeds/:feedId", () => {
 	});
 
 	test("answers a feed this reader does not follow with 404", async () => {
-		let response = await get(routes.feeds.show.href({ feedId: "feed-nobody-follows" }));
+		let response = await get(routes.feed.href({ feed: "feed-nobody-follows" }));
 
 		expect(response.status).toBe(404);
 
 		let body = await response.text();
 		expect(body).toContain("Feed not found");
 		expect(body).toContain("You do not follow a feed with that address.");
-		expect(body).toContain("Back to your feeds");
-		expect(body).toContain(`href="${routes.feeds.index.href()}"`);
+		expect(body).toContain("Back to your reading");
+		expect(body).toContain(`href="${routes.reading.href()}"`);
 		expect(store.feedTimeline).not.toHaveBeenCalled();
 	});
 
 	test("heads the page with the feed's title, which links out to its site", async () => {
 		store.getFeed.mockResolvedValue(FEED);
 
-		let response = await get(routes.feeds.show.href({ feedId: FEED_ID }));
+		let response = await get(routes.feed.href({ feed: FEED_ID }));
 		expect(response.status).toBe(200);
 
 		let body = await response.text();
@@ -130,7 +130,7 @@ describe("GET /feeds/:feedId", () => {
 	test("heads a feed that names no site with plain, unlinked text", async () => {
 		store.getFeed.mockResolvedValue({ ...FEED, siteUrl: null });
 
-		let body = await (await get(routes.feeds.show.href({ feedId: FEED_ID }))).text();
+		let body = await (await get(routes.feed.href({ feed: FEED_ID }))).text();
 		let heading = body.slice(body.indexOf("<h1"), body.indexOf("</h1>"));
 
 		expect(heading).toContain("Daring Fireball");
@@ -150,7 +150,7 @@ describe("GET /feeds/:feedId", () => {
 			cursors: { next: null, prev: null },
 		});
 
-		let body = await (await get(routes.feeds.show.href({ feedId: FEED_ID }))).text();
+		let body = await (await get(routes.feed.href({ feed: FEED_ID }))).text();
 
 		expect(readsAs(body)).toContain("Markdown and the web");
 		expect(readsAs(body)).toContain("An older one");
@@ -166,9 +166,7 @@ describe("GET /feeds/:feedId", () => {
 		expect(body).toContain('title="Mark as read"');
 		expect(body).toContain('aria-label="Mark as unread"');
 		expect(body).toContain('title="Mark as unread"');
-		expect(body).toContain(
-			`name="returnTo" value="${routes.feeds.show.href({ feedId: FEED_ID })}"`,
-		);
+		expect(body).toContain(`name="returnTo" value="${routes.feed.href({ feed: FEED_ID })}"`);
 	});
 
 	test("marks a feed's posts with the ring that says which state each is in", async () => {
@@ -180,7 +178,7 @@ describe("GET /feeds/:feedId", () => {
 			cursors: { next: null, prev: null },
 		});
 
-		let body = await (await get(routes.feeds.show.href({ feedId: FEED_ID }))).text();
+		let body = await (await get(routes.feed.href({ feed: FEED_ID }))).text();
 
 		/**
 		 * The ring the unread post wears and the ticked ring the read one wears, each read
@@ -203,13 +201,11 @@ describe("GET /feeds/:feedId", () => {
 			cursors: { next: "older-cursor", prev: null },
 		});
 
-		let path = `${routes.feeds.show.href({ feedId: FEED_ID })}?cursor=page-2`;
+		let path = `${routes.feed.href({ feed: FEED_ID })}?cursor=page-2`;
 		let body = await (await get(path)).text();
 
 		expect(store.feedTimeline).toHaveBeenCalledWith(FEED_ID, { cursor: "page-2" });
-		expect(body).toContain(
-			`href="${routes.feeds.show.href({ feedId: FEED_ID })}?cursor=older-cursor"`,
-		);
+		expect(body).toContain(`href="${routes.feed.href({ feed: FEED_ID })}?cursor=older-cursor"`);
 		expect(body).toContain("Older posts");
 		expect(body).not.toContain("Newer posts");
 	});
@@ -217,7 +213,7 @@ describe("GET /feeds/:feedId", () => {
 	test("says so when the feed holds nothing", async () => {
 		store.getFeed.mockResolvedValue(FEED);
 
-		let body = await (await get(routes.feeds.show.href({ feedId: FEED_ID }))).text();
+		let body = await (await get(routes.feed.href({ feed: FEED_ID }))).text();
 
 		expect(body).toContain("No posts yet");
 		expect(body).toContain("This feed has published nothing since you started following it.");
@@ -240,7 +236,7 @@ describe("GET /feeds/:feedId", () => {
 			},
 		);
 
-		let path = `${routes.feeds.show.href({ feedId: FEED_ID })}?cursor=rotten`;
+		let path = `${routes.feed.href({ feed: FEED_ID })}?cursor=rotten`;
 		let response = await get(path);
 		expect(response.status).toBe(200);
 
@@ -253,7 +249,7 @@ describe("GET /feeds/:feedId", () => {
 	test("offers the unfollow form, naming the feed and overriding the method", async () => {
 		store.getFeed.mockResolvedValue(FEED);
 
-		let body = await (await get(routes.feeds.show.href({ feedId: FEED_ID }))).text();
+		let body = await (await get(routes.feed.href({ feed: FEED_ID }))).text();
 
 		expect(body).toContain(`action="${routes.feeds.unfollow.href({ feedId: FEED_ID })}"`);
 		expect(body).toContain('method="post"');
@@ -266,7 +262,7 @@ describe("GET /feeds/:feedId", () => {
 	test("puts unfollowing behind a prompt rather than a bare submit", async () => {
 		store.getFeed.mockResolvedValue(FEED);
 
-		let body = await (await get(routes.feeds.show.href({ feedId: FEED_ID }))).text();
+		let body = await (await get(routes.feed.href({ feed: FEED_ID }))).text();
 
 		expect(body).toContain(`commandfor="unfollow-${FEED_ID}"`);
 		expect(body).toContain('command="show-modal"');
@@ -283,7 +279,7 @@ describe("GET /feeds/:feedId", () => {
 			cursors: { next: null, prev: null },
 		});
 
-		let body = await (await get(routes.feeds.show.href({ feedId: FEED_ID }))).text();
+		let body = await (await get(routes.feed.href({ feed: FEED_ID }))).text();
 
 		/** The actions sit beside the page's name, inside the header row the two share. */
 		let header = body.slice(body.indexOf("<h1"), body.indexOf("<ol"));
@@ -303,7 +299,7 @@ describe("GET /feeds/:feedId", () => {
 			cursors: { next: null, prev: null },
 		});
 
-		let body = await (await get(routes.feeds.show.href({ feedId: FEED_ID }))).text();
+		let body = await (await get(routes.feed.href({ feed: FEED_ID }))).text();
 		let [, linked, plain] = body.slice(body.indexOf("<ol"), body.indexOf("</ol>")).split("<li");
 
 		expect(linked).toContain('target="_blank"');
@@ -327,16 +323,16 @@ describe("checking a feed now", () => {
 	test("offers the check alongside the way to unfollow", async () => {
 		store.getFeed.mockResolvedValue(FEED);
 
-		let body = await get(routes.feeds.show.href({ feedId: FEED_ID })).then((r) => r.text());
+		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
 
 		expect(body).toContain(`action="${routes.feeds.refresh.href({ feedId: FEED_ID })}"`);
-		expect(body).toContain("Check now");
+		expect(body).toContain("Check feed");
 	});
 
 	test("posts the check rather than linking it, so nothing follows it by accident", async () => {
 		store.getFeed.mockResolvedValue(FEED);
 
-		let body = await get(routes.feeds.show.href({ feedId: FEED_ID })).then((r) => r.text());
+		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
 		let form = body.match(
 			new RegExp(`<form[^>]*action="${routes.feeds.refresh.href({ feedId: FEED_ID })}"[^>]*>`),
 		);
@@ -347,7 +343,7 @@ describe("checking a feed now", () => {
 	test("says so when the check brought posts in", async () => {
 		store.getFeed.mockResolvedValue(FEED);
 
-		let body = await get(`${routes.feeds.show.href({ feedId: FEED_ID })}?checked=new`).then((r) =>
+		let body = await get(`${routes.feed.href({ feed: FEED_ID })}?checked=new`).then((r) =>
 			r.text(),
 		);
 
@@ -357,7 +353,7 @@ describe("checking a feed now", () => {
 	test("says so when there was nothing new", async () => {
 		store.getFeed.mockResolvedValue(FEED);
 
-		let body = await get(`${routes.feeds.show.href({ feedId: FEED_ID })}?checked=none`).then((r) =>
+		let body = await get(`${routes.feed.href({ feed: FEED_ID })}?checked=none`).then((r) =>
 			r.text(),
 		);
 
@@ -367,8 +363,8 @@ describe("checking a feed now", () => {
 	test("says the feed could not be reached, and that the schedule will retry", async () => {
 		store.getFeed.mockResolvedValue(FEED);
 
-		let body = await get(`${routes.feeds.show.href({ feedId: FEED_ID })}?checked=failed`).then(
-			(r) => r.text(),
+		let body = await get(`${routes.feed.href({ feed: FEED_ID })}?checked=failed`).then((r) =>
+			r.text(),
 		);
 
 		expect(readsAs(body)).toContain("could not be reached just now");
@@ -378,8 +374,8 @@ describe("checking a feed now", () => {
 	test("reports nothing on an ordinary visit, or on a value it does not know", async () => {
 		store.getFeed.mockResolvedValue(FEED);
 
-		let plain = await get(routes.feeds.show.href({ feedId: FEED_ID })).then((r) => r.text());
-		let bogus = await get(`${routes.feeds.show.href({ feedId: FEED_ID })}?checked=wat`).then((r) =>
+		let plain = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
+		let bogus = await get(`${routes.feed.href({ feed: FEED_ID })}?checked=wat`).then((r) =>
 			r.text(),
 		);
 
@@ -401,17 +397,17 @@ describe("marking a feed read", () => {
 			cursors: { next: null, prev: null },
 		});
 
-		let body = await get(routes.feeds.show.href({ feedId: FEED_ID })).then((r) => r.text());
+		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
 
 		expect(body).toContain(`action="${routes.feeds.read.href({ feedId: FEED_ID })}"`);
 
 		/** The three actions share the header's row with the feed's name, in reading order. */
 		let header = body.slice(body.indexOf("<h1"), body.indexOf("<ol"));
-		expect(header).toContain("Check now");
-		expect(header).toContain("Mark this feed read");
+		expect(header).toContain("Check feed");
+		expect(header).toContain("Mark feed read");
 		expect(header).toContain("Unfollow");
-		expect(header.indexOf("Check now")).toBeLessThan(header.indexOf("Mark this feed read"));
-		expect(header.indexOf("Mark this feed read")).toBeLessThan(header.indexOf("Unfollow"));
+		expect(header.indexOf("Check feed")).toBeLessThan(header.indexOf("Mark feed read"));
+		expect(header.indexOf("Mark feed read")).toBeLessThan(header.indexOf("Unfollow"));
 
 		/** Each one carries its own mark, which is what it says on a row too narrow for words. */
 		expect(header).toContain("lucide-refresh-cw");
@@ -422,7 +418,7 @@ describe("marking a feed read", () => {
 	test("posts the mark rather than linking it, so nothing follows it by accident", async () => {
 		store.getFeed.mockResolvedValue(FEED);
 
-		let body = await get(routes.feeds.show.href({ feedId: FEED_ID })).then((r) => r.text());
+		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
 		let form = body.match(
 			new RegExp(`<form[^>]*action="${routes.feeds.read.href({ feedId: FEED_ID })}"[^>]*>`),
 		);
@@ -434,7 +430,7 @@ describe("marking a feed read", () => {
 	test("marks the feed on the first click, with no prompt in the way", async () => {
 		store.getFeed.mockResolvedValue(FEED);
 
-		let body = await get(routes.feeds.show.href({ feedId: FEED_ID })).then((r) => r.text());
+		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
 
 		expect(body).not.toContain(`commandfor="mark-${FEED_ID}"`);
 		expect(body.match(/role="alertdialog"/g)).toHaveLength(1);
@@ -443,12 +439,8 @@ describe("marking a feed read", () => {
 	test("says how many posts the mark took out of the queue", async () => {
 		store.getFeed.mockResolvedValue(FEED);
 
-		let one = await get(`${routes.feeds.show.href({ feedId: FEED_ID })}?marked=1`).then((r) =>
-			r.text(),
-		);
-		let many = await get(`${routes.feeds.show.href({ feedId: FEED_ID })}?marked=12`).then((r) =>
-			r.text(),
-		);
+		let one = await get(`${routes.feed.href({ feed: FEED_ID })}?marked=1`).then((r) => r.text());
+		let many = await get(`${routes.feed.href({ feed: FEED_ID })}?marked=12`).then((r) => r.text());
 
 		expect(readsAs(one)).toContain("1 post marked read.");
 		expect(readsAs(many)).toContain("12 posts marked read.");
@@ -457,9 +449,7 @@ describe("marking a feed read", () => {
 	test("says there was nothing unread rather than counting to zero", async () => {
 		store.getFeed.mockResolvedValue(FEED);
 
-		let body = await get(`${routes.feeds.show.href({ feedId: FEED_ID })}?marked=0`).then((r) =>
-			r.text(),
-		);
+		let body = await get(`${routes.feed.href({ feed: FEED_ID })}?marked=0`).then((r) => r.text());
 
 		expect(readsAs(body)).toContain("There was nothing unread to mark.");
 		expect(readsAs(body)).not.toContain("0 posts marked read.");
@@ -468,13 +458,11 @@ describe("marking a feed read", () => {
 	test("reports nothing on an ordinary visit, or on a value that is not a count", async () => {
 		store.getFeed.mockResolvedValue(FEED);
 
-		let plain = await get(routes.feeds.show.href({ feedId: FEED_ID })).then((r) => r.text());
-		let bogus = await get(`${routes.feeds.show.href({ feedId: FEED_ID })}?marked=lots`).then((r) =>
+		let plain = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
+		let bogus = await get(`${routes.feed.href({ feed: FEED_ID })}?marked=lots`).then((r) =>
 			r.text(),
 		);
-		let blank = await get(`${routes.feeds.show.href({ feedId: FEED_ID })}?marked=`).then((r) =>
-			r.text(),
-		);
+		let blank = await get(`${routes.feed.href({ feed: FEED_ID })}?marked=`).then((r) => r.text());
 
 		for (let body of [plain, bogus, blank]) {
 			expect(readsAs(body)).not.toContain("marked read.");
@@ -485,11 +473,66 @@ describe("marking a feed read", () => {
 	test("says one outcome when a hand-made URL carries both parameters", async () => {
 		store.getFeed.mockResolvedValue(FEED);
 
-		let body = await get(
-			`${routes.feeds.show.href({ feedId: FEED_ID })}?marked=3&checked=new`,
-		).then((r) => r.text());
+		let body = await get(`${routes.feed.href({ feed: FEED_ID })}?marked=3&checked=new`).then((r) =>
+			r.text(),
+		);
 
 		expect(readsAs(body)).toContain("3 posts marked read.");
 		expect(readsAs(body)).not.toContain("New posts arrived.");
+	});
+});
+
+describe("a feed's health", () => {
+	test("says what the publisher calls this feed, under its name", async () => {
+		store.getFeed.mockResolvedValue(FEED);
+
+		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
+
+		expect(readsAs(body)).toContain("By John Gruber");
+	});
+
+	test("says when the feed was last checked, with the full date behind it", async () => {
+		store.getFeed.mockResolvedValue({ ...FEED, lastFetchedAt: Date.UTC(2020, 0, 2, 12) });
+
+		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
+
+		expect(readsAs(body)).toContain("Checked Jan 2, 2020");
+		expect(body).toContain('title="Jan 2, 2020');
+	});
+
+	test("says so plainly for a feed nobody has checked yet", async () => {
+		store.getFeed.mockResolvedValue(FEED);
+
+		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
+
+		expect(readsAs(body)).toContain("Not checked yet");
+	});
+
+	test("says how many checks failed and what the last one recorded", async () => {
+		store.getFeed.mockResolvedValue({
+			...FEED,
+			lastFetchedAt: Date.UTC(2026, 0, 1, 12),
+			lastStatus: "http_error",
+			failureCount: 3,
+		});
+
+		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
+
+		expect(readsAs(body)).toContain("The last 3 checks failed");
+		expect(readsAs(body)).toContain("The site answered with an error");
+	});
+
+	test("says nothing about failures for a feed that is fine", async () => {
+		store.getFeed.mockResolvedValue({
+			...FEED,
+			lastFetchedAt: Date.UTC(2026, 0, 1, 12),
+			lastStatus: "ok",
+			failureCount: 0,
+		});
+
+		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
+
+		expect(readsAs(body)).not.toContain("check failed");
+		expect(readsAs(body)).not.toContain("checks failed");
 	});
 });

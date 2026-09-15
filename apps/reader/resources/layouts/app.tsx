@@ -1,7 +1,13 @@
 /**
- * The chrome every signed-in page wears: the rail naming the app's sections, the header
- * carrying the page's own name and whatever acts on it, and the column the page's content
- * sits in. It exists so each page describes only what it shows.
+ * The chrome every signed-in page wears: the sidebar a reader searches and navigates from,
+ * the header carrying the page's own name and whatever acts on it, and the column the
+ * page's content sits in. It exists so each page describes only what it shows.
+ *
+ * The sidebar is three bands. The search box sits at the top and the reader's own menu at
+ * the foot, both held still; between them the queue and every feed the reader follows,
+ * which is the band that grows with a subscription list and scrolls within itself. One
+ * piece of markup serves both shapes it takes: a drawer a narrow screen opens over the
+ * page, and a rail beside the page from the width that has room for one.
  *
  * Copy arrives already translated, so the layout renders text without reaching for a
  * dictionary and a controller stays the one place a key is named.
@@ -16,19 +22,20 @@ import {
 	ChevronsUpDownIcon,
 	InboxIcon,
 	LogOutIcon,
+	PanelLeftIcon,
 	RssIcon,
-	SearchIcon,
 	SettingsIcon,
 } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, border, borderEdge, fg, translucent } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { cursor, env, listStyle, raw } from "@sdxc/u/general";
+import { rounded, shadow } from "@sdxc/u/effects";
+import { cursor, raw } from "@sdxc/u/general";
 import {
 	basis,
 	fixed,
 	flex,
 	flexCol,
+	flexWrap,
 	gap,
 	grid,
 	grow,
@@ -47,28 +54,26 @@ import {
 	vstack,
 } from "@sdxc/u/layout";
 import { boxSizing } from "@sdxc/u/layout";
-import { overflowY } from "@sdxc/u/overflow";
+import { overflow } from "@sdxc/u/overflow";
 import { media } from "@sdxc/u/responsive";
 import {
 	bleed,
 	bs,
 	is,
 	m,
+	maxBs,
 	maxIs,
-	mbs,
 	minBs,
 	minIs,
 	p,
 	pb,
-	pbe,
 	pi,
-	pis,
 	safeAreaPadding,
 } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
 import { hover, when } from "@sdxc/u/state";
-import { tabularNums, text, textAlign, textDecoration, truncate, weight } from "@sdxc/u/typography";
-import { Avatar, Heading, Menu, NavLink, Sidebar } from "@sdxc/ui";
+import { tabularNums, text, textDecoration, truncate, weight } from "@sdxc/u/typography";
+import { Avatar, Heading, Logo, Menu, NavLink, Sidebar } from "@sdxc/ui";
 
 import DocumentLayout from "~/resources/layouts/document";
 import OutboundMark from "~/resources/views/outbound-mark";
@@ -77,10 +82,10 @@ import routes from "~/routes/web";
 /**
  * Width of the measure prose and fields are read at.
  *
- * The page itself fills the pane the rail leaves it, since a list of rows is scanned down
- * rather than read across and the rail already spends the width a cap used to. Content that
- * wants this measure caps itself here on whichever surface it appears: a sentence is no
- * easier to follow, nor a field easier to fill, for spanning a window.
+ * The page itself fills the pane the sidebar leaves it, since a list of rows is scanned
+ * down rather than read across and the sidebar already spends the width a cap used to.
+ * Content that wants this measure caps itself here on whichever surface it appears: a
+ * sentence is no easier to follow, nor a field easier to fill, for spanning a window.
  */
 export const PAGE_COLUMN = "48rem";
 
@@ -91,18 +96,18 @@ export const PAGE_COLUMN = "48rem";
 const PAGE_GUTTER = 6;
 
 /**
- * Where the sections stand as a rail down the side of the page. Its own width is what the
- * boundary is set by: below it a rail would spend a third of a narrow screen naming four
- * places, so the sections take the bottom of the screen instead and the page keeps the
- * whole of the width it has.
+ * Where the sidebar stands as a rail down the side of the page. Its own width is what the
+ * boundary is set by: below it a rail would spend a third of a narrow screen, so the same
+ * three bands become a drawer the reader opens over the page and the page keeps the whole
+ * of the width it has.
  */
-const SECTION_RAIL = "(min-width: 64rem)";
-
-/** The same boundary read the other way, where the sections are a bar along the bottom. */
-const SECTION_BAR = "(max-width: 63.999rem)";
+const SIDEBAR_RAIL = "(min-width: 64rem)";
 
 /** Width the rail takes out of the screen, leaving the rest of it as the page's own pane. */
 const RAIL_WIDTH = "16rem";
+
+/** Width the same bands take as a drawer, held inside the narrowest screen they open over. */
+const DRAWER_WIDTH = "min(85vw, 18rem)";
 
 /**
  * Where the header's row has the width for an action to say in words what its mark says,
@@ -123,54 +128,104 @@ const WIDE_HEADER = "(min-width: 45rem)";
  */
 const ICON_SIZE = 16;
 
-/** The root this app sets its type at, which turns that edge into a length to compute with. */
-const ROOT_FONT_SIZE = 16;
-
-/** That same edge as a length, for the arithmetic lining the rail's second level up. */
-const ICON_WIDTH = `${ICON_SIZE / ROOT_FONT_SIZE}rem`;
-
-/** Inline padding a rail row keeps from the rail's own edges. */
-const RAIL_ROW_PADDING = "0.75rem";
-
-/** Space between a rail row's mark and the name beside it. */
-const RAIL_ROW_GAP = "0.75rem";
+/** Ties the sidebar's search box to the label naming it. */
+const SIDEBAR_SEARCH_FIELD_ID = "sidebar-search";
 
 /**
- * Where a feed's name begins under the Feeds heading: past the row's own padding, the mark
- * that heading carries, and the gap after it. Computed from those three rather than set to
- * the number they happen to add up to, so the column stays straight if any of them moves.
- */
-const RAIL_NEST_INDENT = `calc(${RAIL_ROW_PADDING} + ${ICON_WIDTH} + ${RAIL_ROW_GAP})`;
-
-/** Ties the rail's search box to the label naming it. */
-const RAIL_SEARCH_FIELD_ID = "rail-search";
-
-/**
- * The parameter a search travels in, which the rail's box submits under and the search page
- * reads its query back out of. It is named here, where the box that sends it lives, and the
- * page that answers reads it from here, so one search has one name.
+ * The parameter a search travels in, which the sidebar's box submits under and the reading
+ * queue reads its query back out of. It is named here, where the box that sends it lives,
+ * and the page that answers reads it from here, so one search has one name.
  */
 export const SEARCH_PARAM = "q";
 
 /**
- * Height of the header, held rather than grown into: a page with three actions beside its
- * name and a page with none draw the same band, so the content below starts on one line
- * wherever a reader is. The name gives way to its own ellipsis to keep it.
+ * Height of a field standing in the app's top band: the sidebar's search box, and whatever
+ * a page puts among its own actions. A field is the one thing up there with a height of its
+ * own — a page's name is as tall as its line — so the field is what the band is measured
+ * from, and both sides read it from here.
  */
-const HEADER_HEIGHT = "3.5rem";
+export const BAND_FIELD_HEIGHT = "2.25rem";
 
-/** Height of the section bar, which a cell of it is no shorter than. */
-const BAR_HEIGHT = "3.5rem";
+/** Space the band keeps above and below whatever stands in it. */
+const BAND_PADDING = "0.625rem";
+
+/** Weight of the rule closing the band, which both halves draw and both count inside. */
+const BAND_RULE_WIDTH = 1;
 
 /**
- * What the page leaves clear below its last line on a screen the sections bar: the bar's
- * own height and the gutter the page keeps everywhere else, plus whatever a phone reserves
- * below the bar for the hardware it is held in.
+ * Height of the app's top band, which the sidebar's own header and the page's header both
+ * draw. The two sit side by side across the top of the screen, so one height is what puts
+ * their lower rules on one line and makes the divider read as a single rule across the
+ * whole width rather than as two that nearly meet.
+ *
+ * A page whose actions outrun its row wraps them beneath its name, which is the one case a
+ * header grows past this; the sidebar is a drawer at every width where that happens, so
+ * there is no band beside it to line up with.
  */
-const BAR_CLEARANCE = `calc(${BAR_HEIGHT} + 1.5rem + ${env("safe-area-inset-bottom", "0px")})`;
+const BAND_HEIGHT = `calc(${BAND_FIELD_HEIGHT} + ${BAND_PADDING} * 2 + ${BAND_RULE_WIDTH}px)`;
+
+/**
+ * The rule under the band, drawn once here so the sidebar's half and the page's half are
+ * the same colour and weight, and counted inside {@link BAND_HEIGHT} on both, so the two
+ * meet as one line across the width of the screen.
+ */
+function bandRule() {
+	return borderEdge("block-end", { color: "neutral.border", width: BAND_RULE_WIDTH });
+}
 
 /** The `id` the viewer's own menu answers to, which its trigger names in `commandfor`. */
 const USER_MENU_ID = "user-menu";
+
+/** The `id` the sidebar answers to, which the header's trigger names in `commandfor`. */
+const SIDEBAR_ID = "app-sidebar";
+
+/**
+ * Edge of every mark down the sidebar's first column: the glyphs naming the two places,
+ * and the picture standing for each feed. One size for all of them is what makes that
+ * column a column, and setting it rather than leaving it to the image is what keeps a row
+ * the same height before a picture arrives as after — and for a picture that never comes.
+ */
+const RAIL_MARK_SIZE = "1.25rem";
+
+/** The initials a feed's mark falls back to, sized to sit inside {@link RAIL_MARK_SIZE}. */
+const RAIL_MARK_TEXT = "0.5rem";
+
+/** Inline padding a sidebar row keeps from the sidebar's own edges. */
+const ROW_PADDING = "0.75rem";
+
+/** Space between a sidebar row's mark and the name beside it. */
+const ROW_GAP = "0.75rem";
+
+/**
+ * One row of the sidebar's navigation: its mark in the first column at the size every
+ * other mark is drawn at, and its name in the second. Carried by the two places and by
+ * each feed alike, which is what puts every name on one vertical line — the column it
+ * begins at being the padding, the mark and the gap rather than a number set to match.
+ *
+ * Each rule names the slot it lands on. The components set this padding and these mark
+ * sizes themselves, and two rules of equal weight are settled by which was written to the
+ * stylesheet last, which is not something a caller can see; naming the slot makes these
+ * the more specific rules and so the ones that hold wherever they land in the sheet.
+ *
+ * @param slot - The `data-slot` the row's own component stamps on itself.
+ */
+function railRow(slot: string) {
+	return [
+		when(`&[data-slot="${slot}"]`, [pi(ROW_PADDING), gap(ROW_GAP)]),
+		when(`&[data-slot="${slot}"] > svg`, [is(RAIL_MARK_SIZE), bs(RAIL_MARK_SIZE), shrink()]),
+	];
+}
+
+/** The same first-column size, carried by a mark the sidebar draws as a picture. */
+function railMark() {
+	return [
+		when('&[data-slot="image-placeholder"]', [
+			is(RAIL_MARK_SIZE),
+			bs(RAIL_MARK_SIZE),
+			raw({ fontSize: RAIL_MARK_TEXT }),
+		]),
+	];
+}
 
 /**
  * Runs a list out to the edges of the page's pane, taking back the gutter the page keeps
@@ -213,10 +268,11 @@ export function pageNote() {
 }
 
 /**
- * The letters a viewer with no picture is drawn with: the first of their first word and the
- * first of their last, which is what tells two readers of one app apart at this size.
+ * The letters something with no picture is drawn with: the first of its first word and the
+ * first of its last, which is what tells one name from another at the size a mark is read
+ * at. It stands in for the viewer's own face and for a feed the publisher gave no picture.
  *
- * @param name - The viewer's name, which an absent claim leaves empty.
+ * @param name - The name to reduce, which an absent one leaves empty.
  */
 function initials(name: string): string {
 	let words = name.split(/\s+/).filter((word) => word.length > 0);
@@ -240,33 +296,39 @@ export namespace AppLayout {
 
 	/** The chrome's copy, translated by the controller that renders the page. */
 	export interface Nav {
-		/** Accessible name for the sections themselves. */
+		/** Accessible name for the sidebar's navigation. */
 		label: string;
 		reading: string;
+		/** Heads the reader's own subscriptions in the sidebar's scrolling band. */
 		feeds: string;
-		search: string;
-		/** Names the rail's search box, which carries no visible label of its own. */
+		/** Names the sidebar's search box, which carries no visible label of its own. */
 		searchLabel: string;
-		/** What the rail's empty search box says it is for. */
+		/** What the sidebar's empty search box says it is for. */
 		searchPlaceholder: string;
-		/** Names the group of followed feeds the rail lists under its Feeds heading. */
+		/** Names the group of followed feeds listed under the Feeds heading. */
 		subscriptions: string;
+		/** Names the control a narrow screen opens the sidebar from. */
+		openSidebar: string;
 		settings: string;
 		/** Names the trigger the viewer's own menu opens from, and the menu it opens. */
 		account: string;
 		logout: string;
 	}
 
-	/** One followed feed as the rail lists it, with its count already in words. */
+	/** One followed feed as the sidebar lists it, with its count already in words. */
 	export interface RailFeed {
 		id: string;
 		title: string;
+		/**
+		 * The mark the publisher puts on their own feed, or `null` for one that puts none,
+		 * whose name is drawn in initials instead.
+		 */
+		imageUrl: string | null;
 		/** How many posts are waiting, shown as the number itself beside the name. */
 		unreadCount: number;
 		/**
 		 * That count said in full for a screen reader, or `null` for a feed with nothing
-		 * waiting — which is a row that carries no count at all, the way the feed list's own
-		 * rows do.
+		 * waiting — which is a row that carries no count at all.
 		 */
 		unreadLabel: string | null;
 	}
@@ -288,13 +350,13 @@ export namespace AppLayout {
 		headingLink?: HeadingLink;
 		/**
 		 * Controls acting on what the header names, laid out in a row at the end of its line.
-		 * They keep that line at every width, so each one says in a mark what it says in
-		 * words on a screen with the room for both.
+		 * Each one says in a mark what it says in words on a screen with the room for both,
+		 * and on a screen without the room for the row they wrap beneath the page's name.
 		 */
 		actions?: RemixNode;
 		/**
 		 * The path being read, which is what marks the one thing in the chrome the reader is
-		 * standing on: a section, one of the feeds under the Feeds heading, or the account
+		 * standing on: the queue, one of the feeds under the Feeds heading, or the account
 		 * menu's own entry. A path naming none of them lights none of them.
 		 */
 		currentPath: string;
@@ -302,9 +364,9 @@ export namespace AppLayout {
 		locale?: string;
 		nav: Nav;
 		viewer: Viewer;
-		/** The followed feeds the rail lists, capped by whoever gathers them. */
+		/** Every feed the reader follows, in the order the sidebar lists them. */
 		feeds: RailFeed[];
-		/** What the reader last searched for, put back into the rail's box. */
+		/** What the reader last searched for, put back into the sidebar's box. */
 		searchQuery: string;
 		children: RemixNode;
 	}
@@ -355,7 +417,8 @@ export function AppNavLink(
 export function ActionLabel(handle: Handle<{ children: RemixNode }>) {
 	return () => <span mix={[hidden(), media(WIDE_HEADER, inline())]}>{handle.props.children}</span>;
 }
-/** Renders the sections, the header and the page around a signed-in page's content. */
+
+/** Renders the sidebar, the header and the page around a signed-in page's content. */
 export default function AppLayout(handle: Handle<AppLayout.Props>) {
 	return () => {
 		let {
@@ -375,275 +438,243 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 		/**
 		 * One thing in the chrome is the place being read, and it is whichever link leads
 		 * exactly where the reader already is. A feed's own page is that feed's row rather
-		 * than the Feeds heading above it, which is what a reader following the rail down
-		 * expects of the row they just clicked.
+		 * than the queue above it, which is what a reader following the sidebar down expects
+		 * of the row they just clicked.
 		 */
 		function isCurrent(href: string): boolean {
 			return currentPath === href;
 		}
 
-		let sections: Array<{ href: string; label: string; icon: RemixNode }> = [
-			{
-				href: routes.reading.href(),
-				label: nav.reading,
-				/** Everything every followed feed has published, waiting to be worked through. */
-				icon: <InboxIcon size={ICON_SIZE} />,
-			},
-			{
-				href: routes.feeds.index.href(),
-				label: nav.feeds,
-				/** The mark a site puts on its own feed, which is what this section collects. */
-				icon: <RssIcon size={ICON_SIZE} />,
-			},
-			{
-				href: routes.search.href(),
-				label: nav.search,
-				icon: <SearchIcon size={ICON_SIZE} />,
-			},
-		];
-
-		/** The Feeds section, which is the one carrying the reader's subscriptions beneath it. */
-		let feedsHref = routes.feeds.index.href();
-
-		/** The Search section, which the rail answers with a box and the bar with a cell. */
-		let searchHref = routes.search.href();
-
 		return (
 			<DocumentLayout title={documentTitle} locale={locale}>
 				{/**
-				 * Two columns from the width the rail earns, and one below it, where the sections
-				 * have left the flow for the foot of the screen. The page's own pane is told it may
-				 * be narrower than its contents, which is what keeps a long word or a wide row
-				 * inside it rather than pushing the whole grid sideways.
+				 * Two columns from the width the rail earns, and one below it, where the sidebar
+				 * has left the flow to wait behind its own trigger. The page's own pane is told
+				 * it may be narrower than its contents, which is what keeps a long word or a wide
+				 * row inside it rather than pushing the whole grid sideways.
 				 */}
 				<div
-					mix={[media(SECTION_RAIL, [grid(), raw({ gridTemplateColumns: `${RAIL_WIDTH} 1fr` })])]}
+					mix={[media(SIDEBAR_RAIL, [grid(), raw({ gridTemplateColumns: `${RAIL_WIDTH} 1fr` })])]}
 				>
 					{/**
-					 * The sections, in the two shapes they take. Beside the page they are a rail that
-					 * holds its place as the page scrolls past it, listing the reader's feeds under
-					 * the Feeds heading and resting the viewer's own menu at the foot of it. Under
-					 * the page they are a bar across the bottom of the screen: three places and the
-					 * viewer, each one tap away, which is what a drawer behind a button would charge
-					 * two taps and a way back out for.
+					 * The three bands, in the two shapes they take. Below the rail's width they are a
+					 * drawer the browser opens over the page and dismisses on its own, which is what
+					 * lets a page shipping almost no script carry one. From that width up the same
+					 * element is the rail beside the page, holding its place as the page scrolls.
+					 *
+					 * The popover's own display, inset, margin and size all come from the browser's
+					 * stylesheet, so each one is named back here for whichever shape is in play.
 					 */}
-					<div
+					<aside
+						id={SIDEBAR_ID}
+						popover="auto"
 						mix={[
+							hidden(),
+							flexCol(),
 							fixed(),
+							insBs(0),
 							insBe(0),
 							insIs(0),
-							insIe(0),
-							z(20),
-							flex(),
-							items("stretch"),
-							translucent(),
+							insIe("auto"),
+							z(30),
+							m(0),
+							p(0),
+							is(DRAWER_WIDTH),
+							maxIs("none"),
+							bs("full"),
+							maxBs("none"),
+							boxSizing("border-box"),
+							/** The bands hold the edges; the slack between them is the middle one's to scroll. */
+							overflow("hidden"),
+							border("none"),
+							borderEdge("inline-end", { color: "neutral.border", width: 1 }),
 							bg("neutral.tint"),
-							borderEdge("block-start", { color: "neutral.border", width: 1 }),
-							safeAreaPadding("bottom"),
-							media(SECTION_RAIL, [
+							shadow("lg"),
+							safeAreaPadding("left"),
+							when("&::backdrop", bg("rgba(0, 0, 0, 0.4)")),
+							when("&:popover-open", raw({ display: "flex !important" })),
+							media(SIDEBAR_RAIL, [
+								/**
+								 * Beating the rule above rather than the browser's: a reader who opened the
+								 * drawer and then widened their window leaves that more specific rule
+								 * matching, and the rail is what this width draws either way.
+								 */
+								raw({ display: "flex !important" }),
 								sticky(),
 								insBs(0),
 								insBe("auto"),
+								insIs("auto"),
 								self("start"),
+								is("auto"),
 								bs("100dvh"),
-								overflowY("auto"),
-								flexCol(),
-								gap(4),
-								p(4, 3),
-								border("none"),
-								borderEdge("inline-end", { color: "neutral.border", width: 1 }),
+								translucent(),
+								shadow("none"),
 							]),
 						]}
 					>
 						{/**
-						 * Searching starts where the reader's eye already is, so the rail opens with the
-						 * box rather than with a link to a page holding one. One field and no submit:
-						 * a form with a single text input is sent by the return key, which is the whole
-						 * of the interaction.
+						 * Searching starts where the reader's eye already is, so the sidebar opens with
+						 * the box rather than with a link to a page holding one. One field and no
+						 * submit: a form with a single text input is sent by the return key, which is
+						 * the whole of the interaction.
 						 *
-						 * The rail is the only place it fits, so below that width Search keeps the cell
-						 * it always had among the sections.
+						 * The band holds its height whatever the middle one is carrying, so a reader
+						 * following a hundred feeds reaches the box without scrolling to it.
 						 */}
-						<form
-							method="get"
-							action={routes.search.href()}
-							mix={[hidden(), media(SECTION_RAIL, [flex(), shrink()])]}
+						<Sidebar.Header
+							mix={[bs(BAND_HEIGHT), pb(BAND_PADDING), pi(3), items("center"), bandRule()]}
 						>
-							<label htmlFor={RAIL_SEARCH_FIELD_ID} mix={[visuallyHidden()]}>
-								{nav.searchLabel}
-							</label>
-							<input
-								/**
-								 * Keyed by the page it was drawn for, so moving between pages replaces the
-								 * field rather than patching it. The runtime keeps an editable value across
-								 * a reload when the incoming HTML changes only the serialized default,
-								 * which is the right call for a field a reader owns — and the wrong one
-								 * here, where the URL owns it: the box says what the page beside it is
-								 * filtered by, so a query left behind would claim a filter nothing applied.
-								 */
-								data-rmx-key={`${RAIL_SEARCH_FIELD_ID}:${currentPath}?${searchQuery}`}
-								id={RAIL_SEARCH_FIELD_ID}
-								type="search"
-								name={SEARCH_PARAM}
-								placeholder={nav.searchPlaceholder}
-								defaultValue={searchQuery}
-								autoComplete="off"
-								mix={[
-									is("full"),
-									minIs(0),
-									boxSizing("border-box"),
-									p(2, 3),
-									rounded("lg"),
-									border({ color: "neutral.border", width: 1 }),
-									bg("neutral.bg"),
-									fg("neutral.emphasis"),
-									raw({ font: "inherit", fontSize: "0.875rem" }),
-								]}
-							/>
-						</form>
+							<form method="get" action={routes.reading.href()} mix={[flex(), is("full")]}>
+								<label htmlFor={SIDEBAR_SEARCH_FIELD_ID} mix={[visuallyHidden()]}>
+									{nav.searchLabel}
+								</label>
+								<input
+									/**
+									 * Keyed by the page it was drawn for, so moving between pages replaces the
+									 * field rather than patching it. The runtime keeps an editable value across
+									 * a reload when the incoming HTML changes only the serialized default,
+									 * which is the right call for a field a reader owns — and the wrong one
+									 * here, where the URL owns it: the box says what the page beside it is
+									 * filtered by, so a query left behind would claim a filter nothing applied.
+									 */
+									data-rmx-key={`${SIDEBAR_SEARCH_FIELD_ID}:${currentPath}?${searchQuery}`}
+									id={SIDEBAR_SEARCH_FIELD_ID}
+									type="search"
+									name={SEARCH_PARAM}
+									placeholder={nav.searchPlaceholder}
+									defaultValue={searchQuery}
+									autoComplete="off"
+									mix={[
+										is("full"),
+										minIs(0),
+										bs(BAND_FIELD_HEIGHT),
+										boxSizing("border-box"),
+										p(0, 3),
+										rounded("lg"),
+										border({ color: "neutral.border", width: 1 }),
+										bg("neutral.bg"),
+										fg("neutral.emphasis"),
+										raw({ font: "inherit", fontSize: "0.875rem" }),
+									]}
+								/>
+							</form>
+						</Sidebar.Header>
 
 						{/**
-						 * The sections sit directly under the box, and the slack in the rail is spent
-						 * here, between them and the menu at the foot: a reader following a feed grows
-						 * this list, and nothing above the menu moves when they do.
-						 *
-						 * It scrolls on its own once the feeds outrun the rail, so a long subscription
-						 * list runs past the bottom of this rather than pushing the menu off the screen.
+						 * The band that grows: the queue, then every feed the reader follows under the
+						 * heading naming them. It scrolls on its own once those outrun the sidebar, so a
+						 * long subscription list runs past the bottom of this rather than pushing the
+						 * menu below it off the screen.
 						 */}
-						<nav
-							aria-label={nav.label}
-							mix={[
-								grow(),
-								minIs(0),
-								media(SECTION_RAIL, [grow(), basis("0%"), minBs(0), overflowY("auto")]),
-							]}
-						>
-							<ul
-								mix={[
-									listStyle(),
-									m(0),
-									p(0),
-									flex(),
-									items("stretch"),
-									bs("full"),
-									media(SECTION_RAIL, [flexCol(), gap(1), bs("auto")]),
-								]}
-							>
-								{sections.map((section) => (
-									<li
-										key={section.href}
+						<Sidebar.Content>
+							<Sidebar.Nav aria-label={nav.label}>
+								<Sidebar.Item
+									href={routes.reading.href()}
+									current={isCurrent(routes.reading.href())}
+									mix={railRow("item")}
+								>
+									{/** Everything every followed feed has published, waiting to be worked through. */}
+									<InboxIcon size={ICON_SIZE} />
+									<span mix={[minIs(0), truncate()]}>{nav.reading}</span>
+								</Sidebar.Item>
+							</Sidebar.Nav>
+
+							{feeds.length > 0 && (
+								<Sidebar.Group>
+									{/**
+									 * The reader's own subscriptions, headed by the word naming them. It is
+									 * drawn as a peer of the queue above — the same mark, the same column, the
+									 * same casing as its own word — rather than as a category divider, because
+									 * that is what it is: the other thing this sidebar holds.
+									 *
+									 * It leads nowhere, and nothing is lost by that: the whole of the list it
+									 * names is the rows directly beneath it, on every page. That leaves one
+									 * thing in the sidebar lit at a time, which is the feed being read rather
+									 * than the feed and the word above it.
+									 */}
+									<Sidebar.GroupLabel
 										mix={[
-											grow(),
-											basis("0%"),
-											minIs(0),
-											media(SECTION_RAIL, [grow(0), basis("auto")]),
+											railRow("group-label"),
+											when('&[data-slot="group-label"]', [
+												pb("0.5rem"),
+												minBs("2.25rem"),
+												justify("start"),
+												text("sm"),
+												weight("medium"),
+												fg("neutral"),
+												raw({ textTransform: "none", letterSpacing: "normal" }),
+											]),
 										]}
 									>
-										<Sidebar.Item
-											href={section.href}
-											current={isCurrent(section.href)}
-											mix={[
-												pi(RAIL_ROW_PADDING),
-												gap(RAIL_ROW_GAP),
+										{/** The mark a site puts on its own feed, which is what these rows are. */}
+										<RssIcon size={ICON_SIZE} />
+										<span mix={[minIs(0), truncate()]}>{nav.feeds}</span>
+									</Sidebar.GroupLabel>
+
+									<Sidebar.Nav aria-label={nav.subscriptions}>
+										{feeds.map((feed) => (
+											<Sidebar.Item
+												key={feed.id}
+												href={routes.feed.href({ feed: feed.id })}
+												current={isCurrent(routes.feed.href({ feed: feed.id }))}
 												/**
-												 * Search keeps a cell of its own down here, where the rail's box
-												 * has nowhere to sit: a bar of cells is no place for a field, and
-												 * a phone still needs the way to search.
+												 * A level down from the queue and quieter for it, so an eye running
+												 * the sidebar still tells the one place from the many feeds.
 												 */
-												section.href === searchHref && media(SECTION_RAIL, hidden()),
-												media(SECTION_BAR, [
-													flexCol(),
-													items("center"),
-													justify("center"),
-													gap(1),
-													pi(1),
-													pb(2),
-													bs("full"),
-													minBs(BAR_HEIGHT),
-													text("xs"),
-													textAlign("center"),
-												]),
-											]}
-										>
-											{section.icon}
-											{/**
-											 * The word itself gives way to an ellipsis in the bar, where four
-											 * cells share the width of a phone, rather than widening a cell and
-											 * pushing the row past the screen.
-											 */}
-											<span mix={[minIs(0), maxIs("full"), truncate()]}>{section.label}</span>
-										</Sidebar.Item>
-
-										{/**
-										 * The subscriptions themselves, under the heading that names them and
-										 * leads to the whole list. They belong to the rail: a bar along the
-										 * bottom of a phone has room for places, not for a tree, and the Feeds
-										 * page is where a reader meets their feeds at that width.
-										 */}
-										{section.href === feedsHref && feeds.length > 0 && (
-											<ul
-												aria-label={nav.subscriptions}
-												mix={[
-													listStyle(),
-													m(0),
-													p(0),
-													hidden(),
-													media(SECTION_RAIL, [flex(), flexCol(), gap("2px"), mbs(1)]),
-												]}
+												mix={[railRow("item"), text("xs"), fg("neutral.muted")]}
 											>
-												{feeds.map((feed) => (
-													<li key={feed.id}>
-														<Sidebar.Item
-															href={routes.feeds.show.href({ feedId: feed.id })}
-															current={isCurrent(routes.feeds.show.href({ feedId: feed.id }))}
-															/**
-															 * A level down from the sections and quieter for it, so an
-															 * eye running the rail still finds Search past twenty feeds.
-															 * The indent lines these names up under the heading's own.
-															 */
-															mix={[
-																minBs("1.75rem"),
-																pi(RAIL_ROW_PADDING),
-																pis(RAIL_NEST_INDENT),
-																gap(RAIL_ROW_GAP),
-																pb(1),
-																text("xs"),
-																fg("neutral.muted"),
-															]}
-														>
-															<span mix={[grow(), minIs(0), truncate()]}>{feed.title}</span>
+												{/**
+												 * The mark the publisher puts on their own feed, which is what an eye
+												 * finds a known publication by before it reads the name. It is the
+												 * picture the feed document itself named and already stored, so
+												 * drawing it asks nobody who the reader follows.
+												 *
+												 * A publisher who named none, or whose picture has since gone, leaves
+												 * the initials of the name — and the name itself is right beside it,
+												 * so nothing is lost either way.
+												 */}
+												<Logo size="sm" mix={railMark()}>
+													{feed.imageUrl ? (
+														<Logo.Image
+															src={feed.imageUrl}
+															alt={feed.title}
+															loading="lazy"
+															referrerPolicy="no-referrer"
+														/>
+													) : null}
+													<Logo.Fallback>{initials(feed.title)}</Logo.Fallback>
+												</Logo>
 
-															{/**
-															 * The number alone beside the name, which is what a column of
-															 * them is read by; the phrase it stands for is said in full
-															 * for anyone listening rather than looking. A feed with
-															 * nothing waiting carries neither.
-															 */}
-															{feed.unreadLabel && (
-																<>
-																	<span aria-hidden="true" mix={[shrink(), tabularNums()]}>
-																		{feed.unreadCount}
-																	</span>
-																	<span mix={[visuallyHidden()]}>{feed.unreadLabel}</span>
-																</>
-															)}
-														</Sidebar.Item>
-													</li>
-												))}
-											</ul>
-										)}
-									</li>
-								))}
-							</ul>
-						</nav>
+												<span mix={[grow(), minIs(0), truncate()]}>{feed.title}</span>
+
+												{/**
+												 * The number alone beside the name, which is what a column of them is
+												 * read by; the phrase it stands for is said in full for anyone
+												 * listening rather than looking. A feed with nothing waiting carries
+												 * neither.
+												 */}
+												{feed.unreadLabel && (
+													<>
+														<span aria-hidden="true" mix={[shrink(), tabularNums()]}>
+															{feed.unreadCount}
+														</span>
+														<span mix={[visuallyHidden()]}>{feed.unreadLabel}</span>
+													</>
+												)}
+											</Sidebar.Item>
+										))}
+									</Sidebar.Nav>
+								</Sidebar.Group>
+							)}
+						</Sidebar.Content>
 
 						{/**
 						 * The viewer, with what belongs to their account behind their own face: the
 						 * preferences and the way out, which are about who is signed in rather than
-						 * about where to read. It is a menu the browser opens and closes on its own,
-						 * which is what lets a page shipping almost no script carry one.
+						 * about where to read. The band holds its height, so the menu is where it was
+						 * however far down their feeds a reader has scrolled.
 						 */}
-						<div mix={[flex(), items("center"), shrink(), media(SECTION_RAIL, [is("full")])]}>
+						<Sidebar.Footer mix={[p(3)]}>
 							<button
 								type="button"
 								commandfor={USER_MENU_ID}
@@ -655,6 +686,7 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 									items("center"),
 									gap(2),
 									minIs(0),
+									is("full"),
 									p(2),
 									pi(3),
 									border("none"),
@@ -662,10 +694,8 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 									bg("transparent"),
 									fg("inherit"),
 									raw({ font: "inherit" }),
-									textAlign("start"),
 									cursor("pointer"),
 									hover(bg("neutral.bg-tint-hover")),
-									media(SECTION_RAIL, is("full")),
 								]}
 							>
 								<Avatar size="sm">
@@ -673,37 +703,27 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 									<Avatar.Fallback>{initials(viewer.name)}</Avatar.Fallback>
 								</Avatar>
 
-								{/**
-								 * The bar spends its width on the three places; the face alone says whose
-								 * menu this is there, and the name the trigger carries says it in words.
-								 */}
 								<span
 									mix={[
-										hidden(),
-										media(SECTION_RAIL, [
-											inline(),
-											grow(),
-											basis("0%"),
-											minIs(0),
-											truncate(),
-											text("sm"),
-											weight("medium"),
-											fg("neutral.emphasis"),
-										]),
+										grow(),
+										basis("0%"),
+										minIs(0),
+										truncate(),
+										text("sm"),
+										weight("medium"),
+										fg("neutral.emphasis"),
+										raw({ textAlign: "start" }),
 									]}
 								>
 									{viewer.name}
 								</span>
 
-								<ChevronsUpDownIcon
-									size={ICON_SIZE}
-									mix={[hidden(), shrink(), media(SECTION_RAIL, inline())]}
-								/>
+								<ChevronsUpDownIcon size={ICON_SIZE} mix={[shrink()]} />
 							</button>
 
 							{/**
-							 * Opening upward from a trigger that sits at the foot of the rail and at the
-							 * foot of the screen alike, so the menu lands over the page either way.
+							 * Opening upward from a trigger that sits at the foot of the sidebar in either
+							 * shape, so the menu lands over the page rather than off the bottom of it.
 							 */}
 							<Menu
 								id={USER_MENU_ID}
@@ -732,10 +752,10 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 								<Menu.Separator />
 
 								{/**
-								 * The preferences live here rather than in the rail because they are about
-								 * the account rather than about somewhere to read. The reader standing on
-								 * that page is told so by the row itself, which is the one place in the
-								 * chrome that can say it once Settings is no longer a section.
+								 * The preferences live here rather than in the sidebar's navigation because
+								 * they are about the account rather than about somewhere to read. The reader
+								 * standing on that page is told so by the row itself, which is the one place
+								 * in the chrome that can say it.
 								 */}
 								<Menu.Item
 									href={routes.settings.index.href()}
@@ -750,39 +770,68 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 									{nav.logout}
 								</Menu.Item>
 							</Menu>
-						</div>
-					</div>
+						</Sidebar.Footer>
+					</aside>
 
 					<div mix={[minIs(0)]}>
 						{/**
 						 * The band spans the page's pane so its rule does, and the row inside it keeps
 						 * the same gutter the content below does, so the two sit on one vertical line.
 						 */}
-						<header
-							mix={[
-								sticky(),
-								insBs(0),
-								z(10),
-								translucent(),
-								bg("neutral.tint"),
-								borderEdge("block-end", { color: "neutral.border", width: 1 }),
-							]}
-						>
+						<header mix={[sticky(), insBs(0), z(10), translucent(), bg("neutral.tint")]}>
 							{/**
-							 * One row at every width, set in its height, which is what keeps the page
-							 * below it starting on the same line from surface to surface.
+							 * One row wherever the width allows one, and its least height is what every
+							 * page draws, so the page below starts on the same line from surface to
+							 * surface. On a screen too narrow for the row, the actions wrap beneath the
+							 * page's name rather than running off the side of it.
 							 */}
 							<div
 								mix={[
 									pi(PAGE_GUTTER),
-									bs(HEADER_HEIGHT),
+									pb(BAND_PADDING),
+									minBs(BAND_HEIGHT),
 									boxSizing("border-box"),
+									/**
+									 * The rule rides on the row rather than on the band around it, so both
+									 * halves of the app's top band measure the same thing: the height the
+									 * band is set to, with the rule counted inside it.
+									 */
+									bandRule(),
 									flex(),
+									flexWrap("wrap"),
 									items("center"),
 									gap(3),
 									media(WIDE_HEADER, gap(4)),
 								]}
 							>
+								{/**
+								 * The way to the sidebar on a screen that keeps it behind one, sitting before
+								 * the page's name the way the sidebar itself sits before the page.
+								 */}
+								<button
+									type="button"
+									commandfor={SIDEBAR_ID}
+									command="toggle-popover"
+									aria-label={nav.openSidebar}
+									title={nav.openSidebar}
+									mix={[
+										inlineFlex(),
+										items("center"),
+										justify("center"),
+										shrink(),
+										p(2),
+										border("none"),
+										rounded("md"),
+										bg("transparent"),
+										fg("neutral.muted"),
+										cursor("pointer"),
+										hover([bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
+										media(SIDEBAR_RAIL, hidden()),
+									]}
+								>
+									<PanelLeftIcon size={ICON_SIZE} />
+								</button>
+
 								<Heading
 									level={1}
 									mix={[grow(), minIs(0), flex(), items("center"), text("lg"), weight("semibold")]}
@@ -822,25 +871,30 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 									)}
 								</Heading>
 
-								{actions && <div mix={[flex(), items("center"), gap(2), shrink()]}>{actions}</div>}
+								{actions && (
+									/**
+									 * Allowed to be narrower than the controls it holds, so a row too small
+									 * for them wraps them onto a line of their own rather than running them
+									 * off the side of the page.
+									 */
+									<div
+										mix={[
+											flex(),
+											items("center"),
+											flexWrap("wrap"),
+											justify("end"),
+											gap(2),
+											minIs(0),
+										]}
+									>
+										{actions}
+									</div>
+								)}
 							</div>
 						</header>
 
-						{/**
-						 * The page's own content, filling the pane the rail leaves it and keeping clear
-						 * of the bar the sections make below it, so the last row of a list is read
-						 * rather than sat under.
-						 */}
-						<main
-							mix={[
-								vstack({ gap: 6 }),
-								p(PAGE_GUTTER),
-								pbe(BAR_CLEARANCE),
-								media(SECTION_RAIL, pbe(PAGE_GUTTER)),
-							]}
-						>
-							{children}
-						</main>
+						{/** The page's own content, filling the pane the sidebar leaves it. */}
+						<main mix={[vstack({ gap: 6 }), p(PAGE_GUTTER)]}>{children}</main>
 					</div>
 				</div>
 			</DocumentLayout>

@@ -91,12 +91,8 @@ export default function application(options: application.Options) {
 		lazy(() => import("~/app/http/controllers/reading")),
 	);
 	router.map(
-		routes.feeds.index,
-		lazy(() => import("~/app/http/controllers/feeds/index")),
-	);
-	router.map(
-		routes.feeds.show,
-		lazy(() => import("~/app/http/controllers/feeds/show")),
+		routes.feed,
+		lazy(() => import("~/app/http/controllers/feed")),
 	);
 	router.map(
 		routes.feeds.follow,
@@ -121,10 +117,6 @@ export default function application(options: application.Options) {
 	router.map(
 		routes.readAll,
 		lazy(() => import("~/app/http/controllers/read-all")),
-	);
-	router.map(
-		routes.search,
-		lazy(() => import("~/app/http/controllers/search")),
 	);
 	router.map(
 		routes.feeds.refreshAll,

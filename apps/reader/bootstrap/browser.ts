@@ -92,6 +92,10 @@ run({
 	 * Fetches a frame's HTML, sending a URL-encoded body when the form declares that
 	 * encoding so the server reads it under the requested type with file entries reduced to
 	 * their name; the response's URL reflects any redirect for the frame to adopt.
+	 *
+	 * A response that is not content is refused rather than rendered: an error page written
+	 * for a whole document has a head and a body of its own, and writing one into a region
+	 * of a page that is otherwise fine puts a second document inside the first.
 	 */
 	async resolveFrame(src, options) {
 		let { target, signal, method, formData, encType } = options ?? {};
@@ -109,6 +113,13 @@ run({
 					)
 				: formData;
 
-		return await fetch(src, { credentials: "same-origin", headers, signal, method, body });
+		let response = await fetch(src, { credentials: "same-origin", headers, signal, method, body });
+
+		let isHtml = response.headers.get("content-type")?.toLowerCase().includes("text/html");
+		if (response.status >= 500 || (response.status >= 300 && !isHtml)) {
+			throw new Error(`A frame answered ${response.status}`);
+		}
+
+		return response;
 	},
 });

@@ -57,7 +57,7 @@ describe("the USER binding", () => {
 		]);
 
 		expect(stored).toBeNull();
-		expect(feeds).toEqual({ ok: true, feeds: [], cursors: { next: null, prev: null } });
+		expect(feeds).toEqual([]);
 		expect(queue).toEqual({
 			ok: true,
 			items: [],
@@ -190,16 +190,12 @@ describe("a reader who follows nothing yet", () => {
 
 		// The column the body was stored in is gone here, so a search that reads `summary`
 		// is what says the migration ran and left the table the statement expects.
-		let found: UserStore.TimelineResult = await stub.searchPosts("anything");
+		let found: UserStore.TimelineResult = await stub.readingQueue({
+			readState: "all",
+			query: "anything",
+		});
 
 		expect(found).toEqual({ ok: true, items: [], feeds: [], cursors: { next: null, prev: null } });
-
-		expect(await stub.searchPosts("   ")).toEqual({
-			ok: true,
-			items: [],
-			feeds: [],
-			cursors: { next: null, prev: null },
-		});
 	});
 
 	test("narrows the reading queue by the read state it is asked for", async () => {
@@ -239,15 +235,14 @@ describe("a reader who follows nothing yet", () => {
 	test("carries a bad cursor back as a refusal rather than an error", async () => {
 		let stub = env.USER.getByName(subject());
 
-		expect(await stub.listFeeds({ cursor: "not-a-cursor" })).toEqual({
+		expect(await stub.readingQueue({ cursor: "not-a-cursor" })).toEqual({
 			ok: false,
 			reason: "bad-cursor",
 		});
 
-		expect(await stub.searchPosts("anything", { cursor: "not-a-cursor" })).toEqual({
-			ok: false,
-			reason: "bad-cursor",
-		});
+		expect(
+			await stub.readingQueue({ readState: "all", query: "anything", cursor: "not-a-cursor" }),
+		).toEqual({ ok: false, reason: "bad-cursor" });
 	});
 
 	test("sweeps nothing and still records that the reader is up to date", async () => {

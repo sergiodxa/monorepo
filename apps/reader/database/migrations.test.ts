@@ -39,6 +39,7 @@ describe("runMigrations", () => {
 			"0002-drop-item-content",
 			"0003-feed-list-index",
 			"0004-read-timeline-index",
+			"0005-feed-title-index",
 		]);
 	});
 
@@ -70,6 +71,7 @@ describe("runMigrations", () => {
 			"feed_items_feed_timeline_idx",
 			"feed_items_unread_timeline_idx",
 			"feed_items_read_timeline_idx",
+			"feeds_title_idx",
 		]) {
 			expect(names, `${name} exists`).toContain(name);
 		}
@@ -166,7 +168,7 @@ describe("query plans", () => {
 		expect(plan).not.toContain("USE TEMP B-TREE FOR ORDER BY");
 	});
 
-	test("answers the subscription list from an index, without sorting", async () => {
+	test("answers the export's subscription list from an index, without sorting", async () => {
 		await migrate();
 
 		let plan = queryPlan(
@@ -175,6 +177,20 @@ describe("query plans", () => {
 		);
 
 		expect(plan).toContain("feeds_subscription_idx");
+		expect(plan).not.toContain("USE TEMP B-TREE FOR ORDER BY");
+	});
+
+	/**
+	 * The rail draws every feed a reader follows, in the order their names read, so this
+	 * one sorts the whole table rather than a page of it — which is exactly the read a
+	 * temporary b-tree would be built for.
+	 */
+	test("answers the rail's subscription list from an index, without sorting", async () => {
+		await migrate();
+
+		let plan = queryPlan(`SELECT id, title FROM feeds ORDER BY title ASC, id ASC`);
+
+		expect(plan).toContain("feeds_title_idx");
 		expect(plan).not.toContain("USE TEMP B-TREE FOR ORDER BY");
 	});
 
@@ -250,6 +266,48 @@ describe("query plans", () => {
 
 		for (let [filter, plan] of Object.entries(plans)) {
 			expect(plan, `${filter} sorts nothing`).not.toContain("USE TEMP B-TREE FOR ORDER BY");
+		}
+	});
+
+	/**
+	 * A query and a read state narrow the same page once the two surfaces are one, so every
+	 * pairing of them is a statement a reader can ask for. A substring match begins
+	 * anywhere in the text, so no index answers the match itself; what these assert is that
+	 * each pairing still reads its rows in published order from the index the read state
+	 * owns, testing the words off each row as it goes, rather than collecting the matches
+	 * and sorting them afterwards.
+	 */
+	test("keeps a searched queue on its read state's index, under every filter", async () => {
+		await migrate();
+
+		let match = `(title LIKE '%remix%' ESCAPE '\\' OR summary LIKE '%remix%' ESCAPE '\\')`;
+		let seek = `(published_at < 100 OR (published_at = 100 AND id < 'i9'))`;
+
+		/** Both pages a reader asks for: the one the box lands on, and the ones they scroll into. */
+		let pagesOf = (filter: string) => ({
+			first: queryPlan(
+				`SELECT id, feed_id, title, summary FROM feed_items WHERE ${match}${filter}
+				 ORDER BY published_at DESC, id DESC LIMIT 50`,
+			),
+			next: queryPlan(
+				`SELECT id, feed_id, title, summary FROM feed_items WHERE ${match}${filter} AND ${seek}
+				 ORDER BY published_at DESC, id DESC LIMIT 50`,
+			),
+		});
+
+		let plans = {
+			all: [pagesOf(""), "feed_items_timeline_idx"],
+			unread: [pagesOf(" AND read_at IS NULL"), "feed_items_unread_timeline_idx"],
+			read: [pagesOf(" AND read_at IS NOT NULL"), "feed_items_read_timeline_idx"],
+		} as const;
+
+		for (let [filter, [pages, index]] of Object.entries(plans)) {
+			for (let [page, plan] of Object.entries(pages)) {
+				expect(plan, `${filter}, ${page} page, reads ${index}`).toContain(index);
+				expect(plan, `${filter}, ${page} page, sorts nothing`).not.toContain(
+					"USE TEMP B-TREE FOR ORDER BY",
+				);
+			}
 		}
 	});
 
