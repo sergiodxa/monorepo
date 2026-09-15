@@ -14,10 +14,12 @@
 import type { RequestContext } from "remix/router";
 
 import { redirect } from "@sdxc/http/response";
-import { border, fg } from "@sdxc/u/color";
+import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
+import { cursor } from "@sdxc/u/general";
 import { flex, flexWrap, gap, items, vstack } from "@sdxc/u/layout";
-import { m, maxIs, p, pb } from "@sdxc/u/size";
+import { m, maxIs, mie, p, pb, pi } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 import {
 	Alert,
@@ -270,7 +272,12 @@ function settingsPage(
 					{/** Outlined rather than quiet: a bare label reads as a sentence, not as the
 					 * control that hands a reader a file. */}
 					<div mix={[flex()]}>
-						<LinkButton href={routes.feeds.export.href()} color="neutral" variant="outline">
+						<LinkButton
+							href={routes.feeds.export.href()}
+							color="neutral"
+							variant="outline"
+							data-rmx-document=""
+						>
 							{ctx.i18next.t("feeds.transfer.export")}
 						</LinkButton>
 					</div>
@@ -317,11 +324,27 @@ function settingsPage(
 									aria-describedby={IMPORT_DESCRIPTION_ID}
 									mix={[
 										maxIs("100%"),
-										p(2),
-										rounded("md"),
-										border("neutral.border"),
 										text("sm"),
-										fg("neutral.emphasis"),
+										fg("neutral.muted"),
+										cursor("pointer"),
+										/**
+										 * The platform draws this control, and only its button half can be
+										 * restyled — which is the half worth restyling. Dressed as the outline
+										 * button it sits beside, it leaves the filename the browser writes
+										 * next to it, which is the whole reason for using the real input.
+										 */
+										when("&::file-selector-button", [
+											mie(3),
+											pi(3),
+											pb(2),
+											rounded("md"),
+											border("neutral.border"),
+											bg("transparent"),
+											fg("neutral.emphasis"),
+											text("sm"),
+											weight("medium"),
+											cursor("pointer"),
+										]),
 									]}
 								/>
 							</div>

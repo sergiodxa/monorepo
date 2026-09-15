@@ -276,6 +276,18 @@ describe("what an import returns here with", () => {
 		expect(body).toContain(`for="${id}"`);
 	});
 
+	/**
+	 * The client runtime navigates a link by fetching it, and a file it is handed has
+	 * nowhere to go — so the export has to stay the browser's own navigation.
+	 */
+	test("leaves the export to the browser rather than the client runtime", async () => {
+		let body = await afterImport({});
+
+		let link = body.match(new RegExp(`<a[^>]*href="${routes.feeds.export.href()}"[^>]*>`))?.[0];
+		expect(link, "the export is a link").toBeTruthy();
+		expect(link).toContain("data-rmx-document");
+	});
+
 	test("names the transfer section, so the controls below it are not unlabelled", async () => {
 		let body = await afterImport({});
 
