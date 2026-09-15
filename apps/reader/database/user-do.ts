@@ -36,6 +36,7 @@ import {
 	insertChunkSize,
 	publishedAt,
 	refreshDueFeeds,
+	refreshFeed,
 } from "~/database/refresh";
 import { feedItems, feeds, REFRESH_INTERVALS, settings } from "~/database/schema";
 
@@ -188,6 +189,23 @@ export namespace UserStore {
 	export type IntervalResult =
 		| { ok: true; settings: Settings }
 		| { ok: false; reason: "invalid-interval" };
+
+	/** Why a reader's own check of one feed never reached the origin's answer. */
+	export type CheckFailure =
+		/** Not a feed this reader follows, so there was nothing to check. */
+		| "not-following"
+		/** The origin refused, timed out, or sent back something that is not a feed. */
+		| "check-failed";
+
+	/**
+	 * What checking one feed on the spot came back with. `inserted` counts the posts the
+	 * reader had not seen, which is the answer they asked the question for; `updated`
+	 * counts entries the publisher revised. A 304 reports both as zero, since the stored
+	 * copy is current and the reader's answer is the same either way.
+	 */
+	export type CheckResult =
+		| { ok: true; inserted: number; updated: number }
+		| { ok: false; reason: CheckFailure };
 }
 
 /**
@@ -376,6 +394,37 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		}
 
 		return { ok: true, feed: toFeedSummary(created, rows.length), items: rows.length };
+	}
+
+	/**
+	 * Retrieves one feed on the spot and reports what came back, for a reader who knows a
+	 * site has just published and would rather not wait out their cadence.
+	 *
+	 * It resolves however the retrieval went, so a feed whose origin is down answers the
+	 * reader instead of failing the request they made.
+	 *
+	 * @param feedId - The subscription to check.
+	 * @example let checked = await userStore(subject).checkFeedNow(feedId);
+	 */
+	async checkFeedNow(feedId: string): Promise<UserStore.CheckResult> {
+		let feed = await this.#db.find(feeds, { id: feedId });
+		if (feed === null) return { ok: false, reason: "not-following" };
+
+		/**
+		 * `next_attempt_at` is read past here. That column is a backoff floor holding the
+		 * alarm off an origin that has been failing, and a person deliberately asking to
+		 * check now is the one case it was never meant to hold back: a feed that has been
+		 * failing is exactly the one they come here to ask about.
+		 */
+		let outcome = await refreshFeed(this.#db, feed, { now: Date.now() });
+
+		if (outcome.status === "ok") {
+			return { ok: true, inserted: outcome.inserted, updated: outcome.updated };
+		}
+
+		if (outcome.status === "not_modified") return { ok: true, inserted: 0, updated: 0 };
+
+		return { ok: false, reason: "check-failed" };
 	}
 
 	/**

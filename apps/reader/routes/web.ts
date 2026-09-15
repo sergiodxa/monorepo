@@ -36,6 +36,8 @@ export default route({
 		 */
 		follow: post("/feeds"),
 		unfollow: del("/feeds/:feedId"),
+		/** Its own path rather than a `POST` on the feed, so a form can reach it directly. */
+		refresh: post("/feeds/:feedId/refresh"),
 	},
 
 	items: {

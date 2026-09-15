@@ -278,6 +278,84 @@ describe("followFeed", () => {
 	});
 });
 
+describe("checkFeedNow", () => {
+	/** A sixth post, as an origin that published while the reader was reading serves it. */
+	const PUBLISHED: Entry = {
+		guid: "f",
+		title: "Sixth",
+		published: "Sat, 06 Sep 2025 10:00:00 GMT",
+	};
+
+	/** Serves the feed with {@link PUBLISHED} at the end of it. */
+	function publishOne() {
+		server.use(http.get(FEED_URL, () => HttpResponse.xml(rss([...ENTRIES, PUBLISHED]))));
+	}
+
+	test("stores what the origin published since the last poll", async () => {
+		let { user, feed } = await createReaderWithFeed();
+		publishOne();
+
+		expect(await user.checkFeedNow(feed.id)).toEqual({ ok: true, inserted: 1, updated: 0 });
+
+		expect(titles(await user.readingQueue())).toEqual([
+			"Sixth",
+			"Fifth",
+			"Fourth",
+			"Third",
+			"Second",
+			"First",
+		]);
+	});
+
+	test("reports a document that carried nothing the reader had not seen", async () => {
+		let { user, feed } = await createReaderWithFeed();
+
+		expect(await user.checkFeedNow(feed.id)).toEqual({ ok: true, inserted: 0, updated: 0 });
+	});
+
+	test("reports an origin answering 304 as nothing new", async () => {
+		let { user, feed } = await createReaderWithFeed();
+		server.use(http.get(FEED_URL, () => new HttpResponse(null, { status: 304 })));
+
+		expect(await user.checkFeedNow(feed.id)).toEqual({ ok: true, inserted: 0, updated: 0 });
+	});
+
+	test("checks a feed inside its backoff window, which is the one a reader asks about", async () => {
+		let { user, feed } = await createReaderWithFeed();
+
+		server.use(http.get(FEED_URL, () => new HttpResponse(null, { status: 503 })));
+		expect(await user.checkFeedNow(feed.id)).toEqual({ ok: false, reason: "check-failed" });
+		expect((await user.getFeed(feed.id))?.failureCount).toBe(1);
+
+		// The failure above put the next attempt minutes out, and asking now reads past it.
+		publishOne();
+
+		expect(await user.checkFeedNow(feed.id)).toEqual({ ok: true, inserted: 1, updated: 0 });
+		expect((await user.getFeed(feed.id))?.failureCount).toBe(0);
+	});
+
+	test("reports a feed this reader does not follow rather than throwing", async () => {
+		let { user } = await createReaderWithFeed();
+
+		await expect(user.checkFeedNow("feed_missing")).resolves.toEqual({
+			ok: false,
+			reason: "not-following",
+		});
+	});
+
+	test("reports a failing check without taking the call down with it", async () => {
+		let { user, feed } = await createReaderWithFeed();
+		server.use(http.get(FEED_URL, () => HttpResponse.error()));
+
+		await expect(user.checkFeedNow(feed.id)).resolves.toEqual({
+			ok: false,
+			reason: "check-failed",
+		});
+
+		expect(titles(await user.readingQueue())).toHaveLength(5);
+	});
+});
+
 describe("readingQueue", () => {
 	test("answers the unread posts newest first", async () => {
 		let { user } = await createReaderWithFeed();

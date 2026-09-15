@@ -107,6 +107,10 @@ export default function application(options: application.Options) {
 		lazy(() => import("~/app/http/controllers/feeds/unfollow")),
 	);
 	router.map(
+		routes.feeds.refresh,
+		lazy(() => import("~/app/http/controllers/feeds/refresh")),
+	);
+	router.map(
 		routes.items.read,
 		lazy(() => import("~/app/http/controllers/items/read")),
 	);
