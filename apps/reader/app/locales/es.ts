@@ -68,6 +68,25 @@ export default {
 		logout: "Cerrar sesión",
 	},
 
+	/** Searching the posts of every followed feed. */
+	search: {
+		title: "Buscar",
+		heading: "Buscar",
+		label: "Busca en tus entradas",
+		placeholder: "¿Qué estás buscando?",
+		submit: "Buscar",
+		results_one: "{{count}} entrada coincide con «{{query}}».",
+		results_other: "{{count}} entradas coinciden con «{{query}}».",
+		none: {
+			title: "No hay coincidencias",
+			description: "Ninguna entrada de los feeds que sigues contiene esas palabras.",
+		},
+		prompt: {
+			title: "Busca en tus lecturas",
+			description: "Escribe lo que recuerdes del título o del resumen de una entrada.",
+		},
+	},
+
 	/** Shared by both timelines, which offer the same way through a long list of posts. */
 	timeline: {
 		newer: "Entradas más recientes",
@@ -80,6 +99,11 @@ export default {
 		byAuthor: "por {{author}}",
 		badCursor: "Esa página de entradas ya no existe.",
 		restart: "Volver a lo más reciente",
+		markAllRead: "Marcar todo como leído",
+		markFeedRead: "Marcar este feed como leído",
+		markedRead_one: "{{count}} entrada marcada como leída.",
+		markedRead_other: "{{count}} entradas marcadas como leídas.",
+		nothingToMark: "No había nada sin leer que marcar.",
 	},
 
 	reading: {
@@ -142,6 +166,43 @@ export default {
 				description: "No sigues ningún feed con esa dirección.",
 				back: "Volver a tus feeds",
 			},
+		},
+
+		/** Checking every followed feed at once, from the subscription list. */
+		checkAll: {
+			submit: "Revisar todos los feeds",
+			done_one: "Se revisó {{count}} feed.",
+			done_other: "Se revisaron {{count}} feeds.",
+			newPosts_one: "{{count}} feed tenía entradas nuevas.",
+			newPosts_other: "{{count}} feeds tenían entradas nuevas.",
+			nothingNew: "Ningún feed tenía nada nuevo.",
+			failed_one: "No se pudo llegar a {{count}} feed.",
+			failed_other: "No se pudo llegar a {{count}} feeds.",
+		},
+
+		/** Carrying subscriptions to and from another reader. */
+		transfer: {
+			export: "Descargar como OPML",
+			import: {
+				label: "Archivo OPML",
+				description: "Una lista de suscripciones exportada de otro lector.",
+				submit: "Importar",
+				added_one: "Ahora sigues {{count}} feed nuevo.",
+				added_other: "Ahora sigues {{count}} feeds nuevos.",
+				alreadyFollowing_one: "Ya seguías {{count}}.",
+				alreadyFollowing_other: "Ya seguías {{count}}.",
+				failed_one: "No se pudo obtener {{count}}.",
+				failed_other: "No se pudieron obtener {{count}}.",
+				empty: "Ese archivo no lista ningún feed.",
+				unreadable: "No se pudo leer ese archivo como OPML.",
+				missing: "Elige un archivo OPML para importar.",
+			},
+		},
+
+		/** Paging the subscription list, which is long once a reader follows enough. */
+		paging: {
+			newer: "Suscripciones más recientes",
+			older: "Suscripciones más antiguas",
 		},
 
 		/** What asking for a feed to be checked on the spot reports back. */

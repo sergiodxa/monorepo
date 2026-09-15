@@ -57,7 +57,7 @@ export default createAction(routes.feeds.follow, {
 		 * The whole feed page comes back with the refusal against the field, so the reader
 		 * corrects the address where they typed it and keeps sight of what they follow.
 		 */
-		let feeds = await store.listFeeds();
+		let { feeds } = await store.listFeeds();
 
 		return renderFeedsPage(
 			ctx,

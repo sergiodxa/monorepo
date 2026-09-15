@@ -60,7 +60,7 @@ function postFollow(viewer: typeof VIEWER | null, url = SUBMITTED_URL) {
  */
 async function refusedBody(reason: UserStore.FollowFailure) {
 	store.followFeed.mockResolvedValue({ ok: false, reason, feedId: null });
-	store.listFeeds.mockResolvedValue([FOLLOWED]);
+	store.listFeeds.mockResolvedValue({ feeds: [FOLLOWED], cursors: { next: null, prev: null } });
 
 	let response = await postFollow(VIEWER);
 

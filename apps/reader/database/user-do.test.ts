@@ -288,7 +288,7 @@ describe("followFeed", () => {
 	test("counts the unread posts beside each feed", async () => {
 		let { user, feed } = await createReaderWithFeed();
 
-		expect(await user.listFeeds()).toEqual([{ ...feed, unreadCount: 5 }]);
+		expect((await user.listFeeds()).feeds).toEqual([{ ...feed, unreadCount: 5 }]);
 		expect(await user.getFeed(feed.id)).toEqual({ ...feed, unreadCount: 5 });
 		expect(await user.getFeed("feed_missing")).toBeNull();
 	});
@@ -302,7 +302,7 @@ describe("followFeed", () => {
 			feedId: feed.id,
 		});
 
-		expect(await user.listFeeds()).toHaveLength(1);
+		expect((await user.listFeeds()).feeds).toHaveLength(1);
 	});
 
 	test("refuses something that is not an HTTP URL", async () => {
@@ -552,7 +552,7 @@ describe("unfollowFeed", () => {
 
 		expect(await user.unfollowFeed(feed.id)).toBe(true);
 
-		expect(await user.listFeeds()).toEqual([]);
+		expect((await user.listFeeds()).feeds).toEqual([]);
 		expect(await user.getFeed(feed.id)).toBeNull();
 		expect(titles(await user.readingQueue())).toEqual([]);
 		expect(titles(await user.feedTimeline(feed.id))).toEqual([]);

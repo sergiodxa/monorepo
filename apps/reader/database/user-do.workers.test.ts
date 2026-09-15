@@ -57,7 +57,7 @@ describe("the USER binding", () => {
 		]);
 
 		expect(stored).toBeNull();
-		expect(feeds).toEqual([]);
+		expect(feeds.feeds).toEqual([]);
 		expect(queue).toEqual({
 			ok: true,
 			items: [],

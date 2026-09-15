@@ -150,7 +150,7 @@ export default createAction(routes.feeds.index, {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let feeds = await userStore(viewer.id).listFeeds();
+		let { feeds } = await userStore(viewer.id).listFeeds();
 
 		return renderFeedsPage(ctx, feeds, { error: null, value: null });
 	},

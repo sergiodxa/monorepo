@@ -197,6 +197,7 @@
         "@sdxc/feed": "workspace:*",
         "@sdxc/http": "workspace:*",
         "@sdxc/i18n": "workspace:*",
+        "@sdxc/icons": "workspace:*",
         "@sdxc/lazy-route": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/pagination": "workspace:*",
@@ -205,6 +206,7 @@
         "@sdxc/typeid": "workspace:*",
         "@sdxc/u": "workspace:*",
         "@sdxc/ui": "workspace:*",
+        "@sdxc/uuid": "workspace:*",
         "remix": "3.0.0-rc.2",
       },
       "devDependencies": {

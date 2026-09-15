@@ -185,6 +185,41 @@ export namespace UserStore {
 		| { ok: true; feed: FeedSummary; items: number }
 		| { ok: false; reason: FollowFailure; feedId: string | null };
 
+	/** One page of the subscription list, paged the way a long timeline is. */
+	export interface FeedPage {
+		feeds: FeedSummary[];
+		cursors: { next: string | null; prev: string | null };
+	}
+
+	/** What a sweep of every followed feed got through. */
+	export interface CheckAllResult {
+		/** Feeds the sweep reached. */
+		checked: number;
+		/** Feeds that answered with something the reader had not seen. */
+		withNewPosts: number;
+		/** Posts the sweep brought in across all of them. */
+		inserted: number;
+		/** Feeds whose origin refused, timed out, or sent something that is not a feed. */
+		failed: number;
+	}
+
+	/** One subscription as an export carries it, which is all OPML has room for. */
+	export interface FeedExport {
+		title: string;
+		feedUrl: string;
+		siteUrl: string | null;
+	}
+
+	/** What an OPML document's subscriptions became. */
+	export interface ImportResult {
+		/** Feeds now followed that were not before. */
+		added: number;
+		/** Feeds in the document that were already followed. */
+		alreadyFollowing: number;
+		/** Feeds in the document that could not be retrieved, with the URL each one names. */
+		failed: string[];
+	}
+
 	/** Setting a cadence the `CHECK` constraint would refuse is reported, never thrown. */
 	export type IntervalResult =
 		| { ok: true; settings: Settings }
@@ -280,8 +315,55 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		return { ok: true, settings: toSettings(row) };
 	}
 
-	/** Every followed feed, newest subscription first, each with its unread count. */
-	async listFeeds(): Promise<UserStore.FeedSummary[]> {
+	/**
+	 * How many feeds the reader follows, which is what tells an empty queue apart from an
+	 * empty subscription list without reading a page of feeds to count it.
+	 */
+	countFeeds(): Promise<number> {
+		throw new Error("UserDO.countFeeds is not implemented");
+	}
+
+	/** Checks every followed feed now, reporting what the sweep as a whole found. */
+	checkAllFeedsNow(): Promise<UserStore.CheckAllResult> {
+		throw new Error("UserDO.checkAllFeedsNow is not implemented");
+	}
+
+	/** Marks every unread post of one feed read, and reports how many that was. */
+	markFeedRead(_feedId: string): Promise<number> {
+		throw new Error("UserDO.markFeedRead is not implemented");
+	}
+
+	/** Marks every unread post read across every feed, and reports how many that was. */
+	markAllRead(): Promise<number> {
+		throw new Error("UserDO.markAllRead is not implemented");
+	}
+
+	/**
+	 * Posts whose title or summary contain `query`, newest first, paged like a timeline.
+	 * A blank query matches nothing rather than everything: it is an empty search box.
+	 */
+	searchPosts(
+		_query: string,
+		_options?: UserStore.TimelineOptions,
+	): Promise<UserStore.TimelineResult> {
+		throw new Error("UserDO.searchPosts is not implemented");
+	}
+
+	/** Every subscription, in the shape an export writes them. */
+	exportFeeds(): Promise<UserStore.FeedExport[]> {
+		throw new Error("UserDO.exportFeeds is not implemented");
+	}
+
+	/**
+	 * Follows each URL that is not already followed, and reports what became of the rest.
+	 * One unreachable feed in a document of fifty leaves the other forty-nine followed.
+	 */
+	importFeeds(_feedUrls: string[]): Promise<UserStore.ImportResult> {
+		throw new Error("UserDO.importFeeds is not implemented");
+	}
+
+	/** One page of followed feeds, newest subscription first, each with its unread count. */
+	async listFeeds(_options?: UserStore.TimelineOptions): Promise<UserStore.FeedPage> {
 		let [rows, unread] = await Promise.all([
 			this.#db.findMany(feeds, {
 				orderBy: [
@@ -292,7 +374,10 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			this.#unreadCounts(),
 		]);
 
-		return rows.map((row) => toFeedSummary(row, unread.get(row.id) ?? 0));
+		return {
+			feeds: rows.map((row) => toFeedSummary(row, unread.get(row.id) ?? 0)),
+			cursors: { next: null, prev: null },
+		};
 	}
 
 	/** One followed feed, or `null` when this reader does not follow it. */

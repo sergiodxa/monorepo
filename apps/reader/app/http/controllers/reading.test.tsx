@@ -192,7 +192,7 @@ describe("GET /reading", () => {
 	});
 
 	test("tells a reader who has read everything that they are caught up", async () => {
-		store.listFeeds.mockResolvedValue([FOLLOWED]);
+		store.countFeeds.mockResolvedValue(1);
 
 		let body = await (await get(routes.reading.href())).text();
 

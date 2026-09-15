@@ -96,7 +96,7 @@ describe("GET /feeds", () => {
 	});
 
 	test("lists a followed feed with its title, description and last check", async () => {
-		store.listFeeds.mockResolvedValue([feed()]);
+		store.listFeeds.mockResolvedValue({ feeds: [feed()], cursors: { next: null, prev: null } });
 
 		let body = await getFeeds(VIEWER).then((response) => response.text());
 
@@ -109,7 +109,10 @@ describe("GET /feeds", () => {
 	});
 
 	test("says a feed has never been checked when nothing has fetched it", async () => {
-		store.listFeeds.mockResolvedValue([feed({ lastFetchedAt: null, lastStatus: null })]);
+		store.listFeeds.mockResolvedValue({
+			feeds: [feed({ lastFetchedAt: null, lastStatus: null })],
+			cursors: { next: null, prev: null },
+		});
 
 		let body = await getFeeds(VIEWER).then((response) => response.text());
 
@@ -118,7 +121,10 @@ describe("GET /feeds", () => {
 	});
 
 	test("counts a single unread post in the singular", async () => {
-		store.listFeeds.mockResolvedValue([feed({ unreadCount: 1 })]);
+		store.listFeeds.mockResolvedValue({
+			feeds: [feed({ unreadCount: 1 })],
+			cursors: { next: null, prev: null },
+		});
 
 		let body = await getFeeds(VIEWER).then((response) => response.text());
 
@@ -126,7 +132,10 @@ describe("GET /feeds", () => {
 	});
 
 	test("counts several unread posts in the plural", async () => {
-		store.listFeeds.mockResolvedValue([feed({ unreadCount: 3 })]);
+		store.listFeeds.mockResolvedValue({
+			feeds: [feed({ unreadCount: 3 })],
+			cursors: { next: null, prev: null },
+		});
 
 		let body = await getFeeds(VIEWER).then((response) => response.text());
 
@@ -134,7 +143,10 @@ describe("GET /feeds", () => {
 	});
 
 	test("says a feed is all read when nothing in it is unread", async () => {
-		store.listFeeds.mockResolvedValue([feed({ unreadCount: 0 })]);
+		store.listFeeds.mockResolvedValue({
+			feeds: [feed({ unreadCount: 0 })],
+			cursors: { next: null, prev: null },
+		});
 
 		let body = await getFeeds(VIEWER).then((response) => response.text());
 
@@ -143,7 +155,10 @@ describe("GET /feeds", () => {
 	});
 
 	test("says how many checks failed and what the last one recorded", async () => {
-		store.listFeeds.mockResolvedValue([feed({ failureCount: 2, lastStatus: "http_error" })]);
+		store.listFeeds.mockResolvedValue({
+			feeds: [feed({ failureCount: 2, lastStatus: "http_error" })],
+			cursors: { next: null, prev: null },
+		});
 
 		let body = await getFeeds(VIEWER).then((response) => response.text());
 
@@ -152,7 +167,10 @@ describe("GET /feeds", () => {
 	});
 
 	test("reports a single failed check in the singular, naming the reason", async () => {
-		store.listFeeds.mockResolvedValue([feed({ failureCount: 1, lastStatus: "network_error" })]);
+		store.listFeeds.mockResolvedValue({
+			feeds: [feed({ failureCount: 1, lastStatus: "network_error" })],
+			cursors: { next: null, prev: null },
+		});
 
 		let body = await getFeeds(VIEWER).then((response) => response.text());
 
@@ -161,7 +179,10 @@ describe("GET /feeds", () => {
 	});
 
 	test("reports nothing against a feed whose last check succeeded", async () => {
-		store.listFeeds.mockResolvedValue([feed({ failureCount: 0, lastStatus: "not_modified" })]);
+		store.listFeeds.mockResolvedValue({
+			feeds: [feed({ failureCount: 0, lastStatus: "not_modified" })],
+			cursors: { next: null, prev: null },
+		});
 
 		let body = await getFeeds(VIEWER).then((response) => response.text());
 
@@ -169,7 +190,7 @@ describe("GET /feeds", () => {
 	});
 
 	test("invites a reader who follows nothing, and still offers the form", async () => {
-		store.listFeeds.mockResolvedValue([]);
+		store.listFeeds.mockResolvedValue({ feeds: [], cursors: { next: null, prev: null } });
 
 		let response = await getFeeds(VIEWER);
 
@@ -183,7 +204,7 @@ describe("GET /feeds", () => {
 	});
 
 	test("renders the follow form with no error and nothing filled in", async () => {
-		store.listFeeds.mockResolvedValue([feed()]);
+		store.listFeeds.mockResolvedValue({ feeds: [feed()], cursors: { next: null, prev: null } });
 
 		let body = await getFeeds(VIEWER).then((response) => response.text());
 

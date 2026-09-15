@@ -90,7 +90,7 @@ export default createAction(routes.reading, {
 		 * An empty queue reads two ways and only the feed list tells them apart: somebody
 		 * following nothing is invited to start, and somebody following feeds has read them.
 		 */
-		let hasFeeds = items.length === 0 ? (await store.listFeeds()).length > 0 : true;
+		let hasFeeds = items.length === 0 ? (await store.countFeeds()) > 0 : true;
 
 		return ctx.render(
 			<AppLayout

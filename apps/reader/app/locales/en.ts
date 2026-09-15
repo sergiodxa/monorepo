@@ -69,6 +69,25 @@ export default {
 		logout: "Sign out",
 	},
 
+	/** Searching the posts of every followed feed. */
+	search: {
+		title: "Search",
+		heading: "Search",
+		label: "Search your posts",
+		placeholder: "What are you looking for?",
+		submit: "Search",
+		results_one: "{{count}} post matches “{{query}}”.",
+		results_other: "{{count}} posts match “{{query}}”.",
+		none: {
+			title: "Nothing matches",
+			description: "No post in any feed you follow contains those words.",
+		},
+		prompt: {
+			title: "Search your reading",
+			description: "Type what you remember of a post's title or summary.",
+		},
+	},
+
 	/** Shared by both timelines, which offer the same way through a long list of posts. */
 	timeline: {
 		newer: "Newer posts",
@@ -81,6 +100,11 @@ export default {
 		byAuthor: "by {{author}}",
 		badCursor: "That page of posts is no longer there.",
 		restart: "Back to the newest",
+		markAllRead: "Mark everything read",
+		markFeedRead: "Mark this feed read",
+		markedRead_one: "{{count}} post marked read.",
+		markedRead_other: "{{count}} posts marked read.",
+		nothingToMark: "There was nothing unread to mark.",
 	},
 
 	reading: {
@@ -142,6 +166,43 @@ export default {
 				description: "You do not follow a feed with that address.",
 				back: "Back to your feeds",
 			},
+		},
+
+		/** Checking every followed feed at once, from the subscription list. */
+		checkAll: {
+			submit: "Check every feed",
+			done_one: "Checked {{count}} feed.",
+			done_other: "Checked {{count}} feeds.",
+			newPosts_one: "{{count}} feed had new posts.",
+			newPosts_other: "{{count}} feeds had new posts.",
+			nothingNew: "No feed had anything new.",
+			failed_one: "{{count}} feed could not be reached.",
+			failed_other: "{{count}} feeds could not be reached.",
+		},
+
+		/** Carrying subscriptions to and from another reader. */
+		transfer: {
+			export: "Download as OPML",
+			import: {
+				label: "OPML file",
+				description: "A subscription list exported from another reader.",
+				submit: "Import",
+				added_one: "Followed {{count}} new feed.",
+				added_other: "Followed {{count}} new feeds.",
+				alreadyFollowing_one: "{{count}} was already followed.",
+				alreadyFollowing_other: "{{count}} were already followed.",
+				failed_one: "{{count}} could not be retrieved.",
+				failed_other: "{{count}} could not be retrieved.",
+				empty: "That file lists no feeds.",
+				unreadable: "That file could not be read as OPML.",
+				missing: "Choose an OPML file to import.",
+			},
+		},
+
+		/** Paging the subscription list, which is long once a reader follows enough. */
+		paging: {
+			newer: "Newer subscriptions",
+			older: "Older subscriptions",
 		},
 
 		/** What asking for a feed to be checked on the spot reports back. */

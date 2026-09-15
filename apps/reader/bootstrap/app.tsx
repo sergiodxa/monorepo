@@ -115,6 +115,30 @@ export default function application(options: application.Options) {
 		lazy(() => import("~/app/http/controllers/items/read")),
 	);
 	router.map(
+		routes.readAll,
+		lazy(() => import("~/app/http/controllers/read-all")),
+	);
+	router.map(
+		routes.search,
+		lazy(() => import("~/app/http/controllers/search")),
+	);
+	router.map(
+		routes.feeds.refreshAll,
+		lazy(() => import("~/app/http/controllers/feeds/refresh-all")),
+	);
+	router.map(
+		routes.feeds.read,
+		lazy(() => import("~/app/http/controllers/feeds/read")),
+	);
+	router.map(
+		routes.feeds.export,
+		lazy(() => import("~/app/http/controllers/feeds/export")),
+	);
+	router.map(
+		routes.feeds.import,
+		lazy(() => import("~/app/http/controllers/feeds/import")),
+	);
+	router.map(
 		routes.settings,
 		lazy(() => import("~/app/http/controllers/settings")),
 	);

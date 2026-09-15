@@ -27,6 +27,12 @@ export default route({
 	/** The unread queue across every followed feed, and the app's landing spot after sign-in. */
 	reading: get("/reading"),
 
+	/** Takes every unread post out of the queue at once. */
+	readAll: post("/reading/read"),
+
+	/** Posts matching what the reader typed, across every feed they follow. */
+	search: get("/search"),
+
 	feeds: {
 		index: get("/feeds"),
 		show: get("/feeds/:feedId"),
@@ -38,6 +44,21 @@ export default route({
 		unfollow: del("/feeds/:feedId"),
 		/** Its own path rather than a `POST` on the feed, so a form can reach it directly. */
 		refresh: post("/feeds/:feedId/refresh"),
+		/**
+		 * Checks every followed feed. A `POST` on the collection, mirroring the way
+		 * `refresh` reads on one feed, and no `GET` answers this path so the pattern it
+		 * shares with `show` never decides between them.
+		 */
+		refreshAll: post("/feeds/refresh"),
+		/** Takes one feed's unread posts out of the queue, leaving every other feed alone. */
+		read: post("/feeds/:feedId/read"),
+		/**
+		 * The subscription list as OPML, for carrying it to another reader. A path of its
+		 * own rather than a segment under `/feeds`, which `show` would read as a feed id.
+		 */
+		export: get("/feeds.opml"),
+		/** Subscribes to every feed in an uploaded OPML document. */
+		import: post("/feeds/import"),
 	},
 
 	items: {
