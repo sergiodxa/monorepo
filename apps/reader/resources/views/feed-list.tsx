@@ -134,7 +134,8 @@ export default function FeedList(handle: Handle<FeedList.Props>) {
 							</Button>
 
 							<form method="post" action={routes.feeds.refreshAll.href()}>
-								<Button type="submit" color="neutral" variant="ghost" size="sm">
+								{/** Same size as the submit it sits beside; the quiet fill is what ranks it. */}
+								<Button type="submit" color="neutral" variant="ghost">
 									{checkAll}
 								</Button>
 							</form>
