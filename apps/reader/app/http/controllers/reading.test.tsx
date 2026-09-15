@@ -32,20 +32,6 @@ const FEEDS: UserStore.FeedRef[] = [
 	{ id: "feed-rc", title: "Remix Changelog", siteUrl: null },
 ];
 
-/** One followed feed, as `listFeeds()` answers it, for telling the two empty queues apart. */
-const FOLLOWED: UserStore.FeedSummary = {
-	id: "feed-df",
-	feedUrl: "https://daringfireball.net/feeds/main",
-	siteUrl: "https://daringfireball.net",
-	title: "Daring Fireball",
-	description: null,
-	imageUrl: null,
-	lastFetchedAt: null,
-	lastStatus: null,
-	failureCount: 0,
-	unreadCount: 0,
-};
-
 /** Builds a queue item, defaulting every field a test is not about. */
 function item(overrides: Partial<UserStore.Item> & Pick<UserStore.Item, "id">): UserStore.Item {
 	return {
