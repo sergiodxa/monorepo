@@ -1,7 +1,7 @@
 /**
  * Authentication controller for `/auth`: the POST starts the OIDC authorization-code flow
- * and the GET completes the callback. A successful callback has nothing to provision — a
- * reader's subscriptions are keyed on the OIDC subject — so it lands straight on the queue.
+ * and the GET completes the callback. A first successful callback is also the sign-up: it
+ * opens the reader's own storage and arms their refresh schedule, then lands on the queue.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,6 +25,7 @@ import { createController } from "remix/router";
 
 import { relyingParty } from "~/app/auth/relying-party";
 import { RETURN_TO_COOKIE } from "~/app/http/cookies";
+import { userStore } from "~/database/user-do";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
@@ -114,7 +115,15 @@ export default createController(routes.auth, {
 			 * session to resolve anybody from, so the record that establishes a session is
 			 * attributed to the subject it established it for.
 			 */
-			ctx.log.set({ user: { id: finished.data.idToken.subject } });
+			let subject = finished.data.idToken.subject;
+			ctx.log.set({ user: { id: subject } });
+
+			/**
+			 * Idempotent, and run on every sign-in rather than once: there is no user table and
+			 * no sign-up step, so a first login is what creates a reader, and every login after
+			 * it finds the row already there.
+			 */
+			await userStore(subject).ensureUser(subject);
 
 			return redirect(routes.reading.href(), { status: redirect.Status.SeeOther });
 		},

@@ -25,6 +25,7 @@
 		"@sdxc/typeid": "workspace:*",
 		"@sdxc/u": "workspace:*",
 		"@sdxc/ui": "workspace:*",
+		"@sdxc/uuid": "workspace:*",
 		"remix": "3.0.0-rc.2"
 	},
 	"devDependencies": {

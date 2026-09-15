@@ -1,8 +1,9 @@
 /**
  * Cloudflare Worker entry point. Its single `fetch` handler reads the session secret and
  * KV binding off the environment, builds the application router, and forwards the request
- * to it. It is the only module allowed to touch a Cloudflare-specific API, so everything
- * below it runs in a plain fetch test without a worker runtime.
+ * to it, and it re-exports the per-reader Durable Object so the runtime can find the class
+ * its binding names. Everything below it runs in a plain fetch test without a worker
+ * runtime.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,6 +12,8 @@
 import { env } from "cloudflare:workers";
 
 import application from "./app";
+
+export { UserDO } from "~/database/user-do";
 
 /**
  * Whether the request arrived on a host that serves HTTPS, which decides the session

@@ -25,6 +25,20 @@
 	// `.dev.vars` locally and `wrangler secret put` in production; `.env.example`
 	// carries the full list. Only bindings need an entry in this file.
 
+	// One object per reader, addressed by their OIDC subject, holding their settings,
+	// the feeds they follow and every post from them in its own SQLite. The whole
+	// design rests on that: the timeline is one indexed query over one person's rows
+	// rather than a merge across feeds, and deleting an account is deleting an object.
+	//
+	// SQLite-backed from the first migration. A `new_classes` object gets key-value
+	// storage instead, which has no SQL to run the schema against, and the storage
+	// backend cannot be changed after the class exists.
+	"durable_objects": {
+		"bindings": [{ "name": "USER", "class_name": "UserDO" }],
+	},
+
+	"migrations": [{ "tag": "add-user-do", "new_sqlite_classes": ["UserDO"] }],
+
 	// Sessions and the OIDC discovery/JWKS cache share one namespace, keyed apart by
 	// prefix. They belong together: both are derived state a cold isolate can rebuild,
 	// so losing the namespace signs everybody out rather than losing anything owned.
