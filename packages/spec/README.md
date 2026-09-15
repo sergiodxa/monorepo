@@ -1348,7 +1348,7 @@ arrives; set it when a run is untrusted and the runtime's memory is bounded,
 since a parsed document costs many times its source.
 
 ```ts
-import { createHttpPlugin } from "@sdxc/spec/workers";
+import { createHttpPlugin } from "@sdxc/spec";
 
 let http = createHttpPlugin({ maxResponseBytes: 1_048_576 });
 ```
@@ -1376,8 +1376,11 @@ that speak the NDJSON-over-stdio protocol. A plugin's own test builds its
 default.
 
 `@sdxc/spec/workers` carries the same language core for a V8-isolate runtime,
-with the four capabilities that reach for neither a process nor a filesystem:
-`http`, `url`, `jwt`, and `sample`.
+with the seven capabilities that reach for neither a process nor a filesystem:
+`http`, `url`, `jwt`, `sample`, `html`, `str`, and `spec`. Each computes from
+its arguments or from the run's own identity; `db`, `cli`, `browser` and the
+stdio transport reach for Bun's SQL client or the `Bun` global, so they stay
+behind the root entry.
 
 ## Versioning
 
