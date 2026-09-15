@@ -111,7 +111,7 @@ Run from the repository root:
 | [get-client-ip](packages/get-client-ip)                         | Read the client IP from a Cloudflare Workers request                                     | ✅  |
 | [highlight](packages/highlight)                                 | Syntax highlighting as tokens, with a markdown visitor that paints code blocks           | ✅  |
 | [hostname](packages/hostname)                                   | Cloudflare for SaaS custom-hostname client: register, poll and delete customer domains   | ✅  |
-| [html](packages/html)                                           | Read a served page: parse HTML, then query it by role and accessible name                | ✅  |
+| [html](packages/html)                                           | Read a served page: fetch or parse HTML, then query it by role and accessible name       | ✅  |
 | [http](packages/http)                                           | Response builders, content negotiation and HTTP caching                                  | ✅  |
 | [i18n](packages/i18n)                                           | Language detection, i18next instances and translated-markup components                   | ✅  |
 | [icons](packages/icons)                                         | Lucide icons for Remix UI                                                                | ✅  |
