@@ -105,7 +105,7 @@ Run from the repository root:
 | [data-table-sqlstorage](packages/data-table-sqlstorage)         | Remix Data Table adapter for Durable Object SQL                                          | ✅  |
 | [dates](packages/dates)                                         | Zone-aware date operations with Intl-only formatting                                     | ✅  |
 | [duration](packages/duration)                                   | Typed duration strings converted to milliseconds or seconds                              | ✅  |
-| [feed](packages/feed)                                           | One feed API over RSS and Atom, with conditional fetching and autodiscovery              | ✅  |
+| [feed](packages/feed)                                           | One feed API over RSS, Atom and JSON Feed, with conditional fetching and autodiscovery   | ✅  |
 | [flags](packages/flags)                                         | Feature flag evaluation implementing the OpenFeature specification                       | ✅  |
 | [flags-engine](packages/flags-engine)                           | Flag evaluation engine: typed targeting rules, percentage splits and pluggable stores    | ✅  |
 | [get-client-ip](packages/get-client-ip)                         | Read the client IP from a Cloudflare Workers request                                     | ✅  |

@@ -1,6 +1,7 @@
 /**
  * Finds the feeds an HTML page advertises, following the autodiscovery convention
- * of a `<link rel="alternate">` whose type names a syndication format.
+ * of a `<link rel="alternate">` whose type names a syndication format, and ranking
+ * the JSON candidates so a well-typed feed wins over a generically typed one.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,6 +12,12 @@ import type { Feed } from "../index.js";
 import { parseHtmlLinks } from "./parse-html-links.js";
 import { dedupeBy } from "./utils.js";
 
+/** The media type a JSON Feed is published under. */
+export const JSON_FEED_TYPE = "application/feed+json";
+
+/** The media type a publisher serving a JSON Feed as ordinary JSON uses instead. */
+const JSON_TYPE = "application/json";
+
 /**
  * The media types that identify a feed.
  *
@@ -18,7 +25,29 @@ import { dedupeBy } from "./utils.js";
  * sitemaps and stylesheets, so accepting them would offer a reader documents it
  * cannot read as feeds.
  */
-const FEED_TYPES = new Set(["application/rss+xml", "application/atom+xml"]);
+const FEED_TYPES = new Set([
+	"application/rss+xml",
+	"application/atom+xml",
+	JSON_FEED_TYPE,
+	JSON_TYPE,
+]);
+
+/** The media type each format is published under, for a URL that is itself a feed. */
+const MEDIA_TYPES: Record<Feed.Format, string> = {
+	rss: "application/rss+xml",
+	atom: "application/atom+xml",
+	json: JSON_FEED_TYPE,
+};
+
+/**
+ * Names the media type a format is served under.
+ *
+ * @param format - The format a document turned out to be
+ * @returns The media type to report for it
+ */
+export function mediaTypeOf(format: Feed.Format): string {
+	return MEDIA_TYPES[format];
+}
 
 /**
  * Reads the feeds a page points at.
@@ -49,7 +78,17 @@ export function discoverFeeds(html: string, pageUrl: string): Feed.Discovery[] {
 		found.push(discovery);
 	}
 
-	return dedupeBy(found, (discovery) => discovery.url);
+	return preferTypedJSON(dedupeBy(found, (discovery) => discovery.url));
+}
+
+/**
+ * Drops the generically typed JSON candidates once a page names a JSON Feed one,
+ * which is the preference JSON Feed asks a discovering app to apply: anything at
+ * all is served as `application/json`, so it stands in only when nothing better does.
+ */
+function preferTypedJSON(found: Feed.Discovery[]): Feed.Discovery[] {
+	if (!found.some((discovery) => discovery.type === JSON_FEED_TYPE)) return found;
+	return found.filter((discovery) => discovery.type !== JSON_TYPE);
 }
 
 /**

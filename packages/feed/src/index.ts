@@ -1,7 +1,7 @@
 /**
- * One feed API over both syndication formats. Sniffs a document's root element to
- * pick a parser, normalizes RSS and Atom into a single shape, and owns the two
- * concerns neither format package should carry: conditional requests and discovery.
+ * One feed API over every syndication format. Sniffs a document to pick a parser,
+ * normalizes RSS, Atom and JSON Feed into a single shape, and owns the two
+ * concerns no format package should carry: conditional requests and discovery.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,10 +13,11 @@ import { failure, isFailure, success } from "@sdxc/result";
 import { XML } from "@sdxc/xml";
 
 import { buildConditionalHeaders, readValidators } from "./lib/conditional.js";
-import { discoverFeeds } from "./lib/discover.js";
+import { discoverFeeds, JSON_FEED_TYPE, mediaTypeOf } from "./lib/discover.js";
 import { fromAtom } from "./lib/from-atom.js";
+import { fromJSONFeed } from "./lib/from-json-feed.js";
 import { fromRSS } from "./lib/from-rss.js";
-import { sniff } from "./lib/sniff.js";
+import { looksLikeJSON, sniff } from "./lib/sniff.js";
 
 /** Raised when a document is a recognized format but cannot be read. */
 export class FeedParseError extends Error {
@@ -35,7 +36,7 @@ export class FeedFetchError extends Error {
 
 export namespace Feed {
 	/** The syndication formats this package reads. */
-	export type Format = "rss" | "atom";
+	export type Format = "rss" | "atom" | "json";
 
 	/** Whoever a post is attributed to. */
 	export interface Author {
@@ -60,6 +61,8 @@ export namespace Feed {
 		summary?: string;
 		/** The body as HTML, unsanitized, exactly as the publisher wrote it. */
 		contentHtml?: string;
+		/** The body as plain text, which rendering as markup means escaping first. */
+		contentText?: string;
 		author?: Author;
 		authors?: Author[];
 		categories?: string[];
@@ -225,9 +228,29 @@ export class Feed {
 	}
 
 	/**
-	 * Parses feed XML text in either format.
+	 * Reads a feed out of an already-parsed JSON value, for a caller that parsed
+	 * the text for some other purpose first.
 	 *
-	 * @param source - The raw XML text
+	 * @param value - The parsed JSON value
+	 * @param options - The document URL, used to resolve relative links
+	 * @returns The feed, or the reason the value is not one
+	 */
+	static fromJSON(
+		value: unknown,
+		options: Feed.ParseOptions = {},
+	): Result<Feed, FeedParseError | FeedFormatError> {
+		let url = options.url === undefined ? undefined : String(options.url);
+
+		let data = fromJSONFeed(value, url);
+		if (isFailure(data)) return data;
+
+		return success(new Feed(data.data));
+	}
+
+	/**
+	 * Parses feed text in any format this package reads.
+	 *
+	 * @param source - The raw feed text, JSON or XML
 	 * @param options - The document URL, used to resolve relative links
 	 * @returns The feed, or the reason the text is not one
 	 */
@@ -235,6 +258,17 @@ export class Feed {
 		source: string,
 		options: Feed.ParseOptions = {},
 	): Result<Feed, FeedParseError | FeedFormatError> {
+		if (looksLikeJSON(source)) {
+			let value: unknown;
+			try {
+				value = JSON.parse(source);
+			} catch (error) {
+				return failure(new FeedParseError(`Failed to parse JSON: ${describe(error)}`));
+			}
+
+			return Feed.fromJSON(value, options);
+		}
+
 		let parsed = XML.parse(source);
 		if (isFailure(parsed)) return failure(new FeedParseError(parsed.error.message));
 		return Feed.fromXML(parsed.data, options);
@@ -295,6 +329,10 @@ export class Feed {
 	 * A URL that is itself a feed resolves without a second request. Anything else
 	 * is read as HTML and its `<link rel="alternate">` elements are followed.
 	 *
+	 * Among the JSON candidates a page advertises, `application/feed+json` wins
+	 * outright: `application/json` is what a page uses for anything at all, and is
+	 * taken as a feed only when the page names no better-typed one.
+	 *
 	 * @param input - A feed URL or the address of a page that advertises one
 	 * @param options - Additional request options
 	 * @returns The feeds found, in document order, or the reason none could be
@@ -320,13 +358,16 @@ export class Feed {
 		let url = response.url || String(input);
 		let text = await response.text();
 
+		if (looksLikeJSON(text)) {
+			let feed = Feed.parse(text, { url });
+			if (!isFailure(feed)) return success([{ url, type: JSON_FEED_TYPE }]);
+			return success([]);
+		}
+
 		let parsed = XML.parse(text);
 		if (!isFailure(parsed)) {
 			let format = sniff(parsed.data);
-			if (!isFailure(format)) {
-				let type = format.data === "atom" ? "application/atom+xml" : "application/rss+xml";
-				return success([{ url, type }]);
-			}
+			if (!isFailure(format)) return success([{ url, type: mediaTypeOf(format.data) }]);
 		}
 
 		return success(discoverFeeds(text, url));

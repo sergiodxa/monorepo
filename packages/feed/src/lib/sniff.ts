@@ -1,7 +1,8 @@
 /**
- * Decides which format a document is written in by looking at its root element,
- * because the `Content-Type` a feed is served under is not evidence: feeds arrive
- * as `text/xml`, `application/octet-stream`, and worse.
+ * Decides which format a document is written in by looking at the document, first
+ * at the shape of its text and then at its root element, because the `Content-Type`
+ * a feed is served under is not evidence: feeds arrive as `text/xml`,
+ * `application/octet-stream`, and worse.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,8 +22,23 @@ import { localName, readNamespaces } from "./utils.js";
 /** The namespace an Atom document's root element must resolve to. */
 const ATOM_NAMESPACE = "http://www.w3.org/2005/Atom";
 
+/** Leading bytes that carry no meaning: a byte order mark and whitespace. */
+const LEADING_NOISE = /^[\uFEFF\s]+/;
+
 /**
- * Identifies the format of a parsed document.
+ * Reports whether text is a JSON object, which is the fork between the JSON and
+ * the XML parser. A JSON Feed is always an object, so an array or a bare scalar
+ * is no more a feed than markup would be.
+ *
+ * @param source - The raw document text
+ * @returns `true` when the text opens a JSON object
+ */
+export function looksLikeJSON(source: string): boolean {
+	return source.replace(LEADING_NOISE, "").startsWith("{");
+}
+
+/**
+ * Identifies the format of a parsed XML document.
  *
  * @param xml - The parsed document
  * @returns The format, or the reason it is not one this package reads

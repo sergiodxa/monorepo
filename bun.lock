@@ -426,6 +426,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@sdxc/atom": "workspace:*",
+        "@sdxc/json-feed": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/rss": "workspace:*",
         "@sdxc/xml": "workspace:*",
@@ -559,6 +560,13 @@
         "remix",
         "vitest",
       ],
+    },
+    "packages/json-feed": {
+      "name": "@sdxc/json-feed",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+      },
     },
     "packages/jwt": {
       "name": "@sdxc/jwt",
@@ -1493,6 +1501,8 @@
     "@sdxc/icons": ["@sdxc/icons@workspace:packages/icons"],
 
     "@sdxc/jobs": ["@sdxc/jobs@workspace:packages/jobs"],
+
+    "@sdxc/json-feed": ["@sdxc/json-feed@workspace:packages/json-feed"],
 
     "@sdxc/jwt": ["@sdxc/jwt@workspace:packages/jwt"],
 

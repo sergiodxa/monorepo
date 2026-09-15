@@ -1,5 +1,5 @@
 /**
- * Exercises the façade: that both formats sniff correctly and normalize to one
+ * Exercises the façade: that every format sniffs correctly and normalizes to one
  * shape, that a conditional request reports a 304 without parsing, and that
  * discovery finds a feed from a page or from the feed URL itself.
  *
@@ -15,6 +15,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 import { Feed } from "./index.js";
 
 let FEED_URL = "https://example.com/feed.xml";
+let JSON_URL = "https://example.com/feed.json";
 let PAGE_URL = "https://example.com/";
 
 let server = setupServer();
@@ -23,7 +24,7 @@ beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-/** The same feed in both formats, so normalization can be compared field by field. */
+/** The same feed in every format, so normalization can be compared field by field. */
 let RSS_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
 	<channel>
@@ -75,6 +76,43 @@ let ATOM_XML = `<?xml version="1.0" encoding="UTF-8"?>
 	</entry>
 </feed>`;
 
+let JSON_FEED = JSON.stringify({
+	version: "https://jsonfeed.org/version/1.1",
+	title: "Example Feed",
+	home_page_url: "https://example.com/",
+	feed_url: JSON_URL,
+	description: "An example",
+	language: "en-us",
+	icon: "https://example.com/logo.png",
+	items: [
+		{
+			id: "post-1",
+			url: "https://example.com/posts/hello",
+			title: "Hello World",
+			summary: "A short summary",
+			content_html: "<p>Full post content</p>",
+			authors: [{ name: "Ada Lovelace" }],
+			tags: ["greeting"],
+			date_published: "2026-04-14T09:00:00Z",
+			date_modified: "2026-04-14T11:00:00Z",
+			attachments: [
+				{
+					url: "https://example.com/posts/hello.mp3",
+					mime_type: "audio/mpeg",
+					size_in_bytes: 12_345,
+				},
+			],
+		},
+	],
+});
+
+/** Each format's document beside the URL it is published at. */
+let DOCUMENTS = [
+	{ format: "rss", source: RSS_XML, url: FEED_URL },
+	{ format: "atom", source: ATOM_XML, url: FEED_URL },
+	{ format: "json", source: JSON_FEED, url: JSON_URL },
+];
+
 describe("Feed.parse", () => {
 	test("sniffs and reads an RSS document", () => {
 		let result = Feed.parse(RSS_XML, { url: FEED_URL });
@@ -94,39 +132,60 @@ describe("Feed.parse", () => {
 		expect(result.data.title).toBe("Example Feed");
 	});
 
-	test("normalizes both formats to the same feed-level shape", () => {
-		let rss = Feed.parse(RSS_XML, { url: FEED_URL });
-		let atom = Feed.parse(ATOM_XML, { url: FEED_URL });
-		if (!isSuccess(rss) || !isSuccess(atom)) throw new Error("expected both to parse");
+	test("sniffs and reads a JSON Feed document", () => {
+		let result = Feed.parse(JSON_FEED, { url: JSON_URL });
+		expect(isSuccess(result)).toBe(true);
+		if (!isSuccess(result)) return;
 
-		for (let feed of [rss.data, atom.data]) {
+		expect(result.data.format).toBe("json");
+		expect(result.data.title).toBe("Example Feed");
+	});
+
+	test("normalizes every format to the same feed-level shape", () => {
+		for (let { format, source, url } of DOCUMENTS) {
+			let result = Feed.parse(source, { url });
+			if (!isSuccess(result)) throw new Error(`expected ${format} to parse`);
+
+			let feed = result.data;
 			expect(feed.title).toBe("Example Feed");
 			expect(feed.description).toBe("An example");
 			expect(feed.siteUrl).toBe("https://example.com/");
-			expect(feed.feedUrl).toBe("https://example.com/feed.xml");
+			expect(feed.feedUrl).toBe(url);
 			expect(feed.language).toBe("en-us");
 			expect(feed.imageUrl).toBe("https://example.com/logo.png");
+			expect(feed.updatedAt?.toISOString()).toBe("2026-04-14T11:00:00.000Z");
 		}
 	});
 
-	test("normalizes both formats to the same item shape", () => {
-		let rss = Feed.parse(RSS_XML, { url: FEED_URL });
-		let atom = Feed.parse(ATOM_XML, { url: FEED_URL });
-		if (!isSuccess(rss) || !isSuccess(atom)) throw new Error("expected both to parse");
+	test("normalizes every format to the same item shape", () => {
+		for (let { format, source, url } of DOCUMENTS) {
+			let result = Feed.parse(source, { url });
+			if (!isSuccess(result)) throw new Error(`expected ${format} to parse`);
 
-		for (let feed of [rss.data, atom.data]) {
-			let item = feed.items[0];
+			let item = result.data.items[0];
 			expect(item?.guid).toBe("post-1");
 			expect(item?.title).toBe("Hello World");
 			expect(item?.url).toBe("https://example.com/posts/hello");
 			expect(item?.summary).toBe("A short summary");
 			expect(item?.contentHtml).toBe("<p>Full post content</p>");
-			expect(item?.author).toEqual({ name: "Ada Lovelace", email: "ada@example.com" });
+			expect(item?.author?.name).toBe("Ada Lovelace");
 			expect(item?.categories).toEqual(["greeting"]);
 			expect(item?.enclosures).toEqual([
 				{ url: "https://example.com/posts/hello.mp3", type: "audio/mpeg", length: 12_345 },
 			]);
 			expect(item?.publishedAt?.toISOString()).toBe("2026-04-14T09:00:00.000Z");
+		}
+	});
+
+	test("reads the author's address from the mailbox the XML formats carry", () => {
+		for (let source of [RSS_XML, ATOM_XML]) {
+			let result = Feed.parse(source, { url: FEED_URL });
+			if (!isSuccess(result)) throw new Error("expected a feed");
+
+			expect(result.data.items[0]?.author).toEqual({
+				name: "Ada Lovelace",
+				email: "ada@example.com",
+			});
 		}
 	});
 
@@ -209,6 +268,93 @@ describe("Feed.parse", () => {
 		if (isFailure(result)) {
 			expect(result.error.message).toBe(`Expected an RSS or Atom document, found "html".`);
 		}
+	});
+});
+
+describe("Feed.parse, on a JSON Feed", () => {
+	test("keeps a plain-text body apart from an HTML one", () => {
+		let result = Feed.parse(
+			JSON.stringify({
+				version: "https://jsonfeed.org/version/1.1",
+				title: "Microblog",
+				items: [{ id: "1", content_text: "Cats are neat." }],
+			}),
+		);
+
+		if (!isSuccess(result)) throw new Error("expected a feed");
+		expect(result.data.items[0]?.contentText).toBe("Cats are neat.");
+		expect(result.data.items[0]?.contentHtml).toBeUndefined();
+	});
+
+	test("falls back to the feed's authors, including the single one 1.0 wrote", () => {
+		let result = Feed.parse(
+			JSON.stringify({
+				version: "https://jsonfeed.org/version/1",
+				title: "Old Blog",
+				author: { name: "Feed Author", url: "https://example.com/author" },
+				items: [{ id: "1", content_text: "Hi" }],
+			}),
+		);
+
+		if (!isSuccess(result)) throw new Error("expected a feed");
+		expect(result.data.items[0]?.author).toEqual({
+			name: "Feed Author",
+			url: "https://example.com/author",
+		});
+	});
+
+	test("links an item through its id when the id is a URL, as the format advises", () => {
+		let result = Feed.parse(
+			JSON.stringify({
+				version: "https://jsonfeed.org/version/1.1",
+				title: "Blog",
+				items: [{ id: "https://example.com/posts/hello", content_text: "Hi" }],
+			}),
+		);
+
+		if (!isSuccess(result)) throw new Error("expected a feed");
+		expect(result.data.items[0]?.url).toBe("https://example.com/posts/hello");
+	});
+
+	test("resolves relative links against the document URL", () => {
+		let result = Feed.parse(
+			JSON.stringify({
+				version: "https://jsonfeed.org/version/1.1",
+				title: "Blog",
+				home_page_url: "/",
+				items: [{ id: "1", url: "/posts/one", content_text: "Hi" }],
+			}),
+			{ url: JSON_URL },
+		);
+
+		if (!isSuccess(result)) throw new Error("expected a feed");
+		expect(result.data.siteUrl).toBe("https://example.com/");
+		expect(result.data.items[0]?.url).toBe("https://example.com/posts/one");
+	});
+
+	test("names JSON that declares no feed version", () => {
+		let result = Feed.parse(JSON.stringify({ title: "An API response" }));
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) {
+			expect(result.error.name).toBe("FeedFormatError");
+			expect(result.error.message).toBe("Expected a JSON Feed document.");
+		}
+	});
+
+	test("reports text that opens as JSON and is not", () => {
+		let result = Feed.parse("{ not json");
+
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) expect(result.error.name).toBe("FeedParseError");
+	});
+
+	test("reads a value that was parsed for some other purpose first", () => {
+		let result = Feed.fromJSON(JSON.parse(JSON_FEED), { url: JSON_URL });
+
+		if (!isSuccess(result)) throw new Error("expected a feed");
+		expect(result.data.format).toBe("json");
+		expect(result.data.items[0]?.guid).toBe("post-1");
 	});
 });
 
@@ -296,6 +442,20 @@ describe("Feed.fetch", () => {
 		if (isFailure(result)) expect(result.error.message).toBe("Failed to fetch feed: 500");
 	});
 
+	test("retrieves a JSON Feed under the media type the format defines", async () => {
+		server.use(
+			http.get(JSON_URL, () =>
+				HttpResponse.text(JSON_FEED, { headers: { "content-type": "application/feed+json" } }),
+			),
+		);
+
+		let result = await Feed.fetch(JSON_URL);
+		if (!isSuccess(result) || result.data.notModified) throw new Error("expected a feed");
+
+		expect(result.data.feed.format).toBe("json");
+		expect(result.data.feed.title).toBe("Example Feed");
+	});
+
 	test("reports a transport failure rather than throwing", async () => {
 		server.use(http.get(FEED_URL, () => HttpResponse.error()));
 
@@ -379,6 +539,76 @@ describe("Feed.discover", () => {
 		expect(result.data).toEqual([
 			{ url: "https://example.com/feed.xml", type: "application/rss+xml" },
 		]);
+	});
+
+	test("finds the JSON Feed a page advertises", async () => {
+		server.use(
+			http.get(PAGE_URL, () =>
+				HttpResponse.html(
+					`<html><head>
+						<link rel="alternate" type="application/feed+json" title="JSON" href="/feed.json">
+					</head></html>`,
+				),
+			),
+		);
+
+		let result = await Feed.discover(PAGE_URL);
+		if (!isSuccess(result)) throw new Error("expected a discovery");
+
+		expect(result.data).toEqual([{ url: JSON_URL, type: "application/feed+json", title: "JSON" }]);
+	});
+
+	test("prefers the JSON Feed media type over the generic one", async () => {
+		server.use(
+			http.get(PAGE_URL, () =>
+				HttpResponse.html(
+					`<html><head>
+						<link rel="alternate" type="application/json" href="/other.json">
+						<link rel="alternate" type="application/feed+json" href="/feed.json">
+					</head></html>`,
+				),
+			),
+		);
+
+		let result = await Feed.discover(PAGE_URL);
+		if (!isSuccess(result)) throw new Error("expected a discovery");
+
+		expect(result.data).toEqual([{ url: JSON_URL, type: "application/feed+json" }]);
+	});
+
+	test("accepts the generic JSON type when a page names no better-typed feed", async () => {
+		server.use(
+			http.get(PAGE_URL, () =>
+				HttpResponse.html(
+					`<html><head>
+						<link rel="alternate" type="application/json" href="/feed.json">
+					</head></html>`,
+				),
+			),
+		);
+
+		let result = await Feed.discover(PAGE_URL);
+		if (!isSuccess(result)) throw new Error("expected a discovery");
+
+		expect(result.data).toEqual([{ url: JSON_URL, type: "application/json" }]);
+	});
+
+	test("treats a URL that is already a JSON Feed as the answer", async () => {
+		server.use(http.get(JSON_URL, () => HttpResponse.text(JSON_FEED)));
+
+		let result = await Feed.discover(JSON_URL);
+		if (!isSuccess(result)) throw new Error("expected a discovery");
+
+		expect(result.data).toEqual([{ url: JSON_URL, type: "application/feed+json" }]);
+	});
+
+	test("finds nothing at a URL serving JSON that is not a feed", async () => {
+		server.use(http.get(JSON_URL, () => HttpResponse.json({ ok: true })));
+
+		let result = await Feed.discover(JSON_URL);
+		if (!isSuccess(result)) throw new Error("expected a discovery");
+
+		expect(result.data).toEqual([]);
 	});
 
 	test("finds nothing on a page that advertises nothing", async () => {

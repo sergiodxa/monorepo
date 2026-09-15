@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/feed",
 	"version": "0.0.1",
-	"description": "One feed API over RSS and Atom, with conditional fetching and autodiscovery",
+	"description": "One feed API over RSS, Atom and JSON Feed, with conditional fetching and autodiscovery",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
@@ -12,6 +12,7 @@
 	},
 	"dependencies": {
 		"@sdxc/atom": "workspace:*",
+		"@sdxc/json-feed": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/rss": "workspace:*",
 		"@sdxc/xml": "workspace:*"
