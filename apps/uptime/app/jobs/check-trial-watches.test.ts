@@ -28,6 +28,7 @@ import { MAIL_FROM } from "~/app/emails/sender";
 import { TrialChangeEmail } from "~/app/emails/trial-change";
 import { TrialWeeklyDigestEmail } from "~/app/emails/trial-weekly-digest";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { installFlags } from "~/app/lib/test/flags";
 import { trialWatches } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -89,6 +90,7 @@ async function runJob(db: Database) {
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.checkTrialWatches, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	await installFlags(ctx);
 	ctx.set(JobMailer, new Mailer({ transport, from: MAIL_FROM }), { property: "mailer" });
 
 	await checkTrialWatches(ctx);

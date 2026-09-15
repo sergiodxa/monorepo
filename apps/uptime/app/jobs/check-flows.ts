@@ -24,6 +24,7 @@ import TeamDomain from "~/app/data/team-domain";
 import jobs from "~/app/jobs";
 import { polar } from "~/app/lib/billing";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
+import { features } from "~/app/lib/flags";
 import { enqueueNotifications } from "~/app/lib/notify-queue";
 import { shouldNotifyFlowResult } from "~/app/services/alerts";
 import { writePingResult } from "~/app/services/analytics";
@@ -66,8 +67,11 @@ export default createJobHandler(jobs.checkFlows, async (ctx) => {
 	let successCount = 0;
 	let errorCount = 0;
 
-	let settled = await mapWithConcurrency(monitors, (monitor) =>
-		check(ctx.database, monitor, verifiedDomains.get(monitor.team_id) ?? []),
+	let concurrency = await ctx.flags.get(features.sweepConcurrency);
+	let settled = await mapWithConcurrency(
+		monitors,
+		(monitor) => check(ctx.database, monitor, verifiedDomains.get(monitor.team_id) ?? []),
+		concurrency,
 	);
 
 	for (let outcome of settled) {

@@ -11,6 +11,7 @@
 import type { JobDispatcherContext } from "@sdxc/jobs";
 import type { AnyJobDefinition } from "@sdxc/jobs";
 
+import featureFlags from "@sdxc/flags/middleware/dispatcher";
 import { createJobDispatcher } from "@sdxc/jobs";
 import { createUptimeReporter } from "@sdxc/jobs/uptime";
 import { env } from "cloudflare:workers";
@@ -20,6 +21,7 @@ import { admin } from "~/app/jobs/middleware/admin";
 import { costLedger } from "~/app/jobs/middleware/cost-ledger";
 import { database } from "~/app/jobs/middleware/database";
 import { mailer } from "~/app/jobs/middleware/mailer";
+import { flags } from "~/app/lib/flags";
 import { jobQueue } from "~/app/lib/queue";
 import { logger } from "~/bootstrap/logger";
 
@@ -74,8 +76,18 @@ export const dispatcher = createJobDispatcher({
 	/**
 	 * The ledger is outermost so it counts the database the middleware inside it opens,
 	 * along with everything the handler then does through it.
+	 *
+	 * The flags come last because they cost nothing to publish: the subject is the job's
+	 * own name, so a rule scopes a knob to the sweep being measured rather than to every
+	 * sweep at once.
 	 */
-	middleware: [costLedger(), database(), mailer(), admin()],
+	middleware: [
+		costLedger(),
+		database(),
+		mailer(),
+		admin(),
+		featureFlags(flags, { context: (ctx) => ({ targetingKey: ctx.name }) }),
+	],
 });
 
 dispatcher.map(jobs.enqueueDueChecks, () => import("~/app/jobs/enqueue-due-checks"));

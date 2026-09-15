@@ -33,6 +33,7 @@ import { Database as JobDatabase } from "~/app/jobs/middleware/database";
 import { Mailer as JobMailer } from "~/app/jobs/middleware/mailer";
 import sendTrialDigests from "~/app/jobs/send-trial-digests";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { installFlags } from "~/app/lib/test/flags";
 import { leads, trialWatches } from "~/database/schema";
 
 const MS_PER_HOUR = 60 * 60 * 1000;
@@ -53,6 +54,7 @@ async function runJob(db: Database, options: { transport?: Transport } = {}) {
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.sendTrialDigests, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	await installFlags(ctx);
 	ctx.set(JobMailer, new Mailer({ transport: options.transport ?? transport, from: MAIL_FROM }), {
 		property: "mailer",
 	});

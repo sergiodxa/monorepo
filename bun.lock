@@ -224,6 +224,8 @@
         "@sdxc/crypto": "workspace:*",
         "@sdxc/data-table-d1": "workspace:*",
         "@sdxc/dates": "workspace:*",
+        "@sdxc/flags": "workspace:*",
+        "@sdxc/flags-engine": "workspace:*",
         "@sdxc/highlight": "workspace:*",
         "@sdxc/http": "workspace:*",
         "@sdxc/i18n": "workspace:*",

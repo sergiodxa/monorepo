@@ -24,6 +24,7 @@ import type { InsertFlowMonitor } from "~/database/schema";
 import FlowMonitor from "~/app/data/flow-monitor";
 import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { installFlags } from "~/app/lib/test/flags";
 
 /** A run whose every test passed, which is the neutral result each case narrows from. */
 function passing(overrides: Partial<FlowCheckResult> = {}): FlowCheckResult {
@@ -109,6 +110,7 @@ async function runJob(db: Database) {
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.checkFlows, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	await installFlags(ctx);
 
 	await checkFlows(ctx);
 	log.emit();

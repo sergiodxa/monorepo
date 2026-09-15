@@ -16,6 +16,10 @@ import {
 	createEnv,
 	createRateLimit,
 } from "@sdxc/cloudflare-mocks";
+import { createEngine } from "@sdxc/flags-engine";
+import { EngineProvider } from "@sdxc/flags-engine/provider";
+import { InMemoryFlagStore } from "@sdxc/flags-engine/store/memory";
+import featureFlags from "@sdxc/flags/middleware/router";
 import { TypeID } from "@sdxc/typeid";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -28,6 +32,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
+import { FLAG_SET, flags } from "~/app/lib/flags";
 import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
 import {
@@ -177,13 +182,21 @@ async function createCaller(db: Db) {
  * Sends a ping request through the router. The handler defers its billing ingest
  * under `waitUntil`, so this drains it explicitly before returning, letting
  * assertions observe the billed event.
+ *
+ * The flags middleware is installed with no context callback: the endpoint names its
+ * own subject on the evaluation, so the request level has nothing to add.
  */
 async function dispatch(
 	db: Db,
 	request: { key?: string; body?: Record<string, unknown> | unknown[] },
 ) {
 	let router = createRouter({
-		middleware: [asyncContext(), database(() => db), billing({ provider: () => testBilling })],
+		middleware: [
+			asyncContext(),
+			database(() => db),
+			billing({ provider: () => testBilling }),
+			featureFlags(flags),
+		],
 	});
 	router.map(routes.api.v1.ping, pingCreate);
 
@@ -282,6 +295,66 @@ describe("POST /api/v1/ping authentication", () => {
 		expect(response.status).toBe(403);
 		expect((await errorBody(response)).error.code).toBe("FORBIDDEN");
 		expect(doFetchMock).not.toHaveBeenCalled();
+	});
+});
+
+/** Points the app's instance at `set`, for a test that needs a flag answered differently. */
+async function serveFlags(set: typeof FLAG_SET) {
+	await flags.setProvider(new EngineProvider(createEngine({ store: new InMemoryFlagStore(set) })));
+}
+
+describe("POST /api/v1/ping availability", () => {
+	/** Restores the shipped definitions, which every other test here evaluates against. */
+	afterEach(() => serveFlags(FLAG_SET));
+
+	/**
+	 * The switch is read before the body is, so a refusal costs nothing: no probe, no
+	 * data point, no billed ping — and no validation of a body nobody will act on.
+	 */
+	test("returns 503 when the endpoint's flag serves off", async () => {
+		await serveFlags({
+			flags: { "adhoc-ping-api": { variants: { off: false }, defaultVariant: "off" } },
+		});
+
+		let { db } = createTestDatabase();
+		let { key } = await createCaller(db);
+
+		let response = await dispatch(db, {
+			key,
+			body: { type: "http", url: "https://example.com" },
+		});
+
+		expect(response.status).toBe(503);
+		expect((await errorBody(response)).error.code).toBe("ENDPOINT_UNAVAILABLE");
+		expect(doFetchMock).not.toHaveBeenCalled();
+		expect(pingResults.dataPoints).toHaveLength(0);
+		expect(await billedEvents(testBilling)).toHaveLength(0);
+	});
+
+	/** A rule naming one team is what takes the endpoint away from a single caller. */
+	test("refuses only the team a targeting rule names", async () => {
+		let { db } = createTestDatabase();
+		let { team, key } = await createCaller(db);
+
+		await serveFlags({
+			flags: {
+				"adhoc-ping-api": {
+					variants: { on: true, off: false },
+					defaultVariant: "on",
+					targeting: [{ when: { op: "eq", field: "team.slug", value: team.slug }, serve: "off" }],
+				},
+			},
+		});
+
+		let refused = await dispatch(db, { key, body: { type: "http", url: "https://example.com" } });
+		expect(refused.status).toBe(503);
+
+		let other = await createCaller(db);
+		let served = await dispatch(db, {
+			key: other.key,
+			body: { type: "http", url: "https://example.com" },
+		});
+		expect(served.status).toBe(200);
 	});
 });
 

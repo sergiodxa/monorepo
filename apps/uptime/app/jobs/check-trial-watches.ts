@@ -31,6 +31,7 @@ import { TrialChangeEmail } from "~/app/emails/trial-change";
 import { TrialWeeklyDigestEmail } from "~/app/emails/trial-weekly-digest";
 import jobs from "~/app/jobs";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
+import { features } from "~/app/lib/flags";
 import { trialProbeOptions } from "~/app/lib/trial-probe";
 import { segmentsOver, watchStats } from "~/app/lib/trial-report";
 import { recordCost } from "~/app/services/cost";
@@ -83,7 +84,12 @@ export default createJobHandler(jobs.checkTrialWatches, async (ctx) => {
 	 * attribution, keeping it distinguishable from a team's own direct spend.
 	 */
 
-	let settled = await mapWithConcurrency(watches, (watch) => check(ctx, ctx.mailer, watch, now));
+	let concurrency = await ctx.flags.get(features.sweepConcurrency);
+	let settled = await mapWithConcurrency(
+		watches,
+		(watch) => check(ctx, ctx.mailer, watch, now),
+		concurrency,
+	);
 
 	let probed = 0;
 	let changed = 0;

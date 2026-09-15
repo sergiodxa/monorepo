@@ -34,6 +34,7 @@ import { Mailer as JobMailer } from "~/app/jobs/middleware/mailer";
 import sendTeamDailyDigests from "~/app/jobs/send-team-daily-digests";
 import sendTeamWeeklyDigests from "~/app/jobs/send-team-weekly-digests";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { installFlags } from "~/app/lib/test/flags";
 import {
 	flowMonitors,
 	memberships,
@@ -96,6 +97,7 @@ async function runJob(db: Database, period: DigestPeriod, options: { transport?:
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(job, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	await installFlags(ctx);
 	ctx.set(JobMailer, new Mailer({ transport: options.transport ?? transport, from: MAIL_FROM }), {
 		property: "mailer",
 	});

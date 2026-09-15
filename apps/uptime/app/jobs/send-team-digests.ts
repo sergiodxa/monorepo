@@ -30,6 +30,7 @@ import { teamDigestDashboardUrl, teamDigestPreferencesUrl } from "~/app/emails/s
 import { TeamDailyDigestEmail } from "~/app/emails/team-daily-digest";
 import { TeamWeeklyDigestEmail } from "~/app/emails/team-weekly-digest";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
+import { features } from "~/app/lib/flags";
 import { formatUptime, worstStatus } from "~/app/lib/uptime-report";
 import { apportionCostByTeam, recordCost } from "~/app/services/cost";
 import { resolveSubjects } from "~/app/services/subjects";
@@ -116,16 +117,20 @@ export async function sendTeamDigests(ctx: CurrentJobContext, period: DigestPeri
 		),
 	]);
 
-	let settled = await mapWithConcurrency([...byTeam], ([teamId, members]) =>
-		digestTeam(ctx, ctx.mailer, {
-			period,
-			window: reported,
-			now,
-			members,
-			team: teams.get(teamId) ?? null,
-			profiles,
-			preferences,
-		}),
+	let concurrency = await ctx.flags.get(features.sweepConcurrency);
+	let settled = await mapWithConcurrency(
+		[...byTeam],
+		([teamId, members]) =>
+			digestTeam(ctx, ctx.mailer, {
+				period,
+				window: reported,
+				now,
+				members,
+				team: teams.get(teamId) ?? null,
+				profiles,
+				preferences,
+			}),
+		concurrency,
 	);
 
 	let sent = 0;

@@ -30,6 +30,7 @@ import TcpMonitor from "~/app/data/tcp-monitor";
 import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { installFlags } from "~/app/lib/test/flags";
 import { tcpMonitors, teams } from "~/database/schema";
 
 let checkTcpConnectionMock = vi.fn(
@@ -93,6 +94,7 @@ async function runJob(db: Database) {
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.checkTcp, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	await installFlags(ctx);
 	ctx.set(JobMailer, new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }), {
 		property: "mailer",
 	});

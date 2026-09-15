@@ -16,6 +16,7 @@
 import type { Middleware } from "remix/router";
 
 import billing from "@sdxc/billing/middleware";
+import featureFlags from "@sdxc/flags/middleware/router";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { log } from "@sdxc/logger/middleware";
 import { CloudflareTransport } from "@sdxc/mail/cloudflare";
@@ -221,7 +222,7 @@ import trialUnsubscribe from "~/app/http/controllers/trial/unsubscribe";
 import trust from "~/app/http/controllers/trust";
 import polarWebhook from "~/app/http/controllers/webhooks/polar";
 import { attribution } from "~/app/http/middleware/attribution";
-import auth from "~/app/http/middleware/auth";
+import auth, { getViewer } from "~/app/http/middleware/auth";
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import requireRole from "~/app/http/middleware/require-role";
@@ -231,6 +232,7 @@ import { createSessionMiddleware } from "~/app/http/middleware/session";
 import { createHtmlRenderer } from "~/app/http/render";
 import { polar } from "~/app/lib/billing";
 import { createDatabase } from "~/app/lib/database";
+import { flags } from "~/app/lib/flags";
 import { logger } from "~/bootstrap/logger";
 import routes from "~/routes/web";
 
@@ -307,6 +309,13 @@ export default function application(options: application.Options) {
 		billing({ provider: polar }),
 		createSessionMiddleware(options.kv, options.cookieSecret, options.secure) as Middleware,
 		auth as Middleware,
+		/**
+		 * Publishes `ctx.flags` on every surface, machine ones included — the ad-hoc
+		 * ping endpoint reads a flag before it reads a body. The subject is the
+		 * signed-in viewer, so it stays after the auth guard; an endpoint whose
+		 * subject is the team names that team on the evaluation itself.
+		 */
+		featureFlags(flags, { context: () => ({ targetingKey: getViewer()?.id }) }) as Middleware,
 		/**
 		 * Stays after the session middleware, whose stored language it reads.
 		 * Wrapped in `htmlOnly` because resolving a language and building an

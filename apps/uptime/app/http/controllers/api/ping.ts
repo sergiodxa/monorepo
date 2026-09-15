@@ -10,7 +10,7 @@
 import type { Adapter, RateLimiterBinding } from "@sdxc/rate-limit";
 import type { Middleware } from "remix/router";
 
-import { BadRequest, PaymentRequired } from "@sdxc/http/status-code";
+import { BadRequest, PaymentRequired, ServiceUnavailable } from "@sdxc/http/status-code";
 import { CloudflareAdapter, MemoryAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 import { isFailure } from "@sdxc/result";
@@ -28,6 +28,7 @@ import type { PingStatus } from "~/app/services/analytics";
 import Subscription from "~/app/data/subscription";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { DNS_RECORD_TYPES } from "~/app/lib/dns-record-value";
+import { features } from "~/app/lib/flags";
 import { recordAdhocPing } from "~/app/services/adhoc-ping";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import { apportionCostByTeam } from "~/app/services/cost";
@@ -175,6 +176,19 @@ const limitByApiKey: Middleware = (context, next) => {
 export default createAction(routes.api.v1.ping, {
 	middleware: [requireApiKey("ping:trigger"), limitByApiKey],
 	handler: async (ctx) => {
+		/**
+		 * The endpoint's own switch, read before the body is: a team it is off for gets
+		 * the same answer whatever it sent. The team is the subject, so a rule naming
+		 * `team.slug` closes the endpoint to one caller rather than to every caller.
+		 */
+		let available = await ctx.flags.get(features.adhocPingApi, {
+			context: { targetingKey: ctx.apiTeam.id, team: { slug: ctx.apiTeam.slug } },
+		});
+
+		if (!available) {
+			return apiError("ENDPOINT_UNAVAILABLE", "Ad-hoc pings are unavailable", ServiceUnavailable);
+		}
+
 		let parsed = await validate(ctx.request, PingSchema);
 		if (isFailure(parsed)) {
 			return apiError(

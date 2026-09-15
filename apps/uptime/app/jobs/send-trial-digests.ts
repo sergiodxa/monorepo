@@ -23,6 +23,7 @@ import { emailTranslator } from "~/app/emails/locale";
 import { TrialDailyDigestEmail } from "~/app/emails/trial-daily-digest";
 import jobs from "~/app/jobs";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
+import { features } from "~/app/lib/flags";
 import { segmentsOver } from "~/app/lib/trial-report";
 import { formatUptime } from "~/app/lib/uptime-report";
 import { recordCost } from "~/app/services/cost";
@@ -52,7 +53,12 @@ export default createJobHandler(jobs.sendTrialDigests, async (ctx) => {
 	 * account, since naming a team id here would misattribute it as `direct` spend.
 	 */
 
-	let settled = await mapWithConcurrency(leads, (lead) => digest(ctx, ctx.mailer, lead, now));
+	let concurrency = await ctx.flags.get(features.sweepConcurrency);
+	let settled = await mapWithConcurrency(
+		leads,
+		(lead) => digest(ctx, ctx.mailer, lead, now),
+		concurrency,
+	);
 
 	let sent = 0;
 	let skipped = 0;
