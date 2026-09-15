@@ -192,12 +192,6 @@ export default createAction(routes.search, {
 
 							<Timeline
 								entries={entries}
-								/**
-								 * A search reaches every post a reader has, read and unread alike, so the
-								 * mark says which of the two a result is rather than offering to finish a
-								 * post that was finished months ago.
-								 */
-								readAction="toggle"
 								copy={{
 									markRead: ctx.i18next.t("timeline.markRead"),
 									markUnread: ctx.i18next.t("timeline.markUnread"),

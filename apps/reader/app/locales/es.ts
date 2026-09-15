@@ -121,14 +121,42 @@ export default {
 	reading: {
 		title: "Lectura",
 		heading: "Lectura",
-		caughtUp: {
-			title: "Estás al día",
-			description: "Has leído todas las entradas de todos los feeds que sigues.",
+		/** Which of the queue's posts the page holds, named beside the heading. */
+		filter: {
+			label: "Mostrar",
+			all: "Todas",
+			unread: "Sin leer",
+			read: "Leídas",
+		},
+		/**
+		 * An empty queue reads differently under each filter: nothing published, nothing left
+		 * to read, and nothing read so far are three different pieces of news.
+		 */
+		empty: {
+			all: {
+				title: "Todavía no hay nada aquí",
+				description: "Los feeds que sigues no han publicado nada por ahora.",
+			},
+			unread: {
+				title: "Estás al día",
+				description: "Has leído todas las entradas de todos los feeds que sigues.",
+			},
+			read: {
+				title: "Todavía no has leído nada",
+				description: "Las entradas se acumulan aquí según las abres o las marcas como leídas.",
+			},
 		},
 		noFeeds: {
 			title: "Todavía no hay nada que leer",
 			description: "Sigue un sitio que publique RSS o Atom y sus entradas aparecerán aquí.",
 			cta: "Sigue tu primer feed",
+		},
+		/** Said at the end of the list, where the next page arrives as the reader scrolls. */
+		paging: {
+			loading: "Cargando entradas más antiguas…",
+			failed: "No se pudieron cargar esas entradas.",
+			retry: "Reintentar",
+			end: "Has llegado al final.",
 		},
 	},
 

@@ -122,14 +122,42 @@ export default {
 	reading: {
 		title: "Reading",
 		heading: "Reading",
-		caughtUp: {
-			title: "You are all caught up",
-			description: "Every post from every feed you follow has been read.",
+		/** Which of the queue's posts the page holds, named beside the heading. */
+		filter: {
+			label: "Show",
+			all: "All",
+			unread: "Unread",
+			read: "Read",
+		},
+		/**
+		 * An empty queue reads differently under each filter: nothing published, nothing left
+		 * to read, and nothing read so far are three different pieces of news.
+		 */
+		empty: {
+			all: {
+				title: "Nothing here yet",
+				description: "The feeds you follow have published nothing so far.",
+			},
+			unread: {
+				title: "You are all caught up",
+				description: "Every post from every feed you follow has been read.",
+			},
+			read: {
+				title: "Nothing read yet",
+				description: "Posts collect here as you open them or mark them read.",
+			},
 		},
 		noFeeds: {
 			title: "Nothing to read yet",
 			description: "Follow a site that publishes RSS or Atom and its posts land here.",
 			cta: "Follow your first feed",
+		},
+		/** Said at the end of the list, where the next page arrives as the reader scrolls. */
+		paging: {
+			loading: "Loading older posts…",
+			failed: "Those posts could not be loaded.",
+			retry: "Try again",
+			end: "You have reached the end.",
 		},
 	},
 

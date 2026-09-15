@@ -161,15 +161,16 @@ export namespace AppLayout {
 }
 
 /**
- * One navigation link. The page being read wears the app's strongest foreground and the
- * three beside it settle to body copy, which is the pair of shades an unread post and a
- * read one already differ by on every other surface.
+ * One link in a row of them: the app's sections here, and a page's own filters where a
+ * page offers any. The one being read wears the app's strongest foreground and the rest
+ * settle to body copy, which is the pair of shades an unread post and a read one already
+ * differ by on every other surface.
  *
  * The weight stays put across the row for the reason a post's title holds its own: a
- * heavier face is a wider one, so marking a label current would nudge the three beside it
+ * heavier face is a wider one, so marking a label current would nudge the ones beside it
  * along the line. Pointing at a label underlines it, which is what the app's other links do.
  */
-function AppNavLink(handle: Handle<{ href: string; label: string; isCurrent: boolean }>) {
+export function AppNavLink(handle: Handle<{ href: string; label: string; isCurrent: boolean }>) {
 	return () => {
 		let { href, label, isCurrent } = handle.props;
 

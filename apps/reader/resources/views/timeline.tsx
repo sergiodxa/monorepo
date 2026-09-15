@@ -18,7 +18,7 @@
 
 import type { Handle } from "remix/ui";
 
-import { CheckIcon, CircleCheckIcon, CircleIcon, Undo2Icon } from "@sdxc/icons";
+import { CircleCheckIcon, CircleIcon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, borderEdge, colorMix, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
@@ -35,7 +35,7 @@ import {
 } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
 import { bs, is, maxIs, mbs, minIs, mis, p, pb, pi } from "@sdxc/u/size";
-import { hover } from "@sdxc/u/state";
+import { hover, when } from "@sdxc/u/state";
 import { color } from "@sdxc/u/tokens";
 import {
 	leading,
@@ -87,18 +87,6 @@ const ICON_SIZE = 16;
 const TOGGLE_SIZE = "1.75rem";
 
 export namespace Timeline {
-	/**
-	 * What the mark on a post stands for on this surface.
-	 *
-	 * `"toggle"` is a state a post is in and can be put back into: a feed's page holds
-	 * read and unread posts alike, so its mark says which of the two a post is.
-	 *
-	 * `"complete"` is a step a post is carried through: the queue holds what is left to
-	 * read, so its mark says finish this rather than naming a state one post shares with
-	 * every other post on the page.
-	 */
-	export type ReadAction = "toggle" | "complete";
-
 	/** One post, with every piece of it already resolved to the text that is printed. */
 	export interface Entry {
 		id: string;
@@ -142,8 +130,11 @@ export namespace Timeline {
 	export interface Props {
 		entries: Entry[];
 		copy: Copy;
-		/** Which mark the rows wear, which is what the surface does with a post. */
-		readAction: ReadAction;
+		/**
+		 * The `id` the list of rows answers to, which a paging enhancement names to append
+		 * the pages it fetches into. Left off a surface that pages by its links alone.
+		 */
+		listId?: string;
 		/** The page the mark-read form returns to, which is the page being rendered. */
 		returnTo: string;
 		/** The URL of the page holding older and newer posts, or `null` at either end. */
@@ -153,22 +144,15 @@ export namespace Timeline {
 
 /**
  * The mark the control wears, which is one glyph of the app's icon set so every mark on a
- * page belongs together.
- *
- * A toggling surface draws the state: an empty ring for a post still to read, a ticked
- * one for a post already read, so the two differ in outline rather than in shade alone. A
- * completing surface draws the move instead: a tick to carry a post out of the queue, and
- * the arrow that brings one back.
+ * page belongs together. It draws the state the post is in: an empty ring for one still
+ * to read and a ticked ring for one already read, so the two differ in outline rather
+ * than in shade alone.
  */
-function ReadMark(handle: Handle<{ action: Timeline.ReadAction; isRead: boolean }>) {
+function ReadMark(handle: Handle<{ isRead: boolean }>) {
 	return () => {
-		let { action, isRead } = handle.props;
+		let { isRead } = handle.props;
 
-		if (action === "toggle") {
-			return isRead ? <CircleCheckIcon size={ICON_SIZE} /> : <CircleIcon size={ICON_SIZE} />;
-		}
-
-		return isRead ? <Undo2Icon size={ICON_SIZE} /> : <CheckIcon size={ICON_SIZE} />;
+		return isRead ? <CircleCheckIcon size={ICON_SIZE} /> : <CircleIcon size={ICON_SIZE} />;
 	};
 }
 
@@ -229,16 +213,10 @@ function PostTitle(handle: Handle<{ title: string; url: string | null; ping: str
  * through `aria-label` and a pointer through the native tooltip `title` gives.
  */
 function ReadToggle(
-	handle: Handle<{
-		id: string;
-		action: Timeline.ReadAction;
-		isRead: boolean;
-		label: string;
-		returnTo: string;
-	}>,
+	handle: Handle<{ id: string; isRead: boolean; label: string; returnTo: string }>,
 ) {
 	return () => {
-		let { action, id, isRead, label, returnTo } = handle.props;
+		let { id, isRead, label, returnTo } = handle.props;
 
 		return (
 			<form method="post" action={routes.items.read.href({ itemId: id })} mix={[shrink(), flex()]}>
@@ -257,7 +235,7 @@ function ReadToggle(
 					title={label}
 					mix={[pi(0), pb(0), is(TOGGLE_SIZE), bs(TOGGLE_SIZE)]}
 				>
-					<ReadMark action={action} isRead={isRead} />
+					<ReadMark isRead={isRead} />
 				</Button>
 			</form>
 		);
@@ -267,7 +245,7 @@ function ReadToggle(
 /** Renders one page of posts and the links to the pages either side of it. */
 export default function Timeline(handle: Handle<Timeline.Props>) {
 	return () => {
-		let { copy, cursors, entries, readAction, returnTo } = handle.props;
+		let { copy, cursors, entries, listId, returnTo } = handle.props;
 
 		/**
 		 * One row without a source would pull its time out of the column every other row's
@@ -282,7 +260,7 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 				 * column the list takes the gutter back: the words keep their place and the rules
 				 * between rows run the full width of the screen.
 				 */}
-				<ol mix={[p(0), pageBleed()]}>
+				<ol id={listId} mix={[p(0), pageBleed()]}>
 					{entries.map((entry) => (
 						<li
 							key={entry.id}
@@ -297,7 +275,6 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 							<article mix={[flex(), items("center"), gap(2)]}>
 								<ReadToggle
 									id={entry.id}
-									action={readAction}
 									isRead={entry.isRead}
 									label={entry.isRead ? copy.markUnread : copy.markRead}
 									returnTo={returnTo}
@@ -416,6 +393,12 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 									textDecoration("none"),
 									hover(textDecoration("underline")),
 									justify("end"),
+									/**
+									 * A paging enhancement marks this link while it is the one fetching pages,
+									 * which leaves the words off a list already growing under the reader. Focus
+									 * brings them back, so tabbing past the last row still reaches the next page.
+									 */
+									when("&[data-paging]:not(:focus-visible)", visuallyHidden()),
 								]}
 							>
 								{copy.older}

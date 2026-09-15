@@ -1,8 +1,10 @@
 /**
  * Tests `GET /reading`: the guard that keeps it to signed-in readers, the queue it renders
- * from what the store answered, the mark that carries a post out of it, the links that
- * walk it, the two ways an empty queue reads, a cursor the store no longer decodes, and
- * the prompt standing between a reader and clearing the whole queue at once.
+ * from what the store answered, the filter naming which of its posts the page holds, the
+ * mark that says whether one has been read, the links that walk it and carry the filter
+ * with them, what an empty queue says under each filter, a cursor the store no longer
+ * decodes, the enhancement that fetches the next page as the reader scrolls, and the
+ * prompt standing between a reader and clearing the whole queue at once.
  *
  * Every assertion is against rendered English copy rather than a translation key, since a
  * key-name assertion passes for a page whose copy was never written.
@@ -77,7 +79,7 @@ describe("GET /reading", () => {
 		expect(store.readingQueue).not.toHaveBeenCalled();
 	});
 
-	test("renders each unread post with the feed it came from and when it was published", async () => {
+	test("renders each post with the feed it came from and when it was published", async () => {
 		store.readingQueue.mockResolvedValue({
 			ok: true,
 			items: [
@@ -144,10 +146,10 @@ describe("GET /reading", () => {
 		expect(body).not.toContain(routes.items.open.href({ itemId: "item-2" }));
 	});
 
-	test("marks a queued post with the tick that carries it out, not a state ring", async () => {
+	test("marks a post with the ring saying which of the two states it is in", async () => {
 		store.readingQueue.mockResolvedValue({
 			ok: true,
-			items: [item({ id: "item-1" })],
+			items: [item({ id: "item-1" }), item({ id: "item-2", readAt: Date.UTC(2026, 0, 3, 12) })],
 			feeds: FEEDS,
 			cursors: { next: null, prev: null },
 		});
@@ -155,17 +157,23 @@ describe("GET /reading", () => {
 		let body = await (await get(routes.reading.href())).text();
 
 		/**
-		 * The tick a completing surface wears, read off the class the icon set stamps on
-		 * every glyph, which outlives a redraw of the strokes inside it.
+		 * The two rings, read off the class the icon set stamps on every glyph, which
+		 * outlives a redraw of the strokes inside it. The page holds both states now, so the
+		 * mark names the one a post is in rather than offering to finish it.
 		 */
-		expect(body).toContain('class="lucide lucide-check"');
-		expect(body).not.toContain("lucide-circle");
+		expect(body.match(/class="lucide lucide-circle"/g)).toHaveLength(1);
+		expect(body.match(/class="lucide lucide-circle-check"/g)).toHaveLength(1);
+		expect(body).not.toContain("lucide-undo");
 	});
 
 	test("reads the cursor off the query string", async () => {
 		await get(`${routes.reading.href()}?cursor=page-2`);
 
-		expect(store.readingQueue).toHaveBeenCalledWith({ cursor: "page-2" });
+		expect(store.readingQueue).toHaveBeenCalledWith({
+			cursor: "page-2",
+			readState: "all",
+			limit: 25,
+		});
 	});
 
 	test("walks the queue with hrefs rather than bare cursors", async () => {
@@ -207,13 +215,21 @@ describe("GET /reading", () => {
 		expect(body).not.toContain("You are all caught up");
 	});
 
-	test("tells a reader who has read everything that they are caught up", async () => {
+	test("says of an empty queue what each filter was asking for", async () => {
 		store.countFeeds.mockResolvedValue(1);
 
-		let body = await (await get(routes.reading.href())).text();
+		let all = await (await get(routes.reading.href())).text();
+		let unread = await (await get(`${routes.reading.href()}?show=unread`)).text();
+		let read = await (await get(`${routes.reading.href()}?show=read`)).text();
 
-		expect(body).toContain("You are all caught up");
-		expect(body).not.toContain("Nothing to read yet");
+		expect(all).toContain("Nothing here yet");
+		expect(all).toContain("The feeds you follow have published nothing so far.");
+
+		expect(unread).toContain("You are all caught up");
+		expect(read).toContain("Nothing read yet");
+
+		/** Somebody following feeds is never invited to follow their first one. */
+		for (let body of [all, unread, read]) expect(body).not.toContain("Nothing to read yet");
 	});
 
 	test("answers a cursor the store cannot decode with the newest page and a note", async () => {
@@ -236,6 +252,124 @@ describe("GET /reading", () => {
 		expect(body).toContain("That page is no longer there.");
 		expect(body).toContain("Back to the newest");
 		expect(readsAs(body)).toContain("Markdown and the web");
+	});
+});
+
+describe("filtering the queue", () => {
+	/** A page of the queue with a post on it, whichever filter is asking for it. */
+	function queued(cursors: { next: string | null; prev: string | null }) {
+		store.readingQueue.mockResolvedValue({
+			ok: true,
+			items: [item({ id: "item-1" })],
+			feeds: FEEDS,
+			cursors,
+		});
+	}
+
+	test("holds every post until the URL asks for less", async () => {
+		await get(routes.reading.href());
+
+		expect(store.readingQueue).toHaveBeenCalledWith({
+			cursor: null,
+			readState: "all",
+			limit: 25,
+		});
+	});
+
+	test("narrows to the state the URL names", async () => {
+		await get(`${routes.reading.href()}?show=unread`);
+		expect(store.readingQueue).toHaveBeenLastCalledWith({
+			cursor: null,
+			readState: "unread",
+			limit: 25,
+		});
+
+		await get(`${routes.reading.href()}?show=read`);
+		expect(store.readingQueue).toHaveBeenLastCalledWith({
+			cursor: null,
+			readState: "read",
+			limit: 25,
+		});
+	});
+
+	test("shows every post for a value nobody wrote, rather than erroring", async () => {
+		let response = await get(`${routes.reading.href()}?show=everything`);
+
+		expect(response.status).toBe(200);
+		expect(store.readingQueue).toHaveBeenCalledWith({
+			cursor: null,
+			readState: "all",
+			limit: 25,
+		});
+	});
+
+	test("marks the filter being read and leaves the others as ways out of it", async () => {
+		queued({ next: null, prev: null });
+
+		let body = await (await get(`${routes.reading.href()}?show=unread`)).text();
+
+		expect(body).toMatch(/<a href="\/reading\?show=unread" aria-current="page"/);
+		expect(body).toContain('<a href="/reading" data-color');
+		expect(body).toContain('<a href="/reading?show=read" data-color');
+		/** Exactly one link in the row is the page being read, and so is one in the header. */
+		expect(body.match(/aria-current="page"/g)).toHaveLength(2);
+	});
+
+	test("carries the filter through the links that page the queue", async () => {
+		queued({ next: "older-cursor", prev: "newer-cursor" });
+
+		let body = await (await get(`${routes.reading.href()}?show=read`)).text();
+
+		expect(body).toContain(`href="${routes.reading.href()}?cursor=older-cursor&amp;show=read"`);
+		expect(body).toContain(`href="${routes.reading.href()}?cursor=newer-cursor&amp;show=read"`);
+	});
+
+	test("offers the filters on an empty queue, which is how a reader leaves one", async () => {
+		store.countFeeds.mockResolvedValue(1);
+
+		let body = await (await get(`${routes.reading.href()}?show=read`)).text();
+
+		expect(body).toContain("Nothing read yet");
+		expect(body).toContain('<a href="/reading" data-color');
+		expect(body).toContain('<a href="/reading?show=unread" data-color');
+	});
+});
+
+describe("paging on scroll", () => {
+	test("hands the enhancement the list to grow and the page to grow it with", async () => {
+		store.readingQueue.mockResolvedValue({
+			ok: true,
+			items: [item({ id: "item-1" })],
+			feeds: FEEDS,
+			cursors: { next: "older-cursor", prev: null },
+		});
+
+		let body = await (await get(routes.reading.href())).text();
+
+		expect(body).toContain('<ol id="reading-queue"');
+		expect(body).toContain('"listId":"reading-queue"');
+		expect(body).toContain(`"next":"${routes.reading.href()}?cursor=older-cursor"`);
+
+		/**
+		 * The link is sent whatever the browser does with it, and is what carries a reader
+		 * whose script never runs.
+		 */
+		expect(body).toContain(`href="${routes.reading.href()}?cursor=older-cursor"`);
+		expect(body).toContain("Older posts");
+	});
+
+	test("enhances nothing at the end of the queue, where there is no page to fetch", async () => {
+		store.readingQueue.mockResolvedValue({
+			ok: true,
+			items: [item({ id: "item-1" })],
+			feeds: FEEDS,
+			cursors: { next: null, prev: "newer-cursor" },
+		});
+
+		let body = await (await get(routes.reading.href())).text();
+
+		expect(body).not.toContain("scroll-paging");
+		expect(body).not.toContain("Loading older posts");
 	});
 });
 
@@ -289,7 +423,7 @@ describe("marking the whole queue read", () => {
 
 		let body = await (await get(routes.reading.href())).text();
 
-		expect(body).toContain("You are all caught up");
+		expect(body).toContain("Nothing here yet");
 		expect(body).not.toContain("Mark everything read");
 		expect(body).not.toContain(`action="${routes.readAll.href()}"`);
 		expect(body).not.toContain('role="alertdialog"');

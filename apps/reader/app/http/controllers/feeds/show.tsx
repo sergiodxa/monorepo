@@ -275,8 +275,6 @@ export default createAction(routes.feeds.show, {
 					{entries.length > 0 ? (
 						<Timeline
 							entries={entries}
-							/** This page holds a feed's posts read and unread alike, so the mark is a state. */
-							readAction="toggle"
 							copy={{
 								markRead: ctx.i18next.t("timeline.markRead"),
 								markUnread: ctx.i18next.t("timeline.markUnread"),
