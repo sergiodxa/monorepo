@@ -188,7 +188,22 @@ router.map(routes.feeds, {
 });
 ```
 
-Where the actions share a module, prefer one loader for the whole controller: splitting them only multiplies chunks over the same source.
+`createController()` takes them just as well, so a group that shares a guard keeps the route map's typing on each action while its modules stay deferred. The guard runs before any of them loads.
+
+```typescript
+router.map(
+	routes.feeds,
+	createController(routes.feeds, {
+		middleware: [requireSignIn],
+		actions: {
+			all: lazy(() => import("./controllers/feeds/all")),
+			articles: lazy(() => import("./controllers/feeds/articles")),
+		},
+	}),
+);
+```
+
+Where the actions share a module, several loaders may name the same specifier — one for each named export the route map asks for. They share a chunk, imported once for whichever action arrives first.
 
 ## Versioning
 

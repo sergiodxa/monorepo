@@ -1,8 +1,8 @@
 /**
  * Covers `lazy()` against a real router: that the module loads on the first matching
- * request and only once, that a single route and a route map both work from the same
- * stand-in, that the middleware a module declares still runs in order, and that a
- * module pointed at the wrong kind of target says so.
+ * request and only once, that a single route, a route map, and one action of a
+ * controller all work from the same stand-in, that the middleware a module declares
+ * still runs in order, and that a module pointed at the wrong kind of target says so.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -370,6 +370,33 @@ describe("lazy", () => {
 
 		expect(await (await router.fetch(get("/form"))).text()).toBe("rendered");
 		expect(await (await router.fetch(get("/form", { method: "POST" }))).text()).toBe("submitted");
+	});
+
+	test("stands in for one action of a controller written at the map call", async () => {
+		let { steps, step } = tracer();
+
+		let router = createRouter();
+		router.map(
+			ROUTES.form,
+			createController(ROUTES.form, {
+				middleware: [step("controller")],
+				actions: {
+					index: lazy(async () => {
+						steps.push("load index");
+						return { default: () => new Response("rendered") };
+					}),
+					action: lazy(async () => {
+						steps.push("load action");
+						return { default: () => new Response("submitted") };
+					}),
+				},
+			}),
+		);
+
+		expect(await (await router.fetch(get("/form"))).text()).toBe("rendered");
+		expect(await (await router.fetch(get("/form", { method: "POST" }))).text()).toBe("submitted");
+
+		expect(steps).toEqual(["controller", "load index", "controller", "load action"]);
 	});
 
 	test("runs middleware given at the map call before the module's own", async () => {
