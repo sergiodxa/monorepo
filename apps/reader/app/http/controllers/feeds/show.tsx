@@ -221,7 +221,6 @@ export default createAction(routes.feeds.show, {
 						: undefined
 				}
 				current="feeds"
-				width="list"
 				locale={ctx.locale}
 				nav={nav}
 			>

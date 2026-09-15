@@ -34,7 +34,7 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { REFRESH_INTERVALS } from "~/database/schema";
 import { userStore } from "~/database/user-do";
-import AppLayout from "~/resources/layouts/app";
+import AppLayout, { PAGE_COLUMN } from "~/resources/layouts/app";
 import routes from "~/routes/web";
 
 /**
@@ -206,8 +206,12 @@ function settingsPage(
 				logout: ctx.i18next.t("nav.logout"),
 			}}
 		>
+			{/**
+			 * A sentence in a box is still a sentence, so the news keeps the measure the page is
+			 * read in rather than running the width of a window.
+			 */}
 			{ctx.url.searchParams.has(SAVED_PARAM) && (
-				<Alert color="success">
+				<Alert color="success" mix={[maxIs(PAGE_COLUMN)]}>
 					<Alert.Content>
 						<Alert.Description>{ctx.i18next.t("settings.refresh.saved")}</Alert.Description>
 					</Alert.Content>
@@ -218,8 +222,15 @@ function settingsPage(
 			 * The preferences sit on the page itself, the way a post and a feed do: a heading, the
 			 * fields under it, and the rule to the next section doing the work a panel's edge used
 			 * to.
+			 *
+			 * The page takes the width every page takes, and the form keeps the measure a sentence
+			 * is read in and a field is filled at, which is the width it wants wherever it appears.
 			 */}
-			<form method="post" action={routes.settings.action.href()} mix={[vstack({ gap: 4 })]}>
+			<form
+				method="post"
+				action={routes.settings.action.href()}
+				mix={[vstack({ gap: 4 }), maxIs(PAGE_COLUMN)]}
+			>
 				<div mix={[vstack({ gap: 3 })]}>
 					<div mix={[vstack({ gap: 1 })]}>
 						<Label htmlFor={CADENCE_FIELD_ID}>{ctx.i18next.t("settings.refresh.legend")}</Label>
@@ -266,7 +277,7 @@ function settingsPage(
 			</form>
 
 			{transfer && (
-				<Alert color={transfer.color}>
+				<Alert color={transfer.color} mix={[maxIs(PAGE_COLUMN)]}>
 					<Alert.Content>
 						<Alert.Description>{transfer.message}</Alert.Description>
 					</Alert.Content>
@@ -319,7 +330,7 @@ function settingsPage(
 					method="post"
 					action={routes.feeds.import.href()}
 					encType="multipart/form-data"
-					mix={[vstack({ gap: 3, align: "start" }), mbs(2)]}
+					mix={[vstack({ gap: 3, align: "start" }), mbs(2), maxIs(PAGE_COLUMN)]}
 				>
 					{/** Ahead of the controls, so it is read before a file is chosen rather than
 					 * after. */}

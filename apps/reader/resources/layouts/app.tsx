@@ -40,12 +40,11 @@ import OutboundMark from "~/resources/views/outbound-mark";
 import routes from "~/routes/web";
 
 /**
- * Width of the column a page of prose and fields reads in, and the width every page starts
- * from. The header's own row takes it too, so the first navigation link starts on the same
- * vertical line as the page heading below it.
+ * Width of the measure prose and fields read in, which is where every page starts before it
+ * climbs.
  *
- * A form on a page that widens caps itself here, since a field is no easier to fill for
- * spanning a window.
+ * Content that wants this measure caps itself here on whichever surface it appears, since a
+ * field is no easier to fill, nor a paragraph easier to follow, for spanning a window.
  */
 export const PAGE_COLUMN = "48rem";
 
@@ -53,14 +52,17 @@ export const PAGE_COLUMN = "48rem";
 const PAGE_GUTTER = 6;
 
 /**
- * The widths a page of rows climbs through, each taken once the window can hold it and
- * still leave the page margins. A row spends what it is given on the summary beside a
+ * The widths the page climbs through, each taken once the window can hold it and still
+ * leave the page margins. A row of a list spends what it is given on the summary beside a
  * title, which is the part a narrow column cuts first.
+ *
+ * Every page climbs the same steps, so the header sits on one vertical line from surface to
+ * surface and the navigation holds still as a reader moves between them.
  *
  * Stepped rather than fluid: a row's source and time hold their columns across a drag of
  * the window rather than sliding under the reader's eye.
  */
-const LIST_STEPS: [query: string, column: string][] = [
+const PAGE_STEPS: [query: string, column: string][] = [
 	["(min-width: 64rem)", "60rem"],
 	["(min-width: 80rem)", "68rem"],
 	["(min-width: 96rem)", "78rem"],
@@ -82,13 +84,9 @@ const LOGOUT_ICON_SIZE = 16;
 /**
  * How wide the page is allowed to read, which the header takes along with the content so
  * the navigation stays on the page heading's own vertical line.
- *
- * @param width - What the page holds, which is what decides whether it widens.
  */
-function pageWidth(width: AppLayout.Width) {
-	if (width === "column") return maxIs(PAGE_COLUMN);
-
-	return [maxIs(PAGE_COLUMN), LIST_STEPS.map(([query, column]) => media(query, maxIs(column)))];
+function pageWidth() {
+	return [maxIs(PAGE_COLUMN), PAGE_STEPS.map(([query, column]) => media(query, maxIs(column)))];
 }
 
 /**
@@ -106,13 +104,6 @@ export function pageBleed() {
 export namespace AppLayout {
 	/** Which navigation link is the page being rendered. */
 	export type Page = "reading" | "feeds" | "search" | "settings";
-
-	/**
-	 * What the page holds, which is what it does with a large window: a list of rows takes
-	 * the extra width, because a row has more to show than it fits; anything else keeps the
-	 * column a paragraph and a field are read in.
-	 */
-	export type Width = "column" | "list";
 
 	/** Where a heading points when the thing it names lives outside the app. */
 	export interface HeadingLink {
@@ -153,8 +144,6 @@ export namespace AppLayout {
 		current: Page;
 		/** The request's detected language, set as `<html lang>`. */
 		locale?: string;
-		/** What the page holds. Defaults to the column, so nothing widens by accident. */
-		width?: Width;
 		nav: Nav;
 		children: RemixNode;
 	}
@@ -194,17 +183,8 @@ export function AppNavLink(handle: Handle<{ href: string; label: string; isCurre
 /** Renders the header, navigation and page column around a signed-in page's content. */
 export default function AppLayout(handle: Handle<AppLayout.Props>) {
 	return () => {
-		let {
-			children,
-			current,
-			documentTitle,
-			heading,
-			headingActions,
-			headingLink,
-			locale,
-			nav,
-			width = "column",
-		} = handle.props;
+		let { children, current, documentTitle, heading, headingActions, headingLink, locale, nav } =
+			handle.props;
 
 		return (
 			<DocumentLayout title={documentTitle} locale={locale}>
@@ -226,7 +206,7 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 					<div
 						mix={[
 							mi("auto"),
-							pageWidth(width),
+							pageWidth(),
 							minBs("3.5rem"),
 							pi(PAGE_GUTTER),
 							pb(2),
@@ -290,7 +270,7 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 					</div>
 				</header>
 
-				<main mix={[vstack({ gap: 6 }), mi("auto"), pageWidth(width), p(PAGE_GUTTER)]}>
+				<main mix={[vstack({ gap: 6 }), mi("auto"), pageWidth(), p(PAGE_GUTTER)]}>
 					{/**
 					 * The heading takes the line and whatever acts on it sits at the far end of the
 					 * same one. A title long enough to want the width pushes the controls onto a line

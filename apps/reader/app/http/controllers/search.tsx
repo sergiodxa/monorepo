@@ -121,7 +121,6 @@ export default createAction(routes.search, {
 				 * and the navigation offers no tab of its own to mark.
 				 */
 				current="search"
-				width="list"
 				locale={ctx.locale}
 				nav={{
 					label: ctx.i18next.t("nav.label"),
