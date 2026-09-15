@@ -1,7 +1,7 @@
 /**
  * Verifies the schema against a real SQLite database: that migrating is repeatable,
- * that every index exists, and — the assertion that matters most — that both paging
- * queries are answered from an index instead of sorting.
+ * that every index exists, and — the assertion that matters most — that every paging
+ * query is answered from an index instead of sorting.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -38,6 +38,7 @@ describe("runMigrations", () => {
 			"0001-init",
 			"0002-drop-item-content",
 			"0003-feed-list-index",
+			"0004-read-timeline-index",
 		]);
 	});
 
@@ -68,6 +69,7 @@ describe("runMigrations", () => {
 			"feed_items_timeline_idx",
 			"feed_items_feed_timeline_idx",
 			"feed_items_unread_timeline_idx",
+			"feed_items_read_timeline_idx",
 		]) {
 			expect(names, `${name} exists`).toContain(name);
 		}
@@ -198,6 +200,57 @@ describe("query plans", () => {
 
 		expect(plan).toContain("feed_items_unread_timeline_idx");
 		expect(plan).not.toContain("USE TEMP B-TREE FOR ORDER BY");
+	});
+
+	/**
+	 * The read posts are the ones that pile up, since a post is read once and stays read,
+	 * so this is the reading-queue filter with the most rows behind it. Its own partial
+	 * index is what keeps it reading like the other two.
+	 */
+	test("answers the read timeline from the partial index", async () => {
+		await migrate();
+
+		let plan = queryPlan(
+			`SELECT id, feed_id, title FROM feed_items WHERE read_at IS NOT NULL
+			 ORDER BY published_at DESC, id DESC LIMIT 50`,
+		);
+
+		expect(plan).toContain("feed_items_read_timeline_idx");
+		expect(plan).not.toContain("USE TEMP B-TREE FOR ORDER BY");
+	});
+
+	/**
+	 * A page past the first seeks on the ordering columns, which is a different statement
+	 * from the first page and the one a reader scrolling spends their time in. Each of the
+	 * three reading-queue filters keeps its index under that seek.
+	 */
+	test("keeps every reading-queue filter on its index while paging", async () => {
+		await migrate();
+
+		let seek = `(published_at < 100 OR (published_at = 100 AND id < 'i9'))`;
+
+		let plans = {
+			all: queryPlan(
+				`SELECT id, feed_id, title FROM feed_items WHERE ${seek}
+				 ORDER BY published_at DESC, id DESC LIMIT 50`,
+			),
+			unread: queryPlan(
+				`SELECT id, feed_id, title FROM feed_items WHERE read_at IS NULL AND ${seek}
+				 ORDER BY published_at DESC, id DESC LIMIT 50`,
+			),
+			read: queryPlan(
+				`SELECT id, feed_id, title FROM feed_items WHERE read_at IS NOT NULL AND ${seek}
+				 ORDER BY published_at DESC, id DESC LIMIT 50`,
+			),
+		};
+
+		expect(plans.all).toContain("feed_items_timeline_idx");
+		expect(plans.unread).toContain("feed_items_unread_timeline_idx");
+		expect(plans.read).toContain("feed_items_read_timeline_idx");
+
+		for (let [filter, plan] of Object.entries(plans)) {
+			expect(plan, `${filter} sorts nothing`).not.toContain("USE TEMP B-TREE FOR ORDER BY");
+		}
 	});
 
 	/**

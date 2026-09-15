@@ -202,6 +202,40 @@ describe("a reader who follows nothing yet", () => {
 		});
 	});
 
+	test("narrows the reading queue by the read state it is asked for", async () => {
+		let name = subject();
+		let stub = env.USER.getByName(name);
+		await stub.ensureUser(name);
+
+		// Posts seeded straight into the object's own SQLite: workerd reaches no origin
+		// here, so the rows a follow would bring in are written by hand and what the three
+		// statements read back is what the assertion is about.
+		await runInDurableObject(stub, (_instance, state) => {
+			for (let [order, title] of ["First", "Second", "Third"].entries()) {
+				state.storage.sql.exec(
+					`INSERT INTO feed_items
+					 (id, feed_id, guid, title, published_at, content_hash, read_at, created_at, updated_at)
+					 VALUES (?, 'feed_seed', ?, ?, ?, 'h', ?, 0, 0)`,
+					`item_seed_${order}`,
+					`guid-${order}`,
+					title,
+					order,
+					title === "First" ? 1 : null,
+				);
+			}
+		});
+
+		let titles = async (readState: UserStore.ReadState) => {
+			let page: UserStore.TimelineResult = await stub.readingQueue({ readState });
+			if (!page.ok) throw new Error(`expected a page, got ${page.reason}`);
+			return page.items.map((item) => item.title);
+		};
+
+		expect(await titles("all")).toEqual(["Third", "Second", "First"]);
+		expect(await titles("unread")).toEqual(["Third", "Second"]);
+		expect(await titles("read")).toEqual(["First"]);
+	});
+
 	test("carries a bad cursor back as a refusal rather than an error", async () => {
 		let stub = env.USER.getByName(subject());
 

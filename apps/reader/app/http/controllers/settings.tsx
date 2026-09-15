@@ -14,26 +14,14 @@
 import type { RequestContext } from "remix/router";
 
 import { redirect } from "@sdxc/http/response";
-import { bg, border, fg } from "@sdxc/u/color";
+import { bg, border, borderEdge, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { cursor } from "@sdxc/u/general";
 import { flex, flexWrap, gap, items, vstack } from "@sdxc/u/layout";
-import { m, maxIs, mie, p, pb, pi } from "@sdxc/u/size";
+import { m, maxIs, mbs, mie, pb, pbs, pi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
-import {
-	Alert,
-	Button,
-	Card,
-	Description,
-	FieldError,
-	Label,
-	Heading,
-	LinkButton,
-	RadioGroup,
-	Separator,
-	Text,
-} from "@sdxc/ui";
+import { Alert, Button, Description, FieldError, Label, LinkButton, Select, Text } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createController } from "remix/router";
@@ -58,9 +46,15 @@ const SAVED_PARAM = "saved";
 /** Status for a submission the offered cadences do not include. */
 const UNPROCESSABLE_STATUS = 422;
 
-/** Ties the radio group's accessible name and hint to the legend and description on screen. */
-const LEGEND_ID = "settings-refresh-legend";
+/** Ties the cadence field to the label naming it and the passage explaining it. */
+const CADENCE_FIELD_ID = "settings-refresh-interval";
 const DESCRIPTION_ID = "settings-refresh-description";
+
+/**
+ * Width of the cadence field, sized to the longest phrase it holds. A field stretched
+ * across the column would promise more than a choice between six words.
+ */
+const CADENCE_FIELD_WIDTH = "14rem";
 
 /** Ties the import field to the label naming it. */
 const IMPORT_FILE_ID = "settings-import-file";
@@ -177,7 +171,7 @@ function settingsPage(
 	error: string | null,
 ) {
 	/** The first offered cadence is what the `settings` column itself defaults to. */
-	let selected = settings?.refreshIntervalHours ?? REFRESH_INTERVALS[0];
+	let chosen = settings?.refreshIntervalHours ?? REFRESH_INTERVALS[0];
 
 	let transfer = importNote(ctx);
 
@@ -220,51 +214,56 @@ function settingsPage(
 				</Alert>
 			)}
 
-			<Card mix={[p(4)]}>
-				<form method="post" action={routes.settings.action.href()} mix={[vstack({ gap: 4 })]}>
-					<fieldset mix={[border("none"), m(0), p(0)]}>
-						<legend id={LEGEND_ID} mix={[p(0), pb(2), text("sm"), weight("semibold")]}>
-							{ctx.i18next.t("settings.refresh.legend")}
-						</legend>
+			{/**
+			 * The preferences sit on the page itself, the way a post and a feed do: a heading, the
+			 * fields under it, and the rule to the next section doing the work a panel's edge used
+			 * to.
+			 */}
+			<form method="post" action={routes.settings.action.href()} mix={[vstack({ gap: 4 })]}>
+				<div mix={[vstack({ gap: 3 })]}>
+					<div mix={[vstack({ gap: 1 })]}>
+						<Label htmlFor={CADENCE_FIELD_ID}>{ctx.i18next.t("settings.refresh.legend")}</Label>
 
-						<div mix={[vstack({ gap: 3 })]}>
-							<Description id={DESCRIPTION_ID}>
-								{ctx.i18next.t("settings.refresh.description")}
-							</Description>
-
-							<RadioGroup
-								name="refreshIntervalHours"
-								aria-labelledby={LEGEND_ID}
-								aria-describedby={DESCRIPTION_ID}
-							>
-								{REFRESH_INTERVALS.map((hours) => (
-									<RadioGroup.Radio
-										key={hours}
-										value={String(hours)}
-										defaultChecked={hours === selected}
-									>
-										{ctx.i18next.t("settings.interval", { count: hours })}
-									</RadioGroup.Radio>
-								))}
-							</RadioGroup>
-
-							{error && <FieldError>{error}</FieldError>}
-
-							{/**
-							 * When the schedule last ran is the schedule's own news, so it sits under the
-							 * cadences it reports on rather than in the gap below the card.
-							 */}
-							<Text mix={[text("xs"), fg("neutral.muted")]} title={lastRefreshed.exact}>
-								{lastRefreshed.short}
-							</Text>
-						</div>
-					</fieldset>
-
-					<div mix={[flex()]}>
-						<Button type="submit">{ctx.i18next.t("settings.refresh.submit")}</Button>
+						<Description id={DESCRIPTION_ID}>
+							{ctx.i18next.t("settings.refresh.description")}
+						</Description>
 					</div>
-				</form>
-			</Card>
+
+					{/**
+					 * One field rather than six rows: the cadences are a single choice, and the one
+					 * in force is what the page has to show. A list of them spent half the page on a
+					 * decision most readers make once.
+					 */}
+					{/** The field fills whatever box it is given, so the box is what sizes it. */}
+					<div mix={[maxIs(CADENCE_FIELD_WIDTH)]}>
+						<Select
+							id={CADENCE_FIELD_ID}
+							name="refreshIntervalHours"
+							aria-describedby={DESCRIPTION_ID}
+						>
+							{REFRESH_INTERVALS.map((hours) => (
+								<Select.Option key={hours} value={String(hours)} selected={hours === chosen}>
+									{ctx.i18next.t("settings.interval", { count: hours })}
+								</Select.Option>
+							))}
+						</Select>
+					</div>
+
+					{error && <FieldError>{error}</FieldError>}
+
+					{/**
+					 * When the schedule last ran is the schedule's own news, so it sits under the
+					 * cadence it reports on, quiet as the dates down the side of a list of posts.
+					 */}
+					<Text mix={[text("xs"), fg("neutral.muted")]} title={lastRefreshed.exact}>
+						{lastRefreshed.short}
+					</Text>
+				</div>
+
+				<div mix={[flex()]}>
+					<Button type="submit">{ctx.i18next.t("settings.refresh.submit")}</Button>
+				</div>
+			</form>
 
 			{transfer && (
 				<Alert color={transfer.color}>
@@ -275,108 +274,111 @@ function settingsPage(
 			)}
 
 			{/**
-			 * Taking the subscription list out and bringing another one in are the same errand
-			 * read in two directions, so they share a card. The picker and its submit wrap, so a
-			 * phone stacks them rather than pinching both into one line.
+			 * Taking the subscription list out and bringing another one in are the same errand read
+			 * in two directions, so they share a section. A hairline is what says the cadences above
+			 * have ended, which is the boundary the rest of the app draws between one thing and the
+			 * next.
 			 */}
-			<Card mix={[p(4)]}>
-				<div mix={[vstack({ gap: 4 })]}>
-					{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
-					<Heading level={2} mix={[text("sm"), weight("semibold")]}>
-						{ctx.i18next.t("feeds.transfer.legend")}
-					</Heading>
+			<section
+				mix={[
+					vstack({ gap: 4 }),
+					pbs(6),
+					borderEdge("block-start", { color: "neutral.border", width: 1 }),
+				]}
+			>
+				{/**
+				 * Level 2, since the layout's own page heading is the document's only `h1`. It is set
+				 * as the legend above it is, so the two sections are named in the same voice.
+				 */}
+				<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
+					{ctx.i18next.t("feeds.transfer.legend")}
+				</h2>
 
-					{/** Outlined rather than quiet: a bare label reads as a sentence, not as the
-					 * control that hands a reader a file. */}
-					<div mix={[flex()]}>
-						<LinkButton
-							href={routes.feeds.export.href()}
-							color="neutral"
-							variant="outline"
-							data-rmx-document=""
-						>
-							{ctx.i18next.t("feeds.transfer.export")}
-						</LinkButton>
-					</div>
-
-					{/** The two directions share a card and are still two errands, so a rule says
-					 * where one ends. */}
-					<Separator />
-
-					{/**
-					 * `multipart/form-data` is the encoding that carries a file's bytes along with
-					 * the field naming it; url-encoding sends the name the reader picked it under
-					 * and leaves the document itself on their disk.
-					 *
-					 * The picker stays optional so an empty submit reaches the import, which answers
-					 * it with the sentence asking for a file. The input behind the trigger is
-					 * visually hidden, and the browser's own validation would anchor its message to
-					 * a control the reader cannot see.
-					 */}
-					<form
-						method="post"
-						action={routes.feeds.import.href()}
-						encType="multipart/form-data"
-						mix={[vstack({ gap: 3, align: "start" })]}
+				{/** Outlined rather than quiet: a bare label reads as a sentence, not as the
+				 * control that hands a reader a file. */}
+				<div mix={[flex()]}>
+					<LinkButton
+						href={routes.feeds.export.href()}
+						color="neutral"
+						variant="outline"
+						data-rmx-document=""
 					>
-						{/** Ahead of the controls, so it is read before a file is chosen rather than
-						 * after. */}
-						<Description id={IMPORT_DESCRIPTION_ID}>
-							{ctx.i18next.t("feeds.transfer.import.description")}
-						</Description>
-
-						<div mix={[vstack({ gap: 2, align: "start" }), maxIs("100%")]}>
-							<Label htmlFor={IMPORT_FILE_ID}>{ctx.i18next.t("feeds.transfer.import.label")}</Label>
-
-							{/** The picker and the submit on one line, wrapping onto two where a phone
-							 * has room for one control at a time. */}
-							<div mix={[flex(), items("center"), flexWrap("wrap"), gap(3), maxIs("100%")]}>
-								{/**
-								 * A native file input rather than a styled trigger. The trigger hides the
-								 * input behind a button-like label, so nothing on the page says which file
-								 * was chosen — and without script there is nothing to say it with. The
-								 * platform's own control names the file it holds.
-								 */}
-								<input
-									id={IMPORT_FILE_ID}
-									type="file"
-									name={FILE_FIELD}
-									accept={IMPORT_ACCEPT}
-									aria-describedby={IMPORT_DESCRIPTION_ID}
-									mix={[
-										maxIs("100%"),
-										text("sm"),
-										fg("neutral.muted"),
-										cursor("pointer"),
-										/**
-										 * The platform draws this control, and only its button half can be
-										 * restyled — which is the half worth restyling. Dressed in the padding,
-										 * border and type the outline buttons on this page wear, it stands the
-										 * same height as the submit beside it and leaves the filename the
-										 * browser writes next to it, which is the whole reason for using the
-										 * real input.
-										 */
-										when("&::file-selector-button", [
-											mie(3),
-											pi(4),
-											pb(2),
-											rounded("md"),
-											border({ color: "neutral.border", width: 2 }),
-											bg("transparent"),
-											fg("neutral.emphasis"),
-											text("sm"),
-											weight("medium"),
-											cursor("pointer"),
-										]),
-									]}
-								/>
-
-								<Button type="submit">{ctx.i18next.t("feeds.transfer.import.submit")}</Button>
-							</div>
-						</div>
-					</form>
+						{ctx.i18next.t("feeds.transfer.export")}
+					</LinkButton>
 				</div>
-			</Card>
+
+				{/**
+				 * `multipart/form-data` is the encoding that carries a file's bytes along with the
+				 * field naming it; url-encoding sends the name the reader picked it under and leaves
+				 * the document itself on their disk.
+				 *
+				 * The picker stays optional so an empty submit reaches the import, which answers it
+				 * with the sentence asking for a file.
+				 */}
+				<form
+					method="post"
+					action={routes.feeds.import.href()}
+					encType="multipart/form-data"
+					mix={[vstack({ gap: 3, align: "start" }), mbs(2)]}
+				>
+					{/** Ahead of the controls, so it is read before a file is chosen rather than
+					 * after. */}
+					<Description id={IMPORT_DESCRIPTION_ID}>
+						{ctx.i18next.t("feeds.transfer.import.description")}
+					</Description>
+
+					<div mix={[vstack({ gap: 2, align: "start" }), maxIs("100%")]}>
+						<Label htmlFor={IMPORT_FILE_ID}>{ctx.i18next.t("feeds.transfer.import.label")}</Label>
+
+						{/** The picker and the submit on one line, wrapping onto two where a phone
+						 * has room for one control at a time. */}
+						<div mix={[flex(), items("center"), flexWrap("wrap"), gap(2), maxIs("100%")]}>
+							{/**
+							 * A native file input rather than a styled trigger. The trigger hides the
+							 * input behind a button-like label, so nothing on the page says which file was
+							 * chosen — and without script there is nothing to say it with. The platform's
+							 * own control names the file it holds.
+							 */}
+							<input
+								id={IMPORT_FILE_ID}
+								type="file"
+								name={FILE_FIELD}
+								accept={IMPORT_ACCEPT}
+								aria-describedby={IMPORT_DESCRIPTION_ID}
+								mix={[
+									maxIs("100%"),
+									text("sm"),
+									fg("neutral.muted"),
+									cursor("pointer"),
+									/**
+									 * The platform draws this control, and only its button half can be
+									 * restyled — which is the half worth restyling. Dressed in the box the
+									 * outline buttons on this page wear, down to the leading that decides
+									 * their height, it stands level with the submit beside it and the pair
+									 * reads as one control; the filename the browser writes sits between
+									 * them, which is the whole reason for using the real input.
+									 */
+									when("&::file-selector-button", [
+										mie(3),
+										pi(4),
+										pb(2),
+										rounded("md"),
+										border({ color: "neutral.strong", width: 2 }),
+										bg("transparent"),
+										fg("neutral"),
+										text("sm"),
+										weight("medium"),
+										cursor("pointer"),
+									]),
+									when("&:hover::file-selector-button", bg("neutral.tint")),
+								]}
+							/>
+
+							<Button type="submit">{ctx.i18next.t("feeds.transfer.import.submit")}</Button>
+						</div>
+					</div>
+				</form>
+			</section>
 		</AppLayout>,
 		error ? { status: UNPROCESSABLE_STATUS } : undefined,
 	);

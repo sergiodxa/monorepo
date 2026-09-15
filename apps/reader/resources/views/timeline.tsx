@@ -22,7 +22,17 @@ import { CheckIcon, CircleCheckIcon, CircleIcon, Undo2Icon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, borderEdge, colorMix, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { flex, gap, grow, inline, inlineFlex, items, justify, shrink } from "@sdxc/u/layout";
+import {
+	flex,
+	gap,
+	grow,
+	inline,
+	inlineFlex,
+	items,
+	justify,
+	relative,
+	shrink,
+} from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
 import { bs, is, maxIs, mbs, minIs, mis, p, pb, pi } from "@sdxc/u/size";
 import { hover } from "@sdxc/u/state";
@@ -39,6 +49,7 @@ import {
 } from "@sdxc/u/typography";
 import { Button, Text } from "@sdxc/ui";
 
+import { pageBleed } from "~/resources/layouts/app";
 import OutboundMark from "~/resources/views/outbound-mark";
 import routes from "~/routes/web";
 
@@ -94,6 +105,12 @@ export namespace Timeline {
 		title: string;
 		/** Where the post lives, or `null` for a feed that published none. */
 		url: string | null;
+		/**
+		 * Where the browser reports that the title was followed, which is what marks the post
+		 * read on the way out. `null` on a row whose title is not a link, since there is
+		 * nothing to follow.
+		 */
+		ping: string | null;
 		/**
 		 * Who the post is from: the feed on a surface holding many of them, the author on
 		 * one feed's own page, and `null` when neither is known.
@@ -165,9 +182,9 @@ function ReadMark(handle: Handle<{ action: Timeline.ReadAction; isRead: boolean 
  * column and never shrinks, because a row clips more titles than it shows in full — and
  * a clipped title that also loses its mark is a link with nothing left to say so.
  */
-function PostTitle(handle: Handle<{ title: string; url: string | null }>) {
+function PostTitle(handle: Handle<{ title: string; url: string | null; ping: string | null }>) {
 	return () => {
-		let { title, url } = handle.props;
+		let { ping, title, url } = handle.props;
 
 		if (!url) return title;
 
@@ -176,6 +193,16 @@ function PostTitle(handle: Handle<{ title: string; url: string | null }>) {
 				href={url}
 				target="_blank"
 				rel="noopener noreferrer"
+				/**
+				 * Following the title is what a reader does instead of ticking the row, so the
+				 * browser reports the trip and the post is marked read on its way out. It is a
+				 * `POST` the browser makes itself, which no prefetcher walks; a browser that
+				 * turns pings off leaves the tick beside the row as the way to say so.
+				 *
+				 * A `null` would reach the attribute as the word, and the browser would report
+				 * the trip to a page of that name.
+				 */
+				ping={ping ?? undefined}
 				mix={[
 					inlineFlex(),
 					items("center"),
@@ -250,7 +277,12 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 
 		return (
 			<div>
-				<ol mix={[p(0)]}>
+				{/**
+				 * A row carries its own inline padding, so on a screen no wider than the page's
+				 * column the list takes the gutter back: the words keep their place and the rules
+				 * between rows run the full width of the screen.
+				 */}
+				<ol mix={[p(0), pageBleed()]}>
 					{entries.map((entry) => (
 						<li
 							key={entry.id}
@@ -289,6 +321,14 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 										mix={[
 											grow(),
 											minIs(0),
+											/**
+											 * The note a screen reader hears is taken out of the flow, and a
+											 * positioned box belongs to the page itself unless something nearer
+											 * claims it. Claiming it here keeps it inside the clip: its place in
+											 * the line is the far end of a summary the row never shows, which is
+											 * a page-wide sideways scroll on a phone when the page owns it.
+											 */
+											relative(),
 											truncate(),
 											text("sm"),
 											leading("normal"),
@@ -296,7 +336,7 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 										]}
 									>
 										<h2 mix={[inline(), weight("medium")]}>
-											<PostTitle title={entry.title} url={entry.url} />
+											<PostTitle title={entry.title} url={entry.url} ping={entry.ping} />
 										</h2>
 
 										{/**

@@ -21,12 +21,13 @@ import { bg, borderEdge, colorMix, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { flex, flexWrap, gap, grow, items, shrink, vstack } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
-import { mbs, minIs, mis, p, pb, pi } from "@sdxc/u/size";
+import { maxIs, mbs, minIs, mis, p, pb, pi } from "@sdxc/u/size";
 import { hover } from "@sdxc/u/state";
 import { color } from "@sdxc/u/tokens";
 import { nowrap, text, textAlign, textDecoration, truncate, weight } from "@sdxc/u/typography";
 import { Badge, Button, Card, Empty, TextField } from "@sdxc/ui";
 
+import { PAGE_COLUMN, pageBleed } from "~/resources/layouts/app";
 import routes from "~/routes/web";
 
 /**
@@ -130,7 +131,8 @@ export default function FeedList(handle: Handle<FeedList.Props>) {
 				 * refusal are the width of the input they belong to, and the submit sits at the end
 				 * of the row under it, where a form puts the thing that finishes it.
 				 */}
-				<Card mix={[p(4)]}>
+				{/** The rows take the window; one field asking for an address does not. */}
+				<Card mix={[p(4), maxIs(PAGE_COLUMN)]}>
 					<div mix={[vstack({ gap: 3, align: "stretch" })]}>
 						<form id={FOLLOW_FORM_ID} method="post" action={routes.feeds.follow.href()}>
 							<TextField
@@ -180,7 +182,12 @@ export default function FeedList(handle: Handle<FeedList.Props>) {
 						<Empty.Description>{empty.description}</Empty.Description>
 					</Empty>
 				) : (
-					<ul mix={[p(0)]}>
+					/**
+					 * A row carries its own inline padding, so on a screen no wider than the page's
+					 * column the list takes the gutter back: the names keep their place and the rules
+					 * between rows run the full width of the screen.
+					 */
+					<ul mix={[p(0), pageBleed()]}>
 						{entries.map((entry) => (
 							<li
 								key={entry.id}

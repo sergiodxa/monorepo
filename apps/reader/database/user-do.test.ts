@@ -152,6 +152,17 @@ function cursors(result: UserStore.TimelineResult): { next: string | null; prev:
 	return result.cursors;
 }
 
+/**
+ * Marks the newest `count` posts read, which is what gives the read filter something to
+ * answer with and the unread filter something to have lost.
+ */
+async function readNewest(user: UserDO, count: number): Promise<void> {
+	let page = await user.readingQueue({ limit: count });
+	if (!page.ok) throw new Error(`expected a page, got ${page.reason}`);
+
+	for (let item of page.items) await user.markRead(item.id);
+}
+
 /** One page of the subscription list, narrowed to the feeds and cursors it answered with. */
 function listing(result: UserStore.FeedPage): Extract<UserStore.FeedPage, { ok: true }> {
 	if (!result.ok) throw new Error(`expected a page, got ${result.reason}`);
@@ -541,6 +552,154 @@ describe("readingQueue", () => {
 			ok: false,
 			reason: "bad-cursor",
 		});
+	});
+
+	test("answers every post when the caller asks for all", async () => {
+		let { user } = await createReaderWithFeed();
+		await readNewest(user, 2);
+
+		expect(titles(await user.readingQueue({ readState: "all" }))).toEqual([
+			"Fifth",
+			"Fourth",
+			"Third",
+			"Second",
+			"First",
+		]);
+	});
+
+	test("answers the read posts when the caller asks for read", async () => {
+		let { user } = await createReaderWithFeed();
+		await readNewest(user, 2);
+
+		expect(titles(await user.readingQueue({ readState: "read" }))).toEqual(["Fifth", "Fourth"]);
+	});
+
+	test("answers the unread posts when the caller asks for unread, or for nothing", async () => {
+		let { user } = await createReaderWithFeed();
+		await readNewest(user, 2);
+
+		let named = titles(await user.readingQueue({ readState: "unread" }));
+
+		expect(named).toEqual(["Third", "Second", "First"]);
+
+		// The default is what keeps a view that offers no filter reading as it always has.
+		expect(titles(await user.readingQueue())).toEqual(named);
+	});
+
+	test("pages all forward and back through the cursors it minted", async () => {
+		let { user } = await createReaderWithFeed();
+		await readNewest(user, 2);
+
+		let first = await user.readingQueue({ readState: "all", limit: 2 });
+		expect(titles(first)).toEqual(["Fifth", "Fourth"]);
+		expect(cursors(first).prev).toBeNull();
+
+		let second = await user.readingQueue({
+			readState: "all",
+			limit: 2,
+			cursor: cursors(first).next,
+		});
+		expect(titles(second)).toEqual(["Third", "Second"]);
+
+		let third = await user.readingQueue({
+			readState: "all",
+			limit: 2,
+			cursor: cursors(second).next,
+		});
+		expect(titles(third)).toEqual(["First"]);
+		expect(cursors(third).next).toBeNull();
+
+		let back = await user.readingQueue({
+			readState: "all",
+			limit: 2,
+			cursor: cursors(second).prev,
+		});
+		expect(titles(back)).toEqual(["Fifth", "Fourth"]);
+	});
+
+	test("pages read forward and back through the cursors it minted", async () => {
+		let { user } = await createReaderWithFeed();
+		await readNewest(user, 3);
+
+		let first = await user.readingQueue({ readState: "read", limit: 2 });
+		expect(titles(first)).toEqual(["Fifth", "Fourth"]);
+		expect(cursors(first).prev).toBeNull();
+
+		let second = await user.readingQueue({
+			readState: "read",
+			limit: 2,
+			cursor: cursors(first).next,
+		});
+		expect(titles(second)).toEqual(["Third"]);
+		expect(cursors(second).next).toBeNull();
+
+		let back = await user.readingQueue({
+			readState: "read",
+			limit: 2,
+			cursor: cursors(second).prev,
+		});
+		expect(titles(back)).toEqual(["Fifth", "Fourth"]);
+	});
+
+	test("pages unread forward and back through the cursors it minted", async () => {
+		let { user } = await createReaderWithFeed();
+		await readNewest(user, 1);
+
+		let first = await user.readingQueue({ readState: "unread", limit: 2 });
+		expect(titles(first)).toEqual(["Fourth", "Third"]);
+
+		let second = await user.readingQueue({
+			readState: "unread",
+			limit: 2,
+			cursor: cursors(first).next,
+		});
+		expect(titles(second)).toEqual(["Second", "First"]);
+
+		let back = await user.readingQueue({
+			readState: "unread",
+			limit: 2,
+			cursor: cursors(second).prev,
+		});
+		expect(titles(back)).toEqual(["Fourth", "Third"]);
+	});
+
+	test("reports a cursor it cannot decode under every read state", async () => {
+		let { user } = await createReaderWithFeed();
+
+		for (let readState of ["all", "unread", "read"] as const) {
+			expect(await user.readingQueue({ readState, cursor: "not-a-cursor" }), readState).toEqual({
+				ok: false,
+				reason: "bad-cursor",
+			});
+		}
+	});
+
+	test("moves a post between the unread and read filters as the reader marks it", async () => {
+		let { user } = await createReaderWithFeed();
+
+		let page = await user.readingQueue({ limit: 1 });
+		expect(page.ok).toBe(true);
+		if (!page.ok) return;
+
+		let newest = page.items[0];
+		expect(newest).toBeDefined();
+		if (newest === undefined) return;
+
+		expect(titles(await user.readingQueue({ readState: "read" }))).toEqual([]);
+
+		expect(await user.markRead(newest.id)).toBe(true);
+
+		expect(titles(await user.readingQueue({ readState: "read" }))).toEqual(["Fifth"]);
+		expect(titles(await user.readingQueue({ readState: "unread" }))).not.toContain("Fifth");
+
+		// The count the two filters split is the one the all filter holds whole, whichever
+		// side each post is currently on.
+		expect(titles(await user.readingQueue({ readState: "all" }))).toHaveLength(5);
+
+		expect(await user.markRead(newest.id, false)).toBe(true);
+
+		expect(titles(await user.readingQueue({ readState: "read" }))).toEqual([]);
+		expect(titles(await user.readingQueue({ readState: "unread" }))).toContain("Fifth");
 	});
 });
 

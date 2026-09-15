@@ -64,6 +64,13 @@ export default route({
 	items: {
 		/** Its own path rather than a `PATCH` on the item, so a form can reach it directly. */
 		read: post("/items/:itemId/read"),
+		/**
+		 * Where the browser reports that a post's title was clicked, named by the link's
+		 * own `ping` attribute. The browser posts here itself while following the title
+		 * through to the publisher, so opening a post marks it read and the title stays an
+		 * ordinary link to the address the publisher gave.
+		 */
+		open: post("/items/:itemId/open"),
 	},
 
 	/** GET = the preferences form ("index"), POST = saves it ("action"). */

@@ -115,6 +115,10 @@ export default function application(options: application.Options) {
 		lazy(() => import("~/app/http/controllers/items/read")),
 	);
 	router.map(
+		routes.items.open,
+		lazy(() => import("~/app/http/controllers/items/open")),
+	);
+	router.map(
 		routes.readAll,
 		lazy(() => import("~/app/http/controllers/read-all")),
 	);

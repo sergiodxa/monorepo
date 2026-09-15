@@ -41,9 +41,9 @@ function createRouter(viewer: Viewer): Router {
 	return router;
 }
 
-/** The cadence the rendered form shows chosen, read off the radio carrying `checked`. */
-function checkedInterval(html: string): string | null {
-	return /<input[^>]*\bvalue="(\d+)"[^>]*\bchecked\b/.exec(html)?.[1] ?? null;
+/** The cadence the rendered form shows chosen, read off the option carrying `selected`. */
+function selectedInterval(html: string): string | null {
+	return /<option[^>]*\bvalue="(\d+)"[^>]*\bselected\b/.exec(html)?.[1] ?? null;
 }
 
 /** Signs a reader in the way a completed sign-in does, creating their settings row. */
@@ -64,7 +64,7 @@ describe("POST /settings for a reader whose settings row was never written", () 
 		let router = createRouter(viewer);
 
 		let before = await (await fetchRoute(router, routes.settings.index.href())).text();
-		expect(checkedInterval(before)).toBe("1");
+		expect(selectedInterval(before)).toBe("1");
 
 		let saved = await fetchRoute(router, routes.settings.action.href(), {
 			refreshIntervalHours: "6",
@@ -85,7 +85,7 @@ describe("POST /settings for a reader whose settings row was never written", () 
 
 		expect(landed.status).toBe(200);
 		expect(html).toContain("Saved.");
-		expect(checkedInterval(html)).toBe("6");
+		expect(selectedInterval(html)).toBe("6");
 	});
 
 	test("keeps the cadence across a fresh request with no redirect behind it", async () => {
@@ -99,7 +99,7 @@ describe("POST /settings for a reader whose settings row was never written", () 
 		// over from the save but the object's own storage.
 		let html = await (await fetchRoute(createRouter(viewer), routes.settings.index.href())).text();
 
-		expect(checkedInterval(html)).toBe("24");
+		expect(selectedInterval(html)).toBe("24");
 		expect(html).not.toContain("Saved.");
 	});
 
@@ -128,7 +128,7 @@ describe("POST /settings for a reader a sign-in has provisioned", () => {
 		let router = createRouter(viewer);
 
 		let before = await (await fetchRoute(router, routes.settings.index.href())).text();
-		expect(checkedInterval(before)).toBe("1");
+		expect(selectedInterval(before)).toBe("1");
 
 		let saved = await fetchRoute(router, routes.settings.action.href(), {
 			refreshIntervalHours: "9",
@@ -139,6 +139,6 @@ describe("POST /settings for a reader a sign-in has provisioned", () => {
 		let html = await (await fetchRoute(router, saved.headers.get("location") ?? "")).text();
 
 		expect(html).toContain("Saved.");
-		expect(checkedInterval(html)).toBe("9");
+		expect(selectedInterval(html)).toBe("9");
 	});
 });

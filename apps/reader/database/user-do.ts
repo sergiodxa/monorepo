@@ -18,7 +18,16 @@ import { isFailure } from "@sdxc/result";
 import { TypeID } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
 import { DurableObject, env } from "cloudflare:workers";
-import { and, Database, getTableColumns, inList, isNull, rawSql, sql } from "remix/data-table";
+import {
+	and,
+	Database,
+	getTableColumns,
+	inList,
+	isNull,
+	notNull,
+	rawSql,
+	sql,
+} from "remix/data-table";
 
 import type {
 	FeedStatus,
@@ -183,6 +192,24 @@ export namespace UserStore {
 		/** An opaque keyset cursor carrying its own direction, or `null` for the first page. */
 		cursor?: string | null;
 		limit?: number;
+	}
+
+	/** Which posts of the reading queue a page holds, by whether the reader has read them. */
+	export type ReadState =
+		/** Every stored post, read and unread alike. */
+		| "all"
+		/** Posts the reader has yet to read. */
+		| "unread"
+		/** Posts the reader has read. */
+		| "read";
+
+	/** Where in the reading queue to read from, how much of it, and which posts. */
+	export interface ReadingQueueOptions extends TimelineOptions {
+		/**
+		 * Which posts the page holds. Unread when the caller names none, so a view that
+		 * offers no filter shows the queue a reader still has ahead of them.
+		 */
+		readState?: ReadState;
 	}
 
 	/**
@@ -681,9 +708,21 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		return await this.#db.delete(feeds, { id: feedId });
 	}
 
-	/** The unread posts across every followed feed, newest first. */
-	readingQueue(options: UserStore.TimelineOptions = {}): Promise<UserStore.TimelineResult> {
-		return this.#page(this.#timeline().where(isNull("read_at")), options);
+	/**
+	 * The posts across every followed feed, newest first, narrowed to the read state the
+	 * caller chooses. It answers the unread ones when they choose none.
+	 *
+	 * Each state is served by an index of its own, so paging the read posts of a reader
+	 * who has read years of them costs what paging the unread ones does.
+	 *
+	 * @param options - Which posts to page, where to page from, and how much of it.
+	 * @example let page = await userStore(viewer.id).readingQueue({ readState: "all" });
+	 */
+	readingQueue(options: UserStore.ReadingQueueOptions = {}): Promise<UserStore.TimelineResult> {
+		let timeline = this.#timeline();
+		let narrowing = readStateWhere(options.readState ?? "unread");
+
+		return this.#page(narrowing === null ? timeline : timeline.where(narrowing), options);
 	}
 
 	/** One feed's posts, read and unread alike, newest first. */
@@ -1166,6 +1205,18 @@ async function itemRow(feedId: string, entry: Feed.Item, now: number): Promise<I
 		content_hash: await digest(displayable),
 		read_at: null,
 	};
+}
+
+/**
+ * What one read state narrows the timeline by, or `null` for the state that narrows
+ * nothing. Both predicates are spelled the way the partial index that serves them is, so
+ * SQLite reads each page from that index rather than sorting the reader's posts.
+ */
+function readStateWhere(readState: UserStore.ReadState): Predicate<"read_at"> | null {
+	if (readState === "unread") return isNull("read_at");
+	if (readState === "read") return notNull("read_at");
+
+	return null;
 }
 
 /** The page size a caller asked for, held between one post and {@link MAX_PAGE_LIMIT}. */

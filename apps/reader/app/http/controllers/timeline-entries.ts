@@ -15,6 +15,8 @@ import type { i18n } from "@sdxc/i18n";
 import type { UserStore } from "~/database/user-do";
 import type { Timeline } from "~/resources/views/timeline";
 
+import routes from "~/routes/web";
+
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
@@ -83,6 +85,23 @@ export function exactDate(moment: number, locale: string): string {
 }
 
 /**
+ * A post's address as a link may carry it: an absolute `http` or `https` URL, which is
+ * what a browser opens as a web page. The publisher wrote that address and it is stored
+ * as written, so anything else — a scheme of its own, an address relative to a site this
+ * app is not — leaves the title plain text rather than a link somewhere unintended.
+ *
+ * @param stored - The address the post carries, as the store answered with it.
+ */
+function linkable(stored: string | null): string | null {
+	if (stored === null || !URL.canParse(stored)) return null;
+
+	let url = new URL(stored);
+	if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+
+	return url.toString();
+}
+
+/**
  * Builds one page of timeline rows from the posts a store answered with.
  *
  * @param ctx - The request's dictionary and language, which every label is resolved through.
@@ -99,6 +118,8 @@ export function timelineEntries(
 	let now = Date.now();
 
 	return items.map((item) => {
+		let url = linkable(item.url);
+
 		/**
 		 * Inside one feed the source is the same word on every row, so the author is what
 		 * tells one post from the next there.
@@ -110,7 +131,12 @@ export function timelineEntries(
 		return {
 			id: item.id,
 			title: item.title,
-			url: item.url,
+			url,
+			/**
+			 * Where the browser reports the click, so following the title is what takes the
+			 * post out of the queue. A row with nothing to open carries no report.
+			 */
+			ping: url === null ? null : routes.items.open.href({ itemId: item.id }),
 			source,
 			summary: item.summary,
 			time: shortDate(item.publishedAt, ctx.locale, now),

@@ -18,7 +18,7 @@
 import { parsePageParams } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { flex, gap, items, vstack } from "@sdxc/u/layout";
-import { p } from "@sdxc/u/size";
+import { maxIs, p } from "@sdxc/u/size";
 import { Alert, Button, Card, Empty, HeadingScope, LinkButton, Text, TextField } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
@@ -28,7 +28,7 @@ import { timelineEntries } from "~/app/http/controllers/timeline-entries";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/database/user-do";
-import AppLayout from "~/resources/layouts/app";
+import AppLayout, { PAGE_COLUMN } from "~/resources/layouts/app";
 import Timeline from "~/resources/views/timeline";
 import routes from "~/routes/web";
 
@@ -121,6 +121,7 @@ export default createAction(routes.search, {
 				 * and the navigation offers no tab of its own to mark.
 				 */
 				current="search"
+				width="list"
 				locale={ctx.locale}
 				nav={{
 					label: ctx.i18next.t("nav.label"),
@@ -132,7 +133,8 @@ export default createAction(routes.search, {
 				}}
 			>
 				<div mix={[vstack({ gap: 6 })]}>
-					<Card mix={[p(4)]}>
+					{/** The results take the window; one field asking for a few words does not. */}
+					<Card mix={[p(4), maxIs(PAGE_COLUMN)]}>
 						<form
 							method="get"
 							action={routes.search.href()}

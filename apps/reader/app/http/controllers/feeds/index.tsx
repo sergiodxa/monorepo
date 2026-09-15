@@ -206,6 +206,7 @@ export function renderFeedsPage(
 			documentTitle={ctx.i18next.t("feeds.index.title")}
 			heading={ctx.i18next.t("feeds.index.heading")}
 			current="feeds"
+			width="list"
 			locale={ctx.locale}
 			nav={{
 				label: ctx.i18next.t("nav.label"),

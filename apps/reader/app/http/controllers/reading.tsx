@@ -132,6 +132,7 @@ export default createAction(routes.reading, {
 					) : undefined
 				}
 				current="reading"
+				width="list"
 				locale={ctx.locale}
 				nav={{
 					label: ctx.i18next.t("nav.label"),

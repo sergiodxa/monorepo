@@ -32,9 +32,9 @@ function createRouter(viewer: typeof VIEWER | null): Router {
 	return router;
 }
 
-/** The cadence the rendered form shows chosen, read off the radio carrying `checked`. */
-function checkedInterval(html: string): string | null {
-	return /<input[^>]*\bvalue="(\d+)"[^>]*\bchecked\b/.exec(html)?.[1] ?? null;
+/** The cadence the rendered form shows chosen, read off the option carrying `selected`. */
+function selectedInterval(html: string): string | null {
+	return /<option[^>]*\bvalue="(\d+)"[^>]*\bselected\b/.exec(html)?.[1] ?? null;
 }
 
 beforeEach(() => {
@@ -50,7 +50,7 @@ describe("GET /settings", () => {
 		expect(store.getSettings).not.toHaveBeenCalled();
 	});
 
-	test("offers every cadence, with the stored one chosen", async () => {
+	test("offers every cadence in one field, with the stored one chosen", async () => {
 		store.getSettings.mockResolvedValue({ ...DEFAULT_SETTINGS, refreshIntervalHours: 3 });
 
 		let response = await fetchRoute(createRouter(VIEWER), routes.settings.index.href());
@@ -58,14 +58,30 @@ describe("GET /settings", () => {
 
 		expect(response.status).toBe(200);
 
+		/** A native select submits the cadence with the form, which is what asks for no script. */
+		expect(html).toMatch(/<select[^>]*\bname="refreshIntervalHours"/);
+
 		for (let hours of REFRESH_INTERVALS) {
-			expect(html).toContain(`value="${hours}"`);
+			expect(html).toMatch(new RegExp(`<option[^>]*\\bvalue="${hours}"`));
 		}
 
 		expect(html).toContain("Every hour");
 		expect(html).toContain("Every 3 hours");
 		expect(html).toContain("Every 24 hours");
-		expect(checkedInterval(html)).toBe("3");
+		expect(selectedInterval(html)).toBe("3");
+	});
+
+	test("ties the field to the label naming it and the passage explaining it", async () => {
+		let html = await (await fetchRoute(createRouter(VIEWER), routes.settings.index.href())).text();
+
+		let field = /<select[^>]*>/.exec(html)?.[0];
+
+		let id = field?.match(/id="([^"]+)"/)?.[1];
+		expect(html).toContain(`for="${id}"`);
+
+		let describedBy = field?.match(/aria-describedby="([^"]+)"/)?.[1];
+		expect(describedBy).toBeDefined();
+		expect(html).toContain(`id="${describedBy}"`);
 	});
 
 	test("names the group and explains what checking more often costs", async () => {

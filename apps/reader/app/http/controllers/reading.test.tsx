@@ -122,6 +122,28 @@ describe("GET /reading", () => {
 		expect(body).toContain('title="Mark as read"');
 	});
 
+	test("reports a followed title to the route that marks the post read", async () => {
+		store.readingQueue.mockResolvedValue({
+			ok: true,
+			items: [
+				item({ id: "item-1" }),
+				/** A feed that published no address leaves the title as words, with nothing to follow. */
+				item({ id: "item-2", title: "Nowhere to go", url: null }),
+			],
+			feeds: FEEDS,
+			cursors: { next: null, prev: null },
+		});
+
+		let body = await (await get(routes.reading.href())).text();
+
+		let linked = /<a[^>]*href="https:\/\/example\.com\/post"[^>]*>/.exec(body)?.[0];
+		expect(linked).toContain(`ping="${routes.items.open.href({ itemId: "item-1" })}"`);
+
+		/** A row with no link carries no ping, rather than reporting the trip to `/null`. */
+		expect(body).not.toContain('ping="null"');
+		expect(body).not.toContain(routes.items.open.href({ itemId: "item-2" }));
+	});
+
 	test("marks a queued post with the tick that carries it out, not a state ring", async () => {
 		store.readingQueue.mockResolvedValue({
 			ok: true,

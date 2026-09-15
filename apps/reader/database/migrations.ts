@@ -14,6 +14,7 @@ import { column as c, Database, table } from "remix/data-table";
 import m0001 from "./migrations/0001-init.sql?raw";
 import m0002 from "./migrations/0002-drop-item-content.sql?raw";
 import m0003 from "./migrations/0003-feed-list-index.sql?raw";
+import m0004 from "./migrations/0004-read-timeline-index.sql?raw";
 
 /** One migration, identified so the journal can record that it ran. */
 interface ReaderMigration {
@@ -26,6 +27,7 @@ export const MIGRATIONS: ReaderMigration[] = [
 	{ id: "0001-init", sql: m0001 },
 	{ id: "0002-drop-item-content", sql: m0002 },
 	{ id: "0003-feed-list-index", sql: m0003 },
+	{ id: "0004-read-timeline-index", sql: m0004 },
 ];
 
 /**
