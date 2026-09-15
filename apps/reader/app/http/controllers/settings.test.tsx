@@ -82,7 +82,13 @@ describe("GET /settings", () => {
 		let html = await (await fetchRoute(createRouter(VIEWER), routes.settings.index.href())).text();
 
 		expect(html).toContain("Last checked");
-		expect(html).toContain(new Intl.DateTimeFormat("en").format(lastRefreshedAt));
+		/**
+		 * The line says how long ago in the words the rest of the app dates things in, and
+		 * carries the exact date in the tooltip that stands behind it.
+		 */
+		expect(html).toContain(
+			new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(lastRefreshedAt),
+		);
 	});
 
 	test("says so when the feeds have never been checked", async () => {

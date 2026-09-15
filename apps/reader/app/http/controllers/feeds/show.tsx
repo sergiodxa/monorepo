@@ -20,6 +20,7 @@ import { createAction } from "remix/router";
 
 import { MARKED_PARAM } from "~/app/http/controllers/feeds/read";
 import { CHECKED_PARAM } from "~/app/http/controllers/feeds/refresh";
+import { timelineEntries } from "~/app/http/controllers/timeline-entries";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/database/user-do";
@@ -160,31 +161,12 @@ export default createAction(routes.feeds.show, {
 		let note =
 			markNote(ctx.url.searchParams.get(MARKED_PARAM)) ??
 			checkNote(ctx.url.searchParams.get(CHECKED_PARAM));
-		let publishedFormat = new Intl.DateTimeFormat(ctx.locale, { dateStyle: "medium" });
 
-		/** Read outside the mapping below, which is a closure and so widens `feed` again. */
-		let feedTitle = feed.title;
-
-		let entries = page.items.map((item) => {
-			let meta: string[] = [];
-
-			meta.push(feedTitle);
-			if (item.author) meta.push(ctx.i18next.t("timeline.byAuthor", { author: item.author }));
-			meta.push(
-				ctx.i18next.t("timeline.publishedOn", {
-					date: publishedFormat.format(item.publishedAt),
-				}),
-			);
-
-			return {
-				id: item.id,
-				title: item.title,
-				url: item.url,
-				summary: item.summary,
-				meta,
-				isRead: item.readAt !== null,
-			};
-		});
+		/**
+		 * The page is headed by the feed's own name, so naming it again on every row below
+		 * says nothing; the author is what tells one of this feed's posts from another.
+		 */
+		let entries = timelineEntries(ctx, page.items, null);
 
 		return ctx.render(
 			<AppLayout

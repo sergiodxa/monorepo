@@ -77,7 +77,7 @@ describe("GET /reading", () => {
 		expect(store.readingQueue).not.toHaveBeenCalled();
 	});
 
-	test("renders each unread post with its feed, author and published date", async () => {
+	test("renders each unread post with the feed it came from and when it was published", async () => {
 		store.readingQueue.mockResolvedValue({
 			ok: true,
 			items: [
@@ -96,8 +96,12 @@ describe("GET /reading", () => {
 		expect(readsAs(body)).toContain("Release candidate two");
 		expect(body).toContain("Daring Fireball");
 		expect(body).toContain("Remix Changelog");
-		expect(body).toContain("by John Gruber");
-		expect(body).toContain("Published Jan 2, 2026");
+		/**
+		 * The queue gathers every feed, so a post names the one it came from, and dates
+		 * itself against today with the full date behind the tooltip.
+		 */
+		expect(body).toContain("Jan 2");
+		expect(body).toContain('title="Published Jan 2, 2026"');
 	});
 
 	test("gives every post a mark-read form returning to this page", async () => {

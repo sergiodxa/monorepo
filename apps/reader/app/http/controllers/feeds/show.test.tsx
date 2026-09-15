@@ -155,7 +155,12 @@ describe("GET /feeds/:feedId", () => {
 		expect(readsAs(body)).toContain("Markdown and the web");
 		expect(readsAs(body)).toContain("An older one");
 		expect(body).toContain("by John Gruber");
-		expect(body).toContain("Published Jan 2, 2026");
+		expect(body).toContain('title="Published Jan 2, 2026"');
+		/**
+		 * The page is headed by the feed, so the list under it names the author instead:
+		 * repeating one name down every row of its own page says nothing.
+		 */
+		expect(body.slice(body.indexOf("<ol"))).not.toContain(FEED.title);
 		/** The mark is the whole control, so the words reach a reader through these two. */
 		expect(body).toContain('aria-label="Mark as read"');
 		expect(body).toContain('title="Mark as read"');
@@ -301,8 +306,12 @@ describe("GET /feeds/:feedId", () => {
 		expect(linked).toContain('rel="noopener noreferrer"');
 		/** The outbound mark, which only a link that leaves the app wears. */
 		expect(linked).toContain("lucide-external-link");
-		/** The last word and the mark travel as one, so a wrap never strands the mark. */
-		expect(linked).toContain("web<svg");
+		/**
+		 * The mark sits outside the span that clips, so it survives a title too long for
+		 * its row — which is most of them. Inside it, the ellipsis would eat the only
+		 * thing saying the words are a link.
+		 */
+		expect(linked).toContain("web</span><svg");
 
 		expect(plain).toContain("Nowhere to go");
 		expect(plain).not.toContain("<a ");

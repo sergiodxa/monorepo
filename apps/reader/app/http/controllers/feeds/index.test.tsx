@@ -152,7 +152,7 @@ describe("GET /feeds", () => {
 		expect(body).toContain("3 unread");
 	});
 
-	test("says a feed is all read when nothing in it is unread", async () => {
+	test("says nothing at all about a feed with nothing unread", async () => {
 		store.listFeeds.mockResolvedValue({
 			ok: true,
 			feeds: [feed({ unreadCount: 0 })],
@@ -161,7 +161,6 @@ describe("GET /feeds", () => {
 
 		let body = await getFeeds(VIEWER).then((response) => response.text());
 
-		expect(body).toContain("All read");
 		expect(body).not.toContain("unread");
 	});
 

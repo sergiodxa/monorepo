@@ -31,6 +31,7 @@ import {
 	Heading,
 	LinkButton,
 	RadioGroup,
+	Separator,
 	Text,
 } from "@sdxc/ui";
 import * as s from "remix/data-schema";
@@ -40,6 +41,7 @@ import { createController } from "remix/router";
 import type { UserStore } from "~/database/user-do";
 
 import { FILE_FIELD, IMPORTED_PARAM } from "~/app/http/controllers/feeds/import";
+import { exactDate, shortDate } from "~/app/http/controllers/timeline-entries";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { REFRESH_INTERVALS } from "~/database/schema";
@@ -179,12 +181,21 @@ function settingsPage(
 
 	let transfer = importNote(ctx);
 
+	/**
+	 * How long ago the schedule above last ran, in the words every other date in the app is
+	 * read in, with the exact one a pointer's breath away.
+	 */
 	let lastRefreshed =
 		settings?.lastRefreshedAt == null
-			? ctx.i18next.t("settings.neverRefreshed")
-			: ctx.i18next.t("settings.lastRefreshed", {
-					date: new Intl.DateTimeFormat(ctx.locale).format(settings.lastRefreshedAt),
-				});
+			? { short: ctx.i18next.t("settings.neverRefreshed"), exact: undefined }
+			: {
+					short: ctx.i18next.t("settings.lastRefreshed", {
+						date: shortDate(settings.lastRefreshedAt, ctx.locale, Date.now()),
+					}),
+					exact: ctx.i18next.t("settings.lastRefreshed", {
+						date: exactDate(settings.lastRefreshedAt, ctx.locale),
+					}),
+				};
 
 	return ctx.render(
 		<AppLayout
@@ -238,6 +249,14 @@ function settingsPage(
 							</RadioGroup>
 
 							{error && <FieldError>{error}</FieldError>}
+
+							{/**
+							 * When the schedule last ran is the schedule's own news, so it sits under the
+							 * cadences it reports on rather than in the gap below the card.
+							 */}
+							<Text mix={[text("xs"), fg("neutral.muted")]} title={lastRefreshed.exact}>
+								{lastRefreshed.short}
+							</Text>
 						</div>
 					</fieldset>
 
@@ -246,8 +265,6 @@ function settingsPage(
 					</div>
 				</form>
 			</Card>
-
-			<Text mix={[text("sm"), fg("neutral.muted")]}>{lastRefreshed}</Text>
 
 			{transfer && (
 				<Alert color={transfer.color}>
@@ -282,6 +299,10 @@ function settingsPage(
 						</LinkButton>
 					</div>
 
+					{/** The two directions share a card and are still two errands, so a rule says
+					 * where one ends. */}
+					<Separator />
+
 					{/**
 					 * `multipart/form-data` is the encoding that carries a file's bytes along with
 					 * the field naming it; url-encoding sends the name the reader picked it under
@@ -296,7 +317,7 @@ function settingsPage(
 						method="post"
 						action={routes.feeds.import.href()}
 						encType="multipart/form-data"
-						mix={[vstack({ gap: 2, align: "start" })]}
+						mix={[vstack({ gap: 3, align: "start" })]}
 					>
 						{/** Ahead of the controls, so it is read before a file is chosen rather than
 						 * after. */}
@@ -304,18 +325,18 @@ function settingsPage(
 							{ctx.i18next.t("feeds.transfer.import.description")}
 						</Description>
 
-						<div mix={[flex(), items("end"), flexWrap("wrap"), gap(3)]}>
-							{/**
-							 * A native file input rather than a styled trigger. The trigger hides the
-							 * input behind a button-like label, so nothing on the page says which file
-							 * was chosen — and without script there is nothing to say it with. The
-							 * platform's own control names the file it holds.
-							 */}
-							<div mix={[vstack({ gap: 1, align: "start" })]}>
-								<Label htmlFor={IMPORT_FILE_ID}>
-									{ctx.i18next.t("feeds.transfer.import.label")}
-								</Label>
+						<div mix={[vstack({ gap: 2, align: "start" }), maxIs("100%")]}>
+							<Label htmlFor={IMPORT_FILE_ID}>{ctx.i18next.t("feeds.transfer.import.label")}</Label>
 
+							{/** The picker and the submit on one line, wrapping onto two where a phone
+							 * has room for one control at a time. */}
+							<div mix={[flex(), items("center"), flexWrap("wrap"), gap(3), maxIs("100%")]}>
+								{/**
+								 * A native file input rather than a styled trigger. The trigger hides the
+								 * input behind a button-like label, so nothing on the page says which file
+								 * was chosen — and without script there is nothing to say it with. The
+								 * platform's own control names the file it holds.
+								 */}
 								<input
 									id={IMPORT_FILE_ID}
 									type="file"
@@ -329,16 +350,18 @@ function settingsPage(
 										cursor("pointer"),
 										/**
 										 * The platform draws this control, and only its button half can be
-										 * restyled — which is the half worth restyling. Dressed as the outline
-										 * button it sits beside, it leaves the filename the browser writes
-										 * next to it, which is the whole reason for using the real input.
+										 * restyled — which is the half worth restyling. Dressed in the padding,
+										 * border and type the outline buttons on this page wear, it stands the
+										 * same height as the submit beside it and leaves the filename the
+										 * browser writes next to it, which is the whole reason for using the
+										 * real input.
 										 */
 										when("&::file-selector-button", [
 											mie(3),
-											pi(3),
+											pi(4),
 											pb(2),
 											rounded("md"),
-											border("neutral.border"),
+											border({ color: "neutral.border", width: 2 }),
 											bg("transparent"),
 											fg("neutral.emphasis"),
 											text("sm"),
@@ -347,9 +370,9 @@ function settingsPage(
 										]),
 									]}
 								/>
-							</div>
 
-							<Button type="submit">{ctx.i18next.t("feeds.transfer.import.submit")}</Button>
+								<Button type="submit">{ctx.i18next.t("feeds.transfer.import.submit")}</Button>
+							</div>
 						</div>
 					</form>
 				</div>

@@ -143,7 +143,6 @@ export default {
 			},
 			unread_one: "{{count}} unread",
 			unread_other: "{{count}} unread",
-			allRead: "All read",
 			checked: "Checked {{date}}",
 			neverChecked: "Not checked yet",
 			failing_one: "The last check failed",

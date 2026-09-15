@@ -28,6 +28,7 @@ import type { UserStore } from "~/database/user-do";
 import type { FeedList as FeedListTypes } from "~/resources/views/feed-list";
 
 import { FAILED_PARAM, FRESH_PARAM, SWEPT_PARAM } from "~/app/http/controllers/feeds/refresh-all";
+import { exactDate, shortDate } from "~/app/http/controllers/timeline-entries";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/database/user-do";
@@ -161,8 +162,8 @@ export function renderFeedsPage(
 ) {
 	let { cursors = { next: null, prev: null }, staleCursor = false } = listing;
 
-	/** The same style the timelines print a publication date in, so one app prints one date. */
-	let dates = new Intl.DateTimeFormat(ctx.locale, { dateStyle: "medium" });
+	/** The moment every check on this page is read against, so the list dates from one clock. */
+	let now = Date.now();
 
 	let note = checkAllNote(ctx);
 
@@ -174,18 +175,20 @@ export function renderFeedsPage(
 			id: feed.id,
 			title: feed.title,
 			description: feed.description,
-			hasUnread: feed.unreadCount > 0,
 
+			/** A count is worth a badge while it counts something; nothing waiting says itself. */
 			unreadLabel:
 				feed.unreadCount > 0
 					? ctx.i18next.t("feeds.index.unread", { count: feed.unreadCount })
-					: ctx.i18next.t("feeds.index.allRead"),
+					: null,
+
+			checked: feed.lastFetchedAt === null ? null : shortDate(feed.lastFetchedAt, ctx.locale, now),
 
 			checkedLabel:
 				feed.lastFetchedAt === null
 					? ctx.i18next.t("feeds.index.neverChecked")
 					: ctx.i18next.t("feeds.index.checked", {
-							date: dates.format(new Date(feed.lastFetchedAt)),
+							date: exactDate(feed.lastFetchedAt, ctx.locale),
 						}),
 
 			failureLabel:

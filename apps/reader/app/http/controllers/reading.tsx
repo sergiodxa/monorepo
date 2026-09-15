@@ -5,7 +5,7 @@
  * starting fresh beats working through the backlog.
  *
  * The store answers with posts and, beside them, the feeds those posts came from. Turning
- * that into the byline a reader sees happens here, where the dictionary and the request's
+ * that into the row a reader sees happens here, where the dictionary and the request's
  * language are, so the list itself prints text it is handed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -19,6 +19,7 @@ import { Alert, Button, Confirm, Empty, HeadingScope, LinkButton } from "@sdxc/u
 import { createAction } from "remix/router";
 
 import { MARKED_PARAM } from "~/app/http/controllers/read-all";
+import { timelineEntries } from "~/app/http/controllers/timeline-entries";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/database/user-do";
@@ -90,30 +91,13 @@ export default createAction(routes.reading, {
 		if (!page.ok) throw new Error("The first page of a timeline decodes without a cursor");
 
 		let items = page.items;
-		let feedTitles = new Map(page.feeds.map((feed) => [feed.id, feed.title]));
-		let publishedFormat = new Intl.DateTimeFormat(ctx.locale, { dateStyle: "medium" });
 
-		let entries = items.map((item) => {
-			let meta: string[] = [];
-
-			let feedTitle = feedTitles.get(item.feedId);
-			if (feedTitle) meta.push(feedTitle);
-			if (item.author) meta.push(ctx.i18next.t("timeline.byAuthor", { author: item.author }));
-			meta.push(
-				ctx.i18next.t("timeline.publishedOn", {
-					date: publishedFormat.format(item.publishedAt),
-				}),
-			);
-
-			return {
-				id: item.id,
-				title: item.title,
-				url: item.url,
-				summary: item.summary,
-				meta,
-				isRead: item.readAt !== null,
-			};
-		});
+		/** The queue gathers every feed, so a row names the one its post came from. */
+		let entries = timelineEntries(
+			ctx,
+			items,
+			new Map(page.feeds.map((feed) => [feed.id, feed.title])),
+		);
 
 		/**
 		 * An empty queue reads two ways and only the feed list tells them apart: somebody

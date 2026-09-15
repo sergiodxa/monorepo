@@ -8,7 +8,7 @@
  * cursor so the second page of a search is still that search.
  *
  * The store answers with posts and, beside them, the feeds those posts came from. Turning
- * that into the byline a reader sees happens here, where the dictionary and the request's
+ * that into the row a reader sees happens here, where the dictionary and the request's
  * language are, so the list itself prints text it is handed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -17,13 +17,14 @@
 
 import { parsePageParams } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
-import { self, vstack } from "@sdxc/u/layout";
+import { flex, gap, items, vstack } from "@sdxc/u/layout";
 import { p } from "@sdxc/u/size";
 import { Alert, Button, Card, Empty, HeadingScope, LinkButton, Text, TextField } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
 import type { UserStore } from "~/database/user-do";
 
+import { timelineEntries } from "~/app/http/controllers/timeline-entries";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/database/user-do";
@@ -94,30 +95,12 @@ export default createAction(routes.search, {
 			page = found;
 		}
 
-		let feedTitles = new Map((page?.feeds ?? []).map((feed) => [feed.id, feed.title]));
-		let publishedFormat = new Intl.DateTimeFormat(ctx.locale, { dateStyle: "medium" });
-
-		let entries = (page?.items ?? []).map((item) => {
-			let meta: string[] = [];
-
-			let feedTitle = feedTitles.get(item.feedId);
-			if (feedTitle) meta.push(feedTitle);
-			if (item.author) meta.push(ctx.i18next.t("timeline.byAuthor", { author: item.author }));
-			meta.push(
-				ctx.i18next.t("timeline.publishedOn", {
-					date: publishedFormat.format(item.publishedAt),
-				}),
-			);
-
-			return {
-				id: item.id,
-				title: item.title,
-				url: item.url,
-				summary: item.summary,
-				meta,
-				isRead: item.readAt !== null,
-			};
-		});
+		/** A search reaches every followed feed, so a result names the one it came from. */
+		let entries = timelineEntries(
+			ctx,
+			page?.items ?? [],
+			new Map((page?.feeds ?? []).map((feed) => [feed.id, feed.title])),
+		);
 
 		let next = page?.cursors.next ?? null;
 		let prev = page?.cursors.prev ?? null;
@@ -169,9 +152,13 @@ export default createAction(routes.search, {
 								autoComplete="off"
 							/>
 
-							<Button type="submit" mix={[self("end")]}>
-								{ctx.i18next.t("search.submit")}
-							</Button>
+							{/**
+							 * Under the field and at the start of the row, so it sits beneath the words it
+							 * submits rather than a card's width away from them.
+							 */}
+							<div mix={[flex(), items("center"), gap(2)]}>
+								<Button type="submit">{ctx.i18next.t("search.submit")}</Button>
+							</div>
 						</form>
 					</Card>
 

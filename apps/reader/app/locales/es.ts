@@ -142,7 +142,6 @@ export default {
 			},
 			unread_one: "{{count}} sin leer",
 			unread_other: "{{count}} sin leer",
-			allRead: "Todo leído",
 			checked: "Revisado el {{date}}",
 			neverChecked: "Aún sin revisar",
 			failing_one: "La última revisión falló",

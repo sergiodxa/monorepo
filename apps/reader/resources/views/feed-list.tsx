@@ -4,6 +4,10 @@
  * failed follow render it: a refused URL is answered with the page it was submitted from,
  * carrying the reason, so the list and the form stay one piece of markup.
  *
+ * A feed is one row, the same row a post is, so a reader moving between the two lists
+ * reads them the same way: the name, then what it has waiting, then when it was last
+ * looked at.
+ *
  * Every string arrives translated and every date arrives formatted, so the dictionary and
  * the request's language stay with the controller.
  *
@@ -13,13 +17,15 @@
 
 import type { Handle } from "remix/ui";
 
-import { fg } from "@sdxc/u/color";
+import { bg, borderEdge, colorMix, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { flex, flexWrap, gap, grow, items, vstack } from "@sdxc/u/layout";
-import { maxIs, p } from "@sdxc/u/size";
+import { flex, flexWrap, gap, grow, items, shrink, vstack } from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
+import { mbs, minIs, mis, p, pb, pi } from "@sdxc/u/size";
 import { hover } from "@sdxc/u/state";
-import { leading, text, textDecoration, weight } from "@sdxc/u/typography";
-import { Badge, Button, Card, Empty, Text, TextField } from "@sdxc/ui";
+import { color } from "@sdxc/u/tokens";
+import { nowrap, text, textAlign, textDecoration, truncate, weight } from "@sdxc/u/typography";
+import { Badge, Button, Card, Empty, TextField } from "@sdxc/ui";
 
 import routes from "~/routes/web";
 
@@ -29,17 +35,42 @@ import routes from "~/routes/web";
  */
 const FOLLOW_FORM_ID = "follow-feed";
 
+/**
+ * The fill a row takes under the pointer: the rule between rows thinned until it reads as
+ * a shade of the page rather than a band across it, which keeps it the same weight on a
+ * light page and a dark one.
+ */
+const ROW_HOVER = colorMix("oklab", { color: color("neutral.border"), weight: 25 }, "transparent");
+
+/**
+ * Where a row has the width for its name, its count and its last check on one line. Below
+ * it the name keeps the line to itself and the rest drops underneath.
+ */
+const WIDE_ROW = "(min-width: 34rem)";
+
+/**
+ * Least width of the column holding the last check, which is what lines the dates up. A
+ * phrase longer than this takes the room it needs rather than reaching back over the name.
+ */
+const CHECKED_COLUMN = "6rem";
+
+/** What a feed nobody has checked yet shows where a date would be. */
+const NO_DATE = "—";
+
 export namespace FeedList {
 	/** One followed feed, with every label already resolved to the text that is printed. */
 	export interface Entry {
 		id: string;
 		title: string;
 		description: string | null;
-		/** Unread count or the all-read note, whichever this feed has earned. */
-		unreadLabel: string;
-		/** Whether anything in this feed is unread, which decides how the count reads. */
-		hasUnread: boolean;
-		/** When it was last checked, or that it has not been. */
+		/**
+		 * How many posts are waiting, or `null` for a feed with none. A count that says
+		 * "nothing" on every row of a list somebody has read is a row of noise.
+		 */
+		unreadLabel: string | null;
+		/** How long ago it was last checked, or `null` for a feed nobody has checked. */
+		checked: string | null;
+		/** The full date of that check, which the short one stands for. */
 		checkedLabel: string;
 		/** Why the last checks failed, or `null` for a feed that is fine. */
 		failureLabel: string | null;
@@ -149,47 +180,84 @@ export default function FeedList(handle: Handle<FeedList.Props>) {
 						<Empty.Description>{empty.description}</Empty.Description>
 					</Empty>
 				) : (
-					<ul mix={[vstack({ gap: 3 }), p(0)]}>
+					<ul mix={[p(0)]}>
 						{entries.map((entry) => (
-							<li key={entry.id}>
-								<Card mix={[p(4)]}>
-									<div mix={[vstack({ gap: 2 })]}>
-										<div mix={[flex(), items("center"), flexWrap("wrap"), gap(2)]}>
-											<a
-												href={routes.feeds.show.href({ feedId: entry.id })}
-												mix={[
-													text("base"),
-													weight("semibold"),
-													fg("neutral.emphasis"),
-													textDecoration("none"),
-													hover(textDecoration("underline")),
-												]}
-											>
-												{entry.title}
-											</a>
+							<li
+								key={entry.id}
+								mix={[
+									pb(2),
+									pi(2),
+									rounded("md"),
+									borderEdge("block-end", { color: "neutral.border", width: 1 }),
+									hover(bg(ROW_HOVER)),
+								]}
+							>
+								<div mix={[media(WIDE_ROW, [flex(), items("baseline"), gap(3)])]}>
+									{/**
+									 * A feed with posts waiting wears the page's strongest foreground and one
+									 * that is read through settles back to body copy, which is the rule the
+									 * posts themselves follow.
+									 */}
+									<div
+										mix={[
+											grow(),
+											minIs(0),
+											truncate(),
+											text("sm"),
+											fg(entry.unreadLabel ? "neutral.emphasis" : "neutral"),
+										]}
+									>
+										<a
+											href={routes.feeds.show.href({ feedId: entry.id })}
+											mix={[
+												weight("medium"),
+												fg("inherit"),
+												textDecoration("none"),
+												hover([fg("brand"), textDecoration("underline")]),
+											]}
+										>
+											{entry.title}
+										</a>
 
-											<Badge color={entry.hasUnread ? "brand" : "neutral"} variant="secondary">
-												{entry.unreadLabel}
-											</Badge>
-										</div>
-
+										{/** What the feed says it is, carried on the name's own line and clipped
+										 * with it, so a list of fifty feeds stays a list of fifty lines. */}
 										{entry.description && (
-											<Text mix={[text("sm"), leading("relaxed"), maxIs("42rem")]}>
-												{entry.description}
-											</Text>
+											<span mix={[mis(2), fg("neutral.muted")]}>{entry.description}</span>
+										)}
+									</div>
+
+									<div
+										mix={[
+											flex(),
+											items("baseline"),
+											gap(2),
+											shrink(),
+											text("xs"),
+											fg("neutral.muted"),
+											mbs(1),
+											media(WIDE_ROW, mbs(0)),
+										]}
+									>
+										{entry.failureLabel && (
+											<Badge color="danger" variant="secondary">
+												{entry.failureLabel}
+											</Badge>
 										)}
 
-										<div mix={[flex(), items("center"), flexWrap("wrap"), gap(2)]}>
-											<Text mix={[text("xs"), fg("neutral.muted")]}>{entry.checkedLabel}</Text>
+										{entry.unreadLabel && (
+											<Badge color="brand" variant="secondary">
+												{entry.unreadLabel}
+											</Badge>
+										)}
 
-											{entry.failureLabel && (
-												<Badge color="danger" variant="secondary">
-													{entry.failureLabel}
-												</Badge>
-											)}
-										</div>
+										<span
+											title={entry.checkedLabel}
+											mix={[nowrap(), media(WIDE_ROW, [minIs(CHECKED_COLUMN), textAlign("end")])]}
+										>
+											{entry.checked ?? NO_DATE}
+										</span>
 									</div>
-								</Card>
+								</div>
 							</li>
 						))}
 					</ul>

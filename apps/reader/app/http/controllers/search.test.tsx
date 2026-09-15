@@ -119,7 +119,7 @@ describe("GET /search", () => {
 		});
 	});
 
-	test("renders each match with its feed, author and published date", async () => {
+	test("renders each match with the feed it came from and when it was published", async () => {
 		store.searchPosts.mockResolvedValue(
 			results([
 				item({ id: "item-1", title: "Markdown and the web", author: "John Gruber" }),
@@ -135,8 +135,12 @@ describe("GET /search", () => {
 		expect(readsAs(body)).toContain("Release candidate two");
 		expect(body).toContain("Daring Fireball");
 		expect(body).toContain("Remix Changelog");
-		expect(body).toContain("by John Gruber");
-		expect(body).toContain("Published Jan 2, 2026");
+		/**
+		 * A result names the feed it came from, since a search reaches every one of them,
+		 * and dates itself against today with the full date behind the tooltip.
+		 */
+		expect(body).toContain("Jan 2");
+		expect(body).toContain('title="Published Jan 2, 2026"');
 	});
 
 	test("counts the matches when the page it has is all of them", async () => {

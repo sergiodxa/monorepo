@@ -1,7 +1,12 @@
 /**
- * The list of posts both reading surfaces render, and the pair of links that walk it. The
- * queue and a single feed differ in which posts they hold and in nothing about how one is
- * shown, so the markup lives here and each controller supplies the page it is showing.
+ * The list of posts every reading surface renders, and the pair of links that walk it. The
+ * queue, a single feed and a search differ in which posts they hold and in nothing about
+ * how one is shown, so the markup lives here and each controller supplies the page it is
+ * showing.
+ *
+ * A post is one row: the mark that changes what has been read, the title, who it came
+ * from, and when. Reading a list of posts is scanning it, and a row that takes one line
+ * puts twenty of them on a screen where a panel puts seven.
  *
  * Every string arrives translated and every date arrives formatted: interpolation and
  * locale-aware formatting belong to the controller, which is where the dictionary and the
@@ -15,43 +20,64 @@ import type { Handle } from "remix/ui";
 
 import { CheckIcon, CircleCheckIcon, CircleIcon, Undo2Icon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
-import { borderEdge, fg } from "@sdxc/u/color";
-import { opacity, rounded } from "@sdxc/u/effects";
-import { flex, gap, grow, items, justify, shrink, vstack } from "@sdxc/u/layout";
-import { bs, is, maxIs, minIs, mis, p, pb, pi } from "@sdxc/u/size";
-import { focusWithin, hover } from "@sdxc/u/state";
-import { leading, nowrap, overflowWrap, text, textDecoration, weight } from "@sdxc/u/typography";
-import { Button, Card, Text } from "@sdxc/ui";
+import { bg, borderEdge, colorMix, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { flex, gap, grow, inline, inlineFlex, items, justify, shrink } from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
+import { bs, is, maxIs, mbs, minIs, mis, p, pb, pi } from "@sdxc/u/size";
+import { hover } from "@sdxc/u/state";
+import { color } from "@sdxc/u/tokens";
+import {
+	leading,
+	nowrap,
+	text,
+	textAlign,
+	textDecoration,
+	truncate,
+	verticalAlign,
+	weight,
+} from "@sdxc/u/typography";
+import { Button, Text } from "@sdxc/ui";
 
 import OutboundMark from "~/resources/views/outbound-mark";
 import routes from "~/routes/web";
 
 /**
- * How much of its contrast a read post keeps. Low enough that a page of posts sorts into
- * read and unread at a glance, high enough that the title of a read one is still body
- * copy rather than a watermark.
+ * The fill a row takes under the pointer: the rule between rows thinned until it reads as
+ * a shade of the page rather than a band across it, which keeps it the same weight on a
+ * light page and a dark one.
  */
-const READ_OPACITY = 70;
+const ROW_HOVER = colorMix("oklab", { color: color("neutral.border"), weight: 25 }, "transparent");
 
 /**
- * The marker down a card's leading edge. It is the card's own border thickened, so a read
- * card carries it too in the card's border colour: transparent would leave the outline
- * open on that side, and dropping the width would move every word on the card.
+ * Where a row has the width for its title, source and time on one line. Below it the row
+ * keeps the title to itself and drops the two quiet columns underneath, which is the only
+ * way a phone shows a title rather than the first three words of one.
  */
-const UNREAD_EDGE_WIDTH = 3;
+const WIDE_ROW = "(min-width: 34rem)";
+
+/**
+ * Width of the column naming where a post came from. Fixed, so the column reads as a
+ * column: a source sized to its own words would leave every row's time in a different
+ * place.
+ */
+const SOURCE_COLUMN = "9rem";
+
+/**
+ * Least width of the column holding the time, which is what lines the times up. A phrase
+ * longer than this takes the room it needs rather than reaching back over the source.
+ */
+const TIME_COLUMN = "6rem";
 
 /** Edge of the read mark, sized to the label a small button would have carried instead. */
 const ICON_SIZE = 16;
 
-/**
- * Edge of the square the mark sits in. Comfortably past the mark itself, so a thumb on a
- * phone has a target rather than a glyph.
- */
-const TOGGLE_SIZE = "2.25rem";
+/** Edge of the square the mark sits in, which is the tallest thing on a row. */
+const TOGGLE_SIZE = "1.75rem";
 
 export namespace Timeline {
 	/**
-	 * What the mark on a post card stands for on this surface.
+	 * What the mark on a post stands for on this surface.
 	 *
 	 * `"toggle"` is a state a post is in and can be put back into: a feed's page holds
 	 * read and unread posts alike, so its mark says which of the two a post is.
@@ -68,12 +94,18 @@ export namespace Timeline {
 		title: string;
 		/** Where the post lives, or `null` for a feed that published none. */
 		url: string | null;
-		summary: string | null;
 		/**
-		 * The byline, in the order it reads: the feed, the author, the date. Already
-		 * translated and formatted, so the list prints the parts and joins them.
+		 * Who the post is from: the feed on a surface holding many of them, the author on
+		 * one feed's own page, and `null` when neither is known.
 		 */
-		meta: string[];
+		source: string | null;
+		summary: string | null;
+		/** How long ago the post was published, short enough to scan down a column. */
+		time: string;
+		/** The full publication date, which the short one stands for. */
+		timeLabel: string;
+		/** The publication date as a machine reads it, for the `datetime` attribute. */
+		dateTime: string;
 		isRead: boolean;
 	}
 
@@ -82,8 +114,8 @@ export namespace Timeline {
 		markRead: string;
 		markUnread: string;
 		/**
-		 * That a post has been read, for a reader who cannot see the card dim. Color and
-		 * contrast carry the state on screen; this carries it to a screen reader.
+		 * That a post has been read, for a reader who cannot see the row dim. Contrast and
+		 * the mark's own glyph carry the state on screen; this carries it to a screen reader.
 		 */
 		read: string;
 		newer: string;
@@ -93,7 +125,7 @@ export namespace Timeline {
 	export interface Props {
 		entries: Entry[];
 		copy: Copy;
-		/** Which mark the cards wear, which is what the surface does with a post. */
+		/** Which mark the rows wear, which is what the surface does with a post. */
 		readAction: ReadAction;
 		/** The page the mark-read form returns to, which is the page being rendered. */
 		returnTo: string;
@@ -125,14 +157,13 @@ function ReadMark(handle: Handle<{ action: Timeline.ReadAction; isRead: boolean 
 
 /**
  * A post's title, and the link out to it for a post whose feed gave it an address. The
- * link is underlined from the start, since a title that only looks like a link under a
- * pointer looks like plain text on a touch screen; pointing at it thickens the rule and
- * takes the brand color.
+ * outbound mark is what says the words can be followed and where following them goes,
+ * which leaves a screenful of rows reading as a list of posts rather than as a page of
+ * rules; pointing at one underlines it and takes the brand color.
  *
- * The last word and the outbound mark share one unbreakable span, so a title that wraps
- * carries the mark down with the word it belongs to. A title of one word leaves that span
- * breakable, since the heading's freedom to break inside a word is what keeps a single
- * long one inside a phone's width.
+ * Only the words are allowed to run out of room. The mark sits beside them as its own
+ * column and never shrinks, because a row clips more titles than it shows in full — and
+ * a clipped title that also loses its mark is a link with nothing left to say so.
  */
 function PostTitle(handle: Handle<{ title: string; url: string | null }>) {
 	return () => {
@@ -140,35 +171,32 @@ function PostTitle(handle: Handle<{ title: string; url: string | null }>) {
 
 		if (!url) return title;
 
-		let lastBreak = title.lastIndexOf(" ");
-		let head = title.slice(0, lastBreak + 1);
-		let tail = title.slice(lastBreak + 1);
-
 		return (
 			<a
 				href={url}
 				target="_blank"
 				rel="noopener noreferrer"
 				mix={[
-					fg("neutral.emphasis"),
-					textDecoration({ line: "underline", thickness: 1, offset: 3 }),
-					hover([fg("brand"), textDecoration({ thickness: 2 })]),
+					inlineFlex(),
+					items("center"),
+					maxIs("100%"),
+					verticalAlign("bottom"),
+					fg("inherit"),
+					textDecoration("none"),
+					hover([fg("brand"), textDecoration({ line: "underline", thickness: 1, offset: 3 })]),
 				]}
 			>
-				{head}
-				<span mix={[head ? nowrap() : undefined]}>
-					{tail}
-					<OutboundMark mix={[mis(1)]} />
-				</span>
+				<span mix={[minIs(0), truncate()]}>{title}</span>
+				<OutboundMark mix={[shrink(0), mis(1)]} />
 			</a>
 		);
 	};
 }
 
 /**
- * The mark-read control, in the corner of the card it belongs to. A form rather than a
- * link, since following it changes what the reader has read, and a link is what a
- * prefetcher and a mail scanner follow on their own.
+ * The mark-read control, at the head of the row it belongs to. A form rather than a link,
+ * since following it changes what the reader has read, and a link is what a prefetcher
+ * and a mail scanner follow on their own.
  *
  * The mark is the whole control, so `label` is what names it: it reaches a screen reader
  * through `aria-label` and a pointer through the native tooltip `title` gives.
@@ -186,7 +214,7 @@ function ReadToggle(
 		let { action, id, isRead, label, returnTo } = handle.props;
 
 		return (
-			<form method="post" action={routes.items.read.href({ itemId: id })} mix={[shrink()]}>
+			<form method="post" action={routes.items.read.href({ itemId: id })} mix={[shrink(), flex()]}>
 				<input type="hidden" name="returnTo" value={returnTo} />
 				<input type="hidden" name="read" value={isRead ? "false" : "true"} />
 				{/**
@@ -214,81 +242,111 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 	return () => {
 		let { copy, cursors, entries, readAction, returnTo } = handle.props;
 
+		/**
+		 * One row without a source would pull its time out of the column every other row's
+		 * time sits in, so the cell is drawn for the whole list or for none of it.
+		 */
+		let hasSource = entries.some((entry) => entry.source !== null);
+
 		return (
-			<div mix={[vstack({ gap: 4 })]}>
-				<ol mix={[vstack({ gap: 4 }), p(0)]}>
+			<div>
+				<ol mix={[p(0)]}>
 					{entries.map((entry) => (
-						<li key={entry.id} mix={[vstack({ gap: 0 })]}>
-							{/**
-							 * A read card dims whole — title, byline, summary, border and control
-							 * together — and trades the accent edge for the card's own border colour, so
-							 * the two states differ in more than one shade of heading.
-							 *
-							 * The title's weight is deliberately not one of those differences. A heavier
-							 * face is a wider one, so switching it rewrites every glyph on the line and
-							 * the title reflows under the reader's eye at the moment they mark a post.
-							 *
-							 * Pointing at a read card or tabbing into it restores its full contrast,
-							 * which is when a reader is reading it rather than scanning past it.
-							 */}
-							<Card
-								mix={[
-									p(4),
-									borderEdge("inline-start", {
-										color: entry.isRead ? "neutral.border" : "brand.solid",
-										width: UNREAD_EDGE_WIDTH,
-									}),
-									entry.isRead && [
-										opacity(READ_OPACITY),
-										hover(opacity(100)),
-										focusWithin(opacity(100)),
-									],
-								]}
-							>
-								<article mix={[vstack({ gap: 2 })]}>
-									{/** The title takes the row and the mark keeps its corner, whatever the width. */}
-									<div mix={[flex(), items("start"), gap(2)]}>
-										<h2
-											mix={[
-												grow(),
-												minIs(0),
-												overflowWrap("anywhere"),
-												text("lg"),
-												weight("semibold"),
-												leading("snug"),
-											]}
-										>
+						<li
+							key={entry.id}
+							mix={[
+								pb(1),
+								pi(2),
+								rounded("md"),
+								borderEdge("block-end", { color: "neutral.border", width: 1 }),
+								hover(bg(ROW_HOVER)),
+							]}
+						>
+							<article mix={[flex(), items("center"), gap(2)]}>
+								<ReadToggle
+									id={entry.id}
+									action={readAction}
+									isRead={entry.isRead}
+									label={entry.isRead ? copy.markUnread : copy.markRead}
+									returnTo={returnTo}
+								/>
+
+								{/**
+								 * The title takes the line and the two quiet columns follow it, until the
+								 * line is too narrow to hold all three and they drop underneath.
+								 */}
+								<div mix={[grow(), minIs(0), media(WIDE_ROW, [flex(), items("baseline"), gap(3)])]}>
+									{/**
+									 * A read post keeps its title as body copy and an unread one wears the
+									 * page's own strongest foreground, so a screenful sorts into the two at a
+									 * glance.
+									 *
+									 * The weight is deliberately not one of those differences. A heavier face
+									 * is a wider one, so switching it rewrites every glyph on the line and the
+									 * title reflows under the reader's eye at the moment they mark a post.
+									 */}
+									<div
+										mix={[
+											grow(),
+											minIs(0),
+											truncate(),
+											text("sm"),
+											leading("normal"),
+											fg(entry.isRead ? "neutral" : "neutral.emphasis"),
+										]}
+									>
+										<h2 mix={[inline(), weight("medium")]}>
 											<PostTitle title={entry.title} url={entry.url} />
 										</h2>
 
-										<ReadToggle
-											id={entry.id}
-											action={readAction}
-											isRead={entry.isRead}
-											label={entry.isRead ? copy.markUnread : copy.markRead}
-											returnTo={returnTo}
-										/>
+										{/**
+										 * The opening of the post, carried on the title's own line in the space
+										 * a short title leaves: quiet enough to read as a continuation rather
+										 * than as a second title, and clipped with it.
+										 */}
+										{entry.summary && (
+											<span mix={[mis(2), fg("neutral.muted")]}>{entry.summary}</span>
+										)}
+
+										{entry.isRead && <Text mix={[visuallyHidden()]}>{copy.read}</Text>}
 									</div>
 
-									{entry.isRead && <Text mix={[visuallyHidden()]}>{copy.read}</Text>}
+									<div
+										mix={[
+											flex(),
+											items("baseline"),
+											gap(2),
+											shrink(),
+											text("xs"),
+											fg("neutral.muted"),
+											mbs(1),
+											media(WIDE_ROW, mbs(0)),
+										]}
+									>
+										{hasSource && (
+											<span
+												mix={[truncate(), media(WIDE_ROW, [is(SOURCE_COLUMN), textAlign("end")])]}
+											>
+												{entry.source}
+											</span>
+										)}
 
-									{entry.meta.length > 0 && (
-										<Text mix={[text("xs"), fg("neutral.muted")]}>{entry.meta.join(" · ")}</Text>
-									)}
-
-									{entry.summary && (
-										<Text mix={[text("sm"), leading("relaxed"), maxIs("42rem")]}>
-											{entry.summary}
-										</Text>
-									)}
-								</article>
-							</Card>
+										<time
+											dateTime={entry.dateTime}
+											title={entry.timeLabel}
+											mix={[nowrap(), media(WIDE_ROW, [minIs(TIME_COLUMN), textAlign("end")])]}
+										>
+											{entry.time}
+										</time>
+									</div>
+								</div>
+							</article>
 						</li>
 					))}
 				</ol>
 
 				{(cursors.prev ?? cursors.next) && (
-					<nav mix={[flex(), items("center"), gap(3), p(2, 0)]}>
+					<nav mix={[flex(), items("center"), gap(3), p(3, 0)]}>
 						{cursors.prev && (
 							<a
 								href={cursors.prev}
