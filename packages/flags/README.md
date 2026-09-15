@@ -449,12 +449,14 @@ interface Flags {
 ```
 
 The API instance `createFlags` returns. `getClient` with a context returns a client carrying it
-as the client merge level, which is how a request publishes its subject. `ready()` initializes
-every registered provider, which is what a middleware awaits on an isolate's first request, and
-`shutdown()` returns the instance to how it started, which is what makes one reusable between
-tests. Those two and `setProvider` answer with a `Result` from
-[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) rather than throwing; nothing on
-the evaluation path returns one, because nothing there fails.
+as the client merge level, which is how a request publishes its subject. `ready()` awaits the
+initialization of every registered provider, which is what a middleware awaits on an isolate's
+first request, and `shutdown()` returns the instance to how it started, which is what makes one
+reusable between tests. `setProvider` and `shutdown` answer with a `Result` from
+[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) rather than throwing. `ready()`
+resolves to nothing, because `setProvider` initializes the provider it registers and hands its
+caller that outcome; a later `ready()` awaits the same memoized answer. Nothing on the
+evaluation path returns a `Result` either, because nothing there fails.
 
 ```typescript
 let outcome = await flags.setProvider("marketing", new ServiceProvider());
