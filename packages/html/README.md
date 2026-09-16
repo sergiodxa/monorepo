@@ -230,6 +230,65 @@ The five lookups are the document's own, run again over the element's descendant
 every match is a scope. They take the same selectors, follow the same matching rules,
 and fail the same way, and a failure's `available` lists what the scope holds.
 
+### `HTML.sanitize(source, policy?): Result<string, HTMLParseError>`
+
+Rewrites markup into the subset that is safe to render beside content of your own,
+which is what rendering someone else's page inside your origin asks for. The source is
+parsed, walked and emitted again, so what comes back is markup the allow-list names and
+nothing else.
+
+```typescript
+let clean = HTML.sanitize(body, { baseUrl: "https://publisher.example/posts/one" });
+if (isFailure(clean)) throw clean.error;
+
+clean.data; // "<h1>Title</h1><p>A <a href=\"https://publisher.example/about\">link</a>.</p>"
+```
+
+- **Elements kept**: `p`, `h1`–`h6`, `ul`, `ol`, `li`, `dl`, `dt`, `dd`, `blockquote`,
+  `pre`, `code`, `em`, `strong`, `b`, `i`, `sup`, `sub`, `del`, `ins`, `abbr`, `a`,
+  `img`, `figure`, `figcaption`, `time`, `hr`, `br`, `table`, `thead`, `tbody`, `tr`,
+  `th`, `td`.
+- **Elements removed with their subtree**: `script`, `style`, `noscript`, `template`,
+  `iframe`, `object`, `embed`, `form`, `input`, `button`, `select`, `textarea`, `link`,
+  `meta`, `base`, `svg`, `math`. Their text leaves with them, so a script's source
+  never lands in the output as prose.
+- **Every other element is unwrapped**: a `<div>` or a `<span>` goes and its children
+  stay where they were, which keeps the text and drops the layout.
+- **Attributes kept**: `href` on `a`; `src`, `alt`, `width`, `height` on `img`;
+  `colspan` and `rowspan` on cells; `datetime` on `time`; `lang` and `dir` anywhere.
+  Everything else goes, which is what removes every `on*` handler, `style`, `class` and
+  `id` without naming them.
+- **URLs** may be `http:` or `https:`, plus `mailto:` on `href`. A relative URL
+  resolves against `policy.baseUrl`, so a relative `src` resolves against the page the
+  markup came from rather than against yours. An attribute left without an acceptable
+  value is dropped and its element kept: an `<a>` with a `javascript:` href comes back
+  as an `<a>` with no `href`.
+- **Images** gain `referrerpolicy="no-referrer"` and `loading="lazy"`, and an `<img>`
+  declaring a `width` or `height` of `1` is dropped, since a one-pixel image is never
+  content.
+
+An allow-list is what makes this hold for the element invented next year, and a
+Content-Security-Policy on the page that renders the result is the second line behind
+it.
+
+### `@sdxc/html/document`
+
+The parsed tree itself, for a package that needs to walk a document rather than ask it
+questions — a readability pass, a rewriter, a link checker. Sharing one parser is what
+keeps two packages agreeing about what `<p>one<p>two` is.
+
+```typescript
+import { parseDocument } from "@sdxc/html/document";
+import type { DOMDocument, DOMElement } from "@sdxc/html/document";
+
+let document = parseDocument(source);
+```
+
+`parseDocument` answers with the same `Result` the rest of the package does, and
+`DOMAttribute`, `DOMNode`, `DOMParent`, `DOMElement`, `DOMDocument` and `DOMStyle` are
+the vocabulary it is read through — declared by this package, so they describe the
+objects the parser produces under every set of globals a consumer compiles with.
+
 ### Errors
 
 `HTMLParseError` is a source carrying no markup.

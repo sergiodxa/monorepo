@@ -1,0 +1,18 @@
+{
+	"name": "@sdxc/readability",
+	"version": "0.0.1",
+	"private": true,
+	"description": "Pull the article out of a web page: fetch under bounds, score the candidates, sanitize what is left",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/html": "workspace:*",
+		"@sdxc/result": "workspace:*"
+	}
+}

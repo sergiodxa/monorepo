@@ -18,6 +18,7 @@ import { attributesOf, isDisabled, valueOf } from "./lib/element.js";
 import { accessibleName } from "./lib/name.js";
 import { parseDocument } from "./lib/parse-document.js";
 import { roleOf } from "./lib/roles.js";
+import { sanitize } from "./lib/sanitize.js";
 import { pick, unique } from "./lib/select.js";
 import { rowCells, tableRows } from "./lib/tables.js";
 import { normalize, visibleText } from "./lib/text.js";
@@ -81,6 +82,12 @@ export class HTMLAmbiguousMatchError extends HTMLQueryError {
 export namespace HTML {
 	/** Which of several matches to take; an ordinal counts from 1. */
 	export type Position = "first" | "last" | number;
+
+	/** How markup is sanitized for rendering beside content of your own. */
+	export interface SanitizePolicy {
+		/** The article's final URL, which every relative URL in the markup resolves against. */
+		baseUrl?: string | undefined;
+	}
 
 	/** What every lookup accepts: the choice among matches, and what markup hides. */
 	export interface Options {
@@ -204,6 +211,19 @@ export class HTML {
 		}
 
 		return HTML.parse(await response.text());
+	}
+
+	/**
+	 * Rewrites markup into the subset that is safe to render beside content of your
+	 * own: an allow-list of elements and attributes, emitted from the parsed tree, so
+	 * scripts, event handlers, styles and unfetchable URLs are absent by construction.
+	 *
+	 * @param source - The markup as the server sent it
+	 * @param policy - The base URL relative URLs in the markup resolve against
+	 * @returns The sanitized markup, or the failure a source carrying none produces
+	 */
+	static sanitize(source: string, policy?: HTML.SanitizePolicy): Result<string, HTMLParseError> {
+		return sanitize(source, policy);
 	}
 
 	/** The `<title>` text, normalized, absent when the page carries no title. */
