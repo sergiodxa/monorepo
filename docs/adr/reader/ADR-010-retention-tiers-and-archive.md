@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-16
+**Accepted** - 2026-09-16
 
 Extends the Retention, Velocity and Saved posts sections of
 [ADR-002](./ADR-002-canonical-feed-objects-and-lazy-reader-timelines.md), and contradicts
@@ -477,18 +477,19 @@ the archive is built.
 
 Part one:
 
-- [ ] `TIERS`, `TIER_BUDGETS` and `TIER_SAVED_LIMITS` in `database/schema.ts`, replacing
-      `READER_BUDGET` and `SAVED_LIMIT`
-- [ ] `tier` on `settings` with a `CHECK` repeating the names, defaulting to Free, in a new
+- [x] `TIER_BUDGETS` and `TIER_SAVED_LIMITS` in `database/schema.ts`, replacing
+      `READER_BUDGET` and `SAVED_LIMIT` and keyed by the `TIERS` the entitlement module
+      names, which is where every other fact about a tier is already written
+- [x] `tier` on `settings` with a `CHECK` repeating the names, defaulting to Free, in a new
       migration
-- [ ] The sweep and the back-pressure check read the budget through the tier
-- [ ] The save path reads its limit through the tier
-- [ ] The billing path writes the column, and is the only writer of it
-- [ ] `user.retention` carries the tier and the budget it applied
-- [ ] Tier copy in `app/locales/en.ts` and `app/locales/es.ts`, stating a number rather than
+- [x] The sweep and the back-pressure check read the budget through the tier
+- [x] The save path reads its limit through the tier
+- [x] The billing path writes the column, and is the only writer of it
+- [x] `user.retention` carries the tier and the budget it applied
+- [x] Tier copy in `app/locales/en.ts` and `app/locales/es.ts`, stating a number rather than
       the word "unlimited"
-- [ ] Durable Object SQLite storage, rows read and rows written added to the rate card
-- [ ] Behaviours 1 through 16
+- [x] Durable Object SQLite storage, rows read and rows written added to the rate card
+- [x] Behaviours 1 through 16
 
 Part two — **not scheduled, listed so the shape is not re-derived later**:
 
