@@ -13,6 +13,7 @@
 
 import type { Middleware } from "remix/router";
 
+import featureFlags from "@sdxc/flags/middleware/router";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
@@ -24,10 +25,11 @@ import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
-import auth from "~/app/http/middleware/auth";
+import auth, { getViewer } from "~/app/http/middleware/auth";
 import i18n from "~/app/http/middleware/i18n";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
 import { createHtmlRenderer } from "~/app/http/render";
+import { flags } from "~/app/lib/flags";
 import routes from "~/routes/web";
 
 import { logger } from "./logger";
@@ -62,6 +64,12 @@ export default function application(options: application.Options) {
 		methodOverride(),
 		createSessionMiddleware(options.kv, options.cookieSecret, options.secure) as Middleware,
 		auth as Middleware,
+		/**
+		 * Publishes `ctx.flags` on every surface. It stays after `auth` because the subject
+		 * targeting is written against is the signed-in reader, and a rule that names one
+		 * reader is the whole reason an evaluation carries a subject at all.
+		 */
+		featureFlags(flags, { context: () => ({ targetingKey: getViewer()?.id }) }) as Middleware,
 		/** Stays after `auth`, whose viewer decides which language preference is in scope. */
 		i18n,
 		cop(),

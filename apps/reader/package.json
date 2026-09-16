@@ -16,6 +16,8 @@
 		"@sdxc/data-table-d1": "workspace:*",
 		"@sdxc/data-table-sqlstorage": "workspace:*",
 		"@sdxc/feed": "workspace:*",
+		"@sdxc/flags": "workspace:*",
+		"@sdxc/flags-engine": "workspace:*",
 		"@sdxc/html": "workspace:*",
 		"@sdxc/http": "workspace:*",
 		"@sdxc/i18n": "workspace:*",

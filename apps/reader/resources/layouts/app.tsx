@@ -302,8 +302,12 @@ export namespace AppLayout {
 		/** Accessible name for the sidebar's navigation. */
 		label: string;
 		reading: string;
-		/** Names the list of posts the reader asked to keep. */
-		saved: string;
+		/**
+		 * Names the list of posts the reader asked to keep, or `null` where keeping is
+		 * turned off — which is what takes the row out of the sidebar rather than a second
+		 * question asked here.
+		 */
+		saved: string | null;
 		/** Names the sidebar's search box, which carries no visible label of its own. */
 		searchLabel: string;
 		/** What the sidebar's empty search box says it is for. */
@@ -706,15 +710,17 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 								 * Under the queue, since a post reaches this list from that one: it is the same
 								 * posts, kept rather than worked through, and the one list here nothing prunes.
 								 */}
-								<Sidebar.Item
-									href={routes.saved.href()}
-									current={isCurrent(routes.saved.href())}
-									mix={railRow("item")}
-								>
-									{/** The mark a row is kept with, worn here by the list of everything kept. */}
-									<BookmarkIcon size={ICON_SIZE} />
-									<span mix={[minIs(0), truncate()]}>{nav.saved}</span>
-								</Sidebar.Item>
+								{nav.saved && (
+									<Sidebar.Item
+										href={routes.saved.href()}
+										current={isCurrent(routes.saved.href())}
+										mix={railRow("item")}
+									>
+										{/** The mark a row is kept with, worn by the list of everything kept. */}
+										<BookmarkIcon size={ICON_SIZE} />
+										<span mix={[minIs(0), truncate()]}>{nav.saved}</span>
+									</Sidebar.Item>
+								)}
 							</Sidebar.Nav>
 
 							{/**

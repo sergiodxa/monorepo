@@ -12,6 +12,7 @@ import type { Renderer } from "remix/middleware/render";
 import type { Middleware, RequestContext, Router } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
+import featureFlags from "@sdxc/flags/middleware/router";
 import { lazy } from "@sdxc/lazy-route";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -25,6 +26,7 @@ import type { Viewer } from "~/app/http/middleware/auth";
 
 import i18n from "~/app/http/middleware/i18n";
 import { resolveFrame } from "~/app/http/render";
+import { flags } from "~/app/lib/flags";
 import routes from "~/routes/web";
 
 /** The origin every test request is made against. */
@@ -97,6 +99,12 @@ export function createTestRouter(viewer: Viewer | null): Router {
 			formData() as Middleware,
 			methodOverride(),
 			seedAuth(viewer),
+			/**
+			 * The app's own flags, resolving against the definitions it ships. A page under
+			 * test then takes the branch it will take in production, rather than whichever one
+			 * a missing client happens to produce.
+			 */
+			featureFlags(flags, { context: () => ({ targetingKey: viewer?.id }) }) as Middleware,
 			i18n,
 			renderWith(createTestRenderer) as Middleware,
 		],

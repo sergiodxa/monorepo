@@ -17,12 +17,13 @@
 
 import type { Router } from "remix/router";
 
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { UserStore } from "~/database/user-do";
 
 import { createTestRouter, fetchRoute, VIEWER } from "~/app/lib/test/controller";
+import { restoreFlags, serveFlags } from "~/app/lib/test/flags";
 import { createUserStoreDouble } from "~/app/lib/test/store";
 import routes from "~/routes/web";
 
@@ -78,6 +79,65 @@ function readsAs(html: string): string {
 
 beforeEach(() => {
 	store = createUserStoreDouble();
+});
+
+describe("what a flag takes off the queue", () => {
+	afterEach(() => restoreFlags());
+
+	/**
+	 * Off, a list is what it was before either feature existed: rows, and the links that
+	 * walk them. That is also what a browser running no script is served, so the way back
+	 * is a path already walked rather than one the switch invents.
+	 */
+	test("leaves the links that page it by hand when the frames are turned off", async () => {
+		await serveFlags({ "infinite-pagination": false });
+
+		store.openReader.mockResolvedValue({
+			timeline: {
+				ok: true,
+				items: [item({ id: "item-1" })],
+				feeds: FEEDS,
+				cursors: { next: "cursor-next", prev: null },
+			},
+			freshness: { stale: [], count: 0 },
+		});
+
+		let body = await get(routes.reading.index.href()).then((r) => r.text());
+
+		expect(body).not.toContain('"exportName":"LazyFrame"');
+		expect(readsAs(body)).toContain("Older posts");
+		expect(body).toContain("cursor-next");
+	});
+
+	test("draws no mark for keeping a post when keeping is turned off", async () => {
+		await serveFlags({ "saved-posts": false });
+
+		store.openReader.mockResolvedValue({
+			timeline: {
+				ok: true,
+				items: [item({ id: "item-1" })],
+				feeds: FEEDS,
+				cursors: { next: null, prev: null },
+			},
+			freshness: { stale: [], count: 0 },
+		});
+
+		let body = await get(routes.reading.index.href()).then((r) => r.text());
+
+		expect(body).not.toContain('"exportName":"SaveToggle"');
+
+		// The mark that moves a post through the queue is a different decision, and stays.
+		expect(body).toContain('"exportName":"ReadToggle"');
+	});
+
+	/** The sidebar stops naming a list nothing can put a post into. */
+	test("takes the saved list out of the sidebar with it", async () => {
+		await serveFlags({ "saved-posts": false });
+
+		let body = await get(routes.reading.index.href()).then((r) => r.text());
+
+		expect(body).not.toContain(`href="${routes.saved.href()}"`);
+	});
 });
 
 describe("GET /reading", () => {

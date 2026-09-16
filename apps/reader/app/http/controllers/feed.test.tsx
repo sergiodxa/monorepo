@@ -16,13 +16,14 @@
 
 import type { Router } from "remix/router";
 
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { FeedStore } from "~/database/feed-do";
 import type { UserStore } from "~/database/user-do";
 
 import { createTestRouter, fetchRoute, VIEWER } from "~/app/lib/test/controller";
+import { restoreFlags, serveFlags } from "~/app/lib/test/flags";
 import { createUserStoreDouble } from "~/app/lib/test/store";
 import routes from "~/routes/web";
 
@@ -584,6 +585,37 @@ describe("a feed's health", () => {
 
 		expect(readsAs(body)).not.toContain("check failed");
 		expect(readsAs(body)).not.toContain("checks failed");
+	});
+});
+
+describe("what a flag moves about the suggestion", () => {
+	afterEach(() => restoreFlags());
+
+	/**
+	 * How much a feed has to publish before the question is worth asking is a judgement
+	 * about people, and the number nobody has measured. Moving it moves who is asked, and
+	 * moves nothing else: no subscription is written either way.
+	 */
+	test("asks nobody when the rate is set above what the feed publishes", async () => {
+		await serveFlags({ "velocity-suggestion-rate": 40 });
+		store.getFeed.mockResolvedValue(FEED);
+		health.mockResolvedValue({ ...HEALTHY, postsPerDay: 12 });
+
+		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
+
+		expect(readsAs(body)).not.toContain("This feed publishes about");
+		expect(store.setVelocity).not.toHaveBeenCalled();
+	});
+
+	test("asks about a quieter feed when the rate is set below it", async () => {
+		await serveFlags({ "velocity-suggestion-rate": 2 });
+		store.getFeed.mockResolvedValue(FEED);
+		health.mockResolvedValue({ ...HEALTHY, postsPerDay: 3 });
+
+		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
+
+		expect(readsAs(body)).toContain("This feed publishes about 3 posts a day");
+		expect(store.setVelocity).not.toHaveBeenCalled();
 	});
 });
 

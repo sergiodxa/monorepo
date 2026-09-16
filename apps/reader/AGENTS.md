@@ -46,6 +46,11 @@ indicate requirement levels.
 - MUST take every user-facing string from `ctx.i18next.t(...)`, with the key defined in
   both `app/locales/en.ts` and `app/locales/es.ts`; a missing key renders as the key
   itself, so the two files stay the same shape.
+- MUST name a flag through the catalog in `app/lib/flags.ts`, which carries its key, its
+  type and the value a call site falls back to — `ctx.flags.get(features.savedPosts)` on a
+  request, `flagsFor(subject)` inside an object, which has no request to carry one. What
+  earns a flag is a number nobody has measured or a feature worth turning off faster than
+  a revert; everything else stays a constant.
 - MUST guard every per-person route with `requireUser`, which redirects an anonymous
   visitor home with a `returnTo` cookie so sign-in returns them where they started.
 - MUST build markup from `@sdxc/ui` components styled with `@sdxc/u` mixins through `mix`.
@@ -71,6 +76,8 @@ indicate requirement levels.
   - `app/http/controllers/auth.tsx` <- OIDC authorization redirect and callback
   - `app/http/controllers/default-handler.tsx` <- 404 handler for unmapped routes
   - `app/http/middleware/require-user.ts` <- Guard for the signed-in surface
+- Feature Flags
+  - `app/lib/flags.ts` <- The definitions, the typed catalog and the instance every surface evaluates through
 - Storage
   - `database/user-do.ts` <- The per-reader Durable Object and the RPC surface it answers
   - `database/feed-do.ts` <- The per-feed Durable Object, which is the only thing that fetches

@@ -20,6 +20,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Client } from "@sdxc/flags";
 import type { i18n } from "@sdxc/i18n";
 
 import { WorkerKVCache } from "@sdxc/cache/worker-kv";
@@ -30,6 +31,7 @@ import type { AppLayout } from "~/resources/layouts/app";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import { FRAME_PARAM } from "~/app/http/render";
+import { features } from "~/app/lib/flags";
 import { userStore } from "~/database/user-do";
 import { SEARCH_PARAM } from "~/resources/layouts/app";
 import routes from "~/routes/web";
@@ -54,6 +56,8 @@ const RAIL_KEY_PREFIX = "reader:sidebar-feeds";
 /** What drawing the chrome needs off the request. */
 export interface ChromeContext {
 	i18next: i18n;
+	/** What the chrome is allowed to offer, which the request's own client answers. */
+	flags: Client;
 	/** Where the reader is, which is what marks the one thing in the chrome they are on. */
 	url: URL;
 	/** The request's language, which orders the rail's feeds by their names. */
@@ -202,6 +206,9 @@ export async function chrome(ctx: ChromeContext): Promise<{
 	let viewer = getViewer();
 	if (!viewer) throw new Error("requireUser must run before a page renders its chrome");
 
+	/** A sidebar naming a list nothing can put a post into is a door onto an empty room. */
+	let saving = await ctx.flags.get(features.savedPosts);
+
 	return {
 		currentPath: ctx.url.pathname,
 		/**
@@ -213,7 +220,7 @@ export async function chrome(ctx: ChromeContext): Promise<{
 		nav: {
 			label: ctx.i18next.t("nav.label"),
 			reading: ctx.i18next.t("nav.reading"),
-			saved: ctx.i18next.t("nav.saved"),
+			saved: saving ? ctx.i18next.t("nav.saved") : null,
 			searchLabel: ctx.i18next.t("search.label"),
 			searchPlaceholder: ctx.i18next.t("search.placeholder"),
 			openSidebar: ctx.i18next.t("nav.openSidebar"),

@@ -15,6 +15,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { redirect } from "@sdxc/http/response";
 import { parsePageParams } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { vstack } from "@sdxc/u/layout";
@@ -27,6 +28,7 @@ import { timelineCopy, timelineEntries } from "~/app/http/controllers/timeline-e
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { isFrameRequest } from "~/app/http/render";
+import { features } from "~/app/lib/flags";
 import { userStore } from "~/database/user-do";
 import AppLayout, { pageNote } from "~/resources/layouts/app";
 import Timeline from "~/resources/views/timeline";
@@ -63,6 +65,15 @@ export default createAction(routes.saved, {
 	async handler(ctx) {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
+
+		/**
+		 * Keeping can be turned off, and this list is the whole of what it is for: with it
+		 * off there is nothing here to show and no way to put anything here, so a reader
+		 * following a bookmark is sent to the queue rather than shown an empty shelf.
+		 */
+		if (!(await ctx.flags.get(features.savedPosts))) {
+			return redirect(routes.reading.index.href(), { status: redirect.Status.SeeOther });
+		}
 
 		let store = userStore(viewer.id);
 

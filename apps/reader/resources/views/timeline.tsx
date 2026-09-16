@@ -238,6 +238,11 @@ export namespace Timeline {
 		 * address asked for as a fragment, which is a different URL from the link beside it:
 		 * the link is a page to navigate to, this is a piece to write into this one.
 		 */
+		/**
+		 * Whether a row carries the mark that keeps a post. Off, the list is what it was
+		 * before keeping existed, which is the state its way back is a return to.
+		 */
+		saving?: boolean;
 		continueSrc?: string | null;
 		/**
 		 * Where the page above this one is fetched from as the reader scrolls back up to it,
@@ -362,6 +367,7 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 	return () => {
 		let {
 			continueSrc = null,
+			saving = true,
 			copy,
 			cursors,
 			entries,
@@ -516,15 +522,17 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 								 * empties the queue. Two decisions about the same post, at either end of it,
 								 * so neither is pressed while reaching for the other.
 								 */}
-								<SaveToggle
-									action={routes.items.save.href({ itemId: entry.id })}
-									isSaved={entry.isSaved}
-									returnTo={returnTo}
-									save={copy.save}
-									unsave={copy.unsave}
-									failed={copy.saveFailed}
-									full={copy.saveFull}
-								/>
+								{saving && (
+									<SaveToggle
+										action={routes.items.save.href({ itemId: entry.id })}
+										isSaved={entry.isSaved}
+										returnTo={returnTo}
+										save={copy.save}
+										unsave={copy.unsave}
+										failed={copy.saveFailed}
+										full={copy.saveFull}
+									/>
+								)}
 							</article>
 						</li>
 					))}

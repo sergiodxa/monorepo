@@ -30,6 +30,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Client } from "@sdxc/flags";
 import type { i18n } from "@sdxc/i18n";
 import type { Renderer } from "remix/middleware/render";
 import type { RemixNode } from "remix/ui";
@@ -71,6 +72,7 @@ import { timelineCopy, timelineEntries } from "~/app/http/controllers/timeline-e
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { isFrameRequest } from "~/app/http/render";
+import { features } from "~/app/lib/flags";
 import { userStore } from "~/database/user-do";
 import AppLayout, {
 	ActionLabel,
@@ -249,6 +251,8 @@ export namespace ReadingQueue {
 		render: Renderer<RemixNode>;
 		i18next: i18n;
 		locale: string;
+		/** What the list is allowed to do, which the request's own client answers. */
+		flags: Client;
 		/** The URL asked for, whose query carries what a completed action has to report. */
 		url: URL;
 		/**
@@ -375,7 +379,7 @@ export async function renderReadingQueue(
 	 * narrowing rides in every one of those addresses, so choosing a filter and then
 	 * scrolling never drops it.
 	 */
-	let placement = placePage({
+	let place = placePage({
 		address: (at, extra) => queueUrl(view, at, extra),
 		params: ctx.url.searchParams,
 		cursor,
@@ -384,6 +388,22 @@ export async function renderReadingQueue(
 		pageSize: PAGE_SIZE,
 		cursors: page.cursors,
 	});
+
+	/**
+	 * What a list is allowed to do beyond printing its rows, both of which a reader can be
+	 * put back to the far side of without a deploy: fetching the page below as they arrive
+	 * at it, and keeping a post out of everything that empties the queue.
+	 *
+	 * Turning the paging off leaves the links that walk the list by hand, which is what a
+	 * browser running no script is served — so the way back is a path already walked rather
+	 * than one this switch invents.
+	 */
+	let [paging, saving] = await Promise.all([
+		ctx.flags.get(features.infinitePagination),
+		ctx.flags.get(features.savedPosts),
+	]);
+
+	let placement = paging ? place : { ...place, continueSrc: null, resumeSrc: null };
 
 	/** The copy every row of the list prints, whichever shape this page is answered in. */
 	let listCopy = timelineCopy(ctx.i18next);
@@ -410,7 +430,7 @@ export async function renderReadingQueue(
 					</Alert.Action>
 				</Alert>
 			) : (
-				<Timeline entries={entries} copy={listCopy} {...placement} />
+				<Timeline entries={entries} copy={listCopy} saving={saving} {...placement} />
 			),
 			init,
 		);
@@ -422,6 +442,7 @@ export async function renderReadingQueue(
 	 * marks the queue as the place being read and puts the search back in the box.
 	 */
 	let chromeProps = await chrome({
+		flags: ctx.flags,
 		i18next: ctx.i18next,
 		locale: ctx.locale,
 		url: new URL(here, ctx.url),
@@ -663,7 +684,7 @@ export async function renderReadingQueue(
 				)}
 
 				{entries.length > 0 ? (
-					<Timeline entries={entries} copy={listCopy} {...placement} />
+					<Timeline entries={entries} copy={listCopy} saving={saving} {...placement} />
 				) : (
 					/** Level 2, since the layout's own page heading is the document's only `h1`. */
 					<HeadingScope level={2}>

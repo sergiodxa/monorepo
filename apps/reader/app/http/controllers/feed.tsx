@@ -60,6 +60,7 @@ import {
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { isFrameRequest } from "~/app/http/render";
+import { features } from "~/app/lib/flags";
 import { feedStore } from "~/database/feed-do";
 import { VELOCITIES } from "~/database/schema";
 import { userStore } from "~/database/user-do";
@@ -164,19 +165,6 @@ function velocityNote(velocity: string | null): Note | null {
 
 /** Edge of the marks the header's own controls are drawn with, sized to the words beside them. */
 const ACTION_ICON_SIZE = 16;
-
-/**
- * Posts a day past which an Evergreen subscription is worth asking about.
- *
- * Ten a day is seventy a week that never leave, which is three screenfuls of a list a
- * reader meant to work through — far enough past what anybody reads that the question is
- * worth their attention, and far enough above an active blog that it is not asked of
- * somebody who is coping fine.
- *
- * It decides whether a sentence is printed and nothing else. Nothing here writes a
- * velocity, whatever this number says.
- */
-const BUSY_POSTS_PER_DAY = 10;
 
 /**
  * The `feeds.status.*` key naming each outcome that counts as a failed check. A refresh
@@ -285,7 +273,7 @@ export default createAction(routes.feed, {
 		 * out by the same code the queue uses: the two surfaces hold different posts and page
 		 * through them identically.
 		 */
-		let placement = placePage({
+		let place = placePage({
 			address: (at, extra) => feedUrl(feedId, at, extra),
 			params: ctx.url.searchParams,
 			cursor,
@@ -294,6 +282,22 @@ export default createAction(routes.feed, {
 			pageSize: PAGE_SIZE,
 			cursors: page.cursors,
 		});
+
+		/**
+		 * What a list is allowed to do beyond printing its rows, both of which a reader can be
+		 * put back to the far side of without a deploy: fetching the page below as they arrive
+		 * at it, and keeping a post out of everything that empties the queue.
+		 *
+		 * Turning the paging off leaves the links that walk the list by hand, which is what a
+		 * browser running no script is served — so the way back is a path already walked rather
+		 * than one this switch invents.
+		 */
+		let [paging, saving] = await Promise.all([
+			ctx.flags.get(features.infinitePagination),
+			ctx.flags.get(features.savedPosts),
+		]);
+
+		let placement = paging ? place : { ...place, continueSrc: null, resumeSrc: null };
 
 		/** The copy every row of the list prints, whichever shape this page is answered in. */
 		let listCopy = timelineCopy(ctx.i18next);
@@ -325,7 +329,7 @@ export default createAction(routes.feed, {
 						</Alert.Action>
 					</Alert>
 				) : (
-					<Timeline entries={entries} copy={listCopy} {...placement} />
+					<Timeline entries={entries} copy={listCopy} saving={saving} {...placement} />
 				),
 			);
 		}
@@ -375,8 +379,15 @@ export default createAction(routes.feed, {
 		 */
 		let postsPerDay = health?.postsPerDay ?? null;
 
-		let isBusy =
-			feed.velocity === "evergreen" && postsPerDay !== null && postsPerDay >= BUSY_POSTS_PER_DAY;
+		/**
+		 * How much a feed has to publish before the question is worth a reader's attention is
+		 * a judgement about people rather than about storage, and nobody has yet watched one
+		 * being asked. It is read from a flag so the answer can move on evidence rather than
+		 * on a deploy, and so it can be asked of one reader before it is asked of everybody.
+		 */
+		let busyRate = await ctx.flags.get(features.velocitySuggestionRate);
+
+		let isBusy = feed.velocity === "evergreen" && postsPerDay !== null && postsPerDay >= busyRate;
 
 		return ctx.render(
 			<AppLayout
@@ -616,7 +627,7 @@ export default createAction(routes.feed, {
 					)}
 
 					{entries.length > 0 ? (
-						<Timeline entries={entries} copy={listCopy} {...placement} />
+						<Timeline entries={entries} copy={listCopy} saving={saving} {...placement} />
 					) : (
 						/** Level 2, since the layout's own page heading is the document's only `h1`. */
 						<HeadingScope level={2}>

@@ -12,12 +12,13 @@
 
 import type { Router } from "remix/router";
 
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { UserStore } from "~/database/user-do";
 
 import { createTestRouter, fetchRoute, VIEWER } from "~/app/lib/test/controller";
+import { restoreFlags, serveFlags } from "~/app/lib/test/flags";
 import { createUserStoreDouble } from "~/app/lib/test/store";
 import routes from "~/routes/web";
 
@@ -72,6 +73,25 @@ function kept(next: string | null = null) {
 
 beforeEach(() => {
 	store = createUserStoreDouble();
+});
+
+describe("with keeping turned off", () => {
+	afterEach(() => restoreFlags());
+
+	/**
+	 * This page is the whole of what keeping is for, so with it off there is nothing to
+	 * show and no way to put anything here. A reader following a bookmark is sent to the
+	 * queue rather than shown a shelf nothing can reach.
+	 */
+	test("sends a reader following a bookmark back to the queue", async () => {
+		await serveFlags({ "saved-posts": false });
+
+		let response = await get(routes.saved.href());
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("Location")).toBe(routes.reading.index.href());
+		expect(store.savedQueue).not.toHaveBeenCalled();
+	});
 });
 
 describe("GET /saved", () => {

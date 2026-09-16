@@ -22,6 +22,9 @@ import {
 	createDurableObjectState,
 	createKVNamespace,
 } from "@sdxc/cloudflare-mocks";
+import { createEngine } from "@sdxc/flags-engine";
+import { EngineProvider } from "@sdxc/flags-engine/provider";
+import { InMemoryFlagStore } from "@sdxc/flags-engine/store/memory";
 import { env } from "cloudflare:workers";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -31,6 +34,7 @@ import type { FeedStore } from "~/database/feed-do";
 import type { Velocity } from "~/database/schema";
 import type { UserStore } from "~/database/user-do";
 
+import { FLAG_SET, flags } from "~/app/lib/flags";
 import catalogSql from "~/database/catalog-migrations/0001-feeds.sql?raw";
 import { FeedDO } from "~/database/feed-do";
 import { headKey } from "~/database/feed-head";
@@ -65,25 +69,36 @@ vi.mock("cloudflare:workers", async (importOriginal) => {
 });
 
 /**
- * The reader's budget, as a value a test can narrow.
+ * Narrows the reader's budget, through the flag that now carries it.
  *
- * The real figure is a million posts, and materializing a million rows would test the
+ * The shipped figure is a million posts, and materializing a million rows would test the
  * number rather than the rule. Every test that narrows it says what it is standing in
  * for, and the rule under test — reclaim only while over budget, only from feeds over
  * their share, and only what the reader has read — is the same rule at either figure.
+ *
+ * It is moved by serving a different definition rather than by mocking the constant, so
+ * these tests walk the path the object walks: the flag is read, and what it answers is
+ * what the sweep is held to.
+ *
+ * @param posts - What the object may hold before it reclaims, and then refuses.
  */
-let budget = vi.hoisted(() => ({ posts: 1_000_000 }));
-
-vi.mock("~/database/schema", async (importOriginal) => {
-	let original = await importOriginal<typeof import("~/database/schema")>();
-
-	return {
-		...original,
-		get READER_BUDGET() {
-			return budget.posts;
-		},
-	};
-});
+async function setBudget(posts: number): Promise<void> {
+	await flags.setProvider(
+		new EngineProvider(
+			createEngine({
+				store: new InMemoryFlagStore({
+					flags: {
+						...FLAG_SET.flags,
+						"reader-post-budget": {
+							variants: { standard: posts },
+							defaultVariant: "standard",
+						},
+					},
+				}),
+			}),
+		),
+	);
+}
 
 const SUBJECT = "sub-1";
 const FEED_URL = "https://example.com/feed.xml";
@@ -240,7 +255,7 @@ beforeEach(async () => {
 	feedCalls.length = 0;
 	catalogQueries.length = 0;
 	pageFault = { reads: 0, failOn: 0 };
-	budget.posts = READER_BUDGET;
+	await setBudget(READER_BUDGET);
 
 	let catalog = createD1Database();
 	await catalog.exec(catalogSql);
@@ -960,7 +975,7 @@ describe("what a reader's object is allowed to delete", () => {
 
 		// Narrowed so that a share recomputed on follow would bite: two feeds against a
 		// budget of four is a share of two, and the first feed is holding three.
-		budget.posts = 4;
+		await setBudget(4);
 
 		let second = await follow(user, "https://second.example.com/feed.xml");
 
@@ -978,7 +993,7 @@ describe("what a reader's object is allowed to delete", () => {
 		 * test of the division rather than of the figure it divides: reclamation runs only
 		 * over budget, only on a feed over its share, and only over what was read.
 		 */
-		budget.posts = 12;
+		await setBudget(12);
 
 		let prolific = seedFeed(state, { id: "feed_prolific" });
 		let quiet = seedFeed(state, { id: "feed_quiet" });
@@ -1042,7 +1057,7 @@ describe("what a reader's object is allowed to delete", () => {
 		 * whole of it is the one case a test of the share cannot tell apart from a test of
 		 * the number.
 		 */
-		budget.posts = 10;
+		await setBudget(10);
 
 		await publish(quiet, [
 			entryAt("q-1", "Quiet one", DAY_MS),
@@ -1080,7 +1095,7 @@ describe("what a reader's object is allowed to delete", () => {
 
 		// One feed, so its share is the whole budget: eight posts against five is a feed over
 		// its share on an object over budget, with nothing read to reclaim.
-		budget.posts = 5;
+		await setBudget(5);
 
 		await publish(
 			loud,
@@ -1186,7 +1201,7 @@ describe("saved posts, the one answer that outlives every rule", () => {
 
 		// And then the other rule, on an object with one feed and no room: everything the
 		// reader read is reclaimable, and the saved post is still not.
-		budget.posts = 1;
+		await setBudget(1);
 		await user.markAllRead();
 		await user.synchronize();
 

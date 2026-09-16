@@ -40,6 +40,7 @@ import {
 import type { FeedStore } from "~/database/feed-do";
 import type { SelectFeed, SelectFeedItem, SelectSettings, Velocity } from "~/database/schema";
 
+import { features, flagsFor } from "~/app/lib/flags";
 import { logger } from "~/bootstrap/logger";
 import { feedStore } from "~/database/feed-do";
 import { KEYS_PER_BULK_READ, readHeads } from "~/database/feed-head";
@@ -50,7 +51,6 @@ import {
 	DEFAULT_VELOCITY,
 	feedItems,
 	feeds,
-	READER_BUDGET,
 	SAVED_LIMIT,
 	settings,
 	VELOCITIES,
@@ -1013,6 +1013,18 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
+	 * Posts this reader's object holds before it reclaims, and then refuses.
+	 *
+	 * The subject is the reader, because the figure is an estimate of what their rows cost
+	 * and the person who meets it is the one who notices: a rule can raise it for them
+	 * without moving it for anybody else.
+	 */
+	async #budget(): Promise<number> {
+		let client = await flagsFor(this.#subject());
+		return Math.max(1, await client.get(features.readerPostBudget));
+	}
+
+	/**
 	 * Writes one wide event about what this object just did.
 	 *
 	 * Opened here rather than read off the request, because a Durable Object answers in its
@@ -1208,17 +1220,18 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		 * whatever else the object holds, so the common answer costs two counts a small
 		 * table and one index answer rather than a scan of every post the reader has.
 		 */
+		let budget = await this.#budget();
 		let followed = await this.#db.count(feeds, { where: isNull("unfollowed_at") });
 		let held = await this.#db.count(feedItems, { where: { feed_id: feed.id } });
 
-		if (held <= shareOf(followed)) return false;
+		if (held <= shareOf(followed, budget)) return false;
 
 		/**
 		 * At the budget rather than past it: the figure is one number with two consequences,
 		 * and refusing is what it does when reclaiming has nothing left to take. An object
 		 * sitting exactly on it has no room for the next post either.
 		 */
-		return (await this.#db.count(feedItems)) >= READER_BUDGET;
+		return (await this.#db.count(feedItems)) >= budget;
 	}
 
 	/**
@@ -1238,15 +1251,16 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 		for (let feed of followed) swept.aged += await this.#ageOut(feed, now);
 
+		let budget = await this.#budget();
 		let total = await this.#db.count(feedItems);
-		if (total < READER_BUDGET) return swept;
+		if (total < budget) return swept;
 
 		/**
 		 * The share is applied only while the object is over budget, which is what keeps the
 		 * division from being destructive: a reader under it keeps everything, so following a
 		 * second feed does not halve the history of the first.
 		 */
-		let share = shareOf(followed.length);
+		let share = shareOf(followed.length, budget);
 
 		for (let feed of followed) {
 			let held = await this.#db.count(feedItems, { where: { feed_id: feed.id } });
@@ -1688,9 +1702,10 @@ function isVelocity(value: string): value is Velocity {
  * quiet feed is never charged for a prolific one.
  *
  * @param followed - How many feeds the reader follows.
+ * @param budget - The posts this reader's object holds in all.
  */
-function shareOf(followed: number): number {
-	return Math.max(1, Math.floor(READER_BUDGET / Math.max(1, followed)));
+function shareOf(followed: number, budget: number): number {
+	return Math.max(1, Math.floor(budget / Math.max(1, followed)));
 }
 
 /**

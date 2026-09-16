@@ -30,6 +30,7 @@ import { Database, gt } from "remix/data-table";
 
 import type { FeedStatus, SelectFeed, SelectItem } from "~/database/feed-schema";
 
+import { features, flagsFor } from "~/app/lib/flags";
 import { logger } from "~/bootstrap/logger";
 import { forgetHead, publishHead } from "~/database/feed-head";
 import { FEED_MIGRATIONS, FEED_JOURNAL } from "~/database/feed-migrations";
@@ -63,6 +64,9 @@ const SYNC_PAGE = 200;
  * whose poll ran out of room catches up in the same sitting.
  */
 const CATCH_UP_MS = 60 * 1000;
+
+/** The unit the polling cadence is set in, which is the one a reader would say it in. */
+const HOUR_MS = 60 * 60 * 1000;
 
 export namespace FeedStore {
 	/** The feed's own description of itself, as a subscriber copies it. */
@@ -212,7 +216,7 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 			await reviveFeed(this.#feedId());
 		}
 
-		await this.#armPoll();
+		await this.#armPoll(await this.#pollInterval());
 
 		this.#record("job", { event: "feed.subscriber.added", feedUrl: feed.feed_url });
 
@@ -547,10 +551,26 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 		let feed = await this.#feedRow();
 		let waiting = feed?.next_attempt_at ?? null;
 		let now = Date.now();
+		let interval = await this.#pollInterval();
 
-		if (waiting !== null && waiting > now) return Math.min(waiting - now, POLL_INTERVAL_MS);
+		if (waiting !== null && waiting > now) return Math.min(waiting - now, interval);
 
-		return outcome.ok ? POLL_INTERVAL_MS : CATCH_UP_MS;
+		return outcome.ok ? interval : CATCH_UP_MS;
+	}
+
+	/**
+	 * How long this feed waits between polls, which a rule may shorten for one publication
+	 * without moving anybody else's.
+	 *
+	 * The subject is the feed itself, because that is what the question is about: how often
+	 * a document is worth fetching is a fact about the document, and every subscriber of it
+	 * is served by the one answer.
+	 */
+	async #pollInterval(): Promise<number> {
+		let client = await flagsFor(this.#feedId());
+		let hours = await client.get(features.feedPollIntervalHours);
+
+		return Math.max(1, hours) * HOUR_MS;
 	}
 
 	/** Arms the poll, holding whatever alarm is already set unless this one is sooner. */
