@@ -47,6 +47,7 @@ describe("runMigrations", () => {
 			"0010-tags-and-pins",
 			"0011-filter-rules",
 			"0012-notifications",
+			"0014-searches",
 		]);
 	});
 
@@ -85,6 +86,8 @@ describe("runMigrations", () => {
 			"feed_items_folder_timeline_idx",
 			"rules",
 			"feed_items_flagged_idx",
+			"searches",
+			"searches_name_idx",
 		]) {
 			expect(names, `${name} exists`).toContain(name);
 		}
@@ -113,6 +116,76 @@ describe("runMigrations", () => {
 		);
 
 		expect(plan).toContain("feed_items_unread_timeline_idx");
+	});
+
+	/**
+	 * A bounded search adds a second comparison on the same leading column the seek uses,
+	 * so it shortens the range the timeline index is scanned over rather than filtering
+	 * rows out of it — which is what keeps a searched page free of a temporary b-tree.
+	 */
+	test("answers a bounded search from a timeline index and sorts nothing", async () => {
+		await migrate();
+
+		let plans = {
+			all: queryPlan(
+				`SELECT id, title FROM feed_items
+				 WHERE (title LIKE '%x%' ESCAPE '\\' OR summary LIKE '%x%' ESCAPE '\\'
+				        OR author LIKE '%x%' ESCAPE '\\')
+				   AND published_at >= 0
+				 ORDER BY published_at DESC, id DESC LIMIT 51`,
+			),
+			unread: queryPlan(
+				`SELECT id, title FROM feed_items
+				 WHERE (title LIKE '%x%' ESCAPE '\\' OR summary LIKE '%x%' ESCAPE '\\'
+				        OR author LIKE '%x%' ESCAPE '\\')
+				   AND published_at >= 0 AND read_at IS NULL
+				 ORDER BY published_at DESC, id DESC LIMIT 51`,
+			),
+			read: queryPlan(
+				`SELECT id, title FROM feed_items
+				 WHERE (title LIKE '%x%' ESCAPE '\\' OR summary LIKE '%x%' ESCAPE '\\'
+				        OR author LIKE '%x%' ESCAPE '\\')
+				   AND published_at >= 0 AND read_at IS NOT NULL
+				 ORDER BY published_at DESC, id DESC LIMIT 51`,
+			),
+		};
+
+		expect(plans.all).toContain("feed_items_timeline_idx");
+		expect(plans.unread).toContain("feed_items_unread_timeline_idx");
+		expect(plans.read).toContain("feed_items_read_timeline_idx");
+
+		for (let plan of Object.values(plans)) expect(plan).not.toContain("TEMP B-TREE");
+	});
+
+	/** A folder-scoped search binds the folder itself, which the post carries a copy of. */
+	test("answers a folder-scoped search without listing the folder's feeds", async () => {
+		await migrate();
+
+		let plan = queryPlan(
+			`SELECT id, title FROM feed_items
+			 WHERE (title LIKE '%x%' ESCAPE '\\' OR summary LIKE '%x%' ESCAPE '\\'
+			        OR author LIKE '%x%' ESCAPE '\\')
+			   AND published_at >= 0 AND folder_id = 'folder-1'
+			 ORDER BY published_at DESC, id DESC LIMIT 51`,
+		);
+
+		expect(plan).not.toContain("TEMP B-TREE");
+	});
+
+	/** A label's own list pages by keyset, and a search inside it is that list's predicate. */
+	test("answers a searched label from the join table's index and sorts nothing", async () => {
+		await migrate();
+
+		let plan = queryPlan(
+			`SELECT i.id, i.title FROM item_tags t JOIN feed_items i ON i.id = t.item_id
+			 WHERE t.tag_id = 'tag-1'
+			   AND (i.title LIKE '%x%' ESCAPE '\\' OR i.summary LIKE '%x%' ESCAPE '\\'
+			        OR i.author LIKE '%x%' ESCAPE '\\')
+			   AND t.published_at >= 0
+			 ORDER BY t.published_at DESC, t.item_id DESC LIMIT 51`,
+		);
+
+		expect(plan).not.toContain("TEMP B-TREE");
 	});
 });
 
@@ -147,6 +220,22 @@ describe("schema constraints", () => {
 		expect(() => insert("r1", "body", "drop")).toThrow();
 		expect(() => insert("r2", "title", "save")).toThrow();
 		expect(() => insert("r3", "title", "drop")).not.toThrow();
+	});
+
+	/** The three states the queue offers are the three a kept query may be kept under. */
+	test("refuses a saved search under a read state the queue does not offer", async () => {
+		await migrate();
+		let insert = (id: string, readState: string) =>
+			sql.exec(
+				`INSERT INTO searches (id, name, query, read_state, feed_id, created_at, updated_at)
+				 VALUES (?, ?, 'remix', ?, NULL, 0, 0)`,
+				id,
+				id,
+				readState,
+			);
+
+		expect(() => insert("s1", "flagged")).toThrow();
+		expect(() => insert("s2", "unread")).not.toThrow();
 	});
 
 	test("refuses a second row in settings", async () => {

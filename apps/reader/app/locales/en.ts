@@ -84,6 +84,37 @@ export default {
 	},
 
 	/** Shared by both timelines, which offer the same way through a long list of posts. */
+	/**
+	 * Reading one post on its own page: what the feed gave, and the article behind the
+	 * link when the reader's plan carries fetching it.
+	 */
+	post: {
+		notFound: {
+			title: "That post is not here",
+			description: "It may have aged out of your timeline, or it was never yours.",
+			back: "Back to your queue",
+		},
+		/** Where the post came from, said above the article as a link to the original. */
+		source: "From {{feed}}",
+		original: "Open the original",
+		back: "Back to {{feed}}",
+		/** What a save actually keeps, said on the control rather than discovered in two years. */
+		saveKeeps:
+			"Saving keeps the title, the excerpt and the link. When the site goes, the link goes.",
+		article: {
+			heading: "The article",
+			pending: "Fetching the article\u2026",
+			/** Every one of these leaves the excerpt and the link exactly where they were. */
+			refused: "This site does not allow reading here.",
+			timeout: "This page took too long to read.",
+			empty: "There is nothing to read here.",
+			/** Said to a reader whose plan does not carry fetching the article. */
+			upgrade: "Reading articles in place is part of the paid plan.",
+			/** Who the article is by, printed under its own heading. */
+			byline: "By {{byline}}",
+		},
+	},
+
 	timeline: {
 		newer: "Newer posts",
 		older: "Older posts",
@@ -102,6 +133,7 @@ export default {
 		/** That one of the reader's own filters picked this post out as it arrived. */
 		flagged: "Flagged",
 		openPost: "Open post",
+		readHere: "Read here",
 		publishedOn: "Published {{date}}",
 		byAuthor: "by {{author}}",
 		badCursor: "That page is no longer there.",
@@ -170,21 +202,58 @@ export default {
 		found: {
 			all: {
 				title: "Nothing matches",
-				description: "No post in any feed you follow contains those words.",
+				description:
+					"Search reads the title, the summary and the author of each post, not the article behind it.",
 			},
 			unread: {
 				title: "Nothing unread matches",
-				description: "Every post containing those words has been read. Try All.",
+				description:
+					"Search reads the title, the summary and the author of each unread post. Try All.",
 			},
 			read: {
 				title: "Nothing read matches",
-				description: "No post you have read contains those words. Try All.",
+				description:
+					"Search reads the title, the summary and the author of each post you have read. Try All.",
 			},
+		},
+		/**
+		 * What a search page looked at, said under the list. A search that shows nothing has
+		 * to name the span it covered, because the confusing failure is the one where the
+		 * post exists and the search was never allowed to reach it.
+		 */
+		searched: {
+			/** Stopped at a step, which the reader carries on from with the same link. */
+			step: "Searched back to {{date}}.",
+			continue: "Keep searching",
+			/** Stopped at the oldest post the tier lets a search reach. */
+			window:
+				"Searched back to {{date}}. Free searches the last {{days}} days. Everything you have kept is searchable on Paid.",
+			/** Stopped at the oldest post stored, so there is nothing further to search. */
+			archive: "Searched everything you have kept, back to {{date}}.",
 		},
 		noFeeds: {
 			title: "Nothing to read yet",
 			description:
 				"Paste a feed address, or the address of a site that publishes one, into the box above.",
+		},
+	},
+
+	/** The queries a reader kept, which the rail draws as addresses of the queue itself. */
+	searches: {
+		/** Names the rail's band of kept queries. */
+		label: "Saved searches",
+		save: "Save this search",
+		nameLabel: "Name this search",
+		namePlaceholder: "What to call it",
+		saved: "Search saved.",
+		forget: "Forget this search",
+		forgotten: "Search forgotten.",
+		error: {
+			invalidName: "Give the search a name of up to {{length}} characters.",
+			invalidQuery: "Type something to search for before saving it.",
+			duplicateName: "You already have a saved search by that name.",
+			notFound: "That saved search is no longer there.",
+			full: "You have {{limit}} saved searches — forget one to make room.",
 		},
 	},
 

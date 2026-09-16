@@ -9,7 +9,7 @@
 
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { CachedFeed } from "~/app/http/controllers/chrome";
+import type { CachedFeed, CachedSearch } from "~/app/http/controllers/chrome";
 
 import { createTestRouter, fetchRoute, VIEWER } from "~/app/lib/test/controller";
 import routes from "~/routes/web";
@@ -20,11 +20,14 @@ import routes from "~/routes/web";
  */
 let railFeeds = vi.fn(async (_subject: string): Promise<CachedFeed[]> => []);
 
+/** The queries the reader kept, which the rail reads from the same cache the feeds are in. */
+let railSearches = vi.fn(async (_subject: string): Promise<CachedSearch[]> => []);
+
 let chrome = await vi.importActual<typeof import("~/app/http/controllers/chrome")>(
 	"~/app/http/controllers/chrome",
 );
 
-vi.doMock("~/app/http/controllers/chrome", () => ({ ...chrome, railFeeds }));
+vi.doMock("~/app/http/controllers/chrome", () => ({ ...chrome, railFeeds, railSearches }));
 
 let { default: sidebar } = await import("./sidebar");
 
@@ -105,5 +108,35 @@ describe("GET /sidebar/feeds", () => {
 
 		expect(body).not.toContain("Feeds");
 		expect(body).not.toContain("Tech");
+	});
+
+	/**
+	 * A saved search is a link rather than a surface, so the rail draws the queue's own
+	 * address under the narrowing it holds and nothing that would cost a scan to print.
+	 */
+	test("draws each kept query as the queue's own address, with no count beside it", async () => {
+		railSearches.mockResolvedValue([
+			{ id: "search-1", name: "Beacons", query: "beacon", readState: "unread", feedId: null },
+			{
+				id: "search-2",
+				name: "In one feed",
+				query: "remix",
+				readState: "all",
+				feedId: "feed-Rust",
+			},
+		]);
+
+		let body = await (await getBand()).text();
+
+		expect(body).toContain('href="/reading?q=beacon&amp;show=unread"');
+		expect(body).toContain('href="/reading?q=remix&amp;feed=feed-Rust"');
+		expect(readsAs(body)).toContain("Beacons");
+		expect(readsAs(body)).toContain("Saved searches");
+	});
+
+	test("draws no band of kept queries for a reader who kept none", async () => {
+		railSearches.mockResolvedValue([]);
+
+		expect(readsAs(await (await getBand()).text())).not.toContain("Saved searches");
 	});
 });

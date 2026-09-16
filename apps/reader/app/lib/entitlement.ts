@@ -162,6 +162,26 @@ export function limitsOf(tier: Tier): TierLimits {
 	return TIER_LIMITS[tier];
 }
 
+/** A day in milliseconds, which is what a search window is counted in. */
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The oldest post a tier's search may reach, as epoch milliseconds, or `null` for a tier
+ * whose search reaches everything the reader has kept.
+ *
+ * Derived from the tier and the clock rather than stored, so a reader's window changes
+ * when their tier does, in one write, with nothing to reconcile — and a cursor minted
+ * before it moved still points at the same row in the same total order.
+ *
+ * @param tier - The tier the reader is on.
+ * @param now - Epoch milliseconds the search is being run at.
+ * @example let floor = searchFloor("free", Date.now());
+ */
+export function searchFloor(tier: Tier, now: number): number | null {
+	let days = TIER_LIMITS[tier].searchWindowDays;
+	return days === null ? null : now - days * DAY_MS;
+}
+
 /** Whether a submitted value is one of the tiers the column's `CHECK` allows. */
 export function isTier(value: string): value is Tier {
 	return TIERS.some((offered) => offered === value);

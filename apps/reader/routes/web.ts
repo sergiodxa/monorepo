@@ -47,6 +47,17 @@ export default route({
 	feed: get("/reading/:feed"),
 
 	/**
+	 * One post, read here rather than at the publisher: what the feed gave — title,
+	 * author, date, excerpt and the link — and underneath it the article itself, fetched
+	 * when the reader opens this and held for nobody in particular.
+	 *
+	 * It sits under the feed whose page lists it, so the address says where the post came
+	 * from as well as which post it is, and a reader who lands on it from a link has the
+	 * way back in the URL they arrived on.
+	 */
+	post: get("/reading/:feed/:item"),
+
+	/**
 	 * One folder's posts: every feed filed there, read as one stream. It lives under the
 	 * queue for the reason one feed's page does — it is that same list narrowed to a group
 	 * the reader chose — and takes a segment of its own rather than sharing the feed's, so
@@ -125,6 +136,17 @@ export default route({
 		 * patterns never decide between each other.
 		 */
 		apply: post("/rules/previewed"),
+	},
+
+	/**
+	 * The queries a reader kept. Nothing here renders posts: a saved search is a link, and
+	 * the rail draws it as the queue's own address, so these are the addresses the forms
+	 * beside that list act against. A second renderer of one list is a second place for the
+	 * two to disagree.
+	 */
+	searches: {
+		create: post("/searches"),
+		delete: del("/searches/:searchId"),
 	},
 
 	/**

@@ -37,6 +37,7 @@ export interface UserStoreDouble {
 	synchronize: ReturnType<typeof vi.fn>;
 	setVelocity: ReturnType<typeof vi.fn>;
 	saveItem: ReturnType<typeof vi.fn>;
+	openPost: ReturnType<typeof vi.fn>;
 	savedQueue: ReturnType<typeof vi.fn>;
 	listFolders: ReturnType<typeof vi.fn>;
 	getFolder: ReturnType<typeof vi.fn>;
@@ -54,6 +55,11 @@ export interface UserStoreDouble {
 	untagItem: ReturnType<typeof vi.fn>;
 	taggedQueue: ReturnType<typeof vi.fn>;
 	listRules: ReturnType<typeof vi.fn>;
+	listSearches: ReturnType<typeof vi.fn>;
+	getSearch: ReturnType<typeof vi.fn>;
+	createSearch: ReturnType<typeof vi.fn>;
+	updateSearch: ReturnType<typeof vi.fn>;
+	deleteSearch: ReturnType<typeof vi.fn>;
 	getRule: ReturnType<typeof vi.fn>;
 	createRule: ReturnType<typeof vi.fn>;
 	updateRule: ReturnType<typeof vi.fn>;
@@ -78,6 +84,7 @@ export const EMPTY_TIMELINE: UserStore.TimelineResult = {
 	items: [],
 	feeds: [],
 	cursors: { next: null, prev: null },
+	search: null,
 };
 
 /** No subscriptions, which is what a store answers before anything is followed. */
@@ -91,6 +98,9 @@ export const NO_TAGS: UserStore.Tag[] = [];
 
 /** No filters, which is what a store answers before a reader has written one. */
 export const NO_RULES: UserStore.Rule[] = [];
+
+/** No kept queries, which is what a store answers before a reader has saved one. */
+export const NO_SEARCHES: UserStore.SavedSearch[] = [];
 
 /** A preview that caught nothing, over an object holding nothing to catch. */
 export const EMPTY_PREVIEW: UserStore.RulePreview = {
@@ -195,6 +205,7 @@ export function createUserStoreDouble(): UserStoreDouble {
 		synchronize: vi.fn(async () => ({ synchronized: 0, items: 0, remaining: 0, paused: 0 })),
 		setVelocity: vi.fn(async () => ({ ok: false, reason: "not-following" })),
 		saveItem: vi.fn(async () => ({ ok: true, saved: true })),
+		openPost: vi.fn(async () => null),
 		listTags: vi.fn(async () => NO_TAGS),
 		getTag: vi.fn(async () => null),
 		createTag: vi.fn(async () => ({ ok: false, reason: "tag-name-invalid" })),
@@ -204,6 +215,11 @@ export function createUserStoreDouble(): UserStoreDouble {
 		untagItem: vi.fn(async () => ({ ok: true, removed: false })),
 		taggedQueue: vi.fn(async () => EMPTY_TIMELINE),
 		listRules: vi.fn(async () => NO_RULES),
+		listSearches: vi.fn(async () => NO_SEARCHES),
+		getSearch: vi.fn(async () => null),
+		createSearch: vi.fn(async () => ({ ok: false, reason: "invalid-name" })),
+		updateSearch: vi.fn(async () => ({ ok: false, reason: "not-found" })),
+		deleteSearch: vi.fn(async () => ({ ok: false, reason: "not-found" })),
 		getRule: vi.fn(async () => null),
 		createRule: vi.fn(async () => ({ ok: false, reason: "invalid-value" })),
 		updateRule: vi.fn(async () => ({ ok: false, reason: "not-found" })),

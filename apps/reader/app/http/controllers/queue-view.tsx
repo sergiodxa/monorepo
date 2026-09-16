@@ -39,6 +39,13 @@ export const FROM_PARAM = "from";
 export const SHOW_PARAM = "show";
 
 /**
+ * The parameter naming the one subscription the queue is narrowed to. A saved search may
+ * be scoped to a feed, and it is drawn as this queue's own address, so the scope rides
+ * beside the words rather than sending the reader to a surface of its own.
+ */
+export const FEED_PARAM = "feed";
+
+/**
  * What the queue holds when the URL asks for nothing in particular. Showing every post is
  * what this surface does unasked, so that view is the plain address with no parameter on
  * it at all.
@@ -53,6 +60,8 @@ export interface QueueView {
 	 * part of what they searched for. Text holding nothing but space narrows nothing.
 	 */
 	query: string;
+	/** The one subscription the queue is narrowed to, or `null` for every followed feed. */
+	feedId: string | null;
 }
 
 /**
@@ -63,7 +72,11 @@ export interface QueueView {
  * @example let view = readQueueView(ctx.url.searchParams);
  */
 export function readQueueView(params: URLSearchParams): QueueView {
-	return queueViewOf(params.get(SEARCH_PARAM) ?? "", params.get(SHOW_PARAM) ?? "");
+	return queueViewOf(
+		params.get(SEARCH_PARAM) ?? "",
+		params.get(SHOW_PARAM) ?? "",
+		params.get(FEED_PARAM) ?? "",
+	);
 }
 
 /**
@@ -73,10 +86,15 @@ export function readQueueView(params: URLSearchParams): QueueView {
  *
  * @param query - What the reader typed, as the field held it.
  * @param show - The read state named, which anything unrecognized reads as every post.
- * @example let view = queueViewOf(submitted.q, submitted.show);
+ * @param feed - The subscription to narrow to, which nothing at all reads as every feed.
+ * @example let view = queueViewOf(submitted.q, submitted.show, submitted.feed);
  */
-export function queueViewOf(query: string, show: string): QueueView {
-	return { readState: show === "unread" || show === "read" ? show : DEFAULT_READ_STATE, query };
+export function queueViewOf(query: string, show: string, feed = ""): QueueView {
+	return {
+		readState: show === "unread" || show === "read" ? show : DEFAULT_READ_STATE,
+		query,
+		feedId: feed.trim().length === 0 ? null : feed,
+	};
 }
 
 /**
@@ -98,6 +116,7 @@ export function queueUrl(
 
 	if (view.query.trim().length > 0) params.set(SEARCH_PARAM, view.query);
 	if (view.readState !== DEFAULT_READ_STATE) params.set(SHOW_PARAM, view.readState);
+	if (view.feedId !== null) params.set(FEED_PARAM, view.feedId);
 	if (cursor !== null) params.set("cursor", cursor);
 	for (let [name, value] of Object.entries(extra)) params.set(name, value);
 
@@ -114,7 +133,7 @@ export function queueUrl(
  */
 export function QueueFields(handle: Handle<QueueView>) {
 	return () => {
-		let { query, readState } = handle.props;
+		let { feedId, query, readState } = handle.props;
 
 		return (
 			<>
@@ -122,6 +141,7 @@ export function QueueFields(handle: Handle<QueueView>) {
 				{readState !== DEFAULT_READ_STATE && (
 					<input type="hidden" name={SHOW_PARAM} value={readState} />
 				)}
+				{feedId !== null && <input type="hidden" name={FEED_PARAM} value={feedId} />}
 			</>
 		);
 	};

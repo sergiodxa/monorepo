@@ -156,6 +156,37 @@ export default {
 	},
 
 	/** Shared by both timelines, which offer the same way through a long list of posts. */
+	/**
+	 * Leer una entrada en su propia página: lo que dio el feed, y el artículo detrás del
+	 * enlace cuando el plan del lector incluye ir a buscarlo.
+	 */
+	post: {
+		notFound: {
+			title: "Esa entrada no está aquí",
+			description: "Puede haber caducado en tu cronología, o nunca fue tuya.",
+			back: "Volver a tu cola",
+		},
+		/** De dónde vino la entrada, dicho sobre el artículo como enlace al original. */
+		source: "De {{feed}}",
+		original: "Abrir el original",
+		back: "Volver a {{feed}}",
+		/** Lo que guardar conserva de verdad, dicho en el control y no descubierto años después. */
+		saveKeeps:
+			"Guardar conserva el título, el extracto y el enlace. Cuando el sitio desaparezca, el enlace también.",
+		article: {
+			heading: "El artículo",
+			pending: "Buscando el artículo\u2026",
+			/** Cada uno de estos deja el extracto y el enlace exactamente donde estaban. */
+			refused: "Este sitio no permite leerlo aquí.",
+			timeout: "Esta página tardó demasiado en leerse.",
+			empty: "No hay nada que leer aquí.",
+			/** Dicho a quien tiene un plan que no incluye ir a buscar el artículo. */
+			upgrade: "Leer artículos aquí mismo forma parte del plan de pago.",
+			/** De quién es el artículo, impreso bajo su propio título. */
+			byline: "Por {{byline}}",
+		},
+	},
+
 	timeline: {
 		newer: "Entradas más recientes",
 		older: "Entradas más antiguas",
@@ -174,6 +205,7 @@ export default {
 		/** Que uno de los filtros de la lectora eligió esta entrada al llegar. */
 		flagged: "Destacada",
 		openPost: "Abrir entrada",
+		readHere: "Leer aquí",
 		publishedOn: "Publicada el {{date}}",
 		byAuthor: "por {{author}}",
 		badCursor: "Esa página ya no existe.",
@@ -242,21 +274,58 @@ export default {
 		found: {
 			all: {
 				title: "No hay coincidencias",
-				description: "Ninguna entrada de los feeds que sigues contiene esas palabras.",
+				description:
+					"La búsqueda lee el título, el resumen y el autor de cada entrada, no el artículo que hay detrás.",
 			},
 			unread: {
 				title: "Nada sin leer coincide",
-				description: "Ya has leído todas las entradas que contienen esas palabras. Prueba Todas.",
+				description:
+					"La búsqueda lee el título, el resumen y el autor de cada entrada sin leer. Prueba Todas.",
 			},
 			read: {
 				title: "Nada leído coincide",
-				description: "Ninguna entrada que hayas leído contiene esas palabras. Prueba Todas.",
+				description:
+					"La búsqueda lee el título, el resumen y el autor de cada entrada que has leído. Prueba Todas.",
 			},
+		},
+		/**
+		 * What a search page looked at, said under the list. A search that shows nothing has
+		 * to name the span it covered, because the confusing failure is the one where the
+		 * post exists and the search was never allowed to reach it.
+		 */
+		searched: {
+			/** Stopped at a step, which the reader carries on from with the same link. */
+			step: "Se buscó hasta el {{date}}.",
+			continue: "Seguir buscando",
+			/** Stopped at the oldest post the tier lets a search reach. */
+			window:
+				"Se buscó hasta el {{date}}. El plan gratuito busca en los últimos {{days}} días. Con el plan de pago se busca en todo lo que has guardado.",
+			/** Stopped at the oldest post stored, so there is nothing further to search. */
+			archive: "Se buscó en todo lo que has guardado, hasta el {{date}}.",
 		},
 		noFeeds: {
 			title: "Todavía no hay nada que leer",
 			description:
 				"Pega en la caja de arriba la dirección de un feed, o la de un sitio que publique uno.",
+		},
+	},
+
+	/** The queries a reader kept, which the rail draws as addresses of the queue itself. */
+	searches: {
+		/** Names the rail's band of kept queries. */
+		label: "Búsquedas guardadas",
+		save: "Guardar esta búsqueda",
+		nameLabel: "Ponle nombre a la búsqueda",
+		namePlaceholder: "Cómo llamarla",
+		saved: "Búsqueda guardada.",
+		forget: "Olvidar esta búsqueda",
+		forgotten: "Búsqueda olvidada.",
+		error: {
+			invalidName: "Ponle a la búsqueda un nombre de hasta {{length}} caracteres.",
+			invalidQuery: "Escribe algo que buscar antes de guardarlo.",
+			duplicateName: "Ya tienes una búsqueda guardada con ese nombre.",
+			notFound: "Esa búsqueda guardada ya no está ahí.",
+			full: "Tienes {{limit}} búsquedas guardadas: olvida una para hacer sitio.",
 		},
 	},
 

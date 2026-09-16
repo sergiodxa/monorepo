@@ -179,6 +179,29 @@ export const RULE_ACTIONS = ["drop", "mark_read", "flag"] as const;
 export type RuleAction = (typeof RULE_ACTIONS)[number];
 
 /**
+ * The read states a saved search may be kept under, which are the three the queue itself
+ * offers. The `CHECK` constraint in `0014-searches.sql` repeats these names, so the
+ * database refuses anything a form somehow lets through.
+ */
+export const SEARCH_READ_STATES = ["all", "unread", "read"] as const;
+
+/** One of the states {@link SEARCH_READ_STATES} offers. */
+export type SearchReadState = (typeof SEARCH_READ_STATES)[number];
+
+/**
+ * Queries a reader may keep. Twenty is past where a rail of them is still a list somebody
+ * reads down, and the twenty-first is refused rather than evicting one, which is how every
+ * other full shelf in this object answers.
+ */
+export const SAVED_SEARCH_LIMIT = 20;
+
+/**
+ * How long a saved search's name may be, in UTF-16 units. Past this a name is a sentence,
+ * and a sentence in a rail is a row nobody can read to the end of.
+ */
+export const SEARCH_NAME_LENGTH = 64;
+
+/**
  * How long the text a rule looks for may be, in UTF-16 units. A filter longer than this is
  * a sentence, and a sentence matches nothing, so the cap is where the field stops being a
  * filter rather than where storage starts to care.
@@ -462,8 +485,36 @@ export const rules = table({
 	},
 });
 
+/**
+ * The queries a reader kept, each one a narrowing of the reading queue and nothing more.
+ *
+ * A row here holds what the queue's own controls hold — words, a read state, and the
+ * subscription the search is scoped to — so the rail draws it as that queue's address and
+ * opening it runs the statement typing those words runs.
+ */
+export const searches = table({
+	name: "searches",
+	primaryKey: ["id"],
+	timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+	columns: {
+		id: c.text(),
+		/** What the reader called it, which is the word the rail draws and orders by. */
+		name: c.text(),
+		/** The text searched for, exactly as it was typed, since the spacing is part of it. */
+		query: c.text(),
+		read_state: c.enum(SEARCH_READ_STATES),
+		/** The subscription the search is scoped to, or `null` for one across every feed. */
+		feed_id: c.text().nullable(),
+		created_at: c.integer(),
+		updated_at: c.integer(),
+	},
+});
+
 export type SelectRule = TableRow<typeof rules>;
 export type InsertRule = InsertRow<typeof rules>;
+
+export type SelectSearch = TableRow<typeof searches>;
+export type InsertSearch = InsertRow<typeof searches>;
 
 export type SelectTag = TableRow<typeof tags>;
 export type InsertTag = InsertRow<typeof tags>;

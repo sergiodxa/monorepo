@@ -27,6 +27,7 @@ import { WorkerKVCache } from "@sdxc/cache/worker-kv";
 import { isFailure } from "@sdxc/result";
 import { env, waitUntil } from "cloudflare:workers";
 
+import type { UserStore } from "~/database/user-do";
 import type { AppLayout } from "~/resources/layouts/app";
 
 import { getViewer } from "~/app/http/middleware/auth";
@@ -107,9 +108,87 @@ export interface RailFolder {
 	unreadCount: number;
 }
 
+/**
+ * Namespace for a reader's kept queries, beside their rail list and apart from it: the two
+ * change on different events, so one going stale never drops the other.
+ */
+const SEARCHES_KEY_PREFIX = "reader:sidebar-searches";
+
 /** Where a reader's rail list is kept. */
 function railKey(subject: string): string {
 	return `${RAIL_KEY_PREFIX}:${subject}`;
+}
+
+/** Where a reader's kept queries are kept. */
+function searchesKey(subject: string): string {
+	return `${SEARCHES_KEY_PREFIX}:${subject}`;
+}
+
+/**
+ * One kept query as the cache holds it: the three fields the rail's address is built from,
+ * and the name it is drawn under.
+ */
+export interface CachedSearch {
+	id: string;
+	name: string;
+	query: string;
+	readState: UserStore.ReadState;
+	/** The subscription it is scoped to, or `null` for one across every followed feed. */
+	feedId: string | null;
+}
+
+/**
+ * Drops a reader's cached queries, so the next rail they are shown lists what they now
+ * hold. Called by the two controllers that change that list, as they change it.
+ *
+ * @param subject - The reader whose kept queries are now out of date.
+ */
+export async function forgetRailSearches(subject: string): Promise<void> {
+	await railCache().delete(searchesKey(subject));
+}
+
+/**
+ * The queries the rail lists, from the cache where it holds them and from the reader's own
+ * object where it does not.
+ *
+ * The sidebar is drawn on every page, so this stays beside the feed list in KV rather than
+ * becoming a second read of the reader's object on every request.
+ *
+ * @param subject - The reader whose kept queries are being drawn.
+ * @returns Every query they kept, or none where neither the cache nor the object answers,
+ * since a rail missing a band is a page a reader can still read and act on.
+ */
+export async function railSearches(subject: string): Promise<CachedSearch[]> {
+	let cached = await railCache().fetch<CachedSearch[]>(
+		searchesKey(subject),
+		async () => {
+			let kept = await userStore(subject).listSearches();
+
+			return kept.map((search) => ({
+				id: search.id,
+				name: search.name,
+				query: search.query,
+				readState: search.readState,
+				feedId: search.feedId,
+			}));
+		},
+		{ ttl: RAIL_TTL },
+	);
+
+	if (isFailure(cached)) return [];
+
+	/**
+	 * Read field by field rather than trusted whole: an entry written before a field was
+	 * added is still in KV until it expires, and a row drawn from one is a row a reader sees.
+	 */
+	return cached.data.map((search) => ({
+		id: search.id,
+		name: search.name,
+		query: typeof search.query === "string" ? search.query : "",
+		readState:
+			search.readState === "unread" || search.readState === "read" ? search.readState : "all",
+		feedId: typeof search.feedId === "string" ? search.feedId : null,
+	}));
 }
 
 /** The KV-backed cache, built per call because the binding is read off the invocation. */

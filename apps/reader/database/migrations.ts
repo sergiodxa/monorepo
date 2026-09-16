@@ -23,6 +23,7 @@ import m0009 from "./migrations/0009-schedule.sql?raw";
 import m0010 from "./migrations/0010-tags-and-pins.sql?raw";
 import m0011 from "./migrations/0011-filter-rules.sql?raw";
 import m0012 from "./migrations/0012-notifications.sql?raw";
+import m0014 from "./migrations/0014-searches.sql?raw";
 
 /** One migration, identified so the journal can record that it ran. */
 export interface Migration {
@@ -44,6 +45,7 @@ export const MIGRATIONS: Migration[] = [
 	{ id: "0010-tags-and-pins", sql: m0010 },
 	{ id: "0011-filter-rules", sql: m0011 },
 	{ id: "0012-notifications", sql: m0012 },
+	{ id: "0014-searches", sql: m0014 },
 ];
 
 /**

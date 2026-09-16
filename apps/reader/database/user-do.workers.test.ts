@@ -168,6 +168,7 @@ describe("the USER binding", () => {
 			items: [],
 			feeds: [],
 			cursors: { next: null, prev: null },
+			search: null,
 		});
 		expect(timeline.ok).toBe(true);
 		expect(opened.freshness).toEqual({ stale: [], count: 0 });
@@ -282,6 +283,7 @@ describe("a reader who follows nothing yet", () => {
 			items: [],
 			feeds: [],
 			cursors: { next: null, prev: null },
+			search: null,
 		});
 
 		expect(await stub.saveItem("item_missing")).toEqual({ ok: false, reason: "not-found" });
@@ -297,7 +299,14 @@ describe("a reader who follows nothing yet", () => {
 			query: "anything",
 		});
 
-		expect(found).toEqual({ ok: true, items: [], feeds: [], cursors: { next: null, prev: null } });
+		expect(found).toMatchObject({
+			ok: true,
+			items: [],
+			feeds: [],
+			cursors: { next: null, prev: null },
+			/** A bounded search says what it covered, which over an empty object is all of it. */
+			search: { stoppedAt: "archive" },
+		});
 	});
 
 	test("narrows the reading queue by the read state it is asked for", async () => {

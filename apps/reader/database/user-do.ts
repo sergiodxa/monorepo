@@ -22,7 +22,7 @@ import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { Feed } from "@sdxc/feed";
 import { Mailer } from "@sdxc/mail";
 import { CloudflareTransport } from "@sdxc/mail/cloudflare";
-import { InvalidCursorError, Pagination } from "@sdxc/pagination";
+import { decodeCursor, encodeCursor, InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { TypeID } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
@@ -49,6 +49,7 @@ import type {
 	SelectFolder,
 	SelectPushSubscription,
 	SelectRule,
+	SelectSearch,
 	SelectSettings,
 	SelectTag,
 	Velocity,
@@ -62,6 +63,7 @@ import {
 	isTierSource,
 	limitRefusal,
 	limitsOf,
+	searchFloor,
 	tierRank,
 	withinLimit,
 } from "~/app/lib/entitlement";
@@ -100,6 +102,10 @@ import {
 	QUIET_TO_HOUR,
 	RULE_PREVIEW_POSTS,
 	rules,
+	SAVED_SEARCH_LIMIT,
+	SEARCH_NAME_LENGTH,
+	SEARCH_READ_STATES,
+	searches,
 	settings,
 	TAG_LIMIT,
 	tags,
@@ -168,6 +174,16 @@ const ON_DEMAND_CONCURRENCY = 6;
  * searching for a title holding `%` or `_` is looking for those characters.
  */
 const LIKE_ESCAPE = "\\";
+
+/** A day in milliseconds, which is what a search window and a search step are counted in. */
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The id a step's boundary cursor carries. Both ordering columns descend, so an id no
+ * stored id sorts below leaves the next step resuming strictly under the floor — which is
+ * exactly where the step that minted it stopped looking.
+ */
+const BELOW_EVERY_ID = "";
 
 /**
  * The comparisons a keyset seek is spelled with, which is the whole grammar
@@ -555,6 +571,19 @@ export namespace UserStore {
 		tags: Tag[];
 	}
 
+	/** One post opened on its own page, with what the reader's tier allows doing to it. */
+	export interface OpenedPost {
+		item: Item;
+		/** The subscription it came from, so the page names the publisher above the article. */
+		feed: FeedSummary | null;
+		/**
+		 * Whether this reader's tier carries full-text extraction. Answered here rather
+		 * than beside the page, so the tier is read from the row that holds it and a
+		 * surface that forgets to ask is offered nothing.
+		 */
+		fullText: boolean;
+	}
+
 	/** Where in a timeline to read from, and how much of it. */
 	export interface TimelineOptions {
 		/** An opaque keyset cursor carrying its own direction, or `null` for the first page. */
@@ -579,12 +608,81 @@ export namespace UserStore {
 		 */
 		readState?: ReadState;
 		/**
-		 * Words a post's title or summary has to contain, which narrow the page alongside
-		 * {@link readState}. Text holding nothing but space narrows nothing, so an empty
-		 * search box reads as the whole queue.
+		 * Words a post's title, summary or author has to contain, which narrow the page
+		 * alongside {@link readState}. Text holding nothing but space narrows nothing, so an
+		 * empty search box reads as the whole queue.
 		 */
 		query?: string;
+		/** One subscription the page is narrowed to, or `null` for every followed feed. */
+		feedId?: string | null;
+		/** One folder the page is narrowed to, or `null` for every followed feed. */
+		folderId?: string | null;
 	}
+
+	/** Why a search page stopped where it did, which is what the list says beneath it. */
+	export type SearchStop =
+		/** At the step's own floor, with more of the reader's archive below it. */
+		| "step"
+		/** At the oldest post the reader's tier lets a search reach. */
+		| "window"
+		/** At the oldest post stored, so there is nothing further to search. */
+		| "archive";
+
+	/**
+	 * How far one search page reached, and what stopped it there. A search that shows
+	 * nothing has to say what it looked at, because the confusing failure is the one where
+	 * the post exists and the search was never allowed to reach it.
+	 */
+	export interface SearchSpan {
+		/** Epoch milliseconds of the oldest moment this page's scan looked at. */
+		reachedAt: number;
+		/** Days the reader's tier lets a search reach, or `null` for everything stored. */
+		windowDays: number | null;
+		stoppedAt: SearchStop;
+	}
+
+	/** A query the reader kept, which is a narrowing of the queue and nothing more. */
+	export interface SavedSearch {
+		id: string;
+		name: string;
+		query: string;
+		readState: ReadState;
+		/** The subscription it is scoped to, or `null` for one across every followed feed. */
+		feedId: string | null;
+	}
+
+	/** What a reader submits to keep a query, or to change one they kept. */
+	export interface SavedSearchDraft {
+		name: string;
+		query: string;
+		readState: ReadState;
+		feedId: string | null;
+	}
+
+	/** Why a query was not kept. */
+	export type SavedSearchFailure =
+		/** The name was blank, or longer than a rail row can carry. */
+		| "invalid-name"
+		/** The query held nothing but space, which narrows nothing. */
+		| "invalid-query"
+		/** Another saved search already answers to that name. */
+		| "duplicate-name"
+		/** No saved search of this reader's has that id. */
+		| "not-found";
+
+	/** What keeping or changing a query did, or why it was refused. */
+	export type SavedSearchResult =
+		| { ok: true; search: SavedSearch }
+		| { ok: false; reason: SavedSearchFailure }
+		| {
+				ok: false;
+				/** The shelf is full, and the newest is refused rather than the oldest evicted. */
+				reason: "full";
+				limit: number;
+		  };
+
+	/** What forgetting a saved search did, or why there was nothing to forget. */
+	export type SavedSearchRemoval = { ok: true } | { ok: false; reason: "not-found" };
 
 	/**
 	 * One page of a timeline. A cursor that no longer decodes is reported rather than
@@ -598,6 +696,11 @@ export namespace UserStore {
 				/** Every feed the returned items came from, for labelling them. */
 				feeds: FeedRef[];
 				cursors: { next: string | null; prev: string | null };
+				/**
+				 * How far a search page reached and what stopped it there, or `null` for a page
+				 * of a list nobody searched, which walks to wherever its cursor takes it.
+				 */
+				search: SearchSpan | null;
 		  }
 		| { ok: false; reason: "bad-cursor" };
 
@@ -1605,6 +1708,34 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
+	 * One post and the subscription it came from, for the page that reads it on its own.
+	 *
+	 * The tier comes back with it because extraction is a tier's to allow and the tier
+	 * lives on this object's own row: deciding it here means the page renders what the
+	 * reader is entitled to rather than what it remembered to check.
+	 *
+	 * @param itemId - The post to open.
+	 * @returns The post, its feed and what the tier allows, or `null` for a post this
+	 * reader does not hold.
+	 */
+	async openPost(itemId: string): Promise<UserStore.OpenedPost | null> {
+		let row = await this.#db.find(feedItems, { id: itemId });
+		if (row === null) return null;
+
+		let [labels, feed, settingsRow] = await Promise.all([
+			this.#tagsFor([row.id]),
+			this.getFeed(row.feed_id),
+			this.#settingsRow(),
+		]);
+
+		return {
+			item: { ...toItem(row), tags: labels.get(row.id) ?? [] },
+			feed,
+			fullText: limitsOf(storedTier(settingsRow)).fullText,
+		};
+	}
+
+	/**
 	 * Keeps a post, or stops keeping it. A kept post is exempt from every rule that deletes
 	 * one: the budget's reclamation, its feed's velocity, and the sweep behind both.
 	 *
@@ -1671,18 +1802,40 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	readingQueue(options: UserStore.ReadingQueueOptions = {}): Promise<UserStore.TimelineResult> {
 		let readState = options.readState ?? "unread";
 		let pattern = likePattern(options.query ?? "");
+		let feedId = options.feedId ?? null;
+		let folderId = options.folderId ?? null;
 
 		if (pattern !== null) {
-			return this.#page(
-				new SearchQuery(this.#db, { pattern, readState, seek: [], orderBy: [], limit: null }),
+			return this.#searchedPage(
+				{
+					query: (floor) =>
+						new SearchQuery(this.#db, {
+							pattern,
+							readState,
+							floor,
+							feedId,
+							folderId,
+							seek: [],
+							orderBy: [],
+							limit: null,
+						}),
+					examined: (from, reachedAt) =>
+						this.#countBetween(reachedAt, from, { readState, feedId, folderId }),
+					scoped: feedId !== null || folderId !== null,
+					withTags: false,
+				},
 				options,
 			);
 		}
 
 		let timeline = this.#timeline();
 		let narrowing = readStateWhere(readState);
+		let narrowed = narrowing === null ? timeline : timeline.where(narrowing);
 
-		return this.#page(narrowing === null ? timeline : timeline.where(narrowing), options);
+		if (feedId !== null) narrowed = narrowed.where({ feed_id: feedId });
+		if (folderId !== null) narrowed = narrowed.where({ folder_id: folderId });
+
+		return this.#page(narrowed, options);
 	}
 
 	/** One feed's posts, read and unread alike, newest first. */
@@ -2079,12 +2232,41 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 */
 	taggedQueue(
 		tagId: string,
-		options: UserStore.TimelineOptions = {},
+		options: UserStore.ReadingQueueOptions = {},
 	): Promise<UserStore.TimelineResult> {
-		return this.#page(
-			new TaggedQuery(this.#db, { tagId, seek: [], orderBy: [], limit: null }),
+		let pattern = likePattern(options.query ?? "");
+
+		if (pattern === null) {
+			return this.#page(
+				new TaggedQuery(this.#db, {
+					tagId,
+					pattern: null,
+					floor: null,
+					seek: [],
+					orderBy: [],
+					limit: null,
+				}),
+				options,
+				true,
+			);
+		}
+
+		return this.#searchedPage(
+			{
+				query: (floor) =>
+					new TaggedQuery(this.#db, {
+						tagId,
+						pattern,
+						floor,
+						seek: [],
+						orderBy: [],
+						limit: null,
+					}),
+				examined: (from, reachedAt) => this.#countTaggedBetween(tagId, reachedAt, from),
+				scoped: true,
+				withTags: true,
+			},
 			options,
-			true,
 		);
 	}
 
@@ -2095,6 +2277,162 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * search over it and no index beyond the primary key, and the list a reader reasons
 	 * about is the list they can see at once.
 	 */
+	/**
+	 * The queries the reader kept, in the order their names read, which is the order the
+	 * rail draws them in.
+	 *
+	 * Unpaged and countless. The table is capped at {@link SAVED_SEARCH_LIMIT} rows, and a
+	 * number beside each entry would be a scan per entry on every page of the app, paid by
+	 * readers who are not searching.
+	 */
+	async listSearches(): Promise<UserStore.SavedSearch[]> {
+		let rows = await this.#db.findMany(searches, {
+			orderBy: [
+				["name", "asc"],
+				["id", "asc"],
+			],
+		});
+
+		return rows.map(toSavedSearch);
+	}
+
+	/** One saved search, or `null` when the reader has none by that id. */
+	async getSearch(searchId: string): Promise<UserStore.SavedSearch | null> {
+		let row = await this.#db.find(searches, { id: searchId });
+		return row === null ? null : toSavedSearch(row);
+	}
+
+	/**
+	 * Keeps a query, so a search worth typing twice is typed once.
+	 *
+	 * A full shelf refuses rather than making room: the twenty-first is the one the reader
+	 * is asking for, and evicting one of the twenty they chose would answer a request they
+	 * did not make.
+	 *
+	 * @param draft - The name, the words, the read state and whatever feed it is scoped to.
+	 */
+	async createSearch(draft: UserStore.SavedSearchDraft): Promise<UserStore.SavedSearchResult> {
+		let checked = await this.#searchDraft(draft);
+		if (!checked.ok) return checked;
+
+		let held = await this.#db.count(searches);
+		if (held >= SAVED_SEARCH_LIMIT) {
+			this.#record("job", { event: "user.search.refused", reason: "full", searches: held });
+			return { ok: false, reason: "full", limit: SAVED_SEARCH_LIMIT };
+		}
+
+		let written = await this.#db.create(
+			searches,
+			{
+				id: TypeID.fromUUID("search", generateUUID()).toString(),
+				name: checked.name,
+				query: checked.query,
+				read_state: checked.readState,
+				feed_id: checked.feedId,
+			},
+			{ returnRow: true },
+		);
+
+		this.#record("job", {
+			event: "user.search.saved",
+			searchId: written.id,
+			searches: held + 1,
+			readState: checked.readState,
+			scoped: checked.feedId !== null,
+		});
+
+		return { ok: true, search: toSavedSearch(written) };
+	}
+
+	/**
+	 * Rewrites a saved search, which changes the address the rail draws and nothing else:
+	 * the row holds a narrowing, so there is no stored result for it to disagree with.
+	 *
+	 * @param searchId - The saved search to rewrite.
+	 * @param draft - What it holds instead.
+	 */
+	async updateSearch(
+		searchId: string,
+		draft: UserStore.SavedSearchDraft,
+	): Promise<UserStore.SavedSearchResult> {
+		let stored = await this.#db.find(searches, { id: searchId });
+		if (stored === null) return { ok: false, reason: "not-found" };
+
+		let checked = await this.#searchDraft(draft, searchId);
+		if (!checked.ok) return checked;
+
+		let written = await this.#db.update(
+			searches,
+			{ id: searchId },
+			{
+				name: checked.name,
+				query: checked.query,
+				read_state: checked.readState,
+				feed_id: checked.feedId,
+			},
+		);
+
+		return { ok: true, search: toSavedSearch(written) };
+	}
+
+	/** Forgets a saved search, which deletes no post and changes no list but the rail's. */
+	async deleteSearch(searchId: string): Promise<UserStore.SavedSearchRemoval> {
+		let stored = await this.#db.find(searches, { id: searchId });
+		if (stored === null) return { ok: false, reason: "not-found" };
+
+		await this.#db.delete(searches, { id: searchId });
+		this.#record("job", { event: "user.search.forgotten", searchId });
+
+		return { ok: true };
+	}
+
+	/**
+	 * A submitted saved search, as the columns take it, or the refusal explaining why it is
+	 * not one. Every path that writes the table goes through it, so a name nobody can read
+	 * and a query that narrows nothing are refused wherever they are submitted from.
+	 *
+	 * @param draft - What was submitted.
+	 * @param excluding - A saved search the name may already belong to, which is the one
+	 * being rewritten.
+	 */
+	async #searchDraft(
+		draft: UserStore.SavedSearchDraft,
+		excluding: string | null = null,
+	): Promise<
+		| {
+				ok: true;
+				name: string;
+				query: string;
+				readState: UserStore.ReadState;
+				feedId: string | null;
+		  }
+		| { ok: false; reason: UserStore.SavedSearchFailure }
+	> {
+		let name = draft.name.trim();
+		if (name.length === 0 || name.length > SEARCH_NAME_LENGTH) {
+			return { ok: false, reason: "invalid-name" };
+		}
+
+		/** The same emptiness the queue reads as no narrowing at all, refused as a saved one. */
+		if (likePattern(draft.query) === null) return { ok: false, reason: "invalid-query" };
+
+		let taken = await this.#db.findOne(searches, { where: { name } });
+		if (taken !== null && taken.id !== excluding) return { ok: false, reason: "duplicate-name" };
+
+		let feedId = draft.feedId;
+		if (feedId !== null && (await this.#db.find(feeds, { id: feedId })) === null) {
+			feedId = null;
+		}
+
+		return {
+			ok: true,
+			name,
+			query: draft.query,
+			readState: isReadState(draft.readState) ? draft.readState : "all",
+			feedId,
+		};
+	}
+
 	async listRules(): Promise<UserStore.Rule[]> {
 		let rows = await this.#db.findMany(rules, {
 			orderBy: [
@@ -3626,7 +3964,150 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			items = items.map((item) => ({ ...item, tags: labels.get(item.id) ?? [] }));
 		}
 
-		return { ok: true, items, feeds: await this.#feedRefs(items), cursors: page.data.cursors };
+		return {
+			ok: true,
+			items,
+			feeds: await this.#feedRefs(items),
+			cursors: page.data.cursors,
+			search: null,
+		};
+	}
+
+	/**
+	 * One page of a searched list: the step's floor, the page inside it, the boundary the
+	 * page stopped at, and the record of what the walk cost.
+	 *
+	 * A search adopts the ordering of the list it narrows and adds a predicate to it, so
+	 * everything that differs between the queue and a label's posts is in the plan handed
+	 * in and everything that is the same about a bounded search is here.
+	 *
+	 * @param plan - How the narrowed list is read, and how far its walk is measured.
+	 * @param options - Where to page from, how much of it, and which posts.
+	 */
+	async #searchedPage(
+		plan: SearchPlan,
+		options: UserStore.ReadingQueueOptions,
+	): Promise<UserStore.TimelineResult> {
+		let started = Date.now();
+		let readState = options.readState ?? "unread";
+
+		let tier = storedTier(await this.#settingsRow());
+		let windowDays = limitsOf(tier).searchWindowDays;
+		let windowFloor = searchFloor(tier, started);
+
+		let client = await flagsFor(this.#subject());
+		let stepDays = await client.get(features.searchStepDays);
+
+		/**
+		 * Where this step starts. A page walking back from a cursor starts at that cursor's
+		 * own moment; the newest page starts now; and a page walking up towards the newest
+		 * is bounded above by its cursor already, so it takes the window alone.
+		 */
+		let from = searchStartsAt(options.cursor ?? null, started);
+		let floor = stepFloorOf(from, stepDays, windowFloor);
+
+		let page = await this.#page(plan.query(floor), options, plan.withTags);
+		if (!page.ok) return page;
+
+		let limit = pageLimit(options.limit);
+		let filled = page.items.length >= limit;
+		let last = page.items.at(-1) ?? null;
+		let oldest = await this.#oldestPostAt();
+
+		/**
+		 * A filled page stopped at its last post rather than at the floor, so that is how far
+		 * this scan actually looked and what the sentence under the list names.
+		 */
+		let reachedAt = filled && last !== null ? last.publishedAt : (floor ?? oldest ?? started);
+		let stoppedAt = searchStop({ filled, floor, windowFloor, oldest });
+
+		let examined = from === null ? page.items.length : await plan.examined(from, reachedAt);
+
+		/**
+		 * No query text. What a person searched for is the most revealing thing this object
+		 * holds, and none of the questions this event answers needs it.
+		 */
+		this.#record("job", {
+			event: "user.search",
+			windowDays,
+			stepDays,
+			examined,
+			matched: page.items.length,
+			exhausted: !filled,
+			readState,
+			scoped: plan.scoped,
+			durationMs: Date.now() - started,
+		});
+
+		return {
+			...page,
+			cursors: boundaryCursors(page.cursors, {
+				filled,
+				floor,
+				from,
+				resumable: (options.cursor ?? null) !== null,
+				stoppedAt,
+			}),
+			search: { reachedAt, windowDays, stoppedAt },
+		};
+	}
+
+	/**
+	 * When the oldest post this reader holds was published, or `null` for an object holding
+	 * none. It is one row off the timeline index, which is what lets a search say it reached
+	 * the end of the archive rather than guess at it.
+	 */
+	async #oldestPostAt(): Promise<number | null> {
+		let { rows = [] } = await this.#db.exec(
+			sql`select "published_at" from feed_items order by "published_at" asc, "id" asc limit 1`,
+		);
+
+		let published = rows[0]?.published_at;
+		return typeof published === "number" ? published : null;
+	}
+
+	/**
+	 * How many of the reader's posts a walk between two moments visited, counted off the
+	 * same index the walk ran down, so the number costs index rows and no table rows.
+	 *
+	 * @param since - Epoch milliseconds the walk reached.
+	 * @param until - Epoch milliseconds it started at.
+	 * @param narrowing - The read state and any scope the walk itself ran under.
+	 */
+	async #countBetween(
+		since: number,
+		until: number,
+		narrowing: {
+			readState: UserStore.ReadState;
+			feedId: string | null;
+			folderId: string | null;
+		},
+	): Promise<number> {
+		let where = sql`"published_at" >= ${since} and "published_at" <= ${until}`;
+
+		let state = readStateSql(narrowing.readState);
+		if (state !== null) where = sql`${where} and ${state}`;
+
+		if (narrowing.feedId !== null) where = sql`${where} and "feed_id" = ${narrowing.feedId}`;
+		if (narrowing.folderId !== null) where = sql`${where} and "folder_id" = ${narrowing.folderId}`;
+
+		let { rows = [] } = await this.#db.exec(
+			sql`select count(*) as examined from feed_items where ${where}`,
+		);
+
+		let examined = rows[0]?.examined;
+		return typeof examined === "number" ? examined : 0;
+	}
+
+	/** The same count for a label's posts, taken off the join table's own ordering columns. */
+	async #countTaggedBetween(tagId: string, since: number, until: number): Promise<number> {
+		let { rows = [] } = await this.#db.exec(
+			sql`select count(*) as examined from item_tags
+				where "tag_id" = ${tagId} and "published_at" >= ${since} and "published_at" <= ${until}`,
+		);
+
+		let examined = rows[0]?.examined;
+		return typeof examined === "number" ? examined : 0;
 	}
 
 	/** The feeds a page's posts came from, for labelling them. */
@@ -3656,12 +4137,157 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 }
 
+/**
+ * How one searched list is read, which is everything a bounded search needs beyond the
+ * ordering the list it narrows already owns.
+ */
+interface SearchPlan {
+	/**
+	 * The page to read, bounded by the floor the step and the window decided between them.
+	 *
+	 * @param floor - Epoch milliseconds the walk stops at, or `null` to reach every post.
+	 */
+	query: (floor: number | null) => KeysetQuery<TimelineRow, Predicate, string>;
+	/**
+	 * How many posts the walk visited, counted off the same index range it walked. A post
+	 * published at either end counts, so a span whose ends fall on ties counts those ties.
+	 *
+	 * @param from - Epoch milliseconds the walk started at.
+	 * @param reachedAt - Epoch milliseconds it got to.
+	 */
+	examined: (from: number, reachedAt: number) => Promise<number>;
+	/** Whether the search was narrowed to one feed, one folder or one label. */
+	scoped: boolean;
+	/** Whether the page's posts carry the labels on them. */
+	withTags: boolean;
+}
+
+/**
+ * Where a search page's walk starts, as epoch milliseconds, or `null` for a page whose
+ * cursor already bounds it above.
+ *
+ * A cursor that no longer decodes leaves the page to the pager, which refuses it and says
+ * so, so this reads it for the moment it carries and answers with the clock otherwise.
+ *
+ * @param cursor - The cursor this page was asked for by, or `null` for the newest.
+ * @param now - Epoch milliseconds the search is being run at.
+ */
+function searchStartsAt(cursor: string | null, now: number): number | null {
+	if (cursor === null) return now;
+
+	let decoded = decodeCursor(cursor);
+	if (isFailure(decoded)) return now;
+	if (decoded.data.direction === "before") return null;
+
+	let at = decoded.data.values[decoded.data.columns.indexOf("published_at")];
+	return typeof at === "number" ? at : now;
+}
+
+/**
+ * The floor one search page walks to: the later of the tier's window and a step back from
+ * where the page starts, so neither bound can be walked past.
+ *
+ * @param from - Epoch milliseconds the walk starts at, or `null` for a page bounded above.
+ * @param stepDays - How far back one page reaches, as the flag answered it.
+ * @param windowFloor - The oldest moment the tier allows, or `null` for every stored post.
+ */
+function stepFloorOf(
+	from: number | null,
+	stepDays: number,
+	windowFloor: number | null,
+): number | null {
+	if (from === null) return windowFloor;
+
+	let step = from - stepDays * DAY_MS;
+	return windowFloor === null ? step : Math.max(step, windowFloor);
+}
+
+/** What stopped a search page where it did, decided before the copy that says it. */
+function searchStop(at: {
+	filled: boolean;
+	floor: number | null;
+	windowFloor: number | null;
+	oldest: number | null;
+}): UserStore.SearchStop {
+	if (at.filled) return "step";
+	if (at.floor === null) return "archive";
+	if (at.oldest === null || at.floor <= at.oldest) return "archive";
+	if (at.windowFloor !== null && at.floor === at.windowFloor) return "window";
+
+	return "step";
+}
+
+/**
+ * The cursors a search page offers, which is where it differs from every other list here:
+ * a step that fills no page still continues, so the boundary is minted from the floor the
+ * scan reached rather than from a row that came back.
+ *
+ * Both are spelled with the ordering columns every other list mints, so a reader who
+ * searches, pages, clears the box and keeps paging follows one the plain timeline seeks
+ * with.
+ *
+ * @param minted - What the pager minted from the rows this page returned.
+ * @param at - Where the step started, where it stopped, and what stopped it there.
+ */
+function boundaryCursors(
+	minted: { next: string | null; prev: string | null },
+	at: {
+		filled: boolean;
+		floor: number | null;
+		from: number | null;
+		/** Whether the reader arrived here by a cursor, and so has a step above them. */
+		resumable: boolean;
+		stoppedAt: UserStore.SearchStop;
+	},
+): { next: string | null; prev: string | null } {
+	let next = minted.next;
+
+	if (!at.filled) {
+		next = at.stoppedAt === "archive" || at.floor === null ? null : cursorAt("after", at.floor);
+	}
+
+	/**
+	 * A step holding nothing still has a way back to the step above it, which the pager
+	 * cannot mint because no row came back to mint it from.
+	 */
+	let resumes = at.resumable && at.from !== null;
+	let prev = minted.prev ?? (resumes ? cursorAt("before", at.from ?? 0) : null);
+
+	return { next, prev };
+}
+
+/**
+ * One end of a step as a cursor, carrying the moment it stopped at and an id no stored id
+ * sorts below, so the step that follows skips nothing that was never examined.
+ *
+ * @param direction - Which edge of the step this marks.
+ * @param at - Epoch milliseconds the step reached.
+ */
+function cursorAt(direction: "after" | "before", at: number): string | null {
+	let cursor = encodeCursor(direction, ["published_at", "id"], [at, BELOW_EVERY_ID]);
+	return isFailure(cursor) ? null : cursor.data;
+}
+
 /** Everything one composed search statement is built from. */
 interface SearchState {
-	/** The `LIKE` pattern, already escaped, that both searched columns are matched against. */
+	/** The `LIKE` pattern, already escaped, that all three searched columns are matched against. */
 	pattern: string;
 	/** Which posts the match is narrowed to, spelled beside it in the same statement. */
 	readState: UserStore.ReadState;
+	/**
+	 * Epoch milliseconds the walk stops at, or `null` for one that reaches every stored
+	 * post. It is a second comparison on the same leading column the seek uses, so it ends
+	 * the index range early rather than filtering rows out of it.
+	 */
+	floor: number | null;
+	/** One subscription the match is narrowed to, or `null` for every followed feed. */
+	feedId: string | null;
+	/**
+	 * One folder the match is narrowed to, or `null` for every feed. The folder is
+	 * denormalized onto the post, so this is one bound parameter rather than a list of the
+	 * folder's feeds.
+	 */
+	folderId: string | null;
 	/** Seek predicates the pager composed, which narrow the match to one page. */
 	seek: readonly Predicate[];
 	/** The ordering the pager owns, which is also what it mints cursors from. */
@@ -3678,8 +4304,9 @@ interface SearchState {
  * wildcards. The query builder's own operators emit no such clause, so the statement is
  * spelled out here and the pager's seek predicate is folded into it: one page, one read.
  *
- * It costs a scan of the reader's posts. A match that may begin anywhere in the text is
- * one no index answers, so the timeline index serves the ordering and nothing else.
+ * It costs a scan of the reader's posts, bounded by {@link SearchState.floor}: a match
+ * that may begin anywhere in the text is one no index answers, so the timeline index
+ * serves the ordering and the floor decides how much of it a page walks.
  */
 class SearchQuery implements KeysetQuery<TimelineRow, Predicate, string> {
 	#db: Database;
@@ -3719,6 +4346,14 @@ class SearchQuery implements KeysetQuery<TimelineRow, Predicate, string> {
 interface TaggedState {
 	/** The label whose posts the page holds, which is the equality the index opens with. */
 	tagId: string;
+	/**
+	 * The `LIKE` pattern a searched label's posts are matched against, or `null` for the
+	 * whole label. A search adopts this list's ordering and adds a predicate to it, so the
+	 * page still seeks and mints cursors on the join table's own copies of the keys.
+	 */
+	pattern: string | null;
+	/** Epoch milliseconds the walk stops at, or `null` for one that reaches every post. */
+	floor: number | null;
 	/** Seek predicates the pager composed, which narrow the label's posts to one page. */
 	seek: readonly Predicate[];
 	/** The ordering the pager owns, which is also what it mints cursors from. */
@@ -3789,9 +4424,21 @@ function quoteJoinColumn(column: string): string {
 
 /** The statement one page of a label's posts runs as. */
 function taggedStatement(state: TaggedState): SqlStatement {
+	let narrowed = sql`t."tag_id" = ${state.tagId}`;
+
+	if (state.pattern !== null) {
+		let pattern = state.pattern;
+
+		narrowed = sql`${narrowed} and (i."title" like ${pattern} escape ${LIKE_ESCAPE}
+			or i."summary" like ${pattern} escape ${LIKE_ESCAPE}
+			or i."author" like ${pattern} escape ${LIKE_ESCAPE})`;
+	}
+
+	if (state.floor !== null) narrowed = sql`${narrowed} and t."published_at" >= ${state.floor}`;
+
 	let where = state.seek.reduce(
 		(left, right) => sql`${left} and ${seekSql(right, quoteJoinColumn)}`,
-		sql`t."tag_id" = ${state.tagId}`,
+		narrowed,
 	);
 
 	// The pager appends the ordering it owns before reading, and the fallback keeps a
@@ -3812,13 +4459,28 @@ function taggedStatement(state: TaggedState): SqlStatement {
 		limit ${state.limit ?? DEFAULT_PAGE_LIMIT}`;
 }
 
-/** The statement one page of a search runs as. */
+/**
+ * The statement one page of a search runs as.
+ *
+ * `author` joins the match because it is on the row the scan already fetches, so it costs
+ * nothing, and somebody looking for a byline is looking for a post.
+ */
 function searchStatement(state: SearchState): SqlStatement {
 	let pattern = state.pattern;
 
-	let match = sql`("title" like ${pattern} escape ${LIKE_ESCAPE} or "summary" like ${pattern} escape ${LIKE_ESCAPE})`;
+	let match = sql`("title" like ${pattern} escape ${LIKE_ESCAPE}
+		or "summary" like ${pattern} escape ${LIKE_ESCAPE}
+		or "author" like ${pattern} escape ${LIKE_ESCAPE})`;
+
+	let matched = match;
+
 	let narrowed = readStateSql(state.readState);
-	let matched = narrowed === null ? match : sql`${match} and ${narrowed}`;
+	if (narrowed !== null) matched = sql`${matched} and ${narrowed}`;
+
+	if (state.floor !== null) matched = sql`${matched} and "published_at" >= ${state.floor}`;
+	if (state.feedId !== null) matched = sql`${matched} and "feed_id" = ${state.feedId}`;
+	if (state.folderId !== null) matched = sql`${matched} and "folder_id" = ${state.folderId}`;
+
 	let where = state.seek.reduce((left, right) => sql`${left} and ${seekSql(right)}`, matched);
 
 	// The pager appends the ordering it owns before reading, and the fallback keeps a
@@ -4015,6 +4677,22 @@ function toRule(row: SelectRule): UserStore.Rule {
 		matches: row.matches,
 		lastMatchedAt: row.last_matched_at,
 	};
+}
+
+/** A saved search as the RPC boundary reports it. */
+function toSavedSearch(row: SelectSearch): UserStore.SavedSearch {
+	return {
+		id: row.id,
+		name: row.name,
+		query: row.query,
+		readState: isReadState(row.read_state) ? row.read_state : "all",
+		feedId: row.feed_id,
+	};
+}
+
+/** Whether a submitted value is one of the read states the column's `CHECK` allows. */
+function isReadState(value: string): value is UserStore.ReadState {
+	return SEARCH_READ_STATES.some((offered) => offered === value);
 }
 
 /** A stored post as the matching language reads it, which is four of its columns. */

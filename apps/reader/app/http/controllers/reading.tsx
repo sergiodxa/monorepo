@@ -37,7 +37,7 @@ import type { RemixNode } from "remix/ui";
 
 import { redirect } from "@sdxc/http/response";
 import { UnprocessableEntity } from "@sdxc/http/status-code";
-import { CheckCheckIcon, RefreshCwIcon } from "@sdxc/icons";
+import { BookmarkIcon, CheckCheckIcon, RefreshCwIcon } from "@sdxc/icons";
 import { currentLog } from "@sdxc/logger";
 import { parsePageParams } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
@@ -69,11 +69,13 @@ import {
 	SHOW_PARAM,
 } from "~/app/http/controllers/queue-view";
 import { MARKED_PARAM } from "~/app/http/controllers/read-all";
-import { timelineCopy, timelineEntries } from "~/app/http/controllers/timeline-entries";
+import { NAME_FIELD, SAVED_PARAM } from "~/app/http/controllers/searches/save";
+import { exactDate, timelineCopy, timelineEntries } from "~/app/http/controllers/timeline-entries";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { isFrameRequest } from "~/app/http/render";
 import { features } from "~/app/lib/flags";
+import { SAVED_SEARCH_LIMIT, SEARCH_NAME_LENGTH } from "~/database/schema";
 import { userStore } from "~/database/user-do";
 import AppLayout, {
 	ActionLabel,
@@ -103,6 +105,9 @@ const FOLLOW_FORM_ID = "follow-feed";
 
 /** Ties the follow field to the note a refusal is reported in, and to the label naming it. */
 const FOLLOW_FIELD_ID = "follow-feed-url";
+
+/** Ties the saved-search name field to the label naming it, which is drawn for listeners. */
+const SAVE_SEARCH_FIELD_ID = "save-search-name";
 
 /** The `id` the refusal's own note answers to, which the field points at while it stands. */
 const FOLLOW_ERROR_ID = "follow-feed-error";
@@ -180,6 +185,56 @@ function emptyCopy(i18next: i18n, view: QueueView) {
 		title: i18next.t("reading.empty.all.title"),
 		description: i18next.t("reading.empty.all.description"),
 	};
+}
+
+/**
+ * What a search page looked at, said under the list. A bounded search that shows nothing
+ * has to name the span it covered, because the confusing failure is the one where the post
+ * exists and the search was never allowed to reach it.
+ *
+ * @param i18next - The request's dictionary.
+ * @param locale - The request's language, which words and orders the date.
+ * @param span - How far the page reached, and what stopped it there.
+ */
+function searchedCopy(i18next: i18n, locale: string, span: UserStore.SearchSpan): string {
+	let date = exactDate(span.reachedAt, locale);
+
+	if (span.stoppedAt === "archive") return i18next.t("reading.searched.archive", { date });
+
+	if (span.stoppedAt === "window") {
+		return i18next.t("reading.searched.window", { date, days: span.windowDays ?? 0 });
+	}
+
+	return i18next.t("reading.searched.step", { date });
+}
+
+/**
+ * The sentence a saved-search action is reported with, or `null` for an ordinary visit.
+ * Keeping a query and forgetting one both end on the queue, which is the one surface that
+ * renders the list a saved search is a narrowing of.
+ *
+ * @param i18next - The request's dictionary.
+ * @param params - The query the page was asked for with.
+ */
+function savedSearchNote(i18next: i18n, params: URLSearchParams): Note | null {
+	let outcome = params.get(SAVED_PARAM);
+	if (outcome === null) return null;
+
+	if (outcome === "saved") return { message: i18next.t("searches.saved"), color: "success" };
+	if (outcome === "forgotten") {
+		return { message: i18next.t("searches.forgotten"), color: "success" };
+	}
+
+	let refusals: Record<string, string> = {
+		"invalid-name": i18next.t("searches.error.invalidName", { length: SEARCH_NAME_LENGTH }),
+		"invalid-query": i18next.t("searches.error.invalidQuery"),
+		"duplicate-name": i18next.t("searches.error.duplicateName"),
+		"not-found": i18next.t("searches.error.notFound"),
+		full: i18next.t("searches.error.full", { limit: SAVED_SEARCH_LIMIT }),
+	};
+
+	let message = refusals[outcome];
+	return message === undefined ? null : { message, color: "warning" };
 }
 
 /** The word one filter's link is read as. */
@@ -326,6 +381,7 @@ export async function renderReadingQueue(
 			cursor,
 			readState: view.readState,
 			query: view.query,
+			feedId: view.feedId,
 			limit: PAGE_SIZE,
 		});
 	} else {
@@ -333,6 +389,7 @@ export async function renderReadingQueue(
 			cursor,
 			readState: view.readState,
 			query: view.query,
+			feedId: view.feedId,
 			limit: PAGE_SIZE,
 		});
 
@@ -359,6 +416,7 @@ export async function renderReadingQueue(
 			cursor: null,
 			readState: view.readState,
 			query: view.query,
+			feedId: view.feedId,
 			limit: PAGE_SIZE,
 		});
 	}
@@ -378,6 +436,28 @@ export async function renderReadingQueue(
 	let hasFeeds = entries.length === 0 ? (await store.countFeeds()) > 0 : true;
 
 	let hasQuery = view.query.trim().length > 0;
+
+	/**
+	 * The queries this reader kept, asked for only where the answer is used: the header
+	 * offers to keep the one being read, and offers to forget it where it is already kept.
+	 * A frame continues a queue whose header is already on screen.
+	 */
+	let kept = hasQuery && !isFrame ? await store.listSearches() : [];
+
+	let keptHere =
+		kept.find(
+			(search) =>
+				search.query.trim() === view.query.trim() &&
+				search.readState === view.readState &&
+				search.feedId === view.feedId,
+		) ?? null;
+
+	/**
+	 * What this page's scan covered, said under the list. A step returns an uneven page —
+	 * fifty posts, or three, or none — so the sentence names the span rather than letting a
+	 * short page read as the end of the archive.
+	 */
+	let searched = page.search ? searchedCopy(ctx.i18next, ctx.locale, page.search) : null;
 
 	let heading = hasQuery
 		? ctx.i18next.t("reading.headingFor", { query: view.query })
@@ -423,6 +503,23 @@ export async function renderReadingQueue(
 	let listCopy = timelineCopy(ctx.i18next);
 
 	/**
+	 * The span this page covered, and the way on from it where there is one. The link is the
+	 * one "Older posts" already is, relabelled: it follows the same cursor, which for a step
+	 * that filled no page is the boundary minted from the floor rather than from a row.
+	 */
+	let searchedNote =
+		searched === null ? null : (
+			<p mix={[text("sm"), fg("neutral.muted")]}>
+				{searched}{" "}
+				{page.search?.stoppedAt === "step" && placement.cursors.next !== null && (
+					<a href={placement.cursors.next} mix={[fg("brand")]}>
+						{ctx.i18next.t("reading.searched.continue")}
+					</a>
+				)}
+			</p>
+		);
+
+	/**
 	 * A frame asked for the piece that continues a queue already on screen, so it is
 	 * answered with that piece: the rows, numbered on from where the page above stopped,
 	 * and whatever carries the reader on from the end of them. The chrome, the heading and
@@ -444,7 +541,10 @@ export async function renderReadingQueue(
 					</Alert.Action>
 				</Alert>
 			) : (
-				<Timeline entries={entries} copy={listCopy} saving={saving} {...placement} />
+				<>
+					<Timeline entries={entries} copy={listCopy} saving={saving} {...placement} />
+					{searchedNote}
+				</>
 			),
 			init,
 		);
@@ -468,7 +568,9 @@ export async function renderReadingQueue(
 	 * both was assembled by hand, and the marking is the one that moved posts, so it speaks.
 	 */
 	let outcome =
-		markNote(ctx.i18next, ctx.url.searchParams) ?? checkAllNote(ctx.i18next, ctx.url.searchParams);
+		markNote(ctx.i18next, ctx.url.searchParams) ??
+		checkAllNote(ctx.i18next, ctx.url.searchParams) ??
+		savedSearchNote(ctx.i18next, ctx.url.searchParams);
 
 	/**
 	 * What the reader has not got yet, which is news about the queue rather than the outcome
@@ -517,7 +619,7 @@ export async function renderReadingQueue(
 					 * and a prefetcher or a mail scanner walks links of its own accord.
 					 */}
 					<form method="post" action={routes.feeds.refreshAll.href()}>
-						<QueueFields query={view.query} readState={view.readState} />
+						<QueueFields query={view.query} readState={view.readState} feedId={view.feedId} />
 
 						<Button
 							type="submit"
@@ -559,6 +661,85 @@ export async function renderReadingQueue(
 					)}
 
 					{/**
+					 * Keeping the query being read, or letting go of one already kept. It is offered
+					 * only where there is a query to keep, and it posts the narrowing as fields rather
+					 * than the address, so what is kept is a queue of this app's.
+					 *
+					 * A saved search is a link rather than a surface, so both outcomes come back to
+					 * this same page and are said in the same line every other action is said in.
+					 */}
+					{hasQuery &&
+						(keptHere === null ? (
+							<form
+								method="post"
+								action={routes.searches.create.href()}
+								mix={[attrs({ "data-rmx-document": "" }), flex(), items("center"), gap(2)]}
+							>
+								<QueueFields query={view.query} readState={view.readState} feedId={view.feedId} />
+
+								<label htmlFor={SAVE_SEARCH_FIELD_ID} mix={[visuallyHidden()]}>
+									{ctx.i18next.t("searches.nameLabel")}
+								</label>
+
+								<input
+									id={SAVE_SEARCH_FIELD_ID}
+									type="text"
+									name={NAME_FIELD}
+									required
+									maxLength={SEARCH_NAME_LENGTH}
+									placeholder={ctx.i18next.t("searches.namePlaceholder")}
+									mix={[
+										minIs(0),
+										bs(BAND_FIELD_HEIGHT),
+										boxSizing("border-box"),
+										p(0, 3),
+										rounded("lg"),
+										border({ color: "neutral.border", width: 1 }),
+										bg("neutral.bg"),
+										fg("neutral.emphasis"),
+										raw({ font: "inherit", fontSize: "0.875rem" }),
+									]}
+								/>
+
+								<Button
+									type="submit"
+									color="neutral"
+									variant="ghost"
+									size="sm"
+									aria-label={ctx.i18next.t("searches.save")}
+									title={ctx.i18next.t("searches.save")}
+								>
+									<BookmarkIcon size={ACTION_ICON_SIZE} />
+									<ActionLabel>{ctx.i18next.t("searches.save")}</ActionLabel>
+								</Button>
+							</form>
+						) : (
+							/**
+							 * A browser form sends `GET` and `POST` alone, so the declared `DELETE` rides
+							 * in `_method` and `methodOverride()` reads it back out.
+							 */
+							<form
+								method="post"
+								action={routes.searches.delete.href({ searchId: keptHere.id })}
+								mix={[attrs({ "data-rmx-document": "" })]}
+							>
+								<input type="hidden" name="_method" value="DELETE" />
+
+								<Button
+									type="submit"
+									color="neutral"
+									variant="ghost"
+									size="sm"
+									aria-label={ctx.i18next.t("searches.forget")}
+									title={ctx.i18next.t("searches.forget")}
+								>
+									<BookmarkIcon size={ACTION_ICON_SIZE} />
+									<ActionLabel>{ctx.i18next.t("searches.forget")}</ActionLabel>
+								</Button>
+							</form>
+						))}
+
+					{/**
 					 * Following another feed belongs beside the list its posts will join, and needs
 					 * one field to do it. The return key sends it, the way the sidebar's search box is
 					 * sent, so nothing takes width from the row for a button saying what the field
@@ -588,7 +769,7 @@ export async function renderReadingQueue(
 							maxIs(FOLLOW_FIELD_CAP),
 						]}
 					>
-						<QueueFields query={view.query} readState={view.readState} />
+						<QueueFields query={view.query} readState={view.readState} feedId={view.feedId} />
 
 						<label htmlFor={FOLLOW_FIELD_ID} mix={[visuallyHidden()]}>
 							{ctx.i18next.t("feeds.follow.label")}
@@ -656,7 +837,9 @@ export async function renderReadingQueue(
 							cancelLabel={ctx.i18next.t("timeline.markAllRead.cancel")}
 							form={{
 								action: routes.readAll.href(),
-								fields: <QueueFields query={view.query} readState={view.readState} />,
+								fields: (
+									<QueueFields query={view.query} readState={view.readState} feedId={view.feedId} />
+								),
 							}}
 						/>
 					</HeadingScope>
@@ -753,7 +936,10 @@ export async function renderReadingQueue(
 				)}
 
 				{entries.length > 0 ? (
-					<Timeline entries={entries} copy={listCopy} saving={saving} {...placement} />
+					<>
+						<Timeline entries={entries} copy={listCopy} saving={saving} {...placement} />
+						{searchedNote}
+					</>
 				) : (
 					/** Level 2, since the layout's own page heading is the document's only `h1`. */
 					<HeadingScope level={2}>
@@ -770,6 +956,8 @@ export async function renderReadingQueue(
 								</Empty.Description>
 							</Empty>
 						)}
+
+						{searchedNote}
 					</HeadingScope>
 				)}
 			</div>

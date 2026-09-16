@@ -199,6 +199,7 @@ describe("POST /feeds", () => {
 			cursor: null,
 			readState: "unread",
 			query: "remix",
+			feedId: null,
 			limit: 25,
 		});
 		expect(body).toContain("That address could not be reached.");

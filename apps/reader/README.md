@@ -13,12 +13,12 @@ From the repo root: `bun check` (format, lint and type check in one pass) and `b
 
 ## Cloudflare Services
 
-| Service        | Binding       | Purpose                                                       |
-| -------------- | ------------- | ------------------------------------------------------------- |
-| KV             | `KV`          | Sessions, the OIDC discovery/JWKS cache, and each feed's head |
-| Durable Object | `USER`        | One object per reader: settings, subscriptions and posts      |
-| Durable Object | `FEED`        | One object per canonical feed: the fetching and its items     |
-| D1             | `PLATFORM_DB` | The feed catalog, and what the payment platform last said     |
+| Service        | Binding       | Purpose                                                        |
+| -------------- | ------------- | -------------------------------------------------------------- |
+| KV             | `KV`          | Sessions, the OIDC cache, each feed's head, extracted articles |
+| Durable Object | `USER`        | One object per reader: settings, subscriptions and posts       |
+| Durable Object | `FEED`        | One object per canonical feed: the fetching and its items      |
+| D1             | `PLATFORM_DB` | The feed catalog, and what the payment platform last said      |
 
 Each `USER` object is addressed by the reader's OIDC subject and keeps its own SQLite,
 migrated at boot. Fetching belongs to the feed rather than to any one follower: each `FEED`
@@ -45,6 +45,8 @@ create the namespace with `bunx wrangler kv namespace create` and paste its id i
 - The same list narrowed to what is read or unread, to words you searched for, or to both
 - Follow a feed by its own address or by the address of a site that advertises one
 - Unfollow a feed, which takes its posts with it
+- The article behind a post's link, fetched when you open that post and read in place,
+  with the publisher named and the original a click away — on the paid plan
 - A count of what is waiting the moment you open the reader, fetched behind the page
 - A refresh schedule taken from each feed's own publishing rate, from every fifteen minutes
   for a feed publishing ten times a day to weekly for one that has published nothing in a month
@@ -82,6 +84,7 @@ create the namespace with `bunx wrangler kv namespace create` and paste its id i
 | `/reading`                 | Every post, narrowed by `show` and by `q`      |
 | `/reading/read`            | `POST` takes every unread post out of it       |
 | `/reading/:feed`           | One feed, its health and its posts             |
+| `/reading/:feed/:item`     | One post, and the article behind its link      |
 | `/reading/folders/:folder` | One folder's feeds, read as one stream         |
 | `/saved`                   | The posts you asked to keep                    |
 | `/feeds`                   | `POST` follows a feed                          |

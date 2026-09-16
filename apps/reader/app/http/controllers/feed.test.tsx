@@ -270,6 +270,7 @@ describe("GET /reading/:feed", () => {
 					items: [item({ id: "item-1", title: "Markdown and the web" })],
 					feeds: [FEED_REF],
 					cursors: { next: null, prev: null },
+					search: null,
 				};
 			},
 		);

@@ -28,6 +28,7 @@ import {
 	PanelLeftIcon,
 	PinIcon,
 	RssIcon,
+	SearchIcon,
 	SettingsIcon,
 } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
@@ -458,7 +459,22 @@ export namespace SidebarFeeds {
 		unreadLabel: string | null;
 	}
 
+	/**
+	 * One kept query as the rail draws it: a name, and the queue's own address under the
+	 * narrowing it holds. It carries no count, because a number beside each one is a scan
+	 * per entry on every page of the app, paid by readers who are not searching.
+	 */
+	export interface Search {
+		id: string;
+		label: string;
+		href: string;
+	}
+
 	export interface Props {
+		/** The queries the reader kept, drawn as addresses of the queue itself. */
+		searches: Search[];
+		/** The word heading the kept queries. */
+		searchesLabel: string;
 		/** The feeds the reader has filed nowhere, drawn below the folders. */
 		feeds: Feed[];
 		/** The reader's folders, each drawn as a heading over the feeds filed in it. */
@@ -616,7 +632,8 @@ function SidebarBand(
  */
 export function SidebarFeeds(handle: Handle<SidebarFeeds.Props>) {
 	return () => {
-		let { currentPath, feeds, folders, label, listLabel, pinned, quiet } = handle.props;
+		let { currentPath, feeds, folders, label, listLabel, pinned, quiet, searches, searchesLabel } =
+			handle.props;
 
 		/** Read from the path the band was asked for, since it is drawn apart from the page. */
 		function isCurrent(href: string): boolean {
@@ -624,12 +641,58 @@ export function SidebarFeeds(handle: Handle<SidebarFeeds.Props>) {
 		}
 
 		/** A reader following nothing is shown no heading for it, and no empty list under one. */
-		if (feeds.length === 0 && folders.length === 0 && pinned === null && quiet === null) {
+		if (
+			feeds.length === 0 &&
+			folders.length === 0 &&
+			pinned === null &&
+			quiet === null &&
+			searches.length === 0
+		) {
 			return null;
 		}
 
 		return (
 			<>
+				{/**
+				 * The queries the reader kept, above their feeds: each one is an address of the
+				 * queue under a narrowing they wrote, so it belongs beside the queue rather than
+				 * among the publications it reads from.
+				 */}
+				{searches.length > 0 && (
+					<Sidebar.Group>
+						<Sidebar.GroupLabel
+							mix={[
+								railRow("group-label"),
+								when('&[data-slot="group-label"]', [
+									pb("0.5rem"),
+									minBs("2.25rem"),
+									justify("start"),
+									text("sm"),
+									weight("medium"),
+									fg("neutral"),
+									raw({ textTransform: "none", letterSpacing: "normal" }),
+								]),
+							]}
+						>
+							<SearchIcon size={ICON_SIZE} />
+							<span mix={[minIs(0), truncate()]}>{searchesLabel}</span>
+						</Sidebar.GroupLabel>
+
+						<Sidebar.Nav aria-label={searchesLabel}>
+							{searches.map((search) => (
+								<Sidebar.Item
+									key={search.id}
+									href={search.href}
+									current={isCurrent(search.href)}
+									mix={[railRow("item"), text("xs"), fg("neutral.muted")]}
+								>
+									<span mix={[grow(), minIs(0), truncate()]}>{search.label}</span>
+								</Sidebar.Item>
+							))}
+						</Sidebar.Nav>
+					</Sidebar.Group>
+				)}
+
 				{/**
 				 * What the reader said they never want to miss, first, because that is what
 				 * saying it was for.

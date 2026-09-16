@@ -119,6 +119,10 @@ export default function application(options: application.Options) {
 		lazy(() => import("~/app/http/controllers/folders/show")),
 	);
 	router.map(
+		routes.post,
+		lazy(() => import("~/app/http/controllers/post")),
+	);
+	router.map(
 		routes.folders.create,
 		lazy(() => import("~/app/http/controllers/folders/create")),
 	);
@@ -177,6 +181,14 @@ export default function application(options: application.Options) {
 	router.map(
 		routes.rule.apply,
 		lazy(() => import("~/app/http/controllers/rules/apply")),
+	);
+	router.map(
+		routes.searches.create,
+		lazy(() => import("~/app/http/controllers/searches/save")),
+	);
+	router.map(
+		routes.searches.delete,
+		lazy(() => import("~/app/http/controllers/searches/forget")),
 	);
 	router.map(
 		routes.feeds.pin,

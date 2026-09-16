@@ -121,6 +121,7 @@ export function timelineCopy(i18next: i18n): Timeline.Copy {
 		saveFull: i18next.t("timeline.saveFull"),
 		saved: i18next.t("timeline.saved"),
 		flagged: i18next.t("timeline.flagged"),
+		readHere: i18next.t("timeline.readHere"),
 		newer: i18next.t("timeline.newer"),
 		older: i18next.t("timeline.older"),
 		end: i18next.t("timeline.end"),
@@ -182,6 +183,12 @@ export function timelineEntries(
 			 * post out of the queue. A row with nothing to open carries no report.
 			 */
 			ping: url === null ? null : routes.items.open.href({ itemId: item.id }),
+			/**
+			 * The post's own page, which holds what the feed gave and, underneath it, the
+			 * article behind the link. A row whose feed gave no address has nothing to fetch,
+			 * so it carries no way in.
+			 */
+			readHref: url === null ? null : routes.post.href({ feed: item.feedId, item: item.id }),
 			source,
 			summary: item.summary,
 			time: shortDate(item.publishedAt, ctx.locale, now),

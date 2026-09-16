@@ -178,6 +178,12 @@ export namespace Timeline {
 		 */
 		ping: string | null;
 		/**
+		 * The post's own page inside this app, where the article behind the link is read in
+		 * place, or `null` for a post whose feed gave it no address — there is nothing
+		 * behind a link that does not exist.
+		 */
+		readHref: string | null;
+		/**
 		 * Who the post is from: the feed on a surface holding many of them, the author on
 		 * one feed's own page, and `null` when neither is known.
 		 */
@@ -232,6 +238,8 @@ export namespace Timeline {
 		saved: string;
 		/** That one of the reader's rules picked this post out, which the mark stands for. */
 		flagged: string;
+		/** The way onto the post's own page, where the article is read without leaving. */
+		readHere: string;
 		newer: string;
 		older: string;
 		/** Said where the list stops, so it is known to have an end rather than to go on. */
@@ -560,6 +568,26 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 												media(WIDE_ROW, mbs(0)),
 											]}
 										>
+											{/**
+											 * The way onto the post's own page, where the article behind the link is
+											 * read in place. It sits with the quiet columns rather than beside the
+											 * title, because the title is still the way out to the publisher and a
+											 * second link of the same weight beside it would be two answers to one
+											 * question.
+											 */}
+											{entry.readHref && (
+												<a
+													href={entry.readHref}
+													mix={[
+														nowrap(),
+														textDecoration("none"),
+														hover(textDecoration("underline")),
+													]}
+												>
+													{copy.readHere}
+												</a>
+											)}
+
 											{hasSource && (
 												<span
 													mix={[truncate(), media(WIDE_ROW, [is(SOURCE_COLUMN), textAlign("end")])]}

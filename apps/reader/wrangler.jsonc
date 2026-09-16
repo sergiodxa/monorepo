@@ -85,10 +85,11 @@
 		},
 	],
 
-	// Sessions, the OIDC discovery/JWKS cache and each feed's published head share one
-	// namespace, keyed apart by prefix. They belong together: all three are derived state
-	// a cold isolate can rebuild, so losing the namespace signs everybody out and makes
-	// every feed look current until its next poll republishes, rather than losing
+	// Sessions, the OIDC discovery/JWKS cache, each feed's published head and the articles
+	// extracted from the pages readers open share one namespace, keyed apart by prefix.
+	// They belong together: every one of them is derived state a cold isolate can rebuild,
+	// so losing the namespace signs everybody out, makes every feed look current until its
+	// next poll republishes, and costs an article one more fetch — rather than losing
 	// anything owned.
 	//
 	// `id` and `preview_id` are placeholders. Create the real namespace with

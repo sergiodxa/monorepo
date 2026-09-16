@@ -161,6 +161,7 @@ describe("GET /saved", () => {
 					items: [item({ id: "item-1" })],
 					feeds: FEEDS,
 					cursors: { next: null, prev: null },
+					search: null,
 				};
 			},
 		);

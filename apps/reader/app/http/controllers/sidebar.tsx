@@ -17,7 +17,13 @@ import { createAction } from "remix/router";
 
 import type { CachedFeed } from "~/app/http/controllers/chrome";
 
-import { groupByFolder, railFeeds, SIDEBAR_PATH_PARAM } from "~/app/http/controllers/chrome";
+import {
+	groupByFolder,
+	railFeeds,
+	railSearches,
+	SIDEBAR_PATH_PARAM,
+} from "~/app/http/controllers/chrome";
+import { queueUrl } from "~/app/http/controllers/queue-view";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { SidebarFeeds } from "~/resources/layouts/app";
@@ -45,6 +51,13 @@ export default createAction(routes.sidebar.feeds, {
 		 * them and a folder's number can never disagree with the rows beneath it.
 		 */
 		let rows = await railFeeds(viewer.id);
+
+		/**
+		 * The queries the reader kept, beside the feed list in the same cache: the sidebar is
+		 * drawn on every page, and each of these is a narrowing rather than a count, so the
+		 * entry stands until the reader changes what they hold.
+		 */
+		let searches = await railSearches(viewer.id);
 
 		let { folders, unfiled, pinned, quiet } = groupByFolder(rows, ctx.locale);
 
@@ -92,6 +105,21 @@ export default createAction(routes.sidebar.feeds, {
 
 		return ctx.render(
 			<SidebarFeeds
+				searchesLabel={ctx.i18next.t("searches.label")}
+				/**
+				 * Each one drawn as the queue's own address under the narrowing it holds, so
+				 * opening a saved search is the same controller, the same statement and the same
+				 * cursor grammar as typing the words it keeps.
+				 */
+				searches={searches.map((search) => ({
+					id: search.id,
+					label: search.name,
+					href: queueUrl({
+						query: search.query,
+						readState: search.readState,
+						feedId: search.feedId,
+					}),
+				}))}
 				pinned={toBand(ctx.i18next.t("nav.pinned"), pinned)}
 				quiet={toBand(ctx.i18next.t("nav.quiet"), quiet)}
 				currentPath={currentPath}

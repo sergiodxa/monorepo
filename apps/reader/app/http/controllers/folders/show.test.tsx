@@ -59,7 +59,7 @@ function item(overrides: Partial<UserStore.Item> & Pick<UserStore.Item, "id">): 
 
 /** One page of the folder, as the store answers it. */
 function page(items: UserStore.Item[]): UserStore.TimelineResult {
-	return { ok: true, items, feeds: [FEED_REF], cursors: { next: null, prev: null } };
+	return { ok: true, items, feeds: [FEED_REF], cursors: { next: null, prev: null }, search: null };
 }
 
 /** Dispatches a real `GET` to `path` as `viewer`, through the folder controller alone. */

@@ -20,11 +20,12 @@ Rules follow RFC 2119: "MUST", "MUST NOT", "SHOULD", "SHOULD NOT", and "MAY" in 
 indicate requirement levels.
 
 - MUST keep the Cloudflare Worker bootstrap in `bootstrap/worker.ts` and the router
-  assembly in `bootstrap/app.tsx`. Six other places reach for a Cloudflare API and no
+  assembly in `bootstrap/app.tsx`. Seven other places reach for a Cloudflare API and no
   more: `database/user-do.ts` and `database/feed-do.ts`, which are Durable Objects and so
   are ones by definition; `database/registry.ts`, the only module holding the catalog's D1
-  binding; `database/feed-head.ts`, which holds the KV a feed publishes its head to; the
-  `app/auth/` clients, which read their credentials off the environment; and
+  binding; `database/feed-head.ts`, which holds the KV a feed publishes its head to;
+  `database/article-cache.ts`, which holds the KV extracted articles are shared through;
+  the `app/auth/` clients, which read their credentials off the environment; and
   `app/push/vapid.ts`, which reads the Web Push key pair off it the same way.
 - MUST leave the read path clear of the catalog. A subscription stores the feed's id, so
   rendering a timeline, paging a frame, checking freshness and marking a post read cross
@@ -84,6 +85,7 @@ indicate requirement levels.
   - `database/feed-do.ts` <- The per-feed Durable Object, which is the only thing that fetches
   - `database/refresh.ts` <- Retrieving one feed and folding what came back into its items
   - `database/feed-head.ts` <- The head each feed publishes, and how a reader reads many at once
+  - `database/article-cache.ts` <- Where an extracted article is shared, keyed by its URL
   - `database/registry.ts` <- The feed catalog, which turns a URL into the id naming its object
   - `database/schema.ts` <- The reader's tables, mirroring `database/migrations/` exactly
   - `database/feed-schema.ts` <- A feed's tables, mirroring `database/feed-migrations/` exactly
@@ -91,4 +93,5 @@ indicate requirement levels.
   - `resources/layouts/document.tsx` <- The html/head/body shell every page composes into
   - `resources/layouts/app.tsx` <- The chrome every signed-in page wears
   - `resources/views/timeline.tsx` <- The post list both reading surfaces render
+  - `resources/views/article.tsx` <- An extracted article, printed as elements rather than markup
   - `resources/components/lazy-frame.tsx` <- Fetches the page below one as a reader reaches it

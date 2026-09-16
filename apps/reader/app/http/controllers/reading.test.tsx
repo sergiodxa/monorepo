@@ -251,6 +251,7 @@ describe("GET /reading", () => {
 			cursor: "page-2",
 			readState: "all",
 			query: "",
+			feedId: null,
 			limit: 25,
 		});
 	});
@@ -322,6 +323,7 @@ describe("GET /reading", () => {
 					items: [item({ id: "item-1", title: "Markdown and the web" })],
 					feeds: FEEDS,
 					cursors: { next: null, prev: null },
+					search: null,
 				};
 			},
 		);
@@ -359,6 +361,7 @@ describe("what the queue knows is waiting", () => {
 			cursor: null,
 			readState: "all",
 			query: "",
+			feedId: null,
 			limit: 25,
 		});
 		expect(readsAs(body)).toContain("2 feeds have posts you have not got yet.");
@@ -442,6 +445,7 @@ describe("filtering the queue", () => {
 			cursor: null,
 			readState: "all",
 			query: "",
+			feedId: null,
 			limit: 25,
 		});
 	});
@@ -452,6 +456,7 @@ describe("filtering the queue", () => {
 			cursor: null,
 			readState: "unread",
 			query: "",
+			feedId: null,
 			limit: 25,
 		});
 
@@ -460,6 +465,7 @@ describe("filtering the queue", () => {
 			cursor: null,
 			readState: "read",
 			query: "",
+			feedId: null,
 			limit: 25,
 		});
 	});
@@ -472,6 +478,7 @@ describe("filtering the queue", () => {
 			cursor: null,
 			readState: "all",
 			query: "",
+			feedId: null,
 			limit: 25,
 		});
 	});
@@ -652,6 +659,7 @@ describe("paging into a frame", () => {
 					items: [item({ id: "item-1" })],
 					feeds: FEEDS,
 					cursors: { next: null, prev: null },
+					search: null,
 				};
 			},
 		);
@@ -776,6 +784,7 @@ describe("searching the queue", () => {
 			cursor: null,
 			readState: "all",
 			query: "  markdown  and  the  web  ",
+			feedId: null,
 			limit: 25,
 		});
 	});
@@ -815,6 +824,7 @@ describe("searching the queue", () => {
 			cursor: null,
 			readState: "unread",
 			query: "remix",
+			feedId: null,
 			limit: 25,
 		});
 
@@ -860,7 +870,10 @@ describe("searching the queue", () => {
 		let read = await (await get(`${routes.reading.index.href()}?q=remix&show=read`)).text();
 
 		expect(all).toContain("Nothing matches");
-		expect(readsAs(all)).toContain("No post in any feed you follow contains those words.");
+		/** The empty state names what search reads, which is where a reader who missed is standing. */
+		expect(readsAs(all)).toContain(
+			"Search reads the title, the summary and the author of each post, not the article behind it.",
+		);
 
 		expect(unread).toContain("Nothing unread matches");
 		expect(read).toContain("Nothing read matches");
@@ -922,8 +935,12 @@ describe("acting on every feed at once", () => {
 
 		let body = await (await get(`${routes.reading.index.href()}?q=remix&show=unread`)).text();
 
-		expect(body.match(/<input type="hidden" name="q" value="remix" \/>/g)).toHaveLength(3);
-		expect(body.match(/<input type="hidden" name="show" value="unread" \/>/g)).toHaveLength(3);
+		/**
+		 * The sweep, the mark-everything prompt, the follow field, and the offer to keep the
+		 * search being read — each posts its own fields rather than the address it came from.
+		 */
+		expect(body.match(/<input type="hidden" name="q" value="remix" \/>/g)).toHaveLength(4);
+		expect(body.match(/<input type="hidden" name="show" value="unread" \/>/g)).toHaveLength(4);
 	});
 
 	test("reports what a sweep of every feed got through", async () => {

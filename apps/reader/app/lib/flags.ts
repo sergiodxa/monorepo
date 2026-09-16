@@ -42,6 +42,13 @@ const POLL_MULTIPLIER = 1;
 const BUSY_POSTS_PER_DAY = 10;
 
 /**
+ * How far back one page of a search reaches from where its cursor sits, in days. Ninety is
+ * a season, which is the span a reader describes a half-remembered post by, and it is a
+ * number nobody has measured against a real archive yet.
+ */
+const SEARCH_STEP_DAYS = 90;
+
+/**
  * What every evaluation resolves against. A key absent from here resolves to the default
  * its call site passed, so retiring a flag is deleting its entry and then its branch.
  */
@@ -107,6 +114,26 @@ export const FLAG_SET: StoredFlagSet = {
 			defaultVariant: "on",
 		},
 		/**
+		 * How far back one page of a search walks before it stops and offers to carry on.
+		 * The tier decides how far a search may reach at all; this decides how much of that
+		 * span one page pays for. Subjects are readers, so an archive dense enough to make a
+		 * step expensive can be given a shorter one without moving anybody else's.
+		 */
+		"reader-search-step-days": {
+			variants: { season: SEARCH_STEP_DAYS, month: 30, year: 365 },
+			defaultVariant: "season",
+		},
+		/**
+		 * Whether a post's page reaches out for the article behind it. The tier decides who
+		 * is offered it; this is the operational switch a tier is not — one edit turns the
+		 * fetching off for everybody, on a publisher's complaint, a CPU line moving the
+		 * wrong way, or a bug in the sanitizer, without waiting for a revert.
+		 */
+		"article-extraction": {
+			variants: { on: true, off: false },
+			defaultVariant: "on",
+		},
+		/**
 		 * Whether a list fetches the page below it as the reader arrives. Off, the links
 		 * that page the list by hand are what a reader gets — which is what a browser
 		 * running no script gets either, so the way back is a path already walked.
@@ -132,7 +159,9 @@ export const features = defineFlags({
 	savedPosts: flag.boolean("saved-posts", true),
 	tags: flag.boolean("tags", true),
 	filterRules: flag.boolean("filter-rules", true),
+	searchStepDays: flag.number("reader-search-step-days", SEARCH_STEP_DAYS),
 	infinitePagination: flag.boolean("infinite-pagination", true),
+	articleExtraction: flag.boolean("article-extraction", true),
 });
 
 /**

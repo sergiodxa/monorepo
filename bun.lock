@@ -197,6 +197,7 @@
         "@sdxc/crypto": "workspace:*",
         "@sdxc/data-table-d1": "workspace:*",
         "@sdxc/data-table-sqlstorage": "workspace:*",
+        "@sdxc/duration": "workspace:*",
         "@sdxc/feed": "workspace:*",
         "@sdxc/flags": "workspace:*",
         "@sdxc/flags-engine": "workspace:*",
@@ -211,6 +212,7 @@
         "@sdxc/opml": "workspace:*",
         "@sdxc/pagination": "workspace:*",
         "@sdxc/rate-limit": "workspace:*",
+        "@sdxc/readability": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/session-storage-kv": "workspace:*",
         "@sdxc/typeid": "workspace:*",
@@ -685,6 +687,14 @@
         "@sdxc/logger": "workspace:*",
         "@sdxc/result": "workspace:*",
         "remix": "3.0.0-rc.2",
+      },
+    },
+    "packages/readability": {
+      "name": "@sdxc/readability",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/html": "workspace:*",
+        "@sdxc/result": "workspace:*",
       },
     },
     "packages/response": {
@@ -1533,6 +1543,8 @@
     "@sdxc/pagination": ["@sdxc/pagination@workspace:packages/pagination"],
 
     "@sdxc/rate-limit": ["@sdxc/rate-limit@workspace:packages/rate-limit"],
+
+    "@sdxc/readability": ["@sdxc/readability@workspace:packages/readability"],
 
     "@sdxc/response": ["@sdxc/response@workspace:packages/response"],
 
