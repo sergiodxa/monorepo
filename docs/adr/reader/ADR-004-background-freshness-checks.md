@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-16
+**Accepted** - 2026-09-16
 
 Builds on [ADR-002](./ADR-002-canonical-feed-objects-and-lazy-reader-timelines.md) without
 changing any of it. The `FeedDO` keeps writing one key and keeps knowing nothing about who
@@ -488,19 +488,19 @@ the worst modelled point does not justify carrying either yet.
 
 ## Implementation
 
-- [ ] `settings` migration: `tier`, `tier_expires_at`, `last_opened_at`, and the three due times
-- [ ] `TIERS`, `CHECK_INTERVAL_MS` and the dormancy ladder as named constants beside `VELOCITIES`
-- [ ] `setTier(tier, expiresAt)` on the `UserDO`, returning a discriminated union
-- [ ] `#arm()` over the three due times, and `#armCatchUp` rewritten to write one of them
-- [ ] The alarm handler as a scheduler: read settings, run what is due, advance, re-arm
-- [ ] The lease check, demoting an expired tier to free before anything is scheduled from it
-- [ ] `#scheduledCheck()`, reusing `#staleSubscriptions` and `synchronize` unchanged
-- [ ] The per-subject phase offset, derived from the subject rather than stored
-- [ ] `last_opened_at` stamped by `openReader`, and the dormancy multiplier read from it
-- [ ] `next_sweep_at`, armed daily, with the sweep still riding on every `synchronize`
-- [ ] `trigger` and `tier` on `user.freshness`; `user.scheduled` and `user.tier`
-- [ ] Durable Object storage and row rates added to `apps/uptime/app/lib/cost-rates.ts`
-- [ ] The tests above
+- [x] `settings` migration: `tier`, `tier_expires_at`, `last_opened_at`, and the three due times
+- [x] `TIERS`, `CHECK_INTERVAL_MS` and the dormancy ladder as named constants beside `VELOCITIES`
+- [x] `setTier(tier, expiresAt)` on the `UserDO`, returning a discriminated union
+- [x] `#arm()` over the three due times, and `#armCatchUp` rewritten to write one of them
+- [x] The alarm handler as a scheduler: read settings, run what is due, advance, re-arm
+- [x] The lease check, demoting an expired tier to free before anything is scheduled from it
+- [x] `#scheduledCheck()`, reusing `#staleSubscriptions` and `synchronize` unchanged
+- [x] The per-subject phase offset, derived from the subject rather than stored
+- [x] `last_opened_at` stamped by `openReader`, and the dormancy multiplier read from it
+- [x] `next_sweep_at`, armed daily, with the sweep still riding on every `synchronize`
+- [x] `trigger` and `tier` on `user.freshness`; `user.scheduled` and `user.tier`
+- [x] Durable Object storage and row rates added to `apps/uptime/app/lib/cost-rates.ts`
+- [x] The tests above
 
 ## References
 
