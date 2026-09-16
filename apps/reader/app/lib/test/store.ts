@@ -53,9 +53,23 @@ export interface UserStoreDouble {
 	tagItem: ReturnType<typeof vi.fn>;
 	untagItem: ReturnType<typeof vi.fn>;
 	taggedQueue: ReturnType<typeof vi.fn>;
+	listRules: ReturnType<typeof vi.fn>;
+	getRule: ReturnType<typeof vi.fn>;
+	createRule: ReturnType<typeof vi.fn>;
+	updateRule: ReturnType<typeof vi.fn>;
+	deleteRule: ReturnType<typeof vi.fn>;
+	previewRule: ReturnType<typeof vi.fn>;
+	applyPreviewedRule: ReturnType<typeof vi.fn>;
 	pinFeed: ReturnType<typeof vi.fn>;
 	pinnedStrip: ReturnType<typeof vi.fn>;
 	recordPublishingRate: ReturnType<typeof vi.fn>;
+	notifications: ReturnType<typeof vi.fn>;
+	setChannels: ReturnType<typeof vi.fn>;
+	setQuietHours: ReturnType<typeof vi.fn>;
+	setTimeZone: ReturnType<typeof vi.fn>;
+	registerDevice: ReturnType<typeof vi.fn>;
+	forgetDevice: ReturnType<typeof vi.fn>;
+	setFeedNotify: ReturnType<typeof vi.fn>;
 }
 
 /** An empty page of a timeline, which is what a store answers before anything is stored. */
@@ -75,6 +89,18 @@ export const NO_FOLDERS: UserStore.Folder[] = [];
 /** No labels, which is what a store answers before a reader has made one. */
 export const NO_TAGS: UserStore.Tag[] = [];
 
+/** No filters, which is what a store answers before a reader has written one. */
+export const NO_RULES: UserStore.Rule[] = [];
+
+/** A preview that caught nothing, over an object holding nothing to catch. */
+export const EMPTY_PREVIEW: UserStore.RulePreview = {
+	ok: true,
+	scanned: 0,
+	matched: 0,
+	items: [],
+	feeds: [],
+};
+
 /** Nothing pinned, which is what a reader opens to before they pin anything. */
 export const NO_PINS: UserStore.PinnedFeed[] = [];
 
@@ -86,6 +112,20 @@ export const DEFAULT_SETTINGS: UserStore.Settings = {
 	tierSource: "default",
 	graceUntil: null,
 	tierCheckedAt: 0,
+};
+
+/** Nothing configured, which is what a reader who has never asked to be notified holds. */
+export const NO_NOTIFICATIONS: UserStore.Notifications = {
+	push: false,
+	email: false,
+	emailAllowed: false,
+	address: null,
+	timeZone: "UTC",
+	quietHours: false,
+	quietFrom: 22,
+	quietTo: 7,
+	feeds: 0,
+	devices: [],
 };
 
 /** Nothing waiting above any cursor, which is what a reader who is current opens to. */
@@ -163,6 +203,13 @@ export function createUserStoreDouble(): UserStoreDouble {
 		tagItem: vi.fn(async () => ({ ok: false, reason: "not-found" })),
 		untagItem: vi.fn(async () => ({ ok: true, removed: false })),
 		taggedQueue: vi.fn(async () => EMPTY_TIMELINE),
+		listRules: vi.fn(async () => NO_RULES),
+		getRule: vi.fn(async () => null),
+		createRule: vi.fn(async () => ({ ok: false, reason: "invalid-value" })),
+		updateRule: vi.fn(async () => ({ ok: false, reason: "not-found" })),
+		deleteRule: vi.fn(async () => ({ ok: false, reason: "not-found" })),
+		previewRule: vi.fn(async () => EMPTY_PREVIEW),
+		applyPreviewedRule: vi.fn(async () => ({ ok: true, scanned: 0, matched: 0, affected: 0 })),
 		pinFeed: vi.fn(async () => ({ ok: false, reason: "not-following" })),
 		pinnedStrip: vi.fn(async () => NO_PINS),
 		recordPublishingRate: vi.fn(async () => undefined),
@@ -174,5 +221,12 @@ export function createUserStoreDouble(): UserStoreDouble {
 		deleteFolder: vi.fn(async () => ({ ok: false, reason: "not-found" })),
 		fileFeed: vi.fn(async () => ({ ok: false, reason: "not-following" })),
 		folderTimeline: vi.fn(async () => EMPTY_TIMELINE),
+		notifications: vi.fn(async () => NO_NOTIFICATIONS),
+		setChannels: vi.fn(async () => ({ ok: true, notifications: NO_NOTIFICATIONS })),
+		setQuietHours: vi.fn(async () => NO_NOTIFICATIONS),
+		setTimeZone: vi.fn(async () => false),
+		registerDevice: vi.fn(async () => ({ devices: 1 })),
+		forgetDevice: vi.fn(async () => true),
+		setFeedNotify: vi.fn(async () => ({ ok: true, notify: true })),
 	};
 }

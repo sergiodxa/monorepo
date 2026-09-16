@@ -46,6 +46,7 @@ const FOLLOWED: UserStore.FeedSummary = {
 	folderTitle: null,
 	pinnedAt: null,
 	postsPerDay: null,
+	notify: false,
 };
 
 /**

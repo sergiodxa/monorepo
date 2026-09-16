@@ -123,8 +123,12 @@ export default createController(routes.auth, {
 			 * Idempotent, and run on every sign-in rather than once: there is no user table and
 			 * no sign-up step, so a first login is what creates a reader, and every login after
 			 * it finds the row already there.
+			 *
+			 * The address rides along because it is the only moment this app holds one: it is
+			 * read off the ID token per request, and the alarm that sends an email has neither
+			 * a request nor a token. Writing it every time picks up a changed one for free.
 			 */
-			let reader = await userStore(subject).ensureUser(subject);
+			let reader = await userStore(subject).ensureUser(subject, finished.data.idToken.email);
 
 			/**
 			 * A webhook that never arrived is repaired here, before anything is rendered: a

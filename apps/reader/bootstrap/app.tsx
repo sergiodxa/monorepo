@@ -34,6 +34,12 @@ import routes from "~/routes/web";
 
 import { logger } from "./logger";
 
+/**
+ * The callback a publisher's hub delivers to, in the pattern language `cop()` matches
+ * bypasses by. Both methods are named, since the verification arrives as a `GET`.
+ */
+const WEBSUB_CALLBACK = "/websub/{feedId}/{token}";
+
 namespace application {
 	export interface Options {
 		/** KV namespace backing session storage. */
@@ -72,7 +78,13 @@ export default function application(options: application.Options) {
 		featureFlags(flags, { context: () => ({ targetingKey: getViewer()?.id }) }) as Middleware,
 		/** Stays after `auth`, whose viewer decides which language preference is in scope. */
 		i18n,
-		cop(),
+		/**
+		 * A publisher's hub is a cross-origin caller by construction, and a notification is
+		 * exactly the unsafe cross-origin `POST` the default refusal is written to reject, so
+		 * the callback states its own provenance instead: an unguessable token in the path
+		 * and an HMAC over the delivery.
+		 */
+		cop({ insecureBypassPatterns: [WEBSUB_CALLBACK] }),
 		renderWith(createHtmlRenderer) as Middleware,
 	];
 
@@ -151,6 +163,22 @@ export default function application(options: application.Options) {
 		lazy(() => import("~/app/http/controllers/tags/remove")),
 	);
 	router.map(
+		routes.rules,
+		lazy(() => import("~/app/http/controllers/rules/manage")),
+	);
+	router.map(
+		routes.rule.update,
+		lazy(() => import("~/app/http/controllers/rules/update")),
+	);
+	router.map(
+		routes.rule.delete,
+		lazy(() => import("~/app/http/controllers/rules/delete")),
+	);
+	router.map(
+		routes.rule.apply,
+		lazy(() => import("~/app/http/controllers/rules/apply")),
+	);
+	router.map(
 		routes.feeds.pin,
 		lazy(() => import("~/app/http/controllers/feeds/pin")),
 	);
@@ -207,6 +235,30 @@ export default function application(options: application.Options) {
 		lazy(() => import("~/app/http/controllers/settings")),
 	);
 	router.map(
+		routes.feeds.notify,
+		lazy(() => import("~/app/http/controllers/feeds/notify")),
+	);
+	router.map(
+		routes.notifications.channels,
+		lazy(() => import("~/app/http/controllers/notifications/channels")),
+	);
+	router.map(
+		routes.notifications.quietHours,
+		lazy(() => import("~/app/http/controllers/notifications/quiet-hours")),
+	);
+	router.map(
+		routes.notifications.devices,
+		lazy(() => import("~/app/http/controllers/notifications/devices")),
+	);
+	router.map(
+		routes.notifications.forget,
+		lazy(() => import("~/app/http/controllers/notifications/forget")),
+	);
+	router.map(
+		routes.notifications.timeZone,
+		lazy(() => import("~/app/http/controllers/notifications/time-zone")),
+	);
+	router.map(
 		routes.billing.checkout,
 		lazy(() => import("~/app/http/controllers/billing/checkout")),
 	);
@@ -217,6 +269,10 @@ export default function application(options: application.Options) {
 	router.map(
 		routes.webhooks.billing,
 		lazy(() => import("~/app/http/controllers/webhooks/billing")),
+	);
+	router.map(
+		routes.websub,
+		lazy(() => import("~/app/http/controllers/websub")),
 	);
 
 	return router;

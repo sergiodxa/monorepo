@@ -45,6 +45,8 @@ describe("runMigrations", () => {
 			"0008-tier",
 			"0009-schedule",
 			"0010-tags-and-pins",
+			"0011-filter-rules",
+			"0012-notifications",
 		]);
 	});
 
@@ -81,6 +83,8 @@ describe("runMigrations", () => {
 			"folders",
 			"folders_title_idx",
 			"feed_items_folder_timeline_idx",
+			"rules",
+			"feed_items_flagged_idx",
 		]) {
 			expect(names, `${name} exists`).toContain(name);
 		}
@@ -127,6 +131,22 @@ describe("schema constraints", () => {
 
 		expect(() => insert("f1", "hourly")).toThrow();
 		expect(() => insert("f2", "breaking")).not.toThrow();
+	});
+
+	test("refuses a rule field and a rule action the named lists do not carry", async () => {
+		await migrate();
+		let insert = (id: string, field: string, action: string) =>
+			sql.exec(
+				`INSERT INTO rules (id, feed_id, field, value, action, matches, created_at, updated_at)
+				 VALUES (?, NULL, ?, 'sponsored', ?, 0, 0, 0)`,
+				id,
+				field,
+				action,
+			);
+
+		expect(() => insert("r1", "body", "drop")).toThrow();
+		expect(() => insert("r2", "title", "save")).toThrow();
+		expect(() => insert("r3", "title", "drop")).not.toThrow();
 	});
 
 	test("refuses a second row in settings", async () => {

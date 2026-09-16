@@ -41,7 +41,7 @@ import {
 	vstack,
 } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
-import { is, maxIs, mbs, minIs, mis, p, pb } from "@sdxc/u/size";
+import { is, maxIs, mbs, mie, minIs, mis, p, pb } from "@sdxc/u/size";
 import { hover } from "@sdxc/u/state";
 import { color } from "@sdxc/u/tokens";
 import {
@@ -193,6 +193,12 @@ export namespace Timeline {
 		/** Whether the reader has asked to keep this post, which no rule that deletes one reaches. */
 		isSaved: boolean;
 		/**
+		 * Whether one of the reader's own rules marked this post as it arrived. The mark says
+		 * a rule picked it out and nothing more: it is kept, aged out and reclaimed exactly as
+		 * every other post is.
+		 */
+		isFlagged: boolean;
+		/**
 		 * The labels on this post, each a way into what else is kept under it. Only the
 		 * surfaces that ask their store for them have any, and the rest of the lists print
 		 * no strip at all.
@@ -224,6 +230,8 @@ export namespace Timeline {
 		 * The glyph carries it on screen; this carries it to a screen reader.
 		 */
 		saved: string;
+		/** That one of the reader's rules picked this post out, which the mark stands for. */
+		flagged: string;
 		newer: string;
 		older: string;
 		/** Said where the list stops, so it is known to have an end rather than to go on. */
@@ -513,6 +521,16 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 												leading("normal"),
 											]}
 										>
+											{/**
+											 * Ahead of the words, so a reader scanning the column meets the rule's
+											 * pick before the title rather than after a summary they may not read.
+											 */}
+											{entry.isFlagged && (
+												<span mix={[mie(2), text("xs"), weight("medium"), fg("brand")]}>
+													{copy.flagged}
+												</span>
+											)}
+
 											<h2 mix={[inline(), weight("medium")]}>
 												<PostTitle title={entry.title} url={entry.url} ping={entry.ping} />
 											</h2>

@@ -10,9 +10,13 @@
 import type { Migration } from "~/database/migrations";
 
 import m0001 from "./feed-migrations/0001-init.sql?raw";
+import m0002 from "./feed-migrations/0002-websub.sql?raw";
 
 /** The journal table these are recorded in, which is this object's alone. */
 export const FEED_JOURNAL = "feed_migrations";
 
 /** Every migration, in the order they must be applied. */
-export const FEED_MIGRATIONS: Migration[] = [{ id: "0001-init", sql: m0001 }];
+export const FEED_MIGRATIONS: Migration[] = [
+	{ id: "0001-init", sql: m0001 },
+	{ id: "0002-websub", sql: m0002 },
+];

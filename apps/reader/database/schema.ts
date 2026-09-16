@@ -130,6 +130,68 @@ export const PIN_LIMIT = 10;
  */
 export const QUIET_POSTS_PER_DAY = 1 / 7;
 
+/**
+ * The local hour a reader's quiet window opens at when they turn it on and name no hour of
+ * their own, which is late enough to cover an evening and early enough to cover a night.
+ */
+export const QUIET_FROM_HOUR = 22;
+
+/** The local hour that window closes at, which is where an ordinary morning starts. */
+export const QUIET_TO_HOUR = 7;
+
+/**
+ * Feed titles one notification names. Three is what a sentence carries before it becomes a
+ * list, and the count beside them is what says how much the three stand for.
+ */
+export const NOTIFY_FEED_TITLES = 3;
+
+/**
+ * Consecutive transient refusals after which a device is forgotten. An endpoint that has
+ * refused across ten checks is not coming back, and any acceptance clears the count.
+ */
+export const PUSH_FAILURE_LIMIT = 10;
+
+/**
+ * What a rule may look at, which is what crosses the RPC boundary from the feed's own
+ * object. The `CHECK` constraint in `0011-filter-rules.sql` repeats these names, so the
+ * database refuses anything a form somehow lets through.
+ *
+ * `summary` is the one with a surprise in it: it is capped at what the timeline renders,
+ * so a rule matching on it matches the line under the title rather than the article.
+ */
+export const RULE_FIELDS = ["title", "url", "summary", "author"] as const;
+
+/** One of the fields {@link RULE_FIELDS} offers. */
+export type RuleField = (typeof RULE_FIELDS)[number];
+
+/**
+ * What a rule does with a post it matched. `drop` refuses the item before it is written,
+ * `mark_read` writes it already read, and `flag` writes it with a mark the timeline shows.
+ *
+ * Saving is absent: a save is exempt from velocity, from the read-age reclamation and from
+ * the budget, against a cap that refuses rather than evicts, so a rule that saved would
+ * spend a reader's own allowance on machine picks. Flagging carries no exemption, which is
+ * what makes it the positive action a rule may take.
+ */
+export const RULE_ACTIONS = ["drop", "mark_read", "flag"] as const;
+
+/** One of the actions {@link RULE_ACTIONS} offers. */
+export type RuleAction = (typeof RULE_ACTIONS)[number];
+
+/**
+ * How long the text a rule looks for may be, in UTF-16 units. A filter longer than this is
+ * a sentence, and a sentence matches nothing, so the cap is where the field stops being a
+ * filter rather than where storage starts to care.
+ */
+export const RULE_VALUE_LENGTH = 100;
+
+/**
+ * How many of the reader's newest posts a candidate rule is previewed against. One indexed
+ * page over `(published_at, id)` — the same seek the timeline is — which is what makes the
+ * preview the retroactivity this design has, bounded and read-only.
+ */
+export const RULE_PREVIEW_POSTS = 200;
+
 export const settings = table({
 	name: "settings",
 	primaryKey: ["id"],
@@ -157,6 +219,32 @@ export const settings = table({
 		next_sweep_at: c.integer().nullable(),
 		/** When the leftovers of a bounded run carry on, and `null` while there are none. */
 		next_catch_up_at: c.integer().nullable(),
+		/** Whether a notified feed reaches the reader on the devices they registered. */
+		notify_push: c.boolean().default(false),
+		/** Whether a notified feed reaches the reader at the address sign-in wrote. */
+		notify_email: c.boolean().default(false),
+		/**
+		 * The IANA zone quiet hours are computed in, captured from the browser that knows it.
+		 * A name rather than an offset, so daylight saving is the platform's problem.
+		 */
+		time_zone: c.text().default("UTC"),
+		/** Whether the window below is applied at all. */
+		quiet_hours: c.boolean().default(false),
+		/** The local hour the quiet window opens at. */
+		quiet_from: c.integer().default(QUIET_FROM_HOUR),
+		/** The local hour the quiet window closes at. */
+		quiet_to: c.integer().default(QUIET_TO_HOUR),
+		/**
+		 * When a notification last went out, and `null` before the first one. It is the whole
+		 * of the notification state: the summary, the minimum gap and the retry after a failed
+		 * send are derived from it, so a suppression is a deferral rather than a loss.
+		 */
+		last_notified_at: c.integer().nullable(),
+		/**
+		 * Where the email channel sends, written on every completed sign-in. It is never a
+		 * key, because an address can be reassigned and the subject naming this object cannot.
+		 */
+		email: c.text().nullable(),
 		created_at: c.integer(),
 		updated_at: c.integer(),
 	},
@@ -196,6 +284,42 @@ export const feeds = table({
 		 * rate below one post a day is the whole of what it is read for.
 		 */
 		posts_per_day: c.decimal(10, 4).nullable(),
+		/**
+		 * Whether this reader wants to hear about this publisher. Off at every level and
+		 * through every change of state: following, importing and changing plan each leave it
+		 * where it was, because a reader who upgrades bought a faster check and not an alarm
+		 * clock.
+		 */
+		notify: c.boolean().default(false),
+	},
+});
+
+/**
+ * One browser the reader asked to be reached on.
+ *
+ * `p256dh` and `auth` are the client's public key and auth secret exactly as the Push API
+ * hands them over, and are what the payload is encrypted under. `user_agent` is what lets
+ * the settings page name a device instead of showing a 200-character URL, and `locale` is
+ * the language that browser was reading the app in, which is the language its notification
+ * is written in.
+ */
+export const pushSubscriptions = table({
+	name: "push_subscriptions",
+	primaryKey: ["id"],
+	timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+	columns: {
+		id: c.text(),
+		/** The URL the push service gave this browser, which uniqueness is taken over. */
+		endpoint: c.text(),
+		p256dh: c.text(),
+		auth: c.text(),
+		user_agent: c.text().nullable(),
+		locale: c.text().default("en"),
+		last_delivered_at: c.integer().nullable(),
+		/** Consecutive transient refusals, cleared by any acceptance. */
+		failure_count: c.integer().default(0),
+		created_at: c.integer(),
+		updated_at: c.integer(),
 	},
 });
 
@@ -219,6 +343,12 @@ export const feedItems = table({
 		published_at: c.integer(),
 		read_at: c.integer().nullable(),
 		saved_at: c.integer().nullable(),
+		/**
+		 * When a rule marked this post on arrival, or `null` for one no rule flagged. It is
+		 * a mark on the timeline and nothing more: a flagged post ages out under its feed's
+		 * velocity and is reclaimed by the budget like any other.
+		 */
+		flagged_at: c.integer().nullable(),
 		created_at: c.integer(),
 		updated_at: c.integer(),
 		/**
@@ -297,6 +427,44 @@ export const itemTags = table({
 	},
 });
 
+/**
+ * The rules a reader writes about what a post says, applied as items arrive and before
+ * they are written.
+ *
+ * Every matching rule applies and `drop` dominates, so there is no position column and no
+ * ordering: three actions of which one dominates and the other two commute cannot produce
+ * an interaction an order would resolve differently.
+ *
+ * {@link rules.feed_id} is this app's own subscription id rather than the catalog's, and
+ * `null` is what makes a rule cover feeds the reader has not followed yet.
+ */
+export const rules = table({
+	name: "rules",
+	primaryKey: ["id"],
+	timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+	columns: {
+		id: c.text(),
+		/** The subscription this rule is scoped to, or `null` for one covering every feed. */
+		feed_id: c.text().nullable(),
+		field: c.enum(RULE_FIELDS),
+		/** The text looked for, matched case-insensitively and as a substring of the field. */
+		value: c.text(),
+		action: c.enum(RULE_ACTIONS),
+		/**
+		 * How many items this rule has decided. It is counted against every rule that matched
+		 * one, so two overlapping rules each count the same post: the number answers whether
+		 * a rule is doing anything rather than how many posts were affected.
+		 */
+		matches: c.integer().default(0),
+		last_matched_at: c.integer().nullable(),
+		created_at: c.integer(),
+		updated_at: c.integer(),
+	},
+});
+
+export type SelectRule = TableRow<typeof rules>;
+export type InsertRule = InsertRow<typeof rules>;
+
 export type SelectTag = TableRow<typeof tags>;
 export type InsertTag = InsertRow<typeof tags>;
 export type SelectItemTag = TableRow<typeof itemTags>;
@@ -311,3 +479,6 @@ export type SelectFeed = TableRow<typeof feeds>;
 export type InsertFeed = InsertRow<typeof feeds>;
 export type SelectFeedItem = TableRow<typeof feedItems>;
 export type InsertFeedItem = InsertRow<typeof feedItems>;
+
+export type SelectPushSubscription = TableRow<typeof pushSubscriptions>;
+export type InsertPushSubscription = InsertRow<typeof pushSubscriptions>;

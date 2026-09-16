@@ -31,6 +31,12 @@
 	// nobody received, and it runs at a quiet hour because nothing waits on it.
 	"triggers": { "crons": ["17 4 * * *"] },
 
+	// The address this app is reached at, which is what a feed object builds the callback
+	// URL it hands a publisher's hub from. A Durable Object answers in its own context and
+	// has no request to read a host off, and the URL it registers has to keep working long
+	// after the request that registered it.
+	"vars": { "PUBLIC_URL": "https://reader.sergiodxa.com" },
+
 	// One object per reader, addressed by their OIDC subject, holding their settings,
 	// the feeds they follow and every post from them in its own SQLite. The whole
 	// design rests on that: the timeline is one indexed query over one person's rows
@@ -55,6 +61,12 @@
 		{ "tag": "add-user-do", "new_sqlite_classes": ["UserDO"] },
 		{ "tag": "add-feed-do", "new_sqlite_classes": ["FeedDO"] },
 	],
+
+	// Where the email channel sends from. A notification's second transport is an outbound
+	// message rather than a store, so the binding is the whole of what it needs — but the
+	// account behind it has to be configured to send from a verified domain and to
+	// arbitrary recipients, which is why the channel stays dark until it is.
+	"send_email": [{ "name": "EMAIL" }],
 
 	// The feed catalog: one row per canonical feed the system has ever created. It
 	// assigns feed identity, and it is the only place the list of feeds exists, because

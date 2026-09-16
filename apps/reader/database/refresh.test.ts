@@ -225,6 +225,7 @@ describe("pollFeed", () => {
 			inserted: 1,
 			edited: 0,
 			head: 1,
+			hub: null,
 		});
 
 		serve([{ guid: "g2" }, { guid: "g1" }]);
@@ -234,6 +235,7 @@ describe("pollFeed", () => {
 			inserted: 1,
 			edited: 0,
 			head: 2,
+			hub: null,
 		});
 
 		expect((await storedItems()).map((item) => item.guid)).toEqual(["g1", "g2"]);
@@ -251,7 +253,7 @@ describe("pollFeed", () => {
 		expect(writes.itemWrites()).toEqual([]);
 		writes.restore();
 
-		expect(outcome).toEqual({ status: "ok", inserted: 0, edited: 0, head: 2 });
+		expect(outcome).toEqual({ status: "ok", inserted: 0, edited: 0, head: 2, hub: null });
 		expect(await storedItems()).toHaveLength(2);
 	});
 
@@ -300,7 +302,7 @@ describe("pollFeed", () => {
 		serve([{ guid: "g1", description: "The typo, fixed", content: "The full body" }]);
 		let outcome = await pollFeed(db, { now: NOW + 2 * HOUR });
 
-		expect(outcome).toEqual({ status: "ok", inserted: 0, edited: 1, head: 2 });
+		expect(outcome).toEqual({ status: "ok", inserted: 0, edited: 1, head: 2, hub: null });
 
 		let after = await loadItem("g1");
 		expect(after.summary).toBe("The typo, fixed");
@@ -325,6 +327,7 @@ describe("pollFeed", () => {
 			inserted: 1,
 			edited: 1,
 			head: 3,
+			hub: null,
 		});
 
 		// Every tick is spent once, so the two decisions leave no revision unaccounted for
@@ -349,7 +352,7 @@ describe("pollFeed", () => {
 		expect(writes.itemWrites()).toEqual([]);
 		writes.restore();
 
-		expect(outcome).toEqual({ status: "ok", inserted: 0, edited: 0, head: 1 });
+		expect(outcome).toEqual({ status: "ok", inserted: 0, edited: 0, head: 1, hub: null });
 		expect((await loadItem("g1")).published_at).toBe(before.published_at);
 	});
 
@@ -520,7 +523,7 @@ describe("pollFeed", () => {
 		expect(writes.itemWrites()).toEqual([]);
 		writes.restore();
 
-		expect(outcome).toEqual({ status: "ok", inserted: 0, edited: 0, head: 1 });
+		expect(outcome).toEqual({ status: "ok", inserted: 0, edited: 0, head: 1, hub: null });
 	});
 
 	test("draws a line to read out of the body when the feed publishes no summary", async () => {
@@ -605,6 +608,7 @@ describe("pollFeed", () => {
 			inserted: 30,
 			edited: 0,
 			head: 30,
+			hub: null,
 		});
 		expect(await storedItems()).toHaveLength(30);
 	});
@@ -704,6 +708,7 @@ describe("what a poll costs whatever the table holds", () => {
 			inserted: 0,
 			edited: 0,
 			head: sunk,
+			hub: null,
 		});
 		expect(await storedItems()).toHaveLength(sunk);
 	});

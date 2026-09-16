@@ -64,9 +64,9 @@ describe("GET /settings", () => {
 	test("offers no control for choosing a cadence", async () => {
 		let html = await (await fetchRoute(createRouter(VIEWER), routes.settings.href())).text();
 
-		expect(html).not.toMatch(/<select/);
 		expect(html).not.toContain("refreshIntervalHours");
 		expect(html).not.toContain("Every hour");
+		expect(html).not.toMatch(/name="(cadence|interval|checkInterval)"/);
 	});
 
 	test("shows when the feeds were last checked", async () => {

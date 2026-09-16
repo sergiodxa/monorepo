@@ -20,11 +20,12 @@ Rules follow RFC 2119: "MUST", "MUST NOT", "SHOULD", "SHOULD NOT", and "MAY" in 
 indicate requirement levels.
 
 - MUST keep the Cloudflare Worker bootstrap in `bootstrap/worker.ts` and the router
-  assembly in `bootstrap/app.tsx`. Five other places reach for a Cloudflare API and no
+  assembly in `bootstrap/app.tsx`. Six other places reach for a Cloudflare API and no
   more: `database/user-do.ts` and `database/feed-do.ts`, which are Durable Objects and so
   are ones by definition; `database/registry.ts`, the only module holding the catalog's D1
-  binding; `database/feed-head.ts`, which holds the KV a feed publishes its head to; and
-  the `app/auth/` clients, which read their credentials off the environment.
+  binding; `database/feed-head.ts`, which holds the KV a feed publishes its head to; the
+  `app/auth/` clients, which read their credentials off the environment; and
+  `app/push/vapid.ts`, which reads the Web Push key pair off it the same way.
 - MUST leave the read path clear of the catalog. A subscription stores the feed's id, so
   rendering a timeline, paging a frame, checking freshness and marking a post read cross
   two SQLite databases and one KV namespace and never D1. The catalog is on the follow

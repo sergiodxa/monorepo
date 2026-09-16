@@ -59,6 +59,79 @@ export default {
 		cta: "Cerrar sesión",
 	},
 
+	/**
+	 * Notifications: what a scheduled check says when it finds something, how the reader is
+	 * reached, and the two places they decide any of it.
+	 */
+	notifications: {
+		/** The line a lock screen and an inbox both lead with, which is a count and nothing else. */
+		title_one: "Una publicación nueva",
+		title_other: "{{count}} publicaciones nuevas",
+		/** Up to three publishers by name, which is what makes the count worth tapping. */
+		body_one: "De {{feeds}}.",
+		body_other: "De {{feeds}}.",
+
+		email: {
+			footer:
+				"Recibís esto porque pediste enterarte de algunas de las fuentes que seguís. Podés cambiarlo en Ajustes.",
+		},
+
+		legend: "Notificaciones",
+		description:
+			"Cuando una revisión encuentra publicaciones en una fuente que elegiste, recibís una sola notificación por todas. Nunca se envía nada de una fuente que no elegiste.",
+		noFeeds: "Todavía no elegiste ninguna fuente. Abrí una fuente y activá las notificaciones ahí.",
+		noChannel: "Elegiste fuentes y no hay por dónde avisarte. Activá una opción abajo.",
+
+		channels: {
+			legend: "Por dónde te avisamos",
+			push: "En los navegadores que permitas",
+			pushHint: "Tu navegador te lo va a preguntar una vez. No se envía nada hasta que aceptes.",
+			email: "Por correo",
+			emailHint: "Como mucho una vez cada cuatro horas, a {{address}}.",
+			emailUnknown: "Como mucho una vez cada cuatro horas.",
+			emailLocked: "El correo viene con el plan Premium.",
+			save: "Guardar",
+			saved: "Guardado.",
+			notEntitled: "El correo viene con el plan Premium, así que no cambió nada.",
+		},
+
+		quiet: {
+			legend: "Horas de silencio",
+			description:
+				"No llega nada entre estas horas. Una notificación retenida no se pierde: la próxima revisión fuera de la ventana la lleva.",
+			enabled: "No me avises entre estas horas",
+			from: "Desde",
+			to: "Hasta",
+			hour: "{{hour}}:00",
+			zone: "Se leen en {{zone}}, según lo informó tu navegador.",
+			save: "Guardar",
+			saved: "Guardado.",
+		},
+
+		devices: {
+			legend: "Navegadores",
+			description: "Cada navegador que permitiste. Olvidar uno deja de notificarlo.",
+			none: "Todavía no hay ningún navegador registrado.",
+			added: "Agregado el {{date}}",
+			never: "Todavía no se entregó nada",
+			delivered: "Última entrega el {{date}}",
+			forget: "Olvidar",
+			forgotten: "Ese navegador no va a recibir más notificaciones.",
+			missing: "Ese navegador ya estaba olvidado.",
+		},
+
+		feed: {
+			legend: "Notificaciones",
+			description:
+				"Enterate de esta fuente cuando una revisión encuentre algo. Por dónde te avisamos se configura una sola vez, en Ajustes.",
+			on: "Avisarme de esta fuente",
+			off: "Dejar de avisarme de esta fuente",
+			turnedOn: "Te vamos a avisar de esta fuente.",
+			turnedOff: "No te vamos a avisar de esta fuente.",
+			missing: "No se encontró esa fuente.",
+		},
+	},
+
 	/** The sidebar every signed-in page wears. */
 	nav: {
 		label: "Secciones",
@@ -98,6 +171,8 @@ export default {
 		saveFull: "Tus entradas guardadas están llenas; quita una para hacer sitio",
 		/** That a post is being kept, for a reader who cannot see the mark it is kept with. */
 		saved: "Guardada",
+		/** Que uno de los filtros de la lectora eligió esta entrada al llegar. */
+		flagged: "Destacada",
 		openPost: "Abrir entrada",
 		publishedOn: "Publicada el {{date}}",
 		byAuthor: "por {{author}}",
@@ -421,6 +496,85 @@ export default {
 	 * kept, where a folder answers where a publication belongs, so nothing here talks about
 	 * subscriptions and nothing here deletes a post.
 	 */
+	/**
+	 * Las reglas que una lectora escribe sobre lo que dice una entrada, aplicadas cuando
+	 * llegan. Cada frase está escrita para que una regla se lea como una: cuando el <campo>
+	 * de una entrada contiene <texto>, <acción>.
+	 */
+	rules: {
+		title: "Filtros",
+		heading: "Filtros",
+		description:
+			"Un filtro lee una parte de la entrada, busca un texto en ella y decide qué pasa con esa entrada al llegar. Los filtros actúan sobre lo que llegue de ahora en adelante y dejan intacto todo lo que ya está aquí.",
+		/** La única sorpresa del lenguaje, dicha donde se elige el campo y no después. */
+		summaryCaveat:
+			"Un filtro sobre el resumen lee los primeros 280 caracteres, que son la línea bajo el título, no el artículo.",
+		/** Dicho a quien tiene un plan que no ejecuta filtros, y que no borra ninguno suyo. */
+		notEntitled:
+			"Los filtros forman parte de un plan de pago. Nada de lo que sigues o has leído cambia.",
+		empty: "Todavía no tienes filtros.",
+		/** Una regla, leída como la frase que es. */
+		sentence: "Cuando el {{field}} de una entrada contiene «{{value}}», {{action}}.",
+		scope: {
+			all: "Todos los feeds que sigues",
+			feed: "Solo {{feed}}",
+		},
+		fields: {
+			legend: "Parte de la entrada",
+			title: "título",
+			url: "enlace",
+			summary: "resumen",
+			author: "autoría",
+		},
+		actions: {
+			legend: "Qué le pasa",
+			drop: "descártala",
+			mark_read: "márcala como leída",
+			flag: "destácala",
+		},
+		/** Lo que dicen los contadores de una regla, el número que dice que funciona. */
+		matched_one: "Ha decidido {{count}} entrada.",
+		matched_other: "Ha decidido {{count}} entradas.",
+		neverMatched: "Este filtro no ha coincidido con ninguna entrada.",
+		lastMatched: "Última coincidencia: {{date}}.",
+		form: {
+			legend: "Añadir un filtro",
+			value: "Texto a buscar",
+			valuePlaceholder: "Patrocinado…",
+			feed: "Dónde se aplica",
+			allFeeds: "Todos los feeds que sigues",
+			submit: "Añadir filtro",
+			update: "Guardar cambios",
+			delete: "Eliminar filtro",
+		},
+		/** La vista previa, lo único que mira hacia atrás y no escribe nada. */
+		preview: {
+			legend: "Qué habría capturado",
+			submit: "Vista previa",
+			result_one: "{{count}} de tus {{scanned}} entradas más recientes coincide.",
+			result_other: "{{count}} de tus {{scanned}} entradas más recientes coinciden.",
+			none: "Ninguna de tus {{scanned}} entradas más recientes coincide. Revisa la parte de la entrada que elegiste y cómo escribiste el texto.",
+			/** La única forma que merece un aviso: un texto que todas llevan vacía la lista. */
+			everything:
+				"Esto coincide con todas tus entradas más recientes. Un filtro que las descarte todas deja un feed sincronizando hacia una lista vacía.",
+			apply_one: "Aplicar a la {{count}} entrada de arriba",
+			apply_other: "Aplicar a las {{count}} entradas de arriba",
+			applied_one: "Se actuó sobre {{count}} entrada.",
+			applied_other: "Se actuó sobre {{count}} entradas.",
+		},
+		notice: {
+			created: "Filtro añadido. Actúa sobre lo que llegue de ahora en adelante.",
+			updated: "Filtro guardado.",
+			deleted: "Filtro eliminado. No se quitó ninguna entrada.",
+			limit: "Tienes tantos filtros como permite tu plan. Elimina uno para añadir otro.",
+			invalidValue: "Un filtro necesita un texto de hasta 100 caracteres para buscar.",
+			invalidField: "Esa no es una de las partes de una entrada que un filtro puede leer.",
+			invalidAction: "Eso no es una de las cosas que un filtro puede hacer.",
+			notFollowing: "Ese no es un feed que sigas.",
+			missing: "Ese filtro ya no es tuyo.",
+		},
+	},
+
 	tags: {
 		created: "Etiqueta creada.",
 		renamed: "Etiqueta renombrada.",

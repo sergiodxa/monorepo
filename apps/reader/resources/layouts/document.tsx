@@ -56,6 +56,12 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					{description ? (
 						<meta name="description" content={description} data-key="description" />
 					) : null}
+					{/**
+					 * A manifest earns its place here because a browser needs one before it will
+					 * keep a push subscription: it names the scope the service worker registers
+					 * under and the page a notification opens into.
+					 */}
+					<link rel="manifest" href="/manifest.webmanifest" data-key="manifest" />
 					<link rel="modulepreload" href={CLIENT_ENTRY_SRC} data-key="entry-preload" />
 					<link rel="stylesheet" href={resetStyles} data-key="style-reset" />
 					<link rel="stylesheet" href={colorStyles} data-key="style-colors" />

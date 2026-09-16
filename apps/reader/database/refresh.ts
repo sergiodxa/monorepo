@@ -22,7 +22,7 @@ import { and, getTableColumns, getTableName, gt, lt, lte } from "remix/data-tabl
 
 import type { InsertItem, SelectFeed } from "~/database/feed-schema";
 
-import { feed as feedTable, items } from "~/database/feed-schema";
+import { feed as feedTable, hubTopicFor, items } from "~/database/feed-schema";
 
 /** The feed row's id, pinned by a `CHECK`, since an object holds exactly one feed. */
 export const FEED_ROW_ID = 1;
@@ -99,8 +99,26 @@ const CLEARED_FAILURE = {
  * drives these must never reject, and a feed that 404s is ordinary news about that feed
  * rather than a failure of the run it happened in.
  */
+export interface HubAdvert {
+	url: string;
+	/** Which of the two places advertised it, since a header outranks a document. */
+	source: "header" | "document";
+	/**
+	 * The string a subscription would be made with, or `null` when the document's own
+	 * `rel=self` names another origin and so no subscription should be made at all.
+	 */
+	topic: string | null;
+}
+
 export type PollOutcome =
-	| { status: "ok"; inserted: number; edited: number; head: number }
+	| {
+			status: "ok";
+			inserted: number;
+			edited: number;
+			head: number;
+			/** The hub the document just served advertises, absent when it advertises none. */
+			hub: HubAdvert | null;
+	  }
 	/** The origin answered 304, so the stored copy is current and nothing was parsed. */
 	| { status: "not_modified" }
 	| { status: "http_error"; httpStatus: number; message: string }
@@ -182,6 +200,7 @@ export async function pollFeed(
 			return { status: "not_modified" };
 		}
 
+		let hub = hubAdvertOf(retrieved, feed.feed_url);
 		let known = await storedDigests(db);
 		let { inserts, edits } = await classify(db, retrieved.feed.items, known, feed.head, now);
 
@@ -208,6 +227,7 @@ export async function pollFeed(
 				last_fetched_at: now,
 				last_status: "ok",
 				last_http_status: retrieved.status,
+				hub_url: hub?.url ?? null,
 				head,
 				posts_per_day: await measurePostsPerDay(db, now),
 				...CLEARED_FAILURE,
@@ -215,7 +235,7 @@ export async function pollFeed(
 			},
 		);
 
-		return { status: "ok", inserted: inserts.length, edited: edits.length, head };
+		return { status: "ok", inserted: inserts.length, edited: edits.length, head, hub };
 	} catch (error) {
 		/**
 		 * An unexpected throw is reported as a feed that could not be reached: the caller's
@@ -308,6 +328,22 @@ export async function measurePostsPerDay(db: Database, now: number): Promise<num
 	});
 
 	return published / RATE_WINDOW_DAYS;
+}
+
+/**
+ * The hub this response advertises, looked for on every poll because a publisher adds one
+ * and drops one and the answer held has to be the one their current document gives.
+ *
+ * @param retrieved - The response and the document it carried.
+ * @param feedUrl - The canonical URL this feed is fetched from.
+ */
+function hubAdvertOf(retrieved: Feed.Fetched, feedUrl: string): HubAdvert | null {
+	let hub = Feed.selectHub(retrieved.links, retrieved.feed.links);
+	if (hub === undefined) return null;
+
+	let declared = retrieved.feed.links.find((link) => link.rel === "self")?.href;
+
+	return { url: hub.url, source: hub.source, topic: hubTopicFor(feedUrl, declared) };
 }
 
 /** The feed's own description of itself, as the document last carried it. */

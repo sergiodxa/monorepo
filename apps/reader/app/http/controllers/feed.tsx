@@ -26,6 +26,8 @@ import {
 	CircleCheckIcon,
 	FolderIcon,
 	HourglassIcon,
+	BellIcon,
+	BellOffIcon,
 	PinIcon,
 	RefreshCwIcon,
 	UnlinkIcon,
@@ -57,6 +59,7 @@ import { attrs } from "remix/ui";
 import type { FeedStatus } from "~/database/feed-schema";
 
 import { chrome } from "~/app/http/controllers/chrome";
+import { NOTIFY_FIELD, NOTIFY_PARAM } from "~/app/http/controllers/feeds/notify";
 import { PIN_FIELD, PIN_PARAM } from "~/app/http/controllers/feeds/pin";
 import { MARKED_PARAM } from "~/app/http/controllers/feeds/read";
 import { CHECKED_PARAM } from "~/app/http/controllers/feeds/refresh";
@@ -204,6 +207,18 @@ function pinNote(pin: string | null): Note | null {
 	return null;
 }
 
+/**
+ * The copy and tone for the outcome an opt-in redirects back with, or `null` when this is
+ * an ordinary visit.
+ *
+ * @param notify - The redirect's `notify` parameter, as it arrived.
+ */
+function notifyNote(notify: string | null): Note | null {
+	if (notify === "on") return { key: "notifications.feed.turnedOn", color: "success" };
+	if (notify === "off") return { key: "notifications.feed.turnedOff", color: "success" };
+	return null;
+}
+
 function velocityNote(velocity: string | null): Note | null {
 	if (velocity === "saved") return { key: "feeds.velocity.saved", color: "success" };
 	if (velocity === "invalid") return { key: "feeds.velocity.invalid", color: "warning" };
@@ -312,6 +327,7 @@ export default createAction(routes.feed, {
 			checkNote(ctx.url.searchParams.get(CHECKED_PARAM)) ??
 			velocityNote(ctx.url.searchParams.get(VELOCITY_PARAM)) ??
 			pinNote(ctx.url.searchParams.get(PIN_PARAM)) ??
+			notifyNote(ctx.url.searchParams.get(NOTIFY_PARAM)) ??
 			folderNote(ctx.url.searchParams.get(FOLDER_PARAM));
 
 		/**
@@ -526,6 +542,39 @@ export default createAction(routes.feed, {
 								<PinIcon size={ACTION_ICON_SIZE} />
 								<ActionLabel>
 									{ctx.i18next.t(feed.pinnedAt === null ? "feeds.pin.submit" : "feeds.pin.remove")}
+								</ActionLabel>
+							</Button>
+						</form>
+
+						{/**
+						 * Whether a check that finds posts here is worth interrupting the reader for.
+						 * It is a judgement about this publisher, so it is stored on the subscription
+						 * and every browser they are reached on shares it; how they are reached is set
+						 * once, on the settings page, rather than again per feed.
+						 */}
+						<form method="post" action={routes.feeds.notify.href({ feedId })}>
+							<input type="hidden" name={NOTIFY_FIELD} value={feed.notify ? "false" : "true"} />
+
+							<Button
+								type="submit"
+								color="neutral"
+								variant="ghost"
+								size="sm"
+								aria-label={ctx.i18next.t(
+									feed.notify ? "notifications.feed.off" : "notifications.feed.on",
+								)}
+								title={ctx.i18next.t(
+									feed.notify ? "notifications.feed.off" : "notifications.feed.on",
+								)}
+							>
+								{feed.notify ? (
+									<BellOffIcon size={ACTION_ICON_SIZE} />
+								) : (
+									<BellIcon size={ACTION_ICON_SIZE} />
+								)}
+
+								<ActionLabel>
+									{ctx.i18next.t(feed.notify ? "notifications.feed.off" : "notifications.feed.on")}
 								</ActionLabel>
 							</Button>
 						</form>

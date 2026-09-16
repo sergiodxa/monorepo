@@ -99,6 +99,8 @@ export default {
 		saveFull: "Your saved posts are full — remove one to make room",
 		/** That a post is being kept, for a reader who cannot see the mark it is kept with. */
 		saved: "Saved",
+		/** That one of the reader's own filters picked this post out as it arrived. */
+		flagged: "Flagged",
 		openPost: "Open post",
 		publishedOn: "Published {{date}}",
 		byAuthor: "by {{author}}",
@@ -420,6 +422,84 @@ export default {
 	 * kept, where a folder answers where a publication belongs, so nothing here talks about
 	 * subscriptions and nothing here deletes a post.
 	 */
+	/**
+	 * The rules a reader writes about what a post says, applied as posts arrive. Every
+	 * sentence here is written so a rule reads as one: when the <field> of a post contains
+	 * <value>, <action> it.
+	 */
+	rules: {
+		title: "Filters",
+		heading: "Filters",
+		description:
+			"A filter reads one part of a post, looks for a piece of text in it, and decides what happens to that post as it arrives. Filters act on what arrives from now on and leave everything already here alone.",
+		/** The one surprise in the language, said where the field is chosen rather than after. */
+		summaryCaveat:
+			"A filter on the summary reads the first 280 characters, which is the line under the title — not the article.",
+		/** Said to a reader whose plan runs no filters, which deletes none they have. */
+		notEntitled: "Filters are part of a paid plan. Nothing you follow or have read changes.",
+		empty: "You have no filters yet.",
+		/** One rule, read back as the sentence it is. */
+		sentence: "When the {{field}} of a post contains “{{value}}”, {{action}} it.",
+		scope: {
+			all: "Every feed you follow",
+			feed: "Only {{feed}}",
+		},
+		fields: {
+			legend: "Part of the post",
+			title: "title",
+			url: "link",
+			summary: "summary",
+			author: "author",
+		},
+		actions: {
+			legend: "What happens to it",
+			drop: "drop",
+			mark_read: "mark it read",
+			flag: "flag",
+		},
+		/** What the counters on a rule say, which is the one number that says it is working. */
+		matched_one: "Decided {{count}} post.",
+		matched_other: "Decided {{count}} posts.",
+		neverMatched: "This filter has never matched a post.",
+		lastMatched: "Last matched {{date}}.",
+		form: {
+			legend: "Add a filter",
+			value: "Text to look for",
+			valuePlaceholder: "Sponsored…",
+			feed: "Where it applies",
+			allFeeds: "Every feed you follow",
+			submit: "Add filter",
+			update: "Save changes",
+			delete: "Delete filter",
+		},
+		/** The preview, which is the whole of what looks backwards and writes nothing. */
+		preview: {
+			legend: "What this would have caught",
+			submit: "Preview",
+			result_one: "{{count}} of your newest {{scanned}} posts matches.",
+			result_other: "{{count}} of your newest {{scanned}} posts match.",
+			none: "None of your newest {{scanned}} posts match. Check the part of the post you chose and the spelling of the text.",
+			/** The one shape worth a warning: a term every post carries empties the list. */
+			everything:
+				"This matches every one of your newest posts. A filter that drops them all leaves a feed synchronizing into an empty timeline.",
+			apply_one: "Apply to the {{count}} post above",
+			apply_other: "Apply to the {{count}} posts above",
+			applied_one: "{{count}} post was acted on.",
+			applied_other: "{{count}} posts were acted on.",
+		},
+		notice: {
+			created: "Filter added. It acts on what arrives from now on.",
+			updated: "Filter saved.",
+			deleted: "Filter deleted. No post was removed.",
+			limit: "You have as many filters as your plan allows. Delete one to add another.",
+			invalidValue: "A filter needs text of up to 100 characters to look for.",
+			invalidField: "That is not one of the parts of a post a filter can read.",
+			invalidAction: "That is not one of the things a filter can do.",
+			notFollowing: "That is not a feed you follow.",
+			missing: "That filter is no longer one of yours.",
+		},
+	},
+
 	tags: {
 		created: "Label made.",
 		renamed: "Label renamed.",
@@ -553,6 +633,79 @@ export default {
 				rules_one: "{{count}} rule over what this plan runs.",
 				rules_other: "{{count}} rules over what this plan runs.",
 			},
+		},
+	},
+
+	/**
+	 * Notifications: what a scheduled check says when it finds something, how the reader is
+	 * reached, and the two places they decide any of it.
+	 */
+	notifications: {
+		/** The line a lock screen and an inbox both lead with, which is a count and nothing else. */
+		title_one: "One new post",
+		title_other: "{{count}} new posts",
+		/** Up to three publishers by name, which is what makes the count worth tapping. */
+		body_one: "From {{feeds}}.",
+		body_other: "From {{feeds}}.",
+
+		email: {
+			footer:
+				"You are getting this because you asked to hear about some of the feeds you follow. You can change that in Settings.",
+		},
+
+		legend: "Notifications",
+		description:
+			"When a check finds posts in a feed you picked, you get one notification about all of them. Nothing is ever sent about a feed you have not picked.",
+		noFeeds: "No feeds are picked yet. Open a feed and turn notifications on there.",
+		noChannel: "You have picked feeds and no way to be reached. Turn one on below.",
+
+		channels: {
+			legend: "How you are reached",
+			push: "On the browsers you allow",
+			pushHint: "Your browser will ask once. Nothing is sent until you allow it.",
+			email: "By email",
+			emailHint: "Sent at most once every four hours, to {{address}}.",
+			emailUnknown: "Sent at most once every four hours.",
+			emailLocked: "Email comes with the Premium plan.",
+			save: "Save",
+			saved: "Saved.",
+			notEntitled: "Email comes with the Premium plan, so nothing changed.",
+		},
+
+		quiet: {
+			legend: "Quiet hours",
+			description:
+				"Nothing arrives between these hours. A notification held back is not lost: the next check outside the window carries it.",
+			enabled: "Leave me alone between these hours",
+			from: "From",
+			to: "Until",
+			hour: "{{hour}}:00",
+			zone: "Read in {{zone}}, as your browser reported it.",
+			save: "Save",
+			saved: "Saved.",
+		},
+
+		devices: {
+			legend: "Browsers",
+			description: "Every browser you allowed. Forgetting one stops it being notified.",
+			none: "No browser is registered yet.",
+			added: "Added {{date}}",
+			never: "Nothing delivered yet",
+			delivered: "Last delivered {{date}}",
+			forget: "Forget",
+			forgotten: "That browser will not be notified again.",
+			missing: "That browser was already forgotten.",
+		},
+
+		feed: {
+			legend: "Notifications",
+			description:
+				"Hear about this feed when a check finds something. How you are reached is set once, in Settings.",
+			on: "Notify me about this feed",
+			off: "Stop notifying me about this feed",
+			turnedOn: "You will hear about this feed.",
+			turnedOff: "You will not hear about this feed.",
+			missing: "That feed could not be found.",
 		},
 	},
 

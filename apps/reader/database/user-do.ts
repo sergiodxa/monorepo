@@ -20,6 +20,8 @@ import type { Predicate, SqlStatement } from "remix/data-table";
 
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { Feed } from "@sdxc/feed";
+import { Mailer } from "@sdxc/mail";
+import { CloudflareTransport } from "@sdxc/mail/cloudflare";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { TypeID } from "@sdxc/typeid";
@@ -40,9 +42,13 @@ import {
 import type { LimitRefusal, Tier, TierLimits, TierSource } from "~/app/lib/entitlement";
 import type { FeedStore } from "~/database/feed-do";
 import type {
+	RuleAction,
+	RuleField,
 	SelectFeed,
 	SelectFeedItem,
 	SelectFolder,
+	SelectPushSubscription,
+	SelectRule,
 	SelectSettings,
 	SelectTag,
 	Velocity,
@@ -61,6 +67,13 @@ import {
 } from "~/app/lib/entitlement";
 import { features, flagsFor } from "~/app/lib/flags";
 import {
+	foldRuleText,
+	foldRuleValue,
+	isRuleAction,
+	isRuleField,
+	matchesRule,
+} from "~/app/lib/rule-match";
+import {
 	checkIntervalFor,
 	dormancyMultiplier,
 	earliestDue,
@@ -72,6 +85,7 @@ import { logger } from "~/bootstrap/logger";
 import { feedStore } from "~/database/feed-do";
 import { KEYS_PER_BULK_READ, readHeads } from "~/database/feed-head";
 import { runMigrations } from "~/database/migrations";
+import { countNotifiedFeeds, notify } from "~/database/notify";
 import { chunked, insertChunkSize } from "~/database/refresh";
 import { registerFeed } from "~/database/registry";
 import {
@@ -81,6 +95,11 @@ import {
 	folders,
 	itemTags,
 	PIN_LIMIT,
+	pushSubscriptions,
+	QUIET_FROM_HOUR,
+	QUIET_TO_HOUR,
+	RULE_PREVIEW_POSTS,
+	rules,
 	settings,
 	TAG_LIMIT,
 	tags,
@@ -181,7 +200,37 @@ type TimelineRow = Pick<
 	| "published_at"
 	| "read_at"
 	| "saved_at"
+	| "flagged_at"
 >;
+
+/**
+ * The rules one synchronization run evaluates, and what each of them has matched so far in
+ * it. The table is read once for the run rather than once per item, and the counts are held
+ * here until the run ends, so fifty rules cost at most fifty small updates however many
+ * items arrived.
+ */
+interface RuleRun {
+	rules: SelectRule[];
+	/** Items each rule decided, by rule id, counted as the run goes. */
+	matched: Map<string, number>;
+}
+
+/** What one page of arriving items became, which is what a run counts itself by. */
+interface Materialized {
+	/** Items written as this reader's own copies. */
+	written: number;
+	/** Items refused for being older than the subscription's velocity. */
+	skipped: number;
+	/** Items a rule decided, dropped and written alike. */
+	ruled: number;
+}
+
+/** What every matching rule together says about one arriving item. */
+interface RuleVerdict {
+	drop: boolean;
+	read: boolean;
+	flag: boolean;
+}
 
 /**
  * The values that cross the RPC boundary, and the shapes a controller renders from.
@@ -275,6 +324,8 @@ export namespace UserStore {
 		folderTitle: string | null;
 		/** When the reader pinned it, or `null` for a subscription they have not pinned. */
 		pinnedAt: number | null;
+		/** Whether a scheduled check that finds posts here is worth interrupting them for. */
+		notify: boolean;
 		/**
 		 * What the feed publishes, in posts per day, as the feed's own object measured it,
 		 * or `null` before any conversation with that object has reported one.
@@ -331,6 +382,87 @@ export namespace UserStore {
 	export type TagRemoval =
 		| { ok: true; name: string; items: number }
 		| { ok: false; reason: "not-found" };
+
+	/**
+	 * One of the reader's rules, which reads as a sentence: when the `field` of a post
+	 * contains `value`, `action` it.
+	 */
+	export interface Rule {
+		id: string;
+		/** The subscription it is scoped to, or `null` for one covering every feed. */
+		feedId: string | null;
+		field: RuleField;
+		/** The text it looks for, in the spelling the reader gave it. */
+		value: string;
+		action: RuleAction;
+		/**
+		 * How many items this rule has decided. A match counts against every rule that
+		 * matched it, so the number answers whether a rule is doing anything rather than how
+		 * many posts were affected.
+		 */
+		matches: number;
+		/** When it last decided one, or `null` for a rule that has never matched. */
+		lastMatchedAt: number | null;
+	}
+
+	/** A rule as a form submits it, before anything has been checked about it. */
+	export interface RuleDraft {
+		/** The subscription to scope it to, or `null` to cover every feed. */
+		feedId?: string | null;
+		field: string;
+		value: string;
+		action: string;
+	}
+
+	/** Why a rule was not written, previewed or found. */
+	export type RuleFailure =
+		/** No rule of the reader's has that id. */
+		| "not-found"
+		/** The field is not one a rule may read. */
+		| "invalid-field"
+		/** The action is not one a rule may take. */
+		| "invalid-action"
+		/** The term was empty or longer than a filter can usefully be. */
+		| "invalid-value"
+		/** The rule names a feed this reader does not follow. */
+		| "not-following"
+		/** The reader's plan runs no rules, which deletes none they have. */
+		| "not-entitled"
+		/** The reader has as many rules as their tier allows; `limit` says how many. */
+		| "rule-limit";
+
+	export type RuleResult =
+		| { ok: true; rule: Rule }
+		| { ok: false; reason: Exclude<RuleFailure, "rule-limit"> }
+		| { ok: false; reason: "rule-limit"; limit: Limit };
+
+	/** What deleting a rule did, which is nothing to any post the reader holds. */
+	export type RuleRemoval = { ok: true } | { ok: false; reason: "not-found" };
+
+	/**
+	 * What a candidate rule would have caught among the posts the reader still holds. It
+	 * writes nothing and creates no rule: it is the one place this feature looks backwards,
+	 * and it looks without touching.
+	 */
+	export type RulePreview =
+		| {
+				ok: true;
+				/** Posts the preview read, which is at most the newest page of them. */
+				scanned: number;
+				matched: number;
+				items: Item[];
+				feeds: FeedRef[];
+		  }
+		| { ok: false; reason: Exclude<RuleFailure, "rule-limit" | "not-found"> };
+
+	/**
+	 * What a one-off over a previewed page did. It is an act on the posts the reader looked
+	 * at rather than a rule granted the power to reach backwards, so it is bounded by the
+	 * same page the preview was.
+	 */
+	export type RuleSweep =
+		| { ok: true; scanned: number; matched: number; affected: number }
+		| { ok: false; reason: Exclude<RuleFailure, "rule-limit" | "not-found"> };
 
 	/** Why a subscription could not be pinned. */
 	export type PinResult =
@@ -411,6 +543,11 @@ export namespace UserStore {
 		readAt: number | null;
 		/** When the reader asked to keep it, or `null` for a post under the ordinary rules. */
 		savedAt: number | null;
+		/**
+		 * When a rule marked it on arrival, or `null` for a post no rule flagged. The mark
+		 * carries no exemption: a flagged post ages out and is reclaimed like any other.
+		 */
+		flaggedAt: number | null;
 		/**
 		 * The labels on this post, which only the two surfaces that draw chips ask for. The
 		 * river answers with an empty list rather than a second read on every page of it.
@@ -569,6 +706,11 @@ export namespace UserStore {
 		remaining: number;
 		/** Feeds holding back because the object is over budget with nothing to reclaim. */
 		paused: number;
+		/**
+		 * Items the reader's rules decided, dropped and written alike. It is what says a rule
+		 * is acting on arrivals, which nothing in the timeline could show.
+		 */
+		ruled: number;
 	}
 
 	/**
@@ -605,6 +747,73 @@ export namespace UserStore {
 		| { ok: true; saved: boolean }
 		| { ok: false; reason: "not-found" }
 		| { ok: false; reason: "full"; limit: Limit };
+
+	/**
+	 * What started a synchronization. Only a wake notifies: buzzing a phone about a page the
+	 * reader is looking at is the fastest way to get the feature turned off, and keeping
+	 * delivery off the request path means no page waits on a push service.
+	 */
+	export type SyncTrigger = "request" | "scheduled";
+
+	/** One browser the reader asked to be reached on, as the settings page lists it. */
+	export interface Device {
+		id: string;
+		/** The push service's own host, which is what a reader recognizes a row by. */
+		service: string;
+		/** What the browser called itself when it registered, for naming the row. */
+		userAgent: string | null;
+		lastDeliveredAt: number | null;
+		createdAt: number;
+	}
+
+	/** What a browser hands over when it subscribes, which is the whole of a registration. */
+	export interface DeviceRegistration {
+		endpoint: string;
+		/** The client's public key as the Push API hands it over. */
+		p256dh: string;
+		/** The client's auth secret as the Push API hands it over. */
+		auth: string;
+		userAgent?: string | null;
+		/** The language that browser is reading the app in, which its copy is written in. */
+		locale?: string;
+	}
+
+	/** Everything the notification surface draws, in one read. */
+	export interface Notifications {
+		push: boolean;
+		email: boolean;
+		/** Whether the reader's plan sends email at all, which the object decides. */
+		emailAllowed: boolean;
+		/** Where email would go, or `null` before a sign-in wrote one. */
+		address: string | null;
+		timeZone: string;
+		quietHours: boolean;
+		quietFrom: number;
+		quietTo: number;
+		/** Subscriptions the reader opted in, which is what says whether anything is configured. */
+		feeds: number;
+		devices: Device[];
+	}
+
+	/** The window a reader is left alone in, as a form submits it. */
+	export interface QuietHours {
+		enabled: boolean;
+		from: number;
+		to: number;
+	}
+
+	/**
+	 * Turning a channel on is refused rather than silently ignored when the plan does not
+	 * sell it, so the page says what happened instead of drawing a switch that does nothing.
+	 */
+	export type ChannelResult =
+		| { ok: true; notifications: Notifications }
+		| { ok: false; reason: "not-entitled" };
+
+	/** Opting one subscription in or out, which is refused for a feed nobody follows. */
+	export type NotifyFeedResult =
+		| { ok: true; notify: boolean }
+		| { ok: false; reason: "not-following" };
 }
 
 /**
@@ -647,8 +856,17 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * there is no user table and no sign-up step, so a first login is what creates a
 	 * reader.
 	 */
-	async ensureUser(subject: string): Promise<UserStore.Settings> {
+	async ensureUser(subject: string, email?: string | null): Promise<UserStore.Settings> {
 		let row = await this.#settingsRow(subject);
+
+		/**
+		 * The address is written on every sign-in rather than on the first, which is what
+		 * picks up a changed one for free. It is what the email channel sends to, since an
+		 * alarm has no ID token to read it off.
+		 */
+		if (email && email !== row.email) {
+			row = await this.#db.update(settings, { id: SETTINGS_ID }, { email });
+		}
 
 		/**
 		 * A tier bought while the object was asleep takes effect at the sign-in that
@@ -1092,7 +1310,23 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			{ returnRow: true },
 		);
 
-		let stored = await this.#materialize(subscriptionId, joined.items, DEFAULT_VELOCITY, now);
+		/**
+		 * The first page of a new subscription is an arrival like any other, so a rule the
+		 * reader wrote before they followed this feed acts on it.
+		 */
+		let run = await this.#ruleRun();
+		let materialized = await this.#materialize(
+			subscriptionId,
+			joined.items,
+			DEFAULT_VELOCITY,
+			now,
+			null,
+			run,
+		);
+
+		await this.#countMatches(run, now);
+
+		let stored = materialized.written;
 
 		/**
 		 * Set to the head the feed reported alongside the page, so a subscription starts
@@ -1181,6 +1415,13 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 		await this.#db.deleteMany(feedItems, { where: dropped });
 
+		/**
+		 * A rule scoped to this feed goes with the subscription: it is one the reader can no
+		 * longer see or reason about, and one they would be astonished to find working again
+		 * if they followed the feed a second time.
+		 */
+		await this.#db.deleteMany(rules, { where: { feed_id: feedId } });
+
 		let saved = await this.#db.count(feedItems, { where: { feed_id: feedId } });
 
 		if (saved > 0) {
@@ -1259,9 +1500,14 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * over the seconds and minutes after it.
 	 *
 	 * @param feedIds - The subscriptions to bring up to date; every stale one when omitted.
+	 * @param trigger - What started it, which is the whole of what decides whether the run
+	 * ends in a notification.
 	 */
-	async synchronize(feedIds?: string[]): Promise<UserStore.SyncRun> {
-		return await this.#runSync(await this.#staleSubscriptions(feedIds));
+	async synchronize(
+		feedIds?: string[],
+		trigger: UserStore.SyncTrigger = "request",
+	): Promise<UserStore.SyncRun> {
+		return await this.#runSync(await this.#staleSubscriptions(feedIds), trigger);
 	}
 
 	/**
@@ -1274,24 +1520,40 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 *
 	 * @param due - The subscriptions with something above their cursor.
 	 */
-	async #runSync(due: SelectFeed[]): Promise<UserStore.SyncRun> {
-		let run: UserStore.SyncRun = { synchronized: 0, items: 0, remaining: 0, paused: 0 };
+	async #runSync(
+		due: SelectFeed[],
+		trigger: UserStore.SyncTrigger = "request",
+	): Promise<UserStore.SyncRun> {
+		let run: UserStore.SyncRun = {
+			synchronized: 0,
+			items: 0,
+			remaining: 0,
+			paused: 0,
+			ruled: 0,
+		};
 
 		try {
 			let batch = due.slice(0, SYNC_FEEDS_PER_REQUEST);
 			run.remaining = Math.max(0, due.length - batch.length);
 
+			/** Read once for the whole run, so every feed in it decides against one set. */
+			let ruleRun = await this.#ruleRun();
+
 			await inParallel(
 				batch,
 				async (feed) => {
-					let synchronized = await this.#syncFeed(feed);
+					let synchronized = await this.#syncFeed(feed, ruleRun);
 
 					run.items += synchronized.items;
+					run.ruled += synchronized.ruled;
 					run.synchronized += 1;
 					if (synchronized.paused) run.paused += 1;
 				},
 				SYNC_CONCURRENCY,
 			);
+
+			/** One small update per rule that matched anything, with the run's whole total. */
+			await this.#countMatches(ruleRun, Date.now());
 
 			await this.#runSweep(Date.now(), run.paused);
 			await this.#stampRefreshed(Date.now());
@@ -1301,6 +1563,12 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 				await this.#armCatchUp();
 				this.#record("job", { event: "user.sync.deferred", remaining: run.remaining });
 			}
+
+			/**
+			 * Last, after every row is written and every cursor has advanced, so a delivery
+			 * that fails costs nothing but itself and can strand nothing behind it.
+			 */
+			if (trigger === "scheduled") await this.#notify();
 		} catch (error) {
 			/**
 			 * Reported rather than rejected, for the reason the alarm resolves: this runs
@@ -1821,6 +2089,348 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
+	 * Every rule the reader has written, in the order they wrote them.
+	 *
+	 * Read whole, because the table is capped at a few dozen rows: there is no paging, no
+	 * search over it and no index beyond the primary key, and the list a reader reasons
+	 * about is the list they can see at once.
+	 */
+	async listRules(): Promise<UserStore.Rule[]> {
+		let rows = await this.#db.findMany(rules, {
+			orderBy: [
+				["created_at", "asc"],
+				["id", "asc"],
+			],
+		});
+
+		return rows.map(toRule);
+	}
+
+	/** One rule, or `null` when the reader has none by that id. */
+	async getRule(ruleId: string): Promise<UserStore.Rule | null> {
+		let row = await this.#db.find(rules, { id: ruleId });
+		return row === null ? null : toRule(row);
+	}
+
+	/**
+	 * Writes a rule, which acts on tomorrow's arrivals and reaches back into nothing.
+	 *
+	 * The count is checked here rather than in the form, because the form is one of several
+	 * ways to reach this object and the cap is a property of the reader rather than of the
+	 * page they happened to use.
+	 *
+	 * @param draft - The field, the text and the action, with the feed it is scoped to.
+	 */
+	async createRule(draft: UserStore.RuleDraft): Promise<UserStore.RuleResult> {
+		let tier = storedTier(await this.#settingsRow());
+		if (!limitsOf(tier).filterRules) return { ok: false, reason: "not-entitled" };
+
+		let checked = await this.#ruleDraft(draft);
+		if (!checked.ok) return checked;
+
+		let held = await this.#db.count(rules);
+		if (!withinLimit(tier, "rules", held)) {
+			this.#record("job", { event: "user.rule.refused", reason: "rule-limit", rules: held });
+			return { ok: false, reason: "rule-limit", limit: limitRefusal(tier, "rules", held) };
+		}
+
+		let written = await this.#db.create(
+			rules,
+			{
+				id: TypeID.fromUUID("rule", generateUUID()).toString(),
+				feed_id: checked.feedId,
+				field: checked.field,
+				value: checked.value,
+				action: checked.action,
+				matches: 0,
+				last_matched_at: null,
+			},
+			{ returnRow: true },
+		);
+
+		this.#record("job", {
+			event: "user.rule.created",
+			ruleId: written.id,
+			field: checked.field,
+			action: checked.action,
+			rules: held + 1,
+		});
+
+		return { ok: true, rule: toRule(written) };
+	}
+
+	/**
+	 * Rewrites a rule, which changes what arrives from here and nothing the reader holds.
+	 *
+	 * The counters are left where they are: they measure the rule, and a rule whose term was
+	 * corrected is the same rule the reader has been watching.
+	 *
+	 * @param ruleId - The rule to rewrite.
+	 * @param draft - What it should say instead.
+	 */
+	async updateRule(ruleId: string, draft: UserStore.RuleDraft): Promise<UserStore.RuleResult> {
+		let tier = storedTier(await this.#settingsRow());
+		if (!limitsOf(tier).filterRules) return { ok: false, reason: "not-entitled" };
+
+		let existing = await this.#db.find(rules, { id: ruleId });
+		if (existing === null) return { ok: false, reason: "not-found" };
+
+		let checked = await this.#ruleDraft(draft);
+		if (!checked.ok) return checked;
+
+		let written = await this.#db.update(
+			rules,
+			{ id: ruleId },
+			{
+				feed_id: checked.feedId,
+				field: checked.field,
+				value: checked.value,
+				action: checked.action,
+			},
+		);
+
+		return { ok: true, rule: toRule(written) };
+	}
+
+	/**
+	 * Deletes a rule, which deletes no post: a rule that dropped posts never wrote them, and
+	 * one that marked or flagged them leaves those marks where they are.
+	 *
+	 * @param ruleId - The rule to delete.
+	 */
+	async deleteRule(ruleId: string): Promise<UserStore.RuleRemoval> {
+		let existing = await this.#db.find(rules, { id: ruleId });
+		if (existing === null) return { ok: false, reason: "not-found" };
+
+		await this.#db.delete(rules, { id: ruleId });
+		this.#record("job", { event: "user.rule.deleted", ruleId, rules: await this.#db.count(rules) });
+
+		return { ok: true };
+	}
+
+	/**
+	 * What a candidate rule would have caught among the reader's newest posts.
+	 *
+	 * This is the whole of the retroactivity this feature has, and it is read-only: nothing
+	 * is written, no rule is created and no post is touched. It is also the answer to "why is
+	 * this rule not working", since it matches against posts the reader can still see.
+	 *
+	 * @param draft - The candidate, which may never have been written.
+	 */
+	async previewRule(draft: UserStore.RuleDraft): Promise<UserStore.RulePreview> {
+		let checked = await this.#ruleDraft(draft);
+		if (!checked.ok) return checked;
+
+		let scanned = await this.#newestPosts(checked.feedId);
+		let matched = scanned.filter((row) =>
+			matchesRule(toRuleSubject(row), { field: checked.field, value: foldRuleText(checked.value) }),
+		);
+
+		/** The terms a reader filters by are their own words, so the event carries none. */
+		this.#record("job", {
+			event: "user.rule.preview",
+			field: checked.field,
+			action: checked.action,
+			scanned: scanned.length,
+			matched: matched.length,
+		});
+
+		let items = matched.map(toItem);
+
+		return {
+			ok: true,
+			scanned: scanned.length,
+			matched: matched.length,
+			items,
+			feeds: await this.#feedRefs(items),
+		};
+	}
+
+	/**
+	 * Applies a candidate's action to the posts it matched among the reader's newest ones.
+	 *
+	 * It is bounded by the page the preview was, so it is an act taken on specific posts the
+	 * reader looked at rather than a rule granted the power to reach backwards, and it runs
+	 * whether or not the candidate was ever saved as a rule.
+	 *
+	 * @param draft - The candidate whose matches are being acted on.
+	 */
+	async applyPreviewedRule(draft: UserStore.RuleDraft): Promise<UserStore.RuleSweep> {
+		let checked = await this.#ruleDraft(draft);
+		if (!checked.ok) return checked;
+
+		let scanned = await this.#newestPosts(checked.feedId);
+		let matched = scanned.filter((row) =>
+			matchesRule(toRuleSubject(row), { field: checked.field, value: foldRuleText(checked.value) }),
+		);
+
+		let ids = matched.map((row) => row.id);
+		let now = Date.now();
+
+		if (checked.action === "drop") {
+			await this.#forgetTags(ids);
+
+			for (let batch of chunked(ids, IDS_PER_LOOKUP)) {
+				await this.#db.deleteMany(feedItems, { where: inList("id", batch) });
+			}
+		} else {
+			let mark = checked.action === "mark_read" ? { read_at: now } : { flagged_at: now };
+
+			for (let batch of chunked(ids, IDS_PER_LOOKUP)) {
+				await this.#db.updateMany(feedItems, mark, { where: inList("id", batch) });
+			}
+		}
+
+		this.#record("job", {
+			event: "user.rule.applied",
+			field: checked.field,
+			action: checked.action,
+			scanned: scanned.length,
+			matched: matched.length,
+		});
+
+		return { ok: true, scanned: scanned.length, matched: matched.length, affected: ids.length };
+	}
+
+	/**
+	 * Everything the notification surface draws: how the reader is reached, the window they
+	 * are left alone in, how many feeds they opted in and every device they registered.
+	 */
+	async notifications(): Promise<UserStore.Notifications> {
+		let row = await this.#settingsRow();
+		return await this.#notifications(row);
+	}
+
+	/**
+	 * Decides how a notified feed reaches the reader.
+	 *
+	 * Email is refused here rather than hidden in the form, because the switch and the plan
+	 * can disagree: a lapse leaves a reader's stored answer alone and stops the sending, and
+	 * the refusal is what lets the page say so.
+	 *
+	 * @param input - Which channels to turn on.
+	 */
+	async setChannels(input: { push: boolean; email: boolean }): Promise<UserStore.ChannelResult> {
+		let row = await this.#settingsRow();
+
+		if (input.email && !limitsOf(leasedTier(row, Date.now())).emailDigests) {
+			return { ok: false, reason: "not-entitled" };
+		}
+
+		let updated = await this.#db.update(
+			settings,
+			{ id: SETTINGS_ID },
+			{ notify_push: input.push, notify_email: input.email },
+		);
+
+		return { ok: true, notifications: await this.#notifications(updated) };
+	}
+
+	/**
+	 * Sets the window the reader is left alone in, in their own hours.
+	 *
+	 * An hour outside the day is clamped rather than refused, so a submission nothing on the
+	 * page could have produced still leaves a window somebody can read.
+	 *
+	 * @param input - Whether the window applies, and the two local hours it runs between.
+	 */
+	async setQuietHours(input: UserStore.QuietHours): Promise<UserStore.Notifications> {
+		await this.#settingsRow();
+
+		let updated = await this.#db.update(
+			settings,
+			{ id: SETTINGS_ID },
+			{
+				quiet_hours: input.enabled,
+				quiet_from: clampHour(input.from, QUIET_FROM_HOUR),
+				quiet_to: clampHour(input.to, QUIET_TO_HOUR),
+			},
+		);
+
+		return await this.#notifications(updated);
+	}
+
+	/**
+	 * Records the zone quiet hours are computed in, as the only participant that knows it
+	 * reported it. A reader signed in from two zones keeps whichever opened the app last, on
+	 * every device, which is acceptable because a suppressed notification is held rather
+	 * than dropped.
+	 *
+	 * @param timeZone - An IANA name, as `Intl.DateTimeFormat` resolved it.
+	 */
+	async setTimeZone(timeZone: string): Promise<boolean> {
+		let row = await this.#settingsRow();
+		if (!isTimeZone(timeZone) || timeZone === row.time_zone) return false;
+
+		await this.#db.update(settings, { id: SETTINGS_ID }, { time_zone: timeZone });
+
+		return true;
+	}
+
+	/**
+	 * Records a browser the reader asked to be reached on, or updates the one already
+	 * holding that endpoint.
+	 *
+	 * A browser that re-subscribes hands back the endpoint it already had, so this is an
+	 * upsert on it: a reader signing in twice on one device keeps one row and receives one
+	 * notification rather than two.
+	 *
+	 * @param input - The endpoint and key material the Push API handed the browser.
+	 */
+	async registerDevice(input: UserStore.DeviceRegistration): Promise<{ devices: number }> {
+		await this.#settingsRow();
+
+		let existing = await this.#db.findOne(pushSubscriptions, {
+			where: { endpoint: input.endpoint },
+		});
+
+		let values = {
+			p256dh: input.p256dh,
+			auth: input.auth,
+			user_agent: input.userAgent ?? null,
+			locale: input.locale ?? "en",
+			failure_count: 0,
+		};
+
+		if (existing === null) {
+			await this.#db.create(pushSubscriptions, {
+				id: TypeID.fromUUID("push", generateUUID()).toString(),
+				endpoint: input.endpoint,
+				...values,
+			});
+		} else {
+			await this.#db.update(pushSubscriptions, { id: existing.id }, values);
+		}
+
+		let devices = await this.#db.count(pushSubscriptions, {});
+		this.#record("job", { event: "push.registered", devices });
+
+		return { devices };
+	}
+
+	/** Forgets one device, which is how a reader revokes a browser they no longer read in. */
+	async forgetDevice(deviceId: string): Promise<boolean> {
+		return await this.#db.delete(pushSubscriptions, { id: deviceId });
+	}
+
+	/**
+	 * Decides whether a check that finds posts in one subscription is worth interrupting the
+	 * reader for. It is a judgement about a publisher, so it is stored on the subscription
+	 * and shared by every device.
+	 *
+	 * @param feedId - The subscription being opted in or out.
+	 * @param wanted - Whether to hear about it.
+	 */
+	async setFeedNotify(feedId: string, wanted = true): Promise<UserStore.NotifyFeedResult> {
+		let feed = await this.#db.find(feeds, { id: feedId });
+		if (feed === null) return { ok: false, reason: "not-following" };
+
+		let updated = await this.#db.update(feeds, { id: feedId }, { notify: wanted });
+
+		return { ok: true, notify: updated.notify };
+	}
+
+	/**
 	 * Pins a subscription, or takes the pin off, so the feeds a reader never wants to miss
 	 * are drawn above the river rather than at whatever letter their names start with.
 	 *
@@ -1958,7 +2568,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		try {
 			if (due.catchUp) {
 				await this.#db.update(settings, { id: SETTINGS_ID }, { next_catch_up_at: null });
-				await this.synchronize();
+				await this.synchronize(undefined, "scheduled");
 			}
 
 			if (due.check) await this.#scheduledCheck(tier);
@@ -2176,9 +2786,87 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			durationMs: Date.now() - started,
 		});
 
-		if (stale.length === 0) return;
+		/**
+		 * A check that found nothing still answers for whatever an earlier one deferred: the
+		 * summary is about everything since the last notification rather than about this
+		 * check, so a gap or a quiet window that has since passed is honoured here.
+		 */
+		if (stale.length === 0) {
+			await this.#notify();
+			return;
+		}
 
-		await this.#runSync(stale);
+		await this.#runSync(stale, "scheduled");
+	}
+
+	/**
+	 * The notification surface as one read, from a settings row the caller already has.
+	 *
+	 * `emailAllowed` is decided here rather than on the page, so a plan that lapsed closes
+	 * the channel wherever it is drawn and wherever it is submitted.
+	 *
+	 * @param row - The settings row as the caller's own writes left it.
+	 */
+	async #notifications(row: SelectSettings): Promise<UserStore.Notifications> {
+		let [devices, opted] = await Promise.all([
+			this.#db.findMany(pushSubscriptions, { orderBy: [["created_at", "desc"]] }),
+			countNotifiedFeeds(this.#db),
+		]);
+
+		return {
+			push: row.notify_push,
+			email: row.notify_email,
+			emailAllowed: limitsOf(leasedTier(row, Date.now())).emailDigests,
+			address: row.email,
+			timeZone: row.time_zone,
+			quietHours: row.quiet_hours,
+			quietFrom: row.quiet_from,
+			quietTo: row.quiet_to,
+			feeds: opted,
+			devices: devices.map(toDevice),
+		};
+	}
+
+	/**
+	 * Tells the reader what has arrived since the last time they were told, and moves the
+	 * one timestamp all of it is derived from when at least one channel accepted.
+	 *
+	 * Advanced on one acceptance rather than on all of them: requiring all would let a
+	 * single broken endpoint re-notify every working one on every check, and requiring none
+	 * would drop the notification whenever the first send failed.
+	 */
+	async #notify(): Promise<void> {
+		let now = Date.now();
+		let row = await this.#settingsRow();
+
+		let outcome = await notify({
+			db: this.#db,
+			row,
+			now,
+			mayEmail: limitsOf(leasedTier(row, now)).emailDigests,
+			mailer: this.#mailer(),
+			appUrl: this.env.APP_URL || null,
+			record: (kind, fields) => this.#record(kind, fields),
+		});
+
+		if (outcome.notified) {
+			await this.#db.update(settings, { id: SETTINGS_ID }, { last_notified_at: now });
+		}
+	}
+
+	/**
+	 * The mailer this object sends through, or `null` on a deployment with no email binding.
+	 *
+	 * Constructed here rather than taken off a request, because an alarm has none: the
+	 * middleware that publishes a mailer per request never runs in an object.
+	 */
+	#mailer(): Mailer | null {
+		if (!this.env.EMAIL || !this.env.EMAIL_FROM) return null;
+
+		return new Mailer({
+			transport: new CloudflareTransport(this.env.EMAIL),
+			from: { email: this.env.EMAIL_FROM },
+		});
 	}
 
 	/**
@@ -2383,12 +3071,23 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * spent on a row that was never written, and this reader would otherwise sit below a head
 	 * they can never reach; the head here is the true one, read from the feed in the same call.
 	 */
-	async #syncFeed(feed: SelectFeed): Promise<{ items: number; paused: boolean }> {
+	async #syncFeed(
+		feed: SelectFeed,
+		shared: RuleRun | null = null,
+	): Promise<{ items: number; paused: boolean; ruled: number }> {
 		let stored = 0;
 		let skipped = 0;
+		let ruled = 0;
 		let cursor = feed.cursor;
 		let now = Date.now();
 		let started = now;
+
+		/**
+		 * A run covering several feeds reads the rules once and counts across all of them, so
+		 * the counters are written once for the run; a feed synchronized on its own reads and
+		 * writes its own.
+		 */
+		let run = shared ?? (await this.#ruleRun());
 
 		/**
 		 * A reader over their budget with nothing left to reclaim stops taking posts rather
@@ -2396,7 +3095,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		 * which is back-pressure rather than data loss: nothing they have is taken, and what
 		 * they have not got yet waits.
 		 */
-		if (await this.#isPaused(feed)) return { items: 0, paused: true };
+		if (await this.#isPaused(feed)) return { items: 0, paused: true, ruled: 0 };
 
 		for (let page = 0; page < SYNC_PAGES_PER_FEED; page += 1) {
 			let answered = await feedStore(feed.feed_id).getItemsAfter(cursor);
@@ -2416,16 +3115,18 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 				break;
 			}
 
-			let kept = await this.#materialize(
+			let materialized = await this.#materialize(
 				feed.id,
 				answered.items,
 				feed.velocity,
 				now,
 				feed.folder_id,
+				run,
 			);
 
-			stored += kept;
-			skipped += answered.items.length - kept;
+			stored += materialized.written;
+			skipped += materialized.skipped;
+			ruled += materialized.ruled;
 
 			cursor = greatestRevision(answered.items);
 			await this.#db.update(feeds, { id: feed.id }, { cursor });
@@ -2433,28 +3134,43 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			if (answered.head <= cursor) break;
 		}
 
+		/** A feed synchronized on its own owns the run, so its counters are written here. */
+		if (shared === null) await this.#countMatches(run, Date.now());
+
 		this.#record("job", {
 			event: "user.sync",
 			feedId: feed.feed_id,
 			items: stored,
 			skipped,
+			ruled,
 			cursorFrom: feed.cursor,
 			cursorTo: cursor,
 			durationMs: Date.now() - started,
 		});
 
-		return { items: stored, paused: false };
+		return { items: stored, paused: false, ruled };
 	}
 
 	/**
-	 * Writes a feed's items as this reader's own copies, and answers how many it kept.
+	 * Decides a feed's items and writes the ones this reader keeps, while they are still in
+	 * memory and before any of them is a row.
 	 *
-	 * An item already older than this subscription's velocity is not stored at all, so a
-	 * reader returning after a month to a feed they read for headlines materializes the last
-	 * few hours rather than a month of them to delete on the next sweep.
+	 * Velocity is applied first: an item already older than this subscription's velocity is
+	 * not stored at all, so a reader returning after a month to a feed they read for
+	 * headlines materializes the last few hours, and the rules never see the rest. It is also
+	 * the honest order for the counters, since an item velocity refused was never in the
+	 * timeline for a rule to have done anything to.
+	 *
+	 * Then every applicable rule runs, and `drop` dominates: an item one rule would flag and
+	 * another would drop is dropped. A rule reaches only items this reader does not have —
+	 * an item the publisher edited is applied as an ordinary edit — so the ids a rule matched
+	 * are read back before anything is acted on, which is the one query rules add and is paid
+	 * only when a rule fires.
 	 *
 	 * @param folderId - The folder the subscription is filed in as this run holds it, which
 	 * the copies are written into so an item arriving twice lands where its feed is now.
+	 * @param run - The rules this run evaluates and the tally they are counted into, or
+	 * `null` for a path that takes no rules.
 	 */
 	async #materialize(
 		subscriptionId: string,
@@ -2462,16 +3178,195 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		velocity: Velocity,
 		now: number,
 		folderId: string | null = null,
-	): Promise<number> {
+		run: RuleRun | null = null,
+	): Promise<Materialized> {
 		let window = VELOCITY_WINDOW_MS[velocity];
-		let kept = incoming.filter((item) => window === null || item.publishedAt >= now - window);
-		if (kept.length === 0) return 0;
+		let fresh = incoming.filter((item) => window === null || item.publishedAt >= now - window);
+		let skipped = incoming.length - fresh.length;
 
-		for (let chunk of chunked(kept, insertChunkSize())) {
-			await this.#db.exec(...upsertItems(subscriptionId, chunk, now, folderId));
+		if (fresh.length === 0) return { written: 0, skipped, ruled: 0 };
+
+		let applicable = (run?.rules ?? []).filter(
+			(rule) => rule.feed_id === null || rule.feed_id === subscriptionId,
+		);
+
+		let verdicts = new Map<string, RuleVerdict>();
+		let credits = new Map<string, string[]>();
+
+		for (let item of applicable.length === 0 ? [] : fresh) {
+			for (let rule of applicable) {
+				if (!matchesRule(item, { field: rule.field, value: foldRuleText(rule.value) })) continue;
+
+				let verdict = verdicts.get(item.id) ?? { drop: false, read: false, flag: false };
+				if (rule.action === "drop") verdict.drop = true;
+				if (rule.action === "mark_read") verdict.read = true;
+				if (rule.action === "flag") verdict.flag = true;
+
+				verdicts.set(item.id, verdict);
+				credits.set(item.id, [...(credits.get(item.id) ?? []), rule.id]);
+			}
 		}
 
-		return kept.length;
+		/**
+		 * A page on which nothing matched is written exactly as it was before rules existed:
+		 * no read-back, no marks, and nothing to count.
+		 */
+		if (verdicts.size === 0) {
+			await this.#writeItems(subscriptionId, fresh, now, folderId, null);
+			return { written: fresh.length, skipped, ruled: 0 };
+		}
+
+		let held = await this.#heldItems([...verdicts.keys()]);
+
+		let marks = new Map<string, { readAt: number | null; flaggedAt: number | null }>();
+		let write: FeedStore.Item[] = [];
+		let ruled = 0;
+
+		for (let item of fresh) {
+			let verdict = held.has(item.id) ? undefined : verdicts.get(item.id);
+
+			if (verdict === undefined) {
+				write.push(item);
+				continue;
+			}
+
+			ruled += 1;
+			for (let ruleId of credits.get(item.id) ?? []) {
+				run?.matched.set(ruleId, (run.matched.get(ruleId) ?? 0) + 1);
+			}
+
+			if (verdict.drop) continue;
+
+			write.push(item);
+			marks.set(item.id, {
+				readAt: verdict.read ? now : null,
+				flaggedAt: verdict.flag ? now : null,
+			});
+		}
+
+		await this.#writeItems(subscriptionId, write, now, folderId, marks);
+
+		return { written: write.length, skipped, ruled };
+	}
+
+	/**
+	 * Writes a page of items as this reader's own copies, in the chunks the bind limit
+	 * allows.
+	 *
+	 * @param marks - The arrival marks a rule left on some of them, or `null` for a page no
+	 * rule decided.
+	 */
+	async #writeItems(
+		subscriptionId: string,
+		incoming: readonly FeedStore.Item[],
+		now: number,
+		folderId: string | null,
+		marks: Map<string, { readAt: number | null; flaggedAt: number | null }> | null,
+	): Promise<void> {
+		if (incoming.length === 0) return;
+
+		for (let chunk of chunked([...incoming], insertChunkSize())) {
+			await this.#db.exec(...upsertItems(subscriptionId, chunk, now, folderId, marks));
+		}
+	}
+
+	/**
+	 * Which of these ids this reader already holds, read through the primary key and chunked
+	 * to the bind limit every lookup here works under.
+	 *
+	 * @param itemIds - The ids a rule matched, which are the only ones worth asking about.
+	 */
+	async #heldItems(itemIds: readonly string[]): Promise<Set<string>> {
+		let held = new Set<string>();
+
+		for (let batch of chunked([...itemIds], IDS_PER_LOOKUP)) {
+			let rows = await this.#db.query(feedItems).where(inList("id", batch)).select("id").all();
+			for (let row of rows) held.add(row.id);
+		}
+
+		return held;
+	}
+
+	/**
+	 * Reads a submitted rule as one this object will act on, or answers why it is not one.
+	 *
+	 * Both named lists are checked here as well as by the column's `CHECK`, so a caller gets
+	 * a refusal it can render rather than a constraint violation, and a rule naming a feed
+	 * the reader does not follow is refused rather than stored as a rule about nothing.
+	 *
+	 * @param draft - The rule as a form submitted it.
+	 */
+	async #ruleDraft(draft: UserStore.RuleDraft): Promise<
+		| {
+				ok: true;
+				feedId: string | null;
+				field: RuleField;
+				value: string;
+				action: RuleAction;
+		  }
+		| { ok: false; reason: Exclude<UserStore.RuleFailure, "rule-limit" | "not-found"> }
+	> {
+		if (!isRuleField(draft.field)) return { ok: false, reason: "invalid-field" };
+		if (!isRuleAction(draft.action)) return { ok: false, reason: "invalid-action" };
+
+		let term = foldRuleValue(draft.value);
+		if (term === null) return { ok: false, reason: "invalid-value" };
+
+		let feedId = draft.feedId ?? null;
+
+		if (feedId !== null) {
+			let feed = await this.#db.find(feeds, { id: feedId });
+			if (feed === null || feed.unfollowed_at !== null)
+				return { ok: false, reason: "not-following" };
+		}
+
+		return { ok: true, feedId, field: draft.field, value: term.value, action: draft.action };
+	}
+
+	/**
+	 * The reader's newest posts, which is the page both the preview and the one-off over it
+	 * are bounded by: one seek down the timeline index, and never a scan of everything the
+	 * object holds.
+	 *
+	 * @param feedId - The subscription to read, or `null` for every feed at once.
+	 */
+	async #newestPosts(feedId: string | null): Promise<TimelineRow[]> {
+		let query = this.#timeline();
+
+		return await (feedId === null ? query : query.where({ feed_id: feedId }))
+			.orderBy("published_at", "desc")
+			.orderBy("id", "desc")
+			.limit(RULE_PREVIEW_POSTS)
+			.all();
+	}
+
+	/** The rules a run evaluates, read whole, with nothing counted against them yet. */
+	async #ruleRun(): Promise<RuleRun> {
+		return { rules: await this.#db.findMany(rules), matched: new Map() };
+	}
+
+	/**
+	 * Writes what a run's rules matched, one small update per rule that matched anything.
+	 *
+	 * @param run - The run whose tally is being settled.
+	 * @param now - Epoch milliseconds the run finished at, which is when each rule last
+	 * matched.
+	 */
+	async #countMatches(run: RuleRun, now: number): Promise<void> {
+		for (let [ruleId, count] of run.matched) {
+			if (count === 0) continue;
+
+			let rule = await this.#db.find(rules, { id: ruleId });
+			if (rule === null) continue;
+
+			await this.#db.update(
+				rules,
+				{ id: ruleId },
+				{ matches: rule.matches + count, last_matched_at: now },
+			);
+		}
+
+		run.matched.clear();
 	}
 
 	/**
@@ -2690,6 +3585,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 				"published_at",
 				"read_at",
 				"saved_at",
+				"flagged_at",
 			);
 	}
 
@@ -2908,7 +3804,7 @@ function taggedStatement(state: TaggedState): SqlStatement {
 		.join(", ");
 
 	return sql`select i."id", i."feed_id", i."title", i."url", i."summary", i."author",
-			i."published_at", i."read_at", i."saved_at"
+			i."published_at", i."read_at", i."saved_at", i."flagged_at"
 		from item_tags t
 		join feed_items i on i."id" = t."item_id"
 		where ${where}
@@ -2932,7 +3828,7 @@ function searchStatement(state: SearchState): SqlStatement {
 		.map(([column, direction]) => `${quoteColumn(column)} ${direction === "asc" ? "asc" : "desc"}`)
 		.join(", ");
 
-	return sql`select "id", "feed_id", "title", "url", "summary", "author", "published_at", "read_at", "saved_at"
+	return sql`select "id", "feed_id", "title", "url", "summary", "author", "published_at", "read_at", "saved_at", "flagged_at"
 		from feed_items
 		where ${where}
 		order by ${rawSql(orderBy)}
@@ -2998,6 +3894,7 @@ function toTimelineRow(row: Record<string, unknown>): TimelineRow {
 		published_at: typeof publishedAt === "number" ? publishedAt : 0,
 		read_at: typeof readAt === "number" ? readAt : null,
 		saved_at: typeof savedAt === "number" ? savedAt : null,
+		flagged_at: typeof row.flagged_at === "number" ? row.flagged_at : null,
 	};
 }
 
@@ -3107,6 +4004,24 @@ function toTag(row: SelectTag): UserStore.Tag {
 	return { id: row.id, name: row.name, slug: row.slug };
 }
 
+/** A rule row as the RPC boundary reports it, counters included. */
+function toRule(row: SelectRule): UserStore.Rule {
+	return {
+		id: row.id,
+		feedId: row.feed_id,
+		field: row.field,
+		value: row.value,
+		action: row.action,
+		matches: row.matches,
+		lastMatchedAt: row.last_matched_at,
+	};
+}
+
+/** A stored post as the matching language reads it, which is four of its columns. */
+function toRuleSubject(row: TimelineRow) {
+	return { title: row.title, url: row.url, summary: row.summary, author: row.author };
+}
+
 /** A folder row as the RPC boundary reports it, which is its id and its name. */
 function toFolder(row: SelectFolder): UserStore.Folder {
 	return { id: row.id, title: row.title };
@@ -3137,7 +4052,62 @@ function toFeedSummary(
 		folderTitle: folder === null ? null : folder.title,
 		pinnedAt: row.pinned_at,
 		postsPerDay: row.posts_per_day,
+		notify: row.notify,
 	};
+}
+
+/**
+ * An hour of the day, or the default for anything outside one. A submission nothing on the
+ * page could have produced still leaves a window a reader can read and change.
+ *
+ * @param value - The hour submitted.
+ * @param fallback - The hour to use for a value outside the day.
+ */
+function clampHour(value: number, fallback: number): number {
+	if (!Number.isInteger(value) || value < 0 || value > 23) return fallback;
+	return value;
+}
+
+/**
+ * Whether the platform recognizes an IANA zone name. A name it does not know would put
+ * quiet hours in UTC forever without saying so, so it is refused at the one place it is
+ * written.
+ *
+ * @param value - The name a browser reported.
+ */
+function isTimeZone(value: string): boolean {
+	try {
+		new Intl.DateTimeFormat("en-GB", { timeZone: value });
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+/** One registered device as the RPC boundary reports it, with the endpoint left behind. */
+function toDevice(row: SelectPushSubscription): UserStore.Device {
+	return {
+		id: row.id,
+		service: serviceOf(row.endpoint),
+		userAgent: row.user_agent,
+		lastDeliveredAt: row.last_delivered_at,
+		createdAt: row.created_at,
+	};
+}
+
+/**
+ * The push service a device is reached through, by host alone. The rest of an endpoint is
+ * a bearer capability for that device, so it stays inside the object and never reaches a
+ * page that is only naming a row to revoke.
+ *
+ * @param endpoint - The URL the push service gave the browser.
+ */
+function serviceOf(endpoint: string): string {
+	try {
+		return new URL(endpoint).host;
+	} catch {
+		return "";
+	}
 }
 
 /** One timeline row as the RPC boundary reports it. */
@@ -3152,6 +4122,7 @@ function toItem(row: TimelineRow): UserStore.Item {
 		publishedAt: row.published_at,
 		readAt: row.read_at,
 		savedAt: row.saved_at,
+		flaggedAt: row.flagged_at,
 		/** Filled in by the two surfaces that draw chips, and by no page of the river. */
 		tags: [],
 	};
@@ -3223,6 +4194,8 @@ const ITEM_COLUMNS = [
 	"author",
 	"published_at",
 	"folder_id",
+	"read_at",
+	"flagged_at",
 	"created_at",
 	"updated_at",
 ] as const;
@@ -3245,18 +4218,26 @@ const ITEM_COLUMNS = [
  *
  * @param subscriptionId - This reader's own handle for the feed the items came from.
  * @param incoming - The items to write.
+ * `read_at` and `flagged_at` are written on insert alone, which is what lets a rule mark an
+ * arriving item while leaving both of them the reader's own answer from then on.
+ *
  * @param now - Epoch milliseconds the copies are stamped with.
  * @param folderId - The folder that subscription is filed in, or `null` for an unfiled one.
+ * @param marks - The arrival marks rules left, by item id, or `null` for a page no rule
+ * decided.
  */
 function upsertItems(
 	subscriptionId: string,
 	incoming: readonly FeedStore.Item[],
 	now: number,
 	folderId: string | null,
+	marks: Map<string, { readAt: number | null; flaggedAt: number | null }> | null = null,
 ): [string, unknown[]] {
 	let values: unknown[] = [];
 
 	for (let item of incoming) {
+		let mark = marks?.get(item.id);
+
 		values.push(
 			item.id,
 			subscriptionId,
@@ -3267,6 +4248,8 @@ function upsertItems(
 			item.author,
 			item.publishedAt,
 			folderId,
+			mark?.readAt ?? null,
+			mark?.flaggedAt ?? null,
 			now,
 			now,
 		);

@@ -440,7 +440,7 @@ describe("the freshness index", () => {
 		expect((await stub.openReader()).freshness).toEqual({ stale: [], count: 0 });
 
 		let run = await stub.synchronize();
-		expect(run).toEqual({ synchronized: 0, items: 0, remaining: 0, paused: 0 });
+		expect(run).toEqual({ synchronized: 0, items: 0, remaining: 0, paused: 0, ruled: 0 });
 	});
 
 	test("answers a page and the staleness beside it without materializing anything", async () => {

@@ -120,6 +120,7 @@ export function timelineCopy(i18next: i18n): Timeline.Copy {
 		saveFailed: i18next.t("timeline.saveFailed"),
 		saveFull: i18next.t("timeline.saveFull"),
 		saved: i18next.t("timeline.saved"),
+		flagged: i18next.t("timeline.flagged"),
 		newer: i18next.t("timeline.newer"),
 		older: i18next.t("timeline.older"),
 		end: i18next.t("timeline.end"),
@@ -195,6 +196,11 @@ export function timelineEntries(
 			 * the queue shows as kept there, and the one control means one thing everywhere.
 			 */
 			isSaved: item.savedAt !== null,
+			/**
+			 * Whether a rule of the reader's own picked this post out on arrival. Read off the
+			 * post, so the mark means the same thing wherever the post is met.
+			 */
+			isFlagged: item.flaggedAt !== null,
 			/**
 			 * The labels on the post, each a way into what else is kept under it, and the
 			 * address another one is applied at. Both are left off wherever the strip is not

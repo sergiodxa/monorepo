@@ -61,6 +61,7 @@ const FEED: UserStore.FeedSummary = {
 	folderTitle: null,
 	pinnedAt: null,
 	postsPerDay: null,
+	notify: false,
 };
 
 /** What the feed's object answers with for a feed whose last check went fine. */
@@ -94,6 +95,8 @@ function item(overrides: Partial<UserStore.Item> & Pick<UserStore.Item, "id">): 
 		readAt: null,
 		savedAt: null,
 		/** No labels, which is what every list but the two that draw chips answers with. */
+		/** Unflagged, which is what a post no rule marked on arrival carries. */
+		flaggedAt: null,
 		tags: [],
 		...overrides,
 	};

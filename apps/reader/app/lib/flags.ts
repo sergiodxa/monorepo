@@ -97,6 +97,16 @@ export const FLAG_SET: StoredFlagSet = {
 			defaultVariant: "on",
 		},
 		/**
+		 * Whether the surface where a reader writes filter rules is drawn. The rules
+		 * themselves are a tier's to allow; this is what decides whether the app offers the
+		 * page at all, so the newest thing that refuses an arriving post can be taken off
+		 * faster than a revert while the table behind it is new.
+		 */
+		"filter-rules": {
+			variants: { on: true, off: false },
+			defaultVariant: "on",
+		},
+		/**
 		 * Whether a list fetches the page below it as the reader arrives. Off, the links
 		 * that page the list by hand are what a reader gets — which is what a browser
 		 * running no script gets either, so the way back is a path already walked.
@@ -121,6 +131,7 @@ export const features = defineFlags({
 	velocitySuggestionRate: flag.number("velocity-suggestion-rate", BUSY_POSTS_PER_DAY),
 	savedPosts: flag.boolean("saved-posts", true),
 	tags: flag.boolean("tags", true),
+	filterRules: flag.boolean("filter-rules", true),
 	infinitePagination: flag.boolean("infinite-pagination", true),
 });
 

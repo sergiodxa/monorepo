@@ -104,6 +104,30 @@ export default route({
 	},
 
 	/**
+	 * The rules a reader writes about what a post says, and the preview of one they are
+	 * still typing. Its own address because a rule is configured once and read back later,
+	 * and because the preview is a page they arrive at with a query rather than a step in a
+	 * flow they have to redo.
+	 *
+	 * GET = the rules and whatever a candidate in the query would have caught ("index"),
+	 * POST = writes a rule ("action"). Writing posts here so a refusal is answered with the
+	 * page the reader is left standing on.
+	 */
+	rules: form("/rules"),
+
+	/** The ways one rule, and one previewed page, are acted on. */
+	rule: {
+		update: post("/rules/:ruleId"),
+		delete: del("/rules/:ruleId"),
+		/**
+		 * Acts on the posts a previewed candidate matched, which is bounded by that page. A
+		 * path of its own rather than a segment a rule id could also spell, so the two
+		 * patterns never decide between each other.
+		 */
+		apply: post("/rules/previewed"),
+	},
+
+	/**
 	 * The subscriptions themselves. Nothing here renders a page: a reader meets their feeds
 	 * in the rail and one feed on {@link reading}'s own surface, so these are the addresses
 	 * the forms on those surfaces act against.
@@ -133,6 +157,12 @@ export default route({
 		 * the way `refresh` and `velocity` are, so the feed's page reaches it with a form.
 		 */
 		pin: post("/feeds/:feedId/pin"),
+		/**
+		 * Decides whether a scheduled check finding posts here is worth interrupting the
+		 * reader for. A path of its own, the way `pin` and `velocity` are, so the feed's page
+		 * reaches it with a plain form.
+		 */
+		notify: post("/feeds/:feedId/notify"),
 		export: get("/feeds.opml"),
 		/** Subscribes to every feed in an uploaded OPML document. */
 		import: post("/feeds/import"),
@@ -172,6 +202,32 @@ export default route({
 	settings: get("/settings"),
 
 	/**
+	 * How the reader is reached when a check finds something, and which browsers it is
+	 * reached on. They sit under the settings page that draws them, and each is a `POST` of
+	 * its own so a form submits one answer rather than the whole surface.
+	 */
+	notifications: {
+		/** Turns the push and email channels on or off. */
+		channels: post("/settings/notifications"),
+		/** Sets the window the reader is left alone in, in their own hours. */
+		quietHours: post("/settings/notifications/quiet-hours"),
+		/**
+		 * Where a browser hands over the endpoint the push service gave it. Nothing links
+		 * here: it answers a script that has just subscribed, and answers JSON rather than a
+		 * page.
+		 */
+		devices: post("/settings/notifications/devices"),
+		/** Revokes one browser, which is the only thing the settings page knows a device by. */
+		forget: del("/settings/notifications/devices/:deviceId"),
+		/**
+		 * Where the only participant that knows the reader's time zone reports it. Posted once
+		 * when it differs from what is stored, because quiet hours without a zone are quiet
+		 * hours in UTC.
+		 */
+		timeZone: post("/settings/notifications/time-zone"),
+	},
+
+	/**
 	 * What a reader does about their plan. Both are `POST`s that end in a redirect to a page
 	 * the platform hosts: this app never draws a card field, so there is nothing here to
 	 * answer a `GET` with.
@@ -191,4 +247,16 @@ export default route({
 	webhooks: {
 		billing: post("/webhooks/billing"),
 	},
+
+	/**
+	 * Where a publisher's hub delivers. Nobody links here and no reader arrives here: the
+	 * `GET` answers the hub's verification and the `POST` its notification, which is the
+	 * shape a form route already describes.
+	 *
+	 * `:feedId` is the catalog's id, so a delivery reaches the right object with no lookup,
+	 * and `:token` is an unguessable value minted per feed — the id appears in
+	 * administrative URLs and in logs, and anything that can post here can make this app
+	 * fetch.
+	 */
+	websub: form("/websub/:feedId/:token"),
 });

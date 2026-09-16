@@ -46,6 +46,8 @@ function item(overrides: Partial<UserStore.Item> & Pick<UserStore.Item, "id">): 
 		/** Kept, because this page holds the posts a reader asked to keep and nothing else. */
 		savedAt: Date.UTC(2026, 0, 3, 9),
 		/** No labels, which is what every list but the two that draw chips answers with. */
+		/** Unflagged, which is what a post no rule marked on arrival carries. */
+		flaggedAt: null,
 		tags: [],
 		...overrides,
 	};
