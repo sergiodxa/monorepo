@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-16
+**Accepted** - 2026-09-16
 
 ## Background
 
@@ -499,20 +499,20 @@ and the route, object and limiter paths in `*.workers.test.ts` with `@sdxc/cloud
 
 ## Implementation
 
-- [ ] `@sdxc/mcp` dependency, `routes/web.ts` entry for `/mcp`, and the `GET` page explaining
+- [x] `@sdxc/mcp` dependency, `routes/web.ts` entry for `/mcp`, and the `GET` page explaining
       how to connect
-- [ ] `tokens` migration on `UserDO`, and `authorizeAgent` returning its discriminated union
-- [ ] Token minting, signing and verification, with `AGENT_TOKEN_SECRET` as a Worker secret
-- [ ] Token management on `/settings`: mint, name, scope, show last use, revoke — with copy in
+- [x] `tokens` migration on `UserDO`, and `authorizeAgent` returning its discriminated union
+- [x] Token minting, signing and verification, with `AGENT_TOKEN_SECRET` as a Worker secret
+- [x] Token management on `/settings`: mint, name, scope, show last use, revoke — with copy in
       `app/locales/en.ts` and `app/locales/es.ts`
-- [ ] The credential middleware, its `401`/`403` answers, and the scope it publishes
-- [ ] `app/mcp/tools.ts`, `app/mcp/resources.ts`, and one controller file per group
-- [ ] `available` on the five writing tools, plus cursor and page-size handling
-- [ ] `MCP_RATE_LIMITER` binding in `wrangler.jsonc`, plus `bun run cf:typegen`
-- [ ] The daily budget through `DataTableAdapter`, and the tier gate reading
+- [x] The credential middleware, its `401`/`403` answers, and the scope it publishes
+- [x] `app/mcp/tools.ts`, `app/mcp/resources.ts`, and one controller file per group
+- [x] `available` on the five writing tools, plus cursor and page-size handling
+- [x] `MCP_RATE_LIMITER` binding in `wrangler.jsonc`, plus `bun run cf:typegen`
+- [x] The daily budget through `DataTableAdapter`, and the tier gate reading
       [ADR-004](./ADR-004-background-freshness-checks.md)'s column
-- [ ] The events and the tests above
-- [ ] `AGENTS.md`, the README feature line, and the Paid-tier copy on the pricing surface
+- [x] The events and the tests above
+- [x] `AGENTS.md`, the README feature line, and the Paid-tier copy on the pricing surface
 
 ## References
 
