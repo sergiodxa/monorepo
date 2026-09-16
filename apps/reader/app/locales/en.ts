@@ -388,6 +388,14 @@ export default {
 			},
 		},
 
+		/**
+		 * The menu holding every action on a feed that is not one of the two a reader
+		 * reaches for while reading it.
+		 */
+		more: {
+			legend: "More actions",
+		},
+
 		/** What asking for a feed to be checked on the spot reports back. */
 		check: {
 			submit: "Check feed",

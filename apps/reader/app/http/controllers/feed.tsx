@@ -24,6 +24,7 @@
 
 import {
 	CircleCheckIcon,
+	EllipsisIcon,
 	FolderIcon,
 	HourglassIcon,
 	LinkIcon,
@@ -124,6 +125,16 @@ function feedUrl(
  */
 function unfollowPromptId(feedId: string): string {
 	return `unfollow-${feedId}`;
+}
+
+/**
+ * The `id` the overflow menu answers to, which its trigger names in `commandfor`, carrying
+ * the feed for the reason the prompt's does.
+ *
+ * @param feedId - The feed whose remaining actions the menu holds.
+ */
+function moreMenuId(feedId: string): string {
+	return `more-${feedId}`;
 }
 
 /**
@@ -537,112 +548,6 @@ export default createAction(routes.feed, {
 						</form>
 
 						{/**
-						 * Pinning draws this feed above the queue, where a reader looks before they
-						 * start reading. It changes nothing the queue holds: the strip asks its own
-						 * bounded question and the queue below keeps every column and predicate it had.
-						 */}
-						<form method="post" action={routes.feeds.pin.href({ feedId })}>
-							<input
-								type="hidden"
-								name={PIN_FIELD}
-								value={feed.pinnedAt === null ? "true" : "false"}
-							/>
-
-							<Button
-								type="submit"
-								color="neutral"
-								variant="ghost"
-								size="sm"
-								aria-label={ctx.i18next.t(
-									feed.pinnedAt === null ? "feeds.pin.submit" : "feeds.pin.remove",
-								)}
-								title={ctx.i18next.t(
-									feed.pinnedAt === null ? "feeds.pin.submit" : "feeds.pin.remove",
-								)}
-							>
-								<PinIcon size={ACTION_ICON_SIZE} />
-								<ActionLabel>
-									{ctx.i18next.t(feed.pinnedAt === null ? "feeds.pin.submit" : "feeds.pin.remove")}
-								</ActionLabel>
-							</Button>
-						</form>
-
-						{/**
-						 * Whether a check that finds posts here is worth interrupting the reader for.
-						 * It is a judgement about this publisher, so it is stored on the subscription
-						 * and every browser they are reached on shares it; how they are reached is set
-						 * once, on the settings page, rather than again per feed.
-						 */}
-						<form method="post" action={routes.feeds.notify.href({ feedId })}>
-							<input type="hidden" name={NOTIFY_FIELD} value={feed.notify ? "false" : "true"} />
-
-							<Button
-								type="submit"
-								color="neutral"
-								variant="ghost"
-								size="sm"
-								aria-label={ctx.i18next.t(
-									feed.notify ? "notifications.feed.off" : "notifications.feed.on",
-								)}
-								title={ctx.i18next.t(
-									feed.notify ? "notifications.feed.off" : "notifications.feed.on",
-								)}
-							>
-								{feed.notify ? (
-									<BellOffIcon size={ACTION_ICON_SIZE} />
-								) : (
-									<BellIcon size={ACTION_ICON_SIZE} />
-								)}
-
-								<ActionLabel>
-									{ctx.i18next.t(feed.notify ? "notifications.feed.off" : "notifications.feed.on")}
-								</ActionLabel>
-							</Button>
-						</form>
-
-						{/**
-						 * A post's outbound link is rendered with its campaign metadata and click
-						 * identifiers removed, which leaves the reader's arrival unattributed and is
-						 * what almost every publisher's server is indifferent to. This is for the one
-						 * that is not: a site routing on a parameter the strip removes answers a broken
-						 * address, and the reader fixes that publisher here rather than the feature.
-						 */}
-						<form method="post" action={routes.feeds.linkParameters.href({ feedId })}>
-							<input
-								type="hidden"
-								name={PARAMETERS_FIELD}
-								value={feed.keepLinkParameters ? "false" : "true"}
-							/>
-
-							<Button
-								type="submit"
-								color="neutral"
-								variant="ghost"
-								size="sm"
-								aria-label={ctx.i18next.t(
-									feed.keepLinkParameters
-										? "feeds.linkParameters.strip"
-										: "feeds.linkParameters.keep",
-								)}
-								title={ctx.i18next.t(
-									feed.keepLinkParameters
-										? "feeds.linkParameters.strip"
-										: "feeds.linkParameters.keep",
-								)}
-							>
-								<LinkIcon size={ACTION_ICON_SIZE} />
-
-								<ActionLabel>
-									{ctx.i18next.t(
-										feed.keepLinkParameters
-											? "feeds.linkParameters.strip"
-											: "feeds.linkParameters.keep",
-									)}
-								</ActionLabel>
-							</Button>
-						</form>
-
-						{/**
 						 * A `POST` rather than a link, for the reason the check is one: a prefetcher or
 						 * a mail scanner follows a `GET`, and following this one would take a feed out of
 						 * a reader's queue without them asking for it.
@@ -666,33 +571,155 @@ export default createAction(routes.feed, {
 						</form>
 
 						{/**
-						 * How long this feed's posts stay, which is the one control on this page that
-						 * can take away a post the reader has not read. It sits among the actions
-						 * because that is what it is — a thing done to this feed, like checking it or
-						 * letting it go — rather than a section of the page to read past on the way to
-						 * the posts.
+						 * Everything else a feed can be told, behind one trigger. Checking it and
+						 * marking it read are what a reader reaches for while reading; pinning it,
+						 * filing it, how long its posts stay and whether it may interrupt are decided
+						 * once and then left alone, and eight controls on one line made the two that
+						 * are pressed often as hard to find as the six that are not.
 						 *
-						 * The trigger wears the answer, so the setting is legible without opening
-						 * anything, and choosing is the whole interaction: one click decides, where a
-						 * field and a submit asked for two. Without script the menu is a popover the
-						 * browser opens itself and each row is a plain submit, so it is the same
-						 * control either way.
+						 * The rows that submit carry their own form, so each is the same single POST
+						 * it was on the line. The two that choose open their own menu from here, which
+						 * is the nesting the menu already answers for.
 						 */}
 						<Button
-							commandfor={velocityMenuId(feedId)}
+							commandfor={moreMenuId(feedId)}
 							command="toggle-popover"
 							color="neutral"
 							variant="ghost"
 							size="sm"
-							aria-label={ctx.i18next.t("feeds.velocity.legend")}
-							title={ctx.i18next.t("feeds.velocity.legend")}
+							aria-label={ctx.i18next.t("feeds.more.legend")}
+							title={ctx.i18next.t("feeds.more.legend")}
 						>
-							{/** Time running out, which is what every span but one describes. */}
-							<HourglassIcon size={ACTION_ICON_SIZE} />
-							<ActionLabel>
-								{ctx.i18next.t(`feeds.velocity.name.${feed.velocity}` as const)}
-							</ActionLabel>
+							{/** The three dots a surface of further actions is named by everywhere. */}
+							<EllipsisIcon size={ACTION_ICON_SIZE} />
+							<ActionLabel>{ctx.i18next.t("feeds.more.legend")}</ActionLabel>
 						</Button>
+
+						<Menu id={moreMenuId(feedId)} aria-label={ctx.i18next.t("feeds.more.legend")}>
+							{/**
+							 * Pinning draws this feed above the queue, where a reader looks before they
+							 * start reading. It changes nothing the queue holds: the strip asks its own
+							 * bounded question and the queue below keeps every column and predicate it had.
+							 */}
+							<form method="post" action={routes.feeds.pin.href({ feedId })}>
+								<input
+									type="hidden"
+									name={PIN_FIELD}
+									value={feed.pinnedAt === null ? "true" : "false"}
+								/>
+
+								<Menu.Item type="submit" mix={[gap(2)]}>
+									<PinIcon size={ACTION_ICON_SIZE} />
+									{ctx.i18next.t(feed.pinnedAt === null ? "feeds.pin.submit" : "feeds.pin.remove")}
+								</Menu.Item>
+							</form>
+
+							{/**
+							 * Whether a check that finds posts here is worth interrupting the reader for.
+							 * It is a judgement about this publisher, so it is stored on the subscription
+							 * and every browser they are reached on shares it; how they are reached is set
+							 * once, on the settings page, rather than again per feed.
+							 */}
+							<form method="post" action={routes.feeds.notify.href({ feedId })}>
+								<input type="hidden" name={NOTIFY_FIELD} value={feed.notify ? "false" : "true"} />
+
+								<Menu.Item type="submit" mix={[gap(2)]}>
+									{feed.notify ? (
+										<BellOffIcon size={ACTION_ICON_SIZE} />
+									) : (
+										<BellIcon size={ACTION_ICON_SIZE} />
+									)}
+
+									{ctx.i18next.t(feed.notify ? "notifications.feed.off" : "notifications.feed.on")}
+								</Menu.Item>
+							</form>
+
+							{/**
+							 * A post's outbound link is rendered with its campaign metadata and click
+							 * identifiers removed, which leaves the reader's arrival unattributed and is
+							 * what almost every publisher's server is indifferent to. This is for the one
+							 * that is not: a site routing on a parameter the strip removes answers a broken
+							 * address, and the reader fixes that publisher here rather than the feature.
+							 */}
+							<form method="post" action={routes.feeds.linkParameters.href({ feedId })}>
+								<input
+									type="hidden"
+									name={PARAMETERS_FIELD}
+									value={feed.keepLinkParameters ? "false" : "true"}
+								/>
+
+								<Menu.Item type="submit" mix={[gap(2)]}>
+									<LinkIcon size={ACTION_ICON_SIZE} />
+									{ctx.i18next.t(
+										feed.keepLinkParameters
+											? "feeds.linkParameters.strip"
+											: "feeds.linkParameters.keep",
+									)}
+								</Menu.Item>
+							</form>
+
+							<Menu.Separator />
+
+							{/**
+							 * How long this feed's posts stay, which is the one control on this page that
+							 * can take away a post the reader has not read. It is a thing done to this
+							 * feed, like checking it or letting it go, so it belongs among these rather
+							 * than in a section of the page to read past on the way to the posts.
+							 *
+							 * The row wears the answer, so the setting is legible without opening
+							 * anything, and choosing is the whole interaction: one click decides, where a
+							 * field and a submit asked for two.
+							 */}
+							<Menu.Item
+								commandfor={velocityMenuId(feedId)}
+								command="toggle-popover"
+								mix={[justify("between"), gap(4)]}
+							>
+								<span mix={[flex(), items("center"), gap(2)]}>
+									{/** Time running out, which is what every span but one describes. */}
+									<HourglassIcon size={ACTION_ICON_SIZE} />
+									{ctx.i18next.t("feeds.velocity.legend")}
+								</span>
+
+								<span mix={[text("xs"), fg("neutral.muted")]}>
+									{ctx.i18next.t(`feeds.velocity.name.${feed.velocity}` as const)}
+								</span>
+							</Menu.Item>
+
+							{/**
+							 * Which group this feed reads in, which is a thing done to the feed the way
+							 * checking it and setting its span are. The row wears the answer, so the
+							 * filing is legible without opening anything.
+							 */}
+							<Menu.Item
+								commandfor={folderMenuId(feedId)}
+								command="toggle-popover"
+								mix={[justify("between"), gap(4)]}
+							>
+								<span mix={[flex(), items("center"), gap(2)]}>
+									{/** A folder, which is what the feed is being put into. */}
+									<FolderIcon size={ACTION_ICON_SIZE} />
+									{ctx.i18next.t("folders.file.legend")}
+								</span>
+
+								<span mix={[text("xs"), fg("neutral.muted")]}>
+									{feed.folderTitle ?? ctx.i18next.t("folders.file.none")}
+								</span>
+							</Menu.Item>
+
+							<Menu.Separator />
+
+							<Menu.Item
+								danger
+								commandfor={unfollowPromptId(feedId)}
+								command="show-modal"
+								mix={[gap(2)]}
+							>
+								{/** The tie between this reader and the feed, drawn as the broken link it becomes. */}
+								<UnlinkIcon size={ACTION_ICON_SIZE} />
+								{ctx.i18next.t("feeds.unfollow.submit")}
+							</Menu.Item>
+						</Menu>
 
 						<Menu id={velocityMenuId(feedId)} aria-label={ctx.i18next.t("feeds.velocity.legend")}>
 							{/**
@@ -725,30 +752,12 @@ export default createAction(routes.feed, {
 						</Menu>
 
 						{/**
-						 * Which group this feed reads in, which is a thing done to the feed the way
-						 * checking it and setting its span are. The trigger wears the answer, so the
-						 * filing is legible without opening anything.
-						 *
 						 * Every folder the reader has is a submit of its own, the one it is in is
 						 * marked, and the field at the foot files it under a name they type — which
 						 * is where most folders come from. Without script the menu is a popover the
 						 * browser opens itself and each row is a plain submit, so it is the same
 						 * control either way.
 						 */}
-						<Button
-							commandfor={folderMenuId(feedId)}
-							command="toggle-popover"
-							color="neutral"
-							variant="ghost"
-							size="sm"
-							aria-label={ctx.i18next.t("folders.file.legend")}
-							title={ctx.i18next.t("folders.file.legend")}
-						>
-							{/** A folder, which is what the feed is being put into. */}
-							<FolderIcon size={ACTION_ICON_SIZE} />
-							<ActionLabel>{feed.folderTitle ?? ctx.i18next.t("folders.file.none")}</ActionLabel>
-						</Button>
-
 						<Menu id={folderMenuId(feedId)} aria-label={ctx.i18next.t("folders.file.legend")}>
 							<form method="post" action={routes.folders.file.href({ feedId })}>
 								<Text mix={[p(2), pb(1), text("xs"), fg("neutral.muted")]}>
@@ -808,20 +817,6 @@ export default createAction(routes.feed, {
 								</div>
 							</form>
 						</Menu>
-
-						<Button
-							commandfor={unfollowPromptId(feedId)}
-							command="show-modal"
-							color="danger"
-							variant="ghost"
-							size="sm"
-							aria-label={ctx.i18next.t("feeds.unfollow.submit")}
-							title={ctx.i18next.t("feeds.unfollow.submit")}
-						>
-							{/** The tie between this reader and the feed, drawn as the broken link it becomes. */}
-							<UnlinkIcon size={ACTION_ICON_SIZE} />
-							<ActionLabel>{ctx.i18next.t("feeds.unfollow.submit")}</ActionLabel>
-						</Button>
 					</>
 				}
 				/** The feed's name is the link to the site behind it, for a feed that names one. */

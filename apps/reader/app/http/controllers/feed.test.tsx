@@ -360,6 +360,60 @@ describe("GET /reading/:feed", () => {
 	});
 });
 
+describe("the actions on a feed's own line", () => {
+	/**
+	 * Eight controls on one line wrapped to two and made the two pressed often as hard to
+	 * find as the six that are not. What stays is what a reader reaches for while reading.
+	 */
+	test("leaves the line with the two frequent actions and a way to the rest", async () => {
+		store.getFeed.mockResolvedValue(FEED);
+
+		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
+		let line = /actions[\s\S]*?(?=<main|<div class="rmxc)/.exec(body)?.[0] ?? body;
+
+		// The two that act on the feed right now keep their own control.
+		expect(body).toContain(
+			`<form method="post" action="${routes.feeds.refresh.href({ feedId: FEED_ID })}"`,
+		);
+		expect(body).toContain(
+			`<form method="post" action="${routes.feeds.read.href({ feedId: FEED_ID })}"`,
+		);
+
+		// And one trigger opens the menu holding everything else.
+		let opens = /<button[^>]*\bcommandfor="(more-[^"]+)"[^>]*\bcommand="toggle-popover"/.exec(
+			body,
+		)?.[1];
+		expect(opens).toBeDefined();
+		expect(body).toContain(`id="${opens}"`);
+		expect(readsAs(line)).toContain("More actions");
+	});
+
+	/**
+	 * Each moved row keeps the single POST it had on the line, so what a browser running no
+	 * script does is unchanged — the menu is a popover it opens itself.
+	 */
+	test("keeps every moved action a submit of its own form", async () => {
+		store.getFeed.mockResolvedValue(FEED);
+
+		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
+
+		for (let action of [
+			routes.feeds.pin.href({ feedId: FEED_ID }),
+			routes.feeds.notify.href({ feedId: FEED_ID }),
+			routes.feeds.linkParameters.href({ feedId: FEED_ID }),
+		]) {
+			expect(body).toContain(`<form method="post" action="${action}"`);
+		}
+
+		// The two that choose open their own menu from the one above them.
+		expect(body).toMatch(/<button[^>]*\bcommandfor="velocity-[^"]*"[^>]*\brole="menuitem"/);
+		expect(body).toMatch(/<button[^>]*\bcommandfor="folder-[^"]*"[^>]*\brole="menuitem"/);
+
+		// And letting the feed go still asks first, from a row of the same menu.
+		expect(body).toMatch(/<button[^>]*\bcommandfor="unfollow-[^"]*"[^>]*\bcommand="show-modal"/);
+	});
+});
+
 describe("checking a feed now", () => {
 	test("offers the check alongside the way to unfollow", async () => {
 		store.getFeed.mockResolvedValue(FEED);
@@ -646,7 +700,7 @@ describe("how long this feed's posts stay", () => {
 		expect(readsAs(body)).toContain("Forever");
 	});
 
-	/** The trigger wears the answer, so the setting reads without opening anything. */
+	/** The row wears the answer, so the setting reads without opening the menu under it. */
 	test("says which span is set on the control that changes it", async () => {
 		store.getFeed.mockResolvedValue({ ...FEED, velocity: "news" });
 
@@ -655,8 +709,9 @@ describe("how long this feed's posts stay", () => {
 			body,
 		)?.[0];
 
+		// The row names itself in words a pointer does not have to rest on to read.
+		expect(readsAs(trigger ?? "")).toContain("How long these posts stay");
 		expect(readsAs(trigger ?? "")).toContain("News");
-		expect(trigger).toContain('aria-label="How long these posts stay"');
 
 		// And the row for that span is the one marked as chosen.
 		expect(body).toMatch(/<button[^>]*\bvalue="news"[^>]*\baria-selected="true"/);
@@ -678,14 +733,14 @@ describe("how long this feed's posts stay", () => {
 
 		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
 
-		let opens = /<button[^>]*\bcommandfor="([^"]+)"[^>]*\bcommand="toggle-popover"/.exec(body)?.[1];
+		let opens = /<button[^>]*\bcommandfor="(velocity-[^"]+)"[^>]*\bcommand="toggle-popover"/.exec(
+			body,
+		)?.[1];
 		expect(opens).toBeDefined();
 		expect(body).toContain(`id="${opens}"`);
 
-		// The menu carries the name too, since a reader who opens it is reading it alone.
-		expect(body).toMatch(
-			/aria-label="How long these posts stay"[\s\S]*aria-label="How long these posts stay"/,
-		);
+		// The menu carries the name, since a reader who opens it is reading it alone.
+		expect(body).toContain('aria-label="How long these posts stay"');
 	});
 
 	/**
