@@ -359,6 +359,43 @@ describe("a reader who follows nothing yet", () => {
  * namespace the app binds, with its real bulk limit and its real answer for a key nobody
  * has written.
  */
+describe("what a sweep of posts reports back", () => {
+	/**
+	 * The number a reader is shown has to be posts. What a write reports is rows of storage,
+	 * and a post lives in the table and in every partial index it qualifies for, so marking
+	 * one read writes several rows — which is invisible against a mock that counts a write
+	 * per row and only shows up here, against the storage a reader actually has.
+	 */
+	test("counts the posts it marked rather than the rows storage wrote", async () => {
+		let name = subject();
+		let stub = env.USER.getByName(name);
+		let url = feedUrl();
+
+		publish(url, ["One", "Two", "Three"]);
+		let followed = await stub.followFeed(url);
+		if (!followed.ok) throw new Error(`following ${url} failed: ${followed.reason}`);
+
+		expect(await storedPosts(stub)).toBe(3);
+		expect(await stub.markFeedRead(followed.feed.id)).toBe(3);
+
+		// And nothing left unread, so a second sweep has nothing to count.
+		expect(await stub.markFeedRead(followed.feed.id)).toBe(0);
+	});
+
+	test("counts the posts one sweep of every feed marked", async () => {
+		let name = subject();
+		let stub = env.USER.getByName(name);
+		let url = feedUrl();
+
+		publish(url, ["One", "Two"]);
+		let followed = await stub.followFeed(url);
+		if (!followed.ok) throw new Error(`following ${url} failed: ${followed.reason}`);
+
+		expect(await stub.markAllRead()).toBe(2);
+		expect(await stub.markAllRead()).toBe(0);
+	});
+});
+
 describe("the freshness index", () => {
 	test("reads a cursor below the published head as stale, and one level with it as current", async () => {
 		let stub = env.USER.getByName(subject());

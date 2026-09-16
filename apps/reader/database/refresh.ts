@@ -235,7 +235,12 @@ export async function pollFeed(
  * @param keep - How many items to leave in place.
  */
 export async function pruneItems(db: Database, keep: number): Promise<number> {
-	if (keep <= 0) return (await db.deleteMany(items, { where: gt("revision", 0) })).affectedRows;
+	if (keep <= 0) {
+		let all = await db.count(items);
+		await db.deleteMany(items, { where: gt("revision", 0) });
+
+		return all;
+	}
 
 	/** The oldest item inside the cap, found by counting down the order it was decided in. */
 	let [cutoff] = await db
@@ -249,7 +254,19 @@ export async function pruneItems(db: Database, keep: number): Promise<number> {
 	if (cutoff === undefined) return 0;
 
 	/** Strictly below, so the cutoff row is the oldest one kept rather than the newest gone. */
-	return (await db.deleteMany(items, { where: lt("revision", cutoff.revision) })).affectedRows;
+	let older = lt("revision", cutoff.revision);
+
+	/**
+	 * Counted before the delete: what a write reports is rows of storage, and an item lives
+	 * in the table and in every index it appears in, so a sweep of a hundred items reports
+	 * several hundred rows written. What a caller wants to know is how many items went.
+	 */
+	let dropped = await db.count(items, { where: older });
+	if (dropped === 0) return 0;
+
+	await db.deleteMany(items, { where: older });
+
+	return dropped;
 }
 
 /**

@@ -467,24 +467,31 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * a reader let pile up costs the same as clearing one they are caught up on.
 	 */
 	async markFeedRead(feedId: string): Promise<number> {
-		let written = await this.#db.updateMany(
-			feedItems,
-			{ read_at: Date.now() },
-			{ where: and({ feed_id: feedId }, isNull("read_at")) },
-		);
+		let unread = and({ feed_id: feedId }, isNull("read_at"));
 
-		return written.affectedRows ?? 0;
+		/**
+		 * Counted before the write rather than read back from it. What a write reports is
+		 * rows of storage, and a post lives in the table and in whichever partial indexes it
+		 * qualifies for, so marking one read writes several rows. The reader is told about
+		 * posts.
+		 */
+		let posts = await this.#db.count(feedItems, { where: unread });
+		if (posts === 0) return 0;
+
+		await this.#db.updateMany(feedItems, { read_at: Date.now() }, { where: unread });
+
+		return posts;
 	}
 
 	/** Marks every unread post read across every feed, and reports how many that was. */
 	async markAllRead(): Promise<number> {
-		let written = await this.#db.updateMany(
-			feedItems,
-			{ read_at: Date.now() },
-			{ where: isNull("read_at") },
-		);
+		/** Counted rather than read back from the write, for the reason one feed's sweep is. */
+		let posts = await this.#db.count(feedItems, { where: isNull("read_at") });
+		if (posts === 0) return 0;
 
-		return written.affectedRows ?? 0;
+		await this.#db.updateMany(feedItems, { read_at: Date.now() }, { where: isNull("read_at") });
+
+		return posts;
 	}
 
 	/** Every subscription, in the shape an export writes them. */
@@ -1264,11 +1271,15 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let window = VELOCITY_WINDOW_MS[feed.velocity];
 		if (window === null) return 0;
 
-		let dropped = await this.#db.deleteMany(feedItems, {
-			where: and({ feed_id: feed.id }, lt("published_at", now - window), isNull("saved_at")),
-		});
+		let past = and({ feed_id: feed.id }, lt("published_at", now - window), isNull("saved_at"));
 
-		return dropped.affectedRows ?? 0;
+		/** Counted before the delete, since what a write reports is rows of storage. */
+		let posts = await this.#db.count(feedItems, { where: past });
+		if (posts === 0) return 0;
+
+		await this.#db.deleteMany(feedItems, { where: past });
+
+		return posts;
 	}
 
 	/**
@@ -1288,16 +1299,18 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 		if (reclaimable.length === 0) return 0;
 
-		let taken = 0;
 		for (let batch of chunked(
 			reclaimable.map((row) => row.id),
 			IDS_PER_LOOKUP,
 		)) {
-			let dropped = await this.#db.deleteMany(feedItems, { where: inList("id", batch) });
-			taken += dropped.affectedRows ?? 0;
+			await this.#db.deleteMany(feedItems, { where: inList("id", batch) });
 		}
 
-		return taken;
+		/**
+		 * The posts it named, rather than what the deletes reported: a write reports rows of
+		 * storage, and this number decides whether the feed has anything left to give back.
+		 */
+		return reclaimable.length;
 	}
 
 	/**
