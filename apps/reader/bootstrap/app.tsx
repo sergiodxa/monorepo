@@ -95,6 +95,10 @@ export default function application(options: application.Options) {
 		lazy(() => import("~/app/http/controllers/feed")),
 	);
 	router.map(
+		routes.saved,
+		lazy(() => import("~/app/http/controllers/saved")),
+	);
+	router.map(
 		routes.feeds.follow,
 		lazy(() => import("~/app/http/controllers/feeds/follow")),
 	);
@@ -111,6 +115,10 @@ export default function application(options: application.Options) {
 		lazy(() => import("~/app/http/controllers/items/read")),
 	);
 	router.map(
+		routes.items.save,
+		lazy(() => import("~/app/http/controllers/items/save")),
+	);
+	router.map(
 		routes.items.open,
 		lazy(() => import("~/app/http/controllers/items/open")),
 	);
@@ -125,6 +133,10 @@ export default function application(options: application.Options) {
 	router.map(
 		routes.feeds.read,
 		lazy(() => import("~/app/http/controllers/feeds/read")),
+	);
+	router.map(
+		routes.feeds.velocity,
+		lazy(() => import("~/app/http/controllers/feeds/velocity")),
 	);
 	router.map(
 		routes.feeds.export,

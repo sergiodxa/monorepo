@@ -48,6 +48,7 @@ function item(overrides: Partial<UserStore.Item> & Pick<UserStore.Item, "id">): 
 		author: null,
 		publishedAt: Date.UTC(2026, 0, 2, 12),
 		readAt: null,
+		savedAt: null,
 		...overrides,
 	};
 }

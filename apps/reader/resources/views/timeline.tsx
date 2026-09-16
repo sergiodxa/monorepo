@@ -59,6 +59,7 @@ import { css } from "remix/ui";
 
 import LazyFrame from "~/resources/components/lazy-frame";
 import ReadToggle from "~/resources/components/read-toggle";
+import SaveToggle from "~/resources/components/save-toggle";
 import { listBleed, listRowGutter } from "~/resources/layouts/app";
 import OutboundMark from "~/resources/views/outbound-mark";
 import routes from "~/routes/web";
@@ -186,6 +187,8 @@ export namespace Timeline {
 		/** The publication date as a machine reads it, for the `datetime` attribute. */
 		dateTime: string;
 		isRead: boolean;
+		/** Whether the reader has asked to keep this post, which no rule that deletes one reaches. */
+		isSaved: boolean;
 	}
 
 	/** The list's translated copy. */
@@ -199,6 +202,17 @@ export namespace Timeline {
 		read: string;
 		/** What the mark says when the server refused the last move, which it wears until the next. */
 		markFailed: string;
+		/** Keeping a post, and stopping. */
+		save: string;
+		unsave: string;
+		saveFailed: string;
+		/** What the keeping control says instead when there is no room left to keep anything. */
+		saveFull: string;
+		/**
+		 * That a post is being kept, for a reader who cannot see the mark it is kept with.
+		 * The glyph carries it on screen; this carries it to a screen reader.
+		 */
+		saved: string;
 		newer: string;
 		older: string;
 		/** Said where the list stops, so it is known to have an end rather than to go on. */
@@ -463,6 +477,7 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 										)}
 
 										{entry.isRead && <Text mix={[visuallyHidden()]}>{copy.read}</Text>}
+										{entry.isSaved && <Text mix={[visuallyHidden()]}>{copy.saved}</Text>}
 									</div>
 
 									<div
@@ -494,6 +509,22 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 										</time>
 									</div>
 								</div>
+
+								{/**
+								 * At the end of the row, where the other mark leads it: the mark at the head
+								 * moves a post through the queue, and this one takes it out of everything that
+								 * empties the queue. Two decisions about the same post, at either end of it,
+								 * so neither is pressed while reaching for the other.
+								 */}
+								<SaveToggle
+									action={routes.items.save.href({ itemId: entry.id })}
+									isSaved={entry.isSaved}
+									returnTo={returnTo}
+									save={copy.save}
+									unsave={copy.unsave}
+									failed={copy.saveFailed}
+									full={copy.saveFull}
+								/>
 							</article>
 						</li>
 					))}

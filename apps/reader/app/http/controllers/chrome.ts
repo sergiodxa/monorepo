@@ -38,10 +38,10 @@ import routes from "~/routes/web";
  * How long a reader's cached rail list stands.
  *
  * Every count the reader moves themselves is purged as they move it, so this covers only
- * what arrives while they are not looking: the refresh alarm, which runs on the cadence in
- * their own settings and counts that in hours. Minutes against hours is fresh enough that a
- * new post reaches the rail in the same sitting, and long enough that a session's worth of
- * pages costs one read rather than one per page.
+ * what arrives while they are not looking: the posts a feed published, which are polled
+ * once a day and reach the reader when they next open the reader. Minutes against a day is
+ * fresh enough that a new post reaches the rail in the same sitting, and long enough that a
+ * session's worth of pages costs one read rather than one per page.
  */
 const RAIL_TTL = "5 minutes";
 
@@ -213,6 +213,7 @@ export async function chrome(ctx: ChromeContext): Promise<{
 		nav: {
 			label: ctx.i18next.t("nav.label"),
 			reading: ctx.i18next.t("nav.reading"),
+			saved: ctx.i18next.t("nav.saved"),
 			searchLabel: ctx.i18next.t("search.label"),
 			searchPlaceholder: ctx.i18next.t("search.placeholder"),
 			openSidebar: ctx.i18next.t("nav.openSidebar"),

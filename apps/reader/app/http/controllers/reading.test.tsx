@@ -55,6 +55,7 @@ function item(overrides: Partial<UserStore.Item> & Pick<UserStore.Item, "id">): 
 		/** Midday, so the date reads the same whatever timezone the test host runs in. */
 		publishedAt: Date.UTC(2026, 0, 2, 12),
 		readAt: null,
+		savedAt: null,
 		...overrides,
 	};
 }
@@ -271,6 +272,94 @@ describe("GET /reading", () => {
 	});
 });
 
+describe("what the queue knows is waiting", () => {
+	/** One page of the queue, with the feeds it is missing named beside it. */
+	function opened(stale: string[]) {
+		store.openReader.mockResolvedValue({
+			timeline: {
+				ok: true,
+				items: [item({ id: "item-1" })],
+				feeds: FEEDS,
+				cursors: { next: null, prev: null },
+			},
+			freshness: { stale, count: stale.length },
+		});
+	}
+
+	test("opens the reader rather than reading the queue, and says how much is missing", async () => {
+		opened(["feed-df", "feed-rc"]);
+
+		let body = await (await get(routes.reading.href())).text();
+
+		expect(store.openReader).toHaveBeenCalledWith({
+			cursor: null,
+			readState: "all",
+			query: "",
+			limit: 25,
+		});
+		expect(readsAs(body)).toContain("2 feeds have posts you have not got yet.");
+	});
+
+	test("counts a single feed in the singular", async () => {
+		opened(["feed-df"]);
+
+		let body = await (await get(routes.reading.href())).text();
+
+		expect(readsAs(body)).toContain("One feed has posts you have not got yet.");
+	});
+
+	test("says nothing to a reader who is current, and asks for no synchronizing", async () => {
+		opened([]);
+
+		let body = await (await get(routes.reading.href())).text();
+
+		expect(readsAs(body)).not.toContain("you have not got yet");
+		expect(store.synchronize).not.toHaveBeenCalled();
+	});
+
+	/** Named feeds rather than all of them: the check has just worked out which they are. */
+	test("synchronizes exactly the feeds the check found stale", async () => {
+		opened(["feed-df", "feed-rc"]);
+
+		await get(routes.reading.href());
+
+		expect(store.synchronize).toHaveBeenCalledWith(["feed-df", "feed-rc"]);
+	});
+
+	/**
+	 * The whole point of doing it behind the response. A synchronization that never finishes
+	 * still leaves the reader holding their timeline.
+	 */
+	test("answers with the timeline without waiting for what it started", async () => {
+		opened(["feed-df"]);
+		store.synchronize.mockReturnValue(new Promise(() => {}));
+
+		let response = await get(routes.reading.href());
+
+		expect(response.status).toBe(200);
+		expect(readsAs(await response.text())).toContain("A post");
+	});
+
+	/**
+	 * Paging a frame is not opening the reader. A page arrives per screenful, and a freshness
+	 * check on each would cost a round trip whose answer the reader never sees.
+	 */
+	test("checks nothing for a frame continuing a queue already on screen", async () => {
+		store.readingQueue.mockResolvedValue({
+			ok: true,
+			items: [item({ id: "item-1" })],
+			feeds: FEEDS,
+			cursors: { next: null, prev: null },
+		});
+
+		await get(`${routes.reading.href()}?cursor=older-cursor&from=26&frame=older`);
+
+		expect(store.readingQueue).toHaveBeenCalled();
+		expect(store.openReader).not.toHaveBeenCalled();
+		expect(store.synchronize).not.toHaveBeenCalled();
+	});
+});
+
 describe("filtering the queue", () => {
 	/** A page of the queue with a post on it, whichever filter is asking for it. */
 	function queued(cursors: { next: string | null; prev: string | null }) {
@@ -401,9 +490,13 @@ describe("paging into a frame", () => {
 			([, exportName, moduleUrl]) => ({ exportName, moduleUrl }),
 		);
 
-		/** The page defers its next page and marks every row, so it mounts both of them. */
+		/** The page defers its next page and carries both of a row's marks, so it mounts all three. */
 		expect(new Set(islands.map((island) => island.moduleUrl))).toEqual(
-			new Set(["/resources/components/lazy-frame.tsx", "/resources/components/read-toggle.tsx"]),
+			new Set([
+				"/resources/components/lazy-frame.tsx",
+				"/resources/components/read-toggle.tsx",
+				"/resources/components/save-toggle.tsx",
+			]),
 		);
 
 		for (let { exportName, moduleUrl } of islands) {
@@ -794,14 +887,13 @@ describe("the sidebar beside the queue", () => {
 		store.listFeeds.mockResolvedValue(
 			Array.from({ length: 40 }, (_unused, index) => ({
 				id: `feed-${index}`,
+				feedId: `canonical-${index}`,
 				feedUrl: `https://example.com/${index}.xml`,
 				siteUrl: null,
 				title: `Feed ${String(index).padStart(2, "0")}`,
 				description: null,
 				imageUrl: null,
-				lastFetchedAt: null,
-				lastStatus: null,
-				failureCount: 0,
+				velocity: "evergreen",
 				unreadCount: index,
 			})),
 		);

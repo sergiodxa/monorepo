@@ -42,6 +42,14 @@ export default route({
 	feed: get("/reading/:feed"),
 
 	/**
+	 * The posts a reader asked to keep, which no rule that deletes a post reaches. Its own
+	 * address rather than a narrowing of {@link reading}: keeping a post is a decision about
+	 * that post rather than a state the queue can be filtered by, and the list of them is
+	 * somewhere a reader goes back to.
+	 */
+	saved: get("/saved"),
+
+	/**
 	 * The subscriptions themselves. Nothing here renders a page: a reader meets their feeds
 	 * in the rail and one feed on {@link reading}'s own surface, so these are the addresses
 	 * the forms on those surfaces act against.
@@ -60,6 +68,11 @@ export default route({
 		/** Takes one feed's unread posts out of the queue, leaving every other feed alone. */
 		read: post("/feeds/:feedId/read"),
 		/**
+		 * Sets how long this feed's posts stay in the reader's timeline. A path of its own,
+		 * the way `refresh` and `read` are, so the feed's page reaches it with a plain form.
+		 */
+		velocity: post("/feeds/:feedId/velocity"),
+		/**
 		 * The subscription list as OPML, for carrying it to another reader. A path of its
 		 * own rather than a segment under `/feeds`, which `unfollow` would read as a feed id.
 		 */
@@ -71,6 +84,8 @@ export default route({
 	items: {
 		/** Its own path rather than a `PATCH` on the item, so a form can reach it directly. */
 		read: post("/items/:itemId/read"),
+		/** Keeps a post, or stops keeping it, beside the route that marks one read. */
+		save: post("/items/:itemId/save"),
 		/**
 		 * Where the browser reports that a post's title was clicked, named by the link's
 		 * own `ping` attribute. The browser posts here itself while following the title
@@ -92,6 +107,10 @@ export default route({
 		feeds: get("/sidebar/feeds"),
 	},
 
-	/** GET = the preferences form ("index"), POST = saves it ("action"). */
-	settings: form("/settings"),
+	/**
+	 * What the app does on the reader's behalf, and the two ways their subscription list
+	 * travels. A `GET` alone: the transfers post to their own addresses under {@link feeds},
+	 * and how often a feed is checked is one number for every reader rather than a choice.
+	 */
+	settings: get("/settings"),
 });

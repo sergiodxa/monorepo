@@ -63,6 +63,7 @@ export default {
 	nav: {
 		label: "Secciones",
 		reading: "Lectura",
+		saved: "Guardadas",
 		feeds: "Feeds",
 		subscriptions: "Feeds que sigues",
 		openSidebar: "Mostrar feeds y búsqueda",
@@ -85,6 +86,14 @@ export default {
 		markUnread: "Marcar como no leída",
 		markFailed: "No se pudo marcar; inténtalo de nuevo",
 		read: "Leída",
+		/** Keeping a post, which is the one thing here no rule that deletes a post reaches. */
+		save: "Guardar",
+		unsave: "Quitar de guardadas",
+		saveFailed: "No se pudo guardar; inténtalo de nuevo",
+		/** Said where a save was refused outright, which is a shelf with no room left on it. */
+		saveFull: "Tus entradas guardadas están llenas; quita una para hacer sitio",
+		/** That a post is being kept, for a reader who cannot see the mark it is kept with. */
+		saved: "Guardada",
 		openPost: "Abrir entrada",
 		publishedOn: "Publicada el {{date}}",
 		byAuthor: "por {{author}}",
@@ -114,6 +123,13 @@ export default {
 		heading: "Lectura",
 		/** The same queue, narrowed to words somebody typed, which the heading says back. */
 		headingFor: "Leyendo sobre «{{query}}»",
+		/**
+		 * What the queue knows is missing from it, which is the question a reader opening it
+		 * has and the one nothing here could answer before. The posts are being fetched behind
+		 * the page, so the sentence says that rather than offering a button that waits for them.
+		 */
+		waiting_one: "Un feed tiene entradas que todavía no tienes. Están llegando ahora.",
+		waiting_other: "{{count}} feeds tienen entradas que todavía no tienes. Están llegando ahora.",
 		/** Which of the queue's posts the page holds, named beside the heading. */
 		filter: {
 			label: "Mostrar",
@@ -162,6 +178,17 @@ export default {
 			title: "Todavía no hay nada que leer",
 			description:
 				"Pega en la caja de arriba la dirección de un feed, o la de un sitio que publique uno.",
+		},
+	},
+
+	/** The posts a reader asked to keep, which is the one list here nothing prunes. */
+	saved: {
+		title: "Guardadas",
+		heading: "Guardadas",
+		empty: {
+			title: "Todavía no has guardado nada",
+			description:
+				"Guarda una entrada desde cualquier lista y se queda aquí, por vieja que se haga y haga lo que haga el feed del que vino.",
 		},
 	},
 
@@ -249,6 +276,34 @@ export default {
 				"No se pudo llegar a ese feed ahora mismo. La próxima revisión programada lo intentará de nuevo.",
 		},
 
+		/**
+		 * How long this feed's posts stay in the reader's own timeline. Each span says what it
+		 * is for as well as how long it holds, since the name alone is a category and the hours
+		 * alone are a number: a reader choosing between them is matching the two.
+		 */
+		velocity: {
+			legend: "Cuánto tiempo se quedan estas entradas",
+			description:
+				"Las entradas de este feed salen de tu lectura en cuanto son más viejas que esto, las hayas leído o no. Lo que guardes se queda, elijas lo que elijas.",
+			submit: "Guardar",
+			saved: "Guardado.",
+			invalid: "Ese no es uno de los plazos disponibles.",
+			breaking: "De última hora — se queda 3 horas",
+			news: "Noticias — se queda 18 horas",
+			article: "Artículos — se queda 3 días",
+			essay: "Ensayos — se queda 2 semanas",
+			evergreen: "Siempre — no se va nunca",
+			/**
+			 * Offered beside the control rather than acted on: a measurement is a good reason to
+			 * ask a reader a question and a bad reason to delete their posts, so this says what
+			 * the feed does and leaves the answer where it was.
+			 */
+			suggestion_one:
+				"Este feed publica alrededor de {{count}} entrada al día y aquí no se va nunca ninguna. Un plazo más corto evita que se te acumulen.",
+			suggestion_other:
+				"Este feed publica alrededor de {{count}} entradas al día y aquí no se va nunca ninguna. Un plazo más corto evita que se te acumulen.",
+		},
+
 		unfollow: {
 			title: "Dejar de seguir un feed",
 			submit: "Dejar de seguir",
@@ -271,21 +326,30 @@ export default {
 			title: "Marcar como leído",
 			notFound: "Esa entrada no está en tu cola de lectura.",
 		},
+		save: {
+			title: "Guardar una entrada",
+			notFound: "Esa entrada no está en tu cola de lectura.",
+			/**
+			 * A full shelf is told to the reader rather than made room on, since making room
+			 * would delete a post they asked to keep. The way out is theirs to choose.
+			 */
+			full: "Has guardado tantas entradas como caben aquí. Quita una de Guardadas para hacer sitio a otra.",
+		},
 	},
 
 	settings: {
 		title: "Preferencias",
 		heading: "Preferencias",
-		refresh: {
-			legend: "Cada cuánto buscar entradas nuevas",
+		/**
+		 * What the schedule is, rather than a choice of one. Checking a feed more often spends
+		 * the bandwidth of the site publishing it, and a reader who wants a feed sooner has the
+		 * check they can ask for on the feed's own page, which is what this points them at.
+		 */
+		cadence: {
+			legend: "Cómo se revisan tus feeds",
 			description:
-				"Todos los feeds que sigues se revisan con esta frecuencia. Revisarlos más a menudo encuentra las entradas antes y le cuesta un poco más a los sitios que lees.",
-			submit: "Guardar",
-			saved: "Guardado.",
-			invalid: "Esa no es una de las frecuencias disponibles.",
+				"Cada feed se revisa una vez al día. Para ver uno antes, ábrelo y usa Revisar feed.",
 		},
-		interval_one: "Cada hora",
-		interval_other: "Cada {{count}} horas",
 		lastRefreshed: "Revisado por última vez el {{date}}",
 		neverRefreshed: "Aún sin revisar",
 	},

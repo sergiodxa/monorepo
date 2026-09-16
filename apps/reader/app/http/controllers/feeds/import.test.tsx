@@ -24,7 +24,7 @@ vi.doMock("~/database/user-do", () => ({ userStore }));
 let { default: importFeeds, FILE_FIELD } = await import("./import");
 
 /** Where an import returns the reader to, before the outcome is appended to it. */
-const SETTINGS_PATH = routes.settings.index.href();
+const SETTINGS_PATH = routes.settings.href();
 
 /** A subscription list as another reader would have written it, folders and all. */
 const OPML_DOCUMENT = `<?xml version="1.0" encoding="UTF-8"?>

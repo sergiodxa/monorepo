@@ -6,7 +6,14 @@
  *
  * It sits under the queue because it is the same list narrowed to one publisher. What that
  * publisher says about itself and how its last checks went are here too: a reader looks at
- * a feed's health while they are looking at the feed.
+ * a feed's health while they are looking at the feed. The checks belong to the feed rather
+ * than to any one follower, so that half is asked of the feed's own object — one call, on
+ * the one page about one feed, which answers with the feed's true head as well.
+ *
+ * How long this feed's posts stay is the reader's own answer and sits beside it. What the
+ * feed actually publishes is measured, and where the two disagree the page says so and
+ * leaves the setting alone: a measurement is a good reason to ask a reader a question and
+ * a bad reason to delete their posts.
  *
  * The feed is looked up in the reader's own storage, so a feed somebody else follows is
  * as absent here as one nobody does, and both answer `404`.
@@ -20,23 +27,44 @@ import { parsePageParams } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { fg } from "@sdxc/u/color";
 import { flex, flexWrap, gap, items, vstack } from "@sdxc/u/layout";
-import { maxIs } from "@sdxc/u/size";
+import { is, maxIs } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
-import { Alert, Badge, Button, Confirm, Empty, HeadingScope, LinkButton, Text } from "@sdxc/ui";
+import {
+	Alert,
+	Badge,
+	Button,
+	Confirm,
+	Description,
+	Empty,
+	HeadingScope,
+	Label,
+	LinkButton,
+	Select,
+	Text,
+} from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 import { attrs } from "remix/ui";
 
-import type { FeedStatus } from "~/database/schema";
+import type { FeedStatus } from "~/database/feed-schema";
+import type { Velocity } from "~/database/schema";
 
 import { chrome } from "~/app/http/controllers/chrome";
 import { MARKED_PARAM } from "~/app/http/controllers/feeds/read";
 import { CHECKED_PARAM } from "~/app/http/controllers/feeds/refresh";
+import { VELOCITY_FIELD, VELOCITY_PARAM } from "~/app/http/controllers/feeds/velocity";
 import { placePage } from "~/app/http/controllers/list-paging";
-import { exactDate, shortDate, timelineEntries } from "~/app/http/controllers/timeline-entries";
+import {
+	exactDate,
+	shortDate,
+	timelineCopy,
+	timelineEntries,
+} from "~/app/http/controllers/timeline-entries";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { isFrameRequest } from "~/app/http/render";
+import { feedStore } from "~/database/feed-do";
+import { VELOCITIES } from "~/database/schema";
 import { userStore } from "~/database/user-do";
 import AppLayout, { ActionLabel, PAGE_COLUMN, pageNote } from "~/resources/layouts/app";
 import Timeline from "~/resources/views/timeline";
@@ -114,8 +142,53 @@ function markNote(marked: string | null): Note | null {
 	return { key: "timeline.markedRead", options: { count }, color: "success" };
 }
 
+/**
+ * The copy and tone for the outcome a velocity submission redirects back with, or `null`
+ * when this is an ordinary visit. `missing` needs no entry: a feed the reader does not
+ * follow renders the not-found page above, which never reaches this.
+ *
+ * @param velocity - The redirect's `velocity` parameter, as it arrived.
+ */
+function velocityNote(velocity: string | null): Note | null {
+	if (velocity === "saved") return { key: "feeds.velocity.saved", color: "success" };
+	if (velocity === "invalid") return { key: "feeds.velocity.invalid", color: "warning" };
+	return null;
+}
+
 /** Edge of the marks the header's own controls are drawn with, sized to the words beside them. */
 const ACTION_ICON_SIZE = 16;
+
+/** Ties the velocity field to the label naming it and the passage explaining it. */
+const VELOCITY_FIELD_ID = "feed-velocity";
+const VELOCITY_DESCRIPTION_ID = "feed-velocity-description";
+
+/**
+ * Width of the velocity field, sized to the longest phrase it holds. A field stretched
+ * across the column would promise more than a choice between five spans.
+ */
+const VELOCITY_FIELD_WIDTH = "18rem";
+
+/**
+ * Posts a day past which an Evergreen subscription is worth asking about.
+ *
+ * Ten a day is seventy a week that never leave, which is three screenfuls of a list a
+ * reader meant to work through — far enough past what anybody reads that the question is
+ * worth their attention, and far enough above an active blog that it is not asked of
+ * somebody who is coping fine.
+ *
+ * It decides whether a sentence is printed and nothing else. Nothing here writes a
+ * velocity, whatever this number says.
+ */
+const BUSY_POSTS_PER_DAY = 10;
+
+/** The `feeds.velocity.*` key naming each span, in the order the field offers them. */
+const VELOCITY_KEYS: Record<Velocity, string> = {
+	breaking: "feeds.velocity.breaking",
+	news: "feeds.velocity.news",
+	article: "feeds.velocity.article",
+	essay: "feeds.velocity.essay",
+	evergreen: "feeds.velocity.evergreen",
+};
 
 /**
  * The `feeds.status.*` key naming each outcome that counts as a failed check. A refresh
@@ -198,7 +271,8 @@ export default createAction(routes.feed, {
 		 */
 		let note =
 			markNote(ctx.url.searchParams.get(MARKED_PARAM)) ??
-			checkNote(ctx.url.searchParams.get(CHECKED_PARAM));
+			checkNote(ctx.url.searchParams.get(CHECKED_PARAM)) ??
+			velocityNote(ctx.url.searchParams.get(VELOCITY_PARAM));
 
 		/**
 		 * The page is headed by the feed's own name, so naming it again on every row below
@@ -234,15 +308,7 @@ export default createAction(routes.feed, {
 		});
 
 		/** The copy every row of the list prints, whichever shape this page is answered in. */
-		let listCopy = {
-			markRead: ctx.i18next.t("timeline.markRead"),
-			markUnread: ctx.i18next.t("timeline.markUnread"),
-			markFailed: ctx.i18next.t("timeline.markFailed"),
-			read: ctx.i18next.t("timeline.read"),
-			newer: ctx.i18next.t("timeline.newer"),
-			older: ctx.i18next.t("timeline.older"),
-			end: ctx.i18next.t("timeline.end"),
-		};
+		let listCopy = timelineCopy(ctx.i18next);
 
 		/**
 		 * A frame asked for the piece continuing a feed already on screen, so it is answered
@@ -280,23 +346,49 @@ export default createAction(routes.feed, {
 		 * What the publisher says this feed is, and how the last checks of it went. A reader
 		 * asks after a feed's health while they are looking at the feed, so it is read here
 		 * rather than off a list of every feed they follow.
+		 *
+		 * The checks are the feed's own rather than this reader's — one fetch serves everybody
+		 * following it — so they are asked of the object that made them. One call, on the one
+		 * page that is about one feed, and it is made below the frame branch above so paging
+		 * this list costs nothing. An object that has never answered leaves every line of this
+		 * reading as a feed nobody has checked yet, which is what it is.
 		 */
-		let statusKey = feed.lastStatus ? FAILURE_STATUS_KEYS[feed.lastStatus] : undefined;
+		let health = await feedStore(feed.feedId).health();
+
+		let statusKey = health?.status ? FAILURE_STATUS_KEYS[health.status] : undefined;
+
+		let failures = health?.failureCount ?? 0;
 
 		let failureLabel =
-			feed.failureCount > 0 && statusKey
+			failures > 0 && statusKey
 				? ctx.i18next.t("feeds.show.failingBecause", {
-						failures: ctx.i18next.t("feeds.show.failing", { count: feed.failureCount }),
+						failures: ctx.i18next.t("feeds.show.failing", { count: failures }),
 						reason: ctx.i18next.t(statusKey),
 					})
 				: null;
 
+		let lastFetchedAt = health?.lastFetchedAt ?? null;
+
 		let checkedLabel =
-			feed.lastFetchedAt === null
+			lastFetchedAt === null
 				? ctx.i18next.t("feeds.show.neverChecked")
 				: ctx.i18next.t("feeds.show.checked", {
-						date: shortDate(feed.lastFetchedAt, ctx.locale, Date.now()),
+						date: shortDate(lastFetchedAt, ctx.locale, Date.now()),
 					});
+
+		/**
+		 * What the feed actually publishes, against what this reader asked to keep of it. The
+		 * rate is measured once for the feed and shared by everybody following it, so a busy
+		 * feed is known to be busy the first time anybody looks.
+		 *
+		 * It produces a sentence and nothing else. The subscription is left exactly as the
+		 * reader set it, including the Evergreen it starts at, because a rule that deletes a
+		 * post they have not read is theirs to ask for.
+		 */
+		let postsPerDay = health?.postsPerDay ?? null;
+
+		let isBusy =
+			feed.velocity === "evergreen" && postsPerDay !== null && postsPerDay >= BUSY_POSTS_PER_DAY;
 
 		return ctx.render(
 			<AppLayout
@@ -434,16 +526,69 @@ export default createAction(routes.feed, {
 							)}
 
 							<span
-								title={
-									feed.lastFetchedAt === null
-										? undefined
-										: exactDate(feed.lastFetchedAt, ctx.locale)
-								}
+								title={lastFetchedAt === null ? undefined : exactDate(lastFetchedAt, ctx.locale)}
 							>
 								{checkedLabel}
 							</span>
 						</div>
 					</div>
+
+					{/**
+					 * How long this feed's posts stay, which is the one thing on this page that can
+					 * take away a post the reader has not read. It sits under what the feed is and
+					 * above the posts themselves, where the reader has just read how busy it is.
+					 *
+					 * A plain form with a native field: the choice is one value and a submit, so the
+					 * control a reader running no script gets is the same control as everybody else's.
+					 */}
+					<form
+						method="post"
+						action={routes.feeds.velocity.href({ feedId })}
+						mix={[vstack({ gap: 3 }), maxIs(PAGE_COLUMN)]}
+					>
+						<div mix={[vstack({ gap: 1 })]}>
+							<Label htmlFor={VELOCITY_FIELD_ID}>{ctx.i18next.t("feeds.velocity.legend")}</Label>
+
+							<Description id={VELOCITY_DESCRIPTION_ID}>
+								{ctx.i18next.t("feeds.velocity.description")}
+							</Description>
+						</div>
+
+						{/** The field and its submit on one line, wrapping where a phone has room for one. */}
+						<div mix={[flex(), items("center"), flexWrap("wrap"), gap(2), maxIs("100%")]}>
+							{/** The field fills whatever box it is given, so the box is what sizes it. */}
+							<div mix={[maxIs(VELOCITY_FIELD_WIDTH), is("full")]}>
+								<Select
+									id={VELOCITY_FIELD_ID}
+									name={VELOCITY_FIELD}
+									aria-describedby={VELOCITY_DESCRIPTION_ID}
+								>
+									{VELOCITIES.map((velocity) => (
+										<Select.Option
+											key={velocity}
+											value={velocity}
+											selected={velocity === feed.velocity}
+										>
+											{ctx.i18next.t(VELOCITY_KEYS[velocity])}
+										</Select.Option>
+									))}
+								</Select>
+							</div>
+
+							<Button type="submit">{ctx.i18next.t("feeds.velocity.submit")}</Button>
+						</div>
+
+						{/**
+						 * The measurement, put to the reader as a question. It stands beside the control
+						 * that answers it and changes nothing on its own: the field above still shows what
+						 * they chose, and it stays that way until they choose something else.
+						 */}
+						{isBusy && postsPerDay !== null && (
+							<Text mix={[text("xs"), fg("neutral.muted")]}>
+								{ctx.i18next.t("feeds.velocity.suggestion", { count: Math.round(postsPerDay) })}
+							</Text>
+						)}
+					</form>
 
 					{note && (
 						<Alert color={note.color} mix={pageNote()}>

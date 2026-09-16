@@ -2,8 +2,10 @@
  * Tests `GET /reading/:feed`: the guard, the feed a reader does not follow, the posts and
  * paging links of one they do, the empty feed, a cursor the store no longer decodes, the
  * unfollow prompt that reaches a `DELETE` route through a browser `POST` — including that
- * it sits above the posts, where a reader finds it without scrolling past them — and the
- * mark-this-feed-read control beside it with the count its redirect comes back carrying.
+ * it sits above the posts, where a reader finds it without scrolling past them — the
+ * mark-this-feed-read control beside it with the count its redirect comes back carrying,
+ * the health this page asks the feed's own object for, and the control that says how long
+ * this feed's posts stay.
  *
  * Every assertion is against rendered English copy rather than a translation key, since a
  * key-name assertion passes for a page whose copy was never written.
@@ -17,6 +19,7 @@ import type { Router } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
+import type { FeedStore } from "~/database/feed-do";
 import type { UserStore } from "~/database/user-do";
 
 import { createTestRouter, fetchRoute, VIEWER } from "~/app/lib/test/controller";
@@ -26,22 +29,44 @@ import routes from "~/routes/web";
 let store = createUserStoreDouble();
 vi.doMock("~/database/user-do", () => ({ userStore: () => store }));
 
+/**
+ * The feed's own object, which answers for the checks rather than the reader's store: the
+ * fetching is shared by everyone following the feed, so what the last one recorded lives
+ * with it.
+ */
+let health = vi.fn(async (): Promise<FeedStore.Health | null> => null);
+let feedStore = vi.fn((_feedId: string) => ({ health }));
+vi.doMock("~/database/feed-do", () => ({ feedStore }));
+
 let { default: feed } = await import("./feed");
 
 const FEED_ID = "feed-df";
 
+/** The canonical feed the subscription names, which is what its object is addressed by. */
+const CANONICAL_ID = "01J0FEED000000000000000000";
+
 /** The feed under test, as `getFeed()` answers it. */
 const FEED: UserStore.FeedSummary = {
 	id: FEED_ID,
+	feedId: CANONICAL_ID,
 	feedUrl: "https://daringfireball.net/feeds/main",
 	siteUrl: "https://daringfireball.net",
 	title: "Daring Fireball",
 	description: "By John Gruber",
 	imageUrl: null,
-	lastFetchedAt: null,
-	lastStatus: null,
-	failureCount: 0,
+	velocity: "evergreen",
 	unreadCount: 2,
+};
+
+/** What the feed's object answers with for a feed whose last check went fine. */
+const HEALTHY: FeedStore.Health = {
+	status: "ok",
+	httpStatus: 200,
+	error: null,
+	failureCount: 0,
+	lastFetchedAt: Date.UTC(2026, 0, 1, 12),
+	head: 12,
+	postsPerDay: 1,
 };
 
 /** The same feed as the timeline carries it beside the posts it produced. */
@@ -62,6 +87,7 @@ function item(overrides: Partial<UserStore.Item> & Pick<UserStore.Item, "id">): 
 		/** Midday, so the date reads the same whatever timezone the test host runs in. */
 		publishedAt: Date.UTC(2026, 0, 2, 12),
 		readAt: null,
+		savedAt: null,
 		...overrides,
 	};
 }
@@ -84,6 +110,8 @@ function readsAs(html: string): string {
 
 beforeEach(() => {
 	store = createUserStoreDouble();
+	health = vi.fn(async (): Promise<FeedStore.Health | null> => null);
+	feedStore.mockClear();
 });
 
 describe("GET /reading/:feed", () => {
@@ -491,8 +519,22 @@ describe("a feed's health", () => {
 		expect(readsAs(body)).toContain("By John Gruber");
 	});
 
+	/**
+	 * The checks belong to the feed rather than to the subscription, so the page asks the
+	 * object that made them, addressed by the canonical id the subscription carries.
+	 */
+	test("asks the feed's own object, by the id the subscription names", async () => {
+		store.getFeed.mockResolvedValue(FEED);
+
+		await get(routes.feed.href({ feed: FEED_ID }));
+
+		expect(feedStore).toHaveBeenCalledWith(CANONICAL_ID);
+		expect(health).toHaveBeenCalled();
+	});
+
 	test("says when the feed was last checked, with the full date behind it", async () => {
-		store.getFeed.mockResolvedValue({ ...FEED, lastFetchedAt: Date.UTC(2020, 0, 2, 12) });
+		store.getFeed.mockResolvedValue(FEED);
+		health.mockResolvedValue({ ...HEALTHY, lastFetchedAt: Date.UTC(2020, 0, 2, 12) });
 
 		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
 
@@ -502,17 +544,29 @@ describe("a feed's health", () => {
 
 	test("says so plainly for a feed nobody has checked yet", async () => {
 		store.getFeed.mockResolvedValue(FEED);
+		health.mockResolvedValue({ ...HEALTHY, lastFetchedAt: null });
 
 		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
 
 		expect(readsAs(body)).toContain("Not checked yet");
 	});
 
+	/** An object that has never answered is a feed nobody has checked, which is what it is. */
+	test("reads a feed whose object answers with nothing as one never checked", async () => {
+		store.getFeed.mockResolvedValue(FEED);
+
+		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
+
+		expect(readsAs(body)).toContain("Not checked yet");
+		expect(readsAs(body)).not.toContain("checks failed");
+	});
+
 	test("says how many checks failed and what the last one recorded", async () => {
-		store.getFeed.mockResolvedValue({
-			...FEED,
-			lastFetchedAt: Date.UTC(2026, 0, 1, 12),
-			lastStatus: "http_error",
+		store.getFeed.mockResolvedValue(FEED);
+		health.mockResolvedValue({
+			...HEALTHY,
+			status: "http_error",
+			httpStatus: 500,
 			failureCount: 3,
 		});
 
@@ -523,16 +577,105 @@ describe("a feed's health", () => {
 	});
 
 	test("says nothing about failures for a feed that is fine", async () => {
-		store.getFeed.mockResolvedValue({
-			...FEED,
-			lastFetchedAt: Date.UTC(2026, 0, 1, 12),
-			lastStatus: "ok",
-			failureCount: 0,
-		});
+		store.getFeed.mockResolvedValue(FEED);
+		health.mockResolvedValue(HEALTHY);
 
 		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
 
 		expect(readsAs(body)).not.toContain("check failed");
 		expect(readsAs(body)).not.toContain("checks failed");
+	});
+});
+
+describe("how long this feed's posts stay", () => {
+	test("offers every span in one field, with this feed's own chosen", async () => {
+		store.getFeed.mockResolvedValue({ ...FEED, velocity: "news" });
+
+		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
+
+		/** A native select submits with the form, which is what asks for no script. */
+		expect(body).toMatch(/<select[^>]*\bname="velocity"/);
+		expect(body).toContain("How long these posts stay");
+		expect(body).toContain("Breaking — holds for 3 hours");
+		expect(body).toContain("News — holds for 18 hours");
+		expect(body).toContain("Article — holds for 3 days");
+		expect(body).toContain("Essay — holds for 2 weeks");
+		expect(body).toContain("Evergreen — holds forever");
+
+		expect(/<option[^>]*\bvalue="([a-z]+)"[^>]*\bselected\b/.exec(body)?.[1]).toBe("news");
+	});
+
+	/** A plain form and a submit, so a browser running no script sets a span the same way. */
+	test("posts the choice to the feed's own velocity route", async () => {
+		store.getFeed.mockResolvedValue(FEED);
+
+		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
+
+		expect(body).toContain(
+			`<form method="post" action="${routes.feeds.velocity.href({ feedId: FEED_ID })}"`,
+		);
+	});
+
+	test("ties the field to the label naming it and the passage explaining it", async () => {
+		store.getFeed.mockResolvedValue(FEED);
+
+		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
+		let field = /<select[^>]*>/.exec(body)?.[0];
+
+		let id = field?.match(/id="([^"]+)"/)?.[1];
+		expect(body).toContain(`for="${id}"`);
+
+		let describedBy = field?.match(/aria-describedby="([^"]+)"/)?.[1];
+		expect(describedBy).toBeDefined();
+		expect(body).toContain(`id="${describedBy}"`);
+	});
+
+	/**
+	 * The measurement is put to the reader as a question. Asserting the field still shows
+	 * what they chose is the point of the test: a suggestion that set anything would be the
+	 * one thing this control is not allowed to do.
+	 */
+	test("asks about a busy feed nothing ages out of, and changes nothing", async () => {
+		store.getFeed.mockResolvedValue(FEED);
+		health.mockResolvedValue({ ...HEALTHY, postsPerDay: 40 });
+
+		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
+
+		expect(readsAs(body)).toContain("This feed publishes about 40 posts a day");
+		expect(/<option[^>]*\bvalue="([a-z]+)"[^>]*\bselected\b/.exec(body)?.[1]).toBe("evergreen");
+		expect(store.setVelocity).not.toHaveBeenCalled();
+	});
+
+	test("says nothing about a feed publishing at a rate anybody could read", async () => {
+		store.getFeed.mockResolvedValue(FEED);
+		health.mockResolvedValue({ ...HEALTHY, postsPerDay: 2 });
+
+		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
+
+		expect(readsAs(body)).not.toContain("posts a day");
+	});
+
+	/** A reader who already chose a span has answered the question this would ask. */
+	test("says nothing about a busy feed whose posts already age out", async () => {
+		store.getFeed.mockResolvedValue({ ...FEED, velocity: "news" });
+		health.mockResolvedValue({ ...HEALTHY, postsPerDay: 40 });
+
+		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
+
+		expect(readsAs(body)).not.toContain("posts a day");
+	});
+
+	test("reports what a submission came back with", async () => {
+		store.getFeed.mockResolvedValue(FEED);
+
+		let saved = await get(`${routes.feed.href({ feed: FEED_ID })}?velocity=saved`).then((r) =>
+			r.text(),
+		);
+		expect(readsAs(saved)).toContain("Saved.");
+
+		let refused = await get(`${routes.feed.href({ feed: FEED_ID })}?velocity=invalid`).then((r) =>
+			r.text(),
+		);
+		expect(readsAs(refused)).toContain("That is not one of the spans on offer.");
 	});
 });

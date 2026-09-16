@@ -1,8 +1,11 @@
 /**
- * Tests the `/settings` controller: the guard on the page, the cadence form it renders from
- * the reader's stored preferences, the redirect a save answers with, and the refusal a
- * cadence outside the offered set earns. Then the transfer section, and the sentence each
- * outcome an import returns here with is reported as.
+ * Tests the `/settings` controller: the guard on the page, what it says about the schedule
+ * its feeds are checked on — which is a sentence rather than a control, since the cadence
+ * is one number for every reader — the transfer section, and the sentence each outcome an
+ * import returns here with is reported as.
+ *
+ * Every assertion is against rendered English copy rather than a translation key, since a
+ * key-name assertion passes for a page whose copy was never written.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,7 +19,6 @@ import type { UserStoreDouble } from "~/app/lib/test/store";
 
 import { createTestRouter, fetchRoute, VIEWER } from "~/app/lib/test/controller";
 import { createUserStoreDouble, DEFAULT_SETTINGS } from "~/app/lib/test/store";
-import { REFRESH_INTERVALS } from "~/database/schema";
 import routes from "~/routes/web";
 
 let store: UserStoreDouble = createUserStoreDouble();
@@ -32,70 +34,46 @@ function createRouter(viewer: typeof VIEWER | null): Router {
 	return router;
 }
 
-/** The cadence the rendered form shows chosen, read off the option carrying `selected`. */
-function selectedInterval(html: string): string | null {
-	return /<option[^>]*\bvalue="(\d+)"[^>]*\bselected\b/.exec(html)?.[1] ?? null;
-}
-
 beforeEach(() => {
 	store = createUserStoreDouble();
 });
 
 describe("GET /settings", () => {
 	test("sends an anonymous visitor home", async () => {
-		let response = await fetchRoute(createRouter(null), routes.settings.index.href());
+		let response = await fetchRoute(createRouter(null), routes.settings.href());
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(routes.home.href());
 		expect(store.getSettings).not.toHaveBeenCalled();
 	});
 
-	test("offers every cadence in one field, with the stored one chosen", async () => {
-		store.getSettings.mockResolvedValue({ ...DEFAULT_SETTINGS, refreshIntervalHours: 3 });
-
-		let response = await fetchRoute(createRouter(VIEWER), routes.settings.index.href());
+	test("says what the schedule is and where a reader goes for a feed sooner", async () => {
+		let response = await fetchRoute(createRouter(VIEWER), routes.settings.href());
 		let html = await response.text();
 
 		expect(response.status).toBe(200);
-
-		/** A native select submits the cadence with the form, which is what asks for no script. */
-		expect(html).toMatch(/<select[^>]*\bname="refreshIntervalHours"/);
-
-		for (let hours of REFRESH_INTERVALS) {
-			expect(html).toMatch(new RegExp(`<option[^>]*\\bvalue="${hours}"`));
-		}
-
-		expect(html).toContain("Every hour");
-		expect(html).toContain("Every 3 hours");
-		expect(html).toContain("Every 24 hours");
-		expect(selectedInterval(html)).toBe("3");
+		expect(html).toContain("How your feeds are checked");
+		expect(html).toContain("Every feed is checked once a day.");
+		expect(html).toContain("Check feed");
 	});
 
-	test("ties the field to the label naming it and the passage explaining it", async () => {
-		let html = await (await fetchRoute(createRouter(VIEWER), routes.settings.index.href())).text();
+	/**
+	 * The cadence is withdrawn rather than hidden, so the page offers nothing to submit it
+	 * with: a field left behind would be a promise the store has no method to keep.
+	 */
+	test("offers no control for choosing a cadence", async () => {
+		let html = await (await fetchRoute(createRouter(VIEWER), routes.settings.href())).text();
 
-		let field = /<select[^>]*>/.exec(html)?.[0];
-
-		let id = field?.match(/id="([^"]+)"/)?.[1];
-		expect(html).toContain(`for="${id}"`);
-
-		let describedBy = field?.match(/aria-describedby="([^"]+)"/)?.[1];
-		expect(describedBy).toBeDefined();
-		expect(html).toContain(`id="${describedBy}"`);
-	});
-
-	test("names the group and explains what checking more often costs", async () => {
-		let html = await (await fetchRoute(createRouter(VIEWER), routes.settings.index.href())).text();
-
-		expect(html).toContain("How often to check for new posts");
-		expect(html).toContain("costs the sites you read a little more");
+		expect(html).not.toMatch(/<select/);
+		expect(html).not.toContain("refreshIntervalHours");
+		expect(html).not.toContain("Every hour");
 	});
 
 	test("shows when the feeds were last checked", async () => {
 		let lastRefreshedAt = Date.UTC(2026, 2, 14, 12, 0, 0);
 		store.getSettings.mockResolvedValue({ ...DEFAULT_SETTINGS, lastRefreshedAt });
 
-		let html = await (await fetchRoute(createRouter(VIEWER), routes.settings.index.href())).text();
+		let html = await (await fetchRoute(createRouter(VIEWER), routes.settings.href())).text();
 
 		expect(html).toContain("Last checked");
 		/**
@@ -108,84 +86,22 @@ describe("GET /settings", () => {
 	});
 
 	test("says so when the feeds have never been checked", async () => {
-		let html = await (await fetchRoute(createRouter(VIEWER), routes.settings.index.href())).text();
+		let html = await (await fetchRoute(createRouter(VIEWER), routes.settings.href())).text();
 
 		expect(html).toContain("Not checked yet");
-	});
-
-	test("shows the saved note only when the redirect reports one", async () => {
-		let router = createRouter(VIEWER);
-
-		let plain = await (await fetchRoute(router, routes.settings.index.href())).text();
-		let saved = await (await fetchRoute(router, `${routes.settings.index.href()}?saved`)).text();
-
-		expect(plain).not.toContain("Saved.");
-		expect(saved).toContain("Saved.");
-	});
-});
-
-describe("POST /settings", () => {
-	test("saves the cadence and redirects so a reload does not resubmit", async () => {
-		let router = createRouter(VIEWER);
-
-		let response = await fetchRoute(router, routes.settings.action.href(), {
-			refreshIntervalHours: "6",
-		});
-
-		expect(store.setRefreshInterval).toHaveBeenCalledWith(6);
-		expect(response.status).toBe(303);
-		expect(response.headers.get("location")).toBe(`${routes.settings.index.href()}?saved`);
-
-		let landed = await fetchRoute(router, response.headers.get("location") ?? "");
-
-		expect(await landed.text()).toContain("Saved.");
-	});
-
-	test("refuses a cadence that is not on offer", async () => {
-		let response = await fetchRoute(createRouter(VIEWER), routes.settings.action.href(), {
-			refreshIntervalHours: "2",
-		});
-		let html = await response.text();
-
-		expect(store.setRefreshInterval).not.toHaveBeenCalled();
-		expect(response.status).toBe(422);
-		expect(html).toContain("That is not one of the schedules on offer.");
-		expect(html).toContain("How often to check for new posts");
-		expect(html).not.toContain("Saved.");
-	});
-
-	test("shows the same refusal when the store rejects the cadence", async () => {
-		store.setRefreshInterval.mockResolvedValue({ ok: false, reason: "invalid-interval" });
-
-		let response = await fetchRoute(createRouter(VIEWER), routes.settings.action.href(), {
-			refreshIntervalHours: "12",
-		});
-
-		expect(response.status).toBe(422);
-		expect(await response.text()).toContain("That is not one of the schedules on offer.");
-	});
-
-	test("sends an anonymous visitor home without touching the store", async () => {
-		let response = await fetchRoute(createRouter(null), routes.settings.action.href(), {
-			refreshIntervalHours: "6",
-		});
-
-		expect(response.status).toBe(303);
-		expect(response.headers.get("location")).toBe(routes.home.href());
-		expect(store.setRefreshInterval).not.toHaveBeenCalled();
 	});
 });
 
 describe("the transfer section", () => {
 	test("offers the subscription list as a download", async () => {
-		let body = await (await fetchRoute(createRouter(VIEWER), routes.settings.index.href())).text();
+		let body = await (await fetchRoute(createRouter(VIEWER), routes.settings.href())).text();
 
 		expect(body).toContain(`href="${routes.feeds.export.href()}"`);
 		expect(body).toContain("Download as OPML");
 	});
 
 	test("uploads an OPML document in the encoding that carries its bytes", async () => {
-		let body = await (await fetchRoute(createRouter(VIEWER), routes.settings.index.href())).text();
+		let body = await (await fetchRoute(createRouter(VIEWER), routes.settings.href())).text();
 
 		expect(body).toContain(
 			`<form method="post" action="${routes.feeds.import.href()}" enctype="multipart/form-data"`,
@@ -199,13 +115,13 @@ describe("the transfer section", () => {
 	});
 
 	test("leaves the picker optional, since the hidden input is one no reader can focus", async () => {
-		let body = await (await fetchRoute(createRouter(VIEWER), routes.settings.index.href())).text();
+		let body = await (await fetchRoute(createRouter(VIEWER), routes.settings.href())).text();
 
 		expect(/<input[^>]*type="file"[^>]*\brequired\b/.test(body)).toBe(false);
 	});
 
 	test("ties the picker to the passage saying what it asks for", async () => {
-		let body = await (await fetchRoute(createRouter(VIEWER), routes.settings.index.href())).text();
+		let body = await (await fetchRoute(createRouter(VIEWER), routes.settings.href())).text();
 
 		let describedBy = /<input[^>]*type="file"[^>]*aria-describedby="([^"]+)"/.exec(body)?.[1];
 
@@ -221,12 +137,12 @@ describe("what an import returns here with", () => {
 	 * @param query - The outcome and counts the redirect carries.
 	 */
 	function afterImport(query: Record<string, string>) {
-		let url = `${routes.settings.index.href()}?${new URLSearchParams(query)}`;
+		let url = `${routes.settings.href()}?${new URLSearchParams(query)}`;
 		return fetchRoute(createRouter(VIEWER), url).then((response) => response.text());
 	}
 
 	test("says nothing on a page nobody was returned to", async () => {
-		let body = await (await fetchRoute(createRouter(VIEWER), routes.settings.index.href())).text();
+		let body = await (await fetchRoute(createRouter(VIEWER), routes.settings.href())).text();
 
 		expect(body).not.toContain("Followed");
 		expect(body).not.toContain("That file lists no feeds.");

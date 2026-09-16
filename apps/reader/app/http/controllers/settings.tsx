@@ -1,7 +1,13 @@
 /**
- * Settings controller for `/settings`: the GET shows the reader's preferences and the POST
- * saves them. A saved cadence redirects back to the form carrying `?saved`, so the page the
- * browser lands on is a fresh read and refreshing it asks for the form again.
+ * Settings controller for `GET /settings`: what the account does on the reader's behalf,
+ * and the two ways their subscription list travels.
+ *
+ * How often feeds are checked is said here rather than chosen here. A feed is one document
+ * with one schedule however many people follow it, so there is no reader to ask, and a
+ * setting whose only effect is to fetch a publisher's document more often spends somebody
+ * else's bandwidth for an answer the reader cannot see. Every feed is checked once a day,
+ * and the check a reader can ask for on a feed's own page is what they have when they want
+ * one sooner.
  *
  * Carrying subscriptions in and out belongs to the account rather than to any one view of
  * the list, so both transfers live here, and an import returns to this page with what
@@ -21,10 +27,8 @@ import { flex, flexWrap, gap, items, vstack } from "@sdxc/u/layout";
 import { m, maxIs, mbs, mie, pb, pbs, pi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
-import { Alert, Button, Description, FieldError, Label, LinkButton, Select, Text } from "@sdxc/ui";
-import * as s from "remix/data-schema";
-import * as f from "remix/data-schema/form-data";
-import { createController } from "remix/router";
+import { Alert, Button, Description, Label, LinkButton, Text } from "@sdxc/ui";
+import { createAction } from "remix/router";
 
 import type { UserStore } from "~/database/user-do";
 
@@ -33,29 +37,9 @@ import { FILE_FIELD, IMPORTED_PARAM } from "~/app/http/controllers/feeds/import"
 import { exactDate, shortDate } from "~/app/http/controllers/timeline-entries";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { REFRESH_INTERVALS } from "~/database/schema";
 import { userStore } from "~/database/user-do";
 import AppLayout, { PAGE_COLUMN, pageNote } from "~/resources/layouts/app";
 import routes from "~/routes/web";
-
-/**
- * The query parameter a saved cadence redirects back with, carrying the success across a
- * redirect that would otherwise arrive as an ordinary view of the form.
- */
-const SAVED_PARAM = "saved";
-
-/** Status for a submission the offered cadences do not include. */
-const UNPROCESSABLE_STATUS = 422;
-
-/** Ties the cadence field to the label naming it and the passage explaining it. */
-const CADENCE_FIELD_ID = "settings-refresh-interval";
-const DESCRIPTION_ID = "settings-refresh-description";
-
-/**
- * Width of the cadence field, sized to the longest phrase it holds. A field stretched
- * across the column would promise more than a choice between six words.
- */
-const CADENCE_FIELD_WIDTH = "14rem";
 
 /** Ties the import field to the label naming it. */
 const IMPORT_FILE_ID = "settings-import-file";
@@ -68,23 +52,6 @@ const IMPORT_DESCRIPTION_ID = "settings-import-description";
  * and the media types a reader's own export is served as.
  */
 const IMPORT_ACCEPT = ".opml,.xml,application/xml,text/xml";
-
-/**
- * The cadence the form submits, as the text a form field carries mapped back to the number
- * of hours it stands for. Anything outside the offered set is refused here, ahead of the
- * database's own `CHECK`.
- */
-const RefreshIntervalForm = f.object({
-	refreshIntervalHours: f.field(
-		s.union(REFRESH_INTERVALS.map((hours) => s.literal(String(hours)).transform(() => hours))),
-	),
-});
-
-/**
- * The refusal a submission outside the offered cadences earns, which is the one the store
- * reports for the same value, so both arrive at the page through a single branch.
- */
-const REFUSED_INTERVAL: UserStore.IntervalResult = { ok: false, reason: "invalid-interval" };
 
 /**
  * One count off an import's redirect, which reads as zero for a parameter that is absent
@@ -159,21 +126,13 @@ function importNote(
 }
 
 /**
- * Renders the preferences form.
+ * Renders the page.
  *
- * @param ctx - The request being answered, whose query decides whether the saved cadence
- * and the outcome of an import are reported.
+ * @param ctx - The request being answered, whose query says what an import made of the
+ * document it was handed.
  * @param settings - The reader's stored preferences, or `null` before a sign-in wrote them.
- * @param error - Why the last submission was refused, or `null` for a page nobody submitted.
  */
-async function settingsPage(
-	ctx: RequestContext,
-	settings: UserStore.Settings | null,
-	error: string | null,
-) {
-	/** The first offered cadence is what the `settings` column itself defaults to. */
-	let chosen = settings?.refreshIntervalHours ?? REFRESH_INTERVALS[0];
-
+async function settingsPage(ctx: RequestContext, settings: UserStore.Settings | null) {
 	let transfer = importNote(ctx);
 
 	/**
@@ -200,74 +159,30 @@ async function settingsPage(
 			{...await chrome(ctx)}
 		>
 			{/**
-			 * A sentence in a box is still a sentence, so the news keeps the measure the page is
-			 * read in rather than running the width of a window.
-			 */}
-			{ctx.url.searchParams.has(SAVED_PARAM) && (
-				<Alert color="success" mix={[maxIs(PAGE_COLUMN), ...pageNote()]}>
-					<Alert.Content>
-						<Alert.Description>{ctx.i18next.t("settings.refresh.saved")}</Alert.Description>
-					</Alert.Content>
-				</Alert>
-			)}
-
-			{/**
-			 * The preferences sit on the page itself, the way a post and a feed do: a heading, the
-			 * fields under it, and the rule to the next section doing the work a panel's edge used
-			 * to.
+			 * What the app does on the reader's behalf, said in the place they would have come
+			 * looking for a switch. The sentence points at the check they can ask for on a feed's
+			 * own page, which is the whole of what is left to act on here.
 			 *
-			 * The page takes the width every page takes, and the form keeps the measure a sentence
-			 * is read in and a field is filled at, which is the width it wants wherever it appears.
+			 * It keeps the measure a sentence is read in rather than running the width of a
+			 * window, which is the width every other passage on this page takes.
 			 */}
-			<form
-				method="post"
-				action={routes.settings.action.href()}
-				mix={[vstack({ gap: 4 }), maxIs(PAGE_COLUMN)]}
-			>
-				<div mix={[vstack({ gap: 3 })]}>
-					<div mix={[vstack({ gap: 1 })]}>
-						<Label htmlFor={CADENCE_FIELD_ID}>{ctx.i18next.t("settings.refresh.legend")}</Label>
+			<section mix={[vstack({ gap: 1 }), maxIs(PAGE_COLUMN)]}>
+				{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
+				<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
+					{ctx.i18next.t("settings.cadence.legend")}
+				</h2>
 
-						<Description id={DESCRIPTION_ID}>
-							{ctx.i18next.t("settings.refresh.description")}
-						</Description>
-					</div>
+				<Description>{ctx.i18next.t("settings.cadence.description")}</Description>
 
-					{/**
-					 * One field rather than six rows: the cadences are a single choice, and the one
-					 * in force is what the page has to show. A list of them spent half the page on a
-					 * decision most readers make once.
-					 */}
-					{/** The field fills whatever box it is given, so the box is what sizes it. */}
-					<div mix={[maxIs(CADENCE_FIELD_WIDTH)]}>
-						<Select
-							id={CADENCE_FIELD_ID}
-							name="refreshIntervalHours"
-							aria-describedby={DESCRIPTION_ID}
-						>
-							{REFRESH_INTERVALS.map((hours) => (
-								<Select.Option key={hours} value={String(hours)} selected={hours === chosen}>
-									{ctx.i18next.t("settings.interval", { count: hours })}
-								</Select.Option>
-							))}
-						</Select>
-					</div>
-
-					{error && <FieldError>{error}</FieldError>}
-
-					{/**
-					 * When the schedule last ran is the schedule's own news, so it sits under the
-					 * cadence it reports on, quiet as the dates down the side of a list of posts.
-					 */}
-					<Text mix={[text("xs"), fg("neutral.muted")]} title={lastRefreshed.exact}>
-						{lastRefreshed.short}
-					</Text>
-				</div>
-
-				<div mix={[flex()]}>
-					<Button type="submit">{ctx.i18next.t("settings.refresh.submit")}</Button>
-				</div>
-			</form>
+				{/**
+				 * When the feeds were last brought up to date is the schedule's own news, so it sits
+				 * under the sentence describing it, quiet as the dates down the side of a list of
+				 * posts.
+				 */}
+				<Text mix={[text("xs"), fg("neutral.muted")]} title={lastRefreshed.exact}>
+					{lastRefreshed.short}
+				</Text>
+			</section>
 
 			{transfer && (
 				<Alert color={transfer.color} mix={[maxIs(PAGE_COLUMN), ...pageNote()]}>
@@ -279,8 +194,8 @@ async function settingsPage(
 
 			{/**
 			 * Taking the subscription list out and bringing another one in are the same errand read
-			 * in two directions, so they share a section. A hairline is what says the cadences above
-			 * have ended, which is the boundary the rest of the app draws between one thing and the
+			 * in two directions, so they share a section. A hairline is what says the passage above
+			 * has ended, which is the boundary the rest of the app draws between one thing and the
 			 * next.
 			 */}
 			<section
@@ -384,50 +299,18 @@ async function settingsPage(
 				</form>
 			</section>
 		</AppLayout>,
-		error ? { status: UNPROCESSABLE_STATUS } : undefined,
 	);
 }
 
-export default createController(routes.settings, {
+/** GET /settings — what the account does on the reader's behalf, and their OPML transfers. */
+export default createAction(routes.settings, {
 	middleware: [requireUser],
-	actions: {
-		/** GET /settings — the preferences form. */
-		async index(ctx) {
-			let viewer = getViewer();
+	async handler(ctx) {
+		let viewer = getViewer();
 
-			/** The guard has already answered an anonymous request, so this holds a reader's id. */
-			if (!viewer) return redirect(routes.home.href(), { status: redirect.Status.SeeOther });
+		/** The guard has already answered an anonymous request, so this holds a reader's id. */
+		if (!viewer) return redirect(routes.home.href(), { status: redirect.Status.SeeOther });
 
-			return await settingsPage(ctx, await userStore(viewer.id).getSettings(), null);
-		},
-
-		/**
-		 * POST /settings — saves the refresh cadence. Success answers with a redirect rather
-		 * than the page, so the browser's next reload asks for the form instead of resubmitting.
-		 */
-		async action(ctx) {
-			let viewer = getViewer();
-
-			if (!viewer) return redirect(routes.home.href(), { status: redirect.Status.SeeOther });
-
-			let store = userStore(viewer.id);
-			let submitted = s.parseSafe(RefreshIntervalForm, ctx.formData);
-
-			let saved = submitted.success
-				? await store.setRefreshInterval(submitted.value.refreshIntervalHours)
-				: REFUSED_INTERVAL;
-
-			if (saved.ok) {
-				return redirect(`${routes.settings.index.href()}?${SAVED_PARAM}`, {
-					status: redirect.Status.SeeOther,
-				});
-			}
-
-			return await settingsPage(
-				ctx,
-				await store.getSettings(),
-				ctx.i18next.t("settings.refresh.invalid"),
-			);
-		},
+		return await settingsPage(ctx, await userStore(viewer.id).getSettings());
 	},
 });

@@ -16,6 +16,13 @@
  * that into the row a reader sees happens here, where the dictionary and the request's
  * language are, so the list itself prints text it is handed.
  *
+ * Opening the queue is also where a reader finds out how much they are missing. The store
+ * compares each subscription's cursor against the head its feed published and hands back
+ * that count with the page, so this says what is waiting in the same breath as it shows
+ * what is here — and then fetches it behind the response, never in front of it. A reader
+ * back after a month gets their timeline in one indexed seek and the feeds they are
+ * missing over the seconds after it.
+ *
  * The page is exported because a refused follow is answered with the page it was submitted
  * from.
  *
@@ -37,6 +44,7 @@ import { raw } from "@sdxc/u/general";
 import { boxSizing, flex, gap, grow, items, vstack } from "@sdxc/u/layout";
 import { bs, is, maxIs, minIs, p } from "@sdxc/u/size";
 import { Alert, Button, Confirm, Empty, HeadingScope, LinkButton } from "@sdxc/ui";
+import { waitUntil } from "cloudflare:workers";
 import { createAction } from "remix/router";
 import { attrs } from "remix/ui";
 
@@ -48,7 +56,7 @@ import { FAILED_PARAM, FRESH_PARAM, SWEPT_PARAM } from "~/app/http/controllers/f
 import { placePage } from "~/app/http/controllers/list-paging";
 import { QueueFields, queueUrl, readQueueView } from "~/app/http/controllers/queue-view";
 import { MARKED_PARAM } from "~/app/http/controllers/read-all";
-import { timelineEntries } from "~/app/http/controllers/timeline-entries";
+import { timelineCopy, timelineEntries } from "~/app/http/controllers/timeline-entries";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { isFrameRequest } from "~/app/http/render";
@@ -273,16 +281,47 @@ export async function renderReadingQueue(
 
 	let store = userStore(viewer.id);
 
-	let page = await store.readingQueue({
-		cursor,
-		readState: view.readState,
-		query: view.query,
-		limit: PAGE_SIZE,
-	});
+	/**
+	 * A frame is continuing a queue already on screen, which is paging rather than opening:
+	 * it reads the page and checks nothing. `lazy-frame` fetches a page per screenful, and a
+	 * freshness check on each would cost a round trip a reader never sees the result of.
+	 */
+	let isFrame = isFrameRequest(ctx.request);
+
+	let freshness: UserStore.Freshness | null = null;
+	let page: UserStore.TimelineResult;
+
+	if (isFrame) {
+		page = await store.readingQueue({
+			cursor,
+			readState: view.readState,
+			query: view.query,
+			limit: PAGE_SIZE,
+		});
+	} else {
+		let opened = await store.openReader({
+			cursor,
+			readState: view.readState,
+			query: view.query,
+			limit: PAGE_SIZE,
+		});
+
+		page = opened.timeline;
+		freshness = opened.freshness;
+
+		/**
+		 * Behind the response rather than in front of it. The page below is already read, and
+		 * the posts this brings in reach the reader through the frames that refetch as they
+		 * move — so nothing here is waited on, and a reader missing two hundred feeds is not
+		 * held while they are fetched.
+		 */
+		if (freshness.count > 0) waitUntil(store.synchronize(freshness.stale));
+	}
 
 	/**
 	 * A cursor the store no longer decodes leaves the reader holding a place that is gone,
-	 * so the newest page is shown with a note saying where they landed.
+	 * so the newest page is shown with a note saying where they landed. The second read is a
+	 * read alone: what is waiting was answered by the first, whichever page it came back with.
 	 */
 	let isStaleCursor = !page.ok;
 	if (!page.ok) {
@@ -335,15 +374,7 @@ export async function renderReadingQueue(
 	});
 
 	/** The copy every row of the list prints, whichever shape this page is answered in. */
-	let listCopy = {
-		markRead: ctx.i18next.t("timeline.markRead"),
-		markUnread: ctx.i18next.t("timeline.markUnread"),
-		markFailed: ctx.i18next.t("timeline.markFailed"),
-		read: ctx.i18next.t("timeline.read"),
-		newer: ctx.i18next.t("timeline.newer"),
-		older: ctx.i18next.t("timeline.older"),
-		end: ctx.i18next.t("timeline.end"),
-	};
+	let listCopy = timelineCopy(ctx.i18next);
 
 	/**
 	 * A frame asked for the piece that continues a queue already on screen, so it is
@@ -351,7 +382,7 @@ export async function renderReadingQueue(
 	 * and whatever carries the reader on from the end of them. The chrome, the heading and
 	 * the header's controls are all already in the document this is written into.
 	 */
-	if (isFrameRequest(ctx.request)) {
+	if (isFrame) {
 		return ctx.render(
 			isStaleCursor ? (
 				/**
@@ -391,6 +422,17 @@ export async function renderReadingQueue(
 	 */
 	let outcome =
 		markNote(ctx.i18next, ctx.url.searchParams) ?? checkAllNote(ctx.i18next, ctx.url.searchParams);
+
+	/**
+	 * What the reader has not got yet, which is news about the queue rather than the outcome
+	 * of anything they pressed, so it stands on its own line and keeps the page's own tone.
+	 * It counts feeds rather than posts: how much each of them holds is exactly what has not
+	 * been read yet.
+	 */
+	let waiting =
+		freshness && freshness.count > 0
+			? ctx.i18next.t("reading.waiting", { count: freshness.count })
+			: null;
 
 	return ctx.render(
 		<AppLayout
@@ -580,6 +622,12 @@ export async function renderReadingQueue(
 				{outcome && (
 					<Alert color={outcome.color} mix={pageNote()}>
 						<Alert.Description>{outcome.message}</Alert.Description>
+					</Alert>
+				)}
+
+				{waiting && (
+					<Alert color="neutral" mix={pageNote()}>
+						<Alert.Description>{waiting}</Alert.Description>
 					</Alert>
 				)}
 

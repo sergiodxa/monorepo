@@ -74,7 +74,7 @@ function toSettings(imported: Imported, counts?: Counts) {
 		query.set("failed", String(counts.failed));
 	}
 
-	return redirect(`${routes.settings.index.href()}?${query}`, {
+	return redirect(`${routes.settings.href()}?${query}`, {
 		status: redirect.Status.SeeOther,
 	});
 }

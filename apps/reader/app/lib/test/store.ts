@@ -15,7 +15,6 @@ import type { UserStore } from "~/database/user-do";
 export interface UserStoreDouble {
 	ensureUser: ReturnType<typeof vi.fn>;
 	getSettings: ReturnType<typeof vi.fn>;
-	setRefreshInterval: ReturnType<typeof vi.fn>;
 	listFeeds: ReturnType<typeof vi.fn>;
 	countFeeds: ReturnType<typeof vi.fn>;
 	checkAllFeedsNow: ReturnType<typeof vi.fn>;
@@ -30,6 +29,11 @@ export interface UserStoreDouble {
 	readingQueue: ReturnType<typeof vi.fn>;
 	feedTimeline: ReturnType<typeof vi.fn>;
 	markRead: ReturnType<typeof vi.fn>;
+	openReader: ReturnType<typeof vi.fn>;
+	synchronize: ReturnType<typeof vi.fn>;
+	setVelocity: ReturnType<typeof vi.fn>;
+	saveItem: ReturnType<typeof vi.fn>;
+	savedQueue: ReturnType<typeof vi.fn>;
 }
 
 /** An empty page of a timeline, which is what a store answers before anything is stored. */
@@ -46,9 +50,11 @@ export const NO_FEEDS: UserStore.FeedSummary[] = [];
 /** The preferences a reader has before they change any of them. */
 export const DEFAULT_SETTINGS: UserStore.Settings = {
 	subject: "01J0READER0000000000000000",
-	refreshIntervalHours: 1,
 	lastRefreshedAt: null,
 };
+
+/** Nothing waiting above any cursor, which is what a reader who is current opens to. */
+export const NOTHING_STALE: UserStore.Freshness = { stale: [], count: 0 };
 
 /**
  * Builds the store double, every method answering the emptiest valid value so a test
@@ -59,10 +65,19 @@ export const DEFAULT_SETTINGS: UserStore.Settings = {
  * vi.doMock("~/database/user-do", () => ({ userStore: () => store }));
  */
 export function createUserStoreDouble(): UserStoreDouble {
+	/**
+	 * Held apart from the rest so opening the reader can answer through it, the way the
+	 * object does: a test says what a page holds once, and both the surface that opens the
+	 * reader and the frame that pages it read that answer.
+	 */
+	let readingQueue = vi.fn(
+		async (_options: UserStore.ReadingQueueOptions = {}): Promise<UserStore.TimelineResult> =>
+			EMPTY_TIMELINE,
+	);
+
 	return {
 		ensureUser: vi.fn(async () => DEFAULT_SETTINGS),
 		getSettings: vi.fn(async () => DEFAULT_SETTINGS),
-		setRefreshInterval: vi.fn(async () => ({ ok: true, settings: DEFAULT_SETTINGS })),
 		listFeeds: vi.fn(async () => NO_FEEDS),
 		countFeeds: vi.fn(async () => 0),
 		checkAllFeedsNow: vi.fn(async () => ({
@@ -79,8 +94,17 @@ export function createUserStoreDouble(): UserStoreDouble {
 		followFeed: vi.fn(async () => ({ ok: false, reason: "not-found", feedId: null })),
 		unfollowFeed: vi.fn(async () => true),
 		checkFeedNow: vi.fn(async () => ({ ok: false, reason: "not-following" })),
-		readingQueue: vi.fn(async () => EMPTY_TIMELINE),
+		readingQueue,
 		feedTimeline: vi.fn(async () => EMPTY_TIMELINE),
 		markRead: vi.fn(async () => true),
+		/** Nothing waiting, which is what a reader who is current opens to. */
+		openReader: vi.fn(async (options: UserStore.ReadingQueueOptions = {}) => ({
+			timeline: await readingQueue(options),
+			freshness: NOTHING_STALE,
+		})),
+		synchronize: vi.fn(async () => ({ synchronized: 0, items: 0, remaining: 0, paused: 0 })),
+		setVelocity: vi.fn(async () => ({ ok: false, reason: "not-following" })),
+		saveItem: vi.fn(async () => ({ ok: true, saved: true })),
+		savedQueue: vi.fn(async () => EMPTY_TIMELINE),
 	};
 }

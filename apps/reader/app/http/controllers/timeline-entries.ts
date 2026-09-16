@@ -78,7 +78,7 @@ export function shortDate(moment: number, locale: string, now: number): string {
  *
  * @param moment - Epoch milliseconds of the thing being dated.
  * @param locale - The request's language, which words and orders the result.
- * @example exactDate(feed.lastFetchedAt, ctx.locale);
+ * @example exactDate(item.publishedAt, ctx.locale);
  */
 export function exactDate(moment: number, locale: string): string {
 	return new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(moment);
@@ -99,6 +99,30 @@ function linkable(stored: string | null): string | null {
 	if (url.protocol !== "http:" && url.protocol !== "https:") return null;
 
 	return url.toString();
+}
+
+/**
+ * The copy every row of a list prints, which is the same on every surface that prints one:
+ * three lists of the same rows differ in the posts they hold and in nothing a row says.
+ *
+ * @param i18next - The request's dictionary.
+ * @example <Timeline entries={entries} copy={timelineCopy(ctx.i18next)} {...placement} />
+ */
+export function timelineCopy(i18next: i18n): Timeline.Copy {
+	return {
+		markRead: i18next.t("timeline.markRead"),
+		markUnread: i18next.t("timeline.markUnread"),
+		markFailed: i18next.t("timeline.markFailed"),
+		read: i18next.t("timeline.read"),
+		save: i18next.t("timeline.save"),
+		unsave: i18next.t("timeline.unsave"),
+		saveFailed: i18next.t("timeline.saveFailed"),
+		saveFull: i18next.t("timeline.saveFull"),
+		saved: i18next.t("timeline.saved"),
+		newer: i18next.t("timeline.newer"),
+		older: i18next.t("timeline.older"),
+		end: i18next.t("timeline.end"),
+	};
 }
 
 /**
@@ -145,6 +169,12 @@ export function timelineEntries(
 			}),
 			dateTime: new Date(item.publishedAt).toISOString(),
 			isRead: item.readAt !== null,
+			/**
+			 * Read off the post rather than off the page it is on, so the mark says which of
+			 * its two things it would do wherever a reader meets the post: a post kept from
+			 * the queue shows as kept there, and the one control means one thing everywhere.
+			 */
+			isSaved: item.savedAt !== null,
 		};
 	});
 }

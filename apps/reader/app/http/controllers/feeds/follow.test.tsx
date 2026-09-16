@@ -31,14 +31,13 @@ const SUBMITTED_URL = "https://example.com/blog";
 /** A followed feed, which the sidebar beside the refusal lists. */
 const FOLLOWED: UserStore.FeedSummary = {
 	id: "01J0FEED0000000000000000A1",
+	feedId: "01J0CANONICAL00000000000001",
 	feedUrl: "https://already.example.com/feed.xml",
 	siteUrl: "https://already.example.com",
 	title: "Already Followed",
 	description: null,
 	imageUrl: null,
-	lastFetchedAt: null,
-	lastStatus: null,
-	failureCount: 0,
+	velocity: "evergreen",
 	unreadCount: 0,
 };
 

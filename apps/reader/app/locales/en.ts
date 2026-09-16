@@ -64,6 +64,7 @@ export default {
 	nav: {
 		label: "Sections",
 		reading: "Reading",
+		saved: "Saved",
 		feeds: "Feeds",
 		subscriptions: "Followed feeds",
 		openSidebar: "Show feeds and search",
@@ -86,6 +87,14 @@ export default {
 		markUnread: "Mark as unread",
 		markFailed: "Could not be marked — try again",
 		read: "Read",
+		/** Keeping a post, which is the one thing here no rule that deletes a post reaches. */
+		save: "Save",
+		unsave: "Remove from saved",
+		saveFailed: "Could not be saved — try again",
+		/** Said where a save was refused outright, which is a shelf with no room left on it. */
+		saveFull: "Your saved posts are full — remove one to make room",
+		/** That a post is being kept, for a reader who cannot see the mark it is kept with. */
+		saved: "Saved",
 		openPost: "Open post",
 		publishedOn: "Published {{date}}",
 		byAuthor: "by {{author}}",
@@ -115,6 +124,13 @@ export default {
 		heading: "Reading",
 		/** The same queue, narrowed to words somebody typed, which the heading says back. */
 		headingFor: "Reading about “{{query}}”",
+		/**
+		 * What the queue knows is missing from it, which is the question a reader opening it
+		 * has and the one nothing here could answer before. The posts are being fetched behind
+		 * the page, so the sentence says that rather than offering a button that waits for them.
+		 */
+		waiting_one: "One feed has posts you have not got yet. They are arriving now.",
+		waiting_other: "{{count}} feeds have posts you have not got yet. They are arriving now.",
 		/** Which of the queue's posts the page holds, named beside the heading. */
 		filter: {
 			label: "Show",
@@ -163,6 +179,17 @@ export default {
 			title: "Nothing to read yet",
 			description:
 				"Paste a feed address, or the address of a site that publishes one, into the box above.",
+		},
+	},
+
+	/** The posts a reader asked to keep, which is the one list here nothing prunes. */
+	saved: {
+		title: "Saved",
+		heading: "Saved",
+		empty: {
+			title: "Nothing saved yet",
+			description:
+				"Keep a post from any list and it stays here — however old it gets, and whatever the feed it came from does.",
 		},
 	},
 
@@ -248,6 +275,34 @@ export default {
 			failed: "That feed could not be reached just now. The next scheduled check will try again.",
 		},
 
+		/**
+		 * How long this feed's posts stay in the reader's own timeline. Each span says what it
+		 * is for as well as how long it holds, since the name alone is a category and the hours
+		 * alone are a number: a reader choosing between them is matching the two.
+		 */
+		velocity: {
+			legend: "How long these posts stay",
+			description:
+				"Posts from this feed leave your timeline once they are older than this, read or not. Anything you save stays whatever you choose.",
+			submit: "Save",
+			saved: "Saved.",
+			invalid: "That is not one of the spans on offer.",
+			breaking: "Breaking — holds for 3 hours",
+			news: "News — holds for 18 hours",
+			article: "Article — holds for 3 days",
+			essay: "Essay — holds for 2 weeks",
+			evergreen: "Evergreen — holds forever",
+			/**
+			 * Offered beside the control rather than acted on: a measurement is a good reason to
+			 * ask a reader a question and a bad reason to delete their posts, so this says what
+			 * the feed does and leaves the answer where it was.
+			 */
+			suggestion_one:
+				"This feed publishes about {{count}} post a day and nothing here ever leaves. A shorter span keeps it from becoming a backlog.",
+			suggestion_other:
+				"This feed publishes about {{count}} posts a day and nothing here ever leaves. A shorter span keeps it from becoming a backlog.",
+		},
+
 		unfollow: {
 			title: "Unfollow a feed",
 			submit: "Unfollow",
@@ -269,21 +324,30 @@ export default {
 			title: "Mark as read",
 			notFound: "That post is not in your reading queue.",
 		},
+		save: {
+			title: "Save a post",
+			notFound: "That post is not in your reading queue.",
+			/**
+			 * A full shelf is told to the reader rather than made room on, since making room
+			 * would delete a post they asked to keep. The way out is theirs to choose.
+			 */
+			full: "You have saved as many posts as this keeps. Remove one from Saved to make room for another.",
+		},
 	},
 
 	settings: {
 		title: "Settings",
 		heading: "Settings",
-		refresh: {
-			legend: "How often to check for new posts",
+		/**
+		 * What the schedule is, rather than a choice of one. Checking a feed more often spends
+		 * the bandwidth of the site publishing it, and a reader who wants a feed sooner has the
+		 * check they can ask for on the feed's own page, which is what this points them at.
+		 */
+		cadence: {
+			legend: "How your feeds are checked",
 			description:
-				"Every feed you follow is checked on this schedule. Checking more often finds posts sooner and costs the sites you read a little more.",
-			submit: "Save",
-			saved: "Saved.",
-			invalid: "That is not one of the schedules on offer.",
+				"Every feed is checked once a day. To see one sooner, open it and use Check feed.",
 		},
-		interval_one: "Every hour",
-		interval_other: "Every {{count}} hours",
 		lastRefreshed: "Last checked {{date}}",
 		neverRefreshed: "Not checked yet",
 	},
