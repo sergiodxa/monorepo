@@ -1,8 +1,11 @@
 /**
- * Tests `POST /feeds`: the guard, the redirect a subscription answers with, each way the
+ * Tests `POST /reading`: the guard, the redirect a subscription answers with, each way the
  * store refuses an address — every refusal coming back as the reading queue it was
  * submitted from, reporting why above the list with the address still in the field — and
  * the narrowing that queue was being read under, which the form carries either way.
+ *
+ * Following is posted to the queue's own address, so a refusal leaves the reader on a page
+ * a reload re-renders rather than on one that answers no `GET`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,7 +26,7 @@ let userStore = vi.fn(() => store);
 
 vi.doMock("~/database/user-do", () => ({ userStore }));
 
-let { default: follow } = await import("./follow");
+let { default: reading } = await import("./reading");
 
 /** The address every test submits, and the one a refusal is expected to put back. */
 const SUBMITTED_URL = "https://example.com/blog";
@@ -49,8 +52,8 @@ const FOLLOWED: UserStore.FeedSummary = {
  */
 function postFollow(viewer: typeof VIEWER | null, fields: Record<string, string> = {}) {
 	let router = createTestRouter(viewer);
-	router.map(routes.feeds.follow, follow);
-	return fetchRoute(router, routes.feeds.follow.href(), { url: SUBMITTED_URL, ...fields });
+	router.map(routes.reading, reading);
+	return fetchRoute(router, routes.reading.action.href(), { url: SUBMITTED_URL, ...fields });
 }
 
 /**
@@ -97,7 +100,7 @@ describe("POST /feeds", () => {
 		let response = await postFollow(VIEWER);
 
 		expect(response.status).toBe(303);
-		expect(response.headers.get("location")).toBe(routes.reading.href());
+		expect(response.headers.get("location")).toBe(routes.reading.index.href());
 	});
 
 	test("returns the reader to the queue as they had narrowed it", async () => {
@@ -105,7 +108,9 @@ describe("POST /feeds", () => {
 
 		let response = await postFollow(VIEWER, { q: "remix", show: "unread" });
 
-		expect(response.headers.get("location")).toBe(`${routes.reading.href()}?q=remix&show=unread`);
+		expect(response.headers.get("location")).toBe(
+			`${routes.reading.index.href()}?q=remix&show=unread`,
+		);
 	});
 
 	test("builds that queue from the two fields alone, never from an address submitted", async () => {
@@ -113,7 +118,7 @@ describe("POST /feeds", () => {
 
 		let response = await postFollow(VIEWER, { show: "https://elsewhere.example.com" });
 
-		expect(response.headers.get("location")).toBe(routes.reading.href());
+		expect(response.headers.get("location")).toBe(routes.reading.index.href());
 	});
 
 	test("explains an address that is not one this app can fetch", async () => {

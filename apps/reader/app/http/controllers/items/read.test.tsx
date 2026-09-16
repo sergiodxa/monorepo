@@ -56,7 +56,7 @@ describe("POST /items/:itemId/read", () => {
 
 		expect(store.markRead).toHaveBeenCalledWith(ITEM_ID, true);
 		expect(response.status).toBe(303);
-		expect(response.headers.get("location")).toBe(routes.reading.href());
+		expect(response.headers.get("location")).toBe(routes.reading.index.href());
 	});
 
 	test("marks the post unread", async () => {
@@ -94,7 +94,7 @@ describe("POST /items/:itemId/read", () => {
 		let response = await markRead(createRouter(VIEWER), { read: "true", returnTo });
 
 		expect(response.status).toBe(303);
-		expect(response.headers.get("location")).toBe(routes.reading.href());
+		expect(response.headers.get("location")).toBe(routes.reading.index.href());
 	});
 
 	test("answers a post the store has nothing for", async () => {

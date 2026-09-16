@@ -224,7 +224,7 @@ export default createAction(routes.feed, {
 								{ctx.i18next.t("feeds.show.notFound.description")}
 							</Empty.Description>
 							<Empty.Action>
-								<LinkButton href={routes.reading.href()} size="sm">
+								<LinkButton href={routes.reading.index.href()} size="sm">
 									{ctx.i18next.t("feeds.show.notFound.back")}
 								</LinkButton>
 							</Empty.Action>

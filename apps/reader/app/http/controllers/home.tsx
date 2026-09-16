@@ -36,7 +36,7 @@ const FEATURE_COLUMNS = "repeat(auto-fit, minmax(16rem, 1fr))";
  */
 export default createAction(routes.home, (ctx) => {
 	if (isAuthenticated()) {
-		return redirect(routes.reading.href(), { status: redirect.Status.SeeOther });
+		return redirect(routes.reading.index.href(), { status: redirect.Status.SeeOther });
 	}
 
 	return ctx.render(

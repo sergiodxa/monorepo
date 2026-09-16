@@ -28,8 +28,13 @@ export default route({
 	 * Every post from every followed feed, and the app's landing spot after sign-in. The
 	 * header's controls narrow it in place: `show` picks a read state, `q` a set of words,
 	 * and the two compose, so a reader searching inside their unread posts is one URL.
+	 *
+	 * GET = the queue ("index"), POST = follows a feed ("action"). Following is posted here
+	 * rather than to the subscriptions, because a refusal is answered with this page: an
+	 * address the reader is left on has to be one they can reload, and a reload of an
+	 * address that answers no `GET` re-sends the submission that got them there.
 	 */
-	reading: get("/reading"),
+	reading: form("/reading"),
 
 	/** Takes every unread post out of the queue at once. */
 	readAll: post("/reading/read"),
@@ -55,8 +60,6 @@ export default route({
 	 * the forms on those surfaces act against.
 	 */
 	feeds: {
-		/** Follows whatever feed an address leads to, posting to the collection it joins. */
-		follow: post("/feeds"),
 		unfollow: del("/feeds/:feedId"),
 		/** Its own path rather than a `POST` on the feed, so a form can reach it directly. */
 		refresh: post("/feeds/:feedId/refresh"),

@@ -68,7 +68,7 @@ describe("DELETE /feeds/:feedId", () => {
 		let response = await postUnfollow(VIEWER);
 
 		expect(response.status).toBe(303);
-		expect(response.headers.get("location")).toBe(routes.reading.href());
+		expect(response.headers.get("location")).toBe(routes.reading.index.href());
 	});
 
 	test("answers a feed this reader does not follow with the not-found page", async () => {
@@ -81,6 +81,6 @@ describe("DELETE /feeds/:feedId", () => {
 		expect(body).toContain("Feed not found");
 		expect(body).toContain("You do not follow a feed with that address.");
 		expect(body).toContain("Back to your reading");
-		expect(body).toContain(`href="${routes.reading.href()}"`);
+		expect(body).toContain(`href="${routes.reading.index.href()}"`);
 	});
 });

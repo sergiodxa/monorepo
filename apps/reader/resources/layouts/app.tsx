@@ -648,7 +648,7 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 						<Sidebar.Header
 							mix={[bs(BAND_HEIGHT), pb(BAND_PADDING), pi(3), items("center"), bandRule()]}
 						>
-							<form method="get" action={routes.reading.href()} mix={[flex(), is("full")]}>
+							<form method="get" action={routes.reading.index.href()} mix={[flex(), is("full")]}>
 								<label htmlFor={SIDEBAR_SEARCH_FIELD_ID} mix={[visuallyHidden()]}>
 									{nav.searchLabel}
 								</label>
@@ -693,8 +693,8 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 						<Sidebar.Content>
 							<Sidebar.Nav aria-label={nav.label}>
 								<Sidebar.Item
-									href={routes.reading.href()}
-									current={isCurrent(routes.reading.href())}
+									href={routes.reading.index.href()}
+									current={isCurrent(routes.reading.index.href())}
 									mix={railRow("item")}
 								>
 									{/** Everything every followed feed has published, waiting to be worked through. */}

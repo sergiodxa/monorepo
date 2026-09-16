@@ -24,7 +24,7 @@ vi.doMock("~/database/user-do", () => ({ userStore }));
 let { default: refreshAll } = await import("./refresh-all");
 
 /** Where a sweep returns the reader to, before the counts are appended to it. */
-const QUEUE_PATH = routes.reading.href();
+const QUEUE_PATH = routes.reading.index.href();
 
 /**
  * Posts the check-every-feed form as `viewer`.

@@ -102,7 +102,9 @@ export function queueUrl(
 	for (let [name, value] of Object.entries(extra)) params.set(name, value);
 
 	let query = params.toString();
-	return query.length === 0 ? routes.reading.href() : `${routes.reading.href()}?${query}`;
+	return query.length === 0
+		? routes.reading.index.href()
+		: `${routes.reading.index.href()}?${query}`;
 }
 
 /**

@@ -25,7 +25,12 @@ function router() {
 		middleware: [asyncContext(), formData() as Middleware, methodOverride()],
 	});
 
-	r.map(routes.reading, () => new Response("QUEUE"));
+	r.map(routes.reading, {
+		actions: {
+			index: () => new Response("QUEUE"),
+			action: () => new Response("FOLLOW"),
+		},
+	});
 	r.map(routes.feed, () => new Response("FEED"));
 	r.map(routes.readAll, () => new Response("READ ALL"));
 	r.map(routes.feeds.unfollow, () => new Response("UNFOLLOW"));

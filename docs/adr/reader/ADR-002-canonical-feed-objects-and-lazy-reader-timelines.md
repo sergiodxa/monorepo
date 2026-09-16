@@ -893,8 +893,13 @@ The timeline queries and their four indexes. The keyset cursor and its rules —
 ordering columns in the projection, one shared `NEWEST_FIRST` ordering constant, no join
 to `feeds` for a title. The RPC boundary rules: never a `Result`, never a `Date`, a
 discriminated union instead of a throw, and those apply to the `FeedDO` surface too. Every
-timestamp an integer. Search, read state, OPML import and export, mark-read, and every
-route in `routes/web.ts`.
+timestamp an integer. Search, read state, OPML import and export, and mark-read.
+
+One route did move, after this shipped: following a feed is posted to `/reading` rather
+than to `/feeds`. A refusal is answered with the queue itself, so the address the reader
+is left on has to be one a reload re-renders — and `/feeds` answered no `GET`, which left
+a reload re-sending the submission that got them there, arriving without the field they
+typed into and refused as an address they never gave.
 
 ## Consequences
 

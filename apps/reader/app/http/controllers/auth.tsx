@@ -125,7 +125,7 @@ export default createController(routes.auth, {
 			 */
 			await userStore(subject).ensureUser(subject);
 
-			return redirect(routes.reading.href(), { status: redirect.Status.SeeOther });
+			return redirect(routes.reading.index.href(), { status: redirect.Status.SeeOther });
 		},
 	},
 });

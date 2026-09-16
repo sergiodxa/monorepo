@@ -77,7 +77,7 @@ describe("POST /items/:itemId/save", () => {
 
 		expect(store.saveItem).toHaveBeenCalledWith(ITEM_ID, true);
 		expect(response.status).toBe(303);
-		expect(response.headers.get("location")).toBe(routes.reading.href());
+		expect(response.headers.get("location")).toBe(routes.reading.index.href());
 	});
 
 	test("stops keeping a post", async () => {
@@ -111,7 +111,7 @@ describe("POST /items/:itemId/save", () => {
 		for (let returnTo of ["https://evil.example/", "//evil.example/", "/\\evil.example/"]) {
 			let response = await postSave(createRouter(VIEWER), { saved: "true", returnTo });
 
-			expect(response.headers.get("location")).toBe(routes.reading.href());
+			expect(response.headers.get("location")).toBe(routes.reading.index.href());
 		}
 	});
 

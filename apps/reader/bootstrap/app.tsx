@@ -99,10 +99,6 @@ export default function application(options: application.Options) {
 		lazy(() => import("~/app/http/controllers/saved")),
 	);
 	router.map(
-		routes.feeds.follow,
-		lazy(() => import("~/app/http/controllers/feeds/follow")),
-	);
-	router.map(
 		routes.feeds.unfollow,
 		lazy(() => import("~/app/http/controllers/feeds/unfollow")),
 	);

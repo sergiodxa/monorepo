@@ -23,7 +23,7 @@ vi.doMock("~/database/user-do", () => ({ userStore }));
 let { default: readAll } = await import("./read-all");
 
 /** Where emptying the queue returns the reader to, before the count is appended to it. */
-const READING_PATH = routes.reading.href();
+const READING_PATH = routes.reading.index.href();
 
 /**
  * Posts the mark-everything-read form as `viewer`.

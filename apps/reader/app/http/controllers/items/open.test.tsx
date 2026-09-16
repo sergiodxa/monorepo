@@ -55,7 +55,7 @@ function ping(router: Router, body = "PING"): Promise<Response> {
 			headers: {
 				"content-type": "text/ping",
 				"ping-to": POST_URL,
-				"ping-from": new URL(routes.reading.href(), ORIGIN).toString(),
+				"ping-from": new URL(routes.reading.index.href(), ORIGIN).toString(),
 			},
 			body,
 		}),

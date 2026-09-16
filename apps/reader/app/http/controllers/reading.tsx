@@ -34,7 +34,10 @@ import type { i18n } from "@sdxc/i18n";
 import type { Renderer } from "remix/middleware/render";
 import type { RemixNode } from "remix/ui";
 
+import { redirect } from "@sdxc/http/response";
+import { UnprocessableEntity } from "@sdxc/http/status-code";
 import { CheckCheckIcon, RefreshCwIcon } from "@sdxc/icons";
+import { currentLog } from "@sdxc/logger";
 import { parsePageParams } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { visuallyHidden } from "@sdxc/u/a11y";
@@ -45,16 +48,24 @@ import { boxSizing, flex, gap, grow, items, vstack } from "@sdxc/u/layout";
 import { bs, is, maxIs, minIs, p } from "@sdxc/u/size";
 import { Alert, Button, Confirm, Empty, HeadingScope, LinkButton } from "@sdxc/ui";
 import { waitUntil } from "cloudflare:workers";
-import { createAction } from "remix/router";
+import * as s from "remix/data-schema";
+import * as f from "remix/data-schema/form-data";
+import { createController } from "remix/router";
 import { attrs } from "remix/ui";
 
 import type { QueueView } from "~/app/http/controllers/queue-view";
 import type { UserStore } from "~/database/user-do";
 
-import { chrome } from "~/app/http/controllers/chrome";
+import { chrome, forgetRailFeeds } from "~/app/http/controllers/chrome";
 import { FAILED_PARAM, FRESH_PARAM, SWEPT_PARAM } from "~/app/http/controllers/feeds/refresh-all";
 import { placePage } from "~/app/http/controllers/list-paging";
-import { QueueFields, queueUrl, readQueueView } from "~/app/http/controllers/queue-view";
+import {
+	QueueFields,
+	queueUrl,
+	queueViewOf,
+	readQueueView,
+	SHOW_PARAM,
+} from "~/app/http/controllers/queue-view";
 import { MARKED_PARAM } from "~/app/http/controllers/read-all";
 import { timelineCopy, timelineEntries } from "~/app/http/controllers/timeline-entries";
 import { getViewer } from "~/app/http/middleware/auth";
@@ -66,6 +77,7 @@ import AppLayout, {
 	AppNavLink,
 	BAND_FIELD_HEIGHT,
 	pageNote,
+	SEARCH_PARAM,
 } from "~/resources/layouts/app";
 import Timeline from "~/resources/views/timeline";
 import routes from "~/routes/web";
@@ -524,7 +536,7 @@ export async function renderReadingQueue(
 					<form
 						id={FOLLOW_FORM_ID}
 						method="post"
-						action={routes.feeds.follow.href()}
+						action={routes.reading.action.href()}
 						mix={[
 							flex(),
 							items("center"),
@@ -668,20 +680,117 @@ export async function renderReadingQueue(
 	);
 }
 
-/** GET /reading — every post, narrowed by whatever the header's controls are set to. */
-export default createAction(routes.reading, {
-	middleware: [requireUser],
-	async handler(ctx) {
-		/**
-		 * A malformed paging parameter falls back to the newest page, which is what this URL
-		 * shows without one, rather than to an error page the reader can do nothing about.
-		 */
-		let params = parsePageParams(ctx.url.searchParams);
-		let cursor = isFailure(params) ? null : params.data.cursor;
+/**
+ * The submitted form: the address, and the narrowing the queue this was sent from is
+ * reading under. An absent or non-text field reads as the empty string, which the store
+ * refuses as an address exactly as it refuses a reader's typo, so one branch answers both,
+ * and which the queue reads as no narrowing at all.
+ */
+const FollowForm = f.object({
+	url: f.field(s.defaulted(s.string(), "")),
+	[SEARCH_PARAM]: f.field(s.defaulted(s.string(), "")),
+	[SHOW_PARAM]: f.field(s.defaulted(s.string(), "")),
+});
 
-		return await renderReadingQueue(ctx, readQueueView(ctx.url.searchParams), cursor, {
-			error: null,
-			value: null,
-		});
+/** The `feeds.follow.error.*` key explaining each way the store can refuse an address. */
+const FOLLOW_ERROR_KEYS: Record<UserStore.FollowFailure, string> = {
+	"invalid-url": "feeds.follow.error.invalidUrl",
+	"not-found": "feeds.follow.error.notFound",
+	unreachable: "feeds.follow.error.unreachable",
+	"already-following": "feeds.follow.error.alreadyFollowing",
+};
+
+/**
+ * The scheme somebody's address carries, or what it has instead of one.
+ *
+ * @param input - The address as it was submitted.
+ */
+function schemeOf(input: string): string {
+	let trimmed = input.trim();
+	if (trimmed.length === 0) return "empty";
+
+	return /^([a-z][\d+.a-z-]*):/i.exec(trimmed)?.[1]?.toLowerCase() ?? "none";
+}
+
+export default createController(routes.reading, {
+	middleware: [requireUser],
+	actions: {
+		/** GET /reading — every post, narrowed by whatever the header's controls are set to. */
+		async index(ctx) {
+			/**
+			 * A malformed paging parameter falls back to the newest page, which is what this
+			 * URL shows without one, rather than to an error page the reader can do nothing
+			 * about.
+			 */
+			let params = parsePageParams(ctx.url.searchParams);
+			let cursor = isFailure(params) ? null : params.data.cursor;
+
+			return await renderReadingQueue(ctx, readQueueView(ctx.url.searchParams), cursor, {
+				error: null,
+				value: null,
+			});
+		},
+
+		/**
+		 * POST /reading — follows whatever feed an address leads to.
+		 *
+		 * It is posted to the queue's own address rather than to the subscriptions, because
+		 * the queue is what answers it: a refused address comes back on this page, and the
+		 * address a reader is left on has to be one they can reload. An address answering no
+		 * `GET` leaves a reload re-sending the submission that got them there, which arrives
+		 * without the field they typed into and is refused as an address they never gave.
+		 */
+		async action(ctx) {
+			let viewer = getViewer();
+			if (!viewer) throw new Error("requireUser must run before this handler");
+
+			let store = userStore(viewer.id);
+			let submitted = s.parseSafe(FollowForm, ctx.formData);
+
+			let url = submitted.success ? submitted.value.url : "";
+
+			/**
+			 * Rebuilt from the two fields rather than from a whole address somebody submitted, so
+			 * what comes back is a queue of this app's and never wherever a posted URL pointed.
+			 */
+			let view = queueViewOf(
+				submitted.success ? (submitted.value[SEARCH_PARAM] ?? "") : "",
+				submitted.success ? (submitted.value[SHOW_PARAM] ?? "") : "",
+			);
+
+			let followed = await store.followFeed(url);
+
+			if (followed.ok) {
+				/** The sidebar lists this feed now. */
+				await forgetRailFeeds(viewer.id);
+
+				return redirect(queueUrl(view), { status: redirect.Status.SeeOther });
+			}
+
+			/**
+			 * What was refused and why, recorded where a refusal a reader reports can be read
+			 * back. The scheme is the field that decides the commonest one, and it is the part of
+			 * an address that says nothing about what somebody reads.
+			 */
+			currentLog()?.set({
+				"follow.refused": followed.reason,
+				"follow.scheme": schemeOf(url),
+				"follow.length": url.length,
+			});
+
+			/**
+			 * The queue comes back carrying the refusal and the address that earned it, so the
+			 * reader reads why, corrects what they typed, and keeps the posts they were reading
+			 * under them. The field has no room beneath it for a sentence, so the queue reports
+			 * it where it reports every other outcome and the field points at that note by name.
+			 */
+			return renderReadingQueue(
+				ctx,
+				view,
+				null,
+				{ error: ctx.i18next.t(FOLLOW_ERROR_KEYS[followed.reason]), value: url },
+				UnprocessableEntity,
+			);
+		},
 	},
 });

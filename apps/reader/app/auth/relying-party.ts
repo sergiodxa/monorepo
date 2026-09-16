@@ -34,6 +34,6 @@ export function relyingParty(url: URL | string): RelyingParty {
 		clientSecret: env.CLIENT_SECRET,
 		redirectUri: new URL(routes.auth.index.href(), url),
 		scopes: LOGIN_SCOPES,
-		fallbackReturnTo: routes.reading.href(),
+		fallbackReturnTo: routes.reading.index.href(),
 	});
 }

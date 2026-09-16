@@ -52,7 +52,7 @@ function localPath(returnTo: string): string {
 	let isRelative =
 		returnTo.startsWith("/") && !returnTo.startsWith("//") && !returnTo.startsWith("/\\");
 
-	return isRelative ? returnTo : routes.reading.href();
+	return isRelative ? returnTo : routes.reading.index.href();
 }
 
 /** POST /items/:itemId/read — marks one post read or unread. */
