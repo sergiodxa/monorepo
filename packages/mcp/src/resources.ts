@@ -45,11 +45,60 @@ export interface ResourceDescriptor extends ResourceDeclaration {
 /** Brands a declared resource so a group can tell one from a nested group. */
 const RESOURCE = Symbol.for("@sdxc/mcp.resource");
 
+/**
+ * The address a pattern or a URI is routed under.
+ *
+ * `remix/route-pattern` speaks `http` and `https`, while MCP lets a server address its
+ * resources under a scheme of its own — `notes://`, `db://` — for content a client cannot
+ * fetch for itself. Such a scheme travels as the host of an `https` address while it is
+ * matched, which is what lets one matcher answer both kinds.
+ */
+export type Routable<Pattern extends string> = Pattern extends `https://${string}`
+	? Pattern
+	: Pattern extends `http://${string}`
+		? Pattern
+		: Pattern extends `${infer Scheme}://${infer Rest}`
+			? `https://${Scheme}/${Rest}`
+			: Pattern;
+
+/** The schemes `remix/route-pattern` parses, which travel unchanged. */
+const ROUTABLE_SCHEMES = new Set(["http", "https"]);
+
+/** The leading `scheme://` of an absolute address, which decides whether it travels as is. */
+const SCHEME = /^([a-zA-Z][\d+.a-zA-Z-]*):\/\//;
+
+/**
+ * The address a pattern or a URI is matched under; see {@link Routable}.
+ *
+ * @param source - A resource pattern, or a URI a client asked to read.
+ */
+export function routable<const Pattern extends string>(source: Pattern): Routable<Pattern> {
+	let found = SCHEME.exec(source);
+	if (found === null) return source as Routable<Pattern>;
+
+	let scheme = found[1] ?? "";
+	if (ROUTABLE_SCHEMES.has(scheme.toLowerCase())) return source as Routable<Pattern>;
+
+	return `https://${scheme}/${source.slice(found[0].length)}` as Routable<Pattern>;
+}
+
+/**
+ * The URI a routed address stands for, which puts a custom scheme back where it came from.
+ *
+ * @param scheme - The scheme the resource was declared under.
+ * @param routed - The address `createHref` built from the routed pattern.
+ */
+function restored(scheme: string, routed: string): string {
+	return `${scheme}://${routed.slice(`https://${scheme}/`.length)}`;
+}
+
 /** A declared resource. Its handler is bound separately, by `map()`. */
 export interface Resource<Pattern extends string = string> {
 	readonly [RESOURCE]: true;
 	/** The `route-pattern` source this resource matches and builds URIs from. */
 	readonly pattern: Pattern;
+	/** The same pattern as the matcher reads it; see {@link Routable}. */
+	readonly route: Routable<Pattern>;
 	/** The declared metadata, plus the derived RFC 6570 template. */
 	readonly descriptor: ResourceDescriptor;
 	/** Whether the pattern captures anything, which decides which list it appears in. */
@@ -60,7 +109,7 @@ export interface Resource<Pattern extends string = string> {
 	 * The typed `createHref` for the declared pattern, so every URI a listing builds comes
 	 * straight from the template it was declared with.
 	 */
-	href(...args: CreateHrefArgs<Pattern>): string;
+	href(...args: CreateHrefArgs<Routable<Pattern>>): string;
 }
 
 /** One entry in a `resources/list` answer. */
@@ -103,7 +152,7 @@ export interface ResourceAction<Pattern extends string = string> {
 	 */
 	list?(ctx: AnyRequestContext): Awaitable<ResourceListing[]>;
 	/** Reads one instance. Return `null` when it does not exist. */
-	read(ctx: ResourceContext<MatchParams<Pattern>>): Awaitable<ReadResult>;
+	read(ctx: ResourceContext<MatchParams<Routable<Pattern>>>): Awaitable<ReadResult>;
 }
 
 /** A tree of declared resources. */
@@ -135,14 +184,20 @@ export function resource<const Pattern extends string>(
 	declaration: ResourceDeclaration,
 ): Resource<Pattern> {
 	let { uriTemplate, hasVariables } = toUriTemplate(pattern);
+	let found = SCHEME.exec(pattern);
+	let scheme = found === null ? "" : (found[1] ?? "");
+	let custom = scheme !== "" && !ROUTABLE_SCHEMES.has(scheme.toLowerCase());
+	let route = routable(pattern);
 
 	return {
 		[RESOURCE]: true,
 		pattern,
+		route,
 		descriptor: { ...declaration, uriTemplate },
 		hasVariables,
 		href(...args) {
-			return createHref(pattern, ...args);
+			let built = createHref(route, ...args);
+			return custom ? restored(scheme, built) : built;
 		},
 	};
 }

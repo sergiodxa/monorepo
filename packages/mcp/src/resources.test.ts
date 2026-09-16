@@ -302,3 +302,71 @@ describe("createResource", () => {
 		expect(typeof action.read).toBe("function");
 	});
 });
+
+/**
+ * A scheme of a server's own is what addresses content a client cannot fetch for itself,
+ * so a URI under one is an identity rather than an address, and every read of it goes
+ * through `resources/read`.
+ */
+describe("a scheme of the server's own", () => {
+	let notes = resources({
+		note: resource("notes://notes/:noteId", { name: "Note", mimeType: "text/plain" }),
+		shelf: resource("notes://shelf", { name: "Shelf", mimeType: "text/plain" }),
+	});
+
+	/** A handler with both mapped, so a read is matched the way a client's would be. */
+	function shelf() {
+		let mcp = createHandler({ name: "notes", version: "1.0.0" });
+
+		mcp.resources.map(notes.note, {
+			list: () => [{ uri: notes.note.href({ noteId: "n1" }), name: "First" }],
+			read: (ctx) => {
+				expectTypeOf(ctx.variables.noteId).toEqualTypeOf<string>();
+				return ctx.variables.noteId === "gone" ? null : `note ${ctx.variables.noteId}`;
+			},
+		});
+
+		mcp.resources.map(notes.shelf, { read: () => "everything" });
+
+		return mcp;
+	}
+
+	test("publishes the template under the scheme it was declared with", () => {
+		expect(notes.note.descriptor.uriTemplate).toBe("notes://notes/{noteId}");
+	});
+
+	test("builds a URI under that scheme", () => {
+		expect(notes.note.href({ noteId: "n1" })).toBe("notes://notes/n1");
+		expect(notes.shelf.href()).toBe("notes://shelf");
+	});
+
+	test("reads one instance back through its URI", async () => {
+		let { body } = await call(send("resources/read", { uri: "notes://notes/n1" }), shelf());
+
+		expect(body.result?.contents?.[0]?.text).toBe("note n1");
+		expect(body.result?.contents?.[0]?.uri).toBe("notes://notes/n1");
+	});
+
+	test("reads a resource that captures nothing", async () => {
+		let { body } = await call(send("resources/read", { uri: "notes://shelf" }), shelf());
+
+		expect(body.result?.contents?.[0]?.text).toBe("everything");
+	});
+
+	test("reports an instance the reader does not hold as missing", async () => {
+		let { body } = await call(send("resources/read", { uri: "notes://notes/gone" }), shelf());
+
+		expect(body.error?.code).toBe(ErrorCode.InvalidParams);
+	});
+
+	/**
+	 * The scheme travels as the host while a URI is matched, so the `https` address it
+	 * becomes reaches the same declaration. It is worth stating because it is what a
+	 * server declaring both a custom scheme and `https://<scheme>/` would collide on.
+	 */
+	test("reaches the same declaration through the address it is routed under", async () => {
+		let { body } = await call(send("resources/read", { uri: "https://notes/notes/n1" }), shelf());
+
+		expect(body.result?.contents?.[0]?.text).toBe("note n1");
+	});
+});

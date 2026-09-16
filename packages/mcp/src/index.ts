@@ -37,6 +37,7 @@ export type {
 	ResourceDescriptor,
 	ResourceGroup,
 	ResourceListing,
+	Routable,
 } from "./resources.js";
 export type {
 	ArraySchema,

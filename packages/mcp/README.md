@@ -156,6 +156,13 @@ capture names have no [RFC 6570](https://datatracker.ietf.org/doc/html/rfc6570) 
 Refusing early beats publishing a template a client would expand into a URI this server never
 matches; a resource needing an optional segment is two resources.
 
+A scheme of the server's own — `notes://`, `db://` — declares and matches the same way,
+and is what addresses content a client cannot fetch for itself, where a URI is an identity
+rather than a fetchable address. Prefer `https://` only when the client can fetch the
+resource; otherwise every read goes through `resources/read` anyway. Such a scheme travels
+as the host of an `https` address while a URI is matched, so a server declaring both
+`notes://` and `https://notes/` would address one declaration twice.
+
 Which list a declaration lands in follows from the declaration itself:
 
 | Declaration                    | `resources/list`         | `resources/templates/list` |

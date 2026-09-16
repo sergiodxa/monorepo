@@ -58,7 +58,7 @@ import {
 	readRequestMetadata,
 	SUPPORTED_PROTOCOL_VERSIONS,
 } from "./protocol.js";
-import { toContents } from "./resources.js";
+import { routable, toContents } from "./resources.js";
 import { isTool } from "./tools.js";
 import { validateArguments } from "./validate.js";
 
@@ -246,7 +246,7 @@ export function createHandler(options: HandlerOptions): McpHandler {
 
 				let registration: ResourceRegistration = { resource, action };
 				resources.set(resource.pattern, registration);
-				matcher.add(resource.pattern, registration);
+				matcher.add(resource.route, registration);
 			},
 		},
 
@@ -619,7 +619,7 @@ function matchUri(
 ): { data: ResourceRegistration; params: Record<string, string | undefined> } | null {
 	let match: unknown;
 	try {
-		match = registry.matcher.match(uri);
+		match = registry.matcher.match(routable(uri));
 	} catch {
 		return null;
 	}
