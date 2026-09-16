@@ -17,6 +17,7 @@ import type { Feed } from "../index.js";
 import { FeedFormatError, FeedParseError } from "../index.js";
 
 import { toDate } from "./dates.js";
+import { fromJSONFeedLinks } from "./links.js";
 import { dedupeBy, firstText, isAbsoluteUrl, resolveUrl } from "./utils.js";
 
 /**
@@ -56,6 +57,9 @@ export function fromJSONFeed(
 
 	let feedUrl = resolveUrl(firstText(feed.feedUrl, url), url);
 	if (feedUrl) data.feedUrl = feedUrl;
+
+	let links = fromJSONFeedLinks(feed, url);
+	if (links.length > 0) data.links = links;
 
 	if (feed.language) data.language = feed.language;
 

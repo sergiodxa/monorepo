@@ -125,8 +125,23 @@ Retrieves and parses a feed, sending the stored validators as preconditions.
   default
 
 Resolves to a `Feed.FetchResult`: `{ notModified: false, feed, url, status, etag?,
-lastModified? }`, or `{ notModified: true, feed: undefined, url, status: 304, etag?,
-lastModified? }`.
+lastModified?, links? }`, or `{ notModified: true, feed: undefined, url, status: 304, etag?,
+lastModified?, links? }`. `links` carries the relations the response's own `Link` header
+declared, which is where a publisher who cannot edit their document still declares one.
+
+### `Feed.selectHub(header?: Feed.Link[], document?: Feed.Link[])`
+
+Chooses the push endpoint to subscribe to, as `{ url, source }` where `source` is `header`
+or `document`. The header's hub wins over the document's, the first `rel=hub` wins within
+each, and a hub reached over anything but `https:` is passed over, since a subscription
+carries a shared secret in a request body.
+
+```typescript
+let fetched = await Feed.fetch(url);
+if (!isFailure(fetched) && !fetched.data.notModified) {
+	let hub = Feed.selectHub(fetched.data.links, fetched.data.feed.links);
+}
+```
 
 ### `Feed.discover(input: string | URL, options?: Feed.FetchOptions)`
 
@@ -138,7 +153,12 @@ chain ended rather than where it started.
 ### Instance Accessors
 
 `format`, `title`, `description`, `siteUrl`, `feedUrl`, `language`, `imageUrl`, `updatedAt`,
-`items`, and `toJSON()`.
+`items`, `links`, and `toJSON()`.
+
+`links` is every relation the document declared, in document order, with each `rel`
+lower-cased and each `href` resolved: an Atom `<link>`, an RSS `<atom:link>`, and a JSON
+Feed's `feed_url` and `hubs` all arrive in the one shape. `feedUrl` keeps deriving from
+`rel=self`, so a caller that only wants the address reads that instead.
 
 ### Errors
 
@@ -151,8 +171,9 @@ package refused from one it could not reach.
 
 ### Types
 
-`Feed.Format`, `Feed.Item`, `Feed.Author`, `Feed.Enclosure`, `Feed.Data`,
-`Feed.ParseOptions`, `Feed.FetchOptions`, `Feed.FetchResult`, and `Feed.Discovery`.
+`Feed.Format`, `Feed.Item`, `Feed.Author`, `Feed.Enclosure`, `Feed.Link`, `Feed.Hub`,
+`Feed.Data`, `Feed.ParseOptions`, `Feed.FetchOptions`, `Feed.FetchResult`, and
+`Feed.Discovery`.
 
 ## The Normalized Shape
 
@@ -165,6 +186,7 @@ package refused from one it could not reach.
 | `language`         | `channel.language`                                      | `xml:lang` on the feed                                         | `language`                        |
 | `imageUrl`         | `channel.image.url`                                     | `feed.logo`, else `feed.icon`                                  | `icon`, else `favicon`            |
 | `updatedAt`        | `lastBuildDate`, else `pubDate`                         | `feed.updated`                                                 | the newest item date              |
+| `links`            | `atom:link` elements                                    | `link` elements                                                | `feed_url` and `hubs`             |
 | `item.guid`        | `guid`, else `link`, else the title                     | `entry.id`, else the alternate link                            | `id`                              |
 | `item.title`       | `title`                                                 | `entry.title`                                                  | `title`                           |
 | `item.url`         | `link`, else a permalink `guid`                         | alternate link                                                 | `url`, else `id` when it is a URL |

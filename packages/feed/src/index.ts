@@ -18,6 +18,7 @@ import { fromAtom } from "./lib/from-atom.js";
 import { fromJSONFeed } from "./lib/from-json-feed.js";
 import { fromRSS } from "./lib/from-rss.js";
 import { readWithin, retrieve } from "./lib/limits.js";
+import { fromLinkHeader, selectHub } from "./lib/links.js";
 import { looksLikeJSON, sniff } from "./lib/sniff.js";
 import { describe } from "./lib/utils.js";
 
@@ -57,6 +58,23 @@ export namespace Feed {
 		email?: string;
 	}
 
+	/**
+	 * One relation a document or a response declared, with `rel` lower-cased and
+	 * `href` resolved against the document it was read from.
+	 */
+	export interface Link {
+		rel: string;
+		href: string;
+		type?: string;
+	}
+
+	/** A push endpoint, beside which of the two places advertised it. */
+	export interface Hub {
+		url: string;
+		/** `header` when the response's own `Link` header named it, `document` otherwise. */
+		source: "header" | "document";
+	}
+
 	/** A file published alongside a post, such as a podcast episode. */
 	export interface Enclosure {
 		url: string;
@@ -93,6 +111,12 @@ export namespace Feed {
 		language?: string;
 		imageUrl?: string;
 		updatedAt?: Date;
+		/**
+		 * Every relation the document declared, in document order. `feedUrl` is the
+		 * `self` relation already resolved, so a caller that only wants the address
+		 * reads that instead of filtering this.
+		 */
+		links?: Link[];
 		items: Item[];
 	}
 
@@ -123,6 +147,11 @@ export namespace Feed {
 		status: number;
 		etag?: string;
 		lastModified?: string;
+		/**
+		 * The relations the response's own `Link` header declared, which outrank the
+		 * document's wherever a publisher can set a header but not edit their feed.
+		 */
+		links?: Link[];
 	}
 
 	/** A retrieval that returned a document. */
@@ -214,6 +243,34 @@ export class Feed {
 	/** The posts, in document order, deduplicated by `guid`. */
 	get items(): Feed.Item[] {
 		return this.#data.items;
+	}
+
+	/**
+	 * Every relation the document declared, in document order, with each `rel`
+	 * lower-cased and each `href` resolved. It is what a caller reads a relation the
+	 * accessors above do not cover — `hub`, say — out of, whichever format the
+	 * document arrived in.
+	 */
+	get links(): Feed.Link[] {
+		return this.#data.links ?? [];
+	}
+
+	/**
+	 * The hub to subscribe to, preferring the one the response's own `Link` header
+	 * named, since a publisher on a hosted platform can set a header where they
+	 * cannot edit the document. A hub reached over anything but `https:` is passed
+	 * over, because a subscription carries a shared secret in a request body.
+	 *
+	 * @param header - The relations the response's `Link` header declared
+	 * @param document - The relations the document declared
+	 * @returns The hub and where it was advertised, or nothing when there is none
+	 * @example let hub = Feed.selectHub(fetched.links, fetched.feed.links);
+	 */
+	static selectHub(
+		header?: readonly Feed.Link[],
+		document?: readonly Feed.Link[],
+	): Feed.Hub | undefined {
+		return selectHub(header, document);
 	}
 
 	/** The whole feed as plain data. */
@@ -314,9 +371,17 @@ export class Feed {
 
 		let { response, url } = retrieved.data;
 		let validators = readValidators(response, options);
+		let links = fromLinkHeader(response, url);
 
 		if (response.status === 304) {
-			return success({ notModified: true, feed: undefined, status: 304, url, ...validators });
+			return success({
+				notModified: true,
+				feed: undefined,
+				status: 304,
+				url,
+				links,
+				...validators,
+			});
 		}
 
 		if (!response.ok) {
@@ -334,6 +399,7 @@ export class Feed {
 			feed: feed.data,
 			status: response.status,
 			url,
+			links,
 			...validators,
 		});
 	}

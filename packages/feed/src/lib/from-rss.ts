@@ -19,6 +19,7 @@ import { FeedParseError } from "../index.js";
 
 import { parseMailbox } from "./authors.js";
 import { toDate } from "./dates.js";
+import { fromRSSLinks } from "./links.js";
 import { dedupeBy, firstText, resolveUrl } from "./utils.js";
 
 /**
@@ -52,6 +53,9 @@ export function fromRSS(xml: XML, url?: string): Result<Feed.Data, FeedParseErro
 
 	let feedUrl = resolveUrl(firstText(selectSelfLink(channel.atomLink), url), url);
 	if (feedUrl) data.feedUrl = feedUrl;
+
+	let links = fromRSSLinks(channel.atomLink, url);
+	if (links.length > 0) data.links = links;
 
 	if (channel.language) data.language = channel.language;
 

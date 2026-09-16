@@ -19,6 +19,7 @@ import { FeedParseError } from "../index.js";
 
 import { fromPersons } from "./authors.js";
 import { toDate } from "./dates.js";
+import { fromAtomLinks } from "./links.js";
 import { selectAlternate, selectEnclosures, selectSelf } from "./select-link.js";
 import { dedupeBy, firstText, isAbsoluteUrl, resolveUrl } from "./utils.js";
 
@@ -58,6 +59,9 @@ export function fromAtom(xml: XML, url?: string): Result<Feed.Data, FeedParseErr
 
 	let feedUrl = resolveUrl(firstText(selectSelf(feed.link), url), url);
 	if (feedUrl) data.feedUrl = feedUrl;
+
+	let links = fromAtomLinks(feed.link, url);
+	if (links.length > 0) data.links = links;
 
 	if (feed.lang) data.language = feed.lang;
 
