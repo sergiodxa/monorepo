@@ -284,15 +284,23 @@ export default {
 		velocity: {
 			legend: "Cuánto tiempo se quedan estas entradas",
 			description:
-				"Las entradas de este feed salen de tu lectura en cuanto son más viejas que esto, las hayas leído o no. Lo que guardes se queda, elijas lo que elijas.",
-			submit: "Guardar",
+				"Las entradas más viejas salen de tu lectura, las hayas leído o no. Las guardadas se quedan siempre.",
 			saved: "Guardado.",
 			invalid: "Ese no es uno de los plazos disponibles.",
-			breaking: "De última hora — se queda 3 horas",
-			news: "Noticias — se queda 18 horas",
-			article: "Artículos — se queda 3 días",
-			essay: "Ensayos — se queda 2 semanas",
-			evergreen: "Siempre — no se va nunca",
+			name: {
+				breaking: "De última hora",
+				news: "Noticias",
+				article: "Artículos",
+				essay: "Ensayos",
+				evergreen: "Siempre",
+			},
+			window: {
+				breaking: "3 horas",
+				news: "18 horas",
+				article: "3 días",
+				essay: "2 semanas",
+				evergreen: "No se va nunca",
+			},
 			/**
 			 * Offered beside the control rather than acted on: a measurement is a good reason to
 			 * ask a reader a question and a bad reason to delete their posts, so this says what

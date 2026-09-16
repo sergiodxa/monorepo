@@ -588,21 +588,34 @@ describe("a feed's health", () => {
 });
 
 describe("how long this feed's posts stay", () => {
-	test("offers every span in one field, with this feed's own chosen", async () => {
+	test("offers every span, each a submit carrying its own value", async () => {
 		store.getFeed.mockResolvedValue({ ...FEED, velocity: "news" });
 
 		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
 
-		/** A native select submits with the form, which is what asks for no script. */
-		expect(body).toMatch(/<select[^>]*\bname="velocity"/);
-		expect(body).toContain("How long these posts stay");
-		expect(body).toContain("Breaking — holds for 3 hours");
-		expect(body).toContain("News — holds for 18 hours");
-		expect(body).toContain("Article — holds for 3 days");
-		expect(body).toContain("Essay — holds for 2 weeks");
-		expect(body).toContain("Evergreen — holds forever");
+		/** Each row submits the form it sits in, which is what asks for no script. */
+		for (let velocity of ["breaking", "news", "article", "essay", "evergreen"]) {
+			expect(body).toMatch(new RegExp(`<button[^>]*\\bname="velocity"[^>]*\\bvalue="${velocity}"`));
+		}
 
-		expect(/<option[^>]*\bvalue="([a-z]+)"[^>]*\bselected\b/.exec(body)?.[1]).toBe("news");
+		expect(readsAs(body)).toContain("3 hours");
+		expect(readsAs(body)).toContain("Forever");
+	});
+
+	/** The trigger wears the answer, so the setting reads without opening anything. */
+	test("says which span is set on the control that changes it", async () => {
+		store.getFeed.mockResolvedValue({ ...FEED, velocity: "news" });
+
+		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
+		let trigger = /<button[^>]*\bcommandfor="velocity-[^"]*"[^>]*>[\s\S]*?<\/button>/.exec(
+			body,
+		)?.[0];
+
+		expect(readsAs(trigger ?? "")).toContain("News");
+		expect(trigger).toContain('aria-label="How long these posts stay"');
+
+		// And the row for that span is the one marked as chosen.
+		expect(body).toMatch(/<button[^>]*\bvalue="news"[^>]*\baria-selected="true"/);
 	});
 
 	/** A plain form and a submit, so a browser running no script sets a span the same way. */
@@ -616,18 +629,19 @@ describe("how long this feed's posts stay", () => {
 		);
 	});
 
-	test("ties the field to the label naming it and the passage explaining it", async () => {
+	test("ties the trigger to the menu it opens, and names both", async () => {
 		store.getFeed.mockResolvedValue(FEED);
 
 		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
-		let field = /<select[^>]*>/.exec(body)?.[0];
 
-		let id = field?.match(/id="([^"]+)"/)?.[1];
-		expect(body).toContain(`for="${id}"`);
+		let opens = /<button[^>]*\bcommandfor="([^"]+)"[^>]*\bcommand="toggle-popover"/.exec(body)?.[1];
+		expect(opens).toBeDefined();
+		expect(body).toContain(`id="${opens}"`);
 
-		let describedBy = field?.match(/aria-describedby="([^"]+)"/)?.[1];
-		expect(describedBy).toBeDefined();
-		expect(body).toContain(`id="${describedBy}"`);
+		// The menu carries the name too, since a reader who opens it is reading it alone.
+		expect(body).toMatch(
+			/aria-label="How long these posts stay"[\s\S]*aria-label="How long these posts stay"/,
+		);
 	});
 
 	/**
@@ -642,7 +656,7 @@ describe("how long this feed's posts stay", () => {
 		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
 
 		expect(readsAs(body)).toContain("This feed publishes about 40 posts a day");
-		expect(/<option[^>]*\bvalue="([a-z]+)"[^>]*\bselected\b/.exec(body)?.[1]).toBe("evergreen");
+		expect(body).toMatch(/<button[^>]*\bvalue="evergreen"[^>]*\baria-selected="true"/);
 		expect(store.setVelocity).not.toHaveBeenCalled();
 	});
 

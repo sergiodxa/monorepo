@@ -22,24 +22,22 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { CircleCheckIcon, RefreshCwIcon, UnlinkIcon } from "@sdxc/icons";
+import { CircleCheckIcon, HourglassIcon, RefreshCwIcon, UnlinkIcon } from "@sdxc/icons";
 import { parsePageParams } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { fg } from "@sdxc/u/color";
-import { flex, flexWrap, gap, items, vstack } from "@sdxc/u/layout";
-import { is, maxIs } from "@sdxc/u/size";
+import { flex, flexWrap, gap, items, justify, vstack } from "@sdxc/u/layout";
+import { maxIs, p, pb } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import {
 	Alert,
 	Badge,
 	Button,
 	Confirm,
-	Description,
 	Empty,
 	HeadingScope,
-	Label,
 	LinkButton,
-	Select,
+	Menu,
 	Text,
 } from "@sdxc/ui";
 import * as s from "remix/data-schema";
@@ -47,7 +45,6 @@ import { createAction } from "remix/router";
 import { attrs } from "remix/ui";
 
 import type { FeedStatus } from "~/database/feed-schema";
-import type { Velocity } from "~/database/schema";
 
 import { chrome } from "~/app/http/controllers/chrome";
 import { MARKED_PARAM } from "~/app/http/controllers/feeds/read";
@@ -105,6 +102,16 @@ function unfollowPromptId(feedId: string): string {
 	return `unfollow-${feedId}`;
 }
 
+/**
+ * The `id` the velocity menu answers to, which its trigger names in `commandfor`, carrying
+ * the feed for the reason the prompt's does.
+ *
+ * @param feedId - The feed whose spans the menu offers.
+ */
+function velocityMenuId(feedId: string): string {
+	return `velocity-${feedId}`;
+}
+
 /** One line of copy the page says an action's outcome in, and the tone it wears. */
 interface Note {
 	key: string;
@@ -158,16 +165,6 @@ function velocityNote(velocity: string | null): Note | null {
 /** Edge of the marks the header's own controls are drawn with, sized to the words beside them. */
 const ACTION_ICON_SIZE = 16;
 
-/** Ties the velocity field to the label naming it and the passage explaining it. */
-const VELOCITY_FIELD_ID = "feed-velocity";
-const VELOCITY_DESCRIPTION_ID = "feed-velocity-description";
-
-/**
- * Width of the velocity field, sized to the longest phrase it holds. A field stretched
- * across the column would promise more than a choice between five spans.
- */
-const VELOCITY_FIELD_WIDTH = "18rem";
-
 /**
  * Posts a day past which an Evergreen subscription is worth asking about.
  *
@@ -180,15 +177,6 @@ const VELOCITY_FIELD_WIDTH = "18rem";
  * velocity, whatever this number says.
  */
 const BUSY_POSTS_PER_DAY = 10;
-
-/** The `feeds.velocity.*` key naming each span, in the order the field offers them. */
-const VELOCITY_KEYS: Record<Velocity, string> = {
-	breaking: "feeds.velocity.breaking",
-	news: "feeds.velocity.news",
-	article: "feeds.velocity.article",
-	essay: "feeds.velocity.essay",
-	evergreen: "feeds.velocity.evergreen",
-};
 
 /**
  * The `feeds.status.*` key naming each outcome that counts as a failed check. A refresh
@@ -444,6 +432,65 @@ export default createAction(routes.feed, {
 							</Button>
 						</form>
 
+						{/**
+						 * How long this feed's posts stay, which is the one control on this page that
+						 * can take away a post the reader has not read. It sits among the actions
+						 * because that is what it is — a thing done to this feed, like checking it or
+						 * letting it go — rather than a section of the page to read past on the way to
+						 * the posts.
+						 *
+						 * The trigger wears the answer, so the setting is legible without opening
+						 * anything, and choosing is the whole interaction: one click decides, where a
+						 * field and a submit asked for two. Without script the menu is a popover the
+						 * browser opens itself and each row is a plain submit, so it is the same
+						 * control either way.
+						 */}
+						<Button
+							commandfor={velocityMenuId(feedId)}
+							command="toggle-popover"
+							color="neutral"
+							variant="ghost"
+							size="sm"
+							aria-label={ctx.i18next.t("feeds.velocity.legend")}
+							title={ctx.i18next.t("feeds.velocity.legend")}
+						>
+							{/** Time running out, which is what every span but one describes. */}
+							<HourglassIcon size={ACTION_ICON_SIZE} />
+							<ActionLabel>
+								{ctx.i18next.t(`feeds.velocity.name.${feed.velocity}` as const)}
+							</ActionLabel>
+						</Button>
+
+						<Menu id={velocityMenuId(feedId)} aria-label={ctx.i18next.t("feeds.velocity.legend")}>
+							{/**
+							 * One form around every row, so each row is a submit carrying its own value.
+							 * The name leads and the span follows it quietly: a reader picking between
+							 * these is matching a kind of feed to a length of time, and the two read as
+							 * one line rather than as a phrase to parse.
+							 */}
+							<form method="post" action={routes.feeds.velocity.href({ feedId })}>
+								<Text mix={[p(2), pb(1), text("xs"), fg("neutral.muted")]}>
+									{ctx.i18next.t("feeds.velocity.description")}
+								</Text>
+
+								{VELOCITIES.map((velocity) => (
+									<Menu.Item
+										key={velocity}
+										type="submit"
+										name={VELOCITY_FIELD}
+										value={velocity}
+										aria-selected={velocity === feed.velocity ? "true" : undefined}
+										mix={[justify("between"), gap(4)]}
+									>
+										<span>{ctx.i18next.t(`feeds.velocity.name.${velocity}` as const)}</span>
+										<span mix={[text("xs"), fg("neutral.muted")]}>
+											{ctx.i18next.t(`feeds.velocity.window.${velocity}` as const)}
+										</span>
+									</Menu.Item>
+								))}
+							</form>
+						</Menu>
+
 						<Button
 							commandfor={unfollowPromptId(feedId)}
 							command="show-modal"
@@ -531,64 +578,20 @@ export default createAction(routes.feed, {
 								{checkedLabel}
 							</span>
 						</div>
-					</div>
-
-					{/**
-					 * How long this feed's posts stay, which is the one thing on this page that can
-					 * take away a post the reader has not read. It sits under what the feed is and
-					 * above the posts themselves, where the reader has just read how busy it is.
-					 *
-					 * A plain form with a native field: the choice is one value and a submit, so the
-					 * control a reader running no script gets is the same control as everybody else's.
-					 */}
-					<form
-						method="post"
-						action={routes.feeds.velocity.href({ feedId })}
-						mix={[vstack({ gap: 3 }), maxIs(PAGE_COLUMN)]}
-					>
-						<div mix={[vstack({ gap: 1 })]}>
-							<Label htmlFor={VELOCITY_FIELD_ID}>{ctx.i18next.t("feeds.velocity.legend")}</Label>
-
-							<Description id={VELOCITY_DESCRIPTION_ID}>
-								{ctx.i18next.t("feeds.velocity.description")}
-							</Description>
-						</div>
-
-						{/** The field and its submit on one line, wrapping where a phone has room for one. */}
-						<div mix={[flex(), items("center"), flexWrap("wrap"), gap(2), maxIs("100%")]}>
-							{/** The field fills whatever box it is given, so the box is what sizes it. */}
-							<div mix={[maxIs(VELOCITY_FIELD_WIDTH), is("full")]}>
-								<Select
-									id={VELOCITY_FIELD_ID}
-									name={VELOCITY_FIELD}
-									aria-describedby={VELOCITY_DESCRIPTION_ID}
-								>
-									{VELOCITIES.map((velocity) => (
-										<Select.Option
-											key={velocity}
-											value={velocity}
-											selected={velocity === feed.velocity}
-										>
-											{ctx.i18next.t(VELOCITY_KEYS[velocity])}
-										</Select.Option>
-									))}
-								</Select>
-							</div>
-
-							<Button type="submit">{ctx.i18next.t("feeds.velocity.submit")}</Button>
-						</div>
 
 						{/**
-						 * The measurement, put to the reader as a question. It stands beside the control
-						 * that answers it and changes nothing on its own: the field above still shows what
-						 * they chose, and it stays that way until they choose something else.
+						 * The measurement, put to the reader as a question and left there. It reads
+						 * beside what the feed is rather than beside the control that answers it,
+						 * because it is news about the feed: how much it publishes, and that nothing
+						 * currently leaves. Nothing here changes a setting — a measurement is a good
+						 * reason to ask somebody a question and a bad reason to delete their posts.
 						 */}
 						{isBusy && postsPerDay !== null && (
 							<Text mix={[text("xs"), fg("neutral.muted")]}>
 								{ctx.i18next.t("feeds.velocity.suggestion", { count: Math.round(postsPerDay) })}
 							</Text>
 						)}
-					</form>
+					</div>
 
 					{note && (
 						<Alert color={note.color} mix={pageNote()}>

@@ -282,16 +282,26 @@ export default {
 		 */
 		velocity: {
 			legend: "How long these posts stay",
-			description:
-				"Posts from this feed leave your timeline once they are older than this, read or not. Anything you save stays whatever you choose.",
-			submit: "Save",
+			/** Said inside the menu, where a reader is choosing rather than reading the page. */
+			description: "Older posts leave your timeline, read or not. Saved posts always stay.",
 			saved: "Saved.",
 			invalid: "That is not one of the spans on offer.",
-			breaking: "Breaking — holds for 3 hours",
-			news: "News — holds for 18 hours",
-			article: "Article — holds for 3 days",
-			essay: "Essay — holds for 2 weeks",
-			evergreen: "Evergreen — holds forever",
+			/** What each span is for, which is the word the control wears once it is chosen. */
+			name: {
+				breaking: "Breaking",
+				news: "News",
+				article: "Articles",
+				essay: "Essays",
+				evergreen: "Evergreen",
+			},
+			/** And how long it holds, read beside the name rather than folded into it. */
+			window: {
+				breaking: "3 hours",
+				news: "18 hours",
+				article: "3 days",
+				essay: "2 weeks",
+				evergreen: "Forever",
+			},
 			/**
 			 * Offered beside the control rather than acted on: a measurement is a good reason to
 			 * ask a reader a question and a bad reason to delete their posts, so this says what
