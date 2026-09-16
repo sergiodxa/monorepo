@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-16
+**Accepted** - 2026-09-16
 
 ## Background
 
@@ -426,19 +426,19 @@ the declared palette.
 
 ## Implementation
 
-- [ ] `theme` and `reading_face` on `settings`, and `presentation` on `feeds`, with their `CHECK`s
-- [ ] `PRESENTATION_COOKIE` in `app/http/cookies.ts`, with its `remix/data-schema` shape
-- [ ] Presentation middleware publishing `ctx.presentation`, declared in `router-context.d.ts`
-- [ ] `class`, `data-face`, `colorScheme()` and the referrer meta in `DocumentLayout`
-- [ ] `--ui-font-reading` under `html[data-face="serif"]`, and `font("reading")` on the reading surfaces
-- [ ] Theme and face controls on `/settings`, with copy in `app/locales/en.ts` and `es.ts`
-- [ ] The cookie set alongside the stored write and from the auth callback, and reconciled on `/settings`
-- [ ] The contrast test over every token pair the app renders, in both schemes
-- [ ] `enclosure_url`, `enclosure_type` and `enclosure_length` on `FeedDO` `items` and `feed_items`, filled at ingestion from the first `audio/` or `video/` attachment and no other
-- [ ] The native player on a feed's surface and the expanded row, with copy for its label
-- [ ] Swipe-to-toggle behind `clientEntry`, with `touch-action: pan-y` and `motion-safe` travel
-- [ ] The presentation middleware in `AGENTS.md`'s reference list, and the settings in the README
-- [ ] The tests above
+- [x] `theme` and `reading_face` on `settings`, and `presentation` on `feeds`, with their `CHECK`s
+- [x] `PRESENTATION_COOKIE` in `app/http/cookies.ts`, with its `remix/data-schema` shape
+- [x] Presentation middleware publishing `ctx.presentation`, declared in `router-context.d.ts`
+- [x] `class`, `data-face`, `colorScheme()` and the referrer meta in `DocumentLayout`
+- [x] `--ui-font-reading` under `html[data-face="serif"]`, and `font("reading")` on the reading surfaces
+- [x] Theme and face controls on `/settings`, with copy in `app/locales/en.ts` and `es.ts`
+- [x] The cookie set alongside the stored write and from the auth callback, and reconciled on `/settings`
+- [x] The contrast test over every token pair the app renders, in both schemes
+- [x] `enclosure_url`, `enclosure_type` and `enclosure_length` on `FeedDO` `items` and `feed_items`, filled at ingestion from the first `audio/` or `video/` attachment and no other
+- [x] The native player on a feed's surface and the expanded row, with copy for its label
+- [x] Swipe-to-toggle behind `clientEntry`, with `touch-action: pan-y` and `motion-safe` travel
+- [x] The presentation middleware in `AGENTS.md`'s reference list, and the settings in the README
+- [x] The tests above
 
 ## References
 

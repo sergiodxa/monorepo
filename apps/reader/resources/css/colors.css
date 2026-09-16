@@ -127,4 +127,26 @@
 	--ui-font-mono:
 		ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
 		monospace;
+
+	/*
+	 * The face a post's title and its words are set in, which `u.font("reading")` resolves.
+	 * One variable rather than a branch in every reading surface, so nothing in the app asks
+	 * which face the reader picked.
+	 */
+	--ui-font-reading: var(--ui-font-sans);
+}
+
+/*
+ * The reader's other answer. It is written against the element and the attribute rather
+ * than against `:root` on purpose: this file is linked before the theme it customizes, so a
+ * `:root` declaration here is outranked by the same declaration arriving from the theme,
+ * and a type-plus-attribute selector outranks `:root` whatever the link order turns out to
+ * be.
+ *
+ * It reaches the reading surfaces alone and never the chrome: a serif sidebar is not what
+ * anybody asking for serif is asking for, and a dense navigation list is harder to scan in
+ * one.
+ */
+html[data-face="serif"] {
+	--ui-font-reading: var(--ui-font-serif);
 }

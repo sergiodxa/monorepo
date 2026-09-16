@@ -54,6 +54,22 @@ const TITLE_TAKEN = "data-marks-read";
 /** Edge of the mark, sized to the label a small button would have carried instead. */
 const ICON_SIZE = 16;
 
+/**
+ * How far sideways a drag has to travel before it counts as a swipe, in CSS pixels. Below
+ * it the row springs back, so a gesture is previewed and abandonable rather than decided
+ * at the moment a finger lands.
+ */
+const SWIPE_THRESHOLD = 64;
+
+/**
+ * The widest the row is carried while a finger is on it. The travel is a preview of the
+ * move rather than the move itself, so it stops well short of the row leaving the screen.
+ */
+const SWIPE_TRAVEL = 96;
+
+/** Where the phone-width gesture is on, which is the same measure a row reflows at. */
+const PHONE_ROW = "(max-width: 33.999rem)";
+
 /** Edge of the square the mark sits in, which is the tallest thing on a row. */
 const TOGGLE_SIZE = "1.75rem";
 
@@ -170,8 +186,89 @@ export const ReadToggle = clientEntry(
 		 * through the row they share. Hydrating the row instead would put every word of every
 		 * post through the browser to reach one glyph.
 		 */
+		/**
+		 * Carries the row with the finger, or puts it back. The travel is written onto the
+		 * element rather than declared, because the distance is whatever the finger has
+		 * covered; a reader who asked for less motion is given none of it, and the toggle
+		 * still happens.
+		 */
+		function travel(distance: number) {
+			if (!(row instanceof HTMLElement)) return;
+			if (!allowsMotion()) return;
+
+			row.style.transform = distance === 0 ? "" : `translateX(${distance}px)`;
+			row.style.transition = distance === 0 ? "transform 150ms ease-out" : "";
+		}
+
+		/** Whether this reader asked to be moved about, which the travel is the whole of here. */
+		function allowsMotion(): boolean {
+			return globalThis.matchMedia?.("(prefers-reduced-motion: no-preference)").matches ?? false;
+		}
+
+		/**
+		 * A horizontal swipe on the row, which toggles the post exactly as the mark does.
+		 *
+		 * The row declares `touch-action: pan-y`, so the browser keeps every vertical movement
+		 * for its own scrolling and this only ever sees the axis it asked for — which is more
+		 * reliable than a threshold deciding after the fact, and a handler that took the
+		 * vertical axis would make a list of posts unusable on the device the gesture is for.
+		 *
+		 * Both directions do the same thing. A swipe has no hover state and so no way to say
+		 * what it is about to do, which makes an accidental one something a reader undoes by
+		 * repeating it.
+		 */
+		function watchSwipe(node: Element, signal: AbortSignal) {
+			let start: { id: number; x: number } | null = null;
+
+			node.addEventListener(
+				"pointerdown",
+				(event) => {
+					let pointer = event as PointerEvent;
+
+					/**
+					 * A finger on a phone, which is the whole of where this is offered: a pointer
+					 * that hovers has the mark beside it and the row's own reach, and a wide row
+					 * has nowhere to travel to.
+					 */
+					if (pointer.pointerType === "mouse") return;
+					if (!globalThis.matchMedia?.(PHONE_ROW).matches) return;
+
+					start = { id: pointer.pointerId, x: pointer.clientX };
+				},
+				{ signal },
+			);
+
+			node.addEventListener(
+				"pointermove",
+				(event) => {
+					let pointer = event as PointerEvent;
+					if (start === null || pointer.pointerId !== start.id) return;
+
+					let distance = pointer.clientX - start.x;
+					travel(Math.max(-SWIPE_TRAVEL, Math.min(SWIPE_TRAVEL, distance)));
+				},
+				{ signal },
+			);
+
+			function end(event: Event) {
+				let pointer = event as PointerEvent;
+				if (start === null || pointer.pointerId !== start.id) return;
+
+				let distance = pointer.clientX - start.x;
+				start = null;
+				travel(0);
+
+				if (Math.abs(distance) >= SWIPE_THRESHOLD) void move(!isRead);
+			}
+
+			node.addEventListener("pointerup", end, { signal });
+			node.addEventListener("pointercancel", end, { signal });
+		}
+
 		let watchTitle = ref((node, signal) => {
 			row = node.closest("li");
+
+			if (row) watchSwipe(row, signal);
 
 			let title = row?.querySelector(`a[ping], a[${TITLE_TAKEN}]`);
 			if (!title) return;
