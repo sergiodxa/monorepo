@@ -590,9 +590,12 @@ export default createAction(routes.feed, {
 							aria-label={ctx.i18next.t("feeds.more.legend")}
 							title={ctx.i18next.t("feeds.more.legend")}
 						>
-							{/** The three dots a surface of further actions is named by everywhere. */}
+							{/**
+							 * The three dots a surface of further actions is named by everywhere, and
+							 * the whole control: the two beside it say what they do because they do it,
+							 * and a word here would only name the place the rest went.
+							 */}
 							<EllipsisIcon size={ACTION_ICON_SIZE} />
-							<ActionLabel>{ctx.i18next.t("feeds.more.legend")}</ActionLabel>
 						</Button>
 
 						<Menu id={moreMenuId(feedId)} aria-label={ctx.i18next.t("feeds.more.legend")}>

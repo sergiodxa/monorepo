@@ -369,7 +369,6 @@ describe("the actions on a feed's own line", () => {
 		store.getFeed.mockResolvedValue(FEED);
 
 		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
-		let line = /actions[\s\S]*?(?=<main|<div class="rmxc)/.exec(body)?.[0] ?? body;
 
 		// The two that act on the feed right now keep their own control.
 		expect(body).toContain(
@@ -380,12 +379,21 @@ describe("the actions on a feed's own line", () => {
 		);
 
 		// And one trigger opens the menu holding everything else.
-		let opens = /<button[^>]*\bcommandfor="(more-[^"]+)"[^>]*\bcommand="toggle-popover"/.exec(
-			body,
-		)?.[1];
-		expect(opens).toBeDefined();
-		expect(body).toContain(`id="${opens}"`);
-		expect(readsAs(line)).toContain("More actions");
+		let trigger =
+			/<button[^>]*\bcommandfor="(more-[^"]+)"[^>]*\bcommand="toggle-popover"[^>]*>[\s\S]*?<\/button>/.exec(
+				body,
+			);
+		expect(trigger).not.toBeNull();
+		expect(body).toContain(`id="${trigger?.[1]}"`);
+
+		/**
+		 * The mark stands alone: the two beside it are named because naming them is what
+		 * says what they do, and a word here would name only where the rest went. What a
+		 * screen reader announces and a pointer rests on is the control's own name.
+		 */
+		expect(readsAs(trigger?.[0] ?? "").trim()).toBe("");
+		expect(trigger?.[0]).toContain('aria-label="More actions"');
+		expect(trigger?.[0]).toContain('title="More actions"');
 	});
 
 	/**
