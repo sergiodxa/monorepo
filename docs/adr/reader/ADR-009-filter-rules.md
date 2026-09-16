@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-16
+**Accepted** - 2026-09-16
 
 ## Background
 
@@ -483,21 +483,21 @@ against a SQLite `Database`, the object paths in `*.workers.test.ts` with
 
 ## Implementation
 
-- [ ] `rules` table, its migration, and the `FIELDS` / `ACTIONS` named lists with their `CHECK`s
-- [ ] `flagged_at` on `feed_items`, its partial index, and the timeline's mark
-- [ ] `RULE_LIMIT`, `FREE_RULE_LIMIT`, and the one entitlement function they are read through,
+- [x] `rules` table, its migration, and the `FIELDS` / `ACTIONS` named lists with their `CHECK`s
+- [x] `flagged_at` on `feed_items`, its partial index, and the timeline's mark
+- [x] `RULE_LIMIT`, `FREE_RULE_LIMIT`, and the one entitlement function they are read through,
       with the rule surface behind a flag from the app's own catalog until the tier exists
-- [ ] Rule evaluation in `#materialize`, after velocity, classifying rather than filtering
-- [ ] The held-id read-back, chunked to the bind limit, taken only when a rule fires
-- [ ] Per-run counter updates for `matches` and `last_matched_at`
-- [ ] `createRule` / `updateRule` / `deleteRule` / `listRules` / `previewRule` on the RPC surface,
+- [x] Rule evaluation in `#materialize`, after velocity, classifying rather than filtering
+- [x] The held-id read-back, chunked to the bind limit, taken only when a rule fires
+- [x] Per-run counter updates for `matches` and `last_matched_at`
+- [x] `createRule` / `updateRule` / `deleteRule` / `listRules` / `previewRule` on the RPC surface,
       each answering a discriminated union rather than throwing
-- [ ] `/rules` and its form, with the preview against the newest two hundred posts
-- [ ] The bounded one-off action over a previewed page
-- [ ] `ruled` on `user.sync`, and the `user.rule.preview` event, carrying no rule values
-- [ ] Copy for every string in `app/locales/en.ts` and `app/locales/es.ts`, including the
+- [x] `/rules` and its form, with the preview against the newest two hundred posts
+- [x] The bounded one-off action over a previewed page
+- [x] `ruled` on `user.sync`, and the `user.rule.preview` event, carrying no rule values
+- [x] Copy for every string in `app/locales/en.ts` and `app/locales/es.ts`, including the
       280-character caveat on summary matching and the warning on a rule matching everything
-- [ ] The tests above
+- [x] The tests above
 
 ## References
 
