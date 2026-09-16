@@ -25,6 +25,8 @@ import { FEED_JOURNAL, FEED_MIGRATIONS } from "~/database/feed-migrations";
 import { feed as feedTable, items } from "~/database/feed-schema";
 import { runMigrations } from "~/database/migrations";
 import {
+	digest,
+	DIGEST_PREFETCH,
 	FEED_ROW_ID,
 	MAX_SUMMARY_LENGTH,
 	measurePostsPerDay,
@@ -624,6 +626,101 @@ describe("pollFeed", () => {
 	});
 });
 
+describe("what a poll costs whatever the table holds", () => {
+	/** Answers `304` to a poll carrying the stored validator, as an unchanged feed does. */
+	function serveNotModified(entries: Entry[]): void {
+		server.use(
+			http.get(FEED_URL, ({ request }) =>
+				request.headers.get("if-none-match") === "v1"
+					? new HttpResponse(null, { status: 304 })
+					: HttpResponse.xml(rss(entries)),
+			),
+		);
+	}
+
+	test("recomputes the rate on a 304, and reaches zero once the window has slid past", async () => {
+		await storeFeed({ etag: "v1", posts_per_day: 1 });
+		await storeItem({ id: "item_1", revision: 1, published_at: NOW - 2 * DAY });
+		serveNotModified([{ guid: "item_1" }]);
+
+		await pollFeed(db, { now: NOW });
+		expect((await loadFeed()).posts_per_day).toBeCloseTo(1 / 30, 5);
+
+		// A feed that stopped publishing answers 304 forever, so this is the only path on
+		// which its rate can fall — and falling to zero is what the dormant cadence reads.
+		await pollFeed(db, { now: NOW + 31 * DAY });
+		expect((await loadFeed()).posts_per_day).toBe(0);
+	});
+
+	test("prefetches at most the bound, whatever the table holds", async () => {
+		await storeFeed();
+		for (let revision of [1, 2, 3]) await storeItem({ id: `item_${revision}`, revision });
+		serve([{ guid: "g1" }]);
+
+		let exec = vi.spyOn(sql, "exec");
+		await pollFeed(db, { now: NOW });
+
+		let reads = exec.mock.calls
+			.map(([statement]) => String(statement))
+			.filter(
+				(statement) => /^\s*select/i.test(statement) && /"guid".*"content_hash"/.test(statement),
+			);
+		exec.mockRestore();
+
+		// A feed at the retention ceiling would otherwise be classified by pulling a
+		// million guids and digests into an isolate with a hundred and twenty-eight
+		// megabytes, which is a busy feed that stops polling rather than one that costs.
+		expect(reads).not.toEqual([]);
+		for (let read of reads) {
+			expect(read).toMatch(new RegExp(`limit\\s+${DIGEST_PREFETCH}\\b`, "i"));
+		}
+	});
+
+	test("recognizes an entry below the prefetch window by its exact lookup", async () => {
+		let sunk = DIGEST_PREFETCH + 1;
+		await storeFeed({ head: sunk });
+		await storeItem({
+			id: "item_old",
+			guid: "old",
+			revision: 1,
+			content_hash: await digest({
+				title: "A post",
+				url: "https://example.com/old",
+				summary: "The body",
+				author: null,
+			}),
+		});
+		for (let revision = 2; revision <= sunk; revision += 1) {
+			await storeItem({ id: `item_${revision}`, revision });
+		}
+
+		serve([{ guid: "old" }]);
+
+		// A thousand is a cache hit rate rather than a correctness boundary: what the
+		// window did not answer for gets one seek on the unique index instead, so the
+		// entry is read as unchanged rather than decided as new.
+		expect(await pollFeed(db, { now: NOW + HOUR })).toEqual({
+			status: "ok",
+			inserted: 0,
+			edited: 0,
+			head: sunk,
+		});
+		expect(await storedItems()).toHaveLength(sunk);
+	});
+
+	test("writes no second row for an insert that conflicts on its guid", async () => {
+		await storeFeed();
+		serve([{ guid: "g1" }]);
+
+		// Two polls of one object, each classifying the entry as new because neither has
+		// written yet. The unique index is what decides, and the loser writes nothing
+		// rather than aborting a chunk of rows that were all new.
+		await Promise.all([pollFeed(db, { now: NOW }), pollFeed(db, { now: NOW })]);
+
+		expect(await storedItems()).toHaveLength(1);
+	});
+});
+
 describe("measurePostsPerDay", () => {
 	test("reports what the feed published over the window, spread across its days", async () => {
 		for (let index of [1, 2, 3]) {
@@ -662,7 +759,7 @@ describe("pruneItems", () => {
 	test("keeps the newest items by revision and drops everything below them", async () => {
 		await storeFiveItems();
 
-		expect(await pruneItems(db, 2)).toBe(3);
+		expect(await pruneItems(db, 2, 5)).toBe(3);
 		// By revision rather than by date: a publisher posting an entry dated four years
 		// ago has published something new, and the newest two here are the oldest by date.
 		expect((await storedItems()).map((item) => item.revision)).toEqual([4, 5]);
@@ -671,14 +768,28 @@ describe("pruneItems", () => {
 	test("deletes nothing from a feed inside the cap", async () => {
 		await storeFiveItems();
 
-		expect(await pruneItems(db, 10)).toBe(0);
+		expect(await pruneItems(db, 10, 5)).toBe(0);
 		expect(await storedItems()).toHaveLength(5);
+	});
+
+	test("skips the probe entirely while the head is at or below the ceiling", async () => {
+		await storeFiveItems();
+
+		let exec = vi.spyOn(sql, "exec");
+		expect(await pruneItems(db, 5, 5)).toBe(0);
+		let statements = exec.mock.calls.map(([statement]) => String(statement));
+		exec.mockRestore();
+
+		// The counter takes a tick per insert, so it is never below the number of items
+		// ever written: one integer comparison stands in for an offset probe that would
+		// otherwise step through the whole index after every successful poll.
+		expect(statements).toEqual([]);
 	});
 
 	test("empties the table when it is asked to keep nothing", async () => {
 		await storeFiveItems();
 
-		expect(await pruneItems(db, 0)).toBe(5);
+		expect(await pruneItems(db, 0, 5)).toBe(5);
 		expect(await storedItems()).toEqual([]);
 	});
 
@@ -686,7 +797,7 @@ describe("pruneItems", () => {
 		await storeFeed({ head: 5 });
 		await storeFiveItems();
 
-		await pruneItems(db, 1);
+		await pruneItems(db, 1, 5);
 
 		expect((await loadFeed()).head).toBe(5);
 	});
@@ -696,7 +807,7 @@ describe("pruneItems", () => {
 		serve([{ guid: "g1" }, { guid: "g2" }]);
 		await pollFeed(db, { now: NOW });
 
-		await pruneItems(db, 0);
+		await pruneItems(db, 0, 2);
 
 		serve([{ guid: "g3" }]);
 		await pollFeed(db, { now: NOW + HOUR });

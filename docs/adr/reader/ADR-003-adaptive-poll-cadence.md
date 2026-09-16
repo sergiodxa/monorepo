@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-16
+**Accepted** - 2026-09-16
 
 Supersedes the single interval
 [ADR-002](./ADR-002-canonical-feed-objects-and-lazy-reader-timelines.md) set, and nothing
@@ -457,28 +457,28 @@ refresh path in plain Vitest against a SQLite `Database`, the alarm and its re-a
 
 ## Implementation
 
-- [ ] `POLL_BANDS`, `POLL_DORMANT_MS`, the warm-up constants and the hysteresis factor in
+- [x] `POLL_BANDS`, `POLL_DORMANT_MS`, the warm-up constants and the hysteresis factor in
       `database/feed-schema.ts`, replacing `POLL_INTERVAL_MS`
-- [ ] `pollIntervalFor(previousRate, rate, createdAt, now)` beside them, taking the previous
+- [x] `pollIntervalFor(previousRate, rate, createdAt, now)` beside them, taking the previous
       rate so hysteresis needs no column
-- [ ] `#nextPollDelay` and `#armPoll` read the band; the backoff becomes a `max` rather than
+- [x] `#nextPollDelay` and `#armPoll` read the band; the backoff becomes a `max` rather than
       a `min` against it
-- [ ] `subscribe` arms at the band rather than at a fixed day
-- [ ] `feedPollIntervalHours` becomes a multiplier on the band, in a unit that can express
+- [x] `subscribe` arms at the band rather than at a fixed day
+- [x] `feedPollIntervalHours` becomes a multiplier on the band, in a unit that can express
       the floor
-- [ ] `measurePostsPerDay` runs on every `pollFeed` outcome, not only on `ok`
-- [ ] Bound `storedDigests` to the newest thousand by `revision`, with an exact `guid` lookup
+- [x] `measurePostsPerDay` runs on every `pollFeed` outcome, not only on `ok`
+- [x] Bound `storedDigests` to the newest thousand by `revision`, with an exact `guid` lookup
       for anything the window missed
-- [ ] `ON CONFLICT (guid) DO NOTHING` on the item insert
-- [ ] Guard `pruneItems` behind `head <= FEED_RETENTION`
-- [ ] `UserDO` advances a cursor to the answered head when a page comes back empty below it
-- [ ] `feed.poll` carries `postsPerDay` and `intervalMs`, so a cadence is readable from the
+- [x] `ON CONFLICT (guid) DO NOTHING` on the item insert
+- [x] Guard `pruneItems` behind `head <= FEED_RETENTION`
+- [x] `UserDO` advances a cursor to the answered head when a page comes back empty below it
+- [x] `feed.poll` carries `postsPerDay` and `intervalMs`, so a cadence is readable from the
       event rather than inferred from firing times
-- [ ] Append `doSqliteStorageGbDay`, `doRowRead` and `doRowWritten` to the rate card, without
+- [x] Append `doSqliteStorageGbDay`, `doRowRead` and `doRowWritten` to the rate card, without
       reordering anything already there
-- [ ] The tests above, and ADR-002's behaviour 24 rewritten to assert the band rather than the
+- [x] The tests above, and ADR-002's behaviour 24 rewritten to assert the band rather than the
       single interval
-- [ ] Update the README's refresh-schedule feature line
+- [x] Update the README's refresh-schedule feature line
 
 ## References
 

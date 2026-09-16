@@ -58,6 +58,9 @@ const COST_FIELDS: Record<CostResource, string> = {
 	aeDataPoint: "ae_data_points",
 	aeQuery: "ae_queries",
 	emailSent: "emails_sent",
+	doSqliteStorageGbDay: "do_sqlite_storage_gb_day",
+	doRowRead: "do_rows_read",
+	doRowWritten: "do_rows_written",
 };
 
 /**

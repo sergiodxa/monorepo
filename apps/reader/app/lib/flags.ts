@@ -25,8 +25,11 @@ import { createFlags, wideEventHook } from "@sdxc/flags/client";
 
 import { READER_BUDGET } from "~/database/schema";
 
-/** The cadence every feed is polled on, as the hours a reader would talk about it in. */
-const POLL_INTERVAL_HOURS = 24;
+/**
+ * What the cadence a feed's measured publishing rate puts it in is scaled by. Dimensionless
+ * because the fastest band is a quarter of an hour, which no whole-hour number can express.
+ */
+const POLL_MULTIPLIER = 1;
 
 /**
  * Posts a day above which a feed is busy enough to be worth asking a reader about, when
@@ -41,15 +44,15 @@ const BUSY_POSTS_PER_DAY = 10;
 export const FLAG_SET: StoredFlagSet = {
 	flags: {
 		/**
-		 * How often a feed's own object fetches it. One number for every feed, chosen for
-		 * the median one and never measured against real publishing rates — so it is the
-		 * number most likely to be wrong, and the one whose cost is paid by publishers
-		 * rather than by this app. Subjects are feeds, so a rule on `targetingKey` polls
-		 * one busy publication faster while the rest stay where they are.
+		 * What a feed's own cadence is multiplied by before its alarm is armed. The band
+		 * its publishing rate puts it in decides the shape; this decides the scale, so a
+		 * deployment can back the whole system off an incident without flattening the
+		 * table. Subjects are feeds, so a rule on `targetingKey` slows one publication
+		 * while the rest stay where they are.
 		 */
-		"feed-poll-interval-hours": {
-			variants: { hourly: 1, "six-hourly": 6, daily: POLL_INTERVAL_HOURS },
-			defaultVariant: "daily",
+		"feed-poll-multiplier": {
+			variants: { normal: POLL_MULTIPLIER, relaxed: 4, "backed-off": 24 },
+			defaultVariant: "normal",
 		},
 		/**
 		 * Posts one reader's object holds before it starts reclaiming, and then refusing.
@@ -99,7 +102,7 @@ export const FLAG_SET: StoredFlagSet = {
  * @example let budget = await ctx.flags.get(features.readerPostBudget);
  */
 export const features = defineFlags({
-	feedPollIntervalHours: flag.number("feed-poll-interval-hours", POLL_INTERVAL_HOURS),
+	feedPollMultiplier: flag.number("feed-poll-multiplier", POLL_MULTIPLIER),
 	readerPostBudget: flag.number("reader-post-budget", READER_BUDGET),
 	velocitySuggestionRate: flag.number("velocity-suggestion-rate", BUSY_POSTS_PER_DAY),
 	savedPosts: flag.boolean("saved-posts", true),

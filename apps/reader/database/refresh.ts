@@ -18,7 +18,7 @@ import { HTML } from "@sdxc/html";
 import { isFailure } from "@sdxc/result";
 import { TypeID } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
-import { and, getTableColumns, gt, lt, lte } from "remix/data-table";
+import { and, getTableColumns, getTableName, gt, lt, lte } from "remix/data-table";
 
 import type { InsertItem, SelectFeed } from "~/database/feed-schema";
 
@@ -47,6 +47,16 @@ const MAX_BACKOFF_MS = 24 * 60 * 60 * 1000;
 
 /** Bound parameters one SQL storage statement accepts, which is what chunks an insert. */
 const MAX_BOUND_PARAMETERS = 100;
+
+/**
+ * Stored entries the classification prefetches, newest decided first.
+ *
+ * A cache hit rate rather than a correctness boundary: `UNIQUE (guid)` is what guarantees
+ * an entry is stored once, and anything this window did not answer for gets an exact point
+ * lookup on that index. Bounding it is what keeps a poll's cost a function of the document
+ * the publisher served rather than of everything the feed has ever published.
+ */
+export const DIGEST_PREFETCH = 1000;
 
 /**
  * The longest line a stored post keeps under its title.
@@ -163,6 +173,7 @@ export async function pollFeed(
 					last_fetched_at: now,
 					last_status: "not_modified",
 					last_http_status: 304,
+					posts_per_day: await measurePostsPerDay(db, now),
 					...CLEARED_FAILURE,
 					updated_at: now,
 				},
@@ -172,7 +183,7 @@ export async function pollFeed(
 		}
 
 		let known = await storedDigests(db);
-		let { inserts, edits } = await classify(retrieved.feed.items, known, feed.head, now);
+		let { inserts, edits } = await classify(db, retrieved.feed.items, known, feed.head, now);
 
 		/**
 		 * The head moves by one tick per thing decided, and each tick is used exactly once:
@@ -182,9 +193,7 @@ export async function pollFeed(
 		 */
 		let head = feed.head + inserts.length + edits.length;
 
-		for (let chunk of chunked(inserts, insertChunkSize())) {
-			await db.createMany(items, chunk, { touch: false });
-		}
+		await insertItems(db, inserts);
 
 		for (let edit of edits) {
 			await db.updateMany(items, edit.changes, { where: { guid: edit.guid }, touch: false });
@@ -233,8 +242,17 @@ export async function pollFeed(
  *
  * @param db - The feed's database.
  * @param keep - How many items to leave in place.
+ * @param head - The feed's head counter, which never shrinks and so bounds the table.
  */
-export async function pruneItems(db: Database, keep: number): Promise<number> {
+export async function pruneItems(db: Database, keep: number, head: number): Promise<number> {
+	/**
+	 * The counter takes a tick per insert and per edit, so it is never below the number of
+	 * items ever written: one integer comparison proves the table is under the ceiling and
+	 * skips an offset probe that would otherwise step through the whole index to delete
+	 * nothing, on every successful poll of every feed.
+	 */
+	if (keep > 0 && head <= keep) return 0;
+
 	if (keep <= 0) {
 		let all = await db.count(items);
 		await db.deleteMany(items, { where: gt("revision", 0) });
@@ -274,9 +292,11 @@ export async function pruneItems(db: Database, keep: number): Promise<number> {
  *
  * Measured rather than guessed, and measured here because this object already holds every
  * item with the date it carries: the figure is taken once for a feed and shared by
- * everyone following it, the same way the fetch and the parse are. What a reader does with
- * it is a suggestion — a rate is a good reason to ask somebody a question and a bad reason
- * to delete their posts.
+ * everyone following it, the same way the fetch and the parse are.
+ *
+ * Taken on every poll, whatever the origin answered: a feed that stopped publishing
+ * answers `304` forever, and it is that feed whose rate has to keep falling until the
+ * window slides off its last entry and the schedule can call it dormant.
  *
  * @param db - The feed's database.
  * @param now - Epoch milliseconds the window is measured back from.
@@ -350,6 +370,7 @@ async function recordFailure(
 			last_status: outcome.status,
 			last_http_status: outcome.status === "http_error" ? outcome.httpStatus : null,
 			last_error: outcome.message,
+			posts_per_day: await measurePostsPerDay(db, now),
 			failure_count: failureCount,
 			next_attempt_at: now + backoffFor(failureCount),
 			updated_at: now,
@@ -369,15 +390,66 @@ export function backoffFor(count: number): number {
  * touching one.
  */
 async function storedDigests(db: Database): Promise<Map<string, string>> {
-	let rows = await db.query(items).select("guid", "content_hash").all();
+	let rows = await db
+		.query(items)
+		.select("guid", "content_hash")
+		.orderBy("revision", "desc")
+		.limit(DIGEST_PREFETCH)
+		.all();
+
 	return new Map(rows.map((row) => [row.guid, row.content_hash]));
+}
+
+/**
+ * The digest of one stored entry, for a guid the prefetch window did not answer for.
+ *
+ * One seek on `UNIQUE (guid)`, and at most as many of them as the document carries
+ * entries, which is what keeps an old entry re-served by a publisher recognized as stored
+ * rather than inserted a second time.
+ */
+async function storedDigestOf(db: Database, guid: string): Promise<string | undefined> {
+	let [stored] = await db.query(items).select("content_hash").where({ guid }).limit(1).all();
+	return stored?.content_hash;
+}
+
+/**
+ * Writes new items, skipping any guid the table already holds.
+ *
+ * `UNIQUE (guid)` is what guarantees an entry is stored once, and deferring to it rather
+ * than failing on it is what makes two polls of one object interleaving safe: the loser of
+ * the race writes nothing instead of aborting a chunk of rows that were all new.
+ */
+async function insertItems(db: Database, rows: readonly InsertItem[]): Promise<void> {
+	if (rows.length === 0) return;
+
+	let columns = Object.keys(getTableColumns(items));
+	let placeholders = `(${columns.map(() => "?").join(", ")})`;
+
+	for (let chunk of chunked(rows, insertChunkSize())) {
+		let values = chunk.flatMap((row) => {
+			let record: Record<string, unknown> = row;
+			return columns.map((column) => record[column] ?? null);
+		});
+
+		await db.exec(
+			`insert into ${getTableName(items)} (${columns.join(", ")}) values ${chunk
+				.map(() => placeholders)
+				.join(", ")} on conflict (guid) do nothing`,
+			values,
+		);
+	}
 }
 
 /**
  * Sorts every parsed entry against what is stored, without writing anything, handing each
  * decision the next tick of the head counter.
+ *
+ * An entry the prefetch window did not answer for is looked up by its guid before it is
+ * called new, so a publisher re-serving something older than the window finds it stored
+ * rather than inserted a second time.
  */
 async function classify(
+	db: Database,
 	entries: Feed.Item[],
 	known: Map<string, string>,
 	head: number,
@@ -390,7 +462,7 @@ async function classify(
 	for (let entry of entries) {
 		let displayable = displayableOf(entry);
 		let hash = await digest(displayable);
-		let stored = known.get(entry.guid);
+		let stored = known.get(entry.guid) ?? (await storedDigestOf(db, entry.guid));
 
 		if (stored === undefined) {
 			tick += 1;

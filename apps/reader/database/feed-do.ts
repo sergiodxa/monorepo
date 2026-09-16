@@ -38,12 +38,14 @@ import {
 	feed as feedTable,
 	FEED_RETENTION,
 	items,
-	POLL_INTERVAL_MS,
+	POLL_CEILING_MS,
+	POLL_FLOOR_MS,
+	pollIntervalFor,
 	PURGE_GRACE_MS,
 	subscribers,
 } from "~/database/feed-schema";
 import { runMigrations } from "~/database/migrations";
-import { FEED_ROW_ID, measurePostsPerDay, pollFeed, pruneItems } from "~/database/refresh";
+import { FEED_ROW_ID, pollFeed, pruneItems } from "~/database/refresh";
 import { deleteFeed, renameFeed, retireFeed, reviveFeed, stampActivity } from "~/database/registry";
 
 /**
@@ -64,9 +66,6 @@ const SYNC_PAGE = 200;
  * whose poll ran out of room catches up in the same sitting.
  */
 const CATCH_UP_MS = 60 * 1000;
-
-/** The unit the polling cadence is set in, which is the one a reader would say it in. */
-const HOUR_MS = 60 * 60 * 1000;
 
 export namespace FeedStore {
 	/** The feed's own description of itself, as a subscriber copies it. */
@@ -216,7 +215,7 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 			await reviveFeed(this.#feedId());
 		}
 
-		await this.#armPoll(await this.#pollInterval());
+		await this.#armPoll(await this.#pollInterval(feed.posts_per_day, feed));
 
 		this.#record("job", { event: "feed.subscriber.added", feedUrl: feed.feed_url });
 
@@ -273,7 +272,7 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Retrieves the feed and reports what came back.
 	 *
-	 * One entry point for every reason a feed is fetched — the daily schedule, a reader
+	 * One entry point for every reason a feed is fetched — its own schedule, a reader
 	 * asking on the spot, and whatever a publisher's own ping becomes later — so the
 	 * trigger changes without anything downstream of it changing.
 	 *
@@ -297,6 +296,7 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 		}
 
 		let outcome = await pollFeed(this.#db, { now });
+		let polled = await this.#feedRow();
 
 		this.#record("job", {
 			event: "feed.poll",
@@ -308,6 +308,8 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 			inserted: outcome.status === "ok" ? outcome.inserted : 0,
 			edited: outcome.status === "ok" ? outcome.edited : 0,
 			head: outcome.status === "ok" ? outcome.head : feed.head,
+			postsPerDay: polled?.posts_per_day ?? null,
+			intervalMs: await this.#pollInterval(feed.posts_per_day, polled),
 		});
 
 		if (outcome.status === "not_modified") {
@@ -318,7 +320,7 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 			return { ok: false, status: outcome.status, message: outcome.message };
 		}
 
-		await pruneItems(this.#db, FEED_RETENTION);
+		await pruneItems(this.#db, FEED_RETENTION, outcome.head);
 
 		/**
 		 * Published only when something actually moved, so a poll that stored nothing writes
@@ -405,8 +407,15 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 				return;
 			}
 
+			/**
+			 * Read before the poll, because the poll overwrites it: the rate this feed measured
+			 * last is what tells a band it is being left for a slower one from a band it is
+			 * arriving at, which is the whole of the hysteresis.
+			 */
+			let previous = await this.#feedRow();
+
 			let outcome = await this.refresh("scheduled");
-			await this.#armPoll(await this.#nextPollDelay(outcome));
+			await this.#armPoll(await this.#nextPollDelay(outcome, previous?.posts_per_day ?? null));
 		} catch (error) {
 			console.error("feed poll alarm failed", error);
 			await this.#armPoll().catch(() => undefined);
@@ -443,12 +452,6 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 			await this.#db.delete(feedTable, { id: FEED_ROW_ID });
 			return { ok: false, reason: outcome.status === "parse_error" ? "not-found" : "unreachable" };
 		}
-
-		await this.#db.update(
-			feedTable,
-			{ id: FEED_ROW_ID },
-			{ posts_per_day: await measurePostsPerDay(this.#db, now), updated_at: now },
-		);
 
 		let feed = (await this.#feedRow()) ?? created;
 
@@ -540,41 +543,51 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	/**
 	 * How long until this feed is next fetched.
 	 *
-	 * A feed that is failing is retried when its own backoff lifts, which is what makes that
-	 * column a schedule rather than a veto: without it the next firing would find the floor
-	 * still in place, report a poll it never made, and settle back to the daily cadence — so
-	 * one failure would cost a day rather than five minutes.
+	 * A feed that is failing is retried when its own backoff lifts, and the backoff is a
+	 * floor on that wait rather than a ceiling: the band is a claim about what a feed
+	 * publishes, and an origin that is not answering is publishing nothing this system can
+	 * see, so the backoff wins for as long as it is the longer of the two.
 	 *
 	 * @param outcome - What the poll that just ran reported.
+	 * @param previousRate - The rate this feed measured before that poll overwrote it.
 	 */
-	async #nextPollDelay(outcome: FeedStore.RefreshResult): Promise<number> {
+	async #nextPollDelay(
+		outcome: FeedStore.RefreshResult,
+		previousRate: number | null,
+	): Promise<number> {
 		let feed = await this.#feedRow();
 		let waiting = feed?.next_attempt_at ?? null;
 		let now = Date.now();
-		let interval = await this.#pollInterval();
+		let interval = await this.#pollInterval(previousRate, feed);
 
-		if (waiting !== null && waiting > now) return Math.min(waiting - now, interval);
+		if (waiting !== null && waiting > now) return Math.max(waiting - now, interval);
 
 		return outcome.ok ? interval : CATCH_UP_MS;
 	}
 
 	/**
-	 * How long this feed waits between polls, which a rule may shorten for one publication
-	 * without moving anybody else's.
+	 * How long this feed waits between polls, derived from what it has been publishing and
+	 * scaled by a rule that may slow the whole system without losing the shape of the table.
 	 *
 	 * The subject is the feed itself, because that is what the question is about: how often
 	 * a document is worth fetching is a fact about the document, and every subscriber of it
 	 * is served by the one answer.
+	 *
+	 * @param previousRate - The rate measured before this poll, which supplies the hysteresis.
+	 * @param feed - The feed's row as it now stands, or `null` for an object with no document.
 	 */
-	async #pollInterval(): Promise<number> {
-		let client = await flagsFor(this.#feedId());
-		let hours = await client.get(features.feedPollIntervalHours);
+	async #pollInterval(previousRate: number | null, feed: SelectFeed | null): Promise<number> {
+		if (feed === null) return POLL_CEILING_MS;
 
-		return Math.max(1, hours) * HOUR_MS;
+		let client = await flagsFor(this.#feedId());
+		let multiplier = await client.get(features.feedPollMultiplier);
+		let band = pollIntervalFor(previousRate, feed.posts_per_day, feed.created_at, Date.now());
+
+		return Math.max(POLL_FLOOR_MS, band * Math.max(0, multiplier));
 	}
 
 	/** Arms the poll, holding whatever alarm is already set unless this one is sooner. */
-	async #armPoll(delay: number = POLL_INTERVAL_MS): Promise<void> {
+	async #armPoll(delay: number = POLL_CEILING_MS): Promise<void> {
 		let next = Date.now() + delay;
 		let armed = await this.ctx.storage.getAlarm();
 

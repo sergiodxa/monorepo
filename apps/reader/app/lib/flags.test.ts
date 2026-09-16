@@ -43,8 +43,8 @@ describe("the shipped values", () => {
 		 * types, and a loop over it hands the client a value whose type it cannot narrow —
 		 * which is the same reason a call site names one flag rather than looking one up.
 		 */
-		expect(await client.get(features.feedPollIntervalHours)).toBe(
-			features.feedPollIntervalHours.defaultValue,
+		expect(await client.get(features.feedPollMultiplier)).toBe(
+			features.feedPollMultiplier.defaultValue,
 		);
 		expect(await client.get(features.readerPostBudget)).toBe(
 			features.readerPostBudget.defaultValue,
@@ -58,8 +58,8 @@ describe("the shipped values", () => {
 		);
 	});
 
-	test("poll a feed once a day, which is what the schedule was written for", async () => {
-		expect(await client.get(features.feedPollIntervalHours)).toBe(24);
+	test("poll a feed at the band its own publishing rate puts it in", async () => {
+		expect(await client.get(features.feedPollMultiplier)).toBe(1);
 	});
 
 	test("hold a reader to the budget the sweep was sized against", async () => {

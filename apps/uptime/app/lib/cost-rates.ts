@@ -40,6 +40,12 @@ export const RATES = {
 	aeQuery: 1.0e-4,
 	/** $0.35 per 1,000, beyond the 3,000 messages Workers Paid includes monthly. */
 	emailSent: 3.5e-2,
+	/** $0.20 per GB-month of Durable Object SQLite, amortized to a day. */
+	doSqliteStorageGbDay: 0.667,
+	/** Durable Object SQLite reads price as D1's do. */
+	doRowRead: 1.0e-7,
+	/** Durable Object SQLite writes price as D1's do. */
+	doRowWritten: 1.0e-4,
 } as const;
 
 /** A resource the ledger can be asked to count. */

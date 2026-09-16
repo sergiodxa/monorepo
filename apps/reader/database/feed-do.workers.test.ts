@@ -20,7 +20,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 import type { FeedStore } from "~/database/feed-do";
 
 import schema from "~/database/catalog-migrations/0001-feeds.sql?raw";
-import { POLL_INTERVAL_MS, PURGE_GRACE_MS } from "~/database/feed-schema";
+import { POLL_WARMUP_INTERVAL_MS, PURGE_GRACE_MS } from "~/database/feed-schema";
 import { registerFeed } from "~/database/registry";
 
 /** The wait a feed serves after its first failure, which is the shortest one there is. */
@@ -333,7 +333,7 @@ describe("polling", () => {
 		expect(source.fetches()).toBe(failed + 1);
 	});
 
-	test("comes back to a failing origin when its backoff has run out", async () => {
+	test("keeps a failing feed at its band while the backoff is shorter than one", async () => {
 		let url = feedUrl();
 		let source = origin(url, [{ guid: "g1" }]);
 		let feedId = await registerFeed(url, "Example");
@@ -342,21 +342,62 @@ describe("polling", () => {
 		source.fail(503);
 		await runDurableObjectAlarm(env.FEED.getByName(feedId));
 
-		// A firing that left the feed unattempted comes back soon rather than in an
-		// interval, and finds a backoff still holding it off the origin.
-		let waiting = await armedAlarm(feedId);
-		expect(waiting).toBeLessThanOrEqual(Date.now() + BACKOFF_MS);
-
-		await runDurableObjectAlarm(env.FEED.getByName(feedId));
-
-		// A feed backed off five minutes is retried in five minutes: the recorded wait is
-		// what the next attempt is scheduled for, rather than something that only
-		// suppresses an attempt and hands the feed back to the daily cadence.
-		expect(await armedAlarm(feedId)).toBeLessThanOrEqual(Date.now() + BACKOFF_MS);
+		// The band is already a floor on how often anything is touched, so one failure on
+		// a feed polled hourly costs its readers nothing: five minutes is shorter than the
+		// band and changes nothing about when the next attempt happens.
+		let armed = await armedAlarm(feedId);
+		expect(armed).toBeGreaterThan(Date.now() + BACKOFF_MS);
+		expect(armed).toBeLessThanOrEqual(Date.now() + POLL_WARMUP_INTERVAL_MS);
 		expect(source.fetches()).toBe(2);
 	});
 
-	test("polls on the alarm while anybody is subscribed, and comes back a day later", async () => {
+	test("waits out a backoff that has grown past its band", async () => {
+		let url = feedUrl();
+		let source = origin(url, [{ guid: "g1" }]);
+		let feedId = await registerFeed(url, "Example");
+		await env.FEED.getByName(feedId).subscribe(reader(), url);
+
+		// A reader asking on the spot ignores the backoff, which is what lets one climb:
+		// five, ten, twenty, forty and eighty minutes, the last of them past the band.
+		source.fail(503);
+		for (let attempt = 0; attempt < 5; attempt += 1) {
+			await env.FEED.getByName(feedId).refresh("manual");
+		}
+
+		await runDurableObjectAlarm(env.FEED.getByName(feedId));
+
+		// The band is a claim about what a feed publishes, and an origin that is not
+		// answering is publishing nothing this system can see, so the backoff wins.
+		let armed = await armedAlarm(feedId);
+		expect(armed).toBeGreaterThan(Date.now() + POLL_WARMUP_INTERVAL_MS);
+		expect(armed).toBeLessThanOrEqual(Date.now() + 16 * BACKOFF_MS);
+	});
+
+	test("returns a feed to its band on the first answer, a 304 included", async () => {
+		let url = feedUrl();
+		let source = origin(url, [{ guid: "g1" }]);
+		source.validate("v1");
+		let feedId = await registerFeed(url, "Example");
+		await env.FEED.getByName(feedId).subscribe(reader(), url);
+
+		source.fail(503);
+		for (let attempt = 0; attempt < 5; attempt += 1) {
+			await env.FEED.getByName(feedId).refresh("manual");
+		}
+
+		source.publish([{ guid: "g1" }]);
+		expect(await env.FEED.getByName(feedId).refresh("manual")).toMatchObject({
+			status: "not_modified",
+		});
+
+		await runDurableObjectAlarm(env.FEED.getByName(feedId));
+
+		// An unchanged feed is an answering feed, so the wait that was protecting a
+		// struggling origin is gone and the band is what decides again.
+		expect(await armedAlarm(feedId)).toBeLessThanOrEqual(Date.now() + POLL_WARMUP_INTERVAL_MS);
+	});
+
+	test("polls on the alarm while anybody is subscribed, and comes back at its band", async () => {
 		let url = feedUrl();
 		let source = origin(url, [{ guid: "g1" }]);
 		let feedId = await registerFeed(url, "Example");
@@ -368,9 +409,12 @@ describe("polling", () => {
 		expect(source.fetches()).toBe(2);
 		expect(await env.FEED.getByName(feedId).getHead()).toBe(2);
 
+		// A feed inside its first day is polled hourly whatever its document measured:
+		// a document carries only its newest entries, so a truncated one can only make a
+		// feed look slower than it is, and slow is the expensive answer to be wrong about.
 		let armed = await armedAlarm(feedId);
-		expect(armed).toBeGreaterThan(Date.now() + POLL_INTERVAL_MS - 10_000);
-		expect(armed).toBeLessThanOrEqual(Date.now() + POLL_INTERVAL_MS);
+		expect(armed).toBeGreaterThan(Date.now() + POLL_WARMUP_INTERVAL_MS - 10_000);
+		expect(armed).toBeLessThanOrEqual(Date.now() + POLL_WARMUP_INTERVAL_MS);
 	});
 
 	test("reports what the last poll recorded, with the head the hint approximates", async () => {
@@ -456,7 +500,7 @@ describe("the end of a feed's life", () => {
 		expect(await env.FEED.getByName(feedId).unsubscribe(mine)).toEqual({ remaining: true });
 
 		expect(await catalogRow(feedId)).toMatchObject({ retired_at: null });
-		expect(await armedAlarm(feedId)).toBeLessThanOrEqual(Date.now() + POLL_INTERVAL_MS);
+		expect(await armedAlarm(feedId)).toBeLessThanOrEqual(Date.now() + POLL_WARMUP_INTERVAL_MS);
 	});
 
 	test("stops polling, retires the catalog row and schedules the purge on the last leaving", async () => {
@@ -492,7 +536,7 @@ describe("the end of a feed's life", () => {
 		expect(source.fetches()).toBe(1);
 		expect(rejoined.items.map((item) => item.guid)).toEqual(["g1"]);
 		expect(await catalogRow(feedId)).toMatchObject({ retired_at: null });
-		expect(await armedAlarm(feedId)).toBeLessThanOrEqual(Date.now() + POLL_INTERVAL_MS);
+		expect(await armedAlarm(feedId)).toBeLessThanOrEqual(Date.now() + POLL_WARMUP_INTERVAL_MS);
 	});
 
 	test("purges the head, the catalog row and the items when the week runs out", async () => {
