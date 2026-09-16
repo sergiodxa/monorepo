@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-16
+**Accepted** - 2026-09-16
 
 ## Background
 
@@ -442,19 +442,19 @@ against a SQLite `Database`, the entitlement and flag paths in `*.workers.test.t
 
 ## Implementation
 
-- [ ] `SEARCH_WINDOW_DAYS` per tier, and the floor derived from it and `Date.now()`
-- [ ] `reader-search-step-days` in the flag catalog, read through `flagsFor(subject)`
-- [ ] The floor and the step in `searchStatement`, with `author` joining the match
-- [ ] The boundary cursor, minted with `encodeCursor` from the step's floor
-- [ ] `TimelineResult` carries the span a search covered and whether it stopped at the step,
+- [x] `SEARCH_WINDOW_DAYS` per tier, and the floor derived from it and `Date.now()`
+- [x] `reader-search-step-days` in the flag catalog, read through `flagsFor(subject)`
+- [x] The floor and the step in `searchStatement`, with `author` joining the match
+- [x] The boundary cursor, minted with `encodeCursor` from the step's floor
+- [x] `TimelineResult` carries the span a search covered and whether it stopped at the step,
       the window, or the end of the archive, the last read off the timeline index
-- [ ] Empty-state and continuation copy in `app/locales/en.ts` and `app/locales/es.ts`,
+- [x] Empty-state and continuation copy in `app/locales/en.ts` and `app/locales/es.ts`,
       replacing the claim that nothing anywhere matches
-- [ ] `searches` table, its migration, its index, and the CRUD routes in `routes/web.ts`
-- [ ] Saved searches in the rail, drawn as `queueUrl` links with no count
-- [ ] The `user.search` event
-- [ ] The tests above
-- [ ] A `*.workers.test.ts` creating an FTS5 virtual table inside a Durable Object, so the
+- [x] `searches` table, its migration, its index, and the CRUD routes in `routes/web.ts`
+- [x] Saved searches in the rail, drawn as `queueUrl` links with no count
+- [x] The `user.search` event
+- [x] The tests above
+- [x] A `*.workers.test.ts` creating an FTS5 virtual table inside a Durable Object, so the
       option is known to work before anybody needs it
 
 ## References
