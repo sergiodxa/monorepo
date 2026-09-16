@@ -1,7 +1,6 @@
 {
 	"name": "@sdxc/opml",
 	"version": "0.0.1",
-	"private": true,
 	"description": "Read and write OPML subscription lists",
 	"license": "MIT",
 	"type": "module",
