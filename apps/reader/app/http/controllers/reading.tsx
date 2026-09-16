@@ -537,7 +537,15 @@ export async function renderReadingQueue(
 						id={FOLLOW_FORM_ID}
 						method="post"
 						action={routes.reading.action.href()}
+						/**
+						 * Submitted by the browser itself rather than fetched and patched in. Following
+						 * changes the sidebar, the queue and what the field should say next, so there is
+						 * no part of this page worth preserving across it — and the browser's own
+						 * submission is the one that cannot arrive without the field a reader typed
+						 * into, because it is the same thing that refuses to send an empty one.
+						 */
 						mix={[
+							attrs({ "data-rmx-document": "" }),
 							flex(),
 							items("center"),
 							grow(),
@@ -757,6 +765,24 @@ export default createController(routes.reading, {
 				submitted.success ? (submitted.value[SEARCH_PARAM] ?? "") : "",
 				submitted.success ? (submitted.value[SHOW_PARAM] ?? "") : "",
 			);
+
+			/**
+			 * A submission carrying no address at all is not a reader's typo, and must not be
+			 * answered as one. The field refuses an empty value before the browser sends it, so
+			 * nobody can submit one on purpose: what arrives this way is a request replayed
+			 * without the body that gave it meaning — a restored history entry, a resend on a
+			 * page that was reloaded. Telling the reader that what they typed is not an address,
+			 * while what they typed is still sitting in the box, is the one answer that can only
+			 * be read as a lie.
+			 *
+			 * The queue answers instead, through a redirect, which also turns the entry the
+			 * reader is standing on back into one a reload simply repeats.
+			 */
+			if (url.trim().length === 0) {
+				currentLog()?.set({ "follow.refused": "empty-submission" });
+
+				return redirect(queueUrl(view), { status: redirect.Status.SeeOther });
+			}
 
 			let followed = await store.followFeed(url);
 

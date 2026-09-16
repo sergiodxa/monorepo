@@ -76,6 +76,25 @@ beforeEach(() => {
 	userStore.mockClear();
 });
 
+describe("a submission that carries no address", () => {
+	/**
+	 * The field refuses an empty value before a browser sends it, so nothing a reader does
+	 * produces one. What arrives this way is a request replayed without the body that gave
+	 * it meaning, and answering it with "that is not an address" tells a reader their own
+	 * typing was refused — while their typing is still sitting in the box above the words.
+	 */
+	test("answers with the queue rather than refusing an address nobody gave", async () => {
+		let router = createTestRouter(VIEWER);
+		router.map(routes.reading, reading);
+
+		let response = await fetchRoute(router, routes.reading.action.href(), { url: "" });
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("Location")).toBe(routes.reading.index.href());
+		expect(store.followFeed).not.toHaveBeenCalled();
+	});
+});
+
 describe("POST /feeds", () => {
 	test("redirects an anonymous visitor home", async () => {
 		let response = await postFollow(null);
