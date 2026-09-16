@@ -16,13 +16,15 @@
  * came from, which is how a list is walked back up as well as down.
  *
  * Vendored from the `lazy-frames` demo in the Remix repository, which publishes no module
- * to import. Four things differ from the original: the second observer, which the demo
+ * to import. Five things differ from the original: the second observer, which the demo
  * used to pause descendant CSS animations while the frame sat off screen, reports which
  * page is on screen instead; the frame's own loading state falls back to `children`,
  * because the links a reader can follow themselves are the right thing to leave standing
  * while their replacement is in the air; `children` is one node rather than many, which is
- * what that default needs; and a frame can be told it sits above the reader, which is what
- * `sitsAbove` covers.
+ * what that default needs; a frame can be told it sits above the reader, which is what
+ * `sitsAbove` covers; and the observers are shared between frames rather than made per
+ * frame, since a list read several pages deep holds a frame per page and they all watch
+ * the same viewport for the same thing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -81,6 +83,68 @@ export type LazyFrameProps = {
 	 */
 	children?: RemixElement | string | number | boolean | null;
 };
+
+/** What one frame is told when it crosses into or out of the band an observer watches. */
+type Crossing = (isIntersecting: boolean) => void;
+
+/**
+ * One observer per band watched, shared by every frame watching it, rather than one per
+ * frame. A list walked several pages deep mounts a frame per page and each would otherwise
+ * bring its own observer, all of them asking the same question of the same viewport; the
+ * browser answers it once per observer, so asking once covers every frame on the page.
+ *
+ * Keyed by the band, since that is the whole of what distinguishes one from another here:
+ * frames reaching ahead by different distances get one observer each and share it with
+ * every frame reaching that far.
+ */
+const observers = new Map<string, SharedObserver>();
+
+/** An observer some number of frames are watching through, and how one joins or leaves. */
+interface SharedObserver {
+	watch(node: Element, onCrossing: Crossing): void;
+	unwatch(node: Element): void;
+}
+
+/**
+ * The observer watching `rootMargin`, made on the first frame to ask for it and handed to
+ * every frame after.
+ *
+ * Each frame hears about itself alone: crossings arrive for every watching frame at once
+ * and are dealt out by target, so a frame is told what it would have been told by an
+ * observer of its own.
+ *
+ * @param rootMargin - The band around the viewport a crossing of which is reported.
+ */
+function observerFor(rootMargin: string): SharedObserver {
+	let existing = observers.get(rootMargin);
+	if (existing) return existing;
+
+	/** Weak, so a frame taken off the page is collected whether or not it said goodbye. */
+	let watchers = new WeakMap<Element, Crossing>();
+
+	let observer = new IntersectionObserver(
+		(entries) => {
+			for (let entry of entries) watchers.get(entry.target)?.(entry.isIntersecting);
+		},
+		{ rootMargin },
+	);
+
+	let shared: SharedObserver = {
+		watch(node, onCrossing) {
+			watchers.set(node, onCrossing);
+			observer.observe(node);
+		},
+		/** The observer itself stays for the frames still watching through it. */
+		unwatch(node) {
+			watchers.delete(node);
+			observer.unobserve(node);
+		},
+	};
+
+	observers.set(rootMargin, shared);
+
+	return shared;
+}
 
 /** One mounted frame that knows where it sits, and whether the reader is in it. */
 interface Reading {
@@ -163,29 +227,12 @@ export const LazyFrame = clientEntry(
 		let isApproachable = handle.props.sitsAbove !== true;
 
 		let observe = ref((node, signal) => {
-			let loadObserver = new IntersectionObserver(
-				(entries) => {
-					if (requested || signal.aborted) return;
+			let loads = observerFor(handle.props.rootMargin ?? "320px 0px");
+			let places = observerFor(READING_BAND);
 
-					if (!entries.some((entry) => entry.isIntersecting)) {
-						isApproachable = true;
-						return;
-					}
+			/** Set once this frame is watching the reading band, so it stops watching it once. */
+			let reportsPlace = false;
 
-					if (!isApproachable) return;
-
-					/**
-					 * Latched before the observer is let go, so a second crossing reported in the
-					 * same batch asks for the same page again.
-					 */
-					requested = true;
-					loadObserver.disconnect();
-					void handle.update();
-				},
-				{ rootMargin: handle.props.rootMargin ?? "320px 0px" },
-			);
-
-			let placeObserver: IntersectionObserver | undefined;
 			let placeHolder: ResizeObserver | undefined;
 
 			/**
@@ -194,13 +241,30 @@ export const LazyFrame = clientEntry(
 			 * Reporting which page is being read is a nicety on top of a list that continues;
 			 * whatever becomes of it below, the reader keeps scrolling into more posts.
 			 */
-			loadObserver.observe(node);
+			loads.watch(node, (isIntersecting) => {
+				if (requested || signal.aborted) return;
+
+				if (!isIntersecting) {
+					isApproachable = true;
+					return;
+				}
+
+				if (!isApproachable) return;
+
+				/**
+				 * Latched before the frame stops watching, so a second crossing reported in the
+				 * same batch asks for the same page again.
+				 */
+				requested = true;
+				loads.unwatch(node);
+				void handle.update();
+			});
 
 			signal.addEventListener(
 				"abort",
 				() => {
-					loadObserver.disconnect();
-					placeObserver?.disconnect();
+					loads.unwatch(node);
+					if (reportsPlace) places.unwatch(node);
 					placeHolder?.disconnect();
 					aboveTheRows.delete(node);
 					reading.delete(node);
@@ -254,21 +318,17 @@ export const LazyFrame = clientEntry(
 				 * crosses the band above once the reader passes the row it begins with, and stops
 				 * crossing it when they scroll back above that row.
 				 */
-				placeObserver = new IntersectionObserver(
-					(entries) => {
-						if (signal.aborted) return;
+				reportsPlace = true;
 
-						let entry = reading.get(node);
-						let isReading = entries.some((crossing) => crossing.isIntersecting);
-						if (!entry || entry.isReading === isReading) return;
+				places.watch(node, (isReading) => {
+					if (signal.aborted) return;
 
-						entry.isReading = isReading;
-						markPlace();
-					},
-					{ rootMargin: READING_BAND },
-				);
+					let entry = reading.get(node);
+					if (!entry || entry.isReading === isReading) return;
 
-				placeObserver.observe(node);
+					entry.isReading = isReading;
+					markPlace();
+				});
 			}
 		});
 
