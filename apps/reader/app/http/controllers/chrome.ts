@@ -28,6 +28,7 @@ import { isFailure } from "@sdxc/result";
 import { env, waitUntil } from "cloudflare:workers";
 
 import type { UserStore } from "~/database/user-do";
+import type { Shortcuts } from "~/resources/components/shortcuts";
 import type { AppLayout } from "~/resources/layouts/app";
 
 import { getViewer } from "~/app/http/middleware/auth";
@@ -391,6 +392,7 @@ export function sidebarFeedsSrc(currentPath: string): string {
  */
 export async function chrome(ctx: ChromeContext): Promise<{
 	nav: AppLayout.Nav;
+	shortcuts: Shortcuts.Copy;
 	viewer: AppLayout.Viewer;
 	sidebarFeedsSrc: string;
 	currentPath: string;
@@ -420,6 +422,27 @@ export async function chrome(ctx: ChromeContext): Promise<{
 			settings: ctx.i18next.t("nav.settings"),
 			account: ctx.i18next.t("nav.account"),
 			logout: ctx.i18next.t("nav.logout"),
+		},
+		/**
+		 * The panel listing every key renders only in a browser, so it has no dictionary of
+		 * its own to read: every line it prints is translated here and travels with it.
+		 */
+		shortcuts: {
+			open: ctx.i18next.t("shortcuts.open"),
+			description: ctx.i18next.t("shortcuts.description"),
+			close: ctx.i18next.t("shortcuts.close"),
+			keys: {
+				nextPost: ctx.i18next.t("shortcuts.keys.nextPost"),
+				previousPost: ctx.i18next.t("shortcuts.keys.previousPost"),
+				openPost: ctx.i18next.t("shortcuts.keys.openPost"),
+				markRead: ctx.i18next.t("shortcuts.keys.markRead"),
+				savePost: ctx.i18next.t("shortcuts.keys.savePost"),
+				checkFeeds: ctx.i18next.t("shortcuts.keys.checkFeeds"),
+				nextFeed: ctx.i18next.t("shortcuts.keys.nextFeed"),
+				previousFeed: ctx.i18next.t("shortcuts.keys.previousFeed"),
+				search: ctx.i18next.t("shortcuts.keys.search"),
+				help: ctx.i18next.t("shortcuts.keys.help"),
+			},
 		},
 		viewer: { name: viewer.name, email: viewer.email, avatar: viewer.avatar },
 		sidebarFeedsSrc: sidebarFeedsSrc(ctx.url.pathname),

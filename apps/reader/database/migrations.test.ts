@@ -50,6 +50,7 @@ describe("runMigrations", () => {
 			"0014-searches",
 			"0015-presentation",
 			"0016-keep-link-parameters",
+			"0017-agent-tokens",
 		]);
 	});
 
@@ -90,6 +91,10 @@ describe("runMigrations", () => {
 			"feed_items_flagged_idx",
 			"searches",
 			"searches_name_idx",
+			"tokens",
+			"tokens_created_at_idx",
+			"rate_limit_hits",
+			"rate_limit_hits_bucket_created_at_idx",
 		]) {
 			expect(names, `${name} exists`).toContain(name);
 		}
@@ -238,6 +243,39 @@ describe("schema constraints", () => {
 
 		expect(() => insert("s1", "flagged")).toThrow();
 		expect(() => insert("s2", "unread")).not.toThrow();
+	});
+
+	/** Two scopes are what a token may carry, and the column repeats them as a `CHECK`. */
+	test("refuses a token under a scope no path of this app could have written", async () => {
+		await migrate();
+		let insert = (id: string, scope: string) =>
+			sql.exec(
+				`INSERT INTO tokens (id, name, scope, hash, created_at, expires_at)
+				 VALUES (?, 'Laptop', ?, 'digest', 0, 1)`,
+				id,
+				scope,
+			);
+
+		expect(() => insert("t1", "admin")).toThrow();
+		expect(() => insert("t2", "read")).not.toThrow();
+		expect(() => insert("t3", "write")).not.toThrow();
+	});
+
+	/** A token answers until it is revoked or expires, so neither stamp starts written. */
+	test("leaves a new token unused, unrevoked and answering", async () => {
+		await migrate();
+		sql.exec(
+			`INSERT INTO tokens (id, name, scope, hash, created_at, expires_at)
+			 VALUES ('t1', 'Laptop', 'read', 'digest', 0, 1)`,
+		);
+
+		let [row] = [
+			...sql.exec<{ last_used_at: number | null; revoked_at: number | null }>(
+				`SELECT last_used_at, revoked_at FROM tokens WHERE id = 't1'`,
+			),
+		];
+
+		expect(row).toEqual({ last_used_at: null, revoked_at: null });
 	});
 
 	test("refuses a second row in settings", async () => {
@@ -525,6 +563,22 @@ describe("query plans", () => {
 
 		expect(plan).toContain("feed_items_feed_timeline_idx");
 		expect(plan).not.toContain("USE TEMP B-TREE FOR GROUP BY");
+	});
+
+	/**
+	 * Every agent request reads one bucket since one instant, which is the read the index
+	 * carries both columns in order for.
+	 */
+	test("answers a token's daily budget from an index, without scanning", async () => {
+		await migrate();
+
+		let plan = queryPlan(
+			`SELECT id, cost FROM rate_limit_hits WHERE bucket = 'agent:tok_1' AND created_at >= 0
+			 ORDER BY created_at ASC`,
+		);
+
+		expect(plan).toContain("rate_limit_hits_bucket_created_at_idx");
+		expect(plan).not.toContain("USE TEMP B-TREE FOR ORDER BY");
 	});
 
 	/**

@@ -62,6 +62,16 @@
 		{ "tag": "add-feed-do", "new_sqlite_classes": ["FeedDO"] },
 	],
 
+	// The burst catch in front of the Model Context Protocol endpoint, keyed on the token
+	// an agent presented rather than on the address it called from: an agent's egress is a
+	// datacenter shared with everybody else's. `simple.limit` is kept equal by hand to
+	// `AGENT_RATE_LIMIT` in `app/mcp/rate-limit.ts`, which is what the headers are computed
+	// from. The daily budget that bounds a bill lives in the reader's own database instead,
+	// because this counts per location and an agent spread across regions slips it.
+	"ratelimits": [
+		{ "name": "MCP_RATE_LIMITER", "namespace_id": "2001", "simple": { "limit": 60, "period": 60 } },
+	],
+
 	// Where the email channel sends from. A notification's second transport is an outbound
 	// message rather than a store, so the binding is the whole of what it needs — but the
 	// account behind it has to be configured to send from a verified domain and to

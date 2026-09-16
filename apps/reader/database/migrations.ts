@@ -26,6 +26,7 @@ import m0012 from "./migrations/0012-notifications.sql?raw";
 import m0014 from "./migrations/0014-searches.sql?raw";
 import m0015 from "./migrations/0015-presentation.sql?raw";
 import m0016 from "./migrations/0016-keep-link-parameters.sql?raw";
+import m0017 from "./migrations/0017-agent-tokens.sql?raw";
 
 /** One migration, identified so the journal can record that it ran. */
 export interface Migration {
@@ -50,6 +51,7 @@ export const MIGRATIONS: Migration[] = [
 	{ id: "0014-searches", sql: m0014 },
 	{ id: "0015-presentation", sql: m0015 },
 	{ id: "0016-keep-link-parameters", sql: m0016 },
+	{ id: "0017-agent-tokens", sql: m0017 },
 ];
 
 /**

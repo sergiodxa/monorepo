@@ -60,8 +60,14 @@ let { i18n } = await createTranslator({
 
 setIntl(i18n);
 
+/**
+ * Every module an island can hydrate from. Server-only modules and tests stay out: a test
+ * reaches for the handlers and helpers it exercises, which pulls worker-only imports such as
+ * `cloudflare:workers` into a bundle the browser has to resolve.
+ */
 const CLIENT_MODULES = import.meta.glob([
 	"!../**/*.server.*",
+	"!../**/*.test.*",
 	"../resources/**/*.{ts,tsx}",
 	"../routes/**/*.{ts,tsx}",
 ]);

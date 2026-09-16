@@ -237,6 +237,24 @@ export default route({
 	appearance: post("/settings/appearance"),
 
 	/**
+	 * The Model Context Protocol endpoint, plus the page explaining it. `form()` answers
+	 * both an agent's `POST` and a browser's `GET` to `/mcp`, so pasting the address into a
+	 * browser explains what is served there rather than refusing the method.
+	 */
+	mcp: form("/mcp"),
+
+	/**
+	 * The tokens a reader mints for an agent. They sit under the settings page that draws
+	 * them, and each acts on one row so a form submits one answer rather than the surface.
+	 */
+	tokens: {
+		/** Mints one, which is the only moment its value exists outside the reader's client. */
+		create: post("/settings/tokens"),
+		/** Stops one answering, from the next call onwards. */
+		revoke: del("/settings/tokens/:tokenId"),
+	},
+
+	/**
 	 * How the reader is reached when a check finds something, and which browsers it is
 	 * reached on. They sit under the settings page that draws them, and each is a `POST` of
 	 * its own so a form submits one answer rather than the whole surface.

@@ -81,6 +81,9 @@ import { tabularNums, text, textDecoration, truncate, weight } from "@sdxc/u/typ
 import { Avatar, Heading, Logo, Menu, NavLink, Sidebar } from "@sdxc/ui";
 import { Frame } from "remix/ui";
 
+import type { Shortcuts } from "~/resources/components/shortcuts";
+
+import ShortcutsIsland from "~/resources/components/shortcuts";
 import { SIDEBAR_FEEDS_FRAME } from "~/resources/components/sidebar-frame";
 import DocumentLayout from "~/resources/layouts/document";
 import OutboundMark from "~/resources/views/outbound-mark";
@@ -135,8 +138,11 @@ const WIDE_HEADER = "(min-width: 45rem)";
  */
 const ICON_SIZE = 16;
 
-/** Ties the sidebar's search box to the label naming it. */
-const SIDEBAR_SEARCH_FIELD_ID = "sidebar-search";
+/**
+ * Ties the sidebar's search box to the label naming it, and names the field the `/` key
+ * puts the caret in from anywhere on the page.
+ */
+export const SIDEBAR_SEARCH_FIELD_ID = "sidebar-search";
 
 /**
  * The parameter a search travels in, which the sidebar's box submits under and the reading
@@ -183,8 +189,11 @@ function bandRule() {
 /** The `id` the viewer's own menu answers to, which its trigger names in `commandfor`. */
 const USER_MENU_ID = "user-menu";
 
-/** The `id` the sidebar answers to, which the header's trigger names in `commandfor`. */
-const SIDEBAR_ID = "app-sidebar";
+/**
+ * The `id` the sidebar answers to, which the header's trigger names in `commandfor` and
+ * which the keys that walk the rail's own links look the rail up by.
+ */
+export const SIDEBAR_ID = "app-sidebar";
 
 /**
  * Edge of every mark down the sidebar's first column: the glyphs naming the two places,
@@ -354,6 +363,11 @@ export namespace AppLayout {
 		/** The request's detected language, set as `<html lang>`. */
 		locale?: string;
 		nav: Nav;
+		/**
+		 * What the keyboard panel prints, which reaches the browser as a serialized prop: the
+		 * island renders nothing on the server, so it has no dictionary of its own to read.
+		 */
+		shortcuts: Shortcuts.Copy;
 		viewer: Viewer;
 		/**
 		 * Where the sidebar's feed band is fetched from, which is an address rather than the
@@ -825,6 +839,7 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 			locale,
 			nav,
 			searchQuery,
+			shortcuts,
 			sidebarFeedsSrc,
 			viewer,
 		} = handle.props;
@@ -1006,51 +1021,64 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 						 * however far down their feeds a reader has scrolled.
 						 */}
 						<Sidebar.Footer mix={[p(3)]}>
-							<button
-								type="button"
-								commandfor={USER_MENU_ID}
-								command="toggle-popover"
-								aria-label={nav.account}
-								title={nav.account}
-								mix={[
-									flex(),
-									items("center"),
-									gap(2),
-									minIs(0),
-									is("full"),
-									p(2),
-									pi(3),
-									border("none"),
-									rounded("lg"),
-									bg("transparent"),
-									fg("inherit"),
-									raw({ font: "inherit" }),
-									cursor("pointer"),
-									hover(bg("neutral.bg-tint-hover")),
-								]}
-							>
-								<Avatar size="sm">
-									{viewer.avatar ? <Avatar.Image src={viewer.avatar} alt="" /> : null}
-									<Avatar.Fallback>{initials(viewer.name)}</Avatar.Fallback>
-								</Avatar>
-
-								<span
+							{/**
+							 * The reader's own menu, and beside it the way into the keys. A shortcut
+							 * nobody can discover is a shortcut nobody uses, so the list of them has a
+							 * control on screen as well as a key that opens it.
+							 */}
+							<div mix={[flex(), items("center"), gap(1), minIs(0)]}>
+								<button
+									type="button"
+									commandfor={USER_MENU_ID}
+									command="toggle-popover"
+									aria-label={nav.account}
+									title={nav.account}
 									mix={[
-										grow(),
-										basis("0%"),
+										flex(),
+										items("center"),
+										gap(2),
 										minIs(0),
-										truncate(),
-										text("sm"),
-										weight("medium"),
-										fg("neutral.emphasis"),
-										raw({ textAlign: "start" }),
+										is("full"),
+										p(2),
+										pi(3),
+										border("none"),
+										rounded("lg"),
+										bg("transparent"),
+										fg("inherit"),
+										raw({ font: "inherit" }),
+										cursor("pointer"),
+										hover(bg("neutral.bg-tint-hover")),
 									]}
 								>
-									{viewer.name}
-								</span>
+									<Avatar size="sm">
+										{viewer.avatar ? <Avatar.Image src={viewer.avatar} alt="" /> : null}
+										<Avatar.Fallback>{initials(viewer.name)}</Avatar.Fallback>
+									</Avatar>
 
-								<ChevronsUpDownIcon size={ICON_SIZE} mix={[shrink()]} />
-							</button>
+									<span
+										mix={[
+											grow(),
+											basis("0%"),
+											minIs(0),
+											truncate(),
+											text("sm"),
+											weight("medium"),
+											fg("neutral.emphasis"),
+											raw({ textAlign: "start" }),
+										]}
+									>
+										{viewer.name}
+									</span>
+
+									<ChevronsUpDownIcon size={ICON_SIZE} mix={[shrink()]} />
+								</button>
+
+								<ShortcutsIsland
+									copy={shortcuts}
+									searchFieldId={SIDEBAR_SEARCH_FIELD_ID}
+									sidebarId={SIDEBAR_ID}
+								/>
+							</div>
 
 							{/**
 							 * Opening upward from a trigger that sits at the foot of the sidebar in either

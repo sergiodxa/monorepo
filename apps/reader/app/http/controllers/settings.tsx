@@ -50,6 +50,7 @@ import {
 	QUIET_TO_FIELD,
 } from "~/app/http/controllers/notifications/quiet-hours";
 import { exactDate, shortDate } from "~/app/http/controllers/timeline-entries";
+import tokensSection from "~/app/http/controllers/tokens/section";
 import { writePresentation } from "~/app/http/cookies";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
@@ -498,12 +499,14 @@ function notificationsSection(ctx: RequestContext, notifications: UserStore.Noti
  * @param settings - The reader's stored preferences, or `null` before a sign-in wrote them.
  * @param entitlement - What their plan allows, and where they stand against it.
  * @param notifications - How they are reached, when they are left alone, and on what.
+ * @param tokens - Every token they minted for an agent, newest first.
  */
 async function settingsPage(
 	ctx: RequestContext,
 	settings: UserStore.Settings | null,
 	entitlement: UserStore.Entitlement,
 	notifications: UserStore.Notifications,
+	tokens: UserStore.AgentToken[],
 ) {
 	let transfer = importNote(ctx);
 
@@ -600,7 +603,7 @@ async function settingsPage(
 						saved: entitlement.limits.saved,
 						posts: entitlement.limits.posts,
 					})}{" "}
-					{ctx.i18next.t("settings.plan.history")}
+					{ctx.i18next.t("settings.plan.history")} {ctx.i18next.t("settings.plan.includes")}
 				</Description>
 
 				<Text mix={[text("xs"), fg("neutral.muted")]}>
@@ -702,6 +705,8 @@ async function settingsPage(
 			</section>
 
 			{notificationsSection(ctx, notifications)}
+
+			{tokensSection(ctx, tokens, entitlement.limits.mcp)}
 
 			{transfer && (
 				<Alert color={transfer.color} mix={[maxIs(PAGE_COLUMN), ...pageNote()]}>
@@ -833,12 +838,13 @@ export default createAction(routes.settings, {
 
 		let store = userStore(viewer.id);
 
-		let [settings, entitlement, notifications] = await Promise.all([
+		let [settings, entitlement, notifications, tokens] = await Promise.all([
 			store.getSettings(),
 			store.entitlement(),
 			store.notifications(),
+			store.listAgentTokens(),
 		]);
 
-		return await settingsPage(ctx, settings, entitlement, notifications);
+		return await settingsPage(ctx, settings, entitlement, notifications, tokens);
 	},
 });

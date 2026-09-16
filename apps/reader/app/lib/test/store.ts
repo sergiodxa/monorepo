@@ -77,6 +77,10 @@ export interface UserStoreDouble {
 	registerDevice: ReturnType<typeof vi.fn>;
 	forgetDevice: ReturnType<typeof vi.fn>;
 	setFeedNotify: ReturnType<typeof vi.fn>;
+	listAgentTokens: ReturnType<typeof vi.fn>;
+	createAgentToken: ReturnType<typeof vi.fn>;
+	revokeAgentToken: ReturnType<typeof vi.fn>;
+	authorizeAgent: ReturnType<typeof vi.fn>;
 }
 
 /** An empty page of a timeline, which is what a store answers before anything is stored. */
@@ -111,6 +115,9 @@ export const EMPTY_PREVIEW: UserStore.RulePreview = {
 	items: [],
 	feeds: [],
 };
+
+/** No tokens, which is what a store answers before a reader has minted one for an agent. */
+export const NO_TOKENS: UserStore.AgentToken[] = [];
 
 /** Nothing pinned, which is what a reader opens to before they pin anything. */
 export const NO_PINS: UserStore.PinnedFeed[] = [];
@@ -247,5 +254,9 @@ export function createUserStoreDouble(): UserStoreDouble {
 		registerDevice: vi.fn(async () => ({ devices: 1 })),
 		forgetDevice: vi.fn(async () => true),
 		setFeedNotify: vi.fn(async () => ({ ok: true, notify: true })),
+		listAgentTokens: vi.fn(async () => NO_TOKENS),
+		createAgentToken: vi.fn(async () => ({ ok: false, reason: "not-entitled" })),
+		revokeAgentToken: vi.fn(async () => ({ ok: false, reason: "not-found" })),
+		authorizeAgent: vi.fn(async () => ({ ok: false, reason: "unknown-token" })),
 	};
 }

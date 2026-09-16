@@ -17,6 +17,7 @@ import featureFlags from "@sdxc/flags/middleware/router";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
+import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
@@ -32,6 +33,8 @@ import securityHeaders from "~/app/http/middleware/security-headers";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
 import { createHtmlRenderer } from "~/app/http/render";
 import { flags } from "~/app/lib/flags";
+import requireAgent from "~/app/mcp/agent";
+import agentRateLimit from "~/app/mcp/rate-limit";
 import routes from "~/routes/web";
 
 import { logger } from "./logger";
@@ -41,6 +44,16 @@ import { logger } from "./logger";
  * bypasses by. Both methods are named, since the verification arrives as a `GET`.
  */
 const WEBSUB_CALLBACK = "/websub/{feedId}/{token}";
+
+/**
+ * The agent endpoint, in the pattern language `cop()` matches bypasses by.
+ *
+ * It states its own provenance instead of a browser's: every call carries a bearer token
+ * this deployment signed, and nothing there reads a cookie, so a client that happens to
+ * run inside a browser is a caller like any other rather than a request made on a
+ * reader's behalf by a page they did not visit.
+ */
+const AGENT_ENDPOINT = "/mcp";
 
 namespace application {
 	export interface Options {
@@ -92,7 +105,7 @@ export default function application(options: application.Options) {
 		 * the callback states its own provenance instead: an unguessable token in the path
 		 * and an HMAC over the delivery.
 		 */
-		cop({ insecureBypassPatterns: [WEBSUB_CALLBACK] }),
+		cop({ insecureBypassPatterns: [WEBSUB_CALLBACK, AGENT_ENDPOINT] }),
 		/**
 		 * Immediately before the renderer, so what it decorates is the response the renderer
 		 * produced and every surface this app adds later is covered without being asked.
@@ -302,6 +315,34 @@ export default function application(options: application.Options) {
 	router.map(
 		routes.feeds.linkParameters,
 		lazy(() => import("~/app/http/controllers/feeds/link-parameters")),
+	);
+	/**
+	 * The agent surface. A browser's `GET` renders the page explaining how to connect; an
+	 * agent's `POST` is answered by the protocol handler, behind the credential middleware
+	 * that turns a token into one reader and the burst limiter keyed on that token.
+	 */
+	router.map(routes.mcp, {
+		actions: {
+			index: lazy(() => import("~/app/http/controllers/mcp")),
+			action: {
+				middleware: [requireAgent, agentRateLimit(env)],
+				/**
+				 * Imported here rather than through `lazy()`, because an action declaring
+				 * middleware stays an action object, whose `handler` must be a function. The
+				 * server is built at module scope, so deferring the import keeps it off a cold
+				 * start for every reader who never speaks to an agent.
+				 */
+				handler: async (ctx) => (await import("./mcp")).default.fetch(ctx),
+			},
+		},
+	});
+	router.map(
+		routes.tokens.create,
+		lazy(() => import("~/app/http/controllers/tokens/mint")),
+	);
+	router.map(
+		routes.tokens.revoke,
+		lazy(() => import("~/app/http/controllers/tokens/revoke")),
 	);
 	router.map(
 		routes.media,

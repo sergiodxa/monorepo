@@ -13,12 +13,13 @@ From the repo root: `bun check` (format, lint and type check in one pass) and `b
 
 ## Cloudflare Services
 
-| Service        | Binding       | Purpose                                                        |
-| -------------- | ------------- | -------------------------------------------------------------- |
-| KV             | `KV`          | Sessions, the OIDC cache, each feed's head, extracted articles |
-| Durable Object | `USER`        | One object per reader: settings, subscriptions and posts       |
-| Durable Object | `FEED`        | One object per canonical feed: the fetching and its items      |
-| D1             | `PLATFORM_DB` | The feed catalog, and what the payment platform last said      |
+| Service        | Binding            | Purpose                                                        |
+| -------------- | ------------------ | -------------------------------------------------------------- |
+| KV             | `KV`               | Sessions, the OIDC cache, each feed's head, extracted articles |
+| Durable Object | `USER`             | One object per reader: settings, subscriptions and posts       |
+| Durable Object | `FEED`             | One object per canonical feed: the fetching and its items      |
+| D1             | `PLATFORM_DB`      | The feed catalog, and what the payment platform last said      |
+| Rate limiter   | `MCP_RATE_LIMITER` | The burst budget in front of the agent endpoint                |
 
 Each `USER` object is addressed by the reader's OIDC subject and keeps its own SQLite,
 migrated at boot. Fetching belongs to the feed rather than to any one follower: each `FEED`
@@ -64,6 +65,9 @@ create the namespace with `bunx wrangler kv namespace create` and paste its id i
   painted and both following you to any browser you sign in on
 - A podcast or video attachment played in the post's own page, by the browser's own player
 - A swipe across a row on a phone marks the post read, which the mark at its head also does
+- An agent surface at `POST /mcp` speaking the Model Context Protocol: read the queue,
+  search it, list and read feeds, and — with a token scoped to write — mark, keep, follow
+  and unfollow. Authenticated by a token you mint in Settings, on the paid plan
 - Interface in English and Spanish, resolved per request
 
 ## Integrations
@@ -83,32 +87,35 @@ create the namespace with `bunx wrangler kv namespace create` and paste its id i
 
 ### Signed in
 
-| Route                      | Description                                    |
-| -------------------------- | ---------------------------------------------- |
-| `/reading`                 | Every post, narrowed by `show` and by `q`      |
-| `/reading/read`            | `POST` takes every unread post out of it       |
-| `/reading/:feed`           | One feed, its health and its posts             |
-| `/reading/:feed/:item`     | One post, and the article behind its link      |
-| `/reading/folders/:folder` | One folder's feeds, read as one stream         |
-| `/saved`                   | The posts you asked to keep                    |
-| `/feeds`                   | `POST` follows a feed                          |
-| `/feeds/refresh`           | `POST` checks every feed now                   |
-| `/feeds.opml`              | Your subscriptions as OPML                     |
-| `/feeds/import`            | `POST` follows everything in an OPML file      |
-| `/feeds/:feedId`           | `DELETE` unfollows a feed                      |
-| `/feeds/:feedId/refresh`   | `POST` checks that feed now                    |
-| `/feeds/:feedId/read`      | `POST` marks that feed's posts read            |
-| `/feeds/:feedId/velocity`  | `POST` sets how long that feed's posts stay    |
-| `/feeds/:feedId/folder`    | `POST` files that feed into a folder           |
-| `/folders`                 | `POST` makes a folder                          |
-| `/folders/:folderId`       | `POST` renames it, `DELETE` takes it away      |
-| `/items/:itemId/read`      | Marks an item read                             |
-| `/items/:itemId/save`      | Keeps an item, or stops keeping it             |
-| `/settings`                | Your plan, how your pages look, OPML           |
-| `/settings/appearance`     | `POST` sets the scheme and the reading face    |
-| `/billing/checkout/:plan`  | `POST` opens the hosted page that sells a plan |
-| `/billing/portal`          | `POST` opens the hosted page that manages one  |
-| `/webhooks/billing`        | `POST` where the payment platform delivers     |
+| Route                       | Description                                    |
+| --------------------------- | ---------------------------------------------- |
+| `/reading`                  | Every post, narrowed by `show` and by `q`      |
+| `/reading/read`             | `POST` takes every unread post out of it       |
+| `/reading/:feed`            | One feed, its health and its posts             |
+| `/reading/:feed/:item`      | One post, and the article behind its link      |
+| `/reading/folders/:folder`  | One folder's feeds, read as one stream         |
+| `/saved`                    | The posts you asked to keep                    |
+| `/feeds`                    | `POST` follows a feed                          |
+| `/feeds/refresh`            | `POST` checks every feed now                   |
+| `/feeds.opml`               | Your subscriptions as OPML                     |
+| `/feeds/import`             | `POST` follows everything in an OPML file      |
+| `/feeds/:feedId`            | `DELETE` unfollows a feed                      |
+| `/feeds/:feedId/refresh`    | `POST` checks that feed now                    |
+| `/feeds/:feedId/read`       | `POST` marks that feed's posts read            |
+| `/feeds/:feedId/velocity`   | `POST` sets how long that feed's posts stay    |
+| `/feeds/:feedId/folder`     | `POST` files that feed into a folder           |
+| `/folders`                  | `POST` makes a folder                          |
+| `/folders/:folderId`        | `POST` renames it, `DELETE` takes it away      |
+| `/items/:itemId/read`       | Marks an item read                             |
+| `/items/:itemId/save`       | Keeps an item, or stops keeping it             |
+| `/settings`                 | Your plan, how your pages look, OPML           |
+| `/settings/appearance`      | `POST` sets the scheme and the reading face    |
+| `/settings/tokens`          | `POST` mints an agent token, shown once        |
+| `/settings/tokens/:tokenId` | `DELETE` stops that token answering            |
+| `/mcp`                      | `GET` explains it, `POST` answers an agent     |
+| `/billing/checkout/:plan`   | `POST` opens the hosted page that sells a plan |
+| `/billing/portal`           | `POST` opens the hosted page that manages one  |
+| `/webhooks/billing`         | `POST` where the payment platform delivers     |
 
 ## Scripts
 

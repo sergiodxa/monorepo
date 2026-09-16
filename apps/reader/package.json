@@ -29,6 +29,7 @@
 		"@sdxc/lazy-route": "workspace:*",
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/mail": "workspace:*",
+		"@sdxc/mcp": "workspace:*",
 		"@sdxc/opml": "workspace:*",
 		"@sdxc/pagination": "workspace:*",
 		"@sdxc/rate-limit": "workspace:*",

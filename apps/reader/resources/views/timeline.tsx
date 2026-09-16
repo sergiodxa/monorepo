@@ -64,7 +64,8 @@ import type { TagChips } from "~/resources/views/tag-chips";
 import LazyFrame from "~/resources/components/lazy-frame";
 import ReadToggle from "~/resources/components/read-toggle";
 import SaveToggle from "~/resources/components/save-toggle";
-import { listBleed, listRowGutter } from "~/resources/layouts/app";
+import { POST_ROW_ATTRIBUTE } from "~/resources/components/shortcuts";
+import { BAND_FIELD_HEIGHT, listBleed, listRowGutter } from "~/resources/layouts/app";
 import OutboundMark from "~/resources/views/outbound-mark";
 import TagStrip from "~/resources/views/tag-chips";
 import routes from "~/routes/web";
@@ -119,6 +120,13 @@ const ROW_TITLE = "data-post-title";
 
 /** The attribute the row wears while its post has been read. */
 const ROW_READ = "data-read";
+
+/**
+ * How far above a row the page stops when focus reaches it. The header band is stuck to
+ * the top of the screen, so a row scrolled exactly to the top would sit under it; this is
+ * that band's own height with a row's gutter on top of it.
+ */
+const ROW_SCROLL_MARGIN = `calc(${BAND_FIELD_HEIGHT} + 2rem)`;
 
 /**
  * What a row's words are coloured by, which is the one thing that changes as a post is read.
@@ -477,9 +485,18 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 					{entries.map((entry) => (
 						<li
 							key={entry.id}
-							{...{ [ROW_READ]: entry.isRead ? "" : undefined }}
+							{...{ [ROW_READ]: entry.isRead ? "" : undefined, [POST_ROW_ATTRIBUTE]: "" }}
+							/**
+							 * The current post is the focused row, which is the one kind of selection a
+							 * screen reader is guaranteed to announce and the one that survives a page
+							 * arriving above these rows, a page arriving below them, and this row being
+							 * taken away. A negative index keeps the row out of the tab sequence, so
+							 * `Tab`, the pointer and a browser running no script are untouched.
+							 */
+							tabIndex={-1}
 							mix={[
 								pb(1),
+								raw({ scrollMarginBlockStart: ROW_SCROLL_MARGIN }),
 								listRowGutter(),
 								borderEdge("block-end", { color: "neutral.border", width: 1 }),
 								hover(bg(ROW_HOVER)),

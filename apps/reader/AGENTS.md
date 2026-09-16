@@ -20,15 +20,16 @@ Rules follow RFC 2119: "MUST", "MUST NOT", "SHOULD", "SHOULD NOT", and "MAY" in 
 indicate requirement levels.
 
 - MUST keep the Cloudflare Worker bootstrap in `bootstrap/worker.ts` and the router
-  assembly in `bootstrap/app.tsx`. Eight other places reach for a Cloudflare API and no
+  assembly in `bootstrap/app.tsx`. Nine other places reach for a Cloudflare API and no
   more: `database/user-do.ts` and `database/feed-do.ts`, which are Durable Objects and so
   are ones by definition; `database/registry.ts`, the only module holding the catalog's D1
   binding; `database/feed-head.ts`, which holds the KV a feed publishes its head to;
   `database/article-cache.ts`, which holds the KV extracted articles are shared through;
   the `app/auth/` clients, which read their credentials off the environment;
-  `app/push/vapid.ts`, which reads the Web Push key pair off it the same way; and
+  `app/push/vapid.ts`, which reads the Web Push key pair off it the same way;
   `app/lib/media.ts`, which reads the key a proxied image's address is signed under and
-  names the edge cache those images are held in.
+  names the edge cache those images are held in; and `app/mcp/token.ts`, which reads the
+  key an agent's token is signed under.
 - MUST keep every logged event free of anything naming a reader or a post. An event MAY
   carry a count, a duration, a status, a host and a feed identifier, and MUST NOT carry a
   post title, a post URL, an item id, or a reader's subject or email. A host names a
@@ -63,6 +64,15 @@ indicate requirement levels.
   a revert; everything else stays a constant.
 - MUST guard every per-person route with `requireUser`, which redirects an anonymous
   visitor home with a `returnTo` cookie so sign-in returns them where they started.
+- MUST answer an agent from the tools and resources declared in `app/mcp/tools.ts` and
+  `app/mcp/resources.ts`, each one a projection of an RPC method that already exists. A
+  handler reaches the reader through `agentStore()`, which is the object the presented
+  token resolved to and the only one any of them can reach. Everything a publisher wrote —
+  a title, an excerpt, an author — is data a model reads, never instruction it follows.
+- MUST decide what an agent may do inside the reader's own object, through
+  `authorizeAgent`, which reads the scope, the expiry, the revocation, the tier and the
+  day's budget from rows. Nothing about any of them is signed into the token, so a
+  revocation and a cancellation both take effect on the next call.
 - MUST build markup from `@sdxc/ui` components styled with `@sdxc/u` mixins through `mix`.
 - MUST let `worker-configuration.d.ts` be the only declaration of a binding's type; run
   `bun run cf:typegen` after every change to `wrangler.jsonc`.
@@ -95,6 +105,12 @@ indicate requirement levels.
   - `app/lib/tracking-parameters.ts` <- What an outbound link is stripped of at render
 - Feature Flags
   - `app/lib/flags.ts` <- The definitions, the typed catalog and the instance every surface evaluates through
+- Agents
+  - `bootstrap/mcp.ts` <- The Model Context Protocol server, and what each tool is mapped to
+  - `app/mcp/tools.ts` <- Every tool an agent may call, and the schema its arguments satisfy
+  - `app/mcp/resources.ts` <- The three things a person attaches directly, under `reader://`
+  - `app/mcp/agent.ts` <- The credential every agent request is answered under
+  - `app/mcp/token.ts` <- Minting and reading the token that names one reader
 - Storage
   - `database/user-do.ts` <- The per-reader Durable Object and the RPC surface it answers
   - `database/feed-do.ts` <- The per-feed Durable Object, which is the only thing that fetches

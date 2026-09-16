@@ -23,6 +23,7 @@ import { Feed } from "@sdxc/feed";
 import { Mailer } from "@sdxc/mail";
 import { CloudflareTransport } from "@sdxc/mail/cloudflare";
 import { decodeCursor, encodeCursor, InvalidCursorError, Pagination } from "@sdxc/pagination";
+import { DataTableAdapter } from "@sdxc/rate-limit";
 import { isFailure } from "@sdxc/result";
 import { TypeID } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
@@ -42,6 +43,7 @@ import {
 import type { LimitRefusal, Tier, TierLimits, TierSource } from "~/app/lib/entitlement";
 import type { FeedStore } from "~/database/feed-do";
 import type {
+	AgentScope,
 	RuleAction,
 	RuleField,
 	SelectFeed,
@@ -52,6 +54,7 @@ import type {
 	SelectSearch,
 	SelectSettings,
 	SelectTag,
+	SelectToken,
 	ReadingFace,
 	Theme,
 	Velocity,
@@ -93,6 +96,8 @@ import { countNotifiedFeeds, notify } from "~/database/notify";
 import { chunked, insertChunkSize } from "~/database/refresh";
 import { registerFeed } from "~/database/registry";
 import {
+	AGENT_DAILY_CALLS,
+	AGENT_SCOPES,
 	DEFAULT_READING_FACE,
 	DEFAULT_THEME,
 	DEFAULT_VELOCITY,
@@ -116,6 +121,10 @@ import {
 	TAG_LIMIT,
 	tags,
 	TAGS_PER_ITEM,
+	TOKEN_LIFETIME_MS,
+	TOKEN_LIMIT,
+	TOKEN_USE_STAMP_MS,
+	tokens,
 	VELOCITIES,
 	VELOCITY_WINDOW_MS,
 } from "~/database/schema";
@@ -150,6 +159,15 @@ const MAX_PAGE_LIMIT = 100;
 
 /** Ids one `IN` list carries, held under the same 100-parameter ceiling. */
 const IDS_PER_LOOKUP = 90;
+
+/** The longest name a token may carry, which is what a row of the settings list can draw. */
+const TOKEN_NAME_LENGTH = 80;
+
+/**
+ * The span an agent's call budget is measured over. It slides with the clock, so there is
+ * no midnight every agent's budget is freed at together.
+ */
+const AGENT_BUDGET_WINDOW = "1 day";
 
 /**
  * Unread posts the strip shows per pinned feed. Enough to say a publication has moved
@@ -967,6 +985,69 @@ export namespace UserStore {
 	export type LinkParametersResult =
 		| { ok: true; keepLinkParameters: boolean }
 		| { ok: false; reason: "not-following" };
+
+	/**
+	 * One token a reader minted for an agent, as the settings page lists it. The token
+	 * itself never comes back out: what was handed over once is gone from here.
+	 */
+	export interface AgentToken {
+		id: string;
+		name: string;
+		scope: AgentScope;
+		createdAt: number;
+		/** When a request last presented it, stamped at most hourly, or `null` before any. */
+		lastUsedAt: number | null;
+		expiresAt: number;
+		/** When the reader revoked it, and `null` for one still in force. */
+		revokedAt: number | null;
+	}
+
+	/** What a reader submits to mint a token, which is a name and what it may do. */
+	export interface AgentTokenDraft {
+		/** The row id, minted alongside the signed value so the two describe each other. */
+		id: string;
+		name: string;
+		scope: string;
+		/** SHA-256 of the signed value's signature segment. */
+		hash: string;
+	}
+
+	/** Why a token was not minted. */
+	export type AgentTokenFailure =
+		/** The name was blank, or longer than a row can carry. */
+		| "invalid-name"
+		/** The scope is not one a token may carry. */
+		| "invalid-scope"
+		/** The reader already holds as many tokens as this keeps; `allowed` says how many. */
+		| "token-limit"
+		/** The reader's plan does not answer an agent at all. */
+		| "not-entitled";
+
+	export type AgentTokenResult =
+		| { ok: true; token: AgentToken }
+		| { ok: false; reason: Exclude<AgentTokenFailure, "token-limit"> }
+		| { ok: false; reason: "token-limit"; allowed: number };
+
+	/** What revoking a token did, which stops the next call and nothing already answered. */
+	export type AgentTokenRemoval = { ok: true } | { ok: false; reason: "not-found" };
+
+	/**
+	 * What one presented token may do right now. Four questions answered against one
+	 * object the request was about to wake anyway: is this token real, is it still
+	 * allowed, is this account entitled, and is it inside its daily budget.
+	 */
+	export type AgentAuthorization =
+		| { ok: true; scope: AgentScope; tier: Tier }
+		| {
+				ok: false;
+				/**
+				 * `unknown-token` for a signed value naming a row this reader never had;
+				 * `revoked` and `expired` for one they no longer honour; `tier` for an
+				 * account whose plan does not answer an agent; `budget` for one that has
+				 * spent its day.
+				 */
+				reason: "unknown-token" | "revoked" | "expired" | "tier" | "budget";
+		  };
 }
 
 /**
@@ -2984,6 +3065,136 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
+	 * Every token this reader minted for an agent, newest first.
+	 *
+	 * Unpaged, because ten is the most a reader may hold and a list they cannot read down
+	 * is a list they cannot revoke from.
+	 */
+	async listAgentTokens(): Promise<UserStore.AgentToken[]> {
+		let rows = await this.#db.findMany(tokens, {
+			orderBy: [
+				["created_at", "desc"],
+				["id", "desc"],
+			],
+		});
+
+		return rows.map(toAgentToken);
+	}
+
+	/**
+	 * Writes the row describing a token the caller has already signed.
+	 *
+	 * The signed value is minted outside this object, because it is the Worker that holds
+	 * the key; what arrives here is the id it named and a digest of it, so nothing
+	 * replayable is ever stored. Entitlement and the cap are decided here rather than
+	 * beside the form, since this object is what every path reaches.
+	 *
+	 * @param draft - The id, the name, the scope and the digest of the signed value.
+	 */
+	async createAgentToken(draft: UserStore.AgentTokenDraft): Promise<UserStore.AgentTokenResult> {
+		let tier = storedTier(await this.#settingsRow());
+		if (!limitsOf(tier).mcp) return { ok: false, reason: "not-entitled" };
+
+		let name = draft.name.trim();
+		if (name.length === 0 || name.length > TOKEN_NAME_LENGTH) {
+			return { ok: false, reason: "invalid-name" };
+		}
+
+		if (!isAgentScope(draft.scope)) return { ok: false, reason: "invalid-scope" };
+
+		let held = await this.#db.count(tokens, { where: isNull("revoked_at") });
+		if (held >= TOKEN_LIMIT) return { ok: false, reason: "token-limit", allowed: TOKEN_LIMIT };
+
+		let now = Date.now();
+
+		let row = await this.#db.create(
+			tokens,
+			{
+				id: draft.id,
+				name,
+				scope: draft.scope,
+				hash: draft.hash,
+				created_at: now,
+				last_used_at: null,
+				expires_at: now + TOKEN_LIFETIME_MS,
+				revoked_at: null,
+			},
+			{ returnRow: true },
+		);
+
+		return { ok: true, token: toAgentToken(row) };
+	}
+
+	/**
+	 * Stops a token answering, from the next call onwards.
+	 *
+	 * The row stays, so the reader can still see what they revoked and when; nothing is
+	 * cached anywhere, so there is nothing else to invalidate.
+	 *
+	 * @param tokenId - The row the reader asked to stop honouring.
+	 */
+	async revokeAgentToken(tokenId: string): Promise<UserStore.AgentTokenRemoval> {
+		let row = await this.#db.find(tokens, { id: tokenId });
+		if (row === null || row.revoked_at !== null) return { ok: false, reason: "not-found" };
+
+		await this.#db.update(tokens, { id: tokenId }, { revoked_at: Date.now() });
+
+		return { ok: true };
+	}
+
+	/**
+	 * What one presented token may do right now, which is the whole of the agent surface's
+	 * authorization.
+	 *
+	 * Every answer is read from this object's own rows, never from the token: a token
+	 * minted while paid would otherwise keep working for a year after a cancellation, and
+	 * a revoked one would work forever. The daily budget is spent on the same wake, which
+	 * is what makes a per-account bill bounded rather than approximately bounded.
+	 *
+	 * @param tokenId - The row id the signed value named.
+	 * @example let allowed = await userStore(subject).authorizeAgent(tokenId);
+	 */
+	async authorizeAgent(tokenId: string): Promise<UserStore.AgentAuthorization> {
+		let row = await this.#db.find(tokens, { id: tokenId });
+		if (row === null) return { ok: false, reason: "unknown-token" };
+		if (row.revoked_at !== null) return { ok: false, reason: "revoked" };
+
+		let now = Date.now();
+		if (row.expires_at <= now) return { ok: false, reason: "expired" };
+
+		let tier = storedTier(await this.#settingsRow());
+		if (!limitsOf(tier).mcp) return { ok: false, reason: "tier" };
+
+		if (!(await this.#withinDailyBudget(tokenId))) return { ok: false, reason: "budget" };
+
+		if (row.last_used_at === null || now - row.last_used_at >= TOKEN_USE_STAMP_MS) {
+			await this.#db.update(tokens, { id: tokenId }, { last_used_at: now });
+		}
+
+		return { ok: true, scope: isAgentScope(row.scope) ? row.scope : "read", tier };
+	}
+
+	/**
+	 * Whether one token still has calls left today, spending one of them.
+	 *
+	 * A limiter that cannot answer lets the request through: a counter being down should
+	 * not sign every agent out.
+	 *
+	 * @param tokenId - The token whose budget is being spent.
+	 */
+	async #withinDailyBudget(tokenId: string): Promise<boolean> {
+		let limiter = new DataTableAdapter(this.#db, {
+			limit: AGENT_DAILY_CALLS,
+			window: AGENT_BUDGET_WINDOW,
+		});
+
+		let decision = await limiter.consume(`agent:${tokenId}`);
+		if (isFailure(decision)) return true;
+
+		return decision.data.allowed;
+	}
+
+	/**
 	 * Runs whatever the three due times say is due, advances them, and arms the next wake.
 	 *
 	 * What a wake is for is derived rather than remembered: the alarm carries no identity,
@@ -4774,6 +4985,24 @@ function isDue(at: number | null, now: number): boolean {
 /** Where a settings row's tier came from, read under the same rule as the tier itself. */
 function storedTierSource(row: SelectSettings): TierSource {
 	return isTierSource(row.tier_source) ? row.tier_source : DEFAULT_TIER_SOURCE;
+}
+
+/** A token row as the RPC boundary reports it, with nothing replayable on it. */
+function toAgentToken(row: SelectToken): UserStore.AgentToken {
+	return {
+		id: row.id,
+		name: row.name,
+		scope: isAgentScope(row.scope) ? row.scope : "read",
+		createdAt: row.created_at,
+		lastUsedAt: row.last_used_at,
+		expiresAt: row.expires_at,
+		revokedAt: row.revoked_at,
+	};
+}
+
+/** Whether a submitted value is one of the scopes the column's `CHECK` allows. */
+function isAgentScope(value: string): value is AgentScope {
+	return AGENT_SCOPES.some((offered) => offered === value);
 }
 
 /** A label row as the RPC boundary reports it. */

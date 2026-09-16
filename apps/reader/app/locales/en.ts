@@ -83,6 +83,25 @@ export default {
 		placeholder: "What are you looking for?",
 	},
 
+	/** The keys the reading surfaces are worked with, and the panel that lists them. */
+	shortcuts: {
+		open: "Keyboard shortcuts",
+		description: "Press a key while reading. Typing in a field leaves every key alone.",
+		close: "Close",
+		keys: {
+			nextPost: "Next post",
+			previousPost: "Previous post",
+			openPost: "Open the post",
+			markRead: "Mark as read or unread",
+			savePost: "Save the post, or stop saving it",
+			checkFeeds: "Check every feed",
+			nextFeed: "Next feed",
+			previousFeed: "Previous feed",
+			search: "Search your posts",
+			help: "Show these shortcuts",
+		},
+	},
+
 	/** Shared by both timelines, which offer the same way through a long list of posts. */
 	/**
 	 * Reading one post on its own page: what the feed gave, and the article behind the
@@ -724,6 +743,13 @@ export default {
 			 * a limit, and this says what the reader gets while they are inside it.
 			 */
 			history: "Nothing is deleted while you are inside these numbers.",
+			/**
+			 * What the Paid plan adds beyond the numbers, said where a reader decides whether to
+			 * pay for it. Agents are named here because they are the one thing on this plan a
+			 * person may be paying for on their own.
+			 */
+			includes:
+				"Paid also reads articles in place, runs your filters, makes folders and labels, and answers an agent through the Model Context Protocol.",
 			usage: "You follow {{feeds}} feeds and have saved {{saved}} posts.",
 			upgrade: "Move to {{plan}}",
 			manage: "Manage billing",
@@ -823,6 +849,92 @@ export default {
 			turnedOn: "You will hear about this feed.",
 			turnedOff: "You will not hear about this feed.",
 			missing: "That feed could not be found.",
+		},
+	},
+
+	/**
+	 * What a reader is told about the agent surface: the endpoint, the tokens they mint for
+	 * it, and the refusals a client reads back when one is not honoured.
+	 */
+	agent: {
+		legend: "Agents",
+		description:
+			"Point an assistant at your feeds and read them without opening this app. It can list what you follow, read your queue, search it, and — if you let it — mark posts read, keep them, and follow or unfollow a feed.",
+		endpoint: "The address to give a client is {{url}}.",
+		locked: "Agents come with the Paid plan. Nothing you have is affected until you upgrade.",
+
+		scopes: {
+			read: "Read only",
+			write: "Read and write",
+		},
+
+		mint: {
+			name: "What is this for?",
+			placeholder: "Laptop assistant",
+			scope: "What it may do",
+			scopeHint:
+				"A read token can never mark, keep, follow or unfollow anything. Choose it unless the assistant needs to act.",
+			submit: "Mint a token",
+		},
+
+		minted: {
+			title: "Your new token",
+			heading: "Your new token",
+			description: "Paste this into your client's configuration as a bearer token.",
+			once: "This is the only time it is shown. Mint another if you lose it.",
+			back: "Back to settings",
+		},
+
+		tokens: {
+			none: "You have not minted a token yet.",
+			revoke: "Revoke",
+			revoked: "That token will not answer again.",
+			missing: "That token was already revoked.",
+			expires: "Expires {{date}}",
+
+			state: {
+				never: "Never used",
+				used: "Last used {{date}}",
+				revoked: "Revoked {{date}}",
+				expired: "Expired {{date}}",
+			},
+
+			refused: {
+				"invalid-name": "Give the token a name, so you can recognize it later.",
+				"invalid-scope": "Choose what the token may do.",
+				"token-limit": "You already hold as many tokens as this keeps. Revoke one first.",
+				"not-entitled": "Agents come with the Paid plan, so nothing was minted.",
+			},
+		},
+
+		page: {
+			title: "Agents",
+			heading: "Agents",
+			description:
+				"This address answers the Model Context Protocol. An assistant pointed at it can read your feeds, search them, and act on them within whatever a token allows.",
+
+			steps: {
+				mint: "Mint a token in Settings, and choose whether it may write.",
+				configure: "Give your client this address and the token, as a bearer credential.",
+				ask: "Ask your assistant what is new, and it will read your queue rather than a browser.",
+			},
+
+			clients: {
+				legend: "Which clients work",
+				description:
+					"Any client that lets you set a bearer token in its configuration. A client that can only sign in through an authorization flow has nothing to sign in against here.",
+				tokens: "Mint a token",
+			},
+		},
+
+		refused: {
+			missing: "This endpoint needs a bearer token. Mint one in the reader's settings.",
+			signature: "That token was not issued by this reader.",
+			"unknown-token": "That token is not one this reader holds.",
+			revoked: "That token was revoked.",
+			expired: "That token has expired. Mint another in the reader's settings.",
+			tier: "Agents come with the Paid plan. Upgrade at {{url}}.",
+			budget: "This token has spent its calls for today. Try again tomorrow.",
 		},
 	},
 

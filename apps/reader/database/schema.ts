@@ -549,6 +549,72 @@ export const rules = table({
 });
 
 /**
+ * What a token lets an agent do. `read` answers questions about the reader's feeds; `write`
+ * also marks, keeps, follows and unfollows. The `CHECK` constraint on `tokens.scope`
+ * repeats these names, so the database refuses anything else.
+ */
+export const AGENT_SCOPES = ["read", "write"] as const;
+
+/** One of the answers {@link AGENT_SCOPES} offers. */
+export type AgentScope = (typeof AGENT_SCOPES)[number];
+
+/**
+ * Tokens one reader may hold at once. Several is the point — one agent that summarizes and
+ * one that marks things read want different scopes — and ten is where a list stops being
+ * something a person can read down and recognize.
+ */
+export const TOKEN_LIMIT = 10;
+
+/**
+ * How long a token lasts. A credential in a config file with no end is one nobody ever
+ * reviews, and there is no browser an agent could refresh one in, so it simply stops
+ * working and the reader mints another.
+ */
+export const TOKEN_LIFETIME_MS = 365 * 24 * 60 * 60 * 1000;
+
+/**
+ * How stale a token's last use may be before another request restamps it. An hour is fine
+ * enough to recognize a token you forgot about and coarse enough to cost no write per call.
+ */
+export const TOKEN_USE_STAMP_MS = 60 * 60 * 1000;
+
+/**
+ * Tool calls one token may spend a day, counted in the reader's own database because the
+ * platform's limiter counts per location and an agent spread across regions slips it. It is
+ * ten times the workload a heavy reader generates, or one call every three minutes all day.
+ */
+export const AGENT_DAILY_CALLS = 500;
+
+/**
+ * The tokens a reader minted for an agent, each one a name, a scope and an expiry.
+ *
+ * The signed value a client holds carries the reader's subject and a row id and nothing
+ * else, so everything that can change after minting lives here and is read on every
+ * request: a revocation takes effect on the next call, with no cache to invalidate.
+ */
+export const tokens = table({
+	name: "tokens",
+	primaryKey: ["id"],
+	columns: {
+		id: c.text(),
+		/** What the reader called it, which is what a row is recognized by and revoked from. */
+		name: c.text(),
+		scope: c.enum(AGENT_SCOPES),
+		/** SHA-256 of the signature segment, so this row holds nothing replayable. */
+		hash: c.text(),
+		created_at: c.integer(),
+		/** When a request last presented it, stamped at most once per hour. */
+		last_used_at: c.integer().nullable(),
+		expires_at: c.integer(),
+		/** When the reader revoked it, and `null` for one still in force. */
+		revoked_at: c.integer().nullable(),
+	},
+});
+
+export type SelectToken = TableRow<typeof tokens>;
+export type InsertToken = InsertRow<typeof tokens>;
+
+/**
  * The queries a reader kept, each one a narrowing of the reading queue and nothing more.
  *
  * A row here holds what the queue's own controls hold — words, a read state, and the

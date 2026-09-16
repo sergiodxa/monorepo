@@ -155,6 +155,25 @@ export default {
 		placeholder: "¿Qué estás buscando?",
 	},
 
+	/** The keys the reading surfaces are worked with, and the panel that lists them. */
+	shortcuts: {
+		open: "Atajos de teclado",
+		description: "Presioná una tecla mientras leés. Mientras escribís en un campo, no hacen nada.",
+		close: "Cerrar",
+		keys: {
+			nextPost: "Entrada siguiente",
+			previousPost: "Entrada anterior",
+			openPost: "Abrir la entrada",
+			markRead: "Marcar como leída o no leída",
+			savePost: "Guardar la entrada, o dejar de guardarla",
+			checkFeeds: "Revisar todas las fuentes",
+			nextFeed: "Fuente siguiente",
+			previousFeed: "Fuente anterior",
+			search: "Busca en tus entradas",
+			help: "Mostrar estos atajos",
+		},
+	},
+
 	/** Shared by both timelines, which offer the same way through a long list of posts. */
 	/**
 	 * Leer una entrada en su propia página: lo que dio el feed, y el artículo detrás del
@@ -796,6 +815,13 @@ export default {
 			/** What each plan allows, as the numbers the reader is measured against. */
 			allowance: "{{feeds}} feeds, {{saved}} entradas guardadas, {{posts}} entradas en total.",
 			history: "No se borra nada mientras estés dentro de estos números.",
+			/**
+			 * Lo que añade el plan De pago más allá de los números, dicho donde se decide si
+			 * pagarlo. Los agentes se nombran aquí porque son lo único de este plan por lo que
+			 * alguien puede estar pagando por sí solo.
+			 */
+			includes:
+				"De pago además lee los artículos en el sitio, ejecuta tus filtros, crea carpetas y etiquetas, y responde a un agente por el Model Context Protocol.",
 			usage: "Sigues {{feeds}} feeds y tienes {{saved}} entradas guardadas.",
 			upgrade: "Cambiar a {{plan}}",
 			manage: "Gestionar la facturación",
@@ -822,6 +848,93 @@ export default {
 				rules_one: "{{count}} regla por encima de las que ejecuta este plan.",
 				rules_other: "{{count}} reglas por encima de las que ejecuta este plan.",
 			},
+		},
+	},
+
+	/**
+	 * Lo que se le dice a quien lee sobre la superficie para agentes: la dirección, los
+	 * tokens que emite para ella y los rechazos que un cliente recibe de vuelta.
+	 */
+	agent: {
+		legend: "Agentes",
+		description:
+			"Apunta un asistente a tus fuentes y léelas sin abrir esta aplicación. Puede listar lo que sigues, leer tu cola, buscarla y, si se lo permites, marcar entradas como leídas, guardarlas y seguir o dejar de seguir una fuente.",
+		endpoint: "La dirección que le darás a un cliente es {{url}}.",
+		locked:
+			"Los agentes vienen con el plan De pago. Nada de lo que tienes cambia hasta que mejores el plan.",
+
+		scopes: {
+			read: "Solo lectura",
+			write: "Lectura y escritura",
+		},
+
+		mint: {
+			name: "¿Para qué es?",
+			placeholder: "Asistente del portátil",
+			scope: "Qué puede hacer",
+			scopeHint:
+				"Un token de lectura nunca puede marcar, guardar, seguir ni dejar de seguir nada. Elígelo salvo que el asistente necesite actuar.",
+			submit: "Emitir un token",
+		},
+
+		minted: {
+			title: "Tu nuevo token",
+			heading: "Tu nuevo token",
+			description: "Pégalo en la configuración de tu cliente como token de portador.",
+			once: "Esta es la única vez que se muestra. Emite otro si lo pierdes.",
+			back: "Volver a ajustes",
+		},
+
+		tokens: {
+			none: "Todavía no has emitido ningún token.",
+			revoke: "Revocar",
+			revoked: "Ese token no volverá a responder.",
+			missing: "Ese token ya estaba revocado.",
+			expires: "Caduca el {{date}}",
+
+			state: {
+				never: "Nunca usado",
+				used: "Usado por última vez {{date}}",
+				revoked: "Revocado {{date}}",
+				expired: "Caducó {{date}}",
+			},
+
+			refused: {
+				"invalid-name": "Dale un nombre al token para que puedas reconocerlo después.",
+				"invalid-scope": "Elige qué puede hacer el token.",
+				"token-limit": "Ya tienes tantos tokens como se guardan aquí. Revoca uno primero.",
+				"not-entitled": "Los agentes vienen con el plan De pago, así que no se emitió nada.",
+			},
+		},
+
+		page: {
+			title: "Agentes",
+			heading: "Agentes",
+			description:
+				"Esta dirección responde al Model Context Protocol. Un asistente apuntado a ella puede leer tus fuentes, buscarlas y actuar sobre ellas dentro de lo que permita un token.",
+
+			steps: {
+				mint: "Emite un token en Ajustes y elige si puede escribir.",
+				configure: "Dale a tu cliente esta dirección y el token, como credencial de portador.",
+				ask: "Pregúntale a tu asistente qué hay nuevo y leerá tu cola en lugar de un navegador.",
+			},
+
+			clients: {
+				legend: "Qué clientes funcionan",
+				description:
+					"Cualquiera que te deje poner un token de portador en su configuración. Un cliente que solo sabe iniciar sesión con un flujo de autorización no tiene aquí contra qué iniciarla.",
+				tokens: "Emitir un token",
+			},
+		},
+
+		refused: {
+			missing: "Esta dirección necesita un token de portador. Emite uno en los ajustes del lector.",
+			signature: "Ese token no lo emitió este lector.",
+			"unknown-token": "Ese token no es uno de los que tiene este lector.",
+			revoked: "Ese token fue revocado.",
+			expired: "Ese token caducó. Emite otro en los ajustes del lector.",
+			tier: "Los agentes vienen con el plan De pago. Mejóralo en {{url}}.",
+			budget: "Este token ha gastado sus llamadas de hoy. Inténtalo mañana.",
 		},
 	},
 

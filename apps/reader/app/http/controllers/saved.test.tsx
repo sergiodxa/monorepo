@@ -24,7 +24,12 @@ import routes from "~/routes/web";
 
 /** The feeds the fixture posts come from, as the store carries them beside the items. */
 const FEEDS: UserStore.FeedRef[] = [
-	{ id: "feed-df", title: "Daring Fireball", siteUrl: "https://daringfireball.net" , keepLinkParameters: false },
+	{
+		id: "feed-df",
+		title: "Daring Fireball",
+		siteUrl: "https://daringfireball.net",
+		keepLinkParameters: false,
+	},
 ];
 
 let store = createUserStoreDouble();

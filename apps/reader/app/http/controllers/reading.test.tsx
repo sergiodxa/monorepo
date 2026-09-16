@@ -41,8 +41,13 @@ let { default: reading } = await import("./reading");
 
 /** The two feeds the fixture posts come from, as the store carries them beside the items. */
 const FEEDS: UserStore.FeedRef[] = [
-	{ id: "feed-df", title: "Daring Fireball", siteUrl: "https://daringfireball.net" , keepLinkParameters: false },
-	{ id: "feed-rc", title: "Remix Changelog", siteUrl: null , keepLinkParameters: false },
+	{
+		id: "feed-df",
+		title: "Daring Fireball",
+		siteUrl: "https://daringfireball.net",
+		keepLinkParameters: false,
+	},
+	{ id: "feed-rc", title: "Remix Changelog", siteUrl: null, keepLinkParameters: false },
 ];
 
 /** Builds a queue item, defaulting every field a test is not about. */
@@ -563,12 +568,16 @@ describe("paging into a frame", () => {
 			([, exportName, moduleUrl]) => ({ exportName, moduleUrl }),
 		);
 
-		/** The page defers its next page and carries both of a row's marks, so it mounts all three. */
+		/**
+		 * The page defers its next page, carries both of a row's marks, and wears the chrome's
+		 * own keys, so it mounts all four.
+		 */
 		expect(new Set(islands.map((island) => island.moduleUrl))).toEqual(
 			new Set([
 				"/resources/components/lazy-frame.tsx",
 				"/resources/components/read-toggle.tsx",
 				"/resources/components/save-toggle.tsx",
+				"/resources/components/shortcuts.tsx",
 			]),
 		);
 
