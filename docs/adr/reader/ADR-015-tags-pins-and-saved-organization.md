@@ -179,9 +179,9 @@ select i."id", i."feed_id", i."title", i."url", i."summary", i."author",
 `WHERE` opens with, and the two behind it are the ordering columns in the order they are
 ordered by, so the plan descends the index to the cursor, scans fifty entries backwards, and
 stops: no temporary b-tree, no row read for any other tag, and a cost that is the page size
-rather than the number of posts carrying the tag. Both keys point the same way, so an
-ascending index answers the descending order by being scanned backwards and declaring `DESC`
-buys nothing. The join behind it is fifty primary-key lookups, one per row the page returns.
+rather than the number of posts carrying the tag. Both keys point the same way, so an ascending
+index answers the descending order by being scanned backwards and declaring `DESC` buys
+nothing. The join behind it is fifty primary-key lookups, one per row the page returns, and
 `item_tags_item_idx` serves the other direction — the chips drawn on a post, and the delete
 that clears a post's rows when the post goes, which without it is a scan.
 
@@ -202,17 +202,15 @@ belongs to a saved post by construction, so the filter is the join.
 
 A hundred tags keeps the picker the same kind of thing as the rail: one unpaged read, drawn
 whole, scannable without a search box of its own. A reader with four hundred tags has a second
-junk drawer with a worse interface, and the honest moment to say so is at the
-hundred-and-first rather than when they are looking for something. Ten per post bounds the
-arithmetic above and is generous against how anybody labels: a post with eleven reasons to
-have been kept has none.
+junk drawer with a worse interface, and the honest moment to say so is at the hundred-and-first
+rather than when they are looking for something. Ten per post bounds the arithmetic above and
+is generous against how anybody labels: a post with eleven reasons to have been kept has none.
 
 A name is what is left after trimming, collapsing internal whitespace to one space, rejecting
 control characters and normalizing to NFKC — between 1 and 32 UTF-16 units. Uniqueness and
 matching are over the case-folded form, so `Rust` and `rust` are one tag while the name shown
-is the one first typed. Thirty-two is where a label is still a label, a chip on one line beside
-four others, and past which a reader is writing a note into a field that the reading queue's
-search serves better.
+is the one first typed. Thirty-two is where a label is still a chip on one line beside four
+others, and past which a reader is writing a note into a field the search serves better.
 
 Every refusal is the discriminated union this app's RPC boundary already speaks —
 `{ ok: false, reason: "tag-limit" | "tag-name-invalid" | "tag-exists" | "post-tag-limit" | "saved-full" }`
@@ -238,22 +236,17 @@ budget's reclamation, and unfollowing a feed. Each goes through one helper that 
 `item_tags` for those ids in the same batch. A cascade would be tidier and would put the
 correctness of a bulk sweep behind whether a pragma is set the way the platform happens to set
 it today; since each of those methods already owns its deletes, writing both is one line and
-depends on nothing.
-
-Unsaving therefore drops a post's tags. The post returns to whatever rule would have taken it,
-exactly as ADR-002 says, and it returns unlabelled, because the labels described something
-kept.
+depends on nothing. Unsaving therefore drops a post's tags, and the post returns to whatever
+rule would have taken it, unlabelled, because the labels described something kept.
 
 ### Tagging saves
 
 Tags apply to saved posts only, and what makes that comfortable rather than annoying is that
-**tagging an unsaved post saves it**. One gesture, and no ordering between two verbs for a
-reader to get wrong.
-
-That puts tagging under the saved cap, where it belongs: tagging the thousand-and-first post is
-refused with the same `saved-full` reason saving it is, and the reader unsaves something. The
-cap keeps meaning what ADR-002 made it mean, there is no second cap to explain, and the
-arithmetic above stays the arithmetic.
+**tagging an unsaved post saves it** — one gesture, with no ordering between two verbs for a
+reader to get wrong. That puts tagging under the saved cap, where it belongs: tagging the
+thousand-and-first post is refused with the same `saved-full` reason saving it is, and the
+reader unsaves something. The cap keeps meaning what ADR-002 made it mean, there is no second
+cap to explain, and the arithmetic above stays the arithmetic.
 
 ### A rule-applied tag is a tag
 
@@ -269,15 +262,13 @@ and says so. A rule applying a tag saves the post, so a rule can fill the shelf 
 is full the rule stops applying rather than evicting, reported through its own surface, because
 a rule may not do by accumulation what a reader may not do by hand. And a reader removing a
 rule-applied tag has removed a tag: rules run on arrival, so nothing re-applies it to an item
-already ruled on.
-
-If ADR-009 wants provenance for its own reporting, that is a column in its tables, about rules,
-and not a second kind of tag in this one.
+already ruled on. If ADR-009 wants provenance for its own reporting, that is a column in its
+tables, about rules, and not a second kind of tag in this one.
 
 ### Pinned feeds
 
 `pinned_at INTEGER` on the reader's `feeds` table, nullable, the shape `read_at`, `saved_at`
-and `unfollowed_at` already have. A timestamp rather than a boolean for the reason the others
+and `unfollowed_at` already have — a timestamp rather than a boolean for the reason the others
 are timestamps: it answers when as well as whether, so pin order is an ordering the reader
 produced.
 
@@ -297,8 +288,6 @@ pinned feed down `feed_items_feed_timeline_idx`, which already exists and alread
 `feed_id`. At most ten seeks of at most three rows, bounded by the pins rather than by how much
 anybody published, drawn as a card per feed so a busy pin does not bury a quiet one. Beneath
 it, `readingQueue` runs the statement it runs today and mints the cursor it mints today.
-Unpinning clears the column, unfollowing clears it with the row, and nothing about a pin
-reaches a `FeedDO`.
 
 ### The quiet group
 
@@ -327,12 +316,10 @@ wants one out of the group pins it or files it.
 It is drawn as the last section of the rail, holding the feeds nobody grouped and nothing
 published, with the sum of their unread counts on it so an arriving newsletter is visible
 unexpanded. No post moves: the quiet group is a way of drawing the rail, and a quiet feed's
-posts sit in the river where their date puts them.
-
-A feed that was busy and goes quiet is the one case the stamp lags — it is rarely stale, so it
-rarely synchronizes, so it joins the group later than it could. The other direction corrects
-immediately, because publishing is what makes a subscription stale, and the health call
-corrects the first the next time the reader opens that feed.
+posts sit in the river where their date puts them. A feed that was busy and goes quiet is the
+one case the stamp lags — it is rarely stale, so it rarely synchronizes, so it joins the group
+later than it could, until the health call corrects it. The other direction corrects itself,
+because publishing is what makes a subscription stale.
 
 ### What the retention budget does not learn
 
@@ -346,10 +333,9 @@ the budget, all of them ADR-002's and none of them moved.
 The one place that is not quite true: **a join table is rows, and rows are storage.**
 `item_tags` is invisible to a budget that counts posts while being perfectly visible to the ten
 gigabytes the budget was sized inside. At its ceiling it is 10,000 rows of two identifiers and
-two integers, about 200 bytes apiece with both indexes counted — **roughly two megabytes**. The
-budget deliberately sits a fifth of the way into the object, leaving some eight gigabytes of
-headroom, so the tag table at its absolute maximum is about 0.03% of the slack. Putting that in
-the budget's arithmetic would be measuring a rounding error.
+two integers, about 200 bytes apiece with both indexes counted — **roughly two megabytes**
+against the eight gigabytes of headroom the budget deliberately leaves, about 0.03% of the
+slack. Putting that in the budget's arithmetic would be measuring a rounding error.
 
 ### Tier and cost
 
@@ -364,19 +350,15 @@ plumbing. The gate is one predicate at the RPC boundary answering
 `{ ok: false, reason: "not-entitled" }` and one condition on the surface, and an entitlement
 that lapses leaves every row in place: the reader keeps their saved posts and their tags, can
 still filter by them, and cannot make new ones. Nothing here deletes anything on a billing
-event. A kill switch sits beside the `saved-posts` entry in the app's flag catalog, which is
-how the lists go back to what they were without a deploy.
+event. A kill switch sits beside the `saved-posts` entry in the app's flag catalog.
 
 The cost is noise, and is worth showing rather than asserting.
 `apps/uptime/app/lib/cost-rates.ts` prices storage in cents per GB-day and carries no line for
-Durable Object SQLite at all, so the conservative move is the most expensive storage rate on
-the card, `d1StorageGbDay` at 2.5 cents. Two megabytes is 0.002 GB, so a reader at the saved
-cap with ten tags on every post costs **0.005 cents a day, about 1.8 cents a year**, against a
-rate several times what the object's own storage bills at. Ten thousand such readers, every one
-at a ceiling almost nobody reaches, is under two dollars a year. The writes are `doRequest` and
-`doDurationMs` on requests the reader was already making. The number that would not have been
-noise is the one the Context rejected: ten million join rows and two gigabytes of labels is a
-second copy of a reader's entire footprint.
+Durable Object SQLite at all, so the conservative move is its most expensive storage rate,
+`d1StorageGbDay` at 2.5 cents. Two megabytes is 0.002 GB, so a reader at the saved cap with ten
+tags on every post costs **0.005 cents a day, about 1.8 cents a year** — and ten thousand such
+readers, every one at a ceiling almost nobody reaches, under two dollars. The writes are
+`doRequest` and `doDurationMs` on requests the reader was already making.
 
 ### Events
 
@@ -384,13 +366,13 @@ Through `@sdxc/logger`, following
 [ADR-033](../ADR-033-wide-events-as-the-logging-contract.md): identifiers and counts, never a
 tag's name, which is text a reader wrote.
 
-| Event                                     | Fields                     |
-| ----------------------------------------- | -------------------------- |
+| Event                                      | Fields                     |
+| ------------------------------------------ | -------------------------- |
 | `user.tag.created` / `renamed` / `deleted` | `tagId`, `tags`, `items`   |
-| `user.item.tagged`                        | `tagId`, `itemId`, `saved` |
-| `user.tag.refused`                        | `reason`, `tags`           |
-| `user.feed.pinned`                        | `feedId`, `pinned`         |
-| `user.rail.quiet`                         | `feeds`, `quiet`           |
+| `user.item.tagged`                         | `tagId`, `itemId`, `saved` |
+| `user.tag.refused`                         | `reason`, `tags`           |
+| `user.feed.pinned`                         | `feedId`, `pinned`         |
+| `user.rail.quiet`                          | `feeds`, `quiet`           |
 
 ## Consequences
 
@@ -454,7 +436,7 @@ on a row velocity or the budget may delete tomorrow.
 
 **A join table keyed by tag name instead of id.** Removes the `tags` table entirely: the name is
 the tag. Renaming then rewrites every join row, folded-form uniqueness has nowhere to live, and
-a URL built from a name breaks when the name changes.
+a URL built from a name breaks when the name does.
 
 **Pinned feeds as a filter on the timeline.** One list, no duplication, no strip: the river
 simply shows pinned feeds first. It needs either a predicate carrying an `IN` list the reader

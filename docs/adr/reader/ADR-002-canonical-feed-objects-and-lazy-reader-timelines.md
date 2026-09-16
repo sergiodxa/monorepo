@@ -459,7 +459,7 @@ below.
 `cursor` is the greatest revision this reader has ruled on, and it is the only
 synchronization state they store.
 
-`feed_items` keeps its shape, its four indexes and its `id`, with one change of meaning:
+`feed_items` keeps its shape, its five indexes and its `id`, with one change of meaning:
 `id` is now the canonical item id assigned by the `FeedDO`, copied verbatim. That is what
 makes synchronization idempotent — the same item arriving twice is an upsert on a primary
 key, not a duplicate — and it is why the id must be minted on the feed side.
@@ -814,9 +814,10 @@ reclamation, and its feed's velocity. A headline from a Breaking feed, saved, is
 next year.
 
 `saved_at` on `feed_items`, nullable, exactly the shape `read_at` already has — and a
-partial index `(published_at, id) WHERE saved_at IS NOT NULL`, exactly the shape the read
-and unread timelines already use, so the saved list pages by the same keyset as every other
-list in the app.
+partial index `(published_at, id, feed_id) WHERE saved_at IS NOT NULL`, exactly the shape
+the read and unread timelines already use — `feed_id` covering, so listing saved posts never
+leaves the index to learn which feed each came from — and the saved list pages by the same
+keyset as every other list in the app.
 
 **A thousand of them, and the thousand-and-first is refused.** Not evicted: a cap that drops
 the oldest save to make room deletes the one thing in the whole design a reader explicitly
@@ -850,7 +851,8 @@ Feed URLs come from readers, so every fetch is untrusted network input. `normali
 already rejects everything that is not `http:` or `https:` and everything that does not
 parse, and the refresh path already applies a 10-second per-fetch timeout.
 
-Two bounds are missing today and are added in `@sdxc/feed`, which owns fetching:
+Two more bounds belong in `@sdxc/feed`, which owns fetching, and are implemented there in
+`lib/limits.ts`:
 
 - a response size cap, read off a stream rather than through `response.text()`, so a
   publisher serving a gigabyte cannot exhaust an isolate's memory before the parser ever
@@ -889,7 +891,7 @@ object is already named for.
 
 ### What does not change
 
-The timeline queries and their four indexes. The keyset cursor and its rules — both
+The timeline queries and their indexes. The keyset cursor and its rules — both
 ordering columns in the projection, one shared `NEWEST_FIRST` ordering constant, no join
 to `feeds` for a title. The RPC boundary rules: never a `Result`, never a `Date`, a
 discriminated union instead of a throw, and those apply to the `FeedDO` surface too. Every

@@ -115,7 +115,7 @@ minutes off a tail that averages twelve hours, and no amount of checking reaches
 sold as "your reader is checked every five minutes" it is exactly true and worth much less.
 
 So the mechanism here is necessary and not sufficient. What makes it worth buying is the
-adaptive poll cadence work being designed alongside this ADR — polling a feed near its own
+adaptive poll cadence of [ADR-003](./ADR-003-adaptive-poll-cadence.md) — polling a feed near its own
 measured publishing rate, which the `feed` row already records and hands back on `subscribe`
 and on the health call. Once a feed that posts six times a day is polled on something like
 that rhythm, the check interval becomes the dominant term instead of a rounding error, and

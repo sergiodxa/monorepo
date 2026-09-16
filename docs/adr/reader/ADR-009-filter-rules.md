@@ -268,8 +268,10 @@ saved posts, and this — behind the same line.
 binding and no entitlement check anywhere in it; the object's `settings` table holds a subject,
 a refresh stamp and nothing else. The limits are spelled as `FREE_RULE_LIMIT = 0` and
 `RULE_LIMIT = 50` beside `SAVED_LIMIT` and `READER_BUDGET`, read through one entitlement
-function, and that function is the seam whatever decision introduces plans to this app will
-fill. Until it is filled, shipping this ships it to everybody.
+function, and that function is the seam
+[ADR-012](./ADR-012-tiers-entitlements-and-billing.md) fills. Until it is filled, shipping
+this ships it to everybody, so the rule surface sits behind a flag from the app's own catalog
+in the meantime.
 
 ### Rules are not retroactive, and a new rule sweeps nothing
 
@@ -501,5 +503,6 @@ against a SQLite `Database`, the object paths in `*.workers.test.ts` with
 
 - [ADR-002](./ADR-002-canonical-feed-objects-and-lazy-reader-timelines.md) — the arrival-time decision rules join, the cursor invariant they honour, and the budget they relieve
 - [ADR-001](./ADR-001-rss-reader-on-per-user-durable-objects.md) — the per-reader object rules are evaluated inside, and the frozen columns an edit may not move
+- [ADR-012](./ADR-012-tiers-entitlements-and-billing.md) — the entitlement seam the rule limit is read through
 - [ADR-033](../ADR-033-wide-events-as-the-logging-contract.md) — the logging contract the counters and events follow
 - [ADR-029](../ADR-029-pagination-package.md) — the keyset the preview pages the newest posts with

@@ -118,9 +118,10 @@ const LIKE_ESCAPE = "\\";
 const SEEK_OPERATORS: Record<string, string> = { eq: "=", gt: ">", lt: "<" };
 
 /**
- * Unread posts per feed, as the feed list shows them. Grouping wants an index led by
- * `feed_id`, which the unread index is not, so this is spelled the way the schema's own
- * query-plan test asserts SQLite answers it: from the guid index, without sorting.
+ * Unread posts per feed, as the feed list shows them. `feed_items_feed_timeline_idx` leads
+ * with `feed_id`, so rows arrive already gathered by the column this groups on and nothing
+ * has to stand in for that order; the unread index holds exactly the rows being counted and
+ * still loses, because it leads with `published_at`, the order the timeline reads in.
  */
 const UNREAD_COUNTS_SQL =
 	"SELECT feed_id, COUNT(*) AS unread FROM feed_items WHERE read_at IS NULL GROUP BY feed_id";

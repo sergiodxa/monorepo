@@ -157,14 +157,13 @@ the cap is what keeps the worst column finite: the single line that dominates it
 freshness reads, which is `feeds × checks` and nothing else, and removing the cap removes
 the bound entirely.
 
-Three honest caveats. The AI line is a guess and is the only line not bounded by any cap
-in this ADR — it needs a quota of its own, which belongs with whatever ADR defines those
-features and does not exist yet. Feed-side storage is shared but unbounded per feed: a
-news firehose at ADR-002's million-item ceiling is 2 GB, about $0.40 a month, paid once
-globally rather than per subscriber, so a reader who follows ten such feeds that nobody
-else follows costs several dollars more than this table says. And the reader has no cost
-ledger of its own — `apps/uptime`'s card is being used as the repository's rate reference,
-not as a meter.
+Three honest caveats. The AI line is a guess and the only line no cap in this ADR bounds —
+it needs a quota of its own, which belongs with whatever ADR defines those features and
+does not exist yet. Feed-side storage is shared but unbounded per feed: a news firehose at
+ADR-002's million-item ceiling is 2 GB, about $0.40 a month, paid once globally rather than
+per subscriber, so a reader following ten such feeds nobody else follows costs several
+dollars more than this says. And the reader has no cost ledger — `apps/uptime`'s card is
+the repository's rate reference here, not a meter.
 
 ## Decision
 
@@ -272,15 +271,15 @@ the later read wins whichever write arrives second.
 Webhooks get lost. Two paths recover, and neither can lower a tier on a failed read.
 
 **At sign-in.** The OIDC callback already does network work once per session. If the
-reader has a `billing_customers` row and `tier_checked_at` is more than 24 hours old, the
+reader has a `billing_customers` row and `tier_checked_at` is over 24 hours old, the
 callback re-reads the snapshot and writes through before rendering anything. A reader who
 paid and did not get what they paid for fixes it by reloading, which is what they will try
 first anyway.
 
 **A daily sweep.** A scheduled job walks `billing_customers` in pages, re-reads
-`entitlements.of` for each, and writes the projection and the tier. It is bounded by the
-number of readers who have ever reached a checkout rather than by the number of readers,
-which is the property that makes it affordable at any size the product reaches.
+`entitlements.of` for each, and writes the projection and the tier. It is bounded by how
+many readers have ever reached a checkout rather than by how many readers there are, which
+is what makes it affordable at any size the free tier reaches.
 
 **The window of wrongness**, stated plainly: seconds when the webhook lands; until the
 next sign-in when it does not and the reader returns; at most 24 hours when it does not
@@ -289,11 +288,10 @@ tier that is too low for up to a day is the one that matters, and the grace peri
 is deliberately three orders of magnitude longer than the reconciliation window, so a lost
 delivery can never be the thing that drops somebody.
 
-**A failed read never writes.** If Polar is unavailable, the snapshot is not read, the
-projection is not touched and no tier moves. Nobody is downgraded by an outage at the
-provider, which is the failure mode a naive "if we cannot confirm, assume free" would
-create and the reason it is spelled out as a rule rather than left to the shape of the
-code.
+**A failed read never writes.** If Polar is unavailable, no projection row is touched and
+no tier moves. Nobody is downgraded by an outage at the provider, which is the failure mode
+a naive "if we cannot confirm, assume free" would create, and the reason this is a rule
+rather than a property of the code's shape.
 
 ### The grace period
 
@@ -415,19 +413,18 @@ through the form.
 
 The first seven cost nothing to check: the object already holds both the tier and the
 count, so the comparison is a local query in code that was going to run anyway. The last
-two are surface gates rather than counts, and they read the tier through the RPC call the
-request was already making.
+two are surface gates rather than counts, and read the tier through the RPC call the
+request was already making. Refusals cross the boundary as discriminated unions, never
+thrown and never a `Result`, as `AGENTS.md` requires —
+`{ ok: false, reason: "over-limit", limit, current, tier }` — so the caller renders the
+exact sentence rather than a generic failure.
 
-Refusals cross the RPC boundary as discriminated unions, never thrown and never a `Result`,
-as `AGENTS.md` requires — `{ ok: false, reason: "over-limit", limit, current, tier }`, so
-the caller can render the exact sentence rather than a generic failure.
-
-Enforcing background checks by not arming the alarm is worth one clarification, because
-"no background checks" reads worse than it is. The shared `FeedDO` polls every feed daily
-for everybody, regardless of who is subscribed and at what tier, since one poll serves
-every subscriber. What a free reader loses is their own object waking on a clock to compare
-heads and tell them. Their timeline still catches up in full the moment they open the app,
-through `openReader`. Nothing goes stale; nobody wakes up for them.
+"No background checks" reads worse than it is, and the reason is worth one clarification.
+The shared `FeedDO` polls every feed daily for everybody, whoever is subscribed and at
+whatever tier, since one poll serves every subscriber. What a free reader loses is their
+own object waking on a clock to compare heads and tell them; their timeline still catches
+up in full the moment they open the app, through `openReader`. Nothing goes stale; nobody
+wakes up for them.
 
 ### What the free tier deliberately does not limit
 
@@ -505,9 +502,8 @@ it.
 - A replayed, late or duplicated delivery cannot downgrade a paying reader, because no
   handler carries state to apply. The correctness argument is the same one ADR-002 makes
   about the freshness index, so there is one idea to understand rather than two.
-- A lost webhook is recovered within a day, and the grace period is two weeks, so a delivery
-  failure has three orders of magnitude of headroom before it could ever be visible to a
-  reader.
+- A lost webhook is recovered within a day against a two-week grace period, so a delivery
+  failure has three orders of magnitude of headroom before a reader could see it.
 - Nothing a reader owns is ever deleted by a billing event, at any point in the lapse
   sequence, on any tier. The only rules that delete posts remain the two ADR-002 named:
   a velocity the reader chose, and physical pressure on the object.
@@ -528,17 +524,14 @@ it.
   wrong. It is bounded and it fails in the generous direction, but "bounded" is not "zero",
   and a reader who pays and closes the tab may wait a day for a lost delivery to be
   reconciled.
-- A reader who cancels while the platform reports them active keeps the tier until the
-  period ends, which is correct, and a reader whose card lapses keeps it for a further two
-  weeks, which is a real cost paid deliberately on every lapse including the ones that never
-  recover.
+- Every lapse, including the ones that never recover, is paid for with two weeks of the
+  tier the reader stopped paying for. That is a real cost taken deliberately.
 - A downgraded reader holding Premium-sized data keeps costing Premium-sized storage
   indefinitely, because rule 1 says nothing is deleted and rule 5 says the tier budget does
   not reach backwards. The bound is ADR-002's physical budget and nothing else.
 - Over-limit is a state the interface has to explain in several places, and it can be
-  reached on several axes at once. A reader over four limits sees four sentences.
-- Filter rules pausing rather than deleting means a reader can accumulate rules that are not
-  running, which is a state that looks like a bug until the copy explains it.
+  reached on several axes at once. A reader over four limits sees four sentences, and rules
+  that are stored but not running look like a bug until the copy explains them.
 - The free search window is the one thing a downgrade takes away that the reader can point
   at. It is not deletion, and it will be experienced as if it were.
 - Four new columns on a row that had five, plus three D1 tables and a webhook endpoint, in
@@ -596,7 +589,7 @@ by construction and a fourth the next time a surface is added.
 
 **Per-feature entitlement flags rather than three tiers.** `EntitlementState.features`
 already carries a flag map, so the platform supports it. It replaces one comparable column
-with a bag of booleans that every call site has to agree about, and the product sells three
+with a bag of booleans every call site has to agree about, and the product sells three
 prices, not a matrix.
 
 ## Tests
