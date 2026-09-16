@@ -14,8 +14,8 @@ import type { OPML } from "../index.js";
 const VERSION = "2.0";
 
 /**
- * Builds the document for a set of subscriptions. The list is written flat, since
- * folders are a reader's own filing rather than anything a subscription carries.
+ * Builds the document for a set of subscriptions, filed the way they arrived: an outline
+ * per folder holding the subscriptions that name it, then the ones naming none.
  *
  * @param outlines - The subscriptions to write, in the order they should appear
  * @param options - The document's own title and creation date
@@ -32,10 +32,45 @@ export function createDocument(
 			attributes: { version: VERSION },
 			children: [
 				{ name: "head", children: createHead(options) },
-				{ name: "body", children: outlines.map(createOutlineElement) },
+				{ name: "body", children: createBody(outlines) },
 			],
 		},
 	};
+}
+
+/**
+ * Builds the `body` children: one outline per folder, in the order their names read, each
+ * holding the subscriptions filed there in the order they were given, and the unfiled ones
+ * after them at the top level.
+ *
+ * Folders come first so that a reader opening the document meets the filing before the
+ * loose ends of it, which is the shape every other reader writes.
+ */
+function createBody(outlines: OPML.Outline[]): XML.Element[] {
+	let filed = new Map<string, OPML.Outline[]>();
+	let loose: OPML.Outline[] = [];
+
+	for (let outline of outlines) {
+		let folder = outline.folder;
+		if (!folder) {
+			loose.push(outline);
+			continue;
+		}
+
+		let group = filed.get(folder) ?? [];
+		group.push(outline);
+		filed.set(folder, group);
+	}
+
+	let groups = [...filed.entries()]
+		.sort(([one], [other]) => (one < other ? -1 : one > other ? 1 : 0))
+		.map<XML.Element>(([folder, members]) => ({
+			name: "outline",
+			attributes: { text: folder, title: folder },
+			children: members.map(createOutlineElement),
+		}));
+
+	return [...groups, ...loose.map(createOutlineElement)];
 }
 
 /**

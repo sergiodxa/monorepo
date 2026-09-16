@@ -49,15 +49,20 @@ const EXPORT = `<?xml version="1.0" encoding="UTF-8"?>
 </opml>`;
 
 describe(parse, () => {
-	test("reads a reader's export into a flat list", () => {
+	test("reads a reader's export into a flat list, each feed under the folder over it", () => {
 		expect(unwrap(parse(EXPORT))).toEqual([
 			{
 				title: "Frontend Weekly",
 				feedUrl: "https://frontend.example/feed.xml",
 				siteUrl: "https://frontend.example/",
+				folder: "Daily",
 			},
-			{ title: "Release Notes", feedUrl: "https://releases.example/atom" },
-			{ title: "https://quiet.example/rss", feedUrl: "https://quiet.example/rss" },
+			{ title: "Release Notes", feedUrl: "https://releases.example/atom", folder: "Daily" },
+			{
+				title: "https://quiet.example/rss",
+				feedUrl: "https://quiet.example/rss",
+				folder: "2024",
+			},
 			{
 				title: "Company Blog",
 				feedUrl: "https://company.example/feed",
@@ -66,14 +71,25 @@ describe(parse, () => {
 		]);
 	});
 
-	test("finds feeds nested several folders deep", () => {
+	/**
+	 * Depth is what a flat reader loses, and it loses it once: the name a feed keeps is the
+	 * one written directly over it, rather than the outermost or a path joining the two,
+	 * which would invent a name nobody typed.
+	 */
+	test("files a feed nested several folders deep under the nearest folder around it", () => {
 		let source = document(
 			`<outline text="News"><outline text="Tech"><outline text="Deep" xmlUrl="https://deep.example/feed"/></outline></outline>`,
 		);
 
 		expect(unwrap(parse(source))).toEqual([
-			{ title: "Deep", feedUrl: "https://deep.example/feed" },
+			{ title: "Deep", feedUrl: "https://deep.example/feed", folder: "Tech" },
 		]);
+	});
+
+	test("leaves a feed listed at the top level in no folder", () => {
+		let source = document(`<outline text="Loose" xmlUrl="https://loose.example/feed"/>`);
+
+		expect(unwrap(parse(source))[0]?.folder).toBeUndefined();
 	});
 
 	test("skips a folder while keeping the feeds inside it", () => {
@@ -196,6 +212,51 @@ describe(stringify, () => {
 			xmlUrl: "https://a.example/feed",
 			htmlUrl: "https://a.example",
 		});
+	});
+
+	/**
+	 * Ordinary OPML 2.0, which is what every other reader expects to receive: the filing
+	 * arrives as filing rather than as a flat list somebody has to redo.
+	 */
+	test("writes one outline per folder holding its feeds, and the unfiled ones after them", () => {
+		let source = stringify([
+			{ title: "Loose", feedUrl: "https://loose.example/feed" },
+			{ title: "Rust Blog", feedUrl: "https://rust.example/feed", folder: "Tech" },
+			{ title: "Daily News", feedUrl: "https://news.example/feed", folder: "News" },
+			{ title: "Rust Weekly", feedUrl: "https://weekly.example/feed", folder: "Tech" },
+		]);
+
+		let body = unwrap(XML.parse(source)).query("opml/body");
+		let children = (body?.children ?? []).filter((child) => typeof child !== "string");
+
+		expect(children.map((child) => child.attributes?.text)).toEqual(["News", "Tech", "Loose"]);
+
+		let tech = children[1];
+		expect(tech?.attributes).not.toHaveProperty("xmlUrl");
+		expect(
+			(tech?.children ?? [])
+				.filter((child) => typeof child !== "string")
+				.map((child) => child.attributes?.xmlUrl),
+		).toEqual(["https://rust.example/feed", "https://weekly.example/feed"]);
+	});
+
+	/** What a reader carrying their subscriptions between two apps actually does. */
+	test("reproduces the same filing when its own document is read back", () => {
+		let filed: OPML.Outline[] = [
+			{ title: "Rust Blog", feedUrl: "https://rust.example/feed", folder: "Tech" },
+			{ title: "Daily News", feedUrl: "https://news.example/feed", folder: "News" },
+			{ title: "Loose", feedUrl: "https://loose.example/feed" },
+		];
+
+		let read = unwrap(parse(stringify(filed)));
+
+		expect(
+			read.map((outline) => ({ feedUrl: outline.feedUrl, folder: outline.folder ?? null })),
+		).toEqual([
+			{ feedUrl: "https://news.example/feed", folder: "News" },
+			{ feedUrl: "https://rust.example/feed", folder: "Tech" },
+			{ feedUrl: "https://loose.example/feed", folder: null },
+		]);
 	});
 
 	test("writes no htmlUrl for a subscription that names no site", () => {

@@ -8,9 +8,10 @@ that has barely changed in twenty years.
 
 Reading is deliberately forgiving. A real export is a tree, because readers let people
 file feeds into folders, and its attributes are spelled however the exporter felt like
-spelling them. Reading flattens the tree, drops the folders, keeps the feeds inside them,
-and falls through the attributes an outline might carry its title in, so what comes back
-is the flat list an import actually wants.
+spelling them. Reading flattens the tree, keeps the feeds inside the folders, carries the
+name of the nearest folder around each feed, and falls through the attributes an outline
+might carry its title in, so what comes back is the flat list an import actually wants,
+filed the way it arrived.
 
 Writing is deliberately plain: valid OPML 2.0, one `<outline>` per subscription, every
 value escaped by the XML layer. A document this package writes reads back as the
@@ -80,6 +81,8 @@ Reads every subscription a document lists, in document order.
 - Outlines nest, and every level is visited, so a grouped export yields the same list as
   a flat one.
 - An outline with no `xmlUrl` is a folder: it is skipped, and the feeds under it are not.
+- `folder` is the name of the nearest enclosing folder, so a feed two levels down carries
+  the name written directly over it rather than the outermost one or a joined path.
 - The title comes from `text`, then `title`, then `htmlUrl`, then `xmlUrl`, so every
   subscription carries something a row can be labelled with.
 - `siteUrl` comes from `htmlUrl`, and is absent when the outline named no site.
@@ -94,8 +97,8 @@ Writes subscriptions as an OPML 2.0 document with the `head`/`body` structure.
 - `options.dateCreated` — when the document was written, emitted in the format the head
   reads.
 
-The list is written flat, since folders are a reader's own filing rather than anything a
-subscription carries.
+Subscriptions carrying a `folder` are written inside one `<outline>` per folder, folders
+in the order their names read, and the rest at the top level after them.
 
 ### Errors
 
@@ -104,7 +107,7 @@ OPML. Nothing a document contains below the root is an error.
 
 ### Types
 
-`OPML.Outline` is `{ title: string; feedUrl: string; siteUrl?: string }`.
+`OPML.Outline` is `{ title: string; feedUrl: string; siteUrl?: string; folder?: string }`.
 `OPML.StringifyOptions` is `{ title?: string; dateCreated?: Date }`.
 
 ## Pattern: Round-Tripping A List

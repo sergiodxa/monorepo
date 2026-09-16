@@ -29,7 +29,7 @@ export function readDocument(root: XML.Element): Result<OPML.Outline[], OPMLPars
 	}
 
 	let outlines: OPML.Outline[] = [];
-	collect(root, outlines, new Set<string>());
+	collect(root, outlines, new Set<string>(), undefined);
 
 	return success(outlines);
 }
@@ -38,21 +38,47 @@ export function readDocument(root: XML.Element): Result<OPML.Outline[], OPMLPars
  * Walks the tree depth-first, so a folder's feeds follow the folder and the whole
  * list reads in the order someone filed it. An outline is visited whether or not it
  * became a subscription, which is what keeps the feeds inside a folder.
+ *
+ * `folder` is the name of the nearest enclosing outline that named no feed, which each
+ * subscription found below it carries. A nested folder replaces it rather than joining to
+ * it, so what a feed keeps is the name written directly over it; a group that named itself
+ * nothing leaves the name above it standing.
  */
-function collect(element: XML.Element, outlines: OPML.Outline[], seen: Set<string>): void {
+function collect(
+	element: XML.Element,
+	outlines: OPML.Outline[],
+	seen: Set<string>,
+	folder: string | undefined,
+): void {
 	for (let child of element.children ?? []) {
 		if (typeof child === "string") continue;
 
-		if (localName(child.name).toLowerCase() === "outline") {
-			let outline = toOutline(child);
-			if (outline && !seen.has(outline.feedUrl)) {
+		if (localName(child.name).toLowerCase() !== "outline") {
+			collect(child, outlines, seen, folder);
+			continue;
+		}
+
+		let outline = toOutline(child);
+
+		if (outline) {
+			if (folder) outline.folder = folder;
+
+			if (!seen.has(outline.feedUrl)) {
 				seen.add(outline.feedUrl);
 				outlines.push(outline);
 			}
+
+			collect(child, outlines, seen, folder);
+			continue;
 		}
 
-		collect(child, outlines, seen);
+		collect(child, outlines, seen, title(child) ?? folder);
 	}
+}
+
+/** What an outline calls itself, which is the name a folder's feeds are filed under. */
+function title(element: XML.Element): string | undefined {
+	return attribute(element, "text") ?? attribute(element, "title");
 }
 
 /**
