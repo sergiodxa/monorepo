@@ -4,10 +4,15 @@ reader is a Cloudflare Worker serving an RSS and Atom feed reader. A person sign
 through the OpenID Connect provider, follows feeds, and works through the unread items
 those feeds produce.
 
-Each reader's settings, feeds and posts live in a Durable Object of their own, addressed
-by their OIDC subject. That is what makes the reading queue one indexed query over one
-person's rows rather than a merge across feeds, and what puts the refresh schedule beside
-the data it refreshes.
+Each reader's settings, subscriptions and posts live in a Durable Object of their own,
+addressed by their OIDC subject. That is what makes the reading queue one indexed query
+over one person's rows rather than a merge across feeds.
+
+Each feed lives in an object of its own too, addressed by the id a D1 catalog assigned it,
+and that object is the only thing that fetches. Ten thousand readers of one feed are one
+poll. A feed publishes the head it has reached to KV; a reader compares that against the
+cursor in their own subscription when they open the app, and comes and gets what they are
+missing. Nothing tells anybody anything.
 
 ## Rules
 
@@ -15,9 +20,15 @@ Rules follow RFC 2119: "MUST", "MUST NOT", "SHOULD", "SHOULD NOT", and "MAY" in 
 indicate requirement levels.
 
 - MUST keep the Cloudflare Worker bootstrap in `bootstrap/worker.ts` and the router
-  assembly in `bootstrap/app.tsx`. Two other places reach for a Cloudflare API and no
-  more: `database/user-do.ts`, which is a Durable Object and so is one by definition, and
+  assembly in `bootstrap/app.tsx`. Five other places reach for a Cloudflare API and no
+  more: `database/user-do.ts` and `database/feed-do.ts`, which are Durable Objects and so
+  are ones by definition; `database/registry.ts`, the only module holding the catalog's D1
+  binding; `database/feed-head.ts`, which holds the KV a feed publishes its head to; and
   the `app/auth/` clients, which read their credentials off the environment.
+- MUST leave the read path clear of the catalog. A subscription stores the feed's id, so
+  rendering a timeline, paging a frame, checking freshness and marking a post read cross
+  two SQLite databases and one KV namespace and never D1. The catalog is on the follow
+  path and at the end of a feed's life.
 - MUST reach a reader's data through `userStore(subject)` and the RPC methods of
   `database/user-do.ts`. Three things never cross that boundary: a `Result`, whose error
   subclass the platform drops so an `instanceof` is always false on the far side; a
@@ -62,8 +73,12 @@ indicate requirement levels.
   - `app/http/middleware/require-user.ts` <- Guard for the signed-in surface
 - Storage
   - `database/user-do.ts` <- The per-reader Durable Object and the RPC surface it answers
-  - `database/refresh.ts` <- Retrieving feeds and folding what came back into a reader's posts
-  - `database/schema.ts` <- The tables, mirroring `database/migrations/` exactly
+  - `database/feed-do.ts` <- The per-feed Durable Object, which is the only thing that fetches
+  - `database/refresh.ts` <- Retrieving one feed and folding what came back into its items
+  - `database/feed-head.ts` <- The head each feed publishes, and how a reader reads many at once
+  - `database/registry.ts` <- The feed catalog, which turns a URL into the id naming its object
+  - `database/schema.ts` <- The reader's tables, mirroring `database/migrations/` exactly
+  - `database/feed-schema.ts` <- A feed's tables, mirroring `database/feed-migrations/` exactly
 - Rendering
   - `resources/layouts/document.tsx` <- The html/head/body shell every page composes into
   - `resources/layouts/app.tsx` <- The chrome every signed-in page wears

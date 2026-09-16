@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-15
+**Accepted** - 2026-09-16
 
 Supersedes the polling and storage halves of
 [ADR-001](./ADR-001-rss-reader-on-per-user-durable-objects.md). Its read path — one
@@ -441,7 +441,10 @@ on every request, which is a stampede triggered by the failure of a hint. Absenc
 ### UserDO changes
 
 The `feeds` table gains `feed_id` and `cursor`, and loses the columns that described a
-fetch it no longer makes: `etag`, `last_modified`, `failure_count`, `next_attempt_at`.
+fetch it no longer makes: `etag`, `last_modified`, `failure_count`, `next_attempt_at`, and
+with them what such a fetch recorded — `last_status`, `last_http_status`, `last_error` and
+`last_fetched_at`. Health is read from the feed's own object by the one page that shows it,
+so a column here would be a second source of truth that nothing ever writes.
 
 `feed_id` is the catalog's identifier for the feed, copied into the subscription when it is
 created. It names the object to synchronize from and builds the key to read the head from,
@@ -546,9 +549,9 @@ above the head.
 The timeline response never waits for it. What was found stale in `openReader` is
 synchronized after the page has been returned:
 
-- up to eight feeds, four at a time, through `ExecutionContext.waitUntil` — which means
-  `bootstrap/worker.ts` starts taking its `env` and `ctx` arguments rather than reading
-  `env` off the module;
+- up to eight feeds, four at a time, through `waitUntil` — taken from the
+  `cloudflare:workers` module, which binds it to the request already in flight, so the
+  entry point keeps reading `env` off the module and nothing is threaded through it;
 - anything past that leaves the `UserDO` alarm armed a minute out, to carry on.
 
 A reader back after a month with two hundred stale feeds gets their timeline in one
@@ -581,7 +584,10 @@ The follow controller resolves what was pasted to a canonical URL, then:
    the newest 50, which is what a subscription was already worth under ADR-001, where
    following a feed stored the document it carried.
 4. `UserDO` writes the subscription with its `feed_id`, at the default velocity, stores
-   those items, and sets `cursor` to the greatest revision among them. The measured posts
+   those items, and sets `cursor` to the head the feed answered with. Not to the greatest
+   revision among the items: a feed numbers entries in the order it discovered them, which
+   is the order the document listed them, so whether the newest page carries the highest
+   revisions or the lowest is the publisher's decision rather than one to depend on. The measured posts
    per day comes back with the metadata, so a feed that is obviously a firehose can be
    raised the moment it is followed rather than after it has flooded anything.
 
@@ -1102,35 +1108,35 @@ against a SQLite `Database`, the object, KV and D1 paths in `*.workers.test.ts` 
 
 ## Implementation
 
-- [ ] `FeedDO` class, migrations, and `FEED` binding with a `new_sqlite_classes` tag
-- [ ] Add `database/feed-do.ts` and `database/registry.ts` to the AGENTS.md binding list
-- [ ] Move `database/refresh.ts` into the feed object, dropping its per-reader assumptions
-- [ ] Head counter, `sequence` / `revision`, and the `getItemsAfter` seek
-- [ ] `subscribe` / `unsubscribe` / `refresh(reason)` / `getHead` / `getItemsAfter` RPC
-- [ ] `subscribers` membership, the existence query, and the daily poll alarm
-- [ ] Publish `feed:<feedId>:head` on discovery, initialization and revival; delete it on purge
-- [ ] `PLATFORM_DB` binding, D1 `database/migrations/`, and the catalog table
-- [ ] `database/registry.ts`, with the `ON CONFLICT (feed_url) DO UPDATE … RETURNING id` upsert
-- [ ] Activity stamp, retirement on last unsubscribe, row deleted by the purge
-- [ ] `UserDO` migrations: `feed_id` and `cursor` in, polling and cadence columns out
-- [ ] `openReader`, the chunked bulk read, and the derived stale list
-- [ ] Bounded `waitUntil` synchronization and the `UserDO` catch-up alarm
-- [ ] `waitUntil` in `bootstrap/worker.ts` and the `/reading` controller
-- [ ] Staleness copy in `app/locales/en.ts` and `app/locales/es.ts`
-- [ ] Response size cap and redirect limit in `@sdxc/feed`
-- [ ] Bring `MAX_SUMMARY_LENGTH` down to what the timeline actually renders
-- [ ] The feed-side million by revision, and the reader-side budget with its per-feed shares
-- [ ] `velocity` on the subscription, the sweep that applies it, and the skip on synchronization
-- [ ] Back-pressure when the budget cannot be reclaimed, and the copy that explains a paused feed
-- [ ] `saved_at`, its partial index, the thousand-post refusal, and exemption from every sweep
-- [ ] `unfollowed_at` on subscriptions that still hold saved posts, filtered out of the lists
-- [ ] `/saved` and `POST /items/:itemId/save`, alongside the existing read routes
-- [ ] Measured posts per day in the `FeedDO`, returned by `subscribe` and the health call
-- [ ] Velocity control and its suggestion on `/reading/:feed`, with copy in `en.ts` and `es.ts`
-- [ ] Feed health and true head on `/reading/:feed` from its `FeedDO`
-- [ ] Remove `REFRESH_INTERVALS`, `setRefreshInterval` and the cadence control on `/settings`
-- [ ] Update the README's service table and its refresh-schedule feature line
-- [ ] The tests above, and the structured events
+- [x] `FeedDO` class, migrations, and `FEED` binding with a `new_sqlite_classes` tag
+- [x] Add `database/feed-do.ts` and `database/registry.ts` to the AGENTS.md binding list
+- [x] Move `database/refresh.ts` into the feed object, dropping its per-reader assumptions
+- [x] Head counter, `sequence` / `revision`, and the `getItemsAfter` seek
+- [x] `subscribe` / `unsubscribe` / `refresh(reason)` / `getHead` / `getItemsAfter` RPC
+- [x] `subscribers` membership, the existence query, and the daily poll alarm
+- [x] Publish `feed:<feedId>:head` on discovery, initialization and revival; delete it on purge
+- [x] `PLATFORM_DB` binding, D1 `database/migrations/`, and the catalog table
+- [x] `database/registry.ts`, with the `ON CONFLICT (feed_url) DO UPDATE … RETURNING id` upsert
+- [x] Activity stamp, retirement on last unsubscribe, row deleted by the purge
+- [x] `UserDO` migrations: `feed_id` and `cursor` in, polling and cadence columns out
+- [x] `openReader`, the chunked bulk read, and the derived stale list
+- [x] Bounded `waitUntil` synchronization and the `UserDO` catch-up alarm
+- [x] `waitUntil` in the `/reading` controller
+- [x] Staleness copy in `app/locales/en.ts` and `app/locales/es.ts`
+- [x] Response size cap and redirect limit in `@sdxc/feed`
+- [x] Bring `MAX_SUMMARY_LENGTH` down to what the timeline actually renders
+- [x] The feed-side million by revision, and the reader-side budget with its per-feed shares
+- [x] `velocity` on the subscription, the sweep that applies it, and the skip on synchronization
+- [x] Back-pressure when the budget cannot be reclaimed, and the copy that explains a paused feed
+- [x] `saved_at`, its partial index, the thousand-post refusal, and exemption from every sweep
+- [x] `unfollowed_at` on subscriptions that still hold saved posts, filtered out of the lists
+- [x] `/saved` and `POST /items/:itemId/save`, alongside the existing read routes
+- [x] Measured posts per day in the `FeedDO`, returned by `subscribe` and the health call
+- [x] Velocity control and its suggestion on `/reading/:feed`, with copy in `en.ts` and `es.ts`
+- [x] Feed health and true head on `/reading/:feed` from its `FeedDO`
+- [x] Remove `REFRESH_INTERVALS`, `setRefreshInterval` and the cadence control on `/settings`
+- [x] Update the README's service table and its refresh-schedule feature line
+- [x] The tests above, and the structured events
 
 ## References
 
