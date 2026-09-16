@@ -84,6 +84,7 @@ export default {
 		older: "Older posts",
 		markRead: "Mark as read",
 		markUnread: "Mark as unread",
+		markFailed: "Could not be marked — try again",
 		read: "Read",
 		openPost: "Open post",
 		publishedOn: "Published {{date}}",

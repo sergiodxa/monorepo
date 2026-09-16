@@ -83,6 +83,7 @@ export default {
 		older: "Entradas más antiguas",
 		markRead: "Marcar como leída",
 		markUnread: "Marcar como no leída",
+		markFailed: "No se pudo marcar; inténtalo de nuevo",
 		read: "Leída",
 		openPost: "Abrir entrada",
 		publishedOn: "Publicada el {{date}}",

@@ -17,11 +17,15 @@ import { chrome, forgetRailFeeds } from "~/app/http/controllers/chrome";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/database/user-do";
+import { READ_IN_PLACE_HEADER } from "~/resources/components/read-toggle";
 import AppLayout, { pageNote } from "~/resources/layouts/app";
 import routes from "~/routes/web";
 
 /** Status for a post this reader has nothing stored for. */
 const NOT_FOUND_STATUS = 404;
+
+/** Status for a move that stood and has nothing to say beyond that. */
+const MOVED_STATUS = 204;
 
 /** The post the URL names. */
 const ItemParams = s.object({ itemId: s.string() });
@@ -67,6 +71,15 @@ export default createAction(routes.items.read, {
 
 		/** The rail counts this post among its feed's unread, so it is dropped as the reader moves it rather than a moment later. */
 		await forgetRailFeeds(viewer.id);
+
+		/**
+		 * The row moved its own mark and is asking only whether the move stood, so that is the
+		 * whole answer. Sending the page back would be sending the first page of a queue the
+		 * reader has scrolled several pages into, which is the thing this path exists to avoid.
+		 */
+		if (ctx.request.headers.has(READ_IN_PLACE_HEADER)) {
+			return new Response(null, { status: marked ? MOVED_STATUS : NOT_FOUND_STATUS });
+		}
 
 		if (marked) {
 			return redirect(localPath(returnTo), { status: redirect.Status.SeeOther });
