@@ -12,6 +12,7 @@
 	},
 	"dependencies": {
 		"@sdxc/auth": "workspace:*",
+		"@sdxc/billing": "workspace:*",
 		"@sdxc/cache": "workspace:*",
 		"@sdxc/data-table-d1": "workspace:*",
 		"@sdxc/data-table-sqlstorage": "workspace:*",

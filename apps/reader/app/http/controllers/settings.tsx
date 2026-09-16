@@ -30,6 +30,7 @@ import { text, weight } from "@sdxc/u/typography";
 import { Alert, Button, Description, Label, LinkButton, Text } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
+import type { Tier } from "~/app/lib/entitlement";
 import type { UserStore } from "~/database/user-do";
 
 import { chrome } from "~/app/http/controllers/chrome";
@@ -37,6 +38,7 @@ import { FILE_FIELD, IMPORTED_PARAM } from "~/app/http/controllers/feeds/import"
 import { exactDate, shortDate } from "~/app/http/controllers/timeline-entries";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
+import { overBy, TIERS, tierRank } from "~/app/lib/entitlement";
 import { userStore } from "~/database/user-do";
 import AppLayout, { PAGE_COLUMN, pageNote } from "~/resources/layouts/app";
 import routes from "~/routes/web";
@@ -126,13 +128,29 @@ function importNote(
 }
 
 /**
+ * The tiers a reader can move up to from where they are, which is what the panel offers a
+ * button for. A reader on the top tier is offered nothing, and the manage link is what
+ * they have instead.
+ *
+ * @param tier - The tier the reader is on.
+ */
+function upgradesFrom(tier: Tier): Tier[] {
+	return TIERS.filter((offered) => tierRank(offered) > tierRank(tier));
+}
+
+/**
  * Renders the page.
  *
  * @param ctx - The request being answered, whose query says what an import made of the
  * document it was handed.
  * @param settings - The reader's stored preferences, or `null` before a sign-in wrote them.
+ * @param entitlement - What their plan allows, and where they stand against it.
  */
-async function settingsPage(ctx: RequestContext, settings: UserStore.Settings | null) {
+async function settingsPage(
+	ctx: RequestContext,
+	settings: UserStore.Settings | null,
+	entitlement: UserStore.Entitlement,
+) {
 	let transfer = importNote(ctx);
 
 	/**
@@ -182,6 +200,105 @@ async function settingsPage(ctx: RequestContext, settings: UserStore.Settings | 
 				<Text mix={[text("xs"), fg("neutral.muted")]} title={lastRefreshed.exact}>
 					{lastRefreshed.short}
 				</Text>
+			</section>
+
+			{/**
+			 * What the reader is on, what it allows, and where they stand against it. It sits
+			 * above the transfers because it is the one section on this page whose numbers can
+			 * be refusing something right now.
+			 */}
+			<section
+				mix={[
+					vstack({ gap: 3 }),
+					maxIs(PAGE_COLUMN),
+					pbs(6),
+					borderEdge("block-start", { color: "neutral.border", width: 1 }),
+				]}
+			>
+				{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
+				<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
+					{ctx.i18next.t("settings.plan.legend")}
+				</h2>
+
+				<Description>
+					{ctx.i18next.t("settings.plan.current", {
+						plan: ctx.i18next.t(`settings.plan.names.${entitlement.tier}`),
+					})}{" "}
+					{ctx.i18next.t("settings.plan.allowance", {
+						feeds: entitlement.limits.feeds,
+						saved: entitlement.limits.saved,
+					})}
+				</Description>
+
+				<Text mix={[text("xs"), fg("neutral.muted")]}>
+					{ctx.i18next.t("settings.plan.usage", {
+						feeds: entitlement.feeds,
+						saved: entitlement.saved,
+					})}
+				</Text>
+
+				{/**
+				 * A failed card, said on the day it fails and not acted on. Nothing has changed,
+				 * and the way out is the platform's own page rather than anything on this one.
+				 */}
+				{entitlement.graceUntil !== null && (
+					<Alert color="warning">
+						<Alert.Content>
+							<Alert.Description>{ctx.i18next.t("settings.plan.lapsed")}</Alert.Description>
+						</Alert.Content>
+					</Alert>
+				)}
+
+				{/**
+				 * Every limit the reader is over, one sentence each, each naming the two ways out
+				 * and neither of them a deletion this app would perform. There is no countdown,
+				 * because nothing is going to be deleted.
+				 */}
+				{entitlement.over.length > 0 && (
+					<Alert color="warning">
+						<Alert.Content>
+							<Alert.Description>
+								{ctx.i18next.t("settings.plan.over.description")}
+							</Alert.Description>
+
+							{entitlement.over.map((refusal) => (
+								<Alert.Description key={refusal.limit}>
+									{ctx.i18next.t(`settings.plan.over.${refusal.limit}`, {
+										count: overBy(refusal),
+									})}
+								</Alert.Description>
+							))}
+						</Alert.Content>
+					</Alert>
+				)}
+
+				<div mix={[flex(), flexWrap("wrap"), gap(2), items("center")]}>
+					{upgradesFrom(entitlement.tier).map((offered) => (
+						<form
+							key={offered}
+							method="post"
+							action={routes.billing.checkout.href({ plan: offered })}
+						>
+							<Button type="submit">
+								{ctx.i18next.t("settings.plan.upgrade", {
+									plan: ctx.i18next.t(`settings.plan.names.${offered}`),
+								})}
+							</Button>
+						</form>
+					))}
+
+					{/**
+					 * Offered only to a reader the platform holds a record for, since there is no
+					 * page to open for somebody who has never bought anything.
+					 */}
+					{entitlement.tier !== "free" && (
+						<form method="post" action={routes.billing.portal.href()}>
+							<Button type="submit" color="neutral" variant="outline">
+								{ctx.i18next.t("settings.plan.manage")}
+							</Button>
+						</form>
+					)}
+				</div>
 			</section>
 
 			{transfer && (
@@ -311,6 +428,9 @@ export default createAction(routes.settings, {
 		/** The guard has already answered an anonymous request, so this holds a reader's id. */
 		if (!viewer) return redirect(routes.home.href(), { status: redirect.Status.SeeOther });
 
-		return await settingsPage(ctx, await userStore(viewer.id).getSettings());
+		let store = userStore(viewer.id);
+		let [settings, entitlement] = await Promise.all([store.getSettings(), store.entitlement()]);
+
+		return await settingsPage(ctx, settings, entitlement);
 	},
 });

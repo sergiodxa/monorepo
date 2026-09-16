@@ -25,6 +25,7 @@ import { createController } from "remix/router";
 
 import { relyingParty } from "~/app/auth/relying-party";
 import { RETURN_TO_COOKIE } from "~/app/http/cookies";
+import { reconcileSubject } from "~/app/lib/billing-sync";
 import { userStore } from "~/database/user-do";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -123,7 +124,17 @@ export default createController(routes.auth, {
 			 * no sign-up step, so a first login is what creates a reader, and every login after
 			 * it finds the row already there.
 			 */
-			await userStore(subject).ensureUser(subject);
+			let reader = await userStore(subject).ensureUser(subject);
+
+			/**
+			 * A webhook that never arrived is repaired here, before anything is rendered: a
+			 * reader who paid and did not get what they paid for fixes it by reloading, which
+			 * is what they will try first anyway.
+			 *
+			 * A reader whose tier was confirmed inside the day, and every reader who has never
+			 * reached a checkout, costs one local comparison and no call at all.
+			 */
+			await reconcileSubject(subject, reader.tierCheckedAt);
 
 			return redirect(routes.reading.index.href(), { status: redirect.Status.SeeOther });
 		},

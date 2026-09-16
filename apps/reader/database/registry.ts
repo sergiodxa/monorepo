@@ -1,24 +1,33 @@
 /**
- * The feed catalog, and the only module that holds its binding. A feed is named by an id
- * the catalog assigns it the first time anybody follows it, so every caller asks for an
- * id rather than writing SQL, and identity survives any later change to how a URL is
- * normalized.
+ * The shared database, and the only module that holds its binding: the feed catalog, which
+ * names a feed by the id it assigns the first time anybody follows it, and the billing
+ * projection, which records what the payment platform last said about a reader.
  *
- * Every function here belongs to the follow path or to the end of a feed's life. Nothing
- * that renders a page reaches this database: a subscription stores the feed's id, so a
- * reader who already follows a feed reaches its object without a lookup.
+ * Every function here belongs to the follow path, to the end of a feed's life, or to a
+ * delivery from the platform. Nothing that renders a page reaches this database: a
+ * subscription stores the feed's id and a reader's object stores their tier, so both are
+ * reachable without a lookup.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { WebhookDelivery, WebhookStore } from "@sdxc/billing";
+
 import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
 import { TypeID } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
 import { env } from "cloudflare:workers";
-import { Database, sql } from "remix/data-table";
+import { and, Database, gt, sql } from "remix/data-table";
 
-import { catalogFeeds } from "~/database/catalog-schema";
+import type { SelectBillingCustomer, SelectBillingSubscription } from "~/database/catalog-schema";
+
+import {
+	billingCustomers,
+	billingDeliveries,
+	billingSubscriptions,
+	catalogFeeds,
+} from "~/database/catalog-schema";
 
 /** The isolate's connection, opened by whichever follow or poll reaches it first. */
 let database: Database | undefined;
@@ -178,3 +187,216 @@ export async function reviveFeed(feedId: string): Promise<void> {
 export async function deleteFeed(feedId: string): Promise<boolean> {
 	return await connect().delete(catalogFeeds, { id: feedId });
 }
+
+/**
+ * Reads the customer identity a reader is billed through, or `null` while they are a
+ * customer of nothing — which is every reader who has never opened a checkout.
+ *
+ * @param subject - The reader's OIDC subject
+ * @param connection - The credential set that issued the id
+ */
+export async function findBillingCustomer(
+	subject: string,
+	connection: string,
+): Promise<SelectBillingCustomer | null> {
+	return await connect().findOne(billingCustomers, { where: { subject, connection } });
+}
+
+/**
+ * Reads the reader behind a customer id the platform reported, which is the fallback for a
+ * customer record created without this app's own subject on it.
+ *
+ * @param connection - The credential set that issued the id
+ * @param providerCustomerId - The customer id as the platform reports it
+ */
+export async function findBillingCustomerByProviderId(
+	connection: string,
+	providerCustomerId: string,
+): Promise<SelectBillingCustomer | null> {
+	return await connect().findOne(billingCustomers, {
+		where: { connection, provider_customer_id: providerCustomerId },
+	});
+}
+
+/**
+ * Records that a reader is a customer of one connection, which is what puts them in the
+ * daily sweep's bounded walk.
+ *
+ * Written as one upsert rather than a read and a write: D1 runs no interactive
+ * transaction, so a checkout completing twice has to converge on one row by itself.
+ *
+ * @param subject - The reader's OIDC subject
+ * @param connection - The credential set that issued the id
+ * @param providerCustomerId - The customer id as the platform reports it
+ */
+export async function linkBillingCustomer(
+	subject: string,
+	connection: string,
+	providerCustomerId: string,
+): Promise<void> {
+	let now = Date.now();
+
+	await connect().exec(sql`
+		insert into billing_customers
+			(subject, connection, provider_customer_id, created_at, updated_at)
+		values (${subject}, ${connection}, ${providerCustomerId}, ${now}, ${now})
+		on conflict (subject, connection) do update set
+			provider_customer_id = excluded.provider_customer_id,
+			updated_at = excluded.updated_at
+	`);
+}
+
+/**
+ * The last snapshot written for a reader, or `null` before the first one.
+ *
+ * @param subject - The reader's OIDC subject
+ */
+export async function readSubscription(subject: string): Promise<SelectBillingSubscription | null> {
+	return await connect().findOne(billingSubscriptions, { where: { subject } });
+}
+
+/** What one snapshot writes into the projection, as the platform reported it. */
+export interface SubscriptionSnapshot {
+	subject: string;
+	connection: string;
+	subscriptionId: string | null;
+	status: string;
+	productSlug: string | null;
+	currentPeriodEnd: number | null;
+	cancelAtPeriodEnd: boolean;
+	/** Epoch milliseconds the platform answered at. */
+	checkedAt: number;
+	providerData: string | null;
+}
+
+/**
+ * Writes what the platform last said about a reader's subscription.
+ *
+ * A snapshot carrying an older read than the stored row leaves it alone, so two reads
+ * taken seconds apart converge on the later one whichever write arrives second.
+ *
+ * @param snapshot - The platform's answer, as one row of the projection
+ * @returns Whether this snapshot is the one now stored
+ */
+export async function writeSubscription(snapshot: SubscriptionSnapshot): Promise<boolean> {
+	let now = Date.now();
+
+	let { rows = [] } = await connect().exec(sql`
+		insert into subscriptions (
+			subject, billing_connection, billing_subscription_id, status, product_slug,
+			current_period_end, cancel_at_period_end, checked_at, provider_data,
+			created_at, updated_at
+		)
+		values (
+			${snapshot.subject}, ${snapshot.connection}, ${snapshot.subscriptionId},
+			${snapshot.status}, ${snapshot.productSlug}, ${snapshot.currentPeriodEnd},
+			${snapshot.cancelAtPeriodEnd ? 1 : 0}, ${snapshot.checkedAt}, ${snapshot.providerData},
+			${now}, ${now}
+		)
+		on conflict (subject) do update set
+			billing_connection = excluded.billing_connection,
+			billing_subscription_id = excluded.billing_subscription_id,
+			status = excluded.status,
+			product_slug = excluded.product_slug,
+			current_period_end = excluded.current_period_end,
+			cancel_at_period_end = excluded.cancel_at_period_end,
+			checked_at = excluded.checked_at,
+			provider_data = excluded.provider_data,
+			updated_at = excluded.updated_at
+		where excluded.checked_at >= subscriptions.checked_at
+		returning subject
+	`);
+
+	return rows.length > 0;
+}
+
+/**
+ * One page of the readers who have ever reached a checkout, which is the whole of what
+ * the daily reconciliation walks.
+ *
+ * @param connection - The credential set to walk
+ * @param limit - How many rows the page holds
+ * @param after - The subject the previous page ended on, or `null` for the first page
+ */
+export async function pageBillingCustomers(
+	connection: string,
+	limit: number,
+	after: string | null = null,
+): Promise<SelectBillingCustomer[]> {
+	let where = after === null ? { connection } : and({ connection }, gt("subject", after));
+
+	return await connect().findMany(billingCustomers, {
+		where,
+		orderBy: [["subject", "asc"]],
+		limit,
+	});
+}
+
+/** One delivery row as D1 holds it, where the two verdicts are integers rather than booleans. */
+interface DeliveryRow {
+	valid: number | boolean;
+	processed: number | boolean;
+}
+
+/** Reads one of D1's integer verdicts as the boolean the store's shape carries. */
+function verdict(value: DeliveryRow["valid"]): boolean {
+	return value === true || value === 1;
+}
+
+/**
+ * Where billing deliveries are kept, so a replay is recognized against a durable key and
+ * the exact bytes a signature covered stay readable after a handler got something wrong.
+ *
+ * @example new BillingWebhook(polar, handlers, { store: deliveries });
+ */
+export let deliveries: WebhookStore = {
+	/**
+	 * Reads a recorded delivery.
+	 *
+	 * @param id - The platform's delivery id
+	 * @returns The row, or `null` when this delivery has never arrived
+	 */
+	async find(id: string): Promise<WebhookDelivery | null> {
+		let row = await connect().findOne(billingDeliveries, { where: { id } });
+		if (row === null) return null;
+
+		return {
+			id: row.id,
+			type: row.type,
+			payload: row.payload,
+			valid: verdict(row.valid),
+			processed: verdict(row.processed),
+		};
+	},
+
+	/**
+	 * Writes a delivery, replacing any row sharing its id, so a redelivery of an unfinished
+	 * one is measured against the bytes that arrived last.
+	 *
+	 * @param delivery - The delivery and the signature verdict on it
+	 */
+	async record(delivery: WebhookDelivery): Promise<void> {
+		await connect().exec(sql`
+			insert into billing_webhook_deliveries
+				(id, type, payload, valid, processed, received_at)
+			values (
+				${delivery.id}, ${delivery.type}, ${delivery.payload},
+				${delivery.valid ? 1 : 0}, ${delivery.processed ? 1 : 0}, ${Date.now()}
+			)
+			on conflict (id) do update set
+				type = excluded.type,
+				payload = excluded.payload,
+				valid = excluded.valid,
+				processed = excluded.processed
+		`);
+	},
+
+	/**
+	 * Marks a delivery handled, which is what a later replay is measured against.
+	 *
+	 * @param id - The platform's delivery id
+	 */
+	async markProcessed(id: string): Promise<void> {
+		await connect().updateMany(billingDeliveries, { processed: true }, { where: { id } });
+	},
+};

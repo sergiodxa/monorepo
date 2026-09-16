@@ -21,9 +21,15 @@
 	// app's identity rather than a placement detail.
 	"routes": [{ "pattern": "reader.sergiodxa.com", "custom_domain": true }],
 
-	// Plain secrets (CLIENT_ID, CLIENT_SECRET, COOKIE_SESSION_SECRET) come from
-	// `.dev.vars` locally and `wrangler secret put` in production; `.env.example`
-	// carries the full list. Only bindings need an entry in this file.
+	// Plain secrets (CLIENT_ID, CLIENT_SECRET, COOKIE_SESSION_SECRET, and the POLAR_*
+	// billing credentials) come from `.dev.vars` locally and `wrangler secret put` in
+	// production; `.env.example` carries the full list. Only bindings need an entry in
+	// this file.
+
+	// The daily billing reconciliation, which re-reads what the payment platform says
+	// about every reader who has ever reached a checkout. It is what recovers a delivery
+	// nobody received, and it runs at a quiet hour because nothing waits on it.
+	"triggers": { "crons": ["17 4 * * *"] },
 
 	// One object per reader, addressed by their OIDC subject, holding their settings,
 	// the feeds they follow and every post from them in its own SQLite. The whole

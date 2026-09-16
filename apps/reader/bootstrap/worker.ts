@@ -1,8 +1,8 @@
 /**
- * Cloudflare Worker entry point. Its single `fetch` handler reads the session secret and
- * KV binding off the environment, builds the application router, and forwards the request
- * to it, and it re-exports both Durable Objects so the runtime can find the classes its
- * bindings name. Everything below it runs in a plain fetch test without a worker runtime.
+ * Cloudflare Worker entry point. Its `fetch` handler reads the session secret and KV
+ * binding off the environment, builds the application router and forwards the request to
+ * it; its `scheduled` handler runs the daily billing reconciliation; and it re-exports both
+ * Durable Objects so the runtime can find the classes its bindings name.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,7 +10,10 @@
 
 import { env } from "cloudflare:workers";
 
+import { reconcileBilling } from "~/app/lib/billing-sync";
+
 import application from "./app";
+import { logger } from "./logger";
 
 export { FeedDO } from "~/database/feed-do";
 export { UserDO } from "~/database/user-do";
@@ -38,5 +41,16 @@ export default {
 		});
 
 		return await app.fetch(request);
+	},
+
+	/**
+	 * Re-reads what the platform says about every reader who has ever reached a checkout,
+	 * which is what recovers a delivery nobody received. It is bounded by how many readers
+	 * have paid rather than by how many readers there are.
+	 */
+	async scheduled(event, _environment, context) {
+		context.waitUntil(
+			logger.open("cron", { cron: { expression: event.cron } }).run(() => reconcileBilling()),
+		);
 	},
 } satisfies ExportedHandler<Cloudflare.Env>;
