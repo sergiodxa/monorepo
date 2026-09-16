@@ -112,6 +112,20 @@ Encodes bytes as standard base64 with `=` padding, over the `A-Z`, `a-z`, `0-9`,
 
 Decodes standard base64 text carrying its full padding. One byte string has exactly one accepted spelling.
 
+### Bytes
+
+#### `concatBytes(...parts: BinaryLike[]): Bytes`
+
+Joins payloads end to end into one buffer, in the order they are given. Every part is read as bytes first, so a label written as text concatenates with the binary around it:
+
+```ts
+import { concatBytes } from "@sdxc/crypto";
+
+let info = concatBytes("Content-Encoding: aes128gcm", new Uint8Array([0]));
+```
+
+That covers the framed records and `info` strings key derivations are built from, where a label and its terminator are spelled inline.
+
 ### Hashing and HMAC
 
 #### `sha256(data: BinaryLike): Promise<Result<Bytes, CryptoError>>`

@@ -1,5 +1,6 @@
 /**
- * Byte conversion helpers shared by every module in this package.
+ * Byte conversion helpers shared by every module in this package, and the
+ * concatenation callers building framed records reach for.
  *
  * One `TextEncoder`/`TextDecoder` pair is reused so string payloads always turn
  * into the same UTF-8 bytes, and every public function can accept text or binary
@@ -59,4 +60,26 @@ export function toBytes(data: BinaryLike): Bytes {
  */
 export function toText(bytes: Uint8Array): string {
 	return DECODER.decode(bytes);
+}
+
+/**
+ * Joins payloads end to end into one buffer.
+ *
+ * Every part is read as bytes first, so a label written as text concatenates with
+ * the binary around it without the caller reaching for its own `TextEncoder`.
+ *
+ * @param parts Payloads, in the order they appear in the result.
+ * @returns One buffer holding them end to end.
+ */
+export function concatBytes(...parts: BinaryLike[]): Bytes {
+	let byteRuns = parts.map(toBytes);
+	let joined = new Uint8Array(byteRuns.reduce((total, run) => total + run.length, 0));
+
+	let offset = 0;
+	for (let run of byteRuns) {
+		joined.set(run, offset);
+		offset += run.length;
+	}
+
+	return joined;
 }
