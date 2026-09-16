@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-16
+**Accepted** - 2026-09-16
 
 ## Background
 
@@ -427,20 +427,20 @@ the order they are listed in, not the order they run.
 
 ## Implementation
 
-- [ ] `links` on `Feed.Data` and `Feed.FetchResult` in `@sdxc/feed`, resolved and lower-cased,
+- [x] `links` on `Feed.Data` and `Feed.FetchResult` in `@sdxc/feed`, resolved and lower-cased,
       and hub selection: header over document, first `rel=hub`, `https:` only
-- [ ] Feed migration for the hub columns, mirrored in `database/feed-schema.ts`
-- [ ] `websub: form("/websub/:feedId/:token")` in `routes/web.ts`, mapped lazily in `bootstrap/app.tsx`
-- [ ] Exempt the callback from `requireUser` and allow it through `cop()`
-- [ ] The callback controller: params through `s.parse`, raw bytes, HMAC, `timingSafeEqual`
-- [ ] Edge rate limit on the callback through `@sdxc/rate-limit`'s KV adapter
-- [ ] `subscribe` / `verify` / `renew` / `unsubscribe` on the `FeedDO`, and the token mint
-- [ ] `"websub"` in `RefreshReason`, with the coalescing window and the backoff it respects
-- [ ] The three-question alarm, re-armed at the earliest of poll and renewal
-- [ ] The six-hour floor composed with the adaptive cadence as `max`, miss counting,
+- [x] Feed migration for the hub columns, mirrored in `database/feed-schema.ts`
+- [x] `websub: form("/websub/:feedId/:token")` in `routes/web.ts`, mapped lazily in `bootstrap/app.tsx`
+- [x] Exempt the callback from `requireUser` and allow it through `cop()`
+- [x] The callback controller: params through `s.parse`, raw bytes, HMAC, `timingSafeEqual`
+- [x] Edge rate limit on the callback through `@sdxc/rate-limit`'s KV adapter
+- [x] `subscribe` / `verify` / `renew` / `unsubscribe` on the `FeedDO`, and the token mint
+- [x] `"websub"` in `RefreshReason`, with the coalescing window and the backoff it respects
+- [x] The three-question alarm, re-armed at the earliest of poll and renewal
+- [x] The six-hour floor composed with the adaptive cadence as `max`, miss counting,
       demotion, and the thirty-day cool-off
-- [ ] Unsubscribe on the last reader leaving, and the token cleared with it
-- [ ] The events above, and the tests above
+- [x] Unsubscribe on the last reader leaving, and the token cleared with it
+- [x] The events above, and the tests above
 
 ## References
 
