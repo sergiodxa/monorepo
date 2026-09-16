@@ -385,6 +385,42 @@ function calls(method?: string): string[] {
 		.map((call) => `${call.feedId}:${call.method}`);
 }
 
+describe("what a reader is allowed to paste", () => {
+	/**
+	 * A subscribe button hands out `feed://…`, and both spellings of it. The scheme says
+	 * the thing behind it is a feed rather than how to fetch one, so a reader who clicked
+	 * such a button and pasted what they got is holding the address they meant.
+	 */
+	test("reads a feed:// address as the feed it points at", async () => {
+		let { user } = await createReader();
+
+		server.use(http.get(FEED_URL, () => HttpResponse.xml(rss(ENTRIES, FEED_URL))));
+
+		let followed = await user.followFeed(FEED_URL.replace("https://", "feed://"));
+		expect(followed.ok).toBe(true);
+
+		// And it is the same subscription the plain address names, not a second one.
+		let again = await user.followFeed(FEED_URL);
+		expect(again).toMatchObject({ ok: false, reason: "already-following" });
+	});
+
+	test("reads the wrapped spelling the same way", async () => {
+		let { user } = await createReader();
+
+		server.use(http.get(FEED_URL, () => HttpResponse.xml(rss(ENTRIES, FEED_URL))));
+
+		let followed = await user.followFeed(`feed:${FEED_URL}`);
+		expect(followed.ok).toBe(true);
+	});
+
+	test("refuses a scheme nothing can fetch, rather than guessing at one", async () => {
+		let { user } = await createReader();
+
+		let followed = await user.followFeed("gopher://example.com/feed");
+		expect(followed).toMatchObject({ ok: false, reason: "invalid-url" });
+	});
+});
+
 describe("what a new subscription starts with", () => {
 	/**
 	 * A feed numbers its entries in the order it discovered them, which is the order the

@@ -1658,7 +1658,16 @@ function normalizeFeedUrl(input: string): string | null {
 	let trimmed = input.trim();
 	if (trimmed.length === 0) return null;
 
-	let candidate = /^[a-z][\d+.a-z-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`;
+	/**
+	 * A subscribe button hands out `feed://example.com/rss`, or `feed:` wrapped around a
+	 * whole address, and a reader who clicked one and pasted what they got is holding the
+	 * feed they meant. The scheme says "this is a feed" rather than how to fetch it, so it
+	 * comes off and what is underneath is read as the address it is.
+	 */
+	let addressed = trimmed.replace(/^feeds?:(\/\/)?/i, "");
+	if (addressed.length === 0) return null;
+
+	let candidate = /^[a-z][\d+.a-z-]*:/i.test(addressed) ? addressed : `https://${addressed}`;
 	if (!URL.canParse(candidate)) return null;
 
 	let url = new URL(candidate);

@@ -13,6 +13,7 @@
 
 import { redirect } from "@sdxc/http/response";
 import { UnprocessableEntity } from "@sdxc/http/status-code";
+import { currentLog } from "@sdxc/logger";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
@@ -48,6 +49,18 @@ const FOLLOW_ERROR_KEYS: Record<UserStore.FollowFailure, string> = {
 	"already-following": "feeds.follow.error.alreadyFollowing",
 };
 
+/**
+ * The scheme somebody's address carries, or what it has instead of one.
+ *
+ * @param input - The address as it was submitted.
+ */
+function schemeOf(input: string): string {
+	let trimmed = input.trim();
+	if (trimmed.length === 0) return "empty";
+
+	return /^([a-z][\d+.a-z-]*):/i.exec(trimmed)?.[1]?.toLowerCase() ?? "none";
+}
+
 /** POST /feeds — follows a feed. */
 export default createAction(routes.feeds.follow, {
 	middleware: [requireUser],
@@ -77,6 +90,17 @@ export default createAction(routes.feeds.follow, {
 
 			return redirect(queueUrl(view), { status: redirect.Status.SeeOther });
 		}
+
+		/**
+		 * What was refused and why, recorded where a refusal a reader reports can be read
+		 * back. The scheme is the field that decides the commonest one, and it is the part of
+		 * an address that says nothing about what somebody reads.
+		 */
+		currentLog()?.set({
+			"follow.refused": followed.reason,
+			"follow.scheme": schemeOf(url),
+			"follow.length": url.length,
+		});
 
 		/**
 		 * The queue comes back carrying the refusal and the address that earned it, so the
