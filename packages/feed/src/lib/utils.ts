@@ -1,6 +1,7 @@
 /**
  * Small shared helpers: qualified-name handling, namespace reading, URL
- * resolution, and the deduplication every normalized item list goes through.
+ * resolution, the deduplication every normalized item list goes through, and
+ * reading the message off whatever a failed request rejected with.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -107,4 +108,12 @@ export function firstText(...values: (string | undefined)[]): string | undefined
 		if (value) return value;
 	}
 	return undefined;
+}
+
+/**
+ * Reads a thrown value's message, so a rejected request reports what went wrong
+ * whether or not it rejected with an `Error`.
+ */
+export function describe(error: unknown): string {
+	return error instanceof Error ? error.message : String(error);
 }

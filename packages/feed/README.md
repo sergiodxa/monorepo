@@ -119,6 +119,10 @@ Retrieves and parses a feed, sending the stored validators as preconditions.
 - `options.etag` / `options.lastModified` — sent as `If-None-Match` / `If-Modified-Since`
 - `options.url` — overrides the response URL as the base for relative links
 - `options.headers`, `options.signal` — passed through to the request
+- `options.maxBytes` — how many bytes of the body to read before refusing it; 10 MiB by
+  default
+- `options.maxRedirects` — how many redirects to follow before refusing the chain; five by
+  default
 
 Resolves to a `Feed.FetchResult`: `{ notModified: false, feed, url, status, etag?,
 lastModified? }`, or `{ notModified: true, feed: undefined, url, status: 304, etag?,
@@ -127,7 +131,9 @@ lastModified? }`.
 ### `Feed.discover(input: string | URL, options?: Feed.FetchOptions)`
 
 Finds the feeds a URL leads to. Resolves to `Feed.Discovery[]` in document order, since the
-first alternate link is conventionally the site's main feed.
+first alternate link is conventionally the site's main feed. Each feed is reported at the URL
+its response finally came from, so a caller that keys a feed by address stores where the
+chain ended rather than where it started.
 
 ### Instance Accessors
 
@@ -138,7 +144,10 @@ first alternate link is conventionally the site's main feed.
 
 `FeedParseError` reports text that is not XML, or XML that is not a feed. `FeedFormatError`
 reports a document in a format this package does not read, naming it. `FeedFetchError`
-reports a request that failed or answered with an error status.
+reports a request that failed or answered with an error status. `FeedLimitError` extends it
+and reports an origin that answered with more than the retrieval allows, so matching on
+`FeedFetchError` still catches it and matching on `FeedLimitError` tells a publisher this
+package refused from one it could not reach.
 
 ### Types
 
@@ -191,7 +200,12 @@ Cross-cutting rules:
    what stops it answering 304, which would defeat the preconditions being sent.
 4. **RSS 1.0 (RDF) is not supported**, and is reported by name rather than as a parse
    failure.
-5. **Discovery accepts `application/rss+xml`, `application/atom+xml`, `application/feed+json`
+5. **Every retrieval is bounded.** A feed URL comes from whoever pasted it, so `Feed.fetch`
+   and `Feed.discover` read the body off the stream and stop at `maxBytes`, and follow at
+   most `maxRedirects` hops. A `Content-Length` over the cap is refused before the body is
+   read at all, and the count over the stream is what enforces the cap when a response
+   declares no length or understates it. Both report a `FeedLimitError`.
+6. **Discovery accepts `application/rss+xml`, `application/atom+xml`, `application/feed+json`
    and `application/json`.** `text/xml` and `application/xml` are excluded deliberately: they
    appear on sitemaps and stylesheets, and accepting them would offer documents that are not
    feeds. Among the JSON candidates, `application/feed+json` wins outright, and

@@ -1,7 +1,8 @@
 /**
  * Exercises the façade: that every format sniffs correctly and normalizes to one
- * shape, that a conditional request reports a 304 without parsing, and that
- * discovery finds a feed from a page or from the feed URL itself.
+ * shape, that a conditional request reports a 304 without parsing, that discovery
+ * finds a feed from a page or from the feed URL itself, and that a retrieval holds
+ * an origin to the size cap and the redirect limit it is given.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,7 +13,7 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import { Feed } from "./index.js";
+import { Feed, FeedLimitError } from "./index.js";
 
 let FEED_URL = "https://example.com/feed.xml";
 let JSON_URL = "https://example.com/feed.json";
@@ -105,6 +106,20 @@ let JSON_FEED = JSON.stringify({
 		},
 	],
 });
+
+/** Serves a document in pieces and without a length, so only a count over the stream refuses it. */
+function streamOf(source: string): ReadableStream<Uint8Array> {
+	let bytes = new TextEncoder().encode(source);
+
+	return new ReadableStream({
+		start(controller) {
+			for (let offset = 0; offset < bytes.length; offset += 8) {
+				controller.enqueue(bytes.slice(offset, offset + 8));
+			}
+			controller.close();
+		},
+	});
+}
 
 /** Each format's document beside the URL it is published at. */
 let DOCUMENTS = [
@@ -463,6 +478,74 @@ describe("Feed.fetch", () => {
 		expect(isFailure(result)).toBe(true);
 		if (isFailure(result)) expect(result.error.name).toBe("FeedFetchError");
 	});
+
+	test("reads a document that fits under the cap", async () => {
+		server.use(http.get(FEED_URL, () => HttpResponse.text(RSS_XML)));
+
+		let result = await Feed.fetch(FEED_URL, { maxBytes: RSS_XML.length });
+		if (!isSuccess(result) || result.data.notModified) throw new Error("expected a feed");
+
+		expect(result.data.feed.title).toBe("Example Feed");
+	});
+
+	test("refuses a body that grows past the cap as it arrives", async () => {
+		server.use(http.get(FEED_URL, () => new HttpResponse(streamOf(RSS_XML))));
+
+		let result = await Feed.fetch(FEED_URL, { maxBytes: 16 });
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) {
+			expect(result.error).toBeInstanceOf(FeedLimitError);
+			expect(result.error.message).toContain("exceeded the 16 byte cap");
+		}
+	});
+
+	test("refuses an oversized Content-Length without reading the body", async () => {
+		server.use(
+			http.get(FEED_URL, () =>
+				HttpResponse.text(RSS_XML, { headers: { "content-length": "20000000" } }),
+			),
+		);
+
+		let result = await Feed.fetch(FEED_URL);
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) {
+			expect(result.error).toBeInstanceOf(FeedLimitError);
+			expect(result.error.message).toContain("declared 20000000 bytes");
+		}
+	});
+
+	test("follows a chain within the limit and reports where it ended", async () => {
+		server.use(
+			http.get(
+				PAGE_URL,
+				() => new HttpResponse(null, { status: 301, headers: { location: "/feed" } }),
+			),
+			http.get("https://example.com/feed", () => HttpResponse.redirect(FEED_URL, 302)),
+			http.get(FEED_URL, () => HttpResponse.text(RSS_XML)),
+		);
+
+		let result = await Feed.fetch(PAGE_URL, { maxRedirects: 2 });
+		if (!isSuccess(result) || result.data.notModified) throw new Error("expected a feed");
+
+		expect(result.data.url).toBe(FEED_URL);
+		expect(result.data.feed.title).toBe("Example Feed");
+	});
+
+	test("refuses a chain past the limit", async () => {
+		server.use(
+			http.get(/https:\/\/example\.com\/hop\/\d+/, ({ request }) => {
+				let hop = Number(new URL(request.url).pathname.split("/").at(-1));
+				return HttpResponse.redirect(`https://example.com/hop/${hop + 1}`, 302);
+			}),
+		);
+
+		let result = await Feed.fetch("https://example.com/hop/1", { maxRedirects: 3 });
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) {
+			expect(result.error).toBeInstanceOf(FeedLimitError);
+			expect(result.error.message).toContain("more than 3 redirects");
+		}
+	});
 });
 
 describe("Feed.discover", () => {
@@ -617,5 +700,42 @@ describe("Feed.discover", () => {
 		let result = await Feed.discover(PAGE_URL);
 		if (!isSuccess(result)) throw new Error("expected a discovery");
 		expect(result.data).toEqual([]);
+	});
+
+	test("reports the URL a followed chain ended at, which is the feed's identity", async () => {
+		server.use(
+			http.get(
+				PAGE_URL,
+				() => new HttpResponse(null, { status: 301, headers: { location: "/feed" } }),
+			),
+			http.get("https://example.com/feed", () => HttpResponse.redirect(FEED_URL, 302)),
+			http.get(FEED_URL, () => HttpResponse.text(RSS_XML)),
+		);
+
+		let result = await Feed.discover(PAGE_URL);
+		if (!isSuccess(result)) throw new Error("expected a discovery");
+
+		expect(result.data).toEqual([{ url: FEED_URL, type: "application/rss+xml" }]);
+	});
+
+	test("refuses a chain past the limit", async () => {
+		server.use(
+			http.get(/https:\/\/example\.com\/hop\/\d+/, ({ request }) => {
+				let hop = Number(new URL(request.url).pathname.split("/").at(-1));
+				return HttpResponse.redirect(`https://example.com/hop/${hop + 1}`, 302);
+			}),
+		);
+
+		let result = await Feed.discover("https://example.com/hop/1");
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) expect(result.error).toBeInstanceOf(FeedLimitError);
+	});
+
+	test("refuses a page that grows past the cap as it arrives", async () => {
+		server.use(http.get(PAGE_URL, () => new HttpResponse(streamOf("<html></html>"))));
+
+		let result = await Feed.discover(PAGE_URL, { maxBytes: 4 });
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) expect(result.error).toBeInstanceOf(FeedLimitError);
 	});
 });

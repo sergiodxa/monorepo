@@ -17,7 +17,9 @@ import { discoverFeeds, JSON_FEED_TYPE, mediaTypeOf } from "./lib/discover.js";
 import { fromAtom } from "./lib/from-atom.js";
 import { fromJSONFeed } from "./lib/from-json-feed.js";
 import { fromRSS } from "./lib/from-rss.js";
+import { readWithin, retrieve } from "./lib/limits.js";
 import { looksLikeJSON, sniff } from "./lib/sniff.js";
+import { describe } from "./lib/utils.js";
 
 /** Raised when a document is a recognized format but cannot be read. */
 export class FeedParseError extends Error {
@@ -32,6 +34,16 @@ export class FeedFormatError extends Error {
 /** Raised when a feed cannot be retrieved. */
 export class FeedFetchError extends Error {
 	override name = "FeedFetchError";
+}
+
+/**
+ * Raised when an origin answers with more than a retrieval allows: a body past
+ * the size cap, or a redirect chain past its limit. It is a `FeedFetchError`, so
+ * matching on that catches it too, and its own type tells a publisher this
+ * package refused from one it could not reach.
+ */
+export class FeedLimitError extends FeedFetchError {
+	override name = "FeedLimitError";
 }
 
 export namespace Feed {
@@ -98,6 +110,10 @@ export namespace Feed {
 		lastModified?: string | null;
 		headers?: HeadersInit;
 		signal?: AbortSignal;
+		/** How many bytes of the response to read before refusing it; 10 MiB by default. */
+		maxBytes?: number;
+		/** How many redirects to follow before refusing the chain; five by default. */
+		maxRedirects?: number;
 	}
 
 	/** What every retrieval reports regardless of whether the feed changed. */
@@ -281,6 +297,10 @@ export class Feed {
 	 * stores the validators pays almost nothing for an unchanged feed. Because a
 	 * 304 may legitimately omit them, the caller's own are carried forward.
 	 *
+	 * A URL comes from whoever pasted it, so the retrieval is bounded on both
+	 * sides: a body is read off the stream up to `maxBytes`, and a chain is
+	 * followed up to `maxRedirects`. Either bound reports a {@link FeedLimitError}.
+	 *
 	 * @param input - The feed's URL
 	 * @param options - Stored validators, plus any additional request options
 	 * @returns What the origin said, or the reason it could not be reached
@@ -289,17 +309,10 @@ export class Feed {
 		input: string | URL,
 		options: Feed.FetchOptions = {},
 	): Promise<Result<Feed.FetchResult, FeedFetchError | FeedParseError | FeedFormatError>> {
-		let response: Response;
-		try {
-			response = await fetch(String(input), {
-				headers: buildConditionalHeaders(options),
-				signal: options.signal,
-			});
-		} catch (error) {
-			return failure(new FeedFetchError(`Failed to fetch feed: ${describe(error)}`));
-		}
+		let retrieved = await retrieve(String(input), buildConditionalHeaders(options), options);
+		if (isFailure(retrieved)) return retrieved;
 
-		let url = response.url || String(input);
+		let { response, url } = retrieved.data;
 		let validators = readValidators(response, options);
 
 		if (response.status === 304) {
@@ -310,8 +323,10 @@ export class Feed {
 			return failure(new FeedFetchError(`Failed to fetch feed: ${response.status}`));
 		}
 
-		let text = await response.text();
-		let feed = Feed.parse(text, { url: options.url ?? url });
+		let body = await readWithin(retrieved.data, options);
+		if (isFailure(body)) return body;
+
+		let feed = Feed.parse(body.data, { url: options.url ?? url });
 		if (isFailure(feed)) return feed;
 
 		return success({
@@ -333,6 +348,10 @@ export class Feed {
 	 * outright: `application/json` is what a page uses for anything at all, and is
 	 * taken as a feed only when the page names no better-typed one.
 	 *
+	 * The retrieval is bounded the way {@link Feed.fetch}'s is, and each feed is
+	 * reported at the URL its response finally came from, so a caller that keys a
+	 * feed by address stores where the chain ended rather than where it started.
+	 *
 	 * @param input - A feed URL or the address of a page that advertises one
 	 * @param options - Additional request options
 	 * @returns The feeds found, in document order, or the reason none could be
@@ -341,22 +360,19 @@ export class Feed {
 		input: string | URL,
 		options: Feed.FetchOptions = {},
 	): Promise<Result<Feed.Discovery[], FeedFetchError>> {
-		let response: Response;
-		try {
-			response = await fetch(String(input), {
-				headers: new Headers(options.headers),
-				signal: options.signal,
-			});
-		} catch (error) {
-			return failure(new FeedFetchError(`Failed to fetch ${String(input)}: ${describe(error)}`));
-		}
+		let retrieved = await retrieve(String(input), new Headers(options.headers), options);
+		if (isFailure(retrieved)) return retrieved;
+
+		let { response, url } = retrieved.data;
 
 		if (!response.ok) {
 			return failure(new FeedFetchError(`Failed to fetch ${String(input)}: ${response.status}`));
 		}
 
-		let url = response.url || String(input);
-		let text = await response.text();
+		let body = await readWithin(retrieved.data, options);
+		if (isFailure(body)) return body;
+
+		let text = body.data;
 
 		if (looksLikeJSON(text)) {
 			let feed = Feed.parse(text, { url });
@@ -372,12 +388,4 @@ export class Feed {
 
 		return success(discoverFeeds(text, url));
 	}
-}
-
-/**
- * Reads a thrown value's message, so a rejected request reports what went wrong
- * whether or not it rejected with an `Error`.
- */
-function describe(error: unknown): string {
-	return error instanceof Error ? error.message : String(error);
 }
