@@ -15,9 +15,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { existsSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-
 import type { Router } from "remix/router";
 
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -27,8 +24,14 @@ import type { UserStore } from "~/database/user-do";
 
 import { createTestRouter, fetchRoute, VIEWER } from "~/app/lib/test/controller";
 import { createUserStoreDouble } from "~/app/lib/test/store";
-import * as lazyFrameModule from "~/resources/components/lazy-frame";
 import routes from "~/routes/web";
+
+/**
+ * Every module a page's islands can name, globbed exactly as `bootstrap/browser.ts` globs
+ * them, so this resolves an island the way the browser will rather than the way a test
+ * author assumed it would.
+ */
+const CLIENT_MODULES = import.meta.glob(["../../../resources/**/*.{ts,tsx}"]);
 
 let store = createUserStoreDouble();
 vi.doMock("~/database/user-do", () => ({ userStore: () => store }));
@@ -374,34 +377,42 @@ describe("paging into a frame", () => {
 		expect(body).toContain(`href="${routes.reading.href()}?cursor=older-cursor&amp;from=2"`);
 		expect(body).toContain("Older posts");
 		/** And the piece that replaces it is the same page asked for as a fragment. */
-		expect(body).toContain(`"src":"/reading?cursor=older-cursor&from=2&frame=1"`);
+		expect(body).toContain(`"src":"/reading?cursor=older-cursor&from=2&frame=older"`);
 		expect(body).toContain('"exportName":"LazyFrame"');
 	});
 
 	/**
-	 * Every other assertion here is about the addresses the island carries. This one is
-	 * about the island itself, which is a file path and an export name written into the
-	 * page as text and resolved by the browser hours later. Get either wrong and the page
-	 * still renders, still carries the right addresses, and still passes every test above
-	 * — the enhancement simply never comes up, and the reader is left with the plain links
-	 * and no sign that anything was meant to replace them.
+	 * Every other assertion here is about the addresses an island carries. This one is about
+	 * the islands themselves, each of which is a file path and an export name written into
+	 * the page as text and resolved by the browser some time later. Get either wrong and the
+	 * page still renders, still carries the right addresses, and still passes every test
+	 * above — the enhancement simply never comes up, and the reader is left with the plain
+	 * links and no sign that anything was meant to replace them.
+	 *
+	 * Resolved through the same glob the browser entry resolves them through, so a module
+	 * that has moved out of its reach fails here rather than in a browser nobody is watching.
 	 */
-	test("names an island by a module and an export that are really there", async () => {
+	test("names every island by a module and an export the browser can reach", async () => {
 		queued("older-cursor");
 
 		let body = await (await get(routes.reading.href())).text();
 
-		let moduleUrl = body.match(/"moduleUrl":"([^"]+)"/)?.[1];
-		let exportName = body.match(/"exportName":"([^"]+)"/)?.[1];
+		let islands = [...body.matchAll(/"exportName":"([^"]+)","moduleUrl":"([^"]+)"/g)].map(
+			([, exportName, moduleUrl]) => ({ exportName, moduleUrl }),
+		);
 
-		expect(moduleUrl).toBe("/resources/components/lazy-frame.tsx");
-		expect(exportName).toBe("LazyFrame");
+		/** The page defers its next page and marks every row, so it mounts both of them. */
+		expect(new Set(islands.map((island) => island.moduleUrl))).toEqual(
+			new Set(["/resources/components/lazy-frame.tsx", "/resources/components/read-toggle.tsx"]),
+		);
 
-		/** The browser reads that address against the app's root, so this reads it the same way. */
-		let file = fileURLToPath(new URL(`../../..${moduleUrl}`, import.meta.url));
-		expect(existsSync(file)).toBe(true);
+		for (let { exportName, moduleUrl } of islands) {
+			let load = CLIENT_MODULES[`../../..${moduleUrl}`];
+			expect(load, `nothing the browser can load at ${moduleUrl}`).toBeDefined();
 
-		expect(Reflect.get(lazyFrameModule, String(exportName))).toBeTypeOf("function");
+			let module = await load!();
+			expect(Reflect.get(module as object, String(exportName))).toBeTypeOf("function");
+		}
 	});
 
 	test("defers nothing at the end of the queue, and says the list has one", async () => {
@@ -429,7 +440,7 @@ describe("paging into a frame", () => {
 		queued("deeper-cursor");
 
 		let body = await (
-			await get(`${routes.reading.href()}?q=remix&cursor=older-cursor&from=26&frame=1`)
+			await get(`${routes.reading.href()}?q=remix&cursor=older-cursor&from=26&frame=older`)
 		).text();
 
 		expect(body).toContain('"parentUrl":"/reading?q=remix&cursor=older-cursor&from=26"');
@@ -447,7 +458,7 @@ describe("paging into a frame", () => {
 	test("answers a frame with the rows alone, numbered on from the page above", async () => {
 		queued("deeper-cursor");
 
-		let response = await get(`${routes.reading.href()}?cursor=older-cursor&from=26&frame=1`);
+		let response = await get(`${routes.reading.href()}?cursor=older-cursor&from=26&frame=older`);
 		let body = await response.text();
 
 		expect(response.status).toBe(200);
@@ -457,7 +468,7 @@ describe("paging into a frame", () => {
 		expect(body).not.toContain("Mark all read");
 		expect(body).toContain('<ol start="26"');
 		/** And it ends with the frame that carries the reader on from it. */
-		expect(body).toContain(`"src":"/reading?cursor=deeper-cursor&from=27&frame=1"`);
+		expect(body).toContain(`"src":"/reading?cursor=deeper-cursor&from=27&frame=older"`);
 	});
 
 	test("numbers from one for a cursor followed with nothing saying how far in it is", async () => {
@@ -468,7 +479,7 @@ describe("paging into a frame", () => {
 		/** A cursor records where to read from and not how far in that is, so it says nothing. */
 		expect(body).not.toContain("<ol start=");
 		/** And the page below it cannot be numbered either, so it is asked for without one. */
-		expect(body).toContain(`"src":"/reading?cursor=older-cursor&frame=1"`);
+		expect(body).toContain(`"src":"/reading?cursor=older-cursor&frame=older"`);
 	});
 
 	test("stops a frame whose cursor the store no longer decodes, rather than starting again", async () => {
@@ -484,7 +495,7 @@ describe("paging into a frame", () => {
 			},
 		);
 
-		let body = await (await get(`${routes.reading.href()}?cursor=rotten&frame=1`)).text();
+		let body = await (await get(`${routes.reading.href()}?cursor=rotten&frame=older`)).text();
 
 		expect(body).toContain("That page is no longer there.");
 		expect(body).toContain("Back to the newest");
@@ -659,7 +670,7 @@ describe("searching the queue", () => {
 		expect(body).toContain('href="/reading?q=remix&amp;show=unread&amp;cursor=newer-cursor"');
 		/** And the piece the frame fetches under the reader is the same page. */
 		expect(body).toContain(
-			'"src":"/reading?q=remix&show=unread&cursor=older-cursor&from=2&frame=1"',
+			'"src":"/reading?q=remix&show=unread&cursor=older-cursor&from=2&frame=older"',
 		);
 	});
 

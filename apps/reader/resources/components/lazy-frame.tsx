@@ -12,13 +12,17 @@
  * reader passes through it, so reloading resumes where they had read to rather than at the
  * top of a list they have already walked.
  *
+ * A frame can also sit above the rows rather than below them, holding the page the reader
+ * came from, which is how a list is walked back up as well as down.
+ *
  * Vendored from the `lazy-frames` demo in the Remix repository, which publishes no module
- * to import. Three things differ from the original: the second observer, which the demo
+ * to import. Four things differ from the original: the second observer, which the demo
  * used to pause descendant CSS animations while the frame sat off screen, reports which
  * page is on screen instead; the frame's own loading state falls back to `children`,
  * because the links a reader can follow themselves are the right thing to leave standing
- * while their replacement is in the air; and `children` is one node rather than many,
- * which is what that default needs.
+ * while their replacement is in the air; `children` is one node rather than many, which is
+ * what that default needs; and a frame can be told it sits above the reader, which is what
+ * `sitsAbove` covers.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -57,6 +61,20 @@ export type LazyFrameProps = {
 	 */
 	parentUrl?: string;
 	/**
+	 * Whether the frame holds ground the reader has already covered, which is true of one
+	 * placed above the rows rather than below them. Such a frame changes on two counts.
+	 *
+	 * It waits to be approached: a page opened in the middle of a list starts with this
+	 * frame on screen, and fetching it there would walk the list back to the top nobody
+	 * asked to return to, so it fetches once the reader has scrolled past it and turned
+	 * back.
+	 *
+	 * And it holds the reader's place: what arrives here lands above them and moves
+	 * everything below it down, so the page is scrolled by as much as it grew and the rows
+	 * they were reading stay under their eyes.
+	 */
+	sitsAbove?: boolean;
+	/**
 	 * What the server sends, and what a browser running no script keeps. One node rather
 	 * than the original's whole `RemixNode`, since it doubles as the frame's own loading
 	 * state and a frame takes one.
@@ -79,6 +97,14 @@ interface Reading {
  * reader is actually in rather than each answering for itself and the last to fire winning.
  */
 const reading = new Map<Element, Reading>();
+
+/**
+ * Every mounted frame that sits above the rows. They nest, since the page fetched into one
+ * carries the next one inside it, so a single arrival grows every host it lands in at
+ * once. The outermost of them has grown by the whole of it, which is what the reader has
+ * to be scrolled past, and it is the only one that answers for it.
+ */
+const aboveTheRows = new Set<Element>();
 
 /** How deeply `node` sits in the document, which is what orders one frame against another. */
 function depthOf(node: Element): number {
@@ -128,10 +154,25 @@ export const LazyFrame = clientEntry(
 	function LazyFrame(handle: Handle<LazyFrameProps>) {
 		let requested = false;
 
+		/**
+		 * Whether a crossing into view counts as the reader arriving. A frame below the rows
+		 * is ahead of them from the first moment, so every crossing counts; one above them is
+		 * already on screen when a list opens part way down, and counts only once they have
+		 * left it and come back.
+		 */
+		let isApproachable = handle.props.sitsAbove !== true;
+
 		let observe = ref((node, signal) => {
 			let loadObserver = new IntersectionObserver(
 				(entries) => {
-					if (requested || signal.aborted || !entries.some((entry) => entry.isIntersecting)) return;
+					if (requested || signal.aborted) return;
+
+					if (!entries.some((entry) => entry.isIntersecting)) {
+						isApproachable = true;
+						return;
+					}
+
+					if (!isApproachable) return;
 
 					/**
 					 * Latched before the observer is let go, so a second crossing reported in the
@@ -145,6 +186,7 @@ export const LazyFrame = clientEntry(
 			);
 
 			let placeObserver: IntersectionObserver | undefined;
+			let placeHolder: ResizeObserver | undefined;
 
 			/**
 			 * Armed first, and torn down by a listener registered in the same breath, so fetching
@@ -159,10 +201,48 @@ export const LazyFrame = clientEntry(
 				() => {
 					loadObserver.disconnect();
 					placeObserver?.disconnect();
+					placeHolder?.disconnect();
+					aboveTheRows.delete(node);
 					reading.delete(node);
 				},
 				{ once: true },
 			);
+
+			if (handle.props.sitsAbove === true) {
+				aboveTheRows.add(node);
+
+				let height = node.getBoundingClientRect().height;
+
+				/**
+				 * A page arriving above the reader pushes everything under it down by exactly what
+				 * it added, so the document is scrolled by the same amount and the rows they were
+				 * reading stay where they were. A resize observer is what makes the two one
+				 * movement: it runs after the new rows are laid out and before the frame is
+				 * painted, so the correction lands in the same frame as the growth it answers and
+				 * there is nothing to see.
+				 *
+				 * It watches for the life of the frame rather than for the one arrival, so rows
+				 * that settle late — a long title wrapping once a font lands — are answered too.
+				 */
+				placeHolder = new ResizeObserver(() => {
+					let grown = node.getBoundingClientRect().height - height;
+					if (grown === 0) return;
+
+					height += grown;
+
+					/**
+					 * One page arriving three frames up grows this one and every frame it sits
+					 * inside by the same amount, and each of them is watching. The outermost holds
+					 * the whole of what arrived, so it does the scrolling and the rest keep their
+					 * measurements and stay still.
+					 */
+					for (let outer of aboveTheRows) if (outer !== node && outer.contains(node)) return;
+
+					scrollBy({ top: grown, behavior: "instant" });
+				});
+
+				placeHolder.observe(node);
+			}
 
 			let { parentUrl, url } = handle.props;
 

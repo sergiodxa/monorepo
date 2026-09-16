@@ -32,9 +32,11 @@ import type { FeedStatus } from "~/database/schema";
 import { chrome } from "~/app/http/controllers/chrome";
 import { MARKED_PARAM } from "~/app/http/controllers/feeds/read";
 import { CHECKED_PARAM } from "~/app/http/controllers/feeds/refresh";
+import { placePage } from "~/app/http/controllers/list-paging";
 import { exactDate, shortDate, timelineEntries } from "~/app/http/controllers/timeline-entries";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
+import { isFrameRequest } from "~/app/http/render";
 import { userStore } from "~/database/user-do";
 import AppLayout, { ActionLabel, PAGE_COLUMN, pageNote } from "~/resources/layouts/app";
 import Timeline from "~/resources/views/timeline";
@@ -44,12 +46,25 @@ import routes from "~/routes/web";
  * The URL of one page of a feed, which is what the timeline's older and newer links carry:
  * the cursor alone would resolve against whatever page the browser is on.
  *
+ * The feed rides in the path rather than in the query, and this surface narrows its posts
+ * by nothing else, so a page of it is that path and a cursor.
+ *
  * @param feedId - The feed being paged through.
- * @param cursor - The boundary the store minted, or `null` at either end of the feed.
+ * @param cursor - The boundary the store minted, or `null` for the newest page.
+ * @param extra - Parameters this page's address has to carry beyond the cursor.
  */
-function feedPage(feedId: string, cursor: string | null): string | null {
-	if (cursor === null) return null;
-	return `${routes.feed.href({ feed: feedId })}?${new URLSearchParams({ cursor })}`;
+function feedUrl(
+	feedId: string,
+	cursor: string | null,
+	extra: Record<string, string> = {},
+): string {
+	let params = new URLSearchParams();
+	if (cursor !== null) params.set("cursor", cursor);
+	for (let [name, value] of Object.entries(extra)) params.set(name, value);
+
+	let base = routes.feed.href({ feed: feedId });
+	let query = params.toString();
+	return query.length === 0 ? base : `${base}?${query}`;
 }
 
 /**
@@ -114,6 +129,13 @@ const FAILURE_STATUS_KEYS: Partial<Record<FeedStatus, string>> = {
 };
 
 /** GET /reading/:feed — one feed, its health and its posts. */
+/**
+ * How many posts one page of a feed holds, which is the number the queue shows too: the
+ * two surfaces are the same list of the same rows, and a page is sized to arrive under a
+ * reader scrolling rather than to be complete.
+ */
+const PAGE_SIZE = 25;
+
 export default createAction(routes.feed, {
 	middleware: [requireUser],
 	async handler(ctx) {
@@ -159,14 +181,14 @@ export default createAction(routes.feed, {
 		let params = parsePageParams(ctx.url.searchParams);
 		let cursor = isFailure(params) ? null : params.data.cursor;
 
-		let page = await store.feedTimeline(feedId, { cursor });
+		let page = await store.feedTimeline(feedId, { cursor, limit: PAGE_SIZE });
 
 		/**
 		 * A cursor the store no longer decodes leaves the reader holding a place that is
 		 * gone, so the newest page is shown with a note saying where they landed.
 		 */
 		let isStaleCursor = !page.ok;
-		if (!page.ok) page = await store.feedTimeline(feedId, { cursor: null });
+		if (!page.ok) page = await store.feedTimeline(feedId, { cursor: null, limit: PAGE_SIZE });
 		if (!page.ok) throw new Error("The first page of a timeline decodes without a cursor");
 
 		/**
@@ -183,6 +205,76 @@ export default createAction(routes.feed, {
 		 * says nothing; the author is what tells one of this feed's posts from another.
 		 */
 		let entries = timelineEntries(ctx, page.items, null);
+
+		/**
+		 * An author every post on the page shares is the feed's own name said again on every
+		 * row, which the heading above them already says once. Dropping it gives a phone back
+		 * a line per row, and gives the rest of them a column that means something: a name
+		 * here now tells one post from another rather than repeating where they all came from.
+		 *
+		 * It is read off the page in hand, so a feed whose authors vary from one page to the
+		 * next names them on the pages where they vary and not on the pages where they do not.
+		 */
+		let authors = new Set(entries.map((entry) => entry.source));
+		if (authors.size === 1) for (let entry of entries) entry.source = null;
+
+		/**
+		 * Where this page sits in the feed and what the ways off both ends of it are, worked
+		 * out by the same code the queue uses: the two surfaces hold different posts and page
+		 * through them identically.
+		 */
+		let placement = placePage({
+			address: (at, extra) => feedUrl(feedId, at, extra),
+			params: ctx.url.searchParams,
+			cursor,
+			isStaleCursor,
+			rows: entries.length,
+			pageSize: PAGE_SIZE,
+			cursors: page.cursors,
+		});
+
+		/** The copy every row of the list prints, whichever shape this page is answered in. */
+		let listCopy = {
+			markRead: ctx.i18next.t("timeline.markRead"),
+			markUnread: ctx.i18next.t("timeline.markUnread"),
+			markFailed: ctx.i18next.t("timeline.markFailed"),
+			read: ctx.i18next.t("timeline.read"),
+			newer: ctx.i18next.t("timeline.newer"),
+			older: ctx.i18next.t("timeline.older"),
+			end: ctx.i18next.t("timeline.end"),
+		};
+
+		/**
+		 * A frame asked for the piece continuing a feed already on screen, so it is answered
+		 * with that piece: the rows, numbered on from the page it continues, and whatever
+		 * carries the reader on from the end it continues. The chrome, the feed's name and
+		 * everything said about the feed are already in the document this is written into.
+		 */
+		if (isFrameRequest(ctx.request)) {
+			return ctx.render(
+				isStaleCursor ? (
+					/**
+					 * The cursor the page above minted no longer decodes, so the list stops here and
+					 * says so rather than starting again from the newest page underneath itself.
+					 */
+					<Alert color="warning" mix={pageNote()}>
+						<Alert.Description>{ctx.i18next.t("timeline.badCursor")}</Alert.Description>
+						<Alert.Action>
+							<LinkButton
+								href={routes.feed.href({ feed: feedId })}
+								color="neutral"
+								variant="outline"
+								size="sm"
+							>
+								{ctx.i18next.t("timeline.restart")}
+							</LinkButton>
+						</Alert.Action>
+					</Alert>
+				) : (
+					<Timeline entries={entries} copy={listCopy} {...placement} />
+				),
+			);
+		}
 
 		/**
 		 * What the publisher says this feed is, and how the last checks of it went. A reader
@@ -376,22 +468,7 @@ export default createAction(routes.feed, {
 					)}
 
 					{entries.length > 0 ? (
-						<Timeline
-							entries={entries}
-							copy={{
-								markRead: ctx.i18next.t("timeline.markRead"),
-								markUnread: ctx.i18next.t("timeline.markUnread"),
-								read: ctx.i18next.t("timeline.read"),
-								newer: ctx.i18next.t("timeline.newer"),
-								older: ctx.i18next.t("timeline.older"),
-								end: ctx.i18next.t("timeline.end"),
-							}}
-							returnTo={ctx.url.pathname + ctx.url.search}
-							cursors={{
-								next: feedPage(feedId, page.cursors.next),
-								prev: feedPage(feedId, page.cursors.prev),
-							}}
-						/>
+						<Timeline entries={entries} copy={listCopy} {...placement} />
 					) : (
 						/** Level 2, since the layout's own page heading is the document's only `h1`. */
 						<HeadingScope level={2}>

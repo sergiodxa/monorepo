@@ -204,7 +204,7 @@ describe("GET /reading/:feed", () => {
 		let path = `${routes.feed.href({ feed: FEED_ID })}?cursor=page-2`;
 		let body = await (await get(path)).text();
 
-		expect(store.feedTimeline).toHaveBeenCalledWith(FEED_ID, { cursor: "page-2" });
+		expect(store.feedTimeline).toHaveBeenCalledWith(FEED_ID, { cursor: "page-2", limit: 25 });
 		expect(body).toContain(`href="${routes.feed.href({ feed: FEED_ID })}?cursor=older-cursor"`);
 		expect(body).toContain("Older posts");
 		expect(body).not.toContain("Newer posts");

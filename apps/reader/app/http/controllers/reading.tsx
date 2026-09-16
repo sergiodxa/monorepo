@@ -45,17 +45,13 @@ import type { UserStore } from "~/database/user-do";
 
 import { chrome } from "~/app/http/controllers/chrome";
 import { FAILED_PARAM, FRESH_PARAM, SWEPT_PARAM } from "~/app/http/controllers/feeds/refresh-all";
-import {
-	FROM_PARAM,
-	QueueFields,
-	queueUrl,
-	readQueueView,
-} from "~/app/http/controllers/queue-view";
+import { placePage } from "~/app/http/controllers/list-paging";
+import { QueueFields, queueUrl, readQueueView } from "~/app/http/controllers/queue-view";
 import { MARKED_PARAM } from "~/app/http/controllers/read-all";
 import { timelineEntries } from "~/app/http/controllers/timeline-entries";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { FRAME_PARAM, isFrameRequest } from "~/app/http/render";
+import { isFrameRequest } from "~/app/http/render";
 import { userStore } from "~/database/user-do";
 import AppLayout, {
 	ActionLabel,
@@ -155,25 +151,6 @@ function emptyCopy(i18next: i18n, view: QueueView) {
 		title: i18next.t("reading.empty.all.title"),
 		description: i18next.t("reading.empty.all.description"),
 	};
-}
-
-/**
- * Where this page's first row falls in the list as a whole, or `null` for a page that
- * cannot say. The newest page starts at the first row; a page below it is told where it
- * begins by the page that linked to it; and a cursor followed on its own says nothing
- * about how far in it is, so such a page counts from one the way any other list does.
- *
- * @param params - The query the page was asked for with.
- * @param isStaleCursor - Whether the cursor was refused, leaving this the newest page.
- */
-function startFrom(params: URLSearchParams, isStaleCursor: boolean): number | null {
-	if (isStaleCursor || params.get("cursor") === null) return 1;
-
-	let from = params.get(FROM_PARAM);
-	if (from === null || !/^\d+$/.test(from)) return null;
-
-	let position = Number.parseInt(from, 10);
-	return position > 0 ? position : null;
 }
 
 /** The word one filter's link is read as. */
@@ -343,44 +320,25 @@ export async function renderReadingQueue(
 	let here = queueUrl(view);
 
 	/**
-	 * The page being read, which a row's own mark returns to: a reader who marks a post on
-	 * the third page of their queue is put back on the third page of it.
+	 * Where this page sits in the queue and what the ways off both ends of it are. The
+	 * narrowing rides in every one of those addresses, so choosing a filter and then
+	 * scrolling never drops it.
 	 */
-	let returnTo = queueUrl(view, isStaleCursor ? null : cursor);
-
-	/**
-	 * Where this page's first row falls in the list, and where the next page's first row
-	 * will: each page counts its own rows on and hands the total to the one below, so the
-	 * numbering is carried by the pages actually walked rather than guessed from a cursor.
-	 */
-	let start = startFrom(ctx.url.searchParams, isStaleCursor);
-
-	/**
-	 * This page's own address, which the reader's browser carries while they are reading it.
-	 * The newest page is the plain address: a reader at the top of their queue is looking at
-	 * the queue rather than at a place inside it.
-	 */
-	let pageUrl =
-		cursor === null || isStaleCursor
-			? here
-			: queueUrl(view, cursor, start === null ? {} : { [FROM_PARAM]: String(start) });
-
-	/** What the page below this one is told about where it begins, when this page can say. */
-	let below: Record<string, string> =
-		start === null ? {} : { [FROM_PARAM]: String(start + entries.length) };
-
-	let older = page.cursors.next === null ? null : queueUrl(view, page.cursors.next, below);
-
-	/** The same page, asked for as the piece that continues this one rather than as a page. */
-	let continueSrc =
-		page.cursors.next === null
-			? null
-			: queueUrl(view, page.cursors.next, { ...below, [FRAME_PARAM]: "1" });
+	let placement = placePage({
+		address: (at, extra) => queueUrl(view, at, extra),
+		params: ctx.url.searchParams,
+		cursor,
+		isStaleCursor,
+		rows: entries.length,
+		pageSize: PAGE_SIZE,
+		cursors: page.cursors,
+	});
 
 	/** The copy every row of the list prints, whichever shape this page is answered in. */
 	let listCopy = {
 		markRead: ctx.i18next.t("timeline.markRead"),
 		markUnread: ctx.i18next.t("timeline.markUnread"),
+		markFailed: ctx.i18next.t("timeline.markFailed"),
 		read: ctx.i18next.t("timeline.read"),
 		newer: ctx.i18next.t("timeline.newer"),
 		older: ctx.i18next.t("timeline.older"),
@@ -409,15 +367,7 @@ export async function renderReadingQueue(
 					</Alert.Action>
 				</Alert>
 			) : (
-				<Timeline
-					entries={entries}
-					start={start}
-					continueSrc={continueSrc}
-					pageUrl={pageUrl}
-					copy={listCopy}
-					returnTo={returnTo}
-					cursors={{ next: older, prev: null }}
-				/>
+				<Timeline entries={entries} copy={listCopy} {...placement} />
 			),
 			init,
 		);
@@ -645,18 +595,7 @@ export async function renderReadingQueue(
 				)}
 
 				{entries.length > 0 ? (
-					<Timeline
-						entries={entries}
-						start={start}
-						continueSrc={continueSrc}
-						pageUrl={pageUrl}
-						copy={listCopy}
-						returnTo={returnTo}
-						cursors={{
-							next: older,
-							prev: page.cursors.prev === null ? null : queueUrl(view, page.cursors.prev),
-						}}
-					/>
+					<Timeline entries={entries} copy={listCopy} {...placement} />
 				) : (
 					/** Level 2, since the layout's own page heading is the document's only `h1`. */
 					<HeadingScope level={2}>

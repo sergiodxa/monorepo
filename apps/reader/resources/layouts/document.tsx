@@ -11,6 +11,7 @@
 import type { Handle, RemixNode } from "remix/ui";
 
 import { bg, fg } from "@sdxc/u/color";
+import { raw } from "@sdxc/u/general";
 import { m, minBs } from "@sdxc/u/size";
 import { font } from "@sdxc/u/typography";
 import resetStyles from "@sdxc/ui/reset.css?url";
@@ -61,7 +62,22 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					<link rel="stylesheet" href={themeStyles} data-key="style-theme" />
 				</head>
 				<body
-					mix={[m(0), minBs("100dvh"), bg("neutral.bg-tint"), fg("neutral.emphasis"), font("sans")]}
+					mix={[
+						m(0),
+						minBs("100dvh"),
+						bg("neutral.bg-tint"),
+						fg("neutral.emphasis"),
+						font("sans"),
+						/**
+						 * The one place this app grows the document above the reader — a page of
+						 * posts arriving as they scroll back up a list — measures that growth and
+						 * scrolls by it, so the reading queue holds its place in every browser
+						 * rather than only in the ones that anchor scrolling themselves. Leaving
+						 * the browser's own anchoring on would have the two corrections land
+						 * together and carry the reader a screenful past where they were.
+						 */
+						raw({ overflowAnchor: "none" }),
+					]}
 				>
 					{children}
 					<script type="module" async src={CLIENT_ENTRY_SRC}></script>

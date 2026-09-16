@@ -45,6 +45,20 @@ const FRAME_HEADER = "x-remix-frame";
 export const FRAME_PARAM = "frame";
 
 /**
+ * What {@link FRAME_PARAM} carries for the piece continuing a page downward, into posts
+ * older than the ones on screen. It is the direction a list is normally walked, and the
+ * value a frame's address carries unless it says otherwise.
+ */
+export const FRAME_OLDER = "older";
+
+/**
+ * And for the piece continuing a page upward, into posts newer than the ones on screen.
+ * The two differ in which end of the fragment carries the way on: the page at the other
+ * end is already in the document this is written into.
+ */
+export const FRAME_NEWER = "newer";
+
+/**
  * Whether this request is for a fragment of a page. The server's resolver says so in a
  * header it sets itself; a frame whose address was built for it says so in that address.
  *

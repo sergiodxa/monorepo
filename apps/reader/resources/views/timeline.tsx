@@ -25,13 +25,23 @@
 
 import type { Handle } from "remix/ui";
 
-import { CircleCheckIcon, CircleIcon } from "@sdxc/icons";
+import { FlagIcon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
-import { bg, borderEdge, colorMix, fg } from "@sdxc/u/color";
+import { bg, border, borderEdge, colorMix, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { flex, gap, grow, inline, inlineFlex, items, relative, shrink } from "@sdxc/u/layout";
+import {
+	flex,
+	gap,
+	grow,
+	inline,
+	inlineFlex,
+	items,
+	relative,
+	shrink,
+	vstack,
+} from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
-import { bs, is, maxIs, mbs, minIs, mis, p, pb, pi } from "@sdxc/u/size";
+import { is, maxIs, mbs, minIs, mis, p, pb } from "@sdxc/u/size";
 import { hover } from "@sdxc/u/state";
 import { color } from "@sdxc/u/tokens";
 import {
@@ -44,9 +54,11 @@ import {
 	verticalAlign,
 	weight,
 } from "@sdxc/u/typography";
-import { Button, Text } from "@sdxc/ui";
+import { Text } from "@sdxc/ui";
+import { css } from "remix/ui";
 
 import LazyFrame from "~/resources/components/lazy-frame";
+import ReadToggle from "~/resources/components/read-toggle";
 import { listBleed, listRowGutter } from "~/resources/layouts/app";
 import OutboundMark from "~/resources/views/outbound-mark";
 import routes from "~/routes/web";
@@ -78,11 +90,75 @@ const SOURCE_COLUMN = "9rem";
  */
 const TIME_COLUMN = "6rem";
 
-/** Edge of the read mark, sized to the label a small button would have carried instead. */
-const ICON_SIZE = 16;
+/**
+ * The room a paging link takes, above and below. It is the rhythm of the rows it sits
+ * against, because the link is a control: the way through the list for a reader running no
+ * script, and what stands there for the moment before the frame holding it mounts. The
+ * note that replaces it when a page fails to arrive is about this tall too, so the rows
+ * above hold still as one gives way to the other.
+ *
+ * Spelled here and written into the links' own styles by hand, since those travel to the
+ * browser as plain declarations.
+ */
+const LINK_ROOM = "0.75rem";
 
-/** Edge of the square the mark sits in, which is the tallest thing on a row. */
-const TOGGLE_SIZE = "1.75rem";
+/**
+ * Marks the row's own words and the link its title is, so the row can colour each of them
+ * for the state it is in. The state is one attribute on the row, set by the server and
+ * turned over by the mark at its head, which leaves what read and unread look like written
+ * once rather than once here and again in the browser.
+ */
+const ROW_WORDS = "data-post-words";
+const ROW_TITLE = "data-post-title";
+
+/** The attribute the row wears while its post has been read. */
+const ROW_READ = "data-read";
+
+/**
+ * What a row's words are coloured by, which is the one thing that changes as a post is read.
+ *
+ * A title still to read takes the brand colour, so a screenful reads as a list of things to
+ * open and the loudest rows are the ones still wanting the reader. Read, it keeps the link
+ * and drops the hue: quiet enough that a screenful sorts into the two at a glance, and at
+ * the same lightness, so it stays a comfortable read on a light page and a dark one alike.
+ *
+ * The weight is deliberately not one of the differences. A heavier face is a wider one, so
+ * switching it rewrites every glyph on the line and the title reflows under the reader's eye
+ * at the moment they mark the post.
+ *
+ * A post whose feed gave it no address is words rather than a link, so it takes the row's own
+ * foreground: the brand colour is a promise that clicking goes somewhere.
+ */
+function readState() {
+	return css({
+		[`& [${ROW_WORDS}]`]: { color: "var(--ui-neutral-fg-emphasis)" },
+		[`& [${ROW_TITLE}]`]: { color: "var(--ui-brand-fg)" },
+		[`&[${ROW_READ}] [${ROW_WORDS}]`]: { color: "var(--ui-neutral-fg)" },
+		[`&[${ROW_READ}] [${ROW_TITLE}]`]: { color: "var(--ui-neutral-fg)" },
+	});
+}
+
+/**
+ * The fill the closing panel carries: the rule between rows thinned nearly to nothing, so
+ * it reads as a patch of the page rather than as a notice pasted onto it, and holds that
+ * weight on a light page and a dark one alike. Derived the way a row's own hover fill is,
+ * since a flat colour picked for one scheme is the wrong one in the other.
+ */
+const END_FILL = colorMix("oklab", { color: color("neutral.border"), weight: 15 }, "transparent");
+
+/**
+ * Edge of the mark the closing panel carries, sized against the sentence beside it rather
+ * than against a row's own controls, which are half this.
+ */
+const END_ICON_SIZE = 28;
+
+/**
+ * How far above the viewport the newer page starts arriving. Short, where the reach below
+ * is generous: a page arriving above the reader moves the document under them, so it is
+ * fetched as they actually turn back toward it rather than on the chance that they might.
+ * Only the top is extended, which is the side they approach it from.
+ */
+const NEWER_REACH = "200px 0px 0px 0px";
 
 export namespace Timeline {
 	/** One post, with every piece of it already resolved to the text that is printed. */
@@ -121,6 +197,8 @@ export namespace Timeline {
 		 * the mark's own glyph carry the state on screen; this carries it to a screen reader.
 		 */
 		read: string;
+		/** What the mark says when the server refused the last move, which it wears until the next. */
+		markFailed: string;
 		newer: string;
 		older: string;
 		/** Said where the list stops, so it is known to have an end rather than to go on. */
@@ -148,25 +226,24 @@ export namespace Timeline {
 		 */
 		continueSrc?: string | null;
 		/**
+		 * Where the page above this one is fetched from as the reader scrolls back up to it,
+		 * read the same way as {@link continueSrc} and holding the newer-posts link the same
+		 * way the lower frame holds the older-posts one.
+		 */
+		resumeSrc?: string | null;
+		/**
+		 * Whether the rows below this page are already on screen. That is true of a piece
+		 * fetched to continue a list upward: the page it was fetched for sits directly under
+		 * it, so this one prints nothing after its rows — neither the way onward nor the
+		 * sentence saying the list has none.
+		 */
+		joinsBelow?: boolean;
+		/**
 		 * This page's own address, which the address bar carries while the reader is reading
 		 * it, so reloading resumes here rather than at the top of a list already walked.
 		 */
 		pageUrl?: string;
 	}
-}
-
-/**
- * The mark the control wears, which is one glyph of the app's icon set so every mark on a
- * page belongs together. It draws the state the post is in: an empty ring for one still
- * to read and a ticked ring for one already read, so the two differ in outline rather
- * than in shade alone.
- */
-function ReadMark(handle: Handle<{ isRead: boolean }>) {
-	return () => {
-		let { isRead } = handle.props;
-
-		return isRead ? <CircleCheckIcon size={ICON_SIZE} /> : <CircleIcon size={ICON_SIZE} />;
-	};
 }
 
 /**
@@ -183,6 +260,10 @@ function PostTitle(handle: Handle<{ title: string; url: string | null; ping: str
 	return () => {
 		let { ping, title, url } = handle.props;
 
+		/**
+		 * A post whose feed gave it no address is words rather than a link, so it goes out
+		 * unmarked and keeps the row's own foreground.
+		 */
 		if (!url) return title;
 
 		return (
@@ -200,57 +281,20 @@ function PostTitle(handle: Handle<{ title: string; url: string | null; ping: str
 				 * the trip to a page of that name.
 				 */
 				ping={ping ?? undefined}
+				{...{ [ROW_TITLE]: "" }}
 				mix={[
 					inlineFlex(),
 					items("center"),
 					maxIs("100%"),
 					verticalAlign("bottom"),
-					fg("inherit"),
 					textDecoration("none"),
-					hover([fg("brand"), textDecoration({ line: "underline", thickness: 1, offset: 3 })]),
+					/** Already brand, so pointing at it has only the underline left to add. */
+					hover(textDecoration({ line: "underline", thickness: 1, offset: 3 })),
 				]}
 			>
 				<span mix={[minIs(0), truncate()]}>{title}</span>
 				<OutboundMark mix={[shrink(0), mis(1)]} />
 			</a>
-		);
-	};
-}
-
-/**
- * The mark-read control, at the head of the row it belongs to. A form rather than a link,
- * since following it changes what the reader has read, and a link is what a prefetcher
- * and a mail scanner follow on their own.
- *
- * The mark is the whole control, so `label` is what names it: it reaches a screen reader
- * through `aria-label` and a pointer through the native tooltip `title` gives.
- */
-function ReadToggle(
-	handle: Handle<{ id: string; isRead: boolean; label: string; returnTo: string }>,
-) {
-	return () => {
-		let { id, isRead, label, returnTo } = handle.props;
-
-		return (
-			<form method="post" action={routes.items.read.href({ itemId: id })} mix={[shrink(), flex()]}>
-				<input type="hidden" name="returnTo" value={returnTo} />
-				<input type="hidden" name="read" value={isRead ? "false" : "true"} />
-				{/**
-				 * A square box in place of the padding a worded button carries, so one glyph
-				 * centres in it rather than sitting in a pill.
-				 */}
-				<Button
-					type="submit"
-					color="neutral"
-					variant="ghost"
-					size="sm"
-					aria-label={label}
-					title={label}
-					mix={[pi(0), pb(0), is(TOGGLE_SIZE), bs(TOGGLE_SIZE)]}
-				>
-					<ReadMark isRead={isRead} />
-				</Button>
-			</form>
 		);
 	};
 }
@@ -265,36 +309,33 @@ function ReadToggle(
  * needs is a declaration, so nothing is lost but the underline a pointer would draw.
  */
 function OlderLink(handle: Handle<{ href: string; label: string }>) {
-	return () => (
-		<nav style="display: flex; justify-content: flex-end; padding-block: 0.75rem;">
-			<a
-				href={handle.props.href}
-				rel="next"
-				style="padding: 0.5rem 0.75rem; border-radius: var(--ui-radius-md, 0.375rem); color: var(--ui-brand-fg); text-decoration: none;"
-			>
-				{handle.props.label}
-			</a>
-		</nav>
-	);
+	return () => <EndLink href={handle.props.href} rel="next" label={handle.props.label} />;
 }
 
 /**
- * The way back to the page above this one, which only a page reached by following one has.
- * It sits above the rows, where the posts it leads to are.
+ * The way back to the page above this one, which only a page below the newest has. It sits
+ * above the rows, where the posts it leads to are, and is what the upper frame replaces.
  */
 function NewerLink(handle: Handle<{ href: string; label: string }>) {
+	return () => <EndLink href={handle.props.href} rel="prev" label={handle.props.label} />;
+}
+
+/**
+ * One end of a list, as a link a reader follows themselves. Compact, and centred at both
+ * ends so the way up and the way down are read as the same control in two places.
+ *
+ * Drawn with inline styles rather than with the app's own mixins, which is the one place
+ * in this app that is true: both links travel to the browser inside a client entry's
+ * serialized props, and the runtime accepts only plain values there. Everything they need
+ * is a declaration, so nothing is lost but the underline a pointer would draw.
+ */
+function EndLink(handle: Handle<{ href: string; label: string; rel: string }>) {
 	return () => (
-		<nav mix={[flex(), items("center"), p(3, 0)]}>
+		<nav style={`display: flex; justify-content: center; padding-block: ${LINK_ROOM};`}>
 			<a
 				href={handle.props.href}
-				rel="prev"
-				mix={[
-					p(2, 3),
-					rounded("md"),
-					fg("brand"),
-					textDecoration("none"),
-					hover(textDecoration("underline")),
-				]}
+				rel={handle.props.rel}
+				style="padding: 0.5rem 0.75rem; border-radius: var(--ui-radius-md, 0.375rem); color: var(--ui-brand-fg); text-decoration: none;"
 			>
 				{handle.props.label}
 			</a>
@@ -305,7 +346,17 @@ function NewerLink(handle: Handle<{ href: string; label: string }>) {
 /** Renders one page of posts, and whatever carries the reader on from the end of it. */
 export default function Timeline(handle: Handle<Timeline.Props>) {
 	return () => {
-		let { continueSrc = null, copy, cursors, entries, pageUrl, returnTo, start } = handle.props;
+		let {
+			continueSrc = null,
+			copy,
+			cursors,
+			entries,
+			joinsBelow = false,
+			pageUrl,
+			resumeSrc = null,
+			returnTo,
+			start,
+		} = handle.props;
 
 		/**
 		 * One row without a source would pull its time out of the column every other row's
@@ -315,7 +366,28 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 
 		return (
 			<div>
-				{cursors.prev && <NewerLink href={cursors.prev} label={copy.newer} />}
+				{/**
+				 * The way back up, held by a frame of its own so the page above arrives under the
+				 * reader as they scroll to it rather than waiting to be asked for. The link is that
+				 * frame's children exactly as the older-posts link is the lower frame's, so a
+				 * browser running no script keeps a way through the list at both ends.
+				 *
+				 * The frame is told it sits above the rows, which is what has it wait to be
+				 * scrolled back to and hold the reader's place when the page lands.
+				 */}
+				{resumeSrc && cursors.prev ? (
+					<LazyFrame
+						src={resumeSrc}
+						url={cursors.prev}
+						parentUrl={pageUrl}
+						rootMargin={NEWER_REACH}
+						sitsAbove
+					>
+						<NewerLink href={cursors.prev} label={copy.newer} />
+					</LazyFrame>
+				) : (
+					cursors.prev && <NewerLink href={cursors.prev} label={copy.newer} />
+				)}
 
 				{/**
 				 * The list takes the page's gutter back and each row spends it inside itself, so the
@@ -326,19 +398,23 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 					{entries.map((entry) => (
 						<li
 							key={entry.id}
+							{...{ [ROW_READ]: entry.isRead ? "" : undefined }}
 							mix={[
 								pb(1),
 								listRowGutter(),
 								borderEdge("block-end", { color: "neutral.border", width: 1 }),
 								hover(bg(ROW_HOVER)),
+								readState(),
 							]}
 						>
 							<article mix={[flex(), items("center"), gap(2)]}>
 								<ReadToggle
-									id={entry.id}
+									action={routes.items.read.href({ itemId: entry.id })}
 									isRead={entry.isRead}
-									label={entry.isRead ? copy.markUnread : copy.markRead}
 									returnTo={returnTo}
+									markRead={copy.markRead}
+									markUnread={copy.markUnread}
+									failed={copy.markFailed}
 								/>
 
 								{/**
@@ -347,15 +423,16 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 								 */}
 								<div mix={[grow(), minIs(0), media(WIDE_ROW, [flex(), items("baseline"), gap(3)])]}>
 									{/**
-									 * A read post keeps its title as body copy and an unread one wears the
-									 * page's own strongest foreground, so a screenful sorts into the two at a
-									 * glance.
+									 * What the row's own words take when they are not a link: a post whose feed
+									 * gave it no address, and the note a screen reader hears. A linked title
+									 * wears the brand pair instead, which sorts read from unread the same way.
 									 *
 									 * The weight is deliberately not one of those differences. A heavier face
 									 * is a wider one, so switching it rewrites every glyph on the line and the
 									 * title reflows under the reader's eye at the moment they mark a post.
 									 */}
 									<div
+										{...{ [ROW_WORDS]: "" }}
 										mix={[
 											grow(),
 											minIs(0),
@@ -370,7 +447,6 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 											truncate(),
 											text("sm"),
 											leading("normal"),
-											fg(entry.isRead ? "neutral" : "neutral.emphasis"),
 										]}
 									>
 										<h2 mix={[inline(), weight("medium")]}>
@@ -433,28 +509,59 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 				 * takes its place the moment it arrives — so the two never stand together and the
 				 * rows of one page meet the rows of the next with nothing between them.
 				 */}
-				{continueSrc && cursors.next ? (
-					/**
-					 * The frame carries both addresses: the page it holds, which the reader is in
-					 * once they pass its first row, and this one, which they are back in when they
-					 * scroll above it.
-					 */
-					<LazyFrame src={continueSrc} url={cursors.next} parentUrl={pageUrl}>
-						<OlderLink href={cursors.next} label={copy.older} />
-					</LazyFrame>
-				) : (
-					cursors.next && <OlderLink href={cursors.next} label={copy.older} />
-				)}
+				{!joinsBelow &&
+					(continueSrc && cursors.next ? (
+						/**
+						 * The frame carries both addresses: the page it holds, which the reader is in
+						 * once they pass its first row, and this one, which they are back in when they
+						 * scroll above it.
+						 */
+						<LazyFrame src={continueSrc} url={cursors.next} parentUrl={pageUrl}>
+							<OlderLink href={cursors.next} label={copy.older} />
+						</LazyFrame>
+					) : (
+						cursors.next && <OlderLink href={cursors.next} label={copy.older} />
+					))}
 
 				{/**
-				 * Where the list stops, said in words. A reader scrolling reaches it the way they
-				 * reach any other row, and one listening is told the list has an end rather than
-				 * being left to keep asking.
+				 * Where the list stops, said in words and given the room to be read as a moment
+				 * rather than as one more row. A reader scrolling reaches it the way they reach any
+				 * other row, and one listening is told the list has an end rather than being left
+				 * to keep asking.
+				 *
+				 * One panel at the foot of a list of flat rows, which is the whole of the contrast:
+				 * it stops the list rather than continuing it. Getting to the bottom of everything
+				 * you follow is worth marking, and this is the only thing saying there is nothing
+				 * further to scroll for.
+				 *
+				 * A block rather than the run of copy this used to be. Centring and vertical room
+				 * are laid out on a block and merely painted on an inline box, so the words sat in
+				 * the corner of a space they never actually took.
 				 */}
-				{cursors.next === null && entries.length > 0 && (
-					<Text role="status" mix={[p(3, 0), text("sm"), fg("neutral.muted")]}>
-						{copy.end}
-					</Text>
+				{!joinsBelow && cursors.next === null && entries.length > 0 && (
+					<div
+						role="status"
+						mix={[
+							vstack({ gap: 2 }),
+							items("center"),
+							textAlign("center"),
+							p(6, 4),
+							mbs(6),
+							rounded("xl"),
+							border({ color: "neutral.border", width: 1 }),
+							bg(END_FILL),
+							fg("neutral"),
+						]}
+					>
+						{/**
+						 * A flag, which is a course finished rather than an answer marked right. The
+						 * ticked ring this app draws already means a post has been read, and one glyph
+						 * doing two jobs on a screen holding both teaches neither.
+						 */}
+						<FlagIcon size={END_ICON_SIZE} />
+
+						<Text mix={[text("sm"), weight("medium"), fg("neutral")]}>{copy.end}</Text>
+					</div>
 				)}
 			</div>
 		);
