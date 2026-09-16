@@ -158,6 +158,9 @@ function rss(entries: Entry[], title = "Example"): string {
  */
 let feedObjects = new Map<string, Promise<FeedDO>>();
 
+/** The storage behind each of them, so a test can stand a head an item never reached. */
+let feedStates = new Map<string, DurableObjectStateMock>();
+
 /** Every call the reader made to a feed object, which is what "reaches nothing" reads off. */
 let feedCalls: { feedId: string; method: string; args: unknown[] }[] = [];
 
@@ -177,6 +180,7 @@ async function feedObject(feedId: string): Promise<FeedDO> {
 
 	let built = (async () => {
 		let state = createDurableObjectState({ name: feedId });
+		feedStates.set(feedId, state);
 		let feed = new FeedDO(state, env);
 
 		// The runtime holds every request behind the constructor's gate; a test that calls
@@ -252,6 +256,7 @@ afterAll(() => server.close());
 
 beforeEach(async () => {
 	feedObjects.clear();
+	feedStates.clear();
 	feedCalls.length = 0;
 	catalogQueries.length = 0;
 	pageFault = { reads: 0, failOn: 0 };
@@ -721,6 +726,23 @@ describe("synchronizing a stale feed", () => {
 
 		// Still stale, because nothing here pretended to have ruled on 6 through 99.
 		expect((await user.openReader()).freshness).toEqual({ stale: [feed.id], count: 1 });
+	});
+
+	test("advances the cursor to the answered head when the page comes back empty", async () => {
+		let { user, state } = await createReader();
+		let feed = await follow(user);
+
+		// A tick can be spent on a row that was never written, which leaves a reader sitting
+		// below a head they could never reach and permanently stale. The head answered here
+		// is the true one, read from the feed in the same call as the empty page.
+		feedStates.get(feed.feedId)?.storage.sql.exec("UPDATE feed SET head = 9 WHERE id = 1");
+		await env.KV.put(headKey(feed.feedId), "9");
+
+		await user.synchronize();
+
+		expect(storedCursor(state, feed.id)).toBe(9);
+		expect(storedItems(state, feed.id)).toHaveLength(ENTRIES.length);
+		expect((await user.openReader()).freshness).toEqual({ stale: [], count: 0 });
 	});
 
 	test("leaves the cursor on the last revision it wrote when a run dies, and writes nothing new on the retry", async () => {
@@ -1210,6 +1232,11 @@ describe("saved posts, the one answer that outlives every rule", () => {
 
 	test("refuses the thousand-and-first save and evicts none of the thousand", async () => {
 		let { user, state } = await createReader();
+
+		// The shelf a thousand posts deep is the one a paying reader has; the free tier's
+		// is a hundred, and which number applies is the whole of what the tier decides here.
+		await user.setTier({ entitled: "paid", cancelled: false, readAt: 1, source: "billing" });
+
 		let feed = seedFeed(state, { id: "feed_shelf" });
 
 		seedItems(
@@ -1226,7 +1253,11 @@ describe("saved posts, the one answer that outlives every rule", () => {
 
 		// A cap that dropped the oldest save to make room would delete the one thing in this
 		// design a reader explicitly asked to keep.
-		expect(refused).toEqual({ ok: false, reason: "full" });
+		expect(refused).toEqual({
+			ok: false,
+			reason: "full",
+			limit: { limit: "saved", current: SAVED_LIMIT, allowed: SAVED_LIMIT, tier: "paid" },
+		});
 
 		let saved = await user.savedQueue({ limit: 1 });
 		expect(saved.ok).toBe(true);
@@ -1305,6 +1336,262 @@ describe("saved posts, the one answer that outlives every rule", () => {
 		expect(state.storage.sql.exec("SELECT id FROM feeds WHERE id = ?", feed.id).toArray()).toEqual(
 			[],
 		);
+	});
+});
+
+/** The folder one post is filed in, read straight off the row. */
+function storedFolder(state: DurableObjectStateMock, itemId: string): string | null {
+	let [row] = state.storage.sql
+		.exec("SELECT folder_id FROM feed_items WHERE id = ?", itemId)
+		.toArray();
+
+	let folderId = row?.["folder_id"];
+	return typeof folderId === "string" ? folderId : null;
+}
+
+/** Makes a folder and answers its id, failing the test where the store refused to. */
+async function folderNamed(user: UserDO, title: string): Promise<string> {
+	let made = await user.createFolder(title);
+	if (!made.ok) throw new Error(`making the folder ${title} failed: ${made.reason}`);
+	return made.folder.id;
+}
+
+describe("folders, which are a reading surface before they are filing", () => {
+	test("moves a feed's posts into the folder's timeline, and leaves their read state alone", async () => {
+		let { user } = await createReader();
+		let feed = await follow(user);
+		let folderId = await folderNamed(user, "Tech");
+
+		let queue = await user.readingQueue({ readState: "all" });
+		let read = queue.ok ? queue.items[0] : undefined;
+		if (read === undefined) throw new Error("expected a post to read");
+		await user.markRead(read.id);
+
+		let filed = await user.fileFeed(feed.id, { folderId });
+
+		expect(filed).toEqual({ ok: true, folder: { id: folderId, title: "Tech" }, moved: 3 });
+		expect(titles(await user.folderTimeline(folderId))).toEqual(["Third", "Second", "First"]);
+
+		// Filing says where a post is read, never whether it was: the reader ruled on that.
+		let after = await user.readingQueue({ readState: "read" });
+		expect(titles(after)).toEqual([read.title]);
+	});
+
+	test("takes a feed back out, and leaves an unfiled feed out of the folder", async () => {
+		let { user } = await createReader();
+		let feed = await follow(user);
+		let folderId = await folderNamed(user, "Tech");
+
+		await user.fileFeed(feed.id, { folderId });
+		let removed = await user.fileFeed(feed.id, null);
+
+		expect(removed).toEqual({ ok: true, folder: null, moved: 3 });
+		expect(titles(await user.folderTimeline(folderId))).toEqual([]);
+		expect((await user.getFeed(feed.id))?.folderId).toBeNull();
+	});
+
+	/**
+	 * The folder orders nothing, so nothing a reader is holding a place in can move under
+	 * them: the page after a cursor is the page it would have been.
+	 */
+	test("moves no row within the ordering, so a cursor in flight skips nothing", async () => {
+		let { user } = await createReader();
+		let feed = await follow(user);
+		let folderId = await folderNamed(user, "Tech");
+
+		let first = await user.readingQueue({ readState: "all", limit: 2 });
+		if (!first.ok) throw new Error(first.reason);
+		expect(titles(first)).toEqual(["Third", "Second"]);
+
+		await user.fileFeed(feed.id, { folderId });
+
+		let next = await user.readingQueue({ readState: "all", cursor: first.cursors.next });
+		expect(titles(next)).toEqual(["First"]);
+	});
+
+	/**
+	 * A cursor records the exact column names it was minted for, and every timeline here is
+	 * spelled by one shared ordering — so a place kept on one surface is a place the others
+	 * can resume from.
+	 */
+	test("mints a folder's cursor over the columns every other timeline mints its own over", async () => {
+		let { user } = await createReader();
+		let feed = await follow(user);
+		let folderId = await folderNamed(user, "Tech");
+		await user.fileFeed(feed.id, { folderId });
+
+		let folderPage = await user.folderTimeline(folderId, { limit: 2 });
+		if (!folderPage.ok) throw new Error(folderPage.reason);
+
+		let feedPage = await user.feedTimeline(feed.id, { limit: 2 });
+		if (!feedPage.ok) throw new Error(feedPage.reason);
+
+		expect(titles(await user.feedTimeline(feed.id, { cursor: folderPage.cursors.next }))).toEqual([
+			"First",
+		]);
+		expect(titles(await user.folderTimeline(folderId, { cursor: feedPage.cursors.next }))).toEqual([
+			"First",
+		]);
+	});
+
+	test("writes an arriving post into the folder its feed is in, on insert and on edit", async () => {
+		let { user, state } = await createReader();
+		let feed = await follow(user);
+		let folderId = await folderNamed(user, "Tech");
+		await user.fileFeed(feed.id, { folderId });
+
+		await publish(feed, [...ENTRIES, entryAt("d", "Fourth", 0)]);
+		await user.synchronize();
+
+		let arrived = await user.folderTimeline(folderId);
+		expect(titles(arrived)).toContain("Fourth");
+
+		// A publisher's correction arrives as the same item again, and lands where its feed
+		// is rather than where it was when the item was first written.
+		await publish(feed, [...ENTRIES, entryAt("d", "Fourth, corrected", 0)]);
+		await user.synchronize();
+
+		expect(titles(await user.folderTimeline(folderId))).toContain("Fourth, corrected");
+		expect(storedItems(state, feed.id).length).toBe(4);
+	});
+
+	/**
+	 * The copy on the post has exactly one source — the subscription's own column — and
+	 * synchronization writes it from the row it is already holding, so a move that got
+	 * halfway is corrected by the next poll rather than drifting.
+	 */
+	test("heals a move interrupted between the subscription and its posts", async () => {
+		let { user, state } = await createReader();
+		let feed = await follow(user);
+		let folderId = await folderNamed(user, "Tech");
+
+		// The subscription moved and its posts did not, which is the half-written state.
+		state.storage.sql.exec("UPDATE feeds SET folder_id = ? WHERE id = ?", folderId, feed.id);
+
+		await publish(feed, [entryAt("a", "First, corrected", 3 * DAY_MS)]);
+		await user.synchronize();
+
+		expect(titles(await user.folderTimeline(folderId))).toEqual(["First, corrected"]);
+	});
+
+	test("unfiles a folder's feeds when it is deleted, and deletes no post", async () => {
+		let { user, state } = await createReader();
+		let feed = await follow(user);
+		let folderId = await folderNamed(user, "Tech");
+		await user.fileFeed(feed.id, { folderId });
+
+		expect(await user.deleteFolder(folderId)).toEqual({ ok: true, title: "Tech", feeds: 1 });
+
+		expect(storedItems(state, feed.id).length).toBe(3);
+		expect((await user.getFeed(feed.id))?.folderId).toBeNull();
+		expect(await user.listFolders()).toEqual([]);
+		expect(storedFolder(state, storedItems(state, feed.id)[0] ?? "")).toBeNull();
+	});
+
+	test("renames one row, and refuses a name another folder already reads under", async () => {
+		let { user } = await createReader();
+		let feed = await follow(user);
+		let folderId = await folderNamed(user, "Tech");
+		await user.fileFeed(feed.id, { folderId });
+		await folderNamed(user, "News");
+
+		expect(await user.renameFolder(folderId, "Programming")).toEqual({
+			ok: true,
+			folder: { id: folderId, title: "Programming" },
+		});
+
+		// The posts hold the folder by its id, which a name never was.
+		expect(titles(await user.folderTimeline(folderId))).toHaveLength(3);
+
+		expect(await user.renameFolder(folderId, "News")).toEqual({
+			ok: false,
+			reason: "duplicate-title",
+		});
+	});
+
+	/** Filing by name is an upsert, which is what an import needs to be idempotent. */
+	test("files under a name, making the folder only where the reader has none by it", async () => {
+		let { user } = await createReader();
+		let one = await follow(user);
+		let other = await follow(user, "https://other.example.com/feed.xml", [
+			entryAt("x", "Elsewhere", HOUR_MS),
+		]);
+
+		let filed = await user.fileFeed(one.id, { title: " Tech " });
+		if (!filed.ok || filed.folder === null) throw new Error("expected the feed to be filed");
+
+		let again = await user.fileFeed(other.id, { title: "Tech" });
+		if (!again.ok || again.folder === null) throw new Error("expected the feed to be filed");
+
+		expect(again.folder.id).toBe(filed.folder.id);
+		expect(await user.listFolders()).toHaveLength(1);
+		expect(titles(await user.folderTimeline(filed.folder.id))).toHaveLength(4);
+	});
+
+	test("reports a folder the reader does not have, and a feed they do not follow", async () => {
+		let { user } = await createReader();
+		let feed = await follow(user);
+
+		expect(await user.fileFeed(feed.id, { folderId: "nope" })).toEqual({
+			ok: false,
+			reason: "not-found",
+		});
+		expect(await user.fileFeed("nope", null)).toEqual({ ok: false, reason: "not-following" });
+		expect(await user.fileFeed(feed.id, { title: "   " })).toEqual({
+			ok: false,
+			reason: "invalid-title",
+		});
+		expect(await user.deleteFolder("nope")).toEqual({ ok: false, reason: "not-found" });
+	});
+
+	test("carries each feed's folder onto the list the rail is drawn from", async () => {
+		let { user } = await createReader();
+		let one = await follow(user);
+		await follow(user, "https://other.example.com/feed.xml", [entryAt("x", "Elsewhere", HOUR_MS)]);
+
+		let folderId = await folderNamed(user, "Tech");
+		await user.fileFeed(one.id, { folderId });
+
+		let listed = await user.listFeeds();
+
+		expect(
+			listed.map((feed) => [feed.id, feed.folderId, feed.folderTitle, feed.unreadCount]),
+		).toEqual([
+			[one.id, folderId, "Tech", 3],
+			[expect.any(String), null, null, 1],
+		]);
+	});
+
+	/**
+	 * The budget counts posts and a folder stores none, so the divisor stays how many feeds
+	 * the reader follows however they have filed them.
+	 */
+	test("changes no retention arithmetic: the share is still the budget over the feeds", async () => {
+		let { user, state } = await createReader();
+		let filed = seedFeed(state, { id: "filed" });
+		let loose = seedFeed(state, { id: "loose" });
+
+		seedItems(
+			state,
+			filed,
+			Array.from({ length: 6 }, (_unused, index) => ({
+				id: `filed-${index}`,
+				publishedAt: index,
+				readAt: 1,
+			})),
+		);
+		seedItems(state, loose, [{ id: "loose-0", publishedAt: 0, readAt: 1 }]);
+
+		let folderId = await folderNamed(user, "Tech");
+		await user.fileFeed(filed, { folderId });
+
+		// Four posts across two feeds, so each feed's share is two and the filed one is over
+		// it by four — which is what comes back, exactly as it would unfiled.
+		await setBudget(4);
+		await user.synchronize();
+
+		expect(storedItems(state, filed)).toEqual(["filed-4", "filed-5"]);
+		expect(storedItems(state, loose)).toEqual(["loose-0"]);
 	});
 });
 

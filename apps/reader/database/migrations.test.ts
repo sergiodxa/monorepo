@@ -41,6 +41,8 @@ describe("runMigrations", () => {
 			"0004-read-timeline-index",
 			"0005-feed-title-index",
 			"0006-shared-feed-objects",
+			"0007-folders",
+			"0008-tier",
 		]);
 	});
 
@@ -74,6 +76,9 @@ describe("runMigrations", () => {
 			"feed_items_read_timeline_idx",
 			"feed_items_saved_idx",
 			"feeds_title_idx",
+			"folders",
+			"folders_title_idx",
+			"feed_items_folder_timeline_idx",
 		]) {
 			expect(names, `${name} exists`).toContain(name);
 		}
@@ -154,6 +159,37 @@ describe("schema constraints", () => {
 		expect(() => insert("i3", "f2")).not.toThrow();
 	});
 
+	/**
+	 * Two rows called Tech are two rows a reader cannot tell apart in a rail, and the
+	 * uniqueness is also what makes filing by name an upsert rather than a duplicate.
+	 */
+	test("refuses a second folder by a name the reader already uses", async () => {
+		await migrate();
+		let insert = (id: string, title: string) =>
+			sql.exec(
+				`INSERT INTO folders (id, title, created_at, updated_at) VALUES (?, ?, 0, 0)`,
+				id,
+				title,
+			);
+
+		insert("d1", "Tech");
+		expect(() => insert("d2", "Tech")).toThrow();
+		/** Uniqueness is over bytes, as everywhere else here, so these are two folders. */
+		expect(() => insert("d3", "tech")).not.toThrow();
+	});
+
+	test("leaves every existing row in no folder, which is what the column means", async () => {
+		await migrate();
+		sql.exec(
+			`INSERT INTO feeds (id, feed_id, feed_url, title, created_at, updated_at)
+			 VALUES ('f1', 'canonical-1', 'https://example.com/feed', 't', 0, 0)`,
+		);
+
+		let [row] = [...sql.exec<{ folder_id: string | null }>(`SELECT folder_id FROM feeds`)];
+
+		expect(row?.folder_id).toBeNull();
+	});
+
 	test("refuses a second subscription to one canonical feed", async () => {
 		await migrate();
 		let insert = (id: string, feedId: string) =>
@@ -218,6 +254,42 @@ describe("query plans", () => {
 		);
 
 		expect(plan).toContain("feed_items_feed_timeline_idx");
+		expect(plan).not.toContain("USE TEMP B-TREE FOR ORDER BY");
+	});
+
+	/**
+	 * The whole point of the folder living on the post: a page of a group is the page of
+	 * one feed with the leading column changed, so neither the reader's history nor how
+	 * many feeds are in the folder enters what it costs.
+	 */
+	test("answers a folder's timeline from its partial index, without sorting", async () => {
+		await migrate();
+
+		let plan = queryPlan(
+			`SELECT id, feed_id, title, published_at FROM feed_items WHERE folder_id = 'd1'
+			 ORDER BY published_at DESC, id DESC LIMIT 50`,
+		);
+
+		expect(plan).toContain("feed_items_folder_timeline_idx");
+		expect(plan).not.toContain("USE TEMP B-TREE FOR ORDER BY");
+	});
+
+	/**
+	 * The page past the first is the one a reader scrolling spends their time in, and it
+	 * is a different statement: the seek on the ordering columns has to stay on the same
+	 * index rather than falling back to a sort of every post in the folder.
+	 */
+	test("keeps a folder's seeked page on that index, without sorting", async () => {
+		await migrate();
+
+		let plan = queryPlan(
+			`SELECT id, feed_id, title, published_at FROM feed_items
+			 WHERE folder_id = 'd1'
+			   AND (published_at < 100 OR (published_at = 100 AND id < 'i9'))
+			 ORDER BY published_at DESC, id DESC LIMIT 50`,
+		);
+
+		expect(plan).toContain("feed_items_folder_timeline_idx");
 		expect(plan).not.toContain("USE TEMP B-TREE FOR ORDER BY");
 	});
 

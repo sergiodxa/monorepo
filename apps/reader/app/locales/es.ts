@@ -206,6 +206,14 @@ export default {
 				notFound: "En esa dirección no hay ningún feed RSS ni Atom.",
 				unreachable: "No se pudo llegar a esa dirección. Inténtalo de nuevo en un momento.",
 				alreadyFollowing: "Ya sigues ese feed.",
+				/**
+				 * The one refusal here whose sentence carries a number, because the way out is the
+				 * reader's and it is a count. It names both ways out and puts neither first.
+				 */
+				overLimit_one:
+					"Tu plan sigue {{count}} feed. Deja de seguir uno, o cambia de plan, para seguir otro.",
+				overLimit_other:
+					"Tu plan sigue {{count}} feeds. Deja de seguir uno, o cambia de plan, para seguir otro.",
 			},
 		},
 
@@ -329,6 +337,69 @@ export default {
 		},
 	},
 
+	/**
+	 * Named groups of subscriptions, each read as one stream. A folder is somewhere a
+	 * reader goes rather than a place posts are kept, which is why nothing here talks about
+	 * losing any.
+	 */
+	folders: {
+		created: "Carpeta creada.",
+		renamed: "Carpeta renombrada.",
+		duplicate: "Ya tienes una carpeta con ese nombre.",
+		invalid: "Una carpeta necesita un nombre.",
+
+		/** The field both the naming forms type into. */
+		name: {
+			label: "Nombre de la carpeta",
+			placeholder: "Nombra esta carpeta…",
+		},
+
+		create: {
+			legend: "Crear una carpeta",
+			submit: "Nueva carpeta",
+		},
+
+		rename: {
+			legend: "Renombrar esta carpeta",
+			submit: "Renombrar",
+		},
+
+		delete: {
+			title: "Eliminar una carpeta",
+			submit: "Eliminar carpeta",
+			/** Backs out of the prompt, leaving the folder as it is. */
+			cancel: "Cancelar",
+			/** Says what is lost, which is the filing and nothing else. */
+			confirm:
+				"¿Eliminar {{title}}? Sus feeds vuelven con los que no están en ninguna carpeta y conservan todas sus entradas.",
+		},
+
+		/** Putting one feed into a folder, from that feed's own page. */
+		file: {
+			legend: "En qué carpeta se lee este feed",
+			description: "Elige una carpeta o nombra una nueva.",
+			/** What the control says for a feed the reader has filed nowhere. */
+			none: "Sin carpeta",
+			remove: "Sacar de esta carpeta",
+			submit: "Guardar",
+			filed: "Guardado en la carpeta.",
+			unfiled: "Sacado de su carpeta.",
+			gone: "Esa carpeta ya no es una de las tuyas.",
+		},
+
+		empty: {
+			title: "Aquí todavía no hay nada",
+			description:
+				"Guarda un feed en esta carpeta desde la página de ese feed y sus entradas aparecen aquí.",
+		},
+
+		notFound: {
+			title: "Carpeta no encontrada",
+			description: "No tienes una carpeta con esa dirección.",
+			back: "Volver a tu lectura",
+		},
+	},
+
 	items: {
 		read: {
 			title: "Marcar como leído",
@@ -360,6 +431,49 @@ export default {
 		},
 		lastRefreshed: "Revisado por última vez el {{date}}",
 		neverRefreshed: "Aún sin revisar",
+
+		/**
+		 * What the reader is on and what it allows, said in numbers. Nothing here counts down,
+		 * because nothing expires and nothing is deleted: a countdown on a page where nothing
+		 * is going to happen is urgency invented to sell.
+		 */
+		plan: {
+			legend: "Tu plan",
+			current: "Estás en {{plan}}.",
+			names: {
+				free: "Gratis",
+				paid: "De pago",
+				premium: "Premium",
+			},
+			/** What each plan allows, as the numbers the reader is measured against. */
+			allowance: "{{feeds}} feeds, {{saved}} entradas guardadas.",
+			usage: "Sigues {{feeds}} feeds y tienes {{saved}} entradas guardadas.",
+			upgrade: "Cambiar a {{plan}}",
+			manage: "Gestionar la facturación",
+			/**
+			 * A failed card is not a data event on the day it fails. The sentence says what is
+			 * true — nothing has changed — and points at the page where a card is replaced.
+			 */
+			lapsed:
+				"Tu pago no se completó. Nada ha cambiado y todo lo que sigues está aquí. Actualiza tu tarjeta para que siga así.",
+			/**
+			 * Over a limit, stated as the two ways out and no third. Both belong to the reader,
+			 * and nothing of theirs is deleted while they decide.
+			 */
+			over: {
+				legend: "Por encima de tu plan",
+				description:
+					"No se ha borrado nada, y no se borrará. Las altas nuevas están en pausa hasta que vuelvas dentro de estos números o pases a un plan mayor.",
+				feeds_one: "Deja de seguir {{count}} feed, o cambia de plan.",
+				feeds_other: "Deja de seguir {{count}} feeds, o cambia de plan.",
+				saved_one: "Quita {{count}} entrada guardada, o cambia de plan.",
+				saved_other: "Quita {{count}} entradas guardadas, o cambia de plan.",
+				posts_one: "{{count}} entrada por encima de lo que guarda este plan.",
+				posts_other: "{{count}} entradas por encima de lo que guarda este plan.",
+				rules_one: "{{count}} regla por encima de las que ejecuta este plan.",
+				rules_other: "{{count}} reglas por encima de las que ejecuta este plan.",
+			},
+		},
 	},
 
 	/** What stands in for a part of a page that did not load. */

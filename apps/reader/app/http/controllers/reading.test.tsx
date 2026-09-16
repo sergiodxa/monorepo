@@ -967,6 +967,8 @@ describe("the sidebar beside the queue", () => {
 				imageUrl: null,
 				velocity: "evergreen",
 				unreadCount: index,
+				folderId: null,
+				folderTitle: null,
 			})),
 		);
 

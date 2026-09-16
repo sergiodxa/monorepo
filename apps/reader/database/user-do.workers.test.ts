@@ -138,7 +138,14 @@ describe("the USER binding", () => {
 
 		// The row exists only because the schema does, which needs the class to hold
 		// SQLite rather than the key-value storage a `new_classes` migration would give it.
-		expect(await stub.ensureUser(name)).toEqual({ subject: name, lastRefreshedAt: null });
+		expect(await stub.ensureUser(name)).toEqual({
+			subject: name,
+			lastRefreshedAt: null,
+			tier: "free",
+			tierSource: "default",
+			graceUntil: null,
+			tierCheckedAt: 0,
+		});
 	});
 
 	test("answers every request that raced the boot, because the constructor gates them", async () => {
@@ -195,6 +202,10 @@ describe("the USER binding", () => {
 		expect(await env.USER.getByName(name).getSettings()).toEqual({
 			subject: name,
 			lastRefreshedAt: null,
+			tier: "free",
+			tierSource: "default",
+			graceUntil: null,
+			tierCheckedAt: 0,
 		});
 
 		expect(env.USER.getByName(name).id.toString()).toBe(env.USER.getByName(name).id.toString());

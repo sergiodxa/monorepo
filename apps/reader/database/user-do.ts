@@ -37,9 +37,27 @@ import {
 	sql,
 } from "remix/data-table";
 
+import type { LimitRefusal, Tier, TierLimits, TierSource } from "~/app/lib/entitlement";
 import type { FeedStore } from "~/database/feed-do";
-import type { SelectFeed, SelectFeedItem, SelectSettings, Velocity } from "~/database/schema";
+import type {
+	SelectFeed,
+	SelectFeedItem,
+	SelectFolder,
+	SelectSettings,
+	Velocity,
+} from "~/database/schema";
 
+import {
+	DEFAULT_TIER,
+	DEFAULT_TIER_SOURCE,
+	effectiveTier,
+	isTier,
+	isTierSource,
+	limitRefusal,
+	limitsOf,
+	tierRank,
+	withinLimit,
+} from "~/app/lib/entitlement";
 import { features, flagsFor } from "~/app/lib/flags";
 import { logger } from "~/bootstrap/logger";
 import { feedStore } from "~/database/feed-do";
@@ -51,7 +69,7 @@ import {
 	DEFAULT_VELOCITY,
 	feedItems,
 	feeds,
-	SAVED_LIMIT,
+	folders,
 	settings,
 	VELOCITIES,
 	VELOCITY_WINDOW_MS,
@@ -159,6 +177,61 @@ export namespace UserStore {
 		subject: string;
 		/** Epoch milliseconds of the last synchronization, or `null` before the first one. */
 		lastRefreshedAt: number | null;
+		/** What every limit check on this object compares against. */
+		tier: Tier;
+		/** Whether the platform put the tier there or a person did. */
+		tierSource: TierSource;
+		/** When the lapse window runs out, or `null` while the reader has not lapsed. */
+		graceUntil: number | null;
+		/** Epoch milliseconds a snapshot last confirmed the tier, and `0` before the first. */
+		tierCheckedAt: number;
+	}
+
+	/** What the platform says a reader holds, as the one writer of the tier takes it. */
+	export interface TierSnapshot {
+		/** The tier the snapshot's settled products grant. */
+		entitled: Tier;
+		/** Whether the reader asked for the subscription to stop renewing. */
+		cancelled: boolean;
+		/** Epoch milliseconds the platform answered at. */
+		readAt: number;
+		/** Whether this snapshot speaks for the platform or for a person. */
+		source: TierSource;
+	}
+
+	/** What a snapshot did to the stored tier, or why it left it alone. */
+	export type TierResult =
+		| { ok: true; from: Tier; to: Tier; graceUntil: number | null }
+		| {
+				ok: false;
+				/**
+				 * `stale` for a snapshot read before the stored one, so the later read wins
+				 * whichever write arrives second; `granted` for a tier a person put there,
+				 * which the platform is not allowed to lower.
+				 */
+				reason: "stale" | "granted";
+				tier: Tier;
+				graceUntil: number | null;
+		  };
+
+	/** What a limit refused, as a caller renders the sentence about it. */
+	export type Limit = LimitRefusal;
+
+	/** What the reader is entitled to, and where they stand against it. */
+	export interface Entitlement {
+		tier: Tier;
+		source: TierSource;
+		graceUntil: number | null;
+		tierCheckedAt: number;
+		limits: TierLimits;
+		/** Every limit the reader is over, with how many they hold and how many they may. */
+		over: LimitRefusal[];
+		/** How many feeds they follow. */
+		feeds: number;
+		/** How many posts they have saved. */
+		saved: number;
+		/** How many posts their object holds. */
+		posts: number;
 	}
 
 	/** A followed feed, with the unread count the feed list shows beside it. */
@@ -175,7 +248,51 @@ export namespace UserStore {
 		/** How long a post from this feed stays in this reader's timeline. */
 		velocity: Velocity;
 		unreadCount: number;
+		/** The group the reader filed it into, or `null` for a subscription they have not. */
+		folderId: string | null;
+		/** That group's name, carried beside the id so a rail draws it without a second read. */
+		folderTitle: string | null;
 	}
+
+	/** One of the reader's groups of subscriptions, which is the whole of what a folder is. */
+	export interface Folder {
+		id: string;
+		title: string;
+	}
+
+	/**
+	 * Where a feed is being filed: a folder that exists, a name to file it under — which
+	 * creates the folder when the reader has none by that name — or `null` to unfile it.
+	 */
+	export type FolderTarget = { folderId: string } | { title: string } | null;
+
+	/** Why a folder was not created, renamed or found. */
+	export type FolderFailure =
+		/** No folder of the reader's has that id. */
+		| "not-found"
+		/** The name held nothing but space, which no rail could draw a row for. */
+		| "invalid-title"
+		/** The reader already has a folder by that name, and two would read alike. */
+		| "duplicate-title";
+
+	export type FolderResult = { ok: true; folder: Folder } | { ok: false; reason: FolderFailure };
+
+	/**
+	 * What filing a feed did. `moved` counts the posts that followed the subscription into
+	 * the folder, which is the write a reader pays for once so every page of the folder is
+	 * a seek, and `folder` is `null` for a feed put back among the unfiled.
+	 */
+	export type FileResult =
+		| { ok: true; folder: Folder | null; moved: number }
+		| { ok: false; reason: "not-following" | "not-found" | "invalid-title" };
+
+	/**
+	 * What deleting a folder did. A folder holds no posts, so `feeds` counts the
+	 * subscriptions that came back unfiled and no post was deleted to produce it.
+	 */
+	export type FolderRemoval =
+		| { ok: true; title: string; feeds: number }
+		| { ok: false; reason: "not-found" };
 
 	/**
 	 * The feed one timeline item came from, carried alongside the items rather than
@@ -257,11 +374,18 @@ export namespace UserStore {
 		/** The origin refused, timed out, or answered with an error status. */
 		| "unreachable"
 		/** Already followed; `feedId` names the existing subscription. */
-		| "already-following";
+		| "already-following"
+		/** The reader holds as many feeds as their tier allows; `limit` says how many. */
+		| "over-limit";
 
 	export type FollowResult =
 		| { ok: true; feed: FeedSummary; items: number }
-		| { ok: false; reason: FollowFailure; feedId: string | null };
+		| {
+				ok: false;
+				reason: Exclude<FollowFailure, "over-limit">;
+				feedId: string | null;
+		  }
+		| { ok: false; reason: "over-limit"; feedId: null; limit: Limit };
 
 	/** What a sweep of every followed feed got through. */
 	export interface CheckAllResult {
@@ -280,6 +404,15 @@ export namespace UserStore {
 		title: string;
 		feedUrl: string;
 		siteUrl: string | null;
+		/** The folder it is filed in, which the document writes as the outline around it. */
+		folder: string | null;
+	}
+
+	/** One subscription an import found, with the folder its document filed it under. */
+	export interface ImportEntry {
+		feedUrl: string;
+		/** The name of the outline around it, or `null` for one listed at the top level. */
+		folder?: string | null;
 	}
 
 	/** What an OPML document's subscriptions became. */
@@ -351,7 +484,10 @@ export namespace UserStore {
 	 */
 	export type SaveFailure = "not-found" | "full";
 
-	export type SaveResult = { ok: true; saved: boolean } | { ok: false; reason: SaveFailure };
+	export type SaveResult =
+		| { ok: true; saved: boolean }
+		| { ok: false; reason: "not-found" }
+		| { ok: false; reason: "full"; limit: Limit };
 }
 
 /**
@@ -402,6 +538,104 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	async getSettings(): Promise<UserStore.Settings | null> {
 		let row = await this.#db.find(settings, { id: SETTINGS_ID });
 		return row === null ? null : toSettings(row);
+	}
+
+	/**
+	 * Writes what the platform says this reader holds, and answers what that did to their
+	 * tier. It is the only way the column moves: this object never computes a tier, never
+	 * raises one, and has no path to the platform or to the catalog through which it could.
+	 *
+	 * Upgrades land at once, a cancellation the reader asked for drops as they asked, and
+	 * anything else that would lower the tier opens a fortnight's grace and drops only once
+	 * that has run out. Nothing is deleted either way.
+	 *
+	 * @param snapshot - What the platform answered, and when it answered it.
+	 * @example let applied = await userStore(subject).setTier({ entitled, cancelled, readAt, source });
+	 */
+	async setTier(snapshot: UserStore.TierSnapshot): Promise<UserStore.TierResult> {
+		let row = await this.#settingsRow();
+		let current = storedTier(row);
+		let source = storedTierSource(row);
+		let graceUntil = row.grace_until;
+
+		/**
+		 * A read taken before the one already stored says nothing newer, so the later read
+		 * wins whichever of the two writes arrives second.
+		 */
+		if (snapshot.readAt < row.tier_checked_at) {
+			return { ok: false, reason: "stale", tier: current, graceUntil };
+		}
+
+		/**
+		 * A tier a person granted outlives what the platform says about the money, which is
+		 * what makes a staff account, a comp and a trial expressible in this column.
+		 */
+		if (
+			source === "grant" &&
+			snapshot.source === "billing" &&
+			tierRank(snapshot.entitled) < tierRank(current)
+		) {
+			return { ok: false, reason: "granted", tier: current, graceUntil };
+		}
+
+		let decided =
+			snapshot.source === "grant"
+				? { tier: snapshot.entitled, graceUntil: null }
+				: effectiveTier(
+						{ entitled: snapshot.entitled, cancelled: snapshot.cancelled },
+						{ tier: current, graceUntil },
+						Date.now(),
+					);
+
+		await this.#db.update(
+			settings,
+			{ id: SETTINGS_ID },
+			{
+				tier: decided.tier,
+				tier_source: snapshot.source,
+				grace_until: decided.graceUntil,
+				tier_checked_at: snapshot.readAt,
+			},
+		);
+
+		return { ok: true, from: current, to: decided.tier, graceUntil: decided.graceUntil };
+	}
+
+	/**
+	 * What this reader may do, and where they stand against it. Every number comes from
+	 * this object's own rows, so the panel that explains an over-limit state costs the same
+	 * local queries a limit check does.
+	 *
+	 * A limit the reader is over is reported rather than acted on: a tier change deletes
+	 * nothing, and coming back is one column write.
+	 */
+	async entitlement(): Promise<UserStore.Entitlement> {
+		let row = await this.#settingsRow();
+		let tier = storedTier(row);
+
+		let [followed, saved, posts] = await Promise.all([
+			this.#db.count(feeds, { where: isNull("unfollowed_at") }),
+			this.#db.count(feedItems, { where: notNull("saved_at") }),
+			this.#db.count(feedItems),
+		]);
+
+		let measured: UserStore.Limit[] = [
+			limitRefusal(tier, "feeds", followed),
+			limitRefusal(tier, "saved", saved),
+			limitRefusal(tier, "posts", posts),
+		];
+
+		return {
+			tier,
+			source: storedTierSource(row),
+			graceUntil: row.grace_until,
+			tierCheckedAt: row.tier_checked_at,
+			limits: limitsOf(tier),
+			over: measured.filter((refusal) => refusal.current > refusal.allowed),
+			feeds: followed,
+			saved,
+			posts,
+		};
 	}
 
 	/**
@@ -507,35 +741,67 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			],
 		});
 
+		/** The folder names read once for the whole list, since a document groups by them. */
+		let byId = new Map((await this.listFolders()).map((folder) => [folder.id, folder.title]));
+
 		return rows.map((row) => ({
 			title: row.title,
 			feedUrl: row.feed_url,
 			siteUrl: row.site_url,
+			folder: row.folder_id === null ? null : (byId.get(row.folder_id) ?? null),
 		}));
 	}
 
 	/**
-	 * Follows each URL that is not already followed, and reports what became of the rest.
-	 * One unreachable feed in a document of fifty leaves the other forty-nine followed.
+	 * Follows each URL that is not already followed, files what it followed under the folder
+	 * its document named, and reports what became of the rest. One unreachable feed in a
+	 * document of fifty leaves the other forty-nine followed.
+	 *
+	 * A feed the reader already follows stays exactly where they put it: a document arriving
+	 * from somewhere else is not a licence to refile a list somebody has already organized.
+	 *
+	 * @param entries - The subscriptions the document listed, each with its folder's name.
 	 */
-	async importFeeds(feedUrls: string[]): Promise<UserStore.ImportResult> {
+	async importFeeds(entries: readonly UserStore.ImportEntry[]): Promise<UserStore.ImportResult> {
 		let result: UserStore.ImportResult = { added: 0, alreadyFollowing: 0, failed: [] };
 
 		// A document listing the same URL twice names one subscription, and the second pass
 		// would otherwise race the first into the unique index on `feed_url`.
-		let requested = [...new Set(feedUrls)];
+		let requested = new Map<string, UserStore.ImportEntry>();
+		for (let entry of entries) {
+			if (!requested.has(entry.feedUrl)) requested.set(entry.feedUrl, entry);
+		}
 
-		await inParallel(requested, async (feedUrl) => {
+		/**
+		 * One promise per folder name, so twenty feeds filed under Tech await the same
+		 * creation rather than twenty of them reading an empty table at once and racing each
+		 * other into the unique index on the title.
+		 */
+		let opened = new Map<string, Promise<SelectFolder>>();
+		let folderByTitle = (title: string): Promise<SelectFolder> => {
+			let pending = opened.get(title) ?? this.#folderByTitle(title);
+			opened.set(title, pending);
+			return pending;
+		};
+
+		await inParallel([...requested.values()], async (entry) => {
 			try {
-				let followed = await this.followFeed(feedUrl);
+				let followed = await this.followFeed(entry.feedUrl);
 
-				if (followed.ok) result.added += 1;
-				else if (followed.reason === "already-following") result.alreadyFollowing += 1;
-				else result.failed.push(feedUrl);
+				if (followed.ok) {
+					result.added += 1;
+
+					let title = entry.folder?.trim() ?? "";
+					if (title.length > 0) {
+						let folder = await folderByTitle(title);
+						await this.fileFeed(followed.feed.id, { folderId: folder.id });
+					}
+				} else if (followed.reason === "already-following") result.alreadyFollowing += 1;
+				else result.failed.push(entry.feedUrl);
 			} catch {
 				// Whatever went wrong belongs to this URL alone, so the rest of the document
 				// still lands and the reader is told which one did not.
-				result.failed.push(feedUrl);
+				result.failed.push(entry.feedUrl);
 			}
 		});
 
@@ -550,7 +816,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * partway down somebody's subscriptions with no way on.
 	 */
 	async listFeeds(): Promise<UserStore.FeedSummary[]> {
-		let [rows, unread] = await Promise.all([
+		let [rows, unread, filed] = await Promise.all([
 			/**
 			 * The names, in order, so an eye running down the rail finds a feed by its name.
 			 * Bytes are what SQLite compares, which the index carries; the reader's own
@@ -564,9 +830,22 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 				],
 			}),
 			this.#unreadCounts(),
+			/**
+			 * The whole folder list read once and carried onto the rows, so a rail drawn under
+			 * folder names costs the same read it costs without them.
+			 */
+			this.listFolders(),
 		]);
 
-		return rows.map((row) => toFeedSummary(row, unread.get(row.id) ?? 0));
+		let byId = new Map(filed.map((folder) => [folder.id, folder]));
+
+		return rows.map((row) =>
+			toFeedSummary(
+				row,
+				unread.get(row.id) ?? 0,
+				row.folder_id === null ? null : (byId.get(row.folder_id) ?? null),
+			),
+		);
 	}
 
 	/** One followed feed, or `null` when this reader does not follow it. */
@@ -578,7 +857,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			where: and({ feed_id: feedId }, isNull("read_at")),
 		});
 
-		return toFeedSummary(row, unread);
+		return toFeedSummary(row, unread, await this.#folderOf(row));
 	}
 
 	/**
@@ -596,6 +875,15 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 		let pasted = await this.#subscriptionByUrl(target);
 		if (pasted !== null) return await this.#follow(pasted);
+
+		/**
+		 * Checked here rather than in the form that offers it, because an OPML import, the
+		 * public API and a replayed submission all reach this method without passing one.
+		 * A feed already followed is answered above, so nothing this refuses would have left
+		 * the count where it was.
+		 */
+		let room = await this.#roomForFeed();
+		if (room !== null) return { ok: false, reason: "over-limit", feedId: null, limit: room };
 
 		/**
 		 * The one external request made outside a feed's own object, and the step that
@@ -876,7 +1164,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			where: and({ feed_id: feedId }, isNull("read_at")),
 		});
 
-		return { ok: true, feed: toFeedSummary(updated, unread) };
+		return { ok: true, feed: toFeedSummary(updated, unread, await this.#folderOf(updated)) };
 	}
 
 	/**
@@ -902,8 +1190,12 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 		if (item.saved_at !== null) return { ok: true, saved: true };
 
+		let tier = storedTier(await this.#settingsRow());
 		let kept = await this.#db.count(feedItems, { where: notNull("saved_at") });
-		if (kept >= SAVED_LIMIT) return { ok: false, reason: "full" };
+
+		if (!withinLimit(tier, "saved", kept)) {
+			return { ok: false, reason: "full", limit: limitRefusal(tier, "saved", kept) };
+		}
 
 		await this.#db.update(feedItems, { id: itemId }, { saved_at: Date.now() });
 
@@ -959,6 +1251,166 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		return this.#page(this.#timeline().where({ feed_id: feedId }), options);
 	}
 
+	/**
+	 * One folder's posts, read and unread alike, newest first — every post of every feed
+	 * filed there, as one stream.
+	 *
+	 * The folder is on the post itself, so this is the page one feed's timeline is with the
+	 * leading column changed: one equality, a range on the cursor, and fifty entries walked
+	 * from where it lands. Neither the reader's history nor how many feeds are in the folder
+	 * enters what a page costs.
+	 *
+	 * @param folderId - The folder being read.
+	 * @param options - Where to page from, and how much of it.
+	 */
+	folderTimeline(
+		folderId: string,
+		options: UserStore.TimelineOptions = {},
+	): Promise<UserStore.TimelineResult> {
+		return this.#page(this.#timeline().where({ folder_id: folderId }), options);
+	}
+
+	/**
+	 * Every folder the reader has, in the order their names read.
+	 *
+	 * Unpaged, for the reason the subscription list is: the rail draws all of them, and a
+	 * folder list is shorter than the feeds under it.
+	 */
+	async listFolders(): Promise<UserStore.Folder[]> {
+		let rows = await this.#db.findMany(folders, { orderBy: [["title", "asc"]] });
+		return rows.map(toFolder);
+	}
+
+	/** One folder, or `null` when the reader has none by that id. */
+	async getFolder(folderId: string): Promise<UserStore.Folder | null> {
+		let row = await this.#db.find(folders, { id: folderId });
+		return row === null ? null : toFolder(row);
+	}
+
+	/**
+	 * Makes a folder to file feeds into. The name is the whole of it: there is no parent to
+	 * choose and no position to set, so the list reads in the order the names do.
+	 *
+	 * @param title - What to call it, which no other folder of this reader's may be called.
+	 */
+	async createFolder(title: string): Promise<UserStore.FolderResult> {
+		let name = title.trim();
+		if (name.length === 0) return { ok: false, reason: "invalid-title" };
+
+		let taken = await this.#db.findOne(folders, { where: { title: name } });
+		if (taken !== null) return { ok: false, reason: "duplicate-title" };
+
+		let folder = toFolder(await this.#createFolder(name));
+		this.#record("job", { event: "user.folder", action: "create", folderId: folder.id });
+
+		return { ok: true, folder };
+	}
+
+	/**
+	 * Renames a folder, which touches one row: everything else holds its id.
+	 *
+	 * @param folderId - The folder to rename.
+	 * @param title - What to call it instead.
+	 */
+	async renameFolder(folderId: string, title: string): Promise<UserStore.FolderResult> {
+		let name = title.trim();
+		if (name.length === 0) return { ok: false, reason: "invalid-title" };
+
+		let folder = await this.#db.find(folders, { id: folderId });
+		if (folder === null) return { ok: false, reason: "not-found" };
+
+		let taken = await this.#db.findOne(folders, { where: { title: name } });
+		if (taken !== null && taken.id !== folderId) return { ok: false, reason: "duplicate-title" };
+
+		let renamed = await this.#db.update(folders, { id: folderId }, { title: name });
+		this.#record("job", { event: "user.folder", action: "rename", folderId });
+
+		return { ok: true, folder: toFolder(renamed) };
+	}
+
+	/**
+	 * Deletes a folder, which deletes no post: its feeds come back unfiled, exactly as they
+	 * were before anybody made it, and their posts come with them.
+	 *
+	 * @param folderId - The folder to delete.
+	 */
+	async deleteFolder(folderId: string): Promise<UserStore.FolderRemoval> {
+		let folder = await this.#db.find(folders, { id: folderId });
+		if (folder === null) return { ok: false, reason: "not-found" };
+
+		let filed = await this.#db.count(feeds, { where: { folder_id: folderId } });
+
+		await this.#db.updateMany(feeds, { folder_id: null }, { where: { folder_id: folderId } });
+		await this.#db.updateMany(feedItems, { folder_id: null }, { where: { folder_id: folderId } });
+		await this.#db.delete(folders, { id: folderId });
+
+		this.#record("job", {
+			event: "user.folder",
+			action: "delete",
+			folderId,
+			feeds: filed,
+		});
+
+		return { ok: true, title: folder.title, feeds: filed };
+	}
+
+	/**
+	 * Files a feed into a folder, or takes it out of the one it is in.
+	 *
+	 * The subscription moves and its posts move with it, which is what every later page of
+	 * that folder is a seek because of. The write is bounded by this feed's share of the
+	 * budget and is paid once, where the reader filed the feed, rather than on every page
+	 * they read it on.
+	 *
+	 * Filing by name creates the folder when the reader has none by that name, which is
+	 * where most folders come from and what lets an import file a feed under the name its
+	 * document used.
+	 *
+	 * @param feedId - The subscription to file.
+	 * @param target - The folder, the name to file it under, or `null` to unfile it.
+	 */
+	async fileFeed(feedId: string, target: UserStore.FolderTarget): Promise<UserStore.FileResult> {
+		let feed = await this.#db.find(feeds, { id: feedId });
+		if (feed === null || feed.unfollowed_at !== null) {
+			return { ok: false, reason: "not-following" };
+		}
+
+		let folder: SelectFolder | null = null;
+
+		if (target !== null && "folderId" in target) {
+			folder = await this.#db.find(folders, { id: target.folderId });
+			if (folder === null) return { ok: false, reason: "not-found" };
+		}
+
+		if (target !== null && "title" in target) {
+			let name = target.title.trim();
+			if (name.length === 0) return { ok: false, reason: "invalid-title" };
+			folder = await this.#folderByTitle(name);
+		}
+
+		let folderId = folder === null ? null : folder.id;
+
+		/**
+		 * Counted before the write rather than read back from it, for the reason marking a
+		 * feed read is: what a write reports is rows of storage, and a post lives in the
+		 * table and in whichever partial indexes it qualifies for.
+		 */
+		let moved = await this.#db.count(feedItems, { where: { feed_id: feedId } });
+
+		await this.#db.update(feeds, { id: feedId }, { folder_id: folderId });
+		await this.#db.updateMany(feedItems, { folder_id: folderId }, { where: { feed_id: feedId } });
+
+		this.#record("job", {
+			event: "user.folder",
+			action: folderId === null ? "unfile" : "file",
+			folderId,
+			feedId: feed.feed_id,
+			items: moved,
+		});
+
+		return { ok: true, folder: folder === null ? null : toFolder(folder), moved };
+	}
+
 	/** Marks one post read or unread. `false` when no such post is stored. */
 	async markRead(itemId: string, read = true): Promise<boolean> {
 		let written = await this.#db.updateMany(
@@ -1011,6 +1463,22 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			{ id: SETTINGS_ID, subject, last_refreshed_at: null },
 			{ returnRow: true },
 		);
+	}
+
+	/**
+	 * Whether this reader has room for another subscription, answering the refusal to
+	 * report when they have not and `null` when they have.
+	 *
+	 * Both numbers are rows of this object, so the comparison is one local query in code
+	 * that was going to read the count anyway.
+	 */
+	async #roomForFeed(): Promise<UserStore.Limit | null> {
+		let tier = storedTier(await this.#settingsRow());
+		let followed = await this.#db.count(feeds, { where: isNull("unfollowed_at") });
+
+		if (withinLimit(tier, "feeds", followed)) return null;
+
+		return limitRefusal(tier, "feeds", followed);
 	}
 
 	/**
@@ -1083,6 +1551,36 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		await this.ctx.storage.setAlarm(next);
 	}
 
+	/**
+	 * The folder by that exact name, made when the reader has none by it.
+	 *
+	 * The upsert is what the unique title buys: filing by name is idempotent, so a document
+	 * naming one folder over twenty feeds creates it once and files twenty feeds into it.
+	 *
+	 * @param title - The name, already trimmed to what a rail would draw.
+	 */
+	async #folderByTitle(title: string): Promise<SelectFolder> {
+		let existing = await this.#db.findOne(folders, { where: { title } });
+		return existing ?? (await this.#createFolder(title));
+	}
+
+	/** Writes one folder row, minting the id every other row holds it by. */
+	async #createFolder(title: string): Promise<SelectFolder> {
+		return await this.#db.create(
+			folders,
+			{ id: TypeID.fromUUID("folder", generateUUID()).toString(), title },
+			{ returnRow: true },
+		);
+	}
+
+	/** The folder one subscription is filed in, or `null` for an unfiled one. */
+	async #folderOf(feed: SelectFeed): Promise<UserStore.Folder | null> {
+		if (feed.folder_id === null) return null;
+
+		let row = await this.#db.find(folders, { id: feed.folder_id });
+		return row === null ? null : toFolder(row);
+	}
+
 	/** Every feed this reader still follows, which is every list and sweep's starting point. */
 	async #subscriptions(): Promise<SelectFeed[]> {
 		return await this.#db.findMany(feeds, { where: isNull("unfollowed_at") });
@@ -1119,6 +1617,10 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * What the cursor may pass is anything the reader has ruled on: an item stored and an
 	 * item dropped for being older than this feed's velocity are both decided. An item whose
 	 * write failed, or that this run never reached, is neither.
+	 *
+	 * An empty page answered under a higher head takes the cursor to that head. A tick can be
+	 * spent on a row that was never written, and this reader would otherwise sit below a head
+	 * they can never reach; the head here is the true one, read from the feed in the same call.
 	 */
 	async #syncFeed(feed: SelectFeed): Promise<{ items: number; paused: boolean }> {
 		let stored = 0;
@@ -1137,9 +1639,23 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 		for (let page = 0; page < SYNC_PAGES_PER_FEED; page += 1) {
 			let answered = await feedStore(feed.feed_id).getItemsAfter(cursor);
-			if (answered.items.length === 0) break;
 
-			let kept = await this.#materialize(feed.id, answered.items, feed.velocity, now);
+			if (answered.items.length === 0) {
+				if (answered.head > cursor) {
+					cursor = answered.head;
+					await this.#db.update(feeds, { id: feed.id }, { cursor });
+				}
+
+				break;
+			}
+
+			let kept = await this.#materialize(
+				feed.id,
+				answered.items,
+				feed.velocity,
+				now,
+				feed.folder_id,
+			);
 
 			stored += kept;
 			skipped += answered.items.length - kept;
@@ -1169,19 +1685,23 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * An item already older than this subscription's velocity is not stored at all, so a
 	 * reader returning after a month to a feed they read for headlines materializes the last
 	 * few hours rather than a month of them to delete on the next sweep.
+	 *
+	 * @param folderId - The folder the subscription is filed in as this run holds it, which
+	 * the copies are written into so an item arriving twice lands where its feed is now.
 	 */
 	async #materialize(
 		subscriptionId: string,
 		incoming: readonly FeedStore.Item[],
 		velocity: Velocity,
 		now: number,
+		folderId: string | null = null,
 	): Promise<number> {
 		let window = VELOCITY_WINDOW_MS[velocity];
 		let kept = incoming.filter((item) => window === null || item.publishedAt >= now - window);
 		if (kept.length === 0) return 0;
 
 		for (let chunk of chunked(kept, insertChunkSize())) {
-			await this.#db.exec(...upsertItems(subscriptionId, chunk, now));
+			await this.#db.exec(...upsertItems(subscriptionId, chunk, now, folderId));
 		}
 
 		return kept.length;
@@ -1348,6 +1868,13 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			return { ok: false, reason: "already-following", feedId: existing.id };
 		}
 
+		/**
+		 * Taking a subscription back off the shelf adds to the count exactly as a new one
+		 * does, so it is held to the same cap.
+		 */
+		let room = await this.#roomForFeed();
+		if (room !== null) return { ok: false, reason: "over-limit", feedId: null, limit: room };
+
 		let revived = await this.#db.update(feeds, { id: existing.id }, { unfollowed_at: null });
 		await feedStore(existing.feed_id).subscribe(this.#subject(), existing.feed_url);
 
@@ -1356,7 +1883,11 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			where: and({ feed_id: existing.id }, isNull("read_at")),
 		});
 
-		return { ok: true, feed: toFeedSummary(revived, unread), items: synchronized.items };
+		return {
+			ok: true,
+			feed: toFeedSummary(revived, unread, await this.#folderOf(revived)),
+			items: synchronized.items,
+		};
 	}
 
 	/** The columns a timeline page reads, ordered and seeked by whoever pages it. */
@@ -1630,11 +2161,46 @@ export function userStore(subject: string): DurableObjectStub<UserDO> {
 
 /** A settings row as the RPC boundary reports it. */
 function toSettings(row: SelectSettings): UserStore.Settings {
-	return { subject: row.subject, lastRefreshedAt: row.last_refreshed_at };
+	return {
+		subject: row.subject,
+		lastRefreshedAt: row.last_refreshed_at,
+		tier: storedTier(row),
+		tierSource: storedTierSource(row),
+		graceUntil: row.grace_until,
+		tierCheckedAt: row.tier_checked_at,
+	};
 }
 
-/** A feed row and its unread count as the feed list renders them. */
-function toFeedSummary(row: SelectFeed, unreadCount: number): UserStore.FeedSummary {
+/**
+ * The tier a settings row holds. The column carries a `CHECK` listing exactly these
+ * names, so a value outside them is a row no statement of this app could have written,
+ * and the free tier is the answer that refuses rather than grants.
+ */
+function storedTier(row: SelectSettings): Tier {
+	return isTier(row.tier) ? row.tier : DEFAULT_TIER;
+}
+
+/** Where a settings row's tier came from, read under the same rule as the tier itself. */
+function storedTierSource(row: SelectSettings): TierSource {
+	return isTierSource(row.tier_source) ? row.tier_source : DEFAULT_TIER_SOURCE;
+}
+
+/** A folder row as the RPC boundary reports it, which is its id and its name. */
+function toFolder(row: SelectFolder): UserStore.Folder {
+	return { id: row.id, title: row.title };
+}
+
+/**
+ * A feed row and its unread count as the feed list renders them.
+ *
+ * @param folder - The group it is filed in, which a caller that has already read the
+ * reader's folders passes rather than making this read one per row.
+ */
+function toFeedSummary(
+	row: SelectFeed,
+	unreadCount: number,
+	folder: UserStore.Folder | null = null,
+): UserStore.FeedSummary {
 	return {
 		id: row.id,
 		feedId: row.feed_id,
@@ -1645,6 +2211,8 @@ function toFeedSummary(row: SelectFeed, unreadCount: number): UserStore.FeedSumm
 		imageUrl: row.image_url,
 		velocity: row.velocity,
 		unreadCount,
+		folderId: row.folder_id,
+		folderTitle: folder === null ? null : folder.title,
 	};
 }
 
@@ -1728,6 +2296,7 @@ const ITEM_COLUMNS = [
 	"summary",
 	"author",
 	"published_at",
+	"folder_id",
 	"created_at",
 	"updated_at",
 ] as const;
@@ -1744,14 +2313,20 @@ const ITEM_COLUMNS = [
  * `saved_at` is left out for the same reason as `read_at`: it is the reader's answer, not
  * the publisher's.
  *
+ * `folder_id` is written on both paths, because its one source is the subscription this
+ * statement is already holding: an item arriving twice lands in the folder its feed is in
+ * now, and a move that failed between the subscription and its posts heals here.
+ *
  * @param subscriptionId - This reader's own handle for the feed the items came from.
  * @param incoming - The items to write.
  * @param now - Epoch milliseconds the copies are stamped with.
+ * @param folderId - The folder that subscription is filed in, or `null` for an unfiled one.
  */
 function upsertItems(
 	subscriptionId: string,
 	incoming: readonly FeedStore.Item[],
 	now: number,
+	folderId: string | null,
 ): [string, unknown[]] {
 	let values: unknown[] = [];
 
@@ -1765,6 +2340,7 @@ function upsertItems(
 			item.summary,
 			item.author,
 			item.publishedAt,
+			folderId,
 			now,
 			now,
 		);
@@ -1781,6 +2357,7 @@ function upsertItems(
 		`"url" = excluded."url",`,
 		`"summary" = excluded."summary",`,
 		`"author" = excluded."author",`,
+		`"folder_id" = excluded."folder_id",`,
 		`"updated_at" = excluded."updated_at"`,
 	].join(" ");
 

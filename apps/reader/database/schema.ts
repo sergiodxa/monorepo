@@ -86,6 +86,17 @@ export const settings = table({
 		id: c.integer(),
 		subject: c.text(),
 		last_refreshed_at: c.integer().nullable(),
+		/** What every limit check reads, written only by the one RPC that takes a snapshot. */
+		tier: c.text().default("free"),
+		/** Whether the payment platform put the tier there or a person did. */
+		tier_source: c.text().default("default"),
+		/** When the lapse window runs out, and `null` while the reader has not lapsed. */
+		grace_until: c.integer().nullable(),
+		/**
+		 * When a snapshot last confirmed the tier. A write carrying an older read is refused,
+		 * so two snapshots landing out of order converge on the later one.
+		 */
+		tier_checked_at: c.integer().default(0),
 		created_at: c.integer(),
 		updated_at: c.integer(),
 	},
@@ -111,6 +122,8 @@ export const feeds = table({
 		unfollowed_at: c.integer().nullable(),
 		created_at: c.integer(),
 		updated_at: c.integer(),
+		/** The group the reader filed this subscription into, or `null` for an unfiled one. */
+		folder_id: c.text().nullable(),
 	},
 });
 
@@ -136,8 +149,38 @@ export const feedItems = table({
 		saved_at: c.integer().nullable(),
 		created_at: c.integer(),
 		updated_at: c.integer(),
+		/**
+		 * The folder of the subscription this post belongs to, copied in when the post is
+		 * written, which is what makes a folder's timeline the seek every other timeline is.
+		 * It is rewritten whenever the subscription moves, since it is the reader's own
+		 * answer rather than the publisher's and it orders nothing.
+		 */
+		folder_id: c.text().nullable(),
 	},
 });
+
+/**
+ * Named groups of subscriptions, each with a stream of its own.
+ *
+ * Flat: no parent, no position, no depth. The list is short and it is drawn in the order
+ * the names read, the way the rail draws subscriptions, and the unique title in
+ * `0007-folders.sql` is what both keeps two rows from reading alike and makes filing by
+ * name an upsert.
+ */
+export const folders = table({
+	name: "folders",
+	primaryKey: ["id"],
+	timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+	columns: {
+		id: c.text(),
+		title: c.text(),
+		created_at: c.integer(),
+		updated_at: c.integer(),
+	},
+});
+
+export type SelectFolder = TableRow<typeof folders>;
+export type InsertFolder = InsertRow<typeof folders>;
 
 export type SelectSettings = TableRow<typeof settings>;
 export type InsertSettings = InsertRow<typeof settings>;

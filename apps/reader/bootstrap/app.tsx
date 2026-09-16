@@ -103,6 +103,26 @@ export default function application(options: application.Options) {
 		lazy(() => import("~/app/http/controllers/feed")),
 	);
 	router.map(
+		routes.folder,
+		lazy(() => import("~/app/http/controllers/folders/show")),
+	);
+	router.map(
+		routes.folders.create,
+		lazy(() => import("~/app/http/controllers/folders/create")),
+	);
+	router.map(
+		routes.folders.rename,
+		lazy(() => import("~/app/http/controllers/folders/rename")),
+	);
+	router.map(
+		routes.folders.delete,
+		lazy(() => import("~/app/http/controllers/folders/delete")),
+	);
+	router.map(
+		routes.folders.file,
+		lazy(() => import("~/app/http/controllers/folders/file")),
+	);
+	router.map(
 		routes.saved,
 		lazy(() => import("~/app/http/controllers/saved")),
 	);
@@ -157,6 +177,18 @@ export default function application(options: application.Options) {
 	router.map(
 		routes.settings,
 		lazy(() => import("~/app/http/controllers/settings")),
+	);
+	router.map(
+		routes.billing.checkout,
+		lazy(() => import("~/app/http/controllers/billing/checkout")),
+	);
+	router.map(
+		routes.billing.portal,
+		lazy(() => import("~/app/http/controllers/billing/portal")),
+	);
+	router.map(
+		routes.webhooks.billing,
+		lazy(() => import("~/app/http/controllers/webhooks/billing")),
 	);
 
 	return router;

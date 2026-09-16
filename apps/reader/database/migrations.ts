@@ -17,6 +17,8 @@ import m0003 from "./migrations/0003-feed-list-index.sql?raw";
 import m0004 from "./migrations/0004-read-timeline-index.sql?raw";
 import m0005 from "./migrations/0005-feed-title-index.sql?raw";
 import m0006 from "./migrations/0006-shared-feed-objects.sql?raw";
+import m0007 from "./migrations/0007-folders.sql?raw";
+import m0008 from "./migrations/0008-tier.sql?raw";
 
 /** One migration, identified so the journal can record that it ran. */
 export interface Migration {
@@ -32,6 +34,8 @@ export const MIGRATIONS: Migration[] = [
 	{ id: "0004-read-timeline-index", sql: m0004 },
 	{ id: "0005-feed-title-index", sql: m0005 },
 	{ id: "0006-shared-feed-objects", sql: m0006 },
+	{ id: "0007-folders", sql: m0007 },
+	{ id: "0008-tier", sql: m0008 },
 ];
 
 /**

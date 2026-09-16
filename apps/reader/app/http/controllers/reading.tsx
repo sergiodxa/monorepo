@@ -722,12 +722,32 @@ const FollowForm = f.object({
 });
 
 /** The `feeds.follow.error.*` key explaining each way the store can refuse an address. */
-const FOLLOW_ERROR_KEYS: Record<UserStore.FollowFailure, string> = {
+const FOLLOW_ERROR_KEYS: Record<Exclude<UserStore.FollowFailure, "over-limit">, string> = {
 	"invalid-url": "feeds.follow.error.invalidUrl",
 	"not-found": "feeds.follow.error.notFound",
 	unreachable: "feeds.follow.error.unreachable",
 	"already-following": "feeds.follow.error.alreadyFollowing",
 };
+
+/**
+ * The sentence a refusal is reported with. A feed cap is the one refusal whose sentence
+ * carries numbers, because the way out of it is the reader's and it is a count: unfollow
+ * this many, or move up a tier.
+ *
+ * @param ctx - The request's dictionary.
+ * @param refused - What the store refused, and why.
+ */
+function followError(
+	ctx: Pick<ReadingQueue.Context, "i18next">,
+	refused: UserStore.FollowResult & { ok: false },
+): string {
+	if (refused.reason !== "over-limit") return ctx.i18next.t(FOLLOW_ERROR_KEYS[refused.reason]);
+
+	return ctx.i18next.t("feeds.follow.error.overLimit", {
+		allowed: refused.limit.allowed,
+		count: refused.limit.allowed,
+	});
+}
 
 /**
  * The scheme somebody's address carries, or what it has instead of one.
@@ -835,7 +855,7 @@ export default createController(routes.reading, {
 				ctx,
 				view,
 				null,
-				{ error: ctx.i18next.t(FOLLOW_ERROR_KEYS[followed.reason]), value: url },
+				{ error: followError(ctx, followed), value: url },
 				UnprocessableEntity,
 			);
 		},

@@ -47,6 +47,30 @@ export default route({
 	feed: get("/reading/:feed"),
 
 	/**
+	 * One folder's posts: every feed filed there, read as one stream. It lives under the
+	 * queue for the reason one feed's page does — it is that same list narrowed to a group
+	 * the reader chose — and takes a segment of its own rather than sharing the feed's, so
+	 * the two patterns never decide between each other.
+	 */
+	folder: get("/reading/folders/:folder"),
+
+	/**
+	 * The folders themselves. A reader meets a folder in the rail and on its own surface,
+	 * so these are the addresses the forms on those surfaces act against.
+	 */
+	folders: {
+		create: post("/folders"),
+		rename: post("/folders/:folderId"),
+		delete: del("/folders/:folderId"),
+		/**
+		 * Files one feed, beside the paths that refresh and set the span on it, so the feed's
+		 * page reaches it with a plain form. It accepts a folder the reader already has or a
+		 * name for a new one, which is where most folders come from.
+		 */
+		file: post("/feeds/:feedId/folder"),
+	},
+
+	/**
 	 * The posts a reader asked to keep, which no rule that deletes a post reaches. Its own
 	 * address rather than a narrowing of {@link reading}: keeping a post is a decision about
 	 * that post rather than a state the queue can be filtered by, and the list of them is
@@ -116,4 +140,25 @@ export default route({
 	 * and how often a feed is checked is one number for every reader rather than a choice.
 	 */
 	settings: get("/settings"),
+
+	/**
+	 * What a reader does about their plan. Both are `POST`s that end in a redirect to a page
+	 * the platform hosts: this app never draws a card field, so there is nothing here to
+	 * answer a `GET` with.
+	 */
+	billing: {
+		/** Opens a hosted checkout for one of the paid tiers, named by the `:plan` segment. */
+		checkout: post("/billing/checkout/:plan"),
+		/** Opens the hosted page where a card, an invoice or a cancellation is dealt with. */
+		portal: post("/billing/portal"),
+	},
+
+	/**
+	 * Where the payment platform delivers. Nobody links here and no reader arrives here:
+	 * it answers a signed delivery, and a forged one is the only thing it closes the door
+	 * on.
+	 */
+	webhooks: {
+		billing: post("/webhooks/billing"),
+	},
 });

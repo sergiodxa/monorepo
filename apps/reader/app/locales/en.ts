@@ -206,6 +206,14 @@ export default {
 				notFound: "Nothing at that address publishes an RSS or Atom feed.",
 				unreachable: "That address could not be reached. Try again in a moment.",
 				alreadyFollowing: "You already follow that feed.",
+				/**
+				 * The one refusal here whose sentence carries a number, because the way out is the
+				 * reader's and it is a count. It names both ways out and puts neither first.
+				 */
+				overLimit_one:
+					"Your plan follows {{count}} feed. Unfollow one, or move up a plan, to follow another.",
+				overLimit_other:
+					"Your plan follows {{count}} feeds. Unfollow one, or move up a plan, to follow another.",
 			},
 		},
 
@@ -329,6 +337,68 @@ export default {
 		},
 	},
 
+	/**
+	 * Named groups of subscriptions, each read as one stream. A folder is somewhere a
+	 * reader goes rather than a place posts are kept, which is why nothing here talks about
+	 * losing any.
+	 */
+	folders: {
+		created: "Folder made.",
+		renamed: "Folder renamed.",
+		duplicate: "You already have a folder by that name.",
+		invalid: "A folder needs a name.",
+
+		/** The field both the naming forms type into. */
+		name: {
+			label: "Folder name",
+			placeholder: "Name this folder…",
+		},
+
+		create: {
+			legend: "Make a folder",
+			submit: "New folder",
+		},
+
+		rename: {
+			legend: "Rename this folder",
+			submit: "Rename",
+		},
+
+		delete: {
+			title: "Delete a folder",
+			submit: "Delete folder",
+			/** Backs out of the prompt, leaving the folder as it is. */
+			cancel: "Cancel",
+			/** Says what is lost, which is the filing and nothing else. */
+			confirm: "Delete {{title}}? Its feeds go back among the unfiled ones and keep every post.",
+		},
+
+		/** Putting one feed into a folder, from that feed's own page. */
+		file: {
+			legend: "Which folder this feed reads in",
+			description: "Pick a folder, or name a new one.",
+			/** What the control says for a feed the reader has filed nowhere. */
+			none: "No folder",
+			remove: "Take out of this folder",
+			submit: "File",
+			filed: "Filed.",
+			unfiled: "Taken out of its folder.",
+			gone: "That folder is no longer one of yours.",
+		},
+
+		empty: {
+			title: "Nothing here yet",
+			description:
+				"File a feed into this folder from that feed's own page and its posts arrive here.",
+		},
+
+		notFound: {
+			title: "Folder not found",
+			description: "You do not have a folder with that address.",
+			back: "Back to your reading",
+		},
+	},
+
 	items: {
 		read: {
 			title: "Mark as read",
@@ -360,6 +430,49 @@ export default {
 		},
 		lastRefreshed: "Last checked {{date}}",
 		neverRefreshed: "Not checked yet",
+
+		/**
+		 * What the reader is on and what it allows, said in numbers. Nothing here counts down,
+		 * because nothing expires and nothing is deleted: a countdown on a page where nothing
+		 * is going to happen is urgency invented to sell.
+		 */
+		plan: {
+			legend: "Your plan",
+			current: "You are on {{plan}}.",
+			names: {
+				free: "Free",
+				paid: "Paid",
+				premium: "Premium",
+			},
+			/** What each plan allows, as the numbers the reader is measured against. */
+			allowance: "{{feeds}} feeds, {{saved}} saved posts.",
+			usage: "You follow {{feeds}} feeds and have saved {{saved}} posts.",
+			upgrade: "Move to {{plan}}",
+			manage: "Manage billing",
+			/**
+			 * A failed card is not a data event on the day it fails. The sentence says what is
+			 * true — nothing has changed — and points at the page where a card is replaced.
+			 */
+			lapsed:
+				"Your payment did not go through. Nothing has changed, and everything you follow is still here. Update your card to keep it that way.",
+			/**
+			 * Over a limit, stated as the two ways out and no third. Both belong to the reader,
+			 * and nothing of theirs is deleted while they decide.
+			 */
+			over: {
+				legend: "Over your plan",
+				description:
+					"Nothing has been deleted, and nothing will be. New additions are paused until you are back inside these numbers or on a larger plan.",
+				feeds_one: "Unfollow {{count}} feed, or move up a plan.",
+				feeds_other: "Unfollow {{count}} feeds, or move up a plan.",
+				saved_one: "Unsave {{count}} post, or move up a plan.",
+				saved_other: "Unsave {{count}} posts, or move up a plan.",
+				posts_one: "{{count}} post over what this plan holds.",
+				posts_other: "{{count}} posts over what this plan holds.",
+				rules_one: "{{count}} rule over what this plan runs.",
+				rules_other: "{{count}} rules over what this plan runs.",
+			},
+		},
 	},
 
 	/** What stands in for a part of a page that did not load. */
