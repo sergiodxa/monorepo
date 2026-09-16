@@ -7,7 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Base64Url, concatBytes } from "@sdxc/crypto";
 import { JWK, JWT } from "@sdxc/jwt";
+import { unwrap } from "@sdxc/result";
 
 /** Bytes of salt RFC 8188 writes at the head of every `aes128gcm` record. */
 const SALT_LENGTH = 16;
@@ -68,46 +70,17 @@ export interface PushRequestOptions extends EncryptOptions {
 }
 
 /**
- * Reads base64url text, which is the only form key material and salts travel in.
+ * Reads the base64url a subscription's key material and a pinned salt travel in.
+ *
+ * The values come from the Push API by way of the browser, so a string that is not
+ * base64url is a malformed subscription rather than a case to encrypt around.
  *
  * @param value - Unpadded base64url.
  * @returns The bytes it spells.
+ * @throws When the text is not base64url.
  */
 function decodeBase64Url(value: string): Uint8Array<ArrayBuffer> {
-	let padded = value.replaceAll("-", "+").replaceAll("_", "/");
-	let binary = atob(padded.padEnd(Math.ceil(padded.length / 4) * 4, "="));
-	let bytes = new Uint8Array(binary.length);
-	for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
-	return bytes;
-}
-
-/**
- * Writes bytes as the unpadded base64url a header value and a JWK carry.
- *
- * @param bytes - The bytes to spell.
- * @returns Unpadded base64url.
- */
-function encodeBase64Url(bytes: Uint8Array): string {
-	let binary = "";
-	for (let byte of bytes) binary += String.fromCharCode(byte);
-	return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
-}
-
-/**
- * Joins byte runs into the single buffer a header, an info string or a record is.
- *
- * @param parts - The runs, in the order they appear.
- * @returns One buffer holding them end to end.
- */
-function concatBytes(...parts: Uint8Array[]): Uint8Array<ArrayBuffer> {
-	let total = parts.reduce((sum, part) => sum + part.length, 0);
-	let joined = new Uint8Array(total);
-	let offset = 0;
-	for (let part of parts) {
-		joined.set(part, offset);
-		offset += part.length;
-	}
-	return joined;
+	return unwrap(Base64Url.decode(value));
 }
 
 /**
@@ -117,7 +90,7 @@ function concatBytes(...parts: Uint8Array[]): Uint8Array<ArrayBuffer> {
  * @returns The label's bytes followed by `0x00`.
  */
 function encodingInfo(label: string): Uint8Array<ArrayBuffer> {
-	return concatBytes(new TextEncoder().encode(label), Uint8Array.of(0));
+	return concatBytes(label, Uint8Array.of(0));
 }
 
 /**
@@ -207,7 +180,7 @@ export async function encryptPayload(
 		"encrypt",
 	]);
 
-	let plaintext = concatBytes(new TextEncoder().encode(payload), Uint8Array.of(2));
+	let plaintext = concatBytes(payload, Uint8Array.of(2));
 
 	let ciphertext = new Uint8Array(
 		await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, aesKey, plaintext),
@@ -243,8 +216,8 @@ function importVapidSigningKey(keys: VapidKeys): Promise<CryptoKey> {
 			kty: "EC",
 			crv: "P-256",
 			d: keys.privateKey,
-			x: encodeBase64Url(publicKey.subarray(1, 33)),
-			y: encodeBase64Url(publicKey.subarray(33, PUBLIC_KEY_LENGTH)),
+			x: Base64Url.encode(publicKey.subarray(1, 33)),
+			y: Base64Url.encode(publicKey.subarray(33, PUBLIC_KEY_LENGTH)),
 		},
 		{ name: "ECDSA", namedCurve: "P-256" },
 		false,
