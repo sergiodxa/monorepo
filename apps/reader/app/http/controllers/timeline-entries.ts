@@ -13,6 +13,7 @@
 import type { i18n } from "@sdxc/i18n";
 
 import type { UserStore } from "~/database/user-do";
+import type { TagChips } from "~/resources/views/tag-chips";
 import type { Timeline } from "~/resources/views/timeline";
 
 import routes from "~/routes/web";
@@ -126,18 +127,37 @@ export function timelineCopy(i18next: i18n): Timeline.Copy {
 }
 
 /**
+ * What the strip of labels under a post prints, which is the same on both surfaces that
+ * draw one.
+ *
+ * @param i18next - The request's dictionary.
+ * @example <Timeline entries={entries} tagging={{ ...taggingCopy(ctx.i18next), options }} />
+ */
+export function taggingCopy(i18next: i18n): TagChips.Copy {
+	return {
+		legend: i18next.t("tags.strip.legend"),
+		add: i18next.t("tags.strip.add"),
+		placeholder: i18next.t("tags.strip.placeholder"),
+		remove: i18next.t("tags.strip.remove"),
+	};
+}
+
+/**
  * Builds one page of timeline rows from the posts a store answered with.
  *
  * @param ctx - The request's dictionary and language, which every label is resolved through.
  * @param items - The posts to print, in the order they are printed.
  * @param feedTitles - Feed titles by id for a surface holding posts from many feeds; `null`
  * on a surface showing one feed, whose every row would otherwise name the same source.
+ * @param tagging - Whether each row carries the strip of labels and the field that adds
+ * one, which the surfaces whose posts are kept by definition ask for and no river does.
  * @example timelineEntries(ctx, page.items, new Map(page.feeds.map((f) => [f.id, f.title])));
  */
 export function timelineEntries(
 	ctx: TimelineContext,
 	items: UserStore.Item[],
 	feedTitles: Map<string, string> | null,
+	tagging = false,
 ): Timeline.Entry[] {
 	let now = Date.now();
 
@@ -175,6 +195,20 @@ export function timelineEntries(
 			 * the queue shows as kept there, and the one control means one thing everywhere.
 			 */
 			isSaved: item.savedAt !== null,
+			/**
+			 * The labels on the post, each a way into what else is kept under it, and the
+			 * address another one is applied at. Both are left off wherever the strip is not
+			 * drawn, so a river's rows carry nothing they would never print.
+			 */
+			tags: tagging
+				? item.tags.map((tag) => ({
+						id: tag.id,
+						name: tag.name,
+						href: routes.tag.href({ tag: tag.id }),
+						removeAction: routes.tags.remove.href({ itemId: item.id, tagId: tag.id }),
+					}))
+				: [],
+			applyTagAction: tagging ? routes.tags.apply.href({ itemId: item.id }) : null,
 		};
 	});
 }

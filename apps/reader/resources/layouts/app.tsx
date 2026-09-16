@@ -24,7 +24,9 @@ import {
 	FolderIcon,
 	InboxIcon,
 	LogOutIcon,
+	MoonIcon,
 	PanelLeftIcon,
+	PinIcon,
 	RssIcon,
 	SettingsIcon,
 } from "@sdxc/icons";
@@ -429,6 +431,17 @@ export namespace SidebarFeeds {
 		unreadLabel: string | null;
 	}
 
+	/** A band of the rail that is a heading and the feeds under it, and leads nowhere. */
+	export interface Group {
+		/** The word heading the band. */
+		label: string;
+		feeds: Feed[];
+		/** What the feeds beneath it add up to, which is the only place this number is from. */
+		unreadCount: number;
+		/** That sum said in full for a screen reader, or `null` for a band with nothing waiting. */
+		unreadLabel: string | null;
+	}
+
 	/**
 	 * One folder as the rail draws it: a heading that is itself the way into the folder's
 	 * own stream, and the feeds filed there beneath it.
@@ -450,6 +463,18 @@ export namespace SidebarFeeds {
 		feeds: Feed[];
 		/** The reader's folders, each drawn as a heading over the feeds filed in it. */
 		folders: Folder[];
+		/**
+		 * The feeds the reader pinned, drawn first under a heading of their own. A pin is
+		 * their own answer about a subscription, so it is drawn where they put it and no
+		 * derived grouping moves it.
+		 */
+		pinned: Group | null;
+		/**
+		 * The feeds nobody grouped and that publish almost nothing, drawn last. It keeps a
+		 * monthly newsletter from being buried by a feed that publishes hourly, and it is
+		 * derived from the measured rate rather than from anything the reader was asked.
+		 */
+		quiet: Group | null;
 		/** The word heading the band, which names the reader's own subscriptions. */
 		label: string;
 		/** Names the list of feeds under that heading, for anyone listening to it. */
@@ -519,13 +544,79 @@ function SidebarFeedRow(handle: Handle<{ feed: SidebarFeeds.Feed; isCurrent: boo
 }
 
 /**
+ * One band of the rail: a heading naming what it gathers, and the feeds under it.
+ *
+ * It leads nowhere, and nothing is lost by that — the whole of the list it names is the
+ * rows directly beneath it — which leaves one thing in the sidebar lit at a time, the feed
+ * being read rather than the feed and the word above it.
+ */
+function SidebarBand(
+	handle: Handle<{
+		group: SidebarFeeds.Group;
+		icon: RemixNode;
+		listLabel: string;
+		currentPath: string;
+	}>,
+) {
+	return () => {
+		let { currentPath, group, icon, listLabel } = handle.props;
+
+		return (
+			<Sidebar.Group>
+				<Sidebar.GroupLabel
+					mix={[
+						railRow("group-label"),
+						when('&[data-slot="group-label"]', [
+							pb("0.5rem"),
+							minBs("2.25rem"),
+							justify("start"),
+							text("sm"),
+							weight("medium"),
+							fg("neutral"),
+							raw({ textTransform: "none", letterSpacing: "normal" }),
+						]),
+					]}
+				>
+					{icon}
+					<span mix={[minIs(0), truncate()]}>{group.label}</span>
+
+					{/**
+					 * What the feeds beneath it add up to, said as the number for an eye and in
+					 * full for anyone listening, so an arriving post is visible without the band
+					 * being read row by row.
+					 */}
+					{group.unreadLabel && (
+						<>
+							<span aria-hidden="true" mix={[shrink(), tabularNums()]}>
+								{group.unreadCount}
+							</span>
+							<span mix={[visuallyHidden()]}>{group.unreadLabel}</span>
+						</>
+					)}
+				</Sidebar.GroupLabel>
+
+				<Sidebar.Nav aria-label={listLabel}>
+					{group.feeds.map((feed) => (
+						<SidebarFeedRow
+							key={feed.id}
+							feed={feed}
+							isCurrent={currentPath === routes.feed.href({ feed: feed.id })}
+						/>
+					))}
+				</Sidebar.Nav>
+			</Sidebar.Group>
+		);
+	};
+}
+
+/**
  * The feeds a reader follows, as the sidebar lists them. It is rendered into the sidebar's
  * own frame rather than by the layout around it, so the counts beside these names can be
  * redrawn on their own when a post is marked read further down the page.
  */
 export function SidebarFeeds(handle: Handle<SidebarFeeds.Props>) {
 	return () => {
-		let { currentPath, feeds, folders, label, listLabel } = handle.props;
+		let { currentPath, feeds, folders, label, listLabel, pinned, quiet } = handle.props;
 
 		/** Read from the path the band was asked for, since it is drawn apart from the page. */
 		function isCurrent(href: string): boolean {
@@ -533,10 +624,25 @@ export function SidebarFeeds(handle: Handle<SidebarFeeds.Props>) {
 		}
 
 		/** A reader following nothing is shown no heading for it, and no empty list under one. */
-		if (feeds.length === 0 && folders.length === 0) return null;
+		if (feeds.length === 0 && folders.length === 0 && pinned === null && quiet === null) {
+			return null;
+		}
 
 		return (
 			<>
+				{/**
+				 * What the reader said they never want to miss, first, because that is what
+				 * saying it was for.
+				 */}
+				{pinned && (
+					<SidebarBand
+						group={pinned}
+						icon={<PinIcon size={ICON_SIZE} />}
+						listLabel={pinned.label}
+						currentPath={currentPath}
+					/>
+				)}
+
 				{folders.map((folder) => (
 					<Sidebar.Group key={folder.id}>
 						{/**
@@ -623,6 +729,20 @@ export function SidebarFeeds(handle: Handle<SidebarFeeds.Props>) {
 							))}
 						</Sidebar.Nav>
 					</Sidebar.Group>
+				)}
+
+				{/**
+				 * Last, holding the feeds nobody grouped and nothing published. No post moves
+				 * with them: this is a way of drawing the rail, and a quiet feed's posts sit in
+				 * the queue where their date puts them.
+				 */}
+				{quiet && (
+					<SidebarBand
+						group={quiet}
+						icon={<MoonIcon size={ICON_SIZE} />}
+						listLabel={quiet.label}
+						currentPath={currentPath}
+					/>
 				)}
 			</>
 		);

@@ -45,6 +45,8 @@ function item(overrides: Partial<UserStore.Item> & Pick<UserStore.Item, "id">): 
 		readAt: null,
 		/** Kept, because this page holds the posts a reader asked to keep and nothing else. */
 		savedAt: Date.UTC(2026, 0, 3, 9),
+		/** No labels, which is what every list but the two that draw chips answers with. */
+		tags: [],
 		...overrides,
 	};
 }

@@ -12,6 +12,7 @@
  */
 
 import { redirect } from "@sdxc/http/response";
+import { currentLog } from "@sdxc/logger";
 import { createAction } from "remix/router";
 
 import type { CachedFeed } from "~/app/http/controllers/chrome";
@@ -43,7 +44,16 @@ export default createAction(routes.sidebar.feeds, {
 		 * already holds, so a rail drawn under folder names costs the read it cost without
 		 * them and a folder's number can never disagree with the rows beneath it.
 		 */
-		let { folders, unfiled } = groupByFolder(await railFeeds(viewer.id), ctx.locale);
+		let rows = await railFeeds(viewer.id);
+
+		let { folders, unfiled, pinned, quiet } = groupByFolder(rows, ctx.locale);
+
+		/**
+		 * How many of the reader's feeds fell into the derived group, which is the number that
+		 * says whether the threshold is drawing a line anybody recognizes. It counts feeds and
+		 * names none of them.
+		 */
+		currentLog()?.set({ event: "user.rail.quiet", feeds: rows.length, quiet: quiet.length });
 
 		/**
 		 * The count becomes the words that say it here, where the dictionary is, so the
@@ -59,8 +69,31 @@ export default createAction(routes.sidebar.feeds, {
 				feed.unreadCount > 0 ? ctx.i18next.t("feeds.unread", { count: feed.unreadCount }) : null,
 		});
 
+		/**
+		 * A band of the rail that is a heading and rows, with its sum already in words. It is
+		 * drawn only where something is in it: a heading over nothing is a door onto an empty
+		 * room, and the quiet group in particular exists only once a feed has fallen into it.
+		 *
+		 * @param label - The word heading the band.
+		 * @param feeds - What is in it, which decides whether it is drawn at all.
+		 */
+		let toBand = (label: string, feeds: CachedFeed[]) => {
+			if (feeds.length === 0) return null;
+
+			let unreadCount = feeds.reduce((sum, feed) => sum + feed.unreadCount, 0);
+
+			return {
+				label,
+				feeds: feeds.map(toRow),
+				unreadCount,
+				unreadLabel: unreadCount > 0 ? ctx.i18next.t("feeds.unread", { count: unreadCount }) : null,
+			};
+		};
+
 		return ctx.render(
 			<SidebarFeeds
+				pinned={toBand(ctx.i18next.t("nav.pinned"), pinned)}
+				quiet={toBand(ctx.i18next.t("nav.quiet"), quiet)}
 				currentPath={currentPath}
 				label={ctx.i18next.t("nav.feeds")}
 				listLabel={ctx.i18next.t("nav.subscriptions")}

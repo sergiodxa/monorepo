@@ -43,6 +43,8 @@ describe("runMigrations", () => {
 			"0006-shared-feed-objects",
 			"0007-folders",
 			"0008-tier",
+			"0009-schedule",
+			"0010-tags-and-pins",
 		]);
 	});
 

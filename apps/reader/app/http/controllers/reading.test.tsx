@@ -57,6 +57,8 @@ function item(overrides: Partial<UserStore.Item> & Pick<UserStore.Item, "id">): 
 		publishedAt: Date.UTC(2026, 0, 2, 12),
 		readAt: null,
 		savedAt: null,
+		/** No labels, which is what every list but the two that draw chips answers with. */
+		tags: [],
 		...overrides,
 	};
 }

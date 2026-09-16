@@ -11,6 +11,8 @@ import type { AnyTable, TableRow } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
 
+import type { Tier } from "~/app/lib/entitlement";
+
 /** Payload accepted when writing a row, with database defaults left out. */
 type InsertRow<sourceTable extends AnyTable> = Partial<TableRow<sourceTable>>;
 
@@ -53,7 +55,7 @@ export const VELOCITY_WINDOW_MS: Record<Velocity, number | null> = {
 export const DEFAULT_VELOCITY: Velocity = "evergreen";
 
 /**
- * Posts one reader's object keeps across every feed they follow.
+ * Posts one reader's object keeps across every feed they follow, by the tier they are on.
  *
  * A budget rather than a per-feed number, because a per-feed number is wrong at both
  * ends: a reader following one feed would be held to a cap sized for somebody following
@@ -61,22 +63,72 @@ export const DEFAULT_VELOCITY: Velocity = "evergreen";
  * than one of them. The object is what has a limit, so the object is what gets the figure,
  * and a feed's share of it is this divided by how many feeds the reader follows.
  *
- * Around two gigabytes at the size of a row, a fifth of the ten gigabytes an object gets,
- * which leaves room for the estimate to be wrong by five times. It sits that far inside
- * the object rather than at its edge because a reader notices what happens at the edge:
- * a budget that cannot be reclaimed stops taking posts rather than deleting them.
+ * Each figure is a count of rows priced at two kilobytes apiece, against the ten
+ * gigabytes an object gets: half a gigabyte, three, and six. They sit that far inside the
+ * object because a write to a full one fails and takes the sweep that would make room with
+ * it, where a budget reached is back-pressure the interface explains.
  */
-export const READER_BUDGET = 1_000_000;
+export const TIER_BUDGETS: Record<Tier, number> = {
+	free: 250_000,
+	paid: 1_500_000,
+	premium: 3_000_000,
+};
 
 /**
- * Posts a reader may keep saved.
+ * Posts a reader may keep saved, by the tier they are on.
  *
- * The number is about what a person can meaningfully keep rather than about storage — a
- * thousand posts is two megabytes against that budget. Reaching it refuses the next save
- * rather than evicting the oldest, because evicting would delete the one thing in this
- * design a reader explicitly asked to keep.
+ * The numbers are about what a person can meaningfully keep rather than about storage —
+ * the largest of them is fifty megabytes against a budget measured in gigabytes. Reaching
+ * one refuses the next save rather than evicting the oldest, because evicting would delete
+ * the one thing in this design a reader explicitly asked to keep.
  */
-export const SAVED_LIMIT = 1000;
+export const TIER_SAVED_LIMITS: Record<Tier, number> = {
+	free: 1_000,
+	paid: 5_000,
+	premium: 25_000,
+};
+
+/**
+ * Labels one reader may have.
+ *
+ * A hundred keeps the picker the same kind of thing as the rail: one unpaged read, drawn
+ * whole, scannable without a search box of its own. Somebody with four hundred labels has
+ * a second junk drawer with a worse interface, and the honest moment to say so is at the
+ * hundred-and-first rather than when they are looking for something.
+ */
+export const TAG_LIMIT = 100;
+
+/**
+ * Labels one post may carry. It bounds the join table against the saved cap, and is
+ * generous against how anybody labels: a post with eleven reasons to have been kept has
+ * none.
+ */
+export const TAGS_PER_ITEM = 10;
+
+/**
+ * How long a label may be, in UTF-16 units. Thirty-two is where a label is still a chip on
+ * one line beside four others, and past which somebody is writing a note into a field the
+ * search serves better.
+ */
+export const TAG_NAME_LENGTH = 32;
+
+/**
+ * Subscriptions a reader may pin. A feed somebody never wants to miss stops meaning
+ * anything at thirty, the strip has to sit above the river without becoming the page, and
+ * ten ids sit well inside the hundred-parameter bind limit every lookup here works under.
+ */
+export const PIN_LIMIT = 10;
+
+/**
+ * Below what measured rate a feed is quiet: one post a week, against the thirty-day window
+ * the measurement is taken over, so a monthly newsletter at 0.03 and a three-a-month blog
+ * at 0.1 are in while a twice-weekly feed is out.
+ *
+ * It is the same judgement as the rate above which a feed publishes enough to be worth
+ * offering a velocity for, read from the other end: that one decides when a feed is busy,
+ * this one when it publishes so little that it disappears.
+ */
+export const QUIET_POSTS_PER_DAY = 1 / 7;
 
 export const settings = table({
 	name: "settings",
@@ -97,6 +149,14 @@ export const settings = table({
 		 * so two snapshots landing out of order converge on the later one.
 		 */
 		tier_checked_at: c.integer().default(0),
+		/** When the reader last opened the reader, which dormancy is measured from. */
+		last_opened_at: c.integer().nullable(),
+		/** When the next scheduled freshness check is due, and `null` for a tier arming none. */
+		next_check_at: c.integer().nullable(),
+		/** When the next retention sweep is due, so a velocity window closes on its own. */
+		next_sweep_at: c.integer().nullable(),
+		/** When the leftovers of a bounded run carry on, and `null` while there are none. */
+		next_catch_up_at: c.integer().nullable(),
 		created_at: c.integer(),
 		updated_at: c.integer(),
 	},
@@ -124,6 +184,18 @@ export const feeds = table({
 		updated_at: c.integer(),
 		/** The group the reader filed this subscription into, or `null` for an unfiled one. */
 		folder_id: c.text().nullable(),
+		/**
+		 * When the reader pinned this subscription, or `null` for one they have not. A
+		 * timestamp rather than a boolean, for the reason the other marks here are: it
+		 * answers when as well as whether, so pin order is an ordering the reader produced.
+		 */
+		pinned_at: c.integer().nullable(),
+		/**
+		 * What the feed publishes, in posts per day, as the feed's own object measured it.
+		 * Declared as a decimal here for a column the migration creates as `REAL`, since a
+		 * rate below one post a day is the whole of what it is read for.
+		 */
+		posts_per_day: c.decimal(10, 4).nullable(),
 	},
 });
 
@@ -178,6 +250,57 @@ export const folders = table({
 		updated_at: c.integer(),
 	},
 });
+
+/**
+ * The labels a reader puts on the posts they kept.
+ *
+ * Held by an id rather than by the name, which is what makes renaming one write a single
+ * row however many posts carry it and keeps a URL built from a label working after it is
+ * renamed. {@link tags.slug} is the folded form uniqueness is taken over, so `Rust` and
+ * `rust` are one label wearing the name it was first given.
+ */
+export const tags = table({
+	name: "tags",
+	primaryKey: ["id"],
+	timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+	columns: {
+		id: c.text(),
+		/** The name as the reader typed it, which is the one drawn. */
+		name: c.text(),
+		/** The case-folded form uniqueness and matching are taken over. */
+		slug: c.text(),
+		created_at: c.integer(),
+		updated_at: c.integer(),
+	},
+});
+
+/**
+ * Which posts carry which label, one row per pairing.
+ *
+ * `published_at` is a copy of the post's own. It is what puts the filter and both ordering
+ * columns into one index, since no index spans two tables, and it is safe to copy because
+ * that column is frozen against a publisher's edits: it leads the timeline's ordering, and
+ * a row moving within that ordering would make an in-flight cursor skip posts. The copy is
+ * written once, by the statement that applies the label.
+ *
+ * Every row here belongs to a saved post by construction, so a query for a reader's kept
+ * posts under one label needs no `saved_at` filter: the join is the filter.
+ */
+export const itemTags = table({
+	name: "item_tags",
+	primaryKey: ["tag_id", "item_id"],
+	columns: {
+		tag_id: c.text(),
+		item_id: c.text(),
+		published_at: c.integer(),
+		created_at: c.integer(),
+	},
+});
+
+export type SelectTag = TableRow<typeof tags>;
+export type InsertTag = InsertRow<typeof tags>;
+export type SelectItemTag = TableRow<typeof itemTags>;
+export type InsertItemTag = InsertRow<typeof itemTags>;
 
 export type SelectFolder = TableRow<typeof folders>;
 export type InsertFolder = InsertRow<typeof folders>;

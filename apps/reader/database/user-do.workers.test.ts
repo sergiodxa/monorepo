@@ -519,6 +519,12 @@ describe("the catch-up alarm", () => {
 		expect(armed).not.toBeNull();
 		expect(armed).toBeLessThanOrEqual(Date.now() + CATCH_UP_MS);
 
+		// A wake runs what its due times say is due, and this one is delivered ahead of the
+		// minute the catch-up asked for, so the due time is brought forward to meet it.
+		await runInDurableObject(stub, (_instance, state) => {
+			state.storage.sql.exec(`UPDATE settings SET next_catch_up_at = ? WHERE id = 1`, Date.now());
+		});
+
 		// The platform's own delivery of it, rather than a direct call: what is asserted is
 		// that the alarm this object arms is one workerd runs, and that it finishes the work.
 		expect(await runDurableObjectAlarm(stub)).toBe(true);

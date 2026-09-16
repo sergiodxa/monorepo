@@ -57,11 +57,14 @@ import {
 import { Text } from "@sdxc/ui";
 import { css } from "remix/ui";
 
+import type { TagChips } from "~/resources/views/tag-chips";
+
 import LazyFrame from "~/resources/components/lazy-frame";
 import ReadToggle from "~/resources/components/read-toggle";
 import SaveToggle from "~/resources/components/save-toggle";
 import { listBleed, listRowGutter } from "~/resources/layouts/app";
 import OutboundMark from "~/resources/views/outbound-mark";
+import TagStrip from "~/resources/views/tag-chips";
 import routes from "~/routes/web";
 
 /**
@@ -189,6 +192,14 @@ export namespace Timeline {
 		isRead: boolean;
 		/** Whether the reader has asked to keep this post, which no rule that deletes one reaches. */
 		isSaved: boolean;
+		/**
+		 * The labels on this post, each a way into what else is kept under it. Only the
+		 * surfaces that ask their store for them have any, and the rest of the lists print
+		 * no strip at all.
+		 */
+		tags?: TagChips.Chip[];
+		/** Where a label is put on this post, or `null` on a list that draws no strip. */
+		applyTagAction?: string | null;
 	}
 
 	/** The list's translated copy. */
@@ -219,6 +230,15 @@ export namespace Timeline {
 		end: string;
 	}
 
+	/** What a list drawing labels needs beyond the chips on each row. */
+	export interface Tagging {
+		copy: TagChips.Copy;
+		/** The names the field offers, so a second spelling of one label takes effort. */
+		options: string[];
+		/** The `id` those names are listed under, which every row's field points at. */
+		optionsId: string;
+	}
+
 	export interface Props {
 		entries: Entry[];
 		copy: Copy;
@@ -243,6 +263,12 @@ export namespace Timeline {
 		 * before keeping existed, which is the state its way back is a return to.
 		 */
 		saving?: boolean;
+		/**
+		 * The copy the strip of labels prints and the list of names its field offers, or
+		 * `null` on a list that draws no labels — which is every list of a river, since a
+		 * label belongs to a post somebody kept.
+		 */
+		tagging?: Timeline.Tagging | null;
 		continueSrc?: string | null;
 		/**
 		 * Where the page above this one is fetched from as the reader scrolls back up to it,
@@ -376,6 +402,7 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 			resumeSrc = null,
 			returnTo,
 			start,
+			tagging = null,
 		} = handle.props;
 
 		/**
@@ -414,6 +441,20 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 				 * words keep their place while the rules between rows and the fill under the pointer
 				 * run the full width of the pane.
 				 */}
+				{/**
+				 * The labels already in use, offered to every field on the page, so a second
+				 * spelling of one label is something a reader goes out of their way to type. It
+				 * is one list for the page rather than one per row, which is the whole reason the
+				 * field points at it by name.
+				 */}
+				{tagging && (
+					<datalist id={tagging.optionsId}>
+						{tagging.options.map((name) => (
+							<option key={name} value={name} />
+						))}
+					</datalist>
+				)}
+
 				<ol start={start ?? undefined} mix={[p(0), listBleed()]}>
 					{entries.map((entry) => (
 						<li
@@ -439,81 +480,100 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 
 								{/**
 								 * The title takes the line and the two quiet columns follow it, until the
-								 * line is too narrow to hold all three and they drop underneath.
+								 * line is too narrow to hold all three and they drop underneath. Where a
+								 * post carries labels they take a line of their own beneath all three, so
+								 * a row is still one line until there is a second thing to say.
 								 */}
-								<div mix={[grow(), minIs(0), media(WIDE_ROW, [flex(), items("baseline"), gap(3)])]}>
-									{/**
-									 * What the row's own words take when they are not a link: a post whose feed
-									 * gave it no address, and the note a screen reader hears. A linked title
-									 * wears the brand pair instead, which sorts read from unread the same way.
-									 *
-									 * The weight is deliberately not one of those differences. A heavier face
-									 * is a wider one, so switching it rewrites every glyph on the line and the
-									 * title reflows under the reader's eye at the moment they mark a post.
-									 */}
-									<div
-										{...{ [ROW_WORDS]: "" }}
-										mix={[
-											grow(),
-											minIs(0),
-											/**
-											 * The note a screen reader hears is taken out of the flow, and a
-											 * positioned box belongs to the page itself unless something nearer
-											 * claims it. Claiming it here keeps it inside the clip: its place in
-											 * the line is the far end of a summary the row never shows, which is
-											 * a page-wide sideways scroll on a phone when the page owns it.
-											 */
-											relative(),
-											truncate(),
-											text("sm"),
-											leading("normal"),
-										]}
-									>
-										<h2 mix={[inline(), weight("medium")]}>
-											<PostTitle title={entry.title} url={entry.url} ping={entry.ping} />
-										</h2>
-
+								<div mix={[grow(), minIs(0)]}>
+									<div mix={[media(WIDE_ROW, [flex(), items("baseline"), gap(3)])]}>
 										{/**
-										 * The opening of the post, carried on the title's own line in the space
-										 * a short title leaves: quiet enough to read as a continuation rather
-										 * than as a second title, and clipped with it.
+										 * What the row's own words take when they are not a link: a post whose feed
+										 * gave it no address, and the note a screen reader hears. A linked title
+										 * wears the brand pair instead, which sorts read from unread the same way.
+										 *
+										 * The weight is deliberately not one of those differences. A heavier face
+										 * is a wider one, so switching it rewrites every glyph on the line and the
+										 * title reflows under the reader's eye at the moment they mark a post.
 										 */}
-										{entry.summary && (
-											<span mix={[mis(2), fg("neutral.muted")]}>{entry.summary}</span>
-										)}
-
-										{entry.isRead && <Text mix={[visuallyHidden()]}>{copy.read}</Text>}
-										{entry.isSaved && <Text mix={[visuallyHidden()]}>{copy.saved}</Text>}
-									</div>
-
-									<div
-										mix={[
-											flex(),
-											items("baseline"),
-											gap(2),
-											shrink(),
-											text("xs"),
-											fg("neutral.muted"),
-											mbs(1),
-											media(WIDE_ROW, mbs(0)),
-										]}
-									>
-										{hasSource && (
-											<span
-												mix={[truncate(), media(WIDE_ROW, [is(SOURCE_COLUMN), textAlign("end")])]}
-											>
-												{entry.source}
-											</span>
-										)}
-
-										<time
-											dateTime={entry.dateTime}
-											title={entry.timeLabel}
-											mix={[nowrap(), media(WIDE_ROW, [minIs(TIME_COLUMN), textAlign("end")])]}
+										<div
+											{...{ [ROW_WORDS]: "" }}
+											mix={[
+												grow(),
+												minIs(0),
+												/**
+												 * The note a screen reader hears is taken out of the flow, and a
+												 * positioned box belongs to the page itself unless something nearer
+												 * claims it. Claiming it here keeps it inside the clip: its place in
+												 * the line is the far end of a summary the row never shows, which is
+												 * a page-wide sideways scroll on a phone when the page owns it.
+												 */
+												relative(),
+												truncate(),
+												text("sm"),
+												leading("normal"),
+											]}
 										>
-											{entry.time}
-										</time>
+											<h2 mix={[inline(), weight("medium")]}>
+												<PostTitle title={entry.title} url={entry.url} ping={entry.ping} />
+											</h2>
+
+											{/**
+											 * The opening of the post, carried on the title's own line in the space
+											 * a short title leaves: quiet enough to read as a continuation rather
+											 * than as a second title, and clipped with it.
+											 */}
+											{entry.summary && (
+												<span mix={[mis(2), fg("neutral.muted")]}>{entry.summary}</span>
+											)}
+
+											{entry.isRead && <Text mix={[visuallyHidden()]}>{copy.read}</Text>}
+											{entry.isSaved && <Text mix={[visuallyHidden()]}>{copy.saved}</Text>}
+										</div>
+
+										<div
+											mix={[
+												flex(),
+												items("baseline"),
+												gap(2),
+												shrink(),
+												text("xs"),
+												fg("neutral.muted"),
+												mbs(1),
+												media(WIDE_ROW, mbs(0)),
+											]}
+										>
+											{hasSource && (
+												<span
+													mix={[truncate(), media(WIDE_ROW, [is(SOURCE_COLUMN), textAlign("end")])]}
+												>
+													{entry.source}
+												</span>
+											)}
+
+											<time
+												dateTime={entry.dateTime}
+												title={entry.timeLabel}
+												mix={[nowrap(), media(WIDE_ROW, [minIs(TIME_COLUMN), textAlign("end")])]}
+											>
+												{entry.time}
+											</time>
+										</div>
 									</div>
+
+									{/**
+									 * Why the post was kept, under the words saying what it is. It is drawn
+									 * only on the lists whose posts are kept by definition, so no row of a
+									 * river carries a strip — or the read behind one.
+									 */}
+									{tagging && entry.applyTagAction && (
+										<TagStrip
+											chips={entry.tags ?? []}
+											applyAction={entry.applyTagAction}
+											returnTo={returnTo}
+											optionsId={tagging.optionsId}
+											copy={tagging.copy}
+										/>
+									)}
 								</div>
 
 								{/**

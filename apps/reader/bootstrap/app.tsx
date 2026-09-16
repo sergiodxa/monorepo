@@ -127,6 +127,34 @@ export default function application(options: application.Options) {
 		lazy(() => import("~/app/http/controllers/saved")),
 	);
 	router.map(
+		routes.tag,
+		lazy(() => import("~/app/http/controllers/tags/show")),
+	);
+	router.map(
+		routes.tags.create,
+		lazy(() => import("~/app/http/controllers/tags/create")),
+	);
+	router.map(
+		routes.tags.rename,
+		lazy(() => import("~/app/http/controllers/tags/rename")),
+	);
+	router.map(
+		routes.tags.delete,
+		lazy(() => import("~/app/http/controllers/tags/delete")),
+	);
+	router.map(
+		routes.tags.apply,
+		lazy(() => import("~/app/http/controllers/tags/apply")),
+	);
+	router.map(
+		routes.tags.remove,
+		lazy(() => import("~/app/http/controllers/tags/remove")),
+	);
+	router.map(
+		routes.feeds.pin,
+		lazy(() => import("~/app/http/controllers/feeds/pin")),
+	);
+	router.map(
 		routes.feeds.unfollow,
 		lazy(() => import("~/app/http/controllers/feeds/unfollow")),
 	);

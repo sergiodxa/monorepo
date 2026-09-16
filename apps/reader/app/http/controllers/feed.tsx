@@ -22,7 +22,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { CircleCheckIcon, FolderIcon, HourglassIcon, RefreshCwIcon, UnlinkIcon } from "@sdxc/icons";
+import {
+	CircleCheckIcon,
+	FolderIcon,
+	HourglassIcon,
+	PinIcon,
+	RefreshCwIcon,
+	UnlinkIcon,
+} from "@sdxc/icons";
 import { parsePageParams } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { visuallyHidden } from "@sdxc/u/a11y";
@@ -50,6 +57,7 @@ import { attrs } from "remix/ui";
 import type { FeedStatus } from "~/database/feed-schema";
 
 import { chrome } from "~/app/http/controllers/chrome";
+import { PIN_FIELD, PIN_PARAM } from "~/app/http/controllers/feeds/pin";
 import { MARKED_PARAM } from "~/app/http/controllers/feeds/read";
 import { CHECKED_PARAM } from "~/app/http/controllers/feeds/refresh";
 import { VELOCITY_FIELD, VELOCITY_PARAM } from "~/app/http/controllers/feeds/velocity";
@@ -182,6 +190,20 @@ function markNote(marked: string | null): Note | null {
  *
  * @param velocity - The redirect's `velocity` parameter, as it arrived.
  */
+/**
+ * The copy and tone for the outcome a pin submission redirects back with, or `null` when
+ * this is an ordinary visit. `missing` needs no entry: a feed the reader does not follow
+ * renders the not-found page, which never reaches this.
+ *
+ * @param pin - The redirect's `pin` parameter, as it arrived.
+ */
+function pinNote(pin: string | null): Note | null {
+	if (pin === "pinned") return { key: "feeds.pin.pinned", color: "success" };
+	if (pin === "unpinned") return { key: "feeds.pin.unpinned", color: "success" };
+	if (pin === "full") return { key: "feeds.pin.full", color: "warning" };
+	return null;
+}
+
 function velocityNote(velocity: string | null): Note | null {
 	if (velocity === "saved") return { key: "feeds.velocity.saved", color: "success" };
 	if (velocity === "invalid") return { key: "feeds.velocity.invalid", color: "warning" };
@@ -289,6 +311,7 @@ export default createAction(routes.feed, {
 			markNote(ctx.url.searchParams.get(MARKED_PARAM)) ??
 			checkNote(ctx.url.searchParams.get(CHECKED_PARAM)) ??
 			velocityNote(ctx.url.searchParams.get(VELOCITY_PARAM)) ??
+			pinNote(ctx.url.searchParams.get(PIN_PARAM)) ??
 			folderNote(ctx.url.searchParams.get(FOLDER_PARAM));
 
 		/**
@@ -429,6 +452,13 @@ export default createAction(routes.feed, {
 		let postsPerDay = health?.postsPerDay ?? null;
 
 		/**
+		 * The reader's own copy of that rate, written down where the number was asked for
+		 * anyway. It is what the rail's quiet group is derived from, so nothing walks the
+		 * subscriptions to keep it and nobody is asked to restate a measurement.
+		 */
+		await store.recordPublishingRate(feedId, postsPerDay);
+
+		/**
 		 * How much a feed has to publish before the question is worth a reader's attention is
 		 * a judgement about people rather than about storage, and nobody has yet watched one
 		 * being asked. It is read from a flag so the answer can move on evidence rather than
@@ -466,6 +496,37 @@ export default createAction(routes.feed, {
 								{/** The arrows a page is fetched again with, which is what this asks for. */}
 								<RefreshCwIcon size={ACTION_ICON_SIZE} />
 								<ActionLabel>{ctx.i18next.t("feeds.check.submit")}</ActionLabel>
+							</Button>
+						</form>
+
+						{/**
+						 * Pinning draws this feed above the queue, where a reader looks before they
+						 * start reading. It changes nothing the queue holds: the strip asks its own
+						 * bounded question and the queue below keeps every column and predicate it had.
+						 */}
+						<form method="post" action={routes.feeds.pin.href({ feedId })}>
+							<input
+								type="hidden"
+								name={PIN_FIELD}
+								value={feed.pinnedAt === null ? "true" : "false"}
+							/>
+
+							<Button
+								type="submit"
+								color="neutral"
+								variant="ghost"
+								size="sm"
+								aria-label={ctx.i18next.t(
+									feed.pinnedAt === null ? "feeds.pin.submit" : "feeds.pin.remove",
+								)}
+								title={ctx.i18next.t(
+									feed.pinnedAt === null ? "feeds.pin.submit" : "feeds.pin.remove",
+								)}
+							>
+								<PinIcon size={ACTION_ICON_SIZE} />
+								<ActionLabel>
+									{ctx.i18next.t(feed.pinnedAt === null ? "feeds.pin.submit" : "feeds.pin.remove")}
+								</ActionLabel>
 							</Button>
 						</form>
 

@@ -227,7 +227,9 @@ async function settingsPage(
 					{ctx.i18next.t("settings.plan.allowance", {
 						feeds: entitlement.limits.feeds,
 						saved: entitlement.limits.saved,
-					})}
+						posts: entitlement.limits.posts,
+					})}{" "}
+					{ctx.i18next.t("settings.plan.history")}
 				</Description>
 
 				<Text mix={[text("xs"), fg("neutral.muted")]}>

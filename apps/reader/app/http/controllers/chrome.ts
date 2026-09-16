@@ -32,6 +32,7 @@ import type { AppLayout } from "~/resources/layouts/app";
 import { getViewer } from "~/app/http/middleware/auth";
 import { FRAME_PARAM } from "~/app/http/render";
 import { features } from "~/app/lib/flags";
+import { QUIET_POSTS_PER_DAY } from "~/database/schema";
 import { userStore } from "~/database/user-do";
 import { SEARCH_PARAM } from "~/resources/layouts/app";
 import routes from "~/routes/web";
@@ -82,6 +83,14 @@ export interface CachedFeed {
 	 * the list it already holds rather than reading the folders a second time.
 	 */
 	folderTitle: string | null;
+	/** When the reader pinned it, or `null` for a subscription they have not pinned. */
+	pinnedAt: number | null;
+	/**
+	 * What the feed publishes, in posts per day, as its own object measured it, or `null`
+	 * before anything has reported one. It is what the quiet group is derived from, so the
+	 * reader is never asked to restate a rate the system already measured.
+	 */
+	postsPerDay: number | null;
 }
 
 /**
@@ -140,6 +149,8 @@ export async function railFeeds(subject: string): Promise<CachedFeed[]> {
 				imageUrl: feed.imageUrl,
 				folderId: feed.folderId,
 				folderTitle: feed.folderTitle,
+				pinnedAt: feed.pinnedAt,
+				postsPerDay: feed.postsPerDay,
 			}));
 		},
 		{ ttl: RAIL_TTL },
@@ -159,6 +170,8 @@ export async function railFeeds(subject: string): Promise<CachedFeed[]> {
 		imageUrl: typeof feed.imageUrl === "string" ? feed.imageUrl : null,
 		folderId: typeof feed.folderId === "string" ? feed.folderId : null,
 		folderTitle: typeof feed.folderTitle === "string" ? feed.folderTitle : null,
+		pinnedAt: typeof feed.pinnedAt === "number" ? feed.pinnedAt : null,
+		postsPerDay: typeof feed.postsPerDay === "number" ? feed.postsPerDay : null,
 	}));
 }
 
@@ -191,17 +204,42 @@ export function sortByTitle(feeds: CachedFeed[], locale: string): CachedFeed[] {
  *
  * @param feeds - The feeds as they were cached or read.
  * @param locale - The request's language, which orders the names.
- * @returns The folders, and the feeds left unfiled, which the rail draws below them.
+ * @returns The folders, the feeds a reader pinned, the ones left unfiled, and the quiet
+ * ones the rail draws last.
  */
 export function groupByFolder(
 	feeds: CachedFeed[],
 	locale: string,
-): { folders: RailFolder[]; unfiled: CachedFeed[] } {
+): { folders: RailFolder[]; unfiled: CachedFeed[]; pinned: CachedFeed[]; quiet: CachedFeed[] } {
 	let byId = new Map<string, RailFolder>();
 	let unfiled: CachedFeed[] = [];
+	let pinned: CachedFeed[] = [];
+	let quiet: CachedFeed[] = [];
 
 	for (let feed of sortByTitle(feeds, locale)) {
+		/**
+		 * A feed the reader pinned is drawn where they put it and nowhere else. It is their
+		 * own answer about this subscription, and it is the escape hatch out of the derived
+		 * group below without there being a setting for one.
+		 */
+		if (feed.pinnedAt !== null) {
+			pinned.push(feed);
+			continue;
+		}
+
 		if (feed.folderId === null) {
+			/**
+			 * Nobody grouped it and it publishes almost nothing, so it goes in the group that
+			 * keeps it from being buried by a feed that publishes hourly. The threshold is read
+			 * against a measurement rather than a preference, which is why a feed near the line
+			 * cannot flicker between page loads: a thirty-day mean moves no faster than a
+			 * publisher does.
+			 */
+			if (feed.postsPerDay !== null && feed.postsPerDay < QUIET_POSTS_PER_DAY) {
+				quiet.push(feed);
+				continue;
+			}
+
 			unfiled.push(feed);
 			continue;
 		}
@@ -222,7 +260,7 @@ export function groupByFolder(
 	let collator = new Intl.Collator(locale);
 	let folders = [...byId.values()].sort((one, other) => collator.compare(one.title, other.title));
 
-	return { folders, unfiled };
+	return { folders, unfiled, pinned, quiet };
 }
 
 /**

@@ -53,7 +53,7 @@ const SaveForm = f.object({
  *
  * @param returnTo - The destination the form submitted.
  */
-function localPath(returnTo: string): string {
+export function localPath(returnTo: string): string {
 	let isRelative =
 		returnTo.startsWith("/") && !returnTo.startsWith("//") && !returnTo.startsWith("/\\");
 

@@ -49,6 +49,8 @@ function feed(
 		imageUrl: null,
 		folderId: folder?.id ?? null,
 		folderTitle: folder?.title ?? null,
+		pinnedAt: null,
+		postsPerDay: null,
 	};
 }
 

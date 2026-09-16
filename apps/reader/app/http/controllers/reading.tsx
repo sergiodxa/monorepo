@@ -45,8 +45,9 @@ import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
-import { boxSizing, flex, gap, grow, items, vstack } from "@sdxc/u/layout";
+import { boxSizing, flex, flexWrap, gap, grow, items, vstack } from "@sdxc/u/layout";
 import { bs, is, maxIs, minIs, p } from "@sdxc/u/size";
+import { text, textDecoration, truncate } from "@sdxc/u/typography";
 import { Alert, Button, Confirm, Empty, HeadingScope, LinkButton } from "@sdxc/ui";
 import { waitUntil } from "cloudflare:workers";
 import * as s from "remix/data-schema";
@@ -118,6 +119,12 @@ const FOLLOW_FIELD_FLOOR = "12rem";
 
 /** Width it stops growing at, since an address needs no more of a wide window than this. */
 const FOLLOW_FIELD_CAP = "20rem";
+
+/** Width a pinned feed's card will not be squeezed past before the strip wraps. */
+const PINNED_CARD_FLOOR = "14rem";
+
+/** Width it stops growing at, so three titles never run the width of a wide window. */
+const PINNED_CARD_CAP = "22rem";
 
 /** One line of copy the page says an action's outcome in, and the tone it wears. */
 interface Note {
@@ -306,6 +313,13 @@ export async function renderReadingQueue(
 
 	let freshness: UserStore.Freshness | null = null;
 	let page: UserStore.TimelineResult;
+
+	/**
+	 * The feeds the reader never wants to miss, asked for as their own bounded question and
+	 * drawn above the queue. A frame is continuing a queue already on screen, and the strip
+	 * is already in the document that frame is written into.
+	 */
+	let pinned = isFrame ? [] : await store.pinnedStrip();
 
 	if (isFrame) {
 		page = await store.readingQueue({
@@ -681,6 +695,61 @@ export async function renderReadingQueue(
 							</LinkButton>
 						</Alert.Action>
 					</Alert>
+				)}
+
+				{/**
+				 * The feeds the reader pinned, each with the newest few posts of it they have not
+				 * read. It is a card per feed rather than one list, so a busy pin does not bury a
+				 * quiet one, and it asks its own bounded question: the queue below keeps every
+				 * column and predicate it had, so a pin cannot move a post out from under anybody
+				 * mid-scroll. A pinned feed's newest post therefore appears twice, which is the
+				 * visible price of not letting a pin touch the timeline's predicate.
+				 */}
+				{pinned.length > 0 && (
+					<section aria-label={ctx.i18next.t("feeds.pin.label")} mix={[flex(), flexWrap(), gap(4)]}>
+						{pinned.map((entry) => (
+							<article
+								key={entry.feed.id}
+								mix={[
+									vstack({ gap: 2 }),
+									grow(),
+									minIs(PINNED_CARD_FLOOR),
+									maxIs(PINNED_CARD_CAP),
+									p(3),
+									rounded("lg"),
+									border({ color: "neutral.border", width: 1 }),
+								]}
+							>
+								<h2 mix={[text("sm")]}>
+									<a
+										href={routes.feed.href({ feed: entry.feed.id })}
+										mix={[fg("neutral.emphasis"), textDecoration("none")]}
+									>
+										{entry.feed.title}
+									</a>
+								</h2>
+
+								{entry.items.length > 0 ? (
+									<ul mix={[vstack({ gap: 1 }), p(0), text("xs")]}>
+										{entry.items.map((item) => (
+											<li key={item.id} mix={[truncate()]}>
+												<a
+													href={item.url ?? routes.feed.href({ feed: entry.feed.id })}
+													mix={[fg("brand"), textDecoration("none")]}
+												>
+													{item.title}
+												</a>
+											</li>
+										))}
+									</ul>
+								) : (
+									<p mix={[text("xs"), fg("neutral.muted")]}>
+										{ctx.i18next.t("feeds.pin.caughtUp")}
+									</p>
+								)}
+							</article>
+						))}
+					</section>
 				)}
 
 				{entries.length > 0 ? (

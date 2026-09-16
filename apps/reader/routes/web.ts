@@ -79,6 +79,31 @@ export default route({
 	saved: get("/saved"),
 
 	/**
+	 * The kept posts under one label, read as one stream. Its own address, the way the
+	 * saved list is: a label is why a reader kept something, and the list of what they kept
+	 * for one reason is somewhere they go back to and can keep a link to.
+	 */
+	tag: get("/tags/:tag"),
+
+	/**
+	 * The labels themselves, and the two ways one reaches a post. A reader meets a label as
+	 * a chip on a post they kept and on its own surface, so these are the addresses the
+	 * forms on those surfaces act against.
+	 */
+	tags: {
+		create: post("/tags"),
+		rename: post("/tags/:tagId"),
+		delete: del("/tags/:tagId"),
+		/**
+		 * Puts a label on one post, which keeps the post as it does — one gesture, with no
+		 * ordering between two verbs for a reader to get wrong.
+		 */
+		apply: post("/items/:itemId/tags"),
+		/** Takes one label off one post, which deletes neither. */
+		remove: del("/items/:itemId/tags/:tagId"),
+	},
+
+	/**
 	 * The subscriptions themselves. Nothing here renders a page: a reader meets their feeds
 	 * in the rail and one feed on {@link reading}'s own surface, so these are the addresses
 	 * the forms on those surfaces act against.
@@ -103,6 +128,11 @@ export default route({
 		 * The subscription list as OPML, for carrying it to another reader. A path of its
 		 * own rather than a segment under `/feeds`, which `unfollow` would read as a feed id.
 		 */
+		/**
+		 * Pins a feed to the strip above the queue, or takes the pin off. A path of its own,
+		 * the way `refresh` and `velocity` are, so the feed's page reaches it with a form.
+		 */
+		pin: post("/feeds/:feedId/pin"),
 		export: get("/feeds.opml"),
 		/** Subscribes to every feed in an uploaded OPML document. */
 		import: post("/feeds/import"),

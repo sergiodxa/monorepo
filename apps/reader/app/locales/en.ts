@@ -67,6 +67,10 @@ export default {
 		saved: "Saved",
 		feeds: "Feeds",
 		subscriptions: "Followed feeds",
+		/** The feeds a reader pinned, drawn first because that is what pinning was for. */
+		pinned: "Pinned",
+		/** The feeds nobody grouped and that publish almost nothing, drawn last. */
+		quiet: "Quiet",
 		openSidebar: "Show feeds and search",
 		settings: "Settings",
 		account: "Your account",
@@ -215,6 +219,18 @@ export default {
 				overLimit_other:
 					"Your plan follows {{count}} feeds. Unfollow one, or move up a plan, to follow another.",
 			},
+		},
+
+		/** Pinning a feed above the queue, from that feed's own page. */
+		pin: {
+			label: "Pinned feeds",
+			submit: "Pin",
+			remove: "Unpin",
+			pinned: "Pinned above your reading.",
+			unpinned: "Taken off the pinned strip.",
+			full: "You have pinned as many feeds as the strip holds. Unpin one to pin another.",
+			/** Said on a pinned feed with nothing waiting, which is the point of pinning it. */
+			caughtUp: "Nothing new.",
 		},
 
 		show: {
@@ -399,6 +415,65 @@ export default {
 		},
 	},
 
+	/**
+	 * The labels a reader puts on the posts they kept. A label answers why something was
+	 * kept, where a folder answers where a publication belongs, so nothing here talks about
+	 * subscriptions and nothing here deletes a post.
+	 */
+	tags: {
+		created: "Label made.",
+		renamed: "Label renamed.",
+		duplicate: "You already have a label reading under that name.",
+		invalid: "A label needs a name of up to 32 characters.",
+		full: "You have as many labels as this holds. Delete one to make another.",
+		/** A post carrying ten reasons to have been kept has none, which is what this says. */
+		postFull: "That post already carries as many labels as one post can.",
+		/** Labelling keeps the post, so a full shelf refuses the label for the same reason. */
+		savedFull: "Your saved posts are full, so nothing was labelled. Remove one to make room.",
+		notEntitled: "Labels are part of a paid plan. Everything you have kept stays where it is.",
+		missing: "That label is no longer one of yours.",
+
+		/** The field both the naming forms type into. */
+		name: {
+			label: "Label name",
+			placeholder: "Name this label…",
+		},
+
+		/** The strip of labels under a kept post, and the field that adds another. */
+		strip: {
+			legend: "Labels on this post",
+			add: "Add a label",
+			placeholder: "Label…",
+			remove: "Remove",
+		},
+
+		rename: {
+			legend: "Rename this label",
+			submit: "Rename",
+		},
+
+		delete: {
+			title: "Delete a label",
+			submit: "Delete label",
+			/** Backs out of the prompt, leaving the label as it is. */
+			cancel: "Cancel",
+			/** Says what is lost, which is the label and nothing else. */
+			confirm_one: "Delete {{name}}? {{count}} post stops carrying it and stays saved.",
+			confirm_other: "Delete {{name}}? {{count}} posts stop carrying it and stay saved.",
+		},
+
+		empty: {
+			title: "Nothing under this label yet",
+			description: "Put this label on a post from your saved posts and it arrives here.",
+		},
+
+		notFound: {
+			title: "Label not found",
+			description: "You do not have a label with that address.",
+			back: "Back to your saved posts",
+		},
+	},
+
 	items: {
 		read: {
 			title: "Mark as read",
@@ -445,7 +520,13 @@ export default {
 				premium: "Premium",
 			},
 			/** What each plan allows, as the numbers the reader is measured against. */
-			allowance: "{{feeds}} feeds, {{saved}} saved posts.",
+			allowance: "{{feeds}} feeds, {{saved}} saved posts, {{posts}} posts kept.",
+			/**
+			 * What the count of posts above means for the reader. The allowance states that
+			 * count rather than promising history for ever, because the object holding it has
+			 * a limit, and this says what the reader gets while they are inside it.
+			 */
+			history: "Nothing is deleted while you are inside these numbers.",
 			usage: "You follow {{feeds}} feeds and have saved {{saved}} posts.",
 			upgrade: "Move to {{plan}}",
 			manage: "Manage billing",

@@ -45,6 +45,17 @@ export interface UserStoreDouble {
 	deleteFolder: ReturnType<typeof vi.fn>;
 	fileFeed: ReturnType<typeof vi.fn>;
 	folderTimeline: ReturnType<typeof vi.fn>;
+	listTags: ReturnType<typeof vi.fn>;
+	getTag: ReturnType<typeof vi.fn>;
+	createTag: ReturnType<typeof vi.fn>;
+	renameTag: ReturnType<typeof vi.fn>;
+	deleteTag: ReturnType<typeof vi.fn>;
+	tagItem: ReturnType<typeof vi.fn>;
+	untagItem: ReturnType<typeof vi.fn>;
+	taggedQueue: ReturnType<typeof vi.fn>;
+	pinFeed: ReturnType<typeof vi.fn>;
+	pinnedStrip: ReturnType<typeof vi.fn>;
+	recordPublishingRate: ReturnType<typeof vi.fn>;
 }
 
 /** An empty page of a timeline, which is what a store answers before anything is stored. */
@@ -60,6 +71,12 @@ export const NO_FEEDS: UserStore.FeedSummary[] = [];
 
 /** No folders, which is what a store answers before a reader has filed anything. */
 export const NO_FOLDERS: UserStore.Folder[] = [];
+
+/** No labels, which is what a store answers before a reader has made one. */
+export const NO_TAGS: UserStore.Tag[] = [];
+
+/** Nothing pinned, which is what a reader opens to before they pin anything. */
+export const NO_PINS: UserStore.PinnedFeed[] = [];
 
 /** The preferences a reader has before they change any of them. */
 export const DEFAULT_SETTINGS: UserStore.Settings = {
@@ -138,6 +155,17 @@ export function createUserStoreDouble(): UserStoreDouble {
 		synchronize: vi.fn(async () => ({ synchronized: 0, items: 0, remaining: 0, paused: 0 })),
 		setVelocity: vi.fn(async () => ({ ok: false, reason: "not-following" })),
 		saveItem: vi.fn(async () => ({ ok: true, saved: true })),
+		listTags: vi.fn(async () => NO_TAGS),
+		getTag: vi.fn(async () => null),
+		createTag: vi.fn(async () => ({ ok: false, reason: "tag-name-invalid" })),
+		renameTag: vi.fn(async () => ({ ok: false, reason: "not-found" })),
+		deleteTag: vi.fn(async () => ({ ok: false, reason: "not-found" })),
+		tagItem: vi.fn(async () => ({ ok: false, reason: "not-found" })),
+		untagItem: vi.fn(async () => ({ ok: true, removed: false })),
+		taggedQueue: vi.fn(async () => EMPTY_TIMELINE),
+		pinFeed: vi.fn(async () => ({ ok: false, reason: "not-following" })),
+		pinnedStrip: vi.fn(async () => NO_PINS),
+		recordPublishingRate: vi.fn(async () => undefined),
 		savedQueue: vi.fn(async () => EMPTY_TIMELINE),
 		listFolders: vi.fn(async () => NO_FOLDERS),
 		getFolder: vi.fn(async () => null),

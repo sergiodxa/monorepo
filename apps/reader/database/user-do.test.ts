@@ -38,7 +38,7 @@ import { FLAG_SET, flags } from "~/app/lib/flags";
 import catalogSql from "~/database/catalog-migrations/0001-feeds.sql?raw";
 import { FeedDO } from "~/database/feed-do";
 import { headKey } from "~/database/feed-head";
-import { READER_BUDGET, SAVED_LIMIT } from "~/database/schema";
+import { TIER_BUDGETS, TIER_SAVED_LIMITS } from "~/database/schema";
 import { UserDO } from "~/database/user-do";
 
 /**
@@ -80,6 +80,10 @@ vi.mock("cloudflare:workers", async (importOriginal) => {
  * these tests walk the path the object walks: the flag is read, and what it answers is
  * what the sweep is held to.
  *
+ * The readers here are on the free tier, so the figure is served as the fraction of that
+ * tier's budget it comes to: the object multiplies the tier's number by what the flag
+ * answers, which is the arithmetic the sweep does in production.
+ *
  * @param posts - What the object may hold before it reclaims, and then refuses.
  */
 async function setBudget(posts: number): Promise<void> {
@@ -89,8 +93,8 @@ async function setBudget(posts: number): Promise<void> {
 				store: new InMemoryFlagStore({
 					flags: {
 						...FLAG_SET.flags,
-						"reader-post-budget": {
-							variants: { standard: posts },
+						"reader-budget-scale": {
+							variants: { standard: posts / TIER_BUDGETS.free },
 							defaultVariant: "standard",
 						},
 					},
@@ -260,7 +264,7 @@ beforeEach(async () => {
 	feedCalls.length = 0;
 	catalogQueries.length = 0;
 	pageFault = { reads: 0, failOn: 0 };
-	await setBudget(READER_BUDGET);
+	await setBudget(TIER_BUDGETS.free);
 
 	let catalog = createD1Database();
 	await catalog.exec(catalogSql);
@@ -822,9 +826,10 @@ describe("synchronizing a stale feed", () => {
 		expect(armed).toBeGreaterThan(Date.now());
 		expect(armed).toBeLessThanOrEqual(Date.now() + 60 * 1000);
 
-		// The platform clears an alarm as it fires it, so the leftovers are what decides
-		// whether another one is armed.
+		// The platform clears an alarm as it fires it, and what a wake does is what its due
+		// times say is due, so the catch-up is brought forward to the moment it delivers.
 		await state.storage.deleteAlarm();
+		state.storage.sql.exec(`UPDATE settings SET next_catch_up_at = ? WHERE id = 1`, Date.now());
 		await user.alarm();
 
 		expect((await user.openReader()).freshness).toEqual({ stale: [], count: 0 });
@@ -1230,11 +1235,11 @@ describe("saved posts, the one answer that outlives every rule", () => {
 		expect(storedItems(state, feed)).toEqual(["kept"]);
 	});
 
-	test("refuses the thousand-and-first save and evicts none of the thousand", async () => {
+	test("refuses the save past the shelf and evicts none of what is on it", async () => {
 		let { user, state } = await createReader();
 
-		// The shelf a thousand posts deep is the one a paying reader has; the free tier's
-		// is a hundred, and which number applies is the whole of what the tier decides here.
+		// The five-thousand-deep shelf is the one a paying reader has; the free tier's is a
+		// thousand, and which number applies is the whole of what the tier decides here.
 		await user.setTier({ entitled: "paid", cancelled: false, readAt: 1, source: "billing" });
 
 		let feed = seedFeed(state, { id: "feed_shelf" });
@@ -1242,21 +1247,29 @@ describe("saved posts, the one answer that outlives every rule", () => {
 		seedItems(
 			state,
 			feed,
-			Array.from({ length: SAVED_LIMIT + 1 }, (_, index) => ({
+			Array.from({ length: TIER_SAVED_LIMITS.paid + 1 }, (_, index) => ({
 				id: `post-${String(index).padStart(4, "0")}`,
-				publishedAt: Date.now() - (SAVED_LIMIT + 1 - index) * 1000,
-				savedAt: index < SAVED_LIMIT ? Date.now() - (SAVED_LIMIT - index) * 1000 : undefined,
+				publishedAt: Date.now() - (TIER_SAVED_LIMITS.paid + 1 - index) * 1000,
+				savedAt:
+					index < TIER_SAVED_LIMITS.paid
+						? Date.now() - (TIER_SAVED_LIMITS.paid - index) * 1000
+						: undefined,
 			})),
 		);
 
-		let refused = await user.saveItem(`post-${String(SAVED_LIMIT).padStart(4, "0")}`);
+		let refused = await user.saveItem(`post-${String(TIER_SAVED_LIMITS.paid).padStart(4, "0")}`);
 
 		// A cap that dropped the oldest save to make room would delete the one thing in this
 		// design a reader explicitly asked to keep.
 		expect(refused).toEqual({
 			ok: false,
 			reason: "full",
-			limit: { limit: "saved", current: SAVED_LIMIT, allowed: SAVED_LIMIT, tier: "paid" },
+			limit: {
+				limit: "saved",
+				current: TIER_SAVED_LIMITS.paid,
+				allowed: TIER_SAVED_LIMITS.paid,
+				tier: "paid",
+			},
 		});
 
 		let saved = await user.savedQueue({ limit: 1 });
@@ -1266,14 +1279,14 @@ describe("saved posts, the one answer that outlives every rule", () => {
 			.exec("SELECT COUNT(*) AS kept FROM feed_items WHERE saved_at IS NOT NULL")
 			.toArray();
 
-		expect(Number(row?.["kept"])).toBe(SAVED_LIMIT);
-		expect(storedItems(state, feed)).toHaveLength(SAVED_LIMIT + 1);
+		expect(Number(row?.["kept"])).toBe(TIER_SAVED_LIMITS.paid);
+		expect(storedItems(state, feed)).toHaveLength(TIER_SAVED_LIMITS.paid + 1);
 
 		// The reader is told they are full and unsaves something, which is the answer that
 		// makes room — and the shelf takes the next one the moment there is any.
 		expect(await user.saveItem("post-0000", false)).toEqual({ ok: true, saved: false });
 
-		expect(await user.saveItem(`post-${String(SAVED_LIMIT).padStart(4, "0")}`)).toEqual({
+		expect(await user.saveItem(`post-${String(TIER_SAVED_LIMITS.paid).padStart(4, "0")}`)).toEqual({
 			ok: true,
 			saved: true,
 		});

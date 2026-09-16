@@ -44,6 +44,7 @@ import type {
 	SelectFeedItem,
 	SelectFolder,
 	SelectSettings,
+	SelectTag,
 	Velocity,
 } from "~/database/schema";
 
@@ -59,6 +60,14 @@ import {
 	withinLimit,
 } from "~/app/lib/entitlement";
 import { features, flagsFor } from "~/app/lib/flags";
+import {
+	checkIntervalFor,
+	dormancyMultiplier,
+	earliestDue,
+	nextCheckAt,
+	SWEEP_INTERVAL_MS,
+} from "~/app/lib/schedule";
+import { foldTagName } from "~/app/lib/tag-name";
 import { logger } from "~/bootstrap/logger";
 import { feedStore } from "~/database/feed-do";
 import { KEYS_PER_BULK_READ, readHeads } from "~/database/feed-head";
@@ -70,7 +79,12 @@ import {
 	feedItems,
 	feeds,
 	folders,
+	itemTags,
+	PIN_LIMIT,
 	settings,
+	TAG_LIMIT,
+	tags,
+	TAGS_PER_ITEM,
 	VELOCITIES,
 	VELOCITY_WINDOW_MS,
 } from "~/database/schema";
@@ -105,6 +119,13 @@ const MAX_PAGE_LIMIT = 100;
 
 /** Ids one `IN` list carries, held under the same 100-parameter ceiling. */
 const IDS_PER_LOOKUP = 90;
+
+/**
+ * Unread posts the strip shows per pinned feed. Enough to say a publication has moved
+ * without a busy pin burying a quiet one, since the strip sits above the river rather
+ * than becoming the page.
+ */
+const PINNED_POSTS = 3;
 
 /**
  * The ordering both timelines read in, spelled once and shared. A cursor records the
@@ -252,6 +273,79 @@ export namespace UserStore {
 		folderId: string | null;
 		/** That group's name, carried beside the id so a rail draws it without a second read. */
 		folderTitle: string | null;
+		/** When the reader pinned it, or `null` for a subscription they have not pinned. */
+		pinnedAt: number | null;
+		/**
+		 * What the feed publishes, in posts per day, as the feed's own object measured it,
+		 * or `null` before any conversation with that object has reported one.
+		 */
+		postsPerDay: number | null;
+	}
+
+	/** One of the reader's labels, which is the whole of what a tag is. */
+	export interface Tag {
+		id: string;
+		/** The name as the reader typed it, which is the one drawn. */
+		name: string;
+		/** The case-folded form uniqueness and matching are taken over. */
+		slug: string;
+	}
+
+	/** Why a label was not made, renamed, applied or found. */
+	export type TagFailure =
+		/** No label or post of the reader's has that id. */
+		| "not-found"
+		/** The reader already has as many labels as this holds. */
+		| "tag-limit"
+		/** The name was empty, too long, or held characters no chip could draw. */
+		| "tag-name-invalid"
+		/** Another label of theirs already reads under that name. */
+		| "tag-exists"
+		/** The post already carries as many labels as one post may. */
+		| "post-tag-limit"
+		/** Labelling keeps the post, and the shelf that keeps it is full. */
+		| "saved-full"
+		/** The reader's plan does not make labels, which deletes none they have. */
+		| "not-entitled";
+
+	export type TagResult =
+		| { ok: true; tag: Tag }
+		| { ok: false; reason: Exclude<TagFailure, "tag-exists" | "saved-full"> }
+		/** The label already reading under that name, so a refusal can name it. */
+		| { ok: false; reason: "tag-exists"; tag: Tag };
+
+	/**
+	 * What labelling a post did. `saved` is `true` on a post this kept as it labelled it,
+	 * which is the one gesture: a label is a reason to have kept something, so applying one
+	 * keeps it.
+	 */
+	export type TagItemResult =
+		| { ok: true; tag: Tag; saved: boolean }
+		| { ok: false; reason: Exclude<TagFailure, "saved-full"> }
+		| { ok: false; reason: "saved-full"; limit: Limit };
+
+	/**
+	 * What deleting a label did. `items` counts the posts that stop carrying it, which is
+	 * the only consequence there is: no post is deleted and none is unsaved.
+	 */
+	export type TagRemoval =
+		| { ok: true; name: string; items: number }
+		| { ok: false; reason: "not-found" };
+
+	/** Why a subscription could not be pinned. */
+	export type PinResult =
+		| { ok: true; pinned: boolean }
+		| { ok: false; reason: "not-following" }
+		/** As many feeds are pinned as the strip holds; `allowed` says how many that is. */
+		| { ok: false; reason: "pin-limit"; allowed: number };
+
+	/**
+	 * One pinned subscription and the newest few posts of it the reader has not read, as
+	 * the strip above the river draws them.
+	 */
+	export interface PinnedFeed {
+		feed: FeedRef;
+		items: Item[];
 	}
 
 	/** One of the reader's groups of subscriptions, which is the whole of what a folder is. */
@@ -317,6 +411,11 @@ export namespace UserStore {
 		readAt: number | null;
 		/** When the reader asked to keep it, or `null` for a post under the ordinary rules. */
 		savedAt: number | null;
+		/**
+		 * The labels on this post, which only the two surfaces that draw chips ask for. The
+		 * river answers with an empty list rather than a second read on every page of it.
+		 */
+		tags: Tag[];
 	}
 
 	/** Where in a timeline to read from, and how much of it. */
@@ -472,6 +571,24 @@ export namespace UserStore {
 		paused: number;
 	}
 
+	/**
+	 * What one retention sweep took, and the two numbers that say what it was measured
+	 * against. A reclamation is only readable beside the budget it was made under, and the
+	 * budget is only readable beside the tier that set it.
+	 */
+	export interface Sweep {
+		/** Posts dropped for being older than the velocity their reader set. */
+		aged: number;
+		/** Posts taken back from what was read and not saved, on an object over budget. */
+		reclaimed: number;
+		/** Feeds left holding, because nothing of theirs was the reader's to lose. */
+		paused: number;
+		/** The tier the object's own settings carried when it ran. */
+		tier: Tier;
+		/** The posts that tier allows, which is what the counts above were compared to. */
+		budget: number;
+	}
+
 	/** Setting a velocity the `CHECK` constraint would refuse is reported, never thrown. */
 	export type VelocityResult =
 		| { ok: true; feed: FeedSummary }
@@ -531,7 +648,15 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * reader.
 	 */
 	async ensureUser(subject: string): Promise<UserStore.Settings> {
-		return toSettings(await this.#settingsRow(subject));
+		let row = await this.#settingsRow(subject);
+
+		/**
+		 * A tier bought while the object was asleep takes effect at the sign-in that
+		 * follows it rather than at a wake the old tier never armed.
+		 */
+		await this.#reschedule(row);
+
+		return toSettings(row);
 	}
 
 	/** The reader's preferences, or `null` for an object no sign-in has reached yet. */
@@ -597,6 +722,24 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 				tier_checked_at: snapshot.readAt,
 			},
 		);
+
+		this.#record("job", {
+			event: "user.tier",
+			from: current,
+			to: decided.tier,
+			expiresAt: decided.graceUntil,
+			source: snapshot.source,
+		});
+
+		/**
+		 * An upgrade takes effect at once rather than at whatever wake the tier it replaced
+		 * had already armed, and a drop to free stops the wakes with the same write.
+		 */
+		await this.#reschedule({
+			...row,
+			tier: decided.tier,
+			grace_until: decided.graceUntil,
+		});
 
 		return { ok: true, from: current, to: decided.tier, graceUntil: decided.graceUntil };
 	}
@@ -940,6 +1083,11 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 				cursor: 0,
 				velocity: DEFAULT_VELOCITY,
 				unfollowed_at: null,
+				/**
+				 * Stamped from the measurement the feed's object already took and already
+				 * returned, which is what the rail's quiet group is derived from.
+				 */
+				posts_per_day: joined.feed.postsPerDay,
 			},
 			{ returnRow: true },
 		);
@@ -1025,9 +1173,13 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let feed = await this.#db.find(feeds, { id: feedId });
 		if (feed === null) return false;
 
-		await this.#db.deleteMany(feedItems, {
-			where: and({ feed_id: feedId }, isNull("saved_at")),
-		});
+		let dropped = and({ feed_id: feedId }, isNull("saved_at"));
+
+		/** The labels of what is going are cleared in the same batch the posts go in. */
+		let doomed = await this.#db.query(feedItems).where(dropped).select("id").all();
+		await this.#forgetTags(doomed.map((row) => row.id));
+
+		await this.#db.deleteMany(feedItems, { where: dropped });
 
 		let saved = await this.#db.count(feedItems, { where: { feed_id: feedId } });
 
@@ -1060,9 +1212,10 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @example let opened = await userStore(viewer.id).openReader({ readState: "unread" });
 	 */
 	async openReader(options: UserStore.ReadingQueueOptions = {}): Promise<UserStore.OpenResult> {
-		let [timeline, subscriptions] = await Promise.all([
+		let [timeline, subscriptions, row] = await Promise.all([
 			this.readingQueue(options),
 			this.#subscriptions(),
+			this.#settingsRow(),
 		]);
 
 		let started = Date.now();
@@ -1073,11 +1226,21 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			.map((feed) => feed.id);
 
 		/**
+		 * An open is what dormancy is measured from, so stamping it here and rescheduling
+		 * from the stamp puts a returning reader back on the cadence they pay for before
+		 * the wake that would otherwise have run on a backed-off one.
+		 */
+		await this.#db.update(settings, { id: SETTINGS_ID }, { last_opened_at: started });
+		await this.#reschedule({ ...row, last_opened_at: started });
+
+		/**
 		 * How many reads covered the subscription list is the number worth watching: a check
 		 * that stops being one round trip is visible here before a reader notices it.
 		 */
 		this.#record("job", {
 			event: "user.freshness",
+			trigger: "open",
+			tier: leasedTier(row, started),
 			feeds: subscriptions.length,
 			reads: Math.ceil(subscriptions.length / KEYS_PER_BULK_READ),
 			stale: stale.length,
@@ -1098,10 +1261,23 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param feedIds - The subscriptions to bring up to date; every stale one when omitted.
 	 */
 	async synchronize(feedIds?: string[]): Promise<UserStore.SyncRun> {
+		return await this.#runSync(await this.#staleSubscriptions(feedIds));
+	}
+
+	/**
+	 * Brings an already-derived list of stale subscriptions up to date, a bounded number at
+	 * a time, and reports what it left behind.
+	 *
+	 * The staleness is taken as given so a caller that has just read the heads pays for one
+	 * bulk read rather than two: the comparison is the same one either way, and reading it
+	 * twice would double the only line of this work that grows with the subscription list.
+	 *
+	 * @param due - The subscriptions with something above their cursor.
+	 */
+	async #runSync(due: SelectFeed[]): Promise<UserStore.SyncRun> {
 		let run: UserStore.SyncRun = { synchronized: 0, items: 0, remaining: 0, paused: 0 };
 
 		try {
-			let due = await this.#staleSubscriptions(feedIds);
 			let batch = due.slice(0, SYNC_FEEDS_PER_REQUEST);
 			run.remaining = Math.max(0, due.length - batch.length);
 
@@ -1117,15 +1293,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 				SYNC_CONCURRENCY,
 			);
 
-			let swept = await this.#sweep(Date.now());
+			await this.#runSweep(Date.now(), run.paused);
 			await this.#stampRefreshed(Date.now());
-
-			this.#record("job", {
-				event: "user.retention",
-				aged: swept.aged,
-				reclaimed: swept.reclaimed,
-				paused: swept.paused + run.paused,
-			});
 
 			/** Whatever a run could not reach carries on in a minute rather than an interval. */
 			if (run.remaining > 0) {
@@ -1182,6 +1351,11 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		if (item === null) return { ok: false, reason: "not-found" };
 
 		if (!saved) {
+			/**
+			 * The labels go with the keeping. They described something kept, so the post returns
+			 * to whatever rule would have taken it, unlabelled.
+			 */
+			await this.#forgetTags([itemId]);
 			await this.#db.update(feedItems, { id: itemId }, { saved_at: null });
 			await this.#dropIfSpent(item.feed_id);
 
@@ -1209,7 +1383,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param options - Where to page from, and how much of it.
 	 */
 	savedQueue(options: UserStore.TimelineOptions = {}): Promise<UserStore.TimelineResult> {
-		return this.#page(this.#timeline().where(notNull("saved_at")), options);
+		return this.#page(this.#timeline().where(notNull("saved_at")), options, true);
 	}
 
 	/**
@@ -1411,6 +1585,338 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		return { ok: true, folder: folder === null ? null : toFolder(folder), moved };
 	}
 
+	/**
+	 * Every label the reader has, in the order their names read.
+	 *
+	 * Unpaged, for the reason the folder list is: the picker draws all of them, and the cap
+	 * on how many there may be is what keeps that one read.
+	 */
+	async listTags(): Promise<UserStore.Tag[]> {
+		let rows = await this.#db.findMany(tags, { orderBy: [["name", "asc"]] });
+		return rows.map(toTag);
+	}
+
+	/** One label, or `null` when the reader has none by that id. */
+	async getTag(tagId: string): Promise<UserStore.Tag | null> {
+		let row = await this.#db.find(tags, { id: tagId });
+		return row === null ? null : toTag(row);
+	}
+
+	/**
+	 * Makes a label to put on the posts the reader keeps.
+	 *
+	 * Uniqueness is over the folded name, so a reader who already has `Rust` and asks for
+	 * `rust` is told they have it and which one it is rather than given a second row nothing
+	 * could tell apart.
+	 *
+	 * @param name - What to call it, which no other label of this reader's may be called.
+	 */
+	async createTag(name: string): Promise<UserStore.TagResult> {
+		let entitled = await this.#mayLabel();
+		if (!entitled) return { ok: false, reason: "not-entitled" };
+
+		let folded = foldTagName(name);
+		if (folded === null) return { ok: false, reason: "tag-name-invalid" };
+
+		let taken = await this.#db.findOne(tags, { where: { slug: folded.slug } });
+		if (taken !== null) return { ok: false, reason: "tag-exists", tag: toTag(taken) };
+
+		let held = await this.#db.count(tags);
+		if (held >= TAG_LIMIT) {
+			this.#record("job", { event: "user.tag.refused", reason: "tag-limit", tags: held });
+			return { ok: false, reason: "tag-limit" };
+		}
+
+		let tag = toTag(await this.#createTag(folded.name, folded.slug));
+		this.#record("job", { event: "user.tag.created", tagId: tag.id, tags: held + 1, items: 0 });
+
+		return { ok: true, tag };
+	}
+
+	/**
+	 * Renames a label, which writes one row and rewrites no post: everything else holds it
+	 * by its id, which a name never was.
+	 *
+	 * A name whose folded form is another label's is refused and names that one. Merging is
+	 * a different verb — it is destructive, the two sets could never be told apart again,
+	 * and a reader who wanted it asked for a rename.
+	 *
+	 * @param tagId - The label to rename.
+	 * @param name - What to call it instead.
+	 */
+	async renameTag(tagId: string, name: string): Promise<UserStore.TagResult> {
+		let entitled = await this.#mayLabel();
+		if (!entitled) return { ok: false, reason: "not-entitled" };
+
+		let folded = foldTagName(name);
+		if (folded === null) return { ok: false, reason: "tag-name-invalid" };
+
+		let tag = await this.#db.find(tags, { id: tagId });
+		if (tag === null) return { ok: false, reason: "not-found" };
+
+		let taken = await this.#db.findOne(tags, { where: { slug: folded.slug } });
+		if (taken !== null && taken.id !== tagId) {
+			return { ok: false, reason: "tag-exists", tag: toTag(taken) };
+		}
+
+		let renamed = await this.#db.update(
+			tags,
+			{ id: tagId },
+			{ name: folded.name, slug: folded.slug },
+		);
+
+		let items = await this.#db.count(itemTags, { where: { tag_id: tagId } });
+		this.#record("job", {
+			event: "user.tag.renamed",
+			tagId,
+			tags: await this.#db.count(tags),
+			items,
+		});
+
+		return { ok: true, tag: toTag(renamed) };
+	}
+
+	/**
+	 * Deletes a label, which deletes no post and unsaves none: losing the label is not
+	 * losing the thing it was on, and a reader who wanted the posts gone unsaves them.
+	 *
+	 * @param tagId - The label to delete.
+	 */
+	async deleteTag(tagId: string): Promise<UserStore.TagRemoval> {
+		let tag = await this.#db.find(tags, { id: tagId });
+		if (tag === null) return { ok: false, reason: "not-found" };
+
+		let items = await this.#db.count(itemTags, { where: { tag_id: tagId } });
+
+		await this.#db.deleteMany(itemTags, { where: { tag_id: tagId } });
+		await this.#db.delete(tags, { id: tagId });
+
+		this.#record("job", {
+			event: "user.tag.deleted",
+			tagId,
+			tags: await this.#db.count(tags),
+			items,
+		});
+
+		return { ok: true, name: tag.name, items };
+	}
+
+	/**
+	 * Puts a label on a post, keeping the post as it does.
+	 *
+	 * One gesture rather than two verbs with an order to get wrong: a label is a reason to
+	 * have kept something, and a reason without the keeping is a promise this design cannot
+	 * honour — the post would sit under a rule that may take it tomorrow. So labelling the
+	 * post past the shelf's last place is refused for exactly the reason keeping it is, and
+	 * nothing is written.
+	 *
+	 * @param itemId - The post to label.
+	 * @param target - The label, by id, or the name to label it with.
+	 * @param create - Whether a name the reader has no label for makes one. A rule applies
+	 * labels and may not create them, so no rule grows the list past its cap, invents a name
+	 * that passed no validation, or resurrects a deleted one.
+	 */
+	async tagItem(
+		itemId: string,
+		target: { tagId: string } | { name: string },
+		create = true,
+	): Promise<UserStore.TagItemResult> {
+		let entitled = await this.#mayLabel();
+		if (!entitled) return { ok: false, reason: "not-entitled" };
+
+		let item = await this.#db.find(feedItems, { id: itemId });
+		if (item === null) return { ok: false, reason: "not-found" };
+
+		let tag = await this.#resolveTag(target, create);
+		if (!tag.ok) return tag;
+
+		let carried = await this.#db.count(itemTags, { where: { item_id: itemId } });
+		let already = await this.#db.find(itemTags, { tag_id: tag.tag.id, item_id: itemId });
+
+		if (already === null && carried >= TAGS_PER_ITEM) {
+			this.#record("job", { event: "user.tag.refused", reason: "post-tag-limit", tags: carried });
+			return { ok: false, reason: "post-tag-limit" };
+		}
+
+		/**
+		 * Kept before it is labelled, so a refused shelf leaves no label on a post the rules
+		 * may take. A post already kept passes this without touching the mark.
+		 */
+		let saved = item.saved_at !== null;
+		if (!saved) {
+			let kept = await this.saveItem(itemId, true);
+
+			if (!kept.ok) {
+				if (kept.reason === "full") {
+					this.#record("job", { event: "user.tag.refused", reason: "saved-full", tags: carried });
+					return { ok: false, reason: "saved-full", limit: kept.limit };
+				}
+
+				return { ok: false, reason: "not-found" };
+			}
+		}
+
+		/**
+		 * The composite primary key makes a second application a no-op the database decides,
+		 * so this is written once whether or not the label was already there.
+		 */
+		if (already === null) {
+			await this.#db.create(itemTags, {
+				tag_id: tag.tag.id,
+				item_id: itemId,
+				published_at: item.published_at,
+				created_at: Date.now(),
+			});
+		}
+
+		this.#record("job", {
+			event: "user.item.tagged",
+			tagId: tag.tag.id,
+			itemId,
+			saved: !saved,
+		});
+
+		return { ok: true, tag: tag.tag, saved: !saved };
+	}
+
+	/**
+	 * Takes one label off one post, which deletes neither. A label applied by a rule is the
+	 * same row as one applied by hand, so taking it off is the same write: rules run on
+	 * arrival, and nothing re-applies a label to a post already ruled on.
+	 *
+	 * @param itemId - The post to take it off.
+	 * @param tagId - The label to remove.
+	 */
+	async untagItem(itemId: string, tagId: string): Promise<{ ok: true; removed: boolean }> {
+		let row = await this.#db.find(itemTags, { tag_id: tagId, item_id: itemId });
+		if (row === null) return { ok: true, removed: false };
+
+		await this.#db.delete(itemTags, { tag_id: tagId, item_id: itemId });
+
+		return { ok: true, removed: true };
+	}
+
+	/**
+	 * The kept posts under one label, newest first, paged by the keyset every other list in
+	 * this app pages by.
+	 *
+	 * The seek is written against the join table's own copies of the ordering columns, which
+	 * is what makes a page a range scan down one index rather than a filter, a join and a
+	 * sort into a temporary b-tree — while the projection returns the post's own `id` and
+	 * `published_at` under those names, so this list mints the app's one cursor shape rather
+	 * than a second spelling no other list could follow.
+	 *
+	 * @param tagId - The label being read.
+	 * @param options - Where to page from, and how much of it.
+	 */
+	taggedQueue(
+		tagId: string,
+		options: UserStore.TimelineOptions = {},
+	): Promise<UserStore.TimelineResult> {
+		return this.#page(
+			new TaggedQuery(this.#db, { tagId, seek: [], orderBy: [], limit: null }),
+			options,
+			true,
+		);
+	}
+
+	/**
+	 * Pins a subscription, or takes the pin off, so the feeds a reader never wants to miss
+	 * are drawn above the river rather than at whatever letter their names start with.
+	 *
+	 * @param feedId - The subscription to pin.
+	 * @param pinned - Whether to pin it; `false` puts it back among the rest.
+	 */
+	async pinFeed(feedId: string, pinned = true): Promise<UserStore.PinResult> {
+		let feed = await this.#db.find(feeds, { id: feedId });
+		if (feed === null || feed.unfollowed_at !== null) {
+			return { ok: false, reason: "not-following" };
+		}
+
+		if (!pinned) {
+			if (feed.pinned_at !== null) {
+				await this.#db.update(feeds, { id: feedId }, { pinned_at: null });
+			}
+
+			this.#record("job", { event: "user.feed.pinned", feedId: feed.feed_id, pinned: false });
+
+			return { ok: true, pinned: false };
+		}
+
+		if (feed.pinned_at !== null) return { ok: true, pinned: true };
+
+		let held = await this.#db.count(feeds, {
+			where: and(isNull("unfollowed_at"), notNull("pinned_at")),
+		});
+
+		if (held >= PIN_LIMIT) return { ok: false, reason: "pin-limit", allowed: PIN_LIMIT };
+
+		await this.#db.update(feeds, { id: feedId }, { pinned_at: Date.now() });
+		this.#record("job", { event: "user.feed.pinned", feedId: feed.feed_id, pinned: true });
+
+		return { ok: true, pinned: true };
+	}
+
+	/**
+	 * The strip above the river: every pinned feed, and the newest few posts of it the
+	 * reader has not read.
+	 *
+	 * Its own question, bounded by the pins rather than by how much anybody published, and
+	 * carrying no cursor. The river beneath it runs the statement it runs today under the
+	 * predicate it runs today, so a pinned feed's newest post appears in both — one
+	 * screenful of duplication rather than a predicate the reader can change mid-scroll,
+	 * which is the class of bug the keyset design exists to make impossible.
+	 */
+	async pinnedStrip(): Promise<UserStore.PinnedFeed[]> {
+		let pinned = await this.#db.findMany(feeds, {
+			where: and(isNull("unfollowed_at"), notNull("pinned_at")),
+			/** Pin order is an ordering the reader produced, which is what the timestamp is for. */
+			orderBy: [
+				["pinned_at", "asc"],
+				["id", "asc"],
+			],
+			limit: PIN_LIMIT,
+		});
+
+		let strip: UserStore.PinnedFeed[] = [];
+
+		for (let feed of pinned) {
+			/** One seek per pinned feed down the index that already leads with the feed. */
+			let rows = await this.#timeline()
+				.where(and({ feed_id: feed.id }, isNull("read_at")))
+				.orderBy("published_at", "desc")
+				.orderBy("id", "desc")
+				.limit(PINNED_POSTS)
+				.all();
+
+			strip.push({
+				feed: { id: feed.id, title: feed.title, siteUrl: feed.site_url },
+				items: rows.map(toItem),
+			});
+		}
+
+		return strip;
+	}
+
+	/**
+	 * Writes down what one feed publishes, as that feed's own object measured it.
+	 *
+	 * The measurement is taken once per feed and shared by everybody following it, so the
+	 * reader is asked nothing and nothing is recomputed here — a local recount would measure
+	 * this reader's velocity as much as the publisher's rate.
+	 *
+	 * @param feedId - The subscription the rate belongs to.
+	 * @param postsPerDay - What the feed publishes, or `null` before anything is known.
+	 */
+	async recordPublishingRate(feedId: string, postsPerDay: number | null): Promise<void> {
+		if (postsPerDay === null) return;
+
+		let feed = await this.#db.find(feeds, { id: feedId });
+		if (feed === null || feed.posts_per_day === postsPerDay) return;
+
+		await this.#db.update(feeds, { id: feedId }, { posts_per_day: postsPerDay });
+	}
+
 	/** Marks one post read or unread. `false` when no such post is stored. */
 	async markRead(itemId: string, read = true): Promise<boolean> {
 		let written = await this.#db.updateMany(
@@ -1423,24 +1929,62 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Carries on with whatever synchronization a request left behind.
+	 * Runs whatever the three due times say is due, advances them, and arms the next wake.
 	 *
-	 * The alarm exists for leftovers alone now that nothing here fetches: a reader back
-	 * after a month has more stale feeds than one request should carry, so the request
-	 * takes a batch and this takes the rest, a minute at a time, until there are none.
+	 * What a wake is for is derived rather than remembered: the alarm carries no identity,
+	 * so leftovers, a scheduled check and the retention sweep each have one due time with
+	 * one writer, and no job can arm a wake another silently consumes. A wake that finds
+	 * nothing due re-arms and returns, which is a clock moving under a schedule.
 	 *
-	 * It never rejects. A rejected alarm is retried by the platform, which would run the
-	 * same catch-up again against objects that already answered.
+	 * Leftovers run first, because leftovers are work a reader is already waiting for.
+	 *
+	 * It never rejects. A rejected alarm is retried by the platform, which would re-run a
+	 * check against objects that already answered.
 	 */
 	override async alarm(): Promise<void> {
-		try {
-			let run = await this.synchronize();
+		let now = Date.now();
+		let row = await this.#settingsRow();
 
-			/** Armed only while work is left, so a reader who is caught up costs no wakes. */
-			if (run.remaining > 0) await this.#armCatchUp();
+		/** An expired lease is free here, before anything is scheduled from it. */
+		let tier = leasedTier(row, now);
+		let interval = checkIntervalFor(tier, row.last_opened_at, now);
+
+		let due = {
+			catchUp: isDue(row.next_catch_up_at, now),
+			check: isDue(row.next_check_at, now),
+			sweep: isDue(row.next_sweep_at, now),
+		};
+
+		try {
+			if (due.catchUp) {
+				await this.#db.update(settings, { id: SETTINGS_ID }, { next_catch_up_at: null });
+				await this.synchronize();
+			}
+
+			if (due.check) await this.#scheduledCheck(tier);
+
+			if (due.sweep) await this.#runSweep(Date.now());
 		} catch (error) {
-			console.error("reader catch-up alarm failed", error);
+			console.error("reader alarm failed", error);
 		}
+
+		this.#record("alarm", {
+			event: "user.scheduled",
+			tier,
+			interval,
+			dormancy: dormancyMultiplier(row.last_opened_at, now),
+			due: Object.entries(due)
+				.filter(([, wasDue]) => wasDue)
+				.map(([job]) => job)
+				.join(","),
+		});
+
+		/**
+		 * Re-armed whatever the jobs did, and from the row as they left it, since a due time
+		 * advanced on a path that does not arm leaves an object that has stopped waking and
+		 * shows nothing but silence.
+		 */
+		await this.#reschedule(await this.#settingsRow());
 	}
 
 	/**
@@ -1482,15 +2026,24 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Posts this reader's object holds before it reclaims, and then refuses.
+	 * Posts this reader's object holds before it reclaims, and then refuses, which is the
+	 * budget of the tier they are on.
 	 *
-	 * The subject is the reader, because the figure is an estimate of what their rows cost
-	 * and the person who meets it is the one who notices: a rule can raise it for them
-	 * without moving it for anybody else.
+	 * The tier is read from this object's own settings, so the sweep and the back-pressure
+	 * check decide from a local row rather than from a billing store that can be slow or
+	 * absent. A tier recorded too low pauses a feed and deletes nothing, which is what makes
+	 * a copied value safe to act on here.
+	 *
+	 * The scale on top of it takes the reader as its subject, because the person who meets
+	 * a budget is the one who notices: a rule can widen it for them without moving what
+	 * anybody else on their tier was sold.
 	 */
-	async #budget(): Promise<number> {
+	async #budget(tier?: Tier): Promise<number> {
+		let applied = tier ?? storedTier(await this.#settingsRow());
 		let client = await flagsFor(this.#subject());
-		return Math.max(1, await client.get(features.readerPostBudget));
+		let scale = await client.get(features.readerBudgetScale);
+
+		return Math.max(1, Math.round(limitsOf(applied).posts * scale));
 	}
 
 	/**
@@ -1536,19 +2089,130 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Arms the catch-up, holding whatever alarm is already set unless this one is sooner.
+	 * Says leftovers are due in a minute, and arms whatever that makes earliest.
 	 *
-	 * The guard is what keeps an active reader from pushing their own catch-up away: an
-	 * object woken by every page view would otherwise re-arm the same minute on every wake
-	 * and carry on once they stopped reading.
+	 * It writes a due time rather than the alarm, so a catch-up a minute out cannot consume
+	 * the wake a scheduled check was armed for and leave nothing to re-arm it.
 	 */
 	async #armCatchUp(): Promise<void> {
-		let next = Date.now() + CATCH_UP_MS;
-		let armed = await this.ctx.storage.getAlarm();
+		await this.#db.update(
+			settings,
+			{ id: SETTINGS_ID },
+			{ next_catch_up_at: Date.now() + CATCH_UP_MS },
+		);
 
-		if (armed !== null && armed <= next) return;
+		await this.#arm();
+	}
+
+	/**
+	 * Points the object's one alarm at the earliest due time it is holding, and clears it
+	 * when it is holding none — which is what makes a reader on a tier that buys no wake
+	 * cost their storage and nothing else.
+	 */
+	async #arm(): Promise<void> {
+		let row = await this.#settingsRow();
+		let next = earliestDue([row.next_catch_up_at, row.next_check_at, row.next_sweep_at]);
+
+		if (next === null) {
+			await this.ctx.storage.deleteAlarm();
+			return;
+		}
 
 		await this.ctx.storage.setAlarm(next);
+	}
+
+	/**
+	 * Writes the due times this reader's tier and last open imply, and arms the alarm at
+	 * the earliest of them.
+	 *
+	 * The check lands on a grid phase-shifted by the subject, so recomputing it on every
+	 * open answers the same moment rather than pushing the wake away from a reader who
+	 * keeps opening the app. The sweep's due time is kept where it is for the same reason,
+	 * and set only when the tier has a wake to run it on.
+	 *
+	 * @param row - The settings row as the caller's own writes left it.
+	 */
+	async #reschedule(row: SelectSettings): Promise<void> {
+		let now = Date.now();
+		let interval = checkIntervalFor(leasedTier(row, now), row.last_opened_at, now);
+
+		await this.#db.update(
+			settings,
+			{ id: SETTINGS_ID },
+			{
+				next_check_at: interval === null ? null : nextCheckAt(this.#subject(), interval, now),
+				next_sweep_at: interval === null ? null : (row.next_sweep_at ?? now + SWEEP_INTERVAL_MS),
+			},
+		);
+
+		await this.#arm();
+	}
+
+	/**
+	 * The freshness comparison a reader pays for, run without a reader waiting on it.
+	 *
+	 * Exactly what an open does, minus the timeline nobody is there to read: the heads are
+	 * read once, in bulk, and the stale list they derive is handed straight to the same
+	 * bounded synchronization a request works under. The bounds do not move because nobody
+	 * is waiting — a bigger batch holds this single-threaded object longer and widens the
+	 * burst the feed objects take — so leftovers go to the catch-up as they always do.
+	 *
+	 * @param tier - The tier the lease left the reader on, for the event this writes.
+	 */
+	async #scheduledCheck(tier: Tier): Promise<void> {
+		let started = Date.now();
+		let followed = await this.#subscriptions();
+		let heads = await readHeads(followed.map((feed) => feed.feed_id));
+
+		let stale = followed.filter((feed) => (heads.get(feed.feed_id) ?? 0) > feed.cursor);
+
+		this.#record("alarm", {
+			event: "user.freshness",
+			trigger: "scheduled",
+			tier,
+			feeds: followed.length,
+			reads: Math.ceil(followed.length / KEYS_PER_BULK_READ),
+			stale: stale.length,
+			durationMs: Date.now() - started,
+		});
+
+		if (stale.length === 0) return;
+
+		await this.#runSync(stale);
+	}
+
+	/**
+	 * Takes what the reader has agreed to lose and moves the sweep's own due time on, so a
+	 * velocity window closes a day at a time whether or not anything synchronized.
+	 *
+	 * @param now - Epoch milliseconds the velocities are measured against.
+	 * @param pausedByRun - Feeds a synchronization behind this held back for want of room.
+	 */
+	async #runSweep(now: number, pausedByRun = 0): Promise<void> {
+		let swept = await this.#sweep(now);
+		let row = await this.#settingsRow();
+
+		if (row.next_sweep_at !== null) {
+			await this.#db.update(
+				settings,
+				{ id: SETTINGS_ID },
+				{ next_sweep_at: now + SWEEP_INTERVAL_MS },
+			);
+		}
+
+		/**
+		 * The tier and the figure it carried are on the event because a sweep is read after
+		 * the fact: what it reclaimed means one thing against half a million posts and
+		 * another against three, and the budget it applied is what tells the two apart.
+		 */
+		this.#record("job", {
+			event: "user.retention",
+			aged: swept.aged,
+			reclaimed: swept.reclaimed,
+			paused: swept.paused + pausedByRun,
+			tier: swept.tier,
+			budget: swept.budget,
+		});
 	}
 
 	/**
@@ -1562,6 +2226,103 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	async #folderByTitle(title: string): Promise<SelectFolder> {
 		let existing = await this.#db.findOne(folders, { where: { title } });
 		return existing ?? (await this.#createFolder(title));
+	}
+
+	/**
+	 * Whether this reader's plan makes labels. An entitlement that lapses leaves every row
+	 * in place: they keep their posts and their labels and can still read by them, and the
+	 * only thing they cannot do is make new ones.
+	 */
+	async #mayLabel(): Promise<boolean> {
+		return limitsOf(storedTier(await this.#settingsRow())).folders;
+	}
+
+	/**
+	 * The label a caller named: one they hold by id, one they hold by name, or a new one
+	 * where naming is allowed to make it.
+	 *
+	 * @param target - The label, by id, or the name to reach it by.
+	 * @param create - Whether an unheld name makes a label rather than being refused.
+	 */
+	async #resolveTag(
+		target: { tagId: string } | { name: string },
+		create: boolean,
+	): Promise<
+		| { ok: true; tag: UserStore.Tag }
+		| { ok: false; reason: Exclude<UserStore.TagFailure, "saved-full"> }
+	> {
+		if ("tagId" in target) {
+			let row = await this.#db.find(tags, { id: target.tagId });
+			return row === null ? { ok: false, reason: "not-found" } : { ok: true, tag: toTag(row) };
+		}
+
+		let folded = foldTagName(target.name);
+		if (folded === null) return { ok: false, reason: "tag-name-invalid" };
+
+		let existing = await this.#db.findOne(tags, { where: { slug: folded.slug } });
+		if (existing !== null) return { ok: true, tag: toTag(existing) };
+
+		if (!create) return { ok: false, reason: "not-found" };
+
+		let held = await this.#db.count(tags);
+		if (held >= TAG_LIMIT) return { ok: false, reason: "tag-limit" };
+
+		return { ok: true, tag: toTag(await this.#createTag(folded.name, folded.slug)) };
+	}
+
+	/** Writes one label row, minting the id every join row and every URL holds it by. */
+	async #createTag(name: string, slug: string): Promise<SelectTag> {
+		return await this.#db.create(
+			tags,
+			{ id: TypeID.fromUUID("tag", generateUUID()).toString(), name, slug },
+			{ returnRow: true },
+		);
+	}
+
+	/**
+	 * Clears the labels of posts that are going.
+	 *
+	 * Four paths remove a post — unsaving, the velocity sweep, the budget's reclamation and
+	 * unfollowing a feed — and each of them comes through here in the same batch it deletes
+	 * with. A cascade would be tidier and would put the correctness of a bulk sweep behind
+	 * whether a pragma is set the way the platform happens to set it today; each of those
+	 * methods already owns its deletes, so writing both is one line and depends on nothing.
+	 *
+	 * @param itemIds - The posts whose labels go with them.
+	 */
+	async #forgetTags(itemIds: readonly string[]): Promise<void> {
+		if (itemIds.length === 0) return;
+
+		for (let batch of chunked([...itemIds], IDS_PER_LOOKUP)) {
+			await this.#db.deleteMany(itemTags, { where: inList("item_id", batch) });
+		}
+	}
+
+	/**
+	 * The labels on a page of posts, keyed by post, read through the index that serves that
+	 * direction. Only the two surfaces that draw chips ask for it, so no page of the river
+	 * pays for a read it prints nothing from.
+	 *
+	 * @param itemIds - The posts on the page being drawn.
+	 */
+	async #tagsFor(itemIds: readonly string[]): Promise<Map<string, UserStore.Tag[]>> {
+		let byItem = new Map<string, UserStore.Tag[]>();
+		if (itemIds.length === 0) return byItem;
+
+		let held = new Map((await this.listTags()).map((tag) => [tag.id, tag]));
+
+		for (let batch of chunked([...itemIds], IDS_PER_LOOKUP)) {
+			let rows = await this.#db.findMany(itemTags, { where: inList("item_id", batch) });
+
+			for (let row of rows) {
+				let tag = held.get(row.tag_id);
+				if (tag === undefined) continue;
+
+				byItem.set(row.item_id, [...(byItem.get(row.item_id) ?? []), tag]);
+			}
+		}
+
+		return byItem;
 	}
 
 	/** Writes one folder row, minting the id every other row holds it by. */
@@ -1639,6 +2400,12 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 		for (let page = 0; page < SYNC_PAGES_PER_FEED; page += 1) {
 			let answered = await feedStore(feed.feed_id).getItemsAfter(cursor);
+
+			/**
+			 * The rate rides on the page this run was already reading, so keeping the reader's
+			 * own copy of it current costs no extra call and no walk over subscriptions.
+			 */
+			await this.recordPublishingRate(feed.id, answered.postsPerDay);
 
 			if (answered.items.length === 0) {
 				if (answered.head > cursor) {
@@ -1726,6 +2493,13 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 		if (kept > 0) return;
 
+		let doomed = await this.#db
+			.query(feedItems)
+			.where({ feed_id: subscriptionId })
+			.select("id")
+			.all();
+
+		await this.#forgetTags(doomed.map((row) => row.id));
 		await this.#db.deleteMany(feedItems, { where: { feed_id: subscriptionId } });
 		await this.#db.delete(feeds, { id: subscriptionId });
 	}
@@ -1764,15 +2538,21 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * rows as readily as on one holding a million, and take reading history from somebody
 	 * using a thousandth of their space.
 	 *
+	 * The budget it holds the object to is the one the reader's tier carries, so an upgrade
+	 * raises it with the column write that records it and a downgrade lowers it without
+	 * taking a post: an object over a lowered budget with nothing read has nothing to
+	 * reclaim, and stopping is what it does then.
+	 *
 	 * @param now - Epoch milliseconds the velocities are measured against.
 	 */
-	async #sweep(now: number): Promise<{ aged: number; reclaimed: number; paused: number }> {
-		let swept = { aged: 0, reclaimed: 0, paused: 0 };
+	async #sweep(now: number): Promise<UserStore.Sweep> {
+		let tier = storedTier(await this.#settingsRow());
+		let budget = await this.#budget(tier);
+		let swept = { aged: 0, reclaimed: 0, paused: 0, tier, budget };
 		let followed = await this.#subscriptions();
 
 		for (let feed of followed) swept.aged += await this.#ageOut(feed, now);
 
-		let budget = await this.#budget();
 		let total = await this.#db.count(feedItems);
 		if (total < budget) return swept;
 
@@ -1808,13 +2588,17 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 		let past = and({ feed_id: feed.id }, lt("published_at", now - window), isNull("saved_at"));
 
-		/** Counted before the delete, since what a write reports is rows of storage. */
-		let posts = await this.#db.count(feedItems, { where: past });
-		if (posts === 0) return 0;
+		/**
+		 * Named before the delete rather than counted, since what a write reports is rows of
+		 * storage and the labels of what is going are cleared in the same batch.
+		 */
+		let doomed = await this.#db.query(feedItems).where(past).select("id").all();
+		if (doomed.length === 0) return 0;
 
+		await this.#forgetTags(doomed.map((row) => row.id));
 		await this.#db.deleteMany(feedItems, { where: past });
 
-		return posts;
+		return doomed.length;
 	}
 
 	/**
@@ -1833,6 +2617,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			.all();
 
 		if (reclaimable.length === 0) return 0;
+
+		await this.#forgetTags(reclaimable.map((row) => row.id));
 
 		for (let batch of chunked(
 			reclaimable.map((row) => row.id),
@@ -1912,10 +2698,14 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 *
 	 * The ordering is left off the query handed in: `Pagination.byKeyset()` owns it,
 	 * because it needs the sort keys both to seek and to mint the cursor.
+	 *
+	 * @param withTags - Whether the page's posts carry the labels on them, which the two
+	 * surfaces that draw chips ask for and no surface rendering a river does.
 	 */
 	async #page<whereArg, columnArg>(
 		query: KeysetQuery<TimelineRow, whereArg, columnArg>,
 		options: UserStore.TimelineOptions,
+		withTags = false,
 	): Promise<UserStore.TimelineResult> {
 		let page = await Pagination.byKeyset(query, {
 			orderBy: NEWEST_FIRST,
@@ -1934,6 +2724,11 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		}
 
 		let items = page.data.items.map(toItem);
+
+		if (withTags) {
+			let labels = await this.#tagsFor(items.map((item) => item.id));
+			items = items.map((item) => ({ ...item, tags: labels.get(item.id) ?? [] }));
+		}
 
 		return { ok: true, items, feeds: await this.#feedRefs(items), cursors: page.data.cursors };
 	}
@@ -2024,6 +2819,103 @@ class SearchQuery implements KeysetQuery<TimelineRow, Predicate, string> {
 	}
 }
 
+/** Everything one composed page of a label's posts is built from. */
+interface TaggedState {
+	/** The label whose posts the page holds, which is the equality the index opens with. */
+	tagId: string;
+	/** Seek predicates the pager composed, which narrow the label's posts to one page. */
+	seek: readonly Predicate[];
+	/** The ordering the pager owns, which is also what it mints cursors from. */
+	orderBy: readonly OrderByTuple[];
+	/** Posts the statement reads, or `null` before the pager has set one. */
+	limit: number | null;
+}
+
+/**
+ * The kept posts under one label, as a query {@link Pagination.byKeyset} can seek, order
+ * and limit.
+ *
+ * It is spelled out here rather than built by the query builder because the seek runs
+ * against the join table's own copies of the ordering columns while the projection returns
+ * the post's: one index carries the equality and both ordering columns in that order, so a
+ * page is a range scan down it, and the page still mints the cursor shape every other list
+ * in this app mints.
+ *
+ * `saved_at is not null` appears nowhere in it. Every row of the join table belongs to a
+ * kept post by construction, so the join is the filter.
+ */
+class TaggedQuery implements KeysetQuery<TimelineRow, Predicate, string> {
+	#db: Database;
+	#state: TaggedState;
+
+	/**
+	 * @param db - The reader's database.
+	 * @param state - The label to read, and whatever the pager has composed so far.
+	 */
+	constructor(db: Database, state: TaggedState) {
+		this.#db = db;
+		this.#state = state;
+	}
+
+	where(input: Predicate): TaggedQuery {
+		return new TaggedQuery(this.#db, { ...this.#state, seek: [...this.#state.seek, input] });
+	}
+
+	orderBy(column: string, direction: OrderDirection): TaggedQuery {
+		return new TaggedQuery(this.#db, {
+			...this.#state,
+			orderBy: [...this.#state.orderBy, [column, direction]],
+		});
+	}
+
+	limit(value: number): TaggedQuery {
+		return new TaggedQuery(this.#db, { ...this.#state, limit: value });
+	}
+
+	async all(): Promise<TimelineRow[]> {
+		let { rows = [] } = await this.#db.exec(taggedStatement(this.#state));
+		return rows.map(toTimelineRow);
+	}
+}
+
+/**
+ * The ordering columns as the join table spells them, which is what the seek and the order
+ * are written against. `id` is the post's, and the join row's copy of it is `item_id`.
+ *
+ * @param column - The ordering column the pager named.
+ */
+function quoteJoinColumn(column: string): string {
+	if (column === "published_at") return `t."published_at"`;
+	if (column === "id") return `t."item_id"`;
+
+	throw new Error("a label's page seeks on the two columns its index carries alone");
+}
+
+/** The statement one page of a label's posts runs as. */
+function taggedStatement(state: TaggedState): SqlStatement {
+	let where = state.seek.reduce(
+		(left, right) => sql`${left} and ${seekSql(right, quoteJoinColumn)}`,
+		sql`t."tag_id" = ${state.tagId}`,
+	);
+
+	// The pager appends the ordering it owns before reading, and the fallback keeps a
+	// statement built without one reading the way this list is defined to.
+	let ordering = state.orderBy.length === 0 ? NEWEST_FIRST : state.orderBy;
+	let orderBy = ordering
+		.map(
+			([column, direction]) => `${quoteJoinColumn(column)} ${direction === "asc" ? "asc" : "desc"}`,
+		)
+		.join(", ");
+
+	return sql`select i."id", i."feed_id", i."title", i."url", i."summary", i."author",
+			i."published_at", i."read_at", i."saved_at"
+		from item_tags t
+		join feed_items i on i."id" = t."item_id"
+		where ${where}
+		order by ${rawSql(orderBy)}
+		limit ${state.limit ?? DEFAULT_PAGE_LIMIT}`;
+}
+
 /** The statement one page of a search runs as. */
 function searchStatement(state: SearchState): SqlStatement {
 	let pattern = state.pattern;
@@ -2050,10 +2942,17 @@ function searchStatement(state: SearchState): SqlStatement {
 /**
  * One seek predicate as SQL. `Pagination.byKeyset` builds these out of the ordering it was
  * given, so the comparisons and the `and`/`or` nesting below are the whole of what arrives.
+ *
+ * @param predicate - What the pager composed for this page.
+ * @param quote - How an ordering column is spelled in the statement being built, which a
+ * page seeking a join table's own copies of those columns answers differently.
  */
-function seekSql(predicate: Predicate): SqlStatement {
+function seekSql(
+	predicate: Predicate,
+	quote: (column: string) => string = quoteColumn,
+): SqlStatement {
 	if (predicate.type === "logical") {
-		let parts = predicate.predicates.map(seekSql);
+		let parts = predicate.predicates.map((nested) => seekSql(nested, quote));
 		let joiner = predicate.operator === "and" ? " and " : " or ";
 
 		return rawSql(
@@ -2066,11 +2965,11 @@ function seekSql(predicate: Predicate): SqlStatement {
 		let operator = SEEK_OPERATORS[predicate.operator];
 
 		if (operator !== undefined) {
-			return rawSql(`${quoteColumn(predicate.column)} ${operator} ?`, [predicate.value]);
+			return rawSql(`${quote(predicate.column)} ${operator} ?`, [predicate.value]);
 		}
 	}
 
-	throw new Error("a search page seeks on comparisons of its ordering columns alone");
+	throw new Error("a composed page seeks on comparisons of its ordering columns alone");
 }
 
 /**
@@ -2180,9 +3079,32 @@ function storedTier(row: SelectSettings): Tier {
 	return isTier(row.tier) ? row.tier : DEFAULT_TIER;
 }
 
+/**
+ * The tier a settings row buys right now. A lease whose window has run out is free until
+ * a snapshot says otherwise, which is what bounds the cost of a subscription that lapsed
+ * and a billing integration that went quiet: nothing has to arrive for the wakes to stop.
+ *
+ * @param row - The settings row the object is deciding from.
+ * @param now - Epoch milliseconds the lease is measured at.
+ */
+function leasedTier(row: SelectSettings, now: number): Tier {
+	if (row.grace_until !== null && row.grace_until <= now) return DEFAULT_TIER;
+	return storedTier(row);
+}
+
+/** Whether a due time has arrived, which a job with no due time never has. */
+function isDue(at: number | null, now: number): boolean {
+	return at !== null && at <= now;
+}
+
 /** Where a settings row's tier came from, read under the same rule as the tier itself. */
 function storedTierSource(row: SelectSettings): TierSource {
 	return isTierSource(row.tier_source) ? row.tier_source : DEFAULT_TIER_SOURCE;
+}
+
+/** A label row as the RPC boundary reports it. */
+function toTag(row: SelectTag): UserStore.Tag {
+	return { id: row.id, name: row.name, slug: row.slug };
 }
 
 /** A folder row as the RPC boundary reports it, which is its id and its name. */
@@ -2213,6 +3135,8 @@ function toFeedSummary(
 		unreadCount,
 		folderId: row.folder_id,
 		folderTitle: folder === null ? null : folder.title,
+		pinnedAt: row.pinned_at,
+		postsPerDay: row.posts_per_day,
 	};
 }
 
@@ -2228,6 +3152,8 @@ function toItem(row: TimelineRow): UserStore.Item {
 		publishedAt: row.published_at,
 		readAt: row.read_at,
 		savedAt: row.saved_at,
+		/** Filled in by the two surfaces that draw chips, and by no page of the river. */
+		tags: [],
 	};
 }
 

@@ -54,7 +54,8 @@ create the namespace with `bunx wrangler kv namespace create` and paste its id i
 - Save a post, which keeps it whatever every other rule here would do to it
 - Mark one feed or the whole queue read at once
 - Import and export your subscriptions as OPML, folders and all
-- Free, Paid and Premium plans, each sized by how many feeds and saved posts it allows
+- Free, Paid and Premium plans, each sized by how many feeds, saved posts and posts in all
+  it keeps: 250,000 posts on Free, 1,500,000 on Paid and 3,000,000 on Premium
 - A failed payment keeps everything for a fortnight, and nothing is ever deleted by a plan
   change: a plan you are over refuses what is new and leaves what is yours where it is
 - Interface in English and Spanish, resolved per request

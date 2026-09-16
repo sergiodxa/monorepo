@@ -66,6 +66,10 @@ export default {
 		saved: "Guardadas",
 		feeds: "Feeds",
 		subscriptions: "Feeds que sigues",
+		/** The feeds a reader pinned, drawn first because that is what pinning was for. */
+		pinned: "Fijados",
+		/** The feeds nobody grouped and that publish almost nothing, drawn last. */
+		quiet: "Tranquilos",
 		openSidebar: "Mostrar feeds y búsqueda",
 		settings: "Preferencias",
 		account: "Tu cuenta",
@@ -215,6 +219,18 @@ export default {
 				overLimit_other:
 					"Tu plan sigue {{count}} feeds. Deja de seguir uno, o cambia de plan, para seguir otro.",
 			},
+		},
+
+		/** Pinning a feed above the queue, from that feed's own page. */
+		pin: {
+			label: "Feeds fijados",
+			submit: "Fijar",
+			remove: "Dejar de fijar",
+			pinned: "Fijado encima de tu lectura.",
+			unpinned: "Quitado de la franja de fijados.",
+			full: "Ya tienes fijados tantos feeds como caben en la franja. Quita uno para fijar otro.",
+			/** Said on a pinned feed with nothing waiting, which is the point of pinning it. */
+			caughtUp: "Nada nuevo.",
 		},
 
 		show: {
@@ -400,6 +416,67 @@ export default {
 		},
 	},
 
+	/**
+	 * The labels a reader puts on the posts they kept. A label answers why something was
+	 * kept, where a folder answers where a publication belongs, so nothing here talks about
+	 * subscriptions and nothing here deletes a post.
+	 */
+	tags: {
+		created: "Etiqueta creada.",
+		renamed: "Etiqueta renombrada.",
+		duplicate: "Ya tienes una etiqueta con ese nombre.",
+		invalid: "Una etiqueta necesita un nombre de hasta 32 caracteres.",
+		full: "Ya tienes tantas etiquetas como caben. Borra una para crear otra.",
+		/** A post carrying ten reasons to have been kept has none, which is what this says. */
+		postFull: "Esa entrada ya lleva tantas etiquetas como puede llevar una entrada.",
+		/** Labelling keeps the post, so a full shelf refuses the label for the same reason. */
+		savedFull:
+			"Tus entradas guardadas están llenas, así que no se etiquetó nada. Quita una para hacer sitio.",
+		notEntitled:
+			"Las etiquetas son parte de un plan de pago. Todo lo que has guardado sigue donde está.",
+		missing: "Esa etiqueta ya no es tuya.",
+
+		/** The field both the naming forms type into. */
+		name: {
+			label: "Nombre de la etiqueta",
+			placeholder: "Nombra esta etiqueta…",
+		},
+
+		/** The strip of labels under a kept post, and the field that adds another. */
+		strip: {
+			legend: "Etiquetas de esta entrada",
+			add: "Añadir una etiqueta",
+			placeholder: "Etiqueta…",
+			remove: "Quitar",
+		},
+
+		rename: {
+			legend: "Renombrar esta etiqueta",
+			submit: "Renombrar",
+		},
+
+		delete: {
+			title: "Borrar una etiqueta",
+			submit: "Borrar etiqueta",
+			/** Backs out of the prompt, leaving the label as it is. */
+			cancel: "Cancelar",
+			/** Says what is lost, which is the label and nothing else. */
+			confirm_one: "¿Borrar {{name}}? {{count}} entrada deja de llevarla y sigue guardada.",
+			confirm_other: "¿Borrar {{name}}? {{count}} entradas dejan de llevarla y siguen guardadas.",
+		},
+
+		empty: {
+			title: "Aún no hay nada con esta etiqueta",
+			description: "Pon esta etiqueta en una entrada desde tus guardadas y aparecerá aquí.",
+		},
+
+		notFound: {
+			title: "Etiqueta no encontrada",
+			description: "No tienes una etiqueta con esa dirección.",
+			back: "Volver a tus entradas guardadas",
+		},
+	},
+
 	items: {
 		read: {
 			title: "Marcar como leído",
@@ -446,7 +523,8 @@ export default {
 				premium: "Premium",
 			},
 			/** What each plan allows, as the numbers the reader is measured against. */
-			allowance: "{{feeds}} feeds, {{saved}} entradas guardadas.",
+			allowance: "{{feeds}} feeds, {{saved}} entradas guardadas, {{posts}} entradas en total.",
+			history: "No se borra nada mientras estés dentro de estos números.",
 			usage: "Sigues {{feeds}} feeds y tienes {{saved}} entradas guardadas.",
 			upgrade: "Cambiar a {{plan}}",
 			manage: "Gestionar la facturación",

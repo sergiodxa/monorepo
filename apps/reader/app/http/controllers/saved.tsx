@@ -24,7 +24,12 @@ import { createAction } from "remix/router";
 
 import { chrome } from "~/app/http/controllers/chrome";
 import { placePage } from "~/app/http/controllers/list-paging";
-import { timelineCopy, timelineEntries } from "~/app/http/controllers/timeline-entries";
+import { TAG_PARAM } from "~/app/http/controllers/tags/create";
+import {
+	taggingCopy,
+	timelineCopy,
+	timelineEntries,
+} from "~/app/http/controllers/timeline-entries";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { isFrameRequest } from "~/app/http/render";
@@ -40,6 +45,25 @@ import routes from "~/routes/web";
  * rather than to be complete.
  */
 const PAGE_SIZE = 25;
+
+/** The `id` the page's own list of label names is offered under. */
+const TAG_OPTIONS_ID = "saved-tag-names";
+
+/**
+ * The copy and tone for a refused label, or `null` when this is an ordinary visit. Every
+ * one of them is a warning: nothing was lost, and everything already kept is still kept.
+ *
+ * @param outcome - The redirect's `tag` parameter, as it arrived.
+ */
+function tagNote(outcome: string | null): { key: string } | null {
+	if (outcome === "tag-limit") return { key: "tags.full" };
+	if (outcome === "tag-name-invalid") return { key: "tags.invalid" };
+	if (outcome === "post-tag-limit") return { key: "tags.postFull" };
+	if (outcome === "saved-full") return { key: "tags.savedFull" };
+	if (outcome === "not-entitled") return { key: "tags.notEntitled" };
+	if (outcome === "not-found") return { key: "tags.missing" };
+	return null;
+}
 
 /**
  * The URL of one page of the list, which is what the timeline's older and newer links
@@ -94,12 +118,28 @@ export default createAction(routes.saved, {
 		if (!page.ok) page = await store.savedQueue({ cursor: null, limit: PAGE_SIZE });
 		if (!page.ok) throw new Error("The first page of a timeline decodes without a cursor");
 
+		/**
+		 * Labels can be turned off on their own, which leaves this list exactly what it was
+		 * before they existed: the same rows, without the strip beneath their titles.
+		 */
+		let labelling = await ctx.flags.get(features.tags);
+
 		/** The list gathers every feed, so a row names the one its post came from. */
 		let entries = timelineEntries(
 			ctx,
 			page.items,
 			new Map(page.feeds.map((feed) => [feed.id, feed.title])),
+			labelling,
 		);
+
+		/** Every label the reader has, which the field on each row offers by name. */
+		let tagging = labelling
+			? {
+					copy: taggingCopy(ctx.i18next),
+					options: (await store.listTags()).map((tag) => tag.name),
+					optionsId: TAG_OPTIONS_ID,
+				}
+			: null;
 
 		let heading = ctx.i18next.t("saved.heading");
 
@@ -119,6 +159,9 @@ export default createAction(routes.saved, {
 		});
 
 		let listCopy = timelineCopy(ctx.i18next);
+
+		/** What a refused label has to say, which is read on the list it was refused from. */
+		let refused = tagNote(ctx.url.searchParams.get(TAG_PARAM));
 
 		/**
 		 * A frame asked for the piece that continues a list already on screen, so it is
@@ -141,7 +184,7 @@ export default createAction(routes.saved, {
 						</Alert.Action>
 					</Alert>
 				) : (
-					<Timeline entries={entries} copy={listCopy} {...placement} />
+					<Timeline entries={entries} copy={listCopy} tagging={tagging} {...placement} />
 				),
 			);
 		}
@@ -165,8 +208,14 @@ export default createAction(routes.saved, {
 						</Alert>
 					)}
 
+					{refused && (
+						<Alert color="warning" mix={pageNote()}>
+							<Alert.Description>{ctx.i18next.t(refused.key)}</Alert.Description>
+						</Alert>
+					)}
+
 					{entries.length > 0 ? (
-						<Timeline entries={entries} copy={listCopy} {...placement} />
+						<Timeline entries={entries} copy={listCopy} tagging={tagging} {...placement} />
 					) : (
 						/** Level 2, since the layout's own page heading is the document's only `h1`. */
 						<HeadingScope level={2}>

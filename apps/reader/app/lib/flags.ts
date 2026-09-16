@@ -23,7 +23,11 @@ import { InMemoryFlagStore } from "@sdxc/flags-engine/store/memory";
 import { defineFlags, flag } from "@sdxc/flags/catalog";
 import { createFlags, wideEventHook } from "@sdxc/flags/client";
 
-import { READER_BUDGET } from "~/database/schema";
+/**
+ * What a reader's tier budget is multiplied by before the sweep compares against it, which
+ * is the whole of it for everybody until a rule says otherwise.
+ */
+const BUDGET_SCALE = 1;
 
 /**
  * What the cadence a feed's measured publishing rate puts it in is scaled by. Dimensionless
@@ -55,13 +59,13 @@ export const FLAG_SET: StoredFlagSet = {
 			defaultVariant: "normal",
 		},
 		/**
-		 * Posts one reader's object holds before it starts reclaiming, and then refusing.
-		 * It is an estimate of what a row costs with room to be wrong by five times, and
-		 * the reader who meets it is the one who notices. Subjects are readers, so the
-		 * budget can be raised for somebody who has met it without moving it for everyone.
+		 * What the tier's budget is multiplied by before the object starts reclaiming, and
+		 * then refusing. The tier carries the number and this carries the exception to it:
+		 * subjects are readers, so the budget can be widened for somebody who has met it
+		 * without moving what anybody else, on any tier, was sold.
 		 */
-		"reader-post-budget": {
-			variants: { standard: READER_BUDGET, generous: READER_BUDGET * 5 },
+		"reader-budget-scale": {
+			variants: { standard: BUDGET_SCALE, generous: 5 },
 			defaultVariant: "standard",
 		},
 		/**
@@ -83,6 +87,16 @@ export const FLAG_SET: StoredFlagSet = {
 			defaultVariant: "on",
 		},
 		/**
+		 * Whether a reader may label the posts they keep. It sits beside keeping because it
+		 * is the surface built on top of it — a label is a reason to have kept something —
+		 * and because turning it off has to be faster than a revert while the table behind
+		 * it is new.
+		 */
+		tags: {
+			variants: { on: true, off: false },
+			defaultVariant: "on",
+		},
+		/**
 		 * Whether a list fetches the page below it as the reader arrives. Off, the links
 		 * that page the list by hand are what a reader gets — which is what a browser
 		 * running no script gets either, so the way back is a path already walked.
@@ -99,13 +113,14 @@ export const FLAG_SET: StoredFlagSet = {
  * value to fall back on when nothing resolved — so a call site restates none of them and
  * a misspelled key is not expressible.
  *
- * @example let budget = await ctx.flags.get(features.readerPostBudget);
+ * @example let scale = await ctx.flags.get(features.readerBudgetScale);
  */
 export const features = defineFlags({
 	feedPollMultiplier: flag.number("feed-poll-multiplier", POLL_MULTIPLIER),
-	readerPostBudget: flag.number("reader-post-budget", READER_BUDGET),
+	readerBudgetScale: flag.number("reader-budget-scale", BUDGET_SCALE),
 	velocitySuggestionRate: flag.number("velocity-suggestion-rate", BUSY_POSTS_PER_DAY),
 	savedPosts: flag.boolean("saved-posts", true),
+	tags: flag.boolean("tags", true),
 	infinitePagination: flag.boolean("infinite-pagination", true),
 });
 

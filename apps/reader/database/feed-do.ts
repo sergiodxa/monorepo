@@ -136,6 +136,12 @@ export namespace FeedStore {
 		items: Item[];
 		/** The feed's head as of this read, which is the truth the hint approximates. */
 		head: number;
+		/**
+		 * What the feed publishes, in posts per day, measured once here and shared by every
+		 * subscriber, so nobody has to ask a second time for a number this answer already
+		 * holds. `null` before any poll has measured one.
+		 */
+		postsPerDay: number | null;
 	}
 }
 
@@ -388,7 +394,17 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 			limit: Math.min(Math.max(1, limit), SYNC_PAGE),
 		});
 
-		return { items: rows.map(itemOf), head: await this.getHead() };
+		/**
+		 * The measured rate rides along with the page a subscriber was already reading, so a
+		 * reader keeping their own copy of it costs no call of its own.
+		 */
+		let feed = await this.#feedRow();
+
+		return {
+			items: rows.map(itemOf),
+			head: await this.getHead(),
+			postsPerDay: feed?.posts_per_day ?? null,
+		};
 	}
 
 	/**

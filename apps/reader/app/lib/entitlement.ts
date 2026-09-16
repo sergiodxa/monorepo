@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { READER_BUDGET, SAVED_LIMIT } from "~/database/schema";
+import { TIER_BUDGETS, TIER_SAVED_LIMITS } from "~/database/schema";
 
 /**
  * The three prices the product sells, ordered from least to most. The `CHECK` constraint
@@ -88,9 +88,9 @@ export interface TierLimits {
 export const TIER_LIMITS: Record<Tier, TierLimits> = {
 	free: {
 		feeds: 50,
-		saved: 100,
+		saved: TIER_SAVED_LIMITS.free,
 		rules: 0,
-		posts: READER_BUDGET / 10,
+		posts: TIER_BUDGETS.free,
 		checkIntervalMs: null,
 		searchWindowDays: 30,
 		folders: false,
@@ -104,9 +104,9 @@ export const TIER_LIMITS: Record<Tier, TierLimits> = {
 	},
 	paid: {
 		feeds: 200,
-		saved: SAVED_LIMIT,
+		saved: TIER_SAVED_LIMITS.paid,
 		rules: 50,
-		posts: READER_BUDGET,
+		posts: TIER_BUDGETS.paid,
 		checkIntervalMs: 30 * 60 * 1000,
 		searchWindowDays: null,
 		folders: true,
@@ -120,9 +120,9 @@ export const TIER_LIMITS: Record<Tier, TierLimits> = {
 	},
 	premium: {
 		feeds: 500,
-		saved: SAVED_LIMIT,
+		saved: TIER_SAVED_LIMITS.premium,
 		rules: 200,
-		posts: READER_BUDGET * 5,
+		posts: TIER_BUDGETS.premium,
 		checkIntervalMs: 5 * 60 * 1000,
 		searchWindowDays: null,
 		folders: true,

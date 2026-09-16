@@ -12,7 +12,6 @@ import { parseFlagSet } from "@sdxc/flags-engine";
 import { beforeAll, describe, expect, test } from "vitest";
 
 import { features, FLAG_SET, flags, flagsFor } from "~/app/lib/flags";
-import { READER_BUDGET } from "~/database/schema";
 
 let snapshot = parseFlagSet(FLAG_SET);
 let client = flags.getClient();
@@ -46,8 +45,8 @@ describe("the shipped values", () => {
 		expect(await client.get(features.feedPollMultiplier)).toBe(
 			features.feedPollMultiplier.defaultValue,
 		);
-		expect(await client.get(features.readerPostBudget)).toBe(
-			features.readerPostBudget.defaultValue,
+		expect(await client.get(features.readerBudgetScale)).toBe(
+			features.readerBudgetScale.defaultValue,
 		);
 		expect(await client.get(features.velocitySuggestionRate)).toBe(
 			features.velocitySuggestionRate.defaultValue,
@@ -62,8 +61,8 @@ describe("the shipped values", () => {
 		expect(await client.get(features.feedPollMultiplier)).toBe(1);
 	});
 
-	test("hold a reader to the budget the sweep was sized against", async () => {
-		expect(await client.get(features.readerPostBudget)).toBe(READER_BUDGET);
+	test("hold a reader to the whole of the budget their tier carries", async () => {
+		expect(await client.get(features.readerBudgetScale)).toBe(1);
 	});
 
 	test("leave both of the newest surfaces on", async () => {
@@ -80,7 +79,7 @@ describe("what an object evaluates through", () => {
 	test("resolves for a subject an object names itself", async () => {
 		let reader = await flagsFor("sub-1");
 
-		expect(await reader.get(features.readerPostBudget)).toBe(READER_BUDGET);
+		expect(await reader.get(features.readerBudgetScale)).toBe(1);
 	});
 
 	test("resolves with no subject at all, which is what an anonymous request is", async () => {
