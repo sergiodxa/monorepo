@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-16
+**Accepted** - 2026-09-16
 
 ## Background
 
@@ -435,19 +435,19 @@ plain Vitest against a SQLite `Database`, the object paths in `*.workers.test.ts
 
 ## Implementation
 
-- [ ] `0007-folders.sql`, mirrored in `database/schema.ts`, and its query-plan tests
-- [ ] `listFolders`, `createFolder`, `renameFolder`, `deleteFolder` and `fileFeed` RPC
-- [ ] `folderTimeline` beside `feedTimeline`, through the same `#page`
-- [ ] The subscription's `folder_id` copied in the synchronization upsert
-- [ ] `folderId` on `CachedFeed`, the folder sums, and cache clearing on every folder write
-- [ ] The five routes in `routes/web.ts`, mapped lazily in `bootstrap/app.tsx`
-- [ ] The folder controller, and the filing control on `/reading/:feed` beside velocity
-- [ ] The rail drawn under folder headings, with unfiled feeds below them
-- [ ] `folder` on `OPML.Outline`, the grouped document it writes back, and the README line
-- [ ] Folder filing in the import controller, folder grouping in the export controller
-- [ ] Copy for every new string in `app/locales/en.ts` and `app/locales/es.ts`
-- [ ] The tests above, and a `user.folder` event carrying the action and what it moved
-- [ ] The README's feature list and its route table
+- [x] `0007-folders.sql`, mirrored in `database/schema.ts`, and its query-plan tests
+- [x] `listFolders`, `createFolder`, `renameFolder`, `deleteFolder` and `fileFeed` RPC
+- [x] `folderTimeline` beside `feedTimeline`, through the same `#page`
+- [x] The subscription's `folder_id` copied in the synchronization upsert
+- [x] `folderId` on `CachedFeed`, the folder sums, and cache clearing on every folder write
+- [x] The five routes in `routes/web.ts`, mapped lazily in `bootstrap/app.tsx`
+- [x] The folder controller, and the filing control on `/reading/:feed` beside velocity
+- [x] The rail drawn under folder headings, with unfiled feeds below them
+- [x] `folder` on `OPML.Outline`, the grouped document it writes back, and the README line
+- [x] Folder filing in the import controller, folder grouping in the export controller
+- [x] Copy for every new string in `app/locales/en.ts` and `app/locales/es.ts`
+- [x] The tests above, and a `user.folder` event carrying the action and what it moved
+- [x] The README's feature list and its route table
 
 ## References
 

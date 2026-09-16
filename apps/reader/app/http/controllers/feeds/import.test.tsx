@@ -38,8 +38,14 @@ const OPML_DOCUMENT = `<?xml version="1.0" encoding="UTF-8"?>
 	</body>
 </opml>`;
 
-/** The addresses {@link OPML_DOCUMENT} lists, in the order it lists them. */
-const FEED_URLS = ["https://example.com/feed.xml", "https://another.example/feed.xml"];
+/**
+ * The subscriptions {@link OPML_DOCUMENT} lists, in the order it lists them and under the
+ * folders it filed them in.
+ */
+const FEED_ENTRIES = [
+	{ feedUrl: "https://example.com/feed.xml", folder: null },
+	{ feedUrl: "https://another.example/feed.xml", folder: "Writing" },
+];
 
 /** A document that is OPML and lists no subscription at all. */
 const EMPTY_DOCUMENT = `<?xml version="1.0" encoding="UTF-8"?>
@@ -121,11 +127,11 @@ describe("POST /feeds/import", () => {
 		expect(store.importFeeds).not.toHaveBeenCalled();
 	});
 
-	test("hands every address the document lists to the signed-in reader's own store", async () => {
+	test("hands every address the document lists, and its folder, to the reader's own store", async () => {
 		await postImport(VIEWER, opmlFile(OPML_DOCUMENT));
 
 		expect(userStore).toHaveBeenCalledWith(VIEWER.id);
-		expect(store.importFeeds).toHaveBeenCalledWith(FEED_URLS);
+		expect(store.importFeeds).toHaveBeenCalledWith(FEED_ENTRIES);
 	});
 
 	test("reports what an import followed and what it already followed", async () => {

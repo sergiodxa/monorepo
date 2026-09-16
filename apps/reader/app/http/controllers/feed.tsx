@@ -22,12 +22,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { CircleCheckIcon, HourglassIcon, RefreshCwIcon, UnlinkIcon } from "@sdxc/icons";
+import { CircleCheckIcon, FolderIcon, HourglassIcon, RefreshCwIcon, UnlinkIcon } from "@sdxc/icons";
 import { parsePageParams } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
-import { fg } from "@sdxc/u/color";
-import { flex, flexWrap, gap, items, justify, vstack } from "@sdxc/u/layout";
-import { maxIs, p, pb } from "@sdxc/u/size";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { raw } from "@sdxc/u/general";
+import { boxSizing, flex, flexWrap, gap, items, justify, vstack } from "@sdxc/u/layout";
+import { bs, maxIs, minIs, p, pb } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import {
 	Alert,
@@ -50,6 +53,8 @@ import { chrome } from "~/app/http/controllers/chrome";
 import { MARKED_PARAM } from "~/app/http/controllers/feeds/read";
 import { CHECKED_PARAM } from "~/app/http/controllers/feeds/refresh";
 import { VELOCITY_FIELD, VELOCITY_PARAM } from "~/app/http/controllers/feeds/velocity";
+import { FOLDER_PARAM, TITLE_FIELD } from "~/app/http/controllers/folders/create";
+import { FOLDER_FIELD } from "~/app/http/controllers/folders/file";
 import { placePage } from "~/app/http/controllers/list-paging";
 import {
 	exactDate,
@@ -64,7 +69,12 @@ import { features } from "~/app/lib/flags";
 import { feedStore } from "~/database/feed-do";
 import { VELOCITIES } from "~/database/schema";
 import { userStore } from "~/database/user-do";
-import AppLayout, { ActionLabel, PAGE_COLUMN, pageNote } from "~/resources/layouts/app";
+import AppLayout, {
+	ActionLabel,
+	BAND_FIELD_HEIGHT,
+	PAGE_COLUMN,
+	pageNote,
+} from "~/resources/layouts/app";
 import Timeline from "~/resources/views/timeline";
 import routes from "~/routes/web";
 
@@ -111,6 +121,21 @@ function unfollowPromptId(feedId: string): string {
  */
 function velocityMenuId(feedId: string): string {
 	return `velocity-${feedId}`;
+}
+
+/**
+ * The `id` the filing menu answers to, which its trigger names in `commandfor`, carrying
+ * the feed for the reason the prompt's does.
+ *
+ * @param feedId - The feed whose folders the menu offers.
+ */
+function folderMenuId(feedId: string): string {
+	return `folder-${feedId}`;
+}
+
+/** The `id` tying the filing menu's own field to the label naming it. */
+function folderFieldId(feedId: string): string {
+	return `folder-name-${feedId}`;
 }
 
 /** One line of copy the page says an action's outcome in, and the tone it wears. */
@@ -160,6 +185,21 @@ function markNote(marked: string | null): Note | null {
 function velocityNote(velocity: string | null): Note | null {
 	if (velocity === "saved") return { key: "feeds.velocity.saved", color: "success" };
 	if (velocity === "invalid") return { key: "feeds.velocity.invalid", color: "warning" };
+	return null;
+}
+
+/**
+ * The copy and tone for the outcome a filing submission redirects back with, or `null`
+ * when this is an ordinary visit. `missing` needs no entry: a feed the reader does not
+ * follow renders the not-found page above, which never reaches this.
+ *
+ * @param folder - The redirect's `folder` parameter, as it arrived.
+ */
+function folderNote(folder: string | null): Note | null {
+	if (folder === "filed") return { key: "folders.file.filed", color: "success" };
+	if (folder === "unfiled") return { key: "folders.file.unfiled", color: "success" };
+	if (folder === "gone") return { key: "folders.file.gone", color: "warning" };
+	if (folder === "invalid") return { key: "folders.invalid", color: "warning" };
 	return null;
 }
 
@@ -248,7 +288,8 @@ export default createAction(routes.feed, {
 		let note =
 			markNote(ctx.url.searchParams.get(MARKED_PARAM)) ??
 			checkNote(ctx.url.searchParams.get(CHECKED_PARAM)) ??
-			velocityNote(ctx.url.searchParams.get(VELOCITY_PARAM));
+			velocityNote(ctx.url.searchParams.get(VELOCITY_PARAM)) ??
+			folderNote(ctx.url.searchParams.get(FOLDER_PARAM));
 
 		/**
 		 * The page is headed by the feed's own name, so naming it again on every row below
@@ -345,7 +386,15 @@ export default createAction(routes.feed, {
 		 * this list costs nothing. An object that has never answered leaves every line of this
 		 * reading as a feed nobody has checked yet, which is what it is.
 		 */
-		let health = await feedStore(feed.feedId).health();
+		let [health, folders] = await Promise.all([
+			feedStore(feed.feedId).health(),
+			/**
+			 * The folders this feed could be filed into, read below the frame branch above so
+			 * paging the list costs nothing. It is a short table and the whole of it fits in
+			 * the control that offers it.
+			 */
+			store.listFolders(),
+		]);
 
 		let statusKey = health?.status ? FAILURE_STATUS_KEYS[health.status] : undefined;
 
@@ -499,6 +548,91 @@ export default createAction(routes.feed, {
 										</span>
 									</Menu.Item>
 								))}
+							</form>
+						</Menu>
+
+						{/**
+						 * Which group this feed reads in, which is a thing done to the feed the way
+						 * checking it and setting its span are. The trigger wears the answer, so the
+						 * filing is legible without opening anything.
+						 *
+						 * Every folder the reader has is a submit of its own, the one it is in is
+						 * marked, and the field at the foot files it under a name they type — which
+						 * is where most folders come from. Without script the menu is a popover the
+						 * browser opens itself and each row is a plain submit, so it is the same
+						 * control either way.
+						 */}
+						<Button
+							commandfor={folderMenuId(feedId)}
+							command="toggle-popover"
+							color="neutral"
+							variant="ghost"
+							size="sm"
+							aria-label={ctx.i18next.t("folders.file.legend")}
+							title={ctx.i18next.t("folders.file.legend")}
+						>
+							{/** A folder, which is what the feed is being put into. */}
+							<FolderIcon size={ACTION_ICON_SIZE} />
+							<ActionLabel>{feed.folderTitle ?? ctx.i18next.t("folders.file.none")}</ActionLabel>
+						</Button>
+
+						<Menu id={folderMenuId(feedId)} aria-label={ctx.i18next.t("folders.file.legend")}>
+							<form method="post" action={routes.folders.file.href({ feedId })}>
+								<Text mix={[p(2), pb(1), text("xs"), fg("neutral.muted")]}>
+									{ctx.i18next.t("folders.file.description")}
+								</Text>
+
+								{folders.map((folder) => (
+									<Menu.Item
+										key={folder.id}
+										type="submit"
+										name={FOLDER_FIELD}
+										value={folder.id}
+										aria-selected={folder.id === feed.folderId ? "true" : undefined}
+										mix={[justify("between"), gap(4)]}
+									>
+										<span>{folder.title}</span>
+									</Menu.Item>
+								))}
+
+								{/**
+								 * Takes the feed out of the folder it is in, which is the empty value the
+								 * filing route reads as no folder at all. It is offered only to a feed
+								 * that is in one, since taking an unfiled feed out of nothing does nothing.
+								 */}
+								{feed.folderId !== null && (
+									<Menu.Item type="submit" name={FOLDER_FIELD} value="">
+										{ctx.i18next.t("folders.file.remove")}
+									</Menu.Item>
+								)}
+
+								<div mix={[flex(), items("center"), gap(2), p(2)]}>
+									<label htmlFor={folderFieldId(feedId)} mix={[visuallyHidden()]}>
+										{ctx.i18next.t("folders.name.label")}
+									</label>
+
+									<input
+										id={folderFieldId(feedId)}
+										type="text"
+										name={TITLE_FIELD}
+										placeholder={ctx.i18next.t("folders.name.placeholder")}
+										mix={[
+											minIs(0),
+											bs(BAND_FIELD_HEIGHT),
+											boxSizing("border-box"),
+											p(0, 3),
+											rounded("lg"),
+											border({ color: "neutral.border", width: 1 }),
+											bg("neutral.bg"),
+											fg("neutral.emphasis"),
+											raw({ font: "inherit", fontSize: "0.875rem" }),
+										]}
+									/>
+
+									<Button type="submit" size="sm">
+										{ctx.i18next.t("folders.file.submit")}
+									</Button>
+								</div>
 							</form>
 						</Menu>
 

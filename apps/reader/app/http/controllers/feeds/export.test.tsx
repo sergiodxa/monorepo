@@ -29,14 +29,23 @@ let { default: exportFeeds } = await import("./export");
 /** The day every export below is taken on, so the filename it suggests is the same one twice. */
 const EXPORTED_AT = new Date(Date.UTC(2026, 0, 15, 12));
 
-/** What a reader with two subscriptions exports, one of them without a site of its own. */
+/**
+ * What a reader with two subscriptions exports: one without a site of its own, and one
+ * filed in a folder, which the document writes as the outline around it.
+ */
 const FEEDS: UserStore.FeedExport[] = [
 	{
 		title: "Example Blog",
 		feedUrl: "https://example.com/feed.xml",
 		siteUrl: "https://example.com",
+		folder: null,
 	},
-	{ title: "Another Blog", feedUrl: "https://another.example/feed.xml", siteUrl: null },
+	{
+		title: "Another Blog",
+		feedUrl: "https://another.example/feed.xml",
+		siteUrl: null,
+		folder: "Writing",
+	},
 ];
 
 /**
@@ -109,12 +118,31 @@ describe("GET /feeds.opml", () => {
 
 		await expect(subscriptions(response)).resolves.toEqual([
 			{
+				title: "Another Blog",
+				feedUrl: "https://another.example/feed.xml",
+				folder: "Writing",
+			},
+			{
 				title: "Example Blog",
 				feedUrl: "https://example.com/feed.xml",
 				siteUrl: "https://example.com",
 			},
-			{ title: "Another Blog", feedUrl: "https://another.example/feed.xml" },
 		]);
+	});
+
+	/**
+	 * A document handed to another reader arrives filed: the folders are outlines holding
+	 * their feeds, and what the reader filed nowhere sits at the top level after them.
+	 */
+	test("writes a folder as the outline around the feeds in it", async () => {
+		store.exportFeeds.mockResolvedValue(FEEDS);
+
+		let document = await (await getExport(VIEWER)).text();
+
+		expect(document).toContain('<outline text="Writing" title="Writing">');
+		expect(document).toMatch(
+			/<outline text="Writing"[^>]*>\s*<outline[^>]*xmlUrl="https:\/\/another\.example\/feed\.xml"/,
+		);
 	});
 
 	test("titles the document so the reader it is carried to knows what it is", async () => {

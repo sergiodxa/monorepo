@@ -75,6 +75,27 @@ export interface CachedFeed {
 	unreadCount: number;
 	/** The mark the publisher puts on their own feed, or `null` for one that puts none. */
 	imageUrl: string | null;
+	/** The folder it is filed in, or `null` for a feed the reader has not filed. */
+	folderId: string | null;
+	/**
+	 * That folder's name, carried here beside the id so the rail draws its headings from
+	 * the list it already holds rather than reading the folders a second time.
+	 */
+	folderTitle: string | null;
+}
+
+/**
+ * One folder as the rail draws it: the feeds filed there and what they add up to.
+ *
+ * The count is the sum of the counts beneath it rather than a number of its own, so a
+ * heading showing eleven shows it because the rows under it show four, three, three and
+ * one — there is no second query to disagree with them.
+ */
+export interface RailFolder {
+	id: string;
+	title: string;
+	feeds: CachedFeed[];
+	unreadCount: number;
 }
 
 /** Where a reader's rail list is kept. */
@@ -117,6 +138,8 @@ export async function railFeeds(subject: string): Promise<CachedFeed[]> {
 				title: feed.title,
 				unreadCount: feed.unreadCount,
 				imageUrl: feed.imageUrl,
+				folderId: feed.folderId,
+				folderTitle: feed.folderTitle,
 			}));
 		},
 		{ ttl: RAIL_TTL },
@@ -134,6 +157,8 @@ export async function railFeeds(subject: string): Promise<CachedFeed[]> {
 		title: feed.title,
 		unreadCount: feed.unreadCount,
 		imageUrl: typeof feed.imageUrl === "string" ? feed.imageUrl : null,
+		folderId: typeof feed.folderId === "string" ? feed.folderId : null,
+		folderTitle: typeof feed.folderTitle === "string" ? feed.folderTitle : null,
 	}));
 }
 
@@ -155,6 +180,49 @@ export async function railFeeds(subject: string): Promise<CachedFeed[]> {
 export function sortByTitle(feeds: CachedFeed[], locale: string): CachedFeed[] {
 	let collator = new Intl.Collator(locale);
 	return [...feeds].sort((one, other) => collator.compare(one.title, other.title));
+}
+
+/**
+ * The rail's folders, each holding the feeds filed in it, in the order their names read.
+ *
+ * Both the grouping and the counts come off the list the request already holds, so drawing
+ * the rail under folder names costs the same read it costs without them. A folder nothing
+ * is filed in has no row here, since what a folder draws is the feeds beneath it.
+ *
+ * @param feeds - The feeds as they were cached or read.
+ * @param locale - The request's language, which orders the names.
+ * @returns The folders, and the feeds left unfiled, which the rail draws below them.
+ */
+export function groupByFolder(
+	feeds: CachedFeed[],
+	locale: string,
+): { folders: RailFolder[]; unfiled: CachedFeed[] } {
+	let byId = new Map<string, RailFolder>();
+	let unfiled: CachedFeed[] = [];
+
+	for (let feed of sortByTitle(feeds, locale)) {
+		if (feed.folderId === null) {
+			unfiled.push(feed);
+			continue;
+		}
+
+		let folder = byId.get(feed.folderId) ?? {
+			id: feed.folderId,
+			/** A feed cached before the name was carried names its folder by nothing else. */
+			title: feed.folderTitle ?? feed.folderId,
+			feeds: [],
+			unreadCount: 0,
+		};
+
+		folder.feeds.push(feed);
+		folder.unreadCount += feed.unreadCount;
+		byId.set(feed.folderId, folder);
+	}
+
+	let collator = new Intl.Collator(locale);
+	let folders = [...byId.values()].sort((one, other) => collator.compare(one.title, other.title));
+
+	return { folders, unfiled };
 }
 
 /**

@@ -1,7 +1,7 @@
 /**
  * OPML import controller for `POST /feeds/import`. It reads the uploaded document and
- * hands every feed address in it to the reader's store, which follows the ones they do
- * not follow already.
+ * hands every feed address in it, with the folder its outline named, to the reader's
+ * store, which follows the ones they do not follow already and files what it followed.
  *
  * It renders nothing. The outcome travels in the `imported` query parameter of the
  * redirect back to the settings page the form lives on, which is the single place that
@@ -100,10 +100,19 @@ export default createAction(routes.feeds.import, {
 		let outlines = parse(await upload.text());
 		if (isFailure(outlines)) return toSettings("unreadable");
 
-		let feedUrls = outlines.data.map((outline) => outline.feedUrl);
-		if (feedUrls.length === 0) return toSettings("empty");
+		/**
+		 * The folder each outline named comes across with it, so a document that arrived
+		 * filed is followed filed. A feed the reader already follows keeps the folder they
+		 * put it in, which the store is what decides.
+		 */
+		let entries = outlines.data.map((outline) => ({
+			feedUrl: outline.feedUrl,
+			folder: outline.folder ?? null,
+		}));
 
-		let result = await userStore(viewer.id).importFeeds(feedUrls);
+		if (entries.length === 0) return toSettings("empty");
+
+		let result = await userStore(viewer.id).importFeeds(entries);
 
 		/** The rail lists whatever the file brought in. */
 		await forgetRailFeeds(viewer.id);

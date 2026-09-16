@@ -21,6 +21,7 @@ import type { Handle, RemixNode } from "remix/ui";
 import {
 	BookmarkIcon,
 	ChevronsUpDownIcon,
+	FolderIcon,
 	InboxIcon,
 	LogOutIcon,
 	PanelLeftIcon,
@@ -428,8 +429,27 @@ export namespace SidebarFeeds {
 		unreadLabel: string | null;
 	}
 
-	export interface Props {
+	/**
+	 * One folder as the rail draws it: a heading that is itself the way into the folder's
+	 * own stream, and the feeds filed there beneath it.
+	 */
+	export interface Folder {
+		id: string;
+		title: string;
+		/** Where the folder's own stream is read, which its heading leads to. */
+		href: string;
 		feeds: Feed[];
+		/** What the feeds beneath it add up to, which is the only place this number is from. */
+		unreadCount: number;
+		/** That sum said in full for a screen reader, or `null` for a folder with nothing waiting. */
+		unreadLabel: string | null;
+	}
+
+	export interface Props {
+		/** The feeds the reader has filed nowhere, drawn below the folders. */
+		feeds: Feed[];
+		/** The reader's folders, each drawn as a heading over the feeds filed in it. */
+		folders: Folder[];
 		/** The word heading the band, which names the reader's own subscriptions. */
 		label: string;
 		/** Names the list of feeds under that heading, for anyone listening to it. */
@@ -440,13 +460,72 @@ export namespace SidebarFeeds {
 }
 
 /**
+ * One followed feed as a row of the rail, wherever it is drawn: under a folder's name or
+ * under the heading that gathers the ones a reader has filed nowhere.
+ *
+ * A level down from the queue and quieter for it, so an eye running the sidebar still
+ * tells the one place from the many feeds.
+ */
+function SidebarFeedRow(handle: Handle<{ feed: SidebarFeeds.Feed; isCurrent: boolean }>) {
+	return () => {
+		let { feed, isCurrent } = handle.props;
+
+		return (
+			<Sidebar.Item
+				href={routes.feed.href({ feed: feed.id })}
+				current={isCurrent}
+				mix={[railRow("item"), text("xs"), fg("neutral.muted")]}
+			>
+				{/**
+				 * The mark the publisher puts on their own feed, which is what an eye finds a
+				 * known publication by before it reads the name. It is the picture the feed
+				 * document itself named and already stored, so drawing it asks nobody who the
+				 * reader follows.
+				 *
+				 * A publisher who named none, or whose picture has since gone, leaves the
+				 * initials of the name — and the name itself is right beside it, so nothing is
+				 * lost either way.
+				 */}
+				<Logo size="sm" mix={railMark()}>
+					{feed.imageUrl ? (
+						<Logo.Image
+							src={feed.imageUrl}
+							alt={feed.title}
+							loading="lazy"
+							referrerPolicy="no-referrer"
+						/>
+					) : null}
+					<Logo.Fallback>{initials(feed.title)}</Logo.Fallback>
+				</Logo>
+
+				<span mix={[grow(), minIs(0), truncate()]}>{feed.title}</span>
+
+				{/**
+				 * The number alone beside the name, which is what a column of them is read by;
+				 * the phrase it stands for is said in full for anyone listening rather than
+				 * looking. A feed with nothing waiting carries neither.
+				 */}
+				{feed.unreadLabel && (
+					<>
+						<span aria-hidden="true" mix={[shrink(), tabularNums()]}>
+							{feed.unreadCount}
+						</span>
+						<span mix={[visuallyHidden()]}>{feed.unreadLabel}</span>
+					</>
+				)}
+			</Sidebar.Item>
+		);
+	};
+}
+
+/**
  * The feeds a reader follows, as the sidebar lists them. It is rendered into the sidebar's
  * own frame rather than by the layout around it, so the counts beside these names can be
  * redrawn on their own when a post is marked read further down the page.
  */
 export function SidebarFeeds(handle: Handle<SidebarFeeds.Props>) {
 	return () => {
-		let { currentPath, feeds, label, listLabel } = handle.props;
+		let { currentPath, feeds, folders, label, listLabel } = handle.props;
 
 		/** Read from the path the band was asked for, since it is drawn apart from the page. */
 		function isCurrent(href: string): boolean {
@@ -454,94 +533,98 @@ export function SidebarFeeds(handle: Handle<SidebarFeeds.Props>) {
 		}
 
 		/** A reader following nothing is shown no heading for it, and no empty list under one. */
-		if (feeds.length === 0) return null;
+		if (feeds.length === 0 && folders.length === 0) return null;
 
 		return (
-			<Sidebar.Group>
-				{/**
-				 * The reader's own subscriptions, headed by the word naming them. It is
-				 * drawn as a peer of the queue above — the same mark, the same column, the
-				 * same casing as its own word — rather than as a category divider, because
-				 * that is what it is: the other thing this sidebar holds.
-				 *
-				 * It leads nowhere, and nothing is lost by that: the whole of the list it
-				 * names is the rows directly beneath it, on every page. That leaves one
-				 * thing in the sidebar lit at a time, which is the feed being read rather
-				 * than the feed and the word above it.
-				 */}
-				<Sidebar.GroupLabel
-					mix={[
-						railRow("group-label"),
-						when('&[data-slot="group-label"]', [
-							pb("0.5rem"),
-							minBs("2.25rem"),
-							justify("start"),
-							text("sm"),
-							weight("medium"),
-							fg("neutral"),
-							raw({ textTransform: "none", letterSpacing: "normal" }),
-						]),
-					]}
-				>
-					{/** The mark a site puts on its own feed, which is what these rows are. */}
-					<RssIcon size={ICON_SIZE} />
-					<span mix={[minIs(0), truncate()]}>{label}</span>
-				</Sidebar.GroupLabel>
-
-				<Sidebar.Nav aria-label={listLabel}>
-					{feeds.map((feed) => (
+			<>
+				{folders.map((folder) => (
+					<Sidebar.Group key={folder.id}>
+						{/**
+						 * The folder's name, and the way into reading it as one stream. It is a
+						 * row rather than a plain heading because a folder is somewhere a reader
+						 * goes, and it wears the weight the Feeds heading below wears so the two
+						 * read as the peers they are.
+						 */}
 						<Sidebar.Item
-							key={feed.id}
-							href={routes.feed.href({ feed: feed.id })}
-							current={isCurrent(routes.feed.href({ feed: feed.id }))}
-							/**
-							 * A level down from the queue and quieter for it, so an eye running
-							 * the sidebar still tells the one place from the many feeds.
-							 */
-							mix={[railRow("item"), text("xs"), fg("neutral.muted")]}
+							href={folder.href}
+							current={isCurrent(folder.href)}
+							mix={[railRow("item"), text("sm"), weight("medium"), fg("neutral")]}
 						>
-							{/**
-							 * The mark the publisher puts on their own feed, which is what an eye
-							 * finds a known publication by before it reads the name. It is the
-							 * picture the feed document itself named and already stored, so
-							 * drawing it asks nobody who the reader follows.
-							 *
-							 * A publisher who named none, or whose picture has since gone, leaves
-							 * the initials of the name — and the name itself is right beside it,
-							 * so nothing is lost either way.
-							 */}
-							<Logo size="sm" mix={railMark()}>
-								{feed.imageUrl ? (
-									<Logo.Image
-										src={feed.imageUrl}
-										alt={feed.title}
-										loading="lazy"
-										referrerPolicy="no-referrer"
-									/>
-								) : null}
-								<Logo.Fallback>{initials(feed.title)}</Logo.Fallback>
-							</Logo>
+							<FolderIcon size={ICON_SIZE} />
 
-							<span mix={[grow(), minIs(0), truncate()]}>{feed.title}</span>
+							<span mix={[grow(), minIs(0), truncate()]}>{folder.title}</span>
 
 							{/**
-							 * The number alone beside the name, which is what a column of them is
-							 * read by; the phrase it stands for is said in full for anyone
-							 * listening rather than looking. A feed with nothing waiting carries
-							 * neither.
+							 * What the feeds beneath it add up to, said as the number for an eye and
+							 * in full for anyone listening. It is the sum of the rows under it and
+							 * nothing else, so a heading can never disagree with them.
 							 */}
-							{feed.unreadLabel && (
+							{folder.unreadLabel && (
 								<>
 									<span aria-hidden="true" mix={[shrink(), tabularNums()]}>
-										{feed.unreadCount}
+										{folder.unreadCount}
 									</span>
-									<span mix={[visuallyHidden()]}>{feed.unreadLabel}</span>
+									<span mix={[visuallyHidden()]}>{folder.unreadLabel}</span>
 								</>
 							)}
 						</Sidebar.Item>
-					))}
-				</Sidebar.Nav>
-			</Sidebar.Group>
+
+						<Sidebar.Nav aria-label={folder.title}>
+							{folder.feeds.map((feed) => (
+								<SidebarFeedRow
+									key={feed.id}
+									feed={feed}
+									isCurrent={isCurrent(routes.feed.href({ feed: feed.id }))}
+								/>
+							))}
+						</Sidebar.Nav>
+					</Sidebar.Group>
+				))}
+
+				{feeds.length > 0 && (
+					<Sidebar.Group>
+						{/**
+						 * The reader's own subscriptions, headed by the word naming them. It is
+						 * drawn as a peer of the queue above — the same mark, the same column, the
+						 * same casing as its own word — rather than as a category divider, because
+						 * that is what it is: the other thing this sidebar holds.
+						 *
+						 * It leads nowhere, and nothing is lost by that: the whole of the list it
+						 * names is the rows directly beneath it, on every page. That leaves one
+						 * thing in the sidebar lit at a time, which is the feed being read rather
+						 * than the feed and the word above it.
+						 */}
+						<Sidebar.GroupLabel
+							mix={[
+								railRow("group-label"),
+								when('&[data-slot="group-label"]', [
+									pb("0.5rem"),
+									minBs("2.25rem"),
+									justify("start"),
+									text("sm"),
+									weight("medium"),
+									fg("neutral"),
+									raw({ textTransform: "none", letterSpacing: "normal" }),
+								]),
+							]}
+						>
+							{/** The mark a site puts on its own feed, which is what these rows are. */}
+							<RssIcon size={ICON_SIZE} />
+							<span mix={[minIs(0), truncate()]}>{label}</span>
+						</Sidebar.GroupLabel>
+
+						<Sidebar.Nav aria-label={listLabel}>
+							{feeds.map((feed) => (
+								<SidebarFeedRow
+									key={feed.id}
+									feed={feed}
+									isCurrent={isCurrent(routes.feed.href({ feed: feed.id }))}
+								/>
+							))}
+						</Sidebar.Nav>
+					</Sidebar.Group>
+				)}
+			</>
 		);
 	};
 }

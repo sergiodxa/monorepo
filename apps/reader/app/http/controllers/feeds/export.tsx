@@ -3,6 +3,10 @@
  * subscription list as the document every other reader knows how to read, so leaving
  * takes one click and arriving somewhere else takes one upload.
  *
+ * The document is written filed: one outline per folder holding the feeds in it, and the
+ * unfiled subscriptions after them, so an export handed to another reader arrives
+ * organized the way it left.
+ *
  * The response is a file rather than a page: an OPML content type and an `attachment`
  * disposition naming it after the day it was taken, which keeps this month's export
  * beside last month's in a downloads folder instead of on top of it. It is one person's
@@ -49,6 +53,8 @@ export default createAction(routes.feeds.export, {
 			title: feed.title,
 			feedUrl: feed.feedUrl,
 			siteUrl: feed.siteUrl ?? undefined,
+			/** The document writes this as the outline around the feed, so filing travels. */
+			folder: feed.folder ?? undefined,
 		}));
 
 		let now = new Date();

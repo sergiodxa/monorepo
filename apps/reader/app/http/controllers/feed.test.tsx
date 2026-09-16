@@ -57,6 +57,8 @@ const FEED: UserStore.FeedSummary = {
 	imageUrl: null,
 	velocity: "evergreen",
 	unreadCount: 2,
+	folderId: null,
+	folderTitle: null,
 };
 
 /** What the feed's object answers with for a feed whose last check went fine. */
@@ -723,5 +725,74 @@ describe("how long this feed's posts stay", () => {
 			r.text(),
 		);
 		expect(readsAs(refused)).toContain("That is not one of the spans on offer.");
+	});
+});
+
+describe("which folder this feed reads in", () => {
+	/** The folders this reader has, which the filing control offers one submit each for. */
+	const FOLDERS = [
+		{ id: "01J0FOLDER00000000000000A1", title: "Tech" },
+		{ id: "01J0FOLDER00000000000000A2", title: "News" },
+	];
+
+	test("offers every folder the reader has, each as a submit of its own", async () => {
+		store.getFeed.mockResolvedValue(FEED);
+		store.listFolders.mockResolvedValue(FOLDERS);
+
+		let body = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
+
+		expect(body).toContain(
+			`<form method="post" action="${routes.folders.file.href({ feedId: FEED_ID })}"`,
+		);
+
+		for (let folder of FOLDERS) {
+			expect(body).toMatch(
+				new RegExp(`<button[^>]*\\bname="folderId"[^>]*\\bvalue="${folder.id}"`),
+			);
+		}
+	});
+
+	/** The trigger wears the answer, so the filing is legible without opening anything. */
+	test("says the folder it is in, and says so when it is in none", async () => {
+		store.getFeed.mockResolvedValue({ ...FEED, folderId: FOLDERS[0]?.id, folderTitle: "Tech" });
+		store.listFolders.mockResolvedValue(FOLDERS);
+
+		let filed = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
+		let trigger = /<button[^>]*\bcommandfor="folder-[^"]*"[^>]*>[\s\S]*?<\/button>/.exec(filed);
+		expect(readsAs(trigger?.[0] ?? "")).toContain("Tech");
+
+		store.getFeed.mockResolvedValue(FEED);
+		let unfiled = await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text());
+		let none = /<button[^>]*\bcommandfor="folder-[^"]*"[^>]*>[\s\S]*?<\/button>/.exec(unfiled);
+		expect(readsAs(none?.[0] ?? "")).toContain("No folder");
+	});
+
+	/** Taking an unfiled feed out of nothing does nothing, so it is offered to neither. */
+	test("offers the way out of a folder only to a feed that is in one", async () => {
+		store.listFolders.mockResolvedValue(FOLDERS);
+
+		store.getFeed.mockResolvedValue({ ...FEED, folderId: FOLDERS[0]?.id, folderTitle: "Tech" });
+		expect(readsAs(await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text()))).toContain(
+			"Take out of this folder",
+		);
+
+		store.getFeed.mockResolvedValue(FEED);
+		expect(
+			readsAs(await get(routes.feed.href({ feed: FEED_ID })).then((r) => r.text())),
+		).not.toContain("Take out of this folder");
+	});
+
+	test("reports what a filing submission came back with", async () => {
+		store.getFeed.mockResolvedValue(FEED);
+
+		let filed = await get(`${routes.feed.href({ feed: FEED_ID })}?folder=filed`).then((r) =>
+			r.text(),
+		);
+		expect(readsAs(filed)).toContain("Filed.");
+
+		let removed = await get(`${routes.feed.href({ feed: FEED_ID })}?folder=unfiled`).then((r) =>
+			r.text(),
+		);
+		expect(readsAs(removed)).toContain("Taken out of its folder.");
 	});
 });

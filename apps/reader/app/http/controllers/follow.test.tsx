@@ -42,6 +42,8 @@ const FOLLOWED: UserStore.FeedSummary = {
 	imageUrl: null,
 	velocity: "evergreen",
 	unreadCount: 0,
+	folderId: null,
+	folderTitle: null,
 };
 
 /**
