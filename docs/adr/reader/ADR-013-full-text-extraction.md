@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-16
+**Accepted** - 2026-09-16
 
 ## Background
 
@@ -511,20 +511,20 @@ Vitest against fixture markup, the cache and route paths in `*.workers.test.ts` 
 
 ## Implementation
 
-- [ ] `@sdxc/html/document` subpath exposing the parsed tree, with the query surface unchanged
-- [ ] `HTML.sanitize(source, policy)`, allow-listing elements, attributes and URL schemes
-- [ ] `@sdxc/readability`: candidate scoring, boilerplate removal, and sanitization inside `extract`
-- [ ] The four fetch bounds, following `packages/feed/src/lib/limits.ts`
-- [ ] `robots.txt` retrieval, its 24-hour cache, and the `X-Robots-Tag: noarchive` no-cache rule
-- [ ] `app/lib/article-cache.ts` over `@sdxc/cache/worker-kv`, with the key, the TTL and the caps
-- [ ] The negative entry and its one-hour TTL, distinguishable from a cached article
-- [ ] The article frame on `/reading/:feedId/:itemId`, pending on a miss, through `lazy-frame`
-- [ ] The Content-Security-Policy on the reading page
-- [ ] Failure copy for every outcome, and the line on the save control saying what a save keeps, in
+- [x] `@sdxc/html/document` subpath exposing the parsed tree, with the query surface unchanged
+- [x] `HTML.sanitize(source, policy)`, allow-listing elements, attributes and URL schemes
+- [x] `@sdxc/readability`: candidate scoring, boilerplate removal, and sanitization inside `extract`
+- [x] The four fetch bounds, following `packages/feed/src/lib/limits.ts`
+- [x] `robots.txt` retrieval, its 24-hour cache, and the `X-Robots-Tag: noarchive` no-cache rule
+- [x] `app/lib/article-cache.ts` over `@sdxc/cache/worker-kv`, with the key, the TTL and the caps
+- [x] The negative entry and its one-hour TTL, distinguishable from a cached article
+- [x] The article frame on `/reading/:feedId/:itemId`, pending on a miss, through `lazy-frame`
+- [x] The Content-Security-Policy on the reading page
+- [x] Failure copy for every outcome, and the line on the save control saying what a save keeps, in
       `app/locales/en.ts` and `app/locales/es.ts`
-- [ ] The entitlement check on the route, and `article-extraction` in `app/lib/flags.ts`
-- [ ] The three structured events, with `cpuMs` on the extraction
-- [ ] The tests above, and `@sdxc/readability` in the app's dependencies and the README
+- [x] The entitlement check on the route, and `article-extraction` in `app/lib/flags.ts`
+- [x] The three structured events, with `cpuMs` on the extraction
+- [x] The tests above, and `@sdxc/readability` in the app's dependencies and the README
 
 ## References
 
