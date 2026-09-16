@@ -9,6 +9,16 @@ heuristic rather than a question the markup answers. This package does that scor
 treats the page it scored as what it is — untrusted markup from an origin nobody vetted — so
 what comes back out is sanitized before any caller can render it.
 
+## Installation
+
+```bash
+npm add @sdxc/distill
+```
+
+Every answer is a `Result`, so install
+[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) alongside this package to read
+one.
+
 ## Usage
 
 ```typescript
@@ -106,17 +116,89 @@ iframes and forms — is gone.
 Sanitization alone leaves the publisher able to see an address when an image loads. Closing
 that needs an image proxy, which belongs to whoever is rendering rather than here.
 
-## Related Packages
+## Pattern: Caching What Comes Back
 
-- `@sdxc/html` — the parser both packages share, and the sanitizer this calls
-- `@sdxc/result` — every answer here is a `Result`
+Nothing about a distilled article is about who asked for it, so the URL is the whole key and
+one distillation serves everybody who opens the same link. Keep a failure too, for far less
+time than a success: a blocked site asked once an hour is politer than one asked on every
+open, and `mayCache` is a page asking not to be kept at all.
 
-## Tips
+```typescript
+import { distill } from "@sdxc/distill";
+import { isFailure } from "@sdxc/result";
 
-- Cache by the article's URL rather than per reader. Nothing about a distilled article is
-  about who asked for it, so one distillation serves everybody who opens the same link.
-- Cache a failure too, for far less time than a success. A blocked site asked once an hour is
-  politer than one asked on every open.
-- Compare `chars` against whatever excerpt you already have. An article no longer than the
-  excerpt has bought the reader nothing, which is one predicate covering teasers, consent
-  interstitials and error pages together.
+const DAY_MS = 86_400_000;
+
+/** Whatever store you already have, keyed by the article's URL. */
+interface ArticleStore {
+	read(url: string): Promise<{ html: string | null } | null>;
+	write(url: string, entry: { html: string | null }, options: { ttl: number }): Promise<void>;
+}
+
+async function articleFor(url: string, cache: ArticleStore): Promise<string | null> {
+	let hit = await cache.read(url);
+	if (hit !== null) return hit.html;
+
+	let article = await distill(url, { userAgent: "MyApp/1.0 (+https://myapp.example/about)" });
+
+	if (isFailure(article)) {
+		// An hour, so a site that refuses today is asked again tomorrow rather than hourly.
+		await cache.write(url, { html: null }, { ttl: DAY_MS / 24 });
+		return null;
+	}
+
+	// A page carrying `X-Robots-Tag: noarchive` is answered, never stored.
+	if (article.data.mayCache) {
+		await cache.write(url, { html: article.data.html }, { ttl: DAY_MS * 7 });
+	}
+
+	return article.data.html;
+}
+```
+
+## Pattern: Deciding The Article Was Worth It
+
+A teaser, a consent interstitial and an error page are all pages that parse, score and
+sanitize perfectly well while carrying nothing the reader did not already have. Comparing
+`chars` against the excerpt already in hand is the one predicate that covers all three.
+
+```typescript
+import { distill } from "@sdxc/distill";
+import { isFailure } from "@sdxc/result";
+
+async function betterThanExcerpt(url: string, excerpt: string): Promise<string | null> {
+	let article = await distill(url, { userAgent: "MyApp/1.0 (+https://myapp.example/about)" });
+	if (isFailure(article)) return null;
+	return article.data.chars > excerpt.length ? article.data.html : null;
+}
+```
+
+## Versioning
+
+Releases are dated rather than semantic. A version is the UTC date it was published, written
+`YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one release goes out
+per day.
+
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
+
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/distill": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every later
+release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)
