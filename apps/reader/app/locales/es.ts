@@ -185,6 +185,13 @@ export default {
 			/** De quién es el artículo, impreso bajo su propio título. */
 			byline: "Por {{byline}}",
 		},
+
+		/** The episode or the clip the post came with, played by the browser's own element. */
+		media: {
+			label: "Reproducir el audio o el video de esta entrada",
+			unsupported: "Tu navegador no puede reproducir este archivo.",
+			download: "Abrilo directamente.",
+		},
 	},
 
 	timeline: {
@@ -449,6 +456,19 @@ export default {
 		 * is for as well as how long it holds, since the name alone is a category and the hours
 		 * alone are a number: a reader choosing between them is matching the two.
 		 */
+		/**
+		 * The one preference about privacy a reader is offered, and it exists because two
+		 * readers can correctly want different answers: almost every publisher's server is
+		 * indifferent to a campaign parameter, and the rare one that routes on it answers a
+		 * broken address without it.
+		 */
+		linkParameters: {
+			keep: "Conservar los parámetros del enlace",
+			strip: "Quitar los parámetros del enlace",
+			kept: "Los enlaces de este feed ahora se abren tal como se publicaron.",
+			stripped: "Se vuelven a quitar los parámetros de seguimiento de los enlaces de este feed.",
+		},
+
 		velocity: {
 			legend: "Cuánto tiempo se quedan estas entradas",
 			description:
@@ -731,6 +751,34 @@ export default {
 		},
 		lastRefreshed: "Revisado por última vez el {{date}}",
 		neverRefreshed: "Aún sin revisar",
+
+		/**
+		 * What the reader may change about how their pages look, which is everything this app
+		 * offers on the subject: a scheme and a reading face.
+		 */
+		appearance: {
+			legend: "Cómo se ven tus páginas",
+			description:
+				"Las dos te siguen a cualquier navegador donde inicies sesión, y se aplican en la próxima página.",
+			theme: {
+				label: "Colores",
+				names: {
+					system: "Seguir a mi sistema",
+					light: "Claro",
+					dark: "Oscuro",
+				},
+			},
+			face: {
+				label: "Tipografía de lectura",
+				names: {
+					sans: "Sin serifa",
+					serif: "Con serifa",
+				},
+				hint: "La tipografía se usa en las entradas y los artículos. Los menús y los controles no cambian.",
+			},
+			save: "Guardar",
+			saved: "Guardado.",
+		},
 
 		/**
 		 * What the reader is on and what it allows, said in numbers. Nothing here counts down,

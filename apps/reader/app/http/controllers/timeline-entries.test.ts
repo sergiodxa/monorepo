@@ -14,7 +14,7 @@ import { describe, expect, test } from "vitest";
 
 import type { UserStore } from "~/database/user-do";
 
-import { timelineEntries } from "~/app/http/controllers/timeline-entries";
+import { keepingLinkParameters, timelineEntries } from "~/app/http/controllers/timeline-entries";
 import routes from "~/routes/web";
 
 /**
@@ -95,5 +95,50 @@ describe("timelineEntries", () => {
 
 		expect(entry?.url).toBeNull();
 		expect(entry?.ping).toBeNull();
+	});
+});
+
+describe("tracking parameters", () => {
+	test("removes campaign metadata and click identifiers from a rendered link", () => {
+		let url = "https://example.com/post?utm_source=feed&utm_medium=rss&fbclid=abc&gclid=def&p=123";
+		let stored = item({ id: "item-1", url });
+
+		let [entry] = timelineEntries(CTX, [stored], null);
+
+		expect(entry?.url).toBe("https://example.com/post?p=123");
+		expect(stored.url).toBe(url);
+	});
+
+	test("leaves a query the publisher routes on exactly as written", () => {
+		let [entry] = timelineEntries(
+			CTX,
+			[item({ id: "item-1", url: "https://a.example/?p=123" })],
+			null,
+		);
+
+		expect(entry?.url).toBe("https://a.example/?p=123");
+	});
+
+	test("renders the address as stored for a feed asked to keep its parameters", () => {
+		let url = "https://example.com/post?utm_source=feed&p=123";
+
+		let [entry] = timelineEntries(
+			CTX,
+			[item({ id: "item-1", url })],
+			null,
+			false,
+			new Set(["feed-df"]),
+		);
+
+		expect(entry?.url).toBe(url);
+	});
+
+	test("reads the preference off the feeds a page already carries", () => {
+		expect(
+			keepingLinkParameters([
+				{ id: "feed-df", title: "a", siteUrl: null, keepLinkParameters: true },
+				{ id: "feed-rc", title: "b", siteUrl: null, keepLinkParameters: false },
+			]),
+		).toEqual(new Set(["feed-df"]));
 	});
 });

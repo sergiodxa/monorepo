@@ -25,6 +25,8 @@ import { renderToStream } from "remix/ui/server";
 import type { Viewer } from "~/app/http/middleware/auth";
 
 import i18n from "~/app/http/middleware/i18n";
+import presentation from "~/app/http/middleware/presentation";
+import securityHeaders from "~/app/http/middleware/security-headers";
 import { resolveFrame } from "~/app/http/render";
 import { flags } from "~/app/lib/flags";
 import routes from "~/routes/web";
@@ -106,6 +108,16 @@ export function createTestRouter(viewer: Viewer | null): Router {
 			 */
 			featureFlags(flags, { context: () => ({ targetingKey: viewer?.id }) }) as Middleware,
 			i18n,
+			/**
+			 * A page under test is painted the way a reader's request paints it, so a controller
+			 * reading `ctx.presentation` reads the same answer here that it reads in production.
+			 */
+			presentation,
+			/**
+			 * Every page is served under the app's own policy here too, so a test that renders a
+			 * document is also a test of what that document is allowed to load.
+			 */
+			securityHeaders,
 			renderWith(createTestRenderer) as Middleware,
 		],
 	});

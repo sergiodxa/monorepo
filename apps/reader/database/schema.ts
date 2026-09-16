@@ -215,6 +215,50 @@ export const RULE_VALUE_LENGTH = 100;
  */
 export const RULE_PREVIEW_POSTS = 200;
 
+/**
+ * The schemes a document may be painted in. The `CHECK` constraint in
+ * `0015-presentation.sql` repeats these names, so the database refuses anything a form
+ * somehow lets through.
+ *
+ * They are the vocabulary the theme layer already reads off an ancestor class, so the
+ * stored answer reaches `<html>` untranslated.
+ */
+export const THEMES = ["system", "light", "dark"] as const;
+
+/** One of the schemes {@link THEMES} offers. */
+export type Theme = (typeof THEMES)[number];
+
+/** What a reader is shown until they say otherwise, which is whatever their system says. */
+export const DEFAULT_THEME: Theme = "system";
+
+/**
+ * The faces a post's title and its words may be set in. The `CHECK` constraint in
+ * `0015-presentation.sql` repeats these names.
+ */
+export const READING_FACES = ["sans", "serif"] as const;
+
+/** One of the faces {@link READING_FACES} offers. */
+export type ReadingFace = (typeof READING_FACES)[number];
+
+/** The face reading surfaces are set in until the reader picks the other one. */
+export const DEFAULT_READING_FACE: ReadingFace = "sans";
+
+/**
+ * How one subscription's posts are drawn. `text` is the dense list every surface renders,
+ * and `image` is the picture-first reading a feed of drawings wants.
+ *
+ * A mode rather than a boolean, so a third rendering is a value rather than a second
+ * column, and per subscription for the reason {@link VELOCITIES} is: two people following
+ * one comic disagree about whether they want the picture or the line, and neither is wrong.
+ */
+export const PRESENTATIONS = ["text", "image"] as const;
+
+/** One of the modes {@link PRESENTATIONS} offers. */
+export type Presentation = (typeof PRESENTATIONS)[number];
+
+/** How a subscription's posts are drawn until the reader asks for the other mode. */
+export const DEFAULT_PRESENTATION: Presentation = "text";
+
 export const settings = table({
 	name: "settings",
 	primaryKey: ["id"],
@@ -268,6 +312,10 @@ export const settings = table({
 		 * key, because an address can be reassigned and the subject naming this object cannot.
 		 */
 		email: c.text().nullable(),
+		/** The scheme every page of this reader's is painted in. */
+		theme: c.enum(THEMES).default(DEFAULT_THEME),
+		/** The face a post's title and its words are set in, which never reaches the chrome. */
+		reading_face: c.enum(READING_FACES).default(DEFAULT_READING_FACE),
 		created_at: c.integer(),
 		updated_at: c.integer(),
 	},
@@ -314,6 +362,14 @@ export const feeds = table({
 		 * clock.
 		 */
 		notify: c.boolean().default(false),
+		/** How this subscription's posts are drawn, which is the reader's own answer for it. */
+		presentation: c.enum(PRESENTATIONS).default(DEFAULT_PRESENTATION),
+		/**
+		 * Whether this feed's links are rendered with the address exactly as the publisher
+		 * wrote it. Off, which is what leaves a reader's arrival unattributed; a reader turns
+		 * it on for the one publisher whose server routes on a parameter the strip removes.
+		 */
+		keep_link_parameters: c.boolean().default(false),
 	},
 });
 
@@ -381,6 +437,13 @@ export const feedItems = table({
 		 * answer rather than the publisher's and it orders nothing.
 		 */
 		folder_id: c.text().nullable(),
+		/**
+		 * The one media file the post arrived with, copied from the canonical item. Three
+		 * nulls is a post with no audio or video attached, which is most of them.
+		 */
+		enclosure_url: c.text().nullable(),
+		enclosure_type: c.text().nullable(),
+		enclosure_length: c.integer().nullable(),
 	},
 });
 

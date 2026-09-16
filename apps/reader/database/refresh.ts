@@ -131,6 +131,10 @@ export interface Displayable {
 	url: string | null;
 	summary: string | null;
 	author: string | null;
+	/** The one media file the entry attaches, and `null` on the entries attaching none. */
+	enclosure_url: string | null;
+	enclosure_type: string | null;
+	enclosure_length: number | null;
 }
 
 /** One re-published entry, addressed by the guid that identifies it within the feed. */
@@ -545,12 +549,36 @@ async function classify(
  * @param entry - One entry of a parsed feed document.
  */
 export function displayableOf(entry: Feed.Item): Displayable {
+	let media = mediaEnclosureOf(entry);
+
 	return {
 		title: entry.title ?? entry.url ?? entry.guid,
 		url: entry.url ?? null,
 		summary: summaryOf(entry),
 		author: entry.author?.name ?? null,
+		enclosure_url: media?.url ?? null,
+		enclosure_type: media?.type ?? null,
+		enclosure_length: media?.length ?? null,
 	};
+}
+
+/** The prefixes an attachment has to start with to be something a player can open. */
+const MEDIA_TYPES = ["audio/", "video/"];
+
+/**
+ * The one attachment worth a play button: the first whose type begins with `audio/` or
+ * `video/`, and `undefined` for an entry attaching none.
+ *
+ * At most one, because a podcast item has one episode. The feeds attaching fifteen files
+ * are attaching images, and keeping a list of them is a second table and a join on the read
+ * path for a feature whose whole value is that button.
+ *
+ * @param entry - One entry of a parsed feed document.
+ */
+function mediaEnclosureOf(entry: Feed.Item): Feed.Enclosure | undefined {
+	return entry.enclosures?.find((enclosure) =>
+		MEDIA_TYPES.some((prefix) => enclosure.type?.toLowerCase().startsWith(prefix)),
+	);
 }
 
 /**
@@ -602,6 +630,10 @@ export function publishedAt(entry: Feed.Item, now: number): number {
  * The digest that tells an edited post from an unchanged one, which is what `content_hash`
  * holds. Take it over a {@link displayableOf} projection on every path that writes an item,
  * so the first poll after a subscription reads every item it already stored as unchanged.
+ *
+ * The four text fields are what it reads. The attachment rides along with whatever edit
+ * those produce, which is what keeps a feed that only re-states its media URLs from
+ * re-issuing a revision to every subscriber on every poll.
  *
  * @param displayable - The fields the row will hold, as {@link displayableOf} resolved them.
  */

@@ -15,6 +15,7 @@ import { currentLog } from "@sdxc/logger";
 import { extract, fetchRobots } from "@sdxc/readability";
 import { isFailure, isSuccess } from "@sdxc/result";
 
+import { proxyImages } from "~/app/lib/media";
 import {
 	ARTICLE_TTL,
 	articleCache,
@@ -179,7 +180,22 @@ export async function readArticle(post: ArticleRequest): Promise<Article> {
 		return article;
 	}
 
-	let { byline, bytes, chars, html, mayCache, title } = extracted.data;
+	let { byline, bytes, chars, html, mayCache, sanitized, title } = extracted.data;
+
+	log?.note("html.sanitize", {
+		removedElements: sanitized.removedElements,
+		removedAttributes: sanitized.removedAttributes,
+		droppedUrls: sanitized.droppedUrls,
+		pixels: sanitized.pixels,
+		durationMs: sanitized.durationMs,
+	});
+
+	/**
+	 * Every image in the body is rewritten to this app's own address before anything holds
+	 * or renders it, so a reader's browser asks one origin for the whole article and the
+	 * policy it is served under can refuse every other one.
+	 */
+	let proxied = await proxyImages(html);
 
 	/**
 	 * An extraction no longer than what the reader already had is treated as nothing
@@ -189,7 +205,7 @@ export async function readArticle(post: ArticleRequest): Promise<Article> {
 	let isThin = chars <= (post.summary?.length ?? 0);
 	let article: Article = isThin
 		? nothing("empty", now)
-		: { outcome: "extracted", html, title, byline, storedAt: now };
+		: { outcome: "extracted", html: proxied, title, byline, storedAt: now };
 
 	log?.note("article.extraction", {
 		host,

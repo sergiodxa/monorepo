@@ -77,6 +77,7 @@ function feed(): UserStore.FeedSummary {
 		pinnedAt: null,
 		postsPerDay: null,
 		notify: false,
+		keepLinkParameters: false,
 	};
 }
 
@@ -97,6 +98,8 @@ function opened(overrides: Partial<UserStore.OpenedPost> = {}): UserStore.Opened
 			tags: [],
 		},
 		feed: feed(),
+		/** No attachment, which is what all but a podcast's posts arrive with. */
+		enclosure: null,
 		/** The paid tier, since extraction is what that tier is bought for. */
 		fullText: true,
 		...overrides,
@@ -149,15 +152,48 @@ describe("GET /reading/:feed/:item", () => {
 		expect(readsAs(body)).toContain("The whole of the article");
 	});
 
-	test("carries a policy that lets an article load images and do nothing else", async () => {
+	test("carries a policy that permits this origin and no other", async () => {
 		store.openPost.mockResolvedValue(opened());
 
 		let response = await get(PATH);
 		let policy = response.headers.get("content-security-policy") ?? "";
 
 		expect(policy).toContain("default-src 'none'");
-		expect(policy).toContain("img-src https:");
+		expect(policy).toContain("img-src 'self'");
+		expect(policy).toContain("script-src 'self'");
+		expect(policy).toContain("frame-src 'none'");
 		expect(policy).toContain("frame-ancestors 'none'");
+		expect(response.headers.get("referrer-policy")).toBe("no-referrer");
+	});
+
+	test("renders a document that violates no directive of its own policy", async () => {
+		store.openPost.mockResolvedValue(opened());
+		peek.mockResolvedValue(extracted());
+
+		let body = await (await get(PATH)).text();
+
+		/**
+		 * Every executable script on the page is a file of this app's own. The one element
+		 * carrying a body is a JSON data block, which a browser reads rather than runs and
+		 * which `script-src` therefore says nothing about.
+		 */
+		let scripts = [...body.matchAll(/<script([^>]*)>/gu)].map((match) => match[1] ?? "");
+		expect(scripts.length).toBeGreaterThan(0);
+		for (let attributes of scripts) {
+			expect(attributes.includes("src=") || attributes.includes(`"application/json"`)).toBe(true);
+		}
+		/** Every image is fetched from this origin, which is what `img-src 'self'` permits. */
+		expect(body).not.toMatch(/<img[^>]+src="https?:\/\//u);
+		expect(body).not.toContain("<iframe");
+	});
+
+	test("renders an outbound post link that opens away and reports nothing back", async () => {
+		store.openPost.mockResolvedValue(opened());
+
+		let body = await (await get(PATH)).text();
+
+		expect(body).toContain(`target="_blank"`);
+		expect(body).toContain(`rel="noopener noreferrer"`);
 	});
 
 	test("answers a post this reader does not hold with the not-found page", async () => {
@@ -260,5 +296,62 @@ describe("the article frame", () => {
 		expect(readsAs(body)).toContain("The whole of the article");
 		expect(body).not.toContain("Markdown and the web");
 		expect(read).toHaveBeenCalledWith({ url: "https://daringfireball.net/post", summary: SUMMARY });
+	});
+});
+
+/**
+ * The episode a podcast's post came with, played by the browser's own element. A hand-built
+ * transport would reimplement keyboard operation, screen-reader labelling, the operating
+ * system's media keys and the lock screen, and would be worse at all four.
+ */
+describe("a post's media attachment", () => {
+	test("plays audio with the browser's own controls, fetching nothing until asked", async () => {
+		store.openPost.mockResolvedValue(
+			opened({
+				enclosure: { url: "https://example.com/ep.mp3", type: "audio/mpeg", length: 1024 },
+			}),
+		);
+
+		let html = await (await get(PATH)).text();
+
+		expect(html).toContain("<audio");
+		expect(html).toContain("https://example.com/ep.mp3");
+		expect(html).toContain("controls");
+		expect(html).toContain(`preload="none"`);
+	});
+
+	test("plays video in the element that shows a picture", async () => {
+		store.openPost.mockResolvedValue(
+			opened({
+				enclosure: { url: "https://example.com/ep.mp4", type: "video/mp4", length: null },
+			}),
+		);
+
+		let html = await (await get(PATH)).text();
+
+		expect(html).toContain("<video");
+		expect(html).toContain(`preload="none"`);
+	});
+
+	test("leaves a reader holding the file when their browser cannot play it", async () => {
+		store.openPost.mockResolvedValue(
+			opened({
+				enclosure: { url: "https://example.com/ep.mp3", type: "audio/mpeg", length: null },
+			}),
+		);
+
+		let html = await (await get(PATH)).text();
+
+		expect(readsAs(html)).toContain("Your browser cannot play this file.");
+		expect(html).toContain(`href="https://example.com/ep.mp3"`);
+	});
+
+	test("draws no player for a post that came with nothing attached", async () => {
+		store.openPost.mockResolvedValue(opened());
+
+		let html = await (await get(PATH)).text();
+
+		expect(html).not.toContain("<audio");
+		expect(html).not.toContain("<video");
 	});
 });

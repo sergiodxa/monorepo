@@ -35,6 +35,7 @@ const FEED_REF: UserStore.FeedRef = {
 	id: "feed-rust",
 	title: "Rust Blog",
 	siteUrl: "https://rust.example",
+	keepLinkParameters: false,
 };
 
 /** Builds one post of the folder, defaulting every field a test is not about. */

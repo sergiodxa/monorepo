@@ -18,7 +18,7 @@ import type { Handle, RemixNode } from "remix/ui";
 import { parseDocument } from "@sdxc/html/document";
 import { isFailure } from "@sdxc/result";
 import { maxIs } from "@sdxc/u/size";
-import { leading } from "@sdxc/u/typography";
+import { font, leading } from "@sdxc/u/typography";
 import { createElement } from "remix/ui";
 
 /** What a tree calls an element, and what it calls a run of text. */
@@ -76,7 +76,9 @@ export default function Article(handle: Handle<{ html: string }>) {
 		if (isFailure(document)) return null;
 
 		return (
-			<div mix={[leading("relaxed"), maxIs(ARTICLE_COLUMN)]}>{children(document.data.body)}</div>
+			<div mix={[font("reading"), leading("relaxed"), maxIs(ARTICLE_COLUMN)]}>
+				{children(document.data.body)}
+			</div>
 		);
 	};
 }

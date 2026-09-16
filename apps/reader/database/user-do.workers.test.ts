@@ -145,6 +145,7 @@ describe("the USER binding", () => {
 			tierSource: "default",
 			graceUntil: null,
 			tierCheckedAt: 0,
+			presentation: { theme: "system", face: "sans" },
 		});
 	});
 
@@ -207,6 +208,7 @@ describe("the USER binding", () => {
 			tierSource: "default",
 			graceUntil: null,
 			tierCheckedAt: 0,
+			presentation: { theme: "system", face: "sans" },
 		});
 
 		expect(env.USER.getByName(name).id.toString()).toBe(env.USER.getByName(name).id.toString());
@@ -238,6 +240,29 @@ describe("the USER binding", () => {
 
 		expect(result).toEqual({ ok: false, reason: "invalid-velocity" });
 		expect(result).not.toBeInstanceOf(Error);
+	});
+
+	/**
+	 * The record behind the cookie. Both values are narrowed inside the object, so a value
+	 * nothing on the page could have produced stores the default instead of reaching the
+	 * `CHECK` that would refuse it and taking the request with it.
+	 */
+	test("keeps how a reader's pages look, and holds both answers to their sets", async () => {
+		let name = subject();
+		let stub = env.USER.getByName(name);
+		await stub.ensureUser(name);
+
+		expect(await stub.setPresentation({ theme: "dark", face: "serif" })).toEqual({
+			theme: "dark",
+			face: "serif",
+		});
+
+		expect((await stub.getSettings())?.presentation).toEqual({ theme: "dark", face: "serif" });
+
+		expect(await stub.setPresentation({ theme: "sepia", face: "comic" })).toEqual({
+			theme: "system",
+			face: "sans",
+		});
 	});
 
 	test("arms no alarm for a reader with nothing left to catch up on", async () => {

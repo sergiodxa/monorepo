@@ -22,13 +22,14 @@ import type { Handle } from "remix/ui";
 
 import { fg } from "@sdxc/u/color";
 import { flex, flexWrap, gap, items, vstack } from "@sdxc/u/layout";
-import { mbs } from "@sdxc/u/size";
-import { text, weight } from "@sdxc/u/typography";
+import { maxIs, mbs } from "@sdxc/u/size";
+import { font, text, weight } from "@sdxc/u/typography";
 import { Empty, HeadingScope, LinkButton, Text } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import type { Article as Extracted, ArticleOutcome } from "~/app/lib/article";
+import type { FeedStore } from "~/database/feed-do";
 
 import { chrome } from "~/app/http/controllers/chrome";
 import { exactDate } from "~/app/http/controllers/timeline-entries";
@@ -56,30 +57,6 @@ const FRAME_ARTICLE = "article";
  * fetched as the page mounts rather than on the chance of a scroll.
  */
 const ARTICLE_REACH = "0px";
-
-/**
- * The Content-Security-Policy the post's page is served under.
- *
- * This is the one page in the app that renders a publisher's markup in this app's origin,
- * on a request carrying the reader's session, so a bug in the sanitizer would be a stored
- * cross-site-scripting hole against everybody who opens that article. The policy is the
- * second line behind the sanitizer: an extracted article may load images over HTTPS and do
- * nothing else, and every script and style the page runs is this app's own.
- *
- * Inline styles are permitted because the renderer collects the page's own rules into
- * `<style>` elements it emits with the document; nothing else here relaxes the default of
- * `'none'`.
- */
-const CONTENT_SECURITY_POLICY = [
-	"default-src 'none'",
-	"img-src https:",
-	"style-src 'self' 'unsafe-inline'",
-	"script-src 'self'",
-	"connect-src 'self'",
-	"form-action 'self'",
-	"base-uri 'none'",
-	"frame-ancestors 'none'",
-].join("; ");
 
 /** The sentence an attempt that produced no article is reported in. */
 function outcomeCopy(i18next: i18n, outcome: ArticleOutcome): string {
@@ -119,6 +96,70 @@ function ArticleBody(handle: Handle<{ article: Extracted | null; copy: string; b
 
 				<Article html={article.html} />
 			</div>
+		);
+	};
+}
+
+/**
+ * The post's own audio or video, played by the browser's own element.
+ *
+ * `controls` and nothing else: the browser's player is keyboard operable, labelled for a
+ * screen reader, wired to the operating system's media keys, present on the lock screen and
+ * remembers a playback rate, and a hand-built transport gets none of that without being
+ * rebuilt.
+ *
+ * `preload="none"` because a page of posts each fetching metadata is a page of requests to
+ * somebody's CDN for a file nobody pressed play on. The element fetches from the publisher's
+ * host with the reader's address, as an image would, and what bounds that is the referrer
+ * meta the document shell carries.
+ */
+function MediaPlayer(
+	handle: Handle<{
+		enclosure: FeedStore.Enclosure;
+		label: string;
+		unsupported: string;
+		download: string;
+	}>,
+) {
+	return () => {
+		let { download, enclosure, label, unsupported } = handle.props;
+
+		/**
+		 * A publisher who attached a file and said nothing about it gets the audio element,
+		 * which is what the overwhelming majority of attachments are.
+		 */
+		let isVideo = enclosure.type?.toLowerCase().startsWith("video/") ?? false;
+
+		/**
+		 * The link inside the element is what a browser that cannot play the file shows, which
+		 * leaves the reader holding the file rather than an empty box.
+		 */
+		let fallback = (
+			<a href={enclosure.url}>
+				{unsupported} {download}
+			</a>
+		);
+
+		/**
+		 * Both elements go out without a `<track>`. A caption file is something a publisher
+		 * would have to have written and advertised, and no feed format carries one, so a
+		 * `<track>` here would point at nothing — the honest alternative to captions this app
+		 * cannot supply is the label naming what the element plays.
+		 */
+		if (isVideo) {
+			return (
+				// oxlint-disable-next-line jsx-a11y/media-has-caption
+				<video src={enclosure.url} controls preload="none" aria-label={label} mix={[maxIs("100%")]}>
+					{fallback}
+				</video>
+			);
+		}
+
+		return (
+			// oxlint-disable-next-line jsx-a11y/media-has-caption
+			<audio src={enclosure.url} controls preload="none" aria-label={label} mix={[maxIs("100%")]}>
+				{fallback}
+			</audio>
 		);
 	};
 }
@@ -247,7 +288,20 @@ export default createAction(routes.post, {
 							)}
 						</div>
 
-						{item.summary && <Text mix={[weight("medium")]}>{item.summary}</Text>}
+						{item.summary && <Text mix={[font("reading"), weight("medium")]}>{item.summary}</Text>}
+
+						{/**
+						 * The episode, where the post came with one. It is on this page and on no row
+						 * of a list: a row is one line and a player is not.
+						 */}
+						{opened.enclosure && (
+							<MediaPlayer
+								enclosure={opened.enclosure}
+								label={ctx.i18next.t("post.media.label")}
+								unsupported={ctx.i18next.t("post.media.unsupported")}
+								download={ctx.i18next.t("post.media.download")}
+							/>
+						)}
 
 						{/**
 						 * What a save actually keeps, said beside the control rather than left for a
@@ -295,7 +349,6 @@ export default createAction(routes.post, {
 					</div>
 				</HeadingScope>
 			</AppLayout>,
-			{ headers: { "content-security-policy": CONTENT_SECURITY_POLICY } },
 		);
 	},
 });

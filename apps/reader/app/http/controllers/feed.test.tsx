@@ -62,6 +62,7 @@ const FEED: UserStore.FeedSummary = {
 	pinnedAt: null,
 	postsPerDay: null,
 	notify: false,
+	keepLinkParameters: false,
 };
 
 /** What the feed's object answers with for a feed whose last check went fine. */
@@ -80,6 +81,7 @@ const FEED_REF: UserStore.FeedRef = {
 	id: FEED_ID,
 	title: FEED.title,
 	siteUrl: FEED.siteUrl,
+	keepLinkParameters: false,
 };
 
 /** Builds one of the feed's posts, defaulting every field a test is not about. */

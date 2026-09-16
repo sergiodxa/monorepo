@@ -20,13 +20,21 @@ Rules follow RFC 2119: "MUST", "MUST NOT", "SHOULD", "SHOULD NOT", and "MAY" in 
 indicate requirement levels.
 
 - MUST keep the Cloudflare Worker bootstrap in `bootstrap/worker.ts` and the router
-  assembly in `bootstrap/app.tsx`. Seven other places reach for a Cloudflare API and no
+  assembly in `bootstrap/app.tsx`. Eight other places reach for a Cloudflare API and no
   more: `database/user-do.ts` and `database/feed-do.ts`, which are Durable Objects and so
   are ones by definition; `database/registry.ts`, the only module holding the catalog's D1
   binding; `database/feed-head.ts`, which holds the KV a feed publishes its head to;
   `database/article-cache.ts`, which holds the KV extracted articles are shared through;
-  the `app/auth/` clients, which read their credentials off the environment; and
-  `app/push/vapid.ts`, which reads the Web Push key pair off it the same way.
+  the `app/auth/` clients, which read their credentials off the environment;
+  `app/push/vapid.ts`, which reads the Web Push key pair off it the same way; and
+  `app/lib/media.ts`, which reads the key a proxied image's address is signed under and
+  names the edge cache those images are held in.
+- MUST keep every logged event free of anything naming a reader or a post. An event MAY
+  carry a count, a duration, a status, a host and a feed identifier, and MUST NOT carry a
+  post title, a post URL, an item id, or a reader's subject or email. A host names a
+  publisher or a CDN; a URL names the article somebody chose to open. Telemetry is held
+  for 30 days, so an incident older than that is reconstructed from the stored objects
+  rather than from the log.
 - MUST leave the read path clear of the catalog. A subscription stores the feed's id, so
   rendering a timeline, paging a frame, checking freshness and marking a post read cross
   two SQLite databases and one KV namespace and never D1. The catalog is on the follow
@@ -77,7 +85,14 @@ indicate requirement levels.
 - HTTP Layer
   - `app/http/controllers/auth.tsx` <- OIDC authorization redirect and callback
   - `app/http/controllers/default-handler.tsx` <- 404 handler for unmapped routes
+  - `app/http/controllers/media.tsx` <- The one place a publisher's image is fetched
   - `app/http/middleware/require-user.ts` <- Guard for the signed-in surface
+  - `app/http/middleware/presentation.ts` <- The scheme and reading face every document is
+    rendered with, read before any controller runs
+  - `app/http/middleware/security-headers.ts` <- The policy every response is read under
+- Content safety
+  - `app/lib/media.ts` <- Signing, retrieving and rewriting a remote image
+  - `app/lib/tracking-parameters.ts` <- What an outbound link is stripped of at render
 - Feature Flags
   - `app/lib/flags.ts` <- The definitions, the typed catalog and the instance every surface evaluates through
 - Storage

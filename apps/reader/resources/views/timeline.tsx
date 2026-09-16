@@ -29,6 +29,7 @@ import { FlagIcon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, border, borderEdge, colorMix, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
+import { raw, touchAction } from "@sdxc/u/general";
 import {
 	flex,
 	gap,
@@ -40,11 +41,12 @@ import {
 	shrink,
 	vstack,
 } from "@sdxc/u/layout";
-import { media } from "@sdxc/u/responsive";
+import { media, motionSafe } from "@sdxc/u/responsive";
 import { is, maxIs, mbs, mie, minIs, mis, p, pb } from "@sdxc/u/size";
 import { hover } from "@sdxc/u/state";
 import { color } from "@sdxc/u/tokens";
 import {
+	font,
 	leading,
 	nowrap,
 	text,
@@ -482,6 +484,20 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 								borderEdge("block-end", { color: "neutral.border", width: 1 }),
 								hover(bg(ROW_HOVER)),
 								readState(),
+								/**
+								 * The browser keeps the vertical axis for its own scrolling, which is what
+								 * leaves a horizontal swipe on the row to the mark at its head. A handler
+								 * deciding the axis instead is how a list of posts becomes unusable on the
+								 * device the gesture exists for.
+								 */
+								touchAction("pan-y"),
+								/**
+								 * The row is carried with the finger while a swipe is in progress. How far is
+								 * whatever the finger covered, written onto the element as it moves, so what
+								 * is declared here is that it may be moved at all — and a reader who asked
+								 * for less motion gets the toggle with none of the travel.
+								 */
+								motionSafe(raw({ willChange: "transform" })),
 							]}
 						>
 							<article mix={[flex(), items("center"), gap(2)]}>
@@ -525,6 +541,12 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 												 */
 												relative(),
 												truncate(),
+												/**
+												 * The reader's own face, which reaches a post's title and its words and
+												 * stops there: the rail, the controls and the times around them stay in
+												 * the chrome's own.
+												 */
+												font("reading"),
 												text("sm"),
 												leading("normal"),
 											]}

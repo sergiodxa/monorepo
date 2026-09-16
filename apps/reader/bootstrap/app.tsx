@@ -27,6 +27,8 @@ import { createRouter } from "remix/router";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import auth, { getViewer } from "~/app/http/middleware/auth";
 import i18n from "~/app/http/middleware/i18n";
+import presentation from "~/app/http/middleware/presentation";
+import securityHeaders from "~/app/http/middleware/security-headers";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
 import { createHtmlRenderer } from "~/app/http/render";
 import { flags } from "~/app/lib/flags";
@@ -79,12 +81,23 @@ export default function application(options: application.Options) {
 		/** Stays after `auth`, whose viewer decides which language preference is in scope. */
 		i18n,
 		/**
+		 * Reads how the document is painted before any controller runs, so the shell writes
+		 * the reader's own scheme into the first byte rather than correcting a page that has
+		 * already been painted in somebody else's.
+		 */
+		presentation,
+		/**
 		 * A publisher's hub is a cross-origin caller by construction, and a notification is
 		 * exactly the unsafe cross-origin `POST` the default refusal is written to reject, so
 		 * the callback states its own provenance instead: an unguessable token in the path
 		 * and an HMAC over the delivery.
 		 */
 		cop({ insecureBypassPatterns: [WEBSUB_CALLBACK] }),
+		/**
+		 * Immediately before the renderer, so what it decorates is the response the renderer
+		 * produced and every surface this app adds later is covered without being asked.
+		 */
+		securityHeaders,
 		renderWith(createHtmlRenderer) as Middleware,
 	];
 
@@ -247,6 +260,10 @@ export default function application(options: application.Options) {
 		lazy(() => import("~/app/http/controllers/settings")),
 	);
 	router.map(
+		routes.appearance,
+		lazy(() => import("~/app/http/controllers/appearance")),
+	);
+	router.map(
 		routes.feeds.notify,
 		lazy(() => import("~/app/http/controllers/feeds/notify")),
 	);
@@ -281,6 +298,14 @@ export default function application(options: application.Options) {
 	router.map(
 		routes.webhooks.billing,
 		lazy(() => import("~/app/http/controllers/webhooks/billing")),
+	);
+	router.map(
+		routes.feeds.linkParameters,
+		lazy(() => import("~/app/http/controllers/feeds/link-parameters")),
+	);
+	router.map(
+		routes.media,
+		lazy(() => import("~/app/http/controllers/media")),
 	);
 	router.map(
 		routes.websub,

@@ -48,6 +48,8 @@ describe("runMigrations", () => {
 			"0011-filter-rules",
 			"0012-notifications",
 			"0014-searches",
+			"0015-presentation",
+			"0016-keep-link-parameters",
 		]);
 	});
 
@@ -540,5 +542,49 @@ describe("query plans", () => {
 
 		expect(plan).toContain("feed_items_saved_idx");
 		expect(plan).not.toContain("USE TEMP B-TREE FOR ORDER BY");
+	});
+});
+
+/**
+ * The closed sets a reader's answers are held to. Each is named once in TypeScript and once
+ * in a `CHECK` repeating it, so the assertion worth making is that the database refuses a
+ * value no path of this app could have written.
+ */
+describe("presentation", () => {
+	beforeEach(async () => {
+		await migrate();
+		sql.exec(
+			`INSERT INTO settings (id, subject, created_at, updated_at) VALUES (1, 'reader', 0, 0)`,
+		);
+	});
+
+	test("paints a reader's pages the way their system does until they say otherwise", () => {
+		let [row] = [
+			...sql.exec<{ theme: string; reading_face: string }>(
+				`SELECT theme, reading_face FROM settings WHERE id = 1`,
+			),
+		];
+
+		expect(row).toEqual({ theme: "system", reading_face: "sans" });
+	});
+
+	test("refuses a scheme or a face outside its set", () => {
+		expect(() => sql.exec(`UPDATE settings SET theme = 'sepia' WHERE id = 1`)).toThrow();
+		expect(() => sql.exec(`UPDATE settings SET reading_face = 'mono' WHERE id = 1`)).toThrow();
+	});
+
+	test("draws a subscription's posts as text until the reader asks for the other mode", () => {
+		sql.exec(
+			`INSERT INTO feeds (id, feed_id, feed_url, title, created_at, updated_at)
+			 VALUES ('sub', 'feed', 'https://example.com/feed', 'Example', 0, 0)`,
+		);
+
+		let [row] = [
+			...sql.exec<{ presentation: string }>(`SELECT presentation FROM feeds WHERE id = 'sub'`),
+		];
+
+		expect(row?.presentation).toBe("text");
+
+		expect(() => sql.exec(`UPDATE feeds SET presentation = 'audio' WHERE id = 'sub'`)).toThrow();
 	});
 });

@@ -41,8 +41,8 @@ let { default: reading } = await import("./reading");
 
 /** The two feeds the fixture posts come from, as the store carries them beside the items. */
 const FEEDS: UserStore.FeedRef[] = [
-	{ id: "feed-df", title: "Daring Fireball", siteUrl: "https://daringfireball.net" },
-	{ id: "feed-rc", title: "Remix Changelog", siteUrl: null },
+	{ id: "feed-df", title: "Daring Fireball", siteUrl: "https://daringfireball.net" , keepLinkParameters: false },
+	{ id: "feed-rc", title: "Remix Changelog", siteUrl: null , keepLinkParameters: false },
 ];
 
 /** Builds a queue item, defaulting every field a test is not about. */

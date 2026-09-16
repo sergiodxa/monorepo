@@ -70,6 +70,7 @@ export interface UserStoreDouble {
 	pinnedStrip: ReturnType<typeof vi.fn>;
 	recordPublishingRate: ReturnType<typeof vi.fn>;
 	notifications: ReturnType<typeof vi.fn>;
+	setPresentation: ReturnType<typeof vi.fn>;
 	setChannels: ReturnType<typeof vi.fn>;
 	setQuietHours: ReturnType<typeof vi.fn>;
 	setTimeZone: ReturnType<typeof vi.fn>;
@@ -122,6 +123,7 @@ export const DEFAULT_SETTINGS: UserStore.Settings = {
 	tierSource: "default",
 	graceUntil: null,
 	tierCheckedAt: 0,
+	presentation: { theme: "system", face: "sans" },
 };
 
 /** Nothing configured, which is what a reader who has never asked to be notified holds. */
@@ -238,6 +240,7 @@ export function createUserStoreDouble(): UserStoreDouble {
 		fileFeed: vi.fn(async () => ({ ok: false, reason: "not-following" })),
 		folderTimeline: vi.fn(async () => EMPTY_TIMELINE),
 		notifications: vi.fn(async () => NO_NOTIFICATIONS),
+		setPresentation: vi.fn(async () => DEFAULT_SETTINGS.presentation),
 		setChannels: vi.fn(async () => ({ ok: true, notifications: NO_NOTIFICATIONS })),
 		setQuietHours: vi.fn(async () => NO_NOTIFICATIONS),
 		setTimeZone: vi.fn(async () => false),

@@ -30,9 +30,11 @@ import { text, weight } from "@sdxc/u/typography";
 import { Alert, Button, Checkbox, Description, Label, LinkButton, Select, Text } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
+import type { Presentation } from "~/app/http/cookies";
 import type { Tier } from "~/app/lib/entitlement";
 import type { UserStore } from "~/database/user-do";
 
+import { APPEARANCE_PARAM, FACE_FIELD, THEME_FIELD } from "~/app/http/controllers/appearance";
 import { chrome } from "~/app/http/controllers/chrome";
 import { FILE_FIELD, IMPORTED_PARAM } from "~/app/http/controllers/feeds/import";
 import {
@@ -48,10 +50,12 @@ import {
 	QUIET_TO_FIELD,
 } from "~/app/http/controllers/notifications/quiet-hours";
 import { exactDate, shortDate } from "~/app/http/controllers/timeline-entries";
+import { writePresentation } from "~/app/http/cookies";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { overBy, TIERS, tierRank } from "~/app/lib/entitlement";
 import { vapidPublicKey } from "~/app/push/vapid";
+import { READING_FACES, THEMES } from "~/database/schema";
 import { userStore } from "~/database/user-do";
 import { PushRegistration } from "~/resources/components/push-registration";
 import AppLayout, { PAGE_COLUMN, pageNote } from "~/resources/layouts/app";
@@ -150,6 +154,92 @@ function importNote(
  */
 function upgradesFrom(tier: Tier): Tier[] {
 	return TIERS.filter((offered) => tierRank(offered) > tierRank(tier));
+}
+
+/** Ties the scheme picker to the label naming it. */
+const THEME_ID = "settings-theme";
+
+/** Ties the reading-face picker to its own label, beside the scheme. */
+const FACE_ID = "settings-face";
+
+/**
+ * How the reader's pages are painted, and the face the words they came here to read are
+ * set in.
+ *
+ * A real form that posts and reloads, so a browser running no script changes both. Where
+ * script runs, it is still a form: the answer is stored and the cookie is set on the same
+ * response, and the page comes back painted in what was picked.
+ *
+ * @param ctx - The request being answered, whose query says whether a submission landed.
+ * @param current - What is stored for this reader, or what the cookie says before a
+ * sign-in has written a row.
+ */
+function appearanceSection(ctx: RequestContext, current: Presentation) {
+	let saved = ctx.url.searchParams.get(APPEARANCE_PARAM) === "saved";
+
+	return (
+		<section
+			mix={[
+				vstack({ gap: 3 }),
+				maxIs(PAGE_COLUMN),
+				pbs(6),
+				borderEdge("block-start", { color: "neutral.border", width: 1 }),
+			]}
+		>
+			{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
+			<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
+				{ctx.i18next.t("settings.appearance.legend")}
+			</h2>
+
+			<Description>{ctx.i18next.t("settings.appearance.description")}</Description>
+
+			{saved && (
+				<Alert color="success">
+					<Alert.Content>
+						<Alert.Description>{ctx.i18next.t("settings.appearance.saved")}</Alert.Description>
+					</Alert.Content>
+				</Alert>
+			)}
+
+			<form
+				method="post"
+				action={routes.appearance.href()}
+				mix={[vstack({ gap: 3, align: "start" })]}
+			>
+				<div mix={[flex(), flexWrap("wrap"), gap(3), items("center")]}>
+					<div mix={[vstack({ gap: 1, align: "start" })]}>
+						<Label htmlFor={THEME_ID}>{ctx.i18next.t("settings.appearance.theme.label")}</Label>
+
+						<Select id={THEME_ID} name={THEME_FIELD} defaultValue={current.theme}>
+							{THEMES.map((name) => (
+								<Select.Option key={name} value={name}>
+									{ctx.i18next.t(`settings.appearance.theme.names.${name}`)}
+								</Select.Option>
+							))}
+						</Select>
+					</div>
+
+					<div mix={[vstack({ gap: 1, align: "start" })]}>
+						<Label htmlFor={FACE_ID}>{ctx.i18next.t("settings.appearance.face.label")}</Label>
+
+						<Select id={FACE_ID} name={FACE_FIELD} defaultValue={current.face}>
+							{READING_FACES.map((name) => (
+								<Select.Option key={name} value={name}>
+									{ctx.i18next.t(`settings.appearance.face.names.${name}`)}
+								</Select.Option>
+							))}
+						</Select>
+					</div>
+				</div>
+
+				<Text mix={[text("xs"), fg("neutral.muted")]}>
+					{ctx.i18next.t("settings.appearance.face.hint")}
+				</Text>
+
+				<Button type="submit">{ctx.i18next.t("settings.appearance.save")}</Button>
+			</form>
+		</section>
+	);
 }
 
 /** Ties the quiet-hours selects to the switch above them. */
@@ -418,6 +508,21 @@ async function settingsPage(
 	let transfer = importNote(ctx);
 
 	/**
+	 * The row wins. This page and the sign-in callback are the two places both are read, so
+	 * this is where a cookie that has drifted — cleared, or written before a choice made on
+	 * another machine — is put back to what is stored, on a response that would otherwise
+	 * set none.
+	 */
+	let current = settings?.presentation ?? ctx.presentation;
+
+	let correction =
+		settings !== null &&
+		(settings.presentation.theme !== ctx.presentation.theme ||
+			settings.presentation.face !== ctx.presentation.face)
+			? { "Set-Cookie": await writePresentation(settings.presentation) }
+			: undefined;
+
+	/**
 	 * How long ago the schedule above last ran, in the words every other date in the app is
 	 * read in, with the exact one a pointer's breath away.
 	 */
@@ -465,6 +570,8 @@ async function settingsPage(
 					{lastRefreshed.short}
 				</Text>
 			</section>
+
+			{appearanceSection(ctx, current)}
 
 			{/**
 			 * What the reader is on, what it allows, and where they stand against it. It sits
@@ -711,6 +818,7 @@ async function settingsPage(
 				</form>
 			</section>
 		</AppLayout>,
+		correction && { headers: correction },
 	);
 }
 

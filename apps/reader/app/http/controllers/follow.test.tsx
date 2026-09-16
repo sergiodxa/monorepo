@@ -47,6 +47,7 @@ const FOLLOWED: UserStore.FeedSummary = {
 	pinnedAt: null,
 	postsPerDay: null,
 	notify: false,
+	keepLinkParameters: false,
 };
 
 /**

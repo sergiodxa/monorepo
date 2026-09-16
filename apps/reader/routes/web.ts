@@ -185,6 +185,12 @@ export default route({
 		 * reaches it with a plain form.
 		 */
 		notify: post("/feeds/:feedId/notify"),
+		/**
+		 * Decides whether this feed's links carry the address exactly as the publisher wrote
+		 * it. A path of its own, the way `notify` and `velocity` are, so the feed's page
+		 * reaches it with a plain form.
+		 */
+		linkParameters: post("/feeds/:feedId/link-parameters"),
 		export: get("/feeds.opml"),
 		/** Subscribes to every feed in an uploaded OPML document. */
 		import: post("/feeds/import"),
@@ -224,6 +230,13 @@ export default route({
 	settings: get("/settings"),
 
 	/**
+	 * What the reader may change about how their pages look. A `POST` of its own beside the
+	 * page that draws it, so a form submits the scheme and the face and nothing else, and so
+	 * the response that stores the answer is the one that sets the cookie carrying it.
+	 */
+	appearance: post("/settings/appearance"),
+
+	/**
 	 * How the reader is reached when a check finds something, and which browsers it is
 	 * reached on. They sit under the settings page that draws them, and each is a `POST` of
 	 * its own so a form submits one answer rather than the whole surface.
@@ -260,6 +273,18 @@ export default route({
 		/** Opens the hosted page where a card, an invoice or a cancellation is dealt with. */
 		portal: post("/billing/portal"),
 	},
+
+	/**
+	 * Every remote image a reading surface shows, fetched by this app and handed on from
+	 * here, so a reader's browser talks to one origin while they read and a publisher learns
+	 * that one server asked for a picture.
+	 *
+	 * `:source` is the base64url of the image's absolute address and `:signature` the MAC
+	 * this app took over it. Both segments are required: without the signature the route is
+	 * an open proxy, and anybody could spend this app's address and egress on any URL they
+	 * liked.
+	 */
+	media: get("/media/:signature/:source"),
 
 	/**
 	 * Where the payment platform delivers. Nobody links here and no reader arrives here:

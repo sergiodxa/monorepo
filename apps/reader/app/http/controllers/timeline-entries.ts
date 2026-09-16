@@ -16,6 +16,7 @@ import type { UserStore } from "~/database/user-do";
 import type { TagChips } from "~/resources/views/tag-chips";
 import type { Timeline } from "~/resources/views/timeline";
 
+import { withoutTrackingParameters } from "~/app/lib/tracking-parameters";
 import routes from "~/routes/web";
 
 const MINUTE = 60_000;
@@ -91,15 +92,33 @@ export function exactDate(moment: number, locale: string): string {
  * as written, so anything else — a scheme of its own, an address relative to a site this
  * app is not — leaves the title plain text rather than a link somewhere unintended.
  *
+ * Campaign metadata and click identifiers come off here rather than out of the row: the
+ * stored address is the publisher's own, so nothing about this can make the database
+ * disagree with the feed, and a new identifier added to the list next year reaches every
+ * post already held.
+ *
  * @param stored - The address the post carries, as the store answered with it.
+ * @param keepParameters - Whether this feed's reader asked for the address exactly as
+ * stored, which is what a publisher who routes on a parameter the list names is fixed by.
  */
-function linkable(stored: string | null): string | null {
+function linkable(stored: string | null, keepParameters: boolean): string | null {
 	if (stored === null || !URL.canParse(stored)) return null;
 
 	let url = new URL(stored);
 	if (url.protocol !== "http:" && url.protocol !== "https:") return null;
 
-	return url.toString();
+	return (keepParameters ? url : withoutTrackingParameters(url)).toString();
+}
+
+/**
+ * The subscriptions on a page whose reader asked for their links exactly as published,
+ * read off the feeds the page already carries so the answer costs no second lookup.
+ *
+ * @param feeds - The feeds a page's posts came from, as the store answered with them.
+ * @example timelineEntries(ctx, page.items, titles, false, keepingLinkParameters(page.feeds));
+ */
+export function keepingLinkParameters(feeds: readonly UserStore.FeedRef[]): ReadonlySet<string> {
+	return new Set(feeds.filter((feed) => feed.keepLinkParameters).map((feed) => feed.id));
 }
 
 /**
@@ -153,6 +172,8 @@ export function taggingCopy(i18next: i18n): TagChips.Copy {
  * on a surface showing one feed, whose every row would otherwise name the same source.
  * @param tagging - Whether each row carries the strip of labels and the field that adds
  * one, which the surfaces whose posts are kept by definition ask for and no river does.
+ * @param keepParameters - The subscriptions whose reader asked for a post's address exactly
+ * as the publisher wrote it; every other row's link has its tracking parameters removed.
  * @example timelineEntries(ctx, page.items, new Map(page.feeds.map((f) => [f.id, f.title])));
  */
 export function timelineEntries(
@@ -160,11 +181,12 @@ export function timelineEntries(
 	items: UserStore.Item[],
 	feedTitles: Map<string, string> | null,
 	tagging = false,
+	keepParameters: ReadonlySet<string> = new Set(),
 ): Timeline.Entry[] {
 	let now = Date.now();
 
 	return items.map((item) => {
-		let url = linkable(item.url);
+		let url = linkable(item.url, keepParameters.has(item.feedId));
 
 		/**
 		 * Inside one feed the source is the same word on every row, so the author is what

@@ -60,6 +60,10 @@ create the namespace with `bunx wrangler kv namespace create` and paste its id i
   it keeps: 250,000 posts on Free, 1,500,000 on Paid and 3,000,000 on Premium
 - A failed payment keeps everything for a fortnight, and nothing is ever deleted by a plan
   change: a plan you are over refuses what is new and leaves what is yours where it is
+- A light or dark scheme and a serif or sans reading face, both decided before the page is
+  painted and both following you to any browser you sign in on
+- A podcast or video attachment played in the post's own page, by the browser's own player
+- A swipe across a row on a phone marks the post read, which the mark at its head also does
 - Interface in English and Spanish, resolved per request
 
 ## Integrations
@@ -100,7 +104,8 @@ create the namespace with `bunx wrangler kv namespace create` and paste its id i
 | `/folders/:folderId`       | `POST` renames it, `DELETE` takes it away      |
 | `/items/:itemId/read`      | Marks an item read                             |
 | `/items/:itemId/save`      | Keeps an item, or stops keeping it             |
-| `/settings`                | Your plan, how your feeds are checked, OPML    |
+| `/settings`                | Your plan, how your pages look, OPML           |
+| `/settings/appearance`     | `POST` sets the scheme and the reading face    |
 | `/billing/checkout/:plan`  | `POST` opens the hosted page that sells a plan |
 | `/billing/portal`          | `POST` opens the hosted page that manages one  |
 | `/webhooks/billing`        | `POST` where the payment platform delivers     |

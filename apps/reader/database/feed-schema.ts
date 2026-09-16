@@ -354,6 +354,14 @@ export const items = table({
 		author: c.text().nullable(),
 		published_at: c.integer(),
 		content_hash: c.text(),
+		/**
+		 * The one media file the entry attaches: the first whose type begins with `audio/` or
+		 * `video/`, chosen at ingestion, and `null` on the entries attaching none. No duration
+		 * and no poster image, because no format reliably carries either.
+		 */
+		enclosure_url: c.text().nullable(),
+		enclosure_type: c.text().nullable(),
+		enclosure_length: c.integer().nullable(),
 		created_at: c.integer(),
 		updated_at: c.integer(),
 	},

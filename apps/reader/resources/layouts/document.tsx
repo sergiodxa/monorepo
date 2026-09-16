@@ -10,14 +10,28 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { bg, fg } from "@sdxc/u/color";
+import { bg, colorScheme, fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { m, minBs } from "@sdxc/u/size";
 import { font } from "@sdxc/u/typography";
 import resetStyles from "@sdxc/ui/reset.css?url";
 import themeStyles from "@sdxc/ui/theme.css?url";
+import { getContext } from "remix/middleware/async-context";
+
+import type { Theme } from "~/database/schema";
 
 import colorStyles from "~/resources/css/colors.css?url";
+
+/**
+ * What the browser is told each scheme paints its own chrome in. `system` declares both so
+ * the page follows the preference; a forced choice pins one, which is what keeps a dark
+ * page from being given a light scrollbar, light form controls and a light media player.
+ */
+const CHROME_SCHEME: Record<Theme, string> = {
+	system: "light dark",
+	light: "only light",
+	dark: "only dark",
+};
 
 /**
  * The dev server serves the entry from source while the build emits it under a pinned
@@ -47,11 +61,34 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
 		let { children, description, locale = "en", title } = handle.props;
 
+		/**
+		 * Read off the request rather than taken as a prop, since every page in the app
+		 * composes into this shell and none of them has an opinion about the scheme it is
+		 * painted in. The middleware resolved it before any controller ran, so the class is
+		 * decided by the time the first byte is written.
+		 */
+		let { face, theme } = getContext().presentation;
+
 		return (
-			<html lang={locale} class="system">
+			<html
+				lang={locale}
+				/**
+				 * The scheme's own name, which is precisely the vocabulary the theme layer reads
+				 * off an ancestor, so nothing is translated between the stored answer and this.
+				 */
+				class={theme}
+				data-face={face}
+				mix={[colorScheme(CHROME_SCHEME[theme])]}
+			>
 				<head>
 					<meta charSet="utf-8" data-key="charset" />
 					<meta name="viewport" content="width=device-width, initial-scale=1" data-key="viewport" />
+					{/**
+					 * What a publisher's host learns when this page fetches from it — an image, or
+					 * the media file a player opens. The origin and nothing past it, so the address
+					 * of the post a reader is on never reaches somebody else's logs.
+					 */}
+					<meta name="referrer" content="strict-origin-when-cross-origin" data-key="referrer" />
 					<title data-key="title">{title}</title>
 					{description ? (
 						<meta name="description" content={description} data-key="description" />

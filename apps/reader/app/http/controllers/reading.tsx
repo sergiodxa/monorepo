@@ -70,7 +70,12 @@ import {
 } from "~/app/http/controllers/queue-view";
 import { MARKED_PARAM } from "~/app/http/controllers/read-all";
 import { NAME_FIELD, SAVED_PARAM } from "~/app/http/controllers/searches/save";
-import { exactDate, timelineCopy, timelineEntries } from "~/app/http/controllers/timeline-entries";
+import {
+	exactDate,
+	keepingLinkParameters,
+	timelineCopy,
+	timelineEntries,
+} from "~/app/http/controllers/timeline-entries";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { isFrameRequest } from "~/app/http/render";
@@ -427,6 +432,8 @@ export async function renderReadingQueue(
 		ctx,
 		page.items,
 		new Map(page.feeds.map((feed) => [feed.id, feed.title])),
+		false,
+		keepingLinkParameters(page.feeds),
 	);
 
 	/**

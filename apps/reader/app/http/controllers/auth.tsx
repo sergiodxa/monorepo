@@ -24,7 +24,7 @@ import { Heading, Text } from "@sdxc/ui";
 import { createController } from "remix/router";
 
 import { relyingParty } from "~/app/auth/relying-party";
-import { RETURN_TO_COOKIE } from "~/app/http/cookies";
+import { RETURN_TO_COOKIE, writePresentation } from "~/app/http/cookies";
 import { reconcileSubject } from "~/app/lib/billing-sync";
 import { userStore } from "~/database/user-do";
 import DocumentLayout from "~/resources/layouts/document";
@@ -140,7 +140,18 @@ export default createController(routes.auth, {
 			 */
 			await reconcileSubject(subject, reader.tierCheckedAt);
 
-			return redirect(routes.reading.index.href(), { status: redirect.Status.SeeOther });
+			/**
+			 * A preference living only in a cookie is a preference per browser, so the stored
+			 * answer is written onto this machine here: a reader signing in on a second one
+			 * finds their own scheme on the first page they are sent to rather than the default
+			 * until they visit the settings.
+			 */
+			return redirect(routes.reading.index.href(), {
+				status: redirect.Status.SeeOther,
+				headers: {
+					"Set-Cookie": await writePresentation(reader.presentation),
+				},
+			});
 		},
 	},
 });

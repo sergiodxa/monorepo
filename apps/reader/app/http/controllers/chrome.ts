@@ -33,6 +33,7 @@ import type { AppLayout } from "~/resources/layouts/app";
 import { getViewer } from "~/app/http/middleware/auth";
 import { FRAME_PARAM } from "~/app/http/render";
 import { features } from "~/app/lib/flags";
+import { proxiedImage } from "~/app/lib/media";
 import { QUIET_POSTS_PER_DAY } from "~/database/schema";
 import { userStore } from "~/database/user-do";
 import { SEARCH_PARAM } from "~/resources/layouts/app";
@@ -221,11 +222,18 @@ export async function railFeeds(subject: string): Promise<CachedFeed[]> {
 		async () => {
 			let followed = await userStore(subject).listFeeds();
 
-			return followed.map((feed) => ({
+			/**
+			 * A publisher's mark is drawn through this app's own media route, so the rail costs
+			 * a reader no request to any host but this one. The signed address is minted here
+			 * rather than as the rail is drawn, so a session's worth of pages pays for it once.
+			 */
+			let marks = await Promise.all(followed.map((feed) => proxiedImage(feed.imageUrl)));
+
+			return followed.map((feed, index) => ({
 				id: feed.id,
 				title: feed.title,
 				unreadCount: feed.unreadCount,
-				imageUrl: feed.imageUrl,
+				imageUrl: marks[index] ?? null,
 				folderId: feed.folderId,
 				folderTitle: feed.folderTitle,
 				pinnedAt: feed.pinnedAt,

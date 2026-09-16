@@ -52,6 +52,8 @@ import type {
 	SelectSearch,
 	SelectSettings,
 	SelectTag,
+	ReadingFace,
+	Theme,
 	Velocity,
 } from "~/database/schema";
 
@@ -91,6 +93,8 @@ import { countNotifiedFeeds, notify } from "~/database/notify";
 import { chunked, insertChunkSize } from "~/database/refresh";
 import { registerFeed } from "~/database/registry";
 import {
+	DEFAULT_READING_FACE,
+	DEFAULT_THEME,
 	DEFAULT_VELOCITY,
 	feedItems,
 	feeds,
@@ -104,9 +108,11 @@ import {
 	rules,
 	SAVED_SEARCH_LIMIT,
 	SEARCH_NAME_LENGTH,
+	READING_FACES,
 	SEARCH_READ_STATES,
 	searches,
 	settings,
+	THEMES,
 	TAG_LIMIT,
 	tags,
 	TAGS_PER_ITEM,
@@ -271,6 +277,26 @@ export namespace UserStore {
 		graceUntil: number | null;
 		/** Epoch milliseconds a snapshot last confirmed the tier, and `0` before the first. */
 		tierCheckedAt: number;
+		/**
+		 * How the reader's pages are painted. It rides along with the rest of the row because
+		 * the two paths that read it — the settings page and the sign-in callback — are asking
+		 * for the row anyway, and both reconcile the cookie against what comes back.
+		 */
+		presentation: Presentation;
+	}
+
+	/**
+	 * What a reader may change about how their pages look, as one row of `settings` reads.
+	 *
+	 * It is two fields rather than a whole settings object because the document shell asks
+	 * for it on every page the reader is signed in on, and because it is what the cookie
+	 * carrying the answer to the first paint holds.
+	 */
+	export interface Presentation {
+		/** The scheme every page is painted in, in the vocabulary `<html>` wears. */
+		theme: Theme;
+		/** The face a post's title and its words are set in, which never reaches the chrome. */
+		face: ReadingFace;
 	}
 
 	/** What the platform says a reader holds, as the one writer of the tier takes it. */
@@ -342,6 +368,11 @@ export namespace UserStore {
 		pinnedAt: number | null;
 		/** Whether a scheduled check that finds posts here is worth interrupting them for. */
 		notify: boolean;
+		/**
+		 * Whether this feed's links are rendered with the address exactly as the publisher
+		 * wrote it, rather than with its campaign metadata and click identifiers removed.
+		 */
+		keepLinkParameters: boolean;
 		/**
 		 * What the feed publishes, in posts per day, as the feed's own object measured it,
 		 * or `null` before any conversation with that object has reported one.
@@ -545,6 +576,12 @@ export namespace UserStore {
 		id: string;
 		title: string;
 		siteUrl: string | null;
+		/**
+		 * Whether this feed's links are rendered with the address exactly as the publisher
+		 * wrote it, which a page needs beside the title because it decides what each row's
+		 * link says.
+		 */
+		keepLinkParameters: boolean;
 	}
 
 	/** One post, with the fields a list renders. The body is left in the database. */
@@ -576,6 +613,12 @@ export namespace UserStore {
 		item: Item;
 		/** The subscription it came from, so the page names the publisher above the article. */
 		feed: FeedSummary | null;
+		/**
+		 * The one audio or video file the post arrived with, or `null` for the posts arriving
+		 * with none. It belongs to the opened post rather than to {@link Item}, because a
+		 * player appears where a post is read and never on a row of a list.
+		 */
+		enclosure: FeedStore.Enclosure | null;
 		/**
 		 * Whether this reader's tier carries full-text extraction. Answered here rather
 		 * than beside the page, so the tier is read from the row that holds it and a
@@ -917,6 +960,13 @@ export namespace UserStore {
 	export type NotifyFeedResult =
 		| { ok: true; notify: boolean }
 		| { ok: false; reason: "not-following" };
+
+	/**
+	 * Answering for one subscription's link parameters, refused for a feed nobody follows.
+	 */
+	export type LinkParametersResult =
+		| { ok: true; keepLinkParameters: boolean }
+		| { ok: false; reason: "not-following" };
 }
 
 /**
@@ -984,6 +1034,30 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	async getSettings(): Promise<UserStore.Settings | null> {
 		let row = await this.#db.find(settings, { id: SETTINGS_ID });
 		return row === null ? null : toSettings(row);
+	}
+
+	/**
+	 * Records the scheme and the reading face, and answers what is now stored.
+	 *
+	 * Both values are narrowed here rather than at the form, so a submission nothing on the
+	 * page could have produced writes the default instead of reaching the `CHECK` that would
+	 * refuse it.
+	 *
+	 * @param input - The scheme and the face the reader picked.
+	 */
+	async setPresentation(input: { theme: string; face: string }): Promise<UserStore.Presentation> {
+		await this.#settingsRow();
+
+		let updated = await this.#db.update(
+			settings,
+			{ id: SETTINGS_ID },
+			{
+				theme: isTheme(input.theme) ? input.theme : DEFAULT_THEME,
+				reading_face: isReadingFace(input.face) ? input.face : DEFAULT_READING_FACE,
+			},
+		);
+
+		return toPresentation(updated);
 	}
 
 	/**
@@ -1731,6 +1805,14 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		return {
 			item: { ...toItem(row), tags: labels.get(row.id) ?? [] },
 			feed,
+			enclosure:
+				row.enclosure_url === null
+					? null
+					: {
+							url: row.enclosure_url,
+							type: row.enclosure_type,
+							length: row.enclosure_length,
+						},
 			fullText: limitsOf(storedTier(settingsRow)).fullText,
 		};
 	}
@@ -2769,6 +2851,26 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
+	 * Decides whether this feed's links carry the address exactly as the publisher wrote it.
+	 * It is an answer about one publisher's server rather than about the reader, so it is
+	 * stored on the subscription and holds wherever that feed's posts are drawn.
+	 *
+	 * @param feedId - The subscription being answered for.
+	 * @param wanted - Whether to render its links unmodified.
+	 */
+	async setFeedLinkParameters(
+		feedId: string,
+		wanted = true,
+	): Promise<UserStore.LinkParametersResult> {
+		let feed = await this.#db.find(feeds, { id: feedId });
+		if (feed === null) return { ok: false, reason: "not-following" };
+
+		let updated = await this.#db.update(feeds, { id: feedId }, { keep_link_parameters: wanted });
+
+		return { ok: true, keepLinkParameters: updated.keep_link_parameters };
+	}
+
+	/**
 	 * Pins a subscription, or takes the pin off, so the feeds a reader never wants to miss
 	 * are drawn above the river rather than at whatever letter their names start with.
 	 *
@@ -2838,7 +2940,12 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 				.all();
 
 			strip.push({
-				feed: { id: feed.id, title: feed.title, siteUrl: feed.site_url },
+				feed: {
+					id: feed.id,
+					title: feed.title,
+					siteUrl: feed.site_url,
+					keepLinkParameters: feed.keep_link_parameters,
+				},
 				items: rows.map(toItem),
 			});
 		}
@@ -4117,7 +4224,14 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let refs: UserStore.FeedRef[] = [];
 		for (let batch of chunked(ids, IDS_PER_LOOKUP)) {
 			let rows = await this.#db.findMany(feeds, { where: inList("id", batch) });
-			refs.push(...rows.map((row) => ({ id: row.id, title: row.title, siteUrl: row.site_url })));
+			refs.push(
+				...rows.map((row) => ({
+					id: row.id,
+					title: row.title,
+					siteUrl: row.site_url,
+					keepLinkParameters: row.keep_link_parameters,
+				})),
+			);
 		}
 
 		return refs;
@@ -4626,6 +4740,7 @@ function toSettings(row: SelectSettings): UserStore.Settings {
 		tierSource: storedTierSource(row),
 		graceUntil: row.grace_until,
 		tierCheckedAt: row.tier_checked_at,
+		presentation: toPresentation(row),
 	};
 }
 
@@ -4731,6 +4846,7 @@ function toFeedSummary(
 		pinnedAt: row.pinned_at,
 		postsPerDay: row.posts_per_day,
 		notify: row.notify,
+		keepLinkParameters: row.keep_link_parameters,
 	};
 }
 
@@ -4806,6 +4922,24 @@ function toItem(row: TimelineRow): UserStore.Item {
 	};
 }
 
+/** How a reader's pages look, as one row of `settings` reads. */
+function toPresentation(row: SelectSettings): UserStore.Presentation {
+	return {
+		theme: isTheme(row.theme) ? row.theme : DEFAULT_THEME,
+		face: isReadingFace(row.reading_face) ? row.reading_face : DEFAULT_READING_FACE,
+	};
+}
+
+/** Whether a value is one of the schemes the column and the theme contract both name. */
+export function isTheme(value: unknown): value is Theme {
+	return typeof value === "string" && (THEMES as readonly string[]).includes(value);
+}
+
+/** Whether a value is one of the faces a reading surface may be set in. */
+export function isReadingFace(value: unknown): value is ReadingFace {
+	return typeof value === "string" && (READING_FACES as readonly string[]).includes(value);
+}
+
 /**
  * Reads what somebody pasted as an HTTP URL, so a bare `example.com` reaches discovery
  * the way typing it into a browser would. The fragment is dropped: it addresses a place
@@ -4874,6 +5008,9 @@ const ITEM_COLUMNS = [
 	"folder_id",
 	"read_at",
 	"flagged_at",
+	"enclosure_url",
+	"enclosure_type",
+	"enclosure_length",
 	"created_at",
 	"updated_at",
 ] as const;
@@ -4928,6 +5065,9 @@ function upsertItems(
 			folderId,
 			mark?.readAt ?? null,
 			mark?.flaggedAt ?? null,
+			item.enclosure?.url ?? null,
+			item.enclosure?.type ?? null,
+			item.enclosure?.length ?? null,
 			now,
 			now,
 		);
@@ -4945,6 +5085,9 @@ function upsertItems(
 		`"summary" = excluded."summary",`,
 		`"author" = excluded."author",`,
 		`"folder_id" = excluded."folder_id",`,
+		`"enclosure_url" = excluded."enclosure_url",`,
+		`"enclosure_type" = excluded."enclosure_type",`,
+		`"enclosure_length" = excluded."enclosure_length",`,
 		`"updated_at" = excluded."updated_at"`,
 	].join(" ");
 

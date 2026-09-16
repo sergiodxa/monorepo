@@ -26,6 +26,7 @@ import {
 	CircleCheckIcon,
 	FolderIcon,
 	HourglassIcon,
+	LinkIcon,
 	BellIcon,
 	BellOffIcon,
 	PinIcon,
@@ -59,6 +60,7 @@ import { attrs } from "remix/ui";
 import type { FeedStatus } from "~/database/feed-schema";
 
 import { chrome } from "~/app/http/controllers/chrome";
+import { PARAMETERS_FIELD, PARAMETERS_PARAM } from "~/app/http/controllers/feeds/link-parameters";
 import { NOTIFY_FIELD, NOTIFY_PARAM } from "~/app/http/controllers/feeds/notify";
 import { PIN_FIELD, PIN_PARAM } from "~/app/http/controllers/feeds/pin";
 import { MARKED_PARAM } from "~/app/http/controllers/feeds/read";
@@ -219,6 +221,18 @@ function notifyNote(notify: string | null): Note | null {
 	return null;
 }
 
+/**
+ * The copy and tone for the outcome a link-parameters submission redirects back with, or
+ * `null` when this is an ordinary visit.
+ *
+ * @param parameters - The redirect's `parameters` parameter, as it arrived.
+ */
+function parametersNote(parameters: string | null): Note | null {
+	if (parameters === "kept") return { key: "feeds.linkParameters.kept", color: "success" };
+	if (parameters === "stripped") return { key: "feeds.linkParameters.stripped", color: "success" };
+	return null;
+}
+
 function velocityNote(velocity: string | null): Note | null {
 	if (velocity === "saved") return { key: "feeds.velocity.saved", color: "success" };
 	if (velocity === "invalid") return { key: "feeds.velocity.invalid", color: "warning" };
@@ -328,13 +342,20 @@ export default createAction(routes.feed, {
 			velocityNote(ctx.url.searchParams.get(VELOCITY_PARAM)) ??
 			pinNote(ctx.url.searchParams.get(PIN_PARAM)) ??
 			notifyNote(ctx.url.searchParams.get(NOTIFY_PARAM)) ??
+			parametersNote(ctx.url.searchParams.get(PARAMETERS_PARAM)) ??
 			folderNote(ctx.url.searchParams.get(FOLDER_PARAM));
 
 		/**
 		 * The page is headed by the feed's own name, so naming it again on every row below
 		 * says nothing; the author is what tells one of this feed's posts from another.
 		 */
-		let entries = timelineEntries(ctx, page.items, null);
+		let entries = timelineEntries(
+			ctx,
+			page.items,
+			null,
+			false,
+			feed.keepLinkParameters ? new Set([feed.id]) : new Set<string>(),
+		);
 
 		/**
 		 * An author every post on the page shares is the feed's own name said again on every
@@ -575,6 +596,48 @@ export default createAction(routes.feed, {
 
 								<ActionLabel>
 									{ctx.i18next.t(feed.notify ? "notifications.feed.off" : "notifications.feed.on")}
+								</ActionLabel>
+							</Button>
+						</form>
+
+						{/**
+						 * A post's outbound link is rendered with its campaign metadata and click
+						 * identifiers removed, which leaves the reader's arrival unattributed and is
+						 * what almost every publisher's server is indifferent to. This is for the one
+						 * that is not: a site routing on a parameter the strip removes answers a broken
+						 * address, and the reader fixes that publisher here rather than the feature.
+						 */}
+						<form method="post" action={routes.feeds.linkParameters.href({ feedId })}>
+							<input
+								type="hidden"
+								name={PARAMETERS_FIELD}
+								value={feed.keepLinkParameters ? "false" : "true"}
+							/>
+
+							<Button
+								type="submit"
+								color="neutral"
+								variant="ghost"
+								size="sm"
+								aria-label={ctx.i18next.t(
+									feed.keepLinkParameters
+										? "feeds.linkParameters.strip"
+										: "feeds.linkParameters.keep",
+								)}
+								title={ctx.i18next.t(
+									feed.keepLinkParameters
+										? "feeds.linkParameters.strip"
+										: "feeds.linkParameters.keep",
+								)}
+							>
+								<LinkIcon size={ACTION_ICON_SIZE} />
+
+								<ActionLabel>
+									{ctx.i18next.t(
+										feed.keepLinkParameters
+											? "feeds.linkParameters.strip"
+											: "feeds.linkParameters.keep",
+									)}
 								</ActionLabel>
 							</Button>
 						</form>

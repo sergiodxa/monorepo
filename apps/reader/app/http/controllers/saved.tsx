@@ -26,6 +26,7 @@ import { chrome } from "~/app/http/controllers/chrome";
 import { placePage } from "~/app/http/controllers/list-paging";
 import { TAG_PARAM } from "~/app/http/controllers/tags/create";
 import {
+	keepingLinkParameters,
 	taggingCopy,
 	timelineCopy,
 	timelineEntries,
@@ -130,6 +131,7 @@ export default createAction(routes.saved, {
 			page.items,
 			new Map(page.feeds.map((feed) => [feed.id, feed.title])),
 			labelling,
+			keepingLinkParameters(page.feeds),
 		);
 
 		/** Every label the reader has, which the field on each row offers by name. */

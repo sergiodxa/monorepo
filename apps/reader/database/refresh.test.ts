@@ -26,6 +26,7 @@ import { feed as feedTable, items } from "~/database/feed-schema";
 import { runMigrations } from "~/database/migrations";
 import {
 	digest,
+	displayableOf,
 	DIGEST_PREFETCH,
 	FEED_ROW_ID,
 	MAX_SUMMARY_LENGTH,
@@ -692,6 +693,9 @@ describe("what a poll costs whatever the table holds", () => {
 				url: "https://example.com/old",
 				summary: "The body",
 				author: null,
+				enclosure_url: null,
+				enclosure_type: null,
+				enclosure_length: null,
 			}),
 		});
 		for (let revision = 2; revision <= sunk; revision += 1) {
@@ -822,5 +826,64 @@ describe("pruneItems", () => {
 		// above it and tell a subscriber to forget what they already have.
 		expect((await storedItems()).map((item) => item.revision)).toEqual([3]);
 		expect((await loadFeed()).head).toBe(3);
+	});
+});
+
+/**
+ * The one media file an entry attaches, which is what a play button is drawn from. No
+ * duration and no poster image, because no format carries either reliably, so the columns
+ * hold what the document actually said and nothing inferred.
+ */
+describe("displayableOf", () => {
+	/** One entry of a parsed document, with only what these assertions turn on. */
+	function entry(enclosures?: { url: string; type?: string; length?: number }[]) {
+		return { guid: "one", title: "An episode", enclosures };
+	}
+
+	test("keeps three nulls for an entry attaching nothing", () => {
+		let resolved = displayableOf(entry());
+
+		expect(resolved.enclosure_url).toBeNull();
+		expect(resolved.enclosure_type).toBeNull();
+		expect(resolved.enclosure_length).toBeNull();
+	});
+
+	test("keeps an audio attachment, with what the publisher claimed about it", () => {
+		let resolved = displayableOf(
+			entry([{ url: "https://example.com/ep.mp3", type: "audio/mpeg", length: 1024 }]),
+		);
+
+		expect(resolved.enclosure_url).toBe("https://example.com/ep.mp3");
+		expect(resolved.enclosure_type).toBe("audio/mpeg");
+		expect(resolved.enclosure_length).toBe(1024);
+	});
+
+	test("keeps the first audio or video one and no other", () => {
+		let resolved = displayableOf(
+			entry([
+				{ url: "https://example.com/cover.png", type: "image/png" },
+				{ url: "https://example.com/ep.mp3", type: "audio/mpeg" },
+				{ url: "https://example.com/ep.mp4", type: "video/mp4" },
+			]),
+		);
+
+		expect(resolved.enclosure_url).toBe("https://example.com/ep.mp3");
+		expect(resolved.enclosure_type).toBe("audio/mpeg");
+	});
+
+	test("keeps nothing from a feed attaching only images", () => {
+		let resolved = displayableOf(
+			entry([
+				{ url: "https://example.com/one.png", type: "image/png" },
+				{ url: "https://example.com/two.png", type: "image/png" },
+			]),
+		);
+
+		expect(resolved.enclosure_url).toBeNull();
+	});
+
+	/** A publisher who attached a file and said nothing about it gets no player. */
+	test("keeps nothing from an attachment with no type at all", () => {
+		expect(displayableOf(entry([{ url: "https://example.com/mystery" }])).enclosure_url).toBeNull();
 	});
 });

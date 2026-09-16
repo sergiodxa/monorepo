@@ -113,6 +113,13 @@ export default {
 			/** Who the article is by, printed under its own heading. */
 			byline: "By {{byline}}",
 		},
+
+		/** The episode or the clip the post came with, played by the browser's own element. */
+		media: {
+			label: "Play this post's audio or video",
+			unsupported: "Your browser cannot play this file.",
+			download: "Open it directly.",
+		},
 	},
 
 	timeline: {
@@ -375,6 +382,19 @@ export default {
 		 * is for as well as how long it holds, since the name alone is a category and the hours
 		 * alone are a number: a reader choosing between them is matching the two.
 		 */
+		/**
+		 * The one preference about privacy a reader is offered, and it exists because two
+		 * readers can correctly want different answers: almost every publisher's server is
+		 * indifferent to a campaign parameter, and the rare one that routes on it answers a
+		 * broken address without it.
+		 */
+		linkParameters: {
+			keep: "Keep link parameters",
+			strip: "Strip link parameters",
+			kept: "Links to this feed now open exactly as published.",
+			stripped: "Tracking parameters are removed from this feed's links again.",
+		},
+
 		velocity: {
 			legend: "How long these posts stay",
 			/** Said inside the menu, where a reader is choosing rather than reading the page. */
@@ -654,6 +674,34 @@ export default {
 		},
 		lastRefreshed: "Last checked {{date}}",
 		neverRefreshed: "Not checked yet",
+
+		/**
+		 * What the reader may change about how their pages look, which is everything this app
+		 * offers on the subject: a scheme and a reading face.
+		 */
+		appearance: {
+			legend: "How your pages look",
+			description:
+				"Both follow you to any browser you sign in on, and both take effect on the next page.",
+			theme: {
+				label: "Colours",
+				names: {
+					system: "Follow my system",
+					light: "Light",
+					dark: "Dark",
+				},
+			},
+			face: {
+				label: "Reading face",
+				names: {
+					sans: "Sans serif",
+					serif: "Serif",
+				},
+				hint: "The face is used for posts and articles. Menus and controls stay as they are.",
+			},
+			save: "Save",
+			saved: "Saved.",
+		},
 
 		/**
 		 * What the reader is on and what it allows, said in numbers. Nothing here counts down,

@@ -95,6 +95,16 @@ const HUB_TIMEOUT_MS = 10_000;
 const HUB_CONTENT_TYPE = "application/x-www-form-urlencoded";
 
 export namespace FeedStore {
+	/**
+	 * The one media file a post arrives with. `type` and `length` are the publisher's own
+	 * claims and are `null` wherever the document made none.
+	 */
+	export interface Enclosure {
+		url: string;
+		type: string | null;
+		length: number | null;
+	}
+
 	/** The feed's own description of itself, as a subscriber copies it. */
 	export interface Metadata {
 		feedUrl: string;
@@ -118,6 +128,12 @@ export namespace FeedStore {
 		publishedAt: number;
 		/** Where this sits in the order subscribers walk, which their cursor moves through. */
 		revision: number;
+		/**
+		 * The one audio or video file the entry attached, or `null` for the posts attaching
+		 * none. A subscriber copies it onto their own row, so a play button costs no second
+		 * read.
+		 */
+		enclosure: Enclosure | null;
 	}
 
 	/** What the last poll recorded, for the page that shows one feed. */
@@ -1230,5 +1246,13 @@ function itemOf(row: SelectItem): FeedStore.Item {
 		author: row.author,
 		publishedAt: row.published_at,
 		revision: row.revision,
+		enclosure:
+			row.enclosure_url === null
+				? null
+				: {
+						url: row.enclosure_url,
+						type: row.enclosure_type,
+						length: row.enclosure_length,
+					},
 	};
 }

@@ -38,6 +38,7 @@ import { chrome } from "~/app/http/controllers/chrome";
 import { placePage } from "~/app/http/controllers/list-paging";
 import { NAME_FIELD, TAG_PARAM } from "~/app/http/controllers/tags/create";
 import {
+	keepingLinkParameters,
 	taggingCopy,
 	timelineCopy,
 	timelineEntries,
@@ -190,6 +191,7 @@ export default createAction(routes.tag, {
 			page.items,
 			new Map(page.feeds.map((feed) => [feed.id, feed.title])),
 			true,
+			keepingLinkParameters(page.feeds),
 		);
 
 		let place = placePage({
