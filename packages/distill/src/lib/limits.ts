@@ -11,7 +11,7 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
-import { ReadabilityLimitError, ReadabilityRefusedError } from "../index.js";
+import { DistillLimitError, DistillRefusedError } from "../index.js";
 
 /**
  * How much of a body is read before a response is refused. An article page is one
@@ -75,20 +75,20 @@ export function isAddressableHost(hostname: string): boolean {
  * @param input - The address to check, as the page that linked it spelled it.
  * @returns The parsed URL, or the refusal that spares the request.
  */
-export function addressable(input: string): Result<URL, ReadabilityRefusedError> {
+export function addressable(input: string): Result<URL, DistillRefusedError> {
 	let url: URL;
 	try {
 		url = new URL(input);
 	} catch {
-		return failure(new ReadabilityRefusedError(`Refused ${input}: it is not a URL`));
+		return failure(new DistillRefusedError(`Refused ${input}: it is not a URL`));
 	}
 
 	if (url.protocol !== "http:" && url.protocol !== "https:") {
-		return failure(new ReadabilityRefusedError(`Refused ${input}: only HTTP(S) is fetched`));
+		return failure(new DistillRefusedError(`Refused ${input}: only HTTP(S) is fetched`));
 	}
 
 	if (!isAddressableHost(url.hostname)) {
-		return failure(new ReadabilityRefusedError(`Refused ${input}: ${url.hostname} is not public`));
+		return failure(new DistillRefusedError(`Refused ${input}: ${url.hostname} is not public`));
 	}
 
 	return success(url);
@@ -118,7 +118,7 @@ export interface RetrieveOptions {
 export async function retrieve(
 	input: URL,
 	options: RetrieveOptions,
-): Promise<Result<Retrieved, ReadabilityLimitError | ReadabilityRefusedError>> {
+): Promise<Result<Retrieved, DistillLimitError | DistillRefusedError>> {
 	let limit = options.maxRedirects ?? MAX_REDIRECTS;
 	let signal = options.signal ?? AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_MS);
 
@@ -139,13 +139,13 @@ export async function retrieve(
 				credentials: "omit",
 			});
 		} catch (error) {
-			return failure(new ReadabilityLimitError(`Failed to read ${url.href}: ${describe(error)}`));
+			return failure(new DistillLimitError(`Failed to read ${url.href}: ${describe(error)}`));
 		}
 
 		if (REFUSING_STATUSES.has(response.status)) {
 			release(response.body);
 			return failure(
-				new ReadabilityRefusedError(`Refused ${url.href}: the site answered ${response.status}`),
+				new DistillRefusedError(`Refused ${url.href}: the site answered ${response.status}`),
 			);
 		}
 
@@ -154,9 +154,7 @@ export async function retrieve(
 			if (!response.ok) {
 				release(response.body);
 				return failure(
-					new ReadabilityLimitError(
-						`Failed to read ${url.href}: the site answered ${response.status}`,
-					),
+					new DistillLimitError(`Failed to read ${url.href}: the site answered ${response.status}`),
 				);
 			}
 
@@ -167,7 +165,7 @@ export async function retrieve(
 
 		if (followed === limit) {
 			return failure(
-				new ReadabilityLimitError(`Failed to read ${input.href}: more than ${limit} redirects`),
+				new DistillLimitError(`Failed to read ${input.href}: more than ${limit} redirects`),
 			);
 		}
 
@@ -197,14 +195,14 @@ export interface Read {
 export async function readWithin(
 	retrieved: Retrieved,
 	cap: number = MAX_BYTES,
-): Promise<Result<Read, ReadabilityLimitError>> {
+): Promise<Result<Read, DistillLimitError>> {
 	let { response, url } = retrieved;
 
 	let declared = declaredLength(response);
 	if (declared !== undefined && declared > cap) {
 		release(response.body);
 		return failure(
-			new ReadabilityLimitError(`Refused ${url}: it declared ${declared} bytes, over the cap`),
+			new DistillLimitError(`Refused ${url}: it declared ${declared} bytes, over the cap`),
 		);
 	}
 
@@ -223,15 +221,13 @@ export async function readWithin(
 			read += value.byteLength;
 			if (read > cap) {
 				release(reader);
-				return failure(
-					new ReadabilityLimitError(`Refused ${url}: it exceeded the ${cap} byte cap`),
-				);
+				return failure(new DistillLimitError(`Refused ${url}: it exceeded the ${cap} byte cap`));
 			}
 
 			text += decoder.decode(value, { stream: true });
 		}
 	} catch (error) {
-		return failure(new ReadabilityLimitError(`Failed to read ${url}: ${describe(error)}`));
+		return failure(new DistillLimitError(`Failed to read ${url}: ${describe(error)}`));
 	}
 
 	return success({ text: text + decoder.decode(), bytes: read });

@@ -26,8 +26,8 @@ export { isAllowed, productToken, robotsUrl } from "./lib/robots.js";
  * Signals that the site said no: a status refusing the request, a `robots.txt`
  * disallowing the path, or an address this package will not ask for at all.
  */
-export class ReadabilityRefusedError extends Error {
-	override name = "ReadabilityRefusedError";
+export class DistillRefusedError extends Error {
+	override name = "DistillRefusedError";
 	readonly outcome = "refused" as const;
 }
 
@@ -35,8 +35,8 @@ export class ReadabilityRefusedError extends Error {
  * Signals that the retrieval ran out of what it was allowed to spend — time, bytes,
  * or hops — which is the same thing to a reader however it was reached.
  */
-export class ReadabilityLimitError extends Error {
-	override name = "ReadabilityLimitError";
+export class DistillLimitError extends Error {
+	override name = "DistillLimitError";
 	readonly outcome = "timeout" as const;
 }
 
@@ -45,19 +45,16 @@ export class ReadabilityLimitError extends Error {
  * would have built, a document that is not markup, or a template holding nothing but
  * furniture.
  */
-export class ReadabilityEmptyError extends Error {
-	override name = "ReadabilityEmptyError";
+export class DistillEmptyError extends Error {
+	override name = "DistillEmptyError";
 	readonly outcome = "empty" as const;
 }
 
-/** Why an extraction produced nothing, carrying the outcome a reader is shown. */
-export type ReadabilityError =
-	| ReadabilityEmptyError
-	| ReadabilityLimitError
-	| ReadabilityRefusedError;
+/** Why a distillation produced nothing, carrying the outcome a reader is shown. */
+export type DistillError = DistillEmptyError | DistillLimitError | DistillRefusedError;
 
 /** Groups the public types under a single import surface. */
-export namespace Readability {
+export namespace Distill {
 	/** What an attempt amounted to, which is the one thing a caller reports on. */
 	export type Outcome = "empty" | "extracted" | "refused" | "timeout";
 
@@ -130,18 +127,18 @@ function essenceOf(response: Response): string {
  * @param url - Where it came from, which every relative URL in it resolves against.
  * @returns The article, or why the page carried none.
  */
-export function extractFrom(
+export function distillFrom(
 	source: string,
 	url: string,
-): Result<Readability.Article, ReadabilityEmptyError> {
+): Result<Distill.Article, DistillEmptyError> {
 	let document = parseDocument(source);
 	if (isFailure(document)) {
-		return failure(new ReadabilityEmptyError(`Nothing to read at ${url}: it carried no markup`));
+		return failure(new DistillEmptyError(`Nothing to read at ${url}: it carried no markup`));
 	}
 
 	let body = articleOf(document.data);
 	if (body === null) {
-		return failure(new ReadabilityEmptyError(`Nothing to read at ${url}: it carried no article`));
+		return failure(new DistillEmptyError(`Nothing to read at ${url}: it carried no article`));
 	}
 
 	let canonical = canonicalOf(document.data, url);
@@ -154,7 +151,7 @@ export function extractFrom(
 		},
 	});
 	if (isFailure(cleaned)) {
-		return failure(new ReadabilityEmptyError(`Nothing to read at ${url}: the article was empty`));
+		return failure(new DistillEmptyError(`Nothing to read at ${url}: the article was empty`));
 	}
 
 	let chars = (body.textContent ?? "").replaceAll(/\s+/gu, " ").trim().length;
@@ -180,19 +177,19 @@ export function extractFrom(
  * @param options - The name to ask under, what the retrieval may spend, and the
  * origin's `robots.txt` when the caller holds it.
  * @returns The article and what it cost, or why there is none.
- * @example let article = await extract(post.url, { userAgent: agent, robots });
+ * @example let article = await distill(post.url, { userAgent: agent, robots });
  */
-export async function extract(
+export async function distill(
 	input: string,
-	options: Readability.Options,
-): Promise<Result<Readability.Retrieved, ReadabilityError>> {
+	options: Distill.Options,
+): Promise<Result<Distill.Retrieved, DistillError>> {
 	let address = addressable(input);
 	if (isFailure(address)) return address;
 
 	if (options.robots !== undefined) {
 		let path = `${address.data.pathname}${address.data.search}`;
 		if (!isAllowed(options.robots, path, options.userAgent)) {
-			return failure(new ReadabilityRefusedError(`Refused ${input}: robots.txt disallows it`));
+			return failure(new DistillRefusedError(`Refused ${input}: robots.txt disallows it`));
 		}
 	}
 
@@ -201,13 +198,13 @@ export async function extract(
 
 	if (essenceOf(retrieved.data.response) !== "text/html") {
 		void retrieved.data.response.body?.cancel().catch(() => undefined);
-		return failure(new ReadabilityEmptyError(`Nothing to read at ${input}: it is not a page`));
+		return failure(new DistillEmptyError(`Nothing to read at ${input}: it is not a page`));
 	}
 
 	let read = await readWithin(retrieved.data, options.maxBytes ?? MAX_BYTES);
 	if (isFailure(read)) return read;
 
-	let article = extractFrom(read.data.text, retrieved.data.url);
+	let article = distillFrom(read.data.text, retrieved.data.url);
 	if (isFailure(article)) return article;
 
 	return success({
@@ -225,10 +222,7 @@ export async function extract(
  * @param input - Any URL on the origin.
  * @param options - The name to ask under, and what the retrieval may spend.
  */
-export async function fetchRobots(
-	input: string,
-	options: Readability.Options,
-): Promise<string | null> {
+export async function fetchRobots(input: string, options: Distill.Options): Promise<string | null> {
 	let address = addressable(input);
 	if (isFailure(address)) return null;
 

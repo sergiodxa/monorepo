@@ -1,6 +1,6 @@
-# @sdxc/readability
+# @sdxc/distill
 
-Pull the article out of a web page: fetch under bounds, score the candidates, sanitize what
+Distill the article out of a web page: fetch under bounds, score the candidates, sanitize what
 is left.
 
 A page is not a document. It is an article wrapped in navigation, a share rail, a comment
@@ -12,10 +12,10 @@ what comes back out is sanitized before any caller can render it.
 ## Usage
 
 ```typescript
-import { extract } from "@sdxc/readability";
+import { distill } from "@sdxc/distill";
 import { isFailure } from "@sdxc/result";
 
-let article = await extract(post.url, {
+let article = await distill(post.url, {
 	userAgent: "MyApp/1.0 (+https://myapp.example/about)",
 });
 
@@ -27,17 +27,17 @@ render(article.data.html, article.data.title, article.data.byline);
 Already holding the markup — from a fixture, or from a response somebody else retrieved:
 
 ```typescript
-import { extractFrom } from "@sdxc/readability";
+import { distillFrom } from "@sdxc/distill";
 
-let article = extractFrom(source, "https://example.com/post");
+let article = distillFrom(source, "https://example.com/post");
 ```
 
 ## API
 
-### `extract(url, options)`
+### `distill(url, options)`
 
 Retrieves a page and reads the article out of it, answering
-`Result<Readability.Retrieved, ReadabilityError>`.
+`Result<Distill.Retrieved, DistillError>`.
 
 `options.userAgent` is required: a publisher who wants to refuse should be able to tell who
 is asking, and only the caller knows what to call itself. `options.robots` takes the origin's
@@ -45,10 +45,10 @@ is asking, and only the caller knows what to call itself. `options.robots` takes
 any request goes out; omitting it consults nothing. `maxBytes`, `maxRedirects`, `timeoutMs`
 and `signal` move the four bounds below.
 
-### `extractFrom(source, url)`
+### `distillFrom(source, url)`
 
 The same scoring, sanitization and metadata over markup in hand, answering
-`Result<Readability.Article, ReadabilityEmptyError>`. `url` is what every relative URL in the
+`Result<Distill.Article, DistillEmptyError>`. `url` is what every relative URL in the
 markup resolves against, so it is the address the page was actually served from.
 
 ### `fetchRobots(url, options)`
@@ -70,13 +70,13 @@ Whether an address is somewhere this package is willing to go, before any reques
 
 Three errors, each carrying an `outcome` a caller renders copy from.
 
-| Error                     | `outcome` | What happened                                                 |
-| ------------------------- | --------- | ------------------------------------------------------------- |
-| `ReadabilityRefusedError` | `refused` | The site said no, or the address is one this will not ask for |
-| `ReadabilityLimitError`   | `timeout` | Time, bytes or hops ran out                                   |
-| `ReadabilityEmptyError`   | `empty`   | The page arrived carrying no article                          |
+| Error                 | `outcome` | What happened                                                 |
+| --------------------- | --------- | ------------------------------------------------------------- |
+| `DistillRefusedError` | `refused` | The site said no, or the address is one this will not ask for |
+| `DistillLimitError`   | `timeout` | Time, bytes or hops ran out                                   |
+| `DistillEmptyError`   | `empty`   | The page arrived carrying no article                          |
 
-`Readability.Retrieved` adds `bytes`, and `mayCache` — `false` for a response carrying
+`Distill.Retrieved` adds `bytes`, and `mayCache` — `false` for a response carrying
 `X-Robots-Tag: noarchive`, which is the exact name for asking not to be kept.
 
 ## The four bounds
@@ -96,7 +96,7 @@ The request carries no cookies, no credentials and no header naming whoever aske
 
 ## Sanitization
 
-`extract` and `extractFrom` both sanitize before they answer, so no consumer can forget to.
+`distill` and `distillFrom` both sanitize before they answer, so no consumer can forget to.
 An allow-list decides what survives: prose, lists, tables, figures, links and images, with
 `href` and `src` restricted to `http:`, `https:` and `mailto:`, every relative URL resolved
 against the article's own address, and every surviving image carrying `referrerpolicy="no-referrer"`
@@ -113,10 +113,10 @@ that needs an image proxy, which belongs to whoever is rendering rather than her
 
 ## Tips
 
-- Cache by the article's URL rather than per reader. Nothing about an extracted article is
-  about who asked for it, so one extraction serves everybody who opens the same link.
+- Cache by the article's URL rather than per reader. Nothing about a distilled article is
+  about who asked for it, so one distillation serves everybody who opens the same link.
 - Cache a failure too, for far less time than a success. A blocked site asked once an hour is
   politer than one asked on every open.
-- Compare `chars` against whatever excerpt you already have. An extraction no longer than the
+- Compare `chars` against whatever excerpt you already have. An article no longer than the
   excerpt has bought the reader nothing, which is one predicate covering teasers, consent
   interstitials and error pages together.

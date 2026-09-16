@@ -104,6 +104,7 @@ Run from the repository root:
 | [data-table-d1](packages/data-table-d1)                         | Remix Data Table adapter for Cloudflare D1                                               | ✅  |
 | [data-table-sqlstorage](packages/data-table-sqlstorage)         | Remix Data Table adapter for Durable Object SQL                                          | ✅  |
 | [dates](packages/dates)                                         | Zone-aware date operations with Intl-only formatting                                     | ✅  |
+| [distill](packages/distill)                                     | Distill the article out of a web page: fetch under bounds, score, sanitize               |     |
 | [duration](packages/duration)                                   | Typed duration strings converted to milliseconds or seconds                              | ✅  |
 | [feed](packages/feed)                                           | One feed API over RSS, Atom and JSON Feed, with conditional fetching and autodiscovery   | ✅  |
 | [flags](packages/flags)                                         | Feature flag evaluation implementing the OpenFeature specification                       | ✅  |
@@ -128,7 +129,6 @@ Run from the repository root:
 | [opml](packages/opml)                                           | Read and write OPML subscription lists                                                   |     |
 | [pagination](packages/pagination)                               | Offset and keyset pagination with Link headers                                           | ✅  |
 | [rate-limit](packages/rate-limit)                               | Adapter-based rate limiting with standard response headers                               | ✅  |
-| [readability](packages/readability)                             | Pull the article out of a web page: fetch under bounds, score, sanitize                  |     |
 | [response](packages/response)                                   | Response builders for JSON APIs and redirects                                            | ✅  |
 | [result](packages/result)                                       | Result type for error handling                                                           | ✅  |
 | [rss](packages/rss)                                             | RSS 2.0 feed builder and parser                                                          | ✅  |

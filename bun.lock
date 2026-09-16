@@ -198,6 +198,7 @@
         "@sdxc/crypto": "workspace:*",
         "@sdxc/data-table-d1": "workspace:*",
         "@sdxc/data-table-sqlstorage": "workspace:*",
+        "@sdxc/distill": "workspace:*",
         "@sdxc/duration": "workspace:*",
         "@sdxc/feed": "workspace:*",
         "@sdxc/flags": "workspace:*",
@@ -214,7 +215,6 @@
         "@sdxc/opml": "workspace:*",
         "@sdxc/pagination": "workspace:*",
         "@sdxc/rate-limit": "workspace:*",
-        "@sdxc/readability": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/session-storage-kv": "workspace:*",
         "@sdxc/typeid": "workspace:*",
@@ -423,6 +423,14 @@
       "version": "0.0.1",
       "dependencies": {
         "@sdxc/duration": "workspace:*",
+        "@sdxc/result": "workspace:*",
+      },
+    },
+    "packages/distill": {
+      "name": "@sdxc/distill",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/html": "workspace:*",
         "@sdxc/result": "workspace:*",
       },
     },
@@ -689,14 +697,6 @@
         "@sdxc/logger": "workspace:*",
         "@sdxc/result": "workspace:*",
         "remix": "3.0.0-rc.2",
-      },
-    },
-    "packages/readability": {
-      "name": "@sdxc/readability",
-      "version": "0.0.1",
-      "dependencies": {
-        "@sdxc/html": "workspace:*",
-        "@sdxc/result": "workspace:*",
       },
     },
     "packages/response": {
@@ -1498,6 +1498,8 @@
 
     "@sdxc/dates": ["@sdxc/dates@workspace:packages/dates"],
 
+    "@sdxc/distill": ["@sdxc/distill@workspace:packages/distill"],
+
     "@sdxc/duration": ["@sdxc/duration@workspace:packages/duration"],
 
     "@sdxc/feed": ["@sdxc/feed@workspace:packages/feed"],
@@ -1545,8 +1547,6 @@
     "@sdxc/pagination": ["@sdxc/pagination@workspace:packages/pagination"],
 
     "@sdxc/rate-limit": ["@sdxc/rate-limit@workspace:packages/rate-limit"],
-
-    "@sdxc/readability": ["@sdxc/readability@workspace:packages/readability"],
 
     "@sdxc/response": ["@sdxc/response@workspace:packages/response"],
 

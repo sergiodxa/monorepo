@@ -11,8 +11,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { distill, fetchRobots } from "@sdxc/distill";
 import { currentLog } from "@sdxc/logger";
-import { extract, fetchRobots } from "@sdxc/readability";
 import { isFailure, isSuccess } from "@sdxc/result";
 
 import { proxyImages } from "~/app/lib/media";
@@ -154,14 +154,14 @@ export async function readArticle(post: ArticleRequest): Promise<Article> {
 
 	let startedAt = Date.now();
 	let spentFrom = performance.now();
-	let extracted = await extract(post.url, { userAgent: EXTRACTION_USER_AGENT, robots });
+	let distilled = await distill(post.url, { userAgent: EXTRACTION_USER_AGENT, robots });
 	let cpuMs = Math.round(performance.now() - spentFrom);
 	let durationMs = Date.now() - startedAt;
 
 	let now = Date.now();
 
-	if (isFailure(extracted)) {
-		let article = nothing(extracted.error.outcome, now);
+	if (isFailure(distilled)) {
+		let article = nothing(distilled.error.outcome, now);
 
 		log?.note("article.extraction", {
 			host,
@@ -173,14 +173,14 @@ export async function readArticle(post: ArticleRequest): Promise<Article> {
 		});
 
 		if (article.outcome === "refused") {
-			log?.note("article.refused", { host, reason: extracted.error.name });
+			log?.note("article.refused", { host, reason: distilled.error.name });
 		}
 
 		await cache.write(key, article, { ttl: FAILURE_TTL });
 		return article;
 	}
 
-	let { byline, bytes, chars, html, mayCache, sanitized, title } = extracted.data;
+	let { byline, bytes, chars, html, mayCache, sanitized, title } = distilled.data;
 
 	log?.note("html.sanitize", {
 		removedElements: sanitized.removedElements,

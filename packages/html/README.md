@@ -274,7 +274,7 @@ it.
 ### `@sdxc/html/document`
 
 The parsed tree itself, for a package that needs to walk a document rather than ask it
-questions — a readability pass, a rewriter, a link checker. Sharing one parser is what
+questions — a distiller, a rewriter, a link checker. Sharing one parser is what
 keeps two packages agreeing about what `<p>one<p>two` is.
 
 ```typescript

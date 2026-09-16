@@ -103,19 +103,23 @@ an element by role and accessible name, the visible text. `refresh.ts` leans on 
 those already, so the parser this feature needs is in the app and exercised against real
 markup.
 
-Readability is not one of those questions. Deciding which subtree of a page is the article is
-a scoring heuristic over candidate containers, carrying accumulated judgement about bylines,
-comment threads, share rails and related-post blocks, and its output is a new document rather
-than an answer read off the old one. [ADR-055](../ADR-055-html-package.md) drew `@sdxc/html`'s
-line at "every answer it gives comes from the markup the server sent", and a scorer sits
-outside it — on a different clock, too, since the parsing algorithm and AccName are
+Finding the article is not one of those questions. Deciding which subtree of a page is the
+article is a scoring heuristic over candidate containers, carrying accumulated judgement about
+bylines, comment threads, share rails and related-post blocks, and its output is a new document
+rather than an answer read off the old one. [ADR-055](../ADR-055-html-package.md) drew
+`@sdxc/html`'s line at "every answer it gives comes from the markup the server sent", and a
+scorer sits outside it — on a different clock, too, since the parsing algorithm and AccName are
 specifications and boilerplate heuristics are a running argument with the web.
 
 ## Decision
 
 Extraction runs on demand when a reader opens a post, in the Worker, through a new
-`@sdxc/readability` package, with the result held in a shared, URL-keyed, expiring cache and
+`@sdxc/distill` package, with the result held in a shared, URL-keyed, expiring cache and
 written into no Durable Object ever.
+
+The package is named `@sdxc/distill` rather than `@sdxc/readability`: readability names
+text-difficulty scoring, while this pulls the article out of a page, and the verb matches
+`validate` and `highlight`.
 
 ### When it runs, and what the reader sees while it does
 
@@ -200,13 +204,13 @@ outside it is a fresh attempt at the live page, which is what a browser bookmark
 
 ### The extraction itself
 
-**`@sdxc/readability`**, new, per the convention in
+**`@sdxc/distill`**, new, per the convention in
 [ADR-001](../ADR-001-new-package-extraction.md) that a general capability becomes its own
 package rather than hiding in its first consumer. It fetches a URL or takes markup in hand,
 parses with `@sdxc/html`'s parser, scores candidate containers, drops navigation, comment
 threads, share rails and related-post blocks, and answers with the article's markup, title,
 byline and canonical URL — or a failure naming why there is none. Sanitization runs inside
-`extract`, so no consumer can forget it.
+`distill`, so no consumer can forget it.
 
 Sharing the parser matters more than it looks: a second HTML parser in the repo is a second
 set of answers about `<p>one<p>two`, and ADR-055's argument is that tree construction is the
@@ -259,7 +263,7 @@ who opens that article, and depth is what keeps a bug in one allow-list from bei
 
 ### Fetching safely
 
-`@sdxc/readability` applies the same four bounds ADR-002 required of `@sdxc/feed`, in the same
+`@sdxc/distill` applies the same four bounds ADR-002 required of `@sdxc/feed`, in the same
 shape — the manual redirect walk of `packages/feed/src/lib/limits.ts` is the model, since
 following a chain yourself is what gives it a length it can exceed.
 
@@ -513,7 +517,7 @@ Vitest against fixture markup, the cache and route paths in `*.workers.test.ts` 
 
 - [x] `@sdxc/html/document` subpath exposing the parsed tree, with the query surface unchanged
 - [x] `HTML.sanitize(source, policy)`, allow-listing elements, attributes and URL schemes
-- [x] `@sdxc/readability`: candidate scoring, boilerplate removal, and sanitization inside `extract`
+- [x] `@sdxc/distill`: candidate scoring, boilerplate removal, and sanitization inside `distill`
 - [x] The four fetch bounds, following `packages/feed/src/lib/limits.ts`
 - [x] `robots.txt` retrieval, its 24-hour cache, and the `X-Robots-Tag: noarchive` no-cache rule
 - [x] `app/lib/article-cache.ts` over `@sdxc/cache/worker-kv`, with the key, the TTL and the caps
@@ -524,7 +528,7 @@ Vitest against fixture markup, the cache and route paths in `*.workers.test.ts` 
       `app/locales/en.ts` and `app/locales/es.ts`
 - [x] The entitlement check on the route, and `article-extraction` in `app/lib/flags.ts`
 - [x] The three structured events, with `cpuMs` on the extraction
-- [x] The tests above, and `@sdxc/readability` in the app's dependencies and the README
+- [x] The tests above, and `@sdxc/distill` in the app's dependencies and the README
 
 ## References
 
