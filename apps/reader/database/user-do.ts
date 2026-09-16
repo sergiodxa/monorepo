@@ -1,18 +1,25 @@
 /**
  * The per-reader Durable Object and the typed surface the Worker reaches it through. One
- * object holds one person's settings, the feeds they follow and every post from them, so
- * the reading queue is a single indexed query over their own rows rather than a merge
- * across feeds, and the refresh schedule lives beside the data it refreshes.
+ * object holds one person's settings, the feeds they follow and their own copy of every
+ * post from them, so the reading queue is a single indexed query over their own rows
+ * rather than a merge across feeds.
+ *
+ * It fetches nothing. A feed is retrieved once, by the object named after that feed, and
+ * what this holds is a projection of it: the items this reader has ruled on, in the order
+ * their timeline reads. The two are joined by a cursor — the greatest revision this reader
+ * has accounted for — and a reader finds out there is more by comparing that against the
+ * head the feed publishes, rather than by being told.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Log } from "@sdxc/logger";
 import type { KeysetQuery, OrderByTuple, OrderDirection } from "@sdxc/pagination";
 import type { Predicate, SqlStatement } from "remix/data-table";
 
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
-import { Feed, FeedFetchError } from "@sdxc/feed";
+import { Feed } from "@sdxc/feed";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { TypeID } from "@sdxc/typeid";
@@ -24,44 +31,51 @@ import {
 	getTableColumns,
 	inList,
 	isNull,
+	lt,
 	notNull,
 	rawSql,
 	sql,
 } from "remix/data-table";
 
-import type {
-	FeedStatus,
-	InsertFeedItem,
-	RefreshIntervalHours,
-	SelectFeed,
-	SelectFeedItem,
-	SelectSettings,
-} from "~/database/schema";
+import type { FeedStore } from "~/database/feed-do";
+import type { SelectFeed, SelectFeedItem, SelectSettings, Velocity } from "~/database/schema";
 
+import { logger } from "~/bootstrap/logger";
+import { feedStore } from "~/database/feed-do";
+import { KEYS_PER_BULK_READ, readHeads } from "~/database/feed-head";
 import { runMigrations } from "~/database/migrations";
+import { chunked, insertChunkSize } from "~/database/refresh";
+import { registerFeed } from "~/database/registry";
 import {
-	chunked,
-	digest,
-	displayableOf,
-	insertChunkSize,
-	publishedAt,
-	refreshDueFeeds,
-	refreshFeed,
-} from "~/database/refresh";
-import { feedItems, feeds, REFRESH_INTERVALS, settings } from "~/database/schema";
+	DEFAULT_VELOCITY,
+	feedItems,
+	feeds,
+	READER_BUDGET,
+	SAVED_LIMIT,
+	settings,
+	VELOCITIES,
+	VELOCITY_WINDOW_MS,
+} from "~/database/schema";
 
 /** The row `settings` holds, which the `CHECK` on its primary key keeps to exactly one. */
 const SETTINGS_ID = 1;
 
-/** The cadence a reader gets before they choose one, matching the column's own default. */
-const DEFAULT_INTERVAL_HOURS: RefreshIntervalHours = 1;
+/**
+ * Feeds one request synchronizes behind the page it has already answered. A reader back
+ * after a month with two hundred stale feeds gets their timeline first, the most useful of
+ * those feeds behind it, and the rest over the following minutes.
+ */
+const SYNC_FEEDS_PER_REQUEST = 8;
 
-/** The unit the stored interval is expressed in. */
-const HOUR_MS = 60 * 60 * 1000;
+/** Feeds synchronized at once, so one slow object does not pace the rest of the batch. */
+const SYNC_CONCURRENCY = 4;
+
+/** Pages of one feed a single run walks, so no feed can hold the object indefinitely. */
+const SYNC_PAGES_PER_FEED = 5;
 
 /**
- * How soon the alarm comes back when a firing left feeds unattempted, so a reader with
- * more feeds than one run carries has no permanently stale tail.
+ * How long the catch-up alarm waits before carrying on with whatever a run left behind.
+ * A minute rather than an interval, because leftover work is work a reader is waiting for.
  */
 const CATCH_UP_MS = 60 * 1000;
 
@@ -118,7 +132,15 @@ const UNREAD_COUNTS_SQL =
  */
 type TimelineRow = Pick<
 	SelectFeedItem,
-	"id" | "feed_id" | "title" | "url" | "summary" | "author" | "published_at" | "read_at"
+	| "id"
+	| "feed_id"
+	| "title"
+	| "url"
+	| "summary"
+	| "author"
+	| "published_at"
+	| "read_at"
+	| "saved_at"
 >;
 
 /**
@@ -134,23 +156,23 @@ export namespace UserStore {
 	/** A reader's preferences, as one row of `settings` reads. */
 	export interface Settings {
 		subject: string;
-		refreshIntervalHours: RefreshIntervalHours;
-		/** Epoch milliseconds of the last refresh run, or `null` before the first one. */
+		/** Epoch milliseconds of the last synchronization, or `null` before the first one. */
 		lastRefreshedAt: number | null;
 	}
 
 	/** A followed feed, with the unread count the feed list shows beside it. */
 	export interface FeedSummary {
+		/** This app's own handle for the subscription, which its URLs are built from. */
 		id: string;
+		/** The feed itself, which names the object holding it and the head it publishes. */
+		feedId: string;
 		feedUrl: string;
 		siteUrl: string | null;
 		title: string;
 		description: string | null;
 		imageUrl: string | null;
-		lastFetchedAt: number | null;
-		lastStatus: FeedStatus | null;
-		/** Consecutive failed refreshes, reset by any success including a 304. */
-		failureCount: number;
+		/** How long a post from this feed stays in this reader's timeline. */
+		velocity: Velocity;
 		unreadCount: number;
 	}
 
@@ -175,6 +197,8 @@ export namespace UserStore {
 		author: string | null;
 		publishedAt: number;
 		readAt: number | null;
+		/** When the reader asked to keep it, or `null` for a post under the ordinary rules. */
+		savedAt: number | null;
 	}
 
 	/** Where in a timeline to read from, and how much of it. */
@@ -267,11 +291,6 @@ export namespace UserStore {
 		failed: string[];
 	}
 
-	/** Setting a cadence the `CHECK` constraint would refuse is reported, never thrown. */
-	export type IntervalResult =
-		| { ok: true; settings: Settings }
-		| { ok: false; reason: "invalid-interval" };
-
 	/** Why a reader's own check of one feed never reached the origin's answer. */
 	export type CheckFailure =
 		/** Not a feed this reader follows, so there was nothing to check. */
@@ -288,6 +307,50 @@ export namespace UserStore {
 	export type CheckResult =
 		| { ok: true; inserted: number; updated: number }
 		| { ok: false; reason: CheckFailure };
+
+	/**
+	 * What the reader has waiting that they have not got yet, worked out by comparing each
+	 * subscription's cursor against the head its feed published. It is a count and the
+	 * feeds it came from, never a promise of fresher posts: the page has already been read
+	 * out of local storage by the time this is known.
+	 */
+	export interface Freshness {
+		/** The subscriptions with something above their cursor, as this app's own feed ids. */
+		stale: string[];
+		count: number;
+	}
+
+	/** A page of the queue, and what is known to be missing from it. */
+	export interface OpenResult {
+		timeline: TimelineResult;
+		freshness: Freshness;
+	}
+
+	/** What one synchronization run got through, for the log and for the alarm. */
+	export interface SyncRun {
+		/** Feeds this run brought up to date. */
+		synchronized: number;
+		/** Posts it materialized across all of them. */
+		items: number;
+		/** Feeds it left behind, which the catch-up alarm carries on with. */
+		remaining: number;
+		/** Feeds holding back because the object is over budget with nothing to reclaim. */
+		paused: number;
+	}
+
+	/** Setting a velocity the `CHECK` constraint would refuse is reported, never thrown. */
+	export type VelocityResult =
+		| { ok: true; feed: FeedSummary }
+		| { ok: false; reason: "not-following" | "invalid-velocity" };
+
+	/**
+	 * Why a post could not be kept. A full shelf refuses the next save rather than
+	 * evicting the oldest, because evicting deletes the one thing a reader explicitly
+	 * asked to keep.
+	 */
+	export type SaveFailure = "not-found" | "full";
+
+	export type SaveResult = { ok: true; saved: boolean } | { ok: false; reason: SaveFailure };
 }
 
 /**
@@ -331,10 +394,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * reader.
 	 */
 	async ensureUser(subject: string): Promise<UserStore.Settings> {
-		let row = await this.#settingsRow(subject);
-		await this.#scheduleRefresh();
-
-		return toSettings(row);
+		return toSettings(await this.#settingsRow(subject));
 	}
 
 	/** The reader's preferences, or `null` for an object no sign-in has reached yet. */
@@ -344,33 +404,20 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Changes the refresh cadence and re-arms the alarm unconditionally, so somebody
-	 * moving from daily to hourly waits an hour rather than out the rest of the day.
-	 */
-	async setRefreshInterval(hours: number): Promise<UserStore.IntervalResult> {
-		if (!isRefreshInterval(hours)) return { ok: false, reason: "invalid-interval" };
-
-		await this.#settingsRow();
-
-		let row = await this.#db.update(
-			settings,
-			{ id: SETTINGS_ID },
-			{ refresh_interval_hours: hours },
-		);
-		await this.#armRefresh(hours * HOUR_MS);
-
-		return { ok: true, settings: toSettings(row) };
-	}
-
-	/**
 	 * How many feeds the reader follows, which is what tells an empty queue apart from an
 	 * empty subscription list without reading a page of feeds to count it.
 	 */
 	async countFeeds(): Promise<number> {
-		return await this.#db.count(feeds);
+		return await this.#db.count(feeds, { where: isNull("unfollowed_at") });
 	}
 
-	/** Checks every followed feed now, reporting what the sweep as a whole found. */
+	/**
+	 * Checks every followed feed now, reporting what the sweep as a whole found.
+	 *
+	 * Each feed is asked of the object that owns it, so a reader sweeping their
+	 * subscriptions fetches nothing themselves and a feed two of them share is retrieved
+	 * once. What comes back into this object afterwards is the reader's own copy.
+	 */
 	async checkAllFeedsNow(): Promise<UserStore.CheckAllResult> {
 		let result: UserStore.CheckAllResult = {
 			checked: 0,
@@ -380,36 +427,22 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		};
 
 		try {
-			/**
-			 * Every followed feed, `next_attempt_at` and all. That column is a backoff floor
-			 * holding the alarm off an origin that has been failing, and a person asking to
-			 * check now is the one case it was never meant to hold back.
-			 *
-			 * Stalest first, so a sweep cut short by the object's own deadline has still
-			 * reached the feeds that had waited longest.
-			 */
-			let followed = await this.#db.findMany(feeds, {
-				orderBy: [
-					["last_fetched_at", "asc"],
-					["id", "asc"],
-				],
-			});
-
+			let followed = await this.#subscriptions();
 			let now = Date.now();
 
 			await inParallel(followed, async (feed) => {
-				let outcome = await refreshFeed(this.#db, feed, { now });
+				let refreshed = await feedStore(feed.feed_id).refresh("manual");
 
-				if (outcome.status !== "ok" && outcome.status !== "not_modified") {
+				if (!refreshed.ok) {
 					result.failed += 1;
 					return;
 				}
 
 				result.checked += 1;
-				if (outcome.status === "not_modified") return;
 
-				result.inserted += outcome.inserted;
-				if (outcome.inserted > 0) result.withNewPosts += 1;
+				let synchronized = await this.#syncFeed(feed);
+				result.inserted += synchronized.items;
+				if (synchronized.items > 0) result.withNewPosts += 1;
 			});
 
 			// A reader's own sweep brings their posts up to date exactly as the scheduled one
@@ -459,6 +492,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		// The whole list, unpaged: a document holding some of a reader's subscriptions is
 		// one they would restore an incomplete library from.
 		let rows = await this.#db.findMany(feeds, {
+			where: isNull("unfollowed_at"),
 			orderBy: [
 				["created_at", "desc"],
 				["id", "desc"],
@@ -515,6 +549,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			 * language orders what comes back, where the request's locale is.
 			 */
 			this.#db.findMany(feeds, {
+				where: isNull("unfollowed_at"),
 				orderBy: [
 					["title", "asc"],
 					["id", "asc"],
@@ -529,7 +564,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	/** One followed feed, or `null` when this reader does not follow it. */
 	async getFeed(feedId: string): Promise<UserStore.FeedSummary | null> {
 		let row = await this.#db.find(feeds, { id: feedId });
-		if (row === null) return null;
+		if (row === null || row.unfollowed_at !== null) return null;
 
 		let unread = await this.#db.count(feedItems, {
 			where: and({ feed_id: feedId }, isNull("read_at")),
@@ -540,93 +575,105 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * Subscribes to whatever feed `input` leads to, accepting either a feed URL or a page
-	 * that advertises one, and stores the posts it carries so the queue is never empty
-	 * the moment a feed is followed.
+	 * that advertises one, and stores the page of posts the feed hands back so the queue is
+	 * never empty the moment a feed is followed.
+	 *
+	 * The feed itself is fetched by the object named after it, which is what makes the
+	 * second follower of a feed cost no request at all: they reach an object that has
+	 * already done the work and is already being polled for everybody.
 	 */
 	async followFeed(input: string): Promise<UserStore.FollowResult> {
 		let target = normalizeFeedUrl(input);
 		if (target === null) return { ok: false, reason: "invalid-url", feedId: null };
 
-		let pasted = await this.#feedByUrl(target);
-		if (pasted !== null) return { ok: false, reason: "already-following", feedId: pasted };
+		let pasted = await this.#subscriptionByUrl(target);
+		if (pasted !== null) return await this.#follow(pasted);
 
+		/**
+		 * The one external request made outside a feed's own object, and the step that
+		 * decides what two people are following: it reports the address the response finally
+		 * came from, so a person who pastes a site and a person who pastes its feed converge
+		 * on one name.
+		 */
 		let discovered = await Feed.discover(target);
 		if (isFailure(discovered)) return { ok: false, reason: "unreachable", feedId: null };
 
 		let [advertised] = discovered.data;
 		if (advertised === undefined) return { ok: false, reason: "not-found", feedId: null };
 
-		let retrieved = await Feed.fetch(advertised.url);
-		if (isFailure(retrieved)) {
-			/**
-			 * A retrieval that failed to reach the origin is told apart from one that
-			 * reached it and came back with something that is not a feed, since the first
-			 * is worth retrying and the second is worth correcting.
-			 */
-			let reached = !(retrieved.error instanceof FeedFetchError);
-			return { ok: false, reason: reached ? "not-found" : "unreachable", feedId: null };
+		let feedUrl = advertised.url;
+
+		let resolved = await this.#subscriptionByUrl(feedUrl);
+		if (resolved !== null) return await this.#follow(resolved);
+
+		/**
+		 * The URL is exchanged for an id once, here, and written down from then on. The
+		 * unique index the exchange goes through is what makes two people following one feed
+		 * in the same second come out with one id, and so with one object.
+		 */
+		let feedId: string;
+		try {
+			feedId = await registerFeed(feedUrl, advertised.title ?? feedUrl);
+		} catch {
+			return { ok: false, reason: "unreachable", feedId: null };
 		}
 
-		/** A subscription is created from the document itself, and a 304 carries none. */
-		if (retrieved.data.notModified) return { ok: false, reason: "unreachable", feedId: null };
-
-		let { feed: document, url: feedUrl } = retrieved.data;
-
-		let resolved = await this.#feedByUrl(feedUrl);
-		if (resolved !== null) return { ok: false, reason: "already-following", feedId: resolved };
+		let joined = await feedStore(feedId).subscribe(this.#subject(), feedUrl);
+		if (!joined.ok) return { ok: false, reason: joined.reason, feedId: null };
 
 		let now = Date.now();
-		let feedId = TypeID.fromUUID("feed", generateUUID()).toString();
-		let rows = await Promise.all(document.items.map((item) => itemRow(feedId, item, now)));
+		let subscriptionId = TypeID.fromUUID("feed", generateUUID()).toString();
 
 		/**
 		 * Written straight through rather than inside a transaction scope. A Durable Object
 		 * refuses `BEGIN` and `SAVEPOINT` outright, and has no need of them: every write a
 		 * turn makes is coalesced into one atomic commit and discarded together if the turn
-		 * throws. Nothing below awaits anything outside storage, so the feed and its posts
-		 * land together or not at all.
+		 * throws.
 		 */
 		let created = await this.#db.create(
 			feeds,
 			{
-				id: feedId,
-				feed_url: feedUrl,
-				site_url: document.siteUrl ?? null,
-				title: document.title,
-				description: document.description ?? null,
-				language: document.language ?? null,
-				image_url: document.imageUrl ?? null,
-				etag: retrieved.data.etag ?? null,
-				last_modified: retrieved.data.lastModified ?? null,
-				last_fetched_at: now,
-				last_status: "ok",
-				last_http_status: retrieved.data.status,
-				last_error: null,
-				failure_count: 0,
-				next_attempt_at: null,
+				id: subscriptionId,
+				feed_id: feedId,
+				feed_url: joined.feed.feedUrl,
+				site_url: joined.feed.siteUrl,
+				title: joined.feed.title,
+				description: joined.feed.description,
+				language: joined.feed.language,
+				image_url: joined.feed.imageUrl,
+				cursor: 0,
+				velocity: DEFAULT_VELOCITY,
+				unfollowed_at: null,
 			},
 			{ returnRow: true },
 		);
 
-		for (let batch of chunked(rows, insertChunkSize())) {
-			await this.#db.createMany(feedItems, batch);
-		}
+		let stored = await this.#materialize(subscriptionId, joined.items, DEFAULT_VELOCITY, now);
 
-		// Following a feed retrieves it, so the reader has posts as current as a sweep
-		// would have left them and the settings page says so rather than reporting none.
+		/**
+		 * Set to the head the feed reported alongside the page, so a subscription starts
+		 * current and what reaches the reader from here is what the feed publishes next.
+		 *
+		 * Not the greatest revision among the items handed over: a feed numbers entries in
+		 * the order it discovered them, which is the order the document listed them, so
+		 * whether a newest-first page carries the highest revisions or the lowest is a
+		 * decision the publisher made. Reading the head makes a new subscription mean the
+		 * same thing either way — the newest page, and everything after it.
+		 *
+		 * This is not the cursor taking its value from the shared index. That head is a hint
+		 * which may lag; this one came back from the feed itself, in the same answer as the
+		 * items, and names exactly what that object had decided by the time it answered.
+		 */
+		await this.#db.update(feeds, { id: subscriptionId }, { cursor: joined.head });
+
 		await this.#stampRefreshed(now);
 
-		// A reader can reach this with a session older than the sign-in step that arms the
-		// schedule, and a subscription nothing ever sweeps stays as stale as the day it was
-		// followed. Arming here holds whatever alarm is already set.
-		await this.#scheduleRefresh();
-
-		return { ok: true, feed: toFeedSummary(created, rows.length), items: rows.length };
+		return { ok: true, feed: toFeedSummary(created, stored), items: stored };
 	}
 
 	/**
 	 * Retrieves one feed on the spot and reports what came back, for a reader who knows a
-	 * site has just published and would rather not wait out their cadence.
+	 * site has just published and would rather not wait out the schedule.
 	 *
 	 * It resolves however the retrieval went, so a feed whose origin is down answers the
 	 * reader instead of failing the request they made.
@@ -639,36 +686,230 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		if (feed === null) return { ok: false, reason: "not-following" };
 
 		/**
-		 * `next_attempt_at` is read past here. That column is a backoff floor holding the
-		 * alarm off an origin that has been failing, and a person deliberately asking to
-		 * check now is the one case it was never meant to hold back: a feed that has been
-		 * failing is exactly the one they come here to ask about.
+		 * Asked for by a person rather than by the schedule, so the feed's own backoff is
+		 * told to stand aside: a feed that has been failing is exactly the one they came
+		 * here to ask about.
 		 */
-		let now = Date.now();
-		let outcome = await refreshFeed(this.#db, feed, { now });
+		let refreshed = await feedStore(feed.feed_id).refresh("manual");
+		if (!refreshed.ok) return { ok: false, reason: "check-failed" };
 
-		if (outcome.status !== "ok" && outcome.status !== "not_modified") {
+		let now = Date.now();
+
+		try {
+			let synchronized = await this.#syncFeed(feed);
+
+			// The origin answered, so this reader's copy is current as of now — a 304 included,
+			// which says the stored copy was already the current one.
+			await this.#stampRefreshed(now);
+
+			return { ok: true, inserted: synchronized.items, updated: 0 };
+		} catch (error) {
+			/**
+			 * The feed answered and this reader's copy did not follow, which is the same news
+			 * to somebody standing in front of a page: they asked for this feed to be checked
+			 * and it has not been. Told as a refusal rather than thrown, so the page they are
+			 * on renders with the outcome on it.
+			 */
+			console.error("reader synchronization of one feed failed", error);
+
 			return { ok: false, reason: "check-failed" };
 		}
-
-		// The origin answered, so this reader's copy is current as of now — a 304 included,
-		// which says the stored copy was already the current one.
-		await this.#stampRefreshed(now);
-
-		if (outcome.status === "not_modified") return { ok: true, inserted: 0, updated: 0 };
-
-		return { ok: true, inserted: outcome.inserted, updated: outcome.updated };
 	}
 
 	/**
-	 * Drops a subscription and every post behind it. `false` when it was not followed.
+	 * Drops a subscription and every post behind it, and tells the feed it has one fewer
+	 * subscriber — which is what eventually stops the feed being polled at all.
 	 *
-	 * The posts go first, so a turn that fails between the two deletes leaves the feed
-	 * still followed rather than its posts orphaned under a feed that is gone.
+	 * The posts go first, so a turn that fails between the two leaves the feed still
+	 * followed rather than its posts orphaned under a subscription that is gone. Saved posts
+	 * are the exception: they survive, and the subscription's row survives with them to hold
+	 * the feed's name, marked as no longer followed so every list leaves it out.
 	 */
 	async unfollowFeed(feedId: string): Promise<boolean> {
-		await this.#db.deleteMany(feedItems, { where: { feed_id: feedId } });
-		return await this.#db.delete(feeds, { id: feedId });
+		let feed = await this.#db.find(feeds, { id: feedId });
+		if (feed === null) return false;
+
+		await this.#db.deleteMany(feedItems, {
+			where: and({ feed_id: feedId }, isNull("saved_at")),
+		});
+
+		let saved = await this.#db.count(feedItems, { where: { feed_id: feedId } });
+
+		if (saved > 0) {
+			await this.#db.update(feeds, { id: feedId }, { unfollowed_at: Date.now() });
+		} else {
+			await this.#db.delete(feeds, { id: feedId });
+		}
+
+		/**
+		 * Told after this reader's own state is settled: the feed's answer decides nothing
+		 * here, and a failure to reach it must not leave a reader still following something
+		 * they asked to be rid of.
+		 */
+		await feedStore(feed.feed_id).unsubscribe(this.#subject());
+
+		return true;
+	}
+
+	/**
+	 * The first page of the queue, and what the reader has waiting that they have not got
+	 * yet — which is the question the reading page actually asks.
+	 *
+	 * The page comes out of local storage and is answered immediately. The staleness beside
+	 * it is derived rather than stored: each subscription's cursor is compared against the
+	 * head its feed published, so there is no flag to leave set, nothing a lost message can
+	 * miss, and no path that can write one and forget the other.
+	 *
+	 * @param options - Which posts the page holds, where to page from, and how much of it.
+	 * @example let opened = await userStore(viewer.id).openReader({ readState: "unread" });
+	 */
+	async openReader(options: UserStore.ReadingQueueOptions = {}): Promise<UserStore.OpenResult> {
+		let [timeline, subscriptions] = await Promise.all([
+			this.readingQueue(options),
+			this.#subscriptions(),
+		]);
+
+		let started = Date.now();
+		let heads = await readHeads(subscriptions.map((feed) => feed.feed_id));
+
+		let stale = subscriptions
+			.filter((feed) => (heads.get(feed.feed_id) ?? 0) > feed.cursor)
+			.map((feed) => feed.id);
+
+		/**
+		 * How many reads covered the subscription list is the number worth watching: a check
+		 * that stops being one round trip is visible here before a reader notices it.
+		 */
+		this.#record("job", {
+			event: "user.freshness",
+			feeds: subscriptions.length,
+			reads: Math.ceil(subscriptions.length / KEYS_PER_BULK_READ),
+			stale: stale.length,
+			durationMs: Date.now() - started,
+		});
+
+		return { timeline, freshness: { stale, count: stale.length } };
+	}
+
+	/**
+	 * Brings stale subscriptions up to date, a bounded number at a time, and reports what it
+	 * left behind.
+	 *
+	 * Nothing renders behind this. It runs after a page has been answered, so a reader back
+	 * after a month gets their timeline in one indexed seek and the feeds they are missing
+	 * over the seconds and minutes after it.
+	 *
+	 * @param feedIds - The subscriptions to bring up to date; every stale one when omitted.
+	 */
+	async synchronize(feedIds?: string[]): Promise<UserStore.SyncRun> {
+		let run: UserStore.SyncRun = { synchronized: 0, items: 0, remaining: 0, paused: 0 };
+
+		try {
+			let due = await this.#staleSubscriptions(feedIds);
+			let batch = due.slice(0, SYNC_FEEDS_PER_REQUEST);
+			run.remaining = Math.max(0, due.length - batch.length);
+
+			await inParallel(
+				batch,
+				async (feed) => {
+					let synchronized = await this.#syncFeed(feed);
+
+					run.items += synchronized.items;
+					run.synchronized += 1;
+					if (synchronized.paused) run.paused += 1;
+				},
+				SYNC_CONCURRENCY,
+			);
+
+			let swept = await this.#sweep(Date.now());
+			await this.#stampRefreshed(Date.now());
+
+			this.#record("job", {
+				event: "user.retention",
+				aged: swept.aged,
+				reclaimed: swept.reclaimed,
+				paused: swept.paused + run.paused,
+			});
+
+			/** Whatever a run could not reach carries on in a minute rather than an interval. */
+			if (run.remaining > 0) {
+				await this.#armCatchUp();
+				this.#record("job", { event: "user.sync.deferred", remaining: run.remaining });
+			}
+		} catch (error) {
+			/**
+			 * Reported rather than rejected, for the reason the alarm resolves: this runs
+			 * behind a page that has already been sent, and a reader is not shown an error for
+			 * work they never asked to wait for.
+			 */
+			console.error("reader synchronization failed", error);
+		}
+
+		return run;
+	}
+
+	/**
+	 * Changes how long a feed's posts stay in this reader's timeline, and applies it at
+	 * once, so the choice is visible in the list rather than at the next sweep.
+	 *
+	 * @param feedId - The subscription to set it on.
+	 * @param velocity - One of the answers the column's `CHECK` allows.
+	 */
+	async setVelocity(feedId: string, velocity: string): Promise<UserStore.VelocityResult> {
+		if (!isVelocity(velocity)) return { ok: false, reason: "invalid-velocity" };
+
+		let feed = await this.#db.find(feeds, { id: feedId });
+		if (feed === null) return { ok: false, reason: "not-following" };
+
+		let updated = await this.#db.update(feeds, { id: feedId }, { velocity });
+		await this.#ageOut(updated, Date.now());
+
+		let unread = await this.#db.count(feedItems, {
+			where: and({ feed_id: feedId }, isNull("read_at")),
+		});
+
+		return { ok: true, feed: toFeedSummary(updated, unread) };
+	}
+
+	/**
+	 * Keeps a post, or stops keeping it. A kept post is exempt from every rule that deletes
+	 * one: the budget's reclamation, its feed's velocity, and the sweep behind both.
+	 *
+	 * A full shelf refuses rather than making room, because making room would delete the one
+	 * thing in this object a reader explicitly asked to keep.
+	 *
+	 * @param itemId - The post to keep.
+	 * @param saved - Whether to keep it; `false` puts it back under whatever rule would take it.
+	 */
+	async saveItem(itemId: string, saved = true): Promise<UserStore.SaveResult> {
+		let item = await this.#db.find(feedItems, { id: itemId });
+		if (item === null) return { ok: false, reason: "not-found" };
+
+		if (!saved) {
+			await this.#db.update(feedItems, { id: itemId }, { saved_at: null });
+			await this.#dropIfSpent(item.feed_id);
+
+			return { ok: true, saved: false };
+		}
+
+		if (item.saved_at !== null) return { ok: true, saved: true };
+
+		let kept = await this.#db.count(feedItems, { where: notNull("saved_at") });
+		if (kept >= SAVED_LIMIT) return { ok: false, reason: "full" };
+
+		await this.#db.update(feedItems, { id: itemId }, { saved_at: Date.now() });
+
+		return { ok: true, saved: true };
+	}
+
+	/**
+	 * The posts this reader asked to keep, newest first, paged by the keyset every other
+	 * list in this app pages by.
+	 *
+	 * @param options - Where to page from, and how much of it.
+	 */
+	savedQueue(options: UserStore.TimelineOptions = {}): Promise<UserStore.TimelineResult> {
+		return this.#page(this.#timeline().where(notNull("saved_at")), options);
 	}
 
 	/**
@@ -722,36 +963,23 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Refreshes whatever feeds are due and re-arms the schedule.
+	 * Carries on with whatever synchronization a request left behind.
 	 *
-	 * It never rejects. A rejected alarm is retried by the platform, which would re-fetch
-	 * every feed because one origin was down, repeatedly, against origins that already
-	 * answered.
+	 * The alarm exists for leftovers alone now that nothing here fetches: a reader back
+	 * after a month has more stale feeds than one request should carry, so the request
+	 * takes a batch and this takes the rest, a minute at a time, until there are none.
+	 *
+	 * It never rejects. A rejected alarm is retried by the platform, which would run the
+	 * same catch-up again against objects that already answered.
 	 */
 	override async alarm(): Promise<void> {
-		let remaining = 0;
-
-		/** Read before the refresh, so the re-arm below needs nothing but the clock. */
-		let interval = DEFAULT_INTERVAL_HOURS * HOUR_MS;
-
 		try {
-			try {
-				interval = await this.#intervalMs();
+			let run = await this.synchronize();
 
-				let run = await refreshDueFeeds(this.#db, { now: Date.now() });
-				remaining = run.remaining;
-
-				await this.#stampRefreshed(Date.now());
-			} finally {
-				/**
-				 * A run that left feeds behind comes back in a minute rather than an
-				 * interval, and the re-arm sits here so the heartbeat outlives whatever the
-				 * refresh above did.
-				 */
-				await this.#armRefresh(remaining > 0 ? CATCH_UP_MS : interval);
-			}
+			/** Armed only while work is left, so a reader who is caught up costs no wakes. */
+			if (run.remaining > 0) await this.#armCatchUp();
 		} catch (error) {
-			console.error("reader refresh alarm failed", error);
+			console.error("reader catch-up alarm failed", error);
 		}
 	}
 
@@ -772,14 +1000,24 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 		return await this.#db.create(
 			settings,
-			{
-				id: SETTINGS_ID,
-				subject,
-				refresh_interval_hours: DEFAULT_INTERVAL_HOURS,
-				last_refreshed_at: null,
-			},
+			{ id: SETTINGS_ID, subject, last_refreshed_at: null },
 			{ returnRow: true },
 		);
+	}
+
+	/**
+	 * Writes one wide event about what this object just did.
+	 *
+	 * Opened here rather than read off the request, because a Durable Object answers in its
+	 * own context and the log the Worker opened for the request does not reach it. Counts
+	 * and feed identifiers only: nothing about what the reader reads, beyond the subject
+	 * this object is already named for.
+	 *
+	 * @param kind - What kind of invocation produced this, which the platform groups by.
+	 * @param fields - The event's name and its measurements.
+	 */
+	#record(kind: Log.Kind, fields: Log.Fields): void {
+		logger.open(kind, fields).emit();
 	}
 
 	/**
@@ -810,42 +1048,304 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Arms the schedule only when nothing is already scheduled.
+	 * Arms the catch-up, holding whatever alarm is already set unless this one is sooner.
 	 *
-	 * The guard is what makes the alarm survive an active reader: an object woken by every
-	 * page view would otherwise push the same interval further into the future on every
-	 * wake, and refresh once they stopped reading.
+	 * The guard is what keeps an active reader from pushing their own catch-up away: an
+	 * object woken by every page view would otherwise re-arm the same minute on every wake
+	 * and carry on once they stopped reading.
 	 */
-	async #scheduleRefresh(): Promise<void> {
-		let scheduled = await this.ctx.storage.getAlarm();
-		if (scheduled !== null) return;
+	async #armCatchUp(): Promise<void> {
+		let next = Date.now() + CATCH_UP_MS;
+		let armed = await this.ctx.storage.getAlarm();
 
-		await this.#armRefresh(await this.#intervalMs());
+		if (armed !== null && armed <= next) return;
+
+		await this.ctx.storage.setAlarm(next);
 	}
 
-	/** Schedules the next refresh `delay` milliseconds out, replacing any alarm set. */
-	async #armRefresh(delay: number): Promise<void> {
-		await this.ctx.storage.setAlarm(Date.now() + delay);
+	/** Every feed this reader still follows, which is every list and sweep's starting point. */
+	async #subscriptions(): Promise<SelectFeed[]> {
+		return await this.#db.findMany(feeds, { where: isNull("unfollowed_at") });
 	}
 
-	/** How long the reader's chosen cadence runs, in milliseconds. */
-	async #intervalMs(): Promise<number> {
-		let row = await this.#db.find(settings, { id: SETTINGS_ID });
-		let hours = row === null ? DEFAULT_INTERVAL_HOURS : readInterval(row);
-		return hours * HOUR_MS;
+	/**
+	 * The subscriptions with something above their cursor, newest news first.
+	 *
+	 * The heads are read in bulk, one request per hundred feeds rather than one per feed,
+	 * so a reader following two hundred pays the latency of a reader following two.
+	 *
+	 * @param feedIds - Narrows the question to these subscriptions, when the caller knows.
+	 */
+	async #staleSubscriptions(feedIds?: string[]): Promise<SelectFeed[]> {
+		let followed = await this.#subscriptions();
+		let asked =
+			feedIds === undefined ? followed : followed.filter((feed) => feedIds.includes(feed.id));
+
+		let heads = await readHeads(asked.map((feed) => feed.feed_id));
+
+		return asked.filter((feed) => (heads.get(feed.feed_id) ?? 0) > feed.cursor);
 	}
 
-	/** The id of the subscription already holding `feedUrl`, or `null` for a new one. */
-	async #feedByUrl(feedUrl: string): Promise<string | null> {
-		let row = await this.#db.findOne(feeds, { where: { feed_url: feedUrl } });
-		return row === null ? null : row.id;
+	/**
+	 * Brings one subscription up to date, a page at a time, and stops where the reader has
+	 * no room left.
+	 *
+	 * The cursor is written after the items, never before. A run that dies between the two
+	 * leaves a cursor pointing at work already done, and the retry upserts rows it already
+	 * wrote, which changes nothing; a cursor advanced first would skip whatever it skipped
+	 * past, permanently, and no later check would notice, because the comparison that would
+	 * have caught it is the one the cursor just satisfied.
+	 *
+	 * What the cursor may pass is anything the reader has ruled on: an item stored and an
+	 * item dropped for being older than this feed's velocity are both decided. An item whose
+	 * write failed, or that this run never reached, is neither.
+	 */
+	async #syncFeed(feed: SelectFeed): Promise<{ items: number; paused: boolean }> {
+		let stored = 0;
+		let skipped = 0;
+		let cursor = feed.cursor;
+		let now = Date.now();
+		let started = now;
+
+		/**
+		 * A reader over their budget with nothing left to reclaim stops taking posts rather
+		 * than deleting ones nobody agreed to lose. The subscription stays stale and says so,
+		 * which is back-pressure rather than data loss: nothing they have is taken, and what
+		 * they have not got yet waits.
+		 */
+		if (await this.#isPaused(feed)) return { items: 0, paused: true };
+
+		for (let page = 0; page < SYNC_PAGES_PER_FEED; page += 1) {
+			let answered = await feedStore(feed.feed_id).getItemsAfter(cursor);
+			if (answered.items.length === 0) break;
+
+			let kept = await this.#materialize(feed.id, answered.items, feed.velocity, now);
+
+			stored += kept;
+			skipped += answered.items.length - kept;
+
+			cursor = greatestRevision(answered.items);
+			await this.#db.update(feeds, { id: feed.id }, { cursor });
+
+			if (answered.head <= cursor) break;
+		}
+
+		this.#record("job", {
+			event: "user.sync",
+			feedId: feed.feed_id,
+			items: stored,
+			skipped,
+			cursorFrom: feed.cursor,
+			cursorTo: cursor,
+			durationMs: Date.now() - started,
+		});
+
+		return { items: stored, paused: false };
+	}
+
+	/**
+	 * Writes a feed's items as this reader's own copies, and answers how many it kept.
+	 *
+	 * An item already older than this subscription's velocity is not stored at all, so a
+	 * reader returning after a month to a feed they read for headlines materializes the last
+	 * few hours rather than a month of them to delete on the next sweep.
+	 */
+	async #materialize(
+		subscriptionId: string,
+		incoming: readonly FeedStore.Item[],
+		velocity: Velocity,
+		now: number,
+	): Promise<number> {
+		let window = VELOCITY_WINDOW_MS[velocity];
+		let kept = incoming.filter((item) => window === null || item.publishedAt >= now - window);
+		if (kept.length === 0) return 0;
+
+		for (let chunk of chunked(kept, insertChunkSize())) {
+			await this.#db.exec(...upsertItems(subscriptionId, chunk, now));
+		}
+
+		return kept.length;
+	}
+
+	/**
+	 * Lets go of a feed the reader unfollowed once the last post they kept from it goes.
+	 *
+	 * Such a row outlives the subscription for one reason — to hold the feed's name for the
+	 * saved list to show — so it has nothing left to do the moment that list stops naming
+	 * it. A feed the reader still follows is untouched.
+	 *
+	 * @param subscriptionId - The feed the unsaved post belonged to.
+	 */
+	async #dropIfSpent(subscriptionId: string): Promise<void> {
+		let feed = await this.#db.find(feeds, { id: subscriptionId });
+		if (feed === null || feed.unfollowed_at === null) return;
+
+		let kept = await this.#db.count(feedItems, {
+			where: and({ feed_id: subscriptionId }, notNull("saved_at")),
+		});
+
+		if (kept > 0) return;
+
+		await this.#db.deleteMany(feedItems, { where: { feed_id: subscriptionId } });
+		await this.#db.delete(feeds, { id: subscriptionId });
+	}
+
+	/**
+	 * Whether this subscription has to stop taking posts: the object is over its budget, and
+	 * this feed is over the share of it that its reader's other feeds leave.
+	 */
+	async #isPaused(feed: SelectFeed): Promise<boolean> {
+		/**
+		 * The share this feed is held to, then its own rows, and the object's whole count
+		 * only for a feed already over that share. A feed inside its share cannot pause
+		 * whatever else the object holds, so the common answer costs two counts a small
+		 * table and one index answer rather than a scan of every post the reader has.
+		 */
+		let followed = await this.#db.count(feeds, { where: isNull("unfollowed_at") });
+		let held = await this.#db.count(feedItems, { where: { feed_id: feed.id } });
+
+		if (held <= shareOf(followed)) return false;
+
+		/**
+		 * At the budget rather than past it: the figure is one number with two consequences,
+		 * and refusing is what it does when reclaiming has nothing left to take. An object
+		 * sitting exactly on it has no room for the next post either.
+		 */
+		return (await this.#db.count(feedItems)) >= READER_BUDGET;
+	}
+
+	/**
+	 * Takes what the reader has agreed to lose, and nothing else.
+	 *
+	 * Two rules, and both are the reader's own: a velocity they set on a feed, and a budget
+	 * they are over. Nothing is deleted for being old on an object with room for it — a
+	 * sweep that dropped posts read a year ago would fire on an object holding a thousand
+	 * rows as readily as on one holding a million, and take reading history from somebody
+	 * using a thousandth of their space.
+	 *
+	 * @param now - Epoch milliseconds the velocities are measured against.
+	 */
+	async #sweep(now: number): Promise<{ aged: number; reclaimed: number; paused: number }> {
+		let swept = { aged: 0, reclaimed: 0, paused: 0 };
+		let followed = await this.#subscriptions();
+
+		for (let feed of followed) swept.aged += await this.#ageOut(feed, now);
+
+		let total = await this.#db.count(feedItems);
+		if (total < READER_BUDGET) return swept;
+
+		/**
+		 * The share is applied only while the object is over budget, which is what keeps the
+		 * division from being destructive: a reader under it keeps everything, so following a
+		 * second feed does not halve the history of the first.
+		 */
+		let share = shareOf(followed.length);
+
+		for (let feed of followed) {
+			let held = await this.#db.count(feedItems, { where: { feed_id: feed.id } });
+			if (held <= share) continue;
+
+			let reclaimed = await this.#reclaim(feed.id, held - share);
+			swept.reclaimed += reclaimed;
+
+			/** Nothing left that was read, so this feed holds rather than losing unread posts. */
+			if (reclaimed < held - share) swept.paused += 1;
+		}
+
+		return swept;
+	}
+
+	/**
+	 * Drops the posts of one feed that are older than the velocity its reader set, and
+	 * answers how many went. A saved post stays: it is the one answer that outlives every
+	 * rule here.
+	 */
+	async #ageOut(feed: SelectFeed, now: number): Promise<number> {
+		let window = VELOCITY_WINDOW_MS[feed.velocity];
+		if (window === null) return 0;
+
+		let dropped = await this.#db.deleteMany(feedItems, {
+			where: and({ feed_id: feed.id }, lt("published_at", now - window), isNull("saved_at")),
+		});
+
+		return dropped.affectedRows ?? 0;
+	}
+
+	/**
+	 * Takes back up to `excess` of one feed's posts, oldest first, from what the reader has
+	 * already read and has not saved. It answers how many it got, which is short of what was
+	 * asked for exactly when there is nothing left the reader agreed to lose.
+	 */
+	async #reclaim(subscriptionId: string, excess: number): Promise<number> {
+		let reclaimable = await this.#db
+			.query(feedItems)
+			.where(and({ feed_id: subscriptionId }, notNull("read_at"), isNull("saved_at")))
+			.select("id")
+			.orderBy("published_at", "asc")
+			.orderBy("id", "asc")
+			.limit(excess)
+			.all();
+
+		if (reclaimable.length === 0) return 0;
+
+		let taken = 0;
+		for (let batch of chunked(
+			reclaimable.map((row) => row.id),
+			IDS_PER_LOOKUP,
+		)) {
+			let dropped = await this.#db.deleteMany(feedItems, { where: inList("id", batch) });
+			taken += dropped.affectedRows ?? 0;
+		}
+
+		return taken;
+	}
+
+	/**
+	 * The subscription already holding `feedUrl`, or `null` for a feed nobody here follows.
+	 *
+	 * It finds a row the reader has unfollowed as readily as one they follow, because such
+	 * a row is still theirs: it was kept to hold the name of a feed they saved posts from,
+	 * and following that feed again is picking it back up rather than starting a second one.
+	 */
+	async #subscriptionByUrl(feedUrl: string): Promise<SelectFeed | null> {
+		return await this.#db.findOne(feeds, { where: { feed_url: feedUrl } });
+	}
+
+	/**
+	 * Answers a follow of a feed this object already has a row for: already following when
+	 * the reader still follows it, and picked back up when only its saved posts were left.
+	 */
+	async #follow(existing: SelectFeed): Promise<UserStore.FollowResult> {
+		if (existing.unfollowed_at === null) {
+			return { ok: false, reason: "already-following", feedId: existing.id };
+		}
+
+		let revived = await this.#db.update(feeds, { id: existing.id }, { unfollowed_at: null });
+		await feedStore(existing.feed_id).subscribe(this.#subject(), existing.feed_url);
+
+		let synchronized = await this.#syncFeed(revived);
+		let unread = await this.#db.count(feedItems, {
+			where: and({ feed_id: existing.id }, isNull("read_at")),
+		});
+
+		return { ok: true, feed: toFeedSummary(revived, unread), items: synchronized.items };
 	}
 
 	/** The columns a timeline page reads, ordered and seeked by whoever pages it. */
 	#timeline() {
 		return this.#db
 			.query(feedItems)
-			.select("id", "feed_id", "title", "url", "summary", "author", "published_at", "read_at");
+			.select(
+				"id",
+				"feed_id",
+				"title",
+				"url",
+				"summary",
+				"author",
+				"published_at",
+				"read_at",
+				"saved_at",
+			);
 	}
 
 	/**
@@ -981,7 +1481,7 @@ function searchStatement(state: SearchState): SqlStatement {
 		.map(([column, direction]) => `${quoteColumn(column)} ${direction === "asc" ? "asc" : "desc"}`)
 		.join(", ");
 
-	return sql`select "id", "feed_id", "title", "url", "summary", "author", "published_at", "read_at"
+	return sql`select "id", "feed_id", "title", "url", "summary", "author", "published_at", "read_at", "saved_at"
 		from feed_items
 		where ${where}
 		order by ${rawSql(orderBy)}
@@ -1028,7 +1528,7 @@ function quoteColumn(column: string): string {
 
 /** One row of the search statement, read back into the shape a timeline page is built from. */
 function toTimelineRow(row: Record<string, unknown>): TimelineRow {
-	let { feed_id: feedId, published_at: publishedAt, read_at: readAt } = row;
+	let { feed_id: feedId, published_at: publishedAt, read_at: readAt, saved_at: savedAt } = row;
 
 	return {
 		id: typeof row.id === "string" ? row.id : "",
@@ -1039,6 +1539,7 @@ function toTimelineRow(row: Record<string, unknown>): TimelineRow {
 		author: typeof row.author === "string" ? row.author : null,
 		published_at: typeof publishedAt === "number" ? publishedAt : 0,
 		read_at: typeof readAt === "number" ? readAt : null,
+		saved_at: typeof savedAt === "number" ? savedAt : null,
 	};
 }
 
@@ -1073,10 +1574,11 @@ function likePattern(query: string): string | null {
 async function inParallel<value>(
 	values: readonly value[],
 	work: (value: value) => Promise<void>,
+	concurrency: number = ON_DEMAND_CONCURRENCY,
 ): Promise<void> {
 	let next = 0;
 
-	let workers = Array.from({ length: Math.min(ON_DEMAND_CONCURRENCY, values.length) }, async () => {
+	let workers = Array.from({ length: Math.min(concurrency, values.length) }, async () => {
 		while (next < values.length) {
 			let value = values[next++];
 			if (value === undefined) return;
@@ -1098,39 +1600,22 @@ export function userStore(subject: string): DurableObjectStub<UserDO> {
 	return env.USER.getByName(subject);
 }
 
-/** Whether a number is one of the cadences the settings form and the `CHECK` both offer. */
-function isRefreshInterval(hours: number): hours is RefreshIntervalHours {
-	return REFRESH_INTERVALS.some((offered) => offered === hours);
-}
-
-/** The stored cadence, falling back to the column's default for a row written around it. */
-function readInterval(row: SelectSettings): RefreshIntervalHours {
-	return isRefreshInterval(row.refresh_interval_hours)
-		? row.refresh_interval_hours
-		: DEFAULT_INTERVAL_HOURS;
-}
-
 /** A settings row as the RPC boundary reports it. */
 function toSettings(row: SelectSettings): UserStore.Settings {
-	return {
-		subject: row.subject,
-		refreshIntervalHours: readInterval(row),
-		lastRefreshedAt: row.last_refreshed_at,
-	};
+	return { subject: row.subject, lastRefreshedAt: row.last_refreshed_at };
 }
 
 /** A feed row and its unread count as the feed list renders them. */
 function toFeedSummary(row: SelectFeed, unreadCount: number): UserStore.FeedSummary {
 	return {
 		id: row.id,
+		feedId: row.feed_id,
 		feedUrl: row.feed_url,
 		siteUrl: row.site_url,
 		title: row.title,
 		description: row.description,
 		imageUrl: row.image_url,
-		lastFetchedAt: row.last_fetched_at,
-		lastStatus: row.last_status,
-		failureCount: row.failure_count,
+		velocity: row.velocity,
 		unreadCount,
 	};
 }
@@ -1146,6 +1631,7 @@ function toItem(row: TimelineRow): UserStore.Item {
 		author: row.author,
 		publishedAt: row.published_at,
 		readAt: row.read_at,
+		savedAt: row.saved_at,
 	};
 }
 
@@ -1169,23 +1655,98 @@ function normalizeFeedUrl(input: string): string | null {
 	return url.toString();
 }
 
-/**
- * One parsed entry as the row that stores it. Ids are TypeIDs so a post's identity says
- * what it identifies wherever it is read, and the projection, the digest and the date
- * fallback are the refresh path's own, so the first poll after this reads nothing as edited.
- */
-async function itemRow(feedId: string, entry: Feed.Item, now: number): Promise<InsertFeedItem> {
-	let displayable = displayableOf(entry);
+/** Whether a submitted value is one of the velocities the column's `CHECK` allows. */
+function isVelocity(value: string): value is Velocity {
+	return VELOCITIES.some((offered) => offered === value);
+}
 
-	return {
-		id: TypeID.fromUUID("item", generateUUID()).toString(),
-		feed_id: feedId,
-		guid: entry.guid,
-		...displayable,
-		published_at: publishedAt(entry, now),
-		content_hash: await digest(displayable),
-		read_at: null,
-	};
+/**
+ * A feed's share of the reader's budget: the whole of it divided by how many feeds they
+ * follow. One feed may fill it alone; a thousand feeds get a thousand posts each, and a
+ * quiet feed is never charged for a prolific one.
+ *
+ * @param followed - How many feeds the reader follows.
+ */
+function shareOf(followed: number): number {
+	return Math.max(1, Math.floor(READER_BUDGET / Math.max(1, followed)));
+}
+
+/**
+ * The greatest revision a page of items accounted for, which is where a cursor lands.
+ *
+ * @param incoming - The page as the feed answered it, in the order it decided them.
+ */
+function greatestRevision(incoming: readonly FeedStore.Item[]): number {
+	return incoming.reduce((highest, item) => Math.max(highest, item.revision), 0);
+}
+
+/** The columns one materialized post is written with, in the order the statement binds them. */
+const ITEM_COLUMNS = [
+	"id",
+	"feed_id",
+	"guid",
+	"title",
+	"url",
+	"summary",
+	"author",
+	"published_at",
+	"created_at",
+	"updated_at",
+] as const;
+
+/**
+ * The statement that writes a page of a feed's items as this reader's own copies.
+ *
+ * An upsert on the canonical id rather than an insert, which is what makes synchronization
+ * idempotent: a run that died before it wrote its cursor re-applies the same items on the
+ * retry and changes nothing. Three columns are left out of the update deliberately —
+ * `read_at`, so a publisher's correction does not resurrect a post the reader has already
+ * read; `id`, the key their copy is joined by; and `published_at`, the leading cursor
+ * column, whose movement would make a cursor already in flight skip posts mid-scroll.
+ * `saved_at` is left out for the same reason as `read_at`: it is the reader's answer, not
+ * the publisher's.
+ *
+ * @param subscriptionId - This reader's own handle for the feed the items came from.
+ * @param incoming - The items to write.
+ * @param now - Epoch milliseconds the copies are stamped with.
+ */
+function upsertItems(
+	subscriptionId: string,
+	incoming: readonly FeedStore.Item[],
+	now: number,
+): [string, unknown[]] {
+	let values: unknown[] = [];
+
+	for (let item of incoming) {
+		values.push(
+			item.id,
+			subscriptionId,
+			item.guid,
+			item.title,
+			item.url,
+			item.summary,
+			item.author,
+			item.publishedAt,
+			now,
+			now,
+		);
+	}
+
+	let row = `(${ITEM_COLUMNS.map(() => "?").join(", ")})`;
+	let columns = ITEM_COLUMNS.map((column) => `"${column}"`).join(", ");
+
+	let statement = [
+		`insert into "feed_items" (${columns})`,
+		`values ${incoming.map(() => row).join(", ")}`,
+		`on conflict ("id") do update set`,
+		`"title" = excluded."title",`,
+		`"url" = excluded."url",`,
+		`"summary" = excluded."summary",`,
+		`"author" = excluded."author",`,
+		`"updated_at" = excluded."updated_at"`,
+	].join(" ");
+
+	return [statement, values];
 }
 
 /**

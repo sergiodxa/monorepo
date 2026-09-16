@@ -1,9 +1,14 @@
 /**
- * Drives the reader's Durable Object by construction, against real SQLite and working
- * alarms, with MSW answering every feed it retrieves. The assertions that matter are the
- * ones a controller cannot make for itself: that the schedule is armed once and re-armed
- * on demand, that a refusal is reported rather than thrown, and that a timeline pages
- * forward and back through the cursors it minted.
+ * Drives the reader's Durable Object by construction, against real SQLite, a real feed
+ * object behind the `FEED` binding, a real KV namespace holding the heads and a real
+ * catalog behind `PLATFORM_DB` — the bindings are this repo's own mocks, so the feed a
+ * reader synchronizes from is the class that answers in production rather than a stand-in
+ * for it, and every head the reader compares against was published by that class.
+ *
+ * What is asserted here is the half of the split this object owns: that staleness is
+ * derived from two numbers rather than stored, that the cursor only ever lands on a
+ * revision this object wrote, that a timeline read reaches nothing at all, and that the
+ * two rules allowed to delete a post are the reader's own.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,72 +16,217 @@
 
 import type { DurableObjectStateMock } from "@sdxc/cloudflare-mocks";
 
-import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
+import {
+	createD1Database,
+	createDurableObjectNamespace,
+	createDurableObjectState,
+	createKVNamespace,
+} from "@sdxc/cloudflare-mocks";
 import { env } from "cloudflare:workers";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { UserStore } from "./user-do";
+import type { FeedStore } from "~/database/feed-do";
+import type { Velocity } from "~/database/schema";
+import type { UserStore } from "~/database/user-do";
 
-import { UserDO } from "./user-do";
+import catalogSql from "~/database/catalog-migrations/0001-feeds.sql?raw";
+import { FeedDO } from "~/database/feed-do";
+import { headKey } from "~/database/feed-head";
+import { READER_BUDGET, SAVED_LIMIT } from "~/database/schema";
+import { UserDO } from "~/database/user-do";
 
 /**
- * The refresh run is driven from here rather than exercised, so the alarm's own
- * guarantees — that it resolves however the run went, and re-arms either way — are what
- * these assertions read. Everything else the module exports stays real, since the row a
- * follow writes is built out of it.
+ * The bindings the modules under test read off `cloudflare:workers`. The stub the test
+ * project installs answers every binding with a placeholder string, which is enough for a
+ * module that never reaches one and nothing like enough here: the reader reads heads out
+ * of KV, names feed objects through `FEED` and exchanges a URL for an id through D1.
+ *
+ * Held behind a hoisted box so each test gets its own namespaces while the `env` every
+ * module already captured stays the same object.
  */
-let refreshDueFeeds = vi.hoisted(() => vi.fn());
-vi.mock("~/database/refresh", async (importOriginal) => ({
-	...(await importOriginal<typeof import("~/database/refresh")>()),
-	refreshDueFeeds,
-}));
+let bindings = vi.hoisted(() => ({ current: {} as Record<string, unknown> }));
 
+vi.mock("cloudflare:workers", async (importOriginal) => {
+	let original = await importOriginal<typeof import("cloudflare:workers")>();
+
+	return {
+		...original,
+		env: new Proxy(
+			{},
+			{
+				get(_target, property: string) {
+					return bindings.current[property] ?? `test-${property}`;
+				},
+			},
+		),
+	};
+});
+
+/**
+ * The reader's budget, as a value a test can narrow.
+ *
+ * The real figure is a million posts, and materializing a million rows would test the
+ * number rather than the rule. Every test that narrows it says what it is standing in
+ * for, and the rule under test — reclaim only while over budget, only from feeds over
+ * their share, and only what the reader has read — is the same rule at either figure.
+ */
+let budget = vi.hoisted(() => ({ posts: 1_000_000 }));
+
+vi.mock("~/database/schema", async (importOriginal) => {
+	let original = await importOriginal<typeof import("~/database/schema")>();
+
+	return {
+		...original,
+		get READER_BUDGET() {
+			return budget.posts;
+		},
+	};
+});
+
+const SUBJECT = "sub-1";
 const FEED_URL = "https://example.com/feed.xml";
-const SITE_URL = "https://example.com/";
-const HOUR_MS = 60 * 60 * 1000;
 
-/** One entry of the RSS document the origin serves. */
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
+
+/** One entry of the RSS document an origin serves. */
 interface Entry {
 	guid: string;
 	title: string;
 	published: string;
-	/**
-	 * A `content:encoded` body. A feed publishing both is what leaves `description` the
-	 * summary it was written to be, which is the post text a search looks through.
-	 */
-	content?: string;
 }
 
-/** Five posts a day apart, newest last, so ordering assertions have something to sort. */
+/** Three posts a day apart, newest last, which is the document most tests start from. */
 const ENTRIES: Entry[] = [
 	{ guid: "a", title: "First", published: "Mon, 01 Sep 2025 10:00:00 GMT" },
 	{ guid: "b", title: "Second", published: "Tue, 02 Sep 2025 10:00:00 GMT" },
 	{ guid: "c", title: "Third", published: "Wed, 03 Sep 2025 10:00:00 GMT" },
-	{ guid: "d", title: "Fourth", published: "Thu, 04 Sep 2025 10:00:00 GMT" },
-	{ guid: "e", title: "Fifth", published: "Fri, 05 Sep 2025 10:00:00 GMT" },
 ];
 
-/** Builds the RSS 2.0 document the origin answers with. */
+/**
+ * An entry published a given while ago, for the rules measured from `published_at`.
+ *
+ * @param guid - What identifies the entry within its feed.
+ * @param title - What a timeline row would read.
+ * @param agoMs - How long before now the world saw it.
+ */
+function entryAt(guid: string, title: string, agoMs: number): Entry {
+	return { guid, title, published: new Date(Date.now() - agoMs).toUTCString() };
+}
+
+/** Builds the RSS 2.0 document an origin answers with. */
 function rss(entries: Entry[], title = "Example"): string {
-	let items = entries
+	let body = entries
 		.map(
 			(entry) =>
 				`<item><guid isPermaLink="false">${entry.guid}</guid><title>${entry.title}</title>` +
 				`<link>https://example.com/${entry.guid}</link>` +
 				`<pubDate>${entry.published}</pubDate><description>About ${entry.title}</description>` +
-				(entry.content === undefined ? "" : `<content:encoded>${entry.content}</content:encoded>`) +
 				`</item>`,
 		)
 		.join("");
 
 	return (
 		`<?xml version="1.0" encoding="UTF-8"?>` +
-		`<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel>` +
+		`<rss version="2.0"><channel>` +
 		`<title>${title}</title><link>https://example.com</link>` +
-		`<description>An example feed</description>${items}</channel></rss>`
+		`<description>An example feed</description>${body}</channel></rss>`
 	);
+}
+
+/**
+ * The feed objects this run has built, one per canonical feed id, so the second reader of
+ * a feed reaches the object the first one created — which is the whole point of naming it
+ * after the feed.
+ */
+let feedObjects = new Map<string, Promise<FeedDO>>();
+
+/** Every call the reader made to a feed object, which is what "reaches nothing" reads off. */
+let feedCalls: { feedId: string; method: string; args: unknown[] }[] = [];
+
+/** Every statement the catalog was asked to run, for the read path that must run none. */
+let catalogQueries: string[] = [];
+
+/**
+ * Which page read of a run fails, counted across the run, so a test can stand a feed
+ * object dying between two pages of a synchronization. Zero fails none.
+ */
+let pageFault = { reads: 0, failOn: 0 };
+
+/** The feed object one id names, built on first use the way the platform builds one. */
+async function feedObject(feedId: string): Promise<FeedDO> {
+	let existing = feedObjects.get(feedId);
+	if (existing !== undefined) return await existing;
+
+	let built = (async () => {
+		let state = createDurableObjectState({ name: feedId });
+		let feed = new FeedDO(state, env);
+
+		// The runtime holds every request behind the constructor's gate; a test that calls
+		// methods directly takes its own turn at it to stand where a request would.
+		await state.blockConcurrencyWhile(async () => undefined);
+
+		return feed;
+	})();
+
+	feedObjects.set(feedId, built);
+
+	return await built;
+}
+
+/**
+ * The object the `FEED` binding hands back, which records what was asked of it and then
+ * asks the real feed object. The behaviour under it is the shipped class; what is added
+ * is the log, since "no feed object was paged" is not a fact a real stub reports.
+ */
+function feedStub(feedId: string) {
+	return {
+		async subscribe(userId: string, feedUrl: string): Promise<FeedStore.SubscribeResult> {
+			feedCalls.push({ feedId, method: "subscribe", args: [userId, feedUrl] });
+			return await (await feedObject(feedId)).subscribe(userId, feedUrl);
+		},
+
+		async unsubscribe(userId: string): Promise<FeedStore.UnsubscribeResult> {
+			feedCalls.push({ feedId, method: "unsubscribe", args: [userId] });
+			return await (await feedObject(feedId)).unsubscribe(userId);
+		},
+
+		async refresh(reason: FeedStore.RefreshReason): Promise<FeedStore.RefreshResult> {
+			feedCalls.push({ feedId, method: "refresh", args: [reason] });
+			return await (await feedObject(feedId)).refresh(reason);
+		},
+
+		async getHead(): Promise<number> {
+			feedCalls.push({ feedId, method: "getHead", args: [] });
+			return await (await feedObject(feedId)).getHead();
+		},
+
+		async getItemsAfter(cursor: number, limit?: number): Promise<FeedStore.ItemsPage> {
+			feedCalls.push({ feedId, method: "getItemsAfter", args: [cursor, limit] });
+
+			pageFault.reads += 1;
+			if (pageFault.failOn === pageFault.reads) {
+				throw new Error("the feed object died between two pages");
+			}
+
+			return await (await feedObject(feedId)).getItemsAfter(cursor, limit);
+		},
+	};
+}
+
+/** The catalog, wrapped so a test can say the read path ran no statement against it. */
+function countingCatalog(catalog: D1Database): D1Database {
+	return new Proxy(catalog, {
+		get(target, property) {
+			if (property === "prepare" || property === "exec" || property === "batch") {
+				catalogQueries.push(String(property));
+			}
+
+			return Reflect.get(target, property) as unknown;
+		},
+	});
 }
 
 let server = setupServer();
@@ -85,21 +235,27 @@ beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-beforeEach(() => {
-	refreshDueFeeds.mockReset();
-	refreshDueFeeds.mockResolvedValue({ attempted: 0, remaining: 0 });
+beforeEach(async () => {
+	feedObjects.clear();
+	feedCalls.length = 0;
+	catalogQueries.length = 0;
+	pageFault = { reads: 0, failOn: 0 };
+	budget.posts = READER_BUDGET;
+
+	let catalog = createD1Database();
+	await catalog.exec(catalogSql);
+
+	bindings.current = {
+		KV: createKVNamespace(),
+		PLATFORM_DB: countingCatalog(catalog),
+		FEED: createDurableObjectNamespace<FeedDO>((feedId) => feedStub(feedId)),
+	};
+
 	server.use(http.get(FEED_URL, () => HttpResponse.xml(rss(ENTRIES))));
 });
 
-/** The reader every test builds its object as, unless it names another. */
-const SUBJECT = "sub-1";
-
-/**
- * Builds a reader's object and waits out the boot. The runtime holds requests behind the
- * constructor's `blockConcurrencyWhile`; a test calls methods directly, so it takes its
- * own turn at the same gate to stand where a request would.
- */
-async function createUser(
+/** Builds a reader's object and waits out the boot, the way a first request would. */
+async function createReader(
 	subject = SUBJECT,
 ): Promise<{ state: DurableObjectStateMock; user: UserDO }> {
 	// Named the way `getByName` names a real object, because the object provisions its own
@@ -107,32 +263,17 @@ async function createUser(
 	let state = createDurableObjectState({ name: subject });
 	let user = new UserDO(state, env);
 	await state.blockConcurrencyWhile(async () => undefined);
+
 	return { state, user };
 }
 
-/** Builds a signed-in reader following the example feed, which is where most tests start. */
-async function createReaderWithFeed() {
-	let { state, user } = await createUser();
-	await user.ensureUser(SUBJECT);
-
-	let followed = await user.followFeed(FEED_URL);
-	if (!followed.ok) throw new Error(`following failed: ${followed.reason}`);
-
-	return { state, user, feed: followed.feed };
-}
-
-/**
- * Follows another origin, so a test has more than one subscription to sweep, export or
- * page through. The host names both the URL and the feed's title, so a page of feeds says
- * which one it holds.
- */
-async function followAnother(
+/** Serves a document at one origin and follows it, which is where most tests start. */
+async function follow(
 	user: UserDO,
-	host: string,
+	url = FEED_URL,
 	entries: Entry[] = ENTRIES,
 ): Promise<UserStore.FeedSummary> {
-	let url = `https://${host}/feed.xml`;
-	server.use(http.get(url, () => HttpResponse.xml(rss(entries, host))));
+	server.use(http.get(url, () => HttpResponse.xml(rss(entries, url))));
 
 	let followed = await user.followFeed(url);
 	if (!followed.ok) throw new Error(`following ${url} failed: ${followed.reason}`);
@@ -140,1117 +281,983 @@ async function followAnother(
 	return followed.feed;
 }
 
-/** The titles of a page, which is what ordering and read-state assertions compare. */
+/**
+ * Publishes a new document at one origin and polls the feed object for it, which is what
+ * moves that feed's head and gives the readers of it something above their cursor.
+ *
+ * Called on the object rather than through the binding, since what a publisher does is
+ * not something the reader under test asked for.
+ */
+async function publish(feed: UserStore.FeedSummary, entries: Entry[]): Promise<void> {
+	server.use(http.get(feed.feedUrl, () => HttpResponse.xml(rss(entries, feed.feedUrl))));
+
+	let refreshed = await (await feedObject(feed.feedId)).refresh("manual");
+	if (!refreshed.ok) throw new Error(`publishing to ${feed.feedUrl} failed: ${refreshed.status}`);
+}
+
+/** One subscription row, written straight into storage for a test that follows nothing. */
+function seedFeed(
+	state: DurableObjectStateMock,
+	seed: {
+		id: string;
+		feedId?: string;
+		velocity?: Velocity;
+		cursor?: number;
+		unfollowedAt?: number | null;
+	},
+): string {
+	state.storage.sql.exec(
+		`INSERT INTO feeds
+			(id, feed_id, feed_url, site_url, title, description, language, image_url,
+			 cursor, velocity, unfollowed_at, created_at, updated_at)
+		 VALUES (?, ?, ?, NULL, ?, NULL, NULL, NULL, ?, ?, ?, 0, 0)`,
+		seed.id,
+		seed.feedId ?? `feed_${seed.id}`,
+		`https://${seed.id}.example.com/feed.xml`,
+		seed.id,
+		seed.cursor ?? 0,
+		seed.velocity ?? "evergreen",
+		seed.unfollowedAt ?? null,
+	);
+
+	return seed.id;
+}
+
+/** Posts of one subscription, written straight into storage. */
+function seedItems(
+	state: DurableObjectStateMock,
+	subscriptionId: string,
+	posts: readonly { id: string; publishedAt: number; readAt?: number; savedAt?: number }[],
+): void {
+	for (let post of posts) {
+		state.storage.sql.exec(
+			`INSERT INTO feed_items
+				(id, feed_id, guid, title, url, summary, author, published_at, read_at, saved_at,
+				 created_at, updated_at)
+			 VALUES (?, ?, ?, ?, NULL, NULL, NULL, ?, ?, ?, 0, 0)`,
+			post.id,
+			subscriptionId,
+			post.id,
+			post.id,
+			post.publishedAt,
+			post.readAt ?? null,
+			post.savedAt ?? null,
+		);
+	}
+}
+
+/** The ids of what one subscription still holds, oldest first. */
+function storedItems(state: DurableObjectStateMock, subscriptionId?: string): string[] {
+	let rows =
+		subscriptionId === undefined
+			? state.storage.sql
+					.exec<{ id: string }>("SELECT id FROM feed_items ORDER BY published_at, id")
+					.toArray()
+			: state.storage.sql
+					.exec<{ id: string }>(
+						"SELECT id FROM feed_items WHERE feed_id = ? ORDER BY published_at, id",
+						subscriptionId,
+					)
+					.toArray();
+
+	return rows.map((row) => row.id);
+}
+
+/** What one subscription has ruled on, read straight off the row. */
+function storedCursor(state: DurableObjectStateMock, subscriptionId: string): number {
+	let [row] = state.storage.sql
+		.exec("SELECT cursor FROM feeds WHERE id = ?", subscriptionId)
+		.toArray();
+
+	return Number(row?.["cursor"]);
+}
+
+/** The titles of a page, which is what ordering assertions compare. */
 function titles(result: UserStore.TimelineResult): string[] {
 	if (!result.ok) throw new Error(`expected a page, got ${result.reason}`);
 	return result.items.map((item) => item.title);
 }
 
-/** The cursors of a page, for walking it forward and back. */
-function cursors(result: UserStore.TimelineResult): { next: string | null; prev: string | null } {
-	if (!result.ok) throw new Error(`expected a page, got ${result.reason}`);
-	return result.cursors;
+/** Every call the reader made to a feed object, as `feedId:method`. */
+function calls(method?: string): string[] {
+	return feedCalls
+		.filter((call) => method === undefined || call.method === method)
+		.map((call) => `${call.feedId}:${call.method}`);
 }
 
-/**
- * Marks the newest `count` posts read, which is what gives the read filter something to
- * answer with and the unread filter something to have lost.
- */
-async function readNewest(user: UserDO, count: number): Promise<void> {
-	let page = await user.readingQueue({ limit: count });
-	if (!page.ok) throw new Error(`expected a page, got ${page.reason}`);
+describe("what a new subscription starts with", () => {
+	/**
+	 * A feed numbers its entries in the order it discovered them, which is the order the
+	 * document listed them in, so whether the newest page carries the highest revisions or
+	 * the lowest is a decision the publisher made rather than one this app can rely on.
+	 * Starting at the head is what makes a subscription mean one thing either way.
+	 */
+	test("starts current whichever end of its document a publisher lists first", async () => {
+		let newest = [
+			entryAt("n-1", "Newest", HOUR_MS),
+			entryAt("n-2", "Middle", DAY_MS),
+			entryAt("n-3", "Oldest", 7 * DAY_MS),
+		];
 
-	for (let item of page.items) await user.markRead(item.id);
-}
+		let first = await createReader("newest-first");
+		let feed = await follow(first.user, FEED_URL, newest);
 
-describe("ensureUser", () => {
-	test("creates the reader's row on a first sign-in", async () => {
-		let { user } = await createUser();
-
-		expect(await user.getSettings()).toBeNull();
-
-		expect(await user.ensureUser("sub-1")).toEqual({
-			subject: "sub-1",
-			refreshIntervalHours: 1,
-			lastRefreshedAt: null,
-		});
-
-		expect(await user.getSettings()).toEqual({
-			subject: "sub-1",
-			refreshIntervalHours: 1,
-			lastRefreshedAt: null,
-		});
-	});
-
-	test("arms the refresh schedule for the reader's interval", async () => {
-		let { state, user } = await createUser();
-		await user.ensureUser("sub-1");
-
-		let scheduled = await state.storage.getAlarm();
-
-		expect(scheduled).not.toBeNull();
-		expect(scheduled).toBeGreaterThan(Date.now() + HOUR_MS - 5_000);
-		expect(scheduled).toBeLessThanOrEqual(Date.now() + HOUR_MS);
-	});
-
-	test("leaves an armed alarm where it is, so an active reader still refreshes", async () => {
-		let { state, user } = await createUser();
-		await user.ensureUser("sub-1");
-
-		let first = await state.storage.getAlarm();
-		await user.ensureUser("sub-1");
-
-		expect(await state.storage.getAlarm()).toBe(first);
-	});
-});
-
-/**
- * A reader is created by whichever call reached their object first, since there is no
- * sign-up step, and a session outlives a deploy — so an object can hold the feeds somebody
- * follows while no sign-in has ever written their settings row.
- */
-describe("an object no sign-in has provisioned", () => {
-	test("follows a feed and reports the retrieval under the subject it was named with", async () => {
-		let { user } = await createUser("sub-unprovisioned");
-
-		let followed = await user.followFeed(FEED_URL);
-		expect(followed.ok).toBe(true);
-
-		expect(await user.getSettings()).toMatchObject({
-			subject: "sub-unprovisioned",
-			refreshIntervalHours: 1,
-		});
-	});
-
-	test("arms the schedule on the follow, so the subscription is actually swept", async () => {
-		let { state, user } = await createUser("sub-unprovisioned");
-
-		expect(await state.storage.getAlarm()).toBeNull();
-
-		await user.followFeed(FEED_URL);
-
-		expect(await state.storage.getAlarm()).toBeGreaterThan(Date.now());
-	});
-
-	test("saves a cadence instead of failing on the row nothing wrote", async () => {
-		let { user } = await createUser("sub-unprovisioned");
-
-		expect(await user.getSettings()).toBeNull();
-
-		expect(await user.setRefreshInterval(6)).toEqual({
-			ok: true,
-			settings: { subject: "sub-unprovisioned", refreshIntervalHours: 6, lastRefreshedAt: null },
-		});
-	});
-
-	test("raises where it was reached when the object carries no name to write", async () => {
-		let state = createDurableObjectState();
-		let user = new UserDO(state, env);
-		await state.blockConcurrencyWhile(async () => undefined);
-
-		// An id built from a raw string or minted unique carries no name, and the rows are
-		// keyed on the reader's subject, so there is nothing to provision the row as.
-		await expect(user.setRefreshInterval(6)).rejects.toThrow("must be addressed by name");
-	});
-});
-
-describe("setRefreshInterval", () => {
-	test("reports a cadence the schema would refuse instead of throwing", async () => {
-		let { user } = await createUser();
-		await user.ensureUser("sub-1");
-
-		expect(await user.setRefreshInterval(2)).toEqual({ ok: false, reason: "invalid-interval" });
-		expect((await user.getSettings())?.refreshIntervalHours).toBe(1);
-	});
-
-	test("stores an offered cadence and re-arms the alarm for it", async () => {
-		let { state, user } = await createUser();
-		await user.ensureUser("sub-1");
-		await user.setRefreshInterval(24);
-
-		let scheduled = await state.storage.getAlarm();
-		expect(scheduled).toBeGreaterThan(Date.now() + 24 * HOUR_MS - 5_000);
-
-		let result = await user.setRefreshInterval(1);
-
-		expect(result).toEqual({
-			ok: true,
-			settings: { subject: "sub-1", refreshIntervalHours: 1, lastRefreshedAt: null },
-		});
-
-		// Moving from daily to hourly waits an hour, rather than out the rest of the day.
-		expect(await state.storage.getAlarm()).toBeLessThanOrEqual(Date.now() + HOUR_MS);
-	});
-});
-
-describe("followFeed", () => {
-	test("stores the feed and every post it carried", async () => {
-		let { user } = await createUser();
-		await user.ensureUser("sub-1");
-
-		let result = await user.followFeed(FEED_URL);
-
-		expect(result.ok).toBe(true);
-		if (!result.ok) return;
-
-		expect(result.items).toBe(5);
-		expect(result.feed).toMatchObject({
-			feedUrl: FEED_URL,
-			siteUrl: SITE_URL,
-			title: "Example",
-			description: "An example feed",
-			lastStatus: "ok",
-			failureCount: 0,
-		});
-		expect(result.feed.id.startsWith("feed_")).toBe(true);
-	});
-
-	test("records the retrieval, so a new reader is not told their feeds were never checked", async () => {
-		let { user } = await createReaderWithFeed();
-
-		// Following retrieves the feed and stores what it carried, which is exactly what a
-		// scheduled sweep does; the settings page would otherwise report none until one ran.
-		expect((await user.getSettings())?.lastRefreshedAt).toBeGreaterThan(0);
-	});
-
-	test("stores a post under an id of the shape every path mints", async () => {
-		let { user } = await createReaderWithFeed();
-
-		let page = await user.readingQueue();
-		expect(page.ok).toBe(true);
-		if (!page.ok) return;
-
-		expect(page.items.every((item) => /^item_[\da-z]{26}$/.test(item.id))).toBe(true);
-	});
-
-	test("counts the unread posts beside each feed", async () => {
-		let { user, feed } = await createReaderWithFeed();
-
-		expect(await user.listFeeds()).toEqual([{ ...feed, unreadCount: 5 }]);
-		expect(await user.getFeed(feed.id)).toEqual({ ...feed, unreadCount: 5 });
-		expect(await user.getFeed("feed_missing")).toBeNull();
-	});
-
-	test("names the existing subscription when the same URL is followed twice", async () => {
-		let { user, feed } = await createReaderWithFeed();
-
-		expect(await user.followFeed(FEED_URL)).toEqual({
-			ok: false,
-			reason: "already-following",
-			feedId: feed.id,
-		});
-
-		expect(await user.listFeeds()).toHaveLength(1);
-	});
-
-	test("refuses something that is not an HTTP URL", async () => {
-		let { user } = await createUser();
-		await user.ensureUser("sub-1");
-
-		for (let input of ["", "   ", "mailto:someone@example.com", "http://"]) {
-			expect(await user.followFeed(input)).toEqual({
-				ok: false,
-				reason: "invalid-url",
-				feedId: null,
-			});
-		}
-	});
-
-	test("tells a page advertising no feed apart from an origin that refused", async () => {
-		let { user } = await createUser();
-		await user.ensureUser("sub-1");
-
-		server.use(
-			http.get("https://plain.example/", () =>
-				HttpResponse.html("<!doctype html><title>Nothing here</title>"),
-			),
-			http.get("https://broken.example/", () => new HttpResponse(null, { status: 503 })),
+		let second = await createReader("oldest-first");
+		let mirrored = await follow(
+			second.user,
+			"https://mirror.example.com/feed.xml",
+			[...newest].reverse(),
 		);
 
-		expect(await user.followFeed("plain.example")).toEqual({
-			ok: false,
-			reason: "not-found",
-			feedId: null,
-		});
+		expect(storedCursor(first.state, feed.id)).toBe(3);
+		expect(storedCursor(second.state, mirrored.id)).toBe(3);
 
-		expect(await user.followFeed("broken.example")).toEqual({
-			ok: false,
-			reason: "unreachable",
-			feedId: null,
-		});
+		// Both readers hold the same three posts, and neither is owed anything.
+		expect(storedItems(first.state, feed.id)).toHaveLength(3);
+		expect(storedItems(second.state, mirrored.id)).toHaveLength(3);
+		expect((await first.user.openReader()).freshness).toEqual({ stale: [], count: 0 });
+		expect((await second.user.openReader()).freshness).toEqual({ stale: [], count: 0 });
+	});
+
+	test("takes what the feed publishes next, having taken none of its archive", async () => {
+		let { user, state } = await createReader();
+		let feed = await follow(user, FEED_URL, [entryAt("a-1", "First", DAY_MS)]);
+
+		await publish(feed, [entryAt("a-2", "Second", HOUR_MS), entryAt("a-1", "First", DAY_MS)]);
+
+		expect((await user.openReader()).freshness).toEqual({ stale: [feed.id], count: 1 });
+
+		await user.synchronize();
+
+		expect(storedItems(state, feed.id)).toHaveLength(2);
 	});
 });
 
-describe("checkFeedNow", () => {
-	/** A sixth post, as an origin that published while the reader was reading serves it. */
-	const PUBLISHED: Entry = {
-		guid: "f",
-		title: "Sixth",
-		published: "Sat, 06 Sep 2025 10:00:00 GMT",
-	};
+describe("staleness, derived from two numbers rather than stored", () => {
+	test("reads a cursor below the published head as stale, and one level with it as current", async () => {
+		let { user } = await createReader();
+		let feed = await follow(user);
 
-	/** Serves the feed with {@link PUBLISHED} at the end of it. */
-	function publishOne() {
-		server.use(http.get(FEED_URL, () => HttpResponse.xml(rss([...ENTRIES, PUBLISHED]))));
-	}
+		// Following leaves the cursor on the greatest revision it stored, which is the head
+		// the object published, so the reader is current without anything being marked.
+		expect(await user.openReader()).toMatchObject({ freshness: { stale: [], count: 0 } });
 
-	test("stores what the origin published since the last poll", async () => {
-		let { user, feed } = await createReaderWithFeed();
-		publishOne();
+		await publish(feed, [...ENTRIES, entryAt("d", "Fourth", HOUR_MS)]);
 
-		expect(await user.checkFeedNow(feed.id)).toEqual({ ok: true, inserted: 1, updated: 0 });
+		let opened = await user.openReader();
+		expect(opened.freshness).toEqual({ stale: [feed.id], count: 1 });
 
-		expect(titles(await user.readingQueue())).toEqual([
-			"Sixth",
-			"Fifth",
-			"Fourth",
-			"Third",
-			"Second",
-			"First",
-		]);
+		// What the check reports is what the controller hands back for synchronizing, so the
+		// two name a subscription the same way.
+		await user.synchronize(opened.freshness.stale);
+
+		expect((await user.openReader()).freshness).toEqual({ stale: [], count: 0 });
 	});
 
-	test("reports a document that carried nothing the reader had not seen", async () => {
-		let { user, feed } = await createReaderWithFeed();
+	test("leaves a reader current when the published head lags the feed, and finds the work on the next check", async () => {
+		let { user, state } = await createReader();
+		let feed = await follow(user);
 
-		expect(await user.checkFeedNow(feed.id)).toEqual({ ok: true, inserted: 0, updated: 0 });
+		await publish(feed, [...ENTRIES, entryAt("d", "Fourth", HOUR_MS)]);
+
+		// KV is eventually consistent, so a reader can read a head the feed has already moved
+		// past. Rolling the key back by hand is that read, and the items are all still in the
+		// feed's object waiting for the check that does see it.
+		await env.KV.put(headKey(feed.feedId), "3");
+
+		expect((await user.openReader()).freshness).toEqual({ stale: [], count: 0 });
+		expect(storedItems(state, feed.id)).toHaveLength(3);
+
+		await env.KV.put(headKey(feed.feedId), "4");
+
+		expect((await user.openReader()).freshness).toEqual({ stale: [feed.id], count: 1 });
+
+		await user.synchronize();
+
+		expect(storedItems(state, feed.id)).toHaveLength(4);
 	});
 
-	test("reports an origin answering 304 as nothing new", async () => {
-		let { user, feed } = await createReaderWithFeed();
-		server.use(http.get(FEED_URL, () => new HttpResponse(null, { status: 304 })));
+	test("leaves a reader current when the feed has published no head at all", async () => {
+		let { user, state } = await createReader();
+		let feed = await follow(user);
 
-		expect(await user.checkFeedNow(feed.id)).toEqual({ ok: true, inserted: 0, updated: 0 });
+		await publish(feed, [...ENTRIES, entryAt("d", "Fourth", HOUR_MS)]);
+		await env.KV.delete(headKey(feed.feedId));
+
+		// An absent key means "no reason to go and look". Reading it as stale would turn an
+		// empty or cold namespace into a full synchronization for every reader on every
+		// request, which is a stampede set off by the failure of a hint.
+		expect((await user.openReader()).freshness).toEqual({ stale: [], count: 0 });
+
+		feedCalls.length = 0;
+		await user.synchronize();
+
+		expect(calls("getItemsAfter")).toEqual([]);
+		expect(storedItems(state, feed.id)).toHaveLength(3);
 	});
 
-	test("checks a feed inside its backoff window, which is the one a reader asks about", async () => {
-		let { user, feed } = await createReaderWithFeed();
+	test("leaves a reader on a cold namespace current, where every cursor is still zero", async () => {
+		let { user, state } = await createReader();
 
-		server.use(http.get(FEED_URL, () => new HttpResponse(null, { status: 503 })));
-		expect(await user.checkFeedNow(feed.id)).toEqual({ ok: false, reason: "check-failed" });
-		expect((await user.getFeed(feed.id))?.failureCount).toBe(1);
+		seedFeed(state, { id: "feed_cold", cursor: 0 });
 
-		// The failure above put the next attempt minutes out, and asking now reads past it.
-		publishOne();
-
-		expect(await user.checkFeedNow(feed.id)).toEqual({ ok: true, inserted: 1, updated: 0 });
-		expect((await user.getFeed(feed.id))?.failureCount).toBe(0);
+		expect((await user.openReader()).freshness).toEqual({ stale: [], count: 0 });
 	});
 
-	test("records the check, so the reader is told when their posts were last brought up", async () => {
-		let { user, feed } = await createReaderWithFeed();
-		publishOne();
+	test("neither reads a head for an unfollowed feed nor synchronizes it", async () => {
+		let { user } = await createReader();
+		let kept = await follow(user);
+		let left = await follow(user, "https://other.example.com/feed.xml");
 
-		let before = (await user.getSettings())?.lastRefreshedAt ?? 0;
+		let page = await user.feedTimeline(left.id);
+		if (!page.ok) throw new Error(page.reason);
 
-		await user.checkFeedNow(feed.id);
+		let saved = page.items[0];
+		if (saved === undefined) throw new Error("expected a post to keep");
 
-		expect((await user.getSettings())?.lastRefreshedAt).toBeGreaterThanOrEqual(before);
-		expect((await user.getSettings())?.lastRefreshedAt).toBeGreaterThan(0);
-	});
+		// A feed with a saved post in it keeps its row, marked as no longer followed, which
+		// is the row that must not be read from KV or synchronized again.
+		expect(await user.saveItem(saved.id)).toEqual({ ok: true, saved: true });
+		expect(await user.unfollowFeed(left.id)).toBe(true);
 
-	test("records a 304 too, since the stored copy is the current one", async () => {
-		let { user, feed } = await createReaderWithFeed();
-		server.use(http.get(FEED_URL, () => new HttpResponse(null, { status: 304 })));
+		await publish(kept, [...ENTRIES, entryAt("d", "Fourth", HOUR_MS)]);
+		await env.KV.put(headKey(left.feedId), "99");
 
-		await user.checkFeedNow(feed.id);
+		let reads = vi.spyOn(env.KV, "get");
+		feedCalls.length = 0;
 
-		expect((await user.getSettings())?.lastRefreshedAt).toBeGreaterThan(0);
-	});
+		let opened = await user.openReader();
 
-	test("records nothing for a check that never reached the origin", async () => {
-		let { user, feed } = await createReaderWithFeed();
+		expect(opened.freshness).toEqual({ stale: [kept.id], count: 1 });
+		expect(reads.mock.calls.flat().flat()).not.toContain(headKey(left.feedId));
 
-		server.use(http.get(FEED_URL, () => HttpResponse.error()));
+		await user.synchronize();
 
-		// The follow that set this reader up stamped, so this is a number rather than null
-		// and a stamp written again would move it.
-		let before = (await user.getSettings())?.lastRefreshedAt;
-		expect(before).toBeGreaterThan(0);
-
-		expect(await user.checkFeedNow(feed.id)).toEqual({ ok: false, reason: "check-failed" });
-		expect((await user.getSettings())?.lastRefreshedAt).toBe(before);
-	});
-
-	test("reports a feed this reader does not follow rather than throwing", async () => {
-		let { user } = await createReaderWithFeed();
-
-		await expect(user.checkFeedNow("feed_missing")).resolves.toEqual({
-			ok: false,
-			reason: "not-following",
-		});
-	});
-
-	test("reports a failing check without taking the call down with it", async () => {
-		let { user, feed } = await createReaderWithFeed();
-		server.use(http.get(FEED_URL, () => HttpResponse.error()));
-
-		await expect(user.checkFeedNow(feed.id)).resolves.toEqual({
-			ok: false,
-			reason: "check-failed",
-		});
-
-		expect(titles(await user.readingQueue())).toHaveLength(5);
+		expect(calls("getItemsAfter")).toEqual([`${kept.feedId}:getItemsAfter`]);
 	});
 });
 
-describe("readingQueue", () => {
-	test("answers the unread posts newest first", async () => {
-		let { user } = await createReaderWithFeed();
+describe("opening the reader", () => {
+	test("pages a timeline without reaching any feed object", async () => {
+		let { user } = await createReader();
+		let feed = await follow(user);
 
-		let page = await user.readingQueue();
+		await publish(feed, [...ENTRIES, entryAt("d", "Fourth", HOUR_MS)]);
 
-		expect(titles(page)).toEqual(["Fifth", "Fourth", "Third", "Second", "First"]);
-		expect(cursors(page)).toEqual({ next: null, prev: null });
+		let namespace = bindings.current["FEED"];
+		if (!isNamespaceMock(namespace)) throw new Error("expected the FEED binding's log");
+
+		feedCalls.length = 0;
+		let resolved = namespace.resolutions.length;
+
+		await user.readingQueue({ readState: "all" });
+		await user.feedTimeline(feed.id);
+		await user.savedQueue();
+
+		// Paging a frame is not opening the reader: `lazy-frame` fetches enough pages that a
+		// round trip per page would be a cost with no reader-visible effect.
+		expect(feedCalls).toEqual([]);
+		expect(namespace.resolutions).toHaveLength(resolved);
 	});
 
-	test("labels a page with the feeds its posts came from", async () => {
-		let { user, feed } = await createReaderWithFeed();
+	test("answers with its page and the staleness beside it, and synchronizes nothing", async () => {
+		let { user, state } = await createReader();
+		let feed = await follow(user);
 
-		let page = await user.readingQueue({ limit: 2 });
+		await publish(feed, [entryAt("d", "Fourth", HOUR_MS), ...ENTRIES]);
 
-		expect(page.ok).toBe(true);
-		if (!page.ok) return;
+		feedCalls.length = 0;
 
-		expect(page.feeds).toEqual([{ id: feed.id, title: "Example", siteUrl: SITE_URL }]);
-		expect(page.items.every((item) => item.feedId === feed.id)).toBe(true);
+		let opened = await user.openReader({ readState: "all" });
+
+		expect(titles(opened.timeline)).toEqual(["Third", "Second", "First"]);
+		expect(opened.freshness).toEqual({ stale: [feed.id], count: 1 });
+
+		// A count, never a promise of fresher posts: the page was read out of local storage
+		// before the staleness beside it was known.
+		expect(calls("getItemsAfter")).toEqual([]);
+		expect(storedItems(state, feed.id)).toHaveLength(3);
 	});
 
-	test("pages forward and back through the cursors it minted", async () => {
-		let { user } = await createReaderWithFeed();
+	test("reads two hundred and fifty subscriptions' heads in three bulk reads rather than two hundred and fifty gets", async () => {
+		let { user, state } = await createReader();
 
-		let first = await user.readingQueue({ limit: 2 });
-		expect(titles(first)).toEqual(["Fifth", "Fourth"]);
-		expect(cursors(first).prev).toBeNull();
-
-		let second = await user.readingQueue({ limit: 2, cursor: cursors(first).next });
-		expect(titles(second)).toEqual(["Third", "Second"]);
-
-		let third = await user.readingQueue({ limit: 2, cursor: cursors(second).next });
-		expect(titles(third)).toEqual(["First"]);
-		expect(cursors(third).next).toBeNull();
-
-		let back = await user.readingQueue({ limit: 2, cursor: cursors(second).prev });
-		expect(titles(back)).toEqual(["Fifth", "Fourth"]);
-	});
-
-	test("reports a cursor it cannot decode rather than answering the first page", async () => {
-		let { user } = await createReaderWithFeed();
-
-		expect(await user.readingQueue({ cursor: "not-a-cursor" })).toEqual({
-			ok: false,
-			reason: "bad-cursor",
-		});
-
-		expect(await user.feedTimeline("feed_missing", { cursor: "not-a-cursor" })).toEqual({
-			ok: false,
-			reason: "bad-cursor",
-		});
-	});
-
-	test("answers every post when the caller asks for all", async () => {
-		let { user } = await createReaderWithFeed();
-		await readNewest(user, 2);
-
-		expect(titles(await user.readingQueue({ readState: "all" }))).toEqual([
-			"Fifth",
-			"Fourth",
-			"Third",
-			"Second",
-			"First",
-		]);
-	});
-
-	test("answers the read posts when the caller asks for read", async () => {
-		let { user } = await createReaderWithFeed();
-		await readNewest(user, 2);
-
-		expect(titles(await user.readingQueue({ readState: "read" }))).toEqual(["Fifth", "Fourth"]);
-	});
-
-	test("answers the unread posts when the caller asks for unread, or for nothing", async () => {
-		let { user } = await createReaderWithFeed();
-		await readNewest(user, 2);
-
-		let named = titles(await user.readingQueue({ readState: "unread" }));
-
-		expect(named).toEqual(["Third", "Second", "First"]);
-
-		// The default is what keeps a view that offers no filter reading as it always has.
-		expect(titles(await user.readingQueue())).toEqual(named);
-	});
-
-	test("pages all forward and back through the cursors it minted", async () => {
-		let { user } = await createReaderWithFeed();
-		await readNewest(user, 2);
-
-		let first = await user.readingQueue({ readState: "all", limit: 2 });
-		expect(titles(first)).toEqual(["Fifth", "Fourth"]);
-		expect(cursors(first).prev).toBeNull();
-
-		let second = await user.readingQueue({
-			readState: "all",
-			limit: 2,
-			cursor: cursors(first).next,
-		});
-		expect(titles(second)).toEqual(["Third", "Second"]);
-
-		let third = await user.readingQueue({
-			readState: "all",
-			limit: 2,
-			cursor: cursors(second).next,
-		});
-		expect(titles(third)).toEqual(["First"]);
-		expect(cursors(third).next).toBeNull();
-
-		let back = await user.readingQueue({
-			readState: "all",
-			limit: 2,
-			cursor: cursors(second).prev,
-		});
-		expect(titles(back)).toEqual(["Fifth", "Fourth"]);
-	});
-
-	test("pages read forward and back through the cursors it minted", async () => {
-		let { user } = await createReaderWithFeed();
-		await readNewest(user, 3);
-
-		let first = await user.readingQueue({ readState: "read", limit: 2 });
-		expect(titles(first)).toEqual(["Fifth", "Fourth"]);
-		expect(cursors(first).prev).toBeNull();
-
-		let second = await user.readingQueue({
-			readState: "read",
-			limit: 2,
-			cursor: cursors(first).next,
-		});
-		expect(titles(second)).toEqual(["Third"]);
-		expect(cursors(second).next).toBeNull();
-
-		let back = await user.readingQueue({
-			readState: "read",
-			limit: 2,
-			cursor: cursors(second).prev,
-		});
-		expect(titles(back)).toEqual(["Fifth", "Fourth"]);
-	});
-
-	test("pages unread forward and back through the cursors it minted", async () => {
-		let { user } = await createReaderWithFeed();
-		await readNewest(user, 1);
-
-		let first = await user.readingQueue({ readState: "unread", limit: 2 });
-		expect(titles(first)).toEqual(["Fourth", "Third"]);
-
-		let second = await user.readingQueue({
-			readState: "unread",
-			limit: 2,
-			cursor: cursors(first).next,
-		});
-		expect(titles(second)).toEqual(["Second", "First"]);
-
-		let back = await user.readingQueue({
-			readState: "unread",
-			limit: 2,
-			cursor: cursors(second).prev,
-		});
-		expect(titles(back)).toEqual(["Fourth", "Third"]);
-	});
-
-	test("reports a cursor it cannot decode under every read state", async () => {
-		let { user } = await createReaderWithFeed();
-
-		for (let readState of ["all", "unread", "read"] as const) {
-			expect(await user.readingQueue({ readState, cursor: "not-a-cursor" }), readState).toEqual({
-				ok: false,
-				reason: "bad-cursor",
-			});
+		// Written straight into storage: what is under test is the shape of the read, and
+		// following two hundred and fifty origins would test the follow path instead.
+		for (let index = 0; index < 250; index += 1) {
+			seedFeed(state, { id: `feed_bulk_${index}`, cursor: 0 });
 		}
+
+		await env.KV.put(headKey("feed_feed_bulk_7"), "4");
+		await env.KV.put(headKey("feed_feed_bulk_180"), "9");
+
+		let reads = vi.spyOn(env.KV, "get");
+
+		let opened = await user.openReader();
+
+		expect(opened.freshness.count).toBe(2);
+		expect(reads).toHaveBeenCalledTimes(3);
+
+		let keys = reads.mock.calls.map(([argument]) => argument);
+
+		for (let batch of keys) {
+			expect(Array.isArray(batch)).toBe(true);
+			expect(batch.length).toBeLessThanOrEqual(100);
+		}
+
+		expect(keys.flat()).toHaveLength(250);
 	});
 
-	test("moves a post between the unread and read filters as the reader marks it", async () => {
-		let { user } = await createReaderWithFeed();
+	test("issues no catalog statement for a timeline, a frame, a freshness check or a mark-read", async () => {
+		let { user } = await createReader();
+		let feed = await follow(user);
 
-		let page = await user.readingQueue({ limit: 1 });
-		expect(page.ok).toBe(true);
-		if (!page.ok) return;
+		let page = await user.feedTimeline(feed.id);
+		if (!page.ok) throw new Error(page.reason);
+		let post = page.items[0];
+		if (post === undefined) throw new Error("expected a post");
 
-		let newest = page.items[0];
-		expect(newest).toBeDefined();
-		if (newest === undefined) return;
+		// The follow path is the one that exchanges a URL for an id, so the count starts
+		// after it: a subscription stores that id, and nothing that renders a page looks it
+		// up again.
+		catalogQueries.length = 0;
 
-		expect(titles(await user.readingQueue({ readState: "read" }))).toEqual([]);
+		await user.openReader();
+		await user.readingQueue({ readState: "all" });
+		await user.feedTimeline(feed.id);
+		await user.savedQueue();
+		await user.listFeeds();
+		await user.getFeed(feed.id);
+		await user.markRead(post.id);
+		await user.markFeedRead(feed.id);
+		await user.markAllRead();
 
-		expect(await user.markRead(newest.id)).toBe(true);
-
-		expect(titles(await user.readingQueue({ readState: "read" }))).toEqual(["Fifth"]);
-		expect(titles(await user.readingQueue({ readState: "unread" }))).not.toContain("Fifth");
-
-		// The count the two filters split is the one the all filter holds whole, whichever
-		// side each post is currently on.
-		expect(titles(await user.readingQueue({ readState: "all" }))).toHaveLength(5);
-
-		expect(await user.markRead(newest.id, false)).toBe(true);
-
-		expect(titles(await user.readingQueue({ readState: "read" }))).toEqual([]);
-		expect(titles(await user.readingQueue({ readState: "unread" }))).toContain("Fifth");
+		expect(catalogQueries).toEqual([]);
 	});
 });
 
-describe("markRead", () => {
-	test("takes a post out of the queue and leaves it in the feed's timeline", async () => {
-		let { user, feed } = await createReaderWithFeed();
+describe("synchronizing a stale feed", () => {
+	test("asks the feed only for the revisions above its cursor", async () => {
+		let { user } = await createReader();
+		let feed = await follow(user);
 
-		let page = await user.readingQueue({ limit: 1 });
-		expect(page.ok).toBe(true);
-		if (!page.ok) return;
+		await publish(feed, [...ENTRIES, entryAt("d", "Fourth", HOUR_MS), entryAt("e", "Fifth", 1000)]);
 
-		let newest = page.items[0];
-		expect(newest).toBeDefined();
-		if (newest === undefined) return;
+		feedCalls.length = 0;
+		await user.synchronize();
 
-		expect(await user.markRead(newest.id)).toBe(true);
+		let pages = feedCalls.filter((call) => call.method === "getItemsAfter");
 
-		expect(titles(await user.readingQueue())).toEqual(["Fourth", "Third", "Second", "First"]);
-		expect(titles(await user.feedTimeline(feed.id))).toEqual([
-			"Fifth",
-			"Fourth",
-			"Third",
-			"Second",
-			"First",
+		expect(pages).toHaveLength(1);
+		expect(pages[0]?.args[0]).toBe(3);
+	});
+
+	test("advances the cursor to the greatest revision it persisted, never to the published head", async () => {
+		let { user, state } = await createReader();
+		let feed = await follow(user);
+
+		await publish(feed, [...ENTRIES, entryAt("d", "Fourth", HOUR_MS), entryAt("e", "Fifth", 1000)]);
+
+		// A head the feed never reached, which is what an assignment of `cursor = kvHead`
+		// would swallow: every later check would read as current because the comparison it
+		// feeds would be satisfied by the number it was given.
+		await env.KV.put(headKey(feed.feedId), "99");
+
+		await user.synchronize();
+
+		expect(storedCursor(state, feed.id)).toBe(5);
+		expect(storedItems(state, feed.id)).toHaveLength(5);
+
+		// Still stale, because nothing here pretended to have ruled on 6 through 99.
+		expect((await user.openReader()).freshness).toEqual({ stale: [feed.id], count: 1 });
+	});
+
+	test("leaves the cursor on the last revision it wrote when a run dies, and writes nothing new on the retry", async () => {
+		let { user, state } = await createReader();
+
+		// A page carries two hundred items, so a run of more than one page is what it takes
+		// for a death between two of them to be a thing that can happen at all.
+		let many = Array.from({ length: 250 }, (_, index) =>
+			entryAt(`item-${index}`, `Post ${index}`, (250 - index) * 60 * 1000),
+		);
+
+		let feed = await follow(user, FEED_URL, many.slice(0, 1));
+		expect(storedCursor(state, feed.id)).toBe(1);
+
+		await publish(feed, many);
+
+		pageFault.failOn = 2;
+		await user.synchronize();
+
+		// Items first, then the cursor: what it points at is exactly what was written, and
+		// nothing above it was claimed on the strength of a page that never landed.
+		expect(storedItems(state, feed.id)).toHaveLength(201);
+		expect(storedCursor(state, feed.id)).toBe(201);
+
+		let readable = storedItems(state, feed.id)[0];
+		if (readable === undefined) throw new Error("expected a post to read");
+		await user.markRead(readable);
+
+		// A run that died between the write and the cursor leaves the cursor below work
+		// already done, which is the order's whole cost: the retry re-upserts rows it
+		// already wrote.
+		state.storage.sql.exec("UPDATE feeds SET cursor = 1 WHERE id = ?", feed.id);
+
+		pageFault.failOn = 0;
+		feedCalls.length = 0;
+		await user.synchronize();
+
+		// Each page is asked for above where the last one left the cursor, so the walk never
+		// re-reads what it has ruled on and never steps over what it has not.
+		expect(
+			feedCalls.filter((call) => call.method === "getItemsAfter").map((call) => call.args[0]),
+		).toEqual([1, 201]);
+
+		expect(storedItems(state, feed.id)).toHaveLength(250);
+		expect(storedCursor(state, feed.id)).toBe(250);
+
+		let [row] = state.storage.sql
+			.exec("SELECT read_at FROM feed_items WHERE id = ?", readable)
+			.toArray();
+
+		expect(row?.["read_at"]).not.toBeNull();
+	});
+
+	test("carries the feeds past one request's budget into the alarm, which finishes them", async () => {
+		let { user, state } = await createReader();
+
+		let feeds: UserStore.FeedSummary[] = [];
+		for (let index = 0; index < 10; index += 1) {
+			feeds.push(
+				await follow(user, `https://feed-${index}.example.com/feed.xml`, [
+					entryAt("a", "First", DAY_MS),
+				]),
+			);
+		}
+
+		for (let feed of feeds) {
+			await publish(feed, [entryAt("a", "First", DAY_MS), entryAt("b", "Second", HOUR_MS)]);
+		}
+
+		let run = await user.synchronize();
+
+		expect(run.synchronized).toBe(8);
+		expect(run.remaining).toBe(2);
+
+		let armed = await state.storage.getAlarm();
+		expect(armed).not.toBeNull();
+		expect(armed).toBeGreaterThan(Date.now());
+		expect(armed).toBeLessThanOrEqual(Date.now() + 60 * 1000);
+
+		// The platform clears an alarm as it fires it, so the leftovers are what decides
+		// whether another one is armed.
+		await state.storage.deleteAlarm();
+		await user.alarm();
+
+		expect((await user.openReader()).freshness).toEqual({ stale: [], count: 0 });
+		expect(await state.storage.getAlarm()).toBeNull();
+	});
+
+	test("keeps a page stable while newer and older posts are synchronized around it", async () => {
+		let { user } = await createReader();
+
+		let feed = await follow(user, FEED_URL, [
+			entryAt("c", "Third", 3 * DAY_MS),
+			entryAt("d", "Fourth", 2 * DAY_MS),
+			entryAt("e", "Fifth", DAY_MS),
 		]);
 
-		expect((await user.getFeed(feed.id))?.unreadCount).toBe(4);
+		let first = await user.feedTimeline(feed.id, { limit: 2 });
+		expect(titles(first)).toEqual(["Fifth", "Fourth"]);
 
-		expect(await user.markRead(newest.id, false)).toBe(true);
-		expect(titles(await user.readingQueue())).toHaveLength(5);
+		if (!first.ok) throw new Error(first.reason);
+		let next = first.cursors.next;
+		expect(next).not.toBeNull();
+
+		// One post newer than the page in hand and one older than it, arriving between two
+		// reads of it. The keyset is over `(published_at, id)` and neither column ever
+		// moves, so each lands where its own key says it does.
+		await publish(feed, [
+			entryAt("a", "Newest", 60 * 1000),
+			entryAt("b", "Oldest", 10 * DAY_MS),
+			entryAt("c", "Third", 3 * DAY_MS),
+			entryAt("d", "Fourth", 2 * DAY_MS),
+			entryAt("e", "Fifth", DAY_MS),
+		]);
+
+		await user.synchronize();
+
+		let second = await user.feedTimeline(feed.id, { limit: 2, cursor: next });
+		expect(titles(second)).toEqual(["Third", "Oldest"]);
+
+		if (!second.ok) throw new Error(second.reason);
+
+		// The older post was the end of the timeline, and it is the end of it still: what
+		// arrived while the reader paged lands by its own key rather than shifting the walk.
+		expect(second.cursors.next).toBeNull();
+
+		// Walking back from where the reader got to returns the page they were on, rather
+		// than a page the newer post has pushed everything down by.
+		let back = await user.feedTimeline(feed.id, { limit: 2, cursor: second.cursors.prev });
+		expect(titles(back)).toEqual(["Fifth", "Fourth"]);
+
+		if (!back.ok) throw new Error(back.reason);
+		let revised = back.items[1];
+		if (revised === undefined) throw new Error("expected the post to revise");
+		await user.markRead(revised.id);
+
+		// A revised entry comes back above the cursor and lands on the row the reader
+		// already has: its text changes, the column the walk is ordered by does not, and
+		// neither does the answer the reader gave it.
+		await publish(feed, [
+			entryAt("a", "Newest", 60 * 1000),
+			entryAt("b", "Oldest", 10 * DAY_MS),
+			entryAt("c", "Third", 3 * DAY_MS),
+			entryAt("d", "Fourth, corrected", 60 * 1000),
+			entryAt("e", "Fifth", DAY_MS),
+		]);
+
+		await user.synchronize();
+
+		let walked = await user.feedTimeline(feed.id, { limit: 10 });
+
+		expect(titles(walked)).toEqual(["Newest", "Fifth", "Fourth, corrected", "Third", "Oldest"]);
+
+		if (!walked.ok) throw new Error(walked.reason);
+		expect(walked.items.find((item) => item.id === revised.id)?.readAt).not.toBeNull();
 	});
 
-	test("reports a post this reader does not hold", async () => {
-		let { user } = await createReaderWithFeed();
-		expect(await user.markRead("item_missing")).toBe(false);
+	test("skips the items already past its velocity and still advances the cursor past them", async () => {
+		let { user, state } = await createReader();
+		let feed = await follow(user, FEED_URL, [entryAt("a", "First", 30 * 60 * 1000)]);
+
+		expect(await user.setVelocity(feed.id, "breaking")).toMatchObject({ ok: true });
+
+		// The old one last, so it holds the greatest revision: an item dropped for being
+		// past the velocity is decided rather than missed, so the cursor may pass it.
+		await publish(feed, [
+			entryAt("a", "First", 30 * 60 * 1000),
+			entryAt("b", "Fresh", 40 * 60 * 1000),
+			entryAt("c", "Ancient", 20 * HOUR_MS),
+		]);
+
+		await user.synchronize();
+
+		expect(storedItems(state, feed.id)).toHaveLength(2);
+		expect(storedCursor(state, feed.id)).toBe(3);
+		expect((await user.openReader()).freshness).toEqual({ stale: [], count: 0 });
+
+		// And the sharp end of it: a page whose every item is past the velocity stores
+		// nothing at all, and the cursor still passes the whole of it, because "accounted
+		// for" is about what the reader ruled on rather than about what was written.
+		await publish(feed, [
+			entryAt("a", "First", 30 * 60 * 1000),
+			entryAt("b", "Fresh", 40 * 60 * 1000),
+			entryAt("c", "Ancient", 20 * HOUR_MS),
+			entryAt("d", "Older still", 30 * HOUR_MS),
+			entryAt("e", "Older again", 40 * HOUR_MS),
+		]);
+
+		await user.synchronize();
+
+		expect(storedItems(state, feed.id)).toHaveLength(2);
+		expect(storedCursor(state, feed.id)).toBe(5);
+		expect((await user.openReader()).freshness).toEqual({ stale: [], count: 0 });
 	});
 });
 
-describe("unfollowFeed", () => {
-	test("drops the subscription and every post behind it", async () => {
-		let { user, feed } = await createReaderWithFeed();
+describe("what a reader's object is allowed to delete", () => {
+	test("deletes nothing for age alone, however long ago the reader read it", async () => {
+		let { user, state } = await createReader();
+
+		let feed = seedFeed(state, { id: "feed_old", velocity: "evergreen" });
+
+		seedItems(state, feed, [
+			{
+				id: "item-1",
+				publishedAt: Date.now() - 4 * 365 * DAY_MS,
+				readAt: Date.now() - 3 * 365 * DAY_MS,
+			},
+			{
+				id: "item-2",
+				publishedAt: Date.now() - 2 * 365 * DAY_MS,
+				readAt: Date.now() - 365 * DAY_MS,
+			},
+			{ id: "item-3", publishedAt: Date.now() - 365 * DAY_MS },
+		]);
+
+		await user.synchronize();
+
+		// Two rules remove a post, and both are the reader's own: a velocity they set, or a
+		// budget they are over. Age on an object with room for it is neither.
+		expect(storedItems(state, feed)).toEqual(["item-1", "item-2", "item-3"]);
+	});
+
+	test("keeps every post while the object is under budget, however many feeds are followed", async () => {
+		let { user, state } = await createReader();
+
+		for (let index = 0; index < 5; index += 1) {
+			let feed = seedFeed(state, { id: `feed_${index}` });
+
+			seedItems(
+				state,
+				feed,
+				Array.from({ length: 20 }, (_, post) => ({
+					id: `item-${index}-${post}`,
+					publishedAt: Date.now() - post * DAY_MS,
+					readAt: Date.now() - post * DAY_MS,
+				})),
+			);
+		}
+
+		await user.synchronize();
+
+		// The share is a division of the budget, and it is enforced only while the object is
+		// over that budget — so following a second feed does not halve the history of the
+		// first, and a fifty-first does not quietly take rows from the other fifty.
+		expect(storedItems(state)).toHaveLength(100);
+	});
+
+	test("deletes nothing from the feeds already followed when another feed is followed", async () => {
+		let { user, state } = await createReader();
+		let first = await follow(user);
+
+		// Narrowed so that a share recomputed on follow would bite: two feeds against a
+		// budget of four is a share of two, and the first feed is holding three.
+		budget.posts = 4;
+
+		let second = await follow(user, "https://second.example.com/feed.xml");
+
+		expect(storedItems(state, first.id)).toHaveLength(3);
+		expect(storedItems(state, second.id)).toHaveLength(3);
+		expect(storedCursor(state, first.id)).toBe(3);
+	});
+
+	test("takes read posts from the feeds over their share, and none from the feeds under it", async () => {
+		let { user, state } = await createReader();
+
+		/**
+		 * A budget of twelve across two feeds, so a share is six. The prolific feed is over
+		 * its share while still inside the budget on its own, which is what makes this a
+		 * test of the division rather than of the figure it divides: reclamation runs only
+		 * over budget, only on a feed over its share, and only over what was read.
+		 */
+		budget.posts = 12;
+
+		let prolific = seedFeed(state, { id: "feed_prolific" });
+		let quiet = seedFeed(state, { id: "feed_quiet" });
+
+		seedItems(
+			state,
+			prolific,
+			Array.from({ length: 12 }, (_, index) => ({
+				id: `loud-${String(index).padStart(2, "0")}`,
+				publishedAt: Date.now() - (12 - index) * DAY_MS,
+				readAt: index < 10 ? Date.now() : undefined,
+			})),
+		);
+
+		seedItems(
+			state,
+			quiet,
+			Array.from({ length: 3 }, (_, index) => ({
+				id: `quiet-${index}`,
+				publishedAt: Date.now() - (3 - index) * DAY_MS,
+				readAt: Date.now(),
+			})),
+		);
+
+		await user.synchronize();
+
+		// Six is this feed's share of twelve, taken oldest read first, and the two it never
+		// read are not the object's to take.
+		expect(storedItems(state, prolific)).toEqual([
+			"loud-06",
+			"loud-07",
+			"loud-08",
+			"loud-09",
+			"loud-10",
+			"loud-11",
+		]);
+		expect(storedItems(state, quiet)).toEqual(["quiet-0", "quiet-1", "quiet-2"]);
+	});
+
+	test("loses no post when there is nothing to reclaim, and stops materializing its worst feed", async () => {
+		let { user, state } = await createReader();
+
+		let loud = await follow(
+			user,
+			FEED_URL,
+			Array.from({ length: 8 }, (_, index) => entryAt(`loud-${index}`, `Loud ${index}`, DAY_MS)),
+		);
+
+		let quiet = await follow(user, "https://quiet.example.com/feed.xml", [
+			entryAt("q-1", "Quiet one", DAY_MS),
+			entryAt("q-2", "Quiet two", DAY_MS),
+		]);
+
+		/**
+		 * Eleven posts against a budget of ten, over two feeds, so a share is five: the loud
+		 * feed is over its share, the quiet one is under it, and the reader has read nothing.
+		 *
+		 * The figures stand in for the million and its half. What is under test is the rule
+		 * — over budget, over this feed's share, nothing reclaimable — and the loud feed is
+		 * deliberately inside the budget on its own, since a feed that alone exceeds the
+		 * whole of it is the one case a test of the share cannot tell apart from a test of
+		 * the number.
+		 */
+		budget.posts = 10;
+
+		await publish(quiet, [
+			entryAt("q-1", "Quiet one", DAY_MS),
+			entryAt("q-2", "Quiet two", DAY_MS),
+			entryAt("q-3", "Quiet three", HOUR_MS),
+		]);
+
+		await publish(
+			loud,
+			Array.from({ length: 9 }, (_, index) => entryAt(`loud-${index}`, `Loud ${index}`, DAY_MS)),
+		);
+
+		let run = await user.synchronize();
+
+		expect(run.paused).toBe(1);
+		expect(storedItems(state, loud.id)).toHaveLength(8);
+		expect(storedCursor(state, loud.id)).toBe(8);
+
+		// The feed under its share is not charged for the one over it, so it carries on.
+		expect(storedItems(state, quiet.id)).toHaveLength(3);
+
+		// Back-pressure rather than data loss: nothing the reader has is taken, and the
+		// subscription stays stale, which is where the reader is told about it.
+		expect((await user.openReader()).freshness).toEqual({ stale: [loud.id], count: 1 });
+	});
+
+	test("resumes a paused feed once reading brings the object back under budget", async () => {
+		let { user, state } = await createReader();
+
+		let loud = await follow(
+			user,
+			FEED_URL,
+			Array.from({ length: 8 }, (_, index) => entryAt(`loud-${index}`, `Loud ${index}`, DAY_MS)),
+		);
+
+		// One feed, so its share is the whole budget: eight posts against five is a feed over
+		// its share on an object over budget, with nothing read to reclaim.
+		budget.posts = 5;
+
+		await publish(
+			loud,
+			Array.from({ length: 9 }, (_, index) => entryAt(`loud-${index}`, `Loud ${index}`, DAY_MS)),
+		);
+
+		expect((await user.synchronize()).paused).toBe(1);
+
+		await user.markFeedRead(loud.id);
+
+		// The sweep runs behind the synchronization in the same call, so what reading buys
+		// is reclaimed on this run and taken up by the next. Eight posts against a budget of
+		// five over one feed is a share of five, so three of what was read goes.
+		await user.synchronize();
+		expect(storedItems(state, loud.id)).toHaveLength(5);
+
+		let resumed = await user.synchronize();
+
+		expect(resumed.paused).toBe(0);
+		expect(storedCursor(state, loud.id)).toBe(9);
+		expect((await user.openReader()).freshness).toEqual({ stale: [], count: 0 });
+	});
+});
+
+describe("velocity, which is the reader's own answer for one feed", () => {
+	test("ages nothing out at the default velocity, read or unread", async () => {
+		let { user, state } = await createReader();
+		let feed = await follow(user, FEED_URL, [
+			entryAt("a", "Ancient", 400 * DAY_MS),
+			entryAt("b", "Old", 40 * DAY_MS),
+		]);
+
+		expect(feed.velocity).toBe("evergreen");
+
+		let page = await user.feedTimeline(feed.id);
+		if (!page.ok) throw new Error(page.reason);
+		let read = page.items[0];
+		if (read === undefined) throw new Error("expected a post");
+		await user.markRead(read.id);
+
+		await user.setVelocity(feed.id, "evergreen");
+		await user.synchronize();
+
+		expect(storedItems(state, feed.id)).toHaveLength(2);
+	});
+
+	test("drops the posts past its window whether or not they were read", async () => {
+		let { user, state } = await createReader();
+		let feed = seedFeed(state, { id: "feed_news", velocity: "evergreen" });
+
+		seedItems(state, feed, [
+			{ id: "fresh-read", publishedAt: Date.now() - HOUR_MS, readAt: Date.now() },
+			{ id: "fresh-unread", publishedAt: Date.now() - 2 * HOUR_MS },
+			{ id: "stale-read", publishedAt: Date.now() - 5 * HOUR_MS, readAt: Date.now() },
+			{ id: "stale-unread", publishedAt: Date.now() - 6 * HOUR_MS },
+		]);
+
+		// Consent given in advance, per feed, which is what makes dropping an unread post
+		// acceptable here where a rule applied on the reader's behalf would not be.
+		expect(await user.setVelocity(feed, "breaking")).toMatchObject({ ok: true });
+
+		expect(storedItems(state, feed)).toEqual(["fresh-unread", "fresh-read"]);
+	});
+
+	test("keeps different posts for two readers of one feed at different velocities", async () => {
+		let entries = [entryAt("a", "Recent", HOUR_MS), entryAt("b", "Yesterday", 30 * HOUR_MS)];
+
+		let mine = await createReader("sub-mine");
+		let yours = await createReader("sub-yours");
+
+		let ours = await follow(mine.user, FEED_URL, entries);
+		let theirs = await follow(yours.user, FEED_URL, entries);
+
+		// One feed, one object, one fetch: what the two of them disagree about is what it is
+		// worth to each of them, which is why the answer is a column on the subscription.
+		expect(theirs.feedId).toBe(ours.feedId);
+		expect(feedCalls.filter((call) => call.method === "subscribe")).toHaveLength(2);
+
+		await mine.user.setVelocity(ours.id, "news");
+		await yours.user.setVelocity(theirs.id, "essay");
+
+		expect(storedItems(mine.state, ours.id)).toHaveLength(1);
+		expect(storedItems(yours.state, theirs.id)).toHaveLength(2);
+	});
+});
+
+describe("saved posts, the one answer that outlives every rule", () => {
+	test("keeps a saved post through its feed's velocity, the sweep and the budget", async () => {
+		let { user, state } = await createReader();
+		let feed = seedFeed(state, { id: "feed_saved", velocity: "evergreen" });
+
+		seedItems(state, feed, [
+			{ id: "kept", publishedAt: Date.now() - 400 * DAY_MS, readAt: Date.now() - 300 * DAY_MS },
+			{ id: "dropped", publishedAt: Date.now() - 400 * DAY_MS, readAt: Date.now() - 300 * DAY_MS },
+			{ id: "recent", publishedAt: Date.now() - 1000 },
+		]);
+
+		expect(await user.saveItem("kept")).toEqual({ ok: true, saved: true });
+
+		await user.setVelocity(feed, "breaking");
+
+		expect(storedItems(state, feed)).toEqual(["kept", "recent"]);
+
+		// And then the other rule, on an object with one feed and no room: everything the
+		// reader read is reclaimable, and the saved post is still not.
+		budget.posts = 1;
+		await user.markAllRead();
+		await user.synchronize();
+
+		expect(storedItems(state, feed)).toEqual(["kept"]);
+	});
+
+	test("refuses the thousand-and-first save and evicts none of the thousand", async () => {
+		let { user, state } = await createReader();
+		let feed = seedFeed(state, { id: "feed_shelf" });
+
+		seedItems(
+			state,
+			feed,
+			Array.from({ length: SAVED_LIMIT + 1 }, (_, index) => ({
+				id: `post-${String(index).padStart(4, "0")}`,
+				publishedAt: Date.now() - (SAVED_LIMIT + 1 - index) * 1000,
+				savedAt: index < SAVED_LIMIT ? Date.now() - (SAVED_LIMIT - index) * 1000 : undefined,
+			})),
+		);
+
+		let refused = await user.saveItem(`post-${String(SAVED_LIMIT).padStart(4, "0")}`);
+
+		// A cap that dropped the oldest save to make room would delete the one thing in this
+		// design a reader explicitly asked to keep.
+		expect(refused).toEqual({ ok: false, reason: "full" });
+
+		let saved = await user.savedQueue({ limit: 1 });
+		expect(saved.ok).toBe(true);
+
+		let [row] = state.storage.sql
+			.exec("SELECT COUNT(*) AS kept FROM feed_items WHERE saved_at IS NOT NULL")
+			.toArray();
+
+		expect(Number(row?.["kept"])).toBe(SAVED_LIMIT);
+		expect(storedItems(state, feed)).toHaveLength(SAVED_LIMIT + 1);
+
+		// The reader is told they are full and unsaves something, which is the answer that
+		// makes room — and the shelf takes the next one the moment there is any.
+		expect(await user.saveItem("post-0000", false)).toEqual({ ok: true, saved: false });
+
+		expect(await user.saveItem(`post-${String(SAVED_LIMIT).padStart(4, "0")}`)).toEqual({
+			ok: true,
+			saved: true,
+		});
+	});
+
+	test("returns an unsaved post to the rule that would have taken it", async () => {
+		let { user, state } = await createReader();
+		let feed = seedFeed(state, { id: "feed_unsaved", velocity: "breaking" });
+
+		seedItems(state, feed, [
+			{ id: "kept", publishedAt: Date.now() - 20 * HOUR_MS, savedAt: Date.now() },
+			{ id: "recent", publishedAt: Date.now() - 1000 },
+		]);
+
+		await user.synchronize();
+		expect(storedItems(state, feed)).toEqual(["kept", "recent"]);
+
+		expect(await user.saveItem("kept", false)).toEqual({ ok: true, saved: false });
+
+		// No second grace period: the save was the grace period, so the next sweep is the
+		// one that takes it.
+		await user.synchronize();
+
+		expect(storedItems(state, feed)).toEqual(["recent"]);
+	});
+
+	test("keeps the saved posts of an unfollowed feed and drops the rest", async () => {
+		let { user, state } = await createReader();
+		let feed = await follow(user);
+
+		let page = await user.feedTimeline(feed.id);
+		if (!page.ok) throw new Error(page.reason);
+		let kept = page.items[0];
+		if (kept === undefined) throw new Error("expected a post to keep");
+
+		await user.saveItem(kept.id);
 
 		expect(await user.unfollowFeed(feed.id)).toBe(true);
 
+		expect(storedItems(state, feed.id)).toEqual([kept.id]);
+		expect(calls("unsubscribe")).toEqual([`${feed.feedId}:unsubscribe`]);
+
+		// The row is what holds the feed's name for the saved list to show, so it stays —
+		// marked as no longer followed, and filtered out of the lists a reader browses.
+		let [row] = state.storage.sql
+			.exec("SELECT unfollowed_at FROM feeds WHERE id = ?", feed.id)
+			.toArray();
+
+		expect(row?.["unfollowed_at"]).not.toBeNull();
 		expect(await user.listFeeds()).toEqual([]);
-		expect(await user.getFeed(feed.id)).toBeNull();
-		expect(titles(await user.readingQueue())).toEqual([]);
-		expect(titles(await user.feedTimeline(feed.id))).toEqual([]);
-	});
 
-	test("reports a feed that was never followed", async () => {
-		let { user } = await createReaderWithFeed();
-		expect(await user.unfollowFeed("feed_missing")).toBe(false);
-	});
-});
+		let saved = await user.savedQueue();
+		expect(titles(saved)).toEqual([kept.title]);
 
-describe("countFeeds", () => {
-	test("counts the subscriptions a reader holds", async () => {
-		let { user } = await createReaderWithFeed();
+		// And the row goes when the last saved post from it does, since holding the feed's
+		// name for that list was the only thing it was still there for.
+		expect(await user.saveItem(kept.id, false)).toEqual({ ok: true, saved: false });
 
-		expect(await user.countFeeds()).toBe(1);
-
-		await followAnother(user, "b.example");
-
-		expect(await user.countFeeds()).toBe(2);
-	});
-
-	test("answers zero for an object no sign-in has provisioned", async () => {
-		let { user } = await createUser("sub-unprovisioned");
-
-		// What tells an empty queue apart from an empty subscription list is asked on the
-		// first page a reader sees, which can be the first call their object ever answers.
-		expect(await user.countFeeds()).toBe(0);
-	});
-});
-
-describe("checkAllFeedsNow", () => {
-	/** A sixth post, as an origin that published while the reader was away serves it. */
-	const PUBLISHED: Entry = {
-		guid: "f",
-		title: "Sixth",
-		published: "Sat, 06 Sep 2025 10:00:00 GMT",
-	};
-
-	test("reaches every followed feed and reports the sweep as a whole", async () => {
-		let { user } = await createReaderWithFeed();
-		await followAnother(user, "b.example");
-
-		server.use(http.get(FEED_URL, () => HttpResponse.xml(rss([...ENTRIES, PUBLISHED]))));
-
-		expect(await user.checkAllFeedsNow()).toEqual({
-			checked: 2,
-			withNewPosts: 1,
-			inserted: 1,
-			failed: 0,
-		});
-
-		expect(titles(await user.readingQueue({ limit: 1 }))).toEqual(["Sixth"]);
-	});
-
-	test("reads past a backoff window, which is what a reader is asking about", async () => {
-		let { user, feed } = await createReaderWithFeed();
-
-		server.use(http.get(FEED_URL, () => new HttpResponse(null, { status: 503 })));
-		await user.checkFeedNow(feed.id);
-
-		// The failure above put the next attempt minutes out, and sweeping now reads past it.
-		server.use(http.get(FEED_URL, () => HttpResponse.xml(rss([...ENTRIES, PUBLISHED]))));
-
-		expect(await user.checkAllFeedsNow()).toEqual({
-			checked: 1,
-			withNewPosts: 1,
-			inserted: 1,
-			failed: 0,
-		});
-	});
-
-	test("counts a feed whose origin refused without taking the sweep down", async () => {
-		let { user } = await createReaderWithFeed();
-		await followAnother(user, "b.example");
-
-		server.use(http.get(FEED_URL, () => HttpResponse.error()));
-
-		await expect(user.checkAllFeedsNow()).resolves.toEqual({
-			checked: 1,
-			withNewPosts: 0,
-			inserted: 0,
-			failed: 1,
-		});
-
-		expect(titles(await user.readingQueue())).toHaveLength(10);
-	});
-
-	test("stamps the run the way the alarm does, on an object no sign-in has reached", async () => {
-		let { user } = await createUser("sub-unprovisioned");
-
-		expect(await user.getSettings()).toBeNull();
-
-		expect(await user.checkAllFeedsNow()).toEqual({
-			checked: 0,
-			withNewPosts: 0,
-			inserted: 0,
-			failed: 0,
-		});
-
-		expect((await user.getSettings())?.lastRefreshedAt).toBeGreaterThan(0);
-	});
-});
-
-describe("markFeedRead and markAllRead", () => {
-	test("clears one feed's unread posts and leaves another's alone", async () => {
-		let { user, feed } = await createReaderWithFeed();
-		let other = await followAnother(user, "b.example");
-
-		expect(await user.markFeedRead(feed.id)).toBe(5);
-
-		expect((await user.getFeed(feed.id))?.unreadCount).toBe(0);
-		expect((await user.getFeed(other.id))?.unreadCount).toBe(5);
-
-		// The posts are read rather than gone, so the feed's own timeline still holds them.
-		expect(titles(await user.feedTimeline(feed.id))).toHaveLength(5);
-
-		expect(await user.markFeedRead(feed.id)).toBe(0);
-	});
-
-	test("clears every feed at once", async () => {
-		let { user } = await createReaderWithFeed();
-		await followAnother(user, "b.example");
-
-		expect(await user.markAllRead()).toBe(10);
-		expect(titles(await user.readingQueue())).toEqual([]);
-	});
-
-	test("reports nothing to clear for a reader with nothing unread", async () => {
-		let { user } = await createUser("sub-unprovisioned");
-
-		expect(await user.markAllRead()).toBe(0);
-		expect(await user.markFeedRead("feed_missing")).toBe(0);
-	});
-});
-
-describe("readingQueue, narrowed to a query", () => {
-	/** Titles holding the characters a `LIKE` pattern would otherwise read as wildcards. */
-	const WILDCARDS: Entry[] = [
-		{ guid: "w1", title: "Growth of 50% this quarter", published: "Mon, 01 Sep 2025 10:00:00 GMT" },
-		{ guid: "w2", title: "Growth of 50 this quarter", published: "Tue, 02 Sep 2025 10:00:00 GMT" },
-		{ guid: "w3", title: "Snake_case naming", published: "Wed, 03 Sep 2025 10:00:00 GMT" },
-		{ guid: "w4", title: "Snake case naming", published: "Thu, 04 Sep 2025 10:00:00 GMT" },
-	];
-
-	test("answers the posts whose title carries the text, newest first", async () => {
-		let { user } = await createReaderWithFeed();
-
-		expect(titles(await user.readingQueue({ readState: "all", query: "ir" }))).toEqual([
-			"Third",
-			"First",
-		]);
-	});
-
-	test("looks through the summary a publisher wrote as well as the title", async () => {
-		let { user } = await createUser();
-		await user.ensureUser(SUBJECT);
-
-		await followAnother(user, "b.example", [
-			{
-				guid: "s1",
-				title: "Untitled",
-				published: "Mon, 01 Sep 2025 10:00:00 GMT",
-				content: "The full body",
-			},
-		]);
-
-		expect(titles(await user.readingQueue({ readState: "all", query: "About Untitled" }))).toEqual([
-			"Untitled",
-		]);
-	});
-
-	test("narrows nothing for a search box holding only space", async () => {
-		let { user } = await createReaderWithFeed();
-
-		let whole = titles(await user.readingQueue({ readState: "all" }));
-
-		for (let query of ["", "   ", "\t\n"]) {
-			expect(titles(await user.readingQueue({ readState: "all", query }))).toEqual(whole);
-		}
-	});
-
-	test("looks for a wildcard character rather than reading it as one", async () => {
-		let { user } = await createUser();
-		await user.ensureUser(SUBJECT);
-		await followAnother(user, "b.example", WILDCARDS);
-
-		let found = (query: string) => user.readingQueue({ readState: "all", query });
-
-		expect(titles(await found("50%"))).toEqual(["Growth of 50% this quarter"]);
-		expect(titles(await found("Snake_case"))).toEqual(["Snake_case naming"]);
-
-		// The escape character itself is only a character somebody can search for.
-		expect(titles(await found("\\"))).toEqual([]);
-	});
-
-	/**
-	 * The pairing the merge exists for: a reader searching for a word and then asking for
-	 * the ones they have yet to read is one query rather than two surfaces.
-	 */
-	test("composes the words with the read state, in one page", async () => {
-		let { user } = await createReaderWithFeed();
-
-		let whole = await user.readingQueue({ readState: "all", query: "h" });
-		expect(titles(whole)).toEqual(["Fifth", "Fourth", "Third"]);
-
-		if (!whole.ok) throw new Error("the first page of a timeline decodes without a cursor");
-		let fourth = whole.items.find((item) => item.title === "Fourth");
-		if (!fourth) throw new Error("the fixture publishes a post titled Fourth");
-		await user.markRead(fourth.id);
-
-		expect(titles(await user.readingQueue({ readState: "unread", query: "h" }))).toEqual([
-			"Fifth",
-			"Third",
-		]);
-		expect(titles(await user.readingQueue({ readState: "read", query: "h" }))).toEqual(["Fourth"]);
-	});
-
-	test("pages forward and back through the cursors it minted", async () => {
-		let { user } = await createReaderWithFeed();
-
-		let search = (options: { limit: number; cursor?: string | null }) =>
-			user.readingQueue({ readState: "all", query: "h", ...options });
-
-		let first = await search({ limit: 2 });
-		expect(titles(first)).toEqual(["Fifth", "Fourth"]);
-		expect(cursors(first).prev).toBeNull();
-
-		let second = await search({ limit: 2, cursor: cursors(first).next });
-		expect(titles(second)).toEqual(["Third"]);
-		expect(cursors(second).next).toBeNull();
-
-		let back = await search({ limit: 2, cursor: cursors(second).prev });
-		expect(titles(back)).toEqual(["Fifth", "Fourth"]);
-	});
-
-	test("reports a cursor it cannot decode rather than answering the first page", async () => {
-		let { user } = await createReaderWithFeed();
-
-		expect(
-			await user.readingQueue({ readState: "all", query: "First", cursor: "not-a-cursor" }),
-		).toEqual({ ok: false, reason: "bad-cursor" });
-	});
-
-	test("answers nothing on an object no sign-in has provisioned", async () => {
-		let { user } = await createUser("sub-unprovisioned");
-
-		expect(titles(await user.readingQueue({ readState: "all", query: "anything" }))).toEqual([]);
-	});
-});
-
-describe("exportFeeds", () => {
-	test("carries every subscription in the shape a document writes", async () => {
-		let { user } = await createReaderWithFeed();
-		await followAnother(user, "b.example");
-
-		expect(await user.exportFeeds()).toEqual(
-			expect.arrayContaining([
-				{ title: "Example", feedUrl: FEED_URL, siteUrl: SITE_URL },
-				{ title: "b.example", feedUrl: "https://b.example/feed.xml", siteUrl: SITE_URL },
-			]),
+		expect(storedItems(state, feed.id)).toEqual([]);
+		expect(state.storage.sql.exec("SELECT id FROM feeds WHERE id = ?", feed.id).toArray()).toEqual(
+			[],
 		);
-
-		expect(await user.exportFeeds()).toHaveLength(2);
-	});
-
-	test("answers nothing for an object no sign-in has provisioned", async () => {
-		let { user } = await createUser("sub-unprovisioned");
-
-		expect(await user.exportFeeds()).toEqual([]);
 	});
 });
 
-describe("importFeeds", () => {
-	/** Serves `count` origins, named so a test can address each of them. */
-	function serveMany(count: number): string[] {
-		return Array.from({ length: count }, (_unused, index) => {
-			let url = `https://feed-${index}.example/feed.xml`;
-			server.use(http.get(url, () => HttpResponse.xml(rss(ENTRIES, `Feed ${index}`))));
-			return url;
-		});
-	}
-
-	test("follows every URL a document names", async () => {
-		let { user } = await createUser();
-		await user.ensureUser(SUBJECT);
-
-		let urls = serveMany(3);
-
-		expect(await user.importFeeds(urls)).toEqual({
-			added: 3,
-			alreadyFollowing: 0,
-			failed: [],
-		});
-
-		expect(await user.countFeeds()).toBe(3);
-	});
-
-	test("leaves the rest followed when some of them cannot be retrieved", async () => {
-		let { user } = await createUser();
-		await user.ensureUser(SUBJECT);
-
-		let reachable = serveMany(8);
-		let refused = ["https://down.example/feed.xml", "https://gone.example/feed.xml"];
-
-		server.use(http.get(refused[0] ?? "", () => HttpResponse.error()));
-		server.use(http.get(refused[1] ?? "", () => new HttpResponse(null, { status: 404 })));
-
-		let result = await user.importFeeds([...reachable, ...refused]);
-
-		expect(result.added).toBe(8);
-		expect(result.alreadyFollowing).toBe(0);
-		expect([...result.failed].sort()).toEqual([...refused].sort());
-
-		expect(await user.countFeeds()).toBe(8);
-	});
-
-	test("counts a feed already followed rather than following it twice", async () => {
-		let { user } = await createReaderWithFeed();
-
-		expect(await user.importFeeds([FEED_URL])).toEqual({
-			added: 0,
-			alreadyFollowing: 1,
-			failed: [],
-		});
-
-		expect(await user.countFeeds()).toBe(1);
-	});
-
-	test("names one subscription for a document listing the same URL twice", async () => {
-		let { user } = await createUser();
-		await user.ensureUser(SUBJECT);
-
-		expect(await user.importFeeds([FEED_URL, FEED_URL, FEED_URL])).toEqual({
-			added: 1,
-			alreadyFollowing: 0,
-			failed: [],
-		});
-
-		expect(await user.countFeeds()).toBe(1);
-	});
-
-	test("reports a URL that is not one, without reaching for it", async () => {
-		let { user } = await createUser();
-		await user.ensureUser(SUBJECT);
-
-		expect(await user.importFeeds(["not a url at all", "mailto:reader@example.com"])).toEqual({
-			added: 0,
-			alreadyFollowing: 0,
-			failed: ["not a url at all", "mailto:reader@example.com"],
-		});
-	});
-
-	test("follows against an object no sign-in has provisioned", async () => {
-		let { user } = await createUser("sub-unprovisioned");
-
-		// An import is a reader's first act as often as not, and it can reach an object no
-		// sign-in ever wrote a settings row into.
-		expect(await user.importFeeds([FEED_URL])).toEqual({
-			added: 1,
-			alreadyFollowing: 0,
-			failed: [],
-		});
-
-		expect((await user.getSettings())?.subject).toBe("sub-unprovisioned");
-	});
-});
-
-describe("listFeeds", () => {
-	test("answers every subscription, in the order their names read", async () => {
-		let { user } = await createReaderWithFeed();
-		await followAnother(user, "c.example");
-		await followAnother(user, "b.example");
-
-		let followed = await user.listFeeds();
-		let names = followed.map((feed) => feed.title);
-
-		expect(followed).toHaveLength(3);
-		expect(names).toEqual([...names].sort());
-	});
-
-	test("counts the unread posts beside each of them", async () => {
-		let { user } = await createReaderWithFeed();
-		await followAnother(user, "b.example");
-
-		let counts = (await user.listFeeds()).map((feed) => feed.unreadCount);
-
-		expect(counts).toEqual([5, 5]);
-	});
-
-	test("answers nothing on an object no sign-in has provisioned", async () => {
-		let { user } = await createUser("sub-unprovisioned");
-
-		expect(await user.listFeeds()).toEqual([]);
-	});
-});
-
-describe("alarm", () => {
-	test("stamps the run and comes back for the reader's interval", async () => {
-		let { state, user } = await createUser();
-		await user.ensureUser("sub-1");
-
-		await user.alarm();
-
-		expect(refreshDueFeeds).toHaveBeenCalledTimes(1);
-		expect((await user.getSettings())?.lastRefreshedAt).toBeGreaterThan(0);
-		expect(await state.storage.getAlarm()).toBeGreaterThan(Date.now() + HOUR_MS - 5_000);
-	});
-
-	test("comes back in a minute while feeds are still due", async () => {
-		let { state, user } = await createUser();
-		await user.ensureUser("sub-1");
-		refreshDueFeeds.mockResolvedValue({ attempted: 20, remaining: 4 });
-
-		await user.alarm();
-
-		expect(await state.storage.getAlarm()).toBeLessThanOrEqual(Date.now() + 60_000);
-	});
-
-	test("resolves and keeps the heartbeat when the refresh path throws", async () => {
-		let { state, user } = await createUser();
-		await user.ensureUser("sub-1");
-		refreshDueFeeds.mockRejectedValue(new Error("every origin is down"));
-
-		let failures = vi.spyOn(console, "error").mockImplementation(() => undefined);
-
-		await expect(user.alarm()).resolves.toBeUndefined();
-
-		expect(failures).toHaveBeenCalled();
-		expect(await state.storage.getAlarm()).toBeGreaterThan(Date.now() + HOUR_MS - 5_000);
-
-		failures.mockRestore();
-	});
-});
-
-describe("the first refresh after a follow", () => {
-	/**
-	 * The one assertion that holds the two write paths to the same digest. A follow and a
-	 * refresh each build the row that stores a post; the moment they project or hash a
-	 * different set of fields, an untouched feed re-writes every post it carries on the very
-	 * next poll, and a reader's list churns without a single error anywhere.
-	 */
-	test("writes no post, because a follow and a refresh hash the same fields", async () => {
-		let { refreshDueFeeds: run } =
-			await vi.importActual<typeof import("~/database/refresh")>("~/database/refresh");
-		refreshDueFeeds.mockImplementation(run);
-
-		let { state, user } = await createReaderWithFeed();
-
-		let exec = vi.spyOn(state.storage.sql, "exec");
-		await user.alarm();
-		let writes = exec.mock.calls
-			.map(([statement]) => String(statement))
-			.filter((statement) => /feed_items/.test(statement))
-			.filter((statement) => /^\s*(insert|update|delete)/i.test(statement));
-		exec.mockRestore();
-
-		expect(writes).toEqual([]);
-		expect(titles(await user.readingQueue())).toHaveLength(5);
-	});
-
-	/**
-	 * Dropping a field from the digest leaves every hash already stored taken over a wider
-	 * projection than the next one, so the first poll after it reads every post as edited
-	 * and writes an update for each. That one-time churn is only bearable if it moves
-	 * nothing a reader or a cursor rests on.
-	 */
-	test("rewrites every post without moving read state, ids or publication dates", async () => {
-		let { refreshDueFeeds: run } =
-			await vi.importActual<typeof import("~/database/refresh")>("~/database/refresh");
-		refreshDueFeeds.mockImplementation(run);
-
-		let { state, user } = await createReaderWithFeed();
-
-		let queue = await user.readingQueue({ limit: 1 });
-		let newest = queue.ok ? queue.items[0] : undefined;
-		expect(newest).toBeDefined();
-		if (newest === undefined) return;
-
-		await user.markRead(newest.id);
-
-		let before = await user.feedTimeline(newest.feedId);
-		expect(before.ok).toBe(true);
-		if (!before.ok) return;
-
-		// Every stored hash was taken over a projection the running code no longer builds.
-		state.storage.sql.exec("UPDATE feed_items SET content_hash = 'over-a-wider-projection'");
-
-		await user.alarm();
-
-		let after = await user.feedTimeline(newest.feedId);
-		expect(after.ok).toBe(true);
-		if (!after.ok) return;
-
-		expect(after.items).toEqual(before.items);
-		expect(after.items.filter((item) => item.readAt !== null)).toHaveLength(1);
-
-		// The churn is real: every post was re-hashed, and settles after this one poll.
-		let hashes = [
-			...state.storage.sql.exec<{ content_hash: string }>("SELECT content_hash FROM feed_items"),
-		].map((row) => row.content_hash);
-
-		expect(hashes.every((hash) => hash !== "over-a-wider-projection")).toBe(true);
-
-		let settled = vi.spyOn(state.storage.sql, "exec");
-		await user.alarm();
-		let writes = settled.mock.calls
-			.map(([statement]) => String(statement))
-			.filter((statement) => /feed_items/.test(statement))
-			.filter((statement) => /^\s*(insert|update|delete)/i.test(statement));
-		settled.mockRestore();
-
-		expect(writes).toEqual([]);
-	});
-});
+/** Whether a binding is the namespace mock, which is what carries the resolution log. */
+function isNamespaceMock(value: unknown): value is { resolutions: readonly unknown[] } {
+	return typeof value === "object" && value !== null && "resolutions" in value;
+}

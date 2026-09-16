@@ -40,6 +40,7 @@ describe("runMigrations", () => {
 			"0003-feed-list-index",
 			"0004-read-timeline-index",
 			"0005-feed-title-index",
+			"0006-shared-feed-objects",
 		]);
 	});
 
@@ -65,12 +66,13 @@ describe("runMigrations", () => {
 			"feed_items",
 			"reader_migrations",
 			"feeds_feed_url_idx",
+			"feeds_feed_id_idx",
 			"feeds_subscription_idx",
-			"feed_items_feed_guid_idx",
 			"feed_items_timeline_idx",
 			"feed_items_feed_timeline_idx",
 			"feed_items_unread_timeline_idx",
 			"feed_items_read_timeline_idx",
+			"feed_items_saved_idx",
 			"feeds_title_idx",
 		]) {
 			expect(names, `${name} exists`).toContain(name);
@@ -104,17 +106,20 @@ describe("runMigrations", () => {
 });
 
 describe("schema constraints", () => {
-	test("refuses a refresh interval outside the offered cadences", async () => {
+	test("refuses a velocity that is not one of the ones on offer", async () => {
 		await migrate();
-		let insert = (hours: number) =>
+		let insert = (id: string, velocity: string) =>
 			sql.exec(
-				`INSERT INTO settings (id, subject, refresh_interval_hours, created_at, updated_at)
-				 VALUES (1, 's', ?, 0, 0)`,
-				hours,
+				`INSERT INTO feeds (id, feed_id, feed_url, title, velocity, created_at, updated_at)
+				 VALUES (?, ?, ?, 't', ?, 0, 0)`,
+				id,
+				`canonical-${id}`,
+				`https://example.com/${id}`,
+				velocity,
 			);
 
-		expect(() => insert(2)).toThrow();
-		expect(() => insert(6)).not.toThrow();
+		expect(() => insert("f1", "hourly")).toThrow();
+		expect(() => insert("f2", "breaking")).not.toThrow();
 	});
 
 	test("refuses a second row in settings", async () => {
@@ -126,32 +131,42 @@ describe("schema constraints", () => {
 		).toThrow();
 	});
 
-	test("refuses a feed repeating a guid, which is what makes dedupe structural", async () => {
+	/**
+	 * A reader's copy of an item is keyed by the id the feed minted for it, so the same
+	 * item arriving twice is an upsert on a primary key. The guid rides along as what the
+	 * publisher called it and constrains nothing here: a feed purged after its grace week
+	 * re-mints its ids, and a reader still holding a saved post from it would otherwise
+	 * meet an index refusing the very write that brings them back up to date.
+	 */
+	test("keys a post by the id its feed minted, and lets a guid repeat", async () => {
 		await migrate();
-		let insert = (id: string) =>
+		let insert = (id: string, feedId: string) =>
 			sql.exec(
-				`INSERT INTO feed_items (id, feed_id, guid, title, published_at, content_hash, created_at, updated_at)
-				 VALUES (?, 'f1', 'g1', 't', 0, 'h', 0, 0)`,
+				`INSERT INTO feed_items (id, feed_id, guid, title, published_at, created_at, updated_at)
+				 VALUES (?, ?, 'g1', 't', 0, 0, 0)`,
 				id,
+				feedId,
 			);
 
-		insert("i1");
-		expect(() => insert("i2")).toThrow();
+		insert("i1", "f1");
+		expect(() => insert("i1", "f1")).toThrow();
+		expect(() => insert("i2", "f1")).not.toThrow();
+		expect(() => insert("i3", "f2")).not.toThrow();
 	});
 
-	test("allows the same guid under a different feed", async () => {
+	test("refuses a second subscription to one canonical feed", async () => {
 		await migrate();
-		sql.exec(
-			`INSERT INTO feed_items (id, feed_id, guid, title, published_at, content_hash, created_at, updated_at)
-			 VALUES ('i1', 'f1', 'g1', 't', 0, 'h', 0, 0)`,
-		);
-
-		expect(() =>
+		let insert = (id: string, feedId: string) =>
 			sql.exec(
-				`INSERT INTO feed_items (id, feed_id, guid, title, published_at, content_hash, created_at, updated_at)
-				 VALUES ('i2', 'f2', 'g1', 't', 0, 'h', 0, 0)`,
-			),
-		).not.toThrow();
+				`INSERT INTO feeds (id, feed_id, feed_url, title, created_at, updated_at)
+				 VALUES (?, ?, ?, 't', 0, 0)`,
+				id,
+				feedId,
+				`https://example.com/${id}`,
+			);
+
+		insert("f1", "canonical-1");
+		expect(() => insert("f2", "canonical-1")).toThrow();
 	});
 });
 
@@ -314,7 +329,7 @@ describe("query plans", () => {
 	/**
 	 * Grouping wants an index led by `feed_id`, which the unread index is not: it leads
 	 * with `published_at` so it can answer the timeline. SQLite therefore reaches for the
-	 * guid index, which groups without sorting and filters unread from the row.
+	 * one feed's-timeline index, which is led by the feed and so groups without sorting.
 	 */
 	test("counts unread per feed from an index, without sorting", async () => {
 		await migrate();
@@ -323,14 +338,24 @@ describe("query plans", () => {
 			`SELECT feed_id, COUNT(*) FROM feed_items WHERE read_at IS NULL GROUP BY feed_id`,
 		);
 
-		expect(plan).toContain("feed_items_feed_guid_idx");
+		expect(plan).toContain("feed_items_feed_timeline_idx");
 		expect(plan).not.toContain("USE TEMP B-TREE FOR GROUP BY");
 	});
 
-	test("finds an item by feed and guid from the unique index", async () => {
+	/**
+	 * The saved list is the fourth thing this table is read as, and it pages by the same
+	 * keyset as the other three, so it earns the same treatment: an index holding only the
+	 * rows a reader asked to keep, in the order the page reads them.
+	 */
+	test("answers the saved list from an index, without sorting", async () => {
 		await migrate();
 
-		let plan = queryPlan(`SELECT id FROM feed_items WHERE feed_id = 'f1' AND guid = 'g1'`);
-		expect(plan).toContain("feed_items_feed_guid_idx");
+		let plan = queryPlan(
+			`SELECT id, feed_id, title FROM feed_items WHERE saved_at IS NOT NULL
+			 ORDER BY published_at DESC, id DESC LIMIT 50`,
+		);
+
+		expect(plan).toContain("feed_items_saved_idx");
+		expect(plan).not.toContain("USE TEMP B-TREE FOR ORDER BY");
 	});
 });
