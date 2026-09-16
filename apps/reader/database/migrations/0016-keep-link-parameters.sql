@@ -1,0 +1,11 @@
+-- Whether one subscription's links are rendered exactly as the publisher wrote them.
+--
+-- A post's outbound address has its campaign metadata and click identifiers removed as the
+-- link is rendered, which is the default and is what almost every publisher wants. A few
+-- route on a parameter the list names, and their links break; this column is how a reader
+-- who meets one fixes that publisher rather than the feature.
+--
+-- Per feed rather than per reader, and off by default: the reader who would go looking for
+-- a switch like this is the one least in need of it, so the answer for everybody else has
+-- to be the one that holds without being chosen.
+ALTER TABLE feeds ADD COLUMN keep_link_parameters INTEGER NOT NULL DEFAULT 0;

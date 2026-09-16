@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-16
+**Accepted** - 2026-09-16
 
 ## Background
 
@@ -228,10 +228,11 @@ renderer produced:
 Content-Security-Policy:
   default-src 'none';
   script-src 'self';
-  style-src 'self';
+  style-src 'self' 'unsafe-inline';
   img-src 'self';
   font-src 'self';
   connect-src 'self';
+  manifest-src 'self';
   media-src 'none';
   frame-src 'none';
   frame-ancestors 'none';
@@ -239,6 +240,24 @@ Content-Security-Policy:
   base-uri 'none';
   object-src 'none'
 ```
+
+Two directives differ from what a reading of the app suggested. `style-src` carries
+`'unsafe-inline'` because this app's renderer mints a page's rules as it streams the page
+and emits them as `<style>` elements inside the document it is building — `mix` and
+`@sdxc/u` compile to classes, and the classes' declarations travel with the document
+rather than in the linked stylesheets. A hash is not available to a streamed render and
+the renderer takes no nonce, so `style-src 'self'` serves every page unstyled. What the
+relaxation would otherwise re-permit is closed one layer up instead: the sanitizer's
+attribute table names no `style` on any element, so an injected one is absent before a
+policy has to refuse it. `manifest-src 'self'` is spelled out because `default-src 'none'`
+covers the manifest the document links, and a browser that cannot read the manifest keeps
+no push subscription for the page.
+
+For the same reason the pager's inline `style` attribute in `resources/views/timeline.tsx`
+stays as it is: it is the app's own constant string rather than a publisher's, it travels
+to the browser inside a hydrated component's serialized props where only plain values
+survive, and the directive it was going to buy is not one this renderer can be served
+under.
 
 `default-src 'none'` rather than `'self'`, so a fetch type nobody thought about fails
 closed and permitting one is a deliberate edit. `img-src 'self'` is the load-bearing
@@ -494,10 +513,12 @@ where a future controller can forget it.
 publisher's markup. It is also a standing bet that HTML stops growing, and the history of
 sanitizers is the history of that bet being lost to an element nobody had heard of.
 
-**`style-src 'unsafe-inline'`, keeping the pager's inline style.** One line of the app
-stays as it is. It also re-permits every injected `style` attribute, which is
-`position:fixed` over the app's own controls and `background-image:url(…)` as an unproxied
-request — the two things dropping `style` was for.
+**`style-src 'unsafe-inline'`, keeping the pager's inline style.** It re-permits every
+injected `style` attribute, which is `position:fixed` over the app's own controls and
+`background-image:url(…)` as an unproxied request. It is what ships, because the renderer
+emits the page's own rules inline and the alternative is an unstyled app; the two things
+dropping `style` was for are taken by the sanitizer's attribute table instead, which names
+`style` on no element.
 
 **Allow `youtube-nocookie.com` in `frame-src`.** Embeds work, and the domain sounds like
 the privacy-preserving option. The browser still reaches Google before playback carrying
@@ -547,24 +568,30 @@ fetches through MSW.
 
 ## Implementation
 
-- [ ] `HTML.sanitize` in `@sdxc/html`, with the element, attribute and scheme allowlists
-- [ ] A serializer in `@sdxc/html` that escapes attribute values and text separately
-- [ ] Call it in the `FeedDO` where `displayableOf` runs, storing only sanitized markup
-- [ ] The dimension rule and the embed-to-link rewrite, inside the sanitizer
-- [ ] `app/http/middleware/security-headers.ts`, placed before `renderWith` in
+- [x] `HTML.sanitize` in `@sdxc/html`, with the element, attribute and scheme allowlists
+- [x] A serializer in `@sdxc/html` that escapes attribute values and text separately
+- [x] Call it where publisher markup enters. `feed_items` holds no markup — a post's row is
+      a title, a URL, a plain-text summary and an author — so the only markup this app ever
+      stores is an extracted article, and it is sanitized before the shared cache is written
+- [x] The dimension rule and the embed-to-link rewrite, inside the sanitizer
+- [x] `app/http/middleware/security-headers.ts`, placed before `renderWith` in
       `bootstrap/app.tsx`
-- [ ] Replace the inline `style` in `resources/views/timeline.tsx:353` with `mix`
-- [ ] The tracking-parameter list and the render-time strip, wherever a post URL is built
-- [ ] `keep_link_parameters` on the subscription, its control, and copy in `en.ts` and
+- [ ] The pager's inline `style` in `resources/views/timeline.tsx` stays, for the reason
+      given beside the policy above
+- [x] The tracking-parameter list and the render-time strip, wherever a post URL is built
+- [x] `keep_link_parameters` on the subscription, its control, and copy in `en.ts` and
       `es.ts`
-- [ ] `routes/web.ts`: `GET /media/:signature/:source`, and its controller
-- [ ] `MEDIA_PROXY_SECRET`, the HMAC mint and the constant-time verification
-- [ ] The scheme, port, address-range and redirect checks, re-run on every hop
-- [ ] The 5 MiB stream cap, the content-type allowlist, and `caches.default`
-- [ ] `media.proxy` and `html.sanitize` events, and the field rule written into
+- [x] `routes/web.ts`: `GET /media/:signature/:source`, and its controller
+- [x] `MEDIA_PROXY_SECRET`, the HMAC mint and the constant-time verification
+- [x] The scheme, port, address-range and redirect checks, re-run on every hop
+- [x] The 5 MiB stream cap, the content-type allowlist, and the edge cache, reached as a
+      named cache since the ambient typings this app compiles under expose `open` alone
+- [x] `media.proxy` and `html.sanitize` events, and the field rule written into
       `AGENTS.md`
-- [ ] 30-day telemetry retention, and the subscriber-row cleanup on account deletion
-- [ ] The tests above
+- [ ] 30-day telemetry retention waits on a sink that can be configured for it, and the
+      subscriber-row cleanup waits on the account-deletion surface it hooks into; neither
+      exists yet
+- [x] The tests above
 
 ## References
 
