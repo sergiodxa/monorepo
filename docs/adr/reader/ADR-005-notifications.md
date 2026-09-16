@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-16
+**Accepted** - 2026-09-16
 
 ## Background
 
@@ -442,25 +442,25 @@ SQLite `Database`, the object and delivery paths in `*.workers.test.ts` with
 
 ## Implementation
 
-- [ ] `push_subscriptions`, its `UNIQUE (endpoint)`, and the `UserDO` migration
-- [ ] `notify` on `feeds`; `notify_push`, `notify_email`, `time_zone`, `quiet_from`, `quiet_to`,
+- [x] `push_subscriptions`, its `UNIQUE (endpoint)`, and the `UserDO` migration
+- [x] `notify` on `feeds`; `notify_push`, `notify_email`, `time_zone`, `quiet_from`, `quiet_to`,
       `last_notified_at` and `email` on `settings`
-- [ ] `ensureUser(subject, email)`, writing the address on every completed sign-in
-- [ ] `app/push/web-push.ts`: VAPID `ES256` through `@sdxc/jwt`, RFC 8291 encryption, and the
+- [x] `ensureUser(subject, email)`, writing the address on every completed sign-in
+- [x] `app/push/web-push.ts`: VAPID `ES256` through `@sdxc/jwt`, RFC 8291 encryption, and the
       `Request` builder, tested against the published vectors
-- [ ] `database/notify.ts`: the derived summary, the gap, quiet hours, delivery, and the response
+- [x] `database/notify.ts`: the derived summary, the gap, quiet hours, delivery, and the response
       table's row bookkeeping, reached only by the alarm's reason
-- [ ] A service worker and manifest, registered from the app layout, handling `push` and
+- [x] A service worker and manifest, registered from the app layout, handling `push` and
       `notificationclick`
-- [ ] Device registration and revocation in `routes/web.ts`, and the device list on `/settings`
-- [ ] The per-feed toggle on `/reading/:feed`, and the zone posted when it differs from what is stored
-- [ ] `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT` in `.env.example`, the private one
+- [x] Device registration and revocation in `routes/web.ts`, and the device list on `/settings`
+- [x] The per-feed toggle on `/reading/:feed`, and the zone posted when it differs from what is stored
+- [x] `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT` in `.env.example`, the private one
       through `wrangler secret put`, and `app/push/vapid` added to the `AGENTS.md` environment list
-- [ ] Copy for every notification surface in `app/locales/en.ts` and `app/locales/es.ts`
-- [ ] The tests above, and the structured events
-- [ ] **Second:** the `EMAIL` binding in `wrangler.jsonc`, `bun run cf:typegen`, the `@sdxc/mail`
+- [x] Copy for every notification surface in `app/locales/en.ts` and `app/locales/es.ts`
+- [x] The tests above, and the structured events
+- [x] **Second:** the `EMAIL` binding in `wrangler.jsonc`, `bun run cf:typegen`, the `@sdxc/mail`
       body, and the alarm-constructed `Mailer`
-- [ ] **Second:** the email channel's four-hour gap, and the `Result` branch on a failed send
+- [x] **Second:** the email channel's four-hour gap, and the `Result` branch on a failed send
 
 ## References
 

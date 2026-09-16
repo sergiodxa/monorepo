@@ -1,0 +1,10 @@
+{
+	"name": "Reader",
+	"short_name": "Reader",
+	"description": "Every post from every feed you follow, newest first.",
+	"start_url": "/reading",
+	"scope": "/",
+	"display": "standalone",
+	"background_color": "#ffffff",
+	"theme_color": "#ffffff"
+}
