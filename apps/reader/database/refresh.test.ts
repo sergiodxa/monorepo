@@ -1,8 +1,12 @@
 /**
- * Exercises the refresh path against a real SQLite database and feed documents served by
- * MSW. The assertions that matter are the ones about writes that must not happen: a 304
- * and an unchanged document each have to leave every `feed_items` row untouched, and a
- * re-published post may not move the columns a cursor and a reader's read state rest on.
+ * Exercises one feed's polling against a real SQLite database and documents served by
+ * MSW, with no object around it — which is what `pollFeed` taking a `Database` is for.
+ *
+ * The assertions that matter are the ones about writes that must not happen and about a
+ * counter that must not go backwards: a 304 and an unchanged document each have to leave
+ * every `items` row alone, a re-published entry may not move the columns a subscriber's
+ * copy is joined and sorted by, and a sweep that empties the table may not hand a later
+ * item a number some subscriber has already walked past.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,29 +19,32 @@ import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { InsertFeedItem, SelectFeed, SelectFeedItem } from "~/database/schema";
+import type { InsertFeed, InsertItem, SelectFeed, SelectItem } from "~/database/feed-schema";
 
-import { feedItems, feeds } from "~/database/schema";
-
-import { runMigrations } from "./migrations";
+import { FEED_JOURNAL, FEED_MIGRATIONS } from "~/database/feed-migrations";
+import { feed as feedTable, items } from "~/database/feed-schema";
+import { runMigrations } from "~/database/migrations";
 import {
-	EXCERPT_LENGTH,
+	FEED_ROW_ID,
 	MAX_SUMMARY_LENGTH,
-	pruneFeed,
-	refreshDueFeeds,
-	refreshFeed,
-} from "./refresh";
+	measurePostsPerDay,
+	pollFeed,
+	pruneItems,
+} from "~/database/refresh";
 
 /** The epoch milliseconds every test measures against, threaded rather than mocked. */
 const NOW = 1_800_000_000_000;
 
-/** One hour, the unit the backoff assertions are written in. */
+/** One hour, the unit a second poll's clock and the backoff assertions are written in. */
 const HOUR = 60 * 60 * 1000;
 
-/** The feed every single-feed test polls. */
+/** One day, which is both the cap on a backoff and the window a rate is measured over. */
+const DAY = 24 * HOUR;
+
+/** The feed this object holds, since an object holds exactly one. */
 const FEED_URL = "https://example.com/feed.xml";
 
-/** MSW server standing in for the origins the feeds are published from. */
+/** MSW server standing in for the origin the feed is published from. */
 let server = setupServer();
 
 let sql: ReturnType<typeof createSqlStorage>;
@@ -50,7 +57,7 @@ afterAll(() => server.close());
 beforeEach(async () => {
 	sql = createSqlStorage();
 	let adapter = createSQLStorageDatabaseAdapter(sql);
-	await runMigrations(adapter);
+	await runMigrations(adapter, FEED_MIGRATIONS, FEED_JOURNAL);
 	db = new Database(adapter);
 });
 
@@ -68,9 +75,9 @@ interface Entry {
 	content?: string;
 }
 
-/** An RSS 2.0 document carrying `entries`, which is what the origins answer with. */
+/** An RSS 2.0 document carrying `entries`, which is what the origin answers with. */
 function rss(entries: Entry[]): string {
-	let items = entries.map(
+	let published = entries.map(
 		(entry) => `<item>
 			<guid isPermaLink="false">${entry.guid}</guid>
 			<title>${entry.title ?? "A post"}</title>
@@ -86,7 +93,7 @@ function rss(entries: Entry[]): string {
 			<title>Example</title>
 			<link>https://example.com</link>
 			<description>An example feed</description>
-			${items.join("\n")}
+			${published.join("\n")}
 		</channel></rss>`;
 }
 
@@ -95,27 +102,25 @@ function cdata(body: string): string {
 	return `<![CDATA[${body}]]>`;
 }
 
-/** Answers `url` with a document built from `entries`. */
-function serve(url: string, entries: Entry[]): void {
-	server.use(http.get(url, () => HttpResponse.xml(rss(entries))));
+/** Answers the feed's URL with a document built from `entries`. */
+function serve(entries: Entry[]): void {
+	server.use(http.get(FEED_URL, () => HttpResponse.xml(rss(entries))));
 }
 
-/** Answers `url` with a status and no document, for the failure branches. */
-function serveStatus(url: string, status: number): void {
-	server.use(http.get(url, () => new HttpResponse(null, { status })));
+/** Answers the feed's URL with a status and no document, for the failure branches. */
+function serveStatus(status: number): void {
+	server.use(http.get(FEED_URL, () => new HttpResponse(null, { status })));
 }
 
-/** Stores a feed, defaulting every polling column to the state of a fresh subscription. */
-async function storeFeed(overrides: Partial<SelectFeed> = {}): Promise<SelectFeed> {
-	let id = overrides.id ?? "feed-1";
-
+/** Stores the feed's single row, defaulting every column to a fresh subscription's state. */
+async function storeFeed(overrides: InsertFeed = {}): Promise<SelectFeed> {
 	await db.create(
-		feeds,
+		feedTable,
 		{
-			id,
+			id: FEED_ROW_ID,
 			feed_url: FEED_URL,
-			site_url: "https://example.com",
-			title: "Example",
+			site_url: null,
+			title: FEED_URL,
 			description: null,
 			language: null,
 			image_url: null,
@@ -127,6 +132,9 @@ async function storeFeed(overrides: Partial<SelectFeed> = {}): Promise<SelectFee
 			last_error: null,
 			failure_count: 0,
 			next_attempt_at: null,
+			head: 0,
+			posts_per_day: null,
+			purge_at: null,
 			created_at: NOW,
 			updated_at: NOW,
 			...overrides,
@@ -134,23 +142,22 @@ async function storeFeed(overrides: Partial<SelectFeed> = {}): Promise<SelectFee
 		{ touch: false },
 	);
 
-	return loadFeed(id);
+	return loadFeed();
 }
 
-/** Stores one post directly, for the tests about retention rather than about parsing. */
-async function storeItem(values: InsertFeedItem & { id: string }): Promise<void> {
+/** Stores one item directly, for the tests about retention rather than about parsing. */
+async function storeItem(values: InsertItem & { id: string; revision: number }): Promise<void> {
 	await db.create(
-		feedItems,
+		items,
 		{
-			feed_id: "feed-1",
 			guid: values.id,
+			sequence: values.revision,
 			title: "A post",
 			url: null,
 			summary: null,
 			author: null,
 			published_at: NOW,
 			content_hash: "hash",
-			read_at: null,
 			created_at: NOW,
 			updated_at: NOW,
 			...values,
@@ -159,47 +166,204 @@ async function storeItem(values: InsertFeedItem & { id: string }): Promise<void>
 	);
 }
 
-/** The stored feed, so a second poll is given the validators the first one wrote. */
-async function loadFeed(id = "feed-1"): Promise<SelectFeed> {
-	let feed = await db.findOne(feeds, { where: { id } });
-	if (feed === null) throw new Error(`No feed stored as ${id}`);
-	return feed;
+/** The feed's row, which is where the counter and the validators a poll reads live. */
+async function loadFeed(): Promise<SelectFeed> {
+	let stored = await db.find(feedTable, { id: FEED_ROW_ID });
+	if (stored === null) throw new Error("No feed stored");
+	return stored;
 }
 
-/** One stored post, addressed the way a feed document addresses it. */
-async function loadItem(guid: string): Promise<SelectFeedItem> {
-	let item = await db.findOne(feedItems, { where: { guid } });
-	if (item === null) throw new Error(`No item stored as ${guid}`);
-	return item;
+/** One stored item, addressed the way the document addresses it. */
+async function loadItem(guid: string): Promise<SelectItem> {
+	let stored = await db.findOne(items, { where: { guid } });
+	if (stored === null) throw new Error(`No item stored as ${guid}`);
+	return stored;
 }
 
-/** Every post of a feed, oldest first, for asserting what survived. */
-function storedItems(feedId = "feed-1"): Promise<SelectFeedItem[]> {
-	return db.findMany(feedItems, { where: { feed_id: feedId }, orderBy: ["published_at", "asc"] });
+/** Every stored item in the order this object decided them, for asserting what survived. */
+function storedItems(): Promise<SelectItem[]> {
+	return db.findMany(items, { orderBy: [["revision", "asc"]] });
 }
 
 /**
- * Watches the statements a run executes, so a test can assert that a poll wrote no post
+ * Watches the statements a run executes, so a test can assert that a poll wrote no item
  * at all rather than that it wrote the same values back.
  */
 function watchWrites() {
 	let exec = vi.spyOn(sql, "exec");
 
 	return {
-		/** Statements that wrote to `feed_items`, which an unchanged poll leaves empty. */
+		/** Statements that wrote to `items`, which an unchanged poll leaves empty. */
 		itemWrites(): string[] {
 			return exec.mock.calls
 				.map(([statement]) => String(statement))
-				.filter((statement) => /feed_items/.test(statement))
+				.filter((statement) => /\bitems\b/.test(statement))
 				.filter((statement) => /^\s*(insert|update|delete)/i.test(statement));
 		},
 		restore: () => exec.mockRestore(),
 	};
 }
 
-describe("refreshFeed", () => {
-	test("stamps a 304 without parsing or touching a post", async () => {
-		let feed = await storeFeed({
+describe("pollFeed", () => {
+	test("reports an object nothing has subscribed to as a feed it cannot reach", async () => {
+		// No row means no address to fetch, and the caller's only question is whether this
+		// feed refreshed — so it is answered as a value rather than as a throw.
+		expect(await pollFeed(db, { now: NOW })).toEqual({
+			status: "network_error",
+			message: expect.any(String),
+		});
+	});
+
+	test("stores an entry the feed did not carry before", async () => {
+		await storeFeed();
+		serve([{ guid: "g1" }]);
+
+		expect(await pollFeed(db, { now: NOW })).toEqual({
+			status: "ok",
+			inserted: 1,
+			edited: 0,
+			head: 1,
+		});
+
+		serve([{ guid: "g2" }, { guid: "g1" }]);
+
+		expect(await pollFeed(db, { now: NOW + HOUR })).toEqual({
+			status: "ok",
+			inserted: 1,
+			edited: 0,
+			head: 2,
+		});
+
+		expect((await storedItems()).map((item) => item.guid)).toEqual(["g1", "g2"]);
+	});
+
+	test("stores the same entries twice without duplicating one of them", async () => {
+		await storeFeed();
+		serve([{ guid: "g1" }, { guid: "g2" }]);
+		await pollFeed(db, { now: NOW });
+
+		let writes = watchWrites();
+		let outcome = await pollFeed(db, { now: NOW + HOUR });
+		// Without the unique guid a feed that re-serves an entry duplicates it on every
+		// poll forever, so the assertion is that the second poll touched no row at all.
+		expect(writes.itemWrites()).toEqual([]);
+		writes.restore();
+
+		expect(outcome).toEqual({ status: "ok", inserted: 0, edited: 0, head: 2 });
+		expect(await storedItems()).toHaveLength(2);
+	});
+
+	test("gives each newly discovered entry a sequence above every one before it", async () => {
+		await storeFeed();
+		serve([{ guid: "g1" }, { guid: "g2" }]);
+		await pollFeed(db, { now: NOW });
+
+		serve([{ guid: "g3" }, { guid: "g2" }, { guid: "g1" }]);
+		await pollFeed(db, { now: NOW + HOUR });
+
+		let sequences = (await storedItems()).map((item) => item.sequence);
+
+		expect(sequences).toEqual([1, 2, 3]);
+		expect(sequences).toEqual([...sequences].sort((a, b) => a - b));
+	});
+
+	test("writes one tick to both columns when it discovers an entry", async () => {
+		await storeFeed();
+		serve([{ guid: "g1" }, { guid: "g2" }]);
+
+		await pollFeed(db, { now: NOW });
+
+		for (let item of await storedItems()) expect(item.revision).toBe(item.sequence);
+		expect((await loadFeed()).head).toBe(2);
+	});
+
+	test("mints an item id carrying the type it identifies", async () => {
+		await storeFeed();
+		serve([{ guid: "g1" }]);
+
+		await pollFeed(db, { now: NOW });
+
+		// It is copied verbatim into every subscriber's own row, so it has to say what it
+		// names wherever it turns up.
+		expect((await loadItem("g1")).id).toMatch(/^item_[\da-z]{26}$/);
+	});
+
+	test("moves only the revision when a publisher edits an entry it already stored", async () => {
+		await storeFeed();
+		serve([{ guid: "g1", description: "A typo", content: "The full body" }]);
+		await pollFeed(db, { now: NOW });
+		await pollFeed(db, { now: NOW + HOUR });
+		let before = await loadItem("g1");
+
+		serve([{ guid: "g1", description: "The typo, fixed", content: "The full body" }]);
+		let outcome = await pollFeed(db, { now: NOW + 2 * HOUR });
+
+		expect(outcome).toEqual({ status: "ok", inserted: 0, edited: 1, head: 2 });
+
+		let after = await loadItem("g1");
+		expect(after.summary).toBe("The typo, fixed");
+		expect(after.content_hash).not.toBe(before.content_hash);
+		// A fresh revision is what puts the correction back in front of every subscriber
+		// exactly once; the three frozen columns are what keeps it the same post to each.
+		expect(after.revision).toBe(2);
+		expect(after.sequence).toBe(before.sequence);
+		expect(after.id).toBe(before.id);
+		expect(after.published_at).toBe(before.published_at);
+	});
+
+	test("hands an edit and a discovery in one document a tick each", async () => {
+		await storeFeed();
+		serve([{ guid: "g1", description: "First" }]);
+		await pollFeed(db, { now: NOW });
+
+		serve([{ guid: "g2" }, { guid: "g1", description: "Second" }]);
+
+		expect(await pollFeed(db, { now: NOW + HOUR })).toEqual({
+			status: "ok",
+			inserted: 1,
+			edited: 1,
+			head: 3,
+		});
+
+		// Every tick is spent once, so the two decisions leave no revision unaccounted for
+		// and none shared: a subscriber walking the order sees each of them exactly once.
+		expect((await storedItems()).map((item) => item.revision).sort((a, b) => a - b)).toEqual([
+			2, 3,
+		]);
+	});
+
+	test("reads an entry re-dated with the same words as unchanged", async () => {
+		await storeFeed();
+		serve([{ guid: "g1", pubDate: "Tue, 01 Sep 2026 00:00:00 GMT" }]);
+		await pollFeed(db, { now: NOW });
+		let before = await loadItem("g1");
+
+		// Feeds that re-date every entry on every poll exist, which is why the digest is
+		// taken over what a reader sees and leaves the date out of it.
+		serve([{ guid: "g1", pubDate: "Wed, 09 Sep 2026 12:00:00 GMT" }]);
+
+		let writes = watchWrites();
+		let outcome = await pollFeed(db, { now: NOW + HOUR });
+		expect(writes.itemWrites()).toEqual([]);
+		writes.restore();
+
+		expect(outcome).toEqual({ status: "ok", inserted: 0, edited: 0, head: 1 });
+		expect((await loadItem("g1")).published_at).toBe(before.published_at);
+	});
+
+	test("keeps an item the document has stopped carrying", async () => {
+		await storeFeed();
+		serve([{ guid: "g1" }, { guid: "g2" }]);
+		await pollFeed(db, { now: NOW });
+
+		serve([{ guid: "g2" }]);
+		await pollFeed(db, { now: NOW + HOUR });
+
+		expect((await storedItems()).map((item) => item.guid)).toEqual(["g1", "g2"]);
+	});
+
+	test("stamps a 304 without parsing a document or touching an item", async () => {
+		await storeFeed({
 			etag: "v1",
 			failure_count: 3,
 			next_attempt_at: NOW - 1,
@@ -207,18 +371,18 @@ describe("refreshFeed", () => {
 			last_http_status: 500,
 			last_error: "Failed to fetch feed: 500",
 		});
-		await storeItem({ id: "i1", guid: "g1" });
+		await storeItem({ id: "item_1", revision: 1 });
 
 		server.use(
 			http.get(FEED_URL, ({ request }) =>
 				request.headers.get("if-none-match") === "v1"
 					? new HttpResponse(null, { status: 304 })
-					: HttpResponse.xml(rss([{ guid: "g1" }])),
+					: HttpResponse.xml(rss([{ guid: "item_1" }, { guid: "unseen" }])),
 			),
 		);
 
 		let writes = watchWrites();
-		let outcome = await refreshFeed(db, feed, { now: NOW });
+		let outcome = await pollFeed(db, { now: NOW });
 		expect(writes.itemWrites()).toEqual([]);
 		writes.restore();
 
@@ -228,100 +392,160 @@ describe("refreshFeed", () => {
 		expect(stored.last_status).toBe("not_modified");
 		expect(stored.last_http_status).toBe(304);
 		expect(stored.last_fetched_at).toBe(NOW);
+		// The head is the number this feed publishes, and a 304 is the feed saying it has
+		// published nothing since the last time it answered.
+		expect(stored.head).toBe(0);
+		// Dropping the validators here would send the next poll without preconditions and
+		// spend a whole document on a feed that has not changed.
+		expect(stored.etag).toBe("v1");
 		expect(stored.failure_count).toBe(0);
 		expect(stored.next_attempt_at).toBeNull();
 		expect(stored.last_error).toBeNull();
-		expect(stored.etag).toBe("v1");
 	});
 
-	test("writes no post when the document came back unchanged", async () => {
-		let feed = await storeFeed();
-		serve(FEED_URL, [{ guid: "g1" }, { guid: "g2" }]);
+	test("records the status behind a refusal and backs the feed off", async () => {
+		await storeFeed();
+		serveStatus(404);
 
-		expect(await refreshFeed(db, feed, { now: NOW })).toEqual({
-			status: "ok",
-			inserted: 2,
-			updated: 0,
+		expect(await pollFeed(db, { now: NOW })).toMatchObject({
+			status: "http_error",
+			httpStatus: 404,
 		});
 
+		let stored = await loadFeed();
+		// The category, the code and the message are kept apart so a view can say a feed
+		// 404s by reading a column rather than by reading prose.
+		expect(stored.last_status).toBe("http_error");
+		expect(stored.last_http_status).toBe(404);
+		expect(stored.last_error).toContain("404");
+		expect(stored.failure_count).toBe(1);
+		expect(stored.next_attempt_at).toBe(NOW + 5 * 60 * 1000);
+	});
+
+	test("lengthens the wait with each consecutive failure", async () => {
+		await storeFeed({ failure_count: 1 });
+		serveStatus(500);
+
+		await pollFeed(db, { now: NOW });
+
+		expect((await loadFeed()).next_attempt_at).toBe(NOW + 10 * 60 * 1000);
+	});
+
+	test("caps the wait at a day however long a feed has been failing", async () => {
+		await storeFeed({ failure_count: 40 });
+		serveStatus(500);
+
+		await pollFeed(db, { now: NOW });
+
+		let stored = await loadFeed();
+		// A feed whose origin has been gone for days is still retried daily, so it
+		// recovers on its own once the origin comes back.
+		expect(stored.failure_count).toBe(41);
+		expect(stored.next_attempt_at).toBe(NOW + DAY);
+	});
+
+	test("reports a document that is not a feed as a parse failure", async () => {
+		await storeFeed();
+		server.use(http.get(FEED_URL, () => HttpResponse.text("not xml at all")));
+
+		expect((await pollFeed(db, { now: NOW })).status).toBe("parse_error");
+
+		let stored = await loadFeed();
+		expect(stored.last_status).toBe("parse_error");
+		expect(stored.last_http_status).toBeNull();
+	});
+
+	test("resolves rather than rejects when an origin cannot be reached at all", async () => {
+		await storeFeed();
+		server.use(http.get(FEED_URL, () => HttpResponse.error()));
+
+		// The alarm that drives this must never reject: a rejected alarm is retried by the
+		// platform, which would re-fetch an origin that has already answered.
+		await expect(pollFeed(db, { now: NOW })).resolves.toMatchObject({
+			status: "network_error",
+		});
+		expect((await loadFeed()).failure_count).toBe(1);
+	});
+
+	test("leaves the backoff behind once the feed answers again", async () => {
+		await storeFeed({
+			failure_count: 4,
+			next_attempt_at: NOW - 1,
+			last_status: "network_error",
+			last_error: "Failed to fetch feed: fetch failed",
+		});
+		serve([{ guid: "g1" }]);
+
+		await pollFeed(db, { now: NOW });
+
+		let stored = await loadFeed();
+		expect(stored.last_status).toBe("ok");
+		expect(stored.failure_count).toBe(0);
+		expect(stored.next_attempt_at).toBeNull();
+		expect(stored.last_error).toBeNull();
+	});
+
+	test("takes the feed's description of itself from the document it answered with", async () => {
+		await storeFeed();
+		serve([{ guid: "g1" }]);
+
+		await pollFeed(db, { now: NOW });
+
+		let stored = await loadFeed();
+		expect(stored.title).toBe("Example");
+		expect(stored.site_url).toBe("https://example.com/");
+		expect(stored.description).toBe("An example feed");
+	});
+
+	test("cuts a summary past the cap and stores what it hashed", async () => {
+		await storeFeed();
+		serve([{ guid: "g1", description: "word ".repeat(200), content: "A body of its own" }]);
+		await pollFeed(db, { now: NOW });
+
+		let summary = (await loadItem("g1")).summary ?? "";
+		// Capping near what the timeline renders is what makes a row's cost predictable, and
+		// the marker is what says the line was cut rather than the sentence stopped. The
+		// marker counts toward the cap, so the cap is what a row holds rather than what it
+		// holds before the thing that says it was cut.
+		expect(summary.length).toBeLessThanOrEqual(MAX_SUMMARY_LENGTH);
+		expect(summary.endsWith("…")).toBe(true);
+		expect(summary).toBe(`${"word ".repeat(55).trimEnd()}…`);
+
+		// The next poll re-hashes the cut summary, so the entry reads as unchanged rather
+		// than as edited on every poll for as long as the publisher leaves it alone.
 		let writes = watchWrites();
-		let outcome = await refreshFeed(db, await loadFeed(), { now: NOW + HOUR });
+		let outcome = await pollFeed(db, { now: NOW + HOUR });
 		expect(writes.itemWrites()).toEqual([]);
 		writes.restore();
 
-		expect(outcome).toEqual({ status: "ok", inserted: 0, updated: 0 });
+		expect(outcome).toEqual({ status: "ok", inserted: 0, edited: 0, head: 1 });
 	});
 
-	test("inserts an entry the document did not carry before", async () => {
-		let feed = await storeFeed();
-		serve(FEED_URL, [{ guid: "g1" }]);
-		await refreshFeed(db, feed, { now: NOW });
-
-		serve(FEED_URL, [{ guid: "g2" }, { guid: "g1" }]);
-
-		let writes = watchWrites();
-		let outcome = await refreshFeed(db, await loadFeed(), { now: NOW + HOUR });
-		/** Proves the watcher the no-write assertions rest on sees a write when there is one. */
-		expect(writes.itemWrites()).toHaveLength(1);
-		writes.restore();
-
-		expect(outcome).toEqual({ status: "ok", inserted: 1, updated: 0 });
-		expect((await storedItems()).map((item) => item.guid).sort()).toEqual(["g1", "g2"]);
-	});
-
-	test("mints a post id carrying the type it identifies", async () => {
-		let feed = await storeFeed();
-		serve(FEED_URL, [{ guid: "g1" }]);
-
-		await refreshFeed(db, feed, { now: NOW });
-
-		/** A `:itemId` in a URL names the same thing whichever path stored the post. */
-		expect((await loadItem("g1")).id).toMatch(/^item_[\da-z]{26}$/);
-	});
-
-	test("cuts a summary past the cap and keeps hashing the cut one", async () => {
-		let feed = await storeFeed();
-		serve(FEED_URL, [
-			{ guid: "g1", description: "a".repeat(MAX_SUMMARY_LENGTH + 1000), content: "The full body" },
-		]);
-		await refreshFeed(db, feed, { now: NOW });
-
-		expect((await loadItem("g1")).summary).toHaveLength(MAX_SUMMARY_LENGTH);
-
-		/** The second poll re-hashes the same cut summary, so the post reads as unchanged. */
-		let writes = watchWrites();
-		let outcome = await refreshFeed(db, await loadFeed(), { now: NOW + HOUR });
-		expect(writes.itemWrites()).toEqual([]);
-		writes.restore();
-
-		expect(outcome).toEqual({ status: "ok", inserted: 0, updated: 0 });
-	});
-
-	test("reads a description-only entry as an excerpt of text, markup and all resolved", async () => {
-		let feed = await storeFeed();
-		serve(FEED_URL, [
+	test("draws a line to read out of the body when the feed publishes no summary", async () => {
+		await storeFeed();
+		serve([
 			{ guid: "g1", description: cdata("<p>An opening line. <strong>Then</strong> a second.</p>") },
 		]);
 
-		await refreshFeed(db, feed, { now: NOW });
+		await pollFeed(db, { now: NOW });
 
+		// Most RSS publishes a bare description, which a feed reports as the body with no
+		// summary beside it, so the visible text of that body is the line under the title.
 		expect((await loadItem("g1")).summary).toBe("An opening line. Then a second.");
 	});
 
 	test("resolves the entities a body carries into the characters they stand for", async () => {
-		let feed = await storeFeed();
-		serve(FEED_URL, [
-			{ guid: "g1", description: cdata("<p>Tea &amp; toast, the caf&#8217;s own.</p>") },
-		]);
+		await storeFeed();
+		serve([{ guid: "g1", description: cdata("<p>Tea &amp; toast, the caf&#8217;s own.</p>") }]);
 
-		await refreshFeed(db, feed, { now: NOW });
+		await pollFeed(db, { now: NOW });
 
 		expect((await loadItem("g1")).summary).toBe("Tea & toast, the caf’s own.");
 	});
 
-	test("keeps the summary a publisher wrote when the entry carries a body of its own", async () => {
-		let feed = await storeFeed();
-		serve(FEED_URL, [
+	test("keeps the summary a publisher wrote when the entry carries a body beside it", async () => {
+		await storeFeed();
+		serve([
 			{
 				guid: "g1",
 				description: "The publisher's own words.",
@@ -329,25 +553,13 @@ describe("refreshFeed", () => {
 			},
 		]);
 
-		await refreshFeed(db, feed, { now: NOW });
+		await pollFeed(db, { now: NOW });
 
 		expect((await loadItem("g1")).summary).toBe("The publisher's own words.");
 	});
 
-	test("cuts an excerpt at a word boundary and marks where it was cut", async () => {
-		let feed = await storeFeed();
-		let opening = "word ".repeat(55);
-		serve(FEED_URL, [{ guid: "g1", description: `${opening}supercalifragilisticexpialidocious` }]);
-
-		await refreshFeed(db, feed, { now: NOW });
-
-		let summary = (await loadItem("g1")).summary ?? "";
-		expect(summary).toBe(`${opening.trimEnd()}…`);
-		expect(summary.length).toBeLessThanOrEqual(EXCERPT_LENGTH + 1);
-	});
-
-	test("stores no summary for an entry carrying neither a body nor one", async () => {
-		let feed = await storeFeed();
+	test("stores no line at all for an entry carrying neither a summary nor a body", async () => {
+		await storeFeed();
 		server.use(
 			http.get(FEED_URL, () =>
 				HttpResponse.xml(`<?xml version="1.0"?>
@@ -358,155 +570,13 @@ describe("refreshFeed", () => {
 			),
 		);
 
-		await refreshFeed(db, feed, { now: NOW });
+		await pollFeed(db, { now: NOW });
 
 		expect((await loadItem("g1")).summary).toBeNull();
 	});
 
-	test("notices a rewritten body in a feed that publishes only a description", async () => {
-		let feed = await storeFeed();
-		serve(FEED_URL, [{ guid: "g1", description: "The first version of the body." }]);
-		await refreshFeed(db, feed, { now: NOW });
-
-		await db.updateMany(feedItems, { read_at: NOW + 1 }, { where: { guid: "g1" }, touch: false });
-		let before = await loadItem("g1");
-
-		serve(FEED_URL, [{ guid: "g1", description: "The body, rewritten by the publisher." }]);
-		let outcome = await refreshFeed(db, await loadFeed(), { now: NOW + HOUR });
-
-		expect(outcome).toEqual({ status: "ok", inserted: 0, updated: 1 });
-
-		let after = await loadItem("g1");
-		expect(after.summary).toBe("The body, rewritten by the publisher.");
-		expect(after.content_hash).not.toBe(before.content_hash);
-		expect(after.id).toBe(before.id);
-		expect(after.published_at).toBe(before.published_at);
-		expect(after.read_at).toBe(NOW + 1);
-	});
-
-	test("updates an edited entry while leaving read_at, id and published_at alone", async () => {
-		let feed = await storeFeed();
-		serve(FEED_URL, [
-			{ guid: "g1", title: "First draft", description: "A typo", content: "The full body" },
-		]);
-		await refreshFeed(db, feed, { now: NOW });
-
-		await db.updateMany(feedItems, { read_at: NOW + 1 }, { where: { guid: "g1" }, touch: false });
-		let before = await loadItem("g1");
-
-		serve(FEED_URL, [
-			{
-				guid: "g1",
-				title: "First draft",
-				description: "The typo, fixed",
-				content: "The full body",
-			},
-		]);
-		let outcome = await refreshFeed(db, await loadFeed(), { now: NOW + HOUR });
-
-		expect(outcome).toEqual({ status: "ok", inserted: 0, updated: 1 });
-
-		let after = await loadItem("g1");
-		expect(after.summary).toContain("The typo, fixed");
-		expect(after.content_hash).not.toBe(before.content_hash);
-		expect(after.id).toBe(before.id);
-		expect(after.published_at).toBe(before.published_at);
-		expect(after.read_at).toBe(NOW + 1);
-	});
-
-	test("treats an entry re-dated with identical content as unchanged", async () => {
-		let feed = await storeFeed();
-		serve(FEED_URL, [{ guid: "g1", pubDate: "Tue, 01 Sep 2026 00:00:00 GMT" }]);
-		await refreshFeed(db, feed, { now: NOW });
-		let before = await loadItem("g1");
-
-		serve(FEED_URL, [{ guid: "g1", pubDate: "Wed, 09 Sep 2026 12:00:00 GMT" }]);
-
-		let writes = watchWrites();
-		let outcome = await refreshFeed(db, await loadFeed(), { now: NOW + HOUR });
-		expect(writes.itemWrites()).toEqual([]);
-		writes.restore();
-
-		expect(outcome).toEqual({ status: "ok", inserted: 0, updated: 0 });
-		expect((await loadItem("g1")).published_at).toBe(before.published_at);
-	});
-
-	test("keeps a post the new document no longer carries", async () => {
-		let feed = await storeFeed();
-		serve(FEED_URL, [{ guid: "g1" }, { guid: "g2" }]);
-		await refreshFeed(db, feed, { now: NOW });
-
-		serve(FEED_URL, [{ guid: "g2" }]);
-		await refreshFeed(db, await loadFeed(), { now: NOW + HOUR });
-
-		expect((await storedItems()).map((item) => item.guid).sort()).toEqual(["g1", "g2"]);
-	});
-
-	test("records an error status in its own column and backs the feed off", async () => {
-		let feed = await storeFeed();
-		serveStatus(FEED_URL, 404);
-
-		let outcome = await refreshFeed(db, feed, { now: NOW });
-		expect(outcome).toMatchObject({ status: "http_error", httpStatus: 404 });
-
-		let stored = await loadFeed();
-		expect(stored.last_status).toBe("http_error");
-		expect(stored.last_http_status).toBe(404);
-		expect(stored.last_error).toContain("404");
-		expect(stored.failure_count).toBe(1);
-		expect(stored.next_attempt_at).toBe(NOW + 5 * 60 * 1000);
-	});
-
-	test("caps the backoff at a day however long a feed has been failing", async () => {
-		let feed = await storeFeed({ failure_count: 40 });
-		serveStatus(FEED_URL, 500);
-
-		await refreshFeed(db, feed, { now: NOW });
-
-		let stored = await loadFeed();
-		expect(stored.failure_count).toBe(41);
-		expect(stored.next_attempt_at).toBe(NOW + 24 * HOUR);
-	});
-
-	test("lengthens the wait with each consecutive failure", async () => {
-		let first = await storeFeed({ failure_count: 1 });
-		serveStatus(FEED_URL, 500);
-		await refreshFeed(db, first, { now: NOW });
-
-		expect((await loadFeed()).next_attempt_at).toBe(NOW + 10 * 60 * 1000);
-	});
-
-	test("reports a document that is not a feed as a parse failure", async () => {
-		let feed = await storeFeed();
-		server.use(http.get(FEED_URL, () => HttpResponse.text("not xml at all")));
-
-		let outcome = await refreshFeed(db, feed, { now: NOW });
-
-		expect(outcome.status).toBe("parse_error");
-		expect((await loadFeed()).last_status).toBe("parse_error");
-		expect((await loadFeed()).last_http_status).toBeNull();
-	});
-
-	test("clears the failure state once the feed answers again", async () => {
-		let feed = await storeFeed({
-			failure_count: 4,
-			next_attempt_at: NOW - 1,
-			last_status: "network_error",
-			last_error: "Failed to fetch feed: fetch failed",
-		});
-		serve(FEED_URL, [{ guid: "g1" }]);
-
-		await refreshFeed(db, feed, { now: NOW });
-
-		let stored = await loadFeed();
-		expect(stored.last_status).toBe("ok");
-		expect(stored.failure_count).toBe(0);
-		expect(stored.next_attempt_at).toBeNull();
-		expect(stored.last_error).toBeNull();
-	});
-
 	test("falls back to first-seen when the entry publishes no date", async () => {
-		let feed = await storeFeed();
+		await storeFeed();
 		server.use(
 			http.get(FEED_URL, () =>
 				HttpResponse.xml(`<?xml version="1.0"?>
@@ -517,158 +587,124 @@ describe("refreshFeed", () => {
 			),
 		);
 
-		await refreshFeed(db, feed, { now: NOW });
+		await pollFeed(db, { now: NOW });
 
+		// The column a timeline sorts on has to be total, and a nullable one leaves a hole
+		// in the index every keyset page walks.
 		expect((await loadItem("g1")).published_at).toBe(NOW);
 	});
 
-	test("inserts more entries than one statement can bind", async () => {
-		let feed = await storeFeed();
-		let entries = Array.from({ length: 30 }, (_, index) => ({ guid: `g${index}` }));
-		serve(FEED_URL, entries);
+	test("stores more entries than one statement can bind", async () => {
+		await storeFeed();
+		serve(Array.from({ length: 30 }, (_, index) => ({ guid: `g${index}` })));
 
-		expect(await refreshFeed(db, feed, { now: NOW })).toEqual({
+		expect(await pollFeed(db, { now: NOW })).toEqual({
 			status: "ok",
 			inserted: 30,
-			updated: 0,
+			edited: 0,
+			head: 30,
 		});
 		expect(await storedItems()).toHaveLength(30);
 	});
+
+	test("records what the feed publishes alongside the items it stored", async () => {
+		await storeFeed();
+		let published = new Date(NOW - DAY).toUTCString();
+		serve([
+			{ guid: "g1", pubDate: published },
+			{ guid: "g2", pubDate: published },
+			{ guid: "g3", pubDate: published },
+		]);
+
+		await pollFeed(db, { now: NOW });
+
+		// Measured once here and handed to everyone following the feed, the same way the
+		// fetch and the parse already are.
+		expect((await loadFeed()).posts_per_day).toBeCloseTo(0.1, 5);
+	});
 });
 
-describe("refreshDueFeeds", () => {
-	test("leaves a feed inside its backoff alone", async () => {
-		await storeFeed({
-			id: "waiting",
-			feed_url: "https://waiting.test/feed.xml",
-			next_attempt_at: NOW + HOUR,
-		});
-		await storeFeed({ id: "due", feed_url: "https://due.test/feed.xml" });
-		serve("https://due.test/feed.xml", [{ guid: "g1" }]);
-
-		let run = await refreshDueFeeds(db, { now: NOW });
-
-		expect(run).toEqual({ attempted: 1, remaining: 0 });
-		expect((await loadFeed("waiting")).last_fetched_at).toBeNull();
-		expect((await loadFeed("due")).last_status).toBe("ok");
-	});
-
-	test("reports what the budget left behind", async () => {
+describe("measurePostsPerDay", () => {
+	test("reports what the feed published over the window, spread across its days", async () => {
 		for (let index of [1, 2, 3]) {
-			let url = `https://feed${index}.test/feed.xml`;
-			await storeFeed({ id: `feed-${index}`, feed_url: url, last_fetched_at: index });
-			serve(url, [{ guid: `g${index}` }]);
+			await storeItem({ id: `item_${index}`, revision: index, published_at: NOW - index * DAY });
 		}
 
-		expect(await refreshDueFeeds(db, { now: NOW, limit: 2 })).toEqual({
-			attempted: 2,
-			remaining: 1,
-		});
+		expect(await measurePostsPerDay(db, NOW)).toBeCloseTo(0.1, 5);
 	});
 
-	test("takes the stalest feeds first, so no feed is permanently skipped", async () => {
-		await storeFeed({ id: "fresh", feed_url: "https://fresh.test/feed.xml", last_fetched_at: NOW });
-		await storeFeed({ id: "stale", feed_url: "https://stale.test/feed.xml", last_fetched_at: 1 });
-		serve("https://stale.test/feed.xml", [{ guid: "g1" }]);
+	test("leaves out what a site published before it went quiet", async () => {
+		await storeItem({ id: "item_1", revision: 1, published_at: NOW - 31 * DAY });
+		await storeItem({ id: "item_2", revision: 2, published_at: NOW - 2 * DAY });
 
-		await refreshDueFeeds(db, { now: NOW, limit: 1 });
-
-		expect((await loadFeed("stale")).last_fetched_at).toBe(NOW);
-		expect((await loadFeed("fresh")).last_fetched_at).toBe(NOW);
-		expect((await loadFeed("stale")).last_status).toBe("ok");
-		expect((await loadFeed("fresh")).last_status).toBeNull();
+		// A rate a site used to run at stops describing it, which is the point of taking
+		// the figure over a window rather than over everything ever stored.
+		expect(await measurePostsPerDay(db, NOW)).toBeCloseTo(1 / 30, 5);
 	});
 
-	test("resolves rather than rejects when every origin is failing", async () => {
-		await storeFeed();
-		serveStatus(FEED_URL, 503);
-
-		await expect(refreshDueFeeds(db, { now: NOW })).resolves.toEqual({
-			attempted: 1,
-			remaining: 0,
-		});
-		expect((await loadFeed()).last_status).toBe("http_error");
-	});
-
-	test("prunes each feed it refreshed", async () => {
-		let feed = await storeFeed();
-		serve(FEED_URL, [{ guid: "g1" }, { guid: "g2" }]);
-		await refreshFeed(db, feed, { now: NOW });
-		await db.updateMany(
-			feedItems,
-			{ read_at: NOW },
-			{ where: { feed_id: "feed-1" }, touch: false },
-		);
-
-		serve(FEED_URL, [{ guid: "g1" }, { guid: "g2" }]);
-		await refreshDueFeeds(db, { now: NOW + HOUR, retention: 1 });
-
-		expect(await storedItems()).toHaveLength(1);
-	});
-
-	test("does nothing at all when no feed is due", async () => {
-		await storeFeed({ next_attempt_at: NOW + HOUR });
-
-		expect(await refreshDueFeeds(db, { now: NOW })).toEqual({ attempted: 0, remaining: 0 });
+	test("reports nothing published as a rate of nothing", async () => {
+		expect(await measurePostsPerDay(db, NOW)).toBe(0);
 	});
 });
 
-describe("pruneFeed", () => {
-	/** Five posts, oldest to newest, so the cap has something to count down through. */
-	async function storeFivePosts(): Promise<void> {
-		for (let index of [1, 2, 3, 4, 5]) {
-			await storeItem({ id: `i${index}`, guid: `g${index}`, published_at: index * 1000 });
+describe("pruneItems", () => {
+	/** Five items in the order this object decided them, for the cap to count down through. */
+	async function storeFiveItems(): Promise<void> {
+		for (let revision of [1, 2, 3, 4, 5]) {
+			await storeItem({
+				id: `item_${revision}`,
+				revision,
+				published_at: NOW - revision * HOUR,
+			});
 		}
 	}
 
-	test("drops the read posts beyond the cap", async () => {
-		await storeFivePosts();
-		await db.updateMany(
-			feedItems,
-			{ read_at: NOW },
-			{ where: { feed_id: "feed-1" }, touch: false },
-		);
+	test("keeps the newest items by revision and drops everything below them", async () => {
+		await storeFiveItems();
 
-		expect(await pruneFeed(db, "feed-1", 2)).toBe(3);
-		expect((await storedItems()).map((item) => item.id)).toEqual(["i4", "i5"]);
-	});
-
-	test("keeps an unread post however far beyond the cap it sits", async () => {
-		await storeFivePosts();
-		await db.updateMany(
-			feedItems,
-			{ read_at: NOW },
-			{ where: { feed_id: "feed-1" }, touch: false },
-		);
-		await db.updateMany(feedItems, { read_at: null }, { where: { id: "i1" }, touch: false });
-
-		expect(await pruneFeed(db, "feed-1", 2)).toBe(2);
-		expect((await storedItems()).map((item) => item.id)).toEqual(["i1", "i4", "i5"]);
+		expect(await pruneItems(db, 2)).toBe(3);
+		// By revision rather than by date: a publisher posting an entry dated four years
+		// ago has published something new, and the newest two here are the oldest by date.
+		expect((await storedItems()).map((item) => item.revision)).toEqual([4, 5]);
 	});
 
 	test("deletes nothing from a feed inside the cap", async () => {
-		await storeFivePosts();
-		await db.updateMany(
-			feedItems,
-			{ read_at: NOW },
-			{ where: { feed_id: "feed-1" }, touch: false },
-		);
+		await storeFiveItems();
 
-		expect(await pruneFeed(db, "feed-1", 10)).toBe(0);
+		expect(await pruneItems(db, 10)).toBe(0);
 		expect(await storedItems()).toHaveLength(5);
 	});
 
-	test("leaves another feed's posts where they are", async () => {
-		await storeFivePosts();
-		await storeItem({ id: "other", feed_id: "feed-2", guid: "go", published_at: 1, read_at: NOW });
-		await db.updateMany(
-			feedItems,
-			{ read_at: NOW },
-			{ where: { feed_id: "feed-1" }, touch: false },
-		);
+	test("empties the table when it is asked to keep nothing", async () => {
+		await storeFiveItems();
 
-		await pruneFeed(db, "feed-1", 1);
+		expect(await pruneItems(db, 0)).toBe(5);
+		expect(await storedItems()).toEqual([]);
+	});
 
-		expect(await storedItems("feed-2")).toHaveLength(1);
+	test("leaves the head where it is, so a sweep has nothing to publish", async () => {
+		await storeFeed({ head: 5 });
+		await storeFiveItems();
+
+		await pruneItems(db, 1);
+
+		expect((await loadFeed()).head).toBe(5);
+	});
+
+	test("hands the next discovery a revision above everything a sweep deleted", async () => {
+		await storeFeed();
+		serve([{ guid: "g1" }, { guid: "g2" }]);
+		await pollFeed(db, { now: NOW });
+
+		await pruneItems(db, 0);
+
+		serve([{ guid: "g3" }]);
+		await pollFeed(db, { now: NOW + HOUR });
+
+		// The counter lives in the feed's row rather than being a rowid, which SQLite
+		// reuses after a delete: a number handed out twice would strand every cursor
+		// above it and tell a subscriber to forget what they already have.
+		expect((await storedItems()).map((item) => item.revision)).toEqual([3]);
+		expect((await loadFeed()).head).toBe(3);
 	});
 });

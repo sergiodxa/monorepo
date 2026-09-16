@@ -33,15 +33,45 @@
 	// SQLite-backed from the first migration. A `new_classes` object gets key-value
 	// storage instead, which has no SQL to run the schema against, and the storage
 	// backend cannot be changed after the class exists.
+	// And one object per canonical feed, addressed by the id the catalog assigned it,
+	// holding the feed's own items, its HTTP validators and its subscribers. It is what
+	// makes the traffic this app sends a publisher a function of how many feeds exist
+	// rather than of how many people follow each one: ten thousand followers of one feed
+	// are one poll, because there is one object doing the polling.
 	"durable_objects": {
-		"bindings": [{ "name": "USER", "class_name": "UserDO" }],
+		"bindings": [
+			{ "name": "USER", "class_name": "UserDO" },
+			{ "name": "FEED", "class_name": "FeedDO" },
+		],
 	},
 
-	"migrations": [{ "tag": "add-user-do", "new_sqlite_classes": ["UserDO"] }],
+	"migrations": [
+		{ "tag": "add-user-do", "new_sqlite_classes": ["UserDO"] },
+		{ "tag": "add-feed-do", "new_sqlite_classes": ["FeedDO"] },
+	],
 
-	// Sessions and the OIDC discovery/JWKS cache share one namespace, keyed apart by
-	// prefix. They belong together: both are derived state a cold isolate can rebuild,
-	// so losing the namespace signs everybody out rather than losing anything owned.
+	// The feed catalog: one row per canonical feed the system has ever created. It
+	// assigns feed identity, and it is the only place the list of feeds exists, because
+	// a Durable Object namespace is reachable one name at a time and enumerable by
+	// nothing. Nothing that renders a page reads it.
+	//
+	// `database_id` is a placeholder. Create the real database with
+	// `bunx wrangler d1 create reader-catalog` and paste its id here before the first
+	// deploy, then apply `./database/catalog-migrations` with `wrangler d1 migrations`.
+	"d1_databases": [
+		{
+			"binding": "PLATFORM_DB",
+			"database_name": "reader-catalog",
+			"database_id": "REPLACE_ME",
+			"migrations_dir": "./database/catalog-migrations",
+		},
+	],
+
+	// Sessions, the OIDC discovery/JWKS cache and each feed's published head share one
+	// namespace, keyed apart by prefix. They belong together: all three are derived state
+	// a cold isolate can rebuild, so losing the namespace signs everybody out and makes
+	// every feed look current until its next poll republishes, rather than losing
+	// anything owned.
 	//
 	// `id` and `preview_id` are placeholders. Create the real namespace with
 	// `bunx wrangler kv namespace create` and paste its id into both fields before the

@@ -1,7 +1,11 @@
 /**
- * The refresh path: retrieving one feed, folding what came back into a reader's posts,
- * and choosing which feeds are due. It takes a `Database` rather than a Durable Object,
- * so the whole thing runs in a plain test against SQLite with no object around it.
+ * The refresh path: retrieving one feed and folding what came back into that feed's own
+ * items. It takes a `Database` rather than a Durable Object, so the whole thing runs in a
+ * plain test against SQLite with no object around it.
+ *
+ * Nothing here is scoped by a feed id, because the database it writes to holds one feed.
+ * A reader's copy of a post is made later, by that reader's own object, from what this
+ * stored.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,37 +18,20 @@ import { HTML } from "@sdxc/html";
 import { isFailure } from "@sdxc/result";
 import { TypeID } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
-import { and, eq, getTableColumns, isNull, lt, lte, notNull, or } from "remix/data-table";
+import { and, getTableColumns, gt, lt, lte } from "remix/data-table";
 
-import type { InsertFeedItem, SelectFeed } from "~/database/schema";
+import type { InsertItem, SelectFeed } from "~/database/feed-schema";
 
-import { feedItems, feeds } from "~/database/schema";
+import { feed as feedTable, items } from "~/database/feed-schema";
 
-/**
- * Feeds one firing may attempt. It bounds how long a single alarm holds the object and
- * how many origins one firing talks to; whatever it leaves behind is reported as
- * `remaining` so the caller re-arms in a minute rather than an interval.
- */
-const DEFAULT_LIMIT = 20;
+/** The feed row's id, pinned by a `CHECK`, since an object holds exactly one feed. */
+export const FEED_ROW_ID = 1;
 
 /**
- * Feeds fetched at once. High enough that a run is paced by the slowest origin rather
- * than by the sum of them, low enough that one reader's refresh is not a burst of
- * connections from the object's single thread.
- */
-const DEFAULT_CONCURRENCY = 6;
-
-/**
- * How long one feed's fetch may take. It caps what a single unresponsive origin costs
- * the run, so twenty healthy feeds still refresh while one of them hangs.
+ * How long one feed's fetch may take. It caps what an unresponsive origin costs the
+ * object's single alarm, which has other feeds' subscribers waiting on nothing else.
  */
 const DEFAULT_TIMEOUT_MS = 10_000;
-
-/**
- * Posts kept per feed. It bounds the object's storage against the 10 GB an object gets,
- * while leaving a reader months of a daily feed to look back through.
- */
-const DEFAULT_RETENTION = 500;
 
 /**
  * The first backoff a failing feed waits. Short enough that a feed down for one poll is
@@ -62,22 +49,25 @@ const MAX_BACKOFF_MS = 24 * 60 * 60 * 1000;
 const MAX_BOUND_PARAMETERS = 100;
 
 /**
- * The longest summary a stored post keeps. A Durable Object's row is capped at 2 MB, so a
- * publisher who sends a chapter where a paragraph belongs still leaves every other column
- * of the row its room. {@link displayableOf} applies it, which is what keeps a cut summary
- * hashing the same twice.
+ * The longest line a stored post keeps under its title.
+ *
+ * It is what a row actually renders: the timeline draws the summary on the title's own
+ * line and clips it, so storing a chapter to display a sentence makes the cost of a row
+ * unpredictable for no reader-visible gain. Every summary is cut to this, whether the
+ * publisher wrote one or it was drawn out of the body, so both kinds read the same and a
+ * row's size is something this object can reason about.
  */
-export const MAX_SUMMARY_LENGTH = 100_000;
+export const MAX_SUMMARY_LENGTH = 280;
+
+/** Closes a shortened line, so the passage reads as cut rather than as a stopped sentence. */
+const SUMMARY_MARKER = "…";
 
 /**
- * The longest excerpt derived from a post's body. It is about two sentences, which is
- * what a timeline entry reads as under its title: enough of the opening to tell whether
- * the post is worth clicking, short enough that every entry stays the same size.
+ * How far back publishing is measured, and the window a rate is taken over. A month is
+ * long enough that a weekly blog registers at all and short enough that a site which has
+ * gone quiet stops being described by what it used to do.
  */
-export const EXCERPT_LENGTH = 280;
-
-/** Closes an excerpt, so the passage reads as shortened rather than as a stopped sentence. */
-const EXCERPT_MARKER = "…";
+const RATE_WINDOW_DAYS = 30;
 
 /**
  * The status behind a failed retrieval. `Feed.fetch` reports an error status and an
@@ -95,45 +85,19 @@ const CLEARED_FAILURE = {
 } satisfies Partial<SelectFeed>;
 
 /**
- * What one feed's refresh recorded. Every branch is an outcome rather than a throw: the
- * alarm that drives these must never reject, and a feed that 404s is ordinary news about
- * that feed rather than a failure of the run it happened in.
+ * What one poll recorded. Every branch is an outcome rather than a throw: the alarm that
+ * drives these must never reject, and a feed that 404s is ordinary news about that feed
+ * rather than a failure of the run it happened in.
  */
-export type RefreshOutcome =
-	| { status: "ok"; inserted: number; updated: number }
+export type PollOutcome =
+	| { status: "ok"; inserted: number; edited: number; head: number }
 	/** The origin answered 304, so the stored copy is current and nothing was parsed. */
 	| { status: "not_modified" }
 	| { status: "http_error"; httpStatus: number; message: string }
 	| { status: "network_error"; message: string }
 	| { status: "parse_error"; message: string };
 
-/** What one firing of the refresh got through. */
-export interface RefreshRun {
-	/** Feeds this firing attempted, at most the budget it was given. */
-	attempted: number;
-	/** Feeds still due when the budget ran out, so the caller can re-arm sooner. */
-	remaining: number;
-}
-
-/** How a whole refresh run is bounded. */
-export interface RefreshRunOptions {
-	/** Epoch milliseconds this run is measured against, threaded through for testability. */
-	now: number;
-	/** Most feeds to attempt in one firing. */
-	limit?: number;
-	/** How many feeds are fetched at once. */
-	concurrency?: number;
-	/** How long one feed's fetch may take before it is abandoned. */
-	timeoutMs?: number;
-	/** Most posts to keep per feed; older read ones beyond it are pruned. */
-	retention?: number;
-}
-
-/**
- * The fields a reader sees, and the whole of what `content_hash` is taken over. A
- * publication date stays out of it deliberately: feeds that re-date every entry on every
- * poll exist, and one of them would otherwise read as a publisher editing everything.
- */
+/** The fields a reader sees, as a row will hold them. */
 export interface Displayable {
 	title: string;
 	url: string | null;
@@ -141,34 +105,39 @@ export interface Displayable {
 	author: string | null;
 }
 
-/** One re-published entry, addressed by the guid that identifies it within its feed. */
+/** One re-published entry, addressed by the guid that identifies it within the feed. */
 interface ItemEdit {
 	guid: string;
-	changes: InsertFeedItem;
+	changes: InsertItem;
 }
 
 /** What a parsed document turned into once compared against what is already stored. */
 interface Classification {
-	inserts: InsertFeedItem[];
+	inserts: InsertItem[];
 	edits: ItemEdit[];
 }
 
 /**
- * Retrieves one feed and writes what changed: new posts inserted, edited ones updated,
+ * Retrieves the feed and writes what changed: new items inserted, edited ones updated,
  * and the feed's own validators and failure state stamped either way.
  *
- * A poll where nothing changed performs no writes beyond the feed's own timestamps.
+ * A poll where nothing changed performs no writes beyond the feed's own timestamps, and
+ * reports a head unchanged from the one it started with, so its caller publishes nothing.
  *
- * @param db - The reader's database.
- * @param feed - The stored feed, whose `etag` and `last_modified` are sent as preconditions.
+ * @param db - The feed's database.
  * @param options - The clock this run reads, and an optional per-fetch deadline.
+ * @returns What the poll did, as a value; it resolves however badly the fetch went.
+ * @example let outcome = await pollFeed(db, { now: Date.now() });
  */
-export async function refreshFeed(
+export async function pollFeed(
 	db: Database,
-	feed: SelectFeed,
 	options: { now: number; timeoutMs?: number },
-): Promise<RefreshOutcome> {
+): Promise<PollOutcome> {
 	let now = options.now;
+	let feed = await db.find(feedTable, { id: FEED_ROW_ID });
+
+	/** Nothing has been subscribed to this object yet, so there is no address to fetch. */
+	if (feed === null) return { status: "network_error", message: "This feed has no document yet" };
 
 	try {
 		let result = await Feed.fetch(feed.feed_url, {
@@ -187,8 +156,8 @@ export async function refreshFeed(
 
 		if (retrieved.notModified) {
 			await db.update(
-				feeds,
-				{ id: feed.id },
+				feedTable,
+				{ id: FEED_ROW_ID },
 				{
 					...carriedValidators(feed, retrieved.etag, retrieved.lastModified),
 					last_fetched_at: now,
@@ -202,34 +171,42 @@ export async function refreshFeed(
 			return { status: "not_modified" };
 		}
 
-		let known = await storedDigests(db, feed.id);
-		let { inserts, edits } = await classify(feed, retrieved.feed.items, known, now);
+		let known = await storedDigests(db);
+		let { inserts, edits } = await classify(retrieved.feed.items, known, feed.head, now);
+
+		/**
+		 * The head moves by one tick per thing decided, and each tick is used exactly once:
+		 * an insert takes one and writes it to both `sequence` and `revision`, an edit takes
+		 * one and writes it to `revision` alone. So `sequence` stays a pure record of
+		 * discovery and `revision` is a gap-free order over what a subscriber has not seen.
+		 */
+		let head = feed.head + inserts.length + edits.length;
 
 		for (let chunk of chunked(inserts, insertChunkSize())) {
-			await db.createMany(feedItems, chunk, { touch: false });
+			await db.createMany(items, chunk, { touch: false });
 		}
 
 		for (let edit of edits) {
-			await db.updateMany(feedItems, edit.changes, {
-				where: { feed_id: feed.id, guid: edit.guid },
-				touch: false,
-			});
+			await db.updateMany(items, edit.changes, { where: { guid: edit.guid }, touch: false });
 		}
 
 		await db.update(
-			feeds,
-			{ id: feed.id },
+			feedTable,
+			{ id: FEED_ROW_ID },
 			{
+				...documentMetadata(retrieved.feed),
 				...carriedValidators(feed, retrieved.etag, retrieved.lastModified),
 				last_fetched_at: now,
 				last_status: "ok",
 				last_http_status: retrieved.status,
+				head,
+				posts_per_day: await measurePostsPerDay(db, now),
 				...CLEARED_FAILURE,
 				updated_at: now,
 			},
 		);
 
-		return { status: "ok", inserted: inserts.length, updated: edits.length };
+		return { status: "ok", inserted: inserts.length, edited: edits.length, head };
 	} catch (error) {
 		/**
 		 * An unexpected throw is reported as a feed that could not be reached: the caller's
@@ -242,120 +219,69 @@ export async function refreshFeed(
 }
 
 /**
- * Refreshes every feed whose backoff has elapsed, a bounded number at a time.
+ * Drops the oldest items beyond `keep`, and reports how many went.
  *
- * Resolves rather than rejects however badly the run went, so an alarm can await it
- * directly without a rejection reaching the platform and earning a retry.
+ * Pruning runs on `revision` rather than on a date. It is the order this object decided
+ * things in, it is exactly the order cursors move through, and the rows at the bottom of
+ * it are by construction the ones furthest behind every subscriber. A publication date
+ * would not be: a publisher posting an entry dated four years ago has published something
+ * new, and pruning on that date would delete it before a single reader synchronized it.
  *
- * @param db - The reader's database.
- * @param options - The clock, the budget, and the retention cap applied after each feed.
+ * Deleting the oldest cannot strand a cursor. Cursors only move forward, a reader whose
+ * cursor is below everything left simply receives what remains, and the head counter is
+ * untouched by a delete — which is why a sweep publishes nothing.
+ *
+ * @param db - The feed's database.
+ * @param keep - How many items to leave in place.
  */
-export async function refreshDueFeeds(
-	db: Database,
-	options: RefreshRunOptions,
-): Promise<RefreshRun> {
-	let {
-		now,
-		limit = DEFAULT_LIMIT,
-		concurrency = DEFAULT_CONCURRENCY,
-		timeoutMs = DEFAULT_TIMEOUT_MS,
-		retention = DEFAULT_RETENTION,
-	} = options;
+export async function pruneItems(db: Database, keep: number): Promise<number> {
+	if (keep <= 0) return (await db.deleteMany(items, { where: gt("revision", 0) })).affectedRows;
 
-	try {
-		let due = or(isNull("next_attempt_at"), lte("next_attempt_at", now));
-		let total = await db.count(feeds, { where: due });
-
-		/**
-		 * Stalest first, and a feed never fetched leads them, since SQLite sorts NULL ahead
-		 * of every value. That ordering is what keeps a reader with more feeds than one
-		 * firing can carry from refreshing the same head of the list every time.
-		 */
-		let batch = await db.findMany(feeds, {
-			where: due,
-			orderBy: [
-				["last_fetched_at", "asc"],
-				["id", "asc"],
-			],
-			limit,
-		});
-
-		let next = 0;
-		let workers = Array.from({ length: Math.min(concurrency, batch.length) }, async () => {
-			while (next < batch.length) {
-				let feed = batch[next++];
-				if (feed === undefined) return;
-				await refreshOne(db, feed, { now, timeoutMs, retention });
-			}
-		});
-
-		await Promise.allSettled(workers);
-
-		return { attempted: batch.length, remaining: Math.max(0, total - batch.length) };
-	} catch {
-		return { attempted: 0, remaining: 0 };
-	}
-}
-
-/**
- * Drops the oldest read posts of one feed beyond `keep`, and reports how many went.
- *
- * Only read posts are eligible. Retention is the one thing that deletes a post — a post
- * that fell out of the feed document is kept, since a feed carries only its most recent
- * entries and dropping the rest would erase a reader's history a week after publication.
- *
- * @param db - The reader's database.
- * @param feedId - The feed to prune.
- * @param keep - How many of the feed's posts to leave in place.
- */
-export async function pruneFeed(db: Database, feedId: string, keep: number): Promise<number> {
-	let read = and({ feed_id: feedId }, notNull("read_at"));
-
-	if (keep <= 0) {
-		return (await db.deleteMany(feedItems, { where: read })).affectedRows;
-	}
-
-	/**
-	 * The oldest post inside the cap, found by counting down the feed's own timeline. Read
-	 * and unread alike count toward it, so the cap describes the feed's whole footprint
-	 * rather than a number that grows with whatever the reader has left unread.
-	 */
+	/** The oldest item inside the cap, found by counting down the order it was decided in. */
 	let [cutoff] = await db
-		.query(feedItems)
-		.where({ feed_id: feedId })
-		.select("published_at", "id")
-		.orderBy("published_at", "desc")
-		.orderBy("id", "desc")
+		.query(items)
+		.select("revision")
+		.orderBy("revision", "desc")
 		.limit(1)
 		.offset(keep - 1)
 		.all();
 
 	if (cutoff === undefined) return 0;
 
-	let older = or(
-		lt("published_at", cutoff.published_at),
-		and(eq("published_at", cutoff.published_at), lt("id", cutoff.id)),
-	);
-
-	return (await db.deleteMany(feedItems, { where: and(read, older) })).affectedRows;
+	/** Strictly below, so the cutoff row is the oldest one kept rather than the newest gone. */
+	return (await db.deleteMany(items, { where: lt("revision", cutoff.revision) })).affectedRows;
 }
 
 /**
- * One feed's whole turn in a run: refreshed, then pruned to the retention cap. Whatever
- * went wrong stops here, so the worker that took this feed carries on to the next one
- * rather than retiring with the queue half read.
+ * What the feed is publishing, in posts per day over the last month.
+ *
+ * Measured rather than guessed, and measured here because this object already holds every
+ * item with the date it carries: the figure is taken once for a feed and shared by
+ * everyone following it, the same way the fetch and the parse are. What a reader does with
+ * it is a suggestion — a rate is a good reason to ask somebody a question and a bad reason
+ * to delete their posts.
+ *
+ * @param db - The feed's database.
+ * @param now - Epoch milliseconds the window is measured back from.
  */
-async function refreshOne(
-	db: Database,
-	feed: SelectFeed,
-	options: { now: number; timeoutMs: number; retention: number },
-): Promise<void> {
-	try {
-		await refreshFeed(db, feed, options);
-		await pruneFeed(db, feed.id, options.retention);
-	} catch {
-		return;
-	}
+export async function measurePostsPerDay(db: Database, now: number): Promise<number> {
+	let since = now - RATE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+	let published = await db.count(items, {
+		where: and(gt("published_at", since), lte("published_at", now)),
+	});
+
+	return published / RATE_WINDOW_DAYS;
+}
+
+/** The feed's own description of itself, as the document last carried it. */
+function documentMetadata(document: Feed.Data) {
+	return {
+		title: document.title,
+		site_url: document.siteUrl ?? null,
+		description: document.description ?? null,
+		language: document.language ?? null,
+		image_url: document.imageUrl ?? null,
+	};
 }
 
 /**
@@ -379,7 +305,7 @@ function describe(error: unknown): string {
 /** Sorts a failed retrieval into the category `last_status` records. */
 function classifyFailure(
 	error: Error,
-): Extract<RefreshOutcome, { status: "http_error" | "network_error" | "parse_error" }> {
+): Extract<PollOutcome, { status: "http_error" | "network_error" | "parse_error" }> {
 	if (!(error instanceof FeedFetchError)) {
 		return { status: "parse_error", message: error.message };
 	}
@@ -394,14 +320,14 @@ function classifyFailure(
 async function recordFailure(
 	db: Database,
 	feed: SelectFeed,
-	outcome: Extract<RefreshOutcome, { status: "http_error" | "network_error" | "parse_error" }>,
+	outcome: Extract<PollOutcome, { status: "http_error" | "network_error" | "parse_error" }>,
 	now: number,
 ): Promise<void> {
 	let failureCount = feed.failure_count + 1;
 
 	await db.update(
-		feeds,
-		{ id: feed.id },
+		feedTable,
+		{ id: FEED_ROW_ID },
 		{
 			last_fetched_at: now,
 			last_status: outcome.status,
@@ -415,35 +341,34 @@ async function recordFailure(
 }
 
 /** How long a feed waits after its `count`-th consecutive failure. */
-function backoffFor(count: number): number {
+export function backoffFor(count: number): number {
 	let doublings = Math.min(count - 1, Math.ceil(Math.log2(MAX_BACKOFF_MS / BASE_BACKOFF_MS)));
 	return Math.min(BASE_BACKOFF_MS * 2 ** doublings, MAX_BACKOFF_MS);
 }
 
 /**
- * Every stored entry of one feed as guid to digest — the single prefetch that sorts a
- * whole document into inserts, no-ops and edits in memory, so an unchanged poll compares
- * rows without touching one.
+ * Every stored entry as guid to digest — the single prefetch that sorts a whole document
+ * into inserts, no-ops and edits in memory, so an unchanged poll compares rows without
+ * touching one.
  */
-async function storedDigests(db: Database, feedId: string): Promise<Map<string, string>> {
-	let rows = await db
-		.query(feedItems)
-		.where({ feed_id: feedId })
-		.select("guid", "content_hash")
-		.all();
-
+async function storedDigests(db: Database): Promise<Map<string, string>> {
+	let rows = await db.query(items).select("guid", "content_hash").all();
 	return new Map(rows.map((row) => [row.guid, row.content_hash]));
 }
 
-/** Sorts every parsed entry against what is stored, without writing anything. */
+/**
+ * Sorts every parsed entry against what is stored, without writing anything, handing each
+ * decision the next tick of the head counter.
+ */
 async function classify(
-	feed: SelectFeed,
 	entries: Feed.Item[],
 	known: Map<string, string>,
+	head: number,
 	now: number,
 ): Promise<Classification> {
-	let inserts: InsertFeedItem[] = [];
+	let inserts: InsertItem[] = [];
 	let edits: ItemEdit[] = [];
+	let tick = head;
 
 	for (let entry of entries) {
 		let displayable = displayableOf(entry);
@@ -451,31 +376,36 @@ async function classify(
 		let stored = known.get(entry.guid);
 
 		if (stored === undefined) {
+			tick += 1;
+
 			inserts.push({
 				id: TypeID.fromUUID("item", generateUUID()).toString(),
-				feed_id: feed.id,
 				guid: entry.guid,
+				sequence: tick,
+				revision: tick,
 				...displayable,
 				published_at: publishedAt(entry, now),
 				content_hash: hash,
-				read_at: null,
 				created_at: now,
 				updated_at: now,
 			});
+
 			continue;
 		}
 
 		if (stored === hash) continue;
 
+		tick += 1;
+
 		/**
-		 * `read_at`, `id` and `published_at` are absent by construction: a publisher fixing
-		 * a typo leaves a read article read, keeps the key the timeline's tiebreaker was
-		 * minted from, and leaves the leading cursor column where an in-flight cursor
-		 * expects to find it.
+		 * `sequence`, `id` and `published_at` are absent by construction: an edit is the same
+		 * entry saying something new, so it keeps the place it was discovered at, the key
+		 * every subscriber's copy is joined by, and the date their timeline sorts it under.
+		 * A fresh `revision` is what puts it back in front of each of them exactly once.
 		 */
 		edits.push({
 			guid: entry.guid,
-			changes: { ...displayable, content_hash: hash, updated_at: now },
+			changes: { ...displayable, revision: tick, content_hash: hash, updated_at: now },
 		});
 	}
 
@@ -483,7 +413,7 @@ async function classify(
 }
 
 /**
- * The fields a reader sees, resolved to what the row will hold. Build every stored post
+ * The fields a reader sees, resolved to what the row will hold. Build every stored item
  * from this, on any path: a publisher who titles nothing still gets something to click on,
  * and a summary past {@link MAX_SUMMARY_LENGTH} is cut here so it is hashed as it is stored.
  *
@@ -499,41 +429,39 @@ export function displayableOf(entry: Feed.Item): Displayable {
 }
 
 /**
- * The text a post is stored with. Most RSS publishes a bare `<description>`, which a feed
- * reports as the body with no summary beside it, so an excerpt of that body is what gives
- * those posts a line to read under their title and the one field that moves when such a
- * publisher rewrites one.
+ * The line a post is stored with. Most RSS publishes a bare `<description>`, which a feed
+ * reports as the body with no summary beside it, so the visible text of that body is what
+ * gives those posts a line to read under their title.
  *
- * Posts stored before this gain a summary, so the first poll reads each as edited and
- * rewrites it — the same one-time pass per feed the narrowed digest is already due.
+ * Both kinds are cut to the same length, so what is stored is what is shown either way.
  */
 function summaryOf(entry: Feed.Item): string | null {
-	if (entry.summary !== undefined) return entry.summary.slice(0, MAX_SUMMARY_LENGTH);
+	if (entry.summary !== undefined) return shortened(entry.summary);
 	if (entry.contentHtml === undefined) return null;
-	return excerptOf(entry.contentHtml);
-}
 
-/**
- * An excerpt of a body, as the text a reader is shown: the markup's visible text, so tags
- * and entities resolve the way a browser resolves them, cut at the last whole word inside
- * {@link EXCERPT_LENGTH}. A body of markup alone leaves the post its title to stand on.
- */
-function excerptOf(html: string): string | null {
-	let parsed = HTML.parse(html);
+	let parsed = HTML.parse(entry.contentHtml);
 	if (isFailure(parsed)) return null;
 
 	let text = parsed.data.text;
-	if (text.length === 0) return null;
-	if (text.length <= EXCERPT_LENGTH) return text;
-
-	let cut = text.slice(0, EXCERPT_LENGTH);
-	let lastSpace = cut.lastIndexOf(" ");
-
-	return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd()}${EXCERPT_MARKER}`;
+	return text.length === 0 ? null : shortened(text);
 }
 
 /**
- * When a post was published, falling back to `now` so the column the timeline sorts on is
+ * Text cut at the last whole word inside {@link MAX_SUMMARY_LENGTH}, closed so it reads as
+ * shortened. Text already inside the length is returned as it came.
+ */
+function shortened(text: string): string {
+	if (text.length <= MAX_SUMMARY_LENGTH) return text;
+
+	/** The marker counts toward the cap, so what is stored never exceeds what was declared. */
+	let cut = text.slice(0, MAX_SUMMARY_LENGTH - SUMMARY_MARKER.length);
+	let lastSpace = cut.lastIndexOf(" ");
+
+	return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd()}${SUMMARY_MARKER}`;
+}
+
+/**
+ * When a post was published, falling back to `now` so the column a timeline sorts on is
  * total. Call it for an entry being inserted: a stored post keeps the date it was written
  * with, so a feed that jitters its dates re-dates nothing.
  *
@@ -547,8 +475,8 @@ export function publishedAt(entry: Feed.Item, now: number): number {
 
 /**
  * The digest that tells an edited post from an unchanged one, which is what `content_hash`
- * holds. Take it over a {@link displayableOf} projection on every path that writes a post,
- * so the first poll after a subscription reads every post it already stored as unchanged.
+ * holds. Take it over a {@link displayableOf} projection on every path that writes an item,
+ * so the first poll after a subscription reads every item it already stored as unchanged.
  *
  * @param displayable - The fields the row will hold, as {@link displayableOf} resolved them.
  */
@@ -567,12 +495,12 @@ export async function digest(displayable: Displayable): Promise<string> {
 
 /**
  * Rows one insert statement fits, derived from the schema so it follows a new column.
- * Call it from any path inserting posts: a Durable Object statement binds at most
- * {@link MAX_BOUND_PARAMETERS} parameters, and a batch sized by hand stops being right
- * the day a column is added.
+ * Call it from any path inserting items: a Durable Object statement binds at most
+ * {@link MAX_BOUND_PARAMETERS} parameters, and a batch sized by hand stops being right the
+ * day a column is added.
  */
 export function insertChunkSize(): number {
-	let columns = Object.keys(getTableColumns(feedItems)).length;
+	let columns = Object.keys(getTableColumns(items)).length;
 	return Math.max(1, Math.floor(MAX_BOUND_PARAMETERS / columns));
 }
 
