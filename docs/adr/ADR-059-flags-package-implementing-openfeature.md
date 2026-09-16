@@ -1081,8 +1081,12 @@ exists.
 - [x] Phase 3: Hooks, Events And Lifecycle
 - [x] Phase 4: Providers And Their Suite
 - [x] Phase 5: Specification Suites
-- [ ] Phase 6: Middleware And Adoption — the middleware and the README are in; no app has
-      adopted the package, which waits on a provider against a real flag system
+- [x] Phase 6: Middleware And Adoption — the middleware, the README, and two adopting apps:
+      `uptime` behind the ad-hoc ping API and its sweep width, and `reader` behind the
+      numbers it guessed at and the two surfaces it shipped last. Both evaluate through the
+      engine provider against definitions written in code, so the rules are reviewed and
+      deployed like any other constant; a store that changes without a deploy is the next
+      question rather than a missing part of this one.
 - [x] Phase 7: The Catalog
 
 ## Notes
