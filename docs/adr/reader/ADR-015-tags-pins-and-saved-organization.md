@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-16
+**Accepted** - 2026-09-16
 
 Extends the saved posts of
 [ADR-002](./ADR-002-canonical-feed-objects-and-lazy-reader-timelines.md), and adds nothing to
