@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-16
+**Accepted** - 2026-09-16
 
 ## Background
 
@@ -312,16 +312,16 @@ existing component tests.
 
 ## Implementation
 
-- [ ] `tabindex="-1"`, `data-post` and the header-clearing scroll margin on the timeline row
-- [ ] `resources/components/shortcuts.tsx`: the `keydown` listener, the guard, and the bindings
-- [ ] Movement by `querySelectorAll` per keystroke, with the viewport fallback
-- [ ] `m`, `s`, `o` and `r` as `requestSubmit()` and `click()` on existing controls
-- [ ] `J` / `K` over the sidebar's feed links, and `/` onto the search box
-- [ ] The `Modal` panel, its `Keyboard` hints, and the button beside the reader's menu
-- [ ] The polite live region, fed through `@sdxc/ui`'s `Announcer`
-- [ ] `shortcuts.*` copy in `app/locales/en.ts` and `app/locales/es.ts`
-- [ ] Mount the island in `resources/layouts/app.tsx`
-- [ ] The tests above
+- [x] `tabindex="-1"`, `data-post` and the header-clearing scroll margin on the timeline row
+- [x] `resources/components/shortcuts.tsx`: the `keydown` listener, the guard, and the bindings
+- [x] Movement by `querySelectorAll` per keystroke, with the viewport fallback
+- [x] `m`, `s`, `o` and `r` as `requestSubmit()` and `click()` on existing controls
+- [x] `J` / `K` over the sidebar's feed links, and `/` onto the search box
+- [x] The `Modal` panel, its `Keyboard` hints, and the button beside the reader's menu
+- [x] The polite live region, fed through `@sdxc/ui`'s `Announcer`
+- [x] `shortcuts.*` copy in `app/locales/en.ts` and `app/locales/es.ts`
+- [x] Mount the island in `resources/layouts/app.tsx`
+- [x] The tests above
 
 ## References
 
