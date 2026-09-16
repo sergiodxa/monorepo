@@ -10,6 +10,8 @@
 import { isFailure } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
+import type { HTML } from "../index.js";
+
 import { sanitize } from "./sanitize.js";
 
 /** Sanitizes a fragment and answers with the markup, failing the test on a refusal. */
@@ -113,17 +115,17 @@ describe("sanitize", () => {
 	});
 
 	test("unwraps an unknown element and keeps its text", () => {
-		let markup = clean(`<div class="wrap"><section><p>Body</p></section></div><span>Tail</span>`);
+		let markup = clean(`<div class="wrap"><section><p>Body</p></section></div><aside>Tail</aside>`);
 		expect(markup).toBe(`<p>Body</p>Tail`);
 	});
 
-	test("keeps colspan, rowspan, datetime, lang and dir", () => {
+	test("keeps colspan, rowspan and datetime, and nothing globally", () => {
 		let markup = clean(
 			`<table><tbody><tr><td colspan="2" rowspan="3" class="x">Cell</td></tr></tbody></table><time datetime="2026-09-16">then</time><p lang="es" dir="rtl">Hola</p>`,
 		);
 		expect(markup).toContain(`<td colspan="2" rowspan="3">Cell</td>`);
 		expect(markup).toContain(`<time datetime="2026-09-16">then</time>`);
-		expect(markup).toContain(`<p lang="es" dir="rtl">Hola</p>`);
+		expect(markup).toContain(`<p>Hola</p>`);
 	});
 
 	test("emits void elements without a closing tag", () => {
@@ -141,5 +143,78 @@ describe("sanitize", () => {
 	test("refuses a source carrying no markup", () => {
 		let result = sanitize("   ");
 		expect(isFailure(result)).toBe(true);
+	});
+
+	test("drops an object, an embed and an applet with their subtrees", () => {
+		let markup = clean(
+			`<object data="x.swf">object fallback</object><embed src="y.swf"><applet code="z">applet fallback</applet><p>Body</p>`,
+		);
+		expect(markup).toBe(`<p>Body</p>`);
+		expect(markup).not.toContain("fallback");
+	});
+
+	test.each([
+		"JaVaScRiPt:alert(1)",
+		"java\tscript:alert(1)",
+		"\njavascript:alert(1)",
+		"%6aavascript:alert(1)",
+	])("refuses %s however it is spelled", (href) => {
+		let markup = clean(`<a href="${href.replaceAll(`"`, "")}">Click</a>`);
+		expect(markup).toBe(`<a>Click</a>`);
+	});
+
+	test("caps a span rather than carrying it through", () => {
+		let markup = clean(`<table><tbody><tr><td colspan="99999">Cell</td></tr></tbody></table>`);
+		expect(markup).toContain(`<td colspan="64">Cell</td>`);
+		expect(markup).not.toContain("99999");
+	});
+
+	test("replaces a publisher's target and rel rather than copying them", () => {
+		let markup = clean(`<a href="https://a.example/x" target="_self" rel="dofollow">x</a>`);
+		expect(markup).toBe(
+			`<a href="https://a.example/x" target="_blank" rel="noopener noreferrer nofollow">x</a>`,
+		);
+	});
+
+	test("escapes a quote and an angle bracket in an attribute value", () => {
+		let markup = clean(`<img src="https://a.example/a.png" alt='" onerror=alert(1) x="<b>'>`);
+		expect(markup).toContain(`alt="&quot; onerror=alert(1) x=&quot;&lt;b&gt;"`);
+		expect(markup).not.toContain(`alt="" onerror`);
+	});
+
+	test("drops an image declaring a side of two and keeps one declaring six hundred", () => {
+		expect(clean(`<p>a</p><img src="https://t.example/p.gif" width="2" height="2">`)).toBe(
+			`<p>a</p>`,
+		);
+		expect(clean(`<img src="https://a.example/a.png" width="600">`)).toContain(`width="600"`);
+	});
+
+	test("turns a recognized video embed into a link carrying its still", () => {
+		let markup = clean(
+			`<p>Watch</p><iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" width="560"></iframe>`,
+		);
+		expect(markup).toContain(`href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"`);
+		expect(markup).toContain(`src="https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg"`);
+		expect(markup).not.toContain("<iframe");
+	});
+
+	test("leaves nothing behind for a frame naming an unrecognized host", () => {
+		expect(clean(`<p>a</p><iframe src="https://ads.example/x"></iframe>`)).toBe(`<p>a</p>`);
+	});
+
+	test("reports what the pass took out", () => {
+		let report: HTML.SanitizeReport | null = null;
+
+		sanitize(
+			`<div><p onclick="x()">Body</p><script>alert(1)</script><a href="javascript:x">y</a><img src="https://t.example/p.gif" width="1"></div>`,
+			{ report: (value) => (report = value) },
+		);
+
+		expect(report).toMatchObject({
+			removedAttributes: 1,
+			droppedUrls: 1,
+			pixels: 1,
+		});
+		expect((report as unknown as HTML.SanitizeReport).removedElements).toBeGreaterThanOrEqual(3);
 	});
 });

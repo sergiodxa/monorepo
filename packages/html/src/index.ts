@@ -83,10 +83,29 @@ export namespace HTML {
 	/** Which of several matches to take; an ordinal counts from 1. */
 	export type Position = "first" | "last" | number;
 
+	/**
+	 * What one sanitizing pass took out, counted so a caller can log the shape of a
+	 * document without logging the document: four numbers and a duration name how
+	 * hostile a publisher's markup was and identify neither the page nor its reader.
+	 */
+	export interface SanitizeReport {
+		/** Elements dropped with their subtree, unwrapped, or removed as a measurement. */
+		removedElements: number;
+		/** Attributes the allow-list did not name, and spans that declared no number. */
+		removedAttributes: number;
+		/** URL attributes whose scheme a browser may not resolve from inside an article. */
+		droppedUrls: number;
+		/** Images declaring a side too small to carry a picture. */
+		pixels: number;
+		durationMs: number;
+	}
+
 	/** How markup is sanitized for rendering beside content of your own. */
 	export interface SanitizePolicy {
 		/** The article's final URL, which every relative URL in the markup resolves against. */
 		baseUrl?: string | undefined;
+		/** Where the pass reports what it took out, called once when the markup is complete. */
+		report?: ((report: SanitizeReport) => void) | undefined;
 	}
 
 	/** What every lookup accepts: the choice among matches, and what markup hides. */

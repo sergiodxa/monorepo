@@ -71,6 +71,8 @@ export namespace Readability {
 		url: string;
 		/** Characters of readable text, which is what tells an article from a teaser. */
 		chars: number;
+		/** What sanitizing the body took out, which is the shape of the page in five numbers. */
+		sanitized: HTML.SanitizeReport;
 	}
 
 	/** An article, beside what retrieving it cost and what the response permits. */
@@ -105,6 +107,15 @@ export namespace Readability {
 	}
 }
 
+/** The report a pass that never ran would have produced, so the field is always a number. */
+const EMPTY_REPORT: HTML.SanitizeReport = {
+	removedElements: 0,
+	removedAttributes: 0,
+	droppedUrls: 0,
+	pixels: 0,
+	durationMs: 0,
+};
+
 /** The essence of a content type, which is the part a format is decided by. */
 function essenceOf(response: Response): string {
 	let declared = response.headers.get("content-type") ?? "";
@@ -135,7 +146,13 @@ export function extractFrom(
 
 	let canonical = canonicalOf(document.data, url);
 
-	let cleaned = HTML.sanitize(serialize(body), { baseUrl: canonical });
+	let sanitized: HTML.SanitizeReport | null = null;
+	let cleaned = HTML.sanitize(serialize(body), {
+		baseUrl: canonical,
+		report: (value) => {
+			sanitized = value;
+		},
+	});
 	if (isFailure(cleaned)) {
 		return failure(new ReadabilityEmptyError(`Nothing to read at ${url}: the article was empty`));
 	}
@@ -148,6 +165,7 @@ export function extractFrom(
 		byline: bylineOf(document.data),
 		url: canonical,
 		chars,
+		sanitized: sanitized ?? EMPTY_REPORT,
 	});
 }
 
