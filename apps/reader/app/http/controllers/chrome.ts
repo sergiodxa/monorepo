@@ -7,10 +7,10 @@
  * prints what it is given, and beside all of them rather than in each so the app's sections
  * are named once however many surfaces lead back to them.
  *
- * The rail is on every page, so its list would be a second read of the reader's object on
+ * The sidebar is on every page, so its list would be a second read of the reader's object on
  * every request — including the pages with no other reason to open it. It holds every feed
- * a reader follows, since the rail is now the whole of the subscription list. It is kept in KV
- * instead, holding the three fields a rail row draws and nothing else. A cache is a second
+ * a reader follows, since the sidebar is now the whole of the subscription list. It is kept in
+ * KV instead, holding the four fields a sidebar row draws and nothing else. A cache is a second
  * place the truth lives, so this one is written to be wrong only in ways nobody notices:
  * every change a reader makes themselves clears it as they make it, and what arrives behind
  * their back waits out {@link RAIL_TTL}. A miss, an expiry, or a KV that cannot be reached
@@ -29,8 +29,10 @@ import { env, waitUntil } from "cloudflare:workers";
 import type { AppLayout } from "~/resources/layouts/app";
 
 import { getViewer } from "~/app/http/middleware/auth";
+import { FRAME_PARAM } from "~/app/http/render";
 import { userStore } from "~/database/user-do";
 import { SEARCH_PARAM } from "~/resources/layouts/app";
+import routes from "~/routes/web";
 
 /**
  * How long a reader's cached rail list stands.
@@ -63,7 +65,7 @@ export interface ChromeContext {
  * else. Anything more would make this a second copy of the subscription list, which is the
  * shape a cache rots in.
  */
-interface CachedFeed {
+export interface CachedFeed {
 	id: string;
 	title: string;
 	unreadCount: number;
@@ -100,7 +102,7 @@ export async function forgetRailFeeds(subject: string): Promise<void> {
  * @returns Every feed the reader follows, or none of them when neither the cache nor the
  * object answers, since a rail missing its list is a page a reader can still read and act on.
  */
-async function railFeeds(subject: string): Promise<CachedFeed[]> {
+export async function railFeeds(subject: string): Promise<CachedFeed[]> {
 	let cached = await railCache().fetch<CachedFeed[]>(
 		railKey(subject),
 		async () => {
@@ -146,14 +148,45 @@ async function railFeeds(subject: string): Promise<CachedFeed[]> {
  * @param feeds - The feeds as they were cached or read.
  * @param locale - The request's language.
  */
-function sortByTitle(feeds: CachedFeed[], locale: string): CachedFeed[] {
+export function sortByTitle(feeds: CachedFeed[], locale: string): CachedFeed[] {
 	let collator = new Intl.Collator(locale);
 	return [...feeds].sort((one, other) => collator.compare(one.title, other.title));
 }
 
 /**
- * The sections' names, the signed-in reader, and the feeds under the rail's Feeds heading,
- * spread into the layout by every page that wears it.
+ * What {@link FRAME_PARAM} carries for the sidebar's feed band, which says the answer is
+ * that band rather than a page.
+ */
+const FRAME_FEEDS = "feeds";
+
+/**
+ * The parameter the band's address carries beside it, naming the page the sidebar is being
+ * drawn beside. The band is fetched on its own, so which of its rows to light is the one
+ * thing it cannot work out from its own address.
+ */
+export const SIDEBAR_PATH_PARAM = "on";
+
+/**
+ * Where the sidebar's feed band is fetched from while a reader is on `currentPath`.
+ *
+ * @param currentPath - The page the sidebar is drawn beside, which lights one of its rows.
+ */
+export function sidebarFeedsSrc(currentPath: string): string {
+	let params = new URLSearchParams({
+		[FRAME_PARAM]: FRAME_FEEDS,
+		[SIDEBAR_PATH_PARAM]: currentPath,
+	});
+
+	return `${routes.sidebar.feeds.href()}?${params}`;
+}
+
+/**
+ * The sections' names, the signed-in reader, and where the sidebar's feed band is fetched
+ * from, spread into the layout by every page that wears it.
+ *
+ * The feeds themselves are not here: they are drawn into a frame of their own, so a count
+ * beside a feed's name can be redrawn when the reader marks a post read several pages into
+ * a queue, without fetching the page they are standing on.
  *
  * @param ctx - The request, for the dictionary the names are read from.
  * @returns Every prop the layout's own chrome is drawn from, ready to spread.
@@ -162,7 +195,7 @@ function sortByTitle(feeds: CachedFeed[], locale: string): CachedFeed[] {
 export async function chrome(ctx: ChromeContext): Promise<{
 	nav: AppLayout.Nav;
 	viewer: AppLayout.Viewer;
-	feeds: AppLayout.RailFeed[];
+	sidebarFeedsSrc: string;
 	currentPath: string;
 	searchQuery: string;
 }> {
@@ -180,28 +213,14 @@ export async function chrome(ctx: ChromeContext): Promise<{
 		nav: {
 			label: ctx.i18next.t("nav.label"),
 			reading: ctx.i18next.t("nav.reading"),
-			feeds: ctx.i18next.t("nav.feeds"),
 			searchLabel: ctx.i18next.t("search.label"),
 			searchPlaceholder: ctx.i18next.t("search.placeholder"),
-			subscriptions: ctx.i18next.t("nav.subscriptions"),
 			openSidebar: ctx.i18next.t("nav.openSidebar"),
 			settings: ctx.i18next.t("nav.settings"),
 			account: ctx.i18next.t("nav.account"),
 			logout: ctx.i18next.t("nav.logout"),
 		},
 		viewer: { name: viewer.name, email: viewer.email, avatar: viewer.avatar },
-		/**
-		 * The count becomes the words that say it here, where the dictionary is, so the rail
-		 * prints what it is handed the way every other list in this app does. A feed with
-		 * nothing waiting carries no label at all: a column of zeroes down a rail is noise.
-		 */
-		feeds: sortByTitle(await railFeeds(viewer.id), ctx.locale).map((feed) => ({
-			id: feed.id,
-			title: feed.title,
-			imageUrl: feed.imageUrl,
-			unreadCount: feed.unreadCount,
-			unreadLabel:
-				feed.unreadCount > 0 ? ctx.i18next.t("feeds.unread", { count: feed.unreadCount }) : null,
-		})),
+		sidebarFeedsSrc: sidebarFeedsSrc(ctx.url.pathname),
 	};
 }

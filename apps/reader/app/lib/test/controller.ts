@@ -9,20 +9,23 @@
  */
 
 import type { Renderer } from "remix/middleware/render";
-import type { Middleware, Router } from "remix/router";
+import type { Middleware, RequestContext, Router } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
+import { lazy } from "@sdxc/lazy-route";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
-import { renderToString } from "remix/ui/server";
+import { renderToStream } from "remix/ui/server";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 
 import i18n from "~/app/http/middleware/i18n";
+import { resolveFrame } from "~/app/http/render";
+import routes from "~/routes/web";
 
 /** The origin every test request is made against. */
 export const ORIGIN = "https://reader.test";
@@ -36,14 +39,28 @@ export const VIEWER: Viewer = {
 };
 
 /**
- * Renders through `renderToString`, which is enough for pages that stream no frames, and
- * gives a test one string to assert against rather than a stream to drain.
+ * Renders the way the app does, and resolves each frame on the page through the router the
+ * test is dispatching against, so a band of a page that arrives in its own request is
+ * asserted on as part of the page rather than missing from it.
+ *
+ * The stream is drained before the response is handed back, which gives a test one string
+ * to assert against rather than a stream to read.
+ *
+ * @param ctx - The request being answered, for the router its frames are fetched through.
  */
-export function createTestRenderer(): Renderer<RemixNode> {
+export function createTestRenderer(ctx: RequestContext): Renderer<RemixNode> {
 	return async (node, init) => {
+		let stream = renderToStream(node, {
+			frameSrc: ctx.request.url,
+			resolveFrame(src, target, context) {
+				return resolveFrame(ctx.router, ctx.request, ctx.i18next, src, target, context);
+			},
+		});
+
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
-		return new Response(await renderToString(node), { ...init, headers });
+
+		return new Response(await new Response(stream).text(), { ...init, headers });
 	};
 }
 
@@ -66,11 +83,15 @@ export function seedAuth(viewer: Viewer | null): Middleware {
  * yet. Cross-origin protection is left out: it guards the app rather than shaping any
  * page, and including it would make every test request carry an origin to satisfy it.
  *
+ * The sidebar's feed band is mapped here rather than by each test: every signed-in page
+ * wears the chrome, and the band is a frame the chrome fetches, so a router without it
+ * answers every page with a sidebar that failed to load.
+ *
  * @param viewer - Who the request is signed in as, or `null` for an anonymous one.
  * @example let router = createTestRouter(VIEWER); router.map(routes.reading, reading);
  */
 export function createTestRouter(viewer: Viewer | null): Router {
-	return createRouter({
+	let router = createRouter({
 		middleware: [
 			asyncContext(),
 			formData() as Middleware,
@@ -80,6 +101,13 @@ export function createTestRouter(viewer: Viewer | null): Router {
 			renderWith(createTestRenderer) as Middleware,
 		],
 	});
+
+	router.map(
+		routes.sidebar.feeds,
+		lazy(() => import("~/app/http/controllers/sidebar")),
+	);
+
+	return router;
 }
 
 /**

@@ -80,6 +80,18 @@ export default route({
 		open: post("/items/:itemId/open"),
 	},
 
+	/**
+	 * The band of the sidebar that changes: the feeds a reader follows and how many posts
+	 * of each are waiting. It is its own address so the page can redraw that band alone
+	 * after marking a post read, instead of fetching the whole document to move a number.
+	 *
+	 * Nothing links here. It answers a fragment of the chrome rather than a page, which is
+	 * why it sits apart from the addresses a reader arrives at.
+	 */
+	sidebar: {
+		feeds: get("/sidebar/feeds"),
+	},
+
 	/** GET = the preferences form ("index"), POST = saves it ("action"). */
 	settings: form("/settings"),
 });

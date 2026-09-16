@@ -27,6 +27,8 @@ import { bs, is, pb, pi } from "@sdxc/u/size";
 import { Button } from "@sdxc/ui";
 import { clientEntry, on, ref } from "remix/ui";
 
+import { SIDEBAR_FEEDS_FRAME } from "~/resources/components/sidebar-frame";
+
 /**
  * The header this control sends when it has already moved the post itself. The answer is
  * then the outcome and nothing else: the reader is looking at the page a redirect would
@@ -41,6 +43,13 @@ export const READ_IN_PLACE_HEADER = "x-reader-in-place";
  * than being worked out a second time here.
  */
 const ROW_READ = "data-read";
+
+/**
+ * Stamped on a title this mark has taken the reporting of over, so a later render finds
+ * the same anchor: it is looked for by its `ping` or by this, and the one is swapped for
+ * the other exactly once.
+ */
+const TITLE_TAKEN = "data-marks-read";
 
 /** Edge of the mark, sized to the label a small button would have carried instead. */
 const ICON_SIZE = 16;
@@ -129,6 +138,16 @@ export const ReadToggle = clientEntry(
 				});
 
 				if (!response.ok) throw new Error(`Marking a post answered ${response.status}`);
+
+				/**
+				 * The sidebar counts this post among its feed's unread, so the band holding those
+				 * counts is drawn again now that the server has recorded the move — after it
+				 * rather than alongside it, since a refused move is one the counts never had.
+				 *
+				 * The band alone: the page around it is by now as many pages of posts as the
+				 * reader has scrolled through, and none of them changed.
+				 */
+				if (token === latest) await handle.frames.get(SIDEBAR_FEEDS_FRAME)?.reload();
 			} catch (error) {
 				if (token !== latest) return;
 
@@ -138,9 +157,14 @@ export const ReadToggle = clientEntry(
 		}
 
 		/**
-		 * The row's own title carries a `ping`, so following it has the browser report the trip
-		 * and the server mark the post read. That work is already done by the time this runs
-		 * and asking for it again would move the post twice, so this moves the mark alone.
+		 * Opening a post reads it, so the title moves this mark as the mark itself would.
+		 *
+		 * The title carries a `ping`, which is how a browser with no script running tells the
+		 * server the post was opened. Where this is running the mark does that instead, in the
+		 * same request every other move goes through: the title opens in a tab of its own, so
+		 * the page stays to send it and to hear the answer. The `ping` comes off as this takes
+		 * over, which leaves one report of one click rather than two, and marks the post for a
+		 * reader whose browser sends no pings at all.
 		 *
 		 * The title is this control's sibling rather than its child, so the control finds it
 		 * through the row they share. Hydrating the row instead would put every word of every
@@ -149,13 +173,16 @@ export const ReadToggle = clientEntry(
 		let watchTitle = ref((node, signal) => {
 			row = node.closest("li");
 
-			let title = row?.querySelector("a[ping]");
+			let title = row?.querySelector(`a[ping], a[${TITLE_TAKEN}]`);
 			if (!title) return;
+
+			title.removeAttribute("ping");
+			title.setAttribute(TITLE_TAKEN, "");
 
 			title.addEventListener(
 				"click",
 				() => {
-					if (!isRead) show(true, false);
+					if (!isRead) void move(true);
 				},
 				{ signal },
 			);

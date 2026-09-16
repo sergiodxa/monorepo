@@ -74,7 +74,9 @@ import { z } from "@sdxc/u/stacking";
 import { hover, when } from "@sdxc/u/state";
 import { tabularNums, text, textDecoration, truncate, weight } from "@sdxc/u/typography";
 import { Avatar, Heading, Logo, Menu, NavLink, Sidebar } from "@sdxc/ui";
+import { Frame } from "remix/ui";
 
+import { SIDEBAR_FEEDS_FRAME } from "~/resources/components/sidebar-frame";
 import DocumentLayout from "~/resources/layouts/document";
 import OutboundMark from "~/resources/views/outbound-mark";
 import routes from "~/routes/web";
@@ -299,38 +301,16 @@ export namespace AppLayout {
 		/** Accessible name for the sidebar's navigation. */
 		label: string;
 		reading: string;
-		/** Heads the reader's own subscriptions in the sidebar's scrolling band. */
-		feeds: string;
 		/** Names the sidebar's search box, which carries no visible label of its own. */
 		searchLabel: string;
 		/** What the sidebar's empty search box says it is for. */
 		searchPlaceholder: string;
-		/** Names the group of followed feeds listed under the Feeds heading. */
-		subscriptions: string;
 		/** Names the control a narrow screen opens the sidebar from. */
 		openSidebar: string;
 		settings: string;
 		/** Names the trigger the viewer's own menu opens from, and the menu it opens. */
 		account: string;
 		logout: string;
-	}
-
-	/** One followed feed as the sidebar lists it, with its count already in words. */
-	export interface RailFeed {
-		id: string;
-		title: string;
-		/**
-		 * The mark the publisher puts on their own feed, or `null` for one that puts none,
-		 * whose name is drawn in initials instead.
-		 */
-		imageUrl: string | null;
-		/** How many posts are waiting, shown as the number itself beside the name. */
-		unreadCount: number;
-		/**
-		 * That count said in full for a screen reader, or `null` for a feed with nothing
-		 * waiting — which is a row that carries no count at all.
-		 */
-		unreadLabel: string | null;
 	}
 
 	/** The signed-in reader, as the chrome shows them back to themselves. */
@@ -364,8 +344,12 @@ export namespace AppLayout {
 		locale?: string;
 		nav: Nav;
 		viewer: Viewer;
-		/** Every feed the reader follows, in the order the sidebar lists them. */
-		feeds: RailFeed[];
+		/**
+		 * Where the sidebar's feed band is fetched from, which is an address rather than the
+		 * list itself: the band is drawn by the server on its own, into the frame below, so
+		 * that what it says can be redrawn without the page around it.
+		 */
+		sidebarFeedsSrc: string;
 		/** What the reader last searched for, put back into the sidebar's box. */
 		searchQuery: string;
 		children: RemixNode;
@@ -418,6 +402,143 @@ export function ActionLabel(handle: Handle<{ children: RemixNode }>) {
 	return () => <span mix={[hidden(), media(WIDE_HEADER, inline())]}>{handle.props.children}</span>;
 }
 
+export namespace SidebarFeeds {
+	/** One followed feed as the sidebar lists it, with its count already in words. */
+	export interface Feed {
+		id: string;
+		/**
+		 * The mark the publisher puts on their own feed, or `null` for one that puts none,
+		 * whose name is drawn in initials instead.
+		 */
+		imageUrl: string | null;
+		title: string;
+		/** How many posts are waiting, shown as the number itself beside the name. */
+		unreadCount: number;
+		/**
+		 * That count said in full for a screen reader, or `null` for a feed with nothing
+		 * waiting — which is a row that carries no count at all.
+		 */
+		unreadLabel: string | null;
+	}
+
+	export interface Props {
+		feeds: Feed[];
+		/** The word heading the band, which names the reader's own subscriptions. */
+		label: string;
+		/** Names the list of feeds under that heading, for anyone listening to it. */
+		listLabel: string;
+		/** The page being read, which is what lights the feed a reader is standing in. */
+		currentPath: string;
+	}
+}
+
+/**
+ * The feeds a reader follows, as the sidebar lists them. It is rendered into the sidebar's
+ * own frame rather than by the layout around it, so the counts beside these names can be
+ * redrawn on their own when a post is marked read further down the page.
+ */
+export function SidebarFeeds(handle: Handle<SidebarFeeds.Props>) {
+	return () => {
+		let { currentPath, feeds, label, listLabel } = handle.props;
+
+		/** Read from the path the band was asked for, since it is drawn apart from the page. */
+		function isCurrent(href: string): boolean {
+			return currentPath === href;
+		}
+
+		/** A reader following nothing is shown no heading for it, and no empty list under one. */
+		if (feeds.length === 0) return null;
+
+		return (
+			<Sidebar.Group>
+				{/**
+				 * The reader's own subscriptions, headed by the word naming them. It is
+				 * drawn as a peer of the queue above — the same mark, the same column, the
+				 * same casing as its own word — rather than as a category divider, because
+				 * that is what it is: the other thing this sidebar holds.
+				 *
+				 * It leads nowhere, and nothing is lost by that: the whole of the list it
+				 * names is the rows directly beneath it, on every page. That leaves one
+				 * thing in the sidebar lit at a time, which is the feed being read rather
+				 * than the feed and the word above it.
+				 */}
+				<Sidebar.GroupLabel
+					mix={[
+						railRow("group-label"),
+						when('&[data-slot="group-label"]', [
+							pb("0.5rem"),
+							minBs("2.25rem"),
+							justify("start"),
+							text("sm"),
+							weight("medium"),
+							fg("neutral"),
+							raw({ textTransform: "none", letterSpacing: "normal" }),
+						]),
+					]}
+				>
+					{/** The mark a site puts on its own feed, which is what these rows are. */}
+					<RssIcon size={ICON_SIZE} />
+					<span mix={[minIs(0), truncate()]}>{label}</span>
+				</Sidebar.GroupLabel>
+
+				<Sidebar.Nav aria-label={listLabel}>
+					{feeds.map((feed) => (
+						<Sidebar.Item
+							key={feed.id}
+							href={routes.feed.href({ feed: feed.id })}
+							current={isCurrent(routes.feed.href({ feed: feed.id }))}
+							/**
+							 * A level down from the queue and quieter for it, so an eye running
+							 * the sidebar still tells the one place from the many feeds.
+							 */
+							mix={[railRow("item"), text("xs"), fg("neutral.muted")]}
+						>
+							{/**
+							 * The mark the publisher puts on their own feed, which is what an eye
+							 * finds a known publication by before it reads the name. It is the
+							 * picture the feed document itself named and already stored, so
+							 * drawing it asks nobody who the reader follows.
+							 *
+							 * A publisher who named none, or whose picture has since gone, leaves
+							 * the initials of the name — and the name itself is right beside it,
+							 * so nothing is lost either way.
+							 */}
+							<Logo size="sm" mix={railMark()}>
+								{feed.imageUrl ? (
+									<Logo.Image
+										src={feed.imageUrl}
+										alt={feed.title}
+										loading="lazy"
+										referrerPolicy="no-referrer"
+									/>
+								) : null}
+								<Logo.Fallback>{initials(feed.title)}</Logo.Fallback>
+							</Logo>
+
+							<span mix={[grow(), minIs(0), truncate()]}>{feed.title}</span>
+
+							{/**
+							 * The number alone beside the name, which is what a column of them is
+							 * read by; the phrase it stands for is said in full for anyone
+							 * listening rather than looking. A feed with nothing waiting carries
+							 * neither.
+							 */}
+							{feed.unreadLabel && (
+								<>
+									<span aria-hidden="true" mix={[shrink(), tabularNums()]}>
+										{feed.unreadCount}
+									</span>
+									<span mix={[visuallyHidden()]}>{feed.unreadLabel}</span>
+								</>
+							)}
+						</Sidebar.Item>
+					))}
+				</Sidebar.Nav>
+			</Sidebar.Group>
+		);
+	};
+}
+
 /** Renders the sidebar, the header and the page around a signed-in page's content. */
 export default function AppLayout(handle: Handle<AppLayout.Props>) {
 	return () => {
@@ -426,12 +547,12 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 			children,
 			currentPath,
 			documentTitle,
-			feeds,
 			heading,
 			headingLink,
 			locale,
 			nav,
 			searchQuery,
+			sidebarFeedsSrc,
 			viewer,
 		} = handle.props;
 
@@ -579,93 +700,14 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 								</Sidebar.Item>
 							</Sidebar.Nav>
 
-							{feeds.length > 0 && (
-								<Sidebar.Group>
-									{/**
-									 * The reader's own subscriptions, headed by the word naming them. It is
-									 * drawn as a peer of the queue above — the same mark, the same column, the
-									 * same casing as its own word — rather than as a category divider, because
-									 * that is what it is: the other thing this sidebar holds.
-									 *
-									 * It leads nowhere, and nothing is lost by that: the whole of the list it
-									 * names is the rows directly beneath it, on every page. That leaves one
-									 * thing in the sidebar lit at a time, which is the feed being read rather
-									 * than the feed and the word above it.
-									 */}
-									<Sidebar.GroupLabel
-										mix={[
-											railRow("group-label"),
-											when('&[data-slot="group-label"]', [
-												pb("0.5rem"),
-												minBs("2.25rem"),
-												justify("start"),
-												text("sm"),
-												weight("medium"),
-												fg("neutral"),
-												raw({ textTransform: "none", letterSpacing: "normal" }),
-											]),
-										]}
-									>
-										{/** The mark a site puts on its own feed, which is what these rows are. */}
-										<RssIcon size={ICON_SIZE} />
-										<span mix={[minIs(0), truncate()]}>{nav.feeds}</span>
-									</Sidebar.GroupLabel>
-
-									<Sidebar.Nav aria-label={nav.subscriptions}>
-										{feeds.map((feed) => (
-											<Sidebar.Item
-												key={feed.id}
-												href={routes.feed.href({ feed: feed.id })}
-												current={isCurrent(routes.feed.href({ feed: feed.id }))}
-												/**
-												 * A level down from the queue and quieter for it, so an eye running
-												 * the sidebar still tells the one place from the many feeds.
-												 */
-												mix={[railRow("item"), text("xs"), fg("neutral.muted")]}
-											>
-												{/**
-												 * The mark the publisher puts on their own feed, which is what an eye
-												 * finds a known publication by before it reads the name. It is the
-												 * picture the feed document itself named and already stored, so
-												 * drawing it asks nobody who the reader follows.
-												 *
-												 * A publisher who named none, or whose picture has since gone, leaves
-												 * the initials of the name — and the name itself is right beside it,
-												 * so nothing is lost either way.
-												 */}
-												<Logo size="sm" mix={railMark()}>
-													{feed.imageUrl ? (
-														<Logo.Image
-															src={feed.imageUrl}
-															alt={feed.title}
-															loading="lazy"
-															referrerPolicy="no-referrer"
-														/>
-													) : null}
-													<Logo.Fallback>{initials(feed.title)}</Logo.Fallback>
-												</Logo>
-
-												<span mix={[grow(), minIs(0), truncate()]}>{feed.title}</span>
-
-												{/**
-												 * The number alone beside the name, which is what a column of them is
-												 * read by; the phrase it stands for is said in full for anyone
-												 * listening rather than looking. A feed with nothing waiting carries
-												 * neither.
-												 */}
-												{feed.unreadLabel && (
-													<>
-														<span aria-hidden="true" mix={[shrink(), tabularNums()]}>
-															{feed.unreadCount}
-														</span>
-														<span mix={[visuallyHidden()]}>{feed.unreadLabel}</span>
-													</>
-												)}
-											</Sidebar.Item>
-										))}
-									</Sidebar.Nav>
-								</Sidebar.Group>
-							)}
+							{/**
+							 * The feeds themselves, drawn by the server into this band and redrawn into it
+							 * alone. What they say changes as the reader reads — a post opened here moves a
+							 * count in the sidebar — and the page they read it on is several fetched pages
+							 * long by then, so the band is refetched by name rather than the document that
+							 * holds it. Without script it arrives with the page like any other markup.
+							 */}
+							<Frame name={SIDEBAR_FEEDS_FRAME} src={sidebarFeedsSrc} />
 						</Sidebar.Content>
 
 						{/**

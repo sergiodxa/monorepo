@@ -135,6 +135,10 @@ export default function application(options: application.Options) {
 		lazy(() => import("~/app/http/controllers/feeds/import")),
 	);
 	router.map(
+		routes.sidebar.feeds,
+		lazy(() => import("~/app/http/controllers/sidebar")),
+	);
+	router.map(
 		routes.settings,
 		lazy(() => import("~/app/http/controllers/settings")),
 	);
