@@ -19,6 +19,7 @@
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
+import { forgetRailFeeds } from "~/app/http/controllers/chrome";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/database/user-do";
@@ -49,6 +50,13 @@ export default createAction(routes.items.open, {
 		let { itemId } = s.parse(ItemParams, ctx.params);
 
 		let marked = await userStore(viewer.id).markRead(itemId);
+
+		/**
+		 * The sidebar counts this post among its feed's unread, so it is dropped as the post
+		 * leaves the queue rather than a moment later. Opening posts is how most of them are
+		 * read, so a count that survived this would be the one a reader saw go wrong.
+		 */
+		await forgetRailFeeds(viewer.id);
 
 		return new Response(null, { status: marked ? MARKED_STATUS : NOT_FOUND_STATUS });
 	},
