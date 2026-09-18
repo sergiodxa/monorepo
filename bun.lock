@@ -689,6 +689,16 @@
         "remix": "3.0.0-rc.2",
       },
     },
+    "packages/passkey": {
+      "name": "@sdxc/passkey",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/validate": "workspace:*",
+        "remix": "3.0.0-rc.2",
+      },
+    },
     "packages/rate-limit": {
       "name": "@sdxc/rate-limit",
       "version": "0.0.1",
@@ -1545,6 +1555,8 @@
     "@sdxc/opml": ["@sdxc/opml@workspace:packages/opml"],
 
     "@sdxc/pagination": ["@sdxc/pagination@workspace:packages/pagination"],
+
+    "@sdxc/passkey": ["@sdxc/passkey@workspace:packages/passkey"],
 
     "@sdxc/rate-limit": ["@sdxc/rate-limit@workspace:packages/rate-limit"],
 

@@ -128,6 +128,7 @@ Run from the repository root:
 | [oidc-provider](packages/oidc-provider)                         | OIDC/OAuth2 provider engine                                                              |     |
 | [opml](packages/opml)                                           | Read and write OPML subscription lists                                                   | ✅  |
 | [pagination](packages/pagination)                               | Offset and keyset pagination with Link headers                                           | ✅  |
+| [passkey](packages/passkey)                                     | Passkeys on both sides: a one-call WebAuthn browser API and a relying party for it       | ✅  |
 | [rate-limit](packages/rate-limit)                               | Adapter-based rate limiting with standard response headers                               | ✅  |
 | [response](packages/response)                                   | Response builders for JSON APIs and redirects                                            | ✅  |
 | [result](packages/result)                                       | Result type for error handling                                                           | ✅  |
