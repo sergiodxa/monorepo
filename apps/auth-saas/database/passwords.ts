@@ -16,7 +16,7 @@ import { typeid } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
 import { and, column as c, eq, notInList, notNull, table } from "remix/data-table";
 
-import type { OpenSessionResult } from "./sessions";
+import type { OpenSessionMetering, OpenSessionSuccess } from "./sessions";
 import type { Actor, IdentifierKind, SubjectIdentifierRow } from "./subjects";
 
 import { checkAndSpendMailEnvelope } from "./mail-rate-limit";
@@ -427,9 +427,10 @@ export type SignInWithPasswordResult =
 			subjectId: string;
 			secondFactorRequired: boolean;
 			mustChangePassword: boolean;
-	  } & OpenSessionResult)
+	  } & OpenSessionSuccess)
 	| { ok: false; reason: "invalid-credentials" }
-	| { ok: false; reason: "password_expired" };
+	| { ok: false; reason: "password_expired" }
+	| { ok: false; reason: "dau_cap_reached" };
 
 /** A stored hash derived once and cached, so a negative path pays the same CPU a real verify would. */
 let dummyHashPromise: Promise<string> | null = null;
@@ -467,11 +468,14 @@ function identifierKindOf(value: string): IdentifierKind {
  * @param db - The tenant's database.
  * @param input - The identifier as typed, the candidate password, whether to remember
  * the session past its own lifetime, and the request's origin.
+ * @param metering - The daily active user meter to record this sign-in against, when
+ * the caller has one; omitted, no meter is touched and no sign-in is ever refused for it.
  * @returns The subject and what it still owes, or why sign-in was refused.
  */
 export async function signInWithPassword(
 	db: Database,
 	input: SignInWithPasswordInput,
+	metering?: OpenSessionMetering,
 ): Promise<SignInWithPasswordResult> {
 	let kind = identifierKindOf(input.identifier);
 	let folded = foldIdentifier(kind, input.identifier);
@@ -519,19 +523,24 @@ export async function signInWithPassword(
 		return { ok: false, reason: "password_expired" };
 	}
 
-	let session = await openSession(db, {
-		subjectId: subject.id,
-		amr: ["pwd"],
-		remembered: input.remembered,
-		ip: input.ip,
-		userAgent: input.userAgent,
-		country: input.country,
-		region: input.region,
-		city: input.city,
-	});
+	let session = await openSession(
+		db,
+		{
+			subjectId: subject.id,
+			amr: ["pwd"],
+			remembered: input.remembered,
+			ip: input.ip,
+			userAgent: input.userAgent,
+			country: input.country,
+			region: input.region,
+			city: input.city,
+		},
+		metering,
+	);
+
+	if (!session.ok) return { ok: false, reason: session.reason };
 
 	return {
-		ok: true,
 		subjectId: subject.id,
 		// No second-factor mechanism exists yet; this is always false until one does.
 		secondFactorRequired: false,

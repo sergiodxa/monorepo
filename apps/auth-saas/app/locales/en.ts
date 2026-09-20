@@ -26,6 +26,8 @@ export default {
 			passwordExpired: "Your password has expired. Contact support to reset it.",
 			passkeyFailed: "Sign-in with a passkey did not complete. Try again or use your password.",
 			passkeyUnsupported: "This browser cannot sign in with a passkey. Use your password instead.",
+			dauCapReached:
+				"This account has reached its daily limit of active users. Try again tomorrow.",
 		},
 		footer: "Secured by Auth SaaS",
 	},

@@ -142,6 +142,55 @@ describe("sign-in", () => {
 		expect(body).toContain("incorrect");
 	});
 
+	test("a sign-in past a capped-out Free tenant's daily active user limit re-renders with an error", async () => {
+		let client = await createTestClient(harness.tenantDO);
+		await createTestSubjectWithPassword(harness.tenantDO, {
+			email: "jane@example.com",
+			password: "correct horse battery staple",
+		});
+		await createTestSubjectWithPassword(harness.tenantDO, {
+			email: "john@example.com",
+			password: "correct horse battery staple",
+		});
+
+		await harness.tenantDO.applyEntitlements({
+			plan: "free",
+			features: {},
+			dauCap: 1,
+			auditRetentionDays: 7,
+			effectiveAt: Date.now(),
+		});
+
+		let counted = await beginAndReachSignIn(harness, client.id);
+		let countedResponse = await harness.router.fetch(
+			harness.request(counted.signInPath, {
+				method: "POST",
+				body: signInForm({
+					identifier: "jane@example.com",
+					password: "correct horse battery staple",
+				}),
+			}),
+		);
+		expect(countedResponse.status).toBe(302);
+
+		let refused = await beginAndReachSignIn(harness, client.id);
+		let refusedResponse = await harness.router.fetch(
+			harness.request(refused.signInPath, {
+				method: "POST",
+				body: signInForm({
+					identifier: "john@example.com",
+					password: "correct horse battery staple",
+				}),
+			}),
+		);
+
+		expect(refusedResponse.status).toBe(400);
+		expect(refusedResponse.headers.get("Location")).toBeNull();
+
+		let body = await refusedResponse.text();
+		expect(body).toContain("daily limit");
+	});
+
 	test("an interaction id that no longer resolves lands on /u/error", async () => {
 		await createTestSubjectWithPassword(harness.tenantDO, {
 			email: "jane@example.com",

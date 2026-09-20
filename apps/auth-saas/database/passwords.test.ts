@@ -16,6 +16,7 @@ import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { Database } from "remix/data-table";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { createDauCache } from "./metering";
 import * as Passwords from "./passwords";
 import * as Subjects from "./subjects";
 import m0001 from "./tenant-migrations/0001-init.sql?raw";
@@ -23,6 +24,7 @@ import m0002 from "./tenant-migrations/0002-subjects.sql?raw";
 import m0003 from "./tenant-migrations/0003-passwords.sql?raw";
 import m0005 from "./tenant-migrations/0005-sessions.sql?raw";
 import m0011 from "./tenant-migrations/0011-mail-rate-limit.sql?raw";
+import m0013 from "./tenant-migrations/0013-dau.sql?raw";
 
 let db: Database;
 
@@ -37,6 +39,7 @@ beforeEach(async () => {
 	await driver.executeScript(m0003);
 	await driver.executeScript(m0005);
 	await driver.executeScript(m0011);
+	await driver.executeScript(m0013);
 
 	db = new Database(driver);
 });
@@ -456,6 +459,84 @@ describe("signInWithPassword", () => {
 
 			expect(result).toEqual({ ok: false, reason: "invalid-credentials" });
 			expect(verifySpy).toHaveBeenCalledTimes(1);
+		});
+	});
+
+	describe("metering", () => {
+		test("a sign-in under cap succeeds and carries the day's metering report", async () => {
+			let subjectId = await createVerifiedSubject("jane@example.com");
+			await Passwords.setPassword(db, {
+				subjectId,
+				password: "correct-password-1",
+				actor: subjectActor,
+			});
+			let cache = createDauCache();
+
+			let result = await Passwords.signInWithPassword(
+				db,
+				{ identifier: "jane@example.com", password: "correct-password-1", remembered: false },
+				{ cache, cap: 100, hard: true },
+			);
+
+			expect(result).toMatchObject({
+				ok: true,
+				subjectId,
+				metering: { subjects: 1, cap: 100, notice: "none" },
+			});
+		});
+
+		test("refuses a genuinely new subject once a hard cap is reached", async () => {
+			let countedId = await createVerifiedSubject("jane@example.com");
+			await Passwords.setPassword(db, {
+				subjectId: countedId,
+				password: "correct-password-1",
+				actor: subjectActor,
+			});
+			let refusedId = await createVerifiedSubject("john@example.com");
+			await Passwords.setPassword(db, {
+				subjectId: refusedId,
+				password: "correct-password-2",
+				actor: subjectActor,
+			});
+			let cache = createDauCache();
+
+			await Passwords.signInWithPassword(
+				db,
+				{ identifier: "jane@example.com", password: "correct-password-1", remembered: false },
+				{ cache, cap: 1, hard: true },
+			);
+
+			let refused = await Passwords.signInWithPassword(
+				db,
+				{ identifier: "john@example.com", password: "correct-password-2", remembered: false },
+				{ cache, cap: 1, hard: true },
+			);
+
+			expect(refused).toEqual({ ok: false, reason: "dau_cap_reached" });
+		});
+
+		test("never refuses a subject already counted today, even past the cap", async () => {
+			let subjectId = await createVerifiedSubject("jane@example.com");
+			await Passwords.setPassword(db, {
+				subjectId,
+				password: "correct-password-1",
+				actor: subjectActor,
+			});
+			let cache = createDauCache();
+
+			await Passwords.signInWithPassword(
+				db,
+				{ identifier: "jane@example.com", password: "correct-password-1", remembered: false },
+				{ cache, cap: 1, hard: true },
+			);
+
+			let again = await Passwords.signInWithPassword(
+				db,
+				{ identifier: "jane@example.com", password: "correct-password-1", remembered: false },
+				{ cache, cap: 1, hard: true },
+			);
+
+			expect(again).toMatchObject({ ok: true, subjectId });
 		});
 	});
 });

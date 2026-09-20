@@ -23,6 +23,7 @@ import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
+import { createDauCache } from "./metering";
 import {
 	beginPasskeyAuthentication,
 	beginPasskeyRegistration,
@@ -520,6 +521,130 @@ describe("signInWithPasskey", () => {
 		});
 
 		expect(retry).toEqual({ ok: false, reason: "credential-suspended" });
+	});
+
+	describe("metering", () => {
+		test("a sign-in under cap succeeds and carries the day's metering report", async () => {
+			let subjectId = await createTestSubject();
+			let authenticator = await Authenticator.create();
+			await enrolTestPasskey(subjectId, authenticator);
+			let cache = createDauCache();
+
+			let begun = await beginPasskeyAuthentication(db, {
+				relyingPartyId: RELYING_PARTY_ID,
+				origins: ORIGINS,
+			});
+			let response = await authenticator.authenticate(begun.options);
+
+			let result = await signInWithPasskey(
+				db,
+				{
+					ceremonyId: begun.ceremonyId,
+					response,
+					relyingPartyId: RELYING_PARTY_ID,
+					origins: ORIGINS,
+					remembered: false,
+				},
+				{ cache, cap: 100, hard: true },
+			);
+
+			expect(result).toMatchObject({
+				ok: true,
+				subjectId,
+				metering: { subjects: 1, cap: 100, notice: "none" },
+			});
+		});
+
+		test("refuses a genuinely new subject once a hard cap is reached", async () => {
+			let counted = await createTestSubject("ana@example.com");
+			let countedAuthenticator = await Authenticator.create();
+			await enrolTestPasskey(counted, countedAuthenticator);
+
+			let refused = await createTestSubject("bo@example.com");
+			let refusedAuthenticator = await Authenticator.create();
+			await enrolTestPasskey(refused, refusedAuthenticator);
+
+			let cache = createDauCache();
+
+			let countedBegun = await beginPasskeyAuthentication(db, {
+				relyingPartyId: RELYING_PARTY_ID,
+				origins: ORIGINS,
+			});
+			let countedResponse = await countedAuthenticator.authenticate(countedBegun.options);
+			await signInWithPasskey(
+				db,
+				{
+					ceremonyId: countedBegun.ceremonyId,
+					response: countedResponse,
+					relyingPartyId: RELYING_PARTY_ID,
+					origins: ORIGINS,
+					remembered: false,
+				},
+				{ cache, cap: 1, hard: true },
+			);
+
+			let refusedBegun = await beginPasskeyAuthentication(db, {
+				relyingPartyId: RELYING_PARTY_ID,
+				origins: ORIGINS,
+			});
+			let refusedResponse = await refusedAuthenticator.authenticate(refusedBegun.options);
+			let result = await signInWithPasskey(
+				db,
+				{
+					ceremonyId: refusedBegun.ceremonyId,
+					response: refusedResponse,
+					relyingPartyId: RELYING_PARTY_ID,
+					origins: ORIGINS,
+					remembered: false,
+				},
+				{ cache, cap: 1, hard: true },
+			);
+
+			expect(result).toEqual({ ok: false, reason: "dau_cap_reached" });
+		});
+
+		test("never refuses a subject already counted today, even past the cap", async () => {
+			let subjectId = await createTestSubject();
+			let authenticator = await Authenticator.create();
+			await enrolTestPasskey(subjectId, authenticator);
+			let cache = createDauCache();
+
+			let firstBegun = await beginPasskeyAuthentication(db, {
+				relyingPartyId: RELYING_PARTY_ID,
+				origins: ORIGINS,
+			});
+			let firstResponse = await authenticator.authenticate(firstBegun.options);
+			await signInWithPasskey(
+				db,
+				{
+					ceremonyId: firstBegun.ceremonyId,
+					response: firstResponse,
+					relyingPartyId: RELYING_PARTY_ID,
+					origins: ORIGINS,
+					remembered: false,
+				},
+				{ cache, cap: 1, hard: true },
+			);
+
+			let secondBegun = await beginPasskeyAuthentication(db, {
+				relyingPartyId: RELYING_PARTY_ID,
+				origins: ORIGINS,
+			});
+			let secondResponse = await authenticator.authenticate(secondBegun.options);
+			let second = await signInWithPasskey(
+				db,
+				{
+					ceremonyId: secondBegun.ceremonyId,
+					response: secondResponse,
+					relyingPartyId: RELYING_PARTY_ID,
+					origins: ORIGINS,
+					remembered: false,
+				},
+				{ cache, cap: 1, hard: true },
+			);
+
+			expect(second).toMatchObject({ ok: true, subjectId });
+		});
 	});
 });
 

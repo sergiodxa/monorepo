@@ -50,6 +50,7 @@ import type {
 	ResolveUserInfoInput,
 	ResolveUserInfoResult,
 } from "./metadata";
+import type { CloseMeteringDayInput, DailyUsage, DauCache, ReadUsageInput } from "./metering";
 import type {
 	BeginPasskeyAuthenticationInput,
 	BeginPasskeyAuthenticationResult,
@@ -118,8 +119,9 @@ import * as Authorization from "./authorization";
 import * as Clients from "./clients";
 import * as Consent from "./consent";
 import { hasAnotherCredential } from "./credentials";
-import { applyEntitlements } from "./entitlements";
+import { applyEntitlements, entitlementEnforcement } from "./entitlements";
 import * as Metadata from "./metadata";
+import { closeMeteringDay, createDauCache, readUsage } from "./metering";
 import * as Passkeys from "./passkeys";
 import * as Passwords from "./passwords";
 import * as Sessions from "./sessions";
@@ -156,6 +158,9 @@ export interface ProvisionResult {
  */
 const SWEEP_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
+/** The daily active user cap a tenant enforces before any enforcement record has ever been written. */
+const DEFAULT_DAU_CAP = 100;
+
 /**
  * One tenant's identity state, isolated in this object's own SQLite database.
  */
@@ -164,6 +169,14 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 
 	/** The migrations applied during construction, read by `provision` once it settles. */
 	#migrated: Promise<{ applied: string[] }>;
+
+	/**
+	 * This isolate's own record of which subjects today's daily active user meter has
+	 * already counted. Never persisted: an object evicted and rebuilt starts it empty
+	 * again, which costs one insert attempt per subject the meter re-meets rather than
+	 * any loss of accuracy.
+	 */
+	#dauCache: DauCache = createDauCache();
 
 	/**
 	 * Opens this tenant's database and applies whatever schema has not run yet, queuing
@@ -234,6 +247,19 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	async #issuer(): Promise<string> {
 		let rows = await this.#db.findMany(settings);
 		return rows[0]?.issuer ?? "";
+	}
+
+	/**
+	 * The daily active user cap and whether it is hard, read from this tenant's own
+	 * enforcement record. `hard` is re-derived from the enforced plan being Free rather
+	 * than carried as a second stored flag, so the two can never disagree. A tenant
+	 * whose record has never been written enforces the Free cap.
+	 */
+	async #dauEnforcement(): Promise<{ cap: number; hard: boolean }> {
+		let record = await this.#db.findOne(entitlementEnforcement, { where: { id: "current" } });
+		if (!record) return { cap: DEFAULT_DAU_CAP, hard: true };
+
+		return { cap: record.dau_cap ?? DEFAULT_DAU_CAP, hard: record.plan === "free" };
 	}
 
 	/**
@@ -448,7 +474,8 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 */
 	async signInWithPassword(input: SignInWithPasswordInput): Promise<SignInWithPasswordResult> {
 		await this.#migrated;
-		return Passwords.signInWithPassword(this.#db, input);
+		let { cap, hard } = await this.#dauEnforcement();
+		return Passwords.signInWithPassword(this.#db, input, { cache: this.#dauCache, cap, hard });
 	}
 
 	/**
@@ -555,7 +582,8 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 */
 	async signInWithPasskey(input: SignInWithPasskeyInput): Promise<SignInWithPasskeyResult> {
 		await this.#migrated;
-		return Passkeys.signInWithPasskey(this.#db, input);
+		let { cap, hard } = await this.#dauEnforcement();
+		return Passkeys.signInWithPasskey(this.#db, input, { cache: this.#dauCache, cap, hard });
 	}
 
 	/**
@@ -975,5 +1003,29 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	async applyEntitlements(input: ApplyEntitlementsInput): Promise<ApplyEntitlementsResult> {
 		await this.#migrated;
 		return applyEntitlements(this.#db, input);
+	}
+
+	/**
+	 * Closes one day of the daily active user meter, for the control plane's own
+	 * scheduled job to fold into `tenant_usage_day`. Safe to call twice: an
+	 * already-closed day answers the figures already stored.
+	 *
+	 * @param input - The day to close.
+	 * @returns The closed day's subject, session and token counts.
+	 */
+	async closeMeteringDay(input: CloseMeteringDayInput): Promise<DailyUsage> {
+		await this.#migrated;
+		return closeMeteringDay(this.#db, input);
+	}
+
+	/**
+	 * Reads the day rows a tenant's usage chart is built from.
+	 *
+	 * @param input - The inclusive day range to read.
+	 * @returns Each day in range that has a row, oldest first.
+	 */
+	async readUsage(input: ReadUsageInput): Promise<DailyUsage[]> {
+		await this.#migrated;
+		return readUsage(this.#db, input);
 	}
 }

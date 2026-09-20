@@ -14,9 +14,15 @@ import { Database } from "remix/data-table";
 import controlPlaneMigration from "~/database/migrations/0001-control-plane.sql?raw";
 import perTenantSubscriptionsMigration from "~/database/migrations/0002-per-tenant-subscriptions.sql?raw";
 import flagChangeMigration from "~/database/migrations/0003-flag-change.sql?raw";
+import tenantUsageMigration from "~/database/migrations/0004-tenant-usage.sql?raw";
 
 /** Every control-plane migration, applied in order. */
-const MIGRATIONS = [controlPlaneMigration, perTenantSubscriptionsMigration, flagChangeMigration];
+const MIGRATIONS = [
+	controlPlaneMigration,
+	perTenantSubscriptionsMigration,
+	flagChangeMigration,
+	tenantUsageMigration,
+];
 
 /**
  * Creates an isolated in-memory control-plane database with the D1 schema applied.

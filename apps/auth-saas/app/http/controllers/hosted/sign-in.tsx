@@ -120,7 +120,9 @@ export const signInSubmit = createAction(routes.hostedSignInSubmit, async (ctx) 
 		let error =
 			signedIn.reason === "password_expired"
 				? ctx.i18next.t("hostedSignIn.errors.passwordExpired")
-				: ctx.i18next.t("hostedSignIn.errors.invalidCredentials");
+				: signedIn.reason === "dau_cap_reached"
+					? ctx.i18next.t("hostedSignIn.errors.dauCapReached")
+					: ctx.i18next.t("hostedSignIn.errors.invalidCredentials");
 		return renderSignInPage(ctx, { loginHint, forced, error });
 	}
 

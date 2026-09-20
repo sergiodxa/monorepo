@@ -19,6 +19,7 @@ import type {
 import type { Database } from "remix/data-table";
 
 import { isFailure, isSuccess } from "@sdxc/result";
+import { env } from "cloudflare:workers";
 
 import type { BillingCheckoutRow } from "~/app/models/billing-checkout";
 import type { TenantRow } from "~/app/models/tenant";
@@ -28,6 +29,7 @@ import Customer from "~/app/models/customer";
 import Tenant from "~/app/models/tenant";
 import TenantAddon from "~/app/models/tenant-addon";
 import TenantEntitlement from "~/app/models/tenant-entitlement";
+import { PLANS } from "~/app/services/billing/catalog";
 
 /** How long a projection may go unread before the sweep refreshes it. */
 const STALE_PROJECTION_MS = 60 * 60 * 1000;
@@ -148,13 +150,26 @@ export async function reprojectTenant(
 		readAt: snapshot.readAt.getTime(),
 	});
 
-	/**
-	 * Writing this projection onto the tenant's own Durable Object via
-	 * `applyEntitlements` is deferred here until ADR-019 (Plan Catalog and
-	 * Feature Split) supplies the real `dauCap`/`auditRetentionDays` a plan
-	 * slug maps to; see `database/entitlements.ts` and `Tenant#applyEntitlements`
-	 * for the RPC itself, built and tested standalone in this pass.
-	 */
+	let plan = PLANS[tenant.plan_slug as keyof typeof PLANS] ?? PLANS.free;
+
+	try {
+		await env.TENANT.getByName(tenant.id).applyEntitlements({
+			plan: tenant.plan_slug,
+			features,
+			dauCap: plan.dauCap,
+			auditRetentionDays: plan.auditRetentionDays,
+			effectiveAt: Date.now(),
+		});
+	} catch (error) {
+		/**
+		 * The projection write above already landed, so a tenant whose object
+		 * cannot be reached right now still reads correctly from
+		 * `tenant_entitlements`; only its object-side cap and retention window
+		 * stay stale until the next successful projection, the same billing
+		 * outage degradation this function already accepts for `read_at`.
+		 */
+		console.error("failed to push entitlements onto the tenant's object", error);
+	}
 }
 
 /**

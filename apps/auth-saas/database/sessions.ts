@@ -19,6 +19,10 @@ import { generateUUID } from "@sdxc/uuid";
 import * as s from "remix/data-schema";
 import { and, column as c, eq, inList, isNull, lt, ne, table } from "remix/data-table";
 
+import type { DauCache, DauNotice } from "./metering";
+
+import { recordAuthentication } from "./metering";
+
 /** How long a session stands before the subject must authenticate again. */
 const ABSOLUTE_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -84,13 +88,40 @@ export interface OpenSessionInput {
 	city?: string | null;
 }
 
+/** The day's figure a session-opening call carries back once it opted into metering. */
+export interface SessionMeteringReport {
+	day: number;
+	subjects: number;
+	cap: number;
+	notice: DauNotice;
+}
+
 /** What a caller mints a session with uses to both write the row and set the cookie. */
-export interface OpenSessionResult {
+export interface OpenSessionSuccess {
 	sessionId: string;
 	token: string;
 	authTime: number;
 	expiresAt: number;
 	idleExpiresAt: number;
+	/** Present only when the call opted into metering. */
+	metering?: SessionMeteringReport;
+}
+
+export type OpenSessionResult =
+	| ({ ok: true } & OpenSessionSuccess)
+	| { ok: false; reason: "dau_cap_reached"; day: number; subjects: number; cap: number };
+
+/**
+ * Cross-cutting metering a caller opts a session-opening call into: the tenant
+ * object's own instance-local cache of today's subjects, the cap currently
+ * enforced, and whether that cap refuses a genuinely new subject rather than
+ * only reporting it. Omitted entirely, this call meters nothing — the shape
+ * every existing caller keeps.
+ */
+export interface OpenSessionMetering {
+	cache: DauCache;
+	cap: number;
+	hard: boolean;
 }
 
 let OpenSessionSchema = s.object({
@@ -110,14 +141,56 @@ let OpenSessionSchema = s.object({
  * @param db - The tenant's database.
  * @param input - The subject the session belongs to, the methods that proved it, whether
  * the browser should keep it past its own lifetime, and the request's origin.
+ * @param metering - The daily active user meter to record this authentication against,
+ * when the caller has one; omitted, no meter is touched and no session is ever refused —
+ * the overload below narrows such a call's return type to always-succeeds, exactly as it
+ * always has.
  * @returns The new session's id and the token to set as the cookie's value, with the
- * clocks the caller may need to shape a response around.
+ * clocks the caller may need to shape a response around, or that a hard daily cap
+ * refused this subject a session.
  */
+export function openSession(
+	db: Database,
+	input: OpenSessionInput,
+): Promise<{ ok: true } & OpenSessionSuccess>;
+export function openSession(
+	db: Database,
+	input: OpenSessionInput,
+	metering: OpenSessionMetering | undefined,
+): Promise<OpenSessionResult>;
 export async function openSession(
 	db: Database,
 	input: OpenSessionInput,
+	metering?: OpenSessionMetering,
 ): Promise<OpenSessionResult> {
 	let parsed = s.parse(OpenSessionSchema, input);
+
+	let meteringReport: SessionMeteringReport | undefined;
+
+	if (metering) {
+		let recorded = await recordAuthentication(db, metering.cache, {
+			subjectId: parsed.subjectId,
+			cap: metering.cap,
+			hard: metering.hard,
+		});
+
+		if (!recorded.ok) {
+			return {
+				ok: false,
+				reason: "dau_cap_reached",
+				day: recorded.day,
+				subjects: recorded.subjects,
+				cap: recorded.cap,
+			};
+		}
+
+		meteringReport = {
+			day: recorded.day,
+			subjects: recorded.subjects,
+			cap: recorded.cap,
+			notice: recorded.notice,
+		};
+	}
 
 	let token = randomToken({ bytes: 32 });
 	let hashed = await sha256(token);
@@ -148,7 +221,15 @@ export async function openSession(
 		revoked_reason: null,
 	});
 
-	return { sessionId: id, token, authTime: now, expiresAt, idleExpiresAt };
+	return {
+		ok: true,
+		sessionId: id,
+		token,
+		authTime: now,
+		expiresAt,
+		idleExpiresAt,
+		...(meteringReport ? { metering: meteringReport } : {}),
+	};
 }
 
 export interface ResolveSessionInput {

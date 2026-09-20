@@ -73,7 +73,11 @@ export const signInPasskeyVerify = createAction(routes.hostedSignInPasskeyVerify
 	});
 
 	if (!signedIn.ok) {
-		return json({ error: t("hostedSignIn.errors.passkeyFailed") }, { status: 400 });
+		let error =
+			signedIn.reason === "dau_cap_reached"
+				? t("hostedSignIn.errors.dauCapReached")
+				: t("hostedSignIn.errors.passkeyFailed");
+		return json({ error }, { status: 400 });
 	}
 
 	let outcome = await ctx.tenantStub.resumeAuthorization({

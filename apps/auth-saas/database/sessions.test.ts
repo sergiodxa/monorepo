@@ -13,6 +13,7 @@ import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { Database } from "remix/data-table";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { createDauCache } from "./metering";
 import {
 	listSubjectSessions,
 	openSession,
@@ -78,6 +79,70 @@ describe("openSession", () => {
 
 		expect(row?.token_hash).not.toBe(opened.token);
 		expect(row?.token_hash).toMatch(/^[0-9a-f]{64}$/);
+	});
+
+	test("carries a metering report when a caller opts into it, and stays under cap", async () => {
+		let subjectId = await createTestSubject();
+		let cache = createDauCache();
+
+		let opened = await openSession(
+			db,
+			{ subjectId, amr: ["pwd"], remembered: true },
+			{ cache, cap: 100, hard: true },
+		);
+
+		expect(opened).toMatchObject({
+			ok: true,
+			metering: { subjects: 1, cap: 100, notice: "none" },
+		});
+	});
+
+	test("refuses a genuinely new subject once a hard cap is reached, without opening a session", async () => {
+		let counted = await createTestSubject("jane");
+		let refused = await createTestSubject("john");
+		let cache = createDauCache();
+
+		await openSession(
+			db,
+			{ subjectId: counted, amr: ["pwd"], remembered: true },
+			{ cache, cap: 1, hard: true },
+		);
+
+		let result = await openSession(
+			db,
+			{ subjectId: refused, amr: ["pwd"], remembered: true },
+			{ cache, cap: 1, hard: true },
+		);
+
+		expect(result).toEqual({
+			ok: false,
+			reason: "dau_cap_reached",
+			day: expect.any(Number),
+			subjects: 1,
+			cap: 1,
+		});
+
+		let rows = await db.findMany(sessions, { where: { subject_id: refused } });
+		expect(rows).toHaveLength(0);
+	});
+
+	test("never refuses a subject the meter already counted today, even past a hard cap", async () => {
+		let subjectId = await createTestSubject();
+		let cache = createDauCache();
+
+		await openSession(
+			db,
+			{ subjectId, amr: ["pwd"], remembered: true },
+			{ cache, cap: 1, hard: true },
+		);
+
+		let second = await openSession(
+			db,
+			{ subjectId, amr: ["webauthn"], remembered: true },
+			{ cache, cap: 1, hard: true },
+		);
+
+		expect(second).toMatchObject({ ok: true });
 	});
 });
 

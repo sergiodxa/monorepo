@@ -42,6 +42,7 @@ describe("runMigrations", () => {
 			"0010-tokens",
 			"0011-mail-rate-limit",
 			"0012-entitlements",
+			"0013-dau",
 		]);
 	});
 
@@ -78,6 +79,8 @@ describe("runMigrations", () => {
 			"grants",
 			"authorization_requests",
 			"authorization_codes",
+			"dau_seen",
+			"dau_day",
 		]) {
 			expect(names, `${name} exists`).toContain(name);
 		}
@@ -105,6 +108,7 @@ describe("runMigrations", () => {
 			{ id: "0010-tokens", applied_at: expect.any(Number) },
 			{ id: "0011-mail-rate-limit", applied_at: expect.any(Number) },
 			{ id: "0012-entitlements", applied_at: expect.any(Number) },
+			{ id: "0013-dau", applied_at: expect.any(Number) },
 		]);
 	});
 
