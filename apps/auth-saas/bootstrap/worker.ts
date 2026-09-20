@@ -17,9 +17,9 @@ import { env } from "cloudflare:workers";
 import { HostMetadataSchema } from "~/app/lib/host-metadata";
 import { HOSTNAME_CACHE_TTL, hostnameCacheKey } from "~/app/lib/hostname-cache";
 import { checkRateLimit } from "~/app/lib/rate-limit";
+import Tenant from "~/database/tenant-do";
 
 import { router } from "./app";
-import Tenant from "./tenant";
 
 export { Tenant };
 
@@ -64,8 +64,10 @@ async function resolveHostname(hostname: string): Promise<ResolvedTenant | null>
 }
 
 /**
- * Forwards a request to a tenant Durable Object after applying rate limits.
- * The tenant's region code doubles as the Durable Object location hint.
+ * Rate-limits a request resolved to a tenant, then answers it. A tenant's protocol
+ * endpoints — `/authorize`, `/oauth/token` and the rest — are typed RPC methods on its
+ * Durable Object, so a request naming this tenant is met with what is true about it today
+ * rather than a call the object has no handler for.
  */
 async function forwardToTenant(request: Request, target: ResolvedTenant): Promise<Response> {
 	let rateLimitResponse = await checkRateLimit(request, {
@@ -75,9 +77,14 @@ async function forwardToTenant(request: Request, target: ResolvedTenant): Promis
 	});
 	if (rateLimitResponse) return rateLimitResponse;
 
-	let locationHint = target.region as DurableObjectLocationHint | undefined;
-	let stub = env.TENANT.getByName(target.tenantId, locationHint ? { locationHint } : undefined);
-	return await stub.fetch(request);
+	return new Response(
+		JSON.stringify({
+			tenantId: target.tenantId,
+			message:
+				"This tenant's protocol endpoints are served through typed RPC methods on its Durable Object.",
+		}),
+		{ status: 501, headers: { "Content-Type": "application/json" } },
+	);
 }
 
 /**

@@ -42,8 +42,7 @@ relative path is only for a sibling inside the same directory.
 
 - `bootstrap/` — runtime entry points: `worker.ts` (the Cloudflare `fetch` handler,
   the only place Cloudflare APIs are used), `app.ts` (router assembly + global
-  middleware + route mapping), `tenant.ts` (the per-tenant Durable Object,
-  implementing the OIDC/OAuth2 provider directly over its own SqlStorage database).
+  middleware + route mapping).
 - `routes/web.ts` — the route registry mapped in `bootstrap/app.ts`.
 - `app/http/controllers/` and `app/http/middleware/` — the HTTP layer.
 - `app/models/` — control-plane data + business-logic models (`remix/data-table`
@@ -53,6 +52,10 @@ relative path is only for a sibling inside the same directory.
 - `app/lib/` — app-internal helpers (fetch-router action/middleware/form wrappers,
   crypto, rate limiting).
 - `resources/layouts/` — server-rendered HTML layouts.
+- `database/tenant-do.ts` — the per-tenant Durable Object: typed RPC methods only,
+  no `fetch` handler, over its own SqlStorage database.
+- `database/tenant-migrations/` and `database/tenant-migrations.ts` — the tenant
+  object's schema registry and the runner that applies it on boot.
 - `database/migrations/` — D1 control-plane migrations (`migrations_dir`).
 - `config/` — ambient `*.d.ts` (env + router-context augmentations).
 
