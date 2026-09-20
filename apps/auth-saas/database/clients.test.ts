@@ -18,6 +18,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { RegisterClientInput } from "./clients";
 
+import { readAuditPage } from "./audit-events";
 import {
 	clientSecrets,
 	clients,
@@ -511,6 +512,75 @@ describe("verifyClientSecret", () => {
 
 		let row = (await db.findMany(clientSecrets, { where: { client_id: created.client.id } }))[0];
 		expect(row?.last_used_at).not.toBeNull();
+	});
+});
+
+describe("audit", () => {
+	async function auditRowsFor(action: string) {
+		let page = await readAuditPage(db, { from: 0, to: Date.now() + 60_000, action });
+		if (!page.ok) throw new Error("unreachable");
+		return page.events;
+	}
+
+	test("client.created lands when a client is registered", async () => {
+		let created = await createTestClient();
+
+		let rows = await auditRowsFor("client.created");
+		expect(rows).toMatchObject([
+			{ actorType: "platform", targetId: created.client.id, outcome: "succeeded" },
+		]);
+	});
+
+	test("client.updated lands when a client's record is replaced", async () => {
+		let created = await createTestClient();
+
+		await updateClient(db, {
+			clientId: created.client.id,
+			...baseInput({ name: "Renamed Client" }),
+		});
+
+		let rows = await auditRowsFor("client.updated");
+		expect(rows).toMatchObject([{ targetId: created.client.id, outcome: "succeeded" }]);
+	});
+
+	test("client.secret.rotated lands when a successor secret is minted", async () => {
+		let created = await createTestClient();
+
+		await rotateClientSecret(db, { clientId: created.client.id });
+
+		let rows = await auditRowsFor("client.secret.rotated");
+		expect(rows).toMatchObject([{ targetId: created.client.id, outcome: "succeeded" }]);
+	});
+
+	test("client.secret.revoked lands when a secret's window is closed", async () => {
+		let created = await createTestClient();
+		let rotated = await rotateClientSecret(db, { clientId: created.client.id });
+		if (!rotated.ok) throw new Error("unreachable");
+
+		await revokeClientSecret(db, { clientId: created.client.id, secretId: rotated.secretId });
+
+		let rows = await auditRowsFor("client.secret.revoked");
+		expect(rows).toMatchObject([
+			{ targetId: created.client.id, detail: { secretId: rotated.secretId } },
+		]);
+	});
+
+	test("client.disabled lands when a client is disabled", async () => {
+		let created = await createTestClient();
+
+		await disableClient(db, { clientId: created.client.id });
+
+		let rows = await auditRowsFor("client.disabled");
+		expect(rows).toMatchObject([{ targetId: created.client.id, outcome: "succeeded" }]);
+	});
+
+	test("client.deleted lands when a client is deleted", async () => {
+		let created = await createTestClient();
+
+		await deleteClient(db, { clientId: created.client.id });
+
+		let rows = await auditRowsFor("client.deleted");
+		expect(rows).toMatchObject([{ targetId: created.client.id, outcome: "succeeded" }]);
 	});
 });
 

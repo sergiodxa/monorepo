@@ -16,9 +16,21 @@ import { and, column as c, eq, isNull, lt, ne, notNull, or, table } from "remix/
 
 import type { IdentifierKind } from "./subject-identifiers";
 
+import { writeAuditEvent } from "./audit-events";
 import { checkAndSpendMailEnvelope } from "./mail-rate-limit";
 import { revokeSubjectSessions, sessions } from "./sessions";
 import { foldIdentifier } from "./subject-identifiers";
+
+/** The audit actor for a call with no operator identity threaded through today. */
+const PLATFORM_ACTOR = { type: "platform", id: "system" } as const;
+
+/** Maps this module's own `subject`/`admin` actor onto the audit log's actor shape. */
+function auditActorFor(
+	actor: Actor,
+	subjectId: string,
+): { type: "subject" | "platform"; id: string } {
+	return actor.kind === "subject" ? { type: "subject", id: subjectId } : PLATFORM_ACTOR;
+}
 
 export type { IdentifierKind } from "./subject-identifiers";
 
@@ -256,6 +268,14 @@ export async function createSubject(
 		});
 	}
 
+	await writeAuditEvent(db, {
+		action: "subject.created",
+		actor: PLATFORM_ACTOR,
+		targetType: "subject",
+		targetId: id,
+		outcome: "succeeded",
+	});
+
 	return { ok: true, subjectId: id, identifiers: states };
 }
 
@@ -326,6 +346,14 @@ export async function updateSubject(
 			});
 		}
 	}
+
+	await writeAuditEvent(db, {
+		action: "subject.updated",
+		actor: auditActorFor(input.actor, input.subjectId),
+		targetType: "subject",
+		targetId: input.subjectId,
+		outcome: "succeeded",
+	});
 
 	return { ok: true };
 }
@@ -425,6 +453,15 @@ export async function addIdentifier(
 			created_at: now,
 		});
 
+		await writeAuditEvent(db, {
+			action: "identifier.added",
+			actor: auditActorFor(input.actor, input.subjectId),
+			targetType: "subject",
+			targetId: input.subjectId,
+			outcome: "succeeded",
+			detail: { identifierId: id, kind: "email" },
+		});
+
 		return {
 			ok: true,
 			identifierId: id,
@@ -446,6 +483,15 @@ export async function addIdentifier(
 		verification_ticket: null,
 		verification_ticket_expires_at: null,
 		created_at: now,
+	});
+
+	await writeAuditEvent(db, {
+		action: "identifier.added",
+		actor: auditActorFor(input.actor, input.subjectId),
+		targetType: "subject",
+		targetId: input.subjectId,
+		outcome: "succeeded",
+		detail: { identifierId: id, kind: "username" },
 	});
 
 	return { ok: true, identifierId: id, kind: "username", value: input.value };
@@ -527,6 +573,15 @@ export async function verifyIdentifier(
 			is_primary: promote,
 		},
 	);
+
+	await writeAuditEvent(db, {
+		action: "identifier.verified",
+		actor: { type: "subject", id: row.subject_id },
+		targetType: "subject",
+		targetId: row.subject_id,
+		outcome: "succeeded",
+		detail: { identifierId: row.id, kind: row.kind },
+	});
 
 	return { ok: true, subjectId: row.subject_id, promotedPrimary: promote };
 }
@@ -638,6 +693,15 @@ export async function removeIdentifier(
 		where: and(eq("subject_id", input.subjectId), eq("kind", "email"), notNull("verified_at")),
 	});
 
+	await writeAuditEvent(db, {
+		action: "identifier.removed",
+		actor: auditActorFor(input.actor, input.subjectId),
+		targetType: "subject",
+		targetId: input.subjectId,
+		outcome: "succeeded",
+		detail: { identifierId: row.id, kind: row.kind },
+	});
+
 	return { ok: true, promotedPrimary, notify: verifiedEmails.map((email) => email.value) };
 }
 
@@ -681,7 +745,20 @@ export async function blockSubject(
 	if (!subject) return { ok: false, reason: "not-found" };
 
 	await db.update(subjects, { id: input.subjectId }, { status: "blocked", updated_at: Date.now() });
-	await revokeSubjectSessions(db, { subjectId: input.subjectId, reason: input.reason });
+	await revokeSubjectSessions(db, {
+		subjectId: input.subjectId,
+		reason: input.reason,
+		actor: PLATFORM_ACTOR,
+	});
+
+	await writeAuditEvent(db, {
+		action: "subject.blocked",
+		actor: PLATFORM_ACTOR,
+		targetType: "subject",
+		targetId: input.subjectId,
+		outcome: "succeeded",
+		detail: { reason: input.reason },
+	});
 
 	return { ok: true };
 }
@@ -703,6 +780,14 @@ export async function unblockSubject(
 	if (!subject) return { ok: false, reason: "not-found" };
 
 	await db.update(subjects, { id: input.subjectId }, { status: "active", updated_at: Date.now() });
+
+	await writeAuditEvent(db, {
+		action: "subject.unblocked",
+		actor: PLATFORM_ACTOR,
+		targetType: "subject",
+		targetId: input.subjectId,
+		outcome: "succeeded",
+	});
 
 	return { ok: true };
 }
@@ -732,6 +817,14 @@ export async function deleteSubject(
 	await db.deleteMany(subjectAttributes, { where: { subject_id: input.subjectId } });
 	await db.deleteMany(subjectIdentifiers, { where: { subject_id: input.subjectId } });
 	await db.delete(subjects, { id: input.subjectId });
+
+	await writeAuditEvent(db, {
+		action: "subject.deleted",
+		actor: PLATFORM_ACTOR,
+		targetType: "subject",
+		targetId: input.subjectId,
+		outcome: "succeeded",
+	});
 
 	return { ok: true };
 }

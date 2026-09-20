@@ -16,13 +16,26 @@ import { typeid } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
 import { and, column as c, eq, notInList, notNull, table } from "remix/data-table";
 
+import type { AuditAction } from "./audit-events";
 import type { OpenSessionMetering, OpenSessionSuccess } from "./sessions";
 import type { Actor, IdentifierKind, SubjectIdentifierRow } from "./subjects";
 
+import { writeAuditEvent } from "./audit-events";
 import { checkAndSpendMailEnvelope } from "./mail-rate-limit";
 import { openSession, revokeSubjectSessions } from "./sessions";
 import { foldIdentifier } from "./subject-identifiers";
 import { subjectIdentifiers, subjects } from "./subjects";
+
+/** The audit actor for a call with no operator identity threaded through today. */
+const PLATFORM_ACTOR = { type: "platform", id: "system" } as const;
+
+/** Maps this module's own `subject`/`admin` actor onto the audit log's actor shape. */
+function auditActorFor(
+	actor: Actor,
+	subjectId: string,
+): { type: "subject" | "platform"; id: string } {
+	return actor.kind === "subject" ? { type: "subject", id: subjectId } : PLATFORM_ACTOR;
+}
 
 /** Mints an id for a `passwords` row. */
 const passwordRowId = typeid("pw");
@@ -348,7 +361,22 @@ export async function setPassword(
 	let subject = await db.find(subjects, { id: input.subjectId });
 	if (!subject) return { ok: false, reason: "not-found" };
 
-	return writeNewPassword(db, { subjectId: input.subjectId, password: input.password });
+	let written = await writeNewPassword(db, {
+		subjectId: input.subjectId,
+		password: input.password,
+	});
+	if (!written.ok) return written;
+
+	await writeAuditEvent(db, {
+		action: "password.changed",
+		actor: auditActorFor(input.actor, input.subjectId),
+		targetType: "subject",
+		targetId: input.subjectId,
+		outcome: "succeeded",
+		detail: { via: "set" },
+	});
+
+	return written;
 }
 
 export interface ChangePasswordInput {
@@ -403,6 +431,15 @@ export async function changePassword(
 		subjectId: input.subjectId,
 		reason: "password_changed",
 		exceptSessionId: input.keepSessionId,
+	});
+
+	await writeAuditEvent(db, {
+		action: "password.changed",
+		actor: { type: "subject", id: input.subjectId },
+		targetType: "subject",
+		targetId: input.subjectId,
+		outcome: "succeeded",
+		detail: { via: "change" },
 	});
 
 	return written;
@@ -477,11 +514,37 @@ export async function signInWithPassword(
 	input: SignInWithPasswordInput,
 	metering?: OpenSessionMetering,
 ): Promise<SignInWithPasswordResult> {
+	let context = { ip: input.ip ?? null, userAgent: input.userAgent ?? null };
+
+	/** Writes the one authentication row this attempt earns, whoever it named. */
+	function auditAuthentication(
+		outcome: "failed" | "denied" | "succeeded",
+		subjectId: string,
+	): Promise<void> {
+		let action: AuditAction =
+			outcome === "succeeded"
+				? "authentication.succeeded"
+				: outcome === "denied"
+					? "authentication.denied"
+					: "authentication.failed";
+
+		return writeAuditEvent(db, {
+			action,
+			actor: { type: "subject", id: subjectId },
+			targetType: "subject",
+			targetId: subjectId,
+			outcome,
+			context,
+			detail: { method: "password" },
+		});
+	}
+
 	let kind = identifierKindOf(input.identifier);
 	let folded = foldIdentifier(kind, input.identifier);
 
 	if (!folded.ok) {
 		await verifyAgainstDummy(input.password);
+		await auditAuthentication("failed", input.identifier);
 		return { ok: false, reason: "invalid-credentials" };
 	}
 
@@ -491,13 +554,21 @@ export async function signInWithPassword(
 
 	if (!identifierRow) {
 		await verifyAgainstDummy(input.password);
+		await auditAuthentication("failed", input.identifier);
 		return { ok: false, reason: "invalid-credentials" };
 	}
 
 	let subject = await db.find(subjects, { id: identifierRow.subject_id });
 
-	if (!subject || subject.status === "blocked") {
+	if (!subject) {
 		await verifyAgainstDummy(input.password);
+		await auditAuthentication("failed", identifierRow.subject_id);
+		return { ok: false, reason: "invalid-credentials" };
+	}
+
+	if (subject.status === "blocked") {
+		await verifyAgainstDummy(input.password);
+		await auditAuthentication("denied", subject.id);
 		return { ok: false, reason: "invalid-credentials" };
 	}
 
@@ -508,11 +579,15 @@ export async function signInWithPassword(
 
 	if (!newest) {
 		await verifyAgainstDummy(input.password);
+		await auditAuthentication("failed", subject.id);
 		return { ok: false, reason: "invalid-credentials" };
 	}
 
 	let verified = await password.verify(newest.hash, input.password);
-	if (isFailure(verified) || !verified.data) return { ok: false, reason: "invalid-credentials" };
+	if (isFailure(verified) || !verified.data) {
+		await auditAuthentication("failed", subject.id);
+		return { ok: false, reason: "invalid-credentials" };
+	}
 
 	if (password.needsRehash(newest.hash)) {
 		let rehashed = await password.hash(input.password);
@@ -520,6 +595,7 @@ export async function signInWithPassword(
 	}
 
 	if (newest.expires_at !== null && newest.expires_at <= Date.now()) {
+		await auditAuthentication("denied", subject.id);
 		return { ok: false, reason: "password_expired" };
 	}
 
@@ -538,7 +614,12 @@ export async function signInWithPassword(
 		metering,
 	);
 
-	if (!session.ok) return { ok: false, reason: session.reason };
+	if (!session.ok) {
+		await auditAuthentication("denied", subject.id);
+		return { ok: false, reason: session.reason };
+	}
+
+	await auditAuthentication("succeeded", subject.id);
 
 	return {
 		subjectId: subject.id,
@@ -694,6 +775,15 @@ export async function completePasswordReset(
 
 	await revokeSubjectSessions(db, { subjectId: row.subject_id, reason: "password_reset" });
 
+	await writeAuditEvent(db, {
+		action: "password.changed",
+		actor: { type: "subject", id: row.subject_id },
+		targetType: "subject",
+		targetId: row.subject_id,
+		outcome: "succeeded",
+		detail: { via: "reset" },
+	});
+
 	return { ok: true, subjectId: row.subject_id, passwordId: written.passwordId };
 }
 
@@ -729,7 +819,20 @@ export async function forcePasswordReset(
 	if (!newest) return { ok: false, reason: "no-password" };
 
 	await db.update(passwords, { id: newest.id }, { must_change: true });
-	await revokeSubjectSessions(db, { subjectId: input.subjectId, reason: input.reason });
+	await revokeSubjectSessions(db, {
+		subjectId: input.subjectId,
+		reason: input.reason,
+		actor: PLATFORM_ACTOR,
+	});
+
+	await writeAuditEvent(db, {
+		action: "password.changed",
+		actor: PLATFORM_ACTOR,
+		targetType: "subject",
+		targetId: input.subjectId,
+		outcome: "succeeded",
+		detail: { via: "forced", reason: input.reason },
+	});
 
 	return { ok: true, passwordId: newest.id, reason: input.reason };
 }
@@ -784,6 +887,14 @@ export async function removePassword(
 	if (!remaining) return { ok: false, reason: "last-credential" };
 
 	await db.deleteMany(passwords, { where: { subject_id: input.subjectId } });
+
+	await writeAuditEvent(db, {
+		action: "password.removed",
+		actor: PLATFORM_ACTOR,
+		targetType: "subject",
+		targetId: input.subjectId,
+		outcome: "succeeded",
+	});
 
 	return { ok: true };
 }

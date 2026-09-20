@@ -19,8 +19,10 @@ import { generateUUID } from "@sdxc/uuid";
 import * as s from "remix/data-schema";
 import { and, column as c, eq, inList, isNull, lt, ne, table } from "remix/data-table";
 
+import type { AuditActor } from "./audit-events";
 import type { DauCache, DauNotice } from "./metering";
 
+import { writeAuditEvent } from "./audit-events";
 import { recordAuthentication } from "./metering";
 
 /** How long a session stands before the subject must authenticate again. */
@@ -219,6 +221,16 @@ export async function openSession(
 		city: parsed.city ?? null,
 		revoked_at: null,
 		revoked_reason: null,
+	});
+
+	await writeAuditEvent(db, {
+		action: "session.created",
+		actor: { type: "subject", id: parsed.subjectId },
+		targetType: "subject",
+		targetId: parsed.subjectId,
+		outcome: "succeeded",
+		context: { ip: parsed.ip ?? null, userAgent: parsed.userAgent ?? null },
+		detail: { sessionId: id, amr: parsed.amr, remembered: parsed.remembered },
 	});
 
 	return {
@@ -452,6 +464,15 @@ export async function revokeSession(
 		{ revoked_at: Date.now(), revoked_reason: parsed.reason },
 	);
 
+	await writeAuditEvent(db, {
+		action: "session.revoked",
+		actor: { type: "subject", id: parsed.subjectId },
+		targetType: "session",
+		targetId: row.id,
+		outcome: "succeeded",
+		detail: { reason: parsed.reason },
+	});
+
 	return { ok: true };
 }
 
@@ -459,6 +480,8 @@ export interface RevokeSubjectSessionsInput {
 	subjectId: string;
 	reason: string;
 	exceptSessionId?: string;
+	/** Who is ending these sessions; defaults to the subject itself when the caller acts on its own. */
+	actor?: AuditActor;
 }
 
 /** How many of a subject's sessions a blanket revocation ended. */
@@ -500,6 +523,20 @@ export async function revokeSubjectSessions(
 		{ revoked_at: Date.now(), revoked_reason: parsed.reason },
 		{ where },
 	);
+
+	// One row for the whole call rather than one per session: a bulk revoke can
+	// end dozens of sessions at once, and the fact worth recording is the
+	// subject's sessions being ended, not each row that happened to carry it.
+	if (result.affectedRows > 0) {
+		await writeAuditEvent(db, {
+			action: "session.revoked",
+			actor: input.actor ?? { type: "subject", id: parsed.subjectId },
+			targetType: "subject",
+			targetId: parsed.subjectId,
+			outcome: "succeeded",
+			detail: { reason: parsed.reason, revokedCount: result.affectedRows },
+		});
+	}
 
 	return { revoked: result.affectedRows };
 }

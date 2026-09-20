@@ -16,6 +16,8 @@ import { JWK } from "@sdxc/jwt";
 import * as s from "remix/data-schema";
 import { and, column as c, gt, isNull, lte, notNull, or, table } from "remix/data-table";
 
+import { writeAuditEvent } from "./audit-events";
+
 /** How long a staged key is published before it starts signing. */
 const STAGED_WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -320,6 +322,16 @@ async function promoteStagedKey(
 		{ id: signing.id },
 		{ retired_at: now, publish_until: now + RETIRED_WINDOW_MS },
 	);
+
+	await writeAuditEvent(db, {
+		action: "signing_key.rotated",
+		actor: { type: "platform", id: "system" },
+		targetType: "signing_key",
+		targetId: staged.id,
+		outcome: "succeeded",
+		detail: { retiredKeyId: signing.id },
+		at: now,
+	});
 }
 
 /** Generates a successor for the given algorithm, published but not yet signing. */

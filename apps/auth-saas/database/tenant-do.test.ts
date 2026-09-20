@@ -44,6 +44,7 @@ describe("provision", () => {
 				"0011-mail-rate-limit",
 				"0012-entitlements",
 				"0013-dau",
+				"0014-audit",
 			],
 			issuer: "https://tenant-1.example.com",
 			keys: { keys: [expect.objectContaining({ kty: "EC", alg: "ES256" })] },
@@ -212,5 +213,75 @@ describe("daily active user metering", () => {
 			remembered: false,
 		});
 		expect(admitted).toMatchObject({ ok: true });
+	});
+});
+
+describe("audit", () => {
+	test("readAuditPage answers rows a wired operation already wrote", async () => {
+		let created = await tenant.createSubject({});
+		if (!created.ok) throw new Error("unreachable");
+
+		let page = await tenant.readAuditPage({
+			from: 0,
+			to: Date.now() + 60_000,
+			action: "subject.created",
+		});
+
+		expect(page).toMatchObject({
+			ok: true,
+			events: [{ targetId: created.subjectId, outcome: "succeeded" }],
+		});
+	});
+
+	test("enforceAuditRetention enforces the Free tier's window by default, with no enforcement record ever written", async () => {
+		// Any awaited RPC call waits on the schema this object's constructor is
+		// still migrating, so calling one first is what makes the raw insert
+		// below land on a database that already has the table.
+		let created = await tenant.createSubject({});
+		if (!created.ok) throw new Error("unreachable");
+
+		let eightDaysAgo = Date.now() - 8 * 24 * 60 * 60 * 1000;
+		state.storage.sql.exec(
+			`INSERT INTO audit_events (id, at, action, actor_type, actor_id, target_type, target_id, outcome, context, detail)
+			 VALUES ('000000000000000', ?, 'subject.created', 'platform', 'system', 'subject', 'sub_old', 'succeeded', '{}', '{}')`,
+			eightDaysAgo,
+		);
+
+		let result = await tenant.enforceAuditRetention();
+
+		expect(result.deleted).toBe(1);
+	});
+
+	test("enforceAuditRetention reads the tenant's own retention window once applyEntitlements has written one", async () => {
+		await tenant.applyEntitlements({
+			plan: "pro",
+			features: {},
+			dauCap: 2500,
+			auditRetentionDays: 30,
+			effectiveAt: Date.now(),
+		});
+
+		let eightDaysAgo = Date.now() - 8 * 24 * 60 * 60 * 1000;
+		state.storage.sql.exec(
+			`INSERT INTO audit_events (id, at, action, actor_type, actor_id, target_type, target_id, outcome, context, detail)
+			 VALUES ('000000000000001', ?, 'subject.created', 'platform', 'system', 'subject', 'sub_old', 'succeeded', '{}', '{}')`,
+			eightDaysAgo,
+		);
+
+		// Eight days old is inside a 30-day window, so the Pro tier's own retention
+		// keeps the row a default (Free) window would already have swept.
+		let result = await tenant.enforceAuditRetention();
+
+		expect(result.deleted).toBe(0);
+	});
+
+	test("drainAuditEvents answers rows after a position", async () => {
+		let created = await tenant.createSubject({});
+		if (!created.ok) throw new Error("unreachable");
+
+		let drained = await tenant.drainAuditEvents({});
+
+		expect(drained.events).toMatchObject([{ targetId: created.subjectId }]);
+		expect(drained.next).toBe(drained.events[0]?.id);
 	});
 });

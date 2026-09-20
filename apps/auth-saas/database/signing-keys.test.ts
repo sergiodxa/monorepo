@@ -13,6 +13,7 @@ import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { Database } from "remix/data-table";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { readAuditPage } from "./audit-events";
 import {
 	advanceSigningKeys,
 	customClaims,
@@ -105,6 +106,35 @@ describe("advanceSigningKeys", () => {
 
 		// Both the freshly promoted key and its retired predecessor stay published.
 		expect(published.keys).toHaveLength(2);
+	});
+
+	test("writes a signing_key.rotated row when a staged key is promoted", async () => {
+		await advanceSigningKeys(db, { now: T0 });
+		await advanceSigningKeys(db, { now: T0 + 90 * DAY_MS });
+
+		let promotedAt = T0 + 90 * DAY_MS + 24 * 60 * 60 * 1000;
+		await advanceSigningKeys(db, { now: promotedAt });
+
+		let rows = await db.findMany(signingKeys);
+		let signing = rows.find((row) => row.retired_at === null);
+		let retired = rows.find((row) => row.retired_at !== null);
+
+		let page = await readAuditPage(db, {
+			from: 0,
+			to: promotedAt + 60_000,
+			action: "signing_key.rotated",
+		});
+		if (!page.ok) throw new Error("unreachable");
+
+		expect(page.events).toMatchObject([
+			{
+				actorType: "platform",
+				targetType: "signing_key",
+				targetId: signing?.id,
+				outcome: "succeeded",
+				detail: { retiredKeyId: retired?.id },
+			},
+		]);
 	});
 
 	test("deletes a key once it is past its publish window", async () => {

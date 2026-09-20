@@ -15,6 +15,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 
 import type { RegisterClientInput } from "./clients";
 
+import { readAuditPage } from "./audit-events";
 import { registerClient } from "./clients";
 import { evaluateConsent, grants, listGrants, recordConsentDecision, revokeGrant } from "./consent";
 import { addIdentifier, createSubject, verifyIdentifier } from "./subjects";
@@ -381,5 +382,66 @@ describe("listGrants", () => {
 		let page = await listGrants(db, { subjectId, cursor: "not-a-real-cursor" });
 
 		expect(page).toEqual({ ok: false, reason: "bad-cursor" });
+	});
+});
+
+describe("audit", () => {
+	async function auditRowsFor(action: string) {
+		let page = await readAuditPage(db, { from: 0, to: Date.now() + 60_000, action });
+		if (!page.ok) throw new Error("unreachable");
+		return page.events;
+	}
+
+	test("consent.granted lands when a decision is approved", async () => {
+		let subjectId = await createTestSubject();
+		let client = await createTestClient();
+
+		await recordConsentDecision(db, {
+			subjectId,
+			clientId: client.id,
+			approved: true,
+			scopes: ["openid"],
+		});
+
+		let rows = await auditRowsFor("consent.granted");
+		expect(rows).toMatchObject([
+			{
+				actorType: "subject",
+				actorId: subjectId,
+				targetType: "client",
+				targetId: client.id,
+				detail: { scopes: ["openid"] },
+			},
+		]);
+	});
+
+	test("consent.granted does not land when a decision is denied", async () => {
+		let subjectId = await createTestSubject();
+		let client = await createTestClient();
+
+		await recordConsentDecision(db, {
+			subjectId,
+			clientId: client.id,
+			approved: false,
+			scopes: ["openid"],
+		});
+
+		expect(await auditRowsFor("consent.granted")).toEqual([]);
+	});
+
+	test("consent.revoked lands when a grant is revoked", async () => {
+		let subjectId = await createTestSubject();
+		let client = await createTestClient();
+		await recordConsentDecision(db, {
+			subjectId,
+			clientId: client.id,
+			approved: true,
+			scopes: ["openid"],
+		});
+
+		await revokeGrant(db, { subjectId, clientId: client.id });
+
+		let rows = await auditRowsFor("consent.revoked");
+		expect(rows).toMatchObject([{ actorId: subjectId, targetId: client.id }]);
 	});
 });

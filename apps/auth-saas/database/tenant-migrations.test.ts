@@ -43,6 +43,7 @@ describe("runMigrations", () => {
 			"0011-mail-rate-limit",
 			"0012-entitlements",
 			"0013-dau",
+			"0014-audit",
 		]);
 	});
 
@@ -81,6 +82,7 @@ describe("runMigrations", () => {
 			"authorization_codes",
 			"dau_seen",
 			"dau_day",
+			"audit_events",
 		]) {
 			expect(names, `${name} exists`).toContain(name);
 		}
@@ -109,6 +111,7 @@ describe("runMigrations", () => {
 			{ id: "0011-mail-rate-limit", applied_at: expect.any(Number) },
 			{ id: "0012-entitlements", applied_at: expect.any(Number) },
 			{ id: "0013-dau", applied_at: expect.any(Number) },
+			{ id: "0014-audit", applied_at: expect.any(Number) },
 		]);
 	});
 

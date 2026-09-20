@@ -23,6 +23,7 @@ import { and, column as c, eq, inList, table } from "remix/data-table";
 
 import type { SubjectRow } from "./subjects";
 
+import { writeAuditEvent } from "./audit-events";
 import { clients } from "./clients";
 import { subjectIdentifiers, subjects } from "./subjects";
 
@@ -264,6 +265,15 @@ export async function recordConsentDecision(
 		});
 	}
 
+	await writeAuditEvent(db, {
+		action: "consent.granted",
+		actor: { type: "subject", id: parsed.subjectId },
+		targetType: "client",
+		targetId: parsed.clientId,
+		outcome: "succeeded",
+		detail: { scopes: mergedScopes },
+	});
+
 	return { decision: "approved", scopes: mergedScopes };
 }
 
@@ -290,6 +300,14 @@ export async function revokeGrant(
 	if (!existing) return { kind: "unknown" };
 
 	await db.delete(grants, { subject_id: input.subjectId, client_id: input.clientId });
+
+	await writeAuditEvent(db, {
+		action: "consent.revoked",
+		actor: { type: "subject", id: input.subjectId },
+		targetType: "client",
+		targetId: input.clientId,
+		outcome: "succeeded",
+	});
 
 	return { kind: "revoked" };
 }

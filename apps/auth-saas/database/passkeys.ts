@@ -21,8 +21,10 @@ import { parse as parseUserAgent } from "@sdxc/user-agent";
 import { generateUUID } from "@sdxc/uuid";
 import { and, column as c, eq, lt, ne, table } from "remix/data-table";
 
+import type { AuditAction } from "./audit-events";
 import type { OpenSessionMetering, OpenSessionSuccess } from "./sessions";
 
+import { writeAuditEvent } from "./audit-events";
 import { openSession } from "./sessions";
 import * as Subjects from "./subjects";
 
@@ -248,6 +250,15 @@ export async function enrolPasskey(
 		last_used_at: null,
 	});
 
+	await writeAuditEvent(db, {
+		action: "passkey.enrolled",
+		actor: { type: "subject", id: row.subject_id as string },
+		targetType: "subject",
+		targetId: row.subject_id as string,
+		outcome: "succeeded",
+		detail: { credentialId: credential.id, label },
+	});
+
 	return {
 		ok: true,
 		passkey: {
@@ -355,6 +366,31 @@ export async function signInWithPasskey(
 	metering?: OpenSessionMetering,
 	rp: RelyingParty = defaultRelyingParty(input.relyingPartyId, input.origins),
 ): Promise<SignInWithPasskeyResult> {
+	let context = { ip: input.ip ?? null, userAgent: input.userAgent ?? null };
+
+	/** Writes the one authentication row this attempt earns, whoever it named. */
+	function auditAuthentication(
+		outcome: "failed" | "denied" | "succeeded",
+		subjectId: string,
+	): Promise<void> {
+		let action: AuditAction =
+			outcome === "succeeded"
+				? "authentication.succeeded"
+				: outcome === "denied"
+					? "authentication.denied"
+					: "authentication.failed";
+
+		return writeAuditEvent(db, {
+			action,
+			actor: { type: "subject", id: subjectId },
+			targetType: "subject",
+			targetId: subjectId,
+			outcome,
+			context,
+			detail: { method: "passkey" },
+		});
+	}
+
 	let row = await db.find(passkeyChallenges, { ceremony_id: input.ceremonyId });
 	if (!row || row.kind !== "authentication") return { ok: false, reason: "invalid-ceremony" };
 
@@ -364,7 +400,11 @@ export async function signInWithPasskey(
 
 	let credential = await db.find(passkeys, { credential_id: input.response.id });
 	if (!credential) return { ok: false, reason: "unknown-credential" };
-	if (credential.suspended) return { ok: false, reason: "credential-suspended" };
+
+	if (credential.suspended) {
+		await auditAuthentication("denied", credential.subject_id);
+		return { ok: false, reason: "credential-suspended" };
+	}
 
 	let verified = await rp.verifyAuthentication(input.response, {
 		challenge: row.challenge,
@@ -378,9 +418,11 @@ export async function signInWithPasskey(
 	if (isFailure(verified)) {
 		if (verified.error instanceof CounterError) {
 			await db.update(passkeys, { credential_id: credential.credential_id }, { suspended: true });
+			await auditAuthentication("denied", credential.subject_id);
 			return { ok: false, reason: "counter-regression" };
 		}
 
+		await auditAuthentication("failed", credential.subject_id);
 		return { ok: false, reason: "verification-failed", error: verified.error.name };
 	}
 
@@ -407,7 +449,12 @@ export async function signInWithPasskey(
 		metering,
 	);
 
-	if (!session.ok) return { ok: false, reason: session.reason };
+	if (!session.ok) {
+		await auditAuthentication("denied", credential.subject_id);
+		return { ok: false, reason: session.reason };
+	}
+
+	await auditAuthentication("succeeded", credential.subject_id);
 
 	return {
 		subjectId: credential.subject_id,
@@ -435,6 +482,15 @@ export async function renamePasskey(
 	if (!row || row.subject_id !== input.subjectId) return { ok: false, reason: "not-found" };
 
 	await db.update(passkeys, { credential_id: input.credentialId }, { label: input.label });
+
+	await writeAuditEvent(db, {
+		action: "passkey.renamed",
+		actor: { type: "subject", id: input.subjectId },
+		targetType: "subject",
+		targetId: input.subjectId,
+		outcome: "succeeded",
+		detail: { credentialId: input.credentialId, label: input.label },
+	});
 
 	return { ok: true };
 }
@@ -486,6 +542,15 @@ export async function revokePasskey(
 	if (!hasOtherCredential) return { ok: false, reason: "last-credential" };
 
 	await db.delete(passkeys, { credential_id: input.credentialId });
+
+	await writeAuditEvent(db, {
+		action: "passkey.revoked",
+		actor: { type: "subject", id: input.subjectId },
+		targetType: "subject",
+		targetId: input.subjectId,
+		outcome: "succeeded",
+		detail: { credentialId: input.credentialId },
+	});
 
 	return { ok: true };
 }

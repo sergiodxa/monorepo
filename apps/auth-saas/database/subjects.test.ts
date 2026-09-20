@@ -599,3 +599,164 @@ describe("retention sweep", () => {
 		expect(armed).toBeGreaterThan(Date.now());
 	});
 });
+
+describe("audit", () => {
+	async function auditRowsFor(action: string) {
+		let page = await tenant.readAuditPage({ from: 0, to: Date.now() + 60_000, action });
+		if (!page.ok) throw new Error("unreachable");
+		return page.events;
+	}
+
+	test("subject.created lands when a subject is created", async () => {
+		let created = await tenant.createSubject({
+			identifiers: [{ kind: "email", value: "jane@example.com" }],
+		});
+		if (!created.ok) throw new Error("unreachable");
+
+		let rows = await auditRowsFor("subject.created");
+		expect(rows).toMatchObject([
+			{
+				actorType: "platform",
+				targetType: "subject",
+				targetId: created.subjectId,
+				outcome: "succeeded",
+			},
+		]);
+	});
+
+	test("subject.updated lands when a subject's profile is written", async () => {
+		let created = await tenant.createSubject({});
+		if (!created.ok) throw new Error("unreachable");
+
+		await tenant.updateSubject({
+			subjectId: created.subjectId,
+			profile: { name: "Ada Lovelace" },
+			actor: adminActor,
+		});
+
+		let rows = await auditRowsFor("subject.updated");
+		expect(rows).toMatchObject([
+			{ actorType: "platform", targetId: created.subjectId, outcome: "succeeded" },
+		]);
+	});
+
+	test("identifier.added lands when a new identifier is claimed", async () => {
+		let created = await tenant.createSubject({
+			identifiers: [{ kind: "username", value: "jane" }],
+		});
+		if (!created.ok) throw new Error("unreachable");
+
+		await tenant.addIdentifier({
+			subjectId: created.subjectId,
+			kind: "email",
+			value: "jane@example.com",
+			actor: subjectActor,
+		});
+
+		let rows = await auditRowsFor("identifier.added");
+		expect(rows).toMatchObject([
+			{ actorType: "subject", actorId: created.subjectId, targetId: created.subjectId },
+		]);
+	});
+
+	test("identifier.verified lands when a ticket is spent", async () => {
+		let created = await tenant.createSubject({});
+		if (!created.ok) throw new Error("unreachable");
+
+		let added = await tenant.addIdentifier({
+			subjectId: created.subjectId,
+			kind: "email",
+			value: "jane@example.com",
+			actor: subjectActor,
+		});
+		if (!added.ok || added.kind !== "email") throw new Error("unreachable");
+
+		await tenant.verifyIdentifier({ ticket: added.ticket });
+
+		let rows = await auditRowsFor("identifier.verified");
+		expect(rows).toMatchObject([{ targetId: created.subjectId, outcome: "succeeded" }]);
+	});
+
+	test("identifier.removed lands when an identifier is taken away", async () => {
+		let created = await tenant.createSubject({
+			identifiers: [{ kind: "username", value: "jane" }],
+		});
+		if (!created.ok) throw new Error("unreachable");
+
+		await tenant.removeIdentifier({
+			subjectId: created.subjectId,
+			value: "jane",
+			actor: subjectActor,
+		});
+
+		let rows = await auditRowsFor("identifier.removed");
+		expect(rows).toMatchObject([{ targetId: created.subjectId, outcome: "succeeded" }]);
+	});
+
+	test("subject.blocked lands when a subject is blocked", async () => {
+		let created = await tenant.createSubject({});
+		if (!created.ok) throw new Error("unreachable");
+
+		await tenant.blockSubject({ subjectId: created.subjectId, reason: "fraud" });
+
+		let rows = await auditRowsFor("subject.blocked");
+		expect(rows).toMatchObject([
+			{ actorType: "platform", targetId: created.subjectId, detail: { reason: "fraud" } },
+		]);
+	});
+
+	test("blocking a subject attributes the session revocation it cascades to the platform, not the subject", async () => {
+		let created = await tenant.createSubject({
+			identifiers: [{ kind: "email", value: "jane@example.com" }],
+		});
+		if (!created.ok) throw new Error("unreachable");
+
+		let added = await tenant.addIdentifier({
+			subjectId: created.subjectId,
+			kind: "email",
+			value: "jane@example.com",
+			actor: subjectActor,
+		});
+		if (!added.ok || added.kind !== "email") throw new Error("unreachable");
+		await tenant.verifyIdentifier({ ticket: added.ticket });
+
+		await tenant.setPassword({
+			subjectId: created.subjectId,
+			password: "correct horse battery",
+			actor: subjectActor,
+		});
+		let signedIn = await tenant.signInWithPassword({
+			identifier: "jane@example.com",
+			password: "correct horse battery",
+			remembered: false,
+		});
+		if (!signedIn.ok) throw new Error("unreachable");
+
+		await tenant.blockSubject({ subjectId: created.subjectId, reason: "fraud" });
+
+		let rows = await auditRowsFor("session.revoked");
+		expect(rows).toMatchObject([{ actorType: "platform", actorId: "system" }]);
+	});
+
+	test("subject.unblocked lands when a subject is unblocked", async () => {
+		let created = await tenant.createSubject({});
+		if (!created.ok) throw new Error("unreachable");
+
+		await tenant.blockSubject({ subjectId: created.subjectId, reason: "fraud" });
+		await tenant.unblockSubject({ subjectId: created.subjectId });
+
+		let rows = await auditRowsFor("subject.unblocked");
+		expect(rows).toMatchObject([{ targetId: created.subjectId, outcome: "succeeded" }]);
+	});
+
+	test("subject.deleted lands when a subject is deleted", async () => {
+		let created = await tenant.createSubject({});
+		if (!created.ok) throw new Error("unreachable");
+
+		let deleted = await tenant.deleteSubject({ subjectId: created.subjectId });
+		expect(deleted).toEqual({ ok: true });
+
+		let rows = await auditRowsFor("subject.deleted");
+		expect(rows).toMatchObject([{ targetId: created.subjectId, outcome: "succeeded" }]);
+	});
+});

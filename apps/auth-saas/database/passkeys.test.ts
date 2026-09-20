@@ -23,6 +23,7 @@ import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
+import { readAuditPage } from "./audit-events";
 import { createDauCache } from "./metering";
 import {
 	beginPasskeyAuthentication,
@@ -759,5 +760,117 @@ describe("sweepExpiredPasskeyChallenges", () => {
 		expect(swept).toEqual({ swept: 1 });
 		expect(await db.find(passkeyChallenges, { ceremony_id: expiring.ceremonyId })).toBeNull();
 		expect(await db.find(passkeyChallenges, { ceremony_id: live.ceremonyId })).not.toBeNull();
+	});
+});
+
+describe("audit", () => {
+	async function auditRowsFor(action: string) {
+		let page = await readAuditPage(db, { from: 0, to: Date.now() + 60_000, action });
+		if (!page.ok) throw new Error("unreachable");
+		return page.events;
+	}
+
+	test("passkey.enrolled lands when a credential is registered", async () => {
+		let subjectId = await createTestSubject();
+		let passkey = await enrolTestPasskey(subjectId, await Authenticator.create());
+
+		let rows = await auditRowsFor("passkey.enrolled");
+		expect(rows).toMatchObject([
+			{
+				actorType: "subject",
+				actorId: subjectId,
+				outcome: "succeeded",
+				detail: { credentialId: passkey.credentialId },
+			},
+		]);
+	});
+
+	test("passkey.renamed lands when a label is changed", async () => {
+		let subjectId = await createTestSubject();
+		let passkey = await enrolTestPasskey(subjectId, await Authenticator.create());
+
+		await renamePasskey(db, {
+			subjectId,
+			credentialId: passkey.credentialId,
+			label: "Work laptop",
+		});
+
+		let rows = await auditRowsFor("passkey.renamed");
+		expect(rows).toMatchObject([{ targetId: subjectId, detail: { label: "Work laptop" } }]);
+	});
+
+	test("passkey.revoked lands when a credential is removed", async () => {
+		let subjectId = await createTestSubject();
+		let first = await enrolTestPasskey(subjectId, await Authenticator.create());
+		await enrolTestPasskey(subjectId, await Authenticator.create());
+
+		await revokePasskey(db, { subjectId, credentialId: first.credentialId });
+
+		let rows = await auditRowsFor("passkey.revoked");
+		expect(rows).toMatchObject([
+			{ targetId: subjectId, detail: { credentialId: first.credentialId } },
+		]);
+	});
+
+	test("authentication.succeeded lands on a verified assertion", async () => {
+		let subjectId = await createTestSubject();
+		let authenticator = await Authenticator.create();
+		await enrolTestPasskey(subjectId, authenticator);
+
+		let begun = await beginPasskeyAuthentication(db, {
+			relyingPartyId: RELYING_PARTY_ID,
+			origins: ORIGINS,
+		});
+		let response = await authenticator.authenticate(begun.options);
+		await signInWithPasskey(db, {
+			ceremonyId: begun.ceremonyId,
+			response,
+			relyingPartyId: RELYING_PARTY_ID,
+			origins: ORIGINS,
+			remembered: false,
+		});
+
+		let rows = await auditRowsFor("authentication.succeeded");
+		expect(rows).toMatchObject([{ actorId: subjectId, outcome: "succeeded" }]);
+	});
+
+	test("authentication.denied lands when a suspended credential is presented again", async () => {
+		let subjectId = await createTestSubject();
+		let authenticator = await Authenticator.create();
+		let passkey = await enrolTestPasskey(subjectId, authenticator);
+
+		await db.update(passkeys, { credential_id: passkey.credentialId }, { counter: 100 });
+
+		let begun = await beginPasskeyAuthentication(db, {
+			relyingPartyId: RELYING_PARTY_ID,
+			origins: ORIGINS,
+		});
+		let response = await authenticator.authenticate(begun.options);
+		await signInWithPasskey(db, {
+			ceremonyId: begun.ceremonyId,
+			response,
+			relyingPartyId: RELYING_PARTY_ID,
+			origins: ORIGINS,
+			remembered: false,
+		});
+
+		let retryBegun = await beginPasskeyAuthentication(db, {
+			relyingPartyId: RELYING_PARTY_ID,
+			origins: ORIGINS,
+		});
+		let retryResponse = await authenticator.authenticate(retryBegun.options);
+		await signInWithPasskey(db, {
+			ceremonyId: retryBegun.ceremonyId,
+			response: retryResponse,
+			relyingPartyId: RELYING_PARTY_ID,
+			origins: ORIGINS,
+			remembered: false,
+		});
+
+		let rows = await auditRowsFor("authentication.denied");
+		expect(rows).toMatchObject([
+			{ actorId: subjectId, outcome: "denied" },
+			{ actorId: subjectId, outcome: "denied" },
+		]);
 	});
 });

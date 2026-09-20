@@ -13,6 +13,7 @@ import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { Database } from "remix/data-table";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { readAuditPage } from "./audit-events";
 import { createDauCache } from "./metering";
 import {
 	listSubjectSessions,
@@ -371,5 +372,63 @@ describe("sweepExpiredSessions", () => {
 
 		expect(swept).toEqual({ deleted: 0, more: false });
 		expect(await db.find(sessions, { id: opened.sessionId })).not.toBeNull();
+	});
+});
+
+describe("audit", () => {
+	async function auditRowsFor(action: string) {
+		let page = await readAuditPage(db, { from: 0, to: Date.now() + 60_000, action });
+		if (!page.ok) throw new Error("unreachable");
+		return page.events;
+	}
+
+	test("session.created lands when a session is opened", async () => {
+		let subjectId = await createTestSubject();
+		let opened = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		let rows = await auditRowsFor("session.created");
+		expect(rows).toMatchObject([
+			{ actorId: subjectId, outcome: "succeeded", detail: { sessionId: opened.sessionId } },
+		]);
+	});
+
+	test("session.revoked lands once for a single revocation", async () => {
+		let subjectId = await createTestSubject();
+		let opened = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		await revokeSession(db, { subjectId, sessionId: opened.sessionId, reason: "logout" });
+
+		let rows = await auditRowsFor("session.revoked");
+		expect(rows).toMatchObject([
+			{ targetType: "session", targetId: opened.sessionId, detail: { reason: "logout" } },
+		]);
+	});
+
+	test("session.revoked lands once per call, not once per session, for a bulk revoke", async () => {
+		let subjectId = await createTestSubject();
+		await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+		await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		let result = await revokeSubjectSessions(db, { subjectId, reason: "blocked" });
+		expect(result).toEqual({ revoked: 2 });
+
+		let rows = await auditRowsFor("session.revoked");
+		expect(rows).toMatchObject([
+			{
+				targetType: "subject",
+				targetId: subjectId,
+				detail: { reason: "blocked", revokedCount: 2 },
+			},
+		]);
+	});
+
+	test("session.revoked does not land for a bulk revoke that touched nothing", async () => {
+		let subjectId = await createTestSubject();
+
+		let result = await revokeSubjectSessions(db, { subjectId, reason: "blocked" });
+		expect(result).toEqual({ revoked: 0 });
+
+		let rows = await auditRowsFor("session.revoked");
+		expect(rows).toEqual([]);
 	});
 });

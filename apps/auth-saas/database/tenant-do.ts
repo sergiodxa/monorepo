@@ -17,6 +17,13 @@ import { DurableObject } from "cloudflare:workers";
 import { column as c, Database, table } from "remix/data-table";
 
 import type {
+	DrainAuditEventsInput,
+	DrainAuditEventsResult,
+	EnforceAuditRetentionResult,
+	ReadAuditPageInput,
+	ReadAuditPageResult,
+} from "./audit-events";
+import type {
 	AuthorizationOutcome,
 	BeginAuthorizationInput,
 	ResumeAuthorizationInput,
@@ -115,6 +122,7 @@ import type {
 } from "./subjects";
 import type { ExchangeCodeInput, RefreshTokensInput, TokenOutcome } from "./tokens";
 
+import { drainAuditEvents, enforceAuditRetention, readAuditPage } from "./audit-events";
 import * as Authorization from "./authorization";
 import * as Clients from "./clients";
 import * as Consent from "./consent";
@@ -160,6 +168,9 @@ const SWEEP_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 /** The daily active user cap a tenant enforces before any enforcement record has ever been written. */
 const DEFAULT_DAU_CAP = 100;
+
+/** The audit retention window, in days, a tenant enforces before any enforcement record has ever been written — the Free tier's own window, so an unprovisioned tenant is never more permissive than the tier that ships to everyone. */
+const DEFAULT_AUDIT_RETENTION_DAYS = 7;
 
 /**
  * One tenant's identity state, isolated in this object's own SQLite database.
@@ -260,6 +271,18 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		if (!record) return { cap: DEFAULT_DAU_CAP, hard: true };
 
 		return { cap: record.dau_cap ?? DEFAULT_DAU_CAP, hard: record.plan === "free" };
+	}
+
+	/**
+	 * This tenant's own audit retention window, read from its own enforcement
+	 * record rather than fetched again from the Worker side — the record already
+	 * lands here on every plan change, the same mechanism {@link #dauEnforcement}
+	 * reads its own cap from. A tenant whose record has never been written
+	 * enforces the Free tier's window.
+	 */
+	async #auditRetentionDays(): Promise<number> {
+		let record = await this.#db.findOne(entitlementEnforcement, { where: { id: "current" } });
+		return record?.audit_retention_days ?? DEFAULT_AUDIT_RETENTION_DAYS;
 	}
 
 	/**
@@ -1027,5 +1050,48 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	async readUsage(input: ReadUsageInput): Promise<DailyUsage[]> {
 		await this.#migrated;
 		return readUsage(this.#db, input);
+	}
+
+	/**
+	 * A page of this tenant's audit log over a time window, for the dashboard and
+	 * the management API to share as a single call per page.
+	 *
+	 * @param input - The inclusive time window to read, optional filters, and
+	 * where to page from.
+	 * @returns A page of rows and the cursors around them, or that the given
+	 * cursor no longer matches this ordering.
+	 */
+	async readAuditPage(input: ReadAuditPageInput): Promise<ReadAuditPageResult> {
+		await this.#migrated;
+		return readAuditPage(this.#db, input);
+	}
+
+	/**
+	 * Deletes audit rows older than this tenant's own retention window, at most
+	 * `limit` per call, for the scheduled sweep to call repeatedly.
+	 *
+	 * @param input - How many rows one call may remove, and the clock to
+	 * measure the window against.
+	 * @returns How many rows this call deleted, and the oldest row still on hand.
+	 */
+	async enforceAuditRetention(
+		input: { now?: number; limit?: number } = {},
+	): Promise<EnforceAuditRetentionResult> {
+		await this.#migrated;
+		let retentionDays = await this.#auditRetentionDays();
+		return enforceAuditRetention(this.#db, { retentionDays, now: input.now, limit: input.limit });
+	}
+
+	/**
+	 * Rows after a durable position, for the streaming and export add-on this
+	 * contributes to. Nothing calls this yet.
+	 *
+	 * @param input - The position already drained, and how many rows one call
+	 * may return.
+	 * @returns Rows after that position, and the position to resume from next.
+	 */
+	async drainAuditEvents(input: DrainAuditEventsInput): Promise<DrainAuditEventsResult> {
+		await this.#migrated;
+		return drainAuditEvents(this.#db, input);
 	}
 }

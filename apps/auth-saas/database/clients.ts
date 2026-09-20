@@ -19,6 +19,11 @@ import { generateUUID } from "@sdxc/uuid";
 import * as s from "remix/data-schema";
 import { and, column as c, eq, gt, inList, isNull, lt, or, table } from "remix/data-table";
 
+import { writeAuditEvent } from "./audit-events";
+
+/** The audit actor for a call with no operator identity threaded through today. */
+const PLATFORM_ACTOR = { type: "platform", id: "system" } as const;
+
 /** How many expired rows one sweep call removes before reporting back to its caller. */
 const SWEEP_BATCH_SIZE = 500;
 
@@ -402,6 +407,15 @@ export async function registerClient(
 	let row = await db.find(clients, { id });
 	if (!row) throw new Error("client row missing immediately after its own create");
 
+	await writeAuditEvent(db, {
+		action: "client.created",
+		actor: PLATFORM_ACTOR,
+		targetType: "client",
+		targetId: id,
+		outcome: "succeeded",
+		detail: { name: parsed.name, kind: parsed.kind },
+	});
+
 	return { ok: true, client: toClientRecord(row), secret };
 }
 
@@ -478,6 +492,14 @@ export async function updateClient(
 	let row = await db.find(clients, { id: parsed.clientId });
 	if (!row) throw new Error("client row missing immediately after its own update");
 
+	await writeAuditEvent(db, {
+		action: "client.updated",
+		actor: PLATFORM_ACTOR,
+		targetType: "client",
+		targetId: parsed.clientId,
+		outcome: "succeeded",
+	});
+
 	return { ok: true, client: toClientRecord(row) };
 }
 
@@ -537,6 +559,15 @@ export async function rotateClientSecret(
 
 	let minted = await mintSecret(db, parsed.clientId, now);
 
+	await writeAuditEvent(db, {
+		action: "client.secret.rotated",
+		actor: PLATFORM_ACTOR,
+		targetType: "client",
+		targetId: parsed.clientId,
+		outcome: "succeeded",
+		detail: { secretId: minted.id },
+	});
+
 	return { ok: true, secretId: minted.id, secret: minted.secret, incumbentExpiresAt };
 }
 
@@ -584,6 +615,15 @@ export async function revokeClientSecret(
 	}
 
 	await db.update(clientSecrets, { id: secret.id }, { expires_at: now });
+
+	await writeAuditEvent(db, {
+		action: "client.secret.revoked",
+		actor: PLATFORM_ACTOR,
+		targetType: "client",
+		targetId: parsed.clientId,
+		outcome: "succeeded",
+		detail: { secretId: parsed.secretId },
+	});
 
 	return { ok: true };
 }
@@ -663,6 +703,14 @@ export async function disableClient(
 		{ disabled_at: Date.now(), updated_at: Date.now() },
 	);
 
+	await writeAuditEvent(db, {
+		action: "client.disabled",
+		actor: PLATFORM_ACTOR,
+		targetType: "client",
+		targetId: input.clientId,
+		outcome: "succeeded",
+	});
+
 	return { ok: true };
 }
 
@@ -687,6 +735,14 @@ export async function deleteClient(
 
 	await db.deleteMany(clientSecrets, { where: { client_id: input.clientId } });
 	await db.delete(clients, { id: input.clientId });
+
+	await writeAuditEvent(db, {
+		action: "client.deleted",
+		actor: PLATFORM_ACTOR,
+		targetType: "client",
+		targetId: input.clientId,
+		outcome: "succeeded",
+	});
 
 	return { ok: true };
 }

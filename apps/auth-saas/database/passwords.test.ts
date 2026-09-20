@@ -16,6 +16,7 @@ import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { Database } from "remix/data-table";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { readAuditPage } from "./audit-events";
 import { createDauCache } from "./metering";
 import * as Passwords from "./passwords";
 import * as Subjects from "./subjects";
@@ -25,6 +26,7 @@ import m0003 from "./tenant-migrations/0003-passwords.sql?raw";
 import m0005 from "./tenant-migrations/0005-sessions.sql?raw";
 import m0011 from "./tenant-migrations/0011-mail-rate-limit.sql?raw";
 import m0013 from "./tenant-migrations/0013-dau.sql?raw";
+import m0014 from "./tenant-migrations/0014-audit.sql?raw";
 
 let db: Database;
 
@@ -40,6 +42,7 @@ beforeEach(async () => {
 	await driver.executeScript(m0005);
 	await driver.executeScript(m0011);
 	await driver.executeScript(m0013);
+	await driver.executeScript(m0014);
 
 	db = new Database(driver);
 });
@@ -776,5 +779,136 @@ describe("beginPasswordReset: the shared mail send envelope", () => {
 		let begun = await Passwords.beginPasswordReset(db, { identifier: "jane@example.com" });
 
 		expect(begun).toEqual({ ok: true, ticket: expect.any(String), address: null });
+	});
+});
+
+describe("audit", () => {
+	async function auditRowsFor(action: string) {
+		let page = await readAuditPage(db, { from: 0, to: Date.now() + 60_000, action });
+		if (!page.ok) throw new Error("unreachable");
+		return page.events;
+	}
+
+	test("password.changed lands when setPassword writes a fresh credential", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+
+		let rows = await auditRowsFor("password.changed");
+		expect(rows).toMatchObject([
+			{ targetId: subjectId, outcome: "succeeded", detail: { via: "set" } },
+		]);
+	});
+
+	test("password.changed lands when changePassword replaces the current one", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let set = await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		if (!set.ok) throw new Error("unreachable");
+
+		await Passwords.changePassword(db, {
+			subjectId,
+			currentPassword: "correct-password-1",
+			newPassword: "correct-password-2",
+			keepSessionId: "sess_current",
+		});
+
+		let rows = await auditRowsFor("password.changed");
+		expect(rows).toMatchObject([{ detail: { via: "change" } }, { detail: { via: "set" } }]);
+	});
+
+	test("forcing a password reset attributes the session revocation it cascades to the platform, not the subject", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "correct-password-1",
+			remembered: false,
+		});
+
+		await Passwords.forcePasswordReset(db, { subjectId, reason: "suspected compromise" });
+
+		let rows = await auditRowsFor("session.revoked");
+		expect(rows).toMatchObject([{ actorType: "platform", actorId: "system" }]);
+	});
+
+	test("password.removed lands when a password is taken away", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+
+		await Passwords.removePassword(db, { subjectId }, true);
+
+		let rows = await auditRowsFor("password.removed");
+		expect(rows).toMatchObject([{ targetId: subjectId, outcome: "succeeded" }]);
+	});
+
+	test("authentication.succeeded lands on a correct sign-in", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+
+		await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "correct-password-1",
+			remembered: false,
+		});
+
+		let rows = await auditRowsFor("authentication.succeeded");
+		expect(rows).toMatchObject([{ actorId: subjectId, outcome: "succeeded" }]);
+	});
+
+	test("authentication.failed lands on a wrong password", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+
+		await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "the-wrong-password",
+			remembered: false,
+		});
+
+		let rows = await auditRowsFor("authentication.failed");
+		expect(rows).toMatchObject([{ actorId: subjectId, outcome: "failed" }]);
+	});
+
+	test("authentication.denied lands when a blocked subject attempts to sign in", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		await Subjects.blockSubject(db, { subjectId, reason: "fraud" });
+
+		await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "correct-password-1",
+			remembered: false,
+		});
+
+		let rows = await auditRowsFor("authentication.denied");
+		expect(rows).toMatchObject([{ actorId: subjectId, outcome: "denied" }]);
 	});
 });
