@@ -61,26 +61,24 @@ tenant's platform subdomain, fixed for the tenant's life: the entity ID is
 `https://{slug}.{platform domain}/u/sso/{connection}`, the assertion consumer service is that plus
 `/acs` over the HTTP-POST binding, and the metadata document is that plus `/metadata`. The object
 generates an RSA key pair at first save and keeps the private half, publishing the certificate in
-the metadata so an IdP can encrypt to it and verify the `AuthnRequest` the platform signs. Ending
-a session is the platform's own revocation, from the account screen or the management API.
+the metadata so an IdP can encrypt to it and verify what `SAML.createAuthnRequest` signs. Ending a
+session is the platform's own revocation, from the account screen or management API.
 
-`signInWithSamlResponse` is one operation, performing in order: parse with DOCTYPE, external
-entities and entity expansion refused; verify the XML signature over the response or the assertion
-against the connection's active certificates, requiring at least one of the two to be signed; read
-claims **only from the element the verified signature references**, which makes a wrapped second
-assertion unreadable rather than merely unexpected; decrypt an `EncryptedAssertion` with the SP
-private key, refusing a cleartext one where the connection requires encryption; check `Destination`,
-`Audience` against the entity ID, `Recipient` against the ACS URL, `NotBefore` and `NotOnOrAfter`
-with 60 seconds of skew, `InResponseTo` against the stored request, and the assertion id against a
-replay table holding ids until their validity expires. Only then are attributes mapped, the subject
-resolved and the session opened.
+`signInWithSamlResponse` is one operation, handing the POST body to `@sdxc/saml`'s
+`verifyResponse` with the connection's active certificates, the entity ID as audience, the ACS URL
+as destination and recipient, the stored `InResponseTo` or `null`, the SP private key for an
+`EncryptedAssertion`, the replay table holding ids until they expire, and 60 seconds of skew. That
+call refuses a DOCTYPE and entity expansion, requires the response or the assertion to be signed,
+and reads claims **only from the element the verified signature references** — it answers with a
+verified assertion and nothing else, which makes a wrapped second assertion unreadable. A
+cleartext assertion is refused where encryption is required, and only then are attributes mapped,
+the subject resolved and the session opened.
 
 All of it runs inside the tenant object, where the certificate set, the SP private key, the replay
 table and the subject already are, so ADR-001 makes the whole check one method rather than a parse
 in the Worker followed by a lookup: the private key never crosses and nothing partially verified is
 a value the Worker holds. The Worker bounds the POST body first and the object caps document size
-and depth. Parsing is `@sdxc/xml`; exclusive canonicalization and signature verification are written
-here over `crypto.subtle.verify` and `@sdxc/crypto`'s digests.
+and depth before the call.
 
 An enterprise OIDC connection is ADR-027's generic OIDC connection under this gate and this
 routing: `Issuer.for` over the IdP's discovery URL, `RelyingParty` from `@sdxc/auth`, the
@@ -92,15 +90,16 @@ since the key set is discovered and rotated by the provider, so a tenant with a 
 An IdP's signing certificate expires on a date and rotates on a schedule the tenant does not
 control, so a connection trusts a set and both events pass unnoticed. `connection_certificates`
 holds `connection_id`, `use` (`signing` or `encryption`), `certificate`, `fingerprint`,
-`not_before`, `not_after`, `source` (`metadata` or `manual`) and `retired_at`. A tenant either
-gives a metadata URL — fetched by the Worker daily and on demand, then handed to
-`refreshConnectionMetadata`, which replaces endpoints, adds certificates and retires one absent
-from metadata after seven days, so a blip at the IdP locks nobody out — or pastes the certificate
-and endpoints by hand. `warnExpiringCertificates` runs daily, marking certificates crossing 30, 14
-and 7 days of remaining life, writing an audit row per crossing and answering whom to notify, and
-the Worker sends through [ADR-017](./ADR-017-transactional-email.md). An expired certificate stops
-verifying, and the failure names its reason to the tenant's administrators while the person signing
-in is told only that the connection is unavailable.
+`not_before`, `not_after`, `source` (`metadata` or `manual`) and `retired_at`, the middle three
+from `SAML.Certificate.parse`. A tenant gives a metadata URL — fetched by the Worker daily and on
+demand, then handed to `refreshConnectionMetadata`, which `SAML.parseIdPMetadata` reads, replacing
+endpoints, adding certificates and retiring one absent for seven days, so a blip at the IdP locks
+nobody out — or pastes the certificate and endpoints by hand. `warnExpiringCertificates` runs
+daily, marking those crossing 30, 14 and 7 days of life left, writing an audit row per crossing
+and answering whom to notify, the Worker sending through
+[ADR-017](./ADR-017-transactional-email.md). An expired certificate stops verifying, its reason
+named to the tenant's administrators while the person signing in is told only that the connection
+is unavailable.
 
 ### Routing a sign-in
 
@@ -141,15 +140,15 @@ domains it proved control of and no others, and attributes map by ADR-027's rule
 
 - `saveEnterpriseConnection(input)` — validates, generates the SP key pair on first save, enforces
   the ceiling, answers the entity ID, ACS URL, metadata URL and SP certificate.
-  `refreshConnectionMetadata({ slug, metadataXml })` replaces endpoints and the certificate set.
+  `refreshConnectionMetadata({ slug, metadataXml })` parses it and replaces the certificate set.
 - `claimConnectionDomain({ slug, domain })`, `confirmConnectionDomain({ slug, domain, txtRecords })`
   and `releaseConnectionDomain({ slug, domain })`.
 - `routeSignIn({ identifier, authorizationRequestId, hostname })` — the next step, minting the
   transaction where that answer is a connection.
 - `signInWithSamlResponse({ slug, samlResponse, relayState, hostname, agent })` — everything above,
   answering the subject, the originating hostname and the handoff ticket.
-- `describeSamlServiceProvider({ slug })` — the metadata document, cached in the Worker, and
-  `warnExpiringCertificates({ now, thresholds })` for the daily sweep.
+- `describeSamlServiceProvider({ slug })` — the metadata `SAML.buildServiceProviderMetadata` writes,
+  cached in the Worker, and `warnExpiringCertificates({ now, thresholds })` for the daily sweep.
 
 ## Consequences
 
@@ -163,8 +162,8 @@ domains it proved control of and no others, and attributes map by ADR-027's rule
 
 ### Negative
 
-- Exclusive canonicalization and XML signature verification are written and maintained here, the
-  least forgiving code in the product.
+- A sign-in is exactly as sound as `@sdxc/saml`, the least forgiving code in the product, so its
+  IdP fixtures and wrapped-assertion corpus are what a tenant's trust rests on.
 - SAML parsing is CPU inside a single-threaded object, so a large assertion occupies that object.
 - Domain verification asks an enterprise buyer for a DNS record before their first sign-in works.
 - IdP-initiated sign-in stays unbound to the browser presenting it however tightly the window is
@@ -186,8 +185,8 @@ correcting a mistake needs no support ticket. It also lets one connection take o
 sign-ins the moment somebody claims a domain they do not own. Rejected: it is refused at the write,
 where a person is there to read why.
 
-**Parsing the assertion in the Worker and calling the object with the result.** Keeps XML work off
-the single-threaded object. It puts the trust decision on the Worker's side and sends claims the
+**Calling `SAML.verifyResponse` in the Worker and handing the object the assertion.** Keeps XML work
+off the single-threaded object. It puts the trust decision on the Worker's side and sends claims the
 object would have to believe. Rejected: the assertion is verified where the certificates are.
 
 ## References
@@ -198,3 +197,4 @@ object would have to believe. Rejected: the assertion is verified where the cert
 - [ADR-020: Entitlements as Feature Flags](./ADR-020-entitlements-as-feature-flags.md) — where the add-on gate is evaluated
 - [ADR-027: Social Identity Providers](./ADR-027-social-identity-providers.md) — the connection record, mapping and callback this extends
 - [ADR-036: Account Linking](./ADR-036-account-linking.md) — what a verified domain claim authorizes
+- [Root ADR-074: SAML Package](../ADR-074-saml-package.md) — the verification, parsing and metadata calls this uses
