@@ -29,7 +29,12 @@ async function migrate() {
 
 describe("runMigrations", () => {
 	test("applies every migration, in the order they are journaled", async () => {
-		expect((await migrate()).applied).toEqual(["0001-init", "0002-subjects"]);
+		expect((await migrate()).applied).toEqual([
+			"0001-init",
+			"0002-subjects",
+			"0003-passwords",
+			"0004-passkeys",
+		]);
 	});
 
 	test("does nothing on a database already migrated", async () => {
@@ -51,6 +56,11 @@ describe("runMigrations", () => {
 			"subject_identifiers",
 			"subject_attributes",
 			"attribute_definitions",
+			"passwords",
+			"password_policy",
+			"password_reset_tickets",
+			"passkeys",
+			"passkey_challenges",
 		]) {
 			expect(names, `${name} exists`).toContain(name);
 		}
@@ -68,6 +78,8 @@ describe("runMigrations", () => {
 		expect(rows).toEqual([
 			{ id: "0001-init", applied_at: expect.any(Number) },
 			{ id: "0002-subjects", applied_at: expect.any(Number) },
+			{ id: "0003-passwords", applied_at: expect.any(Number) },
+			{ id: "0004-passkeys", applied_at: expect.any(Number) },
 		]);
 	});
 

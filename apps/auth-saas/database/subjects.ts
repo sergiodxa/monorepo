@@ -569,20 +569,24 @@ export type RemoveIdentifierResult =
 	| { ok: false; reason: "last-verified-identifier" };
 
 /**
- * Removes an identifier, refusing to take a subject's last verified email address —
- * today's whole remaining-credential predicate, since a password or a passkey has
- * nothing here yet to count. Removing the primary promotes the oldest remaining
- * verified email in the same operation, and every verified address left is reported so
- * the caller can announce the change to each one.
+ * Removes an identifier, refusing to take a subject's last verified email address
+ * when it is also their last remaining credential of any kind. Removing the primary
+ * promotes the oldest remaining verified email in the same operation, and every
+ * verified address left is reported so the caller can announce the change to each one.
  *
  * @param db - The tenant's database.
  * @param input - The subject, the identifier's value as entered, and who is asking.
+ * @param hasOtherCredential - Whether the subject holds a credential besides this
+ * identifier — a password, a passkey, or another verified identifier. Computed here
+ * from identifiers alone when omitted, which is what this module can see on its own;
+ * a caller that also knows about passwords and passkeys passes the fuller answer.
  * @returns The address promoted to primary (or none) and who to notify, or why the
  * removal was refused.
  */
 export async function removeIdentifier(
 	db: Database,
 	input: RemoveIdentifierInput,
+	hasOtherCredential?: boolean,
 ): Promise<RemoveIdentifierResult> {
 	let row = await db.findOne(subjectIdentifiers, {
 		where: { subject_id: input.subjectId, value: input.value },
@@ -591,7 +595,9 @@ export async function removeIdentifier(
 	if (!row) return { ok: false, reason: "not-found" };
 
 	if (row.kind === "email" && row.verified_at !== null) {
-		let remaining = await hasRemainingVerifiedIdentifierAfter(db, input.subjectId, row.id);
+		let remaining =
+			hasOtherCredential ??
+			(await hasRemainingVerifiedIdentifierAfter(db, input.subjectId, row.id));
 		if (!remaining) return { ok: false, reason: "last-verified-identifier" };
 	}
 
@@ -621,12 +627,8 @@ export async function removeIdentifier(
 
 /**
  * Whether a subject keeps at least one other verified email address after one more is
- * taken away.
- *
- * Counts verified email addresses today, which is every credential this subject can
- * hold before a password or a passkey has its own table; extending this count is the
- * whole change a later credential ADR needs, rather than a check of its own to keep in
- * step with this one.
+ * taken away, counting identifiers alone. The fallback this module runs on its own
+ * when a caller has not computed the fuller cross-credential answer.
  */
 async function hasRemainingVerifiedIdentifierAfter(
 	db: Database,
