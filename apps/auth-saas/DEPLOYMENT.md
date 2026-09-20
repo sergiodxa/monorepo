@@ -11,7 +11,10 @@ as you create each resource.
 - **Cloudflare Email Sending** enabled, with the sender address in `EMAIL_FROM`
   (a var in `wrangler.jsonc`) verified as a Destination Address / domain.
 - **Cloudflare for SaaS** enabled on the zone if tenants will use custom domains.
-- A **Polar** account with a product for tenant subscriptions → `POLAR_PRODUCT_ID`.
+- A **Polar** account with the plan and add-on products, benefits and meters
+  ADR-019's catalog names → `POLAR_PRODUCT_IDS`, `POLAR_FEATURE_IDS` and
+  `POLAR_METER_IDS`, each a JSON object mapping our own slugs to that
+  organization's ids.
 - A Cloudflare API token with `Zone:DNS:Edit` + `SSL and Certificates:Edit`
   (custom hostnames) → `CF_API_TOKEN`; plus `CF_ZONE_ID` and `CF_ACCOUNT_ID`.
 
@@ -51,7 +54,8 @@ hostnames are resolved to a tenant via the control-plane `hostnames` table
 cd apps/auth-saas
 for name in INTERNAL_SECRET SESSION_SECRET \
   CF_API_TOKEN CF_ZONE_ID CF_ACCOUNT_ID \
-  POLAR_ACCESS_TOKEN POLAR_PRODUCT_ID POLAR_WEBHOOK_SECRET; do
+  POLAR_ACCESS_TOKEN POLAR_WEBHOOK_SECRET \
+  POLAR_PRODUCT_IDS POLAR_FEATURE_IDS POLAR_METER_IDS; do
   bunx wrangler secret put "$name"
 done
 ```

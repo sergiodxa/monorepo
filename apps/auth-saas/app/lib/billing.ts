@@ -15,18 +15,51 @@ import { env } from "cloudflare:workers";
 
 import { createDatabase } from "~/app/lib/database";
 import BillingDelivery from "~/app/models/billing-delivery";
+import { buildFeatureMap, buildProductMap } from "~/app/services/billing/catalog";
 
 /**
- * The platform's Polar organization. `products` is empty until ADR-019 (Plan
- * Catalog and Feature Split) names the real product slugs this platform sells —
- * until then a checkout names an unconfigured product and every such read
- * reports the slug as unknown, rather than a slug invented here standing in for
- * one ADR-019 has not named yet.
+ * Parses a JSON-encoded id map secret — `POLAR_PRODUCT_IDS`, `POLAR_FEATURE_IDS`
+ * or `POLAR_METER_IDS` — into our own slugs mapped to Polar's ids, answering `{}`
+ * for anything that is not a JSON object of strings rather than throwing at
+ * module load. A slug this then leaves unconfigured gets the "unknown product"
+ * failure `@sdxc/billing` already produces for it, which is the same shape of
+ * failure a genuinely unset secret would produce.
+ *
+ * @param raw - The secret's raw value, or `undefined` when unset.
+ * @returns Our own slugs mapped to Polar's ids.
+ */
+export function parseIdMap(raw: string | undefined): Record<string, string> {
+	if (!raw) return {};
+
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(raw);
+	} catch {
+		return {};
+	}
+
+	if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
+
+	let ids: Record<string, string> = {};
+	for (let [slug, id] of Object.entries(parsed as Record<string, unknown>)) {
+		if (typeof id === "string") ids[slug] = id;
+	}
+
+	return ids;
+}
+
+/**
+ * The platform's Polar organization. `products`, `features` and `meters` merge
+ * the plan and add-on catalog's own slugs (`PLANS`/`ADDONS`) with this
+ * environment's own ids, read from bindings since sandbox and production
+ * share none of them.
  */
 export const polar: Billing = new PolarBilling({
 	accessToken: env.POLAR_ACCESS_TOKEN,
 	webhookSecret: env.POLAR_WEBHOOK_SECRET,
-	products: {},
+	products: buildProductMap(parseIdMap(env.POLAR_PRODUCT_IDS)),
+	features: buildFeatureMap(parseIdMap(env.POLAR_FEATURE_IDS)),
+	meters: parseIdMap(env.POLAR_METER_IDS),
 });
 
 /**
