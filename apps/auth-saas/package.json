@@ -16,6 +16,7 @@
 	"dependencies": {
 		"@sdxc/auth": "workspace:*",
 		"@sdxc/billing": "workspace:*",
+		"@sdxc/crypto": "workspace:*",
 		"@sdxc/data-table-d1": "workspace:*",
 		"@sdxc/data-table-sqlstorage": "workspace:*",
 		"@sdxc/get-client-ip": "workspace:*",
@@ -24,6 +25,7 @@
 		"@sdxc/jwt": "workspace:*",
 		"@sdxc/location": "workspace:*",
 		"@sdxc/logger": "workspace:*",
+		"@sdxc/passkey": "workspace:*",
 		"@sdxc/response": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/typeid": "workspace:*",
