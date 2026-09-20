@@ -58,7 +58,7 @@ describe("removePassword", () => {
 
 		let result = await tenant.removePassword({ subjectId: created.subjectId });
 
-		expect(result).toEqual({ ok: true });
+		expect(result).toMatchObject({ ok: true });
 	});
 
 	test("refuses when the subject has no other credential", async () => {
@@ -75,7 +75,7 @@ describe("removePassword", () => {
 
 		let result = await tenant.removePassword({ subjectId: created.subjectId });
 
-		expect(result).toEqual({ ok: false, reason: "last-credential" });
+		expect(result).toMatchObject({ ok: false, reason: "last-credential" });
 	});
 });
 
@@ -98,7 +98,7 @@ describe("revokePasskey", () => {
 			credentialId: "cred_a",
 		});
 
-		expect(result).toEqual({ ok: true });
+		expect(result).toMatchObject({ ok: true });
 	});
 
 	test("refuses when the subject has no other credential", async () => {
@@ -114,7 +114,7 @@ describe("revokePasskey", () => {
 			credentialId: "cred_a",
 		});
 
-		expect(result).toEqual({ ok: false, reason: "last-credential" });
+		expect(result).toMatchObject({ ok: false, reason: "last-credential" });
 	});
 });
 
@@ -146,7 +146,7 @@ describe("removeIdentifier", () => {
 			actor: adminActor,
 		});
 
-		expect(result).toEqual({ ok: true, promotedPrimary: null, notify: [] });
+		expect(result).toMatchObject({ ok: true, promotedPrimary: null, notify: [] });
 	});
 
 	test("refuses removing a subject's only verified email with no other credential", async () => {
@@ -170,6 +170,6 @@ describe("removeIdentifier", () => {
 			actor: adminActor,
 		});
 
-		expect(result).toEqual({ ok: false, reason: "last-verified-identifier" });
+		expect(result).toMatchObject({ ok: false, reason: "last-verified-identifier" });
 	});
 });

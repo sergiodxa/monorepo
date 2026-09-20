@@ -91,7 +91,9 @@ describe("changePassword revokes every other session", () => {
 		});
 
 		expect(await tenant.resolveSession({ token: kept.token })).toMatchObject({ status: "active" });
-		expect(await tenant.resolveSession({ token: other.token })).toEqual({ status: "revoked" });
+		expect(await tenant.resolveSession({ token: other.token })).toMatchObject({
+			status: "revoked",
+		});
 	});
 });
 
@@ -109,7 +111,9 @@ describe("completePasswordReset revokes every session, including its own", () =>
 		let begun = await tenant.beginPasswordReset({ identifier: "jane@example.com" });
 		await tenant.completePasswordReset({ ticket: begun.ticket, newPassword: "a-reset-password-1" });
 
-		expect(await tenant.resolveSession({ token: signIn.token })).toEqual({ status: "revoked" });
+		expect(await tenant.resolveSession({ token: signIn.token })).toMatchObject({
+			status: "revoked",
+		});
 	});
 });
 
@@ -126,7 +130,9 @@ describe("blockSubject revokes every session", () => {
 
 		await tenant.blockSubject({ subjectId: signIn.subjectId, reason: "suspected compromise" });
 
-		expect(await tenant.resolveSession({ token: signIn.token })).toEqual({ status: "revoked" });
+		expect(await tenant.resolveSession({ token: signIn.token })).toMatchObject({
+			status: "revoked",
+		});
 	});
 });
 
@@ -142,6 +148,6 @@ describe("deleteSubject removes its passwords, passkeys and sessions", () => {
 			remembered: false,
 		});
 
-		expect(signIn).toEqual({ ok: false, reason: "invalid-credentials" });
+		expect(signIn).toMatchObject({ ok: false, reason: "invalid-credentials" });
 	});
 });

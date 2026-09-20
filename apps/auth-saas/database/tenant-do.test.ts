@@ -197,7 +197,7 @@ describe("daily active user metering", () => {
 			password: "correct horse battery staple",
 			remembered: false,
 		});
-		expect(refused).toEqual({ ok: false, reason: "dau_cap_reached" });
+		expect(refused).toMatchObject({ ok: false, reason: "dau_cap_reached" });
 
 		await tenant.applyEntitlements({
 			plan: "pro",
@@ -283,5 +283,65 @@ describe("audit", () => {
 
 		expect(drained.events).toMatchObject([{ targetId: created.subjectId }]);
 		expect(drained.next).toBe(drained.events[0]?.id);
+	});
+});
+
+describe("cost envelope", () => {
+	test("every RPC method's own result carries rowsRead, rowsWritten and durationMs", async () => {
+		let result = await tenant.createSubject({});
+
+		expect(result.ok).toBe(true);
+		expect(result.cost.rowsWritten).toBeGreaterThanOrEqual(1);
+		expect(result.cost.rowsRead).toBeGreaterThanOrEqual(0);
+		expect(typeof result.cost.durationMs).toBe("number");
+		expect(result.cost.durationMs).toBeGreaterThanOrEqual(0);
+	});
+
+	test("resets between calls rather than accumulating across the object's lifetime", async () => {
+		let first = await tenant.createSubject({});
+		let second = await tenant.createSubject({});
+
+		expect(first.cost.rowsWritten).toBeGreaterThanOrEqual(1);
+		expect(second.cost.rowsWritten).toBeGreaterThanOrEqual(1);
+
+		// A second, independent create writes about the same number of rows as the
+		// first — if counters leaked across calls, the second would report roughly
+		// double what the first did instead.
+		expect(second.cost.rowsWritten).toBeLessThan(first.cost.rowsWritten * 2);
+	});
+
+	test("a read-only call reports rows read and no rows written", async () => {
+		await tenant.provision({ tenantId: "tenant_1", issuer: "https://tenant-1.example.com" });
+
+		let result = await tenant.readUsage({ from: 0, to: Date.now() });
+
+		expect(Array.isArray(result)).toBe(true);
+		expect(result.cost.rowsWritten).toBe(0);
+		expect(typeof result.cost.durationMs).toBe("number");
+	});
+});
+
+describe("reportStorageFootprint", () => {
+	test("reports the right row count across at least two tables, and a positive database size", async () => {
+		await tenant.provision({ tenantId: "tenant_1", issuer: "https://tenant-1.example.com" });
+
+		let first = await tenant.createSubject({});
+		if (!first.ok) throw new Error("unreachable");
+		let second = await tenant.createSubject({});
+		if (!second.ok) throw new Error("unreachable");
+
+		await tenant.addIdentifier({
+			subjectId: first.subjectId,
+			kind: "email",
+			value: "jane@example.com",
+			actor: { kind: "subject" },
+		});
+
+		let report = await tenant.reportStorageFootprint();
+
+		expect(report.rows.subjects).toBe(2);
+		expect(report.rows.subject_identifiers).toBe(1);
+		expect(report.databaseSize).toBeGreaterThan(0);
+		expect(typeof report.cost.durationMs).toBe("number");
 	});
 });

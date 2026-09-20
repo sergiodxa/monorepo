@@ -55,7 +55,7 @@ describe("deleteSubject", () => {
 
 		await tenant.deleteSubject({ subjectId });
 
-		expect(await tenant.revokeGrant({ subjectId, clientId })).toEqual({ kind: "unknown" });
+		expect(await tenant.revokeGrant({ subjectId, clientId })).toMatchObject({ kind: "unknown" });
 	});
 });
 
@@ -65,6 +65,6 @@ describe("deleteClient", () => {
 
 		await tenant.deleteClient({ clientId });
 
-		expect(await tenant.revokeGrant({ subjectId, clientId })).toEqual({ kind: "unknown" });
+		expect(await tenant.revokeGrant({ subjectId, clientId })).toMatchObject({ kind: "unknown" });
 	});
 });

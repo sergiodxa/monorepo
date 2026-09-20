@@ -12,6 +12,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { AnyTable } from "remix/data-table";
+
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { DurableObject } from "cloudflare:workers";
 import { column as c, Database, table } from "remix/data-table";
@@ -122,14 +124,20 @@ import type {
 } from "./subjects";
 import type { ExchangeCodeInput, RefreshTokensInput, TokenOutcome } from "./tokens";
 
-import { drainAuditEvents, enforceAuditRetention, readAuditPage } from "./audit-events";
+import {
+	auditEvents,
+	drainAuditEvents,
+	enforceAuditRetention,
+	readAuditPage,
+} from "./audit-events";
 import * as Authorization from "./authorization";
 import * as Clients from "./clients";
 import * as Consent from "./consent";
 import { hasAnotherCredential } from "./credentials";
 import { applyEntitlements, entitlementEnforcement } from "./entitlements";
+import { mailSendEnvelopes } from "./mail-rate-limit";
 import * as Metadata from "./metadata";
-import { closeMeteringDay, createDauCache, readUsage } from "./metering";
+import { closeMeteringDay, createDauCache, dauDay, dauSeen, readUsage } from "./metering";
 import * as Passkeys from "./passkeys";
 import * as Passwords from "./passwords";
 import * as Sessions from "./sessions";
@@ -160,6 +168,56 @@ export interface ProvisionResult {
 }
 
 /**
+ * What this object's own SQLite counters filled in for the one RPC call that just ran,
+ * read from its cursors rather than tracked any other way — the only place these
+ * counters are readable, since they live inside the object.
+ */
+export interface CostEnvelope {
+	rowsRead: number;
+	rowsWritten: number;
+	durationMs: number;
+}
+
+/** An RPC method's own result, with what that call cost this object folded in. */
+export type WithCost<T> = T & { cost: CostEnvelope };
+
+/** What `countingSqlStorage` totals across every statement one RPC call issues. */
+interface CostCounters {
+	rowsRead: number;
+	rowsWritten: number;
+}
+
+/**
+ * Wraps the object's raw `SqlStorage` handle, forwarding every call unchanged and adding
+ * each statement's own cursor counts into `counters`. A cursor only ever reports the one
+ * statement that produced it, so this is the only way to total a whole RPC call's storage
+ * activity without changing the adapter that turns `remix/data-table` operations into the
+ * statements this handle actually runs.
+ *
+ * @param sql - The object's real storage handle.
+ * @param counters - Where every statement's own counts accumulate.
+ * @returns A `SqlStorage` handle indistinguishable from the real one to its caller.
+ */
+function countingSqlStorage(sql: SqlStorage, counters: CostCounters): SqlStorage {
+	return {
+		exec<T extends Record<string, SqlStorageValue>>(
+			query: string,
+			...bindings: any[]
+		): SqlStorageCursor<T> {
+			let cursor = sql.exec<T>(query, ...bindings);
+			counters.rowsRead += cursor.rowsRead;
+			counters.rowsWritten += cursor.rowsWritten;
+			return cursor;
+		},
+		get databaseSize(): number {
+			return sql.databaseSize;
+		},
+		Cursor: sql.Cursor,
+		Statement: sql.Statement,
+	};
+}
+
+/**
  * How often the retention alarm sweeps unverified identifiers. Daily is frequent enough
  * that a swept row never sits long past the retention window, and infrequent enough
  * that an idle tenant's object wakes for almost nothing else.
@@ -171,6 +229,12 @@ const DEFAULT_DAU_CAP = 100;
 
 /** The audit retention window, in days, a tenant enforces before any enforcement record has ever been written — the Free tier's own window, so an unprovisioned tenant is never more permissive than the tier that ships to everyone. */
 const DEFAULT_AUDIT_RETENTION_DAYS = 7;
+
+/** What `reportStorageFootprint` hands back: every table's own row count, and the database's total size. */
+export interface StorageFootprint {
+	rows: Record<string, number>;
+	databaseSize: number;
+}
 
 /**
  * One tenant's identity state, isolated in this object's own SQLite database.
@@ -189,6 +253,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 */
 	#dauCache: DauCache = createDauCache();
 
+	/** Every statement's own row counts, accumulated by `countingSqlStorage` and read and reset around each RPC call by `#withCost`. */
+	#counters: CostCounters = { rowsRead: 0, rowsWritten: 0 };
+
 	/**
 	 * Opens this tenant's database and applies whatever schema has not run yet, queuing
 	 * every method behind it so none observes a half-applied schema.
@@ -199,7 +266,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	constructor(ctx: DurableObjectState, env: Cloudflare.Env) {
 		super(ctx, env);
 
-		let driver = createSQLStorageDatabaseAdapter(ctx.storage.sql);
+		let driver = createSQLStorageDatabaseAdapter(
+			countingSqlStorage(ctx.storage.sql, this.#counters),
+		);
 		this.#db = new Database(driver);
 		this.#migrated = ctx.blockConcurrencyWhile(async () => {
 			let migrated = await runMigrations(driver);
@@ -210,6 +279,32 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 
 			return migrated;
 		});
+	}
+
+	/**
+	 * Runs `fn`, folding this object's own row counters and elapsed time into whatever it
+	 * resolves with as a `cost` envelope. Counters reset first, so a call this object makes
+	 * to itself while `fn` runs — there are none today — would still total correctly rather
+	 * than double-counting whatever the previous call left behind.
+	 *
+	 * @param fn - The one RPC call's own work, its result otherwise unchanged.
+	 * @returns Whatever `fn` resolved with, plus the `cost` this call measured.
+	 */
+	async #withCost<T>(fn: () => Promise<T>): Promise<WithCost<T>> {
+		this.#counters.rowsRead = 0;
+		this.#counters.rowsWritten = 0;
+
+		let startedAt = performance.now();
+		let result = await fn();
+		let durationMs = performance.now() - startedAt;
+
+		return Object.assign(result as object, {
+			cost: {
+				rowsRead: this.#counters.rowsRead,
+				rowsWritten: this.#counters.rowsWritten,
+				durationMs,
+			},
+		}) as WithCost<T>;
 	}
 
 	/**
@@ -250,8 +345,11 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * Destroys everything this object holds, for the control plane's purge job. Nothing
 	 * calls this yet; the job that will is out of scope here.
 	 */
-	async erase(): Promise<void> {
-		await this.ctx.storage.deleteAll();
+	async erase(): Promise<WithCost<{ ok: true }>> {
+		return this.#withCost(async () => {
+			await this.ctx.storage.deleteAll();
+			return { ok: true } as const;
+		});
 	}
 
 	/** This tenant's own issuer, as `provision` recorded it, for stamping onto an error redirect. */
@@ -293,9 +391,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @returns The new subject's id and each identifier's starting state, or which
 	 * identifier or attribute key the call was refused for.
 	 */
-	async createSubject(input: CreateSubjectInput): Promise<CreateSubjectResult> {
+	async createSubject(input: CreateSubjectInput): Promise<WithCost<CreateSubjectResult>> {
 		await this.#migrated;
-		return Subjects.createSubject(this.#db, input);
+		return this.#withCost(() => Subjects.createSubject(this.#db, input));
 	}
 
 	/**
@@ -310,9 +408,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		profile?: SubjectProfile;
 		attributes?: Record<string, unknown>;
 		actor: Actor;
-	}): Promise<UpdateSubjectResult> {
+	}): Promise<WithCost<UpdateSubjectResult>> {
 		await this.#migrated;
-		return Subjects.updateSubject(this.#db, input);
+		return this.#withCost(() => Subjects.updateSubject(this.#db, input));
 	}
 
 	/**
@@ -323,9 +421,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @returns The identifier's starting state — with a ticket to deliver for an email —
 	 * or which rule the call was refused for.
 	 */
-	async addIdentifier(input: AddIdentifierInput): Promise<AddIdentifierResult> {
+	async addIdentifier(input: AddIdentifierInput): Promise<WithCost<AddIdentifierResult>> {
 		await this.#migrated;
-		return Subjects.addIdentifier(this.#db, input);
+		return this.#withCost(() => Subjects.addIdentifier(this.#db, input));
 	}
 
 	/**
@@ -335,9 +433,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @returns The subject the address belongs to and whether it became primary, or why
 	 * the ticket does not work.
 	 */
-	async verifyIdentifier(input: { ticket: string }): Promise<VerifyIdentifierResult> {
+	async verifyIdentifier(input: { ticket: string }): Promise<WithCost<VerifyIdentifierResult>> {
 		await this.#migrated;
-		return Subjects.verifyIdentifier(this.#db, input);
+		return this.#withCost(() => Subjects.verifyIdentifier(this.#db, input));
 	}
 
 	/**
@@ -350,9 +448,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		subjectId: string;
 		value: string;
 		actor: Actor;
-	}): Promise<SetPrimaryIdentifierResult> {
+	}): Promise<WithCost<SetPrimaryIdentifierResult>> {
 		await this.#migrated;
-		return Subjects.setPrimaryIdentifier(this.#db, input);
+		return this.#withCost(() => Subjects.setPrimaryIdentifier(this.#db, input));
 	}
 
 	/**
@@ -366,20 +464,22 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		subjectId: string;
 		value: string;
 		actor: Actor;
-	}): Promise<RemoveIdentifierResult> {
+	}): Promise<WithCost<RemoveIdentifierResult>> {
 		await this.#migrated;
 
-		let row = await this.#db.findOne(Subjects.subjectIdentifiers, {
-			where: { subject_id: input.subjectId, value: input.value },
-		});
-		if (!row) return Subjects.removeIdentifier(this.#db, input);
+		return this.#withCost(async () => {
+			let row = await this.#db.findOne(Subjects.subjectIdentifiers, {
+				where: { subject_id: input.subjectId, value: input.value },
+			});
+			if (!row) return Subjects.removeIdentifier(this.#db, input);
 
-		let hasOtherCredential = await hasAnotherCredential(this.#db, input.subjectId, {
-			kind: "identifier",
-			id: row.id,
-		});
+			let hasOtherCredential = await hasAnotherCredential(this.#db, input.subjectId, {
+				kind: "identifier",
+				id: row.id,
+			});
 
-		return Subjects.removeIdentifier(this.#db, input, hasOtherCredential);
+			return Subjects.removeIdentifier(this.#db, input, hasOtherCredential);
+		});
 	}
 
 	/**
@@ -388,9 +488,12 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @param input - The subject to block and the reason recorded for the call.
 	 * @returns Success, or that no such subject exists.
 	 */
-	async blockSubject(input: { subjectId: string; reason: string }): Promise<BlockSubjectResult> {
+	async blockSubject(input: {
+		subjectId: string;
+		reason: string;
+	}): Promise<WithCost<BlockSubjectResult>> {
 		await this.#migrated;
-		return Subjects.blockSubject(this.#db, input);
+		return this.#withCost(() => Subjects.blockSubject(this.#db, input));
 	}
 
 	/**
@@ -399,9 +502,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @param input - The subject to unblock.
 	 * @returns Success, or that no such subject exists.
 	 */
-	async unblockSubject(input: { subjectId: string }): Promise<UnblockSubjectResult> {
+	async unblockSubject(input: { subjectId: string }): Promise<WithCost<UnblockSubjectResult>> {
 		await this.#migrated;
-		return Subjects.unblockSubject(this.#db, input);
+		return this.#withCost(() => Subjects.unblockSubject(this.#db, input));
 	}
 
 	/**
@@ -410,14 +513,16 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @param input - The subject to delete.
 	 * @returns Success, or that no such subject exists.
 	 */
-	async deleteSubject(input: { subjectId: string }): Promise<DeleteSubjectResult> {
+	async deleteSubject(input: { subjectId: string }): Promise<WithCost<DeleteSubjectResult>> {
 		await this.#migrated;
 
-		await this.#db.deleteMany(Passwords.passwords, { where: { subject_id: input.subjectId } });
-		await this.#db.deleteMany(Passkeys.passkeys, { where: { subject_id: input.subjectId } });
-		await this.#db.deleteMany(Consent.grants, { where: { subject_id: input.subjectId } });
+		return this.#withCost(async () => {
+			await this.#db.deleteMany(Passwords.passwords, { where: { subject_id: input.subjectId } });
+			await this.#db.deleteMany(Passkeys.passkeys, { where: { subject_id: input.subjectId } });
+			await this.#db.deleteMany(Consent.grants, { where: { subject_id: input.subjectId } });
 
-		return Subjects.deleteSubject(this.#db, input);
+			return Subjects.deleteSubject(this.#db, input);
+		});
 	}
 
 	/**
@@ -426,9 +531,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @param input - The key, its type, and its visibility.
 	 * @returns Success; defining an existing key updates it in place.
 	 */
-	async defineAttribute(input: DefineAttributeInput): Promise<{ ok: true }> {
+	async defineAttribute(input: DefineAttributeInput): Promise<WithCost<{ ok: true }>> {
 		await this.#migrated;
-		return Subjects.defineAttribute(this.#db, input);
+		return this.#withCost(() => Subjects.defineAttribute(this.#db, input));
 	}
 
 	/**
@@ -437,9 +542,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @param input - The key to remove.
 	 * @returns Success, or that no such key was defined.
 	 */
-	async removeAttribute(input: { key: string }): Promise<RemoveAttributeResult> {
+	async removeAttribute(input: { key: string }): Promise<WithCost<RemoveAttributeResult>> {
 		await this.#migrated;
-		return Subjects.removeAttribute(this.#db, input);
+		return this.#withCost(() => Subjects.removeAttribute(this.#db, input));
 	}
 
 	/**
@@ -451,9 +556,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	async describeSubject(input: {
 		subjectId: string;
 		audience: Actor;
-	}): Promise<DescribeSubjectResult> {
+	}): Promise<WithCost<DescribeSubjectResult>> {
 		await this.#migrated;
-		return Subjects.describeSubject(this.#db, input);
+		return this.#withCost(() => Subjects.describeSubject(this.#db, input));
 	}
 
 	/**
@@ -462,9 +567,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @returns The minimum length, denied terms, expiry interval and history depth
 	 * currently in force.
 	 */
-	async describePasswordPolicy(): Promise<PasswordPolicy> {
+	async describePasswordPolicy(): Promise<WithCost<PasswordPolicy>> {
 		await this.#migrated;
-		return Passwords.describePasswordPolicy(this.#db);
+		return this.#withCost(() => Passwords.describePasswordPolicy(this.#db));
 	}
 
 	/**
@@ -473,9 +578,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @param input - The subject, the candidate password, and who is asking.
 	 * @returns The new row's id and expiry, or which policy rule refused the candidate.
 	 */
-	async setPassword(input: SetPasswordInput): Promise<SetPasswordResult> {
+	async setPassword(input: SetPasswordInput): Promise<WithCost<SetPasswordResult>> {
 		await this.#migrated;
-		return Passwords.setPassword(this.#db, input);
+		return this.#withCost(() => Passwords.setPassword(this.#db, input));
 	}
 
 	/**
@@ -484,9 +589,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @param input - The subject, its current password, and the replacement.
 	 * @returns The new row's id and expiry, or why the change was refused.
 	 */
-	async changePassword(input: ChangePasswordInput): Promise<ChangePasswordResult> {
+	async changePassword(input: ChangePasswordInput): Promise<WithCost<ChangePasswordResult>> {
 		await this.#migrated;
-		return Passwords.changePassword(this.#db, input);
+		return this.#withCost(() => Passwords.changePassword(this.#db, input));
 	}
 
 	/**
@@ -495,10 +600,15 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @param input - The identifier as typed, and the candidate password.
 	 * @returns The subject and what it still owes, or why sign-in was refused.
 	 */
-	async signInWithPassword(input: SignInWithPasswordInput): Promise<SignInWithPasswordResult> {
+	async signInWithPassword(
+		input: SignInWithPasswordInput,
+	): Promise<WithCost<SignInWithPasswordResult>> {
 		await this.#migrated;
-		let { cap, hard } = await this.#dauEnforcement();
-		return Passwords.signInWithPassword(this.#db, input, { cache: this.#dauCache, cap, hard });
+
+		return this.#withCost(async () => {
+			let { cap, hard } = await this.#dauEnforcement();
+			return Passwords.signInWithPassword(this.#db, input, { cache: this.#dauCache, cap, hard });
+		});
 	}
 
 	/**
@@ -507,9 +617,11 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @param input - The identifier as typed.
 	 * @returns The plaintext ticket to deliver, and the address to deliver it to.
 	 */
-	async beginPasswordReset(input: BeginPasswordResetInput): Promise<BeginPasswordResetResult> {
+	async beginPasswordReset(
+		input: BeginPasswordResetInput,
+	): Promise<WithCost<BeginPasswordResetResult>> {
 		await this.#migrated;
-		return Passwords.beginPasswordReset(this.#db, input);
+		return this.#withCost(() => Passwords.beginPasswordReset(this.#db, input));
 	}
 
 	/**
@@ -520,9 +632,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 */
 	async completePasswordReset(
 		input: CompletePasswordResetInput,
-	): Promise<CompletePasswordResetResult> {
+	): Promise<WithCost<CompletePasswordResetResult>> {
 		await this.#migrated;
-		return Passwords.completePasswordReset(this.#db, input);
+		return this.#withCost(() => Passwords.completePasswordReset(this.#db, input));
 	}
 
 	/**
@@ -531,9 +643,11 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @param input - The subject, and why the reset is being forced.
 	 * @returns The row now marked, and the reason recorded, or why nothing was marked.
 	 */
-	async forcePasswordReset(input: ForcePasswordResetInput): Promise<ForcePasswordResetResult> {
+	async forcePasswordReset(
+		input: ForcePasswordResetInput,
+	): Promise<WithCost<ForcePasswordResetResult>> {
 		await this.#migrated;
-		return Passwords.forcePasswordReset(this.#db, input);
+		return this.#withCost(() => Passwords.forcePasswordReset(this.#db, input));
 	}
 
 	/**
@@ -542,14 +656,16 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @param input - The subject to remove the password from.
 	 * @returns Success, or why the removal was refused.
 	 */
-	async removePassword(input: { subjectId: string }): Promise<RemovePasswordResult> {
+	async removePassword(input: { subjectId: string }): Promise<WithCost<RemovePasswordResult>> {
 		await this.#migrated;
 
-		let hasOtherCredential = await hasAnotherCredential(this.#db, input.subjectId, {
-			kind: "password",
-		});
+		return this.#withCost(async () => {
+			let hasOtherCredential = await hasAnotherCredential(this.#db, input.subjectId, {
+				kind: "password",
+			});
 
-		return Passwords.removePassword(this.#db, input, hasOtherCredential);
+			return Passwords.removePassword(this.#db, input, hasOtherCredential);
+		});
 	}
 
 	/**
@@ -562,9 +678,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 */
 	async beginPasskeyRegistration(
 		input: BeginPasskeyRegistrationInput,
-	): Promise<BeginPasskeyRegistrationResult> {
+	): Promise<WithCost<BeginPasskeyRegistrationResult>> {
 		await this.#migrated;
-		return Passkeys.beginPasskeyRegistration(this.#db, input);
+		return this.#withCost(() => Passkeys.beginPasskeyRegistration(this.#db, input));
 	}
 
 	/**
@@ -575,9 +691,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * resolved.
 	 * @returns The stored credential's public fields, or which check refused it.
 	 */
-	async enrolPasskey(input: EnrolPasskeyInput): Promise<EnrolPasskeyResult> {
+	async enrolPasskey(input: EnrolPasskeyInput): Promise<WithCost<EnrolPasskeyResult>> {
 		await this.#migrated;
-		return Passkeys.enrolPasskey(this.#db, input);
+		return this.#withCost(() => Passkeys.enrolPasskey(this.#db, input));
 	}
 
 	/**
@@ -589,9 +705,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 */
 	async beginPasskeyAuthentication(
 		input: BeginPasskeyAuthenticationInput,
-	): Promise<BeginPasskeyAuthenticationResult> {
+	): Promise<WithCost<BeginPasskeyAuthenticationResult>> {
 		await this.#migrated;
-		return Passkeys.beginPasskeyAuthentication(this.#db, input);
+		return this.#withCost(() => Passkeys.beginPasskeyAuthentication(this.#db, input));
 	}
 
 	/**
@@ -603,10 +719,15 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @returns The subject and credential the assertion proved, or which check refused
 	 * it.
 	 */
-	async signInWithPasskey(input: SignInWithPasskeyInput): Promise<SignInWithPasskeyResult> {
+	async signInWithPasskey(
+		input: SignInWithPasskeyInput,
+	): Promise<WithCost<SignInWithPasskeyResult>> {
 		await this.#migrated;
-		let { cap, hard } = await this.#dauEnforcement();
-		return Passkeys.signInWithPasskey(this.#db, input, { cache: this.#dauCache, cap, hard });
+
+		return this.#withCost(async () => {
+			let { cap, hard } = await this.#dauEnforcement();
+			return Passkeys.signInWithPasskey(this.#db, input, { cache: this.#dauCache, cap, hard });
+		});
 	}
 
 	/**
@@ -619,9 +740,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		subjectId: string;
 		credentialId: string;
 		label: string;
-	}): Promise<RenamePasskeyResult> {
+	}): Promise<WithCost<RenamePasskeyResult>> {
 		await this.#migrated;
-		return Passkeys.renamePasskey(this.#db, input);
+		return this.#withCost(() => Passkeys.renamePasskey(this.#db, input));
 	}
 
 	/**
@@ -635,15 +756,17 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	async revokePasskey(input: {
 		subjectId: string;
 		credentialId: string;
-	}): Promise<RevokePasskeyResult> {
+	}): Promise<WithCost<RevokePasskeyResult>> {
 		await this.#migrated;
 
-		let hasOtherCredential = await hasAnotherCredential(this.#db, input.subjectId, {
-			kind: "passkey",
-			credentialId: input.credentialId,
-		});
+		return this.#withCost(async () => {
+			let hasOtherCredential = await hasAnotherCredential(this.#db, input.subjectId, {
+				kind: "passkey",
+				credentialId: input.credentialId,
+			});
 
-		return Passkeys.revokePasskey(this.#db, input, hasOtherCredential);
+			return Passkeys.revokePasskey(this.#db, input, hasOtherCredential);
+		});
 	}
 
 	/**
@@ -709,9 +832,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @returns The session's subject, methods and clocks when it is live, or which
 	 * refusal applies.
 	 */
-	async resolveSession(input: ResolveSessionInput): Promise<ResolveSessionResult> {
+	async resolveSession(input: ResolveSessionInput): Promise<WithCost<ResolveSessionResult>> {
 		await this.#migrated;
-		return Sessions.resolveSession(this.#db, input);
+		return this.#withCost(() => Sessions.resolveSession(this.#db, input));
 	}
 
 	/**
@@ -721,9 +844,11 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * and where to page from.
 	 * @returns A page of session summaries, or that the given cursor no longer matches.
 	 */
-	async listSubjectSessions(input: ListSubjectSessionsInput): Promise<ListSubjectSessionsResult> {
+	async listSubjectSessions(
+		input: ListSubjectSessionsInput,
+	): Promise<WithCost<ListSubjectSessionsResult>> {
 		await this.#migrated;
-		return Sessions.listSubjectSessions(this.#db, input);
+		return this.#withCost(() => Sessions.listSubjectSessions(this.#db, input));
 	}
 
 	/**
@@ -736,9 +861,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		subjectId: string;
 		sessionId: string;
 		reason: string;
-	}): Promise<RevokeSessionResult> {
+	}): Promise<WithCost<RevokeSessionResult>> {
 		await this.#migrated;
-		return Sessions.revokeSession(this.#db, input);
+		return this.#withCost(() => Sessions.revokeSession(this.#db, input));
 	}
 
 	/**
@@ -749,9 +874,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 */
 	async revokeSubjectSessions(
 		input: RevokeSubjectSessionsInput,
-	): Promise<RevokeSubjectSessionsResult> {
+	): Promise<WithCost<RevokeSubjectSessionsResult>> {
 		await this.#migrated;
-		return Sessions.revokeSubjectSessions(this.#db, input);
+		return this.#withCost(() => Sessions.revokeSubjectSessions(this.#db, input));
 	}
 
 	/**
@@ -762,9 +887,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @returns The new record and the one-time plaintext secret, or which rule refused
 	 * the record.
 	 */
-	async registerClient(input: RegisterClientInput): Promise<RegisterClientResult> {
+	async registerClient(input: RegisterClientInput): Promise<WithCost<RegisterClientResult>> {
 		await this.#migrated;
-		return Clients.registerClient(this.#db, input);
+		return this.#withCost(() => Clients.registerClient(this.#db, input));
 	}
 
 	/**
@@ -773,9 +898,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @param input - The client to update and its whole new editable record.
 	 * @returns The updated record, or which rule refused the update.
 	 */
-	async updateClient(input: UpdateClientInput): Promise<UpdateClientResult> {
+	async updateClient(input: UpdateClientInput): Promise<WithCost<UpdateClientResult>> {
 		await this.#migrated;
-		return Clients.updateClient(this.#db, input);
+		return this.#withCost(() => Clients.updateClient(this.#db, input));
 	}
 
 	/**
@@ -786,9 +911,11 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @returns The new secret and when the incumbent now expires, or why rotation was
 	 * refused.
 	 */
-	async rotateClientSecret(input: RotateClientSecretInput): Promise<RotateClientSecretResult> {
+	async rotateClientSecret(
+		input: RotateClientSecretInput,
+	): Promise<WithCost<RotateClientSecretResult>> {
 		await this.#migrated;
-		return Clients.rotateClientSecret(this.#db, input);
+		return this.#withCost(() => Clients.rotateClientSecret(this.#db, input));
 	}
 
 	/**
@@ -798,9 +925,11 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @param input - The client the secret belongs to, and the secret to revoke.
 	 * @returns Success, or why the revocation was refused.
 	 */
-	async revokeClientSecret(input: RevokeClientSecretInput): Promise<RevokeClientSecretResult> {
+	async revokeClientSecret(
+		input: RevokeClientSecretInput,
+	): Promise<WithCost<RevokeClientSecretResult>> {
 		await this.#migrated;
-		return Clients.revokeClientSecret(this.#db, input);
+		return this.#withCost(() => Clients.revokeClientSecret(this.#db, input));
 	}
 
 	/**
@@ -809,9 +938,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @param input - The client to disable.
 	 * @returns Success, or that no such client exists.
 	 */
-	async disableClient(input: { clientId: string }): Promise<DisableClientResult> {
+	async disableClient(input: { clientId: string }): Promise<WithCost<DisableClientResult>> {
 		await this.#migrated;
-		return Clients.disableClient(this.#db, input);
+		return this.#withCost(() => Clients.disableClient(this.#db, input));
 	}
 
 	/**
@@ -820,12 +949,14 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @param input - The client to delete.
 	 * @returns Success, or that no such client exists.
 	 */
-	async deleteClient(input: { clientId: string }): Promise<DeleteClientResult> {
+	async deleteClient(input: { clientId: string }): Promise<WithCost<DeleteClientResult>> {
 		await this.#migrated;
 
-		await this.#db.deleteMany(Consent.grants, { where: { client_id: input.clientId } });
+		return this.#withCost(async () => {
+			await this.#db.deleteMany(Consent.grants, { where: { client_id: input.clientId } });
 
-		return Clients.deleteClient(this.#db, input);
+			return Clients.deleteClient(this.#db, input);
+		});
 	}
 
 	/**
@@ -834,9 +965,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @param input - Where to page from.
 	 * @returns A page of client summaries, or that the given cursor no longer matches.
 	 */
-	async listClients(input: ListClientsInput = {}): Promise<ListClientsResult> {
+	async listClients(input: ListClientsInput = {}): Promise<WithCost<ListClientsResult>> {
 		await this.#migrated;
-		return Clients.listClients(this.#db, input);
+		return this.#withCost(() => Clients.listClients(this.#db, input));
 	}
 
 	/**
@@ -847,9 +978,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * was demanded.
 	 * @returns The decision, with the assembled screen only when one is shown.
 	 */
-	async evaluateConsent(input: EvaluateConsentInput): Promise<EvaluateConsentResult> {
+	async evaluateConsent(input: EvaluateConsentInput): Promise<WithCost<EvaluateConsentResult>> {
 		await this.#migrated;
-		return Consent.evaluateConsent(this.#db, input);
+		return this.#withCost(() => Consent.evaluateConsent(this.#db, input));
 	}
 
 	/**
@@ -861,9 +992,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 */
 	async recordConsentDecision(
 		input: RecordConsentDecisionInput,
-	): Promise<RecordConsentDecisionResult> {
+	): Promise<WithCost<RecordConsentDecisionResult>> {
 		await this.#migrated;
-		return Consent.recordConsentDecision(this.#db, input);
+		return this.#withCost(() => Consent.recordConsentDecision(this.#db, input));
 	}
 
 	/**
@@ -872,9 +1003,12 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @param input - The subject and client whose grant to revoke.
 	 * @returns That the grant was revoked, or that no such grant existed.
 	 */
-	async revokeGrant(input: { subjectId: string; clientId: string }): Promise<RevokeGrantResult> {
+	async revokeGrant(input: {
+		subjectId: string;
+		clientId: string;
+	}): Promise<WithCost<RevokeGrantResult>> {
 		await this.#migrated;
-		return Consent.revokeGrant(this.#db, input);
+		return this.#withCost(() => Consent.revokeGrant(this.#db, input));
 	}
 
 	/**
@@ -883,9 +1017,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @param input - The subject whose grants to list, and where to page from.
 	 * @returns A page of grant summaries, or that the given cursor no longer matches.
 	 */
-	async listGrants(input: ListGrantsInput): Promise<ListGrantsResult> {
+	async listGrants(input: ListGrantsInput): Promise<WithCost<ListGrantsResult>> {
 		await this.#migrated;
-		return Consent.listGrants(this.#db, input);
+		return this.#withCost(() => Consent.listGrants(this.#db, input));
 	}
 
 	/**
@@ -899,10 +1033,13 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 */
 	async beginAuthorization(
 		input: Omit<BeginAuthorizationInput, "issuer">,
-	): Promise<AuthorizationOutcome> {
+	): Promise<WithCost<AuthorizationOutcome>> {
 		await this.#migrated;
-		let issuer = await this.#issuer();
-		return Authorization.beginAuthorization(this.#db, { ...input, issuer });
+
+		return this.#withCost(async () => {
+			let issuer = await this.#issuer();
+			return Authorization.beginAuthorization(this.#db, { ...input, issuer });
+		});
 	}
 
 	/**
@@ -916,10 +1053,13 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 */
 	async resumeAuthorization(
 		input: Omit<ResumeAuthorizationInput, "issuer">,
-	): Promise<AuthorizationOutcome> {
+	): Promise<WithCost<AuthorizationOutcome>> {
 		await this.#migrated;
-		let issuer = await this.#issuer();
-		return Authorization.resumeAuthorization(this.#db, { ...input, issuer });
+
+		return this.#withCost(async () => {
+			let issuer = await this.#issuer();
+			return Authorization.resumeAuthorization(this.#db, { ...input, issuer });
+		});
 	}
 
 	/**
@@ -928,9 +1068,11 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @param input - The clock to advance the rotation against.
 	 * @returns The key set now published for this tenant.
 	 */
-	async advanceSigningKeys(input: AdvanceSigningKeysInput = {}): Promise<PublishedKeySet> {
+	async advanceSigningKeys(
+		input: AdvanceSigningKeysInput = {},
+	): Promise<WithCost<PublishedKeySet>> {
 		await this.#migrated;
-		return SigningKeys.advanceSigningKeys(this.#db, input);
+		return this.#withCost(() => SigningKeys.advanceSigningKeys(this.#db, input));
 	}
 
 	/**
@@ -940,9 +1082,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @param input - The clock a row's publish window is measured against.
 	 * @returns The key set currently published for this tenant.
 	 */
-	async publishKeySet(input: PublishKeySetInput = {}): Promise<PublishedKeySet> {
+	async publishKeySet(input: PublishKeySetInput = {}): Promise<WithCost<PublishedKeySet>> {
 		await this.#migrated;
-		return SigningKeys.publishKeySet(this.#db, input);
+		return this.#withCost(() => SigningKeys.publishKeySet(this.#db, input));
 	}
 
 	/**
@@ -951,9 +1093,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @param input - The full set of claims the tenant now declares.
 	 * @returns Success, or which rule refused the call.
 	 */
-	async setCustomClaims(input: SetCustomClaimsInput): Promise<SetCustomClaimsResult> {
+	async setCustomClaims(input: SetCustomClaimsInput): Promise<WithCost<SetCustomClaimsResult>> {
 		await this.#migrated;
-		return SigningKeys.setCustomClaims(this.#db, input);
+		return this.#withCost(() => SigningKeys.setCustomClaims(this.#db, input));
 	}
 
 	/**
@@ -966,10 +1108,13 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * used, the client's credentials, and the clock to mint against.
 	 * @returns The minted token set, or the error this exchange was refused for.
 	 */
-	async exchangeCode(input: Omit<ExchangeCodeInput, "issuer">): Promise<TokenOutcome> {
+	async exchangeCode(input: Omit<ExchangeCodeInput, "issuer">): Promise<WithCost<TokenOutcome>> {
 		await this.#migrated;
-		let issuer = await this.#issuer();
-		return Tokens.exchangeCode(this.#db, { ...input, issuer });
+
+		return this.#withCost(async () => {
+			let issuer = await this.#issuer();
+			return Tokens.exchangeCode(this.#db, { ...input, issuer });
+		});
 	}
 
 	/**
@@ -981,10 +1126,13 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * the client's credentials, and the clock to mint against.
 	 * @returns The minted token set, or the error this rotation was refused for.
 	 */
-	async refreshTokens(input: Omit<RefreshTokensInput, "issuer">): Promise<TokenOutcome> {
+	async refreshTokens(input: Omit<RefreshTokensInput, "issuer">): Promise<WithCost<TokenOutcome>> {
 		await this.#migrated;
-		let issuer = await this.#issuer();
-		return Tokens.refreshTokens(this.#db, { ...input, issuer });
+
+		return this.#withCost(async () => {
+			let issuer = await this.#issuer();
+			return Tokens.refreshTokens(this.#db, { ...input, issuer });
+		});
 	}
 
 	/**
@@ -995,10 +1143,13 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @returns Both metadata documents, the published key set, a version a caller can
 	 * compare against what it has cached, and how long the documents may be cached for.
 	 */
-	async publishMetadata(input: { now: number }): Promise<PublishMetadataResult> {
+	async publishMetadata(input: { now: number }): Promise<WithCost<PublishMetadataResult>> {
 		await this.#migrated;
-		let issuer = await this.#issuer();
-		return Metadata.publishMetadata(this.#db, { ...input, issuer });
+
+		return this.#withCost(async () => {
+			let issuer = await this.#issuer();
+			return Metadata.publishMetadata(this.#db, { ...input, issuer });
+		});
 	}
 
 	/**
@@ -1008,9 +1159,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * grant covers.
 	 * @returns The subject's claims, or that the subject id no longer resolves.
 	 */
-	async resolveUserInfo(input: ResolveUserInfoInput): Promise<ResolveUserInfoResult> {
+	async resolveUserInfo(input: ResolveUserInfoInput): Promise<WithCost<ResolveUserInfoResult>> {
 		await this.#migrated;
-		return Metadata.resolveUserInfo(this.#db, input);
+		return this.#withCost(() => Metadata.resolveUserInfo(this.#db, input));
 	}
 
 	/**
@@ -1023,9 +1174,11 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @returns The plan now enforced, and how many audit rows the new
 	 * retention window pruned.
 	 */
-	async applyEntitlements(input: ApplyEntitlementsInput): Promise<ApplyEntitlementsResult> {
+	async applyEntitlements(
+		input: ApplyEntitlementsInput,
+	): Promise<WithCost<ApplyEntitlementsResult>> {
 		await this.#migrated;
-		return applyEntitlements(this.#db, input);
+		return this.#withCost(() => applyEntitlements(this.#db, input));
 	}
 
 	/**
@@ -1036,9 +1189,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @param input - The day to close.
 	 * @returns The closed day's subject, session and token counts.
 	 */
-	async closeMeteringDay(input: CloseMeteringDayInput): Promise<DailyUsage> {
+	async closeMeteringDay(input: CloseMeteringDayInput): Promise<WithCost<DailyUsage>> {
 		await this.#migrated;
-		return closeMeteringDay(this.#db, input);
+		return this.#withCost(() => closeMeteringDay(this.#db, input));
 	}
 
 	/**
@@ -1047,9 +1200,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @param input - The inclusive day range to read.
 	 * @returns Each day in range that has a row, oldest first.
 	 */
-	async readUsage(input: ReadUsageInput): Promise<DailyUsage[]> {
+	async readUsage(input: ReadUsageInput): Promise<WithCost<DailyUsage[]>> {
 		await this.#migrated;
-		return readUsage(this.#db, input);
+		return this.#withCost(() => readUsage(this.#db, input));
 	}
 
 	/**
@@ -1061,9 +1214,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * @returns A page of rows and the cursors around them, or that the given
 	 * cursor no longer matches this ordering.
 	 */
-	async readAuditPage(input: ReadAuditPageInput): Promise<ReadAuditPageResult> {
+	async readAuditPage(input: ReadAuditPageInput): Promise<WithCost<ReadAuditPageResult>> {
 		await this.#migrated;
-		return readAuditPage(this.#db, input);
+		return this.#withCost(() => readAuditPage(this.#db, input));
 	}
 
 	/**
@@ -1076,10 +1229,13 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 */
 	async enforceAuditRetention(
 		input: { now?: number; limit?: number } = {},
-	): Promise<EnforceAuditRetentionResult> {
+	): Promise<WithCost<EnforceAuditRetentionResult>> {
 		await this.#migrated;
-		let retentionDays = await this.#auditRetentionDays();
-		return enforceAuditRetention(this.#db, { retentionDays, now: input.now, limit: input.limit });
+
+		return this.#withCost(async () => {
+			let retentionDays = await this.#auditRetentionDays();
+			return enforceAuditRetention(this.#db, { retentionDays, now: input.now, limit: input.limit });
+		});
 	}
 
 	/**
@@ -1090,8 +1246,57 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * may return.
 	 * @returns Rows after that position, and the position to resume from next.
 	 */
-	async drainAuditEvents(input: DrainAuditEventsInput): Promise<DrainAuditEventsResult> {
+	async drainAuditEvents(input: DrainAuditEventsInput): Promise<WithCost<DrainAuditEventsResult>> {
 		await this.#migrated;
-		return drainAuditEvents(this.#db, input);
+		return this.#withCost(() => drainAuditEvents(this.#db, input));
+	}
+
+	/**
+	 * Row counts per table this object owns, plus the database's total size — the whole
+	 * of what the daily storage sweep needs to model this tenant's storage footprint in
+	 * one call.
+	 *
+	 * @returns Every table's own row count, keyed by table name, and the database's
+	 * size in bytes.
+	 */
+	async reportStorageFootprint(): Promise<WithCost<StorageFootprint>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let tables: Record<string, AnyTable> = {
+				settings,
+				subjects: Subjects.subjects,
+				subject_identifiers: Subjects.subjectIdentifiers,
+				subject_attributes: Subjects.subjectAttributes,
+				attribute_definitions: Subjects.attributeDefinitions,
+				passwords: Passwords.passwords,
+				password_policy: Passwords.passwordPolicy,
+				password_reset_tickets: Passwords.passwordResetTickets,
+				passkeys: Passkeys.passkeys,
+				passkey_challenges: Passkeys.passkeyChallenges,
+				sessions: Sessions.sessions,
+				signing_keys: SigningKeys.signingKeys,
+				custom_claims: SigningKeys.customClaims,
+				clients: Clients.clients,
+				client_secrets: Clients.clientSecrets,
+				scopes: Consent.scopes,
+				grants: Consent.grants,
+				authorization_requests: Authorization.authorizationRequests,
+				authorization_codes: Authorization.authorizationCodes,
+				refresh_tokens: Tokens.refreshTokenRows,
+				mail_send_envelopes: mailSendEnvelopes,
+				entitlement_enforcement: entitlementEnforcement,
+				dau_seen: dauSeen,
+				dau_day: dauDay,
+				audit_events: auditEvents,
+			};
+
+			let rows: Record<string, number> = {};
+			for (let [name, ref] of Object.entries(tables)) {
+				rows[name] = await this.#db.count(ref);
+			}
+
+			return { rows, databaseSize: this.ctx.storage.sql.databaseSize };
+		});
 	}
 }

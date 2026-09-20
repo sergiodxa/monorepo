@@ -31,7 +31,7 @@ describe("createSubject", () => {
 			identifiers: [{ kind: "email", value: "Jane@Example.com" }],
 		});
 
-		expect(result).toEqual({
+		expect(result).toMatchObject({
 			ok: true,
 			subjectId: expect.stringMatching(/^sub_/),
 			identifiers: [
@@ -53,7 +53,7 @@ describe("createSubject", () => {
 			identifiers: [{ kind: "email", value: "JANE@EXAMPLE.COM" }],
 		});
 
-		expect(result).toEqual({
+		expect(result).toMatchObject({
 			ok: false,
 			reason: "identifier-taken",
 			kind: "email",
@@ -69,7 +69,7 @@ describe("createSubject", () => {
 			],
 		});
 
-		expect(result).toEqual({ ok: false, reason: "duplicate-username" });
+		expect(result).toMatchObject({ ok: false, reason: "duplicate-username" });
 	});
 
 	test("refuses an identifier that fails its folding rule", async () => {
@@ -77,7 +77,7 @@ describe("createSubject", () => {
 			identifiers: [{ kind: "username", value: "jane doe" }],
 		});
 
-		expect(result).toEqual({
+		expect(result).toMatchObject({
 			ok: false,
 			reason: "invalid-identifier",
 			kind: "username",
@@ -91,7 +91,7 @@ describe("createSubject", () => {
 			attributes: { plan: "pro" },
 		});
 
-		expect(result).toEqual({ ok: false, reason: "unknown-attribute", key: "plan" });
+		expect(result).toMatchObject({ ok: false, reason: "unknown-attribute", key: "plan" });
 	});
 
 	test("applies a declared attribute", async () => {
@@ -134,7 +134,7 @@ describe("addIdentifier / verifyIdentifier lifecycle", () => {
 		if (!added.ok || added.kind !== "email") throw new Error("unreachable");
 
 		let verified = await tenant.verifyIdentifier({ ticket: added.ticket });
-		expect(verified).toEqual({ ok: true, subjectId, promotedPrimary: true });
+		expect(verified).toMatchObject({ ok: true, subjectId, promotedPrimary: true });
 
 		let described = await tenant.describeSubject({ subjectId, audience: adminActor });
 		expect(described).toMatchObject({
@@ -155,7 +155,7 @@ describe("addIdentifier / verifyIdentifier lifecycle", () => {
 			actor: subjectActor,
 		});
 
-		expect(added).toEqual({ ok: false, reason: "username-already-set" });
+		expect(added).toMatchObject({ ok: false, reason: "username-already-set" });
 	});
 
 	test("refuses claiming an email another subject already verified", async () => {
@@ -181,7 +181,7 @@ describe("addIdentifier / verifyIdentifier lifecycle", () => {
 			actor: subjectActor,
 		});
 
-		expect(addedToSecond).toEqual({ ok: false, reason: "identifier-taken" });
+		expect(addedToSecond).toMatchObject({ ok: false, reason: "identifier-taken" });
 	});
 
 	test("calling addIdentifier again for the same unverified row replaces its ticket", async () => {
@@ -207,10 +207,10 @@ describe("addIdentifier / verifyIdentifier lifecycle", () => {
 		expect(second.ticket).not.toBe(first.ticket);
 
 		let staleTicketResult = await tenant.verifyIdentifier({ ticket: first.ticket });
-		expect(staleTicketResult).toEqual({ ok: false, reason: "invalid-ticket" });
+		expect(staleTicketResult).toMatchObject({ ok: false, reason: "invalid-ticket" });
 
 		let freshTicketResult = await tenant.verifyIdentifier({ ticket: second.ticket });
-		expect(freshTicketResult).toEqual({ ok: true, subjectId, promotedPrimary: true });
+		expect(freshTicketResult).toMatchObject({ ok: true, subjectId, promotedPrimary: true });
 	});
 
 	test("an expired ticket is refused", async () => {
@@ -231,7 +231,7 @@ describe("addIdentifier / verifyIdentifier lifecycle", () => {
 		);
 
 		let result = await tenant.verifyIdentifier({ ticket: added.ticket });
-		expect(result).toEqual({ ok: false, reason: "expired-ticket" });
+		expect(result).toMatchObject({ ok: false, reason: "expired-ticket" });
 	});
 });
 
@@ -256,7 +256,7 @@ describe("setPrimaryIdentifier", () => {
 			actor: subjectActor,
 		});
 
-		expect(result).toEqual({ ok: false, reason: "unverified" });
+		expect(result).toMatchObject({ ok: false, reason: "unverified" });
 	});
 
 	test("moves primary to a verified address", async () => {
@@ -279,7 +279,7 @@ describe("setPrimaryIdentifier", () => {
 			value: "second@example.com",
 			actor: subjectActor,
 		});
-		expect(result).toEqual({ ok: true });
+		expect(result).toMatchObject({ ok: true });
 
 		let described = await tenant.describeSubject({
 			subjectId: created.subjectId,
@@ -324,7 +324,7 @@ describe("removeIdentifier", () => {
 			actor: subjectActor,
 		});
 
-		expect(result).toEqual({ ok: false, reason: "last-verified-identifier" });
+		expect(result).toMatchObject({ ok: false, reason: "last-verified-identifier" });
 	});
 
 	test("promotes the oldest remaining verified address and reports who to notify", async () => {
@@ -358,7 +358,7 @@ describe("removeIdentifier", () => {
 			actor: subjectActor,
 		});
 
-		expect(result).toEqual({
+		expect(result).toMatchObject({
 			ok: true,
 			promotedPrimary: "second@example.com",
 			notify: ["second@example.com"],
@@ -380,7 +380,7 @@ describe("removeIdentifier", () => {
 			actor: subjectActor,
 		});
 
-		expect(result).toEqual({ ok: true, promotedPrimary: null, notify: [] });
+		expect(result).toMatchObject({ ok: true, promotedPrimary: null, notify: [] });
 	});
 });
 
@@ -397,7 +397,7 @@ describe("updateSubject", () => {
 			actor: subjectActor,
 		});
 
-		expect(result).toEqual({ ok: true });
+		expect(result).toMatchObject({ ok: true });
 
 		let described = await tenant.describeSubject({
 			subjectId: created.subjectId,
@@ -420,21 +420,21 @@ describe("updateSubject", () => {
 			attributes: { bio: "hello" },
 			actor: subjectActor,
 		});
-		expect(selfWrite).toEqual({ ok: true });
+		expect(selfWrite).toMatchObject({ ok: true });
 
 		let forbidden = await tenant.updateSubject({
 			subjectId: created.subjectId,
 			attributes: { plan: "pro" },
 			actor: subjectActor,
 		});
-		expect(forbidden).toEqual({ ok: false, reason: "attribute-not-writable", key: "plan" });
+		expect(forbidden).toMatchObject({ ok: false, reason: "attribute-not-writable", key: "plan" });
 
 		let adminWrite = await tenant.updateSubject({
 			subjectId: created.subjectId,
 			attributes: { plan: "pro" },
 			actor: adminActor,
 		});
-		expect(adminWrite).toEqual({ ok: true });
+		expect(adminWrite).toMatchObject({ ok: true });
 	});
 });
 
@@ -471,7 +471,9 @@ describe("blockSubject / unblockSubject / deleteSubject", () => {
 		});
 		if (!created.ok) throw new Error("unreachable");
 
-		expect(await tenant.blockSubject({ subjectId: created.subjectId, reason: "fraud" })).toEqual({
+		expect(
+			await tenant.blockSubject({ subjectId: created.subjectId, reason: "fraud" }),
+		).toMatchObject({
 			ok: true,
 		});
 
@@ -481,7 +483,9 @@ describe("blockSubject / unblockSubject / deleteSubject", () => {
 		});
 		expect(blocked).toMatchObject({ ok: true, profile: { status: "blocked" } });
 
-		expect(await tenant.unblockSubject({ subjectId: created.subjectId })).toEqual({ ok: true });
+		expect(await tenant.unblockSubject({ subjectId: created.subjectId })).toMatchObject({
+			ok: true,
+		});
 
 		let active = await tenant.describeSubject({
 			subjectId: created.subjectId,
@@ -499,10 +503,12 @@ describe("blockSubject / unblockSubject / deleteSubject", () => {
 		});
 		if (!created.ok) throw new Error("unreachable");
 
-		expect(await tenant.deleteSubject({ subjectId: created.subjectId })).toEqual({ ok: true });
+		expect(await tenant.deleteSubject({ subjectId: created.subjectId })).toMatchObject({
+			ok: true,
+		});
 		expect(
 			await tenant.describeSubject({ subjectId: created.subjectId, audience: adminActor }),
-		).toEqual({
+		).toMatchObject({
 			ok: false,
 			reason: "not-found",
 		});
@@ -524,7 +530,7 @@ describe("removeAttribute", () => {
 		});
 		if (!created.ok) throw new Error("unreachable");
 
-		expect(await tenant.removeAttribute({ key: "plan" })).toEqual({ ok: true });
+		expect(await tenant.removeAttribute({ key: "plan" })).toMatchObject({ ok: true });
 
 		let rows = [
 			...state.storage.sql.exec<{ key: string; value: string }>(
@@ -754,7 +760,7 @@ describe("audit", () => {
 		if (!created.ok) throw new Error("unreachable");
 
 		let deleted = await tenant.deleteSubject({ subjectId: created.subjectId });
-		expect(deleted).toEqual({ ok: true });
+		expect(deleted).toMatchObject({ ok: true });
 
 		let rows = await auditRowsFor("subject.deleted");
 		expect(rows).toMatchObject([{ targetId: created.subjectId, outcome: "succeeded" }]);
