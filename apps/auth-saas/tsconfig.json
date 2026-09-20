@@ -10,8 +10,6 @@
 		"routes/**/*",
 		"scripts/**/*",
 		"vite.config.ts",
-		"vite.config.client.ts",
-		"vite.config.browser.ts",
 		"worker-configuration.d.ts"
 	],
 	"compilerOptions": {

@@ -1,17 +1,42 @@
 /**
- * Primary Vite config for the platform worker (the `ssr` environment). Wires up the
- * Cloudflare Workers Vite plugin and tsconfig path resolution, and sets the
- * local dev server port. The two sibling configs build the browser/tenant client bundles.
+ * Vite build configuration for the auth-saas worker: registers the Cloudflare plugin,
+ * resolves tsconfig path aliases, and defines a `client` build environment that bundles
+ * the browser hydration entry so server-rendered `remix/ui` pages hydrate. The
+ * `@cloudflare/vite-plugin` detects this environment and serves the bundle through the
+ * `ASSETS` binding.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import { fileURLToPath } from "node:url";
+
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
 
+/** Absolute path to the browser entrypoint that boots the `remix/ui` runtime. */
+let clientEntryPath = fileURLToPath(new URL("./bootstrap/browser.ts", import.meta.url));
+
 export default defineConfig({
 	server: { port: 3004 },
+
 	resolve: { tsconfigPaths: true },
+
+	environments: {
+		client: {
+			build: {
+				rollupOptions: {
+					input: {
+						clientEntry: clientEntryPath,
+					},
+					output: {
+						entryFileNames: "assets/[name].js",
+						chunkFileNames: "assets/[name]-[hash].js",
+					},
+				},
+			},
+		},
+	},
+
 	plugins: [cloudflare({ viteEnvironment: { name: "ssr" } })],
 });

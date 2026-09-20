@@ -66,7 +66,8 @@ bun run db:local:migrate  # Apply migrations locally
 bun run db:remote:migrate # Apply migrations to production
 ```
 
-Each tenant's own OIDC schema is owned and migrated by `@sdxc/oidc-provider` inside its DO.
+Each tenant's own schema lives in `database/tenant-migrations/` and is applied by the
+tenant Durable Object itself on boot.
 
 ## Scripts
 
@@ -74,7 +75,6 @@ Each tenant's own OIDC schema is owned and migrated by `@sdxc/oidc-provider` ins
 | ------------------- | --------------------------------------- |
 | `dev`               | Start the development server            |
 | `build`             | Build for production                    |
-| `build:client`      | Build browser and client bundles        |
 | `start`             | Preview the production build            |
 | `cf:deploy`         | Deploy to Cloudflare Workers            |
 | `cf:typegen`        | Generate Cloudflare binding types       |
