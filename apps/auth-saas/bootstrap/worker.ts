@@ -15,6 +15,11 @@ import { isSuccess } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
 
+import {
+	TENANT_ID_HEADER,
+	TENANT_ISSUER_HEADER,
+	TENANT_REGION_HEADER,
+} from "~/app/http/middleware/tenant";
 import { dispatcher } from "~/app/jobs/dispatcher";
 import { HostMetadataSchema } from "~/app/lib/host-metadata";
 import {
@@ -26,6 +31,7 @@ import { checkRateLimit } from "~/app/lib/rate-limit";
 import Tenant from "~/database/tenant-do";
 
 import { router } from "./app";
+import { tenantRouter } from "./tenant-app";
 
 export { Tenant };
 
@@ -78,10 +84,12 @@ async function resolveHostname(hostname: string): Promise<ResolvedTenant | null>
 }
 
 /**
- * Rate-limits a request resolved to a tenant, then answers it. A tenant's protocol
- * endpoints — `/authorize`, `/oauth/token` and the rest — are typed RPC methods on its
- * Durable Object, so a request naming this tenant is met with what is true about it today
- * rather than a call the object has no handler for.
+ * Rate-limits a request resolved to a tenant, then hands it to the tenant router:
+ * a request naming this tenant is met with what is true about it today, through
+ * the typed RPC methods its Durable Object exposes, rather than a route this
+ * Worker assembles by hand. The resolved tenant crosses into that router on
+ * internal headers stamped onto the request here, since it is resolved once, on
+ * this hostname lookup, before the tenant router ever sees the request.
  */
 async function forwardToTenant(request: Request, target: ResolvedTenant): Promise<Response> {
 	let rateLimitResponse = await checkRateLimit(request, {
@@ -91,14 +99,12 @@ async function forwardToTenant(request: Request, target: ResolvedTenant): Promis
 	});
 	if (rateLimitResponse) return rateLimitResponse;
 
-	return new Response(
-		JSON.stringify({
-			tenantId: target.tenantId,
-			message:
-				"This tenant's protocol endpoints are served through typed RPC methods on its Durable Object.",
-		}),
-		{ status: 501, headers: { "Content-Type": "application/json" } },
-	);
+	let headers = new Headers(request.headers);
+	headers.set(TENANT_ID_HEADER, target.tenantId);
+	headers.set(TENANT_REGION_HEADER, target.region);
+	headers.set(TENANT_ISSUER_HEADER, target.issuer);
+
+	return await tenantRouter.fetch(new Request(request, { headers }));
 }
 
 /**

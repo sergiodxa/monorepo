@@ -45,9 +45,12 @@ export interface PublishMetadataInput {
 	issuer: string;
 }
 
+/** A discovery document's field values: every field here is a string or a list of them. */
+export type MetadataDocument = Record<string, string | string[]>;
+
 export interface PublishMetadataResult {
-	openidConfiguration: Record<string, unknown>;
-	oauthMetadata: Record<string, unknown>;
+	openidConfiguration: MetadataDocument;
+	oauthMetadata: MetadataDocument;
 	jwks: PublishedKeySet;
 	version: string;
 	maxAge: number;
@@ -93,7 +96,7 @@ export async function publishMetadata(
 	let tokenEndpointAuthMethodsSupported = ["client_secret_basic", "client_secret_post", "none"];
 	let codeChallengeMethodsSupported = ["S256"];
 
-	let openidConfiguration: Record<string, unknown> = {
+	let openidConfiguration: MetadataDocument = {
 		issuer: endpoints.issuer,
 		authorization_endpoint: endpoints.authorizationEndpoint,
 		token_endpoint: endpoints.tokenEndpoint,
@@ -109,7 +112,7 @@ export async function publishMetadata(
 		claims_supported: [...claimsSupported],
 	};
 
-	let oauthMetadata: Record<string, unknown> = {
+	let oauthMetadata: MetadataDocument = {
 		issuer: endpoints.issuer,
 		authorization_endpoint: endpoints.authorizationEndpoint,
 		token_endpoint: endpoints.tokenEndpoint,
@@ -138,8 +141,11 @@ export interface ResolveUserInfoInput {
 	now: number;
 }
 
+/** A userinfo claim value: every claim this endpoint assembles is one of these. */
+export type ClaimValue = string | number | boolean;
+
 export type ResolveUserInfoResult =
-	| { kind: "claims"; claims: Record<string, unknown> }
+	| { kind: "claims"; claims: Record<string, ClaimValue> }
 	| { kind: "unknown" };
 
 let ResolveUserInfoSchema = s.object({
@@ -171,7 +177,7 @@ export async function resolveUserInfo(
 	if (!subject) return { kind: "unknown" };
 
 	let grantedScopes = new Set(parsed.scopes);
-	let claims: Record<string, unknown> = { sub: subject.id };
+	let claims: Record<string, ClaimValue> = { sub: subject.id };
 
 	if (grantedScopes.has("profile")) {
 		for (let [claim, column] of Object.entries(PROFILE_CLAIM_COLUMNS)) {
