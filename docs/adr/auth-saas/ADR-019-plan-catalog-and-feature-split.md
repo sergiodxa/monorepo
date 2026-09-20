@@ -74,12 +74,13 @@ attack protection, and export every subject it holds.
 
 ### What the paid tiers add
 
-Pro and Premium both carry `custom_domain`, `session_policy` and `branding`. Premium adds
-`regional_placement`, which puts the tenant object near the customers it serves, and raises the DAU
-cap and the retention window per the table above. These are presentation and policy — a hostname of
-the customer's own, control over session and token lifetimes, and sign-in pages and emails in the
-customer's own design — and none of them changes how strong an authentication is, which is exactly
-why they are the paid ones.
+Pro and Premium both carry `custom_domain`, `session_policy` and `unbranded_pages`, which drops the
+platform's name from the hosted pages. Premium adds `branding` — the logo, palette, radius,
+typeface, stylesheet and per-screen copy of the brand record — and raises the DAU cap and the
+retention window per the table above. Placement stays out of the catalog: a tenant object is created
+with a suggested region and holds it for life, so a tier selling placement would promise a hint the
+platform fixes at creation and no upgrade moves. What the paid tiers add is presentation and policy,
+and none of it changes how strong an authentication is, which is exactly why they are the paid ones.
 
 ### The add-ons
 
