@@ -102,6 +102,9 @@ export type SubjectIdentifierRow = TableRow<typeof subjectIdentifiers>;
 /** Whether an attribute reaches only the tenant, the subject's own read, or a token. */
 export type AttributeVisibility = "internal" | "claim" | "self";
 
+/** A declared attribute's value, kept to a flat, wire-serializable shape. */
+export type AttributeValue = string | number | boolean | null;
+
 /**
  * Who is asking. `subject` is the account acting on itself through a self-service
  * screen; `admin` is a tenant-privileged actor such as the dashboard. Kept to these two
@@ -790,8 +793,8 @@ export type DescribeSubjectResult =
 			ok: true;
 			profile: SubjectProfile & { id: string; status: SubjectRow["status"] };
 			identifiers: IdentifierState[];
-			attributes: Record<string, unknown>;
-			credentials: [];
+			attributes: Record<string, AttributeValue>;
+			credentials: never[];
 	  }
 	| { ok: false; reason: "not-found" };
 
@@ -822,13 +825,13 @@ export async function describeSubject(
 		where: { subject_id: input.subjectId },
 	});
 
-	let attributes: Record<string, unknown> = {};
+	let attributes: Record<string, AttributeValue> = {};
 
 	for (let row of attributeRows) {
 		let definition = await db.find(attributeDefinitions, { key: row.key });
 		if (!definition) continue;
 		if (definition.visibility === "internal" && input.audience.kind !== "admin") continue;
-		attributes[row.key] = row.value;
+		attributes[row.key] = row.value as AttributeValue;
 	}
 
 	return {
