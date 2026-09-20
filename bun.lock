@@ -30,6 +30,8 @@
         "@sdxc/crypto": "workspace:*",
         "@sdxc/data-table-d1": "workspace:*",
         "@sdxc/data-table-sqlstorage": "workspace:*",
+        "@sdxc/flags": "workspace:*",
+        "@sdxc/flags-engine": "workspace:*",
         "@sdxc/get-client-ip": "workspace:*",
         "@sdxc/hostname": "workspace:*",
         "@sdxc/http": "workspace:*",
