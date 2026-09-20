@@ -12,6 +12,8 @@
 import type { Middleware } from "remix/router";
 
 import { log } from "@sdxc/logger/middleware";
+import { CloudflareTransport } from "@sdxc/mail/cloudflare";
+import mail from "@sdxc/mail/middleware";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
@@ -35,11 +37,16 @@ import jwks from "~/app/http/controllers/well-known/jwks";
 import oauthAuthorizationServer from "~/app/http/controllers/well-known/oauth-authorization-server";
 import openidConfiguration from "~/app/http/controllers/well-known/openid-configuration";
 import i18n from "~/app/http/middleware/i18n";
+import { platformSender } from "~/app/http/middleware/mail-sender";
 import render from "~/app/http/middleware/render";
 import { tenant } from "~/app/http/middleware/tenant";
+import { parseSenderAddress } from "~/app/mail/sender";
 import routes from "~/routes/tenant";
 
 import { logger } from "./logger";
+
+/** The platform's own configured sender, shared by the mail middleware's base identity and every per-tenant override. */
+let platformFrom = parseSenderAddress(env.EMAIL_FROM);
 
 /** Kept as a non-tuple `Middleware[]` so the router context stays the base `RequestContext`. */
 let globalMiddleware: Middleware[] = [
@@ -49,6 +56,8 @@ let globalMiddleware: Middleware[] = [
 	render as Middleware,
 	formData() as Middleware,
 	i18n as Middleware,
+	platformSender(platformFrom),
+	mail({ transport: new CloudflareTransport(env.SEND_EMAIL), from: platformFrom }) as Middleware,
 ];
 
 /**

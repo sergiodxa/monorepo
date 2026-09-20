@@ -41,6 +41,7 @@ describe("provision", () => {
 				"0008-consent",
 				"0009-authorization",
 				"0010-tokens",
+				"0011-mail-rate-limit",
 			],
 			issuer: "https://tenant-1.example.com",
 			keys: { keys: [expect.objectContaining({ kty: "EC", alg: "ES256" })] },

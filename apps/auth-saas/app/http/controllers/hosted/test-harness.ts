@@ -8,10 +8,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Transport } from "@sdxc/mail";
 import type { Middleware } from "remix/router";
 
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
+import { MemoryTransport } from "@sdxc/mail/memory";
+import mail from "@sdxc/mail/middleware";
 import { Database } from "remix/data-table";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
@@ -28,6 +31,7 @@ import {
 import { signUpShow, signUpSubmit } from "~/app/http/controllers/hosted/sign-up";
 import { verifyResend, verifyShow } from "~/app/http/controllers/hosted/verify";
 import i18n from "~/app/http/middleware/i18n";
+import { platformSender } from "~/app/http/middleware/mail-sender";
 import render from "~/app/http/middleware/render";
 import {
 	TENANT_ID_HEADER,
@@ -42,13 +46,18 @@ export const TENANT_ID = "tenant_1";
 export const ISSUER = `https://${TENANT_ID}.example.com`;
 export const REDIRECT_URI = "https://example.com/callback";
 
+/** The sender identity every test message carries, standing in for the real `EMAIL_FROM`. */
+export const TEST_MAIL_FROM = { email: "no-reply@example.com", name: "Test Sender" };
+
 /** Builds the tenant router wired to a constructed Durable Object, mapping every hosted route. */
-function buildRouter(tenantDO: Tenant) {
+function buildRouter(tenantDO: Tenant, transport: Transport) {
 	let middleware: Middleware[] = [
 		tenant(() => tenantDO as unknown as DurableObjectStub<Tenant>),
 		render as Middleware,
 		formData() as Middleware,
 		i18n as Middleware,
+		platformSender(TEST_MAIL_FROM),
+		mail({ transport, from: TEST_MAIL_FROM }) as Middleware,
 	];
 	let router = createRouter({ middleware });
 
@@ -74,21 +83,30 @@ export interface Harness {
 	tenantDO: Tenant;
 	db: Database;
 	router: ReturnType<typeof buildRouter>;
+	/** Records every message the hosted flow sent, unless a test supplied its own transport. */
+	mailTransport: Transport;
 	/** A request already resolved to the fixture tenant, with a `Cookie` header when given one. */
 	request(path: string, init?: RequestInit & { cookie?: string }): Request;
 }
 
+export interface BuildHarnessOptions {
+	/** A transport to exercise a failed send with; defaults to a fresh `MemoryTransport`. */
+	transport?: Transport;
+}
+
 /** Provisions a fresh tenant and its router, ready for a hosted-flow test. */
-export async function buildHarness(): Promise<Harness> {
+export async function buildHarness(options: BuildHarnessOptions = {}): Promise<Harness> {
 	let state = createDurableObjectState();
 	let tenantDO = new Tenant(state, {} as Cloudflare.Env);
 	await tenantDO.provision({ tenantId: TENANT_ID, issuer: ISSUER });
 	let db = new Database(createSQLStorageDatabaseAdapter(state.storage.sql));
+	let transport = options.transport ?? new MemoryTransport();
 
 	return {
 		tenantDO,
 		db,
-		router: buildRouter(tenantDO),
+		router: buildRouter(tenantDO, transport),
+		mailTransport: transport,
 		request(path, init = {}) {
 			let { cookie, headers: initHeaders, ...rest } = init;
 			let headers = new Headers(initHeaders);

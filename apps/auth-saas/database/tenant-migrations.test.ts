@@ -40,6 +40,7 @@ describe("runMigrations", () => {
 			"0008-consent",
 			"0009-authorization",
 			"0010-tokens",
+			"0011-mail-rate-limit",
 		]);
 	});
 
@@ -101,6 +102,7 @@ describe("runMigrations", () => {
 			{ id: "0008-consent", applied_at: expect.any(Number) },
 			{ id: "0009-authorization", applied_at: expect.any(Number) },
 			{ id: "0010-tokens", applied_at: expect.any(Number) },
+			{ id: "0011-mail-rate-limit", applied_at: expect.any(Number) },
 		]);
 	});
 

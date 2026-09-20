@@ -58,6 +58,9 @@ export default {
 		pending: {
 			heading: "Check your email",
 			body: "We sent a verification link to your email address. Follow it to finish setting up your account.",
+			sendFailedHeading: "Your account was created",
+			sendFailedBody:
+				"We couldn't send the verification email right now. Use the button below to send it again.",
 			resend: "Resend verification email",
 			resent: "We sent another verification link.",
 		},
@@ -105,6 +108,25 @@ export default {
 			similarToIdentifier: "Your password can't be similar to your email.",
 			deniedTerm: 'Your password can\'t contain "{{term}}".',
 			reused: "Choose a password you haven't used before.",
+		},
+	},
+
+	mail: {
+		footer: "This is an automated message from {{tenantName}}.",
+		verifyAddress: {
+			subject: "Verify your email for {{tenantName}}",
+			preview: "Confirm your email address to finish setting up your account.",
+			heading: "Confirm your email address",
+			body: "Follow this link to finish setting up your {{tenantName}} account.",
+			action: "Verify email",
+		},
+		resetPassword: {
+			subject: "Reset your password for {{tenantName}}",
+			preview: "Use this link to choose a new password.",
+			heading: "Reset your password",
+			body: "Follow this link to choose a new password for your {{tenantName}} account.",
+			action: "Reset password",
+			unexpected: "If you didn't request this, you can safely ignore this email.",
 		},
 	},
 

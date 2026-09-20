@@ -19,6 +19,7 @@ import { and, column as c, eq, notInList, notNull, table } from "remix/data-tabl
 import type { OpenSessionResult } from "./sessions";
 import type { Actor, IdentifierKind, SubjectIdentifierRow } from "./subjects";
 
+import { checkAndSpendMailEnvelope } from "./mail-rate-limit";
 import { openSession, revokeSubjectSessions } from "./sessions";
 import { foldIdentifier } from "./subject-identifiers";
 import { subjectIdentifiers, subjects } from "./subjects";
@@ -574,6 +575,7 @@ export async function beginPasswordReset(
 
 	let subjectId: string | null = null;
 	let address: string | null = null;
+	let addressFolded: string | null = null;
 
 	if (folded.ok) {
 		let identifierRow = await db.findOne(subjectIdentifiers, {
@@ -585,6 +587,7 @@ export async function beginPasswordReset(
 
 			if (identifierRow.kind === "email") {
 				address = identifierRow.value;
+				addressFolded = identifierRow.folded;
 			} else {
 				let primaryEmail = await db.findOne(subjectIdentifiers, {
 					where: and(
@@ -594,23 +597,36 @@ export async function beginPasswordReset(
 					),
 				});
 				address = primaryEmail?.value ?? null;
+				addressFolded = primaryEmail?.folded ?? null;
 			}
 		}
 	}
 
-	if (subjectId !== null && address !== null) {
-		let hashed = await sha256(ticket);
+	/**
+	 * A spent envelope nulls `address` exactly the way an unresolved identifier
+	 * already does, rather than adding a refusal shape of its own — the request leg's
+	 * response is built from `address` alone, so this is what keeps a rate-limited
+	 * mailbox indistinguishable from one that never resolved.
+	 */
+	if (subjectId !== null && address !== null && addressFolded !== null) {
+		let envelope = await checkAndSpendMailEnvelope(db, { address: addressFolded });
 
-		if (isSuccess(hashed)) {
-			let now = Date.now();
+		if (!envelope.ok) {
+			address = null;
+		} else {
+			let hashed = await sha256(ticket);
 
-			await db.create(passwordResetTickets, {
-				id: resetTicketRowId(generateUUID()).toString(),
-				subject_id: subjectId,
-				ticket_hash: Hex.encode(hashed.data),
-				expires_at: now + RESET_TICKET_TTL_MS,
-				created_at: now,
-			});
+			if (isSuccess(hashed)) {
+				let now = Date.now();
+
+				await db.create(passwordResetTickets, {
+					id: resetTicketRowId(generateUUID()).toString(),
+					subject_id: subjectId,
+					ticket_hash: Hex.encode(hashed.data),
+					expires_at: now + RESET_TICKET_TTL_MS,
+					created_at: now,
+				});
+			}
 		}
 	}
 

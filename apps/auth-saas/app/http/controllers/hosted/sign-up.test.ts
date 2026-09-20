@@ -9,6 +9,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { SentMessage } from "@sdxc/mail";
+import type { MemoryTransport } from "@sdxc/mail/memory";
+import type { Result } from "@sdxc/result";
+
+import { MailError } from "@sdxc/mail";
+import { failure } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { Harness } from "~/app/http/controllers/hosted/test-harness";
@@ -19,7 +25,15 @@ import {
 	createTestSubjectWithPassword,
 	REDIRECT_URI,
 } from "~/app/http/controllers/hosted/test-harness";
-import { subjectIdentifiers } from "~/database/subjects";
+import { VerifyAddressEmail } from "~/app/mail/verify-address-email";
+import { subjectIdentifiers, subjects } from "~/database/subjects";
+
+/** A transport that always refuses delivery, for exercising a failed sign-up send. */
+class FailingTransport {
+	async send(): Promise<Result<SentMessage, MailError>> {
+		return failure(new MailError("the test transport always refuses"));
+	}
+}
 
 let harness: Harness;
 
@@ -138,5 +152,64 @@ describe("sign-up", () => {
 		expect(response.status).toBe(400);
 		let body = await response.text();
 		expect(body).toContain("valid email");
+	});
+
+	test("sends a verification email carrying the minted ticket's link", async () => {
+		let signUpResponse = await harness.router.fetch(
+			harness.request("/u/sign-up", {
+				method: "POST",
+				body: form({
+					email: "jane@example.com",
+					password: "correct horse battery staple",
+					name: "Jane",
+				}),
+			}),
+		);
+
+		let subjectId = new URL(signUpResponse.headers.get("Location") ?? "").searchParams.get(
+			"subject",
+		);
+		let identifierRow = await harness.db.findOne(subjectIdentifiers, {
+			where: { subject_id: subjectId ?? "", kind: "email" },
+		});
+		let ticket = identifierRow?.verification_ticket;
+		expect(ticket).toBeTruthy();
+
+		let transport = harness.mailTransport as MemoryTransport;
+		expect(transport.messages).toHaveLength(1);
+		let sent = transport.last;
+		expect(sent?.to).toEqual([{ email: "jane@example.com" }]);
+		expect(sent?.email).toBeInstanceOf(VerifyAddressEmail);
+		expect(sent?.html).toContain(String(ticket));
+	});
+
+	test("a failed send still creates the subject and renders the distinct failure state", async () => {
+		let failingHarness = await buildHarness({ transport: new FailingTransport() });
+
+		let signUpResponse = await failingHarness.router.fetch(
+			failingHarness.request("/u/sign-up", {
+				method: "POST",
+				body: form({
+					email: "jane@example.com",
+					password: "correct horse battery staple",
+					name: "Jane",
+				}),
+			}),
+		);
+
+		expect(signUpResponse.status).toBe(302);
+		let location = new URL(signUpResponse.headers.get("Location") ?? "");
+		expect(location.searchParams.get("sendFailed")).toBe("1");
+
+		let subjectId = location.searchParams.get("subject");
+		let subjectRow = await failingHarness.db.find(subjects, { id: subjectId ?? "" });
+		expect(subjectRow).toBeTruthy();
+
+		let pendingResponse = await failingHarness.router.fetch(
+			failingHarness.request(`${location.pathname}${location.search}`),
+		);
+		expect(pendingResponse.status).toBe(200);
+		let body = await pendingResponse.text();
+		expect(body).toContain("Your account was created");
 	});
 });

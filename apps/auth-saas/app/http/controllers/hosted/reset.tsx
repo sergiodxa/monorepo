@@ -5,6 +5,9 @@
  * never distinguishes; with one, the new-password form `completePasswordReset`
  * spends. Neither leg opens a session — a reset revokes every one the
  * subject held — so a completed reset offers `/u/sign-in` for signing in fresh.
+ * The request leg sends only when `beginPasswordReset` hands back an address,
+ * which is also null when its own rate envelope is spent, so a send attempt
+ * never varies the confirmation the two cases already share.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,6 +24,9 @@ import { createAction } from "remix/router";
 import type { PasswordPolicy } from "~/database/passwords";
 
 import { passwordPolicyIssue } from "~/app/http/controllers/hosted/password-policy-issue";
+import { resetPasswordLink } from "~/app/mail/links";
+import { ResetPasswordEmail } from "~/app/mail/reset-password-email";
+import { senderAddressFor, senderNameFromIssuer } from "~/app/mail/sender";
 import { HostedDocument } from "~/app/views/hosted/document";
 import { ResetPage } from "~/app/views/hosted/reset";
 import routes from "~/routes/tenant";
@@ -139,7 +145,19 @@ export const resetSubmit = createAction(routes.hostedResetSubmit, async (ctx) =>
 		let parsed = s.parseSafe(RequestSchema, ctx.formData);
 		if (!parsed.success) return renderRequestForm(ctx, parsed.issues);
 
-		await ctx.tenantStub.beginPasswordReset({ identifier: parsed.value.identifier });
+		let begun = await ctx.tenantStub.beginPasswordReset({ identifier: parsed.value.identifier });
+
+		if (begun.address !== null) {
+			await ctx.email.send(
+				new ResetPasswordEmail({
+					email: begun.address,
+					url: resetPasswordLink(ctx, begun.ticket),
+					tenantName: senderNameFromIssuer(ctx.tenant.issuer),
+					t,
+				}),
+				{ from: senderAddressFor(ctx) },
+			);
+		}
 
 		return ctx.render(
 			<HostedDocument title={t("hostedReset.requestTitle")} locale={ctx.locale}>

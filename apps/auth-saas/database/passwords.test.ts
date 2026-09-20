@@ -22,6 +22,7 @@ import m0001 from "./tenant-migrations/0001-init.sql?raw";
 import m0002 from "./tenant-migrations/0002-subjects.sql?raw";
 import m0003 from "./tenant-migrations/0003-passwords.sql?raw";
 import m0005 from "./tenant-migrations/0005-sessions.sql?raw";
+import m0011 from "./tenant-migrations/0011-mail-rate-limit.sql?raw";
 
 let db: Database;
 
@@ -35,6 +36,7 @@ beforeEach(async () => {
 	await driver.executeScript(m0002);
 	await driver.executeScript(m0003);
 	await driver.executeScript(m0005);
+	await driver.executeScript(m0011);
 
 	db = new Database(driver);
 });
@@ -636,5 +638,62 @@ describe("beginPasswordReset / completePasswordReset", () => {
 			newPassword: "a-perfectly-fine-password-1",
 		});
 		expect(secondAttempt).toEqual({ ok: false, reason: "invalid-ticket" });
+	});
+});
+
+describe("beginPasswordReset: the shared mail send envelope", () => {
+	test("stops minting a ticket for an address once its envelope is spent", async () => {
+		await createVerifiedSubject("jane@example.com");
+
+		// One send already happened inside `createVerifiedSubject`'s own `addIdentifier`
+		// call, so four more here reach the shared cap of five.
+		for (let i = 0; i < 4; i++) {
+			let begun = await Passwords.beginPasswordReset(db, { identifier: "jane@example.com" });
+			expect(begun.address).toBe("jane@example.com");
+		}
+
+		let capped = await Passwords.beginPasswordReset(db, { identifier: "jane@example.com" });
+
+		expect(capped).toEqual({ ok: true, ticket: expect.any(String), address: null });
+	});
+
+	test("is spent by addIdentifier's resends and refuses beginPasswordReset for the same address", async () => {
+		let created = await Subjects.createSubject(db, {
+			identifiers: [{ kind: "email", value: "jane@example.com" }],
+		});
+		if (!created.ok) throw new Error("unreachable");
+
+		let lastTicket = "";
+
+		// The first mint plus four resends spend the whole shared cap of five, all
+		// through `addIdentifier` alone; the address is never verified in between.
+		for (let i = 0; i < 5; i++) {
+			let added = await Subjects.addIdentifier(db, {
+				subjectId: created.subjectId,
+				kind: "email",
+				value: "jane@example.com",
+				actor: subjectActor,
+			});
+			if (!added.ok || added.kind !== "email") throw new Error("unreachable");
+			lastTicket = added.ticket;
+		}
+
+		let refusedResend = await Subjects.addIdentifier(db, {
+			subjectId: created.subjectId,
+			kind: "email",
+			value: "jane@example.com",
+			actor: subjectActor,
+		});
+		expect(refusedResend).toEqual({
+			ok: false,
+			reason: "rate-limited",
+			retryAfterSeconds: expect.any(Number),
+		});
+
+		await Subjects.verifyIdentifier(db, { ticket: lastTicket });
+
+		let begun = await Passwords.beginPasswordReset(db, { identifier: "jane@example.com" });
+
+		expect(begun).toEqual({ ok: true, ticket: expect.any(String), address: null });
 	});
 });

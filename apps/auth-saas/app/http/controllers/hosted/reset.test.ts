@@ -9,6 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { MemoryTransport } from "@sdxc/mail/memory";
+
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { Harness } from "~/app/http/controllers/hosted/test-harness";
@@ -19,6 +21,7 @@ import {
 	createTestSubjectWithPassword,
 	REDIRECT_URI,
 } from "~/app/http/controllers/hosted/test-harness";
+import { ResetPasswordEmail } from "~/app/mail/reset-password-email";
 
 let harness: Harness;
 
@@ -78,6 +81,34 @@ describe("reset", () => {
 		expect(resolved.status).toBe(unresolved.status);
 		let [resolvedBody, unresolvedBody] = await Promise.all([resolved.text(), unresolved.text()]);
 		expect(resolvedBody).toBe(unresolvedBody);
+	});
+
+	test("sends a reset email only when the identifier resolves, without changing the response", async () => {
+		await createTestSubjectWithPassword(harness.tenantDO, {
+			email: "jane@example.com",
+			password: "correct horse battery staple",
+		});
+		let transport = harness.mailTransport as MemoryTransport;
+
+		let unresolved = await harness.router.fetch(
+			harness.request("/u/reset", {
+				method: "POST",
+				body: form({ identifier: "nobody@example.com" }),
+			}),
+		);
+		expect(unresolved.status).toBe(200);
+		expect(transport.messages).toHaveLength(0);
+
+		let resolved = await harness.router.fetch(
+			harness.request("/u/reset", {
+				method: "POST",
+				body: form({ identifier: "jane@example.com" }),
+			}),
+		);
+		expect(resolved.status).toBe(200);
+		expect(transport.messages).toHaveLength(1);
+		expect(transport.last?.to).toEqual([{ email: "jane@example.com" }]);
+		expect(transport.last?.email).toBeInstanceOf(ResetPasswordEmail);
 	});
 
 	test("completing a reset with a valid ticket signs in with the new password afterward", async () => {

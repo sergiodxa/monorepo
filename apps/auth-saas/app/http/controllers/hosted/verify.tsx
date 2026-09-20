@@ -6,6 +6,9 @@
  * back through `describeSubject` and mints a fresh ticket for that same
  * address — a subject id alone grants no capability, since every write here
  * still runs through the subject's own row rather than a client-supplied value.
+ * A resend sends the fresh ticket over mail the same way the original did; the
+ * response says a link went out whether or not a fresh one actually did, the
+ * same framing an unresolved-but-plausible resend already carries.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,6 +19,9 @@ import type { RequestContext } from "remix/router";
 import { createAction } from "remix/router";
 
 import { redirectToErrorPage } from "~/app/http/controllers/hosted/outcome";
+import { verifyAddressLink } from "~/app/mail/links";
+import { senderAddressFor, senderNameFromIssuer } from "~/app/mail/sender";
+import { VerifyAddressEmail } from "~/app/mail/verify-address-email";
 import { HostedDocument } from "~/app/views/hosted/document";
 import { VerifyPage } from "~/app/views/hosted/verify";
 import routes from "~/routes/tenant";
@@ -28,7 +34,10 @@ function actionUrl(ctx: RequestContext, path: string): string {
 }
 
 /** Renders the "check your email" state for the subject its `subject` query parameter names. */
-function renderPending(ctx: RequestContext, resent: boolean): Promise<Response> {
+function renderPending(
+	ctx: RequestContext,
+	input: { resent: boolean; sendFailed?: boolean },
+): Promise<Response> {
 	let t = ctx.i18next.t;
 
 	return ctx.render(
@@ -37,7 +46,8 @@ function renderPending(ctx: RequestContext, resent: boolean): Promise<Response> 
 				t={t}
 				state="pending"
 				resendAction={actionUrl(ctx, routes.hostedVerifyResend.href())}
-				resent={resent}
+				resent={input.resent}
+				sendFailed={input.sendFailed ?? false}
 			/>
 		</HostedDocument>,
 	);
@@ -71,7 +81,8 @@ export const verifyShow = createAction(routes.hostedVerifyShow, async (ctx) => {
 		return redirectToErrorPage(ctx, t("hostedVerify.errors.missingState"));
 	}
 
-	return renderPending(ctx, false);
+	let sendFailed = ctx.url.searchParams.get("sendFailed") === "1";
+	return renderPending(ctx, { resent: false, sendFailed });
 });
 
 /**
@@ -96,12 +107,12 @@ export const verifyResend = createAction(routes.hostedVerifyResend, async (ctx) 
 		subjectId,
 		audience: { kind: "subject" },
 	});
-	if (!described.ok) return renderPending(ctx, false);
+	if (!described.ok) return renderPending(ctx, { resent: false });
 
 	let unverifiedEmail = described.identifiers.find(
 		(identifier) => identifier.kind === "email" && !identifier.verified,
 	);
-	if (!unverifiedEmail) return renderPending(ctx, false);
+	if (!unverifiedEmail) return renderPending(ctx, { resent: false });
 
 	let added = await ctx.tenantStub.addIdentifier({
 		subjectId,
@@ -110,5 +121,17 @@ export const verifyResend = createAction(routes.hostedVerifyResend, async (ctx) 
 		actor: { kind: "subject" },
 	});
 
-	return renderPending(ctx, added.ok);
+	if (added.ok && added.kind === "email") {
+		await ctx.email.send(
+			new VerifyAddressEmail({
+				email: added.value,
+				url: verifyAddressLink(ctx, added.ticket),
+				tenantName: senderNameFromIssuer(ctx.tenant.issuer),
+				t,
+			}),
+			{ from: senderAddressFor(ctx) },
+		);
+	}
+
+	return renderPending(ctx, { resent: added.ok });
 });

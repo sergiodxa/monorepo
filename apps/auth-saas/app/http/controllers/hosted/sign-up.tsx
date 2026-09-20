@@ -7,6 +7,11 @@
  * verified identifier, so a fresh signup lands on `/u/verify` instead of
  * completing any authorization it may have arrived from.
  *
+ * The verification email sends before the password is written, so a subject
+ * always exists once a send is attempted; a failed send carries forward as
+ * `sendFailed` on the `/u/verify` redirect rather than rolling the subject
+ * back, since losing an account is worse than one waiting on a resend.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -14,6 +19,7 @@
 import type { Form } from "@sdxc/ui";
 import type { RequestContext } from "remix/router";
 
+import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 import * as f from "remix/data-schema/form-data";
@@ -22,6 +28,9 @@ import { createAction } from "remix/router";
 import type { PasswordPolicy } from "~/database/passwords";
 
 import { passwordPolicyIssue } from "~/app/http/controllers/hosted/password-policy-issue";
+import { verifyAddressLink } from "~/app/mail/links";
+import { senderAddressFor, senderNameFromIssuer } from "~/app/mail/sender";
+import { VerifyAddressEmail } from "~/app/mail/verify-address-email";
 import { HostedDocument } from "~/app/views/hosted/document";
 import { SignUpPage } from "~/app/views/hosted/sign-up";
 import routes from "~/routes/tenant";
@@ -126,6 +135,24 @@ export const signUpSubmit = createAction(routes.hostedSignUpSubmit, async (ctx) 
 		});
 	}
 
+	let sendFailed = false;
+
+	if (added.kind === "email") {
+		let tenantName = senderNameFromIssuer(ctx.tenant.issuer);
+
+		let sent = await ctx.email.send(
+			new VerifyAddressEmail({
+				email: added.value,
+				url: verifyAddressLink(ctx, added.ticket),
+				tenantName,
+				t,
+			}),
+			{ from: senderAddressFor(ctx) },
+		);
+
+		sendFailed = isFailure(sent);
+	}
+
 	let written = await ctx.tenantStub.setPassword({
 		subjectId: created.subjectId,
 		password,
@@ -148,6 +175,7 @@ export const signUpSubmit = createAction(routes.hostedSignUpSubmit, async (ctx) 
 
 	let url = new URL(routes.hostedVerifyShow.href(), ctx.request.url);
 	url.searchParams.set("subject", created.subjectId);
+	if (sendFailed) url.searchParams.set("sendFailed", "1");
 	let uiLocales = ctx.url.searchParams.get("ui_locales");
 	if (uiLocales) url.searchParams.set("ui_locales", uiLocales);
 

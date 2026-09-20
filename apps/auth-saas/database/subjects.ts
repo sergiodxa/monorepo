@@ -16,6 +16,7 @@ import { and, column as c, eq, isNull, lt, ne, notNull, or, table } from "remix/
 
 import type { IdentifierKind } from "./subject-identifiers";
 
+import { checkAndSpendMailEnvelope } from "./mail-rate-limit";
 import { revokeSubjectSessions, sessions } from "./sessions";
 import { foldIdentifier } from "./subject-identifiers";
 
@@ -354,7 +355,8 @@ export type AddIdentifierResult =
 	| { ok: false; reason: "not-found" }
 	| { ok: false; reason: "invalid-identifier" }
 	| { ok: false; reason: "identifier-taken" }
-	| { ok: false; reason: "username-already-set" };
+	| { ok: false; reason: "username-already-set" }
+	| { ok: false; reason: "rate-limited"; retryAfterSeconds: number };
 
 /**
  * Folds and claims a new identifier for an existing subject. An email is written
@@ -402,6 +404,11 @@ export async function addIdentifier(
 	let id = identifierRowId(generateUUID()).toString();
 
 	if (input.kind === "email") {
+		let envelope = await checkAndSpendMailEnvelope(db, { address: folded.folded });
+		if (!envelope.ok) {
+			return { ok: false, reason: "rate-limited", retryAfterSeconds: envelope.retryAfterSeconds };
+		}
+
 		let ticket = generateUUID();
 		let ticketExpiresAt = now + TICKET_TTL_MS;
 
@@ -451,6 +458,11 @@ async function resendOrReturn(
 ): Promise<AddIdentifierResult> {
 	if (existing.kind === "username") {
 		return { ok: true, identifierId: existing.id, kind: "username", value: existing.value };
+	}
+
+	let envelope = await checkAndSpendMailEnvelope(db, { address: existing.folded });
+	if (!envelope.ok) {
+		return { ok: false, reason: "rate-limited", retryAfterSeconds: envelope.retryAfterSeconds };
 	}
 
 	let ticket = generateUUID();

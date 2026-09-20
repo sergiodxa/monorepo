@@ -21,6 +21,8 @@ export namespace VerifyPage {
 				/** Where the resend control posts back to, carrying the subject id in its query. */
 				resendAction: string;
 				resent: boolean;
+				/** Whether the sign-up that landed here could not send its verification email. */
+				sendFailed: boolean;
 		  }
 		| { t: TFunction; state: "verified" }
 		| { t: TFunction; state: "invalid" };
@@ -67,10 +69,18 @@ export function VerifyPage(handle: Handle<VerifyPage.Props>) {
 		return (
 			<Card mix={[is("100%"), maxIs("24rem")]}>
 				<Card.Header>
-					<Card.Title>{t("hostedVerify.pending.heading")}</Card.Title>
+					<Card.Title>
+						{props.sendFailed
+							? t("hostedVerify.pending.sendFailedHeading")
+							: t("hostedVerify.pending.heading")}
+					</Card.Title>
 				</Card.Header>
 				<Card.Content mix={[vstack({ gap: 3 })]}>
-					<Text>{t("hostedVerify.pending.body")}</Text>
+					<Text>
+						{props.sendFailed
+							? t("hostedVerify.pending.sendFailedBody")
+							: t("hostedVerify.pending.body")}
+					</Text>
 
 					{props.resent && (
 						<Alert color="success">
