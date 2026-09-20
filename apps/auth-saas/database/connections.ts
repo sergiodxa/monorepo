@@ -128,7 +128,7 @@ export interface ConnectionMappingInput {
  * declared attribute key, read off `subjects.ts`'s own `SubjectProfile` shape
  * rather than duplicated here as a second list that could drift from it.
  */
-const STANDARD_PROFILE_TARGETS = new Set([
+export const STANDARD_PROFILE_TARGETS = new Set([
 	"name",
 	"givenName",
 	"familyName",
@@ -258,7 +258,7 @@ function toConnectionRecord(
 }
 
 /** The redirect URI a provider's console is told once: fixed to the tenant's platform subdomain, named by this connection's own immutable slug. */
-function buildCallbackUrl(callbackOrigin: string, slug: string): string {
+export function buildCallbackUrl(callbackOrigin: string, slug: string): string {
 	return `${callbackOrigin}/u/connections/${slug}/callback`;
 }
 

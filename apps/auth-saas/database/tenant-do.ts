@@ -48,6 +48,13 @@ import type {
 	UpdateClientResult,
 } from "./clients";
 import type {
+	BeginConnectionSignInInput,
+	BeginConnectionSignInResult,
+	CompleteConnectionSignInInput,
+	CompleteConnectionSignInResult,
+	ResumeConnectionSignInInput,
+} from "./connection-sign-in";
+import type {
 	DescribeConnectionsInput,
 	DescribeConnectionsResult,
 	RemoveConnectionResult,
@@ -158,6 +165,7 @@ import {
 } from "./audit-events";
 import * as Authorization from "./authorization";
 import * as Clients from "./clients";
+import * as ConnectionSignIn from "./connection-sign-in";
 import * as Connections from "./connections";
 import * as Consent from "./consent";
 import { hasAnotherCredential } from "./credentials";
@@ -1086,8 +1094,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * past their rotation window, deletes pending interactions past their ten-minute
 	 * window, deletes authorization codes left unredeemed past their sixty seconds or
 	 * redeemed long enough ago that a replay is no longer worth recognizing, deletes
-	 * refresh tokens whose family is past its ninety-day ceiling, then arms tomorrow's
-	 * run.
+	 * refresh tokens whose family is past its ninety-day ceiling, deletes connection
+	 * sign-in transactions past their ten-minute window and handoff tickets past
+	 * their thirty seconds, then arms tomorrow's run.
 	 *
 	 * Never rejects, the way a Durable Object alarm should not: a rejected alarm is
 	 * retried by the platform, which would repeat a sweep that already ran.
@@ -1126,6 +1135,16 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 
 			for (let iteration = 0; iteration < 20; iteration++) {
 				let { more } = await Tokens.sweepExpiredRefreshTokens(this.#db);
+				if (!more) break;
+			}
+
+			for (let iteration = 0; iteration < 20; iteration++) {
+				let { more } = await ConnectionSignIn.sweepExpiredConnectionTransactions(this.#db);
+				if (!more) break;
+			}
+
+			for (let iteration = 0; iteration < 20; iteration++) {
+				let { more } = await ConnectionSignIn.sweepExpiredConnectionHandoffs(this.#db);
 				if (!more) break;
 			}
 		} catch (error) {
@@ -1350,6 +1369,91 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	): Promise<WithCost<DescribeConnectionsResult>> {
 		await this.#migrated;
 		return this.#withCost(() => Connections.describeConnections(this.#db, input));
+	}
+
+	/**
+	 * Starts a sign-in against a connection's provider, answering the redirect a
+	 * controller sends the browser to next.
+	 *
+	 * @param input - The connection, the pending authorization request and
+	 * hostname the callback answers back to, and any extra scopes or `prompt`.
+	 * @returns The provider's authorization URL, or that no such enabled
+	 * connection exists, or that its kind has no sign-in flow yet.
+	 */
+	async beginConnectionSignIn(
+		input: BeginConnectionSignInInput,
+	): Promise<WithCost<BeginConnectionSignInResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let sealKey = await this.#sealKey();
+			return ConnectionSignIn.beginConnectionSignIn(this.#db, sealKey, input);
+		});
+	}
+
+	/**
+	 * Spends a connection's callback and opens a session for the subject it
+	 * resolves to, counting the sign-in against this tenant's daily active user
+	 * meter the same way every other credential path does.
+	 *
+	 * @param input - The connection, the callback URL exactly as the browser
+	 * reached it, and the request's `User-Agent`.
+	 * @returns The resolved subject, the hostname to hand the browser back to, and
+	 * the handoff ticket to redirect there with, or which check refused the
+	 * callback.
+	 */
+	async completeConnectionSignIn(
+		input: CompleteConnectionSignInInput,
+	): Promise<WithCost<CompleteConnectionSignInResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let [sealKey, { cap, hard }] = await Promise.all([this.#sealKey(), this.#dauEnforcement()]);
+
+			return ConnectionSignIn.completeConnectionSignIn(this.#db, sealKey, input, {
+				cache: this.#dauCache,
+				cap,
+				hard,
+			});
+		});
+	}
+
+	/**
+	 * Spends a completed sign-in's handoff ticket and resumes the pending
+	 * authorization request it was answering — one call answers with the redirect
+	 * a controller sends the browser to next, the same composition
+	 * {@link completeStepUp} runs for its own proof.
+	 *
+	 * @param input - The ticket as the redirect carried it, the hostname the
+	 * resume request landed on, and the request's `User-Agent`.
+	 * @returns The session token to set as the browser's cookie alongside the
+	 * authorization outcome the resumed interaction reaches, or that the ticket is
+	 * unknown, already spent, expired, or named a different hostname.
+	 */
+	async resumeConnectionSignIn(
+		input: ResumeConnectionSignInInput,
+	): Promise<
+		WithCost<
+			| { ok: false; reason: "invalid-ticket" }
+			| ({ ok: true; sessionToken: string } & AuthorizationOutcome)
+		>
+	> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let spent = await ConnectionSignIn.resumeConnectionSignIn(this.#db, input);
+			if (!spent.ok) return spent;
+
+			let issuer = await this.#issuer();
+			let outcome = await Authorization.resumeAuthorization(this.#db, {
+				interactionId: spent.authorizationRequestId ?? "",
+				sessionId: spent.sessionId,
+				now: Date.now(),
+				issuer,
+			});
+
+			return { ok: true, sessionToken: spent.sessionToken, ...outcome };
+		});
 	}
 
 	/**

@@ -48,6 +48,7 @@ describe("runMigrations", () => {
 			"0016-second-factor-sign-in",
 			"0017-step-up",
 			"0018-connections",
+			"0019-connection-sign-in",
 		]);
 	});
 
@@ -125,6 +126,7 @@ describe("runMigrations", () => {
 			{ id: "0016-second-factor-sign-in", applied_at: expect.any(Number) },
 			{ id: "0017-step-up", applied_at: expect.any(Number) },
 			{ id: "0018-connections", applied_at: expect.any(Number) },
+			{ id: "0019-connection-sign-in", applied_at: expect.any(Number) },
 		]);
 	});
 
