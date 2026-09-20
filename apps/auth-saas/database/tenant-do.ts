@@ -45,6 +45,11 @@ import type {
 	RevokeGrantResult,
 } from "./consent";
 import type {
+	PublishMetadataResult,
+	ResolveUserInfoInput,
+	ResolveUserInfoResult,
+} from "./metadata";
+import type {
 	BeginPasskeyAuthenticationInput,
 	BeginPasskeyAuthenticationResult,
 	BeginPasskeyRegistrationInput,
@@ -112,6 +117,7 @@ import * as Authorization from "./authorization";
 import * as Clients from "./clients";
 import * as Consent from "./consent";
 import { hasAnotherCredential } from "./credentials";
+import * as Metadata from "./metadata";
 import * as Passkeys from "./passkeys";
 import * as Passwords from "./passwords";
 import * as Sessions from "./sessions";
@@ -926,5 +932,31 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		await this.#migrated;
 		let issuer = await this.#issuer();
 		return Tokens.refreshTokens(this.#db, { ...input, issuer });
+	}
+
+	/**
+	 * Renders the OpenID configuration, the OAuth authorization server metadata, and the
+	 * JWKS document in one call.
+	 *
+	 * @param input - The clock the key set's publish window is measured against.
+	 * @returns Both metadata documents, the published key set, a version a caller can
+	 * compare against what it has cached, and how long the documents may be cached for.
+	 */
+	async publishMetadata(input: { now: number }): Promise<PublishMetadataResult> {
+		await this.#migrated;
+		let issuer = await this.#issuer();
+		return Metadata.publishMetadata(this.#db, { ...input, issuer });
+	}
+
+	/**
+	 * Assembles the claims a subject's granted scopes carry for `/userinfo`.
+	 *
+	 * @param input - The subject id a verified access token named, and the scopes its
+	 * grant covers.
+	 * @returns The subject's claims, or that the subject id no longer resolves.
+	 */
+	async resolveUserInfo(input: ResolveUserInfoInput): Promise<ResolveUserInfoResult> {
+		await this.#migrated;
+		return Metadata.resolveUserInfo(this.#db, input);
 	}
 }
