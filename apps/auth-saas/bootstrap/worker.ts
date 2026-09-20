@@ -1,8 +1,8 @@
 /**
  * The Cloudflare Worker entry point. Routes every incoming request to the right place —
- * static assets, the platform dashboard router, or a tenant Durable Object (resolved via
- * Cloudflare for SaaS `hostMetadata` or a KV-cached control-plane lookup) — and runs the
- * daily scheduled MAU-reporting cron. Also re-exports the {@link Tenant} Durable Object.
+ * static assets, the platform Worker router, or a tenant Durable Object (resolved via
+ * Cloudflare for SaaS `hostMetadata` or a KV-cached control-plane lookup). Also
+ * re-exports the {@link Tenant} Durable Object.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,14 +14,11 @@ import { isSuccess } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
 
-import { reportMAU } from "~/app/jobs/report-mau";
 import { HostMetadataSchema } from "~/app/lib/host-metadata";
 import { HOSTNAME_CACHE_TTL, hostnameCacheKey } from "~/app/lib/hostname-cache";
-import { ensurePlatformProvisioned, PLATFORM_TENANT } from "~/app/lib/platform-bootstrap";
 import { checkRateLimit } from "~/app/lib/rate-limit";
 
 import { router } from "./app";
-import { logger } from "./logger";
 import Tenant from "./tenant";
 
 export { Tenant };
@@ -31,41 +28,11 @@ interface ResolvedTenant {
 	region?: string;
 }
 
-/**
- * Path prefixes served by the tenant Durable Object (the OIDC provider surface).
- * On the platform domain these route to the platform tenant; everything else
- * there is handled by the dashboard router.
- */
-const TENANT_PATHS = [
-	"/authorize",
-	"/oauth/",
-	"/oidc/",
-	"/userinfo",
-	"/webauthn/",
-	"/.well-known/",
-	"/verify-email",
-	"/magic-link/",
-	"/api/",
-];
-
-/**
- * Platform-domain paths always served by the dashboard router, checked ahead
- * of tenant path matching.
- */
-const ROUTER_PATHS = ["/api/webhooks/"];
-
 function isPlatformHost(hostname: string): boolean {
 	if (hostname === env.PLATFORM_DOMAIN) return true;
 	if (hostname === "localhost" || hostname === "127.0.0.1") return true;
 	if (hostname.endsWith(".workers.dev")) return true;
 	return false;
-}
-
-function isTenantPath(pathname: string): boolean {
-	if (ROUTER_PATHS.some((prefix) => pathname.startsWith(prefix))) return false;
-	return TENANT_PATHS.some((prefix) =>
-		prefix.endsWith("/") ? pathname.startsWith(prefix) : pathname === prefix,
-	);
 }
 
 /**
@@ -79,10 +46,10 @@ async function resolveHostname(hostname: string): Promise<ResolvedTenant | null>
 	if (cached) return cached;
 
 	let row = await env.PLATFORM_DB.prepare(
-		`SELECT h.tenant_id AS tenantId, t.region AS region
-		 FROM hostnames h
-		 JOIN tenants t ON t.id = h.tenant_id
-		 WHERE h.hostname = ?1 AND h.status = 'active' AND t.status = 'active'
+		`SELECT d.tenant_id AS tenantId, t.region AS region
+		 FROM domains d
+		 JOIN tenants t ON t.id = d.tenant_id
+		 WHERE d.hostname = ?1 AND d.status = 'active' AND t.status = 'active'
 		 LIMIT 1`,
 	)
 		.bind(hostname)
@@ -109,25 +76,20 @@ async function forwardToTenant(request: Request, target: ResolvedTenant): Promis
 	if (rateLimitResponse) return rateLimitResponse;
 
 	let locationHint = target.region as DurableObjectLocationHint | undefined;
-	let stub =
-		target.tenantId === PLATFORM_TENANT
-			? env.TENANT.getByName(PLATFORM_TENANT)
-			: env.TENANT.getByName(target.tenantId, locationHint ? { locationHint } : undefined);
+	let stub = env.TENANT.getByName(target.tenantId, locationHint ? { locationHint } : undefined);
 	return await stub.fetch(request);
 }
 
 /**
- * The worker's exported handler, implementing the `fetch` (HTTP) and `scheduled` (cron)
- * runtime hooks.
+ * The worker's exported handler, implementing the `fetch` (HTTP) runtime hook.
  */
 export default {
 	/**
 	 * Routes an incoming HTTP request: static assets first, then the platform
-	 * dashboard router or a tenant Durable Object by host and path, provisioning
-	 * the platform tenant's issuer first since its DO is never set up via /api/setup.
+	 * Worker router or a tenant Durable Object by host and path.
 	 *
 	 * @param request - The incoming request.
-	 * @returns The response from assets, the dashboard router, or a tenant DO (or a 404
+	 * @returns The response from assets, the platform router, or a tenant DO (or a 404
 	 * when the host cannot be resolved).
 	 */
 	async fetch(request) {
@@ -141,13 +103,7 @@ export default {
 		let asset = await env.ASSETS.fetch(assetRequest);
 		if (asset.ok) return asset;
 
-		if (isPlatformHost(hostname)) {
-			if (isTenantPath(url.pathname)) {
-				await ensurePlatformProvisioned(undefined, env.PLATFORM_DOMAIN);
-				return await forwardToTenant(request, { tenantId: PLATFORM_TENANT });
-			}
-			return await router.fetch(request);
-		}
+		if (isPlatformHost(hostname)) return await router.fetch(request);
 
 		let hostMetadata = request.cf?.hostMetadata;
 		if (hostMetadata) {
@@ -164,23 +120,5 @@ export default {
 		if (resolved) return await forwardToTenant(request, resolved);
 
 		return new Response("Not found", { status: 404 });
-	},
-
-	/**
-	 * Cron entry point: opens the trigger's log and runs the matched job inside it, so the
-	 * job reads the log through `currentLog()` and a throw ends the record as a failure.
-	 * The daily MAU report runs at 1:00 AM UTC.
-	 *
-	 * @param controller - The Cloudflare scheduled controller carrying the cron pattern.
-	 * @returns A promise that resolves once the matched job(s) complete.
-	 */
-	async scheduled(controller) {
-		await logger
-			.open("cron", {
-				cron: { expression: controller.cron, scheduled_at: controller.scheduledTime },
-			})
-			.run(async () => {
-				if (controller.cron === "0 1 * * *") await reportMAU();
-			});
 	},
 } satisfies ExportedHandler<Cloudflare.Env>;

@@ -21,7 +21,7 @@ import routes from "~/routes/web";
  */
 export default createAction(routes.index, (ctx) => {
 	return ctx.render(
-		<PublicDocument title="Auth SaaS - Authentication as a Service" variant="landing">
+		<PublicDocument title="Auth SaaS - Authentication as a Service">
 			<LandingPage />
 		</PublicDocument>,
 	);

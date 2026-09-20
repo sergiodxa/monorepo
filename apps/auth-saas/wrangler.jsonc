@@ -14,23 +14,18 @@
 
 	"assets": { "directory": "./assets", "binding": "ASSETS" },
 
-	// The platform dashboard runs on the platform domain (custom_domain). The wildcard
+	// The platform Worker runs on the platform domain (custom_domain). The wildcard
 	// route covers every default tenant subdomain ({slug}.auth.sergiodxa.com) that
 	// tenant creation provisions; the worker resolves each to its tenant via the
-	// control-plane hostnames table. The sso.* hostnames are same-zone tenants resolved
+	// control-plane domains table. The sso.* hostnames are same-zone tenants resolved
 	// the same way (Cloudflare for SaaS metadata does not apply to own-zone hosts).
-	// Replace ids/zone as needed before deploy; see ADR-010 runbook Phase 0.
+	// Replace ids/zone as needed before deploy.
 	"routes": [
 		{ "pattern": "auth.sergiodxa.com", "custom_domain": true },
 		{ "pattern": "*.auth.sergiodxa.com/*", "zone_name": "sergiodxa.com" },
 		{ "pattern": "sso.sergiodxa.com/*", "zone_name": "sergiodxa.com" },
 		{ "pattern": "sso.blog.sergiodxa.com/*", "zone_name": "sergiodxa.com" },
 	],
-
-	"triggers": {
-		// Run MAU reporting job daily at 1:00 AM UTC
-		"crons": ["0 1 * * *"],
-	},
 
 	"queues": { "consumers": [], "producers": [] },
 

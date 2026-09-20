@@ -1,9 +1,6 @@
 /**
- * Public (pre-authentication) `remix/ui` views: the marketing landing page and the
- * onboarding authentication-error page, shown to signed-out visitors with their own
- * lightweight document shell and `css()` mixins, keeping the dashboard's authenticated
- * nav chrome scoped to signed-in routes. Replaces the former Tailwind-CDN `html()`
- * string templates.
+ * Public (pre-authentication) `remix/ui` views: the marketing landing page, shown to
+ * signed-out visitors with its own lightweight document shell and `css()` mixins.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,8 +9,6 @@
 import type { Handle, RemixNode } from "remix/ui";
 
 import { css } from "remix/ui";
-
-import routes from "~/routes/web";
 
 import { RESET_CSS } from "./styles";
 
@@ -24,18 +19,6 @@ let landingBody = css({
 	color: "#111827",
 	lineHeight: "1.5",
 	background: "linear-gradient(to bottom right, #eff6ff, #e0e7ff)",
-});
-
-let errorBody = css({
-	margin: "0",
-	minHeight: "100vh",
-	fontFamily: "system-ui, sans-serif",
-	color: "#111827",
-	lineHeight: "1.5",
-	background: "#f9fafb",
-	display: "flex",
-	alignItems: "center",
-	justifyContent: "center",
 });
 
 let navBar = css({ padding: "1.5rem 0" });
@@ -167,32 +150,6 @@ let checkIcon = css({ width: "1.25rem", height: "1.25rem", color: "#22c55e", fle
 
 let footer = css({ padding: "2rem 0", textAlign: "center", color: "#6b7280" });
 
-let errorWrap = css({ maxWidth: "28rem", width: "100%", padding: "0 1rem" });
-
-let errorCard = css({
-	background: "#ffffff",
-	borderRadius: "0.5rem",
-	border: "1px solid #e5e7eb",
-	boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
-	padding: "1.5rem",
-	textAlign: "center",
-});
-
-let errorTitle = css({
-	fontSize: "1.25rem",
-	fontWeight: "700",
-	color: "#dc2626",
-	margin: "0 0 1rem",
-});
-
-let errorMessage = css({ color: "#4b5563", margin: "0 0 1rem" });
-
-let errorLink = css({
-	color: "#2563eb",
-	textDecoration: "none",
-	"&:hover": { textDecoration: "underline" },
-});
-
 let CAPABILITIES: string[] = [
 	"Authorization Code + PKCE",
 	"Client Credentials",
@@ -220,23 +177,21 @@ function checkIconNode(): RemixNode {
 export interface PublicDocumentProps {
 	/** Text used for the `<title>` (rendered verbatim). */
 	title: string;
-	/** Which body background to use: the marketing gradient or the neutral error page. */
-	variant: "landing" | "error";
 	children: RemixNode;
 }
 
 /**
- * Minimal HTML document shell for signed-out public pages: the `<head>` and a body
- * styled per {@link PublicDocumentProps.variant}.
+ * Minimal HTML document shell for signed-out public pages: the `<head>` and the
+ * marketing gradient body.
  *
  * @param handle - Component handle exposing the shell props.
  * @returns A render function producing the public document markup.
  * @example
- * return ctx.render(<PublicDocument title="Auth SaaS" variant="landing"><LandingPage /></PublicDocument>);
+ * return ctx.render(<PublicDocument title="Auth SaaS"><LandingPage /></PublicDocument>);
  */
 export function PublicDocument(handle: Handle<PublicDocumentProps>) {
 	return () => {
-		let { title, variant, children } = handle.props;
+		let { title, children } = handle.props;
 		return (
 			<html lang="en">
 				<head>
@@ -245,7 +200,7 @@ export function PublicDocument(handle: Handle<PublicDocumentProps>) {
 					<title>{title}</title>
 					<style>{RESET_CSS}</style>
 				</head>
-				<body mix={[variant === "landing" ? landingBody : errorBody]}>{children}</body>
+				<body mix={[landingBody]}>{children}</body>
 			</html>
 		);
 	};
@@ -253,12 +208,12 @@ export function PublicDocument(handle: Handle<PublicDocumentProps>) {
 
 /**
  * Renders the marketing landing page content (hero, feature cards, OIDC capabilities,
- * footer). Preserves the original copy and the "Get Started"/"Start Free" links into
- * the onboarding flow.
+ * footer). Preserves the original copy; the calls to action have no sign-up flow to
+ * link to yet.
  *
  * @returns A render function producing the landing page markup.
  * @example
- * return ctx.render(<PublicDocument title="Auth SaaS - Authentication as a Service" variant="landing"><LandingPage /></PublicDocument>);
+ * return ctx.render(<PublicDocument title="Auth SaaS - Authentication as a Service"><LandingPage /></PublicDocument>);
  */
 export function LandingPage(): () => RemixNode {
 	return () => (
@@ -266,7 +221,7 @@ export function LandingPage(): () => RemixNode {
 			<nav mix={[navBar]}>
 				<div mix={[navRow]}>
 					<h1 mix={[brand]}>Auth SaaS</h1>
-					<a mix={[primaryButton]} href={routes.onboarding.index.href()}>
+					<a mix={[primaryButton]} href="#">
 						Get Started
 					</a>
 				</div>
@@ -280,7 +235,7 @@ export function LandingPage(): () => RemixNode {
 						custom domains, and instant deployment.
 					</p>
 					<div mix={[heroActions]}>
-						<a mix={[primaryButtonLg]} href={routes.onboarding.index.href()}>
+						<a mix={[primaryButtonLg]} href="#">
 							Start Free
 						</a>
 						<a mix={[secondaryButtonLg]} href="#features">
@@ -363,35 +318,4 @@ export function LandingPage(): () => RemixNode {
 			</footer>
 		</>
 	);
-}
-
-/** Props for {@link AuthErrorPage}. */
-export interface AuthErrorPageProps {
-	message: string;
-}
-
-/**
- * Renders the onboarding authentication-error card with the given message and a link
- * back into the onboarding flow. Preserves the original copy and "Try again" link.
- *
- * @param handle - Component handle exposing the error message.
- * @returns A render function producing the error card markup.
- * @example
- * return ctx.render(<PublicDocument title="Authentication Error - Auth SaaS" variant="error"><AuthErrorPage message="Authentication failed. Please try again." /></PublicDocument>, { status: 400 });
- */
-export function AuthErrorPage(handle: Handle<AuthErrorPageProps>) {
-	return () => {
-		let { message } = handle.props;
-		return (
-			<div mix={[errorWrap]}>
-				<div mix={[errorCard]}>
-					<h1 mix={[errorTitle]}>Authentication Error</h1>
-					<p mix={[errorMessage]}>{message}</p>
-					<a mix={[errorLink]} href={routes.onboarding.index.href()}>
-						Try again
-					</a>
-				</div>
-			</div>
-		);
-	};
 }

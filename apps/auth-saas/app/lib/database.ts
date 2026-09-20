@@ -22,5 +22,7 @@ let database: Database | undefined;
  * let middleware = [database(createDatabase)];
  */
 export function createDatabase(): Database {
-	return (database ??= new Database(createD1DatabaseAdapter(env.PLATFORM_DB)));
+	return (database ??= new Database(createD1DatabaseAdapter(env.PLATFORM_DB), {
+		now: () => Date.now(),
+	}));
 }
