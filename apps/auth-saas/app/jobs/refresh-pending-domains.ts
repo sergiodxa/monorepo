@@ -6,30 +6,28 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { createJobHandler } from "@sdxc/jobs";
 
-import { HostnameClient } from "@sdxc/hostname";
-import { env } from "cloudflare:workers";
-
-import { createDatabase } from "~/app/lib/database";
+import jobs from "~/app/jobs";
 import Domain from "~/app/models/domain";
 import { refreshDomainStatus } from "~/app/services/domain";
 
-/**
- * Refreshes every pending domain's verification/certificate status.
- *
- * @returns A promise that resolves once every pending domain has been refreshed.
- * @example
- * export default { scheduled: () => refreshPendingDomains() };
- */
-export async function refreshPendingDomains(): Promise<void> {
-	let db = createDatabase();
-	let hostnameClient = new HostnameClient({
-		apiToken: env.CF_API_TOKEN,
-		zoneId: env.CF_ZONE_ID,
-		platformDomain: env.PLATFORM_DOMAIN,
-	});
+export default createJobHandler(jobs.refreshPendingDomains, async (ctx) => {
+	let pending = await Domain.listPending(ctx.database);
+	ctx.log.set({ domains: { pending: pending.length } });
 
-	for (let domain of await Domain.listPending(db)) {
-		await refreshDomainStatus(db, hostnameClient, domain);
+	for (let domain of pending) {
+		if (ctx.signal.aborted) ctx.ack("The next sweep refreshes the domains left.");
+
+		try {
+			await refreshDomainStatus(ctx.database, ctx.hostnames, domain);
+			ctx.log.inc("domains.refreshed");
+		} catch (error) {
+			ctx.log.inc("domains.failed");
+			ctx.log.warn("domain.refresh_failed", {
+				hostname: domain.hostname,
+				message: error instanceof Error ? error.message : String(error),
+			});
+		}
 	}
-}
+});

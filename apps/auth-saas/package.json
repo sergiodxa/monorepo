@@ -22,6 +22,8 @@
 		"@sdxc/get-client-ip": "workspace:*",
 		"@sdxc/hostname": "workspace:*",
 		"@sdxc/http": "workspace:*",
+		"@sdxc/icons": "workspace:*",
+		"@sdxc/jobs": "workspace:*",
 		"@sdxc/jwt": "workspace:*",
 		"@sdxc/location": "workspace:*",
 		"@sdxc/logger": "workspace:*",

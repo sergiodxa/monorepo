@@ -27,7 +27,20 @@
 		{ "pattern": "sso.blog.sergiodxa.com/*", "zone_name": "sergiodxa.com" },
 	],
 
-	"queues": { "consumers": [], "producers": [] },
+	// `auth-saas-jobs` carries every scheduled job: a cron trigger enqueues the jobs it
+	// names and returns, and each one runs on its own delivery. `wrangler queues create
+	// auth-saas-jobs` must precede any deploy that references it, or the deploy fails.
+	//
+	// `max_batch_size` of 1 gives the daily domain-refresh job its own invocation and
+	// full wall-clock budget. `max_retries` of 3 covers a transient D1 or Cloudflare API
+	// failure; the job is idempotent, so a redelivery repeats work rather than
+	// double-counting it. There is no dead-letter queue: the only producer is this
+	// worker's own cron, and a message that outlives its retries runs again on the next
+	// day's trigger.
+	"queues": {
+		"consumers": [{ "queue": "auth-saas-jobs", "max_batch_size": 1, "max_retries": 3 }],
+		"producers": [{ "binding": "QUEUE", "queue": "auth-saas-jobs" }],
+	},
 
 	// Cloudflare Email Sending binding (the only email transport).
 	"send_email": [{ "name": "SEND_EMAIL" }],

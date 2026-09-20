@@ -10,11 +10,12 @@
 
 import type { JSONValue } from "@sdxc/types";
 
+import * as cloudflare from "@sdxc/jobs/cloudflare";
 import { isSuccess } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
 
-import { refreshPendingDomains } from "~/app/jobs/refresh-pending-domains";
+import { dispatcher } from "~/app/jobs/dispatcher";
 import { HostMetadataSchema } from "~/app/lib/host-metadata";
 import {
 	readHostnameCache,
@@ -27,6 +28,9 @@ import Tenant from "~/database/tenant-do";
 import { router } from "./app";
 
 export { Tenant };
+
+/** Both worker handlers, bound to the dispatcher they delegate to. */
+const jobHandlers = cloudflare.worker(dispatcher);
 
 interface ResolvedTenant {
 	tenantId: string;
@@ -141,12 +145,22 @@ export default {
 	},
 
 	/**
-	 * The worker's `scheduled` (cron) runtime hook: runs the daily sweep over domains
-	 * still pending verification or certificate issuance.
+	 * Cron entrypoint. Enqueues every job whose declared schedule is the one that fired
+	 * and returns; the work itself happens on the queue delivery.
 	 *
-	 * @returns A promise that resolves once the sweep completes.
+	 * @param controller - The scheduled controller carrying the triggering `cron`.
 	 */
-	async scheduled() {
-		await refreshPendingDomains();
+	async scheduled(controller) {
+		await jobHandlers.scheduled(controller);
+	},
+
+	/**
+	 * Queue entrypoint. Runs each message in the batch through its job's handler and
+	 * the dispatcher's middleware chain.
+	 *
+	 * @param batch - The batch of enqueued job messages to process.
+	 */
+	async queue(batch) {
+		await jobHandlers.queue(batch);
 	},
 } satisfies ExportedHandler<Cloudflare.Env>;
