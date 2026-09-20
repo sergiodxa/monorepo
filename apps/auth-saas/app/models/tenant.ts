@@ -11,7 +11,7 @@
 import type { Database, TableRow } from "remix/data-table";
 
 import { typeid } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUIDv7 } from "@sdxc/uuid";
 import { column as c, table } from "remix/data-table";
 
 /** Cloudflare region codes a tenant's Durable Object can be placed in. */
@@ -116,7 +116,7 @@ export default class Tenant {
 		return db.create(
 			Tenant.table,
 			{
-				id: tenantId(generateUUID()).toString(),
+				id: tenantId(generateUUIDv7()).toString(),
 				customer_id: data.customerId,
 				name: data.name,
 				slug: data.slug,

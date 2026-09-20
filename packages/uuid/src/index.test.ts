@@ -3,11 +3,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import {
 	assertUUID,
 	generateUUID,
+	generateUUIDv7,
 	InvalidUUIDFormatError,
 	InvalidUUIDLengthError,
 	InvalidUUIDTypeError,
@@ -60,5 +61,46 @@ describe(generateUUID.name, () => {
 		let id = generateUUID();
 
 		expect(isUUID(id)).toBe(true);
+	});
+});
+
+describe(generateUUIDv7.name, () => {
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	test("returns a valid UUID", () => {
+		let id = generateUUIDv7();
+
+		expect(isUUID(id)).toBe(true);
+	});
+
+	test("carries version 7 and the RFC 9562 variant", () => {
+		let id = generateUUIDv7();
+
+		expect(id[14]).toBe("7");
+		expect(["8", "9", "a", "b"]).toContain(id[19]);
+	});
+
+	test("sorts lexicographically by millisecond of generation", () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1_000_000_000_000);
+		let first = generateUUIDv7();
+
+		vi.setSystemTime(1_000_000_000_001);
+		let second = generateUUIDv7();
+
+		expect(first < second).toBe(true);
+	});
+
+	test("encodes the current time in its first 48 bits", () => {
+		let before = Date.now();
+		let id = generateUUIDv7();
+		let after = Date.now();
+
+		let timestamp = Number.parseInt(id.replace(/-/g, "").slice(0, 12), 16);
+
+		expect(timestamp).toBeGreaterThanOrEqual(before);
+		expect(timestamp).toBeLessThanOrEqual(after);
 	});
 });

@@ -116,7 +116,17 @@ characters, and `InvalidUUIDFormatError` for 36 characters in the wrong shape.
 
 Returns a new random UUID from `crypto.randomUUID()`, already narrowed to `UUID`. That is a
 version 4 UUID as defined by [RFC 9562](https://www.rfc-editor.org/rfc/rfc9562), random in
-every position the format leaves free.
+every position the format leaves free — including when it was created, so two values carry
+no ordering.
+
+### `generateUUIDv7(): UUID`
+
+Returns a new version 7 UUID: a 48-bit millisecond timestamp followed by 74 random bits, so
+values sort the way they were created. Use this one where
+[`@sdxc/typeid`](https://www.npmjs.com/package/@sdxc/typeid) is going to prefix the result
+and something reads that prefixed id's order — a paginated listing, a table with no separate
+`created_at` to sort by. Reach for `generateUUID` instead when the id must not reveal when it
+was minted, such as a value handed to someone outside the system.
 
 ### Errors
 

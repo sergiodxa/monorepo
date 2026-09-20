@@ -12,7 +12,7 @@
 import type { Database, TableRow } from "remix/data-table";
 
 import { typeid } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUIDv7 } from "@sdxc/uuid";
 import { column as c, inList, table } from "remix/data-table";
 
 import type { TenantRow } from "./tenant";
@@ -99,7 +99,7 @@ export default class Membership {
 		return db.create(
 			Membership.table,
 			{
-				id: membershipId(generateUUID()).toString(),
+				id: membershipId(generateUUIDv7()).toString(),
 				tenant_id: data.tenantId,
 				subject_id: data.subjectId,
 				role: data.role,

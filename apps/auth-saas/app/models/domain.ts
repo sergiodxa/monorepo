@@ -10,7 +10,7 @@
 import type { Database, TableRow } from "remix/data-table";
 
 import { typeid } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUIDv7 } from "@sdxc/uuid";
 import { column as c, table } from "remix/data-table";
 
 /** Whether a domain is the platform-issued default or a customer's own DNS. */
@@ -101,7 +101,7 @@ export default class Domain {
 		return db.create(
 			Domain.table,
 			{
-				id: domainId(generateUUID()).toString(),
+				id: domainId(generateUUIDv7()).toString(),
 				tenant_id: data.tenantId,
 				hostname: data.hostname,
 				kind: data.kind,
