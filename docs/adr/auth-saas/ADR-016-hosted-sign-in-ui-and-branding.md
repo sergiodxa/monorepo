@@ -49,7 +49,7 @@ sign-in still reachable when that island does not run.
 
 The screens are rendered by the Worker from `@sdxc/ui`, served under `/u/` on the tenant's
 hostname. A tenant's identity is a record of design tokens in the control plane, applied as
-custom-property declarations when the tenant's entitlement grants branding.
+custom-property declarations for the tenant whose entitlement grants branding.
 
 ### The screen set
 
@@ -105,18 +105,20 @@ The brand record is editable, validated and stored on every tier including Free;
 gates whether the render applies it, so a downgrade stops painting a tenant's colours and destroys
 none of their configuration.
 
-| | Free | Pro and Premium |
-| --- | --- | --- |
-| The six screens, every flow | Yes | Yes |
-| Localization, RTL, accessibility | Yes | Yes |
-| Tenant name and default theme | Yes | Yes |
-| Logo, favicon, palette, radius, typeface | Stored | Applied |
-| Custom stylesheet and per-screen copy | Stored | Applied |
-| Platform attribution in the footer | Shown | Dropped |
+| | Free | Pro | Premium |
+| --- | --- | --- | --- |
+| The six screens, every flow | Yes | Yes | Yes |
+| Localization, RTL, accessibility | Yes | Yes | Yes |
+| Tenant name and default theme | Yes | Yes | Yes |
+| Platform attribution in the footer | Shown | Dropped | Dropped |
+| Logo, favicon, palette, radius, typeface | Stored | Stored | Applied |
+| Custom stylesheet and per-screen copy | Stored | Stored | Applied |
 
-Applying the brand is one predicate over the entitlement projection published by *Entitlements as
-Feature Flags*; until that ADR lands the projection grants nothing, which is the Free rendering.
-Security behaviour is identical across tiers: the screens paywall appearance, never a factor.
+Two predicates read the entitlement projection published by *Entitlements as Feature Flags*:
+`unbranded_pages` drops the platform's name from the footer, and `branding` paints the brand record
+over the default theme. Until that ADR lands the projection grants nothing, which is the Free
+rendering. Security behaviour is identical across tiers: the screens paywall appearance, never a
+factor.
 
 ### Localization and accessibility
 
