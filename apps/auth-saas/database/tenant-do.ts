@@ -31,6 +31,15 @@ import type {
 	UpdateClientResult,
 } from "./clients";
 import type {
+	EvaluateConsentInput,
+	EvaluateConsentResult,
+	ListGrantsInput,
+	ListGrantsResult,
+	RecordConsentDecisionInput,
+	RecordConsentDecisionResult,
+	RevokeGrantResult,
+} from "./consent";
+import type {
 	BeginPasskeyAuthenticationInput,
 	BeginPasskeyAuthenticationResult,
 	BeginPasskeyRegistrationInput,
@@ -94,6 +103,7 @@ import type {
 } from "./subjects";
 
 import * as Clients from "./clients";
+import * as Consent from "./consent";
 import { hasAnotherCredential } from "./credentials";
 import * as Passkeys from "./passkeys";
 import * as Passwords from "./passwords";
@@ -334,6 +344,7 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 
 		await this.#db.deleteMany(Passwords.passwords, { where: { subject_id: input.subjectId } });
 		await this.#db.deleteMany(Passkeys.passkeys, { where: { subject_id: input.subjectId } });
+		await this.#db.deleteMany(Consent.grants, { where: { subject_id: input.subjectId } });
 
 		return Subjects.deleteSubject(this.#db, input);
 	}
@@ -719,6 +730,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 */
 	async deleteClient(input: { clientId: string }): Promise<DeleteClientResult> {
 		await this.#migrated;
+
+		await this.#db.deleteMany(Consent.grants, { where: { client_id: input.clientId } });
+
 		return Clients.deleteClient(this.#db, input);
 	}
 
@@ -731,6 +745,55 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	async listClients(input: ListClientsInput = {}): Promise<ListClientsResult> {
 		await this.#migrated;
 		return Clients.listClients(this.#db, input);
+	}
+
+	/**
+	 * Decides what a consent screen should show for one authorization request.
+	 *
+	 * @param input - The subject and client an authorization request named, the scopes
+	 * it asked for, whether the client is first-party, and whether consent or silence
+	 * was demanded.
+	 * @returns The decision, with the assembled screen only when one is shown.
+	 */
+	async evaluateConsent(input: EvaluateConsentInput): Promise<EvaluateConsentResult> {
+		await this.#migrated;
+		return Consent.evaluateConsent(this.#db, input);
+	}
+
+	/**
+	 * Records the decision a person took on a consent screen.
+	 *
+	 * @param input - The subject and client the decision concerns, whether it was an
+	 * approval, and the scopes it covers.
+	 * @returns The full resulting scope set on approval, or that nothing was recorded.
+	 */
+	async recordConsentDecision(
+		input: RecordConsentDecisionInput,
+	): Promise<RecordConsentDecisionResult> {
+		await this.#migrated;
+		return Consent.recordConsentDecision(this.#db, input);
+	}
+
+	/**
+	 * Revokes a subject's standing grant for one client.
+	 *
+	 * @param input - The subject and client whose grant to revoke.
+	 * @returns That the grant was revoked, or that no such grant existed.
+	 */
+	async revokeGrant(input: { subjectId: string; clientId: string }): Promise<RevokeGrantResult> {
+		await this.#migrated;
+		return Consent.revokeGrant(this.#db, input);
+	}
+
+	/**
+	 * Lists a page of a subject's own grants, most recently agreed to first.
+	 *
+	 * @param input - The subject whose grants to list, and where to page from.
+	 * @returns A page of grant summaries, or that the given cursor no longer matches.
+	 */
+	async listGrants(input: ListGrantsInput): Promise<ListGrantsResult> {
+		await this.#migrated;
+		return Consent.listGrants(this.#db, input);
 	}
 
 	/**
