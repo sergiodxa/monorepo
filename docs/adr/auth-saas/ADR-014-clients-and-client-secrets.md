@@ -11,10 +11,9 @@ a subject to `/authorize` and exchanges the resulting code for tokens. Every pro
 downstream reads its record — where a code may be delivered, which grants the token endpoint
 honours, whether a secret is demanded and how it is presented.
 
-The record lives in the tenant object, and
-[ADR-001](./ADR-001-auth-saas-on-per-tenant-durable-objects.md) makes that object the place which
-resolves and authorizes a `client_id`, rather than a store a caller consults first. Clients and
-client secrets are a base capability, on every tier including Free.
+The record lives in the tenant object, which ADR-001 makes the place that resolves and authorizes
+a `client_id` rather than a store a caller consults first. Clients and client secrets are a base
+capability, on every tier including Free.
 
 ## Context
 
@@ -29,8 +28,7 @@ customer's estate into code exfiltration.
 
 A single-page app and a native app ship their code to the device running it, so a secret embedded
 in either is public the moment it is distributed. What stands in for it is proof that the client
-exchanging the code started the flow, which PKCE supplies. The record says which kind a client is,
-because that is what the token endpoint reads to decide what to demand.
+exchanging the code started the flow, which PKCE supplies.
 
 ### Secrets change while traffic is flowing
 
@@ -69,6 +67,7 @@ CREATE TABLE client_secrets (
   expires_at INTEGER                  -- set on the incumbent when a rotation begins
 );
 CREATE INDEX client_secrets_by_client ON client_secrets (client_id);
+CREATE INDEX client_secrets_by_expiry ON client_secrets (expires_at);
 ```
 
 ### Public and confidential
@@ -84,7 +83,7 @@ A registered URI is absolute and has no fragment, and the object validates it at
 `https` for a web client, `http` only for a loopback host, a custom scheme for a native one. At
 authorization the requested value is compared by string equality against the list, with one
 exception — a loopback URI matches while ignoring its port, since a native app takes the port the
-operating system gives it.
+system gives it.
 
 ### Grant and response types, per client
 
@@ -96,24 +95,29 @@ operating system gives it.
 
 The arrays are a ceiling: the authorization endpoint refuses a `response_type` the client does not
 carry, and the token endpoint refuses a `grant_type` it does not. `client_credentials` is writable
-only while the tenant holds the Machine-to-Machine Access and API Keys add-on, evaluated as an
+only while the tenant holds the Machine-to-Machine Access and API Keys add-on, checked as an
 entitlement flag when the grant list is set.
 
 ### Secrets
 
 A secret is `randomToken({ bytes: 32, prefix: "csec" })` from `@sdxc/crypto`, returned once by the
 operation that mints it and never readable again. Storage keeps the hash `password.hash` writes —
-the repo's single credential hash, per
-[ADR-040](../ADR-040-pbkdf2-as-the-only-credential-hash.md) — verified with `password.verify`, and
+the repo's single credential hash, per root ADR-040 — verified with `password.verify`, and
 `password.needsRehash` replaces a hash trailing current policy on the request that accepted the
 plaintext. A secret is found by way of its client rather than by its own value and checked once
 per token request, so it carries the work factor a stored credential deserves; `hint` is what a
 dashboard shows, and `last_used_at` tells a customer whether the old secret is still in use.
 
 `rotateClientSecret` mints a second live secret and stamps `expires_at` on the incumbent, seven
-days out by default and thirty at most. Both verify until the window closes, at most two live
-secrets exist at a time, and the scheduled sweep deletes the expired row. A customer who finishes
-early calls `revokeClientSecret` and closes the window immediately.
+days out by default and thirty at most. Both verify until the window closes and at most two live
+secrets exist at a time. A customer who finishes early calls `revokeClientSecret` and closes the
+window immediately.
+
+`client_secrets` grows with every rotation, so it carries the retention rule ADR-004 asks of a
+growing table. A row is deletable once `expires_at` is past — the overlap has closed and the
+client is on its successor — while a row with no `expires_at`, or one still ahead, is never a
+candidate, so a window closes before a row goes. The scheduled handler sweeps daily over
+`client_secrets_by_expiry`, and each removal writes a `client.secret.deleted` audit row.
 
 ### Authentication at the token endpoint
 
@@ -124,8 +128,7 @@ early calls `revokeClientSecret` and closes the window immediately.
 | `none` | The `client_id` alone, with PKCE | Public clients |
 
 A client's `token_endpoint_auth_method` is the one method it may use, and discovery advertises
-exactly these three. A presented secret is compared against every live secret of that client, so
-a rotation is invisible to the caller.
+these three. A presented secret is checked against every live secret, so a rotation is invisible.
 
 ### RPC methods
 
@@ -136,6 +139,7 @@ a rotation is invisible to the caller.
 - `rotateClientSecret(input)` — mints the successor and opens the overlap on the incumbent in one
   call, returning the new secret and when the old one expires.
 - `revokeClientSecret(input)` — closes a secret's window at once and keeps one live for the client.
+- `sweepExpiredClientSecrets(input)` — bounded deletes of rows past their window.
 - `disableClient(input)` / `deleteClient(input)` — stop a client authorizing, or remove it with its
   secrets, consents and tokens.
 - `listClients(input)` — a page for the dashboard, `created_at` and `id` in the projection so the
@@ -154,20 +158,15 @@ statements, a rate-limit story for an endpoint that writes to a tenant — worth
 
 ### Positive
 
-- The registered URI list is the exact set of places a code can be delivered, and no matching rule
-  can widen it.
-- A rotation is two calls a week apart with both secrets live between, a procedure a customer will
-  follow.
-- What a client may do is data on its record, so a capability it was never granted is refused by
-  the endpoints rather than by a review.
+- The registered URI list is the exact set of places a code can go, and no rule can widen it.
+- A rotation is two calls a week apart with both secrets live between, which customers follow.
+- What a client may do is data on its record, so the endpoints refuse a capability never granted.
 
 ### Negative
 
-- A customer who loses a secret gets a new one rather than the old one back, and every deployment
-  holding the old value has to be updated.
-- Exact matching means a new environment needs its URI registered before it works, and `kind` fixed
-  after registration means an app moving from a server to a browser is registered again under a new
-  `client_id`.
+- A lost secret is replaced, never recovered; every deployment holding it is updated.
+- Exact matching means a new environment registers its URI before it works, and `kind` fixed after
+  registration means an app moving from a server to a browser is registered again.
 
 ### Neutral
 
@@ -178,14 +177,14 @@ statements, a rate-limit story for an endpoint that writes to a tenant — worth
 
 **Wildcard or prefix redirect URI matching.** The convenience customers ask for, particularly for
 preview deployments. It makes "a code goes where the tenant said" as strong as the customer's
-weakest subdomain, and fails silently until a code has been delivered elsewhere. Rejected; preview
-environments register their URIs.
+weakest subdomain, and fails silently until a code lands elsewhere. Rejected; preview environments
+register their URIs.
 
 **One secret, replaced in place.** The simplest record and the simplest dashboard, and it makes
 every rotation an outage as long as the customer's deployment takes. Rejected.
 
 **Storing secrets reversibly so they can be shown again.** It removes the "copy it now" moment
-customers dislike, and makes one read of tenant state a compromise of every relying party at once.
+customers dislike, and makes one read of tenant state a compromise of every relying party.
 Rejected.
 
 **`private_key_jwt` or mTLS client authentication.** Stronger than a shared secret, and what a
@@ -195,6 +194,7 @@ own, worth deciding when a customer needs it. Rejected for now.
 ## References
 
 - [ADR-001: Auth SaaS on Per-Tenant Durable Objects](./ADR-001-auth-saas-on-per-tenant-durable-objects.md) — whole operations, and the object as the trust boundary
+- ADR-004: Tenant Object Schema and Migrations — the retention rule a growing table carries
 - [ADR-040: PBKDF2 as the Only Credential Hash](../ADR-040-pbkdf2-as-the-only-credential-hash.md) — one credential hash, with upgrade on verify
 - ADR-011: Authorization Endpoint and PKCE — reads the redirect list and the response types
 - ADR-012: Token Endpoint and Refresh Rotation — authenticates the client inside the exchange
