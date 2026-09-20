@@ -39,6 +39,75 @@ export default {
 		deny: "Deny",
 	},
 
+	hostedSignUp: {
+		title: "Create your account",
+		passwordHint: "Use at least {{minLength}} characters.",
+		identifier: { label: "Email" },
+		password: { label: "Password" },
+		name: { label: "Display name (optional)" },
+		submit: "Create account",
+		errors: {
+			identifierInvalid: "Enter a valid email address.",
+			identifierTaken: "An account with that email already exists.",
+			generic: "We couldn't create your account. Try again.",
+		},
+	},
+
+	hostedVerify: {
+		title: "Verify your email",
+		pending: {
+			heading: "Check your email",
+			body: "We sent a verification link to your email address. Follow it to finish setting up your account.",
+			resend: "Resend verification email",
+			resent: "We sent another verification link.",
+		},
+		verified: {
+			heading: "Email verified",
+			body: "Your email is verified. Return to the application to sign in.",
+		},
+		invalid: {
+			heading: "This link no longer works",
+			body: "This verification link is invalid or has expired.",
+		},
+		errors: {
+			missingState:
+				"There is nothing to verify here. Start again from the application that sent you here.",
+		},
+	},
+
+	hostedReset: {
+		requestTitle: "Reset your password",
+		identifier: { label: "Email or username" },
+		requestSubmit: "Send reset link",
+		requested: {
+			heading: "Check your email",
+			body: "If that account exists, we sent a link to reset its password.",
+		},
+		completeTitle: "Choose a new password",
+		newPassword: { label: "New password" },
+		completeSubmit: "Reset password",
+		completeSuccess: {
+			heading: "Password reset",
+			body: "Your password has been reset. Sign in with your new password.",
+			signIn: "Sign in",
+		},
+		invalidTicket: {
+			heading: "This link no longer works",
+			body: "This password reset link is invalid or has expired.",
+			requestNew: "Request a new reset link",
+		},
+	},
+
+	hostedPassword: {
+		errors: {
+			tooShort: "Password must be at least {{minLength}} characters.",
+			common: "Choose a password that isn't easy to guess.",
+			similarToIdentifier: "Your password can't be similar to your email.",
+			deniedTerm: 'Your password can\'t contain "{{term}}".',
+			reused: "Choose a password you haven't used before.",
+		},
+	},
+
 	hostedError: {
 		title: "Something went wrong",
 		correlationId: "Reference: {{id}}",

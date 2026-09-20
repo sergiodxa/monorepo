@@ -1,7 +1,7 @@
 /**
  * The centralized, type-safe route table for requests already resolved to one
  * tenant: discovery, JWKS, `/userinfo`, the token endpoint, `/authorize`, and the
- * hosted sign-in, consent and error pages served under `/u/`.
+ * hosted sign-in, sign-up, verify, reset, consent and error pages served under `/u/`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -31,5 +31,11 @@ export default route({
 	hostedSignInPasskeyVerify: post("/u/sign-in/passkey/verify"),
 	hostedConsentShow: get("/u/consent"),
 	hostedConsentSubmit: post("/u/consent"),
+	hostedSignUpShow: get("/u/sign-up"),
+	hostedSignUpSubmit: post("/u/sign-up"),
+	hostedVerifyShow: get("/u/verify"),
+	hostedVerifyResend: post("/u/verify/resend"),
+	hostedResetShow: get("/u/reset"),
+	hostedResetSubmit: post("/u/reset"),
 	hostedError: get("/u/error"),
 });

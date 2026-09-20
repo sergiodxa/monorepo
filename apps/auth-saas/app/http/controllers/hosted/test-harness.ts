@@ -1,8 +1,8 @@
 /**
  * A fully-provisioned tenant, a registered client, and a real tenant router
  * mapping every hosted-screen and `/authorize` route, for driving the hosted
- * sign-in, consent and error flow through real HTTP requests the way
- * `oauth/token.test.ts` drives the token endpoint.
+ * sign-in, sign-up, verify, reset, consent and error flow through real HTTP
+ * requests the way `oauth/token.test.ts` drives the token endpoint.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,11 +19,14 @@ import { createRouter } from "remix/router";
 import authorize from "~/app/http/controllers/authorize";
 import { consentShow, consentSubmit } from "~/app/http/controllers/hosted/consent";
 import { errorShow } from "~/app/http/controllers/hosted/error";
+import { resetShow, resetSubmit } from "~/app/http/controllers/hosted/reset";
 import { signInShow, signInSubmit } from "~/app/http/controllers/hosted/sign-in";
 import {
 	signInPasskeyOptions,
 	signInPasskeyVerify,
 } from "~/app/http/controllers/hosted/sign-in-passkey";
+import { signUpShow, signUpSubmit } from "~/app/http/controllers/hosted/sign-up";
+import { verifyResend, verifyShow } from "~/app/http/controllers/hosted/verify";
 import i18n from "~/app/http/middleware/i18n";
 import render from "~/app/http/middleware/render";
 import {
@@ -56,6 +59,12 @@ function buildRouter(tenantDO: Tenant) {
 	router.map(routes.hostedSignInPasskeyVerify, signInPasskeyVerify);
 	router.map(routes.hostedConsentShow, consentShow);
 	router.map(routes.hostedConsentSubmit, consentSubmit);
+	router.map(routes.hostedSignUpShow, signUpShow);
+	router.map(routes.hostedSignUpSubmit, signUpSubmit);
+	router.map(routes.hostedVerifyShow, verifyShow);
+	router.map(routes.hostedVerifyResend, verifyResend);
+	router.map(routes.hostedResetShow, resetShow);
+	router.map(routes.hostedResetSubmit, resetSubmit);
 	router.map(routes.hostedError, errorShow);
 
 	return router;

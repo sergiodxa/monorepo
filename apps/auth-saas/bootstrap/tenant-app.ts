@@ -2,7 +2,8 @@
  * Builds the tenant router's fetch-router: the pure-JSON protocol endpoints a
  * request already resolved to one tenant reaches — discovery, JWKS, `/userinfo`,
  * and the token endpoint — alongside `/authorize` and the hosted sign-in,
- * consent and error pages served under `/u/` on the tenant's own hostname.
+ * sign-up, verify, reset, consent and error pages served under `/u/` on the
+ * tenant's own hostname.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,11 +20,14 @@ import { createRouter } from "remix/router";
 import authorize from "~/app/http/controllers/authorize";
 import { consentShow, consentSubmit } from "~/app/http/controllers/hosted/consent";
 import { errorShow } from "~/app/http/controllers/hosted/error";
+import { resetShow, resetSubmit } from "~/app/http/controllers/hosted/reset";
 import { signInShow, signInSubmit } from "~/app/http/controllers/hosted/sign-in";
 import {
 	signInPasskeyOptions,
 	signInPasskeyVerify,
 } from "~/app/http/controllers/hosted/sign-in-passkey";
+import { signUpShow, signUpSubmit } from "~/app/http/controllers/hosted/sign-up";
+import { verifyResend, verifyShow } from "~/app/http/controllers/hosted/verify";
 import notFound from "~/app/http/controllers/not-found";
 import token from "~/app/http/controllers/oauth/token";
 import { userinfoGet, userinfoPost } from "~/app/http/controllers/userinfo";
@@ -74,4 +78,10 @@ tenantRouter.map(routes.hostedSignInPasskeyOptions, signInPasskeyOptions);
 tenantRouter.map(routes.hostedSignInPasskeyVerify, signInPasskeyVerify);
 tenantRouter.map(routes.hostedConsentShow, consentShow);
 tenantRouter.map(routes.hostedConsentSubmit, consentSubmit);
+tenantRouter.map(routes.hostedSignUpShow, signUpShow);
+tenantRouter.map(routes.hostedSignUpSubmit, signUpSubmit);
+tenantRouter.map(routes.hostedVerifyShow, verifyShow);
+tenantRouter.map(routes.hostedVerifyResend, verifyResend);
+tenantRouter.map(routes.hostedResetShow, resetShow);
+tenantRouter.map(routes.hostedResetSubmit, resetSubmit);
 tenantRouter.map(routes.hostedError, errorShow);
