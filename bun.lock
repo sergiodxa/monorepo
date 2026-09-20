@@ -36,6 +36,7 @@
         "@sdxc/jwt": "workspace:*",
         "@sdxc/location": "workspace:*",
         "@sdxc/logger": "workspace:*",
+        "@sdxc/pagination": "workspace:*",
         "@sdxc/passkey": "workspace:*",
         "@sdxc/response": "workspace:*",
         "@sdxc/result": "workspace:*",
