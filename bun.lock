@@ -35,7 +35,6 @@
         "@sdxc/jwt": "workspace:*",
         "@sdxc/location": "workspace:*",
         "@sdxc/logger": "workspace:*",
-        "@sdxc/oidc-provider": "workspace:*",
         "@sdxc/response": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/typeid": "workspace:*",
