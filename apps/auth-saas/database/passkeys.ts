@@ -17,6 +17,7 @@ import type { ColumnBuilder, Database, TableRow } from "remix/data-table";
 import { CounterError, RelyingParty } from "@sdxc/passkey/server";
 import { isFailure } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
+import { parse as parseUserAgent } from "@sdxc/user-agent";
 import { generateUUID } from "@sdxc/uuid";
 import { and, column as c, eq, lt, ne, table } from "remix/data-table";
 
@@ -94,9 +95,11 @@ function defaultRelyingParty(relyingPartyId: string, origins: string[]): Relying
 }
 
 /**
- * Turns a `User-Agent` into a label a subject recognizes in their credential list. Only
- * a handful of common shapes are read; anything else, or a header that never arrived,
- * falls back to a generic name rather than a guess.
+ * Turns a `User-Agent` into a label a subject recognizes in their credential list. A
+ * phone or tablet reads as the device it names — its model where the string gives one,
+ * its platform otherwise; anything else reads as its browser and operating system.
+ * A header that never arrived, or one neither rule recognizes, falls back to a generic
+ * name rather than a guess.
  *
  * A real device model would come from the credential's AAGUID, but that needs a lookup
  * dataset this platform does not have, so an unrecognized agent goes straight to the
@@ -105,34 +108,14 @@ function defaultRelyingParty(relyingPartyId: string, origins: string[]): Relying
 function labelFromUserAgent(userAgent: string | undefined): string {
 	if (!userAgent) return "Passkey";
 
-	if (/iPhone/.test(userAgent)) return "iPhone";
-	if (/iPad/.test(userAgent)) return "iPad";
-	if (/Android/.test(userAgent)) return "Android";
+	let { device, os, browser } = parseUserAgent(userAgent);
 
-	let os = /Windows/.test(userAgent)
-		? "Windows"
-		: /Mac OS X/.test(userAgent)
-			? "macOS"
-			: /Linux/.test(userAgent)
-				? "Linux"
-				: null;
+	if (device.type === "mobile" || device.type === "tablet") {
+		return device.model ?? os.name ?? "Passkey";
+	}
 
-	// Checked in this order because Edge's and Opera's own user agents also carry
-	// "Chrome", and Chrome's carries "Safari".
-	let browser = /Edg\//.test(userAgent)
-		? "Edge"
-		: /OPR\//.test(userAgent)
-			? "Opera"
-			: /Firefox\//.test(userAgent)
-				? "Firefox"
-				: /Chrome\//.test(userAgent)
-					? "Chrome"
-					: /Safari\//.test(userAgent)
-						? "Safari"
-						: null;
-
-	if (browser && os) return `${browser} on ${os}`;
-	return browser ?? os ?? "Passkey";
+	if (browser.name && os.name) return `${browser.name} on ${os.name}`;
+	return browser.name ?? os.name ?? "Passkey";
 }
 
 export interface BeginPasskeyRegistrationInput {
