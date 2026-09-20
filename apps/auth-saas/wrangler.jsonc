@@ -59,6 +59,9 @@
 		// Caches hostname -> tenant resolution for same-zone hostnames.
 		// Replace with the real id from `wrangler kv namespace create HOSTNAMES_KV`.
 		{ "binding": "HOSTNAMES_KV", "id": "placeholder-hostnames-kv-id" },
+		// Holds the release-flag and kill-switch definition set as one JSON value.
+		// Replace with the real id from `wrangler kv namespace create FLAGS`.
+		{ "binding": "FLAGS", "id": "placeholder-flags-kv-id" },
 	],
 
 	"r2_buckets": [],
