@@ -30,7 +30,7 @@ describe("provision", () => {
 		});
 
 		expect(result).toEqual({
-			applied: ["0001-init"],
+			applied: ["0001-init", "0002-subjects"],
 			issuer: "https://tenant-1.example.com",
 		});
 

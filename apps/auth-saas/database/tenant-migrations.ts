@@ -13,6 +13,7 @@ import type { DatabaseDriver } from "remix/data-table";
 import { column as c, Database, table } from "remix/data-table";
 
 import m0001 from "./tenant-migrations/0001-init.sql?raw";
+import m0002 from "./tenant-migrations/0002-subjects.sql?raw";
 
 /** One migration, identified so the journal can record that it ran. */
 export interface Migration {
@@ -21,7 +22,10 @@ export interface Migration {
 }
 
 /** Every migration, in the order they must be applied. */
-export const MIGRATIONS: Migration[] = [{ id: "0001-init", sql: m0001 }];
+export const MIGRATIONS: Migration[] = [
+	{ id: "0001-init", sql: m0001 },
+	{ id: "0002-subjects", sql: m0002 },
+];
 
 /** The journal `0001-init` creates, read back to find out what has already run. */
 const schemaMigrations = table({
