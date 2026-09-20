@@ -558,6 +558,7 @@ let ResumeAuthorizationSchema = s.object({
 	sessionId: s.string(),
 	now: s.number(),
 	issuer: s.string(),
+	denied: s.optional(s.boolean()),
 });
 
 export interface ResumeAuthorizationInput {
@@ -565,6 +566,13 @@ export interface ResumeAuthorizationInput {
 	sessionId: string;
 	now: number;
 	issuer: string;
+	/**
+	 * Set when the person explicitly refused a shown consent screen. Answers with
+	 * `access_denied` on the request's verified target directly, independent of the
+	 * session or of whatever `evaluateConsent` would otherwise decide — a refusal is
+	 * final regardless of what is or isn't already granted.
+	 */
+	denied?: boolean;
 }
 
 /**
@@ -575,8 +583,8 @@ export interface ResumeAuthorizationInput {
  * can no longer stand behind.
  *
  * @param db - The tenant's database.
- * @param input - The interaction to resume, the session that authenticated it, and the
- * clock to decide against.
+ * @param input - The interaction to resume, the session that authenticated it, whether
+ * the person refused a shown consent screen, and the clock to decide against.
  * @returns The outcome this resumption reaches on its own, with no round trip still
  * owed.
  */
@@ -595,6 +603,16 @@ export async function resumeAuthorization(
 	}
 
 	let request = requestFromRow(stored);
+
+	if (parsed.denied) {
+		return redirectError(
+			request,
+			parsed.issuer,
+			"access_denied",
+			"The person declined to grant access.",
+		);
+	}
+
 	let session = await resolveResumedSession(db, parsed.sessionId, parsed.now);
 
 	return decide(db, {

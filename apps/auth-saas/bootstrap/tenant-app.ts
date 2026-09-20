@@ -1,8 +1,8 @@
 /**
  * Builds the tenant router's fetch-router: the pure-JSON protocol endpoints a
  * request already resolved to one tenant reaches — discovery, JWKS, `/userinfo`,
- * and the token endpoint. `/authorize`'s hosted sign-in and consent pages live
- * behind the not-yet-built hosted UI and are not mapped here.
+ * and the token endpoint — alongside `/authorize` and the hosted sign-in,
+ * consent and error pages served under `/u/` on the tenant's own hostname.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,14 +13,25 @@ import type { Middleware } from "remix/router";
 import { log } from "@sdxc/logger/middleware";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
+import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 
+import authorize from "~/app/http/controllers/authorize";
+import { consentShow, consentSubmit } from "~/app/http/controllers/hosted/consent";
+import { errorShow } from "~/app/http/controllers/hosted/error";
+import { signInShow, signInSubmit } from "~/app/http/controllers/hosted/sign-in";
+import {
+	signInPasskeyOptions,
+	signInPasskeyVerify,
+} from "~/app/http/controllers/hosted/sign-in-passkey";
 import notFound from "~/app/http/controllers/not-found";
 import token from "~/app/http/controllers/oauth/token";
 import { userinfoGet, userinfoPost } from "~/app/http/controllers/userinfo";
 import jwks from "~/app/http/controllers/well-known/jwks";
 import oauthAuthorizationServer from "~/app/http/controllers/well-known/oauth-authorization-server";
 import openidConfiguration from "~/app/http/controllers/well-known/openid-configuration";
+import i18n from "~/app/http/middleware/i18n";
+import render from "~/app/http/middleware/render";
 import { tenant } from "~/app/http/middleware/tenant";
 import routes from "~/routes/tenant";
 
@@ -31,6 +42,9 @@ let globalMiddleware: Middleware[] = [
 	log(logger) as Middleware,
 	asyncContext(),
 	tenant((tenantId) => env.TENANT.getByName(tenantId)),
+	render as Middleware,
+	formData() as Middleware,
+	i18n as Middleware,
 ];
 
 /**
@@ -53,3 +67,11 @@ tenantRouter.map(routes.jwks, jwks);
 tenantRouter.map(routes.userinfoGet, userinfoGet);
 tenantRouter.map(routes.userinfoPost, userinfoPost);
 tenantRouter.map(routes.token, token);
+tenantRouter.map(routes.authorize, authorize);
+tenantRouter.map(routes.hostedSignInShow, signInShow);
+tenantRouter.map(routes.hostedSignInSubmit, signInSubmit);
+tenantRouter.map(routes.hostedSignInPasskeyOptions, signInPasskeyOptions);
+tenantRouter.map(routes.hostedSignInPasskeyVerify, signInPasskeyVerify);
+tenantRouter.map(routes.hostedConsentShow, consentShow);
+tenantRouter.map(routes.hostedConsentSubmit, consentSubmit);
+tenantRouter.map(routes.hostedError, errorShow);

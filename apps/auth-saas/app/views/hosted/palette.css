@@ -1,0 +1,73 @@
+/*
+ * The default, unbranded `--ui-color-{scale}-{step}` palette for the hosted sign-in,
+ * consent and error screens. `@sdxc/ui/theme.css` declares no defaults of its own —
+ * every consuming app defines these — and no tenant's entitlement grants a brand
+ * override yet, so every tenant renders from this one palette until that lands.
+ *
+ * Each scale shares one lightness ramp (50 lightest, 950 darkest) with chroma
+ * peaking mid-scale, so tones line up visually at the same step across colors; hue
+ * is what tells them apart. `brand` sits at the blue hue the component library's own
+ * documentation uses for its palette example.
+ */
+
+:root {
+	--ui-color-neutral-50: oklch(0.98 0.003 250);
+	--ui-color-neutral-100: oklch(0.96 0.004 250);
+	--ui-color-neutral-200: oklch(0.91 0.006 250);
+	--ui-color-neutral-300: oklch(0.83 0.008 250);
+	--ui-color-neutral-400: oklch(0.73 0.01 250);
+	--ui-color-neutral-500: oklch(0.62 0.011 250);
+	--ui-color-neutral-600: oklch(0.52 0.011 250);
+	--ui-color-neutral-700: oklch(0.42 0.01 250);
+	--ui-color-neutral-800: oklch(0.32 0.008 250);
+	--ui-color-neutral-900: oklch(0.24 0.006 250);
+	--ui-color-neutral-950: oklch(0.16 0.005 250);
+
+	--ui-color-brand-50: oklch(0.97 0.02 250);
+	--ui-color-brand-100: oklch(0.94 0.04 250);
+	--ui-color-brand-200: oklch(0.88 0.07 250);
+	--ui-color-brand-300: oklch(0.79 0.11 250);
+	--ui-color-brand-400: oklch(0.69 0.15 250);
+	--ui-color-brand-500: oklch(0.6 0.18 250);
+	--ui-color-brand-600: oklch(0.52 0.17 250);
+	--ui-color-brand-700: oklch(0.44 0.14 250);
+	--ui-color-brand-800: oklch(0.35 0.11 250);
+	--ui-color-brand-900: oklch(0.28 0.09 250);
+	--ui-color-brand-950: oklch(0.22 0.08 250);
+
+	--ui-color-danger-50: oklch(0.98 0.02 25);
+	--ui-color-danger-100: oklch(0.96 0.05 25);
+	--ui-color-danger-200: oklch(0.91 0.09 25);
+	--ui-color-danger-300: oklch(0.83 0.13 25);
+	--ui-color-danger-400: oklch(0.73 0.16 25);
+	--ui-color-danger-500: oklch(0.62 0.18 25);
+	--ui-color-danger-600: oklch(0.52 0.18 25);
+	--ui-color-danger-700: oklch(0.42 0.16 25);
+	--ui-color-danger-800: oklch(0.32 0.13 25);
+	--ui-color-danger-900: oklch(0.24 0.09 25);
+	--ui-color-danger-950: oklch(0.16 0.06 25);
+
+	--ui-color-warning-50: oklch(0.98 0.02 85);
+	--ui-color-warning-100: oklch(0.96 0.05 85);
+	--ui-color-warning-200: oklch(0.91 0.08 85);
+	--ui-color-warning-300: oklch(0.83 0.12 85);
+	--ui-color-warning-400: oklch(0.73 0.15 85);
+	--ui-color-warning-500: oklch(0.62 0.16 85);
+	--ui-color-warning-600: oklch(0.52 0.16 85);
+	--ui-color-warning-700: oklch(0.42 0.14 85);
+	--ui-color-warning-800: oklch(0.32 0.11 85);
+	--ui-color-warning-900: oklch(0.24 0.08 85);
+	--ui-color-warning-950: oklch(0.16 0.05 85);
+
+	--ui-color-success-50: oklch(0.98 0.02 145);
+	--ui-color-success-100: oklch(0.95 0.05 145);
+	--ui-color-success-200: oklch(0.89 0.09 145);
+	--ui-color-success-300: oklch(0.8 0.13 145);
+	--ui-color-success-400: oklch(0.7 0.16 145);
+	--ui-color-success-500: oklch(0.6 0.15 145);
+	--ui-color-success-600: oklch(0.5 0.14 145);
+	--ui-color-success-700: oklch(0.41 0.12 145);
+	--ui-color-success-800: oklch(0.32 0.09 145);
+	--ui-color-success-900: oklch(0.25 0.07 145);
+	--ui-color-success-950: oklch(0.17 0.05 145);
+}

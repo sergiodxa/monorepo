@@ -1,6 +1,7 @@
 /**
- * Installs a request-scoped `ctx.render(jsx)` helper for the platform dashboard so
- * controllers can return `remix/ui` JSX documents as complete HTML responses.
+ * Installs a request-scoped `ctx.render(jsx)` helper, shared by the platform and
+ * tenant routers, so controllers can return `remix/ui` JSX documents as complete
+ * HTML responses.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -31,7 +32,7 @@ function createHtmlRenderer(_context: RequestContext) {
 	};
 }
 
-/** Middleware that installs `ctx.render` for the dashboard request pipeline. */
+/** Middleware that installs `ctx.render` for a request pipeline. */
 export default renderWith(createHtmlRenderer);
 
 declare module "remix/router" {
