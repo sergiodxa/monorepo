@@ -21,6 +21,7 @@ import * as Subjects from "./subjects";
 import m0001 from "./tenant-migrations/0001-init.sql?raw";
 import m0002 from "./tenant-migrations/0002-subjects.sql?raw";
 import m0003 from "./tenant-migrations/0003-passwords.sql?raw";
+import m0005 from "./tenant-migrations/0005-sessions.sql?raw";
 
 let db: Database;
 
@@ -33,6 +34,7 @@ beforeEach(async () => {
 	await driver.executeScript(m0001);
 	await driver.executeScript(m0002);
 	await driver.executeScript(m0003);
+	await driver.executeScript(m0005);
 
 	db = new Database(driver);
 });
@@ -246,6 +248,7 @@ describe("changePassword", () => {
 			subjectId: "sub_does_not_exist",
 			currentPassword: "whatever",
 			newPassword: "a-perfectly-fine-password-1",
+			keepSessionId: "sess_test",
 		});
 		expect(result).toEqual({ ok: false, reason: "not-found" });
 	});
@@ -257,6 +260,7 @@ describe("changePassword", () => {
 			subjectId,
 			currentPassword: "whatever",
 			newPassword: "a-perfectly-fine-password-1",
+			keepSessionId: "sess_test",
 		});
 		expect(result).toEqual({ ok: false, reason: "no-password" });
 	});
@@ -273,6 +277,7 @@ describe("changePassword", () => {
 			subjectId,
 			currentPassword: "wrong-password-1",
 			newPassword: "a-new-password-1",
+			keepSessionId: "sess_test",
 		});
 		expect(result).toEqual({ ok: false, reason: "wrong-password" });
 	});
@@ -289,12 +294,14 @@ describe("changePassword", () => {
 			subjectId,
 			currentPassword: "original-password-1",
 			newPassword: "a-new-password-1",
+			keepSessionId: "sess_test",
 		});
 		expect(result.ok).toBe(true);
 
 		let signIn = await Passwords.signInWithPassword(db, {
 			identifier: "jane@example.com",
 			password: "a-new-password-1",
+			remembered: false,
 		});
 		expect(signIn).toMatchObject({ ok: true, subjectId });
 	});
@@ -312,13 +319,16 @@ describe("signInWithPassword", () => {
 		let result = await Passwords.signInWithPassword(db, {
 			identifier: "jane@example.com",
 			password: "correct-password-1",
+			remembered: false,
 		});
 
-		expect(result).toEqual({
+		expect(result).toMatchObject({
 			ok: true,
 			subjectId,
 			secondFactorRequired: false,
 			mustChangePassword: false,
+			sessionId: expect.stringMatching(/^sess_/),
+			token: expect.any(String),
 		});
 	});
 
@@ -333,6 +343,7 @@ describe("signInWithPassword", () => {
 		let result = await Passwords.signInWithPassword(db, {
 			identifier: "JANE@EXAMPLE.COM",
 			password: "correct-password-1",
+			remembered: false,
 		});
 
 		expect(result).toMatchObject({ ok: true, subjectId });
@@ -352,6 +363,7 @@ describe("signInWithPassword", () => {
 		let result = await Passwords.signInWithPassword(db, {
 			identifier: "jane@example.com",
 			password: "correct-password-1",
+			remembered: false,
 		});
 
 		expect(result).toEqual({ ok: false, reason: "password_expired" });
@@ -369,6 +381,7 @@ describe("signInWithPassword", () => {
 		let result = await Passwords.signInWithPassword(db, {
 			identifier: "jane@example.com",
 			password: "correct-password-1",
+			remembered: false,
 		});
 
 		expect(result).toMatchObject({ ok: true, mustChangePassword: true });
@@ -381,6 +394,7 @@ describe("signInWithPassword", () => {
 			let result = await Passwords.signInWithPassword(db, {
 				identifier: "nobody@example.com",
 				password: "whatever-1",
+				remembered: false,
 			});
 
 			expect(result).toEqual({ ok: false, reason: "invalid-credentials" });
@@ -394,6 +408,7 @@ describe("signInWithPassword", () => {
 			let result = await Passwords.signInWithPassword(db, {
 				identifier: "jane@example.com",
 				password: "whatever-1",
+				remembered: false,
 			});
 
 			expect(result).toEqual({ ok: false, reason: "invalid-credentials" });
@@ -414,6 +429,7 @@ describe("signInWithPassword", () => {
 			let result = await Passwords.signInWithPassword(db, {
 				identifier: "jane@example.com",
 				password: "correct-password-1",
+				remembered: false,
 			});
 
 			expect(result).toEqual({ ok: false, reason: "invalid-credentials" });
@@ -433,6 +449,7 @@ describe("signInWithPassword", () => {
 			let result = await Passwords.signInWithPassword(db, {
 				identifier: "jane@example.com",
 				password: "wrong-password-1",
+				remembered: false,
 			});
 
 			expect(result).toEqual({ ok: false, reason: "invalid-credentials" });
@@ -520,6 +537,7 @@ describe("forcePasswordReset", () => {
 		let signIn = await Passwords.signInWithPassword(db, {
 			identifier: "jane@example.com",
 			password: "correct-password-1",
+			remembered: false,
 		});
 		expect(signIn).toMatchObject({ ok: true, mustChangePassword: true });
 	});
@@ -557,6 +575,7 @@ describe("beginPasswordReset / completePasswordReset", () => {
 		let signIn = await Passwords.signInWithPassword(db, {
 			identifier: "jane@example.com",
 			password: "a-reset-password-1",
+			remembered: false,
 		});
 		expect(signIn).toMatchObject({ ok: true, subjectId });
 

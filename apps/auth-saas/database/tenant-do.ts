@@ -45,6 +45,15 @@ import type {
 	SignInWithPasswordResult,
 } from "./passwords";
 import type {
+	ListSubjectSessionsInput,
+	ListSubjectSessionsResult,
+	ResolveSessionInput,
+	ResolveSessionResult,
+	RevokeSessionResult,
+	RevokeSubjectSessionsInput,
+	RevokeSubjectSessionsResult,
+} from "./sessions";
+import type {
 	Actor,
 	AddIdentifierInput,
 	AddIdentifierResult,
@@ -66,6 +75,7 @@ import type {
 import { hasAnotherCredential } from "./credentials";
 import * as Passkeys from "./passkeys";
 import * as Passwords from "./passwords";
+import * as Sessions from "./sessions";
 import * as Subjects from "./subjects";
 import { runMigrations } from "./tenant-migrations";
 
@@ -288,6 +298,10 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 */
 	async deleteSubject(input: { subjectId: string }): Promise<DeleteSubjectResult> {
 		await this.#migrated;
+
+		await this.#db.deleteMany(Passwords.passwords, { where: { subject_id: input.subjectId } });
+		await this.#db.deleteMany(Passkeys.passkeys, { where: { subject_id: input.subjectId } });
+
 		return Subjects.deleteSubject(this.#db, input);
 	}
 
@@ -518,7 +532,7 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	/**
 	 * The daily retention sweep: releases unverified identifiers whose ticket is gone or
 	 * expired and whose row has sat unproven for a week, clears expired passkey
-	 * ceremonies, then arms tomorrow's run.
+	 * ceremonies, deletes sessions past their absolute expiry, then arms tomorrow's run.
 	 *
 	 * Never rejects, the way a Durable Object alarm should not: a rejected alarm is
 	 * retried by the platform, which would repeat a sweep that already ran.
@@ -528,10 +542,73 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 			await this.#migrated;
 			await Subjects.sweepUnverifiedIdentifiers(this.#db);
 			await Passkeys.sweepExpiredPasskeyChallenges(this.#db);
+
+			/**
+			 * One alarm a day against a batch-bounded sweep: keep sweeping while a batch
+			 * came back full, capped so a pathological backlog cannot hold the alarm open
+			 * indefinitely — the remainder waits for tomorrow's run instead.
+			 */
+			for (let iteration = 0; iteration < 20; iteration++) {
+				let { more } = await Sessions.sweepExpiredSessions(this.#db);
+				if (!more) break;
+			}
 		} catch (error) {
 			console.error("retention sweep failed", error);
 		} finally {
 			await this.ctx.storage.setAlarm(Date.now() + SWEEP_INTERVAL_MS).catch(() => undefined);
 		}
+	}
+
+	/**
+	 * Resolves a bearer token to the session it authenticates.
+	 *
+	 * @param input - The token as the cookie carried it, and the resolving request's
+	 * origin.
+	 * @returns The session's subject, methods and clocks when it is live, or which
+	 * refusal applies.
+	 */
+	async resolveSession(input: ResolveSessionInput): Promise<ResolveSessionResult> {
+		await this.#migrated;
+		return Sessions.resolveSession(this.#db, input);
+	}
+
+	/**
+	 * Lists a page of a subject's live sessions, newest first.
+	 *
+	 * @param input - The subject whose sessions to list, the caller's own session id,
+	 * and where to page from.
+	 * @returns A page of session summaries, or that the given cursor no longer matches.
+	 */
+	async listSubjectSessions(input: ListSubjectSessionsInput): Promise<ListSubjectSessionsResult> {
+		await this.#migrated;
+		return Sessions.listSubjectSessions(this.#db, input);
+	}
+
+	/**
+	 * Revokes one session, scoped to the subject it must belong to.
+	 *
+	 * @param input - The subject, the session to revoke, and why.
+	 * @returns Success, or that no such session exists for this subject.
+	 */
+	async revokeSession(input: {
+		subjectId: string;
+		sessionId: string;
+		reason: string;
+	}): Promise<RevokeSessionResult> {
+		await this.#migrated;
+		return Sessions.revokeSession(this.#db, input);
+	}
+
+	/**
+	 * Revokes every live session a subject holds, optionally sparing one.
+	 *
+	 * @param input - The subject, why, and a session id to leave standing.
+	 * @returns How many sessions were revoked.
+	 */
+	async revokeSubjectSessions(
+		input: RevokeSubjectSessionsInput,
+	): Promise<RevokeSubjectSessionsResult> {
+		await this.#migrated;
+		return Sessions.revokeSubjectSessions(this.#db, input);
 	}
 }

@@ -16,8 +16,10 @@ import { typeid } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
 import { and, column as c, eq, notInList, notNull, table } from "remix/data-table";
 
+import type { OpenSessionResult } from "./sessions";
 import type { Actor, IdentifierKind, SubjectIdentifierRow } from "./subjects";
 
+import { openSession, revokeSubjectSessions } from "./sessions";
 import { foldIdentifier } from "./subject-identifiers";
 import { subjectIdentifiers, subjects } from "./subjects";
 
@@ -352,6 +354,8 @@ export interface ChangePasswordInput {
 	subjectId: string;
 	currentPassword: string;
 	newPassword: string;
+	/** The session performing the change, spared from the revocation a change triggers. */
+	keepSessionId: string;
 }
 
 export type ChangePasswordResult =
@@ -363,14 +367,13 @@ export type ChangePasswordResult =
 
 /**
  * Verifies a subject's current password and writes a new one in its place, running
- * the same policy and reuse check every path that writes a password runs.
- *
- * Revoking every session but the one performing the change is the sessions ADR's
- * job to add to this same operation once sessions exist; today this returns what
- * changed and nothing about sessions.
+ * the same policy and reuse check every path that writes a password runs. Revokes
+ * every other session the subject holds: the person changing it is present, and a
+ * session they are not holding may be an attacker's.
  *
  * @param db - The tenant's database.
- * @param input - The subject, its current password, and the replacement.
+ * @param input - The subject, its current password, the replacement, and the session
+ * performing the change.
  * @returns The new row's id and expiry, or why the change was refused.
  */
 export async function changePassword(
@@ -389,21 +392,41 @@ export async function changePassword(
 	let verified = await password.verify(newest.hash, input.currentPassword);
 	if (isFailure(verified) || !verified.data) return { ok: false, reason: "wrong-password" };
 
-	return writeNewPassword(db, { subjectId: input.subjectId, password: input.newPassword });
+	let written = await writeNewPassword(db, {
+		subjectId: input.subjectId,
+		password: input.newPassword,
+	});
+	if (!written.ok) return written;
+
+	await revokeSubjectSessions(db, {
+		subjectId: input.subjectId,
+		reason: "password_changed",
+		exceptSessionId: input.keepSessionId,
+	});
+
+	return written;
 }
 
 export interface SignInWithPasswordInput {
 	identifier: string;
 	password: string;
+	/** Whether the browser should keep the session past its own lifetime. */
+	remembered: boolean;
+	ip?: string | null;
+	userAgent?: string | null;
+	country?: string | null;
+	region?: string | null;
+	city?: string | null;
 }
 
-/**
- * Everything a caller needs to open a session, stopping short of opening one: no
- * session id, refresh token or expiry is minted here, because sessions do not exist
- * yet. A caller uses `subjectId` (and the owed flags) to open one once they do.
- */
+/** A verified sign-in and the session it opened in the same call. */
 export type SignInWithPasswordResult =
-	| { ok: true; subjectId: string; secondFactorRequired: boolean; mustChangePassword: boolean }
+	| ({
+			ok: true;
+			subjectId: string;
+			secondFactorRequired: boolean;
+			mustChangePassword: boolean;
+	  } & OpenSessionResult)
 	| { ok: false; reason: "invalid-credentials" }
 	| { ok: false; reason: "password_expired" };
 
@@ -432,7 +455,8 @@ function identifierKindOf(value: string): IdentifierKind {
 }
 
 /**
- * Verifies a password sign-in and reports what is owed, without opening a session.
+ * Verifies a password sign-in and opens a session in the same call — a credential
+ * checked in one call and a session opened in another is one operation split in half.
  *
  * An unknown identifier, a subject with no password, and a blocked subject all
  * derive the candidate against a fixed dummy hash before answering, the same
@@ -440,7 +464,8 @@ function identifierKindOf(value: string): IdentifierKind {
  * which of those it was.
  *
  * @param db - The tenant's database.
- * @param input - The identifier as typed, and the candidate password.
+ * @param input - The identifier as typed, the candidate password, whether to remember
+ * the session past its own lifetime, and the request's origin.
  * @returns The subject and what it still owes, or why sign-in was refused.
  */
 export async function signInWithPassword(
@@ -493,12 +518,24 @@ export async function signInWithPassword(
 		return { ok: false, reason: "password_expired" };
 	}
 
+	let session = await openSession(db, {
+		subjectId: subject.id,
+		amr: ["pwd"],
+		remembered: input.remembered,
+		ip: input.ip,
+		userAgent: input.userAgent,
+		country: input.country,
+		region: input.region,
+		city: input.city,
+	});
+
 	return {
 		ok: true,
 		subjectId: subject.id,
 		// No second-factor mechanism exists yet; this is always false until one does.
 		secondFactorRequired: false,
 		mustChangePassword: newest.must_change,
+		...session,
 	};
 }
 
@@ -591,7 +628,9 @@ export type CompletePasswordResetResult =
 	| PasswordPolicyFailure;
 
 /**
- * Spends a password reset ticket and writes the new password it authorized.
+ * Spends a password reset ticket, writes the new password it authorized, and revokes
+ * every session the subject holds — a reset is what someone locked out does, and the
+ * browser completing it may not be theirs.
  *
  * The ticket is deleted the moment its row is found, before its expiry or the new
  * password's policy is checked, so a ticket is spent by one attempt regardless of
@@ -628,6 +667,8 @@ export async function completePasswordReset(
 	});
 	if (!written.ok) return written;
 
+	await revokeSubjectSessions(db, { subjectId: row.subject_id, reason: "password_reset" });
+
 	return { ok: true, subjectId: row.subject_id, passwordId: written.passwordId };
 }
 
@@ -643,8 +684,7 @@ export type ForcePasswordResetResult =
 
 /**
  * Marks a subject's current password as owing a change, for a targeted response to
- * a suspected compromise. Revoking every session is the sessions ADR's job to add to
- * this same operation once sessions exist.
+ * a suspected compromise, and revokes every session the subject holds.
  *
  * @param db - The tenant's database.
  * @param input - The subject, and why the reset is being forced.
@@ -664,6 +704,7 @@ export async function forcePasswordReset(
 	if (!newest) return { ok: false, reason: "no-password" };
 
 	await db.update(passwords, { id: newest.id }, { must_change: true });
+	await revokeSubjectSessions(db, { subjectId: input.subjectId, reason: input.reason });
 
 	return { ok: true, passwordId: newest.id, reason: input.reason };
 }

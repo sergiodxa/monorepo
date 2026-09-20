@@ -20,6 +20,9 @@ import { typeid } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
 import { and, column as c, eq, lt, ne, table } from "remix/data-table";
 
+import type { OpenSessionResult } from "./sessions";
+
+import { openSession } from "./sessions";
 import * as Subjects from "./subjects";
 
 /** How long a browser keeps a passkey prompt open, matching the package's own default. */
@@ -319,10 +322,23 @@ export interface SignInWithPasskeyInput {
 	response: AuthenticationResponseJSON;
 	relyingPartyId: string;
 	origins: string[];
+	/** Whether the browser should keep the session past its own lifetime. */
+	remembered: boolean;
+	ip?: string | null;
+	userAgent?: string | null;
+	country?: string | null;
+	region?: string | null;
+	city?: string | null;
 }
 
 export type SignInWithPasskeyResult =
-	| { ok: true; subjectId: string; credentialId: string; userVerified: boolean; backedUp: boolean }
+	| ({
+			ok: true;
+			subjectId: string;
+			credentialId: string;
+			userVerified: boolean;
+			backedUp: boolean;
+	  } & OpenSessionResult)
 	| { ok: false; reason: "invalid-ceremony" }
 	| { ok: false; reason: "expired-ceremony" }
 	| { ok: false; reason: "unknown-credential" }
@@ -332,22 +348,20 @@ export type SignInWithPasskeyResult =
 
 /**
  * Spends an authentication ceremony's challenge, verifies the assertion against the
- * credential it names, and records the counter and last-use time on success. A
- * counter that fails to advance past what is stored is a clone signal rather than an
- * ordinary failed attempt: the credential is suspended and the reason names that
- * outcome on its own, distinct from every other way an assertion can fail.
- *
- * Nothing about a session is opened or returned here — that is a later ADR's call to
- * make once sessions exist. What comes back is the subject and credential an opened
- * session would be issued for.
+ * credential it names, records the counter and last-use time, and opens a session —
+ * a credential checked in one call and a session opened in another is one operation
+ * split in half. A counter that fails to advance past what is stored is a clone
+ * signal rather than an ordinary failed attempt: the credential is suspended and the
+ * reason names that outcome on its own, distinct from every other way an assertion
+ * can fail.
  *
  * @param db - The tenant's database.
  * @param input - The ceremony id issued by {@link beginPasskeyAuthentication}, the
- * browser's response, and the relying party id and origins the Worker resolved.
+ * browser's response, the relying party id and origins the Worker resolved, whether to
+ * remember the session past its own lifetime, and the request's origin.
  * @param rp - Relying party to verify the response with; built from `input` when
  * omitted.
- * @returns The subject and credential the assertion proved, or which check refused
- * it.
+ * @returns The subject, credential and opened session, or which check refused it.
  */
 export async function signInWithPasskey(
 	db: Database,
@@ -391,12 +405,24 @@ export async function signInWithPasskey(
 		{ counter: verified.data.counter, last_used_at: now },
 	);
 
+	let session = await openSession(db, {
+		subjectId: credential.subject_id,
+		amr: ["webauthn"],
+		remembered: input.remembered,
+		ip: input.ip,
+		userAgent: input.userAgent,
+		country: input.country,
+		region: input.region,
+		city: input.city,
+	});
+
 	return {
 		ok: true,
 		subjectId: credential.subject_id,
 		credentialId: credential.credential_id,
 		userVerified: verified.data.userVerified,
 		backedUp: verified.data.backedUp,
+		...session,
 	};
 }
 

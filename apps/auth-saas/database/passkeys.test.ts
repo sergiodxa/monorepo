@@ -406,6 +406,7 @@ describe("signInWithPasskey", () => {
 			response,
 			relyingPartyId: RELYING_PARTY_ID,
 			origins: ORIGINS,
+			remembered: false,
 		});
 
 		expect(result).toMatchObject({ ok: true, subjectId, userVerified: true });
@@ -431,6 +432,7 @@ describe("signInWithPasskey", () => {
 			response,
 			relyingPartyId: RELYING_PARTY_ID,
 			origins: ORIGINS,
+			remembered: false,
 		});
 		expect(first.ok).toBe(true);
 
@@ -439,6 +441,7 @@ describe("signInWithPasskey", () => {
 			response,
 			relyingPartyId: RELYING_PARTY_ID,
 			origins: ORIGINS,
+			remembered: false,
 		});
 		expect(replay).toEqual({ ok: false, reason: "invalid-ceremony" });
 	});
@@ -464,6 +467,7 @@ describe("signInWithPasskey", () => {
 			response,
 			relyingPartyId: RELYING_PARTY_ID,
 			origins: ORIGINS,
+			remembered: false,
 		});
 
 		expect(result).toEqual({
@@ -494,6 +498,7 @@ describe("signInWithPasskey", () => {
 			response,
 			relyingPartyId: RELYING_PARTY_ID,
 			origins: ORIGINS,
+			remembered: false,
 		});
 
 		expect(result).toEqual({ ok: false, reason: "counter-regression" });
@@ -511,6 +516,7 @@ describe("signInWithPasskey", () => {
 			response: retryResponse,
 			relyingPartyId: RELYING_PARTY_ID,
 			origins: ORIGINS,
+			remembered: false,
 		});
 
 		expect(retry).toEqual({ ok: false, reason: "credential-suspended" });

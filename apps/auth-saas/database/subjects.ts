@@ -16,6 +16,7 @@ import { and, column as c, eq, isNull, lt, ne, notNull, or, table } from "remix/
 
 import type { IdentifierKind } from "./subject-identifiers";
 
+import { revokeSubjectSessions, sessions } from "./sessions";
 import { foldIdentifier } from "./subject-identifiers";
 
 export type { IdentifierKind } from "./subject-identifiers";
@@ -650,11 +651,8 @@ async function hasRemainingVerifiedIdentifierAfter(
 export type BlockSubjectResult = { ok: true } | { ok: false; reason: "not-found" };
 
 /**
- * Flips a subject to `blocked`.
- *
- * Ending every session the subject holds happens once there is a sessions table to act
- * on; today the status flip is the whole operation, and every sign-in path already
- * reads it before trusting a subject.
+ * Flips a subject to `blocked` and revokes every session it holds, so a block takes
+ * effect immediately rather than waiting for a session's own expiry.
  *
  * @param db - The tenant's database.
  * @param input - The subject to block and the reason recorded for the call.
@@ -668,6 +666,7 @@ export async function blockSubject(
 	if (!subject) return { ok: false, reason: "not-found" };
 
 	await db.update(subjects, { id: input.subjectId }, { status: "blocked", updated_at: Date.now() });
+	await revokeSubjectSessions(db, { subjectId: input.subjectId, reason: input.reason });
 
 	return { ok: true };
 }
@@ -696,11 +695,12 @@ export async function unblockSubject(
 export type DeleteSubjectResult = { ok: true } | { ok: false; reason: "not-found" };
 
 /**
- * Removes a subject, its identifiers and its attributes, and retires the id for good —
- * a relying party's foreign key never gets handed to someone else.
+ * Removes a subject, its identifiers, its attributes and its sessions, and retires the
+ * id for good — a relying party's foreign key never gets handed to someone else.
  *
- * Credentials and sessions leave with the subject once those tables exist; today its
- * identifiers and attributes are everything there is to remove.
+ * Its passwords and passkeys leave with it too, deleted by the caller alongside this
+ * call: they live in tables of their own that importing here would cycle back to this
+ * one, since both already import from it.
  *
  * @param db - The tenant's database.
  * @param input - The subject to delete.
@@ -713,6 +713,7 @@ export async function deleteSubject(
 	let subject = await db.find(subjects, { id: input.subjectId });
 	if (!subject) return { ok: false, reason: "not-found" };
 
+	await db.deleteMany(sessions, { where: { subject_id: input.subjectId } });
 	await db.deleteMany(subjectAttributes, { where: { subject_id: input.subjectId } });
 	await db.deleteMany(subjectIdentifiers, { where: { subject_id: input.subjectId } });
 	await db.delete(subjects, { id: input.subjectId });
