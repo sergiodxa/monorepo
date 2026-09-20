@@ -122,6 +122,12 @@ export const AUDIT_ACTIONS = [
 	"signing_key.rotated",
 	"consent.granted",
 	"consent.revoked",
+	// Social identity provider connections
+	"connection.created",
+	"connection.updated",
+	"connection.enabled",
+	"connection.disabled",
+	"connection.removed",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

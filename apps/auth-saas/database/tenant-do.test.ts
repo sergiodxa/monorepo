@@ -48,6 +48,7 @@ describe("provision", () => {
 				"0015-totp",
 				"0016-second-factor-sign-in",
 				"0017-step-up",
+				"0018-connections",
 			],
 			issuer: "https://tenant-1.example.com",
 			keys: { keys: [expect.objectContaining({ kty: "EC", alg: "ES256" })] },

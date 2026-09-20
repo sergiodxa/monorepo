@@ -48,6 +48,14 @@ import type {
 	UpdateClientResult,
 } from "./clients";
 import type {
+	DescribeConnectionsInput,
+	DescribeConnectionsResult,
+	RemoveConnectionResult,
+	SaveConnectionInput,
+	SaveConnectionResult,
+	SetConnectionEnabledResult,
+} from "./connections";
+import type {
 	EvaluateConsentInput,
 	EvaluateConsentResult,
 	ListGrantsInput,
@@ -150,6 +158,7 @@ import {
 } from "./audit-events";
 import * as Authorization from "./authorization";
 import * as Clients from "./clients";
+import * as Connections from "./connections";
 import * as Consent from "./consent";
 import { hasAnotherCredential } from "./credentials";
 import { applyEntitlements, entitlementEnforcement } from "./entitlements";
@@ -1273,6 +1282,77 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
+	 * Validates and writes a social identity provider connection's whole
+	 * configuration: resolves a catalog entry or a from-scratch shape, validates
+	 * every mapping's target, seals the client secret when one is given, and
+	 * claims the slug.
+	 *
+	 * `input.callbackOrigin` names the tenant's own platform subdomain, not
+	 * whatever host currently serves as `iss` — a custom domain attached later
+	 * changes the issuer this object records in `settings`, while the callback a
+	 * provider was told about must stay put for the tenant's life. The caller
+	 * (which already knows the control plane's own slug and platform domain)
+	 * supplies it; this object has no way to tell the two hosts apart once an
+	 * issuer has moved, since `settings` only ever remembers the current one.
+	 *
+	 * @param input - The whole connection to save, including the platform
+	 * subdomain origin the callback URL is built against.
+	 * @returns The connection's public record and the callback URL to register
+	 * with the provider, or which rule refused the save.
+	 */
+	async saveConnection(input: SaveConnectionInput): Promise<WithCost<SaveConnectionResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let sealKey = await this.#sealKey();
+			return Connections.saveConnection(this.#db, sealKey, input);
+		});
+	}
+
+	/**
+	 * Turns a connection on or off, refusing to enable one with no client secret
+	 * sealed yet.
+	 *
+	 * @param input - The connection's slug, and whether it should now be enabled.
+	 * @returns The connection's public record, or why the change was refused.
+	 */
+	async setConnectionEnabled(input: {
+		slug: string;
+		enabled: boolean;
+	}): Promise<WithCost<SetConnectionEnabledResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Connections.setConnectionEnabled(this.#db, input));
+	}
+
+	/**
+	 * Removes a connection and its mappings.
+	 *
+	 * @param input - The connection's slug, and whether a referencing identity
+	 * may be unlinked rather than block the removal.
+	 * @returns Success, or that no such connection exists.
+	 */
+	async removeConnection(input: {
+		slug: string;
+		unlinkIdentities: boolean;
+	}): Promise<WithCost<RemoveConnectionResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Connections.removeConnection(this.#db, input));
+	}
+
+	/**
+	 * Every enabled connection's public record, the read a sign-in page renders
+	 * its provider buttons from.
+	 *
+	 * @returns Every enabled connection, oldest first.
+	 */
+	async describeConnections(
+		input: DescribeConnectionsInput = {},
+	): Promise<WithCost<DescribeConnectionsResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Connections.describeConnections(this.#db, input));
+	}
+
+	/**
 	 * Decides what a consent screen should show for one authorization request.
 	 *
 	 * @param input - The subject and client an authorization request named, the scopes
@@ -1581,6 +1661,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 				custom_claims: SigningKeys.customClaims,
 				clients: Clients.clients,
 				client_secrets: Clients.clientSecrets,
+				connections: Connections.connections,
+				connection_mappings: Connections.connectionMappings,
+				connection_transactions: Connections.connectionTransactions,
 				scopes: Consent.scopes,
 				grants: Consent.grants,
 				authorization_requests: Authorization.authorizationRequests,
