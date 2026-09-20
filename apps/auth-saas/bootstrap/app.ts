@@ -16,6 +16,10 @@ import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
 import { createRouter } from "remix/router";
 
+import billingCheckout from "~/app/http/controllers/billing/checkout";
+import billingCheckoutReturn from "~/app/http/controllers/billing/checkout-return";
+import billingPortal from "~/app/http/controllers/billing/portal";
+import billingWebhook from "~/app/http/controllers/billing/webhook";
 import health from "~/app/http/controllers/health";
 import index from "~/app/http/controllers/index";
 import notFound from "~/app/http/controllers/not-found";
@@ -62,3 +66,7 @@ export const router = createRouter({
 
 router.map(routes.index, index);
 router.map(routes.health, health);
+router.map(routes.billing.checkout, billingCheckout);
+router.map(routes.billing.checkoutReturn, billingCheckoutReturn);
+router.map(routes.billing.portal, billingPortal);
+router.map(routes.billing.webhook, billingWebhook);

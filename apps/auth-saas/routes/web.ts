@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { get, route } from "remix/routes";
+import { get, post, route } from "remix/routes";
 
 /**
  * The application route map. Each leaf is a typed route with `.href(params)` for
@@ -19,4 +19,16 @@ import { get, route } from "remix/routes";
 export default route({
 	index: get("/"),
 	health: get("/health"),
+
+	/**
+	 * Per-tenant subscriptions (ADR-018). Backend endpoints only — there is no
+	 * dashboard app in this ADR series, so a future UI posts to `checkout` and
+	 * `portal` and is redirected through `checkoutReturn`.
+	 */
+	billing: {
+		checkout: post("/billing/tenants/:tenantId/checkout"),
+		checkoutReturn: get("/billing/checkout/return"),
+		portal: post("/billing/tenants/:tenantId/portal"),
+		webhook: post("/webhooks/billing"),
+	},
 });

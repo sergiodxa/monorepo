@@ -44,6 +44,7 @@ import type {
 	RecordConsentDecisionResult,
 	RevokeGrantResult,
 } from "./consent";
+import type { ApplyEntitlementsInput, ApplyEntitlementsResult } from "./entitlements";
 import type {
 	PublishMetadataResult,
 	ResolveUserInfoInput,
@@ -117,6 +118,7 @@ import * as Authorization from "./authorization";
 import * as Clients from "./clients";
 import * as Consent from "./consent";
 import { hasAnotherCredential } from "./credentials";
+import { applyEntitlements } from "./entitlements";
 import * as Metadata from "./metadata";
 import * as Passkeys from "./passkeys";
 import * as Passwords from "./passwords";
@@ -958,5 +960,20 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	async resolveUserInfo(input: ResolveUserInfoInput): Promise<ResolveUserInfoResult> {
 		await this.#migrated;
 		return Metadata.resolveUserInfo(this.#db, input);
+	}
+
+	/**
+	 * Writes this tenant's enforcement record — the DAU cap and audit retention
+	 * window its plan now allows — as one whole operation, called from the
+	 * control plane's projection write.
+	 *
+	 * @param input - The plan, its features, the DAU cap and audit retention
+	 * window it now enforces, and when this took effect.
+	 * @returns The plan now enforced, and how many audit rows the new
+	 * retention window pruned.
+	 */
+	async applyEntitlements(input: ApplyEntitlementsInput): Promise<ApplyEntitlementsResult> {
+		await this.#migrated;
+		return applyEntitlements(this.#db, input);
 	}
 }

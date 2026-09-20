@@ -49,7 +49,7 @@ describe("provisionTenant", () => {
 		expect(tenant.customer_id).toBe(customer.id);
 		expect(tenant.issuer).toBe(`https://${tenant.slug}.auth.sergiodxa.com`);
 		expect(tenant.status).toBe("active");
-		expect(tenant.plan).toBe("free");
+		expect(tenant.plan_slug).toBe("free");
 	});
 
 	test("writes an already-active platform domain row for the same hostname as the issuer", async () => {

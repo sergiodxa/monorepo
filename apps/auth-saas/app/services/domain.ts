@@ -58,7 +58,7 @@ export async function attachCustomDomain(
 ): Promise<DomainRow> {
 	let tenant = await Tenant.findById(db, tenantId);
 	if (!tenant) throw new RecordNotFoundError(Tenant.table, { id: tenantId });
-	if (tenant.plan === "free") throw new CustomDomainNotAllowedError(tenantId);
+	if (tenant.plan_slug === "free") throw new CustomDomainNotAllowedError(tenantId);
 
 	let result = await hostnameClient.create(hostname, tenantId, tenant.region);
 	let domain = await Domain.create(db, { tenantId, hostname, kind: "custom" });

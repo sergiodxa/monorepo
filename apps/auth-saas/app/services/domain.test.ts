@@ -68,7 +68,9 @@ async function makeTenant(plan: "free" | "pro" | "premium" = "pro") {
 		issuer: "https://acme.auth.example.com",
 		region: "wnam",
 	});
-	if (plan !== "free") tenant = await db.update(Tenant.table, { id: tenant.id }, { plan });
+	if (plan !== "free") {
+		tenant = await db.update(Tenant.table, { id: tenant.id }, { plan_slug: plan });
+	}
 	return tenant;
 }
 

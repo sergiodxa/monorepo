@@ -46,10 +46,18 @@ export default class Tenant {
 				.enum(["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"] as const)
 				.default("wnam"),
 			status: c.enum(["active", "suspended", "deleted"] as const).default("active"),
-			plan: c.enum(["free", "pro", "premium"] as const).default("free"),
+			/**
+			 * A free-text slug rather than an enum: ADR-019 names the real tiers this
+			 * plan catalog sells, so the column carries whatever it defines without a
+			 * schema change.
+			 */
+			plan_slug: c.text().default("free"),
 			subscription_status: c.text().default("active"),
-			billing_subscription_id: c.text().nullable(),
+			subscription_id: c.text().nullable(),
 			current_period_end: c.integer().nullable(),
+			cancel_at_period_end: c.boolean().default(false),
+			grace_until: c.integer().nullable(),
+			lapsed_at: c.integer().nullable(),
 			deleted_at: c.integer().nullable(),
 			created_at: c.integer(),
 			updated_at: c.integer(),
@@ -123,13 +131,71 @@ export default class Tenant {
 				issuer: data.issuer,
 				region: data.region ?? "wnam",
 				status: "active",
-				plan: "free",
+				plan_slug: "free",
 				subscription_status: "active",
-				billing_subscription_id: null,
+				subscription_id: null,
 				current_period_end: null,
+				cancel_at_period_end: false,
+				grace_until: null,
+				lapsed_at: null,
 				deleted_at: null,
 			},
 			{ touch: true, returnRow: true },
+		);
+	}
+
+	/**
+	 * Finds the tenant a subscription id was recorded as the base plan of.
+	 *
+	 * @param db - Database connection.
+	 * @param subscriptionId - The provider's own subscription id.
+	 * @returns A promise resolving to the tenant row, or null when no tenant holds
+	 * it as a base subscription.
+	 */
+	static findBySubscriptionId(db: Database, subscriptionId: string): Promise<TenantRow | null> {
+		return db.findOne(Tenant.table, { where: { subscription_id: subscriptionId } });
+	}
+
+	/**
+	 * Writes the billing/lapse fields a checkout, a webhook, or a reconciliation
+	 * sweep decided; omitted fields keep their stored value.
+	 *
+	 * @param db - Database connection.
+	 * @param id - The tenant id.
+	 * @param data - The fields to change.
+	 * @returns A promise resolving to the updated tenant row.
+	 * @throws When no tenant exists for the given id.
+	 */
+	static update(
+		db: Database,
+		id: string,
+		data: Partial<{
+			planSlug: string;
+			subscriptionId: string | null;
+			subscriptionStatus: string;
+			currentPeriodEnd: number | null;
+			cancelAtPeriodEnd: boolean;
+			graceUntil: number | null;
+			lapsedAt: number | null;
+		}>,
+	): Promise<TenantRow> {
+		return db.update(
+			Tenant.table,
+			{ id },
+			{
+				...(data.planSlug !== undefined && { plan_slug: data.planSlug }),
+				...(data.subscriptionId !== undefined && { subscription_id: data.subscriptionId }),
+				...(data.subscriptionStatus !== undefined && {
+					subscription_status: data.subscriptionStatus,
+				}),
+				...(data.currentPeriodEnd !== undefined && { current_period_end: data.currentPeriodEnd }),
+				...(data.cancelAtPeriodEnd !== undefined && {
+					cancel_at_period_end: data.cancelAtPeriodEnd,
+				}),
+				...(data.graceUntil !== undefined && { grace_until: data.graceUntil }),
+				...(data.lapsedAt !== undefined && { lapsed_at: data.lapsedAt }),
+			},
+			{ touch: true },
 		);
 	}
 
@@ -152,4 +218,24 @@ export default class Tenant {
 		let random = crypto.randomUUID().slice(0, 4);
 		return `${base}-${random}`;
 	}
+}
+
+/**
+ * Whether a tenant's lapse (ADR-018) must refuse a paid-capability write. Token
+ * issuance and a custom domain already serving as an issuer keep working through a
+ * lapse regardless — this is only for the write side of a paid capability, per
+ * ADR-018's "Payment failure and cancellation" table.
+ *
+ * Nothing in this codebase calls this yet, because none of the paid capabilities it
+ * gates exist here yet: custom-domain configuration beyond attachment, branding
+ * edits, session policy changes, SSO connection setup, and API key minting are each
+ * a later ADR's own write path, and each is expected to check this before it commits.
+ *
+ * @param tenant - The tenant row a paid-capability write is being attempted against.
+ * @returns Whether the tenant has lapsed and the write must refuse.
+ * @example
+ * if (isTenantWriteRestricted(tenant)) throw new TenantLapsedError(tenant.id);
+ */
+export function isTenantWriteRestricted(tenant: Pick<TenantRow, "lapsed_at">): boolean {
+	return tenant.lapsed_at !== null;
 }
