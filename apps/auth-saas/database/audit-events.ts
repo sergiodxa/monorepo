@@ -81,7 +81,6 @@ export type AuditEventRow = TableRow<typeof auditEvents>;
  *   has no prior plan to compare against, so "changed" has no honest answer on the
  *   call that matters most (initial provisioning). Both are solvable, but not for
  *   the price of "cheap and low-risk" this pass is held to.
- * - `recovery_code.consumed` — recovery codes do not exist yet.
  * - `identifier.primary_changed` — redesignating which already-verified identifier is
  *   primary reorders a subject's own claims rather than changing which claims exist,
  *   and did not make the minimum list this pass commits to.
@@ -99,6 +98,11 @@ export const AUDIT_ACTIONS = [
 	"passkey.enrolled",
 	"passkey.renamed",
 	"passkey.revoked",
+	"totp.enrolled",
+	"totp.removed",
+	"recovery_codes.regenerated",
+	"second_factor.reset",
+	"trusted_device.revoked",
 	// Subject lifecycle
 	"subject.created",
 	"subject.updated",

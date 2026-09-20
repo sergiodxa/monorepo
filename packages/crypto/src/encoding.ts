@@ -16,6 +16,7 @@ import { failure, success } from "@sdxc/result";
 import type { BinaryLike, Bytes } from "./lib/bytes.js";
 
 import { InvalidEncodingError } from "./errors.js";
+import { decode as decodeBase32, encode as encodeBase32 } from "./lib/base32.js";
 import { toBytes, toText } from "./lib/bytes.js";
 
 /** Lowercase hex digits; encoding always emits from this alphabet. */
@@ -276,5 +277,39 @@ export class Base64 {
 	static decode(text: string): Result<Bytes, InvalidEncodingError> {
 		if (!BASE64_PATTERN.test(text)) return failure(new InvalidEncodingError("base64"));
 		return decodeBase64(text, BASE64_VALUES, "base64");
+	}
+}
+
+/**
+ * Unpadded uppercase base32 (RFC 4648 §6), the alphabet a value typed by hand or
+ * scanned from a QR code has to survive — recovery codes and, inside `totp.ts`,
+ * shared secrets.
+ *
+ * @example
+ * Base32.encode(new Uint8Array([102, 111, 111])); // "MZXW6"
+ */
+export class Base32 {
+	/**
+	 * Encodes bytes (or UTF-8 text) as unpadded uppercase base32.
+	 *
+	 * @param data Payload to encode.
+	 * @returns Base32 string over `A-Z` and `2-7`, never padded.
+	 * @example
+	 * Base32.encode("hi"); // "NBUQ"
+	 */
+	static encode(data: BinaryLike): string {
+		return encodeBase32(toBytes(data));
+	}
+
+	/**
+	 * Decodes base32 text, ignoring case, padding, and separating whitespace or dashes.
+	 *
+	 * @param text Base32 string to decode.
+	 * @returns Decoded bytes, or `InvalidEncodingError` when a character is invalid.
+	 * @example
+	 * Base32.decode("NBUQ"); // success(bytes for "hi")
+	 */
+	static decode(text: string): Result<Bytes, InvalidEncodingError> {
+		return decodeBase32(text);
 	}
 }

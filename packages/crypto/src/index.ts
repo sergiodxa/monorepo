@@ -11,7 +11,7 @@
 
 export type { BinaryLike, Bytes } from "./lib/bytes.js";
 
-export { Base64, Base64Url, Hex } from "./encoding.js";
+export { Base32, Base64, Base64Url, Hex } from "./encoding.js";
 export { concatBytes } from "./lib/bytes.js";
 export {
 	CryptoError,

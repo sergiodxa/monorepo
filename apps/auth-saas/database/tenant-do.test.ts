@@ -45,6 +45,7 @@ describe("provision", () => {
 				"0012-entitlements",
 				"0013-dau",
 				"0014-audit",
+				"0015-totp",
 			],
 			issuer: "https://tenant-1.example.com",
 			keys: { keys: [expect.objectContaining({ kty: "EC", alg: "ES256" })] },
@@ -55,6 +56,7 @@ describe("provision", () => {
 			{
 				tenant_id: "tenant_1",
 				issuer: "https://tenant-1.example.com",
+				mfa_policy: "optional",
 				created_at: expect.any(Number),
 			},
 		]);

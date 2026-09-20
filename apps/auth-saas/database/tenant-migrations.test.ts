@@ -44,6 +44,7 @@ describe("runMigrations", () => {
 			"0012-entitlements",
 			"0013-dau",
 			"0014-audit",
+			"0015-totp",
 		]);
 	});
 
@@ -83,6 +84,11 @@ describe("runMigrations", () => {
 			"dau_seen",
 			"dau_day",
 			"audit_events",
+			"totp_enrolments",
+			"totp_factors",
+			"totp_claims",
+			"recovery_codes",
+			"trusted_devices",
 		]) {
 			expect(names, `${name} exists`).toContain(name);
 		}
@@ -112,6 +118,7 @@ describe("runMigrations", () => {
 			{ id: "0012-entitlements", applied_at: expect.any(Number) },
 			{ id: "0013-dau", applied_at: expect.any(Number) },
 			{ id: "0014-audit", applied_at: expect.any(Number) },
+			{ id: "0015-totp", applied_at: expect.any(Number) },
 		]);
 	});
 

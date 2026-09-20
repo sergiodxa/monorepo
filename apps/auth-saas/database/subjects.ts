@@ -63,6 +63,8 @@ export const subjects = table({
 		zoneinfo: c.text().nullable(),
 		created_at: c.integer(),
 		updated_at: c.integer(),
+		// Set by an administrator second-factor reset; a sign-in reads it to demand a fresh enrolment.
+		mfa_reset_required: c.boolean().default(false),
 	},
 });
 
@@ -893,31 +895,70 @@ export interface DescribeSubjectInput {
 	audience: Actor;
 }
 
+/** A subject's TOTP factor as an account screen shows it; both fields `null` with none enrolled. */
+export interface TotpFactorSummary {
+	label: string | null;
+	lastUsedAt: number | null;
+}
+
+/** One remembered browser, never carrying the token itself — only what identifies it to the subject. */
+export interface TrustedDeviceSummary {
+	id: string;
+	createdAt: number;
+	expiresAt: number;
+	ip: string | null;
+	userAgent: string | null;
+}
+
+/**
+ * Everything `describeSubject` reports about a subject's second factor. Computed by
+ * `totp.ts` from tables this module does not import — subjects.ts already sits
+ * beneath every credential module, so a subject with none of this state yet
+ * describes it as {@link NO_SECOND_FACTOR} rather than this module reading the
+ * tables itself.
+ */
+export interface SecondFactorState {
+	totpFactor: TotpFactorSummary;
+	recoveryCodesRemaining: number;
+	trustedDevices: TrustedDeviceSummary[];
+}
+
+/** What a subject with no TOTP factor enrolled reports for every second-factor field. */
+const NO_SECOND_FACTOR: SecondFactorState = {
+	totpFactor: { label: null, lastUsedAt: null },
+	recoveryCodesRemaining: 0,
+	trustedDevices: [],
+};
+
 export type DescribeSubjectResult =
-	| {
+	| ({
 			ok: true;
 			profile: SubjectProfile & { id: string; status: SubjectRow["status"] };
 			identifiers: IdentifierState[];
 			attributes: Record<string, AttributeValue>;
 			credentials: never[];
-	  }
+	  } & SecondFactorState)
 	| { ok: false; reason: "not-found" };
 
 /**
  * Assembles everything one account screen renders: profile, every identifier with its
- * state and which is primary, the attributes this audience may see, and which
- * credentials exist.
+ * state and which is primary, the attributes this audience may see, which
+ * credentials exist, and the second-factor state a caller computed for it.
  *
  * The credential list is empty for every subject today; it starts listing passwords and
  * passkeys once those tables exist to describe.
  *
  * @param db - The tenant's database.
  * @param input - The subject to describe and who is looking.
+ * @param secondFactor - The subject's TOTP factor, recovery codes and trusted
+ * devices, computed by a caller that can read `totp.ts`'s tables. Defaults to
+ * {@link NO_SECOND_FACTOR} for a caller that has not computed it.
  * @returns The assembled view, or that no such subject exists.
  */
 export async function describeSubject(
 	db: Database,
 	input: DescribeSubjectInput,
+	secondFactor: SecondFactorState = NO_SECOND_FACTOR,
 ): Promise<DescribeSubjectResult> {
 	let subject = await db.find(subjects, { id: input.subjectId });
 	if (!subject) return { ok: false, reason: "not-found" };
@@ -951,6 +992,7 @@ export async function describeSubject(
 		})),
 		attributes,
 		credentials: [],
+		...secondFactor,
 	};
 }
 

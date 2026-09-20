@@ -14,11 +14,14 @@
 
 import type { AnyTable } from "remix/data-table";
 
+import { importKey } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
+import { isFailure } from "@sdxc/result";
 import { DurableObject } from "cloudflare:workers";
 import { column as c, Database, table } from "remix/data-table";
 
 import type {
+	AuditActor,
 	DrainAuditEventsInput,
 	DrainAuditEventsResult,
 	EnforceAuditRetentionResult,
@@ -123,6 +126,16 @@ import type {
 	VerifyIdentifierResult,
 } from "./subjects";
 import type { ExchangeCodeInput, RefreshTokensInput, TokenOutcome } from "./tokens";
+import type {
+	ActivateTotpFactorInput,
+	ActivateTotpFactorResult,
+	BeginTotpEnrolmentResult,
+	RegenerateRecoveryCodesResult,
+	RemoveTotpFactorInput,
+	RemoveTotpFactorResult,
+	ResetSecondFactorResult,
+	RevokeTrustedDeviceResult,
+} from "./totp";
 
 import {
 	auditEvents,
@@ -145,14 +158,16 @@ import * as SigningKeys from "./signing-keys";
 import * as Subjects from "./subjects";
 import { runMigrations } from "./tenant-migrations";
 import * as Tokens from "./tokens";
+import * as Totp from "./totp";
 
-/** One row: the tenant id this object is addressed by, its issuer, and its creation time. */
+/** One row: the tenant id this object is addressed by, its issuer, its MFA policy, and its creation time. */
 const settings = table({
 	name: "settings",
 	primaryKey: ["tenant_id"],
 	columns: {
 		tenant_id: c.text(),
 		issuer: c.text(),
+		mfa_policy: c.enum(["optional", "required"] as const).default("optional"),
 		created_at: c.integer(),
 	},
 });
@@ -255,6 +270,15 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 
 	/** Every statement's own row counts, accumulated by `countingSqlStorage` and read and reset around each RPC call by `#withCost`. */
 	#counters: CostCounters = { rowsRead: 0, rowsWritten: 0 };
+
+	/**
+	 * The AES-GCM key TOTP secrets are sealed and opened with, imported once from
+	 * the tenant's own secret binding and reused. A constructor cannot `await`,
+	 * so this starts `null` and {@link #sealKey} imports it lazily on first use,
+	 * the same way {@link #dauEnforcement} reads its own state lazily rather than
+	 * at construction.
+	 */
+	#sealKeyPromise: Promise<CryptoKey> | null = null;
 
 	/**
 	 * Opens this tenant's database and applies whatever schema has not run yet, queuing
@@ -381,6 +405,27 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	async #auditRetentionDays(): Promise<number> {
 		let record = await this.#db.findOne(entitlementEnforcement, { where: { id: "current" } });
 		return record?.audit_retention_days ?? DEFAULT_AUDIT_RETENTION_DAYS;
+	}
+
+	/**
+	 * The AES-GCM key TOTP secrets are sealed and opened with, importing it from
+	 * this tenant's `TOTP_SEAL_KEY` secret binding on first use and caching the
+	 * result for the object's lifetime — importing is async and the key is
+	 * non-extractable, so there is nothing to gain from importing it twice.
+	 */
+	async #sealKey(): Promise<CryptoKey> {
+		this.#sealKeyPromise ??= importKey(this.env.TOTP_SEAL_KEY).then((result) => {
+			if (isFailure(result)) throw new Error("the TOTP seal key binding is not a usable AES key");
+			return result.data;
+		});
+
+		return this.#sealKeyPromise;
+	}
+
+	/** This tenant's own MFA policy, read from `settings`. A tenant that has never provisioned enforces `optional`. */
+	async #mfaPolicy(): Promise<"optional" | "required"> {
+		let rows = await this.#db.findMany(settings);
+		return rows[0]?.mfa_policy ?? "optional";
 	}
 
 	/**
@@ -520,6 +565,10 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 			await this.#db.deleteMany(Passwords.passwords, { where: { subject_id: input.subjectId } });
 			await this.#db.deleteMany(Passkeys.passkeys, { where: { subject_id: input.subjectId } });
 			await this.#db.deleteMany(Consent.grants, { where: { subject_id: input.subjectId } });
+			await this.#db.deleteMany(Totp.totpEnrolments, { where: { subject_id: input.subjectId } });
+			await this.#db.deleteMany(Totp.totpFactors, { where: { subject_id: input.subjectId } });
+			await this.#db.deleteMany(Totp.recoveryCodes, { where: { subject_id: input.subjectId } });
+			await this.#db.deleteMany(Totp.trustedDevices, { where: { subject_id: input.subjectId } });
 
 			return Subjects.deleteSubject(this.#db, input);
 		});
@@ -548,7 +597,8 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Assembles everything one account screen renders for a subject.
+	 * Assembles everything one account screen renders for a subject, including
+	 * its TOTP factor, recovery codes and trusted devices.
 	 *
 	 * @param input - The subject to describe and who is looking.
 	 * @returns The assembled view, or that no such subject exists.
@@ -558,7 +608,127 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		audience: Actor;
 	}): Promise<WithCost<DescribeSubjectResult>> {
 		await this.#migrated;
-		return this.#withCost(() => Subjects.describeSubject(this.#db, input));
+
+		return this.#withCost(async () => {
+			let secondFactor = await Totp.describeSecondFactor(this.#db, input.subjectId);
+			return Subjects.describeSubject(this.#db, input, secondFactor);
+		});
+	}
+
+	/**
+	 * Sets this tenant's MFA policy: `optional` lets a subject sign in and leave
+	 * without a factor, `required` refuses to let one be removed.
+	 *
+	 * @param input - The policy to enforce from now on.
+	 * @returns Success, once the setting is written.
+	 */
+	async setMfaPolicy(input: { policy: "optional" | "required" }): Promise<WithCost<{ ok: true }>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let rows = await this.#db.findMany(settings);
+			let row = rows[0];
+			if (row)
+				await this.#db.update(settings, { tenant_id: row.tenant_id }, { mfa_policy: input.policy });
+			return { ok: true } as const;
+		});
+	}
+
+	/**
+	 * Mints a secret, seals it, and starts a ten-minute enrolment window.
+	 *
+	 * @param input - The subject enrolling a TOTP factor.
+	 * @returns The enrolment id, the `otpauth://` URI and the setup key to show
+	 * once, or that no such subject exists.
+	 */
+	async beginTotpEnrolment(input: {
+		subjectId: string;
+	}): Promise<WithCost<BeginTotpEnrolmentResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let [issuer, sealKey] = await Promise.all([this.#issuer(), this.#sealKey()]);
+			return Totp.beginTotpEnrolment(this.#db, sealKey, { subjectId: input.subjectId, issuer });
+		});
+	}
+
+	/**
+	 * Spends an enrolment's sealed secret, verifies the submitted code, and only
+	 * then activates the factor and mints its recovery codes.
+	 *
+	 * @param input - The enrolment id, the code read off the app, and an
+	 * optional label.
+	 * @returns The activated factor and its fresh recovery codes, or why
+	 * activation was refused.
+	 */
+	async activateTotpFactor(
+		input: ActivateTotpFactorInput,
+	): Promise<WithCost<ActivateTotpFactorResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let sealKey = await this.#sealKey();
+			return Totp.activateTotpFactor(this.#db, sealKey, input);
+		});
+	}
+
+	/**
+	 * Replaces a subject's whole recovery-code set.
+	 *
+	 * @param input - The subject regenerating its codes.
+	 * @returns The fresh set, or that the subject holds no factor to back up.
+	 */
+	async regenerateRecoveryCodes(input: {
+		subjectId: string;
+	}): Promise<WithCost<RegenerateRecoveryCodesResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Totp.regenerateRecoveryCodes(this.#db, input));
+	}
+
+	/**
+	 * Removes a subject's TOTP factor, proving a current code or a recovery
+	 * code first and refusing outright under a `required` tenant policy.
+	 *
+	 * @param input - The subject removing its factor, and the proof submitted.
+	 * @returns Success, or why the removal was refused.
+	 */
+	async removeTotpFactor(input: RemoveTotpFactorInput): Promise<WithCost<RemoveTotpFactorResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let [policy, sealKey] = await Promise.all([this.#mfaPolicy(), this.#sealKey()]);
+			return Totp.removeTotpFactor(this.#db, sealKey, input, policy);
+		});
+	}
+
+	/**
+	 * The administrator path: strips a subject's whole second-factor state,
+	 * revokes its sessions, and marks it as owing a fresh enrolment.
+	 *
+	 * @param input - The subject being reset, who is resetting it, and why.
+	 * @returns The address to notify, or that no such subject exists.
+	 */
+	async resetSecondFactor(input: {
+		subjectId: string;
+		actor: AuditActor;
+		reason: string;
+	}): Promise<WithCost<ResetSecondFactorResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Totp.resetSecondFactor(this.#db, input));
+	}
+
+	/**
+	 * Revokes one remembered browser, scoped to the subject it must belong to.
+	 *
+	 * @param input - The subject and the device to revoke.
+	 * @returns Success, or that no such device exists for this subject.
+	 */
+	async revokeTrustedDevice(input: {
+		subjectId: string;
+		deviceId: string;
+	}): Promise<WithCost<RevokeTrustedDeviceResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Totp.revokeTrustedDevice(this.#db, input));
 	}
 
 	/**
@@ -772,7 +942,8 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	/**
 	 * The daily retention sweep: releases unverified identifiers whose ticket is gone or
 	 * expired and whose row has sat unproven for a week, clears expired passkey
-	 * ceremonies, deletes sessions past their absolute expiry, deletes client secrets
+	 * ceremonies, clears expired TOTP enrolments, stale replay claims and expired
+	 * trusted devices, deletes sessions past their absolute expiry, deletes client secrets
 	 * past their rotation window, deletes pending interactions past their ten-minute
 	 * window, deletes authorization codes left unredeemed past their sixty seconds or
 	 * redeemed long enough ago that a replay is no longer worth recognizing, deletes
@@ -787,6 +958,7 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 			await this.#migrated;
 			await Subjects.sweepUnverifiedIdentifiers(this.#db);
 			await Passkeys.sweepExpiredPasskeyChallenges(this.#db);
+			await Totp.sweepTotpState(this.#db);
 
 			/**
 			 * One alarm a day against a batch-bounded sweep: keep sweeping while a batch
@@ -1289,6 +1461,11 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 				dau_seen: dauSeen,
 				dau_day: dauDay,
 				audit_events: auditEvents,
+				totp_enrolments: Totp.totpEnrolments,
+				totp_factors: Totp.totpFactors,
+				totp_claims: Totp.totpClaims,
+				recovery_codes: Totp.recoveryCodes,
+				trusted_devices: Totp.trustedDevices,
 			};
 
 			let rows: Record<string, number> = {};

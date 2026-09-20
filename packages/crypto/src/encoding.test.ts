@@ -13,7 +13,7 @@
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { Base64, Base64Url, Hex } from "./encoding.js";
+import { Base32, Base64, Base64Url, Hex } from "./encoding.js";
 import { InvalidEncodingError } from "./errors.js";
 
 describe("Hex", () => {
@@ -252,6 +252,29 @@ describe("Base64", () => {
 
 		expect(unwrap(Base64.decode("aGk="))).toEqual(new Uint8Array([0x68, 0x69]));
 		expect(isFailure(Base64.decode("aGl="))).toBe(true);
+	});
+});
+
+describe("Base32", () => {
+	test("encodes as unpadded uppercase base32", () => {
+		expect(Base32.encode("hi")).toBe("NBUQ");
+		expect(Base32.encode("hi")).not.toContain("=");
+	});
+
+	test("round-trips arbitrary bytes", () => {
+		let bytes = new Uint8Array(256);
+		for (let index = 0; index < bytes.length; index++) bytes[index] = index;
+
+		expect(unwrap(Base32.decode(Base32.encode(bytes)))).toEqual(bytes);
+	});
+
+	test("decodes case-insensitively and ignores separators", () => {
+		let encoded = Base32.encode(new Uint8Array([1, 2, 3, 4, 5]));
+		expect(unwrap(Base32.decode(encoded.toLowerCase()))).toEqual(unwrap(Base32.decode(encoded)));
+	});
+
+	test("fails on a character outside the alphabet", () => {
+		expect(isFailure(Base32.decode("018"))).toBe(true);
 	});
 });
 
