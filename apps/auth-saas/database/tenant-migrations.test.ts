@@ -35,6 +35,7 @@ describe("runMigrations", () => {
 			"0003-passwords",
 			"0004-passkeys",
 			"0005-sessions",
+			"0006-signing-keys",
 		]);
 	});
 
@@ -63,6 +64,8 @@ describe("runMigrations", () => {
 			"passkeys",
 			"passkey_challenges",
 			"sessions",
+			"signing_keys",
+			"custom_claims",
 		]) {
 			expect(names, `${name} exists`).toContain(name);
 		}
@@ -83,6 +86,7 @@ describe("runMigrations", () => {
 			{ id: "0003-passwords", applied_at: expect.any(Number) },
 			{ id: "0004-passkeys", applied_at: expect.any(Number) },
 			{ id: "0005-sessions", applied_at: expect.any(Number) },
+			{ id: "0006-signing-keys", applied_at: expect.any(Number) },
 		]);
 	});
 

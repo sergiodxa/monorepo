@@ -54,6 +54,13 @@ import type {
 	RevokeSubjectSessionsResult,
 } from "./sessions";
 import type {
+	AdvanceSigningKeysInput,
+	PublishedKeySet,
+	PublishKeySetInput,
+	SetCustomClaimsInput,
+	SetCustomClaimsResult,
+} from "./signing-keys";
+import type {
 	Actor,
 	AddIdentifierInput,
 	AddIdentifierResult,
@@ -76,6 +83,7 @@ import { hasAnotherCredential } from "./credentials";
 import * as Passkeys from "./passkeys";
 import * as Passwords from "./passwords";
 import * as Sessions from "./sessions";
+import * as SigningKeys from "./signing-keys";
 import * as Subjects from "./subjects";
 import { runMigrations } from "./tenant-migrations";
 
@@ -90,10 +98,14 @@ const settings = table({
 	},
 });
 
-/** What `provision` hands back: the schema now applied, and the issuer it recorded. */
+/**
+ * What `provision` hands back: the schema now applied, the issuer it recorded, and the
+ * key set now published for this tenant.
+ */
 export interface ProvisionResult {
 	applied: string[];
 	issuer: string;
+	keys: PublishedKeySet;
 }
 
 /**
@@ -137,13 +149,16 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * Provisions this tenant: waits on the schema the constructor already started
-	 * migrating, then records the tenant's id and issuer in `settings`. A first boot and a
-	 * catch-up boot behind several releases take the same path, because both wait on the
-	 * one migration run the constructor starts.
+	 * migrating, records the tenant's id and issuer in `settings`, and generates the
+	 * tenant's first signing key if it has none yet. A first boot and a catch-up boot
+	 * behind several releases take the same path, because both wait on the one migration
+	 * run the constructor starts; calling this again on an already-provisioned tenant
+	 * generates no redundant key.
 	 *
 	 * @param input - The tenant id this object is addressed by, and the issuer it mints
 	 * tokens under.
-	 * @returns The migration ids applied on this boot, and the issuer now recorded.
+	 * @returns The migration ids applied on this boot, the issuer now recorded, and the
+	 * key set now published for this tenant.
 	 */
 	async provision(input: { tenantId: string; issuer: string }): Promise<ProvisionResult> {
 		let { applied } = await this.#migrated;
@@ -160,7 +175,10 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 			});
 		}
 
-		return { applied, issuer: input.issuer };
+		await SigningKeys.ensureSigningKey(this.#db);
+		let keys = await SigningKeys.publishKeySet(this.#db);
+
+		return { applied, issuer: input.issuer, keys };
 	}
 
 	/**
@@ -610,5 +628,39 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	): Promise<RevokeSubjectSessionsResult> {
 		await this.#migrated;
 		return Sessions.revokeSubjectSessions(this.#db, input);
+	}
+
+	/**
+	 * Performs every signing-key rotation transition due at the given time.
+	 *
+	 * @param input - The clock to advance the rotation against.
+	 * @returns The key set now published for this tenant.
+	 */
+	async advanceSigningKeys(input: AdvanceSigningKeysInput = {}): Promise<PublishedKeySet> {
+		await this.#migrated;
+		return SigningKeys.advanceSigningKeys(this.#db, input);
+	}
+
+	/**
+	 * Re-renders the tenant's currently published key set, for refilling a KV entry that
+	 * is missing or being repaired.
+	 *
+	 * @param input - The clock a row's publish window is measured against.
+	 * @returns The key set currently published for this tenant.
+	 */
+	async publishKeySet(input: PublishKeySetInput = {}): Promise<PublishedKeySet> {
+		await this.#migrated;
+		return SigningKeys.publishKeySet(this.#db, input);
+	}
+
+	/**
+	 * Replaces the tenant's whole set of declared custom claims in one write.
+	 *
+	 * @param input - The full set of claims the tenant now declares.
+	 * @returns Success, or which rule refused the call.
+	 */
+	async setCustomClaims(input: SetCustomClaimsInput): Promise<SetCustomClaimsResult> {
+		await this.#migrated;
+		return SigningKeys.setCustomClaims(this.#db, input);
 	}
 }

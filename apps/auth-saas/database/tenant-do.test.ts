@@ -30,8 +30,16 @@ describe("provision", () => {
 		});
 
 		expect(result).toEqual({
-			applied: ["0001-init", "0002-subjects", "0003-passwords", "0004-passkeys", "0005-sessions"],
+			applied: [
+				"0001-init",
+				"0002-subjects",
+				"0003-passwords",
+				"0004-passkeys",
+				"0005-sessions",
+				"0006-signing-keys",
+			],
 			issuer: "https://tenant-1.example.com",
+			keys: { keys: [expect.objectContaining({ kty: "EC", alg: "ES256" })] },
 		});
 
 		let rows = [...state.storage.sql.exec(`SELECT * FROM settings`)];
@@ -55,10 +63,28 @@ describe("provision", () => {
 			issuer: "https://new.example.com",
 		});
 
-		expect(result).toEqual({ applied: [], issuer: "https://new.example.com" });
+		expect(result.applied).toEqual([]);
+		expect(result.issuer).toBe("https://new.example.com");
 
 		let rows = [...state.storage.sql.exec<{ issuer: string }>(`SELECT issuer FROM settings`)];
 		expect(rows).toEqual([{ issuer: "https://new.example.com" }]);
+	});
+
+	test("generates no redundant signing key on a second call", async () => {
+		let first = await tenant.provision({
+			tenantId: "tenant_1",
+			issuer: "https://tenant-1.example.com",
+		});
+
+		let second = await tenant.provision({
+			tenantId: "tenant_1",
+			issuer: "https://tenant-1.example.com",
+		});
+
+		expect(second.keys).toEqual(first.keys);
+
+		let rows = [...state.storage.sql.exec(`SELECT id FROM signing_keys`)];
+		expect(rows).toHaveLength(1);
 	});
 });
 
