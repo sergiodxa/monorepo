@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import middleware from "~/app/lib/middleware";
+import type { Middleware } from "remix/router";
 
 /**
  * Middleware to remove trailing slashes from URLs.
@@ -19,7 +19,7 @@ import middleware from "~/app/lib/middleware";
  * @example
  * router.use(trailingSlash);
  */
-export default middleware(async (context, next) => {
+const trailingSlash: Middleware = async (context, next) => {
 	let url = new URL(context.request.url);
 
 	if (url.pathname !== "/" && url.pathname.endsWith("/")) {
@@ -28,4 +28,6 @@ export default middleware(async (context, next) => {
 	}
 
 	return next();
-});
+};
+
+export default trailingSlash;

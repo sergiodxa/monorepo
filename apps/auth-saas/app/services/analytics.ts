@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { isUUID } from "@sdxc/uuid";
 import { env } from "cloudflare:workers";
 
 type EventType = "authentication" | "registration" | "verification" | "logout";
@@ -17,19 +18,17 @@ interface MAUResult {
 	mau: number;
 }
 
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
 const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 /**
- * Validates that a string is a valid UUID v4.
+ * Validates that a string is a valid UUID.
  * Prevents SQL injection by ensuring only safe characters.
  * @param value - The string to validate.
  * @param field - The field name for error messages.
  * @throws AnalyticsValidationError if validation fails.
  */
 function validateUUID(value: string, field: string): void {
-	if (!UUID_PATTERN.test(value)) {
+	if (!isUUID(value)) {
 		throw new AnalyticsValidationError(`Invalid ${field}: must be a valid UUID`);
 	}
 }

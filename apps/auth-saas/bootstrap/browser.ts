@@ -17,6 +17,7 @@ import { run } from "remix/ui";
  */
 let clientModules = import.meta.glob([
 	"!../**/*.server.*",
+	"!../**/*.test.*",
 	"../app/views/**/*.{ts,tsx}",
 	"../routes/**/*.{ts,tsx}",
 ]);
