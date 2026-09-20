@@ -18,6 +18,7 @@ import m0003 from "./tenant-migrations/0003-passwords.sql?raw";
 import m0004 from "./tenant-migrations/0004-passkeys.sql?raw";
 import m0005 from "./tenant-migrations/0005-sessions.sql?raw";
 import m0006 from "./tenant-migrations/0006-signing-keys.sql?raw";
+import m0007 from "./tenant-migrations/0007-clients.sql?raw";
 
 /** One migration, identified so the journal can record that it ran. */
 export interface Migration {
@@ -33,6 +34,7 @@ export const MIGRATIONS: Migration[] = [
 	{ id: "0004-passkeys", sql: m0004 },
 	{ id: "0005-sessions", sql: m0005 },
 	{ id: "0006-signing-keys", sql: m0006 },
+	{ id: "0007-clients", sql: m0007 },
 ];
 
 /** The journal `0001-init` creates, read back to find out what has already run. */

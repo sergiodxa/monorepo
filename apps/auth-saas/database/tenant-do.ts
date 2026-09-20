@@ -17,6 +17,20 @@ import { DurableObject } from "cloudflare:workers";
 import { column as c, Database, table } from "remix/data-table";
 
 import type {
+	DeleteClientResult,
+	DisableClientResult,
+	ListClientsInput,
+	ListClientsResult,
+	RegisterClientInput,
+	RegisterClientResult,
+	RevokeClientSecretInput,
+	RevokeClientSecretResult,
+	RotateClientSecretInput,
+	RotateClientSecretResult,
+	UpdateClientInput,
+	UpdateClientResult,
+} from "./clients";
+import type {
 	BeginPasskeyAuthenticationInput,
 	BeginPasskeyAuthenticationResult,
 	BeginPasskeyRegistrationInput,
@@ -79,6 +93,7 @@ import type {
 	VerifyIdentifierResult,
 } from "./subjects";
 
+import * as Clients from "./clients";
 import { hasAnotherCredential } from "./credentials";
 import * as Passkeys from "./passkeys";
 import * as Passwords from "./passwords";
@@ -550,7 +565,8 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	/**
 	 * The daily retention sweep: releases unverified identifiers whose ticket is gone or
 	 * expired and whose row has sat unproven for a week, clears expired passkey
-	 * ceremonies, deletes sessions past their absolute expiry, then arms tomorrow's run.
+	 * ceremonies, deletes sessions past their absolute expiry, deletes client secrets
+	 * past their rotation window, then arms tomorrow's run.
 	 *
 	 * Never rejects, the way a Durable Object alarm should not: a rejected alarm is
 	 * retried by the platform, which would repeat a sweep that already ran.
@@ -568,6 +584,11 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 			 */
 			for (let iteration = 0; iteration < 20; iteration++) {
 				let { more } = await Sessions.sweepExpiredSessions(this.#db);
+				if (!more) break;
+			}
+
+			for (let iteration = 0; iteration < 20; iteration++) {
+				let { more } = await Clients.sweepExpiredClientSecrets(this.#db);
 				if (!more) break;
 			}
 		} catch (error) {
@@ -628,6 +649,88 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	): Promise<RevokeSubjectSessionsResult> {
 		await this.#migrated;
 		return Sessions.revokeSubjectSessions(this.#db, input);
+	}
+
+	/**
+	 * Validates and writes a new client record, minting its first secret when it is
+	 * confidential.
+	 *
+	 * @param input - The whole record to register.
+	 * @returns The new record and the one-time plaintext secret, or which rule refused
+	 * the record.
+	 */
+	async registerClient(input: RegisterClientInput): Promise<RegisterClientResult> {
+		await this.#migrated;
+		return Clients.registerClient(this.#db, input);
+	}
+
+	/**
+	 * Replaces a client's editable fields as one set, refusing a change to `kind`.
+	 *
+	 * @param input - The client to update and its whole new editable record.
+	 * @returns The updated record, or which rule refused the update.
+	 */
+	async updateClient(input: UpdateClientInput): Promise<UpdateClientResult> {
+		await this.#migrated;
+		return Clients.updateClient(this.#db, input);
+	}
+
+	/**
+	 * Mints a successor secret and opens the overlap on the incumbent in one call.
+	 *
+	 * @param input - The client to rotate, and how many days the incumbent's window
+	 * lasts.
+	 * @returns The new secret and when the incumbent now expires, or why rotation was
+	 * refused.
+	 */
+	async rotateClientSecret(input: RotateClientSecretInput): Promise<RotateClientSecretResult> {
+		await this.#migrated;
+		return Clients.rotateClientSecret(this.#db, input);
+	}
+
+	/**
+	 * Closes one secret's window immediately, refusing to take a confidential client's
+	 * last live secret.
+	 *
+	 * @param input - The client the secret belongs to, and the secret to revoke.
+	 * @returns Success, or why the revocation was refused.
+	 */
+	async revokeClientSecret(input: RevokeClientSecretInput): Promise<RevokeClientSecretResult> {
+		await this.#migrated;
+		return Clients.revokeClientSecret(this.#db, input);
+	}
+
+	/**
+	 * Marks a client disabled, stopping it from authorizing.
+	 *
+	 * @param input - The client to disable.
+	 * @returns Success, or that no such client exists.
+	 */
+	async disableClient(input: { clientId: string }): Promise<DisableClientResult> {
+		await this.#migrated;
+		return Clients.disableClient(this.#db, input);
+	}
+
+	/**
+	 * Deletes a client and its secrets.
+	 *
+	 * @param input - The client to delete.
+	 * @returns Success, or that no such client exists.
+	 */
+	async deleteClient(input: { clientId: string }): Promise<DeleteClientResult> {
+		await this.#migrated;
+		return Clients.deleteClient(this.#db, input);
+	}
+
+	/**
+	 * Lists a page of the tenant's clients, newest first.
+	 *
+	 * @param input - Where to page from.
+	 * @returns A page of client summaries, or that the given cursor no longer matches.
+	 */
+	async listClients(input: ListClientsInput = {}): Promise<ListClientsResult> {
+		await this.#migrated;
+		return Clients.listClients(this.#db, input);
 	}
 
 	/**

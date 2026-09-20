@@ -37,6 +37,7 @@ describe("provision", () => {
 				"0004-passkeys",
 				"0005-sessions",
 				"0006-signing-keys",
+				"0007-clients",
 			],
 			issuer: "https://tenant-1.example.com",
 			keys: { keys: [expect.objectContaining({ kty: "EC", alg: "ES256" })] },
