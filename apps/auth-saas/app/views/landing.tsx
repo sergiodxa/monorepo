@@ -8,6 +8,7 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
+import { CheckIcon, GlobeIcon, LockIcon, ZapIcon } from "@sdxc/icons";
 import { css } from "remix/ui";
 
 import { RESET_CSS } from "./styles";
@@ -161,18 +162,6 @@ let CAPABILITIES: string[] = [
 	"Discovery Endpoints",
 ];
 
-function checkIconNode(): RemixNode {
-	return (
-		<svg mix={[checkIcon]} fill="currentColor" viewBox="0 0 20 20">
-			<path
-				fill-rule="evenodd"
-				clip-rule="evenodd"
-				d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-			/>
-		</svg>
-	);
-}
-
 /** Props for {@link PublicDocument}. */
 export interface PublicDocumentProps {
 	/** Text used for the `<title>` (rendered verbatim). */
@@ -247,14 +236,7 @@ export function LandingPage(): () => RemixNode {
 				<div id="features" mix={[featureGrid]}>
 					<div mix={[featureCard]}>
 						<div mix={[featureIconBox, iconBlue]}>
-							<svg mix={[featureIcon]} fill="none" stroke="#2563eb" viewBox="0 0 24 24">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-								/>
-							</svg>
+							<LockIcon mix={[featureIcon]} color="#2563eb" />
 						</div>
 						<h3 mix={[featureTitle]}>Passkey Authentication</h3>
 						<p mix={[featureText]}>
@@ -265,14 +247,7 @@ export function LandingPage(): () => RemixNode {
 
 					<div mix={[featureCard]}>
 						<div mix={[featureIconBox, iconGreen]}>
-							<svg mix={[featureIcon]} fill="none" stroke="#16a34a" viewBox="0 0 24 24">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
-								/>
-							</svg>
+							<GlobeIcon mix={[featureIcon]} color="#16a34a" />
 						</div>
 						<h3 mix={[featureTitle]}>Custom Domains</h3>
 						<p mix={[featureText]}>
@@ -283,14 +258,7 @@ export function LandingPage(): () => RemixNode {
 
 					<div mix={[featureCard]}>
 						<div mix={[featureIconBox, iconPurple]}>
-							<svg mix={[featureIcon]} fill="none" stroke="#9333ea" viewBox="0 0 24 24">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M13 10V3L4 14h7v7l9-11h-7z"
-								/>
-							</svg>
+							<ZapIcon mix={[featureIcon]} color="#9333ea" />
 						</div>
 						<h3 mix={[featureTitle]}>Edge Deployment</h3>
 						<p mix={[featureText]}>
@@ -305,7 +273,7 @@ export function LandingPage(): () => RemixNode {
 					<div mix={[capabilityGrid]}>
 						{CAPABILITIES.map((capability) => (
 							<div mix={[capabilityItem]} key={capability}>
-								{checkIconNode()}
+								<CheckIcon mix={[checkIcon]} color="#22c55e" />
 								<span>{capability}</span>
 							</div>
 						))}
