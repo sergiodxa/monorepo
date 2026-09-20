@@ -1,0 +1,13 @@
+{
+	"name": "@sdxc/user-agent",
+	"version": "0.0.1",
+	"description": "Read a User-Agent string into its browser, engine, operating system and device",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	}
+}

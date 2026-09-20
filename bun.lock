@@ -825,6 +825,10 @@
         "remix": "3.0.0-rc.2",
       },
     },
+    "packages/user-agent": {
+      "name": "@sdxc/user-agent",
+      "version": "0.0.1",
+    },
     "packages/uuid": {
       "name": "@sdxc/uuid",
       "version": "0.0.1",
@@ -1595,6 +1599,8 @@
     "@sdxc/u": ["@sdxc/u@workspace:packages/u"],
 
     "@sdxc/ui": ["@sdxc/ui@workspace:packages/ui"],
+
+    "@sdxc/user-agent": ["@sdxc/user-agent@workspace:packages/user-agent"],
 
     "@sdxc/uuid": ["@sdxc/uuid@workspace:packages/uuid"],
 

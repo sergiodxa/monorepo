@@ -145,6 +145,7 @@ Run from the repository root:
 | [types](packages/types)                                         | Shared TypeScript types                                                                  | ✅  |
 | [u](packages/u)                                                 | Tailwind-like Remix UI styling utilities                                                 | ✅  |
 | [ui](packages/ui)                                               | Remix v3 UI component library                                                            | ✅  |
+| [user-agent](packages/user-agent)                               | Read a User-Agent string into its browser, engine, operating system and device           | ✅  |
 | [uuid](packages/uuid)                                           | Branded UUID type with validation and generation                                         | ✅  |
 | [validate](packages/validate)                                   | Standard Schema validation utilities                                                     | ✅  |
 | [webhooks](packages/webhooks)                                   | Standard Webhooks signing, verification and replay guards                                | ✅  |
