@@ -21,6 +21,7 @@ import m0006 from "./tenant-migrations/0006-signing-keys.sql?raw";
 import m0007 from "./tenant-migrations/0007-clients.sql?raw";
 import m0008 from "./tenant-migrations/0008-consent.sql?raw";
 import m0009 from "./tenant-migrations/0009-authorization.sql?raw";
+import m0010 from "./tenant-migrations/0010-tokens.sql?raw";
 
 /** One migration, identified so the journal can record that it ran. */
 export interface Migration {
@@ -39,6 +40,7 @@ export const MIGRATIONS: Migration[] = [
 	{ id: "0007-clients", sql: m0007 },
 	{ id: "0008-consent", sql: m0008 },
 	{ id: "0009-authorization", sql: m0009 },
+	{ id: "0010-tokens", sql: m0010 },
 ];
 
 /** The journal `0001-init` creates, read back to find out what has already run. */

@@ -106,6 +106,7 @@ import type {
 	UpdateSubjectResult,
 	VerifyIdentifierResult,
 } from "./subjects";
+import type { ExchangeCodeInput, RefreshTokensInput, TokenOutcome } from "./tokens";
 
 import * as Authorization from "./authorization";
 import * as Clients from "./clients";
@@ -117,6 +118,7 @@ import * as Sessions from "./sessions";
 import * as SigningKeys from "./signing-keys";
 import * as Subjects from "./subjects";
 import { runMigrations } from "./tenant-migrations";
+import * as Tokens from "./tokens";
 
 /** One row: the tenant id this object is addressed by, its issuer, and its creation time. */
 const settings = table({
@@ -591,8 +593,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * ceremonies, deletes sessions past their absolute expiry, deletes client secrets
 	 * past their rotation window, deletes pending interactions past their ten-minute
 	 * window, deletes authorization codes left unredeemed past their sixty seconds or
-	 * redeemed long enough ago that a replay is no longer worth recognizing, then arms
-	 * tomorrow's run.
+	 * redeemed long enough ago that a replay is no longer worth recognizing, deletes
+	 * refresh tokens whose family is past its ninety-day ceiling, then arms tomorrow's
+	 * run.
 	 *
 	 * Never rejects, the way a Durable Object alarm should not: a rejected alarm is
 	 * retried by the platform, which would repeat a sweep that already ran.
@@ -625,6 +628,11 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 
 			for (let iteration = 0; iteration < 20; iteration++) {
 				let { more } = await Authorization.sweepExpiredAuthorizationCodes(this.#db);
+				if (!more) break;
+			}
+
+			for (let iteration = 0; iteration < 20; iteration++) {
+				let { more } = await Tokens.sweepExpiredRefreshTokens(this.#db);
 				if (!more) break;
 			}
 		} catch (error) {
@@ -887,5 +895,36 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	async setCustomClaims(input: SetCustomClaimsInput): Promise<SetCustomClaimsResult> {
 		await this.#migrated;
 		return SigningKeys.setCustomClaims(this.#db, input);
+	}
+
+	/**
+	 * Turns an authorization code into a token set: authenticates the client,
+	 * redeems the code, verifies its bindings and PKCE challenge, mints and
+	 * signs, and starts a refresh token family when the grant covers
+	 * `offline_access`.
+	 *
+	 * @param input - The presented code and verifier, the redirect the client
+	 * used, the client's credentials, and the clock to mint against.
+	 * @returns The minted token set, or the error this exchange was refused for.
+	 */
+	async exchangeCode(input: Omit<ExchangeCodeInput, "issuer">): Promise<TokenOutcome> {
+		await this.#migrated;
+		let issuer = await this.#issuer();
+		return Tokens.exchangeCode(this.#db, { ...input, issuer });
+	}
+
+	/**
+	 * Rotates a refresh token into a fresh token set, refusing a second
+	 * presentation of the same token by revoking its whole family and ending the
+	 * session behind it.
+	 *
+	 * @param input - The presented refresh token, an optional narrower scope,
+	 * the client's credentials, and the clock to mint against.
+	 * @returns The minted token set, or the error this rotation was refused for.
+	 */
+	async refreshTokens(input: Omit<RefreshTokensInput, "issuer">): Promise<TokenOutcome> {
+		await this.#migrated;
+		let issuer = await this.#issuer();
+		return Tokens.refreshTokens(this.#db, { ...input, issuer });
 	}
 }

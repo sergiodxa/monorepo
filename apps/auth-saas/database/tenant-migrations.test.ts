@@ -39,6 +39,7 @@ describe("runMigrations", () => {
 			"0007-clients",
 			"0008-consent",
 			"0009-authorization",
+			"0010-tokens",
 		]);
 	});
 
@@ -99,6 +100,7 @@ describe("runMigrations", () => {
 			{ id: "0007-clients", applied_at: expect.any(Number) },
 			{ id: "0008-consent", applied_at: expect.any(Number) },
 			{ id: "0009-authorization", applied_at: expect.any(Number) },
+			{ id: "0010-tokens", applied_at: expect.any(Number) },
 		]);
 	});
 

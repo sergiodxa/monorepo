@@ -1,8 +1,10 @@
 /**
  * A tenant's signing keys and its declared custom claims. The private half of a key
- * never leaves this module: every export here returns a published key set, never a
- * `KeyPair`, so a caller holding the result has exactly what a relying party is allowed
- * to see.
+ * never leaves the object: every export here but `currentSigningKeyPair` returns a
+ * published key set, never a `KeyPair`, so a caller holding the result has exactly
+ * what a relying party is allowed to see. `currentSigningKeyPair` hands back the
+ * live pair for the minting operation to sign with, and only a signed token string
+ * ever crosses back out from there.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -286,6 +288,23 @@ export async function setCustomClaims(
 /** The one row, if any, whose `signing_from` is set and has not been retired. */
 async function currentSigningKey(db: Database): Promise<SigningKeyRow | null> {
 	return db.findOne(signingKeys, { where: and(notNull("signing_from"), isNull("retired_at")) });
+}
+
+/**
+ * Hands back the tenant's current signing key as a usable `KeyPair`, private half
+ * included, for the token endpoint to sign with. This is the one export from this
+ * module that carries private key material — reserved for the minting operation
+ * itself, since producing a token is the one thing worth crossing the object's
+ * boundary for; the string a caller signs with this pair is all that leaves.
+ *
+ * @param db - The tenant's database.
+ * @returns The current signing key pair, or `null` when somehow none is signing.
+ */
+export async function currentSigningKeyPair(db: Database): Promise<JWK.KeyPair | null> {
+	let signing = await currentSigningKey(db);
+	if (!signing) return null;
+
+	return JWK.importKeyPair(toSerializedKeyPair(signing));
 }
 
 /** Promotes a staged key to signing and retires the key it replaces. */
