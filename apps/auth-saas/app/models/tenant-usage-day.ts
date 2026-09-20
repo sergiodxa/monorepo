@@ -57,6 +57,19 @@ export default class TenantUsageDay {
 	}
 
 	/**
+	 * Lists every tenant's closed row for one day, across the whole control
+	 * plane — the read usage reporting rolls up from, one row per tenant that
+	 * closed a day that settled.
+	 *
+	 * @param db - Database connection.
+	 * @param day - The day, as `metering.ts`'s `dayOf` keys it.
+	 * @returns A promise resolving to that day's rows, one per tenant.
+	 */
+	static listByDay(db: Database, day: number): Promise<TenantUsageDayRow[]> {
+		return db.findMany(TenantUsageDay.table, { where: { day } });
+	}
+
+	/**
 	 * Writes a tenant's closed-day figures, creating the row on its first write
 	 * and overwriting it wholesale on every write after — the same figures a
 	 * retried close answers with, so a second write for the same day lands the
