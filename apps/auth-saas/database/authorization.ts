@@ -22,10 +22,12 @@ import { and, column as c, eq, gt, inList, isNull, lt, notNull, or, table } from
 
 import type { ConsentScreen } from "./consent";
 import type { SessionRow } from "./sessions";
+import type { StepUpScreen } from "./totp";
 
 import { clients, redirectUriMatches } from "./clients";
 import { evaluateConsent } from "./consent";
 import { sessions } from "./sessions";
+import { describeStepUpScreen } from "./totp";
 
 /** How long a person has to complete sign-in and consent before a parked request lapses. */
 const AUTHORIZATION_REQUEST_TTL_MS = 10 * 60 * 1000;
@@ -41,6 +43,14 @@ const SWEEP_BATCH_SIZE = 500;
 
 /** Every `prompt` value this endpoint recognizes. */
 const PROMPT_VALUES = new Set(["none", "login", "consent", "select_account"]);
+
+/**
+ * How long a step-up's own proof stands once verified, independent of the
+ * session's own lifetime — the ceiling `acr_values=mfa` accepts a fresh `auth_time`
+ * against before demanding the factor again. A `max_age` requested alongside
+ * `acr_values` narrows this further; it never widens it.
+ */
+const STEP_UP_WINDOW_MS = 15 * 60 * 1000;
 
 /** Mints an `authz_` id for a new pending interaction, unguessable since it round-trips through a browser. */
 const authorizationRequestId = () => randomToken({ bytes: 32, prefix: "authz" });
@@ -64,6 +74,7 @@ export const authorizationRequests = table({
 		code_challenge_method: c.text(),
 		prompt: c.text().nullable(),
 		max_age: c.integer().nullable(),
+		acr_values: c.text().nullable(),
 		login_hint: c.text().nullable(),
 		created_at: c.integer(),
 		expires_at: c.integer(),
@@ -106,7 +117,8 @@ export type AuthorizationOutcome =
 	| { kind: "redirect"; location: string }
 	| { kind: "render"; error: string; description: string }
 	| { kind: "authenticate"; interactionId: string; loginHint: string | null; forced: boolean }
-	| { kind: "consent"; interactionId: string; screen: ConsentScreen };
+	| { kind: "consent"; interactionId: string; screen: ConsentScreen }
+	| { kind: "step-up"; interactionId: string; screen: StepUpScreen };
 
 /** The request once every redirect-class rule has cleared it, independent of where it came from. */
 interface ValidatedRequest {
@@ -121,6 +133,8 @@ interface ValidatedRequest {
 	promptTokens: string[];
 	maxAge: number | null;
 	loginHint: string | null;
+	/** The `acr_values` a relying party demanded; only `mfa`, the one value discovery advertises, is recognized. */
+	acrValues: string[];
 }
 
 /** Builds a URI with the given parameters set, leaving whatever else the URI already carried alone. */
@@ -183,6 +197,7 @@ function requestFromRow(row: AuthorizationRequestRow): ValidatedRequest {
 		promptTokens: row.prompt ? row.prompt.split(" ").filter(Boolean) : [],
 		maxAge: row.max_age,
 		loginHint: row.login_hint,
+		acrValues: row.acr_values ? row.acr_values.split(" ").filter(Boolean) : [],
 	};
 }
 
@@ -213,6 +228,7 @@ async function park(
 		code_challenge_method: request.codeChallengeMethod,
 		prompt: request.promptTokens.length > 0 ? request.promptTokens.join(" ") : null,
 		max_age: request.maxAge,
+		acr_values: request.acrValues.length > 0 ? request.acrValues.join(" ") : null,
 		login_hint: request.loginHint,
 		created_at: now,
 		expires_at: now + AUTHORIZATION_REQUEST_TTL_MS,
@@ -358,6 +374,29 @@ async function decide(db: Database, ctx: DecisionContext): Promise<Authorization
 
 			let interactionId = await park(db, request, now, existingInteractionId);
 			return { kind: "authenticate", interactionId, loginHint: request.loginHint, forced: true };
+		}
+	}
+
+	if (request.acrValues.includes("mfa")) {
+		let window =
+			request.maxAge !== null
+				? Math.min(STEP_UP_WINDOW_MS, request.maxAge * 1000)
+				: STEP_UP_WINDOW_MS;
+		let steppedUp = session.acr === "mfa" && now - session.auth_time <= window;
+
+		if (!steppedUp) {
+			if (promptNone) {
+				return redirectError(
+					request,
+					issuer,
+					"unmet_authentication_requirements",
+					"A more recent proof of the second factor is required.",
+				);
+			}
+
+			let interactionId = await park(db, request, now, existingInteractionId);
+			let screen = await describeStepUpScreen(db, session.subject_id);
+			return { kind: "step-up", interactionId, screen };
 		}
 	}
 
@@ -527,6 +566,8 @@ export async function beginAuthorization(
 		maxAge = Number(query.max_age);
 	}
 
+	let acrValues = query.acr_values ? query.acr_values.split(/\s+/).filter(Boolean) : [];
+
 	let request: ValidatedRequest = {
 		clientId,
 		redirectUri: requestedRedirectUri,
@@ -539,6 +580,7 @@ export async function beginAuthorization(
 		promptTokens,
 		maxAge,
 		loginHint: query.login_hint ?? null,
+		acrValues,
 	};
 
 	let candidateSessions = await resolveValidSessions(db, parsed.sessionIds, parsed.now);

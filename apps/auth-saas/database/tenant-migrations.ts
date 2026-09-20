@@ -27,6 +27,8 @@ import m0012 from "./tenant-migrations/0012-entitlements.sql?raw";
 import m0013 from "./tenant-migrations/0013-dau.sql?raw";
 import m0014 from "./tenant-migrations/0014-audit.sql?raw";
 import m0015 from "./tenant-migrations/0015-totp.sql?raw";
+import m0016 from "./tenant-migrations/0016-second-factor-sign-in.sql?raw";
+import m0017 from "./tenant-migrations/0017-step-up.sql?raw";
 
 /** One migration, identified so the journal can record that it ran. */
 export interface Migration {
@@ -51,6 +53,8 @@ export const MIGRATIONS: Migration[] = [
 	{ id: "0013-dau", sql: m0013 },
 	{ id: "0014-audit", sql: m0014 },
 	{ id: "0015-totp", sql: m0015 },
+	{ id: "0016-second-factor-sign-in", sql: m0016 },
+	{ id: "0017-step-up", sql: m0017 },
 ];
 
 /** The journal `0001-init` creates, read back to find out what has already run. */

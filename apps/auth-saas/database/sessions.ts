@@ -58,6 +58,8 @@ export const sessions = table({
 		idle_expires_at: c.integer(),
 		amr: c.json(),
 		remembered: c.boolean(),
+		/** The step-up class most recently verified for this session, `mfa` once a `completeStepUp` call moves `auth_time` to a freshly verified instant; `null` for a session that has never stepped up. */
+		acr: c.text().nullable(),
 		ip: c.text().nullable(),
 		user_agent: c.text().nullable(),
 		country: c.text().nullable(),
@@ -214,6 +216,7 @@ export async function openSession(
 		idle_expires_at: idleExpiresAt,
 		amr: parsed.amr,
 		remembered: parsed.remembered,
+		acr: null,
 		ip: parsed.ip ?? null,
 		user_agent: parsed.userAgent ?? null,
 		country: parsed.country ?? null,
@@ -242,6 +245,59 @@ export async function openSession(
 		idleExpiresAt,
 		...(meteringReport ? { metering: meteringReport } : {}),
 	};
+}
+
+export interface ExtendSessionFactorInput {
+	sessionId: string;
+	/** The `amr` entry this proof adds, `otp` or `webauthn`, kept once even if it was already present. */
+	method: string;
+	/** Set only by a step-up: the class it just verified, and the instant it verified it. Omitted, an ordinary second-factor demand leaves both alone. */
+	acr?: string;
+	authTime?: number;
+}
+
+export type ExtendSessionFactorResult =
+	| { ok: true; amr: string[]; authTime: number }
+	| { ok: false; reason: "not-found" };
+
+/**
+ * Adds one proof to a live session without opening a new one: `totp.ts`'s own
+ * demand at sign-in extends `amr` alone, and its step-up additionally moves
+ * `auth_time` to the instant just verified and records the `acr` that instant
+ * now stands for — the same session a credential check opened, carrying one
+ * more fact about it rather than a second row.
+ *
+ * @param db - The tenant's database.
+ * @param input - The session to extend, the `amr` entry it earns, and the
+ * `acr`/`auth_time` a step-up moves.
+ * @returns The session's `amr` and `auth_time` once extended, or that no live
+ * session matches.
+ */
+export async function extendSessionFactor(
+	db: Database,
+	input: ExtendSessionFactorInput,
+): Promise<ExtendSessionFactorResult> {
+	let row = await db.findOne(sessions, {
+		where: and(eq("id", input.sessionId), isNull("revoked_at")),
+	});
+	if (!row) return { ok: false, reason: "not-found" };
+
+	let amr = row.amr as string[];
+	if (!amr.includes(input.method)) amr = [...amr, input.method];
+
+	let authTime = input.authTime ?? row.auth_time;
+
+	await db.update(
+		sessions,
+		{ id: row.id },
+		{
+			amr,
+			auth_time: authTime,
+			...(input.acr !== undefined ? { acr: input.acr } : {}),
+		},
+	);
+
+	return { ok: true, amr, authTime };
 }
 
 export interface ResolveSessionInput {

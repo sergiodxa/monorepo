@@ -130,6 +130,11 @@ import type {
 	ActivateTotpFactorInput,
 	ActivateTotpFactorResult,
 	BeginTotpEnrolmentResult,
+	CompleteSecondFactorInput,
+	CompleteSecondFactorResult,
+	CompleteSecondFactorViaEnrolmentResult,
+	CompleteStepUpResult,
+	CompleteStepUpViaEnrolmentResult,
 	RegenerateRecoveryCodesResult,
 	RemoveTotpFactorInput,
 	RemoveTotpFactorResult,
@@ -732,6 +737,123 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
+	 * Completes the second factor a password or passkey sign-in demanded: a code
+	 * or a recovery code, extending the signed-in session's `amr` and, when asked,
+	 * remembering this browser for 30 days.
+	 *
+	 * @param input - The session the factor is owed on, the submission, whether
+	 * to remember this browser, and the request's origin.
+	 * @returns The remaining recovery-code count and a trusted-device token when
+	 * one was minted, or why the factor was not completed.
+	 */
+	async completeSecondFactor(
+		input: CompleteSecondFactorInput,
+	): Promise<WithCost<CompleteSecondFactorResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let sealKey = await this.#sealKey();
+			return Totp.completeSecondFactor(this.#db, sealKey, input);
+		});
+	}
+
+	/**
+	 * Completes a sign-in's second-factor demand for a subject who just enrolled
+	 * the fresh factor an administrator reset had cleared.
+	 *
+	 * @param input - The session the demand moves past, and the subject enrolling.
+	 * @returns Success, or that the session no longer resolves.
+	 */
+	async completeSecondFactorViaEnrolment(input: {
+		sessionId: string;
+		subjectId: string;
+	}): Promise<WithCost<CompleteSecondFactorViaEnrolmentResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Totp.completeSecondFactorViaEnrolment(this.#db, input));
+	}
+
+	/**
+	 * Proves a step-up's own demand and, once proven, resumes the interaction it
+	 * was demanded for — one call answers with the redirect a controller sends
+	 * the browser to next.
+	 *
+	 * @param input - The interaction the proof is scoped to, the session it
+	 * moves, and the code or recovery code submitted.
+	 * @returns The authorization outcome the resumed interaction reaches once
+	 * the step-up is proven, or why the step-up was refused.
+	 */
+	async completeStepUp(input: {
+		interactionId: string;
+		sessionId: string;
+		submission: string;
+		now?: number;
+	}): Promise<
+		WithCost<Exclude<CompleteStepUpResult, { ok: true }> | ({ ok: true } & AuthorizationOutcome)>
+	> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let sealKey = await this.#sealKey();
+			let now = input.now ?? Date.now();
+
+			let proven = await Totp.completeStepUp(this.#db, sealKey, { ...input, now });
+			if (!proven.ok) return proven;
+
+			let issuer = await this.#issuer();
+			let outcome = await Authorization.resumeAuthorization(this.#db, {
+				interactionId: input.interactionId,
+				sessionId: input.sessionId,
+				now,
+				issuer,
+			});
+
+			return { ok: true, ...outcome };
+		});
+	}
+
+	/**
+	 * Moves a step-up straight through for a subject who just enrolled a fresh
+	 * factor to answer it, then resumes the interaction the same way
+	 * {@link completeStepUp} does.
+	 *
+	 * @param input - The interaction and session the step-up moves past.
+	 * @returns The authorization outcome the resumed interaction reaches, or
+	 * that the session no longer resolves.
+	 */
+	async completeStepUpViaEnrolment(input: {
+		interactionId: string;
+		sessionId: string;
+		now?: number;
+	}): Promise<
+		WithCost<
+			| Exclude<CompleteStepUpViaEnrolmentResult, { ok: true }>
+			| ({ ok: true } & AuthorizationOutcome)
+		>
+	> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let now = input.now ?? Date.now();
+
+			let moved = await Totp.completeStepUpViaEnrolment(this.#db, {
+				sessionId: input.sessionId,
+				now,
+			});
+			if (!moved.ok) return moved;
+
+			let issuer = await this.#issuer();
+			let outcome = await Authorization.resumeAuthorization(this.#db, {
+				interactionId: input.interactionId,
+				sessionId: input.sessionId,
+				now,
+				issuer,
+			});
+
+			return { ok: true, ...outcome };
+		});
+	}
+
+	/**
 	 * Reads the tenant's password policy.
 	 *
 	 * @returns The minimum length, denied terms, expiry interval and history depth
@@ -776,8 +898,16 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		await this.#migrated;
 
 		return this.#withCost(async () => {
-			let { cap, hard } = await this.#dauEnforcement();
-			return Passwords.signInWithPassword(this.#db, input, { cache: this.#dauCache, cap, hard });
+			let [{ cap, hard }, mfaPolicy] = await Promise.all([
+				this.#dauEnforcement(),
+				this.#mfaPolicy(),
+			]);
+			return Passwords.signInWithPassword(
+				this.#db,
+				input,
+				{ cache: this.#dauCache, cap, hard },
+				mfaPolicy,
+			);
 		});
 	}
 
@@ -1464,6 +1594,7 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 				totp_enrolments: Totp.totpEnrolments,
 				totp_factors: Totp.totpFactors,
 				totp_claims: Totp.totpClaims,
+				totp_stepup_claims: Totp.totpStepUpClaims,
 				recovery_codes: Totp.recoveryCodes,
 				trusted_devices: Totp.trustedDevices,
 			};

@@ -359,6 +359,13 @@ export type SignInWithPasskeyResult =
  * @param rp - Relying party to verify the response with; built from `input` when
  * omitted.
  * @returns The subject, credential and opened session, or which check refused it.
+ *
+ * A verified assertion carries user verification on every ceremony already, so it
+ * is a complete second factor on its own: this never checks the subject's own TOTP
+ * factor, and `amr` already carries `webauthn` on the session it opens. A subject
+ * holding both a passkey and a TOTP factor satisfies a sign-in demand with either
+ * alone; only a later step-up asks a session that signed in this way to prove
+ * itself again.
  */
 export async function signInWithPasskey(
 	db: Database,

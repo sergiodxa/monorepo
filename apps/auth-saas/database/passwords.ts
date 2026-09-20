@@ -25,6 +25,7 @@ import { checkAndSpendMailEnvelope } from "./mail-rate-limit";
 import { openSession, revokeSubjectSessions } from "./sessions";
 import { foldIdentifier } from "./subject-identifiers";
 import { subjectIdentifiers, subjects } from "./subjects";
+import { isTrustedDevice, totpFactors } from "./totp";
 
 /** The audit actor for a call with no operator identity threaded through today. */
 const PLATFORM_ACTOR = { type: "platform", id: "system" } as const;
@@ -450,6 +451,8 @@ export interface SignInWithPasswordInput {
 	password: string;
 	/** Whether the browser should keep the session past its own lifetime. */
 	remembered: boolean;
+	/** A trusted-device token this browser is carrying, if any, checked against the signed-in subject's own remembered devices. */
+	trustedDeviceToken?: string | null;
 	ip?: string | null;
 	userAgent?: string | null;
 	country?: string | null;
@@ -463,6 +466,8 @@ export type SignInWithPasswordResult =
 			ok: true;
 			subjectId: string;
 			secondFactorRequired: boolean;
+			/** Set instead of demanding a code when the subject has no factor left to prove — an administrator reset — so the hosted screen offers enrolment rather than asking for one that no longer exists. */
+			mustEnrolFactor: boolean;
 			mustChangePassword: boolean;
 	  } & OpenSessionSuccess)
 	| { ok: false; reason: "invalid-credentials" }
@@ -507,12 +512,16 @@ function identifierKindOf(value: string): IdentifierKind {
  * the session past its own lifetime, and the request's origin.
  * @param metering - The daily active user meter to record this sign-in against, when
  * the caller has one; omitted, no meter is touched and no sign-in is ever refused for it.
+ * @param mfaPolicy - The tenant's own MFA policy; omitted, a subject with no factor is
+ * never routed to enrol one before this call reports success, the same as every
+ * existing caller that does not read the policy at all.
  * @returns The subject and what it still owes, or why sign-in was refused.
  */
 export async function signInWithPassword(
 	db: Database,
 	input: SignInWithPasswordInput,
 	metering?: OpenSessionMetering,
+	mfaPolicy: "optional" | "required" = "optional",
 ): Promise<SignInWithPasswordResult> {
 	let context = { ip: input.ip ?? null, userAgent: input.userAgent ?? null };
 
@@ -621,10 +630,23 @@ export async function signInWithPassword(
 
 	await auditAuthentication("succeeded", subject.id);
 
+	let mustEnrolFactor = subject.mfa_reset_required === true;
+
+	let factor = mustEnrolFactor ? null : await db.find(totpFactors, { subject_id: subject.id });
+	let policyDemandsEnrolment = !mustEnrolFactor && mfaPolicy === "required" && factor === null;
+
+	let trustedDevice =
+		factor !== null && input.trustedDeviceToken
+			? await isTrustedDevice(db, subject.id, input.trustedDeviceToken)
+			: false;
+
+	let secondFactorRequired =
+		mustEnrolFactor || policyDemandsEnrolment || (factor !== null && !trustedDevice);
+
 	return {
 		subjectId: subject.id,
-		// No second-factor mechanism exists yet; this is always false until one does.
-		secondFactorRequired: false,
+		secondFactorRequired,
+		mustEnrolFactor: mustEnrolFactor || policyDemandsEnrolment,
 		mustChangePassword: newest.must_change,
 		...session,
 	};

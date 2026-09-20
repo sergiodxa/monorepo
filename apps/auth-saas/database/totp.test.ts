@@ -18,9 +18,12 @@ import type { DurableObjectStateMock } from "@sdxc/cloudflare-mocks";
 
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { randomToken, totp } from "@sdxc/crypto";
+import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { isFailure } from "@sdxc/result";
-import { beforeEach, describe, expect, test } from "vitest";
+import { Database } from "remix/data-table";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
+import { sessions } from "./sessions";
 import Tenant from "./tenant-do";
 
 let state: DurableObjectStateMock;
@@ -502,5 +505,298 @@ describe("describeSubject: second-factor fields", () => {
 				{ id: "tdev_1", ip: "203.0.113.1", userAgent: "Test UA", expiresAt: expect.any(Number) },
 			],
 		});
+	});
+});
+
+/** A fixed password every sign-in test below shares, since the policy check is not what they exercise. */
+const TEST_PASSWORD = "correct horse battery staple";
+
+/** Creates a subject with a verified email and a set password, ready to sign in with. */
+async function createSubjectWithPassword(email: string): Promise<string> {
+	let created = await tenant.createSubject({ identifiers: [{ kind: "email", value: email }] });
+	if (!created.ok) throw new Error("setup failed");
+
+	let added = await tenant.addIdentifier({
+		subjectId: created.subjectId,
+		kind: "email",
+		value: email,
+		actor: { kind: "subject" },
+	});
+	if (!added.ok || added.kind !== "email") throw new Error("setup failed");
+
+	await tenant.verifyIdentifier({ ticket: added.ticket });
+
+	let written = await tenant.setPassword({
+		subjectId: created.subjectId,
+		password: TEST_PASSWORD,
+		actor: { kind: "subject" },
+	});
+	if (!written.ok) throw new Error("setup failed");
+
+	return created.subjectId;
+}
+
+/** Reads a session row's `amr` and `acr` straight off storage, for asserting what a call moved. */
+async function readSession(sessionId: string): Promise<{ amr: string[]; acr: string | null }> {
+	let db = new Database(createSQLStorageDatabaseAdapter(state.storage.sql));
+	let row = await db.find(sessions, { id: sessionId });
+	if (!row) throw new Error("session not found");
+	return { amr: row.amr as string[], acr: row.acr };
+}
+
+describe("signInWithPassword: second-factor demand", () => {
+	test("a subject with no factor signs in exactly as before", async () => {
+		let email = `no-factor-${nextSubjectEmail++}@example.com`;
+		await createSubjectWithPassword(email);
+
+		let signedIn = await tenant.signInWithPassword({
+			identifier: email,
+			password: TEST_PASSWORD,
+			remembered: false,
+		});
+
+		expect(signedIn).toMatchObject({
+			ok: true,
+			secondFactorRequired: false,
+			mustEnrolFactor: false,
+			mustChangePassword: false,
+		});
+	});
+
+	test("a subject with an active factor gets secondFactorRequired, without skipping the session", async () => {
+		let email = `has-factor-${nextSubjectEmail++}@example.com`;
+		let subjectId = await createSubjectWithPassword(email);
+		await enrolAndActivate(subjectId);
+
+		let signedIn = await tenant.signInWithPassword({
+			identifier: email,
+			password: TEST_PASSWORD,
+			remembered: false,
+		});
+
+		expect(signedIn).toMatchObject({
+			ok: true,
+			secondFactorRequired: true,
+			mustEnrolFactor: false,
+		});
+		if (!signedIn.ok) throw new Error("unreachable");
+
+		let session = await readSession(signedIn.sessionId);
+		expect(session.amr).toEqual(["pwd"]);
+	});
+
+	test("mfa_reset_required routes to enrolment rather than a demand for a factor that no longer exists", async () => {
+		let email = `reset-${nextSubjectEmail++}@example.com`;
+		let subjectId = await createSubjectWithPassword(email);
+		await enrolAndActivate(subjectId);
+
+		await tenant.resetSecondFactor({ subjectId, actor: platformActor, reason: "lost device" });
+
+		let signedIn = await tenant.signInWithPassword({
+			identifier: email,
+			password: TEST_PASSWORD,
+			remembered: false,
+		});
+
+		expect(signedIn).toMatchObject({ ok: true, secondFactorRequired: true, mustEnrolFactor: true });
+	});
+
+	test("a trusted-device token within its window skips the demand; expired, it does not", async () => {
+		let email = `trusted-${nextSubjectEmail++}@example.com`;
+		let subjectId = await createSubjectWithPassword(email);
+		let { setupKey } = await enrolAndActivate(subjectId);
+
+		let firstSignIn = await tenant.signInWithPassword({
+			identifier: email,
+			password: TEST_PASSWORD,
+			remembered: false,
+		});
+		if (!firstSignIn.ok) throw new Error("unreachable");
+
+		let completed = await tenant.completeSecondFactor({
+			sessionId: firstSignIn.sessionId,
+			submission: await currentCode(setupKey),
+			trustDevice: true,
+			agent: { ip: "203.0.113.5", userAgent: "Test UA" },
+		});
+		expect(completed).toMatchObject({ ok: true, trustedDeviceToken: expect.any(String) });
+		if (!completed.ok) throw new Error("unreachable");
+
+		let secondSignIn = await tenant.signInWithPassword({
+			identifier: email,
+			password: TEST_PASSWORD,
+			remembered: false,
+			trustedDeviceToken: completed.trustedDeviceToken,
+		});
+		expect(secondSignIn).toMatchObject({ ok: true, secondFactorRequired: false });
+
+		// Past the 30-day window, the same token no longer excuses the demand.
+		state.storage.sql.exec(
+			`UPDATE trusted_devices SET expires_at = ? WHERE subject_id = ?`,
+			Date.now() - 1000,
+			subjectId,
+		);
+
+		let thirdSignIn = await tenant.signInWithPassword({
+			identifier: email,
+			password: TEST_PASSWORD,
+			remembered: false,
+			trustedDeviceToken: completed.trustedDeviceToken,
+		});
+		expect(thirdSignIn).toMatchObject({ ok: true, secondFactorRequired: true });
+	});
+});
+
+describe("completeSecondFactor", () => {
+	async function signInAndGetSessionId(subjectId: string, email: string): Promise<string> {
+		let signedIn = await tenant.signInWithPassword({
+			identifier: email,
+			password: TEST_PASSWORD,
+			remembered: false,
+		});
+		if (!signedIn.ok) throw new Error("unreachable");
+		return signedIn.sessionId;
+	}
+
+	test("a correct code extends amr and returns success", async () => {
+		let email = `ok-${nextSubjectEmail++}@example.com`;
+		let subjectId = await createSubjectWithPassword(email);
+		let { setupKey } = await enrolAndActivate(subjectId);
+		let sessionId = await signInAndGetSessionId(subjectId, email);
+
+		let completed = await tenant.completeSecondFactor({
+			sessionId,
+			submission: await currentCode(setupKey),
+			trustDevice: false,
+			agent: { ip: null, userAgent: null },
+		});
+
+		expect(completed).toMatchObject({
+			ok: true,
+			recoveryCodesRemaining: 10,
+			trustedDeviceToken: null,
+		});
+
+		let session = await readSession(sessionId);
+		expect(session.amr).toEqual(["pwd", "otp"]);
+	});
+
+	test("a wrong code refuses", async () => {
+		let email = `wrong-${nextSubjectEmail++}@example.com`;
+		let subjectId = await createSubjectWithPassword(email);
+		await enrolAndActivate(subjectId);
+		let sessionId = await signInAndGetSessionId(subjectId, email);
+
+		let completed = await tenant.completeSecondFactor({
+			sessionId,
+			submission: "000000",
+			trustDevice: false,
+			agent: { ip: null, userAgent: null },
+		});
+
+		expect(completed).toMatchObject({ ok: false, reason: "invalid-submission" });
+
+		let session = await readSession(sessionId);
+		expect(session.amr).toEqual(["pwd"]);
+	});
+
+	test("a replayed code is refused the second time, even though the first succeeded", async () => {
+		let email = `replay-${nextSubjectEmail++}@example.com`;
+		let subjectId = await createSubjectWithPassword(email);
+		let { setupKey } = await enrolAndActivate(subjectId);
+		let sessionId = await signInAndGetSessionId(subjectId, email);
+		let code = await currentCode(setupKey);
+
+		let first = await tenant.completeSecondFactor({
+			sessionId,
+			submission: code,
+			trustDevice: false,
+			agent: { ip: null, userAgent: null },
+		});
+		expect(first).toMatchObject({ ok: true });
+
+		let second = await tenant.completeSecondFactor({
+			sessionId,
+			submission: code,
+			trustDevice: false,
+			agent: { ip: null, userAgent: null },
+		});
+		expect(second).toMatchObject({ ok: false, reason: "replayed-submission" });
+	});
+});
+
+describe("completeStepUp", () => {
+	async function registerTestClient() {
+		let result = await tenant.registerClient({
+			name: "Test Client",
+			kind: "confidential",
+			redirectUris: ["https://example.com/callback"],
+			postLogoutRedirectUris: [],
+			grantTypes: ["authorization_code"],
+			responseTypes: ["code"],
+			scopes: ["openid"],
+			tokenEndpointAuthMethod: "client_secret_basic",
+			requireConsent: false,
+		});
+		if (!result.ok) throw new Error("unreachable");
+		return result.client;
+	}
+
+	test("a correct code returns a redirect-shaped outcome", async () => {
+		let email = `stepup-${nextSubjectEmail++}@example.com`;
+		let subjectId = await createSubjectWithPassword(email);
+		let { setupKey } = await enrolAndActivate(subjectId);
+
+		let signedIn = await tenant.signInWithPassword({
+			identifier: email,
+			password: TEST_PASSWORD,
+			remembered: false,
+		});
+		if (!signedIn.ok) throw new Error("unreachable");
+
+		await tenant.completeSecondFactor({
+			sessionId: signedIn.sessionId,
+			submission: await currentCode(setupKey),
+			trustDevice: false,
+			agent: { ip: null, userAgent: null },
+		});
+
+		let client = await registerTestClient();
+
+		await tenant.recordConsentDecision({
+			subjectId,
+			clientId: client.id,
+			approved: true,
+			scopes: ["openid"],
+		});
+
+		let parked = await tenant.beginAuthorization({
+			query: {
+				client_id: client.id,
+				redirect_uri: "https://example.com/callback",
+				response_type: "code",
+				scope: "openid",
+				code_challenge: "a valid-looking challenge",
+				code_challenge_method: "S256",
+				acr_values: "mfa",
+			},
+			sessionIds: [signedIn.sessionId],
+			now: Date.now(),
+		});
+		expect(parked).toMatchObject({ kind: "step-up", screen: { hasFactor: true } });
+		if (parked.kind !== "step-up") throw new Error("unreachable");
+
+		let stepUp = await tenant.completeStepUp({
+			interactionId: parked.interactionId,
+			sessionId: signedIn.sessionId,
+			submission: await currentCode(setupKey),
+		});
+
+		expect(stepUp).toMatchObject({ ok: true, kind: "redirect" });
+		if (!("location" in stepUp)) throw new Error("unreachable");
+		expect(new URL(stepUp.location).searchParams.get("code")).toEqual(expect.any(String));
+
+		let session = await readSession(signedIn.sessionId);
+		expect(session.acr).toBe("mfa");
 	});
 });

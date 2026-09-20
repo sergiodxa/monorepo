@@ -17,9 +17,17 @@
 import type { Bytes } from "@sdxc/crypto";
 
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
-import { Base64Url, concatBytes, randomBytes, sha256 } from "@sdxc/crypto";
+import {
+	Base64Url,
+	concatBytes,
+	importKey,
+	randomBytes,
+	randomToken,
+	sha256,
+	totp,
+} from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
-import { unwrap } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
@@ -36,9 +44,11 @@ import {
 	signInWithPasskey,
 	sweepExpiredPasskeyChallenges,
 } from "./passkeys";
+import { sessions } from "./sessions";
 import { addIdentifier, createSubject, verifyIdentifier } from "./subjects";
 import { runMigrations } from "./tenant-migrations";
 import passkeysMigration from "./tenant-migrations/0004-passkeys.sql?raw";
+import { activateTotpFactor, beginTotpEnrolment } from "./totp";
 
 const RELYING_PARTY_ID = "tenant.example.com";
 const ORIGINS = [`https://${RELYING_PARTY_ID}`];
@@ -416,6 +426,50 @@ describe("signInWithPasskey", () => {
 		let row = await db.find(passkeys, { credential_id: response.id });
 		expect(row?.counter).toBe(1);
 		expect(row?.last_used_at).toEqual(expect.any(Number));
+	});
+
+	test("never demands the subject's own TOTP factor: a passkey assertion is already both halves", async () => {
+		let subjectId = await createTestSubject();
+		let authenticator = await Authenticator.create();
+		await enrolTestPasskey(subjectId, authenticator);
+
+		let sealKey = unwrap(await importKey(randomToken({ bytes: 32 })));
+
+		let begunEnrolment = await beginTotpEnrolment(db, sealKey, {
+			subjectId,
+			issuer: "https://tenant.example.com",
+		});
+		if (!begunEnrolment.ok) throw new Error("unreachable");
+
+		let code = await totp.code(begunEnrolment.setupKey);
+		if (isFailure(code)) throw new Error("unreachable");
+
+		let activated = await activateTotpFactor(db, sealKey, {
+			enrolmentId: begunEnrolment.enrolmentId,
+			code: code.data,
+		});
+		expect(activated).toMatchObject({ ok: true });
+
+		let begun = await beginPasskeyAuthentication(db, {
+			relyingPartyId: RELYING_PARTY_ID,
+			origins: ORIGINS,
+		});
+
+		let response = await authenticator.authenticate(begun.options);
+		let result = await signInWithPasskey(db, {
+			ceremonyId: begun.ceremonyId,
+			response,
+			relyingPartyId: RELYING_PARTY_ID,
+			origins: ORIGINS,
+			remembered: false,
+		});
+
+		expect(result).toMatchObject({ ok: true, subjectId });
+		expect("secondFactorRequired" in result).toBe(false);
+		if (!result.ok) throw new Error("unreachable");
+
+		let session = await db.find(sessions, { id: result.sessionId });
+		expect(session?.amr).toEqual(["webauthn"]);
 	});
 
 	test("the challenge is single-use", async () => {

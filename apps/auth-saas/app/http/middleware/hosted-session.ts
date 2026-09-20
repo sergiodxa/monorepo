@@ -14,6 +14,26 @@ import { requestOrigin } from "~/app/lib/request-origin";
 import { sessionCookie } from "~/app/lib/session-cookie";
 
 /**
+ * Resolves the request's session cookie to its live session and subject id, when
+ * it carries one that still resolves as `"active"`.
+ *
+ * @param ctx - The request context (provides `request` and `tenantStub`).
+ * @returns The live session and subject id, or `null` when there is no cookie or
+ * it no longer resolves.
+ */
+export async function activeSession(
+	ctx: RequestContext,
+): Promise<{ sessionId: string; subjectId: string } | null> {
+	let token = await sessionCookie.parse(ctx.request.headers.get("Cookie"));
+	if (!token) return null;
+
+	let resolved = await ctx.tenantStub.resolveSession({ token, ...requestOrigin(ctx.request) });
+	return resolved.status === "active"
+		? { sessionId: resolved.sessionId, subjectId: resolved.subjectId }
+		: null;
+}
+
+/**
  * Resolves the request's session cookie to a live session id, when it carries one
  * that still resolves as `"active"`.
  *
@@ -22,11 +42,7 @@ import { sessionCookie } from "~/app/lib/session-cookie";
  * resolves.
  */
 export async function activeSessionId(ctx: RequestContext): Promise<string | null> {
-	let token = await sessionCookie.parse(ctx.request.headers.get("Cookie"));
-	if (!token) return null;
-
-	let resolved = await ctx.tenantStub.resolveSession({ token, ...requestOrigin(ctx.request) });
-	return resolved.status === "active" ? resolved.sessionId : null;
+	return (await activeSession(ctx))?.sessionId ?? null;
 }
 
 /** What a `signInWithPassword`/`signInWithPasskey` call hands back to open a session from. */

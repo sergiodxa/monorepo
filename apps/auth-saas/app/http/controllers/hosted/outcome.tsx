@@ -20,6 +20,7 @@ import type { ConsentScreen } from "~/database/consent";
 import { ConsentPage } from "~/app/views/hosted/consent";
 import { HostedDocument } from "~/app/views/hosted/document";
 import { ErrorPage } from "~/app/views/hosted/error";
+import { StepUpPage } from "~/app/views/hosted/step-up";
 import routes from "~/routes/tenant";
 
 export interface RespondToOutcomeOptions {
@@ -31,6 +32,18 @@ export interface RespondToOutcomeOptions {
 	renderConsentInline?: boolean;
 	/** The consent screen's own form action, required whenever `renderConsentInline` is set. */
 	consentAction?: string;
+	/**
+	 * Renders a `step-up` outcome inline instead of redirecting to it. Only
+	 * `/u/step-up`'s own controllers pass this; every other caller reaches
+	 * `/u/step-up` through the redirect. A subject with no factor is rendered by
+	 * the caller directly instead — `respondToAuthorizationOutcome` only ever
+	 * shows the code-entry state, since assembling the enrolment form needs a
+	 * fresh `beginTotpEnrolment` call this mapper has no reason to make on every
+	 * outcome it resolves.
+	 */
+	renderStepUpInline?: boolean;
+	/** The step-up form's own action, required whenever `renderStepUpInline` is set and the subject holds a factor. */
+	stepUpAction?: string;
 	/**
 	 * Renders a `render` outcome inline instead of redirecting to `/u/error`. Only
 	 * `/authorize` passes this — the one caller with no verified redirect target
@@ -129,6 +142,31 @@ export async function renderConsentPage(
 }
 
 /**
+ * Renders the `/u/step-up` code-entry screen inline for a request that still
+ * needs a fresh proof. A subject with no factor at all is not rendered here —
+ * see {@link RespondToOutcomeOptions.renderStepUpInline}.
+ *
+ * @param ctx - The request context (provides `render`, `locale` and `i18next`).
+ * @param action - The step-up form's own action, carrying the interaction id.
+ * @param error - An error from a prior submission, if any.
+ * @returns The rendered step-up page.
+ */
+export async function renderStepUpPage(
+	ctx: RequestContext,
+	action: string,
+	error: string | null = null,
+): Promise<Response> {
+	let t = ctx.i18next.t;
+
+	return ctx.render(
+		<HostedDocument title={t("hostedStepUp.title")} locale={ctx.locale}>
+			<StepUpPage t={t} action={action} error={error} />
+		</HostedDocument>,
+		error ? { status: 400 } : undefined,
+	);
+}
+
+/**
  * Resolves the URL a `redirect`, `authenticate` or `consent` outcome sends the
  * browser to next — the piece the passkey verify endpoint also needs, since it
  * answers in JSON rather than an HTTP redirect of its own. A `render` outcome has
@@ -154,6 +192,13 @@ export function resolveOutcomeRedirect(
 		url.searchParams.set("interaction", outcome.interactionId);
 		if (outcome.loginHint) url.searchParams.set("login_hint", outcome.loginHint);
 		if (outcome.forced) url.searchParams.set("forced", "1");
+		if (uiLocales) url.searchParams.set("ui_locales", uiLocales);
+		return url.toString();
+	}
+
+	if (outcome.kind === "step-up") {
+		let url = tenantUrl(ctx, routes.hostedStepUpShow.href());
+		url.searchParams.set("interaction", outcome.interactionId);
 		if (uiLocales) url.searchParams.set("ui_locales", uiLocales);
 		return url.toString();
 	}
@@ -188,6 +233,11 @@ export async function respondToAuthorizationOutcome(
 	if (outcome.kind === "consent" && options.renderConsentInline) {
 		if (!options.consentAction) throw new Error("renderConsentInline requires consentAction");
 		return renderConsentPage(ctx, options.consentAction, outcome.screen);
+	}
+
+	if (outcome.kind === "step-up" && options.renderStepUpInline && outcome.screen.hasFactor) {
+		if (!options.stepUpAction) throw new Error("renderStepUpInline requires stepUpAction");
+		return renderStepUpPage(ctx, options.stepUpAction);
 	}
 
 	let location = resolveOutcomeRedirect(ctx, outcome, options.uiLocales);

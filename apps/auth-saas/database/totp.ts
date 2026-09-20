@@ -17,17 +17,27 @@
 
 import type { Database, TableRow } from "remix/data-table";
 
-import { Base32, Hex, open, randomBytes, seal, sha256, totp } from "@sdxc/crypto";
+import { Base32, Hex, open, randomBytes, randomToken, seal, sha256, totp } from "@sdxc/crypto";
 import { isFailure, isSuccess } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
-import { and, column as c, eq, isNull, lt, notNull, table } from "remix/data-table";
+import {
+	and,
+	column as c,
+	DataTableDatabaseError,
+	eq,
+	gt,
+	isNull,
+	lt,
+	notNull,
+	table,
+} from "remix/data-table";
 
 import type { AuditActor } from "./audit-events";
 import type { SecondFactorState } from "./subjects";
 
 import { writeAuditEvent } from "./audit-events";
-import { revokeSubjectSessions } from "./sessions";
+import { extendSessionFactor, revokeSubjectSessions, sessions } from "./sessions";
 import { subjectIdentifiers, subjects } from "./subjects";
 
 /**
@@ -47,6 +57,9 @@ const ENROLMENT_TTL_MS = 10 * 60 * 1000;
  */
 const CLAIM_RETENTION_MS = 5 * 60 * 1000;
 
+/** How long a browser is excused the factor after `completeSecondFactor` remembers it. */
+const TRUSTED_DEVICE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
 /** How many recovery codes activation and regeneration each mint. */
 const RECOVERY_CODE_COUNT = 10;
 
@@ -58,6 +71,9 @@ const RECOVERY_CODE_GROUP_SIZE = 4;
 
 /** Mints a `totpenr` id for an enrolment awaiting proof. */
 const enrolmentId = typeid("totpenr");
+
+/** Mints a `trdev` id for a remembered browser. */
+const trustedDeviceId = typeid("trdev");
 
 /** A secret sealed and waiting for the code that proves it was received. */
 export const totpEnrolments = table({
@@ -89,6 +105,23 @@ export const totpClaims = table({
 	name: "totp_claims",
 	primaryKey: ["subject_id", "code_hash"],
 	columns: {
+		subject_id: c.text(),
+		code_hash: c.text(),
+		at: c.integer(),
+	},
+});
+
+/**
+ * The replay guard a step-up claims against, scoped to one interaction rather than
+ * the subject at large: the same code proven for a different, concurrent step-up is
+ * never mistaken for a replay of this one, since only a second submission against
+ * this exact interaction conflicts on the unique index.
+ */
+export const totpStepUpClaims = table({
+	name: "totp_stepup_claims",
+	primaryKey: ["interaction_id", "code_hash"],
+	columns: {
+		interaction_id: c.text(),
 		subject_id: c.text(),
 		code_hash: c.text(),
 		at: c.integer(),
@@ -148,11 +181,81 @@ function formatRecoveryCode(raw: string): string {
 	return groups.join("-");
 }
 
+/** SHA-256 of a value, hex-encoded — the digest a recovery code, a claim or a trusted-device token is found by. */
+async function digest(value: string): Promise<string> {
+	let hashed = await sha256(value);
+	if (isFailure(hashed)) throw new Error("digest hashing failed");
+	return Hex.encode(hashed.data);
+}
+
 /** Hashes an already-folded recovery code, the digest every lookup compares against. */
 async function hashRecoveryCode(folded: string): Promise<string> {
-	let hashed = await sha256(folded);
-	if (isFailure(hashed)) throw new Error("recovery code hashing failed");
-	return Hex.encode(hashed.data);
+	return digest(folded);
+}
+
+/**
+ * Whether `error` is the unique-index conflict a replayed claim throws, rather
+ * than some other failure. Matched on the underlying driver's own message
+ * rather than an error code, since Node's `node:sqlite` and Bun's `bun:sqlite`
+ * disagree on the code (`ERR_SQLITE_ERROR` against `SQLITE_CONSTRAINT_*`) but
+ * agree on wording it as a "constraint failed".
+ */
+function isReplayConflict(error: unknown): boolean {
+	if (!(error instanceof DataTableDatabaseError)) return false;
+	let cause = error.cause;
+	if (!(cause instanceof Error)) return false;
+	return /constraint failed/i.test(cause.message);
+}
+
+/**
+ * Claims a submission's digest against the subject-scoped replay guard before
+ * anything about the submission is checked: the unique index on
+ * `(subject_id, code_hash)` makes a second claim of the same digest a conflict,
+ * refused here rather than discovered by comparing timestamps after the fact.
+ * Claiming ahead of verifying keeps the mutual exclusion in one statement, with
+ * no read-modify-write spanning the `await` that would otherwise derive whether
+ * the submission is even valid.
+ */
+async function claimTotpCode(
+	db: Database,
+	subjectId: string,
+	codeHash: string,
+	now: number,
+): Promise<boolean> {
+	try {
+		await db.create(totpClaims, { subject_id: subjectId, code_hash: codeHash, at: now });
+		return true;
+	} catch (error) {
+		if (isReplayConflict(error)) return false;
+		throw error;
+	}
+}
+
+/**
+ * Claims a submission's digest against one step-up interaction rather than the
+ * subject at large, so the same code proven for a different, concurrent step-up
+ * is never refused as a replay here — only a second submission against this
+ * exact interaction is.
+ */
+async function claimStepUpCode(
+	db: Database,
+	interactionId: string,
+	subjectId: string,
+	codeHash: string,
+	now: number,
+): Promise<boolean> {
+	try {
+		await db.create(totpStepUpClaims, {
+			interaction_id: interactionId,
+			subject_id: subjectId,
+			code_hash: codeHash,
+			at: now,
+		});
+		return true;
+	} catch (error) {
+		if (isReplayConflict(error)) return false;
+		throw error;
+	}
 }
 
 /**
@@ -480,6 +583,304 @@ export async function removeTotpFactor(
 	return { ok: true };
 }
 
+/** Whether a subject holds a live, unexpired trusted-device token for this browser. */
+export async function isTrustedDevice(
+	db: Database,
+	subjectId: string,
+	token: string,
+	now: number = Date.now(),
+): Promise<boolean> {
+	let hash = await digest(token);
+
+	let row = await db.findOne(trustedDevices, {
+		where: and(eq("subject_id", subjectId), eq("token_hash", hash), gt("expires_at", now)),
+	});
+
+	return row !== null;
+}
+
+export interface CompleteSecondFactorInput {
+	sessionId: string;
+	submission: string;
+	trustDevice: boolean;
+	agent: { ip: string | null; userAgent: string | null };
+}
+
+export type CompleteSecondFactorResult =
+	| { ok: true; recoveryCodesRemaining: number; trustedDeviceToken: string | null }
+	| { ok: false; reason: "session-not-found" }
+	| { ok: false; reason: "no-factor" }
+	| { ok: false; reason: "invalid-submission" }
+	| { ok: false; reason: "replayed-submission" };
+
+/**
+ * Completes the second factor a sign-in demanded: claims the submission against
+ * the subject-scoped replay guard, accepts a current code or a recovery code,
+ * extends the session's `amr` with `otp`, and, when asked, mints a trusted-device
+ * token remembering this browser for 30 days. A replay and a wrong submission
+ * both refuse cleanly, distinguishable so a screen can say which happened.
+ *
+ * @param db - The tenant's database.
+ * @param sealKey - The tenant object's own AES-GCM key.
+ * @param input - The session the factor is owed on, the code or recovery code
+ * submitted, whether to remember this browser, and the request's origin.
+ * @returns The remaining recovery-code count and a trusted-device token when one
+ * was minted, or why the factor was not completed.
+ */
+export async function completeSecondFactor(
+	db: Database,
+	sealKey: CryptoKey,
+	input: CompleteSecondFactorInput,
+): Promise<CompleteSecondFactorResult> {
+	let now = Date.now();
+
+	let session = await db.findOne(sessions, {
+		where: and(eq("id", input.sessionId), isNull("revoked_at")),
+	});
+	if (!session) return { ok: false, reason: "session-not-found" };
+
+	let factor = await db.find(totpFactors, { subject_id: session.subject_id });
+	if (!factor) return { ok: false, reason: "no-factor" };
+
+	let codeHash = await digest(input.submission);
+	let claimed = await claimTotpCode(db, session.subject_id, codeHash, now);
+
+	if (!claimed) {
+		await writeAuditEvent(db, {
+			action: "authentication.denied",
+			actor: { type: "subject", id: session.subject_id },
+			targetType: "subject",
+			targetId: session.subject_id,
+			outcome: "denied",
+			context: input.agent,
+			detail: { method: "totp", step: "second_factor", reason: "replay" },
+		});
+		return { ok: false, reason: "replayed-submission" };
+	}
+
+	let proven = await proveFactorOwnership(
+		db,
+		sealKey,
+		session.subject_id,
+		factor,
+		input.submission,
+	);
+
+	if (!proven) {
+		await writeAuditEvent(db, {
+			action: "authentication.failed",
+			actor: { type: "subject", id: session.subject_id },
+			targetType: "subject",
+			targetId: session.subject_id,
+			outcome: "failed",
+			context: input.agent,
+			detail: { method: "totp", step: "second_factor" },
+		});
+		return { ok: false, reason: "invalid-submission" };
+	}
+
+	await db.update(totpFactors, { subject_id: session.subject_id }, { last_used_at: now });
+	await extendSessionFactor(db, { sessionId: session.id, method: "otp" });
+
+	let trustedDeviceToken: string | null = null;
+
+	if (input.trustDevice) {
+		trustedDeviceToken = randomToken({ bytes: 32 });
+
+		await db.create(trustedDevices, {
+			id: trustedDeviceId(generateUUID()).toString(),
+			subject_id: session.subject_id,
+			token_hash: await digest(trustedDeviceToken),
+			created_at: now,
+			expires_at: now + TRUSTED_DEVICE_TTL_MS,
+			ip: input.agent.ip,
+			user_agent: input.agent.userAgent,
+		});
+	}
+
+	let recoveryCodesRemaining = await db.count(recoveryCodes, {
+		where: and(eq("subject_id", session.subject_id), isNull("used_at")),
+	});
+
+	await writeAuditEvent(db, {
+		action: "authentication.succeeded",
+		actor: { type: "subject", id: session.subject_id },
+		targetType: "subject",
+		targetId: session.subject_id,
+		outcome: "succeeded",
+		context: input.agent,
+		detail: { method: "totp", step: "second_factor", trustedDevice: input.trustDevice },
+	});
+
+	// A last-recovery-code-spent notice would mail the subject here once a caller
+	// with `@sdxc/mail` access can reach this call; nothing sends one yet.
+
+	return { ok: true, recoveryCodesRemaining, trustedDeviceToken };
+}
+
+export type CompleteSecondFactorViaEnrolmentResult =
+	| { ok: true }
+	| { ok: false; reason: "session-not-found" };
+
+/**
+ * Completes a sign-in's second-factor demand for a subject who just enrolled the
+ * fresh factor an administrator reset had cleared: `activateTotpFactor` already
+ * proved the code that activated it, so this only extends the session's `amr`
+ * and clears `mfa_reset_required`, with no second proof to claim.
+ *
+ * @param db - The tenant's database.
+ * @param input - The session the demand moves past, and the subject whose
+ * `mfa_reset_required` flag this clears.
+ * @returns Success once both are written, or that the session no longer resolves.
+ */
+export async function completeSecondFactorViaEnrolment(
+	db: Database,
+	input: { sessionId: string; subjectId: string },
+): Promise<CompleteSecondFactorViaEnrolmentResult> {
+	let extended = await extendSessionFactor(db, { sessionId: input.sessionId, method: "otp" });
+	if (!extended.ok) return { ok: false, reason: "session-not-found" };
+
+	await db.update(
+		subjects,
+		{ id: input.subjectId },
+		{ mfa_reset_required: false, updated_at: Date.now() },
+	);
+
+	return { ok: true };
+}
+
+/** What the step-up screen needs to choose between asking for a code and offering enrolment. */
+export interface StepUpScreen {
+	hasFactor: boolean;
+}
+
+/**
+ * Assembles the step-up screen: whether the subject holds a factor to ask a code
+ * against, or should be offered enrolment instead.
+ *
+ * @param db - The tenant's database.
+ * @param subjectId - The subject the step-up is demanded of.
+ * @returns The screen `authorization.ts`'s `step-up` outcome carries.
+ */
+export async function describeStepUpScreen(db: Database, subjectId: string): Promise<StepUpScreen> {
+	let factor = await db.find(totpFactors, { subject_id: subjectId });
+	return { hasFactor: factor !== null };
+}
+
+export interface CompleteStepUpInput {
+	interactionId: string;
+	sessionId: string;
+	submission: string;
+	now?: number;
+}
+
+export type CompleteStepUpResult =
+	| { ok: true }
+	| { ok: false; reason: "session-not-found" }
+	| { ok: false; reason: "no-factor" }
+	| { ok: false; reason: "invalid-submission" }
+	| { ok: false; reason: "replayed-submission" };
+
+/**
+ * Proves a step-up's own demand: claims the submission against this interaction
+ * rather than the subject at large, accepts a current code or a recovery code,
+ * and, once proven, moves the session's `auth_time` to this instant, mints its
+ * `acr` as `mfa`, and extends `amr` with `otp` — the fact a caller resumes the
+ * parked interaction against once this answers success.
+ *
+ * A step-up accepting a passkey assertion as its third proof is in the ADR this
+ * mechanism follows, but is not wired here: the RPC this answers takes a single
+ * text `submission`, and `passkeys.ts` exposes no bare "verify this assertion for
+ * this subject" primitive separate from `signInWithPasskey`'s whole sign-in flow.
+ * Building one is a real WebAuthn ceremony of its own — its own challenge storage
+ * and relying-party wiring — not a thin reuse, so it is left for a pass that
+ * decides that surface deliberately rather than growing it here as a side effect.
+ *
+ * @param db - The tenant's database.
+ * @param sealKey - The tenant object's own AES-GCM key.
+ * @param input - The interaction the proof is scoped to, the session it moves,
+ * and the code or recovery code submitted.
+ * @returns Success once the session is moved, or why the step-up was refused.
+ */
+export async function completeStepUp(
+	db: Database,
+	sealKey: CryptoKey,
+	input: CompleteStepUpInput,
+): Promise<CompleteStepUpResult> {
+	let now = input.now ?? Date.now();
+
+	let session = await db.findOne(sessions, {
+		where: and(eq("id", input.sessionId), isNull("revoked_at")),
+	});
+	if (!session) return { ok: false, reason: "session-not-found" };
+
+	let factor = await db.find(totpFactors, { subject_id: session.subject_id });
+	if (!factor) return { ok: false, reason: "no-factor" };
+
+	let codeHash = await digest(input.submission);
+	let claimed = await claimStepUpCode(db, input.interactionId, session.subject_id, codeHash, now);
+	if (!claimed) return { ok: false, reason: "replayed-submission" };
+
+	let proven = await proveFactorOwnership(
+		db,
+		sealKey,
+		session.subject_id,
+		factor,
+		input.submission,
+	);
+	if (!proven) return { ok: false, reason: "invalid-submission" };
+
+	await db.update(totpFactors, { subject_id: session.subject_id }, { last_used_at: now });
+	await extendSessionFactor(db, {
+		sessionId: session.id,
+		method: "otp",
+		acr: "mfa",
+		authTime: now,
+	});
+
+	await writeAuditEvent(db, {
+		action: "authentication.succeeded",
+		actor: { type: "subject", id: session.subject_id },
+		targetType: "subject",
+		targetId: session.subject_id,
+		outcome: "succeeded",
+		detail: { method: "totp", step: "step_up", interactionId: input.interactionId },
+	});
+
+	return { ok: true };
+}
+
+export type CompleteStepUpViaEnrolmentResult =
+	| { ok: true }
+	| { ok: false; reason: "session-not-found" };
+
+/**
+ * Moves a step-up straight through for a subject who just enrolled a fresh
+ * factor to answer it: `activateTotpFactor` already proved the code that
+ * activated the factor, so this only moves the session the same way
+ * {@link completeStepUp} does, with no second proof to claim.
+ *
+ * @param db - The tenant's database.
+ * @param input - The session the step-up moves, and the clock it moves it to.
+ * @returns Success once the session is moved, or that the session no longer resolves.
+ */
+export async function completeStepUpViaEnrolment(
+	db: Database,
+	input: { sessionId: string; now?: number },
+): Promise<CompleteStepUpViaEnrolmentResult> {
+	let now = input.now ?? Date.now();
+
+	let extended = await extendSessionFactor(db, {
+		sessionId: input.sessionId,
+		method: "otp",
+		acr: "mfa",
+		authTime: now,
+	});
+	if (!extended.ok) return { ok: false, reason: "session-not-found" };
+
+	return { ok: true };
+}
+
 export interface ResetSecondFactorInput {
 	subjectId: string;
 	actor: AuditActor;
@@ -624,7 +1025,16 @@ export async function sweepTotpState(
 ): Promise<{ swept: number }> {
 	let enrolments = await db.deleteMany(totpEnrolments, { where: lt("expires_at", now) });
 	let claims = await db.deleteMany(totpClaims, { where: lt("at", now - CLAIM_RETENTION_MS) });
+	let stepUpClaims = await db.deleteMany(totpStepUpClaims, {
+		where: lt("at", now - CLAIM_RETENTION_MS),
+	});
 	let devices = await db.deleteMany(trustedDevices, { where: lt("expires_at", now) });
 
-	return { swept: enrolments.affectedRows + claims.affectedRows + devices.affectedRows };
+	return {
+		swept:
+			enrolments.affectedRows +
+			claims.affectedRows +
+			stepUpClaims.affectedRows +
+			devices.affectedRows,
+	};
 }

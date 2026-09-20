@@ -558,6 +558,89 @@ describe("beginAuthorization", () => {
 		});
 	});
 
+	describe("acr_values=mfa step-up", () => {
+		test("valid session with no recent step-up proof: parks a step-up outcome", async () => {
+			let client = await createTestClient();
+			let { sessionId } = await openTestSession();
+
+			let outcome = await beginAuthorization(db, {
+				query: baseQuery(client.id, { acr_values: "mfa" }),
+				sessionIds: [sessionId],
+				now: Date.now(),
+				issuer: ISSUER,
+			});
+
+			expect(outcome).toMatchObject({
+				kind: "step-up",
+				interactionId: expect.any(String),
+				screen: { hasFactor: false },
+			});
+		});
+
+		test("session already carrying a fresh mfa proof: proceeds past the step-up check", async () => {
+			let client = await createTestClient();
+			let { subjectId, sessionId } = await openTestSession();
+			await recordConsentDecision(db, {
+				subjectId,
+				clientId: client.id,
+				approved: true,
+				scopes: ["openid"],
+			});
+
+			let now = Date.now();
+			await db.update(sessions, { id: sessionId }, { acr: "mfa", auth_time: now });
+
+			let outcome = await beginAuthorization(db, {
+				query: baseQuery(client.id, { acr_values: "mfa" }),
+				sessionIds: [sessionId],
+				now,
+				issuer: ISSUER,
+			});
+
+			expect(outcome.kind).toBe("redirect");
+			if (outcome.kind !== "redirect") throw new Error("unreachable");
+			expect(new URL(outcome.location).searchParams.get("code")).toEqual(expect.any(String));
+		});
+
+		test("a stale mfa proof past the fifteen-minute window: parks a step-up outcome again", async () => {
+			vi.useFakeTimers();
+			vi.setSystemTime(1_700_000_000_000);
+
+			let client = await createTestClient();
+			let { sessionId } = await openTestSession();
+			await db.update(sessions, { id: sessionId }, { acr: "mfa", auth_time: 1_700_000_000_000 });
+
+			vi.setSystemTime(1_700_000_000_000 + 16 * 60 * 1000);
+
+			let outcome = await beginAuthorization(db, {
+				query: baseQuery(client.id, { acr_values: "mfa" }),
+				sessionIds: [sessionId],
+				now: Date.now(),
+				issuer: ISSUER,
+			});
+
+			expect(outcome).toMatchObject({ kind: "step-up" });
+		});
+
+		test("no recent proof, prompt=none: redirects unmet_authentication_requirements", async () => {
+			let client = await createTestClient();
+			let { sessionId } = await openTestSession();
+
+			let outcome = await beginAuthorization(db, {
+				query: baseQuery(client.id, { acr_values: "mfa", prompt: "none" }),
+				sessionIds: [sessionId],
+				now: Date.now(),
+				issuer: ISSUER,
+			});
+
+			expect(outcome.kind).toBe("redirect");
+			if (outcome.kind !== "redirect") throw new Error("unreachable");
+			expect(new URL(outcome.location).searchParams.get("error")).toBe(
+				"unmet_authentication_requirements",
+			);
+		});
+	});
+
 	describe("consent", () => {
 		test("skips straight to a code when a stored grant already covers every requested scope", async () => {
 			let client = await createTestClient();

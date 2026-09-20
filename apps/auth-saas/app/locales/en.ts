@@ -32,6 +32,62 @@ export default {
 		footer: "Secured by Auth SaaS",
 	},
 
+	hostedSecondFactor: {
+		title: "Enter your authentication code",
+		codeLabel: "Authentication code or recovery code",
+		remember: "Remember this device for 30 days",
+		submit: "Verify",
+		errors: {
+			invalid: "That code isn't right. Try again.",
+			replayed: "That code was already used. Wait for the next one and try again.",
+		},
+		enrol: {
+			title: "Set up two-factor authentication",
+			body: "Your authentication method was reset. Add it to an authenticator app, then enter the code it shows.",
+			setupKeyLabel: "Setup key",
+			uriLabel: "Or open this link on a device with an authenticator app installed",
+			codeLabel: "Authentication code",
+			submit: "Activate",
+			errors: {
+				invalid:
+					"That code isn't right. The setup key expired; reload this page for a new one and try again.",
+			},
+		},
+		recoveryCodes: {
+			title: "Save your recovery codes",
+			body: "Store these somewhere safe. Each code works once, if you ever lose access to your authenticator app.",
+			continueButton: "Continue",
+		},
+	},
+
+	hostedStepUp: {
+		title: "Confirm it's you",
+		body: "This action needs a fresh proof of your authentication code, even if you signed in recently.",
+		codeLabel: "Authentication code or recovery code",
+		submit: "Confirm",
+		errors: {
+			invalid: "That code isn't right. Try again.",
+			replayed: "That code was already used. Wait for the next one and try again.",
+		},
+		enrol: {
+			title: "Set up two-factor authentication",
+			body: "This action needs a second factor and none is set up yet. Add it to an authenticator app, then enter the code it shows.",
+			setupKeyLabel: "Setup key",
+			uriLabel: "Or open this link on a device with an authenticator app installed",
+			codeLabel: "Authentication code",
+			submit: "Activate",
+			errors: {
+				invalid:
+					"That code isn't right. The setup key expired; reload this page for a new one and try again.",
+			},
+		},
+		recoveryCodes: {
+			title: "Save your recovery codes",
+			body: "Store these somewhere safe. Each code works once, if you ever lose access to your authenticator app.",
+			continueButton: "Continue",
+		},
+	},
+
 	hostedConsent: {
 		title: "{{clientName}} is asking for access",
 		signedInAs: "Signed in as {{name}}",

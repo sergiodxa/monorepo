@@ -19,6 +19,7 @@ import {
 } from "~/app/http/controllers/hosted/outcome";
 import { serializeSessionCookie } from "~/app/http/middleware/hosted-session";
 import { requestOrigin } from "~/app/lib/request-origin";
+import { readTrustedDeviceToken } from "~/app/lib/trusted-device-cookie";
 import { HostedDocument } from "~/app/views/hosted/document";
 import { SignInPage } from "~/app/views/hosted/sign-in";
 import routes from "~/routes/tenant";
@@ -109,10 +110,13 @@ export const signInSubmit = createAction(routes.hostedSignInSubmit, async (ctx) 
 		});
 	}
 
+	let trustedDeviceToken = await readTrustedDeviceToken(ctx.request);
+
 	let signedIn = await ctx.tenantStub.signInWithPassword({
 		identifier,
 		password,
 		remembered,
+		trustedDeviceToken,
 		...requestOrigin(ctx.request),
 	});
 
@@ -126,6 +130,20 @@ export const signInSubmit = createAction(routes.hostedSignInSubmit, async (ctx) 
 		return renderSignInPage(ctx, { loginHint, forced, error });
 	}
 
+	let sessionCookieHeader = await serializeSessionCookie(signedIn, remembered);
+
+	if (signedIn.secondFactorRequired) {
+		let url = new URL(routes.hostedSecondFactorShow.href(), ctx.request.url);
+		url.searchParams.set("interaction", interactionId);
+		url.searchParams.set("mode", signedIn.mustEnrolFactor ? "enrol" : "prove");
+		let uiLocales = ctx.url.searchParams.get("ui_locales");
+		if (uiLocales) url.searchParams.set("ui_locales", uiLocales);
+
+		let response = new Response(null, { status: 302, headers: { Location: url.toString() } });
+		response.headers.append("Set-Cookie", sessionCookieHeader);
+		return response;
+	}
+
 	let outcome = await ctx.tenantStub.resumeAuthorization({
 		interactionId,
 		sessionId: signedIn.sessionId,
@@ -135,6 +153,6 @@ export const signInSubmit = createAction(routes.hostedSignInSubmit, async (ctx) 
 	let response = await respondToAuthorizationOutcome(ctx, outcome, {
 		uiLocales: ctx.url.searchParams.get("ui_locales"),
 	});
-	response.headers.append("Set-Cookie", await serializeSessionCookie(signedIn, remembered));
+	response.headers.append("Set-Cookie", sessionCookieHeader);
 	return response;
 });

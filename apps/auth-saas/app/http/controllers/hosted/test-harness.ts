@@ -12,6 +12,7 @@ import type { Transport } from "@sdxc/mail";
 import type { Middleware } from "remix/router";
 
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
+import { randomToken } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
@@ -23,12 +24,24 @@ import authorize from "~/app/http/controllers/authorize";
 import { consentShow, consentSubmit } from "~/app/http/controllers/hosted/consent";
 import { errorShow } from "~/app/http/controllers/hosted/error";
 import { resetShow, resetSubmit } from "~/app/http/controllers/hosted/reset";
+import {
+	secondFactorContinueSubmit,
+	secondFactorEnrolSubmit,
+	secondFactorShow,
+	secondFactorSubmit,
+} from "~/app/http/controllers/hosted/second-factor";
 import { signInShow, signInSubmit } from "~/app/http/controllers/hosted/sign-in";
 import {
 	signInPasskeyOptions,
 	signInPasskeyVerify,
 } from "~/app/http/controllers/hosted/sign-in-passkey";
 import { signUpShow, signUpSubmit } from "~/app/http/controllers/hosted/sign-up";
+import {
+	stepUpContinueSubmit,
+	stepUpEnrolSubmit,
+	stepUpShow,
+	stepUpSubmit,
+} from "~/app/http/controllers/hosted/step-up";
 import { verifyResend, verifyShow } from "~/app/http/controllers/hosted/verify";
 import i18n from "~/app/http/middleware/i18n";
 import { platformSender } from "~/app/http/middleware/mail-sender";
@@ -66,6 +79,14 @@ function buildRouter(tenantDO: Tenant, transport: Transport) {
 	router.map(routes.hostedSignInSubmit, signInSubmit);
 	router.map(routes.hostedSignInPasskeyOptions, signInPasskeyOptions);
 	router.map(routes.hostedSignInPasskeyVerify, signInPasskeyVerify);
+	router.map(routes.hostedSecondFactorShow, secondFactorShow);
+	router.map(routes.hostedSecondFactorSubmit, secondFactorSubmit);
+	router.map(routes.hostedSecondFactorEnrolSubmit, secondFactorEnrolSubmit);
+	router.map(routes.hostedSecondFactorContinueSubmit, secondFactorContinueSubmit);
+	router.map(routes.hostedStepUpShow, stepUpShow);
+	router.map(routes.hostedStepUpSubmit, stepUpSubmit);
+	router.map(routes.hostedStepUpEnrolSubmit, stepUpEnrolSubmit);
+	router.map(routes.hostedStepUpContinueSubmit, stepUpContinueSubmit);
 	router.map(routes.hostedConsentShow, consentShow);
 	router.map(routes.hostedConsentSubmit, consentSubmit);
 	router.map(routes.hostedSignUpShow, signUpShow);
@@ -97,7 +118,9 @@ export interface BuildHarnessOptions {
 /** Provisions a fresh tenant and its router, ready for a hosted-flow test. */
 export async function buildHarness(options: BuildHarnessOptions = {}): Promise<Harness> {
 	let state = createDurableObjectState();
-	let tenantDO = new Tenant(state, {} as Cloudflare.Env);
+	let tenantDO = new Tenant(state, {
+		TOTP_SEAL_KEY: randomToken({ bytes: 32 }),
+	} as Cloudflare.Env);
 	await tenantDO.provision({ tenantId: TENANT_ID, issuer: ISSUER });
 	let db = new Database(createSQLStorageDatabaseAdapter(state.storage.sql));
 	let transport = options.transport ?? new MemoryTransport();

@@ -27,6 +27,8 @@ import m0005 from "./tenant-migrations/0005-sessions.sql?raw";
 import m0011 from "./tenant-migrations/0011-mail-rate-limit.sql?raw";
 import m0013 from "./tenant-migrations/0013-dau.sql?raw";
 import m0014 from "./tenant-migrations/0014-audit.sql?raw";
+import m0015 from "./tenant-migrations/0015-totp.sql?raw";
+import m0016 from "./tenant-migrations/0016-second-factor-sign-in.sql?raw";
 
 let db: Database;
 
@@ -43,6 +45,8 @@ beforeEach(async () => {
 	await driver.executeScript(m0011);
 	await driver.executeScript(m0013);
 	await driver.executeScript(m0014);
+	await driver.executeScript(m0015);
+	await driver.executeScript(m0016);
 
 	db = new Database(driver);
 });

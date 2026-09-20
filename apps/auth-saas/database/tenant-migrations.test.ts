@@ -45,6 +45,8 @@ describe("runMigrations", () => {
 			"0013-dau",
 			"0014-audit",
 			"0015-totp",
+			"0016-second-factor-sign-in",
+			"0017-step-up",
 		]);
 	});
 
@@ -119,6 +121,8 @@ describe("runMigrations", () => {
 			{ id: "0013-dau", applied_at: expect.any(Number) },
 			{ id: "0014-audit", applied_at: expect.any(Number) },
 			{ id: "0015-totp", applied_at: expect.any(Number) },
+			{ id: "0016-second-factor-sign-in", applied_at: expect.any(Number) },
+			{ id: "0017-step-up", applied_at: expect.any(Number) },
 		]);
 	});
 
