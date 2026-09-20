@@ -14,8 +14,13 @@ import { isSuccess } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
 
+import { refreshPendingDomains } from "~/app/jobs/refresh-pending-domains";
 import { HostMetadataSchema } from "~/app/lib/host-metadata";
-import { HOSTNAME_CACHE_TTL, hostnameCacheKey } from "~/app/lib/hostname-cache";
+import {
+	readHostnameCache,
+	writeHostnameCache,
+	writeHostnameCacheMiss,
+} from "~/app/lib/hostname-cache";
 import { checkRateLimit } from "~/app/lib/rate-limit";
 import Tenant from "~/database/tenant-do";
 
@@ -25,7 +30,8 @@ export { Tenant };
 
 interface ResolvedTenant {
 	tenantId: string;
-	region?: string;
+	region: string;
+	issuer: string;
 }
 
 function isPlatformHost(hostname: string): boolean {
@@ -36,31 +42,35 @@ function isPlatformHost(hostname: string): boolean {
 }
 
 /**
- * Resolves hostnames `hostMetadata` can't cover via a KV-cached control-plane
- * lookup. Filters to active tenants so suspended or deleted ones stop routing
- * at the edge; the short cache TTL bounds staleness if invalidation is missed.
+ * Resolves hostnames `hostMetadata` can't cover via a KV-cached control-plane lookup.
+ * Filters out only deleted tenants: a suspended tenant still resolves, because
+ * suspension is answered inside the request rather than at resolution, which keeps
+ * the management surface reachable and lets a reinstated tenant serve immediately
+ * rather than waiting out a cache entry. A hostname matching nothing is negatively
+ * cached so repeated unknown-hostname traffic costs one D1 read per minute.
  */
 async function resolveHostname(hostname: string): Promise<ResolvedTenant | null> {
-	let cacheKey = hostnameCacheKey(hostname);
-	let cached = await env.HOSTNAMES_KV.get<ResolvedTenant>(cacheKey, "json");
+	let cached = await readHostnameCache(hostname);
+	if (cached === "miss") return null;
 	if (cached) return cached;
 
 	let row = await env.PLATFORM_DB.prepare(
-		`SELECT d.tenant_id AS tenantId, t.region AS region
+		`SELECT d.tenant_id AS tenantId, t.region AS region, t.issuer AS issuer
 		 FROM domains d
 		 JOIN tenants t ON t.id = d.tenant_id
-		 WHERE d.hostname = ?1 AND d.status = 'active' AND t.status = 'active'
+		 WHERE d.hostname = ?1 AND d.status = 'active' AND t.status != 'deleted'
 		 LIMIT 1`,
 	)
 		.bind(hostname)
 		.first<ResolvedTenant>();
-	if (!row) return null;
 
-	let resolved: ResolvedTenant = { tenantId: row.tenantId, region: row.region };
-	await env.HOSTNAMES_KV.put(cacheKey, JSON.stringify(resolved), {
-		expirationTtl: HOSTNAME_CACHE_TTL,
-	});
-	return resolved;
+	if (!row) {
+		await writeHostnameCacheMiss(hostname);
+		return null;
+	}
+
+	await writeHostnameCache(hostname, row);
+	return row;
 }
 
 /**
@@ -119,6 +129,7 @@ export default {
 				return await forwardToTenant(request, {
 					tenantId: result.data.tenant_id,
 					region: result.data.region,
+					issuer: result.data.issuer,
 				});
 			}
 		}
@@ -127,5 +138,15 @@ export default {
 		if (resolved) return await forwardToTenant(request, resolved);
 
 		return new Response("Not found", { status: 404 });
+	},
+
+	/**
+	 * The worker's `scheduled` (cron) runtime hook: runs the daily sweep over domains
+	 * still pending verification or certificate issuance.
+	 *
+	 * @returns A promise that resolves once the sweep completes.
+	 */
+	async scheduled() {
+		await refreshPendingDomains();
 	},
 } satisfies ExportedHandler<Cloudflare.Env>;

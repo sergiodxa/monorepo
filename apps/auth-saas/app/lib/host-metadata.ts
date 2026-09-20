@@ -21,6 +21,7 @@ export const HostMetadataSchema = s.object({
 		s.enum_(["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"]),
 		"wnam",
 	),
+	issuer: s.string(),
 });
 
 /** Validated metadata identifying which tenant a custom hostname belongs to. */

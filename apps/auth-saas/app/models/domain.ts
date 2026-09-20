@@ -85,15 +85,18 @@ export default class Domain {
 	}
 
 	/**
-	 * Registers a domain for a tenant.
+	 * Registers a domain for a tenant. A platform domain is created active — the
+	 * wildcard route and its certificate already cover it, so there is no verification
+	 * to wait for — while a custom domain defaults to `pending` until it verifies.
 	 *
 	 * @param db - Database connection.
-	 * @param data - The tenant, hostname, and kind (platform default or customer-owned).
+	 * @param data - The tenant, hostname, kind (platform default or customer-owned),
+	 * and optional initial status (defaults to `pending`).
 	 * @returns A promise resolving to the newly-created domain row.
 	 */
 	static create(
 		db: Database,
-		data: { tenantId: string; hostname: string; kind: DomainKind },
+		data: { tenantId: string; hostname: string; kind: DomainKind; status?: DomainStatus },
 	): Promise<DomainRow> {
 		return db.create(
 			Domain.table,
@@ -102,7 +105,7 @@ export default class Domain {
 				tenant_id: data.tenantId,
 				hostname: data.hostname,
 				kind: data.kind,
-				status: "pending",
+				status: data.status ?? "pending",
 				certificate_status: null,
 				verification_name: null,
 				verification_value: null,

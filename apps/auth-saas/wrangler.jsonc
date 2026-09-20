@@ -87,6 +87,9 @@
 
 	"migrations": [{ "tag": "add-tenant-do", "new_sqlite_classes": ["Tenant"] }],
 
+	// Walks the pending-domains index daily, promoting or failing verification attempts.
+	"triggers": { "crons": ["0 0 * * *"] },
+
 	"vars": {
 		"PLATFORM_DOMAIN": "auth.sergiodxa.com",
 		"EMAIL_FROM": "Auth SaaS <noreply@auth.sergiodxa.com>",
