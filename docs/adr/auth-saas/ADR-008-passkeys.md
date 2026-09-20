@@ -28,9 +28,8 @@ it, so the id a tenant's passkeys are bound to decides, for the life of those cr
 origins can spend them.
 
 Custom domains are a Pro and Premium feature, which means a tenant's hostname changes at least
-once: on upgrade, and again whenever it moves its login page to a different domain. Binding
-credentials to the rented domain strands every passkey the tenant's users hold the day that
-domain changes.
+once: on upgrade, and again whenever it moves its login page elsewhere. Binding credentials to the
+rented domain strands every passkey the tenant's users hold the day that domain changes.
 
 | Relying party id | Isolation between tenants | Survives a domain change |
 | --- | --- | --- |
@@ -44,6 +43,12 @@ Calling `rp.authenticate()` with no `allow` starts a usernameless ceremony: the 
 every discoverable credential it holds for the relying party id, and the assertion carries the
 user handle naming the account. That handle is readable on the device, so it is the opaque subject
 id and never an address.
+
+### One passkey covers one device
+
+A credential lives on the authenticator that created it, so a subject signing in from a phone, a
+laptop and a hardware key holds three, each primary in its own right. Several at once is what
+makes a passkey usable everywhere the subject already is, and a lost device a row to revoke.
 
 ### The signature counter is a clone signal, not a session counter
 
@@ -98,11 +103,11 @@ assertion still has to verify. Expiry matches the prompt timeout and a sweep cle
 
 - `beginPasskeyRegistration({ subjectId })` — builds the options with `user.id` set to the subject
   id, `user.name` set to the primary identifier, and `exclude` set to the subject's existing
-  credential ids so the browser refuses a device that is already enrolled. Stores the challenge,
-  returns `{ ceremonyId, options }`.
-- `enrolPasskey({ ceremonyId, response, label })` — spends the challenge, runs
-  `rp.verifyRegistration`, stores the credential, and returns the row's public fields. A refusal
-  comes back as a discriminated union carrying the error name, never the error.
+  credential ids. Stores the challenge, returns `{ ceremonyId, options }`.
+- `enrolPasskey({ ceremonyId, response, label, agent })` — spends the challenge, runs
+  `rp.verifyRegistration`, stores the credential under the given label or the default derived from
+  `agent`, and returns the row's public fields. A refusal comes back as a discriminated union
+  carrying the error name, never the error.
 - `beginPasskeyAuthentication({})` — a ceremony with no `allow`, so the page asks for no identifier.
 - `signInWithPasskey({ ceremonyId, response, agent })` — spends the challenge, resolves the
   credential by the id the assertion reports, runs `rp.verifyAuthentication`, records the counter and
@@ -110,14 +115,28 @@ assertion still has to verify. Expiry matches the prompt timeout and a sweep cle
   authentication methods used. A counter regression is answered here too: the assertion is denied,
   the credential is suspended, and the reason comes back so the Worker can ask for a re-enrollment.
 - `renamePasskey({ subjectId, credentialId, label })`.
-- `revokePasskey({ subjectId, credentialId })` — refuses when it would leave the subject with no
-  passkey and no password.
+- `revokePasskey({ subjectId, credentialId })` — applies the shared remaining-credential
+  predicate before removing the row.
 
-A subject may hold as many passkeys as they have devices. A new credential is labelled from its
-AAGUID when the model is recognized and `Passkey` otherwise, and the subject can rename it,
-because a list of four identical labels is one nobody can revoke safely from. The account screen
-reads that list through `describeSubject`, which returns each passkey's label, authenticator model
-and last use alongside everything else the screen renders.
+### A subject holds many passkeys at once
+
+Every credential stands on its own: adding a laptop takes nothing from the phone, and the
+credential list names the devices that can sign in. That is what `beginPasskeyRegistration` passes
+`exclude` for — a device already holding one for this subject is refused by the browser before the
+prompt appears, so enrolment adds a device rather than duplicating one. Revoking removes a device
+and leaves the rest; the one revocation refused is the last credential, since `revokePasskey` asks
+the remaining-credential predicate the credential ADRs share — one count across passwords,
+passkeys, linked identities and verified addresses, as ADR-007's `removePassword` does.
+
+### A new passkey is labelled for the device that enrolled it
+
+`enrolPasskey` reads the enrolling request's `User-Agent` and writes a readable device name —
+"Chrome on Windows", "iPhone" — as the credential's default label, because the list a subject
+revokes from is one they have to recognize a credential in, and four rows reading `Passkey` is a
+list nobody can act on safely. A `User-Agent` is self-reported, so the label is a hint the subject
+corrects with `renamePasskey` rather than a fact, and nothing about the credential's standing
+reads it. An absent or unrecognized header falls back to the model the AAGUID names, and to
+`Passkey` when that is unknown. `describeSubject` returns each label with its model and last use.
 
 ### The sign-in page
 
@@ -177,4 +196,5 @@ Rejected: a passkey is primary here, and a subject may have no password at all.
 - [ADR-005: Hostname Resolution and Tenant Domains](./ADR-005-hostname-resolution-and-tenant-domains.md)
 - [ADR-006: Subjects and Identifiers](./ADR-006-subjects-and-identifiers.md)
 - [ADR-007: Password Credentials](./ADR-007-password-credentials.md)
+- [ADR-036: Account Linking](./ADR-036-account-linking.md) — where the remaining-credential predicate lives
 - [`@sdxc/passkey` README](/packages/passkey/README.md)
