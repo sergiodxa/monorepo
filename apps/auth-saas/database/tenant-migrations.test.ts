@@ -38,6 +38,7 @@ describe("runMigrations", () => {
 			"0006-signing-keys",
 			"0007-clients",
 			"0008-consent",
+			"0009-authorization",
 		]);
 	});
 
@@ -72,6 +73,8 @@ describe("runMigrations", () => {
 			"client_secrets",
 			"scopes",
 			"grants",
+			"authorization_requests",
+			"authorization_codes",
 		]) {
 			expect(names, `${name} exists`).toContain(name);
 		}
@@ -95,6 +98,7 @@ describe("runMigrations", () => {
 			{ id: "0006-signing-keys", applied_at: expect.any(Number) },
 			{ id: "0007-clients", applied_at: expect.any(Number) },
 			{ id: "0008-consent", applied_at: expect.any(Number) },
+			{ id: "0009-authorization", applied_at: expect.any(Number) },
 		]);
 	});
 

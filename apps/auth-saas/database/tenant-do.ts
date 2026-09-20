@@ -17,6 +17,11 @@ import { DurableObject } from "cloudflare:workers";
 import { column as c, Database, table } from "remix/data-table";
 
 import type {
+	AuthorizationOutcome,
+	BeginAuthorizationInput,
+	ResumeAuthorizationInput,
+} from "./authorization";
+import type {
 	DeleteClientResult,
 	DisableClientResult,
 	ListClientsInput,
@@ -102,6 +107,7 @@ import type {
 	VerifyIdentifierResult,
 } from "./subjects";
 
+import * as Authorization from "./authorization";
 import * as Clients from "./clients";
 import * as Consent from "./consent";
 import { hasAnotherCredential } from "./credentials";
@@ -212,6 +218,12 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 */
 	async erase(): Promise<void> {
 		await this.ctx.storage.deleteAll();
+	}
+
+	/** This tenant's own issuer, as `provision` recorded it, for stamping onto an error redirect. */
+	async #issuer(): Promise<string> {
+		let rows = await this.#db.findMany(settings);
+		return rows[0]?.issuer ?? "";
 	}
 
 	/**
@@ -577,7 +589,10 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * The daily retention sweep: releases unverified identifiers whose ticket is gone or
 	 * expired and whose row has sat unproven for a week, clears expired passkey
 	 * ceremonies, deletes sessions past their absolute expiry, deletes client secrets
-	 * past their rotation window, then arms tomorrow's run.
+	 * past their rotation window, deletes pending interactions past their ten-minute
+	 * window, deletes authorization codes left unredeemed past their sixty seconds or
+	 * redeemed long enough ago that a replay is no longer worth recognizing, then arms
+	 * tomorrow's run.
 	 *
 	 * Never rejects, the way a Durable Object alarm should not: a rejected alarm is
 	 * retried by the platform, which would repeat a sweep that already ran.
@@ -600,6 +615,16 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 
 			for (let iteration = 0; iteration < 20; iteration++) {
 				let { more } = await Clients.sweepExpiredClientSecrets(this.#db);
+				if (!more) break;
+			}
+
+			for (let iteration = 0; iteration < 20; iteration++) {
+				let { more } = await Authorization.sweepExpiredAuthorizationRequests(this.#db);
+				if (!more) break;
+			}
+
+			for (let iteration = 0; iteration < 20; iteration++) {
+				let { more } = await Authorization.sweepExpiredAuthorizationCodes(this.#db);
 				if (!more) break;
 			}
 		} catch (error) {
@@ -794,6 +819,40 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	async listGrants(input: ListGrantsInput): Promise<ListGrantsResult> {
 		await this.#migrated;
 		return Consent.listGrants(this.#db, input);
+	}
+
+	/**
+	 * Validates an `/authorize` request, resolves whichever of the caller's candidate
+	 * sessions applies, evaluates consent and mints a code, all as one operation.
+	 *
+	 * @param input - The request's raw query parameters, the caller's candidate session
+	 * ids, and the clock to validate and decide against.
+	 * @returns The outcome this request reaches on its own: a rendered or redirected
+	 * error, a redirected code, or a parked interaction for a sign-in or consent page.
+	 */
+	async beginAuthorization(
+		input: Omit<BeginAuthorizationInput, "issuer">,
+	): Promise<AuthorizationOutcome> {
+		await this.#migrated;
+		let issuer = await this.#issuer();
+		return Authorization.beginAuthorization(this.#db, { ...input, issuer });
+	}
+
+	/**
+	 * Continues a parked interaction with the session its caller asserts just
+	 * authenticated.
+	 *
+	 * @param input - The interaction to resume, the session that authenticated it, and
+	 * the clock to decide against.
+	 * @returns The outcome this resumption reaches on its own, the same as
+	 * {@link beginAuthorization} answers with.
+	 */
+	async resumeAuthorization(
+		input: Omit<ResumeAuthorizationInput, "issuer">,
+	): Promise<AuthorizationOutcome> {
+		await this.#migrated;
+		let issuer = await this.#issuer();
+		return Authorization.resumeAuthorization(this.#db, { ...input, issuer });
 	}
 
 	/**
