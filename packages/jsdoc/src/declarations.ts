@@ -82,7 +82,62 @@ export function collect(
 		}
 	}
 
-	return { nodes: mergeOverloads(nodes), reExports };
+	let documented = mergeOverloads(nodes);
+	attachStaticMembers(ctx, statements, documented, scope);
+
+	return { nodes: documented, reExports };
+}
+
+/**
+ * Attach every `Owner.part = …` assignment to the exported `Owner` it extends, which
+ * is how a component publishes the parts it composes from. An assignment whose owner
+ * is not exported documents nothing, so it is left where it sits.
+ */
+function attachStaticMembers(
+	ctx: NodeContext,
+	statements: readonly ts.Statement[],
+	nodes: DocNode[],
+	scope: string,
+): void {
+	for (let statement of statements) {
+		if (!ts.isExpressionStatement(statement)) continue;
+
+		let assignment = statement.expression;
+		if (!ts.isBinaryExpression(assignment)) continue;
+		if (assignment.operatorToken.kind !== ts.SyntaxKind.EqualsToken) continue;
+
+		let target = assignment.left;
+		if (!ts.isPropertyAccessExpression(target)) continue;
+		if (!ts.isIdentifier(target.expression)) continue;
+
+		let ownerName = target.expression.text;
+		let owner = nodes.find((candidate) => candidate.name === ownerName);
+		if (!owner) continue;
+
+		let name = target.name.getText();
+		let comment = leadingComment(statement, ctx.after);
+		let initializer = assignment.right;
+		let callable =
+			ts.isArrowFunction(initializer) || ts.isFunctionExpression(initializer) ? initializer : null;
+
+		owner.children = [
+			...owner.children,
+			{
+				id: `${scope}${ownerName}.${name}`,
+				name,
+				kind: callable ? "function" : "variable",
+				comment,
+				source: sourceOf(ctx, statement),
+				type: null,
+				signatures: callable ? [toSignature(callable, comment)] : [],
+				typeParameters: [],
+				extends: [],
+				implements: [],
+				children: [],
+				flags: flagsOf(statement, comment),
+			},
+		];
+	}
 }
 
 /** Build the node for one declaration, published under `name` inside `scope`. */
@@ -446,6 +501,22 @@ function mergeOverloads(nodes: DocNode[]): DocNode[] {
 		}
 
 		existing.signatures = [...existing.signatures, ...node.signatures];
+		existing.children = [...existing.children, ...node.children];
+
+		/**
+		 * A namespace merges with the value of the same name, and the two halves
+		 * document different things: the namespace holds the types, the value is
+		 * what a caller reaches for. The value names the merged symbol and supplies
+		 * its comment, so the description and examples written above the function
+		 * survive rather than losing to the types declared beside it.
+		 */
+		if (existing.kind === "namespace" && node.kind !== "namespace") {
+			existing.kind = node.kind;
+			existing.type = node.type;
+			if (node.comment) existing.comment = node.comment;
+			continue;
+		}
+
 		existing.comment ??= node.comment;
 	}
 

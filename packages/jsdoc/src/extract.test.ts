@@ -386,6 +386,100 @@ export function add(a, b) {
 		expect(result.error.message).toContain("src/add.ts:2:1");
 	});
 
+	test("keeps both halves when a namespace merges with the function it names", () => {
+		let module = documented(`/** The prop types. */
+export namespace Badge {
+	export type Variant = "solid" | "outline";
+}
+
+/**
+ * The component.
+ *
+ * @example <Badge />
+ */
+export function Badge(handle: unknown) {}`);
+
+		let badge = child(module, "Badge");
+
+		expect(badge?.kind).toBe("function");
+		expect(badge?.comment?.description).toBe("The component.");
+		expect(badge?.comment?.tags.map((tag) => tag.tag)).toContain("example");
+		expect(badge?.signatures).toHaveLength(1);
+		expect(child(badge!, "Variant")?.type).toBe('"solid" | "outline"');
+	});
+
+	test("keeps the namespace comment when the value it merges with carries none", () => {
+		let module = documented(`/** The prop types. */
+export namespace Badge {
+	export type Variant = "solid";
+}
+
+export function Badge(handle: unknown) {}`);
+
+		expect(child(module, "Badge")?.comment?.description).toBe("The prop types.");
+	});
+
+	test("still merges overloads of one function into a single symbol", () => {
+		let module = documented(`/** Parses a value. */
+export function parse(input: string): number;
+export function parse(input: number): string;
+export function parse(input: unknown): unknown {
+	return input;
+}`);
+
+		let parse = child(module, "parse");
+
+		expect(parse?.kind).toBe("function");
+		expect(parse?.comment?.description).toBe("Parses a value.");
+		expect(parse?.signatures.length).toBeGreaterThan(1);
+	});
+
+	test("documents a static property assigned to an exported function", () => {
+		let module = documented(`/** The component. */
+export function Badge(handle: unknown) {}
+
+/** The icon slot. */
+Badge.Icon = function BadgeIcon(handle: unknown) {};
+
+/** The text slot. */
+Badge.Text = (handle: unknown) => {};`);
+
+		let badge = child(module, "Badge");
+
+		expect(badge?.kind).toBe("function");
+		expect(badge?.children.map((part) => part.name)).toEqual(["Icon", "Text"]);
+		expect(child(badge!, "Icon")?.comment?.description).toBe("The icon slot.");
+		expect(child(badge!, "Icon")?.signatures).toHaveLength(1);
+		expect(child(badge!, "Text")?.comment?.description).toBe("The text slot.");
+	});
+
+	test("leaves a static assignment alone when its target is not exported", () => {
+		let module = documented(`function helper() {}
+helper.cache = new Map();
+
+/** The export. */
+export function add() {}`);
+
+		expect(module.children.map((node) => node.name)).toEqual(["add"]);
+	});
+
+	test("attaches a static property to a function that also merges with a namespace", () => {
+		let module = documented(`/** The prop types. */
+export namespace Badge {
+	export type Variant = "solid";
+}
+
+/** The component. */
+export function Badge(handle: unknown) {}
+
+/** The icon slot. */
+Badge.Icon = function BadgeIcon(handle: unknown) {};`);
+
+		let badge = child(module, "Badge");
+
+		expect(badge?.children.map((part) => part.name).sort()).toEqual(["Icon", "Variant"]);
+	});
+
 	test("extracts an empty module without inventing anything", () => {
 		expect(documented("")).toEqual({
 			id: "module",
