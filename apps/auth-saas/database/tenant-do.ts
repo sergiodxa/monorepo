@@ -139,6 +139,26 @@ import type {
 	SignInWithPasswordResult,
 } from "./passwords";
 import type {
+	AssignRoleInput,
+	AssignRoleResult,
+	AuthorizeSubjectInput,
+	AuthorizeSubjectResult,
+	DefinePermissionInput,
+	DefinePermissionResult,
+	DefineRoleInput,
+	DefineRoleResult,
+	DeleteRoleInput,
+	DeleteRoleResult,
+	DescribeSubjectAccessInput,
+	RemovePermissionInput,
+	RemovePermissionResult,
+	SetRolePermissionsInput,
+	SetRolePermissionsResult,
+	SubjectAccessSummary,
+	UpdateRoleInput,
+	UpdateRoleResult,
+} from "./roles";
+import type {
 	DescribeSamlServiceProviderResult,
 	RefreshConnectionMetadataResult,
 	ResolveOrganizationConnectionResult,
@@ -256,6 +276,7 @@ import { closeMeteringDay, createDauCache, dauDay, dauSeen, readUsage } from "./
 import * as Organizations from "./organizations";
 import * as Passkeys from "./passkeys";
 import * as Passwords from "./passwords";
+import * as Roles from "./roles";
 import * as SamlConnections from "./saml-connections";
 import * as SamlSignIn from "./saml-sign-in";
 import * as Scim from "./scim";
@@ -1928,6 +1949,130 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	): Promise<WithCost<ReadOrganizationMemberPageResult>> {
 		await this.#migrated;
 		return this.#withCost(() => Organizations.readOrganizationMemberPage(this.#db, input));
+	}
+
+	/**
+	 * Defines a tenant's own role at a scope, refusing a key that collides with
+	 * one of the three the platform reserves or with a role this scope
+	 * already has.
+	 *
+	 * @param input - The scope and key the role is defined at, its name and
+	 * description, and who is defining it.
+	 * @returns The new role's record, or which rule refused the call.
+	 */
+	async defineRole(input: DefineRoleInput): Promise<WithCost<DefineRoleResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Roles.defineRole(this.#db, input));
+	}
+
+	/**
+	 * Updates a custom role's name and description, refusing a call naming one
+	 * of the three system roles outright.
+	 *
+	 * @param input - The role to update, the fields to change, and who is
+	 * making the call.
+	 * @returns The role's record once updated, or which rule refused the call.
+	 */
+	async updateRole(input: UpdateRoleInput): Promise<WithCost<UpdateRoleResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Roles.updateRole(this.#db, input));
+	}
+
+	/**
+	 * Deletes a custom role, reassigning every current holder to another role
+	 * in the same call.
+	 *
+	 * @param input - The role to delete, the role its holders move to, and who
+	 * is making the call.
+	 * @returns How many holders were reassigned, or which rule refused the
+	 * call.
+	 */
+	async deleteRole(input: DeleteRoleInput): Promise<WithCost<DeleteRoleResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Roles.deleteRole(this.#db, input));
+	}
+
+	/**
+	 * Defines a tenant's own permission, refusing a key beginning `auth:` —
+	 * reserved for this platform's own management-API permissions.
+	 *
+	 * @param input - The permission's key, name and description, and who is
+	 * defining it.
+	 * @returns The new permission's record, or which rule refused the call.
+	 */
+	async definePermission(input: DefinePermissionInput): Promise<WithCost<DefinePermissionResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Roles.definePermission(this.#db, input));
+	}
+
+	/**
+	 * Removes a tenant's own permission, dropping every role's grant of it in
+	 * the same call.
+	 *
+	 * @param input - The permission to remove, and who is making the call.
+	 * @returns Success, or that no such permission exists.
+	 */
+	async removePermission(input: RemovePermissionInput): Promise<WithCost<RemovePermissionResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Roles.removePermission(this.#db, input));
+	}
+
+	/**
+	 * Replaces a custom role's whole granted permission set, refusing one
+	 * whose serialized form would exceed what a token's `permissions` claim
+	 * may carry.
+	 *
+	 * @param input - The role to set, its whole new set of permission keys,
+	 * and who is making the call.
+	 * @returns The set now granted, or which rule refused the call.
+	 */
+	async setRolePermissions(
+		input: SetRolePermissionsInput,
+	): Promise<WithCost<SetRolePermissionsResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Roles.setRolePermissions(this.#db, input));
+	}
+
+	/**
+	 * Assigns a role to a subject at a scope, replacing any role already held
+	 * there. An organization-scope assignment writes through to
+	 * `organization_members.role` rather than a `role_assignments` row.
+	 *
+	 * @param input - The subject, the scope the role is held at, the role's
+	 * key, and who is making the call.
+	 * @returns The role now held, or which rule refused the call.
+	 */
+	async assignRole(input: AssignRoleInput): Promise<WithCost<AssignRoleResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Roles.assignRole(this.#db, input));
+	}
+
+	/**
+	 * The role a subject holds at a scope and its resolved permission set, for
+	 * one screen or one `/userinfo` response to render.
+	 *
+	 * @param input - The subject and scope to describe.
+	 * @returns The held role (empty when none) and the permission keys it
+	 * resolves to.
+	 */
+	async describeSubjectAccess(
+		input: DescribeSubjectAccessInput,
+	): Promise<WithCost<SubjectAccessSummary>> {
+		await this.#migrated;
+		return this.#withCost(() => Roles.describeSubjectAccess(this.#db, input));
+	}
+
+	/**
+	 * The single-decision check: does the role a subject holds at a scope
+	 * grant a given permission.
+	 *
+	 * @param input - The subject, the scope, and the permission being asked
+	 * for.
+	 * @returns Whether the subject's held role grants it.
+	 */
+	async authorizeSubject(input: AuthorizeSubjectInput): Promise<WithCost<AuthorizeSubjectResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Roles.authorizeSubject(this.#db, input));
 	}
 
 	/**

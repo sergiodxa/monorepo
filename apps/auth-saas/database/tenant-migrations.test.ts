@@ -53,6 +53,7 @@ describe("runMigrations", () => {
 			"0021-scim",
 			"0022-organizations",
 			"0023-organization-connections",
+			"0024-roles",
 		]);
 	});
 
@@ -101,6 +102,10 @@ describe("runMigrations", () => {
 			"organization_members",
 			"organization_invitations",
 			"organization_domains",
+			"roles",
+			"permissions",
+			"role_permissions",
+			"role_assignments",
 		]) {
 			expect(names, `${name} exists`).toContain(name);
 		}
@@ -139,6 +144,7 @@ describe("runMigrations", () => {
 			{ id: "0021-scim", applied_at: expect.any(Number) },
 			{ id: "0022-organizations", applied_at: expect.any(Number) },
 			{ id: "0023-organization-connections", applied_at: expect.any(Number) },
+			{ id: "0024-roles", applied_at: expect.any(Number) },
 		]);
 	});
 

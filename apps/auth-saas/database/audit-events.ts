@@ -155,6 +155,14 @@ export const AUDIT_ACTIONS = [
 	"organization.domain.added",
 	"organization.domain.verified",
 	"organization.active_organization_set",
+	// Roles and permissions
+	"role.defined",
+	"role.updated",
+	"role.deleted",
+	"permission.defined",
+	"permission.removed",
+	"role.permissions_set",
+	"role.assigned",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
