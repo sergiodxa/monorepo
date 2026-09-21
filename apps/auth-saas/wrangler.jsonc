@@ -104,7 +104,10 @@
 	"migrations": [{ "tag": "add-tenant-do", "new_sqlite_classes": ["Tenant"] }],
 
 	// Walks the pending-domains index daily, promoting or failing verification attempts.
-	"triggers": { "crons": ["0 0 * * *"] },
+	// The five-minute expression is the webhook delivery sweep's own backstop cadence:
+	// it accelerates deliveries already due, while the delay each delivery's own retry
+	// schedules is what actually paces a redelivery.
+	"triggers": { "crons": ["0 0 * * *", "*/5 * * * *"] },
 
 	"vars": {
 		"PLATFORM_DOMAIN": "auth.sergiodxa.com",

@@ -17,15 +17,16 @@ import { logger } from "~/bootstrap/logger";
 
 import { database } from "./middleware/database";
 import { hostnames } from "./middleware/hostnames";
+import { tenant } from "./middleware/tenant";
 
 /**
  * The registry both worker handlers run through. Every job gets the control-plane
- * database and the custom-hostname client, since building either is a constructor call
- * apiece and no job pays for I/O it skips.
+ * database, the custom-hostname client and the tenant Durable Object namespace,
+ * since building each is a constructor call apiece and no job pays for I/O it skips.
  */
 export const dispatcher = createJobDispatcher({
 	logger,
-	middleware: [database(), hostnames()],
+	middleware: [database(), hostnames(), tenant()],
 	timeout: "5 minutes",
 
 	/**
@@ -36,6 +37,11 @@ export const dispatcher = createJobDispatcher({
 });
 
 dispatcher.map(jobs.refreshPendingDomains, () => import("~/app/jobs/refresh-pending-domains"));
+dispatcher.map(
+	jobs.sweepDueWebhookDeliveries,
+	() => import("~/app/jobs/sweep-due-webhook-deliveries"),
+);
+dispatcher.map(jobs.deliverWebhook, () => import("~/app/jobs/deliver-webhook"));
 
 declare module "@sdxc/jobs" {
 	interface JobTypes {

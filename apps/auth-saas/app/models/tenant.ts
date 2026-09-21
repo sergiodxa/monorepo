@@ -8,11 +8,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { KeysetCursors } from "@sdxc/pagination";
 import type { Database, TableRow } from "remix/data-table";
 
+import { InvalidCursorError, Pagination } from "@sdxc/pagination";
+import { isFailure } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
 import { generateUUIDv7 } from "@sdxc/uuid";
-import { column as c, table } from "remix/data-table";
+import { column as c, ne, table } from "remix/data-table";
 
 /** Cloudflare region codes a tenant's Durable Object can be placed in. */
 export type Region = "wnam" | "enam" | "sam" | "weur" | "eeur" | "apac" | "oc" | "afr" | "me";
@@ -20,8 +23,20 @@ export type Region = "wnam" | "enam" | "sam" | "weur" | "eeur" | "apac" | "oc" |
 /** Mints a `ten_` TypeID for a new tenant row. */
 const tenantId = typeid("ten");
 
+/** Tenants one page of {@link Tenant.listProvisioned} reads, when a caller does not choose. */
+const DEFAULT_PROVISIONED_PAGE_SIZE = 100;
+
 /** One tenant row as the control plane stores it. */
 export type TenantRow = TableRow<typeof Tenant.table>;
+
+export interface ListProvisionedInput {
+	cursor?: string | null;
+	limit?: number;
+}
+
+export type ListProvisionedResult =
+	| { ok: true; tenants: TenantRow[]; cursors: KeysetCursors }
+	| { ok: false; reason: "bad-cursor" };
 
 /**
  * Active-record–style model for tenants, exposing static query and mutation helpers
@@ -106,6 +121,41 @@ export default class Tenant {
 	 */
 	static listByCustomer(db: Database, customerId: string): Promise<TenantRow[]> {
 		return db.findMany(Tenant.table, { where: { customer_id: customerId } });
+	}
+
+	/**
+	 * Pages through every tenant still running its own Durable Object: any status but
+	 * `deleted`, since a suspended tenant enforces its suspension per request rather
+	 * than by having its background work skipped, and still needs the same sweeps an
+	 * active tenant gets. Ordered by creation, oldest first, so a sweep that pages
+	 * through to the end has reached every tenant that existed when it began.
+	 *
+	 * @param db - Database connection.
+	 * @param input - Where to page from, and how many rows to read.
+	 * @returns A page of tenant rows and the cursors around it, or that the given
+	 * cursor no longer matches this ordering.
+	 */
+	static async listProvisioned(
+		db: Database,
+		input: ListProvisionedInput = {},
+	): Promise<ListProvisionedResult> {
+		let query = db.query(Tenant.table).where(ne("status", "deleted"));
+
+		let page = await Pagination.byKeyset(query, {
+			orderBy: [
+				["created_at", "asc"],
+				["id", "asc"],
+			],
+			cursor: input.cursor ?? null,
+			limit: input.limit ?? DEFAULT_PROVISIONED_PAGE_SIZE,
+		});
+
+		if (isFailure(page)) {
+			if (page.error instanceof InvalidCursorError) return { ok: false, reason: "bad-cursor" };
+			throw page.error;
+		}
+
+		return { ok: true, tenants: page.data.items, cursors: page.data.cursors };
 	}
 
 	/**
