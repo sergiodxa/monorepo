@@ -17,11 +17,13 @@ import { generateUUID } from "@sdxc/uuid";
 import { and, column as c, eq, notInList, notNull, table } from "remix/data-table";
 
 import type { AuditAction } from "./audit-events";
+import type { AppliedDomainMembership, SuggestedOrganization } from "./organizations";
 import type { OpenSessionMetering, OpenSessionSuccess } from "./sessions";
 import type { Actor, IdentifierKind, SubjectIdentifierRow } from "./subjects";
 
 import { writeAuditEvent } from "./audit-events";
 import { checkAndSpendMailEnvelope } from "./mail-rate-limit";
+import { applyDomainMembership } from "./organizations";
 import { openSession, revokeSubjectSessions } from "./sessions";
 import { foldIdentifier } from "./subject-identifiers";
 import { subjectIdentifiers, subjects } from "./subjects";
@@ -469,6 +471,10 @@ export type SignInWithPasswordResult =
 			/** Set instead of demanding a code when the subject has no factor left to prove — an administrator reset — so the hosted screen offers enrolment rather than asking for one that no longer exists. */
 			mustEnrolFactor: boolean;
 			mustChangePassword: boolean;
+			/** Present only when the call opted into domain membership resolution: the memberships it wrote. */
+			organizationMemberships?: AppliedDomainMembership[];
+			/** Present only when the call opted into domain membership resolution: the organizations it only suggests. */
+			suggestedOrganizations?: SuggestedOrganization[];
 	  } & OpenSessionSuccess)
 	| { ok: false; reason: "invalid-credentials" }
 	| { ok: false; reason: "password_expired" }
@@ -515,6 +521,9 @@ function identifierKindOf(value: string): IdentifierKind {
  * @param mfaPolicy - The tenant's own MFA policy; omitted, a subject with no factor is
  * never routed to enrol one before this call reports success, the same as every
  * existing caller that does not read the policy at all.
+ * @param resolveOrganizationMemberships - Whether to run {@link applyDomainMembership}
+ * against the signed-in subject once the session opens; omitted, no domain is ever
+ * read and neither result field is ever set, the same as every existing caller.
  * @returns The subject and what it still owes, or why sign-in was refused.
  */
 export async function signInWithPassword(
@@ -522,6 +531,7 @@ export async function signInWithPassword(
 	input: SignInWithPasswordInput,
 	metering?: OpenSessionMetering,
 	mfaPolicy: "optional" | "required" = "optional",
+	resolveOrganizationMemberships = false,
 ): Promise<SignInWithPasswordResult> {
 	let context = { ip: input.ip ?? null, userAgent: input.userAgent ?? null };
 
@@ -643,11 +653,22 @@ export async function signInWithPassword(
 	let secondFactorRequired =
 		mustEnrolFactor || policyDemandsEnrolment || (factor !== null && !trustedDevice);
 
+	let organizationMemberships: AppliedDomainMembership[] | undefined;
+	let suggestedOrganizations: SuggestedOrganization[] | undefined;
+
+	if (resolveOrganizationMemberships) {
+		let resolved = await applyDomainMembership(db, { subjectId: subject.id });
+		organizationMemberships = resolved.joined;
+		suggestedOrganizations = resolved.suggested;
+	}
+
 	return {
 		subjectId: subject.id,
 		secondFactorRequired,
 		mustEnrolFactor: mustEnrolFactor || policyDemandsEnrolment,
 		mustChangePassword: newest.must_change,
+		...(organizationMemberships ? { organizationMemberships } : {}),
+		...(suggestedOrganizations ? { suggestedOrganizations } : {}),
 		...session,
 	};
 }

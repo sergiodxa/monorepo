@@ -28,6 +28,7 @@ import {
 	upsertConnectionIdentity,
 } from "./connection-sign-in";
 import { connectionMappings, connections } from "./connections";
+import { ensureConnectionMembership } from "./organizations";
 import {
 	activeCertificates,
 	openServiceProviderKeys,
@@ -284,6 +285,17 @@ export async function signInWithSamlResponse(
 
 	let resolved = await resolveSubject(db, connection, assertion, providerSubject);
 	if (!resolved.ok) return resolved;
+
+	// The directory that asserted this person is that organization's own, so a
+	// sign-in through its connection is itself the proof a domain-earned
+	// membership gets from a verified address.
+	if (connection.organization_id) {
+		await ensureConnectionMembership(db, {
+			organizationId: connection.organization_id,
+			subjectId: resolved.subjectId,
+			at: now,
+		});
+	}
 
 	await upsertConnectionIdentity(db, sealKey, {
 		connectionId: connection.id,

@@ -66,6 +66,8 @@ export const connections = table({
 		email_authority: c.boolean(),
 		auto_link: c.boolean().default(false),
 		on_unknown_subject: c.enum(["create", "refuse"] as const).default("create"),
+		/** The organization this connection is scoped to, for an enterprise (`saml`) connection only; `null` for a social connection and for one not yet claimed by an organization. */
+		organization_id: c.text().nullable(),
 		created_at: c.integer(),
 		updated_at: c.integer(),
 	},
@@ -220,12 +222,15 @@ export interface ConnectionRecord {
 	emailAuthority: boolean;
 	autoLink: boolean;
 	onUnknownSubject: OnUnknownSubject;
+	/** The organization this connection is scoped to; always `null` for a social connection. */
+	organizationId: string | null;
 	mappings: ConnectionMappingInput[];
 	createdAt: number;
 	updatedAt: number;
 }
 
-function toConnectionRecord(
+/** Builds a connection's public record off its row and mapping rows, shared by every module that reads a connection back out. */
+export function toConnectionRecord(
 	row: ConnectionRow,
 	mappings: ConnectionMappingRow[],
 ): ConnectionRecord {
@@ -247,6 +252,7 @@ function toConnectionRecord(
 		emailAuthority: row.email_authority,
 		autoLink: row.auto_link,
 		onUnknownSubject: row.on_unknown_subject as OnUnknownSubject,
+		organizationId: row.organization_id,
 		mappings: mappings.map((mapping) => ({
 			source: mapping.source,
 			target: mapping.target,
@@ -494,6 +500,9 @@ export async function saveConnection(
 			email_authority: resolved.shape.emailAuthority,
 			auto_link: parsed.autoLink ?? false,
 			on_unknown_subject: parsed.onUnknownSubject ?? "create",
+			// A social connection is never organization-scoped — only an enterprise
+			// (`saml`) connection is, through `saveEnterpriseConnection`.
+			organization_id: null,
 			created_at: now,
 			updated_at: now,
 		});

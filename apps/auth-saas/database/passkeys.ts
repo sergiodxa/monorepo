@@ -22,9 +22,11 @@ import { generateUUID } from "@sdxc/uuid";
 import { and, column as c, eq, lt, ne, table } from "remix/data-table";
 
 import type { AuditAction } from "./audit-events";
+import type { AppliedDomainMembership, SuggestedOrganization } from "./organizations";
 import type { OpenSessionMetering, OpenSessionSuccess } from "./sessions";
 
 import { writeAuditEvent } from "./audit-events";
+import { applyDomainMembership } from "./organizations";
 import { openSession } from "./sessions";
 import * as Subjects from "./subjects";
 
@@ -332,6 +334,10 @@ export type SignInWithPasskeyResult =
 			credentialId: string;
 			userVerified: boolean;
 			backedUp: boolean;
+			/** Present only when the call opted into domain membership resolution: the memberships it wrote. */
+			organizationMemberships?: AppliedDomainMembership[];
+			/** Present only when the call opted into domain membership resolution: the organizations it only suggests. */
+			suggestedOrganizations?: SuggestedOrganization[];
 	  } & OpenSessionSuccess)
 	| { ok: false; reason: "invalid-ceremony" }
 	| { ok: false; reason: "expired-ceremony" }
@@ -356,6 +362,9 @@ export type SignInWithPasskeyResult =
  * remember the session past its own lifetime, and the request's origin.
  * @param metering - The daily active user meter to record this sign-in against, when
  * the caller has one; omitted, no meter is touched and no sign-in is ever refused for it.
+ * @param resolveOrganizationMemberships - Whether to run {@link applyDomainMembership}
+ * against the signed-in subject once the session opens; omitted, no domain is ever
+ * read and neither result field is ever set, the same as every existing caller.
  * @param rp - Relying party to verify the response with; built from `input` when
  * omitted.
  * @returns The subject, credential and opened session, or which check refused it.
@@ -371,6 +380,7 @@ export async function signInWithPasskey(
 	db: Database,
 	input: SignInWithPasskeyInput,
 	metering?: OpenSessionMetering,
+	resolveOrganizationMemberships = false,
 	rp: RelyingParty = defaultRelyingParty(input.relyingPartyId, input.origins),
 ): Promise<SignInWithPasskeyResult> {
 	let context = { ip: input.ip ?? null, userAgent: input.userAgent ?? null };
@@ -463,11 +473,22 @@ export async function signInWithPasskey(
 
 	await auditAuthentication("succeeded", credential.subject_id);
 
+	let organizationMemberships: AppliedDomainMembership[] | undefined;
+	let suggestedOrganizations: SuggestedOrganization[] | undefined;
+
+	if (resolveOrganizationMemberships) {
+		let resolved = await applyDomainMembership(db, { subjectId: credential.subject_id });
+		organizationMemberships = resolved.joined;
+		suggestedOrganizations = resolved.suggested;
+	}
+
 	return {
 		subjectId: credential.subject_id,
 		credentialId: credential.credential_id,
 		userVerified: verified.data.userVerified,
 		backedUp: verified.data.backedUp,
+		...(organizationMemberships ? { organizationMemberships } : {}),
+		...(suggestedOrganizations ? { suggestedOrganizations } : {}),
 		...session,
 	};
 }

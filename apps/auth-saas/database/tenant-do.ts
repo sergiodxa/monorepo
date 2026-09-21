@@ -91,6 +91,8 @@ import type {
 	CreateOrganizationResult,
 	DeleteOrganizationInput,
 	DeleteOrganizationResult,
+	DescribeOrganizationDomainInput,
+	DescribeOrganizationDomainResult,
 	DescribeSubjectOrganizationsInput,
 	InviteToOrganizationInput,
 	InviteToOrganizationResult,
@@ -100,6 +102,8 @@ import type {
 	RemoveMembershipResult,
 	RevokeOrganizationInvitationInput,
 	RevokeOrganizationInvitationResult,
+	SetActiveOrganizationInput,
+	SetActiveOrganizationResult,
 	SetMembershipRoleInput,
 	SetMembershipRoleResult,
 	SubjectOrganizationSummary,
@@ -137,6 +141,7 @@ import type {
 import type {
 	DescribeSamlServiceProviderResult,
 	RefreshConnectionMetadataResult,
+	ResolveOrganizationConnectionResult,
 	SaveEnterpriseConnectionInput,
 	SaveEnterpriseConnectionResult,
 	SetEnterpriseConnectionEnabledResult,
@@ -1003,6 +1008,7 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 				input,
 				{ cache: this.#dauCache, cap, hard },
 				mfaPolicy,
+				true,
 			);
 		});
 	}
@@ -1122,7 +1128,12 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 
 		return this.#withCost(async () => {
 			let { cap, hard } = await this.#dauEnforcement();
-			return Passkeys.signInWithPasskey(this.#db, input, { cache: this.#dauCache, cap, hard });
+			return Passkeys.signInWithPasskey(
+				this.#db,
+				input,
+				{ cache: this.#dauCache, cap, hard },
+				true,
+			);
 		});
 	}
 
@@ -1817,6 +1828,21 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
+	 * Sets the organization a session is acting for, once the subject's own
+	 * membership and the session's own ownership both check out.
+	 *
+	 * @param input - The session to set it on, the subject it must belong
+	 * to, and the organization to activate.
+	 * @returns The organization now active, or which rule refused the call.
+	 */
+	async setActiveOrganization(
+		input: SetActiveOrganizationInput,
+	): Promise<WithCost<SetActiveOrganizationResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Organizations.setActiveOrganization(this.#db, input));
+	}
+
+	/**
 	 * Claims a domain for an organization, minting a TXT record to publish.
 	 *
 	 * @param input - The organization claiming the domain, the domain
@@ -1844,6 +1870,21 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	): Promise<WithCost<ConfirmOrganizationDomainResult>> {
 		await this.#migrated;
 		return this.#withCost(() => Organizations.confirmOrganizationDomain(this.#db, input));
+	}
+
+	/**
+	 * Reads what a claimed domain expects to find published, for the
+	 * Worker-side DNS lookup to check a real answer against.
+	 *
+	 * @param input - The organization and domain to describe.
+	 * @returns The TXT record name and value this domain expects, and
+	 * whether it is already verified, or that no such claimed domain exists.
+	 */
+	async describeOrganizationDomain(
+		input: DescribeOrganizationDomainInput,
+	): Promise<WithCost<DescribeOrganizationDomainResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Organizations.describeOrganizationDomain(this.#db, input));
 	}
 
 	/**
@@ -1962,6 +2003,21 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 				callbackOrigin: issuer,
 			});
 		});
+	}
+
+	/**
+	 * Resolves the enterprise connection a verified email domain routes to, for
+	 * a sign-in page taking an address rather than showing a list of providers.
+	 *
+	 * @param input - The domain a sign-in address named.
+	 * @returns The one enabled connection scoped to the organization that
+	 * verified-claims this domain, or that none does.
+	 */
+	async resolveOrganizationConnection(input: {
+		domain: string;
+	}): Promise<WithCost<ResolveOrganizationConnectionResult>> {
+		await this.#migrated;
+		return this.#withCost(() => SamlConnections.resolveOrganizationConnection(this.#db, input));
 	}
 
 	/**

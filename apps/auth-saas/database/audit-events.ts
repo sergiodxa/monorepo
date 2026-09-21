@@ -154,6 +154,7 @@ export const AUDIT_ACTIONS = [
 	"organization.member.removed",
 	"organization.domain.added",
 	"organization.domain.verified",
+	"organization.active_organization_set",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

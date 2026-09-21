@@ -331,6 +331,8 @@ interface MintTokensInput {
 	nonce: string | null;
 	scopes: string[];
 	now: number;
+	/** The session's own active organization, named in the `org` claim when the granted scopes cover it. */
+	activeOrganizationId: string | null;
 }
 
 type MintTokensResult =
@@ -389,6 +391,14 @@ async function mintTokens(db: Database, input: MintTokensInput): Promise<MintTok
 
 	await addCustomClaims(db, accessClaims, idClaims, input.subjectId, input.scopes);
 
+	// A session with no active organization mints no `org` claim at all, and a granted
+	// scope set that never asked for `organization` gets none either — both existing
+	// facts about every session today, so this stays purely additive.
+	if (input.activeOrganizationId !== null && input.scopes.includes("organization")) {
+		accessClaims.org = input.activeOrganizationId;
+		if (idClaims) idClaims.org = input.activeOrganizationId;
+	}
+
 	let accessToken = await new AccessToken(accessClaims).sign(JWK.Algorithm.ES256, [keyPair]);
 	let idToken = idClaims ? await new IdToken(idClaims).sign(JWK.Algorithm.ES256, [keyPair]) : null;
 
@@ -443,18 +453,23 @@ async function issueRefreshToken(
 	return { token };
 }
 
-/** What a code or a refresh token's session lookup needs: its `amr` and `auth_time` alone. */
+/** What a code or a refresh token's session lookup needs: its `amr`, `auth_time` and active organization. */
 interface SessionAmrAndAuthTime {
 	amr: string[];
 	auth_time: number;
+	active_organization_id: string | null;
 }
 
 /** The session row a code or a refresh token names, or a bare fallback for one that no longer resolves. */
 async function sessionFor(db: Database, sessionId: string): Promise<SessionAmrAndAuthTime> {
 	let row = await db.find(sessions, { id: sessionId });
 	return row
-		? { amr: row.amr as string[], auth_time: row.auth_time }
-		: { amr: [], auth_time: Date.now() };
+		? {
+				amr: row.amr as string[],
+				auth_time: row.auth_time,
+				active_organization_id: row.active_organization_id,
+			}
+		: { amr: [], auth_time: Date.now(), active_organization_id: null };
 }
 
 export interface ExchangeCodeInput {
@@ -576,6 +591,7 @@ export async function exchangeCode(db: Database, input: ExchangeCodeInput): Prom
 		nonce: redeemedRow.nonce,
 		scopes: grantedScopes,
 		now: parsed.now,
+		activeOrganizationId: session.active_organization_id,
 	});
 	if (minted.kind === "error") return minted;
 
@@ -740,6 +756,7 @@ export async function refreshTokens(
 		nonce: null,
 		scopes: requestedScopes,
 		now: parsed.now,
+		activeOrganizationId: session.active_organization_id,
 	});
 	if (minted.kind === "error") return minted;
 

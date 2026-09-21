@@ -5,10 +5,11 @@
  * customer of the platform's own, which is a different level entirely with its own
  * word, its own id prefix and its own store.
  *
- * `setActiveOrganization` and minting the `org` claim from it are a later pass's job;
- * everything here is the mechanism that pass wires into sign-in and token minting. The
- * Worker-side DNS lookup that proves a domain is likewise a later pass's job —
- * {@link confirmOrganizationDomain} only marks what that lookup already found.
+ * `setActiveOrganization` writes the session row token minting reads the `org` claim
+ * from. The Worker-side DNS lookup that proves a domain lives in
+ * `app/services/organization-domains.ts`; {@link confirmOrganizationDomain} only marks
+ * what that lookup already found, and {@link describeOrganizationDomain} is what it
+ * reads the expected record from.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -29,7 +30,7 @@ import type { AuditActor } from "./audit-events";
 
 import { writeAuditEvent } from "./audit-events";
 import { checkAndSpendMailEnvelope } from "./mail-rate-limit";
-import { clearActiveOrganization } from "./sessions";
+import { clearActiveOrganization, sessions } from "./sessions";
 import { encodeDomain, foldIdentifier } from "./subject-identifiers";
 import { subjectIdentifiers } from "./subjects";
 
@@ -163,6 +164,66 @@ async function digestToken(value: string): Promise<string> {
 	let hashed = await sha256(value);
 	if (isFailure(hashed)) throw new Error("organization invitation token hashing failed");
 	return Hex.encode(hashed.data);
+}
+
+/**
+ * The TXT record name a domain's verification is published under, the one formula
+ * {@link addOrganizationDomain} mints from and the Worker-side DNS lookup queries
+ * against, so the two never drift apart.
+ *
+ * @param domain - The already-encoded domain a claim names.
+ */
+export function organizationDomainVerificationName(domain: string): string {
+	return `${DOMAIN_VERIFICATION_TXT_PREFIX}.${domain}`;
+}
+
+/**
+ * Writes a membership if the subject does not already hold one, leaving an existing
+ * membership's role and `joined_via` untouched — a subject who already belongs keeps
+ * whatever brought them in the first time, and a second route earning nothing new is
+ * not an error.
+ *
+ * @param db - The tenant's database.
+ * @param input - The organization and subject, how they are joining, and the clock to
+ * write with.
+ * @returns Whether this call actually wrote the membership.
+ */
+async function writeMembershipIfAbsent(
+	db: Database,
+	input: {
+		organizationId: string;
+		subjectId: string;
+		role: string;
+		joinedVia: OrganizationJoinedVia;
+		at: number;
+	},
+): Promise<{ written: boolean }> {
+	let existing = await db.find(organizationMembers, {
+		organization_id: input.organizationId,
+		subject_id: input.subjectId,
+	});
+	if (existing) return { written: false };
+
+	await db.create(organizationMembers, {
+		organization_id: input.organizationId,
+		subject_id: input.subjectId,
+		role: input.role,
+		joined_via: input.joinedVia,
+		created_at: input.at,
+		updated_at: input.at,
+	});
+
+	await writeAuditEvent(db, {
+		action: "organization.member.joined",
+		actor: { type: "subject", id: input.subjectId },
+		targetType: "organization",
+		targetId: input.organizationId,
+		outcome: "succeeded",
+		detail: { subjectId: input.subjectId, role: input.role, joinedVia: input.joinedVia },
+		at: input.at,
+	});
+
+	return { written: true };
 }
 
 export interface CreateOrganizationInput {
@@ -688,10 +749,16 @@ export type RemoveMembershipResult = { ok: true } | { ok: false; reason: "not-fo
  * `org` claim the person no longer belongs to.
  *
  * A grant recorded under this organization would be revoked here too, matching what
- * removing a SCIM-provisioned subject already does for its own consent grants — but
- * nothing in this codebase's consent model carries an organization scope yet, since
- * the `org` claim a grant could be scoped to does not exist until token minting learns
- * to issue one. Left as a gap for whoever adds that scope, rather than invented here.
+ * removing a SCIM-provisioned subject already does for its own consent grants — but a
+ * grant is one merged row per subject and client, unioning every scope a subject ever
+ * agreed to for that client regardless of which organization was active when each
+ * agreement happened. Tagging that row with an organization id would revoke consent an
+ * unrelated authorization also relies on, or leave this removal unable to find what it
+ * should revoke once a later authorization (with no organization active, or a
+ * different one) overwrote the tag. Scoping revocation correctly needs consent tracked
+ * per organization rather than merged away the moment it is granted, which is a
+ * reshape of that mechanism, not a column added to this one. Left as a gap for
+ * whoever takes on that reshape, rather than forced here.
  *
  * @param db - The tenant's database.
  * @param input - The membership to remove, and who is making the call.
@@ -728,6 +795,69 @@ export async function removeMembership(
 	});
 
 	return { ok: true };
+}
+
+export interface SetActiveOrganizationInput {
+	sessionId: string;
+	subjectId: string;
+	organizationId: string;
+	at?: number;
+}
+
+export type SetActiveOrganizationResult =
+	| { ok: true; organizationId: string }
+	| { ok: false; reason: "not-member" }
+	| { ok: false; reason: "session-not-found" };
+
+let SetActiveOrganizationSchema = s.object({
+	sessionId: s.string(),
+	subjectId: s.string(),
+	organizationId: s.string(),
+});
+
+/**
+ * Sets the organization a session is acting for: authorizes that the subject holds a
+ * membership in it and that the session actually belongs to that subject, then writes
+ * `active_organization_id` on the session row. The next ID token and access token
+ * minted from this session name the organization in their `org` claim; nothing already
+ * issued changes.
+ *
+ * @param db - The tenant's database.
+ * @param input - The session to set it on, the subject it must belong to, and the
+ * organization to activate.
+ * @returns The organization now active, or which rule refused the call.
+ */
+export async function setActiveOrganization(
+	db: Database,
+	input: SetActiveOrganizationInput,
+): Promise<SetActiveOrganizationResult> {
+	let parsed = s.parse(SetActiveOrganizationSchema, input);
+	let now = input.at ?? Date.now();
+
+	let membership = await db.find(organizationMembers, {
+		organization_id: parsed.organizationId,
+		subject_id: parsed.subjectId,
+	});
+	if (!membership) return { ok: false, reason: "not-member" };
+
+	let session = await db.findOne(sessions, {
+		where: { id: parsed.sessionId, subject_id: parsed.subjectId },
+	});
+	if (!session) return { ok: false, reason: "session-not-found" };
+
+	await db.update(sessions, { id: session.id }, { active_organization_id: parsed.organizationId });
+
+	await writeAuditEvent(db, {
+		action: "organization.active_organization_set",
+		actor: { type: "subject", id: parsed.subjectId },
+		targetType: "organization",
+		targetId: parsed.organizationId,
+		outcome: "succeeded",
+		detail: { sessionId: parsed.sessionId },
+		at: now,
+	});
+
+	return { ok: true, organizationId: parsed.organizationId };
 }
 
 export interface AddOrganizationDomainInput {
@@ -800,7 +930,7 @@ export async function addOrganizationDomain(
 		domain: encoded,
 		mode: input.mode,
 		verification: {
-			name: `${DOMAIN_VERIFICATION_TXT_PREFIX}.${encoded}`,
+			name: organizationDomainVerificationName(encoded),
 			value: verificationValue,
 		},
 	};
@@ -852,6 +982,54 @@ export async function confirmOrganizationDomain(
 	});
 
 	return { ok: true, verifiedAt: now };
+}
+
+export interface DescribeOrganizationDomainInput {
+	organizationId: string;
+	domain: string;
+}
+
+export type DescribeOrganizationDomainResult =
+	| {
+			ok: true;
+			domain: string;
+			mode: OrganizationDomainMode;
+			verification: { name: string; value: string };
+			verifiedAt: number | null;
+	  }
+	| { ok: false; reason: "not-found" };
+
+/**
+ * Reads what a claimed domain expects to find published, for the Worker-side DNS
+ * lookup to check a real answer against before it calls {@link confirmOrganizationDomain}.
+ *
+ * @param db - The tenant's database.
+ * @param input - The organization and domain to describe.
+ * @returns The TXT record name and value this domain expects, and whether it is
+ * already verified, or that no such claimed domain exists.
+ */
+export async function describeOrganizationDomain(
+	db: Database,
+	input: DescribeOrganizationDomainInput,
+): Promise<DescribeOrganizationDomainResult> {
+	let encoded = encodeDomain(input.domain);
+	let existing = encoded
+		? await db.findOne(organizationDomains, {
+				where: { domain: encoded, organization_id: input.organizationId },
+			})
+		: null;
+	if (!existing) return { ok: false, reason: "not-found" };
+
+	return {
+		ok: true,
+		domain: existing.domain,
+		mode: existing.mode as OrganizationDomainMode,
+		verification: {
+			name: organizationDomainVerificationName(existing.domain),
+			value: existing.verification_value,
+		},
+		verifiedAt: existing.verified_at,
+	};
 }
 
 export interface ApplyDomainMembershipInput {
@@ -920,35 +1098,50 @@ export async function applyDomainMembership(
 			continue;
 		}
 
-		let existingMembership = await db.find(organizationMembers, {
-			organization_id: domainRow.organization_id,
-			subject_id: input.subjectId,
-		});
-		if (existingMembership) continue;
-
-		await db.create(organizationMembers, {
-			organization_id: domainRow.organization_id,
-			subject_id: input.subjectId,
+		let wrote = await writeMembershipIfAbsent(db, {
+			organizationId: domainRow.organization_id,
+			subjectId: input.subjectId,
 			role: DOMAIN_MEMBERSHIP_ROLE,
-			joined_via: "domain",
-			created_at: now,
-			updated_at: now,
-		});
-
-		await writeAuditEvent(db, {
-			action: "organization.member.joined",
-			actor: { type: "subject", id: input.subjectId },
-			targetType: "organization",
-			targetId: domainRow.organization_id,
-			outcome: "succeeded",
-			detail: { subjectId: input.subjectId, role: DOMAIN_MEMBERSHIP_ROLE, joinedVia: "domain" },
+			joinedVia: "domain",
 			at: now,
 		});
+		if (!wrote.written) continue;
 
 		joined.push({ organizationId: domainRow.organization_id, role: DOMAIN_MEMBERSHIP_ROLE });
 	}
 
 	return { ok: true, joined, suggested };
+}
+
+export interface EnsureConnectionMembershipInput {
+	organizationId: string;
+	subjectId: string;
+	at?: number;
+}
+
+/**
+ * Writes the membership an assertion arriving through an organization-scoped
+ * connection earns, with `joined_via: "connection"` — the directory that asserted the
+ * person is that organization's own, so a sign-in through it is itself the proof a
+ * domain-earned membership gets from a verified address. A subject already a member
+ * keeps whatever `joined_via` first brought them in.
+ *
+ * @param db - The tenant's database.
+ * @param input - The organization and subject signing in through its connection, and
+ * the clock to write with.
+ * @returns Whether this call actually wrote the membership.
+ */
+export async function ensureConnectionMembership(
+	db: Database,
+	input: EnsureConnectionMembershipInput,
+): Promise<{ written: boolean }> {
+	return writeMembershipIfAbsent(db, {
+		organizationId: input.organizationId,
+		subjectId: input.subjectId,
+		role: DOMAIN_MEMBERSHIP_ROLE,
+		joinedVia: "connection",
+		at: input.at ?? Date.now(),
+	});
 }
 
 export interface DescribeSubjectOrganizationsInput {

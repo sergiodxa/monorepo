@@ -423,6 +423,127 @@ describe("addOrganizationDomain", () => {
 	});
 });
 
+describe("describeOrganizationDomain", () => {
+	test("answers the TXT name and value a domain expects, and that it is not yet verified", async () => {
+		let { organization, creatorSubjectId } = await createOrg();
+		let added = await tenant.addOrganizationDomain({
+			organizationId: organization.id,
+			domain: "acme.com",
+			mode: "auto_join",
+			actor: { type: "subject", id: creatorSubjectId },
+		});
+		if (!added.ok) throw new Error("setup failed");
+
+		let described = await tenant.describeOrganizationDomain({
+			organizationId: organization.id,
+			domain: "acme.com",
+		});
+
+		expect(described).toMatchObject({
+			ok: true,
+			domain: "acme.com",
+			mode: "auto_join",
+			verification: added.verification,
+			verifiedAt: null,
+		});
+	});
+
+	test("reports when the domain is already verified", async () => {
+		let { organization, creatorSubjectId } = await createOrg();
+		await tenant.addOrganizationDomain({
+			organizationId: organization.id,
+			domain: "acme.com",
+			mode: "auto_join",
+			actor: { type: "subject", id: creatorSubjectId },
+		});
+		await tenant.confirmOrganizationDomain({ organizationId: organization.id, domain: "acme.com" });
+
+		let described = await tenant.describeOrganizationDomain({
+			organizationId: organization.id,
+			domain: "acme.com",
+		});
+		if (!described.ok) throw new Error("unreachable");
+
+		expect(described.verifiedAt).toEqual(expect.any(Number));
+	});
+
+	test("refuses a domain nobody claimed", async () => {
+		let { organization } = await createOrg();
+
+		let described = await tenant.describeOrganizationDomain({
+			organizationId: organization.id,
+			domain: "never-claimed.com",
+		});
+
+		expect(described).toMatchObject({ ok: false, reason: "not-found" });
+	});
+});
+
+describe("setActiveOrganization", () => {
+	test("writes active_organization_id once the subject's own membership and session both check out", async () => {
+		let { organization, creatorSubjectId } = await createOrg();
+		let opened = await openSession(testDb(), {
+			subjectId: creatorSubjectId,
+			amr: ["pwd"],
+			remembered: false,
+		});
+
+		let result = await tenant.setActiveOrganization({
+			sessionId: opened.sessionId,
+			subjectId: creatorSubjectId,
+			organizationId: organization.id,
+		});
+
+		expect(result).toMatchObject({ ok: true, organizationId: organization.id });
+
+		let session = await testDb().find(sessions, { id: opened.sessionId });
+		expect(session?.active_organization_id).toBe(organization.id);
+	});
+
+	test("refuses a subject holding no membership in the organization", async () => {
+		let { organization } = await createOrg();
+		let outsider = await createVerifiedSubject(nextEmail());
+		let opened = await openSession(testDb(), {
+			subjectId: outsider,
+			amr: ["pwd"],
+			remembered: false,
+		});
+
+		let result = await tenant.setActiveOrganization({
+			sessionId: opened.sessionId,
+			subjectId: outsider,
+			organizationId: organization.id,
+		});
+
+		expect(result).toMatchObject({ ok: false, reason: "not-member" });
+
+		let session = await testDb().find(sessions, { id: opened.sessionId });
+		expect(session?.active_organization_id).toBeNull();
+	});
+
+	test("refuses a session that belongs to someone else, even when the claimed subject is a real member", async () => {
+		let { organization, creatorSubjectId } = await createOrg();
+
+		let someoneElse = await createVerifiedSubject(nextEmail());
+		let someoneElsesSession = await openSession(testDb(), {
+			subjectId: someoneElse,
+			amr: ["pwd"],
+			remembered: false,
+		});
+
+		let result = await tenant.setActiveOrganization({
+			sessionId: someoneElsesSession.sessionId,
+			subjectId: creatorSubjectId,
+			organizationId: organization.id,
+		});
+
+		expect(result).toMatchObject({ ok: false, reason: "session-not-found" });
+
+		let session = await testDb().find(sessions, { id: someoneElsesSession.sessionId });
+		expect(session?.active_organization_id).toBeNull();
+	});
+});
+
 describe("applyDomainMembership", () => {
 	test("auto-joins for a verified auto_join domain", async () => {
 		let { organization, creatorSubjectId } = await createOrg();

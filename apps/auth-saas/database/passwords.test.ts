@@ -18,6 +18,12 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { readAuditPage } from "./audit-events";
 import { createDauCache } from "./metering";
+import {
+	addOrganizationDomain,
+	confirmOrganizationDomain,
+	createOrganization,
+	organizationMembers,
+} from "./organizations";
 import * as Passwords from "./passwords";
 import * as Subjects from "./subjects";
 import m0001 from "./tenant-migrations/0001-init.sql?raw";
@@ -546,6 +552,88 @@ describe("signInWithPassword", () => {
 			);
 
 			expect(again).toMatchObject({ ok: true, subjectId });
+		});
+	});
+});
+
+describe("signInWithPassword: organization domain membership", () => {
+	/** Claims and verifies a domain for a fresh organization, for tests that need one already earning membership. */
+	async function createVerifiedAutoJoinDomain(domain: string): Promise<string> {
+		let owner = await createVerifiedSubject(`owner-${domain}@example.com`);
+		let created = await createOrganization(db, {
+			name: "Acme",
+			slug: domain.replace(/\./g, "-"),
+			creatorSubjectId: owner,
+			actor: { type: "subject", id: owner },
+		});
+		if (!created.ok) throw new Error("setup failed");
+
+		let added = await addOrganizationDomain(db, {
+			organizationId: created.organization.id,
+			domain,
+			mode: "auto_join",
+			actor: { type: "subject", id: owner },
+		});
+		if (!added.ok) throw new Error("setup failed");
+		await confirmOrganizationDomain(db, { organizationId: created.organization.id, domain });
+
+		return created.organization.id;
+	}
+
+	test("never touches organizations, and carries neither field, when the caller does not opt in", async () => {
+		let organizationId = await createVerifiedAutoJoinDomain("acme-untouched.example");
+		let subjectId = await createVerifiedSubject("person@acme-untouched.example");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+
+		let result = await Passwords.signInWithPassword(db, {
+			identifier: "person@acme-untouched.example",
+			password: "correct-password-1",
+			remembered: false,
+		});
+
+		expect(result).toMatchObject({ ok: true, subjectId });
+		if (!result.ok) throw new Error("unreachable");
+		expect(result).not.toHaveProperty("organizationMemberships");
+		expect(result).not.toHaveProperty("suggestedOrganizations");
+
+		// The domain earns nothing because this call never asked for it to be resolved.
+		let membership = await db.find(organizationMembers, {
+			organization_id: organizationId,
+			subject_id: subjectId,
+		});
+		expect(membership).toBeNull();
+	});
+
+	test("writes the domain-earned membership and reports it when the caller opts in", async () => {
+		let organizationId = await createVerifiedAutoJoinDomain("acme-opted-in.example");
+		let subjectId = await createVerifiedSubject("person@acme-opted-in.example");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+
+		let result = await Passwords.signInWithPassword(
+			db,
+			{
+				identifier: "person@acme-opted-in.example",
+				password: "correct-password-1",
+				remembered: false,
+			},
+			undefined,
+			"optional",
+			true,
+		);
+
+		expect(result).toMatchObject({
+			ok: true,
+			subjectId,
+			organizationMemberships: [{ organizationId, role: "member" }],
+			suggestedOrganizations: [],
 		});
 	});
 });

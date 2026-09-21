@@ -34,6 +34,12 @@ import { beforeEach, describe, expect, test } from "vitest";
 import { readAuditPage } from "./audit-events";
 import { createDauCache } from "./metering";
 import {
+	addOrganizationDomain,
+	confirmOrganizationDomain,
+	createOrganization,
+	organizationMembers,
+} from "./organizations";
+import {
 	beginPasskeyAuthentication,
 	beginPasskeyRegistration,
 	enrolPasskey,
@@ -700,6 +706,114 @@ describe("signInWithPasskey", () => {
 
 			expect(second).toMatchObject({ ok: true, subjectId });
 		});
+	});
+});
+
+describe("signInWithPasskey: organization domain membership", () => {
+	/** Creates a subject with one verified email, the shape this describe block signs in against. */
+	async function createVerifiedSubject(email: string): Promise<string> {
+		let created = await createSubject(db, { identifiers: [{ kind: "email", value: email }] });
+		if (!created.ok) throw new Error("unreachable");
+
+		let added = await addIdentifier(db, {
+			subjectId: created.subjectId,
+			kind: "email",
+			value: email,
+			actor: { kind: "subject" },
+		});
+		if (!added.ok || added.kind !== "email") throw new Error("unreachable");
+
+		await verifyIdentifier(db, { ticket: added.ticket });
+
+		return created.subjectId;
+	}
+
+	/** Claims and verifies a domain for a fresh organization, for tests that need one already earning membership. */
+	async function createVerifiedAutoJoinDomain(domain: string): Promise<string> {
+		let owner = await createVerifiedSubject(`owner-${domain}@example.com`);
+		let created = await createOrganization(db, {
+			name: "Acme",
+			slug: domain.replace(/\./g, "-"),
+			creatorSubjectId: owner,
+			actor: { type: "subject", id: owner },
+		});
+		if (!created.ok) throw new Error("setup failed");
+
+		let added = await addOrganizationDomain(db, {
+			organizationId: created.organization.id,
+			domain,
+			mode: "auto_join",
+			actor: { type: "subject", id: owner },
+		});
+		if (!added.ok) throw new Error("setup failed");
+		await confirmOrganizationDomain(db, { organizationId: created.organization.id, domain });
+
+		return created.organization.id;
+	}
+
+	test("writes the domain-earned membership and reports it when the caller opts in", async () => {
+		let organizationId = await createVerifiedAutoJoinDomain("acme-passkey.example");
+		let subjectId = await createVerifiedSubject("person@acme-passkey.example");
+		let authenticator = await Authenticator.create();
+		await enrolTestPasskey(subjectId, authenticator);
+
+		let begun = await beginPasskeyAuthentication(db, {
+			relyingPartyId: RELYING_PARTY_ID,
+			origins: ORIGINS,
+		});
+		let response = await authenticator.authenticate(begun.options);
+
+		let result = await signInWithPasskey(
+			db,
+			{
+				ceremonyId: begun.ceremonyId,
+				response,
+				relyingPartyId: RELYING_PARTY_ID,
+				origins: ORIGINS,
+				remembered: false,
+			},
+			undefined,
+			true,
+		);
+
+		expect(result).toMatchObject({
+			ok: true,
+			subjectId,
+			organizationMemberships: [{ organizationId, role: "member" }],
+			suggestedOrganizations: [],
+		});
+	});
+
+	test("writes no membership and carries neither field when the caller does not opt in", async () => {
+		let organizationId = await createVerifiedAutoJoinDomain("acme-passkey-default.example");
+		let subjectId = await createVerifiedSubject("person@acme-passkey-default.example");
+		let authenticator = await Authenticator.create();
+		await enrolTestPasskey(subjectId, authenticator);
+
+		let begun = await beginPasskeyAuthentication(db, {
+			relyingPartyId: RELYING_PARTY_ID,
+			origins: ORIGINS,
+		});
+		let response = await authenticator.authenticate(begun.options);
+
+		let result = await signInWithPasskey(db, {
+			ceremonyId: begun.ceremonyId,
+			response,
+			relyingPartyId: RELYING_PARTY_ID,
+			origins: ORIGINS,
+			remembered: false,
+		});
+
+		expect(result).toMatchObject({ ok: true, subjectId });
+		if (!result.ok) throw new Error("unreachable");
+		expect(result).not.toHaveProperty("organizationMemberships");
+		expect(result).not.toHaveProperty("suggestedOrganizations");
+
+		let membership = await db.find(organizationMembers, {
+			organization_id: organizationId,
+			subject_id: subjectId,
+		});
+		expect(membership).toBeNull();
 	});
 });
 

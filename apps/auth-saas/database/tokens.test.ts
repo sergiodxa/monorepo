@@ -20,7 +20,7 @@ import type { RegisterClientInput } from "./clients";
 
 import { authorizationCodes } from "./authorization";
 import { registerClient } from "./clients";
-import { openSession, resolveSession } from "./sessions";
+import { openSession, resolveSession, sessions } from "./sessions";
 import { currentSigningKeyPair, ensureSigningKey, setCustomClaims } from "./signing-keys";
 import { createSubject, subjectAttributes } from "./subjects";
 import { runMigrations } from "./tenant-migrations";
@@ -724,6 +724,136 @@ describe("refreshTokens", () => {
 		});
 
 		expect(outcome).toMatchObject({ kind: "error", status: 400, error: "invalid_grant" });
+	});
+});
+
+describe("org claim", () => {
+	test("is minted onto both tokens when the session has an active organization and the scope covers it", async () => {
+		let now = 1_700_000_000_000;
+		let subjectId = await createTestSubject();
+		let { client, secret } = await createTestClient({ scopes: ["openid", "organization"] });
+		let session = await openTestSession(subjectId);
+		await db.update(sessions, { id: session.sessionId }, { active_organization_id: "org_acme" });
+
+		let { code, codeVerifier } = await createTestCode({
+			clientId: client.id,
+			subjectId,
+			sessionId: session.sessionId,
+			scopes: ["openid", "organization"],
+			now,
+		});
+
+		let outcome = await exchangeCode(db, {
+			code,
+			codeVerifier,
+			redirectUri: REDIRECT_URI,
+			clientId: client.id,
+			clientSecret: secret,
+			authScheme: "basic",
+			now,
+			issuer: ISSUER,
+		});
+
+		expect(outcome.kind).toBe("tokens");
+		if (outcome.kind !== "tokens") throw new Error("unreachable");
+
+		let accessToken = AccessToken.decode(outcome.accessToken);
+		expect(accessToken.payload.org).toBe("org_acme");
+
+		expect(outcome.idToken).toEqual(expect.any(String));
+		if (!outcome.idToken) throw new Error("unreachable");
+		let idToken = IdToken.decode(outcome.idToken);
+		expect(idToken.payload.org).toBe("org_acme");
+	});
+
+	test("is never minted when the session has no active organization, even with the scope granted", async () => {
+		let now = 1_700_000_000_000;
+		let subjectId = await createTestSubject();
+		let { client, secret } = await createTestClient({ scopes: ["openid", "organization"] });
+		let session = await openTestSession(subjectId);
+
+		let { code, codeVerifier } = await createTestCode({
+			clientId: client.id,
+			subjectId,
+			sessionId: session.sessionId,
+			scopes: ["openid", "organization"],
+			now,
+		});
+
+		let outcome = await exchangeCode(db, {
+			code,
+			codeVerifier,
+			redirectUri: REDIRECT_URI,
+			clientId: client.id,
+			clientSecret: secret,
+			authScheme: "basic",
+			now,
+			issuer: ISSUER,
+		});
+
+		expect(outcome.kind).toBe("tokens");
+		if (outcome.kind !== "tokens") throw new Error("unreachable");
+
+		let accessToken = AccessToken.decode(outcome.accessToken);
+		expect(accessToken.payload.org).toBeUndefined();
+	});
+
+	test("is never minted when the granted scopes never asked for it, even with an active organization", async () => {
+		let now = 1_700_000_000_000;
+		let subjectId = await createTestSubject();
+		let { client, secret } = await createTestClient({ scopes: ["openid"] });
+		let session = await openTestSession(subjectId);
+		await db.update(sessions, { id: session.sessionId }, { active_organization_id: "org_acme" });
+
+		let { code, codeVerifier } = await createTestCode({
+			clientId: client.id,
+			subjectId,
+			sessionId: session.sessionId,
+			scopes: ["openid"],
+			now,
+		});
+
+		let outcome = await exchangeCode(db, {
+			code,
+			codeVerifier,
+			redirectUri: REDIRECT_URI,
+			clientId: client.id,
+			clientSecret: secret,
+			authScheme: "basic",
+			now,
+			issuer: ISSUER,
+		});
+
+		expect(outcome.kind).toBe("tokens");
+		if (outcome.kind !== "tokens") throw new Error("unreachable");
+
+		let accessToken = AccessToken.decode(outcome.accessToken);
+		expect(accessToken.payload.org).toBeUndefined();
+	});
+
+	test("survives a refresh rotation, still read off the session at mint time", async () => {
+		let { client, secret, session, refreshToken, now } = await issueTestRefreshToken([
+			"openid",
+			"organization",
+			"offline_access",
+		]);
+		await db.update(sessions, { id: session.sessionId }, { active_organization_id: "org_acme" });
+
+		let outcome = await refreshTokens(db, {
+			refreshToken,
+			scope: null,
+			clientId: client.id,
+			clientSecret: secret,
+			authScheme: "basic",
+			now: now + 1_000,
+			issuer: ISSUER,
+		});
+
+		expect(outcome.kind).toBe("tokens");
+		if (outcome.kind !== "tokens") throw new Error("unreachable");
+
+		let accessToken = AccessToken.decode(outcome.accessToken);
+		expect(accessToken.payload.org).toBe("org_acme");
 	});
 });
 

@@ -18,12 +18,19 @@ import * as SAML from "@sdxc/saml";
 import { typeid } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
 import * as s from "remix/data-schema";
-import { column as c, lt, table } from "remix/data-table";
+import { and, column as c, eq, lt, table } from "remix/data-table";
 
-import type { ConnectionRow, SetConnectionEnabledResult } from "./connections";
+import type { ConnectionRecord, ConnectionRow, SetConnectionEnabledResult } from "./connections";
 
 import { writeAuditEvent } from "./audit-events";
-import { connections, setConnectionEnabled } from "./connections";
+import {
+	connectionMappings,
+	connections,
+	setConnectionEnabled,
+	toConnectionRecord,
+} from "./connections";
+import { organizationDomains, organizations } from "./organizations";
+import { encodeDomain } from "./subject-identifiers";
 
 /** The audit actor for a call with no operator identity threaded through today. */
 const PLATFORM_ACTOR = { type: "platform", id: "system" } as const;
@@ -147,6 +154,7 @@ let SaveEnterpriseConnectionSchema = s.object({
 	allowIdpInitiated: s.optional(s.boolean()),
 	onUnknownSubject: s.optional(s.enum_(["create", "refuse"] as const)),
 	signingCertificates: s.optional(s.array(s.string())),
+	organizationId: s.optional(s.nullable(s.string())),
 	callbackOrigin: s.string(),
 });
 
@@ -167,6 +175,8 @@ export interface SaveEnterpriseConnectionInput {
 	onUnknownSubject?: "create" | "refuse";
 	/** Certificates pasted by hand, for a provider publishing no metadata. */
 	signingCertificates?: string[];
+	/** The organization this connection belongs to; omitted or `null` to leave it unscoped, or to unscope one on an update. */
+	organizationId?: string | null;
 	callbackOrigin: string;
 }
 
@@ -183,7 +193,8 @@ export type SaveEnterpriseConnectionResult =
 	| { ok: false; reason: "duplicate-slug" }
 	| { ok: false; reason: "kind-immutable" }
 	| { ok: false; reason: "missing-endpoint" }
-	| { ok: false; reason: "invalid-certificate"; detail: string };
+	| { ok: false; reason: "invalid-certificate"; detail: string }
+	| { ok: false; reason: "organization-not-found" };
 
 /**
  * Writes an enterprise connection's whole configuration, generating the service
@@ -208,6 +219,11 @@ export async function saveEnterpriseConnection(
 		return { ok: false, reason: "missing-endpoint" };
 	}
 
+	if (parsed.organizationId) {
+		let organization = await db.find(organizations, { id: parsed.organizationId });
+		if (!organization) return { ok: false, reason: "organization-not-found" };
+	}
+
 	let existing = await db.findOne(connections, { where: { slug: parsed.slug } });
 	if (existing && existing.kind !== "saml") return { ok: false, reason: "kind-immutable" };
 
@@ -224,7 +240,12 @@ export async function saveEnterpriseConnection(
 		await db.update(
 			connections,
 			{ id },
-			{ display_name: parsed.displayName, updated_at: now, ...unknownSubject(parsed) },
+			{
+				display_name: parsed.displayName,
+				updated_at: now,
+				...unknownSubject(parsed),
+				...organizationScope(parsed),
+			},
 		);
 	} else {
 		await db.create(connections, {
@@ -245,6 +266,7 @@ export async function saveEnterpriseConnection(
 			email_authority: false,
 			auto_link: false,
 			on_unknown_subject: parsed.onUnknownSubject ?? "create",
+			organization_id: parsed.organizationId ?? null,
 			created_at: now,
 			updated_at: now,
 		});
@@ -299,6 +321,11 @@ export async function saveEnterpriseConnection(
 /** The unknown-subject column to write, left as it was when a save does not name one. */
 function unknownSubject(parsed: { onUnknownSubject?: "create" | "refuse" }) {
 	return parsed.onUnknownSubject ? { on_unknown_subject: parsed.onUnknownSubject } : {};
+}
+
+/** The organization-scope column to write on an update, left as it was when a save does not name one; `null` explicitly clears it. */
+function organizationScope(parsed: { organizationId?: string | null }) {
+	return parsed.organizationId !== undefined ? { organization_id: parsed.organizationId } : {};
 }
 
 /** The service-provider description built from one stored row. */
@@ -724,4 +751,45 @@ export async function setEnterpriseConnectionEnabled(
 	}
 
 	return setConnectionEnabled(db, { slug: parsed.slug, enabled: parsed.enabled });
+}
+
+export type ResolveOrganizationConnectionResult =
+	| { ok: true; connection: ConnectionRecord }
+	| { ok: false; reason: "not-found" };
+
+/**
+ * Resolves the enterprise connection a verified email domain routes to, for a
+ * future sign-in page that takes an address, matches its domain against verified
+ * organization domains, and sends the browser to the connection that owns it
+ * rather than a list nobody should see every other customer's entry on.
+ *
+ * @param db - The tenant's database.
+ * @param input - The domain a sign-in address named.
+ * @returns The one enabled `saml` connection scoped to the organization that
+ * verified-claims this domain, or that none does.
+ */
+export async function resolveOrganizationConnection(
+	db: Database,
+	input: { domain: string },
+): Promise<ResolveOrganizationConnectionResult> {
+	let encoded = encodeDomain(input.domain);
+	if (!encoded) return { ok: false, reason: "not-found" };
+
+	let domainRow = await db.find(organizationDomains, { domain: encoded });
+	if (!domainRow || domainRow.verified_at === null) return { ok: false, reason: "not-found" };
+
+	let connection = await db.findOne(connections, {
+		where: and(
+			eq("organization_id", domainRow.organization_id),
+			eq("kind", "saml"),
+			eq("enabled", true),
+		),
+	});
+	if (!connection) return { ok: false, reason: "not-found" };
+
+	let mappingRows = await db.findMany(connectionMappings, {
+		where: { connection_id: connection.id },
+	});
+
+	return { ok: true, connection: toConnectionRecord(connection, mappingRows) };
 }

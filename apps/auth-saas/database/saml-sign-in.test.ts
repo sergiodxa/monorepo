@@ -422,3 +422,103 @@ async function signIn(assertionId: string): Promise<string> {
 	if (!signedIn.ok) throw new Error(`refused: ${JSON.stringify(signedIn)}`);
 	return signedIn.subjectId;
 }
+
+describe("organization-scoped connections", () => {
+	/** Creates a bare subject, the shape an organization's own creator needs. */
+	async function createOwner(email: string): Promise<string> {
+		let created = await tenant.createSubject({ identifiers: [{ kind: "email", value: email }] });
+		if (!created.ok) throw new Error("setup failed");
+		return created.subjectId;
+	}
+
+	/** Creates an organization with a fresh owning subject, for tests that need one already made. */
+	async function createOrg(slug: string, ownerEmail: string) {
+		let ownerId = await createOwner(ownerEmail);
+		let created = await tenant.createOrganization({
+			name: "Acme",
+			slug,
+			creatorSubjectId: ownerId,
+			actor: { type: "subject", id: ownerId },
+		});
+		if (!created.ok) throw new Error("setup failed");
+		return created.organization;
+	}
+
+	test("saveEnterpriseConnection refuses an organization that does not exist", async () => {
+		let refused = await tenant.saveEnterpriseConnection({
+			slug: SLUG,
+			displayName: "Northwind",
+			idpEntityId: IDP_ENTITY_ID,
+			ssoRedirectUrl: SSO_URL,
+			signingCertificates: [idpCertificate.toPem()],
+			organizationId: "org_does_not_exist",
+		});
+
+		expect(refused).toMatchObject({ ok: false, reason: "organization-not-found" });
+	});
+
+	test("saves the connection scoped to a real organization", async () => {
+		let organization = await createOrg("acme-scoped", "owner-scoped@acme.test");
+
+		let saved = await configure({ organizationId: organization.id });
+		expect(saved.ok).toBe(true);
+	});
+
+	test("resolveOrganizationConnection finds the connection for a verified domain, and none for an unclaimed one", async () => {
+		let organization = await createOrg("acme-resolve", "owner-resolve@acme.test");
+		let saved = await configure({ organizationId: organization.id });
+		if (!saved.ok) throw new Error("setup failed");
+
+		let domainAdded = await tenant.addOrganizationDomain({
+			organizationId: organization.id,
+			domain: "acme-resolve.example",
+			mode: "auto_join",
+			actor: { type: "platform", id: "system" },
+		});
+		if (!domainAdded.ok) throw new Error("setup failed");
+		await tenant.confirmOrganizationDomain({
+			organizationId: organization.id,
+			domain: "acme-resolve.example",
+		});
+
+		let resolved = await tenant.resolveOrganizationConnection({ domain: "acme-resolve.example" });
+		expect(resolved).toMatchObject({
+			ok: true,
+			connection: { id: saved.connectionId, organizationId: organization.id },
+		});
+
+		let none = await tenant.resolveOrganizationConnection({ domain: "unclaimed.example" });
+		expect(none).toMatchObject({ ok: false, reason: "not-found" });
+	});
+
+	test("a sign-in through an organization-scoped connection writes the membership as joined_via: connection", async () => {
+		let organization = await createOrg("acme-connection", "owner-connection@acme.test");
+		let saved = await configure({ organizationId: organization.id });
+		if (!saved.ok) throw new Error("setup failed");
+
+		let started = await tenant.beginSamlSignIn({ slug: SLUG, hostname: HOSTNAME });
+		if (!started.ok) throw new Error("begin refused");
+
+		let signedIn = await tenant.signInWithSamlResponse({
+			slug: SLUG,
+			samlResponse: await respond(started.requestId, { nameId: "member@acme-connection.example" }),
+			relayState: relayStateOf(started.redirectUrl),
+			hostname: HOSTNAME,
+		});
+		if (!signedIn.ok) throw new Error(`refused: ${JSON.stringify(signedIn)}`);
+
+		let memberships = await tenant.describeSubjectOrganizations({ subjectId: signedIn.subjectId });
+		expect(memberships.organizations).toEqual([
+			expect.objectContaining({ organizationId: organization.id, joinedVia: "connection" }),
+		]);
+	});
+
+	test("a sign-in through an unscoped connection writes no membership", async () => {
+		await configure();
+
+		let subjectId = await signIn("_unscoped");
+
+		let memberships = await tenant.describeSubjectOrganizations({ subjectId });
+		expect(memberships.organizations).toEqual([]);
+	});
+});

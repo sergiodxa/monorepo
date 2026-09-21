@@ -53,6 +53,7 @@ describe("provision", () => {
 				"0020-saml-connections",
 				"0021-scim",
 				"0022-organizations",
+				"0023-organization-connections",
 			],
 			issuer: "https://tenant-1.example.com",
 			keys: { keys: [expect.objectContaining({ kty: "EC", alg: "ES256" })] },
@@ -352,5 +353,75 @@ describe("reportStorageFootprint", () => {
 		expect(report.rows.subject_identifiers).toBe(1);
 		expect(report.databaseSize).toBeGreaterThan(0);
 		expect(typeof report.cost.durationMs).toBe("number");
+	});
+});
+
+describe("signInWithPassword: organization domain membership wired through the Durable Object", () => {
+	test("resolves the caller's verified domain into a real membership on an ordinary sign-in", async () => {
+		await tenant.provision({ tenantId: "tenant_1", issuer: "https://tenant-1.example.com" });
+
+		let ownerId = await createSubjectWithPassword(
+			"owner@acme.example",
+			"correct horse battery staple",
+		);
+		let created = await tenant.createOrganization({
+			name: "Acme",
+			slug: "acme",
+			creatorSubjectId: ownerId,
+			actor: { type: "subject", id: ownerId },
+		});
+		if (!created.ok) throw new Error("unreachable");
+
+		let added = await tenant.addOrganizationDomain({
+			organizationId: created.organization.id,
+			domain: "acme.example",
+			mode: "auto_join",
+			actor: { type: "subject", id: ownerId },
+		});
+		if (!added.ok) throw new Error("unreachable");
+		await tenant.confirmOrganizationDomain({
+			organizationId: created.organization.id,
+			domain: "acme.example",
+		});
+
+		let subjectId = await createSubjectWithPassword(
+			"newperson@acme.example",
+			"correct horse battery staple",
+		);
+
+		let result = await tenant.signInWithPassword({
+			identifier: "newperson@acme.example",
+			password: "correct horse battery staple",
+			remembered: false,
+		});
+
+		expect(result).toMatchObject({
+			ok: true,
+			subjectId,
+			organizationMemberships: [{ organizationId: created.organization.id, role: "member" }],
+			suggestedOrganizations: [],
+		});
+	});
+
+	test("resolves nothing, and mints no organization fields, for a subject at no claimed domain", async () => {
+		await tenant.provision({ tenantId: "tenant_1", issuer: "https://tenant-1.example.com" });
+
+		let subjectId = await createSubjectWithPassword(
+			"jane@unrelated.example",
+			"correct horse battery staple",
+		);
+
+		let result = await tenant.signInWithPassword({
+			identifier: "jane@unrelated.example",
+			password: "correct horse battery staple",
+			remembered: false,
+		});
+
+		expect(result).toMatchObject({
+			ok: true,
+			subjectId,
+			organizationMemberships: [],
+			suggestedOrganizations: [],
+		});
 	});
 });
