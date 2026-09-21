@@ -49,10 +49,14 @@ interface OpeningTag {
  * Parses XML into plain document data.
  *
  * @param source - Raw XML text to parse
+ * @param whitespace - Whether whitespace-only character data reaches the tree
  * @returns A Result containing XML document data or an error
  */
-export function parseDocument(source: string): Result<XML.Document, Error> {
-	let root = parseRoot(source);
+export function parseDocument(
+	source: string,
+	whitespace: XML.Whitespace = "collapse",
+): Result<XML.Document, Error> {
+	let root = parseRoot(source, whitespace);
 	if (root.status === "failure") return root;
 
 	return success({ declaration: parseDeclaration(source), root: root.data });
@@ -60,22 +64,24 @@ export function parseDocument(source: string): Result<XML.Document, Error> {
 
 /**
  * Walks the source once, building the element tree on a stack of open elements.
- * Text and CDATA that hold only whitespace are dropped, which keeps indentation
- * out of the tree and leaves feed traversal working on elements alone.
+ * Under `collapse` the tree holds elements and meaningful text alone, which is
+ * what feed traversal wants; under `preserve` it holds the source's own spacing.
  */
-function parseRoot(source: string): Result<XML.Element, Error> {
+function parseRoot(source: string, whitespace: XML.Whitespace): Result<XML.Element, Error> {
 	let stack: XML.Element[] = [];
 	let root: XML.Element | undefined;
 	let index = 0;
 
 	while (index < source.length) {
 		if (source[index] !== "<") {
-			let text = readText(source, index);
+			let text = readText(source, index, whitespace);
 			if (text.status === "failure") return text;
 
 			let parent = stack.at(-1);
 			if (parent) parent.children?.push(...text.data.value);
-			else if (text.data.value[0]) return failure(strayContent(root, text.data.value[0]));
+			else if (outsideRoot(text.data.value)) {
+				return failure(strayContent(root, text.data.value[0] ?? ""));
+			}
 
 			index = text.data.next;
 			continue;
@@ -89,7 +95,7 @@ function parseRoot(source: string): Result<XML.Element, Error> {
 		}
 
 		if (source.startsWith("<![CDATA[", index)) {
-			let section = readCDATA(source, index);
+			let section = readCDATA(source, index, whitespace);
 			if (section.status === "failure") return section;
 
 			stack.at(-1)?.children?.push(...section.data.value);
@@ -155,33 +161,58 @@ function parseRoot(source: string): Result<XML.Element, Error> {
 }
 
 /**
- * Reads the character data up to the next `<`, resolving references first so a
- * run that decodes to nothing but whitespace is dropped along with plain indentation.
+ * Reads the character data up to the next `<`, resolving references before the
+ * run is weighed, so `&#32;` counts as the space it decodes to either way.
  */
-function readText(source: string, index: number): Result<Scan<string[]>, Error> {
+function readText(
+	source: string,
+	index: number,
+	whitespace: XML.Whitespace,
+): Result<Scan<string[]>, Error> {
 	let end = source.indexOf("<", index);
 	let stop = end === -1 ? source.length : end;
 
 	let decoded = decodeEntities(source.slice(index, stop));
 	if (decoded.status === "failure") return decoded;
 
-	let kept = decoded.data.trim().length > 0 ? [decoded.data] : [];
-	return success({ value: kept, next: stop });
+	return success({ value: keep(decoded.data, whitespace), next: stop });
 }
 
 /**
  * Reads a CDATA section, whose content reaches the tree verbatim because CDATA
  * exists precisely to carry markup as literal text.
  */
-function readCDATA(source: string, index: number): Result<Scan<string[]>, Error> {
+function readCDATA(
+	source: string,
+	index: number,
+	whitespace: XML.Whitespace,
+): Result<Scan<string[]>, Error> {
 	let start = index + "<![CDATA[".length;
 	let end = source.indexOf("]]>", start);
 	if (end === -1) return failure(new Error("Unterminated CDATA section"));
 
 	let content = source.slice(start, end);
-	let kept = content.trim().length > 0 ? [content] : [];
 
-	return success({ value: kept, next: end + "]]>".length });
+	return success({ value: keep(content, whitespace), next: end + "]]>".length });
+}
+
+/**
+ * Reports character data that sits beside the root rather than inside it. The
+ * prolog and the epilog may hold whitespace, so only a run carrying something
+ * else is content XML puts nowhere.
+ */
+function outsideRoot(text: string[]): boolean {
+	return text.some((run) => run.trim().length > 0);
+}
+
+/**
+ * Decides whether one run of character data reaches the tree. A run of nothing
+ * but whitespace is indentation under `collapse` and part of what a digest
+ * covers under `preserve`, so only the caller's mode can tell them apart.
+ */
+function keep(text: string, whitespace: XML.Whitespace): string[] {
+	if (whitespace === "preserve") return text.length > 0 ? [text] : [];
+	return text.trim().length > 0 ? [text] : [];
 }
 
 /**

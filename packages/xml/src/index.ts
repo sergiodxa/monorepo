@@ -80,6 +80,25 @@ export namespace XML {
 	 * Checks one element while traversing an XML tree.
 	 */
 	export type Predicate = (element: Element) => boolean;
+
+	/**
+	 * How whitespace-only character data is treated while parsing. `collapse`
+	 * leaves indentation out of the tree; `preserve` keeps every run, which is
+	 * what a caller digesting the document needs, since spacing changes the hash.
+	 */
+	export type Whitespace = "collapse" | "preserve";
+
+	/**
+	 * How one `parse` call reads its source.
+	 */
+	export interface ParseOptions {
+		/**
+		 * Whether whitespace-only text and CDATA reach the tree.
+		 *
+		 * @default "collapse"
+		 */
+		whitespace?: Whitespace;
+	}
 }
 
 /**
@@ -103,10 +122,11 @@ export class XML {
 	 * Parses XML into an `XML` instance.
 	 *
 	 * @param source - Raw XML text to parse
+	 * @param options - Reading choices; the default drops indentation
 	 * @returns A Result containing an `XML` instance or a parse error
 	 */
-	static parse(source: string): Result<XML, XMLParseError> {
-		let result = parseDocument(source);
+	static parse(source: string, options: XML.ParseOptions = {}): Result<XML, XMLParseError> {
+		let result = parseDocument(source, options.whitespace ?? "collapse");
 		if (result.status === "failure") return failure(new XMLParseError(result.error.message));
 		return success(new XML(result.data));
 	}

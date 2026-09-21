@@ -22,6 +22,15 @@ function parseRoot(source: string) {
 }
 
 /**
+ * Parses a source under preserved whitespace and returns its root element.
+ */
+function preserveRoot(source: string) {
+	let result = parseDocument(source, "preserve");
+	if (isFailure(result)) throw result.error;
+	return result.data.root;
+}
+
+/**
  * Parses a source that the test expects to fail and returns the error message.
  */
 function parseError(source: string) {
@@ -286,5 +295,39 @@ describe("parseDocument failures", () => {
 
 	test("allows whitespace around the root element", () => {
 		expect(parseRoot("\n <r><t>x</t></r>\n  ").name).toBe("r");
+	});
+});
+
+describe("parseDocument, preserving whitespace", () => {
+	test("keeps the indentation between elements", () => {
+		expect(preserveRoot("<r>\n\t<t>x</t>\n</r>").children).toEqual([
+			"\n\t",
+			{ name: "t", attributes: {}, children: ["x"] },
+			"\n",
+		]);
+	});
+
+	test("keeps a whitespace-only CDATA section", () => {
+		expect(preserveRoot("<r><![CDATA[  ]]></r>").children).toEqual(["  "]);
+	});
+
+	test("keeps a run that decodes to whitespace alone", () => {
+		expect(preserveRoot("<r>&#32;</r>").children).toEqual([" "]);
+	});
+
+	test("still allows whitespace around the root element", () => {
+		expect(preserveRoot("\n <r>x</r>\n  ").name).toBe("r");
+	});
+
+	test("still refuses content outside the root element", () => {
+		let result = parseDocument(" hello <a/>", "preserve");
+		if (isSuccess(result)) throw new Error("Expected a failure");
+		expect(result.error.message).toBe("Unexpected content outside root element: ' hello '");
+	});
+
+	test("leaves the collapsing default untouched", () => {
+		expect(parseRoot("<r>\n\t<t>x</t>\n</r>").children).toEqual([
+			{ name: "t", attributes: {}, children: ["x"] },
+		]);
 	});
 });

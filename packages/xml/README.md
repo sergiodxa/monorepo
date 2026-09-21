@@ -40,8 +40,8 @@ let xml = result.data;
 xml.query("channel/title"); // { name: "title", children: ["Feed"] }
 ```
 
-Whitespace-only text nodes are indentation rather than content, so the parser drops them and
-a traversal never has to step over them.
+Whitespace-only text nodes are indentation rather than content, so by default the parser
+drops them and a traversal never has to step over them.
 
 ### Traverse A Document
 
@@ -107,11 +107,27 @@ let source = copy.toString();
 XML.stringify(json); // the same text, as a Result
 ```
 
+### Keep The Source's Whitespace
+
+By default a run of character data holding nothing but whitespace is indentation, and stays
+out of the tree, so traversal sees elements and the text that carries meaning. A caller that
+hashes a document needs the opposite, because a byte of indentation changes the digest:
+
+```typescript
+let xml = XML.parse("<r>\n\t<t>x</t>\n</r>", { whitespace: "preserve" });
+
+// children: ["\n\t", { name: "t", children: ["x"] }, "\n"]
+```
+
+Both modes resolve references first, so `&#32;` counts as the space it decodes to, and both
+allow whitespace around the root element.
+
 ## API
 
-### `XML.parse(source: string): Result<XML, XMLParseError>`
+### `XML.parse(source: string, options?: XML.ParseOptions): Result<XML, XMLParseError>`
 
-Parses XML text into an `XML` instance.
+Parses XML text into an `XML` instance. `options.whitespace` is `"collapse"` by default and
+`"preserve"` to keep whitespace-only text and CDATA in the tree.
 
 ### `XML.stringify(input: XML | XML.Input): Result<string, XMLStringifyError>`
 
@@ -174,8 +190,9 @@ prefix with no namespace declared in scope.
 ### Types
 
 Every public type lives in the `XML` namespace: `XML.Declaration`, `XML.Element`,
-`XML.Node`, `XML.Document`, `XML.Input`, and `XML.Predicate`. `XML.Input` is what
-`stringify` accepts: a whole `XML.Document` or the root `XML.Element` alone.
+`XML.Node`, `XML.Document`, `XML.Input`, `XML.Predicate`, `XML.Whitespace`, and
+`XML.ParseOptions`. `XML.Input` is what `stringify` accepts: a whole `XML.Document` or the
+root `XML.Element` alone.
 
 ```typescript
 import type { XML } from "@sdxc/xml";
