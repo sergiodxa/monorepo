@@ -56,6 +56,7 @@ describe("provision", () => {
 				"0023-organization-connections",
 				"0024-roles",
 				"0025-client-permission-claim",
+				"0026-api-keys",
 			],
 			issuer: "https://tenant-1.example.com",
 			keys: { keys: [expect.objectContaining({ kty: "EC", alg: "ES256" })] },
@@ -425,5 +426,75 @@ describe("signInWithPassword: organization domain membership wired through the D
 			organizationMemberships: [],
 			suggestedOrganizations: [],
 		});
+	});
+});
+
+describe("the machine_access entitlement gate", () => {
+	test("refuses setApiKeyPrefix, createApiKey and rotateApiKey without the entitlement", async () => {
+		await tenant.provision({ tenantId: "tenant_1", issuer: "https://tenant-1.example.com" });
+		let actor = { type: "platform" as const, id: "system" };
+
+		expect(await tenant.setApiKeyPrefix({ prefix: "acme", actor })).toMatchObject({
+			ok: false,
+			reason: "entitlement-required",
+		});
+
+		expect(
+			await tenant.createApiKey({
+				subjectId: "sub_does_not_matter",
+				name: "CI key",
+				scopes: [],
+				actor,
+			}),
+		).toMatchObject({ ok: false, reason: "entitlement-required" });
+
+		expect(await tenant.rotateApiKey({ keyId: "akey_does_not_matter", actor })).toMatchObject({
+			ok: false,
+			reason: "entitlement-required",
+		});
+	});
+
+	test("never gates authenticateApiKey, revokeApiKey, listApiKeys or sweepExpiredApiKeys", async () => {
+		await tenant.provision({ tenantId: "tenant_1", issuer: "https://tenant-1.example.com" });
+		let actor = { type: "platform" as const, id: "system" };
+
+		let authenticated = await tenant.authenticateApiKey({ presented: "not-a-real-key" });
+		expect(authenticated).toMatchObject({ ok: false, reason: "malformed" });
+
+		let revoked = await tenant.revokeApiKey({
+			keyId: "akey_does_not_matter",
+			reason: "test",
+			actor,
+		});
+		expect(revoked).toMatchObject({ ok: false, reason: "not-found" });
+
+		let listed = await tenant.listApiKeys({ subjectId: "sub_does_not_matter" });
+		expect(listed).toMatchObject({ ok: true, keys: [] });
+
+		let swept = await tenant.sweepExpiredApiKeys({});
+		expect(swept).toMatchObject({ deleted: 0, more: false });
+	});
+
+	test("admits setApiKeyPrefix and createApiKey once applyEntitlements grants the feature", async () => {
+		await tenant.provision({ tenantId: "tenant_1", issuer: "https://tenant-1.example.com" });
+		let subjectId = await createSubjectWithPassword(
+			"machine@example.com",
+			"correct horse battery staple",
+		);
+		let actor = { type: "subject" as const, id: subjectId };
+
+		await tenant.applyEntitlements({
+			plan: "pro",
+			features: { machine_access: true },
+			dauCap: null,
+			auditRetentionDays: null,
+			effectiveAt: Date.now(),
+		});
+
+		let prefixed = await tenant.setApiKeyPrefix({ prefix: "acme", actor });
+		expect(prefixed).toMatchObject({ ok: true, prefix: "acme" });
+
+		let created = await tenant.createApiKey({ subjectId, name: "CI key", scopes: [], actor });
+		expect(created.ok).toBe(true);
 	});
 });

@@ -164,6 +164,11 @@ export const AUDIT_ACTIONS = [
 	"permission.removed",
 	"role.permissions_set",
 	"role.assigned",
+	// API keys
+	"api_key.prefix_set",
+	"api_key.created",
+	"api_key.rotated",
+	"api_key.revoked",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

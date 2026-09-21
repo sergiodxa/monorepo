@@ -21,6 +21,23 @@ import { DurableObject } from "cloudflare:workers";
 import { column as c, Database, table } from "remix/data-table";
 
 import type {
+	ApiKeyVerificationCache,
+	AuthenticateApiKeyInput,
+	AuthenticateApiKeyResult,
+	CreateApiKeyInput,
+	CreateApiKeyResult,
+	ListApiKeysInput,
+	ListApiKeysResult,
+	RevokeApiKeyInput,
+	RevokeApiKeyResult,
+	RotateApiKeyInput,
+	RotateApiKeyResult,
+	SetApiKeyPrefixInput,
+	SetApiKeyPrefixResult,
+	SweepExpiredApiKeysInput,
+	SweepExpiredApiKeysResult,
+} from "./api-keys";
+import type {
 	AuditActor,
 	DrainAuditEventsInput,
 	DrainAuditEventsResult,
@@ -259,6 +276,7 @@ import type {
 	RevokeTrustedDeviceResult,
 } from "./totp";
 
+import * as ApiKeys from "./api-keys";
 import {
 	auditEvents,
 	drainAuditEvents,
@@ -396,6 +414,14 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * any loss of accuracy.
 	 */
 	#dauCache: DauCache = createDauCache();
+
+	/**
+	 * This isolate's own map from an API key's id to the facts that verify it,
+	 * updated by the same call that revokes or rotates a key so a change lands
+	 * at once. Never persisted: an object evicted and rebuilt starts it empty
+	 * again, paying one storage read the next time each key is presented.
+	 */
+	#apiKeyCache: ApiKeyVerificationCache = new Map();
 
 	/** Every statement's own row counts, accumulated by `countingSqlStorage` and read and reset around each RPC call by `#withCost`. */
 	#counters: CostCounters = { rowsRead: 0, rowsWritten: 0 };
@@ -1222,7 +1248,8 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * refresh tokens whose family is past its ninety-day ceiling, deletes connection
 	 * sign-in transactions past their ten-minute window and handoff tickets past
 	 * their thirty seconds, deletes organization invitations a week past their expiry
-	 * that were never accepted or revoked, then arms tomorrow's run.
+	 * that were never accepted or revoked, deletes API keys past their expiry, then
+	 * arms tomorrow's run.
 	 *
 	 * Never rejects, the way a Durable Object alarm should not: a rejected alarm is
 	 * retried by the platform, which would repeat a sweep that already ran.
@@ -1286,6 +1313,11 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 
 			for (let iteration = 0; iteration < 20; iteration++) {
 				let { more } = await Organizations.sweepExpiredOrganizationInvitations(this.#db);
+				if (!more) break;
+			}
+
+			for (let iteration = 0; iteration < 20; iteration++) {
+				let { more } = await ApiKeys.sweepExpiredApiKeys(this.#db);
 				if (!more) break;
 			}
 		} catch (error) {
@@ -2137,6 +2169,130 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	async authorizeSubject(input: AuthorizeSubjectInput): Promise<WithCost<AuthorizeSubjectResult>> {
 		await this.#migrated;
 		return this.#withCost(() => Roles.authorizeSubject(this.#db, input));
+	}
+
+	/**
+	 * Sets this tenant's own API key prefix, once. A call naming the prefix
+	 * already in force is a no-op success; a call naming a different one is
+	 * refused.
+	 *
+	 * @param input - The prefix to set, and who is making the call.
+	 * @returns The prefix now in force, or which rule refused the call.
+	 */
+	async setApiKeyPrefix(input: SetApiKeyPrefixInput): Promise<WithCost<SetApiKeyPrefixResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			if (!(await this.#isEntitled(ApiKeys.MACHINE_ACCESS_FEATURE))) {
+				return { ok: false, reason: "entitlement-required" };
+			}
+			return ApiKeys.setApiKeyPrefix(this.#db, input);
+		});
+	}
+
+	/**
+	 * Mints an API key for one of this tenant's own end users, narrowing rather
+	 * than creating an authorization: every requested scope must already be one
+	 * the issuing subject holds.
+	 *
+	 * @param input - The subject the key acts as, its name, scopes and optional
+	 * expiry, and who is making the call.
+	 * @returns The new record and the one-time key value, or which rule refused
+	 * the call.
+	 */
+	async createApiKey(input: CreateApiKeyInput): Promise<WithCost<CreateApiKeyResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			if (!(await this.#isEntitled(ApiKeys.MACHINE_ACCESS_FEATURE))) {
+				return { ok: false, reason: "entitlement-required" };
+			}
+			return ApiKeys.createApiKey(this.#db, input);
+		});
+	}
+
+	/**
+	 * Verifies a presented API key value, answering the subject and scopes it
+	 * resolves to without opening a session. Counts the resolved subject toward
+	 * today's daily active users, the same meter a sign-in counts against.
+	 *
+	 * @param input - The presented value, and the clock to check its expiry
+	 * against.
+	 * @returns The resolved subject and scopes, or which check refused it.
+	 */
+	async authenticateApiKey(
+		input: AuthenticateApiKeyInput,
+	): Promise<WithCost<AuthenticateApiKeyResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let { cap, hard } = await this.#dauEnforcement();
+			return ApiKeys.authenticateApiKey(this.#db, input, this.#apiKeyCache, {
+				cache: this.#dauCache,
+				cap,
+				hard,
+			});
+		});
+	}
+
+	/**
+	 * Mints a successor key and opens the incumbent's overlap window in the same
+	 * call, updating this instance's own verification cache so the incumbent's
+	 * new expiry is what a warm object checks next.
+	 *
+	 * @param input - The key to rotate, how many days the incumbent's window
+	 * lasts, and who is making the call.
+	 * @returns The new record and its one-time value, plus the incumbent's
+	 * updated expiry, or which rule refused the call.
+	 */
+	async rotateApiKey(input: RotateApiKeyInput): Promise<WithCost<RotateApiKeyResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			if (!(await this.#isEntitled(ApiKeys.MACHINE_ACCESS_FEATURE))) {
+				return { ok: false, reason: "entitlement-required" };
+			}
+			return ApiKeys.rotateApiKey(this.#db, input, this.#apiKeyCache);
+		});
+	}
+
+	/**
+	 * Revokes an API key at once, evicting it from this instance's own
+	 * verification cache in the same call.
+	 *
+	 * @param input - The key to revoke, why, and who is making the call.
+	 * @returns Success, or that no such key exists.
+	 */
+	async revokeApiKey(input: RevokeApiKeyInput): Promise<WithCost<RevokeApiKeyResult>> {
+		await this.#migrated;
+		return this.#withCost(() => ApiKeys.revokeApiKey(this.#db, input, this.#apiKeyCache));
+	}
+
+	/**
+	 * Lists a page of a subject's own API keys, newest first.
+	 *
+	 * @param input - The subject whose keys to list, and where to page from.
+	 * @returns A page of key summaries, or that the given cursor no longer
+	 * matches.
+	 */
+	async listApiKeys(input: ListApiKeysInput): Promise<WithCost<ListApiKeysResult>> {
+		await this.#migrated;
+		return this.#withCost(() => ApiKeys.listApiKeys(this.#db, input));
+	}
+
+	/**
+	 * Deletes API keys past their expiry, in one bounded batch, for the
+	 * scheduled handler driving retention.
+	 *
+	 * @param input - The clock to sweep against, and how many rows one call may
+	 * remove.
+	 * @returns How many rows this call deleted, and whether the batch was full.
+	 */
+	async sweepExpiredApiKeys(
+		input: SweepExpiredApiKeysInput = {},
+	): Promise<WithCost<SweepExpiredApiKeysResult>> {
+		await this.#migrated;
+		return this.#withCost(() => ApiKeys.sweepExpiredApiKeys(this.#db, input));
 	}
 
 	/**

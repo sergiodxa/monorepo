@@ -55,6 +55,7 @@ describe("runMigrations", () => {
 			"0023-organization-connections",
 			"0024-roles",
 			"0025-client-permission-claim",
+			"0026-api-keys",
 		]);
 	});
 
@@ -107,6 +108,8 @@ describe("runMigrations", () => {
 			"permissions",
 			"role_permissions",
 			"role_assignments",
+			"api_keys",
+			"api_key_settings",
 		]) {
 			expect(names, `${name} exists`).toContain(name);
 		}
@@ -147,6 +150,7 @@ describe("runMigrations", () => {
 			{ id: "0023-organization-connections", applied_at: expect.any(Number) },
 			{ id: "0024-roles", applied_at: expect.any(Number) },
 			{ id: "0025-client-permission-claim", applied_at: expect.any(Number) },
+			{ id: "0026-api-keys", applied_at: expect.any(Number) },
 		]);
 	});
 
