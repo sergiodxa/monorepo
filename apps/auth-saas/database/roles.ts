@@ -38,7 +38,10 @@ import { organizationMembers, organizations } from "./organizations";
 import { subjects } from "./subjects";
 
 /** The tenant's own directory scope, the one `role_assignments` ever names in `scope`. */
-const TENANT_SCOPE = "tenant";
+export const TENANT_SCOPE = "tenant";
+
+/** The feature slug defining a role or permission beyond the three system roles is sold under. */
+export const CUSTOM_ROLES_FEATURE = "custom_roles";
 
 /** The three role keys the platform reserves at every scope, undeletable and unrenameable. */
 export const SYSTEM_ROLE_KEYS = ["owner", "admin", "member"] as const;
@@ -283,7 +286,8 @@ export interface DefineRoleInput {
 export type DefineRoleResult =
 	| { ok: true; role: RoleRecord }
 	| { ok: false; reason: "reserved-key" }
-	| { ok: false; reason: "duplicate" };
+	| { ok: false; reason: "duplicate" }
+	| { ok: false; reason: "entitlement-required" };
 
 let DefineRoleSchema = s.object({
 	scope: s.string(),
@@ -350,7 +354,8 @@ export interface UpdateRoleInput {
 export type UpdateRoleResult =
 	| { ok: true; role: RoleRecord }
 	| { ok: false; reason: "system-role" }
-	| { ok: false; reason: "not-found" };
+	| { ok: false; reason: "not-found" }
+	| { ok: false; reason: "entitlement-required" };
 
 /**
  * Updates a custom role's name and description, leaving any field left out exactly as
@@ -408,7 +413,8 @@ export type DeleteRoleResult =
 	| { ok: true; reassigned: number }
 	| { ok: false; reason: "system-role" }
 	| { ok: false; reason: "not-found" }
-	| { ok: false; reason: "invalid-reassignment" };
+	| { ok: false; reason: "invalid-reassignment" }
+	| { ok: false; reason: "entitlement-required" };
 
 /**
  * Deletes a custom role, reassigning every current holder to `reassignTo` in the same
@@ -494,7 +500,8 @@ export interface DefinePermissionInput {
 export type DefinePermissionResult =
 	| { ok: true; permission: PermissionRecord }
 	| { ok: false; reason: "reserved-key" }
-	| { ok: false; reason: "duplicate" };
+	| { ok: false; reason: "duplicate" }
+	| { ok: false; reason: "entitlement-required" };
 
 let DefinePermissionSchema = s.object({
 	key: s.string(),
@@ -551,7 +558,10 @@ export interface RemovePermissionInput {
 	at?: number;
 }
 
-export type RemovePermissionResult = { ok: true } | { ok: false; reason: "not-found" };
+export type RemovePermissionResult =
+	| { ok: true }
+	| { ok: false; reason: "not-found" }
+	| { ok: false; reason: "entitlement-required" };
 
 /**
  * Removes a tenant's own permission, dropping every role's grant of it in the same
@@ -597,7 +607,8 @@ export type SetRolePermissionsResult =
 	| { ok: false; reason: "system-role" }
 	| { ok: false; reason: "not-found" }
 	| { ok: false; reason: "unknown-permission"; key: string }
-	| { ok: false; reason: "too-large"; size: number; cap: number };
+	| { ok: false; reason: "too-large"; size: number; cap: number }
+	| { ok: false; reason: "entitlement-required" };
 
 let SetRolePermissionsSchema = s.object({
 	roleId: s.string(),
@@ -802,6 +813,52 @@ export async function describeSubjectAccess(
 	if (!role) return { roles: [], permissions: [] };
 
 	return { roles: [role], permissions: await resolveGrantedPermissions(db, role) };
+}
+
+export interface ResolveRoleAndPermissionClaimsInput {
+	subjectId: string;
+	/** The scope a token's or a `/userinfo` response's second role, beyond the tenant scope, resolves at. */
+	activeOrganizationId: string | null;
+}
+
+export interface ResolveRoleAndPermissionClaimsResult {
+	roleKeys: string[];
+	permissionKeys: string[];
+}
+
+/**
+ * The role keys and the union of granted permission keys a subject holds across the
+ * scopes a token's or a `/userinfo` response's `roles`/`permissions` claims name: the
+ * tenant scope every session resolves, plus the active organization's scope when one is
+ * given. The one place this resolution is written, so a token minted at sign-in and a
+ * later `/userinfo` read of the same session answer from the same facts.
+ *
+ * @param db - The tenant's database.
+ * @param input - The subject, and the active organization scope to resolve alongside
+ * the tenant scope, or `null` for none.
+ * @returns The role keys held, and the resolved permission keys they grant.
+ */
+export async function resolveRoleAndPermissionClaims(
+	db: Database,
+	input: ResolveRoleAndPermissionClaimsInput,
+): Promise<ResolveRoleAndPermissionClaimsResult> {
+	let tenantAccess = await describeSubjectAccess(db, {
+		subjectId: input.subjectId,
+		scope: TENANT_SCOPE,
+	});
+	let roleKeys = tenantAccess.roles.map((role) => role.key);
+	let permissionKeys = new Set(tenantAccess.permissions);
+
+	if (input.activeOrganizationId !== null) {
+		let orgAccess = await describeSubjectAccess(db, {
+			subjectId: input.subjectId,
+			scope: input.activeOrganizationId,
+		});
+		for (let role of orgAccess.roles) roleKeys.push(role.key);
+		for (let permission of orgAccess.permissions) permissionKeys.add(permission);
+	}
+
+	return { roleKeys, permissionKeys: [...permissionKeys] };
 }
 
 export interface AuthorizeSubjectInput {

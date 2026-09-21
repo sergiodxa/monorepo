@@ -44,6 +44,8 @@ import type {
 	RevokeClientSecretResult,
 	RotateClientSecretInput,
 	RotateClientSecretResult,
+	SetClientPermissionClaimInput,
+	SetClientPermissionClaimResult,
 	UpdateClientInput,
 	UpdateClientResult,
 } from "./clients";
@@ -532,6 +534,18 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	async #auditRetentionDays(): Promise<number> {
 		let record = await this.#db.findOne(entitlementEnforcement, { where: { id: "current" } });
 		return record?.audit_retention_days ?? DEFAULT_AUDIT_RETENTION_DAYS;
+	}
+
+	/**
+	 * Whether this tenant's own enforcement record currently entitles a named feature,
+	 * read locally from `entitlement_enforcement` — the same record
+	 * {@link #dauEnforcement} and {@link #auditRetentionDays} already read for their own
+	 * caps — rather than a further RPC round trip. A tenant whose record has never been
+	 * written entitles nothing.
+	 */
+	async #isEntitled(feature: string): Promise<boolean> {
+		let record = await this.#db.findOne(entitlementEnforcement, { where: { id: "current" } });
+		return record?.features[feature] ?? false;
 	}
 
 	/**
@@ -1401,6 +1415,20 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
+	 * Toggles whether minting adds a `permissions` claim to this client's tokens.
+	 *
+	 * @param input - The client whose switch is being set, its new value, and who
+	 * is making the call.
+	 * @returns The updated record, or that no such client exists.
+	 */
+	async setClientPermissionClaim(
+		input: SetClientPermissionClaimInput,
+	): Promise<WithCost<SetClientPermissionClaimResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Clients.setClientPermissionClaim(this.#db, input));
+	}
+
+	/**
 	 * Deletes a client and its secrets.
 	 *
 	 * @param input - The client to delete.
@@ -1962,7 +1990,13 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 */
 	async defineRole(input: DefineRoleInput): Promise<WithCost<DefineRoleResult>> {
 		await this.#migrated;
-		return this.#withCost(() => Roles.defineRole(this.#db, input));
+
+		return this.#withCost(async () => {
+			if (!(await this.#isEntitled(Roles.CUSTOM_ROLES_FEATURE))) {
+				return { ok: false, reason: "entitlement-required" };
+			}
+			return Roles.defineRole(this.#db, input);
+		});
 	}
 
 	/**
@@ -1975,7 +2009,13 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 */
 	async updateRole(input: UpdateRoleInput): Promise<WithCost<UpdateRoleResult>> {
 		await this.#migrated;
-		return this.#withCost(() => Roles.updateRole(this.#db, input));
+
+		return this.#withCost(async () => {
+			if (!(await this.#isEntitled(Roles.CUSTOM_ROLES_FEATURE))) {
+				return { ok: false, reason: "entitlement-required" };
+			}
+			return Roles.updateRole(this.#db, input);
+		});
 	}
 
 	/**
@@ -1989,7 +2029,13 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 */
 	async deleteRole(input: DeleteRoleInput): Promise<WithCost<DeleteRoleResult>> {
 		await this.#migrated;
-		return this.#withCost(() => Roles.deleteRole(this.#db, input));
+
+		return this.#withCost(async () => {
+			if (!(await this.#isEntitled(Roles.CUSTOM_ROLES_FEATURE))) {
+				return { ok: false, reason: "entitlement-required" };
+			}
+			return Roles.deleteRole(this.#db, input);
+		});
 	}
 
 	/**
@@ -2002,7 +2048,13 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 */
 	async definePermission(input: DefinePermissionInput): Promise<WithCost<DefinePermissionResult>> {
 		await this.#migrated;
-		return this.#withCost(() => Roles.definePermission(this.#db, input));
+
+		return this.#withCost(async () => {
+			if (!(await this.#isEntitled(Roles.CUSTOM_ROLES_FEATURE))) {
+				return { ok: false, reason: "entitlement-required" };
+			}
+			return Roles.definePermission(this.#db, input);
+		});
 	}
 
 	/**
@@ -2014,7 +2066,13 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 */
 	async removePermission(input: RemovePermissionInput): Promise<WithCost<RemovePermissionResult>> {
 		await this.#migrated;
-		return this.#withCost(() => Roles.removePermission(this.#db, input));
+
+		return this.#withCost(async () => {
+			if (!(await this.#isEntitled(Roles.CUSTOM_ROLES_FEATURE))) {
+				return { ok: false, reason: "entitlement-required" };
+			}
+			return Roles.removePermission(this.#db, input);
+		});
 	}
 
 	/**
@@ -2030,7 +2088,13 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		input: SetRolePermissionsInput,
 	): Promise<WithCost<SetRolePermissionsResult>> {
 		await this.#migrated;
-		return this.#withCost(() => Roles.setRolePermissions(this.#db, input));
+
+		return this.#withCost(async () => {
+			if (!(await this.#isEntitled(Roles.CUSTOM_ROLES_FEATURE))) {
+				return { ok: false, reason: "entitlement-required" };
+			}
+			return Roles.setRolePermissions(this.#db, input);
+		});
 	}
 
 	/**
@@ -2542,10 +2606,7 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	async hasEntitlement(input: { feature: string }): Promise<WithCost<{ entitled: boolean }>> {
 		await this.#migrated;
 
-		return this.#withCost(async () => {
-			let record = await this.#db.findOne(entitlementEnforcement, { where: { id: "current" } });
-			return { entitled: record?.features[input.feature] ?? false };
-		});
+		return this.#withCost(async () => ({ entitled: await this.#isEntitled(input.feature) }));
 	}
 
 	/**

@@ -119,6 +119,7 @@ export const AUDIT_ACTIONS = [
 	"client.secret.revoked",
 	"client.disabled",
 	"client.deleted",
+	"client.permission_claim_set",
 	"signing_key.rotated",
 	"consent.granted",
 	"consent.revoked",

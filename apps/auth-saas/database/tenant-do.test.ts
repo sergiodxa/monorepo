@@ -55,6 +55,7 @@ describe("provision", () => {
 				"0022-organizations",
 				"0023-organization-connections",
 				"0024-roles",
+				"0025-client-permission-claim",
 			],
 			issuer: "https://tenant-1.example.com",
 			keys: { keys: [expect.objectContaining({ kty: "EC", alg: "ES256" })] },

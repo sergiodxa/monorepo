@@ -32,6 +32,7 @@ import type { SubjectRow } from "./subjects";
 import { authorizationCodes } from "./authorization";
 import { clients, verifyClientSecret } from "./clients";
 import { scopes } from "./consent";
+import { resolveRoleAndPermissionClaims } from "./roles";
 import { revokeSession, sessions } from "./sessions";
 import { currentSigningKeyPair, customClaims } from "./signing-keys";
 import { subjectAttributes, subjectIdentifiers, subjects } from "./subjects";
@@ -321,6 +322,35 @@ async function addCustomClaims(
 	}
 }
 
+/**
+ * Adds the `roles` claim naming the role key a subject holds at the token's scopes —
+ * the tenant scope every session resolves, plus one more for the active organization
+ * when the session carries one — to the access token, and to the ID token when the
+ * grant mints one. Every grant reaches this, not only an `openid` one: a role is a
+ * fact about the session, not about whether an identity token was asked for. A
+ * client whose `include_permissions` switch is on also gets a `permissions` claim,
+ * the union of what those same roles grant, resolved in the same turn the token is
+ * minted.
+ */
+async function addRoleClaims(
+	db: Database,
+	accessClaims: Record<string, unknown>,
+	idClaims: Record<string, unknown> | null,
+	subjectId: string,
+	activeOrganizationId: string | null,
+	includePermissions: boolean,
+): Promise<void> {
+	let resolved = await resolveRoleAndPermissionClaims(db, { subjectId, activeOrganizationId });
+
+	accessClaims.roles = resolved.roleKeys;
+	if (idClaims) idClaims.roles = resolved.roleKeys;
+
+	if (includePermissions) {
+		accessClaims.permissions = resolved.permissionKeys;
+		if (idClaims) idClaims.permissions = resolved.permissionKeys;
+	}
+}
+
 interface MintTokensInput {
 	issuer: string;
 	client: ClientRow;
@@ -388,6 +418,15 @@ async function mintTokens(db: Database, input: MintTokensInput): Promise<MintTok
 
 		await addStandardProfileClaims(db, idClaims, input.subjectId, input.scopes);
 	}
+
+	await addRoleClaims(
+		db,
+		accessClaims,
+		idClaims,
+		input.subjectId,
+		input.activeOrganizationId,
+		input.client.include_permissions,
+	);
 
 	await addCustomClaims(db, accessClaims, idClaims, input.subjectId, input.scopes);
 

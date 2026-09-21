@@ -36,6 +36,7 @@ import m0021 from "./tenant-migrations/0021-scim.sql?raw";
 import m0022 from "./tenant-migrations/0022-organizations.sql?raw";
 import m0023 from "./tenant-migrations/0023-organization-connections.sql?raw";
 import m0024 from "./tenant-migrations/0024-roles.sql?raw";
+import m0025 from "./tenant-migrations/0025-client-permission-claim.sql?raw";
 
 /** One migration, identified so the journal can record that it ran. */
 export interface Migration {
@@ -69,6 +70,7 @@ export const MIGRATIONS: Migration[] = [
 	{ id: "0022-organizations", sql: m0022 },
 	{ id: "0023-organization-connections", sql: m0023 },
 	{ id: "0024-roles", sql: m0024 },
+	{ id: "0025-client-permission-claim", sql: m0025 },
 ];
 
 /** The journal `0001-init` creates, read back to find out what has already run. */

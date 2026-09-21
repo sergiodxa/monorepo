@@ -29,6 +29,7 @@ import {
 	registerClient,
 	revokeClientSecret,
 	rotateClientSecret,
+	setClientPermissionClaim,
 	sweepExpiredClientSecrets,
 	updateClient,
 	validateRedirectUri,
@@ -257,6 +258,7 @@ describe("updateClient", () => {
 				createdAt: created.client.createdAt,
 				updatedAt: expect.any(Number),
 				disabledAt: null,
+				includePermissions: false,
 			},
 		});
 	});
@@ -400,6 +402,51 @@ describe("disableClient", () => {
 			ok: false,
 			reason: "not-found",
 		});
+	});
+});
+
+describe("setClientPermissionClaim", () => {
+	test("turns the switch on, leaving every other field untouched", async () => {
+		let created = await createTestClient();
+		expect(created.client.includePermissions).toBe(false);
+
+		let result = await setClientPermissionClaim(db, {
+			clientId: created.client.id,
+			include: true,
+			actor: { type: "platform", id: "system" },
+		});
+
+		expect(result).toMatchObject({ ok: true, client: { includePermissions: true } });
+
+		let row = await db.find(clients, { id: created.client.id });
+		expect(row?.include_permissions).toBe(true);
+	});
+
+	test("turns the switch back off", async () => {
+		let created = await createTestClient();
+		await setClientPermissionClaim(db, {
+			clientId: created.client.id,
+			include: true,
+			actor: { type: "platform", id: "system" },
+		});
+
+		let result = await setClientPermissionClaim(db, {
+			clientId: created.client.id,
+			include: false,
+			actor: { type: "platform", id: "system" },
+		});
+
+		expect(result).toMatchObject({ ok: true, client: { includePermissions: false } });
+	});
+
+	test("refuses a client that does not exist", async () => {
+		let result = await setClientPermissionClaim(db, {
+			clientId: "client_missing",
+			include: true,
+			actor: { type: "platform", id: "system" },
+		});
+
+		expect(result).toEqual({ ok: false, reason: "not-found" });
 	});
 });
 
@@ -581,6 +628,21 @@ describe("audit", () => {
 
 		let rows = await auditRowsFor("client.deleted");
 		expect(rows).toMatchObject([{ targetId: created.client.id, outcome: "succeeded" }]);
+	});
+
+	test("client.permission_claim_set lands when the switch is toggled", async () => {
+		let created = await createTestClient();
+
+		await setClientPermissionClaim(db, {
+			clientId: created.client.id,
+			include: true,
+			actor: { type: "platform", id: "system" },
+		});
+
+		let rows = await auditRowsFor("client.permission_claim_set");
+		expect(rows).toMatchObject([
+			{ targetId: created.client.id, outcome: "succeeded", detail: { include: true } },
+		]);
 	});
 });
 

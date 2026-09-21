@@ -18,7 +18,10 @@ import { and, eq } from "remix/data-table";
 import type { PublishedKeySet } from "./signing-keys";
 import type { SubjectRow } from "./subjects";
 
+import { clients } from "./clients";
 import { scopes } from "./consent";
+import { resolveRoleAndPermissionClaims } from "./roles";
+import { sessions } from "./sessions";
 import { publishKeySet } from "./signing-keys";
 import { subjectIdentifiers, subjects } from "./subjects";
 
@@ -139,10 +142,14 @@ export interface ResolveUserInfoInput {
 	subjectId: string;
 	scopes: string[];
 	now: number;
+	/** The verified access token's own session, read for a `roles` claim's active organization. */
+	sessionId?: string;
+	/** The verified access token's own client, read for whether its `include_permissions` switch is on. */
+	clientId?: string;
 }
 
 /** A userinfo claim value: every claim this endpoint assembles is one of these. */
-export type ClaimValue = string | number | boolean;
+export type ClaimValue = string | number | boolean | string[];
 
 export type ResolveUserInfoResult =
 	| { kind: "claims"; claims: Record<string, ClaimValue> }
@@ -152,6 +159,8 @@ let ResolveUserInfoSchema = s.object({
 	subjectId: s.string(),
 	scopes: s.array(s.string()),
 	now: s.number(),
+	sessionId: s.optional(s.string()),
+	clientId: s.optional(s.string()),
 });
 
 /**
@@ -163,8 +172,8 @@ let ResolveUserInfoSchema = s.object({
  * which scopes were granted.
  *
  * @param db - The tenant's database.
- * @param input - The subject id a verified access token named, and the scopes its grant
- * covers.
+ * @param input - The subject id a verified access token named, the scopes its grant
+ * covers, and its session and client, for the `roles` and `permissions` claims.
  * @returns The subject's claims, or that the subject id no longer resolves.
  */
 export async function resolveUserInfo(
@@ -196,6 +205,21 @@ export async function resolveUserInfo(
 		if (primaryEmail) {
 			claims.email = primaryEmail.value;
 			claims.email_verified = primaryEmail.verified_at !== null;
+		}
+	}
+
+	if (parsed.sessionId) {
+		let session = await db.find(sessions, { id: parsed.sessionId });
+		let resolved = await resolveRoleAndPermissionClaims(db, {
+			subjectId: subject.id,
+			activeOrganizationId: session?.active_organization_id ?? null,
+		});
+
+		claims.roles = resolved.roleKeys;
+
+		if (parsed.clientId) {
+			let client = await db.find(clients, { id: parsed.clientId });
+			if (client?.include_permissions) claims.permissions = resolved.permissionKeys;
 		}
 	}
 

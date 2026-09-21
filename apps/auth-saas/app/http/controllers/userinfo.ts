@@ -31,6 +31,9 @@ const INSUFFICIENT_SCOPE_CHALLENGE = { "WWW-Authenticate": 'Bearer error="insuff
  * router's request context, so the one implementation serves both the `GET` and
  * the `POST` route this endpoint accepts.
  *
+ * `Cache-Control` states the access token's own remaining lifetime, so a relying
+ * party caching this response never holds it past what the token itself is good for.
+ *
  * @param request - The incoming request, read for its `Authorization` header.
  * @param tenant - The tenant this request was resolved to.
  * @param tenantStub - A stub for the tenant's Durable Object.
@@ -55,6 +58,9 @@ async function respondToUserinfo(
 
 	let subjectId: string;
 	let scopes: string[];
+	let sessionId: string;
+	let clientId: string;
+	let remainingSeconds: number;
 
 	try {
 		let verified = await AccessToken.verify(token, keys, {
@@ -63,6 +69,9 @@ async function respondToUserinfo(
 		});
 		subjectId = verified.subject;
 		scopes = verified.scope.split(" ").filter(Boolean);
+		sessionId = verified.sessionId;
+		clientId = verified.clientId;
+		remainingSeconds = Math.max(0, verified.expiresIn ?? 0);
 	} catch {
 		return unauthorized({}, { headers: INVALID_TOKEN_CHALLENGE });
 	}
@@ -71,10 +80,18 @@ async function respondToUserinfo(
 		return forbidden({ error: "insufficient_scope" }, { headers: INSUFFICIENT_SCOPE_CHALLENGE });
 	}
 
-	let resolved = await tenantStub.resolveUserInfo({ subjectId, scopes, now: Date.now() });
+	let resolved = await tenantStub.resolveUserInfo({
+		subjectId,
+		scopes,
+		now: Date.now(),
+		sessionId,
+		clientId,
+	});
 	if (resolved.kind === "unknown") return unauthorized({}, { headers: INVALID_TOKEN_CHALLENGE });
 
-	return ok(resolved.claims);
+	return ok(resolved.claims, {
+		headers: { "Cache-Control": `private, max-age=${remainingSeconds}` },
+	});
 }
 
 /**

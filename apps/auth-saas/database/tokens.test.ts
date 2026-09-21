@@ -19,7 +19,9 @@ import { beforeEach, describe, expect, test } from "vitest";
 import type { RegisterClientInput } from "./clients";
 
 import { authorizationCodes } from "./authorization";
-import { registerClient } from "./clients";
+import { clients, registerClient } from "./clients";
+import { organizationMembers, organizations } from "./organizations";
+import { assignRole, defineRole, definePermission, setRolePermissions } from "./roles";
 import { openSession, resolveSession, sessions } from "./sessions";
 import { currentSigningKeyPair, ensureSigningKey, setCustomClaims } from "./signing-keys";
 import { createSubject, subjectAttributes } from "./subjects";
@@ -854,6 +856,284 @@ describe("org claim", () => {
 
 		let accessToken = AccessToken.decode(outcome.accessToken);
 		expect(accessToken.payload.org).toBe("org_acme");
+	});
+});
+
+describe("roles and permissions claims", () => {
+	test("names the tenant-scope role on both tokens, with no setup beyond openid being granted", async () => {
+		let now = 1_700_000_000_000;
+		let subjectId = await createTestSubject();
+		let { client, secret } = await createTestClient();
+		let session = await openTestSession(subjectId);
+
+		await assignRole(db, {
+			subjectId,
+			scope: "tenant",
+			roleKey: "admin",
+			actor: { type: "subject", id: subjectId },
+		});
+
+		let { code, codeVerifier } = await createTestCode({
+			clientId: client.id,
+			subjectId,
+			sessionId: session.sessionId,
+			scopes: ["openid"],
+			now,
+		});
+
+		let outcome = await exchangeCode(db, {
+			code,
+			codeVerifier,
+			redirectUri: REDIRECT_URI,
+			clientId: client.id,
+			clientSecret: secret,
+			authScheme: "basic",
+			now,
+			issuer: ISSUER,
+		});
+
+		expect(outcome.kind).toBe("tokens");
+		if (outcome.kind !== "tokens") throw new Error("unreachable");
+
+		let accessToken = AccessToken.decode(outcome.accessToken);
+		expect(accessToken.payload.roles).toEqual(["admin"]);
+
+		if (!outcome.idToken) throw new Error("unreachable");
+		let idToken = IdToken.decode(outcome.idToken);
+		expect(idToken.payload.roles).toEqual(["admin"]);
+	});
+
+	test("names the tenant-scope role on the access token even when the grant carries no openid scope", async () => {
+		let now = 1_700_000_000_000;
+		let subjectId = await createTestSubject();
+		let { client, secret } = await createTestClient({ scopes: ["profile"] });
+		let session = await openTestSession(subjectId);
+
+		await assignRole(db, {
+			subjectId,
+			scope: "tenant",
+			roleKey: "admin",
+			actor: { type: "subject", id: subjectId },
+		});
+
+		let { code, codeVerifier } = await createTestCode({
+			clientId: client.id,
+			subjectId,
+			sessionId: session.sessionId,
+			scopes: ["profile"],
+			now,
+		});
+
+		let outcome = await exchangeCode(db, {
+			code,
+			codeVerifier,
+			redirectUri: REDIRECT_URI,
+			clientId: client.id,
+			clientSecret: secret,
+			authScheme: "basic",
+			now,
+			issuer: ISSUER,
+		});
+
+		expect(outcome.kind).toBe("tokens");
+		if (outcome.kind !== "tokens") throw new Error("unreachable");
+
+		expect(outcome.idToken).toBeNull();
+
+		let accessToken = AccessToken.decode(outcome.accessToken);
+		expect(accessToken.payload.roles).toEqual(["admin"]);
+	});
+
+	test("adds the active organization's own role alongside the tenant scope's", async () => {
+		let now = 1_700_000_000_000;
+		let subjectId = await createTestSubject();
+		let { client, secret } = await createTestClient({ scopes: ["openid", "organization"] });
+		let session = await openTestSession(subjectId);
+		await db.update(sessions, { id: session.sessionId }, { active_organization_id: "org_acme" });
+
+		await db.create(organizations, {
+			id: "org_acme",
+			slug: "acme",
+			name: "Acme",
+			logo_url: null,
+			status: "active",
+			metadata: {},
+			created_at: now,
+			updated_at: now,
+		});
+		await db.create(organizationMembers, {
+			organization_id: "org_acme",
+			subject_id: subjectId,
+			role: "owner",
+			joined_via: "creator",
+			created_at: now,
+			updated_at: now,
+		});
+
+		await assignRole(db, {
+			subjectId,
+			scope: "tenant",
+			roleKey: "member",
+			actor: { type: "subject", id: subjectId },
+		});
+
+		let { code, codeVerifier } = await createTestCode({
+			clientId: client.id,
+			subjectId,
+			sessionId: session.sessionId,
+			scopes: ["openid", "organization"],
+			now,
+		});
+
+		let outcome = await exchangeCode(db, {
+			code,
+			codeVerifier,
+			redirectUri: REDIRECT_URI,
+			clientId: client.id,
+			clientSecret: secret,
+			authScheme: "basic",
+			now,
+			issuer: ISSUER,
+		});
+
+		expect(outcome.kind).toBe("tokens");
+		if (outcome.kind !== "tokens") throw new Error("unreachable");
+
+		let accessToken = AccessToken.decode(outcome.accessToken);
+		expect(accessToken.payload.roles).toEqual(["member", "owner"]);
+	});
+
+	test("never mints a permissions claim for a client whose include_permissions switch is off", async () => {
+		let now = 1_700_000_000_000;
+		let subjectId = await createTestSubject();
+		let { client, secret } = await createTestClient();
+		let session = await openTestSession(subjectId);
+
+		await assignRole(db, {
+			subjectId,
+			scope: "tenant",
+			roleKey: "admin",
+			actor: { type: "subject", id: subjectId },
+		});
+
+		let { code, codeVerifier } = await createTestCode({
+			clientId: client.id,
+			subjectId,
+			sessionId: session.sessionId,
+			scopes: ["openid"],
+			now,
+		});
+
+		let outcome = await exchangeCode(db, {
+			code,
+			codeVerifier,
+			redirectUri: REDIRECT_URI,
+			clientId: client.id,
+			clientSecret: secret,
+			authScheme: "basic",
+			now,
+			issuer: ISSUER,
+		});
+
+		expect(outcome.kind).toBe("tokens");
+		if (outcome.kind !== "tokens") throw new Error("unreachable");
+
+		let accessToken = AccessToken.decode(outcome.accessToken);
+		expect(accessToken.payload.permissions).toBeUndefined();
+	});
+
+	test("mints the resolved permission set for a client whose include_permissions switch is on", async () => {
+		let now = 1_700_000_000_000;
+		let subjectId = await createTestSubject();
+		let { client, secret } = await createTestClient();
+		await db.update(clients, { id: client.id }, { include_permissions: true });
+		let session = await openTestSession(subjectId);
+
+		let actor = { type: "subject" as const, id: subjectId };
+
+		let role = await defineRole(db, {
+			scope: "tenant",
+			key: "support",
+			name: "Support",
+			description: "Reads support tickets",
+			actor,
+		});
+		if (!role.ok) throw new Error("unreachable");
+
+		let permission = await definePermission(db, {
+			key: "tickets.read",
+			name: "Read tickets",
+			description: "Read support tickets",
+			actor,
+		});
+		if (!permission.ok) throw new Error("unreachable");
+
+		await setRolePermissions(db, {
+			roleId: role.role.id,
+			permissionKeys: ["tickets.read"],
+			actor,
+		});
+		await assignRole(db, { subjectId, scope: "tenant", roleKey: "support", actor });
+
+		let { code, codeVerifier } = await createTestCode({
+			clientId: client.id,
+			subjectId,
+			sessionId: session.sessionId,
+			scopes: ["openid"],
+			now,
+		});
+
+		let outcome = await exchangeCode(db, {
+			code,
+			codeVerifier,
+			redirectUri: REDIRECT_URI,
+			clientId: client.id,
+			clientSecret: secret,
+			authScheme: "basic",
+			now,
+			issuer: ISSUER,
+		});
+
+		expect(outcome.kind).toBe("tokens");
+		if (outcome.kind !== "tokens") throw new Error("unreachable");
+
+		let accessToken = AccessToken.decode(outcome.accessToken);
+		expect(accessToken.payload.roles).toEqual(["support"]);
+		expect(accessToken.payload.permissions).toEqual(["tickets.read"]);
+
+		if (!outcome.idToken) throw new Error("unreachable");
+		let idToken = IdToken.decode(outcome.idToken);
+		expect(idToken.payload.permissions).toEqual(["tickets.read"]);
+	});
+
+	test("survives a refresh rotation, resolved fresh rather than carried over", async () => {
+		let { client, secret, subjectId, refreshToken, now } = await issueTestRefreshToken([
+			"openid",
+			"offline_access",
+		]);
+
+		await assignRole(db, {
+			subjectId,
+			scope: "tenant",
+			roleKey: "member",
+			actor: { type: "subject", id: subjectId },
+		});
+
+		let outcome = await refreshTokens(db, {
+			refreshToken,
+			scope: null,
+			clientId: client.id,
+			clientSecret: secret,
+			authScheme: "basic",
+			now: now + 1_000,
+			issuer: ISSUER,
+		});
+
+		expect(outcome.kind).toBe("tokens");
+		if (outcome.kind !== "tokens") throw new Error("unreachable");
+
+		let accessToken = AccessToken.decode(outcome.accessToken);
+		expect(accessToken.payload.roles).toEqual(["member"]);
 	});
 });
 

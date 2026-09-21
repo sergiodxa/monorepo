@@ -19,6 +19,8 @@ import { generateUUID } from "@sdxc/uuid";
 import * as s from "remix/data-schema";
 import { and, column as c, eq, gt, inList, isNull, lt, or, table } from "remix/data-table";
 
+import type { AuditActor } from "./audit-events";
+
 import { writeAuditEvent } from "./audit-events";
 
 /** The audit actor for a call with no operator identity threaded through today. */
@@ -67,6 +69,7 @@ export const clients = table({
 		created_at: c.integer(),
 		updated_at: c.integer(),
 		disabled_at: c.integer().nullable(),
+		include_permissions: c.boolean().default(false),
 	},
 });
 
@@ -275,6 +278,8 @@ export interface ClientRecord {
 	createdAt: number;
 	updatedAt: number;
 	disabledAt: number | null;
+	/** Whether minting adds a `permissions` claim to this client's tokens, alongside the `roles` claim every client receives. */
+	includePermissions: boolean;
 }
 
 /** Maps a stored row's snake_case columns to the API's camelCase record. */
@@ -293,6 +298,7 @@ function toClientRecord(row: ClientRow): ClientRecord {
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
 		disabledAt: row.disabled_at,
+		includePermissions: row.include_permissions,
 	};
 }
 
@@ -712,6 +718,62 @@ export async function disableClient(
 	});
 
 	return { ok: true };
+}
+
+export interface SetClientPermissionClaimInput {
+	clientId: string;
+	include: boolean;
+	actor: AuditActor;
+	at?: number;
+}
+
+export type SetClientPermissionClaimResult =
+	| { ok: true; client: ClientRecord }
+	| { ok: false; reason: "not-found" };
+
+let SetClientPermissionClaimSchema = s.object({ clientId: s.string(), include: s.boolean() });
+
+/**
+ * Toggles whether minting adds a `permissions` claim to this client's tokens. A
+ * client keeps receiving the `roles` claim on every token regardless of this
+ * switch — this is the second half of that pair alone.
+ *
+ * @param db - The tenant's database.
+ * @param input - The client whose switch is being set, its new value, and who is
+ * making the call.
+ * @returns The updated record, or that no such client exists.
+ */
+export async function setClientPermissionClaim(
+	db: Database,
+	input: SetClientPermissionClaimInput,
+): Promise<SetClientPermissionClaimResult> {
+	let parsed = s.parse(SetClientPermissionClaimSchema, input);
+
+	let client = await db.find(clients, { id: parsed.clientId });
+	if (!client) return { ok: false, reason: "not-found" };
+
+	let now = input.at ?? Date.now();
+
+	await db.update(
+		clients,
+		{ id: parsed.clientId },
+		{ include_permissions: parsed.include, updated_at: now },
+	);
+
+	await writeAuditEvent(db, {
+		action: "client.permission_claim_set",
+		actor: input.actor,
+		targetType: "client",
+		targetId: parsed.clientId,
+		outcome: "succeeded",
+		detail: { include: parsed.include },
+		at: now,
+	});
+
+	let row = await db.find(clients, { id: parsed.clientId });
+	if (!row) throw new Error("client row missing immediately after its own update");
+
+	return { ok: true, client: toClientRecord(row) };
 }
 
 export type DeleteClientResult = { ok: true } | { ok: false; reason: "not-found" };

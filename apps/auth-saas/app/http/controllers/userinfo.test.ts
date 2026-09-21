@@ -222,4 +222,105 @@ describe("GET /userinfo", () => {
 		expect(response.status).toBe(401);
 		expect(response.headers.get("WWW-Authenticate")).toBe('Bearer error="invalid_token"');
 	});
+
+	test("Cache-Control states the access token's own remaining lifetime", async () => {
+		let accessToken = await mintAccessToken(["openid"]);
+
+		let response = await buildRouter().fetch(
+			userinfoRequest({ headers: { Authorization: `Bearer ${accessToken}` } }),
+		);
+
+		expect(response.status).toBe(200);
+		let cacheControl = response.headers.get("Cache-Control");
+		expect(cacheControl).toMatch(/^private, max-age=\d+$/);
+
+		let maxAge = Number(cacheControl?.match(/max-age=(\d+)/)?.[1]);
+		expect(maxAge).toBeGreaterThan(0);
+		expect(maxAge).toBeLessThanOrEqual(60 * 60);
+	});
+
+	test("includes a roles claim resolved from the subject's tenant-scope role", async () => {
+		let created = await tenantDO.createSubject({
+			identifiers: [{ kind: "username", value: `jane-${generateUUID()}` }],
+			profile: { name: "Jane Doe" },
+		});
+		if (!created.ok) throw new Error("unreachable");
+
+		let assigned = await tenantDO.assignRole({
+			subjectId: created.subjectId,
+			scope: "tenant",
+			roleKey: "admin",
+			actor: { type: "subject", id: created.subjectId },
+		});
+		expect(assigned.ok).toBe(true);
+
+		let accessToken = await mintAccessToken(["openid"], created.subjectId);
+
+		let response = await buildRouter().fetch(
+			userinfoRequest({ headers: { Authorization: `Bearer ${accessToken}` } }),
+		);
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as Record<string, unknown>;
+		expect(body.roles).toEqual(["admin"]);
+		expect(body).not.toHaveProperty("permissions");
+	});
+
+	test("includes a permissions claim only for a client whose include_permissions switch is on", async () => {
+		let registered = await tenantDO.registerClient({
+			name: "Test Client",
+			kind: "confidential",
+			redirectUris: [REDIRECT_URI],
+			postLogoutRedirectUris: [],
+			grantTypes: ["authorization_code"],
+			responseTypes: ["code"],
+			scopes: ["openid"],
+			tokenEndpointAuthMethod: "client_secret_basic",
+			requireConsent: false,
+		});
+		if (!registered.ok) throw new Error("unreachable");
+
+		let toggled = await tenantDO.setClientPermissionClaim({
+			clientId: registered.client.id,
+			include: true,
+			actor: { type: "platform", id: "system" },
+		});
+		expect(toggled.ok).toBe(true);
+
+		let created = await tenantDO.createSubject({
+			identifiers: [{ kind: "username", value: `jane-${generateUUID()}` }],
+			profile: { name: "Jane Doe" },
+		});
+		if (!created.ok) throw new Error("unreachable");
+
+		let session = await openSession(db, {
+			subjectId: created.subjectId,
+			amr: ["pwd"],
+			remembered: true,
+		});
+		let { code, codeVerifier } = await createTestCode({
+			clientId: registered.client.id,
+			subjectId: created.subjectId,
+			sessionId: session.sessionId,
+			scopes: ["openid"],
+		});
+		let outcome = await tenantDO.exchangeCode({
+			code,
+			codeVerifier,
+			redirectUri: REDIRECT_URI,
+			clientId: registered.client.id,
+			clientSecret: registered.secret,
+			authScheme: "basic",
+			now: Date.now(),
+		});
+		if (outcome.kind !== "tokens") throw new Error("unreachable");
+
+		let response = await buildRouter().fetch(
+			userinfoRequest({ headers: { Authorization: `Bearer ${outcome.accessToken}` } }),
+		);
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as Record<string, unknown>;
+		expect(body.permissions).toEqual([]);
+	});
 });

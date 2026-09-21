@@ -54,6 +54,7 @@ describe("runMigrations", () => {
 			"0022-organizations",
 			"0023-organization-connections",
 			"0024-roles",
+			"0025-client-permission-claim",
 		]);
 	});
 
@@ -145,6 +146,7 @@ describe("runMigrations", () => {
 			{ id: "0022-organizations", applied_at: expect.any(Number) },
 			{ id: "0023-organization-connections", applied_at: expect.any(Number) },
 			{ id: "0024-roles", applied_at: expect.any(Number) },
+			{ id: "0025-client-permission-claim", applied_at: expect.any(Number) },
 		]);
 	});
 

@@ -34,10 +34,22 @@ import Tenant from "./tenant-do";
 let state: DurableObjectStateMock;
 let tenant: Tenant;
 
-beforeEach(() => {
+beforeEach(async () => {
 	state = createDurableObjectState();
 	tenant = new Tenant(state, {} as Cloudflare.Env);
+	await grantCustomRoles(tenant);
 });
+
+/** Grants the `custom_roles` entitlement, the default state every test but the gate's own tests below relies on. */
+async function grantCustomRoles(target: Tenant): Promise<void> {
+	await target.applyEntitlements({
+		plan: "pro",
+		features: { custom_roles: true },
+		dauCap: null,
+		auditRetentionDays: null,
+		effectiveAt: Date.now(),
+	});
+}
 
 let nextSuffix = 0;
 
@@ -618,5 +630,123 @@ describe("authorizeSubject for a custom role", () => {
 		expect(describeAccess.roles).toHaveLength(1);
 		expect(describeAccess.roles[0]).toMatchObject({ key: "support", system: false });
 		expect(describeAccess.permissions).toEqual(["tickets.read"]);
+	});
+});
+
+describe("the custom_roles entitlement gate", () => {
+	test("refuses defineRole, updateRole, deleteRole, definePermission, removePermission and setRolePermissions without the entitlement", async () => {
+		state = createDurableObjectState();
+		tenant = new Tenant(state, {} as Cloudflare.Env);
+
+		let { organizationId, creatorSubjectId } = await createOrg();
+		let actor = { type: "subject" as const, id: creatorSubjectId };
+
+		expect(
+			await tenant.defineRole({
+				scope: organizationId,
+				key: "billing",
+				name: "Billing",
+				description: "Manages billing",
+				actor,
+			}),
+		).toMatchObject({ ok: false, reason: "entitlement-required" });
+
+		expect(
+			await tenant.updateRole({
+				scope: organizationId,
+				roleId: "rol_does_not_matter",
+				name: "Billing Renamed",
+				actor,
+			}),
+		).toMatchObject({ ok: false, reason: "entitlement-required" });
+
+		expect(
+			await tenant.deleteRole({
+				scope: organizationId,
+				roleId: "rol_does_not_matter",
+				reassignTo: "member",
+				actor,
+			}),
+		).toMatchObject({ ok: false, reason: "entitlement-required" });
+
+		expect(
+			await tenant.definePermission({
+				key: "billing.view",
+				name: "View billing",
+				description: "Read billing records",
+				actor,
+			}),
+		).toMatchObject({ ok: false, reason: "entitlement-required" });
+
+		expect(await tenant.removePermission({ key: "billing.view", actor })).toMatchObject({
+			ok: false,
+			reason: "entitlement-required",
+		});
+
+		expect(
+			await tenant.setRolePermissions({
+				roleId: "rol_does_not_matter",
+				permissionKeys: [],
+				actor,
+			}),
+		).toMatchObject({ ok: false, reason: "entitlement-required" });
+	});
+
+	test("never gates assignRole, describeSubjectAccess or authorizeSubject", async () => {
+		state = createDurableObjectState();
+		tenant = new Tenant(state, {} as Cloudflare.Env);
+
+		let { organizationId, creatorSubjectId } = await createOrg();
+		let memberSubjectId = await addMember(organizationId, creatorSubjectId);
+
+		let assigned = await tenant.assignRole({
+			subjectId: memberSubjectId,
+			scope: organizationId,
+			roleKey: "admin",
+			actor: { type: "subject", id: creatorSubjectId },
+		});
+		expect(assigned).toMatchObject({ ok: true, roleKey: "admin" });
+
+		let described = await tenant.describeSubjectAccess({
+			subjectId: memberSubjectId,
+			scope: organizationId,
+		});
+		expect(described.roles).toHaveLength(1);
+		expect(described.roles[0]).toMatchObject({ key: "admin" });
+
+		let authorized = await tenant.authorizeSubject({
+			subjectId: memberSubjectId,
+			scope: organizationId,
+			permission: "anything.at.all",
+		});
+		expect(authorized.authorized).toBe(true);
+	});
+
+	test("admits defineRole once applyEntitlements grants the feature", async () => {
+		state = createDurableObjectState();
+		tenant = new Tenant(state, {} as Cloudflare.Env);
+
+		let { organizationId, creatorSubjectId } = await createOrg();
+		let actor = { type: "subject" as const, id: creatorSubjectId };
+
+		let refused = await tenant.defineRole({
+			scope: organizationId,
+			key: "billing",
+			name: "Billing",
+			description: "Manages billing",
+			actor,
+		});
+		expect(refused).toMatchObject({ ok: false, reason: "entitlement-required" });
+
+		await grantCustomRoles(tenant);
+
+		let granted = await tenant.defineRole({
+			scope: organizationId,
+			key: "billing",
+			name: "Billing",
+			description: "Manages billing",
+			actor,
+		});
+		expect(granted.ok).toBe(true);
 	});
 });

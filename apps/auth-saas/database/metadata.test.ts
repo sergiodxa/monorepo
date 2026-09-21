@@ -13,8 +13,12 @@ import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
+import { clients, registerClient } from "./clients";
 import { scopes } from "./consent";
 import { publishMetadata, resolveUserInfo } from "./metadata";
+import { organizationMembers, organizations } from "./organizations";
+import { assignRole } from "./roles";
+import { openSession, sessions } from "./sessions";
 import { advanceSigningKeys, publishKeySet } from "./signing-keys";
 import { addIdentifier, createSubject, verifyIdentifier } from "./subjects";
 import { runMigrations } from "./tenant-migrations";
@@ -215,5 +219,124 @@ describe("resolveUserInfo", () => {
 		if (result.kind !== "claims") throw new Error("unreachable");
 
 		expect(result.claims).not.toHaveProperty("address");
+	});
+
+	test("never resolves roles or permissions when no sessionId is given, the same shape as before this claim existed", async () => {
+		let subjectId = await createTestSubject();
+
+		let result = await resolveUserInfo(db, { subjectId, scopes: ["openid"], now: T0 });
+
+		expect(result).toEqual({ kind: "claims", claims: { sub: subjectId } });
+	});
+
+	test("names the tenant-scope role once a sessionId is given, with no active organization", async () => {
+		let subjectId = await createTestSubject();
+		let session = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		await assignRole(db, {
+			subjectId,
+			scope: "tenant",
+			roleKey: "admin",
+			actor: { type: "subject", id: subjectId },
+		});
+
+		let result = await resolveUserInfo(db, {
+			subjectId,
+			scopes: ["openid"],
+			now: T0,
+			sessionId: session.sessionId,
+		});
+		if (result.kind !== "claims") throw new Error("unreachable");
+
+		expect(result.claims.roles).toEqual(["admin"]);
+		expect(result.claims).not.toHaveProperty("permissions");
+	});
+
+	test("adds the session's active organization role alongside the tenant scope's", async () => {
+		let subjectId = await createTestSubject();
+		let session = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+		await db.update(sessions, { id: session.sessionId }, { active_organization_id: "org_acme" });
+
+		await db.create(organizations, {
+			id: "org_acme",
+			slug: "acme",
+			name: "Acme",
+			logo_url: null,
+			status: "active",
+			metadata: {},
+			created_at: T0,
+			updated_at: T0,
+		});
+		await db.create(organizationMembers, {
+			organization_id: "org_acme",
+			subject_id: subjectId,
+			role: "owner",
+			joined_via: "creator",
+			created_at: T0,
+			updated_at: T0,
+		});
+		await assignRole(db, {
+			subjectId,
+			scope: "tenant",
+			roleKey: "member",
+			actor: { type: "subject", id: subjectId },
+		});
+
+		let result = await resolveUserInfo(db, {
+			subjectId,
+			scopes: ["openid"],
+			now: T0,
+			sessionId: session.sessionId,
+		});
+		if (result.kind !== "claims") throw new Error("unreachable");
+
+		expect(result.claims.roles).toEqual(["member", "owner"]);
+	});
+
+	test("adds the resolved permissions claim only for a client whose include_permissions switch is on", async () => {
+		let subjectId = await createTestSubject();
+		let session = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		await assignRole(db, {
+			subjectId,
+			scope: "tenant",
+			roleKey: "admin",
+			actor: { type: "subject", id: subjectId },
+		});
+
+		let registeredOff = await registerClient(db, {
+			name: "Off Client",
+			kind: "confidential",
+			redirectUris: ["https://example.com/callback"],
+			postLogoutRedirectUris: [],
+			grantTypes: ["authorization_code"],
+			responseTypes: ["code"],
+			scopes: ["openid"],
+			tokenEndpointAuthMethod: "client_secret_basic",
+			requireConsent: false,
+		});
+		if (!registeredOff.ok) throw new Error("unreachable");
+
+		let withoutClaim = await resolveUserInfo(db, {
+			subjectId,
+			scopes: ["openid"],
+			now: T0,
+			sessionId: session.sessionId,
+			clientId: registeredOff.client.id,
+		});
+		if (withoutClaim.kind !== "claims") throw new Error("unreachable");
+		expect(withoutClaim.claims).not.toHaveProperty("permissions");
+
+		await db.update(clients, { id: registeredOff.client.id }, { include_permissions: true });
+
+		let withClaim = await resolveUserInfo(db, {
+			subjectId,
+			scopes: ["openid"],
+			now: T0,
+			sessionId: session.sessionId,
+			clientId: registeredOff.client.id,
+		});
+		if (withClaim.kind !== "claims") throw new Error("unreachable");
+		expect(withClaim.claims.permissions).toEqual([]);
 	});
 });
