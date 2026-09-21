@@ -51,6 +51,7 @@ describe("runMigrations", () => {
 			"0019-connection-sign-in",
 			"0020-saml-connections",
 			"0021-scim",
+			"0022-organizations",
 		]);
 	});
 
@@ -95,6 +96,10 @@ describe("runMigrations", () => {
 			"totp_claims",
 			"recovery_codes",
 			"trusted_devices",
+			"organizations",
+			"organization_members",
+			"organization_invitations",
+			"organization_domains",
 		]) {
 			expect(names, `${name} exists`).toContain(name);
 		}
@@ -131,6 +136,7 @@ describe("runMigrations", () => {
 			{ id: "0019-connection-sign-in", applied_at: expect.any(Number) },
 			{ id: "0020-saml-connections", applied_at: expect.any(Number) },
 			{ id: "0021-scim", applied_at: expect.any(Number) },
+			{ id: "0022-organizations", applied_at: expect.any(Number) },
 		]);
 	});
 

@@ -84,11 +84,14 @@ function foldEmail(value: string): FoldResult {
  * `mailto:` carries no host of its own to parse — it is not one of the schemes the URL
  * standard treats specially — so a domain is IDNA-encoded by routing it through a
  * scheme that does, discarding everything the parser adds beyond the host it resolved.
+ * Exported for callers folding a bare domain rather than a whole address — an
+ * organization claiming one for automatic membership needs the identical folding rule
+ * an email's own domain half already gets here, not a second copy of it.
  *
  * @param domain - The domain as it appeared after the `@`.
  * @returns The lowercased, IDNA-encoded domain, or `null` when it does not parse as one.
  */
-function encodeDomain(domain: string): string | null {
+export function encodeDomain(domain: string): string | null {
 	let url: URL;
 
 	try {

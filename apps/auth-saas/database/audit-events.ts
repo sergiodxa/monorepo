@@ -143,6 +143,17 @@ export const AUDIT_ACTIONS = [
 	"scim.group.patched",
 	"scim.group.deleted",
 	"scim.group.mapped",
+	// Organizations
+	"organization.created",
+	"organization.updated",
+	"organization.deleted",
+	"organization.member.invited",
+	"organization.invitation.revoked",
+	"organization.member.joined",
+	"organization.member.role_changed",
+	"organization.member.removed",
+	"organization.domain.added",
+	"organization.domain.verified",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

@@ -60,6 +60,8 @@ export const sessions = table({
 		remembered: c.boolean(),
 		/** The step-up class most recently verified for this session, `mfa` once a `completeStepUp` call moves `auth_time` to a freshly verified instant; `null` for a session that has never stepped up. */
 		acr: c.text().nullable(),
+		/** The organization the next token minted from this session names in its `org` claim; `null` for a session that has never selected one. */
+		active_organization_id: c.text().nullable(),
 		ip: c.text().nullable(),
 		user_agent: c.text().nullable(),
 		country: c.text().nullable(),
@@ -217,6 +219,7 @@ export async function openSession(
 		amr: parsed.amr,
 		remembered: parsed.remembered,
 		acr: null,
+		active_organization_id: null,
 		ip: parsed.ip ?? null,
 		user_agent: parsed.userAgent ?? null,
 		country: parsed.country ?? null,
@@ -595,6 +598,40 @@ export async function revokeSubjectSessions(
 	}
 
 	return { revoked: result.affectedRows };
+}
+
+export interface ClearActiveOrganizationInput {
+	organizationId: string;
+	/** Scopes the clear to one subject's sessions; omitted, every session naming the organization is cleared, for removing the organization itself. */
+	subjectId?: string;
+}
+
+/** How many sessions a clear touched. */
+export interface ClearActiveOrganizationResult {
+	cleared: number;
+}
+
+/**
+ * Clears `active_organization_id` off every live session naming an organization, scoped
+ * to one subject when a removed membership calls this, or every subject when the
+ * organization itself is deleted. A session cleared this way keeps standing; it simply
+ * mints no `org` claim until something sets an active organization on it again.
+ *
+ * @param db - The tenant's database.
+ * @param input - The organization to clear, and optionally the one subject to scope it to.
+ * @returns How many sessions were cleared.
+ */
+export async function clearActiveOrganization(
+	db: Database,
+	input: ClearActiveOrganizationInput,
+): Promise<ClearActiveOrganizationResult> {
+	let where = input.subjectId
+		? and(eq("active_organization_id", input.organizationId), eq("subject_id", input.subjectId))
+		: eq("active_organization_id", input.organizationId);
+
+	let result = await db.updateMany(sessions, { active_organization_id: null }, { where });
+
+	return { cleared: result.affectedRows };
 }
 
 export interface SweepExpiredSessionsInput {

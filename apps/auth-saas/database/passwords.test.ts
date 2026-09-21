@@ -29,6 +29,7 @@ import m0013 from "./tenant-migrations/0013-dau.sql?raw";
 import m0014 from "./tenant-migrations/0014-audit.sql?raw";
 import m0015 from "./tenant-migrations/0015-totp.sql?raw";
 import m0016 from "./tenant-migrations/0016-second-factor-sign-in.sql?raw";
+import m0022 from "./tenant-migrations/0022-organizations.sql?raw";
 
 let db: Database;
 
@@ -47,6 +48,7 @@ beforeEach(async () => {
 	await driver.executeScript(m0014);
 	await driver.executeScript(m0015);
 	await driver.executeScript(m0016);
+	await driver.executeScript(m0022);
 
 	db = new Database(driver);
 });

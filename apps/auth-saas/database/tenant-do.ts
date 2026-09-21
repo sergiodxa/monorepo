@@ -79,6 +79,34 @@ import type {
 } from "./metadata";
 import type { CloseMeteringDayInput, DailyUsage, DauCache, ReadUsageInput } from "./metering";
 import type {
+	AcceptOrganizationInvitationInput,
+	AcceptOrganizationInvitationResult,
+	AddOrganizationDomainInput,
+	AddOrganizationDomainResult,
+	ApplyDomainMembershipInput,
+	ApplyDomainMembershipResult,
+	ConfirmOrganizationDomainInput,
+	ConfirmOrganizationDomainResult,
+	CreateOrganizationInput,
+	CreateOrganizationResult,
+	DeleteOrganizationInput,
+	DeleteOrganizationResult,
+	DescribeSubjectOrganizationsInput,
+	InviteToOrganizationInput,
+	InviteToOrganizationResult,
+	ReadOrganizationMemberPageInput,
+	ReadOrganizationMemberPageResult,
+	RemoveMembershipInput,
+	RemoveMembershipResult,
+	RevokeOrganizationInvitationInput,
+	RevokeOrganizationInvitationResult,
+	SetMembershipRoleInput,
+	SetMembershipRoleResult,
+	SubjectOrganizationSummary,
+	UpdateOrganizationInput,
+	UpdateOrganizationResult,
+} from "./organizations";
+import type {
 	BeginPasskeyAuthenticationInput,
 	BeginPasskeyAuthenticationResult,
 	BeginPasskeyRegistrationInput,
@@ -220,6 +248,7 @@ import { applyEntitlements, entitlementEnforcement } from "./entitlements";
 import { mailSendEnvelopes } from "./mail-rate-limit";
 import * as Metadata from "./metadata";
 import { closeMeteringDay, createDauCache, dauDay, dauSeen, readUsage } from "./metering";
+import * as Organizations from "./organizations";
 import * as Passkeys from "./passkeys";
 import * as Passwords from "./passwords";
 import * as SamlConnections from "./saml-connections";
@@ -1146,7 +1175,8 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * redeemed long enough ago that a replay is no longer worth recognizing, deletes
 	 * refresh tokens whose family is past its ninety-day ceiling, deletes connection
 	 * sign-in transactions past their ten-minute window and handoff tickets past
-	 * their thirty seconds, then arms tomorrow's run.
+	 * their thirty seconds, deletes organization invitations a week past their expiry
+	 * that were never accepted or revoked, then arms tomorrow's run.
 	 *
 	 * Never rejects, the way a Durable Object alarm should not: a rejected alarm is
 	 * retried by the platform, which would repeat a sweep that already ran.
@@ -1205,6 +1235,11 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 
 			for (let iteration = 0; iteration < 20; iteration++) {
 				let { more } = await SamlConnections.sweepExpiredAssertionIds(this.#db);
+				if (!more) break;
+			}
+
+			for (let iteration = 0; iteration < 20; iteration++) {
+				let { more } = await Organizations.sweepExpiredOrganizationInvitations(this.#db);
 				if (!more) break;
 			}
 		} catch (error) {
@@ -1662,6 +1697,196 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	async mapScimGroup(input: MapScimGroupInput): Promise<WithCost<MapScimGroupResult>> {
 		await this.#migrated;
 		return this.#withCost(() => Scim.mapScimGroup(this.#db, input));
+	}
+
+	/**
+	 * Creates an organization and writes its creator's `owner` membership in
+	 * the same call.
+	 *
+	 * @param input - The organization's name and slug, the subject creating
+	 * it, and who is making the call.
+	 * @returns The new organization's record, or which rule refused the call.
+	 */
+	async createOrganization(
+		input: CreateOrganizationInput,
+	): Promise<WithCost<CreateOrganizationResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Organizations.createOrganization(this.#db, input));
+	}
+
+	/**
+	 * Updates an organization's name, logo and metadata, leaving any field
+	 * left out exactly as it stood.
+	 *
+	 * @param input - The organization to update, the fields to change, and
+	 * who is making the call.
+	 * @returns The organization's record once updated, or that no such
+	 * organization exists.
+	 */
+	async updateOrganization(
+		input: UpdateOrganizationInput,
+	): Promise<WithCost<UpdateOrganizationResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Organizations.updateOrganization(this.#db, input));
+	}
+
+	/**
+	 * Removes an organization and everything scoped to it, clearing the
+	 * active organization off every session naming it.
+	 *
+	 * @param input - The organization to remove, and who is making the call.
+	 * @returns Success, or that no such organization exists.
+	 */
+	async deleteOrganization(
+		input: DeleteOrganizationInput,
+	): Promise<WithCost<DeleteOrganizationResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Organizations.deleteOrganization(this.#db, input));
+	}
+
+	/**
+	 * Invites an address to join an organization, minting a bearer token
+	 * stored only as its digest.
+	 *
+	 * @param input - The organization, the address and role being invited,
+	 * and who is sending it.
+	 * @returns The token to deliver once, with the address and locale to
+	 * deliver it to, or which rule refused the call.
+	 */
+	async inviteToOrganization(
+		input: InviteToOrganizationInput,
+	): Promise<WithCost<InviteToOrganizationResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Organizations.inviteToOrganization(this.#db, input));
+	}
+
+	/**
+	 * Revokes an open invitation, closing it to acceptance.
+	 *
+	 * @param input - The invitation to revoke, and who is making the call.
+	 * @returns Success, or which rule refused the call.
+	 */
+	async revokeOrganizationInvitation(
+		input: RevokeOrganizationInvitationInput,
+	): Promise<WithCost<RevokeOrganizationInvitationResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Organizations.revokeOrganizationInvitation(this.#db, input));
+	}
+
+	/**
+	 * Accepts an invitation once the signed-in subject's own verified email
+	 * identifier matches the invited address; anyone else is refused without
+	 * marking the invitation resolved.
+	 *
+	 * @param input - The bearer token, the subject accepting it, and the
+	 * clock to write with.
+	 * @returns The organization joined and the role granted, or which rule
+	 * refused the call.
+	 */
+	async acceptOrganizationInvitation(
+		input: AcceptOrganizationInvitationInput,
+	): Promise<WithCost<AcceptOrganizationInvitationResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Organizations.acceptOrganizationInvitation(this.#db, input));
+	}
+
+	/**
+	 * Changes a membership's role to whatever string the caller gives.
+	 *
+	 * @param input - The membership to change, its new role, and who is
+	 * making the call.
+	 * @returns The role now stored, or which rule refused the call.
+	 */
+	async setMembershipRole(
+		input: SetMembershipRoleInput,
+	): Promise<WithCost<SetMembershipRoleResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Organizations.setMembershipRole(this.#db, input));
+	}
+
+	/**
+	 * Removes a membership and clears `active_organization_id` off the
+	 * subject's own sessions naming this organization.
+	 *
+	 * @param input - The membership to remove, and who is making the call.
+	 * @returns Success, or that no such membership exists.
+	 */
+	async removeMembership(input: RemoveMembershipInput): Promise<WithCost<RemoveMembershipResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Organizations.removeMembership(this.#db, input));
+	}
+
+	/**
+	 * Claims a domain for an organization, minting a TXT record to publish.
+	 *
+	 * @param input - The organization claiming the domain, the domain
+	 * itself, and whether it auto-joins or only suggests.
+	 * @returns The TXT record name and value to publish, or which rule
+	 * refused the call.
+	 */
+	async addOrganizationDomain(
+		input: AddOrganizationDomainInput,
+	): Promise<WithCost<AddOrganizationDomainResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Organizations.addOrganizationDomain(this.#db, input));
+	}
+
+	/**
+	 * Marks a domain verified, trusting that the DNS lookup proving it
+	 * already ran.
+	 *
+	 * @param input - The organization and domain now proven.
+	 * @returns When the domain was marked verified, or that no such claimed
+	 * domain exists.
+	 */
+	async confirmOrganizationDomain(
+		input: ConfirmOrganizationDomainInput,
+	): Promise<WithCost<ConfirmOrganizationDomainResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Organizations.confirmOrganizationDomain(this.#db, input));
+	}
+
+	/**
+	 * Writes the memberships a subject's own verified email domains earn
+	 * automatically, and answers the organizations it only suggests.
+	 *
+	 * @param input - The subject to resolve, and the clock to write with.
+	 * @returns Every membership this call wrote, and every organization it
+	 * suggests instead.
+	 */
+	async applyDomainMembership(
+		input: ApplyDomainMembershipInput,
+	): Promise<WithCost<ApplyDomainMembershipResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Organizations.applyDomainMembership(this.#db, input));
+	}
+
+	/**
+	 * Every organization a subject belongs to, for a switcher UI.
+	 *
+	 * @param input - The subject to resolve.
+	 * @returns Every membership the subject holds, most recently joined
+	 * first.
+	 */
+	async describeSubjectOrganizations(
+		input: DescribeSubjectOrganizationsInput,
+	): Promise<WithCost<{ organizations: SubjectOrganizationSummary[] }>> {
+		await this.#migrated;
+		return this.#withCost(() => Organizations.describeSubjectOrganizations(this.#db, input));
+	}
+
+	/**
+	 * A page of an organization's members, most recently joined first.
+	 *
+	 * @param input - The organization to list, and where to page from.
+	 * @returns A page of member summaries and the cursors around it, or that
+	 * the given cursor no longer matches this ordering.
+	 */
+	async readOrganizationMemberPage(
+		input: ReadOrganizationMemberPageInput,
+	): Promise<WithCost<ReadOrganizationMemberPageResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Organizations.readOrganizationMemberPage(this.#db, input));
 	}
 
 	/**
