@@ -597,6 +597,16 @@
         "vitest",
       ],
     },
+    "packages/jsdoc": {
+      "name": "@sdxc/jsdoc",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+      },
+      "peerDependencies": {
+        "typescript": ">=5.4.0",
+      },
+    },
     "packages/json-feed": {
       "name": "@sdxc/json-feed",
       "version": "0.0.1",
@@ -1563,6 +1573,8 @@
     "@sdxc/icons": ["@sdxc/icons@workspace:packages/icons"],
 
     "@sdxc/jobs": ["@sdxc/jobs@workspace:packages/jobs"],
+
+    "@sdxc/jsdoc": ["@sdxc/jsdoc@workspace:packages/jsdoc"],
 
     "@sdxc/json-feed": ["@sdxc/json-feed@workspace:packages/json-feed"],
 
