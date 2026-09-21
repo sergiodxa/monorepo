@@ -21,7 +21,7 @@ import { randomToken, totp } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { isFailure } from "@sdxc/result";
 import { Database } from "remix/data-table";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import { sessions } from "./sessions";
 import Tenant from "./tenant-do";

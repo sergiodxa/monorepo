@@ -201,7 +201,12 @@ function buildRelyingParty(
 		clientSecret: clientSecret ?? undefined,
 		redirectUri,
 		userInfo: "when-missing",
-		subject: (claims) => String(claims[connection.subject_claim] ?? claims.sub ?? ""),
+		subject(claims) {
+			let claimed = claims[connection.subject_claim];
+			if (typeof claimed === "string") return claimed;
+			if (typeof claimed === "number") return String(claimed);
+			return claims.sub ?? "";
+		},
 	});
 }
 

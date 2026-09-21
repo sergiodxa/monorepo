@@ -210,6 +210,7 @@ export function LandingPage(): () => RemixNode {
 			<nav mix={[navBar]}>
 				<div mix={[navRow]}>
 					<h1 mix={[brand]}>Auth SaaS</h1>
+					{/* oxlint-disable-next-line jsx-a11y/anchor-is-valid -- Placeholder target: the call to action keeps its place in the layout until there is a sign-up flow to send it to. */}
 					<a mix={[primaryButton]} href="#">
 						Get Started
 					</a>
@@ -224,6 +225,7 @@ export function LandingPage(): () => RemixNode {
 						custom domains, and instant deployment.
 					</p>
 					<div mix={[heroActions]}>
+						{/* oxlint-disable-next-line jsx-a11y/anchor-is-valid -- Placeholder target: the call to action keeps its place in the layout until there is a sign-up flow to send it to. */}
 						<a mix={[primaryButtonLg]} href="#">
 							Start Free
 						</a>

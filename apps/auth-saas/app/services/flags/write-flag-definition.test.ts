@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { FlagStoreError, StoredFlagSet } from "@sdxc/flags-engine/store";
+import type { StoredFlagSet } from "@sdxc/flags-engine/store";
 import type { Database } from "remix/data-table";
 
 import { success } from "@sdxc/result";

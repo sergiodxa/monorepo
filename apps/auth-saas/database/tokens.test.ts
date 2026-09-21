@@ -19,7 +19,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 import type { RegisterClientInput } from "./clients";
 
 import { authorizationCodes } from "./authorization";
-import { clients, registerClient } from "./clients";
+import { registerClient } from "./clients";
 import { openSession, resolveSession } from "./sessions";
 import { currentSigningKeyPair, ensureSigningKey, setCustomClaims } from "./signing-keys";
 import { createSubject, subjectAttributes } from "./subjects";

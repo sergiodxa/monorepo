@@ -54,6 +54,7 @@ export function StepUpPage(handle: Handle<StepUpPage.Props>) {
 							type="text"
 							required
 							autoComplete="one-time-code"
+							// oxlint-disable-next-line jsx-a11y/no-autofocus -- The page exists to collect this one code, so focus belongs in the field the moment it renders rather than a tab away.
 							autoFocus
 						/>
 

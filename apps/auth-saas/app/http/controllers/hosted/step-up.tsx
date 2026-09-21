@@ -120,7 +120,7 @@ export const stepUpSubmit = createAction(routes.hostedStepUpSubmit, async (ctx) 
 		return renderStepUpPage(ctx, action, error);
 	}
 
-	let { ok, ...outcome } = result;
+	let { ok: _ok, ...outcome } = result;
 	return respondToAuthorizationOutcome(ctx, outcome, {
 		renderStepUpInline: true,
 		stepUpAction: action,
@@ -202,7 +202,7 @@ export const stepUpContinueSubmit = createAction(routes.hostedStepUpContinueSubm
 
 	if (!result.ok) return redirectToErrorPage(ctx, ctx.i18next.t("hostedError.invalidInteraction"));
 
-	let { ok, ...outcome } = result;
+	let { ok: _ok, ...outcome } = result;
 	return respondToAuthorizationOutcome(ctx, outcome, {
 		uiLocales: ctx.url.searchParams.get("ui_locales"),
 	});

@@ -18,7 +18,7 @@ import * as SAML from "@sdxc/saml";
 import { typeid } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
 import * as s from "remix/data-schema";
-import { and, column as c, eq, lt, table } from "remix/data-table";
+import { column as c, lt, table } from "remix/data-table";
 
 import type { ConnectionRow, SetConnectionEnabledResult } from "./connections";
 
