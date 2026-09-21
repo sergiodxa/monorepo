@@ -1,12 +1,12 @@
 {
 	"name": "@sdxc/saml",
 	"version": "0.0.1",
-	"private": true,
 	"description": "SAML 2.0 service provider: verify a signed assertion, build the requests and metadata around it",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./testing": "./src/fixtures/index.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"

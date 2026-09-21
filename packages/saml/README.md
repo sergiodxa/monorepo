@@ -11,6 +11,18 @@ so one implementation serves every runtime — workerd included.
 Identity-provider support is out of scope: issuing and signing assertions for other people's
 service providers is a different job with a different key-handling story.
 
+## Installation
+
+```bash
+npm add @sdxc/saml
+```
+
+Every call reports failures as a `Result` from
+[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which installs alongside this
+package and supplies `isFailure`, `isSuccess` and `unwrap`. A clock skew and a replay TTL are
+written as the duration strings
+[`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration) reads.
+
 ## The shape of the API is the security property
 
 An XML signature covers whatever its reference resolves to, and a reader then goes looking for
@@ -218,6 +230,10 @@ Key transport is RSA-OAEP under MGF1-SHA-1 or MGF1-SHA-256, since providers emit
 encryption is AES-128 or AES-256 in GCM or CBC. Every outcome of opening an encrypted assertion
 is one `DecryptionFailedError`, which keeps CBC from answering questions one attempt at a time.
 
+Canonicalization is CPU over a whole subtree, so bound the posted body and cap document size and
+depth before handing anything here: a large assertion occupies whatever is running it for as
+long as it takes.
+
 ## Pattern: A Connection That Rotates Its Certificates
 
 A provider's signing certificate expires on a date and rotates on a schedule nobody here
@@ -243,6 +259,8 @@ an administrator before an expiry stops sign-ins.
 ## Pattern: A Replay Store On A Table
 
 ```typescript
+import { toMs } from "@sdxc/duration";
+
 let replay: SAML.ReplayStore = {
 	async seen(id) {
 		return (await db.findOne(assertionIds, { where: { id } })) !== null;
@@ -257,21 +275,64 @@ A verification remembers an id only once every other check has passed, so a docu
 failed verification cannot fill the store. The TTL it asks for is the rest of the assertion's
 own window, which is exactly how long a captured document stays replayable.
 
-## Related Packages
+A store that throws surfaces as `ReplayStoreError`, which is an infrastructure failure rather
+than a verdict about the assertion: answer it as a failure to reach a decision, and let the
+person retry.
 
-- `@sdxc/xml` — the parser and serializer the tree comes from, in every runtime
-- `@sdxc/crypto` — the digests, encodings and constant-time comparison this builds on
-- `@sdxc/result` — the `Result` every call answers with
-- `@sdxc/duration` — the duration a clock skew and a replay TTL are written in
+## Pattern: Testing Your Own Integration
 
-## Tips
+`@sdxc/saml/testing` builds and signs the documents an integration test needs, so a suite
+covers the real verification rather than a stub of it:
 
-- Bound the POST body before you hand it here, and cap document size and depth: canonicalization
-  is CPU over a whole subtree, and a large assertion occupies whatever is running it.
-- Read claims off the `Assertion`, never off a document of your own — the two are the same
-  element only here.
-- A sign-in the provider started binds to no browser, however tightly the window is drawn.
-  Cap its window yourself, and let `RelayState` name a registered destination rather than
-  carry a URL.
-- `ReplayStoreError` is infrastructure, not authentication: answer it as a failure to reach a
-  verdict, never as a rejected sign-in.
+```typescript
+import { buildResponse, signDocument } from "@sdxc/saml/testing";
+
+let keys = await crypto.subtle.generateKey(
+	{
+		name: "RSASSA-PKCS1-v1_5",
+		modulusLength: 2048,
+		publicExponent: Uint8Array.of(1, 0, 1),
+		hash: "SHA-256",
+	},
+	true,
+	["sign", "verify"],
+);
+
+let tree = buildResponse({ audience, recipient, inResponseTo: requestId }, "assertion");
+let response = await signDocument(tree, keys.privateKey);
+```
+
+`buildResponse` returns plain tree data, so a test can plant a second assertion beside the
+signed one, or give two elements one id, and assert that the verification answers what it
+should. Signing happens after any such change, which is what makes the signature genuine and
+the document a real attack rather than a broken one.
+
+## Versioning
+
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
+
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
+
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/saml": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)
