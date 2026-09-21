@@ -32,6 +32,7 @@ import m0017 from "./tenant-migrations/0017-step-up.sql?raw";
 import m0018 from "./tenant-migrations/0018-connections.sql?raw";
 import m0019 from "./tenant-migrations/0019-connection-sign-in.sql?raw";
 import m0020 from "./tenant-migrations/0020-saml-connections.sql?raw";
+import m0021 from "./tenant-migrations/0021-scim.sql?raw";
 
 /** One migration, identified so the journal can record that it ran. */
 export interface Migration {
@@ -61,6 +62,7 @@ export const MIGRATIONS: Migration[] = [
 	{ id: "0018-connections", sql: m0018 },
 	{ id: "0019-connection-sign-in", sql: m0019 },
 	{ id: "0020-saml-connections", sql: m0020 },
+	{ id: "0021-scim", sql: m0021 },
 ];
 
 /** The journal `0001-init` creates, read back to find out what has already run. */

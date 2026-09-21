@@ -51,6 +51,7 @@ describe("provision", () => {
 				"0018-connections",
 				"0019-connection-sign-in",
 				"0020-saml-connections",
+				"0021-scim",
 			],
 			issuer: "https://tenant-1.example.com",
 			keys: { keys: [expect.objectContaining({ kty: "EC", alg: "ES256" })] },

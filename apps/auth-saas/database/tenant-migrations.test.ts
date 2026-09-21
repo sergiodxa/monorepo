@@ -50,6 +50,7 @@ describe("runMigrations", () => {
 			"0018-connections",
 			"0019-connection-sign-in",
 			"0020-saml-connections",
+			"0021-scim",
 		]);
 	});
 
@@ -129,6 +130,7 @@ describe("runMigrations", () => {
 			{ id: "0018-connections", applied_at: expect.any(Number) },
 			{ id: "0019-connection-sign-in", applied_at: expect.any(Number) },
 			{ id: "0020-saml-connections", applied_at: expect.any(Number) },
+			{ id: "0021-scim", applied_at: expect.any(Number) },
 		]);
 	});
 

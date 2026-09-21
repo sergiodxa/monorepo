@@ -128,6 +128,21 @@ export const AUDIT_ACTIONS = [
 	"connection.enabled",
 	"connection.disabled",
 	"connection.removed",
+	// SCIM provisioning
+	"scim.connection.created",
+	"scim.connection.rotated",
+	"scim.connection.deleted",
+	"scim.user.provisioned",
+	"scim.user.replaced",
+	"scim.user.patched",
+	"scim.user.activated",
+	"scim.user.deactivated",
+	"scim.user.deleted",
+	"scim.group.provisioned",
+	"scim.group.replaced",
+	"scim.group.patched",
+	"scim.group.deleted",
+	"scim.group.mapped",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

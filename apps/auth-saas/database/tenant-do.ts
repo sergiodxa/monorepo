@@ -120,6 +120,40 @@ import type {
 	SignInWithSamlResponseResult,
 } from "./saml-sign-in";
 import type {
+	CreateScimConnectionInput,
+	CreateScimConnectionResult,
+	DeleteScimConnectionResult,
+	DescribeScimConnectionsInput,
+	MapScimGroupInput,
+	MapScimGroupResult,
+	RotateScimTokenInput,
+	RotateScimTokenResult,
+	ScimDeleteGroupInput,
+	ScimDeleteGroupResult,
+	ScimDeleteUserInput,
+	ScimDeleteUserResult,
+	ScimPatchGroupInput,
+	ScimPatchGroupResult,
+	ScimPatchUserInput,
+	ScimPatchUserResult,
+	ScimProvisionGroupInput,
+	ScimProvisionGroupResult,
+	ScimProvisionUserInput,
+	ScimProvisionUserResult,
+	ScimReadGroupInput,
+	ScimReadGroupPageInput,
+	ScimReadGroupPageResult,
+	ScimReadGroupResult,
+	ScimReadUserInput,
+	ScimReadUserPageInput,
+	ScimReadUserPageResult,
+	ScimReadUserResult,
+	ScimReplaceGroupInput,
+	ScimReplaceGroupResult,
+	ScimReplaceUserInput,
+	ScimReplaceUserResult,
+} from "./scim";
+import type {
 	ListSubjectSessionsInput,
 	ListSubjectSessionsResult,
 	ResolveSessionInput,
@@ -190,6 +224,7 @@ import * as Passkeys from "./passkeys";
 import * as Passwords from "./passwords";
 import * as SamlConnections from "./saml-connections";
 import * as SamlSignIn from "./saml-sign-in";
+import * as Scim from "./scim";
 import * as Sessions from "./sessions";
 import * as SigningKeys from "./signing-keys";
 import * as Subjects from "./subjects";
@@ -1384,6 +1419,252 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
+	 * Mints a SCIM connection's bearer token, stores only its digest, and writes
+	 * its starting record.
+	 *
+	 * @param input - The connection's name, its delete policy and whether it
+	 * syncs groups, and who is creating it.
+	 * @returns The connection's public record and the token to deliver once.
+	 */
+	async createScimConnection(
+		input: CreateScimConnectionInput,
+	): Promise<WithCost<CreateScimConnectionResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Scim.createScimConnection(this.#db, input));
+	}
+
+	/**
+	 * Mints a successor SCIM token and opens the 72-hour grace window on the
+	 * outgoing one.
+	 *
+	 * @param input - The connection to rotate.
+	 * @returns The new token and when the outgoing one now expires, or that no
+	 * such connection exists.
+	 */
+	async rotateScimToken(input: RotateScimTokenInput): Promise<WithCost<RotateScimTokenResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Scim.rotateScimToken(this.#db, input));
+	}
+
+	/**
+	 * Removes a SCIM connection and everything scoped to it.
+	 *
+	 * @param input - The connection to remove.
+	 * @returns Success, or that no such connection exists.
+	 */
+	async deleteScimConnection(input: {
+		connectionId: string;
+	}): Promise<WithCost<DeleteScimConnectionResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Scim.deleteScimConnection(this.#db, input));
+	}
+
+	/**
+	 * Every SCIM connection's public record, never the token digest.
+	 *
+	 * @returns Every connection, oldest first.
+	 */
+	async describeScimConnections(
+		input: DescribeScimConnectionsInput = {},
+	): Promise<WithCost<{ connections: Scim.ScimConnectionRecord[] }>> {
+		await this.#migrated;
+		return this.#withCost(() => Scim.describeScimConnections(this.#db, input));
+	}
+
+	/**
+	 * Provisions a user from a directory connection: adopts a subject already
+	 * carrying the resource's folded email, or mints a fresh one.
+	 *
+	 * @param input - The bearer token, the SCIM user resource, and the clock to
+	 * write with.
+	 * @returns The subject's representation and whether it was created, or
+	 * which rule refused the call.
+	 */
+	async scimProvisionUser(
+		input: ScimProvisionUserInput,
+	): Promise<WithCost<ScimProvisionUserResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Scim.scimProvisionUser(this.#db, input));
+	}
+
+	/**
+	 * Replaces a user's mapped attributes wholesale, answering the current
+	 * representation flagged unchanged and writing nothing when the resource's
+	 * mapped digest already matches.
+	 *
+	 * @param input - The bearer token, the subject id, the replacement
+	 * resource, and the clock to write with.
+	 * @returns The current representation and whether anything changed, or
+	 * which rule refused the call.
+	 */
+	async scimReplaceUser(input: ScimReplaceUserInput): Promise<WithCost<ScimReplaceUserResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Scim.scimReplaceUser(this.#db, input));
+	}
+
+	/**
+	 * Applies `replace`/`add` PATCH operations on named user attributes.
+	 * `active: false` blocks the subject and revokes every session in the same
+	 * call.
+	 *
+	 * @param input - The bearer token, the subject id, the operations to
+	 * apply, and the clock to write with.
+	 * @returns The updated representation, or which rule refused the call.
+	 */
+	async scimPatchUser(input: ScimPatchUserInput): Promise<WithCost<ScimPatchUserResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Scim.scimPatchUser(this.#db, input));
+	}
+
+	/**
+	 * Deletes a user per the connection's own policy: blocks and revokes its
+	 * sessions, or retires the subject outright. A `deleted` outcome also
+	 * clears the subject's passwords, passkeys, consent grants and second
+	 * factor, the same cascade {@link deleteSubject} runs for its own caller.
+	 *
+	 * @param input - The bearer token, the subject id, and the clock to write
+	 * with.
+	 * @returns Which effect ran and the subject it ran against, or which rule
+	 * refused the call.
+	 */
+	async scimDeleteUser(input: ScimDeleteUserInput): Promise<WithCost<ScimDeleteUserResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let result = await Scim.scimDeleteUser(this.#db, input);
+
+			if (result.ok && result.action === "deleted") {
+				let subjectId = result.subjectId;
+				await this.#db.deleteMany(Passwords.passwords, { where: { subject_id: subjectId } });
+				await this.#db.deleteMany(Passkeys.passkeys, { where: { subject_id: subjectId } });
+				await this.#db.deleteMany(Consent.grants, { where: { subject_id: subjectId } });
+				await this.#db.deleteMany(Totp.totpEnrolments, { where: { subject_id: subjectId } });
+				await this.#db.deleteMany(Totp.totpFactors, { where: { subject_id: subjectId } });
+				await this.#db.deleteMany(Totp.recoveryCodes, { where: { subject_id: subjectId } });
+				await this.#db.deleteMany(Totp.trustedDevices, { where: { subject_id: subjectId } });
+			}
+
+			return result;
+		});
+	}
+
+	/**
+	 * Reads one user this connection provisioned.
+	 *
+	 * @param input - The bearer token and the subject id.
+	 * @returns The user's representation, or which rule refused the call.
+	 */
+	async scimReadUser(input: ScimReadUserInput): Promise<WithCost<ScimReadUserResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Scim.scimReadUser(this.#db, input));
+	}
+
+	/**
+	 * A page of a SCIM connection's users, ordered by creation, with
+	 * `totalResults` exact.
+	 *
+	 * @param input - The bearer token, an optional `attribute eq "value"`
+	 * filter, and where to page from.
+	 * @returns The page and its exact total, or which rule refused the call.
+	 */
+	async scimReadUserPage(input: ScimReadUserPageInput): Promise<WithCost<ScimReadUserPageResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Scim.scimReadUserPage(this.#db, input));
+	}
+
+	/**
+	 * Provisions a group, validating every member names an existing subject
+	 * before writing anything.
+	 *
+	 * @param input - The bearer token, the SCIM group resource, and the clock
+	 * to write with.
+	 * @returns The group's representation, or which rule refused the call.
+	 */
+	async scimProvisionGroup(
+		input: ScimProvisionGroupInput,
+	): Promise<WithCost<ScimProvisionGroupResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Scim.scimProvisionGroup(this.#db, input));
+	}
+
+	/**
+	 * Replaces a group's display name and whole membership set.
+	 *
+	 * @param input - The bearer token, the group id, the replacement resource,
+	 * and the clock to write with.
+	 * @returns The updated representation, or which rule refused the call.
+	 */
+	async scimReplaceGroup(input: ScimReplaceGroupInput): Promise<WithCost<ScimReplaceGroupResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Scim.scimReplaceGroup(this.#db, input));
+	}
+
+	/**
+	 * Applies group PATCH operations: a plain `displayName` change, or a
+	 * membership `add`/`remove`.
+	 *
+	 * @param input - The bearer token, the group id, the operations to apply,
+	 * and the clock to write with.
+	 * @returns The updated representation, or which rule refused the call.
+	 */
+	async scimPatchGroup(input: ScimPatchGroupInput): Promise<WithCost<ScimPatchGroupResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Scim.scimPatchGroup(this.#db, input));
+	}
+
+	/**
+	 * Deletes a group, its membership and its mappings, leaving the subjects
+	 * that belonged to it exactly as they are.
+	 *
+	 * @param input - The bearer token, the group id, and the clock to write
+	 * with.
+	 * @returns Success, or which rule refused the call.
+	 */
+	async scimDeleteGroup(input: ScimDeleteGroupInput): Promise<WithCost<ScimDeleteGroupResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Scim.scimDeleteGroup(this.#db, input));
+	}
+
+	/**
+	 * Reads one group this connection provisioned.
+	 *
+	 * @param input - The bearer token and the group id.
+	 * @returns The group's representation, or which rule refused the call.
+	 */
+	async scimReadGroup(input: ScimReadGroupInput): Promise<WithCost<ScimReadGroupResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Scim.scimReadGroup(this.#db, input));
+	}
+
+	/**
+	 * A page of a SCIM connection's groups, ordered by creation, with
+	 * `totalResults` exact.
+	 *
+	 * @param input - The bearer token, an optional `attribute eq "value"`
+	 * filter, and where to page from.
+	 * @returns The page and its exact total, or which rule refused the call.
+	 */
+	async scimReadGroupPage(
+		input: ScimReadGroupPageInput,
+	): Promise<WithCost<ScimReadGroupPageResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Scim.scimReadGroupPage(this.#db, input));
+	}
+
+	/**
+	 * Records what a synced group stands for — a role, or an organization when
+	 * that add-on is present — as plain data naming the target's kind and id.
+	 *
+	 * @param input - The connection and group being mapped, and the target it
+	 * now stands for.
+	 * @returns Success, or that no such group exists for this connection.
+	 */
+	async mapScimGroup(input: MapScimGroupInput): Promise<WithCost<MapScimGroupResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Scim.mapScimGroup(this.#db, input));
+	}
+
+	/**
 	 * Writes an enterprise connection's whole configuration, generating the
 	 * service provider's key pair and certificate the first time so the
 	 * identifiers an identity provider is configured with are fixed from then on.
@@ -1944,6 +2225,11 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 				totp_stepup_claims: Totp.totpStepUpClaims,
 				recovery_codes: Totp.recoveryCodes,
 				trusted_devices: Totp.trustedDevices,
+				scim_connections: Scim.scimConnections,
+				scim_groups: Scim.scimGroups,
+				scim_group_members: Scim.scimGroupMembers,
+				scim_group_mappings: Scim.scimGroupMappings,
+				scim_links: Scim.scimLinks,
 			};
 
 			let rows: Record<string, number> = {};
