@@ -36,10 +36,10 @@ stops, with each window wider than the caching it has to outlive.
 
 The first key is minted while a tenant is created, every later one while a scheduled job runs.
 
-| Algorithm | Generation | Signature | Notes |
-| --- | --- | --- | --- |
-| ES256 | Milliseconds | 64 bytes | P-256 is available everywhere Web Crypto is |
-| RS256 | Seconds at 2048 bits | 256 bytes | The most widely implemented in relying-party libraries |
+| Algorithm | Generation           | Signature | Notes                                                  |
+| --------- | -------------------- | --------- | ------------------------------------------------------ |
+| ES256     | Milliseconds         | 64 bytes  | P-256 is available everywhere Web Crypto is            |
+| RS256     | Seconds at 2048 bits | 256 bytes | The most widely implemented in relying-party libraries |
 
 ### An access token is either a claim or a question
 
@@ -87,11 +87,11 @@ verifier holds a document for a tenant that has issued nothing.
 
 ### Rotation
 
-| Phase | Default | What the key is |
-| --- | --- | --- |
-| Staged | 24 hours | Published, not yet signing |
-| Signing | 90 days | The one key `sign` picks |
-| Retired | 7 days | Published so its tokens keep verifying |
+| Phase   | Default  | What the key is                        |
+| ------- | -------- | -------------------------------------- |
+| Staged  | 24 hours | Published, not yet signing             |
+| Signing | 90 days  | The one key `sign` picks               |
+| Retired | 7 days   | Published so its tokens keep verifying |
 
 Staging is a day against a published cache lifetime of an hour; retirement is a week against an
 access token that lives an hour. Both are wide deliberately: a key published too long lengthens the
@@ -122,21 +122,21 @@ the means to sign.
 The ID token, `exp` ten minutes out because it is consumed at the exchange and accepted as an
 `id_token_hint` afterwards:
 
-| Claim | Value |
-| --- | --- |
-| `iss` | The tenant's issuer |
-| `sub` | The subject id |
-| `aud`, `azp` | The client id; `azp` appears when `aud` names more than one |
-| `auth_time` | The session's last full authentication |
-| `nonce` | Echoed when the authorization request carried one |
-| `amr` | The authentication methods the session records |
-| `sid` | The session record id, which is not the session's cookie token |
-| Profile and email claims | Those the granted scopes carry |
+| Claim                    | Value                                                          |
+| ------------------------ | -------------------------------------------------------------- |
+| `iss`                    | The tenant's issuer                                            |
+| `sub`                    | The subject id                                                 |
+| `aud`, `azp`             | The client id; `azp` appears when `aud` names more than one    |
+| `auth_time`              | The session's last full authentication                         |
+| `nonce`                  | Echoed when the authorization request carried one              |
+| `amr`                    | The authentication methods the session records                 |
+| `sid`                    | The session record id, which is not the session's cookie token |
+| Profile and email claims | Those the granted scopes carry                                 |
 
 The access token is a JWT with `exp` an hour out, `aud` naming the tenant's own userinfo endpoint
 unless the request asked for another resource, and `jti`, `client_id`, `scope` and `sid` beside the
 registered claims. `jti` is what the audit log records and what makes a replayed token
-identifiable. Shortening either lifetime is a *Session Policy Configuration* setting.
+identifiable. Shortening either lifetime is a _Session Policy Configuration_ setting.
 
 ### Tenant-scoped custom claims
 

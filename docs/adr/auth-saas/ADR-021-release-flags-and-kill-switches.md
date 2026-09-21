@@ -41,10 +41,10 @@ design rather than a habit, and it is written down below.
 
 ### Two namespaces, one shape
 
-| Key                | Meaning                         | Default | Lifetime            |
-| ------------------ | ------------------------------- | ------- | ------------------- |
-| `release.<slug>`   | Serve the new path              | `false` | Until fully rolled  |
-| `kill.<slug>`      | Withdraw the capability now     | `false` | As long as it ships |
+| Key              | Meaning                     | Default | Lifetime            |
+| ---------------- | --------------------------- | ------- | ------------------- |
+| `release.<slug>` | Serve the new path          | `false` | Until fully rolled  |
+| `kill.<slug>`    | Withdraw the capability now | `false` | As long as it ships |
 
 Both are `flag.boolean` handles in the catalog module the entitlement handles live in, and both
 default to the state production was in before anyone touched a flag, so a store that cannot be
@@ -111,13 +111,13 @@ no expiry, because the capability they withdraw has none; they are deleted with 
 
 ### Why an entitlement and a release are never one flag
 
-|                              | `entitlement.*`                  | `release.*` and `kill.*`     |
-| ---------------------------- | -------------------------------- | ---------------------------- |
-| Derived from                 | The tenant's own subscription    | How much confidence there is |
-| Changed by                   | A purchase or a lapse            | An operator                  |
-| Read from                    | The projection on the tenant row | The definition set in KV     |
-| Falling back to the default  | Refuses a paying tenant's write  | Leaves production as deployed|
-| Lives as long as             | The capability is sold           | The rollout takes            |
+|                             | `entitlement.*`                  | `release.*` and `kill.*`      |
+| --------------------------- | -------------------------------- | ----------------------------- |
+| Derived from                | The tenant's own subscription    | How much confidence there is  |
+| Changed by                  | A purchase or a lapse            | An operator                   |
+| Read from                   | The projection on the tenant row | The definition set in KV      |
+| Falling back to the default | Refuses a paying tenant's write  | Leaves production as deployed |
+| Lives as long as            | The capability is sold           | The rollout takes             |
 
 One key for both would make throwing a kill switch on SSO indistinguishable from revoking what
 a customer paid for, let a ten-percent rollout ration a purchased capability to a tenth of its

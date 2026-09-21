@@ -53,14 +53,14 @@ custom-property declarations for the tenant whose entitlement grants branding.
 
 ### The screen set
 
-| Path | Screen |
-| --- | --- |
-| `/u/sign-in` | Identifier and password, passkey, magic link, configured social providers |
-| `/u/sign-up` | Registration, legal acknowledgement, the tenant's required profile fields |
-| `/u/verify` | Address confirmation landing, and the resend control |
-| `/u/reset` | Request a reset, and the set-a-new-password form the emailed link lands on |
-| `/u/consent` | The scopes a client is asking for, granted or refused |
-| `/u/error` | A terminal protocol failure with a correlation id |
+| Path         | Screen                                                                     |
+| ------------ | -------------------------------------------------------------------------- |
+| `/u/sign-in` | Identifier and password, passkey, magic link, configured social providers  |
+| `/u/sign-up` | Registration, legal acknowledgement, the tenant's required profile fields  |
+| `/u/verify`  | Address confirmation landing, and the resend control                       |
+| `/u/reset`   | Request a reset, and the set-a-new-password form the emailed link lands on |
+| `/u/consent` | The scopes a client is asking for, granted or refused                      |
+| `/u/error`   | A terminal protocol failure with a correlation id                          |
 
 Each screen is one `<form>` and one POST to its own path. The flow state a screen resumes into —
 the pending authorization request, its redirect target, its PKCE challenge — stays server-side
@@ -105,16 +105,16 @@ The brand record is editable, validated and stored on every tier including Free;
 gates whether the render applies it, so a downgrade stops painting a tenant's colours and destroys
 none of their configuration.
 
-| | Free | Pro | Premium |
-| --- | --- | --- | --- |
-| The six screens, every flow | Yes | Yes | Yes |
-| Localization, RTL, accessibility | Yes | Yes | Yes |
-| Tenant name and default theme | Yes | Yes | Yes |
-| Platform attribution in the footer | Shown | Dropped | Dropped |
-| Logo, favicon, palette, radius, typeface | Stored | Stored | Applied |
-| Custom stylesheet and per-screen copy | Stored | Stored | Applied |
+|                                          | Free   | Pro     | Premium |
+| ---------------------------------------- | ------ | ------- | ------- |
+| The six screens, every flow              | Yes    | Yes     | Yes     |
+| Localization, RTL, accessibility         | Yes    | Yes     | Yes     |
+| Tenant name and default theme            | Yes    | Yes     | Yes     |
+| Platform attribution in the footer       | Shown  | Dropped | Dropped |
+| Logo, favicon, palette, radius, typeface | Stored | Stored  | Applied |
+| Custom stylesheet and per-screen copy    | Stored | Stored  | Applied |
 
-Two predicates read the entitlement projection published by *Entitlements as Feature Flags*:
+Two predicates read the entitlement projection published by _Entitlements as Feature Flags_:
 `unbranded_pages` drops the platform's name from the footer, and `branding` paints the brand record
 over the default theme. Until that ADR lands the projection grants nothing, which is the Free
 rendering. Security behaviour is identical across tiers: the screens paywall appearance, never a
@@ -142,8 +142,8 @@ tenant that wants every pixel hosts its own pages against those same endpoints, 
 but the screens, which are privileged over no other client of that interface.
 
 This ADR adds no methods to the tenant object. The screens render control-plane state and submit
-to the operations owned by *Password Credentials*, *Passkeys*, *Sessions* and *Consent and
-Scopes*; a screen wanting a method of its own would be holding logic that belongs behind the
+to the operations owned by _Password Credentials_, _Passkeys_, _Sessions_ and _Consent and
+Scopes_; a screen wanting a method of its own would be holding logic that belongs behind the
 boundary.
 
 ## Consequences

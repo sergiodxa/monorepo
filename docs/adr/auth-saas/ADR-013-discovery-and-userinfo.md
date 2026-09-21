@@ -22,10 +22,10 @@ core, so they are available on Free.
 
 ### Two metadata documents describe one server
 
-| Document                       | Required fields                                                                                                             |
-| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| `openid-configuration`         | `issuer`, `authorization_endpoint`, `jwks_uri`, `response_types_supported`, `subject_types_supported`, `id_token_signing_alg_values_supported` |
-| `oauth-authorization-server`   | `issuer`, `authorization_endpoint`, `token_endpoint`, `response_types_supported`                                              |
+| Document                     | Required fields                                                                                                                                |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `openid-configuration`       | `issuer`, `authorization_endpoint`, `jwks_uri`, `response_types_supported`, `subject_types_supported`, `id_token_signing_alg_values_supported` |
+| `oauth-authorization-server` | `issuer`, `authorization_endpoint`, `token_endpoint`, `response_types_supported`                                                               |
 
 Both are served, because an OAuth client that has never heard of OIDC looks for the second
 and an OIDC client for the first, and both are built from one set of tenant facts, so they
@@ -43,10 +43,10 @@ Beyond the required fields each advertises what the tenant serves: `grant_types_
 
 ### The documents change on events, not on a clock
 
-| Document               | Changes when                                                        |
-| ---------------------- | ------------------------------------------------------------------- |
-| Both metadata documents| A hostname changes, the scope catalog changes, an add-on activates a grant |
-| JWKS                   | A signing key is published, retired, or rotated                      |
+| Document                | Changes when                                                               |
+| ----------------------- | -------------------------------------------------------------------------- |
+| Both metadata documents | A hostname changes, the scope catalog changes, an add-on activates a grant |
+| JWKS                    | A signing key is published, retired, or rotated                            |
 
 Each of those is an operation somebody performs, so each purges what it invalidated; a
 time-to-live is the weaker second mechanism, bounding how long a missed purge stays wrong
@@ -67,12 +67,12 @@ person edits their profile, and a signature proves nothing about how current the
 claims are cached too — written by the object, read by the Worker — and zero round trips
 holds under four conditions:
 
-| Condition                                                    | What forces a call when it fails      |
-| ------------------------------------------------------------ | ------------------------------------- |
-| The token's `kid` is in the Worker's cached key set           | A fetch of the tenant's public documents |
-| A claims snapshot exists for the subject                      | `resolveUserInfo`                     |
-| The granted scopes map to claims the snapshot carries         | `resolveUserInfo`                     |
-| No `sid` on the token appears in the revoked-session markers  | The request is rejected, not resolved |
+| Condition                                                    | What forces a call when it fails         |
+| ------------------------------------------------------------ | ---------------------------------------- |
+| The token's `kid` is in the Worker's cached key set          | A fetch of the tenant's public documents |
+| A claims snapshot exists for the subject                     | `resolveUserInfo`                        |
+| The granted scopes map to claims the snapshot carries        | `resolveUserInfo`                        |
+| No `sid` on the token appears in the revoked-session markers | The request is rejected, not resolved    |
 
 ## Decision
 
@@ -99,12 +99,12 @@ verified token, never the token itself, and refreshes the snapshot as it answers
 
 ### What the Worker caches
 
-| Entry                    | Key                                   | Tag                  | Purged by                    |
-| ------------------------ | ------------------------------------- | -------------------- | ---------------------------- |
-| The three documents      | The request URL on the tenant hostname | `tenant:<id>:meta`   | Key rotation, hostname or catalog change |
-| Parsed verification keys | Tenant id and `kid`, in-isolate        | —                    | Isolate lifetime and the tag above |
-| Claims snapshot          | `uinfo:<tenantId>:<subjectId>` in KV   | —                    | Written on every claim change |
-| Revoked session markers  | `sid` in KV                            | —                    | Written on revocation, expiring with the session |
+| Entry                    | Key                                    | Tag                | Purged by                                        |
+| ------------------------ | -------------------------------------- | ------------------ | ------------------------------------------------ |
+| The three documents      | The request URL on the tenant hostname | `tenant:<id>:meta` | Key rotation, hostname or catalog change         |
+| Parsed verification keys | Tenant id and `kid`, in-isolate        | —                  | Isolate lifetime and the tag above               |
+| Claims snapshot          | `uinfo:<tenantId>:<subjectId>` in KV   | —                  | Written on every claim change                    |
+| Revoked session markers  | `sid` in KV                            | —                  | Written on revocation, expiring with the session |
 
 Cache entries and their tags come from `@sdxc/workers-cache`, whose `Cache-Tag` vocabulary
 and purge call are what makes an event-driven invalidation expressible. Documents are
@@ -122,13 +122,13 @@ It accepts GET and POST with the access token as a Bearer token in the `Authoriz
 header, and answers `application/json`. The `sub` claim is always present, which OIDC
 requires so a client can confirm the response describes the subject its ID token named.
 
-| Scope            | Claims returned                                                                                                                                         |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `openid`         | `sub`                                                                                                                                                    |
+| Scope            | Claims returned                                                                                                                                                                  |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `openid`         | `sub`                                                                                                                                                                            |
 | `profile`        | `name`, `family_name`, `given_name`, `middle_name`, `nickname`, `preferred_username`, `profile`, `picture`, `website`, `gender`, `birthdate`, `zoneinfo`, `locale`, `updated_at` |
-| `email`          | `email`, `email_verified`                                                                                                                                |
-| `address`        | `address`                                                                                                                                                |
-| `offline_access` | None; it governs refresh token issuance                                                                                                                  |
+| `email`          | `email`, `email_verified`                                                                                                                                                        |
+| `address`        | `address`                                                                                                                                                                        |
+| `offline_access` | None; it governs refresh token issuance                                                                                                                                          |
 
 The OIDC `phone` scope is not offered, and `phone_number` is not a claim a subject can
 hold. A phone number is not an identifier here, not a factor and not a delivery channel:

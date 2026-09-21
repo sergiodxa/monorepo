@@ -32,12 +32,12 @@ needs, since a surface claiming more than it serves fails when a client believes
 An import of ten thousand employees is ten thousand requests landing on the one object that also
 serves that tenant's sign-ins. Four pressures, each with a bound:
 
-| Pressure | Source | Bound |
-| --- | --- | --- |
-| Turn time | One operation per request | Each method is one whole operation and one write, with no await between the read and the write |
-| Request rate | The provider's sync worker | 20 writes per second sustained per connection, bursting to 100; above it, `429` with `Retry-After` |
-| Repeat writes | The periodic re-sync of an unchanged directory | A digest of the mapped attributes, so a replace that changes nothing writes nothing |
-| Storage | One subject row and one link row per employee | The plan's subject cap |
+| Pressure      | Source                                         | Bound                                                                                              |
+| ------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Turn time     | One operation per request                      | Each method is one whole operation and one write, with no await between the read and the write     |
+| Request rate  | The provider's sync worker                     | 20 writes per second sustained per connection, bursting to 100; above it, `429` with `Retry-After` |
+| Repeat writes | The periodic re-sync of an unchanged directory | A digest of the mapped attributes, so a replace that changes nothing writes nothing                |
+| Storage       | One subject row and one link row per employee  | The plan's subject cap                                                                             |
 
 At twenty writes a second of sub-millisecond work the sync takes a small share of the object's time
 and an authentication queued behind it waits one turn. Back-pressure is the protocol's own mechanism
@@ -70,17 +70,17 @@ wakes the object.
 
 ### Users, groups and attribute mapping
 
-| SCIM attribute | Subject model |
-| --- | --- |
-| `id` | The subject id, the same value as the `sub` claim |
-| `externalId` | The link row for this connection |
-| `userName` | The primary email identifier when it parses as an address, the username identifier otherwise |
-| `emails[primary].value` | The primary email identifier, stamped verified |
-| `name.givenName`, `name.familyName`, `name.formatted` | `given_name`, `family_name`, `name` |
-| `displayName`, `preferredLanguage`, `timezone` | `nickname`, `locale`, `zoneinfo` |
-| `photos[type eq "photo"].value` | `picture` |
-| `active` | `status`: `active` or `blocked` |
-| The enterprise extension's members | Declared subject attributes at `internal` visibility unless the tenant raises it |
+| SCIM attribute                                        | Subject model                                                                                |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `id`                                                  | The subject id, the same value as the `sub` claim                                            |
+| `externalId`                                          | The link row for this connection                                                             |
+| `userName`                                            | The primary email identifier when it parses as an address, the username identifier otherwise |
+| `emails[primary].value`                               | The primary email identifier, stamped verified                                               |
+| `name.givenName`, `name.familyName`, `name.formatted` | `given_name`, `family_name`, `name`                                                          |
+| `displayName`, `preferredLanguage`, `timezone`        | `nickname`, `locale`, `zoneinfo`                                                             |
+| `photos[type eq "photo"].value`                       | `picture`                                                                                    |
+| `active`                                              | `status`: `active` or `blocked`                                                              |
+| The enterprise extension's members                    | Declared subject attributes at `internal` visibility unless the tenant raises it             |
 
 An address arriving over an authenticated connection is stamped verified, because the connection is
 the enterprise's own directory asserting its own mailboxes. A create whose folded address matches a
@@ -110,16 +110,16 @@ retires its id and a relying party's rows lose their anchor.
 listing is ordered by creation from an index, and `totalResults` is exact because a directory is
 bounded by its plan's subject cap.
 
-| Request | Answer | Why that is the answer |
-| --- | --- | --- |
-| `PATCH` outside `replace`/`add` on a named attribute, `add` on `members` with a value array, and `remove` on `members[value eq "…"]` | `400`, `scimType: "invalidPath"` | Those four forms are what the deployed clients send, and each maps to one whole operation |
-| A `filter` beyond the `eq` attributes above | `400`, `scimType: "invalidFilter"` | The grammar's remainder has no caller, and a half-implemented parser answers wrong rather than refusing |
-| `POST /Bulk` | `501`, with `bulk.supported: false` advertised | An envelope moves a burst rather than reducing it; each operation inside is still one write in one turn |
-| `If-Match`, `meta.version` | `etag.supported: false`, and the header is ignored | Requests to one tenant are serialized by the object, so the ordering a tag detects conflicts against is the ordering that already happened |
-| `/Me` | `501` | The token names a connection, so there is no person for the alias to resolve to |
-| `sortBy`, `sortOrder` | `sort.supported: false`, and creation order is returned | Creation order is what a full sync walks |
-| `attributes`, `excludedAttributes` | The full representation | Over-returning leaves a client working; refusing stops the sync |
-| `password` on a user | Accepted and stored nowhere | An enterprise connection authenticates these subjects, and a credential set over a provisioning channel is a shared secret with an extra holder |
+| Request                                                                                                                              | Answer                                                  | Why that is the answer                                                                                                                          |
+| ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PATCH` outside `replace`/`add` on a named attribute, `add` on `members` with a value array, and `remove` on `members[value eq "…"]` | `400`, `scimType: "invalidPath"`                        | Those four forms are what the deployed clients send, and each maps to one whole operation                                                       |
+| A `filter` beyond the `eq` attributes above                                                                                          | `400`, `scimType: "invalidFilter"`                      | The grammar's remainder has no caller, and a half-implemented parser answers wrong rather than refusing                                         |
+| `POST /Bulk`                                                                                                                         | `501`, with `bulk.supported: false` advertised          | An envelope moves a burst rather than reducing it; each operation inside is still one write in one turn                                         |
+| `If-Match`, `meta.version`                                                                                                           | `etag.supported: false`, and the header is ignored      | Requests to one tenant are serialized by the object, so the ordering a tag detects conflicts against is the ordering that already happened      |
+| `/Me`                                                                                                                                | `501`                                                   | The token names a connection, so there is no person for the alias to resolve to                                                                 |
+| `sortBy`, `sortOrder`                                                                                                                | `sort.supported: false`, and creation order is returned | Creation order is what a full sync walks                                                                                                        |
+| `attributes`, `excludedAttributes`                                                                                                   | The full representation                                 | Over-returning leaves a client working; refusing stops the sync                                                                                 |
+| `password` on a user                                                                                                                 | Accepted and stored nowhere                             | An enterprise connection authenticates these subjects, and a credential set over a provisioning channel is a shared secret with an extra holder |
 
 ### Tables, RPC methods and the gate
 
@@ -174,7 +174,7 @@ account open.
 ## Alternatives Considered
 
 **Polling each provider's directory API.** No inbound endpoint and no bearer token to rotate. It needs
-a credential *into* every customer's directory, a client per vendor, and a poll interval that delays
+a credential _into_ every customer's directory, a client per vendor, and a poll interval that delays
 every deactivation. Rejected: a push arrives when the decision does.
 
 **Full RFC 7644 conformance.** Every box on a procurement sheet, and no capability question answered

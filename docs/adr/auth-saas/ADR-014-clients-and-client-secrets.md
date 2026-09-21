@@ -87,11 +87,11 @@ system gives it.
 
 ### Grant and response types, per client
 
-| Grant type | Response type | Who carries it |
-| --- | --- | --- |
-| `authorization_code` | `code` | Every client |
-| `refresh_token` | — | A client whose grants include it, refreshing within its scopes |
-| `client_credentials` | — | A client acting for itself, under the machine-to-machine add-on |
+| Grant type           | Response type | Who carries it                                                  |
+| -------------------- | ------------- | --------------------------------------------------------------- |
+| `authorization_code` | `code`        | Every client                                                    |
+| `refresh_token`      | —             | A client whose grants include it, refreshing within its scopes  |
+| `client_credentials` | —             | A client acting for itself, under the machine-to-machine add-on |
 
 The arrays are a ceiling: the authorization endpoint refuses a `response_type` the client does not
 carry, and the token endpoint refuses a `grant_type` it does not. `client_credentials` is writable
@@ -121,11 +121,11 @@ candidate, so a window closes before a row goes. The scheduled handler sweeps da
 
 ### Authentication at the token endpoint
 
-| Method | Presented as | Who uses it |
-| --- | --- | --- |
-| `client_secret_basic` | The `Authorization` header | Confidential clients, the registration default |
-| `client_secret_post` | Form parameters | Confidential clients whose HTTP stack cannot set the header |
-| `none` | The `client_id` alone, with PKCE | Public clients |
+| Method                | Presented as                     | Who uses it                                                 |
+| --------------------- | -------------------------------- | ----------------------------------------------------------- |
+| `client_secret_basic` | The `Authorization` header       | Confidential clients, the registration default              |
+| `client_secret_post`  | Form parameters                  | Confidential clients whose HTTP stack cannot set the header |
+| `none`                | The `client_id` alone, with PKCE | Public clients                                              |
 
 A client's `token_endpoint_auth_method` is the one method it may use, and discovery advertises
 these three. A presented secret is checked against every live secret, so a rotation is invisible.

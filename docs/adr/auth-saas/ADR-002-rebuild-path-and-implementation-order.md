@@ -81,39 +81,39 @@ Three milestones. Each ADR below is a separate document; this one owns only the 
 
 Built in this order, because each step is unusable without the one before it.
 
-| # | ADR | Why it comes here |
-| --- | --- | --- |
-| 003 | Control plane schema | A tenant has to exist before anything can be scoped to it |
-| 004 | Tenant object schema and migrations | The object needs a schema registry before it holds a row |
-| 005 | Hostname resolution and tenant domains | A request has to reach the right object |
-| 006 | Subjects and identifiers | The thing being authenticated |
-| 007 | Password credentials | The first way to prove a subject |
-| 008 | Passkeys | The second, and the one that ships alongside rather than after |
-| 009 | Sessions | Authentication has to survive the redirect to `/authorize` |
-| 010 | Signing keys and token minting | Keys exist before the token endpoint needs them |
-| 014 | Clients and client secrets | A relying party has to be registered to be authorized |
-| 015 | Consent and scopes | The authorization endpoint branches on it |
-| 011 | Authorization endpoint and PKCE | The front half of the exchange |
-| 012 | Token endpoint and refresh rotation | The back half |
-| 013 | Discovery and userinfo | Served from the Worker; needs the key set and the issuer |
-| 016 | Hosted sign-in UI and branding | The pages the flow has been redirecting to |
-| 017 | Transactional email | Verification and reset, which sign-up needs to be real |
+| #   | ADR                                    | Why it comes here                                              |
+| --- | -------------------------------------- | -------------------------------------------------------------- |
+| 003 | Control plane schema                   | A tenant has to exist before anything can be scoped to it      |
+| 004 | Tenant object schema and migrations    | The object needs a schema registry before it holds a row       |
+| 005 | Hostname resolution and tenant domains | A request has to reach the right object                        |
+| 006 | Subjects and identifiers               | The thing being authenticated                                  |
+| 007 | Password credentials                   | The first way to prove a subject                               |
+| 008 | Passkeys                               | The second, and the one that ships alongside rather than after |
+| 009 | Sessions                               | Authentication has to survive the redirect to `/authorize`     |
+| 010 | Signing keys and token minting         | Keys exist before the token endpoint needs them                |
+| 014 | Clients and client secrets             | A relying party has to be registered to be authorized          |
+| 015 | Consent and scopes                     | The authorization endpoint branches on it                      |
+| 011 | Authorization endpoint and PKCE        | The front half of the exchange                                 |
+| 012 | Token endpoint and refresh rotation    | The back half                                                  |
+| 013 | Discovery and userinfo                 | Served from the Worker; needs the key set and the issuer       |
+| 016 | Hosted sign-in UI and branding         | The pages the flow has been redirecting to                     |
+| 017 | Transactional email                    | Verification and reset, which sign-up needs to be real         |
 
 M1 is complete when a registered client completes an authorization code exchange with PKCE
 against a tenant on its own hostname, signed by that tenant's own key.
 
 ### M2 — the platform can charge
 
-| # | ADR | Why it comes here |
-| --- | --- | --- |
-| 018 | Per-tenant subscriptions | Attaches a subscription to a tenant |
-| 019 | Plan catalog and feature split | Names the tiers, the add-ons, and what is free |
-| 020 | Entitlements as feature flags | The evaluation point every later gate reads |
-| 021 | Release flags and kill switches | The other use of the same client, separated deliberately |
-| 022 | Daily active user metering and quotas | The meter the tiers are sold on |
-| 023 | Audit log and retention | Retention is a tier property, so it lands with the tiers |
-| 024 | Cost ledger and unit economics | What a tenant costs to serve |
-| 025 | Usage reporting for lifetime value | Sends both to the billing provider |
+| #   | ADR                                   | Why it comes here                                        |
+| --- | ------------------------------------- | -------------------------------------------------------- |
+| 018 | Per-tenant subscriptions              | Attaches a subscription to a tenant                      |
+| 019 | Plan catalog and feature split        | Names the tiers, the add-ons, and what is free           |
+| 020 | Entitlements as feature flags         | The evaluation point every later gate reads              |
+| 021 | Release flags and kill switches       | The other use of the same client, separated deliberately |
+| 022 | Daily active user metering and quotas | The meter the tiers are sold on                          |
+| 023 | Audit log and retention               | Retention is a tier property, so it lands with the tiers |
+| 024 | Cost ledger and unit economics        | What a tenant costs to serve                             |
+| 025 | Usage reporting for lifetime value    | Sends both to the billing provider                       |
 
 M2 is complete when a tenant can be on a paid plan, a gated capability refuses to run without
 the entitlement, and a month of usage and cost has reached the billing provider.

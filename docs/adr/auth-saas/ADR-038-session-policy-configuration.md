@@ -52,16 +52,16 @@ browser holding a long-lived cookie.
 
 ### The knobs and their bounds
 
-| Setting | Default | Range | Refused because |
-| --- | --- | --- | --- |
-| Absolute lifetime | 30 days | 15 minutes – 90 days | Below the floor the redirect to `/authorize` outlives the session; above the ceiling an authentication stands for a quarter without re-proof |
-| Idle timeout | 7 days | 5 minutes – the configured absolute lifetime | An idle window past the absolute lifetime is a setting that does nothing, and a setting that silently does nothing is worse than a refused one |
-| Refresh token lifetime | 30 days | 1 hour – 180 days | A refresh token past half a year is a bearer credential with no practical expiry |
-| Concurrent sessions per subject | Unlimited | 1 – 100, or unlimited | A limit of zero is an account nobody can use |
-| Sessions after a credential change | `revoke-others` | `revoke-others` or `revoke-all` | Both values revoke, because a reset that leaves an attacker's session live is a reset that recovered nothing |
+| Setting                            | Default         | Range                                        | Refused because                                                                                                                                |
+| ---------------------------------- | --------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Absolute lifetime                  | 30 days         | 15 minutes – 90 days                         | Below the floor the redirect to `/authorize` outlives the session; above the ceiling an authentication stands for a quarter without re-proof   |
+| Idle timeout                       | 7 days          | 5 minutes – the configured absolute lifetime | An idle window past the absolute lifetime is a setting that does nothing, and a setting that silently does nothing is worse than a refused one |
+| Refresh token lifetime             | 30 days         | 1 hour – 180 days                            | A refresh token past half a year is a bearer credential with no practical expiry                                                               |
+| Concurrent sessions per subject    | Unlimited       | 1 – 100, or unlimited                        | A limit of zero is an account nobody can use                                                                                                   |
+| Sessions after a credential change | `revoke-others` | `revoke-others` or `revoke-all`              | Both values revoke, because a reset that leaves an attacker's session live is a reset that recovered nothing                                   |
 
 Refresh token lifetime is the value the token endpoint's issuance and rotation read; the
-mechanism belongs to *Token Endpoint and Refresh Rotation* and this ADR supplies the number.
+mechanism belongs to _Token Endpoint and Refresh Rotation_ and this ADR supplies the number.
 
 ### The policy lives in the object
 

@@ -29,10 +29,10 @@ they are.
 
 ### Two identifiers, and they are the only two
 
-| Identifier | What it proves | Where it is used |
-| --- | --- | --- |
+| Identifier    | What it proves                      | Where it is used                           |
+| ------------- | ----------------------------------- | ------------------------------------------ |
 | Email address | Control of a mailbox, once verified | Sign-in, verification, reset, notification |
-| Username | Nothing on its own | Sign-in, display, `preferred_username` |
+| Username      | Nothing on its own                  | Sign-in, display, `preferred_username`     |
 
 Phone numbers are not an identifier in this series, nor a delivery channel, nor a factor. A verified
 mailbox proves ownership of an account without a carrier in the path and without a per-message cost.
@@ -43,10 +43,10 @@ Two spellings a person reads as the same address have to resolve to the same row
 sign-in and at reset, or a lookalike registration becomes a takeover. One folded form, computed the
 same way everywhere, is what makes that true:
 
-| Kind | Stored as entered | Compared as |
-| --- | --- | --- |
-| Email | The full address, for display and delivery | NFKC, domain lowercased and IDNA-encoded, local part case-folded |
-| Username | The chosen casing | NFKC, case-folded, restricted to letters, digits, `.`, `-` and `_` |
+| Kind     | Stored as entered                          | Compared as                                                        |
+| -------- | ------------------------------------------ | ------------------------------------------------------------------ |
+| Email    | The full address, for display and delivery | NFKC, domain lowercased and IDNA-encoded, local part case-folded   |
+| Username | The chosen casing                          | NFKC, case-folded, restricted to letters, digits, `.`, `-` and `_` |
 
 Folding stops at the general rule. Provider-specific equivalences — dotted Gmail local parts,
 plus-addressing — are distinct addresses, because the platform does not know which mail host applies
@@ -76,11 +76,11 @@ rule below, and `verified_at` sits on the row, so verification is stated about o
 `subject_attributes` — `subject_id`, `key`, `value` as JSON, and a per-tenant
 `attribute_definitions` table holding `key`, `type`, and `visibility`:
 
-| Visibility | Read by the subject | Written by the subject | In a token or `/userinfo` |
-| --- | --- | --- | --- |
-| `internal` | No | No | No |
-| `claim` | Yes | No | Yes, namespaced, when the client's granted scopes cover it |
-| `self` | Yes | Yes | Yes, namespaced, when the client's granted scopes cover it |
+| Visibility | Read by the subject | Written by the subject | In a token or `/userinfo`                                  |
+| ---------- | ------------------- | ---------------------- | ---------------------------------------------------------- |
+| `internal` | No                  | No                     | No                                                         |
+| `claim`    | Yes                 | No                     | Yes, namespaced, when the client's granted scopes cover it |
+| `self`     | Yes                 | Yes                    | Yes, namespaced, when the client's granted scopes cover it |
 
 A key with no definition is refused, which keeps an attribute a tenant meant as authorization data —
 a plan, an entitlement, an internal flag — out of a token a browser can read.

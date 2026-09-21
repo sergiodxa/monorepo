@@ -40,12 +40,12 @@ and a subject whose only credential is a passkey satisfies a later demand by ass
 
 ### Parameters are an interoperability decision
 
-| Parameter | Value | Why it is this, and fixed |
-| --- | --- | --- |
-| Algorithm | SHA-1 | Every authenticator app implements it; strength rests on a 30-second window and a rate limit, not on collision resistance |
-| Digits | 6 | What a person reads off a screen and retypes; the guessing budget is set by rate limiting |
-| Period | 30 seconds | The step every app assumes when a QR code omits it |
-| Drift window | 1 step either side | 90 seconds of acceptance, covering an unsynchronized phone clock |
+| Parameter    | Value              | Why it is this, and fixed                                                                                                 |
+| ------------ | ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| Algorithm    | SHA-1              | Every authenticator app implements it; strength rests on a 30-second window and a rate limit, not on collision resistance |
+| Digits       | 6                  | What a person reads off a screen and retypes; the guessing budget is set by rate limiting                                 |
+| Period       | 30 seconds         | The step every app assumes when a QR code omits it                                                                        |
+| Drift window | 1 step either side | 90 seconds of acceptance, covering an unsynchronized phone clock                                                          |
 
 A tenant changing any of these gains nothing an attacker notices and loses enrolments on whichever
 app disagrees, so they carry no configuration.
@@ -82,13 +82,13 @@ the `await` that derives the code, and claims past the window are deleted when t
 
 ### When the factor is demanded, and when it is remembered
 
-| Situation | Second factor |
-| --- | --- |
-| Password or magic-link sign-in, subject has a factor | Demanded |
-| Passkey assertion | Satisfied by the assertion; `amr` carries `webauthn` |
-| Tenant policy `required`, subject has no factor | Enrolment before the sign-in completes |
+| Situation                                                                                                                              | Second factor                                         |
+| -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| Password or magic-link sign-in, subject has a factor                                                                                   | Demanded                                              |
+| Passkey assertion                                                                                                                      | Satisfied by the assertion; `amr` carries `webauthn`  |
+| Tenant policy `required`, subject has no factor                                                                                        | Enrolment before the sign-in completes                |
 | Enrolling or removing a factor, regenerating codes, changing a password, `prompt=login`, an exceeded `max_age`, an `acr_values` demand | Demanded, and a remembered device does not satisfy it |
-| Same browser within 30 days, holding a valid trusted-device token | Satisfied |
+| Same browser within 30 days, holding a valid trusted-device token                                                                      | Satisfied                                             |
 
 Remembering is a `trusted_devices` row and a `__Host-` cookie carrying a token whose SHA-256 is
 the stored value, bound to one subject, so a shared machine remembers each account separately. The
@@ -100,12 +100,12 @@ factor changes, on a password reset, and on an administrator reset. The tenant s
 
 A relying party that wants the factor for one action — approving a payment, deleting an account —
 sends the browser to `/authorize` with `acr_values` naming `mfa`, the one value discovery
-advertises. *Authorization Endpoint and PKCE* reads it as a requirement beside the `prompt` and
+advertises. _Authorization Endpoint and PKCE_ reads it as a requirement beside the `prompt` and
 `max_age` it already handles, its outcome union gaining a `step-up` kind carrying the interaction
 id and the screen. A subject with no factor is offered enrolment; leaving without enrolling, like
 any `prompt=none` request, redirects with `unmet_authentication_requirements`.
 
-The screen is `/u/step-up`, a row in the set *Hosted Sign-In UI and Branding* owns, under its
+The screen is `/u/step-up`, a row in the set _Hosted Sign-In UI and Branding_ owns, under its
 branding and no-JavaScript constraints. Carrying the interaction id alone, it leaves the object to
 read the verified `redirect_uri` off the stored request and build the `Location`, and the
 submission is claimed against that interaction as well as the subject, so a code is spent once,
@@ -197,4 +197,3 @@ reset is the path, audited and announced.
 - [ADR-016: Hosted Sign-In UI and Branding](./ADR-016-hosted-sign-in-ui-and-branding.md) — owns the screen set the step-up page joins
 - [ADR-035: Attack Protection](./ADR-035-attack-protection.md) — the budget a code submission spends
 - [root ADR-023: Web Crypto Primitives Package](../ADR-023-web-crypto-primitives-package.md)
-

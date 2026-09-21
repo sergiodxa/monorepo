@@ -46,7 +46,10 @@ nothing unusual.
 ### The registry
 
 ```typescript
-export interface Migration { id: string; sql: string }
+export interface Migration {
+	id: string;
+	sql: string;
+}
 
 export const MIGRATIONS: Migration[] = [
 	{ id: "0001-init", sql: m0001 },
@@ -110,26 +113,26 @@ against a database at the version before it, catching a script that depends on a
 
 ### The tables
 
-| Table | What it holds | Why it is here |
-| --- | --- | --- |
-| `settings` | One row: the tenant id, its issuer, its creation time | The object mints tokens under its own issuer without asking anyone |
-| `subjects` | The principal that authenticates | The thing every other table hangs off |
-| `credentials` | One row per proof a subject can present | A new factor is a row type rather than a table |
-| `sessions` | An authenticated browser, and its lifetime | Authentication survives the redirect to `/authorize` |
-| `clients` | Relying parties and their secrets | A client is authorized inside the object that serves it |
-| `grants` | What a subject granted a client, and the artifacts issued under it | Consent, codes and refresh tokens share one lifecycle |
-| `keys` | Signing keys, current and retired | Private material stays where the signing happens |
-| `audit` | The append-only record of what happened | The tenant's own history, retained by tier |
+| Table         | What it holds                                                      | Why it is here                                                     |
+| ------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| `settings`    | One row: the tenant id, its issuer, its creation time              | The object mints tokens under its own issuer without asking anyone |
+| `subjects`    | The principal that authenticates                                   | The thing every other table hangs off                              |
+| `credentials` | One row per proof a subject can present                            | A new factor is a row type rather than a table                     |
+| `sessions`    | An authenticated browser, and its lifetime                         | Authentication survives the redirect to `/authorize`               |
+| `clients`     | Relying parties and their secrets                                  | A client is authorized inside the object that serves it            |
+| `grants`      | What a subject granted a client, and the artifacts issued under it | Consent, codes and refresh tokens share one lifecycle              |
+| `keys`        | Signing keys, current and retired                                  | Private material stays where the signing happens                   |
+| `audit`       | The append-only record of what happened                            | The tenant's own history, retained by tier                         |
 
 ### Retention
 
-| Table | Grows with | Rule |
-| --- | --- | --- |
-| `audit` | Every authentication event | The tier's window: 7, 30 or 90 days |
-| `sessions` | Sign-ins | Removed at expiry |
-| `grants` | Token exchanges | Codes expire in minutes; a refresh token goes at rotation and at absolute expiry |
-| `keys` | Rotations | A retired key is kept one rotation period |
-| `subjects`, `credentials`, `clients` | Customer action | Bounded by the plan's cap; a subject's rows go with the subject |
+| Table                                | Grows with                 | Rule                                                                             |
+| ------------------------------------ | -------------------------- | -------------------------------------------------------------------------------- |
+| `audit`                              | Every authentication event | The tier's window: 7, 30 or 90 days                                              |
+| `sessions`                           | Sign-ins                   | Removed at expiry                                                                |
+| `grants`                             | Token exchanges            | Codes expire in minutes; a refresh token goes at rotation and at absolute expiry |
+| `keys`                               | Rotations                  | A retired key is kept one rotation period                                        |
+| `subjects`, `credentials`, `clients` | Customer action            | Bounded by the plan's cap; a subject's rows go with the subject                  |
 
 Sweeping runs from the object's own alarm, and the same migration that creates a table growing with
 traffic creates the index its sweep reads: a table arrives with its rule.

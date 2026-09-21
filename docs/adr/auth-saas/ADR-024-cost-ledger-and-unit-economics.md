@@ -15,8 +15,8 @@ customer is worth keeping, what the free tier costs, whether a tenant's usage ma
 its tier describes, or what gross margin a plan earns.
 
 This ADR builds the ledger that attributes consumption to the tenant that caused it, prices it,
-and stores the result where it joins to revenue. It is the input to *Usage Reporting for Lifetime
-Value*.
+and stores the result where it joins to revenue. It is the input to _Usage Reporting for Lifetime
+Value_.
 
 ## Context
 
@@ -111,41 +111,41 @@ GB-days against the tenant.
 Modelled per active-user-day, at 8 Worker requests, 8 object requests at ~20 ms, 10 rows read,
 3 rows written, 5 audit rows written, 2 analytics points and 2 KV reads:
 
-| Resource | Units | Rate (¢/unit) | ¢ per DAU-day |
-| --- | --- | --- | --- |
-| Worker requests | 8 | 3.0e-5 | 2.40e-4 |
-| Worker CPU (modelled 8 ms × 8) | 64 ms | 2.0e-6 | 1.28e-4 |
-| Object requests | 8 | 1.5e-5 | 1.20e-4 |
-| Object duration (20 ms × 8) | 160 ms | 1.5625e-7 | 2.50e-5 |
-| Rows read | 10 | 1.0e-7 | 1.00e-6 |
-| Rows written | 3 | 1.0e-4 | 3.00e-4 |
-| **Audit rows written** | 5 | 1.0e-4 | **5.00e-4** |
-| Analytics points | 2 | 2.5e-5 | 5.00e-5 |
-| KV reads | 2 | 5.0e-5 | 1.00e-4 |
-| **Total** | | | **1.464e-3** |
+| Resource                       | Units  | Rate (¢/unit) | ¢ per DAU-day |
+| ------------------------------ | ------ | ------------- | ------------- |
+| Worker requests                | 8      | 3.0e-5        | 2.40e-4       |
+| Worker CPU (modelled 8 ms × 8) | 64 ms  | 2.0e-6        | 1.28e-4       |
+| Object requests                | 8      | 1.5e-5        | 1.20e-4       |
+| Object duration (20 ms × 8)    | 160 ms | 1.5625e-7     | 2.50e-5       |
+| Rows read                      | 10     | 1.0e-7        | 1.00e-6       |
+| Rows written                   | 3      | 1.0e-4        | 3.00e-4       |
+| **Audit rows written**         | 5      | 1.0e-4        | **5.00e-4**   |
+| Analytics points               | 2      | 2.5e-5        | 5.00e-5       |
+| KV reads                       | 2      | 5.0e-5        | 1.00e-4       |
+| **Total**                      |        |               | **1.464e-3**  |
 
-Audit writes are the largest single line, which is why *Audit Log and Retention* keeps a closed
+Audit writes are the largest single line, which is why _Audit Log and Retention_ keeps a closed
 event catalog.
 
 A Premium tenant at its 10,000 DAU cap, over a 30-day month — 300,000 DAU-days:
 
-| Line | Arithmetic | Cents |
-| --- | --- | --- |
-| Per-active-user consumption | 300,000 × 1.464e-3 | 439.2 |
-| Email, at 0.2 per DAU-month | 10,000 × 0.2 × 3.5e-2 | 70.0 |
-| Audit storage, 90-day window | 10,000 × 5 × 200 B = 0.01 GB/day, held 90 days = 0.9 GB; 0.9 × 30 × 0.667 | 18.0 |
-| Directory and key storage | modelled 0.4 GB; 0.4 × 30 × 0.667 | 8.0 |
-| Subtotal | | 535.2 |
-| Scheduled work and object residency, modelled at 5% | 535.2 × 0.05 | 26.8 |
-| **Total** | | **562.0 ≈ $5.60** |
+| Line                                                | Arithmetic                                                                | Cents             |
+| --------------------------------------------------- | ------------------------------------------------------------------------- | ----------------- |
+| Per-active-user consumption                         | 300,000 × 1.464e-3                                                        | 439.2             |
+| Email, at 0.2 per DAU-month                         | 10,000 × 0.2 × 3.5e-2                                                     | 70.0              |
+| Audit storage, 90-day window                        | 10,000 × 5 × 200 B = 0.01 GB/day, held 90 days = 0.9 GB; 0.9 × 30 × 0.667 | 18.0              |
+| Directory and key storage                           | modelled 0.4 GB; 0.4 × 30 × 0.667                                         | 8.0               |
+| Subtotal                                            |                                                                           | 535.2             |
+| Scheduled work and object residency, modelled at 5% | 535.2 × 0.05                                                              | 26.8              |
+| **Total**                                           |                                                                           | **562.0 ≈ $5.60** |
 
 Gross margin at full usage: (99 − 5.60) / 99 ≈ 94%.
 
-| Tier | Full usage at cap | Typical usage (~30% of cap) | Gross margin at full usage |
-| --- | --- | --- | --- |
-| Free | ~$0.05 | ~$0.02 | — |
-| Pro | ~$1.30 | ~$0.40 | ~95% |
-| Premium | ~$5.60 | ~$1.70 | ~94% |
+| Tier    | Full usage at cap | Typical usage (~30% of cap) | Gross margin at full usage |
+| ------- | ----------------- | --------------------------- | -------------------------- |
+| Free    | ~$0.05            | ~$0.02                      | —                          |
+| Pro     | ~$1.30            | ~$0.40                      | ~95%                       |
+| Premium | ~$5.60            | ~$1.70                      | ~94%                       |
 
 Overage prices the same way: 1,000 additional DAU for a month is 30,000 DAU-days, about $0.44 of
 consumption against a $10 charge.

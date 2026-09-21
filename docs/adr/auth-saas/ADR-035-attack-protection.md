@@ -36,11 +36,11 @@ lives on that row, growing with the directory rather than with the attack.
 
 ### Lockout is a denial-of-service primitive
 
-| Response to repeated failure | Costs an attacker | Costs the account holder |
-| --- | --- | --- |
-| Lock until an administrator clears it | One run of failures | The account, until someone answers a ticket |
-| Lock for a fixed window | A pause per window | The account, for that window, on demand |
-| Exponential backoff with a ceiling | A geometric climb against a search needing thousands of tries | Seconds after a typo, minutes at worst |
+| Response to repeated failure          | Costs an attacker                                             | Costs the account holder                    |
+| ------------------------------------- | ------------------------------------------------------------- | ------------------------------------------- |
+| Lock until an administrator clears it | One run of failures                                           | The account, until someone answers a ticket |
+| Lock for a fixed window               | A pause per window                                            | The account, for that window, on demand     |
+| Exponential backoff with a ceiling    | A geometric climb against a search needing thousands of tries | Seconds after a typo, minutes at worst      |
 
 A guessing attack needs volume, so geometric growth ends it early. A lock ends it too, and hands
 anyone who knows an address a free way to keep its owner out. Backoff is the choice, ceilinged
@@ -50,11 +50,11 @@ because the backoff is itself a small denial of service.
 
 ### Three counters, three homes
 
-| Counter | Key | Home |
-| --- | --- | --- |
-| Requests per endpoint class | Client address from `getClientIP`, IPv6 bucketed by `/64` | `CloudflareAdapter` over a rate limiter binding |
-| Requests per tenant per endpoint class | Tenant id | `CloudflareAdapter` over a rate limiter binding |
-| Consecutive authentication failures | Subject id | `failed_attempts` and `retry_after` on the subject's credential row |
+| Counter                                | Key                                                       | Home                                                                |
+| -------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------- |
+| Requests per endpoint class            | Client address from `getClientIP`, IPv6 bucketed by `/64` | `CloudflareAdapter` over a rate limiter binding                     |
+| Requests per tenant per endpoint class | Tenant id                                                 | `CloudflareAdapter` over a rate limiter binding                     |
+| Consecutive authentication failures    | Subject id                                                | `failed_attempts` and `retry_after` on the subject's credential row |
 
 Nothing in the object counts anonymous traffic, so no table grows with an attack, and the two
 columns are set by the statement that records the verification result, so the counter neither adds
@@ -74,14 +74,14 @@ case, where many addresses each stay under that budget while working one account
 One `rateLimit` registration from `@sdxc/rate-limit/middleware` per protected surface, each with
 an explicit `prefix` and `key`, over `CloudflareAdapter` bindings.
 
-| Class | Routes | Key | Budget | `failurePolicy` |
-| --- | --- | --- | --- | --- |
-| Interactive credential | `/u/sign-in`, `/u/sign-up`, `/u/reset`, the second-factor post | Address | 10 / 10 s | `closed` |
-| Mail-sending | Reset request, verification resend, magic-link request | Folded identifier, else address | 5 / hour | `closed` |
-| Token | `/oauth/token` | Authenticated client id, else address | 60 / 10 s | `open` |
-| Authorization | `/authorize` | Address | 30 / 10 s | `open` |
-| Read-only protocol | `/.well-known/*`, `/userinfo` | Address | 120 / 10 s | `open` |
-| Management API | Every route | Token id | 120 / 60 s | `open` |
+| Class                  | Routes                                                         | Key                                   | Budget     | `failurePolicy` |
+| ---------------------- | -------------------------------------------------------------- | ------------------------------------- | ---------- | --------------- |
+| Interactive credential | `/u/sign-in`, `/u/sign-up`, `/u/reset`, the second-factor post | Address                               | 10 / 10 s  | `closed`        |
+| Mail-sending           | Reset request, verification resend, magic-link request         | Folded identifier, else address       | 5 / hour   | `closed`        |
+| Token                  | `/oauth/token`                                                 | Authenticated client id, else address | 60 / 10 s  | `open`          |
+| Authorization          | `/authorize`                                                   | Address                               | 30 / 10 s  | `open`          |
+| Read-only protocol     | `/.well-known/*`, `/userinfo`                                  | Address                               | 120 / 10 s | `open`          |
+| Management API         | Every route                                                    | Token id                              | 120 / 60 s | `open`          |
 
 The two `closed` surfaces are where an uncounted attempt is worse than a refused one: a limiter
 outage must not become unlimited guessing or unlimited mail. Elsewhere `open` holds, since an
@@ -105,14 +105,14 @@ outage would otherwise stop every tenant's users at once.
 
 ### Enumeration resistance, flow by flow
 
-| Flow | What an unknown identifier gets |
-| --- | --- |
-| Password sign-in | The dummy derivation, `invalid_credentials`, one shape and one timing |
-| Passkey sign-in | No identifier is typed: the ceremony is usernameless |
-| Sign-up | Accepted, and the address is mailed — a verification link, or a notice that an account already exists |
-| Password reset, magic link, identifier change | One return shape whether or not a ticket was minted, and the address is mailed either way |
-| Second factor | Reached only inside an authenticated step, so no identifier is taken |
-| Management API | The truth, because the caller is the directory's owner |
+| Flow                                          | What an unknown identifier gets                                                                       |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Password sign-in                              | The dummy derivation, `invalid_credentials`, one shape and one timing                                 |
+| Passkey sign-in                               | No identifier is typed: the ceremony is usernameless                                                  |
+| Sign-up                                       | Accepted, and the address is mailed — a verification link, or a notice that an account already exists |
+| Password reset, magic link, identifier change | One return shape whether or not a ticket was minted, and the address is mailed either way             |
+| Second factor                                 | Reached only inside an authenticated step, so no identifier is taken                                  |
+| Management API                                | The truth, because the caller is the directory's owner                                                |
 
 The last row is the boundary: enumeration resistance protects anonymous surfaces, and hiding a
 tenant's directory from that tenant is not a security property.
@@ -131,13 +131,13 @@ decisions naming one subject, which keeps
 
 ### Configured versus fixed
 
-| Setting | Owner |
-| --- | --- |
-| Failure threshold before backoff begins, 3–10 | Tenant, default 4 |
-| Challenge on sign-up; alert recipients and whether alerts are sent | Tenant |
-| Backoff curve, its 15-minute ceiling, every budget above | Platform |
-| Enumeration-resistant responses, the breached-password deny-list | Platform, always on |
-| An address exemption list | Not offered |
+| Setting                                                            | Owner               |
+| ------------------------------------------------------------------ | ------------------- |
+| Failure threshold before backoff begins, 3–10                      | Tenant, default 4   |
+| Challenge on sign-up; alert recipients and whether alerts are sent | Tenant              |
+| Backoff curve, its 15-minute ceiling, every budget above           | Platform            |
+| Enumeration-resistant responses, the breached-password deny-list   | Platform, always on |
+| An address exemption list                                          | Not offered         |
 
 An exemption list is the one request this refuses: the address that most wants one is a shared
 corporate egress, exactly where a credential-stuffing run hides, and an exemption outlives the

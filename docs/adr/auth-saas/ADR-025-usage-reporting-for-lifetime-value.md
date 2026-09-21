@@ -59,10 +59,10 @@ customer that owns each tenant.
 
 ### What is reported
 
-| Event | One per | Carries |
-| --- | --- | --- |
-| `auth.dau` | tenant, UTC day | The day's distinct authenticating subjects, as the metered quantity |
-| `infra.cost` | tenant, UTC day | The ledger's modelled cost for that tenant-day, as `cost` |
+| Event        | One per         | Carries                                                             |
+| ------------ | --------------- | ------------------------------------------------------------------- |
+| `auth.dau`   | tenant, UTC day | The day's distinct authenticating subjects, as the metered quantity |
+| `infra.cost` | tenant, UTC day | The ledger's modelled cost for that tenant-day, as `cost`           |
 
 Both name the customer as `{ externalId: customerId }` and carry metadata `{ tenantId, tier }`.
 `externalId` on the event is `${name}:${tenantId}:${day}`, so a retried delivery and a re-run of the
@@ -75,7 +75,7 @@ exponential notation and a platform's parser rejects; the string keeps it exact 
 ### The day the job reports
 
 The previous UTC day, once it is settled. The job needs a distinct-subject count that no longer
-changes — *Daily Active User Metering and Quotas* owns producing that settled count per tenant per
+changes — _Daily Active User Metering and Quotas_ owns producing that settled count per tenant per
 UTC day, and this job reads it rather than recomputing it. Cost comes from one analytics query over
 the ledger's dataset for the same day, grouped by tenant. Points recorded under more than one
 rate-card version are priced under the card each was recorded with and then summed.

@@ -24,13 +24,13 @@ including the tenant's own scope definitions.
 
 ### A scope is a name; a claim is a value
 
-| Scope            | What it carries                                                              |
-| ---------------- | ----------------------------------------------------------------------------- |
-| `openid`         | `sub`, and the presence of an ID token                                        |
+| Scope            | What it carries                                                                  |
+| ---------------- | -------------------------------------------------------------------------------- |
+| `openid`         | `sub`, and the presence of an ID token                                           |
 | `profile`        | The OIDC profile claims — `name`, `given_name`, `picture`, `locale` and the rest |
-| `email`          | `email`, `email_verified`                                                     |
-| `address`        | `address`                                                                     |
-| `offline_access` | No claims; it is what makes a refresh token issuable                          |
+| `email`          | `email`, `email_verified`                                                        |
+| `address`        | `address`                                                                        |
+| `offline_access` | No claims; it is what makes a refresh token issuable                             |
 
 The OIDC `phone` scope is absent, and no subject holds a phone number. The verified mailbox
 is the ownership credential here, so a number would add a carrier attack surface and a
@@ -45,14 +45,14 @@ add-on; the vocabulary itself is base.
 
 ### Consent answers a question about the client, not about the request
 
-| Situation                                               | Screen  |
-| ------------------------------------------------------- | ------- |
-| Client is first-party                                   | Skipped |
-| A stored grant already covers every requested scope     | Skipped |
-| A requested scope is outside the stored grant           | Shown, listing the new scopes |
-| No stored grant                                         | Shown   |
-| `prompt=consent`                                        | Shown   |
-| Consent needed under `prompt=none`                      | `consent_required` back to the client |
+| Situation                                           | Screen                                |
+| --------------------------------------------------- | ------------------------------------- |
+| Client is first-party                               | Skipped                               |
+| A stored grant already covers every requested scope | Skipped                               |
+| A requested scope is outside the stored grant       | Shown, listing the new scopes         |
+| No stored grant                                     | Shown                                 |
+| `prompt=consent`                                    | Shown                                 |
+| Consent needed under `prompt=none`                  | `consent_required` back to the client |
 
 A first-party client is one the tenant registered as its own application, which ADR-014:
 Clients and Client Secrets records on the client. Asking a person to authorize the
@@ -90,10 +90,15 @@ no round trip of its own:
 
 ```ts
 type ConsentScreen = {
-  client: { id: string; name: string; logoUri: string | null;
-            policyUri: string | null; tosUri: string | null };
-  subject: { id: string; displayName: string; email: string | null };
-  requested: Array<{ scope: string; title: string; description: string; granted: boolean }>;
+	client: {
+		id: string;
+		name: string;
+		logoUri: string | null;
+		policyUri: string | null;
+		tosUri: string | null;
+	};
+	subject: { id: string; displayName: string; email: string | null };
+	requested: Array<{ scope: string; title: string; description: string; granted: boolean }>;
 };
 ```
 

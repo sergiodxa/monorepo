@@ -13,7 +13,7 @@ log into a warehouse nightly.
 
 A platform whose directory cannot be driven programmatically is not usable, so the management API
 is a base feature on every tier including Free, and it is the surface the dashboard itself is built
-on. Its state lives in the two stores *Auth SaaS on Per-Tenant Durable Objects* splits — the
+on. Its state lives in the two stores _Auth SaaS on Per-Tenant Durable Objects_ splits — the
 registry, memberships, domains and subscription in D1, the directory in each tenant's object.
 
 ## Context
@@ -53,15 +53,15 @@ OpenID Connect endpoints.
 
 ### The surface
 
-| Resource | Operations | State |
-| --- | --- | --- |
-| Tenants, members and domains | read and update settings and branding; invite a member, change a role, remove; attach a domain, read its verification | Control plane |
-| Subjects and identifiers | create, read, update, block, delete, list; add, verify, remove | Tenant object |
-| Credentials and sessions | list metadata, remove a passkey, force a reset, reset a second factor; revoke one session or all | Tenant object |
-| Clients and secrets | register, update, rotate, revoke, disable, delete, list | Tenant object |
-| Scopes, grants and roles | define, list, revoke a grant, assign a role | Tenant object |
-| API keys and webhook endpoints | create, rotate, revoke; read the delivery log, replay | Tenant object |
-| Audit events, import and export runs | read a page over a window with filters; start a run, read its progress, download the report | Both |
+| Resource                             | Operations                                                                                                            | State         |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------- | ------------- |
+| Tenants, members and domains         | read and update settings and branding; invite a member, change a role, remove; attach a domain, read its verification | Control plane |
+| Subjects and identifiers             | create, read, update, block, delete, list; add, verify, remove                                                        | Tenant object |
+| Credentials and sessions             | list metadata, remove a passkey, force a reset, reset a second factor; revoke one session or all                      | Tenant object |
+| Clients and secrets                  | register, update, rotate, revoke, disable, delete, list                                                               | Tenant object |
+| Scopes, grants and roles             | define, list, revoke a grant, assign a role                                                                           | Tenant object |
+| API keys and webhook endpoints       | create, rotate, revoke; read the delivery log, replay                                                                 | Tenant object |
+| Audit events, import and export runs | read a page over a window with filters; start a run, read its progress, download the report                           | Both          |
 
 Each route is one call to one operation the owning ADR already defines, which is why this ADR adds
 no tenant-object methods: an endpoint needing a new one would assemble an operation out of parts.
@@ -112,11 +112,11 @@ id or the member id — an identity the request already authenticated, rather th
 caller shares with everyone behind its egress. A denied request answers `429` with `RateLimit` and
 `Retry-After`, so a client backs off on numbers.
 
-| Tier | Reads / minute | Writes / minute | Import and export runs / hour |
-| --- | --- | --- | --- |
-| Free | 60 | 20 | 1 |
-| Pro | 600 | 200 | 5 |
-| Premium | 1,800 | 600 | 20 |
+| Tier    | Reads / minute | Writes / minute | Import and export runs / hour |
+| ------- | -------------- | --------------- | ----------------------------- |
+| Free    | 60             | 20              | 1                             |
+| Pro     | 600            | 200             | 5                             |
+| Premium | 1,800          | 600             | 20                            |
 
 ### Pagination and errors
 
@@ -145,10 +145,10 @@ and the tenant's owners hear it by email.
 
 ### Operations that live somewhere other than the API
 
-| Capability | Where it lives instead |
-| --- | --- |
-| Reading a secret, an API key, a TOTP secret or a signing key back | Each is returned once by the operation that mints it; a replacement comes from rotation |
-| Minting a session or a token for a chosen subject | The subject authenticates; impersonation is its own decision, with its own consent and audit story |
+| Capability                                                        | Where it lives instead                                                                             |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Reading a secret, an API key, a TOTP secret or a signing key back | Each is returned once by the operation that mints it; a replacement comes from rotation            |
+| Minting a session or a token for a chosen subject                 | The subject authenticates; impersonation is its own decision, with its own consent and audit story |
 
 ## Consequences
 

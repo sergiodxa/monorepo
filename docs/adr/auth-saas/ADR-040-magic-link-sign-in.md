@@ -47,14 +47,14 @@ object.
 
 ### Token, code and expiry
 
-| | Value | Why |
-| --- | --- | --- |
-| Link token | `randomToken({ bytes: 32 })` from `@sdxc/crypto` | 256 bits, URL-safe base64url |
-| Stored form | `sha256` hex of the token | The object holds nothing replayable |
-| Typed code | 8 characters, unambiguous base32, grouped `XXXX-XXXX` | 40 bits, readable aloud |
-| Code attempts | 5, then the attempt is destroyed | Five tries against 2^40 values |
-| Expiry | 10 minutes | Long enough to switch apps, short enough not to sit in a backup |
-| Outstanding | One live attempt per address per tenant | A new request invalidates the old |
+|               | Value                                                 | Why                                                             |
+| ------------- | ----------------------------------------------------- | --------------------------------------------------------------- |
+| Link token    | `randomToken({ bytes: 32 })` from `@sdxc/crypto`      | 256 bits, URL-safe base64url                                    |
+| Stored form   | `sha256` hex of the token                             | The object holds nothing replayable                             |
+| Typed code    | 8 characters, unambiguous base32, grouped `XXXX-XXXX` | 40 bits, readable aloud                                         |
+| Code attempts | 5, then the attempt is destroyed                      | Five tries against 2^40 values                                  |
+| Expiry        | 10 minutes                                            | Long enough to switch apps, short enough not to sit in a backup |
+| Outstanding   | One live attempt per address per tenant               | A new request invalidates the old                               |
 
 A 256-bit random value has no guessable structure, so a fast digest is the right primitive and a
 slow KDF would add latency without adding security. Password hashing stays as the repo's existing
@@ -74,7 +74,7 @@ one write with no `await` between them, so two requests arriving together cannot
 failure a `SELECT` then an `UPDATE` would have, since every `await` in a Durable Object is an
 interleaving point.
 
-The token is delivered by the mechanism *Transactional Email* owns, as the `sign_in` purpose of
+The token is delivered by the mechanism _Transactional Email_ owns, as the `sign_in` purpose of
 its `email_token` table; this ADR owns what that purpose means.
 
 ### The browser binding, and the decision on a different browser
@@ -100,7 +100,7 @@ by editing the URL.
 ### Rate limiting, and an address with no subject
 
 Per address per tenant: a burst limit of 3 requests per 15 minutes, spent inside the object in
-the same method that mints, nested under the 5-per-hour envelope *Transactional Email* sets across
+the same method that mints, nested under the 5-per-hour envelope _Transactional Email_ sets across
 every credential kind. Per connecting address: 10 per hour on the Worker route through
 `@sdxc/rate-limit` keyed on `@sdxc/get-client-ip`, which stops one client spraying many addresses.
 
@@ -116,7 +116,7 @@ is on, the subject is created at successful completion rather than at request, s
 never completes leaves nothing behind.
 
 Completing a magic link satisfies the first factor only: a subject with a second factor enrolled
-still answers the challenge owned by *TOTP Second Factor and Recovery Codes*.
+still answers the challenge owned by _TOTP Second Factor and Recovery Codes_.
 
 ### Tenant object RPC
 
@@ -135,7 +135,7 @@ still answers the challenge owned by *TOTP Second Factor and Recovery Codes*.
 - `cancelMagicLinkAttempt({ browserNonce, at })` — abandons the outstanding attempt when a person
   starts over.
 
-`session` is the verified session claim *Sessions* returns, not a cookie value; the Worker writes
+`session` is the verified session claim _Sessions_ returns, not a cookie value; the Worker writes
 the cookie. `invalid` covers expired, already consumed and never existed alike, because
 distinguishing them tells a caller something only an attacker wants.
 

@@ -23,7 +23,7 @@ through `ctx.flags` in the Worker.
 
 ### The event catalog already exists
 
-*Audit Log and Retention* fixes a closed catalog of actions, written by the operation that caused
+_Audit Log and Retention_ fixes a closed catalog of actions, written by the operation that caused
 each one, inside the same storage transaction as the change. Those are precisely the durable facts
 a tenant would subscribe to, and a second list beside it would drift on the first feature that
 remembered one and forgot the other. So the subscribable event types are the audit catalog's

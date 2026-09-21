@@ -13,8 +13,8 @@ reconciling invoices, a service calling a sibling service, a partner's backend p
 Two separate credentials answer that, held by different callers, and neither substitutes for the
 other. **Machine-to-machine access** is the OAuth 2.0 client credentials grant: a client id and
 secret are exchanged at the token endpoint for a short-lived JWT access token, signed by the
-tenant's key as *Signing Keys and Token Minting* describes and verified by that signature alone.
-An **API key** is a long-lived opaque credential a tenant issues to *its own* end users, so a
+tenant's key as _Signing Keys and Token Minting_ describes and verified by that signature alone.
+An **API key** is a long-lived opaque credential a tenant issues to _its own_ end users, so a
 customer of the tenant can script against the tenant's API without driving a browser flow, and it
 is verified by a storage lookup on every call. The token endpoint mints access tokens and mints
 no API key; an API key is minted by an administrative operation, carries no claims, and is
@@ -28,14 +28,14 @@ of any tier including Free. Its feature slug is `machine_access`, evaluated as
 
 ### Two credentials, two callers
 
-| | Client credentials access token | API key |
-| --- | --- | --- |
-| Who holds it | A confidential client registered in the tenant | An end user of the tenant |
-| How it is obtained | `grant_type=client_credentials` at the tenant's token endpoint, with a client id and secret | An administrative operation mints it and returns the value once |
-| Form | A signed JWT carrying `sub`, `client_id`, `aud` and `scope` | An opaque `{prefix}_{id}_{secret}` string carrying no claims |
-| Lifetime | One hour, with no refresh token | 90 days by default, capped at 365 |
-| Verification | A signature check against the published key set, with no storage lookup | A row lookup inside the tenant object and a constant-time digest compare |
-| Revocation | At expiry; revoking the client's secret stops the next issuance | `revokeApiKey`, effective on the next call |
+|                    | Client credentials access token                                                             | API key                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Who holds it       | A confidential client registered in the tenant                                              | An end user of the tenant                                                |
+| How it is obtained | `grant_type=client_credentials` at the tenant's token endpoint, with a client id and secret | An administrative operation mints it and returns the value once          |
+| Form               | A signed JWT carrying `sub`, `client_id`, `aud` and `scope`                                 | An opaque `{prefix}_{id}_{secret}` string carrying no claims             |
+| Lifetime           | One hour, with no refresh token                                                             | 90 days by default, capped at 365                                        |
+| Verification       | A signature check against the published key set, with no storage lookup                     | A row lookup inside the tenant object and a constant-time digest compare |
+| Revocation         | At expiry; revoking the client's secret stops the next issuance                             | `revokeApiKey`, effective on the next call                               |
 
 An access token stays valid for its hour, which is what verifying it with no lookup costs; a
 tenant that wants a machine caller stopped sooner revokes the secret and waits the hour out. An
@@ -54,7 +54,7 @@ tenant's Durable Object, which is single-threaded, so a work factor there is pai
 the tenant serves and by everything queued behind it.
 
 The way out is the structure of the value rather than a cheaper hash. The key carries the id of
-its own row, so the row is *found* rather than searched, and the secret half is 256 bits no search
+its own row, so the row is _found_ rather than searched, and the secret half is 256 bits no search
 can walk, so storage keeps a SHA-256 digest compared in constant time, as the session token does.
 
 A tenant's object is one instance, and every write to `api_keys` goes through it, so a map from
@@ -65,8 +65,8 @@ revokes a key: a warm object verifies with no storage read and a revocation land
 
 ### Client credentials at the token endpoint
 
-`grant_type=client_credentials` is one RPC call, answering the `TokenOutcome` shape *Token
-Endpoint and Refresh Rotation* defines.
+`grant_type=client_credentials` is one RPC call, answering the `TokenOutcome` shape _Token
+Endpoint and Refresh Rotation_ defines.
 
 ```ts
 issueClientCredentialsToken(input: {
@@ -137,7 +137,7 @@ Paid capabilities lapse at the administrative write, so `entitlement.machine-acc
 where a key is created or rotated, where a tenant's prefix is registered, and where
 `client_credentials` is written onto a client's grant list. Issuing a token to a client that
 already carries the grant and verifying a key already issued are protocol surface, which keeps
-serving a lapsed tenant alongside every authentication *Per-Tenant Subscriptions* keeps running.
+serving a lapsed tenant alongside every authentication _Per-Tenant Subscriptions_ keeps running.
 
 ### Metering
 

@@ -95,12 +95,12 @@ the window an authorization request already gets, and it is the time a person ha
 phone. The device then polls the token endpoint with
 `grant_type=urn:ietf:params:oauth:grant-type:device_code`:
 
-| Answer | When |
-| --- | --- |
-| `authorization_pending` | Nobody has decided yet |
-| `slow_down` | The poll arrived inside the interval; the stored interval rises by 5 seconds |
-| `access_denied` / `expired_token` | The person refused, or the request passed `expires_at` |
-| Tokens | Approved, and this is the first redemption |
+| Answer                            | When                                                                         |
+| --------------------------------- | ---------------------------------------------------------------------------- |
+| `authorization_pending`           | Nobody has decided yet                                                       |
+| `slow_down`                       | The poll arrived inside the interval; the stored interval rises by 5 seconds |
+| `access_denied` / `expired_token` | The person refused, or the request passed `expires_at`                       |
+| Tokens                            | Approved, and this is the first redemption                                   |
 
 `slow_down` raising the stored interval makes it a control rather than advice: a device that
 ignores it is answered `slow_down` again on a longer clock. Redemption is the single statement the
@@ -112,7 +112,7 @@ polls cannot both mint tokens and a second redemption is `invalid_grant`.
 `/device` requires a session; without one the request enters the ordinary sign-in flow and returns
 to the screen afterwards, so approving is always something an authenticated person did.
 
-The screen renders the `ConsentScreen` shape *Consent and Scopes* defines, so a device approval and
+The screen renders the `ConsentScreen` shape _Consent and Scopes_ defines, so a device approval and
 a browser approval are one surface and one set of copy: the client's name and logo, the scopes
 asked for, and the code being confirmed. The submitted form carries the interaction id rather than
 the code, which keeps the flow state server-side.
@@ -126,12 +126,12 @@ unions the agreed scopes into the grant, so tokens minted on the next poll carry
 The code space is one half of RFC 8628 section 5.1 and this is the other, through
 `@sdxc/rate-limit`:
 
-| Budget | Limit | Keyed on |
-| --- | --- | --- |
-| Wrong user codes | 5 per 10 minutes | The approving session |
-| Wrong user codes | 20 per hour | The connecting address |
-| New device authorizations | 60 per minute | The client |
-| Pending authorizations | 500 | The tenant |
+| Budget                    | Limit            | Keyed on               |
+| ------------------------- | ---------------- | ---------------------- |
+| Wrong user codes          | 5 per 10 minutes | The approving session  |
+| Wrong user codes          | 20 per hour      | The connecting address |
+| New device authorizations | 60 per minute    | The client             |
+| Pending authorizations    | 500              | The tenant             |
 
 Exhausting either wrong-code budget refuses `/device` for an hour. With a pending set in the
 thousands against 25.6 billion codes a single guess lands with probability under one in ten
@@ -143,7 +143,7 @@ million, and twenty an hour is the whole of what one address gets.
   grant, validates the scope, mints both codes, and answers the RFC 8628 response.
 - `beginDeviceApproval({ userCode, sessionId, now })` — spends an attempt against the code budget
   and resolves the pending row, answering `{ kind: "approve", screen } | { kind: "unknown" } |
-  { kind: "expired" }`, so a wrong code costs a guess inside the call that looks it up.
+{ kind: "expired" }`, so a wrong code costs a guess inside the call that looks it up.
 - `decideDeviceApproval({ interactionId, sessionId, approved, now })` — binds the session, records
   the decision, unions the grant, and answers what the screen renders next.
 - `redeemDeviceCode({ deviceCode, clientId, clientSecret, authScheme, now })` — enforces the

@@ -51,11 +51,11 @@ reconciled, a delivery retried. That is the line the add-ons follow.
 
 Every tenant carries one base subscription, priced per tenant per month.
 
-| Tier | Price | DAU cap | Audit retention |
-| --- | --- | --- | --- |
-| Free | $0 | 100 | 7 days |
-| Pro | $29 | 2,500 | 30 days |
-| Premium | $99 | 10,000 | 90 days |
+| Tier    | Price | DAU cap | Audit retention |
+| ------- | ----- | ------- | --------------- |
+| Free    | $0    | 100     | 7 days          |
+| Pro     | $29   | 2,500   | 30 days         |
+| Premium | $99   | 10,000  | 90 days         |
 
 A DAU is a distinct subject that completes at least one authentication — a session created or a
 token issued — within a UTC day, counted per tenant, and
@@ -87,16 +87,16 @@ and none of it changes how strong an authentication is, which is exactly why the
 Bought individually, per tenant, on top of any tier including Free. Each is its own subscription on
 the same billing customer, attached to the same tenant.
 
-| Add-on | Price | Feature slug |
-| --- | --- | --- |
-| Enterprise SSO connections | $49 (5 connections, then $10 each) | `sso_connections` |
-| SCIM provisioning | $29 | `scim` |
-| Organizations | $29 | `organizations` |
-| Custom roles and permissions | $19 | `custom_roles` |
-| Outbound webhooks | $19 | `outbound_webhooks` |
-| Machine-to-machine access and API keys | $29 | `machine_access` |
-| Device authorization grant | $9 | `device_grant` |
-| Audit streaming and export | $29 | `audit_streaming` |
+| Add-on                                 | Price                              | Feature slug        |
+| -------------------------------------- | ---------------------------------- | ------------------- |
+| Enterprise SSO connections             | $49 (5 connections, then $10 each) | `sso_connections`   |
+| SCIM provisioning                      | $29                                | `scim`              |
+| Organizations                          | $29                                | `organizations`     |
+| Custom roles and permissions           | $19                                | `custom_roles`      |
+| Outbound webhooks                      | $19                                | `outbound_webhooks` |
+| Machine-to-machine access and API keys | $29                                | `machine_access`    |
+| Device authorization grant             | $9                                 | `device_grant`      |
+| Audit streaming and export             | $29                                | `audit_streaming`   |
 
 No add-on is a prerequisite for a safe provider, which is what makes the split defensible: a Free
 tenant with none of them runs full OIDC with passkeys, TOTP and attack protection. SSO connections

@@ -48,13 +48,13 @@ mints.
 
 ### The messages
 
-| Kind | Trigger | Carries |
-| --- | --- | --- |
-| `verify_address` | Sign-up, and a change of address | A single-use link and its code |
-| `reset_password` | The reset request form | A single-use link |
-| `sign_in` | A magic link request | A single-use link and its code |
-| `no_account` | A request for an address with no subject | No credential; prose only |
-| `security_notice` | Password, passkey, factor or address changed | No credential; prose only |
+| Kind              | Trigger                                      | Carries                        |
+| ----------------- | -------------------------------------------- | ------------------------------ |
+| `verify_address`  | Sign-up, and a change of address             | A single-use link and its code |
+| `reset_password`  | The reset request form                       | A single-use link              |
+| `sign_in`         | A magic link request                         | A single-use link and its code |
+| `no_account`      | A request for an address with no subject     | No credential; prose only      |
+| `security_notice` | Password, passkey, factor or address changed | No credential; prose only      |
 
 `no_account` keeps the HTTP response for an unknown address identical to a known one's.
 
@@ -90,15 +90,15 @@ language: raw HTML arrives as escaped text, so a tenant-authored body cannot inj
 message the platform signs. Interpolation is a fixed placeholder set per kind — `{{url}}`,
 `{{code}}`, `{{tenant}}`, `{{email}}`, `{{expires}}` — substituted before parsing and checked on
 save, so an unknown placeholder or a missing credential placeholder is a save-time error. An
-override is stored on every tier and rendered where *Entitlements as Feature Flags* grants it.
+override is stored on every tier and rendered where _Entitlements as Feature Flags_ grants it.
 
 ### Rate limiting is per recipient
 
-| Layer | Budget | Where |
-| --- | --- | --- |
-| Per address per tenant, all credential kinds | 5 per hour, 15 per day | The tenant object |
-| Per connecting address per tenant | 10 per hour | The Worker route |
-| `security_notice`, per subject per kind | 1 per hour | The object, counted apart |
+| Layer                                        | Budget                 | Where                     |
+| -------------------------------------------- | ---------------------- | ------------------------- |
+| Per address per tenant, all credential kinds | 5 per hour, 15 per day | The tenant object         |
+| Per connecting address per tenant            | 10 per hour            | The Worker route          |
+| `security_notice`, per subject per kind      | 1 per hour             | The object, counted apart |
 
 The envelope is spent inside the same object method that mints the token, because the check and
 the issuance are one read-modify-write with no `await` between them; it uses `@sdxc/rate-limit`'s
@@ -136,8 +136,8 @@ mail", which leaks nothing, since the person typed the address.
 
 The token is the one bearer value that crosses the boundary, because its purpose is to be carried
 to a mailbox; `token_hash` is a SHA-256 digest, so the object holds nothing replayable.
-Security notices need no method: the operations owned by *Password Credentials*, *Passkeys* and
-*TOTP Second Factor and Recovery Codes* return an optional `notice: { kind, address, locale }`, so
+Security notices need no method: the operations owned by _Password Credentials_, _Passkeys_ and
+_TOTP Second Factor and Recovery Codes_ return an optional `notice: { kind, address, locale }`, so
 the judgement that a change is notable stays where the change happened.
 
 ### Cost

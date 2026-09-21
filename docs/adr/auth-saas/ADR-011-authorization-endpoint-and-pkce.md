@@ -23,8 +23,8 @@ belongs to the OIDC/OAuth2 core, so it is available on Free.
 
 An error has two destinations, and the request's own validity decides which.
 
-| Condition                                                                    | Response                                 |
-| ---------------------------------------------------------------------------- | ---------------------------------------- |
+| Condition                                                                     | Response                                 |
+| ----------------------------------------------------------------------------- | ---------------------------------------- |
 | `client_id` missing, unknown, or naming a disabled client                     | Render an error on the tenant's hostname |
 | `redirect_uri` missing, or not string-equal to one registered for that client | Render an error on the tenant's hostname |
 | Everything else — bad `scope`, bad `response_type`, absent `code_challenge`   | 302 to the verified `redirect_uri`       |

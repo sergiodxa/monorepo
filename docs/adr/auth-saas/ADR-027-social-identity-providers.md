@@ -135,7 +135,7 @@ the callback URL to paste.
 
 - `saveConnection(input)` — validates the shape for the kind, seals the secret, claims the slug,
   answers the public record with the callback URL to register. `setConnectionEnabled({ slug,
-  enabled })` turns it on once credentials are there.
+enabled })` turns it on once credentials are there.
 - `removeConnection({ slug, unlinkIdentities })` — refuses while identities reference it unless
   told to unlink them, each unlink obeying the credential rule in ADR-036.
 - `describeConnections({})` — the enabled connections as the sign-in page renders them; a read-only

@@ -31,11 +31,11 @@ Custom domains are a Pro and Premium feature, which means a tenant's hostname ch
 once: on upgrade, and again whenever it moves its login page elsewhere. Binding credentials to the
 rented domain strands every passkey the tenant's users hold the day that domain changes.
 
-| Relying party id | Isolation between tenants | Survives a domain change |
-| --- | --- | --- |
-| One platform-wide domain | None: one tenant's credentials are offered on another's page | Yes |
-| The tenant's platform subdomain | Per tenant | Yes |
-| The tenant's custom domain | Per tenant | No: every credential is stranded |
+| Relying party id                | Isolation between tenants                                    | Survives a domain change         |
+| ------------------------------- | ------------------------------------------------------------ | -------------------------------- |
+| One platform-wide domain        | None: one tenant's credentials are offered on another's page | Yes                              |
+| The tenant's platform subdomain | Per tenant                                                   | Yes                              |
+| The tenant's custom domain      | Per tenant                                                   | No: every credential is stranded |
 
 ### Discoverable credentials remove the identifier field
 

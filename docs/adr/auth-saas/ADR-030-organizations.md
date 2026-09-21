@@ -24,14 +24,14 @@ per tenant per month, feature slug `organizations`, sold on top of any tier incl
 The platform has customers; a tenant has customers. Conflating them is the single way this design goes
 wrong, so the vocabulary is fixed here and the series holds to it:
 
-| | Tenant | Organization |
-| --- | --- | --- |
-| Whose customer it is | The platform's | One tenant's |
-| Where it lives | A Durable Object of its own | Rows inside one tenant's object |
-| Identity boundary | Its own issuer, signing keys and subjects | Shares the tenant's issuer, keys and subjects |
-| Billed by the platform | Yes, one subscription each | No; the tenant bills it, if at all |
-| Id | `ten_…` in the control plane | `org_…` in the tenant object |
-| Reaches a token as | The `iss` claim | The `org` claim |
+|                        | Tenant                                    | Organization                                  |
+| ---------------------- | ----------------------------------------- | --------------------------------------------- |
+| Whose customer it is   | The platform's                            | One tenant's                                  |
+| Where it lives         | A Durable Object of its own               | Rows inside one tenant's object               |
+| Identity boundary      | Its own issuer, signing keys and subjects | Shares the tenant's issuer, keys and subjects |
+| Billed by the platform | Yes, one subscription each                | No; the tenant bills it, if at all            |
+| Id                     | `ten_…` in the control plane              | `org_…` in the tenant object                  |
+| Reaches a token as     | The `iss` claim                           | The `org` claim                               |
 
 "Tenant" never names an organization and "organization" never names a tenant — including in the
 dashboard, where a platform customer administering their tenant is never told it is an organization.
@@ -56,16 +56,16 @@ issued. So a session carries one active organization and switching is a re-issue
 In the tenant object, as `remix/data-table` models over `@sdxc/data-table-sqlstorage`, with inputs
 parsed by `remix/data-schema` inside the object.
 
-| Table | Columns | The constraint that carries the design |
-| --- | --- | --- |
-| `organizations` | `id` (`org_…` TypeID), `slug`, `name`, `logo_url`, `status`, `metadata` as JSON over declared keys, timestamps | `slug` is unique within the tenant |
-| `organization_members` | `organization_id`, `subject_id`, `role`, `joined_via` (`creator`, `invitation`, `domain`, `connection`, `admin`), timestamps | Primary key `(organization_id, subject_id)`, with an index on `(subject_id, created_at)` for the switcher |
+| Table                      | Columns                                                                                                                              | The constraint that carries the design                                                                                                     |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `organizations`            | `id` (`org_…` TypeID), `slug`, `name`, `logo_url`, `status`, `metadata` as JSON over declared keys, timestamps                       | `slug` is unique within the tenant                                                                                                         |
+| `organization_members`     | `organization_id`, `subject_id`, `role`, `joined_via` (`creator`, `invitation`, `domain`, `connection`, `admin`), timestamps         | Primary key `(organization_id, subject_id)`, with an index on `(subject_id, created_at)` for the switcher                                  |
 | `organization_invitations` | `id`, `organization_id`, `folded_email`, `role`, `invited_by`, `token_hash`, `expires_at`, `accepted_at`, `revoked_at`, `created_at` | A partial unique index on `(organization_id, folded_email)` over rows neither accepted nor revoked, so one address has one open invitation |
-| `organization_domains` | `domain` lowercased and IDNA-encoded, `organization_id`, `mode`, `verification_value`, `verified_at`, `created_at` | `domain` is the primary key, so two organizations in one tenant cannot both claim `acme.com` |
+| `organization_domains`     | `domain` lowercased and IDNA-encoded, `organization_id`, `mode`, `verification_value`, `verified_at`, `created_at`                   | `domain` is the primary key, so two organizations in one tenant cannot both claim `acme.com`                                               |
 
 `sessions` gains a nullable `active_organization_id`. `organization_members.role` holds one role key,
 because a membership and its role are created, changed and removed together and splitting them buys a
-join and a way for the two rows to disagree; the role vocabulary belongs to *Roles and Permissions*.
+join and a way for the two rows to disagree; the role vocabulary belongs to _Roles and Permissions_.
 
 Organizations, memberships and domains are customer-action rows bounded by the plan's subject cap;
 invitations grow with traffic, so the object's alarm deletes rows a week past `expires_at`.

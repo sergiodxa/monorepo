@@ -48,12 +48,12 @@ removing it is an ordinary operation rather than an account deletion in disguise
 
 ### Policy that changes guessing odds, and policy that only changes typing
 
-| Rule | Effect on an attacker | Effect on a person |
-| --- | --- | --- |
-| Minimum length | Raises the search space directly | One requirement to meet |
-| Breached and common deny-list | Removes the passwords guessed first | Rejects a choice already public |
-| Composition classes | Narrows the search space to predictable shapes | `Password1!` |
-| Scheduled expiry | Buys nothing against a hash already stolen | Predictable mutation, reuse elsewhere |
+| Rule                          | Effect on an attacker                          | Effect on a person                    |
+| ----------------------------- | ---------------------------------------------- | ------------------------------------- |
+| Minimum length                | Raises the search space directly               | One requirement to meet               |
+| Breached and common deny-list | Removes the passwords guessed first            | Rejects a choice already public       |
+| Composition classes           | Narrows the search space to predictable shapes | `Password1!`                          |
+| Scheduled expiry              | Buys nothing against a hash already stolen     | Predictable mutation, reuse elsewhere |
 
 The first two are always on and composition classes are not offered at all. Expiry is a tenant setting
 defaulting to never, and the last row is why: a date does nothing to a hash already stolen, and what a

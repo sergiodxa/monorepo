@@ -20,11 +20,11 @@ permissions at all, is the **custom roles and permissions** add-on at $19 per te
 
 ### A role is always held at a scope, and there are three of them
 
-| Scope | Who holds a role there | Where the assignment lives | Extensible |
-| --- | --- | --- | --- |
-| A tenant, administratively | A person administering that tenant in the dashboard | `memberships` in the control plane | Fixed at the three names |
-| A tenant's directory | A subject, across the whole tenant | `role_assignments` in the tenant object | With the add-on |
-| One organization | A subject, within that organization | `organization_members.role` in the tenant object | With the add-on |
+| Scope                      | Who holds a role there                              | Where the assignment lives                       | Extensible               |
+| -------------------------- | --------------------------------------------------- | ------------------------------------------------ | ------------------------ |
+| A tenant, administratively | A person administering that tenant in the dashboard | `memberships` in the control plane               | Fixed at the three names |
+| A tenant's directory       | A subject, across the whole tenant                  | `role_assignments` in the tenant object          | With the add-on          |
+| One organization           | A subject, within that organization                 | `organization_members.role` in the tenant object | With the add-on          |
 
 The first is about the platform's customer and never reaches a token; the other two are about a
 tenant's own subjects and do. Keeping them separate stops an organization admin inheriting the ability
@@ -41,7 +41,7 @@ minted rather than while one is.
 
 ### Fine-grained authorization is the tenant's data, not the tenant's directory
 
-"May this subject edit *this document*" is answered from tuples about documents, whose count scales
+"May this subject edit _this document_" is answered from tuples about documents, whose count scales
 with the tenant's content rather than with its people, against a per-tenant storage ceiling sized for
 a directory. The check also sits on the request path of the tenant's own product, a latency budget
 this platform neither owns nor can promise.
@@ -50,15 +50,15 @@ this platform neither owns nor can promise.
 
 ### Where the paid line falls
 
-| Capability | Every tier, including Free | Needs `custom_roles` |
-| --- | --- | --- |
-| The three system roles at every scope above | yes | yes |
-| Assigning, changing and removing a system role | yes | yes |
-| A `roles` claim naming the role held at the token's scopes | yes | yes |
-| System-role checks at the management API and the dashboard | yes | yes |
-| Defining a role beyond the three | | yes |
-| Defining a permission, and granting permissions to a role | | yes |
-| A `permissions` claim, and a resolved permission set at `/userinfo` | | yes |
+| Capability                                                          | Every tier, including Free | Needs `custom_roles` |
+| ------------------------------------------------------------------- | -------------------------- | -------------------- |
+| The three system roles at every scope above                         | yes                        | yes                  |
+| Assigning, changing and removing a system role                      | yes                        | yes                  |
+| A `roles` claim naming the role held at the token's scopes          | yes                        | yes                  |
+| System-role checks at the management API and the dashboard          | yes                        | yes                  |
+| Defining a role beyond the three                                    |                            | yes                  |
+| Defining a permission, and granting permissions to a role           |                            | yes                  |
+| A `permissions` claim, and a resolved permission set at `/userinfo` |                            | yes                  |
 
 A tenant on Free tells an owner from a member wherever it matters, so the management API is safe
 without a purchase, and what $19 buys is a tenant's own vocabulary.
@@ -68,11 +68,11 @@ without a purchase, and what $19 buys is a tenant's own vocabulary.
 `owner`, `admin` and `member` exist in every tenant, at every scope, undeletable and unrenameable,
 with fixed meanings:
 
-| Role | Holds |
-| --- | --- |
-| `owner` | Every administrative operation on the scope, including deleting it and transferring ownership |
-| `admin` | Every administrative operation except deleting the scope, transferring ownership, and changing an owner's role |
-| `member` | Membership of the scope, and nothing more |
+| Role     | Holds                                                                                                          |
+| -------- | -------------------------------------------------------------------------------------------------------------- |
+| `owner`  | Every administrative operation on the scope, including deleting it and transferring ownership                  |
+| `admin`  | Every administrative operation except deleting the scope, transferring ownership, and changing an owner's role |
+| `member` | Membership of the scope, and nothing more                                                                      |
 
 Removing the last owner of a scope is refused, so no scope reaches a state only support can leave, and
 the three keys are reserved, so a check against `owner` means the same thing in every tenant.
@@ -81,12 +81,12 @@ the three keys are reserved, so a check against `owner` means the same thing in 
 
 Tables in the tenant object, as `remix/data-table` models over `@sdxc/data-table-sqlstorage`:
 
-| Table | Columns | The rule it carries |
-| --- | --- | --- |
-| `roles` | `id` (`rol_…`), `scope` (`tenant` or an `org_…` id), `key`, `name`, `description`, `system`, timestamps | Unique on `(scope, key)`, so a role name means one thing within its scope |
-| `permissions` | `key`, `name`, `description`, `created_at` | The key is the primary key; keys beginning `auth:` are reserved for this platform's own management-API permissions |
-| `role_permissions` | `role_id`, `permission_key` | Primary key over both; an explicit set, resolved by one indexed read |
-| `role_assignments` | `subject_id`, `role_id`, `scope`, `assigned_by`, `created_at` | Primary key `(subject_id, scope)` — one role per subject per scope |
+| Table              | Columns                                                                                                 | The rule it carries                                                                                                |
+| ------------------ | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `roles`            | `id` (`rol_…`), `scope` (`tenant` or an `org_…` id), `key`, `name`, `description`, `system`, timestamps | Unique on `(scope, key)`, so a role name means one thing within its scope                                          |
+| `permissions`      | `key`, `name`, `description`, `created_at`                                                              | The key is the primary key; keys beginning `auth:` are reserved for this platform's own management-API permissions |
+| `role_permissions` | `role_id`, `permission_key`                                                                             | Primary key over both; an explicit set, resolved by one indexed read                                               |
+| `role_assignments` | `subject_id`, `role_id`, `scope`, `assigned_by`, `created_at`                                           | Primary key `(subject_id, scope)` — one role per subject per scope                                                 |
 
 One role per subject per scope is the simplifying decision the rest rests on. Several roles at one
 scope makes every read a union, raises a precedence question the moment two disagree, and leaves an
@@ -178,7 +178,7 @@ opaque error at infrastructure nobody here operates. Rejected for a cap enforced
 written.
 
 **Relationship-based authorization as a further add-on.** The honest answer to "may this person edit
-*this* document", and the direction the market moves. Its tuples are the tenant's application data and
+_this_ document", and the direction the market moves. Its tuples are the tenant's application data and
 scale with that data against a storage ceiling sized for a directory, and the check sits in a latency
 budget this platform does not own. Rejected: this platform issues the claims and a system closer to
 the data decides on them.

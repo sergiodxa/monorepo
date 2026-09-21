@@ -62,14 +62,14 @@ states which credential set issued the id it carries.
 
 ### What the control plane records
 
-| Table | Columns added or introduced |
-| --- | --- |
-| `customers` | `provider_customer_id`, `provider_connection` |
-| `tenants` | `plan_slug`, `subscription_id`, `subscription_status`, `current_period_end`, `cancel_at_period_end`, `grace_until`, `lapsed_at` |
-| `tenant_addons` | `tenant_id`, `product_slug`, `subscription_id`, `status`, `current_period_end` |
-| `tenant_entitlements` | `tenant_id`, `products` (JSON slugs), `features` (JSON slug to boolean), `read_at` |
-| `billing_checkouts` | `attempt_id`, `tenant_id`, `customer_id`, `product_slug`, `kind` (`base` or `addon`), `checkout_id`, `created_at` |
-| `billing_deliveries` | `id`, `type`, `payload`, `valid`, `processed`, `received_at` |
+| Table                 | Columns added or introduced                                                                                                     |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `customers`           | `provider_customer_id`, `provider_connection`                                                                                   |
+| `tenants`             | `plan_slug`, `subscription_id`, `subscription_status`, `current_period_end`, `cancel_at_period_end`, `grace_until`, `lapsed_at` |
+| `tenant_addons`       | `tenant_id`, `product_slug`, `subscription_id`, `status`, `current_period_end`                                                  |
+| `tenant_entitlements` | `tenant_id`, `products` (JSON slugs), `features` (JSON slug to boolean), `read_at`                                              |
+| `billing_checkouts`   | `attempt_id`, `tenant_id`, `customer_id`, `product_slug`, `kind` (`base` or `addon`), `checkout_id`, `created_at`               |
+| `billing_deliveries`  | `id`, `type`, `payload`, `valid`, `processed`, `received_at`                                                                    |
 
 `tenant_entitlements` is what the middleware's `entitlements` option reads and `requireEntitlement()`
 gates on; its row satisfies `EntitlementSnapshot` as written, and
@@ -104,15 +104,15 @@ forged delivery is the one request answered `401`, and everything else is acknow
 error response is how a platform decides an endpoint is broken. Deduplication keys on the delivery
 id, since one object produces many deliveries.
 
-| Event | What the handler does |
-| --- | --- |
-| `checkout.completed` | Matches the `billing_checkouts` row, attaches `subscriptionId` to its tenant as base or add-on |
-| `subscription.activated` | Attaches when the checkout event was missed |
-| `subscription.updated` | Carries `status`, `currentPeriodEnd` and `cancelAtPeriodEnd` onto the tenant |
-| `subscription.canceled` | Records `cancel_at_period_end`; access runs to `currentPeriodEnd` |
-| `subscription.revoked` | Ends access and sets `lapsed_at` |
-| `order.paid`, `order.refunded` | Clears `grace_until` on payment; reprojects either way |
-| `customer.updated` | Keeps the customer's email in step |
+| Event                          | What the handler does                                                                          |
+| ------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `checkout.completed`           | Matches the `billing_checkouts` row, attaches `subscriptionId` to its tenant as base or add-on |
+| `subscription.activated`       | Attaches when the checkout event was missed                                                    |
+| `subscription.updated`         | Carries `status`, `currentPeriodEnd` and `cancelAtPeriodEnd` onto the tenant                   |
+| `subscription.canceled`        | Records `cancel_at_period_end`; access runs to `currentPeriodEnd`                              |
+| `subscription.revoked`         | Ends access and sets `lapsed_at`                                                               |
+| `order.paid`, `order.refunded` | Clears `grace_until` on payment; reprojects either way                                         |
+| `customer.updated`             | Keeps the customer's email in step                                                             |
 
 Every handler then re-reads `entitlements.of({ id: providerCustomerId })` and rewrites
 `tenant_entitlements` for each of that customer's tenants, joining the snapshot's `subscriptions`
@@ -134,11 +134,11 @@ Token issuance never stops for non-payment. `/authorize`, `/oauth/token`, `/user
 discovery documents keep serving a lapsed tenant through its notice period, and every token already
 issued keeps verifying.
 
-| Stage | State | What the tenant has |
-| --- | --- | --- |
-| Charge fails | `past_due`, `grace_until` 14 days out | Everything, unchanged; dashboard banner, email at day 0, 7 and 13 |
-| Grace ends, or a cancellation takes effect | `revoked`, `lapsed_at` set | Authentication at the former tier's cap and retention; paid capabilities refuse administrative writes |
-| 60 days after `lapsed_at` | Scheduled for deletion | Export available throughout; final notice at day 45 and day 59 |
+| Stage                                      | State                                 | What the tenant has                                                                                   |
+| ------------------------------------------ | ------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Charge fails                               | `past_due`, `grace_until` 14 days out | Everything, unchanged; dashboard banner, email at day 0, 7 and 13                                     |
+| Grace ends, or a cancellation takes effect | `revoked`, `lapsed_at` set            | Authentication at the former tier's cap and retention; paid capabilities refuse administrative writes |
+| 60 days after `lapsed_at`                  | Scheduled for deletion                | Export available throughout; final notice at day 45 and day 59                                        |
 
 Paid capabilities lapse at the write rather than the read: the gate refuses configuring a new custom
 domain, editing branding, changing session policy, adding an SSO connection or minting an API key.

@@ -20,12 +20,12 @@ one leaks. The endpoint belongs to the OIDC/OAuth2 core, so it is available on F
 
 ### Two grants at launch, two deferred
 
-| `grant_type`                                    | Status                                            |
-| ----------------------------------------------- | ------------------------------------------------- |
-| `authorization_code`                            | Served                                            |
-| `refresh_token`                                 | Served                                            |
-| `urn:ietf:params:oauth:grant-type:device_code`  | ADR-039: Device Authorization Grant, its own add-on |
-| `client_credentials`                            | ADR-032: Machine-to-Machine Access and API Keys, its own add-on |
+| `grant_type`                                   | Status                                                          |
+| ---------------------------------------------- | --------------------------------------------------------------- |
+| `authorization_code`                           | Served                                                          |
+| `refresh_token`                                | Served                                                          |
+| `urn:ietf:params:oauth:grant-type:device_code` | ADR-039: Device Authorization Grant, its own add-on             |
+| `client_credentials`                           | ADR-032: Machine-to-Machine Access and API Keys, its own add-on |
 
 The deferred grants each carry their own storage, gate and failure modes, so each gets a
 decision of its own and answers `unsupported_grant_type` until then. OAuth 2.1 specifies
@@ -35,11 +35,11 @@ page serves the case that reached for the second.
 
 ### A client authenticates one way per request
 
-| Method                | Used by                                          |
-| --------------------- | ------------------------------------------------ |
-| `none`                | Public clients — browser and native apps          |
+| Method                | Used by                                              |
+| --------------------- | ---------------------------------------------------- |
+| `none`                | Public clients — browser and native apps             |
 | `client_secret_basic` | Confidential clients, credentials in `Authorization` |
-| `client_secret_post`  | Confidential clients, credentials in the body     |
+| `client_secret_post`  | Confidential clients, credentials in the body        |
 
 OAuth 2.1 requires a client to use no more than one method per request, so presenting both
 header and body credentials is `invalid_request` rather than a fallback chain. Secrets are
@@ -61,11 +61,11 @@ attacker working. Reuse ends the whole family and the session behind it.
 
 ### A refresh token outlives an access token, not the authentication
 
-| Value                  | Lifetime                                     |
-| ---------------------- | -------------------------------------------- |
-| Access token, ID token | 10 minutes                                   |
-| Refresh token          | 30 days idle, 90 days absolute per family    |
-| Refresh token family   | Ends when its session ends                   |
+| Value                  | Lifetime                                  |
+| ---------------------- | ----------------------------------------- |
+| Access token, ID token | 10 minutes                                |
+| Refresh token          | 30 days idle, 90 days absolute per family |
+| Refresh token family   | Ends when its session ends                |
 
 Binding the family to the session is what makes sign-out mean something: ending a session
 invalidates the tokens minted from it rather than leaving a refresh token to mint new ones
@@ -126,14 +126,14 @@ their family's absolute expiry has passed.
 
 ### Errors
 
-| Code                     | Meaning here                                                |
-| ------------------------ | ------------------------------------------------------------ |
-| `invalid_request`        | Missing or repeated parameter, or two authentication methods  |
-| `invalid_client`         | Unknown client, or a secret that fails to verify              |
+| Code                     | Meaning here                                                    |
+| ------------------------ | --------------------------------------------------------------- |
+| `invalid_request`        | Missing or repeated parameter, or two authentication methods    |
+| `invalid_client`         | Unknown client, or a secret that fails to verify                |
 | `invalid_grant`          | Code or refresh token unknown, expired, redeemed, or mismatched |
-| `unauthorized_client`    | Client is not configured for the grant it asked for            |
-| `unsupported_grant_type` | A grant this tenant does not serve                            |
-| `invalid_scope`          | A refresh asking for scope the grant does not hold             |
+| `unauthorized_client`    | Client is not configured for the grant it asked for             |
+| `unsupported_grant_type` | A grant this tenant does not serve                              |
+| `invalid_scope`          | A refresh asking for scope the grant does not hold              |
 
 Errors are HTTP 400, with the one exception OAuth 2.1 names: `invalid_client` from a client
 that authenticated through the `Authorization` header is HTTP 401 carrying a

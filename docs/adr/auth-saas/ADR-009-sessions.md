@@ -17,7 +17,7 @@ for tokens, and whatever application session it keeps afterwards is its own.
 its Durable Object and gives the Worker HTTP. A session sits on that seam: the record is tenant
 state, the cookie is an HTTP artifact, and the lookup runs on every request to the sign-in host.
 Sessions are a base capability, available on Free; per-tenant configuration of the lifetimes
-below is Pro and above, owned by *Session Policy Configuration*, so this ADR fixes the defaults
+below is Pro and above, owned by _Session Policy Configuration_, so this ADR fixes the defaults
 and the mechanism a policy adjusts.
 
 ## Context
@@ -42,10 +42,10 @@ minute — so a page and its form post share one write.
 
 ### Two clocks answer two different questions
 
-| Clock | Question it answers | Default |
-| --- | --- | --- |
+| Clock    | Question it answers                                                              | Default |
+| -------- | -------------------------------------------------------------------------------- | ------- |
 | Absolute | How long may one authentication stand before the subject proves themselves again | 30 days |
-| Idle | How long may an authentication sit unused before it stops standing | 7 days |
+| Idle     | How long may an authentication sit unused before it stops standing               | 7 days  |
 
 An absolute lifetime bounds a token stolen and held; an idle lifetime clears the abandoned
 session on a shared machine. Both are enforced on every resolve.
@@ -84,24 +84,24 @@ CREATE INDEX sessions_by_expiry ON sessions (expires_at);
 ```
 
 The cookie's token is `randomToken({ bytes: 32 })` from `@sdxc/crypto`, and storage keeps its
-SHA-256. The digest is a plain one because the row is *found* by it: the value is 256 bits the
+SHA-256. The digest is a plain one because the row is _found_ by it: the value is 256 bits the
 object generated, so a work factor would be paid on every request to slow a search nothing can
 walk. A credential located some other way and then compared is hashed under the repo's
-credential-hash decision, which is what *Clients and Client Secrets* does.
+credential-hash decision, which is what _Clients and Client Secrets_ does.
 
 ### The cookie
 
 Built with `createCookie` from `remix/cookie` and signed with the app's cookie secrets, a list
 that rotates without invalidating live sessions.
 
-| Attribute | Value | Why |
-| --- | --- | --- |
-| Name | `__Host-session` | The prefix binds the cookie to one exact host and forbids `Domain`, so another name under the customer's domain can neither read nor overwrite it |
-| `HttpOnly` | yes | The bearer value stays out of reach of page script |
-| `Secure` | yes | Required by the `__Host-` prefix, and the token travels on every request |
-| `SameSite` | `Lax` | `/authorize` is reached by a top-level cross-site navigation, which `Lax` carries the cookie through |
-| `Path` | `/` | Required by the `__Host-` prefix |
-| `Max-Age` | Remaining absolute lifetime, on a remembered session | An unremembered session lives as long as the browser keeps it |
+| Attribute  | Value                                                | Why                                                                                                                                               |
+| ---------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Name       | `__Host-session`                                     | The prefix binds the cookie to one exact host and forbids `Domain`, so another name under the customer's domain can neither read nor overwrite it |
+| `HttpOnly` | yes                                                  | The bearer value stays out of reach of page script                                                                                                |
+| `Secure`   | yes                                                  | Required by the `__Host-` prefix, and the token travels on every request                                                                          |
+| `SameSite` | `Lax`                                                | `/authorize` is reached by a top-level cross-site navigation, which `Lax` carries the cookie through                                              |
+| `Path`     | `/`                                                  | Required by the `__Host-` prefix                                                                                                                  |
+| `Max-Age`  | Remaining absolute lifetime, on a remembered session | An unremembered session lives as long as the browser keeps it                                                                                     |
 
 The signature is verified in the Worker, so a forged or edited cookie is refused before a call
 reaches the object.
@@ -113,7 +113,7 @@ Each parses its input with `remix/data-schema` inside the object and returns pla
 - `resolveSession(input)` — takes the token, the wall clock, and the request's address, agent
   and location. It hashes and looks up, enforces both clocks, slides the idle window, records
   last-seen, and answers `{ status: "active", sessionId, subjectId, authTime, amr, expiresAt,
-  idleExpiresAt }` or `{ status: "expired" | "revoked" | "unknown" }` — a whole operation,
+idleExpiresAt }` or `{ status: "expired" | "revoked" | "unknown" }` — a whole operation,
   attach this request to its session, which is why the write it performs lives inside it.
 - `listSubjectSessions(input)` — a page of summaries for the account UI: id, creation,
   last-seen, methods, agent, address, location, and whether the row is the caller's own.
@@ -131,14 +131,14 @@ and a session created in another is one operation split in half.
 
 ### What authentication writes
 
-| Event | Effect on the session |
-| --- | --- |
-| First factor accepted | A new row, with `auth_time`, `amr` and both clocks set |
-| Second factor accepted | `amr` gains the method, on the same row |
+| Event                                                          | Effect on the session                                                                           |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| First factor accepted                                          | A new row, with `auth_time`, `amr` and both clocks set                                          |
+| Second factor accepted                                         | `amr` gains the method, on the same row                                                         |
 | Re-authentication from `prompt=login` or an exceeded `max_age` | A fresh token into the same row with `auth_time` moved forward, so the published `sid` survives |
-| A request through the session middleware | `last_seen_at` and the idle window, throttled to a minute |
-| A password changed or a credential removed | Every other session for the subject revoked |
-| Sign-out | `revoked_at` and a reason on the one row |
+| A request through the session middleware                       | `last_seen_at` and the idle window, throttled to a minute                                       |
+| A password changed or a credential removed                     | Every other session for the subject revoked                                                     |
+| Sign-out                                                       | `revoked_at` and a reason on the one row                                                        |
 
 Re-issuing the token on re-authentication is also what closes session fixation: the value a
 browser held before the privilege change stops resolving.

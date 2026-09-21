@@ -64,16 +64,16 @@ the event, read through one paging method, and bounded by a scheduled retention 
 
 ### The row
 
-| Column | Type | Holds |
-| --- | --- | --- |
-| `id` | TEXT | Monotonic per-tenant identifier; the tiebreaker in the sort |
-| `at` | INTEGER | UTC milliseconds — an integer, since a `Date` is not sent across the boundary |
-| `action` | TEXT | A catalog key, e.g. `subject.blocked` |
-| `actor_type`, `actor_id` | TEXT | Who acted: `subject`, `member`, `client` or `platform`, and which one |
-| `target_type`, `target_id` | TEXT | What was acted on, and which one |
-| `outcome` | TEXT | `succeeded`, `failed` or `denied` |
-| `context` | TEXT | JSON: request id, client id, source address, user-agent family |
-| `detail` | TEXT | JSON: a bounded, action-specific payload |
+| Column                     | Type    | Holds                                                                         |
+| -------------------------- | ------- | ----------------------------------------------------------------------------- |
+| `id`                       | TEXT    | Monotonic per-tenant identifier; the tiebreaker in the sort                   |
+| `at`                       | INTEGER | UTC milliseconds — an integer, since a `Date` is not sent across the boundary |
+| `action`                   | TEXT    | A catalog key, e.g. `subject.blocked`                                         |
+| `actor_type`, `actor_id`   | TEXT    | Who acted: `subject`, `member`, `client` or `platform`, and which one         |
+| `target_type`, `target_id` | TEXT    | What was acted on, and which one                                              |
+| `outcome`                  | TEXT    | `succeeded`, `failed` or `denied`                                             |
+| `context`                  | TEXT    | JSON: request id, client id, source address, user-agent family                |
+| `detail`                   | TEXT    | JSON: a bounded, action-specific payload                                      |
 
 Ordering is `(at, id)`, with secondary indexes on `(action, at, id)` and `(target_id, at, id)`.
 Two secondary indexes is the budget, because each one is charged at the write.
@@ -82,14 +82,14 @@ Two secondary indexes is the budget, because each one is charged at the write.
 
 Six categories, each a closed list of actions:
 
-| Category | Examples |
-| --- | --- |
-| Authentication | `authentication.succeeded`, `authentication.failed`, `session.created`, `session.revoked` |
-| Credentials | `password.changed`, `passkey.enrolled`, `passkey.removed`, `recovery_code.consumed` |
-| Subject lifecycle | `subject.created`, `subject.updated`, `subject.blocked`, `subject.deleted` |
-| Client and protocol | `client.created`, `client.secret.rotated`, `signing_key.rotated`, `consent.granted`, `consent.revoked` |
-| Tenant administration | `member.invited`, `member.role_changed`, `settings.changed`, `domain.verified` |
-| Plan | `subscription.changed`, `addon.enabled`, `addon.disabled` |
+| Category              | Examples                                                                                               |
+| --------------------- | ------------------------------------------------------------------------------------------------------ |
+| Authentication        | `authentication.succeeded`, `authentication.failed`, `session.created`, `session.revoked`              |
+| Credentials           | `password.changed`, `passkey.enrolled`, `passkey.removed`, `recovery_code.consumed`                    |
+| Subject lifecycle     | `subject.created`, `subject.updated`, `subject.blocked`, `subject.deleted`                             |
+| Client and protocol   | `client.created`, `client.secret.rotated`, `signing_key.rotated`, `consent.granted`, `consent.revoked` |
+| Tenant administration | `member.invited`, `member.role_changed`, `settings.changed`, `domain.verified`                         |
+| Plan                  | `subscription.changed`, `addon.enabled`, `addon.disabled`                                              |
 
 A row is written when a durable fact about the directory changed, or when a security decision
 was made about a subject. Reads write nothing, discovery and userinfo write nothing, and token
@@ -118,7 +118,7 @@ operation is also what makes a change without its row impossible: both land in o
 ### Retention
 
 A scheduled Worker job walks tenants daily, reads each tenant's retention window from the
-entitlement projection *Entitlements as Feature Flags* publishes through `@sdxc/flags`, and calls
+entitlement projection _Entitlements as Feature Flags_ publishes through `@sdxc/flags`, and calls
 `enforceAuditRetention` with `now − window`, repeating while a call reports a full batch. The
 window is a plan attribute, so a tier change takes effect on the next sweep.
 
