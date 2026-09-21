@@ -206,7 +206,7 @@ function buildRelyingParty(
 }
 
 /** Which mappings take effect for a subject the sign-in is creating versus one it already resolved. */
-function mappingsToApply(
+export function mappingsToApply(
 	mappings: ConnectionMappingRow[],
 	phase: "create" | "sign-in",
 ): ConnectionMappingRow[] {
@@ -214,7 +214,7 @@ function mappingsToApply(
 }
 
 /** Reads a mapping set's claims off the resolved claim set into a profile and an attribute map. */
-function applyMappings(
+export function applyMappings(
 	mappings: ConnectionMappingRow[],
 	claims: Record<string, unknown>,
 ): { profile: SubjectProfile; attributes: Record<string, unknown> } {
@@ -240,7 +240,7 @@ function applyMappings(
  * call needs, so this pass has nothing genuine to seal there yet and leaves that
  * column `null` until a later pass has one to write.
  */
-async function upsertConnectionIdentity(
+export async function upsertConnectionIdentity(
 	db: Database,
 	sealKey: CryptoKey,
 	input: {
@@ -292,7 +292,7 @@ async function upsertConnectionIdentity(
 }
 
 /** Mints a single-use handoff ticket naming a completed sign-in's session, storing only its hash. */
-async function mintHandoffTicket(
+export async function mintHandoffTicket(
 	db: Database,
 	input: {
 		subjectId: string;

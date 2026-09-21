@@ -107,6 +107,19 @@ import type {
 	SignInWithPasswordResult,
 } from "./passwords";
 import type {
+	DescribeSamlServiceProviderResult,
+	RefreshConnectionMetadataResult,
+	SaveEnterpriseConnectionInput,
+	SaveEnterpriseConnectionResult,
+	SetEnterpriseConnectionEnabledResult,
+} from "./saml-connections";
+import type {
+	BeginSamlSignInInput,
+	BeginSamlSignInResult,
+	SignInWithSamlResponseInput,
+	SignInWithSamlResponseResult,
+} from "./saml-sign-in";
+import type {
 	ListSubjectSessionsInput,
 	ListSubjectSessionsResult,
 	ResolveSessionInput,
@@ -175,6 +188,8 @@ import * as Metadata from "./metadata";
 import { closeMeteringDay, createDauCache, dauDay, dauSeen, readUsage } from "./metering";
 import * as Passkeys from "./passkeys";
 import * as Passwords from "./passwords";
+import * as SamlConnections from "./saml-connections";
+import * as SamlSignIn from "./saml-sign-in";
 import * as Sessions from "./sessions";
 import * as SigningKeys from "./signing-keys";
 import * as Subjects from "./subjects";
@@ -1147,6 +1162,16 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 				let { more } = await ConnectionSignIn.sweepExpiredConnectionHandoffs(this.#db);
 				if (!more) break;
 			}
+
+			for (let iteration = 0; iteration < 20; iteration++) {
+				let { more } = await SamlSignIn.sweepExpiredSamlTransactions(this.#db);
+				if (!more) break;
+			}
+
+			for (let iteration = 0; iteration < 20; iteration++) {
+				let { more } = await SamlConnections.sweepExpiredAssertionIds(this.#db);
+				if (!more) break;
+			}
 		} catch (error) {
 			console.error("retention sweep failed", error);
 		} finally {
@@ -1356,6 +1381,135 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	}): Promise<WithCost<RemoveConnectionResult>> {
 		await this.#migrated;
 		return this.#withCost(() => Connections.removeConnection(this.#db, input));
+	}
+
+	/**
+	 * Writes an enterprise connection's whole configuration, generating the
+	 * service provider's key pair and certificate the first time so the
+	 * identifiers an identity provider is configured with are fixed from then on.
+	 *
+	 * @param input - The connection to save; the platform-subdomain origin its
+	 * identifiers are built against is filled in here rather than asked of a caller.
+	 * @returns What an identity provider is configured from, or which rule refused
+	 * the save.
+	 */
+	async saveEnterpriseConnection(
+		input: Omit<SaveEnterpriseConnectionInput, "callbackOrigin">,
+	): Promise<WithCost<SaveEnterpriseConnectionResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let [sealKey, issuer] = await Promise.all([this.#sealKey(), this.#issuer()]);
+			return SamlConnections.saveEnterpriseConnection(this.#db, sealKey, {
+				...input,
+				callbackOrigin: issuer,
+			});
+		});
+	}
+
+	/**
+	 * Turns an enterprise connection on or off, enabling one only once it holds a
+	 * sign-on endpoint and a certificate inside its own window.
+	 *
+	 * @param input - The connection's slug, and whether it should now be enabled.
+	 * @returns The connection's public record, or which rule refused the change.
+	 */
+	async setEnterpriseConnectionEnabled(input: {
+		slug: string;
+		enabled: boolean;
+	}): Promise<WithCost<SetEnterpriseConnectionEnabledResult>> {
+		await this.#migrated;
+		return this.#withCost(() => SamlConnections.setEnterpriseConnectionEnabled(this.#db, input));
+	}
+
+	/**
+	 * Re-reads an identity provider's metadata into a connection, replacing its
+	 * endpoints and adding certificates, so a rotation needs no coordination.
+	 *
+	 * @param input - The connection's slug and the metadata document as fetched.
+	 * @returns How many certificates the document carried and how many were retired.
+	 */
+	async refreshConnectionMetadata(input: {
+		slug: string;
+		metadataXml: string;
+	}): Promise<WithCost<RefreshConnectionMetadataResult>> {
+		await this.#migrated;
+		return this.#withCost(() => SamlConnections.refreshConnectionMetadata(this.#db, input));
+	}
+
+	/**
+	 * The metadata document an identity provider is handed for one connection.
+	 *
+	 * @param input - The connection's slug.
+	 * @returns The document and the identifiers it describes, or that no such
+	 * SAML connection exists.
+	 */
+	async describeSamlServiceProvider(input: {
+		slug: string;
+	}): Promise<WithCost<DescribeSamlServiceProviderResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let issuer = await this.#issuer();
+			return SamlConnections.describeSamlServiceProvider(this.#db, {
+				slug: input.slug,
+				callbackOrigin: issuer,
+			});
+		});
+	}
+
+	/**
+	 * Starts a sign-in against an enterprise connection, answering the redirect a
+	 * controller sends the browser to next.
+	 *
+	 * @param input - The connection, and the pending authorization request and
+	 * hostname the sign-in answers back to.
+	 * @returns The provider's sign-on URL, or which rule refused the start.
+	 */
+	async beginSamlSignIn(
+		input: Omit<BeginSamlSignInInput, "callbackOrigin">,
+	): Promise<WithCost<BeginSamlSignInResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let [sealKey, issuer] = await Promise.all([this.#sealKey(), this.#issuer()]);
+			return SamlSignIn.beginSamlSignIn(this.#db, sealKey, {
+				...input,
+				callbackOrigin: issuer,
+			});
+		});
+	}
+
+	/**
+	 * Verifies a posted SAML response and opens a session from it, counting the
+	 * sign-in against this tenant's daily active user meter the same way every
+	 * other credential path does. The whole check runs here, where the
+	 * certificates, the private key and the replay table already are.
+	 *
+	 * @param input - The connection, the decoded response the browser posted,
+	 * the relay state naming the transaction, and the request's `User-Agent`.
+	 * @returns The subject signed in and the ticket that hands the session back,
+	 * or why the assertion was refused.
+	 */
+	async signInWithSamlResponse(
+		input: Omit<SignInWithSamlResponseInput, "callbackOrigin">,
+	): Promise<WithCost<SignInWithSamlResponseResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let [sealKey, issuer, { cap, hard }] = await Promise.all([
+				this.#sealKey(),
+				this.#issuer(),
+				this.#dauEnforcement(),
+			]);
+
+			return SamlSignIn.signInWithSamlResponse(
+				this.#db,
+				sealKey,
+				{ ...input, callbackOrigin: issuer },
+				{ cache: this.#dauCache, cap, hard },
+			);
+		});
 	}
 
 	/**
@@ -1768,6 +1922,12 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 				connections: Connections.connections,
 				connection_mappings: Connections.connectionMappings,
 				connection_transactions: Connections.connectionTransactions,
+				connection_identities: ConnectionSignIn.connectionIdentities,
+				connection_handoffs: ConnectionSignIn.connectionHandoffs,
+				connection_saml: SamlConnections.connectionSaml,
+				connection_certificates: SamlConnections.connectionCertificates,
+				saml_assertion_ids: SamlConnections.samlAssertionIds,
+				saml_transactions: SamlSignIn.samlTransactions,
 				scopes: Consent.scopes,
 				grants: Consent.grants,
 				authorization_requests: Authorization.authorizationRequests,

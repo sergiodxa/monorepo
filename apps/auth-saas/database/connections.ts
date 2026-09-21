@@ -529,10 +529,10 @@ export type SetConnectionEnabledResult =
 	| { ok: false; reason: "missing-secret" };
 
 /**
- * Turns a connection on or off. Refuses to enable one with no client secret sealed
- * yet — a connection that has never held a secret, or one an update explicitly left
- * without one — since a half-configured provider must never appear on a sign-in
- * page.
+ * Turns a connection on or off. A connection that authenticates with a client
+ * secret is enabled only once one is sealed, since a half-configured provider
+ * must never appear on a sign-in page; a connection whose readiness is a set of
+ * certificates has that checked by the call that owns them.
  *
  * @param db - The tenant's database.
  * @param input - The connection's slug, and whether it should now be enabled.
@@ -545,7 +545,7 @@ export async function setConnectionEnabled(
 	let row = await db.findOne(connections, { where: { slug: input.slug } });
 	if (!row) return { ok: false, reason: "not-found" };
 
-	if (input.enabled && row.client_secret_sealed === null) {
+	if (input.enabled && row.kind !== "saml" && row.client_secret_sealed === null) {
 		return { ok: false, reason: "missing-secret" };
 	}
 
