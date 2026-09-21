@@ -490,7 +490,7 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 
 		this.#assertStepUp(idToken, transaction);
 
-		let accessToken = AccessToken.decode(response.access_token);
+		let accessToken = AccessToken.tryDecode(response.access_token);
 		let refreshToken = response.refresh_token ?? null;
 		let expiresAt =
 			response.expires_in === undefined
@@ -510,11 +510,18 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 		return {
 			idToken,
 			accessToken,
+			accessTokenRaw: response.access_token,
+			expiresAt,
 			refreshToken,
 			returnTo: transaction.returnTo,
 			subject: this.#subject ? this.#subject(claims) : idToken.subject,
 			claims,
-			profile: this.#mapProfile(claims, { idToken, accessToken, refreshToken }),
+			profile: this.#mapProfile(claims, {
+				idToken,
+				accessToken,
+				accessTokenRaw: response.access_token,
+				refreshToken,
+			}),
 		};
 	}
 
@@ -992,8 +999,14 @@ export namespace RelyingParty {
 	export interface GrantedTokens {
 		/** The verified ID token. */
 		idToken: IdToken;
-		/** The access token the grant issued. */
-		accessToken: AccessToken;
+		/**
+		 * The access token the grant issued, decoded as a JWT, or `null` when the
+		 * issuer answered one with no such shape — the common case for a
+		 * third-party provider's access token, which OAuth2 leaves opaque.
+		 */
+		accessToken: AccessToken | null;
+		/** The access token exactly as the issuer answered it, whatever its shape. */
+		accessTokenRaw: string;
 		/** The refresh token, when the grant included one. */
 		refreshToken: string | null;
 	}
@@ -1134,8 +1147,22 @@ export namespace RelyingParty {
 	export interface Grant<profile = Profile> {
 		/** The verified ID token. */
 		idToken: IdToken;
-		/** The access token the grant issued. */
-		accessToken: AccessToken;
+		/**
+		 * The access token the grant issued, decoded as a JWT, or `null` when the
+		 * issuer answered one with no such shape — the common case for a
+		 * third-party provider's access token, which OAuth2 leaves opaque.
+		 */
+		accessToken: AccessToken | null;
+		/** The access token exactly as the issuer answered it, whatever its shape. */
+		accessTokenRaw: string;
+		/**
+		 * When the access token stops being accepted, seconds since the epoch, from
+		 * the token response's own `expires_in` — the one source of this that holds
+		 * for an opaque access token as much as for a JWT one, since a JWT's own
+		 * `exp` claim answers the same question only when there is a JWT to read it
+		 * from. `null` where the response stated no lifetime.
+		 */
+		expiresAt: number | null;
 		/** The refresh token, when the grant included one. */
 		refreshToken: string | null;
 		/** Where to send the browser, already held to this app's own origin. */

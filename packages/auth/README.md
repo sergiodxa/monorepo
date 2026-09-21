@@ -42,7 +42,7 @@ import { AuthSession } from "@sdxc/auth/auth-session";
 let auth = AuthSession.from(session); // null for a signed-out request
 
 auth.idToken.subject; // the identity anchor, never null
-auth.accessToken.has("reports:write");
+auth.accessToken?.has("reports:write"); // null when the issuer's own access token is not a JWT
 auth.expired; // the token set has reached its end, counting a 30-second reserve
 auth.renewable; // a refresh token is there to bring it back
 await auth.refresh(rp); // spends the refresh token, rewrites the session
@@ -235,12 +235,20 @@ touched, so a refused login leaves it as it was, and a spent budget throws a `42
 taking `fallbackReturnTo` for anything naming another origin.
 
 `callback` spends the transaction the moment it reads it, so one login answers exactly one
-callback, and its `Grant` carries `idToken`, `accessToken`, `refreshToken`, `returnTo`,
-`subject`, the resolved `claims`, and the mapped `profile`; every way it can refuse is an
-`AuthError` carrying one of the codes below. `renew` answers `null` where
-the request goes on signed in — with a renewed set, or with a set that carried no refresh
-token to renew — and answers with the refusal, the session already cleared, when the
-provider declines the refresh token.
+callback, and its `Grant` carries `idToken`, `accessToken`, `accessTokenRaw`, `expiresAt`,
+`refreshToken`, `returnTo`, `subject`, the resolved `claims`, and the mapped `profile`;
+every way it can refuse is an `AuthError` carrying one of the codes below. `renew` answers
+`null` where the request goes on signed in — with a renewed set, or with a set that carried
+no refresh token to renew — and answers with the refusal, the session already cleared, when
+the provider declines the refresh token.
+
+OAuth2 leaves an access token's own shape to the issuer, so `accessToken` is `null` whenever
+it does not decode as a JWT — the ordinary case for a third-party provider's, since RFC 9068
+is this package's own issuer's choice rather than a rule every issuer follows.
+`accessTokenRaw` and `expiresAt` (from the token response's own `expires_in`, seconds since
+the epoch) answer the same way whether or not the token happens to be one, so a caller that
+only needs to hold the token and know when it expires never has to touch the decoded form at
+all.
 
 `Context` is `{ request, session }`; `Profile` is the default mapped profile (`name`,
 `email`, `emailVerified`, `username`, `picture`); `GrantedTokens` is what `mapProfile` is
@@ -336,7 +344,7 @@ AuthSession.from(store); // AuthSession | null — re-validated on every read
 AuthSession.write(store, tokens); // AuthSession
 
 auth.idToken; // IdToken, decoded lazily and memoized
-auth.accessToken; // AccessToken, likewise
+auth.accessToken; // AccessToken | null, likewise — null for a non-JWT access token
 auth.refreshToken; // string | null
 auth.tokens; // AuthSession.Tokens — a copy, for a step that sends a token on
 auth.expired; // boolean
@@ -404,6 +412,14 @@ token.has("reports:write"); // boolean — whole-value comparison
 The inherited `audience` reads either shape of `aud`: the client id on an
 authorization-code token, and the issuer plus every requested resource on a
 client-credentials one.
+
+RFC 9068 is this package's own issuer's choice, not a rule every issuer follows — OAuth2
+states no shape for an access token at all, so a third-party provider's is commonly an
+opaque string only that provider can dereference. `decode` and `verify` stay strict, for a
+caller that already knows it holds a JWT (this package's own resource-server and
+service-client roles, reading a token this package minted); `AccessToken.tryDecode(raw)`
+is for a caller that does not — a relying party reading whatever a token endpoint answered
+with — answering `null` instead of throwing for a string that is not a compact JWT at all.
 
 ### `@sdxc/auth/auth-error`
 

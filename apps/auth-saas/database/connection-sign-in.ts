@@ -23,27 +23,16 @@
  * sends — so a `kind: "oauth2"` connection is refused before it ever asks a
  * provider for anything.
  *
- * Passing that check is not the same as working against a real provider, and this
- * is the sharper limitation of the two: `callback` also decodes the token response's
- * access token as a compact JWT, unconditionally and uncaught, because the package's
- * own first-party issuer always mints one that way. A third-party consumer identity
- * provider owes no such shape to its access token under OAuth2, and none of this
- * catalog's real providers — Google, Apple, Microsoft, GitLab and LinkedIn included,
- * every one of them nominally `kind: "oidc"` — issues one that decodes as a JWT for
- * the scopes this catalog configures. `completeConnectionSignIn` catches that specific
- * failure and answers `unsupported-access-token-format` rather than letting it escape
- * as an unhandled exception, but a clean refusal is still a refusal: as things stand,
- * no catalog entry's real sign-in completes end to end. What is proven, by this
- * module's own tests, is everything up to and including that boundary — the
- * transaction plumbing, the callback's state/nonce/PKCE checks, claim mapping,
- * subject resolution, and the cross-host handoff — against fixtures shaped the way
- * `@sdxc/auth`'s own test suite shapes them, which is not the way a real provider's
- * response is shaped. Making a real sign-in complete needs one of: `@sdxc/auth`
- * accepting a non-JWT access token (a change to a package five other apps depend on,
- * not this app's call to make alone), or this module driving the token exchange and
- * claim resolution itself against `Issuer` directly rather than through
- * `RelyingParty.callback`, keeping only the parts of `RelyingParty` that are already
- * provider-agnostic.
+ * `callback` no longer assumes the access token it gets back is a JWT: `@sdxc/auth`
+ * decodes it where it can and answers `null` where it cannot, which is the common
+ * case for a real third-party provider's access token — OAuth2 leaves its shape
+ * entirely to the issuer, and none of this catalog's real providers issue one that
+ * decodes as a JWT. This module never reads the decoded form; it reads the token's
+ * own lifetime from `grant.expiresAt` (derived from the token response's own
+ * `expires_in`, not a JWT's `exp` claim) rather than from the access token itself.
+ * Sealing and serving the access token for a later bearer-token read is
+ * `getProviderToken`'s job, not built in this pass — `grant.accessTokenRaw` is
+ * already the right value for it to seal once it exists.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -532,19 +521,6 @@ export async function completeConnectionSignIn(
 			return { ok: false, reason: "authorization-failed", code: error.code };
 		}
 
-		/**
-		 * `RelyingParty.callback` decodes the token response's access token as a
-		 * compact JWT unconditionally, uncaught, because its own first-party
-		 * issuer always mints one. A third-party consumer identity provider's
-		 * access token has no required shape at all under OAuth2, and none of
-		 * this catalog's real providers issue one that decodes as a JWT — the ID
-		 * token this call already verified is what a claim mapping actually
-		 * reads, so losing the access token here costs nothing this pass uses.
-		 */
-		if (error instanceof Error && error.name === "JWTInvalid") {
-			return { ok: false, reason: "unsupported-access-token-format" };
-		}
-
 		throw error;
 	}
 
@@ -595,14 +571,12 @@ export async function completeConnectionSignIn(
 		subjectId = created.subjectId;
 	}
 
-	let expiresAt = grant.accessToken.expiresAt;
-
 	await upsertConnectionIdentity(db, sealKey, {
 		connectionId: connection.id,
 		providerSubject: grant.subject,
 		subjectId,
 		refreshToken: grant.refreshToken,
-		tokenExpiresAt: expiresAt ? Math.floor(expiresAt.getTime() / 1000) : null,
+		tokenExpiresAt: grant.expiresAt,
 	});
 
 	let session = await openSession(

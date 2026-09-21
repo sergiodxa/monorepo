@@ -275,9 +275,20 @@ describe("completeConnectionSignIn", () => {
 		expect(described.attributes.department).toBe("R&D");
 	});
 
-	test("refuses cleanly rather than throwing when the provider's access token is not a JWT", async () => {
+	test("completes a sign-in even when the provider's access token is not a JWT", async () => {
 		let provider = stubProvider();
 		await createConnection(provider.origin);
+
+		// This fixture suite's shared userinfo stub answers by decoding the
+		// access token as a JWT, which is exactly the assumption this test means
+		// to break — a real provider's userinfo endpoint looks a bearer token up
+		// server-side rather than reading claims out of it, so this override
+		// answers the same way regardless of what the token looks like.
+		server.use(
+			http.get(`${provider.origin}/userinfo`, () =>
+				HttpResponse.json({ sub: "provider-subject-1", name: "Ada Lovelace", department: "R&D" }),
+			),
+		);
 
 		let begun = await tenant.beginConnectionSignIn({
 			slug: "acme-oidc",
@@ -309,7 +320,8 @@ describe("completeConnectionSignIn", () => {
 			agent: "test-agent/1.0",
 		});
 
-		expect(completed).toMatchObject({ ok: false, reason: "unsupported-access-token-format" });
+		if (!completed.ok) throw new Error(`expected success, got ${JSON.stringify(completed)}`);
+		expect(completed.subjectId).toMatch(/^sub_/);
 	});
 
 	test("resolves the same subject on a returning sign-in with the same provider subject id", async () => {

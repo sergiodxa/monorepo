@@ -241,7 +241,7 @@ describe("sessionScheme", () => {
 
 	test("renews an access token that has reached its expiry", async () => {
 		let scheme = sessionScheme(createRelyingParty(), {
-			verify: (auth) => ({ scopes: auth.accessToken.scopes }),
+			verify: (auth) => ({ scopes: auth.accessToken?.scopes ?? [] }),
 		});
 		stubTokenEndpoint(async () =>
 			HttpResponse.json({

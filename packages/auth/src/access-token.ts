@@ -14,11 +14,37 @@ import { JWT } from "@sdxc/jwt";
  * id on an authorization-code token, and the issuer plus every requested resource on
  * a client-credentials one.
  *
+ * OAuth2 states no shape for an access token at all — RFC 9068 is this platform's own
+ * choice, not a rule every issuer follows, so a third-party provider's access token is
+ * commonly an opaque string a resource server alone can dereference. `decode` and
+ * `verify` stay strict, since a call naming either already knows it holds a JWT;
+ * `tryDecode` is for a caller that does not, such as a relying party reading whatever a
+ * token endpoint answered with.
+ *
  * @example
  * let token = await AccessToken.verify(raw, await issuer.keys(), { issuer, audience });
  * if (!token.has("monitors:write")) return null;
  */
 export class AccessToken extends JWT {
+	/**
+	 * Reads an access token's claims the way {@link JWT.decode} does, answering `null`
+	 * instead of throwing for a string that is not a compact JWT at all — the shape a
+	 * third-party provider's opaque access token takes.
+	 *
+	 * @param token - The access token exactly as the token endpoint answered it.
+	 * @returns The decoded token, or `null` for one this class cannot read as a JWT.
+	 * @example
+	 * let accessToken = AccessToken.tryDecode(response.access_token);
+	 * if (accessToken?.has("email")) …
+	 */
+	static tryDecode(token: string): AccessToken | null {
+		try {
+			return AccessToken.decode(token);
+		} catch {
+			return null;
+		}
+	}
+
 	/**
 	 * The granted scopes as a list, split from the one space-separated string `scope`
 	 * arrives as, so every scope check compares whole values from the same reading.

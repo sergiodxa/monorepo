@@ -101,7 +101,7 @@ describe("from", () => {
 
 		expect(auth?.idToken.subject).toBe("user-1");
 		expect(auth?.idToken.name).toBe("Ada Lovelace");
-		expect(auth?.accessToken.has("monitors:read")).toBe(true);
+		expect(auth?.accessToken?.has("monitors:read")).toBe(true);
 	});
 });
 
@@ -235,7 +235,7 @@ describe("refresh", () => {
 		expect(reread?.tokens.accessToken).toBe(renewed);
 		expect(reread?.refreshToken).toBe("refresh-2");
 		expect(reread?.expired).toBe(false);
-		expect(reread?.accessToken.has("monitors:write")).toBe(true);
+		expect(reread?.accessToken?.has("monitors:write")).toBe(true);
 	});
 
 	test("keeps the stored ID token when the response repeats none", async () => {

@@ -51,7 +51,8 @@ export class AuthSession {
 	#store: AuthSession.Store;
 	#tokens: AuthSession.Tokens;
 	#idToken: IdToken | null = null;
-	#accessToken: AccessToken | null = null;
+	/** `undefined` until the first read; `null` is itself a legitimate answer once read. */
+	#accessToken: AccessToken | null | undefined = undefined;
 
 	private constructor(store: AuthSession.Store, tokens: AuthSession.Tokens) {
 		this.#store = store;
@@ -67,9 +68,15 @@ export class AuthSession {
 		return this.#idToken;
 	}
 
-	/** The access token, carrying the scopes the client was granted. */
-	get accessToken(): AccessToken {
-		this.#accessToken ??= AccessToken.decode(this.#tokens.accessToken);
+	/**
+	 * The access token, carrying the scopes the client was granted, or `null` when
+	 * the issuer's own access token carries no such shape — the common case for a
+	 * third-party provider's, which OAuth2 leaves opaque.
+	 */
+	get accessToken(): AccessToken | null {
+		if (this.#accessToken === undefined) {
+			this.#accessToken = AccessToken.tryDecode(this.#tokens.accessToken);
+		}
 		return this.#accessToken;
 	}
 
@@ -139,7 +146,7 @@ export class AuthSession {
 			expiresAt: refreshed.expiresAt,
 		};
 		this.#idToken = null;
-		this.#accessToken = null;
+		this.#accessToken = undefined;
 		this.#store.set(SESSION_KEY, this.#tokens);
 
 		return this;

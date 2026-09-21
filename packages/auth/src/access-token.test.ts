@@ -128,6 +128,32 @@ describe("audience", () => {
 	});
 });
 
+describe("tryDecode", () => {
+	test("decodes a compact JWT the same way decode does", async () => {
+		let signed = await new AccessToken({ sub: "user-123", scope: "monitors:read" }).sign(
+			JWK.Algorithm.ES256,
+			keys,
+		);
+
+		let decoded = AccessToken.tryDecode(signed);
+
+		expect(decoded).toBeInstanceOf(AccessToken);
+		expect(decoded?.scopes).toEqual(["monitors:read"]);
+	});
+
+	test("answers null for an opaque string with no JWT shape at all", () => {
+		expect(AccessToken.tryDecode("ya29.opaque-provider-access-token")).toBeNull();
+	});
+
+	test("answers null for an empty string", () => {
+		expect(AccessToken.tryDecode("")).toBeNull();
+	});
+
+	test("answers null for a string with the right number of segments but no valid JSON inside", () => {
+		expect(AccessToken.tryDecode("not-base64.not-base64.not-base64")).toBeNull();
+	});
+});
+
 describe("verify", () => {
 	test("returns an AccessToken, so the subclass's accessors survive verification", async () => {
 		let signed = await new AccessToken({

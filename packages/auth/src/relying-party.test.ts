@@ -609,7 +609,7 @@ describe("callback", () => {
 
 		expect(grant.idToken.subject).toBe("user-1");
 		expect(grant.subject).toBe("user-1");
-		expect(grant.accessToken.has("monitors:read")).toBe(true);
+		expect(grant.accessToken?.has("monitors:read")).toBe(true);
 		expect(grant.refreshToken).toBe("refresh-1");
 		expect(grant.returnTo).toBe("/dashboard");
 
@@ -1139,7 +1139,7 @@ describe("overrides", () => {
 		let agent = createAgent();
 		let rp = createRelyingParty<{ label: string; scopes: string[] }>({
 			mapProfile(claims, tokens) {
-				return { label: String(claims.email), scopes: tokens.accessToken.scopes };
+				return { label: String(claims.email), scopes: tokens.accessToken?.scopes ?? [] };
 			},
 		});
 		let params = await startLogin(agent, rp);
