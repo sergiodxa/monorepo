@@ -133,6 +133,7 @@ Run from the repository root:
 | [response](packages/response)                                   | Response builders for JSON APIs and redirects                                            | ✅  |
 | [result](packages/result)                                       | Result type for error handling                                                           | ✅  |
 | [rss](packages/rss)                                             | RSS 2.0 feed builder and parser                                                          | ✅  |
+| [saml](packages/saml)                                           | SAML 2.0 service provider: verify a signed assertion and the metadata around it          |     |
 | [sample](packages/sample)                                       | Seeded generation of believable people, places, prose, numbers and identifiers           | ✅  |
 | [semver](packages/semver)                                       | SemVer 2.0.0 parsing, precedence ordering and range-free version comparisons             | ✅  |
 | [server-timing](packages/server-timing)                         | Server-Timing measurements written to a response header                                  | ✅  |

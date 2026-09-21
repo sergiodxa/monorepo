@@ -745,6 +745,16 @@
         "@sdxc/xml": "workspace:*",
       },
     },
+    "packages/saml": {
+      "name": "@sdxc/saml",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/duration": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/xml": "workspace:*",
+      },
+    },
     "packages/sample": {
       "name": "@sdxc/sample",
       "version": "0.0.1",
@@ -1583,6 +1593,8 @@
     "@sdxc/result": ["@sdxc/result@workspace:packages/result"],
 
     "@sdxc/rss": ["@sdxc/rss@workspace:packages/rss"],
+
+    "@sdxc/saml": ["@sdxc/saml@workspace:packages/saml"],
 
     "@sdxc/sample": ["@sdxc/sample@workspace:packages/sample"],
 
