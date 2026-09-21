@@ -3,9 +3,10 @@
  * may hold a row for, and the operations over it. Every other module that changes a
  * durable directory fact or makes a security decision calls {@link writeAuditEvent}
  * inline, in the same call that makes the change, so a row and the fact it describes
- * always land together. Leaf module — imports nothing else under `database/`, the way
- * `mail-rate-limit.ts` and `metering.ts` do — since every other module already
- * cross-imports and needs one place to reach for this without cycling back to itself.
+ * always land together. `writeAuditEvent` also fans a succeeded event out to
+ * `webhook-deliveries.ts`, the one place every wired operation's own call already
+ * reaches, so a tenant's registered endpoints stay in sync with the catalog with no
+ * change to any of those call sites.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,6 +19,8 @@ import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { and, between, column as c, eq, gt, inList, lt, table } from "remix/data-table";
+
+import { enqueueMatchingDeliveries } from "./webhook-deliveries";
 
 /** How many rows a page or a sweep batch reads at once, when a caller does not choose. */
 const DEFAULT_PAGE_SIZE = 50;
@@ -276,7 +279,9 @@ async function mintAuditId(db: Database): Promise<string> {
  * Writes one row to this tenant's audit log. The one function every wired operation
  * calls, inline, in the same call that makes the change the row describes — there is
  * no method that only writes a log line, because "write a log line" is a fragment of
- * an operation, not one of its own.
+ * an operation, not one of its own. A succeeded row also fans out to every enabled
+ * webhook endpoint subscribed to its action, so every call site's own webhook
+ * deliveries come from this one write too.
  *
  * @param db - The tenant's database.
  * @param event - The action, who did it, what it was done to, and how it turned out.
@@ -284,10 +289,11 @@ async function mintAuditId(db: Database): Promise<string> {
  */
 export async function writeAuditEvent(db: Database, event: AuditEventInput): Promise<void> {
 	let id = await mintAuditId(db);
+	let at = event.at ?? Date.now();
 
 	await db.create(auditEvents, {
 		id,
-		at: event.at ?? Date.now(),
+		at,
 		action: event.action,
 		actor_type: event.actor.type,
 		actor_id: event.actor.id,
@@ -297,6 +303,8 @@ export async function writeAuditEvent(db: Database, event: AuditEventInput): Pro
 		context: event.context ?? {},
 		detail: event.detail ?? {},
 	});
+
+	await enqueueMatchingDeliveries(db, { ...event, at });
 }
 
 export interface ReadAuditPageInput {

@@ -59,6 +59,7 @@ describe("provision", () => {
 				"0025-client-permission-claim",
 				"0026-api-keys",
 				"0027-webhook-endpoints",
+				"0028-webhook-deliveries",
 			],
 			issuer: "https://tenant-1.example.com",
 			keys: { keys: [expect.objectContaining({ kty: "EC", alg: "ES256" })] },

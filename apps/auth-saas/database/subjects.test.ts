@@ -10,6 +10,7 @@
 import type { DurableObjectStateMock } from "@sdxc/cloudflare-mocks";
 
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
+import { randomToken } from "@sdxc/crypto";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import Tenant from "./tenant-do";
@@ -764,5 +765,42 @@ describe("audit", () => {
 
 		let rows = await auditRowsFor("subject.deleted");
 		expect(rows).toMatchObject([{ targetId: created.subjectId, outcome: "succeeded" }]);
+	});
+});
+
+describe("webhook delivery fan-out", () => {
+	test("subject.blocked, written by blockSubject with no change of its own, also enqueues a matching delivery", async () => {
+		let webhookState = createDurableObjectState();
+		let webhookTenant = new Tenant(webhookState, {
+			TOTP_SEAL_KEY: randomToken({ bytes: 32 }),
+		} as Cloudflare.Env);
+
+		await webhookTenant.applyEntitlements({
+			plan: "pro",
+			features: { outbound_webhooks: true },
+			dauCap: null,
+			auditRetentionDays: null,
+			effectiveAt: Date.now(),
+		});
+
+		let registered = await webhookTenant.registerWebhookEndpoint({
+			url: "https://example.com/hooks",
+			description: "Test endpoint",
+			eventTypes: ["subject.blocked"],
+			actor: { type: "platform", id: "system" },
+		});
+		if (!registered.ok) throw new Error("setup failed");
+
+		let created = await webhookTenant.createSubject({});
+		if (!created.ok) throw new Error("unreachable");
+
+		await webhookTenant.blockSubject({ subjectId: created.subjectId, reason: "fraud" });
+
+		let page = await webhookTenant.readDeliveryPage({ endpointId: registered.endpoint.id });
+		expect(page.ok).toBe(true);
+		if (!page.ok) return;
+		expect(page.deliveries).toMatchObject([
+			{ eventType: "subject.blocked", status: "pending", attempts: 0 },
+		]);
 	});
 });

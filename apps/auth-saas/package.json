@@ -44,6 +44,7 @@
 		"@sdxc/user-agent": "workspace:*",
 		"@sdxc/uuid": "workspace:*",
 		"@sdxc/validate": "workspace:*",
+		"@sdxc/webhooks": "workspace:*",
 		"remix": "3.0.0-rc.2"
 	},
 	"devDependencies": {

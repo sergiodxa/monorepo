@@ -17,6 +17,7 @@
 import type { DurableObjectStateMock } from "@sdxc/cloudflare-mocks";
 
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
+import { randomToken } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
@@ -748,5 +749,46 @@ describe("the custom_roles entitlement gate", () => {
 			actor,
 		});
 		expect(granted.ok).toBe(true);
+	});
+});
+
+describe("webhook delivery fan-out", () => {
+	test("role.assigned, written by assignRole with no change of its own, also enqueues a matching delivery", async () => {
+		let webhookState = createDurableObjectState();
+		let webhookTenant = new Tenant(webhookState, {
+			TOTP_SEAL_KEY: randomToken({ bytes: 32 }),
+		} as Cloudflare.Env);
+
+		await webhookTenant.applyEntitlements({
+			plan: "pro",
+			features: { outbound_webhooks: true, custom_roles: true },
+			dauCap: null,
+			auditRetentionDays: null,
+			effectiveAt: Date.now(),
+		});
+
+		let registered = await webhookTenant.registerWebhookEndpoint({
+			url: "https://example.com/hooks",
+			description: "Test endpoint",
+			eventTypes: ["role.assigned"],
+			actor: { type: "platform", id: "system" },
+		});
+		if (!registered.ok) throw new Error("setup failed");
+
+		let created = await webhookTenant.createSubject({});
+		if (!created.ok) throw new Error("unreachable");
+
+		let assigned = await webhookTenant.assignRole({
+			subjectId: created.subjectId,
+			scope: "tenant",
+			roleKey: "owner",
+			actor: { type: "subject", id: created.subjectId },
+		});
+		expect(assigned).toMatchObject({ ok: true, roleKey: "owner" });
+
+		let page = await webhookTenant.readDeliveryPage({ endpointId: registered.endpoint.id });
+		expect(page.ok).toBe(true);
+		if (!page.ok) return;
+		expect(page.deliveries).toMatchObject([{ eventType: "role.assigned", status: "pending" }]);
 	});
 });

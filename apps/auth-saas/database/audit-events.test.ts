@@ -8,7 +8,9 @@
  */
 
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
+import { importKey, randomToken } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
+import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
@@ -20,6 +22,10 @@ import {
 	writeAuditEvent,
 } from "./audit-events";
 import auditMigration from "./tenant-migrations/0014-audit.sql?raw";
+import webhookEndpointsMigration from "./tenant-migrations/0027-webhook-endpoints.sql?raw";
+import webhookDeliveriesMigration from "./tenant-migrations/0028-webhook-deliveries.sql?raw";
+import { webhookDeliveries } from "./webhook-deliveries";
+import { registerWebhookEndpoint, webhookEndpoints } from "./webhook-endpoints";
 
 const T0 = 1_700_000_000_000;
 
@@ -29,6 +35,8 @@ beforeEach(async () => {
 	let state = createDurableObjectState();
 	let driver = createSQLStorageDatabaseAdapter(state.storage.sql);
 	await driver.executeScript(auditMigration);
+	await driver.executeScript(webhookEndpointsMigration);
+	await driver.executeScript(webhookDeliveriesMigration);
 	db = new Database(driver);
 });
 
@@ -321,5 +329,189 @@ describe("drainAuditEvents", () => {
 
 		let third = await drainAuditEvents(db, { after: first.next });
 		expect(third.events.map((event) => event.targetId)).toEqual(["sub_3"]);
+	});
+});
+
+describe("writeAuditEvent webhook fan-out", () => {
+	let sealKey: CryptoKey;
+	let nextEndpointSuffix = 0;
+
+	beforeEach(async () => {
+		sealKey = unwrap(await importKey(randomToken({ bytes: 32 })));
+	});
+
+	/**
+	 * Inserts an endpoint row directly, bypassing `registerWebhookEndpoint`'s
+	 * own audit write, so a test naming which actions an endpoint subscribes to
+	 * is not itself a fan-out candidate for its own setup.
+	 */
+	async function insertEndpoint(
+		eventTypes: string[],
+		overrides: { disabledAt?: number } = {},
+	): Promise<string> {
+		let id = `whep_test_${nextEndpointSuffix++}`;
+
+		await db.create(webhookEndpoints, {
+			id,
+			url: "https://example.com/hooks",
+			description: "Test endpoint",
+			event_types: eventTypes,
+			sealed_secret: "unused",
+			sealed_previous: null,
+			previous_expires_at: null,
+			created_at: T0,
+			updated_at: T0,
+			disabled_at: overrides.disabledAt ?? null,
+			disabled_reason: null,
+			consecutive_failures: 0,
+		});
+
+		return id;
+	}
+
+	async function deliveriesFor(endpointId: string) {
+		return db.findMany(webhookDeliveries, { where: { endpoint_id: endpointId } });
+	}
+
+	test("a real caller's own registration writes one delivery for a matching enabled endpoint", async () => {
+		let subscriber = await insertEndpoint(["subject.blocked"]);
+
+		let registered = await registerWebhookEndpoint(db, sealKey, {
+			url: "https://example.com/hooks",
+			description: "Second endpoint",
+			eventTypes: ["subject.blocked"],
+			actor: { type: "platform", id: "system" },
+		});
+		if (!registered.ok) throw new Error("setup failed");
+
+		await writeAuditEvent(db, {
+			action: "subject.blocked",
+			actor: { type: "platform", id: "system" },
+			targetType: "subject",
+			targetId: "sub_1",
+			outcome: "succeeded",
+			detail: { reason: "fraud" },
+			at: T0,
+		});
+
+		let rows = await deliveriesFor(subscriber);
+		expect(rows).toMatchObject([
+			{
+				endpoint_id: subscriber,
+				event_type: "subject.blocked",
+				status: "pending",
+				attempts: 0,
+				next_attempt_at: T0,
+				created_at: T0,
+				replay_of: null,
+			},
+		]);
+		expect(JSON.parse(rows[0]?.payload ?? "")).toEqual({
+			type: "subject.blocked",
+			timestamp: T0,
+			sequence: rows[0]?.sequence,
+			data: { targetType: "subject", targetId: "sub_1", reason: "fraud" },
+		});
+	});
+
+	test("the wildcard subscription matches every action", async () => {
+		let endpoint = await insertEndpoint(["*"]);
+
+		await writeAuditEvent(db, {
+			action: "client.created",
+			actor: { type: "platform", id: "system" },
+			targetType: "client",
+			targetId: "client_1",
+			outcome: "succeeded",
+			at: T0,
+		});
+
+		let rows = await deliveriesFor(endpoint);
+		expect(rows).toHaveLength(1);
+		expect(rows[0]?.event_type).toBe("client.created");
+	});
+
+	test("writes nothing for a subscribed action that did not succeed", async () => {
+		let endpoint = await insertEndpoint(["*"]);
+
+		await writeAuditEvent(db, {
+			action: "authentication.failed",
+			actor: { type: "subject", id: "sub_1" },
+			targetType: "subject",
+			targetId: "sub_1",
+			outcome: "failed",
+			at: T0,
+		});
+
+		await writeAuditEvent(db, {
+			action: "authentication.denied",
+			actor: { type: "subject", id: "sub_1" },
+			targetType: "subject",
+			targetId: "sub_1",
+			outcome: "denied",
+			at: T0,
+		});
+
+		expect(await deliveriesFor(endpoint)).toEqual([]);
+	});
+
+	test("writes nothing for a disabled endpoint", async () => {
+		let endpoint = await insertEndpoint(["*"], { disabledAt: T0 });
+
+		await writeAuditEvent(db, {
+			action: "client.created",
+			actor: { type: "platform", id: "system" },
+			targetType: "client",
+			targetId: "client_1",
+			outcome: "succeeded",
+			at: T0,
+		});
+
+		expect(await deliveriesFor(endpoint)).toEqual([]);
+	});
+
+	test("writes nothing when the subscribed event types do not include the action", async () => {
+		let endpoint = await insertEndpoint(["client.created"]);
+
+		await writeAuditEvent(db, {
+			action: "subject.blocked",
+			actor: { type: "platform", id: "system" },
+			targetType: "subject",
+			targetId: "sub_1",
+			outcome: "succeeded",
+			at: T0,
+		});
+
+		expect(await deliveriesFor(endpoint)).toEqual([]);
+	});
+
+	test("mints sequences that are monotonic across every endpoint", async () => {
+		let first = await insertEndpoint(["client.created", "client.updated"]);
+		let second = await insertEndpoint(["client.created", "client.updated"]);
+
+		await writeAuditEvent(db, {
+			action: "client.created",
+			actor: { type: "platform", id: "system" },
+			targetType: "client",
+			targetId: "client_1",
+			outcome: "succeeded",
+			at: T0,
+		});
+
+		await writeAuditEvent(db, {
+			action: "client.updated",
+			actor: { type: "platform", id: "system" },
+			targetType: "client",
+			targetId: "client_1",
+			outcome: "succeeded",
+			at: T0 + 1,
+		});
+
+		let all = [...(await deliveriesFor(first)), ...(await deliveriesFor(second))].sort(
+			(a, b) => a.sequence - b.sequence,
+		);
+
+		expect(all.map((row) => row.sequence)).toEqual([1, 2, 3, 4]);
+		expect(new Set(all.map((row) => row.sequence)).size).toBe(4);
 	});
 });

@@ -283,6 +283,19 @@ import type {
 	RevokeTrustedDeviceResult,
 } from "./totp";
 import type {
+	ClaimDueDeliveriesInput,
+	ClaimDueDeliveriesResult,
+	PrepareDeliveryInput,
+	PrepareDeliveryResult,
+	ReadDeliveryPageInput,
+	ReadDeliveryPageResult,
+	ReplayDeliveryInput,
+	ReplayDeliveryResult,
+	SettleDeliveryInput,
+	SettleDeliveryResult,
+	SweepWebhookDeliveriesResult,
+} from "./webhook-deliveries";
+import type {
 	DeleteWebhookEndpointInput,
 	DeleteWebhookEndpointResult,
 	ListWebhookEndpointsInput,
@@ -326,6 +339,7 @@ import * as Subjects from "./subjects";
 import { runMigrations } from "./tenant-migrations";
 import * as Tokens from "./tokens";
 import * as Totp from "./totp";
+import * as WebhookDeliveries from "./webhook-deliveries";
 import * as WebhookEndpoints from "./webhook-endpoints";
 
 /** One row: the tenant id this object is addressed by, its issuer, its MFA policy, and its creation time. */
@@ -1339,6 +1353,14 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 
 			for (let iteration = 0; iteration < 20; iteration++) {
 				let { more } = await ApiKeys.sweepExpiredApiKeys(this.#db);
+				if (!more) break;
+			}
+
+			for (let iteration = 0; iteration < 20; iteration++) {
+				let retentionDays = await this.#auditRetentionDays();
+				let { more } = await WebhookDeliveries.sweepWebhookDeliveries(this.#db, {
+					retentionDays,
+				});
 				if (!more) break;
 			}
 		} catch (error) {
@@ -2432,6 +2454,105 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	): Promise<WithCost<ListWebhookEndpointsResult>> {
 		await this.#migrated;
 		return this.#withCost(() => WebhookEndpoints.listWebhookEndpoints(this.#db, input));
+	}
+
+	/**
+	 * Leases a pending delivery for one attempt and signs it under every
+	 * currently live secret its endpoint holds. Never gated: a tenant
+	 * delivering to an endpoint it already registered is protocol surface, not
+	 * something a lapsed subscription blocks.
+	 *
+	 * @param input - The delivery to prepare, and the clock to measure its
+	 * secrets' rotation windows against.
+	 * @returns The request to send and which attempt this now is, or that the
+	 * delivery does not exist or is no longer pending.
+	 */
+	async prepareDelivery(input: PrepareDeliveryInput): Promise<WithCost<PrepareDeliveryResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let sealKey = await this.#sealKey();
+			return WebhookDeliveries.prepareDelivery(this.#db, sealKey, input);
+		});
+	}
+
+	/**
+	 * Records one delivery attempt and decides what happens next.
+	 *
+	 * @param input - The delivery this attempt belongs to, how it went, and
+	 * the clock to measure the next attempt against.
+	 * @returns The row's status after recording the attempt, or that no such
+	 * delivery exists.
+	 */
+	async settleDelivery(input: SettleDeliveryInput): Promise<WithCost<SettleDeliveryResult>> {
+		await this.#migrated;
+		return this.#withCost(() => WebhookDeliveries.settleDelivery(this.#db, input));
+	}
+
+	/**
+	 * The pending deliveries already past their own `next_attempt_at`, for the
+	 * scheduled sweep to enqueue.
+	 *
+	 * @param input - The clock to compare `next_attempt_at` against, and how
+	 * many rows one call may return.
+	 * @returns The due deliveries, and whether the batch was full.
+	 */
+	async claimDueDeliveries(
+		input: ClaimDueDeliveriesInput = {},
+	): Promise<WithCost<ClaimDueDeliveriesResult>> {
+		await this.#migrated;
+		return this.#withCost(() => WebhookDeliveries.claimDueDeliveries(this.#db, input));
+	}
+
+	/**
+	 * Writes a new delivery row carrying an existing delivery's own payload,
+	 * event type and endpoint.
+	 *
+	 * @param input - The delivery to replay, and who asked for it.
+	 * @returns The new pending row, or that the original delivery or its
+	 * endpoint no longer exists.
+	 */
+	async replayDelivery(input: ReplayDeliveryInput): Promise<WithCost<ReplayDeliveryResult>> {
+		await this.#migrated;
+		return this.#withCost(() => WebhookDeliveries.replayDelivery(this.#db, input));
+	}
+
+	/**
+	 * A page of one endpoint's own delivery log, most recently created first.
+	 *
+	 * @param input - The endpoint whose deliveries to read, and where to page
+	 * from.
+	 * @returns A page of delivery summaries, or that the given cursor no
+	 * longer matches.
+	 */
+	async readDeliveryPage(input: ReadDeliveryPageInput): Promise<WithCost<ReadDeliveryPageResult>> {
+		await this.#migrated;
+		return this.#withCost(() => WebhookDeliveries.readDeliveryPage(this.#db, input));
+	}
+
+	/**
+	 * Deletes delivered or exhausted delivery rows older than this tenant's
+	 * own retention window, at most `limit` per call, for the scheduled sweep
+	 * to call repeatedly.
+	 *
+	 * @param input - How many rows one call may remove, and the clock to
+	 * measure the window against.
+	 * @returns How many rows this call deleted, and whether the batch was
+	 * full.
+	 */
+	async sweepWebhookDeliveries(
+		input: { now?: number; limit?: number } = {},
+	): Promise<WithCost<SweepWebhookDeliveriesResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let retentionDays = await this.#auditRetentionDays();
+			return WebhookDeliveries.sweepWebhookDeliveries(this.#db, {
+				retentionDays,
+				now: input.now,
+				limit: input.limit,
+			});
+		});
 	}
 
 	/**

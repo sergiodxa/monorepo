@@ -36,6 +36,8 @@ import m0014 from "./tenant-migrations/0014-audit.sql?raw";
 import m0015 from "./tenant-migrations/0015-totp.sql?raw";
 import m0016 from "./tenant-migrations/0016-second-factor-sign-in.sql?raw";
 import m0022 from "./tenant-migrations/0022-organizations.sql?raw";
+import m0027 from "./tenant-migrations/0027-webhook-endpoints.sql?raw";
+import m0028 from "./tenant-migrations/0028-webhook-deliveries.sql?raw";
 
 let db: Database;
 
@@ -55,6 +57,8 @@ beforeEach(async () => {
 	await driver.executeScript(m0015);
 	await driver.executeScript(m0016);
 	await driver.executeScript(m0022);
+	await driver.executeScript(m0027);
+	await driver.executeScript(m0028);
 
 	db = new Database(driver);
 });
