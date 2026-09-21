@@ -23,7 +23,8 @@ Twelve entry points, each importable on its own:
 - `@sdxc/auth/relying-party` — the browser login, callback, and logout
 - `@sdxc/auth/service-client` — acting as the app itself, with no person present
 - `@sdxc/auth/resource-server` — accepting a bearer token an incoming request carries
-- `@sdxc/auth/management-client` — reading the provider's own subject records
+- `@sdxc/auth/management-client` — reading the provider's own subject records, and a
+  multi-tenant provider's tenant-scoped directory
 - `@sdxc/auth/auth-session` — the token set a login leaves in a session store
 - `@sdxc/auth/id-token` — the verified ID token and its claims
 - `@sdxc/auth/access-token` — the verified access token and its claims
@@ -336,6 +337,93 @@ it never answered, and `ManagementError.is(error, code)` narrows a caught value.
 `ManagementErrorCode` is closed — `unauthorized`, `rate_limited`, `provider_failed`,
 `request_failed`, `invalid_response` — and `ManagementErrorOptions` is what the constructor
 takes.
+
+#### The tenant-scoped surface
+
+A second, parallel role on the same class: a multi-tenant provider's per-tenant directory,
+administered as `new ManagementClient(service, { baseUrl, resources: [baseUrl] })` where
+`baseUrl` is the origin the tenant-scoped API is served on. Every method below sends its
+request under `{baseUrl}/tenants/{tenantId}/…`, so one client reaches every tenant a service
+client's credential is scoped to.
+
+A failure this surface reports is `ManagementError` for a request that never completed, was
+unauthorized, or was rate-limited, or the richer `ManagementProblem` — an RFC 9457
+`application/problem+json` body — for everything the tenant-scoped API itself refuses:
+
+```typescript
+ManagementProblem.type; // a stable URI naming the failure
+ManagementProblem.title; // a short, human-readable summary
+ManagementProblem.status; // the HTTP status the response carried
+ManagementProblem.detail; // a longer explanation, or null
+ManagementProblem.instance; // the request id the platform's logs are keyed by, or null
+ManagementProblem.errors; // ManagementProblemDetail[] — one { pointer, code, message } per invalid field
+```
+
+`Options.apiVersion` names the `X-API-Version` every tenant-scoped call sends; left off, a
+request names none, which the provider serves as its oldest supported version. Read
+`admin.apiVersionReceived` right after `await`ing a call to see which version actually
+answered it. A list method answers `ManagementClient.Page<T>`: `items`, and `next`/`prev`
+continuation targets parsed off the response's own `Link` header.
+
+Every method takes a `tenantId` first and answers a `Result` whose failure is
+`ManagementError | ManagementProblem`:
+
+**Subjects and identifiers** (`subjects:read` / `subjects:write`)
+
+- `fetchTenantSubjectById(tenantId, subjectId)` — a subject's profile, identifiers, attributes and second-factor state
+- `createTenantSubject(tenantId, input)` — creates a subject with the given identifiers, profile and attributes
+- `updateTenantSubject(tenantId, subjectId, input)` — writes a subject's profile and declared attributes
+- `blockTenantSubject(tenantId, subjectId, input)` — blocks a subject and revokes every session it holds
+- `unblockTenantSubject(tenantId, subjectId)` — restores a blocked subject to active
+- `deleteTenantSubject(tenantId, subjectId)` — deletes a subject, its identifiers, attributes and sessions
+- `addTenantSubjectIdentifier(tenantId, subjectId, input)` — claims a new identifier, an email starting with a delivery ticket
+- `verifyTenantSubjectIdentifier(tenantId, input)` — spends a ticket, resolving the subject from the ticket alone
+- `removeTenantSubjectIdentifier(tenantId, subjectId, input)` — removes an identifier, refusing to take the last verified one
+
+**Credentials and sessions** (`sessions:write`)
+
+- `listTenantSubjectSessions(tenantId, subjectId, options?)` — a page of a subject's live sessions
+- `revokeTenantSubjectSession(tenantId, subjectId, sessionId, input)` — revokes one session
+- `revokeAllTenantSubjectSessions(tenantId, subjectId, input?)` — revokes every live session a subject holds
+- `revokeTenantSubjectPasskey(tenantId, subjectId, credentialId)` — removes a passkey
+- `forceTenantSubjectPasswordReset(tenantId, subjectId, input)` — marks the current password as owing a change
+- `resetTenantSubjectSecondFactor(tenantId, subjectId, input)` — removes the second factor and marks a fresh enrolment owed
+
+**Clients and secrets** (`clients:write`)
+
+- `listTenantClients(tenantId, options?)` — a page of the tenant's registered clients
+- `registerTenantClient(tenantId, input)` — registers a client, minting its first secret when confidential
+- `updateTenantClient(tenantId, clientId, input)` — replaces a client's editable fields as one set
+- `rotateTenantClientSecret(tenantId, clientId, input?)` — mints a successor secret and opens the incumbent's overlap window
+- `revokeTenantClientSecret(tenantId, clientId, secretId)` — closes one secret immediately
+- `disableTenantClient(tenantId, clientId)` — marks a client disabled
+- `deleteTenantClient(tenantId, clientId)` — deletes a client and its secrets
+
+**Scopes, grants and roles** (`subjects:read` / `subjects:write`)
+
+- `listTenantGrants(tenantId, subjectId, options?)` — a page of a subject's own consent grants
+- `revokeTenantGrant(tenantId, subjectId, clientId)` — ends a subject's standing decision for one client
+
+**Audit events** (`audit:read`)
+
+- `readTenantAuditPage(tenantId, options)` — a page of the tenant's audit log over a window, with optional filters
+
+**Tenants, members and domains** (`tenant:write` / `members:write`)
+
+- `fetchTenant(tenantId)` — a tenant's own public record
+- `listTenantMembers(tenantId)` — every membership of a tenant
+- `inviteTenantMember(tenantId, input)` — grants a subject access at a role
+- `updateTenantMemberRole(tenantId, membershipId, input)` — changes a membership's role
+- `removeTenantMember(tenantId, membershipId)` — revokes a subject's access to a tenant
+- `listTenantDomains(tenantId)` — every domain of a tenant
+- `attachTenantDomain(tenantId, input)` — registers a domain
+- `fetchTenantDomainVerification(tenantId, domainId)` — a domain's verification and activation state
+- `updateTenantMfaPolicy(tenantId, input)` — sets the tenant's second-factor policy
+
+Left out on purpose, because the operation they would call does not exist in this provider
+today: listing subjects, defining a scope or assigning a role, API keys and webhook
+endpoints, import and export runs, and a tenant settings/branding update beyond its
+second-factor policy.
 
 ### `@sdxc/auth/auth-session`
 

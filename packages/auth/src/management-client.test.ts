@@ -16,6 +16,7 @@ import {
 	ManagementClient,
 	ManagementError,
 	ManagementErrorCode,
+	ManagementProblem,
 	SubjectNotFoundError,
 } from "./management-client.js";
 
@@ -332,5 +333,653 @@ describe("ManagementClient#fetchSubjectById", () => {
 		server.use(http.get(SUBJECT_URL, () => new HttpResponse(null, { status: 404 })));
 
 		expect(await resolve(SUBJECT_ID)).toBeNull();
+	});
+});
+
+/**
+ * Covers the tenant-scoped management surface: a request built under
+ * `{baseUrl}/tenants/{tenantId}/…`, a bearer token and an `X-API-Version` on every
+ * call, RFC 9457 `application/problem+json` decoded into a {@link ManagementProblem},
+ * and a keyset list's `Link` header parsed into continuation targets. Every method
+ * shares the same request and decode helpers, so each resource group below covers a
+ * success path, a not-found problem, and a validation problem once, and the `Link`
+ * header round trip is exercised on a single list method rather than on every one.
+ */
+describe("ManagementClient tenant-scoped surface", () => {
+	/** Where the tenant-scoped surface is served, apart from the OIDC issuer above. */
+	const MANAGEMENT_BASE_URL = "https://api.test";
+
+	/** The tenant every call in this suite is scoped to. */
+	const TENANT_ID = "ten_1";
+
+	/** Builds the absolute URL one of this tenant's resources is served at. */
+	function tenantUrl(...segments: string[]): string {
+		return [MANAGEMENT_BASE_URL, "tenants", TENANT_ID, ...segments].join("/");
+	}
+
+	/** Builds a client pointed at the tenant-scoped surface, with an optional configured API version. */
+	function tenantClient(apiVersion?: string): ManagementClient {
+		return new ManagementClient(service, {
+			baseUrl: MANAGEMENT_BASE_URL,
+			resources: [MANAGEMENT_BASE_URL],
+			apiVersion,
+		});
+	}
+
+	/** Answers with an RFC 9457 `application/problem+json` body. */
+	function problem(
+		body: { type: string; title: string; detail?: string; instance?: string; errors?: unknown[] },
+		status: number,
+	) {
+		return new HttpResponse(JSON.stringify({ status, ...body }), {
+			status,
+			headers: { "content-type": "application/problem+json" },
+		});
+	}
+
+	describe("subjects and identifiers", () => {
+		const SUBJECT_PAYLOAD = {
+			id: "sub_1",
+			status: "active",
+			name: "Ada Lovelace",
+			givenName: "Ada",
+			familyName: "Lovelace",
+			nickname: null,
+			preferredUsername: null,
+			picture: null,
+			locale: null,
+			zoneinfo: null,
+			identifiers: [
+				{
+					kind: "email",
+					value: "ada@example.com",
+					verified: true,
+					verifiedAt: 1_750_000_000_000,
+					isPrimary: true,
+				},
+			],
+			attributes: { department: "engineering" },
+			totpFactor: { label: "iPhone", lastUsedAt: 1_750_000_000_000 },
+			recoveryCodesRemaining: 8,
+			trustedDevices: [],
+		};
+
+		test("reads a tenant's subject with its identifiers and second-factor state", async () => {
+			server.use(
+				http.get(tenantUrl("subjects", "sub_1"), () => HttpResponse.json(SUBJECT_PAYLOAD)),
+			);
+
+			let result = await tenantClient().fetchTenantSubjectById(TENANT_ID, "sub_1");
+
+			if (isFailure(result)) throw result.error;
+			expect(result.data).toEqual(SUBJECT_PAYLOAD);
+		});
+
+		test("answers a missing subject with a decoded not-found problem", async () => {
+			server.use(
+				http.get(tenantUrl("subjects", "sub_x"), () =>
+					problem(
+						{ type: "https://api.test/errors/subject-not-found", title: "Subject not found" },
+						404,
+					),
+				),
+			);
+
+			let result = await tenantClient().fetchTenantSubjectById(TENANT_ID, "sub_x");
+
+			if (isSuccess(result)) throw new Error("Expected a failure.");
+			expect(result.error).toBeInstanceOf(ManagementProblem);
+			expect((result.error as ManagementProblem).status).toBe(404);
+			expect((result.error as ManagementProblem).type).toBe(
+				"https://api.test/errors/subject-not-found",
+			);
+		});
+
+		test("decodes a validation failure's field-level errors", async () => {
+			server.use(
+				http.post(tenantUrl("subjects"), () =>
+					problem(
+						{
+							type: "https://api.test/errors/validation",
+							title: "Validation failed",
+							detail: "One or more fields were invalid.",
+							instance: "req_123",
+							errors: [
+								{
+									pointer: "/identifiers/0/value",
+									code: "invalid_identifier",
+									message: "Not a valid email address.",
+								},
+							],
+						},
+						422,
+					),
+				),
+			);
+
+			let result = await tenantClient().createTenantSubject(TENANT_ID, {
+				identifiers: [{ kind: "email", value: "not-an-email" }],
+			});
+
+			if (isSuccess(result)) throw new Error("Expected a failure.");
+			let error = result.error as ManagementProblem;
+			expect(error).toBeInstanceOf(ManagementProblem);
+			expect(error.title).toBe("Validation failed");
+			expect(error.detail).toBe("One or more fields were invalid.");
+			expect(error.instance).toBe("req_123");
+			expect(error.errors).toEqual([
+				{
+					pointer: "/identifiers/0/value",
+					code: "invalid_identifier",
+					message: "Not a valid email address.",
+				},
+			]);
+		});
+
+		test("sends a removed identifier's value as a query parameter rather than a path segment", async () => {
+			let requestedMethod: string | null = null;
+			let requestedUrl: string | null = null;
+
+			server.use(
+				http.delete(tenantUrl("subjects", "sub_1", "identifiers"), ({ request }) => {
+					requestedMethod = request.method;
+					requestedUrl = request.url;
+					return HttpResponse.json({ promotedPrimary: null, notify: [] });
+				}),
+			);
+
+			let result = await tenantClient().removeTenantSubjectIdentifier(TENANT_ID, "sub_1", {
+				value: "ada@example.com",
+			});
+
+			if (isFailure(result)) throw result.error;
+			expect(requestedMethod).toBe("DELETE");
+			expect(new URL(requestedUrl ?? "").searchParams.get("value")).toBe("ada@example.com");
+		});
+
+		test("verifies an identifier from its ticket alone, naming no subject in the path", async () => {
+			let requestedPath: string | null = null;
+
+			server.use(
+				http.post(tenantUrl("identifiers", "verify"), ({ request }) => {
+					requestedPath = new URL(request.url).pathname;
+					return HttpResponse.json({ subjectId: "sub_1", promotedPrimary: true });
+				}),
+			);
+
+			let result = await tenantClient().verifyTenantSubjectIdentifier(TENANT_ID, {
+				ticket: "ticket-abc",
+			});
+
+			if (isFailure(result)) throw result.error;
+			expect(requestedPath).toBe("/tenants/ten_1/identifiers/verify");
+			expect(result.data).toEqual({ subjectId: "sub_1", promotedPrimary: true });
+		});
+	});
+
+	describe("credentials and sessions", () => {
+		test("pages a subject's sessions and follows the Link header's continuation targets", async () => {
+			let next = tenantUrl("subjects", "sub_1", "sessions") + "?cursor=next-cursor";
+			let prev = tenantUrl("subjects", "sub_1", "sessions") + "?cursor=prev-cursor";
+
+			server.use(
+				http.get(tenantUrl("subjects", "sub_1", "sessions"), () =>
+					HttpResponse.json(
+						[
+							{
+								id: "sess_1",
+								createdAt: 1,
+								lastSeenAt: 2,
+								amr: ["pwd"],
+								ip: "203.0.113.10",
+								userAgent: "UA",
+								country: "US",
+								region: "CA",
+								city: "SF",
+							},
+						],
+						{ headers: { link: `<${next}>; rel="next", <${prev}>; rel="prev"` } },
+					),
+				),
+			);
+
+			let result = await tenantClient().listTenantSubjectSessions(TENANT_ID, "sub_1");
+
+			if (isFailure(result)) throw result.error;
+			expect(result.data.items).toHaveLength(1);
+			expect(result.data.items[0]?.id).toBe("sess_1");
+			expect(result.data.next).toBe(next);
+			expect(result.data.prev).toBe(prev);
+		});
+
+		test("answers revoking a missing session with a not-found problem", async () => {
+			server.use(
+				http.post(tenantUrl("subjects", "sub_1", "sessions", "sess_x", "revoke"), () =>
+					problem({ type: "https://api.test/errors/session-not-found", title: "Not found" }, 404),
+				),
+			);
+
+			let result = await tenantClient().revokeTenantSubjectSession(TENANT_ID, "sub_1", "sess_x", {
+				reason: "suspicious activity",
+			});
+
+			if (isSuccess(result)) throw new Error("Expected a failure.");
+			expect((result.error as ManagementProblem).status).toBe(404);
+		});
+
+		test("carries a second-factor reset's notify address through, or a validation problem", async () => {
+			server.use(
+				http.post(tenantUrl("subjects", "sub_1", "second-factor", "reset"), () =>
+					problem({ type: "https://api.test/errors/validation", title: "Validation failed" }, 422),
+				),
+			);
+
+			let result = await tenantClient().resetTenantSubjectSecondFactor(TENANT_ID, "sub_1", {
+				reason: "",
+			});
+
+			if (isSuccess(result)) throw new Error("Expected a failure.");
+			expect(result.error).toBeInstanceOf(ManagementProblem);
+
+			server.use(
+				http.post(tenantUrl("subjects", "sub_1", "second-factor", "reset"), () =>
+					HttpResponse.json({ notifyAddress: "ada@example.com" }),
+				),
+			);
+
+			let succeeded = await tenantClient().resetTenantSubjectSecondFactor(TENANT_ID, "sub_1", {
+				reason: "lost device",
+			});
+
+			if (isFailure(succeeded)) throw succeeded.error;
+			expect(succeeded.data.notifyAddress).toBe("ada@example.com");
+		});
+	});
+
+	describe("clients and secrets", () => {
+		const CLIENT_RECORD = {
+			id: "client_1",
+			name: "Acme Dashboard",
+			kind: "confidential",
+			redirectUris: ["https://acme.test/callback"],
+			postLogoutRedirectUris: [],
+			grantTypes: ["authorization_code"],
+			responseTypes: ["code"],
+			scopes: ["openid"],
+			tokenEndpointAuthMethod: "client_secret_basic",
+			requireConsent: true,
+			createdAt: 1,
+			updatedAt: 1,
+			disabledAt: null,
+		};
+
+		test("registers a confidential client and returns its one-time secret", async () => {
+			server.use(
+				http.post(tenantUrl("clients"), () =>
+					HttpResponse.json({ client: CLIENT_RECORD, secret: "csec_abc" }),
+				),
+			);
+
+			let result = await tenantClient().registerTenantClient(TENANT_ID, {
+				name: "Acme Dashboard",
+				kind: "confidential",
+				redirectUris: ["https://acme.test/callback"],
+				postLogoutRedirectUris: [],
+				grantTypes: ["authorization_code"],
+				responseTypes: ["code"],
+				scopes: ["openid"],
+				tokenEndpointAuthMethod: "client_secret_basic",
+				requireConsent: true,
+			});
+
+			if (isFailure(result)) throw result.error;
+			expect(result.data.client).toEqual(CLIENT_RECORD);
+			expect(result.data.secret).toBe("csec_abc");
+		});
+
+		test("answers updating a missing client with a not-found problem", async () => {
+			server.use(
+				http.put(tenantUrl("clients", "client_x"), () =>
+					problem({ type: "https://api.test/errors/client-not-found", title: "Not found" }, 404),
+				),
+			);
+
+			let result = await tenantClient().updateTenantClient(TENANT_ID, "client_x", {
+				name: "Acme Dashboard",
+				kind: "confidential",
+				redirectUris: [],
+				postLogoutRedirectUris: [],
+				grantTypes: [],
+				responseTypes: ["code"],
+				scopes: [],
+				tokenEndpointAuthMethod: "client_secret_basic",
+				requireConsent: true,
+			});
+
+			if (isSuccess(result)) throw new Error("Expected a failure.");
+			expect((result.error as ManagementProblem).status).toBe(404);
+		});
+
+		test("decodes a client registration's redirect-uri validation failure", async () => {
+			server.use(
+				http.post(tenantUrl("clients"), () =>
+					problem(
+						{
+							type: "https://api.test/errors/validation",
+							title: "Validation failed",
+							errors: [
+								{
+									pointer: "/redirectUris/0",
+									code: "invalid-redirect-uri",
+									message: "Must be absolute and carry no fragment.",
+								},
+							],
+						},
+						422,
+					),
+				),
+			);
+
+			let result = await tenantClient().registerTenantClient(TENANT_ID, {
+				name: "Acme Dashboard",
+				kind: "confidential",
+				redirectUris: ["not-a-url"],
+				postLogoutRedirectUris: [],
+				grantTypes: ["authorization_code"],
+				responseTypes: ["code"],
+				scopes: [],
+				tokenEndpointAuthMethod: "client_secret_basic",
+				requireConsent: true,
+			});
+
+			if (isSuccess(result)) throw new Error("Expected a failure.");
+			expect((result.error as ManagementProblem).errors[0]?.pointer).toBe("/redirectUris/0");
+		});
+	});
+
+	describe("scopes, grants and roles", () => {
+		test("lists a subject's grants", async () => {
+			server.use(
+				http.get(tenantUrl("subjects", "sub_1", "grants"), () =>
+					HttpResponse.json([
+						{
+							clientId: "client_1",
+							clientName: "Acme Dashboard",
+							scopes: ["openid"],
+							createdAt: 1,
+						},
+					]),
+				),
+			);
+
+			let result = await tenantClient().listTenantGrants(TENANT_ID, "sub_1");
+
+			if (isFailure(result)) throw result.error;
+			expect(result.data.items).toEqual([
+				{ clientId: "client_1", clientName: "Acme Dashboard", scopes: ["openid"], createdAt: 1 },
+			]);
+		});
+
+		test("answers revoking an unknown grant with a not-found problem", async () => {
+			server.use(
+				http.delete(tenantUrl("subjects", "sub_1", "grants", "client_x"), () =>
+					problem({ type: "https://api.test/errors/grant-not-found", title: "Not found" }, 404),
+				),
+			);
+
+			let result = await tenantClient().revokeTenantGrant(TENANT_ID, "sub_1", "client_x");
+
+			if (isSuccess(result)) throw new Error("Expected a failure.");
+			expect((result.error as ManagementProblem).status).toBe(404);
+		});
+
+		test("decodes a bad-cursor validation problem while paging grants", async () => {
+			server.use(
+				http.get(tenantUrl("subjects", "sub_1", "grants"), () =>
+					problem(
+						{
+							type: "https://api.test/errors/validation",
+							title: "Validation failed",
+							errors: [{ pointer: "/cursor", code: "invalid_cursor", message: "Stale cursor." }],
+						},
+						400,
+					),
+				),
+			);
+
+			let result = await tenantClient().listTenantGrants(TENANT_ID, "sub_1", { cursor: "stale" });
+
+			if (isSuccess(result)) throw new Error("Expected a failure.");
+			expect((result.error as ManagementProblem).errors[0]?.code).toBe("invalid_cursor");
+		});
+	});
+
+	describe("audit events", () => {
+		const AUDIT_EVENT = {
+			id: "000000000001",
+			at: 1_750_000_000_000,
+			action: "subject.created",
+			actorType: "platform",
+			actorId: "system",
+			targetType: "subject",
+			targetId: "sub_1",
+			outcome: "succeeded",
+			context: {},
+			detail: {},
+		};
+
+		test("reads a page of the tenant's audit log over a window", async () => {
+			server.use(http.get(tenantUrl("audit-events"), () => HttpResponse.json([AUDIT_EVENT])));
+
+			let result = await tenantClient().readTenantAuditPage(TENANT_ID, { from: 0, to: Date.now() });
+
+			if (isFailure(result)) throw result.error;
+			expect(result.data.items).toEqual([AUDIT_EVENT]);
+		});
+
+		test("answers a missing tenant's audit log with a not-found problem", async () => {
+			server.use(
+				http.get(tenantUrl("audit-events"), () =>
+					problem({ type: "https://api.test/errors/tenant-not-found", title: "Not found" }, 404),
+				),
+			);
+
+			let result = await tenantClient().readTenantAuditPage(TENANT_ID, { from: 0, to: Date.now() });
+
+			if (isSuccess(result)) throw new Error("Expected a failure.");
+			expect((result.error as ManagementProblem).status).toBe(404);
+		});
+
+		test("decodes a validation problem for a window with `to` before `from`", async () => {
+			server.use(
+				http.get(tenantUrl("audit-events"), () =>
+					problem(
+						{
+							type: "https://api.test/errors/validation",
+							title: "Validation failed",
+							errors: [{ pointer: "/to", code: "before_from", message: "`to` precedes `from`." }],
+						},
+						400,
+					),
+				),
+			);
+
+			let result = await tenantClient().readTenantAuditPage(TENANT_ID, { from: 100, to: 0 });
+
+			if (isSuccess(result)) throw new Error("Expected a failure.");
+			expect((result.error as ManagementProblem).errors[0]?.pointer).toBe("/to");
+		});
+	});
+
+	describe("tenants, members and domains", () => {
+		const TENANT_RECORD = {
+			id: TENANT_ID,
+			name: "Acme",
+			slug: "acme-4f9a",
+			issuer: "https://acme.example.com",
+			region: "wnam",
+			status: "active",
+			planSlug: "pro",
+			subscriptionStatus: "active",
+			currentPeriodEnd: 1_750_000_000_000,
+			cancelAtPeriodEnd: false,
+			graceUntil: null,
+			lapsedAt: null,
+			createdAt: 1,
+			updatedAt: 1,
+		};
+
+		test("reads a tenant's own public record, leaving out its billing linkage", async () => {
+			server.use(http.get(tenantUrl(), () => HttpResponse.json(TENANT_RECORD)));
+
+			let result = await tenantClient().fetchTenant(TENANT_ID);
+
+			if (isFailure(result)) throw result.error;
+			expect(result.data).toEqual(TENANT_RECORD);
+			expect(result.data).not.toHaveProperty("customerId");
+			expect(result.data).not.toHaveProperty("subscriptionId");
+		});
+
+		test("answers a missing tenant with a not-found problem", async () => {
+			server.use(
+				http.get(tenantUrl(), () =>
+					problem({ type: "https://api.test/errors/tenant-not-found", title: "Not found" }, 404),
+				),
+			);
+
+			let result = await tenantClient().fetchTenant(TENANT_ID);
+
+			if (isSuccess(result)) throw new Error("Expected a failure.");
+			expect((result.error as ManagementProblem).status).toBe(404);
+		});
+
+		test("decodes a domain attachment's hostname validation failure", async () => {
+			server.use(
+				http.post(tenantUrl("domains"), () =>
+					problem(
+						{
+							type: "https://api.test/errors/validation",
+							title: "Validation failed",
+							errors: [
+								{ pointer: "/hostname", code: "invalid_hostname", message: "Not a hostname." },
+							],
+						},
+						422,
+					),
+				),
+			);
+
+			let result = await tenantClient().attachTenantDomain(TENANT_ID, {
+				hostname: "not a hostname",
+				kind: "custom",
+			});
+
+			if (isSuccess(result)) throw new Error("Expected a failure.");
+			expect((result.error as ManagementProblem).errors[0]?.pointer).toBe("/hostname");
+		});
+
+		test("lists members and domains as plain arrays, since neither operation pages", async () => {
+			server.use(
+				http.get(tenantUrl("members"), () =>
+					HttpResponse.json([
+						{
+							id: "mem_1",
+							tenantId: TENANT_ID,
+							subjectId: "sub_1",
+							role: "owner",
+							createdAt: 1,
+							updatedAt: 1,
+						},
+					]),
+				),
+				http.get(tenantUrl("domains"), () =>
+					HttpResponse.json([
+						{
+							id: "dom_1",
+							tenantId: TENANT_ID,
+							hostname: "acme.example.com",
+							kind: "platform",
+							status: "active",
+							certificateStatus: null,
+							verificationName: null,
+							verificationValue: null,
+							createdAt: 1,
+							updatedAt: 1,
+						},
+					]),
+				),
+			);
+
+			let client = tenantClient();
+			let members = await client.listTenantMembers(TENANT_ID);
+			let domains = await client.listTenantDomains(TENANT_ID);
+
+			if (isFailure(members)) throw members.error;
+			if (isFailure(domains)) throw domains.error;
+			expect(Array.isArray(members.data)).toBe(true);
+			expect(members.data).toHaveLength(1);
+			expect(Array.isArray(domains.data)).toBe(true);
+			expect(domains.data).toHaveLength(1);
+		});
+
+		test("reports a policy update's success with no value, from a 204 answer", async () => {
+			server.use(http.post(tenantUrl("mfa-policy"), () => new HttpResponse(null, { status: 204 })));
+
+			let result = await tenantClient().updateTenantMfaPolicy(TENANT_ID, { policy: "required" });
+
+			if (isFailure(result)) throw result.error;
+			expect(result.data).toBeUndefined();
+		});
+	});
+
+	describe("versioning and generic failures", () => {
+		test("names the configured API version and records the one the answer echoes", async () => {
+			let sentVersion: string | null = null;
+
+			server.use(
+				http.get(tenantUrl(), ({ request }) => {
+					sentVersion = request.headers.get("x-api-version");
+					return HttpResponse.json(
+						{
+							id: TENANT_ID,
+							name: "Acme",
+							slug: "acme-4f9a",
+							issuer: "https://acme.example.com",
+							region: "wnam",
+							status: "active",
+							planSlug: "pro",
+							subscriptionStatus: "active",
+							currentPeriodEnd: null,
+							cancelAtPeriodEnd: false,
+							graceUntil: null,
+							lapsedAt: null,
+							createdAt: 1,
+							updatedAt: 1,
+						},
+						{ headers: { "x-api-version": "2026-09-18" } },
+					);
+				}),
+			);
+
+			let client = tenantClient("2026-09-18");
+			expect(client.apiVersionReceived).toBeNull();
+
+			let result = await client.fetchTenant(TENANT_ID);
+
+			if (isFailure(result)) throw result.error;
+			expect(sentVersion).toBe("2026-09-18");
+			expect(client.apiVersionReceived).toBe("2026-09-18");
+		});
+
+		test("falls back to a flat ManagementError for a non-2xx answer that is not a problem body", async () => {
+			server.use(http.get(tenantUrl(), () => new HttpResponse(null, { status: 500 })));
+
+			let result = await tenantClient().fetchTenant(TENANT_ID);
+
+			if (isSuccess(result)) throw new Error("Expected a failure.");
+			expect(result.error).toBeInstanceOf(ManagementError);
+			expect(result.error).not.toBeInstanceOf(ManagementProblem);
+			expect(ManagementError.is(result.error, ManagementErrorCode.ProviderFailed)).toBe(true);
+		});
 	});
 });

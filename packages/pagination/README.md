@@ -256,6 +256,31 @@ and advertises that instead of an internal hostname. The total uses `X-Total-Cou
 that is the name existing client libraries look for, which is worth the `X-` prefix
 [RFC 6648](https://www.rfc-editor.org/rfc/rfc6648) otherwise discourages.
 
+### `parseLinkHeader(header): LinkValue[]`
+
+Parses a `Link` header value into `{ target, rels, raw }` entries, in source order, the
+[RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) splitting `paginate()` itself runs on the way
+in. Exported for a client reading a page it did not build: following `rel="next"` off a response
+this package wrote, or off any other server's `Link` header. A `null` header answers `[]`, and a
+malformed entry is dropped rather than raising, so one bad link never fails a whole header.
+
+```typescript
+import { parseLinkHeader } from "@sdxc/pagination";
+
+let links = parseLinkHeader(response.headers.get("Link"));
+let next = links.find((link) => link.rels.includes("next"))?.target ?? null;
+```
+
+`raw` carries the entry's exact source text, which is what lets a caller re-emit a link it does
+not otherwise understand byte for byte.
+
+### `serializeLinkHeader(links): string | null`
+
+Joins link-value strings — built with `serializeLink(target, rel)` or carried over as `raw` from
+a parsed entry — back into one header value, or `null` for an empty list. `paginate()` uses it to
+write the header it merges into; a caller assembling its own `Link` value from scratch uses it the
+same way.
+
 ### `encodeCursor(direction, columns, values): Result<string, UnencodableCursorValueError>`
 
 Encodes a page boundary as an opaque, URL-safe cursor. `byKeyset()` calls it for you; it is
@@ -304,6 +329,12 @@ interface KeysetPage<T> {
 	items: T[];
 	cursors: { next: string | null; prev: string | null };
 }
+
+interface LinkValue {
+	target: string;
+	rels: string[];
+	raw: string;
+}
 ```
 
 `PageSeriesItem` is a discriminated union, so a pager is a `switch` over `type` that reads
@@ -315,8 +346,8 @@ projection.
 The options and result shapes named in the signatures above — `PaginationInit`,
 `PaginationJSON`, `PageSeriesOptions`, `OffsetOptions`, `KeysetOptions`, `KeysetCursors`,
 `OffsetQuery`, `KeysetQuery`, `PaginateOptions`, `PagingNames`, `Paging`, `CreatePagingOptions`,
-`ParsePageParamsOptions`, `PageParams`, `CursorValue`, `CursorDirection`, and `DecodedCursor` —
-are exported as types too.
+`ParsePageParamsOptions`, `PageParams`, `CursorValue`, `CursorDirection`, `DecodedCursor`, and
+`LinkValue` — are exported as types too.
 
 ## Pattern: One Route, Both Strategies
 

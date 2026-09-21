@@ -13,6 +13,7 @@
 export type { CursorDirection, CursorValue, DecodedCursor } from "./cursor.js";
 export type { PaginateOptions } from "./headers.js";
 export type { OrderByTuple, OrderDirection } from "./keyset.js";
+export type { LinkValue } from "./link.js";
 export type { PagingNames } from "./names.js";
 export type {
 	KeysetCursors,
@@ -39,6 +40,7 @@ export {
 	UnencodableCursorValueError,
 } from "./errors.js";
 export { paginate } from "./headers.js";
+export { parseLinkHeader, serializeLinkHeader } from "./link.js";
 export { DEFAULT_MAX_PER_PAGE, DEFAULT_PAGING_NAMES, DEFAULT_PER_PAGE } from "./names.js";
 export { Pagination } from "./pagination.js";
 export { createPaging, parsePageParams } from "./params.js";
