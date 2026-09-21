@@ -234,7 +234,7 @@ describe("authorization_code grant", () => {
 	});
 
 	test("an unsupported grant_type is 400", async () => {
-		let response = await buildRouter().fetch(tokenRequest({ grant_type: "client_credentials" }));
+		let response = await buildRouter().fetch(tokenRequest({ grant_type: "password" }));
 
 		expect(response.status).toBe(400);
 		let body = (await response.json()) as Record<string, unknown>;
@@ -275,5 +275,93 @@ describe("refresh_token grant", () => {
 		let body = (await response.json()) as Record<string, unknown>;
 		expect(body.access_token).toEqual(expect.any(String));
 		expect(body.refresh_token).not.toBe(minted.refreshToken);
+	});
+});
+
+/** Registers a confidential client carrying `client_credentials`, granting the tenant's own machine_access feature first. */
+async function createMachineClient(scopes: string[] = ["reports.read"]) {
+	await tenantDO.applyEntitlements({
+		plan: "pro",
+		features: { machine_access: true },
+		dauCap: null,
+		auditRetentionDays: null,
+		effectiveAt: Date.now(),
+	});
+
+	let result = await tenantDO.registerClient({
+		name: "Machine Client",
+		kind: "confidential",
+		redirectUris: [],
+		postLogoutRedirectUris: [],
+		grantTypes: ["client_credentials"],
+		responseTypes: [],
+		scopes,
+		tokenEndpointAuthMethod: "client_secret_basic",
+		requireConsent: false,
+	});
+	if (!result.ok) throw new Error("unreachable");
+	return { client: result.client, secret: result.secret };
+}
+
+describe("client_credentials grant", () => {
+	test("exchanges a client's own credentials for a token with no subject", async () => {
+		let { client, secret } = await createMachineClient(["reports.read"]);
+
+		let response = await buildRouter().fetch(
+			tokenRequest(
+				{ grant_type: "client_credentials", scope: "reports.read" },
+				{ Authorization: `Basic ${Base64.encode(`${client.id}:${secret}`)}` },
+			),
+		);
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as Record<string, unknown>;
+		expect(body.access_token).toEqual(expect.any(String));
+		expect(body.id_token).toBeUndefined();
+		expect(body.refresh_token).toBeUndefined();
+		expect(body.token_type).toBe("Bearer");
+		expect(body.scope).toBe("reports.read");
+	});
+
+	test("a scope outside the client's own ceiling is invalid_scope", async () => {
+		let { client, secret } = await createMachineClient(["reports.read"]);
+
+		let response = await buildRouter().fetch(
+			tokenRequest(
+				{ grant_type: "client_credentials", scope: "reports.write" },
+				{ Authorization: `Basic ${Base64.encode(`${client.id}:${secret}`)}` },
+			),
+		);
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as Record<string, unknown>;
+		expect(body.error).toBe("invalid_scope");
+	});
+
+	test("a client that never registered the grant is refused", async () => {
+		let { client, secret } = await createTestClient();
+
+		let response = await buildRouter().fetch(
+			tokenRequest(
+				{ grant_type: "client_credentials" },
+				{ Authorization: `Basic ${Base64.encode(`${client.id}:${secret}`)}` },
+			),
+		);
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as Record<string, unknown>;
+		expect(body.error).toBe("unauthorized_client");
+	});
+
+	test("no credentials at all is invalid_client, since this grant belongs to a confidential client alone", async () => {
+		let { client } = await createMachineClient();
+
+		let response = await buildRouter().fetch(
+			tokenRequest({ grant_type: "client_credentials", client_id: client.id }),
+		);
+
+		expect(response.status).toBe(401);
+		let body = (await response.json()) as Record<string, unknown>;
+		expect(body.error).toBe("invalid_client");
 	});
 });

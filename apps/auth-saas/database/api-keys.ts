@@ -347,11 +347,12 @@ export interface AuthenticateApiKeyInput {
 	now?: number;
 }
 
-/** What a resolved key answers with: the subject it acts as, and the scopes it narrows to. */
+/** What a resolved key answers with: the subject it acts as, the scopes it narrows to, and when it expires. */
 export interface AuthenticateApiKeySuccess {
 	keyId: string;
 	subjectId: string;
 	scopes: string[];
+	expiresAt: number;
 }
 
 /**
@@ -482,7 +483,13 @@ export async function authenticateApiKey(
 		}
 	}
 
-	return { ok: true, keyId: id, subjectId: facts.subjectId, scopes: facts.scopes };
+	return {
+		ok: true,
+		keyId: id,
+		subjectId: facts.subjectId,
+		scopes: facts.scopes,
+		expiresAt: facts.expiresAt,
+	};
 }
 
 export interface RotateApiKeyInput {

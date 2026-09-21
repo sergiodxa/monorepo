@@ -259,7 +259,14 @@ import type {
 	UpdateSubjectResult,
 	VerifyIdentifierResult,
 } from "./subjects";
-import type { ExchangeCodeInput, RefreshTokensInput, TokenOutcome } from "./tokens";
+import type {
+	AuthenticateClientInput,
+	AuthenticateClientResult,
+	ExchangeCodeInput,
+	IssueClientCredentialsTokenInput,
+	RefreshTokensInput,
+	TokenOutcome,
+} from "./tokens";
 import type {
 	ActivateTotpFactorInput,
 	ActivateTotpFactorResult,
@@ -1392,7 +1399,15 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 */
 	async registerClient(input: RegisterClientInput): Promise<WithCost<RegisterClientResult>> {
 		await this.#migrated;
-		return this.#withCost(() => Clients.registerClient(this.#db, input));
+
+		return this.#withCost(async () => {
+			if (input.grantTypes.includes("client_credentials")) {
+				if (!(await this.#isEntitled(ApiKeys.MACHINE_ACCESS_FEATURE))) {
+					return { ok: false, reason: "entitlement-required" };
+				}
+			}
+			return Clients.registerClient(this.#db, input);
+		});
 	}
 
 	/**
@@ -1403,7 +1418,15 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 */
 	async updateClient(input: UpdateClientInput): Promise<WithCost<UpdateClientResult>> {
 		await this.#migrated;
-		return this.#withCost(() => Clients.updateClient(this.#db, input));
+
+		return this.#withCost(async () => {
+			if (input.grantTypes.includes("client_credentials")) {
+				if (!(await this.#isEntitled(ApiKeys.MACHINE_ACCESS_FEATURE))) {
+					return { ok: false, reason: "entitlement-required" };
+				}
+			}
+			return Clients.updateClient(this.#db, input);
+		});
 	}
 
 	/**
@@ -2700,6 +2723,45 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 			let issuer = await this.#issuer();
 			return Tokens.refreshTokens(this.#db, { ...input, issuer });
 		});
+	}
+
+	/**
+	 * Exchanges a client id and secret for a token about the client itself,
+	 * carrying no subject, session or refresh token. Issuing to a client that
+	 * already carries the grant on its own record is protocol surface, so
+	 * this stays open to every tenant regardless of its own add-on standing.
+	 *
+	 * @param input - The client's credentials, the scope and resource
+	 * requested, and the clock to mint against.
+	 * @returns The minted access token, or the error this grant was refused
+	 * for.
+	 */
+	async issueClientCredentialsToken(
+		input: Omit<IssueClientCredentialsTokenInput, "issuer">,
+	): Promise<WithCost<TokenOutcome>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let issuer = await this.#issuer();
+			return Tokens.issueClientCredentialsToken(this.#db, { ...input, issuer });
+		});
+	}
+
+	/**
+	 * Authenticates a client's own credentials without minting anything, for
+	 * a caller that only needs to know whether the presenter is who it
+	 * claims — a client-authenticated endpoint verifying someone else's
+	 * credential, rather than the token endpoint minting one.
+	 *
+	 * @param input - The client's id and secret, and how it presented itself.
+	 * @returns Success, or the status and description an HTTP layer answers
+	 * with.
+	 */
+	async authenticateClient(
+		input: AuthenticateClientInput,
+	): Promise<WithCost<AuthenticateClientResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Tokens.authenticateClient(this.#db, input));
 	}
 
 	/**

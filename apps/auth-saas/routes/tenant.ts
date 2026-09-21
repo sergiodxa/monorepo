@@ -24,6 +24,7 @@ export default route({
 	userinfoGet: get("/userinfo"),
 	userinfoPost: post("/userinfo"),
 	token: post("/oauth/token"),
+	apiKeysIntrospect: post("/api-keys/introspect"),
 	authorize: get("/authorize"),
 	hostedSignInShow: get("/u/sign-in"),
 	hostedSignInSubmit: post("/u/sign-in"),

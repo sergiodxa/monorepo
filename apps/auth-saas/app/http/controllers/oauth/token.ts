@@ -1,7 +1,8 @@
 /**
  * `POST /oauth/token` — the token endpoint: turns an authorization code or a
- * refresh token into a token set, authenticating the client from whichever
- * credential shape it presented.
+ * refresh token into a token set, or a client's own credentials into a token
+ * about that client, authenticating it from whichever credential shape it
+ * presented.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -46,8 +47,12 @@ function stringField(form: FormData, name: string): string | null {
  * form-only `client_id` with no secret at all. A `client_id` presented both in the
  * header and the body is refused here, before either value reaches the exchange
  * the client actually asked for.
+ *
+ * Exported so another client-authenticated endpoint on this same tenant
+ * hostname reads a presented credential exactly the way the token endpoint
+ * does, rather than parsing `Authorization` and form fields a second time.
  */
-function resolveClientAuth(request: Request, form: FormData): ClientAuthResult {
+export function resolveClientAuth(request: Request, form: FormData): ClientAuthResult {
 	let authorization = request.headers.get("Authorization");
 	let formClientId = stringField(form, "client_id");
 
@@ -99,8 +104,13 @@ function resolveClientAuth(request: Request, form: FormData): ClientAuthResult {
 	return { ok: true, auth: { clientId: formClientId, clientSecret: null, authScheme: "none" } };
 }
 
-/** Renders a client-facing token error, adding the `Basic` challenge OAuth 2.1 asks for at `401`. */
-function tokenError(status: number, error: string, description: string): Response {
+/**
+ * Renders a client-facing token error, adding the `Basic` challenge OAuth 2.1
+ * asks for at `401`. Exported so another endpoint answering the same client
+ * authentication failure renders it identically rather than reassembling the
+ * `WWW-Authenticate` header of its own accord.
+ */
+export function tokenError(status: number, error: string, description: string): Response {
 	let headers = status === 401 ? { "WWW-Authenticate": "Basic" } : undefined;
 	return json({ error, error_description: description }, { status, headers });
 }
@@ -131,7 +141,11 @@ export default createAction(routes.token, async (ctx) => {
 		return tokenError(400, "invalid_request", "grant_type is required.");
 	}
 
-	if (grantType !== "authorization_code" && grantType !== "refresh_token") {
+	if (
+		grantType !== "authorization_code" &&
+		grantType !== "refresh_token" &&
+		grantType !== "client_credentials"
+	) {
 		return tokenError(400, "unsupported_grant_type", `Grant type "${grantType}" is not supported.`);
 	}
 
@@ -169,7 +183,7 @@ export default createAction(routes.token, async (ctx) => {
 			authScheme: clientAuth.auth.authScheme,
 			now,
 		});
-	} else {
+	} else if (grantType === "refresh_token") {
 		let refreshToken = form.get("refresh_token");
 		let scope = form.get("scope");
 
@@ -183,6 +197,27 @@ export default createAction(routes.token, async (ctx) => {
 			clientId: clientAuth.auth.clientId,
 			clientSecret: clientAuth.auth.clientSecret,
 			authScheme: clientAuth.auth.authScheme,
+			now,
+		});
+	} else {
+		let authScheme = clientAuth.auth.authScheme;
+		if (authScheme === "none") {
+			return tokenError(
+				401,
+				"invalid_client",
+				"The client credentials grant requires the application to authenticate.",
+			);
+		}
+
+		let scope = form.get("scope");
+		let resource = form.get("resource");
+
+		outcome = await ctx.tenantStub.issueClientCredentialsToken({
+			scope: typeof scope === "string" ? scope : null,
+			resource: typeof resource === "string" ? resource : null,
+			clientId: clientAuth.auth.clientId,
+			clientSecret: clientAuth.auth.clientSecret,
+			authScheme,
 			now,
 		});
 	}

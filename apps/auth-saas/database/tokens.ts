@@ -164,13 +164,13 @@ type AuthScheme = "basic" | "post" | "none";
 
 let AuthSchemeSchema = s.enum_(["basic", "post", "none"] as const);
 
-interface AuthenticateClientInput {
+export interface AuthenticateClientInput {
 	clientId: string;
 	clientSecret: string | null;
 	authScheme: AuthScheme;
 }
 
-type AuthenticateClientResult =
+export type AuthenticateClientResult =
 	| { ok: true; client: ClientRow }
 	| { ok: false; status: 400 | 401; description: string };
 
@@ -183,8 +183,12 @@ type AuthenticateClientResult =
  * OAuth 2.1 asks for a `WWW-Authenticate` challenge rather than a plain 400 — the
  * caller already holds the `basic` scheme it used to reach here, so no header
  * value needs to cross back for it to build one.
+ *
+ * Exported so a caller that only needs to know whether a client is who it
+ * claims — minting nothing — reaches the same check `exchangeCode` and
+ * `refreshTokens` already authenticate through.
  */
-async function authenticateClient(
+export async function authenticateClient(
 	db: Database,
 	input: AuthenticateClientInput,
 ): Promise<AuthenticateClientResult> {
@@ -818,6 +822,111 @@ export async function refreshTokens(
 		tokenType: "Bearer",
 		expiresIn: minted.expiresIn,
 		scope: requestedScopes.join(" "),
+	};
+}
+
+export interface IssueClientCredentialsTokenInput {
+	scope: string | null;
+	resource: string | null;
+	clientId: string;
+	clientSecret: string | null;
+	authScheme: "basic" | "post";
+	now: number;
+	/** The tenant's own issuer, stamped onto the token as `iss` and, absent a named resource, as its `aud`. */
+	issuer: string;
+}
+
+let IssueClientCredentialsTokenSchema = s.object({
+	scope: s.nullable(s.string()),
+	resource: s.nullable(s.string()),
+	clientId: s.string(),
+	clientSecret: s.nullable(s.string()),
+	authScheme: s.enum_(["basic", "post"] as const),
+	now: s.number(),
+	issuer: s.string(),
+});
+
+/**
+ * Exchanges a client id and secret for a token about the client itself: no
+ * subject, no session, no ID token and no refresh token, because the client
+ * holds the credential that mints the next one. `authenticateClient` already
+ * refuses a public client presenting `basic`/`post` — it holds no secret to
+ * authenticate with — so the grant reaches only a confidential client, the one
+ * kind whose whole security is the secret it just proved.
+ *
+ * @param db - The tenant's database.
+ * @param input - The client's credentials, the scope and resource requested,
+ * and the clock and issuer to mint against.
+ * @returns The minted access token, or the error this grant was refused for.
+ */
+export async function issueClientCredentialsToken(
+	db: Database,
+	input: IssueClientCredentialsTokenInput,
+): Promise<TokenOutcome> {
+	let parsed = s.parse(IssueClientCredentialsTokenSchema, input);
+
+	let authenticated = await authenticateClient(db, parsed);
+	if (!authenticated.ok) {
+		return {
+			kind: "error",
+			status: authenticated.status,
+			error: "invalid_client",
+			description: authenticated.description,
+		};
+	}
+	let client = authenticated.client;
+
+	if (!(client.grant_types as string[]).includes("client_credentials")) {
+		return {
+			kind: "error",
+			status: 400,
+			error: "unauthorized_client",
+			description: "This application is not registered for the client credentials grant.",
+		};
+	}
+
+	let ceiling = client.scopes as string[];
+	let grantedScopes = parsed.scope ? parsed.scope.split(/\s+/).filter(Boolean) : ceiling;
+	if (grantedScopes.some((scope) => !ceiling.includes(scope))) {
+		return {
+			kind: "error",
+			status: 400,
+			error: "invalid_scope",
+			description: "One or more requested scopes are not allowed for this application.",
+		};
+	}
+
+	let keyPair = await currentSigningKeyPair(db);
+	if (!keyPair) {
+		return {
+			kind: "error",
+			status: 500,
+			error: "server_error",
+			description: "No signing key is available for this tenant.",
+		};
+	}
+
+	let issuedAt = Math.floor(parsed.now / 1000);
+
+	let accessToken = await new AccessToken({
+		iss: parsed.issuer,
+		sub: client.id,
+		client_id: client.id,
+		aud: parsed.resource ?? `${parsed.issuer}/userinfo`,
+		iat: issuedAt,
+		exp: issuedAt + Math.floor(ACCESS_TOKEN_TTL_MS / 1000),
+		jti: accessTokenId(generateUUID()).toString(),
+		scope: grantedScopes.join(" "),
+	}).sign(JWK.Algorithm.ES256, [keyPair]);
+
+	return {
+		kind: "tokens",
+		accessToken,
+		idToken: null,
+		refreshToken: null,
+		tokenType: "Bearer",
+		expiresIn: Math.floor(ACCESS_TOKEN_TTL_MS / 1000),
+		scope: grantedScopes.join(" "),
 	};
 }
 

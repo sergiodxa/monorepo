@@ -41,6 +41,9 @@ const MAX_ROTATION_WINDOW_DAYS = 30;
 /** How many secrets may verify for one client at once, incumbent and successor together. */
 const MAX_LIVE_SECRETS = 2;
 
+/** How often a successful verify writes `last_used_at`, so a client calling every few seconds stamps one row a minute. */
+const LAST_USED_THROTTLE_MS = 60 * 1000;
+
 /** Mints a `client_` id for a new client. */
 const clientRowId = typeid("client");
 
@@ -355,7 +358,8 @@ export interface RegisterClientInput {
 
 export type RegisterClientResult =
 	| { ok: true; client: ClientRecord; secret: string | null }
-	| ClientRecordValidationFailure;
+	| ClientRecordValidationFailure
+	| { ok: false; reason: "entitlement-required" };
 
 let RegisterClientSchema = s.object({
 	name: s.string(),
@@ -442,7 +446,8 @@ export type UpdateClientResult =
 	| { ok: true; client: ClientRecord }
 	| { ok: false; reason: "not-found" }
 	| { ok: false; reason: "kind-immutable" }
-	| ClientRecordValidationFailure;
+	| ClientRecordValidationFailure
+	| { ok: false; reason: "entitlement-required" };
 
 let UpdateClientSchema = s.object({
 	clientId: s.string(),
@@ -883,9 +888,12 @@ export type VerifyClientSecretResult = { ok: true } | { ok: false };
 
 /**
  * Checks a presented secret against every one of a client's live secrets, so a
- * rotation in progress is invisible to whichever one a caller still holds. Updates
- * `last_used_at` and rehashes past policy on the secret that matched, the same as a
- * password verify does for a password hash.
+ * rotation in progress is invisible to whichever one a caller still holds. Stamps
+ * `last_used_at` on the secret that matched at most once a minute, so a client
+ * exchanging tokens every few seconds — the client credentials grant's own caller,
+ * most of all — writes that row about as often as a person signs in, and rehashes
+ * past policy on the secret that matched, the same as a password verify does for a
+ * password hash.
  *
  * Not an RPC method itself: `exchangeCode` and the refresh exchange call this inside
  * the operation that already resolves the client, rather than checking a secret in a
@@ -906,7 +914,9 @@ export async function verifyClientSecret(
 		let verified = await password.verify(row.hash, input.secret);
 		if (isFailure(verified) || !verified.data) continue;
 
-		await db.update(clientSecrets, { id: row.id }, { last_used_at: now });
+		if (row.last_used_at === null || now - row.last_used_at > LAST_USED_THROTTLE_MS) {
+			await db.update(clientSecrets, { id: row.id }, { last_used_at: now });
+		}
 
 		if (password.needsRehash(row.hash)) {
 			let rehashed = await password.hash(input.secret);

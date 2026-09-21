@@ -220,7 +220,13 @@ describe("authenticateApiKey", () => {
 		let { value, keyId } = await mintKeyFor({ subjectId, scopes: ["keys.read"] });
 
 		let result = await authenticateApiKey(db, { presented: value });
-		expect(result).toEqual({ ok: true, keyId, subjectId, scopes: ["keys.read"] });
+		expect(result).toEqual({
+			ok: true,
+			keyId,
+			subjectId,
+			scopes: ["keys.read"],
+			expiresAt: expect.any(Number),
+		});
 	});
 
 	test("refuses a value that is not shaped like a key at all", async () => {

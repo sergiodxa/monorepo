@@ -560,6 +560,41 @@ describe("verifyClientSecret", () => {
 		let row = (await db.findMany(clientSecrets, { where: { client_id: created.client.id } }))[0];
 		expect(row?.last_used_at).not.toBeNull();
 	});
+
+	test("leaves last_used_at untouched on a verify within a minute of the last stamp", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1_700_000_000_000);
+
+		let created = await createTestClient();
+		if (!created.secret) throw new Error("unreachable");
+
+		await verifyClientSecret(db, { clientId: created.client.id, secret: created.secret });
+		let firstStamp = (
+			await db.findMany(clientSecrets, { where: { client_id: created.client.id } })
+		)[0]?.last_used_at;
+
+		vi.setSystemTime(1_700_000_000_000 + 30_000);
+		await verifyClientSecret(db, { clientId: created.client.id, secret: created.secret });
+
+		let row = (await db.findMany(clientSecrets, { where: { client_id: created.client.id } }))[0];
+		expect(row?.last_used_at).toBe(firstStamp);
+	});
+
+	test("stamps last_used_at again once a minute has passed since the last stamp", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1_700_000_000_000);
+
+		let created = await createTestClient();
+		if (!created.secret) throw new Error("unreachable");
+
+		await verifyClientSecret(db, { clientId: created.client.id, secret: created.secret });
+
+		vi.setSystemTime(1_700_000_000_000 + 60_001);
+		await verifyClientSecret(db, { clientId: created.client.id, secret: created.secret });
+
+		let row = (await db.findMany(clientSecrets, { where: { client_id: created.client.id } }))[0];
+		expect(row?.last_used_at).toBe(1_700_000_000_000 + 60_001);
+	});
 });
 
 describe("audit", () => {

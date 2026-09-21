@@ -31,6 +31,7 @@ import {
 import { signUpShow, signUpSubmit } from "~/app/http/controllers/hosted/sign-up";
 import { verifyResend, verifyShow } from "~/app/http/controllers/hosted/verify";
 import notFound from "~/app/http/controllers/not-found";
+import introspect from "~/app/http/controllers/oauth/introspect";
 import token from "~/app/http/controllers/oauth/token";
 import {
 	scimResourceTypes,
@@ -88,6 +89,7 @@ tenantRouter.map(routes.jwks, jwks);
 tenantRouter.map(routes.userinfoGet, userinfoGet);
 tenantRouter.map(routes.userinfoPost, userinfoPost);
 tenantRouter.map(routes.token, token);
+tenantRouter.map(routes.apiKeysIntrospect, introspect);
 tenantRouter.map(routes.authorize, authorize);
 tenantRouter.map(routes.hostedSignInShow, signInShow);
 tenantRouter.map(routes.hostedSignInSubmit, signInSubmit);
