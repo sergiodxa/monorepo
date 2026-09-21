@@ -56,6 +56,7 @@ describe("runMigrations", () => {
 			"0024-roles",
 			"0025-client-permission-claim",
 			"0026-api-keys",
+			"0027-webhook-endpoints",
 		]);
 	});
 
@@ -110,6 +111,7 @@ describe("runMigrations", () => {
 			"role_assignments",
 			"api_keys",
 			"api_key_settings",
+			"webhook_endpoints",
 		]) {
 			expect(names, `${name} exists`).toContain(name);
 		}
@@ -151,6 +153,7 @@ describe("runMigrations", () => {
 			{ id: "0024-roles", applied_at: expect.any(Number) },
 			{ id: "0025-client-permission-claim", applied_at: expect.any(Number) },
 			{ id: "0026-api-keys", applied_at: expect.any(Number) },
+			{ id: "0027-webhook-endpoints", applied_at: expect.any(Number) },
 		]);
 	});
 

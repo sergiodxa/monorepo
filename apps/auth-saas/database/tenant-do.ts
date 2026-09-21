@@ -282,6 +282,19 @@ import type {
 	ResetSecondFactorResult,
 	RevokeTrustedDeviceResult,
 } from "./totp";
+import type {
+	DeleteWebhookEndpointInput,
+	DeleteWebhookEndpointResult,
+	ListWebhookEndpointsInput,
+	ListWebhookEndpointsResult,
+	ReadWebhookEndpointResult,
+	RegisterWebhookEndpointInput,
+	RegisterWebhookEndpointResult,
+	RotateEndpointSecretInput,
+	RotateEndpointSecretResult,
+	UpdateWebhookEndpointInput,
+	UpdateWebhookEndpointResult,
+} from "./webhook-endpoints";
 
 import * as ApiKeys from "./api-keys";
 import {
@@ -313,6 +326,7 @@ import * as Subjects from "./subjects";
 import { runMigrations } from "./tenant-migrations";
 import * as Tokens from "./tokens";
 import * as Totp from "./totp";
+import * as WebhookEndpoints from "./webhook-endpoints";
 
 /** One row: the tenant id this object is addressed by, its issuer, its MFA policy, and its creation time. */
 const settings = table({
@@ -2316,6 +2330,108 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	): Promise<WithCost<SweepExpiredApiKeysResult>> {
 		await this.#migrated;
 		return this.#withCost(() => ApiKeys.sweepExpiredApiKeys(this.#db, input));
+	}
+
+	/**
+	 * Validates and writes a new webhook endpoint record, minting its signing
+	 * secret and returning it once.
+	 *
+	 * @param input - The endpoint's URL, description and subscribed event
+	 * types, and who is registering it.
+	 * @returns The new record and the one-time plaintext secret, or which rule
+	 * refused it.
+	 */
+	async registerWebhookEndpoint(
+		input: RegisterWebhookEndpointInput,
+	): Promise<WithCost<RegisterWebhookEndpointResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			if (!(await this.#isEntitled(WebhookEndpoints.OUTBOUND_WEBHOOKS_FEATURE))) {
+				return { ok: false, reason: "entitlement-required" };
+			}
+			let sealKey = await this.#sealKey();
+			return WebhookEndpoints.registerWebhookEndpoint(this.#db, sealKey, input);
+		});
+	}
+
+	/**
+	 * Replaces a webhook endpoint's editable fields as one set: its URL,
+	 * description and subscribed event types.
+	 *
+	 * @param input - The endpoint to update and its whole new editable record.
+	 * @returns The updated record, or which rule refused the update.
+	 */
+	async updateWebhookEndpoint(
+		input: UpdateWebhookEndpointInput,
+	): Promise<WithCost<UpdateWebhookEndpointResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			if (!(await this.#isEntitled(WebhookEndpoints.OUTBOUND_WEBHOOKS_FEATURE))) {
+				return { ok: false, reason: "entitlement-required" };
+			}
+			return WebhookEndpoints.updateWebhookEndpoint(this.#db, input);
+		});
+	}
+
+	/**
+	 * Mints a successor signing secret and keeps the incumbent live as
+	 * `sealed_previous` for the rotation's overlap window.
+	 *
+	 * @param input - The endpoint to rotate, and who is making the call.
+	 * @returns The updated record and the new one-time secret, or that no such
+	 * endpoint exists.
+	 */
+	async rotateEndpointSecret(
+		input: RotateEndpointSecretInput,
+	): Promise<WithCost<RotateEndpointSecretResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let sealKey = await this.#sealKey();
+			return WebhookEndpoints.rotateEndpointSecret(this.#db, sealKey, input);
+		});
+	}
+
+	/**
+	 * Deletes a webhook endpoint outright.
+	 *
+	 * @param input - The endpoint to delete, and who is making the call.
+	 * @returns Success, or that no such endpoint exists.
+	 */
+	async deleteWebhookEndpoint(
+		input: DeleteWebhookEndpointInput,
+	): Promise<WithCost<DeleteWebhookEndpointResult>> {
+		await this.#migrated;
+		return this.#withCost(() => WebhookEndpoints.deleteWebhookEndpoint(this.#db, input));
+	}
+
+	/**
+	 * Reads one webhook endpoint's record.
+	 *
+	 * @param input - The endpoint to read.
+	 * @returns The record, or that no such endpoint exists.
+	 */
+	async readWebhookEndpoint(input: {
+		endpointId: string;
+	}): Promise<WithCost<ReadWebhookEndpointResult>> {
+		await this.#migrated;
+		return this.#withCost(() => WebhookEndpoints.readWebhookEndpoint(this.#db, input));
+	}
+
+	/**
+	 * Lists a page of this tenant's own webhook endpoints, newest first.
+	 *
+	 * @param input - Where to page from.
+	 * @returns A page of endpoint records, or that the given cursor no longer
+	 * matches.
+	 */
+	async listWebhookEndpoints(
+		input: ListWebhookEndpointsInput = {},
+	): Promise<WithCost<ListWebhookEndpointsResult>> {
+		await this.#migrated;
+		return this.#withCost(() => WebhookEndpoints.listWebhookEndpoints(this.#db, input));
 	}
 
 	/**

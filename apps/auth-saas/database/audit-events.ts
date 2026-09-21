@@ -169,6 +169,11 @@ export const AUDIT_ACTIONS = [
 	"api_key.created",
 	"api_key.rotated",
 	"api_key.revoked",
+	// Outbound webhooks
+	"webhook_endpoint.registered",
+	"webhook_endpoint.updated",
+	"webhook_endpoint.secret_rotated",
+	"webhook_endpoint.deleted",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

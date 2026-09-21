@@ -10,6 +10,7 @@
 import type { DurableObjectStateMock } from "@sdxc/cloudflare-mocks";
 
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
+import { randomToken } from "@sdxc/crypto";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import Tenant from "./tenant-do";
@@ -57,6 +58,7 @@ describe("provision", () => {
 				"0024-roles",
 				"0025-client-permission-claim",
 				"0026-api-keys",
+				"0027-webhook-endpoints",
 			],
 			issuer: "https://tenant-1.example.com",
 			keys: { keys: [expect.objectContaining({ kty: "EC", alg: "ES256" })] },
@@ -496,5 +498,107 @@ describe("the machine_access entitlement gate", () => {
 
 		let created = await tenant.createApiKey({ subjectId, name: "CI key", scopes: [], actor });
 		expect(created.ok).toBe(true);
+	});
+});
+
+describe("the outbound_webhooks entitlement gate", () => {
+	let webhookState: DurableObjectStateMock;
+	let webhookTenant: Tenant;
+
+	beforeEach(() => {
+		webhookState = createDurableObjectState();
+		webhookTenant = new Tenant(webhookState, {
+			TOTP_SEAL_KEY: randomToken({ bytes: 32 }),
+		} as Cloudflare.Env);
+	});
+
+	test("refuses registerWebhookEndpoint and updateWebhookEndpoint without the entitlement", async () => {
+		await webhookTenant.provision({
+			tenantId: "tenant_1",
+			issuer: "https://tenant-1.example.com",
+		});
+		let actor = { type: "platform" as const, id: "system" };
+
+		expect(
+			await webhookTenant.registerWebhookEndpoint({
+				url: "https://example.com/hooks",
+				description: "Test endpoint",
+				eventTypes: ["*"],
+				actor,
+			}),
+		).toMatchObject({ ok: false, reason: "entitlement-required" });
+
+		expect(
+			await webhookTenant.updateWebhookEndpoint({
+				endpointId: "whep_does_not_matter",
+				url: "https://example.com/hooks",
+				description: "Test endpoint",
+				eventTypes: ["*"],
+				actor,
+			}),
+		).toMatchObject({ ok: false, reason: "entitlement-required" });
+	});
+
+	test("never gates rotateEndpointSecret, deleteWebhookEndpoint, readWebhookEndpoint or listWebhookEndpoints", async () => {
+		await webhookTenant.provision({
+			tenantId: "tenant_1",
+			issuer: "https://tenant-1.example.com",
+		});
+		let actor = { type: "platform" as const, id: "system" };
+
+		let rotated = await webhookTenant.rotateEndpointSecret({
+			endpointId: "whep_does_not_matter",
+			actor,
+		});
+		expect(rotated).toMatchObject({ ok: false, reason: "not-found" });
+
+		let deleted = await webhookTenant.deleteWebhookEndpoint({
+			endpointId: "whep_does_not_matter",
+			actor,
+		});
+		expect(deleted).toMatchObject({ ok: false, reason: "not-found" });
+
+		let read = await webhookTenant.readWebhookEndpoint({ endpointId: "whep_does_not_matter" });
+		expect(read).toMatchObject({ ok: false, reason: "not-found" });
+
+		let listed = await webhookTenant.listWebhookEndpoints({});
+		expect(listed).toMatchObject({ ok: true, endpoints: [] });
+	});
+
+	test("admits registerWebhookEndpoint and updateWebhookEndpoint once applyEntitlements grants the feature", async () => {
+		await webhookTenant.provision({
+			tenantId: "tenant_1",
+			issuer: "https://tenant-1.example.com",
+		});
+		let actor = { type: "platform" as const, id: "system" };
+
+		await webhookTenant.applyEntitlements({
+			plan: "pro",
+			features: { outbound_webhooks: true },
+			dauCap: null,
+			auditRetentionDays: null,
+			effectiveAt: Date.now(),
+		});
+
+		let registered = await webhookTenant.registerWebhookEndpoint({
+			url: "https://example.com/hooks",
+			description: "Test endpoint",
+			eventTypes: ["*"],
+			actor,
+		});
+		expect(registered).toMatchObject({ ok: true, secret: expect.stringMatching(/^whsec_/) });
+		if (!registered.ok) throw new Error("unreachable");
+
+		let updated = await webhookTenant.updateWebhookEndpoint({
+			endpointId: registered.endpoint.id,
+			url: "https://example.com/other-hooks",
+			description: "Renamed",
+			eventTypes: ["*"],
+			actor,
+		});
+		expect(updated).toMatchObject({
+			ok: true,
+			endpoint: { url: "https://example.com/other-hooks" },
+		});
 	});
 });
