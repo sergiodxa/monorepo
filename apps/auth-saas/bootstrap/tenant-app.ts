@@ -32,6 +32,14 @@ import { signUpShow, signUpSubmit } from "~/app/http/controllers/hosted/sign-up"
 import { verifyResend, verifyShow } from "~/app/http/controllers/hosted/verify";
 import notFound from "~/app/http/controllers/not-found";
 import token from "~/app/http/controllers/oauth/token";
+import {
+	scimResourceTypes,
+	scimSchemas,
+	scimServiceProviderConfig,
+} from "~/app/http/controllers/scim/discovery";
+import { createScimGroupsController } from "~/app/http/controllers/scim/groups";
+import { scimBulk, scimMe } from "~/app/http/controllers/scim/unsupported";
+import { createScimUsersController } from "~/app/http/controllers/scim/users";
 import { userinfoGet, userinfoPost } from "~/app/http/controllers/userinfo";
 import jwks from "~/app/http/controllers/well-known/jwks";
 import oauthAuthorizationServer from "~/app/http/controllers/well-known/oauth-authorization-server";
@@ -94,3 +102,34 @@ tenantRouter.map(routes.hostedVerifyResend, verifyResend);
 tenantRouter.map(routes.hostedResetShow, resetShow);
 tenantRouter.map(routes.hostedResetSubmit, resetSubmit);
 tenantRouter.map(routes.hostedError, errorShow);
+
+/**
+ * The write budget every `/scim/v2/*` resource route shares, keyed on the
+ * presented token's own digest rather than the caller's address —
+ * `MANAGEMENT_RATE_LIMITER`'s 100-per-60s configured rate is the closest
+ * single number this binding can express to the write volume a provisioning
+ * sync produces, standing in for the 20/s-sustained, 100-burst shape a
+ * Cloudflare rate limiter cannot represent as two tiers.
+ */
+let scimUsers = createScimUsersController(env.MANAGEMENT_RATE_LIMITER);
+let scimGroups = createScimGroupsController(env.MANAGEMENT_RATE_LIMITER);
+
+tenantRouter.map(routes.scimUsersCreate, scimUsers.create);
+tenantRouter.map(routes.scimUsersList, scimUsers.list);
+tenantRouter.map(routes.scimUsersRead, scimUsers.read);
+tenantRouter.map(routes.scimUsersReplace, scimUsers.replace);
+tenantRouter.map(routes.scimUsersPatch, scimUsers.patch);
+tenantRouter.map(routes.scimUsersDelete, scimUsers.delete);
+
+tenantRouter.map(routes.scimGroupsCreate, scimGroups.create);
+tenantRouter.map(routes.scimGroupsList, scimGroups.list);
+tenantRouter.map(routes.scimGroupsRead, scimGroups.read);
+tenantRouter.map(routes.scimGroupsReplace, scimGroups.replace);
+tenantRouter.map(routes.scimGroupsPatch, scimGroups.patch);
+tenantRouter.map(routes.scimGroupsDelete, scimGroups.delete);
+
+tenantRouter.map(routes.scimServiceProviderConfig, scimServiceProviderConfig);
+tenantRouter.map(routes.scimResourceTypes, scimResourceTypes);
+tenantRouter.map(routes.scimSchemas, scimSchemas);
+tenantRouter.map(routes.scimBulk, scimBulk);
+tenantRouter.map(routes.scimMe, scimMe);

@@ -2103,6 +2103,26 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
+	 * Whether this tenant's own enforcement record currently entitles a named
+	 * feature, read from the same `entitlement_enforcement` row
+	 * {@link #dauEnforcement} and {@link #auditRetentionDays} already read
+	 * locally for their own caps — an add-on gate lives at this boundary
+	 * rather than behind a database connection this object does not hold. A
+	 * tenant whose record has never been written entitles nothing.
+	 *
+	 * @param input - The feature slug to check.
+	 * @returns Whether the feature is currently entitled.
+	 */
+	async hasEntitlement(input: { feature: string }): Promise<WithCost<{ entitled: boolean }>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let record = await this.#db.findOne(entitlementEnforcement, { where: { id: "current" } });
+			return { entitled: record?.features[input.feature] ?? false };
+		});
+	}
+
+	/**
 	 * Closes one day of the daily active user meter, for the control plane's own
 	 * scheduled job to fold into `tenant_usage_day`. Safe to call twice: an
 	 * already-closed day answers the figures already stored.

@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { get, post, route } from "remix/routes";
+import { del, get, patch, post, put, route } from "remix/routes";
 
 /**
  * The tenant route map. `/userinfo` gets two leaf routes over the same pattern,
@@ -46,4 +46,22 @@ export default route({
 	hostedResetShow: get("/u/reset"),
 	hostedResetSubmit: post("/u/reset"),
 	hostedError: get("/u/error"),
+
+	scimUsersCreate: post("/scim/v2/Users"),
+	scimUsersList: get("/scim/v2/Users"),
+	scimUsersRead: get("/scim/v2/Users/:id"),
+	scimUsersReplace: put("/scim/v2/Users/:id"),
+	scimUsersPatch: patch("/scim/v2/Users/:id"),
+	scimUsersDelete: del("/scim/v2/Users/:id"),
+	scimGroupsCreate: post("/scim/v2/Groups"),
+	scimGroupsList: get("/scim/v2/Groups"),
+	scimGroupsRead: get("/scim/v2/Groups/:id"),
+	scimGroupsReplace: put("/scim/v2/Groups/:id"),
+	scimGroupsPatch: patch("/scim/v2/Groups/:id"),
+	scimGroupsDelete: del("/scim/v2/Groups/:id"),
+	scimServiceProviderConfig: get("/scim/v2/ServiceProviderConfig"),
+	scimResourceTypes: get("/scim/v2/ResourceTypes"),
+	scimSchemas: get("/scim/v2/Schemas"),
+	scimBulk: post("/scim/v2/Bulk"),
+	scimMe: get("/scim/v2/Me"),
 });
