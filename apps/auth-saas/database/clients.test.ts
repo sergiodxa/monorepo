@@ -25,6 +25,7 @@ import {
 	deleteClient,
 	disableClient,
 	listClients,
+	readClient,
 	redirectUriMatches,
 	registerClient,
 	revokeClientSecret,
@@ -501,6 +502,33 @@ describe("listClients", () => {
 		let page = await listClients(db, { cursor: "not-a-real-cursor" });
 
 		expect(page).toEqual({ ok: false, reason: "bad-cursor" });
+	});
+});
+
+describe("readClient", () => {
+	test("reads the client's whole record", async () => {
+		let created = await createTestClient({ name: "Reader" });
+
+		let result = await readClient(db, { clientId: created.client.id });
+
+		expect(result).toEqual({ ok: true, client: created.client });
+	});
+
+	test("carries no secret material", async () => {
+		let created = await createTestClient();
+
+		let result = await readClient(db, { clientId: created.client.id });
+		if (!result.ok) throw new Error("unreachable");
+
+		expect(result.client).not.toHaveProperty("secret");
+		expect(result.client).not.toHaveProperty("secretHash");
+	});
+
+	test("refuses a client that does not exist", async () => {
+		expect(await readClient(db, { clientId: "client_missing" })).toEqual({
+			ok: false,
+			reason: "not-found",
+		});
 	});
 });
 

@@ -814,6 +814,29 @@ export async function deleteClient(
 	return { ok: true };
 }
 
+export type ReadClientResult =
+	| { ok: true; client: ClientRecord }
+	| { ok: false; reason: "not-found" };
+
+/**
+ * Reads one client's whole record, the same projection {@link registerClient},
+ * {@link updateClient} and {@link listClients} already hand back — never the
+ * secret hashes a client's own rows carry.
+ *
+ * @param db - The tenant's database.
+ * @param input - The client to read.
+ * @returns The client's record, or that no such client exists.
+ */
+export async function readClient(
+	db: Database,
+	input: { clientId: string },
+): Promise<ReadClientResult> {
+	let row = await db.find(clients, { id: input.clientId });
+	if (!row) return { ok: false, reason: "not-found" };
+
+	return { ok: true, client: toClientRecord(row) };
+}
+
 export interface ListClientsInput {
 	cursor?: string | null;
 	limit?: number;

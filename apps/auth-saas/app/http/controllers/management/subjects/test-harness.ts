@@ -1,8 +1,8 @@
 /**
- * A fully-provisioned tenant, its control-plane record, an allowing rate
- * limiter, and a real management router mapping every subjects and
- * identifiers route, for driving the HTTP surface through real requests the
- * way `scim/test-harness.ts` drives the SCIM surface.
+ * A real management router mapping every subjects and identifiers route, wired
+ * around the provisioned tenant and helpers {@link buildManagementTestCore}
+ * builds, for driving the HTTP surface through real requests the way
+ * `scim/test-harness.ts` drives the SCIM surface.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,12 +10,13 @@
 
 import type { RateLimiterBinding } from "@sdxc/rate-limit";
 import type { Database } from "remix/data-table";
+import type { RequestContext } from "remix/router";
 
-import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
-import { JWK } from "@sdxc/jwt";
 import { createRouter } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
+import type { ManagementTestCore } from "~/app/http/controllers/management/test-harness";
+import type TenantObject from "~/database/tenant-do";
 
 import { createSubjectsBlockAction } from "~/app/http/controllers/management/subjects/block";
 import { createSubjectsCreateAction } from "~/app/http/controllers/management/subjects/create";
@@ -30,34 +31,23 @@ import { createSubjectsListAction } from "~/app/http/controllers/management/subj
 import { createSubjectsReadAction } from "~/app/http/controllers/management/subjects/read";
 import { createSubjectsUnblockAction } from "~/app/http/controllers/management/subjects/unblock";
 import { createSubjectsUpdateAction } from "~/app/http/controllers/management/subjects/update";
-import { database } from "~/app/http/middleware/database";
-import { ManagementAccessToken } from "~/app/lib/management-token";
-import Customer from "~/app/models/customer";
-import Membership from "~/app/models/membership";
 import {
-	advancePlatformSigningKeys,
-	currentPlatformSigningKeyPair,
-} from "~/app/models/platform-signing-key";
-import Tenant from "~/app/models/tenant";
-import { createTestDatabase } from "~/app/test/db";
-import TenantObject from "~/database/tenant-do";
+	buildManagementTestCore,
+	fakeLimiter,
+	grantMembership,
+	ISSUER,
+} from "~/app/http/controllers/management/test-harness";
+import { database } from "~/app/http/middleware/database";
 import routes from "~/routes/management";
 
-export const ISSUER = "https://api.example.com";
-
-/** A fake `RateLimiterBinding` answering the same decision on every call. */
-export function fakeLimiter(success = true): RateLimiterBinding {
-	return { limit: async () => ({ success }) };
-}
+export { fakeLimiter, grantMembership, ISSUER };
 
 /** Builds the management router wired to constructed control-plane and tenant state. */
 export function buildSubjectsRouter(
 	db: Database,
 	tenantDO: TenantObject,
 	options: {
-		resolveDashboardSubjectId?: (
-			ctx: import("remix/router").RequestContext,
-		) => Promise<string | null>;
+		resolveDashboardSubjectId?: (ctx: RequestContext) => Promise<string | null>;
 		limiter?: RateLimiterBinding;
 	} = {},
 ) {
@@ -95,94 +85,21 @@ export function buildSubjectsRouter(
 	return router;
 }
 
-export interface SubjectsHarness {
-	db: Database;
-	tenantId: string;
-	otherTenantId: string;
-	tenantDO: TenantObject;
+export interface SubjectsHarness extends ManagementTestCore {
 	router: ReturnType<typeof buildSubjectsRouter>;
-	/** Signs a management access token the way the token endpoint mints one. */
-	signToken(overrides?: Partial<{ tenantId: string; scope: string }>): Promise<string>;
-	/** A request against this harness's tenant, bearing the given bearer token. */
-	request(path: string, token: string, init?: RequestInit): Request;
 }
 
 export interface BuildSubjectsHarnessOptions {
 	limiter?: RateLimiterBinding;
-	resolveDashboardSubjectId?: (
-		ctx: import("remix/router").RequestContext,
-	) => Promise<string | null>;
+	resolveDashboardSubjectId?: (ctx: RequestContext) => Promise<string | null>;
 }
 
 /** Provisions a fresh tenant, its control-plane record, and the subjects router, ready for an HTTP-surface test. */
 export async function buildSubjectsHarness(
 	options: BuildSubjectsHarnessOptions = {},
 ): Promise<SubjectsHarness> {
-	let db = await createTestDatabase();
-	await advancePlatformSigningKeys(db, { now: Date.now() });
+	let core = await buildManagementTestCore({ defaultScope: "subjects:read subjects:write" });
+	let router = buildSubjectsRouter(core.db, core.tenantDO, options);
 
-	let customer = await Customer.create(db, { name: "Acme, Inc." });
-	let tenant = await Tenant.create(db, {
-		customerId: customer.id,
-		name: "Acme, Inc.",
-		slug: "acme",
-		issuer: "https://acme.auth.example.com",
-	});
-
-	let other = await Tenant.create(db, {
-		customerId: customer.id,
-		name: "Other, Inc.",
-		slug: "other",
-		issuer: "https://other.auth.example.com",
-	});
-
-	let state = createDurableObjectState();
-	let tenantDO = new TenantObject(state, {} as Cloudflare.Env);
-	await tenantDO.provision({ tenantId: tenant.id, issuer: "https://acme.auth.example.com" });
-
-	let router = buildSubjectsRouter(db, tenantDO, options);
-
-	return {
-		db,
-		tenantId: tenant.id,
-		otherTenantId: other.id,
-		tenantDO,
-		router,
-		async signToken(overrides = {}) {
-			let pair = await currentPlatformSigningKeyPair(db);
-			if (!pair) throw new Error("unreachable");
-
-			let now = Math.floor(Date.now() / 1000);
-			let tenantId = overrides.tenantId ?? tenant.id;
-
-			return new ManagementAccessToken({
-				iss: ISSUER,
-				sub: "mgmt_client_1",
-				client_id: "mgmt_client_1",
-				aud: `${ISSUER}/tenants/${tenantId}`,
-				tenant_id: tenantId,
-				scope: overrides.scope ?? "subjects:read subjects:write",
-				iat: now,
-				exp: now + 900,
-			}).sign(JWK.Algorithm.ES256, [pair]);
-		},
-		request(path, token, init = {}) {
-			let { headers: initHeaders, ...rest } = init;
-			let headers = new Headers(initHeaders);
-			headers.set("Authorization", `Bearer ${token}`);
-			if (init.body) headers.set("Content-Type", "application/json");
-
-			return new Request(`${ISSUER}${path}`, { ...rest, headers });
-		},
-	};
-}
-
-/** Grants a tenant membership role, for a dashboard-session test. */
-export async function grantMembership(
-	db: Database,
-	tenantId: string,
-	subjectId: string,
-	role: "owner" | "admin" | "member",
-): Promise<void> {
-	await Membership.create(db, { tenantId, subjectId, role });
+	return { ...core, router };
 }

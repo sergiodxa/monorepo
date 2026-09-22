@@ -55,6 +55,7 @@ import type {
 	DisableClientResult,
 	ListClientsInput,
 	ListClientsResult,
+	ReadClientResult,
 	RegisterClientInput,
 	RegisterClientResult,
 	RevokeClientSecretInput,
@@ -1558,6 +1559,17 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	async listClients(input: ListClientsInput = {}): Promise<WithCost<ListClientsResult>> {
 		await this.#migrated;
 		return this.#withCost(() => Clients.listClients(this.#db, input));
+	}
+
+	/**
+	 * Reads one client's whole record.
+	 *
+	 * @param input - The client to read.
+	 * @returns The client's record, or that no such client exists.
+	 */
+	async readClient(input: { clientId: string }): Promise<WithCost<ReadClientResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Clients.readClient(this.#db, input));
 	}
 
 	/**

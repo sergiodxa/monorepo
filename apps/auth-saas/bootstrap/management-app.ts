@@ -1,9 +1,10 @@
 /**
  * Builds the management API router's fetch-router: the administrative surface
  * served on `api.{PLATFORM_DOMAIN}`. This pass wires the shared plumbing, the
- * token endpoint, and the subjects and identifiers resource area; every other
- * resource route (clients, roles, audit events, and the rest of the
- * administrative surface) is a later pass's own addition to `routes/management.ts`.
+ * token endpoint, the subjects and identifiers resource area, and the clients
+ * and secrets resource area; every other resource route (roles, audit events,
+ * and the rest of the administrative surface) is a later pass's own addition
+ * to `routes/management.ts`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,6 +20,14 @@ import { createRouter } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 
+import { createClientsDeleteAction } from "~/app/http/controllers/management/clients/delete";
+import { createClientsDisableAction } from "~/app/http/controllers/management/clients/disable";
+import { createClientsListAction } from "~/app/http/controllers/management/clients/list";
+import { createClientsReadAction } from "~/app/http/controllers/management/clients/read";
+import { createClientsRegisterAction } from "~/app/http/controllers/management/clients/register";
+import { createClientsRevokeSecretAction } from "~/app/http/controllers/management/clients/revoke-secret";
+import { createClientsRotateSecretAction } from "~/app/http/controllers/management/clients/rotate-secret";
+import { createClientsUpdateAction } from "~/app/http/controllers/management/clients/update";
 import { createSubjectsBlockAction } from "~/app/http/controllers/management/subjects/block";
 import { createSubjectsCreateAction } from "~/app/http/controllers/management/subjects/create";
 import { createSubjectsDeleteAction } from "~/app/http/controllers/management/subjects/delete";
@@ -120,5 +129,20 @@ managementRouter.map(
 	routes.subjectIdentifiersRemove,
 	createSubjectIdentifiersRemoveAction(controllerOptions),
 );
+
+managementRouter.map(routes.clientsRegister, createClientsRegisterAction(controllerOptions));
+managementRouter.map(routes.clientsList, createClientsListAction(controllerOptions));
+managementRouter.map(routes.clientsRead, createClientsReadAction(controllerOptions));
+managementRouter.map(routes.clientsUpdate, createClientsUpdateAction(controllerOptions));
+managementRouter.map(
+	routes.clientsRotateSecret,
+	createClientsRotateSecretAction(controllerOptions),
+);
+managementRouter.map(
+	routes.clientsRevokeSecret,
+	createClientsRevokeSecretAction(controllerOptions),
+);
+managementRouter.map(routes.clientsDisable, createClientsDisableAction(controllerOptions));
+managementRouter.map(routes.clientsDelete, createClientsDeleteAction(controllerOptions));
 
 export { resolveDashboardSubjectId };

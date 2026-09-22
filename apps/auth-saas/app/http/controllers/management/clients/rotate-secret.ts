@@ -1,0 +1,96 @@
+/**
+ * `POST /tenants/:tenantId/clients/:clientId/rotate-secret` — mints a
+ * successor secret and opens the overlap window on the incumbent, so a
+ * caller has both to hand off between before the incumbent stops verifying.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import { json } from "@sdxc/http/response";
+import * as s from "remix/data-schema";
+import { createAction } from "remix/router";
+
+import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
+import type { RotateClientSecretResult } from "~/database/clients";
+
+import { clientIdParam, clientNotFound } from "~/app/http/controllers/management/clients/shared";
+import { parseBody } from "~/app/http/lib/parse-body";
+import { problem } from "~/app/http/lib/problem";
+import { requireScope } from "~/app/http/lib/require-scope";
+import { managementAuth } from "~/app/http/middleware/management-auth";
+import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
+import { managementTenant } from "~/app/http/middleware/management-tenant";
+import routes from "~/routes/management";
+
+let RotateClientSecretBodySchema = s.object({ windowDays: s.optional(s.number()) });
+
+/** Maps every `rotateClientSecret` refusal onto its own `problem+json` response. */
+function rotateClientSecretFailure(
+	result: Exclude<RotateClientSecretResult, { ok: true }>,
+): Response {
+	if (result.reason === "not-found") return clientNotFound();
+
+	if (result.reason === "not-confidential") {
+		return problem({
+			type: "https://docs.example.com/errors/not-confidential",
+			title: "Only a confidential client holds a secret to rotate",
+			status: 409,
+		});
+	}
+
+	return problem({
+		type: "https://docs.example.com/errors/too-many-live-secrets",
+		title: "This client already holds the most secrets it may hold at once",
+		status: 409,
+	});
+}
+
+/**
+ * Builds the `clientsRotateSecret` action.
+ *
+ * @param options - The auth, rate-limit and tenant-stub options every
+ * management resource controller shares.
+ * @returns The action, ready for `router.map`.
+ * @example
+ * router.map(routes.clientsRotateSecret, createClientsRotateSecretAction(options));
+ */
+export function createClientsRotateSecretAction(options: ManagementControllerOptions) {
+	return createAction(routes.clientsRotateSecret, {
+		middleware: [
+			managementAuth({
+				issuer: options.issuer,
+				resolveDashboardSubjectId: options.resolveDashboardSubjectId,
+			}),
+			managementTenant(options.resolveStub),
+			managementRateLimit(options.limiter, { bucket: "write" }),
+		],
+		handler: async (ctx) => {
+			let refused = requireScope(ctx.managementCaller, "clients:write");
+			if (refused) return refused;
+
+			let clientId = clientIdParam(ctx);
+
+			let parsed = parseBody(
+				RotateClientSecretBodySchema,
+				(await ctx.request.json().catch(() => null)) ?? {},
+			);
+			if (!parsed.ok) return parsed.response;
+
+			let result = await ctx.tenantStub.rotateClientSecret({
+				clientId,
+				windowDays: parsed.data.windowDays,
+			});
+			if (!result.ok) return rotateClientSecretFailure(result);
+
+			return json(
+				{
+					secretId: result.secretId,
+					secret: result.secret,
+					incumbentExpiresAt: result.incumbentExpiresAt,
+				},
+				{ status: 200 },
+			);
+		},
+	});
+}

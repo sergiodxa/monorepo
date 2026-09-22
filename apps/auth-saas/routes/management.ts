@@ -1,8 +1,9 @@
 /**
  * The centralized, type-safe route table for the management API, served on
- * `api.{PLATFORM_DOMAIN}`. This pass adds the subjects and identifiers resource
- * area onto the token endpoint the foundation pass already mapped; each later
- * resource-area pass extends this same table with its own routes.
+ * `api.{PLATFORM_DOMAIN}`. This pass adds the clients and secrets resource
+ * area onto the subjects area and token endpoint earlier passes already
+ * mapped; each later resource-area pass extends this same table with its own
+ * routes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -31,4 +32,13 @@ export default route({
 	subjectIdentifiersVerify: post("/tenants/:tenantId/subjects/identifiers/verify"),
 	subjectIdentifiersSetPrimary: post("/tenants/:tenantId/subjects/:subjectId/identifiers/primary"),
 	subjectIdentifiersRemove: del("/tenants/:tenantId/subjects/:subjectId/identifiers/:value"),
+
+	clientsRegister: post("/tenants/:tenantId/clients"),
+	clientsList: get("/tenants/:tenantId/clients"),
+	clientsRead: get("/tenants/:tenantId/clients/:clientId"),
+	clientsUpdate: patch("/tenants/:tenantId/clients/:clientId"),
+	clientsRotateSecret: post("/tenants/:tenantId/clients/:clientId/rotate-secret"),
+	clientsRevokeSecret: post("/tenants/:tenantId/clients/:clientId/secrets/:secretId/revoke"),
+	clientsDisable: post("/tenants/:tenantId/clients/:clientId/disable"),
+	clientsDelete: del("/tenants/:tenantId/clients/:clientId"),
 });

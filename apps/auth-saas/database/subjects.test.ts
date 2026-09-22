@@ -11,7 +11,7 @@ import type { DurableObjectStateMock } from "@sdxc/cloudflare-mocks";
 
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { randomToken } from "@sdxc/crypto";
-import { beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import Tenant from "./tenant-do";
 
@@ -24,6 +24,10 @@ let adminActor = { kind: "admin" } as const;
 beforeEach(() => {
 	state = createDurableObjectState();
 	tenant = new Tenant(state, {} as Cloudflare.Env);
+});
+
+afterEach(() => {
+	vi.useRealTimers();
 });
 
 describe("createSubject", () => {
@@ -523,6 +527,9 @@ describe("blockSubject / unblockSubject / deleteSubject", () => {
 
 describe("listSubjects", () => {
 	test("pages newest first, with each row's own primary identifiers", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1_700_000_000_000);
+
 		let first = await tenant.createSubject({ identifiers: [{ kind: "username", value: "first" }] });
 		if (!first.ok) throw new Error("unreachable");
 		let added = await tenant.addIdentifier({
@@ -533,6 +540,8 @@ describe("listSubjects", () => {
 		});
 		if (!added.ok || added.kind !== "email") throw new Error("unreachable");
 		await tenant.verifyIdentifier({ ticket: added.ticket });
+
+		vi.setSystemTime(1_700_000_000_000 + 1000);
 
 		let second = await tenant.createSubject({
 			identifiers: [{ kind: "username", value: "second" }],
