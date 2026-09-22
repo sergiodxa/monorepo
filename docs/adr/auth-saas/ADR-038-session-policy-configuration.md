@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-18
+**Implemented** - 2026-09-22, end to end: the tenant-DO mechanism (bounds-checked settings, tighten-only enforcement, the concurrent-session trim, policy-driven credential-change revocation) and the management API route pair that reads and writes it, the latter gated on the first real `requireEntitlement` check anywhere in this app.
 
 ## Background
 
