@@ -22,6 +22,11 @@ import type { OpenSessionMetering, OpenSessionSuccess } from "./sessions";
 import type { Actor, IdentifierKind, SubjectIdentifierRow } from "./subjects";
 
 import { writeAuditEvent } from "./audit-events";
+import {
+	clearedBackoff,
+	DEFAULT_FAILURE_THRESHOLD,
+	nextFailureState,
+} from "./authentication-backoff";
 import { checkAndSpendMailEnvelope } from "./mail-rate-limit";
 import { applyDomainMembership } from "./organizations";
 import { openSession, revokeSubjectSessions } from "./sessions";
@@ -507,45 +512,6 @@ async function verifyAgainstDummy(candidate: string): Promise<void> {
 	await password.verify(await dummyHash(), candidate);
 }
 
-/** How many consecutive failures a tenant tolerates before backoff begins, when it has never configured its own threshold. */
-const DEFAULT_FAILURE_THRESHOLD = 4;
-
-/** The delay a failure count earns the moment it reaches the threshold, doubling with every failure past it. */
-const BACKOFF_BASE_MS = 1000;
-
-/** How far a backoff delay ever climbs, however many failures past the threshold a counter reaches. */
-const BACKOFF_CEILING_MS = 15 * 60 * 1000;
-
-/** How long a failure counter sits untouched before the next failure starts it over rather than continuing it. */
-const BACKOFF_DECAY_MS = 24 * 60 * 60 * 1000;
-
-/** The exponential delay a failure count past the threshold earns: one second at the threshold itself, doubling with each failure beyond it, capped at the ceiling. */
-function backoffDelayMs(failedAttempts: number, threshold: number): number {
-	let stepsPastThreshold = failedAttempts - threshold;
-	return Math.min(BACKOFF_BASE_MS * 2 ** stepsPastThreshold, BACKOFF_CEILING_MS);
-}
-
-/**
- * What a wrong password writes onto the subject's newest row: the counter climbed
- * by one, or restarted at one when the previous failure is more than a day old, and
- * the backoff that count now earns once it reaches the tenant's own threshold.
- */
-function nextFailureState(
-	newest: PasswordRow,
-	threshold: number,
-	now: number,
-): Pick<PasswordRow, "failed_attempts" | "retry_after" | "last_failure_at"> {
-	let decayed = newest.last_failure_at === null || now - newest.last_failure_at > BACKOFF_DECAY_MS;
-	let failedAttempts = decayed ? 1 : newest.failed_attempts + 1;
-
-	return {
-		failed_attempts: failedAttempts,
-		retry_after:
-			failedAttempts >= threshold ? now + backoffDelayMs(failedAttempts, threshold) : null,
-		last_failure_at: now,
-	};
-}
-
 /** An identifier with an `@` is checked as an email; anything else, as a username. */
 function identifierKindOf(value: string): IdentifierKind {
 	return value.includes("@") ? "email" : "username";
@@ -672,18 +638,14 @@ export async function signInWithPassword(
 		};
 	}
 
-	let clearedBackoff: Partial<PasswordRow> = {
-		failed_attempts: 0,
-		retry_after: null,
-		last_failure_at: null,
-	};
+	let clearedState: Partial<PasswordRow> = clearedBackoff();
 
 	if (password.needsRehash(newest.hash)) {
 		let rehashed = await password.hash(input.password);
-		if (isSuccess(rehashed)) clearedBackoff.hash = rehashed.data;
+		if (isSuccess(rehashed)) clearedState.hash = rehashed.data;
 	}
 
-	await db.update(passwords, { id: newest.id }, clearedBackoff);
+	await db.update(passwords, { id: newest.id }, clearedState);
 
 	if (newest.expires_at !== null && newest.expires_at <= Date.now()) {
 		await auditAuthentication("denied", subject.id);
@@ -754,13 +716,15 @@ export interface ClearAuthenticationBackoffInput {
 export type ClearAuthenticationBackoffResult = { ok: true } | { ok: false; reason: "not-found" };
 
 /**
- * Resets a subject's own backoff state — its failure count, the window it opened, and
- * when it was last touched — the administrator's undo for a lockout nobody but them can
- * see building.
+ * Resets whatever backoff state a subject has accumulated — its password row's
+ * own failure count and window, its TOTP factor's own, or both when it holds
+ * both — the administrator's one undo for a lockout nobody but them can see
+ * building, across every credential a subject might hold.
  *
  * @param db - The tenant's database.
  * @param input - The subject to clear, who is clearing it, and why.
- * @returns Success, or that the subject holds no password row to clear.
+ * @returns Success, or that the subject holds neither a password row nor a
+ * TOTP factor to clear.
  */
 export async function clearAuthenticationBackoff(
 	db: Database,
@@ -770,13 +734,13 @@ export async function clearAuthenticationBackoff(
 		where: { subject_id: input.subjectId },
 		orderBy: ["created_at", "desc"],
 	});
-	if (!newest) return { ok: false, reason: "not-found" };
 
-	await db.update(
-		passwords,
-		{ id: newest.id },
-		{ failed_attempts: 0, retry_after: null, last_failure_at: null },
-	);
+	let factor = await db.find(totpFactors, { subject_id: input.subjectId });
+
+	if (!newest && !factor) return { ok: false, reason: "not-found" };
+
+	if (newest) await db.update(passwords, { id: newest.id }, clearedBackoff());
+	if (factor) await db.update(totpFactors, { subject_id: input.subjectId }, clearedBackoff());
 
 	await writeAuditEvent(db, {
 		action: "password.backoff_cleared",

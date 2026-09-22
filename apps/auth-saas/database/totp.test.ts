@@ -21,10 +21,12 @@ import { randomToken, totp } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { isFailure } from "@sdxc/result";
 import { Database } from "remix/data-table";
-import { beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { readAuditPage } from "./audit-events";
 import { sessions } from "./sessions";
 import Tenant from "./tenant-do";
+import { totpFactors } from "./totp";
 
 let state: DurableObjectStateMock;
 let tenant: Tenant;
@@ -35,6 +37,11 @@ let platformActor = { type: "platform", id: "member_1" } as const;
 beforeEach(() => {
 	state = createDurableObjectState();
 	tenant = new Tenant(state, { TOTP_SEAL_KEY: randomToken({ bytes: 32 }) } as Cloudflare.Env);
+});
+
+afterEach(() => {
+	vi.restoreAllMocks();
+	vi.useRealTimers();
 });
 
 let nextSubjectEmail = 0;
@@ -544,6 +551,23 @@ async function readSession(sessionId: string): Promise<{ amr: string[]; acr: str
 	return { amr: row.amr as string[], acr: row.acr };
 }
 
+/** Reads a subject's TOTP factor row straight off storage, for asserting what a call wrote onto it. */
+async function readTotpFactor(subjectId: string) {
+	let db = new Database(createSQLStorageDatabaseAdapter(state.storage.sql));
+	return db.find(totpFactors, { subject_id: subjectId });
+}
+
+/** Signs a subject in and returns the session id its second factor is owed on. */
+async function signInAndGetSessionId(subjectId: string, email: string): Promise<string> {
+	let signedIn = await tenant.signInWithPassword({
+		identifier: email,
+		password: TEST_PASSWORD,
+		remembered: false,
+	});
+	if (!signedIn.ok) throw new Error("unreachable");
+	return signedIn.sessionId;
+}
+
 describe("signInWithPassword: second-factor demand", () => {
 	test("a subject with no factor signs in exactly as before", async () => {
 		let email = `no-factor-${nextSubjectEmail++}@example.com`;
@@ -648,16 +672,6 @@ describe("signInWithPassword: second-factor demand", () => {
 });
 
 describe("completeSecondFactor", () => {
-	async function signInAndGetSessionId(subjectId: string, email: string): Promise<string> {
-		let signedIn = await tenant.signInWithPassword({
-			identifier: email,
-			password: TEST_PASSWORD,
-			remembered: false,
-		});
-		if (!signedIn.ok) throw new Error("unreachable");
-		return signedIn.sessionId;
-	}
-
 	test("a correct code extends amr and returns success", async () => {
 		let email = `ok-${nextSubjectEmail++}@example.com`;
 		let subjectId = await createSubjectWithPassword(email);
@@ -798,5 +812,273 @@ describe("completeStepUp", () => {
 
 		let session = await readSession(signedIn.sessionId);
 		expect(session.acr).toBe("mfa");
+	});
+});
+
+describe("completeSecondFactor: authentication backoff", () => {
+	test("a wrong code below the threshold increments the counter without opening a backoff window", async () => {
+		let email = `totp-backoff-${nextSubjectEmail++}@example.com`;
+		let subjectId = await createSubjectWithPassword(email);
+		await enrolAndActivate(subjectId);
+		let sessionId = await signInAndGetSessionId(subjectId, email);
+
+		let completed = await tenant.completeSecondFactor({
+			sessionId,
+			submission: "000000",
+			trustDevice: false,
+			agent: { ip: null, userAgent: null },
+		});
+
+		expect(completed).toMatchObject({ ok: false, reason: "invalid-submission" });
+
+		let row = await readTotpFactor(subjectId);
+		expect(row).toMatchObject({ failed_attempts: 1, retry_after: null });
+	});
+
+	test("crossing the tenant's threshold opens a backoff, echoes it back, and writes the same failure audit row", async () => {
+		let email = `totp-backoff-${nextSubjectEmail++}@example.com`;
+		let subjectId = await createSubjectWithPassword(email);
+		await enrolAndActivate(subjectId);
+		let sessionId = await signInAndGetSessionId(subjectId, email);
+
+		for (let i = 0; i < 3; i++) {
+			await tenant.completeSecondFactor({
+				sessionId,
+				submission: `00000${i}`,
+				trustDevice: false,
+				agent: { ip: null, userAgent: null },
+			});
+		}
+
+		let result = await tenant.completeSecondFactor({
+			sessionId,
+			submission: "000009",
+			trustDevice: false,
+			agent: { ip: null, userAgent: null },
+		});
+
+		expect(result).toMatchObject({
+			ok: false,
+			reason: "invalid-submission",
+			retryAfter: expect.any(Number),
+		});
+
+		let row = await readTotpFactor(subjectId);
+		expect(row).toMatchObject({ failed_attempts: 4 });
+		expect(row?.retry_after).not.toBeNull();
+
+		let db = new Database(createSQLStorageDatabaseAdapter(state.storage.sql));
+		let page = await readAuditPage(db, {
+			from: 0,
+			to: Date.now() + 60_000,
+			action: "authentication.failed",
+		});
+		if (!page.ok) throw new Error("unreachable");
+		expect(page.events).toMatchObject([
+			{ targetId: subjectId, outcome: "failed", detail: { method: "totp", step: "second_factor" } },
+			{ targetId: subjectId, outcome: "failed", detail: { method: "totp", step: "second_factor" } },
+			{ targetId: subjectId, outcome: "failed", detail: { method: "totp", step: "second_factor" } },
+			{ targetId: subjectId, outcome: "failed", detail: { method: "totp", step: "second_factor" } },
+		]);
+	});
+
+	test("a hit during an active backoff window skips the real check and echoes the same retryAfter", async () => {
+		let email = `totp-backoff-${nextSubjectEmail++}@example.com`;
+		let subjectId = await createSubjectWithPassword(email);
+		let { setupKey } = await enrolAndActivate(subjectId);
+		let sessionId = await signInAndGetSessionId(subjectId, email);
+
+		let db = new Database(createSQLStorageDatabaseAdapter(state.storage.sql));
+		let retryAfter = Date.now() + 60_000;
+		await db.update(
+			totpFactors,
+			{ subject_id: subjectId },
+			{ failed_attempts: 5, retry_after: retryAfter, last_failure_at: Date.now() },
+		);
+
+		let verifySpy = vi.spyOn(totp, "verify");
+
+		let result = await tenant.completeSecondFactor({
+			sessionId,
+			submission: await currentCode(setupKey),
+			trustDevice: false,
+			agent: { ip: null, userAgent: null },
+		});
+
+		expect(result).toMatchObject({ ok: false, reason: "invalid-submission", retryAfter });
+		expect(verifySpy).not.toHaveBeenCalled();
+
+		let row = await readTotpFactor(subjectId);
+		expect(row).toMatchObject({ failed_attempts: 5, retry_after: retryAfter });
+
+		let session = await readSession(sessionId);
+		expect(session.amr).toEqual(["pwd"]);
+	});
+
+	test("a successful code clears the failure counter and any backoff window", async () => {
+		let email = `totp-backoff-${nextSubjectEmail++}@example.com`;
+		let subjectId = await createSubjectWithPassword(email);
+		let { setupKey } = await enrolAndActivate(subjectId);
+		let sessionId = await signInAndGetSessionId(subjectId, email);
+
+		let db = new Database(createSQLStorageDatabaseAdapter(state.storage.sql));
+		await db.update(
+			totpFactors,
+			{ subject_id: subjectId },
+			{ failed_attempts: 3, retry_after: null, last_failure_at: Date.now() },
+		);
+
+		let result = await tenant.completeSecondFactor({
+			sessionId,
+			submission: await currentCode(setupKey),
+			trustDevice: false,
+			agent: { ip: null, userAgent: null },
+		});
+
+		expect(result).toMatchObject({ ok: true });
+
+		let row = await readTotpFactor(subjectId);
+		expect(row).toMatchObject({ failed_attempts: 0, retry_after: null, last_failure_at: null });
+	});
+
+	test("a counter untouched for more than a day starts over instead of continuing", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1_700_000_000_000);
+
+		let email = `totp-backoff-${nextSubjectEmail++}@example.com`;
+		let subjectId = await createSubjectWithPassword(email);
+		await enrolAndActivate(subjectId);
+		let sessionId = await signInAndGetSessionId(subjectId, email);
+
+		let db = new Database(createSQLStorageDatabaseAdapter(state.storage.sql));
+		await db.update(
+			totpFactors,
+			{ subject_id: subjectId },
+			{ failed_attempts: 3, last_failure_at: 1_700_000_000_000 },
+		);
+
+		vi.setSystemTime(1_700_000_000_000 + 25 * 60 * 60 * 1000);
+
+		let result = await tenant.completeSecondFactor({
+			sessionId,
+			submission: "000000",
+			trustDevice: false,
+			agent: { ip: null, userAgent: null },
+		});
+
+		expect(result).toMatchObject({ ok: false, reason: "invalid-submission" });
+
+		let row = await readTotpFactor(subjectId);
+		expect(row).toMatchObject({ failed_attempts: 1 });
+	});
+
+	test("a replayed submission does not count toward the failure counter", async () => {
+		let email = `totp-backoff-${nextSubjectEmail++}@example.com`;
+		let subjectId = await createSubjectWithPassword(email);
+		let { setupKey } = await enrolAndActivate(subjectId);
+		let sessionId = await signInAndGetSessionId(subjectId, email);
+		let code = await currentCode(setupKey);
+
+		let first = await tenant.completeSecondFactor({
+			sessionId,
+			submission: code,
+			trustDevice: false,
+			agent: { ip: null, userAgent: null },
+		});
+		expect(first).toMatchObject({ ok: true });
+
+		let second = await tenant.completeSecondFactor({
+			sessionId,
+			submission: code,
+			trustDevice: false,
+			agent: { ip: null, userAgent: null },
+		});
+		expect(second).toMatchObject({ ok: false, reason: "replayed-submission" });
+
+		let row = await readTotpFactor(subjectId);
+		expect(row).toMatchObject({ failed_attempts: 0 });
+	});
+});
+
+describe("completeStepUp: authentication backoff", () => {
+	test("a wrong code increments the same counter completeSecondFactor writes, opening a backoff at the threshold", async () => {
+		let email = `stepup-backoff-${nextSubjectEmail++}@example.com`;
+		let subjectId = await createSubjectWithPassword(email);
+		await enrolAndActivate(subjectId);
+		let sessionId = await signInAndGetSessionId(subjectId, email);
+
+		for (let i = 0; i < 3; i++) {
+			await tenant.completeStepUp({
+				interactionId: "interaction_1",
+				sessionId,
+				submission: `00000${i}`,
+			});
+		}
+
+		let result = await tenant.completeStepUp({
+			interactionId: "interaction_1",
+			sessionId,
+			submission: "000009",
+		});
+
+		expect(result).toMatchObject({
+			ok: false,
+			reason: "invalid-submission",
+			retryAfter: expect.any(Number),
+		});
+
+		let row = await readTotpFactor(subjectId);
+		expect(row).toMatchObject({ failed_attempts: 4 });
+	});
+
+	test("a hit during an active backoff window skips the real check and echoes the same retryAfter", async () => {
+		let email = `stepup-backoff-${nextSubjectEmail++}@example.com`;
+		let subjectId = await createSubjectWithPassword(email);
+		let { setupKey } = await enrolAndActivate(subjectId);
+		let sessionId = await signInAndGetSessionId(subjectId, email);
+
+		let db = new Database(createSQLStorageDatabaseAdapter(state.storage.sql));
+		let retryAfter = Date.now() + 60_000;
+		await db.update(
+			totpFactors,
+			{ subject_id: subjectId },
+			{ failed_attempts: 5, retry_after: retryAfter, last_failure_at: Date.now() },
+		);
+
+		let verifySpy = vi.spyOn(totp, "verify");
+
+		let result = await tenant.completeStepUp({
+			interactionId: "interaction_2",
+			sessionId,
+			submission: await currentCode(setupKey),
+		});
+
+		expect(result).toMatchObject({ ok: false, reason: "invalid-submission", retryAfter });
+		expect(verifySpy).not.toHaveBeenCalled();
+	});
+
+	test("a successful code clears the failure counter, the same way completeSecondFactor does", async () => {
+		let email = `stepup-backoff-${nextSubjectEmail++}@example.com`;
+		let subjectId = await createSubjectWithPassword(email);
+		let { setupKey } = await enrolAndActivate(subjectId);
+		let sessionId = await signInAndGetSessionId(subjectId, email);
+
+		let db = new Database(createSQLStorageDatabaseAdapter(state.storage.sql));
+		await db.update(
+			totpFactors,
+			{ subject_id: subjectId },
+			{ failed_attempts: 3, retry_after: null, last_failure_at: Date.now() },
+		);
+
+		let result = await tenant.completeStepUp({
+			interactionId: "interaction_3",
+			sessionId,
+			submission: await currentCode(setupKey),
+		});
+
+		expect(result).toMatchObject({ ok: true });
+
+		let row = await readTotpFactor(subjectId);
+		expect(row).toMatchObject({ failed_attempts: 0, retry_after: null, last_failure_at: null });
 	});
 });

@@ -39,6 +39,8 @@ import m0022 from "./tenant-migrations/0022-organizations.sql?raw";
 import m0027 from "./tenant-migrations/0027-webhook-endpoints.sql?raw";
 import m0028 from "./tenant-migrations/0028-webhook-deliveries.sql?raw";
 import m0029 from "./tenant-migrations/0029-authentication-backoff.sql?raw";
+import m0030 from "./tenant-migrations/0030-totp-backoff.sql?raw";
+import { totpFactors } from "./totp";
 
 let db: Database;
 
@@ -61,6 +63,7 @@ beforeEach(async () => {
 	await driver.executeScript(m0027);
 	await driver.executeScript(m0028);
 	await driver.executeScript(m0029);
+	await driver.executeScript(m0030);
 
 	db = new Database(driver);
 });
@@ -908,7 +911,7 @@ describe("clearAuthenticationBackoff", () => {
 		]);
 	});
 
-	test("refuses when the subject holds no password row", async () => {
+	test("refuses when the subject holds neither a password row nor a TOTP factor", async () => {
 		let subjectId = await createBareSubject("nopassword");
 
 		let result = await Passwords.clearAuthenticationBackoff(db, {
@@ -918,6 +921,85 @@ describe("clearAuthenticationBackoff", () => {
 		});
 
 		expect(result).toEqual({ ok: false, reason: "not-found" });
+	});
+
+	test("clears a subject's TOTP factor backoff state alongside its password row", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let set = await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		if (!set.ok) throw new Error("unreachable");
+
+		await db.update(
+			Passwords.passwords,
+			{ id: set.passwordId },
+			{ failed_attempts: 5, retry_after: Date.now() + 60_000, last_failure_at: Date.now() },
+		);
+
+		await db.create(totpFactors, {
+			subject_id: subjectId,
+			sealed_secret: "sealed",
+			label: "Authenticator app",
+			activated_at: Date.now(),
+			last_used_at: null,
+			failed_attempts: 5,
+			retry_after: Date.now() + 60_000,
+			last_failure_at: Date.now(),
+		});
+
+		let result = await Passwords.clearAuthenticationBackoff(db, {
+			subjectId,
+			actor: { type: "platform", id: "system" },
+			reason: "support ticket #123",
+		});
+
+		expect(result).toEqual({ ok: true });
+
+		let passwordRow = await db.findOne(Passwords.passwords, { where: { subject_id: subjectId } });
+		expect(passwordRow).toMatchObject({
+			failed_attempts: 0,
+			retry_after: null,
+			last_failure_at: null,
+		});
+
+		let factorRow = await db.find(totpFactors, { subject_id: subjectId });
+		expect(factorRow).toMatchObject({
+			failed_attempts: 0,
+			retry_after: null,
+			last_failure_at: null,
+		});
+	});
+
+	test("clears a TOTP factor's backoff state alone, for a subject with no password row", async () => {
+		let subjectId = await createBareSubject("totp-only");
+
+		await db.create(totpFactors, {
+			subject_id: subjectId,
+			sealed_secret: "sealed",
+			label: "Authenticator app",
+			activated_at: Date.now(),
+			last_used_at: null,
+			failed_attempts: 5,
+			retry_after: Date.now() + 60_000,
+			last_failure_at: Date.now(),
+		});
+
+		let result = await Passwords.clearAuthenticationBackoff(db, {
+			subjectId,
+			actor: { type: "platform", id: "system" },
+			reason: "support ticket #124",
+		});
+
+		expect(result).toEqual({ ok: true });
+
+		let factorRow = await db.find(totpFactors, { subject_id: subjectId });
+		expect(factorRow).toMatchObject({
+			failed_attempts: 0,
+			retry_after: null,
+			last_failure_at: null,
+		});
 	});
 });
 

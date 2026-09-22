@@ -59,6 +59,7 @@ describe("runMigrations", () => {
 			"0027-webhook-endpoints",
 			"0028-webhook-deliveries",
 			"0029-authentication-backoff",
+			"0030-totp-backoff",
 		]);
 	});
 
@@ -159,6 +160,7 @@ describe("runMigrations", () => {
 			{ id: "0027-webhook-endpoints", applied_at: expect.any(Number) },
 			{ id: "0028-webhook-deliveries", applied_at: expect.any(Number) },
 			{ id: "0029-authentication-backoff", applied_at: expect.any(Number) },
+			{ id: "0030-totp-backoff", applied_at: expect.any(Number) },
 		]);
 	});
 

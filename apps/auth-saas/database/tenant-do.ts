@@ -327,6 +327,7 @@ import {
 	enforceAuditRetention,
 	readAuditPage,
 } from "./audit-events";
+import { DEFAULT_FAILURE_THRESHOLD } from "./authentication-backoff";
 import * as Authorization from "./authorization";
 import * as Clients from "./clients";
 import * as ConnectionSignIn from "./connection-sign-in";
@@ -438,9 +439,6 @@ const DEFAULT_DAU_CAP = 100;
 
 /** The audit retention window, in days, a tenant enforces before any enforcement record has ever been written — the Free tier's own window, so an unprovisioned tenant is never more permissive than the tier that ships to everyone. */
 const DEFAULT_AUDIT_RETENTION_DAYS = 7;
-
-/** How many consecutive authentication failures a tenant tolerates before backoff begins, when it has never configured its own threshold. */
-const DEFAULT_FAILURE_THRESHOLD = 4;
 
 /** What `reportStorageFootprint` hands back: every table's own row count, and the database's total size. */
 export interface StorageFootprint {
@@ -982,8 +980,11 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		await this.#migrated;
 
 		return this.#withCost(async () => {
-			let sealKey = await this.#sealKey();
-			return Totp.completeSecondFactor(this.#db, sealKey, input);
+			let [sealKey, failureThreshold] = await Promise.all([
+				this.#sealKey(),
+				this.#failureThreshold(),
+			]);
+			return Totp.completeSecondFactor(this.#db, sealKey, input, failureThreshold);
 		});
 	}
 
@@ -1023,10 +1024,18 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		await this.#migrated;
 
 		return this.#withCost(async () => {
-			let sealKey = await this.#sealKey();
+			let [sealKey, failureThreshold] = await Promise.all([
+				this.#sealKey(),
+				this.#failureThreshold(),
+			]);
 			let now = input.now ?? Date.now();
 
-			let proven = await Totp.completeStepUp(this.#db, sealKey, { ...input, now });
+			let proven = await Totp.completeStepUp(
+				this.#db,
+				sealKey,
+				{ ...input, now },
+				failureThreshold,
+			);
 			if (!proven.ok) return proven;
 
 			let issuer = await this.#issuer();

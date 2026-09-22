@@ -37,6 +37,11 @@ import type { AuditActor } from "./audit-events";
 import type { SecondFactorState } from "./subjects";
 
 import { writeAuditEvent } from "./audit-events";
+import {
+	clearedBackoff,
+	DEFAULT_FAILURE_THRESHOLD,
+	nextFailureState,
+} from "./authentication-backoff";
 import { extendSessionFactor, revokeSubjectSessions, sessions } from "./sessions";
 import { subjectIdentifiers, subjects } from "./subjects";
 
@@ -97,6 +102,9 @@ export const totpFactors = table({
 		label: c.text(),
 		activated_at: c.integer(),
 		last_used_at: c.integer().nullable(),
+		failed_attempts: c.integer().default(0),
+		retry_after: c.integer().nullable(),
+		last_failure_at: c.integer().nullable(),
 	},
 });
 
@@ -610,7 +618,12 @@ export type CompleteSecondFactorResult =
 	| { ok: true; recoveryCodesRemaining: number; trustedDeviceToken: string | null }
 	| { ok: false; reason: "session-not-found" }
 	| { ok: false; reason: "no-factor" }
-	| { ok: false; reason: "invalid-submission" }
+	| {
+			ok: false;
+			reason: "invalid-submission";
+			/** Present only while a backoff window is active, echoing the epoch-ms timestamp it lifts at. */
+			retryAfter?: number;
+	  }
 	| { ok: false; reason: "replayed-submission" };
 
 /**
@@ -624,6 +637,9 @@ export type CompleteSecondFactorResult =
  * @param sealKey - The tenant object's own AES-GCM key.
  * @param input - The session the factor is owed on, the code or recovery code
  * submitted, whether to remember this browser, and the request's origin.
+ * @param failureThreshold - How many consecutive wrong codes the tenant tolerates
+ * before a backoff window opens; omitted, the same default every unconfigured
+ * tenant enforces.
  * @returns The remaining recovery-code count and a trusted-device token when one
  * was minted, or why the factor was not completed.
  */
@@ -631,8 +647,22 @@ export async function completeSecondFactor(
 	db: Database,
 	sealKey: CryptoKey,
 	input: CompleteSecondFactorInput,
+	failureThreshold: number = DEFAULT_FAILURE_THRESHOLD,
 ): Promise<CompleteSecondFactorResult> {
 	let now = Date.now();
+
+	/** Writes the one authentication row a wrong or backed-off submission earns. */
+	function auditFailure(subjectId: string): Promise<void> {
+		return writeAuditEvent(db, {
+			action: "authentication.failed",
+			actor: { type: "subject", id: subjectId },
+			targetType: "subject",
+			targetId: subjectId,
+			outcome: "failed",
+			context: input.agent,
+			detail: { method: "totp", step: "second_factor" },
+		});
+	}
 
 	let session = await db.findOne(sessions, {
 		where: and(eq("id", input.sessionId), isNull("revoked_at")),
@@ -658,6 +688,11 @@ export async function completeSecondFactor(
 		return { ok: false, reason: "replayed-submission" };
 	}
 
+	if (factor.retry_after !== null && factor.retry_after > now) {
+		await auditFailure(session.subject_id);
+		return { ok: false, reason: "invalid-submission", retryAfter: factor.retry_after };
+	}
+
 	let proven = await proveFactorOwnership(
 		db,
 		sealKey,
@@ -667,19 +702,21 @@ export async function completeSecondFactor(
 	);
 
 	if (!proven) {
-		await writeAuditEvent(db, {
-			action: "authentication.failed",
-			actor: { type: "subject", id: session.subject_id },
-			targetType: "subject",
-			targetId: session.subject_id,
-			outcome: "failed",
-			context: input.agent,
-			detail: { method: "totp", step: "second_factor" },
-		});
-		return { ok: false, reason: "invalid-submission" };
+		let failure = nextFailureState(factor, failureThreshold, now);
+		await db.update(totpFactors, { subject_id: session.subject_id }, failure);
+		await auditFailure(session.subject_id);
+		return {
+			ok: false,
+			reason: "invalid-submission",
+			...(failure.retry_after !== null ? { retryAfter: failure.retry_after } : {}),
+		};
 	}
 
-	await db.update(totpFactors, { subject_id: session.subject_id }, { last_used_at: now });
+	await db.update(
+		totpFactors,
+		{ subject_id: session.subject_id },
+		{ last_used_at: now, ...clearedBackoff() },
+	);
 	await extendSessionFactor(db, { sessionId: session.id, method: "otp" });
 
 	let trustedDeviceToken: string | null = null;
@@ -778,7 +815,12 @@ export type CompleteStepUpResult =
 	| { ok: true }
 	| { ok: false; reason: "session-not-found" }
 	| { ok: false; reason: "no-factor" }
-	| { ok: false; reason: "invalid-submission" }
+	| {
+			ok: false;
+			reason: "invalid-submission";
+			/** Present only while a backoff window is active, echoing the epoch-ms timestamp it lifts at. */
+			retryAfter?: number;
+	  }
 	| { ok: false; reason: "replayed-submission" };
 
 /**
@@ -800,12 +842,17 @@ export type CompleteStepUpResult =
  * @param sealKey - The tenant object's own AES-GCM key.
  * @param input - The interaction the proof is scoped to, the session it moves,
  * and the code or recovery code submitted.
+ * @param failureThreshold - How many consecutive wrong codes the tenant tolerates
+ * before a backoff window opens; omitted, the same default every unconfigured
+ * tenant enforces. Shares the same counter {@link completeSecondFactor} writes,
+ * since both prove ownership of the same factor row.
  * @returns Success once the session is moved, or why the step-up was refused.
  */
 export async function completeStepUp(
 	db: Database,
 	sealKey: CryptoKey,
 	input: CompleteStepUpInput,
+	failureThreshold: number = DEFAULT_FAILURE_THRESHOLD,
 ): Promise<CompleteStepUpResult> {
 	let now = input.now ?? Date.now();
 
@@ -821,6 +868,10 @@ export async function completeStepUp(
 	let claimed = await claimStepUpCode(db, input.interactionId, session.subject_id, codeHash, now);
 	if (!claimed) return { ok: false, reason: "replayed-submission" };
 
+	if (factor.retry_after !== null && factor.retry_after > now) {
+		return { ok: false, reason: "invalid-submission", retryAfter: factor.retry_after };
+	}
+
 	let proven = await proveFactorOwnership(
 		db,
 		sealKey,
@@ -828,9 +879,22 @@ export async function completeStepUp(
 		factor,
 		input.submission,
 	);
-	if (!proven) return { ok: false, reason: "invalid-submission" };
 
-	await db.update(totpFactors, { subject_id: session.subject_id }, { last_used_at: now });
+	if (!proven) {
+		let failure = nextFailureState(factor, failureThreshold, now);
+		await db.update(totpFactors, { subject_id: session.subject_id }, failure);
+		return {
+			ok: false,
+			reason: "invalid-submission",
+			...(failure.retry_after !== null ? { retryAfter: failure.retry_after } : {}),
+		};
+	}
+
+	await db.update(
+		totpFactors,
+		{ subject_id: session.subject_id },
+		{ last_used_at: now, ...clearedBackoff() },
+	);
 	await extendSessionFactor(db, {
 		sessionId: session.id,
 		method: "otp",
