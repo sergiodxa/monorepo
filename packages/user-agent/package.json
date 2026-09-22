@@ -5,9 +5,14 @@
 	"license": "MIT",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./helpers": "./src/helpers.ts",
+		"./middleware": "./src/middleware.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"remix": "3.0.0-rc.2"
 	}
 }

@@ -26,6 +26,41 @@ ua.device; // { type: "mobile", vendor: "Apple", model: "iPhone" }
 Every field is `string | null`, so a crawler, a script or an empty header reads as a
 shape with the same keys and nothing in them.
 
+### Read It Once Per Request
+
+```typescript
+import { userAgent } from "@sdxc/user-agent/middleware";
+
+let router = createRouter({ middleware: [userAgent()] });
+
+router.get("/download", (ctx) => {
+	ctx.userAgent.os.name; // "macOS"
+	ctx.userAgent.device.type; // "desktop"
+});
+```
+
+The middleware reads the header once and publishes the result as `ctx.userAgent`, typed in
+every project that installs it. A surface reached before it runs — a router without it, a
+job, a script — reads the same shape with nothing in it, so a handler asks the same
+questions wherever it sits.
+
+### Ask A Question Of It
+
+```typescript
+import { isApplePlatform, isTouch } from "@sdxc/user-agent/helpers";
+
+router.get("/", (ctx) => {
+	isTouch(); // the current request
+	isTouch(ctx); // a request context
+	isTouch(parse(header)); // a user agent already read
+});
+```
+
+The no-argument form is the one to reach for: it reads the current request through the
+`asyncContext()` middleware, so a component deep inside a render asks without being handed
+anything. A call stack outside a request — a script, a job, a router that installs neither
+middleware — reads the unknown agent, and every predicate answers `false`.
+
 ### Branch On The Form Factor
 
 ```typescript
@@ -78,6 +113,32 @@ Each name is a union of the values the rules can produce, so an editor lists the
 Reads a user agent string into the browser, engine, operating system and device it
 describes. It answers for the parts it recognizes and leaves the rest `null`, so it never
 throws and never rejects a string.
+
+### `userAgent(): Middleware`
+
+From `@sdxc/user-agent/middleware`. Reads the request's `User-Agent` header and exposes it
+as `ctx.userAgent`. The module augments the router's request context, so installing the
+middleware is all it takes for `ctx.userAgent` to be typed.
+
+### `CurrentUserAgent`
+
+The context key the middleware writes to, for a caller that reads by key rather than
+through the property: `ctx.get(CurrentUserAgent)`. Its default is a parsed shape with every
+field `null`, which is what a context the middleware never touched answers with.
+
+### Predicates
+
+From `@sdxc/user-agent/helpers`. Each takes one optional argument — a `UserAgent`, a
+request context, or nothing for the current request — and returns a boolean.
+
+- `isApplePlatform()` — macOS, iOS or iPadOS.
+- `isAndroid()` — Android, phones and tablets alike.
+- `isMobile()` — a phone.
+- `isTablet()` — a tablet.
+- `isDesktop()` — a computer. An iPad asked for the desktop site sends the string a Mac
+  sends, and answers here as a desktop.
+- `isTouch()` — a phone or a tablet, which is what decides between a pointer-sized and a
+  finger-sized target.
 
 ### Types
 
