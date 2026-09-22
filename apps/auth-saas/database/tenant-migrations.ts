@@ -40,6 +40,7 @@ import m0025 from "./tenant-migrations/0025-client-permission-claim.sql?raw";
 import m0026 from "./tenant-migrations/0026-api-keys.sql?raw";
 import m0027 from "./tenant-migrations/0027-webhook-endpoints.sql?raw";
 import m0028 from "./tenant-migrations/0028-webhook-deliveries.sql?raw";
+import m0029 from "./tenant-migrations/0029-authentication-backoff.sql?raw";
 
 /** One migration, identified so the journal can record that it ran. */
 export interface Migration {
@@ -77,6 +78,7 @@ export const MIGRATIONS: Migration[] = [
 	{ id: "0026-api-keys", sql: m0026 },
 	{ id: "0027-webhook-endpoints", sql: m0027 },
 	{ id: "0028-webhook-deliveries", sql: m0028 },
+	{ id: "0029-authentication-backoff", sql: m0029 },
 ];
 
 /** The journal `0001-init` creates, read back to find out what has already run. */

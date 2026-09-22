@@ -58,6 +58,7 @@ describe("runMigrations", () => {
 			"0026-api-keys",
 			"0027-webhook-endpoints",
 			"0028-webhook-deliveries",
+			"0029-authentication-backoff",
 		]);
 	});
 
@@ -157,6 +158,7 @@ describe("runMigrations", () => {
 			{ id: "0026-api-keys", applied_at: expect.any(Number) },
 			{ id: "0027-webhook-endpoints", applied_at: expect.any(Number) },
 			{ id: "0028-webhook-deliveries", applied_at: expect.any(Number) },
+			{ id: "0029-authentication-backoff", applied_at: expect.any(Number) },
 		]);
 	});
 

@@ -60,6 +60,7 @@ describe("provision", () => {
 				"0026-api-keys",
 				"0027-webhook-endpoints",
 				"0028-webhook-deliveries",
+				"0029-authentication-backoff",
 			],
 			issuer: "https://tenant-1.example.com",
 			keys: { keys: [expect.objectContaining({ kty: "EC", alg: "ES256" })] },
@@ -71,6 +72,7 @@ describe("provision", () => {
 				tenant_id: "tenant_1",
 				issuer: "https://tenant-1.example.com",
 				mfa_policy: "optional",
+				failure_threshold: 4,
 				created_at: expect.any(Number),
 			},
 		]);

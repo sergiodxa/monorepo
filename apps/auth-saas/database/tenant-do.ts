@@ -150,6 +150,8 @@ import type {
 	BeginPasswordResetResult,
 	ChangePasswordInput,
 	ChangePasswordResult,
+	ClearAuthenticationBackoffInput,
+	ClearAuthenticationBackoffResult,
 	CompletePasswordResetInput,
 	CompletePasswordResetResult,
 	ForcePasswordResetInput,
@@ -351,7 +353,7 @@ import * as Totp from "./totp";
 import * as WebhookDeliveries from "./webhook-deliveries";
 import * as WebhookEndpoints from "./webhook-endpoints";
 
-/** One row: the tenant id this object is addressed by, its issuer, its MFA policy, and its creation time. */
+/** One row: the tenant id this object is addressed by, its issuer, its MFA policy, its authentication failure threshold, and its creation time. */
 const settings = table({
 	name: "settings",
 	primaryKey: ["tenant_id"],
@@ -359,6 +361,7 @@ const settings = table({
 		tenant_id: c.text(),
 		issuer: c.text(),
 		mfa_policy: c.enum(["optional", "required"] as const).default("optional"),
+		failure_threshold: c.integer().default(4),
 		created_at: c.integer(),
 	},
 });
@@ -435,6 +438,9 @@ const DEFAULT_DAU_CAP = 100;
 
 /** The audit retention window, in days, a tenant enforces before any enforcement record has ever been written — the Free tier's own window, so an unprovisioned tenant is never more permissive than the tier that ships to everyone. */
 const DEFAULT_AUDIT_RETENTION_DAYS = 7;
+
+/** How many consecutive authentication failures a tenant tolerates before backoff begins, when it has never configured its own threshold. */
+const DEFAULT_FAILURE_THRESHOLD = 4;
 
 /** What `reportStorageFootprint` hands back: every table's own row count, and the database's total size. */
 export interface StorageFootprint {
@@ -637,6 +643,12 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	async #mfaPolicy(): Promise<"optional" | "required"> {
 		let rows = await this.#db.findMany(settings);
 		return rows[0]?.mfa_policy ?? "optional";
+	}
+
+	/** This tenant's own authentication failure threshold, read from `settings`. A tenant that has never provisioned enforces 4. */
+	async #failureThreshold(): Promise<number> {
+		let rows = await this.#db.findMany(settings);
+		return rows[0]?.failure_threshold ?? DEFAULT_FAILURE_THRESHOLD;
 	}
 
 	/**
@@ -1116,9 +1128,10 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		await this.#migrated;
 
 		return this.#withCost(async () => {
-			let [{ cap, hard }, mfaPolicy] = await Promise.all([
+			let [{ cap, hard }, mfaPolicy, failureThreshold] = await Promise.all([
 				this.#dauEnforcement(),
 				this.#mfaPolicy(),
+				this.#failureThreshold(),
 			]);
 			return Passwords.signInWithPassword(
 				this.#db,
@@ -1126,8 +1139,24 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 				{ cache: this.#dauCache, cap, hard },
 				mfaPolicy,
 				true,
+				failureThreshold,
 			);
 		});
+	}
+
+	/**
+	 * Clears a subject's own authentication backoff: the failure count, the window it
+	 * opened, and when it was last touched — an administrator's undo for a lockout the
+	 * subject cannot lift on its own.
+	 *
+	 * @param input - The subject to clear, who is clearing it, and why.
+	 * @returns Success, or that the subject holds no password row to clear.
+	 */
+	async clearAuthenticationBackoff(
+		input: ClearAuthenticationBackoffInput,
+	): Promise<WithCost<ClearAuthenticationBackoffResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Passwords.clearAuthenticationBackoff(this.#db, input));
 	}
 
 	/**

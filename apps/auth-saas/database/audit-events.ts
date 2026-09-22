@@ -98,6 +98,7 @@ export const AUDIT_ACTIONS = [
 	// Credentials
 	"password.changed",
 	"password.removed",
+	"password.backoff_cleared",
 	"passkey.enrolled",
 	"passkey.renamed",
 	"passkey.revoked",

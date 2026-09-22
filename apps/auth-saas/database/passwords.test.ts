@@ -38,6 +38,7 @@ import m0016 from "./tenant-migrations/0016-second-factor-sign-in.sql?raw";
 import m0022 from "./tenant-migrations/0022-organizations.sql?raw";
 import m0027 from "./tenant-migrations/0027-webhook-endpoints.sql?raw";
 import m0028 from "./tenant-migrations/0028-webhook-deliveries.sql?raw";
+import m0029 from "./tenant-migrations/0029-authentication-backoff.sql?raw";
 
 let db: Database;
 
@@ -59,12 +60,14 @@ beforeEach(async () => {
 	await driver.executeScript(m0022);
 	await driver.executeScript(m0027);
 	await driver.executeScript(m0028);
+	await driver.executeScript(m0029);
 
 	db = new Database(driver);
 });
 
 afterEach(() => {
 	vi.restoreAllMocks();
+	vi.useRealTimers();
 });
 
 /** Creates a subject with one verified email, the shape most tests sign in against. */
@@ -557,6 +560,364 @@ describe("signInWithPassword", () => {
 
 			expect(again).toMatchObject({ ok: true, subjectId });
 		});
+	});
+});
+
+describe("signInWithPassword: authentication backoff", () => {
+	test("a failure below the threshold increments the counter without opening a backoff window", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+
+		let result = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "wrong-password-1",
+			remembered: false,
+		});
+
+		expect(result).toEqual({ ok: false, reason: "invalid-credentials" });
+
+		let row = await db.findOne(Passwords.passwords, { where: { subject_id: subjectId } });
+		expect(row).toMatchObject({ failed_attempts: 1, retry_after: null });
+	});
+
+	test("crossing the tenant's threshold opens a backoff, doubling from one second, and echoes it back", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1_700_000_000_000);
+
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+
+		for (let i = 0; i < 3; i++) {
+			await Passwords.signInWithPassword(db, {
+				identifier: "jane@example.com",
+				password: "wrong-password-1",
+				remembered: false,
+			});
+		}
+
+		let result = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "wrong-password-1",
+			remembered: false,
+		});
+
+		expect(result).toEqual({
+			ok: false,
+			reason: "invalid-credentials",
+			retryAfter: 1_700_000_000_000 + 1000,
+		});
+
+		let row = await db.findOne(Passwords.passwords, { where: { subject_id: subjectId } });
+		expect(row).toMatchObject({ failed_attempts: 4, retry_after: 1_700_000_000_000 + 1000 });
+	});
+
+	test("the backoff delay keeps doubling past the threshold and caps at fifteen minutes", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1_700_000_000_000);
+
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let set = await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		if (!set.ok) throw new Error("unreachable");
+
+		// Ten failures past the default threshold of four would double to over
+		// seventeen minutes; seeding the count directly here is what keeps this
+		// test to one real derivation instead of thirteen.
+		await db.update(
+			Passwords.passwords,
+			{ id: set.passwordId },
+			{ failed_attempts: 13, last_failure_at: 1_700_000_000_000 },
+		);
+
+		let result = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "wrong-password-1",
+			remembered: false,
+		});
+
+		expect(result).toEqual({
+			ok: false,
+			reason: "invalid-credentials",
+			retryAfter: 1_700_000_000_000 + 15 * 60 * 1000,
+		});
+	});
+
+	test("a request during an active backoff window derives against the dummy hash and echoes the same retryAfter, even for the right password", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1_700_000_000_000);
+
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let set = await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		if (!set.ok) throw new Error("unreachable");
+
+		let retryAfter = 1_700_000_000_000 + 60_000;
+		await db.update(
+			Passwords.passwords,
+			{ id: set.passwordId },
+			{ failed_attempts: 5, retry_after: retryAfter, last_failure_at: 1_700_000_000_000 },
+		);
+
+		vi.setSystemTime(1_700_000_000_000 + 1000);
+
+		let verifySpy = vi.spyOn(password, "verify");
+
+		let result = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "correct-password-1",
+			remembered: false,
+		});
+
+		expect(result).toEqual({ ok: false, reason: "invalid-credentials", retryAfter });
+		expect(verifySpy).toHaveBeenCalledTimes(1);
+
+		let row = await db.findOne(Passwords.passwords, { where: { subject_id: subjectId } });
+		expect(row).toMatchObject({ failed_attempts: 5, retry_after: retryAfter });
+	});
+
+	test("a backoff-window refusal has the same shape as a plain wrong password, plus the deliberate retryAfter signal", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let set = await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		if (!set.ok) throw new Error("unreachable");
+
+		let plainWrong = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "wrong-password-1",
+			remembered: false,
+		});
+
+		await db.update(
+			Passwords.passwords,
+			{ id: set.passwordId },
+			{ retry_after: Date.now() + 60_000 },
+		);
+
+		let duringBackoff = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "wrong-password-1",
+			remembered: false,
+		});
+
+		if (plainWrong.ok || duringBackoff.ok) throw new Error("unreachable");
+
+		expect(Object.keys(plainWrong).sort()).toEqual(["ok", "reason"]);
+		expect(Object.keys(duringBackoff).sort()).toEqual(["ok", "reason", "retryAfter"]);
+		expect(duringBackoff.ok).toBe(plainWrong.ok);
+		expect(duringBackoff.reason).toBe(plainWrong.reason);
+	});
+
+	test("a successful sign-in clears the failure counter and any backoff window", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let set = await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		if (!set.ok) throw new Error("unreachable");
+
+		await db.update(
+			Passwords.passwords,
+			{ id: set.passwordId },
+			{ failed_attempts: 3, retry_after: null, last_failure_at: Date.now() },
+		);
+
+		let result = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "correct-password-1",
+			remembered: false,
+		});
+
+		expect(result).toMatchObject({ ok: true, subjectId });
+
+		let row = await db.findOne(Passwords.passwords, { where: { subject_id: subjectId } });
+		expect(row).toMatchObject({ failed_attempts: 0, retry_after: null, last_failure_at: null });
+	});
+
+	test("a counter untouched for more than a day starts over instead of continuing", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1_700_000_000_000);
+
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let set = await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		if (!set.ok) throw new Error("unreachable");
+
+		await db.update(
+			Passwords.passwords,
+			{ id: set.passwordId },
+			{ failed_attempts: 3, last_failure_at: 1_700_000_000_000 },
+		);
+
+		vi.setSystemTime(1_700_000_000_000 + 25 * 60 * 60 * 1000);
+
+		let result = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "wrong-password-1",
+			remembered: false,
+		});
+
+		expect(result).toEqual({ ok: false, reason: "invalid-credentials" });
+
+		let row = await db.findOne(Passwords.passwords, { where: { subject_id: subjectId } });
+		expect(row).toMatchObject({ failed_attempts: 1 });
+	});
+
+	test("a tenant configured at a threshold of 3 opens backoff on the third failure", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1_700_000_000_000);
+
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let set = await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		if (!set.ok) throw new Error("unreachable");
+
+		await db.update(
+			Passwords.passwords,
+			{ id: set.passwordId },
+			{ failed_attempts: 1, last_failure_at: 1_700_000_000_000 },
+		);
+
+		let second = await Passwords.signInWithPassword(
+			db,
+			{ identifier: "jane@example.com", password: "wrong-password-1", remembered: false },
+			undefined,
+			"optional",
+			false,
+			3,
+		);
+		expect(second).toEqual({ ok: false, reason: "invalid-credentials" });
+
+		let third = await Passwords.signInWithPassword(
+			db,
+			{ identifier: "jane@example.com", password: "wrong-password-1", remembered: false },
+			undefined,
+			"optional",
+			false,
+			3,
+		);
+		expect(third).toEqual({
+			ok: false,
+			reason: "invalid-credentials",
+			retryAfter: 1_700_000_000_000 + 1000,
+		});
+	});
+
+	test("a tenant configured at a threshold of 10 tolerates nine failures with no backoff, opening one at the tenth", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1_700_000_000_000);
+
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let set = await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		if (!set.ok) throw new Error("unreachable");
+
+		await db.update(
+			Passwords.passwords,
+			{ id: set.passwordId },
+			{ failed_attempts: 8, last_failure_at: 1_700_000_000_000 },
+		);
+
+		let ninth = await Passwords.signInWithPassword(
+			db,
+			{ identifier: "jane@example.com", password: "wrong-password-1", remembered: false },
+			undefined,
+			"optional",
+			false,
+			10,
+		);
+		expect(ninth).toEqual({ ok: false, reason: "invalid-credentials" });
+
+		let tenth = await Passwords.signInWithPassword(
+			db,
+			{ identifier: "jane@example.com", password: "wrong-password-1", remembered: false },
+			undefined,
+			"optional",
+			false,
+			10,
+		);
+		expect(tenth).toEqual({
+			ok: false,
+			reason: "invalid-credentials",
+			retryAfter: 1_700_000_000_000 + 1000,
+		});
+	});
+});
+
+describe("clearAuthenticationBackoff", () => {
+	test("resets the counter and window, and writes its audit event", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let set = await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		if (!set.ok) throw new Error("unreachable");
+
+		await db.update(
+			Passwords.passwords,
+			{ id: set.passwordId },
+			{ failed_attempts: 5, retry_after: Date.now() + 60_000, last_failure_at: Date.now() },
+		);
+
+		let result = await Passwords.clearAuthenticationBackoff(db, {
+			subjectId,
+			actor: { type: "platform", id: "system" },
+			reason: "support ticket #123",
+		});
+
+		expect(result).toEqual({ ok: true });
+
+		let row = await db.findOne(Passwords.passwords, { where: { subject_id: subjectId } });
+		expect(row).toMatchObject({ failed_attempts: 0, retry_after: null, last_failure_at: null });
+
+		let page = await readAuditPage(db, {
+			from: 0,
+			to: Date.now() + 60_000,
+			action: "password.backoff_cleared",
+		});
+		if (!page.ok) throw new Error("unreachable");
+		expect(page.events).toMatchObject([
+			{ targetId: subjectId, outcome: "succeeded", detail: { reason: "support ticket #123" } },
+		]);
+	});
+
+	test("refuses when the subject holds no password row", async () => {
+		let subjectId = await createBareSubject("nopassword");
+
+		let result = await Passwords.clearAuthenticationBackoff(db, {
+			subjectId,
+			actor: { type: "platform", id: "system" },
+			reason: "support ticket #123",
+		});
+
+		expect(result).toEqual({ ok: false, reason: "not-found" });
 	});
 });
 
