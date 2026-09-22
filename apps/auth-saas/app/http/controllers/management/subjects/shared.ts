@@ -24,3 +24,17 @@ export function subjectNotFound(): Response {
 		status: 404,
 	});
 }
+
+/** Parses and requires the `:runId` path param every import-run route matches. */
+export function importRunIdParam(ctx: { params: Record<string, string | undefined> }): string {
+	return s.parse(s.object({ runId: s.string() }), ctx.params).runId;
+}
+
+/** An import run the caller's own tenant does not hold, for a route naming one in its path. */
+export function importRunNotFound(): Response {
+	return problem({
+		type: "https://docs.example.com/errors/not-found",
+		title: "No such import run exists for this tenant",
+		status: 404,
+	});
+}

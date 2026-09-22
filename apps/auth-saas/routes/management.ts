@@ -34,6 +34,10 @@ export default route({
 	subjectIdentifiersSetPrimary: post("/tenants/:tenantId/subjects/:subjectId/identifiers/primary"),
 	subjectIdentifiersRemove: del("/tenants/:tenantId/subjects/:subjectId/identifiers"),
 
+	subjectsImportBegin: post("/tenants/:tenantId/subjects/import"),
+	subjectsImportStatus: get("/tenants/:tenantId/subjects/import/:runId"),
+	subjectsImportDownload: get("/tenants/:tenantId/subjects/import/:runId/download"),
+
 	clientsRegister: post("/tenants/:tenantId/clients"),
 	clientsList: get("/tenants/:tenantId/clients"),
 	clientsRead: get("/tenants/:tenantId/clients/:clientId"),

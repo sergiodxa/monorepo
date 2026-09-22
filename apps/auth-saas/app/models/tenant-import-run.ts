@@ -181,6 +181,19 @@ export default class TenantImportRun {
 	}
 
 	/**
+	 * Records a run's declared row count, so the job's own storage-ceiling
+	 * check always has a real number to project against rather than skipping
+	 * it for want of one.
+	 *
+	 * @param db - Database connection.
+	 * @param input - The run's id and its total row count.
+	 * @returns A promise resolving to the updated row.
+	 */
+	static setTotal(db: Database, input: { id: string; total: number }): Promise<TenantImportRunRow> {
+		return db.update(TenantImportRun.table, { id: input.id }, { total: input.total });
+	}
+
+	/**
 	 * Marks a run as finished successfully.
 	 *
 	 * @param db - Database connection.

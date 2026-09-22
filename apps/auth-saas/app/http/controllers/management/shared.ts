@@ -28,4 +28,6 @@ export interface ManagementControllerOptions {
 	resolveStub: (tenantId: string) => DurableObjectStub<Tenant>;
 	/** Opens the platform zone's Cloudflare custom-hostname client, for the domain attach and remove routes. */
 	hostnameClient: () => HostnameClient;
+	/** The R2 bucket a subject import run's source file and failure report live in. */
+	r2: R2Bucket;
 }

@@ -1,13 +1,14 @@
 /**
  * Builds the management API router's fetch-router: the administrative surface
  * served on `api.{PLATFORM_DOMAIN}`. This pass wires the shared plumbing, the
- * token endpoint, the subjects and identifiers resource area, the clients and
+ * token endpoint, the subjects and identifiers resource area, the subject
+ * import run's own begin, status and download routes, the clients and
  * secrets resource area, the API keys and webhook endpoints and deliveries
  * resource areas, the roles, permissions and consent grants resource areas,
  * the passkeys, password, second-factor and session resource areas, the
  * audit events resource area, and the tenant, member and domain resource
- * area; every other resource route (import and export runs) is a later
- * pass's own addition to `routes/management.ts`.
+ * area; export's own run routes are a later pass's own addition to
+ * `routes/management.ts`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -77,6 +78,9 @@ import {
 	createSubjectIdentifiersSetPrimaryAction,
 	createSubjectIdentifiersVerifyAction,
 } from "~/app/http/controllers/management/subjects/identifiers";
+import { createSubjectsImportBeginAction } from "~/app/http/controllers/management/subjects/import";
+import { createSubjectsImportDownloadAction } from "~/app/http/controllers/management/subjects/import-download";
+import { createSubjectsImportStatusAction } from "~/app/http/controllers/management/subjects/import-status";
 import { createSubjectsListAction } from "~/app/http/controllers/management/subjects/list";
 import { createSubjectsReadAction } from "~/app/http/controllers/management/subjects/read";
 import { createSubjectsUnblockAction } from "~/app/http/controllers/management/subjects/unblock";
@@ -169,6 +173,7 @@ let controllerOptions: ManagementControllerOptions = {
 	limiter: env.MANAGEMENT_RATE_LIMITER,
 	resolveStub: (tenantId) => env.TENANT.getByName(tenantId),
 	hostnameClient: createHostnameClient,
+	r2: env.R2,
 };
 
 managementRouter.map(routes.subjectsCreate, createSubjectsCreateAction(controllerOptions));
@@ -194,6 +199,19 @@ managementRouter.map(
 managementRouter.map(
 	routes.subjectIdentifiersRemove,
 	createSubjectIdentifiersRemoveAction(controllerOptions),
+);
+
+managementRouter.map(
+	routes.subjectsImportBegin,
+	createSubjectsImportBeginAction(controllerOptions),
+);
+managementRouter.map(
+	routes.subjectsImportStatus,
+	createSubjectsImportStatusAction(controllerOptions),
+);
+managementRouter.map(
+	routes.subjectsImportDownload,
+	createSubjectsImportDownloadAction(controllerOptions),
 );
 
 managementRouter.map(routes.clientsRegister, createClientsRegisterAction(controllerOptions));

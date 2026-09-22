@@ -17,6 +17,7 @@ import type { RateLimiterBinding } from "@sdxc/rate-limit";
 import type { Database } from "remix/data-table";
 import type { RequestContext } from "remix/router";
 
+import { createR2Bucket } from "@sdxc/cloudflare-mocks";
 import { createRouter } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -76,6 +77,7 @@ export function buildTenantsRouter(
 		limiter: options.limiter ?? fakeLimiter(),
 		resolveStub: () => tenantDO as unknown as DurableObjectStub<TenantObject>,
 		hostnameClient: options.hostnameClient ?? fakeHostnameClient,
+		r2: createR2Bucket(),
 	};
 
 	let router = createRouter({ middleware: [database(() => db)] });

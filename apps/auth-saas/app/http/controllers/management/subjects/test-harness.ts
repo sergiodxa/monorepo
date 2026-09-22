@@ -12,6 +12,7 @@ import type { RateLimiterBinding } from "@sdxc/rate-limit";
 import type { Database } from "remix/data-table";
 import type { RequestContext } from "remix/router";
 
+import { createR2Bucket } from "@sdxc/cloudflare-mocks";
 import { createRouter } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -27,6 +28,9 @@ import {
 	createSubjectIdentifiersSetPrimaryAction,
 	createSubjectIdentifiersVerifyAction,
 } from "~/app/http/controllers/management/subjects/identifiers";
+import { createSubjectsImportBeginAction } from "~/app/http/controllers/management/subjects/import";
+import { createSubjectsImportDownloadAction } from "~/app/http/controllers/management/subjects/import-download";
+import { createSubjectsImportStatusAction } from "~/app/http/controllers/management/subjects/import-status";
 import { createSubjectsListAction } from "~/app/http/controllers/management/subjects/list";
 import { createSubjectsReadAction } from "~/app/http/controllers/management/subjects/read";
 import { createSubjectsUnblockAction } from "~/app/http/controllers/management/subjects/unblock";
@@ -50,6 +54,7 @@ export function buildSubjectsRouter(
 	options: {
 		resolveDashboardSubjectId?: (ctx: RequestContext) => Promise<string | null>;
 		limiter?: RateLimiterBinding;
+		r2?: R2Bucket;
 	} = {},
 ) {
 	let controllerOptions: ManagementControllerOptions = {
@@ -58,6 +63,7 @@ export function buildSubjectsRouter(
 		limiter: options.limiter ?? fakeLimiter(),
 		resolveStub: () => tenantDO as unknown as DurableObjectStub<TenantObject>,
 		hostnameClient: fakeHostnameClient,
+		r2: options.r2 ?? createR2Bucket(),
 	};
 
 	let router = createRouter({ middleware: [database(() => db)] });
@@ -84,6 +90,10 @@ export function buildSubjectsRouter(
 		createSubjectIdentifiersRemoveAction(controllerOptions),
 	);
 
+	router.map(routes.subjectsImportBegin, createSubjectsImportBeginAction(controllerOptions));
+	router.map(routes.subjectsImportStatus, createSubjectsImportStatusAction(controllerOptions));
+	router.map(routes.subjectsImportDownload, createSubjectsImportDownloadAction(controllerOptions));
+
 	return router;
 }
 
@@ -94,6 +104,7 @@ export interface SubjectsHarness extends ManagementTestCore {
 export interface BuildSubjectsHarnessOptions {
 	limiter?: RateLimiterBinding;
 	resolveDashboardSubjectId?: (ctx: RequestContext) => Promise<string | null>;
+	r2?: R2Bucket;
 }
 
 /** Provisions a fresh tenant, its control-plane record, and the subjects router, ready for an HTTP-surface test. */
