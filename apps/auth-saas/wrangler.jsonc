@@ -140,7 +140,10 @@
 	// it accelerates deliveries already due, while the delay each delivery's own retry
 	// schedules is what actually paces a redelivery. The 08:00 expression is the
 	// attack-signal baseline check, once a day to match the one alert a tenant may get.
-	"triggers": { "crons": ["0 0 * * *", "*/5 * * * *", "0 8 * * *"] },
+	// The once-a-minute expression advances every active subject import run, the
+	// tightest cadence here because a run in progress has to show steady progress
+	// between ticks rather than wait for the next daily or five-minute sweep.
+	"triggers": { "crons": ["0 0 * * *", "*/5 * * * *", "0 8 * * *", "* * * * *"] },
 
 	"vars": {
 		"PLATFORM_DOMAIN": "auth.sergiodxa.com",

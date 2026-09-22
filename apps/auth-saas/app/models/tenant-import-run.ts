@@ -12,7 +12,7 @@ import type { Database, TableRow } from "remix/data-table";
 
 import { typeid } from "@sdxc/typeid";
 import { generateUUIDv7 } from "@sdxc/uuid";
-import { column as c, table } from "remix/data-table";
+import { column as c, inList, table } from "remix/data-table";
 
 /** Mints an `imp_` TypeID for a new tenant import run row. */
 const tenantImportRunId = typeid("imp");
@@ -109,6 +109,20 @@ export default class TenantImportRun {
 	}
 
 	/**
+	 * Lists every run still owed work: queued and never started, or running and
+	 * left mid-file by an earlier tick. Unpaginated, since a tenant only ever
+	 * holds a handful of runs in either state at once.
+	 *
+	 * @param db - Database connection.
+	 * @returns A promise resolving to every queued or running run, across every tenant.
+	 */
+	static listActive(db: Database): Promise<TenantImportRunRow[]> {
+		return db.findMany(TenantImportRun.table, {
+			where: inList("status", ["queued", "running"] as const),
+		});
+	}
+
+	/**
 	 * Marks a run as under way.
 	 *
 	 * @param db - Database connection.
@@ -148,6 +162,22 @@ export default class TenantImportRun {
 				failed: existing.failed + input.failedDelta,
 			},
 		);
+	}
+
+	/**
+	 * Records the R2 key a run's failure report is being written to, so a later
+	 * tick resuming the same run knows where to keep appending rather than
+	 * starting a second report file.
+	 *
+	 * @param db - Database connection.
+	 * @param input - The run's id and the report's object key.
+	 * @returns A promise resolving to the updated row.
+	 */
+	static setReportKey(
+		db: Database,
+		input: { id: string; reportKey: string },
+	): Promise<TenantImportRunRow> {
+		return db.update(TenantImportRun.table, { id: input.id }, { report_key: input.reportKey });
 	}
 
 	/**

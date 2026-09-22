@@ -48,6 +48,7 @@ dispatcher.map(
 	jobs.checkAttackSignalBaseline,
 	() => import("~/app/jobs/check-attack-signal-baseline"),
 );
+dispatcher.map(jobs.subjectsImport, () => import("~/app/jobs/subjects-import"));
 
 declare module "@sdxc/jobs" {
 	interface JobTypes {

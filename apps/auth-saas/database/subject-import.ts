@@ -92,7 +92,9 @@ export type ImportRowProblem =
 				| "not-member"
 				| "last-owner";
 	  }
-	| { kind: "password"; reason: "unrecognized-hash" | "subject-not-found" };
+	| { kind: "password"; reason: "unrecognized-hash" | "subject-not-found" }
+	/** A line the batching job could not even parse as JSON, so it never reached a row check. */
+	| { kind: "row"; reason: "invalid-json" };
 
 /** What validating or applying one import row reports. */
 export type ImportRowOutcome =

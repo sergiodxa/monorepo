@@ -34,4 +34,12 @@ export default jobs({
 	 * day already spent.
 	 */
 	checkAttackSignalBaseline: job({ cron: "0 8 * * *" }),
+	/**
+	 * Advances every tenant's own active import run by whatever batches fit in one
+	 * tick. Runs every minute, the tightest cadence any job here carries, because an
+	 * import in progress has to show steady visible progress between ticks rather
+	 * than the once-a-day or once-every-five-minutes cadence every other sweep gets
+	 * away with.
+	 */
+	subjectsImport: job({ cron: "* * * * *" }),
 });
