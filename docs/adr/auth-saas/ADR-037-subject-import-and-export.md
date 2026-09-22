@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-18
+**Implemented** - 2026-09-22, mechanism only: every RPC method, both paced cron jobs, the R2 plumbing, and the storage-ceiling and hash-recognition checks are built and tested end-to-end against fixture data, but no management API controller yet creates a real run, uploads a source file, or downloads a report — nothing in this codebase calls any of it in production today. That HTTP surface is comparable in scope to everything already built here and remains open.
 
 ## Background
 
