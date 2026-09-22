@@ -98,6 +98,11 @@ import type {
 	RecordConsentDecisionResult,
 	RevokeGrantResult,
 } from "./consent";
+import type {
+	BeginDeviceAuthorizationInput,
+	BeginDeviceAuthorizationResult,
+	RedeemDeviceCodeInput,
+} from "./device-authorization";
 import type { ApplyEntitlementsInput, ApplyEntitlementsResult } from "./entitlements";
 import type {
 	PublishMetadataResult,
@@ -349,6 +354,7 @@ import * as ConnectionSignIn from "./connection-sign-in";
 import * as Connections from "./connections";
 import * as Consent from "./consent";
 import { hasAnotherCredential } from "./credentials";
+import * as DeviceAuthorization from "./device-authorization";
 import { applyEntitlements, entitlementEnforcement } from "./entitlements";
 import { mailSendEnvelopes } from "./mail-rate-limit";
 import * as Metadata from "./metadata";
@@ -1830,6 +1836,11 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 
 			for (let iteration = 0; iteration < 20; iteration++) {
 				let { more } = await Authorization.sweepExpiredAuthorizationCodes(this.#db);
+				if (!more) break;
+			}
+
+			for (let iteration = 0; iteration < 20; iteration++) {
+				let { more } = await DeviceAuthorization.sweepDeviceAuthorizations(this.#db);
 				if (!more) break;
 			}
 
@@ -3506,6 +3517,47 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		return this.#withCost(async () => {
 			let issuer = await this.#issuer();
 			return Authorization.resumeAuthorization(this.#db, { ...input, issuer });
+		});
+	}
+
+	/**
+	 * Mints a device and user code pair for a client that carries the device grant,
+	 * the response a device with no browser worth using polls the token endpoint
+	 * with next.
+	 *
+	 * @param input - The client asking for the grant, the scope it requests, and
+	 * the clock to mint against.
+	 * @returns The minted codes and polling parameters, or which rule refused the
+	 * request.
+	 */
+	async beginDeviceAuthorization(
+		input: Omit<BeginDeviceAuthorizationInput, "issuer">,
+	): Promise<WithCost<BeginDeviceAuthorizationResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let issuer = await this.#issuer();
+			return DeviceAuthorization.beginDeviceAuthorization(this.#db, { ...input, issuer });
+		});
+	}
+
+	/**
+	 * Turns a device code into a token set once a person has approved it, enforcing
+	 * the polling interval and redeeming the row atomically so two concurrent polls
+	 * cannot both mint.
+	 *
+	 * @param input - The presented device code, the client's credentials, and the
+	 * clock to mint against.
+	 * @returns The minted token set, or the error this poll was refused for.
+	 */
+	async redeemDeviceCode(
+		input: Omit<RedeemDeviceCodeInput, "issuer">,
+	): Promise<WithCost<TokenOutcome>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let issuer = await this.#issuer();
+			return DeviceAuthorization.redeemDeviceCode(this.#db, { ...input, issuer });
 		});
 	}
 

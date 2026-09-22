@@ -105,7 +105,12 @@ export type TokenEndpointAuthMethod = "client_secret_basic" | "client_secret_pos
  * the client's intent; whether the tenant may actually issue tokens under it is read
  * somewhere else, not enforced by this write.
  */
-const GRANT_TYPES = ["authorization_code", "refresh_token", "client_credentials"] as const;
+const GRANT_TYPES = [
+	"authorization_code",
+	"refresh_token",
+	"client_credentials",
+	"urn:ietf:params:oauth:grant-type:device_code",
+] as const;
 
 /** Every response type a client may carry. */
 const RESPONSE_TYPES = ["code"] as const;

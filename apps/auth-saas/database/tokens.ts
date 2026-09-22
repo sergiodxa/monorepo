@@ -50,13 +50,13 @@ const ID_TOKEN_TTL_MS = 10 * 60 * 1000;
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 /** How long a refresh token family lives from its first token, unmoved by any later rotation. */
-const REFRESH_TOKEN_FAMILY_TTL_MS = 90 * 24 * 60 * 60 * 1000;
+export const REFRESH_TOKEN_FAMILY_TTL_MS = 90 * 24 * 60 * 60 * 1000;
 
 /** How many expired rows one sweep call removes before reporting back to its caller. */
 const SWEEP_BATCH_SIZE = 500;
 
 /** Mints an id for a new refresh token family. */
-const refreshTokenFamilyId = typeid("rtfam");
+export const refreshTokenFamilyId = typeid("rtfam");
 
 /** Mints the `jti` an access token carries, for the audit log to key a replay report by. */
 const accessTokenId = typeid("at");
@@ -160,9 +160,9 @@ export type TokenOutcome =
 	| { kind: "error"; status: 400 | 401 | 500; error: string; description: string };
 
 /** How a client presented itself at this call, mirroring the OAuth 2.1 methods this endpoint accepts. */
-type AuthScheme = "basic" | "post" | "none";
+export type AuthScheme = "basic" | "post" | "none";
 
-let AuthSchemeSchema = s.enum_(["basic", "post", "none"] as const);
+export let AuthSchemeSchema = s.enum_(["basic", "post", "none"] as const);
 
 export interface AuthenticateClientInput {
 	clientId: string;
@@ -355,7 +355,7 @@ async function addRoleClaims(
 	}
 }
 
-interface MintTokensInput {
+export interface MintTokensInput {
 	issuer: string;
 	client: ClientRow;
 	subjectId: string;
@@ -369,7 +369,7 @@ interface MintTokensInput {
 	activeOrganizationId: string | null;
 }
 
-type MintTokensResult =
+export type MintTokensResult =
 	| { kind: "minted"; accessToken: string; idToken: string | null; expiresIn: number }
 	| { kind: "error"; status: 500; error: "server_error"; description: string };
 
@@ -378,8 +378,13 @@ type MintTokensResult =
  * token, injecting custom claims and the scope-gated profile claims along the
  * way. The one step every successful grant runs through, so the two token kinds
  * are assembled identically regardless of which grant minted them.
+ *
+ * Exported so a grant whose subject, session and scopes come from somewhere
+ * other than a live session or a fresh authorization — a device authorization's
+ * own recorded approval, for one — mints through this exact step rather than a
+ * second copy of it.
  */
-async function mintTokens(db: Database, input: MintTokensInput): Promise<MintTokensResult> {
+export async function mintTokens(db: Database, input: MintTokensInput): Promise<MintTokensResult> {
 	let keyPair = await currentSigningKeyPair(db);
 	if (!keyPair) {
 		return {
@@ -454,11 +459,11 @@ async function mintTokens(db: Database, input: MintTokensInput): Promise<MintTok
 }
 
 /** Revokes every row in a refresh token family, for a reuse response or a replayed code alike. */
-async function revokeFamily(db: Database, familyId: string, now: number): Promise<void> {
+export async function revokeFamily(db: Database, familyId: string, now: number): Promise<void> {
 	await db.updateMany(refreshTokenRows, { revoked_at: now }, { where: eq("family_id", familyId) });
 }
 
-interface IssueRefreshTokenInput {
+export interface IssueRefreshTokenInput {
 	familyId: string;
 	parentHash: string | null;
 	clientId: string;
@@ -470,7 +475,7 @@ interface IssueRefreshTokenInput {
 }
 
 /** Mints a refresh token, storing only its digest, and writes the row it redeems from next time. */
-async function issueRefreshToken(
+export async function issueRefreshToken(
 	db: Database,
 	input: IssueRefreshTokenInput,
 ): Promise<{ token: string }> {

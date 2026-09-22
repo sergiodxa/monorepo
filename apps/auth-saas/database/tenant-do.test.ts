@@ -64,6 +64,7 @@ describe("provision", () => {
 				"0030-totp-backoff",
 				"0031-account-linking",
 				"0032-session-policy",
+				"0033-device-authorization",
 			],
 			issuer: "https://tenant-1.example.com",
 			keys: { keys: [expect.objectContaining({ kty: "EC", alg: "ES256" })] },
