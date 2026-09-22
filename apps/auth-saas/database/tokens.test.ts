@@ -24,7 +24,7 @@ import { organizationMembers, organizations } from "./organizations";
 import { assignRole, defineRole, definePermission, setRolePermissions } from "./roles";
 import { openSession, resolveSession, sessions } from "./sessions";
 import { currentSigningKeyPair, ensureSigningKey, setCustomClaims } from "./signing-keys";
-import { createSubject, subjectAttributes } from "./subjects";
+import { blockSubject, createSubject, subjectAttributes } from "./subjects";
 import { runMigrations } from "./tenant-migrations";
 import tokensMigration from "./tenant-migrations/0010-tokens.sql?raw";
 import {
@@ -556,6 +556,31 @@ describe("exchangeCode", () => {
 		expect(rows).toHaveLength(1);
 		expect(rows[0]?.revoked_at).not.toBeNull();
 	});
+
+	test("a code minted for a subject blocked before it is exchanged is invalid_grant, indistinguishable from an unknown code", async () => {
+		let { client, secret, subjectId, code, codeVerifier, now } = await fullFixture();
+
+		let blocked = await blockSubject(db, { subjectId, reason: "policy violation" });
+		expect(blocked.ok).toBe(true);
+
+		let outcome = await exchangeCode(db, {
+			code,
+			codeVerifier,
+			redirectUri: REDIRECT_URI,
+			clientId: client.id,
+			clientSecret: secret,
+			authScheme: "basic",
+			now,
+			issuer: ISSUER,
+		});
+
+		expect(outcome).toMatchObject({
+			kind: "error",
+			status: 400,
+			error: "invalid_grant",
+			description: "This code is unknown, expired, or already used.",
+		});
+	});
 });
 
 /** Exchanges a fresh code for a token set that includes a refresh token. */
@@ -685,6 +710,51 @@ describe("refreshTokens", () => {
 
 		let resolved = await resolveSession(db, { token: session.token });
 		expect(resolved.status).not.toBe("active");
+	});
+
+	test("a refresh token issued before its subject is blocked is refused and neutralizes the whole family", async () => {
+		let { client, secret, subjectId, session, refreshToken, now } = await issueTestRefreshToken();
+
+		let blocked = await blockSubject(db, { subjectId, reason: "policy violation" });
+		expect(blocked.ok).toBe(true);
+
+		let outcome = await refreshTokens(db, {
+			refreshToken,
+			scope: null,
+			clientId: client.id,
+			clientSecret: secret,
+			authScheme: "basic",
+			now: now + 1_000,
+			issuer: ISSUER,
+		});
+
+		expect(outcome).toMatchObject({
+			kind: "error",
+			status: 400,
+			error: "invalid_grant",
+			description: "This refresh token is unknown, expired, or no longer valid.",
+		});
+
+		let rows = await db.findMany(refreshTokenRows);
+		expect(rows.length).toBeGreaterThan(0);
+		for (let row of rows) expect(row.revoked_at).not.toBeNull();
+
+		let resolved = await resolveSession(db, { token: session.token });
+		expect(resolved.status).not.toBe("active");
+
+		// Presenting the same token again still refuses, now for the ordinary
+		// already-redeemed reason, since the row was already consumed on first use.
+		let again = await refreshTokens(db, {
+			refreshToken,
+			scope: null,
+			clientId: client.id,
+			clientSecret: secret,
+			authScheme: "basic",
+			now: now + 2_000,
+			issuer: ISSUER,
+		});
+
+		expect(again).toMatchObject({ kind: "error", status: 400, error: "invalid_grant" });
 	});
 
 	test("refuses a rotation once the family's absolute expiry has passed", async () => {

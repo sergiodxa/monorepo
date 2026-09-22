@@ -547,7 +547,9 @@ let ExchangeCodeSchema = s.object({
  * Turns an authorization code into a token set, the whole exchange in one round
  * trip: authenticate the client, redeem the code atomically, verify its bindings
  * and its PKCE challenge, mint and sign, and — when the grant covers
- * `offline_access` — start a refresh token family.
+ * `offline_access` — start a refresh token family. A code minted for a subject
+ * who is since blocked refuses exactly like an unknown or already-used code,
+ * giving nothing away about which case it hit.
  *
  * @param db - The tenant's database.
  * @param input - The presented code and verifier, the redirect the client used,
@@ -623,6 +625,16 @@ export async function exchangeCode(db: Database, input: ExchangeCodeInput): Prom
 			status: 400,
 			error: "invalid_grant",
 			description: "The code verifier does not match this code.",
+		};
+	}
+
+	let subject = await db.find(subjects, { id: redeemedRow.subject_id });
+	if (subject?.status === "blocked") {
+		return {
+			kind: "error",
+			status: 400,
+			error: "invalid_grant",
+			description: "This code is unknown, expired, or already used.",
 		};
 	}
 
@@ -703,7 +715,10 @@ let RefreshTokensSchema = s.object({
  * another one is never claimed), mint a fresh token set for the same or a
  * narrower scope, and issue the family's next token. Presenting a token a
  * second time revokes the whole family and ends the session behind it, then
- * answers exactly like an expired token would.
+ * answers exactly like an expired token would. A token redeemed for a subject
+ * who is since blocked gets the same treatment: the family and session are
+ * revoked and the call refuses exactly like an expired token, so the token is
+ * fully neutralized on the first attempt to use it rather than merely refused.
  *
  * @param db - The tenant's database.
  * @param input - The presented refresh token, an optional narrower scope, the
@@ -789,6 +804,27 @@ export async function refreshTokens(
 			status: 400,
 			error: "invalid_scope",
 			description: "The requested scope is not a subset of this token's own scope.",
+		};
+	}
+
+	let subject = await db.find(subjects, { id: redeemedRow.subject_id });
+	if (subject?.status === "blocked") {
+		// The presented token is already consumed by the redemption above either way,
+		// so revoking the whole family and the session behind it here neutralizes a
+		// blocked subject's refresh token on first use rather than leaving it merely
+		// refused for a later attempt to trip over again.
+		await revokeFamily(db, redeemedRow.family_id, parsed.now);
+		await revokeSession(db, {
+			subjectId: redeemedRow.subject_id,
+			sessionId: redeemedRow.session_id,
+			reason: "subject_blocked",
+		});
+
+		return {
+			kind: "error",
+			status: 400,
+			error: "invalid_grant",
+			description: "This refresh token is unknown, expired, or no longer valid.",
 		};
 	}
 
