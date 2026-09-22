@@ -53,6 +53,17 @@ export default class Domain {
 	});
 
 	/**
+	 * Finds a domain by its primary-key id.
+	 *
+	 * @param db - Database connection.
+	 * @param id - The domain id.
+	 * @returns A promise resolving to the domain row, or null when not found.
+	 */
+	static findById(db: Database, id: string): Promise<DomainRow | null> {
+		return db.findOne(Domain.table, { where: { id } });
+	}
+
+	/**
 	 * Lists every domain of a tenant.
 	 *
 	 * @param db - Database connection.

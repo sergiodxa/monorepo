@@ -25,6 +25,7 @@ import { createApiKeysRevokeAction } from "~/app/http/controllers/management/api
 import { createApiKeysRotateAction } from "~/app/http/controllers/management/api-keys/rotate";
 import {
 	buildManagementTestCore,
+	fakeHostnameClient,
 	fakeLimiter,
 	grantEntitlement,
 	grantMembership,
@@ -33,7 +34,7 @@ import {
 import { database } from "~/app/http/middleware/database";
 import routes from "~/routes/management";
 
-export { fakeLimiter, grantEntitlement, grantMembership, ISSUER };
+export { fakeHostnameClient, fakeLimiter, grantEntitlement, grantMembership, ISSUER };
 
 /** Builds the management router wired to constructed control-plane and tenant state. */
 export function buildApiKeysRouter(
@@ -49,6 +50,7 @@ export function buildApiKeysRouter(
 		resolveDashboardSubjectId: options.resolveDashboardSubjectId ?? (async () => null),
 		limiter: options.limiter ?? fakeLimiter(),
 		resolveStub: () => tenantDO as unknown as DurableObjectStub<TenantObject>,
+		hostnameClient: fakeHostnameClient,
 	};
 
 	let router = createRouter({ middleware: [database(() => db)] });

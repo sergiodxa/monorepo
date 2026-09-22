@@ -37,6 +37,7 @@ import { createRolesSetPermissionsAction } from "~/app/http/controllers/manageme
 import { createRolesUpdateAction } from "~/app/http/controllers/management/roles/update";
 import {
 	buildManagementTestCore,
+	fakeHostnameClient,
 	fakeLimiter,
 	grantEntitlement,
 	grantMembership,
@@ -45,7 +46,7 @@ import {
 import { database } from "~/app/http/middleware/database";
 import routes from "~/routes/management";
 
-export { fakeLimiter, grantEntitlement, grantMembership, ISSUER };
+export { fakeHostnameClient, fakeLimiter, grantEntitlement, grantMembership, ISSUER };
 
 /** Builds the management router wired to constructed control-plane and tenant state. */
 export function buildRolesRouter(
@@ -61,6 +62,7 @@ export function buildRolesRouter(
 		resolveDashboardSubjectId: options.resolveDashboardSubjectId ?? (async () => null),
 		limiter: options.limiter ?? fakeLimiter(),
 		resolveStub: () => tenantDO as unknown as DurableObjectStub<TenantObject>,
+		hostnameClient: fakeHostnameClient,
 	};
 
 	let router = createRouter({ middleware: [database(() => db)] });

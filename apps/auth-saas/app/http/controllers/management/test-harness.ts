@@ -15,6 +15,7 @@ import type { RateLimiterBinding } from "@sdxc/rate-limit";
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { randomToken } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
+import { HostnameClient } from "@sdxc/hostname";
 import { JWK } from "@sdxc/jwt";
 import { Database } from "remix/data-table";
 
@@ -34,6 +35,24 @@ export const ISSUER = "https://api.example.com";
 /** A fake `RateLimiterBinding` answering the same decision on every call. */
 export function fakeLimiter(success = true): RateLimiterBinding {
 	return { limit: async () => ({ success }) };
+}
+
+/** The Cloudflare zone {@link fakeHostnameClient} is pointed at, for a test's own MSW handlers to answer. */
+export const HOSTNAME_ZONE_ID = "zone-1";
+
+/**
+ * Builds a `HostnameClient` pointed at a test zone, so every resource area's
+ * own harness satisfies `ManagementControllerOptions` even when its routes
+ * never call it. The tenants resource area's own domain routes do call it,
+ * and point their tests' MSW handlers at this same zone, the way
+ * `app/services/domain.test.ts` already drives that client.
+ */
+export function fakeHostnameClient(): HostnameClient {
+	return new HostnameClient({
+		apiToken: "test-token",
+		zoneId: HOSTNAME_ZONE_ID,
+		platformDomain: "auth.example.com",
+	});
 }
 
 /** What every resource area's own harness wraps its own router around. */

@@ -10,6 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { HostnameClient } from "@sdxc/hostname";
 import type { RateLimiterBinding } from "@sdxc/rate-limit";
 import type { RequestContext } from "remix/router";
 
@@ -25,4 +26,6 @@ export interface ManagementControllerOptions {
 	limiter: RateLimiterBinding;
 	/** Opens a stub for a tenant's Durable Object, given its id. */
 	resolveStub: (tenantId: string) => DurableObjectStub<Tenant>;
+	/** Opens the platform zone's Cloudflare custom-hostname client, for the domain attach and remove routes. */
+	hostnameClient: () => HostnameClient;
 }

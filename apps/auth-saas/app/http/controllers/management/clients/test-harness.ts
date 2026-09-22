@@ -28,6 +28,7 @@ import { createClientsRotateSecretAction } from "~/app/http/controllers/manageme
 import { createClientsUpdateAction } from "~/app/http/controllers/management/clients/update";
 import {
 	buildManagementTestCore,
+	fakeHostnameClient,
 	fakeLimiter,
 	grantMembership,
 	ISSUER,
@@ -35,7 +36,7 @@ import {
 import { database } from "~/app/http/middleware/database";
 import routes from "~/routes/management";
 
-export { fakeLimiter, grantMembership, ISSUER };
+export { fakeHostnameClient, fakeLimiter, grantMembership, ISSUER };
 
 /** Builds the management router wired to constructed control-plane and tenant state. */
 export function buildClientsRouter(
@@ -51,6 +52,7 @@ export function buildClientsRouter(
 		resolveDashboardSubjectId: options.resolveDashboardSubjectId ?? (async () => null),
 		limiter: options.limiter ?? fakeLimiter(),
 		resolveStub: () => tenantDO as unknown as DurableObjectStub<TenantObject>,
+		hostnameClient: fakeHostnameClient,
 	};
 
 	let router = createRouter({ middleware: [database(() => db)] });

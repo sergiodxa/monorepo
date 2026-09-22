@@ -4,10 +4,10 @@
  * token endpoint, the subjects and identifiers resource area, the clients and
  * secrets resource area, the API keys and webhook endpoints and deliveries
  * resource areas, the roles, permissions and consent grants resource areas,
- * the passkeys, password, second-factor and session resource areas, and the
- * audit events resource area; every other resource route (import and export
- * runs, and the rest of the administrative surface) is a later pass's own
- * addition to `routes/management.ts`.
+ * the passkeys, password, second-factor and session resource areas, the
+ * audit events resource area, and the tenant, member and domain resource
+ * area; every other resource route (import and export runs) is a later
+ * pass's own addition to `routes/management.ts`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -81,6 +81,20 @@ import { createSubjectsListAction } from "~/app/http/controllers/management/subj
 import { createSubjectsReadAction } from "~/app/http/controllers/management/subjects/read";
 import { createSubjectsUnblockAction } from "~/app/http/controllers/management/subjects/unblock";
 import { createSubjectsUpdateAction } from "~/app/http/controllers/management/subjects/update";
+import {
+	createTenantDomainsAttachAction,
+	createTenantDomainsListAction,
+	createTenantDomainsRemoveAction,
+	createTenantDomainsVerificationAction,
+} from "~/app/http/controllers/management/tenants/domains";
+import {
+	createTenantMembersCreateAction,
+	createTenantMembersListAction,
+	createTenantMembersRemoveAction,
+	createTenantMembersUpdateRoleAction,
+} from "~/app/http/controllers/management/tenants/members";
+import { createTenantMfaPolicySetAction } from "~/app/http/controllers/management/tenants/mfa-policy";
+import { createTenantReadAction } from "~/app/http/controllers/management/tenants/read";
 import token from "~/app/http/controllers/management/token";
 import { createWebhookEndpointsDeleteAction } from "~/app/http/controllers/management/webhook-endpoints/delete";
 import {
@@ -97,6 +111,7 @@ import { apiVersioning } from "~/app/http/lib/api-version";
 import { database } from "~/app/http/middleware/database";
 import trailingSlash from "~/app/http/middleware/trailing-slash";
 import { createDatabase } from "~/app/lib/database";
+import { createHostnameClient } from "~/app/lib/hostnames";
 import { requestOrigin } from "~/app/lib/request-origin";
 import { sessionCookie } from "~/app/lib/session-cookie";
 import routes from "~/routes/management";
@@ -153,6 +168,7 @@ let controllerOptions: ManagementControllerOptions = {
 	resolveDashboardSubjectId,
 	limiter: env.MANAGEMENT_RATE_LIMITER,
 	resolveStub: (tenantId) => env.TENANT.getByName(tenantId),
+	hostnameClient: createHostnameClient,
 };
 
 managementRouter.map(routes.subjectsCreate, createSubjectsCreateAction(controllerOptions));
@@ -274,5 +290,37 @@ managementRouter.map(routes.sessionsRevoke, createSessionsRevokeAction(controlle
 managementRouter.map(routes.sessionsRevokeAll, createSessionsRevokeAllAction(controllerOptions));
 
 managementRouter.map(routes.auditEventsList, createAuditEventsListAction(controllerOptions));
+
+managementRouter.map(routes.tenantRead, createTenantReadAction(controllerOptions));
+
+managementRouter.map(routes.tenantMembersList, createTenantMembersListAction(controllerOptions));
+managementRouter.map(
+	routes.tenantMembersCreate,
+	createTenantMembersCreateAction(controllerOptions),
+);
+managementRouter.map(
+	routes.tenantMembersUpdateRole,
+	createTenantMembersUpdateRoleAction(controllerOptions),
+);
+managementRouter.map(
+	routes.tenantMembersRemove,
+	createTenantMembersRemoveAction(controllerOptions),
+);
+
+managementRouter.map(routes.tenantDomainsList, createTenantDomainsListAction(controllerOptions));
+managementRouter.map(
+	routes.tenantDomainsAttach,
+	createTenantDomainsAttachAction(controllerOptions),
+);
+managementRouter.map(
+	routes.tenantDomainsVerification,
+	createTenantDomainsVerificationAction(controllerOptions),
+);
+managementRouter.map(
+	routes.tenantDomainsRemove,
+	createTenantDomainsRemoveAction(controllerOptions),
+);
+
+managementRouter.map(routes.tenantMfaPolicySet, createTenantMfaPolicySetAction(controllerOptions));
 
 export { resolveDashboardSubjectId };
