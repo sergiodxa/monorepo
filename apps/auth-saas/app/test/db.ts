@@ -15,6 +15,7 @@ import controlPlaneMigration from "~/database/migrations/0001-control-plane.sql?
 import perTenantSubscriptionsMigration from "~/database/migrations/0002-per-tenant-subscriptions.sql?raw";
 import flagChangeMigration from "~/database/migrations/0003-flag-change.sql?raw";
 import tenantUsageMigration from "~/database/migrations/0004-tenant-usage.sql?raw";
+import managementApiMigration from "~/database/migrations/0005-management-api.sql?raw";
 
 /** Every control-plane migration, applied in order. */
 const MIGRATIONS = [
@@ -22,6 +23,7 @@ const MIGRATIONS = [
 	perTenantSubscriptionsMigration,
 	flagChangeMigration,
 	tenantUsageMigration,
+	managementApiMigration,
 ];
 
 /**

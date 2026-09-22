@@ -1,8 +1,9 @@
 /**
  * The Cloudflare Worker entry point. Routes every incoming request to the right place —
- * static assets, the platform Worker router, or a tenant Durable Object (resolved via
- * Cloudflare for SaaS `hostMetadata` or a KV-cached control-plane lookup). Also
- * re-exports the {@link Tenant} Durable Object.
+ * static assets, the platform Worker router, the management API router on its own
+ * `api.` hostname, or a tenant Durable Object (resolved via Cloudflare for SaaS
+ * `hostMetadata` or a KV-cached control-plane lookup). Also re-exports the
+ * {@link Tenant} Durable Object.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -31,6 +32,7 @@ import { checkRateLimit } from "~/app/lib/rate-limit";
 import Tenant from "~/database/tenant-do";
 
 import { router } from "./app";
+import { managementRouter } from "./management-app";
 import { tenantRouter } from "./tenant-app";
 
 export { Tenant };
@@ -44,8 +46,14 @@ interface ResolvedTenant {
 	issuer: string;
 }
 
+/** The management API's own hostname, one level under the platform's own. */
+function managementHostname(): string {
+	return `api.${env.PLATFORM_DOMAIN}`;
+}
+
 function isPlatformHost(hostname: string): boolean {
 	if (hostname === env.PLATFORM_DOMAIN) return true;
+	if (hostname === managementHostname()) return true;
 	if (hostname === "localhost" || hostname === "127.0.0.1") return true;
 	if (hostname.endsWith(".workers.dev")) return true;
 	return false;
@@ -113,11 +121,12 @@ async function forwardToTenant(request: Request, target: ResolvedTenant): Promis
 export default {
 	/**
 	 * Routes an incoming HTTP request: static assets first, then the platform
-	 * Worker router or a tenant Durable Object by host and path.
+	 * Worker router, the management API router on its own `api.` hostname, or a
+	 * tenant Durable Object by host and path.
 	 *
 	 * @param request - The incoming request.
-	 * @returns The response from assets, the platform router, or a tenant DO (or a 404
-	 * when the host cannot be resolved).
+	 * @returns The response from assets, the platform router, the management
+	 * router, or a tenant DO (or a 404 when the host cannot be resolved).
 	 */
 	async fetch(request) {
 		let url = new URL(request.url);
@@ -130,7 +139,10 @@ export default {
 		let asset = await env.ASSETS.fetch(assetRequest);
 		if (asset.ok) return asset;
 
-		if (isPlatformHost(hostname)) return await router.fetch(request);
+		if (isPlatformHost(hostname)) {
+			if (hostname === managementHostname()) return await managementRouter.fetch(request);
+			return await router.fetch(request);
+		}
 
 		let hostMetadata = request.cf?.hostMetadata;
 		if (hostMetadata) {

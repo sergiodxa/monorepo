@@ -45,6 +45,7 @@
         "@sdxc/mail": "workspace:*",
         "@sdxc/pagination": "workspace:*",
         "@sdxc/passkey": "workspace:*",
+        "@sdxc/rate-limit": "workspace:*",
         "@sdxc/response": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/saml": "workspace:*",
