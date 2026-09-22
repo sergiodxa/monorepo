@@ -9,9 +9,11 @@
  */
 
 import type { Database } from "remix/data-table";
+import type { Middleware } from "remix/router";
 
 import { Base64 } from "@sdxc/crypto";
 import { env } from "cloudflare:workers";
+import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test } from "vitest";
 
@@ -53,8 +55,14 @@ beforeEach(async () => {
 	otherTenantId = other.id;
 });
 
+/** Builds a management router wired to the constructed database, with the same
+ * form-data middleware the real management router runs every request through —
+ * the token endpoint reads `ctx.formData`, populated there, rather than the
+ * request body directly. */
 function buildRouter() {
-	let router = createRouter({ middleware: [database(() => db)] });
+	let router = createRouter({
+		middleware: [formData() as Middleware, database(() => db)],
+	});
 	router.map(routes.token, token);
 	return router;
 }

@@ -37,16 +37,7 @@ function resources(form: FormData): string[] {
  * router.map(routes.token, token);
  */
 export default createAction(routes.token, async (ctx) => {
-	let form: FormData;
-	try {
-		form = await ctx.request.formData();
-	} catch {
-		return tokenError(
-			400,
-			"invalid_request",
-			"The request body must be application/x-www-form-urlencoded.",
-		);
-	}
+	let form = ctx.formData;
 
 	let grantType = form.get("grant_type");
 	if (typeof grantType !== "string") {

@@ -7,12 +7,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Middleware } from "remix/router";
+
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { Base64, Base64Url, Hex, sha256 } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { isFailure } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid";
 import { Database } from "remix/data-table";
+import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test } from "vitest";
 
@@ -43,10 +46,16 @@ beforeEach(async () => {
 	db = new Database(createSQLStorageDatabaseAdapter(state.storage.sql));
 });
 
-/** Builds a tenant router wired to the constructed Durable Object. */
+/** Builds a tenant router wired to the constructed Durable Object, with the same
+ * form-data middleware the real tenant router runs every request through — the
+ * token endpoint reads `ctx.formData`, populated there, rather than the request
+ * body directly. */
 function buildRouter() {
 	let router = createRouter({
-		middleware: [tenant(() => tenantDO as unknown as DurableObjectStub<Tenant>)],
+		middleware: [
+			formData() as Middleware,
+			tenant(() => tenantDO as unknown as DurableObjectStub<Tenant>),
+		],
 	});
 	router.map(routes.token, token);
 	return router;
