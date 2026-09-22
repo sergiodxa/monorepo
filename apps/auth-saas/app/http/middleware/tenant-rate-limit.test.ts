@@ -16,11 +16,12 @@ import type { Middleware } from "remix/router";
 import i18n from "@sdxc/i18n/middleware";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import en from "~/app/locales/en";
 
 import render from "./render";
+import { TENANT_ID_HEADER, TENANT_ISSUER_HEADER, TENANT_REGION_HEADER, tenant } from "./tenant";
 import {
 	authorizationRateLimit,
 	CredentialRateLimitContext,
@@ -425,5 +426,119 @@ describe("protocolRateLimit", () => {
 
 		expect(response.status).toBe(429);
 		expect(response.headers.get("RateLimit-Policy")).toBe("120;w=10");
+	});
+});
+
+describe("attack-signal recording", () => {
+	/** A router carrying the `tenant` middleware, so a refusal's wrapper resolves `ctx.tenant`. */
+	function buildTenantAwareRouter() {
+		let middleware: Middleware[] = [
+			tenant(() => ({}) as never),
+			render as Middleware,
+			formData() as Middleware,
+			i18n({
+				detection: { supportedLanguages: ["en"], fallbackLanguage: "en", order: ["header"] },
+				i18next: { resources: { en: { translation: en } } },
+			}) as Middleware,
+		];
+		return createRouter({ middleware });
+	}
+
+	/** A form request carrying the internal headers `tenant()` reads a resolved tenant off. */
+	function tenantFormRequest(
+		url: string,
+		fields: Record<string, string> = {},
+		ip = "203.0.113.7",
+	): Request {
+		let body = new URLSearchParams(fields);
+		return new Request(url, {
+			method: "POST",
+			body,
+			headers: {
+				"Content-Type": "application/x-www-form-urlencoded",
+				"CF-Connecting-IP": ip,
+				[TENANT_ID_HEADER]: "tenant_1",
+				[TENANT_REGION_HEADER]: "wnam",
+				[TENANT_ISSUER_HEADER]: "https://tenant_1.example.com",
+			},
+		});
+	}
+
+	/** An `AttackSignalEnv` whose `writeDataPoint` is a spy. */
+	function attackSignalEnv() {
+		let writeDataPoint = vi.fn();
+		return { env: { ANALYTICS: { writeDataPoint } }, writeDataPoint };
+	}
+
+	test("records a refused-rate-limit signal for a class rendering its own onLimit page", async () => {
+		let { env, writeDataPoint } = attackSignalEnv();
+		let router = buildTenantAwareRouter();
+		router.post("/sign-in", {
+			middleware: [interactiveCredentialRateLimit(fakeLimiter(false), env)],
+			handler: () => new Response("ok"),
+		});
+
+		let response = await router.fetch(tenantFormRequest("https://example.com/sign-in"));
+
+		expect(response.status).toBe(429);
+		expect(writeDataPoint).toHaveBeenCalledTimes(1);
+		expect(writeDataPoint).toHaveBeenCalledWith({
+			indexes: ["tenant_1"],
+			blobs: [
+				"attack_signal",
+				"tenant_1",
+				"credential",
+				"refused-rate-limit",
+				"rate_limit.exceeded",
+				"",
+			],
+			doubles: [1],
+		});
+	});
+
+	test("records a refused-rate-limit signal for a class answering the shared default JSON refusal", async () => {
+		let { env, writeDataPoint } = attackSignalEnv();
+		let router = buildTenantAwareRouter();
+		router.post("/oauth/token", {
+			middleware: [tokenRateLimit(fakeLimiter(false), env)],
+			handler: () => new Response("ok"),
+		});
+
+		let response = await router.fetch(
+			tenantFormRequest("https://example.com/oauth/token", { grant_type: "refresh_token" }),
+		);
+
+		expect(response.status).toBe(429);
+		expect(writeDataPoint).toHaveBeenCalledTimes(1);
+		let [point] = writeDataPoint.mock.calls[0] as [{ blobs: string[] }];
+		expect(point.blobs[2]).toBe("token");
+	});
+
+	test("does not record a backend-unavailable refusal", async () => {
+		let { env, writeDataPoint } = attackSignalEnv();
+		let router = buildTenantAwareRouter();
+		router.post("/sign-in", {
+			middleware: [interactiveCredentialRateLimit(brokenLimiter(), env)],
+			handler: () => new Response("ok"),
+		});
+
+		let response = await router.fetch(tenantFormRequest("https://example.com/sign-in"));
+
+		expect(response.status).toBe(429);
+		expect(writeDataPoint).not.toHaveBeenCalled();
+	});
+
+	test("does not record an allowed request", async () => {
+		let { env, writeDataPoint } = attackSignalEnv();
+		let router = buildTenantAwareRouter();
+		router.post("/sign-in", {
+			middleware: [interactiveCredentialRateLimit(fakeLimiter(true), env)],
+			handler: () => new Response("ok"),
+		});
+
+		let response = await router.fetch(tenantFormRequest("https://example.com/sign-in"));
+
+		expect(response.status).toBe(200);
+		expect(writeDataPoint).not.toHaveBeenCalled();
 	});
 });

@@ -19,10 +19,54 @@ import { CloudflareAdapter, KVAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 import { createContextKey } from "remix/router";
 
+import type { AttackSignalEnv, AttackSignalSurface } from "~/app/lib/attack-signals";
+
 import { renderRateLimitedPage } from "~/app/http/controllers/hosted/rate-limited";
 import { resolveClientAuth } from "~/app/http/controllers/oauth/token";
+import { recordAttackSignal } from "~/app/lib/attack-signals";
 import { clientAddressKey } from "~/app/lib/client-address";
+import { requestOrigin } from "~/app/lib/request-origin";
 import { foldIdentifier } from "~/database/subject-identifiers";
+
+/**
+ * Wraps a class's own middleware so a refusal it already decided also
+ * records the tenant's own attack signal — observed from the response
+ * rather than threaded through `onLimit`, since three of the five classes
+ * below answer with the shared default JSON refusal rather than a page of
+ * their own. `Retry-After` rides only the response an evaluated,
+ * budget-exceeded decision builds; the backend-unavailable refusal a closed
+ * policy answers instead carries neither it nor any other quota header, so
+ * checking for it tells the two refusals apart without reading `onLimit`'s
+ * own return value.
+ *
+ * @param surface - The attack-signal surface this class's own refusals belong to.
+ * @param analytics - Where to record the signal; omitted, this wraps to a no-op.
+ * @param middleware - The class's own rate-limited middleware.
+ * @returns `middleware`, observed for a refusal worth recording.
+ */
+function recordRateLimitRefusals(
+	surface: AttackSignalSurface,
+	analytics: AttackSignalEnv | undefined,
+	middleware: Middleware,
+): Middleware {
+	if (!analytics) return middleware;
+
+	return async (context, next) => {
+		let response = await middleware(context, next);
+
+		if (response.status === 429 && response.headers.has("Retry-After") && context.tenant) {
+			recordAttackSignal(analytics, {
+				tenantId: context.tenant.id,
+				surface,
+				outcome: "refused-rate-limit",
+				reason: "rate_limit.exceeded",
+				country: requestOrigin(context.request).country ?? undefined,
+			});
+		}
+
+		return response;
+	};
+}
 
 /** What one credential attempt spent against, so a wrong credential can spend past the request itself. */
 export interface CredentialRateLimitSpend {
@@ -67,14 +111,19 @@ export const CREDENTIAL_FAILURE_SPEND = 4;
  * past the request itself.
  *
  * @param limiter - The `CREDENTIAL_RATE_LIMITER` binding.
+ * @param analytics - Where to record a refusal as the tenant's own attack
+ * signal; omitted, nothing is recorded.
  * @returns The middleware, for a route's own `middleware` array.
  * @example
  * router.map(routes.hostedSignInSubmit, {
- * 	middleware: [interactiveCredentialRateLimit(env.CREDENTIAL_RATE_LIMITER)],
+ * 	middleware: [interactiveCredentialRateLimit(env.CREDENTIAL_RATE_LIMITER, env)],
  * 	handler: signInSubmit,
  * });
  */
-export function interactiveCredentialRateLimit(limiter: RateLimiterBinding): Middleware {
+export function interactiveCredentialRateLimit(
+	limiter: RateLimiterBinding,
+	analytics?: AttackSignalEnv,
+): Middleware {
 	let adapter = new CloudflareAdapter(limiter, {
 		limit: CREDENTIAL_LIMIT,
 		window: CREDENTIAL_WINDOW,
@@ -88,11 +137,13 @@ export function interactiveCredentialRateLimit(limiter: RateLimiterBinding): Mid
 		onLimit: (context) => renderRateLimitedPage(context),
 	});
 
-	return (context, next) => {
+	let guarded: Middleware = (context, next) => {
 		let key = `${CREDENTIAL_PREFIX}:${clientAddressKey(context.request)}`;
 		context.set(CredentialRateLimitContext, { adapter, key }, { property: "credentialRateLimit" });
 		return limited(context, next);
 	};
+
+	return recordRateLimitRefusals("credential", analytics, guarded);
 }
 
 const MAIL_PREFIX = "mail-send";
@@ -139,14 +190,16 @@ export interface MailSendingRateLimitOptions {
  *
  * @param kv - The `MAIL_RATE_LIMIT_KV` namespace.
  * @param options - A `skip` predicate for a route whose own leg sends no mail.
+ * @param analytics - Where to record a refusal as the tenant's own attack
+ * signal; omitted, nothing is recorded.
  * @returns The middleware, for a route's own `middleware` array.
  * @example
  * router.map(routes.hostedResetSubmit, {
  * 	middleware: [
- * 		interactiveCredentialRateLimit(env.CREDENTIAL_RATE_LIMITER),
+ * 		interactiveCredentialRateLimit(env.CREDENTIAL_RATE_LIMITER, env),
  * 		mailSendingRateLimit(env.MAIL_RATE_LIMIT_KV, {
  * 			skip: (context) => context.url.searchParams.get("ticket") !== null,
- * 		}),
+ * 		}, env),
  * 	],
  * 	handler: resetSubmit,
  * });
@@ -154,10 +207,11 @@ export interface MailSendingRateLimitOptions {
 export function mailSendingRateLimit(
 	kv: RateLimitKVNamespace,
 	options: MailSendingRateLimitOptions = {},
+	analytics?: AttackSignalEnv,
 ): Middleware {
 	let adapter = new KVAdapter(kv, { limit: MAIL_LIMIT, window: MAIL_WINDOW });
 
-	return rateLimit({
+	let limited = rateLimit({
 		adapter,
 		prefix: MAIL_PREFIX,
 		key: (context) => {
@@ -168,6 +222,8 @@ export function mailSendingRateLimit(
 		failurePolicy: "closed",
 		onLimit: (context) => renderRateLimitedPage(context),
 	});
+
+	return recordRateLimitRefusals("mail-sending", analytics, limited);
 }
 
 const TOKEN_PREFIX = "token";
@@ -180,14 +236,22 @@ const TOKEN_WINDOW = "10 seconds";
  * outage never stops every tenant's clients from exchanging tokens at once.
  *
  * @param limiter - The `TOKEN_RATE_LIMITER` binding.
+ * @param analytics - Where to record a refusal as the tenant's own attack
+ * signal; omitted, nothing is recorded.
  * @returns The middleware, for the token route's own `middleware` array.
  * @example
- * router.map(routes.token, { middleware: [tokenRateLimit(env.TOKEN_RATE_LIMITER)], handler: token });
+ * router.map(routes.token, {
+ * 	middleware: [tokenRateLimit(env.TOKEN_RATE_LIMITER, env)],
+ * 	handler: token,
+ * });
  */
-export function tokenRateLimit(limiter: RateLimiterBinding): Middleware {
+export function tokenRateLimit(
+	limiter: RateLimiterBinding,
+	analytics?: AttackSignalEnv,
+): Middleware {
 	let adapter = new CloudflareAdapter(limiter, { limit: TOKEN_LIMIT, window: TOKEN_WINDOW });
 
-	return rateLimit({
+	let limited = rateLimit({
 		adapter,
 		prefix: TOKEN_PREFIX,
 		key: (context) => {
@@ -196,6 +260,8 @@ export function tokenRateLimit(limiter: RateLimiterBinding): Middleware {
 		},
 		failurePolicy: "open",
 	});
+
+	return recordRateLimitRefusals("token", analytics, limited);
 }
 
 const AUTHORIZATION_PREFIX = "authorization";
@@ -207,25 +273,32 @@ const AUTHORIZATION_WINDOW = "10 seconds";
  * never stops an authorization request already underway.
  *
  * @param limiter - The `AUTHORIZATION_RATE_LIMITER` binding.
+ * @param analytics - Where to record a refusal as the tenant's own attack
+ * signal; omitted, nothing is recorded.
  * @returns The middleware, for the authorize route's own `middleware` array.
  * @example
  * router.map(routes.authorize, {
- * 	middleware: [authorizationRateLimit(env.AUTHORIZATION_RATE_LIMITER)],
+ * 	middleware: [authorizationRateLimit(env.AUTHORIZATION_RATE_LIMITER, env)],
  * 	handler: authorize,
  * });
  */
-export function authorizationRateLimit(limiter: RateLimiterBinding): Middleware {
+export function authorizationRateLimit(
+	limiter: RateLimiterBinding,
+	analytics?: AttackSignalEnv,
+): Middleware {
 	let adapter = new CloudflareAdapter(limiter, {
 		limit: AUTHORIZATION_LIMIT,
 		window: AUTHORIZATION_WINDOW,
 	});
 
-	return rateLimit({
+	let limited = rateLimit({
 		adapter,
 		prefix: AUTHORIZATION_PREFIX,
 		key: (context) => clientAddressKey(context.request),
 		failurePolicy: "open",
 	});
+
+	return recordRateLimitRefusals("authorization", analytics, limited);
 }
 
 const PROTOCOL_PREFIX = "protocol";
@@ -238,20 +311,27 @@ const PROTOCOL_WINDOW = "10 seconds";
  * a relying party resolving a tenant's metadata or a subject's claims.
  *
  * @param limiter - The `PROTOCOL_RATE_LIMITER` binding.
+ * @param analytics - Where to record a refusal as the tenant's own attack
+ * signal; omitted, nothing is recorded.
  * @returns The middleware, for each protected route's own `middleware` array.
  * @example
  * router.map(routes.userinfoGet, {
- * 	middleware: [protocolRateLimit(env.PROTOCOL_RATE_LIMITER)],
+ * 	middleware: [protocolRateLimit(env.PROTOCOL_RATE_LIMITER, env)],
  * 	handler: userinfoGet,
  * });
  */
-export function protocolRateLimit(limiter: RateLimiterBinding): Middleware {
+export function protocolRateLimit(
+	limiter: RateLimiterBinding,
+	analytics?: AttackSignalEnv,
+): Middleware {
 	let adapter = new CloudflareAdapter(limiter, { limit: PROTOCOL_LIMIT, window: PROTOCOL_WINDOW });
 
-	return rateLimit({
+	let limited = rateLimit({
 		adapter,
 		prefix: PROTOCOL_PREFIX,
 		key: (context) => clientAddressKey(context.request),
 		failurePolicy: "open",
 	});
+
+	return recordRateLimitRefusals("protocol", analytics, limited);
 }

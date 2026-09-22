@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
 import {
@@ -16,6 +17,7 @@ import {
 	respondToAuthorizationOutcome,
 } from "~/app/http/controllers/hosted/outcome";
 import { activeSession } from "~/app/http/middleware/hosted-session";
+import { recordAttackSignal } from "~/app/lib/attack-signals";
 import { requestOrigin } from "~/app/lib/request-origin";
 import { serializeTrustedDeviceCookie } from "~/app/lib/trusted-device-cookie";
 import { HostedDocument } from "~/app/views/hosted/document";
@@ -115,14 +117,26 @@ export const secondFactorSubmit = createAction(routes.hostedSecondFactorSubmit, 
 		);
 	}
 
+	let origin = requestOrigin(ctx.request);
+
 	let completed = await ctx.tenantStub.completeSecondFactor({
 		sessionId: session.sessionId,
 		submission,
 		trustDevice,
-		agent: requestOrigin(ctx.request),
+		agent: origin,
 	});
 
 	if (!completed.ok) {
+		if (completed.reason === "invalid-submission") {
+			recordAttackSignal(env, {
+				tenantId: ctx.tenant.id,
+				surface: "credential",
+				outcome: completed.retryAfter !== undefined ? "refused-backoff" : "refused-credential",
+				reason: "invalid-submission",
+				country: origin.country ?? undefined,
+			});
+		}
+
 		let error =
 			completed.reason === "replayed-submission"
 				? t("hostedSecondFactor.errors.replayed")
@@ -135,6 +149,13 @@ export const secondFactorSubmit = createAction(routes.hostedSecondFactorSubmit, 
 			{ status: 400 },
 		);
 	}
+
+	recordAttackSignal(env, {
+		tenantId: ctx.tenant.id,
+		surface: "credential",
+		outcome: "succeeded",
+		country: origin.country ?? undefined,
+	});
 
 	let outcome = await ctx.tenantStub.resumeAuthorization({
 		interactionId,

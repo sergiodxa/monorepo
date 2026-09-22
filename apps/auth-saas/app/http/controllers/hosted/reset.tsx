@@ -27,6 +27,7 @@ import type { PasswordPolicy } from "~/database/passwords";
 
 import { passwordPolicyIssue } from "~/app/http/controllers/hosted/password-policy-issue";
 import { passesConditionalTurnstileChallenge } from "~/app/http/controllers/hosted/turnstile-guard";
+import { requestOrigin } from "~/app/lib/request-origin";
 import { resetPasswordLink } from "~/app/mail/links";
 import { ResetPasswordEmail } from "~/app/mail/reset-password-email";
 import { senderAddressFor, senderNameFromIssuer } from "~/app/mail/sender";
@@ -157,6 +158,11 @@ export const resetSubmit = createAction(routes.hostedResetSubmit, async (ctx) =>
 			env.TURNSTILE_SECRET_KEY,
 			ctx.formData,
 			getClientIP(ctx.request) ?? undefined,
+			{
+				env,
+				tenantId: ctx.tenant.id,
+				country: requestOrigin(ctx.request).country ?? undefined,
+			},
 		);
 
 		if (!turnstilePassed) {

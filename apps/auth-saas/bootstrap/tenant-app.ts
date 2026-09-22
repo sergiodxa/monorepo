@@ -108,13 +108,17 @@ export const tenantRouter = createRouter({
  * same instance spends from that one surface's own budget, keyed the way its
  * class requires, rather than each route getting a budget of its own.
  */
-let credentialRateLimit = interactiveCredentialRateLimit(env.CREDENTIAL_RATE_LIMITER);
-let mailRateLimit = mailSendingRateLimit(env.MAIL_RATE_LIMIT_KV);
-let resetMailRateLimit = mailSendingRateLimit(env.MAIL_RATE_LIMIT_KV, {
-	// The reset form's complete leg carries a `ticket` and sends no mail of its own.
-	skip: (context) => context.url.searchParams.get("ticket") !== null,
-});
-let protocolLimit = protocolRateLimit(env.PROTOCOL_RATE_LIMITER);
+let credentialRateLimit = interactiveCredentialRateLimit(env.CREDENTIAL_RATE_LIMITER, env);
+let mailRateLimit = mailSendingRateLimit(env.MAIL_RATE_LIMIT_KV, {}, env);
+let resetMailRateLimit = mailSendingRateLimit(
+	env.MAIL_RATE_LIMIT_KV,
+	{
+		// The reset form's complete leg carries a `ticket` and sends no mail of its own.
+		skip: (context) => context.url.searchParams.get("ticket") !== null,
+	},
+	env,
+);
+let protocolLimit = protocolRateLimit(env.PROTOCOL_RATE_LIMITER, env);
 
 /**
  * Shared across `/u/sign-in` and `/u/reset` alike, so one address builds up
@@ -140,12 +144,12 @@ tenantRouter.map(routes.userinfoPost, {
 	handler: userinfoPost as RequestHandler,
 });
 tenantRouter.map(routes.token, {
-	middleware: [tokenRateLimit(env.TOKEN_RATE_LIMITER)],
+	middleware: [tokenRateLimit(env.TOKEN_RATE_LIMITER, env)],
 	handler: token as RequestHandler,
 });
 tenantRouter.map(routes.apiKeysIntrospect, introspect);
 tenantRouter.map(routes.authorize, {
-	middleware: [authorizationRateLimit(env.AUTHORIZATION_RATE_LIMITER)],
+	middleware: [authorizationRateLimit(env.AUTHORIZATION_RATE_LIMITER, env)],
 	handler: authorize as RequestHandler,
 });
 tenantRouter.map(routes.hostedSignInShow, {

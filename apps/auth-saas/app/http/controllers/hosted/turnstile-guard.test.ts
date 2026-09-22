@@ -11,12 +11,21 @@
 
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import {
 	passesConditionalTurnstileChallenge,
 	passesUnconditionalTurnstileChallenge,
 } from "./turnstile-guard";
+
+/** A `TurnstileAttackSignal` whose `writeDataPoint` is a spy. */
+function attackSignal() {
+	let writeDataPoint = vi.fn();
+	return {
+		attackSignal: { env: { ANALYTICS: { writeDataPoint } }, tenantId: "ten_1" },
+		writeDataPoint,
+	};
+}
 
 const SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
@@ -69,6 +78,38 @@ describe("passesUnconditionalTurnstileChallenge", () => {
 
 		expect(passed).toBe(false);
 	});
+
+	test("records a refused-turnstile attack signal for a refused token", async () => {
+		server.use(http.post(SITEVERIFY_URL, () => HttpResponse.json({ success: false })));
+		let { attackSignal: signal, writeDataPoint } = attackSignal();
+
+		await passesUnconditionalTurnstileChallenge(
+			"secret",
+			form({ "cf-turnstile-response": "a-bad-token" }),
+			undefined,
+			signal,
+		);
+
+		expect(writeDataPoint).toHaveBeenCalledWith({
+			indexes: ["ten_1"],
+			blobs: ["attack_signal", "ten_1", "credential", "refused-turnstile", "invalid-token", ""],
+			doubles: [1],
+		});
+	});
+
+	test("records no attack signal for a submission Turnstile confirms", async () => {
+		server.use(http.post(SITEVERIFY_URL, () => HttpResponse.json({ success: true })));
+		let { attackSignal: signal, writeDataPoint } = attackSignal();
+
+		await passesUnconditionalTurnstileChallenge(
+			"secret",
+			form({ "cf-turnstile-response": "a-valid-token" }),
+			undefined,
+			signal,
+		);
+
+		expect(writeDataPoint).not.toHaveBeenCalled();
+	});
 });
 
 describe("passesConditionalTurnstileChallenge", () => {
@@ -108,5 +149,31 @@ describe("passesConditionalTurnstileChallenge", () => {
 		);
 
 		expect(passed).toBe(true);
+	});
+
+	test("records a refused-turnstile attack signal for a missing token", async () => {
+		let { attackSignal: signal, writeDataPoint } = attackSignal();
+
+		await passesConditionalTurnstileChallenge("secret", form(), undefined, signal);
+
+		expect(writeDataPoint).toHaveBeenCalledWith({
+			indexes: ["ten_1"],
+			blobs: ["attack_signal", "ten_1", "credential", "refused-turnstile", "no-token", ""],
+			doubles: [1],
+		});
+	});
+
+	test("records no attack signal when the verification call cannot complete", async () => {
+		server.use(http.post(SITEVERIFY_URL, () => HttpResponse.error()));
+		let { attackSignal: signal, writeDataPoint } = attackSignal();
+
+		await passesConditionalTurnstileChallenge(
+			"secret",
+			form({ "cf-turnstile-response": "a-token" }),
+			undefined,
+			signal,
+		);
+
+		expect(writeDataPoint).not.toHaveBeenCalled();
 	});
 });

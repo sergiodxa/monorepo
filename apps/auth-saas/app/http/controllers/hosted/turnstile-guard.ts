@@ -11,6 +11,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { AttackSignalEnv } from "~/app/lib/attack-signals";
+
+import { recordAttackSignal } from "~/app/lib/attack-signals";
 import { verifyTurnstileToken } from "~/app/services/turnstile";
 
 /** The form field Turnstile's own widget submits its response token under. */
@@ -22,6 +25,13 @@ function readTurnstileToken(formData: FormData): string | null {
 	return typeof token === "string" && token.length > 0 ? token : null;
 }
 
+/** Where a refused challenge records the tenant's own attack signal, and who it belongs to. */
+export interface TurnstileAttackSignal {
+	env: AttackSignalEnv;
+	tenantId: string;
+	country?: string;
+}
+
 /**
  * Verifies a sign-up submission's token under sign-up's unconditional,
  * closed policy: a missing token, a refused one, and an unreachable
@@ -30,6 +40,8 @@ function readTurnstileToken(formData: FormData): string | null {
  * @param secretKey - The platform's Turnstile secret key.
  * @param formData - The submitted form, read for its Turnstile token.
  * @param remoteIp - The connecting address, when known.
+ * @param attackSignal - Where to record a refusal as the tenant's own attack
+ * signal; omitted, nothing is recorded.
  * @returns Whether the submission may proceed.
  * @example
  * let passed = await passesUnconditionalTurnstileChallenge(env.TURNSTILE_SECRET_KEY, ctx.formData);
@@ -38,12 +50,23 @@ export async function passesUnconditionalTurnstileChallenge(
 	secretKey: string,
 	formData: FormData,
 	remoteIp?: string,
+	attackSignal?: TurnstileAttackSignal,
 ): Promise<boolean> {
 	let token = readTurnstileToken(formData);
-	if (!token) return false;
+	let verified = token === null ? null : await verifyTurnstileToken(secretKey, token, remoteIp);
+	let passed = verified !== null && verified.ok;
 
-	let verified = await verifyTurnstileToken(secretKey, token, remoteIp);
-	return verified.ok;
+	if (!passed && attackSignal) {
+		recordAttackSignal(attackSignal.env, {
+			tenantId: attackSignal.tenantId,
+			surface: "credential",
+			outcome: "refused-turnstile",
+			reason: verified === null ? "no-token" : verified.ok ? undefined : verified.reason,
+			country: attackSignal.country,
+		});
+	}
+
+	return passed;
 }
 
 /**
@@ -56,6 +79,9 @@ export async function passesUnconditionalTurnstileChallenge(
  * @param secretKey - The platform's Turnstile secret key.
  * @param formData - The submitted form, read for its Turnstile token.
  * @param remoteIp - The connecting address, when known.
+ * @param attackSignal - Where to record a refusal as the tenant's own attack
+ * signal; omitted, nothing is recorded. Never recorded for a verification
+ * call that could not complete, since that path is not itself a refusal.
  * @returns Whether the submission may proceed.
  * @example
  * let passed = await passesConditionalTurnstileChallenge(env.TURNSTILE_SECRET_KEY, ctx.formData);
@@ -64,10 +90,35 @@ export async function passesConditionalTurnstileChallenge(
 	secretKey: string,
 	formData: FormData,
 	remoteIp?: string,
+	attackSignal?: TurnstileAttackSignal,
 ): Promise<boolean> {
 	let token = readTurnstileToken(formData);
-	if (!token) return false;
+
+	if (!token) {
+		if (attackSignal) {
+			recordAttackSignal(attackSignal.env, {
+				tenantId: attackSignal.tenantId,
+				surface: "credential",
+				outcome: "refused-turnstile",
+				reason: "no-token",
+				country: attackSignal.country,
+			});
+		}
+		return false;
+	}
 
 	let verified = await verifyTurnstileToken(secretKey, token, remoteIp);
-	return verified.ok || verified.reason === "verification-unavailable";
+	let passed = verified.ok || verified.reason === "verification-unavailable";
+
+	if (!passed && attackSignal) {
+		recordAttackSignal(attackSignal.env, {
+			tenantId: attackSignal.tenantId,
+			surface: "credential",
+			outcome: "refused-turnstile",
+			reason: verified.ok ? undefined : verified.reason,
+			country: attackSignal.country,
+		});
+	}
+
+	return passed;
 }

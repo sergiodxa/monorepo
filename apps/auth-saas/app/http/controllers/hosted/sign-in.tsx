@@ -22,6 +22,7 @@ import {
 import { passesConditionalTurnstileChallenge } from "~/app/http/controllers/hosted/turnstile-guard";
 import { serializeSessionCookie } from "~/app/http/middleware/hosted-session";
 import { CREDENTIAL_FAILURE_SPEND } from "~/app/http/middleware/tenant-rate-limit";
+import { recordAttackSignal } from "~/app/lib/attack-signals";
 import { requestOrigin } from "~/app/lib/request-origin";
 import { readTrustedDeviceToken } from "~/app/lib/trusted-device-cookie";
 import { HostedDocument } from "~/app/views/hosted/document";
@@ -111,11 +112,14 @@ export const signInSubmit = createAction(routes.hostedSignInSubmit, async (ctx) 
 		return redirectToErrorPage(ctx, ctx.i18next.t("hostedError.invalidInteraction"));
 	}
 
+	let origin = requestOrigin(ctx.request);
+
 	if (challenge) {
 		let turnstilePassed = await passesConditionalTurnstileChallenge(
 			env.TURNSTILE_SECRET_KEY,
 			ctx.formData,
 			getClientIP(ctx.request) ?? undefined,
+			{ env, tenantId: ctx.tenant.id, country: origin.country ?? undefined },
 		);
 		if (!turnstilePassed) {
 			return renderSignInPage(ctx, {
@@ -147,13 +151,21 @@ export const signInSubmit = createAction(routes.hostedSignInSubmit, async (ctx) 
 		password,
 		remembered,
 		trustedDeviceToken,
-		...requestOrigin(ctx.request),
+		...origin,
 	});
 
 	if (!signedIn.ok) {
 		if (signedIn.reason === "invalid-credentials") {
 			let spend = ctx.credentialRateLimit;
 			if (spend) await spend.adapter.consume(spend.key, CREDENTIAL_FAILURE_SPEND);
+
+			recordAttackSignal(env, {
+				tenantId: ctx.tenant.id,
+				surface: "credential",
+				outcome: signedIn.retryAfter !== undefined ? "refused-backoff" : "refused-credential",
+				reason: "invalid-credentials",
+				country: origin.country ?? undefined,
+			});
 		}
 
 		let error =
@@ -164,6 +176,13 @@ export const signInSubmit = createAction(routes.hostedSignInSubmit, async (ctx) 
 					: ctx.i18next.t("hostedSignIn.errors.invalidCredentials");
 		return renderSignInPage(ctx, { loginHint, forced, challenge, error });
 	}
+
+	recordAttackSignal(env, {
+		tenantId: ctx.tenant.id,
+		surface: "credential",
+		outcome: "succeeded",
+		country: origin.country ?? undefined,
+	});
 
 	let sessionCookieHeader = await serializeSessionCookie(signedIn, remembered);
 

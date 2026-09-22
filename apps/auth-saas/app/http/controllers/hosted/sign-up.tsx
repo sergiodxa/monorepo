@@ -31,6 +31,7 @@ import type { PasswordPolicy } from "~/database/passwords";
 
 import { passwordPolicyIssue } from "~/app/http/controllers/hosted/password-policy-issue";
 import { passesUnconditionalTurnstileChallenge } from "~/app/http/controllers/hosted/turnstile-guard";
+import { requestOrigin } from "~/app/lib/request-origin";
 import { verifyAddressLink } from "~/app/mail/links";
 import { senderAddressFor, senderNameFromIssuer } from "~/app/mail/sender";
 import { VerifyAddressEmail } from "~/app/mail/verify-address-email";
@@ -113,6 +114,7 @@ export const signUpSubmit = createAction(routes.hostedSignUpSubmit, async (ctx) 
 		env.TURNSTILE_SECRET_KEY,
 		ctx.formData,
 		getClientIP(ctx.request) ?? undefined,
+		{ env, tenantId: ctx.tenant.id, country: requestOrigin(ctx.request).country ?? undefined },
 	);
 	if (!turnstilePassed) {
 		return renderSignUpPage(ctx, {
