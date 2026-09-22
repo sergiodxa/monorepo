@@ -246,7 +246,7 @@ describe("sign-up", () => {
 		expect(identifierRow).toBeNull();
 	});
 
-	test("refuses a submission whose Turnstile token is rejected", async () => {
+	test("refuses a submission whose Turnstile token is rejected, with the failure visible on the re-rendered page", async () => {
 		server.use(
 			http.post("https://challenges.cloudflare.com/turnstile/v0/siteverify", () =>
 				HttpResponse.json({ success: false }),
@@ -260,6 +260,8 @@ describe("sign-up", () => {
 		});
 
 		expect(response.status).toBe(400);
+		let html = await response.text();
+		expect(html).toContain("We couldn't verify you're not a robot. Try again.");
 	});
 
 	test("refuses a submission when the Turnstile verification call cannot complete", async () => {

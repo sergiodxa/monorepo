@@ -14,6 +14,8 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { flex, flexCol, gap } from "@sdxc/u/layout";
 
+import { Alert } from "./alert.js";
+
 /** {@link Form.Props.issues} fallback for a first, not-yet-submitted render. */
 const DEFAULT_ISSUES: ReadonlyArray<Form.Issue> = [];
 
@@ -61,6 +63,16 @@ export namespace Form {
 		 * @returns Whether `name` is the first invalid field this render.
 		 */
 		isFirstInvalid(name: string): boolean;
+		/**
+		 * Every issue with no `path` at all — a failure that names no single
+		 * field, such as a server-side refusal decided before any field was
+		 * reached. {@link Form} already renders these through its own leading
+		 * `Alert`; a caller reaches for this only to render them somewhere
+		 * else instead.
+		 *
+		 * @returns The form-level issues, in {@link Form.Props.issues} order.
+		 */
+		getFormIssues(): ReadonlyArray<Issue>;
 	}
 
 	/**
@@ -96,8 +108,9 @@ function resolveFieldName(path: Form.Issue["path"]): string | undefined {
 }
 
 /**
- * Groups `issues` by the field name each one's `path` resolves to, dropping
- * form-level issues that carry no path.
+ * Groups `issues` by the field name each one's `path` resolves to. An issue
+ * with no path names no field to group under, so {@link Form} reads those
+ * separately, through {@link Form.Context.getFormIssues}.
  *
  * @param issues Issues to group, typically {@link Form.Props.issues} as-is.
  * @returns A map from field name to every issue addressed to it, in `issues` order.
@@ -120,7 +133,11 @@ function groupIssuesByField(issues: ReadonlyArray<Form.Issue>): Map<string, Form
 /**
  * Renders a native `<form>` laying children out in a single column, and
  * provides {@link Form.Context} so descendant fields resolve their own
- * issues by name and focus the first invalid field with no client JS.
+ * issues by name and focus the first invalid field with no client JS. An
+ * issue with no `path` names no field to attach to, so it renders as its
+ * own leading `Alert` instead of being silently unreachable — a refusal
+ * decided before any field was reached still reaches the person filling
+ * the form in.
  *
  * @param handle Runtime handle carrying the host `<form>`'s props and providing {@link Form.Context}.
  * @returns The render function producing the form's markup.
@@ -133,8 +150,9 @@ function groupIssuesByField(issues: ReadonlyArray<Form.Issue>): Map<string, Form
  */
 export function Form(handle: Handle<Form.Props, Form.Context>) {
 	return () => {
-		let { issues = DEFAULT_ISSUES, mix, ...rest } = handle.props;
+		let { issues = DEFAULT_ISSUES, mix, children, ...rest } = handle.props;
 		let byField = groupIssuesByField(issues);
+		let formIssues = issues.filter((issue) => resolveFieldName(issue.path) === undefined);
 		let firstInvalidField = issues
 			.map((issue) => resolveFieldName(issue.path))
 			.find((name) => name !== undefined);
@@ -146,9 +164,23 @@ export function Form(handle: Handle<Form.Props, Form.Context>) {
 			isFirstInvalid(name) {
 				return name === firstInvalidField;
 			},
+			getFormIssues() {
+				return formIssues;
+			},
 		});
 
-		return <form {...rest} mix={[flex(), flexCol(), gap(4), mix]} />;
+		return (
+			<form {...rest} mix={[flex(), flexCol(), gap(4), mix]}>
+				{formIssues.length > 0 && (
+					<Alert color="danger" data-slot="form-issues">
+						<Alert.Description>
+							{formIssues.map((issue) => issue.message).join(" ")}
+						</Alert.Description>
+					</Alert>
+				)}
+				{children}
+			</form>
+		);
 	};
 }
 

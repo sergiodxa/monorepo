@@ -115,6 +115,50 @@ describe(Form.name, () => {
 
 		expect(markup(html)).not.toContain("autofocus");
 	});
+
+	test("renders a path-less issue's own message, since no field can claim it", async () => {
+		let html = await renderToString(
+			<Form method="post" issues={[{ message: "Something went wrong. Try again." }]}>
+				<TextField name="email" type="email" label="Email" />
+			</Form>,
+		);
+
+		expect(html).toContain("Something went wrong. Try again.");
+		expect(markup(html)).toContain('role="alert"');
+	});
+
+	test("joins several path-less issues into one alert, in issues order", async () => {
+		let html = await renderToString(
+			<Form method="post" issues={[{ message: "First problem." }, { message: "Second problem." }]}>
+				<TextField name="email" type="email" label="Email" />
+			</Form>,
+		);
+
+		expect(html.indexOf("First problem.")).toBeLessThan(html.indexOf("Second problem."));
+	});
+
+	test("renders no alert at all when every issue names a field", async () => {
+		let html = await renderToString(
+			<Form method="post" issues={ISSUES}>
+				<TextField name="email" type="email" label="Email" />
+				<TextField name="password" type="password" label="Password" />
+			</Form>,
+		);
+
+		expect(markup(html)).not.toContain('data-slot="form-issues"');
+	});
+
+	test("a path-less issue does not affect which field gets autofocus", async () => {
+		let html = await renderToString(
+			<Form method="post" issues={[{ message: "Something went wrong." }, ...ISSUES]}>
+				<TextField name="email" type="email" label="Email" />
+				<TextField name="password" type="password" label="Password" />
+			</Form>,
+		);
+
+		expect(markup(html).match(/autofocus/gi)).toHaveLength(1);
+		expect(html.indexOf("autofocus")).toBeLessThan(html.indexOf('type="password"'));
+	});
 });
 
 describe("a field outside any Form", () => {
