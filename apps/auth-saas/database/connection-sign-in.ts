@@ -522,6 +522,7 @@ export type CompleteConnectionSignInResult =
 	| { ok: false; reason: "invalid-transaction" }
 	| { ok: false; reason: "unsupported-connection-kind" }
 	| { ok: false; reason: "unknown-subject" }
+	| { ok: false; reason: "subject-blocked" }
 	| { ok: false; reason: "mapping-invalid" }
 	| { ok: false; reason: "authorization-failed"; code: string }
 	| { ok: false; reason: "unsupported-access-token-format" }
@@ -750,6 +751,9 @@ export async function completeConnectionSignIn(
 			subjectId = created.subjectId;
 		}
 	}
+
+	let subjectRow = await db.find(subjects, { id: subjectId });
+	if (subjectRow?.status === "blocked") return { ok: false, reason: "subject-blocked" };
 
 	await upsertConnectionIdentity(db, sealKey, {
 		connectionId: connection.id,

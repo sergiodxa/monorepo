@@ -344,6 +344,7 @@ export type SignInWithPasskeyResult =
 	| { ok: false; reason: "expired-ceremony" }
 	| { ok: false; reason: "unknown-credential" }
 	| { ok: false; reason: "credential-suspended" }
+	| { ok: false; reason: "subject-blocked" }
 	| { ok: false; reason: "counter-regression" }
 	| { ok: false; reason: "verification-failed"; error: string }
 	| { ok: false; reason: "dau_cap_reached" };
@@ -445,6 +446,13 @@ export async function signInWithPasskey(
 
 		await auditAuthentication("failed", credential.subject_id);
 		return { ok: false, reason: "verification-failed", error: verified.error.name };
+	}
+
+	let subject = await db.find(Subjects.subjects, { id: credential.subject_id });
+
+	if (subject?.status === "blocked") {
+		await auditAuthentication("denied", credential.subject_id);
+		return { ok: false, reason: "subject-blocked" };
 	}
 
 	let now = Date.now();

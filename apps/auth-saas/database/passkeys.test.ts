@@ -52,7 +52,7 @@ import {
 	sweepExpiredPasskeyChallenges,
 } from "./passkeys";
 import { sessions } from "./sessions";
-import { addIdentifier, createSubject, verifyIdentifier } from "./subjects";
+import { addIdentifier, blockSubject, createSubject, verifyIdentifier } from "./subjects";
 import { runMigrations } from "./tenant-migrations";
 import passkeysMigration from "./tenant-migrations/0004-passkeys.sql?raw";
 import { activateTotpFactor, beginTotpEnrolment } from "./totp";
@@ -433,6 +433,29 @@ describe("signInWithPasskey", () => {
 		let row = await db.find(passkeys, { credential_id: response.id });
 		expect(row?.counter).toBe(1);
 		expect(row?.last_used_at).toEqual(expect.any(Number));
+	});
+
+	test("refuses a blocked subject's own passkey", async () => {
+		let subjectId = await createTestSubject();
+		let authenticator = await Authenticator.create();
+		await enrolTestPasskey(subjectId, authenticator);
+		await blockSubject(db, { subjectId, reason: "fraud" });
+
+		let begun = await beginPasskeyAuthentication(db, {
+			relyingPartyId: RELYING_PARTY_ID,
+			origins: ORIGINS,
+		});
+
+		let response = await authenticator.authenticate(begun.options);
+		let result = await signInWithPasskey(db, {
+			ceremonyId: begun.ceremonyId,
+			response,
+			relyingPartyId: RELYING_PARTY_ID,
+			origins: ORIGINS,
+			remembered: false,
+		});
+
+		expect(result).toEqual({ ok: false, reason: "subject-blocked" });
 	});
 
 	test("never demands the subject's own TOTP factor: a passkey assertion is already both halves", async () => {

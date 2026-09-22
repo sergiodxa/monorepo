@@ -252,6 +252,25 @@ describe("signing in through an enterprise connection", () => {
 		expect(second).toBe(first);
 	});
 
+	test("refuses a blocked subject on a returning sign-in", async () => {
+		await configure();
+
+		let subjectId = await signIn("_first");
+		await tenant.blockSubject({ subjectId, reason: "fraud" });
+
+		let started = await tenant.beginSamlSignIn({ slug: SLUG, hostname: HOSTNAME });
+		if (!started.ok) throw new Error("begin refused");
+
+		let refused = await tenant.signInWithSamlResponse({
+			slug: SLUG,
+			samlResponse: await respond(started.requestId, { assertionId: "_second" }),
+			relayState: relayStateOf(started.redirectUrl),
+			hostname: HOSTNAME,
+		});
+
+		expect(refused).toMatchObject({ ok: false, reason: "subject-blocked" });
+	});
+
 	test("refuses a response nothing asked for", async () => {
 		await configure();
 

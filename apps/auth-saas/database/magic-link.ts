@@ -22,7 +22,7 @@ import type { OpenSessionMetering, OpenSessionSuccess } from "./sessions";
 import { checkAndSpendMailEnvelope } from "./mail-rate-limit";
 import { openSession } from "./sessions";
 import { foldIdentifier } from "./subject-identifiers";
-import { createSubject, subjectIdentifiers } from "./subjects";
+import { createSubject, subjectIdentifiers, subjects } from "./subjects";
 import { totpFactors } from "./totp";
 
 /** How long a minted token and code stand before neither can complete anything. */
@@ -401,6 +401,13 @@ export async function completeMagicLinkSignIn(
 
 		if (!created.ok) return { outcome: "invalid" };
 		subjectId = created.subjectId;
+	} else {
+		// A blocked subject answers the same `invalid` an expired or already-consumed
+		// row would, matching this flow's own rule that nothing here distinguishes a
+		// refusal an attacker could learn from — a block is a fact about the subject,
+		// not something this credential is allowed to reveal on its way to refusing it.
+		let subjectRow = await db.find(subjects, { id: subjectId });
+		if (subjectRow?.status === "blocked") return { outcome: "invalid" };
 	}
 
 	let factor = await db.find(totpFactors, { subject_id: subjectId });

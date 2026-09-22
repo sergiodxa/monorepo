@@ -93,6 +93,30 @@ describe("beginMagicLinkSignIn / completeMagicLinkSignIn: link", () => {
 		expect(typeof completed.token).toBe("string");
 	});
 
+	test("refuses a blocked subject the same way an invalid credential is refused", async () => {
+		let subjectId = await createVerifiedSubject("ada@example.com");
+		let { nonce, hash } = await freshNonce();
+		let now = Date.now();
+
+		let begun = await tenant.beginMagicLinkSignIn({
+			address: "ada@example.com",
+			browserNonceHash: hash,
+			at: now,
+		});
+		expect(begun.message).toBe("sign_in");
+		if (begun.message !== "sign_in") throw new Error("unreachable");
+
+		await tenant.blockSubject({ subjectId, reason: "fraud" });
+
+		let completed = await tenant.completeMagicLinkSignIn({
+			credential: { kind: "link", token: begun.token },
+			browserNonce: nonce,
+			at: now + 1000,
+		});
+
+		expect(completed).toMatchObject({ outcome: "invalid" });
+	});
+
 	test("hands back the resume destination named on the request, not anything the completion call supplies", async () => {
 		await createVerifiedSubject("katherine@example.com");
 		let { nonce, hash } = await freshNonce();

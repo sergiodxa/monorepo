@@ -253,6 +253,7 @@ export type SignInWithSamlResponseResult =
 	| { ok: false; reason: "no-trusted-certificate" }
 	| { ok: false; reason: "assertion-rejected"; kind: string }
 	| { ok: false; reason: "unknown-subject" }
+	| { ok: false; reason: "subject-blocked" }
 	| { ok: false; reason: "mapping-invalid" }
 	| { ok: false; reason: "dau_cap_reached"; day: number; subjects: number; cap: number }
 	| { ok: false; reason: "link_required"; ticket: string };
@@ -346,6 +347,9 @@ export async function signInWithSamlResponse(
 
 	let resolved = await resolveSubject(db, sealKey, connection, assertion, providerSubject);
 	if (!resolved.ok) return resolved;
+
+	let subjectRow = await db.find(subjects, { id: resolved.subjectId });
+	if (subjectRow?.status === "blocked") return { ok: false, reason: "subject-blocked" };
 
 	// The directory that asserted this person is that organization's own, so a
 	// sign-in through its connection is itself the proof a domain-earned

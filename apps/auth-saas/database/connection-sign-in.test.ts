@@ -445,6 +445,36 @@ describe("completeConnectionSignIn", () => {
 		expect(second).toBe(first);
 	});
 
+	test("refuses a blocked subject on a returning sign-in", async () => {
+		let provider = stubProvider();
+		await createConnection(provider.origin);
+
+		async function signInOnce() {
+			let begun = await tenant.beginConnectionSignIn({
+				slug: "acme-oidc",
+				hostname: HOSTNAME,
+				callbackOrigin: CALLBACK_ORIGIN,
+			});
+			if (!begun.ok) throw new Error("unreachable");
+			let state = stateOf(begun.redirectUrl);
+
+			provider.respondWith(() => tokenResponse(provider.origin, begun.redirectUrl));
+
+			return tenant.completeConnectionSignIn({
+				slug: "acme-oidc",
+				callbackUrl: `${CALLBACK_ORIGIN}/u/connections/acme-oidc/callback?code=code-1&state=${state}`,
+			});
+		}
+
+		let first = await signInOnce();
+		if (!first.ok) throw new Error("unreachable");
+
+		await tenant.blockSubject({ subjectId: first.subjectId, reason: "fraud" });
+
+		let second = await signInOnce();
+		expect(second).toMatchObject({ ok: false, reason: "subject-blocked" });
+	});
+
 	test("refuses a callback whose state was never issued", async () => {
 		let provider = stubProvider();
 		await createConnection(provider.origin);
