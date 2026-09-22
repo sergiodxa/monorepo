@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-18
+**Implemented** - 2026-09-22, end to end: the token/code mechanism with its browser binding and atomic single-use consumption, the hosted request and landing screens, both mail templates, and every rate limit the ADR names. Built its own single-purpose token table rather than ADR-017's shared `email_token` table, since ADR-017 itself remains unbuilt.
 
 ## Background
 
