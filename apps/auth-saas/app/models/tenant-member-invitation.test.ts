@@ -160,3 +160,68 @@ describe("TenantMemberInvitation.deletePendingByTenantAndEmail", () => {
 		expect(superseded).toBeDefined();
 	});
 });
+
+describe("TenantMemberInvitation.accept", () => {
+	test("accepts an open, unexpired invitation once and marks accepted_at", async () => {
+		let tenant = await makeTenant("Acme");
+		let invitation = await TenantMemberInvitation.create(db, {
+			tenantId: tenant.id,
+			email: "jane@example.com",
+			role: "admin",
+			tokenHash: "hash-7",
+			invitedBy: "sub_1",
+			expiresAt: Date.now() + 60_000,
+		});
+
+		let now = Date.now();
+		let accepted = await TenantMemberInvitation.accept(db, { tokenHash: "hash-7", now });
+
+		expect(accepted).toMatchObject({ id: invitation.id, accepted_at: now });
+	});
+
+	test("fails a second accept of the same token", async () => {
+		let tenant = await makeTenant("Acme");
+		await TenantMemberInvitation.create(db, {
+			tenantId: tenant.id,
+			email: "jane@example.com",
+			role: "admin",
+			tokenHash: "hash-8",
+			invitedBy: "sub_1",
+			expiresAt: Date.now() + 60_000,
+		});
+
+		let first = await TenantMemberInvitation.accept(db, { tokenHash: "hash-8", now: Date.now() });
+		let second = await TenantMemberInvitation.accept(db, { tokenHash: "hash-8", now: Date.now() });
+
+		expect(first).not.toBeNull();
+		expect(second).toBeNull();
+	});
+
+	test("fails an expired invitation", async () => {
+		let tenant = await makeTenant("Acme");
+		await TenantMemberInvitation.create(db, {
+			tenantId: tenant.id,
+			email: "jane@example.com",
+			role: "admin",
+			tokenHash: "hash-9",
+			invitedBy: "sub_1",
+			expiresAt: Date.now() - 1,
+		});
+
+		let accepted = await TenantMemberInvitation.accept(db, {
+			tokenHash: "hash-9",
+			now: Date.now(),
+		});
+
+		expect(accepted).toBeNull();
+	});
+
+	test("fails a token that was never minted", async () => {
+		let accepted = await TenantMemberInvitation.accept(db, {
+			tokenHash: "does-not-exist",
+			now: Date.now(),
+		});
+
+		expect(accepted).toBeNull();
+	});
+});

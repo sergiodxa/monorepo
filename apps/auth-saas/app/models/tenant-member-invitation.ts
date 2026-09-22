@@ -13,7 +13,7 @@ import type { Database, TableRow } from "remix/data-table";
 
 import { typeid } from "@sdxc/typeid";
 import { generateUUIDv7 } from "@sdxc/uuid";
-import { and, column as c, eq, isNull, table } from "remix/data-table";
+import { and, column as c, eq, gt, isNull, table } from "remix/data-table";
 
 /** A tenant member invitation's role, the same vocabulary a direct-grant membership carries. */
 export type TenantMemberInvitationRole = "owner" | "admin" | "member";
@@ -136,5 +136,32 @@ export default class TenantMemberInvitation {
 		await db.deleteMany(TenantMemberInvitation.table, {
 			where: and(eq("tenant_id", tenantId), eq("email", email), isNull("accepted_at")),
 		});
+	}
+
+	/**
+	 * Spends an invitation by its token's hash, in the single conditional write
+	 * that marks it accepted only when it is still open and unexpired — the same
+	 * idiom `magic_link_attempts`'s own completion already follows, so two
+	 * accept calls racing the same token can never both win.
+	 *
+	 * @param db - Database connection.
+	 * @param data - The presented token's hash, and the clock to measure expiry
+	 * against.
+	 * @returns A promise resolving to the accepted row, or null for a token that
+	 * does not resolve to a still-open, unexpired invitation — unknown, already
+	 * accepted and expired alike.
+	 */
+	static async accept(
+		db: Database,
+		data: { tokenHash: string; now: number },
+	): Promise<TenantMemberInvitationRow | null> {
+		let spent = await db
+			.query(TenantMemberInvitation.table)
+			.where(
+				and(eq("token_hash", data.tokenHash), isNull("accepted_at"), gt("expires_at", data.now)),
+			)
+			.update({ accepted_at: data.now }, { returning: "*" });
+
+		return "rows" in spent ? (spent.rows[0] ?? null) : null;
 	}
 }

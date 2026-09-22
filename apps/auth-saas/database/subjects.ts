@@ -296,6 +296,31 @@ export async function createSubject(
 	return { ok: true, subjectId: id, identifiers: states };
 }
 
+/**
+ * Resolves the subject already holding a verified email identifier, for a caller
+ * with no subject id of its own to look up by — the platform's own accept-invitation
+ * route reaching across into a tenant it does not otherwise operate inside of, the
+ * same verified-identifier lookup `beginMagicLinkSignIn` already keys its own
+ * just-in-time creation decision on.
+ *
+ * @param db - The tenant's database.
+ * @param email - The address as typed.
+ * @returns The subject id, or null when no verified identifier matches.
+ */
+export async function findSubjectByVerifiedEmail(
+	db: Database,
+	email: string,
+): Promise<{ subjectId: string | null }> {
+	let folded = foldIdentifier("email", email);
+	if (!folded.ok) return { subjectId: null };
+
+	let row = await db.findOne(subjectIdentifiers, {
+		where: and(eq("kind", "email"), eq("folded", folded.folded), notNull("verified_at")),
+	});
+
+	return { subjectId: row?.subject_id ?? null };
+}
+
 export interface UpdateSubjectInput {
 	subjectId: string;
 	profile?: SubjectProfile;

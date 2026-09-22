@@ -265,6 +265,8 @@ import type {
 import type {
 	ListSubjectSessionsInput,
 	ListSubjectSessionsResult,
+	OpenSessionInput,
+	OpenSessionSuccess,
 	ResolveSessionInput,
 	ResolveSessionResult,
 	RevokeSessionResult,
@@ -879,6 +881,20 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	async createSubject(input: CreateSubjectInput): Promise<WithCost<CreateSubjectResult>> {
 		await this.#migrated;
 		return this.#withCost(() => Subjects.createSubject(this.#db, input));
+	}
+
+	/**
+	 * Resolves the subject already holding a verified email identifier, for a
+	 * caller with no subject id of its own to look up by.
+	 *
+	 * @param input - The email address as typed.
+	 * @returns The subject id, or null when no verified identifier matches.
+	 */
+	async findSubjectByVerifiedEmail(input: {
+		email: string;
+	}): Promise<WithCost<{ subjectId: string | null }>> {
+		await this.#migrated;
+		return this.#withCost(() => Subjects.findSubjectByVerifiedEmail(this.#db, input.email));
 	}
 
 	/**
@@ -2019,6 +2035,23 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 			let policy = await this.#effectiveSessionPolicy();
 			return Sessions.resolveSession(this.#db, input, policy);
 		});
+	}
+
+	/**
+	 * Opens a session for a subject whose identity a caller outside the usual
+	 * credential flows already proved on its own terms — an accepted
+	 * invitation's own token standing in for a password, passkey or magic link.
+	 *
+	 * @param input - The subject to open a session for, the methods that proved
+	 * it, whether the browser should keep it past its own lifetime, and the
+	 * request's origin.
+	 * @returns The opened session, ready to set as the response's cookie.
+	 */
+	async openSessionForSubject(
+		input: OpenSessionInput,
+	): Promise<WithCost<{ ok: true } & OpenSessionSuccess>> {
+		await this.#migrated;
+		return this.#withCost(() => Sessions.openSession(this.#db, input));
 	}
 
 	/**

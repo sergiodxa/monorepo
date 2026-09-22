@@ -52,6 +52,7 @@ import {
 	createSessionsRevokeAction,
 	createSessionsRevokeAllAction,
 } from "~/app/http/controllers/management/credentials/sessions";
+import invitationsAccept from "~/app/http/controllers/management/invitations/accept";
 import { createSubjectAccessReadAction } from "~/app/http/controllers/management/roles/access";
 import { createSubjectRolesAssignAction } from "~/app/http/controllers/management/roles/assign";
 import { createRolesDefineAction } from "~/app/http/controllers/management/roles/define";
@@ -167,6 +168,13 @@ export const managementRouter = createRouter({
 });
 
 managementRouter.map(routes.token, token);
+
+/**
+ * Mounted with no `managementAuth` middleware: an invitation's own emailed
+ * token is this route's entire credential, exactly like the subject import and
+ * export download routes' own tickets below.
+ */
+managementRouter.map(routes.invitationsAccept, invitationsAccept);
 
 /**
  * The auth, rate-limit and tenant-stub options every subjects-area controller
