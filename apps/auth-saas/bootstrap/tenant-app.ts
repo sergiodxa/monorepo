@@ -2,8 +2,8 @@
  * Builds the tenant router's fetch-router: the pure-JSON protocol endpoints a
  * request already resolved to one tenant reaches — discovery, JWKS, `/userinfo`,
  * and the token endpoint — alongside `/authorize` and the hosted sign-in,
- * sign-up, second-factor, verify, reset, consent and error pages served under
- * `/u/` on the tenant's own hostname.
+ * sign-up, second-factor, step-up, verify, reset, consent and error pages
+ * served under `/u/` on the tenant's own hostname.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,6 +35,12 @@ import {
 	signInPasskeyVerify,
 } from "~/app/http/controllers/hosted/sign-in-passkey";
 import { signUpShow, signUpSubmit } from "~/app/http/controllers/hosted/sign-up";
+import {
+	stepUpContinueSubmit,
+	stepUpEnrolSubmit,
+	stepUpShow,
+	stepUpSubmit,
+} from "~/app/http/controllers/hosted/step-up";
 import { verifyResend, verifyShow } from "~/app/http/controllers/hosted/verify";
 import notFound from "~/app/http/controllers/not-found";
 import introspect from "~/app/http/controllers/oauth/introspect";
@@ -149,6 +155,13 @@ tenantRouter.map(routes.hostedSecondFactorSubmit, {
 });
 tenantRouter.map(routes.hostedSecondFactorEnrolSubmit, secondFactorEnrolSubmit);
 tenantRouter.map(routes.hostedSecondFactorContinueSubmit, secondFactorContinueSubmit);
+tenantRouter.map(routes.hostedStepUpShow, stepUpShow);
+tenantRouter.map(routes.hostedStepUpSubmit, {
+	middleware: [credentialRateLimit],
+	handler: stepUpSubmit as RequestHandler,
+});
+tenantRouter.map(routes.hostedStepUpEnrolSubmit, stepUpEnrolSubmit);
+tenantRouter.map(routes.hostedStepUpContinueSubmit, stepUpContinueSubmit);
 tenantRouter.map(routes.hostedConsentShow, consentShow);
 tenantRouter.map(routes.hostedConsentSubmit, consentSubmit);
 tenantRouter.map(routes.hostedSignUpShow, signUpShow);
