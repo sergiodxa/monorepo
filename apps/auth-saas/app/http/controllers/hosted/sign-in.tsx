@@ -18,6 +18,7 @@ import {
 	respondToAuthorizationOutcome,
 } from "~/app/http/controllers/hosted/outcome";
 import { serializeSessionCookie } from "~/app/http/middleware/hosted-session";
+import { CREDENTIAL_FAILURE_SPEND } from "~/app/http/middleware/tenant-rate-limit";
 import { requestOrigin } from "~/app/lib/request-origin";
 import { readTrustedDeviceToken } from "~/app/lib/trusted-device-cookie";
 import { HostedDocument } from "~/app/views/hosted/document";
@@ -121,6 +122,11 @@ export const signInSubmit = createAction(routes.hostedSignInSubmit, async (ctx) 
 	});
 
 	if (!signedIn.ok) {
+		if (signedIn.reason === "invalid-credentials") {
+			let spend = ctx.credentialRateLimit;
+			if (spend) await spend.adapter.consume(spend.key, CREDENTIAL_FAILURE_SPEND);
+		}
+
 		let error =
 			signedIn.reason === "password_expired"
 				? ctx.i18next.t("hostedSignIn.errors.passwordExpired")

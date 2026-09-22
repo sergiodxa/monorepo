@@ -2,14 +2,14 @@
  * Builds the tenant router's fetch-router: the pure-JSON protocol endpoints a
  * request already resolved to one tenant reaches — discovery, JWKS, `/userinfo`,
  * and the token endpoint — alongside `/authorize` and the hosted sign-in,
- * sign-up, verify, reset, consent and error pages served under `/u/` on the
- * tenant's own hostname.
+ * sign-up, second-factor, verify, reset, consent and error pages served under
+ * `/u/` on the tenant's own hostname.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Middleware } from "remix/router";
+import type { Middleware, RequestHandler } from "remix/router";
 
 import { log } from "@sdxc/logger/middleware";
 import { CloudflareTransport } from "@sdxc/mail/cloudflare";
@@ -23,6 +23,12 @@ import authorize from "~/app/http/controllers/authorize";
 import { consentShow, consentSubmit } from "~/app/http/controllers/hosted/consent";
 import { errorShow } from "~/app/http/controllers/hosted/error";
 import { resetShow, resetSubmit } from "~/app/http/controllers/hosted/reset";
+import {
+	secondFactorContinueSubmit,
+	secondFactorEnrolSubmit,
+	secondFactorShow,
+	secondFactorSubmit,
+} from "~/app/http/controllers/hosted/second-factor";
 import { signInShow, signInSubmit } from "~/app/http/controllers/hosted/sign-in";
 import {
 	signInPasskeyOptions,
@@ -49,6 +55,13 @@ import i18n from "~/app/http/middleware/i18n";
 import { platformSender } from "~/app/http/middleware/mail-sender";
 import render from "~/app/http/middleware/render";
 import { tenant } from "~/app/http/middleware/tenant";
+import {
+	authorizationRateLimit,
+	interactiveCredentialRateLimit,
+	mailSendingRateLimit,
+	protocolRateLimit,
+	tokenRateLimit,
+} from "~/app/http/middleware/tenant-rate-limit";
 import { parseSenderAddress } from "~/app/mail/sender";
 import routes from "~/routes/tenant";
 
@@ -83,26 +96,76 @@ export const tenantRouter = createRouter({
 	defaultHandler: notFound,
 });
 
-tenantRouter.map(routes.openidConfiguration, openidConfiguration);
-tenantRouter.map(routes.oauthAuthorizationServer, oauthAuthorizationServer);
-tenantRouter.map(routes.jwks, jwks);
-tenantRouter.map(routes.userinfoGet, userinfoGet);
-tenantRouter.map(routes.userinfoPost, userinfoPost);
-tenantRouter.map(routes.token, token);
+/**
+ * One shared registration per protected surface: every route mounted with the
+ * same instance spends from that one surface's own budget, keyed the way its
+ * class requires, rather than each route getting a budget of its own.
+ */
+let credentialRateLimit = interactiveCredentialRateLimit(env.CREDENTIAL_RATE_LIMITER);
+let mailRateLimit = mailSendingRateLimit(env.MAIL_RATE_LIMIT_KV);
+let resetMailRateLimit = mailSendingRateLimit(env.MAIL_RATE_LIMIT_KV, {
+	// The reset form's complete leg carries a `ticket` and sends no mail of its own.
+	skip: (context) => context.url.searchParams.get("ticket") !== null,
+});
+let protocolLimit = protocolRateLimit(env.PROTOCOL_RATE_LIMITER);
+
+tenantRouter.map(routes.openidConfiguration, {
+	middleware: [protocolLimit],
+	handler: openidConfiguration as RequestHandler,
+});
+tenantRouter.map(routes.oauthAuthorizationServer, {
+	middleware: [protocolLimit],
+	handler: oauthAuthorizationServer as RequestHandler,
+});
+tenantRouter.map(routes.jwks, { middleware: [protocolLimit], handler: jwks as RequestHandler });
+tenantRouter.map(routes.userinfoGet, {
+	middleware: [protocolLimit],
+	handler: userinfoGet as RequestHandler,
+});
+tenantRouter.map(routes.userinfoPost, {
+	middleware: [protocolLimit],
+	handler: userinfoPost as RequestHandler,
+});
+tenantRouter.map(routes.token, {
+	middleware: [tokenRateLimit(env.TOKEN_RATE_LIMITER)],
+	handler: token as RequestHandler,
+});
 tenantRouter.map(routes.apiKeysIntrospect, introspect);
-tenantRouter.map(routes.authorize, authorize);
+tenantRouter.map(routes.authorize, {
+	middleware: [authorizationRateLimit(env.AUTHORIZATION_RATE_LIMITER)],
+	handler: authorize as RequestHandler,
+});
 tenantRouter.map(routes.hostedSignInShow, signInShow);
-tenantRouter.map(routes.hostedSignInSubmit, signInSubmit);
+tenantRouter.map(routes.hostedSignInSubmit, {
+	middleware: [credentialRateLimit],
+	handler: signInSubmit as RequestHandler,
+});
 tenantRouter.map(routes.hostedSignInPasskeyOptions, signInPasskeyOptions);
 tenantRouter.map(routes.hostedSignInPasskeyVerify, signInPasskeyVerify);
+tenantRouter.map(routes.hostedSecondFactorShow, secondFactorShow);
+tenantRouter.map(routes.hostedSecondFactorSubmit, {
+	middleware: [credentialRateLimit],
+	handler: secondFactorSubmit as RequestHandler,
+});
+tenantRouter.map(routes.hostedSecondFactorEnrolSubmit, secondFactorEnrolSubmit);
+tenantRouter.map(routes.hostedSecondFactorContinueSubmit, secondFactorContinueSubmit);
 tenantRouter.map(routes.hostedConsentShow, consentShow);
 tenantRouter.map(routes.hostedConsentSubmit, consentSubmit);
 tenantRouter.map(routes.hostedSignUpShow, signUpShow);
-tenantRouter.map(routes.hostedSignUpSubmit, signUpSubmit);
+tenantRouter.map(routes.hostedSignUpSubmit, {
+	middleware: [credentialRateLimit, mailRateLimit],
+	handler: signUpSubmit as RequestHandler,
+});
 tenantRouter.map(routes.hostedVerifyShow, verifyShow);
-tenantRouter.map(routes.hostedVerifyResend, verifyResend);
+tenantRouter.map(routes.hostedVerifyResend, {
+	middleware: [mailRateLimit],
+	handler: verifyResend as RequestHandler,
+});
 tenantRouter.map(routes.hostedResetShow, resetShow);
-tenantRouter.map(routes.hostedResetSubmit, resetSubmit);
+tenantRouter.map(routes.hostedResetSubmit, {
+	middleware: [credentialRateLimit, resetMailRateLimit],
+	handler: resetSubmit as RequestHandler,
+});
 tenantRouter.map(routes.hostedError, errorShow);
 
 /**

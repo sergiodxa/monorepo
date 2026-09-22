@@ -28,7 +28,6 @@ import {
 	writeHostnameCache,
 	writeHostnameCacheMiss,
 } from "~/app/lib/hostname-cache";
-import { checkRateLimit } from "~/app/lib/rate-limit";
 import Tenant from "~/database/tenant-do";
 
 import { router } from "./app";
@@ -92,21 +91,16 @@ async function resolveHostname(hostname: string): Promise<ResolvedTenant | null>
 }
 
 /**
- * Rate-limits a request resolved to a tenant, then hands it to the tenant router:
- * a request naming this tenant is met with what is true about it today, through
- * the typed RPC methods its Durable Object exposes, rather than a route this
- * Worker assembles by hand. The resolved tenant crosses into that router on
- * internal headers stamped onto the request here, since it is resolved once, on
- * this hostname lookup, before the tenant router ever sees the request.
+ * Hands a request resolved to a tenant to the tenant router: a request naming
+ * this tenant is met with what is true about it today, through the typed RPC
+ * methods its Durable Object exposes, rather than a route this Worker
+ * assembles by hand. The resolved tenant crosses into that router on internal
+ * headers stamped onto the request here, since it is resolved once, on this
+ * hostname lookup, before the tenant router ever sees the request. Rate
+ * limiting is each protected route's own `rateLimit` registration inside that
+ * router, rather than a check this forwarding step makes uniformly.
  */
 async function forwardToTenant(request: Request, target: ResolvedTenant): Promise<Response> {
-	let rateLimitResponse = await checkRateLimit(request, {
-		authLimiter: env.AUTH_RATE_LIMITER,
-		strictLimiter: env.STRICT_RATE_LIMITER,
-		managementLimiter: env.MANAGEMENT_RATE_LIMITER,
-	});
-	if (rateLimitResponse) return rateLimitResponse;
-
 	let headers = new Headers(request.headers);
 	headers.set(TENANT_ID_HEADER, target.tenantId);
 	headers.set(TENANT_REGION_HEADER, target.region);

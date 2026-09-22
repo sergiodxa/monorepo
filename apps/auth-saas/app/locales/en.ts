@@ -194,5 +194,6 @@ export default {
 		backHint: "Contact the application that sent you here if this continues.",
 		invalidInteraction:
 			"This sign-in attempt is no longer valid. Start again from the application that sent you here.",
+		tooManyAttempts: "Too many attempts. Wait a moment and try again.",
 	},
 };
