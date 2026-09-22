@@ -109,6 +109,13 @@ import type {
 } from "./device-authorization";
 import type { ApplyEntitlementsInput, ApplyEntitlementsResult } from "./entitlements";
 import type {
+	BeginMagicLinkSignInInput,
+	BeginMagicLinkSignInResult,
+	CancelMagicLinkAttemptInput,
+	CompleteMagicLinkSignInInput,
+	CompleteMagicLinkSignInResult,
+} from "./magic-link";
+import type {
 	PublishMetadataResult,
 	ResolveUserInfoInput,
 	ResolveUserInfoResult,
@@ -360,6 +367,7 @@ import * as Consent from "./consent";
 import { hasAnotherCredential } from "./credentials";
 import * as DeviceAuthorization from "./device-authorization";
 import { applyEntitlements, entitlementEnforcement } from "./entitlements";
+import * as MagicLink from "./magic-link";
 import { mailSendEnvelopes } from "./mail-rate-limit";
 import * as Metadata from "./metadata";
 import { closeMeteringDay, createDauCache, dauDay, dauSeen, readUsage } from "./metering";
@@ -416,6 +424,7 @@ const settings = table({
 		refresh_token_lifetime_ms: c.integer().nullable(),
 		concurrent_session_limit: c.integer().nullable(),
 		sessions_after_credential_change: c.enum(["revoke-others", "revoke-all"] as const).nullable(),
+		magic_link_jit_subject_creation: c.boolean().default(false),
 		created_at: c.integer(),
 	},
 });
@@ -826,6 +835,12 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		return row?.failure_threshold ?? DEFAULT_FAILURE_THRESHOLD;
 	}
 
+	/** Whether this tenant lets an address with no matching subject mint a magic-link attempt anyway, read from `settings`. A tenant that has never provisioned enforces off. */
+	async #magicLinkJitSubjectCreationEnabled(): Promise<boolean> {
+		let row = await this.#settings();
+		return row?.magic_link_jit_subject_creation ?? false;
+	}
+
 	/**
 	 * This tenant's own effective session policy: every field it stored, honored
 	 * exactly once its plan entitles `session_policy`, or the tighter of that
@@ -1090,6 +1105,33 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 			let row = await this.#settings();
 			if (row) {
 				await this.#db.update(settings, { tenant_id: row.tenant_id }, { mfa_policy: input.policy });
+				this.#settingsRow = null;
+			}
+			return { ok: true } as const;
+		});
+	}
+
+	/**
+	 * Sets whether this tenant lets an address with no matching subject mint a
+	 * magic-link attempt anyway, the subject created only once that attempt
+	 * completes.
+	 *
+	 * @param input - Whether to allow it from now on.
+	 * @returns Success, once the setting is written.
+	 */
+	async setMagicLinkJitSubjectCreation(input: {
+		enabled: boolean;
+	}): Promise<WithCost<{ ok: true }>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let row = await this.#settings();
+			if (row) {
+				await this.#db.update(
+					settings,
+					{ tenant_id: row.tenant_id },
+					{ magic_link_jit_subject_creation: input.enabled },
+				);
 				this.#settingsRow = null;
 			}
 			return { ok: true } as const;
@@ -1670,6 +1712,71 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 
 			return Passwords.removePassword(this.#db, input, hasOtherCredential);
 		});
+	}
+
+	/**
+	 * Resolves an address, spends its two budgets, and mints a magic-link token and
+	 * code bound to the asking browser.
+	 *
+	 * @param input - The address as typed, the locale to remember for delivery, the
+	 * bound browser's nonce hash, and the clock to measure against.
+	 * @returns The token, code and expiry to deliver, that no account matches, or
+	 * how many seconds until the tighter of the two budgets next has room.
+	 */
+	async beginMagicLinkSignIn(
+		input: BeginMagicLinkSignInInput,
+	): Promise<WithCost<BeginMagicLinkSignInResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let jitSubjectCreationAllowed = await this.#magicLinkJitSubjectCreationEnabled();
+			return MagicLink.beginMagicLinkSignIn(this.#db, input, jitSubjectCreationAllowed);
+		});
+	}
+
+	/**
+	 * Spends a magic-link token or code and opens a session for the subject it
+	 * resolves to, creating it first when the attempt was minted for an address
+	 * with none yet.
+	 *
+	 * @param input - The credential presented, the bound browser's raw nonce, and
+	 * the clock to measure against.
+	 * @returns The subject and the session opened for it, that the credential never
+	 * resolved to a live attempt, that it resolved to one bound to a different
+	 * browser, how many attempts a wrong code leaves, or that the daily cap refused
+	 * this subject a session.
+	 */
+	async completeMagicLinkSignIn(
+		input: CompleteMagicLinkSignInInput,
+	): Promise<WithCost<CompleteMagicLinkSignInResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let [{ cap, hard }, sessionPolicy] = await Promise.all([
+				this.#dauEnforcement(),
+				this.#effectiveSessionPolicy(),
+			]);
+
+			return MagicLink.completeMagicLinkSignIn(
+				this.#db,
+				input,
+				{ cache: this.#dauCache, cap, hard },
+				sessionPolicy,
+			);
+		});
+	}
+
+	/**
+	 * Abandons the outstanding magic-link attempt a browser's own nonce names.
+	 *
+	 * @param input - The bound browser's raw nonce.
+	 * @returns Success, whether or not a matching attempt was found.
+	 */
+	async cancelMagicLinkAttempt(
+		input: CancelMagicLinkAttemptInput,
+	): Promise<WithCost<{ ok: true }>> {
+		await this.#migrated;
+		return this.#withCost(() => MagicLink.cancelMagicLinkAttempt(this.#db, input));
 	}
 
 	/**

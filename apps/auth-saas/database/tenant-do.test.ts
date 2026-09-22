@@ -65,6 +65,7 @@ describe("provision", () => {
 				"0031-account-linking",
 				"0032-session-policy",
 				"0033-device-authorization",
+				"0034-magic-link",
 			],
 			issuer: "https://tenant-1.example.com",
 			keys: { keys: [expect.objectContaining({ kty: "EC", alg: "ES256" })] },
@@ -82,6 +83,7 @@ describe("provision", () => {
 				refresh_token_lifetime_ms: null,
 				concurrent_session_limit: null,
 				sessions_after_credential_change: null,
+				magic_link_jit_subject_creation: 0,
 				created_at: expect.any(Number),
 			},
 		]);
