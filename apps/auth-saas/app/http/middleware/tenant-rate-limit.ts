@@ -1,12 +1,14 @@
 /**
  * The rate limit classes protecting a tenant's anonymous surfaces: interactive
  * credential submissions, the mail-sending routes, the token endpoint,
- * `/authorize`, and the read-only protocol endpoints. Each is one `rateLimit`
- * registration, and every route it is mounted on shares that one registration's
- * budget — an address (or, for mail-sending, a submitted identifier) spends
- * from the same counter regardless of which of a class's routes it hit. The
- * management API's own tiered rate limiting lives in `management-rate-limit.ts`
- * instead, since it is keyed on a resolved caller rather than an address.
+ * `/authorize`, `/oauth/device_authorization`, `/device`'s own code lookup, and
+ * the read-only protocol endpoints. Each is one `rateLimit` registration, and
+ * every route it is mounted on shares that one registration's budget — an
+ * address (or, for mail-sending, a submitted identifier; for a device's own
+ * code lookup, the approving session) spends from the same counter regardless
+ * of which of a class's routes it hit. The management API's own tiered rate
+ * limiting lives in `management-rate-limit.ts` instead, since it is keyed on a
+ * resolved caller rather than an address.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,6 +25,7 @@ import type { AttackSignalEnv, AttackSignalSurface } from "~/app/lib/attack-sign
 
 import { renderRateLimitedPage } from "~/app/http/controllers/hosted/rate-limited";
 import { resolveClientAuth } from "~/app/http/controllers/oauth/token";
+import { activeSessionId } from "~/app/http/middleware/hosted-session";
 import { recordAttackSignal } from "~/app/lib/attack-signals";
 import { clientAddressKey } from "~/app/lib/client-address";
 import { requestOrigin } from "~/app/lib/request-origin";
@@ -334,4 +337,119 @@ export function protocolRateLimit(
 	});
 
 	return recordRateLimitRefusals("protocol", analytics, limited);
+}
+
+const DEVICE_AUTHORIZATION_PREFIX = "device-authorization";
+const DEVICE_AUTHORIZATION_LIMIT = 60;
+const DEVICE_AUTHORIZATION_WINDOW = "60 seconds";
+
+/**
+ * Guards `/oauth/device_authorization` with a per-client budget, falling back
+ * to the connecting address for a request that names none. Open, so a limiter
+ * outage never stops a device starting a fresh sign-in.
+ *
+ * @param limiter - The `DEVICE_AUTHORIZATION_RATE_LIMITER` binding.
+ * @param analytics - Where to record a refusal as the tenant's own attack
+ * signal; omitted, nothing is recorded.
+ * @returns The middleware, for the device authorization route's own `middleware` array.
+ * @example
+ * router.map(routes.deviceAuthorization, {
+ * 	middleware: [deviceAuthorizationRateLimit(env.DEVICE_AUTHORIZATION_RATE_LIMITER, env)],
+ * 	handler: deviceAuthorization,
+ * });
+ */
+export function deviceAuthorizationRateLimit(
+	limiter: RateLimiterBinding,
+	analytics?: AttackSignalEnv,
+): Middleware {
+	let adapter = new CloudflareAdapter(limiter, {
+		limit: DEVICE_AUTHORIZATION_LIMIT,
+		window: DEVICE_AUTHORIZATION_WINDOW,
+	});
+
+	let limited = rateLimit({
+		adapter,
+		prefix: DEVICE_AUTHORIZATION_PREFIX,
+		key: (context) => {
+			let clientId = context.formData.get("client_id");
+			return typeof clientId === "string" && clientId.length > 0
+				? clientId
+				: clientAddressKey(context.request);
+		},
+		failurePolicy: "open",
+	});
+
+	return recordRateLimitRefusals("device-authorization", analytics, limited);
+}
+
+const DEVICE_APPROVAL_SESSION_PREFIX = "device-approval-session";
+const DEVICE_APPROVAL_SESSION_LIMIT = 5;
+const DEVICE_APPROVAL_SESSION_WINDOW = "10 minutes";
+
+const DEVICE_APPROVAL_ADDRESS_PREFIX = "device-approval-address";
+const DEVICE_APPROVAL_ADDRESS_LIMIT = 20;
+const DEVICE_APPROVAL_ADDRESS_WINDOW = "1 hour";
+
+/**
+ * Guards `/device`'s own code lookup with two budgets at once — the approving
+ * session's own five-per-ten-minutes, and the connecting address's twenty-per-
+ * hour — so a wrong user code costs both counters the moment `hostedDeviceShow`
+ * looks it up. Both are `KVAdapter`s, since neither window fits a rate limiter
+ * binding's own 60-second ceiling. Skipped entirely for a plain page load with
+ * no `user_code` yet to look up, so the budget is spent only by an actual
+ * guess. Closed, since an uncounted guess here is unlimited guessing rather
+ * than a refused one.
+ *
+ * @param sessionKv - The `DEVICE_APPROVAL_SESSION_RATE_LIMIT_KV` namespace.
+ * @param addressKv - The `DEVICE_APPROVAL_ADDRESS_RATE_LIMIT_KV` namespace.
+ * @param analytics - Where to record a refusal as the tenant's own attack
+ * signal; omitted, nothing is recorded.
+ * @returns The middleware, for `/device`'s own `GET` route `middleware` array.
+ * @example
+ * router.map(routes.hostedDeviceShow, {
+ * 	middleware: [
+ * 		deviceApprovalRateLimit(
+ * 			env.DEVICE_APPROVAL_SESSION_RATE_LIMIT_KV,
+ * 			env.DEVICE_APPROVAL_ADDRESS_RATE_LIMIT_KV,
+ * 			env,
+ * 		),
+ * 	],
+ * 	handler: hostedDeviceShow,
+ * });
+ */
+export function deviceApprovalRateLimit(
+	sessionKv: RateLimitKVNamespace,
+	addressKv: RateLimitKVNamespace,
+	analytics?: AttackSignalEnv,
+): Middleware {
+	let skip = (context: RequestContext) => context.url.searchParams.get("user_code") === null;
+
+	let sessionLimited = rateLimit({
+		adapter: new KVAdapter(sessionKv, {
+			limit: DEVICE_APPROVAL_SESSION_LIMIT,
+			window: DEVICE_APPROVAL_SESSION_WINDOW,
+		}),
+		prefix: DEVICE_APPROVAL_SESSION_PREFIX,
+		key: async (context) => (await activeSessionId(context)) ?? clientAddressKey(context.request),
+		skip,
+		failurePolicy: "closed",
+		onLimit: (context) => renderRateLimitedPage(context),
+	});
+
+	let addressLimited = rateLimit({
+		adapter: new KVAdapter(addressKv, {
+			limit: DEVICE_APPROVAL_ADDRESS_LIMIT,
+			window: DEVICE_APPROVAL_ADDRESS_WINDOW,
+		}),
+		prefix: DEVICE_APPROVAL_ADDRESS_PREFIX,
+		key: (context) => clientAddressKey(context.request),
+		skip,
+		failurePolicy: "closed",
+		onLimit: (context) => renderRateLimitedPage(context),
+	});
+
+	let combined: Middleware = (context, next) =>
+		sessionLimited(context, async () => addressLimited(context, next));
+
+	return recordRateLimitRefusals("device-approval", analytics, combined);
 }

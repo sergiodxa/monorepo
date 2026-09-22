@@ -1,9 +1,10 @@
 /**
- * The device authorization grant's device-facing mechanism: the `device_authorizations`
- * table, the two codes a device mints, and `beginDeviceAuthorization`/`redeemDeviceCode`,
- * for a device with no browser worth using — a television app, a set-top box, a
- * command-line tool — to sign a person in from a screen it shows and a phone they hold
- * instead.
+ * The device authorization grant's whole mechanism, both sides of it: the
+ * `device_authorizations` table, the two codes a device mints and polls with, and
+ * the pending row a person approves or denies from the phone or laptop they read the
+ * code on — for a device with no browser worth using — a television app, a set-top
+ * box, a command-line tool — to sign a person in from a screen it shows and a device
+ * they already hold instead.
  *
  * The device code is machine-to-machine and as long as anything else this platform
  * mints; only its digest is stored, the same way a session token or an authorization
@@ -14,7 +15,10 @@
  * Redemption reuses the authorization code's own atomic statement — an `UPDATE …
  * WHERE redeemed_at IS NULL … RETURNING *` — so two concurrent polls of an approved
  * row cannot both mint tokens, and minting itself reuses the token endpoint's own
- * shared steps rather than a second copy of them.
+ * shared steps rather than a second copy of them. Approval reuses that same
+ * statement shape to guard against a second decision on one row, and reuses the
+ * consent screen and its own scope-union so a device's approval and a browser's
+ * are one surface and one standing grant.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,6 +36,7 @@ import {
 	column as c,
 	DataTableDatabaseError,
 	eq,
+	gt,
 	inList,
 	isNull,
 	lt,
@@ -40,9 +45,11 @@ import {
 	table,
 } from "remix/data-table";
 
+import type { ConsentScreen } from "./consent";
 import type { AuthScheme, TokenOutcome } from "./tokens";
 
 import { clients } from "./clients";
+import { evaluateConsent, recordConsentDecision } from "./consent";
 import { sessions } from "./sessions";
 import {
 	AuthSchemeSchema,
@@ -86,6 +93,9 @@ const USER_CODE_REJECTION_CEILING = 256 - (256 % USER_CODE_ALPHABET.length);
 
 /** How many times a user code collision against the pending-codes index is retried before the mint fails. */
 const MAX_USER_CODE_MINT_ATTEMPTS = 5;
+
+/** How many pending rows a tenant may hold at once, bounding the table and making a burst of device sign-ups visible rather than quietly expensive. */
+const MAX_PENDING_DEVICE_AUTHORIZATIONS = 500;
 
 /** The feature slug this whole mechanism is sold under. */
 export const DEVICE_GRANT_FEATURE = "device_grant";
@@ -245,7 +255,10 @@ export type BeginDeviceAuthorizationResult =
 			expiresIn: number;
 			interval: number;
 	  }
-	| { ok: false; reason: "invalid-client" | "unsupported-grant-type" | "invalid-scope" };
+	| {
+			ok: false;
+			reason: "invalid-client" | "unsupported-grant-type" | "invalid-scope" | "pending-ceiling";
+	  };
 
 /**
  * Mints a device and user code pair for a client that carries the device grant,
@@ -275,6 +288,13 @@ export async function beginDeviceAuthorization(
 	let ceiling = client.scopes as string[];
 	if (requestedScopes.some((scope) => !ceiling.includes(scope))) {
 		return { ok: false, reason: "invalid-scope" };
+	}
+
+	let pendingCount = await db.count(deviceAuthorizations, {
+		where: and(isNull("approved_at"), isNull("denied_at"), isNull("redeemed_at")),
+	});
+	if (pendingCount >= MAX_PENDING_DEVICE_AUTHORIZATIONS) {
+		return { ok: false, reason: "pending-ceiling" };
 	}
 
 	let { deviceCode, deviceCodeHash } = await mintDeviceCode();
@@ -518,6 +538,177 @@ export async function redeemDeviceCode(
 		expiresIn: minted.expiresIn,
 		scope: grantedScopes.join(" "),
 	};
+}
+
+/** Folds a presented user code the same way a minted one is stored: upper case, no hyphen. */
+function foldUserCode(raw: string): string {
+	return raw.trim().toUpperCase().replace(/-/g, "");
+}
+
+export interface BeginDeviceApprovalInput {
+	userCode: string;
+	/** The approving person's own live session, re-resolved here rather than trusted from the caller. */
+	sessionId: string;
+	now: number;
+}
+
+let BeginDeviceApprovalSchema = s.object({
+	userCode: s.string(),
+	sessionId: s.string(),
+	now: s.number(),
+});
+
+export type BeginDeviceApprovalResult =
+	| { ok: true; screen: ConsentScreen; deviceAuthorizationId: string }
+	| { ok: false; reason: "unknown" | "expired" };
+
+/**
+ * Resolves the pending row a presented user code names, and the consent screen
+ * it should be approved or denied through: the same shape and the same
+ * `evaluateConsent` call an authorization request's own consent screen goes
+ * through, forcing a screen every time regardless of any standing grant, since
+ * an explicit look at what is being approved is this flow's only defence.
+ *
+ * @param db - The tenant's database.
+ * @param input - The presented user code, the approving session, and the clock
+ * to check expiry against.
+ * @returns The screen to render and the row's own id, or which rule refused
+ * the code.
+ */
+export async function beginDeviceApproval(
+	db: Database,
+	input: BeginDeviceApprovalInput,
+): Promise<BeginDeviceApprovalResult> {
+	let parsed = s.parse(BeginDeviceApprovalSchema, input);
+	let folded = foldUserCode(parsed.userCode);
+
+	let row = await db.findOne(deviceAuthorizations, {
+		where: and(
+			eq("user_code", folded),
+			isNull("approved_at"),
+			isNull("denied_at"),
+			isNull("redeemed_at"),
+		),
+	});
+	if (!row) return { ok: false, reason: "unknown" };
+	if (row.expires_at <= parsed.now) return { ok: false, reason: "expired" };
+
+	let session = await db.findOne(sessions, {
+		where: and(
+			eq("id", parsed.sessionId),
+			isNull("revoked_at"),
+			gt("expires_at", parsed.now),
+			gt("idle_expires_at", parsed.now),
+		),
+	});
+	// A session that stopped resolving between the controller's own check and
+	// this call is refused the same as a code nobody recognizes, since nothing
+	// more specific is owed for a race this rare.
+	if (!session) return { ok: false, reason: "unknown" };
+
+	let consent = await evaluateConsent(db, {
+		subjectId: session.subject_id,
+		clientId: row.client_id,
+		requestedScopes: row.scopes as string[],
+		// Shown every time, never skipped for a standing grant: the code's own
+		// screen is the one place this flow lets a person see what they are
+		// about to approve.
+		isFirstParty: false,
+		promptConsent: true,
+		silent: false,
+	});
+	if (consent.decision !== "show") return { ok: false, reason: "unknown" };
+
+	return { ok: true, screen: consent.screen, deviceAuthorizationId: row.id };
+}
+
+export interface DecideDeviceApprovalInput {
+	deviceAuthorizationId: string;
+	/** The deciding person's own live session, re-resolved here for the `subject_id`, `auth_time` and `amr` it names. */
+	sessionId: string;
+	approved: boolean;
+	now: number;
+}
+
+let DecideDeviceApprovalSchema = s.object({
+	deviceAuthorizationId: s.string(),
+	sessionId: s.string(),
+	approved: s.boolean(),
+	now: s.number(),
+});
+
+export type DecideDeviceApprovalResult =
+	| { ok: true; approved: boolean }
+	| { ok: false; reason: "not-found" };
+
+/**
+ * Records the decision a person took on a device's own consent screen. Approval
+ * writes the approving session's `subject_id`, `session_id`, `auth_time` and
+ * `amr` onto the row, so a token minted on the next poll carries them exactly
+ * as a browser sign-in would, and unions the requested scopes into the
+ * subject's standing grant for the client the same way a browser's own consent
+ * decision does. Denial only marks the row refused. Either way, a row already
+ * decided, redeemed, or gone is refused rather than decided twice.
+ *
+ * @param db - The tenant's database.
+ * @param input - The row being decided, the deciding session, whether it was
+ * approved, and the clock to stamp the decision with.
+ * @returns Which decision was recorded, or that the row no longer took one.
+ */
+export async function decideDeviceApproval(
+	db: Database,
+	input: DecideDeviceApprovalInput,
+): Promise<DecideDeviceApprovalResult> {
+	let parsed = s.parse(DecideDeviceApprovalSchema, input);
+
+	let session = await db.findOne(sessions, {
+		where: and(
+			eq("id", parsed.sessionId),
+			isNull("revoked_at"),
+			gt("expires_at", parsed.now),
+			gt("idle_expires_at", parsed.now),
+		),
+	});
+	if (!session) return { ok: false, reason: "not-found" };
+
+	let patch = parsed.approved
+		? {
+				approved_at: parsed.now,
+				subject_id: session.subject_id,
+				session_id: session.id,
+				auth_time: session.auth_time,
+				amr: session.amr,
+			}
+		: { denied_at: parsed.now };
+
+	// The same atomic pattern `redeemDeviceCode` redeems with: the `WHERE`
+	// clause only matches a row still undecided, so a second decision — or one
+	// racing a poll that already redeemed the first — finds nothing to update.
+	let decision = await db
+		.query(deviceAuthorizations)
+		.where(
+			and(
+				eq("id", parsed.deviceAuthorizationId),
+				isNull("approved_at"),
+				isNull("denied_at"),
+				isNull("redeemed_at"),
+			),
+		)
+		.update(patch, { returning: "*" });
+
+	let decidedRow = "rows" in decision ? (decision.rows[0] ?? null) : null;
+	if (!decidedRow) return { ok: false, reason: "not-found" };
+
+	if (parsed.approved) {
+		await recordConsentDecision(db, {
+			subjectId: session.subject_id,
+			clientId: decidedRow.client_id,
+			approved: true,
+			scopes: decidedRow.scopes as string[],
+		});
+	}
+
+	return { ok: true, approved: parsed.approved };
 }
 
 export interface SweepDeviceAuthorizationsInput {

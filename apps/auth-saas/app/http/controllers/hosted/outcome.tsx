@@ -74,6 +74,35 @@ function redirectTo(location: string): Response {
 }
 
 /**
+ * Reads a `return_to` query parameter, for a screen with no interaction row of
+ * its own to resume — a code the person already holds rather than a protocol
+ * request parked server-side. Accepted only as a same-origin relative path, so
+ * a crafted value on `/u/sign-in` or `/u/second-factor` can never redirect the
+ * browser off this tenant's own host once signed in.
+ *
+ * @param ctx - The request context (provides `url`).
+ * @returns The path to return to, or `null` when none was given or it does not
+ * look like one of this tenant's own paths.
+ */
+export function safeReturnTo(ctx: RequestContext): string | null {
+	let value = ctx.url.searchParams.get("return_to");
+	if (!value) return null;
+	if (!value.startsWith("/") || value.startsWith("//") || value.includes("\\")) return null;
+	return value;
+}
+
+/**
+ * A real `302` back to a `return_to` path already validated by {@link safeReturnTo}.
+ *
+ * @param ctx - The request context (provides `request`).
+ * @param returnTo - The same-origin relative path to redirect to.
+ * @returns The redirect response.
+ */
+export function redirectToReturnTo(ctx: RequestContext, returnTo: string): Response {
+	return redirectTo(tenantUrl(ctx, returnTo).toString());
+}
+
+/**
  * Renders the `/u/error` screen's content for the given description, tagging it
  * with a fresh correlation id a support conversation can reference. Used both by
  * `/u/error` itself and, inline, by `/authorize`'s own `render`-class failures.

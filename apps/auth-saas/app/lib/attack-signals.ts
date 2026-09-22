@@ -23,7 +23,9 @@ export type AttackSignalSurface =
 	| "token"
 	| "authorization"
 	| "protocol"
-	| "management";
+	| "management"
+	| "device-authorization"
+	| "device-approval";
 
 /** What happened, from a caller's own decision point. */
 export type AttackSignalOutcome =

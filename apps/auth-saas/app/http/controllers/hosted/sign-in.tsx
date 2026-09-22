@@ -5,6 +5,11 @@
  * this page's own URL, carried onto its form and passkey actions unchanged, so
  * the flow state itself never leaves the interaction row a person can edit.
  *
+ * A caller with no interaction of its own to resume — `/device`'s own approval
+ * screen, which parks nothing server-side beyond the row its code already
+ * names — carries a `return_to` path instead, and is sent back there directly
+ * once signed in rather than through `resumeAuthorization`.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -17,7 +22,9 @@ import { createAction } from "remix/router";
 
 import {
 	redirectToErrorPage,
+	redirectToReturnTo,
 	respondToAuthorizationOutcome,
+	safeReturnTo,
 } from "~/app/http/controllers/hosted/outcome";
 import { passesConditionalTurnstileChallenge } from "~/app/http/controllers/hosted/turnstile-guard";
 import { serializeSessionCookie } from "~/app/http/middleware/hosted-session";
@@ -68,17 +75,17 @@ async function renderSignInPage(
 
 /**
  * Renders the sign-in form for the interaction its own `interaction` query
- * parameter names.
+ * parameter names, or for the `return_to` path a caller with no interaction of
+ * its own gave instead.
  *
  * @param ctx - The request context (provides `render`, `locale` and `i18next`).
- * @returns The rendered sign-in page, or the `/u/error` page when no interaction
- * was named to resume.
+ * @returns The rendered sign-in page, or the `/u/error` page when neither was given.
  * @example
  * router.map(routes.hostedSignInShow, signInShow);
  */
 export const signInShow = createAction(routes.hostedSignInShow, async (ctx) => {
 	let interactionId = ctx.url.searchParams.get("interaction");
-	if (!interactionId) {
+	if (!interactionId && !safeReturnTo(ctx)) {
 		return redirectToErrorPage(ctx, ctx.i18next.t("hostedError.invalidInteraction"));
 	}
 
@@ -104,11 +111,12 @@ export const signInShow = createAction(routes.hostedSignInShow, async (ctx) => {
  */
 export const signInSubmit = createAction(routes.hostedSignInSubmit, async (ctx) => {
 	let interactionId = ctx.url.searchParams.get("interaction");
+	let returnTo = safeReturnTo(ctx);
 	let loginHint = ctx.url.searchParams.get("login_hint");
 	let forced = ctx.url.searchParams.get("forced") === "1";
 	let challenge = ctx.turnstileChallenge === true;
 
-	if (!interactionId) {
+	if (!interactionId && !returnTo) {
 		return redirectToErrorPage(ctx, ctx.i18next.t("hostedError.invalidInteraction"));
 	}
 
@@ -188,7 +196,8 @@ export const signInSubmit = createAction(routes.hostedSignInSubmit, async (ctx) 
 
 	if (signedIn.secondFactorRequired) {
 		let url = new URL(routes.hostedSecondFactorShow.href(), ctx.request.url);
-		url.searchParams.set("interaction", interactionId);
+		if (interactionId) url.searchParams.set("interaction", interactionId);
+		if (returnTo) url.searchParams.set("return_to", returnTo);
 		url.searchParams.set("mode", signedIn.mustEnrolFactor ? "enrol" : "prove");
 		let uiLocales = ctx.url.searchParams.get("ui_locales");
 		if (uiLocales) url.searchParams.set("ui_locales", uiLocales);
@@ -198,15 +207,24 @@ export const signInSubmit = createAction(routes.hostedSignInSubmit, async (ctx) 
 		return response;
 	}
 
-	let outcome = await ctx.tenantStub.resumeAuthorization({
-		interactionId,
-		sessionId: signedIn.sessionId,
-		now: Date.now(),
-	});
+	let response: Response;
 
-	let response = await respondToAuthorizationOutcome(ctx, outcome, {
-		uiLocales: ctx.url.searchParams.get("ui_locales"),
-	});
+	if (interactionId) {
+		let outcome = await ctx.tenantStub.resumeAuthorization({
+			interactionId,
+			sessionId: signedIn.sessionId,
+			now: Date.now(),
+		});
+
+		response = await respondToAuthorizationOutcome(ctx, outcome, {
+			uiLocales: ctx.url.searchParams.get("ui_locales"),
+		});
+	} else {
+		// `returnTo` is the only other way this action was reached — the top
+		// guard already refused any request carrying neither.
+		response = redirectToReturnTo(ctx, returnTo as string);
+	}
+
 	response.headers.append("Set-Cookie", sessionCookieHeader);
 	return response;
 });

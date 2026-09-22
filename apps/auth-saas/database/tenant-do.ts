@@ -99,8 +99,12 @@ import type {
 	RevokeGrantResult,
 } from "./consent";
 import type {
+	BeginDeviceApprovalInput,
+	BeginDeviceApprovalResult,
 	BeginDeviceAuthorizationInput,
 	BeginDeviceAuthorizationResult,
+	DecideDeviceApprovalInput,
+	DecideDeviceApprovalResult,
 	RedeemDeviceCodeInput,
 } from "./device-authorization";
 import type { ApplyEntitlementsInput, ApplyEntitlementsResult } from "./entitlements";
@@ -3569,6 +3573,36 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 			let issuer = await this.#issuer();
 			return DeviceAuthorization.redeemDeviceCode(this.#db, { ...input, issuer });
 		});
+	}
+
+	/**
+	 * Resolves a presented user code to the pending row it names and the
+	 * consent screen it should be approved or denied through.
+	 *
+	 * @param input - The presented user code, the approving session, and the
+	 * clock to check expiry against.
+	 * @returns The screen to render and the row's own id, or which rule
+	 * refused the code.
+	 */
+	async beginDeviceApproval(
+		input: BeginDeviceApprovalInput,
+	): Promise<WithCost<BeginDeviceApprovalResult>> {
+		await this.#migrated;
+		return this.#withCost(() => DeviceAuthorization.beginDeviceApproval(this.#db, input));
+	}
+
+	/**
+	 * Records the decision a person took on a device's own consent screen.
+	 *
+	 * @param input - The row being decided, the deciding session, whether it
+	 * was approved, and the clock to stamp the decision with.
+	 * @returns Which decision was recorded, or that the row no longer took one.
+	 */
+	async decideDeviceApproval(
+		input: DecideDeviceApprovalInput,
+	): Promise<WithCost<DecideDeviceApprovalResult>> {
+		await this.#migrated;
+		return this.#withCost(() => DeviceAuthorization.decideDeviceApproval(this.#db, input));
 	}
 
 	/**

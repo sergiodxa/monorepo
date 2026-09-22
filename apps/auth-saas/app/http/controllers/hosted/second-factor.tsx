@@ -5,16 +5,23 @@
  * set once by `sign-in.tsx` from `signInWithPassword`'s own answer, so this
  * screen never has to re-derive which state it is in.
  *
+ * Carries `interaction` or `return_to` through unchanged, whichever
+ * `sign-in.tsx` handed it, and resumes the same way at the end of every leg.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import type { RequestContext } from "remix/router";
 
 import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
 import {
 	redirectToErrorPage,
+	redirectToReturnTo,
 	respondToAuthorizationOutcome,
+	safeReturnTo,
 } from "~/app/http/controllers/hosted/outcome";
 import { activeSession } from "~/app/http/middleware/hosted-session";
 import { recordAttackSignal } from "~/app/lib/attack-signals";
@@ -26,11 +33,48 @@ import { RecoveryCodesPage } from "~/app/views/hosted/recovery-codes";
 import { SecondFactorPage } from "~/app/views/hosted/second-factor";
 import routes from "~/routes/tenant";
 
-/** Builds an absolute URL for one of this tenant's routes, carrying the interaction id. */
-function actionUrl(ctx: { request: Request }, path: string, interactionId: string): string {
+/** What this screen resumes with at the end of every leg: an interaction id, or a `return_to` path when there is none. */
+interface Resume {
+	interactionId: string | null;
+	returnTo: string | null;
+}
+
+/** Reads whichever of `interaction`/`return_to` the request carries. */
+function readResume(ctx: RequestContext): Resume {
+	return { interactionId: ctx.url.searchParams.get("interaction"), returnTo: safeReturnTo(ctx) };
+}
+
+/** Builds an absolute URL for one of this tenant's routes, carrying whichever of `interaction`/`return_to` this leg resumes with. */
+function actionUrl(ctx: { request: Request }, path: string, resume: Resume): string {
 	let url = new URL(path, ctx.request.url);
-	url.searchParams.set("interaction", interactionId);
+	if (resume.interactionId) url.searchParams.set("interaction", resume.interactionId);
+	if (resume.returnTo) url.searchParams.set("return_to", resume.returnTo);
 	return url.toString();
+}
+
+/**
+ * Resumes with `interaction` when this leg was given one, or redirects
+ * straight to `return_to` otherwise — the same branch `sign-in.tsx` takes once
+ * a session is open.
+ */
+async function resume(
+	ctx: RequestContext,
+	value: Resume,
+	sessionId: string,
+	uiLocales: string | null,
+): Promise<Response> {
+	if (value.interactionId) {
+		let outcome = await ctx.tenantStub.resumeAuthorization({
+			interactionId: value.interactionId,
+			sessionId,
+			now: Date.now(),
+		});
+		return respondToAuthorizationOutcome(ctx, outcome, { uiLocales });
+	}
+
+	// `readResume` never returns both fields empty on a route this module's own
+	// top guard already let through.
+	return redirectToReturnTo(ctx, value.returnTo as string);
 }
 
 /**
@@ -42,8 +86,8 @@ function actionUrl(ctx: { request: Request }, path: string, interactionId: strin
  * router.map(routes.hostedSecondFactorShow, secondFactorShow);
  */
 export const secondFactorShow = createAction(routes.hostedSecondFactorShow, async (ctx) => {
-	let interactionId = ctx.url.searchParams.get("interaction");
-	if (!interactionId) {
+	let value = readResume(ctx);
+	if (!value.interactionId && !value.returnTo) {
 		return redirectToErrorPage(ctx, ctx.i18next.t("hostedError.invalidInteraction"));
 	}
 
@@ -63,7 +107,7 @@ export const secondFactorShow = createAction(routes.hostedSecondFactorShow, asyn
 					t={t}
 					title={t("hostedSecondFactor.enrol.title")}
 					body={t("hostedSecondFactor.enrol.body")}
-					action={actionUrl(ctx, routes.hostedSecondFactorEnrolSubmit.href(), interactionId)}
+					action={actionUrl(ctx, routes.hostedSecondFactorEnrolSubmit.href(), value)}
 					enrolmentId={enrolment.enrolmentId}
 					uri={enrolment.uri}
 					setupKey={enrolment.setupKey}
@@ -79,7 +123,7 @@ export const secondFactorShow = createAction(routes.hostedSecondFactorShow, asyn
 		<HostedDocument title={t("hostedSecondFactor.title")} locale={ctx.locale}>
 			<SecondFactorPage
 				t={t}
-				action={actionUrl(ctx, routes.hostedSecondFactorSubmit.href(), interactionId)}
+				action={actionUrl(ctx, routes.hostedSecondFactorSubmit.href(), value)}
 				error={null}
 			/>
 		</HostedDocument>,
@@ -97,8 +141,10 @@ export const secondFactorShow = createAction(routes.hostedSecondFactorShow, asyn
  */
 export const secondFactorSubmit = createAction(routes.hostedSecondFactorSubmit, async (ctx) => {
 	let t = ctx.i18next.t;
-	let interactionId = ctx.url.searchParams.get("interaction");
-	if (!interactionId) return redirectToErrorPage(ctx, t("hostedError.invalidInteraction"));
+	let value = readResume(ctx);
+	if (!value.interactionId && !value.returnTo) {
+		return redirectToErrorPage(ctx, t("hostedError.invalidInteraction"));
+	}
 
 	let session = await activeSession(ctx);
 	if (!session) return redirectToErrorPage(ctx, t("hostedError.invalidInteraction"));
@@ -106,7 +152,7 @@ export const secondFactorSubmit = createAction(routes.hostedSecondFactorSubmit, 
 	let submission = ctx.formData.get("submission");
 	let trustDevice = ctx.formData.get("trustDevice") === "true";
 
-	let action = actionUrl(ctx, routes.hostedSecondFactorSubmit.href(), interactionId);
+	let action = actionUrl(ctx, routes.hostedSecondFactorSubmit.href(), value);
 
 	if (typeof submission !== "string" || !submission) {
 		return ctx.render(
@@ -157,15 +203,12 @@ export const secondFactorSubmit = createAction(routes.hostedSecondFactorSubmit, 
 		country: origin.country ?? undefined,
 	});
 
-	let outcome = await ctx.tenantStub.resumeAuthorization({
-		interactionId,
-		sessionId: session.sessionId,
-		now: Date.now(),
-	});
-
-	let response = await respondToAuthorizationOutcome(ctx, outcome, {
-		uiLocales: ctx.url.searchParams.get("ui_locales"),
-	});
+	let response = await resume(
+		ctx,
+		value,
+		session.sessionId,
+		ctx.url.searchParams.get("ui_locales"),
+	);
 
 	if (completed.trustedDeviceToken) {
 		response.headers.append(
@@ -193,8 +236,10 @@ export const secondFactorEnrolSubmit = createAction(
 	routes.hostedSecondFactorEnrolSubmit,
 	async (ctx) => {
 		let t = ctx.i18next.t;
-		let interactionId = ctx.url.searchParams.get("interaction");
-		if (!interactionId) return redirectToErrorPage(ctx, t("hostedError.invalidInteraction"));
+		let value = readResume(ctx);
+		if (!value.interactionId && !value.returnTo) {
+			return redirectToErrorPage(ctx, t("hostedError.invalidInteraction"));
+		}
 
 		let session = await activeSession(ctx);
 		if (!session) return redirectToErrorPage(ctx, t("hostedError.invalidInteraction"));
@@ -202,8 +247,7 @@ export const secondFactorEnrolSubmit = createAction(
 		let enrolmentId = ctx.formData.get("enrolmentId");
 		let code = ctx.formData.get("code");
 
-		let retryUrl = new URL(routes.hostedSecondFactorShow.href(), ctx.request.url);
-		retryUrl.searchParams.set("interaction", interactionId);
+		let retryUrl = new URL(actionUrl(ctx, routes.hostedSecondFactorShow.href(), value));
 		retryUrl.searchParams.set("mode", "enrol");
 
 		if (typeof enrolmentId !== "string" || !enrolmentId || typeof code !== "string" || !code) {
@@ -227,11 +271,7 @@ export const secondFactorEnrolSubmit = createAction(
 					title={t("hostedSecondFactor.recoveryCodes.title")}
 					body={t("hostedSecondFactor.recoveryCodes.body")}
 					codes={activated.recoveryCodes}
-					continueAction={actionUrl(
-						ctx,
-						routes.hostedSecondFactorContinueSubmit.href(),
-						interactionId,
-					)}
+					continueAction={actionUrl(ctx, routes.hostedSecondFactorContinueSubmit.href(), value)}
 					continueLabel={t("hostedSecondFactor.recoveryCodes.continueButton")}
 				/>
 			</HostedDocument>,
@@ -250,22 +290,14 @@ export const secondFactorEnrolSubmit = createAction(
 export const secondFactorContinueSubmit = createAction(
 	routes.hostedSecondFactorContinueSubmit,
 	async (ctx) => {
-		let interactionId = ctx.url.searchParams.get("interaction");
-		if (!interactionId) {
+		let value = readResume(ctx);
+		if (!value.interactionId && !value.returnTo) {
 			return redirectToErrorPage(ctx, ctx.i18next.t("hostedError.invalidInteraction"));
 		}
 
 		let session = await activeSession(ctx);
 		if (!session) return redirectToErrorPage(ctx, ctx.i18next.t("hostedError.invalidInteraction"));
 
-		let outcome = await ctx.tenantStub.resumeAuthorization({
-			interactionId,
-			sessionId: session.sessionId,
-			now: Date.now(),
-		});
-
-		return respondToAuthorizationOutcome(ctx, outcome, {
-			uiLocales: ctx.url.searchParams.get("ui_locales"),
-		});
+		return resume(ctx, value, session.sessionId, ctx.url.searchParams.get("ui_locales"));
 	},
 );

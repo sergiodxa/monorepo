@@ -1,11 +1,12 @@
 /**
- * Drives the tenant Durable Object's `beginDeviceAuthorization` and
- * `redeemDeviceCode` RPC methods the way `connection-sign-in.test.ts` drives its
- * own, through a real `Tenant` object rather than the module directly, since both
- * are wired on as RPC methods for this pass. `decideDeviceApproval` does not exist
- * yet, so an approved, denied or expired row is set up by writing the row directly
- * against the object's own storage, the same way `tenant-do.test.ts` seeds a
- * fixture no RPC can produce yet.
+ * Drives the tenant Durable Object's `beginDeviceAuthorization`,
+ * `redeemDeviceCode`, `beginDeviceApproval` and `decideDeviceApproval` RPC
+ * methods the way `connection-sign-in.test.ts` drives its own, through a real
+ * `Tenant` object rather than the module directly, since all four are wired on
+ * as RPC methods. A denied or expired row still needed for a `redeemDeviceCode`
+ * fixture that predates `decideDeviceApproval` is written directly against the
+ * object's own storage, the same way `tenant-do.test.ts` seeds a fixture no RPC
+ * can produce; an approved row is now produced by `decideDeviceApproval` itself.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,9 +16,12 @@ import type { DurableObjectStateMock } from "@sdxc/cloudflare-mocks";
 
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { Hex, randomToken, sha256 } from "@sdxc/crypto";
+import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { isFailure } from "@sdxc/result";
+import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
+import { grants } from "./consent";
 import Tenant from "./tenant-do";
 
 /** The tenant's issuer, `verification_uri` and every minted token's `iss`. */
@@ -27,12 +31,48 @@ const DEVICE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code";
 
 let state: DurableObjectStateMock;
 let tenant: Tenant;
+let db: Database;
 
 beforeEach(async () => {
 	state = createDurableObjectState();
 	tenant = new Tenant(state, {} as Cloudflare.Env);
 	await tenant.provision({ tenantId: "tenant_1", issuer: ISSUER });
+	db = new Database(createSQLStorageDatabaseAdapter(state.storage.sql));
 });
+
+/** Creates a verified subject with a password and signs it in, for a real session `beginDeviceApproval`/`decideDeviceApproval` can resolve. */
+async function createSignedInSubject(
+	email: string,
+	password: string,
+): Promise<{ subjectId: string; sessionId: string }> {
+	let created = await tenant.createSubject({ identifiers: [{ kind: "email", value: email }] });
+	if (!created.ok) throw new Error("unreachable: subject creation failed");
+
+	let added = await tenant.addIdentifier({
+		subjectId: created.subjectId,
+		kind: "email",
+		value: email,
+		actor: { kind: "subject" },
+	});
+	if (!added.ok || added.kind !== "email") throw new Error("unreachable: identifier add failed");
+	await tenant.verifyIdentifier({ ticket: added.ticket });
+
+	let written = await tenant.setPassword({
+		subjectId: created.subjectId,
+		password,
+		actor: { kind: "subject" },
+	});
+	if (!written.ok) throw new Error("unreachable: password set failed");
+
+	let signedIn = await tenant.signInWithPassword({
+		identifier: email,
+		password,
+		remembered: false,
+	});
+	if (!signedIn.ok) throw new Error("unreachable: sign-in failed");
+
+	return { subjectId: created.subjectId, sessionId: signedIn.sessionId };
+}
 
 /** Registers a confidential client carrying the device grant, ready to poll with, granting the tenant's own device_grant feature first. */
 async function createDeviceClient(
@@ -372,5 +412,224 @@ describe("redeemDeviceCode", () => {
 
 		let outcomes = [first.kind, second.kind].sort();
 		expect(outcomes).toEqual(["error", "tokens"]);
+	});
+});
+
+describe("beginDeviceApproval", () => {
+	test("refuses a code that matches no pending row", async () => {
+		let { sessionId } = await createSignedInSubject(
+			"jane@example.com",
+			"correct horse battery staple",
+		);
+
+		let result = await tenant.beginDeviceApproval({
+			userCode: "ZZZZ-ZZZZ",
+			sessionId,
+			now: Date.now(),
+		});
+
+		expect(result).toMatchObject({ ok: false, reason: "unknown" });
+	});
+
+	test("refuses a code past its expiry", async () => {
+		let { clientId } = await createDeviceClient();
+		let { sessionId } = await createSignedInSubject(
+			"jane@example.com",
+			"correct horse battery staple",
+		);
+		let now = Date.now();
+
+		let begun = await tenant.beginDeviceAuthorization({ clientId, scope: "openid", now });
+		if (!begun.ok) throw new Error("unreachable");
+
+		let result = await tenant.beginDeviceApproval({
+			userCode: begun.userCode,
+			sessionId,
+			now: now + 700_000,
+		});
+
+		expect(result).toMatchObject({ ok: false, reason: "expired" });
+	});
+
+	test("resolves a pending code to the right consent screen, accepting the code lower case and unhyphenated", async () => {
+		let { clientId } = await createDeviceClient({ scopes: ["openid", "profile"] });
+		let { sessionId, subjectId } = await createSignedInSubject(
+			"jane@example.com",
+			"correct horse battery staple",
+		);
+		let now = Date.now();
+
+		let begun = await tenant.beginDeviceAuthorization({ clientId, scope: "openid profile", now });
+		if (!begun.ok) throw new Error("unreachable");
+
+		let folded = begun.userCode.replace("-", "").toLowerCase();
+
+		let result = await tenant.beginDeviceApproval({ userCode: folded, sessionId, now });
+
+		expect(result.ok).toBe(true);
+		if (!result.ok) throw new Error("unreachable");
+		expect(result.screen.client.id).toBe(clientId);
+		expect(result.screen.subject.id).toBe(subjectId);
+		expect(new Set(result.screen.requested.map((scope) => scope.scope))).toEqual(
+			new Set(["openid", "profile"]),
+		);
+	});
+});
+
+describe("decideDeviceApproval", () => {
+	test("refuses a device authorization id that does not resolve", async () => {
+		let { sessionId } = await createSignedInSubject(
+			"jane@example.com",
+			"correct horse battery staple",
+		);
+
+		let result = await tenant.decideDeviceApproval({
+			deviceAuthorizationId: "devr_missing",
+			sessionId,
+			approved: true,
+			now: Date.now(),
+		});
+
+		expect(result).toMatchObject({ ok: false, reason: "not-found" });
+	});
+
+	test("refuses a row that was already decided", async () => {
+		let { clientId } = await createDeviceClient();
+		let { sessionId } = await createSignedInSubject(
+			"jane@example.com",
+			"correct horse battery staple",
+		);
+		let now = Date.now();
+
+		let begun = await tenant.beginDeviceAuthorization({ clientId, scope: "openid", now });
+		if (!begun.ok) throw new Error("unreachable");
+		let approval = await tenant.beginDeviceApproval({ userCode: begun.userCode, sessionId, now });
+		if (!approval.ok) throw new Error("unreachable");
+
+		let first = await tenant.decideDeviceApproval({
+			deviceAuthorizationId: approval.deviceAuthorizationId,
+			sessionId,
+			approved: true,
+			now,
+		});
+		expect(first).toMatchObject({ ok: true, approved: true });
+
+		let second = await tenant.decideDeviceApproval({
+			deviceAuthorizationId: approval.deviceAuthorizationId,
+			sessionId,
+			approved: false,
+			now,
+		});
+		expect(second).toMatchObject({ ok: false, reason: "not-found" });
+	});
+
+	test("an approval unions the requested scopes into an existing grant rather than replacing it", async () => {
+		let { clientId } = await createDeviceClient({ scopes: ["openid", "profile", "email"] });
+		let { sessionId, subjectId } = await createSignedInSubject(
+			"jane@example.com",
+			"correct horse battery staple",
+		);
+		let now = Date.now();
+
+		// A standing grant for this same client already covers a different scope,
+		// the way an earlier browser sign-in would have left one.
+		await db.create(grants, {
+			subject_id: subjectId,
+			client_id: clientId,
+			scopes: ["email"],
+			created_at: now,
+			updated_at: now,
+		});
+
+		let begun = await tenant.beginDeviceAuthorization({ clientId, scope: "openid profile", now });
+		if (!begun.ok) throw new Error("unreachable");
+		let approval = await tenant.beginDeviceApproval({ userCode: begun.userCode, sessionId, now });
+		if (!approval.ok) throw new Error("unreachable");
+
+		await tenant.decideDeviceApproval({
+			deviceAuthorizationId: approval.deviceAuthorizationId,
+			sessionId,
+			approved: true,
+			now,
+		});
+
+		let row = await db.find(grants, { subject_id: subjectId, client_id: clientId });
+		expect(new Set(row?.scopes as string[])).toEqual(new Set(["email", "openid", "profile"]));
+	});
+
+	test("a denial marks the row denied, and a subsequent poll answers access_denied", async () => {
+		let { clientId, clientSecret } = await createDeviceClient();
+		let { sessionId } = await createSignedInSubject(
+			"jane@example.com",
+			"correct horse battery staple",
+		);
+		let now = Date.now();
+
+		let begun = await tenant.beginDeviceAuthorization({ clientId, scope: "openid", now });
+		if (!begun.ok) throw new Error("unreachable");
+		let approval = await tenant.beginDeviceApproval({ userCode: begun.userCode, sessionId, now });
+		if (!approval.ok) throw new Error("unreachable");
+
+		let decided = await tenant.decideDeviceApproval({
+			deviceAuthorizationId: approval.deviceAuthorizationId,
+			sessionId,
+			approved: false,
+			now,
+		});
+		expect(decided).toMatchObject({ ok: true, approved: false });
+
+		let polled = await tenant.redeemDeviceCode({
+			deviceCode: begun.deviceCode,
+			clientId,
+			clientSecret,
+			authScheme: "post",
+			now: now + 1000,
+		});
+		expect(polled).toMatchObject({ kind: "error", error: "access_denied" });
+	});
+
+	test("a full approve-then-poll round trip through the real RPC surface mints real tokens", async () => {
+		let { clientId, clientSecret } = await createDeviceClient({
+			scopes: ["openid", "profile", "offline_access"],
+		});
+		let { sessionId, subjectId } = await createSignedInSubject(
+			"jane@example.com",
+			"correct horse battery staple",
+		);
+		let now = Date.now();
+
+		let begun = await tenant.beginDeviceAuthorization({
+			clientId,
+			scope: "openid offline_access",
+			now,
+		});
+		if (!begun.ok) throw new Error("unreachable");
+		let approval = await tenant.beginDeviceApproval({ userCode: begun.userCode, sessionId, now });
+		if (!approval.ok) throw new Error("unreachable");
+
+		let decided = await tenant.decideDeviceApproval({
+			deviceAuthorizationId: approval.deviceAuthorizationId,
+			sessionId,
+			approved: true,
+			now,
+		});
+		expect(decided).toMatchObject({ ok: true, approved: true });
+
+		let redeemed = await tenant.redeemDeviceCode({
+			deviceCode: begun.deviceCode,
+			clientId,
+			clientSecret,
+			authScheme: "post",
+			now: now + 1000,
+		});
+
+		expect(redeemed.kind).toBe("tokens");
+		if (redeemed.kind !== "tokens") throw new Error("unreachable");
+		expect(redeemed.refreshToken).not.toBeNull();
+
+		let idClaims = decodeClaims(redeemed.idToken ?? "");
+		expect(idClaims.sub).toBe(subjectId);
+		expect(idClaims.sid).toBe(sessionId);
+		expect(idClaims.amr).toEqual(["pwd"]);
 	});
 });

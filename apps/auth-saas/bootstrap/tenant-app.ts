@@ -3,7 +3,8 @@
  * request already resolved to one tenant reaches — discovery, JWKS, `/userinfo`,
  * and the token endpoint — alongside `/authorize` and the hosted sign-in,
  * sign-up, second-factor, step-up, verify, reset, consent and error pages
- * served under `/u/` on the tenant's own hostname.
+ * served under `/u/`, and the device authorization grant's own verification
+ * screen at `/device`, on the tenant's own hostname.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,6 +22,7 @@ import { createRouter } from "remix/router";
 
 import authorize from "~/app/http/controllers/authorize";
 import { consentShow, consentSubmit } from "~/app/http/controllers/hosted/consent";
+import { hostedDeviceShow, hostedDeviceSubmit } from "~/app/http/controllers/hosted/device";
 import { errorShow } from "~/app/http/controllers/hosted/error";
 import { resetShow, resetSubmit } from "~/app/http/controllers/hosted/reset";
 import {
@@ -64,6 +66,8 @@ import render from "~/app/http/middleware/render";
 import { tenant } from "~/app/http/middleware/tenant";
 import {
 	authorizationRateLimit,
+	deviceApprovalRateLimit,
+	deviceAuthorizationRateLimit,
 	interactiveCredentialRateLimit,
 	mailSendingRateLimit,
 	protocolRateLimit,
@@ -149,7 +153,7 @@ tenantRouter.map(routes.token, {
 	handler: token as RequestHandler,
 });
 tenantRouter.map(routes.deviceAuthorization, {
-	middleware: [tokenRateLimit(env.TOKEN_RATE_LIMITER, env)],
+	middleware: [deviceAuthorizationRateLimit(env.DEVICE_AUTHORIZATION_RATE_LIMITER, env)],
 	handler: deviceAuthorization as RequestHandler,
 });
 tenantRouter.map(routes.apiKeysIntrospect, introspect);
@@ -183,6 +187,17 @@ tenantRouter.map(routes.hostedStepUpEnrolSubmit, stepUpEnrolSubmit);
 tenantRouter.map(routes.hostedStepUpContinueSubmit, stepUpContinueSubmit);
 tenantRouter.map(routes.hostedConsentShow, consentShow);
 tenantRouter.map(routes.hostedConsentSubmit, consentSubmit);
+tenantRouter.map(routes.hostedDeviceShow, {
+	middleware: [
+		deviceApprovalRateLimit(
+			env.DEVICE_APPROVAL_SESSION_RATE_LIMIT_KV,
+			env.DEVICE_APPROVAL_ADDRESS_RATE_LIMIT_KV,
+			env,
+		),
+	],
+	handler: hostedDeviceShow as RequestHandler,
+});
+tenantRouter.map(routes.hostedDeviceSubmit, hostedDeviceSubmit);
 tenantRouter.map(routes.hostedSignUpShow, signUpShow);
 tenantRouter.map(routes.hostedSignUpSubmit, {
 	middleware: [credentialRateLimit, mailRateLimit],

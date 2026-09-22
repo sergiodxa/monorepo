@@ -22,6 +22,7 @@ import { createRouter } from "remix/router";
 
 import authorize from "~/app/http/controllers/authorize";
 import { consentShow, consentSubmit } from "~/app/http/controllers/hosted/consent";
+import { hostedDeviceShow, hostedDeviceSubmit } from "~/app/http/controllers/hosted/device";
 import { errorShow } from "~/app/http/controllers/hosted/error";
 import { resetShow, resetSubmit } from "~/app/http/controllers/hosted/reset";
 import {
@@ -89,6 +90,8 @@ function buildRouter(tenantDO: Tenant, transport: Transport) {
 	router.map(routes.hostedStepUpContinueSubmit, stepUpContinueSubmit);
 	router.map(routes.hostedConsentShow, consentShow);
 	router.map(routes.hostedConsentSubmit, consentSubmit);
+	router.map(routes.hostedDeviceShow, hostedDeviceShow);
+	router.map(routes.hostedDeviceSubmit, hostedDeviceSubmit);
 	router.map(routes.hostedSignUpShow, signUpShow);
 	router.map(routes.hostedSignUpSubmit, signUpSubmit);
 	router.map(routes.hostedVerifyShow, verifyShow);

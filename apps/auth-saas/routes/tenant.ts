@@ -1,7 +1,8 @@
 /**
  * The centralized, type-safe route table for requests already resolved to one
- * tenant: discovery, JWKS, `/userinfo`, the token endpoint, `/authorize`, and the
- * hosted sign-in, sign-up, verify, reset, consent and error pages served under `/u/`.
+ * tenant: discovery, JWKS, `/userinfo`, the token endpoint, `/authorize`, the
+ * hosted sign-in, sign-up, verify, reset, consent and error pages served under `/u/`,
+ * and the device authorization grant's own verification screen at `/device`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -41,6 +42,8 @@ export default route({
 	hostedStepUpContinueSubmit: post("/u/step-up/continue"),
 	hostedConsentShow: get("/u/consent"),
 	hostedConsentSubmit: post("/u/consent"),
+	hostedDeviceShow: get("/device"),
+	hostedDeviceSubmit: post("/device"),
 	hostedSignUpShow: get("/u/sign-up"),
 	hostedSignUpSubmit: post("/u/sign-up"),
 	hostedVerifyShow: get("/u/verify"),

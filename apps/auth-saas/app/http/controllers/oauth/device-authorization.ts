@@ -58,6 +58,14 @@ export default createAction(routes.deviceAuthorization, async (ctx) => {
 			);
 		}
 
+		if (result.reason === "pending-ceiling") {
+			return tokenError(
+				503,
+				"temporarily_unavailable",
+				"Too many device authorizations are pending for this tenant right now. Try again shortly.",
+			);
+		}
+
 		return tokenError(
 			400,
 			"invalid_scope",

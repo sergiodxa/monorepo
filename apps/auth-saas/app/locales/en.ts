@@ -98,6 +98,23 @@ export default {
 		deny: "Deny",
 	},
 
+	hostedDevice: {
+		title: "Connect a device",
+		body: "Enter the code shown on your device.",
+		codeLabel: "Code",
+		submit: "Continue",
+		errors: {
+			unknown: "That code doesn't match a device waiting to be approved. Check it and try again.",
+			expired: "That code has expired. Go back to your device for a new one.",
+		},
+		done: {
+			approvedTitle: "Device connected",
+			approvedBody: "You may close this window and return to your device.",
+			deniedTitle: "Device not connected",
+			deniedBody: "You may close this window. The device was not signed in.",
+		},
+	},
+
 	hostedSignUp: {
 		title: "Create your account",
 		passwordHint: "Use at least {{minLength}} characters.",
