@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-18
+**Implemented** - 2026-09-22, with one gap left open: ending a link's access at the provider (spending its revocation endpoint on unlink) is not built, since no relying-party client in this codebase yet implements calling one. An administrator's unlink also revokes sessions at `amr`'s current precision — it distinguishes "social" from "saml" only, not one connection from another of the same kind.
 
 ## Background
 
