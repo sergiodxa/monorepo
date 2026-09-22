@@ -3545,7 +3545,8 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 */
 	async unlinkIdentity(input: UnlinkIdentityInput): Promise<WithCost<UnlinkIdentityResult>> {
 		await this.#migrated;
-		return this.#withCost(() => ConnectionSignIn.unlinkIdentity(this.#db, input));
+		let sealKey = await this.#sealKey();
+		return this.#withCost(() => ConnectionSignIn.unlinkIdentity(this.#db, sealKey, input));
 	}
 
 	/**

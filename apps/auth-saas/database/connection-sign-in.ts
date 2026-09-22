@@ -886,19 +886,23 @@ export type UnlinkIdentityResult =
  * identity removed administratively should stop being a way in; a subject
  * unlinking their own identity leaves its own sessions standing.
  *
- * Ending the link's access at the provider is not attempted here: nothing in
- * this codebase yet spends a provider's revocation endpoint, and building a
- * one-off call for this call site alone would duplicate what belongs in the
- * relying party itself. The sealed tokens are still gone the moment the row
- * is, which is the whole of what this tenant itself can revoke.
+ * An OIDC identity's stored refresh token is surrendered at the provider's own
+ * revocation endpoint before the row is dropped, best-effort: a provider that
+ * publishes no revocation endpoint, refuses the request, or cannot be reached
+ * never blocks the local unlink, since this tenant's own directory row is the
+ * source of truth for whether the identity is linked. A SAML connection, and
+ * an OIDC identity that never had a refresh token to seal, have nothing to
+ * revoke and skip the attempt entirely.
  *
  * @param db - The tenant's database.
+ * @param sealKey - The tenant object's own AES-GCM key.
  * @param input - The subject, the connection's slug, and who is asking.
  * @returns Success, or that no such identity exists, or that it is the
  * subject's last remaining credential.
  */
 export async function unlinkIdentity(
 	db: Database,
+	sealKey: CryptoKey,
 	input: UnlinkIdentityInput,
 ): Promise<UnlinkIdentityResult> {
 	let connection = await db.findOne(connections, { where: { slug: input.connectionSlug } });
@@ -914,6 +918,23 @@ export async function unlinkIdentity(
 		connectionId: connection.id,
 	});
 	if (!hasOtherCredential) return { ok: false, reason: "last-credential" };
+
+	let providerRevoked = false;
+
+	if (connection.kind === "oidc" && identity.refresh_token_sealed !== null) {
+		try {
+			let opened = await open(sealKey, identity.refresh_token_sealed);
+			if (isFailure(opened)) throw new Error("failed to open the identity's sealed refresh token");
+
+			let clientSecret = await openClientSecret(sealKey, connection);
+			let rp = buildRelyingParty(connection, clientSecret, "");
+
+			await rp.revoke(opened.data, { tokenTypeHint: "refresh_token" });
+			providerRevoked = true;
+		} catch {
+			providerRevoked = false;
+		}
+	}
 
 	await db.delete(connectionIdentities, {
 		connection_id: connection.id,
@@ -966,7 +987,7 @@ export async function unlinkIdentity(
 		targetType: "subject",
 		targetId: input.subjectId,
 		outcome: "succeeded",
-		detail: { connectionSlug: connection.slug, linkOrigin: identity.linked_by },
+		detail: { connectionSlug: connection.slug, linkOrigin: identity.linked_by, providerRevoked },
 	});
 
 	return { ok: true };

@@ -52,6 +52,9 @@ const TOKEN_ENDPOINT = `${ISSUER}/token`;
 /** The issuer's RP-initiated logout endpoint. */
 const END_SESSION_ENDPOINT = `${ISSUER}/end-session`;
 
+/** The issuer's revocation endpoint, per RFC 7009. */
+const REVOCATION_ENDPOINT = `${ISSUER}/revoke`;
+
 /** The issuer's userinfo endpoint. */
 const USER_INFO_ENDPOINT = `${ISSUER}/userinfo`;
 
@@ -311,6 +314,33 @@ function stubTokenEndpoint(
 			request.authorization = incoming.headers.get("authorization");
 			request.body = new URLSearchParams(await incoming.text());
 			return build(request.body);
+		}),
+	);
+
+	return request;
+}
+
+/** What the revocation endpoint saw, for asserting the surrendered token and the client credentials. */
+interface RevocationRequest {
+	/** The form body the revoke posted. */
+	body: URLSearchParams | null;
+	/** The `Authorization` header, present under `client_secret_basic`. */
+	authorization: string | null;
+}
+
+/**
+ * Intercepts the revocation endpoint, recording what the revoke presented.
+ *
+ * @param status - The status to answer with, `200` by default.
+ */
+function stubRevocationEndpoint(status = 200): RevocationRequest {
+	let request: RevocationRequest = { body: null, authorization: null };
+
+	server.use(
+		http.post(REVOCATION_ENDPOINT, async ({ request: incoming }) => {
+			request.authorization = incoming.headers.get("authorization");
+			request.body = new URLSearchParams(await incoming.text());
+			return new HttpResponse(null, { status });
 		}),
 	);
 
@@ -1773,5 +1803,62 @@ describe("exchangeRefreshToken", () => {
 		let error = await rp.exchangeRefreshToken("refresh-1").catch((thrown) => thrown);
 
 		expect(AuthError.is(error, AuthErrorCode.InvalidToken)).toBe(true);
+	});
+});
+
+describe("revoke", () => {
+	test("posts the token to the discovered revocation endpoint, under client_secret_post", async () => {
+		let rp = createRelyingParty({}, { revocation_endpoint: REVOCATION_ENDPOINT });
+		let request = stubRevocationEndpoint();
+
+		await expect(
+			rp.revoke("refresh-1", { tokenTypeHint: "refresh_token" }),
+		).resolves.toBeUndefined();
+
+		expect(request.body?.get("token")).toBe("refresh-1");
+		expect(request.body?.get("token_type_hint")).toBe("refresh_token");
+		expect(request.body?.get("client_id")).toBe(CLIENT_ID);
+		expect(request.body?.get("client_secret")).toBe(CLIENT_SECRET);
+		expect(request.authorization).toBeNull();
+	});
+
+	test("omits token_type_hint when the caller names none", async () => {
+		let rp = createRelyingParty({}, { revocation_endpoint: REVOCATION_ENDPOINT });
+		let request = stubRevocationEndpoint();
+
+		await rp.revoke("refresh-1");
+
+		expect(request.body?.get("token")).toBe("refresh-1");
+		expect(request.body?.get("token_type_hint")).toBeNull();
+	});
+
+	test("presents the credentials as Basic when the client asks for it", async () => {
+		let rp = createRelyingParty(
+			{ clientAuth: "client_secret_basic" },
+			{ revocation_endpoint: REVOCATION_ENDPOINT },
+		);
+		let request = stubRevocationEndpoint();
+
+		await rp.revoke("refresh-1");
+
+		expect(request.authorization).toBe(`Basic ${btoa(`${CLIENT_ID}:${CLIENT_SECRET}`)}`);
+		expect(request.body?.get("client_secret")).toBeNull();
+	});
+
+	test("throws revocation_failed when the revocation endpoint refuses the request", async () => {
+		let rp = createRelyingParty({}, { revocation_endpoint: REVOCATION_ENDPOINT });
+		stubRevocationEndpoint(400);
+
+		let error = await rp.revoke("refresh-1").catch((thrown) => thrown);
+
+		expect(AuthError.is(error, AuthErrorCode.RevocationFailed)).toBe(true);
+	});
+
+	test("throws endpoint_unsupported when the issuer publishes no revocation endpoint", async () => {
+		let rp = createRelyingParty();
+
+		let error = await rp.revoke("refresh-1").catch((thrown) => thrown);
+
+		expect(AuthError.is(error, AuthErrorCode.EndpointUnsupported)).toBe(true);
 	});
 });

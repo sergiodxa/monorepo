@@ -330,7 +330,7 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 		this.#issuer = issuer;
 		this.#clientId = options.clientId;
 		this.#clientSecret = options.clientSecret ?? null;
-		this.#redirectUri = options.redirectUri.toString();
+		this.#redirectUri = options.redirectUri?.toString() ?? "";
 		this.#scopes = options.scopes ?? DEFAULT_SCOPES;
 		this.#clientAuth = options.clientAuth ?? "client_secret_post";
 		this.#userInfo = options.userInfo ?? "never";
@@ -626,6 +626,48 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 					? null
 					: Math.floor(Date.now() / MS_PER_SECOND) + response.expires_in,
 		};
+	}
+
+	/**
+	 * Surrenders a token at the issuer's revocation endpoint, per RFC 7009, so a
+	 * token an app is done with stops being accepted at the provider rather than
+	 * merely being forgotten locally.
+	 *
+	 * @param token - The access or refresh token to surrender.
+	 * @param options - What kind of token it is, when the issuer benefits from
+	 *   being told.
+	 * @returns Nothing — RFC 7009 defines no response body for a successful revoke.
+	 * @throws {AuthError} `endpoint_unsupported` when the issuer publishes no
+	 *   revocation endpoint, `revocation_failed` when it refuses the request.
+	 * @example
+	 * await rp.revoke(refreshToken, { tokenTypeHint: "refresh_token" });
+	 */
+	async revoke(token: string, options?: RelyingParty.RevokeOptions): Promise<void> {
+		let endpoint = await this.#issuer.revocationEndpoint();
+
+		let body = new URLSearchParams({ token });
+		if (options?.tokenTypeHint) body.set("token_type_hint", options.tokenTypeHint);
+
+		let headers = new Headers({
+			"content-type": "application/x-www-form-urlencoded",
+			accept: "application/json",
+		});
+
+		if (this.#clientAuth === "client_secret_basic") {
+			let credentials = `${encodeURIComponent(this.#clientId)}:${encodeURIComponent(this.#clientSecret ?? "")}`;
+			headers.set("authorization", `Basic ${Base64.encode(credentials)}`);
+		} else {
+			body.set("client_id", this.#clientId);
+			if (this.#clientSecret) body.set("client_secret", this.#clientSecret);
+		}
+
+		let response = await fetch(endpoint, { method: "POST", headers, body });
+
+		if (!response.ok) {
+			throw new AuthError(`The revocation endpoint refused the request with ${response.status}`, {
+				code: AuthErrorCode.RevocationFailed,
+			});
+		}
 	}
 
 	/**
@@ -981,6 +1023,15 @@ export namespace RelyingParty {
 	/** The values `prompt` takes, per OpenID Connect Core §3.1.2.1. */
 	export type Prompt = "none" | "login" | "consent" | "select_account" | (string & {});
 
+	/** Which kind of token is being surrendered, per RFC 7009 §2.1 — advisory only, since a provider still accepts either without it. */
+	export type TokenTypeHint = "access_token" | "refresh_token";
+
+	/** What `revoke` is told about the token it is surrendering. */
+	export interface RevokeOptions {
+		/** The kind of token being revoked, when the issuer benefits from being told. */
+		tokenTypeHint?: TokenTypeHint;
+	}
+
 	/** The display claims a login resolves when the app maps no profile of its own. */
 	export interface Profile {
 		/** The person's display name, sent with the `profile` scope. */
@@ -1030,8 +1081,12 @@ export namespace RelyingParty {
 		clientId: string;
 		/** The client secret, for a confidential client. */
 		clientSecret?: string;
-		/** The callback URL registered with the issuer, sent on both legs of the flow. */
-		redirectUri: string | URL;
+		/**
+		 * The callback URL registered with the issuer, sent on both legs of the flow.
+		 * Only `authorize()` and `callback()` read it, so a client built for `revoke()`
+		 * alone may leave it out.
+		 */
+		redirectUri?: string | URL;
 		/**
 		 * The scopes a login asks for.
 		 *

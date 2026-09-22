@@ -66,14 +66,16 @@ beforeEach(async () => {
  * claims, since `RelyingParty`'s `userInfo: "when-missing"` reaches for it
  * whenever a display claim is missing.
  */
-function stubProvider(): {
+function stubProvider(options: { revocation?: boolean } = {}): {
 	origin: string;
 	tokenEndpointRequests: URLSearchParams[];
+	revocationEndpointRequests: URLSearchParams[];
 	respondWith(build: () => Promise<Response> | Response): void;
 } {
 	origins += 1;
 	let origin = `http://localhost:${5000 + origins}`;
 	let tokenEndpointRequests: URLSearchParams[] = [];
+	let revocationEndpointRequests: URLSearchParams[] = [];
 	let respond: (() => Promise<Response> | Response) | null = null;
 
 	server.use(
@@ -84,6 +86,7 @@ function stubProvider(): {
 				token_endpoint: `${origin}/token`,
 				jwks_uri: `${origin}/jwks`,
 				userinfo_endpoint: `${origin}/userinfo`,
+				...(options.revocation ? { revocation_endpoint: `${origin}/revoke` } : {}),
 			}),
 		),
 		http.get(`${origin}/jwks`, () => HttpResponse.json(JWK.toJSON(keys))),
@@ -97,11 +100,16 @@ function stubProvider(): {
 			let claims = decodeAccessTokenClaims(auth.replace(/^Bearer /, ""));
 			return HttpResponse.json(claims);
 		}),
+		http.post(`${origin}/revoke`, async ({ request }) => {
+			revocationEndpointRequests.push(new URLSearchParams(await request.text()));
+			return new HttpResponse(null, { status: 200 });
+		}),
 	);
 
 	return {
 		origin,
 		tokenEndpointRequests,
+		revocationEndpointRequests,
 		respondWith(build) {
 			respond = build;
 		},
@@ -259,6 +267,19 @@ function insertConnection(connectionId: string) {
 		now,
 		now,
 	);
+}
+
+/** Reads the most recent audit event of one action back out, for asserting on its `detail`. */
+function latestAuditDetail(action: string): Record<string, unknown> {
+	let rows = [
+		...state.storage.sql.exec(
+			`SELECT detail FROM audit_events WHERE action = ? ORDER BY id DESC LIMIT 1`,
+			action,
+		),
+	] as { detail: string }[];
+	let row = rows[0];
+	if (!row) throw new Error(`no audit event recorded for action ${action}`);
+	return JSON.parse(row.detail) as Record<string, unknown>;
 }
 
 /** Inserts a linked identity row directly, carrying the provider's own address, standing in for one a completed sign-in would have written. */
@@ -750,6 +771,88 @@ describe("unlinkIdentity", () => {
 		let described = await tenant.describeSubject({ subjectId, audience: { kind: "admin" } });
 		if (!described.ok) throw new Error("unreachable");
 		expect(described.identities).toHaveLength(0);
+	});
+
+	test("succeeds and removes the identity when the provider publishes no revocation endpoint", async () => {
+		let provider = stubProvider();
+		await createConnection(provider.origin);
+
+		let { subjectId } = await signInAndResume(provider);
+
+		await tenant.setPassword({
+			subjectId,
+			password: "correct-horse-battery",
+			actor: { kind: "admin" },
+		});
+
+		let result = await tenant.unlinkIdentity({
+			subjectId,
+			connectionSlug: "acme-oidc",
+			actor: { type: "subject", id: subjectId },
+		});
+
+		expect(result).toMatchObject({ ok: true });
+		expect(provider.revocationEndpointRequests).toHaveLength(0);
+
+		let described = await tenant.describeSubject({ subjectId, audience: { kind: "admin" } });
+		if (!described.ok) throw new Error("unreachable");
+		expect(described.identities).toHaveLength(0);
+		expect(latestAuditDetail("identity.unlinked")).toMatchObject({ providerRevoked: false });
+	});
+
+	test("revokes the stored refresh token at the provider's revocation endpoint on unlink", async () => {
+		let provider = stubProvider({ revocation: true });
+		await createConnection(provider.origin);
+
+		let { subjectId } = await signInAndResume(provider);
+
+		await tenant.setPassword({
+			subjectId,
+			password: "correct-horse-battery",
+			actor: { kind: "admin" },
+		});
+
+		let result = await tenant.unlinkIdentity({
+			subjectId,
+			connectionSlug: "acme-oidc",
+			actor: { type: "subject", id: subjectId },
+		});
+
+		expect(result).toMatchObject({ ok: true });
+		expect(provider.revocationEndpointRequests).toHaveLength(1);
+		expect(provider.revocationEndpointRequests[0]?.get("token")).toBe("refresh-1");
+		expect(provider.revocationEndpointRequests[0]?.get("token_type_hint")).toBe("refresh_token");
+		expect(latestAuditDetail("identity.unlinked")).toMatchObject({ providerRevoked: true });
+	});
+
+	test("still succeeds and removes the identity when the revocation endpoint refuses the request", async () => {
+		let provider = stubProvider({ revocation: true });
+		await createConnection(provider.origin);
+
+		let { subjectId } = await signInAndResume(provider);
+
+		await tenant.setPassword({
+			subjectId,
+			password: "correct-horse-battery",
+			actor: { kind: "admin" },
+		});
+
+		server.use(
+			http.post(`${provider.origin}/revoke`, () => new HttpResponse(null, { status: 500 })),
+		);
+
+		let result = await tenant.unlinkIdentity({
+			subjectId,
+			connectionSlug: "acme-oidc",
+			actor: { type: "subject", id: subjectId },
+		});
+
+		expect(result).toMatchObject({ ok: true });
+
+		let described = await tenant.describeSubject({ subjectId, audience: { kind: "admin" } });
+		if (!described.ok) throw new Error("unreachable");
+		expect(described.identities).toHaveLength(0);
+		expect(latestAuditDetail("identity.unlinked")).toMatchObject({ providerRevoked: false });
 	});
 
 	test("a self-unlink leaves the subject's other live sessions standing", async () => {
