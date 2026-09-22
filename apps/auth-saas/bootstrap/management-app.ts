@@ -1,8 +1,9 @@
 /**
  * Builds the management API router's fetch-router: the administrative surface
  * served on `api.{PLATFORM_DOMAIN}`. This pass wires the shared plumbing, the
- * token endpoint, the subjects and identifiers resource area, and the clients
- * and secrets resource area; every other resource route (roles, audit events,
+ * token endpoint, the subjects and identifiers resource area, the clients and
+ * secrets resource area, and the API keys and webhook endpoints and
+ * deliveries resource areas; every other resource route (roles, audit events,
  * and the rest of the administrative surface) is a later pass's own addition
  * to `routes/management.ts`.
  *
@@ -20,6 +21,11 @@ import { createRouter } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 
+import { createApiKeysCreateAction } from "~/app/http/controllers/management/api-keys/create";
+import { createApiKeysListAction } from "~/app/http/controllers/management/api-keys/list";
+import { createApiKeysReadAction } from "~/app/http/controllers/management/api-keys/read";
+import { createApiKeysRevokeAction } from "~/app/http/controllers/management/api-keys/revoke";
+import { createApiKeysRotateAction } from "~/app/http/controllers/management/api-keys/rotate";
 import { createClientsDeleteAction } from "~/app/http/controllers/management/clients/delete";
 import { createClientsDisableAction } from "~/app/http/controllers/management/clients/disable";
 import { createClientsListAction } from "~/app/http/controllers/management/clients/list";
@@ -42,6 +48,16 @@ import { createSubjectsReadAction } from "~/app/http/controllers/management/subj
 import { createSubjectsUnblockAction } from "~/app/http/controllers/management/subjects/unblock";
 import { createSubjectsUpdateAction } from "~/app/http/controllers/management/subjects/update";
 import token from "~/app/http/controllers/management/token";
+import { createWebhookEndpointsDeleteAction } from "~/app/http/controllers/management/webhook-endpoints/delete";
+import {
+	createWebhookDeliveriesListAction,
+	createWebhookDeliveriesReplayAction,
+} from "~/app/http/controllers/management/webhook-endpoints/deliveries";
+import { createWebhookEndpointsListAction } from "~/app/http/controllers/management/webhook-endpoints/list";
+import { createWebhookEndpointsReadAction } from "~/app/http/controllers/management/webhook-endpoints/read";
+import { createWebhookEndpointsRegisterAction } from "~/app/http/controllers/management/webhook-endpoints/register";
+import { createWebhookEndpointsRotateSecretAction } from "~/app/http/controllers/management/webhook-endpoints/rotate-secret";
+import { createWebhookEndpointsUpdateAction } from "~/app/http/controllers/management/webhook-endpoints/update";
 import notFound from "~/app/http/controllers/not-found";
 import { apiVersioning } from "~/app/http/lib/api-version";
 import { database } from "~/app/http/middleware/database";
@@ -144,5 +160,45 @@ managementRouter.map(
 );
 managementRouter.map(routes.clientsDisable, createClientsDisableAction(controllerOptions));
 managementRouter.map(routes.clientsDelete, createClientsDeleteAction(controllerOptions));
+
+managementRouter.map(routes.apiKeysCreate, createApiKeysCreateAction(controllerOptions));
+managementRouter.map(routes.apiKeysList, createApiKeysListAction(controllerOptions));
+managementRouter.map(routes.apiKeysRead, createApiKeysReadAction(controllerOptions));
+managementRouter.map(routes.apiKeysRotate, createApiKeysRotateAction(controllerOptions));
+managementRouter.map(routes.apiKeysRevoke, createApiKeysRevokeAction(controllerOptions));
+
+managementRouter.map(
+	routes.webhookEndpointsRegister,
+	createWebhookEndpointsRegisterAction(controllerOptions),
+);
+managementRouter.map(
+	routes.webhookEndpointsList,
+	createWebhookEndpointsListAction(controllerOptions),
+);
+managementRouter.map(
+	routes.webhookEndpointsRead,
+	createWebhookEndpointsReadAction(controllerOptions),
+);
+managementRouter.map(
+	routes.webhookEndpointsUpdate,
+	createWebhookEndpointsUpdateAction(controllerOptions),
+);
+managementRouter.map(
+	routes.webhookEndpointsRotateSecret,
+	createWebhookEndpointsRotateSecretAction(controllerOptions),
+);
+managementRouter.map(
+	routes.webhookEndpointsDelete,
+	createWebhookEndpointsDeleteAction(controllerOptions),
+);
+
+managementRouter.map(
+	routes.webhookDeliveriesList,
+	createWebhookDeliveriesListAction(controllerOptions),
+);
+managementRouter.map(
+	routes.webhookDeliveriesReplay,
+	createWebhookDeliveriesReplayAction(controllerOptions),
+);
 
 export { resolveDashboardSubjectId };

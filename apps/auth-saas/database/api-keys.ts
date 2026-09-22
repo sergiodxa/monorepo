@@ -630,6 +630,26 @@ export async function revokeApiKey(
 	return { ok: true };
 }
 
+export type ReadApiKeyResult = { ok: true; key: ApiKeyRecord } | { ok: false; reason: "not-found" };
+
+/**
+ * Reads one API key's own record, the same projection {@link listApiKeys}
+ * already hands back for each row — never the stored secret hash.
+ *
+ * @param db - The tenant's database.
+ * @param input - The key to read.
+ * @returns The key's record, or that no such key exists.
+ */
+export async function readApiKey(
+	db: Database,
+	input: { keyId: string },
+): Promise<ReadApiKeyResult> {
+	let row = await db.find(apiKeys, { id: input.keyId });
+	if (!row) return { ok: false, reason: "not-found" };
+
+	return { ok: true, key: toApiKeyRecord(row) };
+}
+
 export interface ListApiKeysInput {
 	subjectId: string;
 	cursor?: string | null;

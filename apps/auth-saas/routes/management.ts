@@ -1,9 +1,9 @@
 /**
  * The centralized, type-safe route table for the management API, served on
- * `api.{PLATFORM_DOMAIN}`. This pass adds the clients and secrets resource
- * area onto the subjects area and token endpoint earlier passes already
- * mapped; each later resource-area pass extends this same table with its own
- * routes.
+ * `api.{PLATFORM_DOMAIN}`. This pass adds the API keys and webhook endpoints
+ * and deliveries resource areas onto the subjects, clients and token routes
+ * earlier passes already mapped; each later resource-area pass extends this
+ * same table with its own routes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -41,4 +41,24 @@ export default route({
 	clientsRevokeSecret: post("/tenants/:tenantId/clients/:clientId/secrets/:secretId/revoke"),
 	clientsDisable: post("/tenants/:tenantId/clients/:clientId/disable"),
 	clientsDelete: del("/tenants/:tenantId/clients/:clientId"),
+
+	apiKeysCreate: post("/tenants/:tenantId/api-keys"),
+	apiKeysList: get("/tenants/:tenantId/api-keys"),
+	apiKeysRead: get("/tenants/:tenantId/api-keys/:keyId"),
+	apiKeysRotate: post("/tenants/:tenantId/api-keys/:keyId/rotate"),
+	apiKeysRevoke: post("/tenants/:tenantId/api-keys/:keyId/revoke"),
+
+	webhookEndpointsRegister: post("/tenants/:tenantId/webhook-endpoints"),
+	webhookEndpointsList: get("/tenants/:tenantId/webhook-endpoints"),
+	webhookEndpointsRead: get("/tenants/:tenantId/webhook-endpoints/:endpointId"),
+	webhookEndpointsUpdate: patch("/tenants/:tenantId/webhook-endpoints/:endpointId"),
+	webhookEndpointsRotateSecret: post(
+		"/tenants/:tenantId/webhook-endpoints/:endpointId/rotate-secret",
+	),
+	webhookEndpointsDelete: del("/tenants/:tenantId/webhook-endpoints/:endpointId"),
+
+	webhookDeliveriesList: get("/tenants/:tenantId/webhook-endpoints/:endpointId/deliveries"),
+	webhookDeliveriesReplay: post(
+		"/tenants/:tenantId/webhook-endpoints/:endpointId/deliveries/:deliveryId/replay",
+	),
 });

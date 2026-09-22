@@ -13,6 +13,7 @@
 import type { RateLimiterBinding } from "@sdxc/rate-limit";
 
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
+import { randomToken } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { JWK } from "@sdxc/jwt";
 import { Database } from "remix/data-table";
@@ -91,7 +92,9 @@ export async function buildManagementTestCore(
 	});
 
 	let state = createDurableObjectState();
-	let tenantDO = new TenantObject(state, {} as Cloudflare.Env);
+	let tenantDO = new TenantObject(state, {
+		TOTP_SEAL_KEY: randomToken({ bytes: 32 }),
+	} as Cloudflare.Env);
 	await tenantDO.provision({ tenantId: tenant.id, issuer: "https://acme.auth.example.com" });
 
 	let tenantDb = new Database(createSQLStorageDatabaseAdapter(state.storage.sql));
@@ -139,4 +142,19 @@ export async function grantMembership(
 	role: "owner" | "admin" | "member",
 ): Promise<void> {
 	await Membership.create(db, { tenantId, subjectId, role });
+}
+
+/**
+ * Enforces a feature as entitled on a provisioned tenant object, for a test
+ * whose success path costs an add-on the tenant's own plan must already
+ * include.
+ */
+export async function grantEntitlement(tenantDO: TenantObject, feature: string): Promise<void> {
+	await tenantDO.applyEntitlements({
+		plan: "pro",
+		features: { [feature]: true },
+		dauCap: null,
+		auditRetentionDays: null,
+		effectiveAt: Date.now(),
+	});
 }

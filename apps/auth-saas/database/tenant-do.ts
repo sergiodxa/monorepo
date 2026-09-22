@@ -28,6 +28,7 @@ import type {
 	CreateApiKeyResult,
 	ListApiKeysInput,
 	ListApiKeysResult,
+	ReadApiKeyResult,
 	RevokeApiKeyInput,
 	RevokeApiKeyResult,
 	RotateApiKeyInput,
@@ -2351,6 +2352,18 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	async revokeApiKey(input: RevokeApiKeyInput): Promise<WithCost<RevokeApiKeyResult>> {
 		await this.#migrated;
 		return this.#withCost(() => ApiKeys.revokeApiKey(this.#db, input, this.#apiKeyCache));
+	}
+
+	/**
+	 * Reads one API key's own record. Never gated: reading a key a tenant
+	 * already holds is not something a lapsed subscription blocks.
+	 *
+	 * @param input - The key to read.
+	 * @returns The key's record, or that no such key exists.
+	 */
+	async readApiKey(input: { keyId: string }): Promise<WithCost<ReadApiKeyResult>> {
+		await this.#migrated;
+		return this.#withCost(() => ApiKeys.readApiKey(this.#db, input));
 	}
 
 	/**

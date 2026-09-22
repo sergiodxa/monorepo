@@ -21,6 +21,7 @@ import {
 	authenticateApiKey,
 	createApiKey,
 	listApiKeys,
+	readApiKey,
 	revokeApiKey,
 	rotateApiKey,
 	setApiKeyPrefix,
@@ -416,6 +417,25 @@ describe("revokeApiKey", () => {
 
 		await revokeApiKey(db, { keyId, reason: "compromised", actor: ACTOR }, cache);
 		expect(cache.has(keyId)).toBe(false);
+	});
+});
+
+describe("readApiKey", () => {
+	test("reads a key's own record, the same projection listApiKeys produces", async () => {
+		await setPrefix("acme");
+		let subjectId = await createTestSubject();
+		let { keyId } = await mintKeyFor({ subjectId, name: "CI key", scopes: [] });
+
+		let result = await readApiKey(db, { keyId });
+		if (!result.ok) throw new Error("unreachable");
+
+		expect(result.key).toMatchObject({ id: keyId, subjectId, name: "CI key" });
+		expect(result.key).not.toHaveProperty("secretHash");
+	});
+
+	test("answers not-found for a key that does not exist", async () => {
+		let result = await readApiKey(db, { keyId: "akey_does_not_exist" });
+		expect(result).toEqual({ ok: false, reason: "not-found" });
 	});
 });
 
