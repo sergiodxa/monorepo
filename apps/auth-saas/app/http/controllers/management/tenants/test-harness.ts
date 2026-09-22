@@ -18,6 +18,8 @@ import type { Database } from "remix/data-table";
 import type { RequestContext } from "remix/router";
 
 import { createR2Bucket } from "@sdxc/cloudflare-mocks";
+import { Mailer } from "@sdxc/mail";
+import { MemoryTransport } from "@sdxc/mail/memory";
 import { createRouter } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -36,6 +38,7 @@ import {
 	createTenantMembersRemoveAction,
 	createTenantMembersUpdateRoleAction,
 } from "~/app/http/controllers/management/tenants/members";
+import { createTenantMembersInviteAction } from "~/app/http/controllers/management/tenants/members-invite";
 import { createTenantMfaPolicySetAction } from "~/app/http/controllers/management/tenants/mfa-policy";
 import { createTenantReadAction } from "~/app/http/controllers/management/tenants/read";
 import { createTenantSessionPolicyDescribeAction } from "~/app/http/controllers/management/tenants/session-policy";
@@ -50,6 +53,7 @@ import {
 	ISSUER,
 } from "~/app/http/controllers/management/test-harness";
 import { database } from "~/app/http/middleware/database";
+import { Mail } from "~/app/http/middleware/management-mail";
 import routes from "~/routes/management";
 
 export {
@@ -61,6 +65,9 @@ export {
 	ISSUER,
 };
 
+/** The address {@link buildTenantsRouter}'s own recording mailer sends from. */
+const TEST_SENDER = { email: "noreply@auth.example.com", name: "Auth SaaS" };
+
 /** Builds the management router wired to constructed control-plane and tenant state. */
 export function buildTenantsRouter(
 	db: Database,
@@ -69,6 +76,7 @@ export function buildTenantsRouter(
 		resolveDashboardSubjectId?: (ctx: RequestContext) => Promise<string | null>;
 		limiter?: RateLimiterBinding;
 		hostnameClient?: () => HostnameClient;
+		mailTransport?: MemoryTransport;
 	} = {},
 ) {
 	let controllerOptions: ManagementControllerOptions = {
@@ -80,12 +88,24 @@ export function buildTenantsRouter(
 		r2: createR2Bucket(),
 	};
 
-	let router = createRouter({ middleware: [database(() => db)] });
+	let transport = options.mailTransport ?? new MemoryTransport();
+	let mailer = new Mailer({ transport, from: TEST_SENDER });
+
+	let router = createRouter({
+		middleware: [
+			database(() => db),
+			(ctx, next) => {
+				ctx.set(Mail, mailer, { property: "mail" });
+				return next();
+			},
+		],
+	});
 
 	router.map(routes.tenantRead, createTenantReadAction(controllerOptions));
 
 	router.map(routes.tenantMembersList, createTenantMembersListAction(controllerOptions));
 	router.map(routes.tenantMembersCreate, createTenantMembersCreateAction(controllerOptions));
+	router.map(routes.tenantMembersInvite, createTenantMembersInviteAction(controllerOptions));
 	router.map(
 		routes.tenantMembersUpdateRole,
 		createTenantMembersUpdateRoleAction(controllerOptions),
@@ -113,6 +133,8 @@ export function buildTenantsRouter(
 
 export interface TenantsHarness extends ManagementTestCore {
 	router: ReturnType<typeof buildTenantsRouter>;
+	/** Every message the router's own recording mailer has sent so far. */
+	mailTransport: MemoryTransport;
 }
 
 export interface BuildTenantsHarnessOptions {
@@ -130,7 +152,8 @@ export async function buildTenantsHarness(
 	let core = await buildManagementTestCore({
 		defaultScope: options.defaultScope ?? "tenant:write members:write",
 	});
-	let router = buildTenantsRouter(core.db, core.tenantDO, options);
+	let mailTransport = new MemoryTransport();
+	let router = buildTenantsRouter(core.db, core.tenantDO, { ...options, mailTransport });
 
-	return { ...core, router };
+	return { ...core, router, mailTransport };
 }

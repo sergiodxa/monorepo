@@ -108,6 +108,7 @@ export default route({
 
 	tenantMembersList: get("/tenants/:tenantId/members"),
 	tenantMembersCreate: post("/tenants/:tenantId/members"),
+	tenantMembersInvite: post("/tenants/:tenantId/members/invite"),
 	tenantMembersUpdateRole: put("/tenants/:tenantId/members/:membershipId"),
 	tenantMembersRemove: del("/tenants/:tenantId/members/:membershipId"),
 

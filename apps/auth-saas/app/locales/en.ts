@@ -271,6 +271,14 @@ export default {
 			body: "An export of {{tenantName}}'s directory has started, including every subject's stored password hash.",
 			notice: "If you didn't expect this, contact whoever on your team has access to start one.",
 		},
+		tenantInvitation: {
+			subject: "You've been invited to administer {{tenantName}}",
+			preview: "Accept this invitation to help administer {{tenantName}}.",
+			heading: "You've been invited",
+			body: "You've been invited to administer {{tenantName}} as {{role}}.",
+			action: "Accept invitation",
+			unexpected: "If you weren't expecting this, you can safely ignore this email.",
+		},
 	},
 
 	hostedError: {

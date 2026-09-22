@@ -99,6 +99,7 @@ import {
 	createTenantMembersRemoveAction,
 	createTenantMembersUpdateRoleAction,
 } from "~/app/http/controllers/management/tenants/members";
+import { createTenantMembersInviteAction } from "~/app/http/controllers/management/tenants/members-invite";
 import { createTenantMfaPolicySetAction } from "~/app/http/controllers/management/tenants/mfa-policy";
 import { createTenantReadAction } from "~/app/http/controllers/management/tenants/read";
 import token from "~/app/http/controllers/management/token";
@@ -115,6 +116,7 @@ import { createWebhookEndpointsUpdateAction } from "~/app/http/controllers/manag
 import notFound from "~/app/http/controllers/not-found";
 import { apiVersioning } from "~/app/http/lib/api-version";
 import { database } from "~/app/http/middleware/database";
+import { mail } from "~/app/http/middleware/management-mail";
 import trailingSlash from "~/app/http/middleware/trailing-slash";
 import { createDatabase } from "~/app/lib/database";
 import { createHostnameClient } from "~/app/lib/hostnames";
@@ -148,6 +150,7 @@ let globalMiddleware: Middleware[] = [
 	database(createDatabase),
 	formData() as Middleware,
 	apiVersioning(),
+	mail(),
 ];
 
 /**
@@ -330,6 +333,10 @@ managementRouter.map(routes.tenantMembersList, createTenantMembersListAction(con
 managementRouter.map(
 	routes.tenantMembersCreate,
 	createTenantMembersCreateAction(controllerOptions),
+);
+managementRouter.map(
+	routes.tenantMembersInvite,
+	createTenantMembersInviteAction(controllerOptions),
 );
 managementRouter.map(
 	routes.tenantMembersUpdateRole,
