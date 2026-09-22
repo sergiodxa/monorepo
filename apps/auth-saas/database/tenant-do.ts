@@ -1970,6 +1970,11 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 					return { ok: false, reason: "entitlement-required" };
 				}
 			}
+			if (input.grantTypes.includes(DeviceAuthorization.DEVICE_CODE_GRANT_TYPE)) {
+				if (!(await this.#isEntitled(DeviceAuthorization.DEVICE_GRANT_FEATURE))) {
+					return { ok: false, reason: "entitlement-required" };
+				}
+			}
 			return Clients.registerClient(this.#db, input);
 		});
 	}
@@ -1986,6 +1991,11 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		return this.#withCost(async () => {
 			if (input.grantTypes.includes("client_credentials")) {
 				if (!(await this.#isEntitled(ApiKeys.MACHINE_ACCESS_FEATURE))) {
+					return { ok: false, reason: "entitlement-required" };
+				}
+			}
+			if (input.grantTypes.includes(DeviceAuthorization.DEVICE_CODE_GRANT_TYPE)) {
+				if (!(await this.#isEntitled(DeviceAuthorization.DEVICE_GRANT_FEATURE))) {
 					return { ok: false, reason: "entitlement-required" };
 				}
 			}
@@ -3685,8 +3695,11 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		await this.#migrated;
 
 		return this.#withCost(async () => {
-			let issuer = await this.#issuer();
-			return Metadata.publishMetadata(this.#db, { ...input, issuer });
+			let [issuer, hasDeviceGrant] = await Promise.all([
+				this.#issuer(),
+				this.#isEntitled(DeviceAuthorization.DEVICE_GRANT_FEATURE),
+			]);
+			return Metadata.publishMetadata(this.#db, { ...input, issuer, hasDeviceGrant });
 		});
 	}
 

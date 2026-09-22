@@ -43,6 +43,7 @@ import {
 } from "~/app/http/controllers/hosted/step-up";
 import { verifyResend, verifyShow } from "~/app/http/controllers/hosted/verify";
 import notFound from "~/app/http/controllers/not-found";
+import deviceAuthorization from "~/app/http/controllers/oauth/device-authorization";
 import introspect from "~/app/http/controllers/oauth/introspect";
 import token from "~/app/http/controllers/oauth/token";
 import {
@@ -146,6 +147,10 @@ tenantRouter.map(routes.userinfoPost, {
 tenantRouter.map(routes.token, {
 	middleware: [tokenRateLimit(env.TOKEN_RATE_LIMITER, env)],
 	handler: token as RequestHandler,
+});
+tenantRouter.map(routes.deviceAuthorization, {
+	middleware: [tokenRateLimit(env.TOKEN_RATE_LIMITER, env)],
+	handler: deviceAuthorization as RequestHandler,
 });
 tenantRouter.map(routes.apiKeysIntrospect, introspect);
 tenantRouter.map(routes.authorize, {

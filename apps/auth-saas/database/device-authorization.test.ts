@@ -34,10 +34,18 @@ beforeEach(async () => {
 	await tenant.provision({ tenantId: "tenant_1", issuer: ISSUER });
 });
 
-/** Registers a confidential client carrying the device grant, ready to poll with. */
+/** Registers a confidential client carrying the device grant, ready to poll with, granting the tenant's own device_grant feature first. */
 async function createDeviceClient(
 	overrides: { grantTypes?: string[]; scopes?: string[] } = {},
 ): Promise<{ clientId: string; clientSecret: string }> {
+	await tenant.applyEntitlements({
+		plan: "pro",
+		features: { device_grant: true },
+		dauCap: null,
+		auditRetentionDays: null,
+		effectiveAt: Date.now(),
+	});
+
 	let result = await tenant.registerClient({
 		name: "Living Room TV",
 		kind: "confidential",

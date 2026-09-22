@@ -1,8 +1,8 @@
 /**
- * `POST /oauth/token` — the token endpoint: turns an authorization code or a
- * refresh token into a token set, or a client's own credentials into a token
- * about that client, authenticating it from whichever credential shape it
- * presented.
+ * `POST /oauth/token` — the token endpoint: turns an authorization code, a
+ * refresh token, or an approved device code into a token set, or a client's
+ * own credentials into a token about that client, authenticating it from
+ * whichever credential shape it presented.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,6 +13,7 @@ import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
+import { DEVICE_CODE_GRANT_TYPE } from "~/database/device-authorization";
 import routes from "~/routes/tenant";
 
 /** How a client may present itself here, mirroring what the tenant's token module accepts. */
@@ -135,7 +136,8 @@ export default createAction(routes.token, async (ctx) => {
 	if (
 		grantType !== "authorization_code" &&
 		grantType !== "refresh_token" &&
-		grantType !== "client_credentials"
+		grantType !== "client_credentials" &&
+		grantType !== DEVICE_CODE_GRANT_TYPE
 	) {
 		return tokenError(400, "unsupported_grant_type", `Grant type "${grantType}" is not supported.`);
 	}
@@ -190,7 +192,7 @@ export default createAction(routes.token, async (ctx) => {
 			authScheme: clientAuth.auth.authScheme,
 			now,
 		});
-	} else {
+	} else if (grantType === "client_credentials") {
 		let authScheme = clientAuth.auth.authScheme;
 		if (authScheme === "none") {
 			return tokenError(
@@ -209,6 +211,20 @@ export default createAction(routes.token, async (ctx) => {
 			clientId: clientAuth.auth.clientId,
 			clientSecret: clientAuth.auth.clientSecret,
 			authScheme,
+			now,
+		});
+	} else {
+		let deviceCode = form.get("device_code");
+
+		if (typeof deviceCode !== "string") {
+			return tokenError(400, "invalid_request", "device_code is required.");
+		}
+
+		outcome = await ctx.tenantStub.redeemDeviceCode({
+			deviceCode,
+			clientId: clientAuth.auth.clientId,
+			clientSecret: clientAuth.auth.clientSecret,
+			authScheme: clientAuth.auth.authScheme,
 			now,
 		});
 	}

@@ -66,7 +66,7 @@ describe("publishMetadata", () => {
 	test("publishes a jwks matching publishKeySet's own output", async () => {
 		await advanceSigningKeys(db, { now: T0 });
 
-		let published = await publishMetadata(db, { now: T0, issuer: ISSUER });
+		let published = await publishMetadata(db, { now: T0, issuer: ISSUER, hasDeviceGrant: false });
 		let keySet = await publishKeySet(db, { now: T0 });
 
 		expect(published.jwks).toEqual(keySet);
@@ -75,7 +75,7 @@ describe("publishMetadata", () => {
 	test("builds both metadata documents from the same tenant facts, so they never drift", async () => {
 		await advanceSigningKeys(db, { now: T0 });
 
-		let published = await publishMetadata(db, { now: T0, issuer: ISSUER });
+		let published = await publishMetadata(db, { now: T0, issuer: ISSUER, hasDeviceGrant: false });
 
 		expect(published.openidConfiguration.issuer).toBe(ISSUER);
 		expect(published.oauthMetadata.issuer).toBe(ISSUER);
@@ -101,7 +101,7 @@ describe("publishMetadata", () => {
 			created_at: T0,
 		});
 
-		let published = await publishMetadata(db, { now: T0, issuer: ISSUER });
+		let published = await publishMetadata(db, { now: T0, issuer: ISSUER, hasDeviceGrant: false });
 
 		expect(published.openidConfiguration.scopes_supported).toEqual(
 			expect.arrayContaining([
@@ -129,15 +129,59 @@ describe("publishMetadata", () => {
 
 	test("changes version once a rotation publishes a new key", async () => {
 		await advanceSigningKeys(db, { now: T0 });
-		let before = await publishMetadata(db, { now: T0, issuer: ISSUER });
+		let before = await publishMetadata(db, { now: T0, issuer: ISSUER, hasDeviceGrant: false });
 
 		// Past the signing window, so a successor is staged and published alongside
 		// the incumbent, ahead of ever signing.
 		await advanceSigningKeys(db, { now: T0 + 90 * DAY_MS });
-		let afterStaging = await publishMetadata(db, { now: T0 + 90 * DAY_MS, issuer: ISSUER });
+		let afterStaging = await publishMetadata(db, {
+			now: T0 + 90 * DAY_MS,
+			issuer: ISSUER,
+			hasDeviceGrant: false,
+		});
 
 		expect(afterStaging.version).not.toBe(before.version);
 		expect(afterStaging.jwks.keys).toHaveLength(2);
+	});
+
+	test("omits device_authorization_endpoint and the device grant URN without the entitlement", async () => {
+		await advanceSigningKeys(db, { now: T0 });
+
+		let published = await publishMetadata(db, { now: T0, issuer: ISSUER, hasDeviceGrant: false });
+
+		expect(published.openidConfiguration).not.toHaveProperty("device_authorization_endpoint");
+		expect(published.oauthMetadata).not.toHaveProperty("device_authorization_endpoint");
+		expect(published.openidConfiguration.grant_types_supported).toEqual([
+			"authorization_code",
+			"refresh_token",
+		]);
+		expect(published.oauthMetadata.grant_types_supported).toEqual([
+			"authorization_code",
+			"refresh_token",
+		]);
+	});
+
+	test("advertises device_authorization_endpoint and the device grant URN once the entitlement holds", async () => {
+		await advanceSigningKeys(db, { now: T0 });
+
+		let published = await publishMetadata(db, { now: T0, issuer: ISSUER, hasDeviceGrant: true });
+
+		expect(published.openidConfiguration.device_authorization_endpoint).toBe(
+			`${ISSUER}/oauth/device_authorization`,
+		);
+		expect(published.oauthMetadata.device_authorization_endpoint).toBe(
+			`${ISSUER}/oauth/device_authorization`,
+		);
+		expect(published.openidConfiguration.grant_types_supported).toEqual([
+			"authorization_code",
+			"refresh_token",
+			"urn:ietf:params:oauth:grant-type:device_code",
+		]);
+		expect(published.oauthMetadata.grant_types_supported).toEqual([
+			"authorization_code",
+			"refresh_token",
+			"urn:ietf:params:oauth:grant-type:device_code",
+		]);
 	});
 });
 

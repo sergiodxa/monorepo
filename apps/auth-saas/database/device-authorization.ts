@@ -87,8 +87,11 @@ const USER_CODE_REJECTION_CEILING = 256 - (256 % USER_CODE_ALPHABET.length);
 /** How many times a user code collision against the pending-codes index is retried before the mint fails. */
 const MAX_USER_CODE_MINT_ATTEMPTS = 5;
 
+/** The feature slug this whole mechanism is sold under. */
+export const DEVICE_GRANT_FEATURE = "device_grant";
+
 /** The grant type a client's record must carry for `beginDeviceAuthorization` to answer it at all. */
-const DEVICE_CODE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code";
+export const DEVICE_CODE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code";
 
 /** One device's own pending, approved, denied or redeemed sign-in. */
 export const deviceAuthorizations = table({

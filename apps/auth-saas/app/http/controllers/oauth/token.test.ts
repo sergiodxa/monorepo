@@ -10,7 +10,7 @@
 import type { Middleware } from "remix/router";
 
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
-import { Base64, Base64Url, Hex, sha256 } from "@sdxc/crypto";
+import { Base64, Base64Url, Hex, randomToken, sha256 } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { isFailure } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid";
@@ -26,6 +26,7 @@ import {
 	tenant,
 } from "~/app/http/middleware/tenant";
 import { authorizationCodes } from "~/database/authorization";
+import { DEVICE_CODE_GRANT_TYPE, deviceAuthorizations } from "~/database/device-authorization";
 import { openSession } from "~/database/sessions";
 import Tenant from "~/database/tenant-do";
 import routes from "~/routes/tenant";
@@ -372,5 +373,210 @@ describe("client_credentials grant", () => {
 		expect(response.status).toBe(401);
 		let body = (await response.json()) as Record<string, unknown>;
 		expect(body.error).toBe("invalid_client");
+	});
+});
+
+/** Registers a confidential client carrying the device grant, granting the tenant's own device_grant feature first. */
+async function createDeviceGrantClient(scopes: string[] = ["openid", "offline_access"]) {
+	await tenantDO.applyEntitlements({
+		plan: "pro",
+		features: { device_grant: true },
+		dauCap: null,
+		auditRetentionDays: null,
+		effectiveAt: Date.now(),
+	});
+
+	let result = await tenantDO.registerClient({
+		name: "Living Room TV",
+		kind: "confidential",
+		redirectUris: [],
+		postLogoutRedirectUris: [],
+		grantTypes: [DEVICE_CODE_GRANT_TYPE],
+		responseTypes: [],
+		scopes,
+		tokenEndpointAuthMethod: "client_secret_basic",
+		requireConsent: false,
+	});
+	if (!result.ok || !result.secret) throw new Error("unreachable");
+	return { client: result.client, secret: result.secret };
+}
+
+interface TestDeviceAuthorizationRowInput {
+	deviceCode: string;
+	clientId: string;
+	scopes: string[];
+	now: number;
+	approved?: { subjectId: string; sessionId: string };
+	deniedAt?: number | null;
+	expiresAt?: number;
+}
+
+/** Writes a `device_authorizations` row directly against the tenant's own database, the way `decideDeviceApproval` will once it exists. */
+async function createTestDeviceAuthorizationRow(input: TestDeviceAuthorizationRowInput) {
+	await db.create(deviceAuthorizations, {
+		id: `devr_${generateUUID()}`,
+		device_code_hash: await digestHex(input.deviceCode),
+		user_code: "BCDFGHJK",
+		client_id: input.clientId,
+		scopes: input.scopes,
+		interval_s: 5,
+		last_polled_at: null,
+		expires_at: input.expiresAt ?? input.now + 600_000,
+		approved_at: input.approved ? input.now : null,
+		denied_at: input.deniedAt ?? null,
+		redeemed_at: null,
+		subject_id: input.approved?.subjectId ?? null,
+		session_id: input.approved?.sessionId ?? null,
+		auth_time: input.approved ? input.now : null,
+		amr: input.approved ? ["pwd"] : null,
+		token_family_id: null,
+		created_at: input.now,
+	});
+}
+
+describe("device_code grant", () => {
+	test("redeems an approved device code for real tokens through the HTTP endpoint", async () => {
+		let { client, secret } = await createDeviceGrantClient(["openid", "offline_access"]);
+		let { subjectId, sessionId } = await createTestSubjectAndSession();
+		let deviceCode = randomToken({ bytes: 32 });
+		let now = Date.now();
+
+		await createTestDeviceAuthorizationRow({
+			deviceCode,
+			clientId: client.id,
+			scopes: ["openid", "offline_access"],
+			now,
+			approved: { subjectId, sessionId },
+		});
+
+		let response = await buildRouter().fetch(
+			tokenRequest(
+				{ grant_type: DEVICE_CODE_GRANT_TYPE, device_code: deviceCode },
+				{ Authorization: `Basic ${Base64.encode(`${client.id}:${secret}`)}` },
+			),
+		);
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get("Cache-Control")).toBe("no-store");
+		let body = (await response.json()) as Record<string, unknown>;
+		expect(body.access_token).toEqual(expect.any(String));
+		expect(body.refresh_token).toEqual(expect.any(String));
+		expect(body.token_type).toBe("Bearer");
+	});
+
+	test("answers authorization_pending before any decision", async () => {
+		let { client, secret } = await createDeviceGrantClient();
+		let deviceCode = randomToken({ bytes: 32 });
+		let now = Date.now();
+
+		await createTestDeviceAuthorizationRow({
+			deviceCode,
+			clientId: client.id,
+			scopes: ["openid"],
+			now,
+		});
+
+		let response = await buildRouter().fetch(
+			tokenRequest(
+				{ grant_type: DEVICE_CODE_GRANT_TYPE, device_code: deviceCode },
+				{ Authorization: `Basic ${Base64.encode(`${client.id}:${secret}`)}` },
+			),
+		);
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as Record<string, unknown>;
+		expect(body.error).toBe("authorization_pending");
+	});
+
+	test("answers slow_down on a too-soon second poll", async () => {
+		let { client, secret } = await createDeviceGrantClient();
+		let deviceCode = randomToken({ bytes: 32 });
+		let now = Date.now();
+
+		await createTestDeviceAuthorizationRow({
+			deviceCode,
+			clientId: client.id,
+			scopes: ["openid"],
+			now,
+		});
+
+		let auth = { Authorization: `Basic ${Base64.encode(`${client.id}:${secret}`)}` };
+
+		let first = await buildRouter().fetch(
+			tokenRequest({ grant_type: DEVICE_CODE_GRANT_TYPE, device_code: deviceCode }, auth),
+		);
+		expect(((await first.json()) as Record<string, unknown>).error).toBe("authorization_pending");
+
+		let second = await buildRouter().fetch(
+			tokenRequest({ grant_type: DEVICE_CODE_GRANT_TYPE, device_code: deviceCode }, auth),
+		);
+		expect(second.status).toBe(400);
+		let body = (await second.json()) as Record<string, unknown>;
+		expect(body.error).toBe("slow_down");
+	});
+
+	test("answers access_denied for a denied row", async () => {
+		let { client, secret } = await createDeviceGrantClient();
+		let deviceCode = randomToken({ bytes: 32 });
+		let now = Date.now();
+
+		await createTestDeviceAuthorizationRow({
+			deviceCode,
+			clientId: client.id,
+			scopes: ["openid"],
+			now,
+			deniedAt: now,
+		});
+
+		let response = await buildRouter().fetch(
+			tokenRequest(
+				{ grant_type: DEVICE_CODE_GRANT_TYPE, device_code: deviceCode },
+				{ Authorization: `Basic ${Base64.encode(`${client.id}:${secret}`)}` },
+			),
+		);
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as Record<string, unknown>;
+		expect(body.error).toBe("access_denied");
+	});
+
+	test("answers expired_token for a row past its expiry", async () => {
+		let { client, secret } = await createDeviceGrantClient();
+		let deviceCode = randomToken({ bytes: 32 });
+		let now = Date.now();
+
+		await createTestDeviceAuthorizationRow({
+			deviceCode,
+			clientId: client.id,
+			scopes: ["openid"],
+			now: now - 700_000,
+			expiresAt: now - 1000,
+		});
+
+		let response = await buildRouter().fetch(
+			tokenRequest(
+				{ grant_type: DEVICE_CODE_GRANT_TYPE, device_code: deviceCode },
+				{ Authorization: `Basic ${Base64.encode(`${client.id}:${secret}`)}` },
+			),
+		);
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as Record<string, unknown>;
+		expect(body.error).toBe("expired_token");
+	});
+
+	test("answers invalid_grant for a device code that does not resolve", async () => {
+		let { client, secret } = await createDeviceGrantClient();
+
+		let response = await buildRouter().fetch(
+			tokenRequest(
+				{ grant_type: DEVICE_CODE_GRANT_TYPE, device_code: "not-a-real-device-code" },
+				{ Authorization: `Basic ${Base64.encode(`${client.id}:${secret}`)}` },
+			),
+		);
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as Record<string, unknown>;
+		expect(body.error).toBe("invalid_grant");
 	});
 });

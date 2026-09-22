@@ -681,3 +681,91 @@ describe("the outbound_webhooks entitlement gate", () => {
 		});
 	});
 });
+
+describe("the device_grant entitlement gate", () => {
+	const DEVICE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code";
+
+	test("refuses registerClient and updateClient carrying the device grant without the entitlement", async () => {
+		await tenant.provision({ tenantId: "tenant_1", issuer: "https://tenant-1.example.com" });
+
+		let registered = await tenant.registerClient({
+			name: "Living Room TV",
+			kind: "confidential",
+			redirectUris: [],
+			postLogoutRedirectUris: [],
+			grantTypes: [DEVICE_GRANT_TYPE],
+			responseTypes: [],
+			scopes: ["openid"],
+			tokenEndpointAuthMethod: "client_secret_post",
+			requireConsent: false,
+		});
+		expect(registered).toMatchObject({ ok: false, reason: "entitlement-required" });
+
+		let plainClient = await tenant.registerClient({
+			name: "Plain Client",
+			kind: "confidential",
+			redirectUris: ["https://example.com/callback"],
+			postLogoutRedirectUris: [],
+			grantTypes: ["authorization_code"],
+			responseTypes: ["code"],
+			scopes: ["openid"],
+			tokenEndpointAuthMethod: "client_secret_basic",
+			requireConsent: false,
+		});
+		if (!plainClient.ok) throw new Error("unreachable");
+
+		let updated = await tenant.updateClient({
+			clientId: plainClient.client.id,
+			name: "Plain Client",
+			kind: "confidential",
+			redirectUris: ["https://example.com/callback"],
+			postLogoutRedirectUris: [],
+			grantTypes: [DEVICE_GRANT_TYPE],
+			responseTypes: ["code"],
+			scopes: ["openid"],
+			tokenEndpointAuthMethod: "client_secret_basic",
+			requireConsent: false,
+		});
+		expect(updated).toMatchObject({ ok: false, reason: "entitlement-required" });
+	});
+
+	test("admits registerClient and updateClient carrying the device grant once applyEntitlements grants the feature", async () => {
+		await tenant.provision({ tenantId: "tenant_1", issuer: "https://tenant-1.example.com" });
+
+		await tenant.applyEntitlements({
+			plan: "pro",
+			features: { device_grant: true },
+			dauCap: null,
+			auditRetentionDays: null,
+			effectiveAt: Date.now(),
+		});
+
+		let registered = await tenant.registerClient({
+			name: "Living Room TV",
+			kind: "confidential",
+			redirectUris: [],
+			postLogoutRedirectUris: [],
+			grantTypes: [DEVICE_GRANT_TYPE],
+			responseTypes: [],
+			scopes: ["openid"],
+			tokenEndpointAuthMethod: "client_secret_post",
+			requireConsent: false,
+		});
+		expect(registered.ok).toBe(true);
+		if (!registered.ok) throw new Error("unreachable");
+
+		let updated = await tenant.updateClient({
+			clientId: registered.client.id,
+			name: "Living Room TV",
+			kind: "confidential",
+			redirectUris: [],
+			postLogoutRedirectUris: [],
+			grantTypes: [DEVICE_GRANT_TYPE],
+			responseTypes: [],
+			scopes: ["openid", "profile"],
+			tokenEndpointAuthMethod: "client_secret_post",
+			requireConsent: false,
+		});
+		expect(updated).toMatchObject({ ok: true, client: { scopes: ["openid", "profile"] } });
+	});
+});

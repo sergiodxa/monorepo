@@ -20,6 +20,7 @@ import type { SubjectRow } from "./subjects";
 
 import { clients } from "./clients";
 import { scopes } from "./consent";
+import { DEVICE_CODE_GRANT_TYPE } from "./device-authorization";
 import { resolveRoleAndPermissionClaims } from "./roles";
 import { sessions } from "./sessions";
 import { publishKeySet } from "./signing-keys";
@@ -46,6 +47,8 @@ const PROFILE_CLAIM_COLUMNS: Record<string, keyof SubjectRow> = {
 export interface PublishMetadataInput {
 	now: number;
 	issuer: string;
+	/** Whether this tenant currently holds the device grant add-on. */
+	hasDeviceGrant: boolean;
 }
 
 /** A discovery document's field values: every field here is a string or a list of them. */
@@ -59,7 +62,11 @@ export interface PublishMetadataResult {
 	maxAge: number;
 }
 
-let PublishMetadataSchema = s.object({ now: s.number(), issuer: s.string() });
+let PublishMetadataSchema = s.object({
+	now: s.number(),
+	issuer: s.string(),
+	hasDeviceGrant: s.boolean(),
+});
 
 /**
  * Renders the OpenID configuration, the OAuth authorization server metadata, and the JWKS
@@ -69,8 +76,10 @@ let PublishMetadataSchema = s.object({ now: s.number(), issuer: s.string() });
  * could.
  *
  * @param db - The tenant's database.
- * @param input - The clock the key set's publish window is measured against, and the
- * issuer the Worker resolved for this tenant's hostname.
+ * @param input - The clock the key set's publish window is measured against, the
+ * issuer the Worker resolved for this tenant's hostname, and whether this tenant
+ * currently holds the device grant add-on, which is what gates whether
+ * `device_authorization_endpoint` and its grant type URN appear at all.
  * @returns Both metadata documents, the published key set, a version a caller can compare
  * against what it has cached, and how long the documents may be cached for.
  */
@@ -92,10 +101,13 @@ export async function publishMetadata(
 		tokenEndpoint: `${parsed.issuer}/oauth/token`,
 		userinfoEndpoint: `${parsed.issuer}/userinfo`,
 		jwksUri: `${parsed.issuer}/.well-known/jwks.json`,
+		deviceAuthorizationEndpoint: `${parsed.issuer}/oauth/device_authorization`,
 	};
 
 	let responseTypesSupported = ["code"];
-	let grantTypesSupported = ["authorization_code", "refresh_token"];
+	let grantTypesSupported = parsed.hasDeviceGrant
+		? ["authorization_code", "refresh_token", DEVICE_CODE_GRANT_TYPE]
+		: ["authorization_code", "refresh_token"];
 	let tokenEndpointAuthMethodsSupported = ["client_secret_basic", "client_secret_post", "none"];
 	let codeChallengeMethodsSupported = ["S256"];
 
@@ -113,6 +125,9 @@ export async function publishMetadata(
 		code_challenge_methods_supported: codeChallengeMethodsSupported,
 		scopes_supported: scopesSupported,
 		claims_supported: [...claimsSupported],
+		...(parsed.hasDeviceGrant
+			? { device_authorization_endpoint: endpoints.deviceAuthorizationEndpoint }
+			: {}),
 	};
 
 	let oauthMetadata: MetadataDocument = {
@@ -125,6 +140,9 @@ export async function publishMetadata(
 		token_endpoint_auth_methods_supported: tokenEndpointAuthMethodsSupported,
 		code_challenge_methods_supported: codeChallengeMethodsSupported,
 		scopes_supported: scopesSupported,
+		...(parsed.hasDeviceGrant
+			? { device_authorization_endpoint: endpoints.deviceAuthorizationEndpoint }
+			: {}),
 	};
 
 	let jwks = await publishKeySet(db, { now: parsed.now });
