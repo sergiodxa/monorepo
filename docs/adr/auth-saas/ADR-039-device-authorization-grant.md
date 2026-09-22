@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-18
+**Implemented** - 2026-09-22, end to end: the device-facing mechanism, the `/oauth/device_authorization` and `/oauth/token` HTTP surfaces, entitlement-gated discovery and client registration, the `/device` approval screen reusing the existing consent surface, and all four rate-limit budgets the ADR names.
 
 ## Background
 
