@@ -107,6 +107,8 @@ export const AUDIT_ACTIONS = [
 	"recovery_codes.regenerated",
 	"second_factor.reset",
 	"trusted_device.revoked",
+	"identity.linked",
+	"identity.unlinked",
 	// Subject lifecycle
 	"subject.created",
 	"subject.updated",

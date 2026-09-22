@@ -53,8 +53,13 @@ import { and, column as c, eq, inList, lt, table } from "remix/data-table";
 
 import type { ConnectionMappingRow, ConnectionRow } from "./connections";
 import type { OpenSessionMetering } from "./sessions";
-import type { SubjectProfile } from "./subjects";
+import type { SubjectIdentifierRow, SubjectProfile } from "./subjects";
 
+import {
+	evaluateAutomaticLink,
+	isConnectionAuthoritativeForEmail,
+	mintLinkTicket,
+} from "./account-linking";
 import { writeAuditEvent } from "./audit-events";
 import {
 	buildCallbackUrl,
@@ -64,7 +69,8 @@ import {
 	STANDARD_PROFILE_TARGETS,
 } from "./connections";
 import { openSession, sessions } from "./sessions";
-import { createSubject, updateSubject } from "./subjects";
+import { foldIdentifier } from "./subject-identifiers";
+import { createSubject, subjectIdentifiers, subjects, updateSubject } from "./subjects";
 
 /** How long a login stays completable once `beginConnectionSignIn` starts it. */
 const CONNECTION_TRANSACTION_TTL_MS = 10 * 60 * 1000;
@@ -230,6 +236,42 @@ export function mappingsToApply(
 	return phase === "create" ? mappings : mappings.filter((row) => row.apply === "on-every-sign-in");
 }
 
+/**
+ * The response's own email and whether it asserted that address verified, read
+ * directly off the ID token's claims rather than through the connection's
+ * configurable mappings — those only ever populate profile and attribute columns,
+ * never an identifier.
+ */
+function responseEmailFromClaims(claims: RelyingParty.Grant["claims"]): {
+	email: string | null;
+	verified: boolean;
+} {
+	let email = claims.email;
+	if (typeof email !== "string" || email.length === 0) return { email: null, verified: false };
+
+	return { email, verified: claims.email_verified === true };
+}
+
+/**
+ * The one `email`-kind identifier a folded address matches in this tenant, or
+ * `null` for no match, more than one, or an address that fails to fold — a folded
+ * address is unique to at most one subject by construction, so more than one match
+ * here would mean that invariant had already broken.
+ */
+async function findSoleMatchingEmailIdentifier(
+	db: Database,
+	email: string,
+): Promise<SubjectIdentifierRow | null> {
+	let folded = foldIdentifier("email", email);
+	if (!folded.ok) return null;
+
+	let matches = await db.findMany(subjectIdentifiers, {
+		where: and(eq("kind", "email"), eq("folded", folded.folded)),
+	});
+
+	return matches.length === 1 ? (matches[0] ?? null) : null;
+}
+
 /** Reads a mapping set's claims off the resolved claim set into a profile and an attribute map. */
 export function applyMappings(
 	mappings: ConnectionMappingRow[],
@@ -257,10 +299,12 @@ export function applyMappings(
  * call needs, so this pass has nothing genuine to seal there yet and leaves that
  * column `null` until a later pass has one to write.
  *
- * A row this call creates is written `linked_by: "jit"`, since minting one here is
- * still the same unconditional creation it always was — the automatic linking rule
- * and the confirmed path it falls back to are `account-linking.ts`'s own decision,
- * run by a caller before it ever reaches this write.
+ * A row this call creates defaults to `linked_by: "jit"` and no provider address,
+ * still the same unconditional creation it always was for a caller with nothing
+ * else to report. A caller that already ran the account-linking decision passes
+ * `linkedBy` and the provider's address explicitly instead. Every call stamps
+ * `last_sign_in_at`, on a fresh row and on a refreshed one alike, since a provider
+ * identity resolving to a session either way is itself a sign-in through it.
  */
 export async function upsertConnectionIdentity(
 	db: Database,
@@ -271,6 +315,9 @@ export async function upsertConnectionIdentity(
 		subjectId: string;
 		refreshToken: string | null;
 		tokenExpiresAt: number | null;
+		linkedBy?: "automatic" | "subject" | "admin" | "jit";
+		providerEmail?: string | null;
+		providerEmailVerified?: boolean | null;
 	},
 ): Promise<void> {
 	let refreshTokenSealed: string | null = null;
@@ -295,6 +342,7 @@ export async function upsertConnectionIdentity(
 			{
 				refresh_token_sealed: refreshTokenSealed,
 				token_expires_at: input.tokenExpiresAt,
+				last_sign_in_at: now,
 				updated_at: now,
 			},
 		);
@@ -308,11 +356,11 @@ export async function upsertConnectionIdentity(
 		access_token_sealed: null,
 		refresh_token_sealed: refreshTokenSealed,
 		token_expires_at: input.tokenExpiresAt,
-		provider_email: null,
-		provider_email_verified: null,
-		linked_by: "jit",
+		provider_email: input.providerEmail ?? null,
+		provider_email_verified: input.providerEmailVerified ?? null,
+		linked_by: input.linkedBy ?? "jit",
 		linked_at: now,
-		last_sign_in_at: null,
+		last_sign_in_at: now,
 		granted_scopes: null,
 		claims_json: null,
 		created_at: now,
@@ -460,7 +508,8 @@ export type CompleteConnectionSignInResult =
 	| { ok: false; reason: "mapping-invalid" }
 	| { ok: false; reason: "authorization-failed"; code: string }
 	| { ok: false; reason: "unsupported-access-token-format" }
-	| { ok: false; reason: "dau_cap_reached"; day: number; subjects: number; cap: number };
+	| { ok: false; reason: "dau_cap_reached"; day: number; subjects: number; cap: number }
+	| { ok: false; reason: "link_required"; ticket: string };
 
 let CompleteConnectionSignInSchema = s.object({
 	slug: s.string(),
@@ -477,12 +526,13 @@ let CompleteConnectionSignInSchema = s.object({
  * mints the handoff ticket that carries the browser back to wherever the flow
  * actually started.
  *
- * Account linking is not built here: a connection whose `on_unknown_subject` is
- * `"refuse"` answers `unknown-subject` for a provider identity this tenant has
- * never seen rather than attempting to join it to an existing one by address —
- * that join, and the identity record it would read, belongs to a later addition.
- * Every subject this call mints instead is bare: profile columns and declared
- * attributes from the connection's own mappings, and nothing else.
+ * Account linking runs here for a provider identity this tenant has never seen:
+ * when the response names an address that already belongs to exactly one existing
+ * subject, the automatic linking rule decides whether to sign the caller in as
+ * that subject with nothing further proved, or to answer `link_required` with a
+ * ticket for a credential to complete the link with instead. An address matching
+ * nobody at all, or a response naming none, is not a linking decision, and
+ * `on_unknown_subject` runs exactly as it always has for it.
  *
  * @param db - The tenant's database.
  * @param sealKey - The tenant object's own AES-GCM key.
@@ -563,6 +613,11 @@ export async function completeConnectionSignIn(
 	});
 
 	let subjectId: string;
+	let identityWrite: {
+		linkedBy: "automatic";
+		providerEmail: string | null;
+		providerEmailVerified: boolean | null;
+	} | null = null;
 
 	if (identity) {
 		subjectId = identity.subject_id;
@@ -579,25 +634,101 @@ export async function completeConnectionSignIn(
 			if (!updated.ok) return { ok: false, reason: "mapping-invalid" };
 		}
 	} else {
-		if (connection.on_unknown_subject === "refuse") {
-			await writeAuditEvent(db, {
-				action: "authentication.denied",
-				actor: { type: "platform", id: "system" },
-				targetType: "connection",
-				targetId: connection.id,
-				outcome: "denied",
-				detail: { method: "social", connectionSlug: connection.slug },
-			});
-			return { ok: false, reason: "unknown-subject" };
+		let response = responseEmailFromClaims(grant.claims);
+
+		let responseEmail: string | null = null;
+		let matchedIdentifier: SubjectIdentifierRow | null = null;
+
+		if (response.email !== null) {
+			responseEmail = response.email;
+			matchedIdentifier = await findSoleMatchingEmailIdentifier(db, responseEmail);
 		}
 
-		let minted = applyMappings(mappingsToApply(mappingRows, "create"), grant.claims);
-		let created = await createSubject(db, {
-			profile: minted.profile,
-			attributes: minted.attributes,
-		});
-		if (!created.ok) return { ok: false, reason: "mapping-invalid" };
-		subjectId = created.subjectId;
+		if (matchedIdentifier !== null && responseEmail !== null) {
+			let matchedSubject = await db.find(subjects, { id: matchedIdentifier.subject_id });
+			if (!matchedSubject) throw new Error("matched identifier names no subject");
+
+			let connectionIsAuthoritative = await isConnectionAuthoritativeForEmail(
+				db,
+				connection,
+				responseEmail,
+			);
+
+			let decision = evaluateAutomaticLink({
+				responseEmail,
+				responseEmailVerified: response.verified,
+				connectionIsAuthoritative,
+				connectionAutoLink: connection.auto_link,
+				matchedSubject: {
+					identifierVerified: matchedIdentifier.verified_at !== null,
+					subjectStatus: matchedSubject.status,
+				},
+			});
+
+			if (decision.outcome === "confirmed") {
+				let ticket = await mintLinkTicket(db, sealKey, {
+					connectionId: connection.id,
+					providerSubject: grant.subject,
+					subjectId: matchedSubject.id,
+					providerEmail: responseEmail,
+					providerEmailVerified: response.verified,
+					grantedScopes: null,
+					claims: grant.claims,
+					refreshToken: grant.refreshToken,
+					tokenExpiresAt: grant.expiresAt,
+				});
+
+				return { ok: false, reason: "link_required", ticket };
+			}
+
+			subjectId = matchedSubject.id;
+			identityWrite = {
+				linkedBy: "automatic",
+				providerEmail: responseEmail,
+				providerEmailVerified: response.verified,
+			};
+
+			let refresh = applyMappings(mappingsToApply(mappingRows, "sign-in"), grant.claims);
+
+			if (Object.keys(refresh.profile).length > 0 || Object.keys(refresh.attributes).length > 0) {
+				let updated = await updateSubject(db, {
+					subjectId,
+					profile: refresh.profile,
+					attributes: refresh.attributes,
+					actor: { kind: "admin" },
+				});
+				if (!updated.ok) return { ok: false, reason: "mapping-invalid" };
+			}
+
+			await writeAuditEvent(db, {
+				action: "identity.linked",
+				actor: { type: "subject", id: subjectId },
+				targetType: "subject",
+				targetId: subjectId,
+				outcome: "succeeded",
+				detail: { connectionSlug: connection.slug, linkedBy: "automatic" },
+			});
+		} else {
+			if (connection.on_unknown_subject === "refuse") {
+				await writeAuditEvent(db, {
+					action: "authentication.denied",
+					actor: { type: "platform", id: "system" },
+					targetType: "connection",
+					targetId: connection.id,
+					outcome: "denied",
+					detail: { method: "social", connectionSlug: connection.slug },
+				});
+				return { ok: false, reason: "unknown-subject" };
+			}
+
+			let minted = applyMappings(mappingsToApply(mappingRows, "create"), grant.claims);
+			let created = await createSubject(db, {
+				profile: minted.profile,
+				attributes: minted.attributes,
+			});
+			if (!created.ok) return { ok: false, reason: "mapping-invalid" };
+			subjectId = created.subjectId;
+		}
 	}
 
 	await upsertConnectionIdentity(db, sealKey, {
@@ -606,6 +737,7 @@ export async function completeConnectionSignIn(
 		subjectId,
 		refreshToken: grant.refreshToken,
 		tokenExpiresAt: grant.expiresAt,
+		...(identityWrite ?? {}),
 	});
 
 	let session = await openSession(

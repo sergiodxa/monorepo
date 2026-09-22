@@ -15,10 +15,16 @@ import { isFailure } from "@sdxc/result";
 import * as SAML from "@sdxc/saml";
 import { generateUUID } from "@sdxc/uuid";
 import * as s from "remix/data-schema";
-import { column as c, inList, lt, table } from "remix/data-table";
+import { and, column as c, eq, inList, lt, table } from "remix/data-table";
 
 import type { OpenSessionMetering } from "./sessions";
+import type { SubjectIdentifierRow } from "./subjects";
 
+import {
+	evaluateAutomaticLink,
+	isConnectionAuthoritativeForEmail,
+	mintLinkTicket,
+} from "./account-linking";
 import { writeAuditEvent } from "./audit-events";
 import {
 	applyMappings,
@@ -37,7 +43,57 @@ import {
 	samlServiceProviderUrls,
 } from "./saml-connections";
 import { openSession } from "./sessions";
-import { createSubject, updateSubject } from "./subjects";
+import { foldIdentifier } from "./subject-identifiers";
+import { createSubject, subjectIdentifiers, subjects, updateSubject } from "./subjects";
+
+/** The two NameID Format URIs SAML uses to say a NameID's own value is an email address. */
+const EMAIL_NAME_ID_FORMATS = new Set([
+	"urn:oasis:names:tc:SAML:2.0:nameid-format:emailAddress",
+	"urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
+]);
+
+/**
+ * The response's own email, read off an assertion a caller already verified.
+ * SAML carries no separate "verified" claim the way an OIDC ID token does — the
+ * assertion's signature is the only proof there is, and `signInWithSamlResponse`
+ * has already checked it by the time this runs, so any address this finds counts
+ * as verified in the same response that carried it.
+ *
+ * Prefers the NameID when its own Format says it is an email address, since that
+ * is the identifier the IdP itself chose to assert the person by; falls back to
+ * an `email` attribute for an IdP that sends one alongside an opaque NameID.
+ */
+function responseEmailFromAssertion(assertion: SAML.Assertion): string | null {
+	if (assertion.nameId && EMAIL_NAME_ID_FORMATS.has(assertion.nameId.format ?? "")) {
+		return assertion.nameId.value;
+	}
+
+	let attribute = assertion.claims().email;
+	if (typeof attribute === "string") return attribute;
+	if (Array.isArray(attribute) && typeof attribute[0] === "string") return attribute[0];
+
+	return null;
+}
+
+/**
+ * The one `email`-kind identifier a folded address matches in this tenant, or
+ * `null` for no match, more than one, or an address that fails to fold — a folded
+ * address is unique to at most one subject by construction, so more than one
+ * match here would mean that invariant had already broken.
+ */
+async function findSoleMatchingEmailIdentifier(
+	db: Database,
+	email: string,
+): Promise<SubjectIdentifierRow | null> {
+	let folded = foldIdentifier("email", email);
+	if (!folded.ok) return null;
+
+	let matches = await db.findMany(subjectIdentifiers, {
+		where: and(eq("kind", "email"), eq("folded", folded.folded)),
+	});
+
+	return matches.length === 1 ? (matches[0] ?? null) : null;
+}
 
 /** How long a started sign-in may take before its transaction stops being answerable. */
 const TRANSACTION_TTL_MS = 10 * 60 * 1000;
@@ -197,7 +253,8 @@ export type SignInWithSamlResponseResult =
 	| { ok: false; reason: "assertion-rejected"; kind: string }
 	| { ok: false; reason: "unknown-subject" }
 	| { ok: false; reason: "mapping-invalid" }
-	| { ok: false; reason: "dau_cap_reached"; day: number; subjects: number; cap: number };
+	| { ok: false; reason: "dau_cap_reached"; day: number; subjects: number; cap: number }
+	| { ok: false; reason: "link_required"; ticket: string };
 
 /**
  * Verifies a posted response and opens a session from it. The whole check runs
@@ -283,7 +340,7 @@ export async function signInWithSamlResponse(
 	let providerSubject = assertion.nameId?.value;
 	if (!providerSubject) return { ok: false, reason: "assertion-rejected", kind: "MissingNameID" };
 
-	let resolved = await resolveSubject(db, connection, assertion, providerSubject);
+	let resolved = await resolveSubject(db, sealKey, connection, assertion, providerSubject);
 	if (!resolved.ok) return resolved;
 
 	// The directory that asserted this person is that organization's own, so a
@@ -303,6 +360,9 @@ export async function signInWithSamlResponse(
 		subjectId: resolved.subjectId,
 		refreshToken: null,
 		tokenExpiresAt: null,
+		linkedBy: resolved.linkedBy,
+		providerEmail: resolved.providerEmail,
+		providerEmailVerified: resolved.providerEmailVerified,
 	});
 
 	let session = await openSession(
@@ -345,16 +405,40 @@ export async function signInWithSamlResponse(
  * where the connection provisions from the directory and refusing where it does
  * not. Attributes map by the connection's own rules, on creation and again on
  * every sign-in for the mappings that ask for it.
+ *
+ * Account linking runs here for a provider identity this tenant has never seen:
+ * when the assertion names an address that already belongs to exactly one
+ * existing subject, the automatic linking rule decides whether to sign the
+ * caller in as that subject with nothing further proved, or to answer
+ * `link_required` with a ticket for a credential to complete the link with
+ * instead. An address matching nobody at all, or an assertion naming none, is
+ * not a linking decision, and `on_unknown_subject` runs exactly as it always has
+ * for it.
  */
 async function resolveSubject(
 	db: Database,
-	connection: { id: string; slug: string; on_unknown_subject: string },
+	sealKey: CryptoKey,
+	connection: {
+		id: string;
+		slug: string;
+		on_unknown_subject: string;
+		email_authority: boolean;
+		auto_link: boolean;
+		organization_id: string | null;
+	},
 	assertion: SAML.Assertion,
 	providerSubject: string,
 ): Promise<
-	| { ok: true; subjectId: string }
+	| {
+			ok: true;
+			subjectId: string;
+			linkedBy?: "automatic";
+			providerEmail?: string | null;
+			providerEmailVerified?: boolean | null;
+	  }
 	| { ok: false; reason: "unknown-subject" }
 	| { ok: false; reason: "mapping-invalid" }
+	| { ok: false; reason: "link_required"; ticket: string }
 > {
 	let mappingRows = await db.findMany(connectionMappings, {
 		where: { connection_id: connection.id },
@@ -381,6 +465,78 @@ async function resolveSubject(
 		}
 
 		return { ok: true, subjectId: identity.subject_id };
+	}
+
+	let responseEmail = responseEmailFromAssertion(assertion);
+	let matchedIdentifier = responseEmail
+		? await findSoleMatchingEmailIdentifier(db, responseEmail)
+		: null;
+
+	if (matchedIdentifier !== null && responseEmail !== null) {
+		let matchedSubject = await db.find(subjects, { id: matchedIdentifier.subject_id });
+		if (!matchedSubject) throw new Error("matched identifier names no subject");
+
+		let connectionIsAuthoritative = await isConnectionAuthoritativeForEmail(
+			db,
+			connection,
+			responseEmail,
+		);
+
+		let decision = evaluateAutomaticLink({
+			responseEmail,
+			responseEmailVerified: true,
+			connectionIsAuthoritative,
+			connectionAutoLink: connection.auto_link,
+			matchedSubject: {
+				identifierVerified: matchedIdentifier.verified_at !== null,
+				subjectStatus: matchedSubject.status,
+			},
+		});
+
+		if (decision.outcome === "confirmed") {
+			let ticket = await mintLinkTicket(db, sealKey, {
+				connectionId: connection.id,
+				providerSubject,
+				subjectId: matchedSubject.id,
+				providerEmail: responseEmail,
+				providerEmailVerified: true,
+				grantedScopes: null,
+				claims,
+				refreshToken: null,
+				tokenExpiresAt: null,
+			});
+
+			return { ok: false, reason: "link_required", ticket };
+		}
+
+		let refresh = applyMappings(mappingsToApply(mappingRows, "sign-in"), claims);
+
+		if (Object.keys(refresh.profile).length > 0 || Object.keys(refresh.attributes).length > 0) {
+			let updated = await updateSubject(db, {
+				subjectId: matchedSubject.id,
+				profile: refresh.profile,
+				attributes: refresh.attributes,
+				actor: { kind: "admin" },
+			});
+			if (!updated.ok) return { ok: false, reason: "mapping-invalid" };
+		}
+
+		await writeAuditEvent(db, {
+			action: "identity.linked",
+			actor: { type: "subject", id: matchedSubject.id },
+			targetType: "subject",
+			targetId: matchedSubject.id,
+			outcome: "succeeded",
+			detail: { connectionSlug: connection.slug, linkedBy: "automatic" },
+		});
+
+		return {
+			ok: true,
+			subjectId: matchedSubject.id,
+			linkedBy: "automatic",
+			providerEmail: responseEmail,
+			providerEmailVerified: true,
+		};
 	}
 
 	if (connection.on_unknown_subject === "refuse") {

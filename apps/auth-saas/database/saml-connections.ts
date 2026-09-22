@@ -152,6 +152,7 @@ let SaveEnterpriseConnectionSchema = s.object({
 	metadataUrl: s.optional(s.nullable(s.string())),
 	wantAssertionsEncrypted: s.optional(s.boolean()),
 	allowIdpInitiated: s.optional(s.boolean()),
+	autoLink: s.optional(s.boolean()),
 	onUnknownSubject: s.optional(s.enum_(["create", "refuse"] as const)),
 	signingCertificates: s.optional(s.array(s.string())),
 	organizationId: s.optional(s.nullable(s.string())),
@@ -172,6 +173,8 @@ export interface SaveEnterpriseConnectionInput {
 	wantAssertionsEncrypted?: boolean;
 	/** Whether the provider may start a sign-in with no request of ours behind it. */
 	allowIdpInitiated?: boolean;
+	/** Whether a sign-in naming an address a verified domain already owns may attach to its existing subject with nothing further proved. */
+	autoLink?: boolean;
 	onUnknownSubject?: "create" | "refuse";
 	/** Certificates pasted by hand, for a provider publishing no metadata. */
 	signingCertificates?: string[];
@@ -245,6 +248,7 @@ export async function saveEnterpriseConnection(
 				updated_at: now,
 				...unknownSubject(parsed),
 				...organizationScope(parsed),
+				...autoLinkSetting(parsed),
 			},
 		);
 	} else {
@@ -264,7 +268,7 @@ export async function saveEnterpriseConnection(
 			scopes: [],
 			subject_claim: "nameId",
 			email_authority: false,
-			auto_link: false,
+			auto_link: parsed.autoLink ?? false,
 			on_unknown_subject: parsed.onUnknownSubject ?? "create",
 			organization_id: parsed.organizationId ?? null,
 			created_at: now,
@@ -326,6 +330,11 @@ function unknownSubject(parsed: { onUnknownSubject?: "create" | "refuse" }) {
 /** The organization-scope column to write on an update, left as it was when a save does not name one; `null` explicitly clears it. */
 function organizationScope(parsed: { organizationId?: string | null }) {
 	return parsed.organizationId !== undefined ? { organization_id: parsed.organizationId } : {};
+}
+
+/** The `auto_link` column to write on an update, left as it was when a save does not name it. */
+function autoLinkSetting(parsed: { autoLink?: boolean }) {
+	return parsed.autoLink !== undefined ? { auto_link: parsed.autoLink } : {};
 }
 
 /** The service-provider description built from one stored row. */

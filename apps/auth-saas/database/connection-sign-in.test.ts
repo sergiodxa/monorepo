@@ -161,7 +161,12 @@ async function tokenResponse(
 /** Saves and enables a from-scratch OIDC connection against a fake provider's origin. */
 async function createConnection(
 	origin: string,
-	overrides: { slug?: string; onUnknownSubject?: "create" | "refuse" } = {},
+	overrides: {
+		slug?: string;
+		onUnknownSubject?: "create" | "refuse";
+		emailAuthority?: boolean;
+		autoLink?: boolean;
+	} = {},
 ): Promise<void> {
 	let saved = await tenant.saveConnection({
 		slug: overrides.slug ?? "acme-oidc",
@@ -172,6 +177,8 @@ async function createConnection(
 		clientSecret: "client-secret-1",
 		scopes: ["openid", "email", "profile"],
 		onUnknownSubject: overrides.onUnknownSubject ?? "create",
+		emailAuthority: overrides.emailAuthority,
+		autoLink: overrides.autoLink,
 		mappings: [
 			{ source: "name", target: "name", apply: "on-create" },
 			{ source: "department", target: "department", apply: "on-every-sign-in" },
@@ -412,6 +419,123 @@ describe("completeConnectionSignIn", () => {
 		});
 
 		expect(completed).toMatchObject({ ok: false, reason: "unknown-subject" });
+	});
+
+	test("links automatically to an existing verified subject when the connection is authoritative and auto_link is on", async () => {
+		let provider = stubProvider();
+		await createConnection(provider.origin, { emailAuthority: true, autoLink: true });
+
+		let created = await tenant.createSubject({
+			identifiers: [{ kind: "email", value: "ada@example.com" }],
+		});
+		if (!created.ok) throw new Error("setup failed");
+		let added = await tenant.addIdentifier({
+			subjectId: created.subjectId,
+			kind: "email",
+			value: "ada@example.com",
+			actor: { kind: "subject" },
+		});
+		if (!added.ok || added.kind !== "email") throw new Error("setup failed");
+		await tenant.verifyIdentifier({ ticket: added.ticket });
+
+		let begun = await tenant.beginConnectionSignIn({
+			slug: "acme-oidc",
+			hostname: HOSTNAME,
+			callbackOrigin: CALLBACK_ORIGIN,
+		});
+		if (!begun.ok) throw new Error("unreachable");
+		let state = stateOf(begun.redirectUrl);
+
+		provider.respondWith(() =>
+			tokenResponse(provider.origin, begun.redirectUrl, {
+				claims: { email: "ada@example.com", email_verified: true },
+			}),
+		);
+
+		let completed = await tenant.completeConnectionSignIn({
+			slug: "acme-oidc",
+			callbackUrl: `${CALLBACK_ORIGIN}/u/connections/acme-oidc/callback?code=code-1&state=${state}`,
+		});
+
+		if (!completed.ok) throw new Error(`expected success, got ${JSON.stringify(completed)}`);
+		expect(completed.subjectId).toBe(created.subjectId);
+	});
+
+	test("answers link_required with a ticket instead of linking when auto_link is off", async () => {
+		let provider = stubProvider();
+		await createConnection(provider.origin, { emailAuthority: true, autoLink: false });
+
+		let created = await tenant.createSubject({
+			identifiers: [{ kind: "email", value: "ada@example.com" }],
+		});
+		if (!created.ok) throw new Error("setup failed");
+		let added = await tenant.addIdentifier({
+			subjectId: created.subjectId,
+			kind: "email",
+			value: "ada@example.com",
+			actor: { kind: "subject" },
+		});
+		if (!added.ok || added.kind !== "email") throw new Error("setup failed");
+		await tenant.verifyIdentifier({ ticket: added.ticket });
+
+		let begun = await tenant.beginConnectionSignIn({
+			slug: "acme-oidc",
+			hostname: HOSTNAME,
+			callbackOrigin: CALLBACK_ORIGIN,
+		});
+		if (!begun.ok) throw new Error("unreachable");
+		let state = stateOf(begun.redirectUrl);
+
+		provider.respondWith(() =>
+			tokenResponse(provider.origin, begun.redirectUrl, {
+				claims: { email: "ada@example.com", email_verified: true },
+			}),
+		);
+
+		let completed = await tenant.completeConnectionSignIn({
+			slug: "acme-oidc",
+			callbackUrl: `${CALLBACK_ORIGIN}/u/connections/acme-oidc/callback?code=code-1&state=${state}`,
+		});
+
+		expect(completed.ok).toBe(false);
+		if (completed.ok || completed.reason !== "link_required") {
+			throw new Error(`expected link_required, got ${JSON.stringify(completed)}`);
+		}
+		expect(completed.ticket.length).toBeGreaterThan(10);
+
+		let described = await tenant.describeSubject({
+			subjectId: created.subjectId,
+			audience: { kind: "admin" },
+		});
+		if (!described.ok) throw new Error("unreachable");
+		expect(described.identifiers).toHaveLength(1);
+	});
+
+	test("still creates a fresh subject when no existing identifier matches the response's address", async () => {
+		let provider = stubProvider();
+		await createConnection(provider.origin, { emailAuthority: true, autoLink: true });
+
+		let begun = await tenant.beginConnectionSignIn({
+			slug: "acme-oidc",
+			hostname: HOSTNAME,
+			callbackOrigin: CALLBACK_ORIGIN,
+		});
+		if (!begun.ok) throw new Error("unreachable");
+		let state = stateOf(begun.redirectUrl);
+
+		provider.respondWith(() =>
+			tokenResponse(provider.origin, begun.redirectUrl, {
+				claims: { email: "nobody-yet@example.com", email_verified: true },
+			}),
+		);
+
+		let completed = await tenant.completeConnectionSignIn({
+			slug: "acme-oidc",
+			callbackUrl: `${CALLBACK_ORIGIN}/u/connections/acme-oidc/callback?code=code-1&state=${state}`,
+		});
+
+		if (!completed.ok) throw new Error(`expected success, got ${JSON.stringify(completed)}`);
+		expect(completed.subjectId).toMatch(/^sub_/);
 	});
 });
 

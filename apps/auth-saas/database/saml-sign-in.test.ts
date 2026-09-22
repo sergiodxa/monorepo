@@ -521,4 +521,135 @@ describe("organization-scoped connections", () => {
 		let memberships = await tenant.describeSubjectOrganizations({ subjectId });
 		expect(memberships.organizations).toEqual([]);
 	});
+
+	test("links automatically to an existing verified subject when the connection's organization holds a verified domain and auto_link is on", async () => {
+		let organization = await createOrg("acme-linking", "owner-linking@acme.test");
+		let saved = await configure({ organizationId: organization.id, autoLink: true });
+		if (!saved.ok) throw new Error("setup failed");
+
+		let domainAdded = await tenant.addOrganizationDomain({
+			organizationId: organization.id,
+			domain: "acme-linking.example",
+			mode: "auto_join",
+			actor: { type: "platform", id: "system" },
+		});
+		if (!domainAdded.ok) throw new Error("setup failed");
+		await tenant.confirmOrganizationDomain({
+			organizationId: organization.id,
+			domain: "acme-linking.example",
+		});
+
+		let created = await tenant.createSubject({
+			identifiers: [{ kind: "email", value: "ada@acme-linking.example" }],
+		});
+		if (!created.ok) throw new Error("setup failed");
+		let added = await tenant.addIdentifier({
+			subjectId: created.subjectId,
+			kind: "email",
+			value: "ada@acme-linking.example",
+			actor: { kind: "subject" },
+		});
+		if (!added.ok || added.kind !== "email") throw new Error("setup failed");
+		await tenant.verifyIdentifier({ ticket: added.ticket });
+
+		let started = await tenant.beginSamlSignIn({ slug: SLUG, hostname: HOSTNAME });
+		if (!started.ok) throw new Error("begin refused");
+
+		let signedIn = await tenant.signInWithSamlResponse({
+			slug: SLUG,
+			samlResponse: await respond(started.requestId, {
+				nameId: "ada@acme-linking.example",
+				attributes: { email: ["ada@acme-linking.example"] },
+			}),
+			relayState: relayStateOf(started.redirectUrl),
+			hostname: HOSTNAME,
+		});
+
+		if (!signedIn.ok) throw new Error(`expected success, got ${JSON.stringify(signedIn)}`);
+		expect(signedIn.subjectId).toBe(created.subjectId);
+	});
+
+	test("answers link_required with a ticket instead of linking when auto_link is off", async () => {
+		let organization = await createOrg("acme-confirm", "owner-confirm@acme.test");
+		let saved = await configure({ organizationId: organization.id, autoLink: false });
+		if (!saved.ok) throw new Error("setup failed");
+
+		let domainAdded = await tenant.addOrganizationDomain({
+			organizationId: organization.id,
+			domain: "acme-confirm.example",
+			mode: "auto_join",
+			actor: { type: "platform", id: "system" },
+		});
+		if (!domainAdded.ok) throw new Error("setup failed");
+		await tenant.confirmOrganizationDomain({
+			organizationId: organization.id,
+			domain: "acme-confirm.example",
+		});
+
+		let created = await tenant.createSubject({
+			identifiers: [{ kind: "email", value: "ada@acme-confirm.example" }],
+		});
+		if (!created.ok) throw new Error("setup failed");
+		let added = await tenant.addIdentifier({
+			subjectId: created.subjectId,
+			kind: "email",
+			value: "ada@acme-confirm.example",
+			actor: { kind: "subject" },
+		});
+		if (!added.ok || added.kind !== "email") throw new Error("setup failed");
+		await tenant.verifyIdentifier({ ticket: added.ticket });
+
+		let started = await tenant.beginSamlSignIn({ slug: SLUG, hostname: HOSTNAME });
+		if (!started.ok) throw new Error("begin refused");
+
+		let signedIn = await tenant.signInWithSamlResponse({
+			slug: SLUG,
+			samlResponse: await respond(started.requestId, {
+				nameId: "ada@acme-confirm.example",
+				attributes: { email: ["ada@acme-confirm.example"] },
+			}),
+			relayState: relayStateOf(started.redirectUrl),
+			hostname: HOSTNAME,
+		});
+
+		expect(signedIn.ok).toBe(false);
+		if (signedIn.ok || signedIn.reason !== "link_required") {
+			throw new Error(`expected link_required, got ${JSON.stringify(signedIn)}`);
+		}
+		expect(signedIn.ticket.length).toBeGreaterThan(10);
+	});
+
+	test("still creates a fresh subject when no existing identifier matches the assertion's address", async () => {
+		let organization = await createOrg("acme-fresh", "owner-fresh@acme.test");
+		let saved = await configure({ organizationId: organization.id, autoLink: true });
+		if (!saved.ok) throw new Error("setup failed");
+
+		let domainAdded = await tenant.addOrganizationDomain({
+			organizationId: organization.id,
+			domain: "acme-fresh.example",
+			mode: "auto_join",
+			actor: { type: "platform", id: "system" },
+		});
+		if (!domainAdded.ok) throw new Error("setup failed");
+		await tenant.confirmOrganizationDomain({
+			organizationId: organization.id,
+			domain: "acme-fresh.example",
+		});
+
+		let started = await tenant.beginSamlSignIn({ slug: SLUG, hostname: HOSTNAME });
+		if (!started.ok) throw new Error("begin refused");
+
+		let signedIn = await tenant.signInWithSamlResponse({
+			slug: SLUG,
+			samlResponse: await respond(started.requestId, {
+				nameId: "nobody-yet@acme-fresh.example",
+				attributes: { email: ["nobody-yet@acme-fresh.example"] },
+			}),
+			relayState: relayStateOf(started.redirectUrl),
+			hostname: HOSTNAME,
+		});
+
+		if (!signedIn.ok) throw new Error(`expected success, got ${JSON.stringify(signedIn)}`);
+		expect(signedIn.subjectId).toBeTruthy();
+	});
 });
