@@ -4,10 +4,10 @@
  * token endpoint, the subjects and identifiers resource area, the clients and
  * secrets resource area, the API keys and webhook endpoints and deliveries
  * resource areas, the roles, permissions and consent grants resource areas,
- * and the passkeys, password, second-factor and session resource areas;
- * every other resource route (audit events, import and export runs, and the
- * rest of the administrative surface) is a later pass's own addition to
- * `routes/management.ts`.
+ * the passkeys, password, second-factor and session resource areas, and the
+ * audit events resource area; every other resource route (import and export
+ * runs, and the rest of the administrative surface) is a later pass's own
+ * addition to `routes/management.ts`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,6 +28,7 @@ import { createApiKeysListAction } from "~/app/http/controllers/management/api-k
 import { createApiKeysReadAction } from "~/app/http/controllers/management/api-keys/read";
 import { createApiKeysRevokeAction } from "~/app/http/controllers/management/api-keys/revoke";
 import { createApiKeysRotateAction } from "~/app/http/controllers/management/api-keys/rotate";
+import { createAuditEventsListAction } from "~/app/http/controllers/management/audit/list";
 import { createClientsDeleteAction } from "~/app/http/controllers/management/clients/delete";
 import { createClientsDisableAction } from "~/app/http/controllers/management/clients/disable";
 import { createClientsListAction } from "~/app/http/controllers/management/clients/list";
@@ -271,5 +272,7 @@ managementRouter.map(
 managementRouter.map(routes.sessionsList, createSessionsListAction(controllerOptions));
 managementRouter.map(routes.sessionsRevoke, createSessionsRevokeAction(controllerOptions));
 managementRouter.map(routes.sessionsRevokeAll, createSessionsRevokeAllAction(controllerOptions));
+
+managementRouter.map(routes.auditEventsList, createAuditEventsListAction(controllerOptions));
 
 export { resolveDashboardSubjectId };

@@ -1,10 +1,10 @@
 /**
  * The centralized, type-safe route table for the management API, served on
  * `api.{PLATFORM_DOMAIN}`. This pass adds the passkeys, password and
- * second-factor administration and session routes onto the subjects,
- * clients, API keys, webhook endpoints, roles and permissions routes
- * earlier passes already mapped; each later resource-area pass extends this
- * same table with its own routes.
+ * second-factor administration and session routes, and the audit events
+ * route, onto the subjects, clients, API keys, webhook endpoints, roles and
+ * permissions routes earlier passes already mapped; each later resource-area
+ * pass extends this same table with its own routes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -93,4 +93,6 @@ export default route({
 	sessionsList: get("/tenants/:tenantId/subjects/:subjectId/sessions"),
 	sessionsRevoke: del("/tenants/:tenantId/subjects/:subjectId/sessions/:sessionId"),
 	sessionsRevokeAll: post("/tenants/:tenantId/subjects/:subjectId/sessions/revoke-all"),
+
+	auditEventsList: get("/tenants/:tenantId/audit-events"),
 });
