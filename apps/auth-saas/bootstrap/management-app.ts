@@ -2,13 +2,12 @@
  * Builds the management API router's fetch-router: the administrative surface
  * served on `api.{PLATFORM_DOMAIN}`. This pass wires the shared plumbing, the
  * token endpoint, the subjects and identifiers resource area, the subject
- * import run's own begin, status and download routes, the clients and
- * secrets resource area, the API keys and webhook endpoints and deliveries
- * resource areas, the roles, permissions and consent grants resource areas,
- * the passkeys, password, second-factor and session resource areas, the
- * audit events resource area, and the tenant, member and domain resource
- * area; export's own run routes are a later pass's own addition to
- * `routes/management.ts`.
+ * import and export runs' own begin, status and download routes, the clients
+ * and secrets resource area, the API keys and webhook endpoints and
+ * deliveries resource areas, the roles, permissions and consent grants
+ * resource areas, the passkeys, password, second-factor and session resource
+ * areas, the audit events resource area, and the tenant, member and domain
+ * resource area.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -72,6 +71,9 @@ import { createRolesUpdateAction } from "~/app/http/controllers/management/roles
 import { createSubjectsBlockAction } from "~/app/http/controllers/management/subjects/block";
 import { createSubjectsCreateAction } from "~/app/http/controllers/management/subjects/create";
 import { createSubjectsDeleteAction } from "~/app/http/controllers/management/subjects/delete";
+import { createSubjectsExportBeginAction } from "~/app/http/controllers/management/subjects/export";
+import { createSubjectsExportDownloadAction } from "~/app/http/controllers/management/subjects/export-download";
+import { createSubjectsExportStatusAction } from "~/app/http/controllers/management/subjects/export-status";
 import {
 	createSubjectIdentifiersAddAction,
 	createSubjectIdentifiersRemoveAction,
@@ -212,6 +214,19 @@ managementRouter.map(
 managementRouter.map(
 	routes.subjectsImportDownload,
 	createSubjectsImportDownloadAction(controllerOptions),
+);
+
+managementRouter.map(
+	routes.subjectsExportBegin,
+	createSubjectsExportBeginAction(controllerOptions),
+);
+managementRouter.map(
+	routes.subjectsExportStatus,
+	createSubjectsExportStatusAction(controllerOptions),
+);
+managementRouter.map(
+	routes.subjectsExportDownload,
+	createSubjectsExportDownloadAction(controllerOptions),
 );
 
 managementRouter.map(routes.clientsRegister, createClientsRegisterAction(controllerOptions));

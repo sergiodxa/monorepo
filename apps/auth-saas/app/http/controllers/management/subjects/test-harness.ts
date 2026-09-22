@@ -22,6 +22,9 @@ import type TenantObject from "~/database/tenant-do";
 import { createSubjectsBlockAction } from "~/app/http/controllers/management/subjects/block";
 import { createSubjectsCreateAction } from "~/app/http/controllers/management/subjects/create";
 import { createSubjectsDeleteAction } from "~/app/http/controllers/management/subjects/delete";
+import { createSubjectsExportBeginAction } from "~/app/http/controllers/management/subjects/export";
+import { createSubjectsExportDownloadAction } from "~/app/http/controllers/management/subjects/export-download";
+import { createSubjectsExportStatusAction } from "~/app/http/controllers/management/subjects/export-status";
 import {
 	createSubjectIdentifiersAddAction,
 	createSubjectIdentifiersRemoveAction,
@@ -93,6 +96,10 @@ export function buildSubjectsRouter(
 	router.map(routes.subjectsImportBegin, createSubjectsImportBeginAction(controllerOptions));
 	router.map(routes.subjectsImportStatus, createSubjectsImportStatusAction(controllerOptions));
 	router.map(routes.subjectsImportDownload, createSubjectsImportDownloadAction(controllerOptions));
+
+	router.map(routes.subjectsExportBegin, createSubjectsExportBeginAction(controllerOptions));
+	router.map(routes.subjectsExportStatus, createSubjectsExportStatusAction(controllerOptions));
+	router.map(routes.subjectsExportDownload, createSubjectsExportDownloadAction(controllerOptions));
 
 	return router;
 }
