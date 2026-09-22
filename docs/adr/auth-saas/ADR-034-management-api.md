@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-18
+**Implemented** - 2026-09-21, with three gaps left open: tenant settings/branding has no safe field to expose yet, member invitation is a direct grant rather than an email flow, and import/export runs await the separate ADR that defines them.
 
 ## Background
 
