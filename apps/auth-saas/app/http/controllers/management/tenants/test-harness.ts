@@ -1,6 +1,6 @@
 /**
- * A real management router mapping every tenant, member, domain and
- * MFA-policy route, wired around the provisioned tenant and helpers
+ * A real management router mapping every tenant, member, domain, MFA-policy
+ * and session-policy route, wired around the provisioned tenant and helpers
  * {@link buildManagementTestCore} builds, for driving the HTTP surface
  * through real requests the way `roles/test-harness.ts` drives the roles
  * surface. A domain attach or remove call reaches Cloudflare's
@@ -37,10 +37,13 @@ import {
 } from "~/app/http/controllers/management/tenants/members";
 import { createTenantMfaPolicySetAction } from "~/app/http/controllers/management/tenants/mfa-policy";
 import { createTenantReadAction } from "~/app/http/controllers/management/tenants/read";
+import { createTenantSessionPolicyDescribeAction } from "~/app/http/controllers/management/tenants/session-policy";
+import { createTenantSessionPolicySetAction } from "~/app/http/controllers/management/tenants/set-session-policy";
 import {
 	buildManagementTestCore,
 	fakeHostnameClient,
 	fakeLimiter,
+	grantEntitlement,
 	grantMembership,
 	HOSTNAME_ZONE_ID,
 	ISSUER,
@@ -48,7 +51,14 @@ import {
 import { database } from "~/app/http/middleware/database";
 import routes from "~/routes/management";
 
-export { fakeHostnameClient, fakeLimiter, grantMembership, HOSTNAME_ZONE_ID, ISSUER };
+export {
+	fakeHostnameClient,
+	fakeLimiter,
+	grantEntitlement,
+	grantMembership,
+	HOSTNAME_ZONE_ID,
+	ISSUER,
+};
 
 /** Builds the management router wired to constructed control-plane and tenant state. */
 export function buildTenantsRouter(
@@ -89,6 +99,12 @@ export function buildTenantsRouter(
 	router.map(routes.tenantDomainsRemove, createTenantDomainsRemoveAction(controllerOptions));
 
 	router.map(routes.tenantMfaPolicySet, createTenantMfaPolicySetAction(controllerOptions));
+
+	router.map(routes.tenantSessionPolicySet, createTenantSessionPolicySetAction(controllerOptions));
+	router.map(
+		routes.tenantSessionPolicyDescribe,
+		createTenantSessionPolicyDescribeAction(controllerOptions),
+	);
 
 	return router;
 }

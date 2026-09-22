@@ -109,4 +109,7 @@ export default route({
 	tenantDomainsRemove: del("/tenants/:tenantId/domains/:domainId"),
 
 	tenantMfaPolicySet: post("/tenants/:tenantId/mfa-policy"),
+
+	tenantSessionPolicySet: post("/tenants/:tenantId/session-policy"),
+	tenantSessionPolicyDescribe: get("/tenants/:tenantId/session-policy"),
 });
