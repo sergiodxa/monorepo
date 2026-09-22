@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-18
+**Implemented** - 2026-09-22, with one gap left open: the dashboard's own security screen has nowhere to render yet, since no dashboard application exists in this codebase. The daily baseline-vs-alert job runs on its own, independent of that screen.
 
 ## Background
 
