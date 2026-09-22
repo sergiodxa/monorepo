@@ -634,6 +634,105 @@ describe("authorizeSubject for a custom role", () => {
 	});
 });
 
+describe("listRoles", () => {
+	test("lists the three system roles at a scope with no custom roles of its own", async () => {
+		let { organizationId } = await createOrg();
+
+		let result = await tenant.listRoles({ scope: organizationId });
+
+		expect(result.roles).toHaveLength(3);
+		expect(result.roles.map((role) => role.key).sort((a, b) => a.localeCompare(b))).toEqual([
+			"admin",
+			"member",
+			"owner",
+		]);
+		expect(result.roles.every((role) => role.system)).toBe(true);
+	});
+
+	test("includes a scope's own custom roles alongside the three system roles", async () => {
+		let { organizationId, creatorSubjectId } = await createOrg();
+		let actor = { type: "subject" as const, id: creatorSubjectId };
+
+		let defined = await tenant.defineRole({
+			scope: organizationId,
+			key: "billing",
+			name: "Billing",
+			description: "Manages billing",
+			actor,
+		});
+		if (!defined.ok) throw new Error("setup failed");
+
+		let result = await tenant.listRoles({ scope: organizationId });
+
+		expect(result.roles).toHaveLength(4);
+		let custom = result.roles.find((role) => role.key === "billing");
+		expect(custom).toMatchObject({ id: defined.role.id, system: false });
+	});
+
+	test("never lists a custom role defined at a different scope", async () => {
+		let first = await createOrg();
+		let second = await createOrg();
+		let actor = { type: "subject" as const, id: first.creatorSubjectId };
+
+		let defined = await tenant.defineRole({
+			scope: first.organizationId,
+			key: "billing",
+			name: "Billing",
+			description: "Manages billing",
+			actor,
+		});
+		expect(defined.ok).toBe(true);
+
+		let result = await tenant.listRoles({ scope: second.organizationId });
+
+		expect(result.roles.find((role) => role.key === "billing")).toBeUndefined();
+	});
+
+	test("is never gated by the custom_roles entitlement", async () => {
+		state = createDurableObjectState();
+		tenant = new Tenant(state, {} as Cloudflare.Env);
+
+		let { organizationId } = await createOrg();
+
+		let result = await tenant.listRoles({ scope: organizationId });
+
+		expect(result.roles).toHaveLength(3);
+	});
+});
+
+describe("listPermissions", () => {
+	test("lists a tenant's own declared permissions", async () => {
+		let subjectId = await createVerifiedSubject(nextEmail());
+		let actor = { type: "subject" as const, id: subjectId };
+
+		await tenant.definePermission({
+			key: "billing.view",
+			name: "View billing",
+			description: "Read billing records",
+			actor,
+		});
+
+		let result = await tenant.listPermissions();
+
+		expect(result.permissions).toMatchObject([{ key: "billing.view", name: "View billing" }]);
+	});
+
+	test("lists nothing for a tenant that has declared no permissions of its own", async () => {
+		let result = await tenant.listPermissions();
+
+		expect(result.permissions).toEqual([]);
+	});
+
+	test("is never gated by the custom_roles entitlement", async () => {
+		state = createDurableObjectState();
+		tenant = new Tenant(state, {} as Cloudflare.Env);
+
+		let result = await tenant.listPermissions();
+
+		expect(result.permissions).toEqual([]);
+	});
+});
+
 describe("the custom_roles entitlement gate", () => {
 	test("refuses defineRole, updateRole, deleteRole, definePermission, removePermission and setRolePermissions without the entitlement", async () => {
 		state = createDurableObjectState();

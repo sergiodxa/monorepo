@@ -191,7 +191,7 @@ describe("POST /tenants/:tenantId/subjects/:subjectId/identifiers/primary", () =
 	});
 });
 
-describe("DELETE /tenants/:tenantId/subjects/:subjectId/identifiers/:value", () => {
+describe("DELETE /tenants/:tenantId/subjects/:subjectId/identifiers?value=", () => {
 	test("removes an identifier", async () => {
 		let harness = await buildSubjectsHarness();
 		let token = await harness.signToken();
@@ -206,7 +206,7 @@ describe("DELETE /tenants/:tenantId/subjects/:subjectId/identifiers/:value", () 
 
 		let response = await harness.router.fetch(
 			harness.request(
-				`/tenants/${harness.tenantId}/subjects/${created.subjectId}/identifiers/${encodeURIComponent("jane")}`,
+				`/tenants/${harness.tenantId}/subjects/${created.subjectId}/identifiers?value=${encodeURIComponent("jane")}`,
 				token,
 				{ method: "DELETE" },
 			),
@@ -227,6 +227,38 @@ describe("DELETE /tenants/:tenantId/subjects/:subjectId/identifiers/:value", () 
 		});
 	});
 
+	test("removes an email identifier, whose value carries a dot", async () => {
+		let harness = await buildSubjectsHarness();
+		let token = await harness.signToken();
+
+		let created = await harness.tenantDO.createSubject({
+			identifiers: [
+				{ kind: "username", value: "jane" },
+				{ kind: "email", value: "jane.doe@example.com" },
+			],
+		});
+		if (!created.ok) throw new Error("unreachable");
+
+		let response = await harness.router.fetch(
+			harness.request(
+				`/tenants/${harness.tenantId}/subjects/${created.subjectId}/identifiers?value=${encodeURIComponent("jane.doe@example.com")}`,
+				token,
+				{ method: "DELETE" },
+			),
+		);
+
+		expect(response.status).toBe(200);
+
+		let described = await harness.tenantDO.describeSubject({
+			subjectId: created.subjectId,
+			audience: { kind: "admin" },
+		});
+		expect(described).toMatchObject({
+			ok: true,
+			identifiers: [{ kind: "username", value: "jane" }],
+		});
+	});
+
 	test("answers 404 for an identifier this subject does not hold", async () => {
 		let harness = await buildSubjectsHarness();
 		let token = await harness.signToken();
@@ -238,7 +270,7 @@ describe("DELETE /tenants/:tenantId/subjects/:subjectId/identifiers/:value", () 
 
 		let response = await harness.router.fetch(
 			harness.request(
-				`/tenants/${harness.tenantId}/subjects/${created.subjectId}/identifiers/missing`,
+				`/tenants/${harness.tenantId}/subjects/${created.subjectId}/identifiers?value=missing`,
 				token,
 				{ method: "DELETE" },
 			),
@@ -258,7 +290,7 @@ describe("DELETE /tenants/:tenantId/subjects/:subjectId/identifiers/:value", () 
 
 		let response = await harness.router.fetch(
 			harness.request(
-				`/tenants/${harness.tenantId}/subjects/${created.subjectId}/identifiers/jane`,
+				`/tenants/${harness.tenantId}/subjects/${created.subjectId}/identifiers?value=jane`,
 				token,
 				{ method: "DELETE" },
 			),

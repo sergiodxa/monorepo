@@ -2,8 +2,9 @@
  * Builds the management API router's fetch-router: the administrative surface
  * served on `api.{PLATFORM_DOMAIN}`. This pass wires the shared plumbing, the
  * token endpoint, the subjects and identifiers resource area, the clients and
- * secrets resource area, and the API keys and webhook endpoints and
- * deliveries resource areas; every other resource route (roles, audit events,
+ * secrets resource area, the API keys and webhook endpoints and deliveries
+ * resource areas, and the roles, permissions and consent grants resource
+ * areas; every other resource route (audit events, import and export runs,
  * and the rest of the administrative surface) is a later pass's own addition
  * to `routes/management.ts`.
  *
@@ -34,6 +35,22 @@ import { createClientsRegisterAction } from "~/app/http/controllers/management/c
 import { createClientsRevokeSecretAction } from "~/app/http/controllers/management/clients/revoke-secret";
 import { createClientsRotateSecretAction } from "~/app/http/controllers/management/clients/rotate-secret";
 import { createClientsUpdateAction } from "~/app/http/controllers/management/clients/update";
+import { createSubjectAccessReadAction } from "~/app/http/controllers/management/roles/access";
+import { createSubjectRolesAssignAction } from "~/app/http/controllers/management/roles/assign";
+import { createRolesDefineAction } from "~/app/http/controllers/management/roles/define";
+import { createRolesDeleteAction } from "~/app/http/controllers/management/roles/delete";
+import {
+	createSubjectGrantsListAction,
+	createSubjectGrantsRevokeAction,
+} from "~/app/http/controllers/management/roles/grants";
+import { createRolesListAction } from "~/app/http/controllers/management/roles/list";
+import {
+	createPermissionsDefineAction,
+	createPermissionsListAction,
+	createPermissionsRemoveAction,
+} from "~/app/http/controllers/management/roles/permissions";
+import { createRolesSetPermissionsAction } from "~/app/http/controllers/management/roles/set-permissions";
+import { createRolesUpdateAction } from "~/app/http/controllers/management/roles/update";
 import { createSubjectsBlockAction } from "~/app/http/controllers/management/subjects/block";
 import { createSubjectsCreateAction } from "~/app/http/controllers/management/subjects/create";
 import { createSubjectsDeleteAction } from "~/app/http/controllers/management/subjects/delete";
@@ -199,6 +216,28 @@ managementRouter.map(
 managementRouter.map(
 	routes.webhookDeliveriesReplay,
 	createWebhookDeliveriesReplayAction(controllerOptions),
+);
+
+managementRouter.map(routes.permissionsList, createPermissionsListAction(controllerOptions));
+managementRouter.map(routes.permissionsDefine, createPermissionsDefineAction(controllerOptions));
+managementRouter.map(routes.permissionsRemove, createPermissionsRemoveAction(controllerOptions));
+
+managementRouter.map(routes.rolesList, createRolesListAction(controllerOptions));
+managementRouter.map(routes.rolesDefine, createRolesDefineAction(controllerOptions));
+managementRouter.map(routes.rolesUpdate, createRolesUpdateAction(controllerOptions));
+managementRouter.map(routes.rolesDelete, createRolesDeleteAction(controllerOptions));
+managementRouter.map(
+	routes.rolesSetPermissions,
+	createRolesSetPermissionsAction(controllerOptions),
+);
+
+managementRouter.map(routes.subjectRolesAssign, createSubjectRolesAssignAction(controllerOptions));
+managementRouter.map(routes.subjectAccessRead, createSubjectAccessReadAction(controllerOptions));
+
+managementRouter.map(routes.subjectGrantsList, createSubjectGrantsListAction(controllerOptions));
+managementRouter.map(
+	routes.subjectGrantsRevoke,
+	createSubjectGrantsRevokeAction(controllerOptions),
 );
 
 export { resolveDashboardSubjectId };

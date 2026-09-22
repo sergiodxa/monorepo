@@ -815,6 +815,56 @@ export async function describeSubjectAccess(
 	return { roles: [role], permissions: await resolveGrantedPermissions(db, role) };
 }
 
+export interface ListRolesInput {
+	scope: string;
+}
+
+export interface ListRolesResult {
+	roles: RoleRecord[];
+}
+
+let ListRolesSchema = s.object({ scope: s.string() });
+
+/**
+ * Every role held at a scope: the three system roles first, always present since
+ * neither needs a row to exist, followed by whatever custom roles this scope has
+ * defined. Unpaginated — a scope's own role catalog is the three reserved keys
+ * plus whatever a tenant has defined for itself, small enough that a caller
+ * managing roles is better served seeing the whole list at once than paging
+ * through a handful of rows.
+ *
+ * @param db - The tenant's database.
+ * @param input - The scope to list roles at.
+ * @returns Every role held at that scope, system roles first.
+ */
+export async function listRoles(db: Database, input: ListRolesInput): Promise<ListRolesResult> {
+	let parsed = s.parse(ListRolesSchema, input);
+
+	let systemRoles = SYSTEM_ROLE_KEYS.map((key) => systemRoleRecord(parsed.scope, key));
+	let customRows = await db.findMany(roles, { where: { scope: parsed.scope } });
+
+	return { roles: [...systemRoles, ...customRows.map(toRoleRecord)] };
+}
+
+export interface ListPermissionsResult {
+	permissions: PermissionRecord[];
+}
+
+/**
+ * Every permission this tenant has declared. Tenant-wide rather than scoped to
+ * one role or one scope, since `permissions` carries no scope column of its
+ * own — a permission is granted to a role at whatever scope that role lives at,
+ * not declared at one itself. Unpaginated — a tenant's own declared vocabulary
+ * stays small enough for a caller managing roles to read in one call.
+ *
+ * @param db - The tenant's database.
+ * @returns Every permission this tenant has declared.
+ */
+export async function listPermissions(db: Database): Promise<ListPermissionsResult> {
+	let rows = await db.findMany(permissions);
+	return { permissions: rows.map(toPermissionRecord) };
+}
+
 export interface ResolveRoleAndPermissionClaimsInput {
 	subjectId: string;
 	/** The scope a token's or a `/userinfo` response's second role, beyond the tenant scope, resolves at. */

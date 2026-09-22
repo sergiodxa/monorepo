@@ -41,9 +41,15 @@ function identifierNotFound(): Response {
 }
 
 /** Parses and requires the `:value` path param the remove route matches, URL-decoded. */
-function identifierValueParam(ctx: { params: Record<string, string | undefined> }): string {
-	let raw = s.parse(s.object({ value: s.string() }), ctx.params).value;
-	return decodeURIComponent(raw);
+/**
+ * Reads the `value` query parameter the remove route matches against. A path
+ * segment stops at a literal `.`, which every email identifier carries, so the
+ * value this route names travels in the query string instead, where `.` is
+ * ordinary data URLSearchParams already decodes.
+ */
+function identifierValueParam(ctx: { url: URL }): string {
+	let raw = Object.fromEntries(ctx.url.searchParams);
+	return s.parse(s.object({ value: s.string() }), raw).value;
 }
 
 function mountedMiddleware(options: ManagementControllerOptions, bucket: "read" | "write") {

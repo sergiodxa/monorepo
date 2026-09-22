@@ -171,6 +171,9 @@ import type {
 	DeleteRoleInput,
 	DeleteRoleResult,
 	DescribeSubjectAccessInput,
+	ListPermissionsResult,
+	ListRolesInput,
+	ListRolesResult,
 	RemovePermissionInput,
 	RemovePermissionResult,
 	SetRolePermissionsInput,
@@ -2242,6 +2245,30 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	): Promise<WithCost<SubjectAccessSummary>> {
 		await this.#migrated;
 		return this.#withCost(() => Roles.describeSubjectAccess(this.#db, input));
+	}
+
+	/**
+	 * Every role held at a scope, system roles first. Never gated: seeing
+	 * what already exists is not the operation the `custom_roles`
+	 * entitlement guards.
+	 *
+	 * @param input - The scope to list roles at.
+	 * @returns Every role held at that scope, system roles first.
+	 */
+	async listRoles(input: ListRolesInput): Promise<WithCost<ListRolesResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Roles.listRoles(this.#db, input));
+	}
+
+	/**
+	 * Every permission this tenant has declared. Never gated, for the same
+	 * reason {@link listRoles} is not.
+	 *
+	 * @returns Every permission this tenant has declared.
+	 */
+	async listPermissions(): Promise<WithCost<ListPermissionsResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Roles.listPermissions(this.#db));
 	}
 
 	/**

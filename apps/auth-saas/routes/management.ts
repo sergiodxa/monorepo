@@ -1,15 +1,15 @@
 /**
  * The centralized, type-safe route table for the management API, served on
- * `api.{PLATFORM_DOMAIN}`. This pass adds the API keys and webhook endpoints
- * and deliveries resource areas onto the subjects, clients and token routes
- * earlier passes already mapped; each later resource-area pass extends this
- * same table with its own routes.
+ * `api.{PLATFORM_DOMAIN}`. This pass adds the roles, permissions and consent
+ * grants resource areas onto the subjects, clients, API keys and webhook
+ * endpoints routes earlier passes already mapped; each later resource-area
+ * pass extends this same table with its own routes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { del, get, patch, post, route } from "remix/routes";
+import { del, get, patch, post, put, route } from "remix/routes";
 
 /**
  * The management API's route map.
@@ -31,7 +31,7 @@ export default route({
 	subjectIdentifiersAdd: post("/tenants/:tenantId/subjects/:subjectId/identifiers"),
 	subjectIdentifiersVerify: post("/tenants/:tenantId/subjects/identifiers/verify"),
 	subjectIdentifiersSetPrimary: post("/tenants/:tenantId/subjects/:subjectId/identifiers/primary"),
-	subjectIdentifiersRemove: del("/tenants/:tenantId/subjects/:subjectId/identifiers/:value"),
+	subjectIdentifiersRemove: del("/tenants/:tenantId/subjects/:subjectId/identifiers"),
 
 	clientsRegister: post("/tenants/:tenantId/clients"),
 	clientsList: get("/tenants/:tenantId/clients"),
@@ -61,4 +61,20 @@ export default route({
 	webhookDeliveriesReplay: post(
 		"/tenants/:tenantId/webhook-endpoints/:endpointId/deliveries/:deliveryId/replay",
 	),
+
+	permissionsList: get("/tenants/:tenantId/permissions"),
+	permissionsDefine: post("/tenants/:tenantId/permissions"),
+	permissionsRemove: del("/tenants/:tenantId/permissions"),
+
+	rolesList: get("/tenants/:tenantId/roles"),
+	rolesDefine: post("/tenants/:tenantId/roles"),
+	rolesUpdate: patch("/tenants/:tenantId/roles/:roleId"),
+	rolesDelete: del("/tenants/:tenantId/roles/:roleId"),
+	rolesSetPermissions: put("/tenants/:tenantId/roles/:roleId/permissions"),
+
+	subjectRolesAssign: post("/tenants/:tenantId/subjects/:subjectId/roles"),
+	subjectAccessRead: get("/tenants/:tenantId/subjects/:subjectId/access"),
+
+	subjectGrantsList: get("/tenants/:tenantId/subjects/:subjectId/grants"),
+	subjectGrantsRevoke: post("/tenants/:tenantId/subjects/:subjectId/grants/:clientId/revoke"),
 });
