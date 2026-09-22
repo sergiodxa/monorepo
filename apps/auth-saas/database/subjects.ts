@@ -47,6 +47,9 @@ const RETENTION_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 /** Mints a `sub_` id for a new subject: 128 bits of randomness, Base32-encoded. */
 const subjectId = typeid("sub");
 
+/** The same `sub_` minter {@link createSubject} writes with, exposed for a caller that needs to preview the id a write would take without performing one. */
+export const mintSubjectId = subjectId;
+
 /** Mints an id for a `subject_identifiers` row, which needs one of its own. */
 const identifierRowId = typeid("sid");
 
@@ -154,7 +157,7 @@ export interface IdentifierState {
 }
 
 export interface CreateSubjectInput {
-	identifiers?: { kind: IdentifierKind; value: string }[];
+	identifiers?: { kind: IdentifierKind; value: string; verifiedAt?: number }[];
 	profile?: SubjectProfile;
 	attributes?: Record<string, unknown>;
 }
@@ -168,9 +171,12 @@ export type CreateSubjectResult =
 
 /**
  * Validates and folds every identifier, claims their uniqueness, and creates the
- * subject with them attached unverified. Minting a verification ticket is
- * {@link addIdentifier}'s job, so an email claimed here waits for its own call before it
- * can sign anyone in.
+ * subject with them attached. An identifier with no `verifiedAt` given is written
+ * unverified, and minting a verification ticket is {@link addIdentifier}'s job, so an
+ * email claimed that way waits for its own call before it can sign anyone in. A caller
+ * that already knows an identifier was proven elsewhere — an import asserting its own
+ * directory's history — passes the moment it was proven and the row is written
+ * verified from the start.
  *
  * @param db - The tenant's database.
  * @param input - The identifiers to claim, the standard profile claims, and any declared
@@ -188,7 +194,7 @@ export async function createSubject(
 		return { ok: false, reason: "duplicate-username" };
 	}
 
-	let folded: { kind: IdentifierKind; value: string; folded: string }[] = [];
+	let folded: { kind: IdentifierKind; value: string; folded: string; verifiedAt?: number }[] = [];
 
 	for (let identifier of identifiers) {
 		let result = foldIdentifier(identifier.kind, identifier.value);
@@ -202,7 +208,12 @@ export async function createSubject(
 			};
 		}
 
-		folded.push({ kind: identifier.kind, value: identifier.value, folded: result.folded });
+		folded.push({
+			kind: identifier.kind,
+			value: identifier.value,
+			folded: result.folded,
+			verifiedAt: identifier.verifiedAt,
+		});
 	}
 
 	let claimed = new Set<string>();
@@ -248,7 +259,7 @@ export async function createSubject(
 			kind: entry.kind,
 			value: entry.value,
 			folded: entry.folded,
-			verified_at: null,
+			verified_at: entry.verifiedAt ?? null,
 			is_primary: false,
 			verification_ticket: null,
 			verification_ticket_expires_at: null,
@@ -258,8 +269,8 @@ export async function createSubject(
 		states.push({
 			kind: entry.kind,
 			value: entry.value,
-			verified: false,
-			verifiedAt: null,
+			verified: entry.verifiedAt != null,
+			verifiedAt: entry.verifiedAt ?? null,
 			isPrimary: false,
 		});
 	}

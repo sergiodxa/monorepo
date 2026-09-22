@@ -236,6 +236,22 @@ async function resolveRoleByKey(
 }
 
 /**
+ * Resolves a role by its key at a scope without assigning it — the same lookup
+ * {@link assignRole} runs to decide `role-not-found`, exposed read-only for a caller
+ * that only needs to confirm a role would resolve.
+ *
+ * @param db - The tenant's database.
+ * @param input - The scope the role would be held at, and its key.
+ * @returns The resolved role, or null when no role holds that key at that scope.
+ */
+export async function resolveRole(
+	db: Database,
+	input: { scope: string; roleKey: string },
+): Promise<RoleRecord | null> {
+	return resolveRoleByKey(db, input.scope, input.roleKey);
+}
+
+/**
  * The permission keys a role grants: every declared permission for `owner` and `admin`
  * alike, since neither system role's fixed meaning restricts a tenant's own vocabulary
  * — the three operations `admin` is denied have no declared permission key of their

@@ -118,6 +118,7 @@ export const AUDIT_ACTIONS = [
 	"identifier.added",
 	"identifier.verified",
 	"identifier.removed",
+	"subjects.imported",
 	// Client and protocol
 	"client.created",
 	"client.updated",

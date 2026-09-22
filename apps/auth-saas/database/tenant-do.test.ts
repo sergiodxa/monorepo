@@ -366,6 +366,73 @@ describe("reportStorageFootprint", () => {
 	});
 });
 
+describe("subject import", () => {
+	test("beginImportRun refuses a batch that would cross the storage ceiling", async () => {
+		let result = await tenant.beginImportRun({ estimatedRows: 100_000_000 });
+		expect(result).toMatchObject({ ok: false, reason: "storage-ceiling" });
+	});
+
+	test("beginImportRun succeeds for a reasonable batch against a real, small database", async () => {
+		let result = await tenant.beginImportRun({ estimatedRows: 10 });
+		expect(result).toMatchObject({ ok: true });
+	});
+
+	test("importSubjects in validate mode changes nothing", async () => {
+		let before = await tenant.listSubjects();
+		if (!before.ok) throw new Error("unreachable");
+
+		let result = await tenant.importSubjects({
+			mode: "validate",
+			rows: [{ identifiers: [{ kind: "email", value: "jane@example.com" }] }],
+		});
+
+		expect(result.outcomes).toHaveLength(1);
+		expect(result.outcomes[0]).toMatchObject({ ok: true });
+
+		let after = await tenant.listSubjects();
+		if (!after.ok) throw new Error("unreachable");
+		expect(after.subjects).toHaveLength(before.subjects.length);
+	});
+
+	test("importSubjects in apply mode writes only the valid rows of a mixed batch", async () => {
+		let result = await tenant.importSubjects({
+			mode: "apply",
+			rows: [
+				{ externalId: "ok", identifiers: [{ kind: "email", value: "jane@example.com" }] },
+				{ externalId: "bad", identifiers: [{ kind: "email", value: "not-an-email" }] },
+			],
+		});
+
+		expect(result.outcomes).toHaveLength(2);
+		expect(result.outcomes[0]).toMatchObject({ ok: true, externalId: "ok" });
+		expect(result.outcomes[1]).toMatchObject({
+			ok: false,
+			externalId: "bad",
+			problems: [{ kind: "identifier", reason: "invalid" }],
+		});
+
+		let after = await tenant.listSubjects();
+		if (!after.ok) throw new Error("unreachable");
+		expect(after.subjects).toHaveLength(1);
+	});
+
+	test("completeImportRun writes one summary audit row", async () => {
+		let result = await tenant.completeImportRun({ processed: 5, created: 4, failed: 1 });
+		expect(result).toMatchObject({ ok: true });
+
+		let page = await tenant.readAuditPage({
+			from: 0,
+			to: Date.now() + 60_000,
+			action: "subjects.imported",
+		});
+
+		expect(page).toMatchObject({
+			ok: true,
+			events: [{ outcome: "succeeded", detail: { processed: 5, created: 4, failed: 1 } }],
+		});
+	});
+});
+
 describe("signInWithPassword: organization domain membership wired through the Durable Object", () => {
 	test("resolves the caller's verified domain into a real membership on an ordinary sign-in", async () => {
 		await tenant.provision({ tenantId: "tenant_1", issuer: "https://tenant-1.example.com" });

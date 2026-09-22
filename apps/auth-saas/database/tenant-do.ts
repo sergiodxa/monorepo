@@ -256,6 +256,7 @@ import type {
 	SetCustomClaimsInput,
 	SetCustomClaimsResult,
 } from "./signing-keys";
+import type { ImportRowOutcome, ImportSubjectRow } from "./subject-import";
 import type {
 	Actor,
 	AddIdentifierInput,
@@ -353,6 +354,8 @@ import * as SamlSignIn from "./saml-sign-in";
 import * as Scim from "./scim";
 import * as Sessions from "./sessions";
 import * as SigningKeys from "./signing-keys";
+import { projectsWithinStorageCeiling } from "./storage-ceiling";
+import { applyImportRow, completeImportRun, validateImportRow } from "./subject-import";
 import * as Subjects from "./subjects";
 import { runMigrations } from "./tenant-migrations";
 import * as Tokens from "./tokens";
@@ -3377,5 +3380,78 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 
 			return { rows, databaseSize: this.ctx.storage.sql.databaseSize };
 		});
+	}
+
+	/**
+	 * Answers whether an import of roughly `estimatedRows` more subjects still fits
+	 * under this object's own storage ceiling, projected from its current size — the
+	 * one question only this object can answer before a run starts moving rows
+	 * through it. The run itself, and the id it is tracked under, are the
+	 * control-plane job's own bookkeeping and never reach this object.
+	 *
+	 * @param input - How many subjects the run is about to write.
+	 * @returns Success, or that the projected size would cross the ceiling.
+	 */
+	async beginImportRun(input: {
+		estimatedRows: number;
+	}): Promise<WithCost<{ ok: true } | { ok: false; reason: "storage-ceiling" }>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let fits = projectsWithinStorageCeiling({
+				currentDatabaseSize: this.ctx.storage.sql.databaseSize,
+				estimatedRows: input.estimatedRows,
+			});
+
+			if (!fits) return { ok: false, reason: "storage-ceiling" } as const;
+			return { ok: true } as const;
+		});
+	}
+
+	/**
+	 * Validates or writes one already-assembled batch of import rows, sequentially,
+	 * answering one outcome per row in the same order. Pacing the rows across calls
+	 * and persisting how far a run has gotten are the control-plane job's own concern;
+	 * this method only ever sees the one batch it is handed.
+	 *
+	 * @param input - Whether to only check the batch or write it, and the rows
+	 * themselves.
+	 * @returns One outcome per row, in the order the rows were given.
+	 */
+	async importSubjects(input: {
+		mode: "validate" | "apply";
+		rows: ImportSubjectRow[];
+	}): Promise<WithCost<{ outcomes: ImportRowOutcome[] }>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let outcomes: ImportRowOutcome[] = [];
+
+			for (let row of input.rows) {
+				outcomes.push(
+					input.mode === "validate"
+						? await validateImportRow(this.#db, row)
+						: await applyImportRow(this.#db, row),
+				);
+			}
+
+			return { outcomes };
+		});
+	}
+
+	/**
+	 * Writes one summary audit row for a finished import run's totals.
+	 *
+	 * @param input - How many rows the run processed, how many subjects it created,
+	 * and how many rows failed.
+	 * @returns Success, once the row is written.
+	 */
+	async completeImportRun(input: {
+		processed: number;
+		created: number;
+		failed: number;
+	}): Promise<WithCost<{ ok: true }>> {
+		await this.#migrated;
+		return this.#withCost(() => completeImportRun(this.#db, input));
 	}
 }
