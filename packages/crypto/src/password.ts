@@ -245,11 +245,30 @@ function needsRehash(stored: string): boolean {
 }
 
 /**
- * Password hashing, verification, and upgrade detection.
+ * Reports whether a stored value is one this module wrote — its own scrypt
+ * format, under any cost parameters it has ever used, current or older.
+ *
+ * A value this returns `false` for is foreign: a different algorithm entirely,
+ * or a well-formed value carrying an algorithm tag this module does not read.
+ *
+ * @param stored Value to inspect.
+ * @returns Whether this module's own `verify` and `needsRehash` apply to it.
+ * @example
+ * let stored = unwrap(await password.hash("secret"));
+ * password.recognizes(stored); // true
+ * password.recognizes("$2a$10$N9qo8uLOickgx2ZMRZoMye.OmWJc0.vv.rMIFZQMWLQihlT4YLu8W"); // false
+ */
+function recognizes(stored: string): boolean {
+	return !isFailure(parse(stored));
+}
+
+/**
+ * Password hashing, verification, upgrade detection, and format recognition.
  *
  * @example
  * let stored = unwrap(await password.hash("secret"));
  * let ok = unwrap(await password.verify(stored, "secret")); // true
  * password.needsRehash(stored); // false
+ * password.recognizes(stored); // true
  */
-export const password = { hash, verify, needsRehash };
+export const password = { hash, verify, needsRehash, recognizes };

@@ -194,3 +194,30 @@ describe("password.needsRehash", () => {
 		expect(password.needsRehash("not-a-hash-at-all")).toBe(true);
 	});
 });
+
+describe("password.recognizes", () => {
+	test("is true for a hash this module just produced", async () => {
+		let stored = unwrap(await password.hash("correct horse"));
+
+		expect(password.recognizes(stored)).toBe(true);
+	});
+
+	test("is true for a hash with older, still-valid cost parameters", () => {
+		let stored = legacyHash("correct horse", WEAK_LOG_N);
+
+		expect(password.recognizes(stored)).toBe(true);
+	});
+
+	test("is false for a bcrypt-shaped string", () => {
+		expect(password.recognizes(BCRYPT_HASH)).toBe(false);
+	});
+
+	test("is false for an md5 hex string", () => {
+		expect(password.recognizes("5f4dcc3b5aa765d61d8327deb882cf99")).toBe(false);
+	});
+
+	test("is false for garbage or an empty string", () => {
+		expect(password.recognizes("not-a-hash-at-all")).toBe(false);
+		expect(password.recognizes("")).toBe(false);
+	});
+});

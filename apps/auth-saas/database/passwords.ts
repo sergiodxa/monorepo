@@ -345,6 +345,63 @@ async function writeNewPassword(
 	return { ok: true, passwordId: id, expiresAt };
 }
 
+export type ImportPasswordHashResult =
+	| { ok: true; passwordId: string }
+	| { ok: false; reason: "not-found" }
+	| { ok: false; reason: "unrecognized-hash" };
+
+/**
+ * Writes an already-hashed password directly to a subject's row, for a
+ * directory arriving from elsewhere with a hash this platform's own format
+ * already covers. No plaintext is ever seen on this path, so none of
+ * {@link writeNewPassword}'s policy checks — length, common-password,
+ * similar-to-identifier — apply; those are about a person choosing a
+ * plaintext, and an imported hash is neither chosen here nor rehashable to
+ * check against.
+ *
+ * The one check this path keeps is recognition: the hash must be one
+ * `password.recognizes` accepts as this platform's own format, so a value
+ * imported this way verifies at the subject's next sign-in exactly like any
+ * other stored hash, and upgrades itself the same way if it trails current
+ * policy.
+ *
+ * @param db - The tenant's database.
+ * @param input - The subject the hash belongs to, the hash itself, and
+ * whether the subject must change it at next sign-in.
+ * @returns The new row's id, or why the import was refused.
+ */
+export async function importPasswordHash(
+	db: Database,
+	input: { subjectId: string; hash: string; mustChange?: boolean },
+): Promise<ImportPasswordHashResult> {
+	let subject = await db.find(subjects, { id: input.subjectId });
+	if (!subject) return { ok: false, reason: "not-found" };
+
+	if (!password.recognizes(input.hash)) return { ok: false, reason: "unrecognized-hash" };
+
+	let id = passwordRowId(generateUUID()).toString();
+
+	await db.create(passwords, {
+		id,
+		subject_id: input.subjectId,
+		hash: input.hash,
+		created_at: Date.now(),
+		expires_at: null,
+		must_change: input.mustChange ?? false,
+	});
+
+	await writeAuditEvent(db, {
+		action: "password.changed",
+		actor: PLATFORM_ACTOR,
+		targetType: "subject",
+		targetId: input.subjectId,
+		outcome: "succeeded",
+		detail: { via: "import" },
+	});
+
+	return { ok: true, passwordId: id };
+}
+
 export interface SetPasswordInput {
 	subjectId: string;
 	password: string;

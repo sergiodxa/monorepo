@@ -13,6 +13,7 @@ import type { DurableObjectStateMock } from "@sdxc/cloudflare-mocks";
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { password } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
+import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -334,6 +335,65 @@ describe("changePassword", () => {
 			remembered: false,
 		});
 		expect(signIn).toMatchObject({ ok: true, subjectId });
+	});
+});
+
+describe("importPasswordHash", () => {
+	test("imports a hash this module produced, and it verifies at a normal sign-in", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let hashed = unwrap(await password.hash("correct-password-1"));
+
+		let imported = await Passwords.importPasswordHash(db, {
+			subjectId,
+			hash: hashed,
+		});
+		expect(imported).toMatchObject({ ok: true });
+
+		let signIn = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "correct-password-1",
+			remembered: false,
+		});
+		expect(signIn).toMatchObject({ ok: true, subjectId });
+	});
+
+	test("refuses an unknown subject", async () => {
+		let hashed = unwrap(await password.hash("correct-password-1"));
+
+		let imported = await Passwords.importPasswordHash(db, {
+			subjectId: "sub_does_not_exist",
+			hash: hashed,
+		});
+		expect(imported).toEqual({ ok: false, reason: "not-found" });
+	});
+
+	test("refuses a foreign-looking hash, writing nothing", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let bcryptHash = "$2a$10$N9qo8uLOickgx2ZMRZoMye.OmWJc0.vv.rMIFZQMWLQihlT4YLu8W";
+
+		let imported = await Passwords.importPasswordHash(db, {
+			subjectId,
+			hash: bcryptHash,
+		});
+		expect(imported).toEqual({ ok: false, reason: "unrecognized-hash" });
+
+		let count = await db.count(Passwords.passwords, { where: { subject_id: subjectId } });
+		expect(count).toBe(0);
+	});
+
+	test("carries mustChange through to the written row", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let hashed = unwrap(await password.hash("correct-password-1"));
+
+		let imported = await Passwords.importPasswordHash(db, {
+			subjectId,
+			hash: hashed,
+			mustChange: true,
+		});
+		if (!imported.ok) throw new Error("unreachable");
+
+		let row = await db.find(Passwords.passwords, { id: imported.passwordId });
+		expect(row?.must_change).toBe(true);
 	});
 });
 
