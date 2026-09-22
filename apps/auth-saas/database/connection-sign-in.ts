@@ -95,6 +95,11 @@ const RELYING_PARTY_TRANSACTION_KEY = "auth:transaction";
  * subject, and the sealed provider tokens a later read opens. Reusing this row on a
  * returning sign-in is what keeps one provider account resolving to one platform
  * subject rather than minting a new one every time.
+ *
+ * `linked_by`, `linked_at` and the rest of the account-linking columns describe how
+ * the row came to exist and what the provider last asserted, read and written by
+ * `account-linking.ts` rather than by this module — {@link upsertConnectionIdentity}
+ * only ever touches the token columns it already owned before those existed.
  */
 export const connectionIdentities = table({
 	name: "connection_identities",
@@ -106,6 +111,13 @@ export const connectionIdentities = table({
 		access_token_sealed: c.text().nullable(),
 		refresh_token_sealed: c.text().nullable(),
 		token_expires_at: c.integer().nullable(),
+		provider_email: c.text().nullable(),
+		provider_email_verified: c.boolean().nullable(),
+		linked_by: c.enum(["automatic", "subject", "admin", "jit"] as const),
+		linked_at: c.integer(),
+		last_sign_in_at: c.integer().nullable(),
+		granted_scopes: c.json().nullable(),
+		claims_json: c.text().nullable(),
 		created_at: c.integer(),
 		updated_at: c.integer(),
 	},
@@ -244,6 +256,11 @@ export function applyMappings(
  * access token already decoded into claims rather than the wire string a bearer
  * call needs, so this pass has nothing genuine to seal there yet and leaves that
  * column `null` until a later pass has one to write.
+ *
+ * A row this call creates is written `linked_by: "jit"`, since minting one here is
+ * still the same unconditional creation it always was — the automatic linking rule
+ * and the confirmed path it falls back to are `account-linking.ts`'s own decision,
+ * run by a caller before it ever reaches this write.
  */
 export async function upsertConnectionIdentity(
 	db: Database,
@@ -291,6 +308,13 @@ export async function upsertConnectionIdentity(
 		access_token_sealed: null,
 		refresh_token_sealed: refreshTokenSealed,
 		token_expires_at: input.tokenExpiresAt,
+		provider_email: null,
+		provider_email_verified: null,
+		linked_by: "jit",
+		linked_at: now,
+		last_sign_in_at: null,
+		granted_scopes: null,
+		claims_json: null,
 		created_at: now,
 		updated_at: now,
 	});

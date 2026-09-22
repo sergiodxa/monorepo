@@ -1,11 +1,17 @@
 /**
  * The remaining-credential predicate every credential removal shares: whether a
  * subject keeps at least one other way to sign in after one more is taken away.
- * Counts verified identifiers, passwords and passkeys — every table that can
- * currently authenticate a subject — which is why this lives above `subjects.ts`,
- * `passwords.ts` and `passkeys.ts` rather than inside any one of them: each of those
+ * Counts verified identifiers, passwords, passkeys and linked identities on
+ * enabled connections — every table that can currently authenticate a subject —
+ * which is why this lives above `subjects.ts`, `passwords.ts`, `passkeys.ts` and
+ * `connection-sign-in.ts` rather than inside any one of them: each of those
  * already imports from `subjects.ts`, so a shared check any of them could import
  * would import itself back.
+ *
+ * A verified email identifier where magic-link sign-in is offered belongs in this
+ * count too, once magic-link sign-in exists to offer — {@link hasMagicLinkCredential}
+ * is the seam it lands in, answering `false` today rather than this function
+ * needing a shape change once it does.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,8 +19,10 @@
 
 import type { Database } from "remix/data-table";
 
-import { and, eq, ne, notNull } from "remix/data-table";
+import { and, eq, inList, ne, notNull } from "remix/data-table";
 
+import { connectionIdentities } from "./connection-sign-in";
+import { connections } from "./connections";
 import { passkeys } from "./passkeys";
 import { passwords } from "./passwords";
 import { subjectIdentifiers } from "./subjects";
@@ -68,6 +76,32 @@ export async function hasAnotherCredential(
 					)
 				: and(eq("subject_id", subjectId), eq("suspended", false)),
 	});
+	if (passkeyCount > 0) return true;
 
-	return passkeyCount > 0;
+	let enabledConnections = await db.findMany(connections, { where: eq("enabled", true) });
+
+	if (enabledConnections.length > 0) {
+		let identityCount = await db.count(connectionIdentities, {
+			where: and(
+				eq("subject_id", subjectId),
+				inList(
+					"connection_id",
+					enabledConnections.map((row) => row.id),
+				),
+			),
+		});
+		if (identityCount > 0) return true;
+	}
+
+	return hasMagicLinkCredential(db, subjectId);
+}
+
+/**
+ * Whether a subject holds a verified email identifier magic-link sign-in would
+ * accept. Magic-link sign-in does not exist in this codebase yet, so this answers
+ * `false` for every subject until it does — the seam {@link hasAnotherCredential}
+ * reads rather than a clause it grows once that sign-in method is built.
+ */
+async function hasMagicLinkCredential(_db: Database, _subjectId: string): Promise<boolean> {
+	return false;
 }

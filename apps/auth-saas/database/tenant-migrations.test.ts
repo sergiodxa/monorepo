@@ -60,6 +60,7 @@ describe("runMigrations", () => {
 			"0028-webhook-deliveries",
 			"0029-authentication-backoff",
 			"0030-totp-backoff",
+			"0031-account-linking",
 		]);
 	});
 
@@ -161,6 +162,7 @@ describe("runMigrations", () => {
 			{ id: "0028-webhook-deliveries", applied_at: expect.any(Number) },
 			{ id: "0029-authentication-backoff", applied_at: expect.any(Number) },
 			{ id: "0030-totp-backoff", applied_at: expect.any(Number) },
+			{ id: "0031-account-linking", applied_at: expect.any(Number) },
 		]);
 	});
 
