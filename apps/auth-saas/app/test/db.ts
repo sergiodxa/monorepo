@@ -18,6 +18,7 @@ import tenantUsageMigration from "~/database/migrations/0004-tenant-usage.sql?ra
 import managementApiMigration from "~/database/migrations/0005-management-api.sql?raw";
 import attackSignalAlertsMigration from "~/database/migrations/0006-attack-signal-alerts.sql?raw";
 import tenantImportRunsMigration from "~/database/migrations/0007-tenant-import-runs.sql?raw";
+import transferDownloadTicketsMigration from "~/database/migrations/0008-transfer-download-tickets.sql?raw";
 
 /** Every control-plane migration, applied in order. */
 const MIGRATIONS = [
@@ -28,6 +29,7 @@ const MIGRATIONS = [
 	managementApiMigration,
 	attackSignalAlertsMigration,
 	tenantImportRunsMigration,
+	transferDownloadTicketsMigration,
 ];
 
 /**

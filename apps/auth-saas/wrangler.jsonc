@@ -74,7 +74,15 @@
 		{ "binding": "TURNSTILE_CHALLENGE_KV", "id": "placeholder-turnstile-challenge-kv-id" },
 	],
 
-	"r2_buckets": [],
+	// Holds the NDJSON source and report files a subject import/export run reads and
+	// writes, and the objects a management-API download ticket names.
+	"r2_buckets": [
+		{
+			"binding": "R2",
+			"bucket_name": "auth-saas-transfers",
+			"preview_bucket_name": "auth-saas-transfers",
+		},
+	],
 
 	"ratelimits": [
 		{
