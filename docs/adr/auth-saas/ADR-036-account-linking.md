@@ -2,7 +2,7 @@
 
 ## Status
 
-**Implemented** - 2026-09-22, with one gap left open: ending a link's access at the provider (spending its revocation endpoint on unlink) is not built, since no relying-party client in this codebase yet implements calling one. An administrator's unlink also revokes sessions at `amr`'s current precision — it distinguishes "social" from "saml" only, not one connection from another of the same kind.
+**Implemented** - 2026-09-22: an unlink now surrenders an OIDC identity's stored refresh token at the provider's own revocation endpoint, best-effort, before the local identity is dropped — a provider that publishes no revocation endpoint, refuses the call, or cannot be reached never blocks the local unlink. One gap remains open: an administrator's unlink revokes sessions at `amr`'s current precision, which distinguishes "social" from "saml" only, not one connection from another of the same kind.
 
 ## Background
 
