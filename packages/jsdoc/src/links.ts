@@ -9,8 +9,12 @@
 
 import type { DocLink } from "./types.js";
 
-/** Matches `{@link target}`, `{@link target|label}` and `{@link target label}`. */
-const INLINE_LINK = /\{@link(?:code|plain)?[ \t]+([^}|\s]+)(?:[ \t]*\|[ \t]*|[ \t]+)?([^}]*)\}/g;
+/**
+ * Matches `{@link target}`, `{@link target|label}` and `{@link target label}`. Any
+ * whitespace separates the parts, since a comment wraps where its line ends and a tag
+ * is as likely to be broken across lines as anything else in the prose around it.
+ */
+const INLINE_LINK = /\{@link(?:code|plain)?\s+([^}|\s]+)(?:\s*\|\s*|\s+)?([^}]*)\}/g;
 
 /**
  * Find every inline link in a description or tag text.

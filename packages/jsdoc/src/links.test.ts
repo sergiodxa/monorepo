@@ -36,6 +36,20 @@ describe("inlineLinks", () => {
 		expect(text.slice(link?.index, (link?.index ?? 0) + (link?.raw.length ?? 0))).toBe(link?.raw);
 	});
 
+	test("reads a link the comment wrapped across lines", () => {
+		let [link] = inlineLinks("padded around a stack of {@link\nMenu.Separator} dividers");
+
+		expect(link?.target).toBe("Menu.Separator");
+		expect(link?.text).toBeNull();
+	});
+
+	test("reads a wrapped link carrying its own label", () => {
+		let [link] = inlineLinks("see {@link\nMenu.Item the row} for details");
+
+		expect(link?.target).toBe("Menu.Item");
+		expect(link?.text).toBe("the row");
+	});
+
 	test("returns nothing for text without links", () => {
 		expect(inlineLinks("Plain prose.")).toEqual([]);
 	});
