@@ -16,6 +16,8 @@
 import type { Form } from "@sdxc/ui";
 import type { RequestContext } from "remix/router";
 
+import { getClientIP } from "@sdxc/get-client-ip";
+import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 import * as f from "remix/data-schema/form-data";
@@ -24,6 +26,7 @@ import { createAction } from "remix/router";
 import type { PasswordPolicy } from "~/database/passwords";
 
 import { passwordPolicyIssue } from "~/app/http/controllers/hosted/password-policy-issue";
+import { passesConditionalTurnstileChallenge } from "~/app/http/controllers/hosted/turnstile-guard";
 import { resetPasswordLink } from "~/app/mail/links";
 import { ResetPasswordEmail } from "~/app/mail/reset-password-email";
 import { senderAddressFor, senderNameFromIssuer } from "~/app/mail/sender";
@@ -68,6 +71,7 @@ function completeSchema(policy: PasswordPolicy) {
 /** Renders the request-a-reset form. */
 function renderRequestForm(
 	ctx: RequestContext,
+	challenge: boolean,
 	issues?: ReadonlyArray<Form.Issue>,
 ): Promise<Response> {
 	let t = ctx.i18next.t;
@@ -78,6 +82,8 @@ function renderRequestForm(
 				t={t}
 				state="request"
 				action={actionUrl(ctx, routes.hostedResetSubmit.href())}
+				challenge={challenge}
+				turnstileSiteKey={env.TURNSTILE_SITE_KEY}
 				issues={issues}
 			/>
 		</HostedDocument>,
@@ -89,6 +95,7 @@ function renderRequestForm(
 function renderCompleteForm(
 	ctx: RequestContext,
 	policy: PasswordPolicy,
+	challenge: boolean,
 	issues?: ReadonlyArray<Form.Issue>,
 ): Promise<Response> {
 	let t = ctx.i18next.t;
@@ -100,6 +107,8 @@ function renderCompleteForm(
 				state="complete"
 				action={actionUrl(ctx, routes.hostedResetSubmit.href())}
 				policy={policy}
+				challenge={challenge}
+				turnstileSiteKey={env.TURNSTILE_SITE_KEY}
 				issues={issues}
 			/>
 		</HostedDocument>,
@@ -118,10 +127,11 @@ function renderCompleteForm(
  */
 export const resetShow = createAction(routes.hostedResetShow, async (ctx) => {
 	let ticket = ctx.url.searchParams.get("ticket");
-	if (!ticket) return renderRequestForm(ctx);
+	let challenge = ctx.turnstileChallenge === true;
+	if (!ticket) return renderRequestForm(ctx, challenge);
 
 	let policy = await ctx.tenantStub.describePasswordPolicy();
-	return renderCompleteForm(ctx, policy);
+	return renderCompleteForm(ctx, policy, challenge);
 });
 
 /**
@@ -140,10 +150,27 @@ export const resetShow = createAction(routes.hostedResetShow, async (ctx) => {
 export const resetSubmit = createAction(routes.hostedResetSubmit, async (ctx) => {
 	let t = ctx.i18next.t;
 	let ticket = ctx.url.searchParams.get("ticket");
+	let challenge = ctx.turnstileChallenge === true;
+
+	if (challenge) {
+		let turnstilePassed = await passesConditionalTurnstileChallenge(
+			env.TURNSTILE_SECRET_KEY,
+			ctx.formData,
+			getClientIP(ctx.request) ?? undefined,
+		);
+
+		if (!turnstilePassed) {
+			let turnstileIssue = [{ message: t("hostedReset.errors.turnstileFailed") }];
+			if (!ticket) return renderRequestForm(ctx, challenge, turnstileIssue);
+
+			let policy = await ctx.tenantStub.describePasswordPolicy();
+			return renderCompleteForm(ctx, policy, challenge, turnstileIssue);
+		}
+	}
 
 	if (!ticket) {
 		let parsed = s.parseSafe(RequestSchema, ctx.formData);
-		if (!parsed.success) return renderRequestForm(ctx, parsed.issues);
+		if (!parsed.success) return renderRequestForm(ctx, challenge, parsed.issues);
 
 		let begun = await ctx.tenantStub.beginPasswordReset({ identifier: parsed.value.identifier });
 
@@ -168,7 +195,7 @@ export const resetSubmit = createAction(routes.hostedResetSubmit, async (ctx) =>
 
 	let policy = await ctx.tenantStub.describePasswordPolicy();
 	let parsed = s.parseSafe(completeSchema(policy), ctx.formData);
-	if (!parsed.success) return renderCompleteForm(ctx, policy, parsed.issues);
+	if (!parsed.success) return renderCompleteForm(ctx, policy, challenge, parsed.issues);
 
 	let completed = await ctx.tenantStub.completePasswordReset({
 		ticket,
@@ -185,7 +212,9 @@ export const resetSubmit = createAction(routes.hostedResetSubmit, async (ctx) =>
 			);
 		}
 
-		return renderCompleteForm(ctx, policy, [passwordPolicyIssue(t, completed, "newPassword")]);
+		return renderCompleteForm(ctx, policy, challenge, [
+			passwordPolicyIssue(t, completed, "newPassword"),
+		]);
 	}
 
 	return ctx.render(

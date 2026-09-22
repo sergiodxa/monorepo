@@ -19,7 +19,9 @@
 import type { Form } from "@sdxc/ui";
 import type { RequestContext } from "remix/router";
 
+import { getClientIP } from "@sdxc/get-client-ip";
 import { isFailure } from "@sdxc/result";
+import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 import * as f from "remix/data-schema/form-data";
@@ -28,6 +30,7 @@ import { createAction } from "remix/router";
 import type { PasswordPolicy } from "~/database/passwords";
 
 import { passwordPolicyIssue } from "~/app/http/controllers/hosted/password-policy-issue";
+import { passesUnconditionalTurnstileChallenge } from "~/app/http/controllers/hosted/turnstile-guard";
 import { verifyAddressLink } from "~/app/mail/links";
 import { senderAddressFor, senderNameFromIssuer } from "~/app/mail/sender";
 import { VerifyAddressEmail } from "~/app/mail/verify-address-email";
@@ -54,7 +57,11 @@ function signUpSchema(policy: PasswordPolicy) {
 /** Renders the sign-up form, carrying the current request's own query onto its action. */
 async function renderSignUpPage(
 	ctx: RequestContext,
-	input: { policy: PasswordPolicy; issues?: ReadonlyArray<Form.Issue> },
+	input: {
+		policy: PasswordPolicy;
+		turnstileSiteKey: string;
+		issues?: ReadonlyArray<Form.Issue>;
+	},
 ): Promise<Response> {
 	let t = ctx.i18next.t;
 
@@ -64,6 +71,7 @@ async function renderSignUpPage(
 				t={t}
 				action={actionUrl(ctx, routes.hostedSignUpSubmit.href())}
 				policy={input.policy}
+				turnstileSiteKey={input.turnstileSiteKey}
 				issues={input.issues}
 			/>
 		</HostedDocument>,
@@ -82,7 +90,7 @@ async function renderSignUpPage(
  */
 export const signUpShow = createAction(routes.hostedSignUpShow, async (ctx) => {
 	let policy = await ctx.tenantStub.describePasswordPolicy();
-	return renderSignUpPage(ctx, { policy });
+	return renderSignUpPage(ctx, { policy, turnstileSiteKey: env.TURNSTILE_SITE_KEY });
 });
 
 /**
@@ -99,10 +107,24 @@ export const signUpShow = createAction(routes.hostedSignUpShow, async (ctx) => {
 export const signUpSubmit = createAction(routes.hostedSignUpSubmit, async (ctx) => {
 	let t = ctx.i18next.t;
 	let policy = await ctx.tenantStub.describePasswordPolicy();
+	let turnstileSiteKey = env.TURNSTILE_SITE_KEY;
+
+	let turnstilePassed = await passesUnconditionalTurnstileChallenge(
+		env.TURNSTILE_SECRET_KEY,
+		ctx.formData,
+		getClientIP(ctx.request) ?? undefined,
+	);
+	if (!turnstilePassed) {
+		return renderSignUpPage(ctx, {
+			policy,
+			turnstileSiteKey,
+			issues: [{ message: t("hostedSignUp.errors.turnstileFailed") }],
+		});
+	}
 
 	let parsed = s.parseSafe(signUpSchema(policy), ctx.formData);
 	if (!parsed.success) {
-		return renderSignUpPage(ctx, { policy, issues: parsed.issues });
+		return renderSignUpPage(ctx, { policy, turnstileSiteKey, issues: parsed.issues });
 	}
 
 	let { email, password, name } = parsed.value;
@@ -118,7 +140,11 @@ export const signUpSubmit = createAction(routes.hostedSignUpSubmit, async (ctx) 
 			created.reason === "identifier-taken"
 				? t("hostedSignUp.errors.identifierTaken")
 				: t("hostedSignUp.errors.identifierInvalid");
-		return renderSignUpPage(ctx, { policy, issues: [{ message, path: ["email"] }] });
+		return renderSignUpPage(ctx, {
+			policy,
+			turnstileSiteKey,
+			issues: [{ message, path: ["email"] }],
+		});
 	}
 
 	let added = await ctx.tenantStub.addIdentifier({
@@ -131,6 +157,7 @@ export const signUpSubmit = createAction(routes.hostedSignUpSubmit, async (ctx) 
 	if (!added.ok) {
 		return renderSignUpPage(ctx, {
 			policy,
+			turnstileSiteKey,
 			issues: [{ message: t("hostedSignUp.errors.generic") }],
 		});
 	}
@@ -163,12 +190,14 @@ export const signUpSubmit = createAction(routes.hostedSignUpSubmit, async (ctx) 
 		if (written.reason === "not-found") {
 			return renderSignUpPage(ctx, {
 				policy,
+				turnstileSiteKey,
 				issues: [{ message: t("hostedSignUp.errors.generic") }],
 			});
 		}
 
 		return renderSignUpPage(ctx, {
 			policy,
+			turnstileSiteKey,
 			issues: [passwordPolicyIssue(t, written, "password")],
 		});
 	}

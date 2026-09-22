@@ -11,12 +11,15 @@
 
 import type { RequestContext } from "remix/router";
 
+import { getClientIP } from "@sdxc/get-client-ip";
+import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
 import {
 	redirectToErrorPage,
 	respondToAuthorizationOutcome,
 } from "~/app/http/controllers/hosted/outcome";
+import { passesConditionalTurnstileChallenge } from "~/app/http/controllers/hosted/turnstile-guard";
 import { serializeSessionCookie } from "~/app/http/middleware/hosted-session";
 import { CREDENTIAL_FAILURE_SPEND } from "~/app/http/middleware/tenant-rate-limit";
 import { requestOrigin } from "~/app/lib/request-origin";
@@ -35,7 +38,12 @@ function actionUrl(ctx: RequestContext, path: string): string {
 /** Renders the sign-in form, carrying the current request's own query onto every action. */
 async function renderSignInPage(
 	ctx: RequestContext,
-	input: { loginHint: string | null; forced: boolean; error: string | null },
+	input: {
+		loginHint: string | null;
+		forced: boolean;
+		error: string | null;
+		challenge: boolean;
+	},
 ): Promise<Response> {
 	let t = ctx.i18next.t;
 
@@ -49,6 +57,8 @@ async function renderSignInPage(
 				loginHint={input.loginHint}
 				forced={input.forced}
 				error={input.error}
+				challenge={input.challenge}
+				turnstileSiteKey={env.TURNSTILE_SITE_KEY}
 			/>
 		</HostedDocument>,
 		input.error ? { status: 400 } : undefined,
@@ -75,6 +85,7 @@ export const signInShow = createAction(routes.hostedSignInShow, async (ctx) => {
 		loginHint: ctx.url.searchParams.get("login_hint"),
 		forced: ctx.url.searchParams.get("forced") === "1",
 		error: null,
+		challenge: ctx.turnstileChallenge === true,
 	});
 });
 
@@ -94,9 +105,26 @@ export const signInSubmit = createAction(routes.hostedSignInSubmit, async (ctx) 
 	let interactionId = ctx.url.searchParams.get("interaction");
 	let loginHint = ctx.url.searchParams.get("login_hint");
 	let forced = ctx.url.searchParams.get("forced") === "1";
+	let challenge = ctx.turnstileChallenge === true;
 
 	if (!interactionId) {
 		return redirectToErrorPage(ctx, ctx.i18next.t("hostedError.invalidInteraction"));
+	}
+
+	if (challenge) {
+		let turnstilePassed = await passesConditionalTurnstileChallenge(
+			env.TURNSTILE_SECRET_KEY,
+			ctx.formData,
+			getClientIP(ctx.request) ?? undefined,
+		);
+		if (!turnstilePassed) {
+			return renderSignInPage(ctx, {
+				loginHint,
+				forced,
+				challenge,
+				error: ctx.i18next.t("hostedSignIn.errors.turnstileFailed"),
+			});
+		}
 	}
 
 	let identifier = ctx.formData.get("identifier");
@@ -107,6 +135,7 @@ export const signInSubmit = createAction(routes.hostedSignInSubmit, async (ctx) 
 		return renderSignInPage(ctx, {
 			loginHint,
 			forced,
+			challenge,
 			error: ctx.i18next.t("hostedSignIn.errors.invalidCredentials"),
 		});
 	}
@@ -133,7 +162,7 @@ export const signInSubmit = createAction(routes.hostedSignInSubmit, async (ctx) 
 				: signedIn.reason === "dau_cap_reached"
 					? ctx.i18next.t("hostedSignIn.errors.dauCapReached")
 					: ctx.i18next.t("hostedSignIn.errors.invalidCredentials");
-		return renderSignInPage(ctx, { loginHint, forced, error });
+		return renderSignInPage(ctx, { loginHint, forced, challenge, error });
 	}
 
 	let sessionCookieHeader = await serializeSessionCookie(signedIn, remembered);

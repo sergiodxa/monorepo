@@ -16,6 +16,7 @@ import { textAlign } from "@sdxc/u/typography";
 import { Alert, Button, Card, Checkbox, Separator, Text, TextField } from "@sdxc/ui";
 
 import { PasskeySignInButton } from "./passkey-button";
+import { TurnstileWidget } from "./turnstile-widget";
 
 export namespace SignInPage {
 	export interface Props {
@@ -28,6 +29,10 @@ export namespace SignInPage {
 		loginHint: string | null;
 		forced: boolean;
 		error: string | null;
+		/** Whether this address has crossed half its shared credential budget, so the form should challenge it. */
+		challenge: boolean;
+		/** The platform's Turnstile site key, rendered only when `challenge` is set. */
+		turnstileSiteKey: string;
 	}
 }
 
@@ -39,8 +44,17 @@ export namespace SignInPage {
  */
 export function SignInPage(handle: Handle<SignInPage.Props>) {
 	return () => {
-		let { t, action, passkeyOptionsAction, passkeyVerifyAction, loginHint, forced, error } =
-			handle.props;
+		let {
+			t,
+			action,
+			passkeyOptionsAction,
+			passkeyVerifyAction,
+			loginHint,
+			forced,
+			error,
+			challenge,
+			turnstileSiteKey,
+		} = handle.props;
 
 		return (
 			<Card mix={[is("100%"), maxIs("24rem")]}>
@@ -77,6 +91,8 @@ export function SignInPage(handle: Handle<SignInPage.Props>) {
 						<Checkbox name="remember" value="true" defaultChecked>
 							{t("hostedSignIn.remember")}
 						</Checkbox>
+
+						{challenge && <TurnstileWidget siteKey={turnstileSiteKey} />}
 
 						<Button type="submit" color="brand" mix={[is("100%")]}>
 							{t("hostedSignIn.submit")}

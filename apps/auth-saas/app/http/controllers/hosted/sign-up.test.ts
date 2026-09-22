@@ -15,7 +15,9 @@ import type { Result } from "@sdxc/result";
 
 import { MailError } from "@sdxc/mail";
 import { failure } from "@sdxc/result";
-import { beforeEach, describe, expect, test } from "vitest";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
 import type { Harness } from "~/app/http/controllers/hosted/test-harness";
 
@@ -34,6 +36,16 @@ class FailingTransport {
 		return failure(new MailError("the test transport always refuses"));
 	}
 }
+
+/** Sign-up always challenges, so every submission here carries a token Turnstile confirms. */
+let server = setupServer(
+	http.post("https://challenges.cloudflare.com/turnstile/v0/siteverify", () =>
+		HttpResponse.json({ success: true }),
+	),
+);
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 let harness: Harness;
 
@@ -64,26 +76,39 @@ async function beginAndReachSignIn(harnessValue: Harness, clientId: string) {
 	return { signInPath: `${location.pathname}${location.search}`, interactionId };
 }
 
-function form(fields: Record<string, string>): FormData {
-	let body = new FormData();
-	for (let [key, value] of Object.entries(fields)) body.set(key, value);
-	return body;
+/**
+ * Posts a URL-encoded form through the router, with an explicit content-type
+ * so MSW's raw-header patch — which otherwise breaks on the content-type
+ * undici derives for a body-object POST once MSW is listening — never sees
+ * one to rewrite. Every submission also carries a Turnstile token by
+ * default, since sign-up always challenges (unused, and harmless, on the one
+ * sign-in submission this file also drives).
+ */
+function postForm(
+	harnessValue: Harness,
+	path: string,
+	fields: Record<string, string>,
+): Promise<Response> {
+	let body = new URLSearchParams({ "cf-turnstile-response": "a-valid-token", ...fields });
+
+	return harnessValue.router.fetch(
+		harnessValue.request(path, {
+			method: "POST",
+			body,
+			headers: { "Content-Type": "application/x-www-form-urlencoded" },
+		}),
+	);
 }
 
 describe("sign-up", () => {
 	test("a fresh sign-up mints an unverified identifier and a password that signs in once verified", async () => {
 		let client = await createTestClient(harness.tenantDO, ["openid"]);
 
-		let signUpResponse = await harness.router.fetch(
-			harness.request("/u/sign-up", {
-				method: "POST",
-				body: form({
-					email: "jane@example.com",
-					password: "correct horse battery staple",
-					name: "Jane",
-				}),
-			}),
-		);
+		let signUpResponse = await postForm(harness, "/u/sign-up", {
+			email: "jane@example.com",
+			password: "correct horse battery staple",
+			name: "Jane",
+		});
 
 		expect(signUpResponse.status).toBe(302);
 		let verifyLocation = new URL(signUpResponse.headers.get("Location") ?? "");
@@ -104,16 +129,11 @@ describe("sign-up", () => {
 		expect(verifyBody).toContain("verified");
 
 		let { signInPath } = await beginAndReachSignIn(harness, client.id);
-		let signInResponse = await harness.router.fetch(
-			harness.request(signInPath, {
-				method: "POST",
-				body: form({
-					identifier: "jane@example.com",
-					password: "correct horse battery staple",
-					remember: "true",
-				}),
-			}),
-		);
+		let signInResponse = await postForm(harness, signInPath, {
+			identifier: "jane@example.com",
+			password: "correct horse battery staple",
+			remember: "true",
+		});
 
 		expect(signInResponse.status).toBe(302);
 		expect(signInResponse.headers.get("Set-Cookie")).toMatch(/^__Host-session=/);
@@ -125,12 +145,11 @@ describe("sign-up", () => {
 			password: "correct horse battery staple",
 		});
 
-		let response = await harness.router.fetch(
-			harness.request("/u/sign-up", {
-				method: "POST",
-				body: form({ email: "jane@example.com", password: "another strong password", name: "" }),
-			}),
-		);
+		let response = await postForm(harness, "/u/sign-up", {
+			email: "jane@example.com",
+			password: "another strong password",
+			name: "",
+		});
 
 		expect(response.status).toBe(400);
 		let body = await response.text();
@@ -138,16 +157,11 @@ describe("sign-up", () => {
 	});
 
 	test("signing up with an invalid email renders an error instead of crashing", async () => {
-		let response = await harness.router.fetch(
-			harness.request("/u/sign-up", {
-				method: "POST",
-				body: form({
-					email: "not-an-email",
-					password: "correct horse battery staple",
-					name: "",
-				}),
-			}),
-		);
+		let response = await postForm(harness, "/u/sign-up", {
+			email: "not-an-email",
+			password: "correct horse battery staple",
+			name: "",
+		});
 
 		expect(response.status).toBe(400);
 		let body = await response.text();
@@ -155,16 +169,11 @@ describe("sign-up", () => {
 	});
 
 	test("sends a verification email carrying the minted ticket's link", async () => {
-		let signUpResponse = await harness.router.fetch(
-			harness.request("/u/sign-up", {
-				method: "POST",
-				body: form({
-					email: "jane@example.com",
-					password: "correct horse battery staple",
-					name: "Jane",
-				}),
-			}),
-		);
+		let signUpResponse = await postForm(harness, "/u/sign-up", {
+			email: "jane@example.com",
+			password: "correct horse battery staple",
+			name: "Jane",
+		});
 
 		let subjectId = new URL(signUpResponse.headers.get("Location") ?? "").searchParams.get(
 			"subject",
@@ -186,16 +195,11 @@ describe("sign-up", () => {
 	test("a failed send still creates the subject and renders the distinct failure state", async () => {
 		let failingHarness = await buildHarness({ transport: new FailingTransport() });
 
-		let signUpResponse = await failingHarness.router.fetch(
-			failingHarness.request("/u/sign-up", {
-				method: "POST",
-				body: form({
-					email: "jane@example.com",
-					password: "correct horse battery staple",
-					name: "Jane",
-				}),
-			}),
-		);
+		let signUpResponse = await postForm(failingHarness, "/u/sign-up", {
+			email: "jane@example.com",
+			password: "correct horse battery staple",
+			name: "Jane",
+		});
 
 		expect(signUpResponse.status).toBe(302);
 		let location = new URL(signUpResponse.headers.get("Location") ?? "");
@@ -211,5 +215,66 @@ describe("sign-up", () => {
 		expect(pendingResponse.status).toBe(200);
 		let body = await pendingResponse.text();
 		expect(body).toContain("Your account was created");
+	});
+
+	test("shows the Turnstile widget on the sign-up form", async () => {
+		let response = await harness.router.fetch(harness.request("/u/sign-up"));
+
+		let body = await response.text();
+		expect(body).toContain("challenges.cloudflare.com/turnstile/v0/api.js");
+	});
+
+	test("refuses a submission with no Turnstile token", async () => {
+		let body = new URLSearchParams({
+			email: "jane@example.com",
+			password: "correct horse battery staple",
+			name: "Jane",
+		});
+
+		let response = await harness.router.fetch(
+			harness.request("/u/sign-up", {
+				method: "POST",
+				body,
+				headers: { "Content-Type": "application/x-www-form-urlencoded" },
+			}),
+		);
+
+		expect(response.status).toBe(400);
+		let identifierRow = await harness.db.findOne(subjectIdentifiers, {
+			where: { kind: "email", value: "jane@example.com" },
+		});
+		expect(identifierRow).toBeNull();
+	});
+
+	test("refuses a submission whose Turnstile token is rejected", async () => {
+		server.use(
+			http.post("https://challenges.cloudflare.com/turnstile/v0/siteverify", () =>
+				HttpResponse.json({ success: false }),
+			),
+		);
+
+		let response = await postForm(harness, "/u/sign-up", {
+			email: "jane@example.com",
+			password: "correct horse battery staple",
+			name: "Jane",
+		});
+
+		expect(response.status).toBe(400);
+	});
+
+	test("refuses a submission when the Turnstile verification call cannot complete", async () => {
+		server.use(
+			http.post("https://challenges.cloudflare.com/turnstile/v0/siteverify", () =>
+				HttpResponse.error(),
+			),
+		);
+
+		let response = await postForm(harness, "/u/sign-up", {
+			email: "jane@example.com",
+			password: "correct horse battery staple",
+			name: "Jane",
+		});
+
+		expect(response.status).toBe(400);
 	});
 });

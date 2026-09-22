@@ -16,12 +16,16 @@ import { Button, Card, Form, TextField } from "@sdxc/ui";
 
 import type { PasswordPolicy } from "~/database/passwords";
 
+import { TurnstileWidget } from "./turnstile-widget";
+
 export namespace SignUpPage {
 	export interface Props {
 		t: TFunction;
 		/** Where the form posts back to, carrying `ui_locales` (when present) in its query. */
 		action: string;
 		policy: PasswordPolicy;
+		/** The platform's Turnstile site key, rendered unconditionally — sign-up always challenges. */
+		turnstileSiteKey: string;
 		issues?: ReadonlyArray<Form.Issue>;
 	}
 }
@@ -34,7 +38,7 @@ export namespace SignUpPage {
  */
 export function SignUpPage(handle: Handle<SignUpPage.Props>) {
 	return () => {
-		let { t, action, policy, issues } = handle.props;
+		let { t, action, policy, turnstileSiteKey, issues } = handle.props;
 
 		return (
 			<Card mix={[is("100%"), maxIs("24rem")]}>
@@ -69,6 +73,8 @@ export function SignUpPage(handle: Handle<SignUpPage.Props>) {
 							type="text"
 							autoComplete="name"
 						/>
+
+						<TurnstileWidget siteKey={turnstileSiteKey} />
 
 						<Button type="submit" color="brand" mix={[is("100%")]}>
 							{t("hostedSignUp.submit")}

@@ -28,6 +28,7 @@ export default {
 			passkeyUnsupported: "This browser cannot sign in with a passkey. Use your password instead.",
 			dauCapReached:
 				"This account has reached its daily limit of active users. Try again tomorrow.",
+			turnstileFailed: "We couldn't verify you're not a robot. Try again.",
 		},
 		footer: "Secured by Auth SaaS",
 	},
@@ -108,6 +109,7 @@ export default {
 			identifierInvalid: "Enter a valid email address.",
 			identifierTaken: "An account with that email already exists.",
 			generic: "We couldn't create your account. Try again.",
+			turnstileFailed: "We couldn't verify you're not a robot. Try again.",
 		},
 	},
 
@@ -156,6 +158,9 @@ export default {
 			heading: "This link no longer works",
 			body: "This password reset link is invalid or has expired.",
 			requestNew: "Request a new reset link",
+		},
+		errors: {
+			turnstileFailed: "We couldn't verify you're not a robot. Try again.",
 		},
 	},
 

@@ -46,8 +46,10 @@ declare module "remix/router" {
 }
 
 const CREDENTIAL_PREFIX = "credential";
-const CREDENTIAL_LIMIT = 10;
-const CREDENTIAL_WINDOW = "10 seconds";
+
+/** The interactive credential class's own limit and window, shared with the Turnstile challenge trigger so it decays on the same cadence. */
+export const CREDENTIAL_LIMIT = 10;
+export const CREDENTIAL_WINDOW = "10 seconds";
 
 /**
  * Extra budget units a wrong credential spends beyond the request itself, so

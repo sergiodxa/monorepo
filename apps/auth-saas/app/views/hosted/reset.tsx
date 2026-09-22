@@ -16,12 +16,18 @@ import { Button, Card, Form, Link, Text, TextField } from "@sdxc/ui";
 
 import type { PasswordPolicy } from "~/database/passwords";
 
+import { TurnstileWidget } from "./turnstile-widget";
+
 export namespace ResetPage {
 	export type Props =
 		| {
 				t: TFunction;
 				state: "request";
 				action: string;
+				/** Whether this address has crossed half its shared credential budget, so the form should challenge it. */
+				challenge: boolean;
+				/** The platform's Turnstile site key, rendered only when `challenge` is set. */
+				turnstileSiteKey: string;
 				issues?: ReadonlyArray<Form.Issue>;
 		  }
 		| { t: TFunction; state: "requested" }
@@ -30,6 +36,8 @@ export namespace ResetPage {
 				state: "complete";
 				action: string;
 				policy: PasswordPolicy;
+				challenge: boolean;
+				turnstileSiteKey: string;
 				issues?: ReadonlyArray<Form.Issue>;
 		  }
 		| { t: TFunction; state: "completed"; signInHref: string }
@@ -111,6 +119,7 @@ export function ResetPage(handle: Handle<ResetPage.Props>) {
 								required
 								autoComplete="new-password"
 							/>
+							{props.challenge && <TurnstileWidget siteKey={props.turnstileSiteKey} />}
 							<Button type="submit" color="brand" mix={[is("100%")]}>
 								{t("hostedReset.completeSubmit")}
 							</Button>
@@ -134,6 +143,7 @@ export function ResetPage(handle: Handle<ResetPage.Props>) {
 							required
 							autoComplete="username"
 						/>
+						{props.challenge && <TurnstileWidget siteKey={props.turnstileSiteKey} />}
 						<Button type="submit" color="brand" mix={[is("100%")]}>
 							{t("hostedReset.requestSubmit")}
 						</Button>

@@ -68,6 +68,7 @@ import {
 	protocolRateLimit,
 	tokenRateLimit,
 } from "~/app/http/middleware/tenant-rate-limit";
+import { turnstileChallenge } from "~/app/http/middleware/turnstile-challenge";
 import { parseSenderAddress } from "~/app/mail/sender";
 import routes from "~/routes/tenant";
 
@@ -115,6 +116,12 @@ let resetMailRateLimit = mailSendingRateLimit(env.MAIL_RATE_LIMIT_KV, {
 });
 let protocolLimit = protocolRateLimit(env.PROTOCOL_RATE_LIMITER);
 
+/**
+ * Shared across `/u/sign-in` and `/u/reset` alike, so one address builds up
+ * a single trigger regardless of which of the two screens it is on.
+ */
+let signInAndResetTurnstileChallenge = turnstileChallenge(env.TURNSTILE_CHALLENGE_KV);
+
 tenantRouter.map(routes.openidConfiguration, {
 	middleware: [protocolLimit],
 	handler: openidConfiguration as RequestHandler,
@@ -141,9 +148,12 @@ tenantRouter.map(routes.authorize, {
 	middleware: [authorizationRateLimit(env.AUTHORIZATION_RATE_LIMITER)],
 	handler: authorize as RequestHandler,
 });
-tenantRouter.map(routes.hostedSignInShow, signInShow);
+tenantRouter.map(routes.hostedSignInShow, {
+	middleware: [signInAndResetTurnstileChallenge],
+	handler: signInShow as RequestHandler,
+});
 tenantRouter.map(routes.hostedSignInSubmit, {
-	middleware: [credentialRateLimit],
+	middleware: [signInAndResetTurnstileChallenge, credentialRateLimit],
 	handler: signInSubmit as RequestHandler,
 });
 tenantRouter.map(routes.hostedSignInPasskeyOptions, signInPasskeyOptions);
@@ -174,9 +184,12 @@ tenantRouter.map(routes.hostedVerifyResend, {
 	middleware: [mailRateLimit],
 	handler: verifyResend as RequestHandler,
 });
-tenantRouter.map(routes.hostedResetShow, resetShow);
+tenantRouter.map(routes.hostedResetShow, {
+	middleware: [signInAndResetTurnstileChallenge],
+	handler: resetShow as RequestHandler,
+});
 tenantRouter.map(routes.hostedResetSubmit, {
-	middleware: [credentialRateLimit, resetMailRateLimit],
+	middleware: [signInAndResetTurnstileChallenge, credentialRateLimit, resetMailRateLimit],
 	handler: resetSubmit as RequestHandler,
 });
 tenantRouter.map(routes.hostedError, errorShow);

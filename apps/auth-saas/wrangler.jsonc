@@ -66,6 +66,12 @@
 		// binding can declare a period longer than 60 seconds.
 		// Replace with the real id from `wrangler kv namespace create MAIL_RATE_LIMIT_KV`.
 		{ "binding": "MAIL_RATE_LIMIT_KV", "id": "placeholder-mail-rate-limit-kv-id" },
+		// Counts the Turnstile challenge trigger over the interactive credential
+		// class's own window, tracking the same address so it decays on the same
+		// cadence — a `KVAdapter` counter kept apart from that class's own
+		// `CloudflareAdapter` budget, since that one reports no remaining count.
+		// Replace with the real id from `wrangler kv namespace create TURNSTILE_CHALLENGE_KV`.
+		{ "binding": "TURNSTILE_CHALLENGE_KV", "id": "placeholder-turnstile-challenge-kv-id" },
 	],
 
 	"r2_buckets": [],
