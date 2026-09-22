@@ -191,6 +191,13 @@ export default {
 			action: "Reset password",
 			unexpected: "If you didn't request this, you can safely ignore this email.",
 		},
+		attackSignalAlert: {
+			subject: "Unusual sign-in activity on {{tenantName}}",
+			preview: "Failed sign-ins on {{tenantName}} are running well above their usual rate.",
+			heading: "Elevated failed sign-ins",
+			body: "{{tenantName}} saw {{recentFailures}} failed sign-ins in the last hour, well above its usual rate of about {{baselineHourlyAverage}} per hour.",
+			notice: "This is a notification only; nothing was locked or changed on your account.",
+		},
 	},
 
 	hostedError: {

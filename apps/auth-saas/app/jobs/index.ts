@@ -26,4 +26,12 @@ export default jobs({
 	sweepDueWebhookDeliveries: job({ cron: "*/5 * * * *" }),
 	/** Sends one webhook delivery, enqueued explicitly by the sweep above. */
 	deliverWebhook: job({ input: s.object({ tenantId: s.string(), deliveryId: s.string() }) }),
+	/**
+	 * Compares every provisioned tenant's own last hour of failed sign-ins against
+	 * its trailing week, mailing that tenant's owners once when the rate stands well
+	 * above baseline. Runs once a day, matching the one alert a tenant may receive
+	 * in that span: a tighter cadence would only mean more runs finding the same
+	 * day already spent.
+	 */
+	checkAttackSignalBaseline: job({ cron: "0 8 * * *" }),
 });

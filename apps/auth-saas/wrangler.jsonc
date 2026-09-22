@@ -130,8 +130,9 @@
 	// Walks the pending-domains index daily, promoting or failing verification attempts.
 	// The five-minute expression is the webhook delivery sweep's own backstop cadence:
 	// it accelerates deliveries already due, while the delay each delivery's own retry
-	// schedules is what actually paces a redelivery.
-	"triggers": { "crons": ["0 0 * * *", "*/5 * * * *"] },
+	// schedules is what actually paces a redelivery. The 08:00 expression is the
+	// attack-signal baseline check, once a day to match the one alert a tenant may get.
+	"triggers": { "crons": ["0 0 * * *", "*/5 * * * *", "0 8 * * *"] },
 
 	"vars": {
 		"PLATFORM_DOMAIN": "auth.sergiodxa.com",
