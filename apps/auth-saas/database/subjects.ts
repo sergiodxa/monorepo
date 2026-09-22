@@ -8,11 +8,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { KeysetCursors } from "@sdxc/pagination";
 import type { Database, TableRow } from "remix/data-table";
 
+import { InvalidCursorError, Pagination } from "@sdxc/pagination";
+import { isFailure } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
-import { and, column as c, eq, isNull, lt, ne, notNull, or, table } from "remix/data-table";
+import * as s from "remix/data-schema";
+import { and, column as c, eq, inList, isNull, lt, ne, notNull, or, table } from "remix/data-table";
 
 import type { IdentifierKind } from "./subject-identifiers";
 
@@ -993,6 +997,103 @@ export async function describeSubject(
 		attributes,
 		credentials: [],
 		...secondFactor,
+	};
+}
+
+/** Subject summaries a list page returns, most recently created first. */
+const DEFAULT_LIST_PAGE_SIZE = 20;
+
+/** One subject as a list page renders it: no full profile, only what a row of subjects needs. */
+export interface SubjectSummary {
+	id: string;
+	status: SubjectRow["status"];
+	primaryIdentifiers: IdentifierState[];
+	createdAt: number;
+	updatedAt: number;
+}
+
+export interface ListSubjectsInput {
+	cursor?: string | null;
+	limit?: number;
+	status?: SubjectRow["status"];
+}
+
+export type ListSubjectsResult =
+	| { ok: true; subjects: SubjectSummary[]; cursors: KeysetCursors }
+	| { ok: false; reason: "bad-cursor" };
+
+let ListSubjectsSchema = s.object({
+	cursor: s.optional(s.nullable(s.string())),
+	limit: s.optional(s.number()),
+	status: s.optional(s.enum_(["active", "blocked"] as const)),
+});
+
+/**
+ * A page of the tenant's subjects, newest first, each carrying the identifiers
+ * currently marked primary — the one extra query a page's own subject ids afford,
+ * rather than one query per row.
+ *
+ * @param db - The tenant's database.
+ * @param input - Where to page from, and an optional status to filter on.
+ * @returns A page of subject summaries and the cursors around it, or that the given
+ * cursor no longer matches this ordering.
+ */
+export async function listSubjects(
+	db: Database,
+	input: ListSubjectsInput = {},
+): Promise<ListSubjectsResult> {
+	let parsed = s.parse(ListSubjectsSchema, input);
+
+	let query = db.query(subjects).select("id", "status", "created_at", "updated_at");
+	if (parsed.status) query = query.where(eq("status", parsed.status));
+
+	let page = await Pagination.byKeyset(query, {
+		orderBy: [
+			["created_at", "desc"],
+			["id", "desc"],
+		],
+		cursor: parsed.cursor ?? null,
+		limit: parsed.limit ?? DEFAULT_LIST_PAGE_SIZE,
+	});
+
+	if (isFailure(page)) {
+		if (page.error instanceof InvalidCursorError) return { ok: false, reason: "bad-cursor" };
+		throw page.error;
+	}
+
+	let subjectIds = page.data.items.map((row) => row.id);
+
+	let primaryRows =
+		subjectIds.length === 0
+			? []
+			: await db.findMany(subjectIdentifiers, {
+					where: and(inList("subject_id", subjectIds), eq("is_primary", true)),
+				});
+
+	let primaryBySubject = new Map<string, IdentifierState[]>();
+	for (let row of primaryRows) {
+		let state: IdentifierState = {
+			kind: row.kind,
+			value: row.value,
+			verified: row.verified_at !== null,
+			verifiedAt: row.verified_at,
+			isPrimary: row.is_primary,
+		};
+		let existing = primaryBySubject.get(row.subject_id);
+		if (existing) existing.push(state);
+		else primaryBySubject.set(row.subject_id, [state]);
+	}
+
+	return {
+		ok: true,
+		subjects: page.data.items.map((row) => ({
+			id: row.id,
+			status: row.status,
+			primaryIdentifiers: primaryBySubject.get(row.id) ?? [],
+			createdAt: row.created_at,
+			updatedAt: row.updated_at,
+		})),
+		cursors: page.data.cursors,
 	};
 }
 

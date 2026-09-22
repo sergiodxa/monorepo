@@ -1,8 +1,9 @@
 /**
  * Builds the management API router's fetch-router: the administrative surface
- * served on `api.{PLATFORM_DOMAIN}`. This pass wires only its shared plumbing and
- * the token endpoint; every resource route (subjects, clients, audit events, and
- * the rest of the ADR's table) is a later pass's own addition to `routes/management.ts`.
+ * served on `api.{PLATFORM_DOMAIN}`. This pass wires the shared plumbing, the
+ * token endpoint, and the subjects and identifiers resource area; every other
+ * resource route (clients, roles, audit events, and the rest of the
+ * administrative surface) is a later pass's own addition to `routes/management.ts`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,6 +17,21 @@ import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 
+import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
+
+import { createSubjectsBlockAction } from "~/app/http/controllers/management/subjects/block";
+import { createSubjectsCreateAction } from "~/app/http/controllers/management/subjects/create";
+import { createSubjectsDeleteAction } from "~/app/http/controllers/management/subjects/delete";
+import {
+	createSubjectIdentifiersAddAction,
+	createSubjectIdentifiersRemoveAction,
+	createSubjectIdentifiersSetPrimaryAction,
+	createSubjectIdentifiersVerifyAction,
+} from "~/app/http/controllers/management/subjects/identifiers";
+import { createSubjectsListAction } from "~/app/http/controllers/management/subjects/list";
+import { createSubjectsReadAction } from "~/app/http/controllers/management/subjects/read";
+import { createSubjectsUnblockAction } from "~/app/http/controllers/management/subjects/unblock";
+import { createSubjectsUpdateAction } from "~/app/http/controllers/management/subjects/update";
 import token from "~/app/http/controllers/management/token";
 import notFound from "~/app/http/controllers/not-found";
 import { apiVersioning } from "~/app/http/lib/api-version";
@@ -68,5 +84,41 @@ export const managementRouter = createRouter({
 });
 
 managementRouter.map(routes.token, token);
+
+/**
+ * The auth, rate-limit and tenant-stub options every subjects-area controller
+ * factory shares, assembled once here from the platform's own bindings.
+ */
+let controllerOptions: ManagementControllerOptions = {
+	issuer: `https://api.${env.PLATFORM_DOMAIN}`,
+	resolveDashboardSubjectId,
+	limiter: env.MANAGEMENT_RATE_LIMITER,
+	resolveStub: (tenantId) => env.TENANT.getByName(tenantId),
+};
+
+managementRouter.map(routes.subjectsCreate, createSubjectsCreateAction(controllerOptions));
+managementRouter.map(routes.subjectsList, createSubjectsListAction(controllerOptions));
+managementRouter.map(routes.subjectsRead, createSubjectsReadAction(controllerOptions));
+managementRouter.map(routes.subjectsUpdate, createSubjectsUpdateAction(controllerOptions));
+managementRouter.map(routes.subjectsBlock, createSubjectsBlockAction(controllerOptions));
+managementRouter.map(routes.subjectsUnblock, createSubjectsUnblockAction(controllerOptions));
+managementRouter.map(routes.subjectsDelete, createSubjectsDeleteAction(controllerOptions));
+
+managementRouter.map(
+	routes.subjectIdentifiersAdd,
+	createSubjectIdentifiersAddAction(controllerOptions),
+);
+managementRouter.map(
+	routes.subjectIdentifiersVerify,
+	createSubjectIdentifiersVerifyAction(controllerOptions),
+);
+managementRouter.map(
+	routes.subjectIdentifiersSetPrimary,
+	createSubjectIdentifiersSetPrimaryAction(controllerOptions),
+);
+managementRouter.map(
+	routes.subjectIdentifiersRemove,
+	createSubjectIdentifiersRemoveAction(controllerOptions),
+);
 
 export { resolveDashboardSubjectId };

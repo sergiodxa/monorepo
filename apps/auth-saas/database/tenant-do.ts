@@ -251,6 +251,8 @@ import type {
 	DefineAttributeInput,
 	DeleteSubjectResult,
 	DescribeSubjectResult,
+	ListSubjectsInput,
+	ListSubjectsResult,
 	RemoveAttributeResult,
 	RemoveIdentifierResult,
 	SetPrimaryIdentifierResult,
@@ -796,6 +798,18 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	async removeAttribute(input: { key: string }): Promise<WithCost<RemoveAttributeResult>> {
 		await this.#migrated;
 		return this.#withCost(() => Subjects.removeAttribute(this.#db, input));
+	}
+
+	/**
+	 * Lists a page of the tenant's subjects, newest first, each with the
+	 * identifiers currently marked primary.
+	 *
+	 * @param input - Where to page from, and an optional status to filter on.
+	 * @returns A page of subject summaries, or that the given cursor no longer matches.
+	 */
+	async listSubjects(input: ListSubjectsInput = {}): Promise<WithCost<ListSubjectsResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Subjects.listSubjects(this.#db, input));
 	}
 
 	/**

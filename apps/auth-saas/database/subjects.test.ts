@@ -521,6 +521,66 @@ describe("blockSubject / unblockSubject / deleteSubject", () => {
 	});
 });
 
+describe("listSubjects", () => {
+	test("pages newest first, with each row's own primary identifiers", async () => {
+		let first = await tenant.createSubject({ identifiers: [{ kind: "username", value: "first" }] });
+		if (!first.ok) throw new Error("unreachable");
+		let added = await tenant.addIdentifier({
+			subjectId: first.subjectId,
+			kind: "email",
+			value: "first@example.com",
+			actor: adminActor,
+		});
+		if (!added.ok || added.kind !== "email") throw new Error("unreachable");
+		await tenant.verifyIdentifier({ ticket: added.ticket });
+
+		let second = await tenant.createSubject({
+			identifiers: [{ kind: "username", value: "second" }],
+		});
+		if (!second.ok) throw new Error("unreachable");
+
+		let page = await tenant.listSubjects({ limit: 1 });
+		if (!page.ok) throw new Error("unreachable");
+
+		expect(page.subjects).toMatchObject([{ id: second.subjectId, primaryIdentifiers: [] }]);
+		expect(page.cursors.next).not.toBeNull();
+
+		let next = await tenant.listSubjects({ cursor: page.cursors.next, limit: 1 });
+		if (!next.ok) throw new Error("unreachable");
+
+		expect(next.subjects).toMatchObject([
+			{
+				id: first.subjectId,
+				primaryIdentifiers: [
+					{ kind: "email", value: "first@example.com", verified: true, isPrimary: true },
+				],
+			},
+		]);
+		expect(next.cursors.next).toBeNull();
+	});
+
+	test("filters by status", async () => {
+		let active = await tenant.createSubject({});
+		let blocked = await tenant.createSubject({});
+		if (!active.ok || !blocked.ok) throw new Error("unreachable");
+
+		await tenant.blockSubject({ subjectId: blocked.subjectId, reason: "fraud" });
+
+		let page = await tenant.listSubjects({ status: "blocked" });
+		if (!page.ok) throw new Error("unreachable");
+
+		expect(page.subjects.map((subject) => subject.id)).toEqual([blocked.subjectId]);
+	});
+
+	test("answers bad-cursor for a cursor this ordering did not mint", async () => {
+		await tenant.createSubject({});
+
+		let page = await tenant.listSubjects({ cursor: "not-a-real-cursor" });
+
+		expect(page).toMatchObject({ ok: false, reason: "bad-cursor" });
+	});
+});
+
 describe("removeAttribute", () => {
 	test("leaves a subject's stored value in place after the definition is removed", async () => {
 		await tenant.defineAttribute({ key: "plan", type: "string", visibility: "claim" });
