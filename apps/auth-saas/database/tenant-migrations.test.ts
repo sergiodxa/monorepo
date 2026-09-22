@@ -64,6 +64,7 @@ describe("runMigrations", () => {
 			"0032-session-policy",
 			"0033-device-authorization",
 			"0034-magic-link",
+			"0035-magic-link-attempt-uniformity",
 		]);
 	});
 
@@ -169,6 +170,7 @@ describe("runMigrations", () => {
 			{ id: "0032-session-policy", applied_at: expect.any(Number) },
 			{ id: "0033-device-authorization", applied_at: expect.any(Number) },
 			{ id: "0034-magic-link", applied_at: expect.any(Number) },
+			{ id: "0035-magic-link-attempt-uniformity", applied_at: expect.any(Number) },
 		]);
 	});
 

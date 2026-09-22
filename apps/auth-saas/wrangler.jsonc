@@ -86,6 +86,10 @@
 			"binding": "DEVICE_APPROVAL_ADDRESS_RATE_LIMIT_KV",
 			"id": "placeholder-device-approval-address-rate-limit-kv-id",
 		},
+		// Counts magic-link requests against the connecting address, over an
+		// hour-long window no rate limiter binding can declare.
+		// Replace with the real id from `wrangler kv namespace create MAGIC_LINK_RATE_LIMIT_KV`.
+		{ "binding": "MAGIC_LINK_RATE_LIMIT_KV", "id": "placeholder-magic-link-rate-limit-kv-id" },
 	],
 
 	// Holds the NDJSON source and report files a subject import/export run reads and

@@ -25,7 +25,8 @@ export type AttackSignalSurface =
 	| "protocol"
 	| "management"
 	| "device-authorization"
-	| "device-approval";
+	| "device-approval"
+	| "magic-link";
 
 /** What happened, from a caller's own decision point. */
 export type AttackSignalOutcome =

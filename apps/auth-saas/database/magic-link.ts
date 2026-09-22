@@ -62,6 +62,12 @@ export const magicLinkAttempts = table({
 		expires_at: c.integer(),
 		consumed_at: c.integer().nullable(),
 		created_at: c.integer(),
+		/** Whether this row may ever complete — false for an address with no subject minted while just-in-time creation is off. */
+		completable: c.boolean().default(true),
+		/** The pending authorization to resume once this attempt completes, named by the request rather than by anything the token's own URL carries. */
+		interaction_id: c.text().nullable(),
+		/** The path to resume once this attempt completes, for a caller with no interaction of its own. */
+		return_to: c.text().nullable(),
 	},
 });
 
@@ -150,6 +156,10 @@ export interface BeginMagicLinkSignInInput {
 	locale?: string | null;
 	/** The hash of the nonce the `__Host-` cookie this request's response carries. */
 	browserNonceHash: string;
+	/** The pending authorization to resume once this attempt completes, named by the request itself rather than by anything a later request's own URL carries. */
+	interactionId?: string | null;
+	/** The path to resume once this attempt completes, for a caller with no interaction of its own. */
+	returnTo?: string | null;
 	at?: number;
 }
 
@@ -160,21 +170,27 @@ export type BeginMagicLinkSignInResult =
 
 /**
  * Resolves an address, spends its two budgets, supersedes any outstanding attempt
- * of its own, and mints a fresh token and code together. An address that spends
- * either its burst budget or the shared mail envelope, and one that belongs to no
- * known subject while the tenant has just-in-time creation off, both answer with no
- * distinguishing detail — the timing band and the budget spent are the same
- * regardless, and only what lands in the mailbox differs.
+ * of its own, and mints a fresh token and code together — for an address that
+ * matches a subject, one that does not but the tenant lets become one, and one
+ * that does not while the tenant keeps that off alike, so the write this call
+ * performs costs the same regardless of which of the three an outside observer's
+ * timing measurement could otherwise tell apart. Only the last of those three
+ * mints a row nothing can ever complete, `completable` false, since there is no
+ * subject for a later completion to create; an address that spends either its
+ * burst budget or the shared mail envelope instead answers before reaching any of
+ * this, since a rate-limit refusal reveals a fact about the budget rather than
+ * about the address.
  *
  * @param db - The tenant's database.
  * @param input - The address as typed, the locale to remember for delivery, the
- * bound browser's nonce hash, and the clock to measure against.
+ * bound browser's nonce hash, the resume destination to store against the
+ * minted attempt, and the clock to measure against.
  * @param jitSubjectCreationAllowed - Whether this tenant lets an address with no
- * matching subject mint an attempt anyway, the subject created only once that
+ * matching subject mint a completable attempt, the subject created only once that
  * attempt completes; omitted, the platform default of off.
- * @returns The token, code and expiry to deliver, that no account matches (and
- * nothing was minted), or how many seconds until the tighter of the two budgets
- * next has room.
+ * @returns The token, code and expiry to deliver, that no account matches (an
+ * uncompletable attempt was still minted, to keep this call's own cost the
+ * same), or how many seconds until the tighter of the two budgets next has room.
  */
 export async function beginMagicLinkSignIn(
 	db: Database,
@@ -199,10 +215,7 @@ export async function beginMagicLinkSignIn(
 	});
 
 	let subjectId = identifierRow?.subject_id ?? null;
-
-	if (subjectId === null && !jitSubjectCreationAllowed) {
-		return { message: "no_account" };
-	}
+	let completable = subjectId !== null || jitSubjectCreationAllowed;
 
 	await db.deleteMany(magicLinkAttempts, {
 		where: and(eq("address", addressFolded), isNull("consumed_at")),
@@ -232,7 +245,12 @@ export async function beginMagicLinkSignIn(
 		expires_at: expiresAt,
 		consumed_at: null,
 		created_at: now,
+		completable,
+		interaction_id: input.interactionId ?? null,
+		return_to: input.returnTo ?? null,
 	});
+
+	if (!completable) return { message: "no_account" };
 
 	return { message: "sign_in", token, code: code.display, expiresAt };
 }
@@ -252,6 +270,10 @@ export type CompleteMagicLinkSignInResult =
 			outcome: "signed_in";
 			subjectId: string;
 			secondFactorRequired: boolean;
+			/** The pending authorization to resume, as named on the request that minted this attempt. */
+			interactionId: string | null;
+			/** The path to resume, for a request with no interaction of its own. */
+			returnTo: string | null;
 	  } & OpenSessionSuccess)
 	| { outcome: "invalid" }
 	| { outcome: "wrong_browser" }
@@ -270,7 +292,11 @@ export type CompleteMagicLinkSignInResult =
  * fifth wrong guess destroys the row outright, the same way a token's own
  * exhaustion would leave nothing left to retry against. Consuming a row minted for
  * an address with no subject yet creates one now, verified, since completing this
- * flow is the proof.
+ * flow is the proof — unless the row was minted uncompletable, which refuses here
+ * with the same answer an expired or already-consumed one gets. A successful
+ * completion hands back the resume destination the request stored on this row,
+ * rather than trusting one a caller's own URL might carry, since the token
+ * travels through a channel that can rewrite it before the person ever sees it.
  *
  * @param db - The tenant's database.
  * @param input - The credential presented, the bound browser's raw nonce, and the
@@ -280,10 +306,11 @@ export type CompleteMagicLinkSignInResult =
  * refused for it.
  * @param sessionPolicy - The tenant's own effective session policy the opened
  * session is bound by; omitted, the platform defaults.
- * @returns The subject and the session opened for it, that the credential never
- * resolved to a live attempt, that it resolved to one bound to a different
- * browser, how many attempts a wrong code leaves, or that the daily cap refused
- * this subject a session.
+ * @returns The subject, the session opened for it, and the resume destination
+ * stored against the attempt; that the credential never resolved to a live,
+ * completable attempt; that it resolved to one bound to a different browser; how
+ * many attempts a wrong code leaves; or that the daily cap refused this subject a
+ * session.
  */
 export async function completeMagicLinkSignIn(
 	db: Database,
@@ -359,6 +386,12 @@ export async function completeMagicLinkSignIn(
 		if (!consumedRow) return { outcome: "invalid" };
 	}
 
+	// A row minted for an address with no subject while just-in-time creation was
+	// off consumes the same as any other, so nothing about reaching this point
+	// told the caller apart from a completable one; only here does it refuse,
+	// with the same `invalid` an expired or already-consumed row answers.
+	if (!consumedRow.completable) return { outcome: "invalid" };
+
 	let subjectId = consumedRow.subject_id;
 
 	if (subjectId === null) {
@@ -394,7 +427,14 @@ export async function completeMagicLinkSignIn(
 		};
 	}
 
-	return { outcome: "signed_in", subjectId, secondFactorRequired, ...session };
+	return {
+		outcome: "signed_in",
+		subjectId,
+		secondFactorRequired,
+		interactionId: consumedRow.interaction_id,
+		returnTo: consumedRow.return_to,
+		...session,
+	};
 }
 
 export interface CancelMagicLinkAttemptInput {

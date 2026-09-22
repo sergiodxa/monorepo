@@ -36,3 +36,19 @@ export function resetPasswordLink(ctx: RequestContext, ticket: string): string {
 	url.searchParams.set("ticket", ticket);
 	return url.toString();
 }
+
+/**
+ * Builds the magic-link landing route's absolute link for a sign-in token. The
+ * token is the only thing this URL carries — no interaction id or return path —
+ * since the resume destination lives on the attempt itself, not on anything this
+ * link could be rewritten to say.
+ *
+ * @param ctx - The request context (provides `tenant`).
+ * @param token - The token `beginMagicLinkSignIn` minted for the address.
+ * @returns The link to send.
+ */
+export function magicLinkSignInLink(ctx: RequestContext, token: string): string {
+	let url = new URL(routes.hostedMagicLinkCompleteShow.href(), ctx.tenant.issuer);
+	url.searchParams.set("token", token);
+	return url.toString();
+}

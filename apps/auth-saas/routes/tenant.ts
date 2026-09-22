@@ -1,8 +1,9 @@
 /**
  * The centralized, type-safe route table for requests already resolved to one
  * tenant: discovery, JWKS, `/userinfo`, the token endpoint, `/authorize`, the
- * hosted sign-in, sign-up, verify, reset, consent and error pages served under `/u/`,
- * and the device authorization grant's own verification screen at `/device`.
+ * hosted sign-in, sign-up, verify, reset, magic-link, consent and error pages
+ * served under `/u/`, and the device authorization grant's own verification
+ * screen at `/device`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -50,6 +51,10 @@ export default route({
 	hostedVerifyResend: post("/u/verify/resend"),
 	hostedResetShow: get("/u/reset"),
 	hostedResetSubmit: post("/u/reset"),
+	hostedMagicLinkShow: get("/u/magic-link"),
+	hostedMagicLinkSubmit: post("/u/magic-link"),
+	hostedMagicLinkCompleteShow: get("/u/magic-link/complete"),
+	hostedMagicLinkCompleteSubmit: post("/u/magic-link/complete"),
 	hostedError: get("/u/error"),
 
 	scimUsersCreate: post("/scim/v2/Users"),

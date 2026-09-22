@@ -66,6 +66,7 @@ describe("provision", () => {
 				"0032-session-policy",
 				"0033-device-authorization",
 				"0034-magic-link",
+				"0035-magic-link-attempt-uniformity",
 			],
 			issuer: "https://tenant-1.example.com",
 			keys: { keys: [expect.objectContaining({ kty: "EC", alg: "ES256" })] },

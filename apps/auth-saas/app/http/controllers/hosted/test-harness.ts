@@ -1,8 +1,8 @@
 /**
  * A fully-provisioned tenant, a registered client, and a real tenant router
  * mapping every hosted-screen and `/authorize` route, for driving the hosted
- * sign-in, sign-up, verify, reset, consent and error flow through real HTTP
- * requests the way `oauth/token.test.ts` drives the token endpoint.
+ * sign-in, sign-up, verify, reset, magic-link, consent and error flow through
+ * real HTTP requests the way `oauth/token.test.ts` drives the token endpoint.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,6 +24,12 @@ import authorize from "~/app/http/controllers/authorize";
 import { consentShow, consentSubmit } from "~/app/http/controllers/hosted/consent";
 import { hostedDeviceShow, hostedDeviceSubmit } from "~/app/http/controllers/hosted/device";
 import { errorShow } from "~/app/http/controllers/hosted/error";
+import {
+	magicLinkCompleteShow,
+	magicLinkCompleteSubmit,
+	magicLinkShow,
+	magicLinkSubmit,
+} from "~/app/http/controllers/hosted/magic-link";
 import { resetShow, resetSubmit } from "~/app/http/controllers/hosted/reset";
 import {
 	secondFactorContinueSubmit,
@@ -98,6 +104,10 @@ function buildRouter(tenantDO: Tenant, transport: Transport) {
 	router.map(routes.hostedVerifyResend, verifyResend);
 	router.map(routes.hostedResetShow, resetShow);
 	router.map(routes.hostedResetSubmit, resetSubmit);
+	router.map(routes.hostedMagicLinkShow, magicLinkShow);
+	router.map(routes.hostedMagicLinkSubmit, magicLinkSubmit);
+	router.map(routes.hostedMagicLinkCompleteShow, magicLinkCompleteShow);
+	router.map(routes.hostedMagicLinkCompleteSubmit, magicLinkCompleteSubmit);
 	router.map(routes.hostedError, errorShow);
 
 	return router;

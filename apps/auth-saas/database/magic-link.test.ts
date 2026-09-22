@@ -93,6 +93,30 @@ describe("beginMagicLinkSignIn / completeMagicLinkSignIn: link", () => {
 		expect(typeof completed.token).toBe("string");
 	});
 
+	test("hands back the resume destination named on the request, not anything the completion call supplies", async () => {
+		await createVerifiedSubject("katherine@example.com");
+		let { nonce, hash } = await freshNonce();
+		let now = Date.now();
+
+		let begun = await tenant.beginMagicLinkSignIn({
+			address: "katherine@example.com",
+			browserNonceHash: hash,
+			interactionId: "int_stored_on_request",
+			at: now,
+		});
+		if (begun.message !== "sign_in") throw new Error("unreachable");
+
+		let completed = await tenant.completeMagicLinkSignIn({
+			credential: { kind: "link", token: begun.token },
+			browserNonce: nonce,
+			at: now + 1000,
+		});
+		if (completed.outcome !== "signed_in") throw new Error("unreachable");
+
+		expect(completed.interactionId).toBe("int_stored_on_request");
+		expect(completed.returnTo).toBeNull();
+	});
+
 	test("a link token presented with the wrong browser nonce answers wrong_browser and does not consume the row; a subsequent correct-nonce attempt still succeeds", async () => {
 		await createVerifiedSubject("grace@example.com");
 		let { nonce, hash } = await freshNonce();
@@ -278,7 +302,7 @@ describe("beginMagicLinkSignIn / completeMagicLinkSignIn: code", () => {
 });
 
 describe("beginMagicLinkSignIn: unresolved addresses", () => {
-	test("an unknown address with just-in-time creation off answers no_account and mints nothing", async () => {
+	test("an unknown address with just-in-time creation off answers no_account, minting an uncompletable attempt so the write costs the same as a known address", async () => {
 		let { hash } = await freshNonce();
 
 		let begun = await tenant.beginMagicLinkSignIn({
@@ -289,7 +313,40 @@ describe("beginMagicLinkSignIn: unresolved addresses", () => {
 		expect(begun).toMatchObject({ message: "no_account" });
 
 		let rows = await db.findMany(magicLinkAttempts, { where: { address: "nobody@example.com" } });
-		expect(rows).toHaveLength(0);
+		expect(rows).toHaveLength(1);
+		expect(rows[0]?.subject_id).toBeNull();
+		expect(rows[0]?.completable).toBe(false);
+	});
+
+	test("an attempt minted uncompletable can never complete, even against its own real credential", async () => {
+		let { nonce, hash } = await freshNonce();
+		let token = "not-a-real-secret-just-a-fixed-value";
+		let tokenHashed = await sha256(token);
+		if (isFailure(tokenHashed)) throw new Error("unreachable: token hashing failed");
+
+		await db.create(magicLinkAttempts, {
+			id: "mlnk_uncompletable_test",
+			address: "nobody@example.com",
+			subject_id: null,
+			locale: null,
+			token_hash: Hex.encode(tokenHashed.data),
+			code_hash: "unused",
+			browser_nonce_hash: hash,
+			attempts_remaining: 5,
+			expires_at: Date.now() + 10 * 60 * 1000,
+			consumed_at: null,
+			created_at: Date.now(),
+			completable: false,
+			interaction_id: null,
+			return_to: null,
+		});
+
+		let completed = await tenant.completeMagicLinkSignIn({
+			credential: { kind: "link", token },
+			browserNonce: nonce,
+		});
+
+		expect(completed).toMatchObject({ outcome: "invalid" });
 	});
 
 	test("an unknown address with just-in-time creation on mints an attempt and, on completion, creates a new verified subject and opens a session for it", async () => {

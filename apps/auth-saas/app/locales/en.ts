@@ -181,6 +181,39 @@ export default {
 		},
 	},
 
+	hostedMagicLink: {
+		requestTitle: "Sign in with email",
+		identifier: { label: "Email" },
+		requestSubmit: "Send magic link",
+		confirmation: {
+			heading: "Check your email",
+			body: "If that address has an account, we sent a sign-in link and a code to it.",
+			codeLabel: "Or enter the code from the email",
+			codeSubmit: "Sign in",
+		},
+		tokenLanding: {
+			heading: "Finish signing in",
+			body: "Click below to finish signing in on this device.",
+			submit: "Sign in",
+		},
+		invalid: {
+			heading: "This link no longer works",
+			body: "This sign-in link or code is invalid or has expired.",
+			requestNew: "Request a new one",
+		},
+		wrongBrowser: {
+			heading: "Open this on the device you requested it from",
+			body: "This sign-in link only works in the browser that asked for it. Use the code from the email instead, or request a new link on this device.",
+			requestNew: "Request a new one",
+		},
+		errors: {
+			badCode: "That code isn't right. {{attemptsLeft}} attempts left.",
+			dauCapReached:
+				"This account has reached its daily limit of active users. Try again tomorrow.",
+			turnstileFailed: "We couldn't verify you're not a robot. Try again.",
+		},
+	},
+
 	hostedPassword: {
 		errors: {
 			tooShort: "Password must be at least {{minLength}} characters.",
@@ -207,6 +240,22 @@ export default {
 			body: "Follow this link to choose a new password for your {{tenantName}} account.",
 			action: "Reset password",
 			unexpected: "If you didn't request this, you can safely ignore this email.",
+		},
+		magicLinkSignIn: {
+			subject: "Your sign-in link for {{tenantName}}",
+			preview: "Use this link or code to finish signing in.",
+			heading: "Sign in to {{tenantName}}",
+			body: "Follow this link to finish signing in to your {{tenantName}} account.",
+			action: "Sign in",
+			codeIntro: "Or enter this code where you started signing in:",
+			unexpected: "If you didn't request this, you can safely ignore this email.",
+		},
+		magicLinkNoAccount: {
+			subject: "Sign-in attempted for {{tenantName}}",
+			preview: "Someone tried to sign in with this address, but no account exists.",
+			heading: "No account found",
+			body: "Someone just tried to sign in to {{tenantName}} using this email address, but no account exists for it.",
+			notice: "If this wasn't you, you can safely ignore this email.",
 		},
 		attackSignalAlert: {
 			subject: "Unusual sign-in activity on {{tenantName}}",

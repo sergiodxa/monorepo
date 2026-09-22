@@ -1,8 +1,9 @@
 /**
  * The rate limit classes protecting a tenant's anonymous surfaces: interactive
  * credential submissions, the mail-sending routes, the token endpoint,
- * `/authorize`, `/oauth/device_authorization`, `/device`'s own code lookup, and
- * the read-only protocol endpoints. Each is one `rateLimit` registration, and
+ * `/authorize`, `/oauth/device_authorization`, `/device`'s own code lookup, the
+ * magic-link request route's own per-connecting-address budget, and the
+ * read-only protocol endpoints. Each is one `rateLimit` registration, and
  * every route it is mounted on shares that one registration's budget — an
  * address (or, for mail-sending, a submitted identifier; for a device's own
  * code lookup, the approving session) spends from the same counter regardless
@@ -107,7 +108,8 @@ export const CREDENTIAL_FAILURE_SPEND = 4;
 
 /**
  * Guards every interactive credential surface — sign-in, sign-up, the
- * password reset form, and the second-factor completion — with one shared
+ * password reset form, magic-link's own request and completion, and the
+ * second-factor completion — with one shared
  * per-address budget. Closed, since an uncounted attempt here is unlimited
  * guessing rather than a refused one. Exposes the same adapter and namespaced
  * key on the context as `credentialRateLimit`, so a wrong credential can spend
@@ -452,4 +454,44 @@ export function deviceApprovalRateLimit(
 		sessionLimited(context, async () => addressLimited(context, next));
 
 	return recordRateLimitRefusals("device-approval", analytics, combined);
+}
+
+const MAGIC_LINK_PREFIX = "magic-link";
+const MAGIC_LINK_LIMIT = 10;
+const MAGIC_LINK_WINDOW = "1 hour";
+
+/**
+ * Guards `/u/magic-link`'s request leg with a per-connecting-address budget,
+ * on top of the object's own per-address burst — this one stops a single
+ * client spraying many addresses, the way the object's own budget cannot,
+ * since that one is scoped to one address at a time. A `KVAdapter`, since an
+ * hour-long window is longer than a rate limiter binding can declare. Closed,
+ * since an uncounted request here is unlimited spraying rather than a refused
+ * one; distinct from `mailSendingRateLimit`, which this route does not also
+ * mount, since the object's own mail envelope already spends the identical
+ * per-address concern that class exists to cover.
+ *
+ * @param kv - The `MAGIC_LINK_RATE_LIMIT_KV` namespace.
+ * @param analytics - Where to record a refusal as the tenant's own attack
+ * signal; omitted, nothing is recorded.
+ * @returns The middleware, for the magic-link request route's own `middleware` array.
+ * @example
+ * router.map(routes.hostedMagicLinkSubmit, {
+ * 	middleware: [magicLinkRateLimit(env.MAGIC_LINK_RATE_LIMIT_KV, env)],
+ * 	handler: magicLinkSubmit,
+ * });
+ */
+export function magicLinkRateLimit(
+	kv: RateLimitKVNamespace,
+	analytics?: AttackSignalEnv,
+): Middleware {
+	let limited = rateLimit({
+		adapter: new KVAdapter(kv, { limit: MAGIC_LINK_LIMIT, window: MAGIC_LINK_WINDOW }),
+		prefix: MAGIC_LINK_PREFIX,
+		key: (context) => clientAddressKey(context.request),
+		failurePolicy: "closed",
+		onLimit: (context) => renderRateLimitedPage(context),
+	});
+
+	return recordRateLimitRefusals("magic-link", analytics, limited);
 }

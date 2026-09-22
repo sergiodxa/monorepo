@@ -46,6 +46,7 @@ import m0031 from "./tenant-migrations/0031-account-linking.sql?raw";
 import m0032 from "./tenant-migrations/0032-session-policy.sql?raw";
 import m0033 from "./tenant-migrations/0033-device-authorization.sql?raw";
 import m0034 from "./tenant-migrations/0034-magic-link.sql?raw";
+import m0035 from "./tenant-migrations/0035-magic-link-attempt-uniformity.sql?raw";
 
 /** One migration, identified so the journal can record that it ran. */
 export interface Migration {
@@ -89,6 +90,7 @@ export const MIGRATIONS: Migration[] = [
 	{ id: "0032-session-policy", sql: m0032 },
 	{ id: "0033-device-authorization", sql: m0033 },
 	{ id: "0034-magic-link", sql: m0034 },
+	{ id: "0035-magic-link-attempt-uniformity", sql: m0035 },
 ];
 
 /** The journal `0001-init` creates, read back to find out what has already run. */

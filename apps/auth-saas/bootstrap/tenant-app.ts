@@ -2,9 +2,9 @@
  * Builds the tenant router's fetch-router: the pure-JSON protocol endpoints a
  * request already resolved to one tenant reaches — discovery, JWKS, `/userinfo`,
  * and the token endpoint — alongside `/authorize` and the hosted sign-in,
- * sign-up, second-factor, step-up, verify, reset, consent and error pages
- * served under `/u/`, and the device authorization grant's own verification
- * screen at `/device`, on the tenant's own hostname.
+ * sign-up, second-factor, step-up, verify, reset, magic-link, consent and error
+ * pages served under `/u/`, and the device authorization grant's own
+ * verification screen at `/device`, on the tenant's own hostname.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,6 +24,12 @@ import authorize from "~/app/http/controllers/authorize";
 import { consentShow, consentSubmit } from "~/app/http/controllers/hosted/consent";
 import { hostedDeviceShow, hostedDeviceSubmit } from "~/app/http/controllers/hosted/device";
 import { errorShow } from "~/app/http/controllers/hosted/error";
+import {
+	magicLinkCompleteShow,
+	magicLinkCompleteSubmit,
+	magicLinkShow,
+	magicLinkSubmit,
+} from "~/app/http/controllers/hosted/magic-link";
 import { resetShow, resetSubmit } from "~/app/http/controllers/hosted/reset";
 import {
 	secondFactorContinueSubmit,
@@ -69,6 +75,7 @@ import {
 	deviceApprovalRateLimit,
 	deviceAuthorizationRateLimit,
 	interactiveCredentialRateLimit,
+	magicLinkRateLimit,
 	mailSendingRateLimit,
 	protocolRateLimit,
 	tokenRateLimit,
@@ -126,10 +133,11 @@ let resetMailRateLimit = mailSendingRateLimit(
 let protocolLimit = protocolRateLimit(env.PROTOCOL_RATE_LIMITER, env);
 
 /**
- * Shared across `/u/sign-in` and `/u/reset` alike, so one address builds up
- * a single trigger regardless of which of the two screens it is on.
+ * Shared across `/u/sign-in`, `/u/reset` and `/u/magic-link` alike, so one
+ * address builds up a single trigger regardless of which of the three
+ * screens it is on.
  */
-let signInAndResetTurnstileChallenge = turnstileChallenge(env.TURNSTILE_CHALLENGE_KV);
+let credentialTurnstileChallenge = turnstileChallenge(env.TURNSTILE_CHALLENGE_KV);
 
 tenantRouter.map(routes.openidConfiguration, {
 	middleware: [protocolLimit],
@@ -162,11 +170,11 @@ tenantRouter.map(routes.authorize, {
 	handler: authorize as RequestHandler,
 });
 tenantRouter.map(routes.hostedSignInShow, {
-	middleware: [signInAndResetTurnstileChallenge],
+	middleware: [credentialTurnstileChallenge],
 	handler: signInShow as RequestHandler,
 });
 tenantRouter.map(routes.hostedSignInSubmit, {
-	middleware: [signInAndResetTurnstileChallenge, credentialRateLimit],
+	middleware: [credentialTurnstileChallenge, credentialRateLimit],
 	handler: signInSubmit as RequestHandler,
 });
 tenantRouter.map(routes.hostedSignInPasskeyOptions, signInPasskeyOptions);
@@ -209,12 +217,29 @@ tenantRouter.map(routes.hostedVerifyResend, {
 	handler: verifyResend as RequestHandler,
 });
 tenantRouter.map(routes.hostedResetShow, {
-	middleware: [signInAndResetTurnstileChallenge],
+	middleware: [credentialTurnstileChallenge],
 	handler: resetShow as RequestHandler,
 });
 tenantRouter.map(routes.hostedResetSubmit, {
-	middleware: [signInAndResetTurnstileChallenge, credentialRateLimit, resetMailRateLimit],
+	middleware: [credentialTurnstileChallenge, credentialRateLimit, resetMailRateLimit],
 	handler: resetSubmit as RequestHandler,
+});
+tenantRouter.map(routes.hostedMagicLinkShow, {
+	middleware: [credentialTurnstileChallenge],
+	handler: magicLinkShow as RequestHandler,
+});
+tenantRouter.map(routes.hostedMagicLinkSubmit, {
+	middleware: [
+		credentialTurnstileChallenge,
+		credentialRateLimit,
+		magicLinkRateLimit(env.MAGIC_LINK_RATE_LIMIT_KV, env),
+	],
+	handler: magicLinkSubmit as RequestHandler,
+});
+tenantRouter.map(routes.hostedMagicLinkCompleteShow, magicLinkCompleteShow);
+tenantRouter.map(routes.hostedMagicLinkCompleteSubmit, {
+	middleware: [credentialRateLimit],
+	handler: magicLinkCompleteSubmit as RequestHandler,
 });
 tenantRouter.map(routes.hostedError, errorShow);
 

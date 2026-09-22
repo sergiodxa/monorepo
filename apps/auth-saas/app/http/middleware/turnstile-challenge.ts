@@ -1,6 +1,6 @@
 /**
  * Whether an address has spent enough of the interactive-credential budget to
- * warrant a Turnstile challenge on `/u/sign-in` and `/u/reset`. The
+ * warrant a Turnstile challenge on `/u/sign-in`, `/u/reset` and `/u/magic-link`. The
  * `CloudflareAdapter` that budget itself runs on never reports how much of it
  * is left — Cloudflare's own rate limiter binding answers only allow or deny
  * — so this is a second, purpose-built counter: a `KVAdapter`, which counts
@@ -76,8 +76,9 @@ export async function shouldChallengeWithTurnstile(
 
 /**
  * Answers {@link shouldChallengeWithTurnstile} once per request and exposes
- * it on the context as `turnstileChallenge`, for `/u/sign-in` and `/u/reset`
- * to share one trigger the same way they share the real credential budget.
+ * it on the context as `turnstileChallenge`, for `/u/sign-in`, `/u/reset` and
+ * `/u/magic-link` to share one trigger the same way they share the real
+ * credential budget.
  * Never refuses a request itself — a KV outage answers `false`, so a
  * verification the caller cannot presently show stays off rather than
  * blocking the screen it would have guarded.
