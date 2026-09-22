@@ -26,6 +26,7 @@ import {
 	organizationMembers,
 } from "./organizations";
 import * as Passwords from "./passwords";
+import { openSession, resolveSession } from "./sessions";
 import * as Subjects from "./subjects";
 import m0001 from "./tenant-migrations/0001-init.sql?raw";
 import m0002 from "./tenant-migrations/0002-subjects.sql?raw";
@@ -335,6 +336,81 @@ describe("changePassword", () => {
 			remembered: false,
 		});
 		expect(signIn).toMatchObject({ ok: true, subjectId });
+	});
+
+	test("revoke-others (the default) spares the session performing the change", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "original-password-1",
+			actor: subjectActor,
+		});
+
+		let current = await openSession(db, { subjectId, amr: ["pwd"], remembered: false });
+		let other = await openSession(db, { subjectId, amr: ["pwd"], remembered: false });
+
+		let result = await Passwords.changePassword(
+			db,
+			{
+				subjectId,
+				currentPassword: "original-password-1",
+				newPassword: "a-new-password-1",
+				keepSessionId: current.sessionId,
+			},
+			"revoke-others",
+		);
+		expect(result.ok).toBe(true);
+
+		expect(await resolveSession(db, { token: current.token })).toMatchObject({ status: "active" });
+		expect(await resolveSession(db, { token: other.token })).toEqual({ status: "revoked" });
+	});
+
+	test("revoke-all ends the session performing the change too", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "original-password-1",
+			actor: subjectActor,
+		});
+
+		let current = await openSession(db, { subjectId, amr: ["pwd"], remembered: false });
+		let other = await openSession(db, { subjectId, amr: ["pwd"], remembered: false });
+
+		let result = await Passwords.changePassword(
+			db,
+			{
+				subjectId,
+				currentPassword: "original-password-1",
+				newPassword: "a-new-password-1",
+				keepSessionId: current.sessionId,
+			},
+			"revoke-all",
+		);
+		expect(result.ok).toBe(true);
+
+		expect(await resolveSession(db, { token: current.token })).toEqual({ status: "revoked" });
+		expect(await resolveSession(db, { token: other.token })).toEqual({ status: "revoked" });
+	});
+
+	test("omitting the policy parameter defaults to revoke-others, the behavior this function has always had", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "original-password-1",
+			actor: subjectActor,
+		});
+
+		let current = await openSession(db, { subjectId, amr: ["pwd"], remembered: false });
+
+		let result = await Passwords.changePassword(db, {
+			subjectId,
+			currentPassword: "original-password-1",
+			newPassword: "a-new-password-1",
+			keepSessionId: current.sessionId,
+		});
+		expect(result.ok).toBe(true);
+
+		expect(await resolveSession(db, { token: current.token })).toMatchObject({ status: "active" });
 	});
 });
 

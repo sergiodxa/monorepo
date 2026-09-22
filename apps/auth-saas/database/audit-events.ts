@@ -95,6 +95,7 @@ export const AUDIT_ACTIONS = [
 	"authentication.denied",
 	"session.created",
 	"session.revoked",
+	"session_policy.changed",
 	// Credentials
 	"password.changed",
 	"password.removed",

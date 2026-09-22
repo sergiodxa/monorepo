@@ -18,6 +18,7 @@ import { and, column as c, eq, notInList, notNull, table } from "remix/data-tabl
 
 import type { AuditAction, AuditActor } from "./audit-events";
 import type { AppliedDomainMembership, SuggestedOrganization } from "./organizations";
+import type { EffectiveSessionPolicy, SessionsAfterCredentialChange } from "./session-policy";
 import type { OpenSessionMetering, OpenSessionSuccess } from "./sessions";
 import type { Actor, IdentifierKind, SubjectIdentifierRow } from "./subjects";
 
@@ -29,6 +30,7 @@ import {
 } from "./authentication-backoff";
 import { checkAndSpendMailEnvelope } from "./mail-rate-limit";
 import { applyDomainMembership } from "./organizations";
+import { SESSIONS_AFTER_CREDENTIAL_CHANGE_DEFAULT } from "./session-policy";
 import { openSession, revokeSubjectSessions } from "./sessions";
 import { foldIdentifier } from "./subject-identifiers";
 import { subjectIdentifiers, subjects } from "./subjects";
@@ -464,18 +466,23 @@ export type ChangePasswordResult =
 
 /**
  * Verifies a subject's current password and writes a new one in its place, running
- * the same policy and reuse check every path that writes a password runs. Revokes
- * every other session the subject holds: the person changing it is present, and a
- * session they are not holding may be an attacker's.
+ * the same policy and reuse check every path that writes a password runs. Revokes the
+ * subject's other sessions per the tenant's own policy: `revoke-others` spares the
+ * session performing the change, the way this has always worked; `revoke-all` ends it
+ * too, because the person changing it is present to sign in again.
  *
  * @param db - The tenant's database.
  * @param input - The subject, its current password, the replacement, and the session
  * performing the change.
+ * @param sessionsAfterCredentialChange - The tenant's own effective policy for what a
+ * credential change does to a subject's other sessions; omitted, `revoke-others`, the
+ * behavior this function has always had.
  * @returns The new row's id and expiry, or why the change was refused.
  */
 export async function changePassword(
 	db: Database,
 	input: ChangePasswordInput,
+	sessionsAfterCredentialChange: SessionsAfterCredentialChange = SESSIONS_AFTER_CREDENTIAL_CHANGE_DEFAULT,
 ): Promise<ChangePasswordResult> {
 	let subject = await db.find(subjects, { id: input.subjectId });
 	if (!subject) return { ok: false, reason: "not-found" };
@@ -498,7 +505,9 @@ export async function changePassword(
 	await revokeSubjectSessions(db, {
 		subjectId: input.subjectId,
 		reason: "password_changed",
-		exceptSessionId: input.keepSessionId,
+		...(sessionsAfterCredentialChange === "revoke-others"
+			? { exceptSessionId: input.keepSessionId }
+			: {}),
 	});
 
 	await writeAuditEvent(db, {
@@ -596,6 +605,8 @@ function identifierKindOf(value: string): IdentifierKind {
  * read and neither result field is ever set, the same as every existing caller.
  * @param failureThreshold - How many consecutive failures the tenant tolerates before
  * a backoff window opens; omitted, the same default every unconfigured tenant enforces.
+ * @param sessionPolicy - The tenant's own effective session policy the opened session
+ * is bound by; omitted, the platform defaults.
  * @returns The subject and what it still owes, or why sign-in was refused.
  */
 export async function signInWithPassword(
@@ -605,6 +616,7 @@ export async function signInWithPassword(
 	mfaPolicy: "optional" | "required" = "optional",
 	resolveOrganizationMemberships = false,
 	failureThreshold: number = DEFAULT_FAILURE_THRESHOLD,
+	sessionPolicy?: EffectiveSessionPolicy,
 ): Promise<SignInWithPasswordResult> {
 	let context = { ip: input.ip ?? null, userAgent: input.userAgent ?? null };
 
@@ -722,6 +734,7 @@ export async function signInWithPassword(
 			city: input.city,
 		},
 		metering,
+		sessionPolicy,
 	);
 
 	if (!session.ok) {

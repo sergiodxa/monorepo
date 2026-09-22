@@ -13,8 +13,11 @@ import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { Database } from "remix/data-table";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { EffectiveSessionPolicy } from "./session-policy";
+
 import { readAuditPage } from "./audit-events";
 import { createDauCache } from "./metering";
+import { DEFAULT_EFFECTIVE_SESSION_POLICY } from "./session-policy";
 import {
 	listSubjectSessions,
 	openSession,
@@ -465,5 +468,146 @@ describe("audit", () => {
 
 		let rows = await auditRowsFor("session.revoked");
 		expect(rows).toEqual([]);
+	});
+});
+
+describe("session policy", () => {
+	test("openSession opens a session on the given policy's own lifetimes, not the platform defaults", async () => {
+		let subjectId = await createTestSubject();
+		let policy: EffectiveSessionPolicy = {
+			...DEFAULT_EFFECTIVE_SESSION_POLICY,
+			absoluteLifetimeMs: 60 * 60 * 1000,
+			idleLifetimeMs: 30 * 60 * 1000,
+		};
+
+		let opened = await openSession(
+			db,
+			{ subjectId, amr: ["pwd"], remembered: true },
+			undefined,
+			policy,
+		);
+		if (!opened.ok) throw new Error("unreachable");
+
+		expect(opened.expiresAt - opened.authTime).toBe(60 * 60 * 1000);
+		expect(opened.idleExpiresAt - opened.authTime).toBe(30 * 60 * 1000);
+	});
+
+	test("a shortened absolute lifetime expires a session on its next resolve, with the row never rewritten ahead of time", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1_700_000_000_000);
+
+		let subjectId = await createTestSubject();
+		let opened = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		// The row still carries the 30-day default it was opened under; only the
+		// policy handed to `resolveSession` has tightened.
+		let tightened: EffectiveSessionPolicy = {
+			...DEFAULT_EFFECTIVE_SESSION_POLICY,
+			absoluteLifetimeMs: 1,
+		};
+
+		vi.setSystemTime(1_700_000_000_000 + 1000);
+
+		expect(await resolveSession(db, { token: opened.token }, tightened)).toEqual({
+			status: "expired",
+		});
+
+		let row = await db.find(sessions, { id: opened.sessionId });
+		expect(row?.expires_at).toBe(opened.expiresAt);
+	});
+
+	test("a shortened idle lifetime expires a session on its next resolve the same way", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1_700_000_000_000);
+
+		let subjectId = await createTestSubject();
+		let opened = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		let tightened: EffectiveSessionPolicy = {
+			...DEFAULT_EFFECTIVE_SESSION_POLICY,
+			idleLifetimeMs: 1,
+		};
+
+		vi.setSystemTime(1_700_000_000_000 + 1000);
+
+		expect(await resolveSession(db, { token: opened.token }, tightened)).toEqual({
+			status: "expired",
+		});
+	});
+
+	test("a lengthened policy never overrides what a row already has stored", async () => {
+		let subjectId = await createTestSubject();
+		let opened = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		let loosened: EffectiveSessionPolicy = {
+			...DEFAULT_EFFECTIVE_SESSION_POLICY,
+			absoluteLifetimeMs: 365 * 24 * 60 * 60 * 1000,
+			idleLifetimeMs: 365 * 24 * 60 * 60 * 1000,
+		};
+
+		let resolved = await resolveSession(db, { token: opened.token }, loosened);
+
+		expect(resolved).toMatchObject({
+			status: "active",
+			expiresAt: opened.expiresAt,
+			idleExpiresAt: opened.idleExpiresAt,
+		});
+	});
+
+	describe("the concurrent session limit", () => {
+		test("trims the oldest sessions beyond the limit, revoking them with reason concurrent_limit", async () => {
+			vi.useFakeTimers();
+			vi.setSystemTime(1_700_000_000_000);
+
+			let subjectId = await createTestSubject();
+			let policy: EffectiveSessionPolicy = {
+				...DEFAULT_EFFECTIVE_SESSION_POLICY,
+				concurrentSessionLimit: 2,
+			};
+
+			let first = await openSession(
+				db,
+				{ subjectId, amr: ["pwd"], remembered: true },
+				undefined,
+				policy,
+			);
+			if (!first.ok) throw new Error("unreachable");
+
+			vi.setSystemTime(1_700_000_000_000 + 1000);
+			let second = await openSession(
+				db,
+				{ subjectId, amr: ["pwd"], remembered: true },
+				undefined,
+				policy,
+			);
+			if (!second.ok) throw new Error("unreachable");
+
+			vi.setSystemTime(1_700_000_000_000 + 2000);
+			let third = await openSession(
+				db,
+				{ subjectId, amr: ["pwd"], remembered: true },
+				undefined,
+				policy,
+			);
+			if (!third.ok) throw new Error("unreachable");
+
+			expect(await resolveSession(db, { token: first.token })).toEqual({ status: "revoked" });
+			expect(await resolveSession(db, { token: second.token })).toMatchObject({ status: "active" });
+			expect(await resolveSession(db, { token: third.token })).toMatchObject({ status: "active" });
+
+			let revokedRow = await db.find(sessions, { id: first.sessionId });
+			expect(revokedRow?.revoked_reason).toBe("concurrent_limit");
+		});
+
+		test("never trims when the limit is unlimited", async () => {
+			let subjectId = await createTestSubject();
+
+			for (let i = 0; i < 5; i++) {
+				await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+			}
+
+			let rows = await db.findMany(sessions, { where: { subject_id: subjectId } });
+			expect(rows.filter((row) => row.revoked_at === null)).toHaveLength(5);
+		});
 	});
 });

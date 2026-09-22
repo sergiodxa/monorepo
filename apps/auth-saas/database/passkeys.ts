@@ -23,6 +23,7 @@ import { and, column as c, eq, lt, ne, table } from "remix/data-table";
 
 import type { AuditAction } from "./audit-events";
 import type { AppliedDomainMembership, SuggestedOrganization } from "./organizations";
+import type { EffectiveSessionPolicy } from "./session-policy";
 import type { OpenSessionMetering, OpenSessionSuccess } from "./sessions";
 
 import { writeAuditEvent } from "./audit-events";
@@ -367,6 +368,8 @@ export type SignInWithPasskeyResult =
  * read and neither result field is ever set, the same as every existing caller.
  * @param rp - Relying party to verify the response with; built from `input` when
  * omitted.
+ * @param sessionPolicy - The tenant's own effective session policy the opened session
+ * is bound by; omitted, the platform defaults.
  * @returns The subject, credential and opened session, or which check refused it.
  *
  * A verified assertion carries user verification on every ceremony already, so it
@@ -382,6 +385,7 @@ export async function signInWithPasskey(
 	metering?: OpenSessionMetering,
 	resolveOrganizationMemberships = false,
 	rp: RelyingParty = defaultRelyingParty(input.relyingPartyId, input.origins),
+	sessionPolicy?: EffectiveSessionPolicy,
 ): Promise<SignInWithPasskeyResult> {
 	let context = { ip: input.ip ?? null, userAgent: input.userAgent ?? null };
 
@@ -464,6 +468,7 @@ export async function signInWithPasskey(
 			city: input.city,
 		},
 		metering,
+		sessionPolicy,
 	);
 
 	if (!session.ok) {

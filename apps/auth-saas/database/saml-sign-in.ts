@@ -17,6 +17,7 @@ import { generateUUID } from "@sdxc/uuid";
 import * as s from "remix/data-schema";
 import { and, column as c, eq, inList, lt, table } from "remix/data-table";
 
+import type { EffectiveSessionPolicy } from "./session-policy";
 import type { OpenSessionMetering } from "./sessions";
 import type { SubjectIdentifierRow } from "./subjects";
 
@@ -265,6 +266,8 @@ export type SignInWithSamlResponseResult =
  * @param sealKey - The tenant object's own AES-GCM key.
  * @param input - The posted response and where it arrived.
  * @param metering - The daily-active-subject enforcement a session open reports through.
+ * @param sessionPolicy - The tenant's own effective session policy the opened session
+ * is bound by; omitted, the platform defaults.
  * @returns The subject signed in and the ticket that hands the session back, or why not.
  */
 export async function signInWithSamlResponse(
@@ -272,6 +275,7 @@ export async function signInWithSamlResponse(
 	sealKey: CryptoKey,
 	input: SignInWithSamlResponseInput,
 	metering?: OpenSessionMetering,
+	sessionPolicy?: EffectiveSessionPolicy,
 ): Promise<SignInWithSamlResponseResult> {
 	let parsed = s.parse(SignInWithSamlResponseSchema, input);
 	let now = Date.now();
@@ -374,6 +378,7 @@ export async function signInWithSamlResponse(
 			userAgent: parsed.agent ?? null,
 		},
 		metering,
+		sessionPolicy,
 	);
 	if (!session.ok) return session;
 

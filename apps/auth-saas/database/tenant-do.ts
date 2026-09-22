@@ -12,13 +12,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { AnyTable } from "remix/data-table";
+import type { AnyTable, TableRow } from "remix/data-table";
 
 import { importKey } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { isFailure } from "@sdxc/result";
 import { DurableObject } from "cloudflare:workers";
-import { column as c, Database, table } from "remix/data-table";
+import { column as c, Database, isNull, table } from "remix/data-table";
 
 import type {
 	ApiKeyVerificationCache,
@@ -241,6 +241,12 @@ import type {
 	ScimReplaceUserResult,
 } from "./scim";
 import type {
+	EffectiveSessionPolicy,
+	SessionPolicyInput,
+	SessionsAfterCredentialChange,
+	StoredSessionPolicy,
+} from "./session-policy";
+import type {
 	ListSubjectSessionsInput,
 	ListSubjectSessionsResult,
 	ResolveSessionInput,
@@ -334,6 +340,7 @@ import {
 	drainAuditEvents,
 	enforceAuditRetention,
 	readAuditPage,
+	writeAuditEvent,
 } from "./audit-events";
 import { DEFAULT_FAILURE_THRESHOLD } from "./authentication-backoff";
 import * as Authorization from "./authorization";
@@ -353,6 +360,22 @@ import * as Roles from "./roles";
 import * as SamlConnections from "./saml-connections";
 import * as SamlSignIn from "./saml-sign-in";
 import * as Scim from "./scim";
+import {
+	CONCURRENT_SESSION_LIMIT_CEILING,
+	CONCURRENT_SESSION_LIMIT_DEFAULT,
+	CONCURRENT_SESSION_LIMIT_FLOOR,
+	effectiveSessionPolicy,
+	REFRESH_TOKEN_LIFETIME_CEILING_MS,
+	REFRESH_TOKEN_LIFETIME_DEFAULT_MS,
+	REFRESH_TOKEN_LIFETIME_FLOOR_MS,
+	SESSION_ABSOLUTE_LIFETIME_CEILING_MS,
+	SESSION_ABSOLUTE_LIFETIME_DEFAULT_MS,
+	SESSION_ABSOLUTE_LIFETIME_FLOOR_MS,
+	SESSION_IDLE_LIFETIME_DEFAULT_MS,
+	SESSION_IDLE_LIFETIME_FLOOR_MS,
+	SESSIONS_AFTER_CREDENTIAL_CHANGE_DEFAULT,
+	validateSessionPolicyInput,
+} from "./session-policy";
 import * as Sessions from "./sessions";
 import * as SigningKeys from "./signing-keys";
 import { projectsWithinStorageCeiling } from "./storage-ceiling";
@@ -365,7 +388,10 @@ import * as Totp from "./totp";
 import * as WebhookDeliveries from "./webhook-deliveries";
 import * as WebhookEndpoints from "./webhook-endpoints";
 
-/** One row: the tenant id this object is addressed by, its issuer, its MFA policy, its authentication failure threshold, and its creation time. */
+/** The entitlement feature slug session policy customization is sold under, the exact key {@link ApplyEntitlementsInput.features} carries it as. */
+const SESSION_POLICY_FEATURE = "session_policy";
+
+/** One row: the tenant id this object is addressed by, its issuer, its MFA policy, its authentication failure threshold, its session policy customizations, and its creation time. */
 const settings = table({
 	name: "settings",
 	primaryKey: ["tenant_id"],
@@ -374,6 +400,12 @@ const settings = table({
 		issuer: c.text(),
 		mfa_policy: c.enum(["optional", "required"] as const).default("optional"),
 		failure_threshold: c.integer().default(4),
+		/** `null` means "not customized, use the platform default" — see `session-policy.ts`. */
+		session_absolute_lifetime_ms: c.integer().nullable(),
+		session_idle_lifetime_ms: c.integer().nullable(),
+		refresh_token_lifetime_ms: c.integer().nullable(),
+		concurrent_session_limit: c.integer().nullable(),
+		sessions_after_credential_change: c.enum(["revoke-others", "revoke-all"] as const).nullable(),
 		created_at: c.integer(),
 	},
 });
@@ -458,6 +490,98 @@ export interface StorageFootprint {
 }
 
 /**
+ * Counts this tenant's live sessions whose next resolve would compute an earlier
+ * expiry under `nextPolicy` than it would have under `currentPolicy` — the same
+ * earlier-of-two-instants comparison `resolveSession` itself runs, evaluated against
+ * both policies at once so `setSessionPolicy` can report the shortening it is about to
+ * make before the tenant confirms it.
+ *
+ * @param db - The tenant's database.
+ * @param currentPolicy - The effective policy in force before this write.
+ * @param nextPolicy - The effective policy this write is about to put in force.
+ * @returns How many live sessions would resolve with an earlier expiry under `nextPolicy`.
+ */
+async function countSessionsShortenedBy(
+	db: Database,
+	currentPolicy: EffectiveSessionPolicy,
+	nextPolicy: EffectiveSessionPolicy,
+): Promise<number> {
+	let live = await db.findMany(Sessions.sessions, { where: isNull("revoked_at") });
+
+	let shortened = 0;
+
+	for (let row of live) {
+		let expiryUnder = (policy: EffectiveSessionPolicy): number =>
+			Math.min(
+				Math.min(row.expires_at, row.created_at + policy.absoluteLifetimeMs),
+				Math.min(row.idle_expires_at, row.last_seen_at + policy.idleLifetimeMs),
+			);
+
+		if (expiryUnder(nextPolicy) < expiryUnder(currentPolicy)) shortened++;
+	}
+
+	return shortened;
+}
+
+/**
+ * Whether a session policy field's currently effective value is the platform default
+ * or the tenant's own stored customization — the same tighten-only comparison
+ * `effectiveSessionPolicy` runs for that one field, reported back for `describeSessionPolicy`
+ * to render "which of the two is in force" without duplicating that comparison.
+ *
+ * @param stored - The field as `settings` stores it; `null` means never customized.
+ * @param hasEntitlement - Whether this tenant's plan currently entitles it to customize
+ * session policy at all.
+ * @param storedIsTighter - Whether `stored` (once entitlement has lapsed) would win the
+ * tighten-only comparison against the platform default for this field.
+ * @returns `"tenant"` when the stored value is what is actually in force, `"default"`
+ * when the platform default is.
+ */
+function sessionPolicyFieldSource<value>(
+	stored: value | null,
+	hasEntitlement: boolean,
+	storedIsTighter: (stored: value) => boolean,
+): "default" | "tenant" {
+	if (stored === null) return "default";
+	if (hasEntitlement) return "tenant";
+	return storedIsTighter(stored) ? "tenant" : "default";
+}
+
+/** One field as `describeSessionPolicy` reports it: its currently effective value, and whether that came from the platform default or the tenant's own customization. */
+export interface SessionPolicyFieldSource<value> {
+	value: value;
+	source: "default" | "tenant";
+}
+
+/** The platform bounds `describeSessionPolicy` reports alongside the effective values, so a caller can render the range a write may choose within. */
+export interface SessionPolicyBounds {
+	absoluteLifetimeMs: { floor: number; ceiling: number; default: number };
+	/** `ceiling` is the absolute lifetime currently in force for this tenant, not a fixed number. */
+	idleLifetimeMs: { floor: number; ceiling: number; default: number };
+	refreshTokenLifetimeMs: { floor: number; ceiling: number; default: number };
+	concurrentSessionLimit: { floor: number; ceiling: number; default: number | null };
+	sessionsAfterCredentialChange: {
+		values: readonly ["revoke-others", "revoke-all"];
+		default: SessionsAfterCredentialChange;
+	};
+}
+
+/** What `describeSessionPolicy` answers: the effective value and its source for every field, and the platform bounds a caller renders alongside them. */
+export interface DescribeSessionPolicyResult {
+	absoluteLifetimeMs: SessionPolicyFieldSource<number>;
+	idleLifetimeMs: SessionPolicyFieldSource<number>;
+	refreshTokenLifetimeMs: SessionPolicyFieldSource<number>;
+	concurrentSessionLimit: SessionPolicyFieldSource<number | null>;
+	sessionsAfterCredentialChange: SessionPolicyFieldSource<SessionsAfterCredentialChange>;
+	bounds: SessionPolicyBounds;
+}
+
+/** What `setSessionPolicy` answers once a write is accepted: the stored policy that resulted, and how many live sessions the new values shorten. */
+export type SetSessionPolicyResult =
+	| { ok: true; policy: StoredSessionPolicy; sessionsShortened: number }
+	| { ok: false; field: string; message: string };
+
+/**
  * One tenant's identity state, isolated in this object's own SQLite database.
  */
 export default class Tenant extends DurableObject<Cloudflare.Env> {
@@ -484,6 +608,17 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 
 	/** Every statement's own row counts, accumulated by `countingSqlStorage` and read and reset around each RPC call by `#withCost`. */
 	#counters: CostCounters = { rowsRead: 0, rowsWritten: 0 };
+
+	/**
+	 * This isolate's own copy of the tenant's one `settings` row, read once per
+	 * instance by {@link #settings} and invalidated by the one method that writes
+	 * it — a Durable Object is the only writer of its own settings, so the read
+	 * costs nothing per request once it has run the first time. Never persisted:
+	 * an object evicted and rebuilt starts it empty again, paying one storage
+	 * read the next time any of `#issuer`, `#mfaPolicy`, `#failureThreshold` or
+	 * `#effectiveSessionPolicy` needs the row.
+	 */
+	#settingsRow: TableRow<typeof settings> | null = null;
 
 	/**
 	 * The AES-GCM key TOTP secrets are sealed and opened with, imported once from
@@ -573,6 +708,8 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 			});
 		}
 
+		this.#settingsRow = null;
+
 		await SigningKeys.ensureSigningKey(this.#db);
 		let keys = await SigningKeys.publishKeySet(this.#db);
 
@@ -590,10 +727,29 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		});
 	}
 
+	/**
+	 * This tenant's one `settings` row, read from storage once per instance and
+	 * held from then on — `#issuer`, `#mfaPolicy`, `#failureThreshold` and
+	 * `#effectiveSessionPolicy` all read the same row through this one cache
+	 * rather than issuing their own separate reads of it, and `setMfaPolicy` and
+	 * `setSessionPolicy` — the two methods that write it — invalidate the cache
+	 * in the same call that writes. A tenant that has never provisioned has no
+	 * row at all, which every reader here already treats as its own set of
+	 * defaults.
+	 */
+	async #settings(): Promise<TableRow<typeof settings> | null> {
+		if (this.#settingsRow === null) {
+			let rows = await this.#db.findMany(settings);
+			this.#settingsRow = rows[0] ?? null;
+		}
+
+		return this.#settingsRow;
+	}
+
 	/** This tenant's own issuer, as `provision` recorded it, for stamping onto an error redirect. */
 	async #issuer(): Promise<string> {
-		let rows = await this.#db.findMany(settings);
-		return rows[0]?.issuer ?? "";
+		let row = await this.#settings();
+		return row?.issuer ?? "";
 	}
 
 	/**
@@ -650,14 +806,41 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 
 	/** This tenant's own MFA policy, read from `settings`. A tenant that has never provisioned enforces `optional`. */
 	async #mfaPolicy(): Promise<"optional" | "required"> {
-		let rows = await this.#db.findMany(settings);
-		return rows[0]?.mfa_policy ?? "optional";
+		let row = await this.#settings();
+		return row?.mfa_policy ?? "optional";
 	}
 
 	/** This tenant's own authentication failure threshold, read from `settings`. A tenant that has never provisioned enforces 4. */
 	async #failureThreshold(): Promise<number> {
-		let rows = await this.#db.findMany(settings);
-		return rows[0]?.failure_threshold ?? DEFAULT_FAILURE_THRESHOLD;
+		let row = await this.#settings();
+		return row?.failure_threshold ?? DEFAULT_FAILURE_THRESHOLD;
+	}
+
+	/**
+	 * This tenant's own effective session policy: every field it stored, honored
+	 * exactly once its plan entitles `session_policy`, or the tighter of that
+	 * value and the platform default once it does not — see
+	 * `session-policy.ts`'s own `effectiveSessionPolicy` for the comparison
+	 * itself. Reads the same cached `settings` row `#mfaPolicy` and
+	 * `#failureThreshold` already share, and the same entitlement record
+	 * `#dauEnforcement` and `#auditRetentionDays` already share.
+	 */
+	async #effectiveSessionPolicy(): Promise<EffectiveSessionPolicy> {
+		let [row, hasEntitlement] = await Promise.all([
+			this.#settings(),
+			this.#isEntitled(SESSION_POLICY_FEATURE),
+		]);
+
+		return effectiveSessionPolicy({
+			stored: {
+				sessionAbsoluteLifetimeMs: row?.session_absolute_lifetime_ms ?? null,
+				sessionIdleLifetimeMs: row?.session_idle_lifetime_ms ?? null,
+				refreshTokenLifetimeMs: row?.refresh_token_lifetime_ms ?? null,
+				concurrentSessionLimit: row?.concurrent_session_limit ?? null,
+				sessionsAfterCredentialChange: row?.sessions_after_credential_change ?? null,
+			},
+			hasEntitlement,
+		});
 	}
 
 	/**
@@ -894,11 +1077,224 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		await this.#migrated;
 
 		return this.#withCost(async () => {
-			let rows = await this.#db.findMany(settings);
-			let row = rows[0];
-			if (row)
+			let row = await this.#settings();
+			if (row) {
 				await this.#db.update(settings, { tenant_id: row.tenant_id }, { mfa_policy: input.policy });
+				this.#settingsRow = null;
+			}
 			return { ok: true } as const;
+		});
+	}
+
+	/**
+	 * Validates and writes a partial update to this tenant's session policy — a field
+	 * left out of `input.policy` leaves that column untouched, the single-field-at-a-time
+	 * precedent {@link setMfaPolicy} already follows. Every given field is bounds-checked
+	 * against the platform's own ranges before anything is written; the idle timeout's own
+	 * ceiling is whichever absolute lifetime this same write leaves in force. The
+	 * entitlement that gates who may call this at all is the caller's own concern, decided
+	 * before this object is ever asked to perform the write.
+	 *
+	 * @param input - The fields to change, and who is changing them.
+	 * @returns The stored policy once written and how many live sessions the new values
+	 * shorten, or which field and bound refused the write.
+	 */
+	async setSessionPolicy(input: {
+		policy: SessionPolicyInput;
+		actor: AuditActor;
+	}): Promise<WithCost<SetSessionPolicyResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let row = await this.#settings();
+			if (!row) {
+				return {
+					ok: false,
+					field: "tenantId",
+					message: "the tenant has not been provisioned yet",
+				} as const;
+			}
+
+			let currentStored: StoredSessionPolicy = {
+				sessionAbsoluteLifetimeMs: row.session_absolute_lifetime_ms,
+				sessionIdleLifetimeMs: row.session_idle_lifetime_ms,
+				refreshTokenLifetimeMs: row.refresh_token_lifetime_ms,
+				concurrentSessionLimit: row.concurrent_session_limit,
+				sessionsAfterCredentialChange: row.sessions_after_credential_change,
+			};
+
+			let currentAbsoluteLifetimeMs =
+				currentStored.sessionAbsoluteLifetimeMs ?? SESSION_ABSOLUTE_LIFETIME_DEFAULT_MS;
+
+			let validated = validateSessionPolicyInput({
+				policy: input.policy,
+				currentAbsoluteLifetimeMs,
+			});
+			if (!validated.ok) return validated;
+
+			let nextStored: StoredSessionPolicy = {
+				sessionAbsoluteLifetimeMs:
+					input.policy.absoluteLifetimeMs ?? currentStored.sessionAbsoluteLifetimeMs,
+				sessionIdleLifetimeMs: input.policy.idleLifetimeMs ?? currentStored.sessionIdleLifetimeMs,
+				refreshTokenLifetimeMs:
+					input.policy.refreshTokenLifetimeMs ?? currentStored.refreshTokenLifetimeMs,
+				concurrentSessionLimit:
+					input.policy.concurrentSessionLimit !== undefined
+						? input.policy.concurrentSessionLimit
+						: currentStored.concurrentSessionLimit,
+				sessionsAfterCredentialChange:
+					input.policy.sessionsAfterCredentialChange ?? currentStored.sessionsAfterCredentialChange,
+			};
+
+			let hasEntitlement = await this.#isEntitled(SESSION_POLICY_FEATURE);
+			let currentEffective = effectiveSessionPolicy({ stored: currentStored, hasEntitlement });
+			let nextEffective = effectiveSessionPolicy({ stored: nextStored, hasEntitlement });
+
+			let sessionsShortened = await countSessionsShortenedBy(
+				this.#db,
+				currentEffective,
+				nextEffective,
+			);
+
+			await this.#db.update(
+				settings,
+				{ tenant_id: row.tenant_id },
+				{
+					session_absolute_lifetime_ms: nextStored.sessionAbsoluteLifetimeMs,
+					session_idle_lifetime_ms: nextStored.sessionIdleLifetimeMs,
+					refresh_token_lifetime_ms: nextStored.refreshTokenLifetimeMs,
+					concurrent_session_limit: nextStored.concurrentSessionLimit,
+					sessions_after_credential_change: nextStored.sessionsAfterCredentialChange,
+				},
+			);
+			this.#settingsRow = null;
+
+			let fields: Array<[keyof StoredSessionPolicy, string]> = [
+				["sessionAbsoluteLifetimeMs", "absoluteLifetimeMs"],
+				["sessionIdleLifetimeMs", "idleLifetimeMs"],
+				["refreshTokenLifetimeMs", "refreshTokenLifetimeMs"],
+				["concurrentSessionLimit", "concurrentSessionLimit"],
+				["sessionsAfterCredentialChange", "sessionsAfterCredentialChange"],
+			];
+
+			let changed: Record<string, { from: unknown; to: unknown }> = {};
+			for (let [storedKey, label] of fields) {
+				if (currentStored[storedKey] !== nextStored[storedKey]) {
+					changed[label] = { from: currentStored[storedKey], to: nextStored[storedKey] };
+				}
+			}
+
+			await writeAuditEvent(this.#db, {
+				action: "session_policy.changed",
+				actor: input.actor,
+				targetType: "tenant",
+				targetId: row.tenant_id,
+				outcome: "succeeded",
+				detail: { changed },
+			});
+
+			return { ok: true, policy: nextStored, sessionsShortened };
+		});
+	}
+
+	/**
+	 * Reads this tenant's session policy: the effective values it currently enforces,
+	 * whether each one is the platform default or the tenant's own stored customization,
+	 * and the platform bounds a caller renders alongside them. Open on every tier — a
+	 * tenant asking what its own session lifetimes are is asking about its own security
+	 * posture, not exercising the paid capability to change them.
+	 *
+	 * @returns The effective policy, its per-field source, and the platform bounds.
+	 */
+	async describeSessionPolicy(
+		input: Record<string, never> = {},
+	): Promise<WithCost<DescribeSessionPolicyResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let [row, hasEntitlement] = await Promise.all([
+				this.#settings(),
+				this.#isEntitled(SESSION_POLICY_FEATURE),
+			]);
+
+			let stored: StoredSessionPolicy = {
+				sessionAbsoluteLifetimeMs: row?.session_absolute_lifetime_ms ?? null,
+				sessionIdleLifetimeMs: row?.session_idle_lifetime_ms ?? null,
+				refreshTokenLifetimeMs: row?.refresh_token_lifetime_ms ?? null,
+				concurrentSessionLimit: row?.concurrent_session_limit ?? null,
+				sessionsAfterCredentialChange: row?.sessions_after_credential_change ?? null,
+			};
+
+			let effective = effectiveSessionPolicy({ stored, hasEntitlement });
+
+			return {
+				absoluteLifetimeMs: {
+					value: effective.absoluteLifetimeMs,
+					source: sessionPolicyFieldSource(
+						stored.sessionAbsoluteLifetimeMs,
+						hasEntitlement,
+						(value) => value < SESSION_ABSOLUTE_LIFETIME_DEFAULT_MS,
+					),
+				},
+				idleLifetimeMs: {
+					value: effective.idleLifetimeMs,
+					source: sessionPolicyFieldSource(
+						stored.sessionIdleLifetimeMs,
+						hasEntitlement,
+						(value) => value < SESSION_IDLE_LIFETIME_DEFAULT_MS,
+					),
+				},
+				refreshTokenLifetimeMs: {
+					value: effective.refreshTokenLifetimeMs,
+					source: sessionPolicyFieldSource(
+						stored.refreshTokenLifetimeMs,
+						hasEntitlement,
+						(value) => value < REFRESH_TOKEN_LIFETIME_DEFAULT_MS,
+					),
+				},
+				concurrentSessionLimit: {
+					value: effective.concurrentSessionLimit,
+					source: sessionPolicyFieldSource(
+						stored.concurrentSessionLimit,
+						hasEntitlement,
+						() => true,
+					),
+				},
+				sessionsAfterCredentialChange: {
+					value: effective.sessionsAfterCredentialChange,
+					source: sessionPolicyFieldSource(
+						stored.sessionsAfterCredentialChange,
+						hasEntitlement,
+						(value) => value === "revoke-all",
+					),
+				},
+				bounds: {
+					absoluteLifetimeMs: {
+						floor: SESSION_ABSOLUTE_LIFETIME_FLOOR_MS,
+						ceiling: SESSION_ABSOLUTE_LIFETIME_CEILING_MS,
+						default: SESSION_ABSOLUTE_LIFETIME_DEFAULT_MS,
+					},
+					idleLifetimeMs: {
+						floor: SESSION_IDLE_LIFETIME_FLOOR_MS,
+						ceiling: effective.absoluteLifetimeMs,
+						default: SESSION_IDLE_LIFETIME_DEFAULT_MS,
+					},
+					refreshTokenLifetimeMs: {
+						floor: REFRESH_TOKEN_LIFETIME_FLOOR_MS,
+						ceiling: REFRESH_TOKEN_LIFETIME_CEILING_MS,
+						default: REFRESH_TOKEN_LIFETIME_DEFAULT_MS,
+					},
+					concurrentSessionLimit: {
+						floor: CONCURRENT_SESSION_LIMIT_FLOOR,
+						ceiling: CONCURRENT_SESSION_LIMIT_CEILING,
+						default: CONCURRENT_SESSION_LIMIT_DEFAULT,
+					},
+					sessionsAfterCredentialChange: {
+						values: ["revoke-others", "revoke-all"] as const,
+						default: SESSIONS_AFTER_CREDENTIAL_CHANGE_DEFAULT,
+					},
+				},
+			};
 		});
 	}
 
@@ -1157,7 +1553,11 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 */
 	async changePassword(input: ChangePasswordInput): Promise<WithCost<ChangePasswordResult>> {
 		await this.#migrated;
-		return this.#withCost(() => Passwords.changePassword(this.#db, input));
+
+		return this.#withCost(async () => {
+			let { sessionsAfterCredentialChange } = await this.#effectiveSessionPolicy();
+			return Passwords.changePassword(this.#db, input, sessionsAfterCredentialChange);
+		});
 	}
 
 	/**
@@ -1172,10 +1572,11 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		await this.#migrated;
 
 		return this.#withCost(async () => {
-			let [{ cap, hard }, mfaPolicy, failureThreshold] = await Promise.all([
+			let [{ cap, hard }, mfaPolicy, failureThreshold, sessionPolicy] = await Promise.all([
 				this.#dauEnforcement(),
 				this.#mfaPolicy(),
 				this.#failureThreshold(),
+				this.#effectiveSessionPolicy(),
 			]);
 			return Passwords.signInWithPassword(
 				this.#db,
@@ -1184,6 +1585,7 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 				mfaPolicy,
 				true,
 				failureThreshold,
+				sessionPolicy,
 			);
 		});
 	}
@@ -1317,12 +1719,17 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		await this.#migrated;
 
 		return this.#withCost(async () => {
-			let { cap, hard } = await this.#dauEnforcement();
+			let [{ cap, hard }, sessionPolicy] = await Promise.all([
+				this.#dauEnforcement(),
+				this.#effectiveSessionPolicy(),
+			]);
 			return Passkeys.signInWithPasskey(
 				this.#db,
 				input,
 				{ cache: this.#dauCache, cap, hard },
 				true,
+				undefined,
+				sessionPolicy,
 			);
 		});
 	}
@@ -1485,7 +1892,11 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 */
 	async resolveSession(input: ResolveSessionInput): Promise<WithCost<ResolveSessionResult>> {
 		await this.#migrated;
-		return this.#withCost(() => Sessions.resolveSession(this.#db, input));
+
+		return this.#withCost(async () => {
+			let policy = await this.#effectiveSessionPolicy();
+			return Sessions.resolveSession(this.#db, input, policy);
+		});
 	}
 
 	/**
@@ -2837,10 +3248,11 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		await this.#migrated;
 
 		return this.#withCost(async () => {
-			let [sealKey, issuer, { cap, hard }] = await Promise.all([
+			let [sealKey, issuer, { cap, hard }, sessionPolicy] = await Promise.all([
 				this.#sealKey(),
 				this.#issuer(),
 				this.#dauEnforcement(),
+				this.#effectiveSessionPolicy(),
 			]);
 
 			return SamlSignIn.signInWithSamlResponse(
@@ -2848,6 +3260,7 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 				sealKey,
 				{ ...input, callbackOrigin: issuer },
 				{ cache: this.#dauCache, cap, hard },
+				sessionPolicy,
 			);
 		});
 	}
@@ -2902,13 +3315,19 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		await this.#migrated;
 
 		return this.#withCost(async () => {
-			let [sealKey, { cap, hard }] = await Promise.all([this.#sealKey(), this.#dauEnforcement()]);
+			let [sealKey, { cap, hard }, sessionPolicy] = await Promise.all([
+				this.#sealKey(),
+				this.#dauEnforcement(),
+				this.#effectiveSessionPolicy(),
+			]);
 
-			return ConnectionSignIn.completeConnectionSignIn(this.#db, sealKey, input, {
-				cache: this.#dauCache,
-				cap,
-				hard,
-			});
+			return ConnectionSignIn.completeConnectionSignIn(
+				this.#db,
+				sealKey,
+				input,
+				{ cache: this.#dauCache, cap, hard },
+				sessionPolicy,
+			);
 		});
 	}
 

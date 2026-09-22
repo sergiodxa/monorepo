@@ -43,6 +43,7 @@ import m0028 from "./tenant-migrations/0028-webhook-deliveries.sql?raw";
 import m0029 from "./tenant-migrations/0029-authentication-backoff.sql?raw";
 import m0030 from "./tenant-migrations/0030-totp-backoff.sql?raw";
 import m0031 from "./tenant-migrations/0031-account-linking.sql?raw";
+import m0032 from "./tenant-migrations/0032-session-policy.sql?raw";
 
 /** One migration, identified so the journal can record that it ran. */
 export interface Migration {
@@ -83,6 +84,7 @@ export const MIGRATIONS: Migration[] = [
 	{ id: "0029-authentication-backoff", sql: m0029 },
 	{ id: "0030-totp-backoff", sql: m0030 },
 	{ id: "0031-account-linking", sql: m0031 },
+	{ id: "0032-session-policy", sql: m0032 },
 ];
 
 /** The journal `0001-init` creates, read back to find out what has already run. */

@@ -61,6 +61,7 @@ describe("runMigrations", () => {
 			"0029-authentication-backoff",
 			"0030-totp-backoff",
 			"0031-account-linking",
+			"0032-session-policy",
 		]);
 	});
 
@@ -163,6 +164,7 @@ describe("runMigrations", () => {
 			{ id: "0029-authentication-backoff", applied_at: expect.any(Number) },
 			{ id: "0030-totp-backoff", applied_at: expect.any(Number) },
 			{ id: "0031-account-linking", applied_at: expect.any(Number) },
+			{ id: "0032-session-policy", applied_at: expect.any(Number) },
 		]);
 	});
 

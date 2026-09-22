@@ -21,15 +21,11 @@ import { and, column as c, eq, inList, isNull, lt, ne, table } from "remix/data-
 
 import type { AuditActor } from "./audit-events";
 import type { DauCache, DauNotice } from "./metering";
+import type { EffectiveSessionPolicy } from "./session-policy";
 
 import { writeAuditEvent } from "./audit-events";
 import { recordAuthentication } from "./metering";
-
-/** How long a session stands before the subject must authenticate again. */
-const ABSOLUTE_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
-
-/** How long a session may sit unused before it stops standing. */
-const IDLE_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
+import { DEFAULT_EFFECTIVE_SESSION_POLICY } from "./session-policy";
 
 /** How long a resolve must wait past the last write before it slides the idle window again. */
 const LAST_SEEN_THROTTLE_MS = 60 * 1000;
@@ -151,6 +147,8 @@ let OpenSessionSchema = s.object({
  * when the caller has one; omitted, no meter is touched and no session is ever refused —
  * the overload below narrows such a call's return type to always-succeeds, exactly as it
  * always has.
+ * @param policy - The tenant's own effective session policy; omitted, the platform
+ * defaults, the same lifetimes this function has always opened a session with.
  * @returns The new session's id and the token to set as the cookie's value, with the
  * clocks the caller may need to shape a response around, or that a hard daily cap
  * refused this subject a session.
@@ -163,11 +161,13 @@ export function openSession(
 	db: Database,
 	input: OpenSessionInput,
 	metering: OpenSessionMetering | undefined,
+	policy?: EffectiveSessionPolicy,
 ): Promise<OpenSessionResult>;
 export async function openSession(
 	db: Database,
 	input: OpenSessionInput,
 	metering?: OpenSessionMetering,
+	policy: EffectiveSessionPolicy = DEFAULT_EFFECTIVE_SESSION_POLICY,
 ): Promise<OpenSessionResult> {
 	let parsed = s.parse(OpenSessionSchema, input);
 
@@ -203,8 +203,8 @@ export async function openSession(
 	if (isFailure(hashed)) throw new Error("session token hashing failed");
 
 	let now = Date.now();
-	let expiresAt = now + ABSOLUTE_LIFETIME_MS;
-	let idleExpiresAt = now + IDLE_LIFETIME_MS;
+	let expiresAt = now + policy.absoluteLifetimeMs;
+	let idleExpiresAt = now + policy.idleLifetimeMs;
 	let id = sessionRowId(generateUUID()).toString();
 
 	await db.create(sessions, {
@@ -239,6 +239,10 @@ export async function openSession(
 		detail: { sessionId: id, amr: parsed.amr, remembered: parsed.remembered },
 	});
 
+	if (policy.concurrentSessionLimit !== null) {
+		await trimExcessSessions(db, parsed.subjectId, policy.concurrentSessionLimit);
+	}
+
 	return {
 		ok: true,
 		sessionId: id,
@@ -248,6 +252,37 @@ export async function openSession(
 		idleExpiresAt,
 		...(meteringReport ? { metering: meteringReport } : {}),
 	};
+}
+
+/**
+ * Keeps a subject's live sessions within its concurrent limit, right after the
+ * session that may have just crossed it was created — a session created in one
+ * call and trimmed in another would be one operation split in half. Bounded by
+ * the limit itself rather than a scan: at most one page of the subject's own
+ * sessions is ever read, and the revoke touches only the rows beyond it.
+ *
+ * @param db - The tenant's database.
+ * @param subjectId - The subject whose live sessions to bound.
+ * @param limit - How many of the subject's own sessions may stay live.
+ */
+async function trimExcessSessions(db: Database, subjectId: string, limit: number): Promise<void> {
+	let live = await db.findMany(sessions, {
+		where: and(eq("subject_id", subjectId), isNull("revoked_at")),
+		orderBy: [
+			["created_at", "desc"],
+			["id", "desc"],
+		],
+	});
+
+	if (live.length <= limit) return;
+
+	let overflowIds = live.slice(limit).map((row) => row.id);
+
+	await revokeSubjectSessions(db, {
+		subjectId,
+		reason: "concurrent_limit",
+		onlyIds: overflowIds,
+	});
 }
 
 export interface ExtendSessionFactorInput {
@@ -339,12 +374,15 @@ let ResolveSessionSchema = s.object({
  *
  * @param db - The tenant's database.
  * @param input - The token as the cookie carried it, and the resolving request's origin.
+ * @param policy - The tenant's own effective session policy; omitted, the platform
+ * defaults, the same lifetimes this function has always resolved against.
  * @returns The session's subject, methods and clocks when it is live, or which refusal
  * applies.
  */
 export async function resolveSession(
 	db: Database,
 	input: ResolveSessionInput,
+	policy: EffectiveSessionPolicy = DEFAULT_EFFECTIVE_SESSION_POLICY,
 ): Promise<ResolveSessionResult> {
 	let parsed = s.parse(ResolveSessionSchema, input);
 
@@ -356,12 +394,27 @@ export async function resolveSession(
 	if (row.revoked_at !== null) return { status: "revoked" };
 
 	let now = Date.now();
-	if (row.expires_at <= now || row.idle_expires_at <= now) return { status: "expired" };
 
-	let idleExpiresAt = row.idle_expires_at;
+	/**
+	 * The earlier of two instants governs: the one stored on the row from whatever
+	 * policy was in force when it was written or last slid, and the one the
+	 * tenant's current policy implies from the row's own `created_at` and
+	 * `last_seen_at`. A shortened policy reaches every live session on its very
+	 * next resolve this way, with nothing rewritten ahead of time; a lengthened
+	 * one never overrides what a row already has stored.
+	 */
+	let effectiveExpiresAt = Math.min(row.expires_at, row.created_at + policy.absoluteLifetimeMs);
+	let effectiveIdleExpiresAt = Math.min(
+		row.idle_expires_at,
+		row.last_seen_at + policy.idleLifetimeMs,
+	);
+
+	if (effectiveExpiresAt <= now || effectiveIdleExpiresAt <= now) return { status: "expired" };
+
+	let idleExpiresAt = effectiveIdleExpiresAt;
 
 	if (now - row.last_seen_at > LAST_SEEN_THROTTLE_MS) {
-		idleExpiresAt = now + IDLE_LIFETIME_MS;
+		idleExpiresAt = now + policy.idleLifetimeMs;
 
 		await db.update(
 			sessions,
@@ -384,7 +437,7 @@ export async function resolveSession(
 		subjectId: row.subject_id,
 		authTime: row.auth_time,
 		amr: row.amr as string[],
-		expiresAt: row.expires_at,
+		expiresAt: effectiveExpiresAt,
 		idleExpiresAt,
 	};
 }
@@ -541,6 +594,8 @@ export interface RevokeSubjectSessionsInput {
 	subjectId: string;
 	reason: string;
 	exceptSessionId?: string;
+	/** Revokes only these session ids among the subject's live sessions, rather than every one — how the concurrent-session trim scopes a revocation to exactly the rows beyond the limit. */
+	onlyIds?: string[];
 	/** Who is ending these sessions; defaults to the subject itself when the caller acts on its own. */
 	actor?: AuditActor;
 }
@@ -554,15 +609,17 @@ let RevokeSubjectSessionsSchema = s.object({
 	subjectId: s.string(),
 	reason: s.string(),
 	exceptSessionId: s.optional(s.string()),
+	onlyIds: s.optional(s.array(s.string())),
 });
 
 /**
- * Revokes every live session a subject holds, optionally sparing one — the operation a
- * password change or a block calls to end every other authentication of the subject at
- * once.
+ * Revokes every live session a subject holds, optionally sparing one or scoped to a
+ * given set of ids — the operation a password change, a block, or the concurrent-session
+ * trim calls to end other authentications of the subject at once.
  *
  * @param db - The tenant's database.
- * @param input - The subject, why, and a session id to leave standing.
+ * @param input - The subject, why, and either a session id to leave standing or the
+ * exact ids to revoke.
  * @returns How many sessions were revoked.
  */
 export async function revokeSubjectSessions(
@@ -571,13 +628,15 @@ export async function revokeSubjectSessions(
 ): Promise<RevokeSubjectSessionsResult> {
 	let parsed = s.parse(RevokeSubjectSessionsSchema, input);
 
-	let where = parsed.exceptSessionId
-		? and(
-				eq("subject_id", parsed.subjectId),
-				isNull("revoked_at"),
-				ne("id", parsed.exceptSessionId),
-			)
-		: and(eq("subject_id", parsed.subjectId), isNull("revoked_at"));
+	let where = parsed.onlyIds
+		? and(eq("subject_id", parsed.subjectId), isNull("revoked_at"), inList("id", parsed.onlyIds))
+		: parsed.exceptSessionId
+			? and(
+					eq("subject_id", parsed.subjectId),
+					isNull("revoked_at"),
+					ne("id", parsed.exceptSessionId),
+				)
+			: and(eq("subject_id", parsed.subjectId), isNull("revoked_at"));
 
 	let result = await db.updateMany(
 		sessions,

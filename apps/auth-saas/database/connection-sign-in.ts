@@ -53,6 +53,7 @@ import { and, column as c, eq, inList, isNull, lt, table } from "remix/data-tabl
 
 import type { AuditActor } from "./audit-events";
 import type { ConnectionMappingRow, ConnectionRow } from "./connections";
+import type { EffectiveSessionPolicy } from "./session-policy";
 import type { OpenSessionMetering } from "./sessions";
 import type {
 	Actor,
@@ -557,6 +558,8 @@ let CompleteConnectionSignInSchema = s.object({
  * @param metering - The daily active user meter to record this sign-in against,
  * when the caller has one; omitted, no meter is touched and no sign-in is ever
  * refused for it.
+ * @param sessionPolicy - The tenant's own effective session policy the opened
+ * session is bound by; omitted, the platform defaults.
  * @returns The resolved subject, the hostname the flow started on, and the
  * handoff ticket to redirect there with, or which check refused the callback.
  */
@@ -565,6 +568,7 @@ export async function completeConnectionSignIn(
 	sealKey: CryptoKey,
 	input: CompleteConnectionSignInInput,
 	metering?: OpenSessionMetering,
+	sessionPolicy?: EffectiveSessionPolicy,
 ): Promise<CompleteConnectionSignInResult> {
 	let parsed = s.parse(CompleteConnectionSignInSchema, input);
 
@@ -760,6 +764,7 @@ export async function completeConnectionSignIn(
 		db,
 		{ subjectId, amr: ["social"], remembered: true, userAgent: parsed.agent ?? null },
 		metering,
+		sessionPolicy,
 	);
 	if (!session.ok) return session;
 
