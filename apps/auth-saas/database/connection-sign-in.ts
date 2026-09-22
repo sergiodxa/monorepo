@@ -49,16 +49,24 @@ import { isFailure } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
 import * as s from "remix/data-schema";
-import { and, column as c, eq, inList, lt, table } from "remix/data-table";
+import { and, column as c, eq, inList, isNull, lt, table } from "remix/data-table";
 
+import type { AuditActor } from "./audit-events";
 import type { ConnectionMappingRow, ConnectionRow } from "./connections";
 import type { OpenSessionMetering } from "./sessions";
-import type { SubjectIdentifierRow, SubjectProfile } from "./subjects";
+import type {
+	Actor,
+	AddIdentifierResult,
+	LinkedIdentityState,
+	SubjectIdentifierRow,
+	SubjectProfile,
+} from "./subjects";
 
 import {
 	evaluateAutomaticLink,
 	isConnectionAuthoritativeForEmail,
 	mintLinkTicket,
+	spendLinkTicket,
 } from "./account-linking";
 import { writeAuditEvent } from "./audit-events";
 import {
@@ -68,9 +76,17 @@ import {
 	connectionTransactions,
 	STANDARD_PROFILE_TARGETS,
 } from "./connections";
+import { hasAnotherCredential } from "./credentials";
 import { openSession, sessions } from "./sessions";
 import { foldIdentifier } from "./subject-identifiers";
-import { createSubject, subjectIdentifiers, subjects, updateSubject } from "./subjects";
+import {
+	addIdentifier,
+	createSubject,
+	subjectIdentifiers,
+	subjects,
+	updateSubject,
+	verifyIdentifier,
+} from "./subjects";
 
 /** How long a login stays completable once `beginConnectionSignIn` starts it. */
 const CONNECTION_TRANSACTION_TTL_MS = 10 * 60 * 1000;
@@ -836,6 +852,298 @@ export async function resumeConnectionSignIn(
 		sessionToken: row.session_token,
 		authorizationRequestId: row.authorization_request_id,
 	};
+}
+
+/** The `amr` entry every session a connection of this kind opens carries, the only granularity `amr` names a connection's identities by today. */
+function methodFamilyOf(connectionKind: string): "social" | "saml" {
+	return connectionKind === "saml" ? "saml" : "social";
+}
+
+export interface UnlinkIdentityInput {
+	subjectId: string;
+	connectionSlug: string;
+	actor: AuditActor;
+}
+
+export type UnlinkIdentityResult =
+	| { ok: true }
+	| { ok: false; reason: "not-found" }
+	| { ok: false; reason: "last-credential" };
+
+/**
+ * Removes a subject's identity at one connection, refusing to take its last
+ * remaining way to sign in. An administrator's unlink also revokes every live
+ * session carrying that connection kind's method family in its `amr`, since an
+ * identity removed administratively should stop being a way in; a subject
+ * unlinking their own identity leaves its own sessions standing.
+ *
+ * Ending the link's access at the provider is not attempted here: nothing in
+ * this codebase yet spends a provider's revocation endpoint, and building a
+ * one-off call for this call site alone would duplicate what belongs in the
+ * relying party itself. The sealed tokens are still gone the moment the row
+ * is, which is the whole of what this tenant itself can revoke.
+ *
+ * @param db - The tenant's database.
+ * @param input - The subject, the connection's slug, and who is asking.
+ * @returns Success, or that no such identity exists, or that it is the
+ * subject's last remaining credential.
+ */
+export async function unlinkIdentity(
+	db: Database,
+	input: UnlinkIdentityInput,
+): Promise<UnlinkIdentityResult> {
+	let connection = await db.findOne(connections, { where: { slug: input.connectionSlug } });
+	if (!connection) return { ok: false, reason: "not-found" };
+
+	let identity = await db.findOne(connectionIdentities, {
+		where: { subject_id: input.subjectId, connection_id: connection.id },
+	});
+	if (!identity) return { ok: false, reason: "not-found" };
+
+	let hasOtherCredential = await hasAnotherCredential(db, input.subjectId, {
+		kind: "connection",
+		connectionId: connection.id,
+	});
+	if (!hasOtherCredential) return { ok: false, reason: "last-credential" };
+
+	await db.delete(connectionIdentities, {
+		connection_id: connection.id,
+		provider_subject: identity.provider_subject,
+	});
+
+	let isSelfUnlink = input.actor.type === "subject" && input.actor.id === input.subjectId;
+
+	if (!isSelfUnlink) {
+		let methodFamily = methodFamilyOf(connection.kind);
+
+		let liveSessions = await db.findMany(sessions, {
+			where: and(eq("subject_id", input.subjectId), isNull("revoked_at")),
+		});
+
+		let matching = liveSessions.filter((session) =>
+			(session.amr as string[]).includes(methodFamily),
+		);
+
+		if (matching.length > 0) {
+			await db.updateMany(
+				sessions,
+				{ revoked_at: Date.now(), revoked_reason: "connection identity unlinked" },
+				{
+					where: inList(
+						"id",
+						matching.map((session) => session.id),
+					),
+				},
+			);
+
+			// One row for the whole call rather than one per session, the same
+			// reasoning `revokeSubjectSessions` already follows for its own bulk
+			// revoke: the fact worth recording is the subject's sessions being
+			// ended by this unlink, not each row that happened to carry it.
+			await writeAuditEvent(db, {
+				action: "session.revoked",
+				actor: input.actor,
+				targetType: "subject",
+				targetId: input.subjectId,
+				outcome: "succeeded",
+				detail: { reason: "connection identity unlinked", revokedCount: matching.length },
+			});
+		}
+	}
+
+	await writeAuditEvent(db, {
+		action: "identity.unlinked",
+		actor: input.actor,
+		targetType: "subject",
+		targetId: input.subjectId,
+		outcome: "succeeded",
+		detail: { connectionSlug: connection.slug, linkOrigin: identity.linked_by },
+	});
+
+	return { ok: true };
+}
+
+export interface LinkIdentityInput {
+	subjectId: string;
+	ticket: string;
+	actor: AuditActor;
+}
+
+export type LinkIdentityResult =
+	| { ok: true }
+	| { ok: false; reason: "invalid-ticket" }
+	| { ok: false; reason: "already-linked" };
+
+/**
+ * Spends a confirmed-path ticket once the named subject has presented a
+ * credential for it, writing the identity it names. Refuses a ticket
+ * presented by a subject other than the one it names, without revealing which
+ * subject that was, and refuses a provider identity somebody else already
+ * linked between the ticket's mint and this spend.
+ *
+ * @param db - The tenant's database.
+ * @param sealKey - The tenant object's own AES-GCM key.
+ * @param input - The subject completing the link, the ticket they presented a
+ * credential for, and who is asking.
+ * @returns Success, or that the ticket does not work, or that the provider
+ * identity it named was linked to somebody else in the meantime.
+ */
+export async function linkIdentity(
+	db: Database,
+	sealKey: CryptoKey,
+	input: LinkIdentityInput,
+): Promise<LinkIdentityResult> {
+	let spent = await spendLinkTicket(db, sealKey, { ticket: input.ticket });
+	if (!spent.ok) return spent;
+
+	if (spent.subjectId !== input.subjectId) return { ok: false, reason: "invalid-ticket" };
+
+	let existing = await db.find(connectionIdentities, {
+		connection_id: spent.connectionId,
+		provider_subject: spent.providerSubject,
+	});
+	if (existing) return { ok: false, reason: "already-linked" };
+
+	await upsertConnectionIdentity(db, sealKey, {
+		connectionId: spent.connectionId,
+		providerSubject: spent.providerSubject,
+		subjectId: input.subjectId,
+		refreshToken: spent.refreshToken,
+		tokenExpiresAt: spent.tokenExpiresAt,
+		linkedBy: "subject",
+		providerEmail: spent.providerEmail,
+		providerEmailVerified: spent.providerEmailVerified,
+	});
+
+	let connection = await db.find(connections, { id: spent.connectionId });
+
+	await writeAuditEvent(db, {
+		action: "identity.linked",
+		actor: input.actor,
+		targetType: "subject",
+		targetId: input.subjectId,
+		outcome: "succeeded",
+		detail: { connectionSlug: connection?.slug ?? spent.connectionId, linkedBy: "subject" },
+	});
+
+	return { ok: true };
+}
+
+export interface AdoptIdentityAddressInput {
+	subjectId: string;
+	connectionSlug: string;
+	actor: Actor;
+}
+
+export type AdoptIdentityAddressResult =
+	| { ok: true; kind: "email"; value: string; verified: true }
+	| {
+			ok: true;
+			kind: "email";
+			value: string;
+			verified: false;
+			ticket: string;
+			ticketExpiresAt: number;
+	  }
+	| { ok: false; reason: "not-found" }
+	| { ok: false; reason: "no-address" }
+	| { ok: false; reason: "invalid-identifier" }
+	| { ok: false; reason: "identifier-taken" }
+	| { ok: false; reason: "username-already-set" }
+	| { ok: false; reason: "rate-limited"; retryAfterSeconds: number };
+
+/**
+ * Adds a linked identity's own provider address as the subject's own
+ * identifier, subject to the same uniqueness every address claim answers to.
+ * The provider already proved control of the address when it asserted it
+ * verified, so an address the identity itself carries verified is verified
+ * again here in the same call rather than sent through a second, redundant
+ * verification email.
+ *
+ * @param db - The tenant's database.
+ * @param input - The subject, the connection whose identity names the address
+ * to adopt, and who is asking.
+ * @returns The address adopted and its verified state — with a ticket to
+ * deliver when the provider had not itself proved it — or which rule refused
+ * the adoption.
+ */
+export async function adoptIdentityAddress(
+	db: Database,
+	input: AdoptIdentityAddressInput,
+): Promise<AdoptIdentityAddressResult> {
+	let connection = await db.findOne(connections, { where: { slug: input.connectionSlug } });
+	if (!connection) return { ok: false, reason: "not-found" };
+
+	let identity = await db.findOne(connectionIdentities, {
+		where: { subject_id: input.subjectId, connection_id: connection.id },
+	});
+	if (!identity) return { ok: false, reason: "not-found" };
+
+	if (identity.provider_email === null) return { ok: false, reason: "no-address" };
+
+	let added = await addIdentifier(db, {
+		subjectId: input.subjectId,
+		kind: "email",
+		value: identity.provider_email,
+		actor: input.actor,
+	});
+	if (!added.ok) return added;
+	if (added.kind !== "email") {
+		throw new Error("addIdentifier answered a username's shape for an email add");
+	}
+
+	if (identity.provider_email_verified === true) {
+		let verified = await verifyIdentifier(db, { ticket: added.ticket });
+		if (!verified.ok) {
+			throw new Error("failed to verify a just-added, provider-proven identifier");
+		}
+
+		return { ok: true, kind: "email", value: added.value, verified: true };
+	}
+
+	return {
+		ok: true,
+		kind: "email",
+		value: added.value,
+		verified: false,
+		ticket: added.ticket,
+		ticketExpiresAt: added.ticketExpiresAt,
+	};
+}
+
+/**
+ * A subject's linked identities as an account screen renders them, each
+ * joined to its own connection's slug so no further lookup is needed. A
+ * caller passes this into `subjects.ts`'s own `describeSubject` rather than
+ * that module reading this one itself, the same pattern `totp.ts`'s own
+ * `describeSecondFactor` already follows for the identical layering problem.
+ *
+ * @param db - The tenant's database.
+ * @param subjectId - The subject to describe.
+ * @returns The state to pass into `subjects.ts`'s `describeSubject`.
+ */
+export async function describeLinkedIdentities(
+	db: Database,
+	subjectId: string,
+): Promise<LinkedIdentityState[]> {
+	let rows = await db.findMany(connectionIdentities, { where: { subject_id: subjectId } });
+	if (rows.length === 0) return [];
+
+	let connectionRows = await db.findMany(connections, {
+		where: inList(
+			"id",
+			rows.map((row) => row.connection_id),
+		),
+	});
+	let slugById = new Map(connectionRows.map((row) => [row.id, row.slug]));
+
+	return rows.map((row) => ({
+		connectionSlug: slugById.get(row.connection_id) ?? row.connection_id,
+		providerEmail: row.provider_email,
+		linkedBy: row.linked_by,
+		linkedAt: row.linked_at,
+		lastSignInAt: row.last_sign_in_at,
+	}));
 }
 
 export interface SweepExpiredConnectionTransactionsInput {

@@ -31,7 +31,8 @@ import { subjectIdentifiers } from "./subjects";
 export type ExcludedCredential =
 	| { kind: "identifier"; id: string }
 	| { kind: "password" }
-	| { kind: "passkey"; credentialId: string };
+	| { kind: "passkey"; credentialId: string }
+	| { kind: "connection"; connectionId: string };
 
 /**
  * Whether a subject keeps at least one other verified identifier, password or
@@ -81,14 +82,17 @@ export async function hasAnotherCredential(
 	let enabledConnections = await db.findMany(connections, { where: eq("enabled", true) });
 
 	if (enabledConnections.length > 0) {
+		let enabledConnectionIds = enabledConnections.map((row) => row.id);
+
 		let identityCount = await db.count(connectionIdentities, {
-			where: and(
-				eq("subject_id", subjectId),
-				inList(
-					"connection_id",
-					enabledConnections.map((row) => row.id),
-				),
-			),
+			where:
+				excluding.kind === "connection"
+					? and(
+							eq("subject_id", subjectId),
+							inList("connection_id", enabledConnectionIds),
+							ne("connection_id", excluding.connectionId),
+						)
+					: and(eq("subject_id", subjectId), inList("connection_id", enabledConnectionIds)),
 		});
 		if (identityCount > 0) return true;
 	}

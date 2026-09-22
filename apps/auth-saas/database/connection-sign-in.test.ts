@@ -200,6 +200,91 @@ function stateOf(redirectUrl: string): string {
 	return state;
 }
 
+/** Drives a full sign-in against a fixture provider and resumes its handoff ticket, for a real subject and a real live session to test against. */
+async function signInAndResume(
+	provider: { origin: string; respondWith(build: () => Promise<Response> | Response): void },
+	slug = "acme-oidc",
+): Promise<{ subjectId: string; sessionId: string }> {
+	let begun = await tenant.beginConnectionSignIn({
+		slug,
+		hostname: HOSTNAME,
+		callbackOrigin: CALLBACK_ORIGIN,
+	});
+	if (!begun.ok) throw new Error("unreachable");
+	let state = stateOf(begun.redirectUrl);
+
+	provider.respondWith(() => tokenResponse(provider.origin, begun.redirectUrl));
+
+	let completed = await tenant.completeConnectionSignIn({
+		slug,
+		callbackUrl: `${CALLBACK_ORIGIN}/u/connections/${slug}/callback?code=code-1&state=${state}`,
+	});
+	if (!completed.ok) throw new Error(`expected success, got ${JSON.stringify(completed)}`);
+
+	let resumed = await tenant.resumeConnectionSignIn({
+		ticket: completed.handoffTicket,
+		hostname: HOSTNAME,
+	});
+	if (!resumed.ok) throw new Error("unreachable");
+
+	// `resumeConnectionSignIn`'s own RPC composes the session token with the
+	// authorization outcome it resumes, dropping the session id along the way —
+	// resolving the token back is the way to read it, the same way a browser's
+	// own cookie would.
+	let resolved = await tenant.resolveSession({ token: resumed.sessionToken });
+	if (resolved.status !== "active") throw new Error("unreachable");
+
+	return { subjectId: completed.subjectId, sessionId: resolved.sessionId };
+}
+
+/** Reads a connection's own id back by its slug, for a raw fixture insert that needs to name it. */
+function connectionIdFor(slug: string): string {
+	let rows = [...state.storage.sql.exec(`SELECT id FROM connections WHERE slug = ?`, slug)] as {
+		id: string;
+	}[];
+	let row = rows[0];
+	if (!row) throw new Error(`no connection with slug ${slug}`);
+	return row.id;
+}
+
+/** Inserts a connection row directly, standing in for one `saveConnection` would have written. */
+function insertConnection(connectionId: string) {
+	let now = Date.now();
+	state.storage.sql.exec(
+		`INSERT INTO connections
+			(id, slug, kind, catalog_entry, display_name, enabled, issuer, authorization_endpoint, token_endpoint, userinfo_endpoint, client_id, client_secret_sealed, scopes, subject_claim, email_authority, auto_link, on_unknown_subject, created_at, updated_at, organization_id)
+		 VALUES (?, ?, 'oidc', NULL, 'Test Connection', 1, NULL, NULL, NULL, NULL, 'client', NULL, '[]', 'sub', 0, 0, 'create', ?, ?, NULL)`,
+		connectionId,
+		connectionId,
+		now,
+		now,
+	);
+}
+
+/** Inserts a linked identity row directly, carrying the provider's own address, standing in for one a completed sign-in would have written. */
+function insertConnectionIdentity(
+	connectionId: string,
+	providerSubject: string,
+	subjectId: string,
+	providerEmail: string | null,
+	providerEmailVerified: boolean | null,
+) {
+	let now = Date.now();
+	state.storage.sql.exec(
+		`INSERT INTO connection_identities
+			(connection_id, provider_subject, subject_id, access_token_sealed, refresh_token_sealed, token_expires_at, provider_email, provider_email_verified, linked_by, linked_at, last_sign_in_at, granted_scopes, claims_json, created_at, updated_at)
+		 VALUES (?, ?, ?, NULL, NULL, NULL, ?, ?, 'jit', ?, NULL, NULL, NULL, ?, ?)`,
+		connectionId,
+		providerSubject,
+		subjectId,
+		providerEmail,
+		providerEmailVerified === null ? null : providerEmailVerified ? 1 : 0,
+		now,
+		now,
+		now,
+	);
+}
+
 beforeEach(async () => {
 	await tenant.defineAttribute({ key: "department", type: "string", visibility: "claim" });
 });
@@ -578,5 +663,485 @@ describe("resumeConnectionSignIn", () => {
 
 		let resumed = await tenant.resumeConnectionSignIn({ ticket, hostname: "someone-else.example" });
 		expect(resumed).toMatchObject({ ok: false, reason: "invalid-ticket" });
+	});
+});
+
+describe("unlinkIdentity", () => {
+	test("refuses when it would leave the subject with no remaining way in", async () => {
+		let provider = stubProvider();
+		await createConnection(provider.origin);
+
+		let { subjectId } = await signInAndResume(provider);
+
+		let result = await tenant.unlinkIdentity({
+			subjectId,
+			connectionSlug: "acme-oidc",
+			actor: { type: "subject", id: subjectId },
+		});
+
+		expect(result).toMatchObject({ ok: false, reason: "last-credential" });
+	});
+
+	test("refuses when no such identity exists", async () => {
+		let provider = stubProvider();
+		await createConnection(provider.origin);
+
+		let { subjectId } = await signInAndResume(provider);
+
+		let result = await tenant.unlinkIdentity({
+			subjectId,
+			connectionSlug: "no-such-connection",
+			actor: { type: "subject", id: subjectId },
+		});
+
+		expect(result).toMatchObject({ ok: false, reason: "not-found" });
+	});
+
+	test("succeeds and removes the identity when the subject also holds a password", async () => {
+		let provider = stubProvider();
+		await createConnection(provider.origin);
+
+		let { subjectId } = await signInAndResume(provider);
+
+		await tenant.setPassword({
+			subjectId,
+			password: "correct-horse-battery",
+			actor: { kind: "admin" },
+		});
+
+		let result = await tenant.unlinkIdentity({
+			subjectId,
+			connectionSlug: "acme-oidc",
+			actor: { type: "subject", id: subjectId },
+		});
+
+		expect(result).toMatchObject({ ok: true });
+
+		let described = await tenant.describeSubject({ subjectId, audience: { kind: "admin" } });
+		if (!described.ok) throw new Error("unreachable");
+		expect(described.identities).toHaveLength(0);
+	});
+
+	test("a self-unlink leaves the subject's other live sessions standing", async () => {
+		let provider = stubProvider();
+		await createConnection(provider.origin);
+
+		let first = await signInAndResume(provider);
+		await tenant.setPassword({
+			subjectId: first.subjectId,
+			password: "correct-horse-battery",
+			actor: { kind: "admin" },
+		});
+		let second = await signInAndResume(provider);
+
+		let result = await tenant.unlinkIdentity({
+			subjectId: first.subjectId,
+			connectionSlug: "acme-oidc",
+			actor: { type: "subject", id: first.subjectId },
+		});
+		expect(result).toMatchObject({ ok: true });
+
+		let sessions = await tenant.listSubjectSessions({
+			subjectId: first.subjectId,
+			callerSessionId: first.sessionId,
+		});
+		if (!sessions.ok) throw new Error("unreachable");
+		expect(sessions.sessions.map((session) => session.id).sort()).toEqual(
+			[first.sessionId, second.sessionId].sort(),
+		);
+	});
+
+	test("an administrative unlink revokes every live session carrying that connection kind's amr", async () => {
+		let provider = stubProvider();
+		await createConnection(provider.origin);
+
+		let first = await signInAndResume(provider);
+		await tenant.setPassword({
+			subjectId: first.subjectId,
+			password: "correct-horse-battery",
+			actor: { kind: "admin" },
+		});
+		await signInAndResume(provider);
+
+		let result = await tenant.unlinkIdentity({
+			subjectId: first.subjectId,
+			connectionSlug: "acme-oidc",
+			actor: { type: "platform", id: "system" },
+		});
+		expect(result).toMatchObject({ ok: true });
+
+		let sessions = await tenant.listSubjectSessions({
+			subjectId: first.subjectId,
+			callerSessionId: first.sessionId,
+		});
+		if (!sessions.ok) throw new Error("unreachable");
+		expect(sessions.sessions).toHaveLength(0);
+	});
+});
+
+describe("linkIdentity", () => {
+	/** Drives a sign-in the automatic linking rule declines, back to the ticket it mints instead. */
+	async function beginConfirmedLink(provider: {
+		origin: string;
+		respondWith(build: () => Promise<Response> | Response): void;
+	}): Promise<{ subjectId: string; ticket: string }> {
+		await createConnection(provider.origin, { emailAuthority: true, autoLink: false });
+
+		let created = await tenant.createSubject({
+			identifiers: [{ kind: "email", value: "ada@example.com" }],
+		});
+		if (!created.ok) throw new Error("setup failed");
+		let added = await tenant.addIdentifier({
+			subjectId: created.subjectId,
+			kind: "email",
+			value: "ada@example.com",
+			actor: { kind: "subject" },
+		});
+		if (!added.ok || added.kind !== "email") throw new Error("setup failed");
+		await tenant.verifyIdentifier({ ticket: added.ticket });
+
+		let begun = await tenant.beginConnectionSignIn({
+			slug: "acme-oidc",
+			hostname: HOSTNAME,
+			callbackOrigin: CALLBACK_ORIGIN,
+		});
+		if (!begun.ok) throw new Error("unreachable");
+		let state = stateOf(begun.redirectUrl);
+
+		provider.respondWith(() =>
+			tokenResponse(provider.origin, begun.redirectUrl, {
+				claims: { email: "ada@example.com", email_verified: true },
+			}),
+		);
+
+		let completed = await tenant.completeConnectionSignIn({
+			slug: "acme-oidc",
+			callbackUrl: `${CALLBACK_ORIGIN}/u/connections/acme-oidc/callback?code=code-1&state=${state}`,
+		});
+		if (completed.ok || completed.reason !== "link_required") {
+			throw new Error(`expected link_required, got ${JSON.stringify(completed)}`);
+		}
+
+		return { subjectId: created.subjectId, ticket: completed.ticket };
+	}
+
+	test("succeeds, and the caller can then sign in and resolve the same subject", async () => {
+		let provider = stubProvider();
+		let { subjectId, ticket } = await beginConfirmedLink(provider);
+
+		let linked = await tenant.linkIdentity({
+			subjectId,
+			ticket,
+			actor: { type: "subject", id: subjectId },
+		});
+		expect(linked).toMatchObject({ ok: true });
+
+		let begun = await tenant.beginConnectionSignIn({
+			slug: "acme-oidc",
+			hostname: HOSTNAME,
+			callbackOrigin: CALLBACK_ORIGIN,
+		});
+		if (!begun.ok) throw new Error("unreachable");
+		let state = stateOf(begun.redirectUrl);
+
+		provider.respondWith(() => tokenResponse(provider.origin, begun.redirectUrl));
+
+		let completed = await tenant.completeConnectionSignIn({
+			slug: "acme-oidc",
+			callbackUrl: `${CALLBACK_ORIGIN}/u/connections/acme-oidc/callback?code=code-1&state=${state}`,
+		});
+
+		if (!completed.ok) throw new Error(`expected success, got ${JSON.stringify(completed)}`);
+		expect(completed.subjectId).toBe(subjectId);
+	});
+
+	test("a second spend of the same ticket fails", async () => {
+		let provider = stubProvider();
+		let { subjectId, ticket } = await beginConfirmedLink(provider);
+
+		let first = await tenant.linkIdentity({
+			subjectId,
+			ticket,
+			actor: { type: "subject", id: subjectId },
+		});
+		expect(first).toMatchObject({ ok: true });
+
+		let second = await tenant.linkIdentity({
+			subjectId,
+			ticket,
+			actor: { type: "subject", id: subjectId },
+		});
+		expect(second).toMatchObject({ ok: false, reason: "invalid-ticket" });
+	});
+
+	test("a ticket presented by the wrong subject id fails", async () => {
+		let provider = stubProvider();
+		let { ticket } = await beginConfirmedLink(provider);
+
+		let someoneElse = await tenant.createSubject({
+			identifiers: [{ kind: "email", value: "grace@example.com" }],
+		});
+		if (!someoneElse.ok) throw new Error("setup failed");
+
+		let result = await tenant.linkIdentity({
+			subjectId: someoneElse.subjectId,
+			ticket,
+			actor: { type: "subject", id: someoneElse.subjectId },
+		});
+
+		expect(result).toMatchObject({ ok: false, reason: "invalid-ticket" });
+	});
+
+	test("a ticket for a provider identity someone else already linked in the meantime fails with already-linked", async () => {
+		let provider = stubProvider();
+		let { subjectId, ticket } = await beginConfirmedLink(provider);
+
+		let connectionId = connectionIdFor("acme-oidc");
+
+		let elsewhere = await tenant.createSubject({
+			identifiers: [{ kind: "email", value: "someone-else@example.com" }],
+		});
+		if (!elsewhere.ok) throw new Error("setup failed");
+
+		// The exact race this refuses: another callback for the same provider
+		// identity lands and links it between this ticket's mint and its spend.
+		insertConnectionIdentity(connectionId, "provider-subject-1", elsewhere.subjectId, null, null);
+
+		let result = await tenant.linkIdentity({
+			subjectId,
+			ticket,
+			actor: { type: "subject", id: subjectId },
+		});
+
+		expect(result).toMatchObject({ ok: false, reason: "already-linked" });
+	});
+});
+
+describe("adoptIdentityAddress", () => {
+	test("adds and immediately verifies the address when the identity's provider email is verified", async () => {
+		let created = await tenant.createSubject({});
+		if (!created.ok) throw new Error("setup failed");
+
+		insertConnection("conn_verified");
+		insertConnectionIdentity(
+			"conn_verified",
+			"provider-subject-1",
+			created.subjectId,
+			"provider@example.com",
+			true,
+		);
+
+		let result = await tenant.adoptIdentityAddress({
+			subjectId: created.subjectId,
+			connectionSlug: "conn_verified",
+			actor: { kind: "subject" },
+		});
+
+		expect(result).toMatchObject({
+			ok: true,
+			kind: "email",
+			value: "provider@example.com",
+			verified: true,
+		});
+
+		let described = await tenant.describeSubject({
+			subjectId: created.subjectId,
+			audience: { kind: "admin" },
+		});
+		if (!described.ok) throw new Error("unreachable");
+		let identifier = described.identifiers.find((entry) => entry.value === "provider@example.com");
+		expect(identifier?.verified).toBe(true);
+	});
+
+	test("adds it unverified with a spendable ticket when the provider did not verify it", async () => {
+		let created = await tenant.createSubject({});
+		if (!created.ok) throw new Error("setup failed");
+
+		insertConnection("conn_unverified");
+		insertConnectionIdentity(
+			"conn_unverified",
+			"provider-subject-1",
+			created.subjectId,
+			"unverified@example.com",
+			false,
+		);
+
+		let result = await tenant.adoptIdentityAddress({
+			subjectId: created.subjectId,
+			connectionSlug: "conn_unverified",
+			actor: { kind: "subject" },
+		});
+
+		if (!result.ok || result.verified) {
+			throw new Error(`expected an unverified add, got ${JSON.stringify(result)}`);
+		}
+		expect(result.ticket.length).toBeGreaterThan(10);
+
+		let verified = await tenant.verifyIdentifier({ ticket: result.ticket });
+		expect(verified).toMatchObject({ ok: true, subjectId: created.subjectId });
+	});
+
+	test("refuses no-address when the identity carries none", async () => {
+		let created = await tenant.createSubject({});
+		if (!created.ok) throw new Error("setup failed");
+
+		insertConnection("conn_no_address");
+		insertConnectionIdentity(
+			"conn_no_address",
+			"provider-subject-1",
+			created.subjectId,
+			null,
+			null,
+		);
+
+		let result = await tenant.adoptIdentityAddress({
+			subjectId: created.subjectId,
+			connectionSlug: "conn_no_address",
+			actor: { kind: "subject" },
+		});
+
+		expect(result).toMatchObject({ ok: false, reason: "no-address" });
+	});
+
+	test("refuses identifier-taken when the address already belongs to someone else", async () => {
+		let owner = await tenant.createSubject({
+			identifiers: [{ kind: "email", value: "taken@example.com" }],
+		});
+		if (!owner.ok) throw new Error("setup failed");
+		let addedToOwner = await tenant.addIdentifier({
+			subjectId: owner.subjectId,
+			kind: "email",
+			value: "taken@example.com",
+			actor: { kind: "subject" },
+		});
+		if (!addedToOwner.ok || addedToOwner.kind !== "email") throw new Error("setup failed");
+		await tenant.verifyIdentifier({ ticket: addedToOwner.ticket });
+
+		let created = await tenant.createSubject({});
+		if (!created.ok) throw new Error("setup failed");
+
+		insertConnection("conn_taken");
+		insertConnectionIdentity(
+			"conn_taken",
+			"provider-subject-1",
+			created.subjectId,
+			"taken@example.com",
+			true,
+		);
+
+		let result = await tenant.adoptIdentityAddress({
+			subjectId: created.subjectId,
+			connectionSlug: "conn_taken",
+			actor: { kind: "subject" },
+		});
+
+		expect(result).toMatchObject({ ok: false, reason: "identifier-taken" });
+	});
+});
+
+describe("describeSubject: linked identities", () => {
+	test("lists a connection's slug, address and linkedBy after an automatic link", async () => {
+		let provider = stubProvider();
+		await createConnection(provider.origin, { emailAuthority: true, autoLink: true });
+
+		let created = await tenant.createSubject({
+			identifiers: [{ kind: "email", value: "ada@example.com" }],
+		});
+		if (!created.ok) throw new Error("setup failed");
+		let added = await tenant.addIdentifier({
+			subjectId: created.subjectId,
+			kind: "email",
+			value: "ada@example.com",
+			actor: { kind: "subject" },
+		});
+		if (!added.ok || added.kind !== "email") throw new Error("setup failed");
+		await tenant.verifyIdentifier({ ticket: added.ticket });
+
+		let begun = await tenant.beginConnectionSignIn({
+			slug: "acme-oidc",
+			hostname: HOSTNAME,
+			callbackOrigin: CALLBACK_ORIGIN,
+		});
+		if (!begun.ok) throw new Error("unreachable");
+		let state = stateOf(begun.redirectUrl);
+
+		provider.respondWith(() =>
+			tokenResponse(provider.origin, begun.redirectUrl, {
+				claims: { email: "ada@example.com", email_verified: true },
+			}),
+		);
+
+		let completed = await tenant.completeConnectionSignIn({
+			slug: "acme-oidc",
+			callbackUrl: `${CALLBACK_ORIGIN}/u/connections/acme-oidc/callback?code=code-1&state=${state}`,
+		});
+		if (!completed.ok) throw new Error(`expected success, got ${JSON.stringify(completed)}`);
+
+		let described = await tenant.describeSubject({
+			subjectId: created.subjectId,
+			audience: { kind: "admin" },
+		});
+		if (!described.ok) throw new Error("unreachable");
+
+		expect(described.identities).toMatchObject([
+			{ connectionSlug: "acme-oidc", providerEmail: "ada@example.com", linkedBy: "automatic" },
+		]);
+	});
+
+	test("lists a connection's slug, address and linkedBy after an explicit linkIdentity", async () => {
+		let provider = stubProvider();
+		await createConnection(provider.origin, { emailAuthority: true, autoLink: false });
+
+		let created = await tenant.createSubject({
+			identifiers: [{ kind: "email", value: "ada@example.com" }],
+		});
+		if (!created.ok) throw new Error("setup failed");
+		let added = await tenant.addIdentifier({
+			subjectId: created.subjectId,
+			kind: "email",
+			value: "ada@example.com",
+			actor: { kind: "subject" },
+		});
+		if (!added.ok || added.kind !== "email") throw new Error("setup failed");
+		await tenant.verifyIdentifier({ ticket: added.ticket });
+
+		let begun = await tenant.beginConnectionSignIn({
+			slug: "acme-oidc",
+			hostname: HOSTNAME,
+			callbackOrigin: CALLBACK_ORIGIN,
+		});
+		if (!begun.ok) throw new Error("unreachable");
+		let state = stateOf(begun.redirectUrl);
+
+		provider.respondWith(() =>
+			tokenResponse(provider.origin, begun.redirectUrl, {
+				claims: { email: "ada@example.com", email_verified: true },
+			}),
+		);
+
+		let completed = await tenant.completeConnectionSignIn({
+			slug: "acme-oidc",
+			callbackUrl: `${CALLBACK_ORIGIN}/u/connections/acme-oidc/callback?code=code-1&state=${state}`,
+		});
+		if (completed.ok || completed.reason !== "link_required") {
+			throw new Error(`expected link_required, got ${JSON.stringify(completed)}`);
+		}
+
+		let linked = await tenant.linkIdentity({
+			subjectId: created.subjectId,
+			ticket: completed.ticket,
+			actor: { type: "subject", id: created.subjectId },
+		});
+		expect(linked).toMatchObject({ ok: true });
+
+		let described = await tenant.describeSubject({
+			subjectId: created.subjectId,
+			audience: { kind: "admin" },
+		});
+		if (!described.ok) throw new Error("unreachable");
+
+		expect(described.identities).toMatchObject([
+			{ connectionSlug: "acme-oidc", providerEmail: "ada@example.com", linkedBy: "subject" },
+		]);
 	});
 });

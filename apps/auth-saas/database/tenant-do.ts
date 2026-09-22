@@ -69,11 +69,17 @@ import type {
 	UpdateClientResult,
 } from "./clients";
 import type {
+	AdoptIdentityAddressInput,
+	AdoptIdentityAddressResult,
 	BeginConnectionSignInInput,
 	BeginConnectionSignInResult,
 	CompleteConnectionSignInInput,
 	CompleteConnectionSignInResult,
+	LinkIdentityInput,
+	LinkIdentityResult,
 	ResumeConnectionSignInInput,
+	UnlinkIdentityInput,
+	UnlinkIdentityResult,
 } from "./connection-sign-in";
 import type {
 	DescribeConnectionsInput,
@@ -831,7 +837,8 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * Assembles everything one account screen renders for a subject, including
-	 * its TOTP factor, recovery codes and trusted devices.
+	 * its TOTP factor, recovery codes, trusted devices, and every connection it
+	 * has linked an identity through.
 	 *
 	 * @param input - The subject to describe and who is looking.
 	 * @returns The assembled view, or that no such subject exists.
@@ -843,8 +850,11 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		await this.#migrated;
 
 		return this.#withCost(async () => {
-			let secondFactor = await Totp.describeSecondFactor(this.#db, input.subjectId);
-			return Subjects.describeSubject(this.#db, input, secondFactor);
+			let [secondFactor, identities] = await Promise.all([
+				Totp.describeSecondFactor(this.#db, input.subjectId),
+				ConnectionSignIn.describeLinkedIdentities(this.#db, input.subjectId),
+			]);
+			return Subjects.describeSubject(this.#db, input, secondFactor, identities);
 		});
 	}
 
@@ -2913,6 +2923,54 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 
 			return { ok: true, sessionToken: spent.sessionToken, ...outcome };
 		});
+	}
+
+	/**
+	 * Removes a subject's identity at one connection, refusing to take its last
+	 * remaining way to sign in. An administrator's unlink also revokes every
+	 * live session carrying that connection kind's method family in its `amr`.
+	 *
+	 * @param input - The subject, the connection's slug, and who is asking.
+	 * @returns Success, or that no such identity exists, or that it is the
+	 * subject's last remaining credential.
+	 */
+	async unlinkIdentity(input: UnlinkIdentityInput): Promise<WithCost<UnlinkIdentityResult>> {
+		await this.#migrated;
+		return this.#withCost(() => ConnectionSignIn.unlinkIdentity(this.#db, input));
+	}
+
+	/**
+	 * Spends a confirmed-path ticket once the named subject has presented a
+	 * credential for it, writing the identity it names.
+	 *
+	 * @param input - The subject completing the link, the ticket they presented
+	 * a credential for, and who is asking.
+	 * @returns Success, or that the ticket does not work, or that the provider
+	 * identity it named was linked to somebody else in the meantime.
+	 */
+	async linkIdentity(input: LinkIdentityInput): Promise<WithCost<LinkIdentityResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let sealKey = await this.#sealKey();
+			return ConnectionSignIn.linkIdentity(this.#db, sealKey, input);
+		});
+	}
+
+	/**
+	 * Adds a linked identity's own provider address as the subject's own
+	 * identifier, verifying it at once when the provider already proved it.
+	 *
+	 * @param input - The subject, the connection whose identity names the
+	 * address to adopt, and who is asking.
+	 * @returns The address adopted and its verified state, or which rule
+	 * refused the adoption.
+	 */
+	async adoptIdentityAddress(
+		input: AdoptIdentityAddressInput,
+	): Promise<WithCost<AdoptIdentityAddressResult>> {
+		await this.#migrated;
+		return this.#withCost(() => ConnectionSignIn.adoptIdentityAddress(this.#db, input));
 	}
 
 	/**

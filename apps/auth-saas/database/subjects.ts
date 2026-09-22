@@ -934,6 +934,19 @@ const NO_SECOND_FACTOR: SecondFactorState = {
 	trustedDevices: [],
 };
 
+/**
+ * One connection a subject has signed in through once, as an account screen
+ * renders it: which connection, the provider's own address on that identity,
+ * how the link came to exist, and when it was last used to sign in.
+ */
+export interface LinkedIdentityState {
+	connectionSlug: string;
+	providerEmail: string | null;
+	linkedBy: "automatic" | "subject" | "admin" | "jit";
+	linkedAt: number;
+	lastSignInAt: number | null;
+}
+
 export type DescribeSubjectResult =
 	| ({
 			ok: true;
@@ -941,13 +954,15 @@ export type DescribeSubjectResult =
 			identifiers: IdentifierState[];
 			attributes: Record<string, AttributeValue>;
 			credentials: never[];
+			identities: LinkedIdentityState[];
 	  } & SecondFactorState)
 	| { ok: false; reason: "not-found" };
 
 /**
  * Assembles everything one account screen renders: profile, every identifier with its
  * state and which is primary, the attributes this audience may see, which
- * credentials exist, and the second-factor state a caller computed for it.
+ * credentials exist, the second-factor state a caller computed for it, and every
+ * connection the subject has ever linked an identity through.
  *
  * The credential list is empty for every subject today; it starts listing passwords and
  * passkeys once those tables exist to describe.
@@ -957,12 +972,16 @@ export type DescribeSubjectResult =
  * @param secondFactor - The subject's TOTP factor, recovery codes and trusted
  * devices, computed by a caller that can read `totp.ts`'s tables. Defaults to
  * {@link NO_SECOND_FACTOR} for a caller that has not computed it.
+ * @param identities - The subject's linked identities, computed by a caller
+ * that can read `connection-sign-in.ts`'s own tables. Defaults to an empty
+ * list for a caller that has not computed it.
  * @returns The assembled view, or that no such subject exists.
  */
 export async function describeSubject(
 	db: Database,
 	input: DescribeSubjectInput,
 	secondFactor: SecondFactorState = NO_SECOND_FACTOR,
+	identities: LinkedIdentityState[] = [],
 ): Promise<DescribeSubjectResult> {
 	let subject = await db.find(subjects, { id: input.subjectId });
 	if (!subject) return { ok: false, reason: "not-found" };
@@ -996,6 +1015,7 @@ export async function describeSubject(
 		})),
 		attributes,
 		credentials: [],
+		identities,
 		...secondFactor,
 	};
 }
