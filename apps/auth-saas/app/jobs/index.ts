@@ -42,4 +42,13 @@ export default jobs({
 	 * away with.
 	 */
 	subjectsImport: job({ cron: "* * * * *" }),
+	/**
+	 * Advances every tenant's own active export run by whatever pages fit in one
+	 * tick. Carries the same once-a-minute cadence as the import side for the same
+	 * reason: a customer watching an export in progress needs steady visible
+	 * movement rather than the coarser cadence every other sweep gets away with.
+	 * A cron trigger fires every job registered against its own expression, so this
+	 * shares the import job's existing minute trigger rather than adding a second.
+	 */
+	subjectsExport: job({ cron: "* * * * *" }),
 });

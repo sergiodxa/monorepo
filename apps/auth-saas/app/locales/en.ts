@@ -198,6 +198,13 @@ export default {
 			body: "{{tenantName}} saw {{recentFailures}} failed sign-ins in the last hour, well above its usual rate of about {{baselineHourlyAverage}} per hour.",
 			notice: "This is a notification only; nothing was locked or changed on your account.",
 		},
+		credentialsExportStarted: {
+			subject: "A credentials export started for {{tenantName}}",
+			preview: "Someone started an export that includes every stored password hash.",
+			heading: "Credentials export started",
+			body: "An export of {{tenantName}}'s directory has started, including every subject's stored password hash.",
+			notice: "If you didn't expect this, contact whoever on your team has access to start one.",
+		},
 	},
 
 	hostedError: {

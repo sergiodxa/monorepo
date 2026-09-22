@@ -1183,8 +1183,14 @@ function profileChanges(profile: SubjectProfile): Record<string, string | null> 
 	return changes;
 }
 
-/** Maps a subject row's snake_case columns back to the API's camelCase claims. */
-function profileOf(row: SubjectRow): SubjectProfile {
+/**
+ * Maps a subject row's snake_case columns back to the API's camelCase claims.
+ * Exported so a caller assembling a subject's projection from outside this
+ * module — an export page's own row, alongside its identifiers and
+ * credentials — reads the same mapping `describeSubject` renders from,
+ * rather than a second copy of it.
+ */
+export function profileOf(row: SubjectRow): SubjectProfile {
 	return {
 		name: row.name,
 		givenName: row.given_name,

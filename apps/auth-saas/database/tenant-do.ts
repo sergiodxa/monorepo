@@ -256,6 +256,7 @@ import type {
 	SetCustomClaimsInput,
 	SetCustomClaimsResult,
 } from "./signing-keys";
+import type { ExportSubjectPageInput, ExportSubjectPageResult } from "./subject-export";
 import type { ImportRowOutcome, ImportSubjectRow } from "./subject-import";
 import type {
 	Actor,
@@ -355,6 +356,7 @@ import * as Scim from "./scim";
 import * as Sessions from "./sessions";
 import * as SigningKeys from "./signing-keys";
 import { projectsWithinStorageCeiling } from "./storage-ceiling";
+import { exportSubjectPage } from "./subject-export";
 import { applyImportRow, completeImportRun, validateImportRow } from "./subject-import";
 import * as Subjects from "./subjects";
 import { runMigrations } from "./tenant-migrations";
@@ -859,6 +861,26 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 			]);
 			return Subjects.describeSubject(this.#db, input, secondFactor, identities);
 		});
+	}
+
+	/**
+	 * One page of the tenant's directory for export: every subject's identifiers,
+	 * profile, declared attributes, role assignments and credentials metadata,
+	 * paged the same keyset way `listSubjects` already pages a directory listing.
+	 * A password hash rides along only when `includeCredentials` is true —
+	 * deciding when that is allowed belongs to whatever calls this method, not
+	 * to this object.
+	 *
+	 * @param input - Where to page from, how many subjects to a page, and
+	 * whether to carry each subject's own password hash.
+	 * @returns A page of export rows and the cursors around it, or that the
+	 * given cursor no longer matches this ordering.
+	 */
+	async exportSubjectPage(
+		input: ExportSubjectPageInput,
+	): Promise<WithCost<ExportSubjectPageResult>> {
+		await this.#migrated;
+		return this.#withCost(() => exportSubjectPage(this.#db, input));
 	}
 
 	/**
