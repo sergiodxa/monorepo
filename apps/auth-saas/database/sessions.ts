@@ -488,6 +488,8 @@ export interface RevokeSessionInput {
 	subjectId: string;
 	sessionId: string;
 	reason: string;
+	/** Who is ending this session; defaults to the subject itself when the caller acts on its own. */
+	actor?: AuditActor;
 }
 
 export type RevokeSessionResult = { ok: true } | { ok: false; reason: "not-found" };
@@ -503,7 +505,7 @@ let RevokeSessionSchema = s.object({
  * lives where the data does.
  *
  * @param db - The tenant's database.
- * @param input - The subject, the session to revoke, and why.
+ * @param input - The subject, the session to revoke, why, and who is ending it.
  * @returns Success, or that no such session exists for this subject.
  */
 export async function revokeSession(
@@ -525,7 +527,7 @@ export async function revokeSession(
 
 	await writeAuditEvent(db, {
 		action: "session.revoked",
-		actor: { type: "subject", id: parsed.subjectId },
+		actor: input.actor ?? { type: "subject", id: parsed.subjectId },
 		targetType: "session",
 		targetId: row.id,
 		outcome: "succeeded",

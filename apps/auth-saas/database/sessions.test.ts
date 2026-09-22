@@ -309,6 +309,41 @@ describe("revokeSession", () => {
 		expect(result).toEqual({ ok: true });
 		expect(await resolveSession(db, { token: opened.token })).toEqual({ status: "revoked" });
 	});
+
+	test("attributes the revocation to the subject itself when no actor is given", async () => {
+		let subjectId = await createTestSubject();
+		let opened = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		await revokeSession(db, { subjectId, sessionId: opened.sessionId, reason: "sign-out" });
+
+		let page = await readAuditPage(db, {
+			from: 0,
+			to: Date.now() + 60_000,
+			action: "session.revoked",
+		});
+		if (!page.ok) throw new Error("unreachable");
+		expect(page.events).toMatchObject([{ actorType: "subject", actorId: subjectId }]);
+	});
+
+	test("attributes the revocation to a given actor, for an admin ending someone else's session", async () => {
+		let subjectId = await createTestSubject();
+		let opened = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		await revokeSession(db, {
+			subjectId,
+			sessionId: opened.sessionId,
+			reason: "admin_revoked",
+			actor: { type: "client", id: "mgmt_client_1" },
+		});
+
+		let page = await readAuditPage(db, {
+			from: 0,
+			to: Date.now() + 60_000,
+			action: "session.revoked",
+		});
+		if (!page.ok) throw new Error("unreachable");
+		expect(page.events).toMatchObject([{ actorType: "client", actorId: "mgmt_client_1" }]);
+	});
 });
 
 describe("revokeSubjectSessions", () => {

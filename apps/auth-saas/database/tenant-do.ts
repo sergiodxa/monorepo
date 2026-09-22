@@ -138,6 +138,8 @@ import type {
 	BeginPasskeyRegistrationResult,
 	EnrolPasskeyInput,
 	EnrolPasskeyResult,
+	ListPasskeysInput,
+	ListPasskeysResult,
 	RenamePasskeyResult,
 	RevokePasskeyResult,
 	SignInWithPasskeyInput,
@@ -1253,6 +1255,17 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
+	 * Lists every passkey a subject holds, newest first.
+	 *
+	 * @param input - The subject whose credentials to list.
+	 * @returns Every credential the subject holds, summarized for a credential list.
+	 */
+	async listPasskeys(input: ListPasskeysInput): Promise<WithCost<ListPasskeysResult>> {
+		await this.#migrated;
+		return this.#withCost(() => Passkeys.listPasskeys(this.#db, input));
+	}
+
+	/**
 	 * Renames a passkey, scoped to the subject it belongs to.
 	 *
 	 * @param input - The subject, the credential to rename, and its new label.
@@ -1426,6 +1439,7 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		subjectId: string;
 		sessionId: string;
 		reason: string;
+		actor?: AuditActor;
 	}): Promise<WithCost<RevokeSessionResult>> {
 		await this.#migrated;
 		return this.#withCost(() => Sessions.revokeSession(this.#db, input));

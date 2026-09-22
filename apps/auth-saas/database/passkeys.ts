@@ -493,6 +493,51 @@ export async function signInWithPasskey(
 	};
 }
 
+export interface ListPasskeysInput {
+	subjectId: string;
+}
+
+/** One passkey as a subject's own credential list renders it, alongside its summary fields. */
+export interface PasskeyListItem extends PasskeySummary {
+	lastUsedAt: number | null;
+}
+
+export interface ListPasskeysResult {
+	passkeys: PasskeyListItem[];
+}
+
+/**
+ * Lists every passkey a subject holds, newest first — what an administrator
+ * removing a credential needs to see before naming one, and every field a
+ * credential list renders: never the public key or any other credential
+ * material.
+ *
+ * @param db - The tenant's database.
+ * @param input - The subject whose credentials to list.
+ * @returns Every credential the subject holds, summarized.
+ */
+export async function listPasskeys(
+	db: Database,
+	input: ListPasskeysInput,
+): Promise<ListPasskeysResult> {
+	let rows = await db.findMany(passkeys, {
+		where: { subject_id: input.subjectId },
+		orderBy: ["created_at", "desc"],
+	});
+
+	return {
+		passkeys: rows.map((row) => ({
+			credentialId: row.credential_id,
+			label: row.label,
+			transports: row.transports,
+			syncable: row.syncable,
+			backedUp: row.backed_up,
+			createdAt: row.created_at,
+			lastUsedAt: row.last_used_at,
+		})),
+	};
+}
+
 export type RenamePasskeyResult = { ok: true } | { ok: false; reason: "not-found" };
 
 /**

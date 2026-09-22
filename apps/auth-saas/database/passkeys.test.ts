@@ -29,7 +29,7 @@ import {
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { isFailure, unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import { readAuditPage } from "./audit-events";
 import { createDauCache } from "./metering";
@@ -43,6 +43,7 @@ import {
 	beginPasskeyAuthentication,
 	beginPasskeyRegistration,
 	enrolPasskey,
+	listPasskeys,
 	passkeyChallenges,
 	passkeys,
 	renamePasskey,
@@ -814,6 +815,52 @@ describe("signInWithPasskey: organization domain membership", () => {
 			subject_id: subjectId,
 		});
 		expect(membership).toBeNull();
+	});
+});
+
+describe("listPasskeys", () => {
+	test("lists a subject's own credentials, newest first, without credential material", async () => {
+		let subjectId = await createTestSubject();
+
+		vi.useFakeTimers();
+		vi.setSystemTime(1_700_000_000_000);
+		let first = await enrolTestPasskey(subjectId, await Authenticator.create());
+
+		vi.setSystemTime(1_700_000_000_000 + 1000);
+		let second = await enrolTestPasskey(subjectId, await Authenticator.create());
+		vi.useRealTimers();
+
+		let result = await listPasskeys(db, { subjectId });
+
+		expect(result.passkeys).toHaveLength(2);
+		expect(result.passkeys[0]).toMatchObject({ credentialId: second.credentialId });
+		expect(result.passkeys[1]).toMatchObject({ credentialId: first.credentialId });
+		expect(result.passkeys[0]).not.toHaveProperty("publicKey");
+		expect(result.passkeys[0]).toMatchObject({
+			label: second.label,
+			transports: second.transports,
+			syncable: second.syncable,
+			backedUp: second.backedUp,
+			lastUsedAt: null,
+		});
+	});
+
+	test("answers an empty list for a subject holding no passkey", async () => {
+		let subjectId = await createTestSubject();
+
+		let result = await listPasskeys(db, { subjectId });
+
+		expect(result.passkeys).toEqual([]);
+	});
+
+	test("never lists another subject's credentials", async () => {
+		let owner = await createTestSubject("owner@example.com");
+		let stranger = await createTestSubject("stranger@example.com");
+		await enrolTestPasskey(owner, await Authenticator.create());
+
+		let result = await listPasskeys(db, { subjectId: stranger });
+
+		expect(result.passkeys).toEqual([]);
 	});
 });
 

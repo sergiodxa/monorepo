@@ -1,9 +1,10 @@
 /**
  * The centralized, type-safe route table for the management API, served on
- * `api.{PLATFORM_DOMAIN}`. This pass adds the roles, permissions and consent
- * grants resource areas onto the subjects, clients, API keys and webhook
- * endpoints routes earlier passes already mapped; each later resource-area
- * pass extends this same table with its own routes.
+ * `api.{PLATFORM_DOMAIN}`. This pass adds the passkeys, password and
+ * second-factor administration and session routes onto the subjects,
+ * clients, API keys, webhook endpoints, roles and permissions routes
+ * earlier passes already mapped; each later resource-area pass extends this
+ * same table with its own routes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -77,4 +78,19 @@ export default route({
 
 	subjectGrantsList: get("/tenants/:tenantId/subjects/:subjectId/grants"),
 	subjectGrantsRevoke: post("/tenants/:tenantId/subjects/:subjectId/grants/:clientId/revoke"),
+
+	passkeysList: get("/tenants/:tenantId/subjects/:subjectId/passkeys"),
+	passkeysRename: patch("/tenants/:tenantId/subjects/:subjectId/passkeys/:credentialId"),
+	passkeysRevoke: del("/tenants/:tenantId/subjects/:subjectId/passkeys/:credentialId"),
+
+	passwordForceReset: post("/tenants/:tenantId/subjects/:subjectId/password/force-reset"),
+
+	secondFactorReset: post("/tenants/:tenantId/subjects/:subjectId/second-factor/reset"),
+	secondFactorTrustedDevicesRevoke: post(
+		"/tenants/:tenantId/subjects/:subjectId/second-factor/trusted-devices/:deviceId/revoke",
+	),
+
+	sessionsList: get("/tenants/:tenantId/subjects/:subjectId/sessions"),
+	sessionsRevoke: del("/tenants/:tenantId/subjects/:subjectId/sessions/:sessionId"),
+	sessionsRevokeAll: post("/tenants/:tenantId/subjects/:subjectId/sessions/revoke-all"),
 });

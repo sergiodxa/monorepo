@@ -3,10 +3,11 @@
  * served on `api.{PLATFORM_DOMAIN}`. This pass wires the shared plumbing, the
  * token endpoint, the subjects and identifiers resource area, the clients and
  * secrets resource area, the API keys and webhook endpoints and deliveries
- * resource areas, and the roles, permissions and consent grants resource
- * areas; every other resource route (audit events, import and export runs,
- * and the rest of the administrative surface) is a later pass's own addition
- * to `routes/management.ts`.
+ * resource areas, the roles, permissions and consent grants resource areas,
+ * and the passkeys, password, second-factor and session resource areas;
+ * every other resource route (audit events, import and export runs, and the
+ * rest of the administrative surface) is a later pass's own addition to
+ * `routes/management.ts`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,6 +36,21 @@ import { createClientsRegisterAction } from "~/app/http/controllers/management/c
 import { createClientsRevokeSecretAction } from "~/app/http/controllers/management/clients/revoke-secret";
 import { createClientsRotateSecretAction } from "~/app/http/controllers/management/clients/rotate-secret";
 import { createClientsUpdateAction } from "~/app/http/controllers/management/clients/update";
+import {
+	createPasskeysListAction,
+	createPasskeysRenameAction,
+	createPasskeysRevokeAction,
+} from "~/app/http/controllers/management/credentials/passkeys";
+import { createPasswordForceResetAction } from "~/app/http/controllers/management/credentials/passwords";
+import {
+	createSecondFactorResetAction,
+	createSecondFactorTrustedDevicesRevokeAction,
+} from "~/app/http/controllers/management/credentials/second-factor";
+import {
+	createSessionsListAction,
+	createSessionsRevokeAction,
+	createSessionsRevokeAllAction,
+} from "~/app/http/controllers/management/credentials/sessions";
 import { createSubjectAccessReadAction } from "~/app/http/controllers/management/roles/access";
 import { createSubjectRolesAssignAction } from "~/app/http/controllers/management/roles/assign";
 import { createRolesDefineAction } from "~/app/http/controllers/management/roles/define";
@@ -239,5 +255,21 @@ managementRouter.map(
 	routes.subjectGrantsRevoke,
 	createSubjectGrantsRevokeAction(controllerOptions),
 );
+
+managementRouter.map(routes.passkeysList, createPasskeysListAction(controllerOptions));
+managementRouter.map(routes.passkeysRename, createPasskeysRenameAction(controllerOptions));
+managementRouter.map(routes.passkeysRevoke, createPasskeysRevokeAction(controllerOptions));
+
+managementRouter.map(routes.passwordForceReset, createPasswordForceResetAction(controllerOptions));
+
+managementRouter.map(routes.secondFactorReset, createSecondFactorResetAction(controllerOptions));
+managementRouter.map(
+	routes.secondFactorTrustedDevicesRevoke,
+	createSecondFactorTrustedDevicesRevokeAction(controllerOptions),
+);
+
+managementRouter.map(routes.sessionsList, createSessionsListAction(controllerOptions));
+managementRouter.map(routes.sessionsRevoke, createSessionsRevokeAction(controllerOptions));
+managementRouter.map(routes.sessionsRevokeAll, createSessionsRevokeAllAction(controllerOptions));
 
 export { resolveDashboardSubjectId };
