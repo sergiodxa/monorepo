@@ -35,6 +35,7 @@ export * from "./long-press.js";
 export * from "./menu-keys.js";
 export * from "./menubar-keys.js";
 export * from "./message-follow.js";
+export * from "./mirror-selected-option.js";
 export * from "./otp-slots.js";
 export * from "./persist.js";
 export * from "./press-toggle.js";

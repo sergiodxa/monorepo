@@ -34,6 +34,8 @@ import { data, hover, when } from "@sdxc/u/state";
 import { text, textAlign, truncate } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
+import { mirrorSelectedOption } from "../mixins/mirror-selected-option.js";
+
 /**
  * The `<selectedcontent>` element mirrors the currently selected
  * `<option>`'s rendered content inside a customized `<select>`'s trigger
@@ -78,7 +80,13 @@ export namespace Select {
 	 * `multiple` and a `size` greater than `1` remain functional but switch
 	 * rendering back to the plain list-box; `role` is already implicit.
 	 */
-	export interface Props extends Omit<TagProps<"select">, "role"> {
+	/**
+	 * `value` and `defaultValue` are left out on purpose. A `<select>` takes its selection
+	 * from the option carrying `selected` and nothing else reads either attribute, so a
+	 * value passed here goes unread and the field quietly shows its first option. Mark the
+	 * option instead: `<Select.Option value="eu" selected>`.
+	 */
+	export interface Props extends Omit<TagProps<"select">, "role" | "defaultValue" | "value"> {
 		/** Semantic color role for the focus-visible ring. Defaults to {@link DEFAULT_COLOR}. */
 		color?: Color;
 	}
@@ -147,35 +155,30 @@ export function Select(handle: Handle<Select.Props>) {
 			justify("between"),
 			cursor("default"),
 			text("sm"),
-			when("&:focus", outline("none")),
+			/*
+			 * Focus is drawn as a ring standing off the field, the same way every button in
+			 * this library draws it, rather than by darkening the border: a border promoted
+			 * to its strong weight and a ring sat flush against it read as one thick slab,
+			 * which says the field changed shape rather than that it took focus. The border
+			 * only steps to its hover weight, so nothing jumps.
+			 *
+			 * Pointer focus drops the platform outline and keyboard focus keeps the ring. The
+			 * two selectors exclude each other because `outline: none` is a shorthand, and a
+			 * shorthand reaching this element from a later cascade layer resets the ring's
+			 * color, width and style all at once.
+			 */
+			when("&:focus:not(:focus-visible)", outline("none")),
 			when("&:focus-visible", [
-				border("neutral.strong"),
-				outline({ color: "neutral.ring", offset: 0 }),
-				data("color", "brand", [
-					border("brand.strong"),
-					outline({ color: "brand.ring", offset: 0 }),
-				]),
-				data("color", "neutral", [
-					border("neutral.strong"),
-					outline({ color: "neutral.ring", offset: 0 }),
-				]),
-				data("color", "success", [
-					border("success.strong"),
-					outline({ color: "success.ring", offset: 0 }),
-				]),
-				data("color", "warning", [
-					border("warning.strong"),
-					outline({ color: "warning.ring", offset: 0 }),
-				]),
-				data("color", "danger", [
-					border("danger.strong"),
-					outline({ color: "danger.ring", offset: 0 }),
-				]),
+				border("neutral.border-hover"),
+				outline({ color: "brand.ring", offset: 2 }),
+				data("color", "success", outline("success.ring")),
+				data("color", "warning", outline("warning.ring")),
+				data("color", "danger", outline("danger.ring")),
 			]),
 			when('&[aria-invalid="true"], &:user-invalid', [
 				outlineWidth("2px"),
 				outlineStyle("solid"),
-				raw({ outlineOffset: "0px" }),
+				raw({ outlineOffset: "2px" }),
 			]),
 			when("&:disabled", [cursor("not-allowed"), opacity(50)]),
 
@@ -229,11 +232,11 @@ export function Select(handle: Handle<Select.Props>) {
 			transition(
 				"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
 			),
-			hover(border("neutral.strong")),
-			when("&:focus", border("neutral.strong")),
+			hover(border("neutral.border-hover")),
+			when("&:focus", border("neutral.border-hover")),
 			when('&[aria-invalid="true"], &:user-invalid', [
-				border("danger.strong"),
-				outline({ color: "danger.ring", offset: 0 }),
+				border("danger"),
+				outline({ color: "danger.ring", offset: 2 }),
 			]),
 			when("&:disabled", bg("neutral.bg-tint-hover")),
 			raw({
@@ -340,7 +343,15 @@ Select.Value = function SelectValue(handle: Handle<Select.ValueProps>) {
 		return (
 			<selectedcontent
 				{...rest}
-				mix={[grow(), shrink(1), basis("0%"), truncate(), textAlign("start"), mix]}
+				mix={[
+					mirrorSelectedOption(),
+					grow(),
+					shrink(1),
+					basis("0%"),
+					truncate(),
+					textAlign("start"),
+					mix,
+				]}
 			/>
 		);
 	};
