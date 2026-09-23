@@ -102,13 +102,13 @@ Webhook URLs and secrets stay out of `config`, so a webhook or Discord alert rep
 
 ### Possible Errors
 
-| Status | Code           | Description                              |
-| ------ | -------------- | ---------------------------------------- |
-| 400    | BAD_REQUEST    | Invalid or malformed cursor              |
-| 401    | UNAUTHORIZED   | Missing or invalid API key               |
-| 403    | FORBIDDEN      | API key doesn't have `alerts:read` scope |
-| 429    | RATE_LIMITED   | Too many requests                        |
-| 500    | INTERNAL_ERROR | Server error                             |
+| Status | Type             | Description                              |
+| ------ | ---------------- | ---------------------------------------- |
+| 400    | `bad-request`    | Invalid or malformed cursor              |
+| 401    | `unauthorized`   | Missing or invalid API key               |
+| 403    | `forbidden`      | API key doesn't have `alerts:read` scope |
+| 429    | `rate-limited`   | Too many requests                        |
+| 500    | `internal-error` | Server error                             |
 
 ### Response Schema
 
@@ -358,14 +358,14 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
 
 ### Possible Errors
 
-| Status | Code             | Description                                     |
-| ------ | ---------------- | ----------------------------------------------- |
-| 400    | VALIDATION_ERROR | Invalid request body or missing required fields |
-| 401    | UNAUTHORIZED     | Missing or invalid API key                      |
-| 403    | FORBIDDEN        | API key doesn't have `alerts:write` scope       |
-| 400    | LIMIT_EXCEEDED   | Team already has 10 alerts                      |
-| 429    | RATE_LIMITED     | Too many requests                               |
-| 500    | INTERNAL_ERROR   | Server error                                    |
+| Status | Type               | Description                                     |
+| ------ | ------------------ | ----------------------------------------------- |
+| 400    | `validation-error` | Invalid request body or missing required fields |
+| 401    | `unauthorized`     | Missing or invalid API key                      |
+| 403    | `forbidden`        | API key doesn't have `alerts:write` scope       |
+| 400    | `limit-exceeded`   | Team already has 10 alerts                      |
+| 429    | `rate-limited`     | Too many requests                               |
+| 500    | `internal-error`   | Server error                                    |
 
 ### Request Body Schema (Email)
 
@@ -638,13 +638,13 @@ curl https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123 \
 
 ### Possible Errors
 
-| Status | Code           | Description                              |
-| ------ | -------------- | ---------------------------------------- |
-| 401    | UNAUTHORIZED   | Missing or invalid API key               |
-| 403    | FORBIDDEN      | API key doesn't have `alerts:read` scope |
-| 404    | NOT_FOUND      | Alert not found                          |
-| 429    | RATE_LIMITED   | Too many requests                        |
-| 500    | INTERNAL_ERROR | Server error                             |
+| Status | Type             | Description                              |
+| ------ | ---------------- | ---------------------------------------- |
+| 401    | `unauthorized`   | Missing or invalid API key               |
+| 403    | `forbidden`      | API key doesn't have `alerts:read` scope |
+| 404    | `not-found`      | Alert not found                          |
+| 429    | `rate-limited`   | Too many requests                        |
+| 500    | `internal-error` | Server error                             |
 
 ### Response Schema
 
@@ -723,7 +723,7 @@ Include only the fields you want to update. The `strategy` field cannot be chang
 - `{"monitorId": null}` — back to team-wide
 - `{"monitorId": "..."}` — that one HTTP monitor
 
-A `monitorId` that does not belong to the team, or that belongs to a different kind of monitor than `monitorType` names, answers `404 NOT_FOUND`.
+A `monitorId` that does not belong to the team, or that belongs to a different kind of monitor than `monitorType` names, answers a `404` `not-found` problem.
 
 ### Example Request
 
@@ -758,14 +758,14 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123 \
 
 ### Possible Errors
 
-| Status | Code             | Description                                          |
-| ------ | ---------------- | ---------------------------------------------------- |
-| 400    | VALIDATION_ERROR | Invalid request body or attempted to change strategy |
-| 401    | UNAUTHORIZED     | Missing or invalid API key                           |
-| 403    | FORBIDDEN        | API key doesn't have `alerts:write` scope            |
-| 404    | NOT_FOUND        | Alert not found                                      |
-| 429    | RATE_LIMITED     | Too many requests                                    |
-| 500    | INTERNAL_ERROR   | Server error                                         |
+| Status | Type               | Description                                          |
+| ------ | ------------------ | ---------------------------------------------------- |
+| 400    | `validation-error` | Invalid request body or attempted to change strategy |
+| 401    | `unauthorized`     | Missing or invalid API key                           |
+| 403    | `forbidden`        | API key doesn't have `alerts:write` scope            |
+| 404    | `not-found`        | Alert not found                                      |
+| 429    | `rate-limited`     | Too many requests                                    |
+| 500    | `internal-error`   | Server error                                         |
 
 ### Request Body Schema
 
@@ -902,13 +902,13 @@ Returns `204 No Content` on success.
 
 ### Possible Errors
 
-| Status | Code           | Description                               |
-| ------ | -------------- | ----------------------------------------- |
-| 401    | UNAUTHORIZED   | Missing or invalid API key                |
-| 403    | FORBIDDEN      | API key doesn't have `alerts:write` scope |
-| 404    | NOT_FOUND      | Alert not found                           |
-| 429    | RATE_LIMITED   | Too many requests                         |
-| 500    | INTERNAL_ERROR | Server error                              |
+| Status | Type             | Description                               |
+| ------ | ---------------- | ----------------------------------------- |
+| 401    | `unauthorized`   | Missing or invalid API key                |
+| 403    | `forbidden`      | API key doesn't have `alerts:write` scope |
+| 404    | `not-found`      | Alert not found                           |
+| 429    | `rate-limited`   | Too many requests                         |
+| 500    | `internal-error` | Server error                              |
 
 ### Response Schema
 
@@ -993,14 +993,14 @@ curl "https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123/events?perPage=10" \
 
 ### Possible Errors
 
-| Status | Code           | Description                              |
-| ------ | -------------- | ---------------------------------------- |
-| 400    | BAD_REQUEST    | Invalid or malformed cursor              |
-| 401    | UNAUTHORIZED   | Missing or invalid API key               |
-| 403    | FORBIDDEN      | API key doesn't have `alerts:read` scope |
-| 404    | NOT_FOUND      | Alert not found                          |
-| 429    | RATE_LIMITED   | Too many requests                        |
-| 500    | INTERNAL_ERROR | Server error                             |
+| Status | Type             | Description                              |
+| ------ | ---------------- | ---------------------------------------- |
+| 400    | `bad-request`    | Invalid or malformed cursor              |
+| 401    | `unauthorized`   | Missing or invalid API key               |
+| 403    | `forbidden`      | API key doesn't have `alerts:read` scope |
+| 404    | `not-found`      | Alert not found                          |
+| 429    | `rate-limited`   | Too many requests                        |
+| 500    | `internal-error` | Server error                             |
 
 ### Response Schema
 

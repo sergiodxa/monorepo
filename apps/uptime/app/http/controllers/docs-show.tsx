@@ -8,6 +8,7 @@
  */
 
 import { highlight } from "@sdxc/highlight/markdown";
+import { redirect } from "@sdxc/http/response";
 import { Markdown } from "@sdxc/markdown";
 import { toRemix } from "@sdxc/markdown/remix";
 import { isFailure } from "@sdxc/result";
@@ -20,10 +21,19 @@ import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import { SEO } from "~/app/lib/seo";
+import { apiProblems } from "~/app/services/api-problems";
 import { getDocLoader, listDocs, MARKDOWN_OPTIONS } from "~/app/services/docs";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
+
+/**
+ * Whether `slug` is the path of an API problem `type`, which the API sends as an absolute
+ * URL under `/docs/api/errors/`, so a developer following one lands on the error reference.
+ */
+function isProblemType(slug: string): boolean {
+	return apiProblems.entries().some((entry) => new URL(entry.type).pathname === `/docs/${slug}`);
+}
 
 /**
  * GET /docs/*slug — an individual documentation page. Falls back to the
@@ -92,6 +102,8 @@ export default createAction(routes.docs.show, async (ctx) => {
 			{ status: 404 },
 		);
 	};
+
+	if (isProblemType(slug)) return redirect(routes.docs.show.href({ slug: "api/errors" }));
 
 	let docLoader = getDocLoader(slug);
 	if (!docLoader) return renderNotFound();

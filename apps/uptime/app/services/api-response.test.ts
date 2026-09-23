@@ -1,16 +1,15 @@
 /**
- * Unit tests for the API v1 JSON envelope helpers. The exact envelope shapes matter
- * because existing API integrations parse `data`/`meta` and `error.code`/`error.message`
- * directly.
+ * Unit tests for the API v1 success envelope. The exact envelope shape matters
+ * because existing API integrations parse `data` and `meta` directly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Forbidden, Ok, Unauthorized } from "@sdxc/http/status-code";
+import { Forbidden, Ok } from "@sdxc/http/status-code";
 import { describe, expect, test } from "vitest";
 
-import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiSuccess } from "~/app/services/api-response";
 
 describe("apiSuccess", () => {
 	test("wraps the payload in a data/meta envelope with a 200 default", async () => {
@@ -53,15 +52,5 @@ describe("apiSuccess", () => {
 
 		let body = (await response.json()) as { meta: Record<string, unknown> };
 		expect(body.meta).not.toHaveProperty("pagination");
-	});
-});
-
-describe("apiError", () => {
-	test("wraps a code and message in an error envelope with the given status", async () => {
-		let response = apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
-		expect(response.status).toBe(Unauthorized.status);
-
-		let body = (await response.json()) as { error: { code: string; message: string } };
-		expect(body.error).toEqual({ code: "UNAUTHORIZED", message: "Invalid or missing API key" });
 	});
 });

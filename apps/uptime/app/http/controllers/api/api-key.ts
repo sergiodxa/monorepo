@@ -6,14 +6,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { NotFound } from "@sdxc/http/status-code";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import ApiKey from "~/app/data/api-key";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiProblems, problemInstance } from "~/app/services/api-problems";
+import { apiSuccess } from "~/app/services/api-response";
 import { typedId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
@@ -25,7 +25,8 @@ export const apiKeyDestroy = createAction(routes.api.v1.apiKeys.destroy, {
 	handler: async (ctx) => {
 		let { apiKeyId } = s.parse(ApiKeyIdParams, ctx.params);
 		let existing = await ApiKey.findByIdForTeam(ctx.db, ctx.apiTeam.id, apiKeyId);
-		if (!existing) return apiError("NOT_FOUND", "API key not found", NotFound);
+		if (!existing)
+			return apiProblems.notFound({ detail: "API key not found", instance: problemInstance() });
 
 		await ApiKey.deleteById(ctx.db, apiKeyId);
 		return apiSuccess({ deleted: true });

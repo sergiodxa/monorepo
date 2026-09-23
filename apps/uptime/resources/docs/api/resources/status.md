@@ -99,12 +99,12 @@ The overall `status` field is calculated based on monitor states:
 
 ### Possible Errors
 
-| Status | Code           | Description                                |
-| ------ | -------------- | ------------------------------------------ |
-| 401    | UNAUTHORIZED   | Missing or invalid API key                 |
-| 403    | FORBIDDEN      | API key doesn't have `monitors:read` scope |
-| 429    | RATE_LIMITED   | Too many requests                          |
-| 500    | INTERNAL_ERROR | Server error                               |
+| Status | Type             | Description                                |
+| ------ | ---------------- | ------------------------------------------ |
+| 401    | `unauthorized`   | Missing or invalid API key                 |
+| 403    | `forbidden`      | API key doesn't have `monitors:read` scope |
+| 429    | `rate-limited`   | Too many requests                          |
+| 500    | `internal-error` | Server error                               |
 
 ### Response Schema
 

@@ -98,13 +98,13 @@ curl -i "https://uptime.sergiodxa.com/api/v1/api-keys?perPage=100" \
 
 ### Possible Errors
 
-| Status | Code           | Description                                |
-| ------ | -------------- | ------------------------------------------ |
-| 400    | BAD_REQUEST    | Invalid or malformed cursor                |
-| 401    | UNAUTHORIZED   | Missing or invalid API key                 |
-| 403    | FORBIDDEN      | API key doesn't have `api-keys:read` scope |
-| 429    | RATE_LIMITED   | Too many requests                          |
-| 500    | INTERNAL_ERROR | Server error                               |
+| Status | Type             | Description                                |
+| ------ | ---------------- | ------------------------------------------ |
+| 400    | `bad-request`    | Invalid or malformed cursor                |
+| 401    | `unauthorized`   | Missing or invalid API key                 |
+| 403    | `forbidden`      | API key doesn't have `api-keys:read` scope |
+| 429    | `rate-limited`   | Too many requests                          |
+| 500    | `internal-error` | Server error                               |
 
 ### Response Schema
 
@@ -292,14 +292,14 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/api-keys \
 
 ### Possible Errors
 
-| Status | Code             | Description                                               |
-| ------ | ---------------- | --------------------------------------------------------- |
-| 400    | VALIDATION_ERROR | Invalid request body (missing name, invalid scopes, etc.) |
-| 401    | UNAUTHORIZED     | Missing or invalid API key                                |
-| 403    | FORBIDDEN        | API key doesn't have `api-keys:write` scope               |
-| 400    | LIMIT_EXCEEDED   | Team already has 10 API keys (maximum limit reached)      |
-| 429    | RATE_LIMITED     | Too many requests                                         |
-| 500    | INTERNAL_ERROR   | Server error                                              |
+| Status | Type               | Description                                               |
+| ------ | ------------------ | --------------------------------------------------------- |
+| 400    | `validation-error` | Invalid request body (missing name, invalid scopes, etc.) |
+| 401    | `unauthorized`     | Missing or invalid API key                                |
+| 403    | `forbidden`        | API key doesn't have `api-keys:write` scope               |
+| 400    | `limit-exceeded`   | Team already has 10 API keys (maximum limit reached)      |
+| 429    | `rate-limited`     | Too many requests                                         |
+| 500    | `internal-error`   | Server error                                              |
 
 ### Request Body Schema
 
@@ -465,13 +465,13 @@ curl -X DELETE https://uptime.sergiodxa.com/api/v1/api-keys/key_abc123 \
 
 ### Possible Errors
 
-| Status | Code           | Description                                  |
-| ------ | -------------- | -------------------------------------------- |
-| 401    | UNAUTHORIZED   | Missing or invalid API key                   |
-| 403    | FORBIDDEN      | API key doesn't have `api-keys:write` scope  |
-| 404    | NOT_FOUND      | API key with the specified ID does not exist |
-| 429    | RATE_LIMITED   | Too many requests                            |
-| 500    | INTERNAL_ERROR | Server error                                 |
+| Status | Type             | Description                                  |
+| ------ | ---------------- | -------------------------------------------- |
+| 401    | `unauthorized`   | Missing or invalid API key                   |
+| 403    | `forbidden`      | API key doesn't have `api-keys:write` scope  |
+| 404    | `not-found`      | API key with the specified ID does not exist |
+| 429    | `rate-limited`   | Too many requests                            |
+| 500    | `internal-error` | Server error                                 |
 
 ### Response Schema
 

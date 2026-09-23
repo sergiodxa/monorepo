@@ -20,6 +20,7 @@ import DnsMonitor from "~/app/data/dns-monitor";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { parseLink } from "~/app/lib/test/paging";
+import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { teams } from "~/database/schema";
 import { dnsMonitorRoutes } from "~/routes/api-groups";
@@ -202,8 +203,7 @@ describe("PUT /api/v1/dns-monitors/:dnsMonitorId", () => {
 		);
 
 		expect(response.status).toBe(400);
-		let body = (await response.json()) as { error: { code: string } };
-		expect(body.error.code).toBe("VALIDATION_ERROR");
+		await expectProblem(response, "validationError");
 
 		let unchanged = await DnsMonitor.findByIdForTeam(db, team.id, monitor.id);
 		expect(unchanged?.interval_seconds).toBe(3600);
@@ -404,8 +404,7 @@ describe("GET /api/v1/dns-monitors/:dnsMonitorId/results", () => {
 		);
 
 		expect(response.status).toBe(400);
-		let body = (await response.json()) as { error: { code: string } };
-		expect(body.error.code).toBe("BAD_REQUEST");
+		await expectProblem(response, "badRequest");
 	});
 
 	test("returns 401 when the Authorization header is missing", async () => {

@@ -19,6 +19,7 @@ import ApiKey from "~/app/data/api-key";
 import CronJobMonitor from "~/app/data/cron-job";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { expectProblem, problemMessages } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { teams } from "~/database/schema";
 import { cronJobRoutes } from "~/routes/api-groups";
@@ -223,8 +224,7 @@ describe("PUT /api/v1/cron-jobs/:cronJobId", () => {
 		);
 
 		expect(response.status).toBe(400);
-		let body = (await response.json()) as { error: { code: string } };
-		expect(body.error.code).toBe("VALIDATION_ERROR");
+		await expectProblem(response, "validationError");
 
 		let unchanged = await CronJobMonitor.findByIdForTeam(db, team.id, cronJob.id);
 		expect(unchanged?.cron_expression).toBe("0 2 * * *");
@@ -260,9 +260,8 @@ describe("PUT /api/v1/cron-jobs/:cronJobId", () => {
 		);
 
 		expect(response.status).toBe(400);
-		let body = (await response.json()) as { error: { code: string; message: string } };
-		expect(body.error.code).toBe("VALIDATION_ERROR");
-		expect(body.error.message).toContain("Expected a valid IANA time zone");
+		let body = await expectProblem(response, "validationError");
+		expect(problemMessages(body)).toContain("Expected a valid IANA time zone");
 	});
 
 	test("keeps accepting UTC, so re-saving an existing job never fails on its own value", async () => {

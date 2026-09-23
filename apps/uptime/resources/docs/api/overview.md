@@ -24,13 +24,13 @@ All API requests require authentication via an API key passed in the `Authorizat
 
 ## Response Format
 
-All responses are returned as JSON. Successful responses include a `data` field, while error responses include an `error` field with details about what went wrong. See [Errors](/docs/api/errors) for the complete error format and status codes.
+All responses are returned as JSON. Successful responses include a `data` field, while a failure is an RFC 9457 problem details document served as `application/problem+json`. See [Errors](/docs/api/errors) for the format and every problem type.
 
 ## Identifiers
 
 Every resource is identified by a prefixed string such as `mon_01h455vb4pex5vsknk084sn02q`. The prefix names the kind of resource the id points at — `mon_` for an HTTP monitor, `alt_` for an alert, `sp_` for a status page — and each resource page lists the prefix it uses.
 
-Send these ids back exactly as you received them, in both path segments and request bodies. An id whose prefix names another resource is refused rather than resolved, so a monitor id can never be mistaken for an alert id. Endpoints answer `400 VALIDATION_ERROR` for an id they cannot read, except where a resource page documents otherwise.
+Send these ids back exactly as you received them, in both path segments and request bodies. An id whose prefix names another resource is refused rather than resolved, so a monitor id can never be mistaken for an alert id. Endpoints answer a `400` `validation-error` problem for an id they cannot read, except where a resource page documents otherwise.
 
 ## Available Resources
 

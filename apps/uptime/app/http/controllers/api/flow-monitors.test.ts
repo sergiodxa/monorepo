@@ -23,6 +23,7 @@ import FlowMonitor from "~/app/data/flow-monitor";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { parseLink } from "~/app/lib/test/paging";
+import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { flowMonitorResults, flowMonitors, teamDomains, teams } from "~/database/schema";
 import { flowMonitorsRoutes } from "~/routes/api-groups";
@@ -199,8 +200,7 @@ describe("GET /api/v1/flow-monitors", () => {
 		let response = await dispatch(db, { method: "GET", path: `${path}?cursor=not-a-cursor`, key });
 
 		expect(response.status).toBe(400);
-		let body = (await response.json()) as { error: { code: string } };
-		expect(body.error.code).toBe("BAD_REQUEST");
+		await expectProblem(response, "badRequest");
 	});
 
 	test("omits the spec source, which carries the flow's credentials", async () => {
@@ -332,9 +332,14 @@ describe("POST /api/v1/flow-monitors", () => {
 		});
 
 		expect(response.status).toBe(400);
-		let body = (await response.json()) as { error: { code: string; message: string } };
-		expect(body.error.code).toBe("VALIDATION_ERROR");
-		expect(body.error.message).toBe("Expected one of: 900, 1800, 3600, 10800, 21600, 43200, 86400");
+		let body = await expectProblem(response, "validationError");
+		expect(body.extensions.errors).toEqual([
+			{
+				pointer: "/intervalSeconds",
+				code: "invalid",
+				message: "Expected one of: 900, 1800, 3600, 10800, 21600, 43200, 86400",
+			},
+		]);
 		expect(await db.findOne(flowMonitors, { where: { team_id: team.id } })).toBeNull();
 	});
 
@@ -371,9 +376,9 @@ describe("POST /api/v1/flow-monitors", () => {
 		});
 
 		expect(response.status).toBe(400);
-		let body = (await response.json()) as { error: { code: string; message: string } };
-		expect(body.error.code).toBe("VALIDATION_ERROR");
-		expect(body.error.message).toBe(
+		let body = await expectProblem(response, "validationError");
+		expect(body.extensions.errors.map((issue) => issue.pointer)).toEqual(["/source"]);
+		expect(body.detail).toBe(
 			"This flow reaches victim.invalid.test, which no verified domain on this team covers. A flow monitor can only drive a domain the team has verified.",
 		);
 		expect(await db.findOne(flowMonitors, { where: { team_id: team.id } })).toBeNull();
@@ -527,8 +532,7 @@ describe("GET /api/v1/flow-monitors/:flowMonitorId", () => {
 		});
 
 		expect(response.status).toBe(404);
-		let body = (await response.json()) as { error: { code: string } };
-		expect(body.error.code).toBe("NOT_FOUND");
+		await expectProblem(response, "notFound");
 	});
 });
 
@@ -783,8 +787,7 @@ describe("GET /api/v1/flow-monitors/:flowMonitorId/results", () => {
 		let response = await dispatch(db, { method: "GET", path: `${path}?cursor=not-a-cursor`, key });
 
 		expect(response.status).toBe(400);
-		let body = (await response.json()) as { error: { code: string } };
-		expect(body.error.code).toBe("BAD_REQUEST");
+		await expectProblem(response, "badRequest");
 	});
 
 	test("returns 404 for a monitor belonging to another team", async () => {

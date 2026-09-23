@@ -6,8 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BadRequest, Created, InternalServerError, NotFound } from "@sdxc/http/status-code";
+import { Created } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
+import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
@@ -19,7 +20,8 @@ import type { SelectTeamDomain } from "~/database/schema";
 import TeamDomain from "~/app/data/team-domain";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiProblems, problemInstance } from "~/app/services/api-problems";
+import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId, typedId } from "~/app/services/typed-id";
 import { teamDomainsRoutes } from "~/routes/api-groups";
@@ -50,7 +52,11 @@ export default createController(teamDomainsRoutes, {
 			middleware: [requireApiKey("team-domains:read")],
 			handler: async (ctx) => {
 				let params = PAGING.parse(ctx.url.searchParams);
-				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
+				if (isFailure(params))
+					return apiProblems.badRequest({
+						detail: params.error.message,
+						instance: problemInstance(),
+					});
 
 				// Chaining returns new queries, so the same one both counts and pages.
 				let query = TeamDomain.listByTeamQuery(ctx.db, ctx.apiTeam.id);
@@ -63,9 +69,12 @@ export default createController(teamDomainsRoutes, {
 
 				if (isFailure(page)) {
 					if (page.error instanceof InvalidCursorError) {
-						return apiError("BAD_REQUEST", page.error.message, BadRequest);
+						return apiProblems.badRequest({
+							detail: page.error.message,
+							instance: problemInstance(),
+						});
 					}
-					return apiError("INTERNAL", page.error.message, InternalServerError);
+					return apiProblems.internal({ detail: page.error.message, instance: problemInstance() });
 				}
 
 				return apiPage({ teamDomains: page.data.items.map(serializeTeamDomain) }, page.data, {
@@ -82,11 +91,10 @@ export default createController(teamDomainsRoutes, {
 			handler: async (ctx) => {
 				let result = await validate(ctx.request, CreateTeamDomainSchema);
 				if (isFailure(result)) {
-					return apiError(
-						"VALIDATION_ERROR",
-						result.error.issues.map((issue) => issue.message).join(", "),
-						BadRequest,
-					);
+					return apiProblems.validationError({
+						instance: problemInstance(),
+						extensions: { errors: issuesFrom(result.error) },
+					});
 				}
 
 				let teamDomain = await TeamDomain.create(ctx.db, ctx.apiTeam.id, result.data.hostname);
@@ -100,15 +108,18 @@ export default createController(teamDomainsRoutes, {
 			handler: async (ctx) => {
 				let result = await validate(ctx.request, DeleteTeamDomainSchema);
 				if (isFailure(result)) {
-					return apiError(
-						"VALIDATION_ERROR",
-						result.error.issues.map((issue) => issue.message).join(", "),
-						BadRequest,
-					);
+					return apiProblems.validationError({
+						instance: problemInstance(),
+						extensions: { errors: issuesFrom(result.error) },
+					});
 				}
 
 				let teamDomain = await TeamDomain.findByIdForTeam(ctx.db, ctx.apiTeam.id, result.data.id);
-				if (!teamDomain) return apiError("NOT_FOUND", "Team domain not found", NotFound);
+				if (!teamDomain)
+					return apiProblems.notFound({
+						detail: "Team domain not found",
+						instance: problemInstance(),
+					});
 
 				await TeamDomain.deleteById(ctx.db, result.data.id);
 				return apiSuccess({ deleted: true });

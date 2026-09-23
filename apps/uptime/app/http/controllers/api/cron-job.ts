@@ -9,7 +9,7 @@
  */
 
 import { Schedule } from "@sdxc/cron";
-import { BadRequest, NotFound } from "@sdxc/http/status-code";
+import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
@@ -22,7 +22,8 @@ import CronJobMonitor from "~/app/data/cron-job";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { isSupportedTimezone, UNKNOWN_TIMEZONE_MESSAGE } from "~/app/lib/timezones";
-import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiProblems, invalidField, problemInstance } from "~/app/services/api-problems";
+import { apiSuccess } from "~/app/services/api-response";
 import { encodeId, typedId } from "~/app/services/typed-id";
 import { cronJobRoutes } from "~/routes/api-groups";
 
@@ -66,7 +67,11 @@ export default createController(cronJobRoutes, {
 			handler: async (ctx) => {
 				let { cronJobId } = s.parse(CronJobIdParams, ctx.params);
 				let cronJob = await CronJobMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, cronJobId);
-				if (!cronJob) return apiError("NOT_FOUND", "Cron job not found", NotFound);
+				if (!cronJob)
+					return apiProblems.notFound({
+						detail: "Cron job not found",
+						instance: problemInstance(),
+					});
 				return apiSuccess({ cronJob: serializeCronJob(cronJob) });
 			},
 		},
@@ -81,15 +86,18 @@ export default createController(cronJobRoutes, {
 			handler: async (ctx) => {
 				let { cronJobId } = s.parse(CronJobIdParams, ctx.params);
 				let existing = await CronJobMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, cronJobId);
-				if (!existing) return apiError("NOT_FOUND", "Cron job not found", NotFound);
+				if (!existing)
+					return apiProblems.notFound({
+						detail: "Cron job not found",
+						instance: problemInstance(),
+					});
 
 				let result = await validate(ctx.request, UpdateCronJobSchema);
 				if (isFailure(result)) {
-					return apiError(
-						"VALIDATION_ERROR",
-						result.error.issues.map((issue) => issue.message).join(", "),
-						BadRequest,
-					);
+					return apiProblems.validationError({
+						instance: problemInstance(),
+						extensions: { errors: issuesFrom(result.error) },
+					});
 				}
 
 				let changes: Partial<InsertCronJobMonitor> = {};
@@ -106,7 +114,7 @@ export default createController(cronJobRoutes, {
 					let timezone = result.data.timezone ?? existing.timezone;
 					let schedule = Schedule.parse(result.data.cronExpression);
 					if (isFailure(schedule)) {
-						return apiError("VALIDATION_ERROR", schedule.error.message, BadRequest);
+						return invalidField(schedule.error.message, "/cronExpression");
 					}
 					changes.cron_expression = schedule.data.toString();
 					changes.next_expected_at = CronJobMonitor.calculateNextExpected(
@@ -134,7 +142,11 @@ export default createController(cronJobRoutes, {
 			handler: async (ctx) => {
 				let { cronJobId } = s.parse(CronJobIdParams, ctx.params);
 				let existing = await CronJobMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, cronJobId);
-				if (!existing) return apiError("NOT_FOUND", "Cron job not found", NotFound);
+				if (!existing)
+					return apiProblems.notFound({
+						detail: "Cron job not found",
+						instance: problemInstance(),
+					});
 
 				await CronJobMonitor.deleteById(ctx.db, cronJobId);
 				return apiSuccess({ deleted: true });

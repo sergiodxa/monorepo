@@ -21,6 +21,7 @@ import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { parseLink } from "~/app/lib/test/paging";
+import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { maintenanceWindows, monitors, teams } from "~/database/schema";
 import { maintenanceRoutes } from "~/routes/api-groups";
@@ -219,8 +220,7 @@ describe("GET /api/v1/maintenance", () => {
 		let response = await dispatch(db, request("GET", `${path}?cursor=not-a-cursor`, { key }));
 
 		expect(response.status).toBe(400);
-		let body = (await response.json()) as { error: { code: string } };
-		expect(body.error.code).toBe("BAD_REQUEST");
+		await expectProblem(response, "badRequest");
 	});
 
 	test("returns 401 with a missing Authorization header", async () => {

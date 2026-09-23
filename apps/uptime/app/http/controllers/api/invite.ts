@@ -6,14 +6,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BadRequest, NotFound } from "@sdxc/http/status-code";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import Invite from "~/app/data/invite";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiProblems, invalidField, problemInstance } from "~/app/services/api-problems";
+import { apiSuccess } from "~/app/services/api-response";
 import { typedId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
@@ -25,9 +25,10 @@ export const inviteDestroy = createAction(routes.api.v1.invites.destroy, {
 	handler: async (ctx) => {
 		let { inviteId } = s.parse(InviteIdParams, ctx.params);
 		let invite = await Invite.findByIdForTeam(ctx.db, ctx.apiTeam.id, inviteId);
-		if (!invite) return apiError("NOT_FOUND", "Invite not found", NotFound);
+		if (!invite)
+			return apiProblems.notFound({ detail: "Invite not found", instance: problemInstance() });
 		if (invite.accepted_at !== null) {
-			return apiError("VALIDATION_ERROR", "This invite was already accepted.", BadRequest);
+			return invalidField("This invite was already accepted.");
 		}
 
 		await Invite.revoke(ctx.db, inviteId);

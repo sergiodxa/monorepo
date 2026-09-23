@@ -35,6 +35,7 @@ import { database } from "~/app/http/middleware/database";
 import { FLAG_SET, flags } from "~/app/lib/flags";
 import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { expectProblem } from "~/app/lib/test/problem";
 import {
 	alertEvents,
 	alerts,
@@ -227,11 +228,6 @@ async function pingBody(response: Response) {
 	return body;
 }
 
-/** The error envelope of a refused request. */
-async function errorBody(response: Response) {
-	return (await response.json()) as { error: { code: string; message: string } };
-}
-
 /** The DNS-over-HTTPS resolver the DNS check queries. */
 let DOH_URL = "https://cloudflare-dns.com/dns-query";
 
@@ -278,7 +274,7 @@ describe("POST /api/v1/ping authentication", () => {
 		let response = await dispatch(db, { body: { type: "http", url: "https://example.com" } });
 
 		expect(response.status).toBe(401);
-		expect((await errorBody(response)).error.code).toBe("UNAUTHORIZED");
+		await expectProblem(response, "unauthorized");
 		expect(doFetchMock).not.toHaveBeenCalled();
 	});
 
@@ -293,7 +289,7 @@ describe("POST /api/v1/ping authentication", () => {
 		});
 
 		expect(response.status).toBe(403);
-		expect((await errorBody(response)).error.code).toBe("FORBIDDEN");
+		await expectProblem(response, "forbidden");
 		expect(doFetchMock).not.toHaveBeenCalled();
 	});
 });
@@ -325,7 +321,7 @@ describe("POST /api/v1/ping availability", () => {
 		});
 
 		expect(response.status).toBe(503);
-		expect((await errorBody(response)).error.code).toBe("ENDPOINT_UNAVAILABLE");
+		await expectProblem(response, "endpointUnavailable");
 		expect(doFetchMock).not.toHaveBeenCalled();
 		expect(pingResults.dataPoints).toHaveLength(0);
 		expect(await billedEvents(testBilling)).toHaveLength(0);
@@ -371,7 +367,7 @@ describe("POST /api/v1/ping entitlement", () => {
 		});
 
 		expect(response.status).toBe(402);
-		expect((await errorBody(response)).error.code).toBe("SUBSCRIPTION_REQUIRED");
+		await expectProblem(response, "subscriptionRequired");
 		expect(doFetchMock).not.toHaveBeenCalled();
 		expect(pingResults.dataPoints).toHaveLength(0);
 		expect(await billedEvents(testBilling)).toHaveLength(0);
@@ -401,7 +397,7 @@ describe("POST /api/v1/ping validation", () => {
 		let response = await dispatch(db, { key, body });
 
 		expect(response.status).toBe(400);
-		expect((await errorBody(response)).error.code).toBe("VALIDATION_ERROR");
+		await expectProblem(response, "validationError");
 		expect(doFetchMock).not.toHaveBeenCalled();
 		expect(pingResults.dataPoints).toHaveLength(0);
 	}
@@ -767,6 +763,8 @@ describe("POST /api/v1/ping caller budget", () => {
 		let refused = await dispatch(db, { key, body: { type: "tcp", host: "db", port: 5432 } });
 		expect(refused.status).toBe(429);
 		expect(refused.headers.get("RateLimit-Policy")).toBe(`${CALLER_LIMIT};w=60`);
+		expect(refused.headers.get("Retry-After")).not.toBeNull();
+		await expectProblem(refused, "rateLimited");
 
 		let unaffected = await dispatch(db, {
 			key: other.key,

@@ -19,7 +19,7 @@ Every endpoint that returns a list is paginated. A response carries one page of 
 
 A request without a `cursor` returns the first page.
 
-A `perPage` outside 1-200 is refused with `400 BAD_REQUEST` rather than reduced to the nearest allowed value.
+A `perPage` outside 1-200 is refused with a `400` `bad-request` problem rather than reduced to the nearest allowed value.
 
 ## Cursors in the Response Body
 
@@ -93,14 +93,15 @@ A cursor marks your position in a list. It is an opaque string: read it from a `
 A cursor records the ordering it was issued for. One that has been edited, truncated, or taken from a list ordered differently is refused:
 
 - **HTTP Status**: `400 Bad Request`
-- **Error Code**: `BAD_REQUEST`
+- **Problem type**: `bad-request`
 
 ```json
 {
-	"error": {
-		"code": "BAD_REQUEST",
-		"message": "The cursor is not valid for this ordering"
-	}
+	"type": "https://uptime.sergiodxa.com/docs/api/errors/bad-request",
+	"title": "The request is malformed",
+	"status": 400,
+	"detail": "The cursor is not valid for this ordering",
+	"instance": "urn:uuid:0b6a4c1e-3f7d-4e8a-9c21-5d8f0a7b3e64"
 }
 ```
 

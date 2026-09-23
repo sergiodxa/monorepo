@@ -1,10 +1,8 @@
 /**
- * JSON envelope helpers for the `/api/v1/*` surface: `apiSuccess` wraps a payload in
- * `{ data, meta: { requestId, timestamp } }` and `apiError` wraps a failure in
- * `{ error: { code, message } }`, matching the response shape every existing API
- * integration (including the self-monitoring `UPTIME_CRON_API_KEY` loop) already
- * expects. A paginated endpoint reaches this through `apiPage`, which fills in both
- * the `Link` headers and `meta.pagination` from one page, so the two always agree.
+ * Success envelope for the `/api/v1/*` surface: `apiSuccess` wraps a payload in
+ * `{ data, meta: { requestId, timestamp } }`; failures are problem details from
+ * `api-problems.ts`. A paginated endpoint reaches this through `apiPage`, which fills in
+ * both the `Link` headers and `meta.pagination` from one page, so the two always agree.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -48,11 +46,6 @@ export interface ApiSuccessBody<T> {
 	meta: ApiMeta;
 }
 
-/** Envelope for a failed API response. */
-export interface ApiErrorBody {
-	error: { code: string; message: string };
-}
-
 /**
  * Builds the standard success envelope and JSON response for `/api/v1/*` endpoints.
  *
@@ -74,10 +67,4 @@ export function apiSuccess<T>(
 		},
 	};
 	return json(body, { ...status, headers: options.headers });
-}
-
-/** Builds the standard error envelope and JSON response for `/api/v1/*` endpoints. */
-export function apiError(code: string, message: string, status: StatusCode): Response {
-	let body: ApiErrorBody = { error: { code, message } };
-	return json(body, status);
 }

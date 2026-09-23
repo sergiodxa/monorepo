@@ -79,11 +79,11 @@ curl "https://uptime.sergiodxa.com/api/v1/monitors?perPage=50" \
 
 ### Errors
 
-| Status | Code         | Description                          |
-| ------ | ------------ | ------------------------------------ |
-| 400    | BAD_REQUEST  | Invalid or malformed cursor          |
-| 401    | UNAUTHORIZED | Missing or invalid API key           |
-| 403    | FORBIDDEN    | API key doesn't have `monitors:read` |
+| Status | Type           | Description                          |
+| ------ | -------------- | ------------------------------------ |
+| 400    | `bad-request`  | Invalid or malformed cursor          |
+| 401    | `unauthorized` | Missing or invalid API key           |
+| 403    | `forbidden`    | API key doesn't have `monitors:read` |
 
 ### Response Schema
 
@@ -245,11 +245,11 @@ curl https://uptime.sergiodxa.com/api/v1/monitors \
 
 ### Errors
 
-| Status | Code             | Description                           |
-| ------ | ---------------- | ------------------------------------- |
-| 400    | VALIDATION_ERROR | Invalid request body                  |
-| 401    | UNAUTHORIZED     | Missing or invalid API key            |
-| 403    | FORBIDDEN        | API key doesn't have `monitors:write` |
+| Status | Type               | Description                           |
+| ------ | ------------------ | ------------------------------------- |
+| 400    | `validation-error` | Invalid request body                  |
+| 401    | `unauthorized`     | Missing or invalid API key            |
+| 403    | `forbidden`        | API key doesn't have `monitors:write` |
 
 ### Request Body Schema
 
@@ -412,11 +412,11 @@ curl https://uptime.sergiodxa.com/api/v1/monitors/mon_abc123 \
 
 ### Errors
 
-| Status | Code         | Description                          |
-| ------ | ------------ | ------------------------------------ |
-| 401    | UNAUTHORIZED | Missing or invalid API key           |
-| 403    | FORBIDDEN    | API key doesn't have `monitors:read` |
-| 404    | NOT_FOUND    | Monitor not found                    |
+| Status | Type           | Description                          |
+| ------ | -------------- | ------------------------------------ |
+| 401    | `unauthorized` | Missing or invalid API key           |
+| 403    | `forbidden`    | API key doesn't have `monitors:read` |
+| 404    | `not-found`    | Monitor not found                    |
 
 ### Response Schema
 
@@ -520,12 +520,12 @@ curl https://uptime.sergiodxa.com/api/v1/monitors/mon_abc123 \
 
 ### Errors
 
-| Status | Code             | Description                           |
-| ------ | ---------------- | ------------------------------------- |
-| 400    | VALIDATION_ERROR | Invalid request body                  |
-| 401    | UNAUTHORIZED     | Missing or invalid API key            |
-| 403    | FORBIDDEN        | API key doesn't have `monitors:write` |
-| 404    | NOT_FOUND        | Monitor not found                     |
+| Status | Type               | Description                           |
+| ------ | ------------------ | ------------------------------------- |
+| 400    | `validation-error` | Invalid request body                  |
+| 401    | `unauthorized`     | Missing or invalid API key            |
+| 403    | `forbidden`        | API key doesn't have `monitors:write` |
+| 404    | `not-found`        | Monitor not found                     |
 
 ### Request Body Schema
 
@@ -662,11 +662,11 @@ Returns `204 No Content` on success.
 
 ### Errors
 
-| Status | Code         | Description                           |
-| ------ | ------------ | ------------------------------------- |
-| 401    | UNAUTHORIZED | Missing or invalid API key            |
-| 403    | FORBIDDEN    | API key doesn't have `monitors:write` |
-| 404    | NOT_FOUND    | Monitor not found                     |
+| Status | Type           | Description                           |
+| ------ | -------------- | ------------------------------------- |
+| 401    | `unauthorized` | Missing or invalid API key            |
+| 403    | `forbidden`    | API key doesn't have `monitors:write` |
+| 404    | `not-found`    | Monitor not found                     |
 
 ### Response Schema
 
@@ -739,13 +739,13 @@ curl "https://uptime.sergiodxa.com/api/v1/monitors/mon_abc123/results?perPage=10
 
 ### Errors
 
-| Status | Code             | Description                          |
-| ------ | ---------------- | ------------------------------------ |
-| 400    | BAD_REQUEST      | Invalid or malformed cursor          |
-| 400    | VALIDATION_ERROR | Invalid query parameters             |
-| 401    | UNAUTHORIZED     | Missing or invalid API key           |
-| 403    | FORBIDDEN        | API key doesn't have `monitors:read` |
-| 404    | NOT_FOUND        | Monitor not found                    |
+| Status | Type               | Description                          |
+| ------ | ------------------ | ------------------------------------ |
+| 400    | `bad-request`      | Invalid or malformed cursor          |
+| 400    | `validation-error` | Invalid query parameters             |
+| 401    | `unauthorized`     | Missing or invalid API key           |
+| 403    | `forbidden`        | API key doesn't have `monitors:read` |
+| 404    | `not-found`        | Monitor not found                    |
 
 ### Response Schema
 
@@ -869,12 +869,12 @@ curl "https://uptime.sergiodxa.com/api/v1/monitors/mon_abc123/alert-events?perPa
 
 ### Errors
 
-| Status | Code         | Description                        |
-| ------ | ------------ | ---------------------------------- |
-| 400    | BAD_REQUEST  | Invalid or malformed cursor        |
-| 401    | UNAUTHORIZED | Missing or invalid API key         |
-| 403    | FORBIDDEN    | API key doesn't have `alerts:read` |
-| 404    | NOT_FOUND    | Monitor not found                  |
+| Status | Type           | Description                        |
+| ------ | -------------- | ---------------------------------- |
+| 400    | `bad-request`  | Invalid or malformed cursor        |
+| 401    | `unauthorized` | Missing or invalid API key         |
+| 403    | `forbidden`    | API key doesn't have `alerts:read` |
+| 404    | `not-found`    | Monitor not found                  |
 
 ### Response Schema
 
@@ -988,11 +988,11 @@ curl https://uptime.sergiodxa.com/api/v1/monitors/mon_abc123/stats \
 
 ### Errors
 
-| Status | Code         | Description                          |
-| ------ | ------------ | ------------------------------------ |
-| 401    | UNAUTHORIZED | Missing or invalid API key           |
-| 403    | FORBIDDEN    | API key doesn't have `monitors:read` |
-| 404    | NOT_FOUND    | Monitor not found                    |
+| Status | Type           | Description                          |
+| ------ | -------------- | ------------------------------------ |
+| 401    | `unauthorized` | Missing or invalid API key           |
+| 403    | `forbidden`    | API key doesn't have `monitors:read` |
+| 404    | `not-found`    | Monitor not found                    |
 
 ### Response Schema
 
@@ -1088,10 +1088,10 @@ curl https://uptime.sergiodxa.com/api/v1/monitors/stats \
 
 ### Errors
 
-| Status | Code         | Description                          |
-| ------ | ------------ | ------------------------------------ |
-| 401    | UNAUTHORIZED | Missing or invalid API key           |
-| 403    | FORBIDDEN    | API key doesn't have `monitors:read` |
+| Status | Type           | Description                          |
+| ------ | -------------- | ------------------------------------ |
+| 401    | `unauthorized` | Missing or invalid API key           |
+| 403    | `forbidden`    | API key doesn't have `monitors:read` |
 
 ### Response Schema
 
@@ -1178,10 +1178,10 @@ Returns `202 Accepted` on success.
 
 ### Errors
 
-| Status | Code         | Description                           |
-| ------ | ------------ | ------------------------------------- |
-| 401    | UNAUTHORIZED | Missing or invalid API key            |
-| 403    | FORBIDDEN    | API key doesn't have `monitors:write` |
+| Status | Type           | Description                           |
+| ------ | -------------- | ------------------------------------- |
+| 401    | `unauthorized` | Missing or invalid API key            |
+| 403    | `forbidden`    | API key doesn't have `monitors:write` |
 
 ### Response Schema
 
@@ -1274,12 +1274,12 @@ curl "https://uptime.sergiodxa.com/api/v1/monitors/mon_abc123/content-checks?per
 
 ### Errors
 
-| Status | Code         | Description                          |
-| ------ | ------------ | ------------------------------------ |
-| 400    | BAD_REQUEST  | Invalid or malformed cursor          |
-| 401    | UNAUTHORIZED | Missing or invalid API key           |
-| 403    | FORBIDDEN    | API key doesn't have `monitors:read` |
-| 404    | NOT_FOUND    | Monitor not found                    |
+| Status | Type           | Description                          |
+| ------ | -------------- | ------------------------------------ |
+| 400    | `bad-request`  | Invalid or malformed cursor          |
+| 401    | `unauthorized` | Missing or invalid API key           |
+| 403    | `forbidden`    | API key doesn't have `monitors:read` |
+| 404    | `not-found`    | Monitor not found                    |
 
 ### Create Content Check
 

@@ -12,8 +12,8 @@
 import type { OrderByTuple } from "@sdxc/pagination";
 import type { Database } from "remix/data-table";
 
-import { BadRequest, InternalServerError, NotFound } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
+import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
@@ -26,7 +26,8 @@ import DnsMonitor from "~/app/data/dns-monitor";
 import DnsMonitorRecord from "~/app/data/dns-monitor-record";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiProblems, problemInstance } from "~/app/services/api-problems";
+import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, PAGING } from "~/app/services/pagination";
 import { encodeId, typedId } from "~/app/services/typed-id";
 import { dnsMonitorRecords } from "~/database/schema";
@@ -76,27 +77,6 @@ function serializeDnsMonitorRecord(record: SelectDnsMonitorRecord) {
 	};
 }
 
-/**
- * Joins a validation failure into one message, naming the offending field where the schema
- * reported a path. Both messages this endpoint can produce — "Unknown key" for an identity
- * field and a type mismatch on `isEnabled` — are useless without the field name attached.
- */
-function validationMessage(issues: readonly { message: string; path?: readonly unknown[] }[]) {
-	return issues
-		.map((issue) => {
-			let path = (issue.path ?? [])
-				.map((segment) =>
-					typeof segment === "object" && segment !== null && "key" in segment
-						? String((segment as { key: unknown }).key)
-						: String(segment),
-				)
-				.join(".");
-
-			return path ? `${path}: ${issue.message}` : issue.message;
-		})
-		.join(", ");
-}
-
 export default createController(dnsMonitorRecordsRoutes, {
 	middleware: [catchValidationError()],
 	actions: {
@@ -111,10 +91,18 @@ export default createController(dnsMonitorRecordsRoutes, {
 				let { dnsMonitorId } = s.parse(DnsMonitorIdParams, ctx.params);
 
 				let monitor = await DnsMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, dnsMonitorId);
-				if (!monitor) return apiError("NOT_FOUND", "DNS monitor not found", NotFound);
+				if (!monitor)
+					return apiProblems.notFound({
+						detail: "DNS monitor not found",
+						instance: problemInstance(),
+					});
 
 				let params = PAGING.parse(ctx.url.searchParams);
-				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
+				if (isFailure(params))
+					return apiProblems.badRequest({
+						detail: params.error.message,
+						instance: problemInstance(),
+					});
 
 				// Chaining returns new queries, so the same one both counts and pages.
 				let query = DnsMonitorRecord.byMonitorQuery(ctx.db, dnsMonitorId);
@@ -127,9 +115,12 @@ export default createController(dnsMonitorRecordsRoutes, {
 
 				if (isFailure(page)) {
 					if (page.error instanceof InvalidCursorError) {
-						return apiError("BAD_REQUEST", page.error.message, BadRequest);
+						return apiProblems.badRequest({
+							detail: page.error.message,
+							instance: problemInstance(),
+						});
 					}
-					return apiError("INTERNAL", page.error.message, InternalServerError);
+					return apiProblems.internal({ detail: page.error.message, instance: problemInstance() });
 				}
 
 				return apiPage({ records: page.data.items.map(serializeDnsMonitorRecord) }, page.data, {
@@ -151,20 +142,35 @@ export default createController(dnsMonitorRecordsRoutes, {
 				let { dnsMonitorId, recordId } = s.parse(DnsMonitorRecordParams, ctx.params);
 
 				let monitor = await DnsMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, dnsMonitorId);
-				if (!monitor) return apiError("NOT_FOUND", "DNS monitor not found", NotFound);
+				if (!monitor)
+					return apiProblems.notFound({
+						detail: "DNS monitor not found",
+						instance: problemInstance(),
+					});
 
 				let existing = await findRecordForMonitor(ctx.db, dnsMonitorId, recordId);
-				if (!existing) return apiError("NOT_FOUND", "DNS record not found", NotFound);
+				if (!existing)
+					return apiProblems.notFound({
+						detail: "DNS record not found",
+						instance: problemInstance(),
+					});
 
 				let result = await validate(ctx.request, UpdateDnsMonitorRecordSchema);
 				if (isFailure(result)) {
-					return apiError("VALIDATION_ERROR", validationMessage(result.error.issues), BadRequest);
+					return apiProblems.validationError({
+						instance: problemInstance(),
+						extensions: { errors: issuesFrom(result.error.issues) },
+					});
 				}
 
 				await DnsMonitorRecord.setEnabled(ctx.db, dnsMonitorId, [recordId], result.data.isEnabled);
 
 				let record = await findRecordForMonitor(ctx.db, dnsMonitorId, recordId);
-				if (!record) return apiError("NOT_FOUND", "DNS record not found", NotFound);
+				if (!record)
+					return apiProblems.notFound({
+						detail: "DNS record not found",
+						instance: problemInstance(),
+					});
 
 				return apiSuccess({ record: serializeDnsMonitorRecord(record) });
 			},

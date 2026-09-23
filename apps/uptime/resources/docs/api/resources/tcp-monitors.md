@@ -73,11 +73,11 @@ curl -i "https://uptime.sergiodxa.com/api/v1/tcp-monitors?perPage=25" \
 
 ### Errors
 
-| Status | Code         | Description                               |
-| ------ | ------------ | ----------------------------------------- |
-| 400    | BAD_REQUEST  | Invalid or malformed cursor               |
-| 401    | UNAUTHORIZED | Missing or invalid API key                |
-| 403    | FORBIDDEN    | API key missing `tcp-monitors:read` scope |
+| Status | Type           | Description                               |
+| ------ | -------------- | ----------------------------------------- |
+| 400    | `bad-request`  | Invalid or malformed cursor               |
+| 401    | `unauthorized` | Missing or invalid API key                |
+| 403    | `forbidden`    | API key missing `tcp-monitors:read` scope |
 
 ### Response Schema
 
@@ -238,11 +238,11 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors \
 
 ### Errors
 
-| Status | Code             | Description                                |
-| ------ | ---------------- | ------------------------------------------ |
-| 400    | VALIDATION_ERROR | Invalid request body                       |
-| 401    | UNAUTHORIZED     | Missing or invalid API key                 |
-| 403    | FORBIDDEN        | API key missing `tcp-monitors:write` scope |
+| Status | Type               | Description                                |
+| ------ | ------------------ | ------------------------------------------ |
+| 400    | `validation-error` | Invalid request body                       |
+| 401    | `unauthorized`     | Missing or invalid API key                 |
+| 403    | `forbidden`        | API key missing `tcp-monitors:write` scope |
 
 ### Request Body Schema
 
@@ -428,11 +428,11 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123 \
 
 ### Errors
 
-| Status | Code         | Description                               |
-| ------ | ------------ | ----------------------------------------- |
-| 401    | UNAUTHORIZED | Missing or invalid API key                |
-| 403    | FORBIDDEN    | API key missing `tcp-monitors:read` scope |
-| 404    | NOT_FOUND    | TCP monitor not found                     |
+| Status | Type           | Description                               |
+| ------ | -------------- | ----------------------------------------- |
+| 401    | `unauthorized` | Missing or invalid API key                |
+| 403    | `forbidden`    | API key missing `tcp-monitors:read` scope |
+| 404    | `not-found`    | TCP monitor not found                     |
 
 ### Response Schema
 
@@ -585,12 +585,12 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123 \
 
 ### Errors
 
-| Status | Code             | Description                                |
-| ------ | ---------------- | ------------------------------------------ |
-| 400    | VALIDATION_ERROR | Invalid request body                       |
-| 401    | UNAUTHORIZED     | Missing or invalid API key                 |
-| 403    | FORBIDDEN        | API key missing `tcp-monitors:write` scope |
-| 404    | NOT_FOUND        | TCP monitor not found                      |
+| Status | Type               | Description                                |
+| ------ | ------------------ | ------------------------------------------ |
+| 400    | `validation-error` | Invalid request body                       |
+| 401    | `unauthorized`     | Missing or invalid API key                 |
+| 403    | `forbidden`        | API key missing `tcp-monitors:write` scope |
+| 404    | `not-found`        | TCP monitor not found                      |
 
 ### Request Body Schema
 
@@ -756,11 +756,11 @@ Returns `204 No Content` on success with no response body.
 
 ### Errors
 
-| Status | Code         | Description                                |
-| ------ | ------------ | ------------------------------------------ |
-| 401    | UNAUTHORIZED | Missing or invalid API key                 |
-| 403    | FORBIDDEN    | API key missing `tcp-monitors:write` scope |
-| 404    | NOT_FOUND    | TCP monitor not found                      |
+| Status | Type           | Description                                |
+| ------ | -------------- | ------------------------------------------ |
+| 401    | `unauthorized` | Missing or invalid API key                 |
+| 403    | `forbidden`    | API key missing `tcp-monitors:write` scope |
+| 404    | `not-found`    | TCP monitor not found                      |
 
 ### Response Schema
 
@@ -835,12 +835,12 @@ curl -i "https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123/results?pe
 
 ### Errors
 
-| Status | Code         | Description                               |
-| ------ | ------------ | ----------------------------------------- |
-| 400    | BAD_REQUEST  | Invalid or malformed cursor               |
-| 401    | UNAUTHORIZED | Missing or invalid API key                |
-| 403    | FORBIDDEN    | API key missing `tcp-monitors:read` scope |
-| 404    | NOT_FOUND    | TCP monitor not found                     |
+| Status | Type           | Description                               |
+| ------ | -------------- | ----------------------------------------- |
+| 400    | `bad-request`  | Invalid or malformed cursor               |
+| 401    | `unauthorized` | Missing or invalid API key                |
+| 403    | `forbidden`    | API key missing `tcp-monitors:read` scope |
+| 404    | `not-found`    | TCP monitor not found                     |
 
 ### Response Schema
 

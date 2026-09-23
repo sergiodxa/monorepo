@@ -96,13 +96,13 @@ curl -i "https://uptime.sergiodxa.com/api/v1/invites?perPage=100" \
 
 ### Possible Errors
 
-| Status | Code           | Description                               |
-| ------ | -------------- | ----------------------------------------- |
-| 400    | BAD_REQUEST    | Invalid or malformed cursor               |
-| 401    | UNAUTHORIZED   | Missing or invalid API key                |
-| 403    | FORBIDDEN      | API key doesn't have `invites:read` scope |
-| 429    | RATE_LIMITED   | Too many requests                         |
-| 500    | INTERNAL_ERROR | Server error                              |
+| Status | Type             | Description                               |
+| ------ | ---------------- | ----------------------------------------- |
+| 400    | `bad-request`    | Invalid or malformed cursor               |
+| 401    | `unauthorized`   | Missing or invalid API key                |
+| 403    | `forbidden`      | API key doesn't have `invites:read` scope |
+| 429    | `rate-limited`   | Too many requests                         |
+| 500    | `internal-error` | Server error                              |
 
 ### Response Schema
 
@@ -234,14 +234,14 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/invites \
 
 ### Possible Errors
 
-| Status | Code             | Description                                |
-| ------ | ---------------- | ------------------------------------------ |
-| 400    | VALIDATION_ERROR | Invalid email address                      |
-| 401    | UNAUTHORIZED     | Missing or invalid API key                 |
-| 403    | FORBIDDEN        | API key doesn't have `invites:write` scope |
-| 409    | CONFLICT         | An invite for this email already exists    |
-| 429    | RATE_LIMITED     | Too many requests                          |
-| 500    | INTERNAL_ERROR   | Server error                               |
+| Status | Type               | Description                                |
+| ------ | ------------------ | ------------------------------------------ |
+| 400    | `validation-error` | Invalid email address                      |
+| 401    | `unauthorized`     | Missing or invalid API key                 |
+| 403    | `forbidden`        | API key doesn't have `invites:write` scope |
+| 409    | `conflict`         | An invite for this email already exists    |
+| 429    | `rate-limited`     | Too many requests                          |
+| 500    | `internal-error`   | Server error                               |
 
 ### Request Body Schema
 
@@ -329,13 +329,13 @@ curl -X DELETE https://uptime.sergiodxa.com/api/v1/invites/inv_ghi789 \
 
 ### Possible Errors
 
-| Status | Code           | Description                                |
-| ------ | -------------- | ------------------------------------------ |
-| 401    | UNAUTHORIZED   | Missing or invalid API key                 |
-| 403    | FORBIDDEN      | API key doesn't have `invites:write` scope |
-| 404    | NOT_FOUND      | Invite not found                           |
-| 429    | RATE_LIMITED   | Too many requests                          |
-| 500    | INTERNAL_ERROR | Server error                               |
+| Status | Type             | Description                                |
+| ------ | ---------------- | ------------------------------------------ |
+| 401    | `unauthorized`   | Missing or invalid API key                 |
+| 403    | `forbidden`      | API key doesn't have `invites:write` scope |
+| 404    | `not-found`      | Invite not found                           |
+| 429    | `rate-limited`   | Too many requests                          |
+| 500    | `internal-error` | Server error                               |
 
 ### Response Schema
 

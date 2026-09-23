@@ -9,8 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BadRequest, Created, InternalServerError, NotFound } from "@sdxc/http/status-code";
+import { Created } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
+import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
@@ -26,7 +27,8 @@ import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { DEFAULT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
 import { MONITOR_SCOPE_TYPES, storedMonitorScope } from "~/app/lib/monitor-scope";
-import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiProblems, problemInstance } from "~/app/services/api-problems";
+import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { decodeMonitorId, encodeId, encodeMonitorId } from "~/app/services/typed-id";
 import { alertsRoutes } from "~/routes/api-groups";
@@ -192,7 +194,11 @@ export default createController(alertsRoutes, {
 			middleware: [requireApiKey("alerts:read")],
 			handler: async (ctx) => {
 				let params = PAGING.parse(ctx.url.searchParams);
-				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
+				if (isFailure(params))
+					return apiProblems.badRequest({
+						detail: params.error.message,
+						instance: problemInstance(),
+					});
 
 				// Chaining returns new queries, so the same one both counts and pages.
 				let query = Alert.listByTeamQuery(ctx.db, ctx.apiTeam.id);
@@ -205,9 +211,12 @@ export default createController(alertsRoutes, {
 
 				if (isFailure(page)) {
 					if (page.error instanceof InvalidCursorError) {
-						return apiError("BAD_REQUEST", page.error.message, BadRequest);
+						return apiProblems.badRequest({
+							detail: page.error.message,
+							instance: problemInstance(),
+						});
 					}
-					return apiError("INTERNAL", page.error.message, InternalServerError);
+					return apiProblems.internal({ detail: page.error.message, instance: problemInstance() });
 				}
 
 				return apiPage({ alerts: page.data.items.map(serializeAlertSafe) }, page.data, {
@@ -224,25 +233,23 @@ export default createController(alertsRoutes, {
 			handler: async (ctx) => {
 				let existingCount = await Alert.countByTeam(ctx.db, ctx.apiTeam.id);
 				if (existingCount >= MAX_ALERTS_PER_TEAM) {
-					return apiError(
-						"LIMIT_EXCEEDED",
-						`Maximum of ${MAX_ALERTS_PER_TEAM} alerts per team`,
-						BadRequest,
-					);
+					return apiProblems.limitExceeded({
+						detail: `Maximum of ${MAX_ALERTS_PER_TEAM} alerts per team`,
+						instance: problemInstance(),
+					});
 				}
 
 				let result = await validate(ctx.request, CreateAlertSchema);
 				if (isFailure(result)) {
-					return apiError(
-						"VALIDATION_ERROR",
-						result.error.issues.map((issue) => issue.message).join(", "),
-						BadRequest,
-					);
+					return apiProblems.validationError({
+						instance: problemInstance(),
+						extensions: { errors: issuesFrom(result.error) },
+					});
 				}
 
 				let scope = apiScopeFrom(result.data);
 				if (scope === null || !(await isResolvableScope(ctx.db, ctx.apiTeam.id, scope))) {
-					return apiError("NOT_FOUND", "Monitor not found", NotFound);
+					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 				}
 
 				/**

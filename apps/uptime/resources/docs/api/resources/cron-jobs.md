@@ -81,13 +81,13 @@ The cursors for this page arrive in `meta.pagination`:
 
 ### Possible Errors
 
-| Status | Code           | Description                                 |
-| ------ | -------------- | ------------------------------------------- |
-| 400    | BAD_REQUEST    | Invalid or malformed cursor                 |
-| 401    | UNAUTHORIZED   | Missing or invalid API key                  |
-| 403    | FORBIDDEN      | API key doesn't have `cron-jobs:read` scope |
-| 429    | RATE_LIMITED   | Too many requests                           |
-| 500    | INTERNAL_ERROR | Server error                                |
+| Status | Type             | Description                                 |
+| ------ | ---------------- | ------------------------------------------- |
+| 400    | `bad-request`    | Invalid or malformed cursor                 |
+| 401    | `unauthorized`   | Missing or invalid API key                  |
+| 403    | `forbidden`      | API key doesn't have `cron-jobs:read` scope |
+| 429    | `rate-limited`   | Too many requests                           |
+| 500    | `internal-error` | Server error                                |
 
 ### Response Schema
 
@@ -174,15 +174,15 @@ Creates a new cron job monitor.
 
 ### Request Body
 
-| Field                | Type    | Required | Description                                                                                   |
-| -------------------- | ------- | -------- | --------------------------------------------------------------------------------------------- |
-| `name`               | string  | Yes      | Display name (1-100 characters)                                                               |
-| `cronExpression`     | string  | Yes      | Valid cron expression (e.g., `0 * * * *`)                                                     |
-| `description`        | string  | No       | Optional description (max 500 characters)                                                     |
-| `gracePeriodSeconds` | integer | No       | Seconds to wait before marking late (60-86400, default 300)                                   |
-| `timezone`           | string  | No       | IANA timezone, or `UTC` (default `UTC`). Any other value is rejected with `VALIDATION_ERROR`. |
-| `alertOnLate`        | boolean | No       | Send alerts when job is late (default `false`)                                                |
-| `enabled`            | boolean | No       | Whether the monitor is active (default `true`)                                                |
+| Field                | Type    | Required | Description                                                                                             |
+| -------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------- |
+| `name`               | string  | Yes      | Display name (1-100 characters)                                                                         |
+| `cronExpression`     | string  | Yes      | Valid cron expression (e.g., `0 * * * *`)                                                               |
+| `description`        | string  | No       | Optional description (max 500 characters)                                                               |
+| `gracePeriodSeconds` | integer | No       | Seconds to wait before marking late (60-86400, default 300)                                             |
+| `timezone`           | string  | No       | IANA timezone, or `UTC` (default `UTC`). Any other value is rejected with a `validation-error` problem. |
+| `alertOnLate`        | boolean | No       | Send alerts when job is late (default `false`)                                                          |
+| `enabled`            | boolean | No       | Whether the monitor is active (default `true`)                                                          |
 
 ### Example Request
 
@@ -226,13 +226,13 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs \
 
 ### Possible Errors
 
-| Status | Code             | Description                                  |
-| ------ | ---------------- | -------------------------------------------- |
-| 400    | VALIDATION_ERROR | Invalid request body or cron expression      |
-| 401    | UNAUTHORIZED     | Missing or invalid API key                   |
-| 403    | FORBIDDEN        | API key doesn't have `cron-jobs:write` scope |
-| 429    | RATE_LIMITED     | Too many requests                            |
-| 500    | INTERNAL_ERROR   | Server error                                 |
+| Status | Type               | Description                                  |
+| ------ | ------------------ | -------------------------------------------- |
+| 400    | `validation-error` | Invalid request body or cron expression      |
+| 401    | `unauthorized`     | Missing or invalid API key                   |
+| 403    | `forbidden`        | API key doesn't have `cron-jobs:write` scope |
+| 429    | `rate-limited`     | Too many requests                            |
+| 500    | `internal-error`   | Server error                                 |
 
 ### Request Body Schema
 
@@ -342,13 +342,13 @@ curl https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123 \
 
 ### Possible Errors
 
-| Status | Code           | Description                                 |
-| ------ | -------------- | ------------------------------------------- |
-| 401    | UNAUTHORIZED   | Missing or invalid API key                  |
-| 403    | FORBIDDEN      | API key doesn't have `cron-jobs:read` scope |
-| 404    | NOT_FOUND      | Cron job not found                          |
-| 429    | RATE_LIMITED   | Too many requests                           |
-| 500    | INTERNAL_ERROR | Server error                                |
+| Status | Type             | Description                                 |
+| ------ | ---------------- | ------------------------------------------- |
+| 401    | `unauthorized`   | Missing or invalid API key                  |
+| 403    | `forbidden`      | API key doesn't have `cron-jobs:read` scope |
+| 404    | `not-found`      | Cron job not found                          |
+| 429    | `rate-limited`   | Too many requests                           |
+| 500    | `internal-error` | Server error                                |
 
 ### Response Schema
 
@@ -410,15 +410,15 @@ Updates an existing cron job monitor.
 
 All fields are optional. Only provided fields will be updated.
 
-| Field                | Type    | Description                                                                   |
-| -------------------- | ------- | ----------------------------------------------------------------------------- |
-| `name`               | string  | Display name (1-100 characters)                                               |
-| `cronExpression`     | string  | Valid cron expression                                                         |
-| `description`        | string  | Optional description (max 500 characters)                                     |
-| `gracePeriodSeconds` | integer | Seconds to wait before marking late (60-86400)                                |
-| `timezone`           | string  | IANA timezone, or `UTC`. Any other value is rejected with `VALIDATION_ERROR`. |
-| `alertOnLate`        | boolean | Send alerts when job is late                                                  |
-| `enabled`            | boolean | Whether the monitor is active                                                 |
+| Field                | Type    | Description                                                                             |
+| -------------------- | ------- | --------------------------------------------------------------------------------------- |
+| `name`               | string  | Display name (1-100 characters)                                                         |
+| `cronExpression`     | string  | Valid cron expression                                                                   |
+| `description`        | string  | Optional description (max 500 characters)                                               |
+| `gracePeriodSeconds` | integer | Seconds to wait before marking late (60-86400)                                          |
+| `timezone`           | string  | IANA timezone, or `UTC`. Any other value is rejected with a `validation-error` problem. |
+| `alertOnLate`        | boolean | Send alerts when job is late                                                            |
+| `enabled`            | boolean | Whether the monitor is active                                                           |
 
 ### Example Request
 
@@ -458,14 +458,14 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123 \
 
 ### Possible Errors
 
-| Status | Code             | Description                                  |
-| ------ | ---------------- | -------------------------------------------- |
-| 400    | VALIDATION_ERROR | Invalid request body or cron expression      |
-| 401    | UNAUTHORIZED     | Missing or invalid API key                   |
-| 403    | FORBIDDEN        | API key doesn't have `cron-jobs:write` scope |
-| 404    | NOT_FOUND        | Cron job not found                           |
-| 429    | RATE_LIMITED     | Too many requests                            |
-| 500    | INTERNAL_ERROR   | Server error                                 |
+| Status | Type               | Description                                  |
+| ------ | ------------------ | -------------------------------------------- |
+| 400    | `validation-error` | Invalid request body or cron expression      |
+| 401    | `unauthorized`     | Missing or invalid API key                   |
+| 403    | `forbidden`        | API key doesn't have `cron-jobs:write` scope |
+| 404    | `not-found`        | Cron job not found                           |
+| 429    | `rate-limited`     | Too many requests                            |
+| 500    | `internal-error`   | Server error                                 |
 
 ### Request Body Schema
 
@@ -556,13 +556,13 @@ Returns `204 No Content` on success with an empty response body.
 
 ### Possible Errors
 
-| Status | Code           | Description                                  |
-| ------ | -------------- | -------------------------------------------- |
-| 401    | UNAUTHORIZED   | Missing or invalid API key                   |
-| 403    | FORBIDDEN      | API key doesn't have `cron-jobs:write` scope |
-| 404    | NOT_FOUND      | Cron job not found                           |
-| 429    | RATE_LIMITED   | Too many requests                            |
-| 500    | INTERNAL_ERROR | Server error                                 |
+| Status | Type             | Description                                  |
+| ------ | ---------------- | -------------------------------------------- |
+| 401    | `unauthorized`   | Missing or invalid API key                   |
+| 403    | `forbidden`      | API key doesn't have `cron-jobs:write` scope |
+| 404    | `not-found`      | Cron job not found                           |
+| 429    | `rate-limited`   | Too many requests                            |
+| 500    | `internal-error` | Server error                                 |
 
 ### Response Schema
 
@@ -603,14 +603,14 @@ Unlike the rest of `/api/v1`, this endpoint answers with the bare object above r
 
 ### Possible Errors
 
-| Status | Code           | Description                                                      |
-| ------ | -------------- | ---------------------------------------------------------------- |
-| 401    | UNAUTHORIZED   | Missing, invalid, or expired API key                             |
-| 403    | FORBIDDEN      | API key doesn't have `cron-jobs:ping` scope                      |
-| 404    | NOT_FOUND      | Cron job not found, or owned by another team                     |
-| 409    | CONFLICT       | Cron job is disabled                                             |
-| 429    | RATE_LIMITED   | More than 1 ping per minute for this job, or caller budget spent |
-| 500    | INTERNAL_ERROR | Server error                                                     |
+| Status | Type             | Description                                                      |
+| ------ | ---------------- | ---------------------------------------------------------------- |
+| 401    | `unauthorized`   | Missing, invalid, or expired API key                             |
+| 403    | `forbidden`      | API key doesn't have `cron-jobs:ping` scope                      |
+| 404    | `not-found`      | Cron job not found, or owned by another team                     |
+| 409    | `conflict`       | Cron job is disabled                                             |
+| 429    | `rate-limited`   | More than 1 ping per minute for this job, or caller budget spent |
+| 500    | `internal-error` | Server error                                                     |
 
 ### Response Schema
 

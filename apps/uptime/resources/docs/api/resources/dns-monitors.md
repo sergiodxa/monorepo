@@ -172,11 +172,11 @@ curl "https://uptime.sergiodxa.com/api/v1/dns-monitors?perPage=25" \
 
 ### Errors
 
-| Status | Code         | Description                             |
-| ------ | ------------ | --------------------------------------- |
-| 400    | BAD_REQUEST  | Invalid or malformed cursor             |
-| 401    | UNAUTHORIZED | Missing or invalid API key              |
-| 403    | FORBIDDEN    | API key lacks `dns-monitors:read` scope |
+| Status | Type           | Description                             |
+| ------ | -------------- | --------------------------------------- |
+| 400    | `bad-request`  | Invalid or malformed cursor             |
+| 401    | `unauthorized` | Missing or invalid API key              |
+| 403    | `forbidden`    | API key lacks `dns-monitors:read` scope |
 
 ## Create a DNS Monitor
 
@@ -184,7 +184,7 @@ Creates a domain monitor and runs discovery immediately: every supported record 
 
 **Everything the resolver answered with is imported and watched.** There is no review step on an API call — the dashboard's exists because a human is standing there — so a script that wants something left alone turns it off through the records sub-resource afterwards. The one exception is a record the zone file declares that the resolver does not answer for: it is imported unwatched, for the reason given below.
 
-A team may hold **20 DNS monitors**. Past that the create is refused with `400` and code `LIMIT_EXCEEDED`, before the monitor row is written and before a single query is sent — one domain monitor sweeps every supported type at every tracked name, so the ceiling is what keeps a team's checks inside the platform's per-invocation budget. Delete a monitor to make room.
+A team may hold **20 DNS monitors**. Past that the create is refused with a `400` `limit-exceeded` problem, before the monitor row is written and before a single query is sent — one domain monitor sweeps every supported type at every tracked name, so the ceiling is what keeps a team's checks inside the platform's per-invocation budget. Delete a monitor to make room.
 
 The response is `201 Created`.
 
@@ -254,12 +254,12 @@ curl https://uptime.sergiodxa.com/api/v1/dns-monitors \
 
 ### Errors
 
-| Status | Code             | Description                                                                          |
-| ------ | ---------------- | ------------------------------------------------------------------------------------ |
-| 400    | VALIDATION_ERROR | Invalid body, a zone file over 262144 bytes, or a zone declaring more than 100 names |
-| 400    | LIMIT_EXCEEDED   | The team already has 20 DNS monitors                                                 |
-| 401    | UNAUTHORIZED     | Missing or invalid API key                                                           |
-| 403    | FORBIDDEN        | API key lacks `dns-monitors:write` scope                                             |
+| Status | Type               | Description                                                                          |
+| ------ | ------------------ | ------------------------------------------------------------------------------------ |
+| 400    | `validation-error` | Invalid body, a zone file over 262144 bytes, or a zone declaring more than 100 names |
+| 400    | `limit-exceeded`   | The team already has 20 DNS monitors                                                 |
+| 401    | `unauthorized`     | Missing or invalid API key                                                           |
+| 403    | `forbidden`        | API key lacks `dns-monitors:write` scope                                             |
 
 ### Request Body Schema
 
@@ -398,11 +398,11 @@ curl https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123 \
 
 ### Errors
 
-| Status | Code         | Description                             |
-| ------ | ------------ | --------------------------------------- |
-| 401    | UNAUTHORIZED | Missing or invalid API key              |
-| 403    | FORBIDDEN    | API key lacks `dns-monitors:read` scope |
-| 404    | NOT_FOUND    | DNS monitor not found                   |
+| Status | Type           | Description                             |
+| ------ | -------------- | --------------------------------------- |
+| 401    | `unauthorized` | Missing or invalid API key              |
+| 403    | `forbidden`    | API key lacks `dns-monitors:read` scope |
+| 404    | `not-found`    | DNS monitor not found                   |
 
 ## Update a DNS Monitor
 
@@ -460,12 +460,12 @@ curl https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123 \
 
 ### Errors
 
-| Status | Code             | Description                              |
-| ------ | ---------------- | ---------------------------------------- |
-| 400    | VALIDATION_ERROR | Invalid request body                     |
-| 401    | UNAUTHORIZED     | Missing or invalid API key               |
-| 403    | FORBIDDEN        | API key lacks `dns-monitors:write` scope |
-| 404    | NOT_FOUND        | DNS monitor not found                    |
+| Status | Type               | Description                              |
+| ------ | ------------------ | ---------------------------------------- |
+| 400    | `validation-error` | Invalid request body                     |
+| 401    | `unauthorized`     | Missing or invalid API key               |
+| 403    | `forbidden`        | API key lacks `dns-monitors:write` scope |
+| 404    | `not-found`        | DNS monitor not found                    |
 
 ### Request Body Schema
 
@@ -508,11 +508,11 @@ curl https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123 \
 
 ### Errors
 
-| Status | Code         | Description                              |
-| ------ | ------------ | ---------------------------------------- |
-| 401    | UNAUTHORIZED | Missing or invalid API key               |
-| 403    | FORBIDDEN    | API key lacks `dns-monitors:write` scope |
-| 404    | NOT_FOUND    | DNS monitor not found                    |
+| Status | Type           | Description                              |
+| ------ | -------------- | ---------------------------------------- |
+| 401    | `unauthorized` | Missing or invalid API key               |
+| 403    | `forbidden`    | API key lacks `dns-monitors:write` scope |
+| 404    | `not-found`    | DNS monitor not found                    |
 
 ## Get DNS Monitor Results
 
@@ -578,12 +578,12 @@ A value edited inside a record set holding several values reads as one missing r
 
 ### Errors
 
-| Status | Code         | Description                             |
-| ------ | ------------ | --------------------------------------- |
-| 400    | BAD_REQUEST  | Invalid or malformed cursor             |
-| 401    | UNAUTHORIZED | Missing or invalid API key              |
-| 403    | FORBIDDEN    | API key lacks `dns-monitors:read` scope |
-| 404    | NOT_FOUND    | DNS monitor not found                   |
+| Status | Type           | Description                             |
+| ------ | -------------- | --------------------------------------- |
+| 400    | `bad-request`  | Invalid or malformed cursor             |
+| 401    | `unauthorized` | Missing or invalid API key              |
+| 403    | `forbidden`    | API key lacks `dns-monitors:read` scope |
+| 404    | `not-found`    | DNS monitor not found                   |
 
 ### Response Schema
 
@@ -762,12 +762,12 @@ Timestamps are epoch milliseconds.
 
 ### Errors
 
-| Status | Code         | Description                             |
-| ------ | ------------ | --------------------------------------- |
-| 400    | BAD_REQUEST  | Invalid or malformed cursor             |
-| 401    | UNAUTHORIZED | Missing or invalid API key              |
-| 403    | FORBIDDEN    | API key lacks `dns-monitors:read` scope |
-| 404    | NOT_FOUND    | DNS monitor not found                   |
+| Status | Type           | Description                             |
+| ------ | -------------- | --------------------------------------- |
+| 400    | `bad-request`  | Invalid or malformed cursor             |
+| 401    | `unauthorized` | Missing or invalid API key              |
+| 403    | `forbidden`    | API key lacks `dns-monitors:read` scope |
+| 404    | `not-found`    | DNS monitor not found                   |
 
 A monitor belonging to another team returns `404`, not `403`: a `403` would confirm the id
 names a real monitor somebody else owns.
@@ -877,7 +877,7 @@ PATCH /api/v1/dns-monitors/:dnsMonitorId/records/:recordId
 
 **`isEnabled` is the only accepted field, and the request is rejected rather than filtered.**
 Sending `name`, `recordType`, `value`, `status`, or any other key returns
-`400 VALIDATION_ERROR` with a message naming the key — for example `value: Unknown key`.
+a `400` `validation-error` problem with a message naming the key — for example `value: Unknown key`.
 
 A record's identity is `(name, recordType, value)`, and it comes from DNS or from the zone
 file you imported, never from a client. It is also the key the check diffs on, so accepting
@@ -933,12 +933,12 @@ enabled it. Declining a record never changes its `status`.
 
 ### Errors
 
-| Status | Code             | Description                                                         |
-| ------ | ---------------- | ------------------------------------------------------------------- |
-| 400    | VALIDATION_ERROR | `isEnabled` missing or not a boolean, or an unaccepted key was sent |
-| 401    | UNAUTHORIZED     | Missing or invalid API key                                          |
-| 403    | FORBIDDEN        | API key lacks `dns-monitors:write` scope                            |
-| 404    | NOT_FOUND        | DNS monitor not found, or the record does not belong to it          |
+| Status | Type               | Description                                                         |
+| ------ | ------------------ | ------------------------------------------------------------------- |
+| 400    | `validation-error` | `isEnabled` missing or not a boolean, or an unaccepted key was sent |
+| 401    | `unauthorized`     | Missing or invalid API key                                          |
+| 403    | `forbidden`        | API key lacks `dns-monitors:write` scope                            |
+| 404    | `not-found`        | DNS monitor not found, or the record does not belong to it          |
 
 A record id belonging to a different monitor — including one on your own team — returns
 `404`. Records are addressable only through the monitor that tracks them.

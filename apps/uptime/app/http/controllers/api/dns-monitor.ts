@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BadRequest, InternalServerError, NotFound } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
+import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
@@ -24,7 +24,8 @@ import {
 	MAX_DNS_INTERVAL_SECONDS,
 	MIN_DNS_INTERVAL_SECONDS,
 } from "~/app/http/validators/dns-monitor";
-import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiProblems, problemInstance } from "~/app/services/api-problems";
+import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, newestFirst, PAGING } from "~/app/services/pagination";
 import { encodeId, typedId } from "~/app/services/typed-id";
 import { dnsMonitorRoutes } from "~/routes/api-groups";
@@ -70,7 +71,11 @@ export default createController(dnsMonitorRoutes, {
 			handler: async (ctx) => {
 				let { dnsMonitorId } = s.parse(DnsMonitorIdParams, ctx.params);
 				let monitor = await DnsMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, dnsMonitorId);
-				if (!monitor) return apiError("NOT_FOUND", "DNS monitor not found", NotFound);
+				if (!monitor)
+					return apiProblems.notFound({
+						detail: "DNS monitor not found",
+						instance: problemInstance(),
+					});
 				return apiSuccess({ dnsMonitor: serializeDnsMonitor(monitor) });
 			},
 		},
@@ -81,15 +86,18 @@ export default createController(dnsMonitorRoutes, {
 			handler: async (ctx) => {
 				let { dnsMonitorId } = s.parse(DnsMonitorIdParams, ctx.params);
 				let existing = await DnsMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, dnsMonitorId);
-				if (!existing) return apiError("NOT_FOUND", "DNS monitor not found", NotFound);
+				if (!existing)
+					return apiProblems.notFound({
+						detail: "DNS monitor not found",
+						instance: problemInstance(),
+					});
 
 				let result = await validate(ctx.request, UpdateDnsMonitorSchema);
 				if (isFailure(result)) {
-					return apiError(
-						"VALIDATION_ERROR",
-						result.error.issues.map((issue) => issue.message).join(", "),
-						BadRequest,
-					);
+					return apiProblems.validationError({
+						instance: problemInstance(),
+						extensions: { errors: issuesFrom(result.error) },
+					});
 				}
 
 				let changes: Partial<InsertDnsMonitor> = {};
@@ -110,7 +118,11 @@ export default createController(dnsMonitorRoutes, {
 			handler: async (ctx) => {
 				let { dnsMonitorId } = s.parse(DnsMonitorIdParams, ctx.params);
 				let existing = await DnsMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, dnsMonitorId);
-				if (!existing) return apiError("NOT_FOUND", "DNS monitor not found", NotFound);
+				if (!existing)
+					return apiProblems.notFound({
+						detail: "DNS monitor not found",
+						instance: problemInstance(),
+					});
 
 				await DnsMonitor.deleteById(ctx.db, dnsMonitorId);
 				return apiSuccess({ deleted: true });
@@ -123,10 +135,18 @@ export default createController(dnsMonitorRoutes, {
 			handler: async (ctx) => {
 				let { dnsMonitorId } = s.parse(DnsMonitorIdParams, ctx.params);
 				let monitor = await DnsMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, dnsMonitorId);
-				if (!monitor) return apiError("NOT_FOUND", "DNS monitor not found", NotFound);
+				if (!monitor)
+					return apiProblems.notFound({
+						detail: "DNS monitor not found",
+						instance: problemInstance(),
+					});
 
 				let params = PAGING.parse(ctx.url.searchParams);
-				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
+				if (isFailure(params))
+					return apiProblems.badRequest({
+						detail: params.error.message,
+						instance: problemInstance(),
+					});
 
 				let page = await Pagination.byKeyset(DnsMonitor.resultsQuery(ctx.db, dnsMonitorId), {
 					orderBy: newestFirst("checked_at"),
@@ -136,9 +156,12 @@ export default createController(dnsMonitorRoutes, {
 
 				if (isFailure(page)) {
 					if (page.error instanceof InvalidCursorError) {
-						return apiError("BAD_REQUEST", page.error.message, BadRequest);
+						return apiProblems.badRequest({
+							detail: page.error.message,
+							instance: problemInstance(),
+						});
 					}
-					return apiError("INTERNAL", page.error.message, InternalServerError);
+					return apiProblems.internal({ detail: page.error.message, instance: problemInstance() });
 				}
 
 				let results = page.data.items.map((row) => ({

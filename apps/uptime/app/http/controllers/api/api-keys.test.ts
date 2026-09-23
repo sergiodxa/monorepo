@@ -21,6 +21,7 @@ import apiKeysController from "~/app/http/controllers/api/api-keys";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { parseLink } from "~/app/lib/test/paging";
+import { expectProblem, problemMessages } from "~/app/lib/test/problem";
 import { apiKeys, teams } from "~/database/schema";
 import { apiKeysRoutes } from "~/routes/api-groups";
 
@@ -139,8 +140,7 @@ describe("GET /api/v1/api-keys", () => {
 		let response = await dispatch(db, getPath(`${path}?cursor=not-a-cursor`, key));
 
 		expect(response.status).toBe(400);
-		let body = (await response.json()) as { error: { code: string } };
-		expect(body.error.code).toBe("BAD_REQUEST");
+		await expectProblem(response, "badRequest");
 	});
 
 	test("returns 401 for a missing Authorization header", async () => {
@@ -226,9 +226,8 @@ describe("POST /api/v1/api-keys", () => {
 		let response = await dispatch(db, post(key, { name: "escalated", scopes: ["monitors:write"] }));
 		expect(response.status).toBe(403);
 
-		let body = (await response.json()) as { error: { code: string; message: string } };
-		expect(body.error.code).toBe("FORBIDDEN");
-		expect(body.error.message).toContain("monitors:write");
+		let body = await expectProblem(response, "forbidden");
+		expect(problemMessages(body)).toContain("monitors:write");
 
 		expect(await ApiKey.countByTeam(db, team.id)).toBe(1);
 	});
@@ -244,10 +243,10 @@ describe("POST /api/v1/api-keys", () => {
 		);
 		expect(response.status).toBe(403);
 
-		let body = (await response.json()) as { error: { message: string } };
-		expect(body.error.message).toContain("ping:trigger");
-		expect(body.error.message).toContain("teams:write");
-		expect(body.error.message).not.toContain("monitors:read");
+		let body = await expectProblem(response, "forbidden");
+		expect(problemMessages(body)).toContain("ping:trigger");
+		expect(problemMessages(body)).toContain("teams:write");
+		expect(problemMessages(body)).not.toContain("monitors:read");
 	});
 
 	test("allows a key to mint a narrower copy of itself", async () => {
@@ -267,8 +266,7 @@ describe("POST /api/v1/api-keys", () => {
 		let response = await dispatch(db, post(key, { name: "Bad key", scopes: [] }));
 		expect(response.status).toBe(400);
 
-		let body = (await response.json()) as { error: { code: string } };
-		expect(body.error.code).toBe("VALIDATION_ERROR");
+		await expectProblem(response, "validationError");
 		expect(await db.count(apiKeys, { where: { team_id: team.id, name: "Bad key" } })).toBe(0);
 	});
 
@@ -291,8 +289,7 @@ describe("POST /api/v1/api-keys", () => {
 		);
 		expect(response.status).toBe(400);
 
-		let body = (await response.json()) as { error: { code: string } };
-		expect(body.error.code).toBe("LIMIT_EXCEEDED");
+		await expectProblem(response, "limitExceeded");
 		expect(await db.count(apiKeys, { where: { team_id: team.id } })).toBe(MAX_API_KEYS_PER_TEAM);
 	});
 

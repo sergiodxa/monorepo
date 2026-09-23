@@ -20,6 +20,7 @@ import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { parseLink } from "~/app/lib/test/paging";
+import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { alertEvents, monitorResults, monitors, teams } from "~/database/schema";
 import { monitorRoutes } from "~/routes/api-groups";
@@ -204,8 +205,7 @@ describe("GET /api/v1/monitors/:monitorId", () => {
 		);
 		expect(response.status).toBe(400);
 
-		let body = (await response.json()) as { error: { code: string } };
-		expect(body.error.code).toBe("VALIDATION_ERROR");
+		await expectProblem(response, "validationError");
 	});
 
 	/** A prefix is what makes an id unusable against the resource it does not name. */
@@ -530,8 +530,7 @@ describe("GET /api/v1/monitors/:monitorId/results", () => {
 		let response = await dispatch(db, request("GET", `${path}?cursor=not-a-cursor`, { key }));
 
 		expect(response.status).toBe(400);
-		let body = (await response.json()) as { error: { code: string } };
-		expect(body.error.code).toBe("BAD_REQUEST");
+		await expectProblem(response, "badRequest");
 	});
 
 	test("404s when the monitor belongs to another team", async () => {

@@ -12,7 +12,7 @@
 import type { Adapter, RateLimiterBinding } from "@sdxc/rate-limit";
 import type { Middleware } from "remix/router";
 
-import { conflict, created, notFound, tooManyRequests } from "@sdxc/http/response/json";
+import { created } from "@sdxc/http/response/json";
 import { CloudflareAdapter, MemoryAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 import { env, waitUntil } from "cloudflare:workers";
@@ -24,6 +24,7 @@ import Team from "~/app/data/team";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { notifyCronJobResult } from "~/app/services/alerts";
 import { writePingResult } from "~/app/services/analytics";
+import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { ingestPings } from "~/app/services/ping-meter";
 import { decodeIdOrUUID } from "~/app/services/typed-id";
 import routes from "~/routes/web";
@@ -115,6 +116,13 @@ const limitByCaller: Middleware = (context, next) => {
 			let address = ctx.request.headers.get("CF-Connecting-IP") ?? UNKNOWN_BUCKET;
 			return `${address}:${monitor}`;
 		},
+		/** The API's own `rate-limited` problem; the middleware adds `Retry-After` and the quota headers. */
+		onLimit() {
+			return apiProblems.rateLimited({
+				detail: "Too many pings from this caller. Please try again later.",
+				instance: problemInstance(),
+			});
+		},
 	});
 
 	return limiter(context, next);
@@ -131,7 +139,8 @@ export default createAction(routes.api.cronJobPing, {
 		 * 404 along with every other id this team cannot ping.
 		 */
 		let cronJobId = decodeIdOrUUID("cron", params.cronJobId);
-		if (cronJobId === null) return notFound({ error: "Not Found" });
+		if (cronJobId === null)
+			return apiProblems.notFound({ detail: "Cron job not found", instance: problemInstance() });
 
 		/**
 		 * Scoped to the key's own team: authentication alone says who the caller is,
@@ -139,14 +148,20 @@ export default createAction(routes.api.cronJobPing, {
 		 * answers 404 rather than 403, so ids can't be discovered by probing.
 		 */
 		let monitor = await CronJobMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, cronJobId);
-		if (!monitor) return notFound({ error: "Not Found" });
+		if (!monitor)
+			return apiProblems.notFound({ detail: "Cron job not found", instance: problemInstance() });
 
 		ctx.log.set({ monitor: { id: monitor.id, type: "cron" } });
 
-		if (monitor.enabled_at === null) return conflict({ error: "Cron job is disabled" });
+		if (monitor.enabled_at === null)
+			return apiProblems.conflict({ detail: "Cron job is disabled", instance: problemInstance() });
 
 		if (monitor.last_ping_at !== null && Date.now() - monitor.last_ping_at < RATE_LIMIT_MS) {
-			return tooManyRequests({ error: "Rate limit exceeded. Max 1 ping per minute." });
+			let retryAfter = Math.ceil((RATE_LIMIT_MS - (Date.now() - monitor.last_ping_at)) / 1000);
+			return apiProblems.rateLimited(
+				{ detail: "Rate limit exceeded. Max 1 ping per minute.", instance: problemInstance() },
+				{ headers: { "Retry-After": String(retryAfter) } },
+			);
 		}
 
 		let deadline =

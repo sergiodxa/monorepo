@@ -35,14 +35,15 @@ Every API response includes headers to help you track your usage:
 When you exceed the rate limit, the API returns:
 
 - **HTTP Status**: `429 Too Many Requests`
-- **Error Code**: `RATE_LIMITED`
+- **Problem type**: `rate-limited`
 
 ```json
 {
-	"error": {
-		"code": "RATE_LIMITED",
-		"message": "Rate limit exceeded. Please retry after 45 seconds."
-	}
+	"type": "https://uptime.sergiodxa.com/docs/api/errors/rate-limited",
+	"title": "Too many requests",
+	"status": 429,
+	"detail": "Rate limit exceeded. Please retry after 45 seconds.",
+	"instance": "urn:uuid:0b6a4c1e-3f7d-4e8a-9c21-5d8f0a7b3e64"
 }
 ```
 

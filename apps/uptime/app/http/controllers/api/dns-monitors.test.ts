@@ -23,6 +23,7 @@ import DnsMonitorRecord from "~/app/data/dns-monitor-record";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { parseLink } from "~/app/lib/test/paging";
+import { expectProblem, problemMessages } from "~/app/lib/test/problem";
 import { MAX_TRACKED_NAMES_PER_MONITOR } from "~/app/services/dns-discovery";
 import { dnsMonitorRecords, teams } from "~/database/schema";
 import { dnsMonitorsRoutes } from "~/routes/api-groups";
@@ -216,8 +217,7 @@ describe("GET /api/v1/dns-monitors", () => {
 		);
 
 		expect(response.status).toBe(400);
-		let body = (await response.json()) as { error: { code: string } };
-		expect(body.error.code).toBe("BAD_REQUEST");
+		await expectProblem(response, "badRequest");
 	});
 
 	test("returns 401 when the Authorization header is missing", async () => {
@@ -447,8 +447,7 @@ describe("POST /api/v1/dns-monitors", () => {
 		);
 
 		expect(response.status).toBe(400);
-		let body = (await response.json()) as { error: { code: string } };
-		expect(body.error.code).toBe("VALIDATION_ERROR");
+		await expectProblem(response, "validationError");
 		expect(await DnsMonitor.countByTeam(db, team.id)).toBe(0);
 	});
 
@@ -520,9 +519,8 @@ describe("POST /api/v1/dns-monitors", () => {
 		);
 
 		expect(response.status).toBe(400);
-		let body = (await response.json()) as { error: { code: string; message: string } };
-		expect(body.error.code).toBe("LIMIT_EXCEEDED");
-		expect(body.error.message).toBe(
+		let body = await expectProblem(response, "limitExceeded");
+		expect(problemMessages(body)).toBe(
 			`Maximum of ${MAX_DNS_MONITORS_PER_TEAM} DNS monitors per team`,
 		);
 

@@ -23,6 +23,7 @@ import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { SEO } from "~/app/lib/seo";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { apiProblems } from "~/app/services/api-problems";
 import routes from "~/routes/web";
 
 import docsShow from "./docs-show";
@@ -121,6 +122,16 @@ describe("GET /docs/*slug", () => {
 		expect(response.status).toBe(200);
 		let body = await response.text();
 		expect(body).toContain("Start Monitoring");
+	});
+
+	test("sends every API problem type's URL to the error reference", async () => {
+		for (let entry of apiProblems.entries()) {
+			let slug = new URL(entry.type).pathname.replace(/^\/docs\//, "");
+			let response = await getDocsShow(slug);
+
+			expect(response.status).toBe(307);
+			expect(response.headers.get("Location")).toBe("/docs/api/errors");
+		}
 	});
 
 	test("renders the not-found page for an unknown slug", async () => {

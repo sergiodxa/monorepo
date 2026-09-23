@@ -9,8 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BadRequest, InternalServerError, NotFound } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
+import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
@@ -30,7 +30,8 @@ import {
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { MONITOR_SCOPE_TYPES } from "~/app/lib/monitor-scope";
-import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiProblems, problemInstance } from "~/app/services/api-problems";
+import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, newestFirst, PAGING } from "~/app/services/pagination";
 import { encodeId, encodeMonitorId, typedId } from "~/app/services/typed-id";
 import { alertRoutes } from "~/routes/api-groups";
@@ -54,7 +55,8 @@ export default createController(alertRoutes, {
 			handler: async (ctx) => {
 				let { alertId } = s.parse(AlertIdParams, ctx.params);
 				let alert = await Alert.findByIdForTeam(ctx.db, ctx.apiTeam.id, alertId);
-				if (!alert) return apiError("NOT_FOUND", "Alert not found", NotFound);
+				if (!alert)
+					return apiProblems.notFound({ detail: "Alert not found", instance: problemInstance() });
 				return apiSuccess({ alert: serializeAlertSafe(alert) });
 			},
 		},
@@ -65,15 +67,15 @@ export default createController(alertRoutes, {
 			handler: async (ctx) => {
 				let { alertId } = s.parse(AlertIdParams, ctx.params);
 				let existing = await Alert.findByIdForTeam(ctx.db, ctx.apiTeam.id, alertId);
-				if (!existing) return apiError("NOT_FOUND", "Alert not found", NotFound);
+				if (!existing)
+					return apiProblems.notFound({ detail: "Alert not found", instance: problemInstance() });
 
 				let result = await validate(ctx.request, UpdateAlertSchema);
 				if (isFailure(result)) {
-					return apiError(
-						"VALIDATION_ERROR",
-						result.error.issues.map((issue) => issue.message).join(", "),
-						BadRequest,
-					);
+					return apiProblems.validationError({
+						instance: problemInstance(),
+						extensions: { errors: issuesFrom(result.error) },
+					});
 				}
 
 				let changes: Partial<InsertAlert> = {};
@@ -91,7 +93,10 @@ export default createController(alertRoutes, {
 				if (result.data.monitorType !== undefined || result.data.monitorId !== undefined) {
 					let scope = apiScopeFrom(result.data);
 					if (scope === null || !(await isResolvableScope(ctx.db, ctx.apiTeam.id, scope))) {
-						return apiError("NOT_FOUND", "Monitor not found", NotFound);
+						return apiProblems.notFound({
+							detail: "Monitor not found",
+							instance: problemInstance(),
+						});
 					}
 
 					changes.monitor_type = scope.monitorType;
@@ -109,7 +114,8 @@ export default createController(alertRoutes, {
 			handler: async (ctx) => {
 				let { alertId } = s.parse(AlertIdParams, ctx.params);
 				let existing = await Alert.findByIdForTeam(ctx.db, ctx.apiTeam.id, alertId);
-				if (!existing) return apiError("NOT_FOUND", "Alert not found", NotFound);
+				if (!existing)
+					return apiProblems.notFound({ detail: "Alert not found", instance: problemInstance() });
 
 				await Alert.deleteById(ctx.db, alertId);
 				return apiSuccess({ deleted: true });
@@ -122,10 +128,15 @@ export default createController(alertRoutes, {
 			handler: async (ctx) => {
 				let { alertId } = s.parse(AlertIdParams, ctx.params);
 				let alert = await Alert.findByIdForTeam(ctx.db, ctx.apiTeam.id, alertId);
-				if (!alert) return apiError("NOT_FOUND", "Alert not found", NotFound);
+				if (!alert)
+					return apiProblems.notFound({ detail: "Alert not found", instance: problemInstance() });
 
 				let params = PAGING.parse(ctx.url.searchParams);
-				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
+				if (isFailure(params))
+					return apiProblems.badRequest({
+						detail: params.error.message,
+						instance: problemInstance(),
+					});
 
 				let page = await Pagination.byKeyset(AlertEvent.eventsByAlertQuery(ctx.db, alertId), {
 					orderBy: newestFirst("sent_at"),
@@ -135,9 +146,12 @@ export default createController(alertRoutes, {
 
 				if (isFailure(page)) {
 					if (page.error instanceof InvalidCursorError) {
-						return apiError("BAD_REQUEST", page.error.message, BadRequest);
+						return apiProblems.badRequest({
+							detail: page.error.message,
+							instance: problemInstance(),
+						});
 					}
-					return apiError("INTERNAL", page.error.message, InternalServerError);
+					return apiProblems.internal({ detail: page.error.message, instance: problemInstance() });
 				}
 
 				let events = page.data.items.map((event) => ({

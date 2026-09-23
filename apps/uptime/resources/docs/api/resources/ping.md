@@ -14,7 +14,7 @@ Every probe uses the same regions, timeouts, and status rules as the equivalent 
 
 ## Request Failures Versus Target Failures
 
-**A target that is down still returns `200 OK`.** The outcome of the probe is in `data.ping.status`, never in the HTTP status of the API response.
+**A target that is down still returns a `200` `ok` problem.** The outcome of the probe is in `data.ping.status`, never in the HTTP status of the API response.
 
 A non-2xx response from this endpoint means the _request_ failed — a bad key, a missing scope, an inactive subscription, an invalid body, or the rate limit. It never means your target is down. Collapsing the two would make "your service is unreachable" indistinguishable from "we could not check", and only the first should fail a build.
 
@@ -104,7 +104,7 @@ curl https://uptime.sergiodxa.com/api/v1/ping \
 }
 ```
 
-A target that fails returns the same `200 OK` envelope with a different status:
+A target that fails returns the same a `200` `ok` problem envelope with a different status:
 
 ```json
 {
@@ -128,14 +128,14 @@ A target that fails returns the same `200 OK` envelope with a different status:
 
 ### Errors
 
-| Status | Code                  | Description                                        |
-| ------ | --------------------- | -------------------------------------------------- |
-| 400    | VALIDATION_ERROR      | Invalid request body                               |
-| 401    | UNAUTHORIZED          | Missing or invalid API key                         |
-| 402    | SUBSCRIPTION_REQUIRED | The team owner has no active subscription          |
-| 403    | FORBIDDEN             | API key missing `ping:trigger` scope               |
-| 429    | RATE_LIMIT_EXCEEDED   | More than 60 requests in a minute for this API key |
-| 500    | INTERNAL_ERROR        | The probe could not be performed                   |
+| Status | Type                    | Description                                        |
+| ------ | ----------------------- | -------------------------------------------------- |
+| 400    | `validation-error`      | Invalid request body                               |
+| 401    | `unauthorized`          | Missing or invalid API key                         |
+| 402    | `subscription-required` | The team owner has no active subscription          |
+| 403    | `forbidden`             | API key missing `ping:trigger` scope               |
+| 429    | `rate-limited`          | More than 60 requests in a minute for this API key |
+| 500    | `internal-error`        | The probe could not be performed                   |
 
 ### Request Body Schema
 
@@ -355,16 +355,16 @@ curl https://uptime.sergiodxa.com/api/v1/ping \
 
 ### Errors
 
-| Status | Code                  | Description                                        |
-| ------ | --------------------- | -------------------------------------------------- |
-| 400    | VALIDATION_ERROR      | Invalid request body                               |
-| 401    | UNAUTHORIZED          | Missing or invalid API key                         |
-| 402    | SUBSCRIPTION_REQUIRED | The team owner has no active subscription          |
-| 403    | FORBIDDEN             | API key missing `ping:trigger` scope               |
-| 429    | RATE_LIMIT_EXCEEDED   | More than 60 requests in a minute for this API key |
-| 500    | INTERNAL_ERROR        | The probe could not be performed                   |
+| Status | Type                    | Description                                        |
+| ------ | ----------------------- | -------------------------------------------------- |
+| 400    | `validation-error`      | Invalid request body                               |
+| 401    | `unauthorized`          | Missing or invalid API key                         |
+| 402    | `subscription-required` | The team owner has no active subscription          |
+| 403    | `forbidden`             | API key missing `ping:trigger` scope               |
+| 429    | `rate-limited`          | More than 60 requests in a minute for this API key |
+| 500    | `internal-error`        | The probe could not be performed                   |
 
-A domain that does not resolve is not an error. It returns `200 OK` with status `error` and an `errorMessage`.
+A domain that does not resolve is not an error. It returns a `200` `ok` problem with status `error` and an `errorMessage`.
 
 ### Request Body Schema
 
@@ -525,16 +525,16 @@ curl https://uptime.sergiodxa.com/api/v1/ping \
 
 ### Errors
 
-| Status | Code                  | Description                                        |
-| ------ | --------------------- | -------------------------------------------------- |
-| 400    | VALIDATION_ERROR      | Invalid request body                               |
-| 401    | UNAUTHORIZED          | Missing or invalid API key                         |
-| 402    | SUBSCRIPTION_REQUIRED | The team owner has no active subscription          |
-| 403    | FORBIDDEN             | API key missing `ping:trigger` scope               |
-| 429    | RATE_LIMIT_EXCEEDED   | More than 60 requests in a minute for this API key |
-| 500    | INTERNAL_ERROR        | The probe could not be performed                   |
+| Status | Type                    | Description                                        |
+| ------ | ----------------------- | -------------------------------------------------- |
+| 400    | `validation-error`      | Invalid request body                               |
+| 401    | `unauthorized`          | Missing or invalid API key                         |
+| 402    | `subscription-required` | The team owner has no active subscription          |
+| 403    | `forbidden`             | API key missing `ping:trigger` scope               |
+| 429    | `rate-limited`          | More than 60 requests in a minute for this API key |
+| 500    | `internal-error`        | The probe could not be performed                   |
 
-A refused connection returns `200 OK` with status `down`; a connection that never completes returns `200 OK` with status `timeout`.
+A refused connection returns a `200` `ok` problem with status `down`; a connection that never completes returns a `200` `ok` problem with status `timeout`.
 
 ### Request Body Schema
 
@@ -640,7 +640,7 @@ A refused connection returns `200 OK` with status `down`; a connection that neve
 
 ## Rate Limits
 
-Ad-hoc pings are limited to **60 requests per minute per API key**. The limit is per key rather than per source address, so pipelines sharing an egress address do not consume each other's budget. Exceeding it returns `429` with code `RATE_LIMIT_EXCEEDED`; no probe is performed and nothing is billed.
+Ad-hoc pings are limited to **60 requests per minute per API key**. The limit is per key rather than per source address, so pipelines sharing an egress address do not consume each other's budget. Exceeding it returns a `429` `rate-limited` problem; no probe is performed and nothing is billed.
 
 ## Billing
 

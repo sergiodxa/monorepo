@@ -10,8 +10,9 @@
  */
 
 import { Schedule } from "@sdxc/cron";
-import { BadRequest, Created, InternalServerError } from "@sdxc/http/status-code";
+import { Created } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
+import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
@@ -28,7 +29,8 @@ import {
 	isSupportedTimezone,
 	UNKNOWN_TIMEZONE_MESSAGE,
 } from "~/app/lib/timezones";
-import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiProblems, invalidField, problemInstance } from "~/app/services/api-problems";
+import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
 import { cronJobsRoutes } from "~/routes/api-groups";
@@ -78,7 +80,11 @@ export default createController(cronJobsRoutes, {
 			middleware: [requireApiKey("cron-jobs:read")],
 			handler: async (ctx) => {
 				let params = PAGING.parse(ctx.url.searchParams);
-				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
+				if (isFailure(params))
+					return apiProblems.badRequest({
+						detail: params.error.message,
+						instance: problemInstance(),
+					});
 
 				// Chaining returns new queries, so the same one both counts and pages.
 				let query = CronJobMonitor.listByTeamQuery(ctx.db, ctx.apiTeam.id);
@@ -91,9 +97,12 @@ export default createController(cronJobsRoutes, {
 
 				if (isFailure(page)) {
 					if (page.error instanceof InvalidCursorError) {
-						return apiError("BAD_REQUEST", page.error.message, BadRequest);
+						return apiProblems.badRequest({
+							detail: page.error.message,
+							instance: problemInstance(),
+						});
 					}
-					return apiError("INTERNAL", page.error.message, InternalServerError);
+					return apiProblems.internal({ detail: page.error.message, instance: problemInstance() });
 				}
 
 				return apiPage({ cronJobs: page.data.items.map(serializeCronJob) }, page.data, {
@@ -114,16 +123,15 @@ export default createController(cronJobsRoutes, {
 			handler: async (ctx) => {
 				let result = await validate(ctx.request, CreateCronJobSchema);
 				if (isFailure(result)) {
-					return apiError(
-						"VALIDATION_ERROR",
-						result.error.issues.map((issue) => issue.message).join(", "),
-						BadRequest,
-					);
+					return apiProblems.validationError({
+						instance: problemInstance(),
+						extensions: { errors: issuesFrom(result.error) },
+					});
 				}
 
 				let schedule = Schedule.parse(result.data.cronExpression);
 				if (isFailure(schedule)) {
-					return apiError("VALIDATION_ERROR", schedule.error.message, BadRequest);
+					return invalidField(schedule.error.message, "/cronExpression");
 				}
 
 				let cronJob = await CronJobMonitor.create(ctx.db, ctx.apiTeam.id, {

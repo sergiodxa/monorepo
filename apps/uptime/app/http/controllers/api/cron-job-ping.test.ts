@@ -29,6 +29,7 @@ import { MAIL_FROM } from "~/app/emails/sender";
 import { database } from "~/app/http/middleware/database";
 import { billedEvents, createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { cronJobMonitors, cronJobPings, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -282,8 +283,8 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping authentication", () => {
 		let refused = await dispatch(db, ping(monitor.id, { address }));
 		expect(refused.status).toBe(429);
 
-		let body = (await refused.json()) as { error: string };
-		expect(body.error).toBe("too_many_requests");
+		expect(refused.headers.get("Retry-After")).not.toBeNull();
+		await expectProblem(refused, "rateLimited");
 	});
 });
 
@@ -340,6 +341,7 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping", () => {
 
 		let response = await dispatch(db, ping(crypto.randomUUID(), { key }));
 		expect(response.status).toBe(404);
+		await expectProblem(response, "notFound");
 	});
 
 	test("returns 404 for an id carrying another resource's prefix", async () => {
@@ -364,6 +366,7 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping", () => {
 
 		let response = await dispatch(db, ping(monitor.id, { key }));
 		expect(response.status).toBe(409);
+		await expectProblem(response, "conflict");
 
 		let unchanged = await db.findOne(cronJobMonitors, { where: { id: monitor.id } });
 		expect(unchanged?.last_ping_at).toBeNull();
@@ -376,6 +379,8 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping", () => {
 
 		let response = await dispatch(db, ping(monitor.id, { key }));
 		expect(response.status).toBe(429);
+		expect(Number(response.headers.get("Retry-After"))).toBeGreaterThan(0);
+		await expectProblem(response, "rateLimited");
 
 		let pings = await db.findMany(cronJobPings, { where: { cron_job_monitor_id: monitor.id } });
 		expect(pings).toHaveLength(0);
@@ -400,8 +405,8 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping", () => {
 		expect(refused.status).toBe(429);
 		expect(refused.headers.get("RateLimit-Policy")).toBe(`${CALLER_LIMIT};w=60`);
 
-		let body = (await refused.json()) as { error: string };
-		expect(body.error).toBe("too_many_requests");
+		expect(refused.headers.get("Retry-After")).not.toBeNull();
+		await expectProblem(refused, "rateLimited");
 	});
 
 	/**
@@ -523,6 +528,7 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 		let response = await dispatch(db, ping(monitor.id, { key, address: "203.0.113.34" }));
 
 		expect(response.status).toBe(409);
+		await expectProblem(response, "conflict");
 		expect(await billedEvents(testBilling)).toHaveLength(0);
 		expect(pingResults.dataPoints).toHaveLength(0);
 	});

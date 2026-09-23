@@ -33,6 +33,7 @@
 		"@sdxc/mail": "workspace:*",
 		"@sdxc/markdown": "workspace:*",
 		"@sdxc/pagination": "workspace:*",
+		"@sdxc/problem": "workspace:*",
 		"@sdxc/rate-limit": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/seo": "workspace:*",

@@ -12,7 +12,6 @@
 
 import type { Middleware } from "remix/router";
 
-import { Forbidden, Unauthorized } from "@sdxc/http/status-code";
 import { currentLog } from "@sdxc/logger";
 
 import type { ApiKeyScope, SelectApiKey, SelectTeam } from "~/database/schema";
@@ -20,7 +19,7 @@ import type { ApiKeyScope, SelectApiKey, SelectTeam } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import Team from "~/app/data/team";
 import { hashApiKey } from "~/app/services/api-key";
-import { apiError } from "~/app/services/api-response";
+import { apiProblems, problemInstance } from "~/app/services/api-problems";
 
 declare module "remix/router" {
 	interface RequestContext {
@@ -49,23 +48,41 @@ export default function requireApiKey(scope: ApiKeyScope): Middleware {
 		let header = ctx.request.headers.get("Authorization");
 		let match = header ? BEARER_PATTERN.exec(header) : null;
 		let key = match?.[1] ?? null;
-		if (!key) return apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
+		if (!key)
+			return apiProblems.unauthorized({
+				detail: "Invalid or missing API key",
+				instance: problemInstance(),
+			});
 
 		let keyHash = await hashApiKey(key);
 		let apiKey = await ApiKey.findByHash(ctx.db, keyHash);
-		if (!apiKey) return apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
+		if (!apiKey)
+			return apiProblems.unauthorized({
+				detail: "Invalid or missing API key",
+				instance: problemInstance(),
+			});
 
 		if (apiKey.expires_at !== null && apiKey.expires_at < Date.now()) {
-			return apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
+			return apiProblems.unauthorized({
+				detail: "Invalid or missing API key",
+				instance: problemInstance(),
+			});
 		}
 
 		let team = await Team.findByIdOrSlug(ctx.db, apiKey.team_id);
-		if (!team) return apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
+		if (!team)
+			return apiProblems.unauthorized({
+				detail: "Invalid or missing API key",
+				instance: problemInstance(),
+			});
 
 		await ApiKey.touchLastUsedAt(ctx.db, apiKey.id);
 
 		if (!apiKey.scopes.includes(scope)) {
-			return apiError("FORBIDDEN", `API key does not have ${scope} scope`, Forbidden);
+			return apiProblems.forbidden({
+				detail: `API key does not have ${scope} scope`,
+				instance: problemInstance(),
+			});
 		}
 
 		ctx.apiKey = apiKey;

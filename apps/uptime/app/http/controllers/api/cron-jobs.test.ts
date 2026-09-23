@@ -20,6 +20,7 @@ import CronJobMonitor from "~/app/data/cron-job";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { parseLink } from "~/app/lib/test/paging";
+import { expectProblem, problemMessages } from "~/app/lib/test/problem";
 import { teams } from "~/database/schema";
 import { cronJobsRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
@@ -189,8 +190,7 @@ describe("GET /api/v1/cron-jobs", () => {
 		);
 
 		expect(response.status).toBe(400);
-		let body = (await response.json()) as { error: { code: string } };
-		expect(body.error.code).toBe("BAD_REQUEST");
+		await expectProblem(response, "badRequest");
 	});
 
 	test("returns 401 when the Authorization header is missing", async () => {
@@ -284,8 +284,7 @@ describe("POST /api/v1/cron-jobs", () => {
 		);
 
 		expect(response.status).toBe(400);
-		let body = (await response.json()) as { error: { code: string } };
-		expect(body.error.code).toBe("VALIDATION_ERROR");
+		await expectProblem(response, "validationError");
 	});
 
 	test("returns 400 for an invalid cron expression", async () => {
@@ -301,10 +300,9 @@ describe("POST /api/v1/cron-jobs", () => {
 		);
 
 		expect(response.status).toBe(400);
-		let body = (await response.json()) as { error: { code: string; message: string } };
-		expect(body.error.code).toBe("VALIDATION_ERROR");
-		expect(body.error.message).toContain("field-count");
-		expect(body.error.message).toContain("not a cron expression");
+		let body = await expectProblem(response, "validationError");
+		expect(problemMessages(body)).toContain("field-count");
+		expect(problemMessages(body)).toContain("not a cron expression");
 	});
 
 	test("returns 400, not 500, for a timezone the IANA database doesn't know", async () => {
@@ -320,9 +318,8 @@ describe("POST /api/v1/cron-jobs", () => {
 		);
 
 		expect(response.status).toBe(400);
-		let body = (await response.json()) as { error: { code: string; message: string } };
-		expect(body.error.code).toBe("VALIDATION_ERROR");
-		expect(body.error.message).toContain("Expected a valid IANA time zone");
+		let body = await expectProblem(response, "validationError");
+		expect(problemMessages(body)).toContain("Expected a valid IANA time zone");
 	});
 
 	test("keeps accepting UTC, the documented default", async () => {

@@ -19,6 +19,7 @@ import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { parseLink } from "~/app/lib/test/paging";
+import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { alertEvents, alerts, teams } from "~/database/schema";
 import { alertRoutes } from "~/routes/api-groups";
@@ -204,8 +205,7 @@ describe("PUT /api/v1/alerts/:alertId", () => {
 		);
 		expect(response.status).toBe(400);
 
-		let body = (await response.json()) as { error: { code: string } };
-		expect(body.error.code).toBe("VALIDATION_ERROR");
+		await expectProblem(response, "validationError");
 
 		let unchanged = await db.findOne(alerts, { where: { id: alert.id } });
 		expect(unchanged?.name).toBe("Site down");
@@ -476,8 +476,7 @@ describe("GET /api/v1/alerts/:alertId/events", () => {
 		let response = await dispatch(db, req("GET", `${path}?cursor=not-a-cursor`, key));
 		expect(response.status).toBe(400);
 
-		let body = (await response.json()) as { error: { code: string } };
-		expect(body.error.code).toBe("BAD_REQUEST");
+		await expectProblem(response, "badRequest");
 	});
 
 	test("404s when the alert doesn't belong to the team", async () => {

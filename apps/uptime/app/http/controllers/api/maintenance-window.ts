@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BadRequest, NotFound } from "@sdxc/http/status-code";
+import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
@@ -21,7 +21,8 @@ import { apiScopeFrom, serializeMaintenanceWindow } from "~/app/http/controllers
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { MONITOR_SCOPE_TYPES } from "~/app/lib/monitor-scope";
-import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiProblems, invalidField, problemInstance } from "~/app/services/api-problems";
+import { apiSuccess } from "~/app/services/api-response";
 import { typedId } from "~/app/services/typed-id";
 import { maintenanceWindowRoutes } from "~/routes/api-groups";
 
@@ -52,7 +53,11 @@ export default createController(maintenanceWindowRoutes, {
 			handler: async (ctx) => {
 				let { maintenanceId } = s.parse(MaintenanceIdParams, ctx.params);
 				let window = await MaintenanceWindow.findByIdForTeam(ctx.db, ctx.apiTeam.id, maintenanceId);
-				if (!window) return apiError("NOT_FOUND", "Maintenance window not found", NotFound);
+				if (!window)
+					return apiProblems.notFound({
+						detail: "Maintenance window not found",
+						instance: problemInstance(),
+					});
 				return apiSuccess({ maintenanceWindow: serializeMaintenanceWindow(window) });
 			},
 		},
@@ -67,21 +72,24 @@ export default createController(maintenanceWindowRoutes, {
 					ctx.apiTeam.id,
 					maintenanceId,
 				);
-				if (!existing) return apiError("NOT_FOUND", "Maintenance window not found", NotFound);
+				if (!existing)
+					return apiProblems.notFound({
+						detail: "Maintenance window not found",
+						instance: problemInstance(),
+					});
 
 				let result = await validate(ctx.request, UpdateMaintenanceSchema);
 				if (isFailure(result)) {
-					return apiError(
-						"VALIDATION_ERROR",
-						result.error.issues.map((issue) => issue.message).join(", "),
-						BadRequest,
-					);
+					return apiProblems.validationError({
+						instance: problemInstance(),
+						extensions: { errors: issuesFrom(result.error) },
+					});
 				}
 
 				let newStartsAt = result.data.startsAt ?? existing.starts_at;
 				let newEndsAt = result.data.endsAt ?? existing.ends_at;
 				if (newEndsAt <= newStartsAt) {
-					return apiError("VALIDATION_ERROR", "endsAt must be after startsAt", BadRequest);
+					return invalidField("endsAt must be after startsAt", "/endsAt");
 				}
 
 				let changes: Partial<InsertMaintenanceWindow> = {};
@@ -95,7 +103,10 @@ export default createController(maintenanceWindowRoutes, {
 				if (result.data.monitorType !== undefined || result.data.monitorId !== undefined) {
 					let scope = apiScopeFrom(result.data);
 					if (scope === null || !(await isResolvableScope(ctx.db, ctx.apiTeam.id, scope))) {
-						return apiError("NOT_FOUND", "Monitor not found", NotFound);
+						return apiProblems.notFound({
+							detail: "Monitor not found",
+							instance: problemInstance(),
+						});
 					}
 
 					changes.monitor_type = scope.monitorType;
@@ -124,7 +135,11 @@ export default createController(maintenanceWindowRoutes, {
 					ctx.apiTeam.id,
 					maintenanceId,
 				);
-				if (!existing) return apiError("NOT_FOUND", "Maintenance window not found", NotFound);
+				if (!existing)
+					return apiProblems.notFound({
+						detail: "Maintenance window not found",
+						instance: problemInstance(),
+					});
 
 				await MaintenanceWindow.deleteById(ctx.db, maintenanceId);
 				return apiSuccess({ deleted: true });
@@ -141,7 +156,11 @@ export default createController(maintenanceWindowRoutes, {
 					ctx.apiTeam.id,
 					maintenanceId,
 				);
-				if (!existing) return apiError("NOT_FOUND", "Maintenance window not found", NotFound);
+				if (!existing)
+					return apiProblems.notFound({
+						detail: "Maintenance window not found",
+						instance: problemInstance(),
+					});
 
 				let window = await MaintenanceWindow.endEarly(ctx.db, maintenanceId);
 				return apiSuccess({ maintenanceWindow: serializeMaintenanceWindow(window) });

@@ -10,7 +10,7 @@
 import type { Adapter, RateLimiterBinding } from "@sdxc/rate-limit";
 import type { Middleware } from "remix/router";
 
-import { BadRequest, PaymentRequired, ServiceUnavailable } from "@sdxc/http/status-code";
+import { issuesFrom } from "@sdxc/problem";
 import { CloudflareAdapter, MemoryAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 import { isFailure } from "@sdxc/result";
@@ -30,7 +30,8 @@ import requireApiKey from "~/app/http/middleware/require-api-key";
 import { DNS_RECORD_TYPES } from "~/app/lib/dns-record-value";
 import { features } from "~/app/lib/flags";
 import { recordAdhocPing } from "~/app/services/adhoc-ping";
-import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiProblems, problemInstance } from "~/app/services/api-problems";
+import { apiSuccess } from "~/app/services/api-response";
 import { apportionCostByTeam } from "~/app/services/cost";
 import { checkDns } from "~/app/services/dns-check";
 import { HttpCheck } from "~/app/services/http-check";
@@ -167,6 +168,13 @@ const limitByApiKey: Middleware = (context, next) => {
 		adapter: createAdapter(),
 		prefix: CALLER_PREFIX,
 		key: (ctx) => ctx.apiKey.id,
+		/** The API's own `rate-limited` problem; the middleware adds `Retry-After` and the quota headers. */
+		onLimit() {
+			return apiProblems.rateLimited({
+				detail: `More than ${CALLER_LIMIT} pings in a minute for this API key. Please try again later.`,
+				instance: problemInstance(),
+			});
+		},
 	});
 
 	return limiter(context, next);
@@ -186,16 +194,18 @@ export default createAction(routes.api.v1.ping, {
 		});
 
 		if (!available) {
-			return apiError("ENDPOINT_UNAVAILABLE", "Ad-hoc pings are unavailable", ServiceUnavailable);
+			return apiProblems.endpointUnavailable({
+				detail: "Ad-hoc pings are unavailable",
+				instance: problemInstance(),
+			});
 		}
 
 		let parsed = await validate(ctx.request, PingSchema);
 		if (isFailure(parsed)) {
-			return apiError(
-				"VALIDATION_ERROR",
-				parsed.error.issues.map((issue) => issue.message).join(", "),
-				BadRequest,
-			);
+			return apiProblems.validationError({
+				instance: problemInstance(),
+				extensions: { errors: issuesFrom(parsed.error) },
+			});
 		}
 
 		/**
@@ -204,11 +214,10 @@ export default createAction(routes.api.v1.ping, {
 		 * refusing a paying customer over an inconclusive lookup is the worse mistake.
 		 */
 		if ((await Subscription.stateFor(ctx.db, ctx.apiTeam.owner_id)) === "inactive") {
-			return apiError(
-				"SUBSCRIPTION_REQUIRED",
-				"An active subscription is required to run a ping",
-				PaymentRequired,
-			);
+			return apiProblems.subscriptionRequired({
+				detail: "An active subscription is required to run a ping",
+				instance: problemInstance(),
+			});
 		}
 
 		/**

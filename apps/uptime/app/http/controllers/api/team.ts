@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BadRequest } from "@sdxc/http/status-code";
+import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
@@ -17,7 +17,8 @@ import type { InsertTeam, SelectTeam } from "~/database/schema";
 
 import Team from "~/app/data/team";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiProblems, problemInstance } from "~/app/services/api-problems";
+import { apiSuccess } from "~/app/services/api-response";
 import { encodeId } from "~/app/services/typed-id";
 import { teamRoutes } from "~/routes/api-groups";
 
@@ -60,11 +61,10 @@ export default createController(teamRoutes, {
 			handler: async (ctx) => {
 				let result = await validate(ctx.request, UpdateTeamSchema);
 				if (isFailure(result)) {
-					return apiError(
-						"VALIDATION_ERROR",
-						result.error.issues.map((issue) => issue.message).join(", "),
-						BadRequest,
-					);
+					return apiProblems.validationError({
+						instance: problemInstance(),
+						extensions: { errors: issuesFrom(result.error) },
+					});
 				}
 
 				let changes: Partial<InsertTeam> = {};

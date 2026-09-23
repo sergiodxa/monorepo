@@ -7,8 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BadRequest, Created, InternalServerError, NotFound } from "@sdxc/http/status-code";
+import { Created } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
+import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
@@ -21,7 +22,8 @@ import ContentCheck from "~/app/data/content-check";
 import Monitor from "~/app/data/monitor";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiProblems, problemInstance } from "~/app/services/api-problems";
+import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId, typedId } from "~/app/services/typed-id";
 import { monitorContentChecksRoutes } from "~/routes/api-groups";
@@ -74,10 +76,15 @@ export default createController(monitorContentChecksRoutes, {
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MonitorIdParams, ctx.params);
 				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
-				if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
+				if (!monitor)
+					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 
 				let params = PAGING.parse(ctx.url.searchParams);
-				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
+				if (isFailure(params))
+					return apiProblems.badRequest({
+						detail: params.error.message,
+						instance: problemInstance(),
+					});
 
 				// Chaining returns new queries, so the same one both counts and pages.
 				let query = ContentCheck.byMonitorQuery(ctx.db, monitorId);
@@ -90,9 +97,12 @@ export default createController(monitorContentChecksRoutes, {
 
 				if (isFailure(page)) {
 					if (page.error instanceof InvalidCursorError) {
-						return apiError("BAD_REQUEST", page.error.message, BadRequest);
+						return apiProblems.badRequest({
+							detail: page.error.message,
+							instance: problemInstance(),
+						});
 					}
-					return apiError("INTERNAL", page.error.message, InternalServerError);
+					return apiProblems.internal({ detail: page.error.message, instance: problemInstance() });
 				}
 
 				return apiPage({ contentChecks: page.data.items.map(serializeContentCheck) }, page.data, {
@@ -109,15 +119,15 @@ export default createController(monitorContentChecksRoutes, {
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MonitorIdParams, ctx.params);
 				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
-				if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
+				if (!monitor)
+					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 
 				let result = await validate(ctx.request, CreateContentCheckSchema);
 				if (isFailure(result)) {
-					return apiError(
-						"VALIDATION_ERROR",
-						result.error.issues.map((issue) => issue.message).join(", "),
-						BadRequest,
-					);
+					return apiProblems.validationError({
+						instance: problemInstance(),
+						extensions: { errors: issuesFrom(result.error) },
+					});
 				}
 
 				let contentCheck = await ContentCheck.create(ctx.db, monitorId, {
@@ -137,10 +147,15 @@ export default createController(monitorContentChecksRoutes, {
 			handler: async (ctx) => {
 				let { monitorId, contentCheckId } = s.parse(ContentCheckParams, ctx.params);
 				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
-				if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
+				if (!monitor)
+					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 
 				let contentCheck = await ContentCheck.findByIdForMonitor(ctx.db, monitorId, contentCheckId);
-				if (!contentCheck) return apiError("NOT_FOUND", "Content check not found", NotFound);
+				if (!contentCheck)
+					return apiProblems.notFound({
+						detail: "Content check not found",
+						instance: problemInstance(),
+					});
 
 				await ContentCheck.deleteById(ctx.db, contentCheckId);
 				return apiSuccess({ success: true });

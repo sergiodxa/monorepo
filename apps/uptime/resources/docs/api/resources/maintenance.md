@@ -20,7 +20,7 @@ Maintenance windows allow you to schedule planned downtime for your monitors. Du
 
 A `monitorId` sent on its own is read as an HTTP monitor, which is what it has always meant, so clients written before the other monitor kinds arrived keep working untouched.
 
-A `monitorId` that does not belong to the team, or that belongs to a different kind of monitor than `monitorType` names, answers `404 NOT_FOUND` with "Monitor not found" — the window is never quietly widened to the whole team instead.
+A `monitorId` that does not belong to the team, or that belongs to a different kind of monitor than `monitorType` names, answers a `404` `not-found` problem with "Monitor not found" — the window is never quietly widened to the whole team instead.
 
 ## GET /api/v1/maintenance
 
@@ -92,13 +92,13 @@ The cursors for this page arrive in `meta.pagination`:
 
 ### Possible Errors
 
-| Status | Code           | Description                                   |
-| ------ | -------------- | --------------------------------------------- |
-| 400    | BAD_REQUEST    | Invalid or malformed cursor                   |
-| 401    | UNAUTHORIZED   | Missing or invalid API key                    |
-| 403    | FORBIDDEN      | API key doesn't have `maintenance:read` scope |
-| 429    | RATE_LIMITED   | Too many requests                             |
-| 500    | INTERNAL_ERROR | Server error                                  |
+| Status | Type             | Description                                   |
+| ------ | ---------------- | --------------------------------------------- |
+| 400    | `bad-request`    | Invalid or malformed cursor                   |
+| 401    | `unauthorized`   | Missing or invalid API key                    |
+| 403    | `forbidden`      | API key doesn't have `maintenance:read` scope |
+| 429    | `rate-limited`   | Too many requests                             |
+| 500    | `internal-error` | Server error                                  |
 
 ### Response Schema
 
@@ -279,15 +279,15 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance \
 
 ### Possible Errors
 
-| Status | Code               | Description                                    |
+| Status | Type               | Description                                    |
 | ------ | ------------------ | ---------------------------------------------- |
-| 400    | VALIDATION_ERROR   | Invalid request body or validation failed      |
-| 400    | INVALID_DATE_RANGE | `endsAt` must be after `startsAt`              |
-| 401    | UNAUTHORIZED       | Missing or invalid API key                     |
-| 403    | FORBIDDEN          | API key doesn't have `maintenance:write` scope |
-| 404    | NOT_FOUND          | Monitor not found for the given scope          |
-| 429    | RATE_LIMITED       | Too many requests                              |
-| 500    | INTERNAL_ERROR     | Server error                                   |
+| 400    | `validation-error` | Invalid request body or validation failed      |
+| 400    | `validation-error` | `endsAt` must be after `startsAt`              |
+| 401    | `unauthorized`     | Missing or invalid API key                     |
+| 403    | `forbidden`        | API key doesn't have `maintenance:write` scope |
+| 404    | `not-found`        | Monitor not found for the given scope          |
+| 429    | `rate-limited`     | Too many requests                              |
+| 500    | `internal-error`   | Server error                                   |
 
 ### Request Body Schema
 
@@ -447,13 +447,13 @@ curl https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
 
 ### Possible Errors
 
-| Status | Code           | Description                                   |
-| ------ | -------------- | --------------------------------------------- |
-| 401    | UNAUTHORIZED   | Missing or invalid API key                    |
-| 403    | FORBIDDEN      | API key doesn't have `maintenance:read` scope |
-| 404    | NOT_FOUND      | Maintenance window not found                  |
-| 429    | RATE_LIMITED   | Too many requests                             |
-| 500    | INTERNAL_ERROR | Server error                                  |
+| Status | Type             | Description                                   |
+| ------ | ---------------- | --------------------------------------------- |
+| 401    | `unauthorized`   | Missing or invalid API key                    |
+| 403    | `forbidden`      | API key doesn't have `maintenance:read` scope |
+| 404    | `not-found`      | Maintenance window not found                  |
+| 429    | `rate-limited`   | Too many requests                             |
+| 500    | `internal-error` | Server error                                  |
 
 ### Response Schema
 
@@ -559,7 +559,7 @@ Updates an existing maintenance window.
 - `{"monitorId": null}` — back to team-wide
 - `{"monitorId": "..."}` — that one HTTP monitor
 
-A `monitorId` that does not belong to the team, or that belongs to a different kind of monitor than `monitorType` names, answers `404 NOT_FOUND`.
+A `monitorId` that does not belong to the team, or that belongs to a different kind of monitor than `monitorType` names, answers a `404` `not-found` problem.
 
 ### Example Request
 
@@ -598,15 +598,15 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
 
 ### Possible Errors
 
-| Status | Code               | Description                                    |
+| Status | Type               | Description                                    |
 | ------ | ------------------ | ---------------------------------------------- |
-| 400    | VALIDATION_ERROR   | Invalid request body or validation failed      |
-| 400    | INVALID_DATE_RANGE | `endsAt` must be after `startsAt`              |
-| 401    | UNAUTHORIZED       | Missing or invalid API key                     |
-| 403    | FORBIDDEN          | API key doesn't have `maintenance:write` scope |
-| 404    | NOT_FOUND          | Maintenance window or monitor not found        |
-| 429    | RATE_LIMITED       | Too many requests                              |
-| 500    | INTERNAL_ERROR     | Server error                                   |
+| 400    | `validation-error` | Invalid request body or validation failed      |
+| 400    | `validation-error` | `endsAt` must be after `startsAt`              |
+| 401    | `unauthorized`     | Missing or invalid API key                     |
+| 403    | `forbidden`        | API key doesn't have `maintenance:write` scope |
+| 404    | `not-found`        | Maintenance window or monitor not found        |
+| 429    | `rate-limited`     | Too many requests                              |
+| 500    | `internal-error`   | Server error                                   |
 
 ### Request Body Schema
 
@@ -746,13 +746,13 @@ Returns `204 No Content` on success.
 
 ### Possible Errors
 
-| Status | Code           | Description                                    |
-| ------ | -------------- | ---------------------------------------------- |
-| 401    | UNAUTHORIZED   | Missing or invalid API key                     |
-| 403    | FORBIDDEN      | API key doesn't have `maintenance:write` scope |
-| 404    | NOT_FOUND      | Maintenance window not found                   |
-| 429    | RATE_LIMITED   | Too many requests                              |
-| 500    | INTERNAL_ERROR | Server error                                   |
+| Status | Type             | Description                                    |
+| ------ | ---------------- | ---------------------------------------------- |
+| 401    | `unauthorized`   | Missing or invalid API key                     |
+| 403    | `forbidden`      | API key doesn't have `maintenance:write` scope |
+| 404    | `not-found`      | Maintenance window not found                   |
+| 429    | `rate-limited`   | Too many requests                              |
+| 500    | `internal-error` | Server error                                   |
 
 ### Response Schema
 
@@ -798,15 +798,13 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123/end \
 
 ### Possible Errors
 
-| Status | Code           | Description                                    |
-| ------ | -------------- | ---------------------------------------------- |
-| 400    | ALREADY_ENDED  | Maintenance window has already ended           |
-| 400    | NOT_STARTED    | Maintenance window has not started yet         |
-| 401    | UNAUTHORIZED   | Missing or invalid API key                     |
-| 403    | FORBIDDEN      | API key doesn't have `maintenance:write` scope |
-| 404    | NOT_FOUND      | Maintenance window not found                   |
-| 429    | RATE_LIMITED   | Too many requests                              |
-| 500    | INTERNAL_ERROR | Server error                                   |
+| Status | Type             | Description                                    |
+| ------ | ---------------- | ---------------------------------------------- |
+| 401    | `unauthorized`   | Missing or invalid API key                     |
+| 403    | `forbidden`      | API key doesn't have `maintenance:write` scope |
+| 404    | `not-found`      | Maintenance window not found                   |
+| 429    | `rate-limited`   | Too many requests                              |
+| 500    | `internal-error` | Server error                                   |
 
 ### Response Schema
 

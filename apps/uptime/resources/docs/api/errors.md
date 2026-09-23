@@ -1,114 +1,128 @@
 ---
 title: Error Handling
-description: Understand API error responses, status codes, and error codes. Handle errors gracefully in your integration.
+description: API failures are RFC 9457 problem details. Learn the format, every problem type, and how to handle them in your integration.
 section:
   title: API Reference
   order: 4
 order: 3
-lastUpdated: 2026-02-14
+lastUpdated: 2026-09-23
 ---
 
-All API errors return a consistent JSON structure, making it easy to handle failures programmatically.
+Every API failure is answered with an [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) problem details document, served as `Content-Type: application/problem+json`. Successful responses keep their `data`/`meta` envelope.
 
-## Error Response Format
+## Problem Format
 
 ```json
 {
-	"error": {
-		"code": "ERROR_CODE",
-		"message": "Human readable description"
-	}
+	"type": "https://uptime.sergiodxa.com/docs/api/errors/not-found",
+	"title": "The resource does not exist",
+	"status": 404,
+	"detail": "Monitor not found",
+	"instance": "urn:uuid:0b6a4c1e-3f7d-4e8a-9c21-5d8f0a7b3e64"
 }
 ```
 
-The `code` field contains a machine-readable identifier for programmatic handling, while `message` provides a human-readable explanation.
+| Member     | Meaning                                                                                               |
+| ---------- | ----------------------------------------------------------------------------------------------------- |
+| `type`     | A URL naming the kind of failure. It is the stable identifier to branch on, and it links to this page |
+| `title`    | A short summary of the type, the same for every occurrence                                            |
+| `status`   | The HTTP status code, repeated from the status line                                                   |
+| `detail`   | What went wrong with this request, when there is more to say than the title                           |
+| `instance` | A `urn:uuid:` identifier for this one failure; quote it when you contact support                      |
 
-## HTTP Status Codes
+Treat any `type` you do not recognize by its `status`, since new types may be added.
 
-| Status | Code               | Description                                       |
-| ------ | ------------------ | ------------------------------------------------- |
-| 400    | VALIDATION_ERROR   | Request body validation failed                    |
-| 400    | LIMIT_EXCEEDED     | Resource limit reached (e.g., max 10 alerts)      |
-| 401    | UNAUTHORIZED       | Missing or invalid API key                        |
-| 403    | FORBIDDEN          | API key doesn't have required scope               |
-| 404    | NOT_FOUND          | Resource not found                                |
-| 405    | METHOD_NOT_ALLOWED | HTTP method not supported                         |
-| 409    | CONFLICT           | Resource state conflict (e.g., cron job disabled) |
-| 429    | RATE_LIMITED       | Too many requests                                 |
-| 500    | INTERNAL_ERROR     | Server error                                      |
+## Problem Types
+
+| Status | Type                    | Meaning                                                                           |
+| ------ | ----------------------- | --------------------------------------------------------------------------------- |
+| 400    | `bad-request`           | A malformed query parameter, such as a `perPage` out of range or an edited cursor |
+| 400    | `validation-error`      | The body or a path id failed validation; see `errors`                             |
+| 400    | `limit-exceeded`        | The team reached its limit for this resource (e.g., max 10 alerts)                |
+| 401    | `unauthorized`          | Missing, invalid, or expired API key                                              |
+| 402    | `subscription-required` | The team's owner has no active subscription                                       |
+| 403    | `forbidden`             | The API key doesn't have the required scope                                       |
+| 404    | `not-found`             | The resource does not exist, or belongs to another team                           |
+| 409    | `conflict`              | The resource's state prevents the request (e.g., cron job disabled)               |
+| 429    | `rate-limited`          | Too many requests; wait for `Retry-After` seconds                                 |
+| 500    | `internal`              | The request failed on the server                                                  |
+| 500    | `internal-error`        | A change was saved but could not be read back                                     |
+| 503    | `endpoint-unavailable`  | The endpoint is switched off for this team                                        |
+
+Each type is `https://uptime.sergiodxa.com/docs/api/errors/` followed by the name above, so `not-found` is `https://uptime.sergiodxa.com/docs/api/errors/not-found`.
 
 ## Validation Errors
 
-When a request fails validation, the response includes field-level details:
+A `validation-error` problem lists every invalid field in `errors`. Each entry's `pointer` is an [RFC 6901](https://www.rfc-editor.org/rfc/rfc6901) JSON Pointer into the request body, or `""` for the request as a whole:
 
 ```json
 {
-	"error": {
-		"code": "VALIDATION_ERROR",
-		"message": "Request validation failed",
-		"details": [
-			{
-				"field": "url",
-				"message": "Must be a valid URL"
-			},
-			{
-				"field": "interval",
-				"message": "Must be at least 60 seconds"
-			}
-		]
-	}
+	"type": "https://uptime.sergiodxa.com/docs/api/errors/validation-error",
+	"title": "The request failed validation",
+	"status": 400,
+	"instance": "urn:uuid:5f1d2c3b-8a4e-4b6f-9d7c-2e1a0b9c8d7f",
+	"errors": [
+		{ "pointer": "/url", "code": "invalid", "message": "Expected a valid URL" },
+		{
+			"pointer": "/intervalSeconds",
+			"code": "invalid",
+			"message": "Expected a value of at least 60"
+		}
+	]
 }
 ```
 
-Use the `details` array to display specific feedback for each invalid field in your UI.
+Use `errors` to show feedback next to each invalid field in your UI.
 
 ## Best Practices
 
-### Always Check Status Codes
+### Branch on the Type
 
 ```typescript
-let response = await fetch("/api/monitors", {
+let response = await fetch("https://uptime.sergiodxa.com/api/v1/monitors", {
 	method: "POST",
-	headers: { Authorization: `Bearer ${apiKey}` },
+	headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
 	body: JSON.stringify(data),
 });
 
-if (!response.ok) {
-	let error = await response.json();
-	// Handle based on error.error.code
+if (response.headers.get("Content-Type")?.startsWith("application/problem+json")) {
+	let problem = await response.json();
+	let name = problem.type.split("/").pop(); // "validation-error"
 }
 ```
 
-### Log Error Codes for Debugging
+### Log the Instance
 
-Store the `code` value in your logs to quickly identify issues:
+Store `type` and `instance` in your logs, so a failure can be traced to the exact request:
 
 ```typescript
 if (!response.ok) {
-	let { error } = await response.json();
-	console.error(`API Error: ${error.code} - ${error.message}`);
+	let problem = await response.json();
+	console.error(
+		`API error ${problem.type} (${problem.instance}): ${problem.detail ?? problem.title}`,
+	);
 }
 ```
 
 ### Show User-Friendly Messages
 
-Map error codes to user-friendly messages instead of displaying raw API responses:
+Map problem types to messages for your users instead of displaying raw API responses:
 
 ```typescript
 let userMessages: Record<string, string> = {
-	VALIDATION_ERROR: "Please check your input and try again.",
-	LIMIT_EXCEEDED: "You've reached the maximum number of resources.",
-	UNAUTHORIZED: "Please sign in to continue.",
-	FORBIDDEN: "You don't have permission to perform this action.",
-	NOT_FOUND: "The requested resource could not be found.",
-	RATE_LIMITED: "Too many requests. Please wait a moment.",
-	INTERNAL_ERROR: "Something went wrong. Please try again later.",
+	"validation-error": "Please check your input and try again.",
+	"limit-exceeded": "You've reached the maximum number of resources.",
+	unauthorized: "Please sign in to continue.",
+	forbidden: "You don't have permission to perform this action.",
+	"not-found": "The requested resource could not be found.",
+	"rate-limited": "Too many requests. Please wait a moment.",
+	internal: "Something went wrong. Please try again later.",
 };
 ```
 
 ### Implement Retry Logic
 
-For transient errors (429 and 5xx), implement exponential backoff:
+For transient errors (429 and 5xx), retry with exponential backoff, honoring `Retry-After` when the response carries it:
 
 ```typescript
 async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3) {
@@ -117,19 +131,16 @@ async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3)
 
 		if (response.ok) return response;
 
-		// Retry on rate limit or server errors
 		if (response.status === 429 || response.status >= 500) {
-			let delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+			let retryAfter = Number(response.headers.get("Retry-After"));
+			let delay = retryAfter > 0 ? retryAfter * 1000 : Math.pow(2, attempt) * 1000;
 			await new Promise((resolve) => setTimeout(resolve, delay));
 			continue;
 		}
 
-		// Don't retry client errors (4xx except 429)
-		throw new Error(`API error: ${response.status}`);
+		return response;
 	}
 
 	throw new Error("Max retries exceeded");
 }
 ```
-
-For 429 responses, check the `Retry-After` header if present to determine the optimal wait time.

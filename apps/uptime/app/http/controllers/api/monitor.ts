@@ -8,8 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BadRequest, InternalServerError, NotFound } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
+import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
@@ -22,7 +22,8 @@ import AlertEvent from "~/app/data/alert-event";
 import Monitor from "~/app/data/monitor";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiProblems, problemInstance } from "~/app/services/api-problems";
+import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, newestFirst, PAGING } from "~/app/services/pagination";
 import { encodeId, encodeMonitorId, typedId } from "~/app/services/typed-id";
 import { monitorRoutes } from "~/routes/api-groups";
@@ -79,7 +80,8 @@ export default createController(monitorRoutes, {
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MonitorIdParams, ctx.params);
 				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
-				if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
+				if (!monitor)
+					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 				return apiSuccess({ monitor: serializeMonitor(monitor) });
 			},
 		},
@@ -90,15 +92,15 @@ export default createController(monitorRoutes, {
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MonitorIdParams, ctx.params);
 				let existing = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
-				if (!existing) return apiError("NOT_FOUND", "Monitor not found", NotFound);
+				if (!existing)
+					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 
 				let result = await validate(ctx.request, UpdateMonitorSchema);
 				if (isFailure(result)) {
-					return apiError(
-						"VALIDATION_ERROR",
-						result.error.issues.map((issue) => issue.message).join(", "),
-						BadRequest,
-					);
+					return apiProblems.validationError({
+						instance: problemInstance(),
+						extensions: { errors: issuesFrom(result.error) },
+					});
 				}
 
 				let changes: Partial<InsertMonitor> = {};
@@ -133,7 +135,8 @@ export default createController(monitorRoutes, {
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MonitorIdParams, ctx.params);
 				let existing = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
-				if (!existing) return apiError("NOT_FOUND", "Monitor not found", NotFound);
+				if (!existing)
+					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 
 				await Monitor.deleteById(ctx.db, monitorId);
 				return apiSuccess({ deleted: true });
@@ -146,7 +149,8 @@ export default createController(monitorRoutes, {
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MonitorIdParams, ctx.params);
 				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
-				if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
+				if (!monitor)
+					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 
 				let stats = await Monitor.getStatsById(ctx.db, monitorId);
 				return apiSuccess({ stats });
@@ -159,10 +163,15 @@ export default createController(monitorRoutes, {
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MonitorIdParams, ctx.params);
 				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
-				if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
+				if (!monitor)
+					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 
 				let params = PAGING.parse(ctx.url.searchParams);
-				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
+				if (isFailure(params))
+					return apiProblems.badRequest({
+						detail: params.error.message,
+						instance: problemInstance(),
+					});
 
 				let page = await Pagination.byKeyset(Monitor.resultsQuery(ctx.db, monitorId), {
 					orderBy: NEWEST_FIRST,
@@ -172,9 +181,12 @@ export default createController(monitorRoutes, {
 
 				if (isFailure(page)) {
 					if (page.error instanceof InvalidCursorError) {
-						return apiError("BAD_REQUEST", page.error.message, BadRequest);
+						return apiProblems.badRequest({
+							detail: page.error.message,
+							instance: problemInstance(),
+						});
 					}
-					return apiError("INTERNAL", page.error.message, InternalServerError);
+					return apiProblems.internal({ detail: page.error.message, instance: problemInstance() });
 				}
 
 				let results = page.data.items.map((row) => ({
@@ -204,10 +216,15 @@ export default createController(monitorRoutes, {
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MonitorIdParams, ctx.params);
 				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
-				if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
+				if (!monitor)
+					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 
 				let params = PAGING.parse(ctx.url.searchParams);
-				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
+				if (isFailure(params))
+					return apiProblems.badRequest({
+						detail: params.error.message,
+						instance: problemInstance(),
+					});
 
 				let page = await Pagination.byKeyset(AlertEvent.eventsByMonitorQuery(ctx.db, monitorId), {
 					orderBy: newestFirst("sent_at"),
@@ -217,9 +234,12 @@ export default createController(monitorRoutes, {
 
 				if (isFailure(page)) {
 					if (page.error instanceof InvalidCursorError) {
-						return apiError("BAD_REQUEST", page.error.message, BadRequest);
+						return apiProblems.badRequest({
+							detail: page.error.message,
+							instance: problemInstance(),
+						});
 					}
-					return apiError("INTERNAL", page.error.message, InternalServerError);
+					return apiProblems.internal({ detail: page.error.message, instance: problemInstance() });
 				}
 
 				let events = page.data.items.map((event) => ({

@@ -25,6 +25,7 @@ import DnsMonitor from "~/app/data/dns-monitor";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { parseLink } from "~/app/lib/test/paging";
+import { expectProblem, problemMessages } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { dnsMonitorRecords, teams } from "~/database/schema";
 import { dnsMonitorRecordsRoutes } from "~/routes/api-groups";
@@ -124,10 +125,6 @@ function updateRequest(
 	);
 }
 
-async function errorBody(response: Response) {
-	return (await response.json()) as { error: { code: string; message: string } };
-}
-
 describe("GET /api/v1/dns-monitors/:dnsMonitorId/records", () => {
 	test("lists the monitor's tracked records, declined ones included", async () => {
 		let { db } = createTestDatabase();
@@ -222,7 +219,7 @@ describe("GET /api/v1/dns-monitors/:dnsMonitorId/records", () => {
 		let response = await dispatch(db, listRequest(monitor.id, key, "?cursor=not-a-cursor"));
 
 		expect(response.status).toBe(400);
-		expect((await errorBody(response)).error.code).toBe("BAD_REQUEST");
+		await expectProblem(response, "badRequest");
 	});
 
 	test("returns an empty list for a monitor with no records", async () => {
@@ -264,7 +261,7 @@ describe("GET /api/v1/dns-monitors/:dnsMonitorId/records", () => {
 		let response = await dispatch(db, listRequest(monitor.id, key));
 
 		expect(response.status).toBe(404);
-		expect((await errorBody(response)).error.code).toBe("NOT_FOUND");
+		await expectProblem(response, "notFound");
 	});
 
 	test("returns 401 with a missing Authorization header", async () => {
@@ -343,9 +340,8 @@ describe("PATCH /api/v1/dns-monitors/:dnsMonitorId/records/:recordId", () => {
 			);
 
 			expect(response.status).toBe(400);
-			let body = await errorBody(response);
-			expect(body.error.code).toBe("VALIDATION_ERROR");
-			expect(body.error.message).toBe(`${field}: Unknown key`);
+			let body = await expectProblem(response, "validationError");
+			expect(problemMessages(body)).toBe(`/${field}: Unknown key`);
 
 			let stored = await db.findOne(dnsMonitorRecords, { where: { id: record.id } });
 			expect(stored?.name).toBe("example.com");
@@ -365,9 +361,8 @@ describe("PATCH /api/v1/dns-monitors/:dnsMonitorId/records/:recordId", () => {
 		let response = await dispatch(db, updateRequest(monitor.id, record.id, {}, key));
 
 		expect(response.status).toBe(400);
-		let body = await errorBody(response);
-		expect(body.error.code).toBe("VALIDATION_ERROR");
-		expect(body.error.message).toContain("isEnabled");
+		let body = await expectProblem(response, "validationError");
+		expect(problemMessages(body)).toContain("isEnabled");
 	});
 
 	test("400s when isEnabled is not a boolean", async () => {
@@ -383,9 +378,8 @@ describe("PATCH /api/v1/dns-monitors/:dnsMonitorId/records/:recordId", () => {
 		);
 
 		expect(response.status).toBe(400);
-		let body = await errorBody(response);
-		expect(body.error.code).toBe("VALIDATION_ERROR");
-		expect(body.error.message).toContain("isEnabled");
+		let body = await expectProblem(response, "validationError");
+		expect(problemMessages(body)).toContain("isEnabled");
 
 		let stored = await db.findOne(dnsMonitorRecords, { where: { id: record.id } });
 		expect(stored?.is_enabled).toBeTruthy();
@@ -405,7 +399,7 @@ describe("PATCH /api/v1/dns-monitors/:dnsMonitorId/records/:recordId", () => {
 		);
 
 		expect(response.status).toBe(404);
-		expect((await errorBody(response)).error.code).toBe("NOT_FOUND");
+		await expectProblem(response, "notFound");
 
 		let stored = await db.findOne(dnsMonitorRecords, { where: { id: record.id } });
 		expect(stored?.is_enabled).toBeTruthy();

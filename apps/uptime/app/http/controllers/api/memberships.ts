@@ -6,13 +6,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BadRequest, InternalServerError } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { apiError } from "~/app/services/api-response";
+import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
 import { memberships } from "~/database/schema";
@@ -23,7 +22,8 @@ export const membershipsIndex = createAction(routes.api.v1.memberships, {
 	middleware: [requireApiKey("teams:read")],
 	handler: async (ctx) => {
 		let params = PAGING.parse(ctx.url.searchParams);
-		if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
+		if (isFailure(params))
+			return apiProblems.badRequest({ detail: params.error.message, instance: problemInstance() });
 
 		// Chaining returns new queries, so the same one both counts and pages.
 		let query = ctx.db.query(memberships).where({ team_id: ctx.apiTeam.id });
@@ -40,9 +40,9 @@ export const membershipsIndex = createAction(routes.api.v1.memberships, {
 
 		if (isFailure(page)) {
 			if (page.error instanceof InvalidCursorError) {
-				return apiError("BAD_REQUEST", page.error.message, BadRequest);
+				return apiProblems.badRequest({ detail: page.error.message, instance: problemInstance() });
 			}
-			return apiError("INTERNAL", page.error.message, InternalServerError);
+			return apiProblems.internal({ detail: page.error.message, instance: problemInstance() });
 		}
 
 		return apiPage(

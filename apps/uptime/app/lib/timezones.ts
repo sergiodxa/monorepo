@@ -43,7 +43,7 @@ function load() {
 /**
  * Rejection message for a `timezone` the runtime's IANA database doesn't
  * know, shared by the form and API schemas for one consistent wording that
- * the API client reads verbatim in a `VALIDATION_ERROR` body.
+ * the API client reads verbatim in a `validation-error` problem.
  */
 export const UNKNOWN_TIMEZONE_MESSAGE = "Expected a valid IANA time zone";
 

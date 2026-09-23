@@ -163,11 +163,11 @@ curl -i "https://uptime.sergiodxa.com/api/v1/flow-monitors?perPage=25" \
 
 ### Errors
 
-| Status | Code         | Description                              |
-| ------ | ------------ | ---------------------------------------- |
-| 400    | BAD_REQUEST  | Invalid or malformed cursor              |
-| 401    | UNAUTHORIZED | Missing or invalid API key               |
-| 403    | FORBIDDEN    | API key lacks `flow-monitors:read` scope |
+| Status | Type           | Description                              |
+| ------ | -------------- | ---------------------------------------- |
+| 400    | `bad-request`  | Invalid or malformed cursor              |
+| 401    | `unauthorized` | Missing or invalid API key               |
+| 403    | `forbidden`    | API key lacks `flow-monitors:read` scope |
 
 ## Create a Flow Monitor
 
@@ -241,10 +241,17 @@ curl https://uptime.sergiodxa.com/api/v1/flow-monitors \
 
 ```json
 {
-	"error": {
-		"code": "VALIDATION_ERROR",
-		"message": "Expected one of: 900, 1800, 3600, 10800, 21600, 43200, 86400"
-	}
+	"type": "https://uptime.sergiodxa.com/docs/api/errors/validation-error",
+	"title": "The request failed validation",
+	"status": 400,
+	"instance": "urn:uuid:0b6a4c1e-3f7d-4e8a-9c21-5d8f0a7b3e64",
+	"errors": [
+		{
+			"pointer": "/intervalSeconds",
+			"code": "invalid",
+			"message": "Expected one of: 900, 1800, 3600, 10800, 21600, 43200, 86400"
+		}
+	]
 }
 ```
 
@@ -262,10 +269,18 @@ curl https://uptime.sergiodxa.com/api/v1/flow-monitors \
 
 ```json
 {
-	"error": {
-		"code": "VALIDATION_ERROR",
-		"message": "This flow reaches victim.example.net, which no verified domain on this team covers. A flow monitor can only drive a domain the team has verified."
-	}
+	"type": "https://uptime.sergiodxa.com/docs/api/errors/validation-error",
+	"title": "The request failed validation",
+	"status": 400,
+	"detail": "This flow reaches victim.example.net, which no verified domain on this team covers. A flow monitor can only drive a domain the team has verified.",
+	"instance": "urn:uuid:0b6a4c1e-3f7d-4e8a-9c21-5d8f0a7b3e64",
+	"errors": [
+		{
+			"pointer": "/source",
+			"code": "invalid",
+			"message": "This flow reaches victim.example.net, which no verified domain on this team covers. A flow monitor can only drive a domain the team has verified."
+		}
+	]
 }
 ```
 
@@ -273,20 +288,28 @@ A spec that names no host at all is refused the same way, with:
 
 ```json
 {
-	"error": {
-		"code": "VALIDATION_ERROR",
-		"message": "This flow names no host to reach. Every URL it requests has to be written in the spec, so it can be checked against the team's verified domains."
-	}
+	"type": "https://uptime.sergiodxa.com/docs/api/errors/validation-error",
+	"title": "The request failed validation",
+	"status": 400,
+	"detail": "This flow names no host to reach. Every URL it requests has to be written in the spec, so it can be checked against the team's verified domains.",
+	"instance": "urn:uuid:0b6a4c1e-3f7d-4e8a-9c21-5d8f0a7b3e64",
+	"errors": [
+		{
+			"pointer": "/source",
+			"code": "invalid",
+			"message": "This flow names no host to reach. Every URL it requests has to be written in the spec, so it can be checked against the team's verified domains."
+		}
+	]
 }
 ```
 
 ### Errors
 
-| Status | Code             | Description                                                                            |
-| ------ | ---------------- | -------------------------------------------------------------------------------------- |
-| 400    | VALIDATION_ERROR | Invalid body, an unlisted interval, a spec that will not parse, or an unreachable host |
-| 401    | UNAUTHORIZED     | Missing or invalid API key                                                             |
-| 403    | FORBIDDEN        | API key lacks `flow-monitors:write` scope                                              |
+| Status | Type               | Description                                                                            |
+| ------ | ------------------ | -------------------------------------------------------------------------------------- |
+| 400    | `validation-error` | Invalid body, an unlisted interval, a spec that will not parse, or an unreachable host |
+| 401    | `unauthorized`     | Missing or invalid API key                                                             |
+| 403    | `forbidden`        | API key lacks `flow-monitors:write` scope                                              |
 
 ### Request Body Schema
 
@@ -376,11 +399,11 @@ The detail response carries no more than the list response does: `source` is wit
 
 ### Errors
 
-| Status | Code         | Description                              |
-| ------ | ------------ | ---------------------------------------- |
-| 401    | UNAUTHORIZED | Missing or invalid API key               |
-| 403    | FORBIDDEN    | API key lacks `flow-monitors:read` scope |
-| 404    | NOT_FOUND    | Flow monitor not found                   |
+| Status | Type           | Description                              |
+| ------ | -------------- | ---------------------------------------- |
+| 401    | `unauthorized` | Missing or invalid API key               |
+| 403    | `forbidden`    | API key lacks `flow-monitors:read` scope |
+| 404    | `not-found`    | Flow monitor not found                   |
 
 A monitor belonging to another team is `404`, not `403`: an id you may not read is an id that does not exist.
 
@@ -442,12 +465,12 @@ A refused update changes nothing: the stored spec, interval and schedule are exa
 
 ### Errors
 
-| Status | Code             | Description                                                                           |
-| ------ | ---------------- | ------------------------------------------------------------------------------------- |
-| 400    | VALIDATION_ERROR | Invalid body, an unlisted interval, or a replacement spec reaching an unverified host |
-| 401    | UNAUTHORIZED     | Missing or invalid API key                                                            |
-| 403    | FORBIDDEN        | API key lacks `flow-monitors:write` scope                                             |
-| 404    | NOT_FOUND        | Flow monitor not found                                                                |
+| Status | Type               | Description                                                                           |
+| ------ | ------------------ | ------------------------------------------------------------------------------------- |
+| 400    | `validation-error` | Invalid body, an unlisted interval, or a replacement spec reaching an unverified host |
+| 401    | `unauthorized`     | Missing or invalid API key                                                            |
+| 403    | `forbidden`        | API key lacks `flow-monitors:write` scope                                             |
+| 404    | `not-found`        | Flow monitor not found                                                                |
 
 ### Request Body Schema
 
@@ -499,11 +522,11 @@ curl https://uptime.sergiodxa.com/api/v1/flow-monitors/flow_abc123 \
 
 ### Errors
 
-| Status | Code         | Description                               |
-| ------ | ------------ | ----------------------------------------- |
-| 401    | UNAUTHORIZED | Missing or invalid API key                |
-| 403    | FORBIDDEN    | API key lacks `flow-monitors:write` scope |
-| 404    | NOT_FOUND    | Flow monitor not found                    |
+| Status | Type           | Description                               |
+| ------ | -------------- | ----------------------------------------- |
+| 401    | `unauthorized` | Missing or invalid API key                |
+| 403    | `forbidden`    | API key lacks `flow-monitors:write` scope |
+| 404    | `not-found`    | Flow monitor not found                    |
 
 ## Get Flow Monitor Results
 
@@ -587,12 +610,12 @@ Only the **first** failure of a run is recorded, in `failedTest`, `failedAtLine`
 
 ### Errors
 
-| Status | Code         | Description                              |
-| ------ | ------------ | ---------------------------------------- |
-| 400    | BAD_REQUEST  | Invalid or malformed cursor              |
-| 401    | UNAUTHORIZED | Missing or invalid API key               |
-| 403    | FORBIDDEN    | API key lacks `flow-monitors:read` scope |
-| 404    | NOT_FOUND    | Flow monitor not found                   |
+| Status | Type           | Description                              |
+| ------ | -------------- | ---------------------------------------- |
+| 400    | `bad-request`  | Invalid or malformed cursor              |
+| 401    | `unauthorized` | Missing or invalid API key               |
+| 403    | `forbidden`    | API key lacks `flow-monitors:read` scope |
+| 404    | `not-found`    | Flow monitor not found                   |
 
 ### Response Schema
 

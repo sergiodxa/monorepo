@@ -19,6 +19,7 @@ import ApiKey from "~/app/data/api-key";
 import Invite from "~/app/data/invite";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -95,8 +96,7 @@ describe("DELETE /api/v1/invites/:inviteId", () => {
 		);
 
 		expect(response.status).toBe(400);
-		let body = (await response.json()) as { error: { code: string } };
-		expect(body.error.code).toBe("VALIDATION_ERROR");
+		await expectProblem(response, "validationError");
 		expect(await Invite.findByIdForTeam(db, team.id, invite.id)).not.toBeNull();
 	});
 

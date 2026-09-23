@@ -55,12 +55,12 @@ curl https://uptime.sergiodxa.com/api/v1/team \
 
 ### Possible Errors
 
-| Status | Code           | Description                             |
-| ------ | -------------- | --------------------------------------- |
-| 401    | UNAUTHORIZED   | Missing or invalid API key              |
-| 403    | FORBIDDEN      | API key doesn't have `teams:read` scope |
-| 429    | RATE_LIMITED   | Too many requests                       |
-| 500    | INTERNAL_ERROR | Server error                            |
+| Status | Type             | Description                             |
+| ------ | ---------------- | --------------------------------------- |
+| 401    | `unauthorized`   | Missing or invalid API key              |
+| 403    | `forbidden`      | API key doesn't have `teams:read` scope |
+| 429    | `rate-limited`   | Too many requests                       |
+| 500    | `internal-error` | Server error                            |
 
 ### Response Schema
 
@@ -145,13 +145,13 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/team \
 
 ### Possible Errors
 
-| Status | Code             | Description                                |
-| ------ | ---------------- | ------------------------------------------ |
-| 400    | VALIDATION_ERROR | Invalid request body or no fields provided |
-| 401    | UNAUTHORIZED     | Missing or invalid API key                 |
-| 403    | FORBIDDEN        | API key doesn't have `teams:write` scope   |
-| 429    | RATE_LIMITED     | Too many requests                          |
-| 500    | INTERNAL_ERROR   | Server error                               |
+| Status | Type               | Description                                |
+| ------ | ------------------ | ------------------------------------------ |
+| 400    | `validation-error` | Invalid request body or no fields provided |
+| 401    | `unauthorized`     | Missing or invalid API key                 |
+| 403    | `forbidden`        | API key doesn't have `teams:write` scope   |
+| 429    | `rate-limited`     | Too many requests                          |
+| 500    | `internal-error`   | Server error                               |
 
 ### Request Body Schema
 
@@ -303,13 +303,13 @@ curl -i "https://uptime.sergiodxa.com/api/v1/memberships?perPage=100" \
 
 ### Possible Errors
 
-| Status | Code           | Description                             |
-| ------ | -------------- | --------------------------------------- |
-| 400    | BAD_REQUEST    | Invalid or malformed cursor             |
-| 401    | UNAUTHORIZED   | Missing or invalid API key              |
-| 403    | FORBIDDEN      | API key doesn't have `teams:read` scope |
-| 429    | RATE_LIMITED   | Too many requests                       |
-| 500    | INTERNAL_ERROR | Server error                            |
+| Status | Type             | Description                             |
+| ------ | ---------------- | --------------------------------------- |
+| 400    | `bad-request`    | Invalid or malformed cursor             |
+| 401    | `unauthorized`   | Missing or invalid API key              |
+| 403    | `forbidden`      | API key doesn't have `teams:read` scope |
+| 429    | `rate-limited`   | Too many requests                       |
+| 500    | `internal-error` | Server error                            |
 
 ### Response Schema
 
@@ -472,13 +472,13 @@ curl -i "https://uptime.sergiodxa.com/api/v1/team-domains?perPage=100" \
 
 ### Possible Errors
 
-| Status | Code           | Description                                    |
-| ------ | -------------- | ---------------------------------------------- |
-| 400    | BAD_REQUEST    | Invalid or malformed cursor                    |
-| 401    | UNAUTHORIZED   | Missing or invalid API key                     |
-| 403    | FORBIDDEN      | API key doesn't have `team-domains:read` scope |
-| 429    | RATE_LIMITED   | Too many requests                              |
-| 500    | INTERNAL_ERROR | Server error                                   |
+| Status | Type             | Description                                    |
+| ------ | ---------------- | ---------------------------------------------- |
+| 400    | `bad-request`    | Invalid or malformed cursor                    |
+| 401    | `unauthorized`   | Missing or invalid API key                     |
+| 403    | `forbidden`      | API key doesn't have `team-domains:read` scope |
+| 429    | `rate-limited`   | Too many requests                              |
+| 500    | `internal-error` | Server error                                   |
 
 ### Response Schema
 
@@ -600,14 +600,14 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/team-domains \
 
 ### Possible Errors
 
-| Status | Code             | Description                                     |
-| ------ | ---------------- | ----------------------------------------------- |
-| 400    | VALIDATION_ERROR | Invalid hostname or missing required field      |
-| 401    | UNAUTHORIZED     | Missing or invalid API key                      |
-| 403    | FORBIDDEN        | API key doesn't have `team-domains:write` scope |
-| 409    | CONFLICT         | Domain already exists                           |
-| 429    | RATE_LIMITED     | Too many requests                               |
-| 500    | INTERNAL_ERROR   | Server error                                    |
+| Status | Type               | Description                                     |
+| ------ | ------------------ | ----------------------------------------------- |
+| 400    | `validation-error` | Invalid hostname or missing required field      |
+| 401    | `unauthorized`     | Missing or invalid API key                      |
+| 403    | `forbidden`        | API key doesn't have `team-domains:write` scope |
+| 409    | `conflict`         | Domain already exists                           |
+| 429    | `rate-limited`     | Too many requests                               |
+| 500    | `internal-error`   | Server error                                    |
 
 ### Request Body Schema
 
@@ -694,14 +694,14 @@ curl -X DELETE https://uptime.sergiodxa.com/api/v1/team-domains \
 
 ### Possible Errors
 
-| Status | Code             | Description                                     |
-| ------ | ---------------- | ----------------------------------------------- |
-| 400    | VALIDATION_ERROR | Invalid or missing domain ID                    |
-| 401    | UNAUTHORIZED     | Missing or invalid API key                      |
-| 403    | FORBIDDEN        | API key doesn't have `team-domains:write` scope |
-| 404    | NOT_FOUND        | Domain not found                                |
-| 429    | RATE_LIMITED     | Too many requests                               |
-| 500    | INTERNAL_ERROR   | Server error                                    |
+| Status | Type               | Description                                     |
+| ------ | ------------------ | ----------------------------------------------- |
+| 400    | `validation-error` | Invalid or missing domain ID                    |
+| 401    | `unauthorized`     | Missing or invalid API key                      |
+| 403    | `forbidden`        | API key doesn't have `team-domains:write` scope |
+| 404    | `not-found`        | Domain not found                                |
+| 429    | `rate-limited`     | Too many requests                               |
+| 500    | `internal-error`   | Server error                                    |
 
 ### Request Body Schema
 

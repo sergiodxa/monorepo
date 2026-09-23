@@ -9,9 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BadRequest, Created, InternalServerError } from "@sdxc/http/status-code";
+import { Created } from "@sdxc/http/status-code";
 import { currentLog } from "@sdxc/logger";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
+import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
@@ -29,7 +30,8 @@ import {
 	MAX_DNS_INTERVAL_SECONDS,
 	MIN_DNS_INTERVAL_SECONDS,
 } from "~/app/http/validators/dns-monitor";
-import { apiError, apiSuccess } from "~/app/services/api-response";
+import { apiProblems, invalidField, problemInstance } from "~/app/services/api-problems";
+import { apiSuccess } from "~/app/services/api-response";
 import {
 	MAX_TRACKED_NAMES_PER_MONITOR,
 	discoveryNames,
@@ -103,7 +105,11 @@ export default createController(dnsMonitorsRoutes, {
 			middleware: [requireApiKey("dns-monitors:read")],
 			handler: async (ctx) => {
 				let params = PAGING.parse(ctx.url.searchParams);
-				if (isFailure(params)) return apiError("BAD_REQUEST", params.error.message, BadRequest);
+				if (isFailure(params))
+					return apiProblems.badRequest({
+						detail: params.error.message,
+						instance: problemInstance(),
+					});
 
 				// Chaining returns new queries, so the same one both counts and pages.
 				let query = DnsMonitor.byTeamQuery(ctx.db, ctx.apiTeam.id);
@@ -116,9 +122,12 @@ export default createController(dnsMonitorsRoutes, {
 
 				if (isFailure(page)) {
 					if (page.error instanceof InvalidCursorError) {
-						return apiError("BAD_REQUEST", page.error.message, BadRequest);
+						return apiProblems.badRequest({
+							detail: page.error.message,
+							instance: problemInstance(),
+						});
 					}
-					return apiError("INTERNAL", page.error.message, InternalServerError);
+					return apiProblems.internal({ detail: page.error.message, instance: problemInstance() });
 				}
 
 				return apiPage({ dnsMonitors: page.data.items.map(serializeDnsMonitor) }, page.data, {
@@ -140,20 +149,18 @@ export default createController(dnsMonitorsRoutes, {
 				 */
 				let existingCount = await DnsMonitor.countByTeam(ctx.db, ctx.apiTeam.id);
 				if (existingCount >= MAX_DNS_MONITORS_PER_TEAM) {
-					return apiError(
-						"LIMIT_EXCEEDED",
-						`Maximum of ${MAX_DNS_MONITORS_PER_TEAM} DNS monitors per team`,
-						BadRequest,
-					);
+					return apiProblems.limitExceeded({
+						detail: `Maximum of ${MAX_DNS_MONITORS_PER_TEAM} DNS monitors per team`,
+						instance: problemInstance(),
+					});
 				}
 
 				let result = await validate(ctx.request, CreateDnsMonitorSchema);
 				if (isFailure(result)) {
-					return apiError(
-						"VALIDATION_ERROR",
-						result.error.issues.map((issue) => issue.message).join(", "),
-						BadRequest,
-					);
+					return apiProblems.validationError({
+						instance: problemInstance(),
+						extensions: { errors: issuesFrom(result.error) },
+					});
 				}
 
 				let zoneFile: ZoneFileParse | null = null;
@@ -161,10 +168,9 @@ export default createController(dnsMonitorsRoutes, {
 				if (result.data.zoneFile !== undefined && result.data.zoneFile.trim() !== "") {
 					let parsed = parseZoneFile(result.data.zoneFile, result.data.domain);
 					if (isFailure(parsed)) {
-						return apiError(
-							"VALIDATION_ERROR",
+						return invalidField(
 							`zoneFile must be ${MAX_ZONE_FILE_BYTES} bytes or smaller`,
-							BadRequest,
+							"/zoneFile",
 						);
 					}
 					zoneFile = parsed.data;
@@ -177,10 +183,9 @@ export default createController(dnsMonitorsRoutes, {
 				 * accurate count of what actually got tracked.
 				 */
 				if (names.length > MAX_TRACKED_NAMES_PER_MONITOR) {
-					return apiError(
-						"VALIDATION_ERROR",
+					return invalidField(
 						`zoneFile declares ${names.length} names, over the ${MAX_TRACKED_NAMES_PER_MONITOR} name limit for one monitor`,
-						BadRequest,
+						"/zoneFile",
 					);
 				}
 

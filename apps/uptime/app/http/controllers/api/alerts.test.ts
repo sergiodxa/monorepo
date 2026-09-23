@@ -21,6 +21,7 @@ import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { parseLink } from "~/app/lib/test/paging";
+import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { alerts, dnsMonitors, monitors, teams } from "~/database/schema";
 import { alertsRoutes } from "~/routes/api-groups";
@@ -156,8 +157,7 @@ describe("GET /api/v1/alerts", () => {
 		);
 		expect(response.status).toBe(400);
 
-		let body = (await response.json()) as { error: { code: string } };
-		expect(body.error.code).toBe("BAD_REQUEST");
+		await expectProblem(response, "badRequest");
 	});
 
 	test("returns 401 for a missing Authorization header", async () => {
@@ -239,8 +239,7 @@ describe("POST /api/v1/alerts", () => {
 		let response = await dispatch(db, post(key, emailAlertBody({ name: "" })));
 		expect(response.status).toBe(400);
 
-		let body = (await response.json()) as { error: { code: string } };
-		expect(body.error.code).toBe("VALIDATION_ERROR");
+		await expectProblem(response, "validationError");
 		expect(await db.count(alerts, { where: { team_id: team.id } })).toBe(0);
 	});
 
@@ -383,8 +382,7 @@ describe("POST /api/v1/alerts", () => {
 		let response = await dispatch(db, post(key, emailAlertBody()));
 		expect(response.status).toBe(400);
 
-		let body = (await response.json()) as { error: { code: string } };
-		expect(body.error.code).toBe("LIMIT_EXCEEDED");
+		await expectProblem(response, "limitExceeded");
 		expect(await db.count(alerts, { where: { team_id: team.id } })).toBe(MAX_ALERTS_PER_TEAM);
 	});
 
