@@ -2,9 +2,9 @@
  * A visual and semantic wrapper binding a cluster of related controls into
  * one unit — a text input paired with its clear button, a row of segmented
  * buttons, a search field with a trailing submit action. The host lays its
- * children out in a single row and gains a keyboard focus ring around the
- * whole cluster whenever a control inside it becomes focus-visible, detected
- * structurally rather than through any tracked state.
+ * children out in a single row, joining their edges so the cluster reads as one
+ * control, with the seam between two of them drawn structurally rather than
+ * through any tracked state.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,8 +12,11 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { outline, outlineColor } from "@sdxc/u/color";
+import { outlineColor } from "@sdxc/u/color";
+import { roundedCorner } from "@sdxc/u/effects";
 import { flex, items } from "@sdxc/u/layout";
+import { mis } from "@sdxc/u/size";
+import { z } from "@sdxc/u/stacking";
 import { when } from "@sdxc/u/state";
 import { attrs } from "remix/ui";
 
@@ -37,9 +40,9 @@ export namespace Group {
 }
 
 /**
- * Lays children out in a centered flex row with no border, background, or
- * gap, so controls can compose their own edges into one shape, and shows a
- * keyboard focus ring (primary, or danger under `aria-invalid="true"`).
+ * Lays children out in a centered flex row with no border, background, or gap, joining
+ * their edges into one shape: only the cluster's outer corners stay round, and the seam
+ * two controls share is drawn once. Focus is shown by whichever control holds it.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the group's markup.
@@ -65,10 +68,29 @@ export function Group(handle: Handle<Group.Props>) {
 				{...rest}
 				mix={[
 					attrs({ role: DEFAULT_ROLE }),
-					when("&:has(:focus-visible)", outline({ color: "brand.ring", offset: 2 })),
 					flex(),
 					items("center"),
-					when('&[aria-invalid="true"]', outlineColor("danger")),
+					/*
+					 * The controls compose into one shape, so the cluster keeps the rounding on
+					 * its own outer corners and the seam where two of them meet is drawn once.
+					 */
+					when("& > *:not(:first-child)", [
+						roundedCorner("start-start", "none"),
+						roundedCorner("end-start", "none"),
+						mis("-1px"),
+					]),
+					when("& > *:not(:last-child)", [
+						roundedCorner("start-end", "none"),
+						roundedCorner("end-end", "none"),
+					]),
+					/*
+					 * Focus is shown by the control that holds it, since a ring around the whole
+					 * cluster says a group is focused without saying which of its controls is.
+					 * The focused one is raised so its ring crosses the seam it shares with a
+					 * neighbour rather than being painted over by it.
+					 */
+					when("& > *:focus-visible", z(1)),
+					when('&[aria-invalid="true"] > *:focus-visible', outlineColor("danger")),
 					mix,
 				]}
 			/>
