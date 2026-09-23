@@ -76,7 +76,12 @@ function stringifyBlock(node: Markdown.Block): string {
 		case "thematicBreak":
 			return above(node.attributes, "---");
 		case "html":
-			return above(node.attributes, node.value);
+			/*
+			 * The block separator supplies what follows a raw block, so the newline the source
+			 * ended it with is dropped here — kept, it lands on top of that separator and every
+			 * write adds a blank line the one before it did not have.
+			 */
+			return above(node.attributes, node.value.replace(/\n+$/, ""));
 		case "footnoteDefinition":
 			return writeFootnoteDefinition(node);
 		case "tag":

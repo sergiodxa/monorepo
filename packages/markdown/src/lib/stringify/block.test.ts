@@ -455,6 +455,18 @@ describe("stringifyBlocks", () => {
 			).toBe("<div class='x'>\n\ttext\n</div>");
 		});
 
+		test("drops the newline a raw block ended on, which the separator supplies", () => {
+			/* Kept, it lands on top of the block separator and every write adds a blank line. */
+			expect(
+				write({
+					type: "html",
+					value: '<section-block id="a">\n',
+					attributes: {},
+					position: position(),
+				}),
+			).toBe('<section-block id="a">');
+		});
+
 		test("puts a thematic break's annotation on the line above it", () => {
 			expect(
 				write({ type: "thematicBreak", attributes: { id: "split" }, position: position() }),
