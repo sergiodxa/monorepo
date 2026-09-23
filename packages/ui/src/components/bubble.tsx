@@ -14,18 +14,14 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw, vars } from "@sdxc/u/general";
-import { block, container, flex, flexWrap, gap, items, vstack } from "@sdxc/u/layout";
-import { maxIs, mbs, mie, mis, pb, pi, width } from "@sdxc/u/size";
+import { block, flex, flexWrap, gap, items, vstack } from "@sdxc/u/layout";
+import { maxIs, mie, mis, pb, pbe, pi, width } from "@sdxc/u/size";
 import { data, when } from "@sdxc/u/state";
 import { wordBreak } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
-/**
- * Named container {@link Bubble} declares on its own host, so
- * {@link Bubble.Reactions} can measure the frame's own width and fall back to
- * a plain, non-overlapping row once that space runs out.
- */
-const CONTAINER_NAME = "ui-bubble";
+/** Selector matching every framed variant, the ones that hug their own text. */
+const FRAMED = '&:not([data-variant="ghost"])';
 
 /** Visual weight {@link Bubble} falls back to when `variant` is omitted. */
 const DEFAULT_VARIANT: Bubble.Variant = "default";
@@ -139,21 +135,20 @@ export function Bubble(handle: Handle<Bubble.Props>) {
 				data-variant={resolvedVariant}
 				data-align={resolvedAlign}
 				mix={[
-					container(CONTAINER_NAME),
 					block(),
-					maxIs("80%"),
 					rounded("xl"),
 					border({ width: 1 }),
 					border("transparent"),
-					width("fit-content"),
+
+					when(FRAMED, [width("fit-content"), maxIs("80%")]),
+					when(`${FRAMED}[data-align="start"]`, mie("auto")),
+					when(`${FRAMED}[data-align="end"]`, mis("auto")),
 
 					data("align", "start", [
-						mie("auto"),
 						raw({ borderEndStartRadius: "var(--ui-radius-xs, 0.125rem)" }),
 						vars({ "ui-bubble-reactions-justify": "flex-start" }),
 					]),
 					data("align", "end", [
-						mis("auto"),
 						raw({ borderEndEndRadius: "var(--ui-radius-xs, 0.125rem)" }),
 						vars({ "ui-bubble-reactions-justify": "flex-end" }),
 					]),
@@ -169,12 +164,8 @@ export function Bubble(handle: Handle<Bubble.Props>) {
 					]),
 					data("variant", "ghost", [
 						fg("neutral.emphasis"),
-						maxIs("none"),
-						mis(0),
-						mie(0),
 						bg("transparent"),
 						border("transparent"),
-						width("full"),
 					]),
 					data("variant", "destructive", [bg("danger.solid"), fg("danger.onSolid")]),
 					mix,
@@ -283,10 +274,14 @@ Bubble.Reactions = function BubbleReactions(handle: Handle<Bubble.ReactionsProps
 					flexWrap("wrap"),
 					items("center"),
 					gap(1),
-					pi(0.5),
-					mbs(-2),
+					/*
+					 * The row sits on the line the turn's own text sits on, and clears the frame's
+					 * lower edge: inset to match the content beside it, a negative pull would lift
+					 * the reactions into the last line of the message they belong to.
+					 */
+					pi(3.5),
+					pbe(2.5),
 					raw({ justifyContent: "var(--ui-bubble-reactions-justify, flex-start)" }),
-					when(`@container ${CONTAINER_NAME} (max-width: 16rem)`, mbs("0.375rem")),
 					mix,
 				]}
 			>
