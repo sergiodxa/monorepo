@@ -37,8 +37,16 @@ const DEFAULT_MAX = 100;
  * WebKit/Blink split it in three depending on `value` vs. `low`/`high`/
  * `optimum`; Gecko exposes one. All four resolve their color from `data-color`.
  */
-const FILL_PSEUDO_ELEMENTS =
-	"&::-webkit-meter-optimum-value, &::-webkit-meter-suboptimum-value, &::-webkit-meter-even-less-good-value, &::-moz-meter-bar";
+/**
+ * Chrome and Safari name the fill by how the value scores against the optimum range, and
+ * Firefox names it once. Each engine gets a rule of its own, because a vendor
+ * pseudo-element an engine does not know invalidates every selector in the list beside it —
+ * one combined list leaves both engines with no fill at all.
+ */
+const FILL_SELECTORS = [
+	"&::-webkit-meter-optimum-value, &::-webkit-meter-suboptimum-value, &::-webkit-meter-even-less-good-value",
+	"&::-moz-meter-bar",
+] as const;
 
 /**
  * Prop types for {@link Meter} and its compound parts.
@@ -144,15 +152,35 @@ Meter.Indicator = function MeterIndicator(handle: Handle<Meter.IndicatorProps>) 
 					block(),
 					border("none"),
 					when("&::-webkit-meter-bar", [bg("neutral.border"), rounded("full")]),
-					when(FILL_PSEUDO_ELEMENTS, [rounded("full"), transition("all")]),
-					data("color", "brand", when(FILL_PSEUDO_ELEMENTS, bg("brand.solid"))),
-					data("color", "neutral", when(FILL_PSEUDO_ELEMENTS, bg("neutral.solid"))),
-					data("color", "success", when(FILL_PSEUDO_ELEMENTS, bg("success.solid"))),
-					data("color", "warning", when(FILL_PSEUDO_ELEMENTS, bg("warning.solid"))),
-					data("color", "danger", when(FILL_PSEUDO_ELEMENTS, bg("danger.solid"))),
+					FILL_SELECTORS.map((selector) => when(selector, [rounded("full"), transition("all")])),
+					data(
+						"color",
+						"brand",
+						FILL_SELECTORS.map((selector) => when(selector, bg("brand.solid"))),
+					),
+					data(
+						"color",
+						"neutral",
+						FILL_SELECTORS.map((selector) => when(selector, bg("neutral.solid"))),
+					),
+					data(
+						"color",
+						"success",
+						FILL_SELECTORS.map((selector) => when(selector, bg("success.solid"))),
+					),
+					data(
+						"color",
+						"warning",
+						FILL_SELECTORS.map((selector) => when(selector, bg("warning.solid"))),
+					),
+					data(
+						"color",
+						"danger",
+						FILL_SELECTORS.map((selector) => when(selector, bg("danger.solid"))),
+					),
 					media(
 						"(prefers-reduced-motion: reduce)",
-						when(FILL_PSEUDO_ELEMENTS, raw({ transitionDuration: "0s" })),
+						FILL_SELECTORS.map((selector) => when(selector, raw({ transitionDuration: "0s" }))),
 					),
 					mix,
 				]}

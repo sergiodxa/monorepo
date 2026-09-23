@@ -168,7 +168,13 @@ export function Slider(handle: Handle<Slider.Props, Slider.Context>) {
 		});
 
 		return (
+			/*
+			 * The slot is what the parts below scope their orientation rules to. Matching on
+			 * the attribute alone would answer to any ancestor that happens to carry it — a
+			 * scroll viewport, a toolbar — and lay a horizontal slider out as a vertical one.
+			 */
 			<div
+				data-slot="slider"
 				data-orientation={resolvedOrientation}
 				{...rest}
 				mix={[
@@ -211,14 +217,18 @@ Slider.Track = function SliderTrack(handle: Handle<Slider.TrackProps>) {
 						is("100%"),
 						bs("var(--ui-slider-thumb-size, 1.25rem)"),
 					]),
-					when('[data-orientation="vertical"] &', [
+					when('[data-slot="slider"][data-orientation="vertical"] &', [
 						is("var(--ui-slider-thumb-size, 1.25rem)"),
 						minBs("0"),
 						overflow("hidden"),
 					]),
 					before([absolute(), rounded("full"), bg("neutral.border"), pseudoContent('""')]),
 					after([absolute(), rounded("full"), bg("brand.solid"), pseudoContent('""')]),
-					when('[data-orientation="vertical"] &', [grow(), shrink(1), basis("0%")]),
+					when('[data-slot="slider"][data-orientation="vertical"] &', [
+						grow(),
+						shrink(1),
+						basis("0%"),
+					]),
 					when('[data-orientation="horizontal"] &::before', [
 						bs("var(--ui-slider-track-thickness, 0.5rem)"),
 						insIs("0"),
@@ -233,14 +243,14 @@ Slider.Track = function SliderTrack(handle: Handle<Slider.TrackProps>) {
 						insBs("50%"),
 						translateY("-50%"),
 					]),
-					when('[data-orientation="vertical"] &::before', [
+					when('[data-slot="slider"][data-orientation="vertical"] &::before', [
 						is("var(--ui-slider-track-thickness, 0.5rem)"),
 						bs("100%"),
 						insBs("0"),
 						insIs("50%"),
 						translateX("-50%"),
 					]),
-					when('[data-orientation="vertical"] &::after', [
+					when('[data-slot="slider"][data-orientation="vertical"] &::after', [
 						is("var(--ui-slider-track-thickness, 0.5rem)"),
 						bs("var(--ui-slider-fill, 0%)"),
 						insBe("0"),
@@ -302,7 +312,7 @@ Slider.Thumb = function SliderThumb(handle: Handle<Slider.ThumbProps>) {
 						border({ style: "none" }),
 					]),
 					when(
-						'[data-orientation="vertical"] &',
+						'[data-slot="slider"][data-orientation="vertical"] &',
 						raw({ writingMode: "vertical-lr", direction: "rtl" }),
 					),
 					mix,
