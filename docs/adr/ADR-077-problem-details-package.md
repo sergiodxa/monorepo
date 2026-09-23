@@ -32,14 +32,14 @@ needs a separate decoder for each.
 
 ### What the RFC asks of an implementation
 
-| Rule                                                                 | Consequence for the package                                                                 |
-| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `type` defaults to `about:blank`, whose `title` is the status phrase | a status alone produces a valid document                                                    |
-| `status` in the body is advisory; the status line wins               | the builder sets both from one value; the parser reports both                               |
-| Clients ignore unknown extension members                             | parsing keeps extensions, typed through a caller-given schema                               |
-| Extension names: a letter first, then letters, digits, `_`, ≥3 chars | the builder rejects names outside that grammar at the type level where it can, and in tests |
-| Media type may carry parameters (`; charset=utf-8`)                  | detection compares the essence, case-insensitively                                          |
-| Several problems: one `type` with an array extension                 | a first-class `errors` extension with JSON Pointer entries                                  |
+| Rule                                                                 | Consequence for the package                                                       |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `type` defaults to `about:blank`, whose `title` is the status phrase | a status alone produces a valid document                                          |
+| `status` in the body is advisory; the status line wins               | the builder sets both from one value; the parser reports both                     |
+| Clients ignore unknown extension members                             | parsing keeps extensions, typed through a caller-given schema                     |
+| Extension names: a letter first, then letters, digits, `_`, ≥3 chars | extensions are written before the standard members, so a clash never replaces one |
+| Media type may carry parameters (`; charset=utf-8`)                  | detection compares the essence, case-insensitively                                |
+| Several problems: one `type` with an array extension                 | a first-class `errors` extension with JSON Pointer entries                        |
 
 ### Why a package, not a helper in `@sdxc/response`
 
@@ -166,9 +166,7 @@ if (isSuccess(result) && problems.is(result.data, "outOfCredit")) result.data.ex
   the real docs site is a one-line change, and each `type` is `new URL(slug, base)`, a
   documentation page as RFC 9457 recommends. The base must end in `/`: without it URL
   resolution drops the last segment (`/errors` + `not-found` is `/not-found`), so
-  a string base is typed `` `${string}/` `` and the compiler rejects one without the slash.
-  A `URL` base is checked when the catalog is defined, so a bad base fails the first test
-  that imports the catalog.
+  the base is typed `` `${string}/` `` and the compiler rejects one without the slash.
 - **Slugs stay explicit.** The key names the builder in code and the slug is the wire
   contract, so renaming an identifier never changes a `type` a client compares against.
 - **The catalog is named in camelCase** (`problems`, not `PROBLEMS`). It's an object of
@@ -224,8 +222,9 @@ is a per-API decision, not part of this ADR.
 
 ### Neutral
 
-- **`@sdxc/validate` dependency** - only `issuesFrom` needs it; it stays a regular dependency
-  because the package is already public
+- **`remix` dependency** - `ISSUES_SCHEMA` is a `remix/data-schema` schema so it composes
+  into `s.object`, and `issuesFrom` takes any Standard Schema issues, `@sdxc/validate`'s
+  included, without depending on it
 - **`packages/auth` gains a dependency** - its public types keep their names
 
 ## Implementation Plan
@@ -300,7 +299,8 @@ using the format would add a third copy.
 
 ## Current Progress
 
-- [ ] Phase 1: Specify and build the package
+- [x] Phase 1: Specify and build the package
 - [ ] Phase 2: Declare the management catalog in `@sdxc/auth`
 - [ ] Phase 3: Adopt in auth-saas
-- [ ] Phase 4: Publish
+- [ ] Phase 4: Publish (public from the start; `release:bootstrap` and the trusted publisher
+      are pending)

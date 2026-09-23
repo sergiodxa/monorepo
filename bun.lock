@@ -755,6 +755,15 @@
         "remix": "3.0.0-rc.2",
       },
     },
+    "packages/problem": {
+      "name": "@sdxc/problem",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "remix": "3.0.0-rc.2",
+      },
+    },
     "packages/rate-limit": {
       "name": "@sdxc/rate-limit",
       "version": "0.0.1",
@@ -1634,6 +1643,8 @@
     "@sdxc/pagination": ["@sdxc/pagination@workspace:packages/pagination"],
 
     "@sdxc/passkey": ["@sdxc/passkey@workspace:packages/passkey"],
+
+    "@sdxc/problem": ["@sdxc/problem@workspace:packages/problem"],
 
     "@sdxc/rate-limit": ["@sdxc/rate-limit@workspace:packages/rate-limit"],
 
