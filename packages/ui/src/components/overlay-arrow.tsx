@@ -13,8 +13,19 @@ import type { Handle, Props as TagProps } from "remix/ui";
 
 import { fill } from "@sdxc/u/color";
 import { calc, pointerEvents, var as varUtility } from "@sdxc/u/general";
-import { absolute, insBe, insBs, insIe, insIs, insLeft, insRight } from "@sdxc/u/layout";
-import { mb, mi } from "@sdxc/u/size";
+import {
+	absolute,
+	flex,
+	insBe,
+	insBs,
+	insIe,
+	insIs,
+	insLeft,
+	insRight,
+	items,
+	justify,
+} from "@sdxc/u/layout";
+import { is, mb, mi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { rotate } from "@sdxc/u/transform";
 import { attrs } from "remix/ui";
@@ -98,6 +109,13 @@ export function OverlayArrow(handle: Handle<OverlayArrow.Props>) {
 				mix={[
 					attrs({ "aria-hidden": DEFAULT_ARIA_HIDDEN }),
 					absolute(),
+					/*
+					 * The host spans the whole edge it attaches to, so centring the glyph inside it
+					 * is what puts the point under the trigger the surface is anchored to.
+					 */
+					flex(),
+					items("center"),
+					justify("center"),
 					fill("neutral.tint"),
 					pointerEvents(),
 					when('&[data-placement^="bottom"]', [
@@ -113,12 +131,18 @@ export function OverlayArrow(handle: Handle<OverlayArrow.Props>) {
 						insIs("0"),
 						insIe("0"),
 					]),
+					/*
+					 * A side placement sits past the surface's own inline edge, where the space
+					 * left to grow into is none, so the glyph is sized from its own content the
+					 * way the block placements are sized from theirs.
+					 */
 					when('&[data-placement^="left"]', [
 						mb("auto"),
 						rotate(-90),
 						insLeft("100%"),
 						insBs("0"),
 						insBe("0"),
+						is("max-content"),
 					]),
 					when('&[data-placement^="right"]', [
 						mb("auto"),
@@ -126,6 +150,7 @@ export function OverlayArrow(handle: Handle<OverlayArrow.Props>) {
 						insRight("100%"),
 						insBs("0"),
 						insBe("0"),
+						is("max-content"),
 					]),
 					mix,
 				]}
