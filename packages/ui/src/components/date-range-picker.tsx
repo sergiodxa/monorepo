@@ -1,12 +1,10 @@
 /**
- * A paired-field date range control building on {@link DateField} for its
- * plain fallback — independent start-date and end-date fields, each fully
- * labeled, described, and validated on its own — extended with a
- * {@link DateRangePicker.Group} row and a trigger
- * {@link DateRangePicker.Button} for composing a
- * {@link DateRangePicker.Dialog} calendar surface alongside it. Leaving
- * `children` unset keeps the fallback pair on its own, complete and
- * keyboard-operable with no composed surface at all.
+ * A paired-field date range control built on {@link DateField} — independent
+ * start-date and end-date fields, each fully labeled, described, and validated
+ * on its own — with a {@link DateRangePicker.Group} row for joining the two
+ * into one control. The calendar is the platform's, since each field is a
+ * native date input, so the whole range is pickable before any script loads.
+ * Leaving `children` unset renders the pair on its own.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,9 +19,9 @@ import { DateField } from "./date-field.js";
 import { DatePicker } from "./date-picker.js";
 
 /**
- * Prop types for {@link DateRangePicker} and its compound parts. The
- * {@link DateRangePicker.Group}, {@link DateRangePicker.Button}, and
- * {@link DateRangePicker.Dialog} parts alias {@link DatePicker}'s matching parts directly, since the trigger row and calendar surface render identically for a range as for a single date.
+ * Prop types for {@link DateRangePicker} and its compound parts.
+ * {@link DateRangePicker.Group} aliases {@link DatePicker.Group} directly,
+ * since a row of fields reads the same for a range as for a single date.
  */
 export namespace DateRangePicker {
 	/**
@@ -48,7 +46,9 @@ export namespace DateRangePicker {
 	/**
 	 * Props accepted by {@link DateRangePicker}. Leaving `children` unset
 	 * renders two independent {@link DateField} instances — one per end of
-	 * the range — using every field below; composing {@link DateRangePicker.Group} and {@link DateRangePicker.Dialog} instead renders the richer layout and leaves every field below unread.
+	 * the range — using every field below; composing
+	 * {@link DateRangePicker.Group} instead renders the joined row and leaves
+	 * every field below unread.
 	 */
 	export interface Props extends Omit<TagProps<"div">, "children"> {
 		/** Semantic color role for the fallback pair's focus rings. Read only when `children` is unset. */
@@ -94,31 +94,27 @@ export namespace DateRangePicker {
 		/** Per-part styling for the fallback pair's internally composed {@link DateField} instances. Read only when `children` is unset. */
 		parts?: PartsProps;
 		/**
-		 * The trigger-and-calendar layout — typically a `Label`,
-		 * {@link DateRangePicker.Group}, and {@link DateRangePicker.Dialog} —
-		 * rendered in place of the paired fallback fields, leaving every field above unread when set.
+		 * The joined layout — typically a `Label` and a
+		 * {@link DateRangePicker.Group} — rendered in place of the paired fields,
+		 * leaving every field above unread when set.
 		 */
 		children?: RemixNode;
 	}
 
 	/**
 	 * Every prop {@link DatePicker.GroupProps} accepts, unchanged. `children`
-	 * composes the range's own start and end controls and
-	 * {@link DateRangePicker.Button} into one visual row.
+	 * composes the range's own start and end controls into one visual row.
 	 */
 	export interface GroupProps extends DatePicker.GroupProps {}
-
-	/** Every prop {@link DatePicker.ButtonProps} accepts, unchanged. */
-	export interface ButtonProps extends DatePicker.ButtonProps {}
-
-	/** Every prop {@link DatePicker.DialogProps} accepts, unchanged. */
-	export interface DialogProps extends DatePicker.DialogProps {}
 }
 
 /**
  * Renders {@link DateRangePicker}'s root. Leaving `children` unset renders
  * two independent {@link DateField} instances side by side under a native
- * `role="group"`, each aligned to its own start edge so a validation message under one never shifts the other's label; composing {@link DateRangePicker.Group} and {@link DateRangePicker.Dialog} as `children` instead renders the richer layout and leaves every field above unread.
+ * `role="group"`, each aligned to its own start edge so a validation message
+ * under one never shifts the other's label; composing
+ * {@link DateRangePicker.Group} as `children` instead joins the two fields into
+ * one row and leaves every field prop above unread.
  *
  * @param handle Runtime handle carrying the root element's props.
  * @returns The render function producing the date range picker's markup.
@@ -133,24 +129,9 @@ export namespace DateRangePicker {
  * <DateRangePicker>
  * 	<Label htmlFor="tripStart">{t("form.trip.label")}</Label>
  * 	<DateRangePicker.Group>
- * 		<Input id="tripStart" type="date" name="tripStart" />
- * 		<Input id="tripEnd" type="date" name="tripEnd" />
- * 		<DateRangePicker.Button
- * 			commandfor="trip-calendar"
- * 			command="toggle-popover"
- * 			aria-label={t("form.trip.toggle")}
- * 		/>
+ * 		<Input id="tripStart" type="date" name="tripStart" aria-label={t("form.trip.start")} />
+ * 		<Input id="tripEnd" type="date" name="tripEnd" aria-label={t("form.trip.end")} />
  * 	</DateRangePicker.Group>
- * 	<DateRangePicker.Dialog id="trip-calendar">
- * 		<RangeCalendar aria-label={monthLabel}>
- * 			<RangeCalendar.Header>
- * 				<RangeCalendar.PreviousButton aria-label={t("calendar.previous")} />
- * 				<RangeCalendar.Heading>{monthLabel}</RangeCalendar.Heading>
- * 				<RangeCalendar.NextButton aria-label={t("calendar.next")} />
- * 			</RangeCalendar.Header>
- * 			<RangeCalendar.Grid aria-label={monthLabel}>...</RangeCalendar.Grid>
- * 		</RangeCalendar>
- * 	</DateRangePicker.Dialog>
  * </DateRangePicker>
  */
 export function DateRangePicker(handle: Handle<DateRangePicker.Props>) {
@@ -257,42 +238,8 @@ export function DateRangePicker(handle: Handle<DateRangePicker.Props>) {
  * @returns The render function producing the row's markup.
  * @example
  * <DateRangePicker.Group>
- * 	<Input id="tripStart" type="date" name="tripStart" />
- * 	<Input id="tripEnd" type="date" name="tripEnd" />
- * 	<DateRangePicker.Button commandfor="trip-calendar" command="toggle-popover" aria-label={t("form.trip.toggle")} />
+ * 	<Input id="tripStart" type="date" name="tripStart" aria-label={t("form.trip.start")} />
+ * 	<Input id="tripEnd" type="date" name="tripEnd" aria-label={t("form.trip.end")} />
  * </DateRangePicker.Group>
  */
 DateRangePicker.Group = DatePicker.Group;
-
-/**
- * Renders {@link DateRangePicker}'s trailing trigger: identical to
- * {@link DatePicker.Button}'s calendar glyph and hover/focus-visible
- * styling. Point `commandfor` at {@link DateRangePicker.Dialog}'s `id` with `command="toggle-popover"` to wire it up as that surface's invoker.
- *
- * @param handle Runtime handle carrying the host `<button>`'s props.
- * @returns The render function producing the trigger's markup.
- * @example
- * <DateRangePicker.Button commandfor="trip-calendar" command="toggle-popover" aria-label={t("form.trip.toggle")} />
- */
-DateRangePicker.Button = DatePicker.Button;
-
-/**
- * Renders {@link DateRangePicker}'s calendar surface: identical to
- * {@link DatePicker.Dialog}'s placement default, padding, and
- * `role="dialog"`, with only the calendar a consumer composes as `children` differing. {@link DateRangePicker.Button}'s `commandfor`/`command="toggle-popover"` both opens this surface and becomes its implicit CSS anchor; pair a `calendarKeys()`/`rangePreview()` mixin on the composed calendar for a live, arrow-key- or drag-extended range.
- *
- * @param handle Runtime handle carrying the host's {@link Popover} props.
- * @returns The render function producing the surface's markup.
- * @example
- * <DateRangePicker.Dialog id="trip-calendar">
- * 	<RangeCalendar aria-label={monthLabel}>
- * 		<RangeCalendar.Header>
- * 			<RangeCalendar.PreviousButton aria-label={t("calendar.previous")} />
- * 			<RangeCalendar.Heading>{monthLabel}</RangeCalendar.Heading>
- * 			<RangeCalendar.NextButton aria-label={t("calendar.next")} />
- * 		</RangeCalendar.Header>
- * 		<RangeCalendar.Grid aria-label={monthLabel}>...</RangeCalendar.Grid>
- * 	</RangeCalendar>
- * </DateRangePicker.Dialog>
- */
-DateRangePicker.Dialog = DatePicker.Dialog;

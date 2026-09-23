@@ -1,12 +1,10 @@
 /**
- * A labeled date field building on {@link DateField} for its plain fallback,
- * extended with a {@link DatePicker.Group} row and a trigger
- * {@link DatePicker.Button} for composing a {@link DatePicker.Dialog} —
- * a Popover-hosted calendar surface — alongside it. Composing
- * {@link DatePicker.Group} and {@link DatePicker.Dialog} as children swaps in
- * that richer trigger-and-calendar layout in place of the plain fallback
- * field; leaving `children` unset keeps the fallback on its own, a complete,
- * keyboard-operable control with no composed surface at all.
+ * A labeled date field built on {@link DateField}, with a
+ * {@link DatePicker.Group} row for composing more than one field into a single
+ * control. The calendar is the platform's: the field is a native date input, so
+ * the picker, its keyboard handling and its locale all come from the browser and
+ * all of it works before any script loads. Leaving `children` unset renders the
+ * field on its own.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,40 +12,15 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { CalendarIcon } from "@sdxc/icons";
-import { bg, fg, outline } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { flex, flexCol, gap, items, justify } from "@sdxc/u/layout";
-import { bs, is, mis, p } from "@sdxc/u/size";
-import { hover, when } from "@sdxc/u/state";
-import { attrs } from "remix/ui";
-
-import { interactiveTransition } from "../styles/interactive-transition.js";
-import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
+import { outline } from "@sdxc/u/color";
+import { roundedCorner } from "@sdxc/u/effects";
+import { raw } from "@sdxc/u/general";
+import { flex, flexCol, gap, items } from "@sdxc/u/layout";
+import { mis } from "@sdxc/u/size";
+import { z } from "@sdxc/u/stacking";
+import { when } from "@sdxc/u/state";
 
 import { DateField } from "./date-field.js";
-import { Popover } from "./popover.js";
-
-/**
- * Default `type` for {@link DatePicker.Button}, keeping a click on the
- * trigger from submitting a surrounding `<form>` the way a bare `<button>`'s
- * implicit type otherwise would.
- */
-const DEFAULT_BUTTON_TYPE: NonNullable<DatePicker.ButtonProps["type"]> = "button";
-
-/**
- * `role` applied to {@link DatePicker.Dialog}'s host through {@link attrs}
- * unless a consumer supplies its own, identifying the surface as a
- * non-modal dialog layered above the page.
- */
-const DEFAULT_DIALOG_ROLE = "dialog";
-
-/**
- * Side of the trigger {@link DatePicker.Dialog} renders against when
- * `placement` is left unset, reading down and start-ward the way a dropdown
- * conventionally does.
- */
-const DEFAULT_DIALOG_PLACEMENT: Popover.Placement = "bottom-start";
 
 /**
  * Prop types for {@link DatePicker} and its compound parts.
@@ -62,15 +35,15 @@ export namespace DatePicker {
 
 	/**
 	 * Every prop {@link DateField.PartsProps} accepts, applied only to the
-	 * fallback field's internally composed parts; the composed layout styles
-	 * {@link DatePicker.Group} and {@link DatePicker.Button} individually.
+	 * field's internally composed parts; a composed layout styles the controls
+	 * inside {@link DatePicker.Group} individually.
 	 */
 	export interface PartsProps extends DateField.PartsProps {}
 
 	/**
-	 * Props accepted by {@link DatePicker}. Leaving `children` unset renders
-	 * the plain fallback field using every prop below; composing
-	 * {@link DatePicker.Group} and {@link DatePicker.Dialog} instead renders the richer layout and leaves every prop below unread.
+	 * Props accepted by {@link DatePicker}. Leaving `children` unset renders the
+	 * field using every prop below; composing {@link DatePicker.Group} instead
+	 * renders the joined row and leaves every prop below unread.
 	 */
 	export interface Props extends Omit<TagProps<"div">, "children"> {
 		/** Semantic color role for the fallback field's focus ring. Read only when `children` is unset. */
@@ -104,39 +77,26 @@ export namespace DatePicker {
 		/** Per-part styling for the fallback field's internally composed parts. Read only when `children` is unset. */
 		parts?: PartsProps;
 		/**
-		 * The trigger-and-calendar layout — typically a `Label`,
-		 * {@link DatePicker.Group}, and {@link DatePicker.Dialog} — rendered in
-		 * place of the plain fallback field, leaving every field above unread.
+		 * The composed layout — typically a `Label` and a
+		 * {@link DatePicker.Group} — rendered in place of the field, leaving every
+		 * field above unread.
 		 */
 		children?: RemixNode;
 	}
 
 	/**
 	 * Every native `<div>` attribute, unchanged, plus the `mix` passthrough.
-	 * `children` composes the field's own control and
-	 * {@link DatePicker.Button} into one visual row.
+	 * `children` composes the field's own control, and a second one for a
+	 * range, into one visual row.
 	 */
 	export interface GroupProps extends TagProps<"div"> {}
-
-	/**
-	 * Every native `<button>` attribute except `children`, fixed to this
-	 * button's own calendar glyph, plus the `mix` passthrough. `type`
-	 * defaults to {@link DEFAULT_BUTTON_TYPE}; point `commandfor` at {@link DatePicker.Dialog}'s `id` with `command="toggle-popover"` to wire it up as the surface's invoker.
-	 */
-	export interface ButtonProps extends Omit<TagProps<"button">, "children"> {}
-
-	/**
-	 * Every prop {@link Popover.Props} accepts, since {@link DatePicker.Dialog}
-	 * renders one directly as its host. `placement` defaults to
-	 * {@link DEFAULT_DIALOG_PLACEMENT}.
-	 */
-	export interface DialogProps extends Popover.Props {}
 }
 
 /**
- * Renders {@link DatePicker}'s root. Leaving `children` unset renders the
- * plain fallback field, passing every prop above through unchanged;
- * composing {@link DatePicker.Group} and {@link DatePicker.Dialog} as `children` instead renders the richer layout and leaves those props unread.
+ * Renders {@link DatePicker}'s root. Leaving `children` unset renders the field,
+ * passing every prop above through unchanged; composing
+ * {@link DatePicker.Group} as `children` instead renders the joined row and
+ * leaves those props unread.
  *
  * @param handle Runtime handle carrying the root element's props.
  * @returns The render function producing the date picker's markup.
@@ -147,22 +107,7 @@ export namespace DatePicker {
  * 	<Label htmlFor="startDate">{t("form.startDate.label")}</Label>
  * 	<DatePicker.Group>
  * 		<Input id="startDate" type="date" name="startDate" />
- * 		<DatePicker.Button
- * 			commandfor="startDate-calendar"
- * 			command="toggle-popover"
- * 			aria-label={t("form.startDate.toggle")}
- * 		/>
  * 	</DatePicker.Group>
- * 	<DatePicker.Dialog id="startDate-calendar">
- * 		<Calendar aria-label={monthLabel}>
- * 			<Calendar.Header>
- * 				<Calendar.PreviousButton aria-label={t("calendar.previous")} />
- * 				<Calendar.Heading>{monthLabel}</Calendar.Heading>
- * 				<Calendar.NextButton aria-label={t("calendar.next")} />
- * 			</Calendar.Header>
- * 			<Calendar.Grid aria-label={monthLabel}>...</Calendar.Grid>
- * 		</Calendar>
- * 	</DatePicker.Dialog>
  * </DatePicker>
  */
 export function DatePicker(handle: Handle<DatePicker.Props>) {
@@ -227,16 +172,16 @@ export function DatePicker(handle: Handle<DatePicker.Props>) {
 }
 
 /**
- * Renders {@link DatePicker}'s control row: a plain flex host laying the
- * field's own control and {@link DatePicker.Button} out side by side. The
- * row gains a keyboard focus ring whenever focus lands anywhere inside it, since the trigger button sits outside the control's own tab stop.
+ * Renders {@link DatePicker}'s control row: a flex host laying one or more date
+ * controls side by side and joining their edges, so a pair reads as one field.
+ * Focus and validity are drawn the way `Group` draws them — focus by the control
+ * that holds it, validity once around the row.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the row's markup.
  * @example
  * <DatePicker.Group>
  * 	<Input id="startDate" type="date" name="startDate" />
- * 	<DatePicker.Button commandfor="startDate-calendar" command="toggle-popover" aria-label={t("form.startDate.toggle")} />
  * </DatePicker.Group>
  */
 DatePicker.Group = function DatePickerGroup(handle: Handle<DatePicker.GroupProps>) {
@@ -250,92 +195,49 @@ DatePicker.Group = function DatePickerGroup(handle: Handle<DatePicker.GroupProps
 				mix={[
 					flex(),
 					items("center"),
-					when("&:focus-within", outline({ color: "brand.ring", offset: 2 })),
+					/*
+					 * The fields compose into one control, so the pair keeps the rounding on its own
+					 * outer corners and the seam the two share is drawn once.
+					 */
+					when("& > *:not(:first-child)", [
+						roundedCorner("start-start", "none"),
+						roundedCorner("end-start", "none"),
+						mis("-1px"),
+					]),
+					when("& > *:not(:last-child)", [
+						roundedCorner("start-end", "none"),
+						roundedCorner("end-end", "none"),
+					]),
+					/*
+					 * Focus is shown by the field that holds it, the way `Group` shows it: a ring
+					 * around the pair says the group is focused without saying which of its two
+					 * dates is. The focused one is raised so its own ring crosses the seam rather
+					 * than being painted over by its neighbour.
+					 */
+					when("& > *:focus-visible", z(1)),
+					/*
+					 * Validity is the pair's, not either field's: a range is one value, and half of
+					 * one is what makes it invalid. So the ring is drawn once around the group, and
+					 * the ring each field would draw for itself is released — two of them meeting at
+					 * the seam read as damage rather than as one field needing attention.
+					 */
+					when(
+						'&:has(> :user-invalid), &:has(> [aria-invalid="true"])',
+						outline({ color: "danger.ring", offset: 2 }),
+					),
+					when(
+						'& > :user-invalid:not(:focus-visible), & > [aria-invalid="true"]:not(:focus-visible)',
+						/*
+						 * Marked important because the field's own invalid ring is stated by `Input`,
+						 * in a cascade layer this one cannot be ordered against — importance is what
+						 * reaches across the layers to release it. The selector stops short of
+						 * `:focus-visible` so a field being filled in still shows its own focus ring.
+						 */
+						raw({ outline: "none !important" }),
+					),
 					mix,
 				]}
 			/>
-		);
-	};
-};
-
-/**
- * Renders {@link DatePicker}'s trailing trigger: a native `<button>` pulled
- * back over the row's trailing space so it reads as part of the same field.
- * Point `commandfor` at {@link DatePicker.Dialog}'s `id` with `command="toggle-popover"` to wire it up as that surface's invoker, which both opens the surface and serves as its implicit CSS anchor.
- *
- * @param handle Runtime handle carrying the host `<button>`'s props.
- * @returns The render function producing the trigger's markup.
- * @example
- * <DatePicker.Button commandfor="startDate-calendar" command="toggle-popover" aria-label={t("form.startDate.toggle")} />
- */
-DatePicker.Button = function DatePickerButton(handle: Handle<DatePicker.ButtonProps>) {
-	return () => {
-		let { type, mix, ...rest } = handle.props;
-
-		warnIfNoAccessibleLabel(
-			handle.props,
-			"DatePicker.Button: this button needs an `aria-label` describing what it does — its content is a decorative glyph with no accessible name of its own.",
-		);
-
-		return (
-			<button
-				type={type ?? DEFAULT_BUTTON_TYPE}
-				{...rest}
-				data-slot="button"
-				mix={[
-					interactiveTransition(),
-					flex(),
-					items("center"),
-					justify("center"),
-					mis("-2.25rem"),
-					is("2rem"),
-					bs("2rem"),
-					rounded("sm"),
-					fg("neutral"),
-					when("& svg", [is("1rem"), bs("1rem")]),
-					hover(bg("neutral.bg-tint-hover")),
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 0 })),
-					mix,
-				]}
-			>
-				<CalendarIcon />
-			</button>
-		);
-	};
-};
-
-/**
- * Renders {@link DatePicker}'s calendar surface: a {@link Popover} whose
- * `placement` defaults to reading down and start-ward from its invoker, and
- * whose `role` defaults to `"dialog"`. {@link DatePicker.Button}'s `commandfor`/`command="toggle-popover"` both opens this surface and becomes its implicit CSS anchor, with no positioning logic of its own; pair a `calendarKeys()`/`rangePreview()` mixin on the composed calendar for an arrow-key-driven picker.
- *
- * @param handle Runtime handle carrying the host's {@link Popover} props.
- * @returns The render function producing the surface's markup.
- * @example
- * <DatePicker.Dialog id="startDate-calendar">
- * 	<Calendar aria-label={monthLabel}>
- * 		<Calendar.Header>
- * 			<Calendar.PreviousButton aria-label={t("calendar.previous")} />
- * 			<Calendar.Heading>{monthLabel}</Calendar.Heading>
- * 			<Calendar.NextButton aria-label={t("calendar.next")} />
- * 		</Calendar.Header>
- * 		<Calendar.Grid aria-label={monthLabel}>...</Calendar.Grid>
- * 	</Calendar>
- * </DatePicker.Dialog>
- */
-DatePicker.Dialog = function DatePickerDialog(handle: Handle<DatePicker.DialogProps>) {
-	return () => {
-		let { placement, children, mix, ...rest } = handle.props;
-		let resolvedPlacement = placement ?? DEFAULT_DIALOG_PLACEMENT;
-
-		return (
-			<Popover
-				{...rest}
-				placement={resolvedPlacement}
-				mix={[attrs({ role: DEFAULT_DIALOG_ROLE }), p(4), outline("none"), mix]}
-			>
-				{children}
-			</Popover>
 		);
 	};
 };
