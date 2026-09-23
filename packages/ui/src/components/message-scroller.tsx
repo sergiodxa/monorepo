@@ -47,9 +47,10 @@ const CONTAINER_NAME = "ui-message-scroller";
 /**
  * Container width under which {@link MessageScroller.Button} switches from a
  * centered floating pill to a bar stretched across the frame's own inline
- * size.
+ * size. It is measured against the frame's own width, which a conversation
+ * column keeps well under a viewport's, so only a phone-width column reaches it.
  */
-const BUTTON_NARROW_QUERY = `@container ${CONTAINER_NAME} (max-width: 28rem)`;
+const BUTTON_NARROW_QUERY = `@container ${CONTAINER_NAME} (max-width: 20rem)`;
 
 /**
  * `role="log"` applied to {@link MessageScroller.Content} through
@@ -66,10 +67,14 @@ const DEFAULT_CONTENT_ROLE = "log";
 const DEFAULT_CONTENT_ARIA_RELEVANT = "additions";
 
 /** Semantic color role {@link MessageScroller.Button} falls back to when `color` is omitted. */
-const DEFAULT_BUTTON_COLOR: Button.Color = "brand";
+const DEFAULT_BUTTON_COLOR: Button.Color = "neutral";
 
-/** Visual weight {@link MessageScroller.Button} falls back to when `variant` is omitted. */
-const DEFAULT_BUTTON_VARIANT: Button.Variant = "solid";
+/**
+ * Visual weight {@link MessageScroller.Button} falls back to when `variant` is omitted.
+ * The control floats over a conversation it points at rather than competing with it, so
+ * it reads as a surface of its own carrying an arrow.
+ */
+const DEFAULT_BUTTON_VARIANT: Button.Variant = "outline";
 
 /** Size variant {@link MessageScroller.Button} falls back to when `size` is omitted. */
 const DEFAULT_BUTTON_SIZE: Button.Size = "sm";
@@ -328,7 +333,15 @@ MessageScroller.Button = function MessageScrollerButton(
 					z(1),
 					absolute(),
 					inset("auto", "auto", "1rem", "50%"),
-					shadow("lg"),
+					/*
+					 * The control floats over a log it must stay legible against, so it carries an
+					 * opaque surface of its own rather than the transparent fill an outline button
+					 * sits on. Importance is what settles it: every mix entry compiles into its own
+					 * cascade sublayer ordered by first appearance, and the variant's own fill may
+					 * land in a later one.
+					 */
+					raw({ backgroundColor: "var(--ui-bg, Canvas) !important" }),
+					shadow("md"),
 					translateProperty("-50% 0"),
 					when(BUTTON_NARROW_QUERY, [
 						justify("center"),

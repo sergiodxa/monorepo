@@ -145,7 +145,12 @@ function precedes(node: Node, reference: Node): boolean {
  * @param model Model whose pinned state gates the jump.
  */
 function stickToEndIfPinned(host: HTMLElement, model: ScrollFollowModel): void {
-	if (model.pinned) host.scrollTop = host.scrollHeight;
+	/*
+	 * Following lands at once, so a viewport that scrolls smoothly still keeps up with a
+	 * reply arriving a word at a time: an eased scroll would restart on every word and
+	 * spend the whole answer travelling.
+	 */
+	if (model.pinned) host.scrollTo({ top: host.scrollHeight, behavior: "instant" });
 }
 
 /**
@@ -210,6 +215,22 @@ function scrollableTokens(model: ScrollFollowModel): string | null {
 }
 
 /**
+ * Finds the jump-to-latest control paired with `host`, looking inside the scrolling
+ * element and then in the frame around it, so the control can float over the scroller
+ * rather than scroll along with what it points at.
+ *
+ * @param host Scrolling element the follow behavior is attached to.
+ * @returns The paired control, or `null` where the pairing renders none.
+ */
+function findJumpControl(host: HTMLElement): HTMLElement | null {
+	return (
+		host.querySelector<HTMLElement>(`[${MESSAGE_SCROLLER_JUMP_ATTRIBUTE}]`) ??
+		host.parentElement?.querySelector<HTMLElement>(`[${MESSAGE_SCROLLER_JUMP_ATTRIBUTE}]`) ??
+		null
+	);
+}
+
+/**
  * Mirrors `model`'s state onto the viewport and its jump-to-latest control:
  * autoscrolling and scrollable attributes track `pinned` and reachable
  * edges, and `inert` hides the control from tab order in the same step as visibility.
@@ -225,7 +246,7 @@ function syncAttributesFromModel(host: HTMLElement, model: ScrollFollowModel): v
 	if (tokens) host.setAttribute(MESSAGE_SCROLLER_SCROLLABLE_ATTRIBUTE, tokens);
 	else host.removeAttribute(MESSAGE_SCROLLER_SCROLLABLE_ATTRIBUTE);
 
-	let button = host.querySelector<HTMLElement>(`[${MESSAGE_SCROLLER_JUMP_ATTRIBUTE}]`);
+	let button = findJumpControl(host);
 	if (!button) return;
 
 	let visible = !model.pinned;
@@ -309,20 +330,25 @@ export const messageFollow = createMixin<HTMLElement, [model: ScrollFollowModel]
 		let anchorId = model.anchorTurnId;
 		let anchorNode = anchorId ? findItemById(host, anchorId) : undefined;
 		let prependHeight = 0;
-		let appendedNew = false;
+		let grewAtEnd = false;
 
 		for (let record of records) {
+			if (record.type === "characterData") {
+				grewAtEnd = true;
+				continue;
+			}
+
 			for (let node of record.addedNodes) {
 				if (!(node instanceof HTMLElement)) continue;
 
 				if (anchorNode && precedes(node, anchorNode))
 					prependHeight += node.getBoundingClientRect().height;
-				else appendedNew = true;
+				else grewAtEnd = true;
 			}
 		}
 
 		if (prependHeight > 0) host.scrollTop += prependHeight;
-		if (appendedNew) stickToEndIfPinned(host, model);
+		if (grewAtEnd) stickToEndIfPinned(host, model);
 
 		ensureItemsObserved(host, model);
 		resync(host, model, false);
@@ -330,6 +356,24 @@ export const messageFollow = createMixin<HTMLElement, [model: ScrollFollowModel]
 
 	handle.addEventListener("insert", (event) => {
 		hostNode = event.node;
+
+		/*
+		 * The press is answered from the frame around the scroller rather than the scroller
+		 * itself, so a control floating over the log reaches the behavior the same way one
+		 * rendered inside it does.
+		 */
+		let pressScope = event.node.parentElement ?? event.node;
+		pressScope.addEventListener(
+			"click",
+			(pressEvent) => {
+				let target = pressEvent.target;
+				if (!(target instanceof Element)) return;
+				if (!target.closest(`[${MESSAGE_SCROLLER_JUMP_ATTRIBUTE}]`)) return;
+
+				boundModel?.scrollToEnd();
+			},
+			{ signal: handle.signal },
+		);
 
 		if (boundModel) {
 			stickToEndIfPinned(hostNode, boundModel);
@@ -340,7 +384,15 @@ export const messageFollow = createMixin<HTMLElement, [model: ScrollFollowModel]
 		let mutationObserver = new MutationObserver((records) => {
 			if (hostNode && boundModel) handleMutations(hostNode, boundModel, records);
 		});
-		mutationObserver.observe(event.node, { childList: true, subtree: true });
+		/*
+		 * Text counts as growth, not just nodes: a reply that arrives a word at a time grows
+		 * by rewriting the row it is already in, and following has to keep up with that.
+		 */
+		mutationObserver.observe(event.node, {
+			childList: true,
+			subtree: true,
+			characterData: true,
+		});
 
 		let resizeObserver = new ResizeObserver(() => {
 			if (!hostNode || !boundModel) return;
@@ -391,12 +443,6 @@ export const messageFollow = createMixin<HTMLElement, [model: ScrollFollowModel]
 				}),
 				on<HTMLElement, "keydown">("keydown", (event) => {
 					if (SCROLL_KEYS.has(event.key)) userScrollIntent = true;
-				}),
-				on<HTMLElement, "click">("click", (event) => {
-					let target = event.target;
-					if (target instanceof Element && target.closest(`[${MESSAGE_SCROLLER_JUMP_ATTRIBUTE}]`)) {
-						model.scrollToEnd();
-					}
 				}),
 			],
 		});
