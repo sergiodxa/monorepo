@@ -43,14 +43,13 @@ export interface Translation {
 }
 
 /**
- * Resolves the translation for one language, caching per resolved language. It returns a
- * `Promise` so call sites keep their shape; the work inside is synchronous.
+ * Resolves the translation for one language synchronously, caching per resolved language.
  *
  * @param language - The language to translate into; defaults to the fallback.
  * @returns The translator and the language it is actually bound to.
  */
 export interface Translator {
-	(language?: string): Promise<Translation>;
+	(language?: string): Translation;
 }
 
 /**
@@ -60,29 +59,29 @@ export interface Translator {
  *
  * @param options - Bundles, supported languages, and fallback; see {@link TranslatorOptions}.
  * @returns A translator that resolves one {@link Translation} per language.
- * @example let { locale, t } = await createTranslator({ resources, supportedLanguages, fallbackLanguage: "en" })("es");
+ * @example let { locale, t } = createTranslator({ resources, supportedLanguages, fallbackLanguage: "en" })("es");
  */
 export function createTranslator(options: TranslatorOptions): Translator {
-	let translations = new Map<string, Promise<Translation>>();
+	let translations = new Map<string, Translation>();
 
 	return function translate(language = options.fallbackLanguage) {
 		let locale = options.supportedLanguages.includes(language)
 			? language
 			: options.fallbackLanguage;
 
-		let pending = translations.get(locale);
+		let translation = translations.get(locale);
 
-		if (!pending) {
+		if (!translation) {
 			let intl = createI18n({
 				locale,
 				fallbackLanguage: options.fallbackLanguage,
 				resources: options.resources,
 				onError: options.onError,
 			});
-			pending = Promise.resolve({ locale, t: intl.t, intl });
-			translations.set(locale, pending);
+			translation = { locale, t: intl.t, intl };
+			translations.set(locale, translation);
 		}
 
-		return pending;
+		return translation;
 	};
 }

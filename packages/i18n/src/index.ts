@@ -7,8 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Messages, Translate } from "./lib/i18n.js";
-
 export type {
 	I18n,
 	I18nErrorHandler,
@@ -20,13 +18,6 @@ export type {
 } from "./lib/i18n.js";
 export type { DetectionMethod, LanguageDetectorOptions } from "./lib/language-detector.js";
 export type { Translation, Translator, TranslatorOptions } from "./lib/translator.js";
-
-/**
- * A translator over untyped bundles, where any string is a key.
- *
- * @deprecated Use `Translate`, typed by a bundle (`Translate<typeof en>`) or untyped (`Translate`).
- */
-export type TFunction = Translate<Messages>;
 
 export { getClientLocales } from "./lib/get-client-locales.js";
 export { createI18n } from "./lib/i18n.js";

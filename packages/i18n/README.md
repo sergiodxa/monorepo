@@ -103,7 +103,7 @@ let translate = createTranslator({
 });
 
 // In a job, a consumer, a browser bootstrap, or anywhere `context.intl` does not exist:
-let { locale, t } = await translate(user.language);
+let { locale, t } = translate(user.language);
 ```
 
 ### Rendering with `remix/ui`
@@ -143,7 +143,7 @@ import { Trans } from "@sdxc/i18n/ui";
 import { createTranslator } from "@sdxc/i18n";
 import { setIntl } from "@sdxc/i18n/ui";
 
-let { intl } = await createTranslator({ resources, supportedLanguages, fallbackLanguage })(
+let { intl } = createTranslator({ resources, supportedLanguages, fallbackLanguage })(
 	document.documentElement.lang,
 );
 setIntl(intl);
@@ -212,7 +212,7 @@ let date = new Date().toLocaleDateString(getClientLocales(request));
 
 ### `createTranslator(options: TranslatorOptions): Translator`
 
-From `@sdxc/i18n`. Creates a translator over a fixed set of bundles, for code with no request behind it. The returned `Translator` takes a language and resolves a `Translation`: the language it bound to, its `t`, and the `I18n` behind it.
+From `@sdxc/i18n`. Creates a translator over a fixed set of bundles, for code with no request behind it. The returned `Translator` takes a language and returns a `Translation` synchronously: the language it bound to, its `t`, and the `I18n` behind it.
 
 A language outside `supportedLanguages` resolves to `fallbackLanguage` first, so record `translation.locale` rather than the language you asked for: they differ exactly when the app does not ship the requested one. Translations are cached per resolved language and per translator.
 
@@ -262,10 +262,6 @@ type TranslateParts<R = Messages> = (
 
 `MessageKey<R>` is the union of dotted paths to `R`'s string leaves, so with typed bundles a typo such as `t("feeds.unraed")` is a type error. `createI18n` types its keys by the bundle at `resources[fallbackLanguage]` when the fallback is a literal; other languages may hold any subset of those keys. Resources typed as `Record<string, Messages>`, or a fallback typed as `string`, give an untyped translator. `IntlProvider`, `setIntl` and `Trans` take `I18n<any>`, so a typed translator passes there; a function of your own that takes any translator does the same. Variables are not typed; a locale test that parses every message is the way to catch a missing one.
 
-#### `TFunction`
-
-Deprecated alias of `Translate<Messages>`, kept for one release so call sites typing a `t` parameter migrate on their own schedule.
-
 #### `LanguageDetectorOptions`
 
 ```typescript
@@ -308,7 +304,7 @@ interface Translation {
 }
 
 interface Translator {
-	(language?: string): Promise<Translation>;
+	(language?: string): Translation;
 }
 ```
 

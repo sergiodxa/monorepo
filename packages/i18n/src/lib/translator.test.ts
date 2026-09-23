@@ -31,62 +31,62 @@ function makeTranslator(onError?: (error: Error, key: string) => void) {
 }
 
 describe("createTranslator", () => {
-	test("defaults to the fallback language when asked for none", async () => {
-		let { locale, t } = await makeTranslator()();
+	test("defaults to the fallback language when asked for none", () => {
+		let { locale, t } = makeTranslator()();
 
 		expect(locale).toBe("en");
 		expect(t("hello")).toBe("Hello");
 	});
 
-	test("translates through a supported language and reports it", async () => {
-		let { locale, t, intl } = await makeTranslator()("es");
+	test("translates through a supported language and reports it", () => {
+		let { locale, t, intl } = makeTranslator()("es");
 
 		expect(locale).toBe("es");
 		expect(intl.locale).toBe("es");
 		expect(t("hello")).toBe("Hola");
 	});
 
-	test("resolves an unsupported language to the fallback, and says so", async () => {
-		let { locale, t } = await makeTranslator()("xx");
+	test("resolves an unsupported language to the fallback, and says so", () => {
+		let { locale, t } = makeTranslator()("xx");
 
 		expect(locale).toBe("en");
 		expect(t("hello")).toBe("Hello");
 	});
 
-	test("falls back per key for a language missing one", async () => {
-		let { locale, t } = await makeTranslator()("fr");
+	test("falls back per key for a language missing one", () => {
+		let { locale, t } = makeTranslator()("fr");
 
 		expect(locale).toBe("fr");
 		expect(t("hello")).toBe("Bonjour");
 		expect(t("name", { name: "Ada" })).toBe("Hi Ada");
 	});
 
-	test("reuses one translation per language", async () => {
+	test("reuses one translation per language", () => {
 		let translate = makeTranslator();
 
-		let first = await translate("es");
-		let second = await translate("es");
+		let first = translate("es");
+		let second = translate("es");
 
 		expect(second.intl).toBe(first.intl);
 		expect(second.t).toBe(first.t);
 	});
 
-	test("shares the fallback's translation with every unsupported language", async () => {
+	test("shares the fallback's translation with every unsupported language", () => {
 		let translate = makeTranslator();
 
-		expect((await translate("xx")).intl).toBe((await translate()).intl);
+		expect(translate("xx").intl).toBe(translate().intl);
 	});
 
-	test("keeps each translator's cache to itself", async () => {
-		let first = await makeTranslator()("es");
-		let second = await makeTranslator()("es");
+	test("keeps each translator's cache to itself", () => {
+		let first = makeTranslator()("es");
+		let second = makeTranslator()("es");
 
 		expect(second.intl).not.toBe(first.intl);
 	});
 
-	test("reports message errors through onError", async () => {
+	test("reports message errors through onError", () => {
 		let keys: string[] = [];
-		let { t } = await makeTranslator((_, key) => keys.push(key))("en");
+		let { t } = makeTranslator((_, key) => keys.push(key))("en");
 
 		expect(t("name")).toBe("Hi {$name}");
 		expect(keys).toEqual(["name"]);
