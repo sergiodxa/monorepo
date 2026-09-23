@@ -1,5 +1,5 @@
 /**
- * Browser entry point. It registers a module-scoped i18next instance so any independently
+ * Browser entry point. It registers a module-scoped translator so any independently
  * hydrated island can translate without an `IntlProvider` above it, then runs remix/ui's
  * client runtime against the globbed resource and route modules and reports whatever fails
  * to come up.
@@ -7,6 +7,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import type { Messages } from "@sdxc/i18n";
 
 import { createTranslator } from "@sdxc/i18n";
 import { setIntl } from "@sdxc/i18n/ui";
@@ -23,7 +25,7 @@ const DEFAULT_LANGUAGE: Language = "en";
  * Dynamic imports keyed by language, one per {@link SUPPORTED_LANGUAGES} entry, so the
  * client bundle ships only the locales a page actually renders in.
  */
-const LOCALE_LOADERS: Record<Language, () => Promise<{ default: Record<string, unknown> }>> = {
+const LOCALE_LOADERS: Record<Language, () => Promise<{ default: Messages }>> = {
 	en: () => import("~/app/locales/en"),
 	es: () => import("~/app/locales/es"),
 };
@@ -41,24 +43,19 @@ let localesToLoad = new Set([locale, DEFAULT_LANGUAGE]);
 let resources = Object.fromEntries(
 	await Promise.all(
 		Array.from(localesToLoad, async (language) => {
-			let { default: translation } = await LOCALE_LOADERS[language]();
-			return [language, { translation }] as const;
+			let { default: messages } = await LOCALE_LOADERS[language]();
+			return [language, messages] as const;
 		}),
 	),
 );
 
-/**
- * Interpolation escaping is off because JSX already escapes text nodes when rendering, so
- * a translated value passes through a single encoding pass.
- */
-let { i18n } = await createTranslator({
+let { intl } = await createTranslator({
 	resources,
 	supportedLanguages: SUPPORTED_LANGUAGES,
 	fallbackLanguage: DEFAULT_LANGUAGE,
-	i18next: { interpolation: { escapeValue: false } },
 })(locale);
 
-setIntl(i18n);
+setIntl(intl);
 
 /**
  * Every module an island can hydrate from. Server-only modules and tests stay out: a test

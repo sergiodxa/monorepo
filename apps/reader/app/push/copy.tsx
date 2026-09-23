@@ -7,11 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction, Translation } from "@sdxc/i18n";
+import type { Translate, Translation } from "@sdxc/i18n";
 import type { Email as EmailContract } from "@sdxc/mail";
 import type { Handle } from "remix/ui";
 
 import { createTranslator } from "@sdxc/i18n";
+import { currentLog } from "@sdxc/logger";
 import { Email } from "@sdxc/mail";
 
 import type { Summary } from "~/database/notify";
@@ -26,13 +27,16 @@ const DEFAULT_LANGUAGE = "en";
 
 /**
  * The translator every notification is written through. Instances are cached per language,
- * so a reader with four devices in two languages builds two and reuses them.
+ * so a reader with four devices in two languages builds two and reuses them. A broken
+ * message is reported on the log of whichever invocation is sending.
  */
 const translator = createTranslator({
-	resources: { en: { translation: en }, es: { translation: es } },
+	resources: { en, es },
 	supportedLanguages: SUPPORTED_LANGUAGES,
 	fallbackLanguage: DEFAULT_LANGUAGE,
-	i18next: { interpolation: { escapeValue: false } },
+	onError(error, key) {
+		currentLog()?.warn("i18n.error", { key, message: error.message });
+	},
 });
 
 /** The two lines a notification is drawn as, on a lock screen and in an inbox alike. */
@@ -50,7 +54,7 @@ export interface NotificationText {
  * @param summary - What the check found since the last notification.
  * @example let { title, body } = textFrom(t, summary);
  */
-export function textFrom(t: TFunction, summary: Summary): NotificationText {
+export function textFrom(t: Translate, summary: Summary): NotificationText {
 	return {
 		title: t("notifications.title", { count: summary.posts }),
 		body: t("notifications.body", {

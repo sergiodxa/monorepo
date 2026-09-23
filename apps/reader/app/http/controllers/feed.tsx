@@ -301,21 +301,19 @@ export default createAction(routes.feed, {
 		if (!feed) {
 			return ctx.render(
 				<AppLayout
-					documentTitle={ctx.i18next.t("feeds.show.notFound.title")}
-					heading={ctx.i18next.t("feeds.show.notFound.title")}
+					documentTitle={ctx.intl.t("feeds.show.notFound.title")}
+					heading={ctx.intl.t("feeds.show.notFound.title")}
 					locale={ctx.locale}
 					{...await chrome(ctx)}
 				>
 					{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
 					<HeadingScope level={2}>
 						<Empty>
-							<Empty.Title>{ctx.i18next.t("feeds.show.notFound.title")}</Empty.Title>
-							<Empty.Description>
-								{ctx.i18next.t("feeds.show.notFound.description")}
-							</Empty.Description>
+							<Empty.Title>{ctx.intl.t("feeds.show.notFound.title")}</Empty.Title>
+							<Empty.Description>{ctx.intl.t("feeds.show.notFound.description")}</Empty.Description>
 							<Empty.Action>
 								<LinkButton href={routes.reading.index.href()} size="sm">
-									{ctx.i18next.t("feeds.show.notFound.back")}
+									{ctx.intl.t("feeds.show.notFound.back")}
 								</LinkButton>
 							</Empty.Action>
 						</Empty>
@@ -412,7 +410,7 @@ export default createAction(routes.feed, {
 		let placement = paging ? place : { ...place, continueSrc: null, resumeSrc: null };
 
 		/** The copy every row of the list prints, whichever shape this page is answered in. */
-		let listCopy = timelineCopy(ctx.i18next);
+		let listCopy = timelineCopy(ctx.intl);
 
 		/**
 		 * A frame asked for the piece continuing a feed already on screen, so it is answered
@@ -428,7 +426,7 @@ export default createAction(routes.feed, {
 					 * says so rather than starting again from the newest page underneath itself.
 					 */
 					<Alert color="warning" mix={pageNote()}>
-						<Alert.Description>{ctx.i18next.t("timeline.badCursor")}</Alert.Description>
+						<Alert.Description>{ctx.intl.t("timeline.badCursor")}</Alert.Description>
 						<Alert.Action>
 							<LinkButton
 								href={routes.feed.href({ feed: feedId })}
@@ -436,7 +434,7 @@ export default createAction(routes.feed, {
 								variant="outline"
 								size="sm"
 							>
-								{ctx.i18next.t("timeline.restart")}
+								{ctx.intl.t("timeline.restart")}
 							</LinkButton>
 						</Alert.Action>
 					</Alert>
@@ -473,9 +471,9 @@ export default createAction(routes.feed, {
 
 		let failureLabel =
 			failures > 0 && statusKey
-				? ctx.i18next.t("feeds.show.failingBecause", {
-						failures: ctx.i18next.t("feeds.show.failing", { count: failures }),
-						reason: ctx.i18next.t(statusKey),
+				? ctx.intl.t("feeds.show.failingBecause", {
+						failures: ctx.intl.t("feeds.show.failing", { count: failures }),
+						reason: ctx.intl.t(statusKey),
 					})
 				: null;
 
@@ -483,8 +481,8 @@ export default createAction(routes.feed, {
 
 		let checkedLabel =
 			lastFetchedAt === null
-				? ctx.i18next.t("feeds.show.neverChecked")
-				: ctx.i18next.t("feeds.show.checked", {
+				? ctx.intl.t("feeds.show.neverChecked")
+				: ctx.intl.t("feeds.show.checked", {
 						date: shortDate(lastFetchedAt, ctx.locale, Date.now()),
 					});
 
@@ -538,12 +536,12 @@ export default createAction(routes.feed, {
 								color="neutral"
 								variant="ghost"
 								size="sm"
-								aria-label={ctx.i18next.t("feeds.check.submit")}
-								title={ctx.i18next.t("feeds.check.submit")}
+								aria-label={ctx.intl.t("feeds.check.submit")}
+								title={ctx.intl.t("feeds.check.submit")}
 							>
 								{/** The arrows a page is fetched again with, which is what this asks for. */}
 								<RefreshCwIcon size={ACTION_ICON_SIZE} />
-								<ActionLabel>{ctx.i18next.t("feeds.check.submit")}</ActionLabel>
+								<ActionLabel>{ctx.intl.t("feeds.check.submit")}</ActionLabel>
 							</Button>
 						</form>
 
@@ -561,12 +559,12 @@ export default createAction(routes.feed, {
 								color="neutral"
 								variant="ghost"
 								size="sm"
-								aria-label={ctx.i18next.t("timeline.markFeedRead")}
-								title={ctx.i18next.t("timeline.markFeedRead")}
+								aria-label={ctx.intl.t("timeline.markFeedRead")}
+								title={ctx.intl.t("timeline.markFeedRead")}
 							>
 								{/** The mark a row wears once it is read, here worn by the whole feed. */}
 								<CircleCheckIcon size={ACTION_ICON_SIZE} />
-								<ActionLabel>{ctx.i18next.t("timeline.markFeedRead")}</ActionLabel>
+								<ActionLabel>{ctx.intl.t("timeline.markFeedRead")}</ActionLabel>
 							</Button>
 						</form>
 
@@ -587,8 +585,8 @@ export default createAction(routes.feed, {
 							color="neutral"
 							variant="ghost"
 							size="sm"
-							aria-label={ctx.i18next.t("feeds.more.legend")}
-							title={ctx.i18next.t("feeds.more.legend")}
+							aria-label={ctx.intl.t("feeds.more.legend")}
+							title={ctx.intl.t("feeds.more.legend")}
 						>
 							{/**
 							 * The three dots a surface of further actions is named by everywhere, and
@@ -598,7 +596,7 @@ export default createAction(routes.feed, {
 							<EllipsisIcon size={ACTION_ICON_SIZE} />
 						</Button>
 
-						<Menu id={moreMenuId(feedId)} aria-label={ctx.i18next.t("feeds.more.legend")}>
+						<Menu id={moreMenuId(feedId)} aria-label={ctx.intl.t("feeds.more.legend")}>
 							{/**
 							 * Pinning draws this feed above the queue, where a reader looks before they
 							 * start reading. It changes nothing the queue holds: the strip asks its own
@@ -613,7 +611,7 @@ export default createAction(routes.feed, {
 
 								<Menu.Item type="submit" mix={[gap(2)]}>
 									<PinIcon size={ACTION_ICON_SIZE} />
-									{ctx.i18next.t(feed.pinnedAt === null ? "feeds.pin.submit" : "feeds.pin.remove")}
+									{ctx.intl.t(feed.pinnedAt === null ? "feeds.pin.submit" : "feeds.pin.remove")}
 								</Menu.Item>
 							</form>
 
@@ -633,7 +631,7 @@ export default createAction(routes.feed, {
 										<BellIcon size={ACTION_ICON_SIZE} />
 									)}
 
-									{ctx.i18next.t(feed.notify ? "notifications.feed.off" : "notifications.feed.on")}
+									{ctx.intl.t(feed.notify ? "notifications.feed.off" : "notifications.feed.on")}
 								</Menu.Item>
 							</form>
 
@@ -653,7 +651,7 @@ export default createAction(routes.feed, {
 
 								<Menu.Item type="submit" mix={[gap(2)]}>
 									<LinkIcon size={ACTION_ICON_SIZE} />
-									{ctx.i18next.t(
+									{ctx.intl.t(
 										feed.keepLinkParameters
 											? "feeds.linkParameters.strip"
 											: "feeds.linkParameters.keep",
@@ -681,11 +679,11 @@ export default createAction(routes.feed, {
 								<span mix={[flex(), items("center"), gap(2)]}>
 									{/** Time running out, which is what every span but one describes. */}
 									<HourglassIcon size={ACTION_ICON_SIZE} />
-									{ctx.i18next.t("feeds.velocity.legend")}
+									{ctx.intl.t("feeds.velocity.legend")}
 								</span>
 
 								<span mix={[text("xs"), fg("neutral.muted")]}>
-									{ctx.i18next.t(`feeds.velocity.name.${feed.velocity}` as const)}
+									{ctx.intl.t(`feeds.velocity.name.${feed.velocity}` as const)}
 								</span>
 							</Menu.Item>
 
@@ -702,11 +700,11 @@ export default createAction(routes.feed, {
 								<span mix={[flex(), items("center"), gap(2)]}>
 									{/** A folder, which is what the feed is being put into. */}
 									<FolderIcon size={ACTION_ICON_SIZE} />
-									{ctx.i18next.t("folders.file.legend")}
+									{ctx.intl.t("folders.file.legend")}
 								</span>
 
 								<span mix={[text("xs"), fg("neutral.muted")]}>
-									{feed.folderTitle ?? ctx.i18next.t("folders.file.none")}
+									{feed.folderTitle ?? ctx.intl.t("folders.file.none")}
 								</span>
 							</Menu.Item>
 
@@ -720,11 +718,11 @@ export default createAction(routes.feed, {
 							>
 								{/** The tie between this reader and the feed, drawn as the broken link it becomes. */}
 								<UnlinkIcon size={ACTION_ICON_SIZE} />
-								{ctx.i18next.t("feeds.unfollow.submit")}
+								{ctx.intl.t("feeds.unfollow.submit")}
 							</Menu.Item>
 						</Menu>
 
-						<Menu id={velocityMenuId(feedId)} aria-label={ctx.i18next.t("feeds.velocity.legend")}>
+						<Menu id={velocityMenuId(feedId)} aria-label={ctx.intl.t("feeds.velocity.legend")}>
 							{/**
 							 * One form around every row, so each row is a submit carrying its own value.
 							 * The name leads and the span follows it quietly: a reader picking between
@@ -733,7 +731,7 @@ export default createAction(routes.feed, {
 							 */}
 							<form method="post" action={routes.feeds.velocity.href({ feedId })}>
 								<Text mix={[p(2), pb(1), text("xs"), fg("neutral.muted")]}>
-									{ctx.i18next.t("feeds.velocity.description")}
+									{ctx.intl.t("feeds.velocity.description")}
 								</Text>
 
 								{VELOCITIES.map((velocity) => (
@@ -745,9 +743,9 @@ export default createAction(routes.feed, {
 										aria-selected={velocity === feed.velocity ? "true" : undefined}
 										mix={[justify("between"), gap(4)]}
 									>
-										<span>{ctx.i18next.t(`feeds.velocity.name.${velocity}` as const)}</span>
+										<span>{ctx.intl.t(`feeds.velocity.name.${velocity}` as const)}</span>
 										<span mix={[text("xs"), fg("neutral.muted")]}>
-											{ctx.i18next.t(`feeds.velocity.window.${velocity}` as const)}
+											{ctx.intl.t(`feeds.velocity.window.${velocity}` as const)}
 										</span>
 									</Menu.Item>
 								))}
@@ -761,10 +759,10 @@ export default createAction(routes.feed, {
 						 * browser opens itself and each row is a plain submit, so it is the same
 						 * control either way.
 						 */}
-						<Menu id={folderMenuId(feedId)} aria-label={ctx.i18next.t("folders.file.legend")}>
+						<Menu id={folderMenuId(feedId)} aria-label={ctx.intl.t("folders.file.legend")}>
 							<form method="post" action={routes.folders.file.href({ feedId })}>
 								<Text mix={[p(2), pb(1), text("xs"), fg("neutral.muted")]}>
-									{ctx.i18next.t("folders.file.description")}
+									{ctx.intl.t("folders.file.description")}
 								</Text>
 
 								{folders.map((folder) => (
@@ -787,20 +785,20 @@ export default createAction(routes.feed, {
 								 */}
 								{feed.folderId !== null && (
 									<Menu.Item type="submit" name={FOLDER_FIELD} value="">
-										{ctx.i18next.t("folders.file.remove")}
+										{ctx.intl.t("folders.file.remove")}
 									</Menu.Item>
 								)}
 
 								<div mix={[flex(), items("center"), gap(2), p(2)]}>
 									<label htmlFor={folderFieldId(feedId)} mix={[visuallyHidden()]}>
-										{ctx.i18next.t("folders.name.label")}
+										{ctx.intl.t("folders.name.label")}
 									</label>
 
 									<input
 										id={folderFieldId(feedId)}
 										type="text"
 										name={TITLE_FIELD}
-										placeholder={ctx.i18next.t("folders.name.placeholder")}
+										placeholder={ctx.intl.t("folders.name.placeholder")}
 										mix={[
 											minIs(0),
 											bs(BAND_FIELD_HEIGHT),
@@ -815,7 +813,7 @@ export default createAction(routes.feed, {
 									/>
 
 									<Button type="submit" size="sm">
-										{ctx.i18next.t("folders.file.submit")}
+										{ctx.intl.t("folders.file.submit")}
 									</Button>
 								</div>
 							</form>
@@ -825,7 +823,7 @@ export default createAction(routes.feed, {
 				/** The feed's name is the link to the site behind it, for a feed that names one. */
 				headingLink={
 					feed.siteUrl
-						? { href: feed.siteUrl, label: ctx.i18next.t("feeds.show.visitSite") }
+						? { href: feed.siteUrl, label: ctx.intl.t("feeds.show.visitSite") }
 						: undefined
 				}
 				locale={ctx.locale}
@@ -853,10 +851,10 @@ export default createAction(routes.feed, {
 							 * one for a prompt whose whole purpose is to be finished with.
 							 */
 							parts={{ form: [attrs({ "data-rmx-document": "" })] }}
-							title={ctx.i18next.t("feeds.unfollow.title")}
-							description={ctx.i18next.t("feeds.unfollow.confirm", { title: feed.title })}
-							confirmLabel={ctx.i18next.t("feeds.unfollow.submit")}
-							cancelLabel={ctx.i18next.t("feeds.unfollow.cancel")}
+							title={ctx.intl.t("feeds.unfollow.title")}
+							description={ctx.intl.t("feeds.unfollow.confirm", { title: feed.title })}
+							confirmLabel={ctx.intl.t("feeds.unfollow.submit")}
+							cancelLabel={ctx.intl.t("feeds.unfollow.cancel")}
 							form={{
 								action: routes.feeds.unfollow.href({ feedId }),
 								fields: <input type="hidden" name="_method" value="DELETE" />,
@@ -904,20 +902,20 @@ export default createAction(routes.feed, {
 						 */}
 						{isBusy && postsPerDay !== null && (
 							<Text mix={[text("xs"), fg("neutral.muted")]}>
-								{ctx.i18next.t("feeds.velocity.suggestion", { count: Math.round(postsPerDay) })}
+								{ctx.intl.t("feeds.velocity.suggestion", { count: Math.round(postsPerDay) })}
 							</Text>
 						)}
 					</div>
 
 					{note && (
 						<Alert color={note.color} mix={pageNote()}>
-							<Alert.Description>{ctx.i18next.t(note.key, note.options)}</Alert.Description>
+							<Alert.Description>{ctx.intl.t(note.key, note.options)}</Alert.Description>
 						</Alert>
 					)}
 
 					{isStaleCursor && (
 						<Alert color="warning" mix={pageNote()}>
-							<Alert.Description>{ctx.i18next.t("timeline.badCursor")}</Alert.Description>
+							<Alert.Description>{ctx.intl.t("timeline.badCursor")}</Alert.Description>
 							<Alert.Action>
 								<LinkButton
 									href={routes.feed.href({ feed: feedId })}
@@ -925,7 +923,7 @@ export default createAction(routes.feed, {
 									variant="outline"
 									size="sm"
 								>
-									{ctx.i18next.t("timeline.restart")}
+									{ctx.intl.t("timeline.restart")}
 								</LinkButton>
 							</Alert.Action>
 						</Alert>
@@ -937,10 +935,8 @@ export default createAction(routes.feed, {
 						/** Level 2, since the layout's own page heading is the document's only `h1`. */
 						<HeadingScope level={2}>
 							<Empty>
-								<Empty.Title>{ctx.i18next.t("feeds.show.empty.title")}</Empty.Title>
-								<Empty.Description>
-									{ctx.i18next.t("feeds.show.empty.description")}
-								</Empty.Description>
+								<Empty.Title>{ctx.intl.t("feeds.show.empty.title")}</Empty.Title>
+								<Empty.Description>{ctx.intl.t("feeds.show.empty.description")}</Empty.Description>
 							</Empty>
 						</HeadingScope>
 					)}

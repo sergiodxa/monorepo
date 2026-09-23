@@ -45,6 +45,7 @@
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "^1.54.2",
 		"@sdxc/cloudflare-mocks": "workspace:*",
+		"@sdxc/messageformat": "workspace:*",
 		"vite": "^8.2.2",
 		"wrangler": "^4.127.1"
 	}

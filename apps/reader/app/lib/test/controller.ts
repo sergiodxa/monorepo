@@ -57,7 +57,7 @@ export function createTestRenderer(ctx: RequestContext): Renderer<RemixNode> {
 		let stream = renderToStream(node, {
 			frameSrc: ctx.request.url,
 			resolveFrame(src, target, context) {
-				return resolveFrame(ctx.router, ctx.request, ctx.i18next, src, target, context);
+				return resolveFrame(ctx.router, ctx.request, ctx.intl, src, target, context);
 			},
 		});
 

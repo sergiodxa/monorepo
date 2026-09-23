@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { i18n } from "@sdxc/i18n";
+import type { I18n } from "@sdxc/i18n";
 
 import type { UserStore } from "~/database/user-do";
 import type { TagChips } from "~/resources/views/tag-chips";
@@ -32,7 +32,7 @@ const RELATIVE_WINDOW = 7 * DAY;
 
 /** What building a row needs off the request. */
 export interface TimelineContext {
-	i18next: i18n;
+	intl: I18n;
 	locale: string;
 }
 
@@ -125,25 +125,25 @@ export function keepingLinkParameters(feeds: readonly UserStore.FeedRef[]): Read
  * The copy every row of a list prints, which is the same on every surface that prints one:
  * three lists of the same rows differ in the posts they hold and in nothing a row says.
  *
- * @param i18next - The request's dictionary.
- * @example <Timeline entries={entries} copy={timelineCopy(ctx.i18next)} {...placement} />
+ * @param intl - The request's dictionary.
+ * @example <Timeline entries={entries} copy={timelineCopy(ctx.intl)} {...placement} />
  */
-export function timelineCopy(i18next: i18n): Timeline.Copy {
+export function timelineCopy(intl: I18n): Timeline.Copy {
 	return {
-		markRead: i18next.t("timeline.markRead"),
-		markUnread: i18next.t("timeline.markUnread"),
-		markFailed: i18next.t("timeline.markFailed"),
-		read: i18next.t("timeline.read"),
-		save: i18next.t("timeline.save"),
-		unsave: i18next.t("timeline.unsave"),
-		saveFailed: i18next.t("timeline.saveFailed"),
-		saveFull: i18next.t("timeline.saveFull"),
-		saved: i18next.t("timeline.saved"),
-		flagged: i18next.t("timeline.flagged"),
-		readHere: i18next.t("timeline.readHere"),
-		newer: i18next.t("timeline.newer"),
-		older: i18next.t("timeline.older"),
-		end: i18next.t("timeline.end"),
+		markRead: intl.t("timeline.markRead"),
+		markUnread: intl.t("timeline.markUnread"),
+		markFailed: intl.t("timeline.markFailed"),
+		read: intl.t("timeline.read"),
+		save: intl.t("timeline.save"),
+		unsave: intl.t("timeline.unsave"),
+		saveFailed: intl.t("timeline.saveFailed"),
+		saveFull: intl.t("timeline.saveFull"),
+		saved: intl.t("timeline.saved"),
+		flagged: intl.t("timeline.flagged"),
+		readHere: intl.t("timeline.readHere"),
+		newer: intl.t("timeline.newer"),
+		older: intl.t("timeline.older"),
+		end: intl.t("timeline.end"),
 	};
 }
 
@@ -151,15 +151,15 @@ export function timelineCopy(i18next: i18n): Timeline.Copy {
  * What the strip of labels under a post prints, which is the same on both surfaces that
  * draw one.
  *
- * @param i18next - The request's dictionary.
- * @example <Timeline entries={entries} tagging={{ ...taggingCopy(ctx.i18next), options }} />
+ * @param intl - The request's dictionary.
+ * @example <Timeline entries={entries} tagging={{ ...taggingCopy(ctx.intl), options }} />
  */
-export function taggingCopy(i18next: i18n): TagChips.Copy {
+export function taggingCopy(intl: I18n): TagChips.Copy {
 	return {
-		legend: i18next.t("tags.strip.legend"),
-		add: i18next.t("tags.strip.add"),
-		placeholder: i18next.t("tags.strip.placeholder"),
-		remove: i18next.t("tags.strip.remove"),
+		legend: intl.t("tags.strip.legend"),
+		add: intl.t("tags.strip.add"),
+		placeholder: intl.t("tags.strip.placeholder"),
+		remove: intl.t("tags.strip.remove"),
 	};
 }
 
@@ -194,7 +194,7 @@ export function timelineEntries(
 		 */
 		let source: string | null = null;
 		if (feedTitles) source = feedTitles.get(item.feedId) ?? null;
-		else if (item.author) source = ctx.i18next.t("timeline.byAuthor", { author: item.author });
+		else if (item.author) source = ctx.intl.t("timeline.byAuthor", { author: item.author });
 
 		return {
 			id: item.id,
@@ -214,7 +214,7 @@ export function timelineEntries(
 			source,
 			summary: item.summary,
 			time: shortDate(item.publishedAt, ctx.locale, now),
-			timeLabel: ctx.i18next.t("timeline.publishedOn", {
+			timeLabel: ctx.intl.t("timeline.publishedOn", {
 				date: exactDate(item.publishedAt, ctx.locale),
 			}),
 			dateTime: new Date(item.publishedAt).toISOString(),

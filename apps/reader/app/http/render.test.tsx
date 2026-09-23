@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { i18n } from "@sdxc/i18n";
+import type { I18n } from "@sdxc/i18n";
 import type { Middleware } from "remix/router";
 
 import { asyncContext } from "remix/middleware/async-context";
@@ -32,12 +32,12 @@ const routes = route({
 });
 
 /** The dictionary the note is written in, resolved the way a request resolves one. */
-async function dictionary(): Promise<i18n> {
-	let resolved: i18n | null = null;
+async function dictionary(): Promise<I18n> {
+	let resolved: I18n | null = null;
 
 	let router = createRouter({ middleware: [asyncContext(), i18n_] });
 	router.map(routes.content, (ctx) => {
-		resolved = ctx.i18next;
+		resolved = ctx.intl;
 		return new Response("ok");
 	});
 

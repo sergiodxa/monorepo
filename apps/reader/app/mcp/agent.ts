@@ -131,15 +131,15 @@ function refusal(ctx: RequestContext, reason: string): Response {
 		return refuse(
 			403,
 			"insufficient_plan",
-			ctx.i18next.t("agent.refused.tier", { url: routes.settings.href() }),
+			ctx.intl.t("agent.refused.tier", { url: routes.settings.href() }),
 		);
 	}
 
 	if (reason === "budget") {
-		return refuse(429, "quota_exhausted", ctx.i18next.t("agent.refused.budget"));
+		return refuse(429, "quota_exhausted", ctx.intl.t("agent.refused.budget"));
 	}
 
-	return refuse(401, "invalid_token", ctx.i18next.t(`agent.refused.${reason}`), {
+	return refuse(401, "invalid_token", ctx.intl.t(`agent.refused.${reason}`), {
 		"WWW-Authenticate": CHALLENGE,
 	});
 }
@@ -160,7 +160,7 @@ export let requireAgent: Middleware = async (ctx, next) => {
 
 	if (raw === null) {
 		ctx.log.warn("mcp.refused", { reason: "no-token" });
-		return refuse(401, "invalid_request", ctx.i18next.t("agent.refused.missing"), {
+		return refuse(401, "invalid_request", ctx.intl.t("agent.refused.missing"), {
 			"WWW-Authenticate": CHALLENGE,
 		});
 	}
@@ -169,7 +169,7 @@ export let requireAgent: Middleware = async (ctx, next) => {
 
 	if (credential === null) {
 		ctx.log.warn("mcp.refused", { reason: "bad-signature" });
-		return refuse(401, "invalid_token", ctx.i18next.t("agent.refused.signature"), {
+		return refuse(401, "invalid_token", ctx.intl.t("agent.refused.signature"), {
 			"WWW-Authenticate": CHALLENGE,
 		});
 	}

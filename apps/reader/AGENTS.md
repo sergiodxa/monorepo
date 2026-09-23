@@ -54,7 +54,7 @@ indicate requirement levels.
   `ctx.render` for views.
 - MUST read the request context from the controller's own `ctx` argument, and reach for
   `getContext` from `remix/middleware/async-context` only outside a controller.
-- MUST take every user-facing string from `ctx.i18next.t(...)`, with the key defined in
+- MUST take every user-facing string from `ctx.intl.t(...)`, with the key defined in
   both `app/locales/en.ts` and `app/locales/es.ts`; a missing key renders as the key
   itself, so the two files stay the same shape.
 - MUST name a flag through the catalog in `app/lib/flags.ts`, which carries its key, its

@@ -98,15 +98,15 @@ export default createAction(routes.items.save, {
 
 		return ctx.render(
 			<AppLayout
-				documentTitle={ctx.i18next.t("items.save.title")}
-				heading={ctx.i18next.t("items.save.title")}
+				documentTitle={ctx.intl.t("items.save.title")}
+				heading={ctx.intl.t("items.save.title")}
 				locale={ctx.locale}
 				{...await chrome(ctx)}
 			>
 				<Alert color="warning" mix={pageNote()}>
 					<Alert.Content>
 						<Alert.Description>
-							{isFull ? ctx.i18next.t("items.save.full") : ctx.i18next.t("items.save.notFound")}
+							{isFull ? ctx.intl.t("items.save.full") : ctx.intl.t("items.save.notFound")}
 						</Alert.Description>
 					</Alert.Content>
 				</Alert>

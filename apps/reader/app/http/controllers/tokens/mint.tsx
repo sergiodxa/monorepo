@@ -72,17 +72,17 @@ export default createAction(routes.tokens.create, {
 
 		return ctx.render(
 			<AppLayout
-				documentTitle={ctx.i18next.t("agent.minted.title")}
-				heading={ctx.i18next.t("agent.minted.heading")}
+				documentTitle={ctx.intl.t("agent.minted.title")}
+				heading={ctx.intl.t("agent.minted.heading")}
 				locale={ctx.locale}
 				{...await chrome(ctx)}
 			>
 				<section mix={[vstack({ gap: 3 }), maxIs(PAGE_COLUMN)]}>
-					<Description>{ctx.i18next.t("agent.minted.description")}</Description>
+					<Description>{ctx.intl.t("agent.minted.description")}</Description>
 
 					<Alert color="warning">
 						<Alert.Content>
-							<Alert.Description>{ctx.i18next.t("agent.minted.once")}</Alert.Description>
+							<Alert.Description>{ctx.intl.t("agent.minted.once")}</Alert.Description>
 						</Alert.Content>
 					</Alert>
 
@@ -108,7 +108,7 @@ export default createAction(routes.tokens.create, {
 
 					<div mix={[flex(), gap(2), items("center")]}>
 						<LinkButton href={routes.settings.href()} color="neutral" variant="outline">
-							{ctx.i18next.t("agent.minted.back")}
+							{ctx.intl.t("agent.minted.back")}
 						</LinkButton>
 					</div>
 				</section>

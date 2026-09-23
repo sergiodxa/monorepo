@@ -146,19 +146,19 @@ export default createAction(routes.tag, {
 		if (!tag) {
 			return ctx.render(
 				<AppLayout
-					documentTitle={ctx.i18next.t("tags.notFound.title")}
-					heading={ctx.i18next.t("tags.notFound.title")}
+					documentTitle={ctx.intl.t("tags.notFound.title")}
+					heading={ctx.intl.t("tags.notFound.title")}
 					locale={ctx.locale}
 					{...await chrome(ctx)}
 				>
 					{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
 					<HeadingScope level={2}>
 						<Empty>
-							<Empty.Title>{ctx.i18next.t("tags.notFound.title")}</Empty.Title>
-							<Empty.Description>{ctx.i18next.t("tags.notFound.description")}</Empty.Description>
+							<Empty.Title>{ctx.intl.t("tags.notFound.title")}</Empty.Title>
+							<Empty.Description>{ctx.intl.t("tags.notFound.description")}</Empty.Description>
 							<Empty.Action>
 								<LinkButton href={routes.saved.href()} size="sm">
-									{ctx.i18next.t("tags.notFound.back")}
+									{ctx.intl.t("tags.notFound.back")}
 								</LinkButton>
 							</Empty.Action>
 						</Empty>
@@ -207,11 +207,11 @@ export default createAction(routes.tag, {
 		let paging = await ctx.flags.get(features.infinitePagination);
 		let placement = paging ? place : { ...place, continueSrc: null, resumeSrc: null };
 
-		let listCopy = timelineCopy(ctx.i18next);
+		let listCopy = timelineCopy(ctx.intl);
 
 		/** Every label the reader has, which the field on each row offers by name. */
 		let tagging = {
-			copy: taggingCopy(ctx.i18next),
+			copy: taggingCopy(ctx.intl),
 			options: (await store.listTags()).map((held) => held.name),
 			optionsId: optionsId(tagId),
 		};
@@ -224,7 +224,7 @@ export default createAction(routes.tag, {
 			return ctx.render(
 				isStaleCursor ? (
 					<Alert color="warning" mix={pageNote()}>
-						<Alert.Description>{ctx.i18next.t("timeline.badCursor")}</Alert.Description>
+						<Alert.Description>{ctx.intl.t("timeline.badCursor")}</Alert.Description>
 						<Alert.Action>
 							<LinkButton
 								href={routes.tag.href({ tag: tagId })}
@@ -232,7 +232,7 @@ export default createAction(routes.tag, {
 								variant="outline"
 								size="sm"
 							>
-								{ctx.i18next.t("timeline.restart")}
+								{ctx.intl.t("timeline.restart")}
 							</LinkButton>
 						</Alert.Action>
 					</Alert>
@@ -257,15 +257,15 @@ export default createAction(routes.tag, {
 							color="neutral"
 							variant="ghost"
 							size="sm"
-							aria-label={ctx.i18next.t("tags.rename.submit")}
-							title={ctx.i18next.t("tags.rename.submit")}
+							aria-label={ctx.intl.t("tags.rename.submit")}
+							title={ctx.intl.t("tags.rename.submit")}
 						>
 							{/** A pencil, which is the mark for changing the words on something. */}
 							<PencilIcon size={ACTION_ICON_SIZE} />
-							<ActionLabel>{ctx.i18next.t("tags.rename.submit")}</ActionLabel>
+							<ActionLabel>{ctx.intl.t("tags.rename.submit")}</ActionLabel>
 						</Button>
 
-						<Menu id={renameMenuId(tagId)} aria-label={ctx.i18next.t("tags.rename.legend")}>
+						<Menu id={renameMenuId(tagId)} aria-label={ctx.intl.t("tags.rename.legend")}>
 							{/**
 							 * A field and its submit, which is the one control on this page that needs
 							 * two: a name is typed rather than chosen. Without script the popover is the
@@ -277,7 +277,7 @@ export default createAction(routes.tag, {
 								mix={[attrs({ "data-rmx-document": "" }), flex(), items("center"), gap(2), p(2)]}
 							>
 								<label htmlFor={`rename-name-${tagId}`} mix={[visuallyHidden()]}>
-									{ctx.i18next.t("tags.name.label")}
+									{ctx.intl.t("tags.name.label")}
 								</label>
 
 								<input
@@ -286,7 +286,7 @@ export default createAction(routes.tag, {
 									name={NAME_FIELD}
 									required
 									defaultValue={tag.name}
-									placeholder={ctx.i18next.t("tags.name.placeholder")}
+									placeholder={ctx.intl.t("tags.name.placeholder")}
 									mix={[
 										minIs(0),
 										bs(BAND_FIELD_HEIGHT),
@@ -301,7 +301,7 @@ export default createAction(routes.tag, {
 								/>
 
 								<Button type="submit" size="sm">
-									{ctx.i18next.t("tags.rename.submit")}
+									{ctx.intl.t("tags.rename.submit")}
 								</Button>
 							</form>
 						</Menu>
@@ -312,11 +312,11 @@ export default createAction(routes.tag, {
 							color="danger"
 							variant="ghost"
 							size="sm"
-							aria-label={ctx.i18next.t("tags.delete.submit")}
-							title={ctx.i18next.t("tags.delete.submit")}
+							aria-label={ctx.intl.t("tags.delete.submit")}
+							title={ctx.intl.t("tags.delete.submit")}
 						>
 							<Trash2Icon size={ACTION_ICON_SIZE} />
-							<ActionLabel>{ctx.i18next.t("tags.delete.submit")}</ActionLabel>
+							<ActionLabel>{ctx.intl.t("tags.delete.submit")}</ActionLabel>
 						</Button>
 					</>
 				}
@@ -338,13 +338,13 @@ export default createAction(routes.tag, {
 						<Confirm
 							id={deletePromptId(tagId)}
 							parts={{ form: [attrs({ "data-rmx-document": "" })] }}
-							title={ctx.i18next.t("tags.delete.title")}
-							description={ctx.i18next.t("tags.delete.confirm", {
+							title={ctx.intl.t("tags.delete.title")}
+							description={ctx.intl.t("tags.delete.confirm", {
 								name: tag.name,
 								count: entries.length,
 							})}
-							confirmLabel={ctx.i18next.t("tags.delete.submit")}
-							cancelLabel={ctx.i18next.t("tags.delete.cancel")}
+							confirmLabel={ctx.intl.t("tags.delete.submit")}
+							cancelLabel={ctx.intl.t("tags.delete.cancel")}
 							form={{
 								action: routes.tags.delete.href({ tagId }),
 								fields: <input type="hidden" name="_method" value="DELETE" />,
@@ -354,13 +354,13 @@ export default createAction(routes.tag, {
 
 					{note && (
 						<Alert color={note.color} mix={pageNote()}>
-							<Alert.Description>{ctx.i18next.t(note.key)}</Alert.Description>
+							<Alert.Description>{ctx.intl.t(note.key)}</Alert.Description>
 						</Alert>
 					)}
 
 					{isStaleCursor && (
 						<Alert color="warning" mix={pageNote()}>
-							<Alert.Description>{ctx.i18next.t("timeline.badCursor")}</Alert.Description>
+							<Alert.Description>{ctx.intl.t("timeline.badCursor")}</Alert.Description>
 							<Alert.Action>
 								<LinkButton
 									href={routes.tag.href({ tag: tagId })}
@@ -368,7 +368,7 @@ export default createAction(routes.tag, {
 									variant="outline"
 									size="sm"
 								>
-									{ctx.i18next.t("timeline.restart")}
+									{ctx.intl.t("timeline.restart")}
 								</LinkButton>
 							</Alert.Action>
 						</Alert>
@@ -380,8 +380,8 @@ export default createAction(routes.tag, {
 						/** Level 2, since the layout's own page heading is the document's only `h1`. */
 						<HeadingScope level={2}>
 							<Empty mix={[maxIs(PAGE_COLUMN), text("sm")]}>
-								<Empty.Title>{ctx.i18next.t("tags.empty.title")}</Empty.Title>
-								<Empty.Description>{ctx.i18next.t("tags.empty.description")}</Empty.Description>
+								<Empty.Title>{ctx.intl.t("tags.empty.title")}</Empty.Title>
+								<Empty.Description>{ctx.intl.t("tags.empty.description")}</Empty.Description>
 							</Empty>
 						</HeadingScope>
 					)}

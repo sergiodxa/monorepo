@@ -55,14 +55,14 @@ function tokenNote(
 	if (outcome === null) return null;
 
 	if (outcome === "revoked") {
-		return { message: ctx.i18next.t("agent.tokens.revoked"), color: "success" };
+		return { message: ctx.intl.t("agent.tokens.revoked"), color: "success" };
 	}
 
 	if (outcome === "missing") {
-		return { message: ctx.i18next.t("agent.tokens.missing"), color: "warning" };
+		return { message: ctx.intl.t("agent.tokens.missing"), color: "warning" };
 	}
 
-	return { message: ctx.i18next.t(`agent.tokens.refused.${outcome}`), color: "danger" };
+	return { message: ctx.intl.t(`agent.tokens.refused.${outcome}`), color: "danger" };
 }
 
 /**
@@ -85,20 +85,20 @@ function isLive(token: UserStore.AgentToken, now: number): boolean {
  */
 function stateOf(ctx: RequestContext, token: UserStore.AgentToken, now: number): string {
 	if (token.revokedAt !== null) {
-		return ctx.i18next.t("agent.tokens.state.revoked", {
+		return ctx.intl.t("agent.tokens.state.revoked", {
 			date: shortDate(token.revokedAt, ctx.locale, now),
 		});
 	}
 
 	if (token.expiresAt <= now) {
-		return ctx.i18next.t("agent.tokens.state.expired", {
+		return ctx.intl.t("agent.tokens.state.expired", {
 			date: shortDate(token.expiresAt, ctx.locale, now),
 		});
 	}
 
-	if (token.lastUsedAt === null) return ctx.i18next.t("agent.tokens.state.never");
+	if (token.lastUsedAt === null) return ctx.intl.t("agent.tokens.state.never");
 
-	return ctx.i18next.t("agent.tokens.state.used", {
+	return ctx.intl.t("agent.tokens.state.used", {
 		date: shortDate(token.lastUsedAt, ctx.locale, now),
 	});
 }
@@ -132,13 +132,13 @@ export default function tokensSection(
 		>
 			{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
 			<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-				{ctx.i18next.t("agent.legend")}
+				{ctx.intl.t("agent.legend")}
 			</h2>
 
-			<Description>{ctx.i18next.t("agent.description")}</Description>
+			<Description>{ctx.intl.t("agent.description")}</Description>
 
 			<Text mix={[text("xs"), fg("neutral.muted")]}>
-				{ctx.i18next.t("agent.endpoint", { url: routes.mcp.index.href() })}
+				{ctx.intl.t("agent.endpoint", { url: routes.mcp.index.href() })}
 			</Text>
 
 			{note && (
@@ -152,13 +152,13 @@ export default function tokensSection(
 			{!entitled && (
 				<Alert color="warning">
 					<Alert.Content>
-						<Alert.Description>{ctx.i18next.t("agent.locked")}</Alert.Description>
+						<Alert.Description>{ctx.intl.t("agent.locked")}</Alert.Description>
 					</Alert.Content>
 				</Alert>
 			)}
 
 			{tokens.length === 0 ? (
-				<Text mix={[text("xs"), fg("neutral.muted")]}>{ctx.i18next.t("agent.tokens.none")}</Text>
+				<Text mix={[text("xs"), fg("neutral.muted")]}>{ctx.intl.t("agent.tokens.none")}</Text>
 			) : (
 				<ul mix={[m(0), vstack({ gap: 2 })]}>
 					{tokens.map((token) => (
@@ -166,13 +166,13 @@ export default function tokensSection(
 							<Text mix={[text("sm")]}>{token.name}</Text>
 
 							<Text mix={[text("xs"), fg("neutral.muted")]}>
-								{ctx.i18next.t(`agent.scopes.${token.scope}`)}
+								{ctx.intl.t(`agent.scopes.${token.scope}`)}
 							</Text>
 
 							<Text mix={[text("xs"), fg("neutral.muted")]}>{stateOf(ctx, token, now)}</Text>
 
 							<Text mix={[text("xs"), fg("neutral.muted")]}>
-								{ctx.i18next.t("agent.tokens.expires", {
+								{ctx.intl.t("agent.tokens.expires", {
 									date: exactDate(token.expiresAt, ctx.locale),
 								})}
 							</Text>
@@ -186,7 +186,7 @@ export default function tokensSection(
 									<input type="hidden" name="_method" value="DELETE" />
 
 									<Button type="submit" color="neutral" variant="outline">
-										{ctx.i18next.t("agent.tokens.revoke")}
+										{ctx.intl.t("agent.tokens.revoke")}
 									</Button>
 								</form>
 							)}
@@ -202,32 +202,32 @@ export default function tokensSection(
 					mix={[vstack({ gap: 3, align: "start" }), mbs(2), maxIs(PAGE_COLUMN)]}
 				>
 					<div mix={[vstack({ gap: 2, align: "start" }), maxIs("100%")]}>
-						<Label htmlFor={NAME_ID}>{ctx.i18next.t("agent.mint.name")}</Label>
+						<Label htmlFor={NAME_ID}>{ctx.intl.t("agent.mint.name")}</Label>
 
 						<Input
 							id={NAME_ID}
 							name={NAME_FIELD}
 							required
 							maxLength={TOKEN_NAME_MAX}
-							placeholder={ctx.i18next.t("agent.mint.placeholder")}
+							placeholder={ctx.intl.t("agent.mint.placeholder")}
 						/>
 					</div>
 
 					<div mix={[vstack({ gap: 2, align: "start" }), maxIs("100%")]}>
-						<Label htmlFor={SCOPE_ID}>{ctx.i18next.t("agent.mint.scope")}</Label>
+						<Label htmlFor={SCOPE_ID}>{ctx.intl.t("agent.mint.scope")}</Label>
 
 						<Select id={SCOPE_ID} name={SCOPE_FIELD}>
 							{AGENT_SCOPES.map((scope) => (
 								<Select.Option key={scope} value={scope} selected={scope === "read"}>
-									{ctx.i18next.t(`agent.scopes.${scope}`)}
+									{ctx.intl.t(`agent.scopes.${scope}`)}
 								</Select.Option>
 							))}
 						</Select>
 
-						<Description>{ctx.i18next.t("agent.mint.scopeHint")}</Description>
+						<Description>{ctx.intl.t("agent.mint.scopeHint")}</Description>
 					</div>
 
-					<Button type="submit">{ctx.i18next.t("agent.mint.submit")}</Button>
+					<Button type="submit">{ctx.intl.t("agent.mint.submit")}</Button>
 				</form>
 			)}
 		</section>

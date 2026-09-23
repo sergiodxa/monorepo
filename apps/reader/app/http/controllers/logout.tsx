@@ -34,7 +34,7 @@ export default createController(routes.logout, {
 		 * prefetch or a mail scanner cannot end somebody's session by following a URL.
 		 */
 		index(ctx) {
-			let title = ctx.i18next.t("logout.title");
+			let title = ctx.intl.t("logout.title");
 
 			return ctx.render(
 				<DocumentLayout title={title} locale={ctx.locale}>
@@ -50,7 +50,7 @@ export default createController(routes.logout, {
 					>
 						<Heading level={1}>{title}</Heading>
 						<form method="post" action={routes.logout.action.href()} data-rmx-document="">
-							<Button type="submit">{ctx.i18next.t("logout.cta")}</Button>
+							<Button type="submit">{ctx.intl.t("logout.cta")}</Button>
 						</form>
 					</main>
 				</DocumentLayout>,

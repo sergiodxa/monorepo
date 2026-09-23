@@ -79,7 +79,7 @@ export default createAction(routes.sidebar.feeds, {
 			imageUrl: feed.imageUrl,
 			unreadCount: feed.unreadCount,
 			unreadLabel:
-				feed.unreadCount > 0 ? ctx.i18next.t("feeds.unread", { count: feed.unreadCount }) : null,
+				feed.unreadCount > 0 ? ctx.intl.t("feeds.unread", { count: feed.unreadCount }) : null,
 		});
 
 		/**
@@ -99,13 +99,13 @@ export default createAction(routes.sidebar.feeds, {
 				label,
 				feeds: feeds.map(toRow),
 				unreadCount,
-				unreadLabel: unreadCount > 0 ? ctx.i18next.t("feeds.unread", { count: unreadCount }) : null,
+				unreadLabel: unreadCount > 0 ? ctx.intl.t("feeds.unread", { count: unreadCount }) : null,
 			};
 		};
 
 		return ctx.render(
 			<SidebarFeeds
-				searchesLabel={ctx.i18next.t("searches.label")}
+				searchesLabel={ctx.intl.t("searches.label")}
 				/**
 				 * Each one drawn as the queue's own address under the narrowing it holds, so
 				 * opening a saved search is the same controller, the same statement and the same
@@ -120,11 +120,11 @@ export default createAction(routes.sidebar.feeds, {
 						feedId: search.feedId,
 					}),
 				}))}
-				pinned={toBand(ctx.i18next.t("nav.pinned"), pinned)}
-				quiet={toBand(ctx.i18next.t("nav.quiet"), quiet)}
+				pinned={toBand(ctx.intl.t("nav.pinned"), pinned)}
+				quiet={toBand(ctx.intl.t("nav.quiet"), quiet)}
 				currentPath={currentPath}
-				label={ctx.i18next.t("nav.feeds")}
-				listLabel={ctx.i18next.t("nav.subscriptions")}
+				label={ctx.intl.t("nav.feeds")}
+				listLabel={ctx.intl.t("nav.subscriptions")}
 				folders={folders.map((folder) => ({
 					id: folder.id,
 					title: folder.title,
@@ -133,7 +133,7 @@ export default createAction(routes.sidebar.feeds, {
 					unreadCount: folder.unreadCount,
 					unreadLabel:
 						folder.unreadCount > 0
-							? ctx.i18next.t("feeds.unread", { count: folder.unreadCount })
+							? ctx.intl.t("feeds.unread", { count: folder.unreadCount })
 							: null,
 				}))}
 				feeds={unfiled.map(toRow)}

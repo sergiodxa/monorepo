@@ -157,19 +157,19 @@ export default createAction(routes.folder, {
 		if (!folder) {
 			return ctx.render(
 				<AppLayout
-					documentTitle={ctx.i18next.t("folders.notFound.title")}
-					heading={ctx.i18next.t("folders.notFound.title")}
+					documentTitle={ctx.intl.t("folders.notFound.title")}
+					heading={ctx.intl.t("folders.notFound.title")}
 					locale={ctx.locale}
 					{...await chrome(ctx)}
 				>
 					{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
 					<HeadingScope level={2}>
 						<Empty>
-							<Empty.Title>{ctx.i18next.t("folders.notFound.title")}</Empty.Title>
-							<Empty.Description>{ctx.i18next.t("folders.notFound.description")}</Empty.Description>
+							<Empty.Title>{ctx.intl.t("folders.notFound.title")}</Empty.Title>
+							<Empty.Description>{ctx.intl.t("folders.notFound.description")}</Empty.Description>
 							<Empty.Action>
 								<LinkButton href={routes.reading.index.href()} size="sm">
-									{ctx.i18next.t("folders.notFound.back")}
+									{ctx.intl.t("folders.notFound.back")}
 								</LinkButton>
 							</Empty.Action>
 						</Empty>
@@ -220,7 +220,7 @@ export default createAction(routes.folder, {
 
 		let placement = paging ? place : { ...place, continueSrc: null, resumeSrc: null };
 
-		let listCopy = timelineCopy(ctx.i18next);
+		let listCopy = timelineCopy(ctx.intl);
 
 		/**
 		 * A frame asked for the piece continuing a list already on screen, so it is answered
@@ -231,7 +231,7 @@ export default createAction(routes.folder, {
 			return ctx.render(
 				isStaleCursor ? (
 					<Alert color="warning" mix={pageNote()}>
-						<Alert.Description>{ctx.i18next.t("timeline.badCursor")}</Alert.Description>
+						<Alert.Description>{ctx.intl.t("timeline.badCursor")}</Alert.Description>
 						<Alert.Action>
 							<LinkButton
 								href={routes.folder.href({ folder: folderId })}
@@ -239,7 +239,7 @@ export default createAction(routes.folder, {
 								variant="outline"
 								size="sm"
 							>
-								{ctx.i18next.t("timeline.restart")}
+								{ctx.intl.t("timeline.restart")}
 							</LinkButton>
 						</Alert.Action>
 					</Alert>
@@ -264,15 +264,15 @@ export default createAction(routes.folder, {
 							color="neutral"
 							variant="ghost"
 							size="sm"
-							aria-label={ctx.i18next.t("folders.rename.submit")}
-							title={ctx.i18next.t("folders.rename.submit")}
+							aria-label={ctx.intl.t("folders.rename.submit")}
+							title={ctx.intl.t("folders.rename.submit")}
 						>
 							{/** A pencil, which is the mark for changing the words on something. */}
 							<PencilIcon size={ACTION_ICON_SIZE} />
-							<ActionLabel>{ctx.i18next.t("folders.rename.submit")}</ActionLabel>
+							<ActionLabel>{ctx.intl.t("folders.rename.submit")}</ActionLabel>
 						</Button>
 
-						<Menu id={renameMenuId(folderId)} aria-label={ctx.i18next.t("folders.rename.legend")}>
+						<Menu id={renameMenuId(folderId)} aria-label={ctx.intl.t("folders.rename.legend")}>
 							{/**
 							 * A field and its submit, which is the one control on this page that needs
 							 * two: a name is typed rather than chosen. Without script the popover is
@@ -284,7 +284,7 @@ export default createAction(routes.folder, {
 								mix={[attrs({ "data-rmx-document": "" }), flex(), items("center"), gap(2), p(2)]}
 							>
 								<label htmlFor={nameFieldId("rename", folderId)} mix={[visuallyHidden()]}>
-									{ctx.i18next.t("folders.name.label")}
+									{ctx.intl.t("folders.name.label")}
 								</label>
 
 								<input
@@ -293,7 +293,7 @@ export default createAction(routes.folder, {
 									name={TITLE_FIELD}
 									required
 									defaultValue={folder.title}
-									placeholder={ctx.i18next.t("folders.name.placeholder")}
+									placeholder={ctx.intl.t("folders.name.placeholder")}
 									mix={[
 										minIs(0),
 										bs(BAND_FIELD_HEIGHT),
@@ -308,7 +308,7 @@ export default createAction(routes.folder, {
 								/>
 
 								<Button type="submit" size="sm">
-									{ctx.i18next.t("folders.rename.submit")}
+									{ctx.intl.t("folders.rename.submit")}
 								</Button>
 							</form>
 						</Menu>
@@ -319,22 +319,22 @@ export default createAction(routes.folder, {
 							color="neutral"
 							variant="ghost"
 							size="sm"
-							aria-label={ctx.i18next.t("folders.create.submit")}
-							title={ctx.i18next.t("folders.create.submit")}
+							aria-label={ctx.intl.t("folders.create.submit")}
+							title={ctx.intl.t("folders.create.submit")}
 						>
 							{/** A folder with something being added to it, which is what this makes. */}
 							<FolderPlusIcon size={ACTION_ICON_SIZE} />
-							<ActionLabel>{ctx.i18next.t("folders.create.submit")}</ActionLabel>
+							<ActionLabel>{ctx.intl.t("folders.create.submit")}</ActionLabel>
 						</Button>
 
-						<Menu id={createMenuId(folderId)} aria-label={ctx.i18next.t("folders.create.legend")}>
+						<Menu id={createMenuId(folderId)} aria-label={ctx.intl.t("folders.create.legend")}>
 							<form
 								method="post"
 								action={routes.folders.create.href()}
 								mix={[attrs({ "data-rmx-document": "" }), flex(), items("center"), gap(2), p(2)]}
 							>
 								<label htmlFor={nameFieldId("new", folderId)} mix={[visuallyHidden()]}>
-									{ctx.i18next.t("folders.name.label")}
+									{ctx.intl.t("folders.name.label")}
 								</label>
 
 								<input
@@ -342,7 +342,7 @@ export default createAction(routes.folder, {
 									type="text"
 									name={TITLE_FIELD}
 									required
-									placeholder={ctx.i18next.t("folders.name.placeholder")}
+									placeholder={ctx.intl.t("folders.name.placeholder")}
 									mix={[
 										minIs(0),
 										bs(BAND_FIELD_HEIGHT),
@@ -357,7 +357,7 @@ export default createAction(routes.folder, {
 								/>
 
 								<Button type="submit" size="sm">
-									{ctx.i18next.t("folders.create.submit")}
+									{ctx.intl.t("folders.create.submit")}
 								</Button>
 							</form>
 						</Menu>
@@ -368,11 +368,11 @@ export default createAction(routes.folder, {
 							color="danger"
 							variant="ghost"
 							size="sm"
-							aria-label={ctx.i18next.t("folders.delete.submit")}
-							title={ctx.i18next.t("folders.delete.submit")}
+							aria-label={ctx.intl.t("folders.delete.submit")}
+							title={ctx.intl.t("folders.delete.submit")}
 						>
 							<Trash2Icon size={ACTION_ICON_SIZE} />
-							<ActionLabel>{ctx.i18next.t("folders.delete.submit")}</ActionLabel>
+							<ActionLabel>{ctx.intl.t("folders.delete.submit")}</ActionLabel>
 						</Button>
 					</>
 				}
@@ -400,10 +400,10 @@ export default createAction(routes.folder, {
 							 * one.
 							 */
 							parts={{ form: [attrs({ "data-rmx-document": "" })] }}
-							title={ctx.i18next.t("folders.delete.title")}
-							description={ctx.i18next.t("folders.delete.confirm", { title: folder.title })}
-							confirmLabel={ctx.i18next.t("folders.delete.submit")}
-							cancelLabel={ctx.i18next.t("folders.delete.cancel")}
+							title={ctx.intl.t("folders.delete.title")}
+							description={ctx.intl.t("folders.delete.confirm", { title: folder.title })}
+							confirmLabel={ctx.intl.t("folders.delete.submit")}
+							cancelLabel={ctx.intl.t("folders.delete.cancel")}
 							form={{
 								action: routes.folders.delete.href({ folderId }),
 								fields: <input type="hidden" name="_method" value="DELETE" />,
@@ -413,13 +413,13 @@ export default createAction(routes.folder, {
 
 					{note && (
 						<Alert color={note.color} mix={pageNote()}>
-							<Alert.Description>{ctx.i18next.t(note.key)}</Alert.Description>
+							<Alert.Description>{ctx.intl.t(note.key)}</Alert.Description>
 						</Alert>
 					)}
 
 					{isStaleCursor && (
 						<Alert color="warning" mix={pageNote()}>
-							<Alert.Description>{ctx.i18next.t("timeline.badCursor")}</Alert.Description>
+							<Alert.Description>{ctx.intl.t("timeline.badCursor")}</Alert.Description>
 							<Alert.Action>
 								<LinkButton
 									href={routes.folder.href({ folder: folderId })}
@@ -427,7 +427,7 @@ export default createAction(routes.folder, {
 									variant="outline"
 									size="sm"
 								>
-									{ctx.i18next.t("timeline.restart")}
+									{ctx.intl.t("timeline.restart")}
 								</LinkButton>
 							</Alert.Action>
 						</Alert>
@@ -439,8 +439,8 @@ export default createAction(routes.folder, {
 						/** Level 2, since the layout's own page heading is the document's only `h1`. */
 						<HeadingScope level={2}>
 							<Empty mix={[maxIs(PAGE_COLUMN), text("sm")]}>
-								<Empty.Title>{ctx.i18next.t("folders.empty.title")}</Empty.Title>
-								<Empty.Description>{ctx.i18next.t("folders.empty.description")}</Empty.Description>
+								<Empty.Title>{ctx.intl.t("folders.empty.title")}</Empty.Title>
+								<Empty.Description>{ctx.intl.t("folders.empty.description")}</Empty.Description>
 							</Empty>
 						</HeadingScope>
 					)}

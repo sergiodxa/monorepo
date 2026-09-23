@@ -21,8 +21,8 @@ import routes from "~/routes/web";
 
 /** Renders the 404 document for unmatched routes. */
 export default function defaultHandler(ctx: RequestContext) {
-	let title = ctx.i18next.t("notFound.title");
-	let description = ctx.i18next.t("notFound.description");
+	let title = ctx.intl.t("notFound.title");
+	let description = ctx.intl.t("notFound.description");
 
 	return ctx.render(
 		<DocumentLayout title={title} description={description} locale={ctx.locale}>
@@ -42,7 +42,7 @@ export default function defaultHandler(ctx: RequestContext) {
 					href={routes.home.href()}
 					mix={[fg("brand"), textDecoration("none"), hover(textDecoration("underline"))]}
 				>
-					{ctx.i18next.t("notFound.goBackHome")}
+					{ctx.intl.t("notFound.goBackHome")}
 				</a>
 			</main>
 		</DocumentLayout>,

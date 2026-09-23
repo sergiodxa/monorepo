@@ -31,7 +31,7 @@
  */
 
 import type { Client } from "@sdxc/flags";
-import type { i18n } from "@sdxc/i18n";
+import type { I18n } from "@sdxc/i18n";
 import type { Renderer } from "remix/middleware/render";
 import type { RemixNode } from "remix/ui";
 
@@ -147,48 +147,48 @@ interface Note {
  * narrowing it. A reader is told what came back empty rather than that something did: the
  * words they searched for, the state they filtered to, or the queue itself.
  *
- * @param i18next - The request's dictionary.
+ * @param intl - The request's dictionary.
  * @param view - How the queue was narrowed and came back without a post.
  */
-function emptyCopy(i18next: i18n, view: QueueView) {
+function emptyCopy(intl: I18n, view: QueueView) {
 	if (view.query.trim().length > 0) {
 		if (view.readState === "unread") {
 			return {
-				title: i18next.t("reading.found.unread.title"),
-				description: i18next.t("reading.found.unread.description"),
+				title: intl.t("reading.found.unread.title"),
+				description: intl.t("reading.found.unread.description"),
 			};
 		}
 
 		if (view.readState === "read") {
 			return {
-				title: i18next.t("reading.found.read.title"),
-				description: i18next.t("reading.found.read.description"),
+				title: intl.t("reading.found.read.title"),
+				description: intl.t("reading.found.read.description"),
 			};
 		}
 
 		return {
-			title: i18next.t("reading.found.all.title"),
-			description: i18next.t("reading.found.all.description"),
+			title: intl.t("reading.found.all.title"),
+			description: intl.t("reading.found.all.description"),
 		};
 	}
 
 	if (view.readState === "unread") {
 		return {
-			title: i18next.t("reading.empty.unread.title"),
-			description: i18next.t("reading.empty.unread.description"),
+			title: intl.t("reading.empty.unread.title"),
+			description: intl.t("reading.empty.unread.description"),
 		};
 	}
 
 	if (view.readState === "read") {
 		return {
-			title: i18next.t("reading.empty.read.title"),
-			description: i18next.t("reading.empty.read.description"),
+			title: intl.t("reading.empty.read.title"),
+			description: intl.t("reading.empty.read.description"),
 		};
 	}
 
 	return {
-		title: i18next.t("reading.empty.all.title"),
-		description: i18next.t("reading.empty.all.description"),
+		title: intl.t("reading.empty.all.title"),
+		description: intl.t("reading.empty.all.description"),
 	};
 }
 
@@ -197,20 +197,20 @@ function emptyCopy(i18next: i18n, view: QueueView) {
  * has to name the span it covered, because the confusing failure is the one where the post
  * exists and the search was never allowed to reach it.
  *
- * @param i18next - The request's dictionary.
+ * @param intl - The request's dictionary.
  * @param locale - The request's language, which words and orders the date.
  * @param span - How far the page reached, and what stopped it there.
  */
-function searchedCopy(i18next: i18n, locale: string, span: UserStore.SearchSpan): string {
+function searchedCopy(intl: I18n, locale: string, span: UserStore.SearchSpan): string {
 	let date = exactDate(span.reachedAt, locale);
 
-	if (span.stoppedAt === "archive") return i18next.t("reading.searched.archive", { date });
+	if (span.stoppedAt === "archive") return intl.t("reading.searched.archive", { date });
 
 	if (span.stoppedAt === "window") {
-		return i18next.t("reading.searched.window", { date, days: span.windowDays ?? 0 });
+		return intl.t("reading.searched.window", { date, days: span.windowDays ?? 0 });
 	}
 
-	return i18next.t("reading.searched.step", { date });
+	return intl.t("reading.searched.step", { date });
 }
 
 /**
@@ -218,24 +218,24 @@ function searchedCopy(i18next: i18n, locale: string, span: UserStore.SearchSpan)
  * Keeping a query and forgetting one both end on the queue, which is the one surface that
  * renders the list a saved search is a narrowing of.
  *
- * @param i18next - The request's dictionary.
+ * @param intl - The request's dictionary.
  * @param params - The query the page was asked for with.
  */
-function savedSearchNote(i18next: i18n, params: URLSearchParams): Note | null {
+function savedSearchNote(intl: I18n, params: URLSearchParams): Note | null {
 	let outcome = params.get(SAVED_PARAM);
 	if (outcome === null) return null;
 
-	if (outcome === "saved") return { message: i18next.t("searches.saved"), color: "success" };
+	if (outcome === "saved") return { message: intl.t("searches.saved"), color: "success" };
 	if (outcome === "forgotten") {
-		return { message: i18next.t("searches.forgotten"), color: "success" };
+		return { message: intl.t("searches.forgotten"), color: "success" };
 	}
 
 	let refusals: Record<string, string> = {
-		"invalid-name": i18next.t("searches.error.invalidName", { length: SEARCH_NAME_LENGTH }),
-		"invalid-query": i18next.t("searches.error.invalidQuery"),
-		"duplicate-name": i18next.t("searches.error.duplicateName"),
-		"not-found": i18next.t("searches.error.notFound"),
-		full: i18next.t("searches.error.full", { limit: SAVED_SEARCH_LIMIT }),
+		"invalid-name": intl.t("searches.error.invalidName", { length: SEARCH_NAME_LENGTH }),
+		"invalid-query": intl.t("searches.error.invalidQuery"),
+		"duplicate-name": intl.t("searches.error.duplicateName"),
+		"not-found": intl.t("searches.error.notFound"),
+		full: intl.t("searches.error.full", { limit: SAVED_SEARCH_LIMIT }),
 	};
 
 	let message = refusals[outcome];
@@ -243,10 +243,10 @@ function savedSearchNote(i18next: i18n, params: URLSearchParams): Note | null {
 }
 
 /** The word one filter's link is read as. */
-function filterLabel(i18next: i18n, readState: UserStore.ReadState): string {
-	if (readState === "unread") return i18next.t("reading.filter.unread");
-	if (readState === "read") return i18next.t("reading.filter.read");
-	return i18next.t("reading.filter.all");
+function filterLabel(intl: I18n, readState: UserStore.ReadState): string {
+	if (readState === "unread") return intl.t("reading.filter.unread");
+	if (readState === "read") return intl.t("reading.filter.read");
+	return intl.t("reading.filter.all");
 }
 
 /**
@@ -267,15 +267,15 @@ function reportedCount(params: URLSearchParams, name: string): number | null {
  * The copy and tone for the outcome a mark-everything-read redirect carries, or `null`
  * when this is an ordinary visit.
  *
- * @param i18next - The request's dictionary.
+ * @param intl - The request's dictionary.
  * @param params - The query the page was asked for with.
  */
-function markNote(i18next: i18n, params: URLSearchParams): Note | null {
+function markNote(intl: I18n, params: URLSearchParams): Note | null {
 	let count = reportedCount(params, MARKED_PARAM);
 	if (count === null) return null;
 
-	if (count === 0) return { message: i18next.t("timeline.nothingToMark"), color: "neutral" };
-	return { message: i18next.t("timeline.markedRead", { count }), color: "success" };
+	if (count === 0) return { message: intl.t("timeline.nothingToMark"), color: "neutral" };
+	return { message: intl.t("timeline.markedRead", { count }), color: "success" };
 }
 
 /**
@@ -286,10 +286,10 @@ function markNote(i18next: i18n, params: URLSearchParams): Note | null {
  * A sweep that left some feeds unreached is a warning rather than a failure, the same tone
  * a single feed's failed check earns, since the feeds that did answer are current.
  *
- * @param i18next - The request's dictionary.
+ * @param intl - The request's dictionary.
  * @param params - The query the page was asked for with.
  */
-function checkAllNote(i18next: i18n, params: URLSearchParams): Note | null {
+function checkAllNote(intl: I18n, params: URLSearchParams): Note | null {
 	let swept = reportedCount(params, SWEPT_PARAM);
 	if (swept === null) return null;
 
@@ -297,13 +297,13 @@ function checkAllNote(i18next: i18n, params: URLSearchParams): Note | null {
 	let failed = reportedCount(params, FAILED_PARAM) ?? 0;
 
 	let sentences = [
-		i18next.t("feeds.checkAll.done", { count: swept }),
+		intl.t("feeds.checkAll.done", { count: swept }),
 		fresh > 0
-			? i18next.t("feeds.checkAll.newPosts", { count: fresh })
-			: i18next.t("feeds.checkAll.nothingNew"),
+			? intl.t("feeds.checkAll.newPosts", { count: fresh })
+			: intl.t("feeds.checkAll.nothingNew"),
 	];
 
-	if (failed > 0) sentences.push(i18next.t("feeds.checkAll.failed", { count: failed }));
+	if (failed > 0) sentences.push(intl.t("feeds.checkAll.failed", { count: failed }));
 
 	return { message: sentences.join(" "), color: failed > 0 ? "warning" : "success" };
 }
@@ -316,7 +316,7 @@ export namespace ReadingQueue {
 	 */
 	export interface Context {
 		render: Renderer<RemixNode>;
-		i18next: i18n;
+		intl: I18n;
 		locale: string;
 		/** What the list is allowed to do, which the request's own client answers. */
 		flags: Client;
@@ -464,13 +464,13 @@ export async function renderReadingQueue(
 	 * fifty posts, or three, or none — so the sentence names the span rather than letting a
 	 * short page read as the end of the archive.
 	 */
-	let searched = page.search ? searchedCopy(ctx.i18next, ctx.locale, page.search) : null;
+	let searched = page.search ? searchedCopy(ctx.intl, ctx.locale, page.search) : null;
 
 	let heading = hasQuery
-		? ctx.i18next.t("reading.headingFor", { query: view.query })
-		: ctx.i18next.t("reading.heading");
+		? ctx.intl.t("reading.headingFor", { query: view.query })
+		: ctx.intl.t("reading.heading");
 
-	let empty = emptyCopy(ctx.i18next, view);
+	let empty = emptyCopy(ctx.intl, view);
 
 	/** The narrowing alone, which is where the newest page of it lives. */
 	let here = queueUrl(view);
@@ -507,7 +507,7 @@ export async function renderReadingQueue(
 	let placement = paging ? place : { ...place, continueSrc: null, resumeSrc: null };
 
 	/** The copy every row of the list prints, whichever shape this page is answered in. */
-	let listCopy = timelineCopy(ctx.i18next);
+	let listCopy = timelineCopy(ctx.intl);
 
 	/**
 	 * The span this page covered, and the way on from it where there is one. The link is the
@@ -520,7 +520,7 @@ export async function renderReadingQueue(
 				{searched}{" "}
 				{page.search?.stoppedAt === "step" && placement.cursors.next !== null && (
 					<a href={placement.cursors.next} mix={[fg("brand")]}>
-						{ctx.i18next.t("reading.searched.continue")}
+						{ctx.intl.t("reading.searched.continue")}
 					</a>
 				)}
 			</p>
@@ -540,10 +540,10 @@ export async function renderReadingQueue(
 				 * says so rather than starting again from the newest page underneath itself.
 				 */
 				<Alert color="warning" mix={pageNote()}>
-					<Alert.Description>{ctx.i18next.t("timeline.badCursor")}</Alert.Description>
+					<Alert.Description>{ctx.intl.t("timeline.badCursor")}</Alert.Description>
 					<Alert.Action>
 						<LinkButton href={here} color="neutral" variant="outline" size="sm">
-							{ctx.i18next.t("timeline.restart")}
+							{ctx.intl.t("timeline.restart")}
 						</LinkButton>
 					</Alert.Action>
 				</Alert>
@@ -564,7 +564,7 @@ export async function renderReadingQueue(
 	 */
 	let chromeProps = await chrome({
 		flags: ctx.flags,
-		i18next: ctx.i18next,
+		intl: ctx.intl,
 		locale: ctx.locale,
 		url: new URL(here, ctx.url),
 	});
@@ -575,9 +575,9 @@ export async function renderReadingQueue(
 	 * both was assembled by hand, and the marking is the one that moved posts, so it speaks.
 	 */
 	let outcome =
-		markNote(ctx.i18next, ctx.url.searchParams) ??
-		checkAllNote(ctx.i18next, ctx.url.searchParams) ??
-		savedSearchNote(ctx.i18next, ctx.url.searchParams);
+		markNote(ctx.intl, ctx.url.searchParams) ??
+		checkAllNote(ctx.intl, ctx.url.searchParams) ??
+		savedSearchNote(ctx.intl, ctx.url.searchParams);
 
 	/**
 	 * What the reader has not got yet, which is news about the queue rather than the outcome
@@ -587,7 +587,7 @@ export async function renderReadingQueue(
 	 */
 	let waiting =
 		freshness && freshness.count > 0
-			? ctx.i18next.t("reading.waiting", { count: freshness.count })
+			? ctx.intl.t("reading.waiting", { count: freshness.count })
 			: null;
 
 	return ctx.render(
@@ -607,7 +607,7 @@ export async function renderReadingQueue(
 			actions={
 				<>
 					<nav
-						aria-label={ctx.i18next.t("reading.filter.label")}
+						aria-label={ctx.intl.t("reading.filter.label")}
 						mix={[flex(), items("center"), gap(3)]}
 					>
 						{READ_STATES.map((state) => (
@@ -615,7 +615,7 @@ export async function renderReadingQueue(
 								key={state}
 								/** The words carry across a filter, so narrowing one never drops the other. */
 								href={queueUrl({ ...view, readState: state })}
-								label={filterLabel(ctx.i18next, state)}
+								label={filterLabel(ctx.intl, state)}
 								isCurrent={state === view.readState}
 							/>
 						))}
@@ -633,12 +633,12 @@ export async function renderReadingQueue(
 							color="neutral"
 							variant="ghost"
 							size="sm"
-							aria-label={ctx.i18next.t("feeds.checkAll.submit")}
-							title={ctx.i18next.t("feeds.checkAll.submit")}
+							aria-label={ctx.intl.t("feeds.checkAll.submit")}
+							title={ctx.intl.t("feeds.checkAll.submit")}
 						>
 							{/** The arrows a page is fetched again with, which is what this asks for. */}
 							<RefreshCwIcon size={ACTION_ICON_SIZE} />
-							<ActionLabel>{ctx.i18next.t("feeds.checkAll.submit")}</ActionLabel>
+							<ActionLabel>{ctx.intl.t("feeds.checkAll.submit")}</ActionLabel>
 						</Button>
 					</form>
 
@@ -655,15 +655,15 @@ export async function renderReadingQueue(
 							color="brand"
 							variant="ghost"
 							size="sm"
-							aria-label={ctx.i18next.t("timeline.markAllRead.submit")}
-							title={ctx.i18next.t("timeline.markAllRead.submit")}
+							aria-label={ctx.intl.t("timeline.markAllRead.submit")}
+							title={ctx.intl.t("timeline.markAllRead.submit")}
 						>
 							{/**
 							 * A second tick for the second reach: a row's own mark ticks one post and
 							 * this ticks every post the queue holds.
 							 */}
 							<CheckCheckIcon size={ACTION_ICON_SIZE} />
-							<ActionLabel>{ctx.i18next.t("timeline.markAllRead.submit")}</ActionLabel>
+							<ActionLabel>{ctx.intl.t("timeline.markAllRead.submit")}</ActionLabel>
 						</Button>
 					)}
 
@@ -685,7 +685,7 @@ export async function renderReadingQueue(
 								<QueueFields query={view.query} readState={view.readState} feedId={view.feedId} />
 
 								<label htmlFor={SAVE_SEARCH_FIELD_ID} mix={[visuallyHidden()]}>
-									{ctx.i18next.t("searches.nameLabel")}
+									{ctx.intl.t("searches.nameLabel")}
 								</label>
 
 								<input
@@ -694,7 +694,7 @@ export async function renderReadingQueue(
 									name={NAME_FIELD}
 									required
 									maxLength={SEARCH_NAME_LENGTH}
-									placeholder={ctx.i18next.t("searches.namePlaceholder")}
+									placeholder={ctx.intl.t("searches.namePlaceholder")}
 									mix={[
 										minIs(0),
 										bs(BAND_FIELD_HEIGHT),
@@ -713,11 +713,11 @@ export async function renderReadingQueue(
 									color="neutral"
 									variant="ghost"
 									size="sm"
-									aria-label={ctx.i18next.t("searches.save")}
-									title={ctx.i18next.t("searches.save")}
+									aria-label={ctx.intl.t("searches.save")}
+									title={ctx.intl.t("searches.save")}
 								>
 									<BookmarkIcon size={ACTION_ICON_SIZE} />
-									<ActionLabel>{ctx.i18next.t("searches.save")}</ActionLabel>
+									<ActionLabel>{ctx.intl.t("searches.save")}</ActionLabel>
 								</Button>
 							</form>
 						) : (
@@ -737,11 +737,11 @@ export async function renderReadingQueue(
 									color="neutral"
 									variant="ghost"
 									size="sm"
-									aria-label={ctx.i18next.t("searches.forget")}
-									title={ctx.i18next.t("searches.forget")}
+									aria-label={ctx.intl.t("searches.forget")}
+									title={ctx.intl.t("searches.forget")}
 								>
 									<BookmarkIcon size={ACTION_ICON_SIZE} />
-									<ActionLabel>{ctx.i18next.t("searches.forget")}</ActionLabel>
+									<ActionLabel>{ctx.intl.t("searches.forget")}</ActionLabel>
 								</Button>
 							</form>
 						))}
@@ -779,7 +779,7 @@ export async function renderReadingQueue(
 						<QueueFields query={view.query} readState={view.readState} feedId={view.feedId} />
 
 						<label htmlFor={FOLLOW_FIELD_ID} mix={[visuallyHidden()]}>
-							{ctx.i18next.t("feeds.follow.label")}
+							{ctx.intl.t("feeds.follow.label")}
 						</label>
 
 						<input
@@ -788,7 +788,7 @@ export async function renderReadingQueue(
 							name="url"
 							required
 							autoComplete="url"
-							placeholder={ctx.i18next.t("feeds.follow.placeholder")}
+							placeholder={ctx.intl.t("feeds.follow.placeholder")}
 							defaultValue={submission.value ?? undefined}
 							aria-invalid={submission.error === null ? undefined : "true"}
 							aria-describedby={submission.error === null ? undefined : FOLLOW_ERROR_ID}
@@ -838,10 +838,10 @@ export async function renderReadingQueue(
 							 * whose whole purpose is to be finished with.
 							 */
 							parts={{ form: [attrs({ "data-rmx-document": "" })] }}
-							title={ctx.i18next.t("timeline.markAllRead.title")}
-							description={ctx.i18next.t("timeline.markAllRead.confirm")}
-							confirmLabel={ctx.i18next.t("timeline.markAllRead.submit")}
-							cancelLabel={ctx.i18next.t("timeline.markAllRead.cancel")}
+							title={ctx.intl.t("timeline.markAllRead.title")}
+							description={ctx.intl.t("timeline.markAllRead.confirm")}
+							confirmLabel={ctx.intl.t("timeline.markAllRead.submit")}
+							cancelLabel={ctx.intl.t("timeline.markAllRead.cancel")}
 							form={{
 								action: routes.readAll.href(),
 								fields: (
@@ -878,10 +878,10 @@ export async function renderReadingQueue(
 
 				{isStaleCursor && (
 					<Alert color="warning" mix={pageNote()}>
-						<Alert.Description>{ctx.i18next.t("timeline.badCursor")}</Alert.Description>
+						<Alert.Description>{ctx.intl.t("timeline.badCursor")}</Alert.Description>
 						<Alert.Action>
 							<LinkButton href={here} color="neutral" variant="outline" size="sm">
-								{ctx.i18next.t("timeline.restart")}
+								{ctx.intl.t("timeline.restart")}
 							</LinkButton>
 						</Alert.Action>
 					</Alert>
@@ -896,7 +896,7 @@ export async function renderReadingQueue(
 				 * visible price of not letting a pin touch the timeline's predicate.
 				 */}
 				{pinned.length > 0 && (
-					<section aria-label={ctx.i18next.t("feeds.pin.label")} mix={[flex(), flexWrap(), gap(4)]}>
+					<section aria-label={ctx.intl.t("feeds.pin.label")} mix={[flex(), flexWrap(), gap(4)]}>
 						{pinned.map((entry) => (
 							<article
 								key={entry.feed.id}
@@ -933,9 +933,7 @@ export async function renderReadingQueue(
 										))}
 									</ul>
 								) : (
-									<p mix={[text("xs"), fg("neutral.muted")]}>
-										{ctx.i18next.t("feeds.pin.caughtUp")}
-									</p>
+									<p mix={[text("xs"), fg("neutral.muted")]}>{ctx.intl.t("feeds.pin.caughtUp")}</p>
 								)}
 							</article>
 						))}
@@ -957,10 +955,8 @@ export async function renderReadingQueue(
 							</Empty>
 						) : (
 							<Empty>
-								<Empty.Title>{ctx.i18next.t("reading.noFeeds.title")}</Empty.Title>
-								<Empty.Description>
-									{ctx.i18next.t("reading.noFeeds.description")}
-								</Empty.Description>
+								<Empty.Title>{ctx.intl.t("reading.noFeeds.title")}</Empty.Title>
+								<Empty.Description>{ctx.intl.t("reading.noFeeds.description")}</Empty.Description>
 							</Empty>
 						)}
 
@@ -1002,12 +998,12 @@ const FOLLOW_ERROR_KEYS: Record<Exclude<UserStore.FollowFailure, "over-limit">, 
  * @param refused - What the store refused, and why.
  */
 function followError(
-	ctx: Pick<ReadingQueue.Context, "i18next">,
+	ctx: Pick<ReadingQueue.Context, "intl">,
 	refused: UserStore.FollowResult & { ok: false },
 ): string {
-	if (refused.reason !== "over-limit") return ctx.i18next.t(FOLLOW_ERROR_KEYS[refused.reason]);
+	if (refused.reason !== "over-limit") return ctx.intl.t(FOLLOW_ERROR_KEYS[refused.reason]);
 
-	return ctx.i18next.t("feeds.follow.error.overLimit", {
+	return ctx.intl.t("feeds.follow.error.overLimit", {
 		allowed: refused.limit.allowed,
 		count: refused.limit.allowed,
 	});

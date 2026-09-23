@@ -41,23 +41,23 @@ export default createAction(routes.home, (ctx) => {
 
 	return ctx.render(
 		<DocumentLayout
-			title={ctx.i18next.t("landing.meta.title")}
-			description={ctx.i18next.t("landing.meta.description")}
+			title={ctx.intl.t("landing.meta.title")}
+			description={ctx.intl.t("landing.meta.description")}
 			locale={ctx.locale}
 		>
 			<main mix={[vstack({ gap: 16 }), maxIs("64rem"), mi("auto"), p(8, 6)]}>
 				<section mix={[vstack({ gap: 6, align: "center" }), textAlign("center"), p(12, 0)]}>
 					<Heading level={1} mix={[fontSize("4xl"), leading("tight")]}>
-						{ctx.i18next.t("landing.hero.title")}
+						{ctx.intl.t("landing.hero.title")}
 					</Heading>
 
 					<Text mix={[maxIs("42rem"), fontSize("lg"), leading("relaxed"), fg("neutral.muted")]}>
-						{ctx.i18next.t("landing.hero.description")}
+						{ctx.intl.t("landing.hero.description")}
 					</Text>
 
 					<form method="post" action={routes.auth.action.href()} data-rmx-document="">
 						<Button type="submit" size="lg">
-							{ctx.i18next.t("landing.hero.cta")}
+							{ctx.intl.t("landing.hero.cta")}
 						</Button>
 					</form>
 				</section>
@@ -66,9 +66,9 @@ export default createAction(routes.home, (ctx) => {
 					{FEATURE_KEYS.map((key) => (
 						<Card key={key}>
 							<Card.Header>
-								<Card.Title>{ctx.i18next.t(`landing.features.${key}.title`)}</Card.Title>
+								<Card.Title>{ctx.intl.t(`landing.features.${key}.title`)}</Card.Title>
 								<Card.Description>
-									{ctx.i18next.t(`landing.features.${key}.description`)}
+									{ctx.intl.t(`landing.features.${key}.description`)}
 								</Card.Description>
 							</Card.Header>
 						</Card>

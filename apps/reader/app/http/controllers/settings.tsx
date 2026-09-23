@@ -107,17 +107,17 @@ function importNote(
 		let failed = importedCount(ctx.url.searchParams, "failed");
 
 		let sentences = [
-			ctx.i18next.t("feeds.transfer.import.added", {
+			ctx.intl.t("feeds.transfer.import.added", {
 				count: importedCount(ctx.url.searchParams, "added"),
 			}),
 		];
 
 		if (following > 0) {
-			sentences.push(ctx.i18next.t("feeds.transfer.import.alreadyFollowing", { count: following }));
+			sentences.push(ctx.intl.t("feeds.transfer.import.alreadyFollowing", { count: following }));
 		}
 
 		if (failed > 0) {
-			sentences.push(ctx.i18next.t("feeds.transfer.import.failed", { count: failed }));
+			sentences.push(ctx.intl.t("feeds.transfer.import.failed", { count: failed }));
 		}
 
 		return { message: sentences.join(" "), color: "success" };
@@ -125,22 +125,22 @@ function importNote(
 
 	/** A document that holds no subscriptions left the reader where they were, intact. */
 	if (imported === "empty") {
-		return { message: ctx.i18next.t("feeds.transfer.import.empty"), color: "warning" };
+		return { message: ctx.intl.t("feeds.transfer.import.empty"), color: "warning" };
 	}
 
 	/** The upload was refused outright, which is the one outcome that cost the reader a step. */
 	if (imported === "unreadable") {
-		return { message: ctx.i18next.t("feeds.transfer.import.unreadable"), color: "danger" };
+		return { message: ctx.intl.t("feeds.transfer.import.unreadable"), color: "danger" };
 	}
 
 	/** Refused on size alone, so the message says what a subscription list actually weighs. */
 	if (imported === "too-large") {
-		return { message: ctx.i18next.t("feeds.transfer.import.tooLarge"), color: "danger" };
+		return { message: ctx.intl.t("feeds.transfer.import.tooLarge"), color: "danger" };
 	}
 
 	/** The form is a file short, which the reader fixes by choosing one below. */
 	if (imported === "missing") {
-		return { message: ctx.i18next.t("feeds.transfer.import.missing"), color: "warning" };
+		return { message: ctx.intl.t("feeds.transfer.import.missing"), color: "warning" };
 	}
 
 	return null;
@@ -189,15 +189,15 @@ function appearanceSection(ctx: RequestContext, current: Presentation) {
 		>
 			{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
 			<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-				{ctx.i18next.t("settings.appearance.legend")}
+				{ctx.intl.t("settings.appearance.legend")}
 			</h2>
 
-			<Description>{ctx.i18next.t("settings.appearance.description")}</Description>
+			<Description>{ctx.intl.t("settings.appearance.description")}</Description>
 
 			{saved && (
 				<Alert color="success">
 					<Alert.Content>
-						<Alert.Description>{ctx.i18next.t("settings.appearance.saved")}</Alert.Description>
+						<Alert.Description>{ctx.intl.t("settings.appearance.saved")}</Alert.Description>
 					</Alert.Content>
 				</Alert>
 			)}
@@ -209,24 +209,24 @@ function appearanceSection(ctx: RequestContext, current: Presentation) {
 			>
 				<div mix={[flex(), flexWrap("wrap"), gap(3), items("center")]}>
 					<div mix={[vstack({ gap: 1, align: "start" })]}>
-						<Label htmlFor={THEME_ID}>{ctx.i18next.t("settings.appearance.theme.label")}</Label>
+						<Label htmlFor={THEME_ID}>{ctx.intl.t("settings.appearance.theme.label")}</Label>
 
 						<Select id={THEME_ID} name={THEME_FIELD}>
 							{THEMES.map((name) => (
 								<Select.Option key={name} value={name} selected={name === current.theme}>
-									{ctx.i18next.t(`settings.appearance.theme.names.${name}`)}
+									{ctx.intl.t(`settings.appearance.theme.names.${name}`)}
 								</Select.Option>
 							))}
 						</Select>
 					</div>
 
 					<div mix={[vstack({ gap: 1, align: "start" })]}>
-						<Label htmlFor={FACE_ID}>{ctx.i18next.t("settings.appearance.face.label")}</Label>
+						<Label htmlFor={FACE_ID}>{ctx.intl.t("settings.appearance.face.label")}</Label>
 
 						<Select id={FACE_ID} name={FACE_FIELD}>
 							{READING_FACES.map((name) => (
 								<Select.Option key={name} value={name} selected={name === current.face}>
-									{ctx.i18next.t(`settings.appearance.face.names.${name}`)}
+									{ctx.intl.t(`settings.appearance.face.names.${name}`)}
 								</Select.Option>
 							))}
 						</Select>
@@ -234,10 +234,10 @@ function appearanceSection(ctx: RequestContext, current: Presentation) {
 				</div>
 
 				<Text mix={[text("xs"), fg("neutral.muted")]}>
-					{ctx.i18next.t("settings.appearance.face.hint")}
+					{ctx.intl.t("settings.appearance.face.hint")}
 				</Text>
 
-				<Button type="submit">{ctx.i18next.t("settings.appearance.save")}</Button>
+				<Button type="submit">{ctx.intl.t("settings.appearance.save")}</Button>
 			</form>
 		</section>
 	);
@@ -264,24 +264,24 @@ function notificationNote(
 	let params = ctx.url.searchParams;
 
 	if (params.get(CHANNELS_PARAM) === "saved") {
-		return { message: ctx.i18next.t("notifications.channels.saved"), color: "success" };
+		return { message: ctx.intl.t("notifications.channels.saved"), color: "success" };
 	}
 
 	/** The plan and the switch disagreed, so the page says so rather than drawing nothing. */
 	if (params.get(CHANNELS_PARAM) === "not-entitled") {
-		return { message: ctx.i18next.t("notifications.channels.notEntitled"), color: "warning" };
+		return { message: ctx.intl.t("notifications.channels.notEntitled"), color: "warning" };
 	}
 
 	if (params.get(QUIET_PARAM) === "saved") {
-		return { message: ctx.i18next.t("notifications.quiet.saved"), color: "success" };
+		return { message: ctx.intl.t("notifications.quiet.saved"), color: "success" };
 	}
 
 	if (params.get(FORGET_PARAM) === "forgotten") {
-		return { message: ctx.i18next.t("notifications.devices.forgotten"), color: "success" };
+		return { message: ctx.intl.t("notifications.devices.forgotten"), color: "success" };
 	}
 
 	if (params.get(FORGET_PARAM) === "missing") {
-		return { message: ctx.i18next.t("notifications.devices.missing"), color: "warning" };
+		return { message: ctx.intl.t("notifications.devices.missing"), color: "warning" };
 	}
 
 	return null;
@@ -310,10 +310,10 @@ function notificationsSection(ctx: RequestContext, notifications: UserStore.Noti
 		>
 			{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
 			<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-				{ctx.i18next.t("notifications.legend")}
+				{ctx.intl.t("notifications.legend")}
 			</h2>
 
-			<Description>{ctx.i18next.t("notifications.description")}</Description>
+			<Description>{ctx.intl.t("notifications.description")}</Description>
 
 			{note && (
 				<Alert color={note.color}>
@@ -324,9 +324,7 @@ function notificationsSection(ctx: RequestContext, notifications: UserStore.Noti
 			)}
 
 			{notifications.feeds === 0 && (
-				<Text mix={[text("xs"), fg("neutral.muted")]}>
-					{ctx.i18next.t("notifications.noFeeds")}
-				</Text>
+				<Text mix={[text("xs"), fg("neutral.muted")]}>{ctx.intl.t("notifications.noFeeds")}</Text>
 			)}
 
 			{/**
@@ -336,7 +334,7 @@ function notificationsSection(ctx: RequestContext, notifications: UserStore.Noti
 			{notifications.feeds > 0 && !notifications.push && !notifications.email && (
 				<Alert color="warning">
 					<Alert.Content>
-						<Alert.Description>{ctx.i18next.t("notifications.noChannel")}</Alert.Description>
+						<Alert.Description>{ctx.intl.t("notifications.noChannel")}</Alert.Description>
 					</Alert.Content>
 				</Alert>
 			)}
@@ -347,11 +345,11 @@ function notificationsSection(ctx: RequestContext, notifications: UserStore.Noti
 				mix={[vstack({ gap: 2, align: "start" })]}
 			>
 				<Checkbox name={PUSH_FIELD} defaultChecked={notifications.push}>
-					{ctx.i18next.t("notifications.channels.push")}
+					{ctx.intl.t("notifications.channels.push")}
 				</Checkbox>
 
 				<Text mix={[text("xs"), fg("neutral.muted")]}>
-					{ctx.i18next.t("notifications.channels.pushHint")}
+					{ctx.intl.t("notifications.channels.pushHint")}
 				</Text>
 
 				<Checkbox
@@ -359,27 +357,27 @@ function notificationsSection(ctx: RequestContext, notifications: UserStore.Noti
 					defaultChecked={notifications.email}
 					disabled={!notifications.emailAllowed}
 				>
-					{ctx.i18next.t("notifications.channels.email")}
+					{ctx.intl.t("notifications.channels.email")}
 				</Checkbox>
 
 				<Text mix={[text("xs"), fg("neutral.muted")]}>
 					{notifications.emailAllowed
 						? notifications.address
-							? ctx.i18next.t("notifications.channels.emailHint", {
+							? ctx.intl.t("notifications.channels.emailHint", {
 									address: notifications.address,
 								})
-							: ctx.i18next.t("notifications.channels.emailUnknown")
-						: ctx.i18next.t("notifications.channels.emailLocked")}
+							: ctx.intl.t("notifications.channels.emailUnknown")
+						: ctx.intl.t("notifications.channels.emailLocked")}
 				</Text>
 
-				<Button type="submit">{ctx.i18next.t("notifications.channels.save")}</Button>
+				<Button type="submit">{ctx.intl.t("notifications.channels.save")}</Button>
 			</form>
 
 			<h3 mix={[m(0), mbs(2), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-				{ctx.i18next.t("notifications.quiet.legend")}
+				{ctx.intl.t("notifications.quiet.legend")}
 			</h3>
 
-			<Description>{ctx.i18next.t("notifications.quiet.description")}</Description>
+			<Description>{ctx.intl.t("notifications.quiet.description")}</Description>
 
 			<form
 				method="post"
@@ -387,12 +385,12 @@ function notificationsSection(ctx: RequestContext, notifications: UserStore.Noti
 				mix={[vstack({ gap: 2, align: "start" })]}
 			>
 				<Checkbox name={QUIET_ENABLED_FIELD} defaultChecked={notifications.quietHours}>
-					{ctx.i18next.t("notifications.quiet.enabled")}
+					{ctx.intl.t("notifications.quiet.enabled")}
 				</Checkbox>
 
 				<div mix={[flex(), flexWrap("wrap"), gap(3), items("center")]}>
 					<div mix={[vstack({ gap: 1, align: "start" })]}>
-						<Label htmlFor={QUIET_FROM_ID}>{ctx.i18next.t("notifications.quiet.from")}</Label>
+						<Label htmlFor={QUIET_FROM_ID}>{ctx.intl.t("notifications.quiet.from")}</Label>
 
 						<Select id={QUIET_FROM_ID} name={QUIET_FROM_FIELD}>
 							{HOURS.map((hour) => (
@@ -401,14 +399,14 @@ function notificationsSection(ctx: RequestContext, notifications: UserStore.Noti
 									value={String(hour)}
 									selected={hour === notifications.quietFrom}
 								>
-									{ctx.i18next.t("notifications.quiet.hour", { hour })}
+									{ctx.intl.t("notifications.quiet.hour", { hour })}
 								</Select.Option>
 							))}
 						</Select>
 					</div>
 
 					<div mix={[vstack({ gap: 1, align: "start" })]}>
-						<Label htmlFor={QUIET_TO_ID}>{ctx.i18next.t("notifications.quiet.to")}</Label>
+						<Label htmlFor={QUIET_TO_ID}>{ctx.intl.t("notifications.quiet.to")}</Label>
 
 						<Select id={QUIET_TO_ID} name={QUIET_TO_FIELD}>
 							{HOURS.map((hour) => (
@@ -417,7 +415,7 @@ function notificationsSection(ctx: RequestContext, notifications: UserStore.Noti
 									value={String(hour)}
 									selected={hour === notifications.quietTo}
 								>
-									{ctx.i18next.t("notifications.quiet.hour", { hour })}
+									{ctx.intl.t("notifications.quiet.hour", { hour })}
 								</Select.Option>
 							))}
 						</Select>
@@ -425,21 +423,21 @@ function notificationsSection(ctx: RequestContext, notifications: UserStore.Noti
 				</div>
 
 				<Text mix={[text("xs"), fg("neutral.muted")]}>
-					{ctx.i18next.t("notifications.quiet.zone", { zone: notifications.timeZone })}
+					{ctx.intl.t("notifications.quiet.zone", { zone: notifications.timeZone })}
 				</Text>
 
-				<Button type="submit">{ctx.i18next.t("notifications.quiet.save")}</Button>
+				<Button type="submit">{ctx.intl.t("notifications.quiet.save")}</Button>
 			</form>
 
 			<h3 mix={[m(0), mbs(2), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-				{ctx.i18next.t("notifications.devices.legend")}
+				{ctx.intl.t("notifications.devices.legend")}
 			</h3>
 
-			<Description>{ctx.i18next.t("notifications.devices.description")}</Description>
+			<Description>{ctx.intl.t("notifications.devices.description")}</Description>
 
 			{notifications.devices.length === 0 ? (
 				<Text mix={[text("xs"), fg("neutral.muted")]}>
-					{ctx.i18next.t("notifications.devices.none")}
+					{ctx.intl.t("notifications.devices.none")}
 				</Text>
 			) : (
 				<ul mix={[m(0), vstack({ gap: 2 })]}>
@@ -449,8 +447,8 @@ function notificationsSection(ctx: RequestContext, notifications: UserStore.Noti
 
 							<Text mix={[text("xs"), fg("neutral.muted")]}>
 								{device.lastDeliveredAt === null
-									? ctx.i18next.t("notifications.devices.never")
-									: ctx.i18next.t("notifications.devices.delivered", {
+									? ctx.intl.t("notifications.devices.never")
+									: ctx.intl.t("notifications.devices.delivered", {
 											date: shortDate(device.lastDeliveredAt, ctx.locale, Date.now()),
 										})}
 							</Text>
@@ -466,7 +464,7 @@ function notificationsSection(ctx: RequestContext, notifications: UserStore.Noti
 								<input type="hidden" name="_method" value="DELETE" />
 
 								<Button type="submit" color="neutral" variant="outline">
-									{ctx.i18next.t("notifications.devices.forget")}
+									{ctx.intl.t("notifications.devices.forget")}
 								</Button>
 							</form>
 						</li>
@@ -531,20 +529,20 @@ async function settingsPage(
 	 */
 	let lastRefreshed =
 		settings?.lastRefreshedAt == null
-			? { short: ctx.i18next.t("settings.neverRefreshed"), exact: undefined }
+			? { short: ctx.intl.t("settings.neverRefreshed"), exact: undefined }
 			: {
-					short: ctx.i18next.t("settings.lastRefreshed", {
+					short: ctx.intl.t("settings.lastRefreshed", {
 						date: shortDate(settings.lastRefreshedAt, ctx.locale, Date.now()),
 					}),
-					exact: ctx.i18next.t("settings.lastRefreshed", {
+					exact: ctx.intl.t("settings.lastRefreshed", {
 						date: exactDate(settings.lastRefreshedAt, ctx.locale),
 					}),
 				};
 
 	return ctx.render(
 		<AppLayout
-			documentTitle={ctx.i18next.t("settings.title")}
-			heading={ctx.i18next.t("settings.heading")}
+			documentTitle={ctx.intl.t("settings.title")}
+			heading={ctx.intl.t("settings.heading")}
 			locale={ctx.locale}
 			{...await chrome(ctx)}
 		>
@@ -559,10 +557,10 @@ async function settingsPage(
 			<section mix={[vstack({ gap: 1 }), maxIs(PAGE_COLUMN)]}>
 				{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
 				<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-					{ctx.i18next.t("settings.cadence.legend")}
+					{ctx.intl.t("settings.cadence.legend")}
 				</h2>
 
-				<Description>{ctx.i18next.t("settings.cadence.description")}</Description>
+				<Description>{ctx.intl.t("settings.cadence.description")}</Description>
 
 				{/**
 				 * When the feeds were last brought up to date is the schedule's own news, so it sits
@@ -591,23 +589,23 @@ async function settingsPage(
 			>
 				{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
 				<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-					{ctx.i18next.t("settings.plan.legend")}
+					{ctx.intl.t("settings.plan.legend")}
 				</h2>
 
 				<Description>
-					{ctx.i18next.t("settings.plan.current", {
-						plan: ctx.i18next.t(`settings.plan.names.${entitlement.tier}`),
+					{ctx.intl.t("settings.plan.current", {
+						plan: ctx.intl.t(`settings.plan.names.${entitlement.tier}`),
 					})}{" "}
-					{ctx.i18next.t("settings.plan.allowance", {
+					{ctx.intl.t("settings.plan.allowance", {
 						feeds: entitlement.limits.feeds,
 						saved: entitlement.limits.saved,
 						posts: entitlement.limits.posts,
 					})}{" "}
-					{ctx.i18next.t("settings.plan.history")} {ctx.i18next.t("settings.plan.includes")}
+					{ctx.intl.t("settings.plan.history")} {ctx.intl.t("settings.plan.includes")}
 				</Description>
 
 				<Text mix={[text("xs"), fg("neutral.muted")]}>
-					{ctx.i18next.t("settings.plan.usage", {
+					{ctx.intl.t("settings.plan.usage", {
 						feeds: entitlement.feeds,
 						saved: entitlement.saved,
 					})}
@@ -620,7 +618,7 @@ async function settingsPage(
 				{entitlement.graceUntil !== null && (
 					<Alert color="warning">
 						<Alert.Content>
-							<Alert.Description>{ctx.i18next.t("settings.plan.lapsed")}</Alert.Description>
+							<Alert.Description>{ctx.intl.t("settings.plan.lapsed")}</Alert.Description>
 						</Alert.Content>
 					</Alert>
 				)}
@@ -633,13 +631,11 @@ async function settingsPage(
 				{entitlement.over.length > 0 && (
 					<Alert color="warning">
 						<Alert.Content>
-							<Alert.Description>
-								{ctx.i18next.t("settings.plan.over.description")}
-							</Alert.Description>
+							<Alert.Description>{ctx.intl.t("settings.plan.over.description")}</Alert.Description>
 
 							{entitlement.over.map((refusal) => (
 								<Alert.Description key={refusal.limit}>
-									{ctx.i18next.t(`settings.plan.over.${refusal.limit}`, {
+									{ctx.intl.t(`settings.plan.over.${refusal.limit}`, {
 										count: overBy(refusal),
 									})}
 								</Alert.Description>
@@ -656,8 +652,8 @@ async function settingsPage(
 							action={routes.billing.checkout.href({ plan: offered })}
 						>
 							<Button type="submit">
-								{ctx.i18next.t("settings.plan.upgrade", {
-									plan: ctx.i18next.t(`settings.plan.names.${offered}`),
+								{ctx.intl.t("settings.plan.upgrade", {
+									plan: ctx.intl.t(`settings.plan.names.${offered}`),
 								})}
 							</Button>
 						</form>
@@ -670,7 +666,7 @@ async function settingsPage(
 					{entitlement.tier !== "free" && (
 						<form method="post" action={routes.billing.portal.href()}>
 							<Button type="submit" color="neutral" variant="outline">
-								{ctx.i18next.t("settings.plan.manage")}
+								{ctx.intl.t("settings.plan.manage")}
 							</Button>
 						</form>
 					)}
@@ -692,14 +688,14 @@ async function settingsPage(
 			>
 				{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
 				<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-					{ctx.i18next.t("rules.heading")}
+					{ctx.intl.t("rules.heading")}
 				</h2>
 
-				<Description>{ctx.i18next.t("rules.description")}</Description>
+				<Description>{ctx.intl.t("rules.description")}</Description>
 
 				<div mix={[flex()]}>
 					<LinkButton href={routes.rules.index.href()} color="neutral" variant="outline">
-						{ctx.i18next.t("rules.title")}
+						{ctx.intl.t("rules.title")}
 					</LinkButton>
 				</div>
 			</section>
@@ -734,7 +730,7 @@ async function settingsPage(
 				 * as the legend above it is, so the two sections are named in the same voice.
 				 */}
 				<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-					{ctx.i18next.t("feeds.transfer.legend")}
+					{ctx.intl.t("feeds.transfer.legend")}
 				</h2>
 
 				{/** Outlined rather than quiet: a bare label reads as a sentence, not as the
@@ -746,7 +742,7 @@ async function settingsPage(
 						variant="outline"
 						data-rmx-document=""
 					>
-						{ctx.i18next.t("feeds.transfer.export")}
+						{ctx.intl.t("feeds.transfer.export")}
 					</LinkButton>
 				</div>
 
@@ -767,11 +763,11 @@ async function settingsPage(
 					{/** Ahead of the controls, so it is read before a file is chosen rather than
 					 * after. */}
 					<Description id={IMPORT_DESCRIPTION_ID}>
-						{ctx.i18next.t("feeds.transfer.import.description")}
+						{ctx.intl.t("feeds.transfer.import.description")}
 					</Description>
 
 					<div mix={[vstack({ gap: 2, align: "start" }), maxIs("100%")]}>
-						<Label htmlFor={IMPORT_FILE_ID}>{ctx.i18next.t("feeds.transfer.import.label")}</Label>
+						<Label htmlFor={IMPORT_FILE_ID}>{ctx.intl.t("feeds.transfer.import.label")}</Label>
 
 						{/** The picker and the submit on one line, wrapping onto two where a phone
 						 * has room for one control at a time. */}
@@ -817,7 +813,7 @@ async function settingsPage(
 								]}
 							/>
 
-							<Button type="submit">{ctx.i18next.t("feeds.transfer.import.submit")}</Button>
+							<Button type="submit">{ctx.intl.t("feeds.transfer.import.submit")}</Button>
 						</div>
 					</div>
 				</form>

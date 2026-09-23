@@ -65,11 +65,10 @@ export default {
 	 */
 	notifications: {
 		/** The line a lock screen and an inbox both lead with, which is a count and nothing else. */
-		title_one: "Una publicación nueva",
-		title_other: "{{count}} publicaciones nuevas",
+		title:
+			".input {$count :number}\n.match $count\none {{Una publicación nueva}}\n* {{{$count} publicaciones nuevas}}",
 		/** Up to three publishers by name, which is what makes the count worth tapping. */
-		body_one: "De {{feeds}}.",
-		body_other: "De {{feeds}}.",
+		body: ".input {$count :number}\n.match $count\none {{De {$feeds}.}}\n* {{De {$feeds}.}}",
 
 		email: {
 			footer:
@@ -87,7 +86,7 @@ export default {
 			push: "En los navegadores que permitas",
 			pushHint: "Tu navegador te lo va a preguntar una vez. No se envía nada hasta que aceptes.",
 			email: "Por correo",
-			emailHint: "Como mucho una vez cada cuatro horas, a {{address}}.",
+			emailHint: "Como mucho una vez cada cuatro horas, a {$address}.",
 			emailUnknown: "Como mucho una vez cada cuatro horas.",
 			emailLocked: "El correo viene con el plan Premium.",
 			save: "Guardar",
@@ -102,8 +101,8 @@ export default {
 			enabled: "No me avises entre estas horas",
 			from: "Desde",
 			to: "Hasta",
-			hour: "{{hour}}:00",
-			zone: "Se leen en {{zone}}, según lo informó tu navegador.",
+			hour: "{$hour}:00",
+			zone: "Se leen en {$zone}, según lo informó tu navegador.",
 			save: "Guardar",
 			saved: "Guardado.",
 		},
@@ -112,9 +111,9 @@ export default {
 			legend: "Navegadores",
 			description: "Cada navegador que permitiste. Olvidar uno deja de notificarlo.",
 			none: "Todavía no hay ningún navegador registrado.",
-			added: "Agregado el {{date}}",
+			added: "Agregado el {$date}",
 			never: "Todavía no se entregó nada",
-			delivered: "Última entrega el {{date}}",
+			delivered: "Última entrega el {$date}",
 			forget: "Olvidar",
 			forgotten: "Ese navegador no va a recibir más notificaciones.",
 			missing: "Ese navegador ya estaba olvidado.",
@@ -186,9 +185,9 @@ export default {
 			back: "Volver a tu cola",
 		},
 		/** De dónde vino la entrada, dicho sobre el artículo como enlace al original. */
-		source: "De {{feed}}",
+		source: "De {$feed}",
 		original: "Abrir el original",
-		back: "Volver a {{feed}}",
+		back: "Volver a {$feed}",
 		/** Lo que guardar conserva de verdad, dicho en el control y no descubierto años después. */
 		saveKeeps:
 			"Guardar conserva el título, el extracto y el enlace. Cuando el sitio desaparezca, el enlace también.",
@@ -202,7 +201,7 @@ export default {
 			/** Dicho a quien tiene un plan que no incluye ir a buscar el artículo. */
 			upgrade: "Leer artículos aquí mismo forma parte del plan de pago.",
 			/** De quién es el artículo, impreso bajo su propio título. */
-			byline: "Por {{byline}}",
+			byline: "Por {$byline}",
 		},
 
 		/** The episode or the clip the post came with, played by the browser's own element. */
@@ -232,8 +231,8 @@ export default {
 		flagged: "Destacada",
 		openPost: "Abrir entrada",
 		readHere: "Leer aquí",
-		publishedOn: "Publicada el {{date}}",
-		byAuthor: "por {{author}}",
+		publishedOn: "Publicada el {$date}",
+		byAuthor: "por {$author}",
 		badCursor: "Esa página ya no existe.",
 		restart: "Volver a lo más reciente",
 		/**
@@ -251,22 +250,22 @@ export default {
 		markFeedRead: "Marcar feed leído",
 		/** Said where the list stops, so it is known to have an end rather than to go on. */
 		end: "Has llegado al final.",
-		markedRead_one: "{{count}} entrada marcada como leída.",
-		markedRead_other: "{{count}} entradas marcadas como leídas.",
+		markedRead:
+			".input {$count :number}\n.match $count\none {{{$count} entrada marcada como leída.}}\n* {{{$count} entradas marcadas como leídas.}}",
 		nothingToMark: "No había nada sin leer que marcar.",
 	},
 
 	reading: {
 		heading: "Lectura",
 		/** The same queue, narrowed to words somebody typed, which the heading says back. */
-		headingFor: "Leyendo sobre «{{query}}»",
+		headingFor: "Leyendo sobre «{$query}»",
 		/**
 		 * What the queue knows is missing from it, which is the question a reader opening it
 		 * has and the one nothing here could answer before. The posts are being fetched behind
 		 * the page, so the sentence says that rather than offering a button that waits for them.
 		 */
-		waiting_one: "Un feed tiene entradas que todavía no tienes. Están llegando ahora.",
-		waiting_other: "{{count}} feeds tienen entradas que todavía no tienes. Están llegando ahora.",
+		waiting:
+			".input {$count :number}\n.match $count\none {{Un feed tiene entradas que todavía no tienes. Están llegando ahora.}}\n* {{{$count} feeds tienen entradas que todavía no tienes. Están llegando ahora.}}",
 		/** Which of the queue's posts the page holds, named beside the heading. */
 		filter: {
 			label: "Mostrar",
@@ -321,13 +320,13 @@ export default {
 		 */
 		searched: {
 			/** Stopped at a step, which the reader carries on from with the same link. */
-			step: "Se buscó hasta el {{date}}.",
+			step: "Se buscó hasta el {$date}.",
 			continue: "Seguir buscando",
 			/** Stopped at the oldest post the tier lets a search reach. */
 			window:
-				"Se buscó hasta el {{date}}. El plan gratuito busca en los últimos {{days}} días. Con el plan de pago se busca en todo lo que has guardado.",
+				"Se buscó hasta el {$date}. El plan gratuito busca en los últimos {$days} días. Con el plan de pago se busca en todo lo que has guardado.",
 			/** Stopped at the oldest post stored, so there is nothing further to search. */
-			archive: "Se buscó en todo lo que has guardado, hasta el {{date}}.",
+			archive: "Se buscó en todo lo que has guardado, hasta el {$date}.",
 		},
 		noFeeds: {
 			title: "Todavía no hay nada que leer",
@@ -347,11 +346,11 @@ export default {
 		forget: "Olvidar esta búsqueda",
 		forgotten: "Búsqueda olvidada.",
 		error: {
-			invalidName: "Ponle a la búsqueda un nombre de hasta {{length}} caracteres.",
+			invalidName: "Ponle a la búsqueda un nombre de hasta {$length} caracteres.",
 			invalidQuery: "Escribe algo que buscar antes de guardarlo.",
 			duplicateName: "Ya tienes una búsqueda guardada con ese nombre.",
 			notFound: "Esa búsqueda guardada ya no está ahí.",
-			full: "Tienes {{limit}} búsquedas guardadas: olvida una para hacer sitio.",
+			full: "Tienes {$limit} búsquedas guardadas: olvida una para hacer sitio.",
 		},
 	},
 
@@ -368,8 +367,8 @@ export default {
 
 	feeds: {
 		/** How many of a feed's posts are waiting, said beside its name in the sidebar. */
-		unread_one: "{{count}} sin leer",
-		unread_other: "{{count}} sin leer",
+		unread:
+			".input {$count :number}\n.match $count\none {{{$count} sin leer}}\n* {{{$count} sin leer}}",
 
 		follow: {
 			label: "Dirección del feed o del sitio",
@@ -384,10 +383,8 @@ export default {
 				 * The one refusal here whose sentence carries a number, because the way out is the
 				 * reader's and it is a count. It names both ways out and puts neither first.
 				 */
-				overLimit_one:
-					"Tu plan sigue {{count}} feed. Deja de seguir uno, o cambia de plan, para seguir otro.",
-				overLimit_other:
-					"Tu plan sigue {{count}} feeds. Deja de seguir uno, o cambia de plan, para seguir otro.",
+				overLimit:
+					".input {$count :number}\n.match $count\none {{Tu plan sigue {$count} feed. Deja de seguir uno, o cambia de plan, para seguir otro.}}\n* {{Tu plan sigue {$count} feeds. Deja de seguir uno, o cambia de plan, para seguir otro.}}",
 			},
 		},
 
@@ -406,12 +403,12 @@ export default {
 		show: {
 			title: "Feed",
 			visitSite: "Ir al sitio",
-			checked: "Revisado el {{date}}",
+			checked: "Revisado el {$date}",
 			neverChecked: "Aún sin revisar",
-			failing_one: "La última revisión falló",
-			failing_other: "Las últimas {{count}} revisiones fallaron",
+			failing:
+				".input {$count :number}\n.match $count\none {{La última revisión falló}}\n* {{Las últimas {$count} revisiones fallaron}}",
 			/** How many checks failed and what the last one recorded, read as one badge. */
-			failingBecause: "{{failures}}: {{reason}}",
+			failingBecause: "{$failures}: {$reason}",
 			empty: {
 				title: "Todavía no hay entradas",
 				description: "Este feed no ha publicado nada desde que empezaste a seguirlo.",
@@ -427,13 +424,12 @@ export default {
 		checkAll: {
 			/** Said against the feed page's own "Revisar feed", so the reach of each is plain. */
 			submit: "Revisar todos",
-			done_one: "Se revisó {{count}} feed.",
-			done_other: "Se revisaron {{count}} feeds.",
-			newPosts_one: "{{count}} feed tenía entradas nuevas.",
-			newPosts_other: "{{count}} feeds tenían entradas nuevas.",
+			done: ".input {$count :number}\n.match $count\none {{Se revisó {$count} feed.}}\n* {{Se revisaron {$count} feeds.}}",
+			newPosts:
+				".input {$count :number}\n.match $count\none {{{$count} feed tenía entradas nuevas.}}\n* {{{$count} feeds tenían entradas nuevas.}}",
 			nothingNew: "Ningún feed tenía nada nuevo.",
-			failed_one: "No se pudo llegar a {{count}} feed.",
-			failed_other: "No se pudo llegar a {{count}} feeds.",
+			failed:
+				".input {$count :number}\n.match $count\none {{No se pudo llegar a {$count} feed.}}\n* {{No se pudo llegar a {$count} feeds.}}",
 		},
 
 		/** Carrying subscriptions to and from another reader. */
@@ -447,12 +443,12 @@ export default {
 				label: "Archivo OPML",
 				description: "Una lista de suscripciones exportada de otro lector.",
 				submit: "Importar",
-				added_one: "Ahora sigues {{count}} feed nuevo.",
-				added_other: "Ahora sigues {{count}} feeds nuevos.",
-				alreadyFollowing_one: "Ya seguías {{count}}.",
-				alreadyFollowing_other: "Ya seguías {{count}}.",
-				failed_one: "No se pudo obtener {{count}}.",
-				failed_other: "No se pudieron obtener {{count}}.",
+				added:
+					".input {$count :number}\n.match $count\none {{Ahora sigues {$count} feed nuevo.}}\n* {{Ahora sigues {$count} feeds nuevos.}}",
+				alreadyFollowing:
+					".input {$count :number}\n.match $count\none {{Ya seguías {$count}.}}\n* {{Ya seguías {$count}.}}",
+				failed:
+					".input {$count :number}\n.match $count\none {{No se pudo obtener {$count}.}}\n* {{No se pudieron obtener {$count}.}}",
 				empty: "Ese archivo no lista ningún feed.",
 				unreadable: "No se pudo leer ese archivo como OPML.",
 				tooLarge:
@@ -521,10 +517,8 @@ export default {
 			 * ask a reader a question and a bad reason to delete their posts, so this says what
 			 * the feed does and leaves the answer where it was.
 			 */
-			suggestion_one:
-				"Este feed publica alrededor de {{count}} entrada al día y aquí no se va nunca ninguna. Un plazo más corto evita que se te acumulen.",
-			suggestion_other:
-				"Este feed publica alrededor de {{count}} entradas al día y aquí no se va nunca ninguna. Un plazo más corto evita que se te acumulen.",
+			suggestion:
+				".input {$count :number}\n.match $count\none {{Este feed publica alrededor de {$count} entrada al día y aquí no se va nunca ninguna. Un plazo más corto evita que se te acumulen.}}\n* {{Este feed publica alrededor de {$count} entradas al día y aquí no se va nunca ninguna. Un plazo más corto evita que se te acumulen.}}",
 		},
 
 		unfollow: {
@@ -533,7 +527,7 @@ export default {
 			/** Backs out of the prompt, leaving the feed followed. */
 			cancel: "Cancelar",
 			confirm:
-				"¿Dejar de seguir {{title}}? Sus entradas, y lo que hayas leído de ellas, se van con él.",
+				"¿Dejar de seguir {$title}? Sus entradas, y lo que hayas leído de ellas, se van con él.",
 		},
 
 		/** What the last refresh of a feed recorded, shown beside a feed that is struggling. */
@@ -578,7 +572,7 @@ export default {
 			cancel: "Cancelar",
 			/** Says what is lost, which is the filing and nothing else. */
 			confirm:
-				"¿Eliminar {{title}}? Sus feeds vuelven con los que no están en ninguna carpeta y conservan todas sus entradas.",
+				"¿Eliminar {$title}? Sus feeds vuelven con los que no están en ninguna carpeta y conservan todas sus entradas.",
 		},
 
 		/** Putting one feed into a folder, from that feed's own page. */
@@ -630,10 +624,10 @@ export default {
 			"Los filtros forman parte de un plan de pago. Nada de lo que sigues o has leído cambia.",
 		empty: "Todavía no tienes filtros.",
 		/** Una regla, leída como la frase que es. */
-		sentence: "Cuando el {{field}} de una entrada contiene «{{value}}», {{action}}.",
+		sentence: "Cuando el {$field} de una entrada contiene «{$value}», {$action}.",
 		scope: {
 			all: "Todos los feeds que sigues",
-			feed: "Solo {{feed}}",
+			feed: "Solo {$feed}",
 		},
 		fields: {
 			legend: "Parte de la entrada",
@@ -649,10 +643,10 @@ export default {
 			flag: "destácala",
 		},
 		/** Lo que dicen los contadores de una regla, el número que dice que funciona. */
-		matched_one: "Ha decidido {{count}} entrada.",
-		matched_other: "Ha decidido {{count}} entradas.",
+		matched:
+			".input {$count :number}\n.match $count\none {{Ha decidido {$count} entrada.}}\n* {{Ha decidido {$count} entradas.}}",
 		neverMatched: "Este filtro no ha coincidido con ninguna entrada.",
-		lastMatched: "Última coincidencia: {{date}}.",
+		lastMatched: "Última coincidencia: {$date}.",
 		form: {
 			legend: "Añadir un filtro",
 			value: "Texto a buscar",
@@ -667,16 +661,16 @@ export default {
 		preview: {
 			legend: "Qué habría capturado",
 			submit: "Vista previa",
-			result_one: "{{count}} de tus {{scanned}} entradas más recientes coincide.",
-			result_other: "{{count}} de tus {{scanned}} entradas más recientes coinciden.",
-			none: "Ninguna de tus {{scanned}} entradas más recientes coincide. Revisa la parte de la entrada que elegiste y cómo escribiste el texto.",
+			result:
+				".input {$count :number}\n.match $count\none {{{$count} de tus {$scanned} entradas más recientes coincide.}}\n* {{{$count} de tus {$scanned} entradas más recientes coinciden.}}",
+			none: "Ninguna de tus {$scanned} entradas más recientes coincide. Revisa la parte de la entrada que elegiste y cómo escribiste el texto.",
 			/** La única forma que merece un aviso: un texto que todas llevan vacía la lista. */
 			everything:
 				"Esto coincide con todas tus entradas más recientes. Un filtro que las descarte todas deja un feed sincronizando hacia una lista vacía.",
-			apply_one: "Aplicar a la {{count}} entrada de arriba",
-			apply_other: "Aplicar a las {{count}} entradas de arriba",
-			applied_one: "Se actuó sobre {{count}} entrada.",
-			applied_other: "Se actuó sobre {{count}} entradas.",
+			apply:
+				".input {$count :number}\n.match $count\none {{Aplicar a la {$count} entrada de arriba}}\n* {{Aplicar a las {$count} entradas de arriba}}",
+			applied:
+				".input {$count :number}\n.match $count\none {{Se actuó sobre {$count} entrada.}}\n* {{Se actuó sobre {$count} entradas.}}",
 		},
 		notice: {
 			created: "Filtro añadido. Actúa sobre lo que llegue de ahora en adelante.",
@@ -731,8 +725,8 @@ export default {
 			/** Backs out of the prompt, leaving the label as it is. */
 			cancel: "Cancelar",
 			/** Says what is lost, which is the label and nothing else. */
-			confirm_one: "¿Borrar {{name}}? {{count}} entrada deja de llevarla y sigue guardada.",
-			confirm_other: "¿Borrar {{name}}? {{count}} entradas dejan de llevarla y siguen guardadas.",
+			confirm:
+				".input {$count :number}\n.match $count\none {{¿Borrar {$name}? {$count} entrada deja de llevarla y sigue guardada.}}\n* {{¿Borrar {$name}? {$count} entradas dejan de llevarla y siguen guardadas.}}",
 		},
 
 		empty: {
@@ -776,7 +770,7 @@ export default {
 			description:
 				"Cada feed se revisa una vez al día. Para ver uno antes, ábrelo y usa Revisar feed.",
 		},
-		lastRefreshed: "Revisado por última vez el {{date}}",
+		lastRefreshed: "Revisado por última vez el {$date}",
 		neverRefreshed: "Aún sin revisar",
 
 		/**
@@ -814,14 +808,14 @@ export default {
 		 */
 		plan: {
 			legend: "Tu plan",
-			current: "Estás en {{plan}}.",
+			current: "Estás en {$plan}.",
 			names: {
 				free: "Gratis",
 				paid: "De pago",
 				premium: "Premium",
 			},
 			/** What each plan allows, as the numbers the reader is measured against. */
-			allowance: "{{feeds}} feeds, {{saved}} entradas guardadas, {{posts}} entradas en total.",
+			allowance: "{$feeds} feeds, {$saved} entradas guardadas, {$posts} entradas en total.",
 			history: "No se borra nada mientras estés dentro de estos números.",
 			/**
 			 * Lo que añade el plan De pago más allá de los números, dicho donde se decide si
@@ -830,8 +824,8 @@ export default {
 			 */
 			includes:
 				"De pago además lee los artículos en el sitio, ejecuta tus filtros, crea carpetas y etiquetas, y responde a un agente por el Model Context Protocol.",
-			usage: "Sigues {{feeds}} feeds y tienes {{saved}} entradas guardadas.",
-			upgrade: "Cambiar a {{plan}}",
+			usage: "Sigues {$feeds} feeds y tienes {$saved} entradas guardadas.",
+			upgrade: "Cambiar a {$plan}",
 			manage: "Gestionar la facturación",
 			/**
 			 * A failed card is not a data event on the day it fails. The sentence says what is
@@ -847,14 +841,14 @@ export default {
 				legend: "Por encima de tu plan",
 				description:
 					"No se ha borrado nada, y no se borrará. Las altas nuevas están en pausa hasta que vuelvas dentro de estos números o pases a un plan mayor.",
-				feeds_one: "Deja de seguir {{count}} feed, o cambia de plan.",
-				feeds_other: "Deja de seguir {{count}} feeds, o cambia de plan.",
-				saved_one: "Quita {{count}} entrada guardada, o cambia de plan.",
-				saved_other: "Quita {{count}} entradas guardadas, o cambia de plan.",
-				posts_one: "{{count}} entrada por encima de lo que guarda este plan.",
-				posts_other: "{{count}} entradas por encima de lo que guarda este plan.",
-				rules_one: "{{count}} regla por encima de las que ejecuta este plan.",
-				rules_other: "{{count}} reglas por encima de las que ejecuta este plan.",
+				feeds:
+					".input {$count :number}\n.match $count\none {{Deja de seguir {$count} feed, o cambia de plan.}}\n* {{Deja de seguir {$count} feeds, o cambia de plan.}}",
+				saved:
+					".input {$count :number}\n.match $count\none {{Quita {$count} entrada guardada, o cambia de plan.}}\n* {{Quita {$count} entradas guardadas, o cambia de plan.}}",
+				posts:
+					".input {$count :number}\n.match $count\none {{{$count} entrada por encima de lo que guarda este plan.}}\n* {{{$count} entradas por encima de lo que guarda este plan.}}",
+				rules:
+					".input {$count :number}\n.match $count\none {{{$count} regla por encima de las que ejecuta este plan.}}\n* {{{$count} reglas por encima de las que ejecuta este plan.}}",
 			},
 		},
 	},
@@ -867,7 +861,7 @@ export default {
 		legend: "Agentes",
 		description:
 			"Apunta un asistente a tus fuentes y léelas sin abrir esta aplicación. Puede listar lo que sigues, leer tu cola, buscarla y, si se lo permites, marcar entradas como leídas, guardarlas y seguir o dejar de seguir una fuente.",
-		endpoint: "La dirección que le darás a un cliente es {{url}}.",
+		endpoint: "La dirección que le darás a un cliente es {$url}.",
 		locked:
 			"Los agentes vienen con el plan De pago. Nada de lo que tienes cambia hasta que mejores el plan.",
 
@@ -898,13 +892,13 @@ export default {
 			revoke: "Revocar",
 			revoked: "Ese token no volverá a responder.",
 			missing: "Ese token ya estaba revocado.",
-			expires: "Caduca el {{date}}",
+			expires: "Caduca el {$date}",
 
 			state: {
 				never: "Nunca usado",
-				used: "Usado por última vez {{date}}",
-				revoked: "Revocado {{date}}",
-				expired: "Caducó {{date}}",
+				used: "Usado por última vez {$date}",
+				revoked: "Revocado {$date}",
+				expired: "Caducó {$date}",
 			},
 
 			refused: {
@@ -941,7 +935,7 @@ export default {
 			"unknown-token": "Ese token no es uno de los que tiene este lector.",
 			revoked: "Ese token fue revocado.",
 			expired: "Ese token caducó. Emite otro en los ajustes del lector.",
-			tier: "Los agentes vienen con el plan De pago. Mejóralo en {{url}}.",
+			tier: "Los agentes vienen con el plan De pago. Mejóralo en {$url}.",
 			budget: "Este token ha gastado sus llamadas de hoy. Inténtalo mañana.",
 		},
 	},

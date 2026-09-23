@@ -34,13 +34,13 @@ export default createAction(routes.mcp.index, {
 
 		return ctx.render(
 			<AppLayout
-				documentTitle={ctx.i18next.t("agent.page.title")}
-				heading={ctx.i18next.t("agent.page.heading")}
+				documentTitle={ctx.intl.t("agent.page.title")}
+				heading={ctx.intl.t("agent.page.heading")}
 				locale={ctx.locale}
 				{...await chrome(ctx)}
 			>
 				<section mix={[vstack({ gap: 3 }), maxIs(PAGE_COLUMN)]}>
-					<Description>{ctx.i18next.t("agent.page.description")}</Description>
+					<Description>{ctx.intl.t("agent.page.description")}</Description>
 
 					<Text
 						mix={[
@@ -60,7 +60,7 @@ export default createAction(routes.mcp.index, {
 					<ol mix={[m(0), vstack({ gap: 2 })]}>
 						{STEPS.map((step) => (
 							<li key={step} mix={[text("sm"), fg("neutral")]}>
-								{ctx.i18next.t(`agent.page.steps.${step}`)}
+								{ctx.intl.t(`agent.page.steps.${step}`)}
 							</li>
 						))}
 					</ol>
@@ -80,14 +80,14 @@ export default createAction(routes.mcp.index, {
 				>
 					{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
 					<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-						{ctx.i18next.t("agent.page.clients.legend")}
+						{ctx.intl.t("agent.page.clients.legend")}
 					</h2>
 
-					<Description>{ctx.i18next.t("agent.page.clients.description")}</Description>
+					<Description>{ctx.intl.t("agent.page.clients.description")}</Description>
 
 					<div>
 						<LinkButton href={routes.settings.href()} color="neutral" variant="outline">
-							{ctx.i18next.t("agent.page.clients.tokens")}
+							{ctx.intl.t("agent.page.clients.tokens")}
 						</LinkButton>
 					</div>
 				</section>

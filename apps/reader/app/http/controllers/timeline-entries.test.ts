@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { i18n } from "@sdxc/i18n";
+import type { I18n } from "@sdxc/i18n";
 
 import { createTranslator } from "@sdxc/i18n";
 import { describe, expect, test } from "vitest";
@@ -23,20 +23,18 @@ import routes from "~/routes/web";
  */
 const RESOURCES = {
 	en: {
-		translation: {
-			timeline: { byAuthor: "by {{author}}", publishedOn: "Published on {{date}}" },
-		},
+		timeline: { byAuthor: "by {$author}", publishedOn: "Published on {$date}" },
 	},
 };
 
-let { i18n: i18next } = await createTranslator({
+let { intl } = await createTranslator({
 	resources: RESOURCES,
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",
 })();
 
 /** What building a row reads off the request. */
-const CTX: { i18next: i18n; locale: string } = { i18next, locale: "en" };
+const CTX: { intl: I18n; locale: string } = { intl, locale: "en" };
 
 /** Builds a stored post, defaulting every field a test is not about. */
 function item(overrides: Partial<UserStore.Item> & Pick<UserStore.Item, "id">): UserStore.Item {

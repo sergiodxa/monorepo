@@ -87,14 +87,14 @@ export default createAction(routes.items.read, {
 
 		return ctx.render(
 			<AppLayout
-				documentTitle={ctx.i18next.t("items.read.title")}
-				heading={ctx.i18next.t("items.read.title")}
+				documentTitle={ctx.intl.t("items.read.title")}
+				heading={ctx.intl.t("items.read.title")}
 				locale={ctx.locale}
 				{...await chrome(ctx)}
 			>
 				<Alert color="warning" mix={pageNote()}>
 					<Alert.Content>
-						<Alert.Description>{ctx.i18next.t("items.read.notFound")}</Alert.Description>
+						<Alert.Description>{ctx.intl.t("items.read.notFound")}</Alert.Description>
 					</Alert.Content>
 				</Alert>
 			</AppLayout>,

@@ -16,7 +16,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { i18n } from "@sdxc/i18n";
+import type { I18n } from "@sdxc/i18n";
 import type { RequestContext, Router } from "remix/router";
 import type { RemixNode } from "remix/ui";
 import type { ResolveFrameContext } from "remix/ui/server";
@@ -80,7 +80,7 @@ export function createHtmlRenderer(ctx: RequestContext) {
 		let stream = renderToStream(node, {
 			frameSrc: ctx.request.url,
 			resolveFrame(src, target, context) {
-				return resolveFrame(ctx.router, ctx.request, ctx.i18next, src, target, context);
+				return resolveFrame(ctx.router, ctx.request, ctx.intl, src, target, context);
 			},
 			onError(error) {
 				currentLog()?.fail(error, { render: { failed: true } });
@@ -110,7 +110,7 @@ export function createHtmlRenderer(ctx: RequestContext) {
  * @param router - The router rendering the document, which the fragment is fetched through.
  * @param request - The document's own request, for its cookies and for where a reader asks
  * again from.
- * @param i18next - The request's dictionary, which the note is written in.
+ * @param intl - The request's dictionary, which the note is written in.
  * @param src - The frame's address, resolved against the frame currently rendering.
  * @param target - The named frame a reload is aimed at, when one is.
  * @param context - Where the frame being rendered sits, which `src` resolves against.
@@ -118,7 +118,7 @@ export function createHtmlRenderer(ctx: RequestContext) {
 export async function resolveFrame(
 	router: Router,
 	request: Request,
-	i18next: i18n,
+	intl: I18n,
 	src: string,
 	target?: string,
 	context?: ResolveFrameContext,
@@ -141,14 +141,14 @@ export async function resolveFrame(
 		if (!res.ok) {
 			currentLog()?.warn("frame.no_content", { src: url.toString(), status: res.status });
 
-			return await frameFallback(i18next, request);
+			return await frameFallback(intl, request);
 		}
 
 		return await res.text();
 	} catch (error) {
 		currentLog()?.fail(error, { frame: { src, failed: true } });
 
-		return await frameFallback(i18next, request);
+		return await frameFallback(intl, request);
 	}
 }
 
@@ -157,14 +157,14 @@ export async function resolveFrame(
  * built by hand, so it wears the app's own components and the escaping stays in the one
  * place that does it.
  *
- * @param i18next - The request's dictionary.
+ * @param intl - The request's dictionary.
  * @param request - The document the frame sits in, which is what asking again fetches.
  */
-async function frameFallback(i18next: i18n, request: Request): Promise<string> {
+async function frameFallback(intl: I18n, request: Request): Promise<string> {
 	let markup = await renderToString(
 		<FrameFallback
-			message={i18next.t("frame.failed")}
-			retryLabel={i18next.t("frame.retry")}
+			message={intl.t("frame.failed")}
+			retryLabel={intl.t("frame.retry")}
 			retryHref={request.url}
 		/>,
 	);

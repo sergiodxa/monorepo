@@ -130,7 +130,7 @@ function notice(
 
 	if (applied !== null && /^\d+$/.test(applied)) {
 		return {
-			message: ctx.i18next.t("rules.preview.applied", { count: Number.parseInt(applied, 10) }),
+			message: ctx.intl.t("rules.preview.applied", { count: Number.parseInt(applied, 10) }),
 			color: "success",
 		};
 	}
@@ -138,38 +138,38 @@ function notice(
 	let outcome = ctx.url.searchParams.get(RULE_PARAM);
 
 	if (outcome === "created")
-		return { message: ctx.i18next.t("rules.notice.created"), color: "success" };
+		return { message: ctx.intl.t("rules.notice.created"), color: "success" };
 	if (outcome === "updated")
-		return { message: ctx.i18next.t("rules.notice.updated"), color: "success" };
+		return { message: ctx.intl.t("rules.notice.updated"), color: "success" };
 	if (outcome === "deleted")
-		return { message: ctx.i18next.t("rules.notice.deleted"), color: "success" };
+		return { message: ctx.intl.t("rules.notice.deleted"), color: "success" };
 
 	if (outcome === "rule-limit") {
-		return { message: ctx.i18next.t("rules.notice.limit"), color: "warning" };
+		return { message: ctx.intl.t("rules.notice.limit"), color: "warning" };
 	}
 
 	if (outcome === "not-entitled") {
-		return { message: ctx.i18next.t("rules.notice.notEntitled"), color: "warning" };
+		return { message: ctx.intl.t("rules.notice.notEntitled"), color: "warning" };
 	}
 
 	if (outcome === "invalid-value") {
-		return { message: ctx.i18next.t("rules.notice.invalidValue"), color: "danger" };
+		return { message: ctx.intl.t("rules.notice.invalidValue"), color: "danger" };
 	}
 
 	if (outcome === "invalid-field") {
-		return { message: ctx.i18next.t("rules.notice.invalidField"), color: "danger" };
+		return { message: ctx.intl.t("rules.notice.invalidField"), color: "danger" };
 	}
 
 	if (outcome === "invalid-action") {
-		return { message: ctx.i18next.t("rules.notice.invalidAction"), color: "danger" };
+		return { message: ctx.intl.t("rules.notice.invalidAction"), color: "danger" };
 	}
 
 	if (outcome === "not-following") {
-		return { message: ctx.i18next.t("rules.notice.notFollowing"), color: "danger" };
+		return { message: ctx.intl.t("rules.notice.notFollowing"), color: "danger" };
 	}
 
 	if (outcome === "not-found") {
-		return { message: ctx.i18next.t("rules.notice.missing"), color: "warning" };
+		return { message: ctx.intl.t("rules.notice.missing"), color: "warning" };
 	}
 
 	return null;
@@ -188,18 +188,18 @@ function sentenceFor(
 	rule: UserStore.Rule,
 	feeds: readonly UserStore.FeedSummary[],
 ): { sentence: string; scope: string } {
-	let sentence = ctx.i18next.t("rules.sentence", {
-		field: ctx.i18next.t(`rules.fields.${rule.field}`),
+	let sentence = ctx.intl.t("rules.sentence", {
+		field: ctx.intl.t(`rules.fields.${rule.field}`),
 		value: rule.value,
-		action: ctx.i18next.t(`rules.actions.${rule.action}`),
+		action: ctx.intl.t(`rules.actions.${rule.action}`),
 	});
 
 	let feed = feeds.find((followed) => followed.id === rule.feedId);
 
 	let scope =
 		rule.feedId === null || feed === undefined
-			? ctx.i18next.t("rules.scope.all")
-			: ctx.i18next.t("rules.scope.feed", { feed: feed.title });
+			? ctx.intl.t("rules.scope.all")
+			: ctx.intl.t("rules.scope.feed", { feed: feed.title });
 
 	return { sentence, scope };
 }
@@ -227,19 +227,19 @@ async function rulesView(
 
 	return ctx.render(
 		<AppLayout
-			documentTitle={ctx.i18next.t("rules.title")}
-			heading={ctx.i18next.t("rules.heading")}
+			documentTitle={ctx.intl.t("rules.title")}
+			heading={ctx.intl.t("rules.heading")}
 			locale={ctx.locale}
 			{...await chrome(ctx)}
 		>
 			<section mix={[vstack({ gap: 3 }), maxIs(PAGE_COLUMN)]}>
-				<Description>{ctx.i18next.t("rules.description")}</Description>
-				<Text mix={[text("xs"), fg("neutral.muted")]}>{ctx.i18next.t("rules.summaryCaveat")}</Text>
+				<Description>{ctx.intl.t("rules.description")}</Description>
+				<Text mix={[text("xs"), fg("neutral.muted")]}>{ctx.intl.t("rules.summaryCaveat")}</Text>
 
 				{!entitled && (
 					<Alert color="warning">
 						<Alert.Content>
-							<Alert.Description>{ctx.i18next.t("rules.notEntitled")}</Alert.Description>
+							<Alert.Description>{ctx.intl.t("rules.notEntitled")}</Alert.Description>
 						</Alert.Content>
 					</Alert>
 				)}
@@ -268,10 +268,10 @@ async function rulesView(
 			>
 				{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
 				<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-					{ctx.i18next.t("rules.heading")}
+					{ctx.intl.t("rules.heading")}
 				</h2>
 
-				{held.length === 0 && <Text mix={[text("sm")]}>{ctx.i18next.t("rules.empty")}</Text>}
+				{held.length === 0 && <Text mix={[text("sm")]}>{ctx.intl.t("rules.empty")}</Text>}
 
 				{held.map((rule) => {
 					let read = sentenceFor(ctx, rule, feeds);
@@ -290,10 +290,10 @@ async function rulesView(
 
 							<Text mix={[text("xs"), fg("neutral.muted")]}>
 								{rule.matches === 0
-									? ctx.i18next.t("rules.neverMatched")
-									: ctx.i18next.t("rules.matched", { count: rule.matches })}{" "}
+									? ctx.intl.t("rules.neverMatched")
+									: ctx.intl.t("rules.matched", { count: rule.matches })}{" "}
 								{rule.lastMatchedAt !== null &&
-									ctx.i18next.t("rules.lastMatched", {
+									ctx.intl.t("rules.lastMatched", {
 										date: exactDate(rule.lastMatchedAt, ctx.locale),
 									})}
 							</Text>
@@ -303,7 +303,7 @@ async function rulesView(
 								<input type="hidden" name="_method" value="DELETE" />
 
 								<Button type="submit" color="neutral" variant="outline">
-									{ctx.i18next.t("rules.form.delete")}
+									{ctx.intl.t("rules.form.delete")}
 								</Button>
 							</form>
 						</div>
@@ -326,12 +326,12 @@ async function rulesView(
 			>
 				{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
 				<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-					{ctx.i18next.t("rules.form.legend")}
+					{ctx.intl.t("rules.form.legend")}
 				</h2>
 
 				<form method="get" action={routes.rules.index.href()} mix={[vstack({ gap: 3 })]}>
 					<div mix={[vstack({ gap: 2, align: "start" }), maxIs("100%")]}>
-						<Label htmlFor={FIELD_ID}>{ctx.i18next.t("rules.fields.legend")}</Label>
+						<Label htmlFor={FIELD_ID}>{ctx.intl.t("rules.fields.legend")}</Label>
 
 						<Select id={FIELD_ID} name={FIELD_FIELD}>
 							{RULE_FIELDS.map((offered) => (
@@ -340,14 +340,14 @@ async function rulesView(
 									value={offered}
 									selected={candidate?.field === offered}
 								>
-									{ctx.i18next.t(`rules.fields.${offered}`)}
+									{ctx.intl.t(`rules.fields.${offered}`)}
 								</Select.Option>
 							))}
 						</Select>
 					</div>
 
 					<div mix={[vstack({ gap: 2, align: "start" }), maxIs("100%")]}>
-						<Label htmlFor={VALUE_ID}>{ctx.i18next.t("rules.form.value")}</Label>
+						<Label htmlFor={VALUE_ID}>{ctx.intl.t("rules.form.value")}</Label>
 
 						<Input
 							id={VALUE_ID}
@@ -355,13 +355,13 @@ async function rulesView(
 							required
 							maxLength={RULE_VALUE_LENGTH}
 							value={candidate?.value ?? ""}
-							placeholder={ctx.i18next.t("rules.form.valuePlaceholder")}
+							placeholder={ctx.intl.t("rules.form.valuePlaceholder")}
 							mix={[minIs("16rem")]}
 						/>
 					</div>
 
 					<div mix={[vstack({ gap: 2, align: "start" }), maxIs("100%")]}>
-						<Label htmlFor={ACTION_ID}>{ctx.i18next.t("rules.actions.legend")}</Label>
+						<Label htmlFor={ACTION_ID}>{ctx.intl.t("rules.actions.legend")}</Label>
 
 						<Select id={ACTION_ID} name={ACTION_FIELD}>
 							{RULE_ACTIONS.map((offered) => (
@@ -370,18 +370,18 @@ async function rulesView(
 									value={offered}
 									selected={candidate?.action === offered}
 								>
-									{ctx.i18next.t(`rules.actions.${offered}`)}
+									{ctx.intl.t(`rules.actions.${offered}`)}
 								</Select.Option>
 							))}
 						</Select>
 					</div>
 
 					<div mix={[vstack({ gap: 2, align: "start" }), maxIs("100%")]}>
-						<Label htmlFor={FEED_ID}>{ctx.i18next.t("rules.form.feed")}</Label>
+						<Label htmlFor={FEED_ID}>{ctx.intl.t("rules.form.feed")}</Label>
 
 						<Select id={FEED_ID} name={FEED_FIELD}>
 							<Select.Option value="" selected={candidate?.feedId == null}>
-								{ctx.i18next.t("rules.form.allFeeds")}
+								{ctx.intl.t("rules.form.allFeeds")}
 							</Select.Option>
 
 							{feeds.map((feed) => (
@@ -398,7 +398,7 @@ async function rulesView(
 
 					<div mix={[flex(), flexWrap("wrap"), gap(2), items("center")]}>
 						<Button type="submit" color="neutral" variant="outline">
-							{ctx.i18next.t("rules.preview.submit")}
+							{ctx.intl.t("rules.preview.submit")}
 						</Button>
 
 						{/**
@@ -406,7 +406,7 @@ async function rulesView(
 						 * which is what makes previewing and saving one form with two buttons.
 						 */}
 						<Button type="submit" formMethod="post" formAction={routes.rules.action.href()}>
-							{ctx.i18next.t("rules.form.submit")}
+							{ctx.intl.t("rules.form.submit")}
 						</Button>
 					</div>
 				</form>
@@ -426,16 +426,16 @@ async function rulesView(
 				>
 					{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
 					<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-						{ctx.i18next.t("rules.preview.legend")}
+						{ctx.intl.t("rules.preview.legend")}
 					</h2>
 
 					{preview.matched === 0 ? (
 						<Text mix={[text("sm")]}>
-							{ctx.i18next.t("rules.preview.none", { scanned: preview.scanned })}
+							{ctx.intl.t("rules.preview.none", { scanned: preview.scanned })}
 						</Text>
 					) : (
 						<Text mix={[text("sm")]}>
-							{ctx.i18next.t("rules.preview.result", {
+							{ctx.intl.t("rules.preview.result", {
 								count: preview.matched,
 								scanned: preview.scanned,
 							})}
@@ -450,7 +450,7 @@ async function rulesView(
 					{preview.scanned > 0 && preview.matched === preview.scanned && (
 						<Alert color="warning">
 							<Alert.Content>
-								<Alert.Description>{ctx.i18next.t("rules.preview.everything")}</Alert.Description>
+								<Alert.Description>{ctx.intl.t("rules.preview.everything")}</Alert.Description>
 							</Alert.Content>
 						</Alert>
 					)}
@@ -467,7 +467,7 @@ async function rulesView(
 							<input type="hidden" name={FEED_FIELD} value={candidate.feedId ?? ""} />
 
 							<Button type="submit" color="neutral" variant="outline">
-								{ctx.i18next.t("rules.preview.apply", { count: preview.matched })}
+								{ctx.intl.t("rules.preview.apply", { count: preview.matched })}
 							</Button>
 						</form>
 					)}
@@ -475,7 +475,7 @@ async function rulesView(
 					{previewed.length > 0 && (
 						<Timeline
 							entries={previewed}
-							copy={timelineCopy(ctx.i18next)}
+							copy={timelineCopy(ctx.intl)}
 							returnTo={`${ctx.url.pathname}${ctx.url.search}`}
 							cursors={{ next: null, prev: null }}
 						/>

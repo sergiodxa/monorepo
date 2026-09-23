@@ -137,13 +137,13 @@ export default createAction(routes.saved, {
 		/** Every label the reader has, which the field on each row offers by name. */
 		let tagging = labelling
 			? {
-					copy: taggingCopy(ctx.i18next),
+					copy: taggingCopy(ctx.intl),
 					options: (await store.listTags()).map((tag) => tag.name),
 					optionsId: TAG_OPTIONS_ID,
 				}
 			: null;
 
-		let heading = ctx.i18next.t("saved.heading");
+		let heading = ctx.intl.t("saved.heading");
 
 		/**
 		 * Where this page sits in the list and what the ways off both ends of it are, worked
@@ -160,7 +160,7 @@ export default createAction(routes.saved, {
 			cursors: page.cursors,
 		});
 
-		let listCopy = timelineCopy(ctx.i18next);
+		let listCopy = timelineCopy(ctx.intl);
 
 		/** What a refused label has to say, which is read on the list it was refused from. */
 		let refused = tagNote(ctx.url.searchParams.get(TAG_PARAM));
@@ -178,10 +178,10 @@ export default createAction(routes.saved, {
 					 * says so rather than starting again from the newest page underneath itself.
 					 */
 					<Alert color="warning" mix={pageNote()}>
-						<Alert.Description>{ctx.i18next.t("timeline.badCursor")}</Alert.Description>
+						<Alert.Description>{ctx.intl.t("timeline.badCursor")}</Alert.Description>
 						<Alert.Action>
 							<LinkButton href={routes.saved.href()} color="neutral" variant="outline" size="sm">
-								{ctx.i18next.t("timeline.restart")}
+								{ctx.intl.t("timeline.restart")}
 							</LinkButton>
 						</Alert.Action>
 					</Alert>
@@ -193,7 +193,7 @@ export default createAction(routes.saved, {
 
 		return ctx.render(
 			<AppLayout
-				documentTitle={ctx.i18next.t("saved.title")}
+				documentTitle={ctx.intl.t("saved.title")}
 				heading={heading}
 				locale={ctx.locale}
 				{...await chrome(ctx)}
@@ -201,10 +201,10 @@ export default createAction(routes.saved, {
 				<div mix={[vstack({ gap: 6 })]}>
 					{isStaleCursor && (
 						<Alert color="warning" mix={pageNote()}>
-							<Alert.Description>{ctx.i18next.t("timeline.badCursor")}</Alert.Description>
+							<Alert.Description>{ctx.intl.t("timeline.badCursor")}</Alert.Description>
 							<Alert.Action>
 								<LinkButton href={routes.saved.href()} color="neutral" variant="outline" size="sm">
-									{ctx.i18next.t("timeline.restart")}
+									{ctx.intl.t("timeline.restart")}
 								</LinkButton>
 							</Alert.Action>
 						</Alert>
@@ -212,7 +212,7 @@ export default createAction(routes.saved, {
 
 					{refused && (
 						<Alert color="warning" mix={pageNote()}>
-							<Alert.Description>{ctx.i18next.t(refused.key)}</Alert.Description>
+							<Alert.Description>{ctx.intl.t(refused.key)}</Alert.Description>
 						</Alert>
 					)}
 
@@ -222,8 +222,8 @@ export default createAction(routes.saved, {
 						/** Level 2, since the layout's own page heading is the document's only `h1`. */
 						<HeadingScope level={2}>
 							<Empty>
-								<Empty.Title>{ctx.i18next.t("saved.empty.title")}</Empty.Title>
-								<Empty.Description>{ctx.i18next.t("saved.empty.description")}</Empty.Description>
+								<Empty.Title>{ctx.intl.t("saved.empty.title")}</Empty.Title>
+								<Empty.Description>{ctx.intl.t("saved.empty.description")}</Empty.Description>
 							</Empty>
 						</HeadingScope>
 					)}

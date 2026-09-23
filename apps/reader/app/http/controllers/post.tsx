@@ -17,7 +17,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { i18n } from "@sdxc/i18n";
+import type { I18n } from "@sdxc/i18n";
 import type { Handle } from "remix/ui";
 
 import { fg } from "@sdxc/u/color";
@@ -59,10 +59,10 @@ const FRAME_ARTICLE = "article";
 const ARTICLE_REACH = "0px";
 
 /** The sentence an attempt that produced no article is reported in. */
-function outcomeCopy(i18next: i18n, outcome: ArticleOutcome): string {
-	if (outcome === "refused") return i18next.t("post.article.refused");
-	if (outcome === "timeout") return i18next.t("post.article.timeout");
-	return i18next.t("post.article.empty");
+function outcomeCopy(intl: I18n, outcome: ArticleOutcome): string {
+	if (outcome === "refused") return intl.t("post.article.refused");
+	if (outcome === "timeout") return intl.t("post.article.timeout");
+	return intl.t("post.article.empty");
 }
 
 /**
@@ -184,11 +184,11 @@ export default createAction(routes.post, {
 			let body = (
 				<HeadingScope level={2}>
 					<Empty>
-						<Empty.Title>{ctx.i18next.t("post.notFound.title")}</Empty.Title>
-						<Empty.Description>{ctx.i18next.t("post.notFound.description")}</Empty.Description>
+						<Empty.Title>{ctx.intl.t("post.notFound.title")}</Empty.Title>
+						<Empty.Description>{ctx.intl.t("post.notFound.description")}</Empty.Description>
 						<Empty.Action>
 							<LinkButton href={routes.reading.index.href()} size="sm">
-								{ctx.i18next.t("post.notFound.back")}
+								{ctx.intl.t("post.notFound.back")}
 							</LinkButton>
 						</Empty.Action>
 					</Empty>
@@ -199,8 +199,8 @@ export default createAction(routes.post, {
 
 			return ctx.render(
 				<AppLayout
-					documentTitle={ctx.i18next.t("post.notFound.title")}
-					heading={ctx.i18next.t("post.notFound.title")}
+					documentTitle={ctx.intl.t("post.notFound.title")}
+					heading={ctx.intl.t("post.notFound.title")}
 					locale={ctx.locale}
 					{...await chrome(ctx)}
 				>
@@ -238,10 +238,10 @@ export default createAction(routes.post, {
 					article={article}
 					copy={
 						article === null
-							? ctx.i18next.t("post.article.empty")
-							: outcomeCopy(ctx.i18next, article.outcome)
+							? ctx.intl.t("post.article.empty")
+							: outcomeCopy(ctx.intl, article.outcome)
 					}
-					byline={ctx.i18next.t("post.article.byline", { byline: article?.byline ?? "" })}
+					byline={ctx.intl.t("post.article.byline", { byline: article?.byline ?? "" })}
 				/>,
 			);
 		}
@@ -267,13 +267,13 @@ export default createAction(routes.post, {
 						<div mix={[flex(), flexWrap("wrap"), items("center"), gap(3), text("sm")]}>
 							{feed && (
 								<a href={routes.feed.href({ feed: feed.id })}>
-									{ctx.i18next.t("post.source", { feed: feedTitle })}
+									{ctx.intl.t("post.source", { feed: feedTitle })}
 								</a>
 							)}
 
 							{item.author && (
 								<Text mix={[fg("neutral.muted")]}>
-									{ctx.i18next.t("timeline.byAuthor", { author: item.author })}
+									{ctx.intl.t("timeline.byAuthor", { author: item.author })}
 								</Text>
 							)}
 
@@ -283,7 +283,7 @@ export default createAction(routes.post, {
 
 							{item.url && (
 								<a href={item.url} target="_blank" rel="noopener noreferrer">
-									{ctx.i18next.t("post.original")}
+									{ctx.intl.t("post.original")}
 								</a>
 							)}
 						</div>
@@ -297,9 +297,9 @@ export default createAction(routes.post, {
 						{opened.enclosure && (
 							<MediaPlayer
 								enclosure={opened.enclosure}
-								label={ctx.i18next.t("post.media.label")}
-								unsupported={ctx.i18next.t("post.media.unsupported")}
-								download={ctx.i18next.t("post.media.download")}
+								label={ctx.intl.t("post.media.label")}
+								unsupported={ctx.intl.t("post.media.unsupported")}
+								download={ctx.intl.t("post.media.download")}
 							/>
 						)}
 
@@ -313,36 +313,34 @@ export default createAction(routes.post, {
 								action={routes.items.save.href({ itemId: item.id })}
 								isSaved={item.savedAt !== null}
 								returnTo={ctx.url.pathname}
-								save={ctx.i18next.t("timeline.save")}
-								unsave={ctx.i18next.t("timeline.unsave")}
-								failed={ctx.i18next.t("timeline.saveFailed")}
-								full={ctx.i18next.t("timeline.saveFull")}
+								save={ctx.intl.t("timeline.save")}
+								unsave={ctx.intl.t("timeline.unsave")}
+								failed={ctx.intl.t("timeline.saveFailed")}
+								full={ctx.intl.t("timeline.saveFull")}
 							/>
-							<Text mix={[text("xs"), fg("neutral.muted")]}>{ctx.i18next.t("post.saveKeeps")}</Text>
+							<Text mix={[text("xs"), fg("neutral.muted")]}>{ctx.intl.t("post.saveKeeps")}</Text>
 						</div>
 
 						<section mix={[vstack(), gap(2), mbs(2)]}>
-							<h2 mix={[text("lg"), weight("medium")]}>{ctx.i18next.t("post.article.heading")}</h2>
+							<h2 mix={[text("lg"), weight("medium")]}>{ctx.intl.t("post.article.heading")}</h2>
 
 							{!mayExtract && (
 								<Text mix={[fg("neutral.muted")]}>
-									{fullText
-										? ctx.i18next.t("post.article.empty")
-										: ctx.i18next.t("post.article.upgrade")}
+									{fullText ? ctx.intl.t("post.article.empty") : ctx.intl.t("post.article.upgrade")}
 								</Text>
 							)}
 
 							{mayExtract && held !== null && (
 								<ArticleBody
 									article={held}
-									copy={outcomeCopy(ctx.i18next, held.outcome)}
-									byline={ctx.i18next.t("post.article.byline", { byline: held.byline ?? "" })}
+									copy={outcomeCopy(ctx.intl, held.outcome)}
+									byline={ctx.intl.t("post.article.byline", { byline: held.byline ?? "" })}
 								/>
 							)}
 
 							{mayExtract && held === null && (
 								<LazyFrame src={articleSrc(feedId, item.id)} rootMargin={ARTICLE_REACH}>
-									<Text mix={[fg("neutral.muted")]}>{ctx.i18next.t("post.article.pending")}</Text>
+									<Text mix={[fg("neutral.muted")]}>{ctx.intl.t("post.article.pending")}</Text>
 								</LazyFrame>
 							)}
 						</section>

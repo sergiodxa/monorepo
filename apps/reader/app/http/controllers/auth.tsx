@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { i18n } from "@sdxc/i18n";
+import type { I18n } from "@sdxc/i18n";
 import type { Renderer } from "remix/middleware/render";
 import type { RemixNode } from "remix/ui";
 
@@ -33,13 +33,13 @@ import routes from "~/routes/web";
 /** The slice of `remix/router`'s `RequestContext` the sign-in failure page renders from. */
 interface AuthErrorContext {
 	render: Renderer<RemixNode>;
-	i18next: i18n;
+	intl: I18n;
 	locale: string;
 }
 
 /** Renders the sign-in failure page, showing `message` verbatim as supplied by the caller. */
 function authError(ctx: AuthErrorContext, message: string) {
-	let title = ctx.i18next.t("auth.error.title");
+	let title = ctx.intl.t("auth.error.title");
 
 	return ctx.render(
 		<DocumentLayout title={title} locale={ctx.locale}>
@@ -59,7 +59,7 @@ function authError(ctx: AuthErrorContext, message: string) {
 					href={routes.home.href()}
 					mix={[fg("brand"), textDecoration("none"), hover(textDecoration("underline"))]}
 				>
-					{ctx.i18next.t("notFound.goBackHome")}
+					{ctx.intl.t("notFound.goBackHome")}
 				</a>
 			</main>
 		</DocumentLayout>,
@@ -105,10 +105,10 @@ export default createController(routes.auth, {
 				});
 
 				if (AuthError.is(error, AuthErrorCode.MissingIdToken)) {
-					return authError(ctx, ctx.i18next.t("auth.error.missingIdToken"));
+					return authError(ctx, ctx.intl.t("auth.error.missingIdToken"));
 				}
 
-				return authError(ctx, ctx.i18next.t("auth.error.generic"));
+				return authError(ctx, ctx.intl.t("auth.error.generic"));
 			}
 
 			/**

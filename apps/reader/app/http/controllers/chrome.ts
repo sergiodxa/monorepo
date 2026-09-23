@@ -21,7 +21,7 @@
  */
 
 import type { Client } from "@sdxc/flags";
-import type { i18n } from "@sdxc/i18n";
+import type { I18n } from "@sdxc/i18n";
 
 import { WorkerKVCache } from "@sdxc/cache/worker-kv";
 import { isFailure } from "@sdxc/result";
@@ -59,7 +59,7 @@ const RAIL_KEY_PREFIX = "reader:sidebar-feeds";
 
 /** What drawing the chrome needs off the request. */
 export interface ChromeContext {
-	i18next: i18n;
+	intl: I18n;
 	/** What the chrome is allowed to offer, which the request's own client answers. */
 	flags: Client;
 	/** Where the reader is, which is what marks the one thing in the chrome they are on. */
@@ -413,35 +413,35 @@ export async function chrome(ctx: ChromeContext): Promise<{
 		 */
 		searchQuery: ctx.url.searchParams.get(SEARCH_PARAM) ?? "",
 		nav: {
-			label: ctx.i18next.t("nav.label"),
-			reading: ctx.i18next.t("nav.reading"),
-			saved: saving ? ctx.i18next.t("nav.saved") : null,
-			searchLabel: ctx.i18next.t("search.label"),
-			searchPlaceholder: ctx.i18next.t("search.placeholder"),
-			openSidebar: ctx.i18next.t("nav.openSidebar"),
-			settings: ctx.i18next.t("nav.settings"),
-			account: ctx.i18next.t("nav.account"),
-			logout: ctx.i18next.t("nav.logout"),
+			label: ctx.intl.t("nav.label"),
+			reading: ctx.intl.t("nav.reading"),
+			saved: saving ? ctx.intl.t("nav.saved") : null,
+			searchLabel: ctx.intl.t("search.label"),
+			searchPlaceholder: ctx.intl.t("search.placeholder"),
+			openSidebar: ctx.intl.t("nav.openSidebar"),
+			settings: ctx.intl.t("nav.settings"),
+			account: ctx.intl.t("nav.account"),
+			logout: ctx.intl.t("nav.logout"),
 		},
 		/**
 		 * The panel listing every key renders only in a browser, so it has no dictionary of
 		 * its own to read: every line it prints is translated here and travels with it.
 		 */
 		shortcuts: {
-			open: ctx.i18next.t("shortcuts.open"),
-			description: ctx.i18next.t("shortcuts.description"),
-			close: ctx.i18next.t("shortcuts.close"),
+			open: ctx.intl.t("shortcuts.open"),
+			description: ctx.intl.t("shortcuts.description"),
+			close: ctx.intl.t("shortcuts.close"),
 			keys: {
-				nextPost: ctx.i18next.t("shortcuts.keys.nextPost"),
-				previousPost: ctx.i18next.t("shortcuts.keys.previousPost"),
-				openPost: ctx.i18next.t("shortcuts.keys.openPost"),
-				markRead: ctx.i18next.t("shortcuts.keys.markRead"),
-				savePost: ctx.i18next.t("shortcuts.keys.savePost"),
-				checkFeeds: ctx.i18next.t("shortcuts.keys.checkFeeds"),
-				nextFeed: ctx.i18next.t("shortcuts.keys.nextFeed"),
-				previousFeed: ctx.i18next.t("shortcuts.keys.previousFeed"),
-				search: ctx.i18next.t("shortcuts.keys.search"),
-				help: ctx.i18next.t("shortcuts.keys.help"),
+				nextPost: ctx.intl.t("shortcuts.keys.nextPost"),
+				previousPost: ctx.intl.t("shortcuts.keys.previousPost"),
+				openPost: ctx.intl.t("shortcuts.keys.openPost"),
+				markRead: ctx.intl.t("shortcuts.keys.markRead"),
+				savePost: ctx.intl.t("shortcuts.keys.savePost"),
+				checkFeeds: ctx.intl.t("shortcuts.keys.checkFeeds"),
+				nextFeed: ctx.intl.t("shortcuts.keys.nextFeed"),
+				previousFeed: ctx.intl.t("shortcuts.keys.previousFeed"),
+				search: ctx.intl.t("shortcuts.keys.search"),
+				help: ctx.intl.t("shortcuts.keys.help"),
 			},
 		},
 		viewer: { name: viewer.name, email: viewer.email, avatar: viewer.avatar },

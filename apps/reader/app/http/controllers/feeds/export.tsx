@@ -60,7 +60,7 @@ export default createAction(routes.feeds.export, {
 		let now = new Date();
 
 		let document = stringify(outlines, {
-			title: ctx.i18next.t("feeds.transfer.documentTitle"),
+			title: ctx.intl.t("feeds.transfer.documentTitle"),
 			dateCreated: now,
 		});
 
