@@ -119,8 +119,14 @@ export function HoverCard(handle: Handle<HoverCard.Props>) {
 						when('&:hover [data-slot="hover-card-content"]', [
 							opacity(100),
 							visibility(),
-							pointerEvents("auto"),
+							/*
+							 * An open card is something the reader reaches into, so it takes the
+							 * pointer. Importance is what settles it: every mix entry compiles into
+							 * its own cascade sublayer ordered by first appearance, and the resting
+							 * state's own rule may land in a later one.
+							 */
 							raw({
+								pointerEvents: "auto !important",
 								transitionDelay: "var(--ui-hover-card-open-delay, 0.4s)",
 							}),
 						]),
@@ -128,8 +134,8 @@ export function HoverCard(handle: Handle<HoverCard.Props>) {
 					when('&:focus-within [data-slot="hover-card-content"]', [
 						opacity(100),
 						visibility(),
-						pointerEvents("auto"),
 						raw({
+							pointerEvents: "auto !important",
 							transitionDelay: "0s",
 						}),
 					]),
@@ -226,6 +232,49 @@ HoverCard.Content = function HoverCardContent(handle: Handle<HoverCard.ContentPr
 						marginLeft("var(--ui-popover-offset, 0.5rem)"),
 						raw({ left: "100%" }),
 					]),
+
+					/*
+					 * The card rests off its trigger's edge, and a pointer travelling between the
+					 * two crosses that space, so the card's own hit area reaches back across it
+					 * and the pair reads as one surface for as long as the pointer is on either.
+					 */
+					when("&::before", raw({ content: '""', position: "absolute" })),
+					when(
+						'&[data-placement^="bottom"]::before',
+						raw({
+							insetBlockEnd: "100%",
+							insetInlineStart: "0",
+							insetInlineEnd: "0",
+							blockSize: "var(--ui-popover-offset, 0.5rem)",
+						}),
+					),
+					when(
+						'&[data-placement^="top"]::before',
+						raw({
+							insetBlockStart: "100%",
+							insetInlineStart: "0",
+							insetInlineEnd: "0",
+							blockSize: "var(--ui-popover-offset, 0.5rem)",
+						}),
+					),
+					when(
+						'&[data-placement^="left"]::before',
+						raw({
+							left: "100%",
+							insetBlockStart: "0",
+							insetBlockEnd: "0",
+							inlineSize: "var(--ui-popover-offset, 0.5rem)",
+						}),
+					),
+					when(
+						'&[data-placement^="right"]::before',
+						raw({
+							right: "100%",
+							insetBlockStart: "0",
+							insetBlockEnd: "0",
+							inlineSize: "var(--ui-popover-offset, 0.5rem)",
+						}),
+					),
 
 					when('&[data-placement="bottom"], &[data-placement="top"]', [
 						mi("auto"),
