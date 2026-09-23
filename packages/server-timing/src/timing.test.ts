@@ -60,6 +60,12 @@ describe("Timing", () => {
 		expect(timing.toString()).toBe('db;desc="findUserById"');
 	});
 
+	test("escapes quotes and backslashes in the description", () => {
+		let timing = new Timing("db", 'find "user" in C:\\data');
+
+		expect(timing.toString()).toBe('db;desc="find \\"user\\" in C:\\\\data"');
+	});
+
 	test("formats a completed entry with a two-decimal duration", async () => {
 		let timing = new Timing("db", "findUserById");
 		await sleep(MEASURABLE_DELAY_MS);

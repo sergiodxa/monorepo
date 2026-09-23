@@ -8,6 +8,16 @@
  */
 
 /**
+ * Writes a value as an RFC 9110 quoted-string, backslash-escaping `\` and `"` so any
+ * description stays inside its quotes and the rest of the header still parses.
+ *
+ * @example quote('say "hi"') // '"say \\"hi\\""'
+ */
+function quote(value: string): string {
+	return `"${value.replaceAll(/["\\]/g, "\\$&")}"`;
+}
+
+/**
  * A measurement that starts the moment it is constructed and stops at `end()`.
  * Each instance is single use: a second `end()` call overwrites the first finish
  * time, so take a new instance per thing timed.
@@ -70,7 +80,7 @@ export class Timing {
 	toString(): string {
 		let value = [this.name];
 
-		if (this.description) value.push(`desc="${this.description}"`);
+		if (this.description) value.push(`desc=${quote(this.description)}`);
 		if (this.duration > 0) value.push(`dur=${this.duration.toFixed(2)}`);
 
 		return value.join(";");
