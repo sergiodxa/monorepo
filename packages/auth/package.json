@@ -29,6 +29,7 @@
 		"@sdxc/jwt": "workspace:*",
 		"@sdxc/location": "workspace:*",
 		"@sdxc/pagination": "workspace:*",
+		"@sdxc/problem": "workspace:*",
 		"@sdxc/rate-limit": "workspace:*",
 		"@sdxc/result": "workspace:*"
 	},

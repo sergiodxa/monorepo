@@ -300,7 +300,7 @@ using the format would add a third copy.
 ## Current Progress
 
 - [x] Phase 1: Specify and build the package
-- [ ] Phase 2: Declare the management catalog in `@sdxc/auth`
-- [ ] Phase 3: Adopt in auth-saas
+- [x] Phase 2: Declare the management catalog in `@sdxc/auth`
+- [x] Phase 3: Adopt in auth-saas
 - [ ] Phase 4: Publish (public from the start; `release:bootstrap` and the trusted publisher
       are pending)

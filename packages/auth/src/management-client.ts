@@ -8,14 +8,19 @@
  */
 
 import type { LinkValue } from "@sdxc/pagination";
+import type { ProblemIssue } from "@sdxc/problem";
 import type { Result } from "@sdxc/result";
 
 import * as s from "@remix-run/data-schema";
 import { url } from "@remix-run/data-schema/checks";
 import { parseLinkHeader } from "@sdxc/pagination";
+import { isProblem, ISSUES_SCHEMA } from "@sdxc/problem";
 import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
 
 import { nonJsonMediaType } from "./content-type.js";
+import { managementProblems } from "./management-problems.js";
+
+export { managementProblems } from "./management-problems.js";
 
 /** Path the management API serves one subject at, with the id appended to it. */
 const SUBJECT_PATH = "/api/subjects";
@@ -131,18 +136,8 @@ export class SubjectNotFoundError extends Error {
 	}
 }
 
-/** The media type a tenant-scoped failure declares, naming RFC 9457 by its registered subtype. */
-const PROBLEM_MEDIA_TYPE = "application/problem+json";
-
 /** One field-level issue inside a validation failure's `errors` array. */
-export interface ManagementProblemDetail {
-	/** Which field the issue names, as a JSON Pointer into the request body. */
-	pointer: string;
-	/** A stable code for this issue, for a caller branching without reading `message`. */
-	code: string;
-	/** The issue, phrased for the person who will read it. */
-	message: string;
-}
+export type ManagementProblemDetail = ProblemIssue;
 
 /** The fields a tenant-scoped failure carries, decoded straight off its RFC 9457 body. */
 export interface ManagementProblemOptions {
@@ -186,18 +181,6 @@ export class ManagementProblem extends Error {
 		this.errors = options.errors ?? [];
 	}
 }
-
-/** The shape a tenant-scoped failure's body is decoded against before becoming a {@link ManagementProblem}. */
-const PROBLEM_SCHEMA = s.object({
-	type: s.string(),
-	title: s.string(),
-	status: s.number(),
-	detail: s.optional(s.string()),
-	instance: s.optional(s.string()),
-	errors: s.optional(
-		s.array(s.object({ pointer: s.string(), code: s.string(), message: s.string() })),
-	),
-});
 
 /**
  * Names what a non-2xx answer means for a caller deciding between waiting and
@@ -667,15 +650,22 @@ export class ManagementClient {
 		endpoint: URL,
 		response: Response,
 	): Promise<ManagementError | ManagementProblem> {
-		let declared = response.headers.get("content-type");
-		let mediaType = declared ? (declared.split(";")[0]?.trim().toLowerCase() ?? null) : null;
+		if (isProblem(response)) {
+			let parsed = await managementProblems.parse(response);
 
-		if (mediaType === PROBLEM_MEDIA_TYPE) {
-			let payload = await wrap(async () => JSON.parse(await response.text()) as unknown);
-
-			if (isSuccess(payload)) {
-				let parsed = s.parseSafe(PROBLEM_SCHEMA, payload.data);
-				if (parsed.success) return new ManagementProblem(parsed.value);
+			if (isSuccess(parsed)) {
+				let errors = s.parseSafe(s.optional(ISSUES_SCHEMA), parsed.data.extensions.errors);
+				if (errors.success) {
+					let { type, title, status, detail, instance } = parsed.data;
+					return new ManagementProblem({
+						type,
+						title,
+						status,
+						detail: detail ?? undefined,
+						instance: instance ?? undefined,
+						errors: errors.value,
+					});
+				}
 			}
 		}
 

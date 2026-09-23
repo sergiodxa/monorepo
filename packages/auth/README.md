@@ -359,6 +359,22 @@ ManagementProblem.instance; // the request id the platform's logs are keyed by, 
 ManagementProblem.errors; // ManagementProblemDetail[] — one { pointer, code, message } per invalid field
 ```
 
+The problem types the tenant-scoped API answers with are published as `managementProblems`,
+a [`@sdxc/problem`](../problem/README.md) catalog. A server builds each failure from its
+entry, and a caller compares `ManagementProblem.type` against the entry's resolved `type`:
+
+```typescript
+import { managementProblems } from "@sdxc/auth/management-client";
+
+return managementProblems.notFound({ detail: "No subject has that id." });
+// 404 {"type":"https://docs.example.com/errors/not-found","title":"The resource does not exist",...}
+
+let notFound = managementProblems.entries().find((entry) => entry.name === "notFound");
+if (problem.type === notFound?.type) {
+	// the record is absent
+}
+```
+
 `Options.apiVersion` names the `X-API-Version` every tenant-scoped call sends; left off, a
 request names none, which the provider serves as its oldest supported version. Read
 `admin.apiVersionReceived` right after `await`ing a call to see which version actually
