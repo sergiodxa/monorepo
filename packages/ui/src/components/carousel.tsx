@@ -233,8 +233,8 @@ Carousel.Track = function CarouselTrack(handle: Handle<Carousel.TrackProps>) {
 
 /**
  * A single slide: a `<div>` held at `--ui-carousel-slide-size` along the
- * inline axis, with a mandatory snap stop at its inline-start edge so the
- * viewport settles on a slide boundary.
+ * inline axis, snapping to its inline-start edge so the viewport settles on a
+ * slide boundary.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the slide's markup.
@@ -253,10 +253,16 @@ Carousel.Slide = function CarouselSlide(handle: Handle<Carousel.SlideProps>) {
 					attrs({ role: DEFAULT_SLIDE_ROLE }),
 					grow(0),
 					shrink(0),
+					/*
+					 * The slide snaps to the viewport's start edge, but does not force the scroll to
+					 * stop at it. `scroll-snap-stop: always` clamps every scroll to a single snap
+					 * point, programmatic ones included, which leaves a jump to any slide but the
+					 * next one moving one slide instead — so a row of dots all scroll the same
+					 * distance and none of them reach the slide they name.
+					 */
 					raw({
 						flexBasis: "var(--ui-carousel-slide-size, 18rem)",
 						scrollSnapAlign: "start",
-						scrollSnapStop: "always",
 					}),
 					mix,
 				]}

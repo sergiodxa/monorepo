@@ -39,17 +39,6 @@ export const CAROUSEL_SLIDE_ATTRIBUTE = "data-carousel-slide";
 const EDGE_TOLERANCE_PX = 1;
 
 /**
- * Resolves the animation to scroll a Carousel command with. `scrollBy()`'s
- * smooth-scroll rides the platform's own animation, not a CSS transition, so
- * it never picks up the reduced-motion override applied there.
- *
- * @returns `"instant"` when the user prefers reduced motion, `"smooth"` otherwise.
- */
-function resolveScrollBehavior(): ScrollBehavior {
-	return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth";
-}
-
-/**
  * Reports whether `node` renders in a right-to-left writing direction, so
  * scroll math can flip which physical direction counts as "previous" and
  * "next" in reading order.
@@ -97,7 +86,7 @@ function readScrollEdges(node: HTMLElement): { atStart: boolean; atEnd: boolean 
  */
 function scrollByPage(node: HTMLElement, direction: -1 | 1): void {
 	let sign = isRightToLeft(node) ? -direction : direction;
-	node.scrollBy({ left: sign * node.clientWidth, behavior: resolveScrollBehavior() });
+	node.scrollBy({ left: sign * node.clientWidth });
 }
 
 /**
@@ -113,14 +102,73 @@ function scrollToSlide(node: HTMLElement, index: number): void {
 	let slide = slides[index];
 	if (slide === undefined) return;
 
-	let targetScrollLeft = isRightToLeft(node)
-		? slide.offsetLeft - getMaxScrollLeft(node)
-		: slide.offsetLeft;
+	/*
+	 * Measured against the viewport's own box rather than through `offsetLeft`, which
+	 * reports a distance from whichever ancestor happens to be positioned — usually the
+	 * page — and so scrolls the carousel by however far it sits from that ancestor.
+	 */
+	let viewportEdges = node.getBoundingClientRect();
+	let slideEdges = slide.getBoundingClientRect();
 
-	node.scrollBy({
-		left: targetScrollLeft - node.scrollLeft,
-		behavior: resolveScrollBehavior(),
+	/*
+	 * Given as a position rather than a distance. A distance is measured against wherever
+	 * the viewport happens to be at that instant, so a second command arriving while the
+	 * first is still animating moves by an amount that is already stale; a position is the
+	 * same answer however many times it is asked, and the scroller simply retargets.
+	 */
+	node.scrollTo({
+		left:
+			node.scrollLeft +
+			(isRightToLeft(node)
+				? slideEdges.right - viewportEdges.right
+				: slideEdges.left - viewportEdges.left),
 	});
+}
+
+/**
+ * Reads which slide the viewport has settled on: the one whose start edge sits nearest
+ * the viewport's own, which is the slide a mandatory snap leaves in view.
+ *
+ * @param node Carousel viewport to read.
+ * @returns The zero-based position of the slide in view, or `null` when there are none.
+ */
+function readCurrentSlideIndex(node: HTMLElement): number | null {
+	let slides = node.querySelectorAll<HTMLElement>(`[${CAROUSEL_SLIDE_ATTRIBUTE}]`);
+	if (slides.length === 0) return null;
+
+	let viewportEdges = node.getBoundingClientRect();
+	let rightToLeft = isRightToLeft(node);
+	let closest = 0;
+	let shortest = Number.POSITIVE_INFINITY;
+
+	for (let [index, slide] of slides.entries()) {
+		let slideEdges = slide.getBoundingClientRect();
+		let distance = Math.abs(
+			rightToLeft ? slideEdges.right - viewportEdges.right : slideEdges.left - viewportEdges.left,
+		);
+		if (distance < shortest) {
+			shortest = distance;
+			closest = index;
+		}
+	}
+
+	return closest;
+}
+
+/**
+ * Marks whichever `--ui-goto` invoker names the slide in view, so a row of them reads as
+ * a position indicator rather than as five identical buttons.
+ *
+ * @param node Carousel viewport whose scroll position is read.
+ */
+function syncGotoCurrent(node: HTMLElement): void {
+	let current = readCurrentSlideIndex(node);
+	if (current === null) return;
+
+	for (let button of findInvokerButtons(node, GOTO_COMMAND)) {
+		if (readGotoSlideIndex(button) === current) button.setAttribute("aria-current", "true");
+		else button.removeAttribute("aria-current");
+	}
 }
 
 /**
@@ -193,8 +241,10 @@ function syncInvokerDisabled(node: HTMLElement): void {
 
 /**
  * Adds `--ui-prev`/`--ui-next`/`--ui-goto` command handling to a Carousel
- * viewport, scrolling by page or to a `data-slide` index and re-syncing every
- * invoker button's disabled state on every command, scroll, and resize.
+ * viewport, scrolling by page or to a `data-slide` index and, on every command,
+ * scroll and resize, re-syncing what the invokers say: each `--ui-prev`/`--ui-next`
+ * button's disabled state, and `aria-current` on whichever `--ui-goto` button names
+ * the slide in view.
  *
  * @example
  * <div id="cart-carousel" mix={carouselControls()}>
@@ -210,8 +260,12 @@ export const carouselControls = createMixin<HTMLElement>((handle) => {
 		let viewport = event.node;
 
 		syncInvokerDisabled(viewport);
+		syncGotoCurrent(viewport);
 
-		let observer = new ResizeObserver(() => syncInvokerDisabled(viewport));
+		let observer = new ResizeObserver(() => {
+			syncInvokerDisabled(viewport);
+			syncGotoCurrent(viewport);
+		});
 		observer.observe(viewport);
 		handle.signal.addEventListener("abort", () => observer.disconnect());
 	});
@@ -239,6 +293,7 @@ export const carouselControls = createMixin<HTMLElement>((handle) => {
 				}),
 				on<HTMLElement, "scroll">("scroll", (event) => {
 					syncInvokerDisabled(event.currentTarget);
+					syncGotoCurrent(event.currentTarget);
 				}),
 			],
 		});
