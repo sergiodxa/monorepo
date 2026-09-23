@@ -143,7 +143,15 @@ export function Item(handle: Handle<Item.Props>) {
 					pb("var(--ui-item-padding-block, 0.625rem)"),
 					pi("var(--ui-item-padding-inline, 0.75rem)"),
 					container(CONTAINER_NAME),
-					atMax(NARROW_CONTAINER_SIZE, CONTAINER_NAME, flexWrap("wrap")),
+					/*
+					 * Wrapping is allowed at every width, and what decides whether it happens is
+					 * {@link Item.Actions} claiming a full line once the row is narrow. Asking for
+					 * it under this container's own query instead would never apply, because a
+					 * container query cannot change the layout of the container it measures — and
+					 * the row would hold `nowrap` while its actions took the whole line, leaving
+					 * the content with nothing.
+					 */
+					flexWrap("wrap"),
 					mix,
 				]}
 			>
