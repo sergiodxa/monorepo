@@ -211,9 +211,9 @@ function appearanceSection(ctx: RequestContext, current: Presentation) {
 					<div mix={[vstack({ gap: 1, align: "start" })]}>
 						<Label htmlFor={THEME_ID}>{ctx.i18next.t("settings.appearance.theme.label")}</Label>
 
-						<Select id={THEME_ID} name={THEME_FIELD} defaultValue={current.theme}>
+						<Select id={THEME_ID} name={THEME_FIELD}>
 							{THEMES.map((name) => (
-								<Select.Option key={name} value={name}>
+								<Select.Option key={name} value={name} selected={name === current.theme}>
 									{ctx.i18next.t(`settings.appearance.theme.names.${name}`)}
 								</Select.Option>
 							))}
@@ -223,9 +223,9 @@ function appearanceSection(ctx: RequestContext, current: Presentation) {
 					<div mix={[vstack({ gap: 1, align: "start" })]}>
 						<Label htmlFor={FACE_ID}>{ctx.i18next.t("settings.appearance.face.label")}</Label>
 
-						<Select id={FACE_ID} name={FACE_FIELD} defaultValue={current.face}>
+						<Select id={FACE_ID} name={FACE_FIELD}>
 							{READING_FACES.map((name) => (
-								<Select.Option key={name} value={name}>
+								<Select.Option key={name} value={name} selected={name === current.face}>
 									{ctx.i18next.t(`settings.appearance.face.names.${name}`)}
 								</Select.Option>
 							))}
@@ -394,13 +394,13 @@ function notificationsSection(ctx: RequestContext, notifications: UserStore.Noti
 					<div mix={[vstack({ gap: 1, align: "start" })]}>
 						<Label htmlFor={QUIET_FROM_ID}>{ctx.i18next.t("notifications.quiet.from")}</Label>
 
-						<Select
-							id={QUIET_FROM_ID}
-							name={QUIET_FROM_FIELD}
-							defaultValue={String(notifications.quietFrom)}
-						>
+						<Select id={QUIET_FROM_ID} name={QUIET_FROM_FIELD}>
 							{HOURS.map((hour) => (
-								<Select.Option key={hour} value={String(hour)}>
+								<Select.Option
+									key={hour}
+									value={String(hour)}
+									selected={hour === notifications.quietFrom}
+								>
 									{ctx.i18next.t("notifications.quiet.hour", { hour })}
 								</Select.Option>
 							))}
@@ -410,13 +410,13 @@ function notificationsSection(ctx: RequestContext, notifications: UserStore.Noti
 					<div mix={[vstack({ gap: 1, align: "start" })]}>
 						<Label htmlFor={QUIET_TO_ID}>{ctx.i18next.t("notifications.quiet.to")}</Label>
 
-						<Select
-							id={QUIET_TO_ID}
-							name={QUIET_TO_FIELD}
-							defaultValue={String(notifications.quietTo)}
-						>
+						<Select id={QUIET_TO_ID} name={QUIET_TO_FIELD}>
 							{HOURS.map((hour) => (
-								<Select.Option key={hour} value={String(hour)}>
+								<Select.Option
+									key={hour}
+									value={String(hour)}
+									selected={hour === notifications.quietTo}
+								>
 									{ctx.i18next.t("notifications.quiet.hour", { hour })}
 								</Select.Option>
 							))}
