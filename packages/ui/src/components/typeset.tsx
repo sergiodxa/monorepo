@@ -331,7 +331,18 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 						pb("0.875em"),
 						overflow("auto"),
 					]),
-					when("& :where(pre code)", [bg("transparent"), fg("inherit"), rounded("none")]),
+					/*
+					 * A fenced block's `code` is an inline box, so the chip padding above would
+					 * apply at the start of the box alone and indent the block's first line
+					 * past every line under it. The block's own padding is the `pre`'s.
+					 */
+					when("& :where(pre code)", [
+						bg("transparent"),
+						fg("inherit"),
+						rounded("none"),
+						pi(0),
+						pb(0),
+					]),
 
 					when("& :where(table)", [
 						block(),
