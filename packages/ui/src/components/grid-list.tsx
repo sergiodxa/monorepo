@@ -26,11 +26,12 @@ import {
 	grid,
 	gridTemplate,
 	items,
+	shrink,
 	virtualize,
 } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
-import { mbs, pb, pbs, pi } from "@sdxc/u/size";
-import { active, data, hover, not, when } from "@sdxc/u/state";
+import { bs, is, mbs, pb, pbs, pi } from "@sdxc/u/size";
+import { active, data, not, when } from "@sdxc/u/state";
 import { text, textTransform, tracking, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
 
@@ -249,14 +250,30 @@ GridList.Item = function GridListItem(handle: Handle<GridList.ItemProps>) {
 					flex(),
 					items("center"),
 					gap(2),
+					/*
+					 * A glyph a row leads with is measured against the row's text rather than
+					 * against whatever an icon set draws at, and holds that measure when the row
+					 * runs out of space: the default `flex-shrink: 1` otherwise squeezes it by
+					 * however much that row's own text overruns, so every row lands on a
+					 * different width and the column of glyphs reads as a rendering fault.
+					 */
+					when("& > svg", [shrink(), is(4), bs(4)]),
 					rounded("md"),
 					pb(2),
 					pi(2),
 					fg("neutral.emphasis"),
-					hover(bg("neutral.bg-tint-hover")),
-					active(bg("neutral.bg-tint-pressed")),
-					when("&:focus", bg("neutral.bg-tint-hover")),
-					when('&[aria-selected="true"]', bg("brand.tint")),
+					/*
+					 * A selected row answers "which ones", so it is tinted far enough off the
+					 * surface to be read at a glance: the plain tint is the same lightness as the
+					 * list's own background and leaves a selection invisible. Pointer states and
+					 * selection are written as selectors that exclude each other, so a hovered
+					 * row keeps saying it is selected whichever order the layers land in.
+					 */
+					when('&:hover:not([aria-selected="true"])', bg("neutral.bg-tint-hover")),
+					when('&:active:not([aria-selected="true"])', bg("neutral.bg-tint-pressed")),
+					when('&:focus:not([aria-selected="true"])', bg("neutral.bg-tint-hover")),
+					when('&[aria-selected="true"]', bg("brand.bg-tint-hover")),
+					when('&[aria-selected="true"]:hover', bg("brand.bg-tint-pressed")),
 					when('&[aria-disabled="true"]', opacity(50)),
 					cursor("default"),
 					outline("none"),
