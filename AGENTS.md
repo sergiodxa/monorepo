@@ -95,7 +95,7 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
 - MUST use `@sdxc/jobs` for background jobs
 - MUST validate external/untrusted data (loaders, actions, webhooks, env-derived input) with `remix/data-schema` via `@sdxc/validate`; do not add Zod to new code
 - MUST use `const` only for module-level variables, and `let` for everything else, never use `const` for local variables inside functions or blocks
-- MUST name module-level constant values in `ALL_UPPER_SNAKE_CASE` (e.g. `FIXED_STEP_MS`, `TYPE_MATCHUPS`, `PERSISTENT_WORLD_STORE_KEYS`); module-level functions stay `camelCase` and classes/namespaces/enums stay `PascalCase`
+- MUST name module-level constant values in `ALL_UPPER_SNAKE_CASE` (e.g. `FIXED_STEP_MS`, `TYPE_MATCHUPS`, `PERSISTENT_WORLD_STORE_KEYS`); module-level functions, and objects whose members are functions (a catalog of builders like `defineProblems(…)`'s result), stay `camelCase`, and classes/namespaces/enums stay `PascalCase`
 - MUST use `interface` when possible, and `type` only when necessary (e.g. for union types)
 - MUST import `env` from `cloudflare:workers` and never from `process.env` or other sources
 - MUST extend root `tsconfig.json` in all packages and applications
