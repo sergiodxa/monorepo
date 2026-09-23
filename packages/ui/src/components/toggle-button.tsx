@@ -16,8 +16,8 @@ import type { Handle, Props as TagProps } from "remix/ui";
 import { bg, border, fg, outline } from "@sdxc/u/color";
 import { rounded, opacity } from "@sdxc/u/effects";
 import { cursor, userSelect } from "@sdxc/u/general";
-import { flex, flexCol, inlineFlex, items, justify, gap } from "@sdxc/u/layout";
-import { pi, pb } from "@sdxc/u/size";
+import { flex, flexCol, inlineFlex, items, justify, gap, shrink } from "@sdxc/u/layout";
+import { bs, is, minBs, pi, pb } from "@sdxc/u/size";
 import { when, hover, active, data } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
@@ -150,14 +150,39 @@ export function ToggleButton(handle: Handle<ToggleButton.Props>) {
 					items("center"),
 					justify("center"),
 					gap("0.5rem"),
+					/*
+					 * A glyph is measured against the label it sits beside rather than against
+					 * whatever an icon set draws at, so the row keeps the height its text and
+					 * padding ask for, and it never shrinks: squeeze the row and the default
+					 * `flex-shrink: 1` compresses the glyph rather than the words, and a squashed
+					 * icon reads as a rendering fault.
+					 */
+					when("& > svg", [shrink(), is(4), bs(4)]),
 					rounded("md"),
 					weight(500),
 					cursor("default"),
 					userSelect(),
 					pi("1rem"),
 					pb("0.5rem"),
-					when('&[data-size="sm"]', [pi("0.75rem"), pb("0.375rem")]),
-					when('&[data-size="lg"]', [pi("1.25rem"), pb("0.625rem")]),
+					/*
+					 * The row measure is stated rather than left to fall out of the padding and
+					 * the border, so the control lines up with a field of the same size when a
+					 * Group fuses the two, and still grows when a long label wraps.
+					 */
+					minBs("2.5rem"),
+
+					when('&[data-size="sm"]', [
+						pi("0.75rem"),
+						pb("0.375rem"),
+						minBs("2rem"),
+						when("& > svg", [is(3), bs(3)]),
+					]),
+					when('&[data-size="lg"]', [
+						pi("1.25rem"),
+						pb("0.625rem"),
+						minBs("3rem"),
+						when("& > svg", [is(5), bs(5)]),
+					]),
 					text("sm"),
 					data("size", "sm", text("xs")),
 					data("size", "lg", text("base")),
@@ -194,39 +219,39 @@ export function ToggleButton(handle: Handle<ToggleButton.Props>) {
 						]),
 					]),
 					when('&[data-variant="outline"]', [
-						border({ width: 2, noStyleDefault: true }),
+						border({ width: 1, noStyleDefault: true }),
 						bg("transparent"),
 					]),
 					when('&[data-variant="ghost"]', bg("transparent")),
 					when('&[data-variant="outline"]', [
 						when('&[data-color="brand"]', [
-							border("brand.border-strong"),
+							border("brand.border"),
 							fg("brand.fg"),
-							hover(bg("brand.bg-tint")),
+							hover([bg("brand.bg-tint"), border("brand.border-hover")]),
 							active(bg("brand.bg-tint-hover")),
 						]),
 						when('&[data-color="neutral"]', [
-							border("neutral.border-strong"),
+							border("neutral.border"),
 							fg("neutral.fg"),
-							hover(bg("neutral.bg-tint")),
+							hover([bg("neutral.bg-tint"), border("neutral.border-hover")]),
 							active(bg("neutral.bg-tint-hover")),
 						]),
 						when('&[data-color="success"]', [
-							border("success.border-strong"),
+							border("success.border"),
 							fg("success.fg"),
-							hover(bg("success.bg-tint")),
+							hover([bg("success.bg-tint"), border("success.border-hover")]),
 							active(bg("success.bg-tint-hover")),
 						]),
 						when('&[data-color="danger"]', [
-							border("danger.border-strong"),
+							border("danger.border"),
 							fg("danger.fg"),
-							hover(bg("danger.bg-tint")),
+							hover([bg("danger.bg-tint"), border("danger.border-hover")]),
 							active(bg("danger.bg-tint-hover")),
 						]),
 						when('&[data-color="warning"]', [
-							border("warning.border-strong"),
+							border("warning.border"),
 							fg("warning.fg"),
-							hover(bg("warning.bg-tint")),
+							hover([bg("warning.bg-tint"), border("warning.border-hover")]),
 							active(bg("warning.bg-tint-hover")),
 						]),
 					]),

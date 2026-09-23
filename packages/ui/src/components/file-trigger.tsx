@@ -16,8 +16,8 @@ import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, border, fg, outline } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
 import { cursor, userSelect } from "@sdxc/u/general";
-import { gap, inlineFlex, items, justify } from "@sdxc/u/layout";
-import { pb, pi } from "@sdxc/u/size";
+import { gap, inlineFlex, items, justify, shrink } from "@sdxc/u/layout";
+import { bs, is, minBs, pb, pi } from "@sdxc/u/size";
 import { active, data, hover, when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
@@ -140,6 +140,14 @@ export function FileTrigger(handle: Handle<FileTrigger.Props>) {
 					items("center"),
 					justify("center"),
 					gap(2),
+					/*
+					 * A glyph is measured against the label it sits beside rather than against
+					 * whatever an icon set draws at, so the row keeps the height its text and
+					 * padding ask for, and it never shrinks: squeeze the row and the default
+					 * `flex-shrink: 1` compresses the glyph rather than the words, and a squashed
+					 * icon reads as a rendering fault.
+					 */
+					when("& > svg", [shrink(), is(4), bs(4)]),
 					rounded("md"),
 					weight("medium"),
 					when("&:has(input:focus-visible)", [
@@ -156,8 +164,21 @@ export function FileTrigger(handle: Handle<FileTrigger.Props>) {
 					pb("0.5rem"),
 					text("sm"),
 
-					data("size", "sm", [pi("0.75rem"), pb("0.375rem"), text("xs")]),
-					data("size", "lg", [pi("1.25rem"), pb("0.625rem"), text("base")]),
+					/*
+					 * The row measure is stated rather than left to fall out of the padding and
+					 * the border, so the control lines up with a field of the same size when a
+					 * Group fuses the two, and still grows when a long label wraps.
+					 */
+					minBs("2.5rem"),
+
+					data("size", "sm", [
+						pi("0.75rem"),
+						pb("0.375rem"),
+						text("xs"),
+						minBs("2rem"),
+						when("& > svg", [is(3), bs(3)]),
+					]),
+					data("size", "lg", [pi("1.25rem"), pb("0.625rem"), text("base"), minBs("3rem")]),
 
 					data("variant", "solid", [
 						data("color", "brand", [
@@ -193,36 +214,36 @@ export function FileTrigger(handle: Handle<FileTrigger.Props>) {
 					]),
 
 					data("variant", "outline", [
-						border({ width: 2, noStyleDefault: true }),
+						border({ width: 1, noStyleDefault: true }),
 						bg("transparent"),
 						data("color", "brand", [
-							border("brand.strong"),
+							border("brand"),
 							fg("brand"),
-							hover(bg("brand.tint")),
+							hover([bg("brand.tint"), border("brand.border-hover")]),
 							active(bg("brand.bg-tint-hover")),
 						]),
 						data("color", "neutral", [
-							border("neutral.strong"),
+							border("neutral"),
 							fg("neutral"),
-							hover(bg("neutral.tint")),
+							hover([bg("neutral.tint"), border("neutral.border-hover")]),
 							active(bg("neutral.bg-tint-hover")),
 						]),
 						data("color", "success", [
-							border("success.strong"),
+							border("success"),
 							fg("success"),
-							hover(bg("success.tint")),
+							hover([bg("success.tint"), border("success.border-hover")]),
 							active(bg("success.bg-tint-hover")),
 						]),
 						data("color", "warning", [
-							border("warning.strong"),
+							border("warning"),
 							fg("warning"),
-							hover(bg("warning.tint")),
+							hover([bg("warning.tint"), border("warning.border-hover")]),
 							active(bg("warning.bg-tint-hover")),
 						]),
 						data("color", "danger", [
-							border("danger.strong"),
+							border("danger"),
 							fg("danger"),
-							hover(bg("danger.tint")),
+							hover([bg("danger.tint"), border("danger.border-hover")]),
 							active(bg("danger.bg-tint-hover")),
 						]),
 					]),

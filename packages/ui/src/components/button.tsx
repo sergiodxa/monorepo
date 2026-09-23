@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { LoaderCircleIcon } from "@sdxc/icons";
 import { bg, border, fg, outline } from "@sdxc/u/color";
@@ -25,7 +25,7 @@ import {
 	relative,
 	shrink,
 } from "@sdxc/u/layout";
-import { bs, is, pb, pi } from "@sdxc/u/size";
+import { bs, is, minBs, pb, pi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 
@@ -118,6 +118,18 @@ export namespace Button {
  * @example
  * <Button type="submit" isPending={isSubmitting}>{t("actions.save")}</Button>
  */
+/**
+ * Reports whether `children` is a lone glyph, which is what makes a button a target for
+ * that glyph rather than for a label. A selector cannot answer this: `:only-child`
+ * counts elements, so a button holding text beside one icon still matches it.
+ *
+ * @param children The button's own children.
+ * @returns Whether the button renders a single element and no text of its own.
+ */
+function holdsOnlyAGlyph(children: RemixNode): boolean {
+	return typeof children === "object" && children !== null && !Array.isArray(children);
+}
+
 export function Button(handle: Handle<Button.Props>) {
 	return () => {
 		let { color, variant, size, isPending, disabled, type, parts, children, mix, ...rest } =
@@ -128,6 +140,7 @@ export function Button(handle: Handle<Button.Props>) {
 		let resolvedVariant = variant ?? DEFAULT_VARIANT;
 		let resolvedSize = size ?? DEFAULT_SIZE;
 		let resolvedDisabled = disabled || isPending;
+		let iconOnly = holdsOnlyAGlyph(children);
 
 		warnIfNoAccessibleName(
 			handle.props,
@@ -143,6 +156,7 @@ export function Button(handle: Handle<Button.Props>) {
 				data-variant={resolvedVariant}
 				data-size={resolvedSize}
 				data-pending={isPending || undefined}
+				data-icon-only={iconOnly || undefined}
 				disabled={resolvedDisabled}
 				mix={[
 					when("&:focus-visible", [
@@ -158,11 +172,13 @@ export function Button(handle: Handle<Button.Props>) {
 					justify("center"),
 					gap(2),
 					/**
-					 * An icon keeps the size it was asked for when a narrow row squeezes the
-					 * button: the label is what wraps or ellipsizes, since a compressed glyph
-					 * reads as a rendering fault.
+					 * A glyph is measured against the label it sits beside rather than against
+					 * whatever an icon set draws at, so the row keeps the height its text and
+					 * padding ask for. It never shrinks either: squeeze the row and the default
+					 * `flex-shrink: 1` compresses the glyph rather than the words, and a squashed
+					 * icon reads as a rendering fault.
 					 */
-					when("& > svg", shrink()),
+					when("& > svg", [shrink(), is(4), bs(4)]),
 					rounded("md"),
 					weight("medium"),
 					cursor("default"),
@@ -176,10 +192,39 @@ export function Button(handle: Handle<Button.Props>) {
 					 * fill (transparent for ghost), so solid and ghost render the exact
 					 * footprint outline does.
 					 */
-					border({ width: 2, noStyleDefault: true }),
+					border({ width: 1, noStyleDefault: true }),
 
-					when('&[data-size="sm"]', [pi(3), pb(1.5), text("xs")]),
-					when('&[data-size="lg"]', [pi(5), pb(2.5), text("base")]),
+					/*
+					 * The row measure is stated rather than left to fall out of the padding and
+					 * the border, so the control lines up with a field of the same size when a
+					 * Group fuses the two, and still grows when a long label wraps.
+					 */
+					minBs("2.5rem"),
+
+					when('&[data-size="sm"]', [
+						pi(3),
+						pb(1.5),
+						text("xs"),
+						minBs("2rem"),
+						when("& > svg", [is(3), bs(3)]),
+					]),
+					when('&[data-size="lg"]', [
+						pi(5),
+						pb(2.5),
+						text("base"),
+						minBs("3rem"),
+						when("& > svg", [is(5), bs(5)]),
+					]),
+
+					/*
+					 * A button holding a glyph and nothing else is a target for that glyph alone, so
+					 * it takes a round footprint as tall as the row it would otherwise fill. The
+					 * measure is written out per size, since a box sized by its own content on both
+					 * axes has no ratio to resolve against.
+					 */
+					when("&[data-icon-only]", [pi(0), is("2.5rem"), bs("2.5rem"), shrink(), rounded("full")]),
+					when('&[data-size="sm"][data-icon-only]', [is("2rem"), bs("2rem")]),
+					when('&[data-size="lg"][data-icon-only]', [is("3rem"), bs("3rem")]),
 
 					when('&[data-variant="solid"]', [
 						when('&[data-color="brand"]', [
@@ -231,33 +276,33 @@ export function Button(handle: Handle<Button.Props>) {
 					when('&[data-variant="outline"]', [
 						bg("transparent"),
 						when('&[data-color="brand"]', [
-							border("brand.strong"),
+							border("brand"),
 							fg("brand"),
-							when("&:hover", bg("brand.tint")),
+							when("&:hover", [bg("brand.tint"), border("brand.border-hover")]),
 							when("&:active", bg("brand.bg-tint-hover")),
 						]),
 						when('&[data-color="neutral"]', [
-							border("neutral.strong"),
+							border("neutral"),
 							fg("neutral"),
-							when("&:hover", bg("neutral.tint")),
+							when("&:hover", [bg("neutral.tint"), border("neutral.border-hover")]),
 							when("&:active", bg("neutral.bg-tint-hover")),
 						]),
 						when('&[data-color="success"]', [
-							border("success.strong"),
+							border("success"),
 							fg("success"),
-							when("&:hover", bg("success.tint")),
+							when("&:hover", [bg("success.tint"), border("success.border-hover")]),
 							when("&:active", bg("success.bg-tint-hover")),
 						]),
 						when('&[data-color="warning"]', [
-							border("warning.strong"),
+							border("warning"),
 							fg("warning"),
-							when("&:hover", bg("warning.tint")),
+							when("&:hover", [bg("warning.tint"), border("warning.border-hover")]),
 							when("&:active", bg("warning.bg-tint-hover")),
 						]),
 						when('&[data-color="danger"]', [
-							border("danger.strong"),
+							border("danger"),
 							fg("danger"),
-							when("&:hover", bg("danger.tint")),
+							when("&:hover", [bg("danger.tint"), border("danger.border-hover")]),
 							when("&:active", bg("danger.bg-tint-hover")),
 						]),
 					]),

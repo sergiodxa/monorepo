@@ -15,7 +15,7 @@ import { bg, border, fg, outline } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
 import { cursor, pointerEvents, userSelect } from "@sdxc/u/general";
 import { gap, inlineFlex, items, justify, shrink } from "@sdxc/u/layout";
-import { pb, pi } from "@sdxc/u/size";
+import { bs, is, minBs, pb, pi } from "@sdxc/u/size";
 import { active, data, hover, when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 
@@ -109,11 +109,13 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 					justify("center"),
 					gap(2),
 					/**
-					 * An icon inside a link button never shrinks — the same rule `Button` states, for the
-					 * same reason: squeeze the row and the default `flex-shrink: 1` compresses the glyph
-					 * rather than the words, and a squashed icon reads as a rendering fault.
+					 * A glyph inside a link button is measured and held at size by the same rules
+					 * `Button` states, for the same reasons: it is sized against the label beside
+					 * it so the row keeps the height its text and padding ask for, and it never
+					 * shrinks, since the default `flex-shrink: 1` would compress the glyph rather
+					 * than the words and a squashed icon reads as a rendering fault.
 					 */
-					when("& > svg", shrink()),
+					when("& > svg", [shrink(), is(4), bs(4)]),
 					rounded("md"),
 					weight("medium"),
 					pi(4),
@@ -123,9 +125,22 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 					 * own fill (transparent for ghost), so solid, outline, and ghost
 					 * render at the same footprint.
 					 */
-					border({ width: 2 }),
-					data("size", "sm", [pi(3), pb(1.5)]),
-					data("size", "lg", [pi(5), pb(2.5), text("base")]),
+					border({ width: 1 }),
+					/*
+					 * The row measure is stated rather than left to fall out of the padding and
+					 * the border, so the control lines up with a field of the same size when a
+					 * Group fuses the two, and still grows when a long label wraps.
+					 */
+					minBs("2.5rem"),
+
+					data("size", "sm", [pi(3), pb(1.5), minBs("2rem"), when("& > svg", [is(3), bs(3)])]),
+					data("size", "lg", [
+						pi(5),
+						pb(2.5),
+						text("base"),
+						minBs("3rem"),
+						when("& > svg", [is(5), bs(5)]),
+					]),
 
 					data("variant", "solid", [
 						data("color", "brand", [
@@ -167,33 +182,33 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 
 					data("variant", "outline", [
 						data("color", "brand", [
-							border("brand.strong"),
+							border("brand"),
 							fg("brand"),
-							hover(bg("brand.tint")),
+							hover([bg("brand.tint"), border("brand.border-hover")]),
 							active(bg("brand.bg-tint-hover")),
 						]),
 						data("color", "neutral", [
-							border("neutral.strong"),
+							border("neutral"),
 							fg("neutral"),
-							hover(bg("neutral.tint")),
+							hover([bg("neutral.tint"), border("neutral.border-hover")]),
 							active(bg("neutral.bg-tint-hover")),
 						]),
 						data("color", "success", [
-							border("success.strong"),
+							border("success"),
 							fg("success"),
-							hover(bg("success.tint")),
+							hover([bg("success.tint"), border("success.border-hover")]),
 							active(bg("success.bg-tint-hover")),
 						]),
 						data("color", "warning", [
-							border("warning.strong"),
+							border("warning"),
 							fg("warning"),
-							hover(bg("warning.tint")),
+							hover([bg("warning.tint"), border("warning.border-hover")]),
 							active(bg("warning.bg-tint-hover")),
 						]),
 						data("color", "danger", [
-							border("danger.strong"),
+							border("danger"),
 							fg("danger"),
-							hover(bg("danger.tint")),
+							hover([bg("danger.tint"), border("danger.border-hover")]),
 							active(bg("danger.bg-tint-hover")),
 						]),
 					]),
