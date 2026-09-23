@@ -113,8 +113,19 @@ export function Drawer(handle: Handle<Drawer.Props>) {
 					willChange("transform"),
 					transitionBehavior("allow-discrete"),
 
+					/*
+					 * Each placement releases the edge it does not dock to. The dialog underneath
+					 * constrains all four and centres itself between them, so naming only the near
+					 * edge leaves that centring in force and the drawer away from the edge asked for.
+					 *
+					 * Both measures are stated for the same reason: a `<dialog>` sizes to its
+					 * content on both axes, so pinning the two opposite insets does not stretch it.
+					 * Each placement therefore gives the edge it docks to a depth and tells the
+					 * other axis to fill.
+					 */
 					data("placement", "top", [
 						insBs("0"),
+						insBe("auto"),
 						insIs("0"),
 						insIe("0"),
 						bs("24rem"),
@@ -127,6 +138,7 @@ export function Drawer(handle: Handle<Drawer.Props>) {
 
 					data("placement", "bottom", [
 						insBe("0"),
+						insBs("auto"),
 						insIs("0"),
 						insIe("0"),
 						bs("24rem"),
@@ -141,8 +153,10 @@ export function Drawer(handle: Handle<Drawer.Props>) {
 						insBs("0"),
 						insBe("0"),
 						insLeft("0"),
+						insRight("auto"),
 						is("22rem"),
 						maxIs("90vw"),
+						bs("full"),
 						maxBs("none"),
 						translateX("-100%"),
 						when("&[open]", translateX(0)),
@@ -152,8 +166,10 @@ export function Drawer(handle: Handle<Drawer.Props>) {
 						insBs("0"),
 						insBe("0"),
 						insRight("0"),
+						insLeft("auto"),
 						is("22rem"),
 						maxIs("90vw"),
+						bs("full"),
 						maxBs("none"),
 						translateX("100%"),
 						when("&[open]", translateX(0)),
