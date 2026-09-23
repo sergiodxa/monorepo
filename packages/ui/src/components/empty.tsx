@@ -12,7 +12,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { bg, border, colorMix, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { flex, flexCol, gap, items, justify } from "@sdxc/u/layout";
+import { flex, flexCol, flexWrap, gap, items, justify } from "@sdxc/u/layout";
 import { bs, is, mbs, p } from "@sdxc/u/size";
 import { fontSize, leading, textAlign, tracking, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
@@ -230,7 +230,9 @@ Empty.Description = function EmptyDescription(handle: Handle<Empty.DescriptionPr
 
 /**
  * Renders {@link Empty.ActionProps.children} as the empty state's
- * call-to-action slot, spaced a touch below the text above it.
+ * call-to-action slot: a centered, wrapping row spaced a touch below the
+ * text above it, so a state offering more than one action lays them out
+ * rather than running them together.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the action slot's markup.
@@ -240,7 +242,24 @@ Empty.Action = function EmptyAction(handle: Handle<Empty.ActionProps>) {
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<div {...rest} data-slot="action" mix={[mbs(1), mix]}>
+			<div
+				{...rest}
+				data-slot="action"
+				mix={[
+					/*
+					 * The slot holds however many actions the state offers, so it lays them out
+					 * rather than leaving them to sit flush against each other: a centered row
+					 * that wraps, since two buttons side by side outgrow a narrow panel.
+					 */
+					flex(),
+					flexWrap(),
+					items("center"),
+					justify("center"),
+					gap(2),
+					mbs(1),
+					mix,
+				]}
+			>
 				{children}
 			</div>
 		);
