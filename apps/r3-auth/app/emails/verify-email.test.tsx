@@ -18,7 +18,7 @@ const URL_UNDER_TEST = "https://auth.sergiodxa.com/verify-email?token=abc123";
 
 /** Builds the message with everything held fixed. */
 async function build(): Promise<VerifyEmailEmail> {
-	let { locale, t } = await emailTranslator();
+	let { locale, t } = emailTranslator();
 
 	return new VerifyEmailEmail({
 		email: "jane@example.com",

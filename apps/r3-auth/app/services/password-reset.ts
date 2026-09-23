@@ -148,7 +148,7 @@ export async function requestPasswordReset(
 				url: resetUrl(token),
 				minutes: Math.round(PASSWORD_RESET_TTL / toMs("1 minute")),
 				locale: DEFAULT_EMAIL_LOCALE,
-				t: (await emailTranslator(DEFAULT_EMAIL_LOCALE)).t,
+				t: emailTranslator(DEFAULT_EMAIL_LOCALE).t,
 			}),
 		);
 

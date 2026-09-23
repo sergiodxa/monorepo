@@ -25,7 +25,7 @@ export const DEFAULT_EMAIL_LOCALE = "en";
  * resolves to {@link DEFAULT_EMAIL_LOCALE}, so `locale` names the language the copy was
  * produced in; a broken message is logged on the invocation's log and renders as its key.
  *
- * @example let { locale, t } = await emailTranslator();
+ * @example let { locale, t } = emailTranslator();
  */
 export const emailTranslator = createTranslator({
 	resources: { en },

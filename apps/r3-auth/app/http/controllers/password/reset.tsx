@@ -239,7 +239,7 @@ export default createController(routes.password.reset, {
 				new PasswordChangedEmail({
 					email: subject.email_address,
 					locale: DEFAULT_EMAIL_LOCALE,
-					t: (await emailTranslator(DEFAULT_EMAIL_LOCALE)).t,
+					t: emailTranslator(DEFAULT_EMAIL_LOCALE).t,
 				}),
 			);
 

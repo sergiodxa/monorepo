@@ -54,7 +54,7 @@ export async function notifyNewSignIn(
 				deviceType: ua.deviceType,
 				ip: getClientIP(ctx.request),
 				locale: DEFAULT_EMAIL_LOCALE,
-				t: (await emailTranslator(DEFAULT_EMAIL_LOCALE)).t,
+				t: emailTranslator(DEFAULT_EMAIL_LOCALE).t,
 			}),
 		);
 

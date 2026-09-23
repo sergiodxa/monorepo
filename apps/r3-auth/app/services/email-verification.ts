@@ -175,7 +175,7 @@ export async function sendVerificationEmail(
 				url: verificationUrl(token),
 				expiresInMinutes: VERIFICATION_TTL_MINUTES,
 				locale: DEFAULT_EMAIL_LOCALE,
-				t: (await emailTranslator(DEFAULT_EMAIL_LOCALE)).t,
+				t: emailTranslator(DEFAULT_EMAIL_LOCALE).t,
 			}),
 		);
 

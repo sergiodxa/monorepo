@@ -17,7 +17,7 @@ import { NewSignInEmail } from "~/app/emails/new-sign-in";
 
 /** Builds the notice for one device class, with everything else held fixed. */
 async function renderFor(deviceType: DeviceType, ip: string | null): Promise<string> {
-	let { locale, t } = await emailTranslator();
+	let { locale, t } = emailTranslator();
 
 	let email = new NewSignInEmail({
 		email: "jane@example.com",
