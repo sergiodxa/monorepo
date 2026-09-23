@@ -1,8 +1,8 @@
 /**
  * Unit tests for the `verifyDomainOwnership` job: a missing or already-verified domain is
  * a silent no-op, a matching DNS-over-HTTPS TXT record marks the domain verified, a miss
- * leaves it pending, and a lookup failure is swallowed (the next pending-domains sweep
- * retries it).
+ * leaves it pending, and a lookup failure — network, HTTP or DNS status — is logged without
+ * reporting the domain unverified (the next pending-domains sweep retries it).
  * The DNS-over-HTTPS resolver is served by MSW, so a lookup the job should skip has no
  * route to the network at all.
  *
@@ -39,12 +39,15 @@ beforeEach(() => {
 	lookups = [];
 });
 
-/** Serves the resolver a DNS-JSON body carrying the given TXT record `Answer`s. */
+/** Serves the resolver a `NOERROR` DNS-JSON body carrying the given TXT record `Answer`s. */
 function serveDnsAnswers(answers: Array<{ data: string }> | undefined) {
 	server.use(
 		http.get(DNS_URL, ({ request }) => {
 			lookups.push({ url: request.url, accept: request.headers.get("Accept") });
-			let body: { Answer?: Array<{ name: string; type: number; TTL: number; data: string }> } = {};
+			let body: {
+				Status: number;
+				Answer?: Array<{ name: string; type: number; TTL: number; data: string }>;
+			} = { Status: 0 };
 			if (answers) {
 				body.Answer = answers.map((answer) => ({
 					name: "_ping-verification.example.com",
@@ -161,5 +164,51 @@ describe("verifyDomainOwnership", () => {
 		expect(updated?.verified_at).toBeNull();
 
 		expect(noteOf(record, "domains.lookup_failed")?.error).toBe("Failed to fetch");
+	});
+
+	test("marks the domain verified when the TXT record arrives as several character-strings", async () => {
+		let domain = await TeamDomain.create(db, "team-1", "example.com");
+		let token = `ping_${domain.id}`;
+		serveDnsAnswers([{ data: `"${token.slice(0, 7)}" "${token.slice(7)}"` }]);
+
+		let record = await run(domain.id);
+
+		let updated = await TeamDomain.findById(db, domain.id);
+		expect(updated?.verified_at).not.toBeNull();
+		expect(record).toMatchObject({ "domain.verified": true });
+	});
+
+	test("leaves the domain pending when the verification name does not exist", async () => {
+		let domain = await TeamDomain.create(db, "team-1", "example.com");
+		server.use(http.get(DNS_URL, () => HttpResponse.json({ Status: 3 })));
+
+		let record = await run(domain.id);
+
+		expect(record).toMatchObject({ "domain.verified": false });
+		expect(noteOf(record, "domains.lookup_failed")).toBeUndefined();
+	});
+
+	test("reports a SERVFAIL as a failed lookup, not as an unverified domain", async () => {
+		let domain = await TeamDomain.create(db, "team-1", "example.com");
+		server.use(http.get(DNS_URL, () => HttpResponse.json({ Status: 2 })));
+
+		let record = await run(domain.id);
+
+		let updated = await TeamDomain.findById(db, domain.id);
+		expect(updated?.verified_at).toBeNull();
+		expect(record).not.toHaveProperty(["domain.verified"]);
+		expect(noteOf(record, "domains.lookup_failed")?.error).toBe("DNS query returned status code 2");
+	});
+
+	test("reports an HTTP error from the resolver as a failed lookup, not as an unverified domain", async () => {
+		let domain = await TeamDomain.create(db, "team-1", "example.com");
+		server.use(http.get(DNS_URL, () => HttpResponse.json({}, { status: 500 })));
+
+		let record = await run(domain.id);
+
+		let updated = await TeamDomain.findById(db, domain.id);
+		expect(updated?.verified_at).toBeNull();
+		expect(record).not.toHaveProperty(["domain.verified"]);
+		expect(noteOf(record, "domains.lookup_failed")?.error).toBe("DNS query failed with status 500");
 	});
 });
