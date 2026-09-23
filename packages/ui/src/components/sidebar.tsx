@@ -661,6 +661,13 @@ Sidebar.Header = function SidebarHeader(handle: Handle<Sidebar.HeaderProps>) {
 				{...rest}
 				data-slot="header"
 				mix={[
+					/*
+					 * The slot paints the rail's own background rather than letting it show
+					 * through, so a consumer that holds this row against the viewport keeps the
+					 * scrolling content behind it out of sight. Inheriting it means the row still
+					 * matches whichever surface hosts it — the docked rail or the drawer.
+					 */
+					bg("inherit"),
 					flex(),
 					bs("4rem"),
 					shrink(),
@@ -745,6 +752,7 @@ Sidebar.Footer = function SidebarFooter(handle: Handle<Sidebar.FooterProps>) {
 				{...rest}
 				data-slot="footer"
 				mix={[
+					bg("inherit"),
 					flex(),
 					shrink(),
 					items("center"),
