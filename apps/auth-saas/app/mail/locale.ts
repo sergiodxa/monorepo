@@ -21,7 +21,7 @@ export const DEFAULT_MAIL_LOCALE = "en";
  * owners does not rebuild the translator per message. A broken message is logged on
  * the invocation's log and renders as its key.
  *
- * @example let { t } = await mailTranslator();
+ * @example let { t } = mailTranslator();
  */
 export const mailTranslator = createTranslator({
 	resources: { en },

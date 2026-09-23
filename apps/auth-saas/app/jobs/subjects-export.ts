@@ -100,7 +100,7 @@ export default createJobHandler(jobs.subjectsExport, async (ctx) => {
 						(membership) => membership.role === "owner",
 					);
 
-					let { t } = await mailTranslator();
+					let { t } = mailTranslator();
 
 					for (let owner of owners) {
 						let described = await platformTenant.describeSubject({

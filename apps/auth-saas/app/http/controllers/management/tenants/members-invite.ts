@@ -98,7 +98,7 @@ export function createTenantMembersInviteAction(options: ManagementControllerOpt
 				expiresAt,
 			});
 
-			let { t } = await mailTranslator();
+			let { t } = mailTranslator();
 			let url = `https://dashboard.${env.PLATFORM_DOMAIN}/invitations/accept?token=${token}`;
 
 			await ctx.mail.send(

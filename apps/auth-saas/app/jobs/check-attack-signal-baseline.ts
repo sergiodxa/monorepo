@@ -84,7 +84,7 @@ export default createJobHandler(jobs.checkAttackSignalBaseline, async (ctx) => {
 			);
 			if (owners.length === 0) return;
 
-			let { t } = await mailTranslator();
+			let { t } = mailTranslator();
 			let sentToAny = false;
 
 			for (let owner of owners) {
