@@ -1,0 +1,73 @@
+name: Deploy sdxc
+
+# The documentation site is built from the packages themselves — every page's reference is
+# extracted from the source at build time — so it is only as current as its last deploy.
+# Publishing a release is what changes the packages, so that is what redeploys the site:
+# the daily release from `release.yml` lands, this runs, and the docs describe what was
+# just published rather than what the previous day's build happened to read.
+
+permissions:
+  contents: read
+
+env:
+  BUN_VERSION: 1.4.2
+
+defaults:
+  run:
+    shell: bash
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+# A deploy is never cancelled part-way: the previous one finishes and this waits, so the
+# worker is never replaced by a run that was interrupted mid-upload.
+concurrency:
+  group: deploy-sdxc
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      # Socket Firewall proxies the registry traffic of the install below and refuses any
+      # version Socket knows to be malware, which a lockfile cannot do on its own: a version
+      # is often flagged days after it was published and pinned. A block surfaces as a
+      # resolution failure from bun, and the firewall step logs the package and the reason.
+      - name: Setup Socket Firewall
+        uses: socketdev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
+        with:
+          mode: firewall-free
+
+      - name: Install dependencies
+        run: sfw bun install --frozen-lockfile
+
+      # The generated `Cloudflare.Env` is read by the worker's own source, so it is written
+      # before the build rather than taken from the repository.
+      - name: Generate framework types
+        run: |
+          cp apps/sdxc/.env.example apps/sdxc/.dev.vars
+          bun run --cwd apps/sdxc cf:typegen
+
+      # Extracts the catalogue from the packages and bundles the worker, in that order —
+      # which is what makes the deployed reference match the source this run checked out.
+      - name: Build
+        run: bun run --cwd apps/sdxc build
+
+      - name: Deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: bun run --cwd apps/sdxc cf:deploy
