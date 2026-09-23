@@ -1,7 +1,7 @@
 /**
- * Adapts the WAI-ARIA grid keyboard pattern onto a GridList's rows and
- * action cells: one roving focus position moves with the arrow and
- * Home/End keys, and Space/Shift/Ctrl drive selection through a
+ * Adapts the WAI-ARIA grid pattern onto a GridList's rows and action
+ * cells: one roving focus position moves with the arrow and Home/End keys
+ * or a click, and Space, Shift and a click drive selection through a
  * `SelectionModel` instance.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -161,9 +161,9 @@ function syncSelection(host: HTMLElement, model: SelectionModel): void {
 }
 
 /**
- * Adds ARIA grid keyboard navigation and selection to a GridList's rows and
- * action cells, driving a `SelectionModel` and mirroring its `"change"`
- * events back onto the rows as `aria-selected`.
+ * Adds ARIA grid keyboard and pointer navigation to a GridList's rows and
+ * action cells, driving a `SelectionModel` from both and mirroring its
+ * `"change"` events back onto the rows as `aria-selected`.
  *
  * @param model Behavior class instance owning the grid's selected keys.
  * @example
@@ -213,6 +213,26 @@ export const gridListKeys = createMixin<HTMLElement, [model: SelectionModel]>((h
 					if (position === null) return;
 
 					setRovingTabindex(rows, stopAt(rows, position));
+				}),
+				on<HTMLElement, "pointerdown">("pointerdown", (event) => {
+					/* A shift-click spans rows, so the grid keeps that gesture for selection. */
+					if (event.shiftKey) event.preventDefault();
+				}),
+				on<HTMLElement, "click">("click", (event) => {
+					if (hostNode === undefined) return;
+
+					let rows = queryRows(hostNode);
+					let position = locate(rows, event.target);
+					if (position === null) return;
+
+					focusElement(rows, stopAt(rows, position));
+
+					/* Selection belongs to the row, leaving an action cell's click to its own action. */
+					if (position.cellIndex !== null) return;
+
+					let key = resolveKey(model, rowKeyOf(rows[position.rowIndex]!));
+					if (event.shiftKey) model.selectRange(key);
+					else model.toggle(key);
 				}),
 				on<HTMLElement, "keydown">("keydown", (event) => {
 					if (hostNode === undefined) return;

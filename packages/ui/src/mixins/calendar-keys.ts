@@ -1,7 +1,7 @@
 /**
- * Keyboard navigation for a Calendar grid: moves day/week/month focus on a
- * `CalendarModel` from Arrow/Page/Home/End keys, then mirrors the model's
- * focused day back onto the grid as roving `tabindex` and DOM focus.
+ * Day navigation for a Calendar grid: the Arrow/Page/Home/End keys and a click
+ * on a day cell both move a `CalendarModel`'s focused day, which mirrors back
+ * onto the grid as roving `tabindex` and DOM focus.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,6 +10,8 @@
 import { createElement, createMixin, on } from "remix/ui";
 
 import type { CalendarModel } from "../behaviors/calendar-model.js";
+
+import { DISABLED_SELECTOR } from "../utils/disabled-selector.js";
 
 /**
  * Attribute every calendar day cell exposes its date on, in local
@@ -34,9 +36,27 @@ function toDateKey(date: Date): string {
 }
 
 /**
- * Adds keyboard navigation to a Calendar grid: each key delegates to the
- * matching `CalendarModel` method, and any `focusedDate` change — from a key
- * or another caller of the model — re-syncs roving `tabindex` and DOM focus.
+ * Reads a day cell's {@link CALENDAR_DAY_DATE_ATTRIBUTE} value back into the
+ * local-midnight `Date` a `CalendarModel` counts in, so a clicked cell lands
+ * on the same day the keyboard path moves between.
+ *
+ * @param key Attribute value in `YYYY-MM-DD` form, or `null` when absent.
+ * @returns The day named, or `null` when `key` is missing or malformed.
+ */
+function fromDateKey(key: string | null): Date | null {
+	if (key === null) return null;
+
+	let match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key);
+	if (match === null) return null;
+
+	let [, year, month, day] = match;
+	return new Date(Number(year), Number(month) - 1, Number(day));
+}
+
+/**
+ * Adds keyboard and pointer navigation to a Calendar grid: each key delegates
+ * to the matching `CalendarModel` method, a click focuses the day cell it
+ * lands on, and any `focusedDate` change re-syncs `tabindex` and DOM focus.
  *
  * @param model Behavior class instance owning the grid's focused day, visible
  * month, and range selection state.
@@ -83,6 +103,17 @@ export const calendarKeys = createMixin<HTMLElement, [model: CalendarModel]>((ha
 
 		return createElement(handle.element, {
 			mix: [
+				on<HTMLElement, "click">("click", (event) => {
+					if (!(event.target instanceof Element)) return;
+
+					let cell = event.target.closest<HTMLElement>(`[${CALENDAR_DAY_DATE_ATTRIBUTE}]`);
+					if (cell === null || cell.matches(DISABLED_SELECTOR)) return;
+
+					let date = fromDateKey(cell.getAttribute(CALENDAR_DAY_DATE_ATTRIBUTE));
+					if (date === null || model.isDisabled(date)) return;
+
+					model.focusDate(date);
+				}),
 				on<HTMLElement, "keydown">("keydown", (event) => {
 					switch (event.key) {
 						case "ArrowUp":
