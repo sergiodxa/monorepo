@@ -2,72 +2,67 @@
 
 Read JSDoc out of JavaScript and TypeScript source text into a JSON documentation model.
 
-## Overview
+## Installation
 
-A documentation site needs three things from a codebase: what each export is, what
-its signature looks like, and what its author wrote about it. This package produces
-all three as plain JSON, so a site renders documentation without knowing anything
-about compilers.
+```bash
+npm add @sdxc/jsdoc
+```
 
-It is a pure function of the text it is given. It never touches the file system,
-never follows an import, and never runs a type checker — the caller reads files,
-decides which ones belong in the documentation, and passes their contents in. That
-keeps it usable from a Worker, a build step, or a test, and makes the same input
-produce the same output every time.
-
-Because nothing is resolved across files, types are reported as the annotations
-their authors wrote (`Promise<Entry>`, not an expanded structural type), and a
-barrel's `export … from` lines arrive as `reExports` pointing at the modules the
-caller resolves next.
-
-Parsing runs on the TypeScript compiler's own parser, which is what lets one entry
-point cover `.ts`, `.tsx`, `.js`, `.jsx`, `.mts` and `.cts`.
+`extract()` reports failures as a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which installs alongside this package.
 
 ## Usage
 
-### Extract one module
+### Extract One Module
 
-```ts
-import { readFile } from "node:fs/promises";
-
+```typescript
 import { extract } from "@sdxc/jsdoc";
 import { isFailure } from "@sdxc/result";
 
-let source = await readFile("src/add.ts", "utf8");
-let result = extract(source, { path: "src/add.ts" });
+let source = `
+/** Adds two numbers. */
+export function add(a: number, b: number): number {
+	return a + b;
+}
+`;
 
+let result = extract(source, { path: "src/add.ts" });
 if (isFailure(result)) throw result.error;
 
 result.data.children[0]?.name; // "add"
 result.data.children[0]?.signatures[0]?.returns; // "number"
 ```
 
-### Build the document a site reads
+### Build The Document A Site Reads
 
-```ts
-import { writeFile } from "node:fs/promises";
+Extract every module a package ships, then assemble them into one `DocProject`.
 
+```typescript
 import type { DocModule } from "@sdxc/jsdoc";
 
-import { SCHEMA_VERSION } from "@sdxc/jsdoc";
+import { extract, SCHEMA_VERSION } from "@sdxc/jsdoc";
+import { isFailure } from "@sdxc/result";
+
+let files = new Map([
+	["src/index.ts", 'export { add } from "./add.js";'],
+	[
+		"src/add.ts",
+		"/** Adds two numbers. */\nexport function add(a: number, b: number) {\n\treturn a + b;\n}",
+	],
+]);
 
 let modules: DocModule[] = [];
-
-for (let path of ["src/index.ts", "src/add.ts"]) {
-	let result = extract(await readFile(path, "utf8"), { path });
+for (let [path, source] of files) {
+	let result = extract(source, { path });
 	if (isFailure(result)) throw result.error;
 	modules.push(result.data);
 }
 
-await writeFile(
-	"docs/api.json",
-	JSON.stringify({ schema: SCHEMA_VERSION, name: "math", version: "1.4.0", modules }, null, "\t"),
-);
+let project = { schema: SCHEMA_VERSION, name: "math", version: "1.4.0", modules };
 ```
 
-### Parse a comment on its own
+### Parse A Comment On Its Own
 
-```ts
+```typescript
 import { findTag, parseComment } from "@sdxc/jsdoc";
 
 let comment = parseComment("/** Adds. @param a - The addend. @returns The sum. */");
@@ -80,47 +75,30 @@ findTag(comment, "returns")?.text; // "The sum."
 
 ### `extract(source: string, options?: ExtractOptions): Result<DocModule, ExtractError>`
 
-Reads one file's source text into its documentation module: the header comment, the
-symbols it exports, and the exports it forwards to other modules.
+Reads one file's source text into its documentation module: the header comment, the symbols it exports, and the exports it forwards to other modules. It touches nothing outside the string it is given — no file system, no imports followed, no type checker — so the same text always yields the same document.
 
-**Parameters:**
+- `options.path`: Path the text came from, which selects the dialect from its extension (`.tsx` and `.jsx` enable JSX) and is recorded on every node's `source` (default `"module.ts"`)
+- `options.id`: Prefix for every node id, as `<id>#<name>` (default: `path` with its extension removed)
+- `options.includeInternal`: Keep symbols tagged `@internal`, dropped by default so a published site shows only what its readers can use (default `false`)
 
-- `source`: Contents of one JavaScript or TypeScript file
-- `options.path`: Path the text came from, which selects the dialect from its
-  extension and is recorded on every node's `source` (default `"module.ts"`)
-- `options.id`: Prefix for every node id, as `<id>#<name>` (default: `path` without
-  its extension)
-- `options.includeInternal`: Keep symbols tagged `@internal`, dropped by default
-  (default `false`)
+Returns a `DocModule`, or an `ExtractError` listing every syntax error with its position.
 
-**Returns:**
-
-- A `DocModule`, or an `ExtractError` listing every syntax error with its position
-
-**Example:**
-
-```ts
+```typescript
 let result = extract(source, { path: "src/add.ts", includeInternal: true });
 ```
 
 ### `parseComment(raw: string): DocComment`
 
-Splits one JSDoc block into the prose before its first block tag and the tags after
-it. Accepts the comment with or without its markers, collapses aliases (`@arg` and
-`@argument` become `param`, `@return` becomes `returns`), and keeps fenced code
-inside an `@example` intact even when that code contains tags of its own.
+Splits one JSDoc block into the prose before its first block tag and the tags after it. Accepts the comment with or without its `/**`/`*/` markers, collapses aliases (`@arg` and `@argument` become `param`, `@return` becomes `returns`), and keeps fenced code inside an `@example` intact even when that code contains tags of its own.
 
-**Example:**
-
-```ts
+```typescript
 parseComment("/** @param {string} name - The subject. */").tags;
 // [{ tag: "param", name: "name", type: "string", text: "The subject." }]
 ```
 
 ### `findTag(comment: DocComment | null, tag: string): DocTag | null`
 
-First tag with the given canonical name, or `null`. Takes `null` for a symbol with
-no comment, so a renderer asks the same way everywhere.
+First tag with the given canonical name, or `null`. Takes `null` for a symbol with no comment, so a renderer asks the same way everywhere.
 
 ### `findTags(comment: DocComment | null, tag: string): DocTag[]`
 
@@ -128,35 +106,35 @@ Every tag with the given canonical name, in source order.
 
 ### `inlineLinks(text: string): DocLink[]`
 
-Every `{@link}`, `{@linkcode}` and `{@linkplain}` in a description or tag text, each
-with the raw text it occupies and the offset it starts at, so a renderer substitutes
-anchors without rescanning the markdown.
+Every `{@link}`, `{@linkcode}` and `{@linkplain}` in a description or tag text, each with the raw text it occupies and the offset it starts at, so a renderer substitutes anchors without rescanning the markdown.
 
-```ts
+```typescript
 inlineLinks("See {@link parseComment|the parser}.");
 // [{ raw: "{@link parseComment|the parser}", target: "parseComment", text: "the parser", index: 4 }]
 ```
 
+### `SCHEMA_VERSION: number`
+
+The number to write into `DocProject.schema`. It rises whenever a field changes meaning or disappears, so a site recognizes a document written by an older version of this package.
+
 ### `ExtractError`
 
-The failure `extract` reports for text that will not parse. Carries `path` and a
-`diagnostics` array of `{ message, line, column }`, so a caller names the file and
-the line instead of reporting that documentation generation failed.
+The failure `extract` reports for text that will not parse, delivered inside a `Failure`. Its message leads with the first syntax error, since a later one is usually a consequence of it.
 
-### `SCHEMA_VERSION`
-
-The number to write into `DocProject.schema`. It rises whenever a field changes
-meaning or disappears, so a site recognizes a document written by an older
-extractor.
+- `path`: `string` - Path the caller passed for the source text
+- `diagnostics`: `DocDiagnostic[]` - Every syntax error found, in source order, each `{ message, line, column }` with 1-based positions
 
 ### Types
 
+#### `ExtractOptions`
+
+Options accepted by `extract()`, documented above alongside the function.
+
 #### `DocProject`
 
-The whole document a site reads. The caller assembles it from the modules it
-extracted, in the order it wants them presented.
+The document a site reads. The caller assembles it from the modules it extracted, in whatever order it wants them presented.
 
-```ts
+```typescript
 interface DocProject {
 	schema: number;
 	name: string;
@@ -169,7 +147,7 @@ interface DocProject {
 
 One extracted file.
 
-```ts
+```typescript
 interface DocModule {
 	id: string;
 	path: string;
@@ -181,10 +159,9 @@ interface DocModule {
 
 #### `DocNode`
 
-One documented symbol. Members of classes, interfaces, enums and namespaces are the
-same shape under `children`, so one recursive renderer covers the whole tree.
+One documented symbol. Members of classes, interfaces, enums and namespaces are the same shape under `children`, so one recursive renderer covers the whole tree.
 
-```ts
+```typescript
 interface DocNode {
 	id: string;
 	name: string;
@@ -201,13 +178,11 @@ interface DocNode {
 }
 ```
 
-`DocKind` is one of `function`, `class`, `interface`, `type-alias`, `variable`,
-`enum`, `enum-member`, `namespace`, `property`, `method`, `accessor` or
-`constructor`.
+`DocKind` is one of `function`, `class`, `interface`, `type-alias`, `variable`, `enum`, `enum-member`, `namespace`, `property`, `method`, `accessor` or `constructor`.
 
 #### `DocComment` and `DocTag`
 
-```ts
+```typescript
 interface DocComment {
 	description: string;
 	tags: DocTag[];
@@ -223,11 +198,9 @@ interface DocTag {
 
 #### `DocSignature`, `DocParameter` and `DocTypeParameter`
 
-A symbol with one signature documents itself, so `DocSignature.comment` is filled in
-only for an overloaded symbol, where each signature keeps the comment written above
-it.
+A symbol with one signature documents itself, so `DocSignature.comment` is filled in only for an overloaded symbol, where each signature keeps the comment written above it.
 
-```ts
+```typescript
 interface DocSignature {
 	comment: DocComment | null;
 	typeParameters: DocTypeParameter[];
@@ -247,10 +220,9 @@ interface DocParameter {
 
 #### `DocReExport`
 
-An export forwarded from another module, for the caller to resolve against the
-modules it holds.
+An export forwarded from another module, for the caller to resolve against the modules it holds. `kind` is `named` for `export { a } from`, `all` for `export *`, or `namespace` for `export * as ns`.
 
-```ts
+```typescript
 interface DocReExport {
 	kind: "named" | "all" | "namespace";
 	module: string;
@@ -260,27 +232,22 @@ interface DocReExport {
 }
 ```
 
-#### `DocFlags`, `DocSource` and `DocLink`
+#### `DocFlags`, `DocSource`, `DocLink` and `DocDiagnostic`
 
-`DocFlags` carries `default`, `optional`, `readonly`, `static`, `abstract`, `async`,
-`deprecated`, `internal` and `visibility`, always present so a template reads
-`flags.deprecated` without guarding. `DocSource` is `{ path, line, column }` with
-1-based positions. `DocLink` is `{ raw, target, text, index }`.
+`DocFlags` carries `default`, `optional`, `readonly`, `static`, `abstract`, `async`, `deprecated`, `internal` and `visibility`, always present so a template reads `flags.deprecated` without guarding. `DocSource` is `{ path, line, column }` with 1-based positions. `DocLink` is `{ raw, target, text, index }`. `DocDiagnostic` is `{ message, line, column }`.
 
-## Pattern: Resolving a barrel
+## Pattern: Resolving A Barrel
 
-An `index.ts` that only re-exports produces no symbols of its own. Extract every
-module the package ships, then follow `reExports` to decide what each entry point
-publishes and under which name.
+An `index.ts` that only re-exports produces no symbols of its own. Extract every module a package ships, then follow `reExports` to decide what each entry point publishes and under which name.
 
-```ts
-let byPath = new Map(modules.map((module) => [module.path, module]));
+```typescript
+import type { DocModule, DocNode } from "@sdxc/jsdoc";
 
-function published(module: DocModule): DocNode[] {
+function published(byPath: Map<string, DocModule>, module: DocModule): DocNode[] {
 	return module.reExports.flatMap((forwarded) => {
 		let target = byPath.get(resolve(module.path, forwarded.module));
 		if (!target) return [];
-		if (forwarded.kind === "all") return published(target);
+		if (forwarded.kind === "all") return published(byPath, target);
 		return target.children
 			.filter((node) => node.name === forwarded.name)
 			.map((node) => ({ ...node, name: forwarded.exported ?? node.name }));
@@ -288,15 +255,20 @@ function published(module: DocModule): DocNode[] {
 }
 ```
 
-## Pattern: Linking symbols to each other
+## Pattern: Linking Symbols To Each Other
 
-`{@link}` targets are written as names, not ids. Index the tree by name once, then
-turn each link into an href the site can route to.
+`{@link}` targets are written as names, not ids. Index the tree by name once, then turn each link into an href the site can route to.
 
-```ts
-let ids = new Map(modules.flatMap((module) => module.children.map((node) => [node.name, node.id])));
+```typescript
+import type { DocModule } from "@sdxc/jsdoc";
 
-function render(text: string): string {
+import { inlineLinks } from "@sdxc/jsdoc";
+
+function linkify(modules: DocModule[], text: string): string {
+	let ids = new Map(
+		modules.flatMap((module) => module.children.map((node) => [node.name, node.id])),
+	);
+
 	let out = text;
 	for (let link of inlineLinks(text).reverse()) {
 		let id = ids.get(link.target);
@@ -308,15 +280,15 @@ function render(text: string): string {
 }
 ```
 
-Walking the links in reverse keeps every earlier offset valid while the text is
-rewritten.
+Walking the links in reverse keeps every earlier offset valid while the text is rewritten.
 
-## Pattern: Grouping a page by kind
+## Pattern: Grouping A Page By Kind
 
-`DocNode.kind` is the only thing a page needs to lay symbols out, and the tree is
-uniform, so the same grouping works for a module and for the members of a class.
+`DocNode.kind` is the only thing a page needs to lay symbols out, and the tree is uniform, so the same grouping works for a module and for the members of a class.
 
-```ts
+```typescript
+import type { DocKind, DocNode } from "@sdxc/jsdoc";
+
 function byKind(nodes: DocNode[]): Map<DocKind, DocNode[]> {
 	let groups = new Map<DocKind, DocNode[]>();
 	for (let node of nodes) groups.set(node.kind, [...(groups.get(node.kind) ?? []), node]);
@@ -324,22 +296,28 @@ function byKind(nodes: DocNode[]): Map<DocKind, DocNode[]> {
 }
 ```
 
-## Related Packages
+## Versioning
 
-- [`@sdxc/result`](/packages/result) - Result type the extractor reports failures with
-- [`@sdxc/markdown`](/packages/markdown) - Renders the markdown a description is written in
-- [`@sdxc/highlight`](/packages/highlight) - Paints the code inside an `@example`
+Releases are dated rather than semantic. A version is the UTC date it was published, written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one release goes out per day.
 
-## Tips
+Those numbers say when, not what: a later date means a later release and carries no compatibility promise. Any release may change or remove an export.
 
-1. **Pass a real path** - The extension picks the dialect, so `.tsx` source parsed as
-   `module.ts` fails on its first JSX element.
-2. **Name ids after entry points** - Passing `id` decouples a symbol's id from where
-   its file happens to live, which keeps deep links working when sources move.
-3. **Write annotations you want published** - Types come from what the author wrote,
-   so an exported function with an inferred return type reports `null` rather than a
-   computed type.
-4. **Tag implementation details `@internal`** - They are dropped by default, along
-   with everything nested under them.
-5. **Extract every file, then decide** - Resolution across modules is the caller's,
-   so a site that follows `reExports` needs the target modules already in hand.
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/jsdoc": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)

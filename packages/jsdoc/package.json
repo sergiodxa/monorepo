@@ -1,7 +1,6 @@
 {
 	"name": "@sdxc/jsdoc",
 	"version": "0.0.1",
-	"private": true,
 	"description": "Read JSDoc out of JavaScript and TypeScript source text into a JSON documentation model",
 	"license": "MIT",
 	"type": "module",
