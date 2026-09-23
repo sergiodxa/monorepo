@@ -15,18 +15,17 @@ import { describe, expect, test } from "vitest";
 import { Tree } from "./tree.js";
 
 describe("Tree.ExpandButton", () => {
-	test('types itself "button", so its command survives inside a form', async () => {
-		let html = await renderToString(<Tree.ExpandButton aria-label="Expand" />);
+	test("renders as decoration, so the summary it sits in keeps the activation", async () => {
+		let html = await renderToString(<Tree.ExpandButton />);
 
-		expect(html).toContain('type="button"');
+		/* A button here would take the click for itself and leave the branch closed. */
+		expect(html).not.toContain("<button");
+		expect(html).toContain("<span");
 	});
 
-	test("writes type before the command attributes, which is where the platform reads it", async () => {
-		let html = await renderToString(
-			<Tree.ExpandButton aria-label="Expand" commandfor="src-folder" command="toggle" />,
-		);
+	test("is hidden from the accessibility tree, which the row already speaks for", async () => {
+		let html = await renderToString(<Tree.ExpandButton />);
 
-		expect(html.indexOf('type="button"')).toBeLessThan(html.indexOf("commandfor="));
-		expect(html.indexOf('type="button"')).toBeLessThan(html.indexOf("command="));
+		expect(html).toContain('aria-hidden="true"');
 	});
 });

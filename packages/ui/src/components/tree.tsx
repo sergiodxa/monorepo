@@ -60,6 +60,13 @@ const DEFAULT_DEPTH = 0;
 const DEFAULT_EXPAND_BUTTON_SLOT = "expand-button";
 
 /**
+ * Inline space a row with no {@link Tree.ExpandButton} keeps where the chevron would
+ * sit — the chevron's own width plus the row's gap — so a leaf's icon lines up under
+ * the icons of the branches around it instead of under their chevrons.
+ */
+const LEAF_GUTTER = "calc(var(--ui-spacing, 0.25rem) * 7)";
+
+/**
  * Prop and context types for {@link Tree} and its compound parts.
  */
 export namespace Tree {
@@ -104,14 +111,13 @@ export namespace Tree {
 	export interface LoadMoreItemProps extends TagProps<"div"> {}
 
 	/**
-	 * Props accepted by {@link Tree.ExpandButton}: every native `<button>`
-	 * attribute except `type` (fixed to `"button"` so it never submits an
-	 * enclosing form), plus a required `aria-label` for the icon-only control.
+	 * Props accepted by {@link Tree.ExpandButton}: every native `<span>` attribute.
+	 *
+	 * No accessible name is asked for, because the chevron names nothing: the row it
+	 * sits in is a `<summary>`, which announces the branch and its expanded state on
+	 * its own, and a second name beside it would be read out twice.
 	 */
-	export interface ExpandButtonProps extends Omit<TagProps<"button">, "type"> {
-		/** Accessible name for the icon-only control, e.g. "Expand" or "Collapse". */
-		"aria-label": string;
-	}
+	export interface ExpandButtonProps extends TagProps<"span"> {}
 }
 
 /**
@@ -228,14 +234,18 @@ function TreeItem(handle: Handle<Tree.ItemProps, Tree.ItemContext>) {
 				mix={[
 					attrs({ role: DEFAULT_ITEM_ROLE }),
 					interpolateSize(),
-					detailsContent([clip(), bs(0)]),
 					detailsContent([
+						clip(),
 						raw({
 							transitionProperty: "block-size, content-visibility",
 							transitionBehavior: "allow-discrete",
 						}),
 						transitionDuration("200ms"),
 					]),
+					// Collapsed and expanded sizes are written under selectors that never
+					// match at once, so the reveal holds whichever order the cascade puts
+					// the pair in.
+					when("&:not([open])::details-content", bs(0)),
 					when("&[open]::details-content", bs("auto")),
 					when(`&[open] > summary [data-slot="${DEFAULT_EXPAND_BUTTON_SLOT}"]`, rotate(90)),
 					media("(prefers-reduced-motion: reduce)", detailsContent(transitionDuration("0s"))),
@@ -285,9 +295,20 @@ Tree.ItemContent = function TreeItemContent(handle: Handle<Tree.ItemContentProps
 					fg("neutral.emphasis"),
 					cursor("default"),
 					listStyle(),
-					raw({
-						paddingInlineStart: `calc(0.5rem + ${depth} * var(--ui-tree-indent, 1.25rem))`,
-					}),
+					// The two indents are written under selectors that never match at once, so
+					// a row keeps its own whichever order the cascade puts the pair in.
+					when(
+						`&:has([data-slot="${DEFAULT_EXPAND_BUTTON_SLOT}"])`,
+						raw({
+							paddingInlineStart: `calc(0.5rem + ${depth} * var(--ui-tree-indent, 1.25rem))`,
+						}),
+					),
+					when(
+						`&:not(:has([data-slot="${DEFAULT_EXPAND_BUTTON_SLOT}"]))`,
+						raw({
+							paddingInlineStart: `calc(0.5rem + ${depth} * var(--ui-tree-indent, 1.25rem) + ${LEAF_GUTTER})`,
+						}),
+					),
 					outline("none"),
 					text("sm"),
 					when("&::-webkit-details-marker", hidden()),
@@ -322,9 +343,12 @@ Tree.LoadMoreItem = SentinelRow;
 /**
  * Renders the chevron a node's row shows for a subtree, rotated 90 degrees
  * while the enclosing {@link Tree.Item}'s `<details>` carries `[open]`.
- * `type="button"` precedes the consumer's attributes so a `command`/`commandfor` invoker still runs inside a `<form>`.
  *
- * @param handle Runtime handle carrying the host `<button>`'s props.
+ * It is decoration, not a control: the row it sits in is a `<summary>`, which is already
+ * the thing that opens the branch, and a button nested inside one takes the activation
+ * for itself — the chevron would be the one place on the row that did not expand it.
+ *
+ * @param handle Runtime handle carrying the host `<span>`'s props.
  * @returns The render function producing the chevron's markup.
  * @example
  * <Tree.ItemContent>
@@ -337,11 +361,10 @@ Tree.ExpandButton = function TreeExpandButton(handle: Handle<Tree.ExpandButtonPr
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<button
-				type="button"
+			<span
 				{...rest}
 				mix={[
-					attrs({ "data-slot": DEFAULT_EXPAND_BUTTON_SLOT }),
+					attrs({ "data-slot": DEFAULT_EXPAND_BUTTON_SLOT, "aria-hidden": "true" }),
 					center(),
 					is(5),
 					bs(5),
@@ -350,13 +373,11 @@ Tree.ExpandButton = function TreeExpandButton(handle: Handle<Tree.ExpandButtonPr
 					transition("transform, background-color"),
 					shrink(),
 					media("(prefers-reduced-motion: reduce)", transitionDuration("0s")),
-					when("&:hover", bg("neutral.bg-tint-pressed")),
-					when("&:focus-visible", outline("brand.ring")),
 					mix,
 				]}
 			>
 				{children ?? <ChevronRightIcon size={16} />}
-			</button>
+			</span>
 		);
 	};
 };

@@ -2,8 +2,9 @@
  * Adapts the WAI-ARIA tree keyboard pattern onto a Tree's rows: a roving
  * focus position moves between visible rows, arrow keys expand, collapse, or
  * step into and out of a subtree, and typed text matches labels, with every
- * selection change delegated to a shared `SelectionModel`. Each row still
- * renders in document order behind a disclosure control, staying expandable.
+ * selection change delegated to a shared `SelectionModel`. Expanding or
+ * collapsing a branch writes its `aria-expanded` and opens or closes the
+ * `<details>` revealing it, so a row's two halves say the same thing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,6 +25,12 @@ export const TREE_ITEM_ATTRIBUTE = "data-tree-item";
 
 /** Selector matching a row excluded from keyboard navigation and selection. */
 const DISABLED_SELECTOR = '[aria-disabled="true"]';
+
+/** Selector matching the row's own disclosure label, which its `<details>` hangs from. */
+const SUMMARY_SELECTOR = "summary";
+
+/** Selector matching the disclosure whose `[open]` reveals a row's subtree. */
+const DISCLOSURE_SELECTOR = "details";
 
 /** Idle time after the last keystroke before the typeahead buffer resets. */
 const TYPEAHEAD_RESET_MS = 500;
@@ -77,7 +84,7 @@ interface TreeRow {
 	parent: TreeRow | null;
 	/** `true` when the next row in document order is nested one level deeper. */
 	hasChildren: boolean;
-	/** Current `aria-expanded` value; meaningless when {@link hasChildren} is `false`. */
+	/** Whether the branch is revealed right now; meaningless when {@link hasChildren} is `false`. */
 	expanded: boolean;
 	/** Mirrors `aria-disabled`; excluded from keyboard navigation and selection regardless of {@link visible}. */
 	disabled: boolean;
@@ -86,9 +93,40 @@ interface TreeRow {
 }
 
 /**
+ * The `<details>` whose `[open]` reveals `row`'s subtree, found through the
+ * row's own `<summary>` so the match is the branch the row labels; `null` for
+ * a row whose markup discloses its subtree some other way.
+ */
+function disclosureFor(row: HTMLElement): HTMLDetailsElement | null {
+	let summary = row.closest<HTMLElement>(SUMMARY_SELECTOR);
+	return summary?.closest<HTMLDetailsElement>(DISCLOSURE_SELECTOR) ?? null;
+}
+
+/**
+ * Reads whether `row`'s branch is expanded, answering from the `<details>`
+ * revealing its subtree wherever the row sits in one, so a press straight on
+ * the disclosure is the state the next keystroke moves from.
+ */
+function isTreeItemExpanded(row: HTMLElement): boolean {
+	return disclosureFor(row)?.open ?? row.getAttribute("aria-expanded") === "true";
+}
+
+/**
+ * Expands or collapses `row`'s branch across both halves of the state it
+ * carries: the `aria-expanded` assistive technology announces, and the
+ * `[open]` a surrounding `<details>` reveals the subtree from.
+ */
+function setTreeItemExpanded(row: HTMLElement, expanded: boolean): void {
+	row.setAttribute("aria-expanded", expanded ? "true" : "false");
+
+	let disclosure = disclosureFor(row);
+	if (disclosure) disclosure.open = expanded;
+}
+
+/**
  * Reads rows beneath `host` carrying {@link TREE_ITEM_ATTRIBUTE} into a flat
  * {@link TreeRow} list, deriving level, parent, children, and visibility from
- * `aria-level`/`aria-expanded` alone, via one level-ordered stack pass so no row re-scans its ancestors.
+ * `aria-level` and each row's own disclosure state, via one level-ordered stack pass so no row re-scans its ancestors.
  */
 function collectRows(host: HTMLElement): TreeRow[] {
 	let elements = Array.from(host.querySelectorAll<HTMLElement>(`[${TREE_ITEM_ATTRIBUTE}]`));
@@ -109,7 +147,7 @@ function collectRows(host: HTMLElement): TreeRow[] {
 			level,
 			parent,
 			hasChildren: nextLevel > level,
-			expanded: element.getAttribute("aria-expanded") === "true",
+			expanded: isTreeItemExpanded(element),
 			disabled: element.matches(DISABLED_SELECTOR),
 			visible: parent === null || (parent.visible && parent.expanded),
 		};
@@ -234,6 +272,25 @@ export const treeKeys = createMixin<HTMLElement, [model: SelectionModel]>((handl
 						);
 					}
 				}),
+				on<HTMLElement, "toggle">(
+					"toggle",
+					(event) => {
+						if (!hostNode) return;
+
+						let disclosure = event.target;
+						if (!(disclosure instanceof HTMLDetailsElement)) return;
+
+						let row = disclosure.querySelector<HTMLElement>(
+							`:scope > ${SUMMARY_SELECTOR}[${TREE_ITEM_ATTRIBUTE}][aria-expanded]`,
+						);
+						if (!row) return;
+
+						row.setAttribute("aria-expanded", disclosure.open ? "true" : "false");
+						refreshKeys(hostNode, model);
+					},
+					/* A `toggle` event stays on the `<details>` it fires at, so the host hears it on the way down. */
+					true,
+				),
 				on<HTMLElement, "keydown">("keydown", (event) => {
 					if (!hostNode) return;
 
@@ -268,7 +325,7 @@ export const treeKeys = createMixin<HTMLElement, [model: SelectionModel]>((handl
 							event.preventDefault();
 
 							if (current.hasChildren && !current.expanded) {
-								current.element.setAttribute("aria-expanded", "true");
+								setTreeItemExpanded(current.element, true);
 								refreshKeys(hostNode!, model);
 								return;
 							}
@@ -283,7 +340,7 @@ export const treeKeys = createMixin<HTMLElement, [model: SelectionModel]>((handl
 							event.preventDefault();
 
 							if (current.hasChildren && current.expanded) {
-								current.element.setAttribute("aria-expanded", "false");
+								setTreeItemExpanded(current.element, false);
 								refreshKeys(hostNode!, model);
 								return;
 							}
