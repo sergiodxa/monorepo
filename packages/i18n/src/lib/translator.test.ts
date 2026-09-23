@@ -1,9 +1,8 @@
 /**
- * Covers the request-less translator factory: fallback defaults, resolving a
- * language absent from the caller's resources, the reported locale matching
- * where copy was produced, per-language instance caching (the unsupported
- * language sharing the fallback's instance), cache ownership per translator,
- * and pass-through of the caller's i18next options.
+ * Covers the request-less translator factory: fallback defaults, resolving a language absent
+ * from the caller's resources, the reported locale matching where copy was produced,
+ * per-language caching (the unsupported language sharing the fallback's), cache ownership per
+ * translator, and error reporting.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,19 +14,19 @@ import { createTranslator } from "./translator.js";
 
 /** Bundles for three languages, with one key present in every one of them. */
 const RESOURCES = {
-	en: { translation: { hello: "Hello", name: "Hi {{name}}" } },
-	es: { translation: { hello: "Hola", name: "Hola {{name}}" } },
-	fr: { translation: { hello: "Bonjour" } },
+	en: { hello: "Hello", name: "Hi {$name}" },
+	es: { hello: "Hola", name: "Hola {$name}" },
+	fr: { hello: "Bonjour" },
 };
 
 const SUPPORTED_LANGUAGES = ["en", "es", "fr"];
 
-function makeTranslator(i18next?: { interpolation: { escapeValue: boolean } }) {
+function makeTranslator(onError?: (error: Error, key: string) => void) {
 	return createTranslator({
 		resources: RESOURCES,
 		supportedLanguages: SUPPORTED_LANGUAGES,
 		fallbackLanguage: "en",
-		i18next,
+		onError,
 	});
 }
 
@@ -40,9 +39,10 @@ describe("createTranslator", () => {
 	});
 
 	test("translates through a supported language and reports it", async () => {
-		let { locale, t } = await makeTranslator()("es");
+		let { locale, t, intl } = await makeTranslator()("es");
 
 		expect(locale).toBe("es");
+		expect(intl.locale).toBe("es");
 		expect(t("hello")).toBe("Hola");
 	});
 
@@ -61,54 +61,34 @@ describe("createTranslator", () => {
 		expect(t("name", { name: "Ada" })).toBe("Hi Ada");
 	});
 
-	test("reuses one instance per language instead of initializing again", async () => {
+	test("reuses one translation per language", async () => {
 		let translate = makeTranslator();
 
 		let first = await translate("es");
 		let second = await translate("es");
 
-		expect(second.i18n).toBe(first.i18n);
+		expect(second.intl).toBe(first.intl);
 		expect(second.t).toBe(first.t);
 	});
 
-	test("shares the fallback's instance with every unsupported language", async () => {
+	test("shares the fallback's translation with every unsupported language", async () => {
 		let translate = makeTranslator();
 
-		let fallback = await translate();
-		let unsupported = await translate("xx");
-
-		expect(unsupported.i18n).toBe(fallback.i18n);
-	});
-
-	test("builds a separate instance per language", async () => {
-		let translate = makeTranslator();
-
-		let english = await translate("en");
-		let spanish = await translate("es");
-
-		expect(spanish.i18n).not.toBe(english.i18n);
-		expect(english.i18n.language).toBe("en");
-		expect(spanish.i18n.language).toBe("es");
+		expect((await translate("xx")).intl).toBe((await translate()).intl);
 	});
 
 	test("keeps each translator's cache to itself", async () => {
 		let first = await makeTranslator()("es");
 		let second = await makeTranslator()("es");
 
-		expect(second.i18n).not.toBe(first.i18n);
+		expect(second.intl).not.toBe(first.intl);
 	});
 
-	test("exposes the instance every supported language can be translated through", async () => {
-		let { i18n } = await makeTranslator()("es");
+	test("reports message errors through onError", async () => {
+		let keys: string[] = [];
+		let { t } = await makeTranslator((_, key) => keys.push(key))("en");
 
-		expect(i18n.getFixedT("fr")("hello")).toBe("Bonjour");
-	});
-
-	test("passes the caller's i18next options through to every instance", async () => {
-		let escaping = await makeTranslator({ interpolation: { escapeValue: true } })("en");
-		let raw = await makeTranslator({ interpolation: { escapeValue: false } })("en");
-
-		expect(escaping.t("name", { name: "A&B" })).toBe("Hi A&amp;B");
-		expect(raw.t("name", { name: "A&B" })).toBe("Hi A&B");
+		expect(t("name")).toBe("Hi {$name}");
+		expect(keys).toEqual(["name"]);
 	});
 });

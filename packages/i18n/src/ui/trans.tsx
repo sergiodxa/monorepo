@@ -1,41 +1,46 @@
 /**
- * Renders an i18next translation containing `<tagName>...</tagName>` markers
- * as a `RemixNode` tree, splicing in the `RemixElement` from `components`
- * whose key matches each tag's name and keeping that tag's own text/nesting
- * as the spliced element's children. Plain `{{variable}}` interpolation
- * happens through `i18n.t()` itself, the same as calling it directly.
+ * Renders a MessageFormat 2 message containing markup (`{#link}…{/link}`, `{#br/}`) as a
+ * `RemixNode` tree, splicing in the `components` element whose key matches each markup name,
+ * with the text between an open and its close as that element's children.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { i18n as I18n, TOptions } from "i18next";
-import type { Handle, RemixElement } from "remix/ui";
+import type { MessagePart } from "@sdxc/messageformat";
+import type { Handle, RemixElement, RemixNode } from "remix/ui";
+
+import { createElement } from "remix/ui";
+
+import type { I18n } from "../lib/i18n.js";
+
+import { partText } from "../lib/i18n.js";
 
 import { intl } from "./intl-provider.js";
-import { parseTrans } from "./lib/parse-trans.js";
 
 export namespace Trans {
 	export interface Props {
 		/**
-		 * i18next instance to translate through. Defaults to the nearest ancestor
-		 * `IntlProvider`'s instance (via `intl`); pass it explicitly to translate
-		 * through a different instance, e.g. a namespace-scoped one a parent holds.
+		 * Translator to format through. Defaults to the nearest ancestor `IntlProvider`'s (via
+		 * `intl`); pass one to translate through a different translator.
 		 */
-		i18n?: I18n;
+		intl?: I18n<any>;
 		/**
-		 * Translation key to look up. Named `i18nKey`, not `key` — `key` is
-		 * `remix/ui`'s own reconciliation prop and never reaches `handle.props`.
+		 * Message key to look up. Named `i18nKey` because `key` is `remix/ui`'s own
+		 * reconciliation prop and never reaches `handle.props`.
 		 */
 		i18nKey: string;
-		/** Interpolation values, forwarded to `i18n.t()` alongside `i18nKey`. */
-		values?: TOptions;
-		/** Elements spliced in for each `<tagName>...</tagName>` marker in the translation, keyed by tag name. */
+		/** Values for the message's variables. */
+		values?: Record<string, unknown>;
+		/** Elements spliced in for each markup name in the message, keyed by that name. */
 		components?: Record<string, RemixElement>;
 	}
 }
 
 /**
+ * Markup with no matching `components` entry renders its children unwrapped and reports an
+ * error through the translator's `onError`.
+ *
  * @example
  * <Trans
  * 	i18nKey="feed.article"
@@ -45,9 +50,77 @@ export namespace Trans {
  */
 export function Trans(handle: Handle<Trans.Props>) {
 	return () => {
-		let { i18n = intl(handle), i18nKey, values, components } = handle.props;
-		let translation = i18n.t(i18nKey, values);
-
-		return parseTrans(String(translation), components ?? {});
+		let { i18nKey, values, components = {} } = handle.props;
+		let translator = handle.props.intl ?? intl(handle);
+		let parts = translator.parts(i18nKey, values);
+		return foldParts(parts, components, (error) => translator.onError(error, i18nKey));
 	};
+}
+
+/** An open markup element whose children are still being collected. */
+interface Frame {
+	name: string;
+	children: RemixNode[];
+}
+
+/**
+ * Folds flat parts into a tree: an open part starts a frame, its close wraps the frame's
+ * children in the matching component, and a standalone part renders the component with no
+ * children. A close with no open is dropped, and frames still open at the end close there.
+ *
+ * @param parts - Parts from `I18n#parts`.
+ * @param components - Elements by markup name.
+ * @param report - Receives an error per markup name with no component.
+ * @returns The rendered nodes.
+ */
+function foldParts(
+	parts: MessagePart[],
+	components: Record<string, RemixElement>,
+	report: (error: Error) => void,
+): RemixNode[] {
+	let root: Frame = { name: "", children: [] };
+	let stack: Frame[] = [root];
+
+	/** Wraps `children` in the component named `name`, or returns them unwrapped with a report. */
+	function wrap(name: string, children: RemixNode[]): RemixNode[] {
+		let component = Object.hasOwn(components, name) ? components[name] : undefined;
+		if (!component) {
+			report(new Error(`Trans: no components["${name}"] entry for markup {#${name}}`));
+			return children;
+		}
+		return [createElement(component.type, component.props, ...children)];
+	}
+
+	/** Pops the innermost frame and appends it, wrapped, to its parent. */
+	function close() {
+		let frame = stack.pop();
+		let parent = stack.at(-1);
+		if (frame && parent) parent.children.push(...wrap(frame.name, frame.children));
+	}
+
+	for (let part of parts) {
+		let current = stack.at(-1) ?? root;
+		if (part.type !== "markup" || !("kind" in part)) {
+			let text = partText(part);
+			if (text) current.children.push(text);
+		} else if (part.kind === "open") {
+			stack.push({ name: part.name, children: [] });
+		} else if (part.kind === "standalone") {
+			current.children.push(...wrap(part.name, []));
+		} else {
+			let index = openFrame(stack, part.name);
+			while (index > 0 && stack.length > index) close();
+		}
+	}
+
+	while (stack.length > 1) close();
+	return root.children;
+}
+
+/** The index of the innermost open frame named `name`, or `-1` when none is open. */
+function openFrame(stack: Frame[], name: string) {
+	for (let index = stack.length - 1; index > 0; index--) {
+		if (stack[index]?.name === name) return index;
+	}
+	return -1;
 }

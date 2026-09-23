@@ -1,21 +1,22 @@
 /**
- * Remix fetch-router middleware that detects the request language and publishes
- * a per-request i18next instance on the request context. Handlers translate
- * through `context.i18next` / `context.locale` without any shared mutable
- * language state between concurrent requests.
+ * Remix fetch-router middleware that detects the request language and publishes a translator
+ * fixed to it on the request context. Handlers translate through `context.intl` and read
+ * `context.locale`, with no language state shared between concurrent requests.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { i18n, InitOptions, Module, NewableModule, Resource } from "i18next";
 import type { Middleware } from "remix/router";
 
-import { createInstance } from "i18next";
+import { currentLog } from "@sdxc/logger";
+import { MessageError } from "@sdxc/messageformat";
 import { Session } from "remix/session";
 
+import type { I18n, Messages } from "./lib/i18n.js";
 import type { LanguageDetectorOptions } from "./lib/language-detector.js";
 
+import { createI18n } from "./lib/i18n.js";
 import { LanguageDetector } from "./lib/language-detector.js";
 
 /**
@@ -26,98 +27,58 @@ declare module "remix/router" {
 	interface RequestContext {
 		/** Language detected for the current request, always a supported language. */
 		locale: string;
-		/** Per-request i18next instance initialized with the detected language. */
-		i18next: i18n;
+		/** Translator fixed to {@link locale} for the current request. */
+		intl: I18n;
 	}
 }
 
-/** Options that configure the i18next middleware. */
-export interface I18nextMiddlewareOptions {
+/** Options that configure the i18n middleware. */
+export interface I18nMiddlewareOptions {
 	/** Language detection configuration; see {@link LanguageDetectorOptions}. */
 	detection: LanguageDetectorOptions;
 	/**
-	 * i18next init options for the per-request instance. `supportedLngs` and
-	 * `fallbackLng` default from the detection config, `lng` is always the
-	 * detected language, and `resources` narrows to the bundles it resolves through.
+	 * MessageFormat 2 bundles keyed by language. Keys missing from the detected language resolve
+	 * through `detection.fallbackLanguage`.
 	 */
-	i18next?: Omit<InitOptions, "detection">;
-	/**
-	 * i18next plugins (e.g. a backend that loads translations) registered on the
-	 * per-request instance before it initializes.
-	 */
-	plugins?: NewableModule<Module>[] | Module[];
+	resources: Readonly<Record<string, Messages>>;
 }
 
 /**
- * Creates a middleware that detects the request language and initializes an
- * isolated i18next instance per request, exposing `context.locale` and
- * `context.i18next` with backend-plugin translations ready before handlers run.
+ * Creates a middleware that detects the request language and publishes `context.locale` and
+ * `context.intl`. Message errors become `i18n.error` warnings on the request's log.
  *
- * @param options - Middleware configuration; see {@link I18nextMiddlewareOptions}.
- * @returns A middleware that populates `context.locale` and `context.i18next`.
+ * @param options - Middleware configuration; see {@link I18nMiddlewareOptions}.
+ * @returns A middleware that populates `context.locale` and `context.intl`.
  * @example
- * let router = createRouter({ middleware: [i18next({ detection })] });
+ * let router = createRouter({ middleware: [i18n({ detection, resources: { en, es } })] });
  */
-export default function i18next(options: I18nextMiddlewareOptions): Middleware {
+export default function i18n(options: I18nMiddlewareOptions): Middleware {
 	let detector = new LanguageDetector(options.detection);
 
 	return async (context, next) => {
 		let session = context.has(Session) ? context.get(Session) : undefined;
 		let locale = await detector.detect(context.request, session);
 
-		let instance = createInstance();
-		for (let plugin of options.plugins ?? []) instance.use(plugin);
-
-		await instance.init({
-			supportedLngs: options.detection.supportedLanguages,
-			fallbackLng: options.detection.fallbackLanguage,
-			...options.i18next,
-			resources: pickResources(
-				options.i18next?.resources,
-				locale,
-				options.detection.fallbackLanguage,
-			),
-			lng: locale,
-		});
-
 		context.locale = locale;
-		context.i18next = instance;
+		context.intl = createI18n({
+			locale,
+			fallbackLanguage: options.detection.fallbackLanguage,
+			resources: options.resources,
+			onError: logError,
+		});
 
 		return next();
 	};
 }
 
 /**
- * Narrows inline resources to the bundles `locale` can resolve through: itself,
- * the fallback, and each one's primary subtag, dropping every other language so
- * a request only carries bundles it can serve, or `undefined` with none configured.
- *
- * @param resources - Inline resources from the middleware configuration, if any.
- * @param locale - The language detected for the request.
- * @param fallbackLanguage - The language i18next falls back to for missing keys.
- * @returns The narrowed resources, or `undefined` when there are none.
+ * Reports a message error as a warning on the current invocation's log, keyed by the message
+ * key so a broken translation can be traced to its source.
  */
-function pickResources(
-	resources: Resource | undefined,
-	locale: string,
-	fallbackLanguage: string,
-): Resource | undefined {
-	if (!resources) return undefined;
-
-	let candidates = new Set([
-		locale,
-		locale.split("-")[0],
-		fallbackLanguage,
-		fallbackLanguage.split("-")[0],
-	]);
-
-	let picked: Resource = {};
-
-	for (let candidate of candidates) {
-		if (!candidate) continue;
-		let bundle = resources[candidate];
-		if (bundle) picked[candidate] = bundle;
-	}
-
-	return picked;
+function logError(error: Error, key: string) {
+	currentLog()?.warn("i18n.error", {
+		key,
+		type: error instanceof MessageError ? error.type : error.name,
+		message: error.message,
+	});
 }

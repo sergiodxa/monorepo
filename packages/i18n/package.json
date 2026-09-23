@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/i18n",
 	"version": "0.0.1",
-	"description": "Language detection, i18next instances and translated-markup components",
+	"description": "Language detection and MessageFormat 2 translators for Remix routers and remix/ui",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
@@ -13,8 +13,8 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"html-parse-stringify": "^4.0.1",
-		"i18next": "^26.4.1",
+		"@sdxc/logger": "workspace:*",
+		"@sdxc/messageformat": "workspace:*",
 		"remix": "3.0.0-rc.2"
 	}
 }

@@ -1,33 +1,22 @@
 /**
- * Covers the i18next middleware: locale + per-request instance publication on
- * the request context, translation through inline resources and backend
- * plugins, fallback-language defaults derived from the detection config,
- * session reuse from an upstream session middleware, per-request isolation of
- * the i18next instances, and the narrowing of inline resources to the bundles
- * the detected language can actually resolve through.
+ * Covers the i18n middleware: publication of the detected locale and a translator on the
+ * request context, fallback-language resolution from the detection config, session reuse from
+ * an upstream session middleware, per-request isolation, and error logging.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { BackendModule } from "i18next";
 
 import { RequestContext } from "remix/router";
 import { createSession, Session } from "remix/session";
 import { describe, expect, test, vi } from "vitest";
 
-import i18next from "./middleware.js";
+import i18n from "./middleware.js";
 
-/** Inline resources with a key shared across languages and one English-only key. */
+/** Bundles with a key shared across languages and one English-only key. */
 const RESOURCES = {
-	en: { translation: { hello: "Hello", onlyEnglish: "English only" } },
-	es: { translation: { hello: "Hola" } },
-};
-
-/** Inline resources for three languages, to check which bundles get attached. */
-const MULTILINGUAL_RESOURCES = {
-	en: { translation: { hello: "Hello", onlyEnglish: "English only" } },
-	es: { translation: { hello: "Hola" } },
-	fr: { translation: { hello: "Bonjour" } },
+	en: { hello: "Hello", onlyEnglish: "English only", greet: "Hi {$name}" },
+	es: { hello: "Hola" },
 };
 
 /** Builds a request context for the given path and headers. */
@@ -40,11 +29,11 @@ function passthroughNext() {
 	return vi.fn(async () => new Response("ok", { status: 200 }));
 }
 
-describe("i18next middleware", () => {
-	test("publishes the detected locale and a translating instance on the context", async () => {
-		let middleware = i18next({
+describe("i18n middleware", () => {
+	test("publishes the detected locale and a translator on the context", async () => {
+		let middleware = i18n({
 			detection: { supportedLanguages: ["en", "es"], fallbackLanguage: "en" },
-			i18next: { resources: RESOURCES },
+			resources: RESOURCES,
 		});
 
 		let context = makeContext("/?lng=es");
@@ -55,26 +44,26 @@ describe("i18next middleware", () => {
 		expect(next).toHaveBeenCalledTimes(1);
 		expect(response.status).toBe(200);
 		expect(context.locale).toBe("es");
-		expect(context.i18next.language).toBe("es");
-		expect(context.i18next.t("hello")).toBe("Hola");
+		expect(context.intl.locale).toBe("es");
+		expect(context.intl.t("hello")).toBe("Hola");
 	});
 
-	test("defaults fallbackLng from the detection config", async () => {
-		let middleware = i18next({
+	test("resolves missing keys through the detection fallback language", async () => {
+		let middleware = i18n({
 			detection: { supportedLanguages: ["en", "es"], fallbackLanguage: "en" },
-			i18next: { resources: RESOURCES },
+			resources: RESOURCES,
 		});
 
 		let context = makeContext("/?lng=es");
 		await middleware(context, passthroughNext());
 
-		expect(context.i18next.t("onlyEnglish")).toBe("English only");
+		expect(context.intl.t("onlyEnglish")).toBe("English only");
 	});
 
 	test("reuses the session installed by an upstream session middleware", async () => {
-		let middleware = i18next({
+		let middleware = i18n({
 			detection: { supportedLanguages: ["en", "es", "fr"], fallbackLanguage: "en" },
-			i18next: { resources: RESOURCES },
+			resources: RESOURCES,
 		});
 
 		let session = createSession();
@@ -86,32 +75,13 @@ describe("i18next middleware", () => {
 		await middleware(context, passthroughNext());
 
 		expect(context.locale).toBe("fr");
+		expect(context.intl.t("hello")).toBe("Hello");
 	});
 
-	test("loads translations through a backend plugin", async () => {
-		let backend: BackendModule = {
-			type: "backend",
-			init() {},
-			read(language, namespace, callback) {
-				callback(null, { greeting: `${language}:${namespace}` });
-			},
-		};
-
-		let middleware = i18next({
+	test("each request gets its own translator", async () => {
+		let middleware = i18n({
 			detection: { supportedLanguages: ["en", "es"], fallbackLanguage: "en" },
-			plugins: [backend],
-		});
-
-		let context = makeContext("/?lng=es");
-		await middleware(context, passthroughNext());
-
-		expect(context.i18next.t("greeting")).toBe("es:translation");
-	});
-
-	test("each request gets its own isolated instance", async () => {
-		let middleware = i18next({
-			detection: { supportedLanguages: ["en", "es"], fallbackLanguage: "en" },
-			i18next: { resources: RESOURCES },
+			resources: RESOURCES,
 		});
 
 		let spanish = makeContext("/", { "Accept-Language": "es" });
@@ -122,52 +92,27 @@ describe("i18next middleware", () => {
 			middleware(english, passthroughNext()),
 		]);
 
-		expect(spanish.i18next).not.toBe(english.i18next);
-		expect(spanish.i18next.t("hello")).toBe("Hola");
-		expect(english.i18next.t("hello")).toBe("Hello");
+		expect(spanish.intl).not.toBe(english.intl);
+		expect(spanish.intl.t("hello")).toBe("Hola");
+		expect(english.intl.t("hello")).toBe("Hello");
 	});
 
-	test("loads translations through an async backend plugin before handlers run", async () => {
-		let backend: BackendModule = {
-			type: "backend",
-			init() {},
-			read(language, namespace, callback) {
-				setTimeout(() => callback(null, { greeting: `${language}:${namespace}` }), 5);
-			},
-		};
-
-		let middleware = i18next({
-			detection: { supportedLanguages: ["en", "es"], fallbackLanguage: "en" },
-			plugins: [backend],
+	test("renders a message error as its fallback text without throwing", async () => {
+		let middleware = i18n({
+			detection: { supportedLanguages: ["en"], fallbackLanguage: "en" },
+			resources: RESOURCES,
 		});
 
-		let context = makeContext("/?lng=es");
+		let context = makeContext();
 		await middleware(context, passthroughNext());
 
-		expect(context.i18next.t("greeting")).toBe("es:translation");
-	});
-
-	test("attaches only the request's language and the fallback to the resource store", async () => {
-		let middleware = i18next({
-			detection: { supportedLanguages: ["en", "es", "fr"], fallbackLanguage: "en" },
-			i18next: { resources: MULTILINGUAL_RESOURCES },
-		});
-
-		let context = makeContext("/?lng=es");
-		await middleware(context, passthroughNext());
-
-		expect(context.i18next.hasResourceBundle("es", "translation")).toBe(true);
-		expect(context.i18next.hasResourceBundle("en", "translation")).toBe(true);
-		expect(context.i18next.hasResourceBundle("fr", "translation")).toBe(false);
-
-		expect(context.i18next.t("hello")).toBe("Hola");
-		expect(context.i18next.t("onlyEnglish")).toBe("English only");
+		expect(context.intl.t("greet")).toBe("Hi {$name}");
 	});
 
 	test("returns the downstream response unchanged", async () => {
-		let middleware = i18next({
+		let middleware = i18n({
 			detection: { supportedLanguages: ["en"], fallbackLanguage: "en" },
-			i18next: { resources: RESOURCES },
+			resources: RESOURCES,
 		});
 
 		let context = makeContext();

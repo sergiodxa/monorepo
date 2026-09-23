@@ -1,98 +1,73 @@
 /**
- * `remix/ui` context provider that publishes a live i18next instance to
- * descendants, the render-tree counterpart to `context.i18next` from
- * `@sdxc/i18n/middleware`. Re-renders its subtree client-side when the
- * instance's language changes or a namespace loads, and stays inert
- * server-side so `context.locale` stays fixed for a request's lifetime.
+ * `remix/ui` context provider that publishes an `I18n` translator to descendants, the
+ * render-tree counterpart to `context.intl` from `@sdxc/i18n/middleware`. A translator is
+ * immutable, so switching language means rendering the provider with a new one.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { i18n as I18n } from "i18next";
 import type { Handle, RemixNode } from "remix/ui";
+
+import type { I18n } from "../lib/i18n.js";
 
 export namespace IntlProvider {
 	export interface Props {
-		/** i18next instance published to descendants; read it back with {@link intl}. */
-		i18n: I18n;
+		/** Translator published to descendants, typed keys or not; read it back with {@link intl}. */
+		intl: I18n<any>;
 		children?: RemixNode;
 	}
 }
 
 /**
- * Publishes `i18n` to every descendant through context and renders
- * `children` unchanged. Re-renders its whole subtree client-side when the
- * instance's language changes or a namespace finishes loading.
+ * Publishes `intl` to every descendant through context and renders `children` unchanged.
  *
  * @example
- * <IntlProvider i18n={ctx.i18next}>
+ * <IntlProvider intl={ctx.intl}>
  * 	<App />
  * </IntlProvider>
  */
 export function IntlProvider(handle: Handle<IntlProvider.Props, I18n>) {
-	handle.queueTask(() => {
-		let i18n = handle.props.i18n;
-
-		/**
-		 * Fires-and-forgets: i18next's emitter calls listeners synchronously and
-		 * drops what they return, so this settles the re-render after the event.
-		 */
-		function onChange() {
-			void handle.update();
-		}
-
-		i18n.on("languageChanged", onChange);
-		i18n.on("loaded", onChange);
-
-		handle.signal.addEventListener("abort", () => {
-			i18n.off("languageChanged", onChange);
-			i18n.off("loaded", onChange);
-		});
-	});
-
 	return () => {
-		handle.context.set(handle.props.i18n);
+		handle.context.set(handle.props.intl);
 		return handle.props.children ?? null;
 	};
 }
 
-let defaultI18n: I18n | undefined;
+let defaultIntl: I18n | undefined;
 
 /**
- * Registers a module-scoped default i18next instance for {@link intl} to
- * fall back to when there is no ancestor {@link IntlProvider}, so each
- * independently hydrated island can call `intl(handle)`/`Trans` without one.
+ * Registers a module-scoped default translator for {@link intl} to fall back to when there is
+ * no ancestor {@link IntlProvider}, so each independently hydrated island can call
+ * `intl(handle)`/`Trans` without one.
  *
  * @example
- * setIntl(i18n);
+ * setIntl(translation.intl);
  * run({ loadModule, resolveFrame });
  */
-export function setIntl(i18n: I18n): void {
+export function setIntl(intl: I18n<any>): void {
 	if (typeof document === "undefined") {
 		throw new Error(
-			"setIntl() is browser-only. A module-scoped instance would be shared by every concurrent request in a Workers isolate, exactly what @sdxc/i18n/middleware's per-request instance exists to avoid.",
+			"setIntl() is browser-only. A module-scoped translator would be shared by every concurrent request in a Workers isolate, exactly what @sdxc/i18n/middleware's per-request translator exists to avoid.",
 		);
 	}
 
-	defaultI18n = i18n;
+	defaultIntl = intl;
 }
 
 /**
- * Reads the i18next instance published by the nearest ancestor
- * {@link IntlProvider}, falling back to the module-scoped default
- * registered via {@link setIntl}, and throws when neither exists.
+ * Reads the translator published by the nearest ancestor {@link IntlProvider}, falling back to
+ * the module-scoped default registered via {@link setIntl}, and throws when neither exists.
  *
  * @example
- * let i18n = intl(handle);
- * let message = i18n.t("greeting");
+ * let message = intl(handle).t("greeting");
  */
 export function intl(handle: Handle<unknown, any>): I18n {
-	let i18n = handle.context.get(IntlProvider) ?? defaultI18n;
-	if (!i18n) {
+	let found = handle.context.get(IntlProvider) ?? defaultIntl;
+	if (!found) {
 		throw new Error(
 			"intl() was called with no ancestor IntlProvider and no default registered via setIntl().",
 		);
 	}
-	return i18n;
+	return found;
 }
