@@ -15,8 +15,8 @@ import type { ElementProps, Handle, MixinDescriptor, Props as TagProps, RemixNod
 import { bg, fg, outline } from "@sdxc/u/color";
 import { rounded, opacity } from "@sdxc/u/effects";
 import { cursor } from "@sdxc/u/general";
-import { flex, gap, items } from "@sdxc/u/layout";
-import { is, minIs, mb, pb, pi, p } from "@sdxc/u/size";
+import { flex, gap, items, shrink } from "@sdxc/u/layout";
+import { bs, is, minIs, mb, pb, pi, p } from "@sdxc/u/size";
 import { active, disabled, focusVisible, hover, when } from "@sdxc/u/state";
 import { text, textAlign, textDecoration, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
@@ -174,6 +174,12 @@ Menu.Item = function MenuItem(handle: Handle<Menu.ItemProps>) {
 			is("full"),
 			items("center"),
 			gap(2),
+			/*
+			 * A glyph in a row reads beside the row's own text, so it is measured against that
+			 * text rather than at whatever size it was drawn at, and it holds that measure
+			 * while a long label wraps.
+			 */
+			when("& > svg, & > [data-slot='icon']", [is("1rem"), bs("1rem"), shrink()]),
 			rounded("md"),
 			pi(3),
 			pb(2),
