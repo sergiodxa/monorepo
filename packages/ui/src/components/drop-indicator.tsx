@@ -1,9 +1,9 @@
 /**
  * A thin bar rendered in the gap between two items of a reorderable list,
- * marking where a dragged item will land. It sits in a muted ring tone at
- * rest and switches to the primary solid color once it becomes the
- * pointer's current drop target, with the surrounding list's own reorder
- * interaction deciding when it appears and which gap it marks.
+ * marking where a dragged item will land. It holds its space and paints
+ * nothing until it becomes the pointer's current drop target, so a list can
+ * carry one bar per gap and let each one answer for itself: the gaps stay the
+ * same size throughout the drag, and only the one being pointed at is drawn.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,14 +12,14 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { bg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
+import { rounded, transition } from "@sdxc/u/effects";
 import { bs, is } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { attrs } from "remix/ui";
 
 /**
- * Default {@link DropIndicator.Props.isDropTarget}, rendering the bar in
- * its muted resting tone until a consumer marks it as the active target.
+ * Default {@link DropIndicator.Props.isDropTarget}, leaving the bar unpainted
+ * until a consumer marks it as the active target.
  */
 const DEFAULT_IS_DROP_TARGET = false;
 
@@ -40,8 +40,8 @@ export namespace DropIndicator {
 	export interface Props extends TagProps<"div"> {
 		/**
 		 * Whether this bar marks the pointer's current drop target. Renders
-		 * the host's `data-drop-target` attribute when `true`, switching the
-		 * bar to its active color. Defaults to {@link DEFAULT_IS_DROP_TARGET}.
+		 * the host's `data-drop-target` attribute when `true`, which is what
+		 * draws the bar. Defaults to {@link DEFAULT_IS_DROP_TARGET}.
 		 */
 		isDropTarget?: boolean;
 	}
@@ -49,8 +49,9 @@ export namespace DropIndicator {
 
 /**
  * Renders a full-width, hairline-thick, fully rounded bar shaped for the gap
- * between two items in a reorderable list. Its color follows the host's
- * `data-drop-target` attribute: muted at rest, solid as the active target.
+ * between two items in a reorderable list. The host's `data-drop-target`
+ * attribute is what paints it: transparent without it, the primary solid color
+ * with it.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the bar's markup.
@@ -76,7 +77,19 @@ export function DropIndicator(handle: Handle<DropIndicator.Props>) {
 					is("full"),
 					bs("0.125rem"),
 					rounded("full"),
-					bg("brand.ring"),
+					transition("background-color", { duration: 150 }),
+					/*
+					 * A bar that marks every gap at rest marks nothing: the list reads as though
+					 * it were ruled, and the gap being pointed at looks like all the others. The
+					 * resting bar therefore paints nothing while keeping its place in the layout,
+					 * so the list neither reflows nor jumps when one of them lights up.
+					 *
+					 * The two states are written as selectors that exclude each other rather than
+					 * as a resting value a state rule overrides, because each entry compiles into
+					 * its own cascade layer and a plain utility's layer can land after the state
+					 * rule meant to beat it — which leaves the active bar painted like the rest.
+					 */
+					when("&:not([data-drop-target])", bg("transparent")),
 					when("&[data-drop-target]", bg("brand.solid")),
 					mix,
 				]}
