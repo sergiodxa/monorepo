@@ -33,6 +33,7 @@ import {
 	pi,
 	raw,
 	relative,
+	shrink,
 	textAlign,
 	textDecoration,
 	userSelect,
@@ -342,9 +343,14 @@ Table.Column = function TableColumn(handle: Handle<Table.ColumnProps>) {
 						]}
 					>
 						{children}
-						{sortDirection === "ascending" && <ArrowUpIcon size={14} />}
-						{sortDirection === "descending" && <ArrowDownIcon size={14} />}
-						{!sortDirection && <ArrowUpDownIcon size={14} mix={[opacity(40)]} />}
+						{/*
+						 * The indicator holds its square: a header narrow enough to squeeze the
+						 * link squeezes the glyph with it, and an arrow pair pressed together
+						 * along its own axis stops reading as two arrows.
+						 */}
+						{sortDirection === "ascending" && <ArrowUpIcon size={14} mix={[shrink()]} />}
+						{sortDirection === "descending" && <ArrowDownIcon size={14} mix={[shrink()]} />}
+						{!sortDirection && <ArrowUpDownIcon size={14} mix={[shrink(), opacity(40)]} />}
 					</a>
 				) : (
 					children
