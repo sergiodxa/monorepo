@@ -13,9 +13,17 @@ import { HTML } from "@sdxc/html";
 import { parseDocument } from "@sdxc/html/document";
 import { failure, isFailure, success } from "@sdxc/result";
 
-import { addressable, MAX_BYTES, mayArchive, readWithin, retrieve } from "./lib/limits.js";
+import {
+	addressable,
+	follow,
+	MAX_BYTES,
+	mayArchive,
+	readWithin,
+	release,
+	retrieve,
+} from "./lib/limits.js";
 import { bylineOf, canonicalOf, titleOf } from "./lib/metadata.js";
-import { isAllowed, robotsUrl } from "./lib/robots.js";
+import { DISALLOW_ALL, isAllowed, robotsUrl } from "./lib/robots.js";
 import { articleOf } from "./lib/score.js";
 import { serialize } from "./lib/serialize.js";
 
@@ -84,6 +92,17 @@ export namespace Distill {
 		mayCache: boolean;
 	}
 
+	/**
+	 * `missing` covers any 4xx and permits everything; `unreachable` covers a 5xx, a
+	 * network failure or an unfollowable chain and refuses everything, so a caller
+	 * holding it keeps it briefly rather than locking the origin out for a cache period.
+	 */
+	export interface Robots {
+		status: "found" | "missing" | "unreachable";
+		/** What to pass as `Options.robots`, whichever the status. */
+		source: string | null;
+	}
+
 	/** What a retrieval may spend, and the name it spends it under. */
 	export interface Options {
 		/**
@@ -93,8 +112,9 @@ export namespace Distill {
 		 */
 		userAgent: string;
 		/**
-		 * The origin's `robots.txt` as the caller already holds it, or `null` for an
-		 * origin serving none. Omitted, the document is not consulted.
+		 * The origin's `robots.txt` as the caller already holds it — the `source` of
+		 * {@link fetchRobots} — or `null` for an origin serving none. Omitted, the
+		 * document is not consulted.
 		 */
 		robots?: string | null | undefined;
 		maxBytes?: number | undefined;
@@ -215,22 +235,41 @@ export async function distill(
 }
 
 /**
- * Retrieves an origin's `robots.txt` for the caller to hold, answering `null` for an
- * origin that serves none — which permits everything, the way a missing document
- * always has.
+ * Retrieves an origin's `robots.txt` for the caller to hold, following up to five
+ * redirects and reading the final status the way RFC 9309 does: a 4xx permits
+ * everything, and a server or network error refuses everything.
  *
  * @param input - Any URL on the origin.
  * @param options - The name to ask under, and what the retrieval may spend.
+ * @returns The document to consult and which of the three answers produced it.
+ * @example let robots = await fetchRobots(origin, { userAgent: agent });
  */
-export async function fetchRobots(input: string, options: Distill.Options): Promise<string | null> {
+export async function fetchRobots(
+	input: string,
+	options: Distill.Options,
+): Promise<Distill.Robots> {
+	let unreachable: Distill.Robots = { status: "unreachable", source: DISALLOW_ALL };
+
 	let address = addressable(input);
-	if (isFailure(address)) return null;
+	if (isFailure(address)) return unreachable;
 
-	let retrieved = await retrieve(new URL(robotsUrl(address.data)), options);
-	if (isFailure(retrieved)) return null;
+	let followed = await follow(new URL(robotsUrl(address.data)), options);
+	if (isFailure(followed)) return unreachable;
 
-	let read = await readWithin(retrieved.data, options.maxBytes ?? MAX_BYTES);
-	if (isFailure(read)) return null;
+	let { status, body } = followed.data.response;
 
-	return read.data.text;
+	if (status >= 400 && status < 500) {
+		release(body);
+		return { status: "missing", source: null };
+	}
+
+	if (status < 200 || status >= 300) {
+		release(body);
+		return unreachable;
+	}
+
+	let read = await readWithin(followed.data, options.maxBytes ?? MAX_BYTES);
+	if (isFailure(read)) return unreachable;
+
+	return { status: "found", source: read.data.text };
 }

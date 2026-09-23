@@ -11,7 +11,7 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import { distill, distillFrom, isAllowed } from "./index.js";
+import { distill, distillFrom, fetchRobots, isAllowed } from "./index.js";
 
 /** What every retrieval in this file asks under, since the caller always names one. */
 const AGENT = "ExampleReader/1.0 (+https://example.com/reader)";
@@ -236,6 +236,61 @@ describe("distill", () => {
 		expect(isFailure(article)).toBe(true);
 		if (!isFailure(article)) return;
 		expect(article.error.outcome).toBe("refused");
+	});
+});
+
+describe("fetchRobots", () => {
+	test("refuses everything when the origin answers robots.txt with a 5xx", async () => {
+		server.use(
+			http.get("https://example.com/robots.txt", () => new HttpResponse(null, { status: 503 })),
+		);
+
+		let robots = await fetchRobots("https://example.com/post", { userAgent: AGENT });
+
+		expect(robots.status).toBe("unreachable");
+		expect(isAllowed(robots.source, "/post", AGENT)).toBe(false);
+	});
+
+	test("refuses everything when robots.txt fails at the network level", async () => {
+		server.use(http.get("https://example.com/robots.txt", () => HttpResponse.error()));
+
+		let robots = await fetchRobots("https://example.com/post", { userAgent: AGENT });
+
+		expect(robots.status).toBe("unreachable");
+		expect(isAllowed(robots.source, "/post", AGENT)).toBe(false);
+	});
+
+	test("permits everything when robots.txt answers a 404", async () => {
+		server.use(
+			http.get("https://example.com/robots.txt", () => new HttpResponse(null, { status: 404 })),
+		);
+
+		let robots = await fetchRobots("https://example.com/post", { userAgent: AGENT });
+
+		expect(robots).toEqual({ status: "missing", source: null });
+		expect(isAllowed(robots.source, "/post", AGENT)).toBe(true);
+	});
+
+	test("applies the rules of a robots.txt reached through a redirect", async () => {
+		server.use(
+			http.get(
+				"https://example.com/robots.txt",
+				() =>
+					new HttpResponse(null, {
+						status: 301,
+						headers: { location: "https://www.example.com/robots.txt" },
+					}),
+			),
+			http.get("https://www.example.com/robots.txt", () =>
+				HttpResponse.text("User-agent: *\nDisallow: /private/"),
+			),
+		);
+
+		let robots = await fetchRobots("https://example.com/post", { userAgent: AGENT });
+
+		expect(robots.status).toBe("found");
+		expect(isAllowed(robots.source, "/post", AGENT)).toBe(true);
+		expect(isAllowed(robots.source, "/private/post", AGENT)).toBe(false);
 	});
 });
 

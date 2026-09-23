@@ -105,17 +105,18 @@ export interface RetrieveOptions {
 
 /**
  * Requests a page, walking the redirect chain itself so the chain has a length it
- * can exceed and the final URL is a fact this package tracked.
+ * can exceed and the final URL is a fact this package tracked. The final response
+ * is answered whatever its status, for a caller that reads meaning into each one.
  *
  * The request carries nothing about whoever asked for it: the headers are built
  * here rather than inherited, and credentials are left out, so a page is fetched as
  * an anonymous visitor every time.
  *
- * @param input - The address to retrieve.
+ * @param input - The address to request.
  * @param options - The name to ask under, and what the retrieval may spend.
- * @returns The response and where it came from, or why there is none.
+ * @returns The last response of the chain and where it came from, or why there is none.
  */
-export async function retrieve(
+export async function follow(
 	input: URL,
 	options: RetrieveOptions,
 ): Promise<Result<Retrieved, DistillLimitError | DistillRefusedError>> {
@@ -142,24 +143,8 @@ export async function retrieve(
 			return failure(new DistillLimitError(`Failed to read ${url.href}: ${describe(error)}`));
 		}
 
-		if (REFUSING_STATUSES.has(response.status)) {
-			release(response.body);
-			return failure(
-				new DistillRefusedError(`Refused ${url.href}: the site answered ${response.status}`),
-			);
-		}
-
 		let next = redirectTarget(response, url);
-		if (!next) {
-			if (!response.ok) {
-				release(response.body);
-				return failure(
-					new DistillLimitError(`Failed to read ${url.href}: the site answered ${response.status}`),
-				);
-			}
-
-			return success({ response, url: url.href });
-		}
+		if (!next) return success({ response, url: url.href });
 
 		release(response.body);
 
@@ -173,6 +158,38 @@ export async function retrieve(
 		if (isFailure(checked)) return checked;
 		url = checked.data;
 	}
+}
+
+/**
+ * Requests a page and answers only a successful response: a status a publisher
+ * says no with is a refusal, and any other failing status is a fault.
+ *
+ * @param input - The address to retrieve.
+ * @param options - The name to ask under, and what the retrieval may spend.
+ * @returns The response and where it came from, or why there is none.
+ */
+export async function retrieve(
+	input: URL,
+	options: RetrieveOptions,
+): Promise<Result<Retrieved, DistillLimitError | DistillRefusedError>> {
+	let followed = await follow(input, options);
+	if (isFailure(followed)) return followed;
+
+	let { response, url } = followed.data;
+
+	if (REFUSING_STATUSES.has(response.status)) {
+		release(response.body);
+		return failure(new DistillRefusedError(`Refused ${url}: the site answered ${response.status}`));
+	}
+
+	if (!response.ok) {
+		release(response.body);
+		return failure(
+			new DistillLimitError(`Failed to read ${url}: the site answered ${response.status}`),
+		);
+	}
+
+	return followed;
 }
 
 /** A body read within its cap, and how many bytes came off the wire to produce it. */
@@ -253,7 +270,7 @@ export function mayArchive(response: Response): boolean {
  * sending. The cancellation runs on its own, so the outcome is reported as soon as
  * it is decided and a stream that stalls costs one refusal and nothing more.
  */
-function release(source: { cancel(): Promise<void> } | null): void {
+export function release(source: { cancel(): Promise<void> } | null): void {
 	void source?.cancel().catch(() => undefined);
 }
 

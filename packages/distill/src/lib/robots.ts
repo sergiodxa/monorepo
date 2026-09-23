@@ -7,6 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+/**
+ * The document an origin whose `robots.txt` could not be reached is read as. RFC 9309
+ * has a crawler assume complete disallow while server or network errors keep it from
+ * the rules, so a stored copy of this refuses every path until the next read.
+ */
+export const DISALLOW_ALL = "User-agent: *\nDisallow: /";
+
 /** One `Allow` or `Disallow` line, kept with the length that decides ties. */
 interface Rule {
 	allow: boolean;
@@ -36,11 +43,9 @@ export function productToken(userAgent: string): string {
 /**
  * Whether an agent may retrieve a path.
  *
- * A document nobody could parse permits everything, which is what an origin serving
- * an error page in place of a `robots.txt` amounts to. The groups addressing the
- * agent by name replace the wildcard group entirely, and among the rules that apply
- * the longest pattern decides — an `Allow` winning a tie, so a narrower permission
- * carves a hole in a broader refusal.
+ * A missing document permits everything. Groups naming the agent replace the wildcard
+ * group, and the longest matching pattern decides, an `Allow` winning a tie so a
+ * narrower permission carves a hole in a broader refusal.
  *
  * @param source - The document as the origin served it, or `null` when there is none.
  * @param path - The path and query being retrieved.

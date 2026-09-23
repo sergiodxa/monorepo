@@ -63,14 +63,24 @@ markup resolves against, so it is the address the page was actually served from.
 
 ### `fetchRobots(url, options)`
 
-Retrieves an origin's `robots.txt` for the caller to hold and cache, answering `null` for an
-origin that serves none — which permits everything.
+Retrieves an origin's `robots.txt` for the caller to hold and cache, following up to five
+redirects, and answers `Distill.Robots`: a `status` and the `source` to pass as
+`options.robots`. The status is read the way RFC 9309 reads it:
+
+- `found`: a 2xx, and `source` is the document served.
+- `missing`: any 4xx, 404 included, and `source` is `null`, which permits everything.
+- `unreachable`: a 5xx, a network failure or a chain that could not be followed, and
+  `source` is a document disallowing everything.
+
+An unreachable origin is usually back within minutes, so cache that answer for a short
+while and a `found` or `missing` one for as long as you like; holding an unreachable
+answer for a day keeps the origin refused for that day.
 
 ### `isAllowed(robots, path, userAgent)`, `robotsUrl(url)`, `productToken(userAgent)`
 
 The `robots.txt` rules on their own: the groups naming an agent replace the wildcard group,
-the longest matching pattern decides, `*` and `$` are honoured, and a document nobody could
-parse permits everything.
+the longest matching pattern decides, `*` and `$` are honoured, and a missing document
+permits everything.
 
 ### `addressable(url)`
 
