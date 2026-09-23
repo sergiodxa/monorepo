@@ -59,7 +59,7 @@ const NARROW_CONTAINER_QUERY = `@container ${CONTAINER_NAME} (max-width: 12rem)`
 /**
  * Selector fragment gating {@link Attachment.Title}'s shimmer: it matches the
  * title's own `data-state` attribute while that reads `"uploading"` or
- * `"processing"`, so a title given no state stays plain.
+ * `"processing"`, so a title in any other state renders as plain text.
  */
 const TITLE_SHIMMER_WHEN = ':is([data-state="uploading"], [data-state="processing"])';
 
@@ -360,7 +360,12 @@ Attachment.Title = function AttachmentTitle(handle: Handle<Attachment.TitleProps
 					weight("semibold"),
 					truncate(),
 					text("sm"),
-					shimmer({ when: TITLE_SHIMMER_WHEN }),
+					/*
+					 * The loop settles visible, because this host carries the file's name: a gated
+					 * loop rests hidden outside its gate, which suits an element that exists only
+					 * as a loading cue and would leave every finished upload unnamed.
+					 */
+					shimmer({ when: TITLE_SHIMMER_WHEN, outsideGate: "visible" }),
 					mix,
 				]}
 			>

@@ -123,13 +123,16 @@ function resolveTarget(when: string | undefined): string {
 /**
  * Mount/gate shell every loop factory wraps its animation in: an
  * `@starting-style` fade from {@link HIDDEN_OPACITY}, an `allow-discrete`
- * transition, and a return to hidden outside the `when` gate.
+ * transition, and, for a host that exists only as a loading cue, a return to hidden
+ * outside the `when` gate. A host that carries content of its own asks to stay
+ * `"visible"` there instead, so its text survives the loop settling.
  */
 function loopShell<Node extends Element = Element>(
 	target: string,
 	when: string | undefined,
 	fadeDurationVar: string,
 	restOpacity: number,
+	outsideGate: "hidden" | "visible" = "hidden",
 ) {
 	return combine<Node>([
 		raw<Node>({
@@ -137,7 +140,9 @@ function loopShell<Node extends Element = Element>(
 			transition: `opacity var(${fadeDurationVar}, ${DEFAULT_FADE_DURATION}) ease, display var(${fadeDurationVar}, ${DEFAULT_FADE_DURATION}) ease-out`,
 		}),
 		transitionBehavior<Node>("allow-discrete"),
-		when === undefined ? undefined : gate<Node>(`&:not(${when})`, opacity<Node>(HIDDEN_OPACITY)),
+		when === undefined || outsideGate === "visible"
+			? undefined
+			: gate<Node>(`&:not(${when})`, opacity<Node>(HIDDEN_OPACITY)),
 		startingStyle<Node>(gate<Node>(target, opacity<Node>(HIDDEN_OPACITY))),
 	]);
 }
@@ -307,6 +312,12 @@ export namespace Shimmer {
 		/** Width of the moving highlight band, as a CSS length or percentage. Defaults to {@link DEFAULT_SHIMMER_BAND_SIZE}. */
 		bandSize?: string;
 		/**
+		 * What the host looks like outside the gate. `"hidden"` suits an element that
+		 * exists only as a loading cue; `"visible"` keeps an element that carries its own
+		 * content legible once the loop settles. Defaults to `"hidden"`.
+		 */
+		outsideGate?: "hidden" | "visible";
+		/**
 		 * Selector fragment, relative to the host, that gates the loop. Defaults
 		 * to {@link DEFAULT_SHIMMER_WHEN}; pass a custom fragment (e.g.
 		 * `[data-indeterminate="true"]`) for a hand-built progress indicator.
@@ -335,7 +346,7 @@ export function shimmer<Node extends Element = Element>(
 	let target = resolveTarget(when);
 
 	return combine<Node>([
-		loopShell<Node>(target, when, "--ui-shimmer-fade-duration", 1),
+		loopShell<Node>(target, when, "--ui-shimmer-fade-duration", 1, options.outsideGate),
 		keyframes<Node>("ui-shimmer-sweep", {
 			from: { backgroundPosition: "-100% 0" },
 			to: { backgroundPosition: "200% 0" },
