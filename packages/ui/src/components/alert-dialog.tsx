@@ -13,7 +13,7 @@ import type { Handle, Props as TagProps } from "remix/ui";
 
 import { fg } from "@sdxc/u/color";
 import { flex, gap, justify, vstack } from "@sdxc/u/layout";
-import { maxIs, mbs } from "@sdxc/u/size";
+import { mbs } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
 
 import { Button } from "./button.js";
@@ -138,7 +138,7 @@ export function AlertDialog(handle: Handle<AlertDialog.Props>) {
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<Dialog {...rest} role="alertdialog" closedby="closerequest" mix={[maxIs("32rem"), mix]}>
+			<Dialog {...rest} role="alertdialog" closedby="closerequest" mix={mix}>
 				{children}
 			</Dialog>
 		);

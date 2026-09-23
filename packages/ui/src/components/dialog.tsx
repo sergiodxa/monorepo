@@ -53,6 +53,13 @@ import { resolveHeadingLevel, TAG_BY_LEVEL } from "./heading-scope.js";
 const CONTAINER_NAME = "ui-dialog";
 
 /**
+ * Panel width from which {@link Dialog.Header} and {@link Dialog.Footer} lay out for a
+ * comfortable dialog: a leading title and a trailing row of actions. It is measured
+ * against the panel's own inline size, which a dialog keeps well under a viewport's.
+ */
+const COMFORTABLE_WIDTH = "24rem";
+
+/**
  * Invoker Commands verb {@link Dialog.CloseProps.command} falls back to when
  * omitted, dismissing the ancestor Dialog named by `commandfor`.
  */
@@ -161,7 +168,13 @@ export function Dialog(handle: Handle<Dialog.Props>) {
 					fg("neutral.emphasis"),
 					rounded("lg"),
 					is("full"),
-					maxIs("28rem"),
+					/*
+					 * Wide enough for the form a dialog usually carries: a field, its help text and
+					 * a row of actions read as one column at this measure, where a narrower panel
+					 * stacks them into a ribbon. A consumer with less to say narrows it through
+					 * `mix`.
+					 */
+					maxIs("32rem"),
 					maxBs("90vh"),
 					gap(6),
 					p(6),
@@ -229,7 +242,7 @@ Dialog.Header = function DialogHeader(handle: Handle<Dialog.HeaderProps>) {
 					flexCol(),
 					gap(1.5),
 					textAlign("center"),
-					at("40rem", CONTAINER_NAME, textAlign("start")),
+					at(COMFORTABLE_WIDTH, CONTAINER_NAME, textAlign("start")),
 					mix,
 				]}
 			/>
@@ -319,7 +332,7 @@ Dialog.Footer = function DialogFooter(handle: Handle<Dialog.FooterProps>) {
 					flex(),
 					gap(2),
 					flexColReverse(),
-					at("40rem", CONTAINER_NAME, [flexRow(), justify("end")]),
+					at(COMFORTABLE_WIDTH, CONTAINER_NAME, [flexRow(), justify("end")]),
 					mix,
 				]}
 			/>
