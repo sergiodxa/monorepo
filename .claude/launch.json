@@ -36,6 +36,13 @@
 			"runtimeExecutable": "bun",
 			"runtimeArgs": ["run", "--cwd", "apps/reader", "dev"],
 			"port": 3006
+		},
+		{
+			"name": "sdxc",
+			"runtimeExecutable": "bun",
+			"runtimeArgs": ["run", "dev"],
+			"cwd": "apps/sdxc",
+			"port": 3007
 		}
 	]
 }

@@ -1,0 +1,39 @@
+{
+	"name": "@apps/sdxc",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "bun scripts/extract-catalogue.ts && vite build",
+		"catalogue": "bun scripts/extract-catalogue.ts",
+		"cf:deploy": "bunx wrangler deploy",
+		"cf:typegen": "bunx wrangler types",
+		"dev": "vite dev",
+		"start": "vite preview",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/api-client": "workspace:*",
+		"@sdxc/cache": "workspace:*",
+		"@sdxc/dates": "workspace:*",
+		"@sdxc/highlight": "workspace:*",
+		"@sdxc/http": "workspace:*",
+		"@sdxc/icons": "workspace:*",
+		"@sdxc/logger": "workspace:*",
+		"@sdxc/markdown": "workspace:*",
+		"@sdxc/mcp": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/rss": "workspace:*",
+		"@sdxc/seo": "workspace:*",
+		"@sdxc/sitemap": "workspace:*",
+		"@sdxc/u": "workspace:*",
+		"@sdxc/ui": "workspace:*",
+		"@sdxc/user-agent": "workspace:*",
+		"remix": "3.0.0-rc.2"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "^1.54.2",
+		"@sdxc/jsdoc": "workspace:*",
+		"vite": "^8.2.2",
+		"wrangler": "^4.127.1"
+	}
+}

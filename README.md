@@ -85,6 +85,7 @@ Run from the repository root:
 | [pkmn](apps/pkmn)             | Monster-collecting game engine and browser UI | Local app                                           |
 | [r3-auth](apps/r3-auth)       | OAuth 2.0 / OIDC authorization server         | https://auth.sergiodxa.com                          |
 | [r3-gallery](apps/r3-gallery) | Client-only Remix UI photo gallery SPA        | https://r3-gallery.sergiodxa-cloudflare.workers.dev |
+| [sdxc](apps/sdxc)             | Documentation site for the published packages | https://sdxc.sergiodxa.com                          |
 | [uptime](apps/uptime)         | Uptime and infrastructure monitoring service  | https://uptime.sergiodxa.com                        |
 
 ## Packages

@@ -265,6 +265,21 @@ export default defineConfig({
 				},
 			},
 			{
+				root: "apps/sdxc",
+				plugins: [cloudflareWorkersStub()],
+				resolve: { tsconfigPaths: true },
+				test: {
+					name: "sdxc",
+					include: ["**/*.test.ts?(x)"],
+					pool: "threads",
+					/**
+					 * Not inherited from the top-level `test` block: a project ignores it, so the
+					 * 5s default applies unless set here.
+					 */
+					testTimeout: 20_000,
+				},
+			},
+			{
 				root: "apps/auth-saas",
 				plugins: [cloudflareWorkersStub()],
 				resolve: { tsconfigPaths: true },

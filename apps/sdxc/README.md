@@ -1,0 +1,88 @@
+# sdxc
+
+Documentation and marketing site for the published `@sdxc/*` packages: what the collection
+is, why the packages look alike, and which one to reach for.
+
+Production URL: https://sdxc.sergiodxa.com
+
+## Development
+
+1. Copy `.env.example` to `.dev.vars` for local development
+2. Run `bun run dev` to start the development server at http://localhost:3007
+
+## Cloudflare Services
+
+None. The worker has no D1, KV, R2, queue, cron, or Durable Object binding — every page
+is rendered from files in the deployed bundle.
+
+Observability is enabled, with traces head-sampled at 10%.
+
+## Features
+
+- **The landing page is a markdown file.** `resources/content/home.md` holds the whole
+  pitch, written in a small tag vocabulary — `hero`, `section-block`, `feature-grid`,
+  `code-tabs`, `note` — whose components live in `resources/components/`. Editing the
+  copy is editing that one file.
+- **Every tag has an attribute schema**, so a mistyped attribute is a parse error
+  carrying the line it sits on rather than a section that renders blank.
+- **The package list comes from the workspace.** Names and descriptions are read from
+  `packages/*/package.json` at build time and grouped by the taxonomy in
+  `resources/content/groups.ts`, so a newly published package appears here the day it
+  ships and a stale description is impossible.
+- **The counts are counted.** `{% $packageCount %}` and its siblings resolve from the
+  same manifests, so a sentence about the collection cannot drift from it.
+- **Code blocks are highlighted server-side** by the `@sdxc/highlight` walk visitor,
+  which returns tokens rather than markup.
+- **Almost no first-party JavaScript.** Pages are server-rendered HTML; the tab strip is
+  CSS-only and the sidebar collapses through a checkbox, so the islands are the copy button,
+  which needs script to reach the clipboard, the package palette, which needs it to filter,
+  and the option-group sync, which records a switch and carries it to the other strips on the
+  page.
+- **A tab strip can name the choice it offers.** Every strip naming the same group — the
+  install commands all name `package-manager` — shares one selection, kept in a single cookie
+  and read while the page renders, so the manager a reader picked is the one the server draws
+  and nothing changes under them after hydration. A strip that names no group is remembered
+  nowhere, because two sets of samples are rarely the same question asked twice.
+- **Guides are markdown with validated frontmatter.** `resources/docs/**/*.md` carry a
+  `title`, `description`, `section` and `order`, which is what the sidebar and the hub
+  are built from — no page lists another page by hand.
+- **A package's reference is its own README.** The same file npm and GitHub show, with
+  its links rewritten to site URLs, framed by the install line, subpath exports,
+  dependencies and the applications that depend on it, all read from manifests.
+- **Documentation pages are cached.** Every input to one is a file in the bundle, so a
+  page carries a long `Cache-Control` and a weak `ETag` over the bytes rendered, and a
+  client whose copy is current gets a `304`.
+
+## Routes
+
+| Route                  | Description                                          |
+| ---------------------- | ---------------------------------------------------- |
+| `/`                    | The landing page                                     |
+| `/docs`                | The hub, routing a reader by intent                  |
+| `/docs/<slug>`         | One handwritten guide from `resources/docs`          |
+| `/docs/packages`       | Every published package, grouped and filterable      |
+| `/docs/packages/:name` | One package's README, framed by its manifest's facts |
+
+`packages` is a reserved first segment under `/docs`: a static segment outranks the
+`*slug` wildcard, so a guide filed there would be unreachable.
+
+## Scripts
+
+| Script       | Description                            |
+| ------------ | -------------------------------------- |
+| `dev`        | Start development server               |
+| `build`      | Build for production                   |
+| `start`      | Preview the production build           |
+| `cf:deploy`  | Deploy to Cloudflare                   |
+| `cf:typegen` | Regenerate `worker-configuration.d.ts` |
+| `typecheck`  | Type check the app with `tsc`          |
+
+## Deployment
+
+```bash
+bun run cf:deploy
+```
+
+## Environment Variables
+
+See `.env.example`.

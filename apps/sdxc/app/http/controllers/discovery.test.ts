@@ -1,0 +1,248 @@
+/**
+ * Tests for the surfaces nothing on the site links to as a page: the markdown twins, the
+ * map at `/llms.txt`, the index the palette fetches, the sitemap, the feed and the MCP
+ * endpoint. Nobody reads these by eye, so a content type that drifted or a route that
+ * stopped answering would go unnoticed until an agent or a crawler hit it.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
+import { describe, expect, test } from "vitest";
+
+import { fetchApp, ORIGIN } from "~/app/lib/test/router";
+import { listGuides } from "~/app/services/docs";
+import { listPackages, readPackageReadme } from "~/app/services/packages";
+
+/**
+ * Posts one JSON-RPC message through the real router and reads the result back. A call
+ * and a read also mirror what they address in a header, which the protocol has the server
+ * check against the body.
+ */
+async function callMcp(method: string, params: Record<string, unknown> = {}) {
+	let addressed = params.name ?? params.uri;
+
+	let response = await fetchApp("/mcp", {
+		method: "POST",
+		headers: {
+			"content-type": "application/json",
+			accept: "application/json",
+			"MCP-Protocol-Version": LATEST_PROTOCOL_VERSION,
+			"Mcp-Method": method,
+			...(typeof addressed === "string" ? { "Mcp-Name": addressed } : {}),
+		},
+		body: JSON.stringify({
+			jsonrpc: "2.0",
+			id: 1,
+			method,
+			params: {
+				...params,
+				_meta: {
+					[MetaKey.ProtocolVersion]: LATEST_PROTOCOL_VERSION,
+					[MetaKey.ClientCapabilities]: {},
+				},
+			},
+		}),
+	});
+
+	return { response, body: (await response.json()) as Record<string, any> };
+}
+
+describe("GET /docs/*slug.md", () => {
+	test("serves the guide's own source rather than its rendered page", async () => {
+		let response = await fetchApp("/docs/releases/versioning.md");
+		let body = await response.text();
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get("content-type")).toContain("text/markdown");
+		expect(body.startsWith("---")).toBe(true);
+		expect(body).toContain("title: Versioning");
+	});
+
+	test("answers 404 for a slug no file owns", async () => {
+		expect((await fetchApp("/docs/nothing/here.md")).status).toBe(404);
+	});
+});
+
+describe("GET /docs/packages/:name.md", () => {
+	test("serves the README, the same file npm and GitHub show", async () => {
+		let response = await fetchApp("/docs/packages/result.md");
+		let body = await response.text();
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get("content-type")).toContain("text/markdown");
+		expect(body).toBe(await readPackageReadme("result"));
+	});
+
+	test("every published package has one", async () => {
+		for (let entry of listPackages()) {
+			let response = await fetchApp(`/docs/packages/${entry.directory}.md`);
+			expect(response.status, entry.directory).toBe(200);
+		}
+	});
+
+	test("answers 404 for a directory that publishes nothing", async () => {
+		expect((await fetchApp("/docs/packages/jsdoc.md")).status).toBe(404);
+	});
+});
+
+describe("GET /llms.txt", () => {
+	test("links every guide and every package by its markdown address", async () => {
+		let response = await fetchApp("/llms.txt");
+		let body = await response.text();
+
+		expect(response.headers.get("content-type")).toContain("text/plain");
+
+		for (let entry of listPackages()) {
+			expect(body).toContain(`https://sdxc.sergiodxa.com/docs/packages/${entry.directory}.md`);
+		}
+
+		for (let section of await listGuides()) {
+			for (let guide of section.guides) {
+				expect(body).toContain(`https://sdxc.sergiodxa.com/docs/${guide.slug}.md`);
+			}
+		}
+	});
+});
+
+describe("GET /search.json", () => {
+	test("carries one entry per page, plus the headings inside them", async () => {
+		let response = await fetchApp("/search.json");
+		let body = (await response.json()) as { documents: Array<{ href: string }> };
+
+		expect(response.headers.get("content-type")).toContain("application/json");
+		expect(body.documents.length).toBeGreaterThan(listPackages().length);
+		expect(body.documents.some((entry) => entry.href.includes("#"))).toBe(true);
+	});
+});
+
+describe("GET /sitemap.xml", () => {
+	test("lists every page on the site's own origin, whichever host answered", async () => {
+		let response = await fetchApp("/sitemap.xml");
+		let body = await response.text();
+
+		expect(response.headers.get("content-type")).toContain("xml");
+		expect(body.startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(true);
+		expect(body).toContain("<urlset");
+		expect(body).not.toContain(ORIGIN);
+
+		for (let entry of listPackages()) {
+			expect(body).toContain(`https://sdxc.sergiodxa.com/docs/packages/${entry.directory}`);
+		}
+	});
+});
+
+describe("GET /rss.xml", () => {
+	test("carries the dated guides, newest first", async () => {
+		let response = await fetchApp("/rss.xml");
+		let body = await response.text();
+
+		expect(response.headers.get("content-type")).toContain("xml");
+		expect(body).toContain("<rss");
+		expect(body).toContain("<channel>");
+		expect(body).toContain("https://sdxc.sergiodxa.com/docs/releases/versioning");
+	});
+});
+
+describe("POST /mcp", () => {
+	test("lists the four search and enumeration tools, all read-only", async () => {
+		let { response, body } = await callMcp("tools/list");
+
+		expect(response.status).toBe(200);
+
+		let tools = body.result.tools as Array<{
+			name: string;
+			annotations?: { readOnlyHint?: boolean };
+		}>;
+
+		expect(tools.map((entry) => entry.name).sort()).toEqual([
+			"get_package",
+			"list_packages",
+			"search_docs",
+			"search_packages",
+		]);
+
+		for (let entry of tools) expect(entry.annotations?.readOnlyHint, entry.name).toBe(true);
+	});
+
+	test("search_packages answers with pages a client can fetch", async () => {
+		let { body } = await callMcp("tools/call", {
+			name: "search_packages",
+			arguments: { query: "markdown" },
+		});
+
+		expect(body.result.isError).not.toBe(true);
+		expect(JSON.stringify(body.result)).toContain(
+			"https://sdxc.sergiodxa.com/docs/packages/markdown.md",
+		);
+	});
+
+	test("get_package reads one in full, scope written or not", async () => {
+		let { body } = await callMcp("tools/call", {
+			name: "get_package",
+			arguments: { name: "@sdxc/result" },
+		});
+
+		expect(JSON.stringify(body.result)).toContain("npm add @sdxc/result");
+	});
+
+	test("a name nothing publishes comes back as guidance the model can act on", async () => {
+		let { body } = await callMcp("tools/call", {
+			name: "get_package",
+			arguments: { name: "nothing-here" },
+		});
+
+		expect(body.result.isError).toBe(true);
+		expect(JSON.stringify(body.result)).toContain("search_packages");
+	});
+
+	test("every package and every guide appears in the resource picker", async () => {
+		let { body } = await callMcp("resources/list");
+
+		let uris = new Set((body.result.resources as Array<{ uri: string }>).map((entry) => entry.uri));
+
+		for (let entry of listPackages()) {
+			expect(uris).toContain(`https://sdxc.sergiodxa.com/docs/packages/${entry.directory}.md`);
+		}
+
+		for (let section of await listGuides()) {
+			for (let guide of section.guides) {
+				expect(uris).toContain(`https://sdxc.sergiodxa.com/docs/${guide.slug}.md`);
+			}
+		}
+	});
+
+	test("reading a resource gives the same text its URL serves", async () => {
+		let { body } = await callMcp("resources/read", {
+			uri: "https://sdxc.sergiodxa.com/docs/packages/result.md",
+		});
+
+		let contents = body.result.contents as Array<{ text: string }>;
+
+		expect(contents.at(0)?.text).toBe(await readPackageReadme("result"));
+	});
+});
+
+describe("GET /mcp", () => {
+	test("renders the page a person reaches by opening the endpoint's URL", async () => {
+		let response = await fetchApp("/mcp");
+		let body = await response.text();
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get("content-type")).toContain("text/html");
+		expect(body).toContain("search_packages");
+	});
+});
+
+describe("SEO metadata", () => {
+	test("names one origin whichever host served the request", async () => {
+		let body = await (await fetchApp("/docs/packages/result")).text();
+
+		expect(body).toContain(
+			'<link rel="canonical" href="https://sdxc.sergiodxa.com/docs/packages/result"',
+		);
+		expect(body).toContain('property="og:title"');
+		expect(body).toContain('property="og:site_name"');
+	});
+});

@@ -1,0 +1,88 @@
+/*
+ * Raw --ui-color-{scale}-{step} scales the semantic --ui-{brand,neutral,danger,warning,
+ * success}-* tokens in @sdxc/u's theme layer are derived from. That layer declares no
+ * defaults, so an app defines these itself or every tinted surface resolves to nothing.
+ *
+ * Every scale shares one lightness ramp — 50 lightest through 950 darkest — so the same
+ * step reads at the same weight across colors, and only hue and the chroma curve vary.
+ *
+ * `brand` is indigo at hue 275: a cool accent that sits beside code without competing
+ * with syntax highlighting, which owns the warm end of the spectrum. `neutral` carries
+ * the same hue at near-zero chroma, so borders and muted copy read as the same family
+ * rather than as a separate grey. `danger` (25), `warning` (85) and `success` (145) stay
+ * where status colors are read fastest.
+ *
+ * Chroma is held inside the sRGB gamut at each step's own lightness, so the declared
+ * value is the value that renders instead of one the browser silently clips.
+ */
+
+:root {
+	--ui-color-neutral-50: oklch(0.985 0.003 275);
+	--ui-color-neutral-100: oklch(0.965 0.005 275);
+	--ui-color-neutral-200: oklch(0.915 0.008 275);
+	--ui-color-neutral-300: oklch(0.84 0.011 275);
+	--ui-color-neutral-400: oklch(0.73 0.013 275);
+	--ui-color-neutral-500: oklch(0.62 0.014 275);
+	--ui-color-neutral-600: oklch(0.52 0.014 275);
+	--ui-color-neutral-700: oklch(0.42 0.012 275);
+	--ui-color-neutral-800: oklch(0.32 0.01 275);
+	--ui-color-neutral-900: oklch(0.235 0.008 275);
+	--ui-color-neutral-950: oklch(0.155 0.006 275);
+
+	--ui-color-brand-50: oklch(0.985 0.012 275);
+	--ui-color-brand-100: oklch(0.955 0.03 275);
+	--ui-color-brand-200: oklch(0.9 0.06 275);
+	--ui-color-brand-300: oklch(0.81 0.1 275);
+	--ui-color-brand-400: oklch(0.71 0.14 275);
+	--ui-color-brand-500: oklch(0.61 0.17 275);
+	--ui-color-brand-600: oklch(0.52 0.17 275);
+	--ui-color-brand-700: oklch(0.43 0.15 275);
+	--ui-color-brand-800: oklch(0.33 0.12 275);
+	--ui-color-brand-900: oklch(0.245 0.09 275);
+	--ui-color-brand-950: oklch(0.165 0.06 275);
+
+	--ui-color-danger-50: oklch(0.98 0.02 25);
+	--ui-color-danger-100: oklch(0.96 0.05 25);
+	--ui-color-danger-200: oklch(0.91 0.09 25);
+	--ui-color-danger-300: oklch(0.83 0.13 25);
+	--ui-color-danger-400: oklch(0.73 0.16 25);
+	--ui-color-danger-500: oklch(0.62 0.18 25);
+	--ui-color-danger-600: oklch(0.52 0.18 25);
+	--ui-color-danger-700: oklch(0.42 0.16 25);
+	--ui-color-danger-800: oklch(0.32 0.13 25);
+	--ui-color-danger-900: oklch(0.24 0.09 25);
+	--ui-color-danger-950: oklch(0.16 0.06 25);
+
+	--ui-color-warning-50: oklch(0.98 0.02 85);
+	--ui-color-warning-100: oklch(0.96 0.05 85);
+	--ui-color-warning-200: oklch(0.91 0.08 85);
+	--ui-color-warning-300: oklch(0.83 0.12 85);
+	--ui-color-warning-400: oklch(0.73 0.15 85);
+	--ui-color-warning-500: oklch(0.62 0.16 85);
+	--ui-color-warning-600: oklch(0.52 0.16 85);
+	--ui-color-warning-700: oklch(0.42 0.14 85);
+	--ui-color-warning-800: oklch(0.32 0.11 85);
+	--ui-color-warning-900: oklch(0.24 0.08 85);
+	--ui-color-warning-950: oklch(0.16 0.05 85);
+
+	--ui-color-success-50: oklch(0.98 0.02 145);
+	--ui-color-success-100: oklch(0.96 0.05 145);
+	--ui-color-success-200: oklch(0.91 0.09 145);
+	--ui-color-success-300: oklch(0.83 0.14 145);
+	--ui-color-success-400: oklch(0.73 0.17 145);
+	--ui-color-success-500: oklch(0.62 0.18 145);
+	--ui-color-success-600: oklch(0.52 0.165 145);
+	--ui-color-success-700: oklch(0.42 0.135 145);
+	--ui-color-success-800: oklch(0.32 0.1 145);
+	--ui-color-success-900: oklch(0.24 0.075 145);
+	--ui-color-success-950: oklch(0.16 0.05 145);
+
+	/* The platform's own faces: no webfont is fetched, which is the point on a page
+	whose job is to render the moment the HTML arrives. */
+	--ui-font-sans:
+		ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif, "Apple Color Emoji",
+		"Segoe UI Emoji";
+	--ui-font-mono:
+		ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+		monospace;
+}
