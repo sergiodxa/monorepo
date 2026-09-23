@@ -54,6 +54,22 @@ export class CopyEvent extends Event {
 }
 
 /**
+ * Reads what a target offers to be copied. A form control keeps what it shows in its
+ * `value` and has no text of its own, so the pairing a copy button is most often written
+ * for — a read-only field beside a button — is read there rather than from its markup.
+ *
+ * @param target - The element the button's `commandfor` names.
+ * @returns The text to write to the clipboard, trimmed.
+ */
+function copyableText(target: Element): string {
+	if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+		return target.value.trim();
+	}
+
+	return target.textContent?.trim() ?? "";
+}
+
+/**
  * Finds the element a copy button's `commandfor` targets, preferring the
  * live `commandForElement` reference and falling back to an `id` lookup for
  * runtimes that parse `commandfor` without yet reflecting the IDL property.
@@ -111,7 +127,7 @@ export const copyToClipboard: MixinFactory<HTMLButtonElement> = createMixin<HTML
 							return;
 						}
 
-						let text = target.textContent?.trim() ?? "";
+						let text = copyableText(target);
 						if (text === "") return;
 
 						try {
