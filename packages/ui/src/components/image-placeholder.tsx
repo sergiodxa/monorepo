@@ -18,6 +18,7 @@ import {
 	absolute,
 	center,
 	flex,
+	hidden,
 	inlineFlex,
 	insBe,
 	insIe,
@@ -29,7 +30,7 @@ import {
 } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { bs, fit, is, mis } from "@sdxc/u/size";
-import { data, when } from "@sdxc/u/state";
+import { data, precededBy, when } from "@sdxc/u/state";
 import { text, textTransform, weight } from "@sdxc/u/typography";
 
 /** Size variant {@link ImagePlaceholder} falls back to when `size` is omitted. */
@@ -246,6 +247,12 @@ ImagePlaceholder.Fallback = function ImagePlaceholderFallback(
 				{...rest}
 				data-slot="fallback"
 				mix={[
+					/*
+					 * Both layers fill the host, and this one is written after the image, so it
+					 * would cover a picture that loaded. It stands down while an image is present
+					 * and unbroken, and takes over once the image reports that it failed.
+					 */
+					precededBy('img[data-slot="image"]:not([data-image-error])', hidden()),
 					absolute(),
 					center(),
 					weight("medium"),
