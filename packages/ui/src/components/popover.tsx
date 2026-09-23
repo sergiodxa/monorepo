@@ -13,6 +13,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import { raw } from "@sdxc/u/general";
 import { inset, positionArea, positionTryFallbacks } from "@sdxc/u/layout";
 import { m, marginLeft, marginRight, mbe, mbs } from "@sdxc/u/size";
 import { data, when } from "@sdxc/u/state";
@@ -111,18 +112,40 @@ export function Popover(handle: Handle<Popover.Props>) {
 					when('&[data-placement^="left"]', marginRight("var(--ui-popover-offset, 0.5rem)")),
 					when('&[data-placement^="right"]', marginLeft("var(--ui-popover-offset, 0.5rem)")),
 					positionTryFallbacks("flip-block", "flip-inline", "flip-block flip-inline"),
+					/*
+					 * A corner placement aligns one pair of edges and grows away from it, so the
+					 * surface occupies the anchor's own track and spans the one beyond it. Naming
+					 * the neighbouring cell instead — `bottom left` for `bottom-start` — would sit
+					 * the surface past the anchor's edge rather than flush with it.
+					 */
 					data("placement", "top", positionArea("top")),
-					data("placement", "top-start", positionArea("top left")),
-					data("placement", "top-end", positionArea("top right")),
+					data("placement", "top-start", positionArea("top span-right")),
+					data("placement", "top-end", positionArea("top span-left")),
 					data("placement", "bottom", positionArea("bottom")),
-					data("placement", "bottom-start", positionArea("bottom left")),
-					data("placement", "bottom-end", positionArea("bottom right")),
+					data("placement", "bottom-start", positionArea("bottom span-right")),
+					data("placement", "bottom-end", positionArea("bottom span-left")),
 					data("placement", "left", positionArea("left")),
-					data("placement", "left-start", positionArea("left top")),
-					data("placement", "left-end", positionArea("left bottom")),
+					data("placement", "left-start", positionArea("left span-bottom")),
+					data("placement", "left-end", positionArea("left span-top")),
 					data("placement", "right", positionArea("right")),
-					data("placement", "right-start", positionArea("right top")),
-					data("placement", "right-end", positionArea("right bottom")),
+					data("placement", "right-start", positionArea("right span-bottom")),
+					data("placement", "right-end", positionArea("right span-top")),
+					/*
+					 * A part built on this surface that lays its contents out — a stack, a grid —
+					 * sets `display` in the author origin and beats the user agent's
+					 * `[popover]:not(:popover-open) { display: none }`, leaving the surface on
+					 * screen with nothing having opened it. The closed state is marked important
+					 * because every `mix` entry compiles into its own cascade sublayer ordered by
+					 * first appearance, and a consumer's entry is appended after these: later layer
+					 * wins whatever the selectors say, so importance is what settles it.
+					 *
+					 * A `"hint"` surface is left out: that mode is the one a hint reveals itself
+					 * in, from CSS state on its trigger rather than from an invoker, so it stays
+					 * closed the whole time it is on screen and owns its own hidden state. An
+					 * important rule here would be the one thing its reveal could not answer,
+					 * since importance reverses layer order and this entry comes first.
+					 */
+					when('&:not(:popover-open):not([popover="hint"])', raw({ display: "none !important" })),
 					mix,
 				]}
 			>
