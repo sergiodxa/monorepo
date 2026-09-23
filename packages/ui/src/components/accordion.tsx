@@ -224,6 +224,10 @@ Accordion.Content = function AccordionContent(handle: Handle<Accordion.ContentPr
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <Disclosure.Panel {...rest} mix={[pbe(4), fg("neutral"), text("sm"), mix]} />;
+		/*
+		 * A row in an accordion runs edge to edge, the way its trigger does, so the panel's
+		 * own inline inset is released here rather than carried through.
+		 */
+		return <Disclosure.Panel {...rest} mix={[pi(0), pbe(4), fg("neutral"), text("sm"), mix]} />;
 	};
 };
