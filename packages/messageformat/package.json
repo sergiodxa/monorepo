@@ -1,0 +1,16 @@
+{
+	"name": "@sdxc/messageformat",
+	"version": "0.0.1",
+	"description": "Unicode MessageFormat 2 parser and formatter shaped like Intl.MessageFormat",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*"
+	}
+}

@@ -115,7 +115,7 @@ Run from the repository root:
 | [hostname](packages/hostname)                                   | Cloudflare for SaaS custom-hostname client: register, poll and delete customer domains   | ✅  |
 | [html](packages/html)                                           | Read a served page: fetch or parse HTML, then query it by role and accessible name       | ✅  |
 | [http](packages/http)                                           | Response builders, content negotiation and HTTP caching                                  | ✅  |
-| [i18n](packages/i18n)                                           | Language detection, i18next instances and translated-markup components                   | ✅  |
+| [i18n](packages/i18n)                                           | Language detection and MessageFormat 2 translators for Remix routers and remix/ui        | ✅  |
 | [icons](packages/icons)                                         | Lucide icons for Remix UI                                                                | ✅  |
 | [jobs](packages/jobs)                                           | Declared background jobs dispatched over a pluggable queue backend                       | ✅  |
 | [jsdoc](packages/jsdoc)                                         | Read JSDoc out of source text into a JSON documentation model                            | ✅  |
@@ -127,6 +127,7 @@ Run from the repository root:
 | [mail](packages/mail)                                           | Transactional email with pluggable transports                                            | ✅  |
 | [markdown](packages/markdown)                                   | GitHub Flavored Markdown: parse to a typed AST, transform it, write it back              | ✅  |
 | [mcp](packages/mcp)                                             | MCP servers over stateless Streamable HTTP                                               | ✅  |
+| [messageformat](packages/messageformat)                         | Unicode MessageFormat 2 parser and formatter shaped like Intl.MessageFormat              | ✅  |
 | [oidc-provider](packages/oidc-provider)                         | OIDC/OAuth2 provider engine                                                              |     |
 | [opml](packages/opml)                                           | Read and write OPML subscription lists                                                   | ✅  |
 | [pagination](packages/pagination)                               | Offset and keyset pagination with Link headers                                           | ✅  |
@@ -185,8 +186,6 @@ repeats it. `@sdxc/*` workspace dependencies are listed under [Packages](#packag
 | `@simplewebauthn/server`          | `oidc-provider`                                                                                                         | Passkey registration and authentication.                                                        |
 | `@remix-run/data-schema`          | `auth`                                                                                                                  | Schema validation, reached by its own name rather than through `remix`.                         |
 | `@standard-schema/spec`           | `flags`, `jobs`, `markdown`, `validate`, `webhooks`                                                                     | The `StandardSchemaV1` interface, as types only.                                                |
-| `i18next`                         | `i18n`                                                                                                                  | Translation lookup and interpolation.                                                           |
-| `html-parse-stringify`            | `i18n`                                                                                                                  | Parses the tag AST inside a translation string.                                                 |
 | `lucide-static`                   | `icons`                                                                                                                 | Icon source data for the icon codegen script.                                                   |
 | `cron-parser`                     | `cron`                                                                                                                  | Test-only oracle the package's own schedule maths is checked against.                           |
 | `linkedom`                        | `html`                                                                                                                  | Parses HTML into a document tree.                                                               |
