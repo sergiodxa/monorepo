@@ -55,7 +55,7 @@ let resources = Object.fromEntries(
 	),
 );
 
-let { intl } = await createTranslator({
+let { intl } = createTranslator({
 	resources,
 	supportedLanguages: SUPPORTED_LANGUAGES,
 	fallbackLanguage: DEFAULT_LANGUAGE,

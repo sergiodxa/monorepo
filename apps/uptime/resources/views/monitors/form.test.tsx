@@ -18,7 +18,7 @@ import en from "~/app/locales/en";
 
 import MonitorFormFields from "./form";
 
-let { intl } = await createTranslator({
+let { intl } = createTranslator({
 	resources: { en },
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",

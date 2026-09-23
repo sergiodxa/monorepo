@@ -61,7 +61,7 @@ let dashboardCardUsage = (await import("./dashboard-card-usage")).default as {
 	handler: RequestHandler<any>;
 };
 
-let { intl } = await createTranslator({
+let { intl } = createTranslator({
 	resources: { en },
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",

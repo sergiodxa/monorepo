@@ -63,7 +63,7 @@ let dashboardCardUptime = (await import("./dashboard-card-uptime")).default as {
 	handler: RequestHandler<any>;
 };
 
-let { intl } = await createTranslator({
+let { intl } = createTranslator({
 	resources: { en },
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",

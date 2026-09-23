@@ -60,7 +60,7 @@ let monitorCardSlowestResult = (await import("./monitor-card-slowest-result")).d
 	handler: RequestHandler<any>;
 };
 
-let { intl } = await createTranslator({
+let { intl } = createTranslator({
 	resources: { en },
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",

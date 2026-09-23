@@ -104,7 +104,7 @@ async function digest(
 		return false;
 	}
 
-	let { locale, t } = await emailTranslator(lead.locale);
+	let { locale, t } = emailTranslator(lead.locale);
 
 	recordCost("emailSent");
 	let result = await mailer.send(

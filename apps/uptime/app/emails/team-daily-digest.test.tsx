@@ -49,7 +49,7 @@ function order(text: string, names: string[]): string[] {
 
 /** Builds the email with a real translator, so a missing locale key fails the test. */
 async function makeEmail(overrides: Partial<TeamDailyDigestEmail.Data> = {}) {
-	let { locale, t } = await emailTranslator();
+	let { locale, t } = emailTranslator();
 	return new TeamDailyDigestEmail({
 		to: "member@example.com",
 		teamName: "Acme",

@@ -16,7 +16,7 @@ import { emailTranslator } from "~/app/emails/locale";
 
 /** Builds the email with a real translator, so a missing locale key fails the test. */
 async function makeEmail() {
-	let { locale, t } = await emailTranslator();
+	let { locale, t } = emailTranslator();
 	return new AccountDeletedEmail({ email: "ada@example.com", locale, t });
 }
 

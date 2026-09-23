@@ -270,7 +270,7 @@ async function sendChange(
 		return false;
 	}
 
-	let { locale, t } = await emailTranslator(lead.locale);
+	let { locale, t } = emailTranslator(lead.locale);
 
 	recordCost("emailSent");
 	let sent = await mailer.send(
@@ -324,7 +324,7 @@ async function sendSummary(
 		row.created_at,
 		row.expires_at,
 	);
-	let { locale, t } = await emailTranslator(lead.locale);
+	let { locale, t } = emailTranslator(lead.locale);
 
 	/**
 	 * Built inside the request: signing in is what turns a watched target into a real

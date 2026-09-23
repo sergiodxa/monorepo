@@ -65,7 +65,7 @@ let dashboardCardCount = (await import("./dashboard-card-count")).default as {
 
 let { buildCacheKey } = await import("~/app/services/analytics");
 
-let { intl } = await createTranslator({
+let { intl } = createTranslator({
 	resources: { en },
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",

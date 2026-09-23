@@ -55,7 +55,7 @@ async function createFixture() {
 }
 
 /** Provides the translator directly, standing in for the app's language middleware here. */
-let { intl } = await createTranslator({
+let { intl } = createTranslator({
 	resources: { en },
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",

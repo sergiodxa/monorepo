@@ -15,7 +15,7 @@ import { TeamInviteEmail } from "~/app/emails/team-invite";
 
 /** Builds the email with a real translator, so a missing locale key fails the test. */
 async function makeEmail(overrides: Partial<TeamInviteEmail.Data> = {}) {
-	let { locale, t } = await emailTranslator();
+	let { locale, t } = emailTranslator();
 	return new TeamInviteEmail({
 		team: "Acme",
 		email: "invitee@example.com",
@@ -51,7 +51,7 @@ describe("TeamInviteEmail", () => {
 	});
 
 	test("writes the copy in the language it was constructed for", async () => {
-		let { locale, t } = await emailTranslator("es");
+		let { locale, t } = emailTranslator("es");
 		let email = await makeEmail({ locale, t });
 
 		expect(email.subject).not.toBe("You've been invited to join Acme on Uptime");

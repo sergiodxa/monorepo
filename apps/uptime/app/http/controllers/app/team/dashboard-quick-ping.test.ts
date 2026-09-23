@@ -48,7 +48,7 @@ let quickPing = (await import("./dashboard-quick-ping")).default as {
 	handler: RequestHandler<RequestContext>;
 };
 
-let { intl } = await createTranslator({
+let { intl } = createTranslator({
 	resources: { en },
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",

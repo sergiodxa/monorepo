@@ -20,7 +20,7 @@ import en from "~/app/locales/en";
 
 import DnsMonitorFormFields from "./form";
 
-let { intl } = await createTranslator({
+let { intl } = createTranslator({
 	resources: { en },
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",

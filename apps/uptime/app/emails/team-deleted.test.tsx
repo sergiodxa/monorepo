@@ -16,7 +16,7 @@ import { TeamDeletedEmail } from "~/app/emails/team-deleted";
 
 /** Builds the email with a real translator, so a missing locale key fails the test. */
 async function makeEmail(overrides: Partial<TeamDeletedEmail.Data> = {}) {
-	let { locale, t } = await emailTranslator();
+	let { locale, t } = emailTranslator();
 	return new TeamDeletedEmail({
 		team: "Acme",
 		email: "colleague@example.com",

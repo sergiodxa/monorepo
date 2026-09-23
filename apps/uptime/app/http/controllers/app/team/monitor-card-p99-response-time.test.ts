@@ -65,7 +65,7 @@ let monitorCardP99ResponseTime = (await import("./monitor-card-p99-response-time
 	handler: RequestHandler<any>;
 };
 
-let { intl } = await createTranslator({
+let { intl } = createTranslator({
 	resources: { en },
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",

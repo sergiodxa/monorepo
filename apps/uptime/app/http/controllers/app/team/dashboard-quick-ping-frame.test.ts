@@ -86,7 +86,7 @@ vi.spyOn(console, "info").mockImplementation(() => {});
 
 let BASE_URL = "https://uptime.test";
 
-let { intl } = await createTranslator({
+let { intl } = createTranslator({
 	resources: { en },
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",

@@ -27,7 +27,7 @@ function partialWeek(): UptimeBar.Status[] {
 
 /** Builds the email with a real translator, so a missing locale key fails the test. */
 async function makeEmail(overrides: Partial<TrialRepeatReportEmail.Data> = {}) {
-	let { locale, t } = await emailTranslator();
+	let { locale, t } = emailTranslator();
 	return new TrialRepeatReportEmail({
 		to: "visitor@example.com",
 		url: "https://example.com",
@@ -161,7 +161,7 @@ describe("TrialRepeatReportEmail", () => {
 	});
 
 	test("writes the copy in the language it was constructed for", async () => {
-		let { locale, t } = await emailTranslator("de");
+		let { locale, t } = emailTranslator("de");
 		let email = await makeEmail({ locale, t });
 
 		expect(email.subject).toBe("Was wir bisher zu example.com gefunden haben");

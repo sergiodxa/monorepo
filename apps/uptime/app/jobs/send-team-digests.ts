@@ -240,7 +240,7 @@ async function digestTeam(
 			continue;
 		}
 
-		let { locale, t } = await emailTranslator(
+		let { locale, t } = emailTranslator(
 			preferences.get(member.subjectId)?.preferred_language ?? undefined,
 		);
 

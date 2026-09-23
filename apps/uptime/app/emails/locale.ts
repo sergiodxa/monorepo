@@ -31,7 +31,7 @@ export const DEFAULT_EMAIL_LOCALE = "en";
  * instance is kept per language so an alert fanning out to a team does not rebuild
  * a translator per email; a broken message becomes a warning on the invocation's log.
  *
- * @example let { locale, t } = await emailTranslator();
+ * @example let { locale, t } = emailTranslator();
  */
 export const emailTranslator = createTranslator({
 	resources: { en, es, de, ja, fr, it },

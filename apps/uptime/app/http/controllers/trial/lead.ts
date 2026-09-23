@@ -120,7 +120,7 @@ export default createAction(routes.trial.lead, async (ctx) => {
 				reportToken: existing.report_token,
 				unsubscribeToken: lead.unsubscribe_token,
 				locale,
-				t: (await emailTranslator(locale)).t,
+				t: emailTranslator(locale).t,
 			}),
 		);
 
@@ -185,7 +185,7 @@ export default createAction(routes.trial.lead, async (ctx) => {
 			watchUntil: new Date(probe.checkedAt + TRIAL_WATCH_DURATION_DAYS * MS_PER_DAY),
 			unsubscribeToken: lead.unsubscribe_token,
 			locale,
-			t: (await emailTranslator(locale)).t,
+			t: emailTranslator(locale).t,
 		}),
 	);
 

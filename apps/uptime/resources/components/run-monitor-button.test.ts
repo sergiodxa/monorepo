@@ -13,7 +13,7 @@ import { describe, expect, test } from "vitest";
 
 import { transitionToast } from "./run-monitor-button";
 
-let { intl: i18n } = await createTranslator({
+let { intl: i18n } = createTranslator({
 	resources: {
 		en: {
 			page: {

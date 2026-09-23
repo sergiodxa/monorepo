@@ -59,7 +59,7 @@ function keyRecorder() {
 
 /** Builds the email with a real translator, so a missing locale key fails the test. */
 async function makeEmail(overrides: Partial<AlertEmail.Data> = {}) {
-	let { locale, t } = await emailTranslator();
+	let { locale, t } = emailTranslator();
 	return new AlertEmail({
 		to: "ops@example.com",
 		subjectPrefix: "",
@@ -466,7 +466,7 @@ describe("AlertEmail", () => {
 	});
 
 	test("writes the copy in the language it was constructed for", async () => {
-		let { locale, t } = await emailTranslator("de");
+		let { locale, t } = emailTranslator("de");
 		let email = await makeEmail({ locale, t });
 
 		expect(email.subject).not.toBe("[Uptime Alert] Homepage is DOWN");

@@ -53,7 +53,7 @@ function createHtmlRenderer(ctx: RequestContext) {
 	};
 }
 
-let { intl } = await createTranslator({
+let { intl } = createTranslator({
 	resources: { en },
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",

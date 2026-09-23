@@ -44,7 +44,7 @@ function target(
 
 /** Builds the email with a real translator, so a missing locale key fails the test. */
 async function makeEmail(overrides: Partial<TrialDailyDigestEmail.Data> = {}) {
-	let { locale, t } = await emailTranslator();
+	let { locale, t } = emailTranslator();
 	return new TrialDailyDigestEmail({
 		to: "visitor@example.com",
 		targets: [target("https://example.com")],
@@ -206,7 +206,7 @@ describe("TrialDailyDigestEmail", () => {
 	});
 
 	test("writes the copy in the language it was constructed for", async () => {
-		let { locale, t } = await emailTranslator("de");
+		let { locale, t } = emailTranslator("de");
 		let email = await makeEmail({ locale, t });
 
 		expect(email.subject).toBe("Täglicher Bericht: example.com");

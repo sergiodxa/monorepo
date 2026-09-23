@@ -15,7 +15,7 @@ import { TrialConfirmationEmail } from "~/app/emails/trial-confirmation";
 
 /** Builds the email with a real translator, so a missing locale key fails the test. */
 async function makeEmail(overrides: Partial<TrialConfirmationEmail.Data> = {}) {
-	let { locale, t } = await emailTranslator();
+	let { locale, t } = emailTranslator();
 	return new TrialConfirmationEmail({
 		to: "visitor@example.com",
 		url: "https://example.com",
@@ -109,7 +109,7 @@ describe("TrialConfirmationEmail", () => {
 	});
 
 	test("writes the copy in the language it was constructed for", async () => {
-		let { locale, t } = await emailTranslator("ja");
+		let { locale, t } = emailTranslator("ja");
 		let email = await makeEmail({ locale, t });
 
 		expect(email.subject).not.toBe("We are now checking example.com every hour");

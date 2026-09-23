@@ -394,7 +394,7 @@ async function deliverEmail(
 ): Promise<Result<SentMessage, Error>> {
 	recordCost("emailSent");
 
-	let translation = await wrap(() => emailTranslator());
+	let translation = wrap(() => emailTranslator());
 	if (isFailure(translation)) return translation;
 
 	return await params.mailer.send(

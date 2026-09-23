@@ -59,7 +59,7 @@ export const createInvite = createAction(routes.teamAdminActions.invite.create, 
 			email,
 			url,
 			locale: DEFAULT_EMAIL_LOCALE,
-			t: (await emailTranslator(DEFAULT_EMAIL_LOCALE)).t,
+			t: emailTranslator(DEFAULT_EMAIL_LOCALE).t,
 		}),
 	);
 

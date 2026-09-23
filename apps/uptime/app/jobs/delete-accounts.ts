@@ -98,7 +98,7 @@ async function erase(
 		});
 	}
 
-	let { locale, t } = await emailTranslator();
+	let { locale, t } = emailTranslator();
 
 	/** Counted before the send, because a rejected send is still a billed one. */
 	recordCost("emailSent");
@@ -169,7 +169,7 @@ async function notifyFormerMembers(
 				continue;
 			}
 
-			let { locale, t } = await emailTranslator(
+			let { locale, t } = emailTranslator(
 				preferences.get(subjectId)?.preferred_language ?? undefined,
 			);
 
