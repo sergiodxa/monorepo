@@ -707,7 +707,7 @@ Sidebar.Content = function SidebarContent(handle: Handle<Sidebar.ContentProps>) 
 					minBs("0"),
 					bs("auto"),
 					gap("1rem"),
-					pi("0.75rem"),
+					pi("0.5rem"),
 					pb("1rem"),
 					mix,
 				]}
@@ -750,7 +750,7 @@ Sidebar.Footer = function SidebarFooter(handle: Handle<Sidebar.FooterProps>) {
 						),
 					}),
 					gap("0.5rem"),
-					pi("1rem"),
+					pi("0.5rem"),
 					pbs("1rem"),
 					pbe("calc(1rem + env(safe-area-inset-bottom, 0px))"),
 					mix,
@@ -830,7 +830,7 @@ Sidebar.Item = function SidebarItem(handle: Handle<Sidebar.ItemProps>) {
 					when('&[aria-disabled="true"]', [cursor("not-allowed"), opacity(50)]),
 					gap("0.75rem"),
 					rounded("lg"),
-					pi("0.75rem"),
+					pi("0.5rem"),
 					pb("0.5rem"),
 					fg("neutral"),
 					transition(
@@ -1097,7 +1097,14 @@ Sidebar.MenuItem = function SidebarMenuItem(handle: Handle<Sidebar.MenuItemProps
 				mix={[
 					relative(),
 					flex(),
-					items("center"),
+					/*
+					 * A row on its own centres what it holds; a row that carries a sub-menu
+					 * stacks, so the nested list sits under it at full width. The two are
+					 * written under selectors that never match at once, so the layout holds
+					 * whichever order the cascade puts the pair in.
+					 */
+					when('&:not(:has([data-slot="menu-sub"]))', items("center")),
+					when('&:has([data-slot="menu-sub"])', [flexCol(), items("stretch")]),
 					when(
 						"&:hover [data-slot='menu-action'], &:focus-within [data-slot='menu-action']",
 						opacity(100),
@@ -1205,7 +1212,6 @@ function menuRowMixins() {
 		when("& > span", truncate()),
 		data("size", "sm", [
 			minBs("1.75rem"),
-			pi("0.625rem"),
 			pb("0.375rem"),
 			fontSize("xs"),
 			when("& > svg:first-child, & > [data-slot='icon']:first-child", [
@@ -1216,7 +1222,6 @@ function menuRowMixins() {
 		data("size", "md", minBs("2.25rem")),
 		data("size", "lg", [
 			minBs("2.75rem"),
-			pi("1rem"),
 			pb("0.625rem"),
 			fontSize("base"),
 			when("& > svg:first-child, & > [data-slot='icon']:first-child", [
@@ -1229,7 +1234,7 @@ function menuRowMixins() {
 		when('&[aria-disabled="true"]', [cursor("not-allowed"), opacity(50)]),
 		gap("0.75rem"),
 		rounded("lg"),
-		pi("0.75rem"),
+		pi("0.5rem"),
 		pb("0.5rem"),
 		fg("neutral"),
 		transition(
@@ -1374,7 +1379,7 @@ Sidebar.MenuSkeleton = function SidebarMenuSkeleton(handle: Handle<Sidebar.MenuS
 					items("center"),
 					bs("2.25rem"),
 					gap("0.75rem"),
-					pi("0.75rem"),
+					pi("0.5rem"),
 					rounded("lg"),
 					mix,
 				]}
@@ -1420,11 +1425,11 @@ Sidebar.MenuSub = function SidebarMenuSub(handle: Handle<Sidebar.MenuSubProps>) 
 				data-slot="menu-sub"
 				mix={[
 					relative(),
-					mis("0.875rem"),
+					mis("1rem"),
 					flex(),
 					flexCol(),
 					borderEdge("inline-start", { width: 1, style: "solid" }),
-					pis("0.875rem"),
+					pis("0.625rem"),
 					gap("0.125rem"),
 					border("neutral"),
 					mix,
