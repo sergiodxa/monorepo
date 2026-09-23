@@ -10,7 +10,7 @@
 
 import * as s from "remix/data-schema";
 
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 
 /** Parses and requires the `:keyId` path param every single-key route matches. */
 export function keyIdParam(ctx: { params: Record<string, string | undefined> }): string {
@@ -19,28 +19,20 @@ export function keyIdParam(ctx: { params: Record<string, string | undefined> }):
 
 /** A key the tenant does not hold, for a route naming one in its path. */
 export function apiKeyNotFound(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/not-found",
-		title: "No such API key exists",
-		status: 404,
+	return managementProblem("notFound", {
+		detail: "No such API key exists.",
 	});
 }
 
 /** A caller minting or rotating a key against a plan this tenant is not entitled to. */
 export function apiKeyEntitlementRequired(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/entitlement-required",
-		title: "This tenant is not entitled to machine-to-machine access",
-		status: 403,
-		detail: "Machine-to-machine access is not included on this tenant's plan.",
+	return managementProblem("entitlementRequired", {
+		detail:
+			"This tenant is not entitled to machine-to-machine access. Machine-to-machine access is not included on this tenant's plan.",
 	});
 }
 
 /** A caller minting or rotating a key before this tenant has chosen its own key prefix. */
 export function apiKeyPrefixNotSet(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/prefix-not-set",
-		title: "This tenant has not set its own API key prefix yet",
-		status: 409,
-	});
+	return managementProblem("prefixNotSet");
 }

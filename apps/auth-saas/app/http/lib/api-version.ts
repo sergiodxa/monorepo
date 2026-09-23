@@ -9,7 +9,7 @@
 
 import type { Middleware } from "remix/router";
 
-import { problem } from "./problem";
+import { managementProblem } from "./problem";
 
 /** The header both a request and a response name a version through. */
 export const API_VERSION_HEADER = "X-API-Version";
@@ -87,10 +87,7 @@ export function apiVersioning(): Middleware {
 		let resolved = resolveApiVersion(ctx.request);
 
 		if (!resolved.ok) {
-			return problem({
-				type: "https://docs.example.com/errors/unsupported-api-version",
-				title: "This API version is not published",
-				status: 400,
+			return managementProblem("unsupportedApiVersion", {
 				detail: `Published versions: ${resolved.published.join(", ")}`,
 			});
 		}

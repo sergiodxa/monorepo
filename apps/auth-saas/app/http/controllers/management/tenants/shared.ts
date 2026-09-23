@@ -20,7 +20,7 @@ import type { DomainRow } from "~/app/models/domain";
 import type { MembershipRow } from "~/app/models/membership";
 import type { TenantRow } from "~/app/models/tenant";
 
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 
@@ -115,37 +115,28 @@ export function domainIdParam(ctx: { params: Record<string, string | undefined> 
 
 /** The tenant a route's own path names, for a caller that does not hold one. */
 export function tenantNotFound(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/not-found",
-		title: "No such tenant exists",
-		status: 404,
+	return managementProblem("notFound", {
+		detail: "No such tenant exists.",
 	});
 }
 
 /** A membership the caller's own tenant does not hold, for a route naming one in its path. */
 export function membershipNotFound(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/not-found",
-		title: "No such membership exists for this tenant",
-		status: 404,
+	return managementProblem("notFound", {
+		detail: "No such membership exists for this tenant.",
 	});
 }
 
 /** A domain the caller's own tenant does not hold, for a route naming one in its path. */
 export function domainNotFound(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/not-found",
-		title: "No such domain exists for this tenant",
-		status: 404,
+	return managementProblem("notFound", {
+		detail: "No such domain exists for this tenant.",
 	});
 }
 
 /** A caller naming `kind: "platform"` on an attach call, a domain only the platform's own provisioning writes. */
 export function domainKindNotAttachable(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/invalid-domain-kind",
-		title: "A platform domain may not be attached through this API",
-		status: 400,
+	return managementProblem("invalidDomainKind", {
 		detail:
 			"The platform provisions a tenant's own default domain at creation; this route attaches a custom domain.",
 	});
@@ -153,20 +144,15 @@ export function domainKindNotAttachable(): Response {
 
 /** A caller attaching a custom domain on a plan that does not include one. */
 export function customDomainNotAllowed(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/entitlement-required",
-		title: "This tenant is not entitled to a custom domain",
-		status: 403,
-		detail: "Attaching a custom domain is not included on this tenant's plan.",
+	return managementProblem("entitlementRequired", {
+		detail:
+			"This tenant is not entitled to a custom domain. Attaching a custom domain is not included on this tenant's plan.",
 	});
 }
 
 /** A Cloudflare failure while registering a custom hostname. */
 export function hostnameRegistrationFailed(detail: string): Response {
-	return problem({
-		type: "https://docs.example.com/errors/hostname-registration-failed",
-		title: "Cloudflare refused to register this hostname",
-		status: 502,
+	return managementProblem("hostnameRegistrationFailed", {
 		detail,
 	});
 }

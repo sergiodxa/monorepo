@@ -19,25 +19,21 @@ import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 import { spendTransferDownloadTicket } from "~/app/lib/transfer-storage";
 import routes from "~/routes/management";
 
 /** A ticket that does not spend, or does not name the tenant this route's own path addresses. */
 function invalidTicket(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/invalid-ticket",
-		title: "This download link no longer works",
-		status: 404,
+	return managementProblem("invalidTicket", {
+		detail: "This download link no longer works.",
 	});
 }
 
 /** The report object a ticket named, gone from R2 despite the ticket having named it. */
 function reportNotFound(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/not-found",
-		title: "This run's report is no longer available",
-		status: 404,
+	return managementProblem("notFound", {
+		detail: "This run's report is no longer available.",
 	});
 }
 

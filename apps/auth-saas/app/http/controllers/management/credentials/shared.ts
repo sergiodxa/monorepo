@@ -9,7 +9,7 @@
 
 import * as s from "remix/data-schema";
 
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 
 /** Parses and requires the `:credentialId` path param every single-passkey route matches. */
 export function credentialIdParam(ctx: { params: Record<string, string | undefined> }): string {
@@ -28,27 +28,21 @@ export function sessionIdParam(ctx: { params: Record<string, string | undefined>
 
 /** A passkey named in a route's own path that this subject does not hold. */
 export function passkeyNotFound(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/not-found",
-		title: "No such passkey exists for this subject",
-		status: 404,
+	return managementProblem("notFound", {
+		detail: "No such passkey exists for this subject.",
 	});
 }
 
 /** A trusted device named in a route's own path that this subject does not hold. */
 export function trustedDeviceNotFound(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/not-found",
-		title: "No such trusted device exists for this subject",
-		status: 404,
+	return managementProblem("notFound", {
+		detail: "No such trusted device exists for this subject.",
 	});
 }
 
 /** A session named in a route's own path that this subject does not hold. */
 export function sessionNotFound(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/not-found",
-		title: "No such session exists for this subject",
-		status: 404,
+	return managementProblem("notFound", {
+		detail: "No such session exists for this subject.",
 	});
 }

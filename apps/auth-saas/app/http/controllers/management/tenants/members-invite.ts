@@ -23,7 +23,7 @@ import type { ManagementControllerOptions } from "~/app/http/controllers/managem
 
 import { mountedMiddleware } from "~/app/http/controllers/management/tenants/shared";
 import { parseBody } from "~/app/http/lib/parse-body";
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { mailTranslator } from "~/app/mail/locale";
 import { TenantInvitationEmail } from "~/app/mail/tenant-invitation-email";
@@ -42,11 +42,11 @@ let InviteMemberBodySchema = s.object({
 
 /** Refuses a body whose email does not fold, since `remix/data-schema` alone cannot express that rule. */
 function invalidEmail(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/validation-failed",
-		title: "The request body did not pass validation",
-		status: 400,
-		errors: [{ pointer: "/email", code: "invalid", message: "Not a valid email address." }],
+	return managementProblem("validationFailed", {
+		detail: "The request body did not pass validation.",
+		extensions: {
+			errors: [{ pointer: "/email", code: "invalid", message: "Not a valid email address." }],
+		},
 	});
 }
 

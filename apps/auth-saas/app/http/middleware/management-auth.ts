@@ -13,7 +13,7 @@ import type { Middleware, RequestContext } from "remix/router";
 import { JWK } from "@sdxc/jwt";
 import { createContextKey } from "remix/router";
 
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 import { ManagementAccessToken } from "~/app/lib/management-token";
 import Membership from "~/app/models/membership";
 import { publishPlatformKeySet } from "~/app/models/platform-signing-key";
@@ -41,19 +41,13 @@ declare module "remix/router" {
 const CALLER_PROPERTY = { property: "managementCaller" } as const;
 
 function unauthorized(detail: string): Response {
-	return problem({
-		type: "https://docs.example.com/errors/unauthorized",
-		title: "This request could not be authenticated",
-		status: 401,
+	return managementProblem("unauthorized", {
 		detail,
 	});
 }
 
 function forbidden(detail: string): Response {
-	return problem({
-		type: "https://docs.example.com/errors/forbidden",
-		title: "This caller may not administer this tenant",
-		status: 403,
+	return managementProblem("forbidden", {
 		detail,
 	});
 }

@@ -15,7 +15,7 @@ import type {
 	WebhookUrlValidationFailureReason,
 } from "~/database/webhook-endpoints";
 
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 
 /** Parses and requires the `:endpointId` path param every single-endpoint route matches. */
 export function endpointIdParam(ctx: { params: Record<string, string | undefined> }): string {
@@ -24,20 +24,16 @@ export function endpointIdParam(ctx: { params: Record<string, string | undefined
 
 /** An endpoint the tenant does not hold, for a route naming one in its path. */
 export function endpointNotFound(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/not-found",
-		title: "No such webhook endpoint exists",
-		status: 404,
+	return managementProblem("notFound", {
+		detail: "No such webhook endpoint exists.",
 	});
 }
 
 /** A caller registering or updating an endpoint against a plan this tenant is not entitled to. */
 export function webhookEntitlementRequired(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/entitlement-required",
-		title: "This tenant is not entitled to outbound webhooks",
-		status: 403,
-		detail: "Outbound webhooks are not included on this tenant's plan.",
+	return managementProblem("entitlementRequired", {
+		detail:
+			"This tenant is not entitled to outbound webhooks. Outbound webhooks are not included on this tenant's plan.",
 	});
 }
 
@@ -62,18 +58,12 @@ export function webhookEndpointValidationFailure(
 	result: WebhookEndpointValidationFailure,
 ): Response {
 	if (result.reason === "invalid-url") {
-		return problem({
-			type: "https://docs.example.com/errors/invalid-url",
-			title: "The given URL is not valid for a webhook endpoint",
-			status: 400,
+		return managementProblem("invalidUrl", {
 			detail: `This URL ${webhookUrlDetail(result.detail)}`,
 		});
 	}
 
-	return problem({
-		type: "https://docs.example.com/errors/unknown-event-type",
-		title: "One of the given event types is not recognized",
-		status: 400,
+	return managementProblem("unknownEventType", {
 		detail: `"${result.value}" is not a supported event type.`,
 	});
 }

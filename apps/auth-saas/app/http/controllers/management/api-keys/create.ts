@@ -18,7 +18,7 @@ import {
 	apiKeyPrefixNotSet,
 } from "~/app/http/controllers/management/api-keys/shared";
 import { parseBody } from "~/app/http/lib/parse-body";
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
@@ -38,19 +38,12 @@ function createApiKeyFailure(result: Exclude<CreateApiKeyResult, { ok: true }>):
 	if (result.reason === "entitlement-required") return apiKeyEntitlementRequired();
 
 	if (result.reason === "scope-not-held") {
-		return problem({
-			type: "https://docs.example.com/errors/scope-not-held",
-			title: "The issuing subject does not hold one of the requested scopes",
-			status: 400,
+		return managementProblem("scopeNotHeld", {
 			detail: `"${result.scope}" is not a scope this subject holds.`,
 		});
 	}
 
-	return problem({
-		type: "https://docs.example.com/errors/expiry-too-far",
-		title: "The requested expiry exceeds the longest a key may live",
-		status: 400,
-	});
+	return managementProblem("expiryTooFar");
 }
 
 /**

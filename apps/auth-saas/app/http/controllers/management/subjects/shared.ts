@@ -9,7 +9,7 @@
 
 import * as s from "remix/data-schema";
 
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 
 /** Parses and requires the `:subjectId` path param every single-subject route matches. */
 export function subjectIdParam(ctx: { params: Record<string, string | undefined> }): string {
@@ -18,10 +18,8 @@ export function subjectIdParam(ctx: { params: Record<string, string | undefined>
 
 /** A subject the tenant does not hold, for a route naming one in its path. */
 export function subjectNotFound(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/not-found",
-		title: "No such subject exists",
-		status: 404,
+	return managementProblem("notFound", {
+		detail: "No such subject exists.",
 	});
 }
 
@@ -32,10 +30,8 @@ export function importRunIdParam(ctx: { params: Record<string, string | undefine
 
 /** An import run the caller's own tenant does not hold, for a route naming one in its path. */
 export function importRunNotFound(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/not-found",
-		title: "No such import run exists for this tenant",
-		status: 404,
+	return managementProblem("notFound", {
+		detail: "No such import run exists for this tenant.",
 	});
 }
 
@@ -46,9 +42,7 @@ export function exportRunIdParam(ctx: { params: Record<string, string | undefine
 
 /** An export run the caller's own tenant does not hold, for a route naming one in its path. */
 export function exportRunNotFound(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/not-found",
-		title: "No such export run exists for this tenant",
-		status: 404,
+	return managementProblem("notFound", {
+		detail: "No such export run exists for this tenant.",
 	});
 }

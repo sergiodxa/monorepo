@@ -8,7 +8,7 @@
 
 import type { ManagementCaller } from "~/app/http/middleware/management-auth";
 
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 
 /**
  * Refuses a request whose resolved caller does not carry the given scope.
@@ -24,10 +24,7 @@ import { problem } from "~/app/http/lib/problem";
 export function requireScope(caller: ManagementCaller, scope: string): Response | null {
 	if (caller.scopes.includes(scope)) return null;
 
-	return problem({
-		type: "https://docs.example.com/errors/forbidden",
-		title: "This caller may not administer this tenant",
-		status: 403,
+	return managementProblem("forbidden", {
 		detail: `This route requires the "${scope}" scope.`,
 	});
 }

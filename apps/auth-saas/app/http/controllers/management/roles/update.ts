@@ -19,7 +19,7 @@ import {
 	rolesEntitlementRequired,
 } from "~/app/http/controllers/management/roles/shared";
 import { parseBody } from "~/app/http/lib/parse-body";
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
@@ -37,10 +37,8 @@ function updateRoleFailure(result: Exclude<UpdateRoleResult, { ok: true }>): Res
 	if (result.reason === "not-found") return roleNotFound();
 	if (result.reason === "entitlement-required") return rolesEntitlementRequired();
 
-	return problem({
-		type: "https://docs.example.com/errors/system-role",
-		title: "A system role's name and description may not be changed",
-		status: 409,
+	return managementProblem("systemRole", {
+		detail: "A system role's name and description may not be changed.",
 	});
 }
 

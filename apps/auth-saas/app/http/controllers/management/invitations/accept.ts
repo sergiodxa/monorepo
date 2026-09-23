@@ -21,7 +21,7 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import { parseBody } from "~/app/http/lib/parse-body";
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 import { serializeSessionCookie } from "~/app/http/middleware/hosted-session";
 import { requestOrigin } from "~/app/lib/request-origin";
 import Membership from "~/app/models/membership";
@@ -36,10 +36,8 @@ let AcceptInvitationBodySchema = s.object({ token: s.string() });
  * ticket answers with.
  */
 function invalidInvitation(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/invalid-ticket",
-		title: "This invitation no longer works",
-		status: 404,
+	return managementProblem("invalidTicket", {
+		detail: "This invitation no longer works.",
 	});
 }
 

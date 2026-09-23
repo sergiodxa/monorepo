@@ -18,7 +18,7 @@ import type { ManagementControllerOptions } from "~/app/http/controllers/managem
 
 import { subjectIdParam } from "~/app/http/controllers/management/subjects/shared";
 import { managementPaging } from "~/app/http/lib/management-pagination";
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
@@ -56,11 +56,7 @@ export function createSubjectGrantsListAction(options: ManagementControllerOptio
 
 			let paging = managementPaging.parse(ctx.url.searchParams);
 			if (isFailure(paging)) {
-				return problem({
-					type: "https://docs.example.com/errors/invalid-request",
-					title: "The paging parameters are not valid",
-					status: 400,
-				});
+				return managementProblem("invalidRequest");
 			}
 
 			let result = await ctx.tenantStub.listGrants({
@@ -70,11 +66,7 @@ export function createSubjectGrantsListAction(options: ManagementControllerOptio
 			});
 
 			if (!result.ok) {
-				return problem({
-					type: "https://docs.example.com/errors/bad-cursor",
-					title: "The given cursor no longer matches this ordering",
-					status: 400,
-				});
+				return managementProblem("badCursor");
 			}
 
 			let headers = managementPaging.paginate(
@@ -95,10 +87,8 @@ function clientIdParam(ctx: { params: Record<string, string | undefined> }): str
 
 /** A grant named in the revoke route's own path that this subject does not hold for this client. */
 function grantNotFound(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/not-found",
-		title: "No such grant exists for this subject and client",
-		status: 404,
+	return managementProblem("notFound", {
+		detail: "No such grant exists for this subject and client.",
 	});
 }
 

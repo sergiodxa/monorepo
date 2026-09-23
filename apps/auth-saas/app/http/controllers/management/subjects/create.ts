@@ -14,7 +14,7 @@ import type { ManagementControllerOptions } from "~/app/http/controllers/managem
 import type { CreateSubjectResult } from "~/database/subjects";
 
 import { parseBody } from "~/app/http/lib/parse-body";
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
@@ -44,30 +44,17 @@ let CreateSubjectBodySchema = s.object({
 function createSubjectFailure(result: Exclude<CreateSubjectResult, { ok: true }>): Response {
 	switch (result.reason) {
 		case "invalid-identifier":
-			return problem({
-				type: "https://docs.example.com/errors/invalid-identifier",
-				title: "One of the given identifiers is not valid",
-				status: 400,
+			return managementProblem("invalidIdentifier", {
 				detail: `"${result.value}" is not a valid ${result.kind}.`,
 			});
 		case "identifier-taken":
-			return problem({
-				type: "https://docs.example.com/errors/identifier-taken",
-				title: "One of the given identifiers is already claimed",
-				status: 409,
+			return managementProblem("identifierTaken", {
 				detail: `"${result.value}" is already claimed by another subject.`,
 			});
 		case "duplicate-username":
-			return problem({
-				type: "https://docs.example.com/errors/duplicate-username",
-				title: "Only one username may be claimed at creation",
-				status: 400,
-			});
+			return managementProblem("duplicateUsername");
 		case "unknown-attribute":
-			return problem({
-				type: "https://docs.example.com/errors/unknown-attribute",
-				title: "One of the given attributes has no declared definition",
-				status: 400,
+			return managementProblem("unknownAttribute", {
 				detail: `"${result.key}" has not been declared for this tenant.`,
 			});
 	}

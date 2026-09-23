@@ -16,7 +16,7 @@ import type { ForcePasswordResetResult } from "~/database/passwords";
 
 import { subjectIdParam, subjectNotFound } from "~/app/http/controllers/management/subjects/shared";
 import { parseBody } from "~/app/http/lib/parse-body";
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
@@ -31,11 +31,7 @@ function forcePasswordResetFailure(
 ): Response {
 	if (result.reason === "not-found") return subjectNotFound();
 
-	return problem({
-		type: "https://docs.example.com/errors/no-password",
-		title: "This subject holds no password to reset",
-		status: 409,
-	});
+	return managementProblem("noPassword");
 }
 
 /**

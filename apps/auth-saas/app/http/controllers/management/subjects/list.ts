@@ -13,7 +13,7 @@ import { createAction } from "remix/router";
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 
 import { managementPaging } from "~/app/http/lib/management-pagination";
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
@@ -51,11 +51,7 @@ export function createSubjectsListAction(options: ManagementControllerOptions) {
 
 			let paging = managementPaging.parse(ctx.url.searchParams);
 			if (isFailure(paging)) {
-				return problem({
-					type: "https://docs.example.com/errors/invalid-request",
-					title: "The paging parameters are not valid",
-					status: 400,
-				});
+				return managementProblem("invalidRequest");
 			}
 
 			let result = await ctx.tenantStub.listSubjects({
@@ -65,11 +61,7 @@ export function createSubjectsListAction(options: ManagementControllerOptions) {
 			});
 
 			if (!result.ok) {
-				return problem({
-					type: "https://docs.example.com/errors/bad-cursor",
-					title: "The given cursor no longer matches this ordering",
-					status: 400,
-				});
+				return managementProblem("badCursor");
 			}
 
 			let headers = managementPaging.paginate(

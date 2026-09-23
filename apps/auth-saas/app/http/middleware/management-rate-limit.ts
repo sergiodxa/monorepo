@@ -15,6 +15,7 @@ import type { Middleware } from "remix/router";
 import { CloudflareAdapter, tooManyRequests } from "@sdxc/rate-limit";
 import { isFailure } from "@sdxc/result";
 
+import { managementProblem } from "~/app/http/lib/problem";
 import Tenant from "~/app/models/tenant";
 
 /** Which budget a route spends from. Import and export runs are their own bucket, opted into explicitly rather than inferred from the HTTP method. */
@@ -95,15 +96,11 @@ export function managementRateLimit(
 		if (isFailure(decision)) return next();
 
 		if (!decision.data.allowed) {
-			let body = JSON.stringify({
-				type: "https://docs.example.com/errors/rate-limited",
-				title: "This tenant's request budget is spent for this window",
-				status: 429,
-				instance: crypto.randomUUID(),
+			let answer = managementProblem("rateLimited", {
+				detail: "This tenant's request budget is spent for this window.",
 			});
-
-			return tooManyRequests(decision.data, adapter.window, body, {
-				headers: { "Content-Type": "application/problem+json" },
+			return tooManyRequests(decision.data, adapter.window, answer.body, {
+				headers: answer.headers,
 			});
 		}
 

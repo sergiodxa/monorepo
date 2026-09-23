@@ -15,7 +15,7 @@ import type { AssignRoleResult } from "~/database/roles";
 
 import { subjectIdParam, subjectNotFound } from "~/app/http/controllers/management/subjects/shared";
 import { parseBody } from "~/app/http/lib/parse-body";
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
@@ -29,34 +29,22 @@ function assignRoleFailure(result: Exclude<AssignRoleResult, { ok: true }>): Res
 	if (result.reason === "subject-not-found") return subjectNotFound();
 
 	if (result.reason === "role-not-found") {
-		return problem({
-			type: "https://docs.example.com/errors/not-found",
-			title: "No such role exists at this scope",
-			status: 404,
+		return managementProblem("notFound", {
+			detail: "No such role exists at this scope.",
 		});
 	}
 
 	if (result.reason === "organization-not-found") {
-		return problem({
-			type: "https://docs.example.com/errors/not-found",
-			title: "No such organization exists",
-			status: 404,
+		return managementProblem("notFound", {
+			detail: "No such organization exists.",
 		});
 	}
 
 	if (result.reason === "not-member") {
-		return problem({
-			type: "https://docs.example.com/errors/not-member",
-			title: "This subject does not belong to this organization",
-			status: 409,
-		});
+		return managementProblem("notMember");
 	}
 
-	return problem({
-		type: "https://docs.example.com/errors/last-owner",
-		title: "This scope's last owner may not be reassigned",
-		status: 409,
-	});
+	return managementProblem("lastOwner");
 }
 
 /**

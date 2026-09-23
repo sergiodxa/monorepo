@@ -14,7 +14,7 @@ import type { UpdateSubjectResult } from "~/database/subjects";
 
 import { subjectIdParam, subjectNotFound } from "~/app/http/controllers/management/subjects/shared";
 import { parseBody } from "~/app/http/lib/parse-body";
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
@@ -42,18 +42,12 @@ function updateSubjectFailure(result: Exclude<UpdateSubjectResult, { ok: true }>
 	if (result.reason === "not-found") return subjectNotFound();
 
 	if (result.reason === "unknown-attribute") {
-		return problem({
-			type: "https://docs.example.com/errors/unknown-attribute",
-			title: "One of the given attributes has no declared definition",
-			status: 400,
+		return managementProblem("unknownAttribute", {
 			detail: `"${result.key}" has not been declared for this tenant.`,
 		});
 	}
 
-	return problem({
-		type: "https://docs.example.com/errors/attribute-not-writable",
-		title: "This caller may not write one of the given attributes",
-		status: 403,
+	return managementProblem("attributeNotWritable", {
 		detail: `"${result.key}" is not writable by an administrator's own call.`,
 	});
 }

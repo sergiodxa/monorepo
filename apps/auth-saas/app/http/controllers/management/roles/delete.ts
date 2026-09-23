@@ -19,7 +19,7 @@ import {
 	rolesEntitlementRequired,
 } from "~/app/http/controllers/management/roles/shared";
 import { parseBody } from "~/app/http/lib/parse-body";
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
@@ -34,17 +34,11 @@ function deleteRoleFailure(result: Exclude<DeleteRoleResult, { ok: true }>): Res
 	if (result.reason === "entitlement-required") return rolesEntitlementRequired();
 
 	if (result.reason === "invalid-reassignment") {
-		return problem({
-			type: "https://docs.example.com/errors/invalid-reassignment",
-			title: "The reassignment target does not exist at this role's own scope",
-			status: 400,
-		});
+		return managementProblem("invalidReassignment");
 	}
 
-	return problem({
-		type: "https://docs.example.com/errors/system-role",
-		title: "A system role may not be deleted",
-		status: 409,
+	return managementProblem("systemRole", {
+		detail: "A system role may not be deleted.",
 	});
 }
 

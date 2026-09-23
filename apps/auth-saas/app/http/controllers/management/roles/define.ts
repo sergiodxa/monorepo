@@ -15,7 +15,7 @@ import type { DefineRoleResult } from "~/database/roles";
 
 import { rolesEntitlementRequired } from "~/app/http/controllers/management/roles/shared";
 import { parseBody } from "~/app/http/lib/parse-body";
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
@@ -34,18 +34,12 @@ function defineRoleFailure(result: Exclude<DefineRoleResult, { ok: true }>): Res
 	if (result.reason === "entitlement-required") return rolesEntitlementRequired();
 
 	if (result.reason === "reserved-key") {
-		return problem({
-			type: "https://docs.example.com/errors/reserved-key",
-			title: "This key is reserved for one of the platform's own system roles",
-			status: 400,
+		return managementProblem("reservedKey", {
+			detail: "This key is reserved for one of the platform's own system roles.",
 		});
 	}
 
-	return problem({
-		type: "https://docs.example.com/errors/duplicate-role",
-		title: "This scope already has a role under this key",
-		status: 409,
-	});
+	return managementProblem("duplicateRole");
 }
 
 /**

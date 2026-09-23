@@ -20,7 +20,7 @@ import {
 	clientRecordValidationFailure,
 } from "~/app/http/controllers/management/clients/shared";
 import { parseBody } from "~/app/http/lib/parse-body";
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
@@ -44,11 +44,7 @@ function updateClientFailure(result: Exclude<UpdateClientResult, { ok: true }>):
 	if (result.reason === "not-found") return clientNotFound();
 
 	if (result.reason === "kind-immutable") {
-		return problem({
-			type: "https://docs.example.com/errors/kind-immutable",
-			title: "A client's kind may not change once registered",
-			status: 409,
-		});
+		return managementProblem("kindImmutable");
 	}
 
 	if (result.reason === "entitlement-required") return clientEntitlementRequired();

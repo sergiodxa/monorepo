@@ -16,7 +16,7 @@ import type { RotateClientSecretResult } from "~/database/clients";
 
 import { clientIdParam, clientNotFound } from "~/app/http/controllers/management/clients/shared";
 import { parseBody } from "~/app/http/lib/parse-body";
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
@@ -32,18 +32,10 @@ function rotateClientSecretFailure(
 	if (result.reason === "not-found") return clientNotFound();
 
 	if (result.reason === "not-confidential") {
-		return problem({
-			type: "https://docs.example.com/errors/not-confidential",
-			title: "Only a confidential client holds a secret to rotate",
-			status: 409,
-		});
+		return managementProblem("notConfidential");
 	}
 
-	return problem({
-		type: "https://docs.example.com/errors/too-many-live-secrets",
-		title: "This client already holds the most secrets it may hold at once",
-		status: 409,
-	});
+	return managementProblem("tooManyLiveSecrets");
 }
 
 /**

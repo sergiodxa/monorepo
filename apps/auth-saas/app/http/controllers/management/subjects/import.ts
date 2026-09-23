@@ -16,7 +16,7 @@ import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
@@ -31,26 +31,24 @@ function isImportMode(value: string | null): value is "validate" | "apply" {
 
 /** A `problem+json` refusal for a missing or unrecognized `mode` query parameter. */
 function invalidMode(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/validation-failed",
-		title: "The request did not pass validation",
-		status: 400,
-		errors: [
-			{
-				pointer: "/mode",
-				code: "invalid",
-				message: 'The "mode" query parameter is required and must be "validate" or "apply".',
-			},
-		],
+	return managementProblem("validationFailed", {
+		extensions: {
+			errors: [
+				{
+					pointer: "/mode",
+					code: "invalid",
+					message: 'The "mode" query parameter is required and must be "validate" or "apply".',
+				},
+			],
+		},
 	});
 }
 
 /** A `problem+json` refusal for a source file with no rows to import. */
 function emptySourceFile(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/validation-failed",
-		title: "The uploaded file carries no rows to import",
-		status: 400,
+	return managementProblem("validationFailed", {
+		detail: "The uploaded file carries no rows to import.",
+		extensions: { errors: undefined },
 	});
 }
 

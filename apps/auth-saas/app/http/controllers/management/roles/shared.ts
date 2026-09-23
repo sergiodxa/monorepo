@@ -15,7 +15,7 @@
 
 import * as s from "remix/data-schema";
 
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 
 /** Parses and requires the `:roleId` path param every single-role route matches. */
 export function roleIdParam(ctx: { params: Record<string, string | undefined> }): string {
@@ -24,28 +24,22 @@ export function roleIdParam(ctx: { params: Record<string, string | undefined> })
 
 /** A role the tenant does not hold at the given scope, for a route naming one in its path. */
 export function roleNotFound(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/not-found",
-		title: "No such role exists",
-		status: 404,
+	return managementProblem("notFound", {
+		detail: "No such role exists.",
 	});
 }
 
 /** A permission the tenant has not declared, for a route naming one in its query. */
 export function permissionNotFound(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/not-found",
-		title: "No such permission exists",
-		status: 404,
+	return managementProblem("notFound", {
+		detail: "No such permission exists.",
 	});
 }
 
 /** A caller defining or changing a role or permission against a plan this tenant is not entitled to. */
 export function rolesEntitlementRequired(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/entitlement-required",
-		title: "This tenant is not entitled to custom roles and permissions",
-		status: 403,
-		detail: "Defining or changing a role or permission is not included on this tenant's plan.",
+	return managementProblem("entitlementRequired", {
+		detail:
+			"This tenant is not entitled to custom roles and permissions. Defining or changing a role or permission is not included on this tenant's plan.",
 	});
 }

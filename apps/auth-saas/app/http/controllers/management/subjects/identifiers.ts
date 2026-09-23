@@ -24,7 +24,7 @@ import type {
 
 import { subjectIdParam, subjectNotFound } from "~/app/http/controllers/management/subjects/shared";
 import { parseBody } from "~/app/http/lib/parse-body";
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
@@ -33,10 +33,8 @@ import routes from "~/routes/management";
 
 /** An identifier named in a route's own path or body that this subject does not hold. */
 function identifierNotFound(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/not-found",
-		title: "No such identifier exists for this subject",
-		status: 404,
+	return managementProblem("notFound", {
+		detail: "No such identifier exists for this subject.",
 	});
 }
 
@@ -74,29 +72,18 @@ function addIdentifierFailure(result: Exclude<AddIdentifierResult, { ok: true }>
 		case "not-found":
 			return subjectNotFound();
 		case "invalid-identifier":
-			return problem({
-				type: "https://docs.example.com/errors/invalid-identifier",
-				title: "The given identifier is not valid",
-				status: 400,
+			return managementProblem("invalidIdentifier", {
+				detail: "The given identifier is not valid.",
 			});
 		case "identifier-taken":
-			return problem({
-				type: "https://docs.example.com/errors/identifier-taken",
-				title: "This identifier is already claimed by another subject",
-				status: 409,
+			return managementProblem("identifierTaken", {
+				detail: "This identifier is already claimed by another subject.",
 			});
 		case "username-already-set":
-			return problem({
-				type: "https://docs.example.com/errors/username-already-set",
-				title: "This subject already holds a username",
-				status: 409,
-			});
+			return managementProblem("usernameAlreadySet");
 		case "rate-limited":
-			return problem({
-				type: "https://docs.example.com/errors/rate-limited",
-				title: "Too many verification emails have been sent to this address",
-				status: 429,
-				detail: `Try again in ${result.retryAfterSeconds} seconds.`,
+			return managementProblem("rateLimited", {
+				detail: `Too many verification emails have been sent to this address. Try again in ${result.retryAfterSeconds} seconds.`,
 			});
 	}
 }
@@ -137,16 +124,13 @@ export function createSubjectIdentifiersAddAction(options: ManagementControllerO
 
 let VerifyIdentifierBodySchema = s.object({ ticket: s.string() });
 
-/** Maps every `verifyIdentifier` refusal onto its own `problem+json` response. */
+/**
+ * Maps every `verifyIdentifier` refusal onto its own `problem+json` response. Each
+ * reason is its own problem type.
+ */
 function verifyIdentifierFailure(result: Exclude<VerifyIdentifierResult, { ok: true }>): Response {
-	return problem({
-		type: `https://docs.example.com/errors/${result.reason}`,
-		title:
-			result.reason === "invalid-ticket"
-				? "This verification ticket does not match a pending identifier"
-				: "This verification ticket has expired",
-		status: 400,
-	});
+	if (result.reason === "expired-ticket") return managementProblem("expiredTicket");
+	return managementProblem("invalidVerificationTicket");
 }
 
 /**
@@ -189,11 +173,7 @@ function setPrimaryIdentifierFailure(
 ): Response {
 	if (result.reason === "not-found") return identifierNotFound();
 
-	return problem({
-		type: "https://docs.example.com/errors/unverified",
-		title: "An unverified identifier may not become primary",
-		status: 409,
-	});
+	return managementProblem("unverified");
 }
 
 /**
@@ -239,11 +219,7 @@ export function createSubjectIdentifiersSetPrimaryAction(options: ManagementCont
 function removeIdentifierFailure(result: Exclude<RemoveIdentifierResult, { ok: true }>): Response {
 	if (result.reason === "not-found") return identifierNotFound();
 
-	return problem({
-		type: "https://docs.example.com/errors/last-verified-identifier",
-		title: "This subject's last verified identifier may not be removed",
-		status: 409,
-	});
+	return managementProblem("lastVerifiedIdentifier");
 }
 
 /**

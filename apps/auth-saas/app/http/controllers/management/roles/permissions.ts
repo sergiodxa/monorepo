@@ -19,7 +19,7 @@ import {
 	rolesEntitlementRequired,
 } from "~/app/http/controllers/management/roles/shared";
 import { parseBody } from "~/app/http/lib/parse-body";
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
@@ -71,19 +71,13 @@ function definePermissionFailure(result: Exclude<DefinePermissionResult, { ok: t
 	if (result.reason === "entitlement-required") return rolesEntitlementRequired();
 
 	if (result.reason === "reserved-key") {
-		return problem({
-			type: "https://docs.example.com/errors/reserved-key",
-			title: "This key is reserved for the platform's own management-API permissions",
-			status: 400,
-			detail: 'A tenant\'s own permission key may not begin "auth:".',
+		return managementProblem("reservedKey", {
+			detail:
+				"This key is reserved for the platform's own management-API permissions. A tenant's own permission key may not begin \"auth:\".",
 		});
 	}
 
-	return problem({
-		type: "https://docs.example.com/errors/duplicate-permission",
-		title: "This tenant already has a permission under this key",
-		status: 409,
-	});
+	return managementProblem("duplicatePermission");
 }
 
 /**

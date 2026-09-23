@@ -21,7 +21,7 @@ import {
 	keyIdParam,
 } from "~/app/http/controllers/management/api-keys/shared";
 import { parseBody } from "~/app/http/lib/parse-body";
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
@@ -36,11 +36,7 @@ function rotateApiKeyFailure(result: Exclude<RotateApiKeyResult, { ok: true }>):
 	if (result.reason === "prefix-not-set") return apiKeyPrefixNotSet();
 	if (result.reason === "entitlement-required") return apiKeyEntitlementRequired();
 
-	return problem({
-		type: "https://docs.example.com/errors/overlap-too-long",
-		title: "The requested overlap window exceeds the longest one a rotation may open",
-		status: 400,
-	});
+	return managementProblem("overlapTooLong");
 }
 
 /**

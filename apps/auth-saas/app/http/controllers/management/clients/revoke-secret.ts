@@ -13,7 +13,7 @@ import { createAction } from "remix/router";
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 import type { RevokeClientSecretResult } from "~/database/clients";
 
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
@@ -30,10 +30,8 @@ function secretParams(ctx: { params: Record<string, string | undefined> }): {
 
 /** A secret named in this route's own path that this client does not hold. */
 function secretNotFound(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/not-found",
-		title: "No such secret exists for this client",
-		status: 404,
+	return managementProblem("notFound", {
+		detail: "No such secret exists for this client.",
 	});
 }
 
@@ -43,11 +41,7 @@ function revokeClientSecretFailure(
 ): Response {
 	if (result.reason === "not-found") return secretNotFound();
 
-	return problem({
-		type: "https://docs.example.com/errors/last-live-secret",
-		title: "This client's last live secret may not be revoked",
-		status: 409,
-	});
+	return managementProblem("lastLiveSecret");
 }
 
 /**

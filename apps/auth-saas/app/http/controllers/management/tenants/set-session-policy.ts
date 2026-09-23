@@ -23,7 +23,7 @@ import type { ManagementControllerOptions } from "~/app/http/controllers/managem
 import type { SetSessionPolicyResult } from "~/database/tenant-do";
 
 import { parseBody } from "~/app/http/lib/parse-body";
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
@@ -93,11 +93,11 @@ async function resolveSessionPolicyEntitlements(
 
 /** Maps a `setSessionPolicy` refusal onto the same `problem+json` validation-failure shape `parseBody` answers with. */
 function setSessionPolicyFailure(result: Extract<SetSessionPolicyResult, { ok: false }>): Response {
-	return problem({
-		type: "https://docs.example.com/errors/validation-failed",
-		title: "The request body did not pass validation",
-		status: 400,
-		errors: [{ pointer: `/policy/${result.field}`, code: "invalid", message: result.message }],
+	return managementProblem("validationFailed", {
+		detail: "The request body did not pass validation.",
+		extensions: {
+			errors: [{ pointer: `/policy/${result.field}`, code: "invalid", message: result.message }],
+		},
 	});
 }
 

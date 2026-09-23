@@ -19,7 +19,7 @@ import {
 	rolesEntitlementRequired,
 } from "~/app/http/controllers/management/roles/shared";
 import { parseBody } from "~/app/http/lib/parse-body";
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
@@ -36,27 +36,19 @@ function setRolePermissionsFailure(
 	if (result.reason === "entitlement-required") return rolesEntitlementRequired();
 
 	if (result.reason === "unknown-permission") {
-		return problem({
-			type: "https://docs.example.com/errors/unknown-permission",
-			title: "One of the given permission keys has no declared definition",
-			status: 400,
+		return managementProblem("unknownPermission", {
 			detail: `"${result.key}" has not been declared for this tenant.`,
 		});
 	}
 
 	if (result.reason === "too-large") {
-		return problem({
-			type: "https://docs.example.com/errors/permission-set-too-large",
-			title: "This set of permission keys exceeds what a role may grant",
-			status: 400,
+		return managementProblem("permissionSetTooLarge", {
 			detail: `The serialized set is ${result.size} bytes; the cap is ${result.cap}.`,
 		});
 	}
 
-	return problem({
-		type: "https://docs.example.com/errors/system-role",
-		title: "A system role's grant is fixed and may not be set",
-		status: 409,
+	return managementProblem("systemRole", {
+		detail: "A system role's grant is fixed and may not be set.",
 	});
 }
 

@@ -22,7 +22,7 @@ import {
 } from "~/app/http/controllers/management/credentials/shared";
 import { subjectIdParam } from "~/app/http/controllers/management/subjects/shared";
 import { parseBody } from "~/app/http/lib/parse-body";
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
@@ -105,11 +105,7 @@ export function createPasskeysRenameAction(options: ManagementControllerOptions)
 function revokePasskeyFailure(result: Exclude<RevokePasskeyResult, { ok: true }>): Response {
 	if (result.reason === "not-found") return passkeyNotFound();
 
-	return problem({
-		type: "https://docs.example.com/errors/last-credential",
-		title: "This subject's last remaining credential may not be removed",
-		status: 409,
-	});
+	return managementProblem("lastCredential");
 }
 
 /**

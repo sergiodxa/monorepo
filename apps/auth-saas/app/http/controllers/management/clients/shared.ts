@@ -16,7 +16,7 @@ import type {
 	RedirectUriValidationFailureReason,
 } from "~/database/clients";
 
-import { problem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/lib/problem";
 
 /** Parses and requires the `:clientId` path param every single-client route matches. */
 export function clientIdParam(ctx: { params: Record<string, string | undefined> }): string {
@@ -25,20 +25,16 @@ export function clientIdParam(ctx: { params: Record<string, string | undefined> 
 
 /** A client the tenant does not hold, for a route naming one in its path. */
 export function clientNotFound(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/not-found",
-		title: "No such client exists",
-		status: 404,
+	return managementProblem("notFound", {
+		detail: "No such client exists.",
 	});
 }
 
 /** A caller registering or updating a client into a grant this tenant's plan does not include. */
 export function clientEntitlementRequired(): Response {
-	return problem({
-		type: "https://docs.example.com/errors/entitlement-required",
-		title: "This tenant is not entitled to a client credentials grant",
-		status: 403,
-		detail: "Machine-to-machine access is not included on this tenant's plan.",
+	return managementProblem("entitlementRequired", {
+		detail:
+			"This tenant is not entitled to a client credentials grant. Machine-to-machine access is not included on this tenant's plan.",
 	});
 }
 
@@ -53,38 +49,23 @@ function redirectUriDetail(reason: RedirectUriValidationFailureReason): string {
 export function clientRecordValidationFailure(result: ClientRecordValidationFailure): Response {
 	switch (result.reason) {
 		case "invalid-redirect-uri":
-			return problem({
-				type: "https://docs.example.com/errors/invalid-redirect-uri",
-				title: "One of the given redirect URIs is not valid",
-				status: 400,
+			return managementProblem("invalidRedirectUri", {
 				detail: `"${result.uri}" ${redirectUriDetail(result.detail)}`,
 			});
 		case "invalid-post-logout-redirect-uri":
-			return problem({
-				type: "https://docs.example.com/errors/invalid-post-logout-redirect-uri",
-				title: "One of the given post-logout redirect URIs is not valid",
-				status: 400,
+			return managementProblem("invalidPostLogoutRedirectUri", {
 				detail: `"${result.uri}" ${redirectUriDetail(result.detail)}`,
 			});
 		case "invalid-grant-type":
-			return problem({
-				type: "https://docs.example.com/errors/invalid-grant-type",
-				title: "One of the given grant types is not supported",
-				status: 400,
+			return managementProblem("invalidGrantType", {
 				detail: `"${result.value}" is not a supported grant type.`,
 			});
 		case "invalid-response-type":
-			return problem({
-				type: "https://docs.example.com/errors/invalid-response-type",
-				title: "One of the given response types is not supported",
-				status: 400,
+			return managementProblem("invalidResponseType", {
 				detail: `"${result.value}" is not a supported response type.`,
 			});
 		case "invalid-auth-method":
-			return problem({
-				type: "https://docs.example.com/errors/invalid-auth-method",
-				title: "This auth method does not match the client's kind",
-				status: 400,
+			return managementProblem("invalidAuthMethod", {
 				detail: `"${result.method}" is not valid for a ${result.kind} client.`,
 			});
 	}

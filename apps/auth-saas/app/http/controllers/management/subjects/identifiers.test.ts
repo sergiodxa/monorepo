@@ -110,7 +110,7 @@ describe("POST /tenants/:tenantId/subjects/identifiers/verify", () => {
 
 		expect(response.status).toBe(400);
 		let body = (await response.json()) as Record<string, unknown>;
-		expect(body.type).toBe("https://docs.example.com/errors/invalid-ticket");
+		expect(body.type).toBe("https://docs.example.com/errors/invalid-verification-ticket");
 	});
 });
 
