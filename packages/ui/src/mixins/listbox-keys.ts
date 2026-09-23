@@ -10,7 +10,7 @@
 
 import type { MixinFactory } from "remix/ui";
 
-import { createMixin } from "remix/ui";
+import { createMixin, on } from "remix/ui";
 import * as listbox from "remix/ui/listbox";
 
 import { trackHostNode } from "./track-host-node.js";
@@ -75,6 +75,26 @@ export const listboxKeys: MixinFactory<HTMLElement> = createMixin<HTMLElement>((
 			getHostNode()?.dispatchEvent(new ListboxChangeEvent({ value, activeValue }));
 		}
 
-		return listbox.list();
+		return [
+			/*
+			 * Moving past the first option carries on to the last, matching the wrap the
+			 * forward direction already makes. The primitive's own handler runs on this same
+			 * host, so the press is settled here before it reaches that one.
+			 */
+			on<HTMLElement, "keydown">("keydown", (event) => {
+				if (event.key !== "ArrowUp") return;
+
+				let options = [...event.currentTarget.querySelectorAll('[role="option"]')].filter(
+					(option) => option.getAttribute("aria-disabled") !== "true",
+				);
+				let first = options[0];
+				if (!first || first.getAttribute("data-highlighted") !== "true") return;
+
+				event.preventDefault();
+				event.stopImmediatePropagation();
+				context.navigate("last");
+			}),
+			listbox.list(),
+		];
 	};
 });

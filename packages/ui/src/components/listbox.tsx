@@ -215,7 +215,16 @@ ListBox.Item = function ListBoxItem(handle: Handle<ListBox.ItemProps>) {
 					fg("neutral.emphasis"),
 					hover(bg("neutral.bg-tint-hover")),
 					active(bg("neutral.bg-tint-pressed")),
-					when("&:has(input:focus)", bg("brand.tint")),
+					when("&:has(input:focus)", bg("brand.bg-tint-pressed")),
+					/*
+					 * The row the keyboard is on is where the next Enter lands, so it is shown
+					 * before it is chosen. The tint stops at the selected row, which already
+					 * carries the stronger fill and would otherwise lose it while being walked past.
+					 */
+					when('&[data-highlighted="true"]:not(:has(input:checked)):not([aria-selected="true"])', [
+						bg("brand.bg-tint-pressed"),
+						fg("brand.emphasis"),
+					]),
 					when('&:has(input:checked), &[aria-selected="true"]', [
 						bg("brand.solid"),
 						fg("brand.onSolid"),
