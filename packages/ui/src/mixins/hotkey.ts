@@ -147,18 +147,25 @@ export const hotkey: MixinFactory<HTMLElement, [combo: string]> = createMixin<
 	let getHostNode = trackHostNode(handle);
 	let parsed: ParsedCombo | undefined;
 
-	document.addEventListener(
-		"keydown",
-		(event) => {
-			let hostNode = getHostNode();
-			if (hostNode === undefined || parsed === undefined) return;
-			if (event.repeat || !matchesCombo(event, parsed)) return;
+	/**
+	 * A combination is watched on the document the host was inserted into, which is what
+	 * keeps the mixin to the one document it belongs to and leaves it inert wherever the
+	 * host is rendered without one, such as on a server.
+	 */
+	handle.addEventListener("insert", (event) => {
+		event.node.ownerDocument.addEventListener(
+			"keydown",
+			(keyEvent) => {
+				let hostNode = getHostNode();
+				if (hostNode === undefined || parsed === undefined) return;
+				if (keyEvent.repeat || !matchesCombo(keyEvent, parsed)) return;
 
-			event.preventDefault();
-			setOpen(hostNode, !isOpen(hostNode));
-		},
-		{ signal: handle.signal },
-	);
+				keyEvent.preventDefault();
+				setOpen(hostNode, !isOpen(hostNode));
+			},
+			{ signal: handle.signal },
+		);
+	});
 
 	return (combo) => {
 		parsed = parseCombo(combo);
