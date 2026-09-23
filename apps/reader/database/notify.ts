@@ -378,7 +378,7 @@ async function deliverTo(
 	let { db, now, record } = input;
 	let started = Date.now();
 
-	let { t } = await translationFor(device.locale);
+	let { t } = translationFor(device.locale);
 
 	let payload = JSON.stringify({
 		...textFrom(t, summary),
@@ -446,7 +446,7 @@ async function deliverEmail(input: NotifyInput, summary: Summary): Promise<boole
 	let { mailer, row, appUrl, record } = input;
 	if (mailer === null || appUrl === null || !row.email) return false;
 
-	let { t } = await translationFor(DEFAULT_EMAIL_LANGUAGE);
+	let { t } = translationFor(DEFAULT_EMAIL_LANGUAGE);
 
 	let sent = await mailer.send(
 		new NotificationEmail(

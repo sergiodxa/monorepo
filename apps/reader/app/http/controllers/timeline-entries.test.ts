@@ -27,7 +27,7 @@ const RESOURCES = {
 	},
 };
 
-let { intl } = await createTranslator({
+let { intl } = createTranslator({
 	resources: RESOURCES,
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",

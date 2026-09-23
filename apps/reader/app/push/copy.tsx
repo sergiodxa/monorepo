@@ -70,8 +70,8 @@ export function textFrom(t: Translate, summary: Summary): NotificationText {
  *
  * @param locale - The language the device was registered in.
  */
-export async function translationFor(locale: string): Promise<Translation> {
-	return await translator(locale);
+export function translationFor(locale: string): Translation {
+	return translator(locale);
 }
 
 /** The body of the email channel's message, which carries the same summary the push does. */
