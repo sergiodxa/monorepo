@@ -16,9 +16,9 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 import { bg, borderEdge, fg, outline, outlineStyle } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
 import { cursor } from "@sdxc/u/general";
-import { hstack, vstack } from "@sdxc/u/layout";
+import { hstack, shrink, vstack } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
-import { bs, is, maxBs, p, pb, pi } from "@sdxc/u/size";
+import { bs, is, maxBs, pb, pi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { text, textAlign } from "@sdxc/u/typography";
 import { attrs } from "remix/ui";
@@ -178,7 +178,14 @@ Command.List = function CommandList(handle: Handle<Command.ListProps>) {
 					attrs({ role: DEFAULT_LIST_ROLE }),
 					maxBs("18rem"),
 					overflow("auto"),
-					p(2, 1),
+					pi(1),
+					/*
+					 * The list's own block padding is spent only when it has a row to space. A
+					 * filter that hides every row leaves the list empty but still padded, and that
+					 * padding then sits above the empty-state message and nothing balances it
+					 * below — the message reads as pushed down rather than centered.
+					 */
+					when('&:has([data-slot="item"]:not([hidden]))', pb(2)),
 					outlineStyle("none"),
 					mix,
 				]}
@@ -220,15 +227,35 @@ Command.Item = function CommandItem(handle: Handle<Command.ItemProps>) {
 					interactiveTransition(),
 					attrs({ role: DEFAULT_ITEM_ROLE }),
 					hstack({ gap: 2, align: "center" }),
+					/*
+					 * A glyph anywhere in the row is measured against the row's text and holds that
+					 * measure when the row runs out of space: the default `flex-shrink: 1`
+					 * otherwise squeezes it by however much that row's own label and shortcut
+					 * overrun, so every row lands on a different width and the column of glyphs
+					 * reads as a rendering fault.
+					 */
+					when("& svg", [shrink(), is(4), bs(4)]),
 					cursor("default"),
 					rounded("md"),
 					pi(2),
 					pb(2),
 					fg("neutral.emphasis"),
-					when("&:hover", bg("neutral.bg-tint-hover")),
-					when("&:active", bg("neutral.bg-tint-pressed")),
-					when("&:focus", bg("brand.tint")),
-					when('&[aria-selected="true"]', [bg("brand.solid"), fg("brand.onSolid")]),
+					/*
+					 * The active row is a cursor, not a banner: a tint marks where the keyboard is
+					 * while the row's own text keeps reading as text. It is tinted far enough off
+					 * the surface to be found at a glance, though — the plain tint is the same
+					 * lightness as the panel behind it, which leaves the cursor invisible and the
+					 * arrow keys moving something nobody can see.
+					 *
+					 * Pointer state and the cursor are written as selectors that exclude each
+					 * other, so a row under the pointer keeps saying it is the active one whichever
+					 * order the layers land in.
+					 */
+					when('&:hover:not([aria-selected="true"])', bg("neutral.bg-tint-hover")),
+					when('&:active:not([aria-selected="true"])', bg("neutral.bg-tint-pressed")),
+					when('&:focus:not([aria-selected="true"])', bg("brand.bg-tint-hover")),
+					when('&[aria-selected="true"]', [bg("brand.bg-tint-hover"), fg("neutral.emphasis")]),
+					when('&[aria-selected="true"]:hover', bg("brand.bg-tint-pressed")),
 					when('&[aria-disabled="true"]', opacity(50)),
 					text("sm"),
 					outlineStyle("none"),

@@ -95,9 +95,30 @@ function activateCurrent(root: HTMLElement, model: FilterModel): void {
 export const commandKeys = createMixin<HTMLElement, [model: FilterModel]>((handle) => {
 	let hostNode: HTMLElement | undefined;
 	let boundModel: FilterModel | undefined;
+	/** The most recent model the mixin was given, which insertion subscribes to. */
+	let pendingModel: FilterModel | undefined;
+
+	/**
+	 * The subscription belongs to the inserted host: it exists to write the active item
+	 * onto a live node, and `handle.signal` is the lifetime of that node. Binding it while
+	 * the host is only being rendered — on a server, say — subscribes on behalf of nothing
+	 * and hands `addEventListener` a signal that does not exist yet.
+	 */
+	function follow(model: FilterModel): void {
+		if (boundModel === model) return;
+		boundModel = model;
+		model.addEventListener(
+			"change",
+			() => {
+				if (hostNode !== undefined) syncActive(hostNode, model);
+			},
+			{ signal: handle.signal },
+		);
+	}
 
 	handle.addEventListener("insert", (event) => {
 		hostNode = event.node;
+		if (pendingModel !== undefined) follow(pendingModel);
 		if (boundModel !== undefined) syncActive(hostNode, boundModel);
 	});
 
@@ -106,16 +127,8 @@ export const commandKeys = createMixin<HTMLElement, [model: FilterModel]>((handl
 	});
 
 	return (model) => {
-		if (boundModel !== model) {
-			boundModel = model;
-			model.addEventListener(
-				"change",
-				() => {
-					if (hostNode !== undefined) syncActive(hostNode, model);
-				},
-				{ signal: handle.signal },
-			);
-		}
+		pendingModel = model;
+		if (hostNode !== undefined) follow(model);
 
 		return createElement(handle.element, {
 			mix: [
