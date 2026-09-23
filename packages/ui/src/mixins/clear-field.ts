@@ -1,9 +1,10 @@
 /**
- * Wires a SearchField's clear button to empty its associated input alone
- * and reveals the button, shipped `hidden` in markup, the moment it mounts.
- * Script is required since a form button can only submit or reset every
- * field, and no built-in browser command clears a single input on its own —
- * WebKit's native `type="search"` cancel affordance is the only fallback.
+ * Wires a SearchField's clear button to empty its associated input alone, and
+ * keeps the button — shipped `hidden` in markup — showing exactly while that
+ * input holds a value. Script is required since a form button can only submit
+ * or reset every field, and no built-in browser command clears a single input
+ * on its own — WebKit's native `type="search"` cancel affordance is the only
+ * fallback.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -68,8 +69,9 @@ function resolveClearTarget(button: HTMLButtonElement): HTMLInputElement | undef
 
 /**
  * Wires a SearchField's clear button to empty its own `commandfor`-resolved
- * input and dispatch `input`/`change` plus {@link SearchFieldClearEvent}
- * before refocusing the field, since the button can vanish once styles react to the emptied state; a disabled, read-only, or already-empty target leaves the press with no effect.
+ * input and dispatch `input`/`change` plus {@link SearchFieldClearEvent} before
+ * refocusing the field, and shows the button exactly while that input holds text;
+ * a disabled, read-only, or already-empty target leaves the press with no effect.
  *
  * @returns A mixin descriptor for a SearchField clear button's `mix` prop.
  * @example
@@ -90,7 +92,25 @@ function resolveClearTarget(button: HTMLButtonElement): HTMLInputElement | undef
 export const clearField: MixinFactory<HTMLButtonElement> = createMixin<HTMLButtonElement>(
 	(handle) => {
 		handle.addEventListener("insert", (event) => {
-			event.node.hidden = false;
+			let button = event.node;
+			let input = resolveClearTarget(button);
+
+			/*
+			 * A button whose target resolves later — markup that renders the input after it,
+			 * or a `commandfor` the consumer rewrites — shows from the moment script runs, so
+			 * its press stays reachable while the pairing settles.
+			 */
+			if (!input) {
+				button.hidden = false;
+				return;
+			}
+
+			let syncVisibility = () => {
+				button.hidden = input.value === "";
+			};
+
+			syncVisibility();
+			input.addEventListener("input", syncVisibility, { signal: handle.signal });
 		});
 
 		return () =>
