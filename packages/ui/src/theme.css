@@ -12,9 +12,13 @@
  *
  * This file adds only what's genuinely specific to this package on top of that base:
  * - Interaction-state variants (`-bg-tint-hover`, `-bg-tint-pressed`,
- *   `-bg-solid-hover`, `-bg-solid-pressed`) that `@sdxc/u`'s own theme
- *   contract doesn't define, since how much a color shifts on hover/press
- *   is a component-library design decision, not a lower-level primitive.
+ *   `-bg-solid-hover`, `-bg-solid-pressed`, `-border-hover`) that `@sdxc/u`'s
+ *   own theme contract doesn't define, since how much a color shifts on
+ *   hover/press is a component-library design decision, not a lower-level
+ *   primitive. `-border-hover` sits one step along from the resting `-border`,
+ *   well short of the `-border-strong` the contract reserves for focus,
+ *   validity and the high-contrast promotion, so pointing at a control reads
+ *   as a nudge rather than as a change of state.
  * - A `--ui-chart-{1..8}` categorical color sequence for multi-series
  *   charts — a component-library concern, not a theme-contract concept.
  *
@@ -31,30 +35,35 @@
 	--ui-brand-bg-tint-pressed: var(--ui-color-brand-200);
 	--ui-brand-bg-solid-hover: var(--ui-color-brand-700);
 	--ui-brand-bg-solid-pressed: var(--ui-color-brand-800);
+	--ui-brand-border-hover: var(--ui-color-brand-300);
 
 	/* Neutral — solid backgrounds use inverted shades (dark on light) */
 	--ui-neutral-bg-tint-hover: var(--ui-color-neutral-100);
 	--ui-neutral-bg-tint-pressed: var(--ui-color-neutral-200);
 	--ui-neutral-bg-solid-hover: var(--ui-color-neutral-800);
 	--ui-neutral-bg-solid-pressed: var(--ui-color-neutral-700);
+	--ui-neutral-border-hover: var(--ui-color-neutral-300);
 
 	/* Danger */
 	--ui-danger-bg-tint-hover: var(--ui-color-danger-100);
 	--ui-danger-bg-tint-pressed: var(--ui-color-danger-200);
 	--ui-danger-bg-solid-hover: var(--ui-color-danger-700);
 	--ui-danger-bg-solid-pressed: var(--ui-color-danger-800);
+	--ui-danger-border-hover: var(--ui-color-danger-300);
 
 	/* Warning */
 	--ui-warning-bg-tint-hover: var(--ui-color-warning-100);
 	--ui-warning-bg-tint-pressed: var(--ui-color-warning-200);
 	--ui-warning-bg-solid-hover: var(--ui-color-warning-700);
 	--ui-warning-bg-solid-pressed: var(--ui-color-warning-800);
+	--ui-warning-border-hover: var(--ui-color-warning-300);
 
 	/* Success */
 	--ui-success-bg-tint-hover: var(--ui-color-success-100);
 	--ui-success-bg-tint-pressed: var(--ui-color-success-200);
 	--ui-success-bg-solid-hover: var(--ui-color-success-700);
 	--ui-success-bg-solid-pressed: var(--ui-color-success-800);
+	--ui-success-border-hover: var(--ui-color-success-300);
 
 	/* Chart: categorical sequence for multi-series charts */
 	--ui-chart-1: var(--ui-color-brand-600);
@@ -73,26 +82,31 @@
 	--ui-brand-bg-tint-pressed: var(--ui-color-brand-800);
 	--ui-brand-bg-solid-hover: var(--ui-color-brand-700);
 	--ui-brand-bg-solid-pressed: var(--ui-color-brand-800);
+	--ui-brand-border-hover: var(--ui-color-brand-700);
 
 	--ui-neutral-bg-tint-hover: var(--ui-color-neutral-900);
 	--ui-neutral-bg-tint-pressed: var(--ui-color-neutral-800);
 	--ui-neutral-bg-solid-hover: var(--ui-color-neutral-200);
 	--ui-neutral-bg-solid-pressed: var(--ui-color-neutral-300);
+	--ui-neutral-border-hover: var(--ui-color-neutral-600);
 
 	--ui-danger-bg-tint-hover: var(--ui-color-danger-900);
 	--ui-danger-bg-tint-pressed: var(--ui-color-danger-800);
 	--ui-danger-bg-solid-hover: var(--ui-color-danger-700);
 	--ui-danger-bg-solid-pressed: var(--ui-color-danger-800);
+	--ui-danger-border-hover: var(--ui-color-danger-700);
 
 	--ui-warning-bg-tint-hover: var(--ui-color-warning-900);
 	--ui-warning-bg-tint-pressed: var(--ui-color-warning-800);
 	--ui-warning-bg-solid-hover: var(--ui-color-warning-700);
 	--ui-warning-bg-solid-pressed: var(--ui-color-warning-800);
+	--ui-warning-border-hover: var(--ui-color-warning-700);
 
 	--ui-success-bg-tint-hover: var(--ui-color-success-900);
 	--ui-success-bg-tint-pressed: var(--ui-color-success-800);
 	--ui-success-bg-solid-hover: var(--ui-color-success-700);
 	--ui-success-bg-solid-pressed: var(--ui-color-success-800);
+	--ui-success-border-hover: var(--ui-color-success-700);
 
 	/* Chart: categorical sequence for multi-series charts */
 	--ui-chart-1: var(--ui-color-brand-400);
@@ -112,26 +126,31 @@
 		--ui-brand-bg-tint-pressed: var(--ui-color-brand-800);
 		--ui-brand-bg-solid-hover: var(--ui-color-brand-700);
 		--ui-brand-bg-solid-pressed: var(--ui-color-brand-800);
+		--ui-brand-border-hover: var(--ui-color-brand-700);
 
 		--ui-neutral-bg-tint-hover: var(--ui-color-neutral-900);
 		--ui-neutral-bg-tint-pressed: var(--ui-color-neutral-800);
 		--ui-neutral-bg-solid-hover: var(--ui-color-neutral-200);
 		--ui-neutral-bg-solid-pressed: var(--ui-color-neutral-300);
+		--ui-neutral-border-hover: var(--ui-color-neutral-600);
 
 		--ui-danger-bg-tint-hover: var(--ui-color-danger-900);
 		--ui-danger-bg-tint-pressed: var(--ui-color-danger-800);
 		--ui-danger-bg-solid-hover: var(--ui-color-danger-700);
 		--ui-danger-bg-solid-pressed: var(--ui-color-danger-800);
+		--ui-danger-border-hover: var(--ui-color-danger-700);
 
 		--ui-warning-bg-tint-hover: var(--ui-color-warning-900);
 		--ui-warning-bg-tint-pressed: var(--ui-color-warning-800);
 		--ui-warning-bg-solid-hover: var(--ui-color-warning-700);
 		--ui-warning-bg-solid-pressed: var(--ui-color-warning-800);
+		--ui-warning-border-hover: var(--ui-color-warning-700);
 
 		--ui-success-bg-tint-hover: var(--ui-color-success-900);
 		--ui-success-bg-tint-pressed: var(--ui-color-success-800);
 		--ui-success-bg-solid-hover: var(--ui-color-success-700);
 		--ui-success-bg-solid-pressed: var(--ui-color-success-800);
+		--ui-success-border-hover: var(--ui-color-success-700);
 
 		/* Chart: categorical sequence for multi-series charts */
 		--ui-chart-1: var(--ui-color-brand-400);
@@ -142,5 +161,16 @@
 		--ui-chart-6: var(--ui-color-brand-300);
 		--ui-chart-7: var(--ui-color-success-300);
 		--ui-chart-8: var(--ui-color-warning-300);
+	}
+}
+
+/* High contrast: the resting border is already promoted, so its hover step follows it */
+@media (prefers-contrast: more) {
+	:root {
+		--ui-brand-border-hover: var(--ui-brand-border-strong);
+		--ui-neutral-border-hover: var(--ui-neutral-border-strong);
+		--ui-success-border-hover: var(--ui-success-border-strong);
+		--ui-warning-border-hover: var(--ui-warning-border-strong);
+		--ui-danger-border-hover: var(--ui-danger-border-strong);
 	}
 }
