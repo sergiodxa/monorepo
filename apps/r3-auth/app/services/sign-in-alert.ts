@@ -18,7 +18,7 @@ import type { RequestContext } from "remix/router";
 import { getClientIP } from "@sdxc/get-client-ip";
 
 import Subject from "~/app/data/subject";
-import { DEFAULT_EMAIL_LOCALE } from "~/app/emails/locale";
+import { DEFAULT_EMAIL_LOCALE, emailTranslator } from "~/app/emails/locale";
 import { NewSignInEmail } from "~/app/emails/new-sign-in";
 import { parseUserAgent } from "~/app/http/view-models/account-session";
 
@@ -54,7 +54,7 @@ export async function notifyNewSignIn(
 				deviceType: ua.deviceType,
 				ip: getClientIP(ctx.request),
 				locale: DEFAULT_EMAIL_LOCALE,
-				t: ctx.i18next.getFixedT(DEFAULT_EMAIL_LOCALE),
+				t: (await emailTranslator(DEFAULT_EMAIL_LOCALE)).t,
 			}),
 		);
 

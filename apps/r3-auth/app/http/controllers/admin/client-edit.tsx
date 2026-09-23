@@ -26,12 +26,12 @@ import routes from "~/routes/web";
 /** The page's chrome, shared by the form, a failed submission and the secret reveal. */
 function chrome(ctx: RequestContext, clientName: string, clientId: string) {
 	return toChrome(ctx, {
-		documentTitle: ctx.i18next.t("admin.clients.edit.documentTitle", { name: clientName }),
-		heading: ctx.i18next.t("admin.clients.edit.title"),
+		documentTitle: ctx.intl.t("admin.clients.edit.documentTitle", { name: clientName }),
+		heading: ctx.intl.t("admin.clients.edit.title"),
 		section: "clients",
 		breadcrumbs: [
-			{ label: ctx.i18next.t("admin.nav.items.dashboard"), href: routes.admin.dashboard.href() },
-			{ label: ctx.i18next.t("admin.clients.title"), href: routes.admin.clients.index.href() },
+			{ label: ctx.intl.t("admin.nav.items.dashboard"), href: routes.admin.dashboard.href() },
+			{ label: ctx.intl.t("admin.clients.title"), href: routes.admin.clients.index.href() },
 			{ label: clientName, href: routes.admin.client.index.href({ clientId }) },
 		],
 	});
@@ -40,54 +40,54 @@ function chrome(ctx: RequestContext, clientName: string, clientId: string) {
 /** Every string the edit page renders, resolved once per request. */
 function labels(ctx: RequestContext) {
 	return {
-		title: ctx.i18next.t("admin.clients.edit.title"),
-		description: ctx.i18next.t("admin.clients.edit.description"),
+		title: ctx.intl.t("admin.clients.edit.title"),
+		description: ctx.intl.t("admin.clients.edit.description"),
 		fields: {
 			name: {
-				label: ctx.i18next.t("admin.clients.form.name.label"),
-				placeholder: ctx.i18next.t("admin.clients.form.name.placeholder"),
+				label: ctx.intl.t("admin.clients.form.name.label"),
+				placeholder: ctx.intl.t("admin.clients.form.name.placeholder"),
 			},
 			description: {
-				label: ctx.i18next.t("admin.clients.form.description.label"),
-				placeholder: ctx.i18next.t("admin.clients.form.description.placeholder"),
+				label: ctx.intl.t("admin.clients.form.description.label"),
+				placeholder: ctx.intl.t("admin.clients.form.description.placeholder"),
 			},
 			logoUrl: {
-				label: ctx.i18next.t("admin.clients.form.logoUrl.label"),
-				placeholder: ctx.i18next.t("admin.clients.form.logoUrl.placeholder"),
+				label: ctx.intl.t("admin.clients.form.logoUrl.label"),
+				placeholder: ctx.intl.t("admin.clients.form.logoUrl.placeholder"),
 			},
 			redirectUri: {
-				label: ctx.i18next.t("admin.clients.form.redirectUri.label"),
-				placeholder: ctx.i18next.t("admin.clients.form.redirectUri.placeholder"),
+				label: ctx.intl.t("admin.clients.form.redirectUri.label"),
+				placeholder: ctx.intl.t("admin.clients.form.redirectUri.placeholder"),
 			},
 			logoutUri: {
-				label: ctx.i18next.t("admin.clients.form.logoutUri.label"),
-				placeholder: ctx.i18next.t("admin.clients.form.logoutUri.placeholder"),
+				label: ctx.intl.t("admin.clients.form.logoutUri.label"),
+				placeholder: ctx.intl.t("admin.clients.form.logoutUri.placeholder"),
 			},
 			backchannelLogoutUri: {
-				label: ctx.i18next.t("admin.clients.form.backchannelLogoutUri.label"),
-				placeholder: ctx.i18next.t("admin.clients.form.backchannelLogoutUri.placeholder"),
+				label: ctx.intl.t("admin.clients.form.backchannelLogoutUri.label"),
+				placeholder: ctx.intl.t("admin.clients.form.backchannelLogoutUri.placeholder"),
 			},
 			frontchannelLogoutUri: {
-				label: ctx.i18next.t("admin.clients.form.frontchannelLogoutUri.label"),
-				placeholder: ctx.i18next.t("admin.clients.form.frontchannelLogoutUri.placeholder"),
+				label: ctx.intl.t("admin.clients.form.frontchannelLogoutUri.label"),
+				placeholder: ctx.intl.t("admin.clients.form.frontchannelLogoutUri.placeholder"),
 			},
 		},
-		backchannelSessionRequired: ctx.i18next.t(
+		backchannelSessionRequired: ctx.intl.t(
 			"admin.clients.form.backchannelLogoutSessionRequired.label",
 		),
-		frontchannelSessionRequired: ctx.i18next.t(
+		frontchannelSessionRequired: ctx.intl.t(
 			"admin.clients.form.frontchannelLogoutSessionRequired.label",
 		),
-		regenerateSecret: ctx.i18next.t("admin.clients.actions.regenerateSecret"),
-		submit: ctx.i18next.t("admin.clients.form.submit"),
-		cancel: ctx.i18next.t("admin.clients.form.cancel"),
-		invalid: ctx.i18next.t("admin.clients.form.invalid"),
-		secretRegenerated: ctx.i18next.t("admin.clients.edit.secretRegenerated"),
-		secretWarning: ctx.i18next.t("admin.clients.create.secretWarning"),
-		secret: ctx.i18next.t("admin.clients.detail.secret"),
-		view: ctx.i18next.t("admin.clients.actions.view"),
-		copy: ctx.i18next.t("admin.clients.actions.copy"),
-		copied: ctx.i18next.t("admin.clients.actions.copied"),
+		regenerateSecret: ctx.intl.t("admin.clients.actions.regenerateSecret"),
+		submit: ctx.intl.t("admin.clients.form.submit"),
+		cancel: ctx.intl.t("admin.clients.form.cancel"),
+		invalid: ctx.intl.t("admin.clients.form.invalid"),
+		secretRegenerated: ctx.intl.t("admin.clients.edit.secretRegenerated"),
+		secretWarning: ctx.intl.t("admin.clients.create.secretWarning"),
+		secret: ctx.intl.t("admin.clients.detail.secret"),
+		view: ctx.intl.t("admin.clients.actions.view"),
+		copy: ctx.intl.t("admin.clients.actions.copy"),
+		copied: ctx.intl.t("admin.clients.actions.copied"),
 	};
 }
 

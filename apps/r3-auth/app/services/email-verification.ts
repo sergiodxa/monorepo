@@ -27,7 +27,7 @@ import type { SelectSubject } from "~/database/schema";
 
 import { ISSUER_HOST } from "~/app/config";
 import Subject from "~/app/data/subject";
-import { DEFAULT_EMAIL_LOCALE } from "~/app/emails/locale";
+import { DEFAULT_EMAIL_LOCALE, emailTranslator } from "~/app/emails/locale";
 import { VerifyEmailEmail } from "~/app/emails/verify-email";
 import routes from "~/routes/web";
 
@@ -175,7 +175,7 @@ export async function sendVerificationEmail(
 				url: verificationUrl(token),
 				expiresInMinutes: VERIFICATION_TTL_MINUTES,
 				locale: DEFAULT_EMAIL_LOCALE,
-				t: ctx.i18next.getFixedT(DEFAULT_EMAIL_LOCALE),
+				t: (await emailTranslator(DEFAULT_EMAIL_LOCALE)).t,
 			}),
 		);
 

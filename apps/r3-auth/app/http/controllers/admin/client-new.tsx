@@ -24,12 +24,12 @@ import routes from "~/routes/web";
 /** The page's chrome, shared by the form, the failed submission and the reveal. */
 function chrome(ctx: RequestContext) {
 	return toChrome(ctx, {
-		documentTitle: ctx.i18next.t("admin.clients.create.documentTitle"),
-		heading: ctx.i18next.t("admin.clients.create.title"),
+		documentTitle: ctx.intl.t("admin.clients.create.documentTitle"),
+		heading: ctx.intl.t("admin.clients.create.title"),
 		section: "clients",
 		breadcrumbs: [
-			{ label: ctx.i18next.t("admin.nav.items.dashboard"), href: routes.admin.dashboard.href() },
-			{ label: ctx.i18next.t("admin.clients.title"), href: routes.admin.clients.index.href() },
+			{ label: ctx.intl.t("admin.nav.items.dashboard"), href: routes.admin.dashboard.href() },
+			{ label: ctx.intl.t("admin.clients.title"), href: routes.admin.clients.index.href() },
 		],
 	});
 }
@@ -37,45 +37,45 @@ function chrome(ctx: RequestContext) {
 /** Every string the create page renders, resolved once per request. */
 function labels(ctx: RequestContext) {
 	return {
-		title: ctx.i18next.t("admin.clients.create.title"),
-		description: ctx.i18next.t("admin.clients.create.description"),
+		title: ctx.intl.t("admin.clients.create.title"),
+		description: ctx.intl.t("admin.clients.create.description"),
 		fields: {
 			name: {
-				label: ctx.i18next.t("admin.clients.form.name.label"),
-				placeholder: ctx.i18next.t("admin.clients.form.name.placeholder"),
+				label: ctx.intl.t("admin.clients.form.name.label"),
+				placeholder: ctx.intl.t("admin.clients.form.name.placeholder"),
 			},
 			description: {
-				label: ctx.i18next.t("admin.clients.form.description.label"),
-				placeholder: ctx.i18next.t("admin.clients.form.description.placeholder"),
+				label: ctx.intl.t("admin.clients.form.description.label"),
+				placeholder: ctx.intl.t("admin.clients.form.description.placeholder"),
 			},
 			logoUrl: {
-				label: ctx.i18next.t("admin.clients.form.logoUrl.label"),
-				placeholder: ctx.i18next.t("admin.clients.form.logoUrl.placeholder"),
+				label: ctx.intl.t("admin.clients.form.logoUrl.label"),
+				placeholder: ctx.intl.t("admin.clients.form.logoUrl.placeholder"),
 			},
 			redirectUri: {
-				label: ctx.i18next.t("admin.clients.form.redirectUri.label"),
-				placeholder: ctx.i18next.t("admin.clients.form.redirectUri.placeholder"),
+				label: ctx.intl.t("admin.clients.form.redirectUri.label"),
+				placeholder: ctx.intl.t("admin.clients.form.redirectUri.placeholder"),
 			},
 			logoutUri: {
-				label: ctx.i18next.t("admin.clients.form.logoutUri.label"),
-				placeholder: ctx.i18next.t("admin.clients.form.logoutUri.placeholder"),
+				label: ctx.intl.t("admin.clients.form.logoutUri.label"),
+				placeholder: ctx.intl.t("admin.clients.form.logoutUri.placeholder"),
 			},
 		},
-		submit: ctx.i18next.t("admin.clients.form.submit"),
-		cancel: ctx.i18next.t("admin.clients.form.cancel"),
+		submit: ctx.intl.t("admin.clients.form.submit"),
+		cancel: ctx.intl.t("admin.clients.form.cancel"),
 		cancelHref: routes.admin.clients.index.href(),
-		invalid: ctx.i18next.t("admin.clients.form.invalid"),
-		success: ctx.i18next.t("admin.clients.create.success"),
-		secretWarning: ctx.i18next.t("admin.clients.create.secretWarning"),
+		invalid: ctx.intl.t("admin.clients.form.invalid"),
+		success: ctx.intl.t("admin.clients.create.success"),
+		secretWarning: ctx.intl.t("admin.clients.create.secretWarning"),
 		detail: {
-			id: ctx.i18next.t("admin.clients.detail.id"),
-			secret: ctx.i18next.t("admin.clients.detail.secret"),
-			redirectUri: ctx.i18next.t("admin.clients.detail.redirectUri"),
-			logoutUri: ctx.i18next.t("admin.clients.detail.logoutUri"),
+			id: ctx.intl.t("admin.clients.detail.id"),
+			secret: ctx.intl.t("admin.clients.detail.secret"),
+			redirectUri: ctx.intl.t("admin.clients.detail.redirectUri"),
+			logoutUri: ctx.intl.t("admin.clients.detail.logoutUri"),
 		},
-		view: ctx.i18next.t("admin.clients.actions.view"),
-		copy: ctx.i18next.t("admin.clients.actions.copy"),
-		copied: ctx.i18next.t("admin.clients.actions.copied"),
+		view: ctx.intl.t("admin.clients.actions.view"),
+		copy: ctx.intl.t("admin.clients.actions.copy"),
+		copied: ctx.intl.t("admin.clients.actions.copied"),
 	};
 }
 

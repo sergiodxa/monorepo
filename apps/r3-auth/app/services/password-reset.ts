@@ -20,7 +20,7 @@ import { env } from "cloudflare:workers";
 
 import { ISSUER_HOST } from "~/app/config";
 import Subject from "~/app/data/subject";
-import { DEFAULT_EMAIL_LOCALE } from "~/app/emails/locale";
+import { DEFAULT_EMAIL_LOCALE, emailTranslator } from "~/app/emails/locale";
 import { ResetPasswordEmail } from "~/app/emails/reset-password";
 import { PasswordResetRecordSchema } from "~/app/http/validators/password";
 import routes from "~/routes/web";
@@ -148,7 +148,7 @@ export async function requestPasswordReset(
 				url: resetUrl(token),
 				minutes: Math.round(PASSWORD_RESET_TTL / toMs("1 minute")),
 				locale: DEFAULT_EMAIL_LOCALE,
-				t: ctx.i18next.getFixedT(DEFAULT_EMAIL_LOCALE),
+				t: (await emailTranslator(DEFAULT_EMAIL_LOCALE)).t,
 			}),
 		);
 

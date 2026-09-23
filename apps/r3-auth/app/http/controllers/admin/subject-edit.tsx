@@ -26,12 +26,12 @@ import routes from "~/routes/web";
 /** The page's chrome, shared by the form and a failed submission. */
 function chrome(ctx: RequestContext, displayName: string, subjectId: string) {
 	return toChrome(ctx, {
-		documentTitle: ctx.i18next.t("admin.subjects.edit.documentTitle", { name: displayName }),
-		heading: ctx.i18next.t("admin.subjects.edit.title"),
+		documentTitle: ctx.intl.t("admin.subjects.edit.documentTitle", { name: displayName }),
+		heading: ctx.intl.t("admin.subjects.edit.title"),
 		section: "subjects",
 		breadcrumbs: [
-			{ label: ctx.i18next.t("admin.nav.items.dashboard"), href: routes.admin.dashboard.href() },
-			{ label: ctx.i18next.t("admin.subjects.title"), href: routes.admin.subjects.href() },
+			{ label: ctx.intl.t("admin.nav.items.dashboard"), href: routes.admin.dashboard.href() },
+			{ label: ctx.intl.t("admin.subjects.title"), href: routes.admin.subjects.href() },
 			{ label: displayName, href: routes.admin.subject.index.href({ subjectId }) },
 		],
 	});
@@ -40,35 +40,35 @@ function chrome(ctx: RequestContext, displayName: string, subjectId: string) {
 /** Every string the edit page renders, resolved once per request. */
 function labels(ctx: RequestContext) {
 	return {
-		title: ctx.i18next.t("admin.subjects.edit.title"),
-		description: ctx.i18next.t("admin.subjects.edit.description"),
+		title: ctx.intl.t("admin.subjects.edit.title"),
+		description: ctx.intl.t("admin.subjects.edit.description"),
 		fields: {
 			displayName: {
-				label: ctx.i18next.t("admin.subjects.form.displayName.label"),
-				placeholder: ctx.i18next.t("admin.subjects.form.displayName.placeholder"),
+				label: ctx.intl.t("admin.subjects.form.displayName.label"),
+				placeholder: ctx.intl.t("admin.subjects.form.displayName.placeholder"),
 			},
 			username: {
-				label: ctx.i18next.t("admin.subjects.form.username.label"),
-				placeholder: ctx.i18next.t("admin.subjects.form.username.placeholder"),
+				label: ctx.intl.t("admin.subjects.form.username.label"),
+				placeholder: ctx.intl.t("admin.subjects.form.username.placeholder"),
 			},
 			avatar: {
-				label: ctx.i18next.t("admin.subjects.form.avatar.label"),
-				placeholder: ctx.i18next.t("admin.subjects.form.avatar.placeholder"),
+				label: ctx.intl.t("admin.subjects.form.avatar.label"),
+				placeholder: ctx.intl.t("admin.subjects.form.avatar.placeholder"),
 			},
 			email: {
-				label: ctx.i18next.t("admin.subjects.form.email.label"),
-				placeholder: ctx.i18next.t("admin.subjects.form.email.placeholder"),
+				label: ctx.intl.t("admin.subjects.form.email.label"),
+				placeholder: ctx.intl.t("admin.subjects.form.email.placeholder"),
 			},
 		},
-		role: ctx.i18next.t("admin.subjects.form.role.label"),
+		role: ctx.intl.t("admin.subjects.form.role.label"),
 		roles: {
-			user: ctx.i18next.t("admin.subjects.roles.user"),
-			admin: ctx.i18next.t("admin.subjects.roles.admin"),
+			user: ctx.intl.t("admin.subjects.roles.user"),
+			admin: ctx.intl.t("admin.subjects.roles.admin"),
 		},
-		emailVerified: ctx.i18next.t("admin.subjects.form.emailVerified.label"),
-		submit: ctx.i18next.t("admin.subjects.form.submit"),
-		cancel: ctx.i18next.t("admin.subjects.form.cancel"),
-		invalid: ctx.i18next.t("admin.subjects.form.invalid"),
+		emailVerified: ctx.intl.t("admin.subjects.form.emailVerified.label"),
+		submit: ctx.intl.t("admin.subjects.form.submit"),
+		cancel: ctx.intl.t("admin.subjects.form.cancel"),
+		invalid: ctx.intl.t("admin.subjects.form.invalid"),
 	};
 }
 

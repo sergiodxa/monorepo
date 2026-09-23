@@ -34,35 +34,35 @@ async function grantsPage(ctx: RequestContext): Promise<Response> {
 		<AccountLayout
 			{...accountChrome(ctx, {
 				current: "grants",
-				heading: ctx.i18next.t("grants.title"),
-				documentTitle: ctx.i18next.t("grants.title"),
+				heading: ctx.intl.t("grants.title"),
+				documentTitle: ctx.intl.t("grants.title"),
 				isAdmin: subject.role === "admin",
 			})}
 		>
 			<GrantsView
-				title={ctx.i18next.t("grants.title")}
-				description={ctx.i18next.t("grants.description")}
-				empty={ctx.i18next.t("grants.empty")}
+				title={ctx.intl.t("grants.title")}
+				description={ctx.intl.t("grants.description")}
+				empty={ctx.intl.t("grants.empty")}
 				columns={{
-					app: ctx.i18next.t("grants.columns.app"),
-					authorizedOn: ctx.i18next.t("grants.columns.authorizedOn"),
-					actions: ctx.i18next.t("grants.columns.actions"),
+					app: ctx.intl.t("grants.columns.app"),
+					authorizedOn: ctx.intl.t("grants.columns.authorizedOn"),
+					actions: ctx.intl.t("grants.columns.actions"),
 				}}
 				labels={{
-					revoke: ctx.i18next.t("grants.actions.revoke"),
-					cannotRevoke: ctx.i18next.t("grants.cannotRevoke"),
-					tableLabel: ctx.i18next.t("grants.tableLabel"),
+					revoke: ctx.intl.t("grants.actions.revoke"),
+					cannotRevoke: ctx.intl.t("grants.cannotRevoke"),
+					tableLabel: ctx.intl.t("grants.tableLabel"),
 				}}
 				confirm={{
-					title: ctx.i18next.t("grants.confirm.revoke.title"),
-					confirm: ctx.i18next.t("grants.confirm.revoke.confirm"),
-					cancel: ctx.i18next.t("grants.confirm.cancel"),
+					title: ctx.intl.t("grants.confirm.revoke.title"),
+					confirm: ctx.intl.t("grants.confirm.revoke.confirm"),
+					cancel: ctx.intl.t("grants.confirm.cancel"),
 				}}
 				grants={grants.map((grant) => {
 					let row = toGrantRow(grant, AUTH_SERVER_CLIENT_ID, ctx.locale);
 					return {
 						...row,
-						confirmDescription: ctx.i18next.t("grants.confirm.revoke.description", {
+						confirmDescription: ctx.intl.t("grants.confirm.revoke.description", {
 							client: row.clientName,
 						}),
 					};

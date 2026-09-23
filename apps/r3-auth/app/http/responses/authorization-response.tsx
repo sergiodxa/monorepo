@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { i18n } from "@sdxc/i18n";
+import type { I18n } from "@sdxc/i18n";
 import type { Renderer } from "remix/middleware/render";
 import type { RemixNode } from "remix/ui";
 
@@ -27,7 +27,7 @@ const NO_STORE_HEADERS = { "Cache-Control": "no-store", Pragma: "no-cache" };
 /** The slice of request context this module reads. */
 export interface AuthorizationResponseContext {
 	render: Renderer<RemixNode>;
-	i18next: i18n;
+	intl: I18n;
 }
 
 /**
@@ -53,9 +53,9 @@ export async function authorizationResponse(
 			<FormPostView
 				action={redirectUri}
 				params={params}
-				title={ctx.i18next.t("authorize.formPost.title")}
-				submitLabel={ctx.i18next.t("authorize.formPost.submit")}
-				noscriptMessage={ctx.i18next.t("authorize.formPost.noscript")}
+				title={ctx.intl.t("authorize.formPost.title")}
+				submitLabel={ctx.intl.t("authorize.formPost.submit")}
+				noscriptMessage={ctx.intl.t("authorize.formPost.noscript")}
 			/>,
 			{ headers: NO_STORE_HEADERS },
 		);

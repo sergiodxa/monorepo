@@ -33,11 +33,11 @@ export default createAction(routes.admin.subjects, {
 		]);
 
 		let chrome = toChrome(ctx, {
-			documentTitle: ctx.i18next.t("admin.subjects.documentTitle"),
-			heading: ctx.i18next.t("admin.subjects.title"),
+			documentTitle: ctx.intl.t("admin.subjects.documentTitle"),
+			heading: ctx.intl.t("admin.subjects.title"),
 			section: "subjects",
 			breadcrumbs: [
-				{ label: ctx.i18next.t("admin.nav.items.dashboard"), href: routes.admin.dashboard.href() },
+				{ label: ctx.intl.t("admin.nav.items.dashboard"), href: routes.admin.dashboard.href() },
 			],
 		});
 
@@ -46,29 +46,29 @@ export default createAction(routes.admin.subjects, {
 				chrome={chrome}
 				subjects={subjects.map((subject) => toSubjectRow(subject, ctx.locale))}
 				pagination={toPagination(ctx.url, page, totalCount, {
-					label: ctx.i18next.t("admin.pagination.label"),
-					previous: ctx.i18next.t("admin.pagination.previous"),
-					next: ctx.i18next.t("admin.pagination.next"),
+					label: ctx.intl.t("admin.pagination.label"),
+					previous: ctx.intl.t("admin.pagination.previous"),
+					next: ctx.intl.t("admin.pagination.next"),
 				})}
 				labels={{
-					description: ctx.i18next.t("admin.subjects.description"),
-					empty: ctx.i18next.t("admin.subjects.empty"),
-					tableLabel: ctx.i18next.t("admin.subjects.title"),
+					description: ctx.intl.t("admin.subjects.description"),
+					empty: ctx.intl.t("admin.subjects.empty"),
+					tableLabel: ctx.intl.t("admin.subjects.title"),
 					columns: {
-						avatar: ctx.i18next.t("admin.subjects.table.avatar"),
-						displayName: ctx.i18next.t("admin.subjects.table.displayName"),
-						email: ctx.i18next.t("admin.subjects.table.email"),
-						role: ctx.i18next.t("admin.subjects.table.role"),
-						createdAt: ctx.i18next.t("admin.subjects.table.createdAt"),
-						actions: ctx.i18next.t("admin.subjects.table.actions"),
+						avatar: ctx.intl.t("admin.subjects.table.avatar"),
+						displayName: ctx.intl.t("admin.subjects.table.displayName"),
+						email: ctx.intl.t("admin.subjects.table.email"),
+						role: ctx.intl.t("admin.subjects.table.role"),
+						createdAt: ctx.intl.t("admin.subjects.table.createdAt"),
+						actions: ctx.intl.t("admin.subjects.table.actions"),
 					},
 					actions: {
-						view: ctx.i18next.t("admin.subjects.actions.view"),
-						edit: ctx.i18next.t("admin.subjects.actions.edit"),
+						view: ctx.intl.t("admin.subjects.actions.view"),
+						edit: ctx.intl.t("admin.subjects.actions.edit"),
 					},
 					roles: {
-						user: ctx.i18next.t("admin.subjects.roles.user"),
-						admin: ctx.i18next.t("admin.subjects.roles.admin"),
+						user: ctx.intl.t("admin.subjects.roles.user"),
+						admin: ctx.intl.t("admin.subjects.roles.admin"),
 					},
 				}}
 			/>,

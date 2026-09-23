@@ -76,7 +76,7 @@ const SELF_LOGIN_SCOPE = "openid offline_access";
  * @param code - The `error` value the engine reported.
  */
 function signInErrorMessage(ctx: RequestContext, code: string): string {
-	return ctx.i18next.t(SIGN_IN_ERROR_KEYS[code] ?? SIGN_IN_ERROR_FALLBACK_KEY);
+	return ctx.intl.t(SIGN_IN_ERROR_KEYS[code] ?? SIGN_IN_ERROR_FALLBACK_KEY);
 }
 
 /**
@@ -138,36 +138,36 @@ async function errorRedirect(
  */
 function signInPage(ctx: RequestContext, client: SelectClient, authz: AuthzState, error?: string) {
 	return ctx.render(
-		<DocumentLayout title={ctx.i18next.t("authorize.header.title", { client: client.name })}>
+		<DocumentLayout title={ctx.intl.t("authorize.header.title", { client: client.name })}>
 			<AuthorizeView
 				clientName={client.name}
 				clientDescription={client.description}
 				clientLogoUrl={client.logo_url}
-				title={ctx.i18next.t("authorize.header.titleShort")}
-				description={ctx.i18next.t("authorize.header.description")}
+				title={ctx.intl.t("authorize.header.titleShort")}
+				description={ctx.intl.t("authorize.header.description")}
 				showRegistration={authz.prompt?.includes("create") ?? false}
 				error={error ?? null}
 				labels={{
 					name: {
-						label: ctx.i18next.t("authorize.forms.credentials.fields.name.label"),
-						placeholder: ctx.i18next.t("authorize.forms.credentials.fields.name.placeholder"),
+						label: ctx.intl.t("authorize.forms.credentials.fields.name.label"),
+						placeholder: ctx.intl.t("authorize.forms.credentials.fields.name.placeholder"),
 					},
 					username: {
-						label: ctx.i18next.t("authorize.forms.credentials.fields.username.label"),
-						placeholder: ctx.i18next.t("authorize.forms.credentials.fields.username.placeholder"),
+						label: ctx.intl.t("authorize.forms.credentials.fields.username.label"),
+						placeholder: ctx.intl.t("authorize.forms.credentials.fields.username.placeholder"),
 					},
 					email: {
-						label: ctx.i18next.t("authorize.forms.credentials.fields.email.label"),
-						placeholder: ctx.i18next.t("authorize.forms.credentials.fields.email.placeholder"),
+						label: ctx.intl.t("authorize.forms.credentials.fields.email.label"),
+						placeholder: ctx.intl.t("authorize.forms.credentials.fields.email.placeholder"),
 					},
 					password: {
-						label: ctx.i18next.t("authorize.forms.credentials.fields.password.label"),
-						placeholder: ctx.i18next.t("authorize.forms.credentials.fields.password.placeholder"),
+						label: ctx.intl.t("authorize.forms.credentials.fields.password.label"),
+						placeholder: ctx.intl.t("authorize.forms.credentials.fields.password.placeholder"),
 					},
-					submit: ctx.i18next.t("authorize.forms.credentials.cta"),
-					github: ctx.i18next.t("authorize.forms.github.cta"),
-					separator: ctx.i18next.t("authorize.forms.separator"),
-					forgotPassword: ctx.i18next.t("password.forgot.link"),
+					submit: ctx.intl.t("authorize.forms.credentials.cta"),
+					github: ctx.intl.t("authorize.forms.github.cta"),
+					separator: ctx.intl.t("authorize.forms.separator"),
+					forgotPassword: ctx.intl.t("password.forgot.link"),
 				}}
 			/>
 		</DocumentLayout>,

@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { i18n } from "@sdxc/i18n";
+import type { I18n } from "@sdxc/i18n";
 
 import type { VerificationSendOutcome } from "~/app/services/email-verification";
 
@@ -63,7 +63,7 @@ export default class EmailVerificationViewModel {
 	 * @param actionHref - Where the resend form posts.
 	 */
 	static default(
-		t: i18n,
+		t: I18n,
 		emailVerifiedAt: number | null,
 		outcome: string | null,
 		actionHref: string,

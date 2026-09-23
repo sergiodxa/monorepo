@@ -115,7 +115,7 @@ written inside the shared card in `app/emails/layout.tsx`.
   on the client-create page; dialogs are native `<dialog>` elements driven by command
   invokers.
 - **Localized copy** through `@sdxc/i18n`; English is the only catalog today
-  (`app/locales/en.ts`).
+  (`app/locales/en.ts`), written as MessageFormat 2 messages.
 
 ## Integrations
 

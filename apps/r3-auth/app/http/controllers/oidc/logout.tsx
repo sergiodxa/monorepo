@@ -47,9 +47,9 @@ const CLEAR_SITE_DATA: HeadersInit = { "Clear-Site-Data": '"*"' };
 function confirmationPage(ctx: RequestContext): Response | Promise<Response> {
 	return ctx.render(
 		<LogoutView
-			documentTitle={ctx.i18next.t("logout.documentTitle")}
-			title={ctx.i18next.t("logout.title")}
-			cta={ctx.i18next.t("logout.cta")}
+			documentTitle={ctx.intl.t("logout.documentTitle")}
+			title={ctx.intl.t("logout.title")}
+			cta={ctx.intl.t("logout.cta")}
 		/>,
 	);
 }
@@ -130,11 +130,11 @@ export default createController(routes.oidc.logout, {
 			if (logout.frontchannelUrls.length > 0) {
 				return ctx.render(
 					<LogoutFrontchannelView
-						documentTitle={ctx.i18next.t("logout.documentTitle")}
-						title={ctx.i18next.t("logout.title")}
-						signingOut={ctx.i18next.t("logout.signing_out")}
-						redirecting={ctx.i18next.t("logout.redirecting")}
-						continueLabel={ctx.i18next.t("logout.continue")}
+						documentTitle={ctx.intl.t("logout.documentTitle")}
+						title={ctx.intl.t("logout.title")}
+						signingOut={ctx.intl.t("logout.signing_out")}
+						redirecting={ctx.intl.t("logout.redirecting")}
+						continueLabel={ctx.intl.t("logout.continue")}
 						urls={logout.frontchannelUrls}
 						redirectUri={redirectUri}
 					/>,

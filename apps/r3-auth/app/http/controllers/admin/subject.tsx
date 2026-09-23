@@ -54,7 +54,7 @@ export default createController(routes.admin.subject, {
 				connections: { count: connections.length },
 			});
 
-			let unknown = ctx.i18next.t("admin.subjects.sessions.unknownDevice");
+			let unknown = ctx.intl.t("admin.subjects.sessions.unknownDevice");
 
 			let chrome = toChrome(ctx, {
 				documentTitle: subject.display_name,
@@ -62,11 +62,11 @@ export default createController(routes.admin.subject, {
 				section: "subjects",
 				breadcrumbs: [
 					{
-						label: ctx.i18next.t("admin.nav.items.dashboard"),
+						label: ctx.intl.t("admin.nav.items.dashboard"),
 						href: routes.admin.dashboard.href(),
 					},
 					{
-						label: ctx.i18next.t("admin.subjects.title"),
+						label: ctx.intl.t("admin.subjects.title"),
 						href: routes.admin.subjects.href(),
 					},
 				],
@@ -81,54 +81,54 @@ export default createController(routes.admin.subject, {
 					editHref={routes.admin.subjectEdit.index.href({ subjectId })}
 					labels={{
 						detail: {
-							id: ctx.i18next.t("admin.subjects.detail.id"),
-							email: ctx.i18next.t("admin.subjects.detail.email"),
-							role: ctx.i18next.t("admin.subjects.detail.role"),
-							emailVerifiedAt: ctx.i18next.t("admin.subjects.detail.emailVerifiedAt"),
-							notVerified: ctx.i18next.t("admin.subjects.detail.notVerified"),
-							createdAt: ctx.i18next.t("admin.subjects.detail.createdAt"),
+							id: ctx.intl.t("admin.subjects.detail.id"),
+							email: ctx.intl.t("admin.subjects.detail.email"),
+							role: ctx.intl.t("admin.subjects.detail.role"),
+							emailVerifiedAt: ctx.intl.t("admin.subjects.detail.emailVerifiedAt"),
+							notVerified: ctx.intl.t("admin.subjects.detail.notVerified"),
+							createdAt: ctx.intl.t("admin.subjects.detail.createdAt"),
 						},
 						roles: {
-							user: ctx.i18next.t("admin.subjects.roles.user"),
-							admin: ctx.i18next.t("admin.subjects.roles.admin"),
+							user: ctx.intl.t("admin.subjects.roles.user"),
+							admin: ctx.intl.t("admin.subjects.roles.admin"),
 						},
-						edit: ctx.i18next.t("admin.subjects.actions.edit"),
-						delete: ctx.i18next.t("admin.subjects.actions.delete"),
+						edit: ctx.intl.t("admin.subjects.actions.edit"),
+						delete: ctx.intl.t("admin.subjects.actions.delete"),
 						deleteConfirm: {
-							title: ctx.i18next.t("admin.subjects.delete.title"),
-							description: ctx.i18next.t("admin.subjects.delete.confirm"),
-							confirm: ctx.i18next.t("admin.subjects.actions.delete"),
-							cancel: ctx.i18next.t("admin.subjects.sessions.confirm.cancel"),
+							title: ctx.intl.t("admin.subjects.delete.title"),
+							description: ctx.intl.t("admin.subjects.delete.confirm"),
+							confirm: ctx.intl.t("admin.subjects.actions.delete"),
+							cancel: ctx.intl.t("admin.subjects.sessions.confirm.cancel"),
 						},
 						sessions: {
-							title: ctx.i18next.t("admin.subjects.sessions.title"),
-							description: ctx.i18next.t("admin.subjects.sessions.description"),
-							empty: ctx.i18next.t("admin.subjects.sessions.empty"),
-							lastAccessed: ctx.i18next.t("admin.subjects.sessions.lastAccessedLabel"),
-							expires: ctx.i18next.t("admin.subjects.sessions.expiresLabel"),
-							active: ctx.i18next.t("admin.subjects.sessions.status.active"),
-							stale: ctx.i18next.t("admin.subjects.sessions.status.stale"),
-							revoke: ctx.i18next.t("admin.subjects.sessions.actions.revoke"),
-							revokeAll: ctx.i18next.t("admin.subjects.sessions.actions.revokeAll"),
+							title: ctx.intl.t("admin.subjects.sessions.title"),
+							description: ctx.intl.t("admin.subjects.sessions.description"),
+							empty: ctx.intl.t("admin.subjects.sessions.empty"),
+							lastAccessed: ctx.intl.t("admin.subjects.sessions.lastAccessedLabel"),
+							expires: ctx.intl.t("admin.subjects.sessions.expiresLabel"),
+							active: ctx.intl.t("admin.subjects.sessions.status.active"),
+							stale: ctx.intl.t("admin.subjects.sessions.status.stale"),
+							revoke: ctx.intl.t("admin.subjects.sessions.actions.revoke"),
+							revokeAll: ctx.intl.t("admin.subjects.sessions.actions.revokeAll"),
 							revokeConfirm: {
-								title: ctx.i18next.t("admin.subjects.sessions.confirm.revoke.title"),
-								description: ctx.i18next.t("admin.subjects.sessions.confirm.revoke.description"),
-								confirm: ctx.i18next.t("admin.subjects.sessions.confirm.revoke.confirm"),
-								cancel: ctx.i18next.t("admin.subjects.sessions.confirm.cancel"),
+								title: ctx.intl.t("admin.subjects.sessions.confirm.revoke.title"),
+								description: ctx.intl.t("admin.subjects.sessions.confirm.revoke.description"),
+								confirm: ctx.intl.t("admin.subjects.sessions.confirm.revoke.confirm"),
+								cancel: ctx.intl.t("admin.subjects.sessions.confirm.cancel"),
 							},
 							revokeAllConfirm: {
-								title: ctx.i18next.t("admin.subjects.sessions.confirm.revokeAll.title"),
-								description: ctx.i18next.t("admin.subjects.sessions.confirm.revokeAll.description"),
-								confirm: ctx.i18next.t("admin.subjects.sessions.confirm.revokeAll.confirm"),
-								cancel: ctx.i18next.t("admin.subjects.sessions.confirm.cancel"),
+								title: ctx.intl.t("admin.subjects.sessions.confirm.revokeAll.title"),
+								description: ctx.intl.t("admin.subjects.sessions.confirm.revokeAll.description"),
+								confirm: ctx.intl.t("admin.subjects.sessions.confirm.revokeAll.confirm"),
+								cancel: ctx.intl.t("admin.subjects.sessions.confirm.cancel"),
 							},
 						},
 						connections: {
-							title: ctx.i18next.t("admin.subjects.connections.title"),
-							description: ctx.i18next.t("admin.subjects.connections.description"),
-							empty: ctx.i18next.t("admin.subjects.connections.empty"),
-							externalId: ctx.i18next.t("admin.subjects.connections.externalId"),
-							linkedAt: ctx.i18next.t("admin.subjects.connections.linkedAt"),
+							title: ctx.intl.t("admin.subjects.connections.title"),
+							description: ctx.intl.t("admin.subjects.connections.description"),
+							empty: ctx.intl.t("admin.subjects.connections.empty"),
+							externalId: ctx.intl.t("admin.subjects.connections.externalId"),
+							linkedAt: ctx.intl.t("admin.subjects.connections.linkedAt"),
 						},
 					}}
 				/>,

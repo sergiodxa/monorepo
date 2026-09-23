@@ -77,38 +77,38 @@ function editPage(
 		<AccountLayout
 			{...accountChrome(ctx, {
 				current: "profile",
-				heading: ctx.i18next.t("profile.edit.title"),
-				documentTitle: ctx.i18next.t("profile.edit.title"),
+				heading: ctx.intl.t("profile.edit.title"),
+				documentTitle: ctx.intl.t("profile.edit.title"),
 				isAdmin: subject.role === "admin",
-				parents: [{ label: ctx.i18next.t("profile.title"), href: routes.account.profile.href() }],
+				parents: [{ label: ctx.intl.t("profile.title"), href: routes.account.profile.href() }],
 			})}
 		>
 			<ProfileEditView
-				title={ctx.i18next.t("profile.edit.title")}
-				description={ctx.i18next.t("profile.edit.description")}
+				title={ctx.intl.t("profile.edit.title")}
+				description={ctx.intl.t("profile.edit.description")}
 				fields={{
 					displayName: {
-						label: ctx.i18next.t("profile.edit.form.displayName.label"),
-						placeholder: ctx.i18next.t("profile.edit.form.displayName.placeholder"),
+						label: ctx.intl.t("profile.edit.form.displayName.label"),
+						placeholder: ctx.intl.t("profile.edit.form.displayName.placeholder"),
 						value: values.displayName,
 						error: fieldError(issues, "displayName"),
 					},
 					username: {
-						label: ctx.i18next.t("profile.edit.form.username.label"),
-						placeholder: ctx.i18next.t("profile.edit.form.username.placeholder"),
+						label: ctx.intl.t("profile.edit.form.username.label"),
+						placeholder: ctx.intl.t("profile.edit.form.username.placeholder"),
 						value: values.username,
 						error: fieldError(issues, "username"),
 					},
 					avatar: {
-						label: ctx.i18next.t("profile.edit.form.avatar.label"),
-						placeholder: ctx.i18next.t("profile.edit.form.avatar.placeholder"),
+						label: ctx.intl.t("profile.edit.form.avatar.label"),
+						placeholder: ctx.intl.t("profile.edit.form.avatar.placeholder"),
 						value: values.avatar,
 						error: fieldError(issues, "avatar"),
 					},
 				}}
 				labels={{
-					submit: ctx.i18next.t("profile.edit.form.submit"),
-					cancel: ctx.i18next.t("profile.edit.form.cancel"),
+					submit: ctx.intl.t("profile.edit.form.submit"),
+					cancel: ctx.intl.t("profile.edit.form.cancel"),
 				}}
 				error={error}
 			/>
@@ -147,7 +147,7 @@ export default createController(routes.account.profileEdit, {
 						avatar: readField(ctx.formData, "avatar", subject.avatar),
 					},
 					result.error.issues,
-					ctx.i18next.t("profile.edit.errors.invalid"),
+					ctx.intl.t("profile.edit.errors.invalid"),
 				);
 			}
 
@@ -167,7 +167,7 @@ export default createController(routes.account.profileEdit, {
 					subject,
 					result.data,
 					[],
-					ctx.i18next.t("profile.edit.errors.usernameTaken"),
+					ctx.intl.t("profile.edit.errors.usernameTaken"),
 				);
 			}
 

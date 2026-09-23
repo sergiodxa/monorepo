@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 import type { Handle, RemixNode } from "remix/ui";
 
 import { Email } from "@sdxc/mail";
@@ -40,7 +40,7 @@ export namespace EmailLayout {
 		/** Inbox preheader: the sentence shown beside the subject in a list. */
 		preview: string;
 		/** Translator already bound to {@link lang} by whoever constructed the message. */
-		t: TFunction;
+		t: Translate;
 		/** The message's own content, between the card's edges and the footer. */
 		children?: RemixNode;
 	}

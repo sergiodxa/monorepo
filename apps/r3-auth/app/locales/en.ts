@@ -3,7 +3,7 @@
  * strings — layout metadata, transactional email copy, OAuth scope descriptions,
  * the authorize and logout flows, account/admin navigation, and the profile,
  * sessions, grants, clients, and subjects screens — as the single source of copy
- * consumed by i18next.
+ * formatted as MessageFormat 2.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -59,7 +59,7 @@ export default {
 			 * window, so the promised lifetime always matches the token's actual one.
 			 */
 			expiry:
-				"This link works for {{minutes}} minutes and can be used once. If it has expired, ask for a new one from your profile.",
+				"This link works for {$minutes} minutes and can be used once. If it has expired, ask for a new one from your profile.",
 			ignore:
 				"If you did not create an Auth account and did not sign in, you can ignore this message.",
 		},
@@ -74,7 +74,7 @@ export default {
 			 * Reads the number from the constant that sets the token's own lifetime,
 			 * so the promised window always matches the link's actual one.
 			 */
-			expiry: "This link works for {{minutes}} minutes and can be used once.",
+			expiry: "This link works for {$minutes} minutes and can be used once.",
 			unexpected:
 				"If you did not ask for this, you can ignore this message. Your password stays as it is until this link is used.",
 		},
@@ -161,7 +161,7 @@ export default {
 
 	authorize: {
 		header: {
-			title: "{{client}}",
+			title: "{$client}",
 			titleShort: "Sign in",
 			description: "Sign in to continue",
 		},
@@ -208,7 +208,7 @@ export default {
 		description:
 			"This is a list of devices that have logged into your account. Revoke any sessions you do not recognize.",
 		current: "Your current session",
-		lastAccessed: "Last accessed on {{date}}",
+		lastAccessed: "Last accessed on {$date}",
 		status: {
 			active: "active",
 			stale: "stale",
@@ -388,7 +388,7 @@ export default {
 				secretWarning: "Copy this secret now. You won't be able to see it again.",
 			},
 			edit: {
-				documentTitle: "Edit {{name}} | Auth",
+				documentTitle: "Edit {$name} | Auth",
 				title: "Edit Client",
 				description: "Update client configuration",
 				success: "Client updated successfully",
@@ -459,7 +459,7 @@ export default {
 				notVerified: "Not verified",
 			},
 			edit: {
-				documentTitle: "Edit {{name}} | Auth",
+				documentTitle: "Edit {$name} | Auth",
 				title: "Edit User",
 				description: "Update user information",
 				success: "User updated successfully",
@@ -489,7 +489,7 @@ export default {
 				title: "Active Sessions",
 				description: "Manage this user's active sessions. Revoking a session will log them out.",
 				empty: "No active sessions.",
-				lastAccessed: "Last accessed on {{date}}",
+				lastAccessed: "Last accessed on {$date}",
 				lastAccessedLabel: "Last accessed",
 				expiresLabel: "Expires",
 				unknownDevice: "Unknown",
@@ -565,7 +565,7 @@ export default {
 				description:
 					"This address has not been confirmed yet, so every app you sign in to is told it is unverified.",
 				action: "Send a verification email",
-				sent: "Verification email sent. The link in it works for {{minutes}} minutes.",
+				sent: "Verification email sent. The link in it works for {$minutes} minutes.",
 				/**
 				 * Framed as confirmation a link is already on its way, since the
 				 * earlier one stays valid for the rest of this window.
@@ -598,7 +598,7 @@ export default {
 		description:
 			"Apps you have authorized to access your account. You can revoke access at any time.",
 		empty: "No authorized apps found.",
-		authorizedOn: "Authorized on {{date}}",
+		authorizedOn: "Authorized on {$date}",
 		tableLabel: "Authorized apps",
 		columns: {
 			app: "App",
@@ -614,7 +614,7 @@ export default {
 			revoke: {
 				title: "Revoke access?",
 				description:
-					"This will revoke {{client}}'s access to your account and log you out of that app.",
+					"This will revoke {$client}'s access to your account and log you out of that app.",
 				confirm: "Revoke Access",
 			},
 		},

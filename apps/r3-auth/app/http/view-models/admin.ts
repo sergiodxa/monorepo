@@ -210,12 +210,12 @@ export function toPagination(
  */
 export function toNav(ctx: RequestContext): AdminView.Nav {
 	return {
-		label: ctx.i18next.t("admin.nav.label"),
-		dashboard: ctx.i18next.t("admin.nav.items.dashboard"),
-		clients: ctx.i18next.t("admin.nav.items.clients"),
-		subjects: ctx.i18next.t("admin.nav.items.subjects"),
-		profile: ctx.i18next.t("admin.nav.items.profile"),
-		logout: ctx.i18next.t("admin.nav.items.logout"),
+		label: ctx.intl.t("admin.nav.label"),
+		dashboard: ctx.intl.t("admin.nav.items.dashboard"),
+		clients: ctx.intl.t("admin.nav.items.clients"),
+		subjects: ctx.intl.t("admin.nav.items.subjects"),
+		profile: ctx.intl.t("admin.nav.items.profile"),
+		logout: ctx.intl.t("admin.nav.items.logout"),
 	};
 }
 
@@ -238,7 +238,7 @@ export function toChrome(
 		heading: input.heading,
 		section: input.section,
 		breadcrumbs: input.breadcrumbs,
-		breadcrumbsLabel: ctx.i18next.t("admin.breadcrumbs.label"),
+		breadcrumbsLabel: ctx.intl.t("admin.breadcrumbs.label"),
 		nav: toNav(ctx),
 	};
 }

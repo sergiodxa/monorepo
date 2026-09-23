@@ -48,56 +48,56 @@ async function sessionsPage(ctx: RequestContext): Promise<Response> {
 		<AccountLayout
 			{...accountChrome(ctx, {
 				current: "sessions",
-				heading: ctx.i18next.t("sessions.title"),
-				documentTitle: ctx.i18next.t("sessions.title"),
+				heading: ctx.intl.t("sessions.title"),
+				documentTitle: ctx.intl.t("sessions.title"),
 				isAdmin: subject.role === "admin",
 			})}
 		>
 			<SessionsView
-				title={ctx.i18next.t("sessions.title")}
-				description={ctx.i18next.t("sessions.description")}
-				empty={ctx.i18next.t("sessions.empty")}
+				title={ctx.intl.t("sessions.title")}
+				description={ctx.intl.t("sessions.description")}
+				empty={ctx.intl.t("sessions.empty")}
 				columns={{
-					device: ctx.i18next.t("sessions.columns.device"),
-					ip: ctx.i18next.t("sessions.columns.ip"),
-					client: ctx.i18next.t("sessions.columns.client"),
-					status: ctx.i18next.t("sessions.columns.status"),
-					lastAccessed: ctx.i18next.t("sessions.columns.lastAccessed"),
-					expires: ctx.i18next.t("sessions.columns.expires"),
-					actions: ctx.i18next.t("sessions.columns.actions"),
+					device: ctx.intl.t("sessions.columns.device"),
+					ip: ctx.intl.t("sessions.columns.ip"),
+					client: ctx.intl.t("sessions.columns.client"),
+					status: ctx.intl.t("sessions.columns.status"),
+					lastAccessed: ctx.intl.t("sessions.columns.lastAccessed"),
+					expires: ctx.intl.t("sessions.columns.expires"),
+					actions: ctx.intl.t("sessions.columns.actions"),
 				}}
 				labels={{
-					current: ctx.i18next.t("sessions.current"),
-					active: ctx.i18next.t("sessions.status.active"),
-					stale: ctx.i18next.t("sessions.status.stale"),
+					current: ctx.intl.t("sessions.current"),
+					active: ctx.intl.t("sessions.status.active"),
+					stale: ctx.intl.t("sessions.status.stale"),
 					device: {
-						desktop: ctx.i18next.t("sessions.device.desktop"),
-						mobile: ctx.i18next.t("sessions.device.mobile"),
-						tablet: ctx.i18next.t("sessions.device.tablet"),
-						unknown: ctx.i18next.t("sessions.device.unknown"),
+						desktop: ctx.intl.t("sessions.device.desktop"),
+						mobile: ctx.intl.t("sessions.device.mobile"),
+						tablet: ctx.intl.t("sessions.device.tablet"),
+						unknown: ctx.intl.t("sessions.device.unknown"),
 					},
-					revoke: ctx.i18next.t("sessions.actions.revoke"),
-					revokeAll: ctx.i18next.t("sessions.actions.revokeAll"),
-					tableLabel: ctx.i18next.t("sessions.tableLabel"),
+					revoke: ctx.intl.t("sessions.actions.revoke"),
+					revokeAll: ctx.intl.t("sessions.actions.revokeAll"),
+					tableLabel: ctx.intl.t("sessions.tableLabel"),
 				}}
 				confirmations={{
 					revoke: {
-						title: ctx.i18next.t("sessions.confirm.revoke.title"),
-						description: ctx.i18next.t("sessions.confirm.revoke.description"),
-						confirm: ctx.i18next.t("sessions.confirm.revoke.confirm"),
-						cancel: ctx.i18next.t("sessions.confirm.cancel"),
+						title: ctx.intl.t("sessions.confirm.revoke.title"),
+						description: ctx.intl.t("sessions.confirm.revoke.description"),
+						confirm: ctx.intl.t("sessions.confirm.revoke.confirm"),
+						cancel: ctx.intl.t("sessions.confirm.cancel"),
 					},
 					revokeCurrent: {
-						title: ctx.i18next.t("sessions.confirm.revoke.title"),
-						description: ctx.i18next.t("sessions.confirm.revoke.descriptionCurrent"),
-						confirm: ctx.i18next.t("sessions.confirm.revoke.confirm"),
-						cancel: ctx.i18next.t("sessions.confirm.cancel"),
+						title: ctx.intl.t("sessions.confirm.revoke.title"),
+						description: ctx.intl.t("sessions.confirm.revoke.descriptionCurrent"),
+						confirm: ctx.intl.t("sessions.confirm.revoke.confirm"),
+						cancel: ctx.intl.t("sessions.confirm.cancel"),
 					},
 					revokeAll: {
-						title: ctx.i18next.t("sessions.confirm.revokeAll.title"),
-						description: ctx.i18next.t("sessions.confirm.revokeAll.description"),
-						confirm: ctx.i18next.t("sessions.confirm.revokeAll.confirm"),
-						cancel: ctx.i18next.t("sessions.confirm.cancel"),
+						title: ctx.intl.t("sessions.confirm.revokeAll.title"),
+						description: ctx.intl.t("sessions.confirm.revokeAll.description"),
+						confirm: ctx.intl.t("sessions.confirm.revokeAll.confirm"),
+						cancel: ctx.intl.t("sessions.confirm.cancel"),
 					},
 				}}
 				sessions={sessions.map((session) => toSessionRow(session, currentSessionId, ctx.locale))}

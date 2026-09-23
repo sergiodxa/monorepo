@@ -1,6 +1,6 @@
 /**
  * Translator configuration for the send paths with no request behind them — a queue
- * message or a scheduled sweep — where `ctx.i18next` does not exist. It names the app's
+ * message or a scheduled sweep — where `ctx.intl` does not exist. It names the app's
  * locale bundle, the languages it ships and the language mail falls back to; building,
  * caching and resolving the translator itself is `@sdxc/i18n`'s job.
  *
@@ -9,6 +9,7 @@
  */
 
 import { createTranslator } from "@sdxc/i18n";
+import { currentLog } from "@sdxc/logger";
 
 import en from "~/app/locales/en";
 
@@ -20,15 +21,17 @@ import en from "~/app/locales/en";
 export const DEFAULT_EMAIL_LOCALE = "en";
 
 /**
- * Resolves the translator an email class is constructed with, outside a request. An
- * unsupported language resolves to {@link DEFAULT_EMAIL_LOCALE}, so `locale` names the
- * language the copy was produced in; JSX escapes text nodes, so interpolation stays raw.
+ * Resolves the translator an email class is constructed with. An unsupported language
+ * resolves to {@link DEFAULT_EMAIL_LOCALE}, so `locale` names the language the copy was
+ * produced in; a broken message is logged on the invocation's log and renders as its key.
  *
  * @example let { locale, t } = await emailTranslator();
  */
 export const emailTranslator = createTranslator({
-	resources: { en: { translation: en } },
+	resources: { en },
 	supportedLanguages: [DEFAULT_EMAIL_LOCALE],
 	fallbackLanguage: DEFAULT_EMAIL_LOCALE,
-	i18next: { interpolation: { escapeValue: false } },
+	onError(error, key) {
+		currentLog()?.warn("i18n.error", { key, type: error.name, message: error.message });
+	},
 });

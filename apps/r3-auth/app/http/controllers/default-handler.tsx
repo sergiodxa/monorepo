@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { i18n } from "@sdxc/i18n";
+import type { I18n } from "@sdxc/i18n";
 import type { Renderer } from "remix/middleware/render";
 import type { RemixNode } from "remix/ui";
 
@@ -20,14 +20,14 @@ import NotFoundView from "~/resources/views/not-found";
 /** The slice of request context this handler reads. */
 interface NotFoundContext {
 	render: Renderer<RemixNode>;
-	i18next: i18n;
+	intl: I18n;
 }
 
 /** Responds `404` with the localized not-found document. */
 export default function defaultHandler(ctx: NotFoundContext) {
 	let props = NotFoundViewModel.default({
-		title: ctx.i18next.t("splat.notFound.title"),
-		description: ctx.i18next.t("splat.notFound.description"),
+		title: ctx.intl.t("splat.notFound.title"),
+		description: ctx.intl.t("splat.notFound.description"),
 	});
 	return ctx.render(
 		<DocumentLayout title={props.title}>

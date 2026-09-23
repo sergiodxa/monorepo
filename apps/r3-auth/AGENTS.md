@@ -92,7 +92,7 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
   confirmations, `<details>` for disclosure, links styled with `aria-current` for
   navigation. The only client island is the client-secret copy button; adding another needs
   a reason the platform cannot cover.
-- MUST route every user-facing string through `ctx.i18next.t(...)` and `app/locales/en.ts`;
+- MUST route every user-facing string through `ctx.intl.t(...)` and `app/locales/en.ts`;
   MUST NOT hardcode English copy in a view.
 - MUST NOT use `as any`, and MUST NOT call `getContext()` inside a controller when `ctx` is
   available.

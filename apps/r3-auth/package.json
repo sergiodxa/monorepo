@@ -25,6 +25,7 @@
 		"@sdxc/jwt": "workspace:*",
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/mail": "workspace:*",
+		"@sdxc/messageformat": "workspace:*",
 		"@sdxc/rate-limit": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/server-timing": "workspace:*",

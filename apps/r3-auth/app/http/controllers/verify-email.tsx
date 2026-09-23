@@ -57,23 +57,23 @@ function outcomePage(
 
 	if (outcome === "verified") {
 		action = {
-			label: ctx.i18next.t("verifyEmail.verified.action"),
+			label: ctx.intl.t("verifyEmail.verified.action"),
 			href: routes.account.profile.href(),
 		};
 	}
 
 	if (outcome === "invalid") {
 		action = {
-			label: ctx.i18next.t("verifyEmail.invalid.action"),
+			label: ctx.intl.t("verifyEmail.invalid.action"),
 			href: routes.authorize.index.href(),
 		};
 	}
 
 	return ctx.render(
-		<DocumentLayout title={ctx.i18next.t("verifyEmail.documentTitle")}>
+		<DocumentLayout title={ctx.intl.t("verifyEmail.documentTitle")}>
 			<VerifyEmailView
-				title={ctx.i18next.t(`verifyEmail.${outcome}.title`)}
-				description={ctx.i18next.t(`verifyEmail.${outcome}.description`)}
+				title={ctx.intl.t(`verifyEmail.${outcome}.title`)}
+				description={ctx.intl.t(`verifyEmail.${outcome}.description`)}
 				action={action}
 			/>
 		</DocumentLayout>,
@@ -84,12 +84,12 @@ function outcomePage(
 /** The page a token that is still unspent is answered with, offering the one button. */
 function confirmPage(ctx: RequestContext, token: string): Response | Promise<Response> {
 	return ctx.render(
-		<DocumentLayout title={ctx.i18next.t("verifyEmail.documentTitle")} clientRuntime={false}>
+		<DocumentLayout title={ctx.intl.t("verifyEmail.documentTitle")} clientRuntime={false}>
 			<VerifyEmailConfirmView
-				title={ctx.i18next.t("verifyEmail.confirm.title")}
-				description={ctx.i18next.t("verifyEmail.confirm.description")}
+				title={ctx.intl.t("verifyEmail.confirm.title")}
+				description={ctx.intl.t("verifyEmail.confirm.description")}
 				token={token}
-				submit={ctx.i18next.t("verifyEmail.confirm.submit")}
+				submit={ctx.intl.t("verifyEmail.confirm.submit")}
 			/>
 		</DocumentLayout>,
 		{ headers: TOKEN_PAGE_HEADERS },

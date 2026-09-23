@@ -39,16 +39,16 @@ function requestPage(
 	error: string | null,
 ): Response | Promise<Response> {
 	return ctx.render(
-		<DocumentLayout title={ctx.i18next.t("password.forgot.documentTitle")} clientRuntime={false}>
+		<DocumentLayout title={ctx.intl.t("password.forgot.documentTitle")} clientRuntime={false}>
 			<ForgotPasswordView
-				title={ctx.i18next.t("password.forgot.title")}
-				description={ctx.i18next.t("password.forgot.description")}
+				title={ctx.intl.t("password.forgot.title")}
+				description={ctx.intl.t("password.forgot.description")}
 				email={{
-					label: ctx.i18next.t("password.forgot.email.label"),
-					placeholder: ctx.i18next.t("password.forgot.email.placeholder"),
+					label: ctx.intl.t("password.forgot.email.label"),
+					placeholder: ctx.intl.t("password.forgot.email.placeholder"),
 				}}
 				value={value}
-				submit={ctx.i18next.t("password.forgot.submit")}
+				submit={ctx.intl.t("password.forgot.submit")}
 				error={error}
 			/>
 		</DocumentLayout>,
@@ -63,10 +63,10 @@ function requestPage(
  */
 function sentPage(ctx: RequestContext): Response | Promise<Response> {
 	return ctx.render(
-		<DocumentLayout title={ctx.i18next.t("password.sent.documentTitle")} clientRuntime={false}>
+		<DocumentLayout title={ctx.intl.t("password.sent.documentTitle")} clientRuntime={false}>
 			<PasswordNoticeView
-				title={ctx.i18next.t("password.sent.title")}
-				description={ctx.i18next.t("password.sent.description")}
+				title={ctx.intl.t("password.sent.title")}
+				description={ctx.intl.t("password.sent.description")}
 				action={null}
 			/>
 		</DocumentLayout>,
@@ -101,7 +101,7 @@ export default createController(routes.password.forgot, {
 				return requestPage(
 					ctx,
 					submittedAddress(ctx.formData),
-					ctx.i18next.t("password.forgot.errors.invalid"),
+					ctx.intl.t("password.forgot.errors.invalid"),
 				);
 			}
 

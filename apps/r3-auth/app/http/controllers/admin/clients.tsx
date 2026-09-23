@@ -41,12 +41,12 @@ export default createController(routes.admin.clients, {
 			]);
 
 			let chrome = toChrome(ctx, {
-				documentTitle: ctx.i18next.t("admin.clients.documentTitle"),
-				heading: ctx.i18next.t("admin.clients.title"),
+				documentTitle: ctx.intl.t("admin.clients.documentTitle"),
+				heading: ctx.intl.t("admin.clients.title"),
 				section: "clients",
 				breadcrumbs: [
 					{
-						label: ctx.i18next.t("admin.nav.items.dashboard"),
+						label: ctx.intl.t("admin.nav.items.dashboard"),
 						href: routes.admin.dashboard.href(),
 					},
 				],
@@ -58,31 +58,31 @@ export default createController(routes.admin.clients, {
 					createHref={routes.admin.clientNew.index.href()}
 					clients={clients.map((client) => toClientRow(client, ctx.locale))}
 					pagination={toPagination(ctx.url, page, totalCount, {
-						label: ctx.i18next.t("admin.pagination.label"),
-						previous: ctx.i18next.t("admin.pagination.previous"),
-						next: ctx.i18next.t("admin.pagination.next"),
+						label: ctx.intl.t("admin.pagination.label"),
+						previous: ctx.intl.t("admin.pagination.previous"),
+						next: ctx.intl.t("admin.pagination.next"),
 					})}
 					labels={{
-						description: ctx.i18next.t("admin.clients.description"),
-						empty: ctx.i18next.t("admin.clients.empty"),
-						create: ctx.i18next.t("admin.clients.actions.create"),
-						tableLabel: ctx.i18next.t("admin.clients.title"),
+						description: ctx.intl.t("admin.clients.description"),
+						empty: ctx.intl.t("admin.clients.empty"),
+						create: ctx.intl.t("admin.clients.actions.create"),
+						tableLabel: ctx.intl.t("admin.clients.title"),
 						columns: {
-							name: ctx.i18next.t("admin.clients.table.name"),
-							redirectUri: ctx.i18next.t("admin.clients.table.redirectUri"),
-							createdAt: ctx.i18next.t("admin.clients.table.createdAt"),
-							actions: ctx.i18next.t("admin.clients.table.actions"),
+							name: ctx.intl.t("admin.clients.table.name"),
+							redirectUri: ctx.intl.t("admin.clients.table.redirectUri"),
+							createdAt: ctx.intl.t("admin.clients.table.createdAt"),
+							actions: ctx.intl.t("admin.clients.table.actions"),
 						},
 						actions: {
-							view: ctx.i18next.t("admin.clients.actions.view"),
-							edit: ctx.i18next.t("admin.clients.actions.edit"),
-							delete: ctx.i18next.t("admin.clients.actions.delete"),
+							view: ctx.intl.t("admin.clients.actions.view"),
+							edit: ctx.intl.t("admin.clients.actions.edit"),
+							delete: ctx.intl.t("admin.clients.actions.delete"),
 						},
 						confirm: {
-							title: ctx.i18next.t("admin.clients.delete.title"),
-							description: ctx.i18next.t("admin.clients.delete.confirm"),
-							confirm: ctx.i18next.t("admin.clients.actions.delete"),
-							cancel: ctx.i18next.t("admin.clients.delete.cancel"),
+							title: ctx.intl.t("admin.clients.delete.title"),
+							description: ctx.intl.t("admin.clients.delete.confirm"),
+							confirm: ctx.intl.t("admin.clients.actions.delete"),
+							cancel: ctx.intl.t("admin.clients.delete.cancel"),
 						},
 					}}
 				/>,

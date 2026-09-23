@@ -32,8 +32,8 @@ export default createAction(routes.admin.dashboard, {
 		]);
 
 		let chrome = toChrome(ctx, {
-			documentTitle: ctx.i18next.t("admin.dashboard.documentTitle"),
-			heading: ctx.i18next.t("admin.dashboard.title"),
+			documentTitle: ctx.intl.t("admin.dashboard.documentTitle"),
+			heading: ctx.intl.t("admin.dashboard.title"),
 			section: "dashboard",
 			breadcrumbs: [],
 		});
@@ -43,19 +43,19 @@ export default createAction(routes.admin.dashboard, {
 				chrome={chrome}
 				stats={{
 					clients: {
-						label: ctx.i18next.t("admin.dashboard.stats.clients.label"),
+						label: ctx.intl.t("admin.dashboard.stats.clients.label"),
 						value: clients,
-						description: ctx.i18next.t("admin.dashboard.stats.clients.description"),
+						description: ctx.intl.t("admin.dashboard.stats.clients.description"),
 					},
 					subjects: {
-						label: ctx.i18next.t("admin.dashboard.stats.subjects.label"),
+						label: ctx.intl.t("admin.dashboard.stats.subjects.label"),
 						value: subjects,
-						description: ctx.i18next.t("admin.dashboard.stats.subjects.description"),
+						description: ctx.intl.t("admin.dashboard.stats.subjects.description"),
 					},
 					sessions: {
-						label: ctx.i18next.t("admin.dashboard.stats.sessions.label"),
+						label: ctx.intl.t("admin.dashboard.stats.sessions.label"),
 						value: activeSessions,
-						description: ctx.i18next.t("admin.dashboard.stats.sessions.description"),
+						description: ctx.intl.t("admin.dashboard.stats.sessions.description"),
 					},
 				}}
 			/>,

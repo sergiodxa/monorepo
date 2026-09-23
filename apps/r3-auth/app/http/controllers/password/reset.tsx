@@ -23,7 +23,7 @@ import { createOidcProvider } from "~/app/auth/repository";
 import Credential from "~/app/data/credential";
 import Session from "~/app/data/session";
 import Subject from "~/app/data/subject";
-import { DEFAULT_EMAIL_LOCALE } from "~/app/emails/locale";
+import { DEFAULT_EMAIL_LOCALE, emailTranslator } from "~/app/emails/locale";
 import { PasswordChangedEmail } from "~/app/emails/password-changed";
 import { unsetTokens } from "~/app/http/middleware/session";
 import { ResetPasswordSchema, ResetTokenQuerySchema } from "~/app/http/validators/password";
@@ -57,20 +57,20 @@ function resetPage(
 	error: string | null,
 ): Response | Promise<Response> {
 	return ctx.render(
-		<DocumentLayout title={ctx.i18next.t("password.reset.documentTitle")} clientRuntime={false}>
+		<DocumentLayout title={ctx.intl.t("password.reset.documentTitle")} clientRuntime={false}>
 			<ResetPasswordView
-				title={ctx.i18next.t("password.reset.title")}
-				description={ctx.i18next.t("password.reset.description")}
+				title={ctx.intl.t("password.reset.title")}
+				description={ctx.intl.t("password.reset.description")}
 				token={token}
 				password={{
-					label: ctx.i18next.t("password.reset.password.label"),
-					placeholder: ctx.i18next.t("password.reset.password.placeholder"),
+					label: ctx.intl.t("password.reset.password.label"),
+					placeholder: ctx.intl.t("password.reset.password.placeholder"),
 				}}
 				confirmation={{
-					label: ctx.i18next.t("password.reset.confirmation.label"),
-					placeholder: ctx.i18next.t("password.reset.confirmation.placeholder"),
+					label: ctx.intl.t("password.reset.confirmation.label"),
+					placeholder: ctx.intl.t("password.reset.confirmation.placeholder"),
 				}}
-				submit={ctx.i18next.t("password.reset.submit")}
+				submit={ctx.intl.t("password.reset.submit")}
 				error={error}
 			/>
 		</DocumentLayout>,
@@ -85,12 +85,12 @@ function resetPage(
  */
 function invalidPage(ctx: RequestContext): Response | Promise<Response> {
 	return ctx.render(
-		<DocumentLayout title={ctx.i18next.t("password.invalid.documentTitle")} clientRuntime={false}>
+		<DocumentLayout title={ctx.intl.t("password.invalid.documentTitle")} clientRuntime={false}>
 			<PasswordNoticeView
-				title={ctx.i18next.t("password.invalid.title")}
-				description={ctx.i18next.t("password.invalid.description")}
+				title={ctx.intl.t("password.invalid.title")}
+				description={ctx.intl.t("password.invalid.description")}
 				action={{
-					label: ctx.i18next.t("password.invalid.action"),
+					label: ctx.intl.t("password.invalid.action"),
 					href: routes.password.forgot.index.href(),
 				}}
 			/>
@@ -102,12 +102,12 @@ function invalidPage(ctx: RequestContext): Response | Promise<Response> {
 /** The page a completed reset ends on, offering the way back to signing in. */
 function donePage(ctx: RequestContext): Response | Promise<Response> {
 	return ctx.render(
-		<DocumentLayout title={ctx.i18next.t("password.done.documentTitle")} clientRuntime={false}>
+		<DocumentLayout title={ctx.intl.t("password.done.documentTitle")} clientRuntime={false}>
 			<PasswordNoticeView
-				title={ctx.i18next.t("password.done.title")}
-				description={ctx.i18next.t("password.done.description")}
+				title={ctx.intl.t("password.done.title")}
+				description={ctx.intl.t("password.done.description")}
 				action={{
-					label: ctx.i18next.t("password.done.action"),
+					label: ctx.intl.t("password.done.action"),
 					href: routes.authorize.index.href(),
 				}}
 			/>
@@ -186,12 +186,12 @@ export default createController(routes.password.reset, {
 				}
 
 				ctx.log.note("password_reset.submission_invalid");
-				return resetPage(ctx, token, ctx.i18next.t("password.reset.errors.invalid"));
+				return resetPage(ctx, token, ctx.intl.t("password.reset.errors.invalid"));
 			}
 
 			if (result.data.password !== result.data.passwordConfirmation) {
 				ctx.log.note("password_reset.confirmation_mismatch");
-				return resetPage(ctx, result.data.token, ctx.i18next.t("password.reset.errors.mismatch"));
+				return resetPage(ctx, result.data.token, ctx.intl.t("password.reset.errors.mismatch"));
 			}
 
 			let subjectId = await consumePasswordResetToken(result.data.token);
@@ -213,14 +213,14 @@ export default createController(routes.password.reset, {
 				ctx.log.fail(hash.error);
 				return ctx.render(
 					<DocumentLayout
-						title={ctx.i18next.t("password.invalid.documentTitle")}
+						title={ctx.intl.t("password.invalid.documentTitle")}
 						clientRuntime={false}
 					>
 						<PasswordNoticeView
-							title={ctx.i18next.t("password.reset.errors.failedTitle")}
-							description={ctx.i18next.t("password.reset.errors.failed")}
+							title={ctx.intl.t("password.reset.errors.failedTitle")}
+							description={ctx.intl.t("password.reset.errors.failed")}
 							action={{
-								label: ctx.i18next.t("password.invalid.action"),
+								label: ctx.intl.t("password.invalid.action"),
 								href: routes.password.forgot.index.href(),
 							}}
 						/>
@@ -239,7 +239,7 @@ export default createController(routes.password.reset, {
 				new PasswordChangedEmail({
 					email: subject.email_address,
 					locale: DEFAULT_EMAIL_LOCALE,
-					t: ctx.i18next.getFixedT(DEFAULT_EMAIL_LOCALE),
+					t: (await emailTranslator(DEFAULT_EMAIL_LOCALE)).t,
 				}),
 			);
 
