@@ -164,10 +164,16 @@ NumberField.Group = function NumberFieldGroup(handle: Handle<NumberField.GroupPr
 					border({ color: "neutral", width: 1 }),
 					bg("neutral.tint"),
 					fg("neutral.emphasis"),
-					hover(border("neutral.strong")),
+					hover(border("neutral.border-hover")),
+					/*
+					 * The wrapper wears the focus of whichever part holds it, drawn as a ring
+					 * standing off the field the way every button in this library draws one; the
+					 * border only steps to its hover weight, since a ring sat flush against a
+					 * darkened border reads as one thick slab rather than as focus.
+					 */
 					when("&:focus-within", [
-						outline({ color: "brand.ring", offset: 0 }),
-						border("brand.ring"),
+						outline({ color: "brand.ring", offset: 2 }),
+						border("neutral.border-hover"),
 					]),
 					mix,
 				]}

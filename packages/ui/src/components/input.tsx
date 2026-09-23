@@ -88,29 +88,30 @@ export function Input(handle: Handle<Input.Props>) {
 					pi(3),
 					pb(2),
 					when("&::placeholder", fg("neutral.muted")),
-					hover(border("neutral.strong")),
-					when("&:focus", [border("neutral.strong"), outline("none")]),
+					hover(border("neutral.border-hover")),
+					/*
+					 * Focus is drawn as a ring standing off the field, the same way every button
+					 * in this library draws it, rather than by darkening the border: a border
+					 * promoted to its strong weight and a ring sat flush against it read as one
+					 * thick slab, which says the field changed shape rather than that it took
+					 * focus. The border only steps to its hover weight, so nothing jumps.
+					 */
+					when("&:focus", border("neutral.border-hover")),
+					/*
+					 * Pointer focus drops the platform outline; keyboard focus keeps the ring
+					 * drawn below. The two selectors exclude each other because `outline: none`
+					 * is a shorthand, and a shorthand reaching this element from a later cascade
+					 * layer resets the ring's color, width and style all at once.
+					 */
+					when("&:focus:not(:focus-visible)", outline("none")),
 					focusVisible([
-						border("neutral.strong"),
-						outline({ color: "neutral.ring", offset: 0 }),
-						when('&[data-color="brand"]', [
-							border("brand.strong"),
-							outline({ color: "brand.ring", offset: 0 }),
-						]),
-						when('&[data-color="success"]', [
-							border("success.strong"),
-							outline({ color: "success.ring", offset: 0 }),
-						]),
-						when('&[data-color="warning"]', [
-							border("warning.strong"),
-							outline({ color: "warning.ring", offset: 0 }),
-						]),
-						when('&[data-color="danger"]', [
-							border("danger.strong"),
-							outline({ color: "danger.ring", offset: 0 }),
-						]),
+						border("neutral.border-hover"),
+						outline({ color: "brand.ring", offset: 2 }),
+						when('&[data-color="success"]', outline("success.ring")),
+						when('&[data-color="warning"]', outline("warning.ring")),
+						when('&[data-color="danger"]', outline("danger.ring")),
 					]),
-					invalid([border("danger.strong"), outline({ color: "danger.ring", offset: 0 })]),
+					invalid([border("danger"), outline({ color: "danger.ring", offset: 2 })]),
 					when("&:disabled", [opacity(50), bg("neutral.bg-tint-hover"), cursor("not-allowed")]),
 					text("sm"),
 					mix,
