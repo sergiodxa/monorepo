@@ -50,6 +50,8 @@ export namespace TeamWeeklyDigestEmail {
 		dashboardUrl: string;
 		/** Absolute URL of the reader's email settings, anchor included. */
 		preferencesUrl: string;
+		/** Absolute one-click unsubscribe URL, signed for this member and this digest. */
+		unsubscribeUrl: string;
 		/** Language the copy is produced in, recorded beside the translator it came from. */
 		locale: string;
 		/** Translator already bound to {@link locale} by the sender. */
@@ -96,9 +98,9 @@ export class TeamWeeklyDigestEmail implements Email {
 		return t("emails.teamDigest.weekly.subject", { team: teamName, up, count: total });
 	}
 
-	/** Unsubscribe header pointing at the settings page, for the clients that surface one. */
+	/** One-click unsubscribe headers, for the clients that surface a native button. */
 	get headers(): Record<string, string> {
-		return teamDigestUnsubscribeHeaders(this.#digest.preferencesUrl);
+		return teamDigestUnsubscribeHeaders(this.#digest.unsubscribeUrl);
 	}
 
 	/** Body tree: the headline, the roll-up, the week's bar, the monitor list, the link, the footer. */

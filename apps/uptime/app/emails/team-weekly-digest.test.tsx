@@ -31,6 +31,9 @@ let DASHBOARD_URL = "https://uptime.test/acme";
 /** The reader's own email settings, anchored at the switches. */
 let PREFERENCES_URL = "https://uptime.test/acme/account#emails";
 
+/** The member's signed one-click unsubscribe endpoint for this digest. */
+let UNSUBSCRIBE_URL = "https://uptime.test/digests/unsubscribe/tok-abc123";
+
 /**
  * How many of the bar's own segments carry `fill`, or how many there are in total.
  *
@@ -78,6 +81,7 @@ async function makeEmail(overrides: Partial<TeamWeeklyDigestEmail.Data> = {}) {
 		monitors: mixedTeam(),
 		dashboardUrl: DASHBOARD_URL,
 		preferencesUrl: PREFERENCES_URL,
+		unsubscribeUrl: UNSUBSCRIBE_URL,
 		locale,
 		t,
 		...overrides,
@@ -116,10 +120,18 @@ describe("TeamWeeklyDigestEmail", () => {
 		});
 	});
 
-	test("offers a way out through the settings page, deliberately not one-click", async () => {
+	/**
+	 * Regression: the header used to point at the settings page, which needs a session, so no
+	 * mailbox provider offered its unsubscribe button. RFC 8058 needs a sessionless POST target.
+	 */
+	test("offers a one-click unsubscribe that works without signing in", async () => {
 		let email = await makeEmail();
 
-		expect(email.headers).toEqual({ "List-Unsubscribe": `<${PREFERENCES_URL}>` });
+		expect(email.headers["List-Unsubscribe"]).not.toBe(`<${PREFERENCES_URL}>`);
+		expect(email.headers).toEqual({
+			"List-Unsubscribe": `<${UNSUBSCRIBE_URL}>`,
+			"List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+		});
 	});
 
 	describe("body", () => {

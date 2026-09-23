@@ -4304,6 +4304,25 @@ export default {
 				cta: "Zurück zur Website",
 			},
 		},
+		digestUnsubscribe: {
+			confirm: {
+				title: "Diesen Bericht abbestellen?",
+				body: "Du erhältst diesen Bericht dann für keines deiner Teams mehr. Warnungen und Einladungen kommen weiterhin an, und du kannst ihn in deinen Kontoeinstellungen wieder einschalten.",
+				cta: "Ja, abbestellen",
+			},
+
+			done: {
+				title: "Bericht abbestellt",
+				body: "Du erhältst diesen Bericht nicht mehr. Warnungen und Einladungen kommen weiterhin an, und du kannst ihn in deinen Kontoeinstellungen wieder einschalten.",
+				cta: "Zurück zur Website",
+			},
+
+			invalid: {
+				title: "Dieser Link ist ungültig",
+				body: "Dieser Abmeldelink ist unvollständig oder wurde verändert. Nutze den Link aus dem neuesten Bericht, oder melde dich an und wähle in deinen Kontoeinstellungen, welche Berichte du erhältst.",
+				cta: "Zurück zur Website",
+			},
+		},
 		splat: {
 			notFound: {
 				title: "Nicht gefunden",

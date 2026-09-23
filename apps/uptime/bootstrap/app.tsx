@@ -243,6 +243,15 @@ export default function application(options: application.Options) {
 		lazy(() => import("~/app/http/controllers/trial/report")),
 	);
 
+	/**
+	 * Outside every auth guard, since a mailbox provider's one-click POST arrives with no
+	 * session; the signed token in the URL is the whole credential.
+	 */
+	router.map(
+		routes.digestUnsubscribe,
+		lazy(() => import("~/app/http/controllers/digest-unsubscribe")),
+	);
+
 	router.map(
 		routes.marketing.feature,
 		lazy(() => import("~/app/http/controllers/marketing-feature")),

@@ -67,6 +67,22 @@ export default class UserPreferences {
 	}
 
 	/**
+	 * Adds one email to what a subject has turned off, keeping every other choice. Repeating
+	 * it is harmless, so a provider that retries a one-click unsubscribe changes nothing more.
+	 */
+	static async unsubscribe(db: Database, subjectId: string, email: OptionalEmail) {
+		let existing = await UserPreferences.findBySubjectId(db, subjectId);
+		let unsubscribed = Array.isArray(existing?.unsubscribed_emails)
+			? existing.unsubscribed_emails
+			: [];
+		if (unsubscribed.includes(email)) return existing;
+
+		return await UserPreferences.#upsert(db, subjectId, {
+			unsubscribed_emails: [...unsubscribed, email],
+		});
+	}
+
+	/**
 	 * Whether one optional email may be sent to the owner of these preferences. Takes
 	 * the full row since the caller already loaded it for the language. Defaults to
 	 * yes unless a stored list names the email, keeping a retired key from muting a live digest.

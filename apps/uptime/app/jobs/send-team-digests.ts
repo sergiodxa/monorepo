@@ -30,6 +30,7 @@ import { teamDigestDashboardUrl, teamDigestPreferencesUrl } from "~/app/emails/s
 import { TeamDailyDigestEmail } from "~/app/emails/team-daily-digest";
 import { TeamWeeklyDigestEmail } from "~/app/emails/team-weekly-digest";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
+import { digestUnsubscribeUrl, signDigestUnsubscribeToken } from "~/app/lib/digest-unsubscribe";
 import { features } from "~/app/lib/flags";
 import { formatUptime, worstStatus } from "~/app/lib/uptime-report";
 import { apportionCostByTeam, recordCost } from "~/app/services/cost";
@@ -244,10 +245,36 @@ async function digestTeam(
 			preferences.get(member.subjectId)?.preferred_language ?? undefined,
 		);
 
+		/**
+		 * Every digest carries a one-click unsubscribe, so a token that cannot be signed is a
+		 * send this run skips, unstamped, rather than a digest mailed without its way out.
+		 */
+		let token = await signDigestUnsubscribeToken({
+			subjectId: member.subjectId,
+			email: PREFERENCE[period],
+		});
+		if (isFailure(token)) {
+			skipped++;
+			ctx.log.warn("digests.unsubscribe_token_failed", {
+				"team.id": team.id,
+				"subject.id": member.subjectId,
+				error: token.error.message,
+			});
+			continue;
+		}
+
 		/** Counted before the send, because a rejected send is still a billed one. */
 		recordCost("emailSent");
 		let result = await mailer.send(
-			email({ period, context, to: profile.emailAddress, window: reported, locale, t }),
+			email({
+				period,
+				context,
+				to: profile.emailAddress,
+				unsubscribeUrl: digestUnsubscribeUrl(token.data),
+				window: reported,
+				locale,
+				t,
+			}),
 		);
 
 		if (isFailure(result)) {
@@ -273,11 +300,12 @@ function email(send: {
 	period: DigestPeriod;
 	context: TeamDigestContext;
 	to: string;
+	unsubscribeUrl: string;
 	window: DigestWindow;
 	locale: string;
 	t: Translate;
 }) {
-	let { period, context, to, window: reported, locale, t } = send;
+	let { period, context, to, unsubscribeUrl, window: reported, locale, t } = send;
 	let { team, monitors, segments, uptime } = context;
 
 	let shared = {
@@ -286,6 +314,7 @@ function email(send: {
 		monitors,
 		dashboardUrl: teamDigestDashboardUrl(team.slug),
 		preferencesUrl: teamDigestPreferencesUrl(team.slug),
+		unsubscribeUrl,
 		locale,
 		t,
 	};

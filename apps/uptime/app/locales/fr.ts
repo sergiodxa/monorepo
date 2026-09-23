@@ -4302,6 +4302,25 @@ export default {
 				cta: "Retour au site",
 			},
 		},
+		digestUnsubscribe: {
+			confirm: {
+				title: "Arrêter ce rapport ?",
+				body: "Vous ne recevrez plus ce rapport pour aucune de vos équipes. Les alertes et les invitations continuent d'arriver, et vous pouvez le réactiver depuis les paramètres de votre compte.",
+				cta: "Oui, arrêter ce rapport",
+			},
+
+			done: {
+				title: "Rapport désactivé",
+				body: "Vous ne recevrez plus ce rapport. Les alertes et les invitations continuent d'arriver, et vous pouvez le réactiver depuis les paramètres de votre compte.",
+				cta: "Retour au site",
+			},
+
+			invalid: {
+				title: "Ce lien n'est pas valide",
+				body: "Ce lien de désabonnement est incomplet ou a été modifié. Utilisez le lien du dernier rapport, ou connectez-vous et choisissez les rapports que vous recevez dans les paramètres de votre compte.",
+				cta: "Retour au site",
+			},
+		},
 		splat: {
 			notFound: {
 				title: "Non trouvé",

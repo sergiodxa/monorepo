@@ -1,0 +1,157 @@
+/**
+ * Tests `/digests/unsubscribe/:token` the way a mailbox provider reaches it: a sessionless
+ * RFC 8058 POST through the same cross-origin protection the app runs, which must turn the
+ * digest off for exactly the member the token names and refuse any token it did not sign.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import type { Renderer } from "remix/middleware/render";
+import type { Middleware } from "remix/router";
+import type { RemixNode } from "remix/ui";
+
+import { unwrap } from "@sdxc/result";
+import { asyncContext } from "remix/middleware/async-context";
+import { Auth } from "remix/middleware/auth";
+import { cop } from "remix/middleware/cop";
+import { renderWith } from "remix/middleware/render";
+import { createRouter } from "remix/router";
+import { renderToString } from "remix/ui/server";
+import { describe, expect, test } from "vitest";
+
+import UserPreferences from "~/app/data/user-preferences";
+import { database } from "~/app/http/middleware/database";
+import i18n from "~/app/http/middleware/i18n";
+import { signDigestUnsubscribeToken } from "~/app/lib/digest-unsubscribe";
+import { createTestDatabase } from "~/app/lib/test/db";
+import routes from "~/routes/web";
+
+import digestUnsubscribe from "./digest-unsubscribe";
+
+type Db = ReturnType<typeof createTestDatabase>["db"];
+
+/** Renders through `renderToString`, which suffices for a page built from plain HTML. */
+function createTestRenderer(): Renderer<RemixNode> {
+	return async (node, init) => {
+		let html = await renderToString(node);
+		let headers = new Headers(init?.headers);
+		headers.set("content-type", "text/html; charset=utf-8");
+		return new Response(html, { ...init, headers });
+	};
+}
+
+/** A token for `subject-1`'s daily digest, signed the way the digest job signs it. */
+async function dailyToken(subjectId = "subject-1") {
+	return unwrap(await signDigestUnsubscribeToken({ subjectId, email: "teamDailyDigest" }));
+}
+
+/**
+ * Dispatches one request with no session and no browser provenance headers, which is what a
+ * provider's one-click POST looks like; the POST carries the RFC 8058 body.
+ */
+async function visit(db: Db, token: string, method: "GET" | "POST") {
+	let router = createRouter({
+		middleware: [
+			asyncContext(),
+			database(() => db),
+			((ctx, next) => {
+				ctx.set(Auth, { ok: false });
+				return next();
+			}) as Middleware,
+			i18n as Middleware,
+			cop(),
+			renderWith(createTestRenderer) as Middleware,
+		],
+	});
+	router.map(routes.digestUnsubscribe, digestUnsubscribe);
+
+	let href =
+		method === "GET"
+			? routes.digestUnsubscribe.index.href({ token })
+			: routes.digestUnsubscribe.action.href({ token });
+
+	let init: RequestInit =
+		method === "POST"
+			? {
+					method,
+					headers: { "content-type": "application/x-www-form-urlencoded" },
+					body: "List-Unsubscribe=One-Click",
+				}
+			: { method };
+
+	let response = await router.fetch(new Request(`https://uptime.test${href}`, init));
+
+	return { response, body: await response.text() };
+}
+
+/** Whether the subject would still be sent the daily digest. */
+async function wantsDaily(db: Db, subjectId = "subject-1") {
+	let preferences = await UserPreferences.findBySubjectId(db, subjectId);
+	return UserPreferences.wants(preferences, "teamDailyDigest");
+}
+
+describe("GET /digests/unsubscribe/:token", () => {
+	test("asks for confirmation with a button that POSTs, and changes nothing", async () => {
+		let { db } = createTestDatabase();
+		let token = await dailyToken();
+
+		let { response, body } = await visit(db, token, "GET");
+
+		expect(response.status).toBe(200);
+		expect(body).toContain("Stop this digest?");
+		expect(body).toContain('method="post"');
+		expect(body).toContain(`action="${routes.digestUnsubscribe.action.href({ token })}"`);
+		expect(await wantsDaily(db)).toBe(true);
+	});
+});
+
+describe("POST /digests/unsubscribe/:token", () => {
+	test("turns the digest off with a valid token and no session", async () => {
+		let { db } = createTestDatabase();
+
+		let { response, body } = await visit(db, await dailyToken(), "POST");
+
+		expect(response.status).toBe(200);
+		expect(body).toContain("Digest turned off");
+		expect(await wantsDaily(db)).toBe(false);
+	});
+
+	test("keeps the member's other choices and answers a repeat the same way", async () => {
+		let { db } = createTestDatabase();
+		await UserPreferences.setLanguage(db, "subject-1", "es");
+		let token = await dailyToken();
+
+		await visit(db, token, "POST");
+		let second = await visit(db, token, "POST");
+
+		let preferences = await UserPreferences.findBySubjectId(db, "subject-1");
+		expect(second.response.status).toBe(200);
+		expect(preferences?.preferred_language).toBe("es");
+		expect(preferences?.unsubscribed_emails).toEqual(["teamDailyDigest"]);
+		expect(UserPreferences.wants(preferences, "teamWeeklyDigest")).toBe(true);
+	});
+
+	test("rejects a tampered token and leaves every subscription alone", async () => {
+		let { db } = createTestDatabase();
+		let token = await dailyToken();
+		let forged = token.slice(0, 64) + (await dailyToken("subject-2")).slice(64);
+
+		let { response } = await visit(db, forged, "POST");
+
+		expect(response.status).toBe(400);
+		expect(await wantsDaily(db, "subject-1")).toBe(true);
+		expect(await wantsDaily(db, "subject-2")).toBe(true);
+	});
+
+	test("rejects a token whose signature was altered", async () => {
+		let { db } = createTestDatabase();
+		let token = await dailyToken();
+		let altered = `${token[0] === "0" ? "1" : "0"}${token.slice(1)}`;
+
+		let { response } = await visit(db, altered, "POST");
+
+		expect(response.status).toBe(400);
+		expect(await wantsDaily(db)).toBe(true);
+	});
+});

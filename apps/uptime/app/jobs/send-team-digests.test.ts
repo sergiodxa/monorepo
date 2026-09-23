@@ -33,6 +33,7 @@ import { Database as JobDatabase } from "~/app/jobs/middleware/database";
 import { Mailer as JobMailer } from "~/app/jobs/middleware/mailer";
 import sendTeamDailyDigests from "~/app/jobs/send-team-daily-digests";
 import sendTeamWeeklyDigests from "~/app/jobs/send-team-weekly-digests";
+import { verifyDigestUnsubscribeToken } from "~/app/lib/digest-unsubscribe";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { installFlags } from "~/app/lib/test/flags";
 import {
@@ -280,6 +281,30 @@ describe("sendTeamDigests period", () => {
 
 		expect(weeklyDigests()).toHaveLength(1);
 		expect(dailyDigests()).toHaveLength(0);
+	});
+
+	/**
+	 * Regression: the header once pointed at the sign-in-only settings page. Each copy now
+	 * carries a one-click URL whose signed token names that member and that period's digest.
+	 */
+	test("signs each copy's one-click unsubscribe for its member and period", async () => {
+		let { db } = createTestDatabase();
+		let team = await seedTeam(db, "Acme");
+		await seedMember(db, team.id, "subject-1", "ada@example.com");
+		let monitor = await seedMonitor(db, team.id, "Api");
+		await seedDay(db, monitor.id, utcDay(1), { checks: 10, successful: 10, status: "up" });
+
+		await runJob(db, "weekly");
+
+		let headers = transport.last?.headers ?? {};
+		let token = /\/digests\/unsubscribe\/([^/>]+)>$/.exec(headers["List-Unsubscribe"] ?? "")?.[1];
+
+		expect(headers["List-Unsubscribe"]).not.toContain("/account");
+		expect(headers["List-Unsubscribe-Post"]).toBe("List-Unsubscribe=One-Click");
+		expect(await verifyDigestUnsubscribeToken(token ?? "")).toEqual({
+			subjectId: "subject-1",
+			email: "teamWeeklyDigest",
+		});
 	});
 
 	/**

@@ -4281,6 +4281,25 @@ export default {
 				cta: "Torna al sito",
 			},
 		},
+		digestUnsubscribe: {
+			confirm: {
+				title: "Interrompere questo riepilogo?",
+				body: "Non riceverai più questo riepilogo per nessuno dei tuoi team. Avvisi e inviti continueranno ad arrivare, e puoi riattivarlo dalle impostazioni del tuo account.",
+				cta: "Sì, interrompi il riepilogo",
+			},
+
+			done: {
+				title: "Riepilogo disattivato",
+				body: "Non riceverai più questo riepilogo. Avvisi e inviti continueranno ad arrivare, e puoi riattivarlo dalle impostazioni del tuo account.",
+				cta: "Torna al sito",
+			},
+
+			invalid: {
+				title: "Questo link non è valido",
+				body: "Questo link di disiscrizione è incompleto o è stato modificato. Usa il link dell'ultimo riepilogo, oppure accedi e scegli quali riepiloghi ricevere dalle impostazioni del tuo account.",
+				cta: "Torna al sito",
+			},
+		},
 		splat: {
 			notFound: {
 				title: "Non Trovato",

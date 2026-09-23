@@ -155,16 +155,19 @@ export function teamDigestDay(date: string, locale: string): string {
 }
 
 /**
- * RFC 2369 unsubscribe header pointing at the reader's own settings page.
+ * RFC 8058 headers giving the clients that support them a native one-click unsubscribe button.
  *
- * Points to the settings page so a member can choose which digests to keep across every team,
- * satisfying Gmail's deliverability requirement for an unsubscribe path on bulk mail.
+ * The URL carries a signed token, so the provider's sessionless POST turns this digest off for
+ * the one member it was sent to; the settings page stays in the footer for finer choices.
  *
- * @param preferencesUrl - Absolute URL of the settings section, anchor included.
- * @returns The header, ready to merge over the mailer's configured ones.
+ * @param unsubscribeUrl - Absolute URL of the member's tokenized digest unsubscribe endpoint.
+ * @returns The two headers, ready to merge over the mailer's configured ones.
  */
-export function teamDigestUnsubscribeHeaders(preferencesUrl: string): Record<string, string> {
-	return { "List-Unsubscribe": `<${preferencesUrl}>` };
+export function teamDigestUnsubscribeHeaders(unsubscribeUrl: string): Record<string, string> {
+	return {
+		"List-Unsubscribe": `<${unsubscribeUrl}>`,
+		"List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+	};
 }
 
 /**

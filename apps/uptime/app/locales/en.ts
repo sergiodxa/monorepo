@@ -4295,6 +4295,25 @@ export default {
 				cta: "Back to the site",
 			},
 		},
+		digestUnsubscribe: {
+			confirm: {
+				title: "Stop this digest?",
+				body: "You will stop receiving this digest for every team you belong to. Alerts and invitations keep arriving, and you can turn the digest back on from your account settings.",
+				cta: "Yes, stop this digest",
+			},
+
+			done: {
+				title: "Digest turned off",
+				body: "You will not receive this digest again. Alerts and invitations keep arriving, and you can turn the digest back on from your account settings.",
+				cta: "Back to the site",
+			},
+
+			invalid: {
+				title: "This link is not valid",
+				body: "This unsubscribe link is incomplete or has been changed. Use the link from the latest digest, or sign in and choose which digests you receive from your account settings.",
+				cta: "Back to the site",
+			},
+		},
 		splat: {
 			notFound: {
 				title: "Not Found",

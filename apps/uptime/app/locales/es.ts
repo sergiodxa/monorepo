@@ -4281,6 +4281,25 @@ export default {
 				cta: "Volver al sitio",
 			},
 		},
+		digestUnsubscribe: {
+			confirm: {
+				title: "¿Dejar de recibir este resumen?",
+				body: "Dejarás de recibir este resumen de todos los equipos a los que perteneces. Las alertas y las invitaciones seguirán llegando, y puedes volver a activarlo desde los ajustes de tu cuenta.",
+				cta: "Sí, dejar de recibirlo",
+			},
+
+			done: {
+				title: "Resumen desactivado",
+				body: "No volverás a recibir este resumen. Las alertas y las invitaciones seguirán llegando, y puedes volver a activarlo desde los ajustes de tu cuenta.",
+				cta: "Volver al sitio",
+			},
+
+			invalid: {
+				title: "Este enlace no es válido",
+				body: "Este enlace para darte de baja está incompleto o fue modificado. Usa el enlace del último resumen, o inicia sesión y elige qué resúmenes recibes desde los ajustes de tu cuenta.",
+				cta: "Volver al sitio",
+			},
+		},
 		splat: {
 			notFound: {
 				title: "No encontrado",

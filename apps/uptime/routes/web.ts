@@ -49,6 +49,12 @@ export default route({
 		 */
 		unsubscribe: form("/unsubscribe/:token"),
 	},
+	/**
+	 * One-click unsubscribe from a team digest, addressed by a signed token instead of a
+	 * session: a mailbox provider's RFC 8058 POST carries no cookie. The `GET` only renders
+	 * the confirmation page, so a scanner following the link changes nothing.
+	 */
+	digestUnsubscribe: form("/digests/unsubscribe/:token"),
 	invite: get("/invite/:inviteId"),
 	sitemap: get("/sitemap.xml"),
 
