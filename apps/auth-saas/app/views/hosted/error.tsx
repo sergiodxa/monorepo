@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 import type { Handle } from "remix/ui";
 
 import { vstack } from "@sdxc/u/layout";
@@ -17,7 +17,7 @@ import { Card, Text } from "@sdxc/ui";
 
 export namespace ErrorPage {
 	export interface Props {
-		t: TFunction;
+		t: Translate;
 		/** The already-composed, developer-facing sentence the failing operation answered with. */
 		description: string;
 		correlationId: string;

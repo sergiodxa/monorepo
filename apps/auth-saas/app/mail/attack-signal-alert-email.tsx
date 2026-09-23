@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 import type { Address, Email as EmailContract } from "@sdxc/mail";
 import type { RemixElement } from "remix/ui";
 
@@ -28,7 +28,7 @@ export namespace AttackSignalAlertEmail {
 		/** The tenant's own trailing hourly average, for comparison. */
 		baselineHourlyAverage: number;
 		/** Translator for the message's own locale. */
-		t: TFunction;
+		t: Translate;
 	}
 }
 

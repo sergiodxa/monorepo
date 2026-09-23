@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 import type { Handle } from "remix/ui";
 
 import { vstack } from "@sdxc/u/layout";
@@ -23,7 +23,7 @@ import { TurnstileWidget } from "./turnstile-widget";
 export namespace MagicLinkPage {
 	export type Props =
 		| {
-				t: TFunction;
+				t: Translate;
 				state: "request";
 				action: string;
 				/** Whether this address has crossed half its shared credential budget, so the form should challenge it. */
@@ -33,15 +33,15 @@ export namespace MagicLinkPage {
 				issues?: ReadonlyArray<Form.Issue>;
 		  }
 		| {
-				t: TFunction;
+				t: Translate;
 				state: "confirmation";
 				codeAction: string;
 				error?: string | null;
 		  }
-		| { t: TFunction; state: "tokenLanding"; action: string; token: string }
-		| { t: TFunction; state: "invalid"; requestHref: string }
-		| { t: TFunction; state: "wrongBrowser"; requestHref: string }
-		| { t: TFunction; state: "dauCapReached" };
+		| { t: Translate; state: "tokenLanding"; action: string; token: string }
+		| { t: Translate; state: "invalid"; requestHref: string }
+		| { t: Translate; state: "wrongBrowser"; requestHref: string }
+		| { t: Translate; state: "dauCapReached" };
 }
 
 /**

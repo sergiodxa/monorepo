@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 import type { Handle } from "remix/ui";
 
 import { vstack } from "@sdxc/u/layout";
@@ -16,7 +16,7 @@ import { Alert, Button, Card, Text } from "@sdxc/ui";
 export namespace VerifyPage {
 	export type Props =
 		| {
-				t: TFunction;
+				t: Translate;
 				state: "pending";
 				/** Where the resend control posts back to, carrying the subject id in its query. */
 				resendAction: string;
@@ -24,8 +24,8 @@ export namespace VerifyPage {
 				/** Whether the sign-up that landed here could not send its verification email. */
 				sendFailed: boolean;
 		  }
-		| { t: TFunction; state: "verified" }
-		| { t: TFunction; state: "invalid" };
+		| { t: Translate; state: "verified" }
+		| { t: Translate; state: "invalid" };
 }
 
 /**

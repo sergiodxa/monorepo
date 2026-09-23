@@ -38,7 +38,7 @@ function renderPending(
 	ctx: RequestContext,
 	input: { resent: boolean; sendFailed?: boolean },
 ): Promise<Response> {
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 
 	return ctx.render(
 		<HostedDocument title={t("hostedVerify.title")} locale={ctx.locale}>
@@ -57,13 +57,13 @@ function renderPending(
  * Spends the ticket a verification link carries, or renders the "check your
  * email" state for a subject id fresh off `/u/sign-up`.
  *
- * @param ctx - The request context (provides `render`, `locale`, `i18next` and `tenantStub`).
+ * @param ctx - The request context (provides `render`, `locale`, `intl` and `tenantStub`).
  * @returns The rendered verify screen, or `/u/error` when the request names neither.
  * @example
  * router.map(routes.hostedVerifyShow, verifyShow);
  */
 export const verifyShow = createAction(routes.hostedVerifyShow, async (ctx) => {
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 	let ticket = ctx.url.searchParams.get("ticket");
 
 	if (ticket) {
@@ -90,13 +90,13 @@ export const verifyShow = createAction(routes.hostedVerifyShow, async (ctx) => {
  * unverified email, looked up by id rather than trusted from a value the
  * form would otherwise have to carry.
  *
- * @param ctx - The request context (provides `render`, `locale`, `i18next` and `tenantStub`).
+ * @param ctx - The request context (provides `render`, `locale`, `intl` and `tenantStub`).
  * @returns The "check your email" state again, noting the resend when one went out.
  * @example
  * router.map(routes.hostedVerifyResend, verifyResend);
  */
 export const verifyResend = createAction(routes.hostedVerifyResend, async (ctx) => {
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 	let subjectId = ctx.url.searchParams.get("subject");
 
 	if (!subjectId) {

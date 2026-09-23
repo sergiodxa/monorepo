@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 import type { Form } from "@sdxc/ui";
 
 import type { PasswordPolicyFailure } from "~/database/passwords";
@@ -22,7 +22,7 @@ import type { PasswordPolicyFailure } from "~/database/passwords";
  * @returns The issue to add to the re-rendered form's `issues`.
  */
 export function passwordPolicyIssue(
-	t: TFunction,
+	t: Translate,
 	failure: PasswordPolicyFailure,
 	field: string,
 ): Form.Issue {

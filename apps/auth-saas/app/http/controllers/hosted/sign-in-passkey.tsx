@@ -48,14 +48,14 @@ let VerifyBodySchema = s.object({
  * `__Host-session` cookie, and resumes the interaction its `interaction` query
  * parameter names.
  *
- * @param ctx - The request context (provides `tenantStub`, `request` and `i18next`).
+ * @param ctx - The request context (provides `tenantStub`, `request` and `intl`).
  * @returns `{ redirect }` naming where the island should navigate next, or
  * `{ error }` when the ceremony or the interaction did not resolve.
  * @example
  * router.map(routes.hostedSignInPasskeyVerify, signInPasskeyVerify);
  */
 export const signInPasskeyVerify = createAction(routes.hostedSignInPasskeyVerify, async (ctx) => {
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 	let interactionId = ctx.url.searchParams.get("interaction");
 	if (!interactionId) return json({ error: t("hostedError.invalidInteraction") }, { status: 400 });
 

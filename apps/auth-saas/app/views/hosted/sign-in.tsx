@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 import type { Handle } from "remix/ui";
 
 import { gap, vstack } from "@sdxc/u/layout";
@@ -20,7 +20,7 @@ import { TurnstileWidget } from "./turnstile-widget";
 
 export namespace SignInPage {
 	export interface Props {
-		t: TFunction;
+		t: Translate;
 		/** Where the form posts back to, carrying the interaction id (and `ui_locales`, when present) in its query. */
 		action: string;
 		/** Where the passkey island's two JSON calls post to. */

@@ -31,7 +31,7 @@ import routes from "~/routes/tenant";
 export const consentShow = createAction(routes.hostedConsentShow, async (ctx) => {
 	let interactionId = ctx.url.searchParams.get("interaction");
 	if (!interactionId) {
-		return redirectToErrorPage(ctx, ctx.i18next.t("hostedError.invalidInteraction"));
+		return redirectToErrorPage(ctx, ctx.intl.t("hostedError.invalidInteraction"));
 	}
 
 	let sessionId = (await activeSessionId(ctx)) ?? "";
@@ -64,7 +64,7 @@ export const consentShow = createAction(routes.hostedConsentShow, async (ctx) =>
 export const consentSubmit = createAction(routes.hostedConsentSubmit, async (ctx) => {
 	let interactionId = ctx.url.searchParams.get("interaction");
 	if (!interactionId) {
-		return redirectToErrorPage(ctx, ctx.i18next.t("hostedError.invalidInteraction"));
+		return redirectToErrorPage(ctx, ctx.intl.t("hostedError.invalidInteraction"));
 	}
 
 	let sessionId = (await activeSessionId(ctx)) ?? "";

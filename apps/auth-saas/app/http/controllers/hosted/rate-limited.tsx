@@ -17,13 +17,13 @@ import { ErrorPage } from "~/app/views/hosted/error";
  * `429` so the response already carries the status the rate limit
  * middleware's own headers land on.
  *
- * @param ctx - The request context (provides `render`, `locale` and `i18next`).
+ * @param ctx - The request context (provides `render`, `locale` and `intl`).
  * @returns The rendered page, at `429`.
  * @example
  * rateLimit({ ..., onLimit: (ctx) => renderRateLimitedPage(ctx) });
  */
 export async function renderRateLimitedPage(ctx: RequestContext): Promise<Response> {
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 	let correlationId = crypto.randomUUID();
 
 	return ctx.render(

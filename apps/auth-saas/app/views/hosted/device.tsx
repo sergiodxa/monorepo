@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 import type { Handle } from "remix/ui";
 
 import { vstack } from "@sdxc/u/layout";
@@ -18,7 +18,7 @@ import { Alert, Button, Card, Text, TextField } from "@sdxc/ui";
 
 export namespace DeviceCodePage {
 	export interface Props {
-		t: TFunction;
+		t: Translate;
 		/** Where the code submits to: a plain `GET`, so the browser carries it forward as `?user_code=`. */
 		action: string;
 		defaultUserCode: string | null;
@@ -73,7 +73,7 @@ export function DeviceCodePage(handle: Handle<DeviceCodePage.Props>) {
 
 export namespace DeviceDonePage {
 	export interface Props {
-		t: TFunction;
+		t: Translate;
 		approved: boolean;
 	}
 }

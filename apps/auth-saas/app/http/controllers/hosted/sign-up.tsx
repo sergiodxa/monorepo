@@ -64,7 +64,7 @@ async function renderSignUpPage(
 		issues?: ReadonlyArray<Form.Issue>;
 	},
 ): Promise<Response> {
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 
 	return ctx.render(
 		<HostedDocument title={t("hostedSignUp.title")} locale={ctx.locale}>
@@ -84,7 +84,7 @@ async function renderSignUpPage(
  * Renders the sign-up form, stating the tenant's real password policy rather
  * than a guessed one.
  *
- * @param ctx - The request context (provides `render`, `locale`, `i18next` and `tenantStub`).
+ * @param ctx - The request context (provides `render`, `locale`, `intl` and `tenantStub`).
  * @returns The rendered sign-up page.
  * @example
  * router.map(routes.hostedSignUpShow, signUpShow);
@@ -106,7 +106,7 @@ export const signUpShow = createAction(routes.hostedSignUpShow, async (ctx) => {
  * router.map(routes.hostedSignUpSubmit, signUpSubmit);
  */
 export const signUpSubmit = createAction(routes.hostedSignUpSubmit, async (ctx) => {
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 	let policy = await ctx.tenantStub.describePasswordPolicy();
 	let turnstileSiteKey = env.TURNSTILE_SITE_KEY;
 

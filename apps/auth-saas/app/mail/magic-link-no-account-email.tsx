@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 import type { Address, Email as EmailContract } from "@sdxc/mail";
 import type { RemixElement } from "remix/ui";
 
@@ -27,7 +27,7 @@ export namespace MagicLinkNoAccountEmail {
 		/** The tenant's own display name, derived by the caller. */
 		tenantName: string;
 		/** Translator for the request's own locale. */
-		t: TFunction;
+		t: Translate;
 	}
 }
 

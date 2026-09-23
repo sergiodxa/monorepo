@@ -32,6 +32,7 @@
 		"@sdxc/location": "workspace:*",
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/mail": "workspace:*",
+		"@sdxc/messageformat": "workspace:*",
 		"@sdxc/pagination": "workspace:*",
 		"@sdxc/passkey": "workspace:*",
 		"@sdxc/problem": "workspace:*",

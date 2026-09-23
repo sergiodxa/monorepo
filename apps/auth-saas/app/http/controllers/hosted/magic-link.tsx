@@ -95,7 +95,7 @@ function renderRequestForm(
 	challenge: boolean,
 	issues?: ReadonlyArray<Form.Issue>,
 ): Promise<Response> {
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 
 	return ctx.render(
 		<HostedDocument title={t("hostedMagicLink.requestTitle")} locale={ctx.locale}>
@@ -114,7 +114,7 @@ function renderRequestForm(
 
 /** Renders the invalid/expired-credential screen, shared by every completion path that lands on it. */
 function renderInvalid(ctx: RequestContext): Promise<Response> {
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 
 	return ctx.render(
 		<HostedDocument title={t("hostedMagicLink.invalid.heading")} locale={ctx.locale}>
@@ -129,7 +129,7 @@ function renderConfirmation(
 	ctx: RequestContext,
 	options: { error?: string | null } = {},
 ): Promise<Response> {
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 
 	return ctx.render(
 		<HostedDocument title={t("hostedMagicLink.confirmation.heading")} locale={ctx.locale}>
@@ -149,7 +149,7 @@ function renderConfirmation(
  * parameter names, or for the `return_to` path a caller with no interaction of
  * its own gave instead.
  *
- * @param ctx - The request context (provides `render`, `locale` and `i18next`).
+ * @param ctx - The request context (provides `render`, `locale` and `intl`).
  * @returns The rendered magic-link request screen, or the `/u/error` page when
  * neither was given.
  * @example
@@ -158,7 +158,7 @@ function renderConfirmation(
 export const magicLinkShow = createAction(routes.hostedMagicLinkShow, async (ctx) => {
 	let interactionId = ctx.url.searchParams.get("interaction");
 	if (!interactionId && !safeReturnTo(ctx)) {
-		return redirectToErrorPage(ctx, ctx.i18next.t("hostedError.invalidInteraction"));
+		return redirectToErrorPage(ctx, ctx.intl.t("hostedError.invalidInteraction"));
 	}
 
 	return renderRequestForm(ctx, ctx.turnstileChallenge === true);
@@ -180,7 +180,7 @@ export const magicLinkShow = createAction(routes.hostedMagicLinkShow, async (ctx
  * router.map(routes.hostedMagicLinkSubmit, magicLinkSubmit);
  */
 export const magicLinkSubmit = createAction(routes.hostedMagicLinkSubmit, async (ctx) => {
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 	let interactionId = ctx.url.searchParams.get("interaction");
 	let returnTo = safeReturnTo(ctx);
 	let challenge = ctx.turnstileChallenge === true;
@@ -250,7 +250,7 @@ export const magicLinkSubmit = createAction(routes.hostedMagicLinkSubmit, async 
  * no-referrer`, since this is the one response in this flow whose URL carries
  * the token.
  *
- * @param ctx - The request context (provides `render`, `locale` and `i18next`).
+ * @param ctx - The request context (provides `render`, `locale` and `intl`).
  * @returns The rendered landing page, or a redirect back to the request screen
  * when this request carries no token to land on.
  * @example
@@ -267,7 +267,7 @@ export const magicLinkCompleteShow = createAction(
 			});
 		}
 
-		let t = ctx.i18next.t;
+		let t = ctx.intl.t;
 
 		return ctx.render(
 			<HostedDocument title={t("hostedMagicLink.tokenLanding.heading")} locale={ctx.locale}>
@@ -299,7 +299,7 @@ export const magicLinkCompleteShow = createAction(
 export const magicLinkCompleteSubmit = createAction(
 	routes.hostedMagicLinkCompleteSubmit,
 	async (ctx) => {
-		let t = ctx.i18next.t;
+		let t = ctx.intl.t;
 		let token = ctx.formData.get("token");
 		let code = ctx.formData.get("code");
 

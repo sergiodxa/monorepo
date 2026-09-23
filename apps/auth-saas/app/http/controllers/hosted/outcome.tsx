@@ -107,13 +107,13 @@ export function redirectToReturnTo(ctx: RequestContext, returnTo: string): Respo
  * with a fresh correlation id a support conversation can reference. Used both by
  * `/u/error` itself and, inline, by `/authorize`'s own `render`-class failures.
  *
- * @param ctx - The request context (provides `render`, `locale` and `i18next`).
+ * @param ctx - The request context (provides `render`, `locale` and `intl`).
  * @param description - The already-composed, developer-facing sentence the
  * failing operation answered with.
  * @returns The rendered error page, at `400`.
  */
 export async function renderErrorPage(ctx: RequestContext, description: string): Promise<Response> {
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 	let correlationId = crypto.randomUUID();
 
 	return ctx.render(
@@ -148,7 +148,7 @@ export function redirectToErrorPage(
  * Renders the `/u/consent` screen inline for a request that still needs a
  * decision.
  *
- * @param ctx - The request context (provides `render`, `locale` and `i18next`).
+ * @param ctx - The request context (provides `render`, `locale` and `intl`).
  * @param action - The consent form's own action, carrying the interaction id.
  * @param screen - The assembled consent screen to render.
  * @returns The rendered consent page.
@@ -158,7 +158,7 @@ export async function renderConsentPage(
 	action: string,
 	screen: ConsentScreen,
 ): Promise<Response> {
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 
 	return ctx.render(
 		<HostedDocument
@@ -175,7 +175,7 @@ export async function renderConsentPage(
  * needs a fresh proof. A subject with no factor at all is not rendered here —
  * see {@link RespondToOutcomeOptions.renderStepUpInline}.
  *
- * @param ctx - The request context (provides `render`, `locale` and `i18next`).
+ * @param ctx - The request context (provides `render`, `locale` and `intl`).
  * @param action - The step-up form's own action, carrying the interaction id.
  * @param error - An error from a prior submission, if any.
  * @returns The rendered step-up page.
@@ -185,7 +185,7 @@ export async function renderStepUpPage(
 	action: string,
 	error: string | null = null,
 ): Promise<Response> {
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 
 	return ctx.render(
 		<HostedDocument title={t("hostedStepUp.title")} locale={ctx.locale}>
@@ -242,7 +242,7 @@ export function resolveOutcomeRedirect(
 /**
  * Turns an `AuthorizationOutcome` into the `Response` it deserves.
  *
- * @param ctx - The request context (provides `render`, `locale`, `i18next` and `request`).
+ * @param ctx - The request context (provides `render`, `locale`, `intl` and `request`).
  * @param outcome - The outcome a `beginAuthorization`/`resumeAuthorization` call answered with.
  * @param options - Whether to render a `consent` or `render` outcome inline, and
  * the `ui_locales` value to carry forward onto a redirect.

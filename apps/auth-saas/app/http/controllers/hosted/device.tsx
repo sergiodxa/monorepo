@@ -46,7 +46,7 @@ function redirectToSignIn(ctx: { request: Request }, userCode: string | null): R
  * router.map(routes.hostedDeviceShow, hostedDeviceShow);
  */
 export const hostedDeviceShow = createAction(routes.hostedDeviceShow, async (ctx) => {
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 	let userCode = ctx.url.searchParams.get("user_code");
 
 	let session = await activeSession(ctx);
@@ -108,7 +108,7 @@ export const hostedDeviceShow = createAction(routes.hostedDeviceShow, async (ctx
  * router.map(routes.hostedDeviceSubmit, hostedDeviceSubmit);
  */
 export const hostedDeviceSubmit = createAction(routes.hostedDeviceSubmit, async (ctx) => {
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 	let deviceAuthorizationId = ctx.url.searchParams.get("device");
 	if (!deviceAuthorizationId) {
 		return redirectToErrorPage(ctx, t("hostedError.invalidInteraction"));

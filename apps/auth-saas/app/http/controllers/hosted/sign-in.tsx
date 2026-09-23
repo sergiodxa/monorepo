@@ -53,7 +53,7 @@ async function renderSignInPage(
 		challenge: boolean;
 	},
 ): Promise<Response> {
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 
 	return ctx.render(
 		<HostedDocument title={t("hostedSignIn.title")} locale={ctx.locale}>
@@ -78,7 +78,7 @@ async function renderSignInPage(
  * parameter names, or for the `return_to` path a caller with no interaction of
  * its own gave instead.
  *
- * @param ctx - The request context (provides `render`, `locale` and `i18next`).
+ * @param ctx - The request context (provides `render`, `locale` and `intl`).
  * @returns The rendered sign-in page, or the `/u/error` page when neither was given.
  * @example
  * router.map(routes.hostedSignInShow, signInShow);
@@ -86,7 +86,7 @@ async function renderSignInPage(
 export const signInShow = createAction(routes.hostedSignInShow, async (ctx) => {
 	let interactionId = ctx.url.searchParams.get("interaction");
 	if (!interactionId && !safeReturnTo(ctx)) {
-		return redirectToErrorPage(ctx, ctx.i18next.t("hostedError.invalidInteraction"));
+		return redirectToErrorPage(ctx, ctx.intl.t("hostedError.invalidInteraction"));
 	}
 
 	return renderSignInPage(ctx, {
@@ -117,7 +117,7 @@ export const signInSubmit = createAction(routes.hostedSignInSubmit, async (ctx) 
 	let challenge = ctx.turnstileChallenge === true;
 
 	if (!interactionId && !returnTo) {
-		return redirectToErrorPage(ctx, ctx.i18next.t("hostedError.invalidInteraction"));
+		return redirectToErrorPage(ctx, ctx.intl.t("hostedError.invalidInteraction"));
 	}
 
 	let origin = requestOrigin(ctx.request);
@@ -134,7 +134,7 @@ export const signInSubmit = createAction(routes.hostedSignInSubmit, async (ctx) 
 				loginHint,
 				forced,
 				challenge,
-				error: ctx.i18next.t("hostedSignIn.errors.turnstileFailed"),
+				error: ctx.intl.t("hostedSignIn.errors.turnstileFailed"),
 			});
 		}
 	}
@@ -148,7 +148,7 @@ export const signInSubmit = createAction(routes.hostedSignInSubmit, async (ctx) 
 			loginHint,
 			forced,
 			challenge,
-			error: ctx.i18next.t("hostedSignIn.errors.invalidCredentials"),
+			error: ctx.intl.t("hostedSignIn.errors.invalidCredentials"),
 		});
 	}
 
@@ -178,10 +178,10 @@ export const signInSubmit = createAction(routes.hostedSignInSubmit, async (ctx) 
 
 		let error =
 			signedIn.reason === "password_expired"
-				? ctx.i18next.t("hostedSignIn.errors.passwordExpired")
+				? ctx.intl.t("hostedSignIn.errors.passwordExpired")
 				: signedIn.reason === "dau_cap_reached"
-					? ctx.i18next.t("hostedSignIn.errors.dauCapReached")
-					: ctx.i18next.t("hostedSignIn.errors.invalidCredentials");
+					? ctx.intl.t("hostedSignIn.errors.dauCapReached")
+					: ctx.intl.t("hostedSignIn.errors.invalidCredentials");
 		return renderSignInPage(ctx, { loginHint, forced, challenge, error });
 	}
 

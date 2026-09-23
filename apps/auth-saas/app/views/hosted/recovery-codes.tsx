@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 import type { Handle } from "remix/ui";
 
 import { vstack } from "@sdxc/u/layout";
@@ -18,7 +18,7 @@ import { css } from "remix/ui";
 
 export namespace RecoveryCodesPage {
 	export interface Props {
-		t: TFunction;
+		t: Translate;
 		title: string;
 		body: string;
 		codes: string[];

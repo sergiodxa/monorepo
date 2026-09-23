@@ -75,7 +75,7 @@ function renderRequestForm(
 	challenge: boolean,
 	issues?: ReadonlyArray<Form.Issue>,
 ): Promise<Response> {
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 
 	return ctx.render(
 		<HostedDocument title={t("hostedReset.requestTitle")} locale={ctx.locale}>
@@ -99,7 +99,7 @@ function renderCompleteForm(
 	challenge: boolean,
 	issues?: ReadonlyArray<Form.Issue>,
 ): Promise<Response> {
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 
 	return ctx.render(
 		<HostedDocument title={t("hostedReset.completeTitle")} locale={ctx.locale}>
@@ -121,7 +121,7 @@ function renderCompleteForm(
  * Renders the request form, or the new-password form when a `ticket` names a
  * pending reset.
  *
- * @param ctx - The request context (provides `render`, `locale`, `i18next` and `tenantStub`).
+ * @param ctx - The request context (provides `render`, `locale`, `intl` and `tenantStub`).
  * @returns The rendered reset screen for whichever state the request is in.
  * @example
  * router.map(routes.hostedResetShow, resetShow);
@@ -149,7 +149,7 @@ export const resetShow = createAction(routes.hostedResetShow, async (ctx) => {
  * router.map(routes.hostedResetSubmit, resetSubmit);
  */
 export const resetSubmit = createAction(routes.hostedResetSubmit, async (ctx) => {
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 	let ticket = ctx.url.searchParams.get("ticket");
 	let challenge = ctx.turnstileChallenge === true;
 

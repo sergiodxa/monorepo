@@ -14,7 +14,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import i18next from "@sdxc/i18n/middleware";
+import i18nMiddleware from "@sdxc/i18n/middleware";
 
 import en from "~/app/locales/en";
 
@@ -30,17 +30,15 @@ function findLocale(request: Request): Promise<string[] | null> {
 }
 
 /**
- * Detects the request's language and initializes a per-request i18next instance
- * over the hosted screens' own bundle.
+ * Detects the request's language and publishes a per-request
+ * translator over the hosted screens' own bundle.
  */
-export default i18next({
+export default i18nMiddleware({
 	detection: {
 		supportedLanguages: [DEFAULT_LANGUAGE],
 		fallbackLanguage: DEFAULT_LANGUAGE,
 		findLocale,
 		order: ["custom", "header"],
 	},
-	i18next: {
-		resources: { en: { translation: en } },
-	},
+	resources: { en },
 });

@@ -83,7 +83,7 @@ function buildRouter() {
 		formData() as Middleware,
 		i18n({
 			detection: { supportedLanguages: ["en"], fallbackLanguage: "en", order: ["header"] },
-			i18next: { resources: { en: { translation: en } } },
+			resources: { en },
 		}) as Middleware,
 	];
 	return createRouter({ middleware });
@@ -438,7 +438,7 @@ describe("attack-signal recording", () => {
 			formData() as Middleware,
 			i18n({
 				detection: { supportedLanguages: ["en"], fallbackLanguage: "en", order: ["header"] },
-				i18next: { resources: { en: { translation: en } } },
+				resources: { en },
 			}) as Middleware,
 		];
 		return createRouter({ middleware });

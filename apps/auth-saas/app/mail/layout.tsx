@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 import type { Handle, RemixNode } from "remix/ui";
 
 import { Email } from "@sdxc/mail";
@@ -18,7 +18,7 @@ export namespace AuthMailLayout {
 		title: string;
 		preview: string;
 		tenantName: string;
-		t: TFunction;
+		t: Translate;
 		children?: RemixNode;
 	}
 }

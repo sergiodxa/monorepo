@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 import type { Handle } from "remix/ui";
 
 import { is, maxIs } from "@sdxc/u/size";
@@ -21,7 +21,7 @@ import { TurnstileWidget } from "./turnstile-widget";
 export namespace ResetPage {
 	export type Props =
 		| {
-				t: TFunction;
+				t: Translate;
 				state: "request";
 				action: string;
 				/** Whether this address has crossed half its shared credential budget, so the form should challenge it. */
@@ -30,9 +30,9 @@ export namespace ResetPage {
 				turnstileSiteKey: string;
 				issues?: ReadonlyArray<Form.Issue>;
 		  }
-		| { t: TFunction; state: "requested" }
+		| { t: Translate; state: "requested" }
 		| {
-				t: TFunction;
+				t: Translate;
 				state: "complete";
 				action: string;
 				policy: PasswordPolicy;
@@ -40,8 +40,8 @@ export namespace ResetPage {
 				turnstileSiteKey: string;
 				issues?: ReadonlyArray<Form.Issue>;
 		  }
-		| { t: TFunction; state: "completed"; signInHref: string }
-		| { t: TFunction; state: "invalidTicket"; requestHref: string };
+		| { t: Translate; state: "completed"; signInHref: string }
+		| { t: Translate; state: "invalidTicket"; requestHref: string };
 }
 
 /**

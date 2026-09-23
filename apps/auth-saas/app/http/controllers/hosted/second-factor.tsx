@@ -80,7 +80,7 @@ async function resume(
 /**
  * Renders the code-entry form for a subject who already holds a factor.
  *
- * @param ctx - The request context (provides `render`, `locale` and `i18next`).
+ * @param ctx - The request context (provides `render`, `locale` and `intl`).
  * @returns The rendered second-factor page.
  * @example
  * router.map(routes.hostedSecondFactorShow, secondFactorShow);
@@ -88,14 +88,14 @@ async function resume(
 export const secondFactorShow = createAction(routes.hostedSecondFactorShow, async (ctx) => {
 	let value = readResume(ctx);
 	if (!value.interactionId && !value.returnTo) {
-		return redirectToErrorPage(ctx, ctx.i18next.t("hostedError.invalidInteraction"));
+		return redirectToErrorPage(ctx, ctx.intl.t("hostedError.invalidInteraction"));
 	}
 
 	let session = await activeSession(ctx);
-	if (!session) return redirectToErrorPage(ctx, ctx.i18next.t("hostedError.invalidInteraction"));
+	if (!session) return redirectToErrorPage(ctx, ctx.intl.t("hostedError.invalidInteraction"));
 
 	let mode = ctx.url.searchParams.get("mode");
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 
 	if (mode === "enrol") {
 		let enrolment = await ctx.tenantStub.beginTotpEnrolment({ subjectId: session.subjectId });
@@ -140,7 +140,7 @@ export const secondFactorShow = createAction(routes.hostedSecondFactorShow, asyn
  * router.map(routes.hostedSecondFactorSubmit, secondFactorSubmit);
  */
 export const secondFactorSubmit = createAction(routes.hostedSecondFactorSubmit, async (ctx) => {
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 	let value = readResume(ctx);
 	if (!value.interactionId && !value.returnTo) {
 		return redirectToErrorPage(ctx, t("hostedError.invalidInteraction"));
@@ -235,7 +235,7 @@ export const secondFactorSubmit = createAction(routes.hostedSecondFactorSubmit, 
 export const secondFactorEnrolSubmit = createAction(
 	routes.hostedSecondFactorEnrolSubmit,
 	async (ctx) => {
-		let t = ctx.i18next.t;
+		let t = ctx.intl.t;
 		let value = readResume(ctx);
 		if (!value.interactionId && !value.returnTo) {
 			return redirectToErrorPage(ctx, t("hostedError.invalidInteraction"));
@@ -292,11 +292,11 @@ export const secondFactorContinueSubmit = createAction(
 	async (ctx) => {
 		let value = readResume(ctx);
 		if (!value.interactionId && !value.returnTo) {
-			return redirectToErrorPage(ctx, ctx.i18next.t("hostedError.invalidInteraction"));
+			return redirectToErrorPage(ctx, ctx.intl.t("hostedError.invalidInteraction"));
 		}
 
 		let session = await activeSession(ctx);
-		if (!session) return redirectToErrorPage(ctx, ctx.i18next.t("hostedError.invalidInteraction"));
+		if (!session) return redirectToErrorPage(ctx, ctx.intl.t("hostedError.invalidInteraction"));
 
 		return resume(ctx, value, session.sessionId, ctx.url.searchParams.get("ui_locales"));
 	},

@@ -1,7 +1,7 @@
 /**
  * English translation dictionary for the hosted sign-in, consent and error screens —
  * the only bundle shipped today. Every visible string on those pages reads from here
- * through `ctx.i18next.t(...)`, so a later locale is a sibling file away rather than a
+ * through `ctx.intl.t(...)`, so a later locale is a sibling file away rather than a
  * change to the screens themselves.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -90,9 +90,9 @@ export default {
 	},
 
 	hostedConsent: {
-		title: "{{clientName}} is asking for access",
-		signedInAs: "Signed in as {{name}}",
-		scopesHeading: "This will allow {{clientName}} to:",
+		title: "{$clientName} is asking for access",
+		signedInAs: "Signed in as {$name}",
+		scopesHeading: "This will allow {$clientName} to:",
 		alreadyGranted: "Already granted",
 		approve: "Allow",
 		deny: "Deny",
@@ -117,7 +117,7 @@ export default {
 
 	hostedSignUp: {
 		title: "Create your account",
-		passwordHint: "Use at least {{minLength}} characters.",
+		passwordHint: "Use at least {$minLength} characters.",
 		identifier: { label: "Email" },
 		password: { label: "Password" },
 		name: { label: "Display name (optional)" },
@@ -207,7 +207,7 @@ export default {
 			requestNew: "Request a new one",
 		},
 		errors: {
-			badCode: "That code isn't right. {{attemptsLeft}} attempts left.",
+			badCode: "That code isn't right. {$attemptsLeft} attempts left.",
 			dauCapReached:
 				"This account has reached its daily limit of active users. Try again tomorrow.",
 			turnstileFailed: "We couldn't verify you're not a robot. Try again.",
@@ -216,66 +216,66 @@ export default {
 
 	hostedPassword: {
 		errors: {
-			tooShort: "Password must be at least {{minLength}} characters.",
+			tooShort: "Password must be at least {$minLength} characters.",
 			common: "Choose a password that isn't easy to guess.",
 			similarToIdentifier: "Your password can't be similar to your email.",
-			deniedTerm: 'Your password can\'t contain "{{term}}".',
+			deniedTerm: 'Your password can\'t contain "{$term}".',
 			reused: "Choose a password you haven't used before.",
 		},
 	},
 
 	mail: {
-		footer: "This is an automated message from {{tenantName}}.",
+		footer: "This is an automated message from {$tenantName}.",
 		verifyAddress: {
-			subject: "Verify your email for {{tenantName}}",
+			subject: "Verify your email for {$tenantName}",
 			preview: "Confirm your email address to finish setting up your account.",
 			heading: "Confirm your email address",
-			body: "Follow this link to finish setting up your {{tenantName}} account.",
+			body: "Follow this link to finish setting up your {$tenantName} account.",
 			action: "Verify email",
 		},
 		resetPassword: {
-			subject: "Reset your password for {{tenantName}}",
+			subject: "Reset your password for {$tenantName}",
 			preview: "Use this link to choose a new password.",
 			heading: "Reset your password",
-			body: "Follow this link to choose a new password for your {{tenantName}} account.",
+			body: "Follow this link to choose a new password for your {$tenantName} account.",
 			action: "Reset password",
 			unexpected: "If you didn't request this, you can safely ignore this email.",
 		},
 		magicLinkSignIn: {
-			subject: "Your sign-in link for {{tenantName}}",
+			subject: "Your sign-in link for {$tenantName}",
 			preview: "Use this link or code to finish signing in.",
-			heading: "Sign in to {{tenantName}}",
-			body: "Follow this link to finish signing in to your {{tenantName}} account.",
+			heading: "Sign in to {$tenantName}",
+			body: "Follow this link to finish signing in to your {$tenantName} account.",
 			action: "Sign in",
 			codeIntro: "Or enter this code where you started signing in:",
 			unexpected: "If you didn't request this, you can safely ignore this email.",
 		},
 		magicLinkNoAccount: {
-			subject: "Sign-in attempted for {{tenantName}}",
+			subject: "Sign-in attempted for {$tenantName}",
 			preview: "Someone tried to sign in with this address, but no account exists.",
 			heading: "No account found",
-			body: "Someone just tried to sign in to {{tenantName}} using this email address, but no account exists for it.",
+			body: "Someone just tried to sign in to {$tenantName} using this email address, but no account exists for it.",
 			notice: "If this wasn't you, you can safely ignore this email.",
 		},
 		attackSignalAlert: {
-			subject: "Unusual sign-in activity on {{tenantName}}",
-			preview: "Failed sign-ins on {{tenantName}} are running well above their usual rate.",
+			subject: "Unusual sign-in activity on {$tenantName}",
+			preview: "Failed sign-ins on {$tenantName} are running well above their usual rate.",
 			heading: "Elevated failed sign-ins",
-			body: "{{tenantName}} saw {{recentFailures}} failed sign-ins in the last hour, well above its usual rate of about {{baselineHourlyAverage}} per hour.",
+			body: "{$tenantName} saw {$recentFailures} failed sign-ins in the last hour, well above its usual rate of about {$baselineHourlyAverage} per hour.",
 			notice: "This is a notification only; nothing was locked or changed on your account.",
 		},
 		credentialsExportStarted: {
-			subject: "A credentials export started for {{tenantName}}",
+			subject: "A credentials export started for {$tenantName}",
 			preview: "Someone started an export that includes every stored password hash.",
 			heading: "Credentials export started",
-			body: "An export of {{tenantName}}'s directory has started, including every subject's stored password hash.",
+			body: "An export of {$tenantName}'s directory has started, including every subject's stored password hash.",
 			notice: "If you didn't expect this, contact whoever on your team has access to start one.",
 		},
 		tenantInvitation: {
-			subject: "You've been invited to administer {{tenantName}}",
-			preview: "Accept this invitation to help administer {{tenantName}}.",
+			subject: "You've been invited to administer {$tenantName}",
+			preview: "Accept this invitation to help administer {$tenantName}.",
 			heading: "You've been invited",
-			body: "You've been invited to administer {{tenantName}} as {{role}}.",
+			body: "You've been invited to administer {$tenantName} as {$role}.",
 			action: "Accept invitation",
 			unexpected: "If you weren't expecting this, you can safely ignore this email.",
 		},
@@ -283,7 +283,7 @@ export default {
 
 	hostedError: {
 		title: "Something went wrong",
-		correlationId: "Reference: {{id}}",
+		correlationId: "Reference: {$id}",
 		backHint: "Contact the application that sent you here if this continues.",
 		invalidInteraction:
 			"This sign-in attempt is no longer valid. Start again from the application that sent you here.",

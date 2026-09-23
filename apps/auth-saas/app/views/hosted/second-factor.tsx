@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 import type { Handle } from "remix/ui";
 
 import { vstack } from "@sdxc/u/layout";
@@ -16,7 +16,7 @@ import { Alert, Button, Card, Checkbox, TextField } from "@sdxc/ui";
 
 export namespace SecondFactorPage {
 	export interface Props {
-		t: TFunction;
+		t: Translate;
 		/** Where the form posts back to, carrying the interaction id in its query. */
 		action: string;
 		error: string | null;

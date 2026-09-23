@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 import type { Handle } from "remix/ui";
 
 import { flex, gap, items, justify, vstack } from "@sdxc/u/layout";
@@ -19,7 +19,7 @@ import type { ConsentScreen } from "~/database/consent";
 
 export namespace ConsentPage {
 	export interface Props {
-		t: TFunction;
+		t: Translate;
 		/** Where both decisions post back to, carrying the interaction id in its query. */
 		action: string;
 		screen: ConsentScreen;

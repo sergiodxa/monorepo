@@ -40,7 +40,7 @@ function actionUrl(ctx: { request: Request }, path: string, interactionId: strin
  * router.map(routes.hostedStepUpShow, stepUpShow);
  */
 export const stepUpShow = createAction(routes.hostedStepUpShow, async (ctx) => {
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 	let interactionId = ctx.url.searchParams.get("interaction");
 	if (!interactionId) return redirectToErrorPage(ctx, t("hostedError.invalidInteraction"));
 
@@ -92,7 +92,7 @@ export const stepUpShow = createAction(routes.hostedStepUpShow, async (ctx) => {
  * router.map(routes.hostedStepUpSubmit, stepUpSubmit);
  */
 export const stepUpSubmit = createAction(routes.hostedStepUpSubmit, async (ctx) => {
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 	let interactionId = ctx.url.searchParams.get("interaction");
 	if (!interactionId) return redirectToErrorPage(ctx, t("hostedError.invalidInteraction"));
 
@@ -141,7 +141,7 @@ export const stepUpSubmit = createAction(routes.hostedStepUpSubmit, async (ctx) 
  * router.map(routes.hostedStepUpEnrolSubmit, stepUpEnrolSubmit);
  */
 export const stepUpEnrolSubmit = createAction(routes.hostedStepUpEnrolSubmit, async (ctx) => {
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 	let interactionId = ctx.url.searchParams.get("interaction");
 	if (!interactionId) return redirectToErrorPage(ctx, t("hostedError.invalidInteraction"));
 
@@ -189,18 +189,18 @@ export const stepUpEnrolSubmit = createAction(routes.hostedStepUpEnrolSubmit, as
 export const stepUpContinueSubmit = createAction(routes.hostedStepUpContinueSubmit, async (ctx) => {
 	let interactionId = ctx.url.searchParams.get("interaction");
 	if (!interactionId) {
-		return redirectToErrorPage(ctx, ctx.i18next.t("hostedError.invalidInteraction"));
+		return redirectToErrorPage(ctx, ctx.intl.t("hostedError.invalidInteraction"));
 	}
 
 	let session = await activeSession(ctx);
-	if (!session) return redirectToErrorPage(ctx, ctx.i18next.t("hostedError.invalidInteraction"));
+	if (!session) return redirectToErrorPage(ctx, ctx.intl.t("hostedError.invalidInteraction"));
 
 	let result = await ctx.tenantStub.completeStepUpViaEnrolment({
 		interactionId,
 		sessionId: session.sessionId,
 	});
 
-	if (!result.ok) return redirectToErrorPage(ctx, ctx.i18next.t("hostedError.invalidInteraction"));
+	if (!result.ok) return redirectToErrorPage(ctx, ctx.intl.t("hostedError.invalidInteraction"));
 
 	let { ok: _ok, ...outcome } = result;
 	return respondToAuthorizationOutcome(ctx, outcome, {
