@@ -19,7 +19,6 @@ import {
 	hstack,
 	inlineFlex,
 	insBs,
-	self,
 	shrink,
 	sticky,
 	vstack,
@@ -27,6 +26,7 @@ import {
 import { overflow, overflowX, overflowY } from "@sdxc/u/overflow";
 import { media } from "@sdxc/u/responsive";
 import { bs, is, maxBs, maxIs, mis, p } from "@sdxc/u/size";
+import { z } from "@sdxc/u/stacking";
 import { when } from "@sdxc/u/state";
 import { text, tracking, weight } from "@sdxc/u/typography";
 import { Breadcrumbs, Button, Sidebar } from "@sdxc/ui";
@@ -93,11 +93,13 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 				<Sidebar
 					collapsible="offcanvas"
 					mix={[
-						/* The rail holds the viewport rather than the document, so a page scrolls past it. */
-						sticky(),
-						insBs(0),
-						self("start"),
-						bs("100dvh"),
+						/*
+						 * The rail states no height of its own, so the row it sits in stretches it to
+						 * the page's height. `Sidebar` asks for the full height of its parent, which
+						 * a parent sized by its content answers with that content's height — one
+						 * viewport's worth — and the rail's edge would stop there.
+						 */
+						bs("auto"),
 						/*
 						 * The rail animates its own width, and a transition running on that property
 						 * holds the old value; pulling the rail out of the flow by its own width
@@ -109,8 +111,16 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 						]),
 					]}
 				>
-					<Sidebar.Header>{heading}</Sidebar.Header>
-					<Sidebar.Content>
+					{/*
+					 * The rail is as tall as the page, so its edge runs unbroken from the header to
+					 * the footer rather than sliding along as a segment the height of the viewport.
+					 * What holds against the viewport is the rail's own two rows: the wordmark at
+					 * the top, and the tree below it, each staying put while the page scrolls past.
+					 */}
+					<Sidebar.Header mix={[sticky(), insBs(0), z(1)]}>{heading}</Sidebar.Header>
+					<Sidebar.Content
+						mix={[sticky(), insBs(HEADER_HEIGHT), maxBs(`calc(100dvh - ${HEADER_HEIGHT})`)]}
+					>
 						<DocsNav tree={tree} activePath={activePath} />
 					</Sidebar.Content>
 				</Sidebar>
