@@ -183,6 +183,28 @@ describe("the shared article cache", () => {
 		expect(await env.KV.get(robotsKey(at))).not.toBeNull();
 	});
 
+	test("refuses an origin whose robots.txt is down, and asks it again within the hour", async () => {
+		let at = origin();
+		let fetched = 0;
+
+		server.use(
+			http.get(`${at}/robots.txt`, () => new HttpResponse(null, { status: 503 })),
+			http.get(`${at}/post`, () => {
+				fetched += 1;
+				return HttpResponse.html(page());
+			}),
+		);
+
+		let article = await readArticle({ url: `${at}/post`, summary: SUMMARY });
+
+		expect(article.outcome).toBe("refused");
+		expect(fetched).toBe(0);
+
+		let listed = await env.KV.list({ prefix: robotsKey(at) });
+		let expiration = listed.keys.at(0)?.expiration ?? Number.POSITIVE_INFINITY;
+		expect(expiration).toBeLessThanOrEqual(Math.ceil(Date.now() / 1000) + 60 * 60);
+	});
+
 	test("reads a page asking not to be archived, and keeps it for nobody", async () => {
 		let at = origin();
 		let fetched = 0;

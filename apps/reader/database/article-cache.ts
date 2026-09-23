@@ -44,7 +44,11 @@ export const ARTICLE_TTL: DurationString = "7 days";
  */
 export const FAILURE_TTL: DurationString = "1 hour";
 
-/** How long an origin's `robots.txt` is held, which is how often it is re-read. */
+/**
+ * How long an origin's `robots.txt` is held, which is how often it is re-read. An origin
+ * that could not be reached is held for {@link FAILURE_TTL} instead, since it refuses
+ * every path until the next read.
+ */
 export const ROBOTS_TTL: DurationString = "24 hours";
 
 /**

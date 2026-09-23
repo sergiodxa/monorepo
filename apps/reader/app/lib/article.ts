@@ -11,6 +11,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Distill } from "@sdxc/distill";
+
 import { distill, fetchRobots } from "@sdxc/distill";
 import { currentLog } from "@sdxc/logger";
 import { isFailure, isSuccess } from "@sdxc/result";
@@ -84,10 +86,9 @@ function hostOf(url: string): string {
 /**
  * The origin's `robots.txt`, from the shared cache or from the origin itself.
  *
- * A `Disallow` is the only machine-readable "no" the web has, and honouring it costs one
- * read a day per origin rather than one per open. An origin that serves none, or that
- * could not be asked, permits everything — which is what a missing document has always
- * meant.
+ * One read a day per origin; an unreachable origin refuses everything and is re-read
+ * after a failed attempt's hour. An entry is a hit only when it carries a status, so an
+ * entry of any other shape is read again from the origin and replaced.
  */
 async function robotsFor(url: string): Promise<string | null> {
 	let origin: string;
@@ -97,13 +98,18 @@ async function robotsFor(url: string): Promise<string | null> {
 		return null;
 	}
 
-	let held = await articleCache().fetch<string | null>(
-		robotsKey(origin),
-		async () => await fetchRobots(origin, { userAgent: EXTRACTION_USER_AGENT }),
-		{ ttl: ROBOTS_TTL },
-	);
+	let cache = articleCache();
+	let key = robotsKey(origin);
 
-	return isSuccess(held) ? held.data : null;
+	let held = await cache.read<Distill.Robots>(key);
+	if (isSuccess(held) && typeof held.data?.status === "string") return held.data.source;
+
+	let robots = await fetchRobots(origin, { userAgent: EXTRACTION_USER_AGENT });
+	await cache.write(key, robots, {
+		ttl: robots.status === "unreachable" ? FAILURE_TTL : ROBOTS_TTL,
+	});
+
+	return robots.source;
 }
 
 /**
