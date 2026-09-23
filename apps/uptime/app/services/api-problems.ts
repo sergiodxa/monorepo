@@ -64,11 +64,11 @@ export function problemInstance(): string {
 
 /**
  * A `validation-error` problem for one field a schema accepted but the API still refuses,
- * such as a slug another page already holds, so it reports like any schema failure.
+ * such as an `endsAt` before its `startsAt`, so it reports like any schema failure.
  *
  * @param message - The reason, sent as both `detail` and the field's issue message.
  * @param pointer - JSON Pointer to the refused field; `""` names the request as a whole.
- * @example return invalidField("Slug is already in use", "/slug");
+ * @example return invalidField("endsAt must be after startsAt", "/endsAt");
  */
 export function invalidField(message: string, pointer = ""): Response {
 	return apiProblems.validationError({

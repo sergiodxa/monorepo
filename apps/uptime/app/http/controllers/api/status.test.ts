@@ -182,7 +182,27 @@ describe("GET /api/v1/status", () => {
 
 		let body = (await response.json()) as { data: { status: Record<string, unknown> } };
 		expect(body.data.status.overall).toBe("unknown");
-		expect(body.data.status.summary).toEqual({ total: 1, up: 0, down: 0, degraded: 0, unknown: 1 });
+		expect(body.data.status.summary).toEqual({ total: 0, up: 0, down: 0, degraded: 0, unknown: 0 });
+	});
+
+	test("counts every summary bucket over the enabled monitors, so they sum to total", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["monitors:read"]);
+		let up = await createMonitorRow(db, team.id, { name: "Up" });
+		await createMonitorResultRow(db, up.id, 200);
+		let disabledUp = await createMonitorRow(db, team.id, { name: "Paused", enabled_at: null });
+		await createMonitorResultRow(db, disabledUp.id, 200);
+		let disabledDown = await createMonitorRow(db, team.id, { name: "Off", enabled_at: null });
+		await createMonitorResultRow(db, disabledDown.id, 500);
+		await createMonitorRow(db, team.id, { name: "Never", enabled_at: null });
+
+		let body = (await (await dispatch(db, key)).json()) as {
+			data: { status: { overall: string; monitors: unknown[]; summary: unknown } };
+		};
+		expect(body.data.status.overall).toBe("operational");
+		expect(body.data.status.monitors).toHaveLength(4);
+		expect(body.data.status.summary).toEqual({ total: 1, up: 1, down: 0, degraded: 0, unknown: 0 });
 	});
 
 	test("reports unknown when the team has no monitors at all", async () => {

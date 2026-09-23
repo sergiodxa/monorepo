@@ -159,7 +159,10 @@ export default createAction(routes.api.cronJobPing, {
 		if (monitor.last_ping_at !== null && Date.now() - monitor.last_ping_at < RATE_LIMIT_MS) {
 			let retryAfter = Math.ceil((RATE_LIMIT_MS - (Date.now() - monitor.last_ping_at)) / 1000);
 			return apiProblems.rateLimited(
-				{ detail: "Rate limit exceeded. Max 1 ping per minute.", instance: problemInstance() },
+				{
+					detail: "Rate limit exceeded. Max 1 ping every 30 seconds.",
+					instance: problemInstance(),
+				},
 				{ headers: { "Retry-After": String(retryAfter) } },
 			);
 		}

@@ -24,7 +24,7 @@ import StatusPage from "~/app/data/status-page";
 import { serializeStatusPage } from "~/app/http/controllers/api/status-pages";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { apiProblems, invalidField, problemInstance } from "~/app/services/api-problems";
+import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { encodeId, typedId } from "~/app/services/typed-id";
 import { statusPageRoutes } from "~/routes/api-groups";
@@ -56,9 +56,9 @@ const UpdateStatusPageSchema = s.object({
 			),
 	),
 	title: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
-	description: s.optional(s.string().pipe(checks.maxLength(500))),
-	logoUrl: s.optional(s.string().pipe(checks.url())),
-	customDomain: s.optional(s.string().pipe(checks.minLength(1))),
+	description: s.optional(s.nullable(s.string().pipe(checks.maxLength(500)))),
+	logoUrl: s.optional(s.nullable(s.string().pipe(checks.url()))),
+	customDomain: s.optional(s.nullable(s.string().pipe(checks.minLength(1)))),
 	isPublic: s.optional(s.boolean()),
 	showOverallStatus: s.optional(s.boolean()),
 });
@@ -110,7 +110,10 @@ export default createController(statusPageRoutes, {
 					result.data.slug !== undefined &&
 					(await StatusPage.isSlugTaken(ctx.db, result.data.slug, existing.id))
 				) {
-					return invalidField("Slug is already in use", "/slug");
+					return apiProblems.conflict({
+						detail: "Slug is already in use",
+						instance: problemInstance(),
+					});
 				}
 
 				let changes: Partial<InsertStatusPage> = {};
@@ -176,7 +179,9 @@ export default createController(statusPageRoutes, {
 					});
 				}
 
-				let { monitorIds, cronJobIds } = result.data;
+				/** A repeated id names one attachment, so it is counted once when checking ownership. */
+				let monitorIds = [...new Set(result.data.monitorIds)];
+				let cronJobIds = [...new Set(result.data.cronJobIds)];
 
 				if (monitorIds.length > 0) {
 					let found = await Monitor.findManyByIdsForTeam(ctx.db, ctx.apiTeam.id, monitorIds);

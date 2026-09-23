@@ -85,7 +85,10 @@ export default createController(teamDomainsRoutes, {
 			},
 		},
 
-		/** POST /api/v1/team-domains — adds a domain for the team, pending verification. */
+		/**
+		 * POST /api/v1/team-domains — adds a domain for the team, pending verification. A
+		 * hostname the team already added, verified or not, answers 409 `conflict`.
+		 */
 		teamDomainsCreate: {
 			middleware: [requireApiKey("team-domains:write")],
 			handler: async (ctx) => {
@@ -94,6 +97,13 @@ export default createController(teamDomainsRoutes, {
 					return apiProblems.validationError({
 						instance: problemInstance(),
 						extensions: { errors: issuesFrom(result.error) },
+					});
+				}
+
+				if (await TeamDomain.findByHostnameForTeam(ctx.db, ctx.apiTeam.id, result.data.hostname)) {
+					return apiProblems.conflict({
+						detail: "This domain was already added to the team",
+						instance: problemInstance(),
 					});
 				}
 

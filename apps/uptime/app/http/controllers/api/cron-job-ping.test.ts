@@ -380,7 +380,8 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping", () => {
 		let response = await dispatch(db, ping(monitor.id, { key }));
 		expect(response.status).toBe(429);
 		expect(Number(response.headers.get("Retry-After"))).toBeGreaterThan(0);
-		await expectProblem(response, "rateLimited");
+		let problem = await expectProblem(response, "rateLimited");
+		expect(problem.detail).toBe("Rate limit exceeded. Max 1 ping every 30 seconds.");
 
 		let pings = await db.findMany(cronJobPings, { where: { cron_job_monitor_id: monitor.id } });
 		expect(pings).toHaveLength(0);

@@ -215,6 +215,35 @@ describe("POST /api/v1/team-domains", () => {
 		expect(created?.hostname).toBe("acme.example.com");
 	});
 
+	test("answers 409 conflict for a hostname the team already added", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["team-domains:write"]);
+		let request = {
+			method: "POST",
+			path: routes.api.v1.teamDomains.create.href(),
+			key,
+			body: { hostname: "acme.example.com" },
+		};
+
+		expect((await dispatch(db, request)).status).toBe(201);
+		await expectProblem(await dispatch(db, request), "conflict");
+		expect(await db.count(teamDomains, { where: { team_id: team.id } })).toBe(1);
+	});
+
+	test("adds a hostname another team already added", async () => {
+		let { db } = createTestDatabase();
+		let otherTeam = await createTeamRow(db);
+		let otherKey = await createApiKey(db, otherTeam.id, ["team-domains:write"]);
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["team-domains:write"]);
+		let body = { hostname: "shared.example.com" };
+		let path = routes.api.v1.teamDomains.create.href();
+
+		expect((await dispatch(db, { method: "POST", path, key: otherKey, body })).status).toBe(201);
+		expect((await dispatch(db, { method: "POST", path, key, body })).status).toBe(201);
+	});
+
 	test("returns a validation error for a blank hostname", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);

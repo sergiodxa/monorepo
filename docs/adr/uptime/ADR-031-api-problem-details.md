@@ -30,8 +30,13 @@ built from one catalog, `apiProblems` in `app/services/api-problems.ts`.
 - **Status per type.** A type always answers with the same status. `internal-error`, the one
   code that answered `400` for a server-side failure, now answers `500`.
 - **Validation.** `validation-error` carries an `errors` extension of `{ pointer, code, message }`
-  entries, filled from schema issues with `issuesFrom`. A refusal the schema cannot express (a
-  slug already taken, `endsAt` before `startsAt`) uses `invalidField`, which points at the field.
+  entries, filled from schema issues with `issuesFrom`. A refusal the schema cannot express
+  within the request itself (`endsAt` before `startsAt`) uses `invalidField`, which points at
+  the field.
+- **Conflicts.** A request that collides with existing state answers `409` `conflict`: a status
+  page slug already taken, an email the team already invited, a hostname the team already added,
+  revoking an invite already accepted, pinging a disabled cron job. The duplicate checks read the
+  existing row before writing, which D1 serves without an interactive transaction.
 - **Instance.** Each failure gets `instance: urn:uuid:<uuid>`, identifying the occurrence.
 - **Rate limits.** Both limiters answer with `rate-limited` through the middleware's `onLimit`,
   and the middleware keeps adding `Retry-After` and the quota headers. The per-monitor ping

@@ -22,7 +22,7 @@ import type { SelectStatusPage } from "~/database/schema";
 import StatusPage from "~/app/data/status-page";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { apiProblems, invalidField, problemInstance } from "~/app/services/api-problems";
+import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
@@ -118,7 +118,10 @@ export default createController(statusPagesRoutes, {
 				}
 
 				if (await StatusPage.isSlugTaken(ctx.db, result.data.slug)) {
-					return invalidField("Slug is already in use", "/slug");
+					return apiProblems.conflict({
+						detail: "Slug is already in use",
+						instance: problemInstance(),
+					});
 				}
 
 				let statusPage = await StatusPage.create(ctx.db, ctx.apiTeam.id, {

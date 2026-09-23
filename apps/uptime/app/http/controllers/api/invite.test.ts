@@ -83,7 +83,7 @@ describe("DELETE /api/v1/invites/:inviteId", () => {
 		expect(await Invite.findByIdForTeam(db, team.id, invite.id)).toBeNull();
 	});
 
-	test("returns 400 and does not delete an already-accepted invite", async () => {
+	test("answers 409 conflict and does not delete an already-accepted invite", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["invites:write"]);
@@ -95,8 +95,7 @@ describe("DELETE /api/v1/invites/:inviteId", () => {
 			destroyRequest(invite.id, { Authorization: `Bearer ${key}` }),
 		);
 
-		expect(response.status).toBe(400);
-		await expectProblem(response, "validationError");
+		await expectProblem(response, "conflict");
 		expect(await Invite.findByIdForTeam(db, team.id, invite.id)).not.toBeNull();
 	});
 

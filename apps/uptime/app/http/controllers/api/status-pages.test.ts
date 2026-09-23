@@ -249,7 +249,7 @@ describe("POST /api/v1/status-pages", () => {
 		expect(await db.count(statusPages, { where: { team_id: team.id } })).toBe(0);
 	});
 
-	test("returns a validation error when the slug is already taken by another team", async () => {
+	test("answers 409 conflict when the slug is already taken by another team", async () => {
 		let { db } = createTestDatabase();
 		let otherTeam = await createTeamRow(db);
 		await createStatusPageRow(db, otherTeam.id, { slug: "taken-slug" });
@@ -264,7 +264,7 @@ describe("POST /api/v1/status-pages", () => {
 			body: { name: "Acme Status", slug: "taken-slug" },
 		});
 
-		expect(response.status).toBe(400);
+		await expectProblem(response, "conflict");
 		expect(await db.count(statusPages, { where: { team_id: team.id } })).toBe(0);
 	});
 

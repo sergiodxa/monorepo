@@ -439,8 +439,8 @@ export default route({
 			},
 
 			/**
-			 * On the generic `monitors:read`/`:write` scopes, since no flow-specific pair is
-			 * grantable — a key that may reconfigure a monitor may reconfigure this one too.
+			 * Guarded by the `flow-monitors:read`/`:write` scopes, so a key grants flow access
+			 * separately from HTTP monitor access.
 			 */
 			flowMonitors: {
 				...resources("/api/v1/flow-monitors", {

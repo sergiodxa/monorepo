@@ -12,7 +12,7 @@ import { createAction } from "remix/router";
 import Invite from "~/app/data/invite";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { apiProblems, invalidField, problemInstance } from "~/app/services/api-problems";
+import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { typedId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
@@ -28,7 +28,10 @@ export const inviteDestroy = createAction(routes.api.v1.invites.destroy, {
 		if (!invite)
 			return apiProblems.notFound({ detail: "Invite not found", instance: problemInstance() });
 		if (invite.accepted_at !== null) {
-			return invalidField("This invite was already accepted.");
+			return apiProblems.conflict({
+				detail: "This invite was already accepted",
+				instance: problemInstance(),
+			});
 		}
 
 		await Invite.revoke(ctx.db, inviteId);

@@ -227,6 +227,38 @@ describe("POST /api/v1/invites", () => {
 		expect(created).not.toBeNull();
 	});
 
+	test("answers 409 conflict for an email the team already invited, pending or accepted", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["invites:write"]);
+		await Invite.create(db, team.id, team.owner_id, "pending@example.com");
+		let accepted = await Invite.create(db, team.id, team.owner_id, "accepted@example.com");
+		await Invite.accept(db, accepted.id, team.id, crypto.randomUUID());
+
+		for (let email of ["pending@example.com", "accepted@example.com"]) {
+			let response = await dispatch(
+				db,
+				createRequest({ email }, { Authorization: `Bearer ${key}` }),
+			);
+			await expectProblem(response, "conflict");
+		}
+		expect((await Invite.listByTeam(db, team.id)).length).toBe(2);
+	});
+
+	test("invites an email another team already invited", async () => {
+		let { db } = createTestDatabase();
+		let otherTeam = await createTeamRow(db);
+		await Invite.create(db, otherTeam.id, otherTeam.owner_id, "shared@example.com");
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["invites:write"]);
+
+		let response = await dispatch(
+			db,
+			createRequest({ email: "shared@example.com" }, { Authorization: `Bearer ${key}` }),
+		);
+		expect(response.status).toBe(201);
+	});
+
 	test("returns 400 for a validation failure (invalid email)", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);

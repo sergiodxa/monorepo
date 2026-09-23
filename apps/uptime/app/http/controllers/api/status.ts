@@ -86,11 +86,11 @@ export const statusShow = createAction(routes.api.v1.status, {
 				overall: overallStatus,
 				monitors: monitorStatuses,
 				summary: {
-					total: monitors.length,
-					up: monitorStatuses.filter((monitor) => monitor.status === "up").length,
+					total: enabledMonitors.length,
+					up: enabledMonitors.filter((monitor) => monitor.status === "up").length,
 					down: downMonitors.length,
 					degraded: degradedMonitors.length,
-					unknown: monitorStatuses.filter((monitor) => monitor.status === "unknown").length,
+					unknown: enabledMonitors.filter((monitor) => monitor.status === "unknown").length,
 				},
 			},
 		});

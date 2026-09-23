@@ -84,7 +84,10 @@ export default createController(invitesRoutes, {
 			},
 		},
 
-		/** POST /api/v1/invites — creates a pending invite for the team. */
+		/**
+		 * POST /api/v1/invites — creates a pending invite for the team. An email the team has
+		 * already invited, pending or accepted, answers 409 `conflict` and sends nothing.
+		 */
 		invitesCreate: {
 			middleware: [requireApiKey("invites:write")],
 			handler: async (ctx) => {
@@ -93,6 +96,13 @@ export default createController(invitesRoutes, {
 					return apiProblems.validationError({
 						instance: problemInstance(),
 						extensions: { errors: issuesFrom(result.error) },
+					});
+				}
+
+				if (await Invite.findByEmailForTeam(ctx.db, ctx.apiTeam.id, result.data.email)) {
+					return apiProblems.conflict({
+						detail: "An invite for this email already exists",
+						instance: problemInstance(),
 					});
 				}
 

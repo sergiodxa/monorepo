@@ -17,6 +17,7 @@ import type { ApiKeyScope } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { monitors, statusPageMonitors, statusPages, teams } from "~/database/schema";
 import { statusPageRoutes } from "~/routes/api-groups";
@@ -198,7 +199,32 @@ describe("PUT /api/v1/status-pages/:statusPageId", () => {
 		expect(updated?.name).toBe("Renamed Status");
 	});
 
-	test("returns a validation error for a slug already taken by another page", async () => {
+	test("clears description, logoUrl and customDomain when sent as null", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["status-pages:write"]);
+		let statusPage = await createStatusPageRow(db, team.id);
+		await db.update(statusPages, statusPage.id, {
+			description: "About",
+			logo_url: "https://example.com/logo.png",
+			custom_domain: "status.example.com",
+		});
+
+		let response = await dispatch(db, {
+			method: "PUT",
+			path: routes.api.v1.statusPages.update.href({ statusPageId: encodeId("sp", statusPage.id) }),
+			key,
+			body: { description: null, logoUrl: null, customDomain: null },
+		});
+
+		expect(response.status).toBe(200);
+		let cleared = await db.findOne(statusPages, { where: { id: statusPage.id } });
+		expect(cleared?.description).toBeNull();
+		expect(cleared?.logo_url).toBeNull();
+		expect(cleared?.custom_domain).toBeNull();
+	});
+
+	test("answers 409 conflict for a slug already taken by another page", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["status-pages:write"]);
@@ -212,7 +238,7 @@ describe("PUT /api/v1/status-pages/:statusPageId", () => {
 			body: { slug: "taken" },
 		});
 
-		expect(response.status).toBe(400);
+		await expectProblem(response, "conflict");
 		let unchanged = await db.findOne(statusPages, { where: { id: statusPage.id } });
 		expect(unchanged?.slug).toBe("mine");
 	});
@@ -328,6 +354,32 @@ describe("PUT /api/v1/status-pages/:statusPageId/monitors", () => {
 		let body = (await response.json()) as { data: { monitors: string[] } };
 		expect(body.data.monitors).toEqual([encodeId("mon", monitor.id)]);
 
+		let attached = await db.findMany(statusPageMonitors, {
+			where: { status_page_id: statusPage.id },
+		});
+		expect(attached.map((row) => row.monitor_id)).toEqual([monitor.id]);
+	});
+
+	test("attaches a monitor listed twice once", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["status-pages:write"]);
+		let statusPage = await createStatusPageRow(db, team.id);
+		let monitor = await createMonitorRow(db, team.id);
+		let id = encodeId("mon", monitor.id);
+
+		let response = await dispatch(db, {
+			method: "PUT",
+			path: routes.api.v1.statusPages.monitors.href({
+				statusPageId: encodeId("sp", statusPage.id),
+			}),
+			key,
+			body: { monitorIds: [id, id], cronJobIds: [] },
+		});
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as { data: { monitors: string[] } };
+		expect(body.data.monitors).toEqual([id]);
 		let attached = await db.findMany(statusPageMonitors, {
 			where: { status_page_id: statusPage.id },
 		});
