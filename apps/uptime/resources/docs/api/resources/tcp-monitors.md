@@ -78,6 +78,7 @@ curl -i "https://uptime.sergiodxa.com/api/v1/tcp-monitors?perPage=25" \
 | 400    | `bad-request`  | Invalid or malformed cursor               |
 | 401    | `unauthorized` | Missing or invalid API key                |
 | 403    | `forbidden`    | API key missing `tcp-monitors:read` scope |
+| 500    | `internal`     | A page of the list could not be read      |
 
 ### Response Schema
 
@@ -127,7 +128,7 @@ curl -i "https://uptime.sergiodxa.com/api/v1/tcp-monitors?perPage=25" \
 							"intervalSeconds": {
 								"type": "integer",
 								"description": "Check interval in seconds",
-								"minimum": 10,
+								"minimum": 60,
 								"maximum": 86400,
 								"default": 60
 							},
@@ -197,7 +198,7 @@ POST /api/v1/tcp-monitors
 | `host`            | string  | Yes      | Hostname or IP address (1-255 characters)                     |
 | `port`            | integer | Yes      | TCP port number (1-65535)                                     |
 | `timeoutMs`       | integer | No       | Connection timeout in milliseconds (100-60000, default: 5000) |
-| `intervalSeconds` | integer | No       | Check interval in seconds (10-86400, default: 60)             |
+| `intervalSeconds` | integer | No       | Check interval in seconds (60-86400, default: 60)             |
 | `isEnabled`       | boolean | No       | Whether the monitor is active (default: true)                 |
 
 ### cURL
@@ -220,18 +221,20 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors \
 ```json
 {
 	"data": {
-		"id": "tcpm_abc123",
-		"name": "PostgreSQL Production",
-		"host": "db.example.com",
-		"port": 5432,
-		"timeoutMs": 10000,
-		"intervalSeconds": 60,
-		"isEnabled": true,
-		"lastCheckedAt": null,
-		"lastStatus": null,
-		"lastResponseTimeMs": null,
-		"createdAt": "2026-02-14T12:00:00Z",
-		"updatedAt": "2026-02-14T12:00:00Z"
+		"monitor": {
+			"id": "tcpm_abc123",
+			"name": "PostgreSQL Production",
+			"host": "db.example.com",
+			"port": 5432,
+			"timeoutMs": 10000,
+			"intervalSeconds": 60,
+			"isEnabled": true,
+			"lastCheckedAt": null,
+			"lastStatus": null,
+			"lastResponseTimeMs": null,
+			"createdAt": 1771070400000,
+			"updatedAt": 1771070400000
+		}
 	}
 }
 ```
@@ -279,7 +282,7 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors \
 		"intervalSeconds": {
 			"type": "integer",
 			"description": "Check interval in seconds",
-			"minimum": 10,
+			"minimum": 60,
 			"maximum": 86400,
 			"default": 60
 		},
@@ -289,8 +292,7 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors \
 			"default": true
 		}
 	},
-	"required": ["name", "host", "port"],
-	"additionalProperties": false
+	"required": ["name", "host", "port"]
 }
 ```
 
@@ -337,7 +339,7 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors \
 				"intervalSeconds": {
 					"type": "integer",
 					"description": "Check interval in seconds",
-					"minimum": 10,
+					"minimum": 60,
 					"maximum": 86400,
 					"default": 60
 				},
@@ -347,9 +349,8 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors \
 					"default": true
 				},
 				"lastCheckedAt": {
-					"type": ["string", "null"],
-					"format": "date-time",
-					"description": "Timestamp of the last check"
+					"type": ["integer", "null"],
+					"description": "When the last check ran, in milliseconds since the epoch"
 				},
 				"lastStatus": {
 					"type": ["string", "null"],
@@ -361,14 +362,12 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors \
 					"description": "Response time from the last check in milliseconds"
 				},
 				"createdAt": {
-					"type": "string",
-					"format": "date-time",
-					"description": "Timestamp when the monitor was created"
+					"type": "integer",
+					"description": "When the monitor was created, in milliseconds since the epoch"
 				},
 				"updatedAt": {
-					"type": "string",
-					"format": "date-time",
-					"description": "Timestamp when the monitor was last updated"
+					"type": "integer",
+					"description": "When the monitor was last updated, in milliseconds since the epoch"
 				}
 			},
 			"required": [
@@ -410,29 +409,32 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123 \
 ```json
 {
 	"data": {
-		"id": "tcpm_abc123",
-		"name": "PostgreSQL Production",
-		"host": "db.example.com",
-		"port": 5432,
-		"timeoutMs": 5000,
-		"intervalSeconds": 60,
-		"isEnabled": true,
-		"lastCheckedAt": "2026-02-14T12:00:00Z",
-		"lastStatus": "up",
-		"lastResponseTimeMs": 45,
-		"createdAt": "2026-01-15T10:30:00Z",
-		"updatedAt": "2026-02-10T14:20:00Z"
+		"monitor": {
+			"id": "tcpm_abc123",
+			"name": "PostgreSQL Production",
+			"host": "db.example.com",
+			"port": 5432,
+			"timeoutMs": 5000,
+			"intervalSeconds": 60,
+			"isEnabled": true,
+			"lastCheckedAt": 1771070400000,
+			"lastStatus": "up",
+			"lastResponseTimeMs": 45,
+			"createdAt": 1768473000000,
+			"updatedAt": 1770733200000
+		}
 	}
 }
 ```
 
 ### Errors
 
-| Status | Type           | Description                               |
-| ------ | -------------- | ----------------------------------------- |
-| 401    | `unauthorized` | Missing or invalid API key                |
-| 403    | `forbidden`    | API key missing `tcp-monitors:read` scope |
-| 404    | `not-found`    | TCP monitor not found                     |
+| Status | Type               | Description                               |
+| ------ | ------------------ | ----------------------------------------- |
+| 400    | `validation-error` | Malformed TCP monitor id                  |
+| 401    | `unauthorized`     | Missing or invalid API key                |
+| 403    | `forbidden`        | API key missing `tcp-monitors:read` scope |
+| 404    | `not-found`        | TCP monitor not found                     |
 
 ### Response Schema
 
@@ -477,7 +479,7 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123 \
 				"intervalSeconds": {
 					"type": "integer",
 					"description": "Check interval in seconds",
-					"minimum": 10,
+					"minimum": 60,
 					"maximum": 86400,
 					"default": 60
 				},
@@ -487,9 +489,8 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123 \
 					"default": true
 				},
 				"lastCheckedAt": {
-					"type": ["string", "null"],
-					"format": "date-time",
-					"description": "Timestamp of the last check"
+					"type": ["integer", "null"],
+					"description": "When the last check ran, in milliseconds since the epoch"
 				},
 				"lastStatus": {
 					"type": ["string", "null"],
@@ -501,14 +502,12 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123 \
 					"description": "Response time from the last check in milliseconds"
 				},
 				"createdAt": {
-					"type": "string",
-					"format": "date-time",
-					"description": "Timestamp when the monitor was created"
+					"type": "integer",
+					"description": "When the monitor was created, in milliseconds since the epoch"
 				},
 				"updatedAt": {
-					"type": "string",
-					"format": "date-time",
-					"description": "Timestamp when the monitor was last updated"
+					"type": "integer",
+					"description": "When the monitor was last updated, in milliseconds since the epoch"
 				}
 			},
 			"required": [
@@ -546,7 +545,7 @@ PUT /api/v1/tcp-monitors/:id
 | `host`            | string  | No       | Hostname or IP address (1-255 characters)      |
 | `port`            | integer | No       | TCP port number (1-65535)                      |
 | `timeoutMs`       | integer | No       | Connection timeout in milliseconds (100-60000) |
-| `intervalSeconds` | integer | No       | Check interval in seconds (10-86400)           |
+| `intervalSeconds` | integer | No       | Check interval in seconds (60-86400)           |
 | `isEnabled`       | boolean | No       | Whether the monitor is active                  |
 
 ### cURL
@@ -567,18 +566,20 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123 \
 ```json
 {
 	"data": {
-		"id": "tcpm_abc123",
-		"name": "PostgreSQL Production",
-		"host": "db.example.com",
-		"port": 5432,
-		"timeoutMs": 15000,
-		"intervalSeconds": 60,
-		"isEnabled": false,
-		"lastCheckedAt": "2026-02-14T12:00:00Z",
-		"lastStatus": "up",
-		"lastResponseTimeMs": 45,
-		"createdAt": "2026-01-15T10:30:00Z",
-		"updatedAt": "2026-02-14T12:30:00Z"
+		"monitor": {
+			"id": "tcpm_abc123",
+			"name": "PostgreSQL Production",
+			"host": "db.example.com",
+			"port": 5432,
+			"timeoutMs": 15000,
+			"intervalSeconds": 60,
+			"isEnabled": false,
+			"lastCheckedAt": 1771070400000,
+			"lastStatus": "up",
+			"lastResponseTimeMs": 45,
+			"createdAt": 1768473000000,
+			"updatedAt": 1771072200000
+		}
 	}
 }
 ```
@@ -587,6 +588,7 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123 \
 
 | Status | Type               | Description                                |
 | ------ | ------------------ | ------------------------------------------ |
+| 400    | `validation-error` | Malformed TCP monitor id                   |
 | 400    | `validation-error` | Invalid request body                       |
 | 401    | `unauthorized`     | Missing or invalid API key                 |
 | 403    | `forbidden`        | API key missing `tcp-monitors:write` scope |
@@ -626,15 +628,14 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123 \
 		"intervalSeconds": {
 			"type": "integer",
 			"description": "Check interval in seconds",
-			"minimum": 10,
+			"minimum": 60,
 			"maximum": 86400
 		},
 		"isEnabled": {
 			"type": "boolean",
 			"description": "Whether the monitor is active"
 		}
-	},
-	"additionalProperties": false
+	}
 }
 ```
 
@@ -681,7 +682,7 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123 \
 				"intervalSeconds": {
 					"type": "integer",
 					"description": "Check interval in seconds",
-					"minimum": 10,
+					"minimum": 60,
 					"maximum": 86400,
 					"default": 60
 				},
@@ -691,9 +692,8 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123 \
 					"default": true
 				},
 				"lastCheckedAt": {
-					"type": ["string", "null"],
-					"format": "date-time",
-					"description": "Timestamp of the last check"
+					"type": ["integer", "null"],
+					"description": "When the last check ran, in milliseconds since the epoch"
 				},
 				"lastStatus": {
 					"type": ["string", "null"],
@@ -705,14 +705,12 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123 \
 					"description": "Response time from the last check in milliseconds"
 				},
 				"createdAt": {
-					"type": "string",
-					"format": "date-time",
-					"description": "Timestamp when the monitor was created"
+					"type": "integer",
+					"description": "When the monitor was created, in milliseconds since the epoch"
 				},
 				"updatedAt": {
-					"type": "string",
-					"format": "date-time",
-					"description": "Timestamp when the monitor was last updated"
+					"type": "integer",
+					"description": "When the monitor was last updated, in milliseconds since the epoch"
 				}
 			},
 			"required": [
@@ -752,19 +750,18 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123 \
 
 ### Response
 
-Returns `204 No Content` on success with no response body.
+```json
+{ "data": { "deleted": true } }
+```
 
 ### Errors
 
-| Status | Type           | Description                                |
-| ------ | -------------- | ------------------------------------------ |
-| 401    | `unauthorized` | Missing or invalid API key                 |
-| 403    | `forbidden`    | API key missing `tcp-monitors:write` scope |
-| 404    | `not-found`    | TCP monitor not found                      |
-
-### Response Schema
-
-Returns `204 No Content` with no response body on success.
+| Status | Type               | Description                                |
+| ------ | ------------------ | ------------------------------------------ |
+| 400    | `validation-error` | Malformed TCP monitor id                   |
+| 401    | `unauthorized`     | Missing or invalid API key                 |
+| 403    | `forbidden`        | API key missing `tcp-monitors:write` scope |
+| 404    | `not-found`        | TCP monitor not found                      |
 
 ## Get Check Results
 
@@ -835,12 +832,14 @@ curl -i "https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123/results?pe
 
 ### Errors
 
-| Status | Type           | Description                               |
-| ------ | -------------- | ----------------------------------------- |
-| 400    | `bad-request`  | Invalid or malformed cursor               |
-| 401    | `unauthorized` | Missing or invalid API key                |
-| 403    | `forbidden`    | API key missing `tcp-monitors:read` scope |
-| 404    | `not-found`    | TCP monitor not found                     |
+| Status | Type               | Description                               |
+| ------ | ------------------ | ----------------------------------------- |
+| 400    | `validation-error` | Malformed TCP monitor id                  |
+| 400    | `bad-request`      | Invalid or malformed cursor               |
+| 401    | `unauthorized`     | Missing or invalid API key                |
+| 403    | `forbidden`        | API key missing `tcp-monitors:read` scope |
+| 404    | `not-found`        | TCP monitor not found                     |
+| 500    | `internal`         | A page of the list could not be read      |
 
 ### Response Schema
 

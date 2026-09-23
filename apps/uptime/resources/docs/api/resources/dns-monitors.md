@@ -177,6 +177,7 @@ curl "https://uptime.sergiodxa.com/api/v1/dns-monitors?perPage=25" \
 | 400    | `bad-request`  | Invalid or malformed cursor             |
 | 401    | `unauthorized` | Missing or invalid API key              |
 | 403    | `forbidden`    | API key lacks `dns-monitors:read` scope |
+| 500    | `internal`     | A page of the list could not be read    |
 
 ## Create a DNS Monitor
 
@@ -398,11 +399,12 @@ curl https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123 \
 
 ### Errors
 
-| Status | Type           | Description                             |
-| ------ | -------------- | --------------------------------------- |
-| 401    | `unauthorized` | Missing or invalid API key              |
-| 403    | `forbidden`    | API key lacks `dns-monitors:read` scope |
-| 404    | `not-found`    | DNS monitor not found                   |
+| Status | Type               | Description                             |
+| ------ | ------------------ | --------------------------------------- |
+| 400    | `validation-error` | Malformed DNS monitor id                |
+| 401    | `unauthorized`     | Missing or invalid API key              |
+| 403    | `forbidden`        | API key lacks `dns-monitors:read` scope |
+| 404    | `not-found`        | DNS monitor not found                   |
 
 ## Update a DNS Monitor
 
@@ -462,6 +464,7 @@ curl https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123 \
 
 | Status | Type               | Description                              |
 | ------ | ------------------ | ---------------------------------------- |
+| 400    | `validation-error` | Malformed DNS monitor id                 |
 | 400    | `validation-error` | Invalid request body                     |
 | 401    | `unauthorized`     | Missing or invalid API key               |
 | 403    | `forbidden`        | API key lacks `dns-monitors:write` scope |
@@ -508,11 +511,12 @@ curl https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123 \
 
 ### Errors
 
-| Status | Type           | Description                              |
-| ------ | -------------- | ---------------------------------------- |
-| 401    | `unauthorized` | Missing or invalid API key               |
-| 403    | `forbidden`    | API key lacks `dns-monitors:write` scope |
-| 404    | `not-found`    | DNS monitor not found                    |
+| Status | Type               | Description                              |
+| ------ | ------------------ | ---------------------------------------- |
+| 400    | `validation-error` | Malformed DNS monitor id                 |
+| 401    | `unauthorized`     | Missing or invalid API key               |
+| 403    | `forbidden`        | API key lacks `dns-monitors:write` scope |
+| 404    | `not-found`        | DNS monitor not found                    |
 
 ## Get DNS Monitor Results
 
@@ -578,12 +582,14 @@ A value edited inside a record set holding several values reads as one missing r
 
 ### Errors
 
-| Status | Type           | Description                             |
-| ------ | -------------- | --------------------------------------- |
-| 400    | `bad-request`  | Invalid or malformed cursor             |
-| 401    | `unauthorized` | Missing or invalid API key              |
-| 403    | `forbidden`    | API key lacks `dns-monitors:read` scope |
-| 404    | `not-found`    | DNS monitor not found                   |
+| Status | Type               | Description                             |
+| ------ | ------------------ | --------------------------------------- |
+| 400    | `validation-error` | Malformed DNS monitor id                |
+| 400    | `bad-request`      | Invalid or malformed cursor             |
+| 401    | `unauthorized`     | Missing or invalid API key              |
+| 403    | `forbidden`        | API key lacks `dns-monitors:read` scope |
+| 404    | `not-found`        | DNS monitor not found                   |
+| 500    | `internal`         | A page of the list could not be read    |
 
 ### Response Schema
 
@@ -762,12 +768,14 @@ Timestamps are epoch milliseconds.
 
 ### Errors
 
-| Status | Type           | Description                             |
-| ------ | -------------- | --------------------------------------- |
-| 400    | `bad-request`  | Invalid or malformed cursor             |
-| 401    | `unauthorized` | Missing or invalid API key              |
-| 403    | `forbidden`    | API key lacks `dns-monitors:read` scope |
-| 404    | `not-found`    | DNS monitor not found                   |
+| Status | Type               | Description                             |
+| ------ | ------------------ | --------------------------------------- |
+| 400    | `validation-error` | Malformed DNS monitor id                |
+| 400    | `bad-request`      | Invalid or malformed cursor             |
+| 401    | `unauthorized`     | Missing or invalid API key              |
+| 403    | `forbidden`        | API key lacks `dns-monitors:read` scope |
+| 404    | `not-found`        | DNS monitor not found                   |
+| 500    | `internal`         | A page of the list could not be read    |
 
 A monitor belonging to another team returns `404`, not `403`: a `403` would confirm the id
 names a real monitor somebody else owns.
@@ -935,6 +943,7 @@ enabled it. Declining a record never changes its `status`.
 
 | Status | Type               | Description                                                         |
 | ------ | ------------------ | ------------------------------------------------------------------- |
+| 400    | `validation-error` | Malformed DNS monitor id or record id                               |
 | 400    | `validation-error` | `isEnabled` missing or not a boolean, or an unaccepted key was sent |
 | 401    | `unauthorized`     | Missing or invalid API key                                          |
 | 403    | `forbidden`        | API key lacks `dns-monitors:write` scope                            |

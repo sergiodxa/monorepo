@@ -102,13 +102,12 @@ Webhook URLs and secrets stay out of `config`, so a webhook or Discord alert rep
 
 ### Possible Errors
 
-| Status | Type             | Description                              |
-| ------ | ---------------- | ---------------------------------------- |
-| 400    | `bad-request`    | Invalid or malformed cursor              |
-| 401    | `unauthorized`   | Missing or invalid API key               |
-| 403    | `forbidden`      | API key doesn't have `alerts:read` scope |
-| 429    | `rate-limited`   | Too many requests                        |
-| 500    | `internal-error` | Server error                             |
+| Status | Type           | Description                                             |
+| ------ | -------------- | ------------------------------------------------------- |
+| 400    | `bad-request`  | Invalid or malformed cursor, or `perPage` outside 1-200 |
+| 401    | `unauthorized` | Missing or invalid API key                              |
+| 403    | `forbidden`    | API key doesn't have `alerts:read` scope                |
+| 500    | `internal`     | The page of results could not be read                   |
 
 ### Response Schema
 
@@ -177,7 +176,7 @@ Webhook URLs and secrets stay out of `config`, so a webhook or Discord alert rep
 							},
 							"monitorType": {
 								"type": ["string", "null"],
-								"enum": ["http", "dns", "tcp", "cron", null]
+								"enum": ["http", "dns", "tcp", "cron", "flow", null]
 							},
 							"monitorId": {
 								"type": ["string", "null"]
@@ -239,35 +238,35 @@ Creates a new alert. The request body varies based on the notification strategy.
 
 ### Common Fields
 
-| Field              | Type    | Required | Description                                                                                                                                                                                                                       |
-| ------------------ | ------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`             | string  | Yes      | Display name for the alert                                                                                                                                                                                                        |
-| `strategy`         | string  | Yes      | One of: `email`, `webhook`, `slack`, `discord`                                                                                                                                                                                    |
-| `notifyOnRecovery` | boolean | No       | Send notification when monitor recovers (default: `true`)                                                                                                                                                                         |
-| `cooldownMinutes`  | integer | No       | Minutes between repeat notifications while a monitor stays broken, 0-1440 (default: `60`; repeats are floored at 5 minutes, and the first notification of an outage is never delayed — see [Repeat Behaviour](#repeat-behaviour)) |
-| `monitorType`      | string  | No       | Limit the alert to one kind of monitor: `http`, `dns`, `tcp` or `cron`. Sent on its own, the alert covers every monitor of that kind, including ones created later.                                                               |
-| `monitorId`        | string  | No       | Limit the alert to a single monitor. Sent together with `monitorType`, the id is looked up in that kind's monitors; sent on its own it is read as an HTTP monitor, which is what it has always meant.                             |
+| Field              | Type    | Required | Description                                                                                                                                                                                                                                                                                      |
+| ------------------ | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `name`             | string  | Yes      | Display name for the alert, 1-255 characters                                                                                                                                                                                                                                                     |
+| `strategy`         | string  | Yes      | One of: `email`, `webhook`, `slack`, `discord`                                                                                                                                                                                                                                                   |
+| `notifyOnRecovery` | boolean | No       | Send notification when monitor recovers (default: `true`)                                                                                                                                                                                                                                        |
+| `cooldownMinutes`  | integer | No       | Minutes between repeat notifications while a monitor stays broken, 0-1440 (default: `60`; repeats are floored at 5 minutes, and the first notification of an outage is never delayed — see [Repeat Behaviour](#repeat-behaviour))                                                                |
+| `monitorType`      | string  | No       | Limit the alert to one kind of monitor: `http`, `dns`, `tcp`, `cron` or `flow`. Sent on its own, the alert covers every monitor of that kind, including ones created later.                                                                                                                      |
+| `monitorId`        | string  | No       | Limit the alert to a single monitor. Sent together with `monitorType`, the id is looked up in that kind's monitors; sent on its own it is read as an HTTP monitor, which is what it has always meant. The id carries the prefix of its kind: `mon_` (HTTP), `dns_`, `tcpm_`, `cron_` or `flow_`. |
 
 ### Strategy: Email
 
-| Field           | Type   | Required | Description                    |
-| --------------- | ------ | -------- | ------------------------------ |
-| `email`         | string | Yes      | Email address to notify        |
-| `subjectPrefix` | string | No       | Prefix for email subject lines |
+| Field           | Type   | Required | Description                                          |
+| --------------- | ------ | -------- | ---------------------------------------------------- |
+| `email`         | string | Yes      | Email address to notify                              |
+| `subjectPrefix` | string | No       | Prefix for email subject lines, up to 100 characters |
 
 ### Strategy: Webhook
 
-| Field    | Type   | Required | Description                            |
-| -------- | ------ | -------- | -------------------------------------- |
-| `url`    | string | Yes      | Webhook URL to POST notifications to   |
-| `secret` | string | No       | Secret for HMAC signature verification |
+| Field    | Type   | Required | Description                                                  |
+| -------- | ------ | -------- | ------------------------------------------------------------ |
+| `url`    | string | Yes      | Webhook URL to POST notifications to                         |
+| `secret` | string | No       | Secret for HMAC signature verification, up to 255 characters |
 
 ### Strategy: Slack
 
-| Field        | Type   | Required | Description                  |
-| ------------ | ------ | -------- | ---------------------------- |
-| `webhookUrl` | string | Yes      | Slack incoming webhook URL   |
-| `channel`    | string | No       | Override the default channel |
+| Field        | Type   | Required | Description                                        |
+| ------------ | ------ | -------- | -------------------------------------------------- |
+| `webhookUrl` | string | Yes      | Slack incoming webhook URL                         |
+| `channel`    | string | No       | Override the default channel, up to 100 characters |
 
 ### Strategy: Discord
 
@@ -342,30 +341,39 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
 
 ### Response
 
+Returns `201 Created`. The alert's `config` reports only its `strategy`.
+
 ```json
 {
-	"id": "alt_abc123",
-	"name": "Team Email Alert",
-	"strategy": "email",
-	"notifyOnRecovery": true,
-	"cooldownMinutes": 5,
-	"monitorType": null,
-	"monitorId": null,
-	"createdAt": "2026-02-14T12:00:00Z",
-	"updatedAt": "2026-02-14T12:00:00Z"
+	"data": {
+		"alert": {
+			"id": "alt_abc123",
+			"name": "Team Email Alert",
+			"notifyOnRecovery": true,
+			"cooldownMinutes": 5,
+			"monitorType": null,
+			"monitorId": null,
+			"config": { "strategy": "email" },
+			"createdAt": 1771070400000,
+			"updatedAt": 1771070400000
+		}
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z"
+	}
 }
 ```
 
 ### Possible Errors
 
-| Status | Type               | Description                                     |
-| ------ | ------------------ | ----------------------------------------------- |
-| 400    | `validation-error` | Invalid request body or missing required fields |
-| 401    | `unauthorized`     | Missing or invalid API key                      |
-| 403    | `forbidden`        | API key doesn't have `alerts:write` scope       |
-| 400    | `limit-exceeded`   | Team already has 10 alerts                      |
-| 429    | `rate-limited`     | Too many requests                               |
-| 500    | `internal-error`   | Server error                                    |
+| Status | Type               | Description                                            |
+| ------ | ------------------ | ------------------------------------------------------ |
+| 400    | `validation-error` | Invalid request body or missing required fields        |
+| 400    | `limit-exceeded`   | Team already has 10 alerts                             |
+| 401    | `unauthorized`     | Missing or invalid API key                             |
+| 403    | `forbidden`        | API key doesn't have `alerts:write` scope              |
+| 404    | `not-found`        | `monitorId` names no monitor of that kind in your team |
 
 ### Request Body Schema (Email)
 
@@ -378,7 +386,7 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
 		"name": {
 			"type": "string",
 			"minLength": 1,
-			"maxLength": 100
+			"maxLength": 255
 		},
 		"strategy": {
 			"const": "email"
@@ -389,7 +397,7 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
 		},
 		"subjectPrefix": {
 			"type": "string",
-			"maxLength": 50
+			"maxLength": 100
 		},
 		"notifyOnRecovery": {
 			"type": "boolean",
@@ -403,11 +411,11 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
 		},
 		"monitorType": {
 			"type": "string",
-			"enum": ["http", "dns", "tcp", "cron"]
+			"enum": ["http", "dns", "tcp", "cron", "flow"]
 		},
 		"monitorId": {
 			"type": "string",
-			"pattern": "^mon_[a-zA-Z0-9]+$"
+			"pattern": "^(mon|dns|tcpm|cron|flow)_[a-zA-Z0-9]+$"
 		}
 	}
 }
@@ -424,7 +432,7 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
 		"name": {
 			"type": "string",
 			"minLength": 1,
-			"maxLength": 100
+			"maxLength": 255
 		},
 		"strategy": {
 			"const": "webhook"
@@ -434,7 +442,8 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
 			"format": "uri"
 		},
 		"secret": {
-			"type": "string"
+			"type": "string",
+			"maxLength": 255
 		},
 		"notifyOnRecovery": {
 			"type": "boolean",
@@ -448,11 +457,11 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
 		},
 		"monitorType": {
 			"type": "string",
-			"enum": ["http", "dns", "tcp", "cron"]
+			"enum": ["http", "dns", "tcp", "cron", "flow"]
 		},
 		"monitorId": {
 			"type": "string",
-			"pattern": "^mon_[a-zA-Z0-9]+$"
+			"pattern": "^(mon|dns|tcpm|cron|flow)_[a-zA-Z0-9]+$"
 		}
 	}
 }
@@ -469,7 +478,7 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
 		"name": {
 			"type": "string",
 			"minLength": 1,
-			"maxLength": 100
+			"maxLength": 255
 		},
 		"strategy": {
 			"const": "slack"
@@ -479,7 +488,8 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
 			"format": "uri"
 		},
 		"channel": {
-			"type": "string"
+			"type": "string",
+			"maxLength": 100
 		},
 		"notifyOnRecovery": {
 			"type": "boolean",
@@ -493,11 +503,11 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
 		},
 		"monitorType": {
 			"type": "string",
-			"enum": ["http", "dns", "tcp", "cron"]
+			"enum": ["http", "dns", "tcp", "cron", "flow"]
 		},
 		"monitorId": {
 			"type": "string",
-			"pattern": "^mon_[a-zA-Z0-9]+$"
+			"pattern": "^(mon|dns|tcpm|cron|flow)_[a-zA-Z0-9]+$"
 		}
 	}
 }
@@ -514,7 +524,7 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
 		"name": {
 			"type": "string",
 			"minLength": 1,
-			"maxLength": 100
+			"maxLength": 255
 		},
 		"strategy": {
 			"const": "discord"
@@ -535,11 +545,11 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
 		},
 		"monitorType": {
 			"type": "string",
-			"enum": ["http", "dns", "tcp", "cron"]
+			"enum": ["http", "dns", "tcp", "cron", "flow"]
 		},
 		"monitorId": {
 			"type": "string",
-			"pattern": "^mon_[a-zA-Z0-9]+$"
+			"pattern": "^(mon|dns|tcpm|cron|flow)_[a-zA-Z0-9]+$"
 		}
 	}
 }
@@ -551,53 +561,84 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": [
-		"id",
-		"name",
-		"strategy",
-		"notifyOnRecovery",
-		"cooldownMinutes",
-		"monitorId",
-		"createdAt",
-		"updatedAt"
-	],
+	"required": ["data", "meta"],
 	"properties": {
-		"id": {
-			"type": "string",
-			"pattern": "^alt_[a-zA-Z0-9]+$"
+		"data": {
+			"type": "object",
+			"required": ["alert"],
+			"properties": {
+				"alert": {
+					"type": "object",
+					"required": [
+						"id",
+						"name",
+						"notifyOnRecovery",
+						"cooldownMinutes",
+						"config",
+						"monitorType",
+						"monitorId",
+						"createdAt",
+						"updatedAt"
+					],
+					"properties": {
+						"id": {
+							"type": "string",
+							"pattern": "^alt_[a-zA-Z0-9]+$"
+						},
+						"name": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 255
+						},
+						"notifyOnRecovery": {
+							"type": "boolean"
+						},
+						"cooldownMinutes": {
+							"type": "integer",
+							"minimum": 0,
+							"maximum": 1440
+						},
+						"config": {
+							"type": "object",
+							"required": ["strategy"],
+							"properties": {
+								"strategy": {
+									"type": "string",
+									"enum": ["email", "webhook", "slack", "discord"]
+								}
+							}
+						},
+						"monitorType": {
+							"type": ["string", "null"],
+							"enum": ["http", "dns", "tcp", "cron", "flow", null]
+						},
+						"monitorId": {
+							"type": ["string", "null"],
+							"pattern": "^(mon|dns|tcpm|cron|flow)_[a-zA-Z0-9]+$"
+						},
+						"createdAt": {
+							"type": "integer"
+						},
+						"updatedAt": {
+							"type": "integer"
+						}
+					}
+				}
+			}
 		},
-		"name": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 100
-		},
-		"strategy": {
-			"type": "string",
-			"enum": ["email", "webhook", "slack", "discord"]
-		},
-		"notifyOnRecovery": {
-			"type": "boolean"
-		},
-		"cooldownMinutes": {
-			"type": "integer",
-			"minimum": 0,
-			"maximum": 1440
-		},
-		"monitorType": {
-			"type": ["string", "null"],
-			"enum": ["http", "dns", "tcp", "cron", null]
-		},
-		"monitorId": {
-			"type": ["string", "null"],
-			"pattern": "^mon_[a-zA-Z0-9]+$"
-		},
-		"createdAt": {
-			"type": "string",
-			"format": "date-time"
-		},
-		"updatedAt": {
-			"type": "string",
-			"format": "date-time"
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": {
+					"type": "string",
+					"format": "uuid"
+				},
+				"timestamp": {
+					"type": "string",
+					"format": "date-time"
+				}
+			}
 		}
 	}
 }
@@ -624,27 +665,40 @@ curl https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123 \
 
 ```json
 {
-	"id": "alt_abc123",
-	"name": "Team Email Alert",
-	"strategy": "email",
-	"notifyOnRecovery": true,
-	"cooldownMinutes": 5,
-	"monitorType": null,
-	"monitorId": null,
-	"createdAt": "2026-02-14T12:00:00Z",
-	"updatedAt": "2026-02-14T12:00:00Z"
+	"data": {
+		"alert": {
+			"id": "alt_abc123",
+			"name": "Team Email Alert",
+			"notifyOnRecovery": true,
+			"cooldownMinutes": 5,
+			"monitorType": null,
+			"monitorId": null,
+			"config": {
+				"strategy": "email",
+				"to": "alerts@example.com",
+				"subjectPrefix": "[Uptime]"
+			},
+			"createdAt": 1771070400000,
+			"updatedAt": 1771070400000
+		}
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z"
+	}
 }
 ```
 
+Webhook URLs and secrets stay out of `config`, so a webhook or Discord alert reports only its `strategy`.
+
 ### Possible Errors
 
-| Status | Type             | Description                              |
-| ------ | ---------------- | ---------------------------------------- |
-| 401    | `unauthorized`   | Missing or invalid API key               |
-| 403    | `forbidden`      | API key doesn't have `alerts:read` scope |
-| 404    | `not-found`      | Alert not found                          |
-| 429    | `rate-limited`   | Too many requests                        |
-| 500    | `internal-error` | Server error                             |
+| Status | Type               | Description                              |
+| ------ | ------------------ | ---------------------------------------- |
+| 400    | `validation-error` | Malformed alert id                       |
+| 401    | `unauthorized`     | Missing or invalid API key               |
+| 403    | `forbidden`        | API key doesn't have `alerts:read` scope |
+| 404    | `not-found`        | Alert not found                          |
 
 ### Response Schema
 
@@ -652,53 +706,94 @@ curl https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123 \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": [
-		"id",
-		"name",
-		"strategy",
-		"notifyOnRecovery",
-		"cooldownMinutes",
-		"monitorId",
-		"createdAt",
-		"updatedAt"
-	],
+	"required": ["data", "meta"],
 	"properties": {
-		"id": {
-			"type": "string",
-			"pattern": "^alt_[a-zA-Z0-9]+$"
+		"data": {
+			"type": "object",
+			"required": ["alert"],
+			"properties": {
+				"alert": {
+					"type": "object",
+					"required": [
+						"id",
+						"name",
+						"notifyOnRecovery",
+						"cooldownMinutes",
+						"config",
+						"monitorType",
+						"monitorId",
+						"createdAt",
+						"updatedAt"
+					],
+					"properties": {
+						"id": {
+							"type": "string",
+							"pattern": "^alt_[a-zA-Z0-9]+$"
+						},
+						"name": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 255
+						},
+						"notifyOnRecovery": {
+							"type": "boolean"
+						},
+						"cooldownMinutes": {
+							"type": "integer",
+							"minimum": 0,
+							"maximum": 1440
+						},
+						"config": {
+							"type": "object",
+							"required": ["strategy"],
+							"properties": {
+								"strategy": {
+									"type": "string",
+									"enum": ["email", "webhook", "slack", "discord"]
+								},
+								"to": {
+									"type": "string",
+									"format": "email"
+								},
+								"subjectPrefix": {
+									"type": "string"
+								},
+								"channel": {
+									"type": ["string", "null"]
+								}
+							}
+						},
+						"monitorType": {
+							"type": ["string", "null"],
+							"enum": ["http", "dns", "tcp", "cron", "flow", null]
+						},
+						"monitorId": {
+							"type": ["string", "null"],
+							"pattern": "^(mon|dns|tcpm|cron|flow)_[a-zA-Z0-9]+$"
+						},
+						"createdAt": {
+							"type": "integer"
+						},
+						"updatedAt": {
+							"type": "integer"
+						}
+					}
+				}
+			}
 		},
-		"name": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 100
-		},
-		"strategy": {
-			"type": "string",
-			"enum": ["email", "webhook", "slack", "discord"]
-		},
-		"notifyOnRecovery": {
-			"type": "boolean"
-		},
-		"cooldownMinutes": {
-			"type": "integer",
-			"minimum": 0,
-			"maximum": 1440
-		},
-		"monitorType": {
-			"type": ["string", "null"],
-			"enum": ["http", "dns", "tcp", "cron", null]
-		},
-		"monitorId": {
-			"type": ["string", "null"],
-			"pattern": "^mon_[a-zA-Z0-9]+$"
-		},
-		"createdAt": {
-			"type": "string",
-			"format": "date-time"
-		},
-		"updatedAt": {
-			"type": "string",
-			"format": "date-time"
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": {
+					"type": "string",
+					"format": "uuid"
+				},
+				"timestamp": {
+					"type": "string",
+					"format": "date-time"
+				}
+			}
 		}
 	}
 }
@@ -706,7 +801,7 @@ curl https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123 \
 
 ## PUT /api/v1/alerts/:id
 
-Updates an existing alert. You cannot change the `strategy` field.
+Updates an existing alert. The notification channel is fixed at creation; to change it, delete the alert and create a new one.
 
 ### Required Scope
 
@@ -714,7 +809,7 @@ Updates an existing alert. You cannot change the `strategy` field.
 
 ### Request Body
 
-Include only the fields you want to update. The `strategy` field cannot be changed.
+Include only the fields you want to update: `name`, `notifyOnRecovery`, `cooldownMinutes`, `monitorType` and `monitorId`. Any other field, including `strategy` and the channel settings, is ignored.
 
 `monitorType` and `monitorId` are the alert's scope, and they move as a pair: send either one and both are rewritten, so narrowing an alert to a whole kind of monitor cannot leave the previous monitor's id behind it. Mention neither and the scope is left exactly as it is.
 
@@ -742,30 +837,38 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123 \
 
 ### Response
 
+The alert's `config` reports only its `strategy`.
+
 ```json
 {
-	"id": "alt_abc123",
-	"name": "Updated Alert Name",
-	"strategy": "email",
-	"notifyOnRecovery": false,
-	"cooldownMinutes": 10,
-	"monitorType": null,
-	"monitorId": null,
-	"createdAt": "2026-02-14T12:00:00Z",
-	"updatedAt": "2026-02-14T13:00:00Z"
+	"data": {
+		"alert": {
+			"id": "alt_abc123",
+			"name": "Updated Alert Name",
+			"notifyOnRecovery": false,
+			"cooldownMinutes": 10,
+			"monitorType": null,
+			"monitorId": null,
+			"config": { "strategy": "email" },
+			"createdAt": 1771070400000,
+			"updatedAt": 1771074000000
+		}
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z"
+	}
 }
 ```
 
 ### Possible Errors
 
-| Status | Type               | Description                                          |
-| ------ | ------------------ | ---------------------------------------------------- |
-| 400    | `validation-error` | Invalid request body or attempted to change strategy |
-| 401    | `unauthorized`     | Missing or invalid API key                           |
-| 403    | `forbidden`        | API key doesn't have `alerts:write` scope            |
-| 404    | `not-found`        | Alert not found                                      |
-| 429    | `rate-limited`     | Too many requests                                    |
-| 500    | `internal-error`   | Server error                                         |
+| Status | Type               | Description                                                                |
+| ------ | ------------------ | -------------------------------------------------------------------------- |
+| 400    | `validation-error` | Malformed alert id or invalid request body                                 |
+| 401    | `unauthorized`     | Missing or invalid API key                                                 |
+| 403    | `forbidden`        | API key doesn't have `alerts:write` scope                                  |
+| 404    | `not-found`        | Alert not found, or `monitorId` names no monitor of that kind in your team |
 
 ### Request Body Schema
 
@@ -777,29 +880,7 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123 \
 		"name": {
 			"type": "string",
 			"minLength": 1,
-			"maxLength": 100
-		},
-		"email": {
-			"type": "string",
-			"format": "email"
-		},
-		"subjectPrefix": {
-			"type": "string",
-			"maxLength": 50
-		},
-		"url": {
-			"type": "string",
-			"format": "uri"
-		},
-		"secret": {
-			"type": "string"
-		},
-		"webhookUrl": {
-			"type": "string",
-			"format": "uri"
-		},
-		"channel": {
-			"type": "string"
+			"maxLength": 255
 		},
 		"notifyOnRecovery": {
 			"type": "boolean"
@@ -810,12 +891,12 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123 \
 			"maximum": 1440
 		},
 		"monitorType": {
-			"type": ["string", "null"],
-			"enum": ["http", "dns", "tcp", "cron", null]
+			"type": "string",
+			"enum": ["http", "dns", "tcp", "cron", "flow"]
 		},
 		"monitorId": {
 			"type": ["string", "null"],
-			"pattern": "^mon_[a-zA-Z0-9]+$"
+			"pattern": "^(mon|dns|tcpm|cron|flow)_[a-zA-Z0-9]+$"
 		}
 	}
 }
@@ -827,53 +908,84 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123 \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": [
-		"id",
-		"name",
-		"strategy",
-		"notifyOnRecovery",
-		"cooldownMinutes",
-		"monitorId",
-		"createdAt",
-		"updatedAt"
-	],
+	"required": ["data", "meta"],
 	"properties": {
-		"id": {
-			"type": "string",
-			"pattern": "^alt_[a-zA-Z0-9]+$"
+		"data": {
+			"type": "object",
+			"required": ["alert"],
+			"properties": {
+				"alert": {
+					"type": "object",
+					"required": [
+						"id",
+						"name",
+						"notifyOnRecovery",
+						"cooldownMinutes",
+						"config",
+						"monitorType",
+						"monitorId",
+						"createdAt",
+						"updatedAt"
+					],
+					"properties": {
+						"id": {
+							"type": "string",
+							"pattern": "^alt_[a-zA-Z0-9]+$"
+						},
+						"name": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 255
+						},
+						"notifyOnRecovery": {
+							"type": "boolean"
+						},
+						"cooldownMinutes": {
+							"type": "integer",
+							"minimum": 0,
+							"maximum": 1440
+						},
+						"config": {
+							"type": "object",
+							"required": ["strategy"],
+							"properties": {
+								"strategy": {
+									"type": "string",
+									"enum": ["email", "webhook", "slack", "discord"]
+								}
+							}
+						},
+						"monitorType": {
+							"type": ["string", "null"],
+							"enum": ["http", "dns", "tcp", "cron", "flow", null]
+						},
+						"monitorId": {
+							"type": ["string", "null"],
+							"pattern": "^(mon|dns|tcpm|cron|flow)_[a-zA-Z0-9]+$"
+						},
+						"createdAt": {
+							"type": "integer"
+						},
+						"updatedAt": {
+							"type": "integer"
+						}
+					}
+				}
+			}
 		},
-		"name": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 100
-		},
-		"strategy": {
-			"type": "string",
-			"enum": ["email", "webhook", "slack", "discord"]
-		},
-		"notifyOnRecovery": {
-			"type": "boolean"
-		},
-		"cooldownMinutes": {
-			"type": "integer",
-			"minimum": 0,
-			"maximum": 1440
-		},
-		"monitorType": {
-			"type": ["string", "null"],
-			"enum": ["http", "dns", "tcp", "cron", null]
-		},
-		"monitorId": {
-			"type": ["string", "null"],
-			"pattern": "^mon_[a-zA-Z0-9]+$"
-		},
-		"createdAt": {
-			"type": "string",
-			"format": "date-time"
-		},
-		"updatedAt": {
-			"type": "string",
-			"format": "date-time"
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": {
+					"type": "string",
+					"format": "uuid"
+				},
+				"timestamp": {
+					"type": "string",
+					"format": "date-time"
+				}
+			}
 		}
 	}
 }
@@ -898,21 +1010,63 @@ curl -X DELETE https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123 \
 
 ### Response
 
-Returns `204 No Content` on success.
+Returns `200 OK`:
+
+```json
+{
+	"data": {
+		"deleted": true
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z"
+	}
+}
+```
 
 ### Possible Errors
 
-| Status | Type             | Description                               |
-| ------ | ---------------- | ----------------------------------------- |
-| 401    | `unauthorized`   | Missing or invalid API key                |
-| 403    | `forbidden`      | API key doesn't have `alerts:write` scope |
-| 404    | `not-found`      | Alert not found                           |
-| 429    | `rate-limited`   | Too many requests                         |
-| 500    | `internal-error` | Server error                              |
+| Status | Type               | Description                               |
+| ------ | ------------------ | ----------------------------------------- |
+| 400    | `validation-error` | Malformed alert id                        |
+| 401    | `unauthorized`     | Missing or invalid API key                |
+| 403    | `forbidden`        | API key doesn't have `alerts:write` scope |
+| 404    | `not-found`        | Alert not found                           |
 
 ### Response Schema
 
-Returns `204 No Content` with no response body on success.
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["data", "meta"],
+	"properties": {
+		"data": {
+			"type": "object",
+			"required": ["deleted"],
+			"properties": {
+				"deleted": {
+					"const": true
+				}
+			}
+		},
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": {
+					"type": "string",
+					"format": "uuid"
+				},
+				"timestamp": {
+					"type": "string",
+					"format": "date-time"
+				}
+			}
+		}
+	}
+}
+```
 
 ## GET /api/v1/alerts/:id/events
 
@@ -993,14 +1147,14 @@ curl "https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123/events?perPage=10" \
 
 ### Possible Errors
 
-| Status | Type             | Description                              |
-| ------ | ---------------- | ---------------------------------------- |
-| 400    | `bad-request`    | Invalid or malformed cursor              |
-| 401    | `unauthorized`   | Missing or invalid API key               |
-| 403    | `forbidden`      | API key doesn't have `alerts:read` scope |
-| 404    | `not-found`      | Alert not found                          |
-| 429    | `rate-limited`   | Too many requests                        |
-| 500    | `internal-error` | Server error                             |
+| Status | Type               | Description                              |
+| ------ | ------------------ | ---------------------------------------- |
+| 400    | `validation-error` | Malformed alert id                       |
+| 400    | `bad-request`      | Invalid or malformed cursor              |
+| 401    | `unauthorized`     | Missing or invalid API key               |
+| 403    | `forbidden`        | API key doesn't have `alerts:read` scope |
+| 404    | `not-found`        | Alert not found                          |
+| 500    | `internal`         | The page of results could not be read    |
 
 ### Response Schema
 

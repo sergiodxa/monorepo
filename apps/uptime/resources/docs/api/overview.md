@@ -5,7 +5,7 @@ section:
   title: API Reference
   order: 4
 order: 1
-lastUpdated: 2026-09-05
+lastUpdated: 2026-09-23
 ---
 
 The Uptime API is a RESTful API that allows you to manage all aspects of your monitoring infrastructure programmatically.
@@ -54,4 +54,4 @@ Every endpoint that returns a list serves one page at a time and advertises the 
 
 ## Rate Limits
 
-API requests are subject to rate limiting based on your plan. See [Rate Limits](/docs/api/rate-limits) for details on limits and how to handle rate limit errors.
+The two ping endpoints are rate limited, and their responses report the quota in `RateLimit` headers. See [Rate Limits](/docs/api/rate-limits) for the limits and how to handle a `429`.

@@ -31,36 +31,43 @@ curl https://uptime.sergiodxa.com/api/v1/team \
 
 ```json
 {
-	"id": "team_abc123",
-	"name": "Acme Inc",
-	"slug": "acme-inc",
-	"logo": "https://cdn.example.com/logos/acme.png",
-	"ownerId": "usr_xyz789",
-	"createdAt": "2025-06-15T08:00:00Z",
-	"updatedAt": "2026-01-20T14:30:00Z"
+	"data": {
+		"team": {
+			"id": "team_abc123",
+			"name": "Acme Inc",
+			"slug": "acme-inc",
+			"logo": "https://cdn.example.com/logos/acme.png",
+			"ownerId": "usr_xyz789",
+			"createdAt": 1749974400000,
+			"updatedAt": 1768919400000
+		}
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z"
+	}
 }
 ```
 
 ### Response Fields
 
-| Field       | Type           | Description                                       |
-| ----------- | -------------- | ------------------------------------------------- |
-| `id`        | string         | Unique team identifier                            |
-| `name`      | string         | Display name of the team                          |
-| `slug`      | string         | URL-friendly team identifier                      |
-| `logo`      | string \| null | URL to the team's logo image                      |
-| `ownerId`   | string         | User ID of the team owner                         |
-| `createdAt` | string         | ISO 8601 timestamp when the team was created      |
-| `updatedAt` | string         | ISO 8601 timestamp when the team was last updated |
+| Field                 | Type           | Description                                       |
+| --------------------- | -------------- | ------------------------------------------------- |
+| `data.team`           | object         | The team                                          |
+| `data.team.id`        | string         | Unique team identifier                            |
+| `data.team.name`      | string         | Display name of the team                          |
+| `data.team.slug`      | string         | URL-friendly team identifier                      |
+| `data.team.logo`      | string \| null | URL to the team's logo image                      |
+| `data.team.ownerId`   | string         | User ID of the team owner                         |
+| `data.team.createdAt` | integer        | Unix timestamp in milliseconds of the creation    |
+| `data.team.updatedAt` | integer        | Unix timestamp in milliseconds of the last update |
 
 ### Possible Errors
 
-| Status | Type             | Description                             |
-| ------ | ---------------- | --------------------------------------- |
-| 401    | `unauthorized`   | Missing or invalid API key              |
-| 403    | `forbidden`      | API key doesn't have `teams:read` scope |
-| 429    | `rate-limited`   | Too many requests                       |
-| 500    | `internal-error` | Server error                            |
+| Status | Type           | Description                             |
+| ------ | -------------- | --------------------------------------- |
+| 401    | `unauthorized` | Missing or invalid API key              |
+| 403    | `forbidden`    | API key doesn't have `teams:read` scope |
 
 ### Response Schema
 
@@ -68,33 +75,57 @@ curl https://uptime.sergiodxa.com/api/v1/team \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": ["id", "name", "slug", "logo", "ownerId", "createdAt", "updatedAt"],
+	"required": ["data", "meta"],
 	"properties": {
-		"id": {
-			"type": "string"
+		"data": {
+			"type": "object",
+			"required": ["team"],
+			"properties": {
+				"team": {
+					"type": "object",
+					"required": ["id", "name", "slug", "logo", "ownerId", "createdAt", "updatedAt"],
+					"properties": {
+						"id": {
+							"type": "string"
+						},
+						"name": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 255
+						},
+						"slug": {
+							"type": "string"
+						},
+						"logo": {
+							"type": ["string", "null"],
+							"format": "uri"
+						},
+						"ownerId": {
+							"type": "string"
+						},
+						"createdAt": {
+							"type": "integer"
+						},
+						"updatedAt": {
+							"type": "integer"
+						}
+					}
+				}
+			}
 		},
-		"name": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 255
-		},
-		"slug": {
-			"type": "string"
-		},
-		"logo": {
-			"type": ["string", "null"],
-			"format": "uri"
-		},
-		"ownerId": {
-			"type": "string"
-		},
-		"createdAt": {
-			"type": "string",
-			"format": "date-time"
-		},
-		"updatedAt": {
-			"type": "string",
-			"format": "date-time"
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": {
+					"type": "string",
+					"format": "uuid"
+				},
+				"timestamp": {
+					"type": "string",
+					"format": "date-time"
+				}
+			}
 		}
 	}
 }
@@ -133,13 +164,21 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/team \
 
 ```json
 {
-	"id": "team_abc123",
-	"name": "Acme Corporation",
-	"slug": "acme-inc",
-	"logo": "https://cdn.example.com/logos/acme-new.png",
-	"ownerId": "usr_xyz789",
-	"createdAt": "2025-06-15T08:00:00Z",
-	"updatedAt": "2026-02-14T10:45:00Z"
+	"data": {
+		"team": {
+			"id": "team_abc123",
+			"name": "Acme Corporation",
+			"slug": "acme-inc",
+			"logo": "https://cdn.example.com/logos/acme-new.png",
+			"ownerId": "usr_xyz789",
+			"createdAt": 1749974400000,
+			"updatedAt": 1771065900000
+		}
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T10:45:00.000Z"
+	}
 }
 ```
 
@@ -150,8 +189,6 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/team \
 | 400    | `validation-error` | Invalid request body or no fields provided |
 | 401    | `unauthorized`     | Missing or invalid API key                 |
 | 403    | `forbidden`        | API key doesn't have `teams:write` scope   |
-| 429    | `rate-limited`     | Too many requests                          |
-| 500    | `internal-error`   | Server error                               |
 
 ### Request Body Schema
 
@@ -180,33 +217,57 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/team \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": ["id", "name", "slug", "logo", "ownerId", "createdAt", "updatedAt"],
+	"required": ["data", "meta"],
 	"properties": {
-		"id": {
-			"type": "string"
+		"data": {
+			"type": "object",
+			"required": ["team"],
+			"properties": {
+				"team": {
+					"type": "object",
+					"required": ["id", "name", "slug", "logo", "ownerId", "createdAt", "updatedAt"],
+					"properties": {
+						"id": {
+							"type": "string"
+						},
+						"name": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 255
+						},
+						"slug": {
+							"type": "string"
+						},
+						"logo": {
+							"type": ["string", "null"],
+							"format": "uri"
+						},
+						"ownerId": {
+							"type": "string"
+						},
+						"createdAt": {
+							"type": "integer"
+						},
+						"updatedAt": {
+							"type": "integer"
+						}
+					}
+				}
+			}
 		},
-		"name": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 255
-		},
-		"slug": {
-			"type": "string"
-		},
-		"logo": {
-			"type": ["string", "null"],
-			"format": "uri"
-		},
-		"ownerId": {
-			"type": "string"
-		},
-		"createdAt": {
-			"type": "string",
-			"format": "date-time"
-		},
-		"updatedAt": {
-			"type": "string",
-			"format": "date-time"
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": {
+					"type": "string",
+					"format": "uuid"
+				},
+				"timestamp": {
+					"type": "string",
+					"format": "date-time"
+				}
+			}
 		}
 	}
 }
@@ -303,13 +364,12 @@ curl -i "https://uptime.sergiodxa.com/api/v1/memberships?perPage=100" \
 
 ### Possible Errors
 
-| Status | Type             | Description                             |
-| ------ | ---------------- | --------------------------------------- |
-| 400    | `bad-request`    | Invalid or malformed cursor             |
-| 401    | `unauthorized`   | Missing or invalid API key              |
-| 403    | `forbidden`      | API key doesn't have `teams:read` scope |
-| 429    | `rate-limited`   | Too many requests                       |
-| 500    | `internal-error` | Server error                            |
+| Status | Type           | Description                             |
+| ------ | -------------- | --------------------------------------- |
+| 400    | `bad-request`  | Invalid `perPage` or malformed cursor   |
+| 401    | `unauthorized` | Missing or invalid API key              |
+| 403    | `forbidden`    | API key doesn't have `teams:read` scope |
+| 500    | `internal`     | The page of results could not be read   |
 
 ### Response Schema
 
@@ -472,13 +532,12 @@ curl -i "https://uptime.sergiodxa.com/api/v1/team-domains?perPage=100" \
 
 ### Possible Errors
 
-| Status | Type             | Description                                    |
-| ------ | ---------------- | ---------------------------------------------- |
-| 400    | `bad-request`    | Invalid or malformed cursor                    |
-| 401    | `unauthorized`   | Missing or invalid API key                     |
-| 403    | `forbidden`      | API key doesn't have `team-domains:read` scope |
-| 429    | `rate-limited`   | Too many requests                              |
-| 500    | `internal-error` | Server error                                   |
+| Status | Type           | Description                                    |
+| ------ | -------------- | ---------------------------------------------- |
+| 400    | `bad-request`  | Invalid `perPage` or malformed cursor          |
+| 401    | `unauthorized` | Missing or invalid API key                     |
+| 403    | `forbidden`    | API key doesn't have `team-domains:read` scope |
+| 500    | `internal`     | The page of results could not be read          |
 
 ### Response Schema
 
@@ -561,7 +620,7 @@ curl -i "https://uptime.sergiodxa.com/api/v1/team-domains?perPage=100" \
 
 ## POST /api/v1/team-domains
 
-Adds a custom domain for the team's status pages.
+Adds a custom domain for the team's status pages, pending verification. Answers `201 Created`.
 
 ### Required Scope
 
@@ -590,11 +649,20 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/team-domains \
 
 ```json
 {
-	"id": "dom_ghi789",
-	"hostname": "status.example.com",
-	"teamId": "team_abc123",
-	"createdAt": "2026-02-14T10:00:00Z",
-	"updatedAt": "2026-02-14T10:00:00Z"
+	"data": {
+		"teamDomain": {
+			"id": "dom_ghi789",
+			"hostname": "status.example.com",
+			"verifiedAt": null,
+			"teamId": "team_abc123",
+			"createdAt": 1771063200000,
+			"updatedAt": 1771063200000
+		}
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T10:00:00.000Z"
+	}
 }
 ```
 
@@ -605,9 +673,7 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/team-domains \
 | 400    | `validation-error` | Invalid hostname or missing required field      |
 | 401    | `unauthorized`     | Missing or invalid API key                      |
 | 403    | `forbidden`        | API key doesn't have `team-domains:write` scope |
-| 409    | `conflict`         | Domain already exists                           |
-| 429    | `rate-limited`     | Too many requests                               |
-| 500    | `internal-error`   | Server error                                    |
+| 409    | `conflict`         | The team already added this hostname            |
 
 ### Request Body Schema
 
@@ -632,26 +698,53 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/team-domains \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": ["id", "hostname", "teamId", "createdAt", "updatedAt"],
+	"required": ["data", "meta"],
 	"properties": {
-		"id": {
-			"type": "string"
+		"data": {
+			"type": "object",
+			"required": ["teamDomain"],
+			"properties": {
+				"teamDomain": {
+					"type": "object",
+					"required": ["id", "hostname", "verifiedAt", "teamId", "createdAt", "updatedAt"],
+					"properties": {
+						"id": {
+							"type": "string"
+						},
+						"hostname": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 255
+						},
+						"verifiedAt": {
+							"type": ["integer", "null"]
+						},
+						"teamId": {
+							"type": "string"
+						},
+						"createdAt": {
+							"type": "integer"
+						},
+						"updatedAt": {
+							"type": "integer"
+						}
+					}
+				}
+			}
 		},
-		"hostname": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 255
-		},
-		"teamId": {
-			"type": "string"
-		},
-		"createdAt": {
-			"type": "string",
-			"format": "date-time"
-		},
-		"updatedAt": {
-			"type": "string",
-			"format": "date-time"
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": {
+					"type": "string",
+					"format": "uuid"
+				},
+				"timestamp": {
+					"type": "string",
+					"format": "date-time"
+				}
+			}
 		}
 	}
 }
@@ -667,9 +760,9 @@ Removes a custom domain from the team.
 
 ### Request Body
 
-| Field | Type   | Required | Description                           |
-| ----- | ------ | -------- | ------------------------------------- |
-| `id`  | string | Yes      | The domain ID to remove (UUID format) |
+| Field | Type   | Required | Description                             |
+| ----- | ------ | -------- | --------------------------------------- |
+| `id`  | string | Yes      | The domain ID to remove (`dom_` prefix) |
 
 ### Example Request
 
@@ -688,7 +781,13 @@ curl -X DELETE https://uptime.sergiodxa.com/api/v1/team-domains \
 
 ```json
 {
-	"success": true
+	"data": {
+		"deleted": true
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T10:30:00.000Z"
+	}
 }
 ```
 
@@ -696,12 +795,10 @@ curl -X DELETE https://uptime.sergiodxa.com/api/v1/team-domains \
 
 | Status | Type               | Description                                     |
 | ------ | ------------------ | ----------------------------------------------- |
-| 400    | `validation-error` | Invalid or missing domain ID                    |
+| 400    | `validation-error` | Missing or malformed domain ID                  |
 | 401    | `unauthorized`     | Missing or invalid API key                      |
 | 403    | `forbidden`        | API key doesn't have `team-domains:write` scope |
 | 404    | `not-found`        | Domain not found                                |
-| 429    | `rate-limited`     | Too many requests                               |
-| 500    | `internal-error`   | Server error                                    |
 
 ### Request Body Schema
 
@@ -713,7 +810,7 @@ curl -X DELETE https://uptime.sergiodxa.com/api/v1/team-domains \
 	"properties": {
 		"id": {
 			"type": "string",
-			"format": "uuid"
+			"pattern": "^dom_"
 		}
 	}
 }
@@ -725,11 +822,31 @@ curl -X DELETE https://uptime.sergiodxa.com/api/v1/team-domains \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": ["success"],
+	"required": ["data", "meta"],
 	"properties": {
-		"success": {
-			"type": "boolean",
-			"const": true
+		"data": {
+			"type": "object",
+			"required": ["deleted"],
+			"properties": {
+				"deleted": {
+					"type": "boolean",
+					"const": true
+				}
+			}
+		},
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": {
+					"type": "string",
+					"format": "uuid"
+				},
+				"timestamp": {
+					"type": "string",
+					"format": "date-time"
+				}
+			}
 		}
 	}
 }

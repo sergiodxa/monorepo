@@ -51,7 +51,7 @@ curl -i "https://uptime.sergiodxa.com/api/v1/api-keys?perPage=100" \
 				"createdAt": 1768467600000,
 				"lastUsedAt": 1771065000000,
 				"expiresAt": null,
-				"keyPrefix": "uptime_a1b2c3"
+				"keyPrefix": "uptime_a1b2c3d4"
 			},
 			{
 				"id": "key_def456",
@@ -60,7 +60,7 @@ curl -i "https://uptime.sergiodxa.com/api/v1/api-keys?perPage=100" \
 				"createdAt": 1770301320000,
 				"lastUsedAt": null,
 				"expiresAt": 1785974400000,
-				"keyPrefix": "uptime_d4e5f6"
+				"keyPrefix": "uptime_d4e5f6a7"
 			}
 		]
 	},
@@ -79,32 +79,31 @@ curl -i "https://uptime.sergiodxa.com/api/v1/api-keys?perPage=100" \
 
 ### Response Fields
 
-| Field                       | Type            | Description                                             |
-| --------------------------- | --------------- | ------------------------------------------------------- |
-| `data.apiKeys`              | array           | One page of API keys                                    |
-| `data.apiKeys[].id`         | string          | Unique identifier for the API key                       |
-| `data.apiKeys[].name`       | string          | Display name of the API key                             |
-| `data.apiKeys[].scopes`     | array           | List of permission scopes granted to this key           |
-| `data.apiKeys[].createdAt`  | integer         | Unix timestamp in milliseconds of the creation          |
-| `data.apiKeys[].lastUsedAt` | integer \| null | Unix timestamp in milliseconds of the last use          |
-| `data.apiKeys[].expiresAt`  | integer \| null | Unix timestamp in milliseconds of the expiration        |
-| `data.apiKeys[].keyPrefix`  | string          | First characters of the key for identification purposes |
-| `meta.requestId`            | string          | Identifier for this request                             |
-| `meta.timestamp`            | string          | ISO 8601 timestamp of the response                      |
-| `meta.pagination.next`      | string \| null  | Cursor for the following page, `null` on the last       |
-| `meta.pagination.prev`      | string \| null  | Cursor for the preceding page, `null` on the first      |
-| `meta.pagination.perPage`   | integer         | Results this page was built with                        |
-| `meta.pagination.total`     | integer         | API keys matching, across every page                    |
+| Field                       | Type            | Description                                        |
+| --------------------------- | --------------- | -------------------------------------------------- |
+| `data.apiKeys`              | array           | One page of API keys                               |
+| `data.apiKeys[].id`         | string          | Unique identifier for the API key                  |
+| `data.apiKeys[].name`       | string          | Display name of the API key                        |
+| `data.apiKeys[].scopes`     | array           | List of permission scopes granted to this key      |
+| `data.apiKeys[].createdAt`  | integer         | Unix timestamp in milliseconds of the creation     |
+| `data.apiKeys[].lastUsedAt` | integer \| null | Unix timestamp in milliseconds of the last use     |
+| `data.apiKeys[].expiresAt`  | integer \| null | Unix timestamp in milliseconds of the expiration   |
+| `data.apiKeys[].keyPrefix`  | string          | First 15 characters of the key, for identification |
+| `meta.requestId`            | string          | Identifier for this request                        |
+| `meta.timestamp`            | string          | ISO 8601 timestamp of the response                 |
+| `meta.pagination.next`      | string \| null  | Cursor for the following page, `null` on the last  |
+| `meta.pagination.prev`      | string \| null  | Cursor for the preceding page, `null` on the first |
+| `meta.pagination.perPage`   | integer         | Results this page was built with                   |
+| `meta.pagination.total`     | integer         | API keys matching, across every page               |
 
 ### Possible Errors
 
-| Status | Type             | Description                                |
-| ------ | ---------------- | ------------------------------------------ |
-| 400    | `bad-request`    | Invalid or malformed cursor                |
-| 401    | `unauthorized`   | Missing or invalid API key                 |
-| 403    | `forbidden`      | API key doesn't have `api-keys:read` scope |
-| 429    | `rate-limited`   | Too many requests                          |
-| 500    | `internal-error` | Server error                               |
+| Status | Type           | Description                                |
+| ------ | -------------- | ------------------------------------------ |
+| 400    | `bad-request`  | Invalid `perPage` or malformed cursor      |
+| 401    | `unauthorized` | Missing or invalid API key                 |
+| 403    | `forbidden`    | API key doesn't have `api-keys:read` scope |
+| 500    | `internal`     | The page of results could not be read      |
 
 ### Response Schema
 
@@ -159,6 +158,10 @@ curl -i "https://uptime.sergiodxa.com/api/v1/api-keys?perPage=100" \
 										"maintenance:write",
 										"dns-monitors:read",
 										"dns-monitors:write",
+										"tcp-monitors:read",
+										"tcp-monitors:write",
+										"flow-monitors:read",
+										"flow-monitors:write",
 										"alerts:read",
 										"alerts:write",
 										"status-pages:read",
@@ -167,7 +170,8 @@ curl -i "https://uptime.sergiodxa.com/api/v1/api-keys?perPage=100" \
 										"cron-jobs:write",
 										"cron-jobs:ping",
 										"api-keys:read",
-										"api-keys:write"
+										"api-keys:write",
+										"ping:trigger"
 									]
 								}
 							},
@@ -182,7 +186,7 @@ curl -i "https://uptime.sergiodxa.com/api/v1/api-keys?perPage=100" \
 							},
 							"keyPrefix": {
 								"type": "string",
-								"pattern": "^uptime_[a-zA-Z0-9]+$"
+								"pattern": "^uptime_[a-f0-9]{8}$"
 							}
 						}
 					}
@@ -229,7 +233,7 @@ curl -i "https://uptime.sergiodxa.com/api/v1/api-keys?perPage=100" \
 
 ## POST /api/v1/api-keys
 
-Creates a new API key for your team.
+Creates a new API key for your team and answers `201 Created`. A key can grant only scopes it holds itself.
 
 > **Warning:** The `key` field in the response contains the full API key value. This is the **only time** the complete key will be shown. Copy and store it in a secure location immediately. If you lose the key, you must delete it and create a new one.
 
@@ -243,7 +247,7 @@ Creates a new API key for your team.
 | ----------- | ------ | -------- | -------------------------------------------------- |
 | `name`      | string | Yes      | Display name for the key (1-255 characters)        |
 | `scopes`    | array  | Yes      | Permission scopes to grant (at least one required) |
-| `expiresAt` | string | No       | ISO 8601 timestamp for key expiration              |
+| `expiresAt` | string | No       | Date/time for key expiration (e.g. ISO 8601)       |
 
 ### Example Request
 
@@ -264,14 +268,22 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/api-keys \
 
 ```json
 {
-	"id": "key_ghi789",
-	"name": "GitHub Actions",
-	"scopes": ["monitors:read", "monitors:write"],
-	"createdAt": "2026-02-14T11:00:00Z",
-	"lastUsedAt": null,
-	"expiresAt": "2027-02-14T00:00:00Z",
-	"keyPrefix": "uptime_g7h8i9",
-	"key": "uptime_g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
+	"data": {
+		"apiKey": {
+			"id": "key_ghi789",
+			"name": "GitHub Actions",
+			"scopes": ["monitors:read", "monitors:write"],
+			"createdAt": 1771066800000,
+			"lastUsedAt": null,
+			"expiresAt": 1802563200000,
+			"keyPrefix": "uptime_9f8e7d6c"
+		},
+		"key": "uptime_9f8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0"
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T11:00:00.000Z"
+	}
 }
 ```
 
@@ -279,27 +291,28 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/api-keys \
 
 ### Response Fields
 
-| Field        | Type           | Description                                                         |
-| ------------ | -------------- | ------------------------------------------------------------------- |
-| `id`         | string         | Unique identifier for the API key                                   |
-| `name`       | string         | Display name of the API key                                         |
-| `scopes`     | array          | List of permission scopes granted to this key                       |
-| `createdAt`  | string         | ISO 8601 timestamp when the key was created                         |
-| `lastUsedAt` | string \| null | Always `null` for newly created keys                                |
-| `expiresAt`  | string \| null | ISO 8601 timestamp when the key expires, or `null` if no expiration |
-| `keyPrefix`  | string         | First characters of the key for identification purposes             |
-| `key`        | string         | **The full API key value. Only returned once at creation.**         |
+| Field                    | Type            | Description                                                       |
+| ------------------------ | --------------- | ----------------------------------------------------------------- |
+| `data.apiKey.id`         | string          | Unique identifier for the API key                                 |
+| `data.apiKey.name`       | string          | Display name of the API key                                       |
+| `data.apiKey.scopes`     | array           | List of permission scopes granted to this key                     |
+| `data.apiKey.createdAt`  | integer         | Unix timestamp in milliseconds of the creation                    |
+| `data.apiKey.lastUsedAt` | integer \| null | Always `null` for newly created keys                              |
+| `data.apiKey.expiresAt`  | integer \| null | Unix timestamp in milliseconds of the expiration, `null` for none |
+| `data.apiKey.keyPrefix`  | string          | First 15 characters of the key, for identification                |
+| `data.key`               | string          | **The full API key value. Only returned once at creation.**       |
+| `meta.requestId`         | string          | Identifier for this request                                       |
+| `meta.timestamp`         | string          | ISO 8601 timestamp of the response                                |
 
 ### Possible Errors
 
 | Status | Type               | Description                                               |
 | ------ | ------------------ | --------------------------------------------------------- |
 | 400    | `validation-error` | Invalid request body (missing name, invalid scopes, etc.) |
+| 400    | `limit-exceeded`   | Team already has 10 API keys (maximum limit reached)      |
 | 401    | `unauthorized`     | Missing or invalid API key                                |
 | 403    | `forbidden`        | API key doesn't have `api-keys:write` scope               |
-| 400    | `limit-exceeded`   | Team already has 10 API keys (maximum limit reached)      |
-| 429    | `rate-limited`     | Too many requests                                         |
-| 500    | `internal-error`   | Server error                                              |
+| 403    | `forbidden`        | Requested scopes include one the calling key doesn't hold |
 
 ### Request Body Schema
 
@@ -332,6 +345,10 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/api-keys \
 					"maintenance:write",
 					"dns-monitors:read",
 					"dns-monitors:write",
+					"tcp-monitors:read",
+					"tcp-monitors:write",
+					"flow-monitors:read",
+					"flow-monitors:write",
 					"alerts:read",
 					"alerts:write",
 					"status-pages:read",
@@ -340,7 +357,8 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/api-keys \
 					"cron-jobs:write",
 					"cron-jobs:ping",
 					"api-keys:read",
-					"api-keys:write"
+					"api-keys:write",
+					"ping:trigger"
 				]
 			}
 		},
@@ -358,67 +376,95 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/api-keys \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": ["id", "name", "scopes", "createdAt", "lastUsedAt", "expiresAt", "keyPrefix", "key"],
+	"required": ["data", "meta"],
 	"properties": {
-		"id": {
-			"type": "string",
-			"pattern": "^key_[a-zA-Z0-9]+$"
-		},
-		"name": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 255
-		},
-		"scopes": {
-			"type": "array",
-			"minItems": 1,
-			"items": {
-				"type": "string",
-				"enum": [
-					"teams:read",
-					"teams:write",
-					"invites:read",
-					"invites:write",
-					"team-domains:read",
-					"team-domains:write",
-					"monitors:read",
-					"monitors:write",
-					"maintenance:read",
-					"maintenance:write",
-					"dns-monitors:read",
-					"dns-monitors:write",
-					"alerts:read",
-					"alerts:write",
-					"status-pages:read",
-					"status-pages:write",
-					"cron-jobs:read",
-					"cron-jobs:write",
-					"cron-jobs:ping",
-					"api-keys:read",
-					"api-keys:write"
-				]
+		"data": {
+			"type": "object",
+			"required": ["apiKey", "key"],
+			"properties": {
+				"apiKey": {
+					"type": "object",
+					"required": ["id", "name", "scopes", "createdAt", "lastUsedAt", "expiresAt", "keyPrefix"],
+					"properties": {
+						"id": {
+							"type": "string",
+							"pattern": "^key_[a-zA-Z0-9]+$"
+						},
+						"name": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 255
+						},
+						"scopes": {
+							"type": "array",
+							"minItems": 1,
+							"items": {
+								"type": "string",
+								"enum": [
+									"teams:read",
+									"teams:write",
+									"invites:read",
+									"invites:write",
+									"team-domains:read",
+									"team-domains:write",
+									"monitors:read",
+									"monitors:write",
+									"maintenance:read",
+									"maintenance:write",
+									"dns-monitors:read",
+									"dns-monitors:write",
+									"tcp-monitors:read",
+									"tcp-monitors:write",
+									"flow-monitors:read",
+									"flow-monitors:write",
+									"alerts:read",
+									"alerts:write",
+									"status-pages:read",
+									"status-pages:write",
+									"cron-jobs:read",
+									"cron-jobs:write",
+									"cron-jobs:ping",
+									"api-keys:read",
+									"api-keys:write",
+									"ping:trigger"
+								]
+							}
+						},
+						"createdAt": {
+							"type": "integer"
+						},
+						"lastUsedAt": {
+							"type": ["integer", "null"]
+						},
+						"expiresAt": {
+							"type": ["integer", "null"]
+						},
+						"keyPrefix": {
+							"type": "string",
+							"pattern": "^uptime_[a-f0-9]{8}$"
+						}
+					}
+				},
+				"key": {
+					"type": "string",
+					"description": "The full API key value. Only returned once at creation.",
+					"pattern": "^uptime_[a-f0-9]{64}$"
+				}
 			}
 		},
-		"createdAt": {
-			"type": "string",
-			"format": "date-time"
-		},
-		"lastUsedAt": {
-			"type": ["string", "null"],
-			"format": "date-time"
-		},
-		"expiresAt": {
-			"type": ["string", "null"],
-			"format": "date-time"
-		},
-		"keyPrefix": {
-			"type": "string",
-			"pattern": "^uptime_[a-zA-Z0-9]+$"
-		},
-		"key": {
-			"type": "string",
-			"description": "The full API key value. Only returned once at creation.",
-			"pattern": "^uptime_[a-zA-Z0-9]+$"
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": {
+					"type": "string",
+					"format": "uuid"
+				},
+				"timestamp": {
+					"type": "string",
+					"format": "date-time"
+				}
+			}
 		}
 	}
 }
@@ -453,25 +499,30 @@ curl -X DELETE https://uptime.sergiodxa.com/api/v1/api-keys/key_abc123 \
 
 ```json
 {
-	"deleted": true
+	"data": {
+		"deleted": true
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z"
+	}
 }
 ```
 
 ### Response Fields
 
-| Field     | Type    | Description                          |
-| --------- | ------- | ------------------------------------ |
-| `deleted` | boolean | Always `true` on successful deletion |
+| Field          | Type    | Description                          |
+| -------------- | ------- | ------------------------------------ |
+| `data.deleted` | boolean | Always `true` on successful deletion |
 
 ### Possible Errors
 
-| Status | Type             | Description                                  |
-| ------ | ---------------- | -------------------------------------------- |
-| 401    | `unauthorized`   | Missing or invalid API key                   |
-| 403    | `forbidden`      | API key doesn't have `api-keys:write` scope  |
-| 404    | `not-found`      | API key with the specified ID does not exist |
-| 429    | `rate-limited`   | Too many requests                            |
-| 500    | `internal-error` | Server error                                 |
+| Status | Type               | Description                                  |
+| ------ | ------------------ | -------------------------------------------- |
+| 400    | `validation-error` | Malformed API key id                         |
+| 401    | `unauthorized`     | Missing or invalid API key                   |
+| 403    | `forbidden`        | API key doesn't have `api-keys:write` scope  |
+| 404    | `not-found`        | API key with the specified ID does not exist |
 
 ### Response Schema
 
@@ -479,11 +530,31 @@ curl -X DELETE https://uptime.sergiodxa.com/api/v1/api-keys/key_abc123 \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": ["deleted"],
+	"required": ["data", "meta"],
 	"properties": {
-		"deleted": {
-			"type": "boolean",
-			"const": true
+		"data": {
+			"type": "object",
+			"required": ["deleted"],
+			"properties": {
+				"deleted": {
+					"type": "boolean",
+					"const": true
+				}
+			}
+		},
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": {
+					"type": "string",
+					"format": "uuid"
+				},
+				"timestamp": {
+					"type": "string",
+					"format": "date-time"
+				}
+			}
 		}
 	}
 }

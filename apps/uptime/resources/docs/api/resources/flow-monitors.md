@@ -163,11 +163,12 @@ curl -i "https://uptime.sergiodxa.com/api/v1/flow-monitors?perPage=25" \
 
 ### Errors
 
-| Status | Type           | Description                              |
-| ------ | -------------- | ---------------------------------------- |
-| 400    | `bad-request`  | Invalid or malformed cursor              |
-| 401    | `unauthorized` | Missing or invalid API key               |
-| 403    | `forbidden`    | API key lacks `flow-monitors:read` scope |
+| Status | Type           | Description                                    |
+| ------ | -------------- | ---------------------------------------------- |
+| 400    | `bad-request`  | `perPage` outside 1-200, or a malformed cursor |
+| 401    | `unauthorized` | Missing or invalid API key                     |
+| 403    | `forbidden`    | API key lacks `flow-monitors:read` scope       |
+| 500    | `internal`     | The page could not be read                     |
 
 ## Create a Flow Monitor
 
@@ -399,11 +400,12 @@ The detail response carries no more than the list response does: `source` is wit
 
 ### Errors
 
-| Status | Type           | Description                              |
-| ------ | -------------- | ---------------------------------------- |
-| 401    | `unauthorized` | Missing or invalid API key               |
-| 403    | `forbidden`    | API key lacks `flow-monitors:read` scope |
-| 404    | `not-found`    | Flow monitor not found                   |
+| Status | Type               | Description                              |
+| ------ | ------------------ | ---------------------------------------- |
+| 400    | `validation-error` | Malformed flow monitor id                |
+| 401    | `unauthorized`     | Missing or invalid API key               |
+| 403    | `forbidden`        | API key lacks `flow-monitors:read` scope |
+| 404    | `not-found`        | Flow monitor not found                   |
 
 A monitor belonging to another team is `404`, not `403`: an id you may not read is an id that does not exist.
 
@@ -467,6 +469,7 @@ A refused update changes nothing: the stored spec, interval and schedule are exa
 
 | Status | Type               | Description                                                                           |
 | ------ | ------------------ | ------------------------------------------------------------------------------------- |
+| 400    | `validation-error` | Malformed flow monitor id                                                             |
 | 400    | `validation-error` | Invalid body, an unlisted interval, or a replacement spec reaching an unverified host |
 | 401    | `unauthorized`     | Missing or invalid API key                                                            |
 | 403    | `forbidden`        | API key lacks `flow-monitors:write` scope                                             |
@@ -522,11 +525,12 @@ curl https://uptime.sergiodxa.com/api/v1/flow-monitors/flow_abc123 \
 
 ### Errors
 
-| Status | Type           | Description                               |
-| ------ | -------------- | ----------------------------------------- |
-| 401    | `unauthorized` | Missing or invalid API key                |
-| 403    | `forbidden`    | API key lacks `flow-monitors:write` scope |
-| 404    | `not-found`    | Flow monitor not found                    |
+| Status | Type               | Description                               |
+| ------ | ------------------ | ----------------------------------------- |
+| 400    | `validation-error` | Malformed flow monitor id                 |
+| 401    | `unauthorized`     | Missing or invalid API key                |
+| 403    | `forbidden`        | API key lacks `flow-monitors:write` scope |
+| 404    | `not-found`        | Flow monitor not found                    |
 
 ## Get Flow Monitor Results
 
@@ -610,12 +614,14 @@ Only the **first** failure of a run is recorded, in `failedTest`, `failedAtLine`
 
 ### Errors
 
-| Status | Type           | Description                              |
-| ------ | -------------- | ---------------------------------------- |
-| 400    | `bad-request`  | Invalid or malformed cursor              |
-| 401    | `unauthorized` | Missing or invalid API key               |
-| 403    | `forbidden`    | API key lacks `flow-monitors:read` scope |
-| 404    | `not-found`    | Flow monitor not found                   |
+| Status | Type               | Description                                    |
+| ------ | ------------------ | ---------------------------------------------- |
+| 400    | `bad-request`      | `perPage` outside 1-200, or a malformed cursor |
+| 400    | `validation-error` | Malformed flow monitor id                      |
+| 401    | `unauthorized`     | Missing or invalid API key                     |
+| 403    | `forbidden`        | API key lacks `flow-monitors:read` scope       |
+| 404    | `not-found`        | Flow monitor not found                         |
+| 500    | `internal`         | The page could not be read                     |
 
 ### Response Schema
 

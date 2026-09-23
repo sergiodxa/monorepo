@@ -5,7 +5,7 @@ section:
   title: API Reference
   order: 4
 order: 5
-lastUpdated: 2026-09-05
+lastUpdated: 2026-09-23
 ---
 
 Every endpoint that returns a list is paginated. A response carries one page of results, and both the `Link` header and the response's own `meta.pagination` say where the neighbouring pages are.
@@ -138,7 +138,7 @@ A total says how many rows there are, not where they are. Paging is still cursor
 
 2. **Treat cursors as opaque** - store and resend them verbatim. Do not decode, parse, or generate them.
 
-3. **Ask for larger pages when you want the whole list** - `perPage=200` fetches an export in a quarter of the requests that the default does, against the same rate limit.
+3. **Ask for larger pages when you want the whole list** - `perPage=200` fetches an export in a quarter of the requests that the default does.
 
 4. **Stop when there is no next cursor** - a missing `rel="next"`, or a `null` `meta.pagination.next`, is the end of the list. An empty page is not required to arrive first.
 

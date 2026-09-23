@@ -81,13 +81,12 @@ The cursors for this page arrive in `meta.pagination`:
 
 ### Possible Errors
 
-| Status | Type             | Description                                 |
-| ------ | ---------------- | ------------------------------------------- |
-| 400    | `bad-request`    | Invalid or malformed cursor                 |
-| 401    | `unauthorized`   | Missing or invalid API key                  |
-| 403    | `forbidden`      | API key doesn't have `cron-jobs:read` scope |
-| 429    | `rate-limited`   | Too many requests                           |
-| 500    | `internal-error` | Server error                                |
+| Status | Type           | Description                                 |
+| ------ | -------------- | ------------------------------------------- |
+| 400    | `bad-request`  | Invalid or malformed cursor                 |
+| 401    | `unauthorized` | Missing or invalid API key                  |
+| 403    | `forbidden`    | API key doesn't have `cron-jobs:read` scope |
+| 500    | `internal`     | The page of results could not be read       |
 
 ### Response Schema
 
@@ -166,7 +165,7 @@ The cursors for this page arrive in `meta.pagination`:
 
 ## POST /api/v1/cron-jobs
 
-Creates a new cron job monitor.
+Creates a new cron job monitor and answers `201 Created`.
 
 ### Required Scope
 
@@ -207,19 +206,25 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs \
 ```json
 {
 	"data": {
-		"id": "cron_abc123",
-		"name": "Daily Backup",
-		"description": "Runs database backup every night",
-		"cronExpression": "0 2 * * *",
-		"gracePeriodSeconds": 600,
-		"timezone": "America/New_York",
-		"status": "unknown",
-		"alertOnLate": true,
-		"lastPingAt": null,
-		"nextExpectedAt": "2026-02-15T07:00:00Z",
-		"enabledAt": "2026-02-14T15:30:00Z",
-		"createdAt": "2026-02-14T15:30:00Z",
-		"updatedAt": "2026-02-14T15:30:00Z"
+		"cronJob": {
+			"id": "cron_abc123",
+			"name": "Daily Backup",
+			"description": "Runs database backup every night",
+			"cronExpression": "0 2 * * *",
+			"gracePeriodSeconds": 600,
+			"timezone": "America/New_York",
+			"status": "new",
+			"alertOnLate": true,
+			"lastPingAt": null,
+			"nextExpectedAt": 1771138800000,
+			"enabledAt": 1771083000000,
+			"createdAt": 1771083000000,
+			"updatedAt": 1771083000000
+		}
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z"
 	}
 }
 ```
@@ -231,8 +236,6 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs \
 | 400    | `validation-error` | Invalid request body or cron expression      |
 | 401    | `unauthorized`     | Missing or invalid API key                   |
 | 403    | `forbidden`        | API key doesn't have `cron-jobs:write` scope |
-| 429    | `rate-limited`     | Too many requests                            |
-| 500    | `internal-error`   | Server error                                 |
 
 ### Request Body Schema
 
@@ -243,9 +246,9 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs \
 	"required": ["name", "cronExpression"],
 	"properties": {
 		"name": { "type": "string", "minLength": 1, "maxLength": 100 },
-		"cronExpression": { "type": "string" },
+		"cronExpression": { "type": "string", "minLength": 1 },
 		"description": { "type": "string", "maxLength": 500 },
-		"gracePeriodSeconds": { "type": "integer", "minimum": 60, "maximum": 86400, "default": 300 },
+		"gracePeriodSeconds": { "type": "number", "minimum": 60, "maximum": 86400, "default": 300 },
 		"timezone": { "type": "string", "default": "UTC" },
 		"alertOnLate": { "type": "boolean", "default": false },
 		"enabled": { "type": "boolean", "default": true }
@@ -259,9 +262,23 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": ["data"],
+	"required": ["data", "meta"],
 	"properties": {
-		"data": { "$ref": "#/$defs/cronJob" }
+		"data": {
+			"type": "object",
+			"required": ["cronJob"],
+			"properties": {
+				"cronJob": { "$ref": "#/$defs/cronJob" }
+			}
+		},
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": { "type": "string", "format": "uuid" },
+				"timestamp": { "type": "string", "format": "date-time" }
+			}
+		}
 	},
 	"$defs": {
 		"cronJob": {
@@ -290,11 +307,11 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs \
 				"timezone": { "type": "string" },
 				"status": { "type": "string", "enum": ["healthy", "late", "missed", "new"] },
 				"alertOnLate": { "type": "boolean" },
-				"lastPingAt": { "type": ["string", "null"], "format": "date-time" },
-				"nextExpectedAt": { "type": ["string", "null"], "format": "date-time" },
-				"enabledAt": { "type": ["string", "null"], "format": "date-time" },
-				"createdAt": { "type": "string", "format": "date-time" },
-				"updatedAt": { "type": "string", "format": "date-time" }
+				"lastPingAt": { "type": ["integer", "null"] },
+				"nextExpectedAt": { "type": ["integer", "null"] },
+				"enabledAt": { "type": ["integer", "null"] },
+				"createdAt": { "type": "integer" },
+				"updatedAt": { "type": "integer" }
 			}
 		}
 	}
@@ -323,32 +340,37 @@ curl https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123 \
 ```json
 {
 	"data": {
-		"id": "cron_abc123",
-		"name": "Daily Backup",
-		"description": "Runs database backup every night",
-		"cronExpression": "0 2 * * *",
-		"gracePeriodSeconds": 600,
-		"timezone": "America/New_York",
-		"status": "healthy",
-		"alertOnLate": true,
-		"lastPingAt": "2026-02-14T07:00:12Z",
-		"nextExpectedAt": "2026-02-15T07:00:00Z",
-		"enabledAt": "2026-01-10T14:30:00Z",
-		"createdAt": "2026-01-10T14:30:00Z",
-		"updatedAt": "2026-02-01T09:15:00Z"
+		"cronJob": {
+			"id": "cron_abc123",
+			"name": "Daily Backup",
+			"description": "Runs database backup every night",
+			"cronExpression": "0 2 * * *",
+			"gracePeriodSeconds": 600,
+			"timezone": "America/New_York",
+			"status": "healthy",
+			"alertOnLate": true,
+			"lastPingAt": 1771052412000,
+			"nextExpectedAt": 1771138800000,
+			"enabledAt": 1768055400000,
+			"createdAt": 1768055400000,
+			"updatedAt": 1770282900000
+		}
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z"
 	}
 }
 ```
 
 ### Possible Errors
 
-| Status | Type             | Description                                 |
-| ------ | ---------------- | ------------------------------------------- |
-| 401    | `unauthorized`   | Missing or invalid API key                  |
-| 403    | `forbidden`      | API key doesn't have `cron-jobs:read` scope |
-| 404    | `not-found`      | Cron job not found                          |
-| 429    | `rate-limited`   | Too many requests                           |
-| 500    | `internal-error` | Server error                                |
+| Status | Type               | Description                                 |
+| ------ | ------------------ | ------------------------------------------- |
+| 400    | `validation-error` | Malformed cron job id                       |
+| 401    | `unauthorized`     | Missing or invalid API key                  |
+| 403    | `forbidden`        | API key doesn't have `cron-jobs:read` scope |
+| 404    | `not-found`        | Cron job not found                          |
 
 ### Response Schema
 
@@ -356,9 +378,23 @@ curl https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123 \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": ["data"],
+	"required": ["data", "meta"],
 	"properties": {
-		"data": { "$ref": "#/$defs/cronJob" }
+		"data": {
+			"type": "object",
+			"required": ["cronJob"],
+			"properties": {
+				"cronJob": { "$ref": "#/$defs/cronJob" }
+			}
+		},
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": { "type": "string", "format": "uuid" },
+				"timestamp": { "type": "string", "format": "date-time" }
+			}
+		}
 	},
 	"$defs": {
 		"cronJob": {
@@ -387,11 +423,11 @@ curl https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123 \
 				"timezone": { "type": "string" },
 				"status": { "type": "string", "enum": ["healthy", "late", "missed", "new"] },
 				"alertOnLate": { "type": "boolean" },
-				"lastPingAt": { "type": ["string", "null"], "format": "date-time" },
-				"nextExpectedAt": { "type": ["string", "null"], "format": "date-time" },
-				"enabledAt": { "type": ["string", "null"], "format": "date-time" },
-				"createdAt": { "type": "string", "format": "date-time" },
-				"updatedAt": { "type": "string", "format": "date-time" }
+				"lastPingAt": { "type": ["integer", "null"] },
+				"nextExpectedAt": { "type": ["integer", "null"] },
+				"enabledAt": { "type": ["integer", "null"] },
+				"createdAt": { "type": "integer" },
+				"updatedAt": { "type": "integer" }
 			}
 		}
 	}
@@ -439,19 +475,25 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123 \
 ```json
 {
 	"data": {
-		"id": "cron_abc123",
-		"name": "Daily Backup",
-		"description": "Runs database backup every night",
-		"cronExpression": "0 2 * * *",
-		"gracePeriodSeconds": 900,
-		"timezone": "America/New_York",
-		"status": "healthy",
-		"alertOnLate": false,
-		"lastPingAt": "2026-02-14T07:00:12Z",
-		"nextExpectedAt": "2026-02-15T07:00:00Z",
-		"enabledAt": "2026-01-10T14:30:00Z",
-		"createdAt": "2026-01-10T14:30:00Z",
-		"updatedAt": "2026-02-14T16:45:00Z"
+		"cronJob": {
+			"id": "cron_abc123",
+			"name": "Daily Backup",
+			"description": "Runs database backup every night",
+			"cronExpression": "0 2 * * *",
+			"gracePeriodSeconds": 900,
+			"timezone": "America/New_York",
+			"status": "healthy",
+			"alertOnLate": false,
+			"lastPingAt": 1771052412000,
+			"nextExpectedAt": 1771138800000,
+			"enabledAt": 1768055400000,
+			"createdAt": 1768055400000,
+			"updatedAt": 1771087500000
+		}
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z"
 	}
 }
 ```
@@ -460,12 +502,11 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123 \
 
 | Status | Type               | Description                                  |
 | ------ | ------------------ | -------------------------------------------- |
+| 400    | `validation-error` | Malformed cron job id                        |
 | 400    | `validation-error` | Invalid request body or cron expression      |
 | 401    | `unauthorized`     | Missing or invalid API key                   |
 | 403    | `forbidden`        | API key doesn't have `cron-jobs:write` scope |
 | 404    | `not-found`        | Cron job not found                           |
-| 429    | `rate-limited`     | Too many requests                            |
-| 500    | `internal-error`   | Server error                                 |
 
 ### Request Body Schema
 
@@ -475,9 +516,9 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123 \
 	"type": "object",
 	"properties": {
 		"name": { "type": "string", "minLength": 1, "maxLength": 100 },
-		"cronExpression": { "type": "string" },
+		"cronExpression": { "type": "string", "minLength": 1 },
 		"description": { "type": "string", "maxLength": 500 },
-		"gracePeriodSeconds": { "type": "integer", "minimum": 60, "maximum": 86400 },
+		"gracePeriodSeconds": { "type": "number", "minimum": 60, "maximum": 86400 },
 		"timezone": { "type": "string" },
 		"alertOnLate": { "type": "boolean" },
 		"enabled": { "type": "boolean" }
@@ -491,9 +532,23 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123 \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": ["data"],
+	"required": ["data", "meta"],
 	"properties": {
-		"data": { "$ref": "#/$defs/cronJob" }
+		"data": {
+			"type": "object",
+			"required": ["cronJob"],
+			"properties": {
+				"cronJob": { "$ref": "#/$defs/cronJob" }
+			}
+		},
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": { "type": "string", "format": "uuid" },
+				"timestamp": { "type": "string", "format": "date-time" }
+			}
+		}
 	},
 	"$defs": {
 		"cronJob": {
@@ -522,11 +577,11 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123 \
 				"timezone": { "type": "string" },
 				"status": { "type": "string", "enum": ["healthy", "late", "missed", "new"] },
 				"alertOnLate": { "type": "boolean" },
-				"lastPingAt": { "type": ["string", "null"], "format": "date-time" },
-				"nextExpectedAt": { "type": ["string", "null"], "format": "date-time" },
-				"enabledAt": { "type": ["string", "null"], "format": "date-time" },
-				"createdAt": { "type": "string", "format": "date-time" },
-				"updatedAt": { "type": "string", "format": "date-time" }
+				"lastPingAt": { "type": ["integer", "null"] },
+				"nextExpectedAt": { "type": ["integer", "null"] },
+				"enabledAt": { "type": ["integer", "null"] },
+				"createdAt": { "type": "integer" },
+				"updatedAt": { "type": "integer" }
 			}
 		}
 	}
@@ -552,21 +607,53 @@ curl -X DELETE https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123 \
 
 ### Response
 
-Returns `204 No Content` on success with an empty response body.
+```json
+{
+	"data": {
+		"deleted": true
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z"
+	}
+}
+```
 
 ### Possible Errors
 
-| Status | Type             | Description                                  |
-| ------ | ---------------- | -------------------------------------------- |
-| 401    | `unauthorized`   | Missing or invalid API key                   |
-| 403    | `forbidden`      | API key doesn't have `cron-jobs:write` scope |
-| 404    | `not-found`      | Cron job not found                           |
-| 429    | `rate-limited`   | Too many requests                            |
-| 500    | `internal-error` | Server error                                 |
+| Status | Type               | Description                                  |
+| ------ | ------------------ | -------------------------------------------- |
+| 400    | `validation-error` | Malformed cron job id                        |
+| 401    | `unauthorized`     | Missing or invalid API key                   |
+| 403    | `forbidden`        | API key doesn't have `cron-jobs:write` scope |
+| 404    | `not-found`        | Cron job not found                           |
 
 ### Response Schema
 
-Returns `204 No Content` with an empty response body on success.
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["data", "meta"],
+	"properties": {
+		"data": {
+			"type": "object",
+			"required": ["deleted"],
+			"properties": {
+				"deleted": { "type": "boolean", "const": true }
+			}
+		},
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": { "type": "string", "format": "uuid" },
+				"timestamp": { "type": "string", "format": "date-time" }
+			}
+		}
+	}
+}
+```
 
 ## POST /api/v1/cron-jobs/:id/ping
 
@@ -574,9 +661,12 @@ Records a ping for a cron job monitor. Call this endpoint when your scheduled ta
 
 Like every other endpoint on this page, it requires an API key: send it as `Authorization: Bearer <key>`. A key reaches only the monitors of the team that owns it—pinging another team's monitor returns `404`, exactly as an id that doesn't exist does, so the endpoint can't be used to discover which ids are real.
 
-Because this URL lives in crontabs and deploy scripts, it also accepts the monitor's plain UUID in place of its `cron_` id, so an address saved before the id got its prefix keeps working. Both forms name the same monitor and share the same rate limit. Use the `cron_` id shown by [List Cron Jobs](#get-apiv1cron-jobs) for anything new.
+Because this URL lives in crontabs and deploy scripts, it also accepts the monitor's plain UUID in place of its `cron_` id, so an address saved before the id got its prefix keeps working. Both forms name the same monitor and share the same rate limits. An id in neither form answers `404` `not-found`. Use the `cron_` id shown by [List Cron Jobs](#get-apiv1cron-jobs) for anything new.
 
-**Rate Limit:** This endpoint is rate limited to 1 request per minute per cron job. Additional requests within the same minute will be rejected with a `429` error. A separate abuse limit caps how many requests one caller may send for one monitor per minute, whether or not they are accepted; exceeding it also returns `429`, and it applies before the key is checked.
+**Rate Limits:** Two limits apply, and both answer a `429` `rate-limited` problem with a `Retry-After` header giving the seconds to wait:
+
+- **Caller budget:** 60 requests per minute for each calling IP address (`CF-Connecting-IP`) and monitor pair, counted whether or not the ping is accepted. It is spent before the API key is checked, so requests with a missing or invalid key count against it too. Responses from this limit also carry the quota headers.
+- **Minimum interval:** a monitor accepts one ping every 30 seconds. A ping that arrives sooner after the previous accepted one is rejected.
 
 ### Required Scope
 
@@ -593,6 +683,8 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123/ping \
 
 ### Response
 
+Returns `201 Created`:
+
 ```json
 {
 	"wasOnTime": true
@@ -603,14 +695,13 @@ Unlike the rest of `/api/v1`, this endpoint answers with the bare object above r
 
 ### Possible Errors
 
-| Status | Type             | Description                                                      |
-| ------ | ---------------- | ---------------------------------------------------------------- |
-| 401    | `unauthorized`   | Missing, invalid, or expired API key                             |
-| 403    | `forbidden`      | API key doesn't have `cron-jobs:ping` scope                      |
-| 404    | `not-found`      | Cron job not found, or owned by another team                     |
-| 409    | `conflict`       | Cron job is disabled                                             |
-| 429    | `rate-limited`   | More than 1 ping per minute for this job, or caller budget spent |
-| 500    | `internal-error` | Server error                                                     |
+| Status | Type           | Description                                                               |
+| ------ | -------------- | ------------------------------------------------------------------------- |
+| 401    | `unauthorized` | Missing, invalid, or expired API key                                      |
+| 403    | `forbidden`    | API key doesn't have `cron-jobs:ping` scope                               |
+| 404    | `not-found`    | Cron job not found, owned by another team, or a malformed id              |
+| 409    | `conflict`     | Cron job is disabled                                                      |
+| 429    | `rate-limited` | Less than 30 seconds since the last accepted ping, or caller budget spent |
 
 ### Response Schema
 

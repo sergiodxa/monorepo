@@ -8,7 +8,7 @@ order: 11
 lastUpdated: 2026-09-05
 ---
 
-Manage team invitations to onboard new members. Invites are sent via email and expire after 7 days if not accepted.
+Manage team invitations to onboard new members. An invite stays open for its email address until it is accepted or revoked.
 
 ## GET /api/v1/invites
 
@@ -96,13 +96,12 @@ curl -i "https://uptime.sergiodxa.com/api/v1/invites?perPage=100" \
 
 ### Possible Errors
 
-| Status | Type             | Description                               |
-| ------ | ---------------- | ----------------------------------------- |
-| 400    | `bad-request`    | Invalid or malformed cursor               |
-| 401    | `unauthorized`   | Missing or invalid API key                |
-| 403    | `forbidden`      | API key doesn't have `invites:read` scope |
-| 429    | `rate-limited`   | Too many requests                         |
-| 500    | `internal-error` | Server error                              |
+| Status | Type           | Description                               |
+| ------ | -------------- | ----------------------------------------- |
+| 400    | `bad-request`  | Invalid `perPage` or malformed cursor     |
+| 401    | `unauthorized` | Missing or invalid API key                |
+| 403    | `forbidden`    | API key doesn't have `invites:read` scope |
+| 500    | `internal`     | The page of results could not be read     |
 
 ### Response Schema
 
@@ -195,7 +194,7 @@ curl -i "https://uptime.sergiodxa.com/api/v1/invites?perPage=100" \
 
 ## POST /api/v1/invites
 
-Create a new invitation and send it to the specified email address. The invite expires after 7 days.
+Creates a pending invitation for the specified email address. The API records the invite; the invited person joins the team by accepting it. Answers `201 Created`.
 
 ### Required Scope
 
@@ -222,26 +221,32 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/invites \
 
 ```json
 {
-	"id": "inv_ghi789",
-	"email": "newuser@example.com",
-	"senderId": "usr_xyz789",
-	"teamId": "team_def456",
-	"acceptedAt": null,
-	"createdAt": "2026-02-14T16:45:00Z",
-	"updatedAt": "2026-02-14T16:45:00Z"
+	"data": {
+		"invite": {
+			"id": "inv_ghi789",
+			"email": "newuser@example.com",
+			"senderId": "usr_xyz789",
+			"teamId": "team_def456",
+			"acceptedAt": null,
+			"createdAt": 1771087500000,
+			"updatedAt": 1771087500000
+		}
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T16:45:00.000Z"
+	}
 }
 ```
 
 ### Possible Errors
 
-| Status | Type               | Description                                |
-| ------ | ------------------ | ------------------------------------------ |
-| 400    | `validation-error` | Invalid email address                      |
-| 401    | `unauthorized`     | Missing or invalid API key                 |
-| 403    | `forbidden`        | API key doesn't have `invites:write` scope |
-| 409    | `conflict`         | An invite for this email already exists    |
-| 429    | `rate-limited`     | Too many requests                          |
-| 500    | `internal-error`   | Server error                               |
+| Status | Type               | Description                                          |
+| ------ | ------------------ | ---------------------------------------------------- |
+| 400    | `validation-error` | Missing or invalid email address                     |
+| 401    | `unauthorized`     | Missing or invalid API key                           |
+| 403    | `forbidden`        | API key doesn't have `invites:write` scope           |
+| 409    | `conflict`         | This email was already invited (pending or accepted) |
 
 ### Request Body Schema
 
@@ -265,32 +270,55 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/invites \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": ["id", "email", "senderId", "teamId", "acceptedAt", "createdAt", "updatedAt"],
+	"required": ["data", "meta"],
 	"properties": {
-		"id": {
-			"type": "string"
+		"data": {
+			"type": "object",
+			"required": ["invite"],
+			"properties": {
+				"invite": {
+					"type": "object",
+					"required": ["id", "email", "senderId", "teamId", "acceptedAt", "createdAt", "updatedAt"],
+					"properties": {
+						"id": {
+							"type": "string"
+						},
+						"email": {
+							"type": "string",
+							"format": "email"
+						},
+						"senderId": {
+							"type": "string"
+						},
+						"teamId": {
+							"type": "string"
+						},
+						"acceptedAt": {
+							"type": ["integer", "null"]
+						},
+						"createdAt": {
+							"type": "integer"
+						},
+						"updatedAt": {
+							"type": "integer"
+						}
+					}
+				}
+			}
 		},
-		"email": {
-			"type": "string",
-			"format": "email"
-		},
-		"senderId": {
-			"type": "string"
-		},
-		"teamId": {
-			"type": "string"
-		},
-		"acceptedAt": {
-			"type": ["string", "null"],
-			"format": "date-time"
-		},
-		"createdAt": {
-			"type": "string",
-			"format": "date-time"
-		},
-		"updatedAt": {
-			"type": "string",
-			"format": "date-time"
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": {
+					"type": "string",
+					"format": "uuid"
+				},
+				"timestamp": {
+					"type": "string",
+					"format": "date-time"
+				}
+			}
 		}
 	}
 }
@@ -298,7 +326,7 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/invites \
 
 ## DELETE /api/v1/invites/:id
 
-Revoke a pending invitation. This prevents the invited user from joining the team using this invite.
+Revokes a pending invitation, so the invited user can no longer join the team with it. An invite that was already accepted stays in place and answers `409 conflict`.
 
 ### Required Scope
 
@@ -323,19 +351,25 @@ curl -X DELETE https://uptime.sergiodxa.com/api/v1/invites/inv_ghi789 \
 
 ```json
 {
-	"deleted": true
+	"data": {
+		"deleted": true
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T17:00:00.000Z"
+	}
 }
 ```
 
 ### Possible Errors
 
-| Status | Type             | Description                                |
-| ------ | ---------------- | ------------------------------------------ |
-| 401    | `unauthorized`   | Missing or invalid API key                 |
-| 403    | `forbidden`      | API key doesn't have `invites:write` scope |
-| 404    | `not-found`      | Invite not found                           |
-| 429    | `rate-limited`   | Too many requests                          |
-| 500    | `internal-error` | Server error                               |
+| Status | Type               | Description                                |
+| ------ | ------------------ | ------------------------------------------ |
+| 400    | `validation-error` | Malformed invite id                        |
+| 401    | `unauthorized`     | Missing or invalid API key                 |
+| 403    | `forbidden`        | API key doesn't have `invites:write` scope |
+| 404    | `not-found`        | Invite not found                           |
+| 409    | `conflict`         | The invite was already accepted            |
 
 ### Response Schema
 
@@ -343,11 +377,31 @@ curl -X DELETE https://uptime.sergiodxa.com/api/v1/invites/inv_ghi789 \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": ["deleted"],
+	"required": ["data", "meta"],
 	"properties": {
-		"deleted": {
-			"type": "boolean",
-			"const": true
+		"data": {
+			"type": "object",
+			"required": ["deleted"],
+			"properties": {
+				"deleted": {
+					"type": "boolean",
+					"const": true
+				}
+			}
+		},
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": {
+					"type": "string",
+					"format": "uuid"
+				},
+				"timestamp": {
+					"type": "string",
+					"format": "date-time"
+				}
+			}
 		}
 	}
 }

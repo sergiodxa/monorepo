@@ -92,13 +92,12 @@ The cursors for this page arrive in `meta.pagination`:
 
 ### Possible Errors
 
-| Status | Type             | Description                                   |
-| ------ | ---------------- | --------------------------------------------- |
-| 400    | `bad-request`    | Invalid or malformed cursor                   |
-| 401    | `unauthorized`   | Missing or invalid API key                    |
-| 403    | `forbidden`      | API key doesn't have `maintenance:read` scope |
-| 429    | `rate-limited`   | Too many requests                             |
-| 500    | `internal-error` | Server error                                  |
+| Status | Type           | Description                                   |
+| ------ | -------------- | --------------------------------------------- |
+| 400    | `bad-request`  | Invalid or malformed cursor                   |
+| 401    | `unauthorized` | Missing or invalid API key                    |
+| 403    | `forbidden`    | API key doesn't have `maintenance:read` scope |
+| 500    | `internal`     | The page of results could not be read         |
 
 ### Response Schema
 
@@ -159,6 +158,7 @@ The cursors for this page arrive in `meta.pagination`:
 			"required": [
 				"id",
 				"teamId",
+				"monitorType",
 				"monitorId",
 				"name",
 				"startsAt",
@@ -180,15 +180,15 @@ The cursors for this page arrive in `meta.pagination`:
 				},
 				"monitorType": {
 					"type": ["string", "null"],
-					"enum": ["http", "dns", "tcp", "cron", null]
+					"enum": ["http", "dns", "tcp", "cron", "flow", null]
 				},
 				"monitorId": {
-					"type": ["string", "null"]
+					"type": ["string", "null"],
+					"pattern": "^(mon|dns|tcpm|cron|flow)_[a-zA-Z0-9]+$"
 				},
 				"name": {
 					"type": "string",
-					"minLength": 1,
-					"maxLength": 255
+					"minLength": 1
 				},
 				"startsAt": {
 					"type": "integer"
@@ -219,7 +219,7 @@ The cursors for this page arrive in `meta.pagination`:
 
 ## POST /api/v1/maintenance
 
-Creates a new maintenance window.
+Creates a new maintenance window and answers `201 Created`.
 
 ### Required Scope
 
@@ -229,10 +229,10 @@ Creates a new maintenance window.
 
 | Field              | Type           | Required | Description                                                                                                                                                                                                                        |
 | ------------------ | -------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`             | string         | Yes      | Name of the maintenance window (1-255 characters)                                                                                                                                                                                  |
+| `name`             | string         | Yes      | Name of the maintenance window (at least 1 character)                                                                                                                                                                              |
 | `startsAt`         | string         | Yes      | Start time in ISO 8601 format                                                                                                                                                                                                      |
 | `endsAt`           | string         | Yes      | End time in ISO 8601 format (must be after `startsAt`)                                                                                                                                                                             |
-| `monitorType`      | string \| null | No       | Limit the window to one kind of monitor: `http`, `dns`, `tcp` or `cron`. Sent on its own, the window covers every monitor of that kind, including ones created later.                                                              |
+| `monitorType`      | string         | No       | Limit the window to one kind of monitor: `http`, `dns`, `tcp`, `cron` or `flow`. Sent on its own, the window covers every monitor of that kind, including ones created later.                                                      |
 | `monitorId`        | string \| null | No       | Limit the window to a single monitor, or `null` for all monitors. Sent together with `monitorType`, the id is looked up in that kind's monitors; sent on its own it is read as an HTTP monitor, which is what it has always meant. |
 | `suppressAlerts`   | boolean        | No       | Whether to suppress alerts during maintenance (default: `true`)                                                                                                                                                                    |
 | `showOnStatusPage` | boolean        | No       | Whether to show maintenance on status page (default: `true`)                                                                                                                                                                       |
@@ -261,18 +261,24 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance \
 ```json
 {
 	"data": {
-		"id": "mnt_abc123",
-		"teamId": "team_xyz789",
-		"monitorType": "http",
-		"monitorId": "mon_def456",
-		"name": "Database Migration",
-		"startsAt": "2026-02-15T02:00:00Z",
-		"endsAt": "2026-02-15T04:00:00Z",
-		"endedEarlyAt": null,
-		"suppressAlerts": true,
-		"showOnStatusPage": true,
-		"createdAt": "2026-02-14T10:00:00Z",
-		"updatedAt": "2026-02-14T10:00:00Z"
+		"maintenanceWindow": {
+			"id": "mnt_abc123",
+			"teamId": "team_xyz789",
+			"monitorType": "http",
+			"monitorId": "mon_def456",
+			"name": "Database Migration",
+			"startsAt": 1771120800000,
+			"endsAt": 1771128000000,
+			"endedEarlyAt": null,
+			"suppressAlerts": true,
+			"showOnStatusPage": true,
+			"createdAt": 1771063200000,
+			"updatedAt": 1771063200000
+		}
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z"
 	}
 }
 ```
@@ -286,8 +292,6 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance \
 | 401    | `unauthorized`     | Missing or invalid API key                     |
 | 403    | `forbidden`        | API key doesn't have `maintenance:write` scope |
 | 404    | `not-found`        | Monitor not found for the given scope          |
-| 429    | `rate-limited`     | Too many requests                              |
-| 500    | `internal-error`   | Server error                                   |
 
 ### Request Body Schema
 
@@ -299,8 +303,7 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance \
 	"properties": {
 		"name": {
 			"type": "string",
-			"minLength": 1,
-			"maxLength": 255
+			"minLength": 1
 		},
 		"startsAt": {
 			"type": "string",
@@ -311,12 +314,12 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance \
 			"format": "date-time"
 		},
 		"monitorType": {
-			"type": ["string", "null"],
-			"enum": ["http", "dns", "tcp", "cron", null]
+			"type": "string",
+			"enum": ["http", "dns", "tcp", "cron", "flow"]
 		},
 		"monitorId": {
 			"type": ["string", "null"],
-			"pattern": "^mon_[a-zA-Z0-9]+$"
+			"pattern": "^(mon|dns|tcpm|cron|flow)_[a-zA-Z0-9]+$"
 		},
 		"suppressAlerts": {
 			"type": "boolean",
@@ -336,13 +339,31 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": ["data"],
+	"required": ["data", "meta"],
 	"properties": {
 		"data": {
+			"type": "object",
+			"required": ["maintenanceWindow"],
+			"properties": {
+				"maintenanceWindow": { "$ref": "#/$defs/maintenanceWindow" }
+			}
+		},
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": { "type": "string", "format": "uuid" },
+				"timestamp": { "type": "string", "format": "date-time" }
+			}
+		}
+	},
+	"$defs": {
+		"maintenanceWindow": {
 			"type": "object",
 			"required": [
 				"id",
 				"teamId",
+				"monitorType",
 				"monitorId",
 				"name",
 				"startsAt",
@@ -364,28 +385,24 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance \
 				},
 				"monitorType": {
 					"type": ["string", "null"],
-					"enum": ["http", "dns", "tcp", "cron", null]
+					"enum": ["http", "dns", "tcp", "cron", "flow", null]
 				},
 				"monitorId": {
 					"type": ["string", "null"],
-					"pattern": "^mon_[a-zA-Z0-9]+$"
+					"pattern": "^(mon|dns|tcpm|cron|flow)_[a-zA-Z0-9]+$"
 				},
 				"name": {
 					"type": "string",
-					"minLength": 1,
-					"maxLength": 255
+					"minLength": 1
 				},
 				"startsAt": {
-					"type": "string",
-					"format": "date-time"
+					"type": "integer"
 				},
 				"endsAt": {
-					"type": "string",
-					"format": "date-time"
+					"type": "integer"
 				},
 				"endedEarlyAt": {
-					"type": ["string", "null"],
-					"format": "date-time"
+					"type": ["integer", "null"]
 				},
 				"suppressAlerts": {
 					"type": "boolean"
@@ -394,12 +411,10 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance \
 					"type": "boolean"
 				},
 				"createdAt": {
-					"type": "string",
-					"format": "date-time"
+					"type": "integer"
 				},
 				"updatedAt": {
-					"type": "string",
-					"format": "date-time"
+					"type": "integer"
 				}
 			}
 		}
@@ -429,31 +444,36 @@ curl https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
 ```json
 {
 	"data": {
-		"id": "mnt_abc123",
-		"teamId": "team_xyz789",
-		"monitorType": "http",
-		"monitorId": "mon_def456",
-		"name": "Database Migration",
-		"startsAt": "2026-02-15T02:00:00Z",
-		"endsAt": "2026-02-15T04:00:00Z",
-		"endedEarlyAt": null,
-		"suppressAlerts": true,
-		"showOnStatusPage": true,
-		"createdAt": "2026-02-14T10:00:00Z",
-		"updatedAt": "2026-02-14T10:00:00Z"
+		"maintenanceWindow": {
+			"id": "mnt_abc123",
+			"teamId": "team_xyz789",
+			"monitorType": "http",
+			"monitorId": "mon_def456",
+			"name": "Database Migration",
+			"startsAt": 1771120800000,
+			"endsAt": 1771128000000,
+			"endedEarlyAt": null,
+			"suppressAlerts": true,
+			"showOnStatusPage": true,
+			"createdAt": 1771063200000,
+			"updatedAt": 1771063200000
+		}
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z"
 	}
 }
 ```
 
 ### Possible Errors
 
-| Status | Type             | Description                                   |
-| ------ | ---------------- | --------------------------------------------- |
-| 401    | `unauthorized`   | Missing or invalid API key                    |
-| 403    | `forbidden`      | API key doesn't have `maintenance:read` scope |
-| 404    | `not-found`      | Maintenance window not found                  |
-| 429    | `rate-limited`   | Too many requests                             |
-| 500    | `internal-error` | Server error                                  |
+| Status | Type               | Description                                   |
+| ------ | ------------------ | --------------------------------------------- |
+| 400    | `validation-error` | Malformed maintenance window id               |
+| 401    | `unauthorized`     | Missing or invalid API key                    |
+| 403    | `forbidden`        | API key doesn't have `maintenance:read` scope |
+| 404    | `not-found`        | Maintenance window not found                  |
 
 ### Response Schema
 
@@ -461,13 +481,31 @@ curl https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": ["data"],
+	"required": ["data", "meta"],
 	"properties": {
 		"data": {
+			"type": "object",
+			"required": ["maintenanceWindow"],
+			"properties": {
+				"maintenanceWindow": { "$ref": "#/$defs/maintenanceWindow" }
+			}
+		},
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": { "type": "string", "format": "uuid" },
+				"timestamp": { "type": "string", "format": "date-time" }
+			}
+		}
+	},
+	"$defs": {
+		"maintenanceWindow": {
 			"type": "object",
 			"required": [
 				"id",
 				"teamId",
+				"monitorType",
 				"monitorId",
 				"name",
 				"startsAt",
@@ -489,28 +527,24 @@ curl https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
 				},
 				"monitorType": {
 					"type": ["string", "null"],
-					"enum": ["http", "dns", "tcp", "cron", null]
+					"enum": ["http", "dns", "tcp", "cron", "flow", null]
 				},
 				"monitorId": {
 					"type": ["string", "null"],
-					"pattern": "^mon_[a-zA-Z0-9]+$"
+					"pattern": "^(mon|dns|tcpm|cron|flow)_[a-zA-Z0-9]+$"
 				},
 				"name": {
 					"type": "string",
-					"minLength": 1,
-					"maxLength": 255
+					"minLength": 1
 				},
 				"startsAt": {
-					"type": "string",
-					"format": "date-time"
+					"type": "integer"
 				},
 				"endsAt": {
-					"type": "string",
-					"format": "date-time"
+					"type": "integer"
 				},
 				"endedEarlyAt": {
-					"type": ["string", "null"],
-					"format": "date-time"
+					"type": ["integer", "null"]
 				},
 				"suppressAlerts": {
 					"type": "boolean"
@@ -519,12 +553,10 @@ curl https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
 					"type": "boolean"
 				},
 				"createdAt": {
-					"type": "string",
-					"format": "date-time"
+					"type": "integer"
 				},
 				"updatedAt": {
-					"type": "string",
-					"format": "date-time"
+					"type": "integer"
 				}
 			}
 		}
@@ -542,15 +574,15 @@ Updates an existing maintenance window.
 
 ### Request Body
 
-| Field              | Type           | Required | Description                                                                  |
-| ------------------ | -------------- | -------- | ---------------------------------------------------------------------------- |
-| `name`             | string         | No       | Name of the maintenance window (1-255 characters)                            |
-| `startsAt`         | string         | No       | Start time in ISO 8601 format                                                |
-| `endsAt`           | string         | No       | End time in ISO 8601 format (must be after `startsAt`)                       |
-| `monitorType`      | string \| null | No       | The kind of monitor the window is limited to: `http`, `dns`, `tcp` or `cron` |
-| `monitorId`        | string \| null | No       | The single monitor the window is limited to, or `null` for all monitors      |
-| `suppressAlerts`   | boolean        | No       | Whether to suppress alerts during maintenance                                |
-| `showOnStatusPage` | boolean        | No       | Whether to show maintenance on status page                                   |
+| Field              | Type           | Required | Description                                                                          |
+| ------------------ | -------------- | -------- | ------------------------------------------------------------------------------------ |
+| `name`             | string         | No       | Name of the maintenance window (at least 1 character)                                |
+| `startsAt`         | string         | No       | Start time in ISO 8601 format                                                        |
+| `endsAt`           | string         | No       | End time in ISO 8601 format (must be after the window's start, sent or stored)       |
+| `monitorType`      | string         | No       | The kind of monitor the window is limited to: `http`, `dns`, `tcp`, `cron` or `flow` |
+| `monitorId`        | string \| null | No       | The single monitor the window is limited to, or `null` for all monitors              |
+| `suppressAlerts`   | boolean        | No       | Whether to suppress alerts during maintenance                                        |
+| `showOnStatusPage` | boolean        | No       | Whether to show maintenance on status page                                           |
 
 `monitorType` and `monitorId` are the window's scope, and they move as a pair: send either one and both are rewritten, so narrowing a window to a whole kind of monitor cannot leave the previous monitor's id behind it. Mention neither and the scope is left exactly as it is.
 
@@ -580,18 +612,24 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
 ```json
 {
 	"data": {
-		"id": "mnt_abc123",
-		"teamId": "team_xyz789",
-		"monitorType": "http",
-		"monitorId": "mon_def456",
-		"name": "Extended Database Migration",
-		"startsAt": "2026-02-15T02:00:00Z",
-		"endsAt": "2026-02-15T06:00:00Z",
-		"endedEarlyAt": null,
-		"suppressAlerts": true,
-		"showOnStatusPage": true,
-		"createdAt": "2026-02-14T10:00:00Z",
-		"updatedAt": "2026-02-14T11:30:00Z"
+		"maintenanceWindow": {
+			"id": "mnt_abc123",
+			"teamId": "team_xyz789",
+			"monitorType": "http",
+			"monitorId": "mon_def456",
+			"name": "Extended Database Migration",
+			"startsAt": 1771120800000,
+			"endsAt": 1771135200000,
+			"endedEarlyAt": null,
+			"suppressAlerts": true,
+			"showOnStatusPage": true,
+			"createdAt": 1771063200000,
+			"updatedAt": 1771068600000
+		}
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z"
 	}
 }
 ```
@@ -600,13 +638,12 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
 
 | Status | Type               | Description                                    |
 | ------ | ------------------ | ---------------------------------------------- |
+| 400    | `validation-error` | Malformed maintenance window id                |
 | 400    | `validation-error` | Invalid request body or validation failed      |
 | 400    | `validation-error` | `endsAt` must be after `startsAt`              |
 | 401    | `unauthorized`     | Missing or invalid API key                     |
 | 403    | `forbidden`        | API key doesn't have `maintenance:write` scope |
 | 404    | `not-found`        | Maintenance window or monitor not found        |
-| 429    | `rate-limited`     | Too many requests                              |
-| 500    | `internal-error`   | Server error                                   |
 
 ### Request Body Schema
 
@@ -617,8 +654,7 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
 	"properties": {
 		"name": {
 			"type": "string",
-			"minLength": 1,
-			"maxLength": 255
+			"minLength": 1
 		},
 		"startsAt": {
 			"type": "string",
@@ -629,12 +665,12 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
 			"format": "date-time"
 		},
 		"monitorType": {
-			"type": ["string", "null"],
-			"enum": ["http", "dns", "tcp", "cron", null]
+			"type": "string",
+			"enum": ["http", "dns", "tcp", "cron", "flow"]
 		},
 		"monitorId": {
 			"type": ["string", "null"],
-			"pattern": "^mon_[a-zA-Z0-9]+$"
+			"pattern": "^(mon|dns|tcpm|cron|flow)_[a-zA-Z0-9]+$"
 		},
 		"suppressAlerts": {
 			"type": "boolean"
@@ -652,13 +688,31 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": ["data"],
+	"required": ["data", "meta"],
 	"properties": {
 		"data": {
+			"type": "object",
+			"required": ["maintenanceWindow"],
+			"properties": {
+				"maintenanceWindow": { "$ref": "#/$defs/maintenanceWindow" }
+			}
+		},
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": { "type": "string", "format": "uuid" },
+				"timestamp": { "type": "string", "format": "date-time" }
+			}
+		}
+	},
+	"$defs": {
+		"maintenanceWindow": {
 			"type": "object",
 			"required": [
 				"id",
 				"teamId",
+				"monitorType",
 				"monitorId",
 				"name",
 				"startsAt",
@@ -680,28 +734,24 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
 				},
 				"monitorType": {
 					"type": ["string", "null"],
-					"enum": ["http", "dns", "tcp", "cron", null]
+					"enum": ["http", "dns", "tcp", "cron", "flow", null]
 				},
 				"monitorId": {
 					"type": ["string", "null"],
-					"pattern": "^mon_[a-zA-Z0-9]+$"
+					"pattern": "^(mon|dns|tcpm|cron|flow)_[a-zA-Z0-9]+$"
 				},
 				"name": {
 					"type": "string",
-					"minLength": 1,
-					"maxLength": 255
+					"minLength": 1
 				},
 				"startsAt": {
-					"type": "string",
-					"format": "date-time"
+					"type": "integer"
 				},
 				"endsAt": {
-					"type": "string",
-					"format": "date-time"
+					"type": "integer"
 				},
 				"endedEarlyAt": {
-					"type": ["string", "null"],
-					"format": "date-time"
+					"type": ["integer", "null"]
 				},
 				"suppressAlerts": {
 					"type": "boolean"
@@ -710,12 +760,10 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
 					"type": "boolean"
 				},
 				"createdAt": {
-					"type": "string",
-					"format": "date-time"
+					"type": "integer"
 				},
 				"updatedAt": {
-					"type": "string",
-					"format": "date-time"
+					"type": "integer"
 				}
 			}
 		}
@@ -742,21 +790,53 @@ curl -X DELETE https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
 
 ### Response
 
-Returns `204 No Content` on success.
+```json
+{
+	"data": {
+		"deleted": true
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z"
+	}
+}
+```
 
 ### Possible Errors
 
-| Status | Type             | Description                                    |
-| ------ | ---------------- | ---------------------------------------------- |
-| 401    | `unauthorized`   | Missing or invalid API key                     |
-| 403    | `forbidden`      | API key doesn't have `maintenance:write` scope |
-| 404    | `not-found`      | Maintenance window not found                   |
-| 429    | `rate-limited`   | Too many requests                              |
-| 500    | `internal-error` | Server error                                   |
+| Status | Type               | Description                                    |
+| ------ | ------------------ | ---------------------------------------------- |
+| 400    | `validation-error` | Malformed maintenance window id                |
+| 401    | `unauthorized`     | Missing or invalid API key                     |
+| 403    | `forbidden`        | API key doesn't have `maintenance:write` scope |
+| 404    | `not-found`        | Maintenance window not found                   |
 
 ### Response Schema
 
-Returns `204 No Content` with an empty response body on success.
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["data", "meta"],
+	"properties": {
+		"data": {
+			"type": "object",
+			"required": ["deleted"],
+			"properties": {
+				"deleted": { "type": "boolean", "const": true }
+			}
+		},
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": { "type": "string", "format": "uuid" },
+				"timestamp": { "type": "string", "format": "date-time" }
+			}
+		}
+	}
+}
+```
 
 ## POST /api/v1/maintenance/:id/end
 
@@ -780,31 +860,36 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123/end \
 ```json
 {
 	"data": {
-		"id": "mnt_abc123",
-		"teamId": "team_xyz789",
-		"monitorType": "http",
-		"monitorId": "mon_def456",
-		"name": "Database Migration",
-		"startsAt": "2026-02-15T02:00:00Z",
-		"endsAt": "2026-02-15T04:00:00Z",
-		"endedEarlyAt": "2026-02-15T03:15:00Z",
-		"suppressAlerts": true,
-		"showOnStatusPage": true,
-		"createdAt": "2026-02-14T10:00:00Z",
-		"updatedAt": "2026-02-15T03:15:00Z"
+		"maintenanceWindow": {
+			"id": "mnt_abc123",
+			"teamId": "team_xyz789",
+			"monitorType": "http",
+			"monitorId": "mon_def456",
+			"name": "Database Migration",
+			"startsAt": 1771120800000,
+			"endsAt": 1771128000000,
+			"endedEarlyAt": 1771125300000,
+			"suppressAlerts": true,
+			"showOnStatusPage": true,
+			"createdAt": 1771063200000,
+			"updatedAt": 1771125300000
+		}
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z"
 	}
 }
 ```
 
 ### Possible Errors
 
-| Status | Type             | Description                                    |
-| ------ | ---------------- | ---------------------------------------------- |
-| 401    | `unauthorized`   | Missing or invalid API key                     |
-| 403    | `forbidden`      | API key doesn't have `maintenance:write` scope |
-| 404    | `not-found`      | Maintenance window not found                   |
-| 429    | `rate-limited`   | Too many requests                              |
-| 500    | `internal-error` | Server error                                   |
+| Status | Type               | Description                                    |
+| ------ | ------------------ | ---------------------------------------------- |
+| 400    | `validation-error` | Malformed maintenance window id                |
+| 401    | `unauthorized`     | Missing or invalid API key                     |
+| 403    | `forbidden`        | API key doesn't have `maintenance:write` scope |
+| 404    | `not-found`        | Maintenance window not found                   |
 
 ### Response Schema
 
@@ -812,13 +897,31 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123/end \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": ["data"],
+	"required": ["data", "meta"],
 	"properties": {
 		"data": {
+			"type": "object",
+			"required": ["maintenanceWindow"],
+			"properties": {
+				"maintenanceWindow": { "$ref": "#/$defs/maintenanceWindow" }
+			}
+		},
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": { "type": "string", "format": "uuid" },
+				"timestamp": { "type": "string", "format": "date-time" }
+			}
+		}
+	},
+	"$defs": {
+		"maintenanceWindow": {
 			"type": "object",
 			"required": [
 				"id",
 				"teamId",
+				"monitorType",
 				"monitorId",
 				"name",
 				"startsAt",
@@ -840,28 +943,24 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123/end \
 				},
 				"monitorType": {
 					"type": ["string", "null"],
-					"enum": ["http", "dns", "tcp", "cron", null]
+					"enum": ["http", "dns", "tcp", "cron", "flow", null]
 				},
 				"monitorId": {
 					"type": ["string", "null"],
-					"pattern": "^mon_[a-zA-Z0-9]+$"
+					"pattern": "^(mon|dns|tcpm|cron|flow)_[a-zA-Z0-9]+$"
 				},
 				"name": {
 					"type": "string",
-					"minLength": 1,
-					"maxLength": 255
+					"minLength": 1
 				},
 				"startsAt": {
-					"type": "string",
-					"format": "date-time"
+					"type": "integer"
 				},
 				"endsAt": {
-					"type": "string",
-					"format": "date-time"
+					"type": "integer"
 				},
 				"endedEarlyAt": {
-					"type": ["string", "null"],
-					"format": "date-time"
+					"type": ["integer", "null"]
 				},
 				"suppressAlerts": {
 					"type": "boolean"
@@ -870,12 +969,10 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123/end \
 					"type": "boolean"
 				},
 				"createdAt": {
-					"type": "string",
-					"format": "date-time"
+					"type": "integer"
 				},
 				"updatedAt": {
-					"type": "string",
-					"format": "date-time"
+					"type": "integer"
 				}
 			}
 		}

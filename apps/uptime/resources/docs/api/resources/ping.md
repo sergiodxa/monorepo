@@ -14,9 +14,9 @@ Every probe uses the same regions, timeouts, and status rules as the equivalent 
 
 ## Request Failures Versus Target Failures
 
-**A target that is down still returns a `200` `ok` problem.** The outcome of the probe is in `data.ping.status`, never in the HTTP status of the API response.
+**A target that is down still returns `200`.** The outcome of the probe is in `data.ping.status`, never in the HTTP status of the API response.
 
-A non-2xx response from this endpoint means the _request_ failed — a bad key, a missing scope, an inactive subscription, an invalid body, or the rate limit. It never means your target is down. Collapsing the two would make "your service is unreachable" indistinguishable from "we could not check", and only the first should fail a build.
+A non-2xx response from this endpoint means the _request_ failed — a bad key, a missing scope, an inactive subscription, an invalid body, the rate limit, or the endpoint being unavailable to your team. It never means your target is down. Collapsing the two would make "your service is unreachable" indistinguishable from "we could not check", and only the first should fail a build.
 
 Branch on the payload, not on the transport:
 
@@ -50,16 +50,16 @@ POST /api/v1/ping
 | ----------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------- |
 | `type`            | string  | Yes      | Must be `http`                                                                                                      |
 | `url`             | string  | Yes      | Absolute URL to probe                                                                                               |
-| `method`          | string  | No       | HTTP method (default: `GET`)                                                                                        |
-| `expectedStatus`  | integer | No       | Response status that counts as healthy (default: 200)                                                               |
+| `method`          | string  | No       | `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, or `HEAD` (default: `GET`)                                                 |
+| `expectedStatus`  | integer | No       | Response status that counts as healthy (100-599, default: 200)                                                      |
 | `timeoutSeconds`  | integer | No       | Probe timeout in seconds (1-60, default: 10)                                                                        |
-| `degradedAfterMs` | integer | No       | Response time above which a correct response is `degraded` (default: 5000)                                          |
+| `degradedAfterMs` | integer | No       | Response time above which a correct response is `degraded` (1-60000, default: 5000)                                 |
 | `region`          | string  | No       | Region to probe from (default: `wnam`)                                                                              |
 | `headers`         | object  | No       | Request headers, as string values keyed by header name                                                              |
 | `body`            | string  | No       | Request body, up to 10,000 characters. Rejected with `400` when `method` is `GET` or `HEAD`, which cannot carry one |
 | `contentChecks`   | array   | No       | Assertions run against the response body; all must pass for the status to be `up`                                   |
 
-Each entry in `contentChecks` is an object with `type` (`contains`, `not_contains`, or `regex`), `value`, and an optional `caseSensitive` flag.
+Each entry in `contentChecks` is an object with `type` (`contains`, `not_contains`, or `regex`), `value` (1-1000 characters), and an optional `caseSensitive` flag (default: false).
 
 Valid regions are `wnam`, `enam`, `sam`, `weur`, `eeur`, `apac`, `oc`, `afr`, and `me`.
 
@@ -104,7 +104,7 @@ curl https://uptime.sergiodxa.com/api/v1/ping \
 }
 ```
 
-A target that fails returns the same a `200` `ok` problem envelope with a different status:
+A target that fails returns the same `200` envelope with a different status:
 
 ```json
 {
@@ -135,7 +135,7 @@ A target that fails returns the same a `200` `ok` problem envelope with a differ
 | 402    | `subscription-required` | The team owner has no active subscription          |
 | 403    | `forbidden`             | API key missing `ping:trigger` scope               |
 | 429    | `rate-limited`          | More than 60 requests in a minute for this API key |
-| 500    | `internal-error`        | The probe could not be performed                   |
+| 503    | `endpoint-unavailable`  | Ad-hoc pings are unavailable to this team          |
 
 ### Request Body Schema
 
@@ -155,6 +155,7 @@ A target that fails returns the same a `200` `ok` problem envelope with a differ
 		},
 		"method": {
 			"type": "string",
+			"enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"],
 			"description": "HTTP method",
 			"default": "GET"
 		},
@@ -176,6 +177,7 @@ A target that fails returns the same a `200` `ok` problem envelope with a differ
 			"type": "integer",
 			"description": "Response time above which a correct response is degraded",
 			"minimum": 1,
+			"maximum": 60000,
 			"default": 5000
 		},
 		"region": {
@@ -191,7 +193,8 @@ A target that fails returns the same a `200` `ok` problem envelope with a differ
 		},
 		"body": {
 			"type": "string",
-			"description": "Request body"
+			"maxLength": 10000,
+			"description": "Request body. Refused when `method` is `GET` or `HEAD`"
 		},
 		"contentChecks": {
 			"type": "array",
@@ -206,6 +209,8 @@ A target that fails returns the same a `200` `ok` problem envelope with a differ
 					},
 					"value": {
 						"type": "string",
+						"minLength": 1,
+						"maxLength": 1000,
 						"description": "Text or pattern to assert against"
 					},
 					"caseSensitive": {
@@ -214,13 +219,11 @@ A target that fails returns the same a `200` `ok` problem envelope with a differ
 						"default": false
 					}
 				},
-				"required": ["type", "value"],
-				"additionalProperties": false
+				"required": ["type", "value"]
 			}
 		}
 	},
-	"required": ["type", "url"],
-	"additionalProperties": false
+	"required": ["type", "url"]
 }
 ```
 
@@ -269,7 +272,15 @@ A target that fails returns the same a `200` `ok` problem envelope with a differ
 							"description": "Timestamp when the probe ran"
 						}
 					},
-					"required": ["id", "type", "status", "contentChecksPassed", "checkedAt"]
+					"required": [
+						"id",
+						"type",
+						"status",
+						"responseStatus",
+						"responseTimeMs",
+						"contentChecksPassed",
+						"checkedAt"
+					]
 				}
 			},
 			"required": ["ping"]
@@ -306,12 +317,12 @@ POST /api/v1/ping
 
 ### Request Body
 
-| Field           | Type   | Required | Description                                                       |
-| --------------- | ------ | -------- | ----------------------------------------------------------------- |
-| `type`          | string | Yes      | Must be `dns`                                                     |
-| `domain`        | string | Yes      | Domain to resolve                                                 |
-| `recordType`    | string | No       | Record type (default: `A`)                                        |
-| `expectedValue` | string | No       | Value the record must resolve to; comma-separated for multi-value |
+| Field           | Type   | Required | Description                                                                               |
+| --------------- | ------ | -------- | ----------------------------------------------------------------------------------------- |
+| `type`          | string | Yes      | Must be `dns`                                                                             |
+| `domain`        | string | Yes      | Domain to resolve (1-255 characters)                                                      |
+| `recordType`    | string | No       | Record type (default: `A`)                                                                |
+| `expectedValue` | string | No       | Value the record must resolve to (up to 1000 characters); comma-separated for multi-value |
 
 Valid record types are `A`, `AAAA`, `CNAME`, `MX`, `TXT`, and `NS`.
 
@@ -362,9 +373,9 @@ curl https://uptime.sergiodxa.com/api/v1/ping \
 | 402    | `subscription-required` | The team owner has no active subscription          |
 | 403    | `forbidden`             | API key missing `ping:trigger` scope               |
 | 429    | `rate-limited`          | More than 60 requests in a minute for this API key |
-| 500    | `internal-error`        | The probe could not be performed                   |
+| 503    | `endpoint-unavailable`  | Ad-hoc pings are unavailable to this team          |
 
-A domain that does not resolve is not an error. It returns a `200` `ok` problem with status `error` and an `errorMessage`.
+A domain that does not resolve is not an error. It returns `200` with status `error` and an `errorMessage`.
 
 ### Request Body Schema
 
@@ -391,11 +402,11 @@ A domain that does not resolve is not an error. It returns a `200` `ok` problem 
 		},
 		"expectedValue": {
 			"type": "string",
+			"maxLength": 1000,
 			"description": "Value the record must resolve to, comma-separated for multi-value records"
 		}
 	},
-	"required": ["type", "domain"],
-	"additionalProperties": false
+	"required": ["type", "domain"]
 }
 ```
 
@@ -444,7 +455,15 @@ A domain that does not resolve is not an error. It returns a `200` `ok` problem 
 							"description": "Timestamp when the probe ran"
 						}
 					},
-					"required": ["id", "type", "status", "checkedAt"]
+					"required": [
+						"id",
+						"type",
+						"status",
+						"resolvedValue",
+						"responseTimeMs",
+						"errorMessage",
+						"checkedAt"
+					]
 				}
 			},
 			"required": ["ping"]
@@ -484,7 +503,7 @@ POST /api/v1/ping
 | Field       | Type    | Required | Description                                                   |
 | ----------- | ------- | -------- | ------------------------------------------------------------- |
 | `type`      | string  | Yes      | Must be `tcp`                                                 |
-| `host`      | string  | Yes      | Hostname or IP address                                        |
+| `host`      | string  | Yes      | Hostname or IP address (1-255 characters)                     |
 | `port`      | integer | Yes      | TCP port number (1-65535)                                     |
 | `timeoutMs` | integer | No       | Connection timeout in milliseconds (100-60000, default: 5000) |
 
@@ -532,9 +551,9 @@ curl https://uptime.sergiodxa.com/api/v1/ping \
 | 402    | `subscription-required` | The team owner has no active subscription          |
 | 403    | `forbidden`             | API key missing `ping:trigger` scope               |
 | 429    | `rate-limited`          | More than 60 requests in a minute for this API key |
-| 500    | `internal-error`        | The probe could not be performed                   |
+| 503    | `endpoint-unavailable`  | Ad-hoc pings are unavailable to this team          |
 
-A refused connection returns a `200` `ok` problem with status `down`; a connection that never completes returns a `200` `ok` problem with status `timeout`.
+A refused connection returns `200` with status `down`; a connection that never completes returns `200` with status `timeout`.
 
 ### Request Body Schema
 
@@ -567,8 +586,7 @@ A refused connection returns a `200` `ok` problem with status `down`; a connecti
 			"default": 5000
 		}
 	},
-	"required": ["type", "host", "port"],
-	"additionalProperties": false
+	"required": ["type", "host", "port"]
 }
 ```
 
@@ -613,7 +631,7 @@ A refused connection returns a `200` `ok` problem with status `down`; a connecti
 							"description": "Timestamp when the probe ran"
 						}
 					},
-					"required": ["id", "type", "status", "checkedAt"]
+					"required": ["id", "type", "status", "responseTimeMs", "errorMessage", "checkedAt"]
 				}
 			},
 			"required": ["ping"]
@@ -640,7 +658,7 @@ A refused connection returns a `200` `ok` problem with status `down`; a connecti
 
 ## Rate Limits
 
-Ad-hoc pings are limited to **60 requests per minute per API key**. The limit is per key rather than per source address, so pipelines sharing an egress address do not consume each other's budget. Exceeding it returns a `429` `rate-limited` problem; no probe is performed and nothing is billed.
+Ad-hoc pings are limited to **60 requests per minute per API key**. The limit is per key rather than per source address, so pipelines sharing an egress address do not consume each other's budget. Exceeding it returns a `429` `rate-limited` problem; no probe is performed and nothing is billed. See [Rate Limits](/docs/api/rate-limits) for the `RateLimit` headers this endpoint sends.
 
 ## Billing
 

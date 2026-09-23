@@ -43,7 +43,7 @@ Treat any `type` you do not recognize by its `status`, since new types may be ad
 | 402    | `subscription-required` | The team's owner has no active subscription                                       |
 | 403    | `forbidden`             | The API key doesn't have the required scope                                       |
 | 404    | `not-found`             | The resource does not exist, or belongs to another team                           |
-| 409    | `conflict`              | The resource's state prevents the request (e.g., cron job disabled)               |
+| 409    | `conflict`              | The resource's state prevents the request (e.g., a slug already taken)            |
 | 429    | `rate-limited`          | Too many requests; wait for `Retry-After` seconds                                 |
 | 500    | `internal`              | The request failed on the server                                                  |
 | 500    | `internal-error`        | A change was saved but could not be read back                                     |

@@ -81,13 +81,12 @@ The cursors for this page arrive in `meta.pagination`:
 
 ### Possible Errors
 
-| Status | Type             | Description                                    |
-| ------ | ---------------- | ---------------------------------------------- |
-| 400    | `bad-request`    | Invalid or malformed cursor                    |
-| 401    | `unauthorized`   | Missing or invalid API key                     |
-| 403    | `forbidden`      | API key doesn't have `status-pages:read` scope |
-| 429    | `rate-limited`   | Too many requests                              |
-| 500    | `internal-error` | Server error                                   |
+| Status | Type           | Description                                             |
+| ------ | -------------- | ------------------------------------------------------- |
+| 400    | `bad-request`  | Invalid or malformed cursor, or `perPage` outside 1-200 |
+| 401    | `unauthorized` | Missing or invalid API key                              |
+| 403    | `forbidden`    | API key doesn't have `status-pages:read` scope          |
+| 500    | `internal`     | The page of results could not be read                   |
 
 ### Response Schema
 
@@ -204,21 +203,29 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/status-pages \
 
 ### Response
 
+Returns `201 Created`. Attach monitors and cron jobs afterwards with [`PUT /api/v1/status-pages/:id/monitors`](#put-apiv1status-pagesidmonitors).
+
 ```json
 {
-	"id": "sp_abc123",
-	"name": "Production Status",
-	"slug": "production-status",
-	"title": "Service Status",
-	"description": "Real-time status of our production services",
-	"logoUrl": "https://example.com/logo.png",
-	"customDomain": null,
-	"isPublic": true,
-	"showOverallStatus": true,
-	"createdAt": "2026-02-14T12:00:00Z",
-	"updatedAt": "2026-02-14T12:00:00Z",
-	"monitors": [],
-	"cronJobs": []
+	"data": {
+		"statusPage": {
+			"id": "sp_abc123",
+			"name": "Production Status",
+			"slug": "production-status",
+			"title": "Service Status",
+			"description": "Real-time status of our production services",
+			"logoUrl": "https://example.com/logo.png",
+			"customDomain": null,
+			"isPublic": true,
+			"showOverallStatus": true,
+			"createdAt": 1770710400000,
+			"updatedAt": 1770710400000
+		}
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z"
+	}
 }
 ```
 
@@ -229,9 +236,7 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/status-pages \
 | 400    | `validation-error` | Invalid request body or validation failed       |
 | 401    | `unauthorized`     | Missing or invalid API key                      |
 | 403    | `forbidden`        | API key doesn't have `status-pages:write` scope |
-| 409    | `conflict`         | A status page with this slug already exists     |
-| 429    | `rate-limited`     | Too many requests                               |
-| 500    | `internal-error`   | Server error                                    |
+| 409    | `conflict`         | Another status page already uses this slug      |
 
 ### Request Body Schema
 
@@ -259,42 +264,58 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/status-pages \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": [
-		"id",
-		"name",
-		"slug",
-		"title",
-		"description",
-		"logoUrl",
-		"customDomain",
-		"isPublic",
-		"showOverallStatus",
-		"createdAt",
-		"updatedAt",
-		"monitors",
-		"cronJobs"
-	],
+	"required": ["data", "meta"],
 	"properties": {
-		"id": { "type": "string" },
-		"name": { "type": "string", "minLength": 1, "maxLength": 255 },
-		"slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-		"title": { "type": "string", "minLength": 1, "maxLength": 255 },
-		"description": { "type": ["string", "null"], "maxLength": 500 },
-		"logoUrl": { "type": ["string", "null"], "format": "uri" },
-		"customDomain": { "type": ["string", "null"] },
-		"isPublic": { "type": "boolean" },
-		"showOverallStatus": { "type": "boolean" },
-		"createdAt": { "type": "string", "format": "date-time" },
-		"updatedAt": { "type": "string", "format": "date-time" },
-		"monitors": { "type": "array", "items": { "type": "object" } },
-		"cronJobs": { "type": "array", "items": { "type": "object" } }
+		"data": {
+			"type": "object",
+			"required": ["statusPage"],
+			"properties": {
+				"statusPage": {
+					"type": "object",
+					"required": [
+						"id",
+						"name",
+						"slug",
+						"title",
+						"description",
+						"logoUrl",
+						"customDomain",
+						"isPublic",
+						"showOverallStatus",
+						"createdAt",
+						"updatedAt"
+					],
+					"properties": {
+						"id": { "type": "string", "pattern": "^sp_[a-zA-Z0-9]+$" },
+						"name": { "type": "string", "minLength": 1, "maxLength": 255 },
+						"slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+						"title": { "type": "string", "minLength": 1, "maxLength": 255 },
+						"description": { "type": ["string", "null"], "maxLength": 500 },
+						"logoUrl": { "type": ["string", "null"], "format": "uri" },
+						"customDomain": { "type": ["string", "null"] },
+						"isPublic": { "type": "boolean" },
+						"showOverallStatus": { "type": "boolean" },
+						"createdAt": { "type": "integer" },
+						"updatedAt": { "type": "integer" }
+					}
+				}
+			}
+		},
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": { "type": "string", "format": "uuid" },
+				"timestamp": { "type": "string", "format": "date-time" }
+			}
+		}
 	}
 }
 ```
 
 ## GET /api/v1/status-pages/:id
 
-Returns a single status page with its associated monitors and cron jobs.
+Returns a single status page with the ids of its attached HTTP monitors and cron jobs.
 
 ### Required Scope
 
@@ -319,48 +340,38 @@ curl https://uptime.sergiodxa.com/api/v1/status-pages/sp_abc123 \
 
 ```json
 {
-	"id": "sp_abc123",
-	"name": "Production Status",
-	"slug": "production-status",
-	"title": "Service Status",
-	"description": "Real-time status of our production services",
-	"logoUrl": "https://example.com/logo.png",
-	"customDomain": "status.example.com",
-	"isPublic": true,
-	"showOverallStatus": true,
-	"createdAt": "2026-02-10T08:00:00Z",
-	"updatedAt": "2026-02-14T12:30:00Z",
-	"monitors": [
-		{
-			"id": "mon_def456",
-			"name": "Production API",
-			"status": "up"
-		},
-		{
-			"id": "mon_ghi789",
-			"name": "Marketing Website",
-			"status": "up"
+	"data": {
+		"statusPage": {
+			"id": "sp_abc123",
+			"name": "Production Status",
+			"slug": "production-status",
+			"title": "Service Status",
+			"description": "Real-time status of our production services",
+			"logoUrl": "https://example.com/logo.png",
+			"customDomain": "status.example.com",
+			"isPublic": true,
+			"showOverallStatus": true,
+			"createdAt": 1770710400000,
+			"updatedAt": 1771079400000,
+			"monitors": ["mon_def456", "mon_ghi789"],
+			"cronJobs": ["cron_jkl012"]
 		}
-	],
-	"cronJobs": [
-		{
-			"id": "cron_jkl012",
-			"name": "Daily Backup",
-			"status": "healthy"
-		}
-	]
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z"
+	}
 }
 ```
 
 ### Possible Errors
 
-| Status | Type             | Description                                    |
-| ------ | ---------------- | ---------------------------------------------- |
-| 401    | `unauthorized`   | Missing or invalid API key                     |
-| 403    | `forbidden`      | API key doesn't have `status-pages:read` scope |
-| 404    | `not-found`      | Status page not found                          |
-| 429    | `rate-limited`   | Too many requests                              |
-| 500    | `internal-error` | Server error                                   |
+| Status | Type               | Description                                    |
+| ------ | ------------------ | ---------------------------------------------- |
+| 400    | `validation-error` | Malformed status page id                       |
+| 401    | `unauthorized`     | Missing or invalid API key                     |
+| 403    | `forbidden`        | API key doesn't have `status-pages:read` scope |
+| 404    | `not-found`        | Status page not found                          |
 
 ### Response Schema
 
@@ -368,55 +379,59 @@ curl https://uptime.sergiodxa.com/api/v1/status-pages/sp_abc123 \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": [
-		"id",
-		"name",
-		"slug",
-		"title",
-		"description",
-		"logoUrl",
-		"customDomain",
-		"isPublic",
-		"showOverallStatus",
-		"createdAt",
-		"updatedAt",
-		"monitors",
-		"cronJobs"
-	],
+	"required": ["data", "meta"],
 	"properties": {
-		"id": { "type": "string" },
-		"name": { "type": "string", "minLength": 1, "maxLength": 255 },
-		"slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-		"title": { "type": "string", "minLength": 1, "maxLength": 255 },
-		"description": { "type": ["string", "null"], "maxLength": 500 },
-		"logoUrl": { "type": ["string", "null"], "format": "uri" },
-		"customDomain": { "type": ["string", "null"] },
-		"isPublic": { "type": "boolean" },
-		"showOverallStatus": { "type": "boolean" },
-		"createdAt": { "type": "string", "format": "date-time" },
-		"updatedAt": { "type": "string", "format": "date-time" },
-		"monitors": {
-			"type": "array",
-			"items": {
-				"type": "object",
-				"required": ["id", "name", "status"],
-				"properties": {
-					"id": { "type": "string" },
-					"name": { "type": "string" },
-					"status": { "type": "string", "enum": ["up", "down", "degraded", "unknown"] }
+		"data": {
+			"type": "object",
+			"required": ["statusPage"],
+			"properties": {
+				"statusPage": {
+					"type": "object",
+					"required": [
+						"id",
+						"name",
+						"slug",
+						"title",
+						"description",
+						"logoUrl",
+						"customDomain",
+						"isPublic",
+						"showOverallStatus",
+						"createdAt",
+						"updatedAt",
+						"monitors",
+						"cronJobs"
+					],
+					"properties": {
+						"id": { "type": "string", "pattern": "^sp_[a-zA-Z0-9]+$" },
+						"name": { "type": "string", "minLength": 1, "maxLength": 255 },
+						"slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+						"title": { "type": "string", "minLength": 1, "maxLength": 255 },
+						"description": { "type": ["string", "null"], "maxLength": 500 },
+						"logoUrl": { "type": ["string", "null"], "format": "uri" },
+						"customDomain": { "type": ["string", "null"] },
+						"isPublic": { "type": "boolean" },
+						"showOverallStatus": { "type": "boolean" },
+						"createdAt": { "type": "integer" },
+						"updatedAt": { "type": "integer" },
+						"monitors": {
+							"type": "array",
+							"items": { "type": "string", "pattern": "^mon_[a-zA-Z0-9]+$" }
+						},
+						"cronJobs": {
+							"type": "array",
+							"items": { "type": "string", "pattern": "^cron_[a-zA-Z0-9]+$" }
+						}
+					}
 				}
 			}
 		},
-		"cronJobs": {
-			"type": "array",
-			"items": {
-				"type": "object",
-				"required": ["id", "name", "status"],
-				"properties": {
-					"id": { "type": "string" },
-					"name": { "type": "string" },
-					"status": { "type": "string", "enum": ["healthy", "unhealthy", "unknown"] }
-				}
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": { "type": "string", "format": "uuid" },
+				"timestamp": { "type": "string", "format": "date-time" }
 			}
 		}
 	}
@@ -439,16 +454,16 @@ Updates an existing status page.
 
 ### Request Body
 
-All fields are optional. Only provided fields will be updated.
+All fields are optional. Only provided fields are updated; fields outside this table are ignored.
 
 | Field               | Type    | Description                                                        |
 | ------------------- | ------- | ------------------------------------------------------------------ |
 | `name`              | string  | Internal name (1-255 characters)                                   |
 | `slug`              | string  | URL-friendly identifier (lowercase letters, numbers, hyphens only) |
 | `title`             | string  | Display title (1-255 characters)                                   |
-| `description`       | string  | Page description (max 500 characters)                              |
-| `logoUrl`           | string  | URL to your logo image                                             |
-| `customDomain`      | string  | Custom domain for the status page                                  |
+| `description`       | string  | Page description (max 500 characters); `null` clears it            |
+| `logoUrl`           | string  | URL to your logo image; `null` clears it                           |
+| `customDomain`      | string  | Custom domain for the status page; `null` clears it                |
 | `isPublic`          | boolean | Whether the page is publicly accessible                            |
 | `showOverallStatus` | boolean | Whether to display the overall status indicator                    |
 
@@ -469,35 +484,44 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/status-pages/sp_abc123 \
 
 ### Response
 
+The updated status page, with the ids of its attached HTTP monitors and cron jobs.
+
 ```json
 {
-	"id": "sp_abc123",
-	"name": "Production Status",
-	"slug": "production-status",
-	"title": "Updated Service Status",
-	"description": "Current status of all our services",
-	"logoUrl": "https://example.com/logo.png",
-	"customDomain": "status.example.com",
-	"isPublic": true,
-	"showOverallStatus": true,
-	"createdAt": "2026-02-10T08:00:00Z",
-	"updatedAt": "2026-02-14T14:00:00Z",
-	"monitors": [],
-	"cronJobs": []
+	"data": {
+		"statusPage": {
+			"id": "sp_abc123",
+			"name": "Production Status",
+			"slug": "production-status",
+			"title": "Updated Service Status",
+			"description": "Current status of all our services",
+			"logoUrl": "https://example.com/logo.png",
+			"customDomain": "status.example.com",
+			"isPublic": true,
+			"showOverallStatus": true,
+			"createdAt": 1770710400000,
+			"updatedAt": 1771084800000,
+			"monitors": [],
+			"cronJobs": []
+		}
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z"
+	}
 }
 ```
 
 ### Possible Errors
 
-| Status | Type               | Description                                     |
-| ------ | ------------------ | ----------------------------------------------- |
-| 400    | `validation-error` | Invalid request body or validation failed       |
-| 401    | `unauthorized`     | Missing or invalid API key                      |
-| 403    | `forbidden`        | API key doesn't have `status-pages:write` scope |
-| 404    | `not-found`        | Status page not found                           |
-| 409    | `conflict`         | A status page with this slug already exists     |
-| 429    | `rate-limited`     | Too many requests                               |
-| 500    | `internal-error`   | Server error                                    |
+| Status | Type               | Description                                              |
+| ------ | ------------------ | -------------------------------------------------------- |
+| 400    | `validation-error` | Malformed status page id or invalid request body         |
+| 401    | `unauthorized`     | Missing or invalid API key                               |
+| 403    | `forbidden`        | API key doesn't have `status-pages:write` scope          |
+| 404    | `not-found`        | Status page not found                                    |
+| 409    | `conflict`         | Another status page already uses this slug               |
+| 500    | `internal-error`   | The change was saved but the page could not be read back |
 
 ### Request Body Schema
 
@@ -509,9 +533,9 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/status-pages/sp_abc123 \
 		"name": { "type": "string", "minLength": 1, "maxLength": 255 },
 		"slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
 		"title": { "type": "string", "minLength": 1, "maxLength": 255 },
-		"description": { "type": "string", "maxLength": 500 },
-		"logoUrl": { "type": "string", "format": "uri" },
-		"customDomain": { "type": "string" },
+		"description": { "type": ["string", "null"], "maxLength": 500 },
+		"logoUrl": { "type": ["string", "null"], "format": "uri" },
+		"customDomain": { "type": ["string", "null"] },
 		"isPublic": { "type": "boolean" },
 		"showOverallStatus": { "type": "boolean" }
 	}
@@ -524,42 +548,68 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/status-pages/sp_abc123 \
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": [
-		"id",
-		"name",
-		"slug",
-		"title",
-		"description",
-		"logoUrl",
-		"customDomain",
-		"isPublic",
-		"showOverallStatus",
-		"createdAt",
-		"updatedAt",
-		"monitors",
-		"cronJobs"
-	],
+	"required": ["data", "meta"],
 	"properties": {
-		"id": { "type": "string" },
-		"name": { "type": "string", "minLength": 1, "maxLength": 255 },
-		"slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-		"title": { "type": "string", "minLength": 1, "maxLength": 255 },
-		"description": { "type": ["string", "null"], "maxLength": 500 },
-		"logoUrl": { "type": ["string", "null"], "format": "uri" },
-		"customDomain": { "type": ["string", "null"] },
-		"isPublic": { "type": "boolean" },
-		"showOverallStatus": { "type": "boolean" },
-		"createdAt": { "type": "string", "format": "date-time" },
-		"updatedAt": { "type": "string", "format": "date-time" },
-		"monitors": { "type": "array", "items": { "type": "object" } },
-		"cronJobs": { "type": "array", "items": { "type": "object" } }
+		"data": {
+			"type": "object",
+			"required": ["statusPage"],
+			"properties": {
+				"statusPage": {
+					"type": "object",
+					"required": [
+						"id",
+						"name",
+						"slug",
+						"title",
+						"description",
+						"logoUrl",
+						"customDomain",
+						"isPublic",
+						"showOverallStatus",
+						"createdAt",
+						"updatedAt",
+						"monitors",
+						"cronJobs"
+					],
+					"properties": {
+						"id": { "type": "string", "pattern": "^sp_[a-zA-Z0-9]+$" },
+						"name": { "type": "string", "minLength": 1, "maxLength": 255 },
+						"slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+						"title": { "type": "string", "minLength": 1, "maxLength": 255 },
+						"description": { "type": ["string", "null"], "maxLength": 500 },
+						"logoUrl": { "type": ["string", "null"], "format": "uri" },
+						"customDomain": { "type": ["string", "null"] },
+						"isPublic": { "type": "boolean" },
+						"showOverallStatus": { "type": "boolean" },
+						"createdAt": { "type": "integer" },
+						"updatedAt": { "type": "integer" },
+						"monitors": {
+							"type": "array",
+							"items": { "type": "string", "pattern": "^mon_[a-zA-Z0-9]+$" }
+						},
+						"cronJobs": {
+							"type": "array",
+							"items": { "type": "string", "pattern": "^cron_[a-zA-Z0-9]+$" }
+						}
+					}
+				}
+			}
+		},
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": { "type": "string", "format": "uuid" },
+				"timestamp": { "type": "string", "format": "date-time" }
+			}
+		}
 	}
 }
 ```
 
 ## DELETE /api/v1/status-pages/:id
 
-Deletes a status page.
+Deletes a status page and its monitor and cron job attachments.
 
 ### Required Scope
 
@@ -582,25 +632,59 @@ curl -X DELETE https://uptime.sergiodxa.com/api/v1/status-pages/sp_abc123 \
 
 ### Response
 
-Returns `204 No Content` on success.
+Returns `200 OK`:
+
+```json
+{
+	"data": {
+		"deleted": true
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z"
+	}
+}
+```
 
 ### Possible Errors
 
-| Status | Type             | Description                                     |
-| ------ | ---------------- | ----------------------------------------------- |
-| 401    | `unauthorized`   | Missing or invalid API key                      |
-| 403    | `forbidden`      | API key doesn't have `status-pages:write` scope |
-| 404    | `not-found`      | Status page not found                           |
-| 429    | `rate-limited`   | Too many requests                               |
-| 500    | `internal-error` | Server error                                    |
+| Status | Type               | Description                                     |
+| ------ | ------------------ | ----------------------------------------------- |
+| 400    | `validation-error` | Malformed status page id                        |
+| 401    | `unauthorized`     | Missing or invalid API key                      |
+| 403    | `forbidden`        | API key doesn't have `status-pages:write` scope |
+| 404    | `not-found`        | Status page not found                           |
 
 ### Response Schema
 
-Returns `204 No Content` with an empty response body on success.
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["data", "meta"],
+	"properties": {
+		"data": {
+			"type": "object",
+			"required": ["deleted"],
+			"properties": {
+				"deleted": { "const": true }
+			}
+		},
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": { "type": "string", "format": "uuid" },
+				"timestamp": { "type": "string", "format": "date-time" }
+			}
+		}
+	}
+}
+```
 
 ## PUT /api/v1/status-pages/:id/monitors
 
-Updates the monitors and cron jobs associated with a status page.
+Replaces the HTTP monitors and cron jobs attached to a status page. The lists you send become the page's full set of attachments: a list you omit, or send empty, detaches everything of that kind.
 
 ### Required Scope
 
@@ -614,10 +698,12 @@ Updates the monitors and cron jobs associated with a status page.
 
 ### Request Body
 
-| Field        | Type  | Required | Description                          |
-| ------------ | ----- | -------- | ------------------------------------ |
-| `monitorIds` | array | Yes      | Array of monitor UUIDs to associate  |
-| `cronJobIds` | array | Yes      | Array of cron job UUIDs to associate |
+| Field        | Type  | Required | Description                                          |
+| ------------ | ----- | -------- | ---------------------------------------------------- |
+| `monitorIds` | array | No       | HTTP monitor ids (`mon_…`) to attach (default: `[]`) |
+| `cronJobIds` | array | No       | Cron job ids (`cron_…`) to attach (default: `[]`)    |
+
+An id listed more than once is attached once.
 
 ### Example Request
 
@@ -628,58 +714,49 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/status-pages/sp_abc123/monitors 
   -H "Authorization: Bearer uptime_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
-    "monitorIds": ["550e8400-e29b-41d4-a716-446655440000", "6ba7b810-9dad-11d1-80b4-00c04fd430c8"],
-    "cronJobIds": ["7c9e6679-7425-40de-944b-e07fc1f90ae7"]
+    "monitorIds": ["mon_def456", "mon_ghi789"],
+    "cronJobIds": ["cron_jkl012"]
   }'
 ```
 
 ### Response
 
+The status page, with the attached ids beside it in `monitors` and `cronJobs`.
+
 ```json
 {
-	"id": "sp_abc123",
-	"name": "Production Status",
-	"slug": "production-status",
-	"title": "Service Status",
-	"description": "Real-time status of our production services",
-	"logoUrl": "https://example.com/logo.png",
-	"customDomain": "status.example.com",
-	"isPublic": true,
-	"showOverallStatus": true,
-	"createdAt": "2026-02-10T08:00:00Z",
-	"updatedAt": "2026-02-14T15:00:00Z",
-	"monitors": [
-		{
-			"id": "mon_def456",
-			"name": "Production API",
-			"status": "up"
+	"data": {
+		"statusPage": {
+			"id": "sp_abc123",
+			"name": "Production Status",
+			"slug": "production-status",
+			"title": "Service Status",
+			"description": "Real-time status of our production services",
+			"logoUrl": "https://example.com/logo.png",
+			"customDomain": "status.example.com",
+			"isPublic": true,
+			"showOverallStatus": true,
+			"createdAt": 1770710400000,
+			"updatedAt": 1771079400000
 		},
-		{
-			"id": "mon_ghi789",
-			"name": "Marketing Website",
-			"status": "up"
-		}
-	],
-	"cronJobs": [
-		{
-			"id": "cron_jkl012",
-			"name": "Daily Backup",
-			"status": "healthy"
-		}
-	]
+		"monitors": ["mon_def456", "mon_ghi789"],
+		"cronJobs": ["cron_jkl012"]
+	},
+	"meta": {
+		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+		"timestamp": "2026-02-14T12:00:00.000Z"
+	}
 }
 ```
 
 ### Possible Errors
 
-| Status | Type               | Description                                     |
-| ------ | ------------------ | ----------------------------------------------- |
-| 400    | `validation-error` | Invalid request body or invalid UUIDs           |
-| 401    | `unauthorized`     | Missing or invalid API key                      |
-| 403    | `forbidden`        | API key doesn't have `status-pages:write` scope |
-| 404    | `not-found`        | Status page, monitor, or cron job not found     |
-| 429    | `rate-limited`     | Too many requests                               |
-| 500    | `internal-error`   | Server error                                    |
+| Status | Type               | Description                                                                                |
+| ------ | ------------------ | ------------------------------------------------------------------------------------------ |
+| 400    | `validation-error` | Malformed status page id, invalid request body, or an id without the `mon_`/`cron_` prefix |
+| 401    | `unauthorized`     | Missing or invalid API key                                                                 |
+| 403    | `forbidden`        | API key doesn't have `status-pages:write` scope                                            |
+| 404    | `not-found`        | Status page not found, or a monitor or cron job id names nothing in your team              |
 
 ### Request Body Schema
 
@@ -687,15 +764,16 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/status-pages/sp_abc123/monitors 
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": ["monitorIds", "cronJobIds"],
 	"properties": {
 		"monitorIds": {
 			"type": "array",
-			"items": { "type": "string", "format": "uuid" }
+			"items": { "type": "string", "pattern": "^mon_[a-zA-Z0-9]+$" },
+			"default": []
 		},
 		"cronJobIds": {
 			"type": "array",
-			"items": { "type": "string", "format": "uuid" }
+			"items": { "type": "string", "pattern": "^cron_[a-zA-Z0-9]+$" },
+			"default": []
 		}
 	}
 }
@@ -707,55 +785,57 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/status-pages/sp_abc123/monitors 
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": [
-		"id",
-		"name",
-		"slug",
-		"title",
-		"description",
-		"logoUrl",
-		"customDomain",
-		"isPublic",
-		"showOverallStatus",
-		"createdAt",
-		"updatedAt",
-		"monitors",
-		"cronJobs"
-	],
+	"required": ["data", "meta"],
 	"properties": {
-		"id": { "type": "string" },
-		"name": { "type": "string", "minLength": 1, "maxLength": 255 },
-		"slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-		"title": { "type": "string", "minLength": 1, "maxLength": 255 },
-		"description": { "type": ["string", "null"], "maxLength": 500 },
-		"logoUrl": { "type": ["string", "null"], "format": "uri" },
-		"customDomain": { "type": ["string", "null"] },
-		"isPublic": { "type": "boolean" },
-		"showOverallStatus": { "type": "boolean" },
-		"createdAt": { "type": "string", "format": "date-time" },
-		"updatedAt": { "type": "string", "format": "date-time" },
-		"monitors": {
-			"type": "array",
-			"items": {
-				"type": "object",
-				"required": ["id", "name", "status"],
-				"properties": {
-					"id": { "type": "string" },
-					"name": { "type": "string" },
-					"status": { "type": "string", "enum": ["up", "down", "degraded", "unknown"] }
+		"data": {
+			"type": "object",
+			"required": ["statusPage", "monitors", "cronJobs"],
+			"properties": {
+				"statusPage": {
+					"type": "object",
+					"required": [
+						"id",
+						"name",
+						"slug",
+						"title",
+						"description",
+						"logoUrl",
+						"customDomain",
+						"isPublic",
+						"showOverallStatus",
+						"createdAt",
+						"updatedAt"
+					],
+					"properties": {
+						"id": { "type": "string", "pattern": "^sp_[a-zA-Z0-9]+$" },
+						"name": { "type": "string", "minLength": 1, "maxLength": 255 },
+						"slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+						"title": { "type": "string", "minLength": 1, "maxLength": 255 },
+						"description": { "type": ["string", "null"], "maxLength": 500 },
+						"logoUrl": { "type": ["string", "null"], "format": "uri" },
+						"customDomain": { "type": ["string", "null"] },
+						"isPublic": { "type": "boolean" },
+						"showOverallStatus": { "type": "boolean" },
+						"createdAt": { "type": "integer" },
+						"updatedAt": { "type": "integer" }
+					}
+				},
+				"monitors": {
+					"type": "array",
+					"items": { "type": "string", "pattern": "^mon_[a-zA-Z0-9]+$" }
+				},
+				"cronJobs": {
+					"type": "array",
+					"items": { "type": "string", "pattern": "^cron_[a-zA-Z0-9]+$" }
 				}
 			}
 		},
-		"cronJobs": {
-			"type": "array",
-			"items": {
-				"type": "object",
-				"required": ["id", "name", "status"],
-				"properties": {
-					"id": { "type": "string" },
-					"name": { "type": "string" },
-					"status": { "type": "string", "enum": ["healthy", "unhealthy", "unknown"] }
-				}
+		"meta": {
+			"type": "object",
+			"required": ["requestId", "timestamp"],
+			"properties": {
+				"requestId": { "type": "string", "format": "uuid" },
+				"timestamp": { "type": "string", "format": "date-time" }
 			}
 		}
 	}
@@ -764,18 +844,18 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/status-pages/sp_abc123/monitors 
 
 ## Response Fields
 
-| Field               | Type           | Description                                       |
-| ------------------- | -------------- | ------------------------------------------------- |
-| `id`                | string         | Unique status page identifier                     |
-| `name`              | string         | Internal name                                     |
-| `slug`              | string         | URL-friendly identifier                           |
-| `title`             | string         | Display title                                     |
-| `description`       | string \| null | Page description                                  |
-| `logoUrl`           | string \| null | URL to the logo image                             |
-| `customDomain`      | string \| null | Custom domain if configured                       |
-| `isPublic`          | boolean        | Whether the page is publicly accessible           |
-| `showOverallStatus` | boolean        | Whether the overall status indicator is displayed |
-| `createdAt`         | integer        | Unix timestamp in milliseconds of creation        |
-| `updatedAt`         | integer        | Unix timestamp in milliseconds of the last update |
-| `monitors`          | array          | Attached monitor IDs, on a single status page     |
-| `cronJobs`          | array          | Attached cron job IDs, on a single status page    |
+| Field               | Type           | Description                                        |
+| ------------------- | -------------- | -------------------------------------------------- |
+| `id`                | string         | Unique status page identifier                      |
+| `name`              | string         | Internal name                                      |
+| `slug`              | string         | URL-friendly identifier                            |
+| `title`             | string         | Display title                                      |
+| `description`       | string \| null | Page description                                   |
+| `logoUrl`           | string \| null | URL to the logo image                              |
+| `customDomain`      | string \| null | Custom domain if configured                        |
+| `isPublic`          | boolean        | Whether the page is publicly accessible            |
+| `showOverallStatus` | boolean        | Whether the overall status indicator is displayed  |
+| `createdAt`         | integer        | Unix timestamp in milliseconds of creation         |
+| `updatedAt`         | integer        | Unix timestamp in milliseconds of the last update  |
+| `monitors`          | array          | Attached HTTP monitor ids, on a single status page |
+| `cronJobs`          | array          | Attached cron job IDs, on a single status page     |
