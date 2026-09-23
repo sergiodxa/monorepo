@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-23
+**Accepted** - 2026-09-23
 
 ## Background
 
@@ -93,6 +93,9 @@ being designed. Writing MF1 now would mean converting every message a second tim
    parser and formatter exposing the proposal's API, exported as a module and never installed on
    `globalThis`.
 3. Rebuild **`@sdxc/i18n`** on it and remove the `i18next` and `html-parse-stringify` dependencies.
+4. Land **breaking changes together with the app updates**: every app is updated in the same
+   change, and npm releases are date-versioned with no compatibility promise, so no deprecated
+   alias or transitional signature is kept.
 
 ### Messages in MF2
 
@@ -188,7 +191,7 @@ Apps can widen to `Translate<Messages>` (any string) when their bundles are larg
   with `resources`, and publishes `context.intl: I18n` next to `context.locale`. `context.i18next`
   and bundle narrowing (`pickResources`) are removed.
 - **`createTranslator`.** Keeps its name and returns `Translation { locale, t, intl }`; the `i18n`
-  field becomes `intl`. It stays `Promise`-returning for one release so call sites change once.
+  field becomes `intl`. It returns the `Translation` synchronously, since nothing inside awaits.
 - **`IntlProvider`** takes `intl: I18n` and only publishes it; the i18next event subscription goes
   away because an `I18n` is immutable. A client language switch renders a provider with a new one.
   `intl(handle)` and `setIntl(intl)` keep their names and the browser-only guard.
@@ -200,8 +203,7 @@ Apps can widen to `Translate<Messages>` (any string) when their bundles are larg
 ### Exported types
 
 `I18n`, `Translate`, `TranslateParts`, and `Messages` replace the re-exported `i18n` and
-`TFunction`. `TFunction` stays one release as a `@deprecated` alias of `Translate<Messages>`, so
-the 119 call sites that type a `t` parameter migrate independently.
+`TFunction`; call sites that type a `t` parameter use `Translate`, typed by a bundle or untyped.
 
 ### Converting the locale files
 
@@ -243,35 +245,30 @@ the fallback, so a translation that drops `{$count}` fails CI.
 
 ### Phase 1: `@sdxc/messageformat`
 
-- [ ] Vendor the Unicode MessageFormat conformance tests and wire them as the package spec
-- [ ] Parser to the MF2 data model, with `parse` returning a `Result`
-- [ ] Formatter with `format`/`formatToParts`, `:string`/`:number`/`:integer`, fallback and `onError`
-- [ ] README, JSDoc, and entry in the root README package table
+- [x] Vendor the Unicode MessageFormat conformance tests and wire them as the package spec
+- [x] Parser to the MF2 data model, with `parse` returning a `Result`
+- [x] Formatter with `format`/`formatToParts`, `:string`/`:number`/`:integer`, fallback and `onError`
+- [x] README, JSDoc, and entry in the root README package table
 
 ### Phase 2: `@sdxc/i18n`
 
-- [ ] Tests first for the "preserve" table: chain order with regional locales, missing-key echo,
+- [x] Tests first for the "preserve" table: chain order with regional locales, missing-key echo,
       plural selection for `en`, `es`, `ja`, `fr` (`0` is `one` in French), raw interpolation
-- [ ] `createI18n`, the compiled-message cache, `Translate<R>` with type tests
-- [ ] Rewrite `middleware.ts`, `translator.ts`, `intl-provider.tsx`, `trans.tsx` on `I18n` and parts
-- [ ] Deprecated `TFunction` alias; drop `i18next` and `html-parse-stringify`; update the README
+- [x] `createI18n`, the compiled-message cache, `Translate<R>` with type tests
+- [x] Rewrite `middleware.ts`, `translator.ts`, `intl-provider.tsx`, `trans.tsx` on `I18n` and parts
+- [x] Drop `i18next` and `html-parse-stringify`; update the README
 
 ### Phase 3: Adopt, one commit per app
 
-- [ ] Codemod each app's locales and add its `locales.test.ts`
-- [ ] `r3-auth`: middleware, emails' `createTranslator`, `ctx.i18next` → `ctx.intl`
-- [ ] `reader`: middleware, `push/copy.tsx`, controllers, `bootstrap/browser.ts`
-- [ ] `uptime`: middleware, emails, jobs, `bootstrap/browser.ts`, `app-shell.test.tsx`
+- [x] Codemod each app's locales and add its `locales.test.ts`
+- [x] `r3-auth`: middleware, emails' `createTranslator`, `ctx.i18next` → `ctx.intl`
+- [x] `reader`: middleware, `push/copy.tsx`, controllers, `bootstrap/browser.ts`
+- [x] `uptime`: middleware, emails, jobs, `bootstrap/browser.ts`, `app-shell.test.tsx`
       (`cloneInstance({ lng })` → `createI18n({ locale, ... })`)
-- [ ] `auth-saas`: middleware, mail
-- [ ] Build and deploy each deployed app after its commit
+- [x] `auth-saas`: middleware, mail
+- [ ] Build and deploy each deployed app
 
-### Phase 4: Clean up
-
-- [ ] Replace `TFunction` imports with `Translate`, then delete the alias
-- [ ] Make `createTranslator` return `Translation` synchronously
-
-### Phase 5: Native `Intl.MessageFormat` (when it ships)
+### Phase 4: Native `Intl.MessageFormat` (when it ships)
 
 - [ ] Run the conformance suite and package tests against the native class in workerd and browsers
 - [ ] Export the native class behind a feature check, keeping the ponyfill as fallback
@@ -313,4 +310,20 @@ and our output are compared against.
 
 ## Current Progress
 
-Not started.
+Phases 1–3 done on 2026-09-23: `@sdxc/messageformat` passes the conformance suite, `@sdxc/i18n`
+runs on it, and `r3-auth`, `reader`, `uptime`, and `auth-saas` translate through it. Pending: the
+npm bootstrap of `@sdxc/messageformat` and its trusted publisher, and the app deploys.
+
+### Deviations from the plan
+
+Phase 2 settled these details differently from the sketch above:
+
+- Resources have no `translation` namespace: a bundle is the language's messages directly.
+- `createI18n<Resources, Fallback>` returns `I18n<Resources[Fallback]>`, typing keys by the
+  fallback language's bundle when the fallback is a literal.
+- `I18n` carries an `onError` field, so `Trans` and other consumers report through the same handler.
+- `IntlProvider`, `setIntl`, and `Trans` take `I18n<any>`, so a translator typed by any bundle
+  passes.
+- `@sdxc/messageformat` reports nothing without an `onError`; the `@sdxc/i18n` middleware supplies one that logs.
+- Messages format with `bidiIsolation: "none"`, so output carries no isolation characters.
+- Unannotated numeric values format with `:number`, so copy shows the locale's digit grouping.
