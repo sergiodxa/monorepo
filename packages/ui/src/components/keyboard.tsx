@@ -1,8 +1,8 @@
 /**
- * A keyboard-shortcut hint rendered inside a native `<kbd>` element, sized
- * and colored as a small muted annotation. Its inline-start auto margin
- * pushes it to the trailing edge of whatever row it sits in — a menu item's
- * command, a tooltip's accelerator, a button's shortcut label.
+ * A keyboard-shortcut hint rendered inside a native `<kbd>` element, drawn as the key
+ * it names: a tinted, bordered cap sized to read beside the row's own text. Its
+ * inline-start auto margin pushes it to the trailing edge of whatever row it sits in —
+ * a menu item's command, a tooltip's accelerator, a button's shortcut label.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,9 +10,11 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { fg } from "@sdxc/u/color";
-import { mis } from "@sdxc/u/size";
-import { text } from "@sdxc/u/typography";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { inlineFlex, items, justify } from "@sdxc/u/layout";
+import { bs, minIs, mis, pi } from "@sdxc/u/size";
+import { leading, text } from "@sdxc/u/typography";
 
 /**
  * Prop types for {@link Keyboard}.
@@ -27,9 +29,9 @@ export namespace Keyboard {
 }
 
 /**
- * Renders its children inside a `<kbd>` element styled as a small, muted
- * shortcut hint whose inline-start auto margin pushes it to the trailing
- * edge of whatever row it sits in — a menu item, a tooltip, a button.
+ * Renders its children inside a `<kbd>` element drawn as a key cap, whose inline-start
+ * auto margin pushes it to the trailing edge of whatever row it sits in — a menu item,
+ * a tooltip, a button.
  *
  * @param handle Runtime handle carrying the host `<kbd>`'s props.
  * @returns The render function producing the shortcut hint's markup.
@@ -40,6 +42,35 @@ export function Keyboard(handle: Handle<Keyboard.Props>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <kbd {...rest} mix={[mis("auto"), fg("neutral.muted"), text("xs"), mix]} />;
+		return (
+			<kbd
+				{...rest}
+				mix={[
+					mis("auto"),
+					/*
+					 * A cap keeps its height and a minimum width whatever it holds, so a single
+					 * letter and a two-glyph chord sit on the same line as each other.
+					 */
+					/*
+					 * The cap centers its glyph without `center()`, because that pattern composes
+					 * `flex()` and would turn the cap into a block of its own — a key standing on
+					 * its own line in the middle of the sentence naming it.
+					 */
+					inlineFlex(),
+					items("center"),
+					justify("center"),
+					bs("1.25rem"),
+					minIs("1.25rem"),
+					pi(1.5),
+					rounded("sm"),
+					bg("neutral.tint"),
+					border({ color: "neutral", width: 1 }),
+					fg("neutral"),
+					text("xs"),
+					leading("none"),
+					mix,
+				]}
+			/>
+		);
 	};
 }
