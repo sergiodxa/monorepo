@@ -2,7 +2,7 @@
 
 Language detection, translators for [Unicode MessageFormat 2](https://messageformat.unicode.org) messages, a Remix middleware that publishes one per request, and `remix/ui` components that render messages containing markup.
 
-The detector is the one from [remix-i18next](https://github.com/sergiodxa/remix-i18next), ported to the Remix v3 primitives. Messages format through [`@sdxc/messageformat`](https://www.npmjs.com/package/@sdxc/messageformat).
+Messages format through [`@sdxc/messageformat`](https://www.npmjs.com/package/@sdxc/messageformat).
 
 ## Installation
 
