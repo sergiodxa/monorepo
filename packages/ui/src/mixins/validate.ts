@@ -69,7 +69,7 @@ export class ValidateChangeEvent extends Event {
  * come from `schema`, from an untouched native constraint, or be empty when
  * the field is fully valid.
  */
-function applySchema(field: ValidatableField, schema: Schema<string, unknown>): string {
+function applySchema(field: ValidatableField, schema: Schema<unknown, unknown>): string {
 	let result = parseSafe(schema, field.value);
 	let message = result.success ? "" : (result.issues[0]?.message ?? "");
 	field.setCustomValidity(message);
@@ -137,7 +137,7 @@ function mirrorValidity(field: ValidatableField, message: string): void {
  * <input name="email" type="email" required aria-describedby="email-error" mix={[validate(EmailSchema)]} />
  * <p id="email-error" data-field-error hidden />
  */
-export const validate = createMixin<HTMLElement, [schema: Schema<string, unknown>]>((handle) => {
+export const validate = createMixin<HTMLElement, [schema: Schema<unknown, unknown>]>((handle) => {
 	let hasReported = false;
 
 	handle.addEventListener("remove", () => {
