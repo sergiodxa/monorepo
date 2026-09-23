@@ -15,6 +15,7 @@ import { border } from "@sdxc/u/color";
 import { opacity, rounded, shadow } from "@sdxc/u/effects";
 import { flex, flexCol, gap, items } from "@sdxc/u/layout";
 import { p, pbe, pbs, pi } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
 import { fontSize, leading, tracking, weight } from "@sdxc/u/typography";
 
 import type { SemanticColor } from "../utils/semantic-color.js";
@@ -183,7 +184,17 @@ Card.Content = function CardContent(handle: Handle<Card.ContentProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <div {...rest} mix={[pbs(0), pbe(6), pi(6), mix]} />;
+		return (
+			<div
+				{...rest}
+				/*
+				 * The body meets whatever sits above it with no gap of its own, because a header
+				 * already carries that space. Opening the card takes it back: a card written as
+				 * content alone would otherwise start hard against its own top edge.
+				 */
+				mix={[pbs(0), when("&:first-child", pbs(6)), pbe(6), pi(6), mix]}
+			/>
+		);
 	};
 };
 
