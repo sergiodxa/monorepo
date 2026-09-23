@@ -189,7 +189,17 @@ export function ColorSlider(handle: Handle<ColorSlider.Props, ColorSlider.Contex
 			<div
 				data-channel={channel}
 				{...rest}
-				mix={[vstack({ gap: 2 }), is("full"), minIs("10rem"), mix]}
+				mix={[
+					vstack({ gap: 2 }),
+					is("full"),
+					/*
+					 * The slider takes the width it is given rather than insisting on a floor: a
+					 * minimum wider than the panel holding it does not make the track usable, it
+					 * makes the panel overflow, and the track is what runs off the edge.
+					 */
+					minIs(0),
+					mix,
+				]}
 			/>
 		);
 	};

@@ -12,7 +12,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 import { outline } from "@sdxc/u/color";
 import { opacity, rounded, transition } from "@sdxc/u/effects";
 import { cursor, raw } from "@sdxc/u/general";
-import { hstack, inlineFlex, relative, shrink, vstack } from "@sdxc/u/layout";
+import { hstack, inlineFlex, items, justify, relative, shrink, vstack } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
 import { bs, is, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
@@ -255,7 +255,11 @@ ColorPicker.Group = function ColorPickerGroup(handle: Handle<ColorPicker.GroupPr
 				{...rest}
 				data-slot="group"
 				mix={[
-					when("&:focus-within", outline({ color: "brand.ring", offset: 2 })),
+					/*
+					 * Focus is shown by the control that holds it, the way `Group` shows it: a ring
+					 * around the row says the group is focused without saying whether the field or
+					 * the preview has it, and it stacks with the ring that control draws for itself.
+					 */
 					hstack({ gap: 2, align: "center" }),
 					mix,
 				]}
@@ -300,6 +304,8 @@ ColorPicker.Trigger = function ColorPickerTrigger(handle: Handle<ColorPicker.Tri
 					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					relative(),
 					inlineFlex(),
+					items("center"),
+					justify("center"),
 					is("var(--ui-color-picker-trigger-size, 2.25rem)"),
 					bs("var(--ui-color-picker-trigger-size, 2.25rem)"),
 					rounded("md"),
@@ -310,12 +316,25 @@ ColorPicker.Trigger = function ColorPickerTrigger(handle: Handle<ColorPicker.Tri
 					p(0),
 					shrink(),
 					when('&[data-shape="square"]', rounded("none")),
-					when("&:hover", raw({ boxShadow: "0 0 0 2px var(--ui-neutral-border)" })),
+					/*
+					 * The preview is the button, so the swatch is grown through the measure the
+					 * swatch itself reads rather than by overriding the size it sets: a size passed
+					 * down as `mix` compiles into its own cascade layer and can land before the
+					 * swatch's own, which leaves the preview at its default size in a corner of the
+					 * button.
+					 */
+					raw({ "--ui-color-swatch-size-md": "100%" }),
+					/*
+					 * Hover steps the preview's edge one shade darker rather than laying a second
+					 * ring outside it, since the swatch already draws an edge of its own and the
+					 * two together read as a border drawn twice.
+					 */
+					when("&:hover", raw({ boxShadow: "0 0 0 1px var(--ui-neutral-border-hover)" })),
 					media("(prefers-reduced-motion: reduce)", raw({ transitionDuration: "0s" })),
 					mix,
 				]}
 			>
-				<ColorSwatch value={value} shape={resolvedShape} mix={[is("full"), bs("full")]} />
+				<ColorSwatch value={value} shape={resolvedShape} />
 			</button>
 		);
 	};

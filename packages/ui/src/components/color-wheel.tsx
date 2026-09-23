@@ -23,6 +23,7 @@ import {
 	insIs,
 	inset,
 	relative,
+	shrink,
 } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
 import { bs, is, m, mbs, minIs, mis } from "@sdxc/u/size";
@@ -161,9 +162,13 @@ export function ColorWheel(handle: Handle<ColorWheel.Props>) {
 				style={resolvedStyle}
 				mix={[
 					relative(),
-					block(),
-					is("full"),
-					minIs("10rem"),
+					/*
+					 * The two shapes size themselves through selectors that exclude each other: a
+					 * circular wheel states one measure for both axes, and a bare `is("full")`
+					 * beside it compiles into its own cascade layer that can land after the
+					 * circular rule and stretch the wheel into an ellipse.
+					 */
+					when('&:not([data-shape="circular"])', [block(), is("full"), minIs("10rem")]),
 					when(
 						'&[data-shape="circular"]',
 						when("&:has(> input:focus-visible)", outline({ color: "brand.ring", offset: 2 })),
@@ -173,6 +178,12 @@ export function ColorWheel(handle: Handle<ColorWheel.Props>) {
 						is("var(--ui-color-wheel-size, 12rem)"),
 						bs("var(--ui-color-wheel-size, 12rem)"),
 						minIs("0"),
+						/*
+						 * A wheel is round, so it holds the one measure it states on both axes. As a
+						 * flex item it would otherwise shrink on the inline axis alone when the row
+						 * runs short, and a circle squeezed on one axis is an ellipse.
+						 */
+						shrink(),
 						rounded("full"),
 						bg({ image: WHEEL_CONIC_GRADIENT }),
 						mask(RING_MASK),
