@@ -9,7 +9,7 @@
  */
 
 import type { InvalidCronExpression, TimeOfDay } from "@sdxc/cron";
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 
 import { Schedule } from "@sdxc/cron";
 import { isFailure } from "@sdxc/result";
@@ -18,8 +18,8 @@ import { isFailure } from "@sdxc/result";
 export interface ScheduleTextOptions {
 	/** BCP 47 locale the weekday names, month names and list separators come from. */
 	locale: string;
-	/** The request's translator, i.e. `ctx.i18next.t`. */
-	t: TFunction;
+	/** The request's translator, i.e. `ctx.intl.t`. */
+	t: Translate;
 }
 
 /** A Sunday at UTC midnight, the anchor weekday index `0` names. */
@@ -107,9 +107,9 @@ export function describeSchedule(expression: string, options: ScheduleTextOption
  * @returns The translated reason the expression was rejected.
  *
  * @example
- * invalidCronMessage(result.error, ctx.i18next.t);
+ * invalidCronMessage(result.error, ctx.intl.t);
  */
-export function invalidCronMessage(error: InvalidCronExpression, t: TFunction): string {
+export function invalidCronMessage(error: InvalidCronExpression, t: Translate): string {
 	return t(`cron.error.${error.reason}`);
 }
 

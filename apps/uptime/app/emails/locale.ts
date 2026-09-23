@@ -1,6 +1,6 @@
 /**
  * Translator configuration for the send paths that have no request behind them — the
- * check jobs and the queue consumer — where `ctx.i18next` does not exist. It names the
+ * check jobs and the queue consumer — where `ctx.intl` does not exist. It names the
  * app's own locale bundles, the languages it ships, and the language email falls back
  * to; building, caching and resolving the translator itself is `@sdxc/i18n`'s job.
  *
@@ -9,6 +9,7 @@
  */
 
 import { createTranslator } from "@sdxc/i18n";
+import { currentLog } from "@sdxc/logger";
 
 import de from "~/app/locales/de";
 import en from "~/app/locales/en";
@@ -28,20 +29,15 @@ export const DEFAULT_EMAIL_LOCALE = "en";
 /**
  * A language the app does not ship falls back to {@link DEFAULT_EMAIL_LOCALE}, and one
  * instance is kept per language so an alert fanning out to a team does not rebuild
- * i18next per email; escaping stays off since JSX already escapes the text it renders.
+ * a translator per email; a broken message becomes a warning on the invocation's log.
  *
  * @example let { locale, t } = await emailTranslator();
  */
 export const emailTranslator = createTranslator({
-	resources: {
-		en: { translation: en },
-		es: { translation: es },
-		de: { translation: de },
-		ja: { translation: ja },
-		fr: { translation: fr },
-		it: { translation: it },
-	},
+	resources: { en, es, de, ja, fr, it },
 	supportedLanguages,
 	fallbackLanguage: DEFAULT_EMAIL_LOCALE,
-	i18next: { interpolation: { escapeValue: false } },
+	onError(error, key) {
+		currentLog()?.warn("i18n.error", { key, type: error.name, message: error.message });
+	},
 });

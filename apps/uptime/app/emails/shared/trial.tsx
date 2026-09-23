@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 import type { EmailTableRow } from "@sdxc/mail";
 import type { Handle } from "remix/ui";
 
@@ -90,7 +90,7 @@ export namespace TrialFooter {
 		/** Already-translated sentence saying why this message arrived, which each email writes. */
 		reason: string;
 		/** Translator already bound to the reader's language. */
-		t: TFunction;
+		t: Translate;
 	}
 }
 
@@ -186,7 +186,7 @@ export namespace TrialReport {
 		/** Caption at the newest end of it. */
 		rangeEnd: string;
 		/** Translator already bound to the reader's language by the sender. */
-		t: TFunction;
+		t: Translate;
 	}
 }
 

@@ -9,10 +9,10 @@
  */
 
 import type { InvalidCronReason } from "@sdxc/cron";
-import type { TFunction } from "@sdxc/i18n";
+import type { Messages, Translate } from "@sdxc/i18n";
 
 import { Schedule } from "@sdxc/cron";
-import { createTranslator } from "@sdxc/i18n";
+import { createI18n } from "@sdxc/i18n";
 import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
@@ -25,20 +25,11 @@ import ja from "~/app/locales/ja";
 
 import { describeSchedule, invalidCronMessage } from "./cron-text";
 
-const LOCALES = { en, es, de, fr, it, ja };
-
-let { i18n } = await createTranslator({
-	resources: Object.fromEntries(
-		Object.entries(LOCALES).map(([language, translation]) => [language, { translation }]),
-	),
-	supportedLanguages: Object.keys(LOCALES),
-	fallbackLanguage: "en",
-	i18next: { interpolation: { escapeValue: false } },
-})();
+const LOCALES: Record<string, Messages> = { en, es, de, fr, it, ja };
 
 /** The translator for one language, as a controller would hand it to the helpers. */
-function translator(language: string): TFunction {
-	return i18n.getFixedT(language);
+function translator(language: string): Translate {
+	return createI18n({ locale: language, fallbackLanguage: "en", resources: LOCALES }).t;
 }
 
 /** Describes an expression in one language, the way a controller calls the helper. */

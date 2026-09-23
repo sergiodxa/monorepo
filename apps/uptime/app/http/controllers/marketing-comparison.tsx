@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 
 import { CheckIcon, TriangleAlertIcon } from "@sdxc/icons";
 import { bg, border, fg, linearGradient } from "@sdxc/u/color";
@@ -136,7 +136,7 @@ function ourCostFor(row: MarketingContent.PricingScenario, locale: string): stri
  * subtractable number and we come out cheaper, otherwise the row's own note. Never
  * both — a row claiming a saving and a qualitative win at once reads as padding.
  */
-function savingsFor(row: MarketingContent.PricingScenario, locale: string, t: TFunction): string {
+function savingsFor(row: MarketingContent.PricingScenario, locale: string, t: Translate): string {
 	if (row.usage && row.theirCostUsd !== undefined) {
 		let yearly = (row.theirCostUsd - monthlyCostForUsage(row.usage).totalUsd) * 12;
 		if (yearly > 0) {
@@ -165,8 +165,8 @@ function ctaRow() {
 export default createAction(routes.marketing.comparison, async (ctx) => {
 	let { slug } = s.parse(s.object({ slug: s.string() }), ctx.params);
 	let isSignedIn = getViewer() !== null;
-	let chrome = buildMarketingChrome(ctx.i18next.t);
-	let t = ctx.i18next.t;
+	let chrome = buildMarketingChrome(ctx.intl.t);
+	let t = ctx.intl.t;
 
 	let content = comparisons[slug];
 	if (!content) {

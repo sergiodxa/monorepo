@@ -29,14 +29,14 @@ import routes from "~/routes/web";
  */
 export default createAction(routes.legal.terms, async (ctx) => {
 	let isSignedIn = getViewer() !== null;
-	let chrome = buildMarketingChrome(ctx.i18next.t);
+	let chrome = buildMarketingChrome(ctx.intl.t);
 
 	return ctx.render(
 		<DocumentLayout
-			title={ctx.i18next.t("legal.terms.meta.title")}
+			title={ctx.intl.t("legal.terms.meta.title")}
 			locale={ctx.locale}
 			seo={{
-				description: ctx.i18next.t("legal.terms.meta.description"),
+				description: ctx.intl.t("legal.terms.meta.description"),
 				canonical: SEO.canonical(ctx.url),
 				og: { type: "article" },
 			}}
@@ -45,88 +45,88 @@ export default createAction(routes.legal.terms, async (ctx) => {
 				<article mix={[maxIs("720px"), m(0, "auto"), pbs("48px"), pi("24px"), pbe("80px")]}>
 					<Typeset preset="reading">
 						<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-							{ctx.i18next.t("legal.terms.lastUpdated")}
+							{ctx.intl.t("legal.terms.lastUpdated")}
 						</p>
 
-						<h1>{ctx.i18next.t("legal.terms.title")}</h1>
+						<h1>{ctx.intl.t("legal.terms.title")}</h1>
 
-						<h2>{ctx.i18next.t("legal.terms.sections.introduction.title")}</h2>
-						<p>{ctx.i18next.t("legal.terms.sections.introduction.body")}</p>
+						<h2>{ctx.intl.t("legal.terms.sections.introduction.title")}</h2>
+						<p>{ctx.intl.t("legal.terms.sections.introduction.body")}</p>
 
-						<h2>{ctx.i18next.t("legal.terms.sections.serviceDescription.title")}</h2>
-						<p>{ctx.i18next.t("legal.terms.sections.serviceDescription.body")}</p>
+						<h2>{ctx.intl.t("legal.terms.sections.serviceDescription.title")}</h2>
+						<p>{ctx.intl.t("legal.terms.sections.serviceDescription.body")}</p>
 
-						<h2>{ctx.i18next.t("legal.terms.sections.accountTerms.title")}</h2>
+						<h2>{ctx.intl.t("legal.terms.sections.accountTerms.title")}</h2>
 						<ul>
-							<li>{ctx.i18next.t("legal.terms.sections.accountTerms.first")}</li>
-							<li>{ctx.i18next.t("legal.terms.sections.accountTerms.second")}</li>
-							<li>{ctx.i18next.t("legal.terms.sections.accountTerms.third")}</li>
-							<li>{ctx.i18next.t("legal.terms.sections.accountTerms.fourth")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.accountTerms.first")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.accountTerms.second")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.accountTerms.third")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.accountTerms.fourth")}</li>
 						</ul>
 
-						<h2>{ctx.i18next.t("legal.terms.sections.acceptableUse.title")}</h2>
-						<p>{ctx.i18next.t("legal.terms.sections.acceptableUse.intro")}</p>
+						<h2>{ctx.intl.t("legal.terms.sections.acceptableUse.title")}</h2>
+						<p>{ctx.intl.t("legal.terms.sections.acceptableUse.intro")}</p>
 						<ul>
-							<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.first")}</li>
-							<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.second")}</li>
-							<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.third")}</li>
-							<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.fourth")}</li>
-							<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.fifth")}</li>
-							<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.sixth")}</li>
-							<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.seventh")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.acceptableUse.first")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.acceptableUse.second")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.acceptableUse.third")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.acceptableUse.fourth")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.acceptableUse.fifth")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.acceptableUse.sixth")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.acceptableUse.seventh")}</li>
 						</ul>
 
-						<h2>{ctx.i18next.t("legal.terms.sections.paymentTerms.title")}</h2>
+						<h2>{ctx.intl.t("legal.terms.sections.paymentTerms.title")}</h2>
 						<ul>
-							<li>{ctx.i18next.t("legal.terms.sections.paymentTerms.first")}</li>
-							<li>{ctx.i18next.t("legal.terms.sections.paymentTerms.second")}</li>
-							<li>{ctx.i18next.t("legal.terms.sections.paymentTerms.third")}</li>
-							<li>{ctx.i18next.t("legal.terms.sections.paymentTerms.fourth")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.paymentTerms.first")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.paymentTerms.second")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.paymentTerms.third")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.paymentTerms.fourth")}</li>
 						</ul>
 
-						<h2>{ctx.i18next.t("legal.terms.sections.dataAndPrivacy.title")}</h2>
+						<h2>{ctx.intl.t("legal.terms.sections.dataAndPrivacy.title")}</h2>
 						<ul>
 							<li>
-								{ctx.i18next.t("legal.terms.sections.dataAndPrivacy.firstPrefix")}
+								{ctx.intl.t("legal.terms.sections.dataAndPrivacy.firstPrefix")}
 								<a href={routes.legal.privacy.href()}>
-									{ctx.i18next.t("legal.terms.sections.dataAndPrivacy.firstLinkText")}
+									{ctx.intl.t("legal.terms.sections.dataAndPrivacy.firstLinkText")}
 								</a>
-								{ctx.i18next.t("legal.terms.sections.dataAndPrivacy.firstSuffix")}
+								{ctx.intl.t("legal.terms.sections.dataAndPrivacy.firstSuffix")}
 							</li>
-							<li>{ctx.i18next.t("legal.terms.sections.dataAndPrivacy.second")}</li>
-							<li>{ctx.i18next.t("legal.terms.sections.dataAndPrivacy.third")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.dataAndPrivacy.second")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.dataAndPrivacy.third")}</li>
 						</ul>
 
-						<h2>{ctx.i18next.t("legal.terms.sections.serviceAvailability.title")}</h2>
+						<h2>{ctx.intl.t("legal.terms.sections.serviceAvailability.title")}</h2>
 						<ul>
-							<li>{ctx.i18next.t("legal.terms.sections.serviceAvailability.first")}</li>
-							<li>{ctx.i18next.t("legal.terms.sections.serviceAvailability.second")}</li>
-							<li>{ctx.i18next.t("legal.terms.sections.serviceAvailability.third")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.serviceAvailability.first")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.serviceAvailability.second")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.serviceAvailability.third")}</li>
 						</ul>
 
-						<h2>{ctx.i18next.t("legal.terms.sections.limitationOfLiability.title")}</h2>
+						<h2>{ctx.intl.t("legal.terms.sections.limitationOfLiability.title")}</h2>
 						<ul>
-							<li>{ctx.i18next.t("legal.terms.sections.limitationOfLiability.first")}</li>
-							<li>{ctx.i18next.t("legal.terms.sections.limitationOfLiability.second")}</li>
-							<li>{ctx.i18next.t("legal.terms.sections.limitationOfLiability.third")}</li>
-							<li>{ctx.i18next.t("legal.terms.sections.limitationOfLiability.fourth")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.limitationOfLiability.first")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.limitationOfLiability.second")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.limitationOfLiability.third")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.limitationOfLiability.fourth")}</li>
 						</ul>
 
-						<h2>{ctx.i18next.t("legal.terms.sections.termination.title")}</h2>
+						<h2>{ctx.intl.t("legal.terms.sections.termination.title")}</h2>
 						<ul>
-							<li>{ctx.i18next.t("legal.terms.sections.termination.first")}</li>
-							<li>{ctx.i18next.t("legal.terms.sections.termination.second")}</li>
-							<li>{ctx.i18next.t("legal.terms.sections.termination.third")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.termination.first")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.termination.second")}</li>
+							<li>{ctx.intl.t("legal.terms.sections.termination.third")}</li>
 						</ul>
 
-						<h2>{ctx.i18next.t("legal.terms.sections.changesToTerms.title")}</h2>
-						<p>{ctx.i18next.t("legal.terms.sections.changesToTerms.body")}</p>
+						<h2>{ctx.intl.t("legal.terms.sections.changesToTerms.title")}</h2>
+						<p>{ctx.intl.t("legal.terms.sections.changesToTerms.body")}</p>
 
-						<h2>{ctx.i18next.t("legal.terms.sections.contact.title")}</h2>
+						<h2>{ctx.intl.t("legal.terms.sections.contact.title")}</h2>
 						<p>
-							{ctx.i18next.t("legal.terms.sections.contact.prefix")}
-							<a href={`mailto:${ctx.i18next.t("legal.terms.sections.contact.email")}`}>
-								{ctx.i18next.t("legal.terms.sections.contact.email")}
+							{ctx.intl.t("legal.terms.sections.contact.prefix")}
+							<a href={`mailto:${ctx.intl.t("legal.terms.sections.contact.email")}`}>
+								{ctx.intl.t("legal.terms.sections.contact.email")}
 							</a>
 							.
 						</p>

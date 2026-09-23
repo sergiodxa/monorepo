@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 
 import { formatDate, formatDateTime } from "@sdxc/dates";
 import { notFound } from "@sdxc/http/response/html";
@@ -138,7 +138,7 @@ function segmentLabelKey(status: UptimeBar.Status) {
  * consecutive checks failed, since checks land an hour apart and any duration
  * would claim minutes nobody observed.
  */
-function incidentLine(incident: TrialIncident, locale: string, t: TFunction) {
+function incidentLine(incident: TrialIncident, locale: string, t: Translate) {
 	return t("page.trial.report.incidents.entry", {
 		started: formatDateTime(new Date(incident.startedAt), { locale, timeZone: REPORT_ZONE }),
 		/**
@@ -152,7 +152,7 @@ function incidentLine(incident: TrialIncident, locale: string, t: TFunction) {
 /** GET /try/report/:token — one trial target's health report. */
 export default createAction(routes.trial.report, async (ctx) => {
 	let { token } = s.parse(ParamsSchema, ctx.params);
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 	let locale = ctx.locale;
 
 	let watch = await TrialWatch.findByReportToken(ctx.db, token);

@@ -3,7 +3,7 @@
  * `cloudflare:workers` is mocked because `~/app/data/monitor` and
  * `~/app/services/analytics` read `env` at module load; the bindings behind it are
  * in-memory implementations, and the Analytics Engine SQL API call is intercepted by
- * MSW so it never hits the network. `ctx.team`/`ctx.membership`/auth/i18next state is
+ * MSW so it never hits the network. `ctx.team`/`ctx.membership`/auth/intl state is
  * seeded directly, standing in for the real middleware chain.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -65,8 +65,8 @@ let monitorCardP99ResponseTime = (await import("./monitor-card-p99-response-time
 	handler: RequestHandler<any>;
 };
 
-let { i18n: i18nextInstance } = await createTranslator({
-	resources: { en: { translation: en } },
+let { intl } = await createTranslator({
+	resources: { en },
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",
 })();
@@ -81,7 +81,7 @@ function createHtmlRenderer(ctx: RequestContext) {
 	};
 }
 
-/** Middleware that seeds `ctx.team`/`ctx.membership`/auth/i18next state, standing in for the real chain. */
+/** Middleware that seeds `ctx.team`/`ctx.membership`/auth/intl state, standing in for the real chain. */
 function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	let viewer: Viewer = {
 		id: membership.subject_id,
@@ -95,7 +95,7 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 		ctx.membership = membership;
 		ctx.teams = [team];
 		ctx.locale = "en";
-		ctx.i18next = i18nextInstance;
+		ctx.intl = intl;
 		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
 		return next();
 	};

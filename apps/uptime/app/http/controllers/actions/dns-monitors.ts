@@ -105,7 +105,7 @@ export const createDnsMonitor = createAction(routes.actions.monitor.dns.create, 
 	if (isFailure(result)) {
 		session?.flash("toast", {
 			intent: "error",
-			message: ctx.i18next.t("actions.createDnsMonitor.errors.generic"),
+			message: ctx.intl.t("actions.createDnsMonitor.errors.generic"),
 		});
 		return redirect(routes.app.team.dnsMonitors.new.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
@@ -115,7 +115,7 @@ export const createDnsMonitor = createAction(routes.actions.monitor.dns.create, 
 	let existingCount = await DnsMonitor.countByTeam(ctx.db, ctx.team.id);
 	if (existingCount >= MAX_DNS_MONITORS_PER_TEAM) {
 		return unprocessableEntity(
-			ctx.i18next.t("actions.createDnsMonitor.errors.limitExceeded", {
+			ctx.intl.t("actions.createDnsMonitor.errors.limitExceeded", {
 				limit: MAX_DNS_MONITORS_PER_TEAM,
 			}),
 		);
@@ -127,7 +127,7 @@ export const createDnsMonitor = createAction(routes.actions.monitor.dns.create, 
 	if ("refusal" in zone) {
 		session?.flash("toast", {
 			intent: "error",
-			message: ctx.i18next.t(zone.refusal.messageKey, zone.refusal.values),
+			message: ctx.intl.t(zone.refusal.messageKey, zone.refusal.values),
 		});
 		return redirect(routes.app.team.dnsMonitors.new.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
@@ -157,7 +157,7 @@ export const createDnsMonitor = createAction(routes.actions.monitor.dns.create, 
 
 	session?.flash("toast", {
 		intent: "success",
-		message: ctx.i18next.t("actions.createDnsMonitor.success.created", { name: monitor.name }),
+		message: ctx.intl.t("actions.createDnsMonitor.success.created", { name: monitor.name }),
 	});
 	return redirect(
 		routes.app.team.dnsMonitors.review.href({ team: ctx.team.slug, monitorId: monitor.id }),
@@ -173,7 +173,7 @@ export const updateDnsMonitor = createAction(routes.actions.monitor.dns.update, 
 	if (isFailure(result)) {
 		session?.flash("toast", {
 			intent: "error",
-			message: ctx.i18next.t("actions.updateDnsMonitor.errors.generic"),
+			message: ctx.intl.t("actions.updateDnsMonitor.errors.generic"),
 		});
 		return redirect(
 			ctx.request.headers.get("Referer") ??
@@ -190,7 +190,7 @@ export const updateDnsMonitor = createAction(routes.actions.monitor.dns.update, 
 
 	session?.flash("toast", {
 		intent: "success",
-		message: ctx.i18next.t("actions.updateDnsMonitor.success", { name: existing.name }),
+		message: ctx.intl.t("actions.updateDnsMonitor.success", { name: existing.name }),
 	});
 	return redirect(
 		routes.app.team.dnsMonitors.show.href({ team: ctx.team.slug, monitorId: monitor_id }),
@@ -216,7 +216,7 @@ export const deleteDnsMonitor = createAction(routes.actions.monitor.dns.delete, 
 
 	session?.flash("toast", {
 		intent: "success",
-		message: ctx.i18next.t("actions.deleteDnsMonitor.success", { name: existing.name }),
+		message: ctx.intl.t("actions.deleteDnsMonitor.success", { name: existing.name }),
 	});
 	return redirect(routes.app.team.dnsMonitors.index.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
@@ -249,7 +249,7 @@ export const checkDnsMonitor = createAction(routes.actions.monitor.dns.check, as
 	if ((await Subscription.stateFor(ctx.db, ctx.team.owner_id)) === "inactive") {
 		session?.flash("toast", {
 			intent: "error",
-			message: ctx.i18next.t("actions.checks.subscriptionRequired"),
+			message: ctx.intl.t("actions.checks.subscriptionRequired"),
 		});
 		return redirect(
 			routes.app.team.dnsMonitors.show.href({ team: ctx.team.slug, monitorId: monitor.id }),
@@ -308,7 +308,7 @@ export const checkDnsMonitor = createAction(routes.actions.monitor.dns.check, as
 
 	session?.flash("toast", {
 		intent: "success",
-		message: ctx.i18next.t("actions.checkDnsMonitor.success.checked", { name: monitor.name }),
+		message: ctx.intl.t("actions.checkDnsMonitor.success.checked", { name: monitor.name }),
 	});
 	return redirect(
 		routes.app.team.dnsMonitors.show.href({ team: ctx.team.slug, monitorId: monitor.id }),
@@ -328,7 +328,7 @@ export const reviewDnsMonitor = createAction(routes.actions.monitor.dns.review, 
 	if (isFailure(result)) {
 		session?.flash("toast", {
 			intent: "error",
-			message: ctx.i18next.t("actions.reviewDnsMonitor.errors.generic"),
+			message: ctx.intl.t("actions.reviewDnsMonitor.errors.generic"),
 		});
 		return redirect(
 			ctx.request.headers.get("Referer") ??
@@ -354,7 +354,7 @@ export const reviewDnsMonitor = createAction(routes.actions.monitor.dns.review, 
 
 	session?.flash("toast", {
 		intent: "success",
-		message: ctx.i18next.t("actions.reviewDnsMonitor.success.saved", { count: enabled.length }),
+		message: ctx.intl.t("actions.reviewDnsMonitor.success.saved", { count: enabled.length }),
 	});
 	return redirect(
 		routes.app.team.dnsMonitors.show.href({ team: ctx.team.slug, monitorId: monitor.id }),
@@ -376,7 +376,7 @@ export const toggleDnsMonitorRecord = createAction(
 		if (isFailure(result)) {
 			session?.flash("toast", {
 				intent: "error",
-				message: ctx.i18next.t("actions.toggleDnsMonitorRecord.errors.generic"),
+				message: ctx.intl.t("actions.toggleDnsMonitorRecord.errors.generic"),
 			});
 			return redirect(
 				ctx.request.headers.get("Referer") ??
@@ -396,7 +396,7 @@ export const toggleDnsMonitorRecord = createAction(
 
 		session?.flash("toast", {
 			intent: "success",
-			message: ctx.i18next.t(
+			message: ctx.intl.t(
 				result.data.is_enabled
 					? "actions.toggleDnsMonitorRecord.success.enabled"
 					: "actions.toggleDnsMonitorRecord.success.disabled",
@@ -424,7 +424,7 @@ export const importDnsMonitorZoneFile = createAction(
 		if (isFailure(result)) {
 			session?.flash("toast", {
 				intent: "error",
-				message: ctx.i18next.t("actions.importDnsMonitorZoneFile.errors.generic"),
+				message: ctx.intl.t("actions.importDnsMonitorZoneFile.errors.generic"),
 			});
 			return redirect(
 				ctx.request.headers.get("Referer") ??
@@ -440,7 +440,7 @@ export const importDnsMonitorZoneFile = createAction(
 		if ("refusal" in zone) {
 			session?.flash("toast", {
 				intent: "error",
-				message: ctx.i18next.t(zone.refusal.messageKey, zone.refusal.values),
+				message: ctx.intl.t(zone.refusal.messageKey, zone.refusal.values),
 			});
 			return redirect(
 				routes.app.team.dnsMonitors.show.href({ team: ctx.team.slug, monitorId: monitor.id }),
@@ -453,7 +453,7 @@ export const importDnsMonitorZoneFile = createAction(
 
 		session?.flash("toast", {
 			intent: "success",
-			message: ctx.i18next.t("actions.importDnsMonitorZoneFile.success.imported", {
+			message: ctx.intl.t("actions.importDnsMonitorZoneFile.success.imported", {
 				count: discovery.names.length,
 			}),
 		});

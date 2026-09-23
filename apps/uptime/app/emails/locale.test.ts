@@ -2,7 +2,7 @@
  * Tests the translator factory the background send paths use: it resolves a
  * shipped language, reports the language it actually resolved to, and reuses
  * one instance across repeated calls so an outage fanning out to a team's
- * alerts builds i18next only once.
+ * alerts builds a translator only once.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

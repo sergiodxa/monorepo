@@ -46,13 +46,13 @@ export default createAction(routes.docs.show, async (ctx) => {
 	let isSignedIn = getViewer() !== null;
 	let activePath = routes.docs.show.href({ slug });
 
-	let dashboardLabel = ctx.i18next.t("docs.header.cta.in");
-	let startLabel = ctx.i18next.t("docs.header.cta.out");
-	let sidebarTitle = ctx.i18next.t("docs.sidebar.title");
-	let sidebarDescription = ctx.i18next.t("docs.sidebar.description");
-	let searchPlaceholder = ctx.i18next.t("docs.sidebar.searchPlaceholder");
-	let toggleNavLabel = ctx.i18next.t("docs.sidebar.openMenu");
-	let breadcrumbLabel = ctx.i18next.t("app.layout.breadcrumbs.label");
+	let dashboardLabel = ctx.intl.t("docs.header.cta.in");
+	let startLabel = ctx.intl.t("docs.header.cta.out");
+	let sidebarTitle = ctx.intl.t("docs.sidebar.title");
+	let sidebarDescription = ctx.intl.t("docs.sidebar.description");
+	let searchPlaceholder = ctx.intl.t("docs.sidebar.searchPlaceholder");
+	let toggleNavLabel = ctx.intl.t("docs.sidebar.openMenu");
+	let breadcrumbLabel = ctx.intl.t("app.layout.breadcrumbs.label");
 
 	/**
 	 * Builds the `docs > ... > <segment>` trail, one crumb per URL segment.
@@ -79,7 +79,7 @@ export default createAction(routes.docs.show, async (ctx) => {
 	let renderNotFound = () => {
 		return ctx.render(
 			<DocumentLayout
-				title={`${ctx.i18next.t("docs.error.notFoundTitle")} | ${ctx.i18next.t("docs.meta.title")}`}
+				title={`${ctx.intl.t("docs.error.notFoundTitle")} | ${ctx.intl.t("docs.meta.title")}`}
 				locale={ctx.locale}
 			>
 				<DocsLayout
@@ -95,8 +95,8 @@ export default createAction(routes.docs.show, async (ctx) => {
 					toggleNavLabel={toggleNavLabel}
 					breadcrumbLabel={breadcrumbLabel}
 				>
-					<h1>{ctx.i18next.t("docs.error.notFoundTitle")}</h1>
-					<p>{ctx.i18next.t("docs.error.notFoundDescription")}</p>
+					<h1>{ctx.intl.t("docs.error.notFoundTitle")}</h1>
+					<p>{ctx.intl.t("docs.error.notFoundDescription")}</p>
 				</DocsLayout>
 			</DocumentLayout>,
 			{ status: 404 },
@@ -140,10 +140,10 @@ export default createAction(routes.docs.show, async (ctx) => {
 
 	return ctx.render(
 		<DocumentLayout
-			title={`${frontmatter.title} | ${ctx.i18next.t("docs.meta.title")}`}
+			title={`${frontmatter.title} | ${ctx.intl.t("docs.meta.title")}`}
 			locale={ctx.locale}
 			seo={{
-				description: frontmatter.description || ctx.i18next.t("docs.meta.description"),
+				description: frontmatter.description || ctx.intl.t("docs.meta.description"),
 				canonical: SEO.canonical(ctx.url),
 				og: { type: "article" },
 			}}
@@ -169,7 +169,7 @@ export default createAction(routes.docs.show, async (ctx) => {
 						</p>
 						{frontmatter.lastUpdated && (
 							<p mix={[fontSize("0.8125rem"), fg("neutral.muted"), m("0")]}>
-								{ctx.i18next.t("docs.lastUpdated", { date: frontmatter.lastUpdated })}
+								{ctx.intl.t("docs.lastUpdated", { date: frontmatter.lastUpdated })}
 							</p>
 						)}
 					</header>

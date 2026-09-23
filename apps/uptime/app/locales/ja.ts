@@ -44,7 +44,7 @@ export default {
 
 		hero: {
 			pill: "稼働時間監視",
-			title: "安心してサービスを<strong>監視</strong>",
+			title: "安心してサービスを{#strong}監視{/strong}",
 			description:
 				"ウェブサイトやAPIがダウンした時に即座にアラートを受け取れます。簡単にウェブサイトやAPIを監視できます。",
 
@@ -52,7 +52,7 @@ export default {
 				in: "ダッシュボードを開く",
 				out: "監視を始める",
 				pricing: "料金を見る",
-				try: "{{days}}日間無料でモニタリング",
+				try: "{$days}日間無料でモニタリング",
 			},
 
 			try: {
@@ -102,7 +102,7 @@ export default {
 				payForUsage: {
 					title: "実際に使った分だけお支払い",
 					description:
-						"月 {{price}} に {{included}} 回のチェックが含まれます。それを超えた分は、実際に実行したチェックの分だけをお支払いいただきます。それ以外の費用はありません。",
+						"月 {$price} に {$included} 回のチェックが含まれます。それを超えた分は、実際に実行したチェックの分だけをお支払いいただきます。それ以外の費用はありません。",
 				},
 			},
 		},
@@ -253,12 +253,12 @@ export default {
 				list: {
 					first: {
 						title: "基本サブスクリプション",
-						description: "月額{{price}}で最初の{{included}}回のpingを含む",
+						description: "月額{$price}で最初の{$included}回のpingを含む",
 					},
 
 					second: {
 						title: "追加ping",
-						description: "以降は{{blockSize}}pingごとに{{blockPrice}}（ブロック単位での課金）",
+						description: "以降は{$blockSize}pingごとに{$blockPrice}（ブロック単位での課金）",
 					},
 
 					third: {
@@ -287,10 +287,9 @@ export default {
 				stats: {
 					pingsPerMonth: "月間ping数：",
 					baseSubscription: "基本サブスクリプション",
-					includes: "最初の{{amount}}回のpingを含む",
+					includes: "最初の{$amount}回のpingを含む",
 					additionalPings: "追加ping：",
-					additionalPingsCost:
-						"{{blocks}} × {{blockSize}}pingあたり{{blockPrice}}（超過{{pings}}）",
+					additionalPingsCost: "{$blocks} × {$blockSize}pingあたり{$blockPrice}（超過{$pings}）",
 					totalCost: "月額合計：",
 				},
 			},
@@ -384,7 +383,7 @@ export default {
 
 				seventeenth: {
 					q: "プランの制限を超えるとどうなりますか？",
-					a: "サブスクリプションに含まれる{{included}}回を超える利用は、{{blockSize}}pingのブロック単位で1ブロックあたり{{blockPrice}}が課金されます（1回の超過でも1ブロック分）。",
+					a: "サブスクリプションに含まれる{$included}回を超える利用は、{$blockSize}pingのブロック単位で1ブロックあたり{$blockPrice}が課金されます（1回の超過でも1ブロック分）。",
 				},
 
 				eighteenth: {
@@ -407,7 +406,7 @@ export default {
 		footer: {
 			name: "Uptime",
 			description: "ウェブサイトとAPIのためのシンプルで信頼性の高い監視。",
-			copyright: "© {{year}} Uptime by Sergio Xalambrí. All rights reserved.",
+			copyright: "© {$year :string} Uptime by Sergio Xalambrí. All rights reserved.",
 			sections: {
 				product: {
 					title: "製品",
@@ -479,7 +478,7 @@ export default {
 		},
 
 		comparison: {
-			tableLabel: "Uptime と {{competitor}} の比較",
+			tableLabel: "Uptime と {$competitor} の比較",
 			tableCategoryHeader: "項目",
 			tableProductHeader: "Uptime",
 			whyTeamsSwitchTitle: "チームが Uptime に移行する理由",
@@ -488,21 +487,21 @@ export default {
 
 			honestTake: {
 				badge: "正直な評価",
-				title: "{{competitor}} のほうが適している場合",
+				title: "{$competitor} のほうが適している場合",
 				description:
-					"私たちは透明性を大切にしています。次のような場合は {{competitor}} が適した選択かもしれません。",
+					"私たちは透明性を大切にしています。次のような場合は {$competitor} が適した選択かもしれません。",
 			},
 
 			pricing: {
 				badge: "料金",
 				title: "実際のコスト比較",
 				description: "一般的な監視構成でどれだけ節約できるかをご確認ください。",
-				tableLabel: "コスト比較: Uptime と {{competitor}}",
+				tableLabel: "コスト比較: Uptime と {$competitor}",
 				scenarioHeader: "ユースケース",
 				savingsHeader: "削減額",
-				savingsPerYear: "年間~{{amount}}",
+				savingsPerYear: "年間~{$amount}",
 				footnote:
-					"一般的な利用パターンに基づく概算です。{{competitor}} の料金は変更される場合があり、実際の費用は構成によって異なります。",
+					"一般的な利用パターンに基づく概算です。{$competitor} の料金は変更される場合があり、実際の費用は構成によって異なります。",
 			},
 		},
 
@@ -1012,7 +1011,7 @@ export default {
 
 	monitorDetail: {
 		header: {
-			region: "{{emoji}} {{code}}",
+			region: "{$emoji} {$code}",
 		},
 		stats: {
 			title: "統計",
@@ -1061,7 +1060,7 @@ export default {
 				noData: "データなし",
 			},
 			tooltip: {
-				uptime: "{{percentage}}% 稼働率",
+				uptime: "{$percentage}% 稼働率",
 				noData: "データなし",
 			},
 		},
@@ -1075,7 +1074,7 @@ export default {
 			description: "このステータスページにはサービスが設定されていません。",
 		},
 		footer: {
-			lastUpdated: "最終更新: {{date}}",
+			lastUpdated: "最終更新: {$date}",
 			poweredBy: "Uptime提供",
 		},
 		error: {
@@ -1140,8 +1139,8 @@ export default {
 	auth: {
 		error: {
 			title: "認証エラー",
-			errorCode: "エラーコード: {{code}}",
-			description: "説明: {{description}}",
+			errorCode: "エラーコード: {$code}",
+			description: "説明: {$description}",
 			uri: "URI:",
 			tryAgain: "もう一度お試しいただくか、問題が解決しない場合はサポートにお問い合わせください。",
 
@@ -1215,15 +1214,15 @@ export default {
 				description: "pingが実行されるリージョン。",
 				placeholder: "wnam",
 				options: {
-					afr: "{{emoji}} アフリカ",
-					apac: "{{emoji}} アジア太平洋",
-					eeur: "{{emoji}} 東ヨーロッパ",
-					enam: "{{emoji}} 東北アメリカ",
-					me: "{{emoji}} 中東",
-					oc: "{{emoji}} オセアニア",
-					sam: "{{emoji}} 南アメリカ",
-					weur: "{{emoji}} 西ヨーロッパ",
-					wnam: "{{emoji}} 西北アメリカ",
+					afr: "{$emoji} アフリカ",
+					apac: "{$emoji} アジア太平洋",
+					eeur: "{$emoji} 東ヨーロッパ",
+					enam: "{$emoji} 東北アメリカ",
+					me: "{$emoji} 中東",
+					oc: "{$emoji} オセアニア",
+					sam: "{$emoji} 南アメリカ",
+					weur: "{$emoji} 西ヨーロッパ",
+					wnam: "{$emoji} 西北アメリカ",
 				},
 			},
 		},
@@ -1253,33 +1252,33 @@ export default {
 		},
 
 		teamDeleted: {
-			subject: "Uptimeの{{team}}が削除されました",
-			preview: "{{team}}と、そこで監視していたものはすべて存在しなくなりました。",
-			heading: "{{team}}が削除されました",
-			body: "{{team}}の所有者がUptimeアカウントを削除したため、チームも一緒に削除されました。このチームにはアクセスできなくなりました。",
+			subject: "Uptimeの{$team}が削除されました",
+			preview: "{$team}と、そこで監視していたものはすべて存在しなくなりました。",
+			heading: "{$team}が削除されました",
+			body: "{$team}の所有者がUptimeアカウントを削除したため、チームも一緒に削除されました。このチームにはアクセスできなくなりました。",
 			lost: "チームに属していたものはすべて失われました。モニター、アラート、ステータスページは存在せず、いずれも復元できません。",
 			next: "この監視が今後も必要な場合は、Uptimeでご自身のチームを作成し、あらためて設定できます。",
 			footer:
-				"このメールは、あなたがUptimeの{{team}}のメンバーだったため送信されました。あなたの側で必要な対応はありません。",
+				"このメールは、あなたがUptimeの{$team}のメンバーだったため送信されました。あなたの側で必要な対応はありません。",
 		},
 
 		teamInvite: {
-			subject: "Uptimeの{{team}}に招待されました",
-			preview: "Uptimeで{{team}}に参加",
-			heading: "{{team}}に招待されました",
-			body: "{{team}}はUptimeを使ってサービスを監視しています。招待を承認してチームに参加してください。",
+			subject: "Uptimeの{$team}に招待されました",
+			preview: "Uptimeで{$team}に参加",
+			heading: "{$team}に招待されました",
+			body: "{$team}はUptimeを使ってサービスを監視しています。招待を承認してチームに参加してください。",
 			action: "招待を承認",
 			footer:
 				"このメールは、Uptimeでどなたかがあなたをチームに招待したため送信されました。心当たりがない場合は、このメッセージを無視してください。",
 		},
 
 		alert: {
-			subject: "[Uptimeアラート] {{monitor}}：{{status}}",
-			preview: "{{monitor}}：{{status}}",
-			heading: "{{monitor}}：{{status}}",
+			subject: "[Uptimeアラート] {$monitor}：{$status}",
+			preview: "{$monitor}：{$status}",
+			heading: "{$monitor}：{$status}",
 			action: "ダッシュボードを開く",
 			incidentCooldown:
-				"このインシデントの通知：{{sent}}件送信、{{suppressed}}件はアラートのクールダウンにより保留されました。",
+				"このインシデントの通知：{$sent}件送信、{$suppressed}件はアラートのクールダウンにより保留されました。",
 			footer:
 				"このメールは、チームのアラートのいずれかがこのイベントに一致したため送信されました。",
 
@@ -1314,23 +1313,23 @@ export default {
 			values: {
 				none: "—",
 				never: "なし",
-				monitor: "{{name}}（{{type}}）",
-				responseStatus: "{{actual}}（期待値：{{expected}}）",
-				milliseconds: "{{value}}ms",
-				endpoint: "{{host}}:{{port}}",
-				schedule: "{{expression}}（{{timezone}}）",
-				dnsRecordCounts: "消失 {{missing}} 件、変更 {{changed}} 件、新規 {{new}} 件",
+				monitor: "{$name}（{$type}）",
+				responseStatus: "{$actual}（期待値：{$expected}）",
+				milliseconds: "{$value}ms",
+				endpoint: "{$host}:{$port :string}",
+				schedule: "{$expression}（{$timezone}）",
+				dnsRecordCounts: "消失 {$missing} 件、変更 {$changed} 件、新規 {$new} 件",
 
 				/** One finding, written out per outcome so each reads as its own sentence. */
 				dnsFinding: {
-					missing: "解決しなくなりました：{{name}} {{type}} {{value}}",
-					changed: "現在の解決先：{{name}} {{type}} {{value}}",
-					new: "新たに確認：{{name}} {{type}} {{value}}",
+					missing: "解決しなくなりました：{$name} {$type} {$value}",
+					changed: "現在の解決先：{$name} {$type} {$value}",
+					new: "新たに確認：{$name} {$type} {$value}",
 				},
 
-				dnsMoreFindings: "…ほか {{count}} 件",
-				flowTests: "{{total}}件中{{passed}}件成功",
-				flowFailedTest: "{{title}}（{{line}}行目）",
+				dnsMoreFindings: "…ほか {$count} 件",
+				flowTests: "{$total}件中{$passed}件成功",
+				flowFailedTest: "{$title}（{$line :string}行目）",
 			},
 
 			/** Said only where it applies: what a DNS diff means, not what it found. */
@@ -1344,7 +1343,7 @@ export default {
 
 		teamDigest: {
 			action: "ダッシュボードを開く",
-			footer: "このメールは、あなたがUptimeの{{team}}のメンバーであるため送信されました。",
+			footer: "このメールは、あなたがUptimeの{$team}のメンバーであるため送信されました。",
 			manageAction: "受け取るメールを選ぶ",
 
 			status: {
@@ -1370,11 +1369,11 @@ export default {
 
 			values: {
 				none: "—",
-				percentage: "{{value}}%",
+				percentage: "{$value}%",
 			},
 
 			bar: {
-				uptime: "稼働率{{value}}%",
+				uptime: "稼働率{$value}%",
 				legend: {
 					up: "正常",
 					degraded: "低下",
@@ -1384,21 +1383,29 @@ export default {
 			},
 
 			daily: {
-				subject_other: "{{team}}：昨日はモニター{{count}}件中{{up}}件が正常",
-				subjectAll_other: "{{team}}：昨日はモニター{{count}}件すべてが正常",
-				preview: "{{team}}の直近1日分のチェック結果",
-				heading: "昨日の{{team}}",
-				summaryAll_other: "{{date}}はモニター{{count}}件すべてが正常でした。",
-				summary_other: "{{date}}はモニター{{count}}件中{{up}}件が正常でした。",
+				subject:
+					".input {$count :number}\n.match $count\n* {{{$team}：昨日はモニター{$count}件中{$up}件が正常}}",
+				subjectAll:
+					".input {$count :number}\n.match $count\n* {{{$team}：昨日はモニター{$count}件すべてが正常}}",
+				preview: "{$team}の直近1日分のチェック結果",
+				heading: "昨日の{$team}",
+				summaryAll:
+					".input {$count :number}\n.match $count\n* {{{$date}はモニター{$count}件すべてが正常でした。}}",
+				summary:
+					".input {$count :number}\n.match $count\n* {{{$date}はモニター{$count}件中{$up}件が正常でした。}}",
 			},
 
 			weekly: {
-				subject_other: "{{team}}：1週間でモニター{{count}}件中{{up}}件が正常",
-				subjectAll_other: "{{team}}：1週間でモニター{{count}}件すべてが正常",
-				preview: "{{team}}の過去7日間のチェック結果",
-				heading: "過去7日間の{{team}}",
-				summaryAll_other: "モニター{{count}}件すべてが毎日正常でした。",
-				summary_other: "モニター{{count}}件中{{up}}件が毎日正常でした。",
+				subject:
+					".input {$count :number}\n.match $count\n* {{{$team}：1週間でモニター{$count}件中{$up}件が正常}}",
+				subjectAll:
+					".input {$count :number}\n.match $count\n* {{{$team}：1週間でモニター{$count}件すべてが正常}}",
+				preview: "{$team}の過去7日間のチェック結果",
+				heading: "過去7日間の{$team}",
+				summaryAll:
+					".input {$count :number}\n.match $count\n* {{モニター{$count}件すべてが毎日正常でした。}}",
+				summary:
+					".input {$count :number}\n.match $count\n* {{モニター{$count}件中{$up}件が毎日正常でした。}}",
 			},
 		},
 
@@ -1436,12 +1443,12 @@ export default {
 
 			values: {
 				none: "—",
-				milliseconds: "{{value}}ms",
-				percentage: "{{value}}%",
+				milliseconds: "{$value}ms",
+				percentage: "{$value}%",
 			},
 
 			bar: {
-				uptime: "稼働率{{value}}%",
+				uptime: "稼働率{$value}%",
 				legend: {
 					up: "正常",
 					degraded: "低下",
@@ -1451,58 +1458,58 @@ export default {
 			},
 
 			confirmation: {
-				subject: "{{url}}を1時間ごとにチェックしています",
-				preview: "{{url}}の1時間ごとのチェックを開始しました",
-				heading: "{{url}}を1時間ごとにチェックしています",
-				body: "こちらが今実行されたチェックの結果です。{{until}}まで同じチェックを1時間ごとに実行し、結果が変化したらメールでお知らせします。1日1回、まとめもお送りします。",
+				subject: "{$url}を1時間ごとにチェックしています",
+				preview: "{$url}の1時間ごとのチェックを開始しました",
+				heading: "{$url}を1時間ごとにチェックしています",
+				body: "こちらが今実行されたチェックの結果です。{$until}まで同じチェックを1時間ごとに実行し、結果が変化したらメールでお知らせします。1日1回、まとめもお送りします。",
 				footer: "このメールは、当サイトからこのURLのチェックをご依頼いただいたため送信されました。",
 			},
 
 			change: {
-				subject: "{{url}}：{{status}}",
-				preview: "{{url}}：{{status}}",
-				heading: "{{url}}：{{status}}",
-				body: "{{time}}の定時チェックが、直前のチェックとは異なる結果を返しました。",
+				subject: "{$url}：{$status}",
+				preview: "{$url}：{$status}",
+				heading: "{$url}：{$status}",
+				body: "{$time}の定時チェックが、直前のチェックとは異なる結果を返しました。",
 				footer: "このメールは、このURLを1週間監視するようご依頼いただいたため送信されました。",
 			},
 
 			daily: {
-				subject: "日次レポート：{{url}}",
-				subjectMany: "日次レポート：{{total}}件のURL",
-				preview: "{{url}}の過去24時間のチェック結果",
-				previewMany: "{{total}}件のURLの過去24時間のチェック結果",
-				heading: "過去24時間の{{url}}",
-				headingMany: "過去24時間の{{total}}件のURL",
-				summaryAll: "最後のチェックでは{{total}}件すべてが正常でした。",
-				summary: "最後のチェックでは{{total}}件中{{up}}件が正常でした。",
-				target: "{{url}} — {{status}}",
+				subject: "日次レポート：{$url}",
+				subjectMany: "日次レポート：{$total}件のURL",
+				preview: "{$url}の過去24時間のチェック結果",
+				previewMany: "{$total}件のURLの過去24時間のチェック結果",
+				heading: "過去24時間の{$url}",
+				headingMany: "過去24時間の{$total}件のURL",
+				summaryAll: "最後のチェックでは{$total}件すべてが正常でした。",
+				summary: "最後のチェックでは{$total}件中{$up}件が正常でした。",
+				target: "{$url} — {$status}",
 				rangeStart: "24時間前",
 				rangeEnd: "現在",
 				footer: "このメールは、当サイトからこれらのチェックをご依頼いただいたため送信されました。",
 			},
 
 			weekly: {
-				subject: "7日間レポート：{{url}}",
-				preview: "{{url}}の1週間分のチェック結果",
-				heading: "過去7日間の{{url}}",
+				subject: "7日間レポート：{$url}",
+				preview: "{$url}の1週間分のチェック結果",
+				heading: "過去7日間の{$url}",
 				rangeStart: "7日前",
 				rangeEnd: "今日",
-				closing: "7日目が終わりましたので、{{url}}の無料チェックはここで終了します。",
+				closing: "7日目が終わりましたので、{$url}の無料チェックはここで終了します。",
 				action: "このURLのチェックを続ける",
 				footer:
 					"このメールは、このURLを1週間監視するようご依頼いただいたため送信されました。これが最後のメールです。",
 			},
 
 			repeat: {
-				subject: "{{url}}のこれまでのチェック結果",
-				preview: "{{url}}ですでに実施したチェックの結果",
-				heading: "{{url}}はすでにチェック中です",
+				subject: "{$url}のこれまでのチェック結果",
+				preview: "{$url}ですでに実施したチェックの結果",
+				heading: "{$url}はすでにチェック中です",
 				intro:
-					"{{since}}に{{url}}の監視をご依頼いただきました。これまでのチェックで分かったことをお伝えします。",
+					"{$since}に{$url}の監視をご依頼いただきました。これまでのチェックで分かったことをお伝えします。",
 				rangeStart: "1日目",
 				rangeEnd: "7日目",
 				closing:
-					"1つのURLにつき無料の1週間は30日ごとに1回のため、今回のお申し込みでは新しく開始していません。{{url}}のチェックを続けるには、お好きな間隔で実行でき、変化があればすぐにお知らせするUptimeをご利用ください。",
+					"1つのURLにつき無料の1週間は30日ごとに1回のため、今回のお申し込みでは新しく開始していません。{$url}のチェックを続けるには、お好きな間隔で実行でき、変化があればすぐにお知らせするUptimeをご利用ください。",
 				action: "このURLのチェックを続ける",
 				footer:
 					"このメールは、当サイトでこのURLをお送りいただき、すでにレポートがあったため送信されました。",
@@ -1567,23 +1574,23 @@ export default {
 
 	schedule: {
 		interval: {
-			minute_other: "{{count}} 分ごと",
-			hour_other: "{{count}} 時間ごと",
+			minute: ".input {$count :number}\n.match $count\n* {{{$count} 分ごと}}",
+			hour: ".input {$count :number}\n.match $count\n* {{{$count} 時間ごと}}",
 		},
 		hourly: {
 			onTheHour: "毎時",
-			atMinutes: "毎時 {{minutes}} 分",
+			atMinutes: "毎時 {$minutes} 分",
 		},
-		daily: "毎日 {{times}}",
-		weekly: "毎週{{days}} {{times}}",
-		monthly: "毎月 {{days}} 日 {{times}}",
-		yearly: "毎年 {{months}}{{days}} 日 {{times}}",
-		expression: "カスタムスケジュール ({{expression}})",
+		daily: "毎日 {$times}",
+		weekly: "毎週{$days} {$times}",
+		monthly: "毎月 {$days} 日 {$times}",
+		yearly: "毎年 {$months}{$days} 日 {$times}",
+		expression: "カスタムスケジュール ({$expression})",
 	},
 
 	actions: {
 		checks: {
-			queued: "「{{name}}」のチェックをキューに追加しました。",
+			queued: "「{$name}」のチェックをキューに追加しました。",
 			subscriptionRequired: "チェックを実行するには有効なサブスクリプションが必要です。",
 		},
 
@@ -1591,12 +1598,12 @@ export default {
 			errors: {
 				generic: "エラーが発生しました。",
 				notAllowed: "このチームにドメインを追加する権限がありません。",
-				alreadyExists: "{{hostname}}は{{verifiedAt}}に追加されました。",
+				alreadyExists: "{$hostname}は{$verifiedAt}に追加されました。",
 			},
 
 			success: {
-				accepted: "{{hostname}}は確認待ちの状態です。",
-				created: "{{hostname}}が{{team}}に追加されました。確認は保留中です。",
+				accepted: "{$hostname}は確認待ちの状態です。",
+				created: "{$hostname}が{$team}に追加されました。確認は保留中です。",
 			},
 		},
 
@@ -1607,30 +1614,30 @@ export default {
 				cannotChangeOwner: "チームオーナーの役割は変更できません。",
 			},
 
-			success: "{{name}}の役割が{{team}}で{{role}}に変更されました。",
+			success: "{$name}の役割が{$team}で{$role}に変更されました。",
 		},
 
 		createAlert: {
 			errors: {
 				generic: "エラーが発生しました。",
 				notAllowed: "このチームでアラートを作成する権限がありません。",
-				limitExceeded: "このチームのアラート上限（{{limit}}個）に達しました。",
+				limitExceeded: "このチームのアラート上限（{$limit}個）に達しました。",
 			},
-			success: { created: "{{name}}アラートが作成されました。" },
+			success: { created: "{$name}アラートが作成されました。" },
 		},
 
 		createInvite: {
 			email: {
-				subject: "Uptimeの{{team}}に招待されました",
+				subject: "Uptimeの{$team}に招待されました",
 			},
 
 			errors: {
 				generic: "エラーが発生しました。",
 				notAllowed: "このチームにメンバーを招待する権限がありません。",
-				alreadyAccepted: "このメールアドレスは既に{{team}}のメンバーです。",
+				alreadyAccepted: "このメールアドレスは既に{$team}のメンバーです。",
 			},
 
-			success: "{{email}}が{{team}}に招待されました。",
+			success: "{$email}が{$team}に招待されました。",
 		},
 
 		createMonitor: {
@@ -1638,7 +1645,7 @@ export default {
 				generic: "エラーが発生しました。",
 			},
 
-			success: "{{name}}モニターが作成されました。",
+			success: "{$name}モニターが作成されました。",
 		},
 
 		/**
@@ -1652,9 +1659,10 @@ export default {
 				none: "そのリストからは何もインポートできませんでした。下記の理由を確認して、もう一度お試しください。",
 			},
 
-			success_other: "{{count}}件のモニターが作成されました。",
-			partial_other:
-				"{{count}}件のモニターが作成されました。残り{{rejected}}件は作成できませんでした。詳細は下記をご覧ください。",
+			success:
+				".input {$count :number}\n.match $count\n* {{{$count}件のモニターが作成されました。}}",
+			partial:
+				".input {$count :number}\n.match $count\n* {{{$count}件のモニターが作成されました。残り{$rejected}件は作成できませんでした。詳細は下記をご覧ください。}}",
 		},
 
 		updateMonitor: {
@@ -1663,7 +1671,7 @@ export default {
 				notFound: "このモニターは存在しません。",
 			},
 
-			success: "{{name}}モニターが更新されました。",
+			success: "{$name}モニターが更新されました。",
 		},
 
 		updateSsl: {
@@ -1672,7 +1680,7 @@ export default {
 				notFound: "このモニターは存在しません。",
 			},
 
-			success: "{{name}}のSSL設定が更新されました。",
+			success: "{$name}のSSL設定が更新されました。",
 		},
 
 		deleteMonitor: {
@@ -1681,26 +1689,26 @@ export default {
 				notAllowed: "このチームでモニターを削除する権限がありません。",
 				notFound: "このモニターは存在しません。",
 			},
-			success: "{{name}}モニターが削除されました。",
+			success: "{$name}モニターが削除されました。",
 		},
 
 		removeAlert: {
 			errors: {
 				generic: "エラーが発生しました。",
 				forbidden: "このチームでアラートを削除する権限がありません。",
-				notFound: "{{name}}は存在しません。",
+				notFound: "{$name}は存在しません。",
 			},
-			success: "{{name}}アラートが削除されました。",
+			success: "{$name}アラートが削除されました。",
 		},
 
 		removeDomain: {
 			errors: {
 				generic: "エラーが発生しました。",
 				notAllowed: "このチームからドメインを削除する権限がありません。",
-				notFound: "{{hostname}}は存在しません。",
+				notFound: "{$hostname}は存在しません。",
 			},
 
-			success: "{{hostname}}が{{team}}から削除されました。",
+			success: "{$hostname}が{$team}から削除されました。",
 		},
 
 		removeMember: {
@@ -1710,21 +1718,21 @@ export default {
 				cannotRemoveOwner: "チームオーナーは削除できません。",
 			},
 
-			success: "{{name}}が{{team}}から削除されました。",
+			success: "{$name}が{$team}から削除されました。",
 		},
 
 		retryDomainVerification: {
 			errors: {
 				generic: "エラーが発生しました。",
 				notAllowed: "このチームでドメイン確認を再試行する権限がありません。",
-				notFound: "{{hostname}}は存在しません。",
+				notFound: "{$hostname}は存在しません。",
 				workflowFailed:
-					"{{hostname}}の確認プロセスを開始できませんでした。後でもう一度お試しください。",
+					"{$hostname}の確認プロセスを開始できませんでした。後でもう一度お試しください。",
 			},
 
 			success: {
-				alreadyVerified: "{{hostname}}は既に確認済みです。",
-				requested: "{{hostname}}の確認再試行がリクエストされました。",
+				alreadyVerified: "{$hostname}は既に確認済みです。",
+				requested: "{$hostname}の確認再試行がリクエストされました。",
 			},
 		},
 
@@ -1736,7 +1744,7 @@ export default {
 				alreadyAccepted: "この招待は既に受け入れられています。",
 			},
 
-			success: "{{email}}の{{team}}への招待が取り消されました。",
+			success: "{$email}の{$team}への招待が取り消されました。",
 		},
 
 		updateTeam: {
@@ -1757,7 +1765,7 @@ export default {
 				confirmationRequired: "確認のためDELETEと入力してください。",
 			},
 
-			success: "{{team}}が削除されました。",
+			success: "{$team}が削除されました。",
 		},
 
 		leaveTeam: {
@@ -1770,7 +1778,7 @@ export default {
 					"管理者はチームを離れることができません。オーナーに降格を依頼してください。",
 			},
 
-			success: "{{team}}を離れました。",
+			success: "{$team}を離れました。",
 		},
 
 		createStatusPage: {
@@ -1804,7 +1812,7 @@ export default {
 			},
 
 			success: {
-				created: "メンテナンスウィンドウ「{{name}}」が作成されました。",
+				created: "メンテナンスウィンドウ「{$name}」が作成されました。",
 			},
 		},
 
@@ -1815,7 +1823,7 @@ export default {
 				forbidden: "このメンテナンスウィンドウを削除する権限がありません。",
 			},
 
-			success: "メンテナンスウィンドウ「{{name}}」が削除されました。",
+			success: "メンテナンスウィンドウ「{$name}」が削除されました。",
 		},
 
 		endMaintenance: {
@@ -1825,7 +1833,7 @@ export default {
 				forbidden: "このメンテナンスウィンドウを終了する権限がありません。",
 			},
 
-			success: "メンテナンスウィンドウ「{{name}}」が早期終了されました。",
+			success: "メンテナンスウィンドウ「{$name}」が早期終了されました。",
 		},
 
 		createTeam: {
@@ -1834,18 +1842,18 @@ export default {
 			},
 
 			success: {
-				created: "{{name}}チームが正常に作成されました。",
+				created: "{$name}チームが正常に作成されました。",
 			},
 		},
 
 		createDnsMonitor: {
 			errors: {
 				generic: "エラーが発生しました。",
-				limitExceeded: "このチームのDNSモニター上限（{{limit}}個）に達しました。",
+				limitExceeded: "このチームのDNSモニター上限（{$limit}個）に達しました。",
 			},
 
 			success: {
-				created: "{{name}} DNSモニターが作成されました。",
+				created: "{$name} DNSモニターが作成されました。",
 			},
 		},
 
@@ -1856,7 +1864,7 @@ export default {
 				forbidden: "このDNSモニターを更新する権限がありません。",
 			},
 
-			success: "{{name}} DNSモニターが更新されました。",
+			success: "{$name} DNSモニターが更新されました。",
 		},
 
 		deleteDnsMonitor: {
@@ -1866,39 +1874,39 @@ export default {
 				forbidden: "このDNSモニターを削除する権限がありません。",
 			},
 
-			success: "{{name}} DNSモニターが削除されました。",
+			success: "{$name} DNSモニターが削除されました。",
 		},
 
 		checkDnsMonitor: {
-			success: { checked: "「{{name}}」をチェックしました。" },
+			success: { checked: "「{$name}」をチェックしました。" },
 		},
 
 		reviewDnsMonitor: {
 			errors: { generic: "監視するレコードを保存できませんでした。もう一度お試しください。" },
 			success: {
-				saved_one: "{{count}}件のレコードを監視しています。",
-				saved_other: "{{count}}件のレコードを監視しています。",
+				saved:
+					".input {$count :number}\n.match $count\none {{{$count}件のレコードを監視しています。}}\n* {{{$count}件のレコードを監視しています。}}",
 			},
 		},
 
 		toggleDnsMonitorRecord: {
 			errors: { generic: "このレコードを変更できませんでした。もう一度お試しください。" },
 			success: {
-				enabled: "{{name}}の監視を開始しました。",
-				disabled: "{{name}}の監視を停止しました。",
+				enabled: "{$name}の監視を開始しました。",
+				disabled: "{$name}の監視を停止しました。",
 			},
 		},
 
 		importDnsMonitorZoneFile: {
 			errors: {
 				generic: "このゾーンファイルを読み取れませんでした。もう一度お試しください。",
-				tooLarge: "ゾーンファイルは{{limit}}以下である必要があります。",
+				tooLarge: "ゾーンファイルは{$limit}以下である必要があります。",
 				tooManyNames:
-					"このゾーンには{{limit}}件を超える名前があり、1つのモニターでは処理しきれません。",
+					"このゾーンには{$limit}件を超える名前があり、1つのモニターでは処理しきれません。",
 			},
 			success: {
-				imported_one: "ゾーンファイルから{{count}}件の名前をインポートしました。",
-				imported_other: "ゾーンファイルから{{count}}件の名前をインポートしました。",
+				imported:
+					".input {$count :number}\n.match $count\none {{ゾーンファイルから{$count}件の名前をインポートしました。}}\n* {{ゾーンファイルから{$count}件の名前をインポートしました。}}",
 			},
 		},
 
@@ -1906,7 +1914,7 @@ export default {
 			errors: {
 				generic: "TCPモニターの作成中にエラーが発生しました。",
 			},
-			success: "{{name}} TCPモニターが作成されました。",
+			success: "{$name} TCPモニターが作成されました。",
 		},
 
 		updateTcpMonitor: {
@@ -1914,7 +1922,7 @@ export default {
 				generic: "TCPモニターの更新中にエラーが発生しました。",
 				notFound: "このTCPモニターは存在しません。",
 			},
-			success: "{{name}} TCPモニターが更新されました。",
+			success: "{$name} TCPモニターが更新されました。",
 		},
 
 		deleteTcpMonitor: {
@@ -1923,16 +1931,16 @@ export default {
 				notAllowed: "このチームでTCPモニターを削除する権限がありません。",
 				notFound: "このTCPモニターは存在しません。",
 			},
-			success: "{{name}} TCPモニターが削除されました。",
+			success: "{$name} TCPモニターが削除されました。",
 		},
 
 		createApiKey: {
 			errors: {
 				generic: "APIキーの作成中にエラーが発生しました。",
-				limitExceeded: "このチームのAPIキー上限（{{limit}}個）に達しました。",
+				limitExceeded: "このチームのAPIキー上限（{$limit}個）に達しました。",
 			},
 			success: {
-				created: "APIキー「{{name}}」が作成されました。",
+				created: "APIキー「{$name}」が作成されました。",
 			},
 		},
 
@@ -1941,7 +1949,7 @@ export default {
 				generic: "APIキーの削除中にエラーが発生しました。",
 				notFound: "このAPIキーは存在しません。",
 			},
-			success: "APIキー「{{name}}」が削除されました。",
+			success: "APIキー「{$name}」が削除されました。",
 		},
 
 		updateLanguage: {
@@ -1954,9 +1962,9 @@ export default {
 		createCronJob: {
 			errors: {
 				generic: "エラーが発生しました。",
-				limitExceeded: "このチームのCronジョブ上限（{{limit}}個）に達しました。",
+				limitExceeded: "このチームのCronジョブ上限（{$limit}個）に達しました。",
 			},
-			success: "Cronジョブ「{{name}}」が作成されました。",
+			success: "Cronジョブ「{$name}」が作成されました。",
 		},
 
 		updateCronJob: {
@@ -1964,7 +1972,7 @@ export default {
 				generic: "エラーが発生しました。",
 				notFound: "このCronジョブは存在しません。",
 			},
-			success: "Cronジョブ「{{name}}」が更新されました。",
+			success: "Cronジョブ「{$name}」が更新されました。",
 		},
 
 		deleteCronJob: {
@@ -1973,7 +1981,7 @@ export default {
 				notFound: "このCronジョブは存在しません。",
 				forbidden: "このCronジョブを削除する権限がありません。",
 			},
-			success: "Cronジョブ「{{name}}」が削除されました。",
+			success: "Cronジョブ「{$name}」が削除されました。",
 		},
 	},
 
@@ -2028,8 +2036,8 @@ export default {
 			stats: {
 				monitors: {
 					label: "月間ping使用量",
-					value: "{{consumed}}<small> 使用済み</small>",
-					description: "推定{{estimated}}のうち",
+					value: "{$consumed}{#small} 使用済み{/small}",
+					description: "推定{$estimated}のうち",
 					unavailable: "推定値は利用できません",
 				},
 
@@ -2042,8 +2050,8 @@ export default {
 					label: "HTTPモニター",
 					create: "新しいHTTPモニター",
 					breakdown: {
-						up: "{{up}} 稼働中",
-						down: "{{down}} 停止中",
+						up: "{$up} 稼働中",
+						down: "{$down} 停止中",
 					},
 				},
 				dnsMonitors: {
@@ -2052,41 +2060,41 @@ export default {
 					/** One monitor is one domain, so this count is smaller than the work behind it. */
 					hint: "1つのモニターがドメイン全体と、そこで追跡しているすべてのレコードを対象とします。",
 					breakdown: {
-						ok: "{{ok}} 正常",
-						changed: "{{changed}} 変更",
-						error: "{{error}} エラー",
+						ok: "{$ok} 正常",
+						changed: "{$changed} 変更",
+						error: "{$error} エラー",
 					},
 				},
 				flowMonitors: {
 					label: "フローモニター",
 					create: "新しいフローモニター",
 					breakdown: {
-						up: "{{up}} 成功",
-						down: "{{down}} 失敗",
-						error: "{{error}} 実行不可",
+						up: "{$up} 成功",
+						down: "{$down} 失敗",
+						error: "{$error} 実行不可",
 					},
 				},
 				tcpMonitors: {
 					label: "TCPモニター",
 					create: "新しいTCPモニター",
 					breakdown: {
-						up: "{{up}} 稼働中",
-						down: "{{down}} 停止中",
+						up: "{$up} 稼働中",
+						down: "{$down} 停止中",
 					},
 				},
 				cronJobs: {
 					label: "Cronジョブ",
 					create: "新しいCronジョブ",
 					breakdown: {
-						healthy: "{{healthy}} 正常",
-						late: "{{late}} 遅延",
-						missed: "{{missed}} 未実行",
+						healthy: "{$healthy} 正常",
+						late: "{$late} 遅延",
+						missed: "{$missed} 未実行",
 					},
 				},
 
 				slowestEndpoint: {
 					label: {
-						default: "最も遅いエンドポイント「<em>{{name}}</em>」",
+						default: "最も遅いエンドポイント「{#em}{$name}{/em}」",
 						noData: "最も遅いエンドポイント",
 					},
 					value: { noData: "N/A" },
@@ -2105,7 +2113,7 @@ export default {
 
 			panel: {
 				tabsLabel: "モニタータイプ",
-				tabPanelLabel: "{{tab}}モニター",
+				tabPanelLabel: "{$tab}モニター",
 				refresh: "更新",
 			},
 
@@ -2143,7 +2151,7 @@ export default {
 				},
 
 				lastIncident: { never: "-" },
-				responseTime: "約{{value}}",
+				responseTime: "約{$value}",
 
 				actions: {
 					menu: "アクションメニュー",
@@ -2153,7 +2161,7 @@ export default {
 				},
 
 				confirmation: {
-					deleteMonitor: "モニター{{name}}を削除してもよろしいですか？この操作は取り消せません。",
+					deleteMonitor: "モニター{$name}を削除してもよろしいですか？この操作は取り消せません。",
 				},
 			},
 		},
@@ -2224,15 +2232,15 @@ export default {
 						description: "pingが実行されるリージョン。",
 						placeholder: "リージョンを選択",
 						options: {
-							afr: "{{emoji}} アフリカ",
-							apac: "{{emoji}} アジア太平洋",
-							eeur: "{{emoji}} 東ヨーロッパ",
-							enam: "{{emoji}} 東北アメリカ",
-							me: "{{emoji}} 中東",
-							oc: "{{emoji}} オセアニア",
-							sam: "{{emoji}} 南アメリカ",
-							weur: "{{emoji}} 西ヨーロッパ",
-							wnam: "{{emoji}} 西北アメリカ",
+							afr: "{$emoji} アフリカ",
+							apac: "{$emoji} アジア太平洋",
+							eeur: "{$emoji} 東ヨーロッパ",
+							enam: "{$emoji} 東北アメリカ",
+							me: "{$emoji} 中東",
+							oc: "{$emoji} オセアニア",
+							sam: "{$emoji} 南アメリカ",
+							weur: "{$emoji} 西ヨーロッパ",
+							wnam: "{$emoji} 西北アメリカ",
 						},
 					},
 				},
@@ -2302,15 +2310,15 @@ export default {
 						description: "pingが実行されるリージョン。",
 						placeholder: "wnam",
 						options: {
-							afr: "{{emoji}} アフリカ",
-							apac: "{{emoji}} アジア太平洋",
-							eeur: "{{emoji}} 東ヨーロッパ",
-							enam: "{{emoji}} 東北アメリカ",
-							me: "{{emoji}} 中東",
-							oc: "{{emoji}} オセアニア",
-							sam: "{{emoji}} 南アメリカ",
-							weur: "{{emoji}} 西ヨーロッパ",
-							wnam: "{{emoji}} 西北アメリカ",
+							afr: "{$emoji} アフリカ",
+							apac: "{$emoji} アジア太平洋",
+							eeur: "{$emoji} 東ヨーロッパ",
+							enam: "{$emoji} 東北アメリカ",
+							me: "{$emoji} 中東",
+							oc: "{$emoji} オセアニア",
+							sam: "{$emoji} 南アメリカ",
+							weur: "{$emoji} 西ヨーロッパ",
+							wnam: "{$emoji} 西北アメリカ",
 						},
 					},
 					ssl: {
@@ -2367,7 +2375,7 @@ export default {
 
 		monitor: {
 			header: {
-				title: "モニター「{{name}}」",
+				title: "モニター「{$name}」",
 
 				action: {
 					play: "モニターを実行",
@@ -2388,8 +2396,8 @@ export default {
 			stats: {
 				monitors: {
 					label: "月間ping使用量",
-					value: "{{consumed}}<small> 使用済み</small>",
-					description: "推定{{estimated}}のうち",
+					value: "{$consumed}{#small} 使用済み{/small}",
+					description: "推定{$estimated}のうち",
 					estimateUnavailable: "見積もりが利用できません",
 				},
 
@@ -2405,7 +2413,7 @@ export default {
 
 				p99ResponseTime: {
 					label: "P99応答時間",
-					value: "{{value}} ms",
+					value: "{$value} ms",
 					description: "p99、過去24時間",
 				},
 			},
@@ -2420,7 +2428,7 @@ export default {
 					unknown: "未設定",
 				},
 				expiresAt: "有効期限",
-				expiresIn: "{{days}}日",
+				expiresIn: "{$days}日",
 				issuer: "発行者",
 				lastChecked: "最終チェック",
 				notConfigured: "このモニターではSSL監視が有効になっていません。",
@@ -2428,9 +2436,9 @@ export default {
 			},
 			run: {
 				toast: {
-					up: "{{name}} は稼働中です",
-					down: "{{name}} はダウンしています",
-					degraded: "{{name}} の状態が低下しています",
+					up: "{$name} は稼働中です",
+					down: "{$name} はダウンしています",
+					degraded: "{$name} の状態が低下しています",
 					changed: "実行したチェックにより、このモニターのステータスが変わりました。",
 					notQueued: {
 						title: "チェックは実行されませんでした",
@@ -2500,7 +2508,7 @@ export default {
 				},
 
 				confirmation: {
-					removeMember: "{{name}}をチームから削除してもよろしいですか？",
+					removeMember: "{$name}をチームから削除してもよろしいですか？",
 				},
 			},
 
@@ -2520,7 +2528,7 @@ export default {
 				},
 
 				confirmation: {
-					revokeInvite: "{{email}}の招待を取り消してもよろしいですか？",
+					revokeInvite: "{$email}の招待を取り消してもよろしいですか？",
 				},
 			},
 
@@ -2552,7 +2560,7 @@ export default {
 					email: {
 						label: "メールアドレス",
 						placeholder: "john.doe@example.com",
-						description: "{{team}}に招待したい方のメールアドレス。",
+						description: "{$team}に招待したい方のメールアドレス。",
 					},
 				},
 
@@ -2569,7 +2577,7 @@ export default {
 				forbidden: "この招待はあなた宛てではありません。",
 				badRequest: "メールアドレスが見つかりません。再度ログインしてください。",
 				wrongEmail:
-					"この招待は{{email}}宛に送信されました。そのメールアドレスでサインインして承諾してください。",
+					"この招待は{$email}宛に送信されました。そのメールアドレスでサインインして承諾してください。",
 			},
 		},
 
@@ -2599,7 +2607,7 @@ export default {
 					hostname: {
 						label: "ドメイン",
 						placeholder: "example.com",
-						description: "{{team}}に追加したいドメイン。",
+						description: "{$team}に追加したいドメイン。",
 					},
 				},
 
@@ -2629,7 +2637,7 @@ export default {
 				},
 
 				confirmation: {
-					removeDomain: "{{hostname}}をチームから削除してもよろしいですか？",
+					removeDomain: "{$hostname}をチームから削除してもよろしいですか？",
 				},
 			},
 
@@ -2649,7 +2657,7 @@ export default {
 					},
 				},
 
-				note: "<code>VERIFICATION_ID</code>を上に表示されている実際の確認IDに置き換えてください。",
+				note: "{#code}VERIFICATION_ID{/code}を上に表示されている実際の確認IDに置き換えてください。",
 
 				disclaimer: "DNS変更の反映には時間がかかる場合があるため、確認が遅れることがあります。",
 			},
@@ -2691,7 +2699,7 @@ export default {
 				cta: "アラートを作成",
 			},
 
-			limitReached: "このチームはアラートの上限（{{limit}}件）に達しました。",
+			limitReached: "このチームはアラートの上限（{$limit}件）に達しました。",
 
 			form: {
 				fields: {
@@ -2735,7 +2743,7 @@ export default {
 									"リクエストヘッダーに含めるオプションのシークレット。このシークレットを使用したペイロードのHMAC SHA256署名が`Webhook-Signature`ヘッダーとして追加されます。",
 							},
 							signatureNote:
-								"設定すると、リクエストに<code>Webhook-Signature: sha256=<hex></code>ヘッダーが付与されます。これはこのシークレットを使用した生のJSONボディのHMAC-SHA256です。",
+								"設定すると、リクエストに{#code}Webhook-Signature: sha256=<hex>{/code}ヘッダーが付与されます。これはこのシークレットを使用した生のJSONボディのHMAC-SHA256です。",
 						},
 						email: {
 							to: {
@@ -2804,7 +2812,7 @@ export default {
 					cooldownMinutes: {
 						label: "クールダウン（分単位）",
 						description:
-							"モニターがダウンし続けている間、アラートを再送するまでに待つ時間です。インシデントの最初のアラートは常に即座に送信され、復旧の通知も常に送信されます。再送の間隔は、ここで設定した値にかかわらず {{floor}} 分より短くなることはありません。",
+							"モニターがダウンし続けている間、アラートを再送するまでに待つ時間です。インシデントの最初のアラートは常に即座に送信され、復旧の通知も常に送信されます。再送の間隔は、ここで設定した値にかかわらず {$floor} 分より短くなることはありません。",
 					},
 
 					legends: {
@@ -2844,8 +2852,8 @@ export default {
 
 				cooldown: {
 					none: "可能な限り最短",
-					minutes: "{{count}}分",
-					hours: "{{count}}時間",
+					minutes: "{$count}分",
+					hours: "{$count}時間",
 				},
 
 				actions: {
@@ -2867,7 +2875,7 @@ export default {
 				},
 
 				confirmation: {
-					deleteAlert: "アラート{{name}}を削除してもよろしいですか？",
+					deleteAlert: "アラート{$name}を削除してもよろしいですか？",
 				},
 			},
 		},
@@ -2913,7 +2921,7 @@ export default {
 				},
 
 				confirmation: {
-					delete: "ステータスページ{{name}}を削除してもよろしいですか？",
+					delete: "ステータスページ{$name}を削除してもよろしいですか？",
 				},
 			},
 
@@ -3042,7 +3050,7 @@ export default {
 					urls: {
 						label: "監視する URL",
 						description:
-							"1 行に 1 つの URL を、最大 {{limit}} 件まで。example.com のようなホスト名だけの場合は https://example.com になります。空行と同じアドレスの重複はスキップされます。",
+							"1 行に 1 つの URL を、最大 {$limit} 件まで。example.com のようなホスト名だけの場合は https://example.com になります。空行と同じアドレスの重複はスキップされます。",
 						placeholder: "example.com\nhttps://www.example.org/health\nstatus.example.net",
 					},
 					interval: {
@@ -3060,9 +3068,10 @@ export default {
 			 */
 			report: {
 				section: { title: "前回のインポート" },
-				title_other: "{{count}}件のモニターが作成されました。次の行は作成されていません：",
-				overflow_other:
-					"さらに {{count}} 行が対象外になりました。1 回のインポートで扱えるのは {{limit}} 行までです。残りを貼り付けてインポートしてください。",
+				title:
+					".input {$count :number}\n.match $count\n* {{{$count}件のモニターが作成されました。次の行は作成されていません：}}",
+				overflow:
+					".input {$count :number}\n.match $count\n* {{さらに {$count} 行が対象外になりました。1 回のインポートで扱えるのは {$limit} 行までです。残りを貼り付けてインポートしてください。}}",
 				table: {
 					label: "インポートされなかった行",
 					columns: { line: "行", input: "貼り付けた内容", reason: "理由" },
@@ -3113,7 +3122,7 @@ export default {
 					unknown: "不明",
 				},
 				confirmation: {
-					delete: "モニター {{name}} を削除してもよろしいですか？",
+					delete: "モニター {$name} を削除してもよろしいですか？",
 					deleteDescription:
 						"コンテンツチェックとチェック結果の履歴も削除されます。この操作は元に戻せません。",
 				},
@@ -3147,7 +3156,7 @@ export default {
 					actions: "アクション",
 				},
 
-				records: "{{total}}件中{{enabled}}件を監視中",
+				records: "{$total}件中{$enabled}件を監視中",
 				noRecords: "まだありません",
 				disabled: "無効",
 				neverChecked: "未実行",
@@ -3161,7 +3170,7 @@ export default {
 				},
 
 				confirmation: {
-					delete: "DNSモニター{{name}}を削除してもよろしいですか？",
+					delete: "DNSモニター{$name}を削除してもよろしいですか？",
 				},
 			},
 		},
@@ -3206,7 +3215,7 @@ export default {
 						placeholder: "example.com.\t1\tIN\tA\t192.0.2.1",
 						description:
 							"任意。DNSプロバイダーからエクスポートしたBIND形式のゾーンファイルを貼り付けてください。内容は一度読み取るだけで保存されません。ゾーン内の名前を把握できる唯一の方法です。",
-						limits: "テキストは最大 {{size}}、モニターあたり {{limit}} 個の名前までです。",
+						limits: "テキストは最大 {$size}、モニターあたり {$limit} 個の名前までです。",
 					},
 
 					interval: {
@@ -3298,7 +3307,7 @@ export default {
 				title: "ゾーンファイル",
 				description:
 					"前回のインポート以降に追加された名前を取り込むには、ゾーンを再度貼り付けてください。テキストは一度読み取るだけで保存されないため、更新のたびにファイルをお願いしています。",
-				lastImported: "最終インポート：{{date}}。",
+				lastImported: "最終インポート：{$date}。",
 				neverImported:
 					"ゾーンファイルはまだインポートされていません。このモニターはApexのみを対象としています。",
 				cta: "ゾーンファイルをインポート",
@@ -3315,7 +3324,7 @@ export default {
 
 		dnsMonitorDetail: {
 			header: {
-				title: "DNSモニター「{{name}}」",
+				title: "DNSモニター「{$name}」",
 
 				action: {
 					check: "今すぐチェック",
@@ -3331,7 +3340,7 @@ export default {
 				domain: "ドメイン",
 				status: "ステータス",
 				recordsWatched: "監視中のレコード",
-				recordsWatchedValue: "{{total}}件中{{enabled}}件",
+				recordsWatchedValue: "{$total}件中{$enabled}件",
 				zoneFileImported: "ゾーンファイルのインポート",
 				zoneFileNeverImported: "なし — Apexのみ",
 			},
@@ -3361,11 +3370,11 @@ export default {
 					},
 				},
 
-				findings: "{{changed}}件変更 · {{missing}}件消失 · {{new}}件新規",
+				findings: "{$changed}件変更 · {$missing}件消失 · {$new}件新規",
 				noFindings: "変更なし",
 				/** A failed query stays out of the diff, so a partial sweep reads as partial. */
-				queriesFailed_one: "{{count}}件のクエリが応答しませんでした",
-				queriesFailed_other: "{{count}}件のクエリが応答しませんでした",
+				queriesFailed:
+					".input {$count :number}\n.match $count\none {{{$count}件のクエリが応答しませんでした}}\n* {{{$count}件のクエリが応答しませんでした}}",
 			},
 
 			records: {
@@ -3411,18 +3420,18 @@ export default {
 		 */
 		dnsMonitorReview: {
 			header: {
-				title: "「{{name}}」のレコードを確認",
+				title: "「{$name}」のレコードを確認",
 				description:
 					"見つかったレコードは既定ですべて監視します。通知が不要なものはチェックを外してください。いずれの場合もレコードは保持されるため、除外したものが後から新規レコードとして現れることはありません。",
 			},
 
 			/** Every line the parser rejects surfaces here, each with its own reason. */
 			unparsed: {
-				title_one: "{{count}}行はインポートされませんでした",
-				title_other: "{{count}}行はインポートされませんでした",
+				title:
+					".input {$count :number}\n.match $count\none {{{$count}行はインポートされませんでした}}\n* {{{$count}行はインポートされませんでした}}",
 				description:
 					"これらの行は読み取り対象の範囲に含まれません。そこで宣言されている内容は監視されません。",
-				line: "{{line}}行目：{{reason}}",
+				line: "{$line :string}行目：{$reason}",
 
 				/** One sentence per parser outcome, so each names the fix it points at. */
 				reasons: {
@@ -3466,18 +3475,18 @@ export default {
 			 * first line that declared it.
 			 */
 			duplicates: {
-				title_one: "{{count}}行は、別の行がすでに宣言しているレコードを宣言していました",
-				title_other: "{{count}}行は、別の行がすでに宣言しているレコードを宣言していました",
+				title:
+					".input {$count :number}\n.match $count\none {{{$count}行は、別の行がすでに宣言しているレコードを宣言していました}}\n* {{{$count}行は、別の行がすでに宣言しているレコードを宣言していました}}",
 				description:
 					"失われたものはありません。DNS は重複したレコードにも一度だけ応答するため、最初に宣言した行から取り込まれています。",
-				line: "{{line}}行目：{{name}} {{type}} は{{firstLine}}行目ですでに宣言されています。",
+				line: "{$line :string}行目：{$name} {$type} は{$firstLine :string}行目ですでに宣言されています。",
 			},
 
 			/** Said at review, the point where the cap is enforced. */
 			namesCap: {
 				title: "1 つのモニターで監視できる名前の数を超えています",
 				description:
-					"このモニターは現在 {{count}} 個の名前を対象としていますが、1 回のチェックで確認できるのは {{limit}} 個までです。すべての名前を引き続きチェックするには、ゾーンを複数のモニターに分けてください。",
+					"このモニターは現在 {$count} 個の名前を対象としていますが、1 回のチェックで確認できるのは {$limit} 個までです。すべての名前を引き続きチェックするには、ゾーンを複数のモニターに分けてください。",
 			},
 
 			/** Column headings match the monitor's own record list, so both screens read alike. */
@@ -3490,7 +3499,7 @@ export default {
 				},
 
 				/** Each box names the record it decides, since the heading appears once, above the whole list. */
-				watchRecord: "{{name}} の {{type}} レコードを監視します",
+				watchRecord: "{$name} の {$type} レコードを監視します",
 			},
 
 			empty: "このドメインでは何も見つかりませんでした。",
@@ -3556,8 +3565,8 @@ export default {
 				},
 
 				confirmation: {
-					endMaintenance: "「{{name}}」メンテナンスを早期終了してもよろしいですか？",
-					deleteMaintenance: "「{{name}}」を削除してもよろしいですか？",
+					endMaintenance: "「{$name}」メンテナンスを早期終了してもよろしいですか？",
+					deleteMaintenance: "「{$name}」を削除してもよろしいですか？",
 				},
 			},
 		},
@@ -3648,7 +3657,7 @@ export default {
 
 		editMaintenance: {
 			header: {
-				title: "{{name}} を編集",
+				title: "{$name} を編集",
 			},
 
 			form: {
@@ -3968,14 +3977,14 @@ export default {
 			 */
 			report: {
 				meta: {
-					title: "{{days}} 日間のサイト健全性レポート — Uptime",
+					title: "{$days} 日間のサイト健全性レポート — Uptime",
 					description:
 						"無料の 1 週間の監視で、あなたのサイトについて記録した稼働率、チェック回数、インシデントです。",
 				},
-				eyebrow: "{{days}} 日間の健全性レポート",
-				period: "{{start}} 〜 {{end}}（{{zone}}）を監視",
+				eyebrow: "{$days} 日間の健全性レポート",
+				period: "{$start} 〜 {$end}（{$zone}）を監視",
 				bar: {
-					caption: "{{days}} 日間を 1 日 1 ブロックで、古い順に表示しています。",
+					caption: "{$days} 日間を 1 日 1 ブロックで、古い順に表示しています。",
 					status: {
 						up: "終日正常",
 						degraded: "1 回以上低速",
@@ -3995,21 +4004,21 @@ export default {
 					title: "インシデント",
 					unknown:
 						"まだ完了したチェックがないため、この URL にインシデントがあったかどうかは分かりません。",
-					none_other:
-						"インシデントなし：完了した {{count}} 件のチェックはすべて期待どおりに応答しました。",
-					summary_other: "{{count}} 件のインシデント。",
-					entry_other:
-						"最初の失敗を {{started}} に検知——{{count}} 件のチェックが連続して失敗しました。",
+					none: ".input {$count :number}\n.match $count\n* {{インシデントなし：完了した {$count} 件のチェックはすべて期待どおりに応答しました。}}",
+					summary: ".input {$count :number}\n.match $count\n* {{{$count} 件のインシデント。}}",
+					entry:
+						".input {$count :number}\n.match $count\n* {{最初の失敗を {$started} に検知——{$count} 件のチェックが連続して失敗しました。}}",
 				},
 				timing: {
 					title: "応答時間",
 					fastest: "最速",
 					average: "平均",
 					slowest: "最遅",
-					basis_other: "応答した {{count}} 件のチェックを対象に計測しました。",
+					basis:
+						".input {$count :number}\n.match $count\n* {{応答した {$count} 件のチェックを対象に計測しました。}}",
 				},
 				cta: {
-					title: "月 {{price}} でこのサイトの監視を続ける",
+					title: "月 {$price} でこのサイトの監視を続ける",
 					action: "監視を始める",
 					convertible: {
 						body: "サインインしていただければ、この URL を実際のモニターに変え、上記の履歴もそのまま引き継ぎます。",
@@ -4026,14 +4035,14 @@ export default {
 			},
 
 			meta: {
-				title: "無料の {{days}} 日間ウェブサイト健全性レポート — Uptime",
+				title: "無料の {$days} 日間ウェブサイト健全性レポート — Uptime",
 				description:
-					"いますぐあなたのサイトをチェックし、その後 {{days}} 日間 1 時間ごとにチェックして、分かったことをメールでお送りします。アカウントもカードも不要です。",
+					"いますぐあなたのサイトをチェックし、その後 {$days} 日間 1 時間ごとにチェックして、分かったことをメールでお送りします。アカウントもカードも不要です。",
 			},
 
-			heading: "あなたのサイトの無料 {{days}} 日間健全性レポート",
+			heading: "あなたのサイトの無料 {$days} 日間健全性レポート",
 			intro:
-				"URL を入力すると、当社ネットワークからいますぐチェックを実行します。有料モニターが実行するものと同じチェックです。そのあとメールアドレスを入力いただければ、{{days}} 日間 1 時間ごとにチェックを続け、最後にレポートをお送りします。",
+				"URL を入力すると、当社ネットワークからいますぐチェックを実行します。有料モニターが実行するものと同じチェックです。そのあとメールアドレスを入力いただければ、{$days} 日間 1 時間ごとにチェックを続け、最後にレポートをお送りします。",
 
 			form: {
 				url: {
@@ -4052,7 +4061,7 @@ export default {
 				failedChallenge:
 					"リクエストがブラウザーから送られたことを確認できませんでした。ページを再読み込みしてやり直してください。",
 				rateLimited: "1 分後にもう一度チェックできます。",
-				rateLimitedFor: "{{seconds}} 秒後にもう一度チェックできます。",
+				rateLimitedFor: "{$seconds} 秒後にもう一度チェックできます。",
 				budgetExhausted:
 					"本日分の無料チェックはすべて実行済みです。これは当社側の事情で、あなたの URL の問題ではありません。明日また来ていただくか、監視を始めていただければ 1 分ごとにチェックします。",
 				unavailable:
@@ -4062,16 +4071,16 @@ export default {
 			result: {
 				checkAnother: "別の URL をチェック",
 				noResponse: "応答なし",
-				httpStatus: "HTTP {{status}}",
-				milliseconds: "{{value}} ms",
-				checkedAt: "{{time}} に実行",
+				httpStatus: "HTTP {$status}",
+				milliseconds: "{$value} ms",
+				checkedAt: "{$time} に実行",
 
 				redirect: {
 					badge: "リダイレクト",
 					title: "この URL は別の場所へリダイレクトします",
 					description:
 						"応答はありましたが、その内容は別のアドレスへの案内でした。そこへは行っていません。入力された URL だけをチェックする方針で、これがこの入力欄を本来届くべきでない場所への踏み台にさせない仕組みです。転送先を指定して調べれば、その実際の結果が得られます。",
-					destination: "転送先は {{url}} です",
+					destination: "転送先は {$url} です",
 					action: "そちらをチェックする",
 					unknownDestination:
 						"転送先は読み取っていません。ブラウザーでこの URL を開いて到達先を確認し、そのアドレスをここでチェックしてください。",
@@ -4085,14 +4094,14 @@ export default {
 			},
 
 			lead: {
-				title: "無料の {{days}} 日間レポートを受け取る",
+				title: "無料の {$days} 日間レポートを受け取る",
 				description:
-					"いまご覧になったチェックが 1 回目です。メールアドレスを入力いただければチェックを継続し、{{days}} 日間のチェックで分かったことをお伝えします。",
+					"いまご覧になったチェックが 1 回目です。メールアドレスを入力いただければチェックを継続し、{$days} 日間のチェックで分かったことをお伝えします。",
 				consent: "Uptime 自体についても、ときどきメールを送ってよい。",
 				consentNote: "どちらを選んでもチェックは届きます。",
 				promise:
 					"すべてのメールに、ワンクリックでチェックを止めてアドレスを削除するリンクが付いています。",
-				submit: "無料の {{days}} 日間レポートを開始する",
+				submit: "無料の {$days} 日間レポートを開始する",
 
 				/**
 				 * What a visitor is agreeing to, placed beside the field so it reads before
@@ -4101,8 +4110,8 @@ export default {
 				 */
 				expectations: {
 					target:
-						"チェックを続けるのは {{url}} です。いまチェックしたアドレスそのものだけで、それ以外は対象になりません。",
-					cadence: "{{days}} 日間、1 時間ごとに 1 回。",
+						"チェックを続けるのは {$url} です。いまチェックしたアドレスそのものだけで、それ以外は対象になりません。",
+					cadence: "{$days} 日間、1 時間ごとに 1 回。",
 					emails:
 						"1 日 1 通のまとめ、ステータスが変化したときのお知らせ、そして最後に完全なレポート。",
 					noAccount: "カードもパスワードも不要、作成するアカウントもありません。",
@@ -4128,24 +4137,24 @@ export default {
 			watching: {
 				title: "監視を開始しました",
 				description:
-					"{{url}} の最初の 1 時間ごとのチェックは 1 時間後に実行され、{{days}} 日間チェックを続けます。いま実行したチェックの控えはすでに受信箱に届いています。",
+					"{$url} の最初の 1 時間ごとのチェックは 1 時間後に実行され、{$days} 日間チェックを続けます。いま実行したチェックの控えはすでに受信箱に届いています。",
 			},
 
 			repeated: {
 				title: "このURLはすでにチェック済みです",
 				description:
-					"{{url}} は以前のお申し込みですでに無料レポートをご利用済みです。1 つの URL につき 30 日ごとに 1 回となります。これまでのチェック結果はメールでお送りしましたので、新しい監視は開始していません。",
+					"{$url} は以前のお申し込みですでに無料レポートをご利用済みです。1 つの URL につき 30 日ごとに 1 回となります。これまでのチェック結果はメールでお送りしましたので、新しい監視は開始していません。",
 			},
 
 			benefits: {
 				title: "レポートに含まれる内容",
 				description:
-					"有料モニターがこの URL について教えてくれることをすべて、{{days}} 日間、無料で。",
+					"有料モニターがこの URL について教えてくれることをすべて、{$days} 日間、無料で。",
 
 				list: {
 					hourly: {
 						title: "1 時間ごとのチェック",
-						description: "{{days}} 日間、有料モニターと同じネットワークから。",
+						description: "{$days} 日間、有料モニターと同じネットワークから。",
 					},
 					changes: {
 						title: "変化したときのメール",
@@ -4155,7 +4164,7 @@ export default {
 					digest: {
 						title: "1 日 1 通のまとめ",
 						description:
-							"URL の状態が一目で分かります。最後には {{days}} 日間の全体を 1 通のレポートにまとめます。",
+							"URL の状態が一目で分かります。最後には {$days} 日間の全体を 1 通のレポートにまとめます。",
 					},
 					noAccount: {
 						title: "アカウントもカードも不要",
@@ -4190,7 +4199,7 @@ export default {
 
 			cta: {
 				badge: "レポートが終わったあとに",
-				title: "月 {{price}} でこのサイトの監視を続ける",
+				title: "月 {$price} でこのサイトの監視を続ける",
 				description:
 					"登録すると、この URL は実際のモニターになり、チェック履歴もそのまま引き継がれるので、何もやり直しにはなりません。1 時間ごとではなく 1 分ごとのチェック、好きなだけの URL、普段使っている場所へのアラート、ステータスページ、そして 1 年分の履歴が付きます。",
 				action: "このサイトの監視を続ける",
@@ -4336,7 +4345,7 @@ export default {
 					},
 
 					confirmation: {
-						leaveTeam: "{{name}}から脱退してもよろしいですか？",
+						leaveTeam: "{$name}から脱退してもよろしいですか？",
 					},
 				},
 			},
@@ -4367,7 +4376,7 @@ export default {
 					title: "削除を受け付けました",
 					description:
 						"アカウントは削除の順番待ちに入っており、まだ何も削除されていません。1日以内に実行され、完了したらメールでお知らせします。まだ止められます——実行前であれば、下からいつでも取り消せます。",
-					requestedAt: "{{date}}に依頼されました。",
+					requestedAt: "{$date}に依頼されました。",
 					cta: "削除を取り消す",
 				},
 
@@ -4384,11 +4393,12 @@ export default {
 
 					ownedTeamsIntro:
 						"このアプリにチームを他の人へ引き継ぐ手段はないため、所有しているチームはすべて、そのモニター、アラート、ステータスページ、APIキー、メンバーとともにアカウントと一緒に削除されます：",
-					ownedTeam_other: "{{name}} — 他の{{count}}名がアクセスを失います。",
-					ownedTeamAlone: "{{name}} — 他のメンバーはいません。",
+					ownedTeam:
+						".input {$count :number}\n.match $count\n* {{{$name} — 他の{$count}名がアクセスを失います。}}",
+					ownedTeamAlone: "{$name} — 他のメンバーはいません。",
 
-					othersWarning_other:
-						"これが実行されると、他の{{count}}名が自分のチームへのアクセスを失います。事前に確認を求められることも、警告されることもありません。",
+					othersWarning:
+						".input {$count :number}\n.match $count\n* {{これが実行されると、他の{$count}名が自分のチームへのアクセスを失います。事前に確認を求められることも、警告されることもありません。}}",
 
 					retained: {
 						intro: "削除できないものもあり、それを隠さずお伝えします：",
@@ -4516,7 +4526,7 @@ export default {
 					},
 
 					confirmation: {
-						removeMember: "{{name}}をチームから削除してもよろしいですか？",
+						removeMember: "{$name}をチームから削除してもよろしいですか？",
 					},
 				},
 
@@ -4541,7 +4551,7 @@ export default {
 					},
 
 					confirmation: {
-						revokeInvite: "{{email}}の招待を取り消してもよろしいですか？",
+						revokeInvite: "{$email}の招待を取り消してもよろしいですか？",
 					},
 
 					empty: {
@@ -4581,7 +4591,7 @@ export default {
 					},
 
 					confirmation: {
-						removeDomain: "{{hostname}}をチームから削除してもよろしいですか？",
+						removeDomain: "{$hostname}をチームから削除してもよろしいですか？",
 					},
 
 					empty: {
@@ -4596,7 +4606,7 @@ export default {
 						hostname: {
 							label: "ドメイン",
 							placeholder: "example.com",
-							description: "{{team}}に追加したいドメイン。",
+							description: "{$team}に追加したいドメイン。",
 						},
 					},
 
@@ -4618,7 +4628,7 @@ export default {
 						},
 					},
 
-					note: "<code>VERIFICATION_ID</code>を上に表示されている実際の確認IDに置き換えてください。",
+					note: "{#code}VERIFICATION_ID{/code}を上に表示されている実際の確認IDに置き換えてください。",
 					disclaimer: "DNS変更の反映には時間がかかる場合があるため、確認が遅れることがあります。",
 				},
 			},
@@ -4686,7 +4696,7 @@ export default {
 
 			failure: {
 				title: "最後の失敗",
-				failedTest: "{{test}}が{{line}}行目で失敗しました。",
+				failedTest: "{$test}が{$line :string}行目で失敗しました。",
 			},
 
 			source: { title: "フロー" },
@@ -4740,7 +4750,7 @@ export default {
 					edit: "編集",
 					delete: "削除",
 					confirmation: {
-						delete: "フローモニター{{name}}を削除してもよろしいですか？この操作は取り消せません。",
+						delete: "フローモニター{$name}を削除してもよろしいですか？この操作は取り消せません。",
 					},
 				},
 			},
@@ -4748,13 +4758,12 @@ export default {
 			run: {
 				cta: "今すぐ実行",
 				toast: {
-					up: "{{name}}が成功しました",
-					down: "{{name}}が失敗しました",
-					error: "{{name}}を実行できませんでした",
-					refused: "{{name}}は実行されませんでした",
-					summary:
-						"{{total}}件中{{passed}}件のテストが成功、{{requests}}リクエスト、{{duration}}ms。",
-					failedTest: "失敗：{{test}}（{{line}}行目）。",
+					up: "{$name}が成功しました",
+					down: "{$name}が失敗しました",
+					error: "{$name}を実行できませんでした",
+					refused: "{$name}は実行されませんでした",
+					summary: "{$total}件中{$passed}件のテストが成功、{$requests}リクエスト、{$duration}ms。",
+					failedTest: "失敗：{$test}（{$line :string}行目）。",
 				},
 			},
 		},
@@ -4781,11 +4790,11 @@ export default {
 					},
 					source: {
 						label: "フロー",
-						placeholder: 'test "メンバーがログインできる" { when { … } then { … } }',
+						placeholder: 'test "メンバーがログインできる" \\{ when \\{ … \\} then \\{ … \\} \\}',
 						description:
 							"リクエストと、その間に挟むアサーションです。検証済みドメインと照合できるよう、すべてのURLをここに記述する必要があります。",
 						verifiedDomains:
-							"このフローがアクセスできる範囲：{{domains}} — およびそのサブドメイン。",
+							"このフローがアクセスできる範囲：{$domains} — およびそのサブドメイン。",
 						noVerifiedDomains:
 							"このチームには検証済みドメインがないため、まだフローを実行できません。先にチーム設定でドメインを検証してください。",
 					},
@@ -4817,9 +4826,8 @@ export default {
 			lastRun: {
 				title: "前回の実行",
 				description: "このフローが前回実行されたときの結果です。",
-				summary:
-					"{{total}}件中{{passed}}件のテストが成功、{{requests}}リクエスト、{{duration}}ms。",
-				failedTest: "失敗：{{test}}（{{line}}行目）。",
+				summary: "{$total}件中{$passed}件のテストが成功、{$requests}リクエスト、{$duration}ms。",
+				failedTest: "失敗：{$test}（{$line :string}行目）。",
 			},
 
 			form: {
@@ -4839,11 +4847,11 @@ export default {
 					},
 					source: {
 						label: "フロー",
-						placeholder: 'test "メンバーがログインできる" { when { … } then { … } }',
+						placeholder: 'test "メンバーがログインできる" \\{ when \\{ … \\} then \\{ … \\} \\}',
 						description:
 							"リクエストと、その間に挟むアサーションです。検証済みドメインと照合できるよう、すべてのURLをここに記述する必要があります。",
 						verifiedDomains:
-							"このフローがアクセスできる範囲：{{domains}} — およびそのサブドメイン。",
+							"このフローがアクセスできる範囲：{$domains} — およびそのサブドメイン。",
 						noVerifiedDomains:
 							"このチームには検証済みドメインがないため、まだフローを実行できません。先にチーム設定でドメインを検証してください。",
 					},
@@ -4922,7 +4930,7 @@ export default {
 					edit: "編集",
 					delete: "削除",
 					confirmation: {
-						delete: "{{name}}を削除してもよろしいですか？",
+						delete: "{$name}を削除してもよろしいですか？",
 					},
 				},
 			},
@@ -5146,7 +5154,7 @@ export default {
 			},
 
 			newKey: {
-				title: "APIキー「{{name}}」が作成されました！",
+				title: "APIキー「{$name}」が作成されました！",
 				description:
 					"今すぐこのキーをコピーしてください。セキュリティ上の理由から、再度表示することはできません。",
 				dismiss: "キーをコピーしました",
@@ -5260,7 +5268,7 @@ export default {
 				},
 
 				confirmation: {
-					delete: "APIキー「{{name}}」を削除してもよろしいですか？この操作は取り消せません。",
+					delete: "APIキー「{$name}」を削除してもよろしいですか？この操作は取り消せません。",
 				},
 			},
 
@@ -5321,7 +5329,7 @@ export default {
 					edit: "編集",
 					delete: "削除",
 					confirmation: {
-						delete: "{{name}}を削除してもよろしいですか？",
+						delete: "{$name}を削除してもよろしいですか？",
 					},
 				},
 			},
@@ -5516,7 +5524,7 @@ export default {
 				timezone: "タイムゾーン",
 				status: "ステータス",
 				gracePeriod: "猶予期間",
-				gracePeriodValue: "猶予 {{duration}}",
+				gracePeriodValue: "猶予 {$duration}",
 				description: "説明",
 			},
 
@@ -5592,7 +5600,7 @@ export default {
 			},
 
 			delete: {
-				confirmation: "{{name}}を削除してもよろしいですか？この操作は取り消せません。",
+				confirmation: "{$name}を削除してもよろしいですか？この操作は取り消せません。",
 			},
 		},
 	},
@@ -5645,6 +5653,6 @@ export default {
 			notFoundDescription: "お探しのドキュメントページは存在しません。",
 		},
 
-		lastUpdated: "最終更新: {{date}}",
+		lastUpdated: "最終更新: {$date}",
 	},
 };

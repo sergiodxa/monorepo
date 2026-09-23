@@ -2,7 +2,7 @@
  * Tests for the monitor detail page "Monthly Pings Usage" stat-card fragment
  * controller. `cloudflare:workers` is mocked because `~/app/data/monitor` reads
  * `env` at module load, and both figures come from local check history rather
- * than billing state. `ctx.team`/`ctx.membership`/auth/i18next are seeded
+ * than billing state. `ctx.team`/`ctx.membership`/auth/intl are seeded
  * directly, standing in for the real middleware chain. The three figures the
  * card can produce are pinned here since two look alike but mean opposite
  * things and must never be confused.
@@ -50,8 +50,8 @@ let monitorCardUsage = (await import("./monitor-card-usage")).default as {
 	handler: RequestHandler<any>;
 };
 
-let { i18n: i18nextInstance } = await createTranslator({
-	resources: { en: { translation: en } },
+let { intl } = await createTranslator({
+	resources: { en },
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",
 })();
@@ -66,7 +66,7 @@ function createHtmlRenderer(ctx: RequestContext) {
 	};
 }
 
-/** Middleware that seeds `ctx.team`/`ctx.membership`/auth/i18next state, standing in for the real chain. */
+/** Middleware that seeds `ctx.team`/`ctx.membership`/auth/intl state, standing in for the real chain. */
 function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	let viewer: Viewer = {
 		id: membership.subject_id,
@@ -80,7 +80,7 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 		ctx.membership = membership;
 		ctx.teams = [team];
 		ctx.locale = "en";
-		ctx.i18next = i18nextInstance;
+		ctx.intl = intl;
 		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
 		ctx.log.set({ team: { id: team.id } });
 		return next();

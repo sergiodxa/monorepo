@@ -19,6 +19,7 @@ import { Select, Switch, TextArea, TextField } from "@sdxc/ui";
 
 import type { SelectFlowMonitor } from "~/database/schema";
 
+import { withPrefix } from "~/app/lib/prefixed-translate";
 import { DEFAULT_FLOW_INTERVAL_SECONDS, FLOW_INTERVALS_SECONDS } from "~/app/lib/pricing";
 import Field from "~/resources/components/field";
 
@@ -28,8 +29,8 @@ namespace FlowMonitorFormFields {
 		monitor?: SelectFlowMonitor;
 		/** The team's verified hostnames — what a spec written here may reach. */
 		verifiedDomains: readonly string[];
-		/** The request's i18next instance, used to read this page's `form.fields.*` copy. */
-		i18next: ReturnType<typeof getContext>["i18next"];
+		/** The request's translator, used to read this page's `form.fields.*` copy. */
+		intl: ReturnType<typeof getContext>["intl"];
 		/** Which page is rendering these fields, selecting the `page.<page>.form.fields.*` keys. */
 		page: "createFlowMonitor" | "editFlowMonitor";
 	}
@@ -38,8 +39,8 @@ namespace FlowMonitorFormFields {
 /** Renders the name/source/interval fields (plus an enabled toggle when editing). */
 export default function FlowMonitorFormFields(handle: Handle<FlowMonitorFormFields.Props>) {
 	return () => {
-		let { monitor, verifiedDomains, i18next, page } = handle.props;
-		let t = i18next.getFixedT(null, "translation", `page.${page}.form.fields`);
+		let { monitor, verifiedDomains, intl, page } = handle.props;
+		let t = withPrefix(intl.t, `page.${page}.form.fields`);
 		let selectedInterval = monitor?.interval_seconds ?? DEFAULT_FLOW_INTERVAL_SECONDS;
 
 		return (

@@ -48,30 +48,30 @@ export default createAction(routes.app.team.alerts.index, {
 		/** How one alert's scope reads in the table: a monitor's name, a type, or team-wide. */
 		function scopeLabel(alert: SelectAlert): string {
 			let scope = storedMonitorScope(alert);
-			if (scope.monitorType === null) return ctx.i18next.t("page.alerts.table.scope.teamWide");
+			if (scope.monitorType === null) return ctx.intl.t("page.alerts.table.scope.teamWide");
 			if (scope.monitorId === null) {
-				return ctx.i18next.t(`page.alerts.table.scope.allOfType.${scope.monitorType}`);
+				return ctx.intl.t(`page.alerts.table.scope.allOfType.${scope.monitorType}`);
 			}
 
 			return (
 				monitorNamesById.get(scope.monitorId) ??
-				ctx.i18next.t("page.alerts.table.scope.unknownMonitor")
+				ctx.intl.t("page.alerts.table.scope.unknownMonitor")
 			);
 		}
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · ${ctx.i18next.t("page.alerts.header.title")}`}>
+			<DocumentLayout title={`${ctx.team.name} · ${ctx.intl.t("page.alerts.header.title")}`}>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
-					heading={ctx.i18next.t("page.alerts.header.title")}
+					intl={ctx.intl}
+					heading={ctx.intl.t("page.alerts.header.title")}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("app.layout.sidebar.navigation.items.dashboard"),
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.dashboard"),
 							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 						},
 					]}
@@ -79,12 +79,12 @@ export default createAction(routes.app.team.alerts.index, {
 						<div mix={[hstack({ align: "center", gap: 3 })]}>
 							<LinkButton href={routes.app.team.alerts.history.href({ team: ctx.team.slug })}>
 								<HistoryIcon size={16} strokeWidth={1.5} />
-								{ctx.i18next.t("page.alerts.header.action.history")}
+								{ctx.intl.t("page.alerts.header.action.history")}
 							</LinkButton>
 							{!atLimit && (
 								<LinkButton href={routes.app.team.alerts.new.href({ team: ctx.team.slug })}>
 									<BellPlusIcon size={16} strokeWidth={1.5} />
-									{ctx.i18next.t("page.alerts.header.action.create")}
+									{ctx.intl.t("page.alerts.header.action.create")}
 								</LinkButton>
 							)}
 						</div>
@@ -93,7 +93,7 @@ export default createAction(routes.app.team.alerts.index, {
 					<div>
 						{atLimit && (
 							<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-								{ctx.i18next.t("page.alerts.limitReached", { limit: MAX_ALERTS_PER_TEAM })}
+								{ctx.intl.t("page.alerts.limitReached", { limit: MAX_ALERTS_PER_TEAM })}
 							</p>
 						)}
 
@@ -102,34 +102,30 @@ export default createAction(routes.app.team.alerts.index, {
 								<Empty.Icon>
 									<BellIcon size={24} strokeWidth={1.5} />
 								</Empty.Icon>
-								<Empty.Title>{ctx.i18next.t("page.alerts.empty.title")}</Empty.Title>
-								<Empty.Description>
-									{ctx.i18next.t("page.alerts.empty.description")}
-								</Empty.Description>
+								<Empty.Title>{ctx.intl.t("page.alerts.empty.title")}</Empty.Title>
+								<Empty.Description>{ctx.intl.t("page.alerts.empty.description")}</Empty.Description>
 								<Empty.Action>
 									<LinkButton href={routes.app.team.alerts.new.href({ team: ctx.team.slug })}>
 										<PlusIcon size={20} strokeWidth={1.5} />
-										{ctx.i18next.t("page.alerts.empty.cta")}
+										{ctx.intl.t("page.alerts.empty.cta")}
 									</LinkButton>
 								</Empty.Action>
 							</Empty>
 						) : (
 							<Table.Container>
-								<Table aria-label={ctx.i18next.t("page.alerts.table.label")}>
+								<Table aria-label={ctx.intl.t("page.alerts.table.label")}>
 									<Table.Header>
 										<Table.Row>
-											<Table.Column>{ctx.i18next.t("page.alerts.table.columns.name")}</Table.Column>
+											<Table.Column>{ctx.intl.t("page.alerts.table.columns.name")}</Table.Column>
+											<Table.Column>{ctx.intl.t("page.alerts.table.columns.scope")}</Table.Column>
 											<Table.Column>
-												{ctx.i18next.t("page.alerts.table.columns.scope")}
+												{ctx.intl.t("page.alerts.table.columns.strategy")}
 											</Table.Column>
 											<Table.Column>
-												{ctx.i18next.t("page.alerts.table.columns.strategy")}
+												{ctx.intl.t("page.alerts.table.columns.notifyOnRecovery")}
 											</Table.Column>
 											<Table.Column>
-												{ctx.i18next.t("page.alerts.table.columns.notifyOnRecovery")}
-											</Table.Column>
-											<Table.Column>
-												{ctx.i18next.t("page.alerts.table.columns.cooldown")}
+												{ctx.intl.t("page.alerts.table.columns.cooldown")}
 											</Table.Column>
 											<Table.Column></Table.Column>
 										</Table.Row>
@@ -140,16 +136,16 @@ export default createAction(routes.app.team.alerts.index, {
 												<Table.Cell>{alert.name}</Table.Cell>
 												<Table.Cell>{scopeLabel(alert)}</Table.Cell>
 												<Table.Cell>
-													{ctx.i18next.t(`page.alerts.table.types.${alert.config.strategy}`)}
+													{ctx.intl.t(`page.alerts.table.types.${alert.config.strategy}`)}
 												</Table.Cell>
 												<Table.Cell>
 													{alert.notify_on_recovery
-														? ctx.i18next.t("page.alerts.table.notifyOnRecovery.enabled")
-														: ctx.i18next.t("page.alerts.table.notifyOnRecovery.disabled")}
+														? ctx.intl.t("page.alerts.table.notifyOnRecovery.enabled")
+														: ctx.intl.t("page.alerts.table.notifyOnRecovery.disabled")}
 												</Table.Cell>
 												<Table.Cell>
 													{alert.cooldown_minutes === 0
-														? ctx.i18next.t("page.alerts.table.cooldown.none")
+														? ctx.intl.t("page.alerts.table.cooldown.none")
 														: `${alert.cooldown_minutes}m`}
 												</Table.Cell>
 												<Table.Cell>
@@ -164,7 +160,7 @@ export default createAction(routes.app.team.alerts.index, {
 															hover(textDecoration("underline")),
 														]}
 													>
-														{ctx.i18next.t("page.alerts.table.actions.edit")}
+														{ctx.intl.t("page.alerts.table.actions.edit")}
 													</a>
 												</Table.Cell>
 											</Table.Row>

@@ -16,14 +16,15 @@ import { Switch, TextField } from "@sdxc/ui";
 
 import type { SelectTcpMonitor } from "~/database/schema";
 
+import { withPrefix } from "~/app/lib/prefixed-translate";
 import StepperField from "~/resources/components/stepper-field";
 
 namespace TcpMonitorFormFields {
 	export interface Props {
 		/** Existing monitor values when editing; omitted when creating. */
 		monitor?: SelectTcpMonitor;
-		/** The request's i18next instance, used to read this page's `form.fields.*` copy. */
-		i18next: ReturnType<typeof getContext>["i18next"];
+		/** The request's translator, used to read this page's `form.fields.*` copy. */
+		intl: ReturnType<typeof getContext>["intl"];
 		/** Which page is rendering these fields, selecting the `page.<page>.form.fields.*` keys to read. */
 		page: "createTcpMonitor" | "editTcpMonitor";
 	}
@@ -32,8 +33,8 @@ namespace TcpMonitorFormFields {
 /** Renders the host/port/interval/timeout fields (plus an enabled toggle when editing), pre-filled from `monitor` when editing. */
 export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields.Props>) {
 	return () => {
-		let { monitor, i18next, page } = handle.props;
-		let t = i18next.getFixedT(null, "translation", `page.${page}.form.fields`);
+		let { monitor, intl, page } = handle.props;
+		let t = withPrefix(intl.t, `page.${page}.form.fields`);
 
 		return (
 			<>

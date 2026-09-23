@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 import type { Address } from "@sdxc/mail";
 import type { RemixElement } from "remix/ui";
 
@@ -45,7 +45,7 @@ export namespace TeamDailyDigestEmail {
 		/** Language the copy is produced in, recorded beside the translator it came from. */
 		locale: string;
 		/** Translator already bound to {@link locale} by the sender. */
-		t: TFunction;
+		t: Translate;
 	}
 }
 

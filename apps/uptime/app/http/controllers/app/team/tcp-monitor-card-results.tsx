@@ -63,43 +63,43 @@ export default createAction(routes.app.team.tcpMonitors.cards.results, {
 			<Fragment>
 				<div mix={[flex(), flexWrap(), gap("16px"), mbe("24px")]}>
 					<StatCard
-						label={ctx.i18next.t("page.tcpMonitorDetail.stats.uptime.label")}
+						label={ctx.intl.t("page.tcpMonitorDetail.stats.uptime.label")}
 						value={uptimePercent === null ? "—" : `${uptimePercent}%`}
 					/>
 					<StatCard
-						label={ctx.i18next.t("page.tcpMonitorDetail.stats.avgResponseTime.label")}
+						label={ctx.intl.t("page.tcpMonitorDetail.stats.avgResponseTime.label")}
 						value={avgResponseTime === null ? "—" : `${avgResponseTime}ms`}
 					/>
 					<StatCard
-						label={ctx.i18next.t("page.tcpMonitorDetail.stats.totalChecks.label")}
+						label={ctx.intl.t("page.tcpMonitorDetail.stats.totalChecks.label")}
 						value={totalChecks}
 					/>
 				</div>
 
 				<section>
-					<h2>{ctx.i18next.t("page.tcpMonitorDetail.results.title")}</h2>
+					<h2>{ctx.intl.t("page.tcpMonitorDetail.results.title")}</h2>
 					{results.length === 0 ? (
 						<Empty>
 							<Empty.Description>
-								{ctx.i18next.t("page.tcpMonitorDetail.results.empty")}
+								{ctx.intl.t("page.tcpMonitorDetail.results.empty")}
 							</Empty.Description>
 						</Empty>
 					) : (
 						<Table.Container>
-							<Table aria-label={ctx.i18next.t("page.tcpMonitorDetail.results.label")}>
+							<Table aria-label={ctx.intl.t("page.tcpMonitorDetail.results.label")}>
 								<Table.Header>
 									<Table.Row>
 										<Table.Column>
-											{ctx.i18next.t("page.tcpMonitorDetail.results.columns.time")}
+											{ctx.intl.t("page.tcpMonitorDetail.results.columns.time")}
 										</Table.Column>
 										<Table.Column>
-											{ctx.i18next.t("page.tcpMonitorDetail.results.columns.status")}
+											{ctx.intl.t("page.tcpMonitorDetail.results.columns.status")}
 										</Table.Column>
 										<Table.Column>
-											{ctx.i18next.t("page.tcpMonitorDetail.results.columns.responseTime")}
+											{ctx.intl.t("page.tcpMonitorDetail.results.columns.responseTime")}
 										</Table.Column>
 										<Table.Column>
-											{ctx.i18next.t("page.tcpMonitorDetail.results.columns.error")}
+											{ctx.intl.t("page.tcpMonitorDetail.results.columns.error")}
 										</Table.Column>
 									</Table.Row>
 								</Table.Header>
@@ -109,7 +109,7 @@ export default createAction(routes.app.team.tcpMonitors.cards.results, {
 											<Table.Cell>{new Date(result.checked_at).toLocaleString()}</Table.Cell>
 											<Table.Cell>
 												<Badge {...badgeVariant(STATUS_BADGE_TONE[result.status] ?? "neutral")}>
-													{ctx.i18next.t(`page.tcpMonitors.table.status.${result.status}`)}
+													{ctx.intl.t(`page.tcpMonitors.table.status.${result.status}`)}
 												</Badge>
 											</Table.Cell>
 											<Table.Cell>

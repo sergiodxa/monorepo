@@ -83,10 +83,10 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 
 			return ctx.render(
 				<StatCard
-					label={ctx.i18next.t("page.dashboard.stats.dnsMonitors.label")}
+					label={ctx.intl.t("page.dashboard.stats.dnsMonitors.label")}
 					create={{
 						href: routes.app.team.dnsMonitors.new.href({ team: ctx.team.slug }),
-						label: ctx.i18next.t("page.dashboard.stats.dnsMonitors.create"),
+						label: ctx.intl.t("page.dashboard.stats.dnsMonitors.create"),
 					}}
 					value={
 						<>
@@ -96,21 +96,21 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 									{
 										count: dnsCounts.ok,
 										tone: "up",
-										label: ctx.i18next.t("page.dashboard.stats.dnsMonitors.breakdown.ok", {
+										label: ctx.intl.t("page.dashboard.stats.dnsMonitors.breakdown.ok", {
 											ok: dnsCounts.ok,
 										}),
 									},
 									{
 										count: dnsCounts.changed,
 										tone: "degraded",
-										label: ctx.i18next.t("page.dashboard.stats.dnsMonitors.breakdown.changed", {
+										label: ctx.intl.t("page.dashboard.stats.dnsMonitors.breakdown.changed", {
 											changed: dnsCounts.changed,
 										}),
 									},
 									{
 										count: dnsCounts.error,
 										tone: "down",
-										label: ctx.i18next.t("page.dashboard.stats.dnsMonitors.breakdown.error", {
+										label: ctx.intl.t("page.dashboard.stats.dnsMonitors.breakdown.error", {
 											error: dnsCounts.error,
 										}),
 									},
@@ -134,10 +134,10 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 
 			return ctx.render(
 				<StatCard
-					label={ctx.i18next.t("page.dashboard.stats.tcpMonitors.label")}
+					label={ctx.intl.t("page.dashboard.stats.tcpMonitors.label")}
 					create={{
 						href: routes.app.team.tcpMonitors.new.href({ team: ctx.team.slug }),
-						label: ctx.i18next.t("page.dashboard.stats.tcpMonitors.create"),
+						label: ctx.intl.t("page.dashboard.stats.tcpMonitors.create"),
 					}}
 					value={
 						<>
@@ -147,14 +147,14 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 									{
 										count: tcpCounts.up,
 										tone: "up",
-										label: ctx.i18next.t("page.dashboard.stats.tcpMonitors.breakdown.up", {
+										label: ctx.intl.t("page.dashboard.stats.tcpMonitors.breakdown.up", {
 											up: tcpCounts.up,
 										}),
 									},
 									{
 										count: tcpCounts.down,
 										tone: "down",
-										label: ctx.i18next.t("page.dashboard.stats.tcpMonitors.breakdown.down", {
+										label: ctx.intl.t("page.dashboard.stats.tcpMonitors.breakdown.down", {
 											down: tcpCounts.down,
 										}),
 									},
@@ -182,10 +182,10 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 
 			return ctx.render(
 				<StatCard
-					label={ctx.i18next.t("page.dashboard.stats.flowMonitors.label")}
+					label={ctx.intl.t("page.dashboard.stats.flowMonitors.label")}
 					create={{
 						href: routes.app.team.flowMonitors.new.href({ team: ctx.team.slug }),
-						label: ctx.i18next.t("page.dashboard.stats.flowMonitors.create"),
+						label: ctx.intl.t("page.dashboard.stats.flowMonitors.create"),
 					}}
 					value={
 						<>
@@ -195,21 +195,21 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 									{
 										count: flowCounts.up,
 										tone: "up",
-										label: ctx.i18next.t("page.dashboard.stats.flowMonitors.breakdown.up", {
+										label: ctx.intl.t("page.dashboard.stats.flowMonitors.breakdown.up", {
 											up: flowCounts.up,
 										}),
 									},
 									{
 										count: flowCounts.down,
 										tone: "down",
-										label: ctx.i18next.t("page.dashboard.stats.flowMonitors.breakdown.down", {
+										label: ctx.intl.t("page.dashboard.stats.flowMonitors.breakdown.down", {
 											down: flowCounts.down,
 										}),
 									},
 									{
 										count: flowCounts.error,
 										tone: "degraded",
-										label: ctx.i18next.t("page.dashboard.stats.flowMonitors.breakdown.error", {
+										label: ctx.intl.t("page.dashboard.stats.flowMonitors.breakdown.error", {
 											error: flowCounts.error,
 										}),
 									},
@@ -232,10 +232,10 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 
 			return ctx.render(
 				<StatCard
-					label={ctx.i18next.t("page.dashboard.stats.cronJobs.label")}
+					label={ctx.intl.t("page.dashboard.stats.cronJobs.label")}
 					create={{
 						href: routes.app.team.cronJobs.new.href({ team: ctx.team.slug }),
-						label: ctx.i18next.t("page.dashboard.stats.cronJobs.create"),
+						label: ctx.intl.t("page.dashboard.stats.cronJobs.create"),
 					}}
 					value={
 						<>
@@ -245,21 +245,21 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 									{
 										count: cronCounts.healthy,
 										tone: "up",
-										label: ctx.i18next.t("page.dashboard.stats.cronJobs.breakdown.healthy", {
+										label: ctx.intl.t("page.dashboard.stats.cronJobs.breakdown.healthy", {
 											healthy: cronCounts.healthy,
 										}),
 									},
 									{
 										count: cronCounts.late,
 										tone: "degraded",
-										label: ctx.i18next.t("page.dashboard.stats.cronJobs.breakdown.late", {
+										label: ctx.intl.t("page.dashboard.stats.cronJobs.breakdown.late", {
 											late: cronCounts.late,
 										}),
 									},
 									{
 										count: cronCounts.missed,
 										tone: "down",
-										label: ctx.i18next.t("page.dashboard.stats.cronJobs.breakdown.missed", {
+										label: ctx.intl.t("page.dashboard.stats.cronJobs.breakdown.missed", {
 											missed: cronCounts.missed,
 										}),
 									},
@@ -284,10 +284,10 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 
 		return ctx.render(
 			<StatCard
-				label={ctx.i18next.t("page.dashboard.stats.httpMonitors.label")}
+				label={ctx.intl.t("page.dashboard.stats.httpMonitors.label")}
 				create={{
 					href: routes.app.team.monitors.new.href({ team: ctx.team.slug }),
-					label: ctx.i18next.t("page.dashboard.stats.httpMonitors.create"),
+					label: ctx.intl.t("page.dashboard.stats.httpMonitors.create"),
 				}}
 				value={
 					<>
@@ -297,14 +297,14 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 								{
 									count: httpCounts.up,
 									tone: "up",
-									label: ctx.i18next.t("page.dashboard.stats.httpMonitors.breakdown.up", {
+									label: ctx.intl.t("page.dashboard.stats.httpMonitors.breakdown.up", {
 										up: httpCounts.up,
 									}),
 								},
 								{
 									count: httpCounts.down,
 									tone: "down",
-									label: ctx.i18next.t("page.dashboard.stats.httpMonitors.breakdown.down", {
+									label: ctx.intl.t("page.dashboard.stats.httpMonitors.breakdown.down", {
 										down: httpCounts.down,
 									}),
 								},

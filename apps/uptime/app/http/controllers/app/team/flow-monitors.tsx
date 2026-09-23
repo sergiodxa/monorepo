@@ -67,11 +67,11 @@ export default createAction(routes.app.team.flowMonitors.index, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
-					heading={ctx.i18next.t("page.flowMonitors.header.title")}
+					intl={ctx.intl}
+					heading={ctx.intl.t("page.flowMonitors.header.title")}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("app.layout.sidebar.navigation.items.dashboard"),
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.dashboard"),
 							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 						},
 					]}
@@ -79,7 +79,7 @@ export default createAction(routes.app.team.flowMonitors.index, {
 						<div mix={[flex(), items("center"), nowrap()]}>
 							<LinkButton href={newHref}>
 								<PlusIcon size={16} strokeWidth={1.5} />
-								{ctx.i18next.t("page.flowMonitors.header.action.create")}
+								{ctx.intl.t("page.flowMonitors.header.action.create")}
 							</LinkButton>
 						</div>
 					}
@@ -90,37 +90,37 @@ export default createAction(routes.app.team.flowMonitors.index, {
 								<Empty.Icon>
 									<WorkflowIcon size={24} strokeWidth={1.5} />
 								</Empty.Icon>
-								<Empty.Title>{ctx.i18next.t("page.flowMonitors.empty.title")}</Empty.Title>
+								<Empty.Title>{ctx.intl.t("page.flowMonitors.empty.title")}</Empty.Title>
 								<Empty.Description>
-									{ctx.i18next.t("page.flowMonitors.empty.description")}
+									{ctx.intl.t("page.flowMonitors.empty.description")}
 								</Empty.Description>
 								<Empty.Action>
 									<LinkButton href={newHref}>
 										<PlusIcon size={20} strokeWidth={1.5} />
-										{ctx.i18next.t("page.flowMonitors.empty.cta")}
+										{ctx.intl.t("page.flowMonitors.empty.cta")}
 									</LinkButton>
 								</Empty.Action>
 							</Empty>
 						) : (
 							<Table.Container>
-								<Table aria-label={ctx.i18next.t("page.flowMonitors.table.label")}>
+								<Table aria-label={ctx.intl.t("page.flowMonitors.table.label")}>
 									<Table.Header>
 										<Table.Row>
 											<Table.Column>
-												{ctx.i18next.t("page.flowMonitors.table.columns.name")}
+												{ctx.intl.t("page.flowMonitors.table.columns.name")}
 											</Table.Column>
 											<Table.Column>
-												{ctx.i18next.t("page.flowMonitors.table.columns.interval")}
+												{ctx.intl.t("page.flowMonitors.table.columns.interval")}
 											</Table.Column>
 											<Table.Column>
-												{ctx.i18next.t("page.flowMonitors.table.columns.status")}
+												{ctx.intl.t("page.flowMonitors.table.columns.status")}
 											</Table.Column>
 											<Table.Column>
-												{ctx.i18next.t("page.flowMonitors.table.columns.lastChecked")}
+												{ctx.intl.t("page.flowMonitors.table.columns.lastChecked")}
 											</Table.Column>
 											<Table.Column align="end">
 												<span mix={[visuallyHidden()]}>
-													{ctx.i18next.t("page.flowMonitors.table.columns.actions")}
+													{ctx.intl.t("page.flowMonitors.table.columns.actions")}
 												</span>
 											</Table.Column>
 										</Table.Row>
@@ -151,12 +151,12 @@ export default createAction(routes.app.team.flowMonitors.index, {
 														</a>
 														{!monitor.is_enabled && (
 															<Badge {...badgeVariant("neutral")}>
-																{ctx.i18next.t("page.flowMonitors.table.status.disabled")}
+																{ctx.intl.t("page.flowMonitors.table.status.disabled")}
 															</Badge>
 														)}
 													</Table.Cell>
 													<Table.Cell mix={[nowrap()]}>
-														{ctx.i18next.t(
+														{ctx.intl.t(
 															`page.createFlowMonitor.form.fields.interval.options.${monitor.interval_seconds}`,
 														)}
 													</Table.Cell>
@@ -166,7 +166,7 @@ export default createAction(routes.app.team.flowMonitors.index, {
 																STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral",
 															)}
 														>
-															{ctx.i18next.t(
+															{ctx.intl.t(
 																`page.flowMonitors.table.status.${monitor.last_status ?? "pending"}`,
 															)}
 														</Badge>
@@ -192,11 +192,11 @@ export default createAction(routes.app.team.flowMonitors.index, {
 													<Table.Cell>
 														<RowMenu
 															id={menuId}
-															label={ctx.i18next.t("page.flowMonitors.table.actions.menu")}
+															label={ctx.intl.t("page.flowMonitors.table.actions.menu")}
 														>
 															<Menu.Item href={showHref}>
 																<EyeIcon size={16} strokeWidth={1.5} />
-																{ctx.i18next.t("page.flowMonitors.table.actions.view")}
+																{ctx.intl.t("page.flowMonitors.table.actions.view")}
 															</Menu.Item>
 															<Menu.Item
 																href={routes.app.team.flowMonitors.edit.href({
@@ -205,12 +205,12 @@ export default createAction(routes.app.team.flowMonitors.index, {
 																})}
 															>
 																<PencilIcon size={16} strokeWidth={1.5} />
-																{ctx.i18next.t("page.flowMonitors.table.actions.edit")}
+																{ctx.intl.t("page.flowMonitors.table.actions.edit")}
 															</Menu.Item>
 															<Menu.Separator />
 															<Menu.Item danger commandfor={deleteDialogId} command="show-modal">
 																<TrashIcon size={16} strokeWidth={1.5} />
-																{ctx.i18next.t("page.flowMonitors.table.actions.delete")}
+																{ctx.intl.t("page.flowMonitors.table.actions.delete")}
 															</Menu.Item>
 														</RowMenu>
 
@@ -221,7 +221,7 @@ export default createAction(routes.app.team.flowMonitors.index, {
 														>
 															<AlertDialog.Header>
 																<AlertDialog.Title id={titleId}>
-																	{ctx.i18next.t(
+																	{ctx.intl.t(
 																		"page.flowMonitors.table.actions.confirmation.delete",
 																		{
 																			name: monitor.name,
@@ -229,7 +229,7 @@ export default createAction(routes.app.team.flowMonitors.index, {
 																	)}
 																</AlertDialog.Title>
 																<AlertDialog.Description id={descriptionId}>
-																	{ctx.i18next.t("page.editFlowMonitor.danger.description")}
+																	{ctx.intl.t("page.editFlowMonitor.danger.description")}
 																</AlertDialog.Description>
 															</AlertDialog.Header>
 															<form
@@ -242,10 +242,10 @@ export default createAction(routes.app.team.flowMonitors.index, {
 																<input type="hidden" name="monitor_id" value={monitor.id} />
 																<AlertDialog.Footer>
 																	<AlertDialog.Cancel type="button" commandfor={deleteDialogId}>
-																		{ctx.i18next.t("page.editFlowMonitor.form.cancel")}
+																		{ctx.intl.t("page.editFlowMonitor.form.cancel")}
 																	</AlertDialog.Cancel>
 																	<Button type="submit" color="danger">
-																		{ctx.i18next.t("page.flowMonitors.table.actions.delete")}
+																		{ctx.intl.t("page.flowMonitors.table.actions.delete")}
 																	</Button>
 																</AlertDialog.Footer>
 															</form>

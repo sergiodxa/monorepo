@@ -16,6 +16,7 @@ import { Select, Switch, TextField } from "@sdxc/ui";
 
 import type { SelectDnsMonitor } from "~/database/schema";
 
+import { withPrefix } from "~/app/lib/prefixed-translate";
 import Field from "~/resources/components/field";
 
 /**
@@ -36,8 +37,8 @@ namespace DnsMonitorFormFields {
 	export interface Props {
 		/** Existing monitor values when editing; omitted when creating. */
 		monitor?: SelectDnsMonitor;
-		/** The request's i18next instance, used to read this page's `form.fields.*` copy. */
-		i18next: ReturnType<typeof getContext>["i18next"];
+		/** The request's translator, used to read this page's `form.fields.*` copy. */
+		intl: ReturnType<typeof getContext>["intl"];
 		/** Which page is rendering these fields, selecting the `page.<page>.form.fields.*` keys to read. */
 		page: "createDnsMonitor" | "editDnsMonitor";
 	}
@@ -50,8 +51,8 @@ namespace DnsMonitorFormFields {
  */
 export default function DnsMonitorFormFields(handle: Handle<DnsMonitorFormFields.Props>) {
 	return () => {
-		let { monitor, i18next, page } = handle.props;
-		let t = i18next.getFixedT(null, "translation", `page.${page}.form.fields`);
+		let { monitor, intl, page } = handle.props;
+		let t = withPrefix(intl.t, `page.${page}.form.fields`);
 
 		let intervalSeconds = monitor?.interval_seconds ?? 86_400;
 

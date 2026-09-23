@@ -171,9 +171,9 @@ export const playMonitor = createAction(routes.actions.monitor.http.play, async 
 		queued
 			? {
 					intent: "success",
-					message: ctx.i18next.t("actions.checks.queued", { name: monitor.name }),
+					message: ctx.intl.t("actions.checks.queued", { name: monitor.name }),
 				}
-			: { intent: "error", message: ctx.i18next.t("actions.checks.subscriptionRequired") },
+			: { intent: "error", message: ctx.intl.t("actions.checks.subscriptionRequired") },
 	);
 	return redirect(
 		routes.app.team.monitors.show.href({ team: ctx.team.slug, monitorId: monitor.id }),

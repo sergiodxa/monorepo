@@ -68,7 +68,7 @@ describe("TrialChangeEmail", () => {
 		expect(text).toContain("Status DOWN");
 		expect(text).toContain("Previous status UP");
 		expect(text).toContain("Response status 503");
-		expect(text).toContain("Response time 4200ms");
+		expect(text).toContain("Response time 4,200ms");
 		expect(instants(text)).toContain("Changed at Aug 3, 2026 at 2:32 PM UTC");
 	});
 

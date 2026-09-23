@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 import type { Handle } from "remix/ui";
 
 import { ArrowRightIcon, CheckIcon, Icon } from "@sdxc/icons";
@@ -174,7 +174,7 @@ namespace MarketingPageView {
  * controllers rendering it (`/features/:slug`, `/for/:slug`, `/use-cases/:slug`) share one
  * set of `t()` calls; the view itself renders only plain, already-translated strings.
  */
-export function buildMarketingPageChrome(t: TFunction): MarketingPageView.Chrome {
+export function buildMarketingPageChrome(t: Translate): MarketingPageView.Chrome {
 	return {
 		startLabel: t("landing.hero.cta.out"),
 		dashboardLabel: t("landing.hero.cta.in"),

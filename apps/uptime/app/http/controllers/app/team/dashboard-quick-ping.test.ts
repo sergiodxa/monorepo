@@ -48,8 +48,8 @@ let quickPing = (await import("./dashboard-quick-ping")).default as {
 	handler: RequestHandler<RequestContext>;
 };
 
-let { i18n: i18nextInstance } = await createTranslator({
-	resources: { en: { translation: en } },
+let { intl } = await createTranslator({
+	resources: { en },
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",
 })();
@@ -67,7 +67,7 @@ function createHtmlRenderer(ctx: RequestContext) {
 	};
 }
 
-/** Seeds `ctx.team`/`ctx.membership`/auth/i18next state, standing in for the real chain. */
+/** Seeds `ctx.team`/`ctx.membership`/auth/intl state, standing in for the real chain. */
 function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	let viewer: Viewer = {
 		id: membership.subject_id,
@@ -81,7 +81,7 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 		ctx.membership = membership;
 		ctx.teams = [team];
 		ctx.locale = "en";
-		ctx.i18next = i18nextInstance;
+		ctx.intl = intl;
 		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
 		return next();
 	};

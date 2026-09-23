@@ -1,7 +1,7 @@
 /**
  * Tests for the run-monitor button's transition rule — the single decision that separates
  * a run worth telling the visitor about from one that isn't. Exercised as a pure function
- * over a real i18next instance rather than through the DOM, since the surrounding flow is
+ * over a real translator rather than through the DOM, since the surrounding flow is
  * a `fetch` and a poll loop and the rule is the part that can quietly go wrong.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -13,19 +13,17 @@ import { describe, expect, test } from "vitest";
 
 import { transitionToast } from "./run-monitor-button";
 
-let { i18n } = await createTranslator({
+let { intl: i18n } = await createTranslator({
 	resources: {
 		en: {
-			translation: {
-				page: {
-					monitor: {
-						run: {
-							toast: {
-								up: "{{name}} is up",
-								down: "{{name}} is down",
-								degraded: "{{name}} is degraded",
-								changed: "The check you just ran changed this monitor's status.",
-							},
+			page: {
+				monitor: {
+					run: {
+						toast: {
+							up: "{$name} is up",
+							down: "{$name} is down",
+							degraded: "{$name} is degraded",
+							changed: "The check you just ran changed this monitor's status.",
 						},
 					},
 				},

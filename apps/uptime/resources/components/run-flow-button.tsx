@@ -6,14 +6,14 @@
  *
  * The toast names the failing test and line, the one signal a flow run has
  * that no other monitor type does. Its label reads through `intl(handle)`
- * rather than `ctx.i18next.t`, since it also renders server-side with no
- * request-scoped `ctx.i18next` to read from.
+ * rather than `ctx.intl.t`, since it also renders server-side with no
+ * request-scoped `ctx.intl` to read from.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 import type { Handle } from "remix/ui";
 
 import { intl } from "@sdxc/i18n/ui";
@@ -62,7 +62,7 @@ type RunFlowButtonProps = {
  * warns about the monitor's own ability to run, distinct from an outage of
  * the thing it watches, and its `detail` names the reason why.
  */
-export function runToast(t: TFunction, name: string, run: RunResponse): AppToast {
+export function runToast(t: Translate, name: string, run: RunResponse): AppToast {
 	if (run.status === null) {
 		return {
 			title: t("page.flowMonitors.run.toast.refused", { name }),

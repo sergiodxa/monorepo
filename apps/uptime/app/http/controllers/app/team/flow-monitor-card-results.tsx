@@ -79,25 +79,25 @@ export default createAction(routes.app.team.flowMonitors.cards.results, {
 			<Fragment>
 				<div mix={[flex(), flexWrap(), gap("16px"), mbe("24px")]}>
 					<StatCard
-						label={ctx.i18next.t("page.flowMonitorDetail.stats.passRate.label")}
+						label={ctx.intl.t("page.flowMonitorDetail.stats.passRate.label")}
 						value={passRate === null ? "—" : `${passRate}%`}
 					/>
 					<StatCard
-						label={ctx.i18next.t("page.flowMonitorDetail.stats.avgDuration.label")}
+						label={ctx.intl.t("page.flowMonitorDetail.stats.avgDuration.label")}
 						value={avgDuration === null ? "—" : `${avgDuration}ms`}
 					/>
 					<StatCard
-						label={ctx.i18next.t("page.flowMonitorDetail.stats.totalRuns.label")}
+						label={ctx.intl.t("page.flowMonitorDetail.stats.totalRuns.label")}
 						value={totalRuns}
 					/>
 				</div>
 
 				{last !== undefined && (last.failure_detail ?? last.error_message) !== null && (
 					<section mix={[mbe("24px")]}>
-						<h2>{ctx.i18next.t("page.flowMonitorDetail.failure.title")}</h2>
+						<h2>{ctx.intl.t("page.flowMonitorDetail.failure.title")}</h2>
 						{last.failed_test !== null && (
 							<p mix={[m(0), mbe("8px"), fontSize("sm"), weight(600)]}>
-								{ctx.i18next.t("page.flowMonitorDetail.failure.failedTest", {
+								{ctx.intl.t("page.flowMonitorDetail.failure.failedTest", {
 									test: last.failed_test,
 									line: last.failed_at_line ?? 0,
 								})}
@@ -122,37 +122,37 @@ export default createAction(routes.app.team.flowMonitors.cards.results, {
 				)}
 
 				<section mix={[mbe("24px")]}>
-					<h2>{ctx.i18next.t("page.flowMonitorDetail.source.title")}</h2>
+					<h2>{ctx.intl.t("page.flowMonitorDetail.source.title")}</h2>
 					<SourceListing source={monitor.source} failedAtLine={last?.failed_at_line ?? null} />
 				</section>
 
 				<section>
-					<h2>{ctx.i18next.t("page.flowMonitorDetail.results.title")}</h2>
+					<h2>{ctx.intl.t("page.flowMonitorDetail.results.title")}</h2>
 					{results.length === 0 ? (
 						<Empty>
 							<Empty.Description>
-								{ctx.i18next.t("page.flowMonitorDetail.results.empty")}
+								{ctx.intl.t("page.flowMonitorDetail.results.empty")}
 							</Empty.Description>
 						</Empty>
 					) : (
 						<Table.Container>
-							<Table aria-label={ctx.i18next.t("page.flowMonitorDetail.results.label")}>
+							<Table aria-label={ctx.intl.t("page.flowMonitorDetail.results.label")}>
 								<Table.Header>
 									<Table.Row>
 										<Table.Column>
-											{ctx.i18next.t("page.flowMonitorDetail.results.columns.time")}
+											{ctx.intl.t("page.flowMonitorDetail.results.columns.time")}
 										</Table.Column>
 										<Table.Column>
-											{ctx.i18next.t("page.flowMonitorDetail.results.columns.status")}
+											{ctx.intl.t("page.flowMonitorDetail.results.columns.status")}
 										</Table.Column>
 										<Table.Column>
-											{ctx.i18next.t("page.flowMonitorDetail.results.columns.tests")}
+											{ctx.intl.t("page.flowMonitorDetail.results.columns.tests")}
 										</Table.Column>
 										<Table.Column>
-											{ctx.i18next.t("page.flowMonitorDetail.results.columns.requests")}
+											{ctx.intl.t("page.flowMonitorDetail.results.columns.requests")}
 										</Table.Column>
 										<Table.Column>
-											{ctx.i18next.t("page.flowMonitorDetail.results.columns.duration")}
+											{ctx.intl.t("page.flowMonitorDetail.results.columns.duration")}
 										</Table.Column>
 									</Table.Row>
 								</Table.Header>
@@ -173,7 +173,7 @@ export default createAction(routes.app.team.flowMonitors.cards.results, {
 											</Table.Cell>
 											<Table.Cell>
 												<Badge {...badgeVariant(STATUS_BADGE_TONE[result.status] ?? "neutral")}>
-													{ctx.i18next.t(`page.flowMonitors.table.status.${result.status}`)}
+													{ctx.intl.t(`page.flowMonitors.table.status.${result.status}`)}
 												</Badge>
 											</Table.Cell>
 											<Table.Cell>

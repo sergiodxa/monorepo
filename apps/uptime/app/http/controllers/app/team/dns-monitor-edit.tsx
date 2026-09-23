@@ -63,11 +63,11 @@ export default createAction(routes.app.team.dnsMonitors.edit, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
-					heading={ctx.i18next.t("page.editDnsMonitor.header.title")}
+					intl={ctx.intl}
+					heading={ctx.intl.t("page.editDnsMonitor.header.title")}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("app.layout.sidebar.navigation.items.dnsMonitors"),
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.dnsMonitors"),
 							href: routes.app.team.dnsMonitors.index.href({ team: ctx.team.slug }),
 						},
 						{ label: monitor.name, href: showHref },
@@ -83,24 +83,22 @@ export default createAction(routes.app.team.dnsMonitors.edit, {
 
 								<SettingsSection
 									id="basics"
-									title={ctx.i18next.t("page.editDnsMonitor.form.sections.basics.title")}
-									description={ctx.i18next.t(
-										"page.editDnsMonitor.form.sections.basics.description",
-									)}
+									title={ctx.intl.t("page.editDnsMonitor.form.sections.basics.title")}
+									description={ctx.intl.t("page.editDnsMonitor.form.sections.basics.description")}
 								>
 									<SettingsSection.Card>
 										<SettingsSection.Body>
 											<DnsMonitorFormFields
 												monitor={monitor}
-												i18next={ctx.i18next}
+												intl={ctx.intl}
 												page="editDnsMonitor"
 											/>
 										</SettingsSection.Body>
 										<SettingsSection.Footer>
 											<LinkButton variant="outline" href={showHref}>
-												{ctx.i18next.t("page.editDnsMonitor.form.cancel")}
+												{ctx.intl.t("page.editDnsMonitor.form.cancel")}
 											</LinkButton>
-											<Button type="submit">{ctx.i18next.t("page.editDnsMonitor.form.cta")}</Button>
+											<Button type="submit">{ctx.intl.t("page.editDnsMonitor.form.cta")}</Button>
 										</SettingsSection.Footer>
 									</SettingsSection.Card>
 								</SettingsSection>
@@ -114,21 +112,21 @@ export default createAction(routes.app.team.dnsMonitors.edit, {
 
 								<SettingsSection
 									id="zone-file"
-									title={ctx.i18next.t("page.editDnsMonitor.zoneFileImport.title")}
-									description={ctx.i18next.t("page.editDnsMonitor.zoneFileImport.description")}
+									title={ctx.intl.t("page.editDnsMonitor.zoneFileImport.title")}
+									description={ctx.intl.t("page.editDnsMonitor.zoneFileImport.description")}
 								>
 									<SettingsSection.Card>
 										<SettingsSection.Body>
 											<Field
-												label={ctx.i18next.t("page.editDnsMonitor.form.fields.zoneFile.label")}
-												description={ctx.i18next.t(
+												label={ctx.intl.t("page.editDnsMonitor.form.fields.zoneFile.label")}
+												description={ctx.intl.t(
 													"page.editDnsMonitor.form.fields.zoneFile.description",
 												)}
 											>
 												<TextArea
 													name="zone_file"
 													required
-													placeholder={ctx.i18next.t(
+													placeholder={ctx.intl.t(
 														"page.editDnsMonitor.form.fields.zoneFile.placeholder",
 													)}
 												/>
@@ -136,15 +134,15 @@ export default createAction(routes.app.team.dnsMonitors.edit, {
 
 											<Description>
 												{monitor.zone_file_imported_at === null
-													? ctx.i18next.t("page.editDnsMonitor.zoneFileImport.neverImported")
-													: ctx.i18next.t("page.editDnsMonitor.zoneFileImport.lastImported", {
+													? ctx.intl.t("page.editDnsMonitor.zoneFileImport.neverImported")
+													: ctx.intl.t("page.editDnsMonitor.zoneFileImport.lastImported", {
 															date: new Date(monitor.zone_file_imported_at).toLocaleString(),
 														})}
 											</Description>
 										</SettingsSection.Body>
 										<SettingsSection.Footer>
 											<Button type="submit">
-												{ctx.i18next.t("page.editDnsMonitor.zoneFileImport.cta")}
+												{ctx.intl.t("page.editDnsMonitor.zoneFileImport.cta")}
 											</Button>
 										</SettingsSection.Footer>
 									</SettingsSection.Card>
@@ -154,13 +152,13 @@ export default createAction(routes.app.team.dnsMonitors.edit, {
 							<SettingsSection
 								id="danger"
 								tone="danger"
-								title={ctx.i18next.t("page.editDnsMonitor.dangerZone.title")}
-								description={ctx.i18next.t("page.editDnsMonitor.dangerZone.description")}
+								title={ctx.intl.t("page.editDnsMonitor.dangerZone.title")}
+								description={ctx.intl.t("page.editDnsMonitor.dangerZone.description")}
 							>
 								<SettingsSection.Card tone="danger">
 									<SettingsSection.Body>
 										<p mix={[m(0), fontSize("sm"), fg("danger")]}>
-											{ctx.i18next.t("page.editDnsMonitor.dangerZone.warning")}
+											{ctx.intl.t("page.editDnsMonitor.dangerZone.warning")}
 										</p>
 									</SettingsSection.Body>
 									<SettingsSection.Footer tone="danger">
@@ -170,7 +168,7 @@ export default createAction(routes.app.team.dnsMonitors.edit, {
 											commandfor={DELETE_DIALOG_ID}
 											command="show-modal"
 										>
-											{ctx.i18next.t("page.editDnsMonitor.dangerZone.deleteMonitor")}
+											{ctx.intl.t("page.editDnsMonitor.dangerZone.deleteMonitor")}
 										</Button>
 									</SettingsSection.Footer>
 								</SettingsSection.Card>
@@ -183,12 +181,12 @@ export default createAction(routes.app.team.dnsMonitors.edit, {
 							>
 								<AlertDialog.Header>
 									<AlertDialog.Title id={`${DELETE_DIALOG_ID}-title`}>
-										{ctx.i18next.t("page.dnsMonitors.table.confirmation.delete", {
+										{ctx.intl.t("page.dnsMonitors.table.confirmation.delete", {
 											name: monitor.name,
 										})}
 									</AlertDialog.Title>
 									<AlertDialog.Description id={`${DELETE_DIALOG_ID}-description`}>
-										{ctx.i18next.t("page.editDnsMonitor.dangerZone.deleteDescription")}
+										{ctx.intl.t("page.editDnsMonitor.dangerZone.deleteDescription")}
 									</AlertDialog.Description>
 								</AlertDialog.Header>
 								<form
@@ -199,10 +197,10 @@ export default createAction(routes.app.team.dnsMonitors.edit, {
 									<input type="hidden" name="monitor_id" value={monitor.id} />
 									<AlertDialog.Footer>
 										<AlertDialog.Cancel type="button" commandfor={DELETE_DIALOG_ID}>
-											{ctx.i18next.t("page.editDnsMonitor.form.cancel")}
+											{ctx.intl.t("page.editDnsMonitor.form.cancel")}
 										</AlertDialog.Cancel>
 										<Button type="submit" color="danger">
-											{ctx.i18next.t("page.dnsMonitors.table.actions.delete")}
+											{ctx.intl.t("page.dnsMonitors.table.actions.delete")}
 										</Button>
 									</AlertDialog.Footer>
 								</form>

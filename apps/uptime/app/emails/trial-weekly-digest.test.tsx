@@ -63,7 +63,7 @@ describe("TrialWeeklyDigestEmail", () => {
 		expect(text).toContain("example.com over the last seven days");
 		expect(text).toContain("Checks run 168");
 		expect(text).toContain("Uptime 99.4%");
-		expect(text).toContain("Slowest response 2100ms");
+		expect(text).toContain("Slowest response 2,100ms");
 		expect(text).toContain("7 days ago");
 		expect(text).toContain("Today");
 	});

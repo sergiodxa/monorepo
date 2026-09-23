@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 import type { Address } from "@sdxc/mail";
 import type { Handle, RemixElement } from "remix/ui";
 
@@ -51,7 +51,7 @@ export namespace TrialDailyDigestEmail {
 		/** Language the copy is produced in, recorded beside the translator it came from. */
 		locale: string;
 		/** Translator already bound to {@link locale} by the sender. */
-		t: TFunction;
+		t: Translate;
 	}
 }
 
@@ -63,7 +63,7 @@ namespace TargetSection {
 		/** Whether to head the section with the URL; false when the email covers only it. */
 		headed: boolean;
 		/** Translator already bound to the reader's language. */
-		t: TFunction;
+		t: Translate;
 	}
 }
 

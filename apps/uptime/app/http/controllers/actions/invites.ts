@@ -17,7 +17,7 @@ import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
 import Invite from "~/app/data/invite";
-import { DEFAULT_EMAIL_LOCALE } from "~/app/emails/locale";
+import { DEFAULT_EMAIL_LOCALE, emailTranslator } from "~/app/emails/locale";
 import { TeamInviteEmail } from "~/app/emails/team-invite";
 import { CreateInviteSchema, RevokeInviteSchema } from "~/app/http/validators/invite";
 import { recordCost } from "~/app/services/cost";
@@ -59,7 +59,7 @@ export const createInvite = createAction(routes.teamAdminActions.invite.create, 
 			email,
 			url,
 			locale: DEFAULT_EMAIL_LOCALE,
-			t: ctx.i18next.getFixedT(DEFAULT_EMAIL_LOCALE),
+			t: (await emailTranslator(DEFAULT_EMAIL_LOCALE)).t,
 		}),
 	);
 

@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 import type { Handle } from "remix/ui";
 
 import { formatDate } from "@sdxc/dates";
@@ -44,7 +44,7 @@ export namespace TeamDigestMonitorList {
 		/** The monitors to list, in the order they should be read. */
 		monitors: TeamDigestMonitor[];
 		/** Translator already bound to the reader's language. */
-		t: TFunction;
+		t: Translate;
 	}
 }
 
@@ -258,7 +258,7 @@ export namespace TeamDigestFooter {
 		/** Absolute URL of the reader's email settings, anchor included. */
 		preferencesUrl: string;
 		/** Translator already bound to the reader's language. */
-		t: TFunction;
+		t: Translate;
 	}
 }
 

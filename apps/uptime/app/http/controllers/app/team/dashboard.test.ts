@@ -1,6 +1,6 @@
 /**
  * Tests for the team dashboard shell. `requireUser`/`requireTeam`/`i18n` are bypassed by
- * seeding `ctx.team`/`ctx.membership`/`ctx.i18next` directly, standing in for a real
+ * seeding `ctx.team`/`ctx.membership`/`ctx.intl` directly, standing in for a real
  * session cookie, `auth` middleware, and a DB-backed locale lookup. `ctx.render` uses a
  * minimal renderer with a no-op `resolveFrame`, since the dashboard renders `<Frame>`
  * placeholders for monitors and analytics.
@@ -41,13 +41,13 @@ function createHtmlRenderer(ctx: RequestContext) {
 	};
 }
 
-let { i18n: i18nextInstance } = await createTranslator({
-	resources: { en: { translation: en } },
+let { intl } = await createTranslator({
+	resources: { en },
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",
 })();
 
-/** Seeds ctx.team/ctx.membership/ctx.teams/ctx.locale/ctx.i18next + Auth, standing in for requireUser+requireTeam+i18n. */
+/** Seeds ctx.team/ctx.membership/ctx.teams/ctx.locale/ctx.intl + Auth, standing in for requireUser+requireTeam+i18n. */
 function seedTeam(
 	team: SelectTeam,
 	membership: SelectMembership,
@@ -65,7 +65,7 @@ function seedTeam(
 		ctx.membership = membership;
 		ctx.teams = teamsList;
 		ctx.locale = "en";
-		ctx.i18next = i18nextInstance;
+		ctx.intl = intl;
 		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
 		return next();
 	};

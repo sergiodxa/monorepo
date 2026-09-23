@@ -25,6 +25,7 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { storedMonitorScope } from "~/app/lib/monitor-scope";
+import { withPrefix } from "~/app/lib/prefixed-translate";
 import FormPage from "~/resources/components/form-page";
 import MonitorScopeField from "~/resources/components/monitor-scope-field";
 import SettingsSection, { SETTINGS_SWITCH_GAP } from "~/resources/components/settings-section";
@@ -56,9 +57,9 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 		let scopeGroups = await listScopeMonitors(ctx.db, ctx.team.id);
 		let isActive =
 			window.ended_early_at === null && MaintenanceWindow.isActiveAt(window, Date.now());
-		let heading = ctx.i18next.t("page.editMaintenance.header.title", { name: window.name });
+		let heading = ctx.intl.t("page.editMaintenance.header.title", { name: window.name });
 		let indexHref = routes.app.team.maintenanceWindows.index.href({ team: ctx.team.slug });
-		let fields = ctx.i18next.getFixedT(null, "translation", "page.maintenanceWindows.form.fields");
+		let fields = withPrefix(ctx.intl.t, "page.maintenanceWindows.form.fields");
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · ${heading}`}>
@@ -68,11 +69,11 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
+					intl={ctx.intl}
 					heading={heading}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("app.layout.sidebar.navigation.items.maintenance"),
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.maintenance"),
 							href: indexHref,
 						},
 						{ label: window.name },
@@ -89,8 +90,8 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 
 								<SettingsSection
 									id="coverage"
-									title={ctx.i18next.t("page.editMaintenance.form.sections.coverage.title")}
-									description={ctx.i18next.t(
+									title={ctx.intl.t("page.editMaintenance.form.sections.coverage.title")}
+									description={ctx.intl.t(
 										"page.editMaintenance.form.sections.coverage.description",
 									)}
 								>
@@ -108,7 +109,7 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 												groups={scopeGroups}
 												selected={storedMonitorScope(window)}
 												description={fields("scope.description")}
-												i18next={ctx.i18next}
+												intl={ctx.intl}
 											/>
 										</SettingsSection.Body>
 									</SettingsSection.Card>
@@ -116,8 +117,8 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 
 								<SettingsSection
 									id="schedule"
-									title={ctx.i18next.t("page.editMaintenance.form.sections.schedule.title")}
-									description={ctx.i18next.t(
+									title={ctx.intl.t("page.editMaintenance.form.sections.schedule.title")}
+									description={ctx.intl.t(
 										"page.editMaintenance.form.sections.schedule.description",
 									)}
 								>
@@ -152,8 +153,8 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 
 								<SettingsSection
 									id="behavior"
-									title={ctx.i18next.t("page.editMaintenance.form.sections.behavior.title")}
-									description={ctx.i18next.t(
+									title={ctx.intl.t("page.editMaintenance.form.sections.behavior.title")}
+									description={ctx.intl.t(
 										"page.editMaintenance.form.sections.behavior.description",
 									)}
 								>
@@ -182,8 +183,8 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 
 								<SettingsSection
 									id="recurrence"
-									title={ctx.i18next.t("page.editMaintenance.form.sections.recurrence.title")}
-									description={ctx.i18next.t(
+									title={ctx.intl.t("page.editMaintenance.form.sections.recurrence.title")}
+									description={ctx.intl.t(
 										"page.editMaintenance.form.sections.recurrence.description",
 									)}
 								>
@@ -207,11 +208,9 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 										</SettingsSection.Body>
 										<SettingsSection.Footer>
 											<LinkButton variant="outline" href={indexHref}>
-												{ctx.i18next.t("page.editMaintenance.form.cancel")}
+												{ctx.intl.t("page.editMaintenance.form.cancel")}
 											</LinkButton>
-											<Button type="submit">
-												{ctx.i18next.t("page.editMaintenance.form.cta")}
-											</Button>
+											<Button type="submit">{ctx.intl.t("page.editMaintenance.form.cta")}</Button>
 										</SettingsSection.Footer>
 									</SettingsSection.Card>
 								</SettingsSection>
@@ -220,8 +219,8 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 							{isActive && (
 								<SettingsSection
 									id="end-now"
-									title={ctx.i18next.t("page.editMaintenance.endNow.title")}
-									description={ctx.i18next.t("page.editMaintenance.endNow.description")}
+									title={ctx.intl.t("page.editMaintenance.endNow.title")}
+									description={ctx.intl.t("page.editMaintenance.endNow.description")}
 								>
 									<SettingsSection.Card>
 										<form
@@ -231,12 +230,12 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 											<input type="hidden" name="window_id" value={window.id} />
 											<SettingsSection.Body>
 												<p mix={[m(0), fontSize("sm"), fg("neutral.muted")]}>
-													{ctx.i18next.t("page.editMaintenance.endNow.warning")}
+													{ctx.intl.t("page.editMaintenance.endNow.warning")}
 												</p>
 											</SettingsSection.Body>
 											<SettingsSection.Footer>
 												<Button type="submit" variant="outline">
-													{ctx.i18next.t("page.editMaintenance.endNow.cta")}
+													{ctx.intl.t("page.editMaintenance.endNow.cta")}
 												</Button>
 											</SettingsSection.Footer>
 										</form>
@@ -247,13 +246,13 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 							<SettingsSection
 								id="danger"
 								tone="danger"
-								title={ctx.i18next.t("page.editMaintenance.danger.title")}
-								description={ctx.i18next.t("page.editMaintenance.danger.description")}
+								title={ctx.intl.t("page.editMaintenance.danger.title")}
+								description={ctx.intl.t("page.editMaintenance.danger.description")}
 							>
 								<SettingsSection.Card tone="danger">
 									<SettingsSection.Body>
 										<p mix={[m(0), fontSize("sm"), fg("danger")]}>
-											{ctx.i18next.t("page.editMaintenance.danger.warning")}
+											{ctx.intl.t("page.editMaintenance.danger.warning")}
 										</p>
 									</SettingsSection.Body>
 									<SettingsSection.Footer tone="danger">
@@ -263,7 +262,7 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 											commandfor={DELETE_DIALOG_ID}
 											command="show-modal"
 										>
-											{ctx.i18next.t("page.editMaintenance.danger.delete.trigger")}
+											{ctx.intl.t("page.editMaintenance.danger.delete.trigger")}
 										</Button>
 									</SettingsSection.Footer>
 								</SettingsSection.Card>
@@ -276,10 +275,10 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 							>
 								<AlertDialog.Header>
 									<AlertDialog.Title id={`${DELETE_DIALOG_ID}-title`}>
-										{ctx.i18next.t("page.editMaintenance.danger.delete.confirmTitle")}
+										{ctx.intl.t("page.editMaintenance.danger.delete.confirmTitle")}
 									</AlertDialog.Title>
 									<AlertDialog.Description id={`${DELETE_DIALOG_ID}-description`}>
-										{ctx.i18next.t("page.editMaintenance.danger.delete.confirmDescription")}
+										{ctx.intl.t("page.editMaintenance.danger.delete.confirmDescription")}
 									</AlertDialog.Description>
 								</AlertDialog.Header>
 								<form
@@ -290,10 +289,10 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 									<input type="hidden" name="window_id" value={window.id} />
 									<AlertDialog.Footer>
 										<AlertDialog.Cancel commandfor={DELETE_DIALOG_ID}>
-											{ctx.i18next.t("page.editMaintenance.form.cancel")}
+											{ctx.intl.t("page.editMaintenance.form.cancel")}
 										</AlertDialog.Cancel>
 										<AlertDialog.Action commandfor={DELETE_DIALOG_ID} type="submit">
-											{ctx.i18next.t("page.editMaintenance.danger.delete.confirm")}
+											{ctx.intl.t("page.editMaintenance.danger.delete.confirm")}
 										</AlertDialog.Action>
 									</AlertDialog.Footer>
 								</form>

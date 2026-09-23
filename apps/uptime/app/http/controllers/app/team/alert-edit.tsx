@@ -25,6 +25,7 @@ import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { DEFAULT_COOLDOWN_MINUTES, MIN_REPEAT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
 import { storedMonitorScope } from "~/app/lib/monitor-scope";
+import { withPrefix } from "~/app/lib/prefixed-translate";
 import AlertChannelFields from "~/resources/components/alert-channel-fields";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
@@ -52,7 +53,7 @@ export default createAction(routes.app.team.alerts.edit, {
 		let scopeGroups = await listScopeMonitors(ctx.db, ctx.team.id);
 
 		/** Same fixed namespace the create page reads, so both pages label fields identically. */
-		let t = ctx.i18next.getFixedT(null, "translation", "page.alerts.form.fields");
+		let t = withPrefix(ctx.intl.t, "page.alerts.form.fields");
 		let config = alert.config;
 		let indexHref = routes.app.team.alerts.index.href({ team: ctx.team.slug });
 
@@ -64,11 +65,11 @@ export default createAction(routes.app.team.alerts.edit, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
-					heading={ctx.i18next.t("page.editAlert.header.title")}
+					intl={ctx.intl}
+					heading={ctx.intl.t("page.editAlert.header.title")}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("app.layout.sidebar.navigation.items.alerts"),
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.alerts"),
 							href: indexHref,
 						},
 						{ label: alert.name },
@@ -85,8 +86,8 @@ export default createAction(routes.app.team.alerts.edit, {
 
 								<SettingsSection
 									id="basics"
-									title={ctx.i18next.t("page.editAlert.form.sections.basics.title")}
-									description={ctx.i18next.t("page.editAlert.form.sections.basics.description")}
+									title={ctx.intl.t("page.editAlert.form.sections.basics.title")}
+									description={ctx.intl.t("page.editAlert.form.sections.basics.description")}
 								>
 									<SettingsSection.Card>
 										<SettingsSection.Body>
@@ -101,7 +102,7 @@ export default createAction(routes.app.team.alerts.edit, {
 												groups={scopeGroups}
 												selected={storedMonitorScope(alert)}
 												description={t("scope.description")}
-												i18next={ctx.i18next}
+												intl={ctx.intl}
 											/>
 										</SettingsSection.Body>
 									</SettingsSection.Card>
@@ -109,20 +110,20 @@ export default createAction(routes.app.team.alerts.edit, {
 
 								<SettingsSection
 									id="channel"
-									title={ctx.i18next.t("page.editAlert.form.sections.channel.title")}
-									description={ctx.i18next.t("page.editAlert.form.sections.channel.description")}
+									title={ctx.intl.t("page.editAlert.form.sections.channel.title")}
+									description={ctx.intl.t("page.editAlert.form.sections.channel.description")}
 								>
 									<SettingsSection.Card>
 										<SettingsSection.Body>
-											<AlertChannelFields i18next={ctx.i18next} config={config} />
+											<AlertChannelFields intl={ctx.intl} config={config} />
 										</SettingsSection.Body>
 									</SettingsSection.Card>
 								</SettingsSection>
 
 								<SettingsSection
 									id="delivery"
-									title={ctx.i18next.t("page.editAlert.form.sections.delivery.title")}
-									description={ctx.i18next.t("page.editAlert.form.sections.delivery.description")}
+									title={ctx.intl.t("page.editAlert.form.sections.delivery.title")}
+									description={ctx.intl.t("page.editAlert.form.sections.delivery.description")}
 								>
 									<SettingsSection.Card>
 										<SettingsSection.Body>
@@ -156,9 +157,9 @@ export default createAction(routes.app.team.alerts.edit, {
 										</SettingsSection.Body>
 										<SettingsSection.Footer>
 											<LinkButton variant="outline" href={indexHref}>
-												{ctx.i18next.t("page.editAlert.form.cancel")}
+												{ctx.intl.t("page.editAlert.form.cancel")}
 											</LinkButton>
-											<Button type="submit">{ctx.i18next.t("page.editAlert.form.cta")}</Button>
+											<Button type="submit">{ctx.intl.t("page.editAlert.form.cta")}</Button>
 										</SettingsSection.Footer>
 									</SettingsSection.Card>
 								</SettingsSection>
@@ -167,13 +168,13 @@ export default createAction(routes.app.team.alerts.edit, {
 							<SettingsSection
 								id="danger"
 								tone="danger"
-								title={ctx.i18next.t("page.editAlert.danger.title")}
-								description={ctx.i18next.t("page.editAlert.danger.description")}
+								title={ctx.intl.t("page.editAlert.danger.title")}
+								description={ctx.intl.t("page.editAlert.danger.description")}
 							>
 								<SettingsSection.Card tone="danger">
 									<SettingsSection.Body>
 										<p mix={[m(0), fontSize("sm"), fg("danger")]}>
-											{ctx.i18next.t("page.editAlert.danger.warning")}
+											{ctx.intl.t("page.editAlert.danger.warning")}
 										</p>
 									</SettingsSection.Body>
 									<SettingsSection.Footer tone="danger">
@@ -183,7 +184,7 @@ export default createAction(routes.app.team.alerts.edit, {
 											commandfor={DELETE_ALERT_DIALOG_ID}
 											command="show-modal"
 										>
-											{ctx.i18next.t("page.editAlert.danger.delete.trigger")}
+											{ctx.intl.t("page.editAlert.danger.delete.trigger")}
 										</Button>
 									</SettingsSection.Footer>
 								</SettingsSection.Card>
@@ -196,10 +197,10 @@ export default createAction(routes.app.team.alerts.edit, {
 							>
 								<AlertDialog.Header>
 									<AlertDialog.Title id={DELETE_ALERT_TITLE_ID}>
-										{ctx.i18next.t("page.editAlert.danger.delete.confirmTitle")}
+										{ctx.intl.t("page.editAlert.danger.delete.confirmTitle")}
 									</AlertDialog.Title>
 									<AlertDialog.Description id={DELETE_ALERT_DESCRIPTION_ID}>
-										{ctx.i18next.t("page.editAlert.danger.delete.confirmDescription")}
+										{ctx.intl.t("page.editAlert.danger.delete.confirmDescription")}
 									</AlertDialog.Description>
 								</AlertDialog.Header>
 								<form
@@ -210,10 +211,10 @@ export default createAction(routes.app.team.alerts.edit, {
 									<input type="hidden" name="alert_id" value={alert.id} />
 									<AlertDialog.Footer>
 										<AlertDialog.Cancel type="button" commandfor={DELETE_ALERT_DIALOG_ID}>
-											{ctx.i18next.t("page.editAlert.form.cancel")}
+											{ctx.intl.t("page.editAlert.form.cancel")}
 										</AlertDialog.Cancel>
 										<Button type="submit" color="danger">
-											{ctx.i18next.t("page.editAlert.danger.delete.confirm")}
+											{ctx.intl.t("page.editAlert.danger.delete.confirm")}
 										</Button>
 									</AlertDialog.Footer>
 								</form>

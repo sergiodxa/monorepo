@@ -35,7 +35,7 @@ export default createController(routes.logout, {
 		/** GET /logout — confirmation page. */
 		index(ctx) {
 			return ctx.render(
-				<DocumentLayout title={ctx.i18next.t("page.logout.title")}>
+				<DocumentLayout title={ctx.intl.t("page.logout.title")}>
 					<main mix={[flex(), flexCol(), minBs("100vh")]}>
 						<div
 							mix={[
@@ -50,9 +50,9 @@ export default createController(routes.logout, {
 								dark(border("oklch(0.42 0.012 250)")),
 							]}
 						>
-							<h1 mix={[m(0)]}>{ctx.i18next.t("page.logout.title")}</h1>
+							<h1 mix={[m(0)]}>{ctx.intl.t("page.logout.title")}</h1>
 							<form method="post" action={routes.logout.action.href()} data-rmx-document="">
-								<Button type="submit">{ctx.i18next.t("page.logout.cta")}</Button>
+								<Button type="submit">{ctx.intl.t("page.logout.cta")}</Button>
 							</form>
 						</div>
 					</main>

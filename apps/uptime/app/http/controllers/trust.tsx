@@ -59,146 +59,146 @@ const PROBE_REGIONS = ["afr", "apac", "eeur", "enam", "me", "oc", "sam", "weur",
  */
 export default createAction(routes.trust, async (ctx) => {
 	let isSignedIn = getViewer() !== null;
-	let chrome = buildMarketingChrome(ctx.i18next.t);
+	let chrome = buildMarketingChrome(ctx.intl.t);
 
 	return ctx.render(
 		<DocumentLayout
-			title={ctx.i18next.t("trust.meta.title")}
+			title={ctx.intl.t("trust.meta.title")}
 			locale={ctx.locale}
 			seo={{
-				description: ctx.i18next.t("trust.meta.description"),
+				description: ctx.intl.t("trust.meta.description"),
 				canonical: SEO.canonical(ctx.url),
 			}}
 		>
 			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
 				<article mix={[maxIs("720px"), m(0, "auto"), pbs("48px"), pi("24px"), pbe("80px")]}>
 					<Typeset preset="reading">
-						<h1>{ctx.i18next.t("trust.heading")}</h1>
-						<p>{ctx.i18next.t("trust.intro")}</p>
+						<h1>{ctx.intl.t("trust.heading")}</h1>
+						<p>{ctx.intl.t("trust.intro")}</p>
 
-						<h2>{ctx.i18next.t("trust.sections.whoRuns.title")}</h2>
+						<h2>{ctx.intl.t("trust.sections.whoRuns.title")}</h2>
 						<p>
-							{ctx.i18next.t("trust.sections.whoRuns.bodyPrefix")}
+							{ctx.intl.t("trust.sections.whoRuns.bodyPrefix")}
 							<a href={FOUNDER_URL} target="_blank" rel="noreferrer">
-								{ctx.i18next.t("trust.sections.whoRuns.founderName")}
+								{ctx.intl.t("trust.sections.whoRuns.founderName")}
 							</a>
-							{ctx.i18next.t("trust.sections.whoRuns.bodySuffix")}
+							{ctx.intl.t("trust.sections.whoRuns.bodySuffix")}
 						</p>
-						<p>{ctx.i18next.t("trust.sections.whoRuns.second")}</p>
+						<p>{ctx.intl.t("trust.sections.whoRuns.second")}</p>
 
-						<h2>{ctx.i18next.t("trust.sections.source.title")}</h2>
+						<h2>{ctx.intl.t("trust.sections.source.title")}</h2>
 						<p>
-							{ctx.i18next.t("trust.sections.source.bodyPrefix")}
+							{ctx.intl.t("trust.sections.source.bodyPrefix")}
 							<a href={SOURCE_URL} target="_blank" rel="noreferrer">
-								{ctx.i18next.t("trust.sections.source.linkText")}
+								{ctx.intl.t("trust.sections.source.linkText")}
 							</a>
-							{ctx.i18next.t("trust.sections.source.bodySuffix")}
+							{ctx.intl.t("trust.sections.source.bodySuffix")}
 						</p>
-						<p>{ctx.i18next.t("trust.sections.source.caveat")}</p>
+						<p>{ctx.intl.t("trust.sections.source.caveat")}</p>
 
-						<h2>{ctx.i18next.t("trust.sections.ownStatus.title")}</h2>
+						<h2>{ctx.intl.t("trust.sections.ownStatus.title")}</h2>
 						<p>
-							{ctx.i18next.t("trust.sections.ownStatus.bodyPrefix")}
+							{ctx.intl.t("trust.sections.ownStatus.bodyPrefix")}
 							<a href={OWN_STATUS_PAGE_URL} target="_blank" rel="noreferrer">
-								{ctx.i18next.t("trust.sections.ownStatus.linkText")}
+								{ctx.intl.t("trust.sections.ownStatus.linkText")}
 							</a>
-							{ctx.i18next.t("trust.sections.ownStatus.bodySuffix")}
+							{ctx.intl.t("trust.sections.ownStatus.bodySuffix")}
 						</p>
-						<p>{ctx.i18next.t("trust.sections.ownStatus.scope")}</p>
+						<p>{ctx.intl.t("trust.sections.ownStatus.scope")}</p>
 
-						<h2>{ctx.i18next.t("trust.sections.whereChecksRun.title")}</h2>
-						<p>{ctx.i18next.t("trust.sections.whereChecksRun.intro")}</p>
+						<h2>{ctx.intl.t("trust.sections.whereChecksRun.title")}</h2>
+						<p>{ctx.intl.t("trust.sections.whereChecksRun.intro")}</p>
 						<ul>
 							{PROBE_REGIONS.map((region) => (
-								<li key={region}>{ctx.i18next.t(`trust.regions.${region}`)}</li>
+								<li key={region}>{ctx.intl.t(`trust.regions.${region}`)}</li>
 							))}
 						</ul>
-						<p>{ctx.i18next.t("trust.sections.whereChecksRun.hint")}</p>
-						<p>{ctx.i18next.t("trust.sections.whereChecksRun.timing")}</p>
+						<p>{ctx.intl.t("trust.sections.whereChecksRun.hint")}</p>
+						<p>{ctx.intl.t("trust.sections.whereChecksRun.timing")}</p>
 
-						<h2>{ctx.i18next.t("trust.sections.incidents.title")}</h2>
-						<p>{ctx.i18next.t("trust.sections.incidents.classification")}</p>
+						<h2>{ctx.intl.t("trust.sections.incidents.title")}</h2>
+						<p>{ctx.intl.t("trust.sections.incidents.classification")}</p>
 						<p>
-							<strong>{ctx.i18next.t("trust.sections.incidents.noConfirmation")}</strong>
+							<strong>{ctx.intl.t("trust.sections.incidents.noConfirmation")}</strong>
 						</p>
-						<p>{ctx.i18next.t("trust.sections.incidents.falsePositivesIntro")}</p>
+						<p>{ctx.intl.t("trust.sections.incidents.falsePositivesIntro")}</p>
 						<ul>
 							<li>
-								<strong>{ctx.i18next.t("trust.sections.incidents.infraFault.label")}</strong>{" "}
-								{ctx.i18next.t("trust.sections.incidents.infraFault.body")}
+								<strong>{ctx.intl.t("trust.sections.incidents.infraFault.label")}</strong>{" "}
+								{ctx.intl.t("trust.sections.incidents.infraFault.body")}
 							</li>
 							<li>
-								<strong>{ctx.i18next.t("trust.sections.incidents.yourThresholds.label")}</strong>{" "}
-								{ctx.i18next.t("trust.sections.incidents.yourThresholds.body")}
+								<strong>{ctx.intl.t("trust.sections.incidents.yourThresholds.label")}</strong>{" "}
+								{ctx.intl.t("trust.sections.incidents.yourThresholds.body")}
 							</li>
 							<li>
-								<strong>{ctx.i18next.t("trust.sections.incidents.cooldown.label")}</strong>{" "}
-								{ctx.i18next.t("trust.sections.incidents.cooldown.body")}
+								<strong>{ctx.intl.t("trust.sections.incidents.cooldown.label")}</strong>{" "}
+								{ctx.intl.t("trust.sections.incidents.cooldown.body")}
 							</li>
 							<li>
-								<strong>{ctx.i18next.t("trust.sections.incidents.recovery.label")}</strong>{" "}
-								{ctx.i18next.t("trust.sections.incidents.recovery.body")}
+								<strong>{ctx.intl.t("trust.sections.incidents.recovery.label")}</strong>{" "}
+								{ctx.intl.t("trust.sections.incidents.recovery.body")}
 							</li>
 							<li>
-								<strong>{ctx.i18next.t("trust.sections.incidents.maintenance.label")}</strong>{" "}
-								{ctx.i18next.t("trust.sections.incidents.maintenance.body")}
+								<strong>{ctx.intl.t("trust.sections.incidents.maintenance.label")}</strong>{" "}
+								{ctx.intl.t("trust.sections.incidents.maintenance.body")}
 							</li>
 							<li>
-								<strong>{ctx.i18next.t("trust.sections.incidents.accounting.label")}</strong>{" "}
-								{ctx.i18next.t("trust.sections.incidents.accounting.body")}
+								<strong>{ctx.intl.t("trust.sections.incidents.accounting.label")}</strong>{" "}
+								{ctx.intl.t("trust.sections.incidents.accounting.body")}
 							</li>
 						</ul>
 
-						<h2>{ctx.i18next.t("trust.sections.storage.title")}</h2>
+						<h2>{ctx.intl.t("trust.sections.storage.title")}</h2>
 						<p>
-							<strong>{ctx.i18next.t("trust.sections.storage.noBodies")}</strong>
+							<strong>{ctx.intl.t("trust.sections.storage.noBodies")}</strong>
 						</p>
-						<p>{ctx.i18next.t("trust.sections.storage.contentChecks")}</p>
-						<p>{ctx.i18next.t("trust.sections.storage.storedIntro")}</p>
+						<p>{ctx.intl.t("trust.sections.storage.contentChecks")}</p>
+						<p>{ctx.intl.t("trust.sections.storage.storedIntro")}</p>
 						<ul>
 							<li>
-								<strong>{ctx.i18next.t("trust.sections.storage.httpResults.label")}</strong>{" "}
-								{ctx.i18next.t("trust.sections.storage.httpResults.body")}
+								<strong>{ctx.intl.t("trust.sections.storage.httpResults.label")}</strong>{" "}
+								{ctx.intl.t("trust.sections.storage.httpResults.body")}
 							</li>
 							<li>
-								<strong>{ctx.i18next.t("trust.sections.storage.dailyStats.label")}</strong>{" "}
-								{ctx.i18next.t("trust.sections.storage.dailyStats.body")}
+								<strong>{ctx.intl.t("trust.sections.storage.dailyStats.label")}</strong>{" "}
+								{ctx.intl.t("trust.sections.storage.dailyStats.body")}
 							</li>
 							<li>
-								<strong>{ctx.i18next.t("trust.sections.storage.otherResults.label")}</strong>{" "}
-								{ctx.i18next.t("trust.sections.storage.otherResults.body")}
+								<strong>{ctx.intl.t("trust.sections.storage.otherResults.label")}</strong>{" "}
+								{ctx.intl.t("trust.sections.storage.otherResults.body")}
 							</li>
 							<li>
-								<strong>{ctx.i18next.t("trust.sections.storage.alertHistory.label")}</strong>{" "}
-								{ctx.i18next.t("trust.sections.storage.alertHistory.body")}
+								<strong>{ctx.intl.t("trust.sections.storage.alertHistory.label")}</strong>{" "}
+								{ctx.intl.t("trust.sections.storage.alertHistory.body")}
 							</li>
 							<li>
-								<strong>{ctx.i18next.t("trust.sections.storage.cronPings.label")}</strong>{" "}
-								{ctx.i18next.t("trust.sections.storage.cronPings.body")}
+								<strong>{ctx.intl.t("trust.sections.storage.cronPings.label")}</strong>{" "}
+								{ctx.intl.t("trust.sections.storage.cronPings.body")}
 							</li>
 						</ul>
 
-						<h2>{ctx.i18next.t("trust.sections.customerData.title")}</h2>
+						<h2>{ctx.intl.t("trust.sections.customerData.title")}</h2>
 						<p>
-							{ctx.i18next.t("trust.sections.customerData.bodyPrefix")}
+							{ctx.intl.t("trust.sections.customerData.bodyPrefix")}
 							<a href={routes.legal.privacy.href()}>
-								{ctx.i18next.t("trust.sections.customerData.privacyLinkText")}
+								{ctx.intl.t("trust.sections.customerData.privacyLinkText")}
 							</a>
-							{ctx.i18next.t("trust.sections.customerData.bodySuffix")}
+							{ctx.intl.t("trust.sections.customerData.bodySuffix")}
 						</p>
 
-						<h2>{ctx.i18next.t("trust.sections.ourIncidents.title")}</h2>
-						<p>{ctx.i18next.t("trust.sections.ourIncidents.retries")}</p>
-						<p>{ctx.i18next.t("trust.sections.ourIncidents.gaps")}</p>
+						<h2>{ctx.intl.t("trust.sections.ourIncidents.title")}</h2>
+						<p>{ctx.intl.t("trust.sections.ourIncidents.retries")}</p>
+						<p>{ctx.intl.t("trust.sections.ourIncidents.gaps")}</p>
 						<p>
-							<strong>{ctx.i18next.t("trust.sections.ourIncidents.missedAlerts")}</strong>
+							<strong>{ctx.intl.t("trust.sections.ourIncidents.missedAlerts")}</strong>
 						</p>
 						<p>
-							{ctx.i18next.t("trust.sections.ourIncidents.noSlaPrefix")}
+							{ctx.intl.t("trust.sections.ourIncidents.noSlaPrefix")}
 							<a href={routes.legal.terms.href()}>
-								{ctx.i18next.t("trust.sections.ourIncidents.termsLinkText")}
+								{ctx.intl.t("trust.sections.ourIncidents.termsLinkText")}
 							</a>
-							{ctx.i18next.t("trust.sections.ourIncidents.noSlaSuffix")}
+							{ctx.intl.t("trust.sections.ourIncidents.noSlaSuffix")}
 						</p>
 					</Typeset>
 				</article>

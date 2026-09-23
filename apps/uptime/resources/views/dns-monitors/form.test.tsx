@@ -20,8 +20,8 @@ import en from "~/app/locales/en";
 
 import DnsMonitorFormFields from "./form";
 
-let { i18n: i18next } = await createTranslator({
-	resources: { en: { translation: en } },
+let { intl } = await createTranslator({
+	resources: { en },
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",
 })();
@@ -63,16 +63,14 @@ function selectedValues(html: string, name: string): string[] {
 describe("DnsMonitorFormFields", () => {
 	test("marks the saved interval selected, and only it", async () => {
 		let html = await renderToString(
-			<DnsMonitorFormFields monitor={monitor()} i18next={i18next} page="editDnsMonitor" />,
+			<DnsMonitorFormFields monitor={monitor()} intl={intl} page="editDnsMonitor" />,
 		);
 
 		expect(selectedValues(html, "interval_seconds")).toEqual(["900"]);
 	});
 
 	test("falls back to a daily sweep with no monitor to read one from", async () => {
-		let html = await renderToString(
-			<DnsMonitorFormFields i18next={i18next} page="createDnsMonitor" />,
-		);
+		let html = await renderToString(<DnsMonitorFormFields intl={intl} page="createDnsMonitor" />);
 
 		expect(selectedValues(html, "interval_seconds")).toEqual(["86400"]);
 	});
@@ -84,7 +82,7 @@ describe("DnsMonitorFormFields", () => {
 	 */
 	test("offers no interval below the domain-monitor floor", async () => {
 		let html = await renderToString(
-			<DnsMonitorFormFields monitor={monitor()} i18next={i18next} page="editDnsMonitor" />,
+			<DnsMonitorFormFields monitor={monitor()} intl={intl} page="editDnsMonitor" />,
 		);
 
 		let values = [...optionsOf(html, "interval_seconds").matchAll(/\bvalue="(\d+)"/g)].map(
@@ -102,7 +100,7 @@ describe("DnsMonitorFormFields", () => {
 	 */
 	test("names no value through an attribute a <select> does not have", async () => {
 		let html = await renderToString(
-			<DnsMonitorFormFields monitor={monitor()} i18next={i18next} page="editDnsMonitor" />,
+			<DnsMonitorFormFields monitor={monitor()} intl={intl} page="editDnsMonitor" />,
 		);
 
 		expect(/<select[^>]*defaultvalue=/i.test(html)).toBe(false);

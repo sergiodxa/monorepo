@@ -79,7 +79,7 @@ export default createAction(routes.app.team.checkout, {
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		if (ctx.membership.subject_id !== ctx.team.owner_id) {
-			return notice(ctx.i18next.t("page.billing.ownerOnly"), viewer);
+			return notice(ctx.intl.t("page.billing.ownerOnly"), viewer);
 		}
 
 		let hasActiveSubscription = await Subscription.isActive(ctx.db, ctx.team.owner_id);
@@ -96,7 +96,7 @@ export default createAction(routes.app.team.checkout, {
 				subscribed: hasActiveSubscription,
 			});
 
-			return notice(ctx.i18next.t("page.billing.unavailable"), viewer);
+			return notice(ctx.intl.t("page.billing.unavailable"), viewer);
 		}
 
 		return redirect(opened.data, { status: redirect.Status.SeeOther });
@@ -115,8 +115,8 @@ export default createAction(routes.app.team.checkout, {
 						teams={ctx.teams}
 						viewer={signedIn}
 						isAdmin={ctx.membership.role === "admin"}
-						i18next={ctx.i18next}
-						heading={ctx.i18next.t("page.billing.header.title")}
+						intl={ctx.intl}
+						heading={ctx.intl.t("page.billing.header.title")}
 					>
 						<BillingNotice message={message} />
 					</AppShell>

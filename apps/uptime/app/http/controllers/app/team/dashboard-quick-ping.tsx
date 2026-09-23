@@ -56,7 +56,7 @@ export default createAction(routes.app.team.dashboard.quickPing, {
 		if (result) {
 			let code =
 				result.responseStatus === null
-					? ctx.i18next.t("page.dashboard.quickPing.result.noResponse")
+					? ctx.intl.t("page.dashboard.quickPing.result.noResponse")
 					: `HTTP ${result.responseStatus}`;
 			detail =
 				result.responseTimeMs === null ? code : `${code} · ${Math.round(result.responseTimeMs)} ms`;
@@ -68,7 +68,7 @@ export default createAction(routes.app.team.dashboard.quickPing, {
 					type="button"
 					commandfor={QUICK_PING_FORM_ID}
 					command="toggle-popover"
-					aria-label={ctx.i18next.t("page.dashboard.quickPing.action.open")}
+					aria-label={ctx.intl.t("page.dashboard.quickPing.action.open")}
 					mix={[
 						inlineFlex(),
 						items("center"),
@@ -93,18 +93,18 @@ export default createAction(routes.app.team.dashboard.quickPing, {
 					action={routes.actions.runPing.href({ team: ctx.team.slug })}
 					src={routes.app.team.dashboard.quickPing.href({ team: ctx.team.slug })}
 					url={result?.url}
-					label={ctx.i18next.t("page.dashboard.quickPing.field.label")}
-					placeholder={ctx.i18next.t("page.dashboard.quickPing.field.placeholder")}
-					description={ctx.i18next.t("page.dashboard.quickPing.description")}
-					submit={ctx.i18next.t("page.dashboard.quickPing.action.submit")}
+					label={ctx.intl.t("page.dashboard.quickPing.field.label")}
+					placeholder={ctx.intl.t("page.dashboard.quickPing.field.placeholder")}
+					description={ctx.intl.t("page.dashboard.quickPing.description")}
+					submit={ctx.intl.t("page.dashboard.quickPing.action.submit")}
 				/>
 
 				{result && detail && (
 					<FlashToast
 						color={badgeVariant(result.status).color}
-						label={ctx.i18next.t("page.dashboard.quickPing.result.label")}
+						label={ctx.intl.t("page.dashboard.quickPing.result.label")}
 						occurrence={result.id}
-						title={ctx.i18next.t(`page.dashboard.quickPing.result.status.${result.status}`)}
+						title={ctx.intl.t(`page.dashboard.quickPing.result.status.${result.status}`)}
 						description={detail}
 					/>
 				)}
@@ -112,10 +112,10 @@ export default createAction(routes.app.team.dashboard.quickPing, {
 				{outcome?.kind === "error" && (
 					<FlashToast
 						color="danger"
-						label={ctx.i18next.t("page.dashboard.quickPing.result.label")}
+						label={ctx.intl.t("page.dashboard.quickPing.result.label")}
 						occurrence={outcome.id}
-						title={ctx.i18next.t("page.dashboard.quickPing.title")}
-						description={ctx.i18next.t(`page.dashboard.quickPing.error.${outcome.code}`)}
+						title={ctx.intl.t("page.dashboard.quickPing.title")}
+						description={ctx.intl.t(`page.dashboard.quickPing.error.${outcome.code}`)}
 					/>
 				)}
 			</>,

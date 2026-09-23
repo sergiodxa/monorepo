@@ -8,8 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RemixNode } from "remix/ui";
-
+import { Trans } from "@sdxc/i18n/ui";
 import {
 	BadgeMinusIcon,
 	ExternalLinkIcon,
@@ -95,24 +94,6 @@ function formatRelativeTime(target: Date, locale: string): { text: string; isExp
 }
 
 /**
- * Splits a translated string containing exactly one `<code>...</code>` span into plain
- * text plus a `<code>` node, so the domain-verification note can render an inline code
- * fragment straight from locale copy through matched substrings.
- */
-function renderInlineCode(text: string): RemixNode {
-	let match = /^(.*)<code>(.*)<\/code>(.*)$/s.exec(text);
-	if (!match) return text;
-	let [, before, code, after] = match;
-	return (
-		<>
-			{before}
-			<code>{code}</code>
-			{after}
-		</>
-	);
-}
-
-/**
  * Viewport from which a section's card is allowed to bleed past its column.
  *
  * `AppShell` pads its content area by 20px below this width and 48px above it, so a
@@ -183,8 +164,8 @@ export default createAction(routes.app.team.settings, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
-					heading={ctx.i18next.t("page.settings.header.title")}
+					intl={ctx.intl}
+					heading={ctx.intl.t("page.settings.header.title")}
 				>
 					<div mix={[vstack({ gap: 12 })]}>
 						<section
@@ -193,10 +174,10 @@ export default createAction(routes.app.team.settings, {
 						>
 							<div mix={[vstack({ gap: 1 })]}>
 								<h2 mix={[m(0), fontSize("xl"), weight("semibold")]}>
-									{ctx.i18next.t("page.settings.sections.general.title")}
+									{ctx.intl.t("page.settings.sections.general.title")}
 								</h2>
 								<p mix={[m(0), fontSize("sm"), fg("neutral.muted")]}>
-									{ctx.i18next.t("page.settings.sections.general.description")}
+									{ctx.intl.t("page.settings.sections.general.description")}
 								</p>
 							</div>
 
@@ -207,17 +188,17 @@ export default createAction(routes.app.team.settings, {
 								>
 									<div mix={[p(5, 6), borderEdge("block-end", { color: "neutral", width: 1 })]}>
 										<h3 mix={[m(0, 0, 1, 0), fontSize("base"), weight("semibold")]}>
-											{ctx.i18next.t("page.settings.form.card.title")}
+											{ctx.intl.t("page.settings.form.card.title")}
 										</h3>
 										<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-											{ctx.i18next.t("page.settings.form.card.description")}
+											{ctx.intl.t("page.settings.form.card.description")}
 										</p>
 									</div>
 
 									<div mix={[p(6), vstack({ gap: SETTINGS_FIELD_GAP })]}>
 										<Field
-											label={ctx.i18next.t("page.settings.form.fields.logo.label")}
-											description={ctx.i18next.t("page.settings.form.fields.logo.description")}
+											label={ctx.intl.t("page.settings.form.fields.logo.label")}
+											description={ctx.intl.t("page.settings.form.fields.logo.description")}
 										>
 											<div mix={[hstack({ gap: 4, align: "center" })]}>
 												<Avatar src={team.logo || null} name={team.name} size={48} />
@@ -225,22 +206,22 @@ export default createAction(routes.app.team.settings, {
 													type="url"
 													name="logo"
 													defaultValue={team.logo ?? ""}
-													placeholder={ctx.i18next.t("page.settings.form.fields.logo.placeholder")}
+													placeholder={ctx.intl.t("page.settings.form.fields.logo.placeholder")}
 													mix={[textInput(), grow(), shrink(1), basis("0%")]}
 												/>
 											</div>
 										</Field>
 
 										<Field
-											label={ctx.i18next.t("page.settings.form.fields.name.label")}
-											description={ctx.i18next.t("page.settings.form.fields.name.description")}
+											label={ctx.intl.t("page.settings.form.fields.name.label")}
+											description={ctx.intl.t("page.settings.form.fields.name.description")}
 										>
 											<input
 												type="text"
 												name="name"
 												required
 												defaultValue={team.name}
-												placeholder={ctx.i18next.t("page.settings.form.fields.name.placeholder")}
+												placeholder={ctx.intl.t("page.settings.form.fields.name.placeholder")}
 												mix={[textInput()]}
 											/>
 										</Field>
@@ -254,11 +235,9 @@ export default createAction(routes.app.team.settings, {
 										]}
 									>
 										<Button type="reset" variant="outline">
-											{ctx.i18next.t("page.settings.form.actions.cancel")}
+											{ctx.intl.t("page.settings.form.actions.cancel")}
 										</Button>
-										<Button type="submit">
-											{ctx.i18next.t("page.settings.form.actions.save")}
-										</Button>
+										<Button type="submit">{ctx.intl.t("page.settings.form.actions.save")}</Button>
 									</div>
 								</form>
 							</div>
@@ -271,10 +250,10 @@ export default createAction(routes.app.team.settings, {
 							<div mix={[hstack({ gap: 4, align: "start", justify: "between" })]}>
 								<div mix={[vstack({ gap: 1 })]}>
 									<h2 mix={[m(0), fontSize("xl"), weight("semibold")]}>
-										{ctx.i18next.t("page.settings.members.title")}
+										{ctx.intl.t("page.settings.members.title")}
 									</h2>
 									<p mix={[m(0), fontSize("sm"), fg("neutral.muted")]}>
-										{ctx.i18next.t("page.settings.members.description")}
+										{ctx.intl.t("page.settings.members.description")}
 									</p>
 								</div>
 								<Button
@@ -285,7 +264,7 @@ export default createAction(routes.app.team.settings, {
 									mix={[shrink()]}
 								>
 									<UserPlusIcon size={16} strokeWidth={1.5} />
-									<span>{ctx.i18next.t("page.settings.members.actions.invite")}</span>
+									<span>{ctx.intl.t("page.settings.members.actions.invite")}</span>
 								</Button>
 							</div>
 
@@ -304,19 +283,19 @@ export default createAction(routes.app.team.settings, {
 								]}
 							>
 								<h3 mix={[m(0, 0, 4, 0), fontSize("base"), weight("semibold")]}>
-									{ctx.i18next.t("page.invite.header.title")}
+									{ctx.intl.t("page.invite.header.title")}
 								</h3>
 								<form
 									method="post"
 									action={routes.teamAdminActions.invite.create.href({ team: team.slug })}
 									mix={[vstack({ gap: SETTINGS_FIELD_GAP })]}
 								>
-									<Field label={ctx.i18next.t("page.invite.form.fields.email.label")}>
+									<Field label={ctx.intl.t("page.invite.form.fields.email.label")}>
 										<input
 											type="email"
 											name="email"
 											required
-											placeholder={ctx.i18next.t("page.invite.form.fields.email.placeholder")}
+											placeholder={ctx.intl.t("page.invite.form.fields.email.placeholder")}
 											mix={[textInput()]}
 										/>
 									</Field>
@@ -327,9 +306,9 @@ export default createAction(routes.app.team.settings, {
 											commandfor="invite-member"
 											command="close"
 										>
-											{ctx.i18next.t("page.invite.form.cancel")}
+											{ctx.intl.t("page.invite.form.cancel")}
 										</Button>
-										<Button type="submit">{ctx.i18next.t("page.invite.form.cta")}</Button>
+										<Button type="submit">{ctx.intl.t("page.invite.form.cta")}</Button>
 									</div>
 								</form>
 							</dialog>
@@ -337,26 +316,26 @@ export default createAction(routes.app.team.settings, {
 							<div mix={settingsCard()}>
 								<div mix={[p(5, 6), borderEdge("block-end", { color: "neutral", width: 1 })]}>
 									<h3 mix={[m(0, 0, 1, 0), fontSize("base"), weight("semibold")]}>
-										{ctx.i18next.t("page.settings.members.table.label")}
+										{ctx.intl.t("page.settings.members.table.label")}
 									</h3>
 									<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-										{ctx.i18next.t("page.settings.members.table.description")}
+										{ctx.intl.t("page.settings.members.table.description")}
 									</p>
 								</div>
 
 								<Table.Container>
-									<Table aria-label={ctx.i18next.t("page.settings.members.table.label")}>
+									<Table aria-label={ctx.intl.t("page.settings.members.table.label")}>
 										<Table.Header>
 											<Table.Row>
 												<Table.Column>
-													{ctx.i18next.t("page.settings.members.table.columns.name")}
+													{ctx.intl.t("page.settings.members.table.columns.name")}
 												</Table.Column>
 												<Table.Column align="end">
-													{ctx.i18next.t("page.settings.members.table.columns.role")}
+													{ctx.intl.t("page.settings.members.table.columns.role")}
 												</Table.Column>
 												<Table.Column align="center">
 													<span mix={[visuallyHidden()]}>
-														{ctx.i18next.t("page.settings.members.table.columns.actions")}
+														{ctx.intl.t("page.settings.members.table.columns.actions")}
 													</span>
 												</Table.Column>
 											</Table.Row>
@@ -398,7 +377,7 @@ export default createAction(routes.app.team.settings, {
 															</div>
 														</Table.Cell>
 														<Table.Cell mix={[textAlign("end")]}>
-															{ctx.i18next.t(
+															{ctx.intl.t(
 																`page.settings.members.table.role.${memberIsOwner ? "owner" : member.role}`,
 															)}
 														</Table.Cell>
@@ -407,9 +386,7 @@ export default createAction(routes.app.team.settings, {
 																<>
 																	<RowMenu
 																		id={`member-menu-${member.id}`}
-																		label={ctx.i18next.t(
-																			"page.settings.members.table.actions.menu",
-																		)}
+																		label={ctx.intl.t("page.settings.members.table.actions.menu")}
 																	>
 																		<form
 																			method="post"
@@ -426,7 +403,7 @@ export default createAction(routes.app.team.settings, {
 																			<button type="submit" mix={[menuItem]}>
 																				<UserCogIcon size={16} strokeWidth={1.5} />
 																				<span>
-																					{ctx.i18next.t(
+																					{ctx.intl.t(
 																						`page.settings.members.table.actions.changeRole.${member.role}`,
 																					)}
 																				</span>
@@ -441,9 +418,7 @@ export default createAction(routes.app.team.settings, {
 																		>
 																			<UserMinusIcon size={16} strokeWidth={1.5} />
 																			<span>
-																				{ctx.i18next.t(
-																					"page.settings.members.table.actions.remove",
-																				)}
+																				{ctx.intl.t("page.settings.members.table.actions.remove")}
 																			</span>
 																		</button>
 
@@ -453,7 +428,7 @@ export default createAction(routes.app.team.settings, {
 																				<button type="button" disabled mix={[menuItem]}>
 																					<HandshakeIcon size={16} strokeWidth={1.5} />
 																					<span>
-																						{ctx.i18next.t(
+																						{ctx.intl.t(
 																							"page.settings.members.table.actions.transfer",
 																						)}
 																					</span>
@@ -468,7 +443,7 @@ export default createAction(routes.app.team.settings, {
 																	>
 																		<AlertDialog.Header>
 																			<AlertDialog.Title id={removeDialogTitleId}>
-																				{ctx.i18next.t(
+																				{ctx.intl.t(
 																					"page.settings.members.table.confirmation.removeMember",
 																					{ name: displayName },
 																				)}
@@ -493,15 +468,13 @@ export default createAction(routes.app.team.settings, {
 																			/>
 																			<AlertDialog.Footer>
 																				<AlertDialog.Cancel commandfor={removeDialogId}>
-																					{ctx.i18next.t("page.settings.form.actions.cancel")}
+																					{ctx.intl.t("page.settings.form.actions.cancel")}
 																				</AlertDialog.Cancel>
 																				<AlertDialog.Action
 																					type="submit"
 																					commandfor={removeDialogId}
 																				>
-																					{ctx.i18next.t(
-																						"page.settings.members.table.actions.remove",
-																					)}
+																					{ctx.intl.t("page.settings.members.table.actions.remove")}
 																				</AlertDialog.Action>
 																			</AlertDialog.Footer>
 																		</form>
@@ -520,10 +493,10 @@ export default createAction(routes.app.team.settings, {
 							<div mix={settingsCard()}>
 								<div mix={[p(5, 6), borderEdge("block-end", { color: "neutral", width: 1 })]}>
 									<h3 mix={[m(0, 0, 1, 0), fontSize("base"), weight("semibold")]}>
-										{ctx.i18next.t("page.settings.members.invitedTable.label")}
+										{ctx.intl.t("page.settings.members.invitedTable.label")}
 									</h3>
 									<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-										{ctx.i18next.t("page.settings.members.invitedTable.description")}
+										{ctx.intl.t("page.settings.members.invitedTable.description")}
 									</p>
 								</div>
 
@@ -531,24 +504,24 @@ export default createAction(routes.app.team.settings, {
 									<div mix={[p(6)]}>
 										<Empty>
 											<Empty.Description>
-												{ctx.i18next.t("page.settings.members.invitedTable.empty.description")}
+												{ctx.intl.t("page.settings.members.invitedTable.empty.description")}
 											</Empty.Description>
 										</Empty>
 									</div>
 								) : (
 									<Table.Container>
-										<Table aria-label={ctx.i18next.t("page.settings.members.invitedTable.label")}>
+										<Table aria-label={ctx.intl.t("page.settings.members.invitedTable.label")}>
 											<Table.Header>
 												<Table.Row>
 													<Table.Column>
-														{ctx.i18next.t("page.settings.members.invitedTable.columns.email")}
+														{ctx.intl.t("page.settings.members.invitedTable.columns.email")}
 													</Table.Column>
 													<Table.Column align="end">
-														{ctx.i18next.t("page.settings.members.invitedTable.columns.expires")}
+														{ctx.intl.t("page.settings.members.invitedTable.columns.expires")}
 													</Table.Column>
 													<Table.Column align="center">
 														<span mix={[visuallyHidden()]}>
-															{ctx.i18next.t("page.settings.members.invitedTable.columns.actions")}
+															{ctx.intl.t("page.settings.members.invitedTable.columns.actions")}
 														</span>
 													</Table.Column>
 												</Table.Row>
@@ -568,7 +541,7 @@ export default createAction(routes.app.team.settings, {
 															<Table.Cell mix={[textAlign("end")]}>
 																{expiration.isExpired ? (
 																	<span mix={[fg("danger")]}>
-																		{ctx.i18next.t(
+																		{ctx.intl.t(
 																			"page.settings.members.invitedTable.expires.expired",
 																		)}
 																	</span>
@@ -579,7 +552,7 @@ export default createAction(routes.app.team.settings, {
 															<Table.Cell mix={[textAlign("center")]}>
 																<RowMenu
 																	id={`invite-menu-${invite.id}`}
-																	label={ctx.i18next.t(
+																	label={ctx.intl.t(
 																		"page.settings.members.invitedTable.actions.menu",
 																	)}
 																>
@@ -591,7 +564,7 @@ export default createAction(routes.app.team.settings, {
 																	>
 																		<UserMinusIcon size={16} strokeWidth={1.5} />
 																		<span>
-																			{ctx.i18next.t(
+																			{ctx.intl.t(
 																				"page.settings.members.invitedTable.actions.revoke",
 																			)}
 																		</span>
@@ -604,7 +577,7 @@ export default createAction(routes.app.team.settings, {
 																>
 																	<AlertDialog.Header>
 																		<AlertDialog.Title id={revokeDialogTitleId}>
-																			{ctx.i18next.t(
+																			{ctx.intl.t(
 																				"page.settings.members.invitedTable.confirmation.revokeInvite",
 																				{ email: invite.email },
 																			)}
@@ -620,10 +593,10 @@ export default createAction(routes.app.team.settings, {
 																		<input type="hidden" name="invite_id" value={invite.id} />
 																		<AlertDialog.Footer>
 																			<AlertDialog.Cancel commandfor={revokeDialogId}>
-																				{ctx.i18next.t("page.settings.form.actions.cancel")}
+																				{ctx.intl.t("page.settings.form.actions.cancel")}
 																			</AlertDialog.Cancel>
 																			<AlertDialog.Action type="submit" commandfor={revokeDialogId}>
-																				{ctx.i18next.t(
+																				{ctx.intl.t(
 																					"page.settings.members.invitedTable.actions.revoke",
 																				)}
 																			</AlertDialog.Action>
@@ -647,10 +620,10 @@ export default createAction(routes.app.team.settings, {
 						>
 							<div mix={[vstack({ gap: 1 })]}>
 								<h2 mix={[m(0), fontSize("xl"), weight("semibold")]}>
-									{ctx.i18next.t("page.settings.domains.title")}
+									{ctx.intl.t("page.settings.domains.title")}
 								</h2>
 								<p mix={[m(0), fontSize("sm"), fg("neutral.muted")]}>
-									{ctx.i18next.t("page.settings.domains.description")}
+									{ctx.intl.t("page.settings.domains.description")}
 								</p>
 							</div>
 
@@ -669,15 +642,15 @@ export default createAction(routes.app.team.settings, {
 								]}
 							>
 								<h3 mix={[m(0, 0, 4, 0), fontSize("base"), weight("semibold")]}>
-									{ctx.i18next.t("page.settings.domains.form.title")}
+									{ctx.intl.t("page.settings.domains.form.title")}
 								</h3>
 								<form
 									method="post"
 									action={routes.teamAdminActions.domain.add.href({ team: team.slug })}
 								>
 									<Field
-										label={ctx.i18next.t("page.settings.domains.form.fields.hostname.label")}
-										description={ctx.i18next.t(
+										label={ctx.intl.t("page.settings.domains.form.fields.hostname.label")}
+										description={ctx.intl.t(
 											"page.settings.domains.form.fields.hostname.description",
 											{ team: team.name },
 										)}
@@ -686,7 +659,7 @@ export default createAction(routes.app.team.settings, {
 											type="text"
 											name="hostname"
 											required
-											placeholder={ctx.i18next.t(
+											placeholder={ctx.intl.t(
 												"page.settings.domains.form.fields.hostname.placeholder",
 											)}
 											mix={[textInput()]}
@@ -694,9 +667,9 @@ export default createAction(routes.app.team.settings, {
 									</Field>
 									<div mix={[hstack({ gap: 2, justify: "end" })]}>
 										<Button type="button" variant="outline" commandfor="add-domain" command="close">
-											{ctx.i18next.t("page.settings.form.actions.cancel")}
+											{ctx.intl.t("page.settings.form.actions.cancel")}
 										</Button>
-										<Button type="submit">{ctx.i18next.t("page.settings.domains.form.cta")}</Button>
+										<Button type="submit">{ctx.intl.t("page.settings.domains.form.cta")}</Button>
 									</div>
 								</form>
 							</dialog>
@@ -711,10 +684,10 @@ export default createAction(routes.app.team.settings, {
 								>
 									<div>
 										<h3 mix={[m(0, 0, 1, 0), fontSize("base"), weight("semibold")]}>
-											{ctx.i18next.t("page.settings.domains.table.label")}
+											{ctx.intl.t("page.settings.domains.table.label")}
 										</h3>
 										<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-											{ctx.i18next.t("page.settings.domains.table.description")}
+											{ctx.intl.t("page.settings.domains.table.description")}
 										</p>
 									</div>
 									<Button
@@ -724,7 +697,7 @@ export default createAction(routes.app.team.settings, {
 										command="show-modal"
 										mix={[shrink()]}
 									>
-										<span>{ctx.i18next.t("page.settings.domains.actions.addDomain")}</span>
+										<span>{ctx.intl.t("page.settings.domains.actions.addDomain")}</span>
 									</Button>
 								</div>
 
@@ -732,7 +705,7 @@ export default createAction(routes.app.team.settings, {
 									<div mix={[p(6)]}>
 										<Empty>
 											<Empty.Description>
-												{ctx.i18next.t("page.settings.domains.table.empty.description")}
+												{ctx.intl.t("page.settings.domains.table.empty.description")}
 											</Empty.Description>
 										</Empty>
 									</div>
@@ -755,23 +728,23 @@ export default createAction(routes.app.team.settings, {
 											]),
 										]}
 									>
-										<Table aria-label={ctx.i18next.t("page.settings.domains.table.label")}>
+										<Table aria-label={ctx.intl.t("page.settings.domains.table.label")}>
 											<Table.Header>
 												<Table.Row>
 													<Table.Column mix={[nowrap(), minIs("200px")]}>
-														{ctx.i18next.t("page.settings.domains.table.columns.hostname")}
+														{ctx.intl.t("page.settings.domains.table.columns.hostname")}
 													</Table.Column>
 													<Table.Column align="end">
 														<span mix={hasPendingDomainVerification ? [] : [visuallyHidden()]}>
-															{ctx.i18next.t("page.settings.domains.table.columns.id")}
+															{ctx.intl.t("page.settings.domains.table.columns.id")}
 														</span>
 													</Table.Column>
 													<Table.Column align="end">
-														{ctx.i18next.t("page.settings.domains.table.columns.verifiedAt")}
+														{ctx.intl.t("page.settings.domains.table.columns.verifiedAt")}
 													</Table.Column>
 													<Table.Column align="center">
 														<span mix={[visuallyHidden()]}>
-															{ctx.i18next.t("page.settings.domains.table.columns.actions")}
+															{ctx.intl.t("page.settings.domains.table.columns.actions")}
 														</span>
 													</Table.Column>
 												</Table.Row>
@@ -798,12 +771,12 @@ export default createAction(routes.app.team.settings, {
 															<Table.Cell mix={[textAlign("end")]}>
 																{domain.verified_at !== null
 																	? new Date(domain.verified_at).toLocaleDateString(ctx.locale)
-																	: ctx.i18next.t("page.settings.domains.table.verifiedAt.pending")}
+																	: ctx.intl.t("page.settings.domains.table.verifiedAt.pending")}
 															</Table.Cell>
 															<Table.Cell mix={[textAlign("center")]}>
 																<RowMenu
 																	id={`domain-menu-${domain.id}`}
-																	label={ctx.i18next.t("page.settings.domains.table.actions.menu")}
+																	label={ctx.intl.t("page.settings.domains.table.actions.menu")}
 																>
 																	{domain.verified_at === null && (
 																		<form
@@ -818,7 +791,7 @@ export default createAction(routes.app.team.settings, {
 																			<button type="submit" mix={[menuItem]}>
 																				<RefreshCcwIcon size={16} strokeWidth={1.5} />
 																				<span>
-																					{ctx.i18next.t(
+																					{ctx.intl.t(
 																						"page.settings.domains.table.actions.retryVerification",
 																					)}
 																				</span>
@@ -834,7 +807,7 @@ export default createAction(routes.app.team.settings, {
 																	>
 																		<BadgeMinusIcon size={16} strokeWidth={1.5} />
 																		<span>
-																			{ctx.i18next.t("page.settings.domains.table.actions.remove")}
+																			{ctx.intl.t("page.settings.domains.table.actions.remove")}
 																		</span>
 																	</button>
 																</RowMenu>
@@ -845,7 +818,7 @@ export default createAction(routes.app.team.settings, {
 																>
 																	<AlertDialog.Header>
 																		<AlertDialog.Title id={removeDialogTitleId}>
-																			{ctx.i18next.t(
+																			{ctx.intl.t(
 																				"page.settings.domains.table.confirmation.removeDomain",
 																				{ hostname: domain.hostname },
 																			)}
@@ -861,12 +834,10 @@ export default createAction(routes.app.team.settings, {
 																		<input type="hidden" name="domain_id" value={domain.id} />
 																		<AlertDialog.Footer>
 																			<AlertDialog.Cancel commandfor={removeDialogId}>
-																				{ctx.i18next.t("page.settings.form.actions.cancel")}
+																				{ctx.intl.t("page.settings.form.actions.cancel")}
 																			</AlertDialog.Cancel>
 																			<AlertDialog.Action type="submit" commandfor={removeDialogId}>
-																				{ctx.i18next.t(
-																					"page.settings.domains.table.actions.remove",
-																				)}
+																				{ctx.intl.t("page.settings.domains.table.actions.remove")}
 																			</AlertDialog.Action>
 																		</AlertDialog.Footer>
 																	</form>
@@ -892,38 +863,40 @@ export default createAction(routes.app.team.settings, {
 									]}
 								>
 									<h3 mix={[m(0), fontSize("1.0625rem"), weight("semibold")]}>
-										{ctx.i18next.t("page.settings.domains.instructions.title")}
+										{ctx.intl.t("page.settings.domains.instructions.title")}
 									</h3>
-									<p mix={[m(0)]}>
-										{ctx.i18next.t("page.settings.domains.instructions.description")}
-									</p>
+									<p mix={[m(0)]}>{ctx.intl.t("page.settings.domains.instructions.description")}</p>
 									<dl mix={[m(1, 0), vstack({ gap: 2 })]}>
 										<div mix={[hstack({ gap: 2 })]}>
 											<dt mix={[weight("semibold")]}>
-												{ctx.i18next.t("page.settings.domains.instructions.record.name.label")}
+												{ctx.intl.t("page.settings.domains.instructions.record.name.label")}
 											</dt>
 											<dd mix={[m(0)]}>
 												<code>
-													{ctx.i18next.t("page.settings.domains.instructions.record.name.value")}
+													{ctx.intl.t("page.settings.domains.instructions.record.name.value")}
 												</code>
 											</dd>
 										</div>
 										<div mix={[hstack({ gap: 2 })]}>
 											<dt mix={[weight("semibold")]}>
-												{ctx.i18next.t("page.settings.domains.instructions.record.content.label")}
+												{ctx.intl.t("page.settings.domains.instructions.record.content.label")}
 											</dt>
 											<dd mix={[m(0)]}>
 												<code>
-													{ctx.i18next.t("page.settings.domains.instructions.record.content.value")}
+													{ctx.intl.t("page.settings.domains.instructions.record.content.value")}
 												</code>
 											</dd>
 										</div>
 									</dl>
 									<p mix={[m(0)]}>
-										{renderInlineCode(ctx.i18next.t("page.settings.domains.instructions.note"))}
+										<Trans
+											intl={ctx.intl}
+											i18nKey="page.settings.domains.instructions.note"
+											components={{ code: <code /> }}
+										/>
 									</p>
 									<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-										{ctx.i18next.t("page.settings.domains.instructions.disclaimer")}
+										{ctx.intl.t("page.settings.domains.instructions.disclaimer")}
 									</p>
 								</aside>
 							)}
@@ -936,26 +909,26 @@ export default createAction(routes.app.team.settings, {
 							>
 								<div mix={[vstack({ gap: 1 })]}>
 									<h2 mix={[m(0), fontSize("xl"), weight("semibold")]}>
-										{ctx.i18next.t("page.settings.billing.title")}
+										{ctx.intl.t("page.settings.billing.title")}
 									</h2>
 									<p mix={[m(0), fontSize("sm"), fg("neutral.muted")]}>
-										{ctx.i18next.t("page.settings.billing.description")}
+										{ctx.intl.t("page.settings.billing.description")}
 									</p>
 								</div>
 
 								<div mix={settingsCard()}>
 									<div mix={[p(5, 6), borderEdge("block-end", { color: "neutral", width: 1 })]}>
 										<h3 mix={[m(0, 0, 1, 0), fontSize("base"), weight("semibold")]}>
-											{ctx.i18next.t("page.settings.billing.card.title")}
+											{ctx.intl.t("page.settings.billing.card.title")}
 										</h3>
 										<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-											{ctx.i18next.t("page.settings.billing.card.description")}
+											{ctx.intl.t("page.settings.billing.card.description")}
 										</p>
 									</div>
 
 									<div mix={[p(6)]}>
 										<p mix={[m(0), fontSize("sm"), fg("neutral.muted")]}>
-											{ctx.i18next.t("page.settings.billing.card.notice")}
+											{ctx.intl.t("page.settings.billing.card.notice")}
 										</p>
 									</div>
 
@@ -970,7 +943,7 @@ export default createAction(routes.app.team.settings, {
 											href={routes.app.team.checkout.href({ team: team.slug })}
 											data-rmx-document=""
 										>
-											<span>{ctx.i18next.t("page.settings.billing.card.cta")}</span>
+											<span>{ctx.intl.t("page.settings.billing.card.cta")}</span>
 											<ExternalLinkIcon size={16} strokeWidth={1.5} />
 										</LinkButton>
 									</div>
@@ -985,10 +958,10 @@ export default createAction(routes.app.team.settings, {
 							>
 								<div mix={[vstack({ gap: 1 })]}>
 									<h2 mix={[m(0), fontSize("xl"), weight("semibold"), fg("danger")]}>
-										{ctx.i18next.t("page.settings.danger.title")}
+										{ctx.intl.t("page.settings.danger.title")}
 									</h2>
 									<p mix={[m(0), fontSize("sm"), fg("neutral.muted")]}>
-										{ctx.i18next.t("page.settings.danger.description")}
+										{ctx.intl.t("page.settings.danger.description")}
 									</p>
 								</div>
 
@@ -1001,27 +974,27 @@ export default createAction(routes.app.team.settings, {
 
 										<div mix={[p(5, 6), borderEdge("block-end", { color: "danger", width: 1 })]}>
 											<h3 mix={[m(0, 0, 1, 0), fontSize("base"), weight("semibold"), fg("danger")]}>
-												{ctx.i18next.t("page.settings.danger.card.title")}
+												{ctx.intl.t("page.settings.danger.card.title")}
 											</h3>
 											<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-												{ctx.i18next.t("page.settings.danger.card.description")}
+												{ctx.intl.t("page.settings.danger.card.description")}
 											</p>
 										</div>
 
 										<div mix={[p(6, 6, 0, 6), vstack({ gap: 4 })]}>
 											<p mix={[m(0), fontSize("sm"), fg("danger")]}>
-												{ctx.i18next.t("page.settings.danger.card.warning")}
+												{ctx.intl.t("page.settings.danger.card.warning")}
 											</p>
 
-											<Field label={ctx.i18next.t("page.settings.danger.card.confirmation.label")}>
+											<Field label={ctx.intl.t("page.settings.danger.card.confirmation.label")}>
 												<input
 													type="text"
 													name="confirmation"
 													required
 													autocomplete="off"
 													pattern="DELETE"
-													title={ctx.i18next.t("page.settings.danger.card.confirmation.label")}
-													placeholder={ctx.i18next.t(
+													title={ctx.intl.t("page.settings.danger.card.confirmation.label")}
+													placeholder={ctx.intl.t(
 														"page.settings.danger.card.confirmation.placeholder",
 													)}
 													mix={[textInput()]}
@@ -1037,7 +1010,7 @@ export default createAction(routes.app.team.settings, {
 											]}
 										>
 											<Button type="submit" color="danger">
-												{ctx.i18next.t("page.settings.danger.card.cta")}
+												{ctx.intl.t("page.settings.danger.card.cta")}
 											</Button>
 										</div>
 									</form>

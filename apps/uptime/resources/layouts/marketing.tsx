@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 import type { Handle, RemixNode } from "remix/ui";
 
 import { bg, borderEdge, colorMix, fg } from "@sdxc/u/color";
@@ -89,11 +89,11 @@ function buildFooterGrid(footerColumns: FooterColumn[]): FooterCell[] {
 
 /**
  * Builds every translated, already-`t()`-resolved prop {@link MarketingLayout}
- * needs, from a controller's own `ctx.i18next.t`. Centralizes the nav/footer
+ * needs, from a controller's own `ctx.intl.t`. Centralizes the nav/footer
  * link structure — which labels pair with which `routes.*` href — as this layout's own chrome.
  *
  * @example
- * let chrome = buildMarketingChrome(ctx.i18next.t);
+ * let chrome = buildMarketingChrome(ctx.intl.t);
  * return ctx.render(
  * 	<DocumentLayout title={...}>
  * 		<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
@@ -103,7 +103,7 @@ function buildFooterGrid(footerColumns: FooterColumn[]): FooterCell[] {
  * );
  */
 export function buildMarketingChrome(
-	t: TFunction,
+	t: Translate,
 ): Omit<MarketingLayout.Props, "isSignedIn" | "children"> {
 	let footerColumns: FooterColumn[] = [
 		{

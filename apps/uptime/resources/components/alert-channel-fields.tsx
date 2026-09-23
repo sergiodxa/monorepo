@@ -12,6 +12,7 @@
 import type { getContext } from "remix/middleware/async-context";
 import type { Handle } from "remix/ui";
 
+import { Trans } from "@sdxc/i18n/ui";
 import { fg } from "@sdxc/u/color";
 import { hidden, vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
@@ -21,44 +22,31 @@ import { Select, TextField } from "@sdxc/ui";
 
 import type { AlertConfig } from "~/database/schema";
 
+import { withPrefix } from "~/app/lib/prefixed-translate";
 import Field from "~/resources/components/field";
 import { SETTINGS_FIELD_GAP } from "~/resources/components/settings-section";
 
 const CHANNELS = ["email", "webhook", "slack", "discord"] as const;
 
-/** Splits a translated string containing exactly one `<code>...</code>` span into plain text plus a `<code>` node. */
-function renderInlineCode(text: string) {
-	let match = /^(.*)<code>(.*)<\/code>(.*)$/s.exec(text);
-	if (!match) return text;
-	let [, before, code, after] = match;
-	return (
-		<>
-			{before}
-			<code>{code}</code>
-			{after}
-		</>
-	);
-}
-
 namespace AlertChannelFields {
 	export interface Props {
 		/** The alert's saved channel config when editing; omitted when creating. */
 		config?: AlertConfig | null;
-		/** The request's i18next instance, used to read the shared `page.alerts.form.fields.*` copy. */
-		i18next: ReturnType<typeof getContext>["i18next"];
+		/** The request's translator, used to read the shared `page.alerts.form.fields.*` copy. */
+		intl: ReturnType<typeof getContext>["intl"];
 	}
 }
 
 /** Renders the channel picker plus every channel's settings, revealing only the selected one. */
 export default function AlertChannelFields(handle: Handle<AlertChannelFields.Props>) {
 	return () => {
-		let { config, i18next } = handle.props;
+		let { config, intl } = handle.props;
 
 		/**
 		 * Reads the shared `page.alerts.form.fields` namespace so the create
 		 * and edit pages label these fields identically.
 		 */
-		let t = i18next.getFixedT(null, "translation", "page.alerts.form.fields");
+		let t = withPrefix(intl.t, "page.alerts.form.fields");
 
 		/**
 		 * The saved channel's own `<option>` is marked `selected`, which is
@@ -128,7 +116,11 @@ export default function AlertChannelFields(handle: Handle<AlertChannelFields.Pro
 							defaultValue={config?.strategy === "webhook" ? config.config.secret : ""}
 						/>
 						<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-							{renderInlineCode(t("config.webhook.signatureNote"))}
+							<Trans
+								intl={intl}
+								i18nKey="page.alerts.form.fields.config.webhook.signatureNote"
+								components={{ code: <code /> }}
+							/>
 						</p>
 					</div>
 				</fieldset>

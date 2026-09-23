@@ -1,6 +1,6 @@
 /**
  * Browser entry point that hydrates the uptime client. It registers a
- * module-scoped i18next instance so every independently hydrated island
+ * module-scoped translator so every independently hydrated island
  * (`Avatar`, `Logo`, `CopyButton`, `RunMonitorButton`, `DocsNav`) can call
  * `intl`/`Trans` without an `IntlProvider` of its own, then runs remix/ui's
  * client runtime against the globbed resource and route modules.
@@ -8,6 +8,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import type { Messages } from "@sdxc/i18n";
 
 import { createTranslator } from "@sdxc/i18n";
 import { setIntl } from "@sdxc/i18n/ui";
@@ -25,7 +27,7 @@ const DEFAULT_LANGUAGE: Language = "en";
  * entry, so the client bundle ships only the locale(s) a page actually
  * renders in instead of every language's translation bundle.
  */
-const localeLoaders: Record<Language, () => Promise<{ default: Record<string, unknown> }>> = {
+const localeLoaders: Record<Language, () => Promise<{ default: Messages }>> = {
 	en: () => import("~/app/locales/en"),
 	es: () => import("~/app/locales/es"),
 	de: () => import("~/app/locales/de"),
@@ -47,24 +49,19 @@ let localesToLoad = new Set([locale, DEFAULT_LANGUAGE]);
 let resources = Object.fromEntries(
 	await Promise.all(
 		Array.from(localesToLoad, async (language) => {
-			let { default: translation } = await localeLoaders[language]();
-			return [language, { translation }] as const;
+			let { default: messages } = await localeLoaders[language]();
+			return [language, messages] as const;
 		}),
 	),
 );
 
-/**
- * Disables i18next's interpolation escaping because JSX already escapes
- * text nodes when rendering, so values pass through a single encoding pass.
- */
-let { i18n } = await createTranslator({
+let { intl } = await createTranslator({
 	resources,
 	supportedLanguages: SUPPORTED_LANGUAGES,
 	fallbackLanguage: DEFAULT_LANGUAGE,
-	i18next: { interpolation: { escapeValue: false } },
 })(locale);
 
-setIntl(i18n);
+setIntl(intl);
 
 const clientModules = import.meta.glob([
 	"!../**/*.server.*",

@@ -51,18 +51,18 @@ export default createAction(routes.app.team.statusPages.index, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
-					heading={ctx.i18next.t("page.statusPages.header.title")}
+					intl={ctx.intl}
+					heading={ctx.intl.t("page.statusPages.header.title")}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("app.layout.sidebar.navigation.items.dashboard"),
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.dashboard"),
 							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 						},
 					]}
 					actions={
 						<LinkButton href={routes.app.team.statusPages.new.href({ team: ctx.team.slug })}>
 							<PlusIcon size={16} strokeWidth={1.5} />
-							{ctx.i18next.t("page.statusPages.header.action.create")}
+							{ctx.intl.t("page.statusPages.header.action.create")}
 						</LinkButton>
 					}
 				>
@@ -72,33 +72,33 @@ export default createAction(routes.app.team.statusPages.index, {
 								<Empty.Icon>
 									<FileTextIcon size={24} strokeWidth={1.5} />
 								</Empty.Icon>
-								<Empty.Title>{ctx.i18next.t("page.statusPages.empty.title")}</Empty.Title>
+								<Empty.Title>{ctx.intl.t("page.statusPages.empty.title")}</Empty.Title>
 								<Empty.Description>
-									{ctx.i18next.t("page.statusPages.empty.description")}
+									{ctx.intl.t("page.statusPages.empty.description")}
 								</Empty.Description>
 								<Empty.Action>
 									<LinkButton href={routes.app.team.statusPages.new.href({ team: ctx.team.slug })}>
 										<PlusIcon size={20} strokeWidth={1.5} />
-										{ctx.i18next.t("page.statusPages.empty.cta")}
+										{ctx.intl.t("page.statusPages.empty.cta")}
 									</LinkButton>
 								</Empty.Action>
 							</Empty>
 						) : (
 							<Table.Container>
-								<Table aria-label={ctx.i18next.t("page.statusPages.table.label")}>
+								<Table aria-label={ctx.intl.t("page.statusPages.table.label")}>
 									<Table.Header>
 										<Table.Row>
 											<Table.Column>
-												{ctx.i18next.t("page.statusPages.table.columns.name")}
+												{ctx.intl.t("page.statusPages.table.columns.name")}
 											</Table.Column>
 											<Table.Column>
-												{ctx.i18next.t("page.statusPages.table.columns.slug")}
+												{ctx.intl.t("page.statusPages.table.columns.slug")}
 											</Table.Column>
 											<Table.Column>
-												{ctx.i18next.t("page.statusPages.table.columns.services")}
+												{ctx.intl.t("page.statusPages.table.columns.services")}
 											</Table.Column>
 											<Table.Column>
-												{ctx.i18next.t("page.statusPages.table.columns.visibility")}
+												{ctx.intl.t("page.statusPages.table.columns.visibility")}
 											</Table.Column>
 											<Table.Column></Table.Column>
 										</Table.Row>
@@ -125,8 +125,8 @@ export default createAction(routes.app.team.statusPages.index, {
 												<Table.Cell>
 													<Badge {...badgeVariant(page.is_public ? "up" : "neutral")}>
 														{page.is_public
-															? ctx.i18next.t("page.statusPages.table.visibility.public")
-															: ctx.i18next.t("page.statusPages.table.visibility.private")}
+															? ctx.intl.t("page.statusPages.table.visibility.public")
+															: ctx.intl.t("page.statusPages.table.visibility.private")}
 													</Badge>
 												</Table.Cell>
 												<Table.Cell>
@@ -141,7 +141,7 @@ export default createAction(routes.app.team.statusPages.index, {
 															hover(textDecoration("underline")),
 														]}
 													>
-														{ctx.i18next.t("page.statusPages.table.actions.edit")}
+														{ctx.intl.t("page.statusPages.table.actions.edit")}
 													</a>
 												</Table.Cell>
 											</Table.Row>

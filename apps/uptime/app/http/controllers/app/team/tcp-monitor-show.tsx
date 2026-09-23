@@ -60,15 +60,15 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
+					intl={ctx.intl}
 					heading={monitor.name}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("app.layout.sidebar.navigation.items.dashboard"),
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.dashboard"),
 							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 						},
 						{
-							label: ctx.i18next.t("page.tcpMonitorDetail.header.breadcrumb.tcpMonitors"),
+							label: ctx.intl.t("page.tcpMonitorDetail.header.breadcrumb.tcpMonitors"),
 							href: routes.app.team.tcpMonitors.index.href({ team: ctx.team.slug }),
 						},
 					]}
@@ -81,7 +81,7 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 							>
 								<input type="hidden" name="monitor_id" value={monitor.id} />
 								<Button type="submit">
-									{ctx.i18next.t("page.tcpMonitorDetail.header.action.checkNow")}
+									{ctx.intl.t("page.tcpMonitorDetail.header.action.checkNow")}
 								</Button>
 							</form>
 							<LinkButton
@@ -91,7 +91,7 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 								})}
 							>
 								<PencilIcon size={16} strokeWidth={1.5} />
-								{ctx.i18next.t("page.tcpMonitorDetail.header.action.edit")}
+								{ctx.intl.t("page.tcpMonitorDetail.header.action.edit")}
 							</LinkButton>
 						</div>
 					}
@@ -99,7 +99,7 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 					<div>
 						<div mix={[flex(), flexWrap(), gap("16px"), mbe("24px")]}>
 							<StatCard
-								label={ctx.i18next.t("page.tcpMonitorDetail.info.endpoint")}
+								label={ctx.intl.t("page.tcpMonitorDetail.info.endpoint")}
 								value={
 									<code>
 										{monitor.host}:{monitor.port}
@@ -107,23 +107,23 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 								}
 							/>
 							<StatCard
-								label={ctx.i18next.t("page.tcpMonitorDetail.info.status")}
+								label={ctx.intl.t("page.tcpMonitorDetail.info.status")}
 								value={
 									<Badge
 										{...badgeVariant(STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral")}
 									>
-										{ctx.i18next.t(
+										{ctx.intl.t(
 											`page.tcpMonitors.table.status.${monitor.last_status ?? "pending"}`,
 										)}
 									</Badge>
 								}
 							/>
 							<StatCard
-								label={ctx.i18next.t("page.tcpMonitorDetail.info.interval")}
+								label={ctx.intl.t("page.tcpMonitorDetail.info.interval")}
 								value={`${monitor.interval_seconds}s`}
 							/>
 							<StatCard
-								label={ctx.i18next.t("page.tcpMonitorDetail.info.timeout")}
+								label={ctx.intl.t("page.tcpMonitorDetail.info.timeout")}
 								value={`${monitor.timeout_ms}ms`}
 							/>
 						</div>

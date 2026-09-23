@@ -19,6 +19,7 @@ import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { DEFAULT_COOLDOWN_MINUTES, MIN_REPEAT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
 import { TEAM_WIDE_MONITOR_SCOPE } from "~/app/lib/monitor-scope";
+import { withPrefix } from "~/app/lib/prefixed-translate";
 import AlertChannelFields from "~/resources/components/alert-channel-fields";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
@@ -41,23 +42,21 @@ export default createAction(routes.app.team.alerts.new, {
 
 		let scopeGroups = await listScopeMonitors(ctx.db, ctx.team.id);
 
-		let t = ctx.i18next.getFixedT(null, "translation", "page.alerts.form.fields");
+		let t = withPrefix(ctx.intl.t, "page.alerts.form.fields");
 
 		return ctx.render(
-			<DocumentLayout
-				title={`${ctx.team.name} · ${ctx.i18next.t("page.createAlert.header.title")}`}
-			>
+			<DocumentLayout title={`${ctx.team.name} · ${ctx.intl.t("page.createAlert.header.title")}`}>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
-					heading={ctx.i18next.t("page.createAlert.header.title")}
+					intl={ctx.intl}
+					heading={ctx.intl.t("page.createAlert.header.title")}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("app.layout.sidebar.navigation.items.alerts"),
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.alerts"),
 							href: routes.app.team.alerts.index.href({ team: ctx.team.slug }),
 						},
 					]}
@@ -70,8 +69,8 @@ export default createAction(routes.app.team.alerts.new, {
 						>
 							<SettingsSection
 								id="basics"
-								title={ctx.i18next.t("page.createAlert.form.sections.basics.title")}
-								description={ctx.i18next.t("page.createAlert.form.sections.basics.description")}
+								title={ctx.intl.t("page.createAlert.form.sections.basics.title")}
+								description={ctx.intl.t("page.createAlert.form.sections.basics.description")}
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
@@ -81,7 +80,7 @@ export default createAction(routes.app.team.alerts.new, {
 											groups={scopeGroups}
 											selected={TEAM_WIDE_MONITOR_SCOPE}
 											description={t("scope.description")}
-											i18next={ctx.i18next}
+											intl={ctx.intl}
 										/>
 									</SettingsSection.Body>
 								</SettingsSection.Card>
@@ -89,20 +88,20 @@ export default createAction(routes.app.team.alerts.new, {
 
 							<SettingsSection
 								id="channel"
-								title={ctx.i18next.t("page.createAlert.form.sections.channel.title")}
-								description={ctx.i18next.t("page.createAlert.form.sections.channel.description")}
+								title={ctx.intl.t("page.createAlert.form.sections.channel.title")}
+								description={ctx.intl.t("page.createAlert.form.sections.channel.description")}
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
-										<AlertChannelFields i18next={ctx.i18next} />
+										<AlertChannelFields intl={ctx.intl} />
 									</SettingsSection.Body>
 								</SettingsSection.Card>
 							</SettingsSection>
 
 							<SettingsSection
 								id="delivery"
-								title={ctx.i18next.t("page.createAlert.form.sections.delivery.title")}
-								description={ctx.i18next.t("page.createAlert.form.sections.delivery.description")}
+								title={ctx.intl.t("page.createAlert.form.sections.delivery.title")}
+								description={ctx.intl.t("page.createAlert.form.sections.delivery.description")}
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
@@ -131,7 +130,7 @@ export default createAction(routes.app.team.alerts.new, {
 										</Field>
 									</SettingsSection.Body>
 									<SettingsSection.Footer>
-										<Button type="submit">{ctx.i18next.t("page.alerts.form.cta")}</Button>
+										<Button type="submit">{ctx.intl.t("page.alerts.form.cta")}</Button>
 									</SettingsSection.Footer>
 								</SettingsSection.Card>
 							</SettingsSection>

@@ -36,7 +36,7 @@ export default createAction(routes.invite, {
 
 		let renderError = (message: string) =>
 			ctx.render(
-				<DocumentLayout title={ctx.i18next.t("page.acceptInvite.errors.pageTitle")}>
+				<DocumentLayout title={ctx.intl.t("page.acceptInvite.errors.pageTitle")}>
 					<main mix={[flex(), flexCol(), minBs("100vh")]}>
 						<div
 							mix={[
@@ -50,13 +50,13 @@ export default createAction(routes.invite, {
 								rounded("12px"),
 							]}
 						>
-							<h1 mix={[m("0")]}>{ctx.i18next.t("page.acceptInvite.errors.pageTitle")}</h1>
+							<h1 mix={[m("0")]}>{ctx.intl.t("page.acceptInvite.errors.pageTitle")}</h1>
 							<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>{message}</p>
 							<a
 								href={routes.home.href()}
 								mix={[fg("brand"), textDecoration("none"), hover(textDecoration("underline"))]}
 							>
-								{ctx.i18next.t("errors.backHome")}
+								{ctx.intl.t("errors.backHome")}
 							</a>
 						</div>
 					</main>
@@ -64,13 +64,13 @@ export default createAction(routes.invite, {
 				{ status: 400 },
 			);
 
-		if (!invite) return renderError(ctx.i18next.t("page.acceptInvite.errors.notFound"));
+		if (!invite) return renderError(ctx.intl.t("page.acceptInvite.errors.notFound"));
 		if (invite.accepted_at !== null) {
-			return renderError(ctx.i18next.t("page.acceptInvite.errors.gone"));
+			return renderError(ctx.intl.t("page.acceptInvite.errors.gone"));
 		}
 		if (invite.email !== viewer.email) {
 			return renderError(
-				ctx.i18next.t("page.acceptInvite.errors.wrongEmail", { email: invite.email }),
+				ctx.intl.t("page.acceptInvite.errors.wrongEmail", { email: invite.email }),
 			);
 		}
 

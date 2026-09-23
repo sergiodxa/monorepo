@@ -71,8 +71,8 @@ export default createAction(routes.app.team.dashboard.index, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
-					heading={ctx.i18next.t("page.dashboard.header.title")}
+					intl={ctx.intl}
+					heading={ctx.intl.t("page.dashboard.header.title")}
 					actions={
 						/**
 						 * The fallback mirrors the bar's own two controls at the height they render at,
@@ -163,7 +163,7 @@ export default createAction(routes.app.team.dashboard.index, {
 							src={routes.app.team.dashboard.panel.href({ team: ctx.team.slug, type: tab })}
 							fallback={
 								<Empty>
-									<Empty.Description>{ctx.i18next.t("page.dashboard.loading")}</Empty.Description>
+									<Empty.Description>{ctx.intl.t("page.dashboard.loading")}</Empty.Description>
 								</Empty>
 							}
 						/>

@@ -2,7 +2,7 @@
  * Tests for the dashboard "Monthly Pings Usage" stat-card fragment controller.
  * `cloudflare:workers` is mocked because `~/app/data/monitor` reads `env` at module
  * load. Both figures the card shows come from the local database, so there is no
- * network client to stand in for. `ctx.team`/`ctx.membership`/auth/i18next state is
+ * network client to stand in for. `ctx.team`/`ctx.membership`/auth/intl state is
  * seeded directly, standing in for the real `requireUser`/`requireTeam`/i18n
  * middleware chain, following the template in
  * `app/http/controllers/actions/monitors.test.ts`.
@@ -61,8 +61,8 @@ let dashboardCardUsage = (await import("./dashboard-card-usage")).default as {
 	handler: RequestHandler<any>;
 };
 
-let { i18n: i18nextInstance } = await createTranslator({
-	resources: { en: { translation: en } },
+let { intl } = await createTranslator({
+	resources: { en },
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",
 })();
@@ -77,7 +77,7 @@ function createHtmlRenderer(ctx: RequestContext) {
 	};
 }
 
-/** Middleware that seeds `ctx.team`/`ctx.membership`/auth/i18next state, standing in for the real chain. */
+/** Middleware that seeds `ctx.team`/`ctx.membership`/auth/intl state, standing in for the real chain. */
 function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	let viewer: Viewer = {
 		id: membership.subject_id,
@@ -91,7 +91,7 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 		ctx.membership = membership;
 		ctx.teams = [team];
 		ctx.locale = "en";
-		ctx.i18next = i18nextInstance;
+		ctx.intl = intl;
 		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
 		return next();
 	};

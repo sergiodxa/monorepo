@@ -64,15 +64,15 @@ export default createAction(routes.app.team.flowMonitors.edit, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
-					heading={ctx.i18next.t("page.editFlowMonitor.header.title")}
+					intl={ctx.intl}
+					heading={ctx.intl.t("page.editFlowMonitor.header.title")}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("app.layout.sidebar.navigation.items.dashboard"),
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.dashboard"),
 							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 						},
 						{
-							label: ctx.i18next.t("page.editFlowMonitor.header.breadcrumb.flowMonitors"),
+							label: ctx.intl.t("page.editFlowMonitor.header.breadcrumb.flowMonitors"),
 							href: listHref,
 						},
 						{ label: monitor.name, href: showHref },
@@ -88,8 +88,8 @@ export default createAction(routes.app.team.flowMonitors.edit, {
 
 								<SettingsSection
 									id="settings"
-									title={ctx.i18next.t("page.editFlowMonitor.form.sections.settings.title")}
-									description={ctx.i18next.t(
+									title={ctx.intl.t("page.editFlowMonitor.form.sections.settings.title")}
+									description={ctx.intl.t(
 										"page.editFlowMonitor.form.sections.settings.description",
 									)}
 								>
@@ -98,17 +98,15 @@ export default createAction(routes.app.team.flowMonitors.edit, {
 											<FlowMonitorFormFields
 												monitor={monitor}
 												verifiedDomains={verifiedDomains}
-												i18next={ctx.i18next}
+												intl={ctx.intl}
 												page="editFlowMonitor"
 											/>
 										</SettingsSection.Body>
 										<SettingsSection.Footer>
 											<LinkButton variant="outline" href={showHref}>
-												{ctx.i18next.t("page.editFlowMonitor.form.cancel")}
+												{ctx.intl.t("page.editFlowMonitor.form.cancel")}
 											</LinkButton>
-											<Button type="submit">
-												{ctx.i18next.t("page.editFlowMonitor.form.cta")}
-											</Button>
+											<Button type="submit">{ctx.intl.t("page.editFlowMonitor.form.cta")}</Button>
 										</SettingsSection.Footer>
 									</SettingsSection.Card>
 								</SettingsSection>
@@ -117,13 +115,13 @@ export default createAction(routes.app.team.flowMonitors.edit, {
 							<SettingsSection
 								id="danger"
 								tone="danger"
-								title={ctx.i18next.t("page.editFlowMonitor.danger.title")}
-								description={ctx.i18next.t("page.editFlowMonitor.danger.sectionDescription")}
+								title={ctx.intl.t("page.editFlowMonitor.danger.title")}
+								description={ctx.intl.t("page.editFlowMonitor.danger.sectionDescription")}
 							>
 								<SettingsSection.Card tone="danger">
 									<SettingsSection.Body>
 										<p mix={[m(0), fontSize("sm"), fg("danger")]}>
-											{ctx.i18next.t("page.editFlowMonitor.danger.warning")}
+											{ctx.intl.t("page.editFlowMonitor.danger.warning")}
 										</p>
 									</SettingsSection.Body>
 									<SettingsSection.Footer tone="danger">
@@ -133,7 +131,7 @@ export default createAction(routes.app.team.flowMonitors.edit, {
 											commandfor={DELETE_DIALOG_ID}
 											command="show-modal"
 										>
-											{ctx.i18next.t("page.editFlowMonitor.danger.cta")}
+											{ctx.intl.t("page.editFlowMonitor.danger.cta")}
 										</Button>
 									</SettingsSection.Footer>
 								</SettingsSection.Card>
@@ -146,12 +144,12 @@ export default createAction(routes.app.team.flowMonitors.edit, {
 							>
 								<AlertDialog.Header>
 									<AlertDialog.Title id={`${DELETE_DIALOG_ID}-title`}>
-										{ctx.i18next.t("page.flowMonitors.table.actions.confirmation.delete", {
+										{ctx.intl.t("page.flowMonitors.table.actions.confirmation.delete", {
 											name: monitor.name,
 										})}
 									</AlertDialog.Title>
 									<AlertDialog.Description id={`${DELETE_DIALOG_ID}-description`}>
-										{ctx.i18next.t("page.editFlowMonitor.danger.description")}
+										{ctx.intl.t("page.editFlowMonitor.danger.description")}
 									</AlertDialog.Description>
 								</AlertDialog.Header>
 								<form
@@ -162,10 +160,10 @@ export default createAction(routes.app.team.flowMonitors.edit, {
 									<input type="hidden" name="monitor_id" value={monitor.id} />
 									<AlertDialog.Footer>
 										<AlertDialog.Cancel type="button" commandfor={DELETE_DIALOG_ID}>
-											{ctx.i18next.t("page.editFlowMonitor.form.cancel")}
+											{ctx.intl.t("page.editFlowMonitor.form.cancel")}
 										</AlertDialog.Cancel>
 										<Button type="submit" color="danger">
-											{ctx.i18next.t("page.flowMonitors.table.actions.delete")}
+											{ctx.intl.t("page.flowMonitors.table.actions.delete")}
 										</Button>
 									</AlertDialog.Footer>
 								</form>

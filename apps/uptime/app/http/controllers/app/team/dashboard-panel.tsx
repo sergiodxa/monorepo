@@ -590,14 +590,14 @@ export default createAction(routes.app.team.dashboard.panel, {
 		let headers = { "Cache-Control": CACHE_CONTROL };
 
 		let tabLabels: Record<DashboardTab, string> = {
-			http: ctx.i18next.t("page.dashboard.tabs.http"),
-			dns: ctx.i18next.t("page.dashboard.tabs.dns"),
-			tcp: ctx.i18next.t("page.dashboard.tabs.tcp"),
-			"cron-jobs": ctx.i18next.t("page.dashboard.tabs.cronJobs"),
+			http: ctx.intl.t("page.dashboard.tabs.http"),
+			dns: ctx.intl.t("page.dashboard.tabs.dns"),
+			tcp: ctx.intl.t("page.dashboard.tabs.tcp"),
+			"cron-jobs": ctx.intl.t("page.dashboard.tabs.cronJobs"),
 		};
-		let tabsListLabel = ctx.i18next.t("page.dashboard.panel.tabsLabel");
-		let panelLabel = ctx.i18next.t("page.dashboard.panel.tabPanelLabel", { tab: tabLabels[type] });
-		let refreshLabel = ctx.i18next.t("page.dashboard.panel.refresh");
+		let tabsListLabel = ctx.intl.t("page.dashboard.panel.tabsLabel");
+		let panelLabel = ctx.intl.t("page.dashboard.panel.tabPanelLabel", { tab: tabLabels[type] });
+		let refreshLabel = ctx.intl.t("page.dashboard.panel.refresh");
 		let refreshToken = String(Date.now());
 
 		if (type === "dns") {
@@ -613,16 +613,16 @@ export default createAction(routes.app.team.dashboard.panel, {
 					refreshLabel={refreshLabel}
 					refreshToken={refreshToken}
 					copy={{
-						emptyTitle: ctx.i18next.t("page.dnsMonitors.empty.title"),
-						emptyDescription: ctx.i18next.t("page.dnsMonitors.empty.description"),
-						emptyCta: ctx.i18next.t("page.dnsMonitors.empty.cta"),
-						tableLabel: ctx.i18next.t("page.dnsMonitors.table.label"),
+						emptyTitle: ctx.intl.t("page.dnsMonitors.empty.title"),
+						emptyDescription: ctx.intl.t("page.dnsMonitors.empty.description"),
+						emptyCta: ctx.intl.t("page.dnsMonitors.empty.cta"),
+						tableLabel: ctx.intl.t("page.dnsMonitors.table.label"),
 						columns: {
-							name: ctx.i18next.t("page.dnsMonitors.table.columns.name"),
-							domain: ctx.i18next.t("page.dnsMonitors.table.columns.domain"),
-							status: ctx.i18next.t("page.dnsMonitors.table.columns.status"),
+							name: ctx.intl.t("page.dnsMonitors.table.columns.name"),
+							domain: ctx.intl.t("page.dnsMonitors.table.columns.domain"),
+							status: ctx.intl.t("page.dnsMonitors.table.columns.status"),
 						},
-						notChecked: ctx.i18next.t("page.dnsMonitors.table.notChecked"),
+						notChecked: ctx.intl.t("page.dnsMonitors.table.notChecked"),
 					}}
 				/>,
 				{ headers },
@@ -642,20 +642,20 @@ export default createAction(routes.app.team.dashboard.panel, {
 					refreshLabel={refreshLabel}
 					refreshToken={refreshToken}
 					copy={{
-						emptyTitle: ctx.i18next.t("page.tcpMonitors.empty.title"),
-						emptyDescription: ctx.i18next.t("page.tcpMonitors.empty.description"),
-						emptyCta: ctx.i18next.t("page.tcpMonitors.empty.cta"),
-						tableLabel: ctx.i18next.t("page.tcpMonitors.table.label"),
+						emptyTitle: ctx.intl.t("page.tcpMonitors.empty.title"),
+						emptyDescription: ctx.intl.t("page.tcpMonitors.empty.description"),
+						emptyCta: ctx.intl.t("page.tcpMonitors.empty.cta"),
+						tableLabel: ctx.intl.t("page.tcpMonitors.table.label"),
 						columns: {
-							name: ctx.i18next.t("page.tcpMonitors.table.columns.name"),
-							endpoint: ctx.i18next.t("page.tcpMonitors.table.columns.endpoint"),
-							status: ctx.i18next.t("page.tcpMonitors.table.columns.status"),
+							name: ctx.intl.t("page.tcpMonitors.table.columns.name"),
+							endpoint: ctx.intl.t("page.tcpMonitors.table.columns.endpoint"),
+							status: ctx.intl.t("page.tcpMonitors.table.columns.status"),
 						},
 						statusLabels: {
-							up: ctx.i18next.t("page.tcpMonitors.table.status.up"),
-							down: ctx.i18next.t("page.tcpMonitors.table.status.down"),
-							timeout: ctx.i18next.t("page.tcpMonitors.table.status.timeout"),
-							pending: ctx.i18next.t("page.tcpMonitors.table.status.pending"),
+							up: ctx.intl.t("page.tcpMonitors.table.status.up"),
+							down: ctx.intl.t("page.tcpMonitors.table.status.down"),
+							timeout: ctx.intl.t("page.tcpMonitors.table.status.timeout"),
+							pending: ctx.intl.t("page.tcpMonitors.table.status.pending"),
 						},
 					}}
 				/>,
@@ -669,7 +669,7 @@ export default createAction(routes.app.team.dashboard.panel, {
 				monitor,
 				schedule: describeSchedule(monitor.cron_expression, {
 					locale: ctx.locale,
-					t: ctx.i18next.t,
+					t: ctx.intl.t,
 				}),
 			}));
 			return ctx.render(
@@ -683,20 +683,20 @@ export default createAction(routes.app.team.dashboard.panel, {
 					refreshLabel={refreshLabel}
 					refreshToken={refreshToken}
 					copy={{
-						emptyTitle: ctx.i18next.t("page.cronJobs.empty.title"),
-						emptyDescription: ctx.i18next.t("page.cronJobs.empty.description"),
-						emptyCta: ctx.i18next.t("page.cronJobs.empty.cta"),
-						tableLabel: ctx.i18next.t("page.cronJobs.table.label"),
+						emptyTitle: ctx.intl.t("page.cronJobs.empty.title"),
+						emptyDescription: ctx.intl.t("page.cronJobs.empty.description"),
+						emptyCta: ctx.intl.t("page.cronJobs.empty.cta"),
+						tableLabel: ctx.intl.t("page.cronJobs.table.label"),
 						columns: {
-							name: ctx.i18next.t("page.cronJobs.table.columns.name"),
-							schedule: ctx.i18next.t("page.cronJobs.table.columns.schedule"),
-							status: ctx.i18next.t("page.cronJobs.table.columns.status"),
+							name: ctx.intl.t("page.cronJobs.table.columns.name"),
+							schedule: ctx.intl.t("page.cronJobs.table.columns.schedule"),
+							status: ctx.intl.t("page.cronJobs.table.columns.status"),
 						},
 						statusLabels: {
-							healthy: ctx.i18next.t("page.cronJobs.table.status.healthy"),
-							late: ctx.i18next.t("page.cronJobs.table.status.late"),
-							missed: ctx.i18next.t("page.cronJobs.table.status.missed"),
-							new: ctx.i18next.t("page.cronJobs.table.status.new"),
+							healthy: ctx.intl.t("page.cronJobs.table.status.healthy"),
+							late: ctx.intl.t("page.cronJobs.table.status.late"),
+							missed: ctx.intl.t("page.cronJobs.table.status.missed"),
+							new: ctx.intl.t("page.cronJobs.table.status.new"),
 						},
 					}}
 				/>,
@@ -733,20 +733,20 @@ export default createAction(routes.app.team.dashboard.panel, {
 				refreshLabel={refreshLabel}
 				refreshToken={refreshToken}
 				copy={{
-					emptyTitle: ctx.i18next.t("page.dashboard.empty.title"),
-					emptyDescription: ctx.i18next.t("page.dashboard.empty.description"),
-					emptyCta: ctx.i18next.t("page.dashboard.empty.cta"),
-					tableLabel: ctx.i18next.t("page.dashboard.table.label"),
+					emptyTitle: ctx.intl.t("page.dashboard.empty.title"),
+					emptyDescription: ctx.intl.t("page.dashboard.empty.description"),
+					emptyCta: ctx.intl.t("page.dashboard.empty.cta"),
+					tableLabel: ctx.intl.t("page.dashboard.table.label"),
 					columns: {
-						name: ctx.i18next.t("page.dashboard.table.columns.name"),
-						latencyChart: ctx.i18next.t("page.dashboard.table.columns.latencyChart"),
-						status: ctx.i18next.t("page.dashboard.table.columns.status"),
+						name: ctx.intl.t("page.dashboard.table.columns.name"),
+						latencyChart: ctx.intl.t("page.dashboard.table.columns.latencyChart"),
+						status: ctx.intl.t("page.dashboard.table.columns.status"),
 					},
 					statusLabels: {
-						up: ctx.i18next.t("page.dashboard.table.status.up"),
-						degraded: ctx.i18next.t("page.dashboard.table.status.degraded"),
-						down: ctx.i18next.t("page.dashboard.table.status.down"),
-						pending: ctx.i18next.t("page.dashboard.table.status.unknown"),
+						up: ctx.intl.t("page.dashboard.table.status.up"),
+						degraded: ctx.intl.t("page.dashboard.table.status.degraded"),
+						down: ctx.intl.t("page.dashboard.table.status.down"),
+						pending: ctx.intl.t("page.dashboard.table.status.unknown"),
 					},
 				}}
 			/>,

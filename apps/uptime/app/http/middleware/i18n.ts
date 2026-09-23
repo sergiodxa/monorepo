@@ -2,8 +2,8 @@
  * Language-resolution middleware layered over `@sdxc/i18n/middleware`:
  * resolves the `language` cookie, then a signed-in viewer's stored
  * preference, then `Accept-Language`, falling back to English, and
- * initializes a per-request i18next instance over the app's locale files.
- * Exposes `ctx.locale` and `ctx.i18next`.
+ * binds a per-request translator over the app's locale files.
+ * Exposes `ctx.locale` and `ctx.intl`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,7 +11,7 @@
 
 import type { Middleware } from "remix/router";
 
-import i18next from "@sdxc/i18n/middleware";
+import i18nMiddleware from "@sdxc/i18n/middleware";
 import { getContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 
@@ -59,11 +59,11 @@ async function findLocale(request: Request): Promise<string | null> {
 }
 
 /**
- * Resolves the request language and initializes a per-request i18next
- * instance. Interpolation escaping is disabled since `ctx.i18next.t(...)` is
- * always rendered through JSX, which already HTML-escapes text nodes.
+ * Resolves the request language and binds a per-request translator; values
+ * interpolate raw since `ctx.intl.t(...)` is always rendered through JSX,
+ * which HTML-escapes text nodes.
  */
-const detect = i18next({
+const detect = i18nMiddleware({
 	detection: {
 		supportedLanguages: [...supportedLanguages],
 		fallbackLanguage: DEFAULT_LANGUAGE,
@@ -71,17 +71,7 @@ const detect = i18next({
 		findLocale,
 		order: ["cookie", "custom", "header"],
 	},
-	i18next: {
-		resources: {
-			en: { translation: en },
-			es: { translation: es },
-			de: { translation: de },
-			ja: { translation: ja },
-			fr: { translation: fr },
-			it: { translation: it },
-		},
-		interpolation: { escapeValue: false },
-	},
+	resources: { en, es, de, ja, fr, it },
 });
 
 /**

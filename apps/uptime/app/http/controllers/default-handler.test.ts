@@ -43,7 +43,7 @@ describe("default handler", () => {
 	test("renders the not-found page with a 404 status for any unmatched route", async () => {
 		/**
 		 * The real `i18n` middleware runs here because `defaultHandler` renders its
-		 * copy through `ctx.i18next.t()`, and the global middleware (`bootstrap/app.tsx`)
+		 * copy through `ctx.intl.t()`, and the global middleware (`bootstrap/app.tsx`)
 		 * wraps the whole router, `defaultHandler` included.
 		 */
 		let router = createRouter({

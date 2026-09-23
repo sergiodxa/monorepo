@@ -50,11 +50,11 @@ export default createAction(routes.app.team.dashboard.cards.usage, {
 		if (consumed === null && usage === null) {
 			return ctx.render(
 				<StatCard
-					label={ctx.i18next.t("page.dashboard.error.card.label")}
+					label={ctx.intl.t("page.dashboard.error.card.label")}
 					value={
 						<>
-							{ctx.i18next.t("page.dashboard.error.card.value")}
-							<Subtitle>{ctx.i18next.t("page.dashboard.error.card.description")}</Subtitle>
+							{ctx.intl.t("page.dashboard.error.card.value")}
+							<Subtitle>{ctx.intl.t("page.dashboard.error.card.description")}</Subtitle>
 						</>
 					}
 				/>,
@@ -63,14 +63,14 @@ export default createAction(routes.app.team.dashboard.cards.usage, {
 
 		return ctx.render(
 			<StatCard
-				label={ctx.i18next.t("page.dashboard.stats.monitors.label")}
+				label={ctx.intl.t("page.dashboard.stats.monitors.label")}
 				value={
 					<>
 						{consumed === null ? "—" : consumed.toLocaleString()}
 						<Subtitle>
 							{usage === null
-								? ctx.i18next.t("page.dashboard.stats.monitors.unavailable")
-								: ctx.i18next.t("page.dashboard.stats.monitors.description", {
+								? ctx.intl.t("page.dashboard.stats.monitors.unavailable")
+								: ctx.intl.t("page.dashboard.stats.monitors.description", {
 										estimated: usage.toLocaleString(),
 									})}
 						</Subtitle>

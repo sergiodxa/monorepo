@@ -33,7 +33,7 @@ export default createAction(routes.app.team.dashboard.cards.uptime, {
 			return ctx.render(
 				<Empty>
 					<Empty.Description>
-						{ctx.i18next.t("page.dashboard.error.analytics.message")}
+						{ctx.intl.t("page.dashboard.error.analytics.message")}
 					</Empty.Description>
 				</Empty>,
 			);
@@ -46,11 +46,11 @@ export default createAction(routes.app.team.dashboard.cards.uptime, {
 
 		return ctx.render(
 			<StatCard
-				label={ctx.i18next.t("page.dashboard.stats.uptime.label")}
+				label={ctx.intl.t("page.dashboard.stats.uptime.label")}
 				value={
 					<>
 						{uptimePercent === null ? "—" : `${uptimePercent}%`}
-						<Subtitle>{ctx.i18next.t("page.dashboard.stats.uptime.description")}</Subtitle>
+						<Subtitle>{ctx.intl.t("page.dashboard.stats.uptime.description")}</Subtitle>
 					</>
 				}
 			/>,

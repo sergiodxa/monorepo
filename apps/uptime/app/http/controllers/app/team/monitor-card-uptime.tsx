@@ -37,11 +37,11 @@ export default createAction(routes.app.team.monitors.cards.uptime, {
 
 		return ctx.render(
 			<StatCard
-				label={ctx.i18next.t("page.monitor.stats.uptime.label")}
+				label={ctx.intl.t("page.monitor.stats.uptime.label")}
 				value={
 					<>
 						{uptimePercent === null ? "—" : `${uptimePercent}%`}
-						<Subtitle>{ctx.i18next.t("page.monitor.stats.uptime.description")}</Subtitle>
+						<Subtitle>{ctx.intl.t("page.monitor.stats.uptime.description")}</Subtitle>
 					</>
 				}
 			/>,

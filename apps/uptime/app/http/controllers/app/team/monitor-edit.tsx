@@ -38,10 +38,10 @@ import MonitorFormFields from "~/resources/views/monitors/form";
 import routes from "~/routes/web";
 
 function contentCheckTypeLabel(
-	i18next: ReturnType<typeof getContext>["i18next"],
+	intl: ReturnType<typeof getContext>["intl"],
 	type: SelectMonitorContentCheck["type"],
 ): string {
-	return i18next.t(`contentMonitoring.types.${type === "not_contains" ? "notContains" : type}`);
+	return intl.t(`contentMonitoring.types.${type === "not_contains" ? "notContains" : type}`);
 }
 
 namespace ContentChecksSection {
@@ -49,7 +49,7 @@ namespace ContentChecksSection {
 		team: { slug: string };
 		monitorId: string;
 		contentChecks: SelectMonitorContentCheck[];
-		i18next: ReturnType<typeof getContext>["i18next"];
+		intl: ReturnType<typeof getContext>["intl"];
 	}
 }
 
@@ -60,28 +60,26 @@ namespace ContentChecksSection {
  */
 function ContentChecksSection(handle: Handle<ContentChecksSection.Props>) {
 	return () => {
-		let { team, monitorId, contentChecks, i18next } = handle.props;
+		let { team, monitorId, contentChecks, intl } = handle.props;
 		let deleteAction = routes.actions.monitor.http.deleteContentCheck.href({ team: team.slug });
 
 		return (
 			<SettingsSection
 				id="content-monitoring"
-				title={i18next.t("contentMonitoring.title")}
-				description={i18next.t("contentMonitoring.description")}
+				title={intl.t("contentMonitoring.title")}
+				description={intl.t("contentMonitoring.description")}
 			>
 				<SettingsSection.Card>
 					{contentChecks.length > 0 && (
 						<div mix={[borderEdge("block-end", { color: "neutral", width: 1 })]}>
 							<Table.Container>
-								<Table aria-label={i18next.t("contentMonitoring.title")}>
+								<Table aria-label={intl.t("contentMonitoring.title")}>
 									<Table.Header>
 										<Table.Row>
-											<Table.Column>{i18next.t("contentMonitoring.item.type")}</Table.Column>
-											<Table.Column>{i18next.t("contentMonitoring.form.value.label")}</Table.Column>
-											<Table.Column>
-												{i18next.t("contentMonitoring.item.caseSensitive")}
-											</Table.Column>
-											<Table.Column>{i18next.t("contentMonitoring.item.status")}</Table.Column>
+											<Table.Column>{intl.t("contentMonitoring.item.type")}</Table.Column>
+											<Table.Column>{intl.t("contentMonitoring.form.value.label")}</Table.Column>
+											<Table.Column>{intl.t("contentMonitoring.item.caseSensitive")}</Table.Column>
+											<Table.Column>{intl.t("contentMonitoring.item.status")}</Table.Column>
 											<Table.Column></Table.Column>
 										</Table.Row>
 									</Table.Header>
@@ -92,19 +90,19 @@ function ContentChecksSection(handle: Handle<ContentChecksSection.Props>) {
 
 											return (
 												<Table.Row key={check.id}>
-													<Table.Cell>{contentCheckTypeLabel(i18next, check.type)}</Table.Cell>
+													<Table.Cell>{contentCheckTypeLabel(intl, check.type)}</Table.Cell>
 													<Table.Cell>
 														<code>{check.value}</code>
 													</Table.Cell>
 													<Table.Cell>
 														{check.case_sensitive
-															? i18next.t("contentMonitoring.item.yes")
-															: i18next.t("contentMonitoring.item.no")}
+															? intl.t("contentMonitoring.item.yes")
+															: intl.t("contentMonitoring.item.no")}
 													</Table.Cell>
 													<Table.Cell>
 														{check.is_enabled
-															? i18next.t("contentMonitoring.item.enabled")
-															: i18next.t("contentMonitoring.item.disabled")}
+															? intl.t("contentMonitoring.item.enabled")
+															: intl.t("contentMonitoring.item.disabled")}
 													</Table.Cell>
 													<Table.Cell>
 														<Button
@@ -113,13 +111,13 @@ function ContentChecksSection(handle: Handle<ContentChecksSection.Props>) {
 															commandfor={dialogId}
 															command="show-modal"
 														>
-															{i18next.t("contentMonitoring.item.delete")}
+															{intl.t("contentMonitoring.item.delete")}
 														</Button>
 
 														<AlertDialog id={dialogId} aria-labelledby={titleId}>
 															<AlertDialog.Header>
 																<AlertDialog.Title id={titleId}>
-																	{i18next.t("contentMonitoring.item.deleteConfirmTitle")}
+																	{intl.t("contentMonitoring.item.deleteConfirmTitle")}
 																</AlertDialog.Title>
 															</AlertDialog.Header>
 															<form method="post" action={deleteAction}>
@@ -128,10 +126,10 @@ function ContentChecksSection(handle: Handle<ContentChecksSection.Props>) {
 																<input type="hidden" name="monitor_id" value={monitorId} />
 																<AlertDialog.Footer>
 																	<AlertDialog.Cancel type="button" commandfor={dialogId}>
-																		{i18next.t("contentMonitoring.form.cancel")}
+																		{intl.t("contentMonitoring.form.cancel")}
 																	</AlertDialog.Cancel>
 																	<Button type="submit" color="danger">
-																		{i18next.t("contentMonitoring.item.delete")}
+																		{intl.t("contentMonitoring.item.delete")}
 																	</Button>
 																</AlertDialog.Footer>
 															</form>
@@ -153,26 +151,26 @@ function ContentChecksSection(handle: Handle<ContentChecksSection.Props>) {
 						<input type="hidden" name="monitor_id" value={monitorId} />
 
 						<SettingsSection.Header
-							title={i18next.t("contentMonitoring.form.title")}
-							description={i18next.t("contentMonitoring.form.description")}
+							title={intl.t("contentMonitoring.form.title")}
+							description={intl.t("contentMonitoring.form.description")}
 						/>
 
 						<SettingsSection.Body>
-							<Field label={i18next.t("contentMonitoring.form.checkType.label")}>
+							<Field label={intl.t("contentMonitoring.form.checkType.label")}>
 								<Select name="type">
 									<Select.Option value="contains" selected>
-										{i18next.t("contentMonitoring.form.checkType.options.contains")}
+										{intl.t("contentMonitoring.form.checkType.options.contains")}
 									</Select.Option>
 									<Select.Option value="not_contains">
-										{i18next.t("contentMonitoring.form.checkType.options.notContains")}
+										{intl.t("contentMonitoring.form.checkType.options.notContains")}
 									</Select.Option>
 									<Select.Option value="regex">
-										{i18next.t("contentMonitoring.form.checkType.options.regex")}
+										{intl.t("contentMonitoring.form.checkType.options.regex")}
 									</Select.Option>
 								</Select>
 							</Field>
 
-							<Field label={i18next.t("contentMonitoring.form.value.label")}>
+							<Field label={intl.t("contentMonitoring.form.value.label")}>
 								<input
 									type="text"
 									name="value"
@@ -191,13 +189,13 @@ function ContentChecksSection(handle: Handle<ContentChecksSection.Props>) {
 
 							<label mix={[flex(), items("center"), gap("8px"), fontSize("0.875rem")]}>
 								<input type="checkbox" name="case_sensitive" value="true" />
-								<span>{i18next.t("contentMonitoring.form.caseSensitive")}</span>
+								<span>{intl.t("contentMonitoring.form.caseSensitive")}</span>
 							</label>
 						</SettingsSection.Body>
 
 						<SettingsSection.Footer>
 							<Button type="submit" variant="outline">
-								{i18next.t("contentMonitoring.form.add")}
+								{intl.t("contentMonitoring.form.add")}
 							</Button>
 						</SettingsSection.Footer>
 					</form>
@@ -211,14 +209,14 @@ namespace SslSettingsSection {
 	export interface Props {
 		team: { slug: string };
 		monitor: SelectMonitor;
-		i18next: ReturnType<typeof getContext>["i18next"];
+		intl: ReturnType<typeof getContext>["intl"];
 	}
 }
 
 /** Renders the SSL monitoring toggle plus manually-entered expiry date/issuer/warning-threshold fields, pre-filled from `monitor`. */
 function SslSettingsSection(handle: Handle<SslSettingsSection.Props>) {
 	return () => {
-		let { team, monitor, i18next } = handle.props;
+		let { team, monitor, intl } = handle.props;
 		let expiresAtValue = monitor.ssl_expires_at
 			? new Date(monitor.ssl_expires_at).toISOString().slice(0, 10)
 			: "";
@@ -226,8 +224,8 @@ function SslSettingsSection(handle: Handle<SslSettingsSection.Props>) {
 		return (
 			<SettingsSection
 				id="ssl"
-				title={i18next.t("page.editMonitor.ssl.title")}
-				description={i18next.t("page.editMonitor.ssl.description")}
+				title={intl.t("page.editMonitor.ssl.title")}
+				description={intl.t("page.editMonitor.ssl.description")}
 			>
 				<SettingsSection.Card>
 					<form
@@ -244,12 +242,12 @@ function SslSettingsSection(handle: Handle<SslSettingsSection.Props>) {
 									value="true"
 									defaultChecked={monitor.ssl_monitoring_enabled}
 								/>
-								<span>{i18next.t("page.editMonitor.form.fields.ssl.enabled.label")}</span>
+								<span>{intl.t("page.editMonitor.form.fields.ssl.enabled.label")}</span>
 							</label>
 
 							<Field
-								label={i18next.t("page.editMonitor.form.fields.ssl.expiresAt.label")}
-								description={i18next.t("page.editMonitor.form.fields.ssl.expiresAt.description")}
+								label={intl.t("page.editMonitor.form.fields.ssl.expiresAt.label")}
+								description={intl.t("page.editMonitor.form.fields.ssl.expiresAt.description")}
 							>
 								<input
 									type="date"
@@ -268,8 +266,8 @@ function SslSettingsSection(handle: Handle<SslSettingsSection.Props>) {
 							</Field>
 
 							<Field
-								label={i18next.t("page.editMonitor.form.fields.ssl.issuer.label")}
-								description={i18next.t("page.editMonitor.form.fields.ssl.issuer.description")}
+								label={intl.t("page.editMonitor.form.fields.ssl.issuer.label")}
+								description={intl.t("page.editMonitor.form.fields.ssl.issuer.description")}
 							>
 								<input
 									type="text"
@@ -288,8 +286,8 @@ function SslSettingsSection(handle: Handle<SslSettingsSection.Props>) {
 							</Field>
 
 							<Field
-								label={i18next.t("page.editMonitor.form.fields.ssl.warningDays.label")}
-								description={i18next.t("page.editMonitor.form.fields.ssl.warningDays.description")}
+								label={intl.t("page.editMonitor.form.fields.ssl.warningDays.label")}
+								description={intl.t("page.editMonitor.form.fields.ssl.warningDays.description")}
 							>
 								<input
 									type="number"
@@ -311,7 +309,7 @@ function SslSettingsSection(handle: Handle<SslSettingsSection.Props>) {
 						</SettingsSection.Body>
 
 						<SettingsSection.Footer>
-							<Button type="submit">{i18next.t("page.editMonitor.ssl.cta")}</Button>
+							<Button type="submit">{intl.t("page.editMonitor.ssl.cta")}</Button>
 						</SettingsSection.Footer>
 					</form>
 				</SettingsSection.Card>
@@ -344,11 +342,11 @@ export default createAction(routes.app.team.monitors.edit, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
-					heading={ctx.i18next.t("page.editMonitor.header.title")}
+					intl={ctx.intl}
+					heading={ctx.intl.t("page.editMonitor.header.title")}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("app.layout.sidebar.navigation.items.dashboard"),
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.dashboard"),
 							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 						},
 						{
@@ -371,14 +369,14 @@ export default createAction(routes.app.team.monitors.edit, {
 
 								<SettingsSection
 									id="basics"
-									title={ctx.i18next.t("page.editMonitor.form.sections.basics.title")}
-									description={ctx.i18next.t("page.editMonitor.form.sections.basics.description")}
+									title={ctx.intl.t("page.editMonitor.form.sections.basics.title")}
+									description={ctx.intl.t("page.editMonitor.form.sections.basics.description")}
 								>
 									<SettingsSection.Card>
 										<SettingsSection.Body>
 											<MonitorFormFields
 												monitor={monitor}
-												i18next={ctx.i18next}
+												intl={ctx.intl}
 												page="editMonitor"
 												group="basics"
 											/>
@@ -388,14 +386,14 @@ export default createAction(routes.app.team.monitors.edit, {
 
 								<SettingsSection
 									id="checks"
-									title={ctx.i18next.t("page.editMonitor.form.sections.checks.title")}
-									description={ctx.i18next.t("page.editMonitor.form.sections.checks.description")}
+									title={ctx.intl.t("page.editMonitor.form.sections.checks.title")}
+									description={ctx.intl.t("page.editMonitor.form.sections.checks.description")}
 								>
 									<SettingsSection.Card>
 										<SettingsSection.Body>
 											<MonitorFormFields
 												monitor={monitor}
-												i18next={ctx.i18next}
+												intl={ctx.intl}
 												page="editMonitor"
 												group="checks"
 											/>
@@ -408,9 +406,9 @@ export default createAction(routes.app.team.monitors.edit, {
 													monitorId: monitor.id,
 												})}
 											>
-												{ctx.i18next.t("page.editMonitor.form.cancel")}
+												{ctx.intl.t("page.editMonitor.form.cancel")}
 											</LinkButton>
-											<Button type="submit">{ctx.i18next.t("page.editMonitor.form.cta")}</Button>
+											<Button type="submit">{ctx.intl.t("page.editMonitor.form.cta")}</Button>
 										</SettingsSection.Footer>
 									</SettingsSection.Card>
 								</SettingsSection>
@@ -420,21 +418,21 @@ export default createAction(routes.app.team.monitors.edit, {
 								team={ctx.team}
 								monitorId={monitor.id}
 								contentChecks={contentChecks}
-								i18next={ctx.i18next}
+								intl={ctx.intl}
 							/>
 
-							<SslSettingsSection team={ctx.team} monitor={monitor} i18next={ctx.i18next} />
+							<SslSettingsSection team={ctx.team} monitor={monitor} intl={ctx.intl} />
 
 							<SettingsSection
 								id="danger"
 								tone="danger"
-								title={ctx.i18next.t("page.editMonitor.dangerZone.title")}
-								description={ctx.i18next.t("page.editMonitor.dangerZone.description")}
+								title={ctx.intl.t("page.editMonitor.dangerZone.title")}
+								description={ctx.intl.t("page.editMonitor.dangerZone.description")}
 							>
 								<SettingsSection.Card tone="danger">
 									<SettingsSection.Body>
 										<p mix={[m(0), fontSize("sm"), fg("danger")]}>
-											{ctx.i18next.t("page.editMonitor.dangerZone.warning")}
+											{ctx.intl.t("page.editMonitor.dangerZone.warning")}
 										</p>
 									</SettingsSection.Body>
 									<SettingsSection.Footer tone="danger">
@@ -444,7 +442,7 @@ export default createAction(routes.app.team.monitors.edit, {
 											commandfor="delete-monitor"
 											command="show-modal"
 										>
-											{ctx.i18next.t("page.editMonitor.dangerZone.delete")}
+											{ctx.intl.t("page.editMonitor.dangerZone.delete")}
 										</Button>
 									</SettingsSection.Footer>
 								</SettingsSection.Card>
@@ -457,12 +455,12 @@ export default createAction(routes.app.team.monitors.edit, {
 							>
 								<AlertDialog.Header>
 									<AlertDialog.Title id={deleteMonitorTitleId}>
-										{ctx.i18next.t("page.httpMonitors.table.confirmation.delete", {
+										{ctx.intl.t("page.httpMonitors.table.confirmation.delete", {
 											name: monitor.name,
 										})}
 									</AlertDialog.Title>
 									<AlertDialog.Description id={deleteMonitorDescriptionId}>
-										{ctx.i18next.t("page.httpMonitors.table.confirmation.deleteDescription")}
+										{ctx.intl.t("page.httpMonitors.table.confirmation.deleteDescription")}
 									</AlertDialog.Description>
 								</AlertDialog.Header>
 								<form
@@ -473,10 +471,10 @@ export default createAction(routes.app.team.monitors.edit, {
 									<input type="hidden" name="monitor_id" value={monitor.id} />
 									<AlertDialog.Footer>
 										<AlertDialog.Cancel type="button" commandfor="delete-monitor">
-											{ctx.i18next.t("page.editMonitor.form.cancel")}
+											{ctx.intl.t("page.editMonitor.form.cancel")}
 										</AlertDialog.Cancel>
 										<Button type="submit" color="danger">
-											{ctx.i18next.t("page.httpMonitors.table.actions.delete")}
+											{ctx.intl.t("page.httpMonitors.table.actions.delete")}
 										</Button>
 									</AlertDialog.Footer>
 								</form>

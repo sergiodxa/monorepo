@@ -123,8 +123,8 @@ export default createAction(routes.app.team.account, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
-					heading={ctx.i18next.t("page.account.header.title")}
+					intl={ctx.intl}
+					heading={ctx.intl.t("page.account.header.title")}
 				>
 					<div mix={[vstack({ gap: "48px" })]}>
 						<section
@@ -133,10 +133,10 @@ export default createAction(routes.app.team.account, {
 						>
 							<div mix={[vstack({ gap: "4px" })]}>
 								<h2 mix={[m(0), fontSize("1.25rem"), weight(600)]}>
-									{ctx.i18next.t("page.account.profile.title")}
+									{ctx.intl.t("page.account.profile.title")}
 								</h2>
 								<p mix={[m(0), fontSize("0.875rem"), fg("neutral.muted")]}>
-									{ctx.i18next.t("page.account.profile.description")}
+									{ctx.intl.t("page.account.profile.description")}
 								</p>
 							</div>
 
@@ -145,10 +145,10 @@ export default createAction(routes.app.team.account, {
 									mix={[p("20px", "24px"), borderEdge("block-end", { color: "neutral", width: 1 })]}
 								>
 									<h3 mix={[m(0, 0, "4px", 0), fontSize("1rem"), weight(600)]}>
-										{ctx.i18next.t("page.account.profile.card.title")}
+										{ctx.intl.t("page.account.profile.card.title")}
 									</h3>
 									<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-										{ctx.i18next.t("page.account.profile.card.description")}
+										{ctx.intl.t("page.account.profile.card.description")}
 									</p>
 								</div>
 
@@ -178,10 +178,10 @@ export default createAction(routes.app.team.account, {
 						>
 							<div mix={[vstack({ gap: "4px" })]}>
 								<h2 mix={[m(0), fontSize("1.25rem"), weight(600)]}>
-									{ctx.i18next.t("page.account.language.title")}
+									{ctx.intl.t("page.account.language.title")}
 								</h2>
 								<p mix={[m(0), fontSize("0.875rem"), fg("neutral.muted")]}>
-									{ctx.i18next.t("page.account.language.description")}
+									{ctx.intl.t("page.account.language.description")}
 								</p>
 							</div>
 
@@ -194,17 +194,17 @@ export default createAction(routes.app.team.account, {
 										]}
 									>
 										<h3 mix={[m(0, 0, "4px", 0), fontSize("1rem"), weight(600)]}>
-											{ctx.i18next.t("page.account.language.card.title")}
+											{ctx.intl.t("page.account.language.card.title")}
 										</h3>
 										<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-											{ctx.i18next.t("page.account.language.card.description")}
+											{ctx.intl.t("page.account.language.card.description")}
 										</p>
 									</div>
 
 									<div mix={[p("24px"), vstack({ gap: SETTINGS_FIELD_GAP })]}>
 										<Field
-											label={ctx.i18next.t("page.account.language.form.fields.language.label")}
-											description={ctx.i18next.t(
+											label={ctx.intl.t("page.account.language.form.fields.language.label")}
+											description={ctx.intl.t(
 												"page.account.language.form.fields.language.description",
 											)}
 										>
@@ -217,7 +217,7 @@ export default createAction(routes.app.team.account, {
 												 */
 											>
 												<Select.Option value="auto" selected={preferredLanguage === null}>
-													{ctx.i18next.t("page.account.language.form.fields.language.options.auto")}
+													{ctx.intl.t("page.account.language.form.fields.language.options.auto")}
 												</Select.Option>
 												{supportedLanguages.map((code) => (
 													<Select.Option
@@ -225,7 +225,7 @@ export default createAction(routes.app.team.account, {
 														value={code}
 														selected={code === preferredLanguage}
 													>
-														{ctx.i18next.t(
+														{ctx.intl.t(
 															`page.account.language.form.fields.language.options.${code}`,
 														)}
 													</Select.Option>
@@ -242,9 +242,9 @@ export default createAction(routes.app.team.account, {
 										]}
 									>
 										<Button type="reset" variant="outline">
-											{ctx.i18next.t("page.account.form.actions.cancel")}
+											{ctx.intl.t("page.account.form.actions.cancel")}
 										</Button>
-										<Button type="submit">{ctx.i18next.t("page.account.language.form.cta")}</Button>
+										<Button type="submit">{ctx.intl.t("page.account.language.form.cta")}</Button>
 									</div>
 								</form>
 							</div>
@@ -256,10 +256,10 @@ export default createAction(routes.app.team.account, {
 						>
 							<div mix={[vstack({ gap: "4px" })]}>
 								<h2 mix={[m(0), fontSize("1.25rem"), weight(600)]}>
-									{ctx.i18next.t("page.account.emails.title")}
+									{ctx.intl.t("page.account.emails.title")}
 								</h2>
 								<p mix={[m(0), fontSize("0.875rem"), fg("neutral.muted")]}>
-									{ctx.i18next.t("page.account.emails.description")}
+									{ctx.intl.t("page.account.emails.description")}
 								</p>
 							</div>
 
@@ -272,10 +272,10 @@ export default createAction(routes.app.team.account, {
 										]}
 									>
 										<h3 mix={[m(0, 0, "4px", 0), fontSize("1rem"), weight(600)]}>
-											{ctx.i18next.t("page.account.emails.card.title")}
+											{ctx.intl.t("page.account.emails.card.title")}
 										</h3>
 										<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-											{ctx.i18next.t("page.account.emails.card.description")}
+											{ctx.intl.t("page.account.emails.card.description")}
 										</p>
 									</div>
 
@@ -293,7 +293,7 @@ export default createAction(routes.app.team.account, {
 													defaultChecked={UserPreferences.wants(preferences, email)}
 													aria-describedby={emailDescriptionId(email)}
 												>
-													{ctx.i18next.t(`page.account.emails.list.${email}.name`)}
+													{ctx.intl.t(`page.account.emails.list.${email}.name`)}
 												</Switch>
 												<Description
 													/**
@@ -303,7 +303,7 @@ export default createAction(routes.app.team.account, {
 													 */
 													id={emailDescriptionId(email)}
 												>
-													{ctx.i18next.t(`page.account.emails.list.${email}.description`)}
+													{ctx.intl.t(`page.account.emails.list.${email}.description`)}
 												</Description>
 											</div>
 										))}
@@ -317,9 +317,9 @@ export default createAction(routes.app.team.account, {
 										]}
 									>
 										<Button type="reset" variant="outline">
-											{ctx.i18next.t("page.account.form.actions.cancel")}
+											{ctx.intl.t("page.account.form.actions.cancel")}
 										</Button>
-										<Button type="submit">{ctx.i18next.t("page.account.emails.form.cta")}</Button>
+										<Button type="submit">{ctx.intl.t("page.account.emails.form.cta")}</Button>
 									</div>
 								</form>
 							</div>
@@ -332,10 +332,10 @@ export default createAction(routes.app.team.account, {
 							<div mix={[hstack({ align: "start", justify: "between", gap: "16px" })]}>
 								<div mix={[vstack({ gap: "4px" })]}>
 									<h2 mix={[m(0), fontSize("1.25rem"), weight(600)]}>
-										{ctx.i18next.t("page.account.teams.title")}
+										{ctx.intl.t("page.account.teams.title")}
 									</h2>
 									<p mix={[m(0), fontSize("0.875rem"), fg("neutral.muted")]}>
-										{ctx.i18next.t("page.account.teams.description")}
+										{ctx.intl.t("page.account.teams.description")}
 									</p>
 								</div>
 								<Button
@@ -345,7 +345,7 @@ export default createAction(routes.app.team.account, {
 									mix={[shrink(0)]}
 								>
 									<PlusIcon size={16} strokeWidth={1.5} />
-									<span>{ctx.i18next.t("page.account.teams.actions.createTeam")}</span>
+									<span>{ctx.intl.t("page.account.teams.actions.createTeam")}</span>
 								</Button>
 							</div>
 
@@ -363,18 +363,18 @@ export default createAction(routes.app.team.account, {
 									when("&::backdrop", bg("rgba(0, 0, 0, 0.4)")),
 								]}
 							>
-								<h3>{ctx.i18next.t("page.createTeam.header.title")}</h3>
+								<h3>{ctx.intl.t("page.createTeam.header.title")}</h3>
 								<form
 									method="post"
 									action={routes.accountActions.createTeam.href()}
 									mix={[vstack({ gap: SETTINGS_FIELD_GAP })]}
 								>
-									<Field label={ctx.i18next.t("page.createTeam.form.fields.name.label")}>
+									<Field label={ctx.intl.t("page.createTeam.form.fields.name.label")}>
 										<input
 											type="text"
 											name="name"
 											required
-											placeholder={ctx.i18next.t("page.createTeam.form.fields.name.placeholder")}
+											placeholder={ctx.intl.t("page.createTeam.form.fields.name.placeholder")}
 											mix={[
 												p("8px", "12px"),
 												rounded("6px"),
@@ -393,9 +393,9 @@ export default createAction(routes.app.team.account, {
 											commandfor="create-team"
 											command="close"
 										>
-											{ctx.i18next.t("page.createTeam.form.cancel")}
+											{ctx.intl.t("page.createTeam.form.cancel")}
 										</Button>
-										<Button type="submit">{ctx.i18next.t("page.createTeam.form.cta")}</Button>
+										<Button type="submit">{ctx.intl.t("page.createTeam.form.cta")}</Button>
 									</div>
 								</form>
 							</dialog>
@@ -405,10 +405,10 @@ export default createAction(routes.app.team.account, {
 									mix={[p("20px", "24px"), borderEdge("block-end", { color: "neutral", width: 1 })]}
 								>
 									<h3 mix={[m(0, 0, "4px", 0), fontSize("1rem"), weight(600)]}>
-										{ctx.i18next.t("page.account.teams.table.label")}
+										{ctx.intl.t("page.account.teams.table.label")}
 									</h3>
 									<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-										{ctx.i18next.t("page.account.teams.table.description")}
+										{ctx.intl.t("page.account.teams.table.description")}
 									</p>
 								</div>
 
@@ -416,24 +416,24 @@ export default createAction(routes.app.team.account, {
 									<div mix={[p("24px")]}>
 										<Empty>
 											<Empty.Description>
-												{ctx.i18next.t("page.account.teams.empty.description")}
+												{ctx.intl.t("page.account.teams.empty.description")}
 											</Empty.Description>
 										</Empty>
 									</div>
 								) : (
 									<Table.Container>
-										<Table aria-label={ctx.i18next.t("page.account.teams.table.label")}>
+										<Table aria-label={ctx.intl.t("page.account.teams.table.label")}>
 											<Table.Header>
 												<Table.Row>
 													<Table.Column>
-														{ctx.i18next.t("page.account.teams.table.columns.team")}
+														{ctx.intl.t("page.account.teams.table.columns.team")}
 													</Table.Column>
 													<Table.Column align="end">
-														{ctx.i18next.t("page.account.teams.table.columns.role")}
+														{ctx.intl.t("page.account.teams.table.columns.role")}
 													</Table.Column>
 													<Table.Column align="center">
 														<span mix={[visuallyHidden()]}>
-															{ctx.i18next.t("page.account.teams.table.columns.actions")}
+															{ctx.intl.t("page.account.teams.table.columns.actions")}
 														</span>
 													</Table.Column>
 												</Table.Row>
@@ -459,7 +459,7 @@ export default createAction(routes.app.team.account, {
 																</a>
 															</Table.Cell>
 															<Table.Cell mix={[textAlign("end")]}>
-																{ctx.i18next.t(
+																{ctx.intl.t(
 																	`page.account.teams.table.role.${isOwner ? "owner" : role}`,
 																)}
 															</Table.Cell>
@@ -468,7 +468,7 @@ export default createAction(routes.app.team.account, {
 																	<>
 																		<RowMenu
 																			id={`team-menu-${team.id}`}
-																			label={ctx.i18next.t("page.account.teams.table.actions.menu")}
+																			label={ctx.intl.t("page.account.teams.table.actions.menu")}
 																		>
 																			<button
 																				type="button"
@@ -478,7 +478,7 @@ export default createAction(routes.app.team.account, {
 																			>
 																				<LogOutIcon size={16} strokeWidth={1.5} />
 																				<span>
-																					{ctx.i18next.t("page.account.teams.table.actions.leave")}
+																					{ctx.intl.t("page.account.teams.table.actions.leave")}
 																				</span>
 																			</button>
 																		</RowMenu>
@@ -489,7 +489,7 @@ export default createAction(routes.app.team.account, {
 																		>
 																			<AlertDialog.Header>
 																				<AlertDialog.Title id={leaveDialogTitleId}>
-																					{ctx.i18next.t(
+																					{ctx.intl.t(
 																						"page.account.teams.table.confirmation.leaveTeam",
 																						{ name: team.name },
 																					)}
@@ -502,15 +502,13 @@ export default createAction(routes.app.team.account, {
 																				<input type="hidden" name="team_id" value={team.id} />
 																				<AlertDialog.Footer>
 																					<AlertDialog.Cancel commandfor={leaveDialogId}>
-																						{ctx.i18next.t("page.account.form.actions.cancel")}
+																						{ctx.intl.t("page.account.form.actions.cancel")}
 																					</AlertDialog.Cancel>
 																					<AlertDialog.Action
 																						type="submit"
 																						commandfor={leaveDialogId}
 																					>
-																						{ctx.i18next.t(
-																							"page.account.teams.table.actions.leave",
-																						)}
+																						{ctx.intl.t("page.account.teams.table.actions.leave")}
 																					</AlertDialog.Action>
 																				</AlertDialog.Footer>
 																			</form>
@@ -534,10 +532,10 @@ export default createAction(routes.app.team.account, {
 						>
 							<div mix={[vstack({ gap: "4px" })]}>
 								<h2 mix={[m(0), fontSize("1.25rem"), weight(600)]}>
-									{ctx.i18next.t("page.account.dataExport.title")}
+									{ctx.intl.t("page.account.dataExport.title")}
 								</h2>
 								<p mix={[m(0), fontSize("0.875rem"), fg("neutral.muted")]}>
-									{ctx.i18next.t("page.account.dataExport.description")}
+									{ctx.intl.t("page.account.dataExport.description")}
 								</p>
 							</div>
 
@@ -557,19 +555,19 @@ export default createAction(routes.app.team.account, {
 										]}
 									>
 										<h3 mix={[m(0, 0, "4px", 0), fontSize("1rem"), weight(600)]}>
-											{ctx.i18next.t("page.account.dataExport.card.title")}
+											{ctx.intl.t("page.account.dataExport.card.title")}
 										</h3>
 										<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-											{ctx.i18next.t("page.account.dataExport.card.description")}
+											{ctx.intl.t("page.account.dataExport.card.description")}
 										</p>
 									</div>
 
 									<div mix={[p("24px"), vstack({ gap: "12px" })]}>
 										<p mix={[m(0), fontSize("0.875rem")]}>
-											{ctx.i18next.t("page.account.dataExport.card.includes")}
+											{ctx.intl.t("page.account.dataExport.card.includes")}
 										</p>
 										<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-											{ctx.i18next.t("page.account.dataExport.card.excludes")}
+											{ctx.intl.t("page.account.dataExport.card.excludes")}
 										</p>
 									</div>
 
@@ -582,7 +580,7 @@ export default createAction(routes.app.team.account, {
 									>
 										<Button type="submit">
 											<DownloadIcon size={16} strokeWidth={1.5} />
-											<span>{ctx.i18next.t("page.account.dataExport.form.cta")}</span>
+											<span>{ctx.intl.t("page.account.dataExport.form.cta")}</span>
 										</Button>
 									</div>
 								</form>
@@ -595,10 +593,10 @@ export default createAction(routes.app.team.account, {
 						>
 							<div mix={[vstack({ gap: "4px" })]}>
 								<h2 mix={[m(0), fontSize("1.25rem"), weight(600), fg("danger")]}>
-									{ctx.i18next.t("page.account.deleteAccount.title")}
+									{ctx.intl.t("page.account.deleteAccount.title")}
 								</h2>
 								<p mix={[m(0), fontSize("0.875rem"), fg("neutral.muted")]}>
-									{ctx.i18next.t("page.account.deleteAccount.description")}
+									{ctx.intl.t("page.account.deleteAccount.description")}
 								</p>
 							</div>
 
@@ -616,10 +614,10 @@ export default createAction(routes.app.team.account, {
 										]}
 									>
 										<h3 mix={[m(0, 0, "4px", 0), fontSize("1rem"), weight(600), fg("danger")]}>
-											{ctx.i18next.t("page.account.deleteAccount.queued.title")}
+											{ctx.intl.t("page.account.deleteAccount.queued.title")}
 										</h3>
 										<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-											{ctx.i18next.t("page.account.deleteAccount.queued.requestedAt", {
+											{ctx.intl.t("page.account.deleteAccount.queued.requestedAt", {
 												date: new Date(queuedDeletion.requested_at).toISOString().slice(0, 10),
 											})}
 										</p>
@@ -627,7 +625,7 @@ export default createAction(routes.app.team.account, {
 
 									<div mix={[p("24px")]}>
 										<p mix={[m(0), fontSize("0.875rem")]}>
-											{ctx.i18next.t("page.account.deleteAccount.queued.description")}
+											{ctx.intl.t("page.account.deleteAccount.queued.description")}
 										</p>
 									</div>
 
@@ -641,7 +639,7 @@ export default createAction(routes.app.team.account, {
 											]}
 										>
 											<Button type="submit" variant="outline">
-												{ctx.i18next.t("page.account.deleteAccount.queued.cta")}
+												{ctx.intl.t("page.account.deleteAccount.queued.cta")}
 											</Button>
 										</div>
 									</form>
@@ -656,36 +654,35 @@ export default createAction(routes.app.team.account, {
 											]}
 										>
 											<h3 mix={[m(0, 0, "4px", 0), fontSize("1rem"), weight(600), fg("danger")]}>
-												{ctx.i18next.t("page.account.deleteAccount.card.title")}
+												{ctx.intl.t("page.account.deleteAccount.card.title")}
 											</h3>
 											<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-												{ctx.i18next.t("page.account.deleteAccount.card.description")}
+												{ctx.intl.t("page.account.deleteAccount.card.description")}
 											</p>
 										</div>
 
 										<div mix={[p("24px"), vstack({ gap: "16px" })]}>
 											<p mix={[m(0), fontSize("0.875rem")]}>
-												{ctx.i18next.t("page.account.deleteAccount.card.whatHappens")}
+												{ctx.intl.t("page.account.deleteAccount.card.whatHappens")}
 											</p>
 
 											{plan.ownedTeams.length === 0 ? (
 												<p mix={[m(0), fontSize("0.875rem"), fg("neutral.muted")]}>
-													{ctx.i18next.t("page.account.deleteAccount.card.noOwnedTeams")}
+													{ctx.intl.t("page.account.deleteAccount.card.noOwnedTeams")}
 												</p>
 											) : (
 												<div mix={[vstack({ gap: "8px" })]}>
 													<p mix={[m(0), fontSize("0.875rem")]}>
-														{ctx.i18next.t("page.account.deleteAccount.card.ownedTeamsIntro")}
+														{ctx.intl.t("page.account.deleteAccount.card.ownedTeamsIntro")}
 													</p>
 													<ul mix={[m(0), p(0, 0, 0, "20px"), fontSize("0.875rem")]}>
 														{plan.ownedTeams.map((team) => (
 															<li key={team.id}>
 																{team.otherMemberCount === 0
-																	? ctx.i18next.t(
-																			"page.account.deleteAccount.card.ownedTeamAlone",
-																			{ name: team.name },
-																		)
-																	: ctx.i18next.t("page.account.deleteAccount.card.ownedTeam", {
+																	? ctx.intl.t("page.account.deleteAccount.card.ownedTeamAlone", {
+																			name: team.name,
+																		})
+																	: ctx.intl.t("page.account.deleteAccount.card.ownedTeam", {
 																			name: team.name,
 																			count: team.otherMemberCount,
 																		})}
@@ -704,7 +701,7 @@ export default createAction(routes.app.team.account, {
 													 */
 													mix={[m(0), fontSize("0.875rem"), weight(600), fg("danger")]}
 												>
-													{ctx.i18next.t("page.account.deleteAccount.card.othersWarning", {
+													{ctx.intl.t("page.account.deleteAccount.card.othersWarning", {
 														count: plan.othersLosingAccess,
 													})}
 												</p>
@@ -712,7 +709,7 @@ export default createAction(routes.app.team.account, {
 
 											<div mix={[vstack({ gap: "4px" })]}>
 												<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-													{ctx.i18next.t("page.account.deleteAccount.card.retained.intro")}
+													{ctx.intl.t("page.account.deleteAccount.card.retained.intro")}
 												</p>
 												<ul
 													mix={[
@@ -722,21 +719,17 @@ export default createAction(routes.app.team.account, {
 														fg("neutral.muted"),
 													]}
 												>
+													<li>{ctx.intl.t("page.account.deleteAccount.card.retained.billing")}</li>
 													<li>
-														{ctx.i18next.t("page.account.deleteAccount.card.retained.billing")}
+														{ctx.intl.t("page.account.deleteAccount.card.retained.analytics")}
 													</li>
-													<li>
-														{ctx.i18next.t("page.account.deleteAccount.card.retained.analytics")}
-													</li>
-													<li>{ctx.i18next.t("page.account.deleteAccount.card.retained.logs")}</li>
-													<li>
-														{ctx.i18next.t("page.account.deleteAccount.card.retained.identity")}
-													</li>
+													<li>{ctx.intl.t("page.account.deleteAccount.card.retained.logs")}</li>
+													<li>{ctx.intl.t("page.account.deleteAccount.card.retained.identity")}</li>
 												</ul>
 											</div>
 
 											<Field
-												label={ctx.i18next.t("page.account.deleteAccount.card.confirmation.label")}
+												label={ctx.intl.t("page.account.deleteAccount.card.confirmation.label")}
 											>
 												<input
 													type="text"
@@ -744,10 +737,8 @@ export default createAction(routes.app.team.account, {
 													required
 													autocomplete="off"
 													pattern="DELETE"
-													title={ctx.i18next.t(
-														"page.account.deleteAccount.card.confirmation.label",
-													)}
-													placeholder={ctx.i18next.t(
+													title={ctx.intl.t("page.account.deleteAccount.card.confirmation.label")}
+													placeholder={ctx.intl.t(
 														"page.account.deleteAccount.card.confirmation.placeholder",
 													)}
 													mix={confirmationInput()}
@@ -764,7 +755,7 @@ export default createAction(routes.app.team.account, {
 										>
 											<Button type="submit" color="danger">
 												<Trash2Icon size={16} strokeWidth={1.5} />
-												<span>{ctx.i18next.t("page.account.deleteAccount.card.cta")}</span>
+												<span>{ctx.intl.t("page.account.deleteAccount.card.cta")}</span>
 											</Button>
 										</div>
 									</form>

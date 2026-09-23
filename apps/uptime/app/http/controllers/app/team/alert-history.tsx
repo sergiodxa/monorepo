@@ -5,6 +5,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Translate } from "@sdxc/i18n";
+
 import { BellIcon, HistoryIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { fontSize } from "@sdxc/u/typography";
@@ -35,6 +37,16 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	failed: "down",
 };
 
+/**
+ * The translated label for an alert event's status; a status the locales have no copy for
+ * reads as "skipped", so a status added to the database later still renders a label.
+ */
+function statusLabel(t: Translate, status: string): string {
+	let key = `page.alertHistory.table.status.${status}`;
+	let label = t(key);
+	return label === key ? t("page.alertHistory.table.status.skipped") : label;
+}
+
 const EVENT_TYPE_BADGE_TONE: Record<string, BadgeTone> = {
 	up: "up",
 	degraded: "degraded",
@@ -53,20 +65,18 @@ export default createAction(routes.app.team.alerts.history, {
 		let events = await AlertEvent.listByAlertIds(ctx.db, [...alertsById.keys()], HISTORY_LIMIT);
 
 		return ctx.render(
-			<DocumentLayout
-				title={`${ctx.team.name} · ${ctx.i18next.t("page.alertHistory.header.title")}`}
-			>
+			<DocumentLayout title={`${ctx.team.name} · ${ctx.intl.t("page.alertHistory.header.title")}`}>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
-					heading={ctx.i18next.t("page.alertHistory.header.title")}
+					intl={ctx.intl}
+					heading={ctx.intl.t("page.alertHistory.header.title")}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("page.alertHistory.breadcrumbs.alerts"),
+							label: ctx.intl.t("page.alertHistory.breadcrumbs.alerts"),
 							href: routes.app.team.alerts.index.href({ team: ctx.team.slug }),
 						},
 					]}
@@ -77,36 +87,36 @@ export default createAction(routes.app.team.alerts.history, {
 								<Empty.Icon>
 									<HistoryIcon size={24} strokeWidth={1.5} />
 								</Empty.Icon>
-								<Empty.Title>{ctx.i18next.t("page.alertHistory.empty.title")}</Empty.Title>
+								<Empty.Title>{ctx.intl.t("page.alertHistory.empty.title")}</Empty.Title>
 								<Empty.Description>
-									{ctx.i18next.t("page.alertHistory.empty.description")}
+									{ctx.intl.t("page.alertHistory.empty.description")}
 								</Empty.Description>
 								<Empty.Action>
 									<LinkButton href={routes.app.team.alerts.index.href({ team: ctx.team.slug })}>
 										<BellIcon size={20} strokeWidth={1.5} />
-										{ctx.i18next.t("page.alertHistory.empty.cta")}
+										{ctx.intl.t("page.alertHistory.empty.cta")}
 									</LinkButton>
 								</Empty.Action>
 							</Empty>
 						) : (
 							<Table.Container>
-								<Table aria-label={ctx.i18next.t("page.alertHistory.header.title")}>
+								<Table aria-label={ctx.intl.t("page.alertHistory.header.title")}>
 									<Table.Header>
 										<Table.Row>
 											<Table.Column>
-												{ctx.i18next.t("page.alertHistory.table.columns.alert")}
+												{ctx.intl.t("page.alertHistory.table.columns.alert")}
 											</Table.Column>
 											<Table.Column>
-												{ctx.i18next.t("page.alertHistory.table.columns.monitor")}
+												{ctx.intl.t("page.alertHistory.table.columns.monitor")}
 											</Table.Column>
 											<Table.Column>
-												{ctx.i18next.t("page.alertHistory.table.columns.eventType")}
+												{ctx.intl.t("page.alertHistory.table.columns.eventType")}
 											</Table.Column>
 											<Table.Column>
-												{ctx.i18next.t("page.alertHistory.table.columns.status")}
+												{ctx.intl.t("page.alertHistory.table.columns.status")}
 											</Table.Column>
 											<Table.Column>
-												{ctx.i18next.t("page.alertHistory.table.columns.sentAt")}
+												{ctx.intl.t("page.alertHistory.table.columns.sentAt")}
 											</Table.Column>
 										</Table.Row>
 									</Table.Header>
@@ -115,25 +125,22 @@ export default createAction(routes.app.team.alerts.history, {
 											<Table.Row key={event.id}>
 												<Table.Cell>
 													{alertsById.get(event.alert_id)?.name ??
-														ctx.i18next.t("page.alertHistory.table.unknownAlert")}
+														ctx.intl.t("page.alertHistory.table.unknownAlert")}
 												</Table.Cell>
 												<Table.Cell>
 													{event.monitor_name ??
-														ctx.i18next.t("page.alertHistory.table.unknownMonitor")}
+														ctx.intl.t("page.alertHistory.table.unknownMonitor")}
 												</Table.Cell>
 												<Table.Cell>
 													<Badge
 														{...badgeVariant(EVENT_TYPE_BADGE_TONE[event.event_type] ?? "neutral")}
 													>
-														{ctx.i18next.t(`page.alertHistory.table.eventType.${event.event_type}`)}
+														{ctx.intl.t(`page.alertHistory.table.eventType.${event.event_type}`)}
 													</Badge>
 												</Table.Cell>
 												<Table.Cell>
 													<Badge {...badgeVariant(STATUS_BADGE_TONE[event.status] ?? "neutral")}>
-														{ctx.i18next.t([
-															`page.alertHistory.table.status.${event.status}`,
-															"page.alertHistory.table.status.skipped",
-														])}
+														{statusLabel(ctx.intl.t, event.status)}
 													</Badge>
 													{event.error_message && (
 														<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>

@@ -32,6 +32,7 @@ import DnsMonitorRecord from "~/app/data/dns-monitor-record";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import { withPrefix } from "~/app/lib/prefixed-translate";
 import { MAX_TRACKED_NAMES_PER_MONITOR } from "~/app/services/dns-discovery";
 import CheckboxGroupSelectAll from "~/resources/components/checkbox-group-select-all";
 import FormPage from "~/resources/components/form-page";
@@ -70,8 +71,8 @@ namespace RecordGroupSection {
 	export interface Props {
 		kind: Kind;
 		records: SelectDnsMonitorRecord[];
-		/** The request's i18next instance, used to read the `page.dnsMonitorReview.*` copy. */
-		i18next: ReturnType<typeof getContextType>["i18next"];
+		/** The request's translator, used to read the `page.dnsMonitorReview.*` copy. */
+		intl: ReturnType<typeof getContextType>["intl"];
 	}
 }
 
@@ -82,8 +83,8 @@ namespace RecordGroupSection {
  */
 function RecordGroupSection(handle: Handle<RecordGroupSection.Props>) {
 	return () => {
-		let { kind, records, i18next } = handle.props;
-		let t = i18next.getFixedT(null, "translation", "page.dnsMonitorReview");
+		let { kind, records, intl } = handle.props;
+		let t = withPrefix(intl.t, "page.dnsMonitorReview");
 		let groupId = `dns-review-${kind}-group`;
 
 		return (
@@ -100,7 +101,7 @@ function RecordGroupSection(handle: Handle<RecordGroupSection.Props>) {
 							</Description>
 						)}
 
-						<IntlProvider i18n={i18next}>
+						<IntlProvider intl={intl}>
 							<CheckboxGroupSelectAll groupId={groupId} />
 						</IntlProvider>
 
@@ -221,7 +222,7 @@ export default createAction(routes.app.team.dnsMonitors.review, {
 		 */
 		let overNameLimit = names > MAX_TRACKED_NAMES_PER_MONITOR;
 
-		let t = ctx.i18next.getFixedT(null, "translation", "page.dnsMonitorReview");
+		let t = withPrefix(ctx.intl.t, "page.dnsMonitorReview");
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · ${monitor.name}`}>
@@ -231,12 +232,12 @@ export default createAction(routes.app.team.dnsMonitors.review, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
+					intl={ctx.intl}
 					toast={toast}
 					heading={t("header.title", { name: monitor.name })}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("app.layout.sidebar.navigation.items.dnsMonitors"),
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.dnsMonitors"),
 							href: routes.app.team.dnsMonitors.index.href({ team: ctx.team.slug }),
 						},
 						{
@@ -331,22 +332,18 @@ export default createAction(routes.app.team.dnsMonitors.review, {
 										<RecordGroupSection
 											kind="discovered"
 											records={groups.discovered}
-											i18next={ctx.i18next}
+											intl={ctx.intl}
 										/>
 									)}
 									{groups.resolving.length > 0 && (
 										<RecordGroupSection
 											kind="resolving"
 											records={groups.resolving}
-											i18next={ctx.i18next}
+											intl={ctx.intl}
 										/>
 									)}
 									{groups.declared.length > 0 && (
-										<RecordGroupSection
-											kind="declared"
-											records={groups.declared}
-											i18next={ctx.i18next}
-										/>
+										<RecordGroupSection kind="declared" records={groups.declared} intl={ctx.intl} />
 									)}
 
 									<div mix={[hstack({ gap: 2, align: "center", justify: "end" })]}>

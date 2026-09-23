@@ -2,7 +2,7 @@
  * Tests for the account page controller. No `cloudflare:workers` mock is needed —
  * this controller only touches `~/app/data/team` and `~/app/data/user-preferences`,
  * neither of which depends on a queue binding. `ctx.team`/`ctx.membership`/
- * `Auth`/`ctx.i18next` are seeded directly, standing in for the real
+ * `Auth`/`ctx.intl` are seeded directly, standing in for the real
  * `requireUser`/`requireTeam` middleware chain.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -42,8 +42,8 @@ function createHtmlRenderer(ctx: RequestContext) {
 	};
 }
 
-let { i18n: i18nextInstance } = await createTranslator({
-	resources: { en: { translation: en } },
+let { intl } = await createTranslator({
+	resources: { en },
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",
 })();
@@ -64,7 +64,7 @@ function seedTeam(
 		ctx.membership = membership;
 		ctx.teams = teamsList;
 		ctx.locale = "en";
-		ctx.i18next = i18nextInstance;
+		ctx.intl = intl;
 		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
 		return next();
 	};

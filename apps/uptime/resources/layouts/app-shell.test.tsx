@@ -1,6 +1,6 @@
 /**
  * Tests that the signed-in shell sources every string it owns from the request's
- * own i18next instance. A missing or misspelled key renders as the key itself and
+ * own translator. A missing or misspelled key renders as the key itself and
  * fails neither typecheck nor any other test, so these assert on the rendered
  * output, and assert it twice — once per locale — so a hardcoded literal that
  * happens to match the English copy still fails.
@@ -9,7 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createTranslator } from "@sdxc/i18n";
+import type { Messages } from "@sdxc/i18n";
+
+import { createI18n } from "@sdxc/i18n";
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 
@@ -18,11 +20,7 @@ import en from "~/app/locales/en";
 
 import AppShell from "./app-shell";
 
-let { i18n } = await createTranslator({
-	resources: { en: { translation: en }, de: { translation: de } },
-	supportedLanguages: ["en", "de"],
-	fallbackLanguage: "en",
-})();
+const RESOURCES: Record<string, Messages> = { en, de };
 
 /** Queues a toast so the flash region appears in the markup when rendering the shell in `locale`. */
 function render(locale: "en" | "de") {
@@ -32,7 +30,7 @@ function render(locale: "en" | "de") {
 			teams={[{ id: "team-1", slug: "acme", name: "Acme", logo: null }]}
 			viewer={{ name: "Ada", email: "ada@acme.test", avatar: "" }}
 			isAdmin
-			i18next={i18n.cloneInstance({ lng: locale })}
+			intl={createI18n({ locale, fallbackLanguage: "en", resources: RESOURCES })}
 			heading="Dashboard"
 			breadcrumbs={[{ label: "Monitors" }]}
 			toast={{ intent: "success", message: "Saved" }}

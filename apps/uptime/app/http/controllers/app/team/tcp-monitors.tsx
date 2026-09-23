@@ -48,18 +48,18 @@ export default createAction(routes.app.team.tcpMonitors.index, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
-					heading={ctx.i18next.t("page.tcpMonitors.header.title")}
+					intl={ctx.intl}
+					heading={ctx.intl.t("page.tcpMonitors.header.title")}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("app.layout.sidebar.navigation.items.dashboard"),
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.dashboard"),
 							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 						},
 					]}
 					actions={
 						<LinkButton href={routes.app.team.tcpMonitors.new.href({ team: ctx.team.slug })}>
 							<PlusIcon size={16} strokeWidth={1.5} />
-							{ctx.i18next.t("page.tcpMonitors.header.action.create")}
+							{ctx.intl.t("page.tcpMonitors.header.action.create")}
 						</LinkButton>
 					}
 				>
@@ -69,33 +69,33 @@ export default createAction(routes.app.team.tcpMonitors.index, {
 								<Empty.Icon>
 									<NetworkIcon size={24} strokeWidth={1.5} />
 								</Empty.Icon>
-								<Empty.Title>{ctx.i18next.t("page.tcpMonitors.empty.title")}</Empty.Title>
+								<Empty.Title>{ctx.intl.t("page.tcpMonitors.empty.title")}</Empty.Title>
 								<Empty.Description>
-									{ctx.i18next.t("page.tcpMonitors.empty.description")}
+									{ctx.intl.t("page.tcpMonitors.empty.description")}
 								</Empty.Description>
 								<Empty.Action>
 									<LinkButton href={routes.app.team.tcpMonitors.new.href({ team: ctx.team.slug })}>
 										<PlusIcon size={20} strokeWidth={1.5} />
-										{ctx.i18next.t("page.tcpMonitors.empty.cta")}
+										{ctx.intl.t("page.tcpMonitors.empty.cta")}
 									</LinkButton>
 								</Empty.Action>
 							</Empty>
 						) : (
 							<Table.Container>
-								<Table aria-label={ctx.i18next.t("page.tcpMonitors.table.label")}>
+								<Table aria-label={ctx.intl.t("page.tcpMonitors.table.label")}>
 									<Table.Header>
 										<Table.Row>
 											<Table.Column>
-												{ctx.i18next.t("page.tcpMonitors.table.columns.name")}
+												{ctx.intl.t("page.tcpMonitors.table.columns.name")}
 											</Table.Column>
 											<Table.Column>
-												{ctx.i18next.t("page.tcpMonitors.table.columns.endpoint")}
+												{ctx.intl.t("page.tcpMonitors.table.columns.endpoint")}
 											</Table.Column>
 											<Table.Column>
-												{ctx.i18next.t("page.tcpMonitors.table.columns.status")}
+												{ctx.intl.t("page.tcpMonitors.table.columns.status")}
 											</Table.Column>
 											<Table.Column>
-												{ctx.i18next.t("page.tcpMonitors.table.columns.responseTime")}
+												{ctx.intl.t("page.tcpMonitors.table.columns.responseTime")}
 											</Table.Column>
 										</Table.Row>
 									</Table.Header>
@@ -118,7 +118,7 @@ export default createAction(routes.app.team.tcpMonitors.index, {
 													</a>
 													{!monitor.is_enabled && (
 														<Badge {...badgeVariant("neutral")}>
-															{ctx.i18next.t("page.tcpMonitors.table.status.disabled")}
+															{ctx.intl.t("page.tcpMonitors.table.status.disabled")}
 														</Badge>
 													)}
 												</Table.Cell>
@@ -133,7 +133,7 @@ export default createAction(routes.app.team.tcpMonitors.index, {
 															STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral",
 														)}
 													>
-														{ctx.i18next.t(
+														{ctx.intl.t(
 															`page.tcpMonitors.table.status.${monitor.last_status ?? "pending"}`,
 														)}
 													</Badge>

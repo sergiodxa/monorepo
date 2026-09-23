@@ -83,13 +83,13 @@ export default createAction(routes.app.team.cronJobs.show, {
 		 * second set, so wording can't drift between the two surfaces.
 		 */
 		let uptimeBarLabels = {
-			daysAgo: ctx.i18next.t("statusPage.uptimeBar.daysAgo"),
-			today: ctx.i18next.t("statusPage.uptimeBar.today"),
+			daysAgo: ctx.intl.t("statusPage.uptimeBar.daysAgo"),
+			today: ctx.intl.t("statusPage.uptimeBar.today"),
 			legend: {
-				full: ctx.i18next.t("statusPage.uptimeBar.legend.full"),
-				partial: ctx.i18next.t("statusPage.uptimeBar.legend.partial"),
-				down: ctx.i18next.t("statusPage.uptimeBar.legend.down"),
-				noData: ctx.i18next.t("statusPage.uptimeBar.legend.noData"),
+				full: ctx.intl.t("statusPage.uptimeBar.legend.full"),
+				partial: ctx.intl.t("statusPage.uptimeBar.legend.partial"),
+				down: ctx.intl.t("statusPage.uptimeBar.legend.down"),
+				noData: ctx.intl.t("statusPage.uptimeBar.legend.noData"),
 			},
 		};
 
@@ -101,22 +101,22 @@ export default createAction(routes.app.team.cronJobs.show, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
+					intl={ctx.intl}
 					heading={monitor.name}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("app.layout.sidebar.navigation.items.dashboard"),
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.dashboard"),
 							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 						},
 						{
-							label: ctx.i18next.t("page.cronJobDetail.header.breadcrumb.cronJobs"),
+							label: ctx.intl.t("page.cronJobDetail.header.breadcrumb.cronJobs"),
 							href: routes.app.team.cronJobs.index.href({ team: ctx.team.slug }),
 						},
 					]}
 					actions={
 						<Fragment>
 							<Badge {...badgeVariant(STATUS_BADGE_TONE[monitor.status] ?? "neutral")}>
-								{ctx.i18next.t(`page.cronJobs.table.status.${monitor.status}`)}
+								{ctx.intl.t(`page.cronJobs.table.status.${monitor.status}`)}
 							</Badge>
 							<LinkButton
 								href={routes.app.team.cronJobs.edit.href({
@@ -125,7 +125,7 @@ export default createAction(routes.app.team.cronJobs.show, {
 								})}
 							>
 								<PencilIcon size={16} strokeWidth={1.5} />
-								{ctx.i18next.t("page.cronJobDetail.header.action.edit")}
+								{ctx.intl.t("page.cronJobDetail.header.action.edit")}
 							</LinkButton>
 						</Fragment>
 					}
@@ -146,18 +146,18 @@ export default createAction(routes.app.team.cronJobs.show, {
 							]}
 						>
 							<div mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-								{ctx.i18next.t("page.cronJobDetail.info.schedule")}
+								{ctx.intl.t("page.cronJobDetail.info.schedule")}
 							</div>
 							<div mix={[fontSize("1.5rem"), weight(700), leading("2rem")]}>
 								{describeSchedule(monitor.cron_expression, {
 									locale: ctx.locale,
-									t: ctx.i18next.t,
+									t: ctx.intl.t,
 								})}
 							</div>
 							<div mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
 								{monitor.timezone}
 								{" · "}
-								{ctx.i18next.t("page.cronJobDetail.info.gracePeriodValue", {
+								{ctx.intl.t("page.cronJobDetail.info.gracePeriodValue", {
 									duration: formatDuration(monitor.grace_period_seconds * 1000, {
 										locale: ctx.locale,
 									}),
@@ -170,10 +170,10 @@ export default createAction(routes.app.team.cronJobs.show, {
 
 						<div mix={[flex(), flexWrap(), gap("16px"), mbe("32px")]}>
 							<StatCard
-								label={ctx.i18next.t("page.cronJobDetail.stats.lastPing.label")}
+								label={ctx.intl.t("page.cronJobDetail.stats.lastPing.label")}
 								value={
 									monitor.last_ping_at === null ? (
-										ctx.i18next.t("page.cronJobDetail.stats.lastPing.never")
+										ctx.intl.t("page.cronJobDetail.stats.lastPing.never")
 									) : (
 										<Timestamp
 											value={monitor.last_ping_at}
@@ -184,7 +184,7 @@ export default createAction(routes.app.team.cronJobs.show, {
 								}
 							/>
 							<StatCard
-								label={ctx.i18next.t("page.cronJobDetail.stats.nextExpected.label")}
+								label={ctx.intl.t("page.cronJobDetail.stats.nextExpected.label")}
 								value={
 									monitor.next_expected_at === null ? (
 										"—"
@@ -198,71 +198,71 @@ export default createAction(routes.app.team.cronJobs.show, {
 								}
 							/>
 							<StatCard
-								label={ctx.i18next.t("page.cronJobDetail.stats.onTimeRate.label")}
+								label={ctx.intl.t("page.cronJobDetail.stats.onTimeRate.label")}
 								value={onTimeRate === null ? "—" : `${onTimeRate}%`}
 							/>
 							<StatCard
-								label={ctx.i18next.t("page.cronJobDetail.stats.totalPings.label")}
+								label={ctx.intl.t("page.cronJobDetail.stats.totalPings.label")}
 								value={totalPings}
 							/>
 						</div>
 
-						<Section title={ctx.i18next.t("page.cronJobDetail.ping.title")}>
+						<Section title={ctx.intl.t("page.cronJobDetail.ping.title")}>
 							<p mix={[m("0"), mbe("16px"), fontSize("0.8125rem"), fg("neutral.muted")]}>
-								{ctx.i18next.t("page.cronJobDetail.ping.description")}
+								{ctx.intl.t("page.cronJobDetail.ping.description")}
 							</p>
-							<IntlProvider i18n={ctx.i18next}>
+							<IntlProvider intl={ctx.intl}>
 								<Snippet
-									label={ctx.i18next.t("page.cronJobDetail.ping.snippet.curl")}
-									copyLabel={ctx.i18next.t("page.cronJobDetail.ping.snippet.copyCurl")}
+									label={ctx.intl.t("page.cronJobDetail.ping.snippet.curl")}
+									copyLabel={ctx.intl.t("page.cronJobDetail.ping.snippet.copyCurl")}
 									code={curlSnippet}
 								/>
 								<Snippet
-									label={ctx.i18next.t("page.cronJobDetail.ping.snippet.crontab")}
-									copyLabel={ctx.i18next.t("page.cronJobDetail.ping.snippet.copyCrontab")}
+									label={ctx.intl.t("page.cronJobDetail.ping.snippet.crontab")}
+									copyLabel={ctx.intl.t("page.cronJobDetail.ping.snippet.copyCrontab")}
 									code={crontabSnippet}
 								/>
 							</IntlProvider>
 							<p mix={[m("0"), fontSize("0.8125rem"), fg("neutral.muted")]}>
-								{ctx.i18next.t("page.cronJobDetail.ping.apiKey.text")}{" "}
+								{ctx.intl.t("page.cronJobDetail.ping.apiKey.text")}{" "}
 								<Link href={routes.app.team.apiKeys.new.href({ team: ctx.team.slug })}>
-									{ctx.i18next.t("page.cronJobDetail.ping.apiKey.cta")}
+									{ctx.intl.t("page.cronJobDetail.ping.apiKey.cta")}
 								</Link>
 							</p>
 						</Section>
 
-						<Section title={ctx.i18next.t("page.cronJobDetail.uptimeHistory")}>
+						<Section title={ctx.intl.t("page.cronJobDetail.uptimeHistory")}>
 							<div mix={[overflowX("auto")]}>
 								<UptimeBar
 									days={dailyStats}
 									labels={uptimeBarLabels}
 									formatUptime={(percentage) =>
-										ctx.i18next.t("statusPage.uptimeBar.tooltip.uptime", { percentage })
+										ctx.intl.t("statusPage.uptimeBar.tooltip.uptime", { percentage })
 									}
 								/>
 							</div>
 						</Section>
 
-						<Section title={ctx.i18next.t("page.cronJobDetail.pings.title")}>
+						<Section title={ctx.intl.t("page.cronJobDetail.pings.title")}>
 							{pings.length === 0 ? (
 								<Empty>
 									<Empty.Description>
-										{ctx.i18next.t("page.cronJobDetail.pings.empty")}
+										{ctx.intl.t("page.cronJobDetail.pings.empty")}
 									</Empty.Description>
 								</Empty>
 							) : (
 								<Table.Container>
-									<Table aria-label={ctx.i18next.t("page.cronJobDetail.pings.label")}>
+									<Table aria-label={ctx.intl.t("page.cronJobDetail.pings.label")}>
 										<Table.Header>
 											<Table.Row>
 												<Table.Column>
-													{ctx.i18next.t("page.cronJobDetail.pings.columns.time")}
+													{ctx.intl.t("page.cronJobDetail.pings.columns.time")}
 												</Table.Column>
 												<Table.Column>
-													{ctx.i18next.t("page.cronJobDetail.pings.columns.status")}
+													{ctx.intl.t("page.cronJobDetail.pings.columns.status")}
 												</Table.Column>
 												<Table.Column>
-													{ctx.i18next.t("page.cronJobDetail.pings.columns.sourceIp")}
+													{ctx.intl.t("page.cronJobDetail.pings.columns.sourceIp")}
 												</Table.Column>
 											</Table.Row>
 										</Table.Header>
@@ -279,8 +279,8 @@ export default createAction(routes.app.team.cronJobs.show, {
 													<Table.Cell>
 														<Badge {...badgeVariant(ping.was_on_time ? "up" : "degraded")}>
 															{ping.was_on_time
-																? ctx.i18next.t("page.cronJobDetail.pings.status.onTime")
-																: ctx.i18next.t("page.cronJobDetail.pings.status.late")}
+																? ctx.intl.t("page.cronJobDetail.pings.status.onTime")
+																: ctx.intl.t("page.cronJobDetail.pings.status.late")}
 														</Badge>
 													</Table.Cell>
 													<Table.Cell>{ping.source_ip ?? "—"}</Table.Cell>

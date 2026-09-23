@@ -57,29 +57,29 @@ export default createAction(routes.app.team.dnsMonitors.cards.checkHistory, {
 
 		return ctx.render(
 			<section>
-				<h2>{ctx.i18next.t("page.dnsMonitorDetail.results.title")}</h2>
+				<h2>{ctx.intl.t("page.dnsMonitorDetail.results.title")}</h2>
 				{results.length === 0 ? (
 					<Empty>
 						<Empty.Description>
-							{ctx.i18next.t("page.dnsMonitorDetail.results.empty")}
+							{ctx.intl.t("page.dnsMonitorDetail.results.empty")}
 						</Empty.Description>
 					</Empty>
 				) : (
 					<Table.Container>
-						<Table aria-label={ctx.i18next.t("page.dnsMonitorDetail.results.title")}>
+						<Table aria-label={ctx.intl.t("page.dnsMonitorDetail.results.title")}>
 							<Table.Header>
 								<Table.Row>
 									<Table.Column>
-										{ctx.i18next.t("page.dnsMonitorDetail.results.table.columns.checkedAt")}
+										{ctx.intl.t("page.dnsMonitorDetail.results.table.columns.checkedAt")}
 									</Table.Column>
 									<Table.Column>
-										{ctx.i18next.t("page.dnsMonitorDetail.results.table.columns.status")}
+										{ctx.intl.t("page.dnsMonitorDetail.results.table.columns.status")}
 									</Table.Column>
 									<Table.Column>
-										{ctx.i18next.t("page.dnsMonitorDetail.results.table.columns.findings")}
+										{ctx.intl.t("page.dnsMonitorDetail.results.table.columns.findings")}
 									</Table.Column>
 									<Table.Column>
-										{ctx.i18next.t("page.dnsMonitorDetail.results.table.columns.responseTime")}
+										{ctx.intl.t("page.dnsMonitorDetail.results.table.columns.responseTime")}
 									</Table.Column>
 								</Table.Row>
 							</Table.Header>
@@ -99,7 +99,7 @@ export default createAction(routes.app.team.dnsMonitors.cards.checkHistory, {
 												) : (
 													findings(result) !== 0 && (
 														<span>
-															{ctx.i18next.t("page.dnsMonitorDetail.results.findings", {
+															{ctx.intl.t("page.dnsMonitorDetail.results.findings", {
 																changed: result.records_changed,
 																missing: result.records_missing,
 																new: result.records_new,
@@ -109,7 +109,7 @@ export default createAction(routes.app.team.dnsMonitors.cards.checkHistory, {
 												)}
 												{result.queries_failed > 0 && (
 													<span mix={[fg("neutral.muted"), fontSize("sm")]}>
-														{ctx.i18next.t("page.dnsMonitorDetail.results.queriesFailed", {
+														{ctx.intl.t("page.dnsMonitorDetail.results.queriesFailed", {
 															count: result.queries_failed,
 														})}
 													</span>
@@ -117,7 +117,7 @@ export default createAction(routes.app.team.dnsMonitors.cards.checkHistory, {
 												{result.error_message === null &&
 													findings(result) === 0 &&
 													result.queries_failed === 0 &&
-													ctx.i18next.t("page.dnsMonitorDetail.results.noFindings")}
+													ctx.intl.t("page.dnsMonitorDetail.results.noFindings")}
 											</div>
 										</Table.Cell>
 										<Table.Cell>

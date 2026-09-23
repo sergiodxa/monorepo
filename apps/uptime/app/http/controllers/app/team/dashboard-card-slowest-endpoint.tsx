@@ -35,7 +35,7 @@ export default createAction(routes.app.team.dashboard.cards.slowestEndpoint, {
 			return ctx.render(
 				<Empty>
 					<Empty.Description>
-						{ctx.i18next.t("page.dashboard.error.analytics.message")}
+						{ctx.intl.t("page.dashboard.error.analytics.message")}
 					</Empty.Description>
 				</Empty>,
 			);
@@ -60,21 +60,21 @@ export default createAction(routes.app.team.dashboard.cards.slowestEndpoint, {
 				label={
 					slowestMonitorName ? (
 						<Trans
-							i18n={ctx.i18next}
+							intl={ctx.intl}
 							i18nKey="page.dashboard.stats.slowestEndpoint.label.default"
 							values={{ name: slowestMonitorName }}
 							components={{ em: <em /> }}
 						/>
 					) : (
-						ctx.i18next.t("page.dashboard.stats.slowestEndpoint.label.noData")
+						ctx.intl.t("page.dashboard.stats.slowestEndpoint.label.noData")
 					)
 				}
 				value={
 					<>
 						{slowestResponseMs === null
-							? ctx.i18next.t("page.dashboard.stats.slowestEndpoint.value.noData")
+							? ctx.intl.t("page.dashboard.stats.slowestEndpoint.value.noData")
 							: `${slowestResponseMs}ms`}
-						<Subtitle>{ctx.i18next.t("page.dashboard.stats.slowestEndpoint.description")}</Subtitle>
+						<Subtitle>{ctx.intl.t("page.dashboard.stats.slowestEndpoint.description")}</Subtitle>
 					</>
 				}
 			/>,

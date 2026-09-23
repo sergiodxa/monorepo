@@ -47,7 +47,7 @@ function createTestRenderer(): Renderer<RemixNode> {
 /**
  * Dispatches a real GET request to `/vs/:slug` as an anonymous visitor. Includes the
  * real `i18n` middleware — this controller renders its FAQ section header through
- * `ctx.i18next.t()` — backed by an empty test database.
+ * `ctx.intl.t()` — backed by an empty test database.
  */
 async function getComparison(slug: string) {
 	let { db } = createTestDatabase();

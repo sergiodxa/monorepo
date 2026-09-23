@@ -44,15 +44,15 @@ export default createAction(routes.app.team.monitors.cards.p99ResponseTime, {
 
 		return ctx.render(
 			<StatCard
-				label={ctx.i18next.t("page.monitor.stats.p99ResponseTime.label")}
+				label={ctx.intl.t("page.monitor.stats.p99ResponseTime.label")}
 				value={
 					<>
 						{p99ResponseTimeMs === null
 							? "—"
-							: ctx.i18next.t("page.monitor.stats.p99ResponseTime.value", {
+							: ctx.intl.t("page.monitor.stats.p99ResponseTime.value", {
 									value: Math.round(p99ResponseTimeMs),
 								})}
-						<Subtitle>{ctx.i18next.t("page.monitor.stats.p99ResponseTime.description")}</Subtitle>
+						<Subtitle>{ctx.intl.t("page.monitor.stats.p99ResponseTime.description")}</Subtitle>
 					</>
 				}
 			/>,

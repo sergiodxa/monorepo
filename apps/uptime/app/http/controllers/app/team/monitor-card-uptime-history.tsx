@@ -37,13 +37,13 @@ export default createAction(routes.app.team.monitors.cards.uptimeHistory, {
 		let dailyStats = await MonitorDailyStats.listRecentDays(ctx.db, monitor.id, "http");
 
 		let labels = {
-			daysAgo: ctx.i18next.t("statusPage.uptimeBar.daysAgo"),
-			today: ctx.i18next.t("statusPage.uptimeBar.today"),
+			daysAgo: ctx.intl.t("statusPage.uptimeBar.daysAgo"),
+			today: ctx.intl.t("statusPage.uptimeBar.today"),
 			legend: {
-				full: ctx.i18next.t("statusPage.uptimeBar.legend.full"),
-				partial: ctx.i18next.t("statusPage.uptimeBar.legend.partial"),
-				down: ctx.i18next.t("statusPage.uptimeBar.legend.down"),
-				noData: ctx.i18next.t("statusPage.uptimeBar.legend.noData"),
+				full: ctx.intl.t("statusPage.uptimeBar.legend.full"),
+				partial: ctx.intl.t("statusPage.uptimeBar.legend.partial"),
+				down: ctx.intl.t("statusPage.uptimeBar.legend.down"),
+				noData: ctx.intl.t("statusPage.uptimeBar.legend.noData"),
 			},
 		};
 
@@ -53,7 +53,7 @@ export default createAction(routes.app.team.monitors.cards.uptimeHistory, {
 					days={dailyStats}
 					labels={labels}
 					formatUptime={(percentage) =>
-						ctx.i18next.t("statusPage.uptimeBar.tooltip.uptime", { percentage })
+						ctx.intl.t("statusPage.uptimeBar.tooltip.uptime", { percentage })
 					}
 				/>
 			</div>,

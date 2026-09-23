@@ -44,7 +44,7 @@ export default {
 
 		hero: {
 			pill: "Uptime Monitoring",
-			title: "Monitor your services <strong>with confidence</strong>",
+			title: "Monitor your services {#strong}with confidence{/strong}",
 			description:
 				"Get instant alerts when your websites and APIs go down. Monitor your websites and APIs with ease.",
 
@@ -52,7 +52,7 @@ export default {
 				in: "Open Dashboard",
 				out: "Start Monitoring",
 				pricing: "View Pricing",
-				try: "Monitor a site free for {{days}} days",
+				try: "Monitor a site free for {$days} days",
 			},
 
 			try: {
@@ -102,7 +102,7 @@ export default {
 				payForUsage: {
 					title: "Pay for actual usage",
 					description:
-						"{{price}} a month includes {{included}} checks. Past that you pay for the checks you actually run, and nothing else.",
+						"{$price} a month includes {$included} checks. Past that you pay for the checks you actually run, and nothing else.",
 				},
 			},
 		},
@@ -311,13 +311,12 @@ export default {
 				list: {
 					first: {
 						title: "Base subscription",
-						description: "{{price}}/month includes your first {{included}} pings",
+						description: "{$price}/month includes your first {$included} pings",
 					},
 
 					second: {
 						title: "Additional pings",
-						description:
-							"{{blockPrice}} per {{blockSize}} pings after that, billed in whole blocks",
+						description: "{$blockPrice} per {$blockSize} pings after that, billed in whole blocks",
 					},
 
 					third: {
@@ -346,10 +345,9 @@ export default {
 				stats: {
 					pingsPerMonth: "Pings per month:",
 					baseSubscription: "Base subscription",
-					includes: "Includes first {{amount}} pings",
+					includes: "Includes first {$amount} pings",
 					additionalPings: "Additional pings:",
-					additionalPingsCost:
-						"{{blocks}} × {{blockPrice}} per {{blockSize}} pings ({{pings}} over)",
+					additionalPingsCost: "{$blocks} × {$blockPrice} per {$blockSize} pings ({$pings} over)",
 					totalCost: "Total monthly cost:",
 				},
 			},
@@ -443,7 +441,7 @@ export default {
 
 				seventeenth: {
 					q: "What happens if I exceed my plan’s limits?",
-					a: "Usage above the {{included}} pings included in your subscription is billed in whole blocks of {{blockSize}} at {{blockPrice}} each — a single ping over starts a new block.",
+					a: "Usage above the {$included} pings included in your subscription is billed in whole blocks of {$blockSize} at {$blockPrice} each — a single ping over starts a new block.",
 				},
 
 				eighteenth: {
@@ -466,7 +464,7 @@ export default {
 		footer: {
 			name: "Uptime",
 			description: "Simple, reliable monitoring for your websites and APIs.",
-			copyright: "© {{year}} Uptime by Sergio Xalambrí. All rights reserved.",
+			copyright: "© {$year :string} Uptime by Sergio Xalambrí. All rights reserved.",
 			sections: {
 				product: {
 					title: "Product",
@@ -556,7 +554,7 @@ export default {
 		},
 
 		comparison: {
-			tableLabel: "Uptime vs {{competitor}}",
+			tableLabel: "Uptime vs {$competitor}",
 			tableCategoryHeader: "Category",
 			tableProductHeader: "Uptime",
 			whyTeamsSwitchTitle: "Why teams switch to Uptime",
@@ -565,21 +563,21 @@ export default {
 
 			honestTake: {
 				badge: "Honest take",
-				title: "When {{competitor}} might be better",
+				title: "When {$competitor} might be better",
 				description:
-					"We believe in being transparent. Here's when {{competitor}} could be the right choice.",
+					"We believe in being transparent. Here's when {$competitor} could be the right choice.",
 			},
 
 			pricing: {
 				badge: "Pricing",
 				title: "Real cost comparison",
 				description: "See how much you could save for a typical monitoring setup.",
-				tableLabel: "Cost comparison: Uptime vs {{competitor}}",
+				tableLabel: "Cost comparison: Uptime vs {$competitor}",
 				scenarioHeader: "Use case",
 				savingsHeader: "Savings",
-				savingsPerYear: "~{{amount}}/year",
+				savingsPerYear: "~{$amount}/year",
 				footnote:
-					"Estimates based on typical usage patterns. {{competitor}} pricing can change and your actual cost depends on your setup.",
+					"Estimates based on typical usage patterns. {$competitor} pricing can change and your actual cost depends on your setup.",
 			},
 		},
 	},
@@ -630,7 +628,7 @@ export default {
 				bodyPrefix:
 					"The code that runs this service is public, so the claims on this page can be checked rather than taken on faith — how a check is classified, what a stored result holds, when a notification goes out: ",
 				linkText: "apps/uptime on GitHub",
-				bodySuffix: ".",
+				bodySuffix: "{|.|}",
 				caveat:
 					"That shows you the code, not the deployment running right now. It is one more thing you can verify for yourself, not a guarantee on its own.",
 			},
@@ -639,7 +637,7 @@ export default {
 				bodyPrefix:
 					"The service publishes a status page about itself, built with the same cron-job monitoring the product offers: ",
 				linkText: "uptime.sergiodxa.com/status/uptime",
-				bodySuffix: ".",
+				bodySuffix: "{|.|}",
 				scope:
 					"What that page covers is narrower than it might sound, so here is the precise claim. Each of the service's scheduled internal jobs — the monitor sweeps, the nightly roll-up of daily statistics, the retention cleanups — reports in when it finishes, so the page shows whether that scheduled work is running on time. It is not an independent probe of the whole service, and it runs on the same platform as the app itself, so trouble broad enough to stop the app can stop the page reporting too.",
 			},
@@ -729,7 +727,7 @@ export default {
 					"We do not offer a service level agreement, and we publish no availability figure to hold ourselves to. The ",
 				termsLinkText: "Terms of Service",
 				noSlaSuffix:
-					" say as much, and this page will not quietly say otherwise. What there is instead: the status page above, and a person who answers email.",
+					"{| |}say as much, and this page will not quietly say otherwise. What there is instead: the status page above, and a person who answers email.",
 			},
 		},
 	},
@@ -980,7 +978,7 @@ export default {
 						"Turnstile runs only on that public page. It is not used anywhere in the signed-in app.",
 					referencePrefix: "For what Cloudflare does with that data, see their ",
 					referenceLinkText: "Turnstile Privacy Addendum",
-					referenceSuffix: ".",
+					referenceSuffix: "{|.|}",
 				},
 				childrensPrivacy: {
 					title: "10. Children's Privacy",
@@ -1077,7 +1075,7 @@ export default {
 
 	monitorDetail: {
 		header: {
-			region: "{{emoji}} {{code}}",
+			region: "{$emoji} {$code}",
 		},
 		stats: {
 			title: "Stats",
@@ -1126,7 +1124,7 @@ export default {
 				noData: "No data",
 			},
 			tooltip: {
-				uptime: "{{percentage}}% uptime",
+				uptime: "{$percentage}% uptime",
 				noData: "No data",
 			},
 		},
@@ -1140,7 +1138,7 @@ export default {
 			description: "No services are configured for this status page.",
 		},
 		footer: {
-			lastUpdated: "Last updated {{date}}",
+			lastUpdated: "Last updated {$date}",
 			poweredBy: "Powered by Uptime",
 		},
 		error: {
@@ -1205,8 +1203,8 @@ export default {
 	auth: {
 		error: {
 			title: "Authentication Error",
-			errorCode: "Error Code: {{code}}",
-			description: "Description: {{description}}",
+			errorCode: "Error Code: {$code}",
+			description: "Description: {$description}",
 			uri: "URI:",
 			tryAgain: "Please try again or contact support if the issue persists.",
 
@@ -1280,15 +1278,15 @@ export default {
 				description: "The region from which the ping will run.",
 				placeholder: "wnam",
 				options: {
-					afr: "{{emoji}} Africa",
-					apac: "{{emoji}} Asia-Pacific",
-					eeur: "{{emoji}} Eastern Europe",
-					enam: "{{emoji}} Eastern North America",
-					me: "{{emoji}} Middle East",
-					oc: "{{emoji}} Oceania",
-					sam: "{{emoji}} South America",
-					weur: "{{emoji}} Western Europe",
-					wnam: "{{emoji}} Western North America",
+					afr: "{$emoji} Africa",
+					apac: "{$emoji} Asia-Pacific",
+					eeur: "{$emoji} Eastern Europe",
+					enam: "{$emoji} Eastern North America",
+					me: "{$emoji} Middle East",
+					oc: "{$emoji} Oceania",
+					sam: "{$emoji} South America",
+					weur: "{$emoji} Western Europe",
+					wnam: "{$emoji} Western North America",
 				},
 			},
 		},
@@ -1318,33 +1316,33 @@ export default {
 		},
 
 		teamDeleted: {
-			subject: "{{team}} has been deleted on Uptime",
-			preview: "{{team}} and everything it was monitoring no longer exist.",
-			heading: "{{team}} has been deleted",
-			body: "The owner of {{team}} deleted their Uptime account, and the team was deleted along with it. You no longer have access to it.",
+			subject: "{$team} has been deleted on Uptime",
+			preview: "{$team} and everything it was monitoring no longer exist.",
+			heading: "{$team} has been deleted",
+			body: "The owner of {$team} deleted their Uptime account, and the team was deleted along with it. You no longer have access to it.",
 			lost: "Everything that belonged to the team is gone: its monitors, alerts and status pages no longer exist, and none of it can be recovered.",
 			next: "If you still need this monitoring, you can create a team of your own on Uptime and set it up again.",
 			footer:
-				"You received this email because you were a member of {{team}} on Uptime. There is nothing you need to do.",
+				"You received this email because you were a member of {$team} on Uptime. There is nothing you need to do.",
 		},
 
 		teamInvite: {
-			subject: "You've been invited to join {{team}} on Uptime",
-			preview: "Join {{team}} on Uptime",
-			heading: "You've been invited to join {{team}}",
-			body: "{{team}} uses Uptime to keep an eye on its services. Accept the invite to join the team.",
+			subject: "You've been invited to join {$team} on Uptime",
+			preview: "Join {$team} on Uptime",
+			heading: "You've been invited to join {$team}",
+			body: "{$team} uses Uptime to keep an eye on its services. Accept the invite to join the team.",
 			action: "Accept invite",
 			footer:
 				"You received this email because someone invited you to their team on Uptime. If you weren't expecting it, you can ignore this message.",
 		},
 
 		alert: {
-			subject: "[Uptime Alert] {{monitor}} is {{status}}",
-			preview: "{{monitor}} is {{status}}",
-			heading: "{{monitor}} is {{status}}",
+			subject: "[Uptime Alert] {$monitor} is {$status}",
+			preview: "{$monitor} is {$status}",
+			heading: "{$monitor} is {$status}",
 			action: "Open the dashboard",
 			incidentCooldown:
-				"Notifications for this incident: {{sent}} sent, {{suppressed}} held back by the alert's cooldown.",
+				"Notifications for this incident: {$sent} sent, {$suppressed} held back by the alert's cooldown.",
 			footer: "You received this email because one of your team's alerts matched this event.",
 
 			status: {
@@ -1378,23 +1376,23 @@ export default {
 			values: {
 				none: "—",
 				never: "never",
-				monitor: "{{name}} ({{type}})",
-				responseStatus: "{{actual}} (expected {{expected}})",
-				milliseconds: "{{value}}ms",
-				endpoint: "{{host}}:{{port}}",
-				schedule: "{{expression}} ({{timezone}})",
-				dnsRecordCounts: "{{missing}} missing, {{changed}} changed, {{new}} newly seen",
+				monitor: "{$name} ({$type})",
+				responseStatus: "{$actual} (expected {$expected})",
+				milliseconds: "{$value}ms",
+				endpoint: "{$host}:{$port :string}",
+				schedule: "{$expression} ({$timezone})",
+				dnsRecordCounts: "{$missing} missing, {$changed} changed, {$new} newly seen",
 
 				/** One finding, written out per outcome so each reads as its own sentence. */
 				dnsFinding: {
-					missing: "No longer resolving: {{name}} {{type}} {{value}}",
-					changed: "Now resolves to: {{name}} {{type}} {{value}}",
-					new: "Newly seen: {{name}} {{type}} {{value}}",
+					missing: "No longer resolving: {$name} {$type} {$value}",
+					changed: "Now resolves to: {$name} {$type} {$value}",
+					new: "Newly seen: {$name} {$type} {$value}",
 				},
 
-				dnsMoreFindings: "…and {{count}} more",
-				flowTests: "{{passed}} of {{total}} passed",
-				flowFailedTest: "{{title}} (line {{line}})",
+				dnsMoreFindings: "…and {$count} more",
+				flowTests: "{$passed} of {$total} passed",
+				flowFailedTest: "{$title} (line {$line :string})",
 			},
 
 			/** Explains what a DNS diff means, shown only where that meaning is needed. */
@@ -1408,7 +1406,7 @@ export default {
 
 		teamDigest: {
 			action: "Open the dashboard",
-			footer: "You received this email because you are a member of {{team}} on Uptime.",
+			footer: "You received this email because you are a member of {$team} on Uptime.",
 			manageAction: "Choose which emails you get",
 
 			status: {
@@ -1434,11 +1432,11 @@ export default {
 
 			values: {
 				none: "—",
-				percentage: "{{value}}%",
+				percentage: "{$value}%",
 			},
 
 			bar: {
-				uptime: "{{value}}% uptime",
+				uptime: "{$value}% uptime",
 				legend: {
 					up: "Up",
 					degraded: "Degraded",
@@ -1448,29 +1446,29 @@ export default {
 			},
 
 			daily: {
-				subject_one: "{{team}}: the monitor needs a look",
-				subject_other: "{{team}}: {{up}} of {{count}} monitors up yesterday",
-				subjectAll_one: "{{team}}: the monitor was up yesterday",
-				subjectAll_other: "{{team}}: all {{count}} monitors up yesterday",
-				preview: "The last full day of checks on {{team}}",
-				heading: "Yesterday on {{team}}",
-				summaryAll_one: "The team's monitor was up on {{date}}.",
-				summaryAll_other: "All {{count}} monitors were up on {{date}}.",
-				summary_one: "The team's monitor was not up on {{date}}.",
-				summary_other: "{{up}} of {{count}} monitors were up on {{date}}.",
+				subject:
+					".input {$count :number}\n.match $count\none {{{$team}: the monitor needs a look}}\n* {{{$team}: {$up} of {$count} monitors up yesterday}}",
+				subjectAll:
+					".input {$count :number}\n.match $count\none {{{$team}: the monitor was up yesterday}}\n* {{{$team}: all {$count} monitors up yesterday}}",
+				preview: "The last full day of checks on {$team}",
+				heading: "Yesterday on {$team}",
+				summaryAll:
+					".input {$count :number}\n.match $count\none {{The team's monitor was up on {$date}.}}\n* {{All {$count} monitors were up on {$date}.}}",
+				summary:
+					".input {$count :number}\n.match $count\none {{The team's monitor was not up on {$date}.}}\n* {{{$up} of {$count} monitors were up on {$date}.}}",
 			},
 
 			weekly: {
-				subject_one: "{{team}}: the monitor had a bad day this week",
-				subject_other: "{{team}}: {{up}} of {{count}} monitors up all week",
-				subjectAll_one: "{{team}}: the monitor was up all week",
-				subjectAll_other: "{{team}}: all {{count}} monitors up all week",
-				preview: "The last seven days of checks on {{team}}",
-				heading: "The last seven days on {{team}}",
-				summaryAll_one: "The team's monitor was up every day.",
-				summaryAll_other: "All {{count}} monitors were up every day.",
-				summary_one: "The team's monitor was not up every day.",
-				summary_other: "{{up}} of {{count}} monitors were up every day.",
+				subject:
+					".input {$count :number}\n.match $count\none {{{$team}: the monitor had a bad day this week}}\n* {{{$team}: {$up} of {$count} monitors up all week}}",
+				subjectAll:
+					".input {$count :number}\n.match $count\none {{{$team}: the monitor was up all week}}\n* {{{$team}: all {$count} monitors up all week}}",
+				preview: "The last seven days of checks on {$team}",
+				heading: "The last seven days on {$team}",
+				summaryAll:
+					".input {$count :number}\n.match $count\none {{The team's monitor was up every day.}}\n* {{All {$count} monitors were up every day.}}",
+				summary:
+					".input {$count :number}\n.match $count\none {{The team's monitor was not up every day.}}\n* {{{$up} of {$count} monitors were up every day.}}",
 			},
 		},
 
@@ -1508,12 +1506,12 @@ export default {
 
 			values: {
 				none: "—",
-				milliseconds: "{{value}}ms",
-				percentage: "{{value}}%",
+				milliseconds: "{$value}ms",
+				percentage: "{$value}%",
 			},
 
 			bar: {
-				uptime: "{{value}}% uptime",
+				uptime: "{$value}% uptime",
 				legend: {
 					up: "Up",
 					degraded: "Degraded",
@@ -1523,31 +1521,31 @@ export default {
 			},
 
 			confirmation: {
-				subject: "We are now checking {{url}} every hour",
-				preview: "Hourly checks on {{url}} have started",
-				heading: "We are now checking {{url}} every hour",
-				body: "This is the check you just ran. We will run the same one every hour until {{until}} and email you whenever the result changes. You will also get a summary once a day.",
+				subject: "We are now checking {$url} every hour",
+				preview: "Hourly checks on {$url} have started",
+				heading: "We are now checking {$url} every hour",
+				body: "This is the check you just ran. We will run the same one every hour until {$until} and email you whenever the result changes. You will also get a summary once a day.",
 				footer: "You received this email because you asked us to check this URL from our website.",
 			},
 
 			change: {
-				subject: "{{url}} is {{status}}",
-				preview: "{{url}} is {{status}}",
-				heading: "{{url}} is {{status}}",
-				body: "The hourly check at {{time}} returned a different result from the one before it.",
+				subject: "{$url} is {$status}",
+				preview: "{$url} is {$status}",
+				heading: "{$url} is {$status}",
+				body: "The hourly check at {$time} returned a different result from the one before it.",
 				footer: "You received this email because you asked us to watch this URL for a week.",
 			},
 
 			daily: {
-				subject: "Daily report: {{url}}",
-				subjectMany: "Daily report: {{total}} URLs",
-				preview: "The last 24 hours of checks on {{url}}",
-				previewMany: "The last 24 hours of checks on {{total}} URLs",
-				heading: "{{url}} over the last 24 hours",
-				headingMany: "Your {{total}} URLs over the last 24 hours",
-				summaryAll: "All {{total}} were up at the last check.",
-				summary: "{{up}} of {{total}} were up at the last check.",
-				target: "{{url}} — {{status}}",
+				subject: "Daily report: {$url}",
+				subjectMany: "Daily report: {$total} URLs",
+				preview: "The last 24 hours of checks on {$url}",
+				previewMany: "The last 24 hours of checks on {$total} URLs",
+				heading: "{$url} over the last 24 hours",
+				headingMany: "Your {$total} URLs over the last 24 hours",
+				summaryAll: "All {$total} were up at the last check.",
+				summary: "{$up} of {$total} were up at the last check.",
+				target: "{$url} — {$status}",
 				rangeStart: "24 hours ago",
 				rangeEnd: "Now",
 				footer:
@@ -1555,26 +1553,26 @@ export default {
 			},
 
 			weekly: {
-				subject: "Seven-day report: {{url}}",
-				preview: "The full week of checks on {{url}}",
-				heading: "{{url}} over the last seven days",
+				subject: "Seven-day report: {$url}",
+				preview: "The full week of checks on {$url}",
+				heading: "{$url} over the last seven days",
 				rangeStart: "7 days ago",
 				rangeEnd: "Today",
-				closing: "That was the seventh day, so the free checks on {{url}} stop here.",
+				closing: "That was the seventh day, so the free checks on {$url} stop here.",
 				action: "Keep checking this URL",
 				footer:
 					"You received this email because you asked us to watch this URL for a week. This is the last one.",
 			},
 
 			repeat: {
-				subject: "What we have found on {{url}} so far",
-				preview: "The checks we already have on {{url}}",
-				heading: "{{url}} has already been checked",
-				intro: "You asked us to watch {{url}} on {{since}}. Here is everything those checks found.",
+				subject: "What we have found on {$url} so far",
+				preview: "The checks we already have on {$url}",
+				heading: "{$url} has already been checked",
+				intro: "You asked us to watch {$url} on {$since}. Here is everything those checks found.",
 				rangeStart: "Day 1",
 				rangeEnd: "Day 7",
 				closing:
-					"Each URL gets one free week every 30 days, so this request did not start a second one. To keep checking {{url}} — as often as you like, with an alert the moment it changes — use Uptime.",
+					"Each URL gets one free week every 30 days, so this request did not start a second one. To keep checking {$url} — as often as you like, with an alert the moment it changes — use Uptime.",
 				action: "Keep checking this URL",
 				footer:
 					"You received this email because you submitted this URL on our website and we already had a report for it.",
@@ -1640,20 +1638,19 @@ export default {
 
 	schedule: {
 		interval: {
-			minute_one: "Every minute",
-			minute_other: "Every {{count}} minutes",
-			hour_one: "Every hour",
-			hour_other: "Every {{count}} hours",
+			minute:
+				".input {$count :number}\n.match $count\none {{Every minute}}\n* {{Every {$count} minutes}}",
+			hour: ".input {$count :number}\n.match $count\none {{Every hour}}\n* {{Every {$count} hours}}",
 		},
 		hourly: {
 			onTheHour: "Every hour",
-			atMinutes: "Every hour at minute {{minutes}}",
+			atMinutes: "Every hour at minute {$minutes}",
 		},
-		daily: "Every day at {{times}}",
-		weekly: "Every {{days}} at {{times}}",
-		monthly: "Every month on day {{days}} at {{times}}",
-		yearly: "Every year on {{months}} {{days}} at {{times}}",
-		expression: "Custom schedule ({{expression}})",
+		daily: "Every day at {$times}",
+		weekly: "Every {$days} at {$times}",
+		monthly: "Every month on day {$days} at {$times}",
+		yearly: "Every year on {$months} {$days} at {$times}",
+		expression: "Custom schedule ({$expression})",
 	},
 
 	actions: {
@@ -1662,7 +1659,7 @@ export default {
 		 * same reason and flash the same toast, so one key keeps them from drifting apart.
 		 */
 		checks: {
-			queued: 'Check queued for "{{name}}".',
+			queued: 'Check queued for "{$name}".',
 			subscriptionRequired: "An active subscription is required to run a check.",
 		},
 
@@ -1670,12 +1667,12 @@ export default {
 			errors: {
 				generic: "Oops! Something went wrong.",
 				notAllowed: "You are not allowed to add domains to this team.",
-				alreadyExists: "{{hostname}} was added on {{verifiedAt}}.",
+				alreadyExists: "{$hostname} was added on {$verifiedAt}.",
 			},
 
 			success: {
-				accepted: "{{hostname}} is still pending verification.",
-				created: "{{hostname}} was added to {{team}}. Verification is pending.",
+				accepted: "{$hostname} is still pending verification.",
+				created: "{$hostname} was added to {$team}. Verification is pending.",
 			},
 		},
 
@@ -1686,30 +1683,30 @@ export default {
 				cannotChangeOwner: "You cannot change the role of the team owner.",
 			},
 
-			success: "{{name}}'s role was changed to {{role}} in {{team}}.",
+			success: "{$name}'s role was changed to {$role} in {$team}.",
 		},
 
 		createAlert: {
 			errors: {
 				generic: "Oops! Something went wrong.",
 				notAllowed: "You are not allowed to create alerts in this team.",
-				limitExceeded: "You have reached the limit of {{limit}} alerts in this team.",
+				limitExceeded: "You have reached the limit of {$limit} alerts in this team.",
 			},
-			success: { created: "{{name}} alert was created." },
+			success: { created: "{$name} alert was created." },
 		},
 
 		createInvite: {
 			email: {
-				subject: "You've been invited to join {{team}} on Uptime",
+				subject: "You've been invited to join {$team} on Uptime",
 			},
 
 			errors: {
 				generic: "Oops! Something went wrong.",
 				notAllowed: "You are not allowed to invite members to this team.",
-				alreadyAccepted: "There's already a member of {{team}} with this email.",
+				alreadyAccepted: "There's already a member of {$team} with this email.",
 			},
 
-			success: "{{email}} was invited to join {{team}}.",
+			success: "{$email} was invited to join {$team}.",
 		},
 
 		createMonitor: {
@@ -1717,7 +1714,7 @@ export default {
 				generic: "Oops! Something went wrong.",
 			},
 
-			success: "{{name}} monitor was created.",
+			success: "{$name} monitor was created.",
 		},
 
 		/**
@@ -1731,10 +1728,10 @@ export default {
 				none: "Nothing in that list could be imported. Check the reasons below and try again.",
 			},
 
-			success_one: "1 monitor was created.",
-			success_other: "{{count}} monitors were created.",
-			partial_one: "1 monitor was created. {{rejected}} more could not be — see below.",
-			partial_other: "{{count}} monitors were created. {{rejected}} more could not be — see below.",
+			success:
+				".input {$count :number}\n.match $count\none {{1 monitor was created.}}\n* {{{$count} monitors were created.}}",
+			partial:
+				".input {$count :number}\n.match $count\none {{1 monitor was created. {$rejected} more could not be — see below.}}\n* {{{$count} monitors were created. {$rejected} more could not be — see below.}}",
 		},
 
 		updateMonitor: {
@@ -1743,7 +1740,7 @@ export default {
 				notFound: "This monitor does not exist.",
 			},
 
-			success: "{{name}} monitor was updated.",
+			success: "{$name} monitor was updated.",
 		},
 
 		updateSsl: {
@@ -1752,7 +1749,7 @@ export default {
 				notFound: "This monitor does not exist.",
 			},
 
-			success: "SSL settings for {{name}} were updated.",
+			success: "SSL settings for {$name} were updated.",
 		},
 
 		deleteMonitor: {
@@ -1761,26 +1758,26 @@ export default {
 				notAllowed: "You are not allowed to delete monitors in this team.",
 				notFound: "This monitor does not exist.",
 			},
-			success: "{{name}} monitor was deleted.",
+			success: "{$name} monitor was deleted.",
 		},
 
 		removeAlert: {
 			errors: {
 				generic: "Oops! Something went wrong.",
 				forbidden: "You are not allowed to remove alerts in this team.",
-				notFound: "{{name}} does not exist.",
+				notFound: "{$name} does not exist.",
 			},
-			success: "{{name}} alert was removed.",
+			success: "{$name} alert was removed.",
 		},
 
 		removeDomain: {
 			errors: {
 				generic: "Oops! Something went wrong.",
 				notAllowed: "You are not allowed to remove domains from this team.",
-				notFound: "{{hostname}} does not exist.",
+				notFound: "{$hostname} does not exist.",
 			},
 
-			success: "{{hostname}} was removed from {{team}}.",
+			success: "{$hostname} was removed from {$team}.",
 		},
 
 		removeMember: {
@@ -1790,21 +1787,21 @@ export default {
 				cannotRemoveOwner: "You cannot remove the team owner.",
 			},
 
-			success: "{{name}} was removed from {{team}}.",
+			success: "{$name} was removed from {$team}.",
 		},
 
 		retryDomainVerification: {
 			errors: {
 				generic: "Oops! Something went wrong.",
 				notAllowed: "You are not allowed to retry domain verification in this team.",
-				notFound: "{{hostname}} does not exist.",
+				notFound: "{$hostname} does not exist.",
 				workflowFailed:
-					"The verification process failed to start for {{hostname}}. Try again later.",
+					"The verification process failed to start for {$hostname}. Try again later.",
 			},
 
 			success: {
-				alreadyVerified: "{{hostname}} is already verified.",
-				requested: "{{hostname}} verification retry was requested.",
+				alreadyVerified: "{$hostname} is already verified.",
+				requested: "{$hostname} verification retry was requested.",
 			},
 		},
 
@@ -1816,7 +1813,7 @@ export default {
 				alreadyAccepted: "This invite has already been accepted by the invitee.",
 			},
 
-			success: "{{email}}'s invite was revoked from {{team}}.",
+			success: "{$email}'s invite was revoked from {$team}.",
 		},
 
 		updateTeam: {
@@ -1837,7 +1834,7 @@ export default {
 				confirmationRequired: "Please type DELETE to confirm.",
 			},
 
-			success: "{{team}} has been deleted.",
+			success: "{$team} has been deleted.",
 		},
 
 		leaveTeam: {
@@ -1848,7 +1845,7 @@ export default {
 				adminCannotLeave: "Admins cannot leave the team. Ask the owner to demote you first.",
 			},
 
-			success: "You have left {{team}}.",
+			success: "You have left {$team}.",
 		},
 
 		createStatusPage: {
@@ -1882,7 +1879,7 @@ export default {
 			},
 
 			success: {
-				created: "Maintenance window '{{name}}' was created.",
+				created: "Maintenance window '{$name}' was created.",
 			},
 		},
 
@@ -1893,7 +1890,7 @@ export default {
 				forbidden: "You are not allowed to delete this maintenance window.",
 			},
 
-			success: "Maintenance window '{{name}}' was deleted.",
+			success: "Maintenance window '{$name}' was deleted.",
 		},
 
 		endMaintenance: {
@@ -1903,7 +1900,7 @@ export default {
 				forbidden: "You are not allowed to end this maintenance window.",
 			},
 
-			success: "Maintenance window '{{name}}' was ended early.",
+			success: "Maintenance window '{$name}' was ended early.",
 		},
 
 		createTeam: {
@@ -1912,18 +1909,18 @@ export default {
 			},
 
 			success: {
-				created: "{{name}} team was created successfully.",
+				created: "{$name} team was created successfully.",
 			},
 		},
 
 		createDnsMonitor: {
 			errors: {
 				generic: "Oops! Something went wrong.",
-				limitExceeded: "You have reached the limit of {{limit}} DNS monitors in this team.",
+				limitExceeded: "You have reached the limit of {$limit} DNS monitors in this team.",
 			},
 
 			success: {
-				created: "{{name}} DNS monitor was created.",
+				created: "{$name} DNS monitor was created.",
 			},
 		},
 
@@ -1934,7 +1931,7 @@ export default {
 				forbidden: "You are not allowed to update this DNS monitor.",
 			},
 
-			success: "{{name}} DNS monitor was updated.",
+			success: "{$name} DNS monitor was updated.",
 		},
 
 		deleteDnsMonitor: {
@@ -1944,36 +1941,36 @@ export default {
 				forbidden: "You are not allowed to delete this DNS monitor.",
 			},
 
-			success: "{{name}} DNS monitor was deleted.",
+			success: "{$name} DNS monitor was deleted.",
 		},
 
 		checkDnsMonitor: {
-			success: { checked: 'Checked "{{name}}".' },
+			success: { checked: 'Checked "{$name}".' },
 		},
 
 		reviewDnsMonitor: {
 			errors: { generic: "We could not save which records to watch. Please try again." },
 			success: {
-				saved_one: "Watching {{count}} record.",
-				saved_other: "Watching {{count}} records.",
+				saved:
+					".input {$count :number}\n.match $count\none {{Watching {$count} record.}}\n* {{Watching {$count} records.}}",
 			},
 		},
 
 		toggleDnsMonitorRecord: {
 			errors: { generic: "We could not change that record. Please try again." },
-			success: { enabled: "Now watching {{name}}.", disabled: "No longer watching {{name}}." },
+			success: { enabled: "Now watching {$name}.", disabled: "No longer watching {$name}." },
 		},
 
 		importDnsMonitorZoneFile: {
 			errors: {
 				generic: "We could not read that zone file. Please try again.",
-				tooLarge: "A zone file must be {{limit}} or smaller.",
+				tooLarge: "A zone file must be {$limit} or smaller.",
 				tooManyNames:
-					"That zone has more than {{limit}} names, which is more than one monitor can sweep.",
+					"That zone has more than {$limit} names, which is more than one monitor can sweep.",
 			},
 			success: {
-				imported_one: "Imported {{count}} name from your zone file.",
-				imported_other: "Imported {{count}} names from your zone file.",
+				imported:
+					".input {$count :number}\n.match $count\none {{Imported {$count} name from your zone file.}}\n* {{Imported {$count} names from your zone file.}}",
 			},
 		},
 
@@ -1981,7 +1978,7 @@ export default {
 			errors: {
 				generic: "Oops! Something went wrong while creating the TCP monitor.",
 			},
-			success: "{{name}} TCP monitor was created.",
+			success: "{$name} TCP monitor was created.",
 		},
 
 		updateTcpMonitor: {
@@ -1989,7 +1986,7 @@ export default {
 				generic: "Oops! Something went wrong while updating the TCP monitor.",
 				notFound: "This TCP monitor does not exist.",
 			},
-			success: "{{name}} TCP monitor was updated.",
+			success: "{$name} TCP monitor was updated.",
 		},
 
 		deleteTcpMonitor: {
@@ -1998,16 +1995,16 @@ export default {
 				notAllowed: "You are not allowed to delete TCP monitors in this team.",
 				notFound: "This TCP monitor does not exist.",
 			},
-			success: "{{name}} TCP monitor was deleted.",
+			success: "{$name} TCP monitor was deleted.",
 		},
 
 		createApiKey: {
 			errors: {
 				generic: "Oops! Something went wrong while creating the API key.",
-				limitExceeded: "You have reached the limit of {{limit}} API keys in this team.",
+				limitExceeded: "You have reached the limit of {$limit} API keys in this team.",
 			},
 			success: {
-				created: "API key '{{name}}' was created.",
+				created: "API key '{$name}' was created.",
 			},
 		},
 
@@ -2016,7 +2013,7 @@ export default {
 				generic: "Oops! Something went wrong while deleting the API key.",
 				notFound: "This API key does not exist.",
 			},
-			success: "API key '{{name}}' was deleted.",
+			success: "API key '{$name}' was deleted.",
 		},
 
 		updateLanguage: {
@@ -2029,9 +2026,9 @@ export default {
 		createCronJob: {
 			errors: {
 				generic: "Oops! Something went wrong while creating the cron job.",
-				limitExceeded: "You have reached the limit of {{limit}} cron job monitors in this team.",
+				limitExceeded: "You have reached the limit of {$limit} cron job monitors in this team.",
 			},
-			success: "{{name}} cron job was created.",
+			success: "{$name} cron job was created.",
 		},
 
 		updateCronJob: {
@@ -2039,7 +2036,7 @@ export default {
 				generic: "Oops! Something went wrong while updating the cron job.",
 				notFound: "This cron job does not exist.",
 			},
-			success: "{{name}} cron job was updated.",
+			success: "{$name} cron job was updated.",
 		},
 
 		deleteCronJob: {
@@ -2048,7 +2045,7 @@ export default {
 				notFound: "This cron job does not exist.",
 				forbidden: "You are not allowed to delete this cron job.",
 			},
-			success: "{{name}} cron job was deleted.",
+			success: "{$name} cron job was deleted.",
 		},
 	},
 
@@ -2103,8 +2100,8 @@ export default {
 			stats: {
 				monitors: {
 					label: "Monthly Pings Usage",
-					value: "{{consumed}}<small> used</small>",
-					description: "Out of {{estimated}} estimated",
+					value: "{$consumed}{#small} used{/small}",
+					description: "Out of {$estimated} estimated",
 					unavailable: "Estimate unavailable",
 				},
 
@@ -2115,7 +2112,7 @@ export default {
 
 				slowestEndpoint: {
 					label: {
-						default: 'Slowest Endpoint "<em>{{name}}</em>"',
+						default: 'Slowest Endpoint "{#em}{$name}{/em}"',
 						noData: "Slowest Endpoint",
 					},
 					value: { noData: "N/A" },
@@ -2126,8 +2123,8 @@ export default {
 					label: "HTTP Monitors",
 					create: "New HTTP monitor",
 					breakdown: {
-						up: "{{up}} up",
-						down: "{{down}} down",
+						up: "{$up} up",
+						down: "{$down} down",
 					},
 				},
 
@@ -2137,9 +2134,9 @@ export default {
 					/** One monitor is one domain, so this count is smaller than the work behind it. */
 					hint: "One monitor covers a whole domain and every record tracked on it.",
 					breakdown: {
-						ok: "{{ok}} ok",
-						changed: "{{changed}} changed",
-						error: "{{error}} error",
+						ok: "{$ok} ok",
+						changed: "{$changed} changed",
+						error: "{$error} error",
 					},
 				},
 
@@ -2147,9 +2144,9 @@ export default {
 					label: "Flow Monitors",
 					create: "New flow monitor",
 					breakdown: {
-						up: "{{up}} passing",
-						down: "{{down}} failing",
-						error: "{{error}} cannot run",
+						up: "{$up} passing",
+						down: "{$down} failing",
+						error: "{$error} cannot run",
 					},
 				},
 
@@ -2157,8 +2154,8 @@ export default {
 					label: "TCP Monitors",
 					create: "New TCP monitor",
 					breakdown: {
-						up: "{{up}} up",
-						down: "{{down}} down",
+						up: "{$up} up",
+						down: "{$down} down",
 					},
 				},
 
@@ -2166,9 +2163,9 @@ export default {
 					label: "Cron Jobs",
 					create: "New cron job",
 					breakdown: {
-						healthy: "{{healthy}} healthy",
-						late: "{{late}} late",
-						missed: "{{missed}} missed",
+						healthy: "{$healthy} healthy",
+						late: "{$late} late",
+						missed: "{$missed} missed",
 					},
 				},
 			},
@@ -2184,7 +2181,7 @@ export default {
 
 			panel: {
 				tabsLabel: "Monitor type",
-				tabPanelLabel: "{{tab}} monitors",
+				tabPanelLabel: "{$tab} monitors",
 				refresh: "Refresh",
 			},
 
@@ -2222,7 +2219,7 @@ export default {
 				},
 
 				lastIncident: { never: "-" },
-				responseTime: "~{{value}}",
+				responseTime: "~{$value}",
 
 				actions: {
 					menu: "Actions Menu",
@@ -2233,7 +2230,7 @@ export default {
 
 				confirmation: {
 					deleteMonitor:
-						"Are you sure you want to delete the monitor {{name}}? This action cannot be undone.",
+						"Are you sure you want to delete the monitor {$name}? This action cannot be undone.",
 				},
 			},
 		},
@@ -2304,15 +2301,15 @@ export default {
 						description: "The region from which the ping will run.",
 						placeholder: "Select a region",
 						options: {
-							afr: "{{emoji}} Africa",
-							apac: "{{emoji}} Asia-Pacific",
-							eeur: "{{emoji}} Eastern Europe",
-							enam: "{{emoji}} Eastern North America",
-							me: "{{emoji}} Middle East",
-							oc: "{{emoji}} Oceania",
-							sam: "{{emoji}} South America",
-							weur: "{{emoji}} Western Europe",
-							wnam: "{{emoji}} Western North America",
+							afr: "{$emoji} Africa",
+							apac: "{$emoji} Asia-Pacific",
+							eeur: "{$emoji} Eastern Europe",
+							enam: "{$emoji} Eastern North America",
+							me: "{$emoji} Middle East",
+							oc: "{$emoji} Oceania",
+							sam: "{$emoji} South America",
+							weur: "{$emoji} Western Europe",
+							wnam: "{$emoji} Western North America",
 						},
 					},
 				},
@@ -2383,15 +2380,15 @@ export default {
 						description: "The region from which the ping will run.",
 						placeholder: "wnam",
 						options: {
-							afr: "{{emoji}} Africa",
-							apac: "{{emoji}} Asia-Pacific",
-							eeur: "{{emoji}} Eastern Europe",
-							enam: "{{emoji}} Eastern North America",
-							me: "{{emoji}} Middle East",
-							oc: "{{emoji}} Oceania",
-							sam: "{{emoji}} South America",
-							weur: "{{emoji}} Western Europe",
-							wnam: "{{emoji}} Western North America",
+							afr: "{$emoji} Africa",
+							apac: "{$emoji} Asia-Pacific",
+							eeur: "{$emoji} Eastern Europe",
+							enam: "{$emoji} Eastern North America",
+							me: "{$emoji} Middle East",
+							oc: "{$emoji} Oceania",
+							sam: "{$emoji} South America",
+							weur: "{$emoji} Western Europe",
+							wnam: "{$emoji} Western North America",
 						},
 					},
 					ssl: {
@@ -2450,7 +2447,7 @@ export default {
 
 		monitor: {
 			header: {
-				title: 'Monitor "{{name}}"',
+				title: 'Monitor "{$name}"',
 
 				action: {
 					play: "Run Monitor",
@@ -2471,8 +2468,8 @@ export default {
 			stats: {
 				monitors: {
 					label: "Monthly Pings Usage",
-					value: "{{consumed}}<small> used</small>",
-					description: "Out of {{estimated}} estimated",
+					value: "{$consumed}{#small} used{/small}",
+					description: "Out of {$estimated} estimated",
 					estimateUnavailable: "Estimate unavailable",
 				},
 
@@ -2488,7 +2485,7 @@ export default {
 
 				p99ResponseTime: {
 					label: "P99 Response Time",
-					value: "{{value}} ms",
+					value: "{$value} ms",
 					description: "p99, last 24h",
 				},
 			},
@@ -2503,7 +2500,7 @@ export default {
 					unknown: "Not Configured",
 				},
 				expiresAt: "Expires",
-				expiresIn: "{{days}} days",
+				expiresIn: "{$days} days",
 				issuer: "Issuer",
 				lastChecked: "Last Checked",
 				notConfigured: "SSL monitoring is not enabled for this monitor.",
@@ -2511,9 +2508,9 @@ export default {
 			},
 			run: {
 				toast: {
-					up: "{{name}} is up",
-					down: "{{name}} is down",
-					degraded: "{{name}} is degraded",
+					up: "{$name} is up",
+					down: "{$name} is down",
+					degraded: "{$name} is degraded",
 					changed: "The check you just ran changed this monitor's status.",
 					notQueued: {
 						title: "Check not run",
@@ -2583,7 +2580,7 @@ export default {
 				},
 
 				confirmation: {
-					removeMember: "Are you sure you want to remove {{name}} from the team?",
+					removeMember: "Are you sure you want to remove {$name} from the team?",
 				},
 			},
 
@@ -2603,7 +2600,7 @@ export default {
 				},
 
 				confirmation: {
-					revokeInvite: "Are you sure you want to revoke {{email}}'s invite?",
+					revokeInvite: "Are you sure you want to revoke {$email}'s invite?",
 				},
 			},
 
@@ -2635,7 +2632,7 @@ export default {
 					email: {
 						label: "Email Address",
 						placeholder: "john.doe@example.com",
-						description: "The email address of the person you want to invite to {{team}}.",
+						description: "The email address of the person you want to invite to {$team}.",
 					},
 				},
 
@@ -2651,7 +2648,7 @@ export default {
 				gone: "This invite has already been accepted.",
 				forbidden: "This invite was not meant for you.",
 				badRequest: "Somehow you don't have an email address. Try to login again.",
-				wrongEmail: "This invite was sent to {{email}}. Sign in with that email to accept it.",
+				wrongEmail: "This invite was sent to {$email}. Sign in with that email to accept it.",
 			},
 		},
 
@@ -2681,7 +2678,7 @@ export default {
 					hostname: {
 						label: "Domain",
 						placeholder: "example.com",
-						description: "The domain you want to add to {{team}}.",
+						description: "The domain you want to add to {$team}.",
 					},
 				},
 
@@ -2711,7 +2708,7 @@ export default {
 				},
 
 				confirmation: {
-					removeDomain: "Are you sure you want to remove {{hostname}} from the team?",
+					removeDomain: "Are you sure you want to remove {$hostname} from the team?",
 				},
 			},
 
@@ -2731,7 +2728,7 @@ export default {
 					},
 				},
 
-				note: "Make sure to replace <code>VERIFICATION_ID</code> with the actual verification ID shown above.",
+				note: "Make sure to replace {#code}VERIFICATION_ID{/code} with the actual verification ID shown above.",
 
 				disclaimer:
 					"DNS changes may take some time to propagate, so verification might be delayed.",
@@ -2774,7 +2771,7 @@ export default {
 				cta: "Create Alert",
 			},
 
-			limitReached: "This team has reached the limit of {{limit}} alerts.",
+			limitReached: "This team has reached the limit of {$limit} alerts.",
 
 			form: {
 				fields: {
@@ -2819,7 +2816,7 @@ export default {
 									"An optional secret to include in the request headers. A `Webhook-Signature` header will be added with a HMAC SHA256 signature of the payload using this secret.",
 							},
 							signatureNote:
-								"When set, requests carry a <code>Webhook-Signature: sha256=<hex></code> header — an HMAC-SHA256 of the raw JSON body using this secret.",
+								"When set, requests carry a {#code}Webhook-Signature: sha256=<hex>{/code} header — an HMAC-SHA256 of the raw JSON body using this secret.",
 						},
 						email: {
 							to: {
@@ -2888,7 +2885,7 @@ export default {
 					cooldownMinutes: {
 						label: "Cooldown (minutes)",
 						description:
-							"How long to wait before repeating an alert while a monitor is still down. The first alert of an incident is always sent immediately, and a recovery is always sent. Repeats are never spaced closer than {{floor}} minutes, whatever you set here.",
+							"How long to wait before repeating an alert while a monitor is still down. The first alert of an incident is always sent immediately, and a recovery is always sent. Repeats are never spaced closer than {$floor} minutes, whatever you set here.",
 					},
 
 					legends: {
@@ -2932,8 +2929,8 @@ export default {
 					 * apart by a floor interval — this label names that guaranteed minimum.
 					 */
 					none: "Fastest allowed",
-					minutes: "{{count}} min",
-					hours: "{{count}} hr",
+					minutes: "{$count} min",
+					hours: "{$count} hr",
 				},
 
 				actions: {
@@ -2955,7 +2952,7 @@ export default {
 				},
 
 				confirmation: {
-					deleteAlert: "Are you sure you want to delete the alert {{name}}?",
+					deleteAlert: "Are you sure you want to delete the alert {$name}?",
 				},
 			},
 		},
@@ -3000,7 +2997,7 @@ export default {
 				},
 
 				confirmation: {
-					delete: "Are you sure you want to delete the status page {{name}}?",
+					delete: "Are you sure you want to delete the status page {$name}?",
 				},
 			},
 
@@ -3129,7 +3126,7 @@ export default {
 					urls: {
 						label: "URLs to monitor",
 						description:
-							"One URL per line, up to {{limit}}. A bare host like example.com becomes https://example.com. Blank lines and repeats of the same address are skipped.",
+							"One URL per line, up to {$limit}. A bare host like example.com becomes https://example.com. Blank lines and repeats of the same address are skipped.",
 						placeholder: "example.com\nhttps://www.example.org/health\nstatus.example.net",
 					},
 					interval: {
@@ -3147,12 +3144,10 @@ export default {
 			 */
 			report: {
 				section: { title: "Last import" },
-				title_one: "1 monitor was created. These lines weren't:",
-				title_other: "{{count}} monitors were created. These lines weren't:",
-				overflow_one:
-					"1 more line was left out: an import takes {{limit}} lines at a time. Paste the rest to import them.",
-				overflow_other:
-					"{{count}} more lines were left out: an import takes {{limit}} lines at a time. Paste the rest to import them.",
+				title:
+					".input {$count :number}\n.match $count\none {{1 monitor was created. These lines weren't:}}\n* {{{$count} monitors were created. These lines weren't:}}",
+				overflow:
+					".input {$count :number}\n.match $count\none {{1 more line was left out: an import takes {$limit} lines at a time. Paste the rest to import them.}}\n* {{{$count} more lines were left out: an import takes {$limit} lines at a time. Paste the rest to import them.}}",
 				table: {
 					label: "Lines that were not imported",
 					columns: { line: "Line", input: "What you pasted", reason: "Why" },
@@ -3203,7 +3198,7 @@ export default {
 					unknown: "Unknown",
 				},
 				confirmation: {
-					delete: "Are you sure you want to delete the monitor {{name}}?",
+					delete: "Are you sure you want to delete the monitor {$name}?",
 					deleteDescription:
 						"This also deletes its content checks and check-result history. This can't be undone.",
 				},
@@ -3237,7 +3232,7 @@ export default {
 					actions: "Actions",
 				},
 
-				records: "{{enabled}} of {{total}} watched",
+				records: "{$enabled} of {$total} watched",
 				noRecords: "None yet",
 				disabled: "Disabled",
 				neverChecked: "Never",
@@ -3251,7 +3246,7 @@ export default {
 				},
 
 				confirmation: {
-					delete: "Are you sure you want to delete the DNS monitor {{name}}?",
+					delete: "Are you sure you want to delete the DNS monitor {$name}?",
 				},
 			},
 		},
@@ -3296,7 +3291,7 @@ export default {
 						placeholder: "example.com.\t1\tIN\tA\t192.0.2.1",
 						description:
 							"Optional. Paste a BIND zone file exported from your DNS provider. It is read once and never stored, and it is the only way we can learn the names in your zone.",
-						limits: "Up to {{size}} of text, and {{limit}} names per monitor.",
+						limits: "Up to {$size} of text, and {$limit} names per monitor.",
 					},
 
 					interval: {
@@ -3388,7 +3383,7 @@ export default {
 				title: "Zone file",
 				description:
 					"Re-paste your zone to pick up names added since the last import. The text is read once and never stored, which is why refreshing it means asking for the file again.",
-				lastImported: "Last imported {{date}}.",
+				lastImported: "Last imported {$date}.",
 				neverImported: "No zone file has been imported. This monitor covers the apex only.",
 				cta: "Import Zone File",
 			},
@@ -3404,7 +3399,7 @@ export default {
 
 		dnsMonitorDetail: {
 			header: {
-				title: 'DNS Monitor "{{name}}"',
+				title: 'DNS Monitor "{$name}"',
 
 				action: {
 					check: "Check Now",
@@ -3420,7 +3415,7 @@ export default {
 				domain: "Domain",
 				status: "Status",
 				recordsWatched: "Records Watched",
-				recordsWatchedValue: "{{enabled}} of {{total}}",
+				recordsWatchedValue: "{$enabled} of {$total}",
 				zoneFileImported: "Zone File Imported",
 				zoneFileNeverImported: "Never — apex only",
 			},
@@ -3450,11 +3445,11 @@ export default {
 					},
 				},
 
-				findings: "{{changed}} changed · {{missing}} missing · {{new}} new",
+				findings: "{$changed} changed · {$missing} missing · {$new} new",
 				noFindings: "No changes",
 				/** Only successfully answered queries enter the diff, so a partial sweep reads as partial. */
-				queriesFailed_one: "{{count}} query did not answer",
-				queriesFailed_other: "{{count}} queries did not answer",
+				queriesFailed:
+					".input {$count :number}\n.match $count\none {{{$count} query did not answer}}\n* {{{$count} queries did not answer}}",
 			},
 
 			records: {
@@ -3500,18 +3495,18 @@ export default {
 		 */
 		dnsMonitorReview: {
 			header: {
-				title: 'Review records for "{{name}}"',
+				title: 'Review records for "{$name}"',
 				description:
 					"Every record we found is watched by default. Uncheck anything you do not want to be alerted about — it is kept either way, so nothing you decline comes back as a new record later.",
 			},
 
 			/** Every line the parser could not use is still surfaced to the user. */
 			unparsed: {
-				title_one: "{{count}} line was not imported",
-				title_other: "{{count}} lines were not imported",
+				title:
+					".input {$count :number}\n.match $count\none {{{$count} line was not imported}}\n* {{{$count} lines were not imported}}",
 				description:
 					"These lines are not part of the subset we read. Anything they declare is not monitored.",
-				line: "Line {{line}}: {{reason}}",
+				line: "Line {$line :string}: {$reason}",
 
 				/** One sentence per parser outcome, so each names the fix it points at. */
 				reasons: {
@@ -3555,18 +3550,18 @@ export default {
 			 * from whichever line named it first.
 			 */
 			duplicates: {
-				title_one: "{{count}} line declared a record another line already declared",
-				title_other: "{{count}} lines declared records other lines already declared",
+				title:
+					".input {$count :number}\n.match $count\none {{{$count} line declared a record another line already declared}}\n* {{{$count} lines declared records other lines already declared}}",
 				description:
 					"Nothing was lost. DNS answers a repeated record once, so it was imported from the first line that declared it.",
-				line: "Line {{line}}: {{name}} {{type}} was already declared on line {{firstLine}}.",
+				line: "Line {$line :string}: {$name} {$type} was already declared on line {$firstLine :string}.",
 			},
 
 			/** The cap is enforced at review time, so this notice appears there too. */
 			namesCap: {
 				title: "More names than one monitor can watch",
 				description:
-					"This monitor now covers {{count}} names, and one check can sweep {{limit}}. Split the zone across more than one monitor so every name keeps being checked.",
+					"This monitor now covers {$count} names, and one check can sweep {$limit}. Split the zone across more than one monitor so every name keeps being checked.",
 			},
 
 			/** Column headings match the monitor's own record list, so both screens read alike. */
@@ -3579,7 +3574,7 @@ export default {
 				},
 
 				/** Each box names the record it decides, so a row makes sense read on its own. */
-				watchRecord: "Watch {{name}} {{type}}",
+				watchRecord: "Watch {$name} {$type}",
 			},
 
 			empty: "Nothing was found for this domain.",
@@ -3644,8 +3639,8 @@ export default {
 				},
 
 				confirmation: {
-					endMaintenance: "Are you sure you want to end '{{name}}' maintenance early?",
-					deleteMaintenance: "Are you sure you want to delete '{{name}}'?",
+					endMaintenance: "Are you sure you want to end '{$name}' maintenance early?",
+					deleteMaintenance: "Are you sure you want to delete '{$name}'?",
 				},
 			},
 		},
@@ -3735,7 +3730,7 @@ export default {
 
 		editMaintenance: {
 			header: {
-				title: "Edit {{name}}",
+				title: "Edit {$name}",
 			},
 
 			form: {
@@ -4059,14 +4054,14 @@ export default {
 			 */
 			report: {
 				meta: {
-					title: "Your {{days}}-day site health report — Uptime",
+					title: "Your {$days}-day site health report — Uptime",
 					description:
 						"The uptime, checks and incidents we recorded for your site over its free week of monitoring.",
 				},
-				eyebrow: "{{days}}-day health report",
-				period: "Monitored {{start}} to {{end}} ({{zone}})",
+				eyebrow: "{$days}-day health report",
+				period: "Monitored {$start} to {$end} ({$zone})",
 				bar: {
-					caption: "One block per day over {{days}} days, oldest first.",
+					caption: "One block per day over {$days} days, oldest first.",
 					status: {
 						up: "Up all day",
 						degraded: "Slow at least once",
@@ -4085,23 +4080,22 @@ export default {
 				incidents: {
 					title: "Incidents",
 					unknown: "No check has completed yet, so we cannot say whether this URL had an incident.",
-					none_one: "No incident: the one completed check answered as expected.",
-					none_other: "No incidents: all {{count}} completed checks answered as expected.",
-					summary_one: "One incident.",
-					summary_other: "{{count}} incidents.",
-					entry_one: "First failure seen {{started}} — one check failed.",
-					entry_other: "First failure seen {{started}} — {{count}} checks in a row failed.",
+					none: ".input {$count :number}\n.match $count\none {{No incident: the one completed check answered as expected.}}\n* {{No incidents: all {$count} completed checks answered as expected.}}",
+					summary:
+						".input {$count :number}\n.match $count\none {{One incident.}}\n* {{{$count} incidents.}}",
+					entry:
+						".input {$count :number}\n.match $count\none {{First failure seen {$started} — one check failed.}}\n* {{First failure seen {$started} — {$count} checks in a row failed.}}",
 				},
 				timing: {
 					title: "Response times",
 					fastest: "Fastest",
 					average: "Average",
 					slowest: "Slowest",
-					basis_one: "Measured over the one check that answered.",
-					basis_other: "Measured over the {{count}} checks that answered.",
+					basis:
+						".input {$count :number}\n.match $count\none {{Measured over the one check that answered.}}\n* {{Measured over the {$count} checks that answered.}}",
 				},
 				cta: {
-					title: "Keep monitoring this site for {{price}}/month",
+					title: "Keep monitoring this site for {$price}/month",
 					action: "Start monitoring",
 					convertible: {
 						body: "Sign in and we will turn this URL into a real monitor, with the history above carried over.",
@@ -4118,14 +4112,14 @@ export default {
 			},
 
 			meta: {
-				title: "Free {{days}}-day website health report — Uptime",
+				title: "Free {$days}-day website health report — Uptime",
 				description:
-					"We check your site now, then every hour for {{days}} days, and email you what we found. No account, no card.",
+					"We check your site now, then every hour for {$days} days, and email you what we found. No account, no card.",
 			},
 
-			heading: "A free {{days}}-day health report for your site",
+			heading: "A free {$days}-day health report for your site",
 			intro:
-				"Give us a URL and we check it right now from our network — the same check a paid monitor runs. Leave an email after that and we keep checking every hour for {{days}} days, then send you the report.",
+				"Give us a URL and we check it right now from our network — the same check a paid monitor runs. Leave an email after that and we keep checking every hour for {$days} days, then send you the report.",
 
 			form: {
 				url: {
@@ -4144,7 +4138,7 @@ export default {
 				failedChallenge:
 					"We could not confirm the request came from a browser. Reload the page and try again.",
 				rateLimited: "You can run another check in a minute.",
-				rateLimitedFor: "You can run another check in {{seconds}} seconds.",
+				rateLimitedFor: "You can run another check in {$seconds} seconds.",
 				budgetExhausted:
 					"We have already run every free check we run in a day. That is about us, not about your URL — come back tomorrow, or start monitoring and we will check it every minute.",
 				unavailable:
@@ -4154,16 +4148,16 @@ export default {
 			result: {
 				checkAnother: "Check another URL",
 				noResponse: "No response",
-				httpStatus: "HTTP {{status}}",
-				milliseconds: "{{value}} ms",
-				checkedAt: "Checked {{time}}",
+				httpStatus: "HTTP {$status}",
+				milliseconds: "{$value} ms",
+				checkedAt: "Checked {$time}",
 
 				redirect: {
 					badge: "Redirects",
 					title: "This URL redirects somewhere else",
 					description:
 						"It answered, and it answered by pointing us at another address. We did not go there: we only check the URL you gave us, which is what keeps this box from being used to reach places it should not. Check the destination instead and you will get a real result for it.",
-					destination: "It points at {{url}}",
+					destination: "It points at {$url}",
 					action: "Check that instead",
 					unknownDestination:
 						"We did not read where it points. Open the URL in a browser, see where you land, and check that address here.",
@@ -4177,13 +4171,13 @@ export default {
 			},
 
 			lead: {
-				title: "Get the free {{days}}-day report",
+				title: "Get the free {$days}-day report",
 				description:
-					"The check you just watched was the first one. Leave an email and we keep going, then tell you what {{days}} days of checking found.",
+					"The check you just watched was the first one. Leave an email and we keep going, then tell you what {$days} days of checking found.",
 				consent: "Also email me occasionally about Uptime itself.",
 				consentNote: "Either way you get the checks.",
 				promise: "Every email carries a one-click link that stops them and deletes your address.",
-				submit: "Start the free {{days}}-day report",
+				submit: "Start the free {$days}-day report",
 
 				/**
 				 * What a visitor is agreeing to, placed beside the field. Each line states a
@@ -4191,8 +4185,8 @@ export default {
 				 * cadence and length, and the three emails that exist.
 				 */
 				expectations: {
-					target: "We keep checking {{url}} — the exact address we just checked, and nothing else.",
-					cadence: "Once an hour, every hour, for {{days}} days.",
+					target: "We keep checking {$url} — the exact address we just checked, and nothing else.",
+					cadence: "Once an hour, every hour, for {$days} days.",
 					emails:
 						"One summary a day, a note when the status changes, and the full report at the end.",
 					noAccount: "No card, no password, no account to create.",
@@ -4218,24 +4212,24 @@ export default {
 			watching: {
 				title: "We are on it",
 				description:
-					"The first hourly check on {{url}} runs in an hour, and we keep checking for {{days}} days. A copy of the check you just ran is already in your inbox.",
+					"The first hourly check on {$url} runs in an hour, and we keep checking for {$days} days. A copy of the check you just ran is already in your inbox.",
 			},
 
 			repeated: {
 				title: "We have already checked this one",
 				description:
-					"{{url}} already had its free report from an earlier request — each URL gets one every 30 days. We have emailed you everything those checks found, so nothing new was started.",
+					"{$url} already had its free report from an earlier request — each URL gets one every 30 days. We have emailed you everything those checks found, so nothing new was started.",
 			},
 
 			benefits: {
 				title: "What the report covers",
 				description:
-					"Everything a paid monitor would tell you about this URL, free, for {{days}} days.",
+					"Everything a paid monitor would tell you about this URL, free, for {$days} days.",
 
 				list: {
 					hourly: {
 						title: "A check every hour",
-						description: "For {{days}} days, from the same network a paid monitor runs on.",
+						description: "For {$days} days, from the same network a paid monitor runs on.",
 					},
 					changes: {
 						title: "An email when it changes",
@@ -4245,7 +4239,7 @@ export default {
 					digest: {
 						title: "One summary a day",
 						description:
-							"How your URL held up, at a glance — and the whole {{days}} days in one report at the end.",
+							"How your URL held up, at a glance — and the whole {$days} days in one report at the end.",
 					},
 					noAccount: {
 						title: "No account, no card",
@@ -4280,7 +4274,7 @@ export default {
 
 			cta: {
 				badge: "When the report ends",
-				title: "Keep monitoring this site for {{price}} a month",
+				title: "Keep monitoring this site for {$price} a month",
 				description:
 					"Signing up turns this URL into a real monitor and carries its check history across, so nothing starts over. A check every minute instead of every hour, as many URLs as you like, alerts wherever you already work, status pages, and a year of history.",
 				action: "Keep monitoring this site",
@@ -4429,7 +4423,7 @@ export default {
 					},
 
 					confirmation: {
-						leaveTeam: "Are you sure you want to leave {{name}}?",
+						leaveTeam: "Are you sure you want to leave {$name}?",
 					},
 				},
 			},
@@ -4460,7 +4454,7 @@ export default {
 					title: "Deletion Requested",
 					description:
 						"Your account is queued for deletion and nothing has been deleted yet. It runs within a day, and we will email you once it has. You can still stop it — cancel below any time before it runs.",
-					requestedAt: "Requested {{date}}.",
+					requestedAt: "Requested {$date}.",
 					cta: "Cancel Deletion",
 				},
 
@@ -4477,14 +4471,12 @@ export default {
 
 					ownedTeamsIntro:
 						"There is no way to hand a team over to somebody else in this app, so every team you own is deleted with your account, along with its monitors, alerts, status pages, API keys and members:",
-					ownedTeam_one: "{{name}} — 1 other member loses access.",
-					ownedTeam_other: "{{name}} — {{count}} other members lose access.",
-					ownedTeamAlone: "{{name}} — no other members.",
+					ownedTeam:
+						".input {$count :number}\n.match $count\none {{{$name} — 1 other member loses access.}}\n* {{{$name} — {$count} other members lose access.}}",
+					ownedTeamAlone: "{$name} — no other members.",
 
-					othersWarning_one:
-						"1 other person will lose access to a team when this runs. They will not be asked and will not be warned.",
-					othersWarning_other:
-						"{{count}} other people will lose access to their teams when this runs. They will not be asked and will not be warned.",
+					othersWarning:
+						".input {$count :number}\n.match $count\none {{1 other person will lose access to a team when this runs. They will not be asked and will not be warned.}}\n* {{{$count} other people will lose access to their teams when this runs. They will not be asked and will not be warned.}}",
 
 					retained: {
 						intro: "Some things cannot be deleted, and we would rather say so:",
@@ -4612,7 +4604,7 @@ export default {
 					},
 
 					confirmation: {
-						removeMember: "Are you sure you want to remove {{name}} from the team?",
+						removeMember: "Are you sure you want to remove {$name} from the team?",
 					},
 				},
 
@@ -4637,7 +4629,7 @@ export default {
 					},
 
 					confirmation: {
-						revokeInvite: "Are you sure you want to revoke {{email}}'s invite?",
+						revokeInvite: "Are you sure you want to revoke {$email}'s invite?",
 					},
 
 					empty: {
@@ -4677,7 +4669,7 @@ export default {
 					},
 
 					confirmation: {
-						removeDomain: "Are you sure you want to remove {{hostname}} from the team?",
+						removeDomain: "Are you sure you want to remove {$hostname} from the team?",
 					},
 
 					empty: {
@@ -4692,7 +4684,7 @@ export default {
 						hostname: {
 							label: "Domain",
 							placeholder: "example.com",
-							description: "The domain you want to add to {{team}}.",
+							description: "The domain you want to add to {$team}.",
 						},
 					},
 
@@ -4714,7 +4706,7 @@ export default {
 						},
 					},
 
-					note: "Make sure to replace <code>VERIFICATION_ID</code> with the actual verification ID shown above.",
+					note: "Make sure to replace {#code}VERIFICATION_ID{/code} with the actual verification ID shown above.",
 					disclaimer:
 						"DNS changes may take some time to propagate, so verification might be delayed.",
 				},
@@ -4785,7 +4777,7 @@ export default {
 
 			failure: {
 				title: "Last failure",
-				failedTest: "{{test}} failed on line {{line}}.",
+				failedTest: "{$test} failed on line {$line :string}.",
 			},
 
 			source: { title: "Flow" },
@@ -4840,7 +4832,7 @@ export default {
 					delete: "Delete",
 					confirmation: {
 						delete:
-							"Are you sure you want to delete the flow monitor {{name}}? This action cannot be undone.",
+							"Are you sure you want to delete the flow monitor {$name}? This action cannot be undone.",
 					},
 				},
 			},
@@ -4848,12 +4840,12 @@ export default {
 			run: {
 				cta: "Run now",
 				toast: {
-					up: "{{name}} passed",
-					down: "{{name}} failed",
-					error: "{{name}} could not run",
-					refused: "{{name}} was not run",
-					summary: "{{passed}} of {{total}} tests passed, {{requests}} requests, {{duration}}ms.",
-					failedTest: "Failed: {{test}} (line {{line}}).",
+					up: "{$name} passed",
+					down: "{$name} failed",
+					error: "{$name} could not run",
+					refused: "{$name} was not run",
+					summary: "{$passed} of {$total} tests passed, {$requests} requests, {$duration}ms.",
+					failedTest: "Failed: {$test} (line {$line :string}).",
 				},
 			},
 		},
@@ -4880,10 +4872,10 @@ export default {
 					},
 					source: {
 						label: "Flow",
-						placeholder: 'test "a member can sign in" { when { … } then { … } }',
+						placeholder: 'test "a member can sign in" \\{ when \\{ … \\} then \\{ … \\} \\}',
 						description:
 							"Requests and the assertions between them. Every URL has to be written here so it can be checked against your verified domains.",
-						verifiedDomains: "This flow may reach: {{domains}} — and their subdomains.",
+						verifiedDomains: "This flow may reach: {$domains} — and their subdomains.",
 						noVerifiedDomains:
 							"This team has no verified domains, so no flow can run yet. Verify a domain in team settings first.",
 					},
@@ -4915,8 +4907,8 @@ export default {
 			lastRun: {
 				title: "Last run",
 				description: "What this flow concluded the last time it ran.",
-				summary: "{{passed}} of {{total}} tests passed, {{requests}} requests, {{duration}}ms.",
-				failedTest: "Failed: {{test}} (line {{line}}).",
+				summary: "{$passed} of {$total} tests passed, {$requests} requests, {$duration}ms.",
+				failedTest: "Failed: {$test} (line {$line :string}).",
 			},
 
 			form: {
@@ -4936,10 +4928,10 @@ export default {
 					},
 					source: {
 						label: "Flow",
-						placeholder: 'test "a member can sign in" { when { … } then { … } }',
+						placeholder: 'test "a member can sign in" \\{ when \\{ … \\} then \\{ … \\} \\}',
 						description:
 							"Requests and the assertions between them. Every URL has to be written here so it can be checked against your verified domains.",
-						verifiedDomains: "This flow may reach: {{domains}} — and their subdomains.",
+						verifiedDomains: "This flow may reach: {$domains} — and their subdomains.",
 						noVerifiedDomains:
 							"This team has no verified domains, so no flow can run yet. Verify a domain in team settings first.",
 					},
@@ -5017,7 +5009,7 @@ export default {
 					edit: "Edit",
 					delete: "Delete",
 					confirmation: {
-						delete: "Are you sure you want to delete {{name}}?",
+						delete: "Are you sure you want to delete {$name}?",
 					},
 				},
 			},
@@ -5241,7 +5233,7 @@ export default {
 			},
 
 			newKey: {
-				title: "API Key '{{name}}' created!",
+				title: "API Key '{$name}' created!",
 				description: "Copy this key now. For security reasons, you won't be able to see it again.",
 				dismiss: "I've copied my key",
 				copyLabel: "Copy key",
@@ -5250,7 +5242,7 @@ export default {
 			form: {
 				title: "Create New API Key",
 				description:
-					"Create an API key to access the Uptime API. See the <link>documentation</link> for usage examples.",
+					"Create an API key to access the Uptime API. See the {#link}documentation{/link} for usage examples.",
 
 				sections: {
 					details: {
@@ -5357,7 +5349,7 @@ export default {
 
 				confirmation: {
 					delete:
-						"Are you sure you want to delete the API key '{{name}}'? This action cannot be undone.",
+						"Are you sure you want to delete the API key '{$name}'? This action cannot be undone.",
 				},
 			},
 
@@ -5417,7 +5409,7 @@ export default {
 					edit: "Edit",
 					delete: "Delete",
 					confirmation: {
-						delete: "Are you sure you want to delete {{name}}?",
+						delete: "Are you sure you want to delete {$name}?",
 					},
 				},
 			},
@@ -5614,7 +5606,7 @@ export default {
 				timezone: "Timezone",
 				status: "Status",
 				gracePeriod: "Grace Period",
-				gracePeriodValue: "{{duration}} grace",
+				gracePeriodValue: "{$duration} grace",
 				description: "Description",
 			},
 
@@ -5688,7 +5680,7 @@ export default {
 			},
 
 			delete: {
-				confirmation: "Are you sure you want to delete {{name}}? This action cannot be undone.",
+				confirmation: "Are you sure you want to delete {$name}? This action cannot be undone.",
 			},
 		},
 	},
@@ -5741,6 +5733,6 @@ export default {
 			notFoundDescription: "The documentation page you're looking for doesn't exist.",
 		},
 
-		lastUpdated: "Last updated: {{date}}",
+		lastUpdated: "Last updated: {$date}",
 	},
 };

@@ -101,7 +101,7 @@ describe("TrialRepeatReportEmail", () => {
 
 		expect(text).toContain("Checks run 72");
 		expect(text).toContain("Uptime 98.6%");
-		expect(text).toContain("Slowest response 1400ms");
+		expect(text).toContain("Slowest response 1,400ms");
 		expect(text).toContain("Day 1");
 		expect(text).toContain("Day 7");
 	});

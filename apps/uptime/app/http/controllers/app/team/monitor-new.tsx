@@ -54,8 +54,8 @@ export default createAction(routes.app.team.monitors.new, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
-					heading={ctx.i18next.t("page.createMonitor.header.title")}
+					intl={ctx.intl}
+					heading={ctx.intl.t("page.createMonitor.header.title")}
 				>
 					<FormPage>
 						<form
@@ -65,13 +65,13 @@ export default createAction(routes.app.team.monitors.new, {
 						>
 							<SettingsSection
 								id="basics"
-								title={ctx.i18next.t("page.createMonitor.form.sections.basics.title")}
-								description={ctx.i18next.t("page.createMonitor.form.sections.basics.description")}
+								title={ctx.intl.t("page.createMonitor.form.sections.basics.title")}
+								description={ctx.intl.t("page.createMonitor.form.sections.basics.description")}
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
 										<MonitorFormFields
-											i18next={ctx.i18next}
+											intl={ctx.intl}
 											page="createMonitor"
 											group="basics"
 											defaultUrl={prefill}
@@ -82,15 +82,15 @@ export default createAction(routes.app.team.monitors.new, {
 
 							<SettingsSection
 								id="checks"
-								title={ctx.i18next.t("page.createMonitor.form.sections.checks.title")}
-								description={ctx.i18next.t("page.createMonitor.form.sections.checks.description")}
+								title={ctx.intl.t("page.createMonitor.form.sections.checks.title")}
+								description={ctx.intl.t("page.createMonitor.form.sections.checks.description")}
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
-										<MonitorFormFields i18next={ctx.i18next} page="createMonitor" group="checks" />
+										<MonitorFormFields intl={ctx.intl} page="createMonitor" group="checks" />
 									</SettingsSection.Body>
 									<SettingsSection.Footer>
-										<Button type="submit">{ctx.i18next.t("page.createMonitor.form.cta")}</Button>
+										<Button type="submit">{ctx.intl.t("page.createMonitor.form.cta")}</Button>
 									</SettingsSection.Footer>
 								</SettingsSection.Card>
 							</SettingsSection>

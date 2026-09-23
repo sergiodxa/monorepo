@@ -41,15 +41,15 @@ export default createAction(routes.app.team.tcpMonitors.new, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
-					heading={ctx.i18next.t("page.createTcpMonitor.header.title")}
+					intl={ctx.intl}
+					heading={ctx.intl.t("page.createTcpMonitor.header.title")}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("app.layout.sidebar.navigation.items.dashboard"),
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.dashboard"),
 							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 						},
 						{
-							label: ctx.i18next.t("page.createTcpMonitor.header.breadcrumb.tcpMonitors"),
+							label: ctx.intl.t("page.createTcpMonitor.header.breadcrumb.tcpMonitors"),
 							href: routes.app.team.tcpMonitors.index.href({ team: ctx.team.slug }),
 						},
 					]}
@@ -61,17 +61,15 @@ export default createAction(routes.app.team.tcpMonitors.new, {
 						>
 							<SettingsSection
 								id="basics"
-								title={ctx.i18next.t("page.createTcpMonitor.form.sections.basics.title")}
-								description={ctx.i18next.t(
-									"page.createTcpMonitor.form.sections.basics.description",
-								)}
+								title={ctx.intl.t("page.createTcpMonitor.form.sections.basics.title")}
+								description={ctx.intl.t("page.createTcpMonitor.form.sections.basics.description")}
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
-										<TcpMonitorFormFields i18next={ctx.i18next} page="createTcpMonitor" />
+										<TcpMonitorFormFields intl={ctx.intl} page="createTcpMonitor" />
 									</SettingsSection.Body>
 									<SettingsSection.Footer>
-										<Button type="submit">{ctx.i18next.t("page.createTcpMonitor.form.cta")}</Button>
+										<Button type="submit">{ctx.intl.t("page.createTcpMonitor.form.cta")}</Button>
 									</SettingsSection.Footer>
 								</SettingsSection.Card>
 							</SettingsSection>

@@ -104,18 +104,18 @@ export default createAction(routes.app.team.dnsMonitors.index, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
-					heading={ctx.i18next.t("page.dnsMonitors.header.title")}
+					intl={ctx.intl}
+					heading={ctx.intl.t("page.dnsMonitors.header.title")}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("app.layout.sidebar.navigation.items.dashboard"),
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.dashboard"),
 							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 						},
 					]}
 					actions={
 						<LinkButton href={routes.app.team.dnsMonitors.new.href({ team: ctx.team.slug })}>
 							<PlusIcon size={16} strokeWidth={1.5} />
-							{ctx.i18next.t("page.dnsMonitors.header.action.create")}
+							{ctx.intl.t("page.dnsMonitors.header.action.create")}
 						</LinkButton>
 					}
 				>
@@ -125,33 +125,33 @@ export default createAction(routes.app.team.dnsMonitors.index, {
 								<Empty.Icon>
 									<GlobeIcon size={24} strokeWidth={1.5} />
 								</Empty.Icon>
-								<Empty.Title>{ctx.i18next.t("page.dnsMonitors.empty.title")}</Empty.Title>
+								<Empty.Title>{ctx.intl.t("page.dnsMonitors.empty.title")}</Empty.Title>
 								<Empty.Description>
-									{ctx.i18next.t("page.dnsMonitors.empty.description")}
+									{ctx.intl.t("page.dnsMonitors.empty.description")}
 								</Empty.Description>
 								<Empty.Action>
 									<LinkButton href={routes.app.team.dnsMonitors.new.href({ team: ctx.team.slug })}>
 										<PlusIcon size={20} strokeWidth={1.5} />
-										{ctx.i18next.t("page.dnsMonitors.empty.cta")}
+										{ctx.intl.t("page.dnsMonitors.empty.cta")}
 									</LinkButton>
 								</Empty.Action>
 							</Empty>
 						) : (
 							<Table.Container>
-								<Table aria-label={ctx.i18next.t("page.dnsMonitors.table.label")}>
+								<Table aria-label={ctx.intl.t("page.dnsMonitors.table.label")}>
 									<Table.Header>
 										<Table.Row>
 											<Table.Column>
-												{ctx.i18next.t("page.dnsMonitors.table.columns.name")}
+												{ctx.intl.t("page.dnsMonitors.table.columns.name")}
 											</Table.Column>
 											<Table.Column>
-												{ctx.i18next.t("page.dnsMonitors.table.columns.domain")}
+												{ctx.intl.t("page.dnsMonitors.table.columns.domain")}
 											</Table.Column>
 											<Table.Column>
-												{ctx.i18next.t("page.dnsMonitors.table.columns.records")}
+												{ctx.intl.t("page.dnsMonitors.table.columns.records")}
 											</Table.Column>
 											<Table.Column>
-												{ctx.i18next.t("page.dnsMonitors.table.columns.status")}
+												{ctx.intl.t("page.dnsMonitors.table.columns.status")}
 											</Table.Column>
 										</Table.Row>
 									</Table.Header>
@@ -177,7 +177,7 @@ export default createAction(routes.app.team.dnsMonitors.index, {
 														</a>
 														{!monitor.is_enabled && (
 															<Badge {...badgeVariant("neutral")}>
-																{ctx.i18next.t("page.dnsMonitors.table.disabled")}
+																{ctx.intl.t("page.dnsMonitors.table.disabled")}
 															</Badge>
 														)}
 													</Table.Cell>
@@ -186,8 +186,8 @@ export default createAction(routes.app.team.dnsMonitors.index, {
 													</Table.Cell>
 													<Table.Cell>
 														{count === undefined
-															? ctx.i18next.t("page.dnsMonitors.table.noRecords")
-															: ctx.i18next.t("page.dnsMonitors.table.records", {
+															? ctx.intl.t("page.dnsMonitors.table.noRecords")
+															: ctx.intl.t("page.dnsMonitors.table.records", {
 																	enabled: count.watched,
 																	total: count.total,
 																})}
@@ -199,7 +199,7 @@ export default createAction(routes.app.team.dnsMonitors.index, {
 															)}
 														>
 															{monitor.last_status ??
-																ctx.i18next.t("page.dnsMonitors.table.notChecked")}
+																ctx.intl.t("page.dnsMonitors.table.notChecked")}
 														</Badge>
 													</Table.Cell>
 												</Table.Row>

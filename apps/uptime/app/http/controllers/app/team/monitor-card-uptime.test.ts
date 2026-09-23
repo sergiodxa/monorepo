@@ -1,7 +1,7 @@
 /**
  * Tests for the monitor detail page "Uptime percentage" stat-card fragment
  * controller. `cloudflare:workers` is mocked because `~/app/data/monitor` reads `env`
- * at module load. `ctx.team`/`ctx.membership`/auth/i18next state is seeded directly,
+ * at module load. `ctx.team`/`ctx.membership`/auth/intl state is seeded directly,
  * standing in for the real `requireUser`/`requireTeam`/i18n middleware chain.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -39,8 +39,8 @@ let monitorCardUptime = (await import("./monitor-card-uptime")).default as {
 	handler: RequestHandler<any>;
 };
 
-let { i18n: i18nextInstance } = await createTranslator({
-	resources: { en: { translation: en } },
+let { intl } = await createTranslator({
+	resources: { en },
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",
 })();
@@ -55,7 +55,7 @@ function createHtmlRenderer(ctx: RequestContext) {
 	};
 }
 
-/** Middleware that seeds `ctx.team`/`ctx.membership`/auth/i18next state, standing in for the real chain. */
+/** Middleware that seeds `ctx.team`/`ctx.membership`/auth/intl state, standing in for the real chain. */
 function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	let viewer: Viewer = {
 		id: membership.subject_id,
@@ -69,7 +69,7 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 		ctx.membership = membership;
 		ctx.teams = [team];
 		ctx.locale = "en";
-		ctx.i18next = i18nextInstance;
+		ctx.intl = intl;
 		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
 		return next();
 	};

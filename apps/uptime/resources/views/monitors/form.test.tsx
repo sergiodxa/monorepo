@@ -18,8 +18,8 @@ import en from "~/app/locales/en";
 
 import MonitorFormFields from "./form";
 
-let { i18n: i18next } = await createTranslator({
-	resources: { en: { translation: en } },
+let { intl } = await createTranslator({
+	resources: { en },
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",
 })();
@@ -75,7 +75,7 @@ function render(saved?: SelectMonitor) {
 	return renderToString(
 		<MonitorFormFields
 			monitor={saved}
-			i18next={i18next}
+			intl={intl}
 			page={saved ? "editMonitor" : "createMonitor"}
 			group="checks"
 		/>,

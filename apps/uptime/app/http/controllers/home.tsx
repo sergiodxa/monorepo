@@ -170,8 +170,8 @@ interface TrustIndicator {
 /** GET / — the public marketing homepage. */
 export default createAction(routes.home, async (ctx) => {
 	let isSignedIn = getViewer() !== null;
-	let chrome = buildMarketingChrome(ctx.i18next.t);
-	let t = ctx.i18next.t;
+	let chrome = buildMarketingChrome(ctx.intl.t);
+	let t = ctx.intl.t;
 
 	let HERO_TRUST_INDICATORS = [
 		t("landing.hero.trustIndicators.freeToStart"),
@@ -461,7 +461,7 @@ export default createAction(routes.home, async (ctx) => {
 									]}
 								>
 									<Trans
-										i18n={ctx.i18next}
+										intl={ctx.intl}
 										i18nKey="landing.hero.title"
 										components={{ strong: <span mix={[fg("brand")]} /> }}
 									/>
@@ -724,7 +724,7 @@ export default createAction(routes.home, async (ctx) => {
 							description={t("landing.pricing.description")}
 						/>
 
-						<IntlProvider i18n={ctx.i18next}>
+						<IntlProvider intl={ctx.intl}>
 							<PricingCalculator initialFrequencies={[10]} />
 						</IntlProvider>
 					</div>

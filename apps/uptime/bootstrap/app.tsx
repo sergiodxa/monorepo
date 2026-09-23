@@ -157,7 +157,7 @@ export default function application(options: application.Options) {
 		/**
 		 * Stays after the session middleware, whose stored language it reads.
 		 * Wrapped in `htmlOnly` because resolving a language and building an
-		 * i18next instance only pays off for a page a person actually reads.
+		 * translator only pays off for a page a person actually reads.
 		 */
 		htmlOnly(i18n),
 		/**

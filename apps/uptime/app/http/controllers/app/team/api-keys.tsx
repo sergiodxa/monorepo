@@ -59,13 +59,13 @@ export default createAction(routes.app.team.apiKeys.index, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
-					heading={ctx.i18next.t("page.apiKeys.header.title")}
+					intl={ctx.intl}
+					heading={ctx.intl.t("page.apiKeys.header.title")}
 					actions={
 						apiKeys.length < 10 && (
 							<LinkButton href={routes.app.team.apiKeys.new.href({ team: ctx.team.slug })}>
 								<PlusIcon size={16} strokeWidth={1.5} />
-								{ctx.i18next.t("page.apiKeys.header.action.create")}
+								{ctx.intl.t("page.apiKeys.header.action.create")}
 							</LinkButton>
 						)
 					}
@@ -82,14 +82,14 @@ export default createAction(routes.app.team.apiKeys.index, {
 									rounded("12px"),
 								]}
 							>
-								<p>{ctx.i18next.t("page.apiKeys.newKey.title", { name: newApiKey.name })}</p>
-								<p>{ctx.i18next.t("page.apiKeys.newKey.description")}</p>
+								<p>{ctx.intl.t("page.apiKeys.newKey.title", { name: newApiKey.name })}</p>
+								<p>{ctx.intl.t("page.apiKeys.newKey.description")}</p>
 								<div mix={[hstack({ gap: "12px", align: "center" })]}>
 									<code>{newApiKey.key}</code>
-									<IntlProvider i18n={ctx.i18next}>
+									<IntlProvider intl={ctx.intl}>
 										<CopyButton
 											value={newApiKey.key}
-											label={ctx.i18next.t("page.apiKeys.newKey.copyLabel")}
+											label={ctx.intl.t("page.apiKeys.newKey.copyLabel")}
 										/>
 									</IntlProvider>
 								</div>
@@ -101,36 +101,30 @@ export default createAction(routes.app.team.apiKeys.index, {
 								<Empty.Icon>
 									<KeyIcon size={24} strokeWidth={1.5} />
 								</Empty.Icon>
-								<Empty.Title>{ctx.i18next.t("page.apiKeys.empty.title")}</Empty.Title>
+								<Empty.Title>{ctx.intl.t("page.apiKeys.empty.title")}</Empty.Title>
 								<Empty.Description>
-									{ctx.i18next.t("page.apiKeys.empty.description")}
+									{ctx.intl.t("page.apiKeys.empty.description")}
 								</Empty.Description>
 								<Empty.Action>
 									<LinkButton href={routes.app.team.apiKeys.new.href({ team: ctx.team.slug })}>
 										<PlusIcon size={20} strokeWidth={1.5} />
-										{ctx.i18next.t("page.apiKeys.empty.cta")}
+										{ctx.intl.t("page.apiKeys.empty.cta")}
 									</LinkButton>
 								</Empty.Action>
 							</Empty>
 						) : (
 							<Table.Container>
-								<Table aria-label={ctx.i18next.t("page.apiKeys.table.label")}>
+								<Table aria-label={ctx.intl.t("page.apiKeys.table.label")}>
 									<Table.Header>
 										<Table.Row>
+											<Table.Column>{ctx.intl.t("page.apiKeys.table.columns.name")}</Table.Column>
+											<Table.Column>{ctx.intl.t("page.apiKeys.table.columns.prefix")}</Table.Column>
+											<Table.Column>{ctx.intl.t("page.apiKeys.table.columns.scopes")}</Table.Column>
 											<Table.Column>
-												{ctx.i18next.t("page.apiKeys.table.columns.name")}
+												{ctx.intl.t("page.apiKeys.table.columns.lastUsed")}
 											</Table.Column>
 											<Table.Column>
-												{ctx.i18next.t("page.apiKeys.table.columns.prefix")}
-											</Table.Column>
-											<Table.Column>
-												{ctx.i18next.t("page.apiKeys.table.columns.scopes")}
-											</Table.Column>
-											<Table.Column>
-												{ctx.i18next.t("page.apiKeys.table.columns.lastUsed")}
-											</Table.Column>
-											<Table.Column>
-												{ctx.i18next.t("page.apiKeys.table.columns.expires")}
+												{ctx.intl.t("page.apiKeys.table.columns.expires")}
 											</Table.Column>
 											<Table.Column></Table.Column>
 										</Table.Row>
@@ -155,7 +149,7 @@ export default createAction(routes.app.team.apiKeys.index, {
 													<Table.Cell>
 														{apiKey.last_used_at
 															? new Date(apiKey.last_used_at).toLocaleString()
-															: ctx.i18next.t("page.apiKeys.table.lastUsed.never")}
+															: ctx.intl.t("page.apiKeys.table.lastUsed.never")}
 													</Table.Cell>
 													<Table.Cell>
 														{apiKey.expires_at ? (
@@ -163,7 +157,7 @@ export default createAction(routes.app.team.apiKeys.index, {
 																{new Date(apiKey.expires_at).toLocaleDateString()}
 															</Badge>
 														) : (
-															ctx.i18next.t("page.apiKeys.table.expires.never")
+															ctx.intl.t("page.apiKeys.table.expires.never")
 														)}
 													</Table.Cell>
 													<Table.Cell>
@@ -176,7 +170,7 @@ export default createAction(routes.app.team.apiKeys.index, {
 															<input type="hidden" name="_method" value="DELETE" />
 															<input type="hidden" name="api_key_id" value={apiKey.id} />
 															<Button type="submit" color="danger">
-																{ctx.i18next.t("page.apiKeys.table.actions.delete")}
+																{ctx.intl.t("page.apiKeys.table.actions.delete")}
 															</Button>
 														</form>
 													</Table.Cell>

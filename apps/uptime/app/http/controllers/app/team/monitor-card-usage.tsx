@@ -81,14 +81,14 @@ export default createAction(routes.app.team.monitors.cards.usage, {
 
 		return ctx.render(
 			<StatCard
-				label={ctx.i18next.t("page.monitor.stats.monitors.label")}
+				label={ctx.intl.t("page.monitor.stats.monitors.label")}
 				value={
 					<>
 						{usage.consumed === null ? "—" : usage.consumed.toLocaleString()}
 						<Subtitle>
 							{usage.estimated === null
-								? ctx.i18next.t("page.monitor.stats.monitors.estimateUnavailable")
-								: ctx.i18next.t("page.monitor.stats.monitors.description", {
+								? ctx.intl.t("page.monitor.stats.monitors.estimateUnavailable")
+								: ctx.intl.t("page.monitor.stats.monitors.description", {
 										estimated: usage.estimated.toLocaleString(),
 									})}
 						</Subtitle>

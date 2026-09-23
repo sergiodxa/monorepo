@@ -136,7 +136,7 @@ export const checkTcpMonitor = createAction(routes.actions.monitor.tcp.check, as
 	if ((await Subscription.stateFor(ctx.db, ctx.team.owner_id)) === "inactive") {
 		session?.flash("toast", {
 			intent: "error",
-			message: ctx.i18next.t("actions.checks.subscriptionRequired"),
+			message: ctx.intl.t("actions.checks.subscriptionRequired"),
 		});
 		return redirect(
 			routes.app.team.tcpMonitors.show.href({ team: ctx.team.slug, monitorId: monitor.id }),

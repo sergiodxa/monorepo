@@ -72,21 +72,21 @@ export default createAction(routes.app.team.monitors.show, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
+					intl={ctx.intl}
 					heading={monitor.name}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("app.layout.sidebar.navigation.items.dashboard"),
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.dashboard"),
 							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 						},
 						{
-							label: ctx.i18next.t("page.httpMonitors.header.title"),
+							label: ctx.intl.t("page.httpMonitors.header.title"),
 							href: routes.app.team.monitors.index.href({ team: ctx.team.slug }),
 						},
 					]}
 					actions={
 						<Fragment>
-							<IntlProvider i18n={ctx.i18next}>
+							<IntlProvider intl={ctx.intl}>
 								<RunMonitorButton
 									action={routes.actions.monitor.http.play.href({ team: ctx.team.slug })}
 									monitorId={monitor.id}
@@ -104,11 +104,11 @@ export default createAction(routes.app.team.monitors.show, {
 								})}
 							>
 								<PencilIcon size={16} strokeWidth={1.5} />
-								{ctx.i18next.t("page.monitor.header.action.edit")}
+								{ctx.intl.t("page.monitor.header.action.edit")}
 							</LinkButton>
 							<LinkButton href={ctx.url.pathname}>
 								<RefreshCwIcon size={16} strokeWidth={1.5} />
-								{ctx.i18next.t("page.monitor.header.action.refresh")}
+								{ctx.intl.t("page.monitor.header.action.refresh")}
 							</LinkButton>
 						</Fragment>
 					}
@@ -149,7 +149,7 @@ export default createAction(routes.app.team.monitors.show, {
 							/>
 						</div>
 
-						<SslCard team={ctx.team} monitor={monitor} i18next={ctx.i18next} locale={ctx.locale} />
+						<SslCard team={ctx.team} monitor={monitor} intl={ctx.intl} locale={ctx.locale} />
 
 						<div mix={[mbs("24px")]}>
 							<Frame
@@ -186,7 +186,7 @@ namespace SslCard {
 	export interface Props {
 		team: { slug: string };
 		monitor: SelectMonitor;
-		i18next: ReturnType<typeof getContext>["i18next"];
+		intl: ReturnType<typeof getContext>["intl"];
 		locale: string;
 	}
 }
@@ -194,7 +194,7 @@ namespace SslCard {
 /** Renders the SSL certificate card: a "not configured" prompt, or the certificate's expiry/issuer details, matching {@link calculateSslStatus}'s classification. */
 function SslCard(handle: Handle<SslCard.Props>) {
 	return () => {
-		let { team, monitor, i18next, locale } = handle.props;
+		let { team, monitor, intl, locale } = handle.props;
 		let editHref = routes.app.team.monitors.edit.href({ team: team.slug, monitorId: monitor.id });
 
 		if (!monitor.ssl_monitoring_enabled) {
@@ -204,18 +204,16 @@ function SslCard(handle: Handle<SslCard.Props>) {
 						<div mix={[flex(), items("center"), gap("8px")]}>
 							<LockIcon size={20} strokeWidth={1.5} mix={[fg("neutral.muted")]} />
 							<h3 mix={[m("0"), fontSize("1.125rem"), weight(700)]}>
-								{i18next.t("page.monitor.ssl.title")}
+								{intl.t("page.monitor.ssl.title")}
 							</h3>
 						</div>
-						<Badge {...badgeVariant("neutral")}>
-							{i18next.t("page.monitor.ssl.status.unknown")}
-						</Badge>
+						<Badge {...badgeVariant("neutral")}>{intl.t("page.monitor.ssl.status.unknown")}</Badge>
 					</div>
 					<div mix={[flex(), items("center"), justify("between")]}>
-						<p mix={[m("0"), fg("neutral.muted")]}>{i18next.t("page.monitor.ssl.notConfigured")}</p>
+						<p mix={[m("0"), fg("neutral.muted")]}>{intl.t("page.monitor.ssl.notConfigured")}</p>
 						<LinkButton href={editHref} color="brand" size="sm">
 							<LockIcon size={16} strokeWidth={1.5} />
-							{i18next.t("page.monitor.ssl.configure")}
+							{intl.t("page.monitor.ssl.configure")}
 						</LinkButton>
 					</div>
 				</div>
@@ -234,11 +232,11 @@ function SslCard(handle: Handle<SslCard.Props>) {
 					<div mix={[flex(), items("center"), gap("8px")]}>
 						<Icon size={20} strokeWidth={1.5} mix={[fg("neutral.muted")]} />
 						<h3 mix={[m("0"), fontSize("1.125rem"), weight(700)]}>
-							{i18next.t("page.monitor.ssl.title")}
+							{intl.t("page.monitor.ssl.title")}
 						</h3>
 					</div>
 					<Badge {...badgeVariant(SSL_TONE[status] ?? "neutral")}>
-						{i18next.t(`page.monitor.ssl.status.${status}`)}
+						{intl.t(`page.monitor.ssl.status.${status}`)}
 					</Badge>
 				</div>
 				<div
@@ -251,7 +249,7 @@ function SslCard(handle: Handle<SslCard.Props>) {
 				>
 					<div>
 						<p mix={[fontSize("0.8125rem"), mbe("4px"), fg("neutral.muted")]}>
-							{i18next.t("page.monitor.ssl.expiresAt")}
+							{intl.t("page.monitor.ssl.expiresAt")}
 						</p>
 						<p mix={[fontSize("1.125rem"), weight(600)]}>
 							{monitor.ssl_expires_at === null
@@ -260,19 +258,19 @@ function SslCard(handle: Handle<SslCard.Props>) {
 						</p>
 						{daysUntilExpiry !== null && (
 							<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-								{i18next.t("page.monitor.ssl.expiresIn", { days: daysUntilExpiry })}
+								{intl.t("page.monitor.ssl.expiresIn", { days: daysUntilExpiry })}
 							</p>
 						)}
 					</div>
 					<div>
 						<p mix={[fontSize("0.8125rem"), mbe("4px"), fg("neutral.muted")]}>
-							{i18next.t("page.monitor.ssl.issuer")}
+							{intl.t("page.monitor.ssl.issuer")}
 						</p>
 						<p mix={[fontSize("1.125rem"), weight(600)]}>{monitor.ssl_issuer ?? "—"}</p>
 					</div>
 					<div>
 						<p mix={[fontSize("0.8125rem"), mbe("4px"), fg("neutral.muted")]}>
-							{i18next.t("page.monitor.ssl.lastChecked")}
+							{intl.t("page.monitor.ssl.lastChecked")}
 						</p>
 						<p mix={[fontSize("1.125rem"), weight(600)]}>
 							{monitor.ssl_last_checked_at === null ? (
@@ -292,7 +290,7 @@ function SslCard(handle: Handle<SslCard.Props>) {
 					<div mix={[flex(), justify("end")]}>
 						<LinkButton href={editHref} color="neutral" size="sm">
 							<PencilIcon size={16} strokeWidth={1.5} />
-							{i18next.t("page.monitor.ssl.configure")}
+							{intl.t("page.monitor.ssl.configure")}
 						</LinkButton>
 					</div>
 				</div>

@@ -38,6 +38,7 @@ import TcpMonitor from "~/app/data/tcp-monitor";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import { withPrefix } from "~/app/lib/prefixed-translate";
 import CheckboxGroupSelectAll from "~/resources/components/checkbox-group-select-all";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
@@ -73,7 +74,7 @@ export default createAction(routes.app.team.statusPages.new, {
 			CronJobMonitor.listByTeam(ctx.db, ctx.team.id),
 		]);
 
-		let t = ctx.i18next.getFixedT(null, "translation", "page.statusPages.form.fields");
+		let t = withPrefix(ctx.intl.t, "page.statusPages.form.fields");
 
 		/**
 		 * HTTP, DNS, TCP and flow monitors share one list, but each checkbox keeps the `name` of
@@ -103,7 +104,7 @@ export default createAction(routes.app.team.statusPages.new, {
 
 		return ctx.render(
 			<DocumentLayout
-				title={`${ctx.team.name} · ${ctx.i18next.t("page.createStatusPage.header.title")}`}
+				title={`${ctx.team.name} · ${ctx.intl.t("page.createStatusPage.header.title")}`}
 			>
 				<AppShell
 					team={ctx.team}
@@ -111,11 +112,11 @@ export default createAction(routes.app.team.statusPages.new, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
-					heading={ctx.i18next.t("page.createStatusPage.header.title")}
+					intl={ctx.intl}
+					heading={ctx.intl.t("page.createStatusPage.header.title")}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("app.layout.sidebar.navigation.items.statusPages"),
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.statusPages"),
 							href: routes.app.team.statusPages.index.href({ team: ctx.team.slug }),
 						},
 					]}
@@ -128,10 +129,8 @@ export default createAction(routes.app.team.statusPages.new, {
 						>
 							<SettingsSection
 								id="branding"
-								title={ctx.i18next.t("page.createStatusPage.form.sections.branding.title")}
-								description={ctx.i18next.t(
-									"page.createStatusPage.form.sections.branding.description",
-								)}
+								title={ctx.intl.t("page.createStatusPage.form.sections.branding.title")}
+								description={ctx.intl.t("page.createStatusPage.form.sections.branding.description")}
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
@@ -187,8 +186,8 @@ export default createAction(routes.app.team.statusPages.new, {
 
 							<SettingsSection
 								id="visibility"
-								title={ctx.i18next.t("page.createStatusPage.form.sections.visibility.title")}
-								description={ctx.i18next.t(
+								title={ctx.intl.t("page.createStatusPage.form.sections.visibility.title")}
+								description={ctx.intl.t(
 									"page.createStatusPage.form.sections.visibility.description",
 								)}
 							>
@@ -219,10 +218,8 @@ export default createAction(routes.app.team.statusPages.new, {
 
 							<SettingsSection
 								id="services"
-								title={ctx.i18next.t("page.createStatusPage.form.sections.services.title")}
-								description={ctx.i18next.t(
-									"page.createStatusPage.form.sections.services.description",
-								)}
+								title={ctx.intl.t("page.createStatusPage.form.sections.services.title")}
+								description={ctx.intl.t("page.createStatusPage.form.sections.services.description")}
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
@@ -247,7 +244,7 @@ export default createAction(routes.app.team.statusPages.new, {
 												 * module-scoped `setIntl()` default on the server, so it needs an
 												 * `IntlProvider` ancestor to resolve against.
 												 */}
-												<IntlProvider i18n={ctx.i18next}>
+												<IntlProvider intl={ctx.intl}>
 													<CheckboxGroupSelectAll groupId={MONITORS_GROUP_ID} />
 												</IntlProvider>
 
@@ -277,7 +274,7 @@ export default createAction(routes.app.team.statusPages.new, {
 													<Description>{t("cronJobs.description")}</Description>
 												</div>
 
-												<IntlProvider i18n={ctx.i18next}>
+												<IntlProvider intl={ctx.intl}>
 													<CheckboxGroupSelectAll groupId={CRON_JOBS_GROUP_ID} />
 												</IntlProvider>
 
@@ -294,12 +291,12 @@ export default createAction(routes.app.team.statusPages.new, {
 										{/** A team with nothing to list still gets the card, so the submit control keeps its place. */}
 										{!hasSomethingToList && (
 											<Description>
-												{ctx.i18next.t("page.createStatusPage.form.sections.services.empty")}
+												{ctx.intl.t("page.createStatusPage.form.sections.services.empty")}
 											</Description>
 										)}
 									</SettingsSection.Body>
 									<SettingsSection.Footer>
-										<Button type="submit">{ctx.i18next.t("page.statusPages.form.cta")}</Button>
+										<Button type="submit">{ctx.intl.t("page.statusPages.form.cta")}</Button>
 									</SettingsSection.Footer>
 								</SettingsSection.Card>
 							</SettingsSection>

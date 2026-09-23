@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 import type { Address, EmailTableRow } from "@sdxc/mail";
 import type { Handle, RemixElement } from "remix/ui";
 
@@ -137,7 +137,7 @@ export namespace AlertEmail {
 		/** Language the copy is produced in, recorded beside the translator it came from. */
 		locale: string;
 		/** Translator already bound to {@link locale} by the sender. */
-		t: TFunction;
+		t: Translate;
 	}
 }
 

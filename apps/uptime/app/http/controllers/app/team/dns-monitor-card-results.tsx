@@ -38,11 +38,11 @@ export default createAction(routes.app.team.dnsMonitors.cards.results, {
 		return ctx.render(
 			<div mix={[flex(), flexWrap(), gap("16px")]}>
 				<StatCard
-					label={ctx.i18next.t("page.dnsMonitorDetail.stats.successRate.label")}
+					label={ctx.intl.t("page.dnsMonitorDetail.stats.successRate.label")}
 					value={successRate === null ? "—" : `${successRate}%`}
 				/>
 				<StatCard
-					label={ctx.i18next.t("page.dnsMonitorDetail.stats.totalChecks.label")}
+					label={ctx.intl.t("page.dnsMonitorDetail.stats.totalChecks.label")}
 					value={totalChecks}
 				/>
 			</div>,

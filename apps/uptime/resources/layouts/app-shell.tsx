@@ -59,6 +59,7 @@ import { fontSize, textAlign, truncate, weight } from "@sdxc/u/typography";
 import { Breadcrumbs, Menu, Sidebar } from "@sdxc/ui";
 import { menuKeys } from "@sdxc/ui/mixins";
 
+import { withPrefix } from "~/app/lib/prefixed-translate";
 import AppToaster from "~/resources/components/app-toaster";
 import Avatar from "~/resources/components/avatar";
 import FlashToast from "~/resources/components/flash-toast";
@@ -301,11 +302,11 @@ namespace AppShell {
 		viewer: { name: string; email: string; avatar: string };
 		isAdmin: boolean;
 		/**
-		 * The request's i18next instance, used to read every string the shell
+		 * The request's translator, used to read every string the shell
 		 * owns under `app.layout.*`. Required, so a missing instance is caught
 		 * at compile time and every render uses the caller's real translations.
 		 */
-		i18next: ReturnType<typeof getContext>["i18next"];
+		intl: ReturnType<typeof getContext>["intl"];
 		/** Bold page title, shown in the header in place of a per-page `<h1>`. */
 		heading: string;
 		/**
@@ -339,7 +340,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 			teams,
 			viewer,
 			isAdmin,
-			i18next,
+			intl,
 			heading,
 			breadcrumbs,
 			currentPath,
@@ -348,7 +349,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 			children,
 		} = handle.props;
 
-		let t = i18next.getFixedT(null, "translation", "app.layout");
+		let t = withPrefix(intl.t, "app.layout");
 		let dashboardHref = routes.app.team.dashboard.index.href({ team: team.slug });
 
 		/**

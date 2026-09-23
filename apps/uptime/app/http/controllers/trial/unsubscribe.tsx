@@ -69,7 +69,7 @@ export default createController(routes.trial.unsubscribe, {
 		 */
 		index(ctx) {
 			let { token } = s.parse(ParamsSchema, ctx.params);
-			let t = ctx.i18next.t;
+			let t = ctx.intl.t;
 
 			return renderPage(
 				t("page.unsubscribe.confirm.title"),
@@ -90,7 +90,7 @@ export default createController(routes.trial.unsubscribe, {
 		 */
 		async action(ctx) {
 			let { token } = s.parse(ParamsSchema, ctx.params);
-			let t = ctx.i18next.t;
+			let t = ctx.intl.t;
 
 			let lead = await Lead.findByUnsubscribeToken(ctx.db, token);
 			if (lead) await Lead.forget(ctx.db, lead.id);

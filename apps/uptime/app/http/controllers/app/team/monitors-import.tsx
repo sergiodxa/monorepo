@@ -58,22 +58,22 @@ export default createAction(routes.app.team.monitorsImport, {
 		let report = session?.get(MONITOR_IMPORT_REPORT) as MonitorImportReport | undefined;
 
 		return ctx.render(
-			<DocumentLayout title={ctx.i18next.t("page.monitorsImport.meta.title")} locale={ctx.locale}>
+			<DocumentLayout title={ctx.intl.t("page.monitorsImport.meta.title")} locale={ctx.locale}>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
+					intl={ctx.intl}
 					toast={toast}
-					heading={ctx.i18next.t("page.monitorsImport.header.title")}
+					heading={ctx.intl.t("page.monitorsImport.header.title")}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("page.httpMonitors.header.title"),
+							label: ctx.intl.t("page.httpMonitors.header.title"),
 							href: routes.app.team.monitors.index.href({ team: ctx.team.slug }),
 						},
-						{ label: ctx.i18next.t("page.monitorsImport.header.title") },
+						{ label: ctx.intl.t("page.monitorsImport.header.title") },
 					]}
 				>
 					<FormPage>
@@ -81,8 +81,8 @@ export default createAction(routes.app.team.monitorsImport, {
 							{report && (report.rejected.length > 0 || report.overflow > 0) && (
 								<SettingsSection
 									id="import-report"
-									title={ctx.i18next.t("page.monitorsImport.report.section.title")}
-									description={ctx.i18next.t("page.monitorsImport.report.title", {
+									title={ctx.intl.t("page.monitorsImport.report.section.title")}
+									description={ctx.intl.t("page.monitorsImport.report.title", {
 										count: report.created,
 									})}
 								>
@@ -92,22 +92,18 @@ export default createAction(routes.app.team.monitorsImport, {
 												{report.rejected.length > 0 && (
 													<Table.Container>
 														<Table
-															aria-label={ctx.i18next.t("page.monitorsImport.report.table.label")}
+															aria-label={ctx.intl.t("page.monitorsImport.report.table.label")}
 														>
 															<Table.Header>
 																<Table.Row>
 																	<Table.Column>
-																		{ctx.i18next.t("page.monitorsImport.report.table.columns.line")}
+																		{ctx.intl.t("page.monitorsImport.report.table.columns.line")}
 																	</Table.Column>
 																	<Table.Column>
-																		{ctx.i18next.t(
-																			"page.monitorsImport.report.table.columns.input",
-																		)}
+																		{ctx.intl.t("page.monitorsImport.report.table.columns.input")}
 																	</Table.Column>
 																	<Table.Column>
-																		{ctx.i18next.t(
-																			"page.monitorsImport.report.table.columns.reason",
-																		)}
+																		{ctx.intl.t("page.monitorsImport.report.table.columns.reason")}
 																	</Table.Column>
 																</Table.Row>
 															</Table.Header>
@@ -119,7 +115,7 @@ export default createAction(routes.app.team.monitorsImport, {
 																			<code>{rejection.input}</code>
 																		</Table.Cell>
 																		<Table.Cell>
-																			{ctx.i18next.t(
+																			{ctx.intl.t(
 																				`page.monitorsImport.report.reasons.${rejection.reason}`,
 																			)}
 																		</Table.Cell>
@@ -132,7 +128,7 @@ export default createAction(routes.app.team.monitorsImport, {
 
 												{report.overflow > 0 && (
 													<p id="import-overflow" mix={[fg("neutral")]}>
-														{ctx.i18next.t("page.monitorsImport.report.overflow", {
+														{ctx.intl.t("page.monitorsImport.report.overflow", {
 															count: report.overflow,
 															limit: MAX_IMPORT_LINES,
 														})}
@@ -151,14 +147,14 @@ export default createAction(routes.app.team.monitorsImport, {
 							>
 								<SettingsSection
 									id="urls"
-									title={ctx.i18next.t("page.monitorsImport.form.sections.urls.title")}
-									description={ctx.i18next.t("page.monitorsImport.form.sections.urls.description")}
+									title={ctx.intl.t("page.monitorsImport.form.sections.urls.title")}
+									description={ctx.intl.t("page.monitorsImport.form.sections.urls.description")}
 								>
 									<SettingsSection.Card>
 										<SettingsSection.Body>
 											<Field
-												label={ctx.i18next.t("page.monitorsImport.form.fields.urls.label")}
-												description={ctx.i18next.t(
+												label={ctx.intl.t("page.monitorsImport.form.fields.urls.label")}
+												description={ctx.intl.t(
 													"page.monitorsImport.form.fields.urls.description",
 													{ limit: MAX_IMPORT_LINES },
 												)}
@@ -167,7 +163,7 @@ export default createAction(routes.app.team.monitorsImport, {
 													name="urls"
 													required
 													spellcheck={false}
-													placeholder={ctx.i18next.t(
+													placeholder={ctx.intl.t(
 														"page.monitorsImport.form.fields.urls.placeholder",
 													)}
 												/>
@@ -178,16 +174,14 @@ export default createAction(routes.app.team.monitorsImport, {
 
 								<SettingsSection
 									id="schedule"
-									title={ctx.i18next.t("page.monitorsImport.form.sections.schedule.title")}
-									description={ctx.i18next.t(
-										"page.monitorsImport.form.sections.schedule.description",
-									)}
+									title={ctx.intl.t("page.monitorsImport.form.sections.schedule.title")}
+									description={ctx.intl.t("page.monitorsImport.form.sections.schedule.description")}
 								>
 									<SettingsSection.Card>
 										<SettingsSection.Body>
 											<RangeSlider
-												label={ctx.i18next.t("page.monitorsImport.form.fields.interval.label")}
-												description={ctx.i18next.t(
+												label={ctx.intl.t("page.monitorsImport.form.fields.interval.label")}
+												description={ctx.intl.t(
 													"page.monitorsImport.form.fields.interval.description",
 												)}
 												name="interval_seconds"
@@ -201,7 +195,7 @@ export default createAction(routes.app.team.monitorsImport, {
 											/>
 										</SettingsSection.Body>
 										<SettingsSection.Footer>
-											<Button type="submit">{ctx.i18next.t("page.monitorsImport.form.cta")}</Button>
+											<Button type="submit">{ctx.intl.t("page.monitorsImport.form.cta")}</Button>
 										</SettingsSection.Footer>
 									</SettingsSection.Card>
 								</SettingsSection>

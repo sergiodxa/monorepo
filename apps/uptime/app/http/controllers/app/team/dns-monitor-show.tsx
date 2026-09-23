@@ -83,11 +83,11 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
-					heading={ctx.i18next.t("page.dnsMonitorDetail.header.title", { name: monitor.name })}
+					intl={ctx.intl}
+					heading={ctx.intl.t("page.dnsMonitorDetail.header.title", { name: monitor.name })}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("app.layout.sidebar.navigation.items.dnsMonitors"),
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.dnsMonitors"),
 							href: routes.app.team.dnsMonitors.index.href({ team: ctx.team.slug }),
 						},
 					]}
@@ -101,7 +101,7 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 								<input type="hidden" name="monitor_id" value={monitor.id} />
 								<Button type="submit">
 									<PlayIcon size={16} strokeWidth={1.5} />
-									{ctx.i18next.t("page.dnsMonitorDetail.header.action.check")}
+									{ctx.intl.t("page.dnsMonitorDetail.header.action.check")}
 								</Button>
 							</form>
 							<LinkButton
@@ -111,7 +111,7 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 								})}
 							>
 								<RefreshCwIcon size={16} strokeWidth={1.5} />
-								{ctx.i18next.t("page.dnsMonitorDetail.header.action.refresh")}
+								{ctx.intl.t("page.dnsMonitorDetail.header.action.refresh")}
 							</LinkButton>
 							<LinkButton
 								href={routes.app.team.dnsMonitors.edit.href({
@@ -120,7 +120,7 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 								})}
 							>
 								<PencilIcon size={16} strokeWidth={1.5} />
-								{ctx.i18next.t("page.dnsMonitorDetail.header.action.edit")}
+								{ctx.intl.t("page.dnsMonitorDetail.header.action.edit")}
 							</LinkButton>
 						</div>
 					}
@@ -128,31 +128,31 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 					<div>
 						<div mix={[flex(), flexWrap(), gap("16px"), mbe("24px")]}>
 							<StatCard
-								label={ctx.i18next.t("page.dnsMonitorDetail.info.domain")}
+								label={ctx.intl.t("page.dnsMonitorDetail.info.domain")}
 								value={<code>{monitor.domain}</code>}
 							/>
 							<StatCard
-								label={ctx.i18next.t("page.dnsMonitorDetail.info.status")}
+								label={ctx.intl.t("page.dnsMonitorDetail.info.status")}
 								value={
 									<Badge
 										{...badgeVariant(STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral")}
 									>
-										{monitor.last_status ?? ctx.i18next.t("page.dnsMonitorDetail.notChecked")}
+										{monitor.last_status ?? ctx.intl.t("page.dnsMonitorDetail.notChecked")}
 									</Badge>
 								}
 							/>
 							<StatCard
-								label={ctx.i18next.t("page.dnsMonitorDetail.info.recordsWatched")}
-								value={ctx.i18next.t("page.dnsMonitorDetail.info.recordsWatchedValue", {
+								label={ctx.intl.t("page.dnsMonitorDetail.info.recordsWatched")}
+								value={ctx.intl.t("page.dnsMonitorDetail.info.recordsWatchedValue", {
 									enabled: watchedCount,
 									total: records.length,
 								})}
 							/>
 							<StatCard
-								label={ctx.i18next.t("page.dnsMonitorDetail.info.zoneFileImported")}
+								label={ctx.intl.t("page.dnsMonitorDetail.info.zoneFileImported")}
 								value={
 									monitor.zone_file_imported_at === null
-										? ctx.i18next.t("page.dnsMonitorDetail.info.zoneFileNeverImported")
+										? ctx.intl.t("page.dnsMonitorDetail.info.zoneFileNeverImported")
 										: new Date(monitor.zone_file_imported_at).toLocaleString()
 								}
 							/>
@@ -188,40 +188,40 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 
 						<section mix={[vstack({ gap: 3 }), mbs("24px")]}>
 							<div mix={[vstack({ gap: 1 })]}>
-								<h2 mix={[m(0)]}>{ctx.i18next.t("page.dnsMonitorDetail.records.title")}</h2>
+								<h2 mix={[m(0)]}>{ctx.intl.t("page.dnsMonitorDetail.records.title")}</h2>
 								<p mix={[m(0), fontSize("sm"), fg("neutral.muted")]}>
-									{ctx.i18next.t("page.dnsMonitorDetail.records.description")}
+									{ctx.intl.t("page.dnsMonitorDetail.records.description")}
 								</p>
 							</div>
 
 							{records.length === 0 ? (
 								<Empty>
 									<Empty.Description>
-										{ctx.i18next.t("page.dnsMonitorDetail.records.empty")}
+										{ctx.intl.t("page.dnsMonitorDetail.records.empty")}
 									</Empty.Description>
 								</Empty>
 							) : (
 								<Table.Container>
-									<Table aria-label={ctx.i18next.t("page.dnsMonitorDetail.records.title")}>
+									<Table aria-label={ctx.intl.t("page.dnsMonitorDetail.records.title")}>
 										<Table.Header>
 											<Table.Row>
 												<Table.Column>
-													{ctx.i18next.t("page.dnsMonitorDetail.records.table.columns.name")}
+													{ctx.intl.t("page.dnsMonitorDetail.records.table.columns.name")}
 												</Table.Column>
 												<Table.Column>
-													{ctx.i18next.t("page.dnsMonitorDetail.records.table.columns.type")}
+													{ctx.intl.t("page.dnsMonitorDetail.records.table.columns.type")}
 												</Table.Column>
 												<Table.Column>
-													{ctx.i18next.t("page.dnsMonitorDetail.records.table.columns.value")}
+													{ctx.intl.t("page.dnsMonitorDetail.records.table.columns.value")}
 												</Table.Column>
 												<Table.Column>
-													{ctx.i18next.t("page.dnsMonitorDetail.records.table.columns.source")}
+													{ctx.intl.t("page.dnsMonitorDetail.records.table.columns.source")}
 												</Table.Column>
 												<Table.Column>
-													{ctx.i18next.t("page.dnsMonitorDetail.records.table.columns.state")}
+													{ctx.intl.t("page.dnsMonitorDetail.records.table.columns.state")}
 												</Table.Column>
 												<Table.Column mix={[is("1%"), nowrap()]}>
-													{ctx.i18next.t("page.dnsMonitorDetail.records.table.columns.watched")}
+													{ctx.intl.t("page.dnsMonitorDetail.records.table.columns.watched")}
 												</Table.Column>
 											</Table.Row>
 										</Table.Header>
@@ -236,13 +236,11 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 														<code mix={[overflowWrap("anywhere")]}>{record.value}</code>
 													</Table.Cell>
 													<Table.Cell>
-														{ctx.i18next.t(`page.dnsMonitorDetail.records.source.${record.source}`)}
+														{ctx.intl.t(`page.dnsMonitorDetail.records.source.${record.source}`)}
 													</Table.Cell>
 													<Table.Cell>
 														<Badge {...badgeVariant(recordStateTone(record))}>
-															{ctx.i18next.t(
-																`page.dnsMonitorDetail.records.state.${record.status}`,
-															)}
+															{ctx.intl.t(`page.dnsMonitorDetail.records.state.${record.status}`)}
 														</Badge>
 													</Table.Cell>
 													<Table.Cell mix={[is("1%"), nowrap()]}>
@@ -262,8 +260,8 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 															/>
 															<Button type="submit" variant="outline" size="sm">
 																{record.is_enabled
-																	? ctx.i18next.t("page.dnsMonitorDetail.records.actions.disable")
-																	: ctx.i18next.t("page.dnsMonitorDetail.records.actions.enable")}
+																	? ctx.intl.t("page.dnsMonitorDetail.records.actions.disable")
+																	: ctx.intl.t("page.dnsMonitorDetail.records.actions.enable")}
 															</Button>
 														</form>
 													</Table.Cell>

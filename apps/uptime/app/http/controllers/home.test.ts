@@ -64,7 +64,7 @@ function seedAuth(viewer: Viewer | null): Middleware {
 
 /**
  * Dispatches a real GET request to `/` with the given signed-in state. Uses the
- * real `i18n` middleware since `home.tsx` renders through `ctx.i18next.t()`, and
+ * real `i18n` middleware since `home.tsx` renders through `ctx.intl.t()`, and
  * an empty database whose only bearing is a saved locale, defaulting to English.
  */
 async function getHome(viewer: Viewer | null) {
@@ -238,7 +238,7 @@ describe("GET /", () => {
 	/**
 	 * The cost benefit quotes the pricing model, so a hard-coded figure instead of
 	 * one interpolated from `app/lib/pricing` is the one way it drifts. Checked
-	 * against the source, since `$5` and `{{price}}` render identically at runtime.
+	 * against the source, since `$5` and `{$price}` render identically at runtime.
 	 */
 	test("states no price of its own", () => {
 		let source = readFileSync(new URL("./home.tsx", import.meta.url), "utf8");

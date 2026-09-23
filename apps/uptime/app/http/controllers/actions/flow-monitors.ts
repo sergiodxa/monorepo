@@ -167,7 +167,7 @@ export const checkFlowMonitor = createAction(routes.actions.monitor.flow.check, 
 		if (wantsJson(ctx.request)) {
 			return ok({
 				status: null,
-				reason: ctx.i18next.t("actions.checks.subscriptionRequired"),
+				reason: ctx.intl.t("actions.checks.subscriptionRequired"),
 				testsPassed: 0,
 				testsTotal: 0,
 				requestsMade: 0,
@@ -179,7 +179,7 @@ export const checkFlowMonitor = createAction(routes.actions.monitor.flow.check, 
 		}
 		session?.flash("toast", {
 			intent: "error",
-			message: ctx.i18next.t("actions.checks.subscriptionRequired"),
+			message: ctx.intl.t("actions.checks.subscriptionRequired"),
 		});
 		return redirect(showHref, { status: redirect.Status.SeeOther });
 	}

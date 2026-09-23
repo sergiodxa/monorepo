@@ -69,8 +69,8 @@ export default createAction(routes.app.team.apiKeys.new, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
-					heading={ctx.i18next.t("page.apiKeys.form.title")}
+					intl={ctx.intl}
+					heading={ctx.intl.t("page.apiKeys.form.title")}
 				>
 					<FormPage maxWidth={FORM_MAX_WIDTH}>
 						<form
@@ -80,24 +80,24 @@ export default createAction(routes.app.team.apiKeys.new, {
 						>
 							<SettingsSection
 								id="details"
-								title={ctx.i18next.t("page.apiKeys.form.sections.details.title")}
-								description={ctx.i18next.t("page.apiKeys.form.sections.details.description")}
+								title={ctx.intl.t("page.apiKeys.form.sections.details.title")}
+								description={ctx.intl.t("page.apiKeys.form.sections.details.description")}
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
 										<TextField
-											label={ctx.i18next.t("page.apiKeys.form.fields.name.label")}
+											label={ctx.intl.t("page.apiKeys.form.fields.name.label")}
 											type="text"
 											name="name"
 											required
-											placeholder={ctx.i18next.t("page.apiKeys.form.fields.name.placeholder")}
-											description={ctx.i18next.t("page.apiKeys.form.fields.name.description")}
+											placeholder={ctx.intl.t("page.apiKeys.form.fields.name.placeholder")}
+											description={ctx.intl.t("page.apiKeys.form.fields.name.description")}
 										/>
 
 										<DateField
-											label={ctx.i18next.t("page.apiKeys.form.fields.expiresAt.label")}
+											label={ctx.intl.t("page.apiKeys.form.fields.expiresAt.label")}
 											name="expires_at"
-											description={ctx.i18next.t("page.apiKeys.form.fields.expiresAt.description")}
+											description={ctx.intl.t("page.apiKeys.form.fields.expiresAt.description")}
 										/>
 									</SettingsSection.Body>
 								</SettingsSection.Card>
@@ -105,14 +105,12 @@ export default createAction(routes.app.team.apiKeys.new, {
 
 							<SettingsSection
 								id="scopes"
-								title={ctx.i18next.t("page.apiKeys.form.fields.scopes.label")}
-								description={ctx.i18next.t("page.apiKeys.form.fields.scopes.description")}
+								title={ctx.intl.t("page.apiKeys.form.fields.scopes.label")}
+								description={ctx.intl.t("page.apiKeys.form.fields.scopes.description")}
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
-										<CheckboxGroup
-											aria-label={ctx.i18next.t("page.apiKeys.form.fields.scopes.label")}
-										>
+										<CheckboxGroup aria-label={ctx.intl.t("page.apiKeys.form.fields.scopes.label")}>
 											<div
 												mix={[
 													grid(),
@@ -130,10 +128,9 @@ export default createAction(routes.app.team.apiKeys.new, {
 															{scope}
 														</Checkbox>
 														<Description id={descriptionId(scope)} mix={pis("1.75rem")}>
-															{ctx.i18next.t(
-																`page.apiKeys.form.fields.scopes.descriptions.${scope}`,
-																{ nsSeparator: false },
-															)}
+															{ctx.intl.t(`page.apiKeys.form.fields.scopes.descriptions.${scope}`, {
+																nsSeparator: false,
+															})}
 														</Description>
 													</div>
 												))}
@@ -141,9 +138,7 @@ export default createAction(routes.app.team.apiKeys.new, {
 										</CheckboxGroup>
 									</SettingsSection.Body>
 									<SettingsSection.Footer>
-										<Button type="submit">
-											{ctx.i18next.t("page.apiKeys.form.actions.create")}
-										</Button>
+										<Button type="submit">{ctx.intl.t("page.apiKeys.form.actions.create")}</Button>
 									</SettingsSection.Footer>
 								</SettingsSection.Card>
 							</SettingsSection>

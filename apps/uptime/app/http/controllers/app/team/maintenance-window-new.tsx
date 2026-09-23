@@ -19,6 +19,7 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { TEAM_WIDE_MONITOR_SCOPE } from "~/app/lib/monitor-scope";
+import { withPrefix } from "~/app/lib/prefixed-translate";
 import FormPage from "~/resources/components/form-page";
 import MonitorScopeField from "~/resources/components/monitor-scope-field";
 import SettingsSection, { SETTINGS_SWITCH_GAP } from "~/resources/components/settings-section";
@@ -36,11 +37,11 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 		let scopeGroups = await listScopeMonitors(ctx.db, ctx.team.id);
 
 		/** Shares its field copy with the edit page by reading the same maintenance-window form namespace. */
-		let t = ctx.i18next.getFixedT(null, "translation", "page.maintenanceWindows.form.fields");
+		let t = withPrefix(ctx.intl.t, "page.maintenanceWindows.form.fields");
 
 		return ctx.render(
 			<DocumentLayout
-				title={`${ctx.team.name} · ${ctx.i18next.t("page.createMaintenance.header.title")}`}
+				title={`${ctx.team.name} · ${ctx.intl.t("page.createMaintenance.header.title")}`}
 			>
 				<AppShell
 					team={ctx.team}
@@ -48,11 +49,11 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
-					heading={ctx.i18next.t("page.createMaintenance.header.title")}
+					intl={ctx.intl}
+					heading={ctx.intl.t("page.createMaintenance.header.title")}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("app.layout.sidebar.navigation.items.maintenance"),
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.maintenance"),
 							href: routes.app.team.maintenanceWindows.index.href({ team: ctx.team.slug }),
 						},
 					]}
@@ -65,8 +66,8 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 						>
 							<SettingsSection
 								id="coverage"
-								title={ctx.i18next.t("page.createMaintenance.form.sections.coverage.title")}
-								description={ctx.i18next.t(
+								title={ctx.intl.t("page.createMaintenance.form.sections.coverage.title")}
+								description={ctx.intl.t(
 									"page.createMaintenance.form.sections.coverage.description",
 								)}
 							>
@@ -78,7 +79,7 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 											groups={scopeGroups}
 											selected={TEAM_WIDE_MONITOR_SCOPE}
 											description={t("scope.description")}
-											i18next={ctx.i18next}
+											intl={ctx.intl}
 										/>
 									</SettingsSection.Body>
 								</SettingsSection.Card>
@@ -86,8 +87,8 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 
 							<SettingsSection
 								id="schedule"
-								title={ctx.i18next.t("page.createMaintenance.form.sections.schedule.title")}
-								description={ctx.i18next.t(
+								title={ctx.intl.t("page.createMaintenance.form.sections.schedule.title")}
+								description={ctx.intl.t(
 									"page.createMaintenance.form.sections.schedule.description",
 								)}
 							>
@@ -118,8 +119,8 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 
 							<SettingsSection
 								id="behavior"
-								title={ctx.i18next.t("page.createMaintenance.form.sections.behavior.title")}
-								description={ctx.i18next.t(
+								title={ctx.intl.t("page.createMaintenance.form.sections.behavior.title")}
+								description={ctx.intl.t(
 									"page.createMaintenance.form.sections.behavior.description",
 								)}
 							>
@@ -148,9 +149,7 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 										/>
 									</SettingsSection.Body>
 									<SettingsSection.Footer>
-										<Button type="submit">
-											{ctx.i18next.t("page.createMaintenance.form.cta")}
-										</Button>
+										<Button type="submit">{ctx.intl.t("page.createMaintenance.form.cta")}</Button>
 									</SettingsSection.Footer>
 								</SettingsSection.Card>
 							</SettingsSection>

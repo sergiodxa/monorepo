@@ -55,11 +55,10 @@ async function createFixture() {
 }
 
 /** Provides the translator directly, standing in for the app's language middleware here. */
-let { i18n: i18nextInstance } = await createTranslator({
-	resources: { en: { translation: en } },
+let { intl } = await createTranslator({
+	resources: { en },
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",
-	i18next: { interpolation: { escapeValue: false } },
 })();
 
 /**
@@ -71,7 +70,7 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 		ctx.team = team;
 		ctx.membership = membership;
 		ctx.locale = "en";
-		ctx.i18next = i18nextInstance;
+		ctx.intl = intl;
 		return next();
 	};
 }

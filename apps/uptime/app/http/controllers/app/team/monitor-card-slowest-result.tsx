@@ -36,11 +36,11 @@ export default createAction(routes.app.team.monitors.cards.slowestResult, {
 
 		return ctx.render(
 			<StatCard
-				label={ctx.i18next.t("page.monitor.stats.slowestResult.label")}
+				label={ctx.intl.t("page.monitor.stats.slowestResult.label")}
 				value={
 					<>
 						{slowestResultMs === null ? "N/A" : `${Math.round(slowestResultMs)}ms`}
-						<Subtitle>{ctx.i18next.t("page.monitor.stats.slowestResult.description")}</Subtitle>
+						<Subtitle>{ctx.intl.t("page.monitor.stats.slowestResult.description")}</Subtitle>
 					</>
 				}
 			/>,

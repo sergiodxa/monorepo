@@ -2,7 +2,7 @@
  * Tests for the public status page controller. `cloudflare:workers` is mocked
  * before the dynamic import because the import chain touches bindings at
  * module scope. The route is public, so the fixture seeds only
- * `ctx.locale`/`ctx.i18next`. The last two cases assert the response's cache
+ * `ctx.locale`/`ctx.intl`. The last two cases assert the response's cache
  * policy rather than its markup.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -95,17 +95,17 @@ function createHtmlRenderer(ctx: RequestContext) {
 	};
 }
 
-let { i18n: i18nextInstance } = await createTranslator({
-	resources: { en: { translation: en } },
+let { intl } = await createTranslator({
+	resources: { en },
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",
 })();
 
-/** Middleware for the public status page route: seeds `ctx.locale` and `ctx.i18next`. */
+/** Middleware for the public status page route: seeds `ctx.locale` and `ctx.intl`. */
 function seedLocale(): Middleware {
 	return (ctx, next) => {
 		ctx.locale = "en";
-		ctx.i18next = i18nextInstance;
+		ctx.intl = intl;
 		return next();
 	};
 }
@@ -456,7 +456,7 @@ describe("GET /status/:slug", () => {
 
 		expect(response.status).toBe(200);
 		expect(body).toContain("Corporate DNS");
-		expect(body).toContain(i18nextInstance.t("statusPage.dns.coverage"));
+		expect(body).toContain(intl.t("statusPage.dns.coverage"));
 		expect(body).toContain("Operational");
 		expect(body).not.toContain("internal-zone.example");
 		expect(body).not.toContain("vpn.internal-zone.example");
@@ -516,12 +516,12 @@ describe("GET /status/:slug", () => {
 		let body = await (await get(db, page.slug)).text();
 
 		expect(body).toContain("Sign in and check out");
-		expect(body).toContain(i18nextInstance.t("statusPage.status.unknown"));
+		expect(body).toContain(intl.t("statusPage.status.unknown"));
 		/** The card wears the neutral chip and mark, never the ones an outage is published with. */
 		expect(body).toContain('data-color="neutral"');
 		expect(body).toContain("lucide-circle-minus");
 		expect(body).not.toContain("lucide-circle-x");
-		expect(body).toContain(i18nextInstance.t("statusPage.banner.operational"));
+		expect(body).toContain(intl.t("statusPage.banner.operational"));
 	});
 
 	/** A team publishes the journey under its own label, exactly as for every other type. */
@@ -544,7 +544,7 @@ describe("GET /status/:slug", () => {
 
 		expect(body).toContain("Checkout");
 		expect(body).not.toContain("flow-prod-checkout-v2");
-		expect(body).toContain(i18nextInstance.t("statusPage.banner.down"));
+		expect(body).toContain(intl.t("statusPage.banner.down"));
 	});
 
 	/**

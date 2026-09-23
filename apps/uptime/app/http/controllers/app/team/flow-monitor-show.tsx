@@ -70,21 +70,21 @@ export default createAction(routes.app.team.flowMonitors.show, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
+					intl={ctx.intl}
 					heading={monitor.name}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("app.layout.sidebar.navigation.items.dashboard"),
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.dashboard"),
 							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 						},
 						{
-							label: ctx.i18next.t("page.flowMonitorDetail.header.breadcrumb.flowMonitors"),
+							label: ctx.intl.t("page.flowMonitorDetail.header.breadcrumb.flowMonitors"),
 							href: routes.app.team.flowMonitors.index.href({ team: ctx.team.slug }),
 						},
 					]}
 					actions={
 						<div mix={[flex(), items("center"), gap("12px"), nowrap()]}>
-							<IntlProvider i18n={ctx.i18next}>
+							<IntlProvider intl={ctx.intl}>
 								<RunFlowButton
 									action={routes.actions.monitor.flow.check.href({ team: ctx.team.slug })}
 									monitorId={monitor.id}
@@ -99,7 +99,7 @@ export default createAction(routes.app.team.flowMonitors.show, {
 									})}
 								>
 									<PencilIcon size={16} strokeWidth={1.5} />
-									{ctx.i18next.t("page.flowMonitorDetail.header.action.edit")}
+									{ctx.intl.t("page.flowMonitorDetail.header.action.edit")}
 								</LinkButton>
 							</div>
 						</div>
@@ -108,25 +108,25 @@ export default createAction(routes.app.team.flowMonitors.show, {
 					<div>
 						<div mix={[flex(), flexWrap(), gap("16px"), mbe("24px")]}>
 							<StatCard
-								label={ctx.i18next.t("page.flowMonitorDetail.info.status")}
+								label={ctx.intl.t("page.flowMonitorDetail.info.status")}
 								value={
 									<Badge
 										{...badgeVariant(STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral")}
 									>
-										{ctx.i18next.t(
+										{ctx.intl.t(
 											`page.flowMonitors.table.status.${monitor.last_status ?? "pending"}`,
 										)}
 									</Badge>
 								}
 							/>
 							<StatCard
-								label={ctx.i18next.t("page.flowMonitorDetail.info.interval")}
-								value={ctx.i18next.t(
+								label={ctx.intl.t("page.flowMonitorDetail.info.interval")}
+								value={ctx.intl.t(
 									`page.createFlowMonitor.form.fields.interval.options.${monitor.interval_seconds}`,
 								)}
 							/>
 							<StatCard
-								label={ctx.i18next.t("page.flowMonitorDetail.info.lastChecked")}
+								label={ctx.intl.t("page.flowMonitorDetail.info.lastChecked")}
 								value={
 									monitor.last_checked_at === null ? (
 										"—"
@@ -145,10 +145,10 @@ export default createAction(routes.app.team.flowMonitors.show, {
 							/>
 							{!monitor.is_enabled && (
 								<StatCard
-									label={ctx.i18next.t("page.flowMonitorDetail.info.enabled")}
+									label={ctx.intl.t("page.flowMonitorDetail.info.enabled")}
 									value={
 										<Badge {...badgeVariant("neutral")}>
-											{ctx.i18next.t("page.flowMonitors.table.status.disabled")}
+											{ctx.intl.t("page.flowMonitors.table.status.disabled")}
 										</Badge>
 									}
 								/>

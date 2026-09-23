@@ -21,6 +21,7 @@ import type { ScopeMonitorGroup } from "~/app/data/scope-monitors";
 import type { MonitorScope } from "~/app/lib/monitor-scope";
 
 import { encodeMonitorScope } from "~/app/lib/monitor-scope";
+import { withPrefix } from "~/app/lib/prefixed-translate";
 import Field from "~/resources/components/field";
 
 namespace MonitorScopeField {
@@ -31,8 +32,8 @@ namespace MonitorScopeField {
 		selected: MonitorScope;
 		/** What narrowing the scope means on the form rendering it, in the page's own words. */
 		description: string;
-		/** The request's i18next instance, used to read the shared `components.monitorScope.*` copy. */
-		i18next: ReturnType<typeof getContext>["i18next"];
+		/** The request's translator, used to read the shared `components.monitorScope.*` copy. */
+		intl: ReturnType<typeof getContext>["intl"];
 	}
 }
 
@@ -43,9 +44,9 @@ namespace MonitorScopeField {
  */
 export default function MonitorScopeField(handle: Handle<MonitorScopeField.Props>) {
 	return () => {
-		let { groups, selected, description, i18next } = handle.props;
+		let { groups, selected, description, intl } = handle.props;
 
-		let t = i18next.getFixedT(null, "translation", "components.monitorScope");
+		let t = withPrefix(intl.t, "components.monitorScope");
 		let selectedValue = encodeMonitorScope(selected);
 
 		let offered = new Set<string>([""]);

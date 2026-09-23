@@ -39,6 +39,7 @@ import TcpMonitor from "~/app/data/tcp-monitor";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import { withPrefix } from "~/app/lib/prefixed-translate";
 import CheckboxGroupSelectAll from "~/resources/components/checkbox-group-select-all";
 import FormPage from "~/resources/components/form-page";
 import SettingsSection, { SETTINGS_SWITCH_GAP } from "~/resources/components/settings-section";
@@ -115,7 +116,7 @@ export default createAction(routes.app.team.statusPages.edit, {
 			})),
 		];
 
-		let t = ctx.i18next.getFixedT(null, "translation", "page.statusPages.form.fields");
+		let t = withPrefix(ctx.intl.t, "page.statusPages.form.fields");
 		let indexHref = routes.app.team.statusPages.index.href({ team: ctx.team.slug });
 
 		return ctx.render(
@@ -126,11 +127,11 @@ export default createAction(routes.app.team.statusPages.edit, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
-					heading={ctx.i18next.t("page.editStatusPage.header.title")}
+					intl={ctx.intl}
+					heading={ctx.intl.t("page.editStatusPage.header.title")}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("app.layout.sidebar.navigation.items.statusPages"),
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.statusPages"),
 							href: indexHref,
 						},
 						{ label: page.name },
@@ -147,10 +148,8 @@ export default createAction(routes.app.team.statusPages.edit, {
 
 								<SettingsSection
 									id="branding"
-									title={ctx.i18next.t("page.editStatusPage.form.sections.branding.title")}
-									description={ctx.i18next.t(
-										"page.editStatusPage.form.sections.branding.description",
-									)}
+									title={ctx.intl.t("page.editStatusPage.form.sections.branding.title")}
+									description={ctx.intl.t("page.editStatusPage.form.sections.branding.description")}
 								>
 									<SettingsSection.Card>
 										<SettingsSection.Body>
@@ -209,8 +208,8 @@ export default createAction(routes.app.team.statusPages.edit, {
 
 								<SettingsSection
 									id="visibility"
-									title={ctx.i18next.t("page.editStatusPage.form.sections.visibility.title")}
-									description={ctx.i18next.t(
+									title={ctx.intl.t("page.editStatusPage.form.sections.visibility.title")}
+									description={ctx.intl.t(
 										"page.editStatusPage.form.sections.visibility.description",
 									)}
 								>
@@ -245,10 +244,8 @@ export default createAction(routes.app.team.statusPages.edit, {
 
 								<SettingsSection
 									id="services"
-									title={ctx.i18next.t("page.editStatusPage.form.sections.services.title")}
-									description={ctx.i18next.t(
-										"page.editStatusPage.form.sections.services.description",
-									)}
+									title={ctx.intl.t("page.editStatusPage.form.sections.services.title")}
+									description={ctx.intl.t("page.editStatusPage.form.sections.services.description")}
 								>
 									<SettingsSection.Card>
 										<SettingsSection.Body>
@@ -272,7 +269,7 @@ export default createAction(routes.app.team.statusPages.edit, {
 													 * The island resolves copy through `intl(handle)`, which relies on an
 													 * ancestor `IntlProvider` to supply request-scoped context on the server.
 													 */}
-													<IntlProvider i18n={ctx.i18next}>
+													<IntlProvider intl={ctx.intl}>
 														<CheckboxGroupSelectAll groupId={MONITORS_GROUP_ID} />
 													</IntlProvider>
 
@@ -303,7 +300,7 @@ export default createAction(routes.app.team.statusPages.edit, {
 														<Description>{t("cronJobs.description")}</Description>
 													</div>
 
-													<IntlProvider i18n={ctx.i18next}>
+													<IntlProvider intl={ctx.intl}>
 														<CheckboxGroupSelectAll groupId={CRON_JOBS_GROUP_ID} />
 													</IntlProvider>
 
@@ -328,17 +325,15 @@ export default createAction(routes.app.team.statusPages.edit, {
 											{/** The empty-state message keeps the card body non-empty, so the action row still has a place to sit. */}
 											{selectableMonitors.length === 0 && cronJobs.length === 0 && (
 												<p mix={[m(0), fontSize("sm"), fg("neutral.muted")]}>
-													{ctx.i18next.t("page.editStatusPage.form.sections.services.empty")}
+													{ctx.intl.t("page.editStatusPage.form.sections.services.empty")}
 												</p>
 											)}
 										</SettingsSection.Body>
 										<SettingsSection.Footer>
 											<LinkButton variant="outline" href={indexHref}>
-												{ctx.i18next.t("page.editMonitor.form.cancel")}
+												{ctx.intl.t("page.editMonitor.form.cancel")}
 											</LinkButton>
-											<Button type="submit">
-												{ctx.i18next.t("page.statusPages.form.ctaUpdate")}
-											</Button>
+											<Button type="submit">{ctx.intl.t("page.statusPages.form.ctaUpdate")}</Button>
 										</SettingsSection.Footer>
 									</SettingsSection.Card>
 								</SettingsSection>
@@ -347,13 +342,13 @@ export default createAction(routes.app.team.statusPages.edit, {
 							<SettingsSection
 								id="danger"
 								tone="danger"
-								title={ctx.i18next.t("page.editStatusPage.dangerZone.title")}
-								description={ctx.i18next.t("page.editStatusPage.dangerZone.description")}
+								title={ctx.intl.t("page.editStatusPage.dangerZone.title")}
+								description={ctx.intl.t("page.editStatusPage.dangerZone.description")}
 							>
 								<SettingsSection.Card tone="danger">
 									<SettingsSection.Body>
 										<p mix={[m(0), fontSize("sm"), fg("danger")]}>
-											{ctx.i18next.t("page.editStatusPage.dangerZone.warning")}
+											{ctx.intl.t("page.editStatusPage.dangerZone.warning")}
 										</p>
 									</SettingsSection.Body>
 									<SettingsSection.Footer tone="danger">
@@ -363,7 +358,7 @@ export default createAction(routes.app.team.statusPages.edit, {
 											commandfor={DELETE_DIALOG_ID}
 											command="show-modal"
 										>
-											{ctx.i18next.t("page.statusPages.table.actions.delete")}
+											{ctx.intl.t("page.statusPages.table.actions.delete")}
 										</Button>
 									</SettingsSection.Footer>
 								</SettingsSection.Card>
@@ -376,12 +371,12 @@ export default createAction(routes.app.team.statusPages.edit, {
 							>
 								<AlertDialog.Header>
 									<AlertDialog.Title id={`${DELETE_DIALOG_ID}-title`}>
-										{ctx.i18next.t("page.statusPages.table.confirmation.delete", {
+										{ctx.intl.t("page.statusPages.table.confirmation.delete", {
 											name: page.name,
 										})}
 									</AlertDialog.Title>
 									<AlertDialog.Description id={`${DELETE_DIALOG_ID}-description`}>
-										{ctx.i18next.t("page.editStatusPage.dangerZone.deleteDescription")}
+										{ctx.intl.t("page.editStatusPage.dangerZone.deleteDescription")}
 									</AlertDialog.Description>
 								</AlertDialog.Header>
 								{/**
@@ -397,10 +392,10 @@ export default createAction(routes.app.team.statusPages.edit, {
 									<input type="hidden" name="status_page_id" value={page.id} />
 									<AlertDialog.Footer>
 										<AlertDialog.Cancel type="button" commandfor={DELETE_DIALOG_ID}>
-											{ctx.i18next.t("page.editMonitor.form.cancel")}
+											{ctx.intl.t("page.editMonitor.form.cancel")}
 										</AlertDialog.Cancel>
 										<Button type="submit" color="danger">
-											{ctx.i18next.t("page.statusPages.table.actions.delete")}
+											{ctx.intl.t("page.statusPages.table.actions.delete")}
 										</Button>
 									</AlertDialog.Footer>
 								</form>

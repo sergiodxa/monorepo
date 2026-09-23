@@ -20,6 +20,7 @@ import type { SupportedLanguage } from "~/database/schema";
 
 import Lead from "~/app/data/lead";
 import TrialWatch, { TRIAL_WATCH_DURATION_DAYS } from "~/app/data/trial-watch";
+import { emailTranslator } from "~/app/emails/locale";
 import { TrialConfirmationEmail } from "~/app/emails/trial-confirmation";
 import { TrialRepeatReportEmail } from "~/app/emails/trial-repeat-report";
 import { renderTrialPage } from "~/app/http/controllers/trial/index";
@@ -119,7 +120,7 @@ export default createAction(routes.trial.lead, async (ctx) => {
 				reportToken: existing.report_token,
 				unsubscribeToken: lead.unsubscribe_token,
 				locale,
-				t: ctx.i18next.getFixedT(locale),
+				t: (await emailTranslator(locale)).t,
 			}),
 		);
 
@@ -184,7 +185,7 @@ export default createAction(routes.trial.lead, async (ctx) => {
 			watchUntil: new Date(probe.checkedAt + TRIAL_WATCH_DURATION_DAYS * MS_PER_DAY),
 			unsubscribeToken: lead.unsubscribe_token,
 			locale,
-			t: ctx.i18next.getFixedT(locale),
+			t: (await emailTranslator(locale)).t,
 		}),
 	);
 

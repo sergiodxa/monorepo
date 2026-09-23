@@ -32,17 +32,17 @@ import routes from "~/routes/web";
 export default createAction(routes.marketing.audience, async (ctx) => {
 	let { slug } = s.parse(s.object({ slug: s.string() }), ctx.params);
 	let isSignedIn = getViewer() !== null;
-	let chrome = buildMarketingChrome(ctx.i18next.t);
+	let chrome = buildMarketingChrome(ctx.intl.t);
 
 	let content = audiences[slug];
 	if (!content) {
 		let props = {
-			title: ctx.i18next.t("notFound.title"),
-			description: ctx.i18next.t("notFound.description"),
+			title: ctx.intl.t("notFound.title"),
+			description: ctx.intl.t("notFound.description"),
 		};
 		return ctx.render(
 			<DocumentLayout title={props.title}>
-				<NotFoundView {...props} goBackHomeLabel={ctx.i18next.t("notFound.goBackHome")} />
+				<NotFoundView {...props} goBackHomeLabel={ctx.intl.t("notFound.goBackHome")} />
 			</DocumentLayout>,
 			{ status: 404 },
 		);
@@ -65,7 +65,7 @@ export default createAction(routes.marketing.audience, async (ctx) => {
 			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
 				<MarketingPageView
 					{...content}
-					{...buildMarketingPageChrome(ctx.i18next.t)}
+					{...buildMarketingPageChrome(ctx.intl.t)}
 					isSignedIn={isSignedIn}
 				/>
 			</MarketingLayout>

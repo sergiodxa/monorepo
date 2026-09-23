@@ -8,7 +8,7 @@
  */
 
 import type { IdToken } from "@sdxc/auth/id-token";
-import type { i18n } from "@sdxc/i18n";
+import type { I18n } from "@sdxc/i18n";
 import type { Database } from "remix/data-table";
 import type { Renderer } from "remix/middleware/render";
 import type { RemixNode } from "remix/ui";
@@ -44,7 +44,7 @@ import routes from "~/routes/web";
 /** The slice of `remix/router`'s `RequestContext` the sign-in failure page renders from. */
 interface AuthErrorContext {
 	render: Renderer<RemixNode>;
-	i18next: i18n;
+	intl: I18n;
 }
 
 /**
@@ -99,7 +99,7 @@ async function languageHeaders(db: Database, subjectId: string): Promise<Headers
 /** Renders the sign-in failure page, showing `message` verbatim as supplied by the caller. */
 function authError(ctx: AuthErrorContext, message: string) {
 	return ctx.render(
-		<DocumentLayout title={ctx.i18next.t("auth.error.signInFailedTitle")}>
+		<DocumentLayout title={ctx.intl.t("auth.error.signInFailedTitle")}>
 			<main mix={[flex(), flexCol(), minBs("100vh")]}>
 				<div
 					mix={[
@@ -113,13 +113,13 @@ function authError(ctx: AuthErrorContext, message: string) {
 						rounded("12px"),
 					]}
 				>
-					<h1 mix={[m("0")]}>{ctx.i18next.t("auth.error.signInFailedTitle")}</h1>
+					<h1 mix={[m("0")]}>{ctx.intl.t("auth.error.signInFailedTitle")}</h1>
 					<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>{message}</p>
 					<a
 						href={routes.home.href()}
 						mix={[fg("brand"), textDecoration("none"), hover(textDecoration("underline"))]}
 					>
-						{ctx.i18next.t("errors.backHome")}
+						{ctx.intl.t("errors.backHome")}
 					</a>
 				</div>
 			</main>
@@ -158,10 +158,10 @@ export default createController(routes.auth, {
 				});
 
 				if (AuthError.is(error, AuthErrorCode.MissingIdToken)) {
-					return authError(ctx, ctx.i18next.t("auth.error.missingIdToken"));
+					return authError(ctx, ctx.intl.t("auth.error.missingIdToken"));
 				}
 
-				return authError(ctx, ctx.i18next.t("auth.error.signInFailedGeneric"));
+				return authError(ctx, ctx.intl.t("auth.error.signInFailedGeneric"));
 			}
 
 			let grant = finished.data;

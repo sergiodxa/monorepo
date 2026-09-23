@@ -21,6 +21,7 @@ import CronJobMonitor from "~/app/data/cron-job";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import { withPrefix } from "~/app/lib/prefixed-translate";
 import { DEFAULT_TIMEZONE, groupedTimezones, isSupportedTimezone } from "~/app/lib/timezones";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
@@ -51,8 +52,8 @@ export default createAction(routes.app.team.cronJobs.edit, {
 		let monitor = await CronJobMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
 		if (!monitor) return notFound("Not Found");
 
-		let t = ctx.i18next.getFixedT(null, "translation", "page.editCronJob");
-		let fields = ctx.i18next.getFixedT(null, "translation", "page.editCronJob.form.fields");
+		let t = withPrefix(ctx.intl.t, "page.editCronJob");
+		let fields = withPrefix(ctx.intl.t, "page.editCronJob.form.fields");
 
 		let timezone = monitor.timezone ?? DEFAULT_TIMEZONE;
 		let hasUnknownTimezone = !isSupportedTimezone(timezone);
@@ -65,11 +66,11 @@ export default createAction(routes.app.team.cronJobs.edit, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
+					intl={ctx.intl}
 					heading={t("header.title")}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("app.layout.sidebar.navigation.items.dashboard"),
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.dashboard"),
 							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 						},
 						{

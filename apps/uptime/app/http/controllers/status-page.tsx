@@ -264,29 +264,29 @@ export default createAction(routes.statusPage, async (ctx) => {
 	let BannerIcon = BANNER_ICON[overallStatus];
 
 	let bannerLabel: Record<ServiceStatus, string> = {
-		operational: ctx.i18next.t("statusPage.banner.operational"),
-		degraded: ctx.i18next.t("statusPage.banner.degraded"),
-		down: ctx.i18next.t("statusPage.banner.down"),
-		unknown: ctx.i18next.t("statusPage.banner.operational"),
+		operational: ctx.intl.t("statusPage.banner.operational"),
+		degraded: ctx.intl.t("statusPage.banner.degraded"),
+		down: ctx.intl.t("statusPage.banner.down"),
+		unknown: ctx.intl.t("statusPage.banner.operational"),
 	};
 	let statusLabel: Record<ServiceStatus, string> = {
-		operational: ctx.i18next.t("statusPage.status.operational"),
-		degraded: ctx.i18next.t("statusPage.status.degraded"),
-		down: ctx.i18next.t("statusPage.status.down"),
-		unknown: ctx.i18next.t("statusPage.status.unknown"),
+		operational: ctx.intl.t("statusPage.status.operational"),
+		degraded: ctx.intl.t("statusPage.status.degraded"),
+		down: ctx.intl.t("statusPage.status.down"),
+		unknown: ctx.intl.t("statusPage.status.unknown"),
 	};
 	let uptimeBarLabels = {
-		daysAgo: ctx.i18next.t("statusPage.uptimeBar.daysAgo"),
-		today: ctx.i18next.t("statusPage.uptimeBar.today"),
+		daysAgo: ctx.intl.t("statusPage.uptimeBar.daysAgo"),
+		today: ctx.intl.t("statusPage.uptimeBar.today"),
 		legend: {
-			full: ctx.i18next.t("statusPage.uptimeBar.legend.full"),
-			partial: ctx.i18next.t("statusPage.uptimeBar.legend.partial"),
-			down: ctx.i18next.t("statusPage.uptimeBar.legend.down"),
-			noData: ctx.i18next.t("statusPage.uptimeBar.legend.noData"),
+			full: ctx.intl.t("statusPage.uptimeBar.legend.full"),
+			partial: ctx.intl.t("statusPage.uptimeBar.legend.partial"),
+			down: ctx.intl.t("statusPage.uptimeBar.legend.down"),
+			noData: ctx.intl.t("statusPage.uptimeBar.legend.noData"),
 		},
 	};
 	let formatUptime = (percentage: string) =>
-		ctx.i18next.t("statusPage.uptimeBar.tooltip.uptime", { percentage });
+		ctx.intl.t("statusPage.uptimeBar.tooltip.uptime", { percentage });
 
 	/**
 	 * The moment the page reports as its own, rounded down to the start of the
@@ -334,7 +334,7 @@ export default createAction(routes.statusPage, async (ctx) => {
 
 				{isEmpty ? (
 					<Empty>
-						<Empty.Description>{ctx.i18next.t("statusPage.empty.description")}</Empty.Description>
+						<Empty.Description>{ctx.intl.t("statusPage.empty.description")}</Empty.Description>
 					</Empty>
 				) : (
 					<>
@@ -360,7 +360,7 @@ export default createAction(routes.statusPage, async (ctx) => {
 								</div>
 								{service.kind === "dns" && (
 									<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-										{ctx.i18next.t("statusPage.dns.coverage")}
+										{ctx.intl.t("statusPage.dns.coverage")}
 									</p>
 								)}
 								<UptimeBar
@@ -373,7 +373,7 @@ export default createAction(routes.statusPage, async (ctx) => {
 
 						{cronServices.length > 0 && (
 							<>
-								{barServices.length > 0 && <h2>{ctx.i18next.t("statusPage.cronJobs.title")}</h2>}
+								{barServices.length > 0 && <h2>{ctx.intl.t("statusPage.cronJobs.title")}</h2>}
 								{cronServices.map((service) => (
 									<div
 										key={service.id}
@@ -403,15 +403,15 @@ export default createAction(routes.statusPage, async (ctx) => {
 										>
 											<ClockIcon size={12} />
 											<span>
-												{ctx.i18next.t("statusPage.cronJobs.schedule")}:{" "}
+												{ctx.intl.t("statusPage.cronJobs.schedule")}:{" "}
 												<code>{service.cronExpression}</code>
 											</span>
 										</p>
 										<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-											{ctx.i18next.t("statusPage.cronJobs.lastPing")}:{" "}
+											{ctx.intl.t("statusPage.cronJobs.lastPing")}:{" "}
 											{service.lastPingAt
 												? new Date(service.lastPingAt).toLocaleString()
-												: ctx.i18next.t("statusPage.cronJobs.never")}
+												: ctx.intl.t("statusPage.cronJobs.never")}
 										</p>
 									</div>
 								))}
@@ -421,12 +421,12 @@ export default createAction(routes.statusPage, async (ctx) => {
 				)}
 
 				<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-					{ctx.i18next.t("statusPage.footer.lastUpdated", { date: renderedAt.toLocaleString() })} ·{" "}
+					{ctx.intl.t("statusPage.footer.lastUpdated", { date: renderedAt.toLocaleString() })} ·{" "}
 					<a
 						href={routes.home.href()}
 						mix={[fg("brand"), textDecoration("none"), hover(textDecoration("underline"))]}
 					>
-						{ctx.i18next.t("statusPage.footer.poweredBy")}
+						{ctx.intl.t("statusPage.footer.poweredBy")}
 					</a>
 				</p>
 			</main>

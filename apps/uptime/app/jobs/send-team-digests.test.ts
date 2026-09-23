@@ -226,7 +226,7 @@ function disableAfterListDue(db: Database, monitorId: string): void {
 /**
  * Whether a rendered digest is the one about `teamName`, read off its heading and footer.
  * The body carries the team name as plain text, while the subject line renders through
- * i18next's plural keys with an interpolated `{{count}}`, so only the body is checked here.
+ * plural messages with an interpolated `{$count}`, so only the body is checked here.
  */
 function namesTeam(text: string | undefined, teamName: string): boolean {
 	return (text ?? "").includes(teamName);

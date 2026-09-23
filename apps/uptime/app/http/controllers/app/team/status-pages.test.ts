@@ -3,7 +3,7 @@
  * needed — this controller only imports `~/app/data/status-page`, which has no
  * Cloudflare dependency. `requireUser`/`requireTeam`/`i18n` are bypassed the same
  * way `monitors.test.ts` bypasses auth: a stand-in middleware seeds
- * `ctx.team`/`ctx.membership`/`ctx.i18next` directly, and `ctx.render` is backed by
+ * `ctx.team`/`ctx.membership`/`ctx.intl` directly, and `ctx.render` is backed by
  * a minimal renderer mirroring `bootstrap/app.tsx`'s `createHtmlRenderer`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -50,13 +50,13 @@ function createHtmlRenderer(ctx: RequestContext) {
 	};
 }
 
-let { i18n: i18nextInstance } = await createTranslator({
-	resources: { en: { translation: en } },
+let { intl } = await createTranslator({
+	resources: { en },
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",
 })();
 
-/** Seeds ctx.team/ctx.membership/ctx.teams/ctx.locale/ctx.i18next + Auth, standing in for requireUser+requireTeam+i18n. */
+/** Seeds ctx.team/ctx.membership/ctx.teams/ctx.locale/ctx.intl + Auth, standing in for requireUser+requireTeam+i18n. */
 function seedTeam(
 	team: SelectTeam,
 	membership: SelectMembership,
@@ -73,7 +73,7 @@ function seedTeam(
 		ctx.membership = membership;
 		ctx.teams = teamsList;
 		ctx.locale = "en";
-		ctx.i18next = i18nextInstance;
+		ctx.intl = intl;
 		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
 		return next();
 	};

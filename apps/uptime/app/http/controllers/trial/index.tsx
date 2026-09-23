@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 import type { Database } from "remix/data-table";
 import type { Handle, RemixNode } from "remix/ui";
 
@@ -324,7 +324,7 @@ function statusColor(status: MonitorStatus): Badge.Color {
  * @param t - The request's translator.
  * @returns A finished line, ready to render.
  */
-function resultDetail(probe: TrialProbeState, t: TFunction): string {
+function resultDetail(probe: TrialProbeState, t: Translate): string {
 	let code =
 		probe.responseStatus === null
 			? t("page.trial.result.noResponse")
@@ -343,7 +343,7 @@ function resultDetail(probe: TrialProbeState, t: TFunction): string {
  * @param t - The request's translator.
  * @returns The sentence to show.
  */
-function refusalMessage(refusal: TrialRefusalState, t: TFunction): string {
+function refusalMessage(refusal: TrialRefusalState, t: Translate): string {
 	if (refusal.code === "rate-limited") {
 		if (refusal.retryAfterSeconds === null) return t("page.trial.refusal.rateLimited");
 		return t("page.trial.refusal.rateLimitedFor", { seconds: refusal.retryAfterSeconds });
@@ -377,7 +377,7 @@ function isIncompleteForm(refusal: TrialRefusalState | undefined): boolean {
  */
 export function renderTrialPage(view: TrialPageView = {}) {
 	let ctx = getContext();
-	let t = ctx.i18next.t;
+	let t = ctx.intl.t;
 	let { probe, refusal, watching, repeated, leadError, monitorOffer } = view;
 	let incomplete = isIncompleteForm(refusal);
 

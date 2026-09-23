@@ -73,8 +73,8 @@ function createHtmlRenderer(ctx: RequestContext) {
 	};
 }
 
-let { i18n: i18nextInstance } = await createTranslator({
-	resources: { en: { translation: en } },
+let { intl } = await createTranslator({
+	resources: { en },
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",
 })();
@@ -99,7 +99,7 @@ function seedTeam(
 		ctx.membership = membership;
 		ctx.teams = teamsList;
 		ctx.locale = "en";
-		ctx.i18next = i18nextInstance;
+		ctx.intl = intl;
 		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
 		return next();
 	};

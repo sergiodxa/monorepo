@@ -10,7 +10,7 @@
  */
 
 import type { ManagementClient } from "@sdxc/auth/management-client";
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 import type { CurrentJobContext } from "@sdxc/jobs";
 import type { Mailer } from "@sdxc/mail";
 
@@ -275,7 +275,7 @@ function email(send: {
 	to: string;
 	window: DigestWindow;
 	locale: string;
-	t: TFunction;
+	t: Translate;
 }) {
 	let { period, context, to, window: reported, locale, t } = send;
 	let { team, monitors, segments, uptime } = context;

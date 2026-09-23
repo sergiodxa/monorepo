@@ -46,14 +46,13 @@ export default createAction(routes.app.team.maintenanceWindows.index, {
 		/** How one window's coverage reads in the table: a monitor's name, a type, or everything. */
 		function scopeLabel(window: SelectMaintenanceWindow): string {
 			let scope = storedMonitorScope(window);
-			if (scope.monitorType === null) return ctx.i18next.t("page.maintenance.table.allMonitors");
+			if (scope.monitorType === null) return ctx.intl.t("page.maintenance.table.allMonitors");
 			if (scope.monitorId === null) {
-				return ctx.i18next.t(`components.monitorScope.allOfType.${scope.monitorType}`);
+				return ctx.intl.t(`components.monitorScope.allOfType.${scope.monitorType}`);
 			}
 
 			return (
-				monitorNamesById.get(scope.monitorId) ??
-				ctx.i18next.t("page.maintenance.table.unknownMonitor")
+				monitorNamesById.get(scope.monitorId) ?? ctx.intl.t("page.maintenance.table.unknownMonitor")
 			);
 		}
 
@@ -64,37 +63,35 @@ export default createAction(routes.app.team.maintenanceWindows.index, {
 		let past = windows.filter((window) => !active.includes(window) && !upcoming.includes(window));
 
 		let sections = [
-			{ key: "active", title: ctx.i18next.t("page.maintenance.tabs.active"), windows: active },
+			{ key: "active", title: ctx.intl.t("page.maintenance.tabs.active"), windows: active },
 			{
 				key: "upcoming",
-				title: ctx.i18next.t("page.maintenance.tabs.upcoming"),
+				title: ctx.intl.t("page.maintenance.tabs.upcoming"),
 				windows: upcoming,
 			},
-			{ key: "past", title: ctx.i18next.t("page.maintenance.tabs.past"), windows: past },
+			{ key: "past", title: ctx.intl.t("page.maintenance.tabs.past"), windows: past },
 		];
 
 		return ctx.render(
-			<DocumentLayout
-				title={`${ctx.team.name} · ${ctx.i18next.t("page.maintenance.header.title")}`}
-			>
+			<DocumentLayout title={`${ctx.team.name} · ${ctx.intl.t("page.maintenance.header.title")}`}>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
-					heading={ctx.i18next.t("page.maintenance.header.title")}
+					intl={ctx.intl}
+					heading={ctx.intl.t("page.maintenance.header.title")}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("app.layout.sidebar.navigation.items.dashboard"),
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.dashboard"),
 							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 						},
 					]}
 					actions={
 						<LinkButton href={routes.app.team.maintenanceWindows.new.href({ team: ctx.team.slug })}>
 							<PlusIcon size={16} strokeWidth={1.5} />
-							{ctx.i18next.t("page.maintenance.header.action.create")}
+							{ctx.intl.t("page.maintenance.header.action.create")}
 						</LinkButton>
 					}
 				>
@@ -104,16 +101,16 @@ export default createAction(routes.app.team.maintenanceWindows.index, {
 								<Empty.Icon>
 									<WrenchIcon size={24} strokeWidth={1.5} />
 								</Empty.Icon>
-								<Empty.Title>{ctx.i18next.t("page.maintenance.empty.title")}</Empty.Title>
+								<Empty.Title>{ctx.intl.t("page.maintenance.empty.title")}</Empty.Title>
 								<Empty.Description>
-									{ctx.i18next.t("page.maintenance.empty.description")}
+									{ctx.intl.t("page.maintenance.empty.description")}
 								</Empty.Description>
 								<Empty.Action>
 									<LinkButton
 										href={routes.app.team.maintenanceWindows.new.href({ team: ctx.team.slug })}
 									>
 										<PlusIcon size={20} strokeWidth={1.5} />
-										{ctx.i18next.t("page.maintenance.empty.cta")}
+										{ctx.intl.t("page.maintenance.empty.cta")}
 									</LinkButton>
 								</Empty.Action>
 							</Empty>
@@ -132,16 +129,16 @@ export default createAction(routes.app.team.maintenanceWindows.index, {
 													<Table.Header>
 														<Table.Row>
 															<Table.Column>
-																{ctx.i18next.t("page.maintenance.table.columns.name")}
+																{ctx.intl.t("page.maintenance.table.columns.name")}
 															</Table.Column>
 															<Table.Column>
-																{ctx.i18next.t("page.maintenance.table.columns.scope")}
+																{ctx.intl.t("page.maintenance.table.columns.scope")}
 															</Table.Column>
 															<Table.Column>
-																{ctx.i18next.t("page.maintenance.table.columns.starts")}
+																{ctx.intl.t("page.maintenance.table.columns.starts")}
 															</Table.Column>
 															<Table.Column>
-																{ctx.i18next.t("page.maintenance.table.columns.ends")}
+																{ctx.intl.t("page.maintenance.table.columns.ends")}
 															</Table.Column>
 															<Table.Column />
 														</Table.Row>
@@ -153,12 +150,12 @@ export default createAction(routes.app.team.maintenanceWindows.index, {
 																	{window.name}
 																	{window.is_recurring && (
 																		<Badge {...badgeVariant("neutral")}>
-																			{ctx.i18next.t("page.maintenance.table.recurring")}
+																			{ctx.intl.t("page.maintenance.table.recurring")}
 																		</Badge>
 																	)}
 																	{window.ended_early_at !== null && (
 																		<Badge {...badgeVariant("neutral")}>
-																			{ctx.i18next.t("page.maintenance.table.endedEarly")}
+																			{ctx.intl.t("page.maintenance.table.endedEarly")}
 																		</Badge>
 																	)}
 																</Table.Cell>
@@ -179,7 +176,7 @@ export default createAction(routes.app.team.maintenanceWindows.index, {
 																			hover(textDecoration("underline")),
 																		]}
 																	>
-																		{ctx.i18next.t("page.maintenance.table.edit")}
+																		{ctx.intl.t("page.maintenance.table.edit")}
 																	</a>
 																</Table.Cell>
 															</Table.Row>

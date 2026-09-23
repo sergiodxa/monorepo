@@ -22,6 +22,7 @@ import { createAction } from "remix/router";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import { withPrefix } from "~/app/lib/prefixed-translate";
 import { MAX_TRACKED_NAMES_PER_MONITOR } from "~/app/services/dns-discovery";
 import { MAX_ZONE_FILE_BYTES } from "~/app/services/zone-file";
 import Field from "~/resources/components/field";
@@ -66,7 +67,7 @@ export default createAction(routes.app.team.dnsMonitors.new, {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let t = ctx.i18next.getFixedT(null, "translation", "page.createDnsMonitor.form.fields");
+		let t = withPrefix(ctx.intl.t, "page.createDnsMonitor.form.fields");
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · New DNS monitor`}>
@@ -76,11 +77,11 @@ export default createAction(routes.app.team.dnsMonitors.new, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					i18next={ctx.i18next}
-					heading={ctx.i18next.t("page.createDnsMonitor.header.title")}
+					intl={ctx.intl}
+					heading={ctx.intl.t("page.createDnsMonitor.header.title")}
 					breadcrumbs={[
 						{
-							label: ctx.i18next.t("app.layout.sidebar.navigation.items.dnsMonitors"),
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.dnsMonitors"),
 							href: routes.app.team.dnsMonitors.index.href({ team: ctx.team.slug }),
 						},
 					]}
@@ -93,10 +94,8 @@ export default createAction(routes.app.team.dnsMonitors.new, {
 						>
 							<SettingsSection
 								id="basics"
-								title={ctx.i18next.t("page.createDnsMonitor.form.sections.basics.title")}
-								description={ctx.i18next.t(
-									"page.createDnsMonitor.form.sections.basics.description",
-								)}
+								title={ctx.intl.t("page.createDnsMonitor.form.sections.basics.title")}
+								description={ctx.intl.t("page.createDnsMonitor.form.sections.basics.description")}
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
@@ -121,10 +120,8 @@ export default createAction(routes.app.team.dnsMonitors.new, {
 
 							<SettingsSection
 								id="zone-file"
-								title={ctx.i18next.t("page.createDnsMonitor.form.sections.zoneFile.title")}
-								description={ctx.i18next.t(
-									"page.createDnsMonitor.form.sections.zoneFile.description",
-								)}
+								title={ctx.intl.t("page.createDnsMonitor.form.sections.zoneFile.title")}
+								description={ctx.intl.t("page.createDnsMonitor.form.sections.zoneFile.description")}
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
@@ -147,7 +144,7 @@ export default createAction(routes.app.team.dnsMonitors.new, {
 										<Alert id="dns-apex-only-notice" color="neutral" live="off">
 											<Alert.Content>
 												<Alert.Description>
-													{ctx.i18next.t("page.createDnsMonitor.form.apexOnlyNotice")}
+													{ctx.intl.t("page.createDnsMonitor.form.apexOnlyNotice")}
 												</Alert.Description>
 											</Alert.Content>
 										</Alert>
@@ -157,10 +154,8 @@ export default createAction(routes.app.team.dnsMonitors.new, {
 
 							<SettingsSection
 								id="checks"
-								title={ctx.i18next.t("page.createDnsMonitor.form.sections.checks.title")}
-								description={ctx.i18next.t(
-									"page.createDnsMonitor.form.sections.checks.description",
-								)}
+								title={ctx.intl.t("page.createDnsMonitor.form.sections.checks.title")}
+								description={ctx.intl.t("page.createDnsMonitor.form.sections.checks.description")}
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
@@ -183,7 +178,7 @@ export default createAction(routes.app.team.dnsMonitors.new, {
 										</Switch>
 									</SettingsSection.Body>
 									<SettingsSection.Footer>
-										<Button type="submit">{ctx.i18next.t("page.createDnsMonitor.form.cta")}</Button>
+										<Button type="submit">{ctx.intl.t("page.createDnsMonitor.form.cta")}</Button>
 									</SettingsSection.Footer>
 								</SettingsSection.Card>
 							</SettingsSection>

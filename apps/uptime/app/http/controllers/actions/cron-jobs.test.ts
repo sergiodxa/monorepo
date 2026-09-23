@@ -35,7 +35,7 @@ function teamContextMiddleware(team: SelectTeam, membership: SelectMembership): 
 /**
  * Posts a form body to one of the cron-job actions through the real action and a real
  * database, including `i18n` since the actions flash translated toasts and need
- * `ctx.i18next` present when the router runs.
+ * `ctx.intl` present when the router runs.
  */
 async function postCronJobAction(
 	action: unknown,

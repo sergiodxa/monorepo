@@ -153,7 +153,7 @@ describe("monitorsImport", () => {
 	});
 
 	/**
-	 * Reason copy is i18next-translated; the assertion checks that each rejected
+	 * Reason copy is translated; the assertion checks that each rejected
 	 * line renders its own reason cell, independent of the exact translated wording.
 	 */
 	test("shows every rejected line with its reason so it can be fixed and re-pasted", async () => {

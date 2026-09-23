@@ -50,7 +50,7 @@ export const importMonitors = createAction(routes.actions.monitor.http.import, a
 	if (isFailure(result)) {
 		session?.flash("toast", {
 			intent: "error",
-			message: ctx.i18next.t("actions.importMonitors.errors.generic"),
+			message: ctx.intl.t("actions.importMonitors.errors.generic"),
 		});
 		return redirect(backToForm, { status: redirect.Status.SeeOther });
 	}
@@ -75,7 +75,7 @@ export const importMonitors = createAction(routes.actions.monitor.http.import, a
 	if (!hasProblems && report.created > 0) {
 		session?.flash("toast", {
 			intent: "success",
-			message: ctx.i18next.t("actions.importMonitors.success", { count: report.created }),
+			message: ctx.intl.t("actions.importMonitors.success", { count: report.created }),
 		});
 		return redirect(routes.app.team.monitors.index.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
@@ -91,11 +91,11 @@ export const importMonitors = createAction(routes.actions.monitor.http.import, a
 		intent: report.created > 0 ? "success" : "error",
 		message:
 			report.created > 0
-				? ctx.i18next.t("actions.importMonitors.partial", {
+				? ctx.intl.t("actions.importMonitors.partial", {
 						count: report.created,
 						rejected: report.rejected.length + report.overflow,
 					})
-				: ctx.i18next.t("actions.importMonitors.errors.none"),
+				: ctx.intl.t("actions.importMonitors.errors.none"),
 	});
 	return redirect(backToForm, { status: redirect.Status.SeeOther });
 });

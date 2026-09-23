@@ -4,7 +4,7 @@
  * `~/app/services/analytics` both read `env` at module load. MSW intercepts
  * the `http` resource's `queryAnalytics` call so it never hits the network;
  * every other resource's count comes straight from DB tables. `ctx.team`,
- * `ctx.membership`, auth, and i18next state are seeded directly, standing in
+ * `ctx.membership`, auth, and intl state are seeded directly, standing in
  * for the real `requireUser`/`requireTeam`/i18n middleware chain.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -65,8 +65,8 @@ let dashboardCardCount = (await import("./dashboard-card-count")).default as {
 
 let { buildCacheKey } = await import("~/app/services/analytics");
 
-let { i18n: i18nextInstance } = await createTranslator({
-	resources: { en: { translation: en } },
+let { intl } = await createTranslator({
+	resources: { en },
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",
 })();
@@ -81,7 +81,7 @@ function createHtmlRenderer(ctx: RequestContext) {
 	};
 }
 
-/** Middleware that seeds `ctx.team`/`ctx.membership`/auth/i18next state, standing in for the real chain. */
+/** Middleware that seeds `ctx.team`/`ctx.membership`/auth/intl state, standing in for the real chain. */
 function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	let viewer: Viewer = {
 		id: membership.subject_id,
@@ -95,7 +95,7 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 		ctx.membership = membership;
 		ctx.teams = [team];
 		ctx.locale = "en";
-		ctx.i18next = i18nextInstance;
+		ctx.intl = intl;
 		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
 		return next();
 	};

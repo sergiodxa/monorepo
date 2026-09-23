@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "@sdxc/i18n";
+import type { Translate } from "@sdxc/i18n";
 
 import { render } from "@sdxc/mail";
 import { describe, expect, test } from "vitest";
@@ -52,7 +52,7 @@ function keyRecorder() {
 	let t = ((key: string, options?: unknown) => {
 		calls.push({ key, options });
 		return key;
-	}) as unknown as TFunction;
+	}) as unknown as Translate;
 
 	return { calls, t };
 }
@@ -119,7 +119,7 @@ describe("AlertEmail", () => {
 		expect(text).toContain("Status DOWN");
 		expect(text).toContain("URL https://example.com");
 		expect(text).toContain("Response status 500 (expected 200)");
-		expect(text).toContain("Response time 1200ms");
+		expect(text).toContain("Response time 1,200ms");
 		expect(instants(text)).toContain("Time Aug 1, 2026 at 10:00 AM UTC");
 		expect(text).toContain("https://uptime.test/app/team-1/monitors/monitor-1");
 	});

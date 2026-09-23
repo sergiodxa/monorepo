@@ -122,7 +122,7 @@ export const PricingCalculator = clientEntry(
 		return () => {
 			let i18n = intl(handle);
 			let t = i18n.t;
-			let language = i18n.language;
+			let language = i18n.locale;
 
 			let minutes = new Intl.NumberFormat(language, {
 				style: "unit",

@@ -16,6 +16,7 @@ import { Select, TextField } from "@sdxc/ui";
 
 import type { SelectMonitor } from "~/database/schema";
 
+import { withPrefix } from "~/app/lib/prefixed-translate";
 import Field from "~/resources/components/field";
 import { RangeSlider } from "~/resources/components/range-slider";
 
@@ -70,8 +71,8 @@ namespace MonitorFormFields {
 	export interface Props {
 		/** Existing monitor values when editing; omitted when creating. */
 		monitor?: SelectMonitor;
-		/** The request's i18next instance, used to read this page's `form.fields.*` copy. */
-		i18next: ReturnType<typeof getContext>["i18next"];
+		/** The request's translator, used to read this page's `form.fields.*` copy. */
+		intl: ReturnType<typeof getContext>["intl"];
 		/** Which page is rendering these fields, selecting the `page.<page>.form.fields.*` keys to read. */
 		page: "createMonitor" | "editMonitor";
 		/**
@@ -96,8 +97,8 @@ namespace MonitorFormFields {
  */
 export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props>) {
 	return () => {
-		let { monitor, i18next, page, group, defaultUrl } = handle.props;
-		let t = i18next.getFixedT(null, "translation", `page.${page}.form.fields`);
+		let { monitor, intl, page, group, defaultUrl } = handle.props;
+		let t = withPrefix(intl.t, `page.${page}.form.fields`);
 
 		let expectedStatus = monitor?.expected_status ?? 200;
 		let locationHint = monitor?.location_hint;
