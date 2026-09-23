@@ -571,7 +571,8 @@ Sidebar.Provider = function SidebarProvider(handle: Handle<Sidebar.ProviderProps
 /**
  * Renders the docked, edge-to-edge mobile substitute for {@link Sidebar}:
  * {@link Sidebar}'s nav content re-composed inside {@link Dialog}, docked
- * to `side` and opened via Invoker Commands, not a viewport check.
+ * to `side` and opened via Invoker Commands, not a viewport check. A press
+ * outside it closes it, which is the dismissal a touch device has.
  *
  * @param handle Runtime handle carrying the host `<dialog>`'s props, plus `side`.
  * @returns The render function producing the drawer's markup.
@@ -595,6 +596,13 @@ Sidebar.MobileNav = function SidebarMobileNav(handle: Handle<Sidebar.MobileNavPr
 				data-slot="mobile-nav"
 				data-side={resolvedSide}
 				mix={[
+					/*
+					 * A press outside the drawer closes it, which is how a drawer is dismissed on a
+					 * phone: a modal dialog closes on Escape and nothing else, and a touch device has
+					 * no Escape to press — so the only way out would be a control the drawer does not
+					 * render. A consumer wanting the drawer held open passes its own `closedby`.
+					 */
+					attrs({ closedby: "any" }),
 					fixed(),
 					insBs("0"),
 					insBe("0"),
