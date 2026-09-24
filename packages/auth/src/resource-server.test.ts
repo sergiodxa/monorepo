@@ -8,11 +8,21 @@
  */
 
 import type { JWT } from "@sdxc/jwt";
+import type { ProtectedResourceMetadata } from "@sdxc/well-known/oauth-protected-resource";
 
 import { JWK } from "@sdxc/jwt";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	expectTypeOf,
+	test,
+} from "vitest";
 
 import { AccessToken } from "./access-token.js";
 import { AuthError } from "./auth-error.js";
@@ -603,6 +613,139 @@ describe("infrastructure failures", () => {
 
 		await expect(api.verifyRequest(request(`Bearer ${await sign()}`))).rejects.toSatisfy(
 			(error: unknown) => AuthError.is(error, "discovery_failed"),
+		);
+	});
+});
+
+describe("resource identifier", () => {
+	/** The resource a protected API names, carrying a path. */
+	const API = "https://api.test/v1";
+
+	/** Where RFC 9728 §3.1 serves metadata for {@link API}. */
+	const API_METADATA = "https://api.test/.well-known/oauth-protected-resource/v1";
+
+	test("answers null for every metadata member on a server named by audience alone", () => {
+		let api = resourceServer();
+
+		expect(api.resource).toBeNull();
+		expect(api.metadataUrl).toBeNull();
+		expect(api.metadata()).toBeNull();
+	});
+
+	test("inserts the well-known suffix before the resource's path", () => {
+		let api = new ResourceServer(new Issuer(ISSUER), { resource: API });
+
+		expect(api.resource?.href).toBe(API);
+		expect(api.metadataUrl?.href).toBe(API_METADATA);
+	});
+
+	test("publishes the issuer as the authorization server and the header as the method", () => {
+		let api = new ResourceServer(new Issuer(ISSUER), { resource: new URL(API) });
+
+		expect(api.metadata()).toMatchObject({
+			resource: new URL(API),
+			authorizationServers: [new URL(ISSUER)],
+			bearerMethodsSupported: ["header"],
+			scopesSupported: [],
+			jwksUri: null,
+		});
+	});
+
+	test("publishes the members it was configured with, keeping its own resource", () => {
+		let api = new ResourceServer(new Issuer(ISSUER), {
+			resource: API,
+			metadata: {
+				scopesSupported: ["monitors:read"],
+				resourceName: { value: "Monitors", translations: { es: "Monitores" } },
+				authorizationServers: [new URL("https://other.test")],
+			},
+		});
+
+		expect(api.metadata()).toMatchObject({
+			resource: new URL(API),
+			authorizationServers: [new URL("https://other.test")],
+			scopesSupported: ["monitors:read"],
+			resourceName: { value: "Monitors", translations: { es: "Monitores" } },
+		});
+	});
+
+	test("accepts a token bound to the resource when no audience is configured", async () => {
+		let api = new ResourceServer(new Issuer(ISSUER), { resource: API });
+
+		let token = await api.verifyRequest(request(`Bearer ${await sign({ aud: API })}`));
+
+		expect(token?.subject).toBe("user-123");
+	});
+
+	test("accepts either spelling of a resource identifier's trailing slash", async () => {
+		let api = new ResourceServer(new Issuer(ISSUER), { resource: RESOURCE });
+
+		await expect(api.verifyAccessToken(await sign({ aud: RESOURCE }))).resolves.toBeInstanceOf(
+			AccessToken,
+		);
+		await expect(
+			api.verifyAccessToken(await sign({ aud: `${RESOURCE}/` })),
+		).resolves.toBeInstanceOf(AccessToken);
+	});
+
+	test("holds tokens to a configured audience over the resource", async () => {
+		let api = new ResourceServer(new Issuer(ISSUER), { resource: API, audience: CLIENT_ID });
+
+		await expect(api.verifyAccessToken(await sign({ aud: API }))).rejects.toMatchObject(
+			INVALID_TOKEN,
+		);
+		await expect(api.verifyAccessToken(await sign())).resolves.toBeInstanceOf(AccessToken);
+	});
+
+	test("types the metadata as present for a server built with a resource", () => {
+		let bound = new ResourceServer(new Issuer(ISSUER), { resource: API });
+		let unbound: ResourceServer = resourceServer();
+
+		expectTypeOf(bound.metadata()).toEqualTypeOf<ProtectedResourceMetadata>();
+		expectTypeOf(bound.metadataUrl).toEqualTypeOf<URL>();
+		expectTypeOf(unbound.metadata()).toEqualTypeOf<ProtectedResourceMetadata | null>();
+		expectTypeOf(unbound.resource).toEqualTypeOf<URL | null>();
+	});
+
+	test("refuses to compile a configuration naming neither audience nor resource", () => {
+		// @ts-expect-error -- a server naming neither answers for no token
+		expect(() => new ResourceServer(new Issuer(ISSUER), {})).not.toThrow();
+	});
+});
+
+describe("challenge", () => {
+	test("answers an anonymous request with the bare scheme when nothing else is known", () => {
+		expect(resourceServer().challenge()).toBe("Bearer");
+	});
+
+	test("keeps the rejected-token challenge servers answered with before metadata", () => {
+		expect(resourceServer().challenge({ error: "invalid_token" })).toBe(
+			`Bearer error="invalid_token"`,
+		);
+	});
+
+	test("points at the metadata and names the realm", () => {
+		let api = new ResourceServer(new Issuer(ISSUER), {
+			resource: "https://api.test/v1",
+			realm: "api",
+		});
+
+		expect(api.challenge()).toBe(
+			`Bearer realm="api", resource_metadata="https://api.test/.well-known/oauth-protected-resource/v1"`,
+		);
+	});
+
+	test("carries the error, its description and the scopes a refusal names", () => {
+		let api = new ResourceServer(new Issuer(ISSUER), { resource: RESOURCE });
+
+		expect(
+			api.challenge({
+				error: "insufficient_scope",
+				errorDescription: "Needs write access",
+				scope: ["monitors:write"],
+			}),
+		).toBe(
+			`Bearer scope="monitors:write", error="insufficient_scope", error_description="Needs write access", resource_metadata="https://api.test/.well-known/oauth-protected-resource"`,
 		);
 	});
 });

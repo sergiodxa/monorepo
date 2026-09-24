@@ -17,12 +17,16 @@ The core subpaths need only a runtime with `fetch`. The `@sdxc/auth/remix/*` sub
 [`remix`](https://www.npmjs.com/package/remix) v3, declared as an optional peer
 dependency, so an app on another router installs nothing extra.
 
-Twelve entry points, each importable on its own:
+Fourteen entry points, each importable on its own:
 
 - `@sdxc/auth/issuer` — the discovery document and key set every role shares
 - `@sdxc/auth/relying-party` — the browser login, callback, and logout
 - `@sdxc/auth/service-client` — acting as the app itself, with no person present
-- `@sdxc/auth/resource-server` — accepting a bearer token an incoming request carries
+- `@sdxc/auth/resource-server` — accepting a bearer token an incoming request carries,
+  and publishing the RFC 9728 metadata that says where to get one
+- `@sdxc/auth/protected-resource` — finding an API's authorization server from its URL
+  or from the `401` it answered with
+- `@sdxc/auth/bearer-challenge` — writing and reading `WWW-Authenticate` Bearer challenges
 - `@sdxc/auth/management-client` — reading the provider's own subject records, and a
   multi-tenant provider's tenant-scoped directory
 - `@sdxc/auth/auth-session` — the token set a login leaves in a session store
@@ -121,6 +125,42 @@ One grant is spent per client and resource set however many callers ask at once.
 compact-serialized token is verified against the published key set, a claimless one over
 RFC 7662 introspection, and both paths end at the same `AccessToken`.
 
+### An API That Describes Itself
+
+A resource server given its RFC 9728 identifier publishes metadata naming its issuer, and
+every refusal points at that document, so a client holding only the API's URL finds where
+to get a token for it. With no `audience`, it accepts tokens bound to the resource.
+
+```typescript
+import { protectedResourceMetadata } from "@sdxc/well-known/oauth-protected-resource";
+import { serve, wellKnown } from "@sdxc/well-known/middleware";
+
+let api = new ResourceServer(issuer, {
+	resource: "https://api.example.com/v1",
+	metadata: { scopesSupported: ["reports:read", "reports:write"] },
+});
+
+wellKnown({ "oauth-protected-resource": serve(protectedResourceMetadata, () => api.metadata()) });
+
+api.challenge(); // Bearer resource_metadata="https://api.example.com/.well-known/oauth-protected-resource/v1"
+api.challenge({ error: "insufficient_scope", scope: ["reports:write"] });
+```
+
+The client starts from the refusal, or from the URL alone, and ends at an `Issuer`:
+
+```typescript
+import { ProtectedResource } from "@sdxc/auth/protected-resource";
+
+let response = await fetch("https://api.example.com/v1/reports");
+let found = await ProtectedResource.fromChallenge(response, response.url);
+if (isFailure(found) || found.data === null) return; // no pointer: use configured values
+
+let issuer = unwrap(await found.data.issuer()); // RFC 8414, falling back to OIDC discovery
+let token = await new ServiceClient(issuer, credentials).token({
+	resources: [found.data.metadata.resource.href],
+});
+```
+
 ## API
 
 ### `@sdxc/auth/issuer`
@@ -129,7 +169,7 @@ RFC 7662 introspection, and both paths end at the same `AccessToken`.
 Issuer.for(url: string | URL, options?: Issuer.Options): Issuer;
 new Issuer(url: string | URL, options?: Issuer.Options);
 
-issuer.url; // URL — discovery appends `/.well-known/openid-configuration` to it
+issuer.url; // URL — where the discovery document is read from
 issuer.metadata(); // Promise<Issuer.Metadata> — validated, and held to naming this issuer
 issuer.identifier(); // Promise<string> — what the provider's tokens carry as `iss`
 issuer.keys(); // Promise<JWK.KeyResolver> — ready as `JWT.verify`'s second argument
@@ -151,7 +191,9 @@ the provider publishes no list: `scopesSupported`, `responseTypesSupported`,
 `codeChallengeMethodsSupported`.
 
 `Options` takes `identifier`, the `iss` value where it differs from the URL the documents
-are served from; `cache`, a `CacheSource`, omitted keeping documents for the life of the
+are served from; `discovery`, `"openid"` by default, appending
+`/.well-known/openid-configuration` to the URL, or `"oauth"`, reading RFC 8414 metadata
+with `/.well-known/oauth-authorization-server` inserted before the URL's path; `cache`, a `CacheSource`, omitted keeping documents for the life of the
 instance; `metadata`, a document served in the provider's place and checked the same way;
 and `ttl`, `"1 hour"` by default. `Metadata` is the discovery document in the shape a
 provider publishes it, so one copied from an issuer is accepted unchanged.
@@ -292,13 +334,31 @@ new ResourceServer(issuer: Issuer, options: ResourceServer.Options);
 api.verifyRequest(request); // Promise<AccessToken | null> — null: no bearer credential
 api.verifyAccessToken(credential); // Promise<AccessToken> — over a credential in hand
 api.issuer; // Issuer
+api.resource; // URL | null — the RFC 9728 identifier
+api.metadataUrl; // URL | null — where the metadata is served (RFC 9728 §3.1)
+api.metadata(); // ProtectedResourceMetadata | null — the document to serve
+api.challenge(refusal?); // string — the `WWW-Authenticate` value for a refusal
 
 interface Options {
 	audience: string | string[]; // accepted when the token's `aud` carries any of them
+	resource?: URL | string; // required when `audience` is omitted
+	metadata?: ResourceServer.PublishedMetadata; // members published beside `resource`
+	realm?: string; // carried on every challenge
 	introspection?: Introspector; // supplying one opens the introspection path
 	acceptUnscopedIntrospection?: boolean; // false
 }
 ```
+
+One of `audience` and `resource` is required, which the type enforces. With a `resource`
+and no `audience`, the server answers for the identifier with and without a trailing
+slash, which is what an RFC 8707 token carries in `aud`. `metadata()` builds the document
+with [`@sdxc/well-known`](https://www.npmjs.com/package/@sdxc/well-known)'s `define`: `authorizationServers`
+defaults to the issuer's URL and `bearerMethodsSupported` to `["header"]`, and it answers
+`null` for a server with no resource. A server built with `resource` in its options types
+`resource`, `metadataUrl` and `metadata()` as present. `challenge` takes `error`, `errorDescription` and
+`scope`, and adds `realm` and `resource_metadata` when the server has them; called with
+nothing, it is the challenge for a request that sent no token, which carries no `error`
+per RFC 6750 §3.1.
 
 `verifyRequest` reads the bearer credential per RFC 6750 §2.1 and answers `null` for a
 request carrying none, which is another authentication method's to answer; a credential
@@ -311,6 +371,61 @@ An `Introspector` is anything with `introspect(token)` answering a
 `ResourceServer.Introspection` — `active`, `subject`, `clientId`, `scopes`, `audience`,
 `issuer`, `expiresAt` — which a `ServiceClient` satisfies. A single-valued `aud` arrives as
 a one-element list, an absent one as an empty list, every other omitted member as `null`.
+
+### `@sdxc/auth/protected-resource`
+
+```typescript
+ProtectedResource.discover(resource, options?); // Promise<Result<ProtectedResource, AuthError>>
+ProtectedResource.fromChallenge(response, requested, options?); // Promise<Result<ProtectedResource | null, AuthError>>
+ProtectedResource.requiredScopes(response); // string[] — the scopes a refusal asks for
+new ProtectedResource(metadata); // over metadata the app already holds
+
+resource.metadata; // ProtectedResourceMetadata
+resource.issuer(authorizationServer?, options?); // Promise<Result<Issuer, AuthError>>
+
+interface DiscoverOptions {
+	match?: "exact" | "prefix"; // "exact"
+	cache?: Issuer.CacheSource; // documents shared for an hour
+}
+```
+
+`discover` fetches the metadata RFC 9728 §3.1 serves for an identifier; `fromChallenge`
+follows the `resource_metadata` pointer on a refusal's Bearer challenge and answers `null`
+when there is none. Both hold the document's `resource` to the URL asked about (§3.3), and
+report a document that cannot be fetched, is malformed, or names another resource as
+`discovery_failed`. `match: "prefix"` accepts a resource that is a same-origin,
+segment-aligned prefix of the URL, for a client that met a challenge below the resource's
+root.
+
+`issuer` hands out the `Issuer` for a listed authorization server, the first when none is
+named, with its metadata already read: RFC 8414 first, OpenID Connect discovery when that
+document cannot be read. An unlisted server, or a document naming another issuer, fails
+with `issuer_mismatch` (§7.6); a resource listing none fails with `endpoint_unsupported`.
+
+### `@sdxc/auth/bearer-challenge`
+
+```typescript
+stringify(challenge: Partial<BearerChallenge>): string;
+parse(header: string): Result<BearerChallenge[], ChallengeParseError>;
+
+interface BearerChallenge {
+	realm: string | null;
+	scope: string[];
+	error: "invalid_request" | "invalid_token" | "insufficient_scope" | null;
+	errorDescription: string | null;
+	errorUri: URL | null;
+	resourceMetadata: URL | null; // RFC 9728 §5.1
+	extensions: Record<string, string>; // every other auth-param, by lowercased name
+}
+```
+
+`stringify` writes the parameters in RFC order, every value quoted with `"` and `\`
+escaped and control characters replaced by spaces, and the bare `Bearer` for a challenge
+with none. `parse` reads a header that may list several schemes, stepping over the others
+by RFC 9110's grammar; a header naming no Bearer challenge is an empty list. A registered
+parameter whose value fits no typed field (an unregistered `error` code, a relative
+`error_uri`) is kept in `extensions`. A malformed header, a Bearer challenge carrying a
+token68, or one repeating a parameter fails with a `ChallengeParseError` naming the offset.
 
 ### `@sdxc/auth/management-client`
 
@@ -563,19 +678,35 @@ sessionScheme<identity>(
 ): AuthScheme<identity>;
 
 bearerScheme<identity>(
-	api: Pick<ResourceServer, "verifyRequest">,
+	api: BearerSchemeServer, // a ResourceServer, or anything with verifyRequest
 	options: BearerSchemeOptions<identity>, // { verify(token, context), name?: "bearer" }
 ): AuthScheme<identity>;
+
+bearerFailure(
+	api: Pick<ResourceServer, "challenge">,
+	body?: (context: RequestContext) => Response | Promise<Response>,
+): (context: RequestContext, auth?: BadAuth) => Promise<Response>;
 ```
 
 `sessionScheme` resolves the stored token set into the identity `verify` returns, renewing
 a set that has reached its end first; a `verify` answering `null` or `undefined` rejects
 the request. `bearerScheme` resolves the request's bearer token, then asks who is holding
-it, and a declined token stops there with RFC 6750's `401` and a
-`Bearer error="invalid_token"` challenge. Either scheme leaves a request it has nothing to
+it, and a declined token stops there with RFC 6750's `401` and the challenge
+`api.challenge({ error: "invalid_token" })`, which points at the server's metadata when it
+has a resource. Either scheme leaves a request it has nothing to
 say about — signed out, or carrying no bearer credential — to the next one, and lets an
 issuer outage through as a thrown `AuthError`, so an environment fault stays a fault the
 app answers rather than a person being signed out.
+
+A request carrying no token is anonymous to `auth()`, so `requireAuth()` answers it
+without a challenge unless its `onFailure` supplies one. `bearerFailure(api)` is that
+handler: a `401` carrying `api.challenge()`. `body` builds the app's own response, whose
+status and body are kept; a `WWW-Authenticate` it already sets wins, then a scheme's own
+challenge, then the anonymous one.
+
+```typescript
+requireAuth({ onFailure: bearerFailure(api, () => problems.unauthorized()) });
+```
 
 ### `@sdxc/auth/remix/authorization`
 

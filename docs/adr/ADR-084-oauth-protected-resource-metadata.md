@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-23
+**Accepted** - 2026-09-24
 
 ## Background
 
@@ -567,8 +567,45 @@ need a token per endpoint, and the metadata endpoint would answer for arbitrary 
 - [ADR-085: SCIM 2.0 Package](./ADR-085-scim-package.md)
 - [Reader ADR-006: MCP Server](./reader/ADR-006-mcp-server.md)
 
+## Notes
+
+- Implementation: `ProtectedResource#issuer()` is asynchronous and answers
+  `Promise<Result<Issuer, AuthError>>`. The RFC 8414-then-OIDC fallback needs to know
+  whether the RFC 8414 document can be read, so the method reads it (the read fills the
+  issuer's memo, so it is spent once) and hands out an issuer whose metadata is known good.
+  A document naming another issuer fails with `issuer_mismatch` and never falls back; an
+  unlisted server also fails with `issuer_mismatch`, and a resource listing none with
+  `endpoint_unsupported`.
+- Implementation: `ResourceServer#metadata()` answers `null` for a server with no
+  `resource`, like the `resource` and `metadataUrl` getters. `ResourceServer` is generic over
+  the options it was built with, so a server whose options state `resource` types all three
+  as present and `serve(protectedResourceMetadata, () => api.metadata())` compiles without
+  an assertion. `ResourceServer.Options` is a union of `AudienceOptions` and
+  `ResourceOptions` in place of constructor overloads, which keeps one of the two required.
+- Implementation: with `resource` and no `audience`, the default audience is the resource as
+  stated and as serialized, with and without a trailing slash, because `URL#href` adds a
+  slash to a bare origin and an RFC 8707 token carries whichever spelling the client sent.
+- Implementation: `bearerScheme` takes a `BearerSchemeServer`, `verifyRequest` plus an
+  optional `challenge`, so a stand-in exposing only `verifyRequest` still compiles and
+  answers the plain `Bearer error="invalid_token"`. `bearerFailure`'s handler also takes
+  `requireAuth()`'s `BadAuth`: a `WWW-Authenticate` the app's body sets wins, then the
+  failing scheme's challenge, then `api.challenge()`, so the header is sent exactly once.
+- Implementation: `BearerChallenge` keeps a registered parameter whose value fits no typed
+  field (an `error` outside RFC 6750 §3.1, a relative `error_uri` or `resource_metadata`) in
+  `extensions` under its wire name. `parse` fails on a Bearer challenge carrying a token68
+  or repeating a parameter; `ChallengeParseError` carries the offset. `stringify` replaces
+  control characters with spaces so no value can end the header line.
+- Implementation: `Issuer`'s `discovery: "oauth"` reads the RFC 8414 document through
+  the same schema as the OIDC one, so an authorization server whose RFC 8414 metadata omits
+  `authorization_endpoint` or `jwks_uri` still fails discovery; loosening that changes
+  `Issuer.Metadata`'s required members and is left to the management API's adoption.
+- Implementation: `ProtectedResource.DiscoverOptions.cache` shares fetched documents for an
+  hour, the `Issuer` default; the §3.3 check runs on every read, cached or not.
+
 ## Current Progress
 
-- [ ] Phase 1: The document
-- [ ] Phase 2: `@sdxc/auth`
+- [x] Phase 1: The document (`@sdxc/well-known/oauth-protected-resource`, built with ADR-083)
+- [x] Phase 2: `@sdxc/auth` — `./bearer-challenge`, `ResourceServer`'s resource members,
+      `./protected-resource`, `Issuer`'s `discovery` option, `bearerScheme`'s pointer and
+      `bearerFailure`, README
 - [ ] Phase 3: Adopt

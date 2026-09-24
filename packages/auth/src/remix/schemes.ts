@@ -1,7 +1,7 @@
 /**
- * The two `remix/middleware/auth` schemes this package's roles answer: a session-backed
- * one for the person a login signed in, and a bearer one for a caller presenting an
- * access token. Both leave a request they have nothing to say about to the next scheme.
+ * The two `remix/middleware/auth` schemes this package's roles answer, a session-backed
+ * one and a bearer one, plus the `requireAuth()` failure that challenges a request that
+ * sent no token. Both schemes leave a request they have nothing to say about to the next.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,6 +11,7 @@ import type {
 	AuthScheme,
 	AuthSchemeAuthenticateResult,
 	AuthSchemeFailure,
+	BadAuth,
 } from "remix/middleware/auth";
 import type { RequestContext } from "remix/router";
 
@@ -31,17 +32,27 @@ const DEFAULT_SESSION_SCHEME_NAME = "oidc-session";
 /** The method name a bearer scheme reports when it is given none. */
 const DEFAULT_BEARER_SCHEME_NAME = "bearer";
 
+/** The challenge RFC 6750 §3 pairs with a rejected token, for a server that writes none. */
+const INVALID_TOKEN_CHALLENGE = `Bearer error="invalid_token"`;
+
+/** The HTTP status a request lacking authentication is answered with. */
+const UNAUTHORIZED = 401;
+
 /**
- * The answer a credential the resource server declines is reported with. The challenge
- * is the one RFC 6750 §3 pairs with a rejected token, and the middleware forwards it as
- * `WWW-Authenticate` so a client knows to obtain a new one.
+ * The answer a credential the resource server declines is reported with. The middleware
+ * forwards its challenge as `WWW-Authenticate`, so a client knows to obtain a new token
+ * and, from a server bound to a resource, where to read its metadata.
+ *
+ * @param api - The resource server that declined the credential.
  */
-const REJECTED: AuthSchemeFailure = {
-	status: "failure",
-	code: "invalid_credentials",
-	message: "The bearer token was not accepted.",
-	challenge: `Bearer error="invalid_token"`,
-};
+function rejected(api: BearerSchemeServer): AuthSchemeFailure {
+	return {
+		status: "failure",
+		code: "invalid_credentials",
+		message: "The bearer token was not accepted.",
+		challenge: api.challenge?.({ error: "invalid_token" }) ?? INVALID_TOKEN_CHALLENGE,
+	};
+}
 
 /**
  * A scheme that resolves the request's stored token set into the identity the app's
@@ -100,7 +111,7 @@ export function sessionScheme<identity>(
 /**
  * A scheme that resolves the request's bearer token into the identity the app's `verify`
  * returns. A request carrying no bearer credential is left to the next scheme, and one
- * the server declines stops here with RFC 6750's `401`.
+ * the server declines stops here with `api.challenge({ error: "invalid_token" })`.
  *
  * @param api - The resource server whose audiences the token is held to.
  * @param options - The app's `verify`, and the method name to report.
@@ -113,7 +124,7 @@ export function sessionScheme<identity>(
  * bearerScheme(api, { verify: (token) => (token.issuedToService ? service : null) });
  */
 export function bearerScheme<identity>(
-	api: Pick<ResourceServer, "verifyRequest">,
+	api: BearerSchemeServer,
 	options: BearerSchemeOptions<identity>,
 ): AuthScheme<identity> {
 	return {
@@ -130,18 +141,56 @@ export function bearerScheme<identity>(
 			let token = await wrap(() => api.verifyRequest(context.request));
 
 			if (isFailure(token)) {
-				if (AuthError.is(token.error, AuthErrorCode.InvalidToken)) return REJECTED;
+				if (AuthError.is(token.error, AuthErrorCode.InvalidToken)) return rejected(api);
 				throw token.error;
 			}
 
 			if (token.data === null) return null;
 
 			let identity = await options.verify(token.data, context);
-			if (identity === null) return REJECTED;
+			if (identity === null) return rejected(api);
 
 			return { status: "success", identity };
 		},
 	};
+}
+
+/**
+ * A `requireAuth({ onFailure })` handler answering a request that reached a protected
+ * route unauthenticated with a `401` whose challenge points at the server's metadata, so
+ * a client that sent no token learns where to get one. A challenge the body already
+ * carries wins, then a scheme's own (a rejected token's), then the anonymous one.
+ *
+ * @param api - The resource server whose challenge is sent.
+ * @param body - Builds the response, whose status and body are kept; a bare `401` when omitted.
+ * @returns The handler to pass as `onFailure`.
+ * @example
+ * requireAuth({ onFailure: bearerFailure(api) });
+ * @example
+ * requireAuth({ onFailure: bearerFailure(api, () => problems.unauthorized()) });
+ */
+export function bearerFailure(
+	api: Pick<ResourceServer, "challenge">,
+	body: (context: RequestContext) => Response | Promise<Response> = () =>
+		new Response("Unauthorized", { status: UNAUTHORIZED }),
+): (context: RequestContext, auth?: BadAuth) => Promise<Response> {
+	return async (context, auth) => {
+		let answer = await body(context);
+		if (answer.headers.has("WWW-Authenticate")) return answer;
+
+		let response = new Response(answer.body, answer);
+		response.headers.set("WWW-Authenticate", auth?.error?.challenge ?? api.challenge());
+		return response;
+	};
+}
+
+/**
+ * The resource server a bearer scheme verifies against. `challenge` is optional, so a
+ * stand-in exposing `verifyRequest` alone still answers a rejection, with RFC 6750's
+ * plain `invalid_token` challenge.
+ */
+export interface BearerSchemeServer extends Pick<ResourceServer, "verifyRequest"> {
+	challenge?: ResourceServer["challenge"];
 }
 
 /** How a session scheme turns a signed-in session into the app's identity. */

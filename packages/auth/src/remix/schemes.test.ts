@@ -14,7 +14,7 @@ import { JWK } from "@sdxc/jwt";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { createCookie } from "remix/cookie";
-import { Auth, auth } from "remix/middleware/auth";
+import { Auth, auth, requireAuth } from "remix/middleware/auth";
 import { session } from "remix/middleware/session";
 import { createRouter, RequestContext } from "remix/router";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
@@ -29,7 +29,7 @@ import { RelyingParty } from "../relying-party.js";
 import { ResourceServer } from "../resource-server.js";
 
 import { sessionOf } from "./context.js";
-import { bearerScheme, sessionScheme } from "./schemes.js";
+import { bearerFailure, bearerScheme, sessionScheme } from "./schemes.js";
 
 /** Seconds in an hour, the lifetime every fixture token carries. */
 const ONE_HOUR = 3600;
@@ -372,5 +372,121 @@ describe("bearerScheme", () => {
 		await expect(resolveBearer(scheme, `Bearer ${await signAccessToken()}`)).rejects.toSatisfy(
 			(error: unknown) => AuthError.is(error, "jwks_failed"),
 		);
+	});
+});
+
+describe("a resource server bound to a resource", () => {
+	/** The protected API the fixture resource server answers for. */
+	const RESOURCE = `${APP_ORIGIN}/api`;
+
+	/** Where RFC 9728 serves the metadata for {@link RESOURCE}. */
+	const METADATA = `${APP_ORIGIN}/.well-known/oauth-protected-resource/api`;
+
+	/** A resource server bound to {@link RESOURCE}, still accepting the fixture client. */
+	function createBoundServer(): ResourceServer {
+		return new ResourceServer(createIssuer(), { resource: RESOURCE, audience: CLIENT_ID });
+	}
+
+	/**
+	 * Runs a request through `auth()` and `requireAuth()`, answering `ok` when both let it
+	 * through.
+	 *
+	 * @param scheme - The scheme `auth()` tries.
+	 * @param onFailure - The failure handler `requireAuth()` is given.
+	 * @param authorization - The request's `Authorization` header, omitted when absent.
+	 */
+	async function guard(
+		scheme: AuthScheme<unknown>,
+		onFailure: ReturnType<typeof bearerFailure>,
+		authorization?: string,
+	): Promise<Response> {
+		let headers: Record<string, string> = {};
+		if (authorization !== undefined) headers.authorization = authorization;
+
+		let context = new RequestContext(new Request(`${RESOURCE}/monitors`, { headers }));
+		return await auth({ schemes: [scheme] })(context, async () =>
+			requireAuth({ onFailure })(context, () => Promise.resolve(new Response("ok"))),
+		);
+	}
+
+	test("points a declined credential's challenge at the metadata", async () => {
+		let scheme = bearerScheme(createBoundServer(), { verify: (token) => token.subject });
+
+		expect(
+			await resolveBearer(scheme, `Bearer ${await signAccessToken({}, foreign)}`),
+		).toMatchObject({
+			ok: false,
+			error: { challenge: `Bearer error="invalid_token", resource_metadata="${METADATA}"` },
+		});
+	});
+
+	test("answers a request with no token with a 401 pointing at the metadata", async () => {
+		let api = createBoundServer();
+		let response = await guard(
+			bearerScheme(api, { verify: (token) => token.subject }),
+			bearerFailure(api),
+		);
+
+		expect(response.status).toBe(401);
+		expect(response.headers.get("WWW-Authenticate")).toBe(`Bearer resource_metadata="${METADATA}"`);
+	});
+
+	test("keeps a declined credential's challenge, sent once", async () => {
+		let api = createBoundServer();
+		let response = await guard(
+			bearerScheme(api, { verify: (token) => token.subject }),
+			bearerFailure(api),
+			`Bearer ${await signAccessToken({}, foreign)}`,
+		);
+
+		expect(response.status).toBe(401);
+		expect(response.headers.get("WWW-Authenticate")).toBe(
+			`Bearer error="invalid_token", resource_metadata="${METADATA}"`,
+		);
+	});
+
+	test("keeps the status and body the app builds", async () => {
+		let api = createBoundServer();
+		let failure = bearerFailure(api, () => Response.json({ error: "nope" }, { status: 401 }));
+		let response = await guard(bearerScheme(api, { verify: (token) => token.subject }), failure);
+
+		await expect(response.json()).resolves.toEqual({ error: "nope" });
+		expect(response.headers.get("content-type")).toBe("application/json");
+		expect(response.headers.get("WWW-Authenticate")).toBe(`Bearer resource_metadata="${METADATA}"`);
+	});
+
+	test("keeps a challenge the app's body already carries", async () => {
+		let api = createBoundServer();
+		let failure = bearerFailure(
+			api,
+			() =>
+				new Response(null, { status: 401, headers: { "WWW-Authenticate": `Bearer realm="own"` } }),
+		);
+		let response = await guard(bearerScheme(api, { verify: (token) => token.subject }), failure);
+
+		expect(response.headers.get("WWW-Authenticate")).toBe(`Bearer realm="own"`);
+	});
+
+	test("lets an accepted token through", async () => {
+		let api = createBoundServer();
+		let response = await guard(
+			bearerScheme(api, { verify: (token) => token.subject }),
+			bearerFailure(api),
+			`Bearer ${await signAccessToken()}`,
+		);
+
+		await expect(response.text()).resolves.toBe("ok");
+	});
+
+	test("answers a stand-in exposing only verifyRequest with the plain challenge", async () => {
+		let api = createBoundServer();
+		let scheme = bearerScheme(
+			{ verifyRequest: (request) => api.verifyRequest(request) },
+			{ verify: (token) => token.subject },
+		);
+
+		expect(
+			await resolveBearer(scheme, `Bearer ${await signAccessToken({}, foreign)}`),
+		).toMatchObject({ ok: false, error: { challenge: `Bearer error="invalid_token"` } });
 	});
 });

@@ -12,6 +12,7 @@
 		"./id-token": "./src/id-token.ts",
 		"./issuer": "./src/issuer.ts",
 		"./management-client": "./src/management-client.ts",
+		"./protected-resource": "./src/protected-resource.ts",
 		"./relying-party": "./src/relying-party.ts",
 		"./remix/authorization": "./src/remix/authorization.ts",
 		"./remix/context": "./src/remix/context.ts",

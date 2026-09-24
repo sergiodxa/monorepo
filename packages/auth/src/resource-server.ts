@@ -1,16 +1,22 @@
 /**
  * The role an app plays when someone else calls it: it turns the access token a caller
- * presents into the claims behind it, read off the request's `Authorization` header or
- * handed over as the bare credential an app holds.
+ * presents into the claims behind it, and describes itself to clients through RFC 9728
+ * metadata and the `WWW-Authenticate` challenge that points at it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { ProtectedResourceMetadata } from "@sdxc/well-known/oauth-protected-resource";
+
+import { define, metadataUrl } from "@sdxc/well-known/oauth-protected-resource";
+
+import type { BearerChallenge } from "./bearer-challenge.js";
 import type { Issuer } from "./issuer.js";
 
 import { AccessToken } from "./access-token.js";
 import { AuthError, AuthErrorCode } from "./auth-error.js";
+import { stringify } from "./bearer-challenge.js";
 
 /** Milliseconds in a second, for the epoch claim an introspected token is given. */
 const MS_PER_SECOND = 1000;
@@ -23,6 +29,22 @@ const AUTHORIZATION_HEADER = /^(\S+)[ \t]+(\S.*)$/;
 
 /** Matches the three base64url segments of an RFC 7515 §3.1 compact serialization. */
 const COMPACT_JWS = /^[\w-]+\.[\w-]+\.[\w-]+$/;
+
+/** Matches the slashes a resource identifier may end with. */
+const TRAILING_SLASHES = /\/+$/;
+
+/**
+ * The audiences a server bound to a resource answers for when none is configured: the
+ * identifier as stated and as serialized, with and without a trailing slash, since an
+ * RFC 8707 token carries whichever spelling the client sent as `resource`.
+ *
+ * @param stated - The resource as the app configured it.
+ */
+function resourceAudiences(stated: URL | string): string[] {
+	let href = new URL(stated).href;
+	let spellings = [String(stated), href, href.replace(TRAILING_SLASHES, "")];
+	return [...new Set(spellings)];
+}
 
 /**
  * Reports whether a token's audiences include one this server answers for. Each side
@@ -66,22 +88,34 @@ function readBearerCredential(header: string | null): string | null {
  * let token = await api.verifyRequest(request);
  * @example
  * let token = await api.verifyAccessToken(envelope.accessToken);
+ * @template Configured - The options it was built with; a stated `resource` types
+ *   `resource`, `metadataUrl` and `metadata()` as present.
  */
-export class ResourceServer {
+export class ResourceServer<Configured extends ResourceServer.Options = ResourceServer.Options> {
 	#issuer: Issuer;
 	#audience: string | string[];
+	#resource: URL | null;
+	#metadata: ResourceServer.PublishedMetadata;
+	#realm: string | null;
 	#introspection: ResourceServer.Introspector | null;
 	#acceptUnscopedIntrospection: boolean;
 
 	/**
-	 * Points a resource server at the issuer whose tokens it accepts.
+	 * Points a resource server at the issuer whose tokens it accepts. One of `audience`
+	 * and `resource` is required; a server with a resource and no audience answers for
+	 * the resource identifier.
 	 *
 	 * @param issuer - The issuer publishing the keys and describing opaque tokens.
-	 * @param options - The audiences this server answers for, and the introspector.
+	 * @param options - The audiences, the resource identifier, and the introspector.
+	 * @throws `TypeError` when `resource` is a string that does not parse as a URL.
 	 */
-	constructor(issuer: Issuer, options: ResourceServer.Options) {
+	constructor(issuer: Issuer, options: Configured) {
 		this.#issuer = issuer;
-		this.#audience = options.audience;
+		let stated = options.resource;
+		this.#resource = stated === undefined ? null : new URL(stated);
+		this.#audience = options.audience ?? (stated === undefined ? [] : resourceAudiences(stated));
+		this.#metadata = options.metadata ?? {};
+		this.#realm = options.realm ?? null;
 		this.#introspection = options.introspection ?? null;
 		this.#acceptUnscopedIntrospection = options.acceptUnscopedIntrospection ?? false;
 	}
@@ -92,6 +126,72 @@ export class ResourceServer {
 	 */
 	get issuer(): Issuer {
 		return this.#issuer;
+	}
+
+	/**
+	 * The RFC 9728 identifier tokens are bound to and the metadata names as `resource`,
+	 * `null` for a server configured by audience alone.
+	 */
+	get resource(): ResourceServer.IfBound<Configured, URL> {
+		return (this.#resource === null ? null : new URL(this.#resource)) as ResourceServer.IfBound<
+			Configured,
+			URL
+		>;
+	}
+
+	/**
+	 * Where this server's metadata is served, with the well-known suffix inserted before
+	 * the resource's path (RFC 9728 §3.1); `null` without a resource.
+	 */
+	get metadataUrl(): ResourceServer.IfBound<Configured, URL> {
+		return (this.#resource === null ? null : metadataUrl(this.#resource)) as ResourceServer.IfBound<
+			Configured,
+			URL
+		>;
+	}
+
+	/**
+	 * The RFC 9728 document to serve at `metadataUrl`. `authorizationServers` defaults to
+	 * the issuer's URL and `bearerMethodsSupported` to the header alone.
+	 *
+	 * @returns The document, or `null` for a server with no resource identifier, which
+	 *   has no metadata to publish.
+	 * @example
+	 * serve(protectedResourceMetadata, () => api.metadata());
+	 */
+	metadata(): ResourceServer.IfBound<Configured, ProtectedResourceMetadata> {
+		if (this.#resource === null) {
+			return null as ResourceServer.IfBound<Configured, ProtectedResourceMetadata>;
+		}
+
+		return define({
+			authorizationServers: [new URL(this.#issuer.url)],
+			...this.#metadata,
+			resource: new URL(this.#resource),
+		});
+	}
+
+	/**
+	 * The `WWW-Authenticate` value for a refusal, carrying `realm` and the metadata pointer
+	 * when the server has them. A request that sent no token gets no `error`, per RFC 6750
+	 * §3.1, so a call with no refusal is the challenge for an anonymous request.
+	 *
+	 * @param refusal - Why the request was refused, and the scopes a `403` needs.
+	 * @example
+	 * new Response(null, { status: 401, headers: { "WWW-Authenticate": api.challenge() } });
+	 * @example
+	 * api.challenge({ error: "insufficient_scope", scope: ["reports:write"] });
+	 */
+	challenge(
+		refusal: Pick<Partial<BearerChallenge>, "error" | "errorDescription" | "scope"> = {},
+	): string {
+		return stringify({
+			realm: this.#realm,
+			scope: refusal.scope,
+			error: refusal.error,
+			errorDescription: refusal.errorDescription,
+			resourceMetadata: this.#resource === null ? null : metadataUrl(this.#resource),
+		});
 	}
 
 	/**
@@ -211,14 +311,67 @@ export class ResourceServer {
 }
 
 export namespace ResourceServer {
-	/** How a {@link ResourceServer} is configured. */
-	export interface Options {
+	/**
+	 * How a {@link ResourceServer} is configured: by its audiences, its RFC 9728 resource
+	 * identifier, or both.
+	 */
+	export type Options = AudienceOptions | ResourceOptions;
+
+	/**
+	 * A member a server with a resource always has: present for one whose options state
+	 * `resource`, possibly `null` for any other.
+	 *
+	 * @template Configured - The server's options.
+	 * @template Value - The member's value.
+	 */
+	export type IfBound<Configured, Value> = Configured extends { resource: URL | string }
+		? Value
+		: Value | null;
+
+	/** The members an RFC 9728 document publishes beside `resource`. */
+	export type PublishedMetadata = Omit<Partial<ProtectedResourceMetadata>, "resource">;
+
+	/** A server configured by the audiences its tokens name. */
+	export interface AudienceOptions extends CommonOptions {
 		/**
 		 * The audiences this server answers for; a token is accepted when its `aud`, written
 		 * as one value or as a list, carries any of them. An authorization-code token names
 		 * the client id, a client-credentials token the issuer and the resources it asked for.
 		 */
 		audience: string | string[];
+		/**
+		 * The RFC 9728 resource identifier; setting it turns on `metadata()` and the
+		 * challenge's `resource_metadata` pointer.
+		 */
+		resource?: URL | string;
+	}
+
+	/** A server bound to an RFC 9728 resource identifier. */
+	export interface ResourceOptions extends CommonOptions {
+		/**
+		 * The audiences this server answers for.
+		 *
+		 * @default the resource identifier, with and without a trailing slash, which is
+		 *   what an RFC 8707 token carries in `aud`
+		 */
+		audience?: string | string[];
+		/**
+		 * The RFC 9728 resource identifier; it turns on `metadata()` and the challenge's
+		 * `resource_metadata` pointer.
+		 */
+		resource: URL | string;
+	}
+
+	/** Configuration shared by every way of naming the server. */
+	export interface CommonOptions {
+		/**
+		 * Members published beside `resource`: the scopes, the documentation link, a
+		 * name, and `authorizationServers` to list more than the issuer.
+		 */
+		metadata?: PublishedMetadata;
+
+		/** The `realm` every challenge carries, left out when unset. */
+		realm?: string;
 
 		/**
 		 * Who asks the issuer about a credential carrying no claims of its own.
