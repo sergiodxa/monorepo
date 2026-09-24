@@ -820,14 +820,17 @@ the discovery parsers come attached to a client `@sdxc/auth` already is.
 - Implementation: `wellKnown()` accepts `/.well-known/<name>/<path>` only for an entry built
   by `serve()` from an `"insert"` format; a plain function entry (a change-password
   redirect) matches its exact name. `respond` answers `HEAD` with an empty body.
-- Implementation: the type test asserting `JWK.toJSON` produces a `JwkSet` is not written:
-  `@sdxc/jwt` is not yet a dev dependency of the package.
+- Implementation: the type test asserting `JWK.toJSON` produces a `JwkSet` does not
+  compile yet. `JWK.toJSON` is typed as `jose.JSONWebKeySet`, whose `JWK` declares `kty`
+  optional, while `Jwk` requires it (RFC 7517 §4.1). Every entry `toJSON` writes carries
+  `kty`, so the fix is narrowing its return type in `@sdxc/jwt` to entries with a
+  `kty: string`; the test lands with that change.
 
 ## Current Progress
 
 - [x] Phase 1: `"."`, `./oauth-authorization-server`, `./openid-configuration`, `./jwks`,
       `./response`, with tests and README
-- [ ] Phase 1: the `JWK.toJSON` type test (needs `@sdxc/jwt` as a dev dependency)
+- [ ] Phase 1: the `JWK.toJSON` type test (waits on `JWK.toJSON` typing `kty` as present)
 - [ ] Phase 2: Migrate the auth call sites
 - [x] Phase 3: `./security-txt` and `./middleware`
 - [ ] Phase 3: security.txt adoption in the apps
