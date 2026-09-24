@@ -6,7 +6,17 @@
 	"license": "MIT",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./security-txt": "./src/security-txt.ts",
+		"./webfinger": "./src/webfinger.ts",
+		"./oauth-authorization-server": "./src/oauth-authorization-server.ts",
+		"./openid-configuration": "./src/openid-configuration.ts",
+		"./oauth-protected-resource": "./src/oauth-protected-resource.ts",
+		"./jwks": "./src/jwks.ts",
+		"./change-password": "./src/change-password.ts",
+		"./passkey-endpoints": "./src/passkey-endpoints.ts",
+		"./response": "./src/response.ts",
+		"./middleware": "./src/middleware.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"

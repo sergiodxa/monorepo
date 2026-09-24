@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-23
+**Accepted** - 2026-09-24
 
 ## Background
 
@@ -794,11 +794,45 @@ the discovery parsers come attached to a client `@sdxc/auth` already is.
 - [ADR-084: OAuth 2.0 Protected Resource Metadata](./ADR-084-oauth-protected-resource-metadata.md)
 - [ADR-087: robots.txt Package](./ADR-087-robots-txt-package.md)
 
+## Notes
+
+- Implementation: `issuer` is a `string` in `AuthorizationServerMetadata` and
+  `OpenIdProviderMetadata`, and `ParseOptions.issuer` accepts `URL | string`. The deployed
+  provider publishes the non-URL identifier `auth.sergiodxa.com`, `@sdxc/auth` already reads
+  `issuer` as a string, and the value is compared as published and carried verbatim in `iss`.
+  The identity check reads a URL identifier as a URL (host case and a trailing slash ignored)
+  and compares any other identifier byte for byte.
+- Implementation: `WellKnownFormat.stringify` returns a `string`, so the `jwks` descriptor
+  cannot return `jwks.stringify`'s `Result`. Serving through the descriptor publishes each
+  key's public half (private members removed) and leaves `oct` keys out, so a response can
+  never carry private material; `jwks.stringify` still refuses private members with issues.
+- Implementation: the descriptors' `parse` reads structure only. `protectedResourceMetadata`
+  in particular cannot run the §3.3 check without the expected resource, which only the
+  subpath's `parse(text, { resource })` receives.
+- Implementation: flags carry the specification's default rather than always `false`:
+  `requestUriParameterSupported` defaults to `true` (OIDC Discovery §3), and `stringify`
+  omits a flag at its default, so an explicit `false` survives the round trip.
+- Implementation: `jwks.parse` also drops an entry of a registered key type (`EC`, `RSA`,
+  `OKP`, `oct`) missing a member that type requires, as RFC 7517 §5 allows; an unregistered
+  `kty` is kept for the importing code to judge.
+- Implementation: `WellKnownParseError.Issue.at` is `""` for a whole JSON document and `0`
+  for a whole security.txt file (a missing `Contact` or `Expires`).
+- Implementation: `wellKnown()` accepts `/.well-known/<name>/<path>` only for an entry built
+  by `serve()` from an `"insert"` format; a plain function entry (a change-password
+  redirect) matches its exact name. `respond` answers `HEAD` with an empty body.
+- Implementation: the type test asserting `JWK.toJSON` produces a `JwkSet` is not written:
+  `@sdxc/jwt` is not yet a dev dependency of the package.
+
 ## Current Progress
 
-- [ ] Phase 1: Core and the auth documents
+- [x] Phase 1: `"."`, `./oauth-authorization-server`, `./openid-configuration`, `./jwks`,
+      `./response`, with tests and README
+- [ ] Phase 1: the `JWK.toJSON` type test (needs `@sdxc/jwt` as a dev dependency)
 - [ ] Phase 2: Migrate the auth call sites
-- [ ] Phase 3: security.txt and the middleware
-- [ ] Phase 4: WebFinger extraction
-- [ ] Phase 5: change-password and passkey-endpoints
+- [x] Phase 3: `./security-txt` and `./middleware`
+- [ ] Phase 3: security.txt adoption in the apps
+- [x] Phase 4: `./webfinger`
+- [ ] Phase 4: `apps/blog` WebFinger extraction
+- [x] Phase 5: `./change-password` and `./passkey-endpoints`, plus `./oauth-protected-resource` for ADR-084
+- [ ] Phase 5: `apps/r3-auth` serves `change-password`
 - [ ] Phase 6: Publish
