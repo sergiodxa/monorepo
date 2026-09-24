@@ -1,0 +1,19 @@
+{
+	"name": "@sdxc/structured-fields",
+	"version": "0.0.1",
+	"private": true,
+	"description": "Parse and serialize RFC 9651 structured HTTP field values",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*",
+		"@standard-schema/spec": "^1.1.0",
+		"remix": "3.0.0-rc.2"
+	}
+}

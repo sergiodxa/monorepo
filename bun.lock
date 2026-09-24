@@ -329,6 +329,9 @@
     "packages/api-client": {
       "name": "@sdxc/api-client",
       "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/trace-context": "workspace:*",
+      },
     },
     "packages/atom": {
       "name": "@sdxc/atom",
@@ -352,6 +355,7 @@
         "@sdxc/problem": "workspace:*",
         "@sdxc/rate-limit": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "@sdxc/well-known": "workspace:*",
       },
       "devDependencies": {
         "@sdxc/cache": "workspace:*",
@@ -487,6 +491,14 @@
         "@sdxc/result": "workspace:*",
       },
     },
+    "packages/doh": {
+      "name": "@sdxc/doh",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+        "remix": "3.0.0-rc.2",
+      },
+    },
     "packages/duration": {
       "name": "@sdxc/duration",
       "version": "0.0.1",
@@ -595,6 +607,15 @@
         "remix": "3.0.0-rc.2",
       },
     },
+    "packages/icalendar": {
+      "name": "@sdxc/icalendar",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/dates": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "remix": "3.0.0-rc.2",
+      },
+    },
     "packages/icons": {
       "name": "@sdxc/icons",
       "version": "0.0.1",
@@ -606,6 +627,18 @@
         "lucide-static": "^1.38.0",
       },
     },
+    "packages/idempotency": {
+      "name": "@sdxc/idempotency",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/problem": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/structured-fields": "workspace:*",
+        "@sdxc/types": "workspace:*",
+        "remix": "3.0.0-rc.2",
+      },
+    },
     "packages/jobs": {
       "name": "@sdxc/jobs",
       "version": "0.0.1",
@@ -614,6 +647,7 @@
         "@sdxc/duration": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "@sdxc/trace-context": "workspace:*",
         "@sdxc/types": "workspace:*",
         "@sdxc/validate": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
@@ -649,6 +683,15 @@
       "version": "0.0.1",
       "dependencies": {
         "@sdxc/result": "workspace:*",
+      },
+    },
+    "packages/json-schema": {
+      "name": "@sdxc/json-schema",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "remix": "3.0.0-rc.2",
       },
     },
     "packages/jwt": {
@@ -689,6 +732,7 @@
       "name": "@sdxc/mail",
       "version": "0.0.1",
       "dependencies": {
+        "@sdxc/crypto": "workspace:*",
         "@sdxc/highlight": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/markdown": "workspace:*",
@@ -715,11 +759,41 @@
         "remix": "3.0.0-rc.2",
       },
     },
+    "packages/merge-patch": {
+      "name": "@sdxc/merge-patch",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/problem": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "remix": "3.0.0-rc.2",
+      },
+    },
     "packages/messageformat": {
       "name": "@sdxc/messageformat",
       "version": "0.0.1",
       "dependencies": {
         "@sdxc/result": "workspace:*",
+      },
+    },
+    "packages/microformats": {
+      "name": "@sdxc/microformats",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/html": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "remix": "3.0.0-rc.2",
+      },
+    },
+    "packages/micropub": {
+      "name": "@sdxc/micropub",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/microformats": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "remix": "3.0.0-rc.2",
       },
     },
     "packages/oidc-provider": {
@@ -739,6 +813,18 @@
       "devDependencies": {
         "@cloudflare/workers-types": "^5.20260901.1",
         "@sdxc/cloudflare-mocks": "workspace:*",
+      },
+    },
+    "packages/openapi": {
+      "name": "@sdxc/openapi",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/json-schema": "workspace:*",
+        "@sdxc/problem": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/yaml": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "remix": "3.0.0-rc.2",
       },
     },
     "packages/opml": {
@@ -802,6 +888,13 @@
         "@sdxc/types": "workspace:*",
       },
     },
+    "packages/robots": {
+      "name": "@sdxc/robots",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+      },
+    },
     "packages/rss": {
       "name": "@sdxc/rss",
       "version": "0.0.1",
@@ -828,6 +921,27 @@
         "@sdxc/dates": "workspace:*",
         "@sdxc/duration": "workspace:*",
         "@sdxc/jwt": "workspace:*",
+      },
+    },
+    "packages/scim": {
+      "name": "@sdxc/scim",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/problem": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "remix": "3.0.0-rc.2",
+      },
+    },
+    "packages/security-headers": {
+      "name": "@sdxc/security-headers",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/http": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/structured-fields": "workspace:*",
+        "remix": "3.0.0-rc.2",
       },
     },
     "packages/semver": {
@@ -880,6 +994,25 @@
     "packages/strings": {
       "name": "@sdxc/strings",
       "version": "0.0.1",
+    },
+    "packages/structured-fields": {
+      "name": "@sdxc/structured-fields",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "remix": "3.0.0-rc.2",
+      },
+    },
+    "packages/trace-context": {
+      "name": "@sdxc/trace-context",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/logger": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "remix": "3.0.0-rc.2",
+      },
     },
     "packages/typeid": {
       "name": "@sdxc/typeid",
@@ -947,6 +1080,48 @@
       "devDependencies": {
         "remix": "3.0.0-rc.2",
       },
+    },
+    "packages/webmention": {
+      "name": "@sdxc/webmention",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/distill": "workspace:*",
+        "@sdxc/html": "workspace:*",
+        "@sdxc/microformats": "workspace:*",
+        "@sdxc/pagination": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "remix": "3.0.0-rc.2",
+      },
+    },
+    "packages/websub": {
+      "name": "@sdxc/websub",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "remix": "3.0.0-rc.2",
+      },
+    },
+    "packages/well-known": {
+      "name": "@sdxc/well-known",
+      "version": "0.0.1",
+      "dependencies": {
+        "@remix-run/data-schema": "^0.3.0",
+        "@sdxc/result": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+      },
+      "devDependencies": {
+        "@sdxc/http": "workspace:*",
+        "remix": "3.0.0-rc.2",
+      },
+      "peerDependencies": {
+        "@sdxc/http": "workspace:*",
+        "remix": "3.0.0-rc.2",
+      },
+      "optionalPeers": [
+        "@sdxc/http",
+        "remix",
+      ],
     },
     "packages/workers-cache": {
       "name": "@sdxc/workers-cache",
@@ -1608,6 +1783,8 @@
 
     "@sdxc/distill": ["@sdxc/distill@workspace:packages/distill"],
 
+    "@sdxc/doh": ["@sdxc/doh@workspace:packages/doh"],
+
     "@sdxc/duration": ["@sdxc/duration@workspace:packages/duration"],
 
     "@sdxc/feed": ["@sdxc/feed@workspace:packages/feed"],
@@ -1628,13 +1805,19 @@
 
     "@sdxc/i18n": ["@sdxc/i18n@workspace:packages/i18n"],
 
+    "@sdxc/icalendar": ["@sdxc/icalendar@workspace:packages/icalendar"],
+
     "@sdxc/icons": ["@sdxc/icons@workspace:packages/icons"],
+
+    "@sdxc/idempotency": ["@sdxc/idempotency@workspace:packages/idempotency"],
 
     "@sdxc/jobs": ["@sdxc/jobs@workspace:packages/jobs"],
 
     "@sdxc/jsdoc": ["@sdxc/jsdoc@workspace:packages/jsdoc"],
 
     "@sdxc/json-feed": ["@sdxc/json-feed@workspace:packages/json-feed"],
+
+    "@sdxc/json-schema": ["@sdxc/json-schema@workspace:packages/json-schema"],
 
     "@sdxc/jwt": ["@sdxc/jwt@workspace:packages/jwt"],
 
@@ -1650,9 +1833,17 @@
 
     "@sdxc/mcp": ["@sdxc/mcp@workspace:packages/mcp"],
 
+    "@sdxc/merge-patch": ["@sdxc/merge-patch@workspace:packages/merge-patch"],
+
     "@sdxc/messageformat": ["@sdxc/messageformat@workspace:packages/messageformat"],
 
+    "@sdxc/microformats": ["@sdxc/microformats@workspace:packages/microformats"],
+
+    "@sdxc/micropub": ["@sdxc/micropub@workspace:packages/micropub"],
+
     "@sdxc/oidc-provider": ["@sdxc/oidc-provider@workspace:packages/oidc-provider"],
+
+    "@sdxc/openapi": ["@sdxc/openapi@workspace:packages/openapi"],
 
     "@sdxc/opml": ["@sdxc/opml@workspace:packages/opml"],
 
@@ -1668,11 +1859,17 @@
 
     "@sdxc/result": ["@sdxc/result@workspace:packages/result"],
 
+    "@sdxc/robots": ["@sdxc/robots@workspace:packages/robots"],
+
     "@sdxc/rss": ["@sdxc/rss@workspace:packages/rss"],
 
     "@sdxc/saml": ["@sdxc/saml@workspace:packages/saml"],
 
     "@sdxc/sample": ["@sdxc/sample@workspace:packages/sample"],
+
+    "@sdxc/scim": ["@sdxc/scim@workspace:packages/scim"],
+
+    "@sdxc/security-headers": ["@sdxc/security-headers@workspace:packages/security-headers"],
 
     "@sdxc/semver": ["@sdxc/semver@workspace:packages/semver"],
 
@@ -1687,6 +1884,10 @@
     "@sdxc/spec": ["@sdxc/spec@workspace:packages/spec"],
 
     "@sdxc/strings": ["@sdxc/strings@workspace:packages/strings"],
+
+    "@sdxc/structured-fields": ["@sdxc/structured-fields@workspace:packages/structured-fields"],
+
+    "@sdxc/trace-context": ["@sdxc/trace-context@workspace:packages/trace-context"],
 
     "@sdxc/typeid": ["@sdxc/typeid@workspace:packages/typeid"],
 
@@ -1703,6 +1904,12 @@
     "@sdxc/validate": ["@sdxc/validate@workspace:packages/validate"],
 
     "@sdxc/webhooks": ["@sdxc/webhooks@workspace:packages/webhooks"],
+
+    "@sdxc/webmention": ["@sdxc/webmention@workspace:packages/webmention"],
+
+    "@sdxc/websub": ["@sdxc/websub@workspace:packages/websub"],
+
+    "@sdxc/well-known": ["@sdxc/well-known@workspace:packages/well-known"],
 
     "@sdxc/workers-cache": ["@sdxc/workers-cache@workspace:packages/workers-cache"],
 

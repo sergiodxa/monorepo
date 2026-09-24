@@ -1,0 +1,20 @@
+{
+	"name": "@sdxc/merge-patch",
+	"version": "0.0.1",
+	"private": true,
+	"description": "Apply, diff and read RFC 7396 JSON Merge Patch documents",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/problem": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@standard-schema/spec": "^1.1.0",
+		"remix": "3.0.0-rc.2"
+	}
+}

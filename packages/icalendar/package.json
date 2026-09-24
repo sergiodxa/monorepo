@@ -1,0 +1,19 @@
+{
+	"name": "@sdxc/icalendar",
+	"version": "0.0.1",
+	"private": true,
+	"description": "Read and write iCalendar documents, with recurrence rules and time zones",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/dates": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"remix": "3.0.0-rc.2"
+	}
+}

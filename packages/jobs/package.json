@@ -21,6 +21,7 @@
 		"@sdxc/duration": "workspace:*",
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/result": "workspace:*",
+		"@sdxc/trace-context": "workspace:*",
 		"@sdxc/types": "workspace:*",
 		"@sdxc/validate": "workspace:*",
 		"@standard-schema/spec": "^1.1.0"

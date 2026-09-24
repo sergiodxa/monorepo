@@ -1,0 +1,18 @@
+{
+	"name": "@sdxc/doh",
+	"version": "0.0.1",
+	"private": true,
+	"description": "Typed DNS over HTTPS lookups",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*",
+		"remix": "3.0.0-rc.2"
+	}
+}

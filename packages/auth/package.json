@@ -31,7 +31,8 @@
 		"@sdxc/pagination": "workspace:*",
 		"@sdxc/problem": "workspace:*",
 		"@sdxc/rate-limit": "workspace:*",
-		"@sdxc/result": "workspace:*"
+		"@sdxc/result": "workspace:*",
+		"@sdxc/well-known": "workspace:*"
 	},
 	"devDependencies": {
 		"@sdxc/cache": "workspace:*",

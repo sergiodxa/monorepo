@@ -1,0 +1,22 @@
+{
+	"name": "@sdxc/openapi",
+	"version": "0.0.1",
+	"private": true,
+	"description": "Build, serve and check OpenAPI 3.1 documents from typed operations",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/json-schema": "workspace:*",
+		"@sdxc/problem": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/yaml": "workspace:*",
+		"@standard-schema/spec": "^1.1.0",
+		"remix": "3.0.0-rc.2"
+	}
+}

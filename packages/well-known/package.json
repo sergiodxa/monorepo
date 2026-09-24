@@ -1,0 +1,35 @@
+{
+	"name": "@sdxc/well-known",
+	"version": "0.0.1",
+	"private": true,
+	"description": "Typed documents for well-known URIs: security.txt, WebFinger, OAuth and OIDC metadata, JWKS and more",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@remix-run/data-schema": "^0.3.0",
+		"@sdxc/result": "workspace:*",
+		"@standard-schema/spec": "^1.1.0"
+	},
+	"devDependencies": {
+		"@sdxc/http": "workspace:*",
+		"remix": "3.0.0-rc.2"
+	},
+	"peerDependencies": {
+		"@sdxc/http": "workspace:*",
+		"remix": "3.0.0-rc.2"
+	},
+	"peerDependenciesMeta": {
+		"@sdxc/http": {
+			"optional": true
+		},
+		"remix": {
+			"optional": true
+		}
+	}
+}

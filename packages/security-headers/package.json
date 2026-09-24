@@ -1,0 +1,21 @@
+{
+	"name": "@sdxc/security-headers",
+	"version": "0.0.1",
+	"private": true,
+	"description": "Typed Content-Security-Policy, Permissions-Policy and response security headers, with middleware",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/crypto": "workspace:*",
+		"@sdxc/http": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/structured-fields": "workspace:*",
+		"remix": "3.0.0-rc.2"
+	}
+}

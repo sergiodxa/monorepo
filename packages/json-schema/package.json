@@ -1,0 +1,19 @@
+{
+	"name": "@sdxc/json-schema",
+	"version": "0.0.1",
+	"private": true,
+	"description": "Schema builders that validate like remix/data-schema and describe themselves as JSON Schema 2020-12",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*",
+		"@standard-schema/spec": "^1.1.0",
+		"remix": "3.0.0-rc.2"
+	}
+}

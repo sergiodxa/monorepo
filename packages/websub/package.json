@@ -1,0 +1,19 @@
+{
+	"name": "@sdxc/websub",
+	"version": "0.0.1",
+	"private": true,
+	"description": "WebSub subscriber and publisher: subscribe, verify intent and signatures, notify hubs",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/crypto": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"remix": "3.0.0-rc.2"
+	}
+}

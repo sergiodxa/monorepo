@@ -1,0 +1,22 @@
+{
+	"name": "@sdxc/idempotency",
+	"version": "0.0.1",
+	"private": true,
+	"description": "Idempotency-Key requests: replay the first response, refuse conflicting reuse",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/crypto": "workspace:*",
+		"@sdxc/problem": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/structured-fields": "workspace:*",
+		"@sdxc/types": "workspace:*",
+		"remix": "3.0.0-rc.2"
+	}
+}

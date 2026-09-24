@@ -1,0 +1,20 @@
+{
+	"name": "@sdxc/micropub",
+	"version": "0.0.1",
+	"private": true,
+	"description": "Read Micropub requests into typed operations and build the spec's responses",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/microformats": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@standard-schema/spec": "^1.1.0",
+		"remix": "3.0.0-rc.2"
+	}
+}
