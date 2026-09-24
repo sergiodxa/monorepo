@@ -1,8 +1,8 @@
 /**
  * Public surface of the dates package: `Intl`-only formatting, calendar operations that
- * always take the zone they depend on, day-grid helpers, and the day key. The zone math
- * stays internal, and every format draws its locale data from the runtime's own `Intl`
- * implementation.
+ * always take the zone they depend on, day-grid helpers, and the day key. The raw zone
+ * math lives on the `@sdxc/dates/zone` subpath, and every format draws its locale data
+ * from the runtime's own `Intl` implementation.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

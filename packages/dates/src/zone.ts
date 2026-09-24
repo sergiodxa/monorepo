@@ -1,13 +1,15 @@
 /**
- * The zone math every calendar operation here is built on: reading an instant's
- * wall clock in an IANA zone through `Intl`, and inverting that reading to turn a
- * wall clock back into an instant across DST gaps and repeats.
+ * The zone math every calendar operation here is built on, published as
+ * `@sdxc/dates/zone`: reading an instant's wall clock in an IANA zone through
+ * `Intl`, and inverting it into an instant with RFC 5545's DST gap and repeat rule.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { CalendarDay, TimeZone, Weekday } from "./types.js";
+
+export type { CalendarDay, TimeZone, Weekday } from "./types.js";
 
 import { dateTimeFormatter } from "./intl-cache.js";
 
@@ -136,9 +138,9 @@ function readsBackAs(instant: number, parts: ZonedParts, timeZone: TimeZone): bo
 }
 
 /**
- * Invert a wall clock into the instant it names in a zone. A wall clock is not
- * always unique: when DST repeats an hour the earlier instant is returned, and
- * when DST skips an hour the instant just after the gap is returned.
+ * Invert a wall clock into the instant it names in a zone. A repeated hour yields
+ * its earlier instant, and a skipped one is read with the offset before the gap,
+ * so it lands as far past the gap as it was into it (RFC 5545 §3.3.5).
  *
  * @param parts - Wall-clock fields as a reader would write them.
  * @param timeZone - IANA zone the clock belongs to.

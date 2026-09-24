@@ -355,6 +355,73 @@ The error `parseDayKey()` and `fromDayKey()` report, with the rejected text on `
 
 The error `parseDate()` reports, with the rejected value on `error.input`.
 
+### Zone Math
+
+The conversions every operation above is built on, on their own subpath for code that works with wall clocks directly, such as a calendar format reader.
+
+```typescript
+import { instantFromParts, zonedParts } from "@sdxc/dates/zone";
+
+zonedParts(Date.UTC(2026, 6, 29, 2), "America/New_York"); // { year: 2026, month: 7, day: 28, hour: 22, ... }
+instantFromParts(
+	{ year: 2026, month: 3, day: 8, hour: 2, minute: 30, second: 0, millisecond: 0 },
+	"America/New_York",
+); // 2026-03-08T07:30:00Z, the skipped 02:30 read with the offset before the gap
+```
+
+#### `zonedParts(instant: number, timeZone: TimeZone): ZonedParts`
+
+The wall clock a zone shows at an instant: calendar day, hour, minute, second and millisecond.
+
+#### `instantFromParts(parts: ZonedParts, timeZone: TimeZone): number`
+
+The instant a wall clock names in a zone. A repeated hour resolves to its earlier instant, and a skipped one is read with the offset before the gap, which moves it forward by the gap's length: the rule RFC 5545 gives for local times.
+
+#### `offsetMsAt(instant: number, timeZone: TimeZone): number`
+
+The zone's offset from UTC at an instant, in milliseconds to add to UTC; negative west of Greenwich.
+
+#### `utcFromParts(parts: ZonedParts): number`
+
+Wall-clock fields read as if they were UTC, with years 0 to 99 kept literal.
+
+#### `calendarDayAt(instant: number, timeZone: TimeZone): CalendarDay`
+
+The calendar day an instant falls on in a zone.
+
+#### `startOfDayInstant(day: CalendarDay, timeZone: TimeZone): number`
+
+The first instant of a calendar day in a zone: midnight, or the first instant that exists when DST skips midnight.
+
+#### `epochDayOf(day: CalendarDay): number`, `calendarDayFromEpochDay(epochDay: number): CalendarDay`
+
+A calendar day as whole days since 1970-01-01 and back, for DST-proof day differences and iteration.
+
+#### `shiftCalendarDay(day: CalendarDay, count: number): CalendarDay`
+
+A calendar day moved by whole days, rolling over months and years.
+
+#### `weekdayOf(day: CalendarDay): Weekday`
+
+The weekday a calendar day falls on, `0` Sunday through `6` Saturday.
+
+#### `DAY_MS`
+
+`86_400_000`, one exact 24-hour day in milliseconds.
+
+#### `ZonedParts`
+
+```typescript
+interface ZonedParts extends CalendarDay {
+	hour: number; // 0-23
+	minute: number;
+	second: number;
+	millisecond: number;
+}
+```
+
+The subpath also re-exports `CalendarDay`, `TimeZone` and `Weekday`.
+
 ### Types
 
 #### `TimeZone`
