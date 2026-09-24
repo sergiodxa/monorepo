@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-23
+**Accepted** - 2026-09-24
 
 ## Background
 
@@ -436,6 +436,12 @@ control; only a public resolver sees them.
 - [uptime ADR-026: Domain DNS Monitors with Record Import](./uptime/ADR-026-domain-dns-monitors-with-record-import.md)
 - [ADR-053: Cache Package with Adapters](./ADR-053-cache-package-with-adapters.md)
 
+## Current Progress
+
+- [x] Phase 1: Specify and build the package (`packages/doh`)
+- [ ] Phase 2: Migrate call sites (uptime, auth-saas)
+- [ ] Phase 3: Publish
+
 ## Notes
 
 - Cloudflare's JSON endpoint is `https://cloudflare-dns.com/dns-query` with `Accept:
@@ -443,3 +449,16 @@ application/dns-json`; Google's is `https://dns.google/resolve` and answers JSON
   `Accept`
 - The package lowercases names and drops the trailing dot on output only; the query goes out as the
   caller wrote it, so an internationalized name must already be in its ASCII (punycode) form
+- Implementation: a record of the asked type whose data fails to parse goes to a separate
+  `Answer.unparsed` list (as `UnknownRecord`) instead of into `records`, so `records` stays exactly
+  `RecordFor<Type>[]` and a caller never narrows away a record whose `type` claims a shape it
+  lacks; `ttl` is the smallest across both lists
+- Implementation: `parseRecordData` returns `DoH.RecordData<Type>` (the ADR's
+  `Omit<RecordFor<Type>, "name" | "ttl">`, named); it decodes RFC 3597 generic data into typed
+  fields for all nine typed types, since Cloudflare answers CAA that way, and reads TXT bare words
+  as separate character-strings per RFC 1035, decoding `\DDD` escapes to octets read as UTF-8
+- Implementation: AAAA addresses come back in RFC 5952 canonical form, and the root name stays
+  `"."` (an RFC 7505 null MX exchange) instead of folding to an empty string
+- Implementation: `checkCname` follows the chain with one `CNAME` query per hop (at most eight,
+  stopping on a loop) rather than reading an `A` answer's chain, so it holds when the target
+  resolves to nothing or to NXDOMAIN
