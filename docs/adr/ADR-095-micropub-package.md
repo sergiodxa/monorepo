@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-23
+**Accepted** - 2026-09-24
 
 ## Background
 
@@ -180,8 +180,9 @@ export namespace Micropub {
 		| { q: "config" }
 		| { q: "syndicate-to" }
 		| { q: "source"; url: string; properties: string[] }
-		/** A query the spec leaves to extensions (`category`, `contact`), passed through. */
-		| { q: string; params: URLSearchParams };
+		| { q: "category"; filter: string | null }
+		/** A query the spec leaves to extensions (`contact`, `channel`), passed through. */
+		| { q: "extension"; name: string; params: URLSearchParams };
 
 	export interface Parsed<Body> {
 		body: Body;
@@ -538,6 +539,46 @@ metadata discovery.
 **Estimated Effort:** 30 minutes
 
 1. Make `@sdxc/microformats` public first, then this package
+
+## Current Progress
+
+- [x] Phase 1: Build the package
+  - [x] Tests from every example of the Recommendation and every micropub.rocks server test
+  - [x] `parseOperation`, `parseQuery`, `requiredScopes`, the response builders and `./media`
+  - [x] README and root README row
+- [ ] Phase 2: Endpoint in the blog
+- [ ] Phase 3: IndieAuth (separate ADR)
+- [ ] Phase 4: Publish
+
+## Notes
+
+- Implementation: `insufficient_scope` answers 401, not 403. The Recommendation's error
+  table and micropub.rocks test 804 both require 401, which departs from RFC 6750; a client
+  written against either expects it.
+- Implementation: a token sent both in `Authorization` and as the body's `access_token` is
+  `invalid_request`. RFC 6750 forbids using two methods, and micropub.rocks test 805
+  expects a 400.
+- Implementation: an unknown `q` is `{ q: "extension", name, params }` rather than
+  `{ q: string, params }`. A `string`-typed `q` beside the literal ones stops TypeScript
+  narrowing on `q`, so `query.q === "source"` would not expose `query.url`. `q=category`,
+  the widely implemented extension, has its own `{ q: "category", filter }` member and a
+  `categories()` builder.
+- Implementation: numbers and booleans inside JSON property arrays are read as their text
+  before `ITEM_SCHEMA` validates them. micropub.rocks test 204 sends a check-in whose
+  `latitude` and `longitude` are JSON numbers, and mf2 values are strings.
+- Implementation: `url` in a form create stays a property (an `h=card` create has one);
+  it is the target only when the form carries `action`, which is the only case the
+  specification reserves it for.
+- Implementation: `deleted(location?)` takes the optional URL `updated` takes, since an
+  undelete that restores a post at a new URL must answer 201 with `Location`.
+- Implementation: `error()` takes a third `details` argument whose `scope` is written to
+  the body and the `insufficient_scope` challenge, which the specification allows.
+  `SyndicationTarget` carries the optional `service` and `user` the specification defines.
+- Implementation: `requiredScopes` lists alternatives, any one of which authorizes the
+  operation: `undelete` also accepts `delete`, the scope most servers issue for both.
+- Implementation: the micropub.rocks server tests (commit `eeac57a`, Apache-2.0) are
+  replayed in `src/rocks.test.ts` with each request written out, since the suite lives in
+  PHP views rather than data fixtures.
 
 ## Alternatives Considered
 
