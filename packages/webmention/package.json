@@ -6,7 +6,10 @@
 	"license": "MIT",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./receiver": "./src/receiver.ts",
+		"./discover": "./src/discover.ts",
+		"./sender": "./src/sender.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"

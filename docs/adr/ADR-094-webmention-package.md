@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-23
+**Accepted** - 2026-09-24
 
 ## Background
 
@@ -506,6 +506,46 @@ own.
 **Estimated Effort:** 30 minutes
 
 1. Make `@sdxc/distill` and `@sdxc/microformats` public first, then this package
+
+## Current Progress
+
+- [x] Phase 1: Expose the bounded retrieval as `@sdxc/distill/retrieve`
+- [x] Phase 2: Build the package
+  - [x] The 23 webmention.rocks discovery tests as a fixture table run against `endpointOf`
+  - [x] Receiver: request validation, exact-link matching, `gone`/`unlinked`, JSON and text
+        sources, redirect, size and time bounds through MSW
+  - [x] `./discover`, `./receiver`, `./sender`, README
+- [ ] Phase 3: Receive in the blog
+- [ ] Phase 4: Send from the blog
+- [ ] Phase 5: Publish
+
+## Notes
+
+- Implementation: `@sdxc/distill/retrieve` also exports `follow`, which answers the last
+  response of the chain whatever its status. `verify` and `discover` need it, since `410`,
+  other 4xx and 5xx each mean something different to them; `retrieve` answers only a 2xx.
+  `isAddressableHost` and `release` ride along.
+- Implementation: `summarize` takes an optional fourth argument, the page's `<title>`,
+  because an `MF2.Document` carries no title; `verify` passes the one it read from the tree.
+  `Mention.name` is the entry's name only when Post Type Discovery calls it an article, so a
+  note's implied name (its whole text) is never repeated as a title.
+- Implementation: `linksTo` ignores fragments on both sides (`/post#comments` links to
+  `/post`) and resolves against `<base href>` when the page has one. Discovery resolves
+  against the final URL, as the discovery tests require.
+- Implementation: `parseRequest` also rejects a `source` that `addressable` refuses (a
+  private or literal-IP host) as `invalid-url`, since its verification could never succeed.
+- Implementation: retryability. A refused host is final; a timeout, network failure or
+  redirect chain over the limit (`DistillLimitError` from `follow`) is retryable; a body over
+  the cap is final and a body cut off by the deadline is retryable; `5xx` and `429` answers
+  are retryable. `discover` answers `null` for a target answering any other 4xx.
+- Implementation: `Sender.Delivery.code` is any 2xx status as a `number`, since the
+  specification treats every 2xx as success; `send` follows no redirect on the POST.
+- Implementation: `outboundLinks` reads `<a href>` and `<area href>` and keeps each URL as
+  written, fragment included, so the target a receiver checks is the exact link on the page.
+- Implementation: the discovery fixtures live in `src/fixtures/discovery.ts`, transcribed
+  from the live pages (headers and markup) on 2026-09-24; the site's source is
+  `aaronpk/webmention.rocks` at `7b97198`, Apache-2.0. Test #23's redirect tokens are
+  per-visit, so the fixture keeps the pair observed that day.
 
 ## Alternatives Considered
 
