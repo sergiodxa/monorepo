@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-23
+**Accepted** - 2026-09-24
 
 ## Background
 
@@ -472,6 +472,45 @@ The HTTP working group publishes the conformance suite
 
 1. Remove `private: true`, add `description` and `LICENSE.md`
 2. `bun run release:bootstrap @sdxc/structured-fields`, then configure the trusted publisher
+
+## Current Progress
+
+- [x] Phase 1: Specify and build the package
+  - [x] Vendor the httpwg suite (commit `00462dd`) and run it as `src/conformance.test.ts`
+  - [x] Parser and serializer for the three top-level types and every bare item type
+  - [x] `getField`, `setField`, the typed `parse` overload and the `./schema` helpers
+  - [x] README
+- [ ] Phase 2: Adopt in `@sdxc/rate-limit`
+- [ ] Phase 3: Add the `Cache-Status` reader to `@sdxc/workers-cache`
+- [ ] Phase 4: Publish
+
+## Notes
+
+- Implementation: `ValidationError` is `remix/data-schema`'s class, re-exported, where the
+  Decision names `@sdxc/validate`'s. `remix` is already a dependency and `@sdxc/validate` is not;
+  the class carries the same `issues`, and it is the one `s.parse` throws, so a caller mixing
+  both catches one class. Byte Sequences use the platform's `atob`/`btoa` in place of
+  `@sdxc/crypto`'s `Base64` for the same reason: `atob` implements forgiving base64, which is
+  what RFC 9651 section 4.2.7 asks of a parser (missing padding and nonzero pad bits accepted).
+- Implementation: schema parameters are typed `SF.SyncSchema<Output>`, a
+  `StandardSchemaV1<unknown, Output>` whose `validate` returns synchronously, in place of
+  `StandardSchemaV1<SF.ValueOf[Type]>` (on `parse`/`getField`) and
+  `StandardSchemaV1<SF.BareItem, V>` (on `sf.item`/`sf.value`/`sf.innerList`). The Decision's
+  constraints rejected its own usage examples: `s.object(...)` and `s.boolean()` declare their
+  input as `unknown`, which does not fit a `BareItem` input, and an `s.object` output such as
+  `{ u?: number }` does not fit the `Dictionary` output. `SyncSchema` also makes a schema with an
+  async `validate` the type error the Decision describes; at runtime one that returns a Promise
+  anyway fails with a `ValidationError`.
+- Implementation: `SF.MemberInput`'s two object forms are named `SF.ItemInput` and
+  `SF.InnerListInput`; the shapes are the ones the Decision lists.
+- Implementation: `sf.item` and `sf.value` report a bare value's issue under `"value"` and
+  parameter issues under `"params"` (a Dictionary member `u` fails at `["u", "value"]`), and
+  `sf.innerList` under `"items", index`, matching the model's own keys.
+- Implementation: a Date beyond the range a JavaScript `Date` holds (about ±8.64e12 seconds) fails
+  to parse; the suite marks the two such cases `can_fail`.
+- Implementation: the vendored fixtures are laid out by `vp fmt` (whitespace only) instead of
+  gaining a `fmt` ignore entry in the root `vite.config.ts`, so the package needs no root
+  configuration change. The suite passes in full: 2,137 cases.
 
 ## Alternatives Considered
 
