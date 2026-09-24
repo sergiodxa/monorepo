@@ -25,6 +25,7 @@ import type {
 import { MailError } from "./errors.js";
 import { isValidAddress, toAddressList } from "./lib/address.js";
 import { htmlToText } from "./lib/html-to-text.js";
+import { buildListHeaders } from "./lib/list-headers.js";
 import { render } from "./render.js";
 
 /**
@@ -208,6 +209,8 @@ export class Mailer {
 			subject: input.subject,
 			replyTo: input.replyTo,
 			headers: input.headers,
+			unsubscribe: input.unsubscribe,
+			list: input.list,
 			html: rendered.data.html,
 			text: rendered.data.text,
 		});
@@ -215,8 +218,9 @@ export class Mailer {
 
 	/**
 	 * Produces the shape transports read: configured defaults filled in, address
-	 * lists coerced, a plain-text part derived, and the source email recorded for
-	 * type-based lookup. Validation runs last, so a failure describes the final message.
+	 * lists coerced, a plain-text part derived, the `List-*` headers generated from
+	 * their options, and the source email recorded for type-based lookup. Validation
+	 * runs last, so a failure describes the final message.
 	 */
 	async #normalize(
 		input: Message | Email,
@@ -227,6 +231,12 @@ export class Mailer {
 
 		let message = { ...converted.data, ...overrides };
 		let from = message.from ?? this.#options.from;
+		let headers = { ...this.#options.headers, ...message.headers };
+		let unsubscribe = message.unsubscribe ?? null;
+		let list = message.list ?? null;
+
+		let listHeaders = buildListHeaders(headers, { unsubscribe, list });
+		if (isFailure(listHeaders)) return listHeaders;
 
 		return validate({
 			from,
@@ -237,9 +247,11 @@ export class Mailer {
 			subject: message.subject,
 			html: message.html,
 			text: derivePlainText(converted.data, overrides),
-			headers: { ...this.#options.headers, ...message.headers },
+			headers: { ...headers, ...listHeaders.data },
 			date: message.date ?? new Date(),
 			messageId: message.messageId ?? generateMessageId(from),
+			unsubscribe,
+			list,
 			email: isEmail(input) ? input : undefined,
 		});
 	}

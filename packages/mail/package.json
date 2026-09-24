@@ -9,7 +9,8 @@
 		"./markdown": "./src/markdown.tsx",
 		"./memory": "./src/memory.ts",
 		"./middleware": "./src/middleware.ts",
-		"./cloudflare": "./src/cloudflare.ts"
+		"./cloudflare": "./src/cloudflare.ts",
+		"./unsubscribe": "./src/unsubscribe.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"

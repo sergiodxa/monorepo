@@ -391,3 +391,219 @@ describe("Mailer.later", () => {
 		expect(transport.find((message) => message.email instanceof WelcomeEmail)).toBeDefined();
 	});
 });
+
+/** Email class for optional mail, declaring its unsubscribe target and list the way a digest would. */
+class DigestEmail implements Email {
+	constructor(private headersToSet?: Record<string, string>) {}
+
+	get to() {
+		return { email: "reader@example.com" };
+	}
+
+	/** Subject, already translated by the time it reaches the mailer. */
+	get subject() {
+		return "Your daily digest";
+	}
+
+	/** Hand-written headers, present only when a test checks the conflict with the options. */
+	get headers() {
+		return this.headersToSet;
+	}
+
+	/** Signed-token endpoint, so the provider's sessionless POST identifies the recipient. */
+	get unsubscribe() {
+		return { url: "https://example.com/unsubscribe/abc" };
+	}
+
+	/** List the digest belongs to. */
+	get list() {
+		return { id: "digest.example.com", name: "Daily digest" };
+	}
+
+	/** Body tree rendered by the mailer into both parts. */
+	body() {
+		return <InviteBody team="Acme" url="https://example.com/start" />;
+	}
+}
+
+/** A plain optional-mail message, so each test states only the option under test. */
+const DIGEST = { to: { email: "reader@example.com" }, subject: "Digest", text: "Hi" };
+
+describe("Mailer list headers", () => {
+	test("writes both RFC 8058 headers for an HTTPS unsubscribe URL", async () => {
+		let { mailer, transport } = createMailer();
+		await mailer.send({ ...DIGEST, unsubscribe: { url: "https://example.com/u/abc" } });
+
+		let message = lastMessage(transport);
+		expect(message.headers["List-Unsubscribe"]).toBe("<https://example.com/u/abc>");
+		expect(message.headers["List-Unsubscribe-Post"]).toBe("List-Unsubscribe=One-Click");
+		expect(message.unsubscribe).toEqual({ url: "https://example.com/u/abc" });
+	});
+
+	test("lists a plain mailto address after the URL with an unsubscribe subject", async () => {
+		let { mailer, transport } = createMailer();
+		await mailer.send({
+			...DIGEST,
+			unsubscribe: { url: new URL("https://example.com/u/abc"), mailto: "unsubscribe@example.com" },
+		});
+
+		expect(lastMessage(transport).headers["List-Unsubscribe"]).toBe(
+			"<https://example.com/u/abc>, <mailto:unsubscribe@example.com?subject=unsubscribe>",
+		);
+	});
+
+	test("writes a full mailto URI as given", async () => {
+		let { mailer, transport } = createMailer();
+		await mailer.send({
+			...DIGEST,
+			unsubscribe: {
+				url: "https://example.com/u/abc",
+				mailto: "mailto:list@example.com?subject=stop-abc",
+			},
+		});
+
+		expect(lastMessage(transport).headers["List-Unsubscribe"]).toBe(
+			"<https://example.com/u/abc>, <mailto:list@example.com?subject=stop-abc>",
+		);
+	});
+
+	test("omits List-Unsubscribe-Post when one-click is turned off", async () => {
+		let { mailer, transport } = createMailer();
+		await mailer.send({
+			...DIGEST,
+			unsubscribe: { url: "https://example.com/u/abc", oneClick: false },
+		});
+
+		let message = lastMessage(transport);
+		expect(message.headers["List-Unsubscribe"]).toBe("<https://example.com/u/abc>");
+		expect(message.headers).not.toHaveProperty("List-Unsubscribe-Post");
+	});
+
+	test("writes List-Id with and without a description", async () => {
+		let { mailer, transport } = createMailer();
+		await mailer.send({ ...DIGEST, list: { id: "digest.example.com" } });
+		expect(lastMessage(transport).headers["List-Id"]).toBe("<digest.example.com>");
+
+		await mailer.send({ ...DIGEST, list: { id: "digest.example.com", name: "Daily digest" } });
+		expect(lastMessage(transport).headers["List-Id"]).toBe("Daily digest <digest.example.com>");
+		expect(lastMessage(transport).list).toEqual({ id: "digest.example.com", name: "Daily digest" });
+	});
+
+	test("quotes a List-Id description that contains specials", async () => {
+		let { mailer, transport } = createMailer();
+		await mailer.send({ ...DIGEST, list: { id: "digest.example.com", name: "Acme, Inc." } });
+		expect(lastMessage(transport).headers["List-Id"]).toBe('"Acme, Inc." <digest.example.com>');
+	});
+
+	test("leaves transactional mail without any list header", async () => {
+		let { mailer, transport } = createMailer();
+		await mailer.send(DIGEST);
+
+		let message = lastMessage(transport);
+		expect(Object.keys(message.headers)).toEqual([]);
+		expect(message.unsubscribe).toBeNull();
+		expect(message.list).toBeNull();
+	});
+
+	test("reads unsubscribe and list off an email", async () => {
+		let { mailer, transport } = createMailer();
+		await mailer.send(new DigestEmail());
+
+		let message = lastMessage(transport);
+		expect(message.headers["List-Unsubscribe"]).toBe("<https://example.com/unsubscribe/abc>");
+		expect(message.headers["List-Unsubscribe-Post"]).toBe("List-Unsubscribe=One-Click");
+		expect(message.headers["List-Id"]).toBe("Daily digest <digest.example.com>");
+	});
+
+	test("lets a send-time override replace the email's unsubscribe target", async () => {
+		let { mailer, transport } = createMailer();
+		await mailer.send(new DigestEmail(), { unsubscribe: { url: "https://example.com/u/other" } });
+		expect(lastMessage(transport).headers["List-Unsubscribe"]).toBe(
+			"<https://example.com/u/other>",
+		);
+	});
+
+	test.each([
+		["an http: URL", { url: "http://example.com/u/abc" }],
+		["a mailto: URL in the url slot", { url: "mailto:unsubscribe@example.com" }],
+		["an unparseable URL", { url: "not a url" }],
+		["a mailto that is not an address", { url: "https://example.com/u", mailto: "nobody" }],
+		[
+			"a mailto URI without an address",
+			{ url: "https://example.com/u", mailto: "mailto:?subject=x" },
+		],
+	])("fails the send for %s", async (_, unsubscribe) => {
+		let { mailer, transport } = createMailer();
+		let result = await mailer.send({ ...DIGEST, unsubscribe });
+
+		expect(isFailure(result) && result.error).toBeInstanceOf(MailError);
+		expect(transport.messages).toHaveLength(0);
+	});
+
+	test.each([
+		["a single label", "digest"],
+		["an empty label", "digest..example.com"],
+		["whitespace", "daily digest.example.com"],
+		["angle brackets", "<digest.example.com>"],
+	])("fails the send for a list id with %s", async (_, id) => {
+		let { mailer } = createMailer();
+		let result = await mailer.send({ ...DIGEST, list: { id } });
+		expect(isFailure(result) && result.error).toBeInstanceOf(MailError);
+	});
+
+	test("fails the send for a list description with a line break", async () => {
+		let { mailer } = createMailer();
+		let result = await mailer.send({
+			...DIGEST,
+			list: { id: "digest.example.com", name: "Daily\r\nBcc: x@example.com" },
+		});
+		expect(isFailure(result) && result.error).toBeInstanceOf(MailError);
+	});
+
+	test.each([
+		["List-Unsubscribe", "unsubscribe"],
+		["list-unsubscribe", "unsubscribe"],
+		["LIST-UNSUBSCRIBE-POST", "unsubscribe"],
+		["List-Id", "list"],
+	])("fails when the message also sets %s by hand", async (header, option) => {
+		let { mailer, transport } = createMailer();
+		let options =
+			option === "list"
+				? { list: { id: "digest.example.com" } }
+				: { unsubscribe: { url: "https://example.com/u" } };
+		let result = await mailer.send({
+			...DIGEST,
+			...options,
+			headers: { [header]: "<https://example.com/old>" },
+		});
+
+		expect(isFailure(result) && result.error.message).toContain(header);
+		expect(transport.messages).toHaveLength(0);
+	});
+
+	test("fails when the mailer's configured headers set a generated header", async () => {
+		let { mailer } = createMailer({ headers: { "List-Id": "<old.example.com>" } });
+		let result = await mailer.send({ ...DIGEST, list: { id: "digest.example.com" } });
+		expect(isFailure(result)).toBe(true);
+	});
+
+	test("fails when an email sets a generated header alongside the option", async () => {
+		let { mailer } = createMailer();
+		let result = await mailer.send(
+			new DigestEmail({ "List-Unsubscribe": "<https://example.com/settings>" }),
+		);
+		expect(isFailure(result) && result.error).toBeInstanceOf(MailError);
+	});
+
+	test("keeps a hand-written header when the matching option is unset", async () => {
+		let { mailer, transport } = createMailer();
+		let result = await mailer.send({
+			...DIGEST,
+			headers: { "List-Unsubscribe": "<https://example.com/old>" },
+			list: { id: "digest.example.com" },
+		});
+
+		expect(isSuccess(result)).toBe(true);
+		expect(lastMessage(transport).headers["List-Unsubscribe"]).toBe("<https://example.com/old>");
+	});
+});

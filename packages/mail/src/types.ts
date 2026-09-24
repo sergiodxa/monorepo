@@ -21,6 +21,34 @@ export interface Address {
 }
 
 /**
+ * An RFC 8058 one-click unsubscribe target, from which the mailer writes
+ * `List-Unsubscribe` and `List-Unsubscribe-Post`. Mailbox providers show their own
+ * unsubscribe button only for an HTTPS target they can POST to without a session.
+ */
+export interface Unsubscribe {
+	/**
+	 * The one-click endpoint, which must be `https:`. It receives the provider's POST
+	 * with no cookies, so the URL alone has to identify the recipient and the list.
+	 */
+	url: string | URL;
+	/** An address, or a full `mailto:` URI, listed after the URL for clients that only mail. */
+	mailto?: string;
+	/**
+	 * Writes `List-Unsubscribe-Post`; set `false` only for a URL that cannot accept the POST.
+	 * @default true
+	 */
+	oneClick?: boolean;
+}
+
+/** The mailing list a message belongs to, written as RFC 2919 `List-Id` for filters and feedback loops. */
+export interface MailingList {
+	/** Dot-separated labels in a domain the sender controls, e.g. `digest.uptime.example.com`. */
+	id: string;
+	/** Description shown before the id: `List-Id: Daily digest <digest.uptime.example.com>`. */
+	name?: string;
+}
+
+/**
  * A message as callers write it. Everything the mailer can supply a default for
  * is optional, so a caller only states what is specific to this message.
  */
@@ -47,6 +75,10 @@ export interface Message {
 	date?: Date;
 	/** Explicit `Message-ID` value; omitted means generated. Set it to keep tests deterministic. */
 	messageId?: string;
+	/** One-click unsubscribe for optional mail; transactional mail leaves it unset. */
+	unsubscribe?: Unsubscribe;
+	/** List the message belongs to, written as `List-Id`. */
+	list?: MailingList;
 }
 
 /**
@@ -71,12 +103,19 @@ export interface NormalizedMessage {
 	html?: string;
 	/** Plain-text body; derived from `html` unless the caller supplied one. */
 	text?: string;
-	/** Headers to add, with per-message values winning over configured ones. */
+	/**
+	 * Headers to add, with per-message values winning over configured ones, plus the
+	 * `List-*` headers generated from `unsubscribe` and `list`.
+	 */
 	headers: Record<string, string>;
 	/** Value for the `Date` header, defaulted to the moment of normalization. */
 	date: Date;
 	/** Value for the `Message-ID` header, generated when the caller omitted it. */
 	messageId: string;
+	/** The unsubscribe target the `List-Unsubscribe` headers were written from, when set. */
+	unsubscribe: Unsubscribe | null;
+	/** The list the `List-Id` header was written from, when set. */
+	list: MailingList | null;
 	/**
 	 * The email object this message was produced from, when it came from one.
 	 * It exists so tests can identify a sent message by its type.
@@ -121,4 +160,8 @@ export interface Email {
 	readonly replyTo?: Address | Address[];
 	/** Per-email headers, merged over the mailer's configured headers. */
 	readonly headers?: Record<string, string>;
+	/** One-click unsubscribe for optional mail; transactional emails leave it unset. */
+	readonly unsubscribe?: Unsubscribe;
+	/** List the email belongs to, written as `List-Id`. */
+	readonly list?: MailingList;
 }

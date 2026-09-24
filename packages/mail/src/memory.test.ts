@@ -53,6 +53,8 @@ function createMessage(overrides?: Partial<NormalizedMessage>): NormalizedMessag
 		headers: {},
 		date: new Date("2026-01-01T00:00:00.000Z"),
 		messageId: "<one@example.com>",
+		unsubscribe: null,
+		list: null,
 		...overrides,
 	};
 }

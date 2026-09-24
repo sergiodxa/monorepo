@@ -12,7 +12,15 @@ import type { Email as EmailContract } from "./types.js";
 
 import * as EmailComponents from "./components.js";
 
-export type { Address, Message, NormalizedMessage, SentMessage, Transport } from "./types.js";
+export type {
+	Address,
+	MailingList,
+	Message,
+	NormalizedMessage,
+	SentMessage,
+	Transport,
+	Unsubscribe,
+} from "./types.js";
 export type { MailerOptions, SendOptions } from "./mailer.js";
 export type { RenderedEmail } from "./render.js";
 

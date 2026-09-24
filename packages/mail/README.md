@@ -25,7 +25,8 @@ alongside this package.
 
 Entry points: `@sdxc/mail` for the mailer, renderer, MIME builder and layout kit;
 `@sdxc/mail/markdown` for markdown bodies; `@sdxc/mail/memory` and `@sdxc/mail/cloudflare`
-for transports; `@sdxc/mail/middleware` for the router middleware. A transport ships from
+for transports; `@sdxc/mail/middleware` for the router middleware; `@sdxc/mail/unsubscribe`
+for the endpoint behind a one-click unsubscribe link. A transport ships from
 its own subpath, so importing one never pulls another's platform dependency into a bundle.
 
 ## Usage
@@ -214,8 +215,8 @@ alone. `render()` applies this for you.
 
 ### `MailError`
 
-The single error type the package reports. The original provider or render error is kept
-as `cause`, so one log line can name the root problem.
+The error every send failure reports. The original provider or render error is kept as
+`cause`, so one log line can name the root problem.
 
 ### `Email` (layout kit)
 
@@ -279,6 +280,24 @@ interface Message {
 	/** Explicit values; omitted means "now" and a generated id. Set both to keep tests deterministic. */
 	date?: Date;
 	messageId?: string;
+	/** Optional mail only; see "Bulk Mail". */
+	unsubscribe?: Unsubscribe;
+	list?: MailingList;
+}
+
+interface Unsubscribe {
+	/** Must be `https:`; receives the RFC 8058 POST with no session. */
+	url: string | URL;
+	/** A bare address (sent with `?subject=unsubscribe`) or a full `mailto:` URI. */
+	mailto?: string;
+	/** `false` omits `List-Unsubscribe-Post`. Defaults to `true`. */
+	oneClick?: boolean;
+}
+
+interface MailingList {
+	/** RFC 2919 list-id, e.g. `digest.example.com`. */
+	id: string;
+	name?: string;
 }
 
 interface Email {
@@ -287,6 +306,8 @@ interface Email {
 	body(): RemixElement;
 	readonly replyTo?: Address | Address[];
 	readonly headers?: Record<string, string>;
+	readonly unsubscribe?: Unsubscribe;
+	readonly list?: MailingList;
 }
 
 interface Transport {
@@ -301,7 +322,8 @@ interface SentMessage {
 
 `NormalizedMessage` is what a transport receives: every field of `Message` with defaults
 applied, address fields as lists, `date` and `messageId` always present, a derived `text`
-part, and `email` carrying the source `Email` when the message came from one — which
+part, `headers` including the generated `List-*` ones, `unsubscribe` and `list` as the
+option or `null`, and `email` carrying the source `Email` when the message came from one — which
 transports ignore and tests use to identify a send by type. `RenderedEmail` is
 `{ html, text }`, `SendOptions` is `Partial<Message>`, `MailerOptions` is the
 constructor's options object, `EmailTableRow` is one `{ label, value }` row of an
@@ -376,6 +398,89 @@ message id; a failed one is a `mail.send_failed` warning, since the response is 
 out. With no log current the outcomes are dropped. The module augments `RequestContext`,
 so `context.email` is typed wherever the middleware is imported. Despite the name, it is
 the object that _sends_ mail, not the current user's address.
+
+### `@sdxc/mail/unsubscribe`
+
+#### `signUnsubscribeToken(secret, claims, options?): Promise<Result<string, MailError>>`
+
+Signs `{ subject, list }` into one URL path segment: the hex HMAC-SHA-256 followed by the
+base64url payload. `subject` must be an opaque id — an email address is refused, since the
+token lands in URLs and logs — and `list` a name without colons. `options.expiresAt` makes
+the link stop working; omitted, it never expires, because a provider may POST long after
+delivery. `options.purpose` (default `"unsubscribe:v1:"`) prefixes the MAC input, so a
+secret shared with something else cannot mint these tokens.
+
+#### `verifyUnsubscribeToken(secret, token, options?): Promise<Result<UnsubscribeToken.Claims, InvalidUnsubscribeTokenError>>`
+
+Checks the MAC in constant time and returns `{ subject, list, issuedAt }`. Malformed,
+tampered, foreign-key, foreign-purpose and expired tokens all fail with the same
+`InvalidUnsubscribeTokenError`, so the endpoint answers every case alike. `issuedAt` is
+`null` for a token whose payload names only `list:subject`, the shape an app signing with
+the same scheme by hand produces; pass that app's `purpose` to verify its links.
+
+#### `isOneClickUnsubscribe(form: FormData): boolean`
+
+Whether a parsed body is RFC 8058's `List-Unsubscribe=One-Click`, URL-encoded or
+multipart. It tells the provider's POST, which reads no response, from a person pressing
+the confirmation page's button.
+
+## Bulk Mail
+
+Gmail and Yahoo require one-click unsubscribe on subscribed and marketing mail: a
+`List-Unsubscribe` header with an HTTPS URL, `List-Unsubscribe-Post:
+List-Unsubscribe=One-Click`, both covered by DKIM, and the unsubscribe honored within two
+days. With those present the provider shows its own "Unsubscribe" button, and a recipient
+who presses it stops receiving mail instead of reporting spam. Transactional mail
+(verification, resets, sign-in alerts) is exempt and leaves the options unset.
+
+An optional email declares its target and list; the mailer writes the headers:
+
+```typescript
+import type { Email, MailingList, Unsubscribe } from "@sdxc/mail";
+
+class DailyDigestEmail implements Email {
+	// to, subject, body() ...
+
+	get unsubscribe(): Unsubscribe {
+		return { url: this.digest.unsubscribeUrl, mailto: "unsubscribe@example.com" };
+	}
+
+	get list(): MailingList {
+		return { id: "daily-digest.example.com", name: "Daily digest" };
+	}
+}
+```
+
+```text
+List-Unsubscribe: <https://example.com/unsubscribe/…>, <mailto:unsubscribe@example.com?subject=unsubscribe>
+List-Unsubscribe-Post: List-Unsubscribe=One-Click
+List-Id: Daily digest <daily-digest.example.com>
+```
+
+The send fails with a `MailError` when the URL is not `https:`, `mailto` names no address,
+`list.id` is not a list-id, or the mailer, message or email headers already contain
+`List-Unsubscribe`, `List-Unsubscribe-Post` or `List-Id` (any case) alongside the matching
+option — a half-migrated email fails loudly instead of sending two targets. A hand-written
+header keeps working while its option is unset.
+
+The URL receives a POST from the provider's servers with no cookies, so it carries a
+signed token and sits outside any auth guard. `GET` renders a confirmation and changes
+nothing, because link scanners follow every URL; `POST` acts:
+
+```typescript
+import { isOneClickUnsubscribe, verifyUnsubscribeToken } from "@sdxc/mail/unsubscribe";
+import { isSuccess } from "@sdxc/result";
+
+let claims = await verifyUnsubscribeToken(env.UNSUBSCRIBE_SECRET, token);
+if (isSuccess(claims)) await unsubscribe(claims.data.subject, claims.data.list);
+if (isOneClickUnsubscribe(formData)) return new Response(null, { status: 200 });
+return renderDonePage();
+```
+
+Rotating the secret breaks every link already delivered. DKIM coverage of the two headers
+is decided by the transport's platform (Cloudflare's `send_email` binding signs for the
+verified domain); check a delivered message's `h=` tag lists `list-unsubscribe` and
+`list-unsubscribe-post`.
 
 ## MIME Guarantees
 

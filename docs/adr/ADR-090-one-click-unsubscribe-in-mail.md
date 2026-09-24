@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-23
+**Accepted** - 2026-09-24
 
 ## Background
 
@@ -357,9 +357,33 @@ with an id, a signed token needs no storage.
 - [ADR-030: Email Classes as the Authoring Contract](./ADR-030-email-classes-as-the-authoring-contract.md)
 - [ADR-023: Web Crypto Primitives Package](./ADR-023-web-crypto-primitives-package.md)
 
+## Current Progress
+
+- [x] Phase 1: `unsubscribe` and `list` options, header generation and validation, and the
+      `@sdxc/mail/unsubscribe` subpath in `@sdxc/mail`
+- [ ] Phase 2: Adopt in uptime
+- [ ] Phase 3: Verify delivery (DKIM `h=` coverage on Gmail and Yahoo)
+- [ ] Phase 4: Adopt in reader
+
 ## Notes
 
-- `DurationInput` in `SignOptions` comes from `@sdxc/duration`, the type other packages use for TTLs
+- Implementation: `SignOptions` takes `expiresAt?: Date` in place of `expiresIn?: DurationInput`.
+  `@sdxc/duration` is not a dependency of `@sdxc/mail`, and an absolute instant is unambiguous;
+  adding the dependency later can bring `expiresIn` alongside it
+- Implementation: the token is the hex HMAC-SHA-256 (64 characters) followed by the base64url
+  payload `list:subject`, then the issue time and optional expiry in Unix seconds on their own
+  lines. The MAC covers a purpose prefix plus the payload; `purpose` is an option on both
+  functions (default `unsubscribe:v1:`) so a secret shared with sessions cannot mint these
+  tokens. This is the scheme uptime's app-local digest unsubscribe already uses, so its
+  delivered links verify with `purpose: "digest-unsubscribe:v1:"` once it adopts the package
+- Implementation: `Claims.issuedAt` is `Date | null`; a payload with only `list:subject` (the
+  shape uptime signs today) verifies with `null`
+- Implementation: `signUnsubscribeToken` refuses a subject that parses as an email address, an
+  empty field, a list containing `:`, and control characters in either field
+- Implementation: `InvalidUnsubscribeTokenError` lives beside `MailError` and is exported from
+  `@sdxc/mail/unsubscribe`; the `UnsubscribeToken` namespace also exports `Options`
+- Implementation: a `List-Id` without a name is written `<id>`; a name with specials is quoted
+  like a display name, and a name with control characters fails the send
 - The Gmail and Yahoo bulk-sender threshold (about 5,000 messages a day to their users) applies to
   the sending domain as a whole; the headers earn the provider's button, and the lower spam-report
   rate that follows, at any volume

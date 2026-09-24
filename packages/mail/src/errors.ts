@@ -1,7 +1,7 @@
 /**
- * The single error type the mail package reports. Every failure a caller can
- * branch on — invalid message, failed render, rejected delivery — arrives as a
- * `MailError` inside a `Result`, so no send path throws.
+ * The errors the mail package reports inside a `Result`: `MailError` for every
+ * send failure — invalid message, failed render, rejected delivery — and
+ * `InvalidUnsubscribeTokenError` for a token the unsubscribe endpoint refuses.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,5 +22,23 @@ export class MailError extends Error {
 	 */
 	constructor(message: string, options?: ErrorOptions) {
 		super(message, options);
+	}
+}
+
+/**
+ * A token the unsubscribe endpoint cannot act on: malformed, tampered with, signed
+ * with another secret or purpose, or expired. The cases share one type so the
+ * endpoint answers all of them the same way and leaks nothing about which failed.
+ */
+export class InvalidUnsubscribeTokenError extends Error {
+	override name = "InvalidUnsubscribeTokenError";
+
+	/**
+	 * Creates the error.
+	 *
+	 * @param options - Standard error options; `cause` keeps a crypto failure for logs.
+	 */
+	constructor(options?: ErrorOptions) {
+		super("The unsubscribe token is invalid or has expired.", options);
 	}
 }
