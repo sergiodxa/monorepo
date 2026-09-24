@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-23
+**Accepted** - 2026-09-24
 
 ## Background
 
@@ -532,10 +532,26 @@ that wants a narrower list still passes `algorithms`.
 - [ADR-023: Web Crypto Primitives Package](./ADR-023-web-crypto-primitives-package.md)
 - [ADR-077: Problem Details Package](./ADR-077-problem-details-package.md) (style reference)
 
+## Notes
+
+- Implementation: `publishRequest` returns `Result<Request, WebSubRequestError>` rather than a
+  bare `Request`, refusing a hub that is not an absolute URL and an empty topic list, so it
+  matches `subscriptionRequest` and never throws from `new Request`.
+- Implementation: `renewalAt` renews a lease shorter than twice `minimumLeadMs` at its
+  midpoint (the lead is `max(lease × (1 − share), min(minimumLeadMs, lease / 2))`). Clamping
+  such a lease to "now" would turn a short grant into a renewal loop.
+- Implementation: the unsubscription variant of `subscriptionRequest`'s options is exported as
+  `Subscriber.UnsubscriptionRequestOptions`, and the verification union's members as
+  `Subscriber.SubscribeVerification`, `UnsubscribeVerification` and `Denial`, so `acknowledge`
+  names its parameter type directly. `subscribe` and `unsubscribe` refuse a non-`https:` hub
+  alike. A delivery body stream that fails partway is refused with `reason: "mismatch"`.
+- Implementation: `Feed.selectSubscription` returns `topic: string | null`, `null` when neither
+  the header nor the document declares `rel=self`; the caller decides the fallback.
+
 ## Current Progress
 
-- [ ] Phase 1: Specify and build the package
-- [ ] Phase 2: Pair hub and topic in `@sdxc/feed`
+- [x] Phase 1: Specify and build the package
+- [x] Phase 2: Pair hub and topic in `@sdxc/feed`
 - [ ] Phase 3: Migrate the reader
 - [ ] Phase 4: Publish from the blog and blog-engine
 - [ ] Phase 5: Publish the package
