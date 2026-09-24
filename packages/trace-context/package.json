@@ -1,7 +1,6 @@
 {
 	"name": "@sdxc/trace-context",
 	"version": "0.0.1",
-	"private": true,
 	"description": "W3C Trace Context: traceparent and tracestate, one trace per invocation, propagated to jobs and outbound requests",
 	"license": "MIT",
 	"type": "module",

@@ -158,7 +158,7 @@ Run from the repository root:
 | [spec](packages/spec)                                           | Executable specification runner for `.spec` files                                                                 | ✅  |
 | [strings](packages/strings)                                     | Inflection, Chicago title case, slugs and grapheme-safe text                                                      | ✅  |
 | [structured-fields](packages/structured-fields)                 | Parse and serialize RFC 9651 structured HTTP field values                                                         |     |
-| [trace-context](packages/trace-context)                         | W3C Trace Context: traceparent and tracestate, one trace per invocation, propagated to jobs and outbound requests |     |
+| [trace-context](packages/trace-context)                         | W3C Trace Context: traceparent and tracestate, one trace per invocation, propagated to jobs and outbound requests | ✅  |
 | [typeid](packages/typeid)                                       | TypeID values: a UUID and the prefix naming it                                                                    | ✅  |
 | [types](packages/types)                                         | Shared TypeScript types                                                                                           | ✅  |
 | [u](packages/u)                                                 | Tailwind-like Remix UI styling utilities                                                                          | ✅  |
