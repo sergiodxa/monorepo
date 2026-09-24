@@ -15,7 +15,6 @@
 	},
 	"dependencies": {
 		"@sdxc/crypto": "workspace:*",
-		"@sdxc/result": "workspace:*",
-		"remix": "3.0.0-rc.2"
+		"@sdxc/result": "workspace:*"
 	}
 }

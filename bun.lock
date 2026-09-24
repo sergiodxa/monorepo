@@ -632,11 +632,19 @@
       "version": "0.0.1",
       "dependencies": {
         "@sdxc/crypto": "workspace:*",
+        "@sdxc/duration": "workspace:*",
+        "@sdxc/logger": "workspace:*",
         "@sdxc/problem": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/structured-fields": "workspace:*",
         "@sdxc/types": "workspace:*",
         "remix": "3.0.0-rc.2",
+      },
+      "devDependencies": {
+        "@cloudflare/workers-types": "^5.20260901.1",
+        "@sdxc/cloudflare-mocks": "workspace:*",
+        "@sdxc/data-table-d1": "workspace:*",
+        "@sdxc/data-table-sqlstorage": "workspace:*",
       },
     },
     "packages/jobs": {
@@ -938,7 +946,6 @@
       "version": "0.0.1",
       "dependencies": {
         "@sdxc/crypto": "workspace:*",
-        "@sdxc/http": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/structured-fields": "workspace:*",
         "remix": "3.0.0-rc.2",
@@ -1099,7 +1106,6 @@
       "dependencies": {
         "@sdxc/crypto": "workspace:*",
         "@sdxc/result": "workspace:*",
-        "remix": "3.0.0-rc.2",
       },
     },
     "packages/well-known": {

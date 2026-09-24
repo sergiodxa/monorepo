@@ -17,7 +17,6 @@
 	},
 	"dependencies": {
 		"@sdxc/crypto": "workspace:*",
-		"@sdxc/http": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/structured-fields": "workspace:*",
 		"remix": "3.0.0-rc.2"
