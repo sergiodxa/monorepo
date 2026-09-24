@@ -98,14 +98,30 @@ Send a request with that method. Each takes an `APIClientInit` and sets `method`
 ### `protected before(request: Request): Promise<Request>`
 
 Adjusts a request before it is sent, and returns the one to send. The single place a
-subclass sets what every call carries — credentials, tracing headers, a rewritten body. The
-base implementation returns the request as it arrived.
+subclass sets what every call carries — credentials, a rewritten body — and it already sees
+the trace headers `fetch` wrote. The base implementation returns the request as it arrived.
 
 ### `protected after(request: Request, response: Response): Promise<Response>`
 
 Sees the response before it reaches the caller, and returns the one to hand back. It
 receives the request too, since reading a status usually needs to know what was asked. The
 base implementation returns the response as it arrived.
+
+### `protected propagateTrace: "all" | "traceparent" | "none"`
+
+Which [W3C Trace Context](https://www.w3.org/TR/trace-context/) headers every request
+carries. When the running invocation has a trace bound, `fetch` writes `traceparent`
+(naming that invocation's span as the parent) and `tracestate` into the request before
+`before` runs, so a subclass can still read, replace or delete them, and a `traceparent`
+passed in `init` is kept. Outside a traced invocation nothing is added. Defaults to
+`"all"`; a subclass talking to a service that should not receive upstream vendor state
+narrows it to `"traceparent"`, and one that should see no trace to `"none"`:
+
+```typescript
+class Payments extends APIClient {
+	protected override readonly propagateTrace = "traceparent";
+}
+```
 
 ### `protected baseURL: URL`
 

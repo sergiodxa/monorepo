@@ -3,11 +3,15 @@
  *
  * Subclasses get path-relative requests against a fixed origin and one shared place —
  * the `before` and `after` hooks — to attach whatever every call needs: credentials,
- * tracing, a retry decision.
+ * a retry decision. Every request carries the running invocation's W3C trace by default.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import type { TraceContext } from "@sdxc/trace-context";
+
+import { currentTrace, inject } from "@sdxc/trace-context";
 
 /** Request options a verb method accepts, minus the method it sets itself. */
 export type APIClientInit = Omit<RequestInit, "method">;
@@ -30,6 +34,14 @@ export type APIClientInit = Omit<RequestInit, "method">;
 export class APIClient {
 	/** Origin every path is resolved against. */
 	protected readonly baseURL: URL;
+
+	/**
+	 * Which trace headers every request carries. A subclass talking to a service that should
+	 * not learn the caller's upstream vendor state narrows it to `"traceparent"`, and one that
+	 * should see no trace at all to `"none"`.
+	 * @default "all"
+	 */
+	protected readonly propagateTrace: TraceContext.Propagation = "all";
 
 	/** @param baseURL Origin to resolve request paths against. */
 	constructor(baseURL: URL) {
@@ -64,14 +76,18 @@ export class APIClient {
 	}
 
 	/**
-	 * Sends a request to a path relative to {@link APIClient.baseURL}.
+	 * Sends a request to a path relative to {@link APIClient.baseURL}. The running
+	 * invocation's trace is written into it before {@link APIClient.before} runs, so a
+	 * subclass can read or replace those headers, and a `traceparent` in `init` is kept.
 	 *
 	 * @param path Path to request, resolved against the base URL.
 	 * @param init Request options.
 	 * @returns The response, after {@link APIClient.after} has seen it.
 	 */
 	async fetch(path: string, init?: RequestInit): Promise<Response> {
-		let request = await this.before(new Request(new URL(path, this.baseURL), init));
+		let request = new Request(new URL(path, this.baseURL), init);
+		inject(request.headers, currentTrace(), this.propagateTrace);
+		request = await this.before(request);
 		return await this.after(request, await fetch(request));
 	}
 

@@ -500,7 +500,7 @@ most joins.
 
 - [x] Phase 1: `@sdxc/trace-context` with `./traceparent`, `./tracestate` and `./middleware`
 - [ ] Phase 2: Jobs
-- [ ] Phase 3: API client
+- [x] Phase 3: API client
 - [ ] Phase 4: Adopt in the workers
 - [ ] Phase 5: Publish
 
