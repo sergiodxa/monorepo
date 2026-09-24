@@ -364,6 +364,26 @@ describe("schemas that cannot describe themselves", () => {
 		});
 	});
 
+	test("a data-schema schema carrying its own converter nests, validates and describes", () => {
+		let base = ds.array(ds.string());
+		let tags = {
+			...base,
+			"~standard": {
+				...base["~standard"],
+				jsonSchema: {
+					input: () => ({ type: "array", items: { type: "string" } }),
+					output: () => ({ type: "array", items: { type: "string" } }),
+				},
+			},
+		};
+		let schema = s.object({ tags });
+
+		expect(unwrap(toJSONSchema(schema)).properties).toEqual({
+			tags: { type: "array", items: { type: "string" } },
+		});
+		expect(s.parseSafe(schema, { tags: [1] }).success).toBe(false);
+	});
+
 	test("a foreign converter that throws becomes a failure carrying the cause", () => {
 		let cause = new Error("unsupported refinement");
 		let foreign = {

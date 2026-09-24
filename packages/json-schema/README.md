@@ -86,7 +86,9 @@ const CATEGORY: s.Schema<unknown, Category> = s.lazy(
 
 ### Combinators
 
-Each takes the arguments of its `remix/data-schema` counterpart and validates identically.
+Each takes the arguments of its `remix/data-schema` counterpart and validates identically. A nested
+schema can be any `DescribedSchema`: a schema from this package, or one built with
+`remix/data-schema` directly that implements Standard JSON Schema itself.
 
 | Combinator                                | JSON Schema 2020-12                                                           |
 | ----------------------------------------- | ----------------------------------------------------------------------------- |
@@ -168,6 +170,8 @@ let slug = s.withJSONSchema(ds.string().refine(isSlug), {
 - `JSONSchema`: the 2020-12 vocabulary this package emits and reads, with `JSONSchema.TypeName`
   and `JSONSchema.Direction`.
 - `Schema<Input, Output>`: a `remix/data-schema` schema that implements Standard JSON Schema.
+- `DescribedSchema<Input, Output>`: what a combinator nests, a `remix/data-schema` schema that
+  implements Standard JSON Schema.
 - `Check<Output>`: a `remix/data-schema` check with `keywords`.
 - `Annotations<Output>`: what `meta()` accepts.
 

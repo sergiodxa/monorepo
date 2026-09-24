@@ -9,7 +9,7 @@
 
 export type { ToJSONSchemaOptions } from "./convert.js";
 export type { ObjectInput, ObjectOptions, ObjectOutput } from "./schema.js";
-export type { Annotations, Check, JSONSchema, Schema } from "./types.js";
+export type { Annotations, Check, DescribedSchema, JSONSchema, Schema } from "./types.js";
 export type { InferInput, InferOutput } from "remix/data-schema";
 
 export { toJSONSchema, withJSONSchema } from "./convert.js";

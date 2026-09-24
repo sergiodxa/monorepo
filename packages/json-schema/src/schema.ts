@@ -15,12 +15,12 @@ import { lazy as dataLazy } from "remix/data-schema/lazy";
 
 import type { JSONSchemaConversionError } from "./error.js";
 import type { Describe, DescribeContext } from "./node.js";
-import type { JSONSchema, Schema } from "./types.js";
+import type { DescribedSchema, JSONSchema, Schema } from "./types.js";
 
 import { describeChild, named, nodeOf, wrap } from "./node.js";
 
-/** Any schema this package builds, whatever its types. */
-type AnySchema = Schema<any, any>;
+/** Any schema a combinator nests, whatever its types. */
+type AnySchema = DescribedSchema<any, any>;
 
 /** Flattens an intersection so hovers and errors show one object type. */
 type Simplify<T> = { [Key in keyof T]: T[Key] } & {};
@@ -299,7 +299,7 @@ export function optional<S extends AnySchema>(
  * @param value - The schema each value must pass.
  * @example let labels = s.record(s.string(), s.string());
  */
-export function record<K extends Schema<string, string>, V extends AnySchema>(
+export function record<K extends DescribedSchema<string, string>, V extends AnySchema>(
 	key: K,
 	value: V,
 ): Schema<Record<InferInput<K>, InferInput<V>>, Record<InferOutput<K>, InferOutput<V>>> {

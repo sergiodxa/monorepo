@@ -71,6 +71,17 @@ export interface Annotations<Output> {
 }
 
 /**
+ * What a combinator accepts as a nested schema: anything `remix/data-schema` can run that
+ * also implements Standard JSON Schema. Every schema from this package qualifies, and so
+ * does a schema built with data-schema directly that carries its own converter.
+ *
+ * @template Input - What the schema is documented to accept.
+ * @template Output - What a successful parse yields.
+ */
+export type DescribedSchema<Input = any, Output = any> = DataSchema<Input, Output> &
+	StandardJSONSchemaV1<Input, Output>;
+
+/**
  * A `remix/data-schema` check that also contributes JSON Schema keywords to the schema it
  * is piped into, so the check that runs and the keyword that documents it are one value.
  */
@@ -94,6 +105,9 @@ export interface Schema<Input, Output = Input> extends DataSchema<Input, Output>
 	/** The predicate validates; the JSON Schema is unchanged, so describe it with `meta`. */
 	refine(predicate: (value: Output) => boolean, message?: string): Schema<Input, Output>;
 	/** The input side keeps this schema; the output side is `output`, or `{}` without one. */
-	transform<Next>(fn: (value: Output) => Next, output?: Schema<any, Next>): Schema<Input, Next>;
+	transform<Next>(
+		fn: (value: Output) => Next,
+		output?: DescribedSchema<any, Next>,
+	): Schema<Input, Next>;
 	meta(annotations: Annotations<Output>): Schema<Input, Output>;
 }

@@ -12,7 +12,7 @@ import type { Check as DataCheck, Schema as DataSchema } from "remix/data-schema
 
 import { failure, success } from "@sdxc/result";
 
-import type { Annotations, JSONSchema, Schema } from "./types.js";
+import type { Annotations, DescribedSchema, JSONSchema, Schema } from "./types.js";
 
 import { JSONSchemaConversionError, toPointer } from "./error.js";
 
@@ -275,7 +275,7 @@ export function wrap<Input, Output>(
 		refine(predicate: (value: Output) => boolean, message?: string) {
 			return wrap<Input, Output>(base.refine(predicate, message), node);
 		},
-		transform<Next>(fn: (value: Output) => Next, output?: Schema<any, Next>) {
+		transform<Next>(fn: (value: Output) => Next, output?: DescribedSchema<any, Next>) {
 			return wrap<Input, Next>(base.transform(fn), {
 				presence: node.presence,
 				transformed: true,
