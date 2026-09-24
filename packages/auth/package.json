@@ -8,6 +8,7 @@
 		"./access-token": "./src/access-token.ts",
 		"./auth-error": "./src/auth-error.ts",
 		"./auth-session": "./src/auth-session.ts",
+		"./bearer-challenge": "./src/bearer-challenge.ts",
 		"./id-token": "./src/id-token.ts",
 		"./issuer": "./src/issuer.ts",
 		"./management-client": "./src/management-client.ts",
