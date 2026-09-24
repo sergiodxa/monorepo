@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-23
+**Accepted** - 2026-09-24
 
 ## Background
 
@@ -583,6 +583,53 @@ Both start with `contentSecurityPolicyReportOnly` and a report route, then enfor
 1. Remove `private: true`, add `description` and `LICENSE.md`; `@sdxc/structured-fields` must be
    public first
 2. `bun run release:bootstrap @sdxc/security-headers`, then configure the trusted publisher
+
+## Current Progress
+
+- [x] Phase 1: Specify and build the package
+- [ ] Phase 2: Migrate the reader
+- [ ] Phase 3: Adopt in r3-auth and auth-saas
+- [ ] Phase 4: Adopt in uptime and blog
+- [ ] Phase 5: Publish
+
+## Notes
+
+- Implementation: serialization never fails and always errs toward the stricter policy, where
+  the Decision leaves invalid input unspecified or says `stringifyStrictTransportSecurity`
+  "refuses" `preload`. `stringify` drops a CSP source (or nonce) that would break out of its
+  directive (whitespace, `;`, `,`, `'`), so the list may become `'none'`;
+  `stringifyStrictTransportSecurity` leaves `preload` out unless `maxAge` is a year or more and
+  `includeSubDomains` is set; `entries` writes a Permissions-Policy feature whose origin RFC 9651
+  cannot carry as `()` and drops a feature name outside the key grammar; a
+  `Reporting-Endpoints` entry with no RFC 9651 form is dropped. The signatures stay as the
+  Decision writes them, with no `Result` on the write path.
+- Implementation: `SecurityHeaders.Policy` gains `crossOriginEmbedderPolicyReportOnly`
+  (`Cross-Origin-Embedder-Policy-Report-Only`), which the Scope lists and the interface lacked.
+- Implementation: `apply` derives no `X-Frame-Options` when the response set its own
+  `Content-Security-Policy`, since the derived value would describe a `frame-ancestors` the
+  response no longer sends. The Report-Only policy derives nothing either.
+- Implementation: `parse` fails with `CSPParseError` on a character outside printable ASCII
+  and whitespace, and on a directive name outside `[A-Za-z0-9-]`; CSP3's browser algorithm skips
+  those, but this parser serves tests and merging, where a malformed policy is a bug to surface.
+- Implementation: the nonce is generated on first read, and the headers are written when the
+  chain resolves. A renderer that streams its body renders after that point, so the nonce must be
+  read in the handler (and passed down as a prop), which is how the Usage examples already
+  read it.
+- Implementation: the middleware passes a `101 Switching Protocols` response through untouched,
+  since rebuilding it would detach its WebSocket, and rebuilds every other response, so one with
+  immutable headers (`Response.redirect`) is decorated too.
+- Implementation: `parseReports` also accepts `application/json`, which some browsers send
+  legacy reports under, and skips reports of other types and malformed CSP reports inside a
+  Reporting API batch instead of failing the whole batch.
+- Implementation: `remix` stays a regular dependency, where the Decision names it an optional
+  peer, and the scaffolded `@sdxc/http` dependency is unused; both are `package.json` changes that
+  need a lockfile update, left to the publish phase.
+- Implementation: the `remix/ui` 0.9.0 findings hold against its source. `buildImportMapSegment`
+  keeps every `<ImportMap>` prop but `value` as attributes of
+  `<script data-rmx-import-map type="importmap">`, `createImportMapManager` reads that script's
+  `nonce` and stamps it on each import map it appends, and `<style data-rmx-style>` carries no
+  nonce. `import-map.test.tsx` renders `<ImportMap nonce>` through the middleware and checks the
+  nonce matches the `script-src` the response carries.
 
 ## Alternatives Considered
 

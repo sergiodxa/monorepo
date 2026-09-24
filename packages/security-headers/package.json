@@ -6,7 +6,11 @@
 	"license": "MIT",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./csp": "./src/csp.ts",
+		"./permissions-policy": "./src/permissions-policy.ts",
+		"./reports": "./src/reports.ts",
+		"./middleware": "./src/middleware.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
