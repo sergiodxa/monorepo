@@ -6,7 +6,9 @@
 	"license": "MIT",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./checks": "./src/checks.ts",
+		"./coerce": "./src/coerce.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"

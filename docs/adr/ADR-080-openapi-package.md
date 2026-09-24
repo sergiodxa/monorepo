@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-23
+**Accepted** - 2026-09-24
 
 ## Background
 
@@ -873,7 +873,7 @@ the two would still drift, which is the state `2796c090` inherited.
 
 ## Current Progress
 
-- [ ] Phase 1: `@sdxc/json-schema`
+- [x] Phase 1: `@sdxc/json-schema`
 - [ ] Phase 2: `@sdxc/openapi`
 - [ ] Phase 3: Adopt in uptime
 - [ ] Phase 4: Adopt in auth-saas
