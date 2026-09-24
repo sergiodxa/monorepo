@@ -280,10 +280,7 @@ export namespace JWK {
 	/** The members jose allows on a key inside a JWKS document. */
 	type PublishedKeyMembers = jose.JSONWebKeySet["keys"][number];
 
-	/**
-	 * A published key: RFC 7517 makes `kty` the one member every JWK carries, and lets a
-	 * key carry members beyond the registered ones.
-	 */
+	/** A published key: RFC 7517 makes `kty` the one member every JWK carries. */
 	export interface PublishedKey extends PublishedKeyMembers {
 		kty: string;
 	}
