@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-23
+**Accepted** - 2026-09-24
 
 ## Background
 
@@ -560,10 +560,44 @@ has to follow one.
 - [ADR-090: One-click Unsubscribe in Mail](./ADR-090-one-click-unsubscribe-in-mail.md) (the other
   pending `@sdxc/mail` change)
 
+## Notes
+
+- Implementation: `Property.value` holds the value as written after unfolding, TEXT escapes
+  intact, because only the property's value type says whether `\,` separates list items; a
+  decoded value could not be written back losslessly. `escapeText` and `unescapeText` are
+  exported from `"."` for callers building or reading untyped TEXT properties.
+- Implementation: `RDATE;VALUE=PERIOD` is typed as `ICalendar.Period`
+  (`{ type: "period", start, end?, duration? }`), so `Event.recurrenceDates` is
+  `(DateValue | Period)[]` and a period's own length reaches `occurrences`.
+- Implementation: the types keep more of what they read, for lossless round trips: `Alarm`
+  gains `properties?` (e.g. `ATTACH`) and an open `action`, `TimeZone` gains `properties?`
+  (`TZURL`, `LAST-MODIFIED`), the observance is the named `ICalendar.Observance` with
+  `recurrenceDates?` and `properties?`, and `CalendarUser` gains `parameters?` for the ones it
+  does not type (`CUTYPE` in RFC 5545 §4's example).
+- Implementation: a read `VEVENT` without `UID` or `DTSTAMP` gets `uid: ""` or an invalid
+  `dtstamp` plus a warning, and the writer omits both again; one without a readable `DTSTART`
+  stays in `components` with a warning.
+- Implementation: `toInstant` and `occurrences` resolve a `TZID` through the calendar's
+  `VTIMEZONE` first and `Intl` second, since the object's own definition is authoritative
+  (RFC 5545 §3.2.19). `OccurrenceOptions` gains `timeZone` (default `"UTC"`) for floating
+  times and `DATE` values, which name no instant on their own.
+- Implementation: `DTSTART` always counts as the first instance of a rule, as §3.3.10 says;
+  the §3.8.5.3 Friday-the-13th example depends on it, excluding its own `DTSTART` by `EXDATE`.
+- Implementation: the §3.8.5.3 example "every 3 hours from 9:00 AM to 5:00 PM" lists 15:00
+  while its `UNTIL=19970902T170000Z` is 13:00 EDT; the test follows the `UNTIL` as printed and
+  adds the `UNTIL=19970902T210000Z` variant that yields 09:00, 12:00 and 15:00.
+- Implementation: the §3.6.5 "fictitious" `VTIMEZONE` starts its second daylight rule on
+  Saturday 1999-04-24; that `DTSTART` is an onset of its own, one day before the rule's first
+  last-Sunday instance.
+
 ## Current Progress
 
-- [ ] Phase 1: Core format
+- [x] Phase 1: Core format (`@sdxc/dates/zone` exported; `parse`, `parseAll`, `stringify`,
+      `toInstant`, `utc`, `calendarResponse`; RRULE value type; README)
 - [ ] Phase 2: Uptime maintenance feed and download
 - [ ] Phase 3: Expansion and zones
+  - [x] `./rrule` `occurrences`, tested against every §3.8.5.3 example
+  - [x] `./timezone` `vtimezone` and `TZID` resolution through parsed `VTIMEZONE`s
+  - [ ] Replace `isRecurringPatternActive` in uptime with `occurrences`
 - [ ] Phase 4: Invitations
 - [ ] Phase 5: Publish
