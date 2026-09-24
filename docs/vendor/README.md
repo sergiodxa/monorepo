@@ -110,3 +110,22 @@ the in-memory provider of Appendix A:
 
 Scenarios are tagged by capability (`@transaction`, `@hooks`), so an implementation that
 declines an optional part of the specification filters those tags out rather than failing them.
+
+## `microformats-tests/`
+
+The official [microformats parser test suite](https://github.com/microformats/tests), taken
+from `https://github.com/microformats/tests` at commit
+`d49f5d76d0395676274c9ff15f1a14091498d7d4` (2025-12-09). It is dedicated to the public domain
+under CC0 1.0 Universal; `LICENSE` is the upstream copy.
+
+Only the fixtures are kept: each `.html` beside the `.json` a parser is expected to produce
+from it, under the upstream `tests/` layout (`microformats-v2`, `microformats-v2-unit`,
+`microformats-mixed`, `microformats-v1`), plus the unit suite's `README.md`, which states that
+its base URL is `http://example.test` where every other suite uses `http://example.com/`. The
+upstream `change-log.html` pages are left out.
+
+The files live here rather than beside the parser because whitespace inside them is data: the
+formatter would rewrite the HTML and JSON it is pointed at.
+
+`packages/microformats/src/conformance.test.ts` runs every fixture and names each departure
+with its reason.
