@@ -86,6 +86,38 @@ permits everything.
 
 Whether an address is somewhere this package is willing to go, before any request is made.
 
+### `@sdxc/distill/retrieve`
+
+The four bounds on their own, for any client fetching a URL somebody else chose (a
+Webmention source, a link preview, a feed):
+
+- `addressable(url)` and `isAddressableHost(hostname)`: the check made before every request.
+- `follow(url, options)`: walks the redirect chain under the bounds and answers the last
+  response whatever its status, as `{ response, url }` with the final URL.
+- `retrieve(url, options)`: the same, answering only a 2xx; a refusing status (401, 402,
+  403, 429, 451) is a `DistillRefusedError` and any other failure a `DistillLimitError`.
+- `readWithin(retrieved, cap?)`: reads the body as text within the byte cap, answering
+  `{ text, bytes }`.
+- `release(body)`: cancels a body left unread, so the origin stops sending.
+- `MAX_BYTES`, `MAX_REDIRECTS`, `TIMEOUT_MS`, `DistillLimitError` and `DistillRefusedError`.
+
+`options` is `{ userAgent, maxRedirects?, timeoutMs?, signal? }`; the deadline covers the whole
+chain and the body read that follows it.
+
+```typescript
+import { addressable, follow, readWithin } from "@sdxc/distill/retrieve";
+import { isFailure } from "@sdxc/result";
+
+let url = addressable(input);
+if (isFailure(url)) return url;
+
+let followed = await follow(url.data, { userAgent: "MyApp/1.0 (+https://myapp.example)" });
+if (isFailure(followed)) return followed;
+if (followed.data.response.status === 410) return gone();
+
+let body = await readWithin(followed.data, 1_048_576);
+```
+
 ### Outcomes
 
 Three errors, each carrying an `outcome` a caller renders copy from.
