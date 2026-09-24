@@ -6,7 +6,11 @@
 	"license": "MIT",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./filter": "./src/filter.ts",
+		"./data-table": "./src/data-table.ts",
+		"./patch": "./src/patch.ts",
+		"./discovery": "./src/discovery.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"

@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-23
+**Accepted** - 2026-09-24
 
 ## Background
 
@@ -642,6 +642,14 @@ PATCH), and each provider added later brings its own slice of the grammar, one r
 `remix/data-table`; the gateway-style ones own the HTTP server, and the parsers split filter and
 PATCH-path grammars that the RFC defines together.
 
+## Current Progress
+
+- [x] Phase 1: `@sdxc/scim` built with its five subpaths, tested against every RFC 7644
+      §3.4.2.2 filter and §3.5.2 PATCH example, the RFC 7643 §8 resources, and Okta and Entra
+      ID request shapes
+- [ ] Phase 2: migrate auth-saas
+- [ ] Phase 3: update auth-saas ADR-029 and publish
+
 ## References
 
 - [RFC 7643 - SCIM: Core Schema](https://www.rfc-editor.org/rfc/rfc7643)
@@ -657,3 +665,34 @@ PATCH-path grammars that the RFC defines together.
   own examples send weak tags on `If-Match`, which is why `matchesVersion` lives here
 - The `"True"`/`"False"` string coercion exists for Entra ID's PATCH values; it only applies where
   the attribute definition says `boolean`
+- Implementation: `filterToWhere` refuses (with `UntranslatableFilterError`) a value containing
+  `%`, `_` or `\` rather than escaping it, because `remix/data-table`'s `like`/`ilike` compile
+  without an `ESCAPE` clause and SQLite has no default escape character. `eq` on a
+  `caseExact: false` column becomes `ilike` with the literal value, while `ne` and ordering on such
+  a column are untranslatable. `ne` translates to `ne OR IS NULL`, since SCIM's `ne` holds for an
+  unassigned attribute. `not` is pushed down through `and`/`or` by De Morgan's laws, which
+  translates more than the direct inverses the Decision lists
+- Implementation: `id`, `externalId`, `schemas` and `meta` resolve for every resource as built-in
+  common attributes, so RFC 7644's own `meta.lastModified gt …` and `schemas eq …` examples
+  evaluate although RFC 7643 §8.7.1's `/Schemas` documents omit them
+- Implementation: `applyPatch` also reads the provider shapes RFC 7644 leaves open: an `add`
+  through an `eq` value filter that matches nothing appends the value it describes (Entra ID's
+  `emails[type eq "work"].value`), a `remove` of a multi-valued attribute with a value list removes
+  the listed items (Entra ID's group members), a bare value written to a complex attribute with a
+  `value` sub-attribute reads as `{ value }` (Entra ID's `manager`), a path-less value's URN keys
+  and dotted keys apply at their paths, a read-only attribute written back unchanged is accepted,
+  and a newly written `primary: true` clears `primary` on the attribute's other values
+- Implementation: the types gained `Patch.Path` (the operation path), `Scim.Member` and
+  `Scim.GroupMembership` (so group references keep their `$ref` as `ref`), and
+  `Discovery.ServiceProviderConfigOptions`/`ResourceType`; `ExtensionSchemas` takes any
+  synchronous Standard Schema; `listResponse` and `errorResponse` take an optional `ResponseInit`
+- Implementation: `matchesVersion` answers whether the request's `If-Match` and `If-None-Match`
+  both let it proceed; the caller answers `412`, or `304` for a read failing `If-None-Match`.
+  `readBody` also accepts a body with no `Content-Type` and answers `415` for other types
+- Implementation: `GROUP_DEFINITION` marks `displayName` required, following RFC 7643 §4.2's
+  text over the §8.7.1 schema listing. The RFC 7644 §3.4.2.2 text example
+  `(meta.resourceType eq User) or …` has unquoted values the ABNF rejects, and `parseFilter`
+  refuses it
+- Implementation: auth-saas's controller tests hold no captured provider traffic, so the Okta and
+  Entra ID fixtures follow the providers' documented request shapes. `@sdxc/problem` stays
+  declared in `package.json` but unused, since the SCIM error document is independent of RFC 9457
