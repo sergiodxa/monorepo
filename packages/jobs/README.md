@@ -185,6 +185,17 @@ over `kind: "job"` and `outcome`. The batch log degrades when any of its jobs di
 A dispatcher built without a `logger` emits the same records, carrying no `service`,
 which is how one under test runs unchanged.
 
+### Traces
+
+Every record also carries the [W3C Trace Context](https://www.w3.org/TR/trace-context/) it
+ran under, as `trace_id`, `span_id`, `trace_flags`, and `parent_span_id` when it has a
+parent. A message enqueued inside a traced invocation — a request, another job — carries
+that invocation's trace in its envelope, and the job that runs it continues the trace with
+a span of its own, so a request and the jobs it caused share a `trace_id`. A cron tick and
+a queue batch have no caller, so each starts a root trace; every message one tick enqueues
+carries the tick's. An envelope with no trace, or with an invalid one, runs under a new
+root, so messages enqueued by an earlier deploy dispatch unchanged.
+
 ## API
 
 ### `jobs(tree: JobTree): JobMap`
@@ -247,15 +258,17 @@ job({ cron: "invalid" }); // Type error: not five fields
 
 ### `messageBody(job: JobDefinition, input?): JSONValue`
 
-Builds the body one message carries: the job it names, and the payload beside it under
-`body`. For a call site that sends through the app's own queue helper rather than through
-the dispatcher.
+Builds the body one message carries: the job it names, the payload beside it under
+`body`, and the running invocation's trace as `traceparent` and `tracestate`. For a call
+site that sends through the app's own queue helper rather than through the dispatcher.
 
 ```json
-{ "job": "notify", "body": { "monitorId": "…" } }
+{ "job": "notify", "body": { "monitorId": "…" }, "traceparent": "00-…-…-03" }
 ```
 
-A job declaring no payload carries no `body`. The payload keeps a namespace of its own, so
+A job declaring no payload carries no `body`; outside a traced invocation the message
+carries no trace members, and `tracestate` is written only when upstream sent vendor
+entries. The payload keeps a namespace of its own, so
 a job whose input declares a `job` or a `type` field carries it intact.
 
 **Example:**
@@ -450,6 +463,8 @@ handler directly.
 - `init.log`: Where this job's fields go, a `Log` from `@sdxc/logger`. One is created
   when omitted, under the current log when there is one
 - `init.signal`: Aborts when the job's timeout expires. Never aborts when omitted
+- `init.trace`: The trace this run belongs to. Defaults to the running invocation's, or a
+  new root outside one
 
 **Example:**
 
@@ -469,6 +484,9 @@ let ctx = new JobContext(jobs.clean, { id: "message-1", attempts: 1 });
 - `ctx.log`: The run's record — `set()` fields, `note()` breadcrumbs, `time()` durations —
   emitted once when the run ends
 - `ctx.signal`: Aborts when the timeout expires
+- `ctx.trace`: The trace this run belongs to — `traceId`, this run's `spanId`, the
+  enqueuing invocation's `parentSpanId` — bound for the whole run, so every job it
+  enqueues names this run as its parent
 
 #### `ctx.ack(reason?: string): never`
 

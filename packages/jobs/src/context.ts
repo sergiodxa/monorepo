@@ -8,10 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { TraceContext } from "@sdxc/trace-context";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { ContextValue } from "remix/router";
 
 import { currentLog, Log } from "@sdxc/logger";
+import { currentTrace, startTrace, traceFields } from "@sdxc/trace-context";
 
 import type { RetryOptions } from "./errors.js";
 import type { CronExpression } from "./job.js";
@@ -33,6 +35,8 @@ export interface JobContextInit<Input = undefined> {
 	log?: Log;
 	/** Aborts when the job's timeout expires. Never aborts when omitted. */
 	signal?: AbortSignal;
+	/** The trace this run belongs to. Defaults to the current one, or a new root outside one. */
+	trace?: TraceContext;
 }
 
 /**
@@ -74,6 +78,11 @@ export class JobContext<Input = undefined> {
 	readonly log: Log;
 	/** Aborts when the job's timeout expires; pass it to `fetch`, or read it in a loop. */
 	readonly signal: AbortSignal;
+	/**
+	 * The trace this run belongs to, continued from the envelope of the invocation that
+	 * enqueued it; every job it enqueues and every API call it makes names this run's span.
+	 */
+	readonly trace: TraceContext;
 
 	readonly #values = new Map<object, unknown>();
 
@@ -88,6 +97,7 @@ export class JobContext<Input = undefined> {
 		this.id = init.id;
 		this.attempts = init.attempts;
 		this.batchSize = init.batchSize ?? 1;
+		this.trace = init.trace ?? currentTrace() ?? startTrace();
 		this.log =
 			init.log ??
 			openJobLog({
@@ -98,6 +108,7 @@ export class JobContext<Input = undefined> {
 					batch_size: this.batchSize,
 					cron: job.cron,
 				},
+				...traceFields(this.trace),
 			});
 		this.signal = init.signal ?? new AbortController().signal;
 	}

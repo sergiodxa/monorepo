@@ -849,7 +849,7 @@ describe("scheduled()", () => {
 		await dispatcher.tick({ now: new Date(0), only: "0 0 * * *" });
 
 		expect(ran).not.toHaveBeenCalled();
-		expect(binding.messages.map((message) => message.body)).toEqual([
+		expect(binding.messages.map((message) => message.body)).toMatchObject([
 			{ job: "clean" },
 			{ job: "sweep" },
 		]);

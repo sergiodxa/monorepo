@@ -12,6 +12,7 @@ import type { DurationInput } from "@sdxc/duration";
 import type { Log } from "@sdxc/logger";
 
 import { toMs, toSeconds } from "@sdxc/duration";
+import { runWithTrace, traceFields } from "@sdxc/trace-context";
 import { ValidationError } from "@sdxc/validate";
 
 import type { AnyJobContext } from "./context.js";
@@ -22,6 +23,7 @@ import type { JobDelivery, Settlement } from "./queue.js";
 
 import { JobContext, openJobLog } from "./context.js";
 import { Ack, NonRetriable, Retry, Timeout } from "./errors.js";
+import { readMessageTrace } from "./jobs.js";
 
 /**
  * How long a handler has to end the delivery itself after its timeout aborts the
@@ -213,7 +215,8 @@ function waitForWork(
 
 /**
  * Runs one delivery through the whole lifecycle, inside a `job` log that records how it
- * ended and counts that ending into the batch's log.
+ * ended and counts that ending into the batch's log, and inside the trace its envelope
+ * carries, continued with a span of its own.
  *
  * @param options The job, its handler, and the delivery to run it for.
  * @returns What the delivery ended as, for the caller's backend to apply.
@@ -223,6 +226,7 @@ function waitForWork(
 export async function runJob(options: RunOptions): Promise<Settlement> {
 	let { job, delivery } = options;
 	let controller = new AbortController();
+	let trace = readMessageTrace(delivery.body);
 
 	let log = openJobLog({
 		job: {
@@ -232,6 +236,7 @@ export async function runJob(options: RunOptions): Promise<Settlement> {
 			batch_size: options.batchSize,
 			cron: job.cron,
 		},
+		...traceFields(trace),
 	});
 
 	let context = new JobContext(job, {
@@ -241,28 +246,31 @@ export async function runJob(options: RunOptions): Promise<Settlement> {
 		batchSize: options.batchSize,
 		log,
 		signal: controller.signal,
+		trace,
 	});
 
-	return await log.run(async () => {
-		let outcome = await waitForWork(
-			() =>
-				runChain(options.middleware, context, async () => {
-					let handler = await options.handler();
+	return await runWithTrace(trace, () =>
+		log.run(async () => {
+			let outcome = await waitForWork(
+				() =>
+					runChain(options.middleware, context, async () => {
+						let handler = await options.handler();
 
-					if (handler.job !== job) {
-						throw new Error(
-							`Job "${job.name}" is mapped to a handler written for "${handler.job.name}"`,
-						);
-					}
+						if (handler.job !== job) {
+							throw new Error(
+								`Job "${job.name}" is mapped to a handler written for "${handler.job.name}"`,
+							);
+						}
 
-					await handler(context);
-				}),
-			options.timeout,
-			controller,
-		);
+						await handler(context);
+					}),
+				options.timeout,
+				controller,
+			);
 
-		return await settle(endingOf(outcome, controller.signal), context, log, options.onEnd);
-	});
+			return await settle(endingOf(outcome, controller.signal), context, log, options.onEnd);
+		}),
+	);
 }
 
 /**

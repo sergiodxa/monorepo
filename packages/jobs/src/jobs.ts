@@ -8,8 +8,18 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { TraceContext } from "@sdxc/trace-context";
 import type { JSONValue } from "@sdxc/types";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
+
+import { isFailure } from "@sdxc/result";
+import { continueTrace, currentTrace, startTrace, toTraceParent } from "@sdxc/trace-context";
+import { parse as parseTraceParent } from "@sdxc/trace-context/traceparent";
+import {
+	parse as parseTraceState,
+	stringify as stringifyTraceState,
+	TraceState,
+} from "@sdxc/trace-context/tracestate";
 
 import type { CronExpression, JobLeaf } from "./job.js";
 
@@ -93,10 +103,10 @@ function isLeaf(value: AnyJobLeaf | JobTree): value is AnyJobLeaf {
 }
 
 /**
- * The body one message carries: the job it names, and the payload beside it under `body`. The
- * payload keeps a namespace of its own, so a job whose input declares a `job` or a `type` field
- * carries it intact. Exported for an app that sends through its own helper rather than the
- * dispatcher.
+ * The body one message carries: the job it names, the payload beside it under `body`, and the
+ * enqueuing invocation's trace as `traceparent` and `tracestate`. The payload keeps a namespace
+ * of its own, so a job whose input declares a `job` or a `type` field carries it intact.
+ * Exported for an app that sends through its own helper rather than the dispatcher.
  *
  * @param job The job the message is for.
  * @param input The payload, absent for a job that declares no schema.
@@ -108,14 +118,49 @@ export function messageBody(job: AnyJobDefinition, input?: unknown): JSONValue {
 
 /**
  * The envelope itself, named by job rather than by definition, so an adapter serializing a
- * `JobMessage` and a call site holding a definition write the same wire shape.
+ * `JobMessage` and a call site holding a definition write the same wire shape. Outside a traced
+ * invocation both trace members are left out, and `tracestate` is left out for an empty state.
  *
  * @param job The name the message is addressed to.
  * @param input The payload, absent for a job that declares no schema.
+ * @param trace The trace the message continues; the current one by default.
  */
-export function envelope(job: string, input?: unknown): JSONValue {
-	if (input === undefined) return { job } as JSONValue;
-	return { job, body: input } as JSONValue;
+export function envelope(
+	job: string,
+	input?: unknown,
+	trace: TraceContext | undefined = currentTrace(),
+): JSONValue {
+	let message: Record<string, unknown> = { job };
+	if (input !== undefined) message.body = input;
+	if (trace === undefined) return message as JSONValue;
+
+	message.traceparent = toTraceParent(trace);
+	let state = stringifyTraceState(trace.state);
+	if (state !== "") message.tracestate = state;
+
+	return message as JSONValue;
+}
+
+/**
+ * The trace a delivered body continues, or a new one for a body that carries none or an
+ * invalid `traceparent` (whose `tracestate` is then ignored), which is how an envelope written
+ * before tracing, or by a flat-body producer, still runs with a trace of its own.
+ *
+ * @param body The delivered body, of whatever shape.
+ */
+export function readMessageTrace(body: unknown): TraceContext {
+	if (typeof body !== "object" || body === null) return startTrace();
+	if (!("traceparent" in body) || typeof body.traceparent !== "string") return startTrace();
+
+	let parent = parseTraceParent(body.traceparent);
+	if (isFailure(parent)) return startTrace();
+
+	if (!("tracestate" in body) || typeof body.tracestate !== "string") {
+		return continueTrace(parent.data);
+	}
+
+	let state = parseTraceState(body.tracestate);
+	return continueTrace(parent.data, isFailure(state) ? TraceState.EMPTY : state.data);
 }
 
 /** The job a delivered body names, and the payload it carries. */

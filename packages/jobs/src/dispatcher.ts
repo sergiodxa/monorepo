@@ -16,6 +16,7 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { Schedule } from "@sdxc/cron";
 import { Log } from "@sdxc/logger";
 import { isFailure, unwrap } from "@sdxc/result";
+import { runWithTrace, startTrace, traceFields } from "@sdxc/trace-context";
 import { validate } from "@sdxc/validate";
 
 import type { JobContext } from "./context.js";
@@ -242,6 +243,20 @@ export function createJobDispatcher<const Chain extends readonly AnyJobMiddlewar
 	}
 
 	/**
+	 * Runs one worker invocation under a root trace of its own and a log stamped with it. A
+	 * cron tick or a queue batch has no caller to continue, so everything it enqueues or calls
+	 * shares the trace started here.
+	 * @param kind Which invocation it records.
+	 * @param fields What is known before any work runs.
+	 * @param work The invocation's work, handed its log.
+	 */
+	function invocation(kind: Log.Kind, fields: Log.Fields, work: (log: Log) => Promise<void>) {
+		let trace = startTrace();
+		let log = open(kind, { ...fields, ...traceFields(trace) });
+		return runWithTrace(trace, () => log.run(work));
+	}
+
+	/**
 	 * Loads a job's handler, once per isolate. The loader is awaited only after a
 	 * message has been matched and parsed, so nothing else pays for the module.
 	 * @param name The job whose handler is wanted.
@@ -439,45 +454,45 @@ export function createJobDispatcher<const Chain extends readonly AnyJobMiddlewar
 		},
 
 		async tick({ now, only }) {
-			let log = open("cron", {
-				cron: { expression: only, scheduled_at: now.getTime() },
-			});
+			await invocation(
+				"cron",
+				{ cron: { expression: only, scheduled_at: now.getTime() } },
+				async (log) => {
+					let jobs = due(now, only);
 
-			await log.run(async () => {
-				let jobs = due(now, only);
+					await send(jobs.map((job) => ({ job: job.name })));
 
-				await send(jobs.map((job) => ({ job: job.name })));
-
-				log.set({ jobs: { enqueued: jobs.length } });
-			});
+					log.set({ jobs: { enqueued: jobs.length } });
+				},
+			);
 		},
 
 		async deliverBatch(deliveries, { queue, deadLettered, apply }) {
-			let log = open("queue", {
-				queue: { name: queue, batch_size: deliveries.length },
-			});
-
-			await log.run(async () => {
-				if (deadLettered === true) {
-					for (let delivery of deliveries) {
-						recordDeadLetter(delivery);
-						await apply(delivery, { type: "ack" });
+			await invocation(
+				"queue",
+				{ queue: { name: queue, batch_size: deliveries.length } },
+				async () => {
+					if (deadLettered === true) {
+						for (let delivery of deliveries) {
+							recordDeadLetter(delivery);
+							await apply(delivery, { type: "ack" });
+						}
+						return;
 					}
-					return;
-				}
 
-				let outcomes = await Promise.allSettled(
-					deliveries.map(async (delivery) => {
-						await apply(delivery, await deliver(delivery, deliveries.length));
-					}),
-				);
+					let outcomes = await Promise.allSettled(
+						deliveries.map(async (delivery) => {
+							await apply(delivery, await deliver(delivery, deliveries.length));
+						}),
+					);
 
-				/**
-				 * The first unexpected failure is re-thrown once every delivery has had its turn,
-				 * so one job's crash reaches the platform without stopping its batch mates.
-				 */
-				for (let outcome of outcomes) if (outcome.status === "rejected") throw outcome.reason;
-			});
+					/**
+					 * The first unexpected failure is re-thrown once every delivery has had its turn,
+					 * so one job's crash reaches the platform without stopping its batch mates.
+					 */
+					for (let outcome of outcomes) if (outcome.status === "rejected") throw outcome.reason;
+				},
+			);
 		},
 	};
 }

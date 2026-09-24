@@ -499,7 +499,7 @@ most joins.
 ## Current Progress
 
 - [x] Phase 1: `@sdxc/trace-context` with `./traceparent`, `./tracestate` and `./middleware`
-- [ ] Phase 2: Jobs
+- [x] Phase 2: Jobs
 - [x] Phase 3: API client
 - [ ] Phase 4: Adopt in the workers
 - [ ] Phase 5: Publish
@@ -568,3 +568,13 @@ headers are a small grammar; the value is in binding them to the existing wide e
 - Implementation: the W3C test suite is a harness that drives a live server, so its cases are
   encoded as table tests in `traceparent.test.ts` and `tracestate.test.ts` instead of vendored
   fixtures.
+- Implementation: `JobMessage` gains no trace members. `envelope()` reads `currentTrace()`
+  itself (with an optional `trace` argument), and both adapters call it inside `send()`, which
+  runs in the enqueuing invocation's async context, so the dispatcher, `messageBody()` and the
+  adapters propagate without a second place to thread the trace through.
+- Implementation: a delivered body is read for its trace by `readMessageTrace()` beside
+  `readMessageBody()`; `runJob()` continues it (or starts a root) and binds it outside
+  `log.run()`, and `JobContextInit` gains an optional `trace` that defaults to the current
+  trace, or a new root, for contexts built directly in tests.
+- Implementation: no `@sdxc/logger` change was needed; the trace fields are ordinary
+  `Log.set()` fields.
