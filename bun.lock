@@ -1112,6 +1112,7 @@
       },
       "devDependencies": {
         "@sdxc/http": "workspace:*",
+        "@sdxc/jwt": "workspace:*",
         "remix": "3.0.0-rc.2",
       },
       "peerDependencies": {
