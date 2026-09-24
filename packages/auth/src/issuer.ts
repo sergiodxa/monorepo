@@ -14,13 +14,13 @@ import * as s from "@remix-run/data-schema";
 import { minLength, url } from "@remix-run/data-schema/checks";
 import { JWK } from "@sdxc/jwt";
 import { isFailure, wrap } from "@sdxc/result";
+import { wellKnownUrl } from "@sdxc/well-known";
+import { NAME as OAUTH_AUTHORIZATION_SERVER } from "@sdxc/well-known/oauth-authorization-server";
+import { NAME as OPENID_CONFIGURATION } from "@sdxc/well-known/openid-configuration";
 
 import { AuthError, AuthErrorCode } from "./auth-error.js";
 import { nonJsonMediaType } from "./content-type.js";
 import { IdToken } from "./id-token.js";
-
-/** Path OpenID Connect Discovery §4 appends to an issuer identifier. */
-const DISCOVERY_PATH = "/.well-known/openid-configuration";
 
 /**
  * How long a discovery document and a key set stay in the shared cache, which bounds
@@ -150,6 +150,7 @@ function instanceKey(url: string | URL, options: Issuer.Options): string {
 	return JSON.stringify([
 		address,
 		options.identifier ?? null,
+		options.discovery ?? "openid",
 		String(options.ttl ?? DEFAULT_TTL),
 		options.metadata ?? null,
 	]);
@@ -207,6 +208,7 @@ export class Issuer {
 	#cache: Issuer.CacheSource | null;
 	#configured: Issuer.Metadata | null;
 	#expected: string;
+	#discovery: Issuer.Discovery;
 	#ttl: DurationInput;
 	#metadata: Promise<Issuer.Metadata> | null = null;
 	#keys: Promise<JWK.KeyResolver> | null = null;
@@ -251,6 +253,7 @@ export class Issuer {
 		this.#cache = options.cache ?? null;
 		this.#configured = options.metadata ?? null;
 		this.#expected = options.identifier ?? this.url.href;
+		this.#discovery = options.discovery ?? "openid";
 		this.#ttl = options.ttl ?? DEFAULT_TTL;
 	}
 
@@ -427,11 +430,17 @@ export class Issuer {
 	async #discover(): Promise<Issuer.Metadata> {
 		if (this.#configured) return this.#readMetadata(this.#configured);
 
-		let endpoint = new URL(`${this.url.href.replace(TRAILING_SLASHES, "")}${DISCOVERY_PATH}`);
+		let endpoint =
+			this.#discovery === "oauth"
+				? wellKnownUrl(this.url, OAUTH_AUTHORIZATION_SERVER, "insert")
+				: wellKnownUrl(this.url, OPENID_CONFIGURATION, "append");
 
-		let body = await this.#cached(`${CACHE_PREFIX}:metadata:${this.url.href}`, () =>
-			this.#text(endpoint, AuthErrorCode.DiscoveryFailed),
-		);
+		let key =
+			this.#discovery === "oauth"
+				? `${CACHE_PREFIX}:metadata:oauth:${this.url.href}`
+				: `${CACHE_PREFIX}:metadata:${this.url.href}`;
+
+		let body = await this.#cached(key, () => this.#text(endpoint, AuthErrorCode.DiscoveryFailed));
 
 		return this.#readMetadata(this.#json(body, AuthErrorCode.DiscoveryFailed));
 	}
@@ -748,6 +757,12 @@ export namespace Issuer {
 		clockTolerance?: number;
 	}
 
+	/**
+	 * The discovery document an issuer is read from; an OAuth-only authorization server
+	 * publishes RFC 8414 metadata and no OpenID Connect document.
+	 */
+	export type Discovery = "openid" | "oauth";
+
 	/** How an {@link Issuer} is configured. */
 	export interface Options {
 		/**
@@ -771,6 +786,14 @@ export namespace Issuer {
 		 * checked the same way.
 		 */
 		metadata?: Metadata;
+
+		/**
+		 * Which document describes the issuer: OpenID Connect Discovery, appended to the
+		 * URL, or RFC 8414 authorization server metadata, inserted before its path.
+		 *
+		 * @default "openid"
+		 */
+		discovery?: Discovery;
 
 		/**
 		 * How long a document stays in the shared cache.

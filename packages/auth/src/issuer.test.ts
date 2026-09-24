@@ -283,6 +283,43 @@ describe("metadata", () => {
 		await expect(new Issuer(tenant).identifier()).resolves.toBe(tenant);
 	});
 
+	test("reads RFC 8414 metadata from the root for an OAuth issuer", async () => {
+		respond(`${ISSUER}/.well-known/oauth-authorization-server`, document());
+
+		let issuer = new Issuer(ISSUER, { discovery: "oauth" });
+
+		await expect(issuer.tokenEndpoint()).resolves.toEqual(new URL(`${ISSUER}/oauth/token`));
+		expect(count(DISCOVERY_URL)).toBe(0);
+	});
+
+	test("inserts the RFC 8414 suffix before an OAuth issuer's path", async () => {
+		let tenant = `${ISSUER}/tenant-1`;
+		respond(
+			`${ISSUER}/.well-known/oauth-authorization-server/tenant-1`,
+			document({ issuer: tenant }),
+		);
+
+		await expect(new Issuer(tenant, { discovery: "oauth" }).identifier()).resolves.toBe(tenant);
+	});
+
+	test("holds RFC 8414 metadata to the issuer it was asked for", async () => {
+		respond(
+			`${ISSUER}/.well-known/oauth-authorization-server`,
+			document({ issuer: "https://other.test" }),
+		);
+
+		await expect(new Issuer(ISSUER, { discovery: "oauth" }).metadata()).rejects.toSatisfy(
+			(error: unknown) => AuthError.is(error, AuthErrorCode.IssuerMismatch),
+		);
+	});
+
+	test("hands out one instance per discovery document", () => {
+		let origin = "https://discovery-kind.test";
+
+		expect(Issuer.for(origin, { discovery: "oauth" })).not.toBe(Issuer.for(origin));
+		expect(Issuer.for(origin, { discovery: "openid" })).toBe(Issuer.for(origin));
+	});
+
 	test("accepts a trailing slash on either side of the identity check", async () => {
 		respond(DISCOVERY_URL, document({ issuer: `${ISSUER}/` }));
 
