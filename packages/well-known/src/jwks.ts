@@ -18,18 +18,34 @@ import { WellKnownParseError } from "./parse-error.js";
 export const NAME = "jwks.json";
 export const MEDIA_TYPE = "application/json";
 
-/** One key, with the member names RFC 7517 §4 registers, as Web Crypto imports it. */
+/**
+ * One key, with the members RFC 7517 §4 and the key types of RFC 7518 §6 and RFC 8037
+ * register, as Web Crypto imports it. Any interface-typed JWK with those members fits.
+ */
 export interface Jwk {
 	kty: string;
 	kid?: string;
 	use?: string;
 	key_ops?: string[];
 	alg?: string;
+	ext?: boolean;
 	x5u?: string;
 	x5c?: string[];
 	x5t?: string;
 	"x5t#S256"?: string;
-	[member: string]: unknown;
+	crv?: string;
+	x?: string;
+	y?: string;
+	n?: string;
+	e?: string;
+	d?: string;
+	p?: string;
+	q?: string;
+	dp?: string;
+	dq?: string;
+	qi?: string;
+	oth?: { r?: string; d?: string; t?: string }[];
+	k?: string;
 }
 
 export interface JwkSet {
@@ -45,7 +61,7 @@ export interface ParsedJwkSet extends JwkSet {
 }
 
 /** Members that carry private or symmetric key material (RFC 7518 §6). */
-const PRIVATE_MEMBERS = ["d", "p", "q", "dp", "dq", "qi", "oth", "k"];
+const PRIVATE_MEMBERS = ["d", "p", "q", "dp", "dq", "qi", "oth", "k"] as const;
 
 /** The members each key type RFC 7518 and RFC 8037 register cannot be imported without. */
 const REQUIRED_MEMBERS: Record<string, readonly string[]> = {

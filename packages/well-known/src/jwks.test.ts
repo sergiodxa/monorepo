@@ -6,10 +6,11 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { JWK } from "@sdxc/jwt";
 import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { Jwk } from "./jwks.js";
+import type { Jwk, JwkSet } from "./jwks.js";
 
 import { jwks, parse, stringify } from "./jwks.js";
 
@@ -85,5 +86,13 @@ describe("jwks", () => {
 		});
 		expect(JSON.parse(text)).toEqual({ keys: [EC_KEY] });
 		expect(jwks.name).toBe("jwks.json");
+	});
+});
+
+describe("JWK.toJSON", () => {
+	test("writes a document the JWK Set type accepts", () => {
+		let document: JwkSet = JWK.toJSON([]);
+
+		expect(document).toEqual({ keys: [] });
 	});
 });
