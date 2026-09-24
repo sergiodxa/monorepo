@@ -259,21 +259,38 @@ export namespace JWK {
 	 * plus `kid` and `alg`, keeping unvetted private material out of the set.
 	 *
 	 * @param keys - The key pairs to publish.
-	 * @returns The JWKS document.
+	 * @returns The JWKS document, every entry carrying the `kty` RFC 7517 requires.
 	 * @throws When a pair's key type has no published shape on record.
 	 * @example
 	 * return Response.json(JWK.toJSON(await JWK.signingKeys(storage)));
 	 */
-	export function toJSON(keys: KeyPair[]): jose.JSONWebKeySet {
+	export function toJSON(keys: KeyPair[]): PublishedKeySet {
 		return {
 			keys: keys.map(({ alg, id, jwk }) => {
-				let publish = jwk.kty ? PUBLISHED_JWK_FIELDS[jwk.kty] : undefined;
+				let kty = jwk.kty;
+				let publish = kty ? PUBLISHED_JWK_FIELDS[kty] : undefined;
 
-				if (!publish) throw new Error(`Cannot publish a key of type ${String(jwk.kty)}`);
+				if (!kty || !publish) throw new Error(`Cannot publish a key of type ${String(kty)}`);
 
-				return { ...publish(jwk), kty: jwk.kty, kid: id, alg };
+				return { ...publish(jwk), kty, kid: id, alg };
 			}),
 		};
+	}
+
+	/** The members jose allows on a key inside a JWKS document. */
+	type PublishedKeyMembers = jose.JSONWebKeySet["keys"][number];
+
+	/**
+	 * A published key: RFC 7517 makes `kty` the one member every JWK carries, and lets a
+	 * key carry members beyond the registered ones.
+	 */
+	export interface PublishedKey extends PublishedKeyMembers {
+		kty: string;
+	}
+
+	/** The JWKS document {@link toJSON} writes, accepted anywhere a JWKS is read. */
+	export interface PublishedKeySet {
+		keys: PublishedKey[];
 	}
 
 	/**
