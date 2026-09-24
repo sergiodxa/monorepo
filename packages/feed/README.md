@@ -143,6 +143,21 @@ if (!isFailure(fetched) && !fetched.data.notModified) {
 }
 ```
 
+### `Feed.selectSubscription(header?: Feed.Link[], document?: Feed.Link[])`
+
+Chooses the hub the way `selectHub` does and pairs it with the topic to subscribe under, as
+`{ hub, topic, source }`. The topic is the `rel=self` declared in the same place as the hub,
+falling back to the document's when the header named a hub alone, and `null` when neither
+declares one, so a header-advertised hub is never subscribed under a topic the header
+contradicts.
+
+```typescript
+let subscription = Feed.selectSubscription(fetched.data.links, fetched.data.feed.links);
+if (subscription) {
+	let topic = subscription.topic ?? url;
+}
+```
+
 ### `Feed.discover(input: string | URL, options?: Feed.FetchOptions)`
 
 Finds the feeds a URL leads to. Resolves to `Feed.Discovery[]` in document order, since the

@@ -22,6 +22,9 @@ const DEFAULT_REL = "alternate";
 /** The relation a push-protocol endpoint is advertised under. */
 const HUB_REL = "hub";
 
+/** The relation a document declares its own address under, which WebSub keys a topic by. */
+const SELF_REL = "self";
+
 /** The only scheme a hub may be reached over, since a subscription carries a secret. */
 const SECURE_PROTOCOL = "https:";
 
@@ -126,6 +129,35 @@ export function selectHub(
 	if (fromDocument !== undefined) return { url: fromDocument, source: "document" };
 
 	return undefined;
+}
+
+/**
+ * The hub to subscribe to and the topic to subscribe under, read as a pair.
+ *
+ * A hub keys a subscription by the `rel=self` its publisher declared beside it, so the topic
+ * comes from the list the hub came from, falling back to the document's where the header
+ * named a hub alone. `topic` is `null` where neither declares one.
+ *
+ * @param header - The relations the response's own `Link` header declared
+ * @param document - The relations the feed document declared, in document order
+ * @example let subscription = Feed.selectSubscription(fetched.links, fetched.feed.links);
+ */
+export function selectSubscription(
+	header: readonly Feed.Link[] = [],
+	document: readonly Feed.Link[] = [],
+): Feed.Subscription | undefined {
+	let hub = selectHub(header, document);
+	if (hub === undefined) return undefined;
+
+	let fromDocument = firstSelf(document);
+	let topic = hub.source === "header" ? (firstSelf(header) ?? fromDocument) : fromDocument;
+
+	return { hub: hub.url, topic: topic ?? null, source: hub.source };
+}
+
+/** The first `rel=self` of one list, which is the address its publisher claims for the feed. */
+function firstSelf(links: readonly Feed.Link[]): string | undefined {
+	return links.find((link) => link.rel === SELF_REL)?.href;
 }
 
 /** The first usable hub of one list, which is the one the spec tells a subscriber to take. */

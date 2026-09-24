@@ -145,3 +145,70 @@ describe("choosing a hub", () => {
 		expect(Feed.selectHub([], [])).toBeUndefined();
 	});
 });
+
+describe("pairing a hub with its topic", () => {
+	test("takes the topic from the header when the header named the hub", () => {
+		let header = fromLinkHeader(
+			new Response(null, {
+				headers: {
+					link: `<https://header.example.com/>; rel="hub", <https://example.com/pushed.xml>; rel="self"`,
+				},
+			}),
+			URL_,
+		);
+
+		expect(Feed.selectSubscription(header, parsed(ATOM).links)).toEqual({
+			hub: "https://header.example.com/",
+			topic: "https://example.com/pushed.xml",
+			source: "header",
+		});
+	});
+
+	test("falls back to the document's topic when the header named a hub alone", () => {
+		let header = fromLinkHeader(
+			new Response(null, { headers: { link: `<https://header.example.com/>; rel="hub"` } }),
+			URL_,
+		);
+
+		expect(Feed.selectSubscription(header, parsed(ATOM).links)).toEqual({
+			hub: "https://header.example.com/",
+			topic: URL_,
+			source: "header",
+		});
+	});
+
+	test("keeps the document's topic for a document hub even when the header declares a self", () => {
+		let header = fromLinkHeader(
+			new Response(null, {
+				headers: { link: `<https://example.com/other.xml>; rel="self"` },
+			}),
+			URL_,
+		);
+
+		expect(Feed.selectSubscription(header, parsed(RSS).links)).toEqual({
+			hub: HUB,
+			topic: URL_,
+			source: "document",
+		});
+	});
+
+	test("answers a null topic where no place declares rel=self", () => {
+		let feed = parsed(`<?xml version="1.0"?>
+			<feed xmlns="http://www.w3.org/2005/Atom">
+				<title>Example</title>
+				<id>https://example.com/</id>
+				<updated>2026-09-16T00:00:00Z</updated>
+				<link rel="hub" href="${HUB}"/>
+			</feed>`);
+
+		expect(Feed.selectSubscription([], feed.links)).toEqual({
+			hub: HUB,
+			topic: null,
+			source: "document",
+		});
+	});
+
+	test("answers with nothing for a feed advertising no usable hub", () => {
+		expect(Feed.selectSubscription([], parsed(ATOM).links.slice(0, 1))).toBeUndefined();
+	});
+});

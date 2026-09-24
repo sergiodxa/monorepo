@@ -18,7 +18,7 @@ import { fromAtom } from "./lib/from-atom.js";
 import { fromJSONFeed } from "./lib/from-json-feed.js";
 import { fromRSS } from "./lib/from-rss.js";
 import { readWithin, retrieve } from "./lib/limits.js";
-import { fromLinkHeader, selectHub } from "./lib/links.js";
+import { fromLinkHeader, selectHub, selectSubscription } from "./lib/links.js";
 import { looksLikeJSON, sniff } from "./lib/sniff.js";
 import { describe } from "./lib/utils.js";
 
@@ -72,6 +72,15 @@ export namespace Feed {
 	export interface Hub {
 		url: string;
 		/** `header` when the response's own `Link` header named it, `document` otherwise. */
+		source: "header" | "document";
+	}
+
+	/** A push endpoint paired with the topic it keys the feed's subscription by. */
+	export interface Subscription {
+		hub: string;
+		/** The `rel=self` declared beside the hub, `null` where neither place declares one. */
+		topic: string | null;
+		/** `header` when the response's own `Link` header named the hub, `document` otherwise. */
 		source: "header" | "document";
 	}
 
@@ -271,6 +280,23 @@ export class Feed {
 		document?: readonly Feed.Link[],
 	): Feed.Hub | undefined {
 		return selectHub(header, document);
+	}
+
+	/**
+	 * The hub to subscribe to and the topic to subscribe under, taking `rel=self` from the
+	 * place the hub was advertised and falling back to the document's, so a hub named in the
+	 * header is never paired with a topic the header contradicts.
+	 *
+	 * @param header - The relations the response's `Link` header declared
+	 * @param document - The relations the document declared
+	 * @returns The hub, its topic and where the hub was advertised, or nothing when there is none
+	 * @example let subscription = Feed.selectSubscription(fetched.links, fetched.feed.links);
+	 */
+	static selectSubscription(
+		header?: readonly Feed.Link[],
+		document?: readonly Feed.Link[],
+	): Feed.Subscription | undefined {
+		return selectSubscription(header, document);
 	}
 
 	/** The whole feed as plain data. */
