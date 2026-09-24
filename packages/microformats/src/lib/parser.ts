@@ -65,7 +65,7 @@ export function parseTree(
 	return { items, rels, relUrls };
 }
 
-/** Walks elements depth-first, parsing each root found and not descending past it. */
+/** Walks elements depth-first, parsing each root found as the whole of its subtree. */
 function findItems(element: DOMElement, context: Context, items: MF2.Item[]): void {
 	let root = rootOf(element, context.backcompat);
 	if (root) {
@@ -133,8 +133,8 @@ function walkProperties(
 
 /**
  * The value a nested item carries for the property it sits in: its first `p-name` for
- * `p-*`, its first `u-url` for `u-*` (a `name` or `url` written with another prefix does
- * not count), and the markup and text for `e-*`, else what the element parses to.
+ * `p-*` and its first `u-url` for `u-*` (those prefixes exactly, implied ones included),
+ * the markup and text for `e-*`, else what the element parses to.
  */
 function nestedValue(
 	nested: ItemState,
@@ -252,9 +252,9 @@ function imageValue(element: DOMElement, context: Context): string | MF2.Url | n
 }
 
 /**
- * The value elements of a property: descendants classed `value` or `value-title`,
- * neither searched inside nor searched past another item or another property of the
- * items in `scopes`.
+ * The value elements of a property: descendants classed `value` or `value-title`, the
+ * search stopping at each one found and at every other item or property of the items
+ * in `scopes`.
  */
 function valueElements(
 	element: DOMElement,

@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-23
+**Accepted** - 2026-09-24
 
 ## Background
 
@@ -517,6 +517,47 @@ with `stringify(item)` (ADR-095).
 
 1. Remove `private: true`, add `description` and `LICENSE.md`, bootstrap the release and
    configure the trusted publisher
+
+## Current Progress
+
+- [x] Phase 1: Parser against the official test suite
+  - [x] Vendor `microformats-v2`, `microformats-v2-unit` and `microformats-mixed` and run the fixture loop
+  - [x] Roots, property parsers, nesting, implied properties, value-class pattern, rels, URL resolution
+  - [x] `stringify`, `parseJSON`, `ITEM_SCHEMA`, `findItem`, `values`
+- [x] Phase 2: Backward-compatible parsing
+  - [x] `microformats-v1` fixtures and the classic-to-mf2 tables
+- [x] Phase 3: Vocabulary and templates
+  - [x] `./vocabulary`, tested against the IndieWeb wiki's examples
+  - [x] `mf()`, `classes()`, `MicroTime`, with type tests for the class-name unions
+  - [x] README and root README row
+- [ ] Phase 4: Mark up the blog
+- [ ] Phase 5: Publish
+
+## Notes
+
+- Implementation: the test suite (CC0, commit `d49f5d7`) is vendored under
+  `docs/vendor/microformats-tests` rather than `src/fixtures`, because whitespace in its HTML
+  and JSON is data and the formatter rewrites both everywhere outside `docs/vendor`. 135 of
+  140 fixtures run and match; `src/conformance.test.ts` lists each departure with its reason.
+  They are markup linkedom builds differently from an HTML5 parser (it splits `class` on
+  Unicode whitespace and drops repeated tokens, and nests an `<a>` inside an `<a>`), the
+  classic include pattern, which the mf2 backcompat rules never read, and two places where
+  the suite contradicts itself (a value-class timezone keeps its colon in the unit suite and
+  loses it in `h-event/time`; a mistyped nested `u-*` item's fallback value).
+- Implementation: an absolute URL is kept as written and an empty reference is the base as
+  given, since the suite expects `http://example.com` without the slash a URL serializer adds.
+- Implementation: a custom `remix/ui` mixin adds class names alongside `css()` the same way
+  `css()` itself does, by returning the host element with `className` extended; the runtime
+  merges `class` and `className` on render. `mf()` is that mixin, so no alternative was needed.
+- Implementation: `ITEM_SCHEMA` always outputs a canonical item. Micropub clients send
+  `{ html }` content and nested `h-card`s without a `value`, so a missing `value` is read from
+  the markup's text, or from the nested item's first `name`, then its first `url`.
+- Implementation: `readEntry`, `readCard` and `readFeed` fail only for an item of another
+  type; property values in an unexpected shape are read as the closest field value instead.
+- Implementation: `representativeCard`'s last rule follows the living specification, which
+  takes the page's only card only when one of its `url`s is the page.
+- Implementation: `Item.lang` and `Embedded.lang` are the nearest `lang` in scope, so a page
+  declaring `<html lang>` gives every item its language.
 
 ## Alternatives Considered
 

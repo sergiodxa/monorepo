@@ -192,7 +192,10 @@ describe("ITEM_SCHEMA", () => {
 	});
 
 	test("reads { html } content with the value its markup reads as", () => {
-		let body = { type: ["h-entry"], properties: { content: [{ html: "<p>Hello <b>world</b></p>" }] } };
+		let body = {
+			type: ["h-entry"],
+			properties: { content: [{ html: "<p>Hello <b>world</b></p>" }] },
+		};
 
 		let result = parseSafe(ITEM_SCHEMA, body);
 
@@ -205,7 +208,9 @@ describe("ITEM_SCHEMA", () => {
 		let body = {
 			type: ["h-entry"],
 			properties: {
-				location: [{ type: ["h-card"], properties: { name: ["Café"], url: ["https://cafe.example"] } }],
+				location: [
+					{ type: ["h-card"], properties: { name: ["Café"], url: ["https://cafe.example"] } },
+				],
 			},
 		};
 

@@ -11,7 +11,7 @@ import type { DOMElement, DOMNode } from "@sdxc/html/document";
 import { ELEMENT_NODE, TEXT_NODE, tagName, trimSpaces } from "./tree.js";
 import { resolveUrl } from "./url.js";
 
-/** Elements whose text is never part of a value. */
+/** Elements whose text every value leaves out. */
 const DROPPED_TAGS = new Set(["script", "style", "template"]);
 
 /**
