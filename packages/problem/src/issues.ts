@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { StandardSchemaV1 } from "@standard-schema/spec";
+import type { StandardJSONSchemaV1, StandardSchemaV1 } from "@standard-schema/spec";
 
 import * as s from "remix/data-schema";
 
@@ -62,10 +62,38 @@ export function validationProblem(
 	return problem({ status: 422, ...options, extensions: { errors: issues } });
 }
 
-/**
- * The schema for the `errors` extension, for composing into an extension schema such as
- * `s.object({ errors: ISSUES_SCHEMA })`.
- */
-export const ISSUES_SCHEMA: s.Schema<unknown, ProblemIssue[]> = s.array(
+/** The JSON Schema the `errors` extension follows, valid in every Standard JSON Schema target. */
+const ISSUES_JSON_SCHEMA = {
+	type: "array",
+	items: {
+		type: "object",
+		properties: {
+			pointer: { type: "string", description: "An RFC 6901 JSON Pointer into the request body" },
+			code: { type: "string" },
+			message: { type: "string" },
+		},
+		required: ["pointer", "code", "message"],
+	},
+};
+
+/** The validator behind `ISSUES_SCHEMA`. */
+const ISSUES_VALIDATOR = s.array(
 	s.object({ pointer: s.string(), code: s.string(), message: s.string() }),
 );
+
+/**
+ * The schema for the `errors` extension, for composing into an extension schema such as
+ * `s.object({ errors: ISSUES_SCHEMA })`. It also implements Standard JSON Schema, so a
+ * tool documenting a catalog can describe the extension.
+ */
+export const ISSUES_SCHEMA: s.Schema<unknown, ProblemIssue[]> &
+	StandardJSONSchemaV1<unknown, ProblemIssue[]> = {
+	...ISSUES_VALIDATOR,
+	"~standard": {
+		...ISSUES_VALIDATOR["~standard"],
+		jsonSchema: {
+			input: () => structuredClone(ISSUES_JSON_SCHEMA),
+			output: () => structuredClone(ISSUES_JSON_SCHEMA),
+		},
+	},
+};

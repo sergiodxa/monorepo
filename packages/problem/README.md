@@ -120,7 +120,8 @@ The document's JSON text, for writing a problem somewhere other than a `Response
 
 A catalog: one builder per entry, plus `parse(response)`, `is(problem, name)` and
 `entries()`, which lists every entry with its resolved `type` for rendering an error
-reference. Entries cannot be named `parse`, `is` or `entries`.
+reference, plus the `extensions` schema of an entry declared with one, for documenting its
+members. Entries cannot be named `parse`, `is` or `entries`.
 
 ### `isProblem(message)`
 
@@ -154,7 +155,9 @@ Formats an issue path as an RFC 6901 JSON Pointer, escaping `~` and `/`.
 
 ### `ISSUES_SCHEMA`
 
-The schema for the `errors` extension, for `s.object({ errors: ISSUES_SCHEMA })`.
+The schema for the `errors` extension, for `s.object({ errors: ISSUES_SCHEMA })`. It also
+implements [Standard JSON Schema](https://standardschema.dev/), so a tool that documents a
+catalog can describe the extension.
 
 ### `ProblemParseError`
 

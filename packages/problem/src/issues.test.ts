@@ -73,4 +73,11 @@ describe("ISSUES_SCHEMA", () => {
 
 		expect(result.issues?.[0]?.path?.[0]).toBe(1);
 	});
+
+	test("describes itself as JSON Schema for a tool documenting a catalog", () => {
+		expect(ISSUES_SCHEMA["~standard"].jsonSchema.input({ target: "draft-2020-12" })).toMatchObject({
+			type: "array",
+			items: { type: "object", required: ["pointer", "code", "message"] },
+		});
+	});
 });

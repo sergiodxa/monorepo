@@ -73,6 +73,8 @@ export interface CatalogEntry {
 	type: string;
 	status: number;
 	title: string;
+	/** The schema the entry was declared with, present only when it has one, for documenting its members. */
+	extensions?: StandardSchemaV1;
 }
 
 /** The methods every catalog carries beside its builders. */
@@ -117,7 +119,9 @@ export function defineProblems<const Entries extends ProblemEntries>(
 	for (let [name, entry] of Object.entries(entries) as [string, ProblemEntry][]) {
 		let type = `${base}${entry.slug}`;
 		names.set(type, name);
-		listing.push({ name, type, status: entry.status, title: entry.title });
+		let listed: CatalogEntry = { name, type, status: entry.status, title: entry.title };
+		if (entry.extensions !== undefined) listed.extensions = entry.extensions;
+		listing.push(listed);
 		catalog[name] = (
 			input: { detail?: string; instance?: string; extensions?: object } = {},
 			init?: ResponseInit,

@@ -73,21 +73,25 @@ describe("defineProblems", () => {
 		expect(isSuccess(result) && result.data.name).toBeNull();
 	});
 
-	test("entries lists every entry with its resolved type", () => {
-		expect(problems.entries()).toEqual([
-			{
-				name: "notFound",
-				type: "https://docs.example.com/errors/not-found",
-				status: 404,
-				title: "The resource does not exist",
-			},
-			{
-				name: "outOfCredit",
-				type: "https://docs.example.com/errors/out-of-credit",
-				status: 403,
-				title: "You do not have enough credit",
-			},
-		]);
+	test("entries lists every entry with its resolved type, and the schema of one that has it", () => {
+		let [notFound, outOfCredit] = problems.entries();
+
+		expect(notFound).toEqual({
+			name: "notFound",
+			type: "https://docs.example.com/errors/not-found",
+			status: 404,
+			title: "The resource does not exist",
+		});
+		expect(outOfCredit).toEqual({
+			name: "outOfCredit",
+			type: "https://docs.example.com/errors/out-of-credit",
+			status: 403,
+			title: "You do not have enough credit",
+			extensions: expect.anything(),
+		});
+		expect(outOfCredit?.extensions?.["~standard"].validate({ balance: 30 })).toEqual({
+			value: { balance: 30 },
+		});
 	});
 
 	test("the types hold the catalog's contract", () => {
