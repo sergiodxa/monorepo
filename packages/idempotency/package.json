@@ -6,17 +6,29 @@
 	"license": "MIT",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./middleware": "./src/middleware.ts",
+		"./data-table": "./src/data-table.ts",
+		"./memory": "./src/memory.ts",
+		"./client": "./src/client.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@sdxc/crypto": "workspace:*",
+		"@sdxc/duration": "workspace:*",
+		"@sdxc/logger": "workspace:*",
 		"@sdxc/problem": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/structured-fields": "workspace:*",
 		"@sdxc/types": "workspace:*",
 		"remix": "3.0.0-rc.2"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^5.20260901.1",
+		"@sdxc/cloudflare-mocks": "workspace:*",
+		"@sdxc/data-table-d1": "workspace:*",
+		"@sdxc/data-table-sqlstorage": "workspace:*"
 	}
 }

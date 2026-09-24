@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-23
+**Accepted** - 2026-09-24
 
 ## Background
 
@@ -489,6 +489,51 @@ Two commits, one per workspace.
 1. Remove `private: true`, add `description` and `LICENSE.md` (after
    `@sdxc/structured-fields` is public)
 2. `bun run release:bootstrap @sdxc/idempotency`, then configure the trusted publisher
+
+## Current Progress
+
+- [x] Phase 1: Build the package
+  - [x] Header helpers, `fingerprint`, the store contract and `IDEMPOTENCY_PROBLEM_ENTRIES`
+  - [x] `./middleware`, `./memory`, `./data-table` and `./client`
+  - [x] One store contract suite run against `MemoryStore`, the D1 driver over a D1 mock, the
+        Durable Object driver over a `SqlStorage` mock, and a real D1 binding in workerd
+  - [x] README
+- [ ] Phase 2: Adopt in uptime
+- [ ] Phase 3: Adopt in auth-saas and `@sdxc/auth`
+- [ ] Phase 4: Publish
+
+## Notes
+
+- Implementation: `remix/data-table` cannot express the claim. Its upsert takes `values`,
+  `conflictTarget` and `update`, with no condition on the `do update`, so `DataTableStore#claim`
+  runs the statement as ``db.exec(sql`…`)`` through whichever driver the `Database` wraps, then
+  reads the row with `db.find`. `complete`, `release` and `purgeExpired` use the query API
+  (`updateMany`, `deleteMany`). The raw statement passes unchanged on the D1 driver, on the
+  Durable Object SQLite driver and on a real D1 binding; the shared contract suite, including ten
+  concurrent claims of which exactly one wins, runs on all three.
+- Implementation: `withIdempotencyKey` and `applyIdempotencyKey` return
+  `Result<RequestInit | Request, IdempotencyKeyError>` in place of the bare value. A key an
+  sf-string cannot carry (non-ASCII, a control character, empty) has no valid header, and the
+  repo reports failures as `Result`. Keys from `generateIdempotencyKey` and
+  `deriveIdempotencyKey` always format.
+- Implementation: `MemoryStore` takes no options. Every expiry is judged against the
+  `ClaimRequest`'s `now`, which the middleware reads from `Date.now()`, so a test controls time
+  with `vi.setSystemTime` and the store needs no clock of its own.
+- Implementation: the middleware logs through `currentLog()` from `@sdxc/logger`, the same
+  invocation log `ctx.log` exposes, and records nothing when no log is bound. `idempotency.store_unavailable`
+  is a warning under both failure policies, with the policy as a field. A `503` from a
+  closed policy carries `Retry-After: 1`.
+- Implementation: `prefix` defaults to `"idempotency"`, a fixed value, because record ids are
+  persisted and must stay stable across deploys.
+- Implementation: `IDEMPOTENCY_KEYS_SCHEMA_SQL` must go through a migration runner. D1's
+  `exec()` reads each line as its own statement and fails on the multi-line `create table`; the
+  D1 mock in `@sdxc/cloudflare-mocks` accepts it, which only the Workers-pool test showed.
+- Implementation: the package depends on `@sdxc/duration` (`ttl` and `lease` are
+  `DurationInput`) and `@sdxc/logger`, and tests on `@sdxc/cloudflare-mocks`,
+  `@sdxc/data-table-d1`, `@sdxc/data-table-sqlstorage` and `@cloudflare/workers-types`. The
+  Workers-pool test uses the `DB` D1 binding the `packages-workers` project already declares.
+- Implementation: `readIdempotencyKey` also refuses an empty sf-string (`""`), which cannot tell
+  two operations apart; `formatIdempotencyKey` refuses an empty key to match.
 
 ## Alternatives Considered
 
