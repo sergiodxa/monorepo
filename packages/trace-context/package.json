@@ -6,7 +6,10 @@
 	"license": "MIT",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./middleware": "./src/middleware.ts",
+		"./traceparent": "./src/traceparent.ts",
+		"./tracestate": "./src/tracestate.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"

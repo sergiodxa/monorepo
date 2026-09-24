@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-23
+**Accepted** - 2026-09-24
 
 ## Background
 
@@ -496,6 +496,14 @@ most joins.
 2. `bun run release:bootstrap @sdxc/trace-context`, then configure the trusted publisher;
    `@sdxc/api-client` and `@sdxc/jobs` republish with the new pin automatically
 
+## Current Progress
+
+- [x] Phase 1: `@sdxc/trace-context` with `./traceparent`, `./tracestate` and `./middleware`
+- [ ] Phase 2: Jobs
+- [ ] Phase 3: API client
+- [ ] Phase 4: Adopt in the workers
+- [ ] Phase 5: Publish
+
 ## Alternatives Considered
 
 ### 1. An opt-in mixin or helper for `APIClient`
@@ -548,3 +556,15 @@ headers are a small grammar; the value is in binding them to the existing wide e
 - The `traceparent` example trace id in the Usage section is the specification's own.
 - A `tracestate` entry this repo would write for itself is not proposed; the state is carried
   for callers and callees that use it.
+- Implementation: `withTrace()` replaces both trace headers on the copy instead of leaving
+  present ones, because a forwarded request always arrives with its caller's `traceparent`,
+  and keeping it would hand the Durable Object the caller's caller as its parent. `inject()`
+  keeps the leave-present-headers rule, and adds no `tracestate` beside a `traceparent` the
+  caller set, since that state would belong to another trace.
+- Implementation: `traceFields()` returns a named `TraceFields` interface with a string index
+  signature, so the object is assignable to `Log.Fields` without a cast.
+- Implementation: `remix` stays a regular dependency of the package as scaffolded; only
+  `./middleware` imports it, so the root export used by `@sdxc/api-client` never loads it.
+- Implementation: the W3C test suite is a harness that drives a live server, so its cases are
+  encoded as table tests in `traceparent.test.ts` and `tracestate.test.ts` instead of vendored
+  fixtures.
