@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-23
+**Accepted** - 2026-09-24
 
 ## Background
 
@@ -459,9 +459,31 @@ per-page directives and Content Signals would still need writing.
 - [ADR-083: Well-known URIs Package](./ADR-083-well-known-package.md)
 - [ADR-007: Publishable Package Releases](./ADR-007-publishable-package-releases.md)
 
+## Notes
+
+- Implementation: `robotsUrl` returns `string | null`, `null` for text that is not a URL or a
+  URL with no origin, so it never throws; `fetchRobots` reads that as `unreachable`.
+- Implementation: `Crawl-delay` and `Content-Signal` count as group members, like `Allow` and
+  `Disallow`: they end a run of user-agent lines, so `User-agent: *` / `Crawl-delay: 1` followed
+  by `User-agent: SlowBot` is two groups. `Sitemap` and unknown records never split or end a
+  group, per §2.2.4. A group-scoped record before every group is kept in `records`, and
+  `stringify` writes it before the groups so it round-trips.
+- Implementation: `Robots.ContentSignals` types the three Content Signals keys and keeps any
+  other; `RobotsFetch.Outcome` is a union of the named `Parsed`, `Unavailable` and
+  `Unreachable` interfaces; `Directives.Set` extends a `Directives.Flags` interface.
+- Implementation: a redirect chain past `maxRedirects`, a redirect with no `Location`, a status
+  outside 2xx and 4xx, a caller's abort, and a body that fails to read are all `unreachable`
+  (disallow all). This matches the `unreachable` answer `@sdxc/distill`'s `fetchRobots` gives
+  for an unfollowable chain, where RFC 9309 §2.3.1.2 would also permit "unavailable".
+- Implementation: `isAllowed` on text that is neither an absolute URL nor a `/` path answers
+  `false`, and `isAllowedBy` on an unreachable outcome still allows `/robots.txt`.
+- Implementation: RFC 9309 figure 4's `https%3A%2F%2Ffoo.bar` row is not applied to raw reserved
+  characters in a URL: they compare as written on both sides, which is what Google's suite
+  expects for a query containing `http://`.
+
 ## Current Progress
 
-- [ ] Phase 1: Specify and build the package
+- [x] Phase 1: Specify and build the package
 - [ ] Phase 2: Migrate `@sdxc/distill`
 - [ ] Phase 3: Migrate the reader
 - [ ] Phase 4: Migrate the writers

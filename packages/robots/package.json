@@ -6,7 +6,9 @@
 	"license": "MIT",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./directives": "./src/directives.ts",
+		"./fetch": "./src/fetch.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
