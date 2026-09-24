@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-23
+**Accepted** - 2026-09-24
 
 ## Background
 
@@ -383,6 +383,18 @@ cheapest.
 
 ## Current Progress
 
-- [ ] Phase 1: Specify and build the package
+- [x] Phase 1: Specify and build the package (`packages/merge-patch`; `@sdxc/validate` now reads
+      any `+json` body)
 - [ ] Phase 2: Auth-saas subjects, clients, webhook endpoints
 - [ ] Phase 3: Uptime
+
+## Notes
+
+- Implementation: the package defines and exports its own `JSONValue` (and `JSONObject`),
+  structurally identical to `@sdxc/types`'s, so it carries no dependency for one type alias
+- Implementation: `"./request"` also exports `mergePatchProblem(error)`, the `415`/`400` problem
+  response with `Accept-Patch` on a `415`, since every adopter would otherwise build the same one
+- Implementation: `diff` of two equal non-object values returns the target itself, because `{}`
+  applied to a non-object replaces it with `{}`; `{}` means "equal" only between objects
+- Implementation: `applyValidated` fails with a single issue when the schema validates
+  asynchronously, since its `Result` is synchronous; `remix/data-schema` schemas are synchronous
