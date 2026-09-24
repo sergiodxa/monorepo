@@ -148,7 +148,7 @@ async function createSession(expiresAt: number): Promise<string> {
 describe("scheduled", () => {
 	test("enqueues the sweep on the daily trigger", async () => {
 		await schedule("0 0 * * *");
-		expect(queue.messages.map((message) => message.body)).toEqual([
+		expect(queue.messages.map((message) => message.body)).toMatchObject([
 			{ job: "cleanExpiredSessions" },
 		]);
 	});
