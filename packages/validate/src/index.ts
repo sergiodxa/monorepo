@@ -41,6 +41,19 @@ function urlSearchParamsToObject(params: URLSearchParams): Record<string, unknow
 }
 
 /**
+ * Whether a `Content-Type` names a JSON body: `application/json` itself or any media type
+ * with the RFC 6839 `+json` structured-syntax suffix (`application/merge-patch+json`,
+ * `application/problem+json`), compared case-insensitively with parameters ignored.
+ */
+function isJsonMediaType(contentType: string | null): boolean {
+	if (contentType === null) return false;
+	let essence = (contentType.split(";")[0] ?? "").trim().toLowerCase();
+	return (
+		essence === "application/json" || /^[a-z0-9!#$&^_.-]+\/[a-z0-9!#$&^_.+-]+\+json$/.test(essence)
+	);
+}
+
+/**
  * Some schemas (e.g. `remix/data-schema/form-data`'s `object()`) validate
  * the raw `FormData`/`URLSearchParams` source instead of a flattened plain
  * object; a raw-source rejection triggers a retry against that raw source.
@@ -52,7 +65,7 @@ export async function validate<Schema extends StandardSchemaV1>(
 	if (input instanceof Request) {
 		let contentType = input.headers.get("content-type");
 
-		if (contentType?.includes("application/json")) {
+		if (isJsonMediaType(contentType)) {
 			try {
 				let data = (await input.json()) as Record<string, unknown>;
 				return validate(data, schema);

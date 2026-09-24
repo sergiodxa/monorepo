@@ -196,6 +196,36 @@ describe("validate", () => {
 			expect(isSuccess(result)).toBe(true);
 		});
 
+		test.each([
+			"application/merge-patch+json",
+			"application/problem+json; charset=utf-8",
+			"APPLICATION/JSON",
+			"application/vnd.api+json",
+		])("reads a %s body as JSON", async (contentType) => {
+			let request = new Request("https://example.com/api", {
+				method: "PATCH",
+				headers: { "Content-Type": contentType },
+				body: JSON.stringify({ name: "Frank", email: "frank@example.com" }),
+			});
+
+			let result = await validate(request, userSchema);
+
+			expect(isSuccess(result)).toBe(true);
+			if (isSuccess(result)) expect(result.data.name).toBe("Frank");
+		});
+
+		test("refuses a +json lookalike that is not a structured-syntax suffix", async () => {
+			let request = new Request("https://example.com/api", {
+				method: "POST",
+				headers: { "Content-Type": "text/plain; note=application/json+json" },
+				body: JSON.stringify({ name: "Grace", email: "grace@example.com" }),
+			});
+
+			let result = await validate(request, userSchema);
+
+			expect(isFailure(result)).toBe(true);
+		});
+
 		test("handles validation errors from JSON Request", async () => {
 			let request = new Request("https://example.com/api", {
 				method: "POST",

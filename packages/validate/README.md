@@ -85,7 +85,7 @@ Normalizes `input`, runs it through `schema`, and resolves to a `Result` carryin
 `input` is any of:
 
 - `FormData` or `URLSearchParams` — entries flatten to an object, a repeated name becoming an array.
-- `Request` — the body is read by content type: `application/json`, `multipart/form-data`, or `application/x-www-form-urlencoded`. Any other type refuses with `Unsupported content-type: …`, and a body that is not valid JSON refuses with `Invalid JSON in request body`.
+- `Request` — the body is read by content type: `application/json` or any `+json` media type (`application/merge-patch+json`, `application/problem+json`), `multipart/form-data`, or `application/x-www-form-urlencoded`. Any other type refuses with `Unsupported content-type: …`, and a body that is not valid JSON refuses with `Invalid JSON in request body`.
 - A plain object, or any JSON value — handed to the schema as it stands.
 
 Some schemas validate the raw source rather than a flattened object — `remix/data-schema/form-data`'s `object()` is one, and it rejects the flattened object with `Expected FormData or URLSearchParams`. That rejection is retried against the original `FormData` or `URLSearchParams`, so those schemas pass through the same call as any other.
