@@ -6,7 +6,10 @@
 	"license": "MIT",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./security": "./src/security.ts",
+		"./router": "./src/router.ts",
+		"./testing": "./src/testing.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"

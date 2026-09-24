@@ -871,9 +871,35 @@ the two would still drift, which is the state `2796c090` inherited.
 - [ADR-092: JSON Merge Patch Package](./ADR-092-json-merge-patch-package.md)
 - [auth-saas ADR-034: Management API](./auth-saas/ADR-034-management-api.md)
 
+## Notes
+
+- Implementation: `@sdxc/problem` stays free of a `@sdxc/json-schema` dependency, because
+  it is a public package and `@sdxc/json-schema` is private. `ISSUES_SCHEMA` implements
+  Standard JSON Schema with a hand-written converter instead of being rebuilt from the
+  combinators, and `CatalogEntry.extensions` is present only on entries declared with one.
+- Implementation: combinators nest any `DescribedSchema` (a `remix/data-schema` schema that
+  implements Standard JSON Schema), so `s.object({ errors: ISSUES_SCHEMA })` composes. `pipe`
+  accepts plain data-schema checks too; only keyword-carrying checks document themselves.
+- Implementation: `defaulted` and `lazy` return `Schema<InferInput<S> | undefined, …>` and
+  `Schema<InferInput<S>, InferOutput<S>>` rather than `S`, matching what data-schema returns.
+  An object's inferred types make a key whose value accepts `undefined` optional (`key?:`).
+- Implementation: `OpenAPI.Document` makes optional what the specification makes optional
+  (`servers`, `paths`, `components`, `jsonSchemaDialect`) and types `openapi` as `string`, so
+  `parse` can return documents other tools wrote; a built document always sets every field.
+- Implementation: problem names are checked at compile time by `DocumentBuilder.add`, since
+  `defineOperation` runs before the catalog is known; `Operation` carries them as a type
+  parameter. `DocumentBuilder` also exposes `operations()` and `problems()` for the
+  conformance checker.
+- Implementation: `openapiHandler` negotiates with `remix/headers` (`Accept`, `IfNoneMatch`)
+  instead of `@sdxc/http/negotiate`, which is not a dependency of the package. The ETag is the
+  hex SHA-256 of the serialized bytes; a weak `If-None-Match` also revalidates.
+- Implementation: every schema in the document describes its input side, response bodies
+  included, because the conformance checker validates a response by passing its body to the
+  schema. A request body is always `required: true`.
+
 ## Current Progress
 
 - [x] Phase 1: `@sdxc/json-schema`
-- [ ] Phase 2: `@sdxc/openapi`
+- [x] Phase 2: `@sdxc/openapi` (with the `@sdxc/problem` change)
 - [ ] Phase 3: Adopt in uptime
 - [ ] Phase 4: Adopt in auth-saas
