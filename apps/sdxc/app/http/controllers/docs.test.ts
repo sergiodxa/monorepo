@@ -100,7 +100,7 @@ describe("GET /docs/packages/:name", () => {
 	});
 
 	test("answers 404 for a directory that publishes nothing", async () => {
-		expect((await fetchApp("/docs/packages/jsdoc")).status).toBe(404);
+		expect((await fetchApp("/docs/packages/blog-engine")).status).toBe(404);
 	});
 });
 

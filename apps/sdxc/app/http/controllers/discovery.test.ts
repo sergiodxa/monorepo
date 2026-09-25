@@ -83,7 +83,7 @@ describe("GET /docs/packages/:name.md", () => {
 	});
 
 	test("answers 404 for a directory that publishes nothing", async () => {
-		expect((await fetchApp("/docs/packages/jsdoc.md")).status).toBe(404);
+		expect((await fetchApp("/docs/packages/blog-engine.md")).status).toBe(404);
 	});
 });
 
