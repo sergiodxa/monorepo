@@ -6,6 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { stringifyDirectives } from "@sdxc/robots/directives";
 
 /** Per-page crawl directives. Both default to `true`, the behavior of no tag at all. */
 export interface RobotsOptions {
@@ -27,5 +28,5 @@ export interface RobotsOptions {
  */
 export function robotsDirectives(options: RobotsOptions = {}): string {
 	let { index = true, follow = true } = options;
-	return `${index ? "index" : "noindex"}, ${follow ? "follow" : "nofollow"}`;
+	return stringifyDirectives({ noindex: !index, nofollow: !follow }, { explicit: true });
 }

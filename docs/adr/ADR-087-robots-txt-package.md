@@ -487,4 +487,6 @@ per-page directives and Content Signals would still need writing.
 - [ ] Phase 2: Migrate `@sdxc/distill`
 - [ ] Phase 3: Migrate the reader
 - [ ] Phase 4: Migrate the writers
+  - [ ] `@sdxc/blog-engine`'s `robots.txt` controller
+  - [x] `@sdxc/seo`'s `robotsDirectives` delegates to `stringifyDirectives`
 - [ ] Phase 5: Publish

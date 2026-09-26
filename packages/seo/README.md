@@ -16,7 +16,9 @@ npm add @sdxc/seo
 ```
 
 The head elements are [`remix`](https://www.npmjs.com/package/remix) components, rendered
-by `remix/ui`, which installs alongside this package. The URL helpers, schema builders and
+by `remix/ui`, which installs alongside this package, as does
+[`@sdxc/robots`](https://www.npmjs.com/package/@sdxc/robots), which writes the `robots`
+directives. The URL helpers, schema builders and
 `jsonLdString` are plain functions and run anywhere.
 
 ## Usage
