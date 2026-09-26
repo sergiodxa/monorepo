@@ -2,30 +2,30 @@
 
 WebSub subscriber and publisher: subscribe, verify intent and signatures, notify hubs.
 
-## Overview
+## Installation
+
+```bash
+npm add @sdxc/websub
+```
+
+Every fallible step returns a [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result)
+value, which installs alongside this package.
 
 [WebSub](https://www.w3.org/TR/websub/) lets a subscriber learn about an update the moment it is
-published instead of polling for it. A publisher advertises a hub; a subscriber asks the hub to
-call it back for one topic; the hub verifies the subscriber meant it by calling the callback
-with a challenge; and from then on the hub POSTs each update to the callback, signed with a
-secret only the two of them share.
+published. A publisher advertises a hub; a subscriber asks the hub to call it back for one
+topic; the hub verifies the subscriber meant it by calling the callback with a challenge; and
+from then on the hub POSTs each update to the callback, signed with a secret only the two of
+them share.
 
 This package is the wire format of both halves as plain functions over `Request`, `Response` and
-`URL`. Every fallible step returns a `Result` from `@sdxc/result`, signatures are checked in
-constant time through `@sdxc/crypto`, and each half sits on its own subpath so a publisher never
-loads the verifier. Storage, callback tokens, scheduling and every policy about which
-subscriptions to hold stay with the caller. Discovering a feed's hub and topic lives in
-`@sdxc/feed` (`Feed.selectSubscription`).
-
-| Subpath                   | Exports                                                                                                                                                          |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@sdxc/websub`            | `SignatureAlgorithm`, `WebSubRequestError`, `WebSubVerificationError`, `WebSubSignatureError`                                                                    |
-| `@sdxc/websub/subscriber` | `subscriptionRequest`, `subscribe`, `unsubscribe`, `parseVerification`, `acknowledge`, `refuse`, `gone`, `received`, `verifyDelivery`, `renewalAt`, `Subscriber` |
-| `@sdxc/websub/publisher`  | `links`, `publishRequest`, `publish`, `Publisher`                                                                                                                |
+`URL`. Signatures are checked in constant time, and each half sits on its own subpath so a
+publisher loads only the publishing code. Storage, callback tokens, scheduling and every policy
+about which subscriptions to hold stay with the caller. To discover a feed's hub and topic, use
+`Feed.selectSubscription` from [`@sdxc/feed`](https://www.npmjs.com/package/@sdxc/feed).
 
 ## Usage
 
-### Subscribe to a topic
+### Subscribe To A Topic
 
 ```typescript
 import { randomToken } from "@sdxc/crypto";
@@ -41,13 +41,13 @@ let asked = await subscribe({
 	leaseSeconds: 864_000,
 });
 
-if (isFailure(asked)) log.warn("websub.subscribe.failed", { status: asked.error.status });
+if (isFailure(asked)) console.warn("hub refused", asked.error.status);
 ```
 
 Success means the hub answered `202 Accepted`. The subscription is live once the callback
 acknowledges the hub's verification.
 
-### Answer the hub at the callback
+### Answer The Hub At The Callback
 
 ```typescript
 import { isFailure } from "@sdxc/result";
@@ -73,7 +73,7 @@ async function delivery(request: Request, secret: string) {
 }
 ```
 
-### Advertise a hub and ping it
+### Advertise A Hub And Ping It
 
 ```typescript
 import { links, publish } from "@sdxc/websub/publisher";
@@ -104,14 +104,16 @@ A verification request is missing a field WebSub requires or carries an unknown 
 #### `WebSubSignatureError`
 
 A delivery was refused. `reason` is `"missing"`, `"malformed"`, `"algorithm"`, `"mismatch"` or
-`"too-large"`, for the caller to log; the response is `received()` whatever the reason.
+`"too-large"`, for the caller to log; the response is `received()` whatever the reason. The union is
+exported as `WebSubSignatureError.Reason`.
 
 ### `@sdxc/websub/subscriber`
 
 #### `subscriptionRequest(options): Result<Request, WebSubRequestError>`
 
 Builds the `application/x-www-form-urlencoded` POST without sending it. Pass
-`Subscriber.SubscribeOptions`, or `Subscriber.UnsubscribeOptions` with `mode: "unsubscribe"`.
+`Subscriber.SubscribeOptions`, or `Subscriber.UnsubscriptionRequestOptions` (the
+`UnsubscribeOptions` fields plus `mode: "unsubscribe"`).
 
 - `hub`: must be `https:`, since the request carries the secret
 - `topic`: sent verbatim; the hub keys the subscription by this exact string
@@ -178,6 +180,12 @@ The epoch milliseconds to resubscribe at, from `verifiedAt` and the granted `lea
 hours) before it runs out. A lease shorter than twice the lead renews at its midpoint, so a
 short grant never becomes a renewal loop.
 
+#### `Subscriber`
+
+Types only: `SubscribeOptions`, `UnsubscribeOptions`, `UnsubscriptionRequestOptions`,
+`SubscribeVerification`, `UnsubscribeVerification`, `Denial`, `Verification`,
+`VerifyDeliveryOptions`, `Delivery` and `RenewalOptions`.
+
 ### `@sdxc/websub/publisher`
 
 #### `links(options: Publisher.LinksOptions): string`
@@ -194,9 +202,19 @@ Builds the ping without sending it: `hub.mode=publish` with one `hub.url` field 
 Sends the ping; success is any `2xx`. WebSub leaves publisher-to-hub notification unspecified,
 so this follows the PubSubHubbub 0.4 form that public hubs accept.
 
+#### `Publisher`
+
+Types only: `LinksOptions` (`hubs`, `self`) and `PublishOptions` (`timeoutMs`, default
+`10_000`).
+
 ## Pattern: A Callback Route
 
 The route owns token lookup and what a delivery triggers; the package owns the wire format.
+Answer `received()` to every delivery, since a response that differed by outcome would tell a
+prober whether a guess at the secret was right, and `gone()` for an unknown token, since `410`
+ends the hub's retries where `404` keeps them coming. Store the lease the hub granted, and
+re-fetch the topic rather than trust the body: a verified delivery proves the hub sent it, and
+fetching from the publisher's origin keeps a compromised hub from writing content.
 
 ```typescript
 import { isFailure } from "@sdxc/result";
@@ -236,7 +254,7 @@ export async function onDelivery(request: Request, token: string) {
 
 	let delivery = await verifyDelivery(request, subscription.secret);
 	if (isFailure(delivery)) {
-		log.warn("websub.rejected", { reason: delivery.error.reason });
+		console.warn("delivery refused", delivery.error.reason);
 		return received();
 	}
 
@@ -263,21 +281,36 @@ export function feedResponse(xml: string, self: string) {
 export async function afterSave(feeds: string[]) {
 	await cache.purge("feeds");
 	let pinged = await publish(HUB, feeds);
-	if (isFailure(pinged)) log.warn("websub.publish.failed", { status: pinged.error.status });
+	if (isFailure(pinged)) console.warn("hub refused the ping", pinged.error.status);
 }
 ```
 
-## Related Packages
+## Versioning
 
-- [`@sdxc/feed`](/packages/feed) - Discovers a feed's hub and topic with `Feed.selectSubscription`
-- [`@sdxc/crypto`](/packages/crypto) - `hmac.verify` and `randomToken` for secrets and callback tokens
-- [`@sdxc/rss`](/packages/rss), [`@sdxc/atom`](/packages/atom), [`@sdxc/json-feed`](/packages/json-feed) - Write `rel=hub` into the feed document
-- [`@sdxc/rate-limit`](/packages/rate-limit) - Bounds what a flood of deliveries to one callback costs
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
 
-## Tips
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
 
-1. **Answer `received()` to every delivery** - A response that differed by outcome would tell a prober whether a guess at the secret was right.
-2. **Answer `gone()` for an unknown token** - `410` ends the hub's retries; `404` keeps them coming.
-3. **Store the granted lease** - Compute renewal from `verification.leaseSeconds`, never from the lease you asked for.
-4. **Re-fetch rather than trust the body** - A verified delivery proves the hub sent it, and fetching the topic from the publisher's origin keeps a compromised hub from writing content.
-5. **Use a fresh secret and token per subscription** - A renewal that rotates both leaves nothing a leaked callback URL can reuse.
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/websub": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)

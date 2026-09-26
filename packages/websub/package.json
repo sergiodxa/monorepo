@@ -1,7 +1,6 @@
 {
 	"name": "@sdxc/websub",
 	"version": "0.0.1",
-	"private": true,
 	"description": "WebSub subscriber and publisher: subscribe, verify intent and signatures, notify hubs",
 	"license": "MIT",
 	"type": "module",

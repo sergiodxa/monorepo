@@ -168,7 +168,7 @@ Run from the repository root:
 | [validate](packages/validate)                                   | Standard Schema validation utilities                                                                              | ✅  |
 | [webhooks](packages/webhooks)                                   | Standard Webhooks signing, verification and replay guards                                                         | ✅  |
 | [webmention](packages/webmention)                               | Receive, verify, discover and send Webmentions                                                                    |     |
-| [websub](packages/websub)                                       | WebSub subscriber and publisher: subscribe, verify intent and signatures, notify hubs                             |     |
+| [websub](packages/websub)                                       | WebSub subscriber and publisher: subscribe, verify intent and signatures, notify hubs                             | ✅  |
 | [well-known](packages/well-known)                               | Typed documents for well-known URIs: security.txt, WebFinger, OAuth and OIDC metadata, JWKS and more              | ✅  |
 | [workers-cache](packages/workers-cache)                         | Cloudflare cache tags, purging and cache-status reads                                                             | ✅  |
 | [xml](packages/xml)                                             | XML parser and serializer for RSS-style feeds                                                                     | ✅  |
