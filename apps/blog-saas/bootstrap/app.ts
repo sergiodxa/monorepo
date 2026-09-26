@@ -1,6 +1,6 @@
 /**
  * Assembles the platform-domain HTTP router: the shared middleware stack (request
- * logging, async context, HTML rendering, signed session, cross-origin protection,
+ * logging and tracing, async context, HTML rendering, signed session, cross-origin protection,
  * billing, form/method parsing) and every dashboard, auth, marketing, and webhook
  * route mapping.
  *
@@ -13,6 +13,7 @@ import billing from "@sdxc/billing/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { notFound } from "@sdxc/http/response/html";
 import { log } from "@sdxc/logger/middleware";
+import { trace } from "@sdxc/trace-context/middleware";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
@@ -53,6 +54,7 @@ export function createDashboardRouter() {
 	let middleware: Middleware[] = [
 		headRequests(),
 		log(logger) as Middleware,
+		trace() as Middleware,
 		asyncContext(),
 		database(createDatabase),
 		renderMiddleware as Middleware,
