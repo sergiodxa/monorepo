@@ -1,7 +1,6 @@
 {
 	"name": "@sdxc/robots",
 	"version": "0.0.1",
-	"private": true,
 	"description": "Read, write and evaluate robots.txt and robots directives",
 	"license": "MIT",
 	"type": "module",

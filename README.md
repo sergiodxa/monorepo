@@ -144,7 +144,7 @@ Run from the repository root:
 | [rate-limit](packages/rate-limit)                               | Adapter-based rate limiting with standard response headers                                                        | ✅  |
 | [response](packages/response)                                   | Response builders for JSON APIs and redirects                                                                     | ✅  |
 | [result](packages/result)                                       | Result type for error handling                                                                                    | ✅  |
-| [robots](packages/robots)                                       | Read, write and evaluate robots.txt and robots directives                                                         |     |
+| [robots](packages/robots)                                       | Read, write and evaluate robots.txt and robots directives                                                         | ✅  |
 | [rss](packages/rss)                                             | RSS 2.0 feed builder and parser                                                                                   | ✅  |
 | [saml](packages/saml)                                           | SAML 2.0 service provider: verify a signed assertion and the metadata around it                                   | ✅  |
 | [sample](packages/sample)                                       | Seeded generation of believable people, places, prose, numbers and identifiers                                    | ✅  |

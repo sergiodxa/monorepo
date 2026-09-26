@@ -2,29 +2,26 @@
 
 Read, write and evaluate robots.txt and robots directives.
 
-## Overview
+## Installation
+
+```bash
+npm add @sdxc/robots
+```
 
 [RFC 9309](https://www.rfc-editor.org/rfc/rfc9309) standardized the Robots Exclusion Protocol:
 how `robots.txt` groups rules by user agent, how a crawler picks its group, how `Allow` and
 `Disallow` patterns match (longest match wins, `*` and `$` wildcards), how much of the file a
-crawler must read, and what an HTTP error fetching it means. This package is that protocol in
-both directions: `parse` and `stringify` for the file, `isAllowed` and `crawlDelay` over a parsed
-document, and `fetchRobots`, which turns every HTTP outcome into the decision the RFC assigns it.
+crawler must read, and what an HTTP error fetching it means. `parse` and `stringify` cover the
+file, `isAllowed` and `crawlDelay` evaluate a parsed document, and `fetchRobots` turns every
+HTTP outcome into the decision the RFC assigns it.
 
-`parse` never fails. The RFC defines no invalid file: a parser skips what it cannot read, so a
-page of HTML parses to a document with no groups, which allows everything. Matching normalizes
-percent-encoding in both the pattern and the path, and compares with a wildcard walker rather
-than a regular expression built from the file.
+`parse` always returns a document. The RFC defines every file as readable: a parser skips what
+it cannot read, so a page of HTML parses to a document with no groups, which allows everything.
+Matching normalizes percent-encoding in both the pattern and the path.
 
 The per-page counterpart, the `robots` meta tag and the `X-Robots-Tag` header, is documented by
-the search engines rather than an RFC. `./directives` reads and writes that grammar, including
+the search engines. `@sdxc/robots/directives` reads and writes that grammar, including
 bot-scoped sets and value-carrying directives such as `max-snippet`.
-
-| Subpath                   | Exports                                                                                |
-| ------------------------- | -------------------------------------------------------------------------------------- |
-| `@sdxc/robots`            | `parse`, `stringify`, `isAllowed`, `crawlDelay`, `productToken`, `robotsUrl`, `Robots` |
-| `@sdxc/robots/fetch`      | `fetchRobots`, `isAllowedBy`, `RobotsFetch`                                            |
-| `@sdxc/robots/directives` | `parseDirectives`, `directivesFor`, `stringifyDirectives`, `Directives`                |
 
 ## Usage
 
@@ -33,7 +30,7 @@ bot-scoped sets and value-carrying directives such as `max-snippet`.
 ```typescript
 import { fetchRobots, isAllowedBy } from "@sdxc/robots/fetch";
 
-const AGENT = "SergioReader/1.0 (+https://sergiodxa.com/bot)";
+const AGENT = "ExampleBot/1.0 (+https://example.com/bot)";
 
 let outcome = await fetchRobots(url, { userAgent: AGENT });
 if (!isAllowedBy(outcome, AGENT, url)) return refuse();
@@ -45,8 +42,8 @@ if (!isAllowedBy(outcome, AGENT, url)) return refuse();
 import { crawlDelay, isAllowed, parse } from "@sdxc/robots";
 
 let document = parse(text);
-isAllowed(document, "SergioReader/1.0", "https://example.com/private/x"); // false
-crawlDelay(document, "SergioReader/1.0"); // 10, or undefined
+isAllowed(document, "ExampleBot/1.0", "https://example.com/private/x"); // false
+crawlDelay(document, "ExampleBot/1.0"); // 10, or undefined
 ```
 
 ### Serve a robots.txt
@@ -129,8 +126,8 @@ The `Crawl-delay` of the groups that apply to the agent, in seconds.
 
 #### `productToken(userAgent: string): string`
 
-The lower-cased leading `[A-Za-z_-]+` run: `"SergioReader/1.0 (+https://…)"` gives
-`"sergioreader"`. User-agent lines in the file are reduced the same way, so `User-agent: Foo Bar`
+The lower-cased leading `[A-Za-z_-]+` run: `"ExampleBot/1.0 (+https://…)"` gives
+`"examplebot"`. User-agent lines in the file are reduced the same way, so `User-agent: Foo Bar`
 applies to `foo`.
 
 #### `robotsUrl(url: string | URL): string | null`
@@ -234,23 +231,43 @@ function robotsMeta({ index = true, follow = true }) {
 ## Conformance
 
 The tests run RFC 9309's §5 examples and its percent-encoding tables, and the RFC matching cases
-from Google's open-source robots.txt parser (`src/fixtures/google-robotstxt.ts`, Apache 2.0,
-license beside it). Google-only extensions in that suite are left out: a missing colon read as
-one, `index.html` read as its directory, the 16 KiB line limit, and an empty URL refused. Two of
-its assertions differ by design and are left out too: this package parses the URL, so a raw
-`/foo/bar/ツ` matches its encoded pattern, and it decodes unreserved escapes as §2.2.2 asks, so
-`%62%61%7A` in a pattern matches `/baz`.
+from [Google's open-source robots.txt parser](https://github.com/google/robotstxt). Google-only
+extensions in that suite are outside the RFC and stay out: a missing colon read as one,
+`index.html` read as its directory, the 16 KiB line limit, and an empty URL refused. Two of its
+assertions differ by design: this package parses the URL, so a raw `/foo/bar/ツ` matches its
+encoded pattern, and it decodes unreserved escapes as §2.2.2 asks, so `%62%61%7A` in a pattern
+matches `/baz`.
 
-## Related Packages
+Two decisions stay with the caller. RFC 9309 lets a crawler treat an origin unreachable for a
+month as unavailable, which only a cache with history can tell. And a `429` evaluates as
+unreachable: an origin rate-limiting you is asking you to stay away.
 
-- [`@sdxc/distill`](/packages/distill) - Article extraction, which consults robots.txt before fetching
-- [`@sdxc/seo`](/packages/seo) - Head tags, including the `robots` meta tag
-- [`@sdxc/sitemap`](/packages/sitemap) - The sitemaps a robots.txt points to
+## Versioning
 
-## Tips
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
 
-1. **Pass your full user agent** - Only the product token is compared, so the string you send as `User-Agent` works as is.
-2. **Treat unreachable as temporary** - It disallows everything, so keep it for its one-hour `lifetimeMs` rather than a day.
-3. **The 30-day rule is yours** - RFC 9309 lets a crawler treat an origin unreachable for a month as unavailable; only a cache with history can tell, so apply it there.
-4. **`429` refuses** - The RFC files it under unavailable, but an origin rate-limiting you is asking you to stay away, so it evaluates as unreachable.
-5. **Several `X-Robots-Tag` headers join with commas** - A bot scope runs until the next one, so a header with a scope followed by an unscoped header reads the second under the first's bot.
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
+
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/robots": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)
