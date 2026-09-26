@@ -31,6 +31,35 @@ export type CachePolicy = string;
  */
 export type CacheStatus = "hit" | "miss" | "expired" | "bypass" | "unknown";
 
+/** Why a cache forwarded a request towards the origin, as RFC 9211 section 2.2 lists them. */
+export type CacheForwardReason =
+	| "bypass"
+	| "method"
+	| "uri-miss"
+	| "vary-miss"
+	| "miss"
+	| "request"
+	| "stale"
+	| "partial";
+
+/**
+ * One cache a response passed through, from an RFC 9211 `Cache-Status` member. Each
+ * parameter is present only when that cache sent it, and `detail` is a String or a Token's text.
+ */
+export interface CacheHop {
+	cache: string;
+	hit?: boolean;
+	fwd?: CacheForwardReason;
+	/** The status the next hop answered the forwarded request with. */
+	fwdStatus?: number;
+	/** Seconds of freshness left; negative once the entry is stale. */
+	ttl?: number;
+	stored?: boolean;
+	collapsed?: boolean;
+	key?: string;
+	detail?: string;
+}
+
 /**
  * The selector handed to the platform, with exactly one of its fields set. It is
  * the normalized form of {@link PurgeOptions}: tags are deduplicated and

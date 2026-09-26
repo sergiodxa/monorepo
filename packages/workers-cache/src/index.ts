@@ -1,6 +1,6 @@
 /**
  * Public surface of the workers cache package: the tag vocabulary builder, the
- * `Cache-Tag` serializer, purging, the cache status reader, the cache interface
+ * `Cache-Tag` serializer, purging, the cache status readers, the cache interface
  * these all speak to, and a recording double for tests. Nothing here touches a
  * request, so jobs and scheduled handlers use the same functions handlers do.
  *
@@ -9,6 +9,8 @@
  */
 
 export type {
+	CacheForwardReason,
+	CacheHop,
 	CacheInterface,
 	CachePolicy,
 	CacheStatus,
@@ -24,7 +26,7 @@ export type {
 export type { CacheTags, TagVocabulary } from "./create-tags.js";
 export type { RecordingCache, RecordingCacheOptions } from "./recording-cache.js";
 
-export { cacheStatus } from "./cache-status.js";
+export { cacheHops, cacheStatus } from "./cache-status.js";
 export { cacheTag } from "./cache-tag.js";
 export { CacheTagError } from "./cache-tag-error.js";
 export { createTags } from "./create-tags.js";

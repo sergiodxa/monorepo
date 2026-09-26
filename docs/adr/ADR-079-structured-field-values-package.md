@@ -484,7 +484,8 @@ The HTTP working group publishes the conformance suite
   - [x] `rateLimitHeaders` writes both fields through `stringify`; `headers.test.ts`'s byte-exact
         expectations are unchanged
   - [ ] Move to the named-policy draft revision (a separate decision)
-- [ ] Phase 3: Add the `Cache-Status` reader to `@sdxc/workers-cache`
+- [x] Phase 3: Add the `Cache-Status` reader to `@sdxc/workers-cache`
+  - [x] `cacheHops(response)` beside `cacheStatus`, tested with RFC 9211's examples
 - [ ] Phase 4: Publish
 
 ## Notes
@@ -518,6 +519,10 @@ The HTTP working group publishes the conformance suite
   (`RateLimit: limit=…, remaining=…, reset=…`, `RateLimit-Policy: <limit>;w=<seconds>`). The one
   output change is for numbers RFC 9651 cannot represent: a field holding an Integer beyond 15
   digits is now left out, where the template strings wrote it anyway.
+- Adoption: `cacheHops` returns `CacheHop[]` with camelCase fields (`fwd-status` as
+  `fwdStatus`) and also reads `collapsed`, `key` and `detail`, which the Decision's schema
+  leaves out. An absent or invalid field reads as `[]`, the RFCs' "ignore the field", so the
+  reader sits beside `cacheStatus` as a plain value with no `Result` to unwrap.
 
 ## Alternatives Considered
 

@@ -11,7 +11,7 @@ specified, so any runtime can write them. Invalidation is not: tagging a respons
 cache object.
 
 This package holds that vendor half — a typed tag vocabulary, the serializer, purging, a
-cache-status reader, a recording double for tests, and a `remix/router` middleware that
+cache-status readers, a recording double for tests, and a `remix/router` middleware that
 applies all of it.
 
 ## Installation
@@ -25,7 +25,9 @@ Every purge reports its outcome as a `Result` from
 comes from, and the middleware entry point is built for the router in
 [`remix`](https://www.npmjs.com/package/remix). Both install alongside this package, as does
 [`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger), which the middleware enriches
-when an invocation log is current.
+when an invocation log is current. The standard `Cache-Status` field is parsed with
+[`@sdxc/structured-fields`](https://www.npmjs.com/package/@sdxc/structured-fields), installed
+alongside too.
 
 ## Usage
 
@@ -162,6 +164,24 @@ Reads how the platform treated a response, from the `cf-cache-status` header, as
 | `BYPASS`, `DYNAMIC`                           | `bypass`  |
 | anything else, or no header                   | `unknown` |
 
+### `cacheHops(response: Response): CacheHop[]`
+
+Reads the standard [RFC 9211](https://www.rfc-editor.org/rfc/rfc9211) `Cache-Status` field,
+one entry per cache the response passed through, in the field's order: the cache closest to the
+origin first, the one nearest the client last. Each entry carries the parameters that cache
+sent, with `fwd-status` read as `fwdStatus`, and extension parameters dropped. An absent field,
+or one that is not a valid Structured Field List or breaks RFC 9211's parameter types, reads as
+`[]`, since the RFCs have a recipient ignore an invalid field.
+
+```typescript
+// Cache-Status: OriginCache; hit; ttl=1100, "CDN Company Here"; fwd=uri-miss; stored
+cacheHops(response);
+// [
+//   { cache: "OriginCache", hit: true, ttl: 1100 },
+//   { cache: "CDN Company Here", fwd: "uri-miss", stored: true },
+// ]
+```
+
 ### `createRecordingCache(options?: RecordingCacheOptions): RecordingCache`
 
 A `CacheInterface` that records purges instead of calling a platform. The returned object
@@ -207,6 +227,21 @@ type CacheTag = string & { readonly [CACHE_TAG_BRAND]: true };
 type CachePolicy = string;
 
 type CacheStatus = "hit" | "miss" | "expired" | "bypass" | "unknown";
+
+type CacheForwardReason =
+	"bypass" | "method" | "uri-miss" | "vary-miss" | "miss" | "request" | "stale" | "partial";
+
+interface CacheHop {
+	cache: string;
+	hit?: boolean;
+	fwd?: CacheForwardReason;
+	fwdStatus?: number;
+	ttl?: number;
+	stored?: boolean;
+	collapsed?: boolean;
+	key?: string;
+	detail?: string;
+}
 
 type PurgeOptions =
 	{ tags: readonly CacheTag[] } | { prefixes: readonly string[] } | { everything: true };
