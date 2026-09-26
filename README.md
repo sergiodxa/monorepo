@@ -106,7 +106,7 @@ Run from the repository root:
 | [data-table-sqlstorage](packages/data-table-sqlstorage)         | Remix Data Table adapter for Durable Object SQL                                                                   | ✅  |
 | [dates](packages/dates)                                         | Zone-aware date operations with Intl-only formatting                                                              | ✅  |
 | [distill](packages/distill)                                     | Distill the article out of a web page: fetch under bounds, score, sanitize                                        | ✅  |
-| [doh](packages/doh)                                             | Typed DNS over HTTPS lookups                                                                                      |     |
+| [doh](packages/doh)                                             | Typed DNS over HTTPS lookups                                                                                      | ✅  |
 | [duration](packages/duration)                                   | Typed duration strings converted to milliseconds or seconds                                                       | ✅  |
 | [feed](packages/feed)                                           | One feed API over RSS, Atom and JSON Feed, with conditional fetching and autodiscovery                            | ✅  |
 | [flags](packages/flags)                                         | Feature flag evaluation implementing the OpenFeature specification                                                | ✅  |

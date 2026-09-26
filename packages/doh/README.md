@@ -2,24 +2,32 @@
 
 Typed DNS over HTTPS lookups.
 
-## Overview
+## Installation
 
-A Cloudflare Worker has no socket to send a DNS query over, so names resolve through DNS over
-HTTPS: a `fetch` to a public resolver. This package speaks the DoH JSON API (`application/dns-json`)
-that Cloudflare and Google answer, validates the envelope with `remix/data-schema`, and returns a
-`Result` whose records are typed per query type: an `MX` query gives `preference` and `exchange`, a
-`TXT` query gives the joined `text` with the resolver's quoting and escapes removed.
+```bash
+npm add @sdxc/doh
+```
+
+Every lookup returns a [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) value, which
+installs alongside this package.
+
+A runtime with no DNS socket, such as a Cloudflare Worker, resolves names through DNS over HTTPS:
+a `fetch` to a public resolver. This package speaks the DoH JSON API (`application/dns-json`)
+that Cloudflare and Google answer, validates the envelope, and returns a `Result` whose records
+are typed per query type: an `MX` query gives `preference` and `exchange`, a `TXT` query gives
+the joined `text` with the resolver's quoting and escapes removed.
 
 Failures are classes, so a caller tells "the name is gone" from "the resolver is down" with
-`instanceof`: NXDOMAIN is `NameNotFoundError`, SERVFAIL is `ServerFailureError`, any other RCODE is
-`ResponseCodeError`, and a request that produced no DNS answer is `TransportError`. A name that
-exists with no records of the asked type (NODATA) is a success with no records.
+`instanceof`: NXDOMAIN is `NameNotFoundError`, SERVFAIL is `ServerFailureError`, any other RCODE
+is `ResponseCodeError`, and a request that produced no DNS answer is `TransportError`. A name
+that exists with no records of the asked type (NODATA) is a success with no records.
 
-The package calls the global `fetch`, keeps no state, and neither caches nor retries: every answer
-carries its TTL for a caller that caches, and retry policy belongs to the caller. The resolver is an
-object carrying its `format`, leaving room for an RFC 8484 wire-format resolver later.
+Each call is one request through the global `fetch` and keeps no state: every answer carries its
+TTL for a caller that caches, and retry policy stays with the caller.
 
 ## Usage
+
+### Look Up Records
 
 ```typescript
 import { resolve } from "@sdxc/doh";
@@ -31,7 +39,7 @@ if (isSuccess(answer)) {
 }
 ```
 
-Domain ownership checks:
+### Check Domain Ownership
 
 ```typescript
 import { checkCname, verifyTxtRecord } from "@sdxc/doh";
@@ -40,7 +48,18 @@ let verified = await verifyTxtRecord("_verify.example.com", "token_abc123"); // 
 let pointed = await checkCname("shop.example.com", "custom.hosting.example"); // Result<boolean>
 ```
 
+### Read Record Data From Anywhere
+
+```typescript
+import { parseRecordData } from "@sdxc/doh";
+
+let data = parseRecordData("MX", "10 mail.example.com.");
+// success({ type: "MX", preference: 10, exchange: "mail.example.com" })
+```
+
 ## API
+
+### `@sdxc/doh`
 
 #### `resolve(name, type, options?): Promise<Result<DoH.Answer<Type>, DoHError>>`
 
@@ -98,7 +117,7 @@ a loop), so it holds even when the target resolves to nothing. NXDOMAIN is `succ
 #### `CLOUDFLARE` / `GOOGLE`
 
 `{ url: "https://cloudflare-dns.com/dns-query", format: "json" }` and
-`{ url: "https://dns.google/resolve", format: "json" }`. Tests intercept `CLOUDFLARE.url` with MSW.
+`{ url: "https://dns.google/resolve", format: "json" }`.
 
 #### Errors
 
@@ -117,37 +136,44 @@ Types only: `RecordType`, `Resolver`, `ResolveOptions`, `Answer<Type>`, `RecordF
 `RecordData<Type>`, `RecordBase`, the nine record interfaces (`ARecord` through `SOARecord`), and
 `UnknownRecord`.
 
-## Patterns
+## Pattern: Tell A Vanished Name From A Failing Resolver
 
-### Tell a vanished name from a failing resolver
+Keep NXDOMAIN and NODATA apart, and treat `TransportError` and `ServerFailureError` as unknown
+rather than as "no records".
 
 ```typescript
 import { NameNotFoundError, resolve } from "@sdxc/doh";
 import { isFailure } from "@sdxc/result";
 
-let answer = await resolve(owner, "A");
+let answer = await resolve("app.example.com", "A");
 if (isFailure(answer)) {
 	if (answer.error instanceof NameNotFoundError) return { records: [] };
-	return { error: answer.error.message }; // skip the diff: the resolver is having a bad minute
+	return { error: answer.error.message }; // the resolver is having a bad minute
 }
 
 let viaAlias = answer.data.chain.length > 0;
 ```
 
-### Cache through the answer's TTL
+## Pattern: Cache Through The Answer's TTL
 
 ```typescript
+import { resolve } from "@sdxc/doh";
+import { isSuccess } from "@sdxc/result";
+
 let answer = await resolve(hostname, "A");
 if (isSuccess(answer)) {
 	let seconds = Math.max(answer.data.ttl ?? 60, 60);
-	await cache.write(`doh:A:${hostname}`, answer.data.records, { ttl: `${seconds}s` });
+	await cache.put(`doh:A:${hostname}`, JSON.stringify(answer.data.records), {
+		expirationTtl: seconds,
+	});
 }
 ```
 
-### Confirm a SERVFAIL with a second resolver
+## Pattern: Confirm A SERVFAIL With A Second Resolver
 
 ```typescript
 import { GOOGLE, resolve, ServerFailureError } from "@sdxc/doh";
+import { isFailure } from "@sdxc/result";
 
 let answer = await resolve(name, "TXT");
 if (isFailure(answer) && answer.error instanceof ServerFailureError) {
@@ -155,14 +181,32 @@ if (isFailure(answer) && answer.error instanceof ServerFailureError) {
 }
 ```
 
-## Related Packages
+## Versioning
 
-- [`@sdxc/result`](../result/README.md) - the `Result` every function returns, and `retry` for
-  callers that want one
-- [`@sdxc/cache`](../cache/README.md) - stores answers for their TTL
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
 
-## Tips
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
 
-- Keep NXDOMAIN and NODATA apart unless your product rule says they mean the same
-- Treat `TransportError` and `ServerFailureError` as "unknown", never as "no records"
-- Compare TXT values against `text`, never against the raw resolver data
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/doh": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)
