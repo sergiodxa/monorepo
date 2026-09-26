@@ -868,6 +868,10 @@ export default function application(options: application.Options) {
 		routes.api.cronJobPing,
 		lazy(() => import("~/app/http/controllers/api/cron-job-ping")),
 	);
+	router.map(
+		routes.api.metadata,
+		lazy(() => import("~/app/http/controllers/api/protected-resource")),
+	);
 
 	/**
 	 * Inbound webhooks, gated by `MACHINE_PATH_PREFIXES` above: the sender

@@ -64,6 +64,23 @@ API keys have scopes that control which resources they can access. When creating
 
 Requests that require a scope your key doesn't have return a `403 Forbidden` error.
 
+## Challenges And Discovery
+
+Every `401` and `403` carries a `WWW-Authenticate` header with a `Bearer` challenge. Its
+`resource_metadata` parameter points at the API's
+[RFC 9728](https://www.rfc-editor.org/rfc/rfc9728) metadata, which lists every scope a key can
+hold:
+
+```
+HTTP/1.1 403 Forbidden
+WWW-Authenticate: Bearer scope="monitors:write", error="insufficient_scope", resource_metadata="https://uptime.sergiodxa.com/.well-known/oauth-protected-resource/api/v1"
+```
+
+A request without a key gets the challenge with no `error`; an unknown, expired or revoked key
+adds `error="invalid_token"`, and a key missing a scope adds `error="insufficient_scope"` with
+the `scope` it needs. The metadata at
+`https://uptime.sergiodxa.com/.well-known/oauth-protected-resource/api/v1` needs no key.
+
 ## Key Expiration
 
 API keys can have an optional expiration date. Once expired, requests using that key return a `401 Unauthorized` error. Set expiration dates for keys used for temporary integrations or time-limited access.

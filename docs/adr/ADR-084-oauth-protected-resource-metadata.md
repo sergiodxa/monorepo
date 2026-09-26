@@ -609,3 +609,6 @@ need a token per endpoint, and the metadata endpoint would answer for arbitrary 
       `./protected-resource`, `Issuer`'s `discovery` option, `bearerScheme`'s pointer and
       `bearerFailure`, README
 - [ ] Phase 3: Adopt
+  - [x] uptime API: every `401` and `403` from `require-api-key.ts` carries a Bearer challenge
+        pointing at `/.well-known/oauth-protected-resource/api/v1`, which the app serves with no
+        `authorization_servers`

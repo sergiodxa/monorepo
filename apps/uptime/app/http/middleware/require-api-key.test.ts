@@ -10,16 +10,21 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { parse as parseChallenge } from "@sdxc/auth/bearer-challenge";
+import { isFailure } from "@sdxc/result";
+import { parse as parseMetadata } from "@sdxc/well-known/oauth-protected-resource";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
+import protectedResource from "~/app/http/controllers/api/protected-resource";
 import { database } from "~/app/http/middleware/database";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { apiKeys, teams } from "~/database/schema";
+import { apiKeys, apiKeyScopes, teams } from "~/database/schema";
+import routes from "~/routes/web";
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 
@@ -125,5 +130,78 @@ describe("requireApiKey", () => {
 		expect(response.status).toBe(200);
 		let updated = await db.findOne(apiKeys, { where: { id: record.id } });
 		expect(updated?.last_used_at).not.toBeNull();
+	});
+});
+
+/** Serves a guarded API path beside the metadata controller, as the worker maps them. */
+async function dispatchApi(db: Db, url: string, headers: Record<string, string> = {}) {
+	let router = createRouter({ middleware: [database(() => db)] });
+	router.map(routes.api.metadata, protectedResource);
+	router.get("/api/v1/monitors", {
+		middleware: [requireApiKey("monitors:write")],
+		handler: () => Response.json({}),
+	});
+	return router.fetch(new Request(url, { headers }));
+}
+
+/** The one Bearer challenge a refusal carries, failing the test when it carries none. */
+function challengeOf(response: Response) {
+	let challenges = parseChallenge(response.headers.get("WWW-Authenticate") ?? "");
+	if (isFailure(challenges)) return expect.unreachable(challenges.error.message);
+	expect(challenges.data).toHaveLength(1);
+	return challenges.data[0]!;
+}
+
+describe("requireApiKey challenges", () => {
+	test("a 401 without a key carries a Bearer challenge a client can follow to the metadata", async () => {
+		let { db } = createTestDatabase();
+		let requested = "https://uptime.test/api/v1/monitors";
+
+		let response = await dispatchApi(db, requested);
+
+		expect(response.status).toBe(401);
+		let challenge = challengeOf(response);
+		expect(challenge.error).toBeNull();
+		expect(challenge.resourceMetadata?.href).toBe(
+			"https://uptime.test/.well-known/oauth-protected-resource/api/v1",
+		);
+
+		let metadataResponse = await dispatchApi(db, challenge.resourceMetadata!.href);
+		expect(metadataResponse.status).toBe(200);
+		let metadata = parseMetadata(await metadataResponse.text(), {
+			resource: requested,
+			match: "prefix",
+		});
+		if (isFailure(metadata)) return expect.unreachable(metadata.error.message);
+		expect(metadata.data.resource.href).toBe("https://uptime.test/api/v1");
+		expect(metadata.data.authorizationServers).toEqual([]);
+		expect(metadata.data.scopesSupported).toEqual([...apiKeyScopes]);
+		expect(metadata.data.bearerMethodsSupported).toEqual(["header"]);
+	});
+
+	test("a 401 for an unknown key names invalid_token", async () => {
+		let { db } = createTestDatabase();
+
+		let response = await dispatchApi(db, "https://uptime.test/api/v1/monitors", {
+			Authorization: "Bearer uptime_does-not-exist",
+		});
+
+		expect(response.status).toBe(401);
+		expect(challengeOf(response).error).toBe("invalid_token");
+	});
+
+	test("a 403 for a missing scope names insufficient_scope and the scope", async () => {
+		let { db } = createTestDatabase();
+		let team = await seedTeam(db);
+		let { key } = await seedApiKey(db, team.id, ["monitors:read"]);
+
+		let response = await dispatchApi(db, "https://uptime.test/api/v1/monitors", {
+			Authorization: `Bearer ${key}`,
+		});
+
+		expect(response.status).toBe(403);
+		let challenge = challengeOf(response);
+		expect(challenge.error).toBe("insufficient_scope");
+		expect(challenge.scope).toEqual(["monitors:write"]);
 	});
 });

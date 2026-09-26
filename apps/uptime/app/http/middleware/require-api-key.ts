@@ -19,6 +19,7 @@ import type { ApiKeyScope, SelectApiKey, SelectTeam } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import Team from "~/app/data/team";
 import { hashApiKey } from "~/app/services/api-key";
+import { apiChallenge } from "~/app/services/api-metadata";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 
 declare module "remix/router" {
@@ -31,11 +32,29 @@ declare module "remix/router" {
 const BEARER_PATTERN = /^Bearer\s+(.+)$/i;
 
 /**
+ * The `401` for a request without a usable key. RFC 9110 requires its `WWW-Authenticate`,
+ * which points at the API's metadata; a presented key that failed adds `invalid_token`.
+ *
+ * @param origin - The origin the request reached.
+ * @param presented - Whether the request carried a key at all.
+ */
+function unauthorized(origin: string, presented: boolean): Response {
+	return apiProblems.unauthorized(
+		{ detail: "Invalid or missing API key", instance: problemInstance() },
+		{
+			headers: {
+				"WWW-Authenticate": apiChallenge(origin, presented ? { error: "invalid_token" } : {}),
+			},
+		},
+	);
+}
+
+/**
  * Requires a valid `Authorization: Bearer <key>` header carrying `scope`.
  *
  * @param scope The scope the calling route requires.
  * @returns Middleware responding 401 for a missing/invalid/expired key, 403 for a
- * valid key missing `scope`, otherwise forwarding to the handler with
+ * valid key missing `scope` (both with a Bearer challenge), otherwise forwarding to the handler with
  * `ctx.apiKey`/`ctx.apiTeam` set.
  * @example
  * router.map(routes.api.v1.monitors.index, {
@@ -48,41 +67,33 @@ export default function requireApiKey(scope: ApiKeyScope): Middleware {
 		let header = ctx.request.headers.get("Authorization");
 		let match = header ? BEARER_PATTERN.exec(header) : null;
 		let key = match?.[1] ?? null;
-		if (!key)
-			return apiProblems.unauthorized({
-				detail: "Invalid or missing API key",
-				instance: problemInstance(),
-			});
+		if (!key) return unauthorized(ctx.url.origin, false);
 
 		let keyHash = await hashApiKey(key);
 		let apiKey = await ApiKey.findByHash(ctx.db, keyHash);
-		if (!apiKey)
-			return apiProblems.unauthorized({
-				detail: "Invalid or missing API key",
-				instance: problemInstance(),
-			});
+		if (!apiKey) return unauthorized(ctx.url.origin, true);
 
 		if (apiKey.expires_at !== null && apiKey.expires_at < Date.now()) {
-			return apiProblems.unauthorized({
-				detail: "Invalid or missing API key",
-				instance: problemInstance(),
-			});
+			return unauthorized(ctx.url.origin, true);
 		}
 
 		let team = await Team.findByIdOrSlug(ctx.db, apiKey.team_id);
-		if (!team)
-			return apiProblems.unauthorized({
-				detail: "Invalid or missing API key",
-				instance: problemInstance(),
-			});
+		if (!team) return unauthorized(ctx.url.origin, true);
 
 		await ApiKey.touchLastUsedAt(ctx.db, apiKey.id);
 
 		if (!apiKey.scopes.includes(scope)) {
-			return apiProblems.forbidden({
-				detail: `API key does not have ${scope} scope`,
-				instance: problemInstance(),
-			});
+			return apiProblems.forbidden(
+				{ detail: `API key does not have ${scope} scope`, instance: problemInstance() },
+				{
+					headers: {
+						"WWW-Authenticate": apiChallenge(ctx.url.origin, {
+							error: "insufficient_scope",
+							scope: [scope],
+						}),
+					},
+				},
+			);
 		}
 
 		ctx.apiKey = apiKey;

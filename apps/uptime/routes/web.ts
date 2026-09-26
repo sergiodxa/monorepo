@@ -385,6 +385,12 @@ export default route({
 
 	api: {
 		/**
+		 * The `v1` API's RFC 9728 metadata, at the path §3.1 derives from the resource
+		 * `/api/v1`. Every `401` and `403` the API answers points here.
+		 */
+		metadata: get("/.well-known/oauth-protected-resource/api/v1"),
+
+		/**
 		 * Public, unauthenticated (see its controller's docblock) — kept separate from
 		 * the bearer-key-gated `v1` group below.
 		 */
