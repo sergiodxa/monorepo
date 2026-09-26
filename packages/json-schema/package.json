@@ -1,7 +1,6 @@
 {
 	"name": "@sdxc/json-schema",
 	"version": "0.0.1",
-	"private": true,
 	"description": "Schema builders that validate like remix/data-schema and describe themselves as JSON Schema 2020-12",
 	"license": "MIT",
 	"type": "module",

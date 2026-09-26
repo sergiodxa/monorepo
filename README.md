@@ -123,7 +123,7 @@ Run from the repository root:
 | [jobs](packages/jobs)                                           | Declared background jobs dispatched over a pluggable queue backend                                                | ✅  |
 | [jsdoc](packages/jsdoc)                                         | Read JSDoc out of source text into a JSON documentation model                                                     | ✅  |
 | [json-feed](packages/json-feed)                                 | JSON Feed 1.1 builder and parser                                                                                  | ✅  |
-| [json-schema](packages/json-schema)                             | Schema builders that validate like remix/data-schema and describe themselves as JSON Schema 2020-12               |     |
+| [json-schema](packages/json-schema)                             | Schema builders that validate like remix/data-schema and describe themselves as JSON Schema 2020-12               | ✅  |
 | [jwt](packages/jwt)                                             | JWT payload classes and the keys that sign them                                                                   | ✅  |
 | [lazy-route](packages/lazy-route)                               | Maps a route to a module imported on the first request that reaches it                                            | ✅  |
 | [location](packages/location)                                   | URL-like `Location` class for URL paths without an origin                                                         | ✅  |
