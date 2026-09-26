@@ -1,6 +1,6 @@
 /**
  * Application bootstrap that assembles the books fetch-router. It registers the
- * global middleware stack (async context, request logging, form data, cross-origin
+ * global middleware stack (async context, request logging and tracing, form data, cross-origin
  * protection, HTML rendering), maps the funnel's routes onto their controllers, and
  * wires the request-scoped renderer. It exists as the composition root shared by the
  * worker and by the router-level tests.
@@ -16,6 +16,7 @@ import type { RemixNode } from "remix/ui";
 import billing from "@sdxc/billing/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { log } from "@sdxc/logger/middleware";
+import { trace } from "@sdxc/trace-context/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
@@ -52,6 +53,7 @@ export default function application(provider: Billing = polar) {
 		headRequests(),
 		asyncContext(),
 		log(logger) as Middleware,
+		trace() as Middleware,
 		formData() as Middleware,
 
 		/**
