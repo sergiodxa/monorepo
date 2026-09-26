@@ -21,6 +21,7 @@
 		"@sdxc/response": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/seo": "workspace:*",
+		"@sdxc/trace-context": "workspace:*",
 		"@sdxc/u": "workspace:*",
 		"@sdxc/ui": "workspace:*",
 		"@sdxc/validate": "workspace:*",

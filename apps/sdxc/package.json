@@ -25,6 +25,7 @@
 		"@sdxc/rss": "workspace:*",
 		"@sdxc/seo": "workspace:*",
 		"@sdxc/sitemap": "workspace:*",
+		"@sdxc/trace-context": "workspace:*",
 		"@sdxc/u": "workspace:*",
 		"@sdxc/ui": "workspace:*",
 		"@sdxc/user-agent": "workspace:*",

@@ -35,11 +35,16 @@
 		"@sdxc/pagination": "workspace:*",
 		"@sdxc/rate-limit": "workspace:*",
 		"@sdxc/result": "workspace:*",
+		"@sdxc/robots": "workspace:*",
+		"@sdxc/security-headers": "workspace:*",
 		"@sdxc/session-storage-kv": "workspace:*",
+		"@sdxc/trace-context": "workspace:*",
 		"@sdxc/typeid": "workspace:*",
 		"@sdxc/u": "workspace:*",
 		"@sdxc/ui": "workspace:*",
 		"@sdxc/uuid": "workspace:*",
+		"@sdxc/websub": "workspace:*",
+		"@sdxc/well-known": "workspace:*",
 		"remix": "3.0.0-rc.2"
 	},
 	"devDependencies": {

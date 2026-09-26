@@ -23,6 +23,7 @@
 		"@sdxc/jobs": "workspace:*",
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/result": "workspace:*",
+		"@sdxc/trace-context": "workspace:*",
 		"@sdxc/types": "workspace:*",
 		"@sdxc/validate": "workspace:*",
 		"remix": "3.0.0-rc.2"
