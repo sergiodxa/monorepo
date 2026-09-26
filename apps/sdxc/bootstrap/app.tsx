@@ -1,6 +1,6 @@
 /**
  * Application bootstrap that assembles the fetch-router. It registers the global
- * middleware stack (head requests, async context, request logging, form data,
+ * middleware stack (head requests, async context, request logging and tracing, form data,
  * cross-origin protection, HTML rendering), maps routes onto their controllers, and
  * wires the request-scoped renderer. It exists as the composition root shared by the
  * worker and by router-level tests.
@@ -14,6 +14,7 @@ import type { RemixNode } from "remix/ui";
 
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { log } from "@sdxc/logger/middleware";
+import { trace } from "@sdxc/trace-context/middleware";
 import { userAgent } from "@sdxc/user-agent/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
@@ -64,6 +65,7 @@ export default function application() {
 		headRequests(),
 		asyncContext(),
 		log(logger) as Middleware,
+		trace() as Middleware,
 		formData() as Middleware,
 		cop(),
 		renderWith(createHtmlRenderer) as Middleware,
