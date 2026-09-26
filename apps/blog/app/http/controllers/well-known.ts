@@ -8,29 +8,32 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Jrd, JrdLink } from "@sdxc/well-known/webfinger";
+
+import { badRequest, notFound } from "@sdxc/http/response/json";
+import { isFailure } from "@sdxc/result";
+import { respond } from "@sdxc/well-known/response";
+import { readQuery, select, webFinger } from "@sdxc/well-known/webfinger";
 import { createController } from "remix/router";
 
 import { PROFILE } from "~/config/profile";
 import routes from "~/routes/web";
 
-interface WebFingerProperties {
-	"http://schema.org/name": string;
-	"http://schema.org/description": string;
-	"http://schema.org/url": string;
-	"http://schema.org/image": string;
-}
+/**
+ * RFC 7033 §5 asks every WebFinger answer, errors included, to allow any origin, so a
+ * browser-based client can read why a lookup failed as well as what it found.
+ */
+const CORS_HEADERS = { "Access-Control-Allow-Origin": "*" };
 
-interface WebFingerLink {
-	rel: string;
-	href: string;
-	type?: string;
-}
-
-interface WebFingerDocument {
-	subject: string;
-	aliases: Array<string>;
-	properties: WebFingerProperties;
-	links: Array<WebFingerLink>;
+/**
+ * One JRD link; the site's links carry no titles or link properties.
+ *
+ * @param rel Relation type, a registered name or a URI.
+ * @param href Absolute target URL.
+ * @param type Media type of the target, when a client can use it to pick a link.
+ */
+function link(rel: string, href: string, type: string | null = null): JrdLink {
+	return { rel, href, type, titles: {}, properties: {} };
 }
 
 /**
@@ -42,7 +45,7 @@ interface WebFingerDocument {
  * @param resource Raw `resource` query parameter from the request URL.
  * @returns The canonical subject when the resource is recognized, otherwise `null`.
  */
-function normalizeResource(resource: string | null) {
+function normalizeResource(resource: string) {
 	if (resource === PROFILE.canonical.resource) return PROFILE.canonical.resource;
 	if (resource === PROFILE.canonical.origin) return PROFILE.canonical.resource;
 	if (resource === new URL("/", PROFILE.canonical.origin).toString()) {
@@ -58,55 +61,32 @@ function normalizeResource(resource: string | null) {
  * @param subject Canonical resource identifier to expose in the JRD payload.
  * @returns WebFinger document with homepage, avatar, RSS, and social profile links.
  */
-function createWebFingerDocument(subject: string): WebFingerDocument {
+function createWebFingerDocument(subject: string): Jrd {
+	let home = new URL("/", PROFILE.canonical.origin).toString();
+	let avatar = new URL(routes.wellKnown.avatar.href(), PROFILE.canonical.origin).toString();
+	let feed = (path: string) => new URL(path, PROFILE.canonical.origin).toString();
+
 	return {
 		subject,
-		aliases: [new URL("/", PROFILE.canonical.origin).toString()],
+		aliases: [home],
 		properties: {
 			"http://schema.org/name": PROFILE.name,
 			"http://schema.org/description": PROFILE.summary,
-			"http://schema.org/url": new URL("/", PROFILE.canonical.origin).toString(),
-			"http://schema.org/image": new URL(
-				routes.wellKnown.avatar.href(),
-				PROFILE.canonical.origin,
-			).toString(),
+			"http://schema.org/url": home,
+			"http://schema.org/image": avatar,
 		},
 		links: [
-			{ rel: "self", type: "text/html", href: new URL("/", PROFILE.canonical.origin).toString() },
-			{
-				rel: "http://webfinger.net/rel/profile-page",
-				type: "text/html",
-				href: new URL("/", PROFILE.canonical.origin).toString(),
-			},
-			{
-				rel: "http://webfinger.net/rel/avatar",
-				type: "image/png",
-				href: new URL(routes.wellKnown.avatar.href(), PROFILE.canonical.origin).toString(),
-			},
-			{
-				rel: "alternate",
-				type: "application/rss+xml",
-				href: new URL(routes.rss.feed.href(), PROFILE.canonical.origin).toString(),
-			},
-			{
-				rel: "alternate",
-				type: "application/rss+xml",
-				href: new URL(routes.rss.articles.href(), PROFILE.canonical.origin).toString(),
-			},
-			{
-				rel: "alternate",
-				type: "application/rss+xml",
-				href: new URL(routes.rss.tutorials.href(), PROFILE.canonical.origin).toString(),
-			},
-			{
-				rel: "alternate",
-				type: "application/rss+xml",
-				href: new URL(routes.rss.bookmarks.href(), PROFILE.canonical.origin).toString(),
-			},
-			{ rel: "me", href: PROFILE.x.profile },
-			{ rel: "me", href: PROFILE.github.profile },
-			{ rel: "me", href: PROFILE.github.sponsor },
-			{ rel: "me", href: PROFILE.youtube.profile },
+			link("self", home, "text/html"),
+			link("http://webfinger.net/rel/profile-page", home, "text/html"),
+			link("http://webfinger.net/rel/avatar", avatar, "image/png"),
+			link("alternate", feed(routes.rss.feed.href()), "application/rss+xml"),
+			link("alternate", feed(routes.rss.articles.href()), "application/rss+xml"),
+			link("alternate", feed(routes.rss.tutorials.href()), "application/rss+xml"),
+			link("alternate", feed(routes.rss.bookmarks.href()), "application/rss+xml"),
+			link("me", PROFILE.x.profile),
+			link("me", PROFILE.github.profile),
+			link("me", PROFILE.github.sponsor),
+			link("me", PROFILE.youtube.profile),
 		],
 	};
 }
@@ -121,35 +101,24 @@ export default createController(routes.wellKnown, {
 	middleware: [],
 	actions: {
 		/**
-		 * Serves the site's WebFinger JRD document for Sergio's canonical identity.
+		 * Serves the site's WebFinger JRD document for Sergio's canonical identity, keeping
+		 * only the links whose relation a `rel` parameter asks for (RFC 7033 §4.3).
 		 *
 		 * @param ctx Request context providing the parsed request URL.
-		 * @returns JRD JSON for known resources, or a small JSON error response otherwise.
+		 * @returns JRD JSON for known resources, a JSON 400 without `resource`, a JSON 404 for
+		 *   anyone else's; every answer allows any origin.
 		 */
 		async webFinger(ctx) {
-			let resource = ctx.url.searchParams.get("resource");
-			let subject = normalizeResource(resource);
-
-			if (!resource) {
-				return Response.json(
-					{ error: "Missing resource query parameter." },
-					{ status: 400, headers: { "Content-Type": "application/json; charset=utf-8" } },
-				);
+			let query = readQuery(ctx.url);
+			if (isFailure(query)) {
+				return badRequest({ error: query.error.message }, { headers: CORS_HEADERS });
 			}
 
-			if (!subject) {
-				return Response.json(
-					{ error: "Unknown resource." },
-					{ status: 404, headers: { "Content-Type": "application/json; charset=utf-8" } },
-				);
-			}
+			let subject = normalizeResource(query.data.resource);
+			if (!subject) return notFound({ error: "Unknown resource." }, { headers: CORS_HEADERS });
 
-			let body = createWebFingerDocument(subject);
-
-			return new Response(JSON.stringify(body), {
-				headers: {
-					"Content-Type": "application/jrd+json; charset=utf-8",
-				},
+			return await respond(webFinger, select(createWebFingerDocument(subject), query.data.rels), {
+				request: ctx.request,
 			});
 		},
 

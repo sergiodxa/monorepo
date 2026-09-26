@@ -837,7 +837,7 @@ the discovery parsers come attached to a client `@sdxc/auth` already is.
 - [x] Phase 3: `./security-txt` and `./middleware`
 - [ ] Phase 3: security.txt adoption in the apps
 - [x] Phase 4: `./webfinger`
-- [ ] Phase 4: `apps/blog` WebFinger extraction
+- [x] Phase 4: `apps/blog` WebFinger extraction
 - [x] Phase 5: `./change-password` and `./passkey-endpoints`, plus `./oauth-protected-resource` for ADR-084
 - [ ] Phase 5: `apps/r3-auth` serves `change-password`
 - [ ] Phase 6: Publish
