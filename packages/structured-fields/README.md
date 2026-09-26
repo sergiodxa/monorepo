@@ -2,32 +2,56 @@
 
 Parse and serialize RFC 9651 structured HTTP field values.
 
-## Overview
+## Installation
+
+```bash
+npm add @sdxc/structured-fields
+```
+
+Results are [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) values, and the
+`./schema` builders compose with [`remix`](https://www.npmjs.com/package/remix)'s
+`remix/data-schema`. Both install alongside this package.
 
 [RFC 9651](https://www.rfc-editor.org/rfc/rfc9651) defines one grammar for new HTTP fields:
 `Priority`, `Cache-Status`, `RateLimit`, `Idempotency-Key`, `Repr-Digest` and the client hints
 are all a List, a Dictionary or an Item of typed bare values. This package implements the RFC's
-parsing and serialization algorithms once, checked against the HTTP working group's
-[structured-field-tests](https://github.com/httpwg/structured-field-tests) suite, so each field
-becomes a few lines of declaration instead of hand-written string handling.
-
-Every call names the field's top-level type (`"list"`, `"dictionary"` or `"item"`), because the
-RFC fixes it in the field's definition rather than in the text. Parsing returns a `Result` from
-`@sdxc/result` and never a partial value; serializing fails, with the path to the offending
-value, for anything the RFC cannot represent. Headers whose grammar predates RFC 9651 (`Accept`,
-`Cache-Control`, `Set-Cookie`, …) stay with `remix/headers`.
-
-The `./schema` entry point adds `remix/data-schema` helpers, so a field's shape is declared once
-and read as typed values.
+parsing and serialization algorithms, checked against the HTTP working group's
+[structured-field-tests](https://github.com/httpwg/structured-field-tests) suite. Every call
+names the field's top-level type (`"list"`, `"dictionary"` or `"item"`), because the RFC fixes
+it in the field's definition rather than in the text. Parsing fails the whole field on any
+error, as the RFC requires, and never returns a partial value.
 
 ## Usage
 
-### Reading a field with a schema
+### Write A Field
 
 ```typescript
+import { setField, stringify } from "@sdxc/structured-fields";
+
+setField(headers, "RateLimit", { limit: 10, remaining: 0, reset: 7 }, "dictionary");
+// RateLimit: limit=10, remaining=0, reset=7
+
+stringify({ value: 10, params: { w: 60 } }, "item"); // success: "10;w=60"
+```
+
+### Read The Untyped Model
+
+```typescript
+import { parse } from "@sdxc/structured-fields";
+
+let parsed = parse('ExampleCache; hit; ttl=376, "Origin"; fwd=uri-miss', "list");
+// success: [
+//   { value: Token("ExampleCache"), params: { hit: true, ttl: 376 } },
+//   { value: "Origin", params: { fwd: Token("uri-miss") } },
+// ]
+```
+
+### Read A Field Through A Schema
+
+```typescript
+import { isSuccess } from "@sdxc/result";
 import { getField } from "@sdxc/structured-fields";
 import { sf } from "@sdxc/structured-fields/schema";
-import { isSuccess } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 
@@ -42,32 +66,11 @@ if (isSuccess(priority) && priority.data) {
 }
 ```
 
-### Writing a field
-
-```typescript
-import { setField, stringify } from "@sdxc/structured-fields";
-
-setField(headers, "RateLimit", { limit: 10, remaining: 0, reset: 7 }, "dictionary");
-// RateLimit: limit=10, remaining=0, reset=7
-
-stringify({ value: 10, params: { w: 60 } }, "item"); // success: "10;w=60"
-```
-
-### Reading the untyped model
-
-```typescript
-import { parse, Token } from "@sdxc/structured-fields";
-
-let parsed = parse('ExampleCache; hit; ttl=376, "Origin"; fwd=uri-miss', "list");
-// success: [
-//   { value: Token("ExampleCache"), params: { hit: true, ttl: 376 } },
-//   { value: "Origin", params: { fwd: Token("uri-miss") } },
-// ]
-```
+`sf.*` schemas hold no state, so declare a field's schema once at module scope.
 
 ## API
 
-### `.`
+### `@sdxc/structured-fields`
 
 #### `parse(text, type, schema?)`
 
@@ -92,6 +95,7 @@ omitted anywhere.
   as a Decimal rounded half-to-even to three fractional digits
 - A `string` writes as a quoted sf-string, which carries printable ASCII only
 - A member or parameter whose value is `true` writes as the bare key
+- A `Date` writes as whole seconds; one with milliseconds fails
 
 ```typescript
 stringify([1, 1.5, new Decimal(1)], "list"); // success: "1, 1.5, 1.0"
@@ -110,15 +114,16 @@ Dictionary deletes the field. A failure leaves `headers` untouched.
 
 #### `Token`, `Decimal`, `DisplayString`
 
-Wrappers for the bare item types a JavaScript primitive cannot tell apart: `new Token("HIT")`
-writes `HIT` where `"HIT"` writes `"HIT"`, `new Decimal(1)` writes `1.0`, and
-`new DisplayString("fü")` writes `%"f%c3%bc"`. `parse` returns them, so a round trip is
-lossless. Byte Sequences are `Uint8Array`, Dates are `Date` (whole seconds only), Booleans are
+Wrappers, each holding a readonly `value`, for the bare item types a JavaScript primitive cannot
+tell apart: `new Token("HIT")` writes `HIT` where `"HIT"` writes `"HIT"`, `new Decimal(1)`
+writes `1.0`, and `new DisplayString("fü")` writes `%"f%c3%bc"`. `parse` returns them, so a
+round trip is lossless. Byte Sequences are `Uint8Array`, Dates are `Date`, Booleans are
 `boolean`.
 
 #### `StructuredFieldParseError`
 
-`position` is the offset into the field value where parsing stopped.
+`position` is the offset into the field value where parsing stopped. RFC 9651 has recipients
+ignore an invalid field as a whole, so treat this failure as an absent field.
 
 #### `StructuredFieldStringifyError`
 
@@ -144,13 +149,15 @@ lossless. Byte Sequences are `Uint8Array`, Dates are `Date` (whole seconds only)
 | `SF.ItemInput`, `SF.InnerListInput`, `SF.MemberInput` | The shorthand member forms `stringify` accepts                                           |
 | `SF.SyncSchema<Output>`                               | A Standard Schema whose `validate` answers synchronously                                 |
 
-### `./schema`
+### `@sdxc/structured-fields/schema`
 
 #### `sf`
 
-Schema builders built on `remix/data-schema`'s `createSchema`, so they compose with `s.object`,
-`s.array`, `s.union`, `s.optional`, `.pipe()` and `.refine()`. Issues point at their place in
-the field, such as `["u", "value"]` or `[0, "items", 1, "value"]`.
+Schema builders made with `remix/data-schema`'s `createSchema`, so they compose with
+`s.object`, `s.array`, `s.union`, `s.optional`, `.pipe()` and `.refine()`. Issues point at
+their place in the field, such as `["u", "value"]` or `[0, "items", 1, "value"]`, and carry an
+error-map code (`sf.integer`, `sf.token.allowed`, …) for localized messages.
+`StructuredFieldSchemas` is its type.
 
 | Builder                       | Accepts                           | Outputs                            |
 | ----------------------------- | --------------------------------- | ---------------------------------- |
@@ -168,7 +175,7 @@ A plain sf-string and a Boolean need no helper: `s.string()` and `s.boolean()`. 
 Dictionaries are `s.object(...)`, with `s.optional` for keys a field allows but does not
 require; the object schema's `unknownKeys` option decides what happens to the rest.
 
-## Pattern: Reading RFC 9211 Cache-Status
+## Pattern: Read RFC 9211 Cache-Status
 
 A List of cache hops, each a Token or String naming the cache, with typed parameters.
 
@@ -216,12 +223,14 @@ let header = stringify("8e03978e-40d5-43e8-bc93-6894a57f9324", "item");
 // success: "\"8e03978e-40d5-43e8-bc93-6894a57f9324\""
 ```
 
-## Pattern: Writing only the members you have
+## Pattern: Write Only The Members You Have
 
 `setField` deletes the field when the Dictionary ends up empty, so build the object from the
 values that exist and write it unconditionally.
 
 ```typescript
+import { setField } from "@sdxc/structured-fields";
+
 let quota: Record<string, number> = {};
 if (limit !== null) quota.limit = limit;
 if (remaining !== null) quota.remaining = remaining;
@@ -229,22 +238,32 @@ if (remaining !== null) quota.remaining = remaining;
 let written = setField(headers, "RateLimit", quota, "dictionary");
 ```
 
-## Related Packages
+## Versioning
 
-- [`@sdxc/result`](/packages/result) - The `Result` every function returns
-- [`@sdxc/rate-limit`](/packages/rate-limit) - Writes the `RateLimit` fields
-- [`@sdxc/server-timing`](/packages/server-timing) - `Server-Timing` has its own W3C grammar
-  and keeps its own writer
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
 
-## Tips
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
 
-1. **Build schemas at module scope** - `sf.*` schemas hold no state, so declare a field's schema
-   once and reuse it on every request.
-2. **Treat a parse failure as an absent field** - RFC 9651 has recipients ignore an invalid field
-   as a whole; fall back to the field's default rather than failing the request.
-3. **Use `DisplayString` for Unicode** - an sf-string carries printable ASCII only, so
-   `stringify` fails a `string` with other characters.
-4. **Write Decimals explicitly when the field requires one** - `2` writes as the Integer `2`;
-   `new Decimal(2)` writes `2.0`.
-5. **Dates are whole seconds** - a `Date` with milliseconds fails to serialize; truncate it
-   first with `new Date(Math.floor(date.getTime() / 1000) * 1000)`.
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/structured-fields": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)
