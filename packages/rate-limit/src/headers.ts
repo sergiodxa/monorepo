@@ -1,7 +1,7 @@
 /**
- * Serialization of a decision into the IETF draft rate limit response fields,
- * plus the helper that writes them onto a finished response. Output includes
- * only the fields the backend actually reports, keeping every number accurate.
+ * Serialization of a decision into the rate limit response fields of
+ * draft-ietf-httpapi-ratelimit-headers-07, as RFC 9651 structured fields, plus
+ * the helper that writes them onto a response. Only reported numbers ship.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,6 +10,8 @@
 import type { DurationInput } from "@sdxc/duration";
 
 import { toSeconds } from "@sdxc/duration";
+import { isSuccess } from "@sdxc/result";
+import { stringify } from "@sdxc/structured-fields";
 
 import type { RateLimitDecision } from "./types.js";
 
@@ -25,7 +27,7 @@ const RETRY_AFTER_FIELD = "Retry-After";
 /**
  * Serializes a decision into header name/value pairs, keeping `remaining`
  * out when the backend can't report it and adding `Retry-After` only when
- * the attempt is denied, since that's the only time 'try again' applies.
+ * the attempt is denied. A field holding an Integer beyond 15 digits is left out.
  *
  * @param decision - The decision to describe.
  * @param window - The adapter's window, needed for the policy field's `w` parameter.
@@ -43,17 +45,21 @@ export function rateLimitHeaders(
 	let hasLimit = Number.isFinite(decision.limit);
 	let hasReset = Number.isFinite(decision.retryAfter);
 
-	let quota: string[] = [];
-	if (hasLimit) quota.push(`limit=${decision.limit}`);
+	let quota: Record<string, number> = {};
+	if (hasLimit) quota.limit = decision.limit;
 	if (decision.remaining !== null && Number.isFinite(decision.remaining)) {
-		quota.push(`remaining=${decision.remaining}`);
+		quota.remaining = decision.remaining;
 	}
-	if (hasReset) quota.push(`reset=${decision.retryAfter}`);
-	if (quota.length > 0) entries.push([RATE_LIMIT_FIELD, quota.join(", ")]);
+	if (hasReset) quota.reset = decision.retryAfter;
+	let quotaField = stringify(quota, "dictionary");
+	if (isSuccess(quotaField) && quotaField.data !== "") {
+		entries.push([RATE_LIMIT_FIELD, quotaField.data]);
+	}
 
 	let windowSeconds = toSeconds(window);
 	if (hasLimit && Number.isFinite(windowSeconds) && windowSeconds > 0) {
-		entries.push([RATE_LIMIT_POLICY_FIELD, `${decision.limit};w=${windowSeconds}`]);
+		let policy = stringify({ value: decision.limit, params: { w: windowSeconds } }, "item");
+		if (isSuccess(policy)) entries.push([RATE_LIMIT_POLICY_FIELD, policy.data]);
 	}
 
 	if (!decision.allowed && hasReset) {

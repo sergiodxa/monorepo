@@ -2,7 +2,7 @@
 
 Adapter-based rate limiting with standard response headers.
 
-An `Adapter` counts attempts against a key and answers a decision; the middleware spends that budget for a request and serializes the decision into the IETF draft `RateLimit` fields. Because the counting sits behind one interface, the same limit runs on a platform binding, on a key-value store, on a SQL table, or in process — chosen per endpoint.
+An `Adapter` counts attempts against a key and answers a decision; the middleware spends that budget for a request and serializes the decision into the `RateLimit` and `RateLimit-Policy` fields of [draft-ietf-httpapi-ratelimit-headers-07](https://datatracker.ietf.org/doc/html/draft-ietf-httpapi-ratelimit-headers-07). Because the counting sits behind one interface, the same limit runs on a platform binding, on a key-value store, on a SQL table, or in process — chosen per endpoint.
 
 ## Installation
 
@@ -10,7 +10,7 @@ An `Adapter` counts attempts against a key and answers a decision; the middlewar
 npm add @sdxc/rate-limit
 ```
 
-The middleware mounts on a [`remix`](https://www.npmjs.com/package/remix) (v3) fetch router, which installs alongside this package, together with [`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration), [`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger) and [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result).
+The middleware mounts on a [`remix`](https://www.npmjs.com/package/remix) (v3) fetch router, which installs alongside this package, together with [`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration), [`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger), [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) and [`@sdxc/structured-fields`](https://www.npmjs.com/package/@sdxc/structured-fields).
 
 Two entry points:
 
@@ -153,14 +153,14 @@ The `create table` statement for those columns, plus a `create index` over `(buc
 
 ### `rateLimitHeaders(decision, window): [string, string][]`
 
-Serializes a decision into header name and value pairs, in the order they should be written.
+Serializes a decision into header name and value pairs, in the order they should be written. `RateLimit` is an RFC 9651 Dictionary and `RateLimit-Policy` an Item with a `w` parameter, both written in canonical form.
 
 ```typescript
 rateLimitHeaders(decision, "10 seconds");
 // [["RateLimit", "limit=10, remaining=0, reset=7"], ["RateLimit-Policy", "10;w=10"], ["Retry-After", "7"]]
 ```
 
-A field the adapter cannot compute is left out entirely, so every number that ships is one the backend measured: `remaining` is absent when the decision reports `null`, `RateLimit-Policy` needs a finite limit and a positive window, and `Retry-After` appears only on a denied attempt, since that is the only time "try again" applies. The result may be empty.
+A field the adapter cannot compute is left out entirely, so every number that ships is one the backend measured: `remaining` is absent when the decision reports `null`, `RateLimit-Policy` needs a finite limit and a positive window, and `Retry-After` appears only on a denied attempt, since that is the only time "try again" applies. A field holding an Integer beyond 15 digits, which RFC 9651 cannot represent, is left out as well. The result may be empty.
 
 ### `applyRateLimitHeaders(response, decision, window): Response`
 

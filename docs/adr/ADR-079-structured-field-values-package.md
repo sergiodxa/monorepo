@@ -480,7 +480,10 @@ The HTTP working group publishes the conformance suite
   - [x] Parser and serializer for the three top-level types and every bare item type
   - [x] `getField`, `setField`, the typed `parse` overload and the `./schema` helpers
   - [x] README
-- [ ] Phase 2: Adopt in `@sdxc/rate-limit`
+- [x] Phase 2: Adopt in `@sdxc/rate-limit`
+  - [x] `rateLimitHeaders` writes both fields through `stringify`; `headers.test.ts`'s byte-exact
+        expectations are unchanged
+  - [ ] Move to the named-policy draft revision (a separate decision)
 - [ ] Phase 3: Add the `Cache-Status` reader to `@sdxc/workers-cache`
 - [ ] Phase 4: Publish
 
@@ -511,6 +514,10 @@ The HTTP working group publishes the conformance suite
 - Implementation: the vendored fixtures are laid out by `vp fmt` (whitespace only) instead of
   gaining a `fmt` ignore entry in the root `vite.config.ts`, so the package needs no root
   configuration change. The suite passes in full: 2,137 cases.
+- Adoption: `@sdxc/rate-limit` writes the fields of draft-ietf-httpapi-ratelimit-headers-07
+  (`RateLimit: limit=…, remaining=…, reset=…`, `RateLimit-Policy: <limit>;w=<seconds>`). The one
+  output change is for numbers RFC 9651 cannot represent: a field holding an Integer beyond 15
+  digits is now left out, where the template strings wrote it anyway.
 
 ## Alternatives Considered
 

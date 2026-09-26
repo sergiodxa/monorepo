@@ -74,6 +74,26 @@ describe("rateLimitHeaders", () => {
 
 		expect(entries).toEqual([]);
 	});
+	test("keeps a number within 15 digits byte-for-byte", () => {
+		let entries = rateLimitHeaders(
+			decision({ limit: 999_999_999_999_999, remaining: 0, retryAfter: 3600 }),
+			"1 day",
+		);
+
+		expect(entries).toEqual([
+			["RateLimit", "limit=999999999999999, remaining=0, reset=3600"],
+			["RateLimit-Policy", "999999999999999;w=86400"],
+		]);
+	});
+
+	test("omits a field whose Integer has no structured field representation", () => {
+		let entries = rateLimitHeaders(
+			decision({ allowed: false, limit: 10_000_000_000_000_000 }),
+			"10 seconds",
+		);
+
+		expect(entries).toEqual([["Retry-After", "7"]]);
+	});
 });
 
 describe("applyRateLimitHeaders", () => {
