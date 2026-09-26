@@ -1,7 +1,6 @@
 {
 	"name": "@sdxc/microformats",
 	"version": "0.0.1",
-	"private": true,
 	"description": "Parse, read and write microformats2",
 	"license": "MIT",
 	"type": "module",
