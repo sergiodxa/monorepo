@@ -362,7 +362,9 @@ with an id, a signed token needs no storage.
 - [x] Phase 1: `unsubscribe` and `list` options, header generation and validation, and the
       `@sdxc/mail/unsubscribe` subpath in `@sdxc/mail`
 - [ ] Phase 2: Adopt in uptime
-- [ ] Phase 3: Verify delivery (DKIM `h=` coverage on Gmail and Yahoo)
+- [ ] Phase 3: Verify delivery (DKIM `h=` coverage on Gmail and Yahoo) — procedure ready:
+      `bun scripts/verify-dkim-headers.ts <message.eml>`; Cloudflare's docs say
+      `List-Unsubscribe` is always signed and are silent on `List-Unsubscribe-Post`
 - [ ] Phase 4: Adopt in reader
 
 ## Notes
@@ -387,3 +389,30 @@ with an id, a signed token needs no storage.
 - The Gmail and Yahoo bulk-sender threshold (about 5,000 messages a day to their users) applies to
   the sending domain as a whole; the headers earn the provider's button, and the lower spam-report
   rate that follows, at any volume
+- DKIM coverage, from Cloudflare's docs (checked 2026-09-26): the
+  [Email headers reference](https://developers.cloudflare.com/email-service/reference/headers/)
+  lists `List-Unsubscribe`, `List-Unsubscribe-Post` and `List-Id` as allowlisted, validates
+  them (HTTPS or `mailto:` URIs only; the POST header must be exactly
+  `List-Unsubscribe=One-Click` and needs an HTTPS `List-Unsubscribe`), and says of
+  `List-Unsubscribe` alone that it is "Always DKIM-signed per RFC 8058". Nothing documents
+  the `h=` list or states that `List-Unsubscribe-Post` is signed. The one published `h=`
+  list, an Email Routing ARC example in the
+  [subdomains post](https://blog.cloudflare.com/email-routing-subdomains/), covers the
+  RFC 2369 `List-*` headers without `list-unsubscribe-post`, but that is forwarding, not
+  sending. Sent mail is signed with selector `cf-bounce` and `d=` the sending domain
+  ([domain configuration](https://developers.cloudflare.com/email-service/configuration/domains/)).
+  Confidence that both headers are signed: likely, not confirmed; a delivered message settles it
+- `Feedback-ID` is platform-controlled on Email Service: the platform writes its own, and a
+  `headers` entry for it fails the send with `E_HEADER_NOT_ALLOWED`, so it cannot stay in
+  `Message.headers` as Scope says. The same applies to any non-allowlisted header that does
+  not start with `X-`, and at most 20 allowlisted non-`X-` headers go on one message
+- Phase 3 procedure: `apps/uptime` trial emails already carry both headers (hand-written until
+  Phase 2 lands). Run a check at `https://uptime.sergiodxa.com/try`, submit a Gmail (and a
+  Yahoo) address, open the confirmation email, "Show original" then "Download original", and
+  run `bun scripts/verify-dkim-headers.ts ~/Downloads/<file>.eml`. It prints each
+  signature's `d=`, `s=` and `h=`, says whether `list-unsubscribe` and
+  `list-unsubscribe-post` are covered by a signature aligned with the From domain (and flags
+  over-signing), echoes `Authentication-Results` so `dkim=pass` can be read off, and exits 0
+  on PASS, 1 on FAIL. This uses production as a visitor would, creating one lead that the
+  email's own unsubscribe link removes; a local `vite dev` sends for real too, since the
+  `send_email` binding is `remote: true`, but needs the same trial flow and gains nothing
