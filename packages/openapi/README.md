@@ -2,21 +2,24 @@
 
 Build, serve and check OpenAPI 3.1 documents from typed operations.
 
-## Overview
+## Installation
 
-An operation binds a route from a `remix/fetch-router` route map to the schemas of its params,
-query and body, its responses, its problem types and its security. The handler parses its input
-through the operation, and the document describes the same declaration, so the published
-contract and the code that enforces it are one value.
+```bash
+npm add @sdxc/openapi
+```
 
-Schemas come from [`@sdxc/json-schema`](/packages/json-schema): they validate like
-`remix/data-schema` and describe themselves as JSON Schema 2020-12, the schema dialect of
-[OpenAPI 3.1](https://spec.openapis.org/oas/v3.1.1.html). Problem types come from an
-[`@sdxc/problem`](/packages/problem) catalog, whose entries become reusable responses.
+Schemas come from [`@sdxc/json-schema`](https://www.npmjs.com/package/@sdxc/json-schema), problem
+types from an [`@sdxc/problem`](https://www.npmjs.com/package/@sdxc/problem) catalog, and routes
+from a [`remix`](https://www.npmjs.com/package/remix) route map; results are
+[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) values. All four install alongside
+this package.
 
-The package also reads and writes documents as JSON or YAML, serves one from a fetch-router
-action, and checks responses in tests against it: a response the document does not describe is
-a violation, and a declared status no test produced is reported as uncovered.
+An operation binds one route to the schemas of its params, query and body, its responses, its
+problem types and its security. The handler parses its input through the operation, and the
+[OpenAPI 3.1](https://spec.openapis.org/oas/v3.1.1.html) document describes the same
+declaration, so the published contract and the code that enforces it are one value. The
+package also reads and writes documents as JSON or YAML, serves one from a router, and checks
+responses in tests against it.
 
 ## Usage
 
@@ -26,27 +29,37 @@ a violation, and a declared status no test produced is reported as uncovered.
 import * as s from "@sdxc/json-schema";
 import * as checks from "@sdxc/json-schema/checks";
 import { defineOperation } from "@sdxc/openapi";
+import { get, patch, route } from "remix/routes";
 
-import routes from "~/routes/web";
+export const ROUTES = route("/api/v1", {
+	openapi: get("/openapi.json"),
+	books: { show: get("/books/:bookId"), update: patch("/books/:bookId") },
+});
 
-export const MonitorSchema = s
+export const BOOK = s
 	.object({
-		id: s.string().pipe(checks.pattern(/^mon_[0-9a-z]{26}$/)),
-		name: s.string(),
+		id: s.string().pipe(checks.pattern(/^book_[0-9a-z]{26}$/)),
+		title: s.string(),
 		createdAt: s.integer().meta({ description: "Epoch milliseconds" }),
 	})
-	.meta({ id: "Monitor" });
+	.meta({ id: "Book" });
 
-export const monitorUpdate = defineOperation("monitorUpdate", routes.api.monitors.update, {
-	summary: "Update a monitor",
-	tags: ["Monitors"],
-	params: s.object({ monitorId: s.string() }),
-	body: s.object({ name: s.optional(s.string().pipe(checks.minLength(1))) }),
+export const BOOK_SHOW = defineOperation("bookShow", ROUTES.books.show, {
+	summary: "Show a book",
+	responses: { 200: { description: "The book", body: s.object({ data: BOOK }) } },
+	problems: ["notFound"],
+});
+
+export const BOOK_UPDATE = defineOperation("bookUpdate", ROUTES.books.update, {
+	summary: "Update a book",
+	tags: ["Books"],
+	params: s.object({ bookId: s.string() }),
+	body: s.object({ title: s.optional(s.string().pipe(checks.minLength(1))) }),
 	responses: {
-		200: { description: "The updated monitor", body: s.object({ data: MonitorSchema }) },
+		200: { description: "The updated book", body: s.object({ data: BOOK }) },
 	},
 	problems: ["validationError", "notFound"],
-	security: [{ apiKey: ["monitors:write"] }],
+	security: [{ apiKey: ["books:write"] }],
 });
 ```
 
@@ -56,77 +69,98 @@ compile, and fails the build if it slips past the compiler.
 ### Parse A Request Through It
 
 ```typescript
-import { isFailure } from "@sdxc/result";
 import { issuesFrom, validationProblem } from "@sdxc/problem";
+import { isFailure } from "@sdxc/result";
 
-let input = await monitorUpdate.parse(ctx.request, ctx.params);
-if (isFailure(input)) return validationProblem(issuesFrom(input.error));
+router.patch(ROUTES.books.update, async ({ request, params }) => {
+	let input = await BOOK_UPDATE.parse(request, params);
+	if (isFailure(input)) return validationProblem(issuesFrom(input.error));
 
-input.data.params.monitorId; // string
-input.data.body.name; // string | undefined
+	input.data.params.bookId; // string
+	input.data.body.title; // string | undefined
+	// ...
+});
 ```
 
 ### Build And Serve The Document
 
 ```typescript
+import * as s from "@sdxc/json-schema";
 import { createDocument } from "@sdxc/openapi";
 import { openapiHandler } from "@sdxc/openapi/router";
 import { bearer } from "@sdxc/openapi/security";
+import { defineProblems, ISSUES_SCHEMA } from "@sdxc/problem";
+
+const PROBLEMS = defineProblems("https://docs.example.com/errors/", {
+	validationError: {
+		slug: "validation-error",
+		status: 422,
+		title: "The request failed validation",
+		extensions: s.object({ errors: ISSUES_SCHEMA }),
+	},
+	notFound: { slug: "not-found", status: 404, title: "The resource does not exist" },
+});
 
 export function buildApiDocument() {
 	return createDocument({
-		info: { title: "Monitors API", version: "1" },
+		info: { title: "Books API", version: "1" },
 		servers: [{ url: "https://api.example.com" }],
 		securitySchemes: { apiKey: bearer({ description: "An API key, sent as a bearer token" }) },
-		problems,
-	}).add(monitorShow, monitorUpdate);
+		problems: PROBLEMS,
+	}).add(BOOK_SHOW, BOOK_UPDATE);
 }
 
-router.map(
-	routes.openapi,
+router.get(
+	ROUTES.openapi,
 	openapiHandler(() => buildApiDocument().build()),
 );
 ```
 
 ## API
 
-### `defineOperation(name, route, spec): Operation`
+### `@sdxc/openapi`
+
+#### `defineOperation(name, route, spec)`
 
 Binds a spec to one route, keyed by the name it has in its route map, which becomes the
-`operationId`.
+`operationId`. `spec` (an `OperationSpec`) takes:
 
 - `summary`, `description`, `tags`, `deprecated`: copied to the operation.
 - `params`: an object schema whose keys equal the pattern's variables. Without one, each
   variable documents as a string and `parse` yields the router's params.
 - `query`: an object schema; each key becomes a query parameter, required unless `optional`.
 - `body`: a schema (`application/json`) or a record of media types to schemas.
-- `responses`: status to `{ description, body?, headers? }`; a header is
+- `responses`: status to a `ResponseSpec`, `{ description, body?, headers? }`; a header is
   `{ schema, description?, required? }`.
-- `problems`: entry names from the document's catalog; `add` refuses unknown names at compile time.
+- `problems`: entry names from the document's catalog; `add` refuses unknown names at compile
+  time.
 - `security`: scheme name to scopes; `[]` marks an unauthenticated operation.
 
-`operation.parse(request, params)` parses params, query and body in that order and returns a
-`Result`. A repeated query key arrives as an array. The body is read by its `Content-Type`:
-JSON media types are parsed, forms become objects, anything else is text. A request without a
-body validates `undefined`, so an `optional` body accepts it. A failure is an
-`OperationInputError` with `location` (`"params"`, `"query"` or `"body"`) and the schema's
-`issues`.
+The returned `Operation` carries `route`, `operationId` and `spec`, and
+`operation.parse(request, params)`, which parses params, query and body in that order and
+resolves to a `Result`. A repeated query key arrives as an array. The body is read by its
+`Content-Type`: JSON media types are parsed, forms become objects, anything else is text. A
+request without a body validates `undefined`, so an `optional` body accepts it.
+`PathParams<Route>` is the params type a route's pattern implies.
 
-### `createDocument(options): DocumentBuilder`
+#### `OperationInputError`
+
+What `parse` fails with: `location` (`"params"`, `"query"` or `"body"`) and the schema's
+`issues`, ready for `issuesFrom` from `@sdxc/problem`.
+
+#### `createDocument(options)`
+
+Starts a `DocumentBuilder`; nothing is assembled until `build()`. `DocumentOptions` takes:
 
 - `info`, `servers` (absolute URLs), `tags`: copied to the document.
 - `securitySchemes`: the schemes operations may name.
 - `security`: applied to every operation that declares none of its own.
-- `problems`: an `@sdxc/problem` catalog.
+- `problems`: an `@sdxc/problem` catalog from `defineProblems`.
 
 `builder.add(...operations)` collects operations. `builder.build()` returns
-`Result<OpenAPI.Document, OpenAPIBuildError>` and fails on a duplicate `operationId`, a route
-OpenAPI cannot express (an optional segment, an unnamed wildcard, a hostname variable or a
-method-agnostic route), params that disagree with the pattern, an unknown scheme, a status
-declared both as a response and a problem, or a schema without a JSON Schema form. The error
-names the `operationId` and a JSON Pointer into the document. `builder.scopes()` lists every
-scope any operation requires, per scheme. `builder.operations()` and `builder.problems()`
-expose what the builder holds, for tooling.
+`Result<OpenAPI.Document, OpenAPIBuildError>`. `builder.scopes()` lists every scope any
+operation requires, per scheme. `builder.operations()` and `builder.problems()` expose what the
+builder holds, for tooling.
 
 How the parts land in the document:
 
@@ -139,57 +173,78 @@ How the parts land in the document:
 - An operation's problem is a `$ref` to its response; problems sharing a status merge into one
   response with `oneOf`.
 
-### `parse(text)` / `stringify(document, options?)`
+#### `OpenAPIBuildError`
+
+`build()` fails on a duplicate `operationId`, a route OpenAPI cannot express (an optional
+segment, an unnamed wildcard, a hostname variable or a method-agnostic route), params that
+disagree with the pattern, an unknown scheme, a status declared both as a response and a
+problem, or a schema without a JSON Schema form. `operationId` names the operation (`null` for
+a document-level failure) and `pointer` is a JSON Pointer into the document.
+
+#### `parse(text)` and `stringify(document, options?)`
 
 `parse` reads JSON (text starting with `{`) or YAML, and checks `openapi: 3.1.x`, `info.title`,
-`info.version` and the shape of `paths`, `components`, `servers`, `security` and `tags`.
-`stringify` writes JSON by default or YAML with `{ format: "yaml" }`, `indent` spaces per level
-(2 by default), ending with a newline. Both return a `Result`.
+`info.version` and the shape of `paths`, `components`, `servers`, `security` and `tags`; it
+fails with an `OpenAPIParseError`. `stringify` writes JSON by default or YAML with
+`{ format: "yaml" }`, `indent` spaces per level (2 by default), ending with a newline; it fails
+with an `OpenAPIStringifyError`. `StringifyOptions` types its options.
 
-### Constants
+#### Constants
 
 `MEDIA_TYPE_JSON` (`application/json`), `MEDIA_TYPE_YAML` (`application/yaml`, RFC 9512),
-`OPENAPI_VERSION` (`3.1.1`) and `JSON_SCHEMA_DIALECT`.
+`OPENAPI_VERSION` (`3.1.1`) and `JSON_SCHEMA_DIALECT`
+(`https://spec.openapis.org/oas/3.1/dialect/base`), which a built document declares.
+
+#### `OpenAPI` (types)
+
+A namespace of the OpenAPI 3.1 object model: `OpenAPI.Document`, `OpenAPI.Operation`,
+`OpenAPI.Info`, `OpenAPI.Server`, `OpenAPI.Tag`, `OpenAPI.SecurityScheme` and the rest.
 
 ### `@sdxc/openapi/security`
 
 `bearer({ description?, bearerFormat? })`, `apiKey({ in, name, description? })`,
 `oauth2({ description?, flows })` and `openIdConnect({ openIdConnectUrl, description? })`
-return the scheme objects `securitySchemes` lists. OpenAPI 3.1 has no field for an OAuth 2.0
-authorization server's metadata, so link `/.well-known/oauth-protected-resource` from the
-`oauth2` description.
+return the scheme objects `securitySchemes` lists. `oauth2` takes `clientCredentials` and
+`authorizationCode` flows. OpenAPI 3.1 has no field for an OAuth 2.0 authorization server's
+metadata, so link `/.well-known/oauth-protected-resource` from the `oauth2` description.
 
 ### `@sdxc/openapi/router`
 
-`openapiHandler(build, { cacheControl? })` returns a request handler that serves the document:
-JSON by default, YAML for `?format=yaml` or an `Accept` preferring `application/yaml`. `build`
-runs on the first request and its outcome is reused, which keeps document assembly out of a
-Worker's global scope. Each representation carries a strong `ETag` (the SHA-256 of its bytes),
-`Vary: Accept` and `Cache-Control` (`public, max-age=300` by default), and a matching
-`If-None-Match` answers `304`. A build failure answers `500` with a problem document.
+#### `openapiHandler(build, options?)`
+
+A request handler that serves the document: JSON by default, YAML for `?format=yaml` or an
+`Accept` preferring `application/yaml`. `build` runs on the first request and its outcome is
+reused, which keeps document assembly out of a Worker's global scope. Each representation
+carries a strong `ETag` (the SHA-256 of its bytes), `Vary: Accept` and `Cache-Control`, and a
+matching `If-None-Match` answers `304`. A build failure answers `500` with a problem document.
+`ServeOptions` types the options: `cacheControl` defaults to `public, max-age=300`.
 
 ### `@sdxc/openapi/testing`
 
-`checkResponse(document, request, response)` checks one exchange and returns
-`Result<void, ConformanceError>`, whose `violations` list every departure. The body is read
-from a clone and validated with the declared schema's own `~standard.validate`. Violation kinds:
+#### `checkResponse(document, request, response)`
+
+Checks one exchange against the builder's operations and resolves to
+`Result<void, ConformanceError>`. The body is read from a clone and validated with the declared
+schema's own `~standard.validate`.
+
+#### `ConformanceError` and `Violation`
+
+`violations` lists every departure found, each a `Violation` with `operationId` (`null` when
+the request matched no operation), `kind`, `message`, and `pointer` into the body for a body
+mismatch. The kinds:
 
 - `undocumented-operation`: the method and path match no operation
 - `undocumented-status`: neither a response nor a listed problem has this status
 - `undocumented-media-type`: the `Content-Type` is not one the response declares
 - `undocumented-problem-type`: a problem whose `type` is not an entry listed for this status
 - `missing-header`: a header declared `required` is absent
-- `body-mismatch`: the body fails its schema, with `pointer` into the body
+- `body-mismatch`: the body fails its schema
 
-`createConformanceRecorder(document)` returns `{ middleware, violations(), uncovered() }`.
-Install `middleware` on a test router to record every exchange; `uncovered()` lists the
-declared `operationId` and status pairs no recorded exchange produced.
+#### `createConformanceRecorder(document)`
 
-### Types
-
-`OpenAPI` is a namespace of the OpenAPI 3.1 object model (`OpenAPI.Document`,
-`OpenAPI.Operation`, `OpenAPI.SecurityScheme`, …). Also exported: `Operation`, `OperationSpec`,
-`ResponseSpec`, `PathParams`, `DocumentBuilder`, `DocumentOptions` and `StringifyOptions`.
+Returns `{ middleware, violations(), uncovered() }`. Install `middleware` first on a test router
+to record every exchange; `uncovered()` lists the declared `operationId` and status pairs no
+recorded exchange produced.
 
 ## Pattern: A Drift Test
 
@@ -211,12 +266,16 @@ test("the document builds and matches the committed snapshot", async () => {
 ```typescript
 import { createConformanceRecorder } from "@sdxc/openapi/testing";
 import { createRouter } from "remix/router";
+import { afterAll, expect } from "vitest";
 
 let recorder = createConformanceRecorder(buildApiDocument());
 let router = createRouter({ middleware: [recorder.middleware] });
-// ...map the controllers and run the requests...
+// ...map the handlers and run the requests...
 
-expect(recorder.violations()).toEqual([]);
+afterAll(() => {
+	expect(recorder.violations()).toEqual([]);
+	expect(recorder.uncovered()).toEqual([]);
+});
 ```
 
 ## Pattern: Protected Resource Scopes
@@ -228,15 +287,35 @@ let { oauth } = buildApiDocument().scopes();
 return Response.json({ resource: origin, scopes_supported: oauth ?? [] });
 ```
 
-## Related Packages
+Keep operations in a module of their own, beside the route map: it holds only schemas, so the
+document imports every operation without importing every handler.
 
-- [`@sdxc/json-schema`](/packages/json-schema) - The schemas operations declare
-- [`@sdxc/problem`](/packages/problem) - The catalog whose entries become responses
-- [`@sdxc/yaml`](/packages/yaml) - The YAML reader and writer behind `parse` and `stringify`
+## Versioning
 
-## Tips
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
 
-1. **Keep operations beside the route map** - a module of operations holds only schemas, so the document can import every one without importing every controller.
-2. **Build lazily** - pass `() => buildApiDocument().build()` to `openapiHandler`; never build at module scope in a Worker.
-3. **Name shared shapes** - `meta({ id })` keeps one `components.schemas` entry per resource.
-4. **Describe extension schemas with `@sdxc/json-schema`** - a catalog entry whose extensions cannot describe themselves fails the build.
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
+
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/openapi": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)

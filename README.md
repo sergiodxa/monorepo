@@ -136,7 +136,7 @@ Run from the repository root:
 | [microformats](packages/microformats)                           | Parse, read and write microformats2                                                                               |     |
 | [micropub](packages/micropub)                                   | Read Micropub requests into typed operations and build the spec's responses                                       |     |
 | [oidc-provider](packages/oidc-provider)                         | OIDC/OAuth2 provider engine                                                                                       |     |
-| [openapi](packages/openapi)                                     | Build, serve and check OpenAPI 3.1 documents from typed operations                                                |     |
+| [openapi](packages/openapi)                                     | Build, serve and check OpenAPI 3.1 documents from typed operations                                                | ✅  |
 | [opml](packages/opml)                                           | Read and write OPML subscription lists                                                                            | ✅  |
 | [pagination](packages/pagination)                               | Offset and keyset pagination with Link headers                                                                    | ✅  |
 | [passkey](packages/passkey)                                     | Passkeys on both sides: a one-call WebAuthn browser API and a relying party for it                                | ✅  |

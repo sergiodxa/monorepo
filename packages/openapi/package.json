@@ -1,7 +1,6 @@
 {
 	"name": "@sdxc/openapi",
 	"version": "0.0.1",
-	"private": true,
 	"description": "Build, serve and check OpenAPI 3.1 documents from typed operations",
 	"license": "MIT",
 	"type": "module",
