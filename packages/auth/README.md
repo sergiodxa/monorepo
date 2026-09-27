@@ -504,6 +504,14 @@ request names none, which the provider serves as its oldest supported version. R
 answered it. A list method answers `ManagementClient.Page<T>`: `items`, and `next`/`prev`
 continuation targets parsed off the response's own `Link` header.
 
+`createTenantSubject`, `registerTenantClient`, `rotateTenantClientSecret` and
+`inviteTenantMember` take a last `{ idempotencyKey }` argument, sent as the
+`Idempotency-Key` header: mint the key once per operation and resend it on every retry, and
+the API answers a retry with the first attempt's response. A key that is empty or not
+printable ASCII fails with `ManagementError` before anything is sent. The catalog carries
+the four refusals: `idempotencyKeyMissing`, `idempotencyKeyInvalid`, `idempotencyKeyInUse`
+(`409`, still processing) and `idempotencyKeyReused` (`422`, a different request).
+
 Every method takes a `tenantId` first and answers a `Result` whose failure is
 `ManagementError | ManagementProblem`:
 

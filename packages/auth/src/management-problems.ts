@@ -14,6 +14,8 @@ import { defineProblems, ISSUES_SCHEMA } from "@sdxc/problem";
  * Every problem type the management API answers with. The base URL and slugs are the
  * wire contract a caller branches on, so an entry's slug never changes once published.
  * `validationFailed` carries `errors`, one `{ pointer, code, message }` per invalid field.
+ * The four `idempotencyKey*` entries are the Idempotency-Key refusals, under the slugs
+ * the draft's implementations share.
  *
  * @example return managementProblems.notFound({ detail: "No subject has that id." });
  */
@@ -67,6 +69,26 @@ export const managementProblems = defineProblems("https://docs.example.com/error
 		slug: "hostname-registration-failed",
 		status: 502,
 		title: "Cloudflare refused to register this hostname",
+	},
+	idempotencyKeyInUse: {
+		slug: "idempotency-key-in-use",
+		status: 409,
+		title: "A request with this idempotency key is still being processed",
+	},
+	idempotencyKeyInvalid: {
+		slug: "idempotency-key-invalid",
+		status: 400,
+		title: "The Idempotency-Key header is not valid",
+	},
+	idempotencyKeyMissing: {
+		slug: "idempotency-key-missing",
+		status: 400,
+		title: "This request requires an Idempotency-Key header",
+	},
+	idempotencyKeyReused: {
+		slug: "idempotency-key-reused",
+		status: 422,
+		title: "This idempotency key was already used for a different request",
 	},
 	identifierTaken: {
 		slug: "identifier-taken",

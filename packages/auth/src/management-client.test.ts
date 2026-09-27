@@ -476,6 +476,36 @@ describe("ManagementClient tenant-scoped surface", () => {
 			]);
 		});
 
+		test("sends an idempotency key as a quoted Idempotency-Key header", async () => {
+			let header: string | null = null;
+			server.use(
+				http.post(tenantUrl("subjects"), ({ request }) => {
+					header = request.headers.get("idempotency-key");
+					return HttpResponse.json({ subjectId: "sub_1", identifiers: [] }, { status: 201 });
+				}),
+			);
+
+			let result = await tenantClient().createTenantSubject(
+				TENANT_ID,
+				{ identifiers: [] },
+				{ idempotencyKey: 'op-"1"' },
+			);
+
+			expect(isSuccess(result)).toBe(true);
+			expect(header).toBe('"op-\\"1\\""');
+		});
+
+		test("refuses an idempotency key no header can carry before sending anything", async () => {
+			let result = await tenantClient().createTenantSubject(
+				TENANT_ID,
+				{ identifiers: [] },
+				{ idempotencyKey: "clé" },
+			);
+
+			if (isSuccess(result)) throw new Error("Expected a failure.");
+			expect(ManagementError.is(result.error, ManagementErrorCode.RequestFailed)).toBe(true);
+		});
+
 		test("sends a removed identifier's value as a query parameter rather than a path segment", async () => {
 			let requestedMethod: string | null = null;
 			let requestedUrl: string | null = null;

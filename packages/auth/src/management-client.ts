@@ -30,6 +30,23 @@ export { managementProblems } from "./management-problems.js";
 /** RFC 7396's media type, which every tenant-scoped `PATCH` body is sent as. */
 const MERGE_PATCH_MEDIA_TYPE = "application/merge-patch+json";
 
+/**
+ * Writes a key as the `Idempotency-Key` header's RFC 9651 sf-string: quoted, with each
+ * backslash and double quote escaped.
+ *
+ * @param key - The caller's key, minted once per logical operation.
+ * @returns The header value, or `null` for a key an sf-string cannot carry (empty,
+ *   non-ASCII, or holding a control character).
+ */
+function formatIdempotencyKey(key: string): string | null {
+	if (key.length === 0) return null;
+	for (let index = 0; index < key.length; index++) {
+		let code = key.charCodeAt(index);
+		if (code < 0x20 || code > 0x7e) return null;
+	}
+	return `"${key.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
+}
+
 /** Path the management API serves one subject at, with the id appended to it. */
 const SUBJECT_PATH = "/api/subjects";
 
@@ -629,14 +646,32 @@ export class ManagementClient {
 	 *
 	 * @param method - The HTTP method to send.
 	 * @param path - The absolute path under the configured base URL, from {@link tenantPath}.
-	 * @param options - The body to encode, the query string to append, and an
-	 *   `X-API-Version` for this call alone.
+	 * @param options - The body to encode, the query string to append, an
+	 *   `X-API-Version` for this call alone, and the `Idempotency-Key` to send.
 	 */
 	async #send(
 		method: string,
 		path: string,
-		options: { body?: unknown; query?: Record<string, QueryValue>; apiVersion?: string } = {},
+		options: {
+			body?: unknown;
+			query?: Record<string, QueryValue>;
+			apiVersion?: string;
+			idempotencyKey?: string;
+		} = {},
 	): Promise<Result<{ endpoint: URL; response: Response }, ManagementError | ManagementProblem>> {
+		let idempotencyKey: string | null = null;
+		if (options.idempotencyKey !== undefined) {
+			idempotencyKey = formatIdempotencyKey(options.idempotencyKey);
+			if (idempotencyKey === null) {
+				return failure(
+					new ManagementError(
+						"The idempotency key must be non-empty printable ASCII to travel as an Idempotency-Key header.",
+						{ code: ManagementErrorCode.RequestFailed },
+					),
+				);
+			}
+		}
+
 		let token = await this.#service.token({ resources: this.#resources });
 		let endpoint = new URL(path, this.#baseUrl);
 
@@ -651,6 +686,7 @@ export class ManagementClient {
 
 		let apiVersion = options.apiVersion ?? this.#apiVersion;
 		if (apiVersion !== undefined) headers.set("x-api-version", apiVersion);
+		if (idempotencyKey !== null) headers.set("idempotency-key", idempotencyKey);
 
 		let init: RequestInit = { method, headers };
 		if (options.body !== undefined) {
@@ -784,6 +820,7 @@ export class ManagementClient {
 			body?: unknown;
 			query?: Record<string, QueryValue>;
 			apiVersion?: string;
+			idempotencyKey?: string;
 			schema?: s.Schema<unknown, Output>;
 		} = {},
 	): Promise<Result<Output, ManagementError | ManagementProblem>> {
@@ -841,15 +878,18 @@ export class ManagementClient {
 	 *
 	 * @param tenantId - The tenant to create the subject in.
 	 * @param input - The identifiers to claim, the profile claims, and any attributes to set.
+	 * @param options - The idempotency key a retry of this same creation sends again.
 	 */
 	async createTenantSubject(
 		tenantId: string,
 		input: ManagementClient.CreateTenantSubjectInput,
+		options: ManagementClient.IdempotentCallOptions = {},
 	): Promise<
 		Result<ManagementClient.CreateTenantSubjectResult, ManagementError | ManagementProblem>
 	> {
 		return this.#call("POST", tenantPath(tenantId, "subjects"), {
 			body: input,
+			idempotencyKey: options.idempotencyKey,
 			schema: CREATE_TENANT_SUBJECT_RESULT_SCHEMA,
 		});
 	}
@@ -1143,11 +1183,13 @@ export class ManagementClient {
 	 *
 	 * @param tenantId - The tenant to register the client in.
 	 * @param input - The whole record to register.
+	 * @param options - The idempotency key a retry of this same registration sends again.
 	 * @returns The new record and the one-time plaintext secret (`null` for a public client).
 	 */
 	async registerTenantClient(
 		tenantId: string,
 		input: ManagementClient.RegisterTenantClientInput,
+		options: ManagementClient.IdempotentCallOptions = {},
 	): Promise<
 		Result<
 			{ client: ManagementClient.TenantClientRecord; secret: string | null },
@@ -1156,6 +1198,7 @@ export class ManagementClient {
 	> {
 		return this.#call("POST", tenantPath(tenantId, "clients"), {
 			body: input,
+			idempotencyKey: options.idempotencyKey,
 			schema: REGISTER_TENANT_CLIENT_RESULT_SCHEMA,
 		});
 	}
@@ -1188,11 +1231,13 @@ export class ManagementClient {
 	 * @param tenantId - The tenant the client belongs to.
 	 * @param clientId - The client to rotate.
 	 * @param input - How many days the incumbent keeps verifying once the successor is minted.
+	 * @param options - The idempotency key a retry of this same rotation sends again.
 	 */
 	async rotateTenantClientSecret(
 		tenantId: string,
 		clientId: string,
 		input: { windowDays?: number } = {},
+		options: ManagementClient.IdempotentCallOptions = {},
 	): Promise<
 		Result<
 			{ secretId: string; secret: string; incumbentExpiresAt: number | null },
@@ -1201,6 +1246,7 @@ export class ManagementClient {
 	> {
 		return this.#call("POST", tenantPath(tenantId, "clients", clientId, "secrets", "rotate"), {
 			body: input,
+			idempotencyKey: options.idempotencyKey,
 			schema: ROTATE_TENANT_CLIENT_SECRET_RESULT_SCHEMA,
 		});
 	}
@@ -1362,13 +1408,16 @@ export class ManagementClient {
 	 *
 	 * @param tenantId - The tenant to grant access to.
 	 * @param input - The subject and the role the membership grants.
+	 * @param options - The idempotency key a retry of this same grant sends again.
 	 */
 	async inviteTenantMember(
 		tenantId: string,
 		input: { subjectId: string; role: ManagementClient.TenantMemberRole },
+		options: ManagementClient.IdempotentCallOptions = {},
 	): Promise<Result<ManagementClient.TenantMember, ManagementError | ManagementProblem>> {
 		return this.#call("POST", tenantPath(tenantId, "members"), {
 			body: input,
+			idempotencyKey: options.idempotencyKey,
 			schema: TENANT_MEMBER_SCHEMA,
 		});
 	}
@@ -1524,6 +1573,16 @@ export namespace ManagementClient {
 		 * oldest supported version rather than refusing.
 		 */
 		apiVersion?: string;
+	}
+
+	/** Options a non-idempotent call takes so a retry is recognized as the same operation. */
+	export interface IdempotentCallOptions {
+		/**
+		 * Sent as `Idempotency-Key`: a key minted once per logical operation and resent on
+		 * every retry of it, so the API answers a retry with the first attempt's response.
+		 * Printable ASCII only.
+		 */
+		idempotencyKey?: string;
 	}
 
 	/** One page of a keyset list, and the targets to continue paging with. */
