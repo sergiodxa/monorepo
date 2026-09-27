@@ -17,5 +17,16 @@ export default jobs({
 	webmentions: {
 		/** Fetches a received mention's source and stores, updates or deletes the mention. */
 		verify: job({ input: s.object({ source: s.string(), target: s.string() }) }),
+		/** Plans what a created, updated or deleted post notifies and queues each delivery. */
+		send: job({ input: s.object({ postId: s.string() }) }),
+		/**
+		 * Notifies one target, so one slow endpoint delays nobody else; `removed` marks a
+		 * link the post dropped, whose record goes once the target is told.
+		 */
+		deliver: job({
+			input: s.object({ postId: s.string(), target: s.string(), removed: s.boolean() }),
+		}),
+		/** Sends for posts whose scheduled publish date has arrived since the last run. */
+		scheduled: job({ cron: "*/15 * * * *" }),
 	},
 });

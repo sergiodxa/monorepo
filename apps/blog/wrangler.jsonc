@@ -89,6 +89,10 @@
 		"consumers": [{ "queue": "blog-jobs", "max_batch_size": 1, "max_retries": 5 }],
 		"producers": [{ "binding": "QUEUE", "queue": "blog-jobs" }],
 	},
+	// Every quarter hour, the job map's `webmentions.scheduled` sends the Webmentions of
+	// posts whose scheduled publish date has arrived. Kept equal to the job's `cron`, which
+	// `app/jobs/dispatcher.test.ts` checks.
+	"triggers": { "crons": ["*/15 * * * *"] },
 
 	"d1_databases": [
 		{

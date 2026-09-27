@@ -1,8 +1,8 @@
 /**
  * CMS controller for tutorial CRUD. It renders index and edit/new HTML views and handles
  * create, update, and destroy actions, validating form data against the tutorial schema
- * and using See Other redirects for the post/redirect/get flow. It exists to manage
- * tutorials from the backoffice while delegating parsing and shaping to schema/view-model layers.
+ * and using See Other redirects for the post/redirect/get flow. Every write queues the
+ * tutorial's Webmentions; parsing and shaping stay in the schema and view-model layers.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,6 +15,8 @@ import { createController } from "remix/router";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
 import { TutorialViewModel } from "~/app/http/view-models/cms/tutorials";
+import jobs from "~/app/jobs";
+import { dispatcher } from "~/app/jobs/dispatcher";
 import { Post } from "~/app/repositories/post";
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
 import { TutorialSchema } from "~/app/schemas/cms/tutorial";
@@ -82,6 +84,8 @@ export default createController(routes.cms.tutorials, {
 					status: redirect.Status.SeeOther,
 				});
 
+			await dispatcher.enqueue(jobs.webmentions.send, { postId: created.id });
+
 			return redirect(routes.cms.tutorials.edit.href({ id: created.id }), {
 				status: redirect.Status.SeeOther,
 			});
@@ -103,7 +107,8 @@ export default createController(routes.cms.tutorials, {
 			// only the record carries.
 			let tutorial = await TutorialPost.findById(ctx.db, id);
 
-			await TutorialPost.destroy(ctx.db, id);
+			let destroyed = await TutorialPost.destroy(ctx.db, id);
+			if (destroyed) await dispatcher.enqueue(jobs.webmentions.send, { postId: id });
 
 			if (tutorial) ctx.cache.purgeLater(TAGS.post("tutorials", tutorial.meta.slug));
 
@@ -183,6 +188,8 @@ export default createController(routes.cms.tutorials, {
 				let model = TutorialViewModel.notFound({ id });
 				return ctx.render(CMSTutorialsActionView, model, { status: 404 });
 			}
+
+			await dispatcher.enqueue(jobs.webmentions.send, { postId: id });
 
 			let slugs = new Set([input.meta.slug]);
 			if (previous) slugs.add(previous.meta.slug);

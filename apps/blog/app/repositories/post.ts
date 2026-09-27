@@ -9,7 +9,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { and, eq, isNull, notNull } from "remix/data-table";
+import { and, eq, inList, isNull, notNull } from "remix/data-table";
 
 import { PostMeta } from "~/app/repositories/post-meta";
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
@@ -153,12 +153,33 @@ export namespace Post {
 				tags: Array<string>;
 		  };
 
+	/** What sending a post's Webmentions reads: its permalink parts, source and state. */
+	export interface MentionSource {
+		id: string;
+		postType: PublicTypePath;
+		slug: string;
+		/** The Markdown source, whose rendered links are the targets. */
+		content: string;
+		published_at: string | null;
+		deleted_at: string | null;
+	}
+
 	/** Tutorial related-post summary matched through one shared tag. */
 	export interface RelatedByTypeItem {
 		slug: string;
 		title: string;
 		matchedTag: string;
 	}
+}
+
+/**
+ * The latest value stored under a metadata key, since an edit can leave more than one
+ * row for it; `undefined` when the key was never written.
+ */
+function latestMeta(rows: Array<schema.SelectPostMeta>, key: string): string | undefined {
+	let matching = rows.filter((row) => row.key === key);
+	matching.sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+	return matching[0]?.value;
 }
 
 /** The stored `posts.type` behind each public collection path. */
@@ -332,6 +353,70 @@ export class Post {
 
 		let tags = TutorialPost.tags(post.meta.tags);
 		return TutorialPost.findRelatedByTags(db, post.id, tags, input.limit ?? 3);
+	}
+
+	/**
+	 * Reads what sending a post's Webmentions needs, deleted posts included, since a
+	 * delete notifies every target the post had linked.
+	 *
+	 * @param db Database handle used for lookups.
+	 * @param id Post identifier.
+	 * @returns The article or tutorial with its Markdown source, or `null` for any other post.
+	 */
+	static async findForMentions(db: Database, id: string): Promise<Post.MentionSource | null> {
+		let post = await db.findOne(this.table, { where: { id } });
+		if (!post) return null;
+		let postType: Post.PublicTypePath;
+		if (post.type === "article") postType = "articles";
+		else if (post.type === "tutorial") postType = "tutorials";
+		else return null;
+
+		let meta = await PostMeta.findByPostId(db, id);
+		return {
+			id: post.id,
+			postType,
+			slug: latestMeta(meta, "slug") ?? post.id,
+			content: latestMeta(meta, "content") ?? "",
+			published_at: post.published_at,
+			deleted_at: post.deleted_at,
+		};
+	}
+
+	/**
+	 * Articles and tutorials whose scheduled publish date has arrived since they last sent
+	 * their Webmentions. A post published on save sends from the CMS and never lands here.
+	 *
+	 * @param db Database handle used for lookups.
+	 * @returns The ids of the posts due to send.
+	 */
+	static async findDueForMentions(db: Database): Promise<string[]> {
+		let rows = await db.findMany(this.table, {
+			where: and(
+				inList("type", ["article", "tutorial"]),
+				isNull("deleted_at"),
+				notNull("published_at"),
+			),
+		});
+
+		return rows
+			.filter((row) => {
+				if (row.published_at === null || !this.isPublishedAt(row.published_at)) return false;
+				if (row.mentions_sent_at === null) return true;
+				return this.parseTimestamp(row.mentions_sent_at) < this.parseTimestamp(row.published_at);
+			})
+			.map((row) => row.id);
+	}
+
+	/**
+	 * Stamps a post as having sent its Webmentions now, which takes it off the cron's list
+	 * until its publish date moves past this moment.
+	 *
+	 * @param db Database handle used for writes.
+	 * @param id Post identifier.
+	 */
+	static async markMentionsSent(db: Database, id: string) {
+		let now = this.timestamp;
+		await db.update(this.table, id, { mentions_sent_at: now, updated_at: now });
 	}
 
 	/**
@@ -640,6 +725,7 @@ export class Post {
 				type: this.table.type,
 				published_at: this.table.published_at,
 				deleted_at: this.table.deleted_at,
+				mentions_sent_at: this.table.mentions_sent_at,
 				meta_id: schema.postMeta.id,
 				meta_created_at: schema.postMeta.created_at,
 				meta_updated_at: schema.postMeta.updated_at,
@@ -680,6 +766,7 @@ export class Post {
 			type: Post.Type;
 			published_at: string | null;
 			deleted_at: string | null;
+			mentions_sent_at: string | null;
 			meta_id: string;
 			meta_created_at: string;
 			meta_updated_at: string;
@@ -702,6 +789,7 @@ export class Post {
 					type: row.type,
 					published_at: row.published_at,
 					deleted_at: row.deleted_at,
+					mentions_sent_at: row.mentions_sent_at,
 					meta: [],
 				};
 				posts.set(row.id, post);

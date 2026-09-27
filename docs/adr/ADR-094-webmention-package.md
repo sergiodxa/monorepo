@@ -521,7 +521,10 @@ own.
   - [x] `Link` header on post pages and `<link rel="webmention">` in `<head>`
   - [x] `/cms/webmentions` moderation (approve, reject, trust or block a domain) and approved mentions under posts
   - [ ] Create the queue, migrate, deploy, and send a test mention from webmention.rocks
-- [ ] Phase 4: Send from the blog
+- [x] Phase 4: Send from the blog
+  - [x] `deleted_at` and the 410 (landed with Phase 3)
+  - [x] `webmentions.send`/`deliver`/`scheduled` jobs, `0005_WebmentionSends.sql`, and the article and tutorial CMS hooks
+  - [ ] Verify against the webmention.rocks receiver tests once deployed
 - [ ] Phase 5: Publish
 
 ## Notes
@@ -562,6 +565,13 @@ own.
 - Adoption: a mention stores the `post_id` its target resolved to, so it stays under its post
   when the slug changes; the verify job re-resolves the target and acks when it no longer
   names a published post.
+
+- Adoption: the scheduled-post cron runs every 15 minutes and picks the articles and
+  tutorials whose `published_at` has passed since their `posts.mentions_sent_at`, which the
+  send job stamps. Migration 0005 stamps every existing post, so the first run notifies only
+  posts scheduled after it, not the archive. A post still in preview sends nothing from the CMS.
+- Adoption: a removed link's `webmention_sends` row is dropped once its target is told (or
+  refuses for good), so later edits do not notify it again.
 
 ## Alternatives Considered
 

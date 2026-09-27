@@ -1,7 +1,7 @@
 /**
  * Data-table schema for the Webmention tables: the mentions received for each post,
- * keyed by their source/target pair, and the per-host moderation policy that approves
- * or drops a source's mentions before anyone reviews them.
+ * keyed by their source/target pair, the per-host moderation policy, and the targets
+ * each post has notified, which is what lets a removed link be notified too.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -74,3 +74,29 @@ export const webmentionDomains = table({
 
 /** Persisted moderation policy row. */
 export type SelectWebmentionDomain = TableRow<typeof webmentionDomains>;
+
+/**
+ * A target a post notified, and what its endpoint answered. Kept while the post links
+ * to it, so an update that drops the link still notifies the target once more.
+ */
+export const webmentionSends = table({
+	name: "webmention_sends",
+	timestamps: {
+		createdAt: "created_at",
+		updatedAt: "updated_at",
+	},
+	columns: {
+		id: c.text().primaryKey(),
+		created_at: c.text(),
+		updated_at: c.text(),
+		target: c.text(),
+		status: c.enum(["sent", "no-endpoint", "failed"]),
+		endpoint: c.text().nullable(),
+		code: c.integer().nullable(),
+		location: c.text().nullable(),
+		post_id: c.text().references("posts", "id", "fk_webmention_sends_post_id").onDelete("cascade"),
+	},
+});
+
+/** Persisted send row. */
+export type SelectWebmentionSend = TableRow<typeof webmentionSends>;

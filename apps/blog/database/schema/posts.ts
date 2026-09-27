@@ -35,6 +35,8 @@ export const posts = table({
 		published_at: c.text().nullable(),
 		/** Set when the post is deleted; its URL then answers 410 instead of 404. */
 		deleted_at: c.text().nullable(),
+		/** When the post last sent its Webmentions; `null` when it never has. */
+		mentions_sent_at: c.text().nullable(),
 	},
 	validate({ value }) {
 		return validateTimestamps(value, [
@@ -42,6 +44,7 @@ export const posts = table({
 			{ name: "updated_at", nullable: false },
 			{ name: "published_at", nullable: true },
 			{ name: "deleted_at", nullable: true },
+			{ name: "mentions_sent_at", nullable: true },
 		]);
 	},
 });

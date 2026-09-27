@@ -20,7 +20,7 @@ Production URL: https://sergiodxa.com
 | KV          | `AUTH`                                                | Authentication/session state                |
 | KV          | `REDIRECTS`                                           | URL redirect mappings                       |
 | R2          | `BACKUPS`                                             | Database backup storage                     |
-| Queue       | `QUEUE` (`blog-jobs`)                                 | Background jobs (Webmention verification)   |
+| Queue       | `QUEUE` (`blog-jobs`)                                 | Background jobs (Webmention receive/send)   |
 | Rate limit  | `WEBMENTION_RATE_LIMITER`                             | Webmention endpoint budget                  |
 | Secrets     | `CLIENT_ID`, `CLIENT_SECRET`, `COOKIE_SESSION_SECRET` | OIDC and session secrets from Secrets Store |
 | Assets      | N/A                                                   | Static assets served from `build/client`    |
@@ -37,6 +37,9 @@ Smart Placement and Observability are enabled.
 - Webmention receiving: `POST /webmention` queues verification, verified mentions wait in
   the CMS moderation queue (`/cms/webmentions`), and approved ones render under the post.
   Deleted posts answer 410 Gone.
+- Webmention sending: creating, updating or deleting an article or tutorial notifies every
+  page it links to (and every page it stopped linking to); a cron every 15 minutes sends
+  for posts whose scheduled publish date has arrived.
 
 ## Routes
 

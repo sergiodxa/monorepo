@@ -14,5 +14,5 @@ export { posts } from "./posts";
 export type { InsertPost, SelectPost } from "./posts";
 export { users } from "./users";
 export type { InsertUser, SelectUser } from "./users";
-export { webmentionDomains, webmentions } from "./webmentions";
-export type { SelectWebmention, SelectWebmentionDomain } from "./webmentions";
+export { webmentionDomains, webmentionSends, webmentions } from "./webmentions";
+export type { SelectWebmention, SelectWebmentionDomain, SelectWebmentionSend } from "./webmentions";

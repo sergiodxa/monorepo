@@ -32,6 +32,9 @@ export const dispatcher = createJobDispatcher({
 });
 
 dispatcher.map(jobs.webmentions.verify, () => import("~/app/jobs/webmentions/verify"));
+dispatcher.map(jobs.webmentions.send, () => import("~/app/jobs/webmentions/send"));
+dispatcher.map(jobs.webmentions.deliver, () => import("~/app/jobs/webmentions/deliver"));
+dispatcher.map(jobs.webmentions.scheduled, () => import("~/app/jobs/webmentions/scheduled"));
 
 declare module "@sdxc/jobs" {
 	interface JobTypes {
