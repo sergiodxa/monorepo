@@ -51,7 +51,6 @@ const UNREACHABLE = {
 vi.doMock("~/database/article-cache", () => ({
 	ARTICLE_TTL: "7 days",
 	FAILURE_TTL: "1 hour",
-	ROBOTS_TTL: "24 hours",
 	MAX_STORED_BYTES: 512 * 1024,
 	articleCache: () => UNREACHABLE,
 	articleKey: async (url: string) => `article:${url}`,
@@ -80,5 +79,18 @@ describe("with the shared store unreachable", () => {
 		expect(article.outcome).toBe("extracted");
 		expect(article.html).toContain("The harbour was quiet");
 		expect(writes).toBeGreaterThan(0);
+	});
+
+	test("refuses the article when the origin's robots.txt answers 503", async () => {
+		server.use(
+			http.get("https://example.com/robots.txt", () => new HttpResponse(null, { status: 503 })),
+			http.get("https://example.com/post", () => {
+				throw new Error("a refused article is never fetched");
+			}),
+		);
+
+		let article = await readArticle({ url: "https://example.com/post", summary: SUMMARY });
+
+		expect(article.outcome).toBe("refused");
 	});
 });

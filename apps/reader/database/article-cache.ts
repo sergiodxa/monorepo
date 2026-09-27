@@ -27,8 +27,11 @@ import { env } from "cloudflare:workers";
  */
 const ARTICLE_KEY_PREFIX = "article";
 
-/** And for the `robots.txt` each origin is asked for once a day rather than per open. */
-const ROBOTS_KEY_PREFIX = "robots";
+/**
+ * And for the `robots.txt` decision each origin is asked for once a day rather than per
+ * open, versioned by the shape of the value held under it.
+ */
+const ROBOTS_KEY_PREFIX = "robots-v2";
 
 /**
  * How long an extracted article is held. A link circulates for about a week, which is
@@ -43,13 +46,6 @@ export const ARTICLE_TTL: DurationString = "7 days";
  * down is tried again today rather than next week.
  */
 export const FAILURE_TTL: DurationString = "1 hour";
-
-/**
- * How long an origin's `robots.txt` is held, which is how often it is re-read. An origin
- * that could not be reached is held for {@link FAILURE_TTL} instead, since it refuses
- * every path until the next read.
- */
-export const ROBOTS_TTL: DurationString = "24 hours";
 
 /**
  * How much sanitized markup is written. A cost decision rather than a store limit: KV
@@ -74,8 +70,8 @@ export async function articleKey(url: string): Promise<string> {
 }
 
 /**
- * Where one origin's `robots.txt` is held. The origin is short and fixed-width enough
- * to be the key itself, so a cached document is legible in the namespace.
+ * Where one origin's `robots.txt` decision is held, for as long as the decision says. The
+ * origin is short enough to be the key itself, so a cached entry is legible in the namespace.
  *
  * @param origin - The scheme and host the document governs.
  */

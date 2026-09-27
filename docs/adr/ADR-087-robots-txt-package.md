@@ -480,12 +480,16 @@ per-page directives and Content Signals would still need writing.
 - Implementation: RFC 9309 figure 4's `https%3A%2F%2Ffoo.bar` row is not applied to raw reserved
   characters in a URL: they compare as written on both sides, which is what Google's suite
   expects for a query containing `http://`.
+- Adoption: no dated release of `@sdxc/distill` carried the robots exports, so they were
+  removed without re-exports. `@sdxc/cache` reads a numeric `ttl` as seconds, so the reader
+  writes `lifetimeMs / 1000`. The reader checks the origin with distill's `addressable`
+  before `fetchRobots`, so a non-public origin is never asked for its file.
 
 ## Current Progress
 
 - [x] Phase 1: Specify and build the package
-- [ ] Phase 2: Migrate `@sdxc/distill`
-- [ ] Phase 3: Migrate the reader
+- [x] Phase 2: Migrate `@sdxc/distill`
+- [x] Phase 3: Migrate the reader
 - [ ] Phase 4: Migrate the writers
   - [ ] `@sdxc/blog-engine`'s `robots.txt` controller
   - [x] `@sdxc/seo`'s `robotsDirectives` delegates to `stringifyDirectives`

@@ -181,6 +181,27 @@ describe("the shared article cache", () => {
 
 		expect(asked).toBe(1);
 		expect(await env.KV.get(robotsKey(at))).not.toBeNull();
+
+		let listed = await env.KV.list({ prefix: robotsKey(at) });
+		let expiration = listed.keys.at(0)?.expiration ?? 0;
+		expect(expiration).toBeGreaterThan(Math.floor(Date.now() / 1000) + 23 * 60 * 60);
+		expect(expiration).toBeLessThanOrEqual(Math.ceil(Date.now() / 1000) + 24 * 60 * 60);
+	});
+
+	test("refuses an origin whose robots.txt answers 429, which asks to be left alone", async () => {
+		let at = origin();
+		let fetched = 0;
+
+		server.use(
+			http.get(`${at}/robots.txt`, () => new HttpResponse(null, { status: 429 })),
+			http.get(`${at}/post`, () => {
+				fetched += 1;
+				return HttpResponse.html(page());
+			}),
+		);
+
+		expect((await readArticle({ url: `${at}/post`, summary: SUMMARY })).outcome).toBe("refused");
+		expect(fetched).toBe(0);
 	});
 
 	test("refuses an origin whose robots.txt is down, and asks it again within the hour", async () => {

@@ -11,11 +11,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Distill } from "@sdxc/distill";
+import type { RobotsFetch } from "@sdxc/robots/fetch";
 
-import { distill, fetchRobots } from "@sdxc/distill";
+import { addressable, distill } from "@sdxc/distill";
 import { currentLog } from "@sdxc/logger";
 import { isFailure, isSuccess } from "@sdxc/result";
+import { fetchRobots } from "@sdxc/robots/fetch";
 
 import { proxyImages } from "~/app/lib/media";
 import {
@@ -25,7 +26,6 @@ import {
 	FAILURE_TTL,
 	MAX_STORED_BYTES,
 	robotsKey,
-	ROBOTS_TTL,
 } from "~/database/article-cache";
 
 /**
@@ -84,32 +84,26 @@ function hostOf(url: string): string {
 }
 
 /**
- * The origin's `robots.txt`, from the shared cache or from the origin itself.
- *
- * One read a day per origin; an unreachable origin refuses everything and is re-read
- * after a failed attempt's hour. An entry is a hit only when it carries a status, so an
- * entry of any other shape is read again from the origin and replaced.
+ * What the origin's `robots.txt` decided, from the shared cache or from the origin itself,
+ * held for the lifetime the decision carries: a day for a file read or missing, an hour for
+ * an unreachable origin, which refuses every path until then. A non-public origin is never
+ * asked, since `distill` refuses its articles before any request.
  */
-async function robotsFor(url: string): Promise<string | null> {
-	let origin: string;
-	try {
-		origin = new URL(url).origin;
-	} catch {
-		return null;
-	}
+async function robotsFor(url: string): Promise<RobotsFetch.Outcome | undefined> {
+	let address = addressable(url);
+	if (isFailure(address)) return undefined;
 
+	let origin = address.data.origin;
 	let cache = articleCache();
 	let key = robotsKey(origin);
 
-	let held = await cache.read<Distill.Robots>(key);
-	if (isSuccess(held) && typeof held.data?.status === "string") return held.data.source;
+	let held = await cache.read<RobotsFetch.Outcome>(key);
+	if (isSuccess(held) && held.data !== null) return held.data;
 
-	let robots = await fetchRobots(origin, { userAgent: EXTRACTION_USER_AGENT });
-	await cache.write(key, robots, {
-		ttl: robots.status === "unreachable" ? FAILURE_TTL : ROBOTS_TTL,
-	});
+	let outcome = await fetchRobots(origin, { userAgent: EXTRACTION_USER_AGENT });
+	await cache.write(key, outcome, { ttl: Math.ceil(outcome.lifetimeMs / 1000) });
 
-	return robots.source;
+	return outcome;
 }
 
 /**
