@@ -99,7 +99,7 @@ indicate requirement levels.
   - `app/http/middleware/require-user.ts` <- Guard for the signed-in surface
   - `app/http/middleware/presentation.ts` <- The scheme and reading face every document is
     rendered with, read before any controller runs
-  - `app/http/middleware/security-headers.ts` <- The policy every response is read under
+  - `app/http/security-policy.ts` <- The policy every response is read under
 - Content safety
   - `app/lib/media.ts` <- Signing, retrieving and rewriting a remote image
   - `app/lib/tracking-parameters.ts` <- What an outbound link is stripped of at render

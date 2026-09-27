@@ -45,8 +45,6 @@ function mediaHeaders(type: string): Headers {
 	let headers = new Headers();
 	headers.set("content-type", type);
 	headers.set("cache-control", MEDIA_CACHE_CONTROL);
-	headers.set("x-content-type-options", "nosniff");
-	headers.set("cross-origin-resource-policy", "same-origin");
 	return headers;
 }
 

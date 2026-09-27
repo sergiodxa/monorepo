@@ -14,6 +14,7 @@ import type { RemixNode } from "remix/ui";
 
 import featureFlags from "@sdxc/flags/middleware/router";
 import { lazy } from "@sdxc/lazy-route";
+import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
@@ -26,8 +27,8 @@ import type { Viewer } from "~/app/http/middleware/auth";
 
 import i18n from "~/app/http/middleware/i18n";
 import presentation from "~/app/http/middleware/presentation";
-import securityHeaders from "~/app/http/middleware/security-headers";
 import { resolveFrame } from "~/app/http/render";
+import { SECURITY_POLICY } from "~/app/http/security-policy";
 import { flags } from "~/app/lib/flags";
 import routes from "~/routes/web";
 
@@ -117,7 +118,7 @@ export function createTestRouter(viewer: Viewer | null): Router {
 			 * Every page is served under the app's own policy here too, so a test that renders a
 			 * document is also a test of what that document is allowed to load.
 			 */
-			securityHeaders,
+			securityHeaders(SECURITY_POLICY) as Middleware,
 			renderWith(createTestRenderer) as Middleware,
 		],
 	});

@@ -17,6 +17,7 @@ import featureFlags from "@sdxc/flags/middleware/router";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
+import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
@@ -29,9 +30,9 @@ import defaultHandler from "~/app/http/controllers/default-handler";
 import auth, { getViewer } from "~/app/http/middleware/auth";
 import i18n from "~/app/http/middleware/i18n";
 import presentation from "~/app/http/middleware/presentation";
-import securityHeaders from "~/app/http/middleware/security-headers";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
 import { createHtmlRenderer } from "~/app/http/render";
+import { SECURITY_POLICY } from "~/app/http/security-policy";
 import { flags } from "~/app/lib/flags";
 import requireAgent from "~/app/mcp/agent";
 import agentRateLimit from "~/app/mcp/rate-limit";
@@ -110,7 +111,7 @@ export default function application(options: application.Options) {
 		 * Immediately before the renderer, so what it decorates is the response the renderer
 		 * produced and every surface this app adds later is covered without being asked.
 		 */
-		securityHeaders,
+		securityHeaders(SECURITY_POLICY) as Middleware,
 		renderWith(createHtmlRenderer) as Middleware,
 	];
 

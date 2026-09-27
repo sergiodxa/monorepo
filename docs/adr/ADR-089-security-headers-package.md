@@ -587,7 +587,7 @@ Both start with `contentSecurityPolicyReportOnly` and a report route, then enfor
 ## Current Progress
 
 - [x] Phase 1: Specify and build the package
-- [ ] Phase 2: Migrate the reader
+- [x] Phase 2: Migrate the reader
 - [ ] Phase 3: Adopt in r3-auth and auth-saas
 - [ ] Phase 4: Adopt in uptime and blog
 - [ ] Phase 5: Publish
@@ -630,6 +630,10 @@ Both start with `contentSecurityPolicyReportOnly` and a report route, then enfor
   `nonce` and stamps it on each import map it appends, and `<style data-rmx-style>` carries no
   nonce. `import-map.test.tsx` renders `<ImportMap nonce>` through the middleware and checks the
   nonce matches the `script-src` the response carries.
+- Reader adoption: the reader renders no `<ImportMap>` and loads its one client entry with
+  `script-src 'self'`, so it reads no nonce and its policy carries none. It gains
+  `X-Frame-Options: DENY` (derived from `frame-ancestors 'none'`), and HSTS is left off plain
+  `http:` responses, which only local development serves.
 
 ## Alternatives Considered
 
