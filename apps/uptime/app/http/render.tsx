@@ -2,7 +2,8 @@
  * The app's request-scoped SSR renderer and its frame resolver. Streams `remix/ui` JSX
  * as HTML and fetches every `<Frame>`'s `src` back through the router that is rendering
  * the document, so a fragment shares the request's cookies and middleware chain instead
- * of going out over the network.
+ * of going out over the network. The response's CSP nonce is read before the stream starts,
+ * so the policy the headers carry names the nonce the document renders.
  *
  * Living in this module lets tests exercise the real resolver: a page test that supplies
  * its own stub can pass while every frame on the page is broken, which is exactly how a
@@ -17,8 +18,11 @@ import type { RemixNode } from "remix/ui";
 import type { ResolveFrameContext } from "remix/ui/server";
 
 import { currentLog } from "@sdxc/logger";
+import { SecurityHeadersKey } from "@sdxc/security-headers/middleware";
 import { createHtmlResponse } from "remix/response/html";
 import { renderToStream } from "remix/ui/server";
+
+import { CspNonce } from "~/resources/components/csp-nonce";
 
 /** How many redirects a frame's sub-request may follow before it is treated as a loop. */
 const MAX_FRAME_REDIRECTS = 10;
@@ -31,7 +35,8 @@ export function createHtmlRenderer(ctx: RequestContext) {
 	 * via `createHtmlResponse` since JSX cannot express a doctype directly.
 	 */
 	return function render(node: RemixNode, init?: ResponseInit) {
-		let stream = renderToStream(node, {
+		let nonce = ctx.has(SecurityHeadersKey) ? ctx.get(SecurityHeadersKey)?.nonce : undefined;
+		let stream = renderToStream(<CspNonce nonce={nonce}>{node}</CspNonce>, {
 			frameSrc: ctx.request.url,
 			resolveFrame(src, target, context) {
 				return resolveFrame(ctx.router, ctx.request, src, target, context);

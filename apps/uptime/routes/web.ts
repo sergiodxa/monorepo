@@ -26,6 +26,8 @@ export default route({
 	statusPageCalendar: get("/status/:slug/maintenance.ics"),
 	/** One published maintenance window as an `.ics` download, sharing the feed's `UID`s. */
 	statusPageMaintenanceEvent: get("/status/:slug/maintenance/:windowId.ics"),
+	/** Where browsers report Content Security Policy violations, named by `Reporting-Endpoints`. */
+	cspReports: post("/reports/csp"),
 
 	/**
 	 * The public try-it surface, reachable with no account. Every leaf carries its own

@@ -1,16 +1,20 @@
 /**
- * Tests the request-scoped renderer's response contract: the doctype the renderer
- * prepends to the byte stream ahead of the JSX-rendered markup. The doctype lives
- * outside the JSX tree, so verifying it here is what keeps every page in the app
- * parsing in standards mode.
+ * Tests the request-scoped renderer's response contract: the doctype it prepends ahead of
+ * the JSX-rendered markup, which keeps every page in standards mode, and the CSP nonce it
+ * hands the document, which must match the one the response's policy names.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Middleware } from "remix/router";
+
+import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
+import { SECURITY_POLICY } from "~/app/http/security-policy";
 import DocumentLayout from "~/resources/layouts/document";
 
 import { createHtmlRenderer } from "./render";
@@ -46,5 +50,49 @@ describe("createHtmlRenderer", () => {
 		let response = await renderDocument();
 
 		expect(response.headers.get("content-type")).toBe("text/html; charset=utf-8");
+	});
+});
+
+describe("createHtmlRenderer with the security policy", () => {
+	/** Renders a document through the app's security headers and renderer, as production does. */
+	async function renderSecuredDocument() {
+		let router = createRouter({
+			middleware: [
+				securityHeaders(SECURITY_POLICY) as Middleware,
+				renderWith(createHtmlRenderer) as Middleware,
+			],
+		});
+		router.get("/", (ctx) =>
+			ctx.render(
+				<DocumentLayout title="Test">
+					<p>Body</p>
+				</DocumentLayout>,
+			),
+		);
+		return await router.fetch(new Request("https://uptime.test/"));
+	}
+
+	test("stamps the import map with the nonce the Report-Only policy names", async () => {
+		let response = await renderSecuredDocument();
+		let html = await response.text();
+		let policy = response.headers.get("Content-Security-Policy-Report-Only") ?? "";
+
+		let nonce = /<script data-rmx-import-map type="importmap" nonce="([^"]+)"/.exec(html)?.[1];
+
+		expect(nonce).toBeDefined();
+		expect(policy).toContain(`'nonce-${nonce}'`);
+		expect(policy).toContain("https://challenges.cloudflare.com");
+		expect(policy).toContain("https://static.cloudflareinsights.com");
+		expect(policy).toContain("report-to csp");
+		expect(response.headers.get("Content-Security-Policy")).toBeNull();
+	});
+
+	test("sends the headers the policy enforces now", async () => {
+		let response = await renderSecuredDocument();
+
+		expect(response.headers.get("Strict-Transport-Security")).toBe("max-age=31536000");
+		expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
+		expect(response.headers.get("Referrer-Policy")).toBe("strict-origin-when-cross-origin");
+		expect(response.headers.get("Reporting-Endpoints")).toBe('csp="/reports/csp"');
 	});
 });

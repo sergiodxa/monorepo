@@ -597,6 +597,10 @@ Both start with `contentSecurityPolicyReportOnly` and a report route, then enfor
         magic-link page's own header. No inline script or ImportMap renders today, so the
         nonce source is advertised only once a page reads it
 - [ ] Phase 4: Adopt in uptime and blog
+  - [x] `apps/uptime`: CSP Report-Only naming the Web Analytics and Turnstile origins, reported
+        to a `/reports/csp` route; HSTS, `Referrer-Policy`, Permissions-Policy and `nosniff`
+        enforced. The renderer reads the nonce before streaming and hands it to the document
+        through a context provider, which stamps it on an `<ImportMap>` in the head
 - [ ] Phase 5: Publish
 
 ## Notes

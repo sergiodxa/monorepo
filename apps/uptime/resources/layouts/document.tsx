@@ -2,7 +2,8 @@
  * Root HTML document layout for the uptime app. It renders the outer html/head/body
  * shell with charset and viewport meta tags, an optional page title, an indexable
  * page's metadata and structured data, the @sdxc/ui design-system stylesheets, and
- * the client entry script, switching between the dev source and the built asset path.
+ * the client entry script, switching between the dev source and the built asset path, and
+ * the import map carrying the response's CSP nonce for the client runtime to reuse.
  * It exists as the shared document wrapper every server-rendered page is composed into.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -18,8 +19,10 @@ import { m } from "@sdxc/u/size";
 import { font } from "@sdxc/u/typography";
 import resetStyles from "@sdxc/ui/reset.css?url";
 import themeStyles from "@sdxc/ui/theme.css?url";
+import { ImportMap } from "remix/ui/server";
 
 import { SEO } from "~/app/lib/seo";
+import { CspNonce } from "~/resources/components/csp-nonce";
 import colorStyles from "~/resources/css/colors.css?url";
 
 /**
@@ -84,9 +87,12 @@ namespace DocumentLayout {
 /**
  * Renders the outer `<html>`/`<head>`/`<body>` shell around `children`. The
  * client entry script loads `async`, so a non-blocking Frame's `<template>`
- * is picked up the moment that chunk of the streamed response arrives.
+ * is picked up the moment that chunk of the streamed response arrives. With a
+ * nonce, the import map carries it and every map the client runtime appends reuses it.
  */
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
+	let nonce = handle.context.get(CspNonce)?.nonce;
+
 	return () => {
 		let { title, locale = "en", preload = [], seo, children } = handle.props;
 
@@ -95,6 +101,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 				<head>
 					<meta charSet="utf-8" />
 					<meta name="viewport" content="width=device-width, initial-scale=1" />
+					{nonce && <ImportMap value={{ imports: {} }} nonce={nonce} />}
 					{seo ? <Seo title={title} site={SEO.site} {...seo} /> : title && <title>{title}</title>}
 					<link rel="modulepreload" href={CLIENT_ENTRY_SRC} />
 					{preload.map((asset) => (

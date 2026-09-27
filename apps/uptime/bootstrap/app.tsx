@@ -26,6 +26,8 @@ import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import { CloudflareTransport } from "@sdxc/mail/cloudflare";
 import mail from "@sdxc/mail/middleware";
+import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { wellKnown } from "@sdxc/well-known/middleware";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
@@ -45,9 +47,11 @@ import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
 import { createHtmlRenderer } from "~/app/http/render";
+import { SECURITY_POLICY } from "~/app/http/security-policy";
 import { polar } from "~/app/lib/billing";
 import { createDatabase } from "~/app/lib/database";
 import { flags } from "~/app/lib/flags";
+import { securityTxtEntry } from "~/app/lib/security-txt";
 import { logger } from "~/bootstrap/logger";
 import {
 	alertRoutes,
@@ -123,6 +127,11 @@ export default function application(options: application.Options) {
 		asyncContext(),
 		log(logger) as Middleware,
 		/**
+		 * Answers `/.well-known/security.txt` before anything that reads a session or the
+		 * database, since the file is static and a researcher's probe carries no cookie.
+		 */
+		wellKnown({ "security.txt": securityTxtEntry }),
+		/**
 		 * Publishes `ctx.db` on every surface. The session, the auth guard and every
 		 * controller below read from it, so it leads the chain that reaches storage.
 		 */
@@ -174,6 +183,11 @@ export default function application(options: application.Options) {
 		cop({
 			insecureBypassPatterns: MACHINE_PATH_PREFIXES.map((prefix) => `${prefix}{path...}`),
 		}),
+		/**
+		 * Right before the renderer, so the headers land on the response it produced and the
+		 * renderer can read the nonce while the handler still runs.
+		 */
+		securityHeaders(SECURITY_POLICY) as Middleware,
 		renderWith(createHtmlRenderer) as Middleware,
 	];
 
@@ -215,6 +229,10 @@ export default function application(options: application.Options) {
 	router.map(
 		routes.statusPage,
 		lazy(() => import("~/app/http/controllers/status-page")),
+	);
+	router.map(
+		routes.cspReports,
+		lazy(() => import("~/app/http/controllers/csp-reports")),
 	);
 	router.map(
 		routes.statusPageCalendar,
