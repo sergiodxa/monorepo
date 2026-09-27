@@ -46,7 +46,7 @@ export function createTenantSessionPolicyDescribeAction(options: ManagementContr
 			let refused = requireScope(ctx, "tenant:write");
 			if (refused) return refused;
 
-			let result = await ctx.tenantStub.describeSessionPolicy({});
+			let result = await ctx.tenantStub.describeSessionPolicy();
 			let { cost: _cost, ...body } = result;
 
 			return json(body, { status: 200 });

@@ -62,6 +62,12 @@ async function appendExportOutputLines(
 ): Promise<void> {
 	let existing = await bucket.head(key);
 
+	/**
+	 * Streams the object's existing lines ahead of `newLines`, so the rewrite keeps
+	 * every earlier tick's output rows.
+	 *
+	 * @yields Each existing line, then each of `newLines`, in order.
+	 */
 	async function* lines(): AsyncGenerator<string> {
 		if (existing) {
 			for await (let line of readTransferFileLines(bucket, key)) yield line;

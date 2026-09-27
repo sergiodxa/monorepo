@@ -59,6 +59,12 @@ async function appendFailureReportLines(
 ): Promise<void> {
 	let existing = await bucket.head(key);
 
+	/**
+	 * Streams the object's existing lines ahead of `newLines`, so the rewrite keeps
+	 * every earlier tick's report lines.
+	 *
+	 * @yields Each existing line, then each of `newLines`, in order.
+	 */
 	async function* lines(): AsyncGenerator<string> {
 		if (existing) {
 			for await (let line of readTransferFileLines(bucket, key)) yield line;

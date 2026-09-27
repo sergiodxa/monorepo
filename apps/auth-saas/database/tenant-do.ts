@@ -1282,9 +1282,7 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 *
 	 * @returns The effective policy, its per-field source, and the platform bounds.
 	 */
-	async describeSessionPolicy(
-		input: Record<string, never> = {},
-	): Promise<WithCost<DescribeSessionPolicyResult>> {
+	async describeSessionPolicy(): Promise<WithCost<DescribeSessionPolicyResult>> {
 		await this.#migrated;
 
 		return this.#withCost(async () => {

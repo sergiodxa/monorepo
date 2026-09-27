@@ -59,6 +59,8 @@ function emptySourceFile(): Response {
  * Calls `onLine` once per non-empty row as it is yielded, so a caller
  * streaming these lines straight into R2 counts them in the same pass rather
  * than reading the file twice.
+ *
+ * @yields Each non-empty NDJSON line of the body, in order.
  */
 async function* readRequestBodyLines(
 	body: ReadableStream<Uint8Array>,

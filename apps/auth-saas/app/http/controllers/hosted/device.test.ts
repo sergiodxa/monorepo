@@ -22,7 +22,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 import type { Harness } from "~/app/http/controllers/hosted/test-harness";
 import type Tenant from "~/database/tenant-do";
 
-import { hostedDeviceShow, hostedDeviceSubmit } from "~/app/http/controllers/hosted/device";
+import { hostedDeviceShow } from "~/app/http/controllers/hosted/device";
 import {
 	buildHarness,
 	cookieFrom,

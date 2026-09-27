@@ -55,13 +55,7 @@ import type { AuditActor } from "./audit-events";
 import type { ConnectionMappingRow, ConnectionRow } from "./connections";
 import type { EffectiveSessionPolicy } from "./session-policy";
 import type { OpenSessionMetering } from "./sessions";
-import type {
-	Actor,
-	AddIdentifierResult,
-	LinkedIdentityState,
-	SubjectIdentifierRow,
-	SubjectProfile,
-} from "./subjects";
+import type { Actor, LinkedIdentityState, SubjectIdentifierRow, SubjectProfile } from "./subjects";
 
 import {
 	evaluateAutomaticLink,
@@ -761,7 +755,7 @@ export async function completeConnectionSignIn(
 		subjectId,
 		refreshToken: grant.refreshToken,
 		tokenExpiresAt: grant.expiresAt,
-		...(identityWrite ?? {}),
+		...identityWrite,
 	});
 
 	let session = await openSession(

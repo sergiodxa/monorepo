@@ -72,7 +72,7 @@ async function setEntitlement(hasEntitlement: boolean): Promise<void> {
 
 describe("describeSessionPolicy", () => {
 	test("a freshly provisioned tenant reports every field's platform default, sourced from the default", async () => {
-		let described = await tenant.describeSessionPolicy({});
+		let described = await tenant.describeSessionPolicy();
 
 		expect(described).toMatchObject({
 			absoluteLifetimeMs: { value: SESSION_ABSOLUTE_LIFETIME_DEFAULT_MS, source: "default" },
@@ -97,7 +97,7 @@ describe("describeSessionPolicy", () => {
 	test("reads open on every tier: a non-entitled tenant still answers its own (default) posture", async () => {
 		await setEntitlement(false);
 
-		let described = await tenant.describeSessionPolicy({});
+		let described = await tenant.describeSessionPolicy();
 
 		expect(described.absoluteLifetimeMs).toEqual({
 			value: SESSION_ABSOLUTE_LIFETIME_DEFAULT_MS,
@@ -113,7 +113,7 @@ describe("describeSessionPolicy", () => {
 			actor,
 		});
 
-		let described = await tenant.describeSessionPolicy({});
+		let described = await tenant.describeSessionPolicy();
 
 		expect(described.absoluteLifetimeMs).toEqual({
 			value: SESSION_ABSOLUTE_LIFETIME_DEFAULT_MS + 60 * 60 * 1000,
@@ -130,7 +130,7 @@ describe("describeSessionPolicy", () => {
 
 		await setEntitlement(false);
 
-		let described = await tenant.describeSessionPolicy({});
+		let described = await tenant.describeSessionPolicy();
 
 		expect(described.absoluteLifetimeMs).toEqual({
 			value: SESSION_ABSOLUTE_LIFETIME_FLOOR_MS,
@@ -147,7 +147,7 @@ describe("describeSessionPolicy", () => {
 
 		await setEntitlement(false);
 
-		let described = await tenant.describeSessionPolicy({});
+		let described = await tenant.describeSessionPolicy();
 
 		expect(described.absoluteLifetimeMs).toEqual({
 			value: SESSION_ABSOLUTE_LIFETIME_DEFAULT_MS,

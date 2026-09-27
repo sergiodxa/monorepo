@@ -126,7 +126,7 @@ export interface ReadTransferFileLinesOptions {
  * @param bucket - The R2 bucket the object lives in.
  * @param key - The object key to read.
  * @param options - How many leading rows to skip.
- * @returns An async iterable of the object's NDJSON lines, in order.
+ * @yields Each of the object's NDJSON lines, in order.
  * @throws When no object exists at `key`.
  * @example
  * for await (let line of readTransferFileLines(env.R2, sourceKey, { startLine: cursor })) {

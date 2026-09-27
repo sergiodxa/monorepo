@@ -37,7 +37,11 @@ async function collect(lines: AsyncIterable<string>): Promise<string[]> {
 	return collected;
 }
 
-/** Yields a fixed list of strings as an `AsyncIterable`, the shape a batching writer produces. */
+/**
+ * Yields a fixed list of strings as an `AsyncIterable`, the shape a batching writer produces.
+ *
+ * @yields Each value of `values`, in order.
+ */
 async function* asyncLines(values: string[]): AsyncGenerator<string> {
 	for (let value of values) yield value;
 }
