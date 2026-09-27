@@ -7,7 +7,6 @@
  */
 
 import { json } from "@sdxc/http/response";
-import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -16,6 +15,7 @@ import type { RegisterWebhookEndpointResult } from "~/database/webhook-endpoints
 import {
 	webhookEndpointValidationFailure,
 	webhookEntitlementRequired,
+	WEBHOOK_ENDPOINT_BODY_SCHEMA,
 } from "~/app/http/controllers/management/webhook-endpoints/shared";
 import { parseBody } from "~/app/http/lib/parse-body";
 import { requireScope } from "~/app/http/lib/require-scope";
@@ -23,12 +23,6 @@ import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import routes from "~/routes/management";
-
-let RegisterWebhookEndpointBodySchema = s.object({
-	url: s.string(),
-	description: s.string(),
-	eventTypes: s.array(s.string()),
-});
 
 /** Maps every `registerWebhookEndpoint` refusal onto its own `problem+json` response. */
 function registerWebhookEndpointFailure(
@@ -62,7 +56,7 @@ export function createWebhookEndpointsRegisterAction(options: ManagementControll
 			if (refused) return refused;
 
 			let parsed = parseBody(
-				RegisterWebhookEndpointBodySchema,
+				WEBHOOK_ENDPOINT_BODY_SCHEMA,
 				await ctx.request.json().catch(() => null),
 			);
 			if (!parsed.ok) return parsed.response;

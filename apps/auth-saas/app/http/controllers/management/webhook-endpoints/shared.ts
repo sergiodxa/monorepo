@@ -2,7 +2,8 @@
  * What every route in this directory shares: reading the `:endpointId` path
  * param, the `problem+json` response for an endpoint the tenant does not
  * hold, the entitlement refusal outbound webhooks are gated behind, and
- * mapping a URL or event type refusal onto its own response.
+ * mapping a URL or event type refusal onto its own response, and the schema an
+ * endpoint's body is held to on register and on update.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,11 +12,29 @@
 import * as s from "remix/data-schema";
 
 import type {
+	WebhookEndpointRecord,
 	WebhookEndpointValidationFailure,
 	WebhookUrlValidationFailureReason,
 } from "~/database/webhook-endpoints";
 
 import { managementProblem } from "~/app/http/lib/problem";
+
+/**
+ * An endpoint's writable members: the body a registration sends whole, and the shape a
+ * merge-patched endpoint must still have, so both routes hold one set of rules.
+ */
+export const WEBHOOK_ENDPOINT_BODY_SCHEMA = s.object({
+	url: s.string(),
+	description: s.string(),
+	eventTypes: s.array(s.string()),
+});
+
+/** Projects an endpoint's record onto {@link WEBHOOK_ENDPOINT_BODY_SCHEMA}, the resource a merge patch edits. */
+export function writableWebhookEndpoint(
+	endpoint: WebhookEndpointRecord,
+): s.InferOutput<typeof WEBHOOK_ENDPOINT_BODY_SCHEMA> {
+	return { url: endpoint.url, description: endpoint.description, eventTypes: endpoint.eventTypes };
+}
 
 /** Parses and requires the `:endpointId` path param every single-endpoint route matches. */
 export function endpointIdParam(ctx: { params: Record<string, string | undefined> }): string {

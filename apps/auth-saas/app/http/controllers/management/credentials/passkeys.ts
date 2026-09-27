@@ -21,7 +21,7 @@ import {
 	passkeyNotFound,
 } from "~/app/http/controllers/management/credentials/shared";
 import { subjectIdParam } from "~/app/http/controllers/management/subjects/shared";
-import { parseBody } from "~/app/http/lib/parse-body";
+import { readPatchBody } from "~/app/http/lib/merge-patch";
 import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
@@ -86,7 +86,7 @@ export function createPasskeysRenameAction(options: ManagementControllerOptions)
 			let subjectId = subjectIdParam(ctx);
 			let credentialId = credentialIdParam(ctx);
 
-			let parsed = parseBody(RenamePasskeyBodySchema, await ctx.request.json().catch(() => null));
+			let parsed = await readPatchBody(ctx.request, RenamePasskeyBodySchema);
 			if (!parsed.ok) return parsed.response;
 
 			let result = await ctx.tenantStub.renamePasskey({

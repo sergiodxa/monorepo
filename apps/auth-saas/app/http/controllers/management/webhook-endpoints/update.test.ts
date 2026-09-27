@@ -63,6 +63,35 @@ describe("PATCH /tenants/:tenantId/webhook-endpoints/:endpointId", () => {
 		expect(body).toMatchObject({ description: "Renamed receiver" });
 	});
 
+	test("applies a merge patch naming only what changes", async () => {
+		let harness = await buildWebhookEndpointsHarness();
+		await grantEntitlement(harness.tenantDO, "outbound_webhooks");
+		let token = await harness.signToken();
+
+		let created = await harness.tenantDO.registerWebhookEndpoint(baseInput());
+		if (!created.ok) throw new Error("unreachable");
+
+		let response = await harness.router.fetch(
+			harness.request(
+				`/tenants/${harness.tenantId}/webhook-endpoints/${created.endpoint.id}`,
+				token,
+				{
+					method: "PATCH",
+					headers: { "Content-Type": "application/merge-patch+json" },
+					body: JSON.stringify({ eventTypes: ["subject.created"] }),
+				},
+			),
+		);
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as Record<string, unknown>;
+		expect(body).toMatchObject({
+			url: "https://example.com/webhooks/auth",
+			description: "CI receiver",
+			eventTypes: ["subject.created"],
+		});
+	});
+
 	test("answers 404 for an endpoint the tenant does not hold", async () => {
 		let harness = await buildWebhookEndpointsHarness();
 		await grantEntitlement(harness.tenantDO, "outbound_webhooks");

@@ -146,7 +146,8 @@ export async function buildManagementTestCore(
 			let { headers: initHeaders, ...rest } = init;
 			let headers = new Headers(initHeaders);
 			headers.set("Authorization", `Bearer ${token}`);
-			if (init.body) headers.set("Content-Type", "application/json");
+			if (init.body && !headers.has("Content-Type"))
+				headers.set("Content-Type", "application/json");
 
 			return new Request(`${ISSUER}${path}`, { ...rest, headers });
 		},

@@ -7,13 +7,13 @@
  */
 
 import { json } from "@sdxc/http/response";
-import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 import type { RegisterClientResult } from "~/database/clients";
 
 import {
+	CLIENT_BODY_SCHEMA,
 	clientEntitlementRequired,
 	clientRecordValidationFailure,
 } from "~/app/http/controllers/management/clients/shared";
@@ -23,18 +23,6 @@ import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import routes from "~/routes/management";
-
-let RegisterClientBodySchema = s.object({
-	name: s.string(),
-	kind: s.enum_(["confidential", "public"] as const),
-	redirectUris: s.array(s.string()),
-	postLogoutRedirectUris: s.array(s.string()),
-	grantTypes: s.array(s.string()),
-	responseTypes: s.array(s.string()),
-	scopes: s.array(s.string()),
-	tokenEndpointAuthMethod: s.enum_(["client_secret_basic", "client_secret_post", "none"] as const),
-	requireConsent: s.boolean(),
-});
 
 /** Maps every `registerClient` refusal onto its own `problem+json` response. */
 function registerClientFailure(result: Exclude<RegisterClientResult, { ok: true }>): Response {
@@ -65,7 +53,7 @@ export function createClientsRegisterAction(options: ManagementControllerOptions
 			let refused = requireScope(ctx, "clients:write");
 			if (refused) return refused;
 
-			let parsed = parseBody(RegisterClientBodySchema, await ctx.request.json().catch(() => null));
+			let parsed = parseBody(CLIENT_BODY_SCHEMA, await ctx.request.json().catch(() => null));
 			if (!parsed.ok) return parsed.response;
 
 			let result = await ctx.tenantStub.registerClient(parsed.data);

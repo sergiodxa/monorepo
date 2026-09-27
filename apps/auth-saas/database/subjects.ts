@@ -336,7 +336,8 @@ export type UpdateSubjectResult =
 
 /**
  * Writes the given profile columns, and only the given attributes whose visibility this
- * actor may set, in one operation.
+ * actor may set, in one operation. A `null` attribute removes its row, the merge patch
+ * meaning of `null`, so a later read reports the attribute absent.
  *
  * @param db - The tenant's database.
  * @param input - The subject to update, the profile columns and attributes to change,
@@ -370,6 +371,11 @@ export async function updateSubject(
 	);
 
 	for (let [key, value] of Object.entries(attributes)) {
+		if (value === null) {
+			await db.deleteMany(subjectAttributes, { where: { subject_id: input.subjectId, key } });
+			continue;
+		}
+
 		let existing = await db.find(subjectAttributes, { subject_id: input.subjectId, key });
 
 		if (existing) {

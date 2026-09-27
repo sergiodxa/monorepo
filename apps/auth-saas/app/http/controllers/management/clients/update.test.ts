@@ -51,6 +51,50 @@ describe("PATCH /tenants/:tenantId/clients/:clientId", () => {
 		expect(body).toMatchObject({ name: "Renamed Client", requireConsent: true });
 	});
 
+	test("applies a merge patch naming only what changes, replacing a list whole", async () => {
+		let harness = await buildClientsHarness();
+		let token = await harness.signToken();
+
+		let created = await harness.tenantDO.registerClient(baseInput());
+		if (!created.ok) throw new Error("unreachable");
+
+		let response = await harness.router.fetch(
+			harness.request(`/tenants/${harness.tenantId}/clients/${created.client.id}`, token, {
+				method: "PATCH",
+				headers: { "Content-Type": "application/merge-patch+json" },
+				body: JSON.stringify({ redirectUris: ["https://example.com/other"] }),
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as Record<string, unknown>;
+		expect(body).toMatchObject({
+			name: "Test Client",
+			redirectUris: ["https://example.com/other"],
+			scopes: ["openid"],
+		});
+	});
+
+	test("refuses a patch removing a required member", async () => {
+		let harness = await buildClientsHarness();
+		let token = await harness.signToken();
+
+		let created = await harness.tenantDO.registerClient(baseInput());
+		if (!created.ok) throw new Error("unreachable");
+
+		let response = await harness.router.fetch(
+			harness.request(`/tenants/${harness.tenantId}/clients/${created.client.id}`, token, {
+				method: "PATCH",
+				headers: { "Content-Type": "application/merge-patch+json" },
+				body: JSON.stringify({ name: null }),
+			}),
+		);
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as Record<string, unknown>;
+		expect(body.type).toBe("https://docs.example.com/errors/validation-failed");
+	});
+
 	test("answers 404 for a client the tenant does not hold", async () => {
 		let harness = await buildClientsHarness();
 		let token = await harness.signToken();

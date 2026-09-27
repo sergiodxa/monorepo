@@ -18,7 +18,7 @@ import {
 	roleNotFound,
 	rolesEntitlementRequired,
 } from "~/app/http/controllers/management/roles/shared";
-import { parseBody } from "~/app/http/lib/parse-body";
+import { readPatchBody } from "~/app/http/lib/merge-patch";
 import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
@@ -67,7 +67,7 @@ export function createRolesUpdateAction(options: ManagementControllerOptions) {
 
 			let roleId = roleIdParam(ctx);
 
-			let parsed = parseBody(UpdateRoleBodySchema, await ctx.request.json().catch(() => null));
+			let parsed = await readPatchBody(ctx.request, UpdateRoleBodySchema);
 			if (!parsed.ok) return parsed.response;
 
 			let result = await ctx.tenantStub.updateRole({

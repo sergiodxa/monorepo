@@ -1,43 +1,33 @@
 /**
- * `PATCH /tenants/:tenantId/clients/:clientId` — replaces a client's whole
- * editable record in one call, refusing a change to `kind`.
+ * `PATCH /tenants/:tenantId/clients/:clientId` — applies an RFC 7396 merge patch to
+ * a client's editable record, so a caller sends only what changes (a list replaces
+ * the stored one whole), refusing a change to `kind`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { json } from "@sdxc/http/response";
-import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 import type { UpdateClientResult } from "~/database/clients";
 
 import {
+	CLIENT_BODY_SCHEMA,
 	clientEntitlementRequired,
 	clientIdParam,
 	clientNotFound,
 	clientRecordValidationFailure,
+	writableClient,
 } from "~/app/http/controllers/management/clients/shared";
-import { parseBody } from "~/app/http/lib/parse-body";
+import { patchResource } from "~/app/http/lib/merge-patch";
 import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import routes from "~/routes/management";
-
-let UpdateClientBodySchema = s.object({
-	name: s.string(),
-	kind: s.enum_(["confidential", "public"] as const),
-	redirectUris: s.array(s.string()),
-	postLogoutRedirectUris: s.array(s.string()),
-	grantTypes: s.array(s.string()),
-	responseTypes: s.array(s.string()),
-	scopes: s.array(s.string()),
-	tokenEndpointAuthMethod: s.enum_(["client_secret_basic", "client_secret_post", "none"] as const),
-	requireConsent: s.boolean(),
-});
 
 /** Maps every `updateClient` refusal onto its own `problem+json` response. */
 function updateClientFailure(result: Exclude<UpdateClientResult, { ok: true }>): Response {
@@ -77,10 +67,17 @@ export function createClientsUpdateAction(options: ManagementControllerOptions) 
 
 			let clientId = clientIdParam(ctx);
 
-			let parsed = parseBody(UpdateClientBodySchema, await ctx.request.json().catch(() => null));
-			if (!parsed.ok) return parsed.response;
+			let current = await ctx.tenantStub.readClient({ clientId });
+			if (!current.ok) return clientNotFound();
 
-			let result = await ctx.tenantStub.updateClient({ clientId, ...parsed.data });
+			let patched = await patchResource(
+				ctx.request,
+				writableClient(current.client),
+				CLIENT_BODY_SCHEMA,
+			);
+			if (!patched.ok) return patched.response;
+
+			let result = await ctx.tenantStub.updateClient({ clientId, ...patched.next });
 			if (!result.ok) return updateClientFailure(result);
 
 			return json(result.client, { status: 200 });

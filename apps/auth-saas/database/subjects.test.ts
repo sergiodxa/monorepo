@@ -118,6 +118,32 @@ describe("createSubject", () => {
 	});
 });
 
+describe("updateSubject", () => {
+	test("removes an attribute given null, where it used to store null as its value", async () => {
+		await tenant.defineAttribute({ key: "plan", type: "string", visibility: "claim" });
+		let created = await tenant.createSubject({
+			identifiers: [{ kind: "username", value: "jane" }],
+			attributes: { plan: "pro" },
+		});
+		if (!created.ok) throw new Error("unreachable");
+
+		let updated = await tenant.updateSubject({
+			subjectId: created.subjectId,
+			attributes: { plan: null },
+			actor: adminActor,
+		});
+
+		expect(updated).toMatchObject({ ok: true });
+		let rows = [...state.storage.sql.exec(`SELECT key FROM subject_attributes`)];
+		expect(rows).toEqual([]);
+		let described = await tenant.describeSubject({
+			subjectId: created.subjectId,
+			audience: adminActor,
+		});
+		expect(described).toMatchObject({ ok: true, attributes: {} });
+	});
+});
+
 describe("addIdentifier / verifyIdentifier lifecycle", () => {
 	async function createBareSubject() {
 		let result = await tenant.createSubject({ identifiers: [{ kind: "username", value: "jane" }] });
