@@ -352,7 +352,8 @@ export function EncoreSupportView() {
 								<p mix={[m(0), text("sm")]}>
 									We’ll use the information you submit to respond to your request and investigate
 									any reported issue. Please don’t include passwords, payment details, or other
-									sensitive information.
+									sensitive information. Read our{" "}
+									<Link href={routes.encorePrivacy.href()}>Privacy Policy</Link>.
 								</p>
 
 								<div mix={[hstack({ gap: 3, align: "center" }), flexWrap("wrap")]}>

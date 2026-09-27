@@ -19,7 +19,7 @@ import { createAction } from "remix/router";
 import type { McpPage } from "~/app/services/mcp-page";
 
 import { loadMcpPage, resolveMcpPageLocale } from "~/app/services/mcp-page";
-import { McpView } from "~/resources/views/mcp";
+import { MarkdownPageView } from "~/resources/views/markdown-page";
 import routes from "~/routes/web";
 
 /** Builds a Markdown response, matching how the post route serves its own. */
@@ -57,7 +57,7 @@ export default createAction(routes.mcp.index, async (ctx) => {
 		return markdown(200, page.body);
 	}
 
-	let model: McpView.Model = {
+	let model: MarkdownPageView.Model = {
 		title: page.frontmatter.title,
 		description: page.frontmatter.description,
 		activePath: routes.mcp.index.href(),
@@ -66,7 +66,7 @@ export default createAction(routes.mcp.index, async (ctx) => {
 		locale: page.locale,
 	};
 
-	return ctx.render(McpView, model);
+	return ctx.render(MarkdownPageView, model);
 });
 
 /**

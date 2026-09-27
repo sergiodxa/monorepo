@@ -119,6 +119,7 @@ describe("GET /apps/encore/support", () => {
 		expect(html).toContain("Send support request");
 		expect(html).toContain("Describe your question, problem, or suggestion…");
 		expect(html).toContain("Please don’t include passwords, payment details");
+		expect(html).toContain('href="/apps/encore/privacy"');
 	});
 
 	test("labels every visible control", async () => {

@@ -56,6 +56,13 @@ export default route({
 	 */
 	encoreSupport: form("/apps/encore/support"),
 
+	/**
+	 * Encore's privacy policy, which the App Store listings and the support form link to,
+	 * plus the same policy as Markdown on its own route.
+	 */
+	encorePrivacy: get("/apps/encore/privacy"),
+	encorePrivacyMarkdown: get("/apps/encore/privacy.md"),
+
 	articles: get("/articles"),
 	tutorials: get("/tutorials"),
 	bookmarks: get("/bookmarks"),

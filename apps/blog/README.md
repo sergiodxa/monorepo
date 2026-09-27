@@ -50,21 +50,22 @@ Smart Placement and Observability are enabled.
 
 ## Routes
 
-| Route                  | Description                  |
-| ---------------------- | ---------------------------- |
-| `/`                    | Homepage                     |
-| `/articles`            | Articles listing             |
-| `/articles/:slug`      | Article detail page          |
-| `/tutorials`           | Tutorials listing            |
-| `/tutorials/:slug`     | Tutorial detail page         |
-| `/bookmarks`           | Saved bookmarks              |
-| `/rss`                 | Main RSS feed                |
-| `/articles.rss`        | Articles RSS feed            |
-| `/tutorials.rss`       | Tutorials RSS feed           |
-| `/bookmarks.rss`       | Bookmarks RSS feed           |
-| `/sitemap.xml`         | Sitemap for search engines   |
-| `/webmention`          | Webmention endpoint (POST)   |
-| `/apps/encore/support` | Encore support page and form |
+| Route                  | Description                                |
+| ---------------------- | ------------------------------------------ |
+| `/`                    | Homepage                                   |
+| `/articles`            | Articles listing                           |
+| `/articles/:slug`      | Article detail page                        |
+| `/tutorials`           | Tutorials listing                          |
+| `/tutorials/:slug`     | Tutorial detail page                       |
+| `/bookmarks`           | Saved bookmarks                            |
+| `/rss`                 | Main RSS feed                              |
+| `/articles.rss`        | Articles RSS feed                          |
+| `/tutorials.rss`       | Tutorials RSS feed                         |
+| `/bookmarks.rss`       | Bookmarks RSS feed                         |
+| `/sitemap.xml`         | Sitemap for search engines                 |
+| `/webmention`          | Webmention endpoint (POST)                 |
+| `/apps/encore/support` | Encore support page and form               |
+| `/apps/encore/privacy` | Encore privacy policy (`.md` for Markdown) |
 
 ## Database
 

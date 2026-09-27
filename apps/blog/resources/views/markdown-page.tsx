@@ -1,8 +1,7 @@
 /**
- * View for the `/mcp` page. Renders the parsed Markdown body inside the
- * design system's `Typeset` reading rhythm, the same presentation a post
- * uses for its own prose. The server picks the reader's translation before
- * the view runs, so it renders exactly that language's content.
+ * View for a standalone page written in Markdown, such as `/mcp` or a privacy policy.
+ * Renders the parsed body inside the design system's `Typeset` reading rhythm, the same
+ * presentation a post uses for its own prose, with a link to the page's Markdown source.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,14 +20,15 @@ import { Heading, Link, Typeset } from "@sdxc/ui";
 import { BlogLayout } from "~/resources/layouts/blog";
 
 /**
- * Types used by the MCP page renderer.
+ * Types used by the Markdown page renderer.
  */
-export namespace McpView {
+export namespace MarkdownPageView {
 	/** Data required to render the page. */
 	export interface Model {
 		title: string;
 		description: string;
-		activePath: string;
+		/** The navigation entry to mark current, when the page has one. */
+		activePath?: string;
 		/** The page's body, parsed from its Markdown source. */
 		document: Markdown.Document;
 		/** Where the same page is served as Markdown. */
@@ -44,8 +44,8 @@ export namespace McpView {
  *
  * @returns View function that renders the page from its parsed Markdown.
  */
-export function McpView() {
-	return ({ model }: { model: McpView.Model }) => (
+export function MarkdownPageView() {
+	return ({ model }: { model: MarkdownPageView.Model }) => (
 		<BlogLayout
 			locale={model.locale}
 			title={model.title}

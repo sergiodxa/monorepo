@@ -206,6 +206,14 @@ export default function createApplication(env: App.Env, options: ApplicationOpti
 		),
 	);
 	router.map(
+		routes.encorePrivacy,
+		lazy(() => import("~/app/http/controllers/encore-privacy")),
+	);
+	router.map(
+		routes.encorePrivacyMarkdown,
+		lazy(() => import("~/app/http/controllers/encore-privacy").then((it) => it.markdownPage)),
+	);
+	router.map(
 		routes.articles,
 		lazy(() => import("~/app/http/controllers/articles")),
 	);
