@@ -15,6 +15,7 @@
  */
 
 import type { Database } from "remix/data-table";
+import type { RequestContext } from "remix/router";
 
 import { Created } from "@sdxc/http/status-code";
 import * as s from "@sdxc/json-schema";
@@ -35,9 +36,11 @@ import {
 	CREATE_FLOW_MONITOR_BODY,
 	FLOW_MONITOR_ID_PARAMS,
 	UPDATE_FLOW_MONITOR_BODY,
+	WRITABLE_FLOW_MONITOR,
 } from "~/app/http/openapi/flow-monitors";
 import { apiProblems, invalidField, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
+import { readApiUpdate } from "~/app/services/api-update";
 import { inspectFlowSource } from "~/app/services/flow-check";
 import { apiPage, NEWEST_FIRST, newestFirst, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
@@ -60,6 +63,57 @@ function serializeFlowMonitor(monitor: SelectFlowMonitor) {
 		createdAt: monitor.created_at,
 		updatedAt: monitor.updated_at,
 	};
+}
+
+/**
+ * The flow monitor's writable members as the API reads them, the target a `PATCH` merge
+ * patch applies to. `source` is here even though no response carries it, since a patch
+ * leaving it out must keep the stored spec.
+ */
+function writableFlowMonitor(monitor: SelectFlowMonitor) {
+	return {
+		name: monitor.name,
+		source: monitor.source,
+		intervalSeconds: monitor.interval_seconds,
+		isEnabled: monitor.is_enabled,
+	};
+}
+
+/**
+ * Applies a `PATCH` merge patch to one flow monitor. Only the members the patch changed
+ * are written, so re-sending `isEnabled: true` keeps the schedule, and a changed `source`
+ * passes the reach rule before anything is stored.
+ *
+ * @param ctx - The request, after `requireApiKey("flow-monitors:write")`.
+ * @returns The updated monitor; a 404 for a monitor outside the team, before the body is read.
+ */
+async function patchFlowMonitor(ctx: RequestContext): Promise<Response> {
+	let { flowMonitorId } = s.parse(FLOW_MONITOR_ID_PARAMS, ctx.params);
+	let existing = await FlowMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, flowMonitorId);
+	if (!existing)
+		return apiProblems.notFound({ detail: "Flow monitor not found", instance: problemInstance() });
+
+	let update = await readApiUpdate(
+		ctx.request,
+		writableFlowMonitor(existing),
+		WRITABLE_FLOW_MONITOR,
+	);
+	if (update instanceof Response) return update;
+	let { value, changed } = update;
+
+	if (changed.has("source")) {
+		let refusal = await refuseUnreachableSource(ctx.db, ctx.apiTeam.id, value.source);
+		if (refusal) return refusal;
+	}
+
+	let changes: Partial<InsertFlowMonitor> = {};
+	if (changed.has("name")) changes.name = value.name;
+	if (changed.has("source")) changes.source = value.source;
+	if (changed.has("intervalSeconds")) changes.interval_seconds = value.intervalSeconds;
+	if (changed.has("isEnabled")) changes.is_enabled = value.isEnabled;
+
+	let monitor = await FlowMonitor.updateById(ctx.db, flowMonitorId, changes);
+	return apiSuccess({ flowMonitor: serializeFlowMonitor(monitor) });
 }
 
 export default createController(flowMonitorsRoutes, {
@@ -142,6 +196,12 @@ export default createController(flowMonitorsRoutes, {
 					});
 				return apiSuccess({ flowMonitor: serializeFlowMonitor(monitor) });
 			},
+		},
+
+		/** PATCH /api/v1/flow-monitors/:flowMonitorId — merge-patches a flow monitor. */
+		flowMonitorPatch: {
+			middleware: [requireApiKey("flow-monitors:write")],
+			handler: patchFlowMonitor,
 		},
 
 		/** PUT /api/v1/flow-monitors/:flowMonitorId — updates a flow monitor's editable fields. */

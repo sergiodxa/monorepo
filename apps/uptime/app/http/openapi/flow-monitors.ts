@@ -86,6 +86,24 @@ export const CREATE_FLOW_MONITOR_BODY = s.object({
 	isEnabled: s.defaulted(s.boolean(), true),
 });
 
+/**
+ * A flow monitor's writable members, which a `PATCH` merge patch must leave valid. Every
+ * member a create takes is one an update may change, so the create body is the whole set.
+ */
+export const WRITABLE_FLOW_MONITOR = CREATE_FLOW_MONITOR_BODY;
+
+/**
+ * The patch a `PATCH` documents: every member optional, and `null` removing one, which
+ * gives it its default. The handler validates the patched monitor with
+ * {@link WRITABLE_FLOW_MONITOR}, so the limits are the create body's.
+ */
+const FLOW_MONITOR_PATCH = s.object({
+	name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
+	source: s.optional(SOURCE),
+	intervalSeconds: s.optional(s.nullable(INTERVAL_SECONDS)),
+	isEnabled: s.optional(s.nullable(s.boolean())),
+});
+
 /** The body `PUT /api/v1/flow-monitors/{flowMonitorId}` accepts; every field is optional. */
 export const UPDATE_FLOW_MONITOR_BODY = s.object({
 	name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
@@ -136,11 +154,35 @@ const FLOW_MONITOR_SHOW = defineOperation("flowMonitorShow", routes.api.v1.flowM
 	security: [{ apiKey: ["flow-monitors:read"] }],
 });
 
+const FLOW_MONITOR_PATCH_OPERATION = defineOperation(
+	"flowMonitorPatch",
+	routes.api.v1.flowMonitors.patch,
+	{
+		summary: "Update a flow monitor",
+		description:
+			"An RFC 7396 JSON merge patch: send the members to change; `null` resets one to its default.",
+		tags: TAGS,
+		params: FLOW_MONITOR_ID_PARAMS,
+		body: {
+			"application/merge-patch+json": FLOW_MONITOR_PATCH,
+			"application/json": FLOW_MONITOR_PATCH,
+		},
+		responses: {
+			200: {
+				description: "The updated flow monitor",
+				body: envelope({ flowMonitor: FLOW_MONITOR }),
+			},
+		},
+		problems: ["validationError", ...AUTH_PROBLEMS, "notFound", "unsupportedMediaType"],
+		security: [{ apiKey: ["flow-monitors:write"] }],
+	},
+);
+
 const FLOW_MONITOR_UPDATE = defineOperation(
 	"flowMonitorUpdate",
 	routes.api.v1.flowMonitors.update,
 	{
-		summary: "Update a flow monitor",
+		summary: "Update a flow monitor (PUT)",
 		tags: TAGS,
 		params: FLOW_MONITOR_ID_PARAMS,
 		body: UPDATE_FLOW_MONITOR_BODY,
@@ -196,6 +238,7 @@ export const OPERATIONS = [
 	FLOW_MONITORS_INDEX,
 	FLOW_MONITORS_CREATE,
 	FLOW_MONITOR_SHOW,
+	FLOW_MONITOR_PATCH_OPERATION,
 	FLOW_MONITOR_UPDATE,
 	FLOW_MONITOR_DESTROY,
 	FLOW_MONITOR_RESULTS,

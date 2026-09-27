@@ -1045,3 +1045,169 @@ describe("one flow monitor's routes", () => {
 		},
 	);
 });
+
+describe("PATCH /api/v1/flow-monitors/:flowMonitorId", () => {
+	/** A merge patch request, sent as `application/merge-patch+json` unless told otherwise. */
+	function mergePatch(
+		monitorId: string,
+		body: Record<string, unknown>,
+		options: { key?: string; contentType?: string } = {},
+	) {
+		return {
+			method: "PATCH",
+			path: routes.api.v1.flowMonitors.patch.href({
+				flowMonitorId: encodeId("flow", monitorId),
+			}),
+			key: options.key,
+			body,
+			headers: { "content-type": options.contentType ?? "application/merge-patch+json" },
+		};
+	}
+
+	test("changes only the members the patch names, keeping the stored source", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
+		let monitor = await FlowMonitor.create(db, team.id, {
+			name: "Login",
+			source: validSource(),
+			interval_seconds: 900,
+		});
+
+		let response = await dispatch(db, mergePatch(monitor.id, { name: "Patched" }, { key }));
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(flowMonitors, { where: { id: monitor.id } });
+		expect(updated?.name).toBe("Patched");
+		expect(updated?.interval_seconds).toBe(900);
+		expect(updated?.source).toBe(validSource());
+	});
+
+	test("null resets the interval and isEnabled to their defaults", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
+		let monitor = await FlowMonitor.create(db, team.id, {
+			name: "Login",
+			source: validSource(),
+			interval_seconds: 900,
+			is_enabled: false,
+		});
+
+		let response = await dispatch(
+			db,
+			mergePatch(monitor.id, { intervalSeconds: null, isEnabled: null }, { key }),
+		);
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(flowMonitors, { where: { id: monitor.id } });
+		expect(updated?.interval_seconds).toBe(3600);
+		expect(updated?.is_enabled).toBe(true);
+	});
+
+	test("null on the source answers validation-error at its pointer", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
+		let monitor = await FlowMonitor.create(db, team.id, { name: "Login", source: validSource() });
+
+		let response = await dispatch(db, mergePatch(monitor.id, { source: null }, { key }));
+
+		expect(response.status).toBe(400);
+		let problem = await expectProblem(response, "validationError");
+		expect(problem.extensions.errors.map((issue) => issue.pointer)).toEqual(["/source"]);
+	});
+
+	test("refuses a replacement source reaching an unverified host", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
+		let monitor = await FlowMonitor.create(db, team.id, { name: "Login", source: validSource() });
+
+		let response = await dispatch(
+			db,
+			mergePatch(monitor.id, { source: unverifiedSource() }, { key }),
+		);
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "validationError");
+		let stored = await db.findOne(flowMonitors, { where: { id: monitor.id } });
+		expect(stored?.source).toBe(validSource());
+	});
+
+	test("accepts application/json as a merge patch", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
+		let monitor = await FlowMonitor.create(db, team.id, { name: "Login", source: validSource() });
+
+		let response = await dispatch(
+			db,
+			mergePatch(monitor.id, { isEnabled: false }, { key, contentType: "application/json" }),
+		);
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(flowMonitors, { where: { id: monitor.id } });
+		expect(updated?.is_enabled).toBe(false);
+	});
+
+	test("answers unsupported-media-type with Accept-Patch for any other body", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
+		let monitor = await FlowMonitor.create(db, team.id, { name: "Login", source: validSource() });
+
+		let response = await dispatch(
+			db,
+			mergePatch(monitor.id, { name: "x" }, { key, contentType: "text/plain" }),
+		);
+
+		expect(response.status).toBe(415);
+		expect(response.headers.get("Accept-Patch")).toBe("application/merge-patch+json");
+		await expectProblem(response, "unsupportedMediaType");
+	});
+
+	test("PUT keeps refusing null and rescheduling on a re-sent isEnabled: true", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
+		let monitor = await FlowMonitor.create(db, team.id, { name: "Login", source: validSource() });
+		let later = Date.now() + 86_400_000;
+		await db.update(flowMonitors, monitor.id, { next_due_at: later });
+		let put = (body: Record<string, unknown>) => ({
+			method: "PUT",
+			path: routes.api.v1.flowMonitors.update.href({
+				flowMonitorId: encodeId("flow", monitor.id),
+			}),
+			key,
+			body,
+		});
+
+		let refused = await dispatch(db, put({ intervalSeconds: null }));
+		let resent = await dispatch(db, put({ isEnabled: true }));
+
+		expect(refused.status).toBe(400);
+		expect(resent.status).toBe(200);
+		let updated = await db.findOne(flowMonitors, { where: { id: monitor.id } });
+		expect(updated?.next_due_at).toBeLessThan(later);
+	});
+
+	test("404s for another team's monitor, 401 without a key, 403 without flow-monitors:write", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let otherTeam = await createTeamRow(db);
+		let writer = await createApiKey(db, team.id, ["flow-monitors:write"]);
+		let reader = await createApiKey(db, team.id, ["flow-monitors:read"]);
+		let foreign = await FlowMonitor.create(db, otherTeam.id, {
+			name: "Theirs",
+			source: validSource(),
+		});
+		let own = await FlowMonitor.create(db, team.id, { name: "Mine", source: validSource() });
+
+		let notFound = await dispatch(db, mergePatch(foreign.id, { name: "x" }, { key: writer }));
+		let unauthorized = await dispatch(db, mergePatch(own.id, { name: "x" }));
+		let forbidden = await dispatch(db, mergePatch(own.id, { name: "x" }, { key: reader }));
+
+		expect([notFound.status, unauthorized.status, forbidden.status]).toEqual([404, 401, 403]);
+	});
+});

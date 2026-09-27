@@ -409,3 +409,165 @@ describe("malformed cron job ids", () => {
 		await expectProblem(response, "validationError");
 	});
 });
+
+describe("PATCH /api/v1/cron-jobs/:cronJobId", () => {
+	/** A merge patch request, sent as `application/merge-patch+json` unless told otherwise. */
+	function mergePatch(
+		id: string,
+		body: unknown,
+		options: { key?: string; contentType?: string } = {},
+	) {
+		let headers: Record<string, string> = {
+			"content-type": options.contentType ?? "application/merge-patch+json",
+		};
+		if (options.key) headers.Authorization = `Bearer ${options.key}`;
+		let cronJobId = encodeId("cron", id);
+		return new Request(`https://uptime.test${routes.api.v1.cronJobs.patch.href({ cronJobId })}`, {
+			method: "PATCH",
+			headers,
+			body: JSON.stringify(body),
+		});
+	}
+
+	test("changes only the members the patch names", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["cron-jobs:write"]);
+		let cronJob = await createCronJobRow(db, team.id, { grace_period_seconds: 900 });
+
+		let response = await dispatch(db, mergePatch(cronJob.id, { name: "Patched" }, { key }));
+
+		expect(response.status).toBe(200);
+		let updated = await CronJobMonitor.findByIdForTeam(db, team.id, cronJob.id);
+		expect(updated?.name).toBe("Patched");
+		expect(updated?.grace_period_seconds).toBe(900);
+		expect(updated?.cron_expression).toBe("0 2 * * *");
+	});
+
+	test("null clears the description and resets defaulted members", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["cron-jobs:write"]);
+		let cronJob = await createCronJobRow(db, team.id, {
+			description: "Nightly",
+			grace_period_seconds: 900,
+			timezone: "America/Lima",
+			alert_on_late: true,
+		});
+
+		let response = await dispatch(
+			db,
+			mergePatch(
+				cronJob.id,
+				{ description: null, gracePeriodSeconds: null, timezone: null, alertOnLate: null },
+				{ key },
+			),
+		);
+
+		expect(response.status).toBe(200);
+		let updated = await CronJobMonitor.findByIdForTeam(db, team.id, cronJob.id);
+		expect(updated?.description).toBeNull();
+		expect(updated?.grace_period_seconds).toBe(300);
+		expect(updated?.timezone).toBe("UTC");
+		expect(updated?.alert_on_late).toBe(false);
+		expect(updated?.next_expected_at).toBe(
+			CronJobMonitor.calculateNextExpected("0 2 * * *", "UTC"),
+		);
+	});
+
+	test("null on a required member answers validation-error at its pointer", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["cron-jobs:write"]);
+		let cronJob = await createCronJobRow(db, team.id);
+
+		let response = await dispatch(db, mergePatch(cronJob.id, { cronExpression: null }, { key }));
+
+		expect(response.status).toBe(400);
+		let problem = await expectProblem(response, "validationError");
+		expect(problem.extensions.errors.map((issue) => issue.pointer)).toEqual(["/cronExpression"]);
+	});
+
+	test("re-sending enabled: true keeps the instant the job was enabled", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["cron-jobs:write"]);
+		let cronJob = await createCronJobRow(db, team.id, { enabled_at: 1000 });
+
+		let response = await dispatch(db, mergePatch(cronJob.id, { enabled: true }, { key }));
+
+		expect(response.status).toBe(200);
+		let updated = await CronJobMonitor.findByIdForTeam(db, team.id, cronJob.id);
+		expect(updated?.enabled_at).toBe(1000);
+	});
+
+	test("accepts application/json as a merge patch", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["cron-jobs:write"]);
+		let cronJob = await createCronJobRow(db, team.id, { enabled_at: 1000 });
+
+		let response = await dispatch(
+			db,
+			mergePatch(cronJob.id, { enabled: false }, { key, contentType: "application/json" }),
+		);
+
+		expect(response.status).toBe(200);
+		let updated = await CronJobMonitor.findByIdForTeam(db, team.id, cronJob.id);
+		expect(updated?.enabled_at).toBeNull();
+	});
+
+	test("answers unsupported-media-type with Accept-Patch for any other body", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["cron-jobs:write"]);
+		let cronJob = await createCronJobRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			mergePatch(cronJob.id, { name: "x" }, { key, contentType: "text/plain" }),
+		);
+
+		expect(response.status).toBe(415);
+		expect(response.headers.get("Accept-Patch")).toBe("application/merge-patch+json");
+		await expectProblem(response, "unsupportedMediaType");
+	});
+
+	test("PUT keeps refusing null and resetting enabledAt on a re-sent enabled: true", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["cron-jobs:write"]);
+		let cronJob = await createCronJobRow(db, team.id, { enabled_at: 1000 });
+		let href = `https://uptime.test${routes.api.v1.cronJobs.update.href({ cronJobId: encodeId("cron", cronJob.id) })}`;
+		let put = (body: unknown) =>
+			new Request(href, {
+				method: "PUT",
+				headers: { Authorization: `Bearer ${key}`, "content-type": "application/json" },
+				body: JSON.stringify(body),
+			});
+
+		let refused = await dispatch(db, put({ gracePeriodSeconds: null }));
+		let resent = await dispatch(db, put({ enabled: true }));
+
+		expect(refused.status).toBe(400);
+		expect(resent.status).toBe(200);
+		let updated = await CronJobMonitor.findByIdForTeam(db, team.id, cronJob.id);
+		expect(updated?.enabled_at).not.toBe(1000);
+	});
+
+	test("404s for another team's job, 401 without a key, 403 without cron-jobs:write", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let otherTeam = await createTeamRow(db);
+		let writer = await createApiKey(db, team.id, ["cron-jobs:write"]);
+		let reader = await createApiKey(db, team.id, ["cron-jobs:read"]);
+		let foreign = await createCronJobRow(db, otherTeam.id);
+		let own = await createCronJobRow(db, team.id);
+
+		let notFound = await dispatch(db, mergePatch(foreign.id, { name: "x" }, { key: writer }));
+		let unauthorized = await dispatch(db, mergePatch(own.id, { name: "x" }));
+		let forbidden = await dispatch(db, mergePatch(own.id, { name: "x" }, { key: reader }));
+
+		expect([notFound.status, unauthorized.status, forbidden.status]).toEqual([404, 401, 403]);
+	});
+});

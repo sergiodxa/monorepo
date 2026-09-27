@@ -79,6 +79,27 @@ export const CREATE_CRON_JOB_BODY = s.object({
 	enabled: s.defaulted(s.boolean(), true),
 });
 
+/**
+ * A cron job's writable members, which a `PATCH` merge patch must leave valid. Every
+ * member a create takes is one an update may change, so the create body is the whole set.
+ */
+export const WRITABLE_CRON_JOB = CREATE_CRON_JOB_BODY;
+
+/**
+ * The patch a `PATCH` documents: every member optional, and `null` removing one, which
+ * clears `description` and gives a defaulted member its default. The handler validates the
+ * patched job with {@link WRITABLE_CRON_JOB}, so the limits are the create body's.
+ */
+const CRON_JOB_PATCH = s.object({
+	name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(100))),
+	description: s.optional(s.nullable(s.string().pipe(checks.maxLength(500)))),
+	cronExpression: s.optional(s.string().pipe(checks.minLength(1))),
+	gracePeriodSeconds: s.optional(s.nullable(s.number().pipe(checks.min(60), checks.max(86_400)))),
+	timezone: s.optional(s.nullable(TIMEZONE)),
+	alertOnLate: s.optional(s.nullable(s.boolean())),
+	enabled: s.optional(s.nullable(s.boolean())),
+});
+
 /** The body `PUT /api/v1/cron-jobs/{cronJobId}` accepts; every field is optional. */
 export const UPDATE_CRON_JOB_BODY = s.object({
 	name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(100))),
@@ -121,8 +142,23 @@ const CRON_JOB_SHOW = defineOperation("cronJobShow", routes.api.v1.cronJobs.show
 	security: [{ apiKey: ["cron-jobs:read"] }],
 });
 
-const CRON_JOB_UPDATE = defineOperation("cronJobUpdate", routes.api.v1.cronJobs.update, {
+const CRON_JOB_PATCH_OPERATION = defineOperation("cronJobPatch", routes.api.v1.cronJobs.patch, {
 	summary: "Update a cron job",
+	description:
+		"An RFC 7396 JSON merge patch: send the members to change; `null` clears `description` " +
+		"and resets any other optional member to its default.",
+	tags: TAGS,
+	params: CRON_JOB_ID_PARAMS,
+	body: { "application/merge-patch+json": CRON_JOB_PATCH, "application/json": CRON_JOB_PATCH },
+	responses: {
+		200: { description: "The updated cron job", body: envelope({ cronJob: CRON_JOB }) },
+	},
+	problems: ["validationError", ...AUTH_PROBLEMS, "notFound", "unsupportedMediaType"],
+	security: [{ apiKey: ["cron-jobs:write"] }],
+});
+
+const CRON_JOB_UPDATE = defineOperation("cronJobUpdate", routes.api.v1.cronJobs.update, {
+	summary: "Update a cron job (PUT)",
 	tags: TAGS,
 	params: CRON_JOB_ID_PARAMS,
 	body: UPDATE_CRON_JOB_BODY,
@@ -180,6 +216,7 @@ export const OPERATIONS = [
 	CRON_JOBS_INDEX,
 	CRON_JOBS_CREATE,
 	CRON_JOB_SHOW,
+	CRON_JOB_PATCH_OPERATION,
 	CRON_JOB_UPDATE,
 	CRON_JOB_DESTROY,
 	CRON_JOB_PING,

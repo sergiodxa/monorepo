@@ -184,15 +184,15 @@ curl https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123 \
 }
 ```
 
-## PUT /api/v1/cron-jobs/:id
+## PATCH /api/v1/cron-jobs/:id
 
-Updates an existing cron job monitor.
+Updates an existing cron job monitor with a [JSON merge patch](/docs/api/overview#updating-resources).
 
-<!-- operation: cronJobUpdate -->
+<!-- operation: cronJobPatch -->
 
 ### Request Body
 
-All fields are optional. Only provided fields will be updated.
+All fields are optional, with the same limits as a create; only the ones you send change. `null` clears `description` and resets `gracePeriodSeconds`, `timezone`, `alertOnLate` and `enabled` to their defaults; `name` and `cronExpression` cannot be removed.
 
 | Field                | Type    | Description                                                                             |
 | -------------------- | ------- | --------------------------------------------------------------------------------------- |
@@ -209,9 +209,9 @@ All fields are optional. Only provided fields will be updated.
 #### cURL
 
 ```bash
-curl -X PUT https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123 \
+curl -X PATCH https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123 \
   -H "Authorization: Bearer uptime_your_api_key" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/merge-patch+json" \
   -d '{
     "gracePeriodSeconds": 900,
     "alertOnLate": false
@@ -245,6 +245,12 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123 \
 	}
 }
 ```
+
+### Update With PUT
+
+`PUT /api/v1/cron-jobs/:id` takes the same fields, for integrations written before `PATCH` existed. A field you leave out keeps its value, `null` is refused, `enabled: true` sets `enabledAt` to now on every request, and a `cronExpression` you send recomputes `nextExpectedAt` even when it is unchanged.
+
+<!-- operation: cronJobUpdate -->
 
 ## DELETE /api/v1/cron-jobs/:id
 

@@ -25,7 +25,7 @@ Read a monitor's spec in the dashboard, where a signed-in member is standing in 
 - A spec naming a host no verified domain covers is refused, naming the host.
 - A spec naming **no** host at all is refused too. Every URL a flow requests has to be written into the spec, because a URL assembled at run time cannot be checked against anything.
 
-The check runs on `POST` and on a `PUT` that carries a new `source`, so a monitor cannot be edited onto a host it could not have been created on. Un-verifying a domain closes this endpoint to it on the very next call.
+The check runs on `POST`, on a `PATCH` that changes `source`, and on a `PUT` that carries one, so a monitor cannot be edited onto a host it could not have been created on. Un-verifying a domain closes this endpoint to it on the very next call.
 
 ## Intervals are a fixed list
 
@@ -341,17 +341,19 @@ The detail response carries no more than the list response does: `source` is wit
 
 ## Update a Flow Monitor
 
-Updates a flow monitor's editable fields. Every field is optional; only the ones you send change.
+Updates a flow monitor with a [JSON merge patch](/docs/api/overview#updating-resources). Every field is optional; only the ones you send change.
 
-Sending `source` replaces the spec, and the replacement goes through the same verified-domain check a create does. Sending `intervalSeconds` or `isEnabled` reschedules the monitor in the same write, so the next run honours the new setting rather than the old one.
+A new `source` replaces the spec, and the replacement goes through the same verified-domain check a create does. Changing `intervalSeconds` or `isEnabled` reschedules the monitor in the same write, so the next run honours the new setting rather than the old one.
 
 ```
-PUT /api/v1/flow-monitors/:flowMonitorId
+PATCH /api/v1/flow-monitors/:flowMonitorId
 ```
 
-<!-- operation: flowMonitorUpdate -->
+<!-- operation: flowMonitorPatch -->
 
 ### Request Body
+
+The fields and limits are [Create a Flow Monitor](#create-a-flow-monitor)'s. `null` resets `intervalSeconds` and `isEnabled` to their defaults; `name` and `source` cannot be removed.
 
 | Field             | Type    | Required | Description                                        |
 | ----------------- | ------- | -------- | -------------------------------------------------- |
@@ -364,9 +366,9 @@ PUT /api/v1/flow-monitors/:flowMonitorId
 
 ```bash
 curl https://uptime.sergiodxa.com/api/v1/flow-monitors/flow_abc123 \
-  -X PUT \
+  -X PATCH \
   -H "Authorization: Bearer uptime_your_api_key" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/merge-patch+json" \
   -d '{ "intervalSeconds": 21600, "isEnabled": false }'
 ```
 
@@ -394,6 +396,12 @@ curl https://uptime.sergiodxa.com/api/v1/flow-monitors/flow_abc123 \
 ```
 
 A refused update changes nothing: the stored spec, interval and schedule are exactly what they were before the call.
+
+### Update With PUT
+
+`PUT /api/v1/flow-monitors/:flowMonitorId` takes the same fields, for integrations written before `PATCH` existed. A field you leave out keeps its value, `null` is refused, a `source` you send goes through the verified-domain check even when it is unchanged, and `isEnabled: true` schedules an immediate run on every request.
+
+<!-- operation: flowMonitorUpdate -->
 
 ## Delete a Flow Monitor
 
