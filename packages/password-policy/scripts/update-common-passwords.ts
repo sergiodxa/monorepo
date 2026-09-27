@@ -101,13 +101,13 @@ function renderModule(input: {
 		" */",
 		"",
 		"/** The SecLists license, carried with the list as its MIT terms require. */",
-		`export const COMMON_PASSWORDS_NOTICE = ${templateLiteral(input.license.trim())};`,
+		`export const COMMON_PASSWORDS_NOTICE: string = ${templateLiteral(input.license.trim())};`,
 		"",
 		"/** Shortest entry the list holds; a shorter candidate is never matched against it. */",
 		`export const COMMON_PASSWORDS_MIN_LENGTH = ${MIN_ENTRY_LENGTH};`,
 		"",
 		"/** Newline-separated folded entries, split into a set only on first lookup. */",
-		`export const COMMON_PASSWORDS = ${templateLiteral(input.entries.join("\n"))};`,
+		`export const COMMON_PASSWORDS: string = ${templateLiteral(input.entries.join("\n"))};`,
 		"",
 	].join("\n");
 }

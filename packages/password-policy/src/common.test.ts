@@ -78,3 +78,16 @@ describe("the bundled list", () => {
 		expect(COMMON_PASSWORDS_NOTICE).toContain("Copyright (c) 2018 Daniel Miessler");
 	});
 });
+
+describe("the bundled list's declared type", () => {
+	/**
+	 * Typechecks only while the list is declared `string`: a literal type would reject any
+	 * other string here, and would copy the whole list into the published declaration file.
+	 */
+	test("is string, so the declaration file stays small", () => {
+		let other: typeof COMMON_PASSWORDS = "any other string";
+		let other1: typeof COMMON_PASSWORDS_NOTICE = "any other string";
+		expect(other).toBe("any other string");
+		expect(other1).toBe("any other string");
+	});
+});

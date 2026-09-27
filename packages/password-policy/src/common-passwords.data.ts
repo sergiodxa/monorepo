@@ -9,7 +9,7 @@
  */
 
 /** The SecLists license, carried with the list as its MIT terms require. */
-export const COMMON_PASSWORDS_NOTICE = `MIT License
+export const COMMON_PASSWORDS_NOTICE: string = `MIT License
 
 Copyright (c) 2018 Daniel Miessler
 
@@ -35,7 +35,7 @@ SOFTWARE.`;
 export const COMMON_PASSWORDS_MIN_LENGTH = 8;
 
 /** Newline-separated folded entries, split into a set only on first lookup. */
-export const COMMON_PASSWORDS = `123456789
+export const COMMON_PASSWORDS: string = `123456789
 password
 12345678
 password1
