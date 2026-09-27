@@ -73,6 +73,7 @@ vi.doMock("cloudflare:workers", async (importOriginal) => {
 	};
 });
 
+let { conformance } = await import("~/app/http/controllers/management/test-harness");
 let { database } = await import("~/app/http/middleware/database");
 let { sessionCookie } = await import("~/app/lib/session-cookie");
 let Customer = (await import("~/app/models/customer")).default;
@@ -99,7 +100,7 @@ beforeEach(async () => {
 
 /** Builds a router mapping only `invitationsAccept`, with no auth middleware, matching how it is mounted for real. */
 function buildRouter() {
-	let router = createRouter({ middleware: [database(() => db)] });
+	let router = createRouter({ middleware: [conformance, database(() => db)] });
 	router.map(routes.invitationsAccept, invitationsAccept);
 	return router;
 }
@@ -142,6 +143,7 @@ async function mintInvitation(
 function acceptRequest(token: string): Request {
 	return new Request("https://api.example.com/invitations/accept", {
 		method: "POST",
+		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({ token }),
 	});
 }
@@ -191,6 +193,21 @@ describe("POST /invitations/accept", () => {
 
 		expect(first.status).toBe(200);
 		expect(second.status).toBe(404);
+	});
+
+	test("answers 400 validationFailed for a body sent as anything but JSON", async () => {
+		let { token } = await mintInvitation();
+
+		let response = await buildRouter().fetch(
+			new Request("https://api.example.com/invitations/accept", {
+				method: "POST",
+				headers: { "Content-Type": "text/plain" },
+				body: JSON.stringify({ token }),
+			}),
+		);
+
+		expect(response.status).toBe(400);
+		expect(response.headers.get("Content-Type")).toBe("application/problem+json");
 	});
 
 	test("refuses an unknown token", async () => {

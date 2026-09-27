@@ -26,8 +26,13 @@ export function requires(scope: ManagementScope) {
 	return [{ [SECURITY_SCHEME]: [scope] }] as const;
 }
 
-/** The refusals every authenticated, rate-limited route can answer with. */
-export const AUTH_PROBLEMS = ["unauthorized", "forbidden", "rateLimited"] as const;
+/** The refusals every authenticated, rate-limited route can answer with, an unpublished `X-API-Version` included. */
+export const AUTH_PROBLEMS = [
+	"unauthorized",
+	"forbidden",
+	"rateLimited",
+	"unsupportedApiVersion",
+] as const;
 
 /** The refusals a route taking an `Idempotency-Key` adds. */
 export const IDEMPOTENCY_PROBLEMS = [

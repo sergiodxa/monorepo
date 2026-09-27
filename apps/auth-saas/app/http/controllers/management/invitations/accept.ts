@@ -17,18 +17,16 @@ import { Hex, sha256 } from "@sdxc/crypto";
 import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { env } from "cloudflare:workers";
-import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import { parseBody } from "~/app/http/lib/parse-body";
+import { operationInputProblem } from "~/app/http/lib/parse-body";
 import { managementProblem } from "~/app/http/lib/problem";
 import { serializeSessionCookie } from "~/app/http/middleware/hosted-session";
+import { INVITATIONS_ACCEPT } from "~/app/http/openapi/public";
 import { requestOrigin } from "~/app/lib/request-origin";
 import Membership from "~/app/models/membership";
 import TenantMemberInvitation from "~/app/models/tenant-member-invitation";
 import routes from "~/routes/management";
-
-let AcceptInvitationBodySchema = s.object({ token: s.string() });
 
 /**
  * A token that does not spend — unknown, already accepted, or expired alike —
@@ -42,17 +40,18 @@ function invalidInvitation(): Response {
 }
 
 /**
- * `invitationsAccept`, mounted with no auth middleware of its own: the
- * invitation token in the request body is this route's entire credential.
+ * `invitationsAccept`, mounted with no auth middleware of its own: the invitation token
+ * in the request body is this route's entire credential. An address that collides with a
+ * subject created mid-acceptance draws the same refusal as a spent token.
  *
  * @example
  * router.map(routes.invitationsAccept, invitationsAccept);
  */
 export default createAction(routes.invitationsAccept, async (ctx) => {
-	let parsed = parseBody(AcceptInvitationBodySchema, await ctx.request.json().catch(() => null));
-	if (!parsed.ok) return parsed.response;
+	let input = await INVITATIONS_ACCEPT.parse(ctx.request, ctx.params);
+	if (isFailure(input)) return operationInputProblem(input.error);
 
-	let hashed = await sha256(parsed.data.token);
+	let hashed = await sha256(input.data.body.token);
 	if (isFailure(hashed)) return invalidInvitation();
 	let tokenHash = Hex.encode(hashed.data);
 
@@ -68,9 +67,6 @@ export default createAction(routes.invitationsAccept, async (ctx) => {
 		let created = await platform.createSubject({
 			identifiers: [{ kind: "email", value: invitation.email, verifiedAt: Date.now() }],
 		});
-		// Refuses the same way an unresolvable token does: an invitation whose own
-		// address collides with a subject created between the lookup above and this
-		// call is no more the caller's fault than an already-accepted token is.
 		if (!created.ok) return invalidInvitation();
 		subjectId = created.subjectId;
 	}

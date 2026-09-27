@@ -12,7 +12,7 @@
 import type { Database } from "remix/data-table";
 
 import { json } from "@sdxc/http/response";
-import * as s from "remix/data-schema";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -24,8 +24,9 @@ import {
 	mountedMiddleware,
 	serializeMembership,
 } from "~/app/http/controllers/management/tenants/shared";
-import { parseBody } from "~/app/http/lib/parse-body";
+import { operationInputProblem } from "~/app/http/lib/parse-body";
 import { requireScope } from "~/app/http/lib/require-scope";
+import { TENANT_MEMBERS_CREATE, TENANT_MEMBERS_UPDATE_ROLE } from "~/app/http/openapi/tenants";
 import Membership from "~/app/models/membership";
 import routes from "~/routes/management";
 
@@ -66,11 +67,6 @@ export function createTenantMembersListAction(options: ManagementControllerOptio
 	});
 }
 
-let CreateMemberBodySchema = s.object({
-	subjectId: s.string(),
-	role: s.enum_(["owner", "admin", "member"] as const),
-});
-
 /**
  * Builds the `tenantMembersCreate` action.
  *
@@ -87,21 +83,20 @@ export function createTenantMembersCreateAction(options: ManagementControllerOpt
 			let refused = requireScope(ctx, "members:write");
 			if (refused) return refused;
 
-			let parsed = parseBody(CreateMemberBodySchema, await ctx.request.json().catch(() => null));
-			if (!parsed.ok) return parsed.response;
+			let input = await TENANT_MEMBERS_CREATE.parse(ctx.request, ctx.params);
+			if (isFailure(input)) return operationInputProblem(input.error);
+			let body = input.data.body;
 
 			let membership = await Membership.create(ctx.db, {
 				tenantId: ctx.managementCaller.tenantId,
-				subjectId: parsed.data.subjectId,
-				role: parsed.data.role,
+				subjectId: body.subjectId,
+				role: body.role,
 			});
 
 			return json(serializeMembership(membership), { status: 201 });
 		},
 	});
 }
-
-let UpdateMemberRoleBodySchema = s.object({ role: s.enum_(["owner", "admin", "member"] as const) });
 
 /**
  * Builds the `tenantMembersUpdateRole` action.
@@ -121,16 +116,13 @@ export function createTenantMembersUpdateRoleAction(options: ManagementControlle
 
 			let membershipId = membershipIdParam(ctx);
 
-			let parsed = parseBody(
-				UpdateMemberRoleBodySchema,
-				await ctx.request.json().catch(() => null),
-			);
-			if (!parsed.ok) return parsed.response;
+			let input = await TENANT_MEMBERS_UPDATE_ROLE.parse(ctx.request, ctx.params);
+			if (isFailure(input)) return operationInputProblem(input.error);
 
 			let existing = await findOwnMembership(ctx.db, ctx.managementCaller.tenantId, membershipId);
 			if (!existing) return membershipNotFound();
 
-			let updated = await Membership.update(ctx.db, membershipId, parsed.data.role);
+			let updated = await Membership.update(ctx.db, membershipId, input.data.body.role);
 
 			return json(serializeMembership(updated), { status: 200 });
 		},

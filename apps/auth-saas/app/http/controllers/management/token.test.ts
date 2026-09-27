@@ -17,6 +17,7 @@ import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test } from "vitest";
 
+import { conformance } from "~/app/http/controllers/management/test-harness";
 import { database } from "~/app/http/middleware/database";
 import Customer from "~/app/models/customer";
 import { registerManagementClient } from "~/app/models/management-client";
@@ -61,7 +62,7 @@ beforeEach(async () => {
  * request body directly. */
 function buildRouter() {
 	let router = createRouter({
-		middleware: [formData() as Middleware, database(() => db)],
+		middleware: [conformance, formData() as Middleware, database(() => db)],
 	});
 	router.map(routes.token, token);
 	return router;

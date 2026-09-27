@@ -16,18 +16,19 @@ import billing, { requireEntitlement } from "@sdxc/billing/middleware";
 import { MemoryBilling } from "@sdxc/billing/providers/memory";
 import { NoopProvider } from "@sdxc/flags/provider/noop";
 import { json } from "@sdxc/http/response";
-import * as s from "remix/data-schema";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 import type { SetSessionPolicyResult } from "~/database/tenant-do";
 
-import { parseBody } from "~/app/http/lib/parse-body";
+import { operationInputProblem } from "~/app/http/lib/parse-body";
 import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { TENANT_SESSION_POLICY_SET } from "~/app/http/openapi/tenants";
 import { EntitlementProvider } from "~/app/lib/entitlement-provider";
 import Tenant from "~/app/models/tenant";
 import TenantEntitlement from "~/app/models/tenant-entitlement";
@@ -50,16 +51,6 @@ let entitlementProvider = new EntitlementProvider(new NoopProvider());
  * own.
  */
 let noopBillingProvider = new MemoryBilling();
-
-let SetSessionPolicyBodySchema = s.object({
-	policy: s.object({
-		absoluteLifetimeMs: s.optional(s.number()),
-		idleLifetimeMs: s.optional(s.number()),
-		refreshTokenLifetimeMs: s.optional(s.number()),
-		concurrentSessionLimit: s.optional(s.nullable(s.number())),
-		sessionsAfterCredentialChange: s.optional(s.enum_(["revoke-others", "revoke-all"] as const)),
-	}),
-});
 
 /**
  * Resolves the `session_policy` entitlement `requireEntitlement` gates this
@@ -91,7 +82,14 @@ async function resolveSessionPolicyEntitlements(
 	return { products: entitlement?.products ?? [], features: { session_policy: entitled } };
 }
 
-/** Maps a `setSessionPolicy` refusal onto the same `problem+json` validation-failure shape `parseBody` answers with. */
+/** A caller whose tenant's plan does not include customizing session lifetimes. */
+function sessionPolicyNotEntitled(): Response {
+	return managementProblem("entitlementRequired", {
+		detail: "This tenant is not entitled to customize its session policy on its current plan.",
+	});
+}
+
+/** Maps a `setSessionPolicy` refusal onto the same `problem+json` validation failure a refused body answers with. */
 function setSessionPolicyFailure(result: Extract<SetSessionPolicyResult, { ok: false }>): Response {
 	return managementProblem("validationFailed", {
 		detail: "The request body did not pass validation.",
@@ -120,20 +118,17 @@ export function createTenantSessionPolicySetAction(options: ManagementController
 			managementTenant(options.resolveStub),
 			managementRateLimit(options.limiter, { bucket: "write" }),
 			billing({ provider: noopBillingProvider, entitlements: resolveSessionPolicyEntitlements }),
-			requireEntitlement("session_policy"),
+			requireEntitlement("session_policy", { onDenied: sessionPolicyNotEntitled }),
 		],
 		handler: async (ctx) => {
 			let refused = requireScope(ctx, "tenant:write");
 			if (refused) return refused;
 
-			let parsed = parseBody(
-				SetSessionPolicyBodySchema,
-				await ctx.request.json().catch(() => null),
-			);
-			if (!parsed.ok) return parsed.response;
+			let input = await TENANT_SESSION_POLICY_SET.parse(ctx.request, ctx.params);
+			if (isFailure(input)) return operationInputProblem(input.error);
 
 			let result = await ctx.tenantStub.setSessionPolicy({
-				policy: parsed.data.policy,
+				policy: input.data.body.policy,
 				actor: ctx.managementCaller.actor,
 			});
 			if (!result.ok) return setSessionPolicyFailure(result);

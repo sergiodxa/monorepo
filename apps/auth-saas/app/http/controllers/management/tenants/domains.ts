@@ -14,7 +14,7 @@ import type { Database } from "remix/data-table";
 
 import { HostnameApiError } from "@sdxc/hostname";
 import { json } from "@sdxc/http/response";
-import * as s from "remix/data-schema";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -30,8 +30,9 @@ import {
 	serializeDomain,
 	serializeDomainVerification,
 } from "~/app/http/controllers/management/tenants/shared";
-import { parseBody } from "~/app/http/lib/parse-body";
+import { operationInputProblem } from "~/app/http/lib/parse-body";
 import { requireScope } from "~/app/http/lib/require-scope";
+import { TENANT_DOMAINS_ATTACH } from "~/app/http/openapi/tenants";
 import Domain from "~/app/models/domain";
 import {
 	attachCustomDomain,
@@ -74,11 +75,6 @@ export function createTenantDomainsListAction(options: ManagementControllerOptio
 	});
 }
 
-let AttachDomainBodySchema = s.object({
-	hostname: s.string(),
-	kind: s.enum_(["platform", "custom"] as const),
-});
-
 /**
  * Builds the `tenantDomainsAttach` action.
  *
@@ -95,16 +91,17 @@ export function createTenantDomainsAttachAction(options: ManagementControllerOpt
 			let refused = requireScope(ctx, "tenant:write");
 			if (refused) return refused;
 
-			let parsed = parseBody(AttachDomainBodySchema, await ctx.request.json().catch(() => null));
-			if (!parsed.ok) return parsed.response;
-			if (parsed.data.kind !== "custom") return domainKindNotAttachable();
+			let input = await TENANT_DOMAINS_ATTACH.parse(ctx.request, ctx.params);
+			if (isFailure(input)) return operationInputProblem(input.error);
+			let body = input.data.body;
+			if (body.kind !== "custom") return domainKindNotAttachable();
 
 			try {
 				let domain = await attachCustomDomain(
 					ctx.db,
 					options.hostnameClient(),
 					ctx.managementCaller.tenantId,
-					parsed.data.hostname,
+					body.hostname,
 				);
 				return json(serializeDomain(domain), { status: 201 });
 			} catch (error) {

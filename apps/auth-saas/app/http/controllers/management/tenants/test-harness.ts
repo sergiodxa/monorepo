@@ -45,6 +45,7 @@ import { createTenantSessionPolicyDescribeAction } from "~/app/http/controllers/
 import { createTenantSessionPolicySetAction } from "~/app/http/controllers/management/tenants/set-session-policy";
 import {
 	buildManagementTestCore,
+	conformance,
 	fakeHostnameClient,
 	fakeLimiter,
 	grantEntitlement,
@@ -93,6 +94,7 @@ export function buildTenantsRouter(
 
 	let router = createRouter({
 		middleware: [
+			conformance,
 			database(() => db),
 			(ctx, next) => {
 				ctx.set(Mail, mailer, { property: "mail" });

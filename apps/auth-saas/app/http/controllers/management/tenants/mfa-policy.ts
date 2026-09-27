@@ -8,19 +8,18 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import * as s from "remix/data-schema";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 
-import { parseBody } from "~/app/http/lib/parse-body";
+import { operationInputProblem } from "~/app/http/lib/parse-body";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { TENANT_MFA_POLICY_SET } from "~/app/http/openapi/tenants";
 import routes from "~/routes/management";
-
-let SetMfaPolicyBodySchema = s.object({ policy: s.enum_(["optional", "required"] as const) });
 
 /**
  * Builds the `tenantMfaPolicySet` action.
@@ -45,10 +44,10 @@ export function createTenantMfaPolicySetAction(options: ManagementControllerOpti
 			let refused = requireScope(ctx, "tenant:write");
 			if (refused) return refused;
 
-			let parsed = parseBody(SetMfaPolicyBodySchema, await ctx.request.json().catch(() => null));
-			if (!parsed.ok) return parsed.response;
+			let input = await TENANT_MFA_POLICY_SET.parse(ctx.request, ctx.params);
+			if (isFailure(input)) return operationInputProblem(input.error);
 
-			await ctx.tenantStub.setMfaPolicy({ policy: parsed.data.policy });
+			await ctx.tenantStub.setMfaPolicy({ policy: input.data.body.policy });
 
 			return new Response(null, { status: 204 });
 		},

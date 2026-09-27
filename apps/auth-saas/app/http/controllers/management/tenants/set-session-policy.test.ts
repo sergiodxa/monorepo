@@ -63,6 +63,9 @@ describe("POST /tenants/:tenantId/session-policy", () => {
 		);
 
 		expect(response.status).toBe(403);
+		expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+		let body = (await response.json()) as { type: string };
+		expect(body.type).toContain("entitlement");
 	});
 
 	test("refuses an out-of-bounds value with the field and message", async () => {

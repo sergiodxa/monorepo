@@ -16,17 +16,17 @@ import { Hex, randomToken, sha256 } from "@sdxc/crypto";
 import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { env } from "cloudflare:workers";
-import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 
 import { mountedMiddleware } from "~/app/http/controllers/management/tenants/shared";
-import { parseBody } from "~/app/http/lib/parse-body";
+import { operationInputProblem } from "~/app/http/lib/parse-body";
 import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementIdempotency } from "~/app/http/middleware/management-idempotency";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { TENANT_MEMBERS_INVITE } from "~/app/http/openapi/tenants";
 import { mailTranslator } from "~/app/mail/locale";
 import { TenantInvitationEmail } from "~/app/mail/tenant-invitation-email";
 import Tenant from "~/app/models/tenant";
@@ -37,12 +37,7 @@ import routes from "~/routes/management";
 /** How long a minted invitation stands before it can no longer be accepted. */
 const TENANT_INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-let InviteMemberBodySchema = s.object({
-	email: s.string(),
-	role: s.enum_(["owner", "admin", "member"] as const),
-});
-
-/** Refuses a body whose email does not fold, since `remix/data-schema` alone cannot express that rule. */
+/** Refuses a body whose email does not fold, a rule the body schema alone cannot express. */
 function invalidEmail(): Response {
 	return managementProblem("validationFailed", {
 		detail: "The request body did not pass validation.",
@@ -53,7 +48,8 @@ function invalidEmail(): Response {
 }
 
 /**
- * Builds the `tenantMembersInvite` action.
+ * Builds the `tenantMembersInvite` action. A second invitation to the same address
+ * replaces any invitation still outstanding, so one address holds one live token.
  *
  * @param options - The auth, rate-limit and tenant-stub options every
  * management resource controller shares.
@@ -72,10 +68,11 @@ export function createTenantMembersInviteAction(options: ManagementControllerOpt
 			let refused = requireScope(ctx, "members:write");
 			if (refused) return refused;
 
-			let parsed = parseBody(InviteMemberBodySchema, await ctx.request.json().catch(() => null));
-			if (!parsed.ok) return parsed.response;
+			let input = await TENANT_MEMBERS_INVITE.parse(ctx.request, ctx.params);
+			if (isFailure(input)) return operationInputProblem(input.error);
+			let body = input.data.body;
 
-			let folded = foldIdentifier("email", parsed.data.email);
+			let folded = foldIdentifier("email", body.email);
 			if (!folded.ok) return invalidEmail();
 
 			let tenantId = ctx.managementCaller.tenantId;
@@ -87,10 +84,6 @@ export function createTenantMembersInviteAction(options: ManagementControllerOpt
 			if (isFailure(hashed)) throw new Error("failed to hash the tenant invitation token");
 			let tokenHash = Hex.encode(hashed.data);
 
-			// Supersedes rather than piling up: a second invitation to the same
-			// address replaces any invitation still outstanding, the same
-			// delete-before-insert idiom `magic_link_attempts` already follows for
-			// its own outstanding attempt.
 			await TenantMemberInvitation.deletePendingByTenantAndEmail(ctx.db, tenantId, folded.folded);
 
 			let expiresAt = Date.now() + TENANT_INVITATION_TTL_MS;
@@ -98,7 +91,7 @@ export function createTenantMembersInviteAction(options: ManagementControllerOpt
 			let invitation = await TenantMemberInvitation.create(ctx.db, {
 				tenantId,
 				email: folded.folded,
-				role: parsed.data.role,
+				role: body.role,
 				tokenHash,
 				invitedBy: ctx.managementCaller.actor.id,
 				expiresAt,
@@ -109,9 +102,9 @@ export function createTenantMembersInviteAction(options: ManagementControllerOpt
 
 			await ctx.mail.send(
 				new TenantInvitationEmail({
-					email: parsed.data.email,
+					email: body.email,
 					tenantName: tenant.name,
-					role: parsed.data.role,
+					role: body.role,
 					url,
 					t,
 				}),
