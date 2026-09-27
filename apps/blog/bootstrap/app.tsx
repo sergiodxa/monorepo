@@ -11,6 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Transport } from "@sdxc/mail";
 import type { Middleware, RequestContext } from "remix/router";
 import type { ResolveFrameContext } from "remix/ui/server";
 
@@ -25,6 +26,7 @@ import { securityTxt } from "@sdxc/well-known/security-txt";
 import workersCache from "@sdxc/workers-cache/middleware";
 import { cache as platformCache } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
+import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
 import { renderWith } from "remix/middleware/render";
@@ -45,6 +47,7 @@ import purgePostList from "~/app/http/middleware/purge-post-list";
 import redirects from "~/app/http/middleware/redirects";
 import requireAdmin from "~/app/http/middleware/require-admin";
 import session from "~/app/http/middleware/session";
+import supportDesk from "~/app/http/middleware/support-desk";
 import webmentionRateLimit from "~/app/http/middleware/webmention-rate-limit";
 import { SECURITY_POLICY } from "~/app/http/security-policy";
 import mcpRateLimit from "~/app/mcp/rate-limit";
@@ -102,6 +105,12 @@ const CMS_GUARDS: Middleware[] = [requireCMSAuth, requireAdmin];
 /** The same, for the routes that write, which invalidate the shared listing afterwards. */
 const CMS_WRITE_GUARDS: Middleware[] = [...CMS_GUARDS, purgePostList];
 
+/** Services {@link createApplication} otherwise builds from the Worker's bindings. */
+export interface ApplicationOptions {
+	/** Delivers Encore support requests in place of the `EMAIL` binding. */
+	mailTransport?: Transport;
+}
+
 /**
  * Builds the blog HTTP router with global middleware, route mappings, CMS auth
  * guards, and the HTML 404 fallback. `headRequests()` runs first so every later
@@ -117,9 +126,10 @@ const CMS_WRITE_GUARDS: Middleware[] = [...CMS_GUARDS, purgePostList];
  * `database(createDatabase)` is global, so `ctx.db` is there for a route the app maps and
  * for a handler behind a route-agnostic boundary alike.
  * @param env Worker environment bindings injected into request context.
+ * @param options Services a test substitutes for the ones the bindings provide.
  * @returns Configured router instance for the worker fetch entrypoint.
  */
-export default function createApplication(env: App.Env) {
+export default function createApplication(env: App.Env, options: ApplicationOptions = {}) {
 	let globalMiddleware: Array<Middleware<any>> = [
 		headRequests(),
 		log(logger),
@@ -183,6 +193,17 @@ export default function createApplication(env: App.Env) {
 	router.map(
 		routes.webmention,
 		lazy(() => import("~/app/http/controllers/webmention"), webmentionRateLimit(env)),
+	);
+	/**
+	 * The Encore support form takes anonymous submissions, so it answers only same-origin
+	 * browser posts and reaches the support desk the controller rate-limits and mails through.
+	 */
+	router.map(
+		routes.encoreSupport,
+		lazy(
+			() => import("~/app/http/controllers/encore-support"),
+			[cop(), supportDesk(env, options.mailTransport)],
+		),
 	);
 	router.map(
 		routes.articles,

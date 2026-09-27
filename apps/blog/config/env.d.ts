@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { SendEmailBinding } from "@sdxc/mail/cloudflare";
+
 import type { KVStore } from "../app/contracts/kv-store";
 
 declare global {
@@ -28,6 +30,12 @@ declare global {
 			MCP_RATE_LIMITER: RateLimit | undefined;
 			/** The Webmention endpoint's budget; absent from a deployment predating the binding. */
 			WEBMENTION_RATE_LIMITER?: RateLimit;
+			/** Delivers support requests; absent from a deployment without the `send_email` binding. */
+			EMAIL?: SendEmailBinding;
+			/** Where Encore support requests are delivered, set as a Worker secret. */
+			SUPPORT_INBOX?: string;
+			/** The Encore support form's per-address budget. */
+			SUPPORT_RATE_LIMITER?: RateLimit;
 			/** Lets a deferred write finish after the response has been sent. */
 			waitUntil(promise: Promise<unknown>): void;
 		}

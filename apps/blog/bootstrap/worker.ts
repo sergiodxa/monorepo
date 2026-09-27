@@ -36,6 +36,9 @@ export default {
 			CACHE: env.CACHE,
 			MCP_RATE_LIMITER: env.MCP_RATE_LIMITER,
 			WEBMENTION_RATE_LIMITER: env.WEBMENTION_RATE_LIMITER,
+			EMAIL: env.EMAIL,
+			SUPPORT_INBOX: env.SUPPORT_INBOX,
+			SUPPORT_RATE_LIMITER: env.SUPPORT_RATE_LIMITER,
 			waitUntil: (promise) => ctx.waitUntil(promise),
 		});
 

@@ -22,6 +22,9 @@ Production URL: https://sergiodxa.com
 | R2          | `BACKUPS`                                             | Database backup storage                     |
 | Queue       | `QUEUE` (`blog-jobs`)                                 | Background jobs (Webmention receive/send)   |
 | Rate limit  | `WEBMENTION_RATE_LIMITER`                             | Webmention endpoint budget                  |
+| Rate limit  | `SUPPORT_RATE_LIMITER`                                | Encore support form budget per address      |
+| Email       | `EMAIL` (`send_email`)                                | Delivers Encore support requests            |
+| Secret      | `SUPPORT_INBOX`                                       | Inbox Encore support requests go to         |
 | Secrets     | `CLIENT_ID`, `CLIENT_SECRET`, `COOKIE_SESSION_SECRET` | OIDC and session secrets from Secrets Store |
 | Assets      | N/A                                                   | Static assets served from `build/client`    |
 
@@ -40,23 +43,28 @@ Smart Placement and Observability are enabled.
 - Webmention sending: creating, updating or deleting an article or tutorial notifies every
   page it links to (and every page it stopped linking to); a cron every 15 minutes sends
   for posts whose scheduled publish date has arrived.
+- Encore support page (`/apps/encore/support`), the Support URL of the Encore App Store
+  listings: a public form that mails each request to `SUPPORT_INBOX` from
+  `no-reply@sergiodxa.com` with the visitor as Reply-To, behind same-origin checks, a
+  honeypot, and a per-address rate limit. An unset inbox makes the form report a failure.
 
 ## Routes
 
-| Route              | Description                |
-| ------------------ | -------------------------- |
-| `/`                | Homepage                   |
-| `/articles`        | Articles listing           |
-| `/articles/:slug`  | Article detail page        |
-| `/tutorials`       | Tutorials listing          |
-| `/tutorials/:slug` | Tutorial detail page       |
-| `/bookmarks`       | Saved bookmarks            |
-| `/rss`             | Main RSS feed              |
-| `/articles.rss`    | Articles RSS feed          |
-| `/tutorials.rss`   | Tutorials RSS feed         |
-| `/bookmarks.rss`   | Bookmarks RSS feed         |
-| `/sitemap.xml`     | Sitemap for search engines |
-| `/webmention`      | Webmention endpoint (POST) |
+| Route                  | Description                  |
+| ---------------------- | ---------------------------- |
+| `/`                    | Homepage                     |
+| `/articles`            | Articles listing             |
+| `/articles/:slug`      | Article detail page          |
+| `/tutorials`           | Tutorials listing            |
+| `/tutorials/:slug`     | Tutorial detail page         |
+| `/bookmarks`           | Saved bookmarks              |
+| `/rss`                 | Main RSS feed                |
+| `/articles.rss`        | Articles RSS feed            |
+| `/tutorials.rss`       | Tutorials RSS feed           |
+| `/bookmarks.rss`       | Bookmarks RSS feed           |
+| `/sitemap.xml`         | Sitemap for search engines   |
+| `/webmention`          | Webmention endpoint (POST)   |
+| `/apps/encore/support` | Encore support page and form |
 
 ## Database
 

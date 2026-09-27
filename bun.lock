@@ -92,6 +92,7 @@
         "@sdxc/lazy-route": "workspace:*",
         "@sdxc/location": "workspace:*",
         "@sdxc/logger": "workspace:*",
+        "@sdxc/mail": "workspace:*",
         "@sdxc/markdown": "workspace:*",
         "@sdxc/mcp": "workspace:*",
         "@sdxc/microformats": "workspace:*",

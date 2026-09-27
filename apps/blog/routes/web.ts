@@ -49,6 +49,13 @@ export default route({
 	 */
 	mcpMarkdown: get("/mcp.md"),
 
+	/**
+	 * The support page the Encore App Store listings link to. `form()` serves the page on
+	 * `GET` and takes the support request on `POST` at the same address, so a failed
+	 * submission re-renders where the visitor already is.
+	 */
+	encoreSupport: form("/apps/encore/support"),
+
 	articles: get("/articles"),
 	tutorials: get("/tutorials"),
 	bookmarks: get("/bookmarks"),

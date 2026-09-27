@@ -81,7 +81,20 @@
 			"namespace_id": "1002",
 			"simple": { "limit": 30, "period": 60 },
 		},
+		// The Encore support form's budget per client address (`app/services/support-desk.ts`,
+		// which mirrors the limit). Every submission counts, valid or not.
+		{
+			"name": "SUPPORT_RATE_LIMITER",
+			"namespace_id": "1003",
+			"simple": { "limit": 5, "period": 60 },
+		},
 	],
+
+	// Delivers Encore support requests to the inbox in the `SUPPORT_INBOX` secret, from the
+	// sender in `app/services/support-desk.ts`, which has to be a verified sending domain. The
+	// bare form allows any verified destination, since the inbox is a secret rather than a
+	// value written here. A local run only logs the message it would have sent.
+	"send_email": [{ "name": "EMAIL" }],
 
 	// Background jobs (`app/jobs/dispatcher.ts`): Webmention verification and sending.
 	// One message per invocation keeps a slow source or endpoint from holding up others.

@@ -53,6 +53,12 @@ declare global {
 			CACHE: KVNamespace;
 			/** Present only once a deploy's bindings include the `ratelimits` entry. */
 			MCP_RATE_LIMITER?: RateLimit;
+			/** Present only once a deploy's bindings include the `SUPPORT_RATE_LIMITER` entry. */
+			SUPPORT_RATE_LIMITER?: RateLimit;
+			/** The `send_email` binding support requests are delivered through. */
+			EMAIL?: SendEmail;
+			/** Set with `bunx wrangler secret put SUPPORT_INBOX`; unset keeps the form failing closed. */
+			SUPPORT_INBOX?: string;
 			CLIENT_ID: SecretsStoreSecret;
 			CLIENT_SECRET: SecretsStoreSecret;
 			COOKIE_SESSION_SECRET: SecretsStoreSecret;
