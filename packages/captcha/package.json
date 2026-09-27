@@ -1,7 +1,6 @@
 {
 	"name": "@sdxc/captcha",
 	"version": "0.0.1",
-	"private": true,
 	"description": "CAPTCHA verification for Turnstile, hCaptcha and reCAPTCHA, with router middleware, widgets and a test provider",
 	"license": "MIT",
 	"type": "module",
