@@ -458,6 +458,15 @@
         "@cloudflare/workers-types": "^5.20260901.1",
       },
     },
+    "packages/captcha": {
+      "name": "@sdxc/captcha",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+        "@sdxc/validate": "workspace:*",
+        "remix": "3.0.0-rc.2",
+      },
+    },
     "packages/catch-response-middleware": {
       "name": "@sdxc/catch-response-middleware",
       "version": "0.0.1",
@@ -1825,6 +1834,8 @@
     "@sdxc/blog-engine": ["@sdxc/blog-engine@workspace:packages/blog-engine"],
 
     "@sdxc/cache": ["@sdxc/cache@workspace:packages/cache"],
+
+    "@sdxc/captcha": ["@sdxc/captcha@workspace:packages/captcha"],
 
     "@sdxc/catch-response-middleware": ["@sdxc/catch-response-middleware@workspace:packages/catch-response-middleware"],
 

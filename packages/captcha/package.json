@@ -1,0 +1,27 @@
+{
+	"name": "@sdxc/captcha",
+	"version": "0.0.1",
+	"private": true,
+	"description": "CAPTCHA verification for Turnstile, hCaptcha and reCAPTCHA, with router middleware, widgets and a test provider",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./middleware": "./src/middleware.ts",
+		"./memory": "./src/memory.ts",
+		"./turnstile": "./src/turnstile.ts",
+		"./turnstile/ui": "./src/turnstile-ui.tsx",
+		"./hcaptcha": "./src/hcaptcha.ts",
+		"./hcaptcha/ui": "./src/hcaptcha-ui.tsx",
+		"./recaptcha": "./src/recaptcha.ts",
+		"./recaptcha/ui": "./src/recaptcha-ui.tsx"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*",
+		"@sdxc/validate": "workspace:*",
+		"remix": "3.0.0-rc.2"
+	}
+}

@@ -98,6 +98,7 @@ Run from the repository root:
 | [billing](packages/billing)                                     | Vendor-neutral billing with pluggable providers and a webhook endpoint                                            | ✅  |
 | [blog-engine](packages/blog-engine)                             | Host-agnostic blog engine                                                                                         |     |
 | [cache](packages/cache)                                         | Cache contract with adapters for memory and Cloudflare KV                                                         | ✅  |
+| [captcha](packages/captcha)                                     | CAPTCHA verification for Turnstile, hCaptcha and reCAPTCHA, with router middleware, widgets and a test provider   |     |
 | [catch-response-middleware](packages/catch-response-middleware) | Router middleware that turns a thrown `Response` into the request's response                                      | ✅  |
 | [cloudflare-mocks](packages/cloudflare-mocks)                   | In-memory Cloudflare binding mocks for tests                                                                      | ✅  |
 | [cloudflare-pricing](packages/cloudflare-pricing)               | Cloudflare Developer Platform list prices, one module per service                                                 |     |
