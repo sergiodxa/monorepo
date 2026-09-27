@@ -2,13 +2,24 @@
 
 Read and write iCalendar documents, with recurrence rules and time zones.
 
-## Overview
+## Installation
 
-[RFC 5545](https://www.rfc-editor.org/rfc/rfc5545) iCalendar is the format every calendar client subscribes to and imports. This package reads and writes it with typed `VEVENT`, `VALARM` and `VTIMEZONE` components over a generic component and property layer, so `VTODO`, `VJOURNAL`, `VFREEBUSY` and `X-` properties survive a parse and stringify round trip untouched.
+```bash
+npm add @sdxc/icalendar
+```
 
-The reader is lenient and the writer strict. Structural errors (an unmatched `END`, a line with no `:`, no `VCALENDAR`) fail with the physical line they start on; a missing `UID` or `DTSTAMP`, or a value that does not parse, becomes a warning and the property is kept verbatim. The writer folds at 75 octets without splitting a UTF-8 character, escapes TEXT, quotes and caret-encodes parameters ([RFC 6868](https://www.rfc-editor.org/rfc/rfc6868)), and always writes `VERSION:2.0`.
+Fallible functions return a `Result` from
+[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), and zone conversion comes from
+[`@sdxc/dates`](https://www.npmjs.com/package/@sdxc/dates); both install alongside this package.
 
-Four entry points keep a writer-only consumer small:
+[RFC 5545](https://www.rfc-editor.org/rfc/rfc5545) iCalendar is the format every calendar
+client subscribes to and imports. Events, alarms and time zones are typed over a generic
+component and property layer, so `VTODO`, `VJOURNAL`, `VFREEBUSY` and `X-` properties survive a
+parse and stringify round trip untouched. The reader is lenient and the writer strict:
+structural errors fail with the line they start on, while a missing `UID` or a value that does
+not parse becomes a warning and the property is kept verbatim. The writer folds at 75 octets
+without splitting a UTF-8 character, escapes TEXT, caret-encodes parameters
+([RFC 6868](https://www.rfc-editor.org/rfc/rfc6868)), and always writes `VERSION:2.0`.
 
 | Import                     | What it holds                                                                                   |
 | -------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -17,11 +28,12 @@ Four entry points keep a writer-only consumer small:
 | `@sdxc/icalendar/timezone` | `vtimezone`, a `VTIMEZONE` built from `Intl`                                                    |
 | `@sdxc/icalendar/itip`     | `request`, `cancel`, `reply`, `readReply`, `nextSequence`, `calendarPart` (RFC 5546)            |
 
-Zone conversion comes from `@sdxc/dates/zone`, whose DST rule (a repeated hour resolves to its first instant, a skipped one is read with the offset before the gap) is the one RFC 5545 §3.3.5 prescribes.
+A repeated local hour resolves to its first instant and a skipped one is read with the offset
+before the gap, as RFC 5545 §3.3.5 prescribes.
 
 ## Usage
 
-### Write a feed
+### Write A Feed
 
 UTC date-times need no `VTIMEZONE`, so a feed of one-off events is just events.
 
@@ -70,7 +82,7 @@ END:VEVENT
 END:VCALENDAR
 ```
 
-### Read a calendar
+### Read A Calendar
 
 ```ts
 import { parse, toInstant } from "@sdxc/icalendar";
@@ -85,7 +97,7 @@ for (let event of calendar.events) {
 }
 ```
 
-### Expand a recurrence
+### Expand A Recurrence
 
 ```ts
 import { occurrences } from "@sdxc/icalendar/rrule";
@@ -98,7 +110,7 @@ let result = occurrences(event, {
 // { status: "success", data: [{ start, end }, ...] }
 ```
 
-### Write a zoned recurring event
+### Write A Zoned Recurring Event
 
 A rule whose wall clock follows a zone needs `TZID` plus a `VTIMEZONE`, or it drifts by an hour across DST.
 
@@ -189,7 +201,8 @@ TEXT escaping (`\\`, `\;`, `\,`, `\n`; `\N` accepted on read), for untyped `Prop
 
 #### `ICalendarParseError`
 
-The structural failure, with the 1-based physical `line` it starts on.
+The structural failure (an unmatched `BEGIN`/`END`, a content line without `:`, no
+`VCALENDAR`), with the 1-based physical `line` it starts on.
 
 #### `ICalendar` types
 
@@ -213,6 +226,10 @@ An alarm's `trigger.before` is the time before the start (or end): `{ minutes: 1
 
 Reads an `RRULE` value, case-insensitively. An unknown or repeated part, an out-of-range number, or `COUNT` beside `UNTIL` fails.
 
+#### `RecurrenceRuleError`
+
+An `RRULE` that does not parse, carries out-of-range parts, or cannot be expanded.
+
 #### `stringifyRecurrence(rule: ICalendar.RecurrenceRule): string`
 
 `FREQ`, `INTERVAL`, `COUNT`/`UNTIL`, `BYSECOND` through `BYSETPOS`, `WKST`.
@@ -220,6 +237,8 @@ Reads an `RRULE` value, case-insensitively. An unknown or repeated part, an out-
 #### `occurrences(event, options): Result<{ start: number; end: number }[], RecurrenceRuleError>`
 
 The occurrences overlapping `[from, to)`, earliest first, at most `limit` (default 1,000): `DTSTART`, which RFC 5545 counts as the first instance, the rule's instances, and the `RDATE`s, minus every `EXDATE`. Each occurrence lasts as long as the event: a `DTEND` gives an exact length, a `DURATION` a nominal one (a day across DST keeps its local time), and neither gives a `DATE` one day.
+
+`OccurrenceOptions` is the options type:
 
 | Option     | Meaning                                                                  |
 | ---------- | ------------------------------------------------------------------------ |
@@ -237,9 +256,17 @@ Expansion jumps straight to the window for rules without `COUNT`, stops at `to`,
 
 A `VTIMEZONE` for an IANA zone: the transition in force when the span starts, then one observance per offset change until it ends, each with an explicit onset and no rule. `DAYLIGHT` marks an offset above the year's standard one, in either hemisphere; names come from `Intl` (`EST`, `GMT+9`). Past the span the last observance's offset holds, so the span should cover every date-time the calendar writes in that zone.
 
+#### `TimeZoneError`
+
+A zone `Intl` does not know, or an empty span.
+
 ### `@sdxc/icalendar/itip`
 
 iTIP ([RFC 5546](https://www.rfc-editor.org/rfc/rfc5546)) scheduling messages for one event. Each builder returns a calendar with its `METHOD` set, ready for `stringify` or `calendarPart`, or an `ITipError` naming the constraint the event breaks.
+
+#### `ITipError`
+
+An event that cannot carry the method asked of it, or a message that is not a `REPLY`.
 
 #### `request(event, options: ITip.Options): Result<ICalendar.Calendar, ITipError>`
 
@@ -263,7 +290,7 @@ The §2.1.4 rule: one more than `previous.sequence` when `start`, `end`, `durati
 
 #### `calendarPart(calendar, options?: { filename?: string }): ITip.CalendarPart`
 
-`{ method, content, filename? }` for a mailer: the calendar's method (`PUBLISH` when unset) and its text. The shape is what `@sdxc/mail`'s `calendar` option takes, written as a `text/calendar; method=…` alternative part.
+`{ method, content, filename? }` for a mailer: the calendar's method (`PUBLISH` when unset) and its text. The shape is what [`@sdxc/mail`](https://www.npmjs.com/package/@sdxc/mail)'s `calendar` option takes, written as a `text/calendar; method=…` alternative part.
 
 | Type                 | Shape                                                                   |
 | -------------------- | ----------------------------------------------------------------------- |
@@ -273,9 +300,7 @@ The §2.1.4 rule: one more than `previous.sequence` when `start`, `end`, `durati
 | `ITip.Reply`         | `uid`, `sequence`, `dtstamp`, `recurrenceId?`, `organizer?`, `attendee` |
 | `ITip.CalendarPart`  | `method`, `content`, `filename?`                                        |
 
-## Patterns
-
-### Pattern: invite, update, cancel by mail
+## Pattern: Invite, Update And Cancel By Mail
 
 ```ts
 import { utc } from "@sdxc/icalendar";
@@ -310,7 +335,7 @@ await mailer.send({
 
 The recipient's client matches the three messages by `UID`, and the higher `SEQUENCE` of the move and the cancellation replaces what it holds.
 
-### Pattern: record an attendee's answer
+## Pattern: Record An Attendee's Answer
 
 ```ts
 import { readReply } from "@sdxc/icalendar/itip";
@@ -325,7 +350,7 @@ for (let { uid, sequence, attendee } of replies.data) {
 
 A reply to an older `SEQUENCE` answers a revision the attendee has since been sent again; compare it with the current one before trusting it.
 
-### Pattern: a status page's maintenance feed
+## Pattern: A Maintenance Feed With Stable Revisions
 
 ```ts
 import { calendarResponse, utc } from "@sdxc/icalendar";
@@ -350,9 +375,13 @@ return calendarResponse({
 });
 ```
 
-A single-window download is the same calendar with one event and `{ filename: "maintenance.ics" }`.
+`SEQUENCE` comes from something that only grows (seconds between creation and the last edit),
+so clients replace their copy on every change. A single-window download is the same calendar
+with one event and `{ filename: "maintenance.ics" }`; the shared `UID` makes a client holding
+both show one event. UTC needs no `VTIMEZONE`; reach for `TZID` only when a recurrence must
+follow a zone's wall clock.
 
-### Pattern: "last day of the month" recurrences
+## Pattern: "Last Day Of The Month" Recurrences
 
 `BYMONTHDAY=31` skips short months. The clamp is a set position over the candidate days:
 
@@ -360,7 +389,7 @@ A single-window download is the same calendar with one event and `{ filename: "m
 let rule = { frequency: "MONTHLY", byMonthDay: [28, 29, 30, 31], bySetPosition: [-1] } as const;
 ```
 
-### Pattern: is anything active now
+## Pattern: Is Anything Active Now
 
 ```ts
 import { occurrences } from "@sdxc/icalendar/rrule";
@@ -371,15 +400,32 @@ let result = occurrences(event, { from: now, to: now + 1, limit: 1 });
 let active = isSuccess(result) && result.data.length > 0;
 ```
 
-## Related Packages
+## Versioning
 
-- [`@sdxc/dates`](../dates/README.md) - the `./zone` subpath this package converts wall clocks with
-- [`@sdxc/cron`](../cron/README.md) - cron expressions, a separate grammar with its own schedules
-- [`@sdxc/result`](../result/README.md) - the `Result` every fallible function returns
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
 
-## Tips
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
 
-- Prefer UTC. A one-off event in UTC is exact and needs no `VTIMEZONE`; reach for `TZID` only when a recurrence must follow a zone's wall clock.
-- Derive `SEQUENCE` from something that only grows, like seconds since creation of the last edit, so clients replace their copy on every change.
-- Keep `UID`s stable across the feed and single-event downloads, so a client holding both shows one event.
-- Read `warnings` when importing third-party feeds; they point at the properties that stayed untyped.
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/icalendar": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)

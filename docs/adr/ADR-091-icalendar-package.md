@@ -627,3 +627,5 @@ has to follow one.
         tested against RFC 5546 §4.2
   - [ ] Maintenance emails in uptime that carry them
 - [ ] Phase 5: Publish
+  - [x] `private` removed, README written for npm, release build checked
+  - [ ] Root README ✅, `bun run release:bootstrap @sdxc/icalendar`, trusted publisher
