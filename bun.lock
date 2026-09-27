@@ -430,6 +430,7 @@
         "@sdxc/robots": "workspace:*",
         "@sdxc/rss": "workspace:*",
         "@sdxc/sitemap": "workspace:*",
+        "@sdxc/trace-context": "workspace:*",
         "@sdxc/validate": "workspace:*",
         "@sdxc/websub": "workspace:*",
         "@sdxc/well-known": "workspace:*",

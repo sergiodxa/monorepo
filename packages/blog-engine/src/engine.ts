@@ -11,6 +11,7 @@ import type { Database } from "remix/data-table";
 import type { Middleware } from "remix/router";
 
 import { log } from "@sdxc/logger/middleware";
+import { trace } from "@sdxc/trace-context/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
@@ -57,11 +58,10 @@ export interface EngineRouterDeps {
 }
 
 /**
- * Builds the engine's fetch-router. `database()` heads the middleware chain so every
- * handler, the 404 fall-through included, reads `ctx.db`, and `log()` follows it so
- * every request publishes `ctx.log`, joining the host's log when one is current. Route
- * groups map in call order — dynamic public routes go last so fixed routes win,
- * and nested `map()` groups throw.
+ * Builds the engine's fetch-router. `database()` heads the chain so every handler, the 404
+ * fall-through included, reads `ctx.db`; `log()` joins the host's log as `ctx.log` and
+ * `trace()` continues the caller's `traceparent` on it. Route groups map in call order —
+ * dynamic public routes go last so fixed routes win, and nested `map()` groups throw.
  * @param deps - The database, session middleware, and OIDC config.
  * @returns A configured fetch-router ready to handle the request.
  */
@@ -71,6 +71,7 @@ export function createEngineRouter(deps: EngineRouterDeps) {
 		background(deps.waitUntil),
 		trailingSlash,
 		log() as Middleware,
+		trace() as Middleware,
 		oidcMiddleware(deps.oidc, deps.issuer),
 		renderMiddleware as Middleware,
 		asyncContext(),

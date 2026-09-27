@@ -97,4 +97,25 @@ describe("createBlogEngine — logging", () => {
 		expect(records).toHaveLength(1);
 		expect(records[0]).toMatchObject({ route: "/sitemap.xml", "http.method": "GET" });
 	});
+
+	test("continues the caller's traceparent on the request's log", async () => {
+		let engine = createEngine();
+		let records: Record<string, unknown>[] = [];
+		let host = new Log({ kind: "request", sink: (record) => records.push({ ...record }) });
+		let traceId = "4bf92f3577b34da6a3ce929d0e0e4736";
+		let callerSpanId = "00f067aa0ba902b7";
+
+		let response = await host.run(() =>
+			engine.fetch(
+				new Request("https://blog.example.com/sitemap.xml", {
+					headers: { traceparent: `00-${traceId}-${callerSpanId}-01` },
+				}),
+			),
+		);
+
+		expect(response.status).toBe(200);
+		expect(records).toHaveLength(1);
+		expect(records[0]).toMatchObject({ trace_id: traceId, parent_span_id: callerSpanId });
+		expect(records[0]?.span_id).not.toBe(callerSpanId);
+	});
 });
