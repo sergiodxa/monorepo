@@ -17,6 +17,7 @@ import { and, isNull } from "remix/data-table";
 import type { SelectPushSubscription, SelectSettings } from "~/database/schema";
 
 import { NotificationEmail, textFrom, translationFor } from "~/app/push/copy";
+import { unsubscribeUrl } from "~/app/push/unsubscribe";
 import { vapidKeys } from "~/app/push/vapid";
 import { pushRequest } from "~/app/push/web-push";
 import {
@@ -120,6 +121,8 @@ export interface NotifyInput {
 	 * sending a message whose button goes nowhere.
 	 */
 	appUrl: string | null;
+	/** The reader this object belongs to, whom an email's unsubscribe link is signed for. */
+	subject: string;
 	/** Where this object writes its wide events. */
 	record: (kind: Log.Kind, fields: Log.Fields) => void;
 }
@@ -443,22 +446,36 @@ async function deliverTo(
  * than caught.
  */
 async function deliverEmail(input: NotifyInput, summary: Summary): Promise<boolean> {
-	let { mailer, row, appUrl, record } = input;
+	let { mailer, row, appUrl, record, subject } = input;
 	if (mailer === null || appUrl === null || !row.email) return false;
 
 	let { t } = translationFor(DEFAULT_EMAIL_LANGUAGE);
+
+	/** A link that cannot be signed leaves the settings page as the way out, and is recorded. */
+	let unsubscribe = await unsubscribeUrl(subject, appUrl);
 
 	let sent = await mailer.send(
 		new NotificationEmail(
 			row.email,
 			textFrom(t, summary),
 			new URL(routes.reading.index.href(), appUrl).toString(),
-			t("notifications.email.footer"),
+			{
+				reason: t("notifications.email.footer"),
+				unsubscribeUrl: isFailure(unsubscribe) ? null : unsubscribe.data,
+				unsubscribeLabel: t("notifications.email.unsubscribe"),
+				listName: t("notifications.email.listName"),
+			},
 		),
 	);
 	let ok = !isFailure(sent);
 
-	record("alarm", { event: "mail.notify", ok, posts: summary.posts, feeds: summary.feeds });
+	record("alarm", {
+		event: "mail.notify",
+		ok,
+		posts: summary.posts,
+		feeds: summary.feeds,
+		unsubscribe: !isFailure(unsubscribe),
+	});
 
 	return ok;
 }

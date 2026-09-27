@@ -782,6 +782,21 @@ export default {
 		},
 	},
 
+	/** The page an email's unsubscribe link opens, which acts only once it is confirmed. */
+	unsubscribe: {
+		title: "Stop notification emails",
+		description:
+			"You will no longer get notification emails. Push notifications and everything else stay as they are.",
+		cta: "Stop the emails",
+		doneTitle: "Emails stopped",
+		doneDescription:
+			"No more notification emails will be sent. You can turn them back on in Settings.",
+		invalidTitle: "This link does not work",
+		invalidDescription:
+			"It may have been copied incompletely or replaced by a newer one. You can turn emails off in Settings.",
+		settings: "Go to Settings",
+	},
+
 	/**
 	 * Notifications: what a scheduled check says when it finds something, how the reader is
 	 * reached, and the two places they decide any of it.
@@ -795,6 +810,8 @@ export default {
 		email: {
 			footer:
 				"You are getting this because you asked to hear about some of the feeds you follow. You can change that in Settings.",
+			unsubscribe: "Stop these emails.",
+			listName: "Reader notifications",
 		},
 
 		legend: "Notifications",

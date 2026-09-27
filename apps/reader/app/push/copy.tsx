@@ -8,7 +8,7 @@
  */
 
 import type { Translate, Translation } from "@sdxc/i18n";
-import type { Email as EmailContract } from "@sdxc/mail";
+import type { Email as EmailContract, MailingList, Unsubscribe } from "@sdxc/mail";
 import type { Handle } from "remix/ui";
 
 import { createTranslator } from "@sdxc/i18n";
@@ -74,8 +74,22 @@ export function translationFor(locale: string): Translation {
 	return translator(locale);
 }
 
+/** How the email channel leaves a way out of itself, in the reader's language. */
+export interface NotificationFooter {
+	/** Why this message arrived, which is what makes it answerable. */
+	reason: string;
+	/** The signed link out of the email channel, or `null` where none could be signed. */
+	unsubscribeUrl: string | null;
+	/** The text that link is drawn with. */
+	unsubscribeLabel: string;
+	/** The channel's name, as a mail client shows the `List-Id` beside its filters. */
+	listName: string;
+}
+
 /** The body of the email channel's message, which carries the same summary the push does. */
-function NotificationBody(handle: Handle<{ text: NotificationText; url: string; footer: string }>) {
+function NotificationBody(
+	handle: Handle<{ text: NotificationText; url: string; footer: NotificationFooter }>,
+) {
 	return () => {
 		let { text, url, footer } = handle.props;
 
@@ -84,7 +98,15 @@ function NotificationBody(handle: Handle<{ text: NotificationText; url: string; 
 				<Email.Heading>{text.title}</Email.Heading>
 				<Email.Text>{text.body}</Email.Text>
 				<Email.Button href={url}>{text.title}</Email.Button>
-				<Email.Footer>{footer}</Email.Footer>
+				<Email.Footer>
+					{footer.reason}
+					{footer.unsubscribeUrl === null ? null : (
+						<>
+							{" "}
+							<Email.Link href={footer.unsubscribeUrl}>{footer.unsubscribeLabel}</Email.Link>
+						</>
+					)}
+				</Email.Footer>
 			</Email.Layout>
 		);
 	};
@@ -92,21 +114,35 @@ function NotificationBody(handle: Handle<{ text: NotificationText; url: string; 
 
 /**
  * The notification as the email channel sends it: the same count and the same feed titles,
- * to the address a completed sign-in wrote.
+ * to the address a completed sign-in wrote, with a one-click way out of the channel.
  */
 export class NotificationEmail implements EmailContract {
 	/**
 	 * @param address - Where the message is sent, as sign-in recorded it.
 	 * @param text - The two lines the summary reads as, already in the reader's language.
 	 * @param url - Where the message points, which is the reader's own queue.
-	 * @param footer - Why this message arrived, which is what makes it answerable.
+	 * @param footer - Why this message arrived, and the signed link out of the channel.
 	 */
 	constructor(
 		private address: string,
 		private text: NotificationText,
 		private url: string,
-		private footer: string,
+		private footer: NotificationFooter,
 	) {}
+
+	/**
+	 * The signed link a mailbox provider's unsubscribe button posts to, so leaving the channel
+	 * takes one press and no sign-in; absent where no link could be signed.
+	 */
+	get unsubscribe(): Unsubscribe | undefined {
+		if (this.footer.unsubscribeUrl === null) return undefined;
+		return { url: this.footer.unsubscribeUrl };
+	}
+
+	/** The channel as a list, named under the host the link points at, for filters and feedback loops. */
+	get list(): MailingList {
+		return { id: `notifications.${new URL(this.url).hostname}`, name: this.footer.listName };
+	}
 
 	/** The reader this object belongs to, which is the only recipient there ever is. */
 	get to() {

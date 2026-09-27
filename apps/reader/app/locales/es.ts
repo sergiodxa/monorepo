@@ -59,6 +59,21 @@ export default {
 		cta: "Cerrar sesión",
 	},
 
+	/** The page an email's unsubscribe link opens, which acts only once it is confirmed. */
+	unsubscribe: {
+		title: "Dejar de recibir correos de notificación",
+		description:
+			"Ya no vas a recibir correos de notificación. Las notificaciones push y todo lo demás siguen igual.",
+		cta: "Dejar de recibir correos",
+		doneTitle: "Correos desactivados",
+		doneDescription:
+			"No se van a enviar más correos de notificación. Podés volver a activarlos en Ajustes.",
+		invalidTitle: "Este enlace no funciona",
+		invalidDescription:
+			"Puede que se haya copiado incompleto o que uno más nuevo lo haya reemplazado. Podés desactivar los correos en Ajustes.",
+		settings: "Ir a Ajustes",
+	},
+
 	/**
 	 * Notifications: what a scheduled check says when it finds something, how the reader is
 	 * reached, and the two places they decide any of it.
@@ -73,6 +88,8 @@ export default {
 		email: {
 			footer:
 				"Recibís esto porque pediste enterarte de algunas de las fuentes que seguís. Podés cambiarlo en Ajustes.",
+			unsubscribe: "Dejar de recibir estos correos.",
+			listName: "Notificaciones del lector",
 		},
 
 		legend: "Notificaciones",

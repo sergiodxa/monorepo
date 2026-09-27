@@ -314,6 +314,13 @@ export default route({
 	},
 
 	/**
+	 * The link a notification email carries out of the email channel. `GET` asks, because a
+	 * link scanner follows every URL it sees; `POST` acts, whether a person pressed the
+	 * button or a mailbox provider sent RFC 8058's one-click request.
+	 */
+	unsubscribe: form("/notifications/unsubscribe/:token"),
+
+	/**
 	 * Where a publisher's hub delivers. Nobody links here and no reader arrives here: the
 	 * `GET` answers the hub's verification and the `POST` its notification, which is the
 	 * shape a form route already describes.

@@ -364,7 +364,7 @@ with an id, a signed token needs no storage.
 - [ ] Phase 3: Verify delivery (DKIM `h=` coverage on Gmail and Yahoo) — procedure ready:
       `bun scripts/verify-dkim-headers.ts <message.eml>`; Cloudflare's docs say
       `List-Unsubscribe` is always signed and are silent on `List-Unsubscribe-Post`
-- [ ] Phase 4: Adopt in reader
+- [x] Phase 4: Adopt in reader
 
 ## Notes
 
@@ -420,3 +420,9 @@ with an id, a signed token needs no storage.
   link keeps verifying and no secret has to be provisioned; the route stays
   `/digests/unsubscribe/:token`. Lists carry ids only (`trial.`, `team-daily-digest.` and
   `team-weekly-digest.` under the app's host); a translated `name` would need per-recipient copy
+- Reader adoption: tokens are signed with `COOKIE_SESSION_SECRET` under the purpose
+  `reader-notifications-unsubscribe:v1:` and the list `notifications`, for the reader's OIDC
+  subject, as uptime does, so no secret has to be provisioned. A deployment with the key unset
+  sends the email without the headers and refuses every token. The endpoint is
+  `/notifications/unsubscribe/:token`; the `List-Id` is `notifications.<APP_URL host>`, named
+  in the reader's locale

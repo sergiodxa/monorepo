@@ -2828,6 +2828,14 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
+	 * Turns the email channel off and leaves push as it was: what an unsubscribe link asks for.
+	 * Idempotent, so a mailbox provider repeating its one-click request changes nothing more.
+	 */
+	async stopEmail(): Promise<void> {
+		await this.#db.update(settings, { id: SETTINGS_ID }, { notify_email: false });
+	}
+
+	/**
 	 * Sets the window the reader is left alone in, in their own hours.
 	 *
 	 * An hour outside the day is clamped rather than refused, so a submission nothing on the
@@ -3502,6 +3510,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			mayEmail: limitsOf(leasedTier(row, now)).emailDigests,
 			mailer: this.#mailer(),
 			appUrl: this.env.APP_URL || null,
+			subject: this.#subject(),
 			record: (kind, fields) => this.#record(kind, fields),
 		});
 

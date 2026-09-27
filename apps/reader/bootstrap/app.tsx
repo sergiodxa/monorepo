@@ -353,6 +353,10 @@ export default function application(options: application.Options) {
 		routes.websub,
 		lazy(() => import("~/app/http/controllers/websub")),
 	);
+	router.map(
+		routes.unsubscribe,
+		lazy(() => import("~/app/http/controllers/unsubscribe")),
+	);
 
 	return router;
 }

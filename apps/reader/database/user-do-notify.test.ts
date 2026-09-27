@@ -732,6 +732,17 @@ describe("the email channel", () => {
 		expect(settingsColumn(state, "notify_email")).toBe(0);
 	});
 
+	test("an unsubscribe link turns email off and leaves push as it was", async () => {
+		let { state, user } = await createReader("sub-unsubscribe");
+		await user.setChannels({ push: true, email: true });
+
+		await user.stopEmail();
+		await user.stopEmail();
+
+		expect(settingsColumn(state, "notify_email")).toBe(0);
+		expect(settingsColumn(state, "notify_push")).toBe(1);
+	});
+
 	test("sign-in writes the address the channel would send to", async () => {
 		let { state, user } = await createReader("sub-address");
 

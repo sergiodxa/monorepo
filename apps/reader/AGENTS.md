@@ -20,13 +20,15 @@ Rules follow RFC 2119: "MUST", "MUST NOT", "SHOULD", "SHOULD NOT", and "MAY" in 
 indicate requirement levels.
 
 - MUST keep the Cloudflare Worker bootstrap in `bootstrap/worker.ts` and the router
-  assembly in `bootstrap/app.tsx`. Nine other places reach for a Cloudflare API and no
+  assembly in `bootstrap/app.tsx`. Ten other places reach for a Cloudflare API and no
   more: `database/user-do.ts` and `database/feed-do.ts`, which are Durable Objects and so
   are ones by definition; `database/registry.ts`, the only module holding the catalog's D1
   binding; `database/feed-head.ts`, which holds the KV a feed publishes its head to;
   `database/article-cache.ts`, which holds the KV extracted articles are shared through;
   the `app/auth/` clients, which read their credentials off the environment;
   `app/push/vapid.ts`, which reads the Web Push key pair off it the same way;
+  `app/push/unsubscribe.ts`, which reads the session key an email's unsubscribe link is signed
+  under;
   `app/lib/media.ts`, which reads the key a proxied image's address is signed under and
   names the edge cache those images are held in; and `app/mcp/token.ts`, which reads the
   key an agent's token is signed under.

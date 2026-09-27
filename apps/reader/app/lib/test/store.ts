@@ -72,6 +72,7 @@ export interface UserStoreDouble {
 	notifications: ReturnType<typeof vi.fn>;
 	setPresentation: ReturnType<typeof vi.fn>;
 	setChannels: ReturnType<typeof vi.fn>;
+	stopEmail: ReturnType<typeof vi.fn>;
 	setQuietHours: ReturnType<typeof vi.fn>;
 	setTimeZone: ReturnType<typeof vi.fn>;
 	registerDevice: ReturnType<typeof vi.fn>;
@@ -249,6 +250,7 @@ export function createUserStoreDouble(): UserStoreDouble {
 		notifications: vi.fn(async () => NO_NOTIFICATIONS),
 		setPresentation: vi.fn(async () => DEFAULT_SETTINGS.presentation),
 		setChannels: vi.fn(async () => ({ ok: true, notifications: NO_NOTIFICATIONS })),
+		stopEmail: vi.fn(async () => undefined),
 		setQuietHours: vi.fn(async () => NO_NOTIFICATIONS),
 		setTimeZone: vi.fn(async () => false),
 		registerDevice: vi.fn(async () => ({ devices: 1 })),
