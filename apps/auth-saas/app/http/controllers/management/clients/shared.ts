@@ -34,6 +34,8 @@ export const CLIENT_BODY_SCHEMA = s.object({
 	scopes: s.array(s.string()),
 	tokenEndpointAuthMethod: s.enum_(["client_secret_basic", "client_secret_post", "none"] as const),
 	requireConsent: s.boolean(),
+	/** The ID token's signing algorithm; registration defaults it to ES256. */
+	idTokenSignedResponseAlg: s.optional(s.enum_(["ES256", "RS256"] as const)),
 });
 
 /** Projects a client's record onto {@link CLIENT_BODY_SCHEMA}, the resource a merge patch edits. */
@@ -48,6 +50,7 @@ export function writableClient(client: ClientRecord): s.InferOutput<typeof CLIEN
 		scopes: client.scopes,
 		tokenEndpointAuthMethod: client.tokenEndpointAuthMethod,
 		requireConsent: client.requireConsent,
+		idTokenSignedResponseAlg: client.idTokenSignedResponseAlg,
 	};
 }
 

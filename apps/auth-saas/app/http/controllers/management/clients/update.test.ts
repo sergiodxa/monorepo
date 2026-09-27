@@ -75,6 +75,33 @@ describe("PATCH /tenants/:tenantId/clients/:clientId", () => {
 		});
 	});
 
+	test("a merge patch switches a client's ID tokens to RS256 and keeps it through later patches", async () => {
+		let harness = await buildClientsHarness();
+		let token = await harness.signToken();
+
+		let created = await harness.tenantDO.registerClient(baseInput());
+		if (!created.ok) throw new Error("unreachable");
+
+		let patch = (body: Record<string, unknown>) =>
+			harness.router.fetch(
+				harness.request(`/tenants/${harness.tenantId}/clients/${created.client.id}`, token, {
+					method: "PATCH",
+					headers: { "Content-Type": "application/merge-patch+json" },
+					body: JSON.stringify(body),
+				}),
+			);
+
+		let switched = (await (await patch({ idTokenSignedResponseAlg: "RS256" })).json()) as {
+			idTokenSignedResponseAlg: string;
+		};
+		let renamed = (await (await patch({ name: "Renamed" })).json()) as {
+			idTokenSignedResponseAlg: string;
+		};
+
+		expect(switched.idTokenSignedResponseAlg).toBe("RS256");
+		expect(renamed.idTokenSignedResponseAlg).toBe("RS256");
+	});
+
 	test("refuses a patch removing a required member", async () => {
 		let harness = await buildClientsHarness();
 		let token = await harness.signToken();

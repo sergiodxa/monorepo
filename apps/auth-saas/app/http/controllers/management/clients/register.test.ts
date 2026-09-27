@@ -43,6 +43,31 @@ describe("POST /tenants/:tenantId/clients", () => {
 		expect(body.secret).toMatch(/^csec_/);
 	});
 
+	test("registers a client for RS256 ID tokens, and defaults one that names none to ES256", async () => {
+		let harness = await buildClientsHarness();
+		let token = await harness.signToken();
+
+		let register = (body: Record<string, unknown>) =>
+			harness.router.fetch(
+				harness.request(`/tenants/${harness.tenantId}/clients`, token, {
+					method: "POST",
+					body: JSON.stringify(body),
+				}),
+			);
+
+		let rs256 = (await (
+			await register(baseBody({ idTokenSignedResponseAlg: "RS256" }))
+		).json()) as {
+			client: Record<string, unknown>;
+		};
+		let unstated = (await (await register(baseBody())).json()) as {
+			client: Record<string, unknown>;
+		};
+
+		expect(rs256.client.idTokenSignedResponseAlg).toBe("RS256");
+		expect(unstated.client.idTokenSignedResponseAlg).toBe("ES256");
+	});
+
 	test("mints no secret for a public client", async () => {
 		let harness = await buildClientsHarness();
 		let token = await harness.signToken();
