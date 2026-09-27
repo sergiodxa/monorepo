@@ -583,3 +583,194 @@ describe("malformed maintenance window ids", () => {
 		await expectProblem(response, "validationError");
 	});
 });
+
+describe("PATCH /api/v1/maintenance/:maintenanceId", () => {
+	/** A merge patch request, sent as `application/merge-patch+json` unless told otherwise. */
+	function mergePatch(
+		maintenanceId: string,
+		body: unknown,
+		options: { key?: string; contentType?: string } = {},
+	) {
+		let headers: Record<string, string> = {
+			"content-type": options.contentType ?? "application/merge-patch+json",
+		};
+		if (options.key) headers.Authorization = `Bearer ${options.key}`;
+		let href = routes.api.v1.maintenance.patch.href({
+			maintenanceId: encodeId("mnt", maintenanceId),
+		});
+		return new Request(`https://uptime.test${href}`, {
+			method: "PATCH",
+			headers,
+			body: JSON.stringify(body),
+		});
+	}
+
+	test("changes only the members the patch names", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["maintenance:write"]);
+		let window = await createMaintenanceWindowRow(db, team.id, { suppress_alerts: false });
+
+		let response = await dispatch(db, mergePatch(window.id, { name: "Patched" }, { key }));
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(maintenanceWindows, { where: { id: window.id } });
+		expect(updated?.name).toBe("Patched");
+		expect(updated?.suppress_alerts).toBe(false);
+		expect(updated?.starts_at).toBe(window.starts_at);
+		expect(updated?.ends_at).toBe(window.ends_at);
+	});
+
+	test("moves the end date and keeps the start", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["maintenance:write"]);
+		let window = await createMaintenanceWindowRow(db, team.id);
+		let endsAt = window.ends_at + 3_600_000;
+
+		let response = await dispatch(
+			db,
+			mergePatch(window.id, { endsAt: new Date(endsAt).toISOString() }, { key }),
+		);
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(maintenanceWindows, { where: { id: window.id } });
+		expect(updated?.starts_at).toBe(window.starts_at);
+		expect(updated?.ends_at).toBe(endsAt);
+	});
+
+	test("null resets a flag to its default", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["maintenance:write"]);
+		let window = await createMaintenanceWindowRow(db, team.id, {
+			suppress_alerts: false,
+			show_on_status_page: false,
+		});
+
+		let response = await dispatch(
+			db,
+			mergePatch(window.id, { suppressAlerts: null, showOnStatusPage: null }, { key }),
+		);
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(maintenanceWindows, { where: { id: window.id } });
+		expect(updated?.suppress_alerts).toBe(true);
+		expect(updated?.show_on_status_page).toBe(true);
+	});
+
+	test("null monitorId widens the window to every monitor", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["maintenance:write"]);
+		let monitor = await createMonitorRow(db, team.id);
+		let window = await createMaintenanceWindowRow(db, team.id, {
+			monitor_type: "http",
+			monitor_id: monitor.id,
+		});
+
+		let response = await dispatch(db, mergePatch(window.id, { monitorId: null }, { key }));
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(maintenanceWindows, { where: { id: window.id } });
+		expect(updated?.monitor_type).toBeNull();
+		expect(updated?.monitor_id).toBeNull();
+	});
+
+	test("null on a required member answers validation-error at its pointer", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["maintenance:write"]);
+		let window = await createMaintenanceWindowRow(db, team.id);
+
+		let response = await dispatch(db, mergePatch(window.id, { startsAt: null }, { key }));
+
+		expect(response.status).toBe(400);
+		let problem = await expectProblem(response, "validationError");
+		expect(problem.extensions.errors.map((issue) => issue.pointer)).toEqual(["/startsAt"]);
+	});
+
+	test("a start after the end answers validation-error at /endsAt", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["maintenance:write"]);
+		let window = await createMaintenanceWindowRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			mergePatch(window.id, { startsAt: new Date(window.ends_at + 1000).toISOString() }, { key }),
+		);
+
+		expect(response.status).toBe(400);
+		let problem = await expectProblem(response, "validationError");
+		expect(problem.extensions.errors.map((issue) => issue.pointer)).toEqual(["/endsAt"]);
+	});
+
+	test("accepts application/json as a merge patch", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["maintenance:write"]);
+		let window = await createMaintenanceWindowRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			mergePatch(window.id, { name: "Json" }, { key, contentType: "application/json" }),
+		);
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(maintenanceWindows, { where: { id: window.id } });
+		expect(updated?.name).toBe("Json");
+	});
+
+	test("answers unsupported-media-type with Accept-Patch for any other body", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["maintenance:write"]);
+		let window = await createMaintenanceWindowRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			mergePatch(window.id, { name: "x" }, { key, contentType: "text/plain" }),
+		);
+
+		expect(response.status).toBe(415);
+		expect(response.headers.get("Accept-Patch")).toBe("application/merge-patch+json");
+		await expectProblem(response, "unsupportedMediaType");
+	});
+
+	test("PUT keeps refusing null on a flag", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["maintenance:write"]);
+		let window = await createMaintenanceWindowRow(db, team.id, { suppress_alerts: false });
+		let href = routes.api.v1.maintenance.update.href({
+			maintenanceId: encodeId("mnt", window.id),
+		});
+
+		let response = await dispatch(
+			db,
+			request("PUT", href, { key, body: { suppressAlerts: null } }),
+		);
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "validationError");
+		let unchanged = await db.findOne(maintenanceWindows, { where: { id: window.id } });
+		expect(unchanged?.suppress_alerts).toBe(false);
+	});
+
+	test("404s for another team's window, 401 without a key, 403 without maintenance:write", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let otherTeam = await createTeamRow(db);
+		let writer = await createApiKey(db, team.id, ["maintenance:write"]);
+		let reader = await createApiKey(db, team.id, ["maintenance:read"]);
+		let foreign = await createMaintenanceWindowRow(db, otherTeam.id);
+		let own = await createMaintenanceWindowRow(db, team.id);
+
+		let notFound = await dispatch(db, mergePatch(foreign.id, { name: "x" }, { key: writer }));
+		let unauthorized = await dispatch(db, mergePatch(own.id, { name: "x" }));
+		let forbidden = await dispatch(db, mergePatch(own.id, { name: "x" }, { key: reader }));
+
+		expect([notFound.status, unauthorized.status, forbidden.status]).toEqual([404, 401, 403]);
+	});
+});

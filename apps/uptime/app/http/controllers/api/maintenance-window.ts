@@ -1,11 +1,14 @@
 /**
  * API v1 item endpoints for a single maintenance window: get/update/delete and
  * ending it early, all requiring `maintenance:read`/`maintenance:write` via
- * `requireApiKey` and re-validating dates and the `monitorType`/`monitorId` scope pair.
+ * `requireApiKey`. `PUT` writes the fields it is sent and `PATCH` reads a JSON merge patch;
+ * both re-validate the dates and the `monitorType`/`monitorId` scope pair.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import type { RequestContext } from "remix/router";
 
 import * as s from "@sdxc/json-schema";
 import { issuesFrom } from "@sdxc/problem";
@@ -13,17 +16,96 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
-import type { InsertMaintenanceWindow } from "~/database/schema";
+import type { InsertMaintenanceWindow, SelectMaintenanceWindow } from "~/database/schema";
 
 import MaintenanceWindow from "~/app/data/maintenance-window";
 import { isResolvableScope } from "~/app/data/scope-monitors";
 import { apiScopeFrom, serializeMaintenanceWindow } from "~/app/http/controllers/api/maintenance";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { MAINTENANCE_ID_PARAMS, UPDATE_MAINTENANCE_BODY } from "~/app/http/openapi/maintenance";
+import {
+	MAINTENANCE_ID_PARAMS,
+	UPDATE_MAINTENANCE_BODY,
+	WRITABLE_MAINTENANCE,
+} from "~/app/http/openapi/maintenance";
+import { storedMonitorScope } from "~/app/lib/monitor-scope";
 import { apiProblems, invalidField, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
+import { readApiUpdate } from "~/app/services/api-update";
+import { encodeMonitorId } from "~/app/services/typed-id";
 import { maintenanceWindowRoutes } from "~/routes/api-groups";
+
+/**
+ * The window's writable members as its create body spells them, the target a `PATCH`
+ * merge patch applies to; the dates are ISO-8601 strings, the form a request sends.
+ */
+function writableMaintenanceWindow(window: SelectMaintenanceWindow) {
+	let scope = storedMonitorScope(window);
+	return {
+		name: window.name,
+		monitorType: scope.monitorType,
+		monitorId:
+			scope.monitorId === null ? null : encodeMonitorId(scope.monitorType, scope.monitorId),
+		startsAt: new Date(window.starts_at).toISOString(),
+		endsAt: new Date(window.ends_at).toISOString(),
+		suppressAlerts: window.suppress_alerts,
+		showOnStatusPage: window.show_on_status_page,
+	};
+}
+
+/**
+ * Applies a `PATCH` merge patch to one window, writing only the members it changed.
+ * A changed `monitorType` alone widens to the whole type, and a removed `monitorId` alone
+ * widens to every monitor.
+ *
+ * @param ctx - The request, after `requireApiKey("maintenance:write")`.
+ * @returns The updated window; a 404 for a window outside the team, before the body is read.
+ */
+async function patchMaintenanceWindow(ctx: RequestContext): Promise<Response> {
+	let { maintenanceId } = s.parse(MAINTENANCE_ID_PARAMS, ctx.params);
+	let existing = await MaintenanceWindow.findByIdForTeam(ctx.db, ctx.apiTeam.id, maintenanceId);
+	if (!existing)
+		return apiProblems.notFound({
+			detail: "Maintenance window not found",
+			instance: problemInstance(),
+		});
+
+	let update = await readApiUpdate(
+		ctx.request,
+		writableMaintenanceWindow(existing),
+		WRITABLE_MAINTENANCE,
+	);
+	if (update instanceof Response) return update;
+	let { value, changed } = update;
+
+	if (value.endsAt <= value.startsAt) {
+		return invalidField("endsAt must be after startsAt", "/endsAt");
+	}
+
+	let changes: Partial<InsertMaintenanceWindow> = {};
+	if (changed.has("name")) changes.name = value.name;
+
+	if (changed.has("monitorType") || changed.has("monitorId")) {
+		let scope = apiScopeFrom({
+			monitorType: changed.has("monitorType") ? value.monitorType : undefined,
+			monitorId: changed.has("monitorId") ? (value.monitorId ?? null) : undefined,
+		});
+		if (scope === null || !(await isResolvableScope(ctx.db, ctx.apiTeam.id, scope))) {
+			return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
+		}
+
+		changes.monitor_type = scope.monitorType;
+		changes.monitor_id = scope.monitorId;
+	}
+
+	if (changed.has("startsAt")) changes.starts_at = value.startsAt;
+	if (changed.has("endsAt")) changes.ends_at = value.endsAt;
+	if (changed.has("suppressAlerts")) changes.suppress_alerts = value.suppressAlerts;
+	if (changed.has("showOnStatusPage")) changes.show_on_status_page = value.showOnStatusPage;
+
+	let window = await MaintenanceWindow.updateById(ctx.db, maintenanceId, changes);
+	return apiSuccess({ maintenanceWindow: serializeMaintenanceWindow(window) });
+}
 
 export default createController(maintenanceWindowRoutes, {
 	middleware: [catchValidationError()],
@@ -41,6 +123,12 @@ export default createController(maintenanceWindowRoutes, {
 					});
 				return apiSuccess({ maintenanceWindow: serializeMaintenanceWindow(window) });
 			},
+		},
+
+		/** PATCH /api/v1/maintenance/:maintenanceId — merge-patches a maintenance window. */
+		maintenancePatch: {
+			middleware: [requireApiKey("maintenance:write")],
+			handler: patchMaintenanceWindow,
 		},
 
 		/** PUT /api/v1/maintenance/:maintenanceId — updates a maintenance window. */

@@ -1,13 +1,14 @@
 /**
  * API v1 item endpoints for a single alert: get/update/delete (`alerts:read`/
- * `alerts:write`) and its delivery-event history (`alerts:read`). Update only ever
- * touches `name`/`notifyOnRecovery`/`cooldownMinutes` and the
- * `monitorType`/`monitorId` scope pair — the channel strategy and its config are
- * immutable after creation; delete and recreate the alert to change channel.
+ * `alerts:write`) and its delivery-event history (`alerts:read`). `PATCH` reads a JSON
+ * merge patch over the alert as its create body spells it, channel settings included;
+ * `PUT` writes only `name`/`notifyOnRecovery`/`cooldownMinutes` and the scope pair.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import type { RequestContext } from "remix/router";
 
 import * as s from "@sdxc/json-schema";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
@@ -16,24 +17,130 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
-import type { InsertAlert } from "~/database/schema";
+import type { CreateAlertValues } from "~/app/http/controllers/api/alerts";
+import type { InsertAlert, SelectAlert } from "~/database/schema";
 
 import Alert from "~/app/data/alert";
 import AlertEvent from "~/app/data/alert-event";
 import { isResolvableScope } from "~/app/data/scope-monitors";
 import {
 	apiScopeFrom,
+	buildConfig,
 	serializeAlertSafe,
 	serializeAlertStrategyOnly,
 } from "~/app/http/controllers/api/alerts";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { ALERT_ID_PARAMS, UPDATE_ALERT_BODY } from "~/app/http/openapi/alerts";
+import { ALERT_ID_PARAMS, CREATE_ALERT_BODY, UPDATE_ALERT_BODY } from "~/app/http/openapi/alerts";
+import { storedMonitorScope } from "~/app/lib/monitor-scope";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
+import { readApiUpdate } from "~/app/services/api-update";
 import { apiPage, newestFirst, PAGING } from "~/app/services/pagination";
 import { encodeId, encodeMonitorId } from "~/app/services/typed-id";
 import { alertRoutes } from "~/routes/api-groups";
+
+/** The members that make up an alert's channel, rebuilt together when any of them changes. */
+const CHANNEL_MEMBERS = [
+	"strategy",
+	"email",
+	"subjectPrefix",
+	"url",
+	"secret",
+	"webhookUrl",
+	"channel",
+] as const;
+
+/**
+ * The alert's writable members as its create body spells them, the target an update's
+ * merge patch applies to. The channel's secrets are part of it so the patched alert still
+ * validates; they never leave the server.
+ */
+function writableAlert(alert: SelectAlert) {
+	let scope = storedMonitorScope(alert);
+	return {
+		name: alert.name,
+		notifyOnRecovery: alert.notify_on_recovery,
+		cooldownMinutes: alert.cooldown_minutes,
+		monitorType: scope.monitorType,
+		monitorId:
+			scope.monitorId === null ? null : encodeMonitorId(scope.monitorType, scope.monitorId),
+		...writableChannel(alert),
+	};
+}
+
+/** The stored channel config in the create body's flat spelling. */
+function writableChannel(alert: SelectAlert) {
+	switch (alert.config.strategy) {
+		case "email":
+			return {
+				strategy: "email",
+				email: alert.config.config.to,
+				subjectPrefix: alert.config.config.subjectPrefix,
+			};
+		case "webhook":
+			return {
+				strategy: "webhook",
+				url: alert.config.config.url,
+				secret: alert.config.config.secret,
+			};
+		case "slack":
+			return {
+				strategy: "slack",
+				webhookUrl: alert.config.config.webhookUrl,
+				channel: alert.config.config.channel,
+			};
+		case "discord":
+			return { strategy: "discord", webhookUrl: alert.config.config.webhookUrl };
+	}
+}
+
+/**
+ * Applies a `PATCH` merge patch to one alert, writing only the members it changed.
+ * A changed `monitorType` alone widens to the whole type, a removed `monitorId` alone
+ * widens to every monitor, and any changed channel member rebuilds the channel config.
+ *
+ * @param ctx - The request, after `requireApiKey("alerts:write")`.
+ * @returns The updated alert; a 404 for an alert outside the team, before the body is read.
+ */
+async function patchAlert(ctx: RequestContext): Promise<Response> {
+	let { alertId } = s.parse(ALERT_ID_PARAMS, ctx.params);
+	let existing = await Alert.findByIdForTeam(ctx.db, ctx.apiTeam.id, alertId);
+	if (!existing)
+		return apiProblems.notFound({ detail: "Alert not found", instance: problemInstance() });
+
+	let update = await readApiUpdate(ctx.request, writableAlert(existing), CREATE_ALERT_BODY);
+	if (update instanceof Response) return update;
+	let { value, changed } = update;
+
+	let changes: Partial<InsertAlert> = {};
+	if (changed.has("name")) changes.name = value.name;
+	if (changed.has("notifyOnRecovery")) changes.notify_on_recovery = value.notifyOnRecovery;
+	if (changed.has("cooldownMinutes")) changes.cooldown_minutes = value.cooldownMinutes;
+
+	/**
+	 * `CREATE_ALERT_BODY`'s inferred output loses its per-branch literal discriminant (see
+	 * `CreateAlertValues`); the same schema just validated the runtime shape.
+	 */
+	if (CHANNEL_MEMBERS.some((member) => changed.has(member)))
+		changes.config = buildConfig(value as CreateAlertValues);
+
+	if (changed.has("monitorType") || changed.has("monitorId")) {
+		let scope = apiScopeFrom({
+			monitorType: changed.has("monitorType") ? value.monitorType : undefined,
+			monitorId: changed.has("monitorId") ? (value.monitorId ?? null) : undefined,
+		});
+		if (scope === null || !(await isResolvableScope(ctx.db, ctx.apiTeam.id, scope))) {
+			return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
+		}
+
+		changes.monitor_type = scope.monitorType;
+		changes.monitor_id = scope.monitorId;
+	}
+
+	let alert = await Alert.updateById(ctx.db, alertId, changes);
+	return apiSuccess({ alert: serializeAlertStrategyOnly(alert) });
+}
 
 export default createController(alertRoutes, {
 	middleware: [catchValidationError()],
@@ -48,6 +155,12 @@ export default createController(alertRoutes, {
 					return apiProblems.notFound({ detail: "Alert not found", instance: problemInstance() });
 				return apiSuccess({ alert: serializeAlertSafe(alert) });
 			},
+		},
+
+		/** PATCH /api/v1/alerts/:alertId — merge-patches an alert. */
+		alertPatch: {
+			middleware: [requireApiKey("alerts:write")],
+			handler: patchAlert,
 		},
 
 		/** PUT /api/v1/alerts/:alertId — updates an alert's non-channel fields. */

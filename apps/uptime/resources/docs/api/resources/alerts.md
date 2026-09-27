@@ -278,21 +278,26 @@ curl https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123 \
 
 Webhook URLs and secrets stay out of `config`, so a webhook or Discord alert reports only its `strategy`.
 
-## PUT /api/v1/alerts/:id
+## PATCH /api/v1/alerts/:id
 
-Updates an existing alert. The notification channel is fixed at creation; to change it, delete the alert and create a new one.
+Updates an existing alert with a [JSON merge patch](/docs/api/overview#updating-resources).
 
-<!-- operation: alertUpdate -->
+<!-- operation: alertPatch -->
 
 ### Request Body
 
-Include only the fields you want to update: `name`, `notifyOnRecovery`, `cooldownMinutes`, `monitorType` and `monitorId`. Any other field, including `strategy` and the channel settings, is ignored.
+Every field `POST /api/v1/alerts` accepts is accepted here, with the same limits. Include only the fields you want to change:
 
-`monitorType` and `monitorId` are the alert's scope, and they move as a pair: send either one and both are rewritten, so narrowing an alert to a whole kind of monitor cannot leave the previous monitor's id behind it. Mention neither and the scope is left exactly as it is.
+- `null` resets `notifyOnRecovery` and `cooldownMinutes` to their defaults, and clears `subjectPrefix`, `secret` and `channel`.
+- `name`, `strategy` and a strategy's required setting (`email`, `url` or `webhookUrl`) cannot be removed.
+- A channel setting changes on its own, keeping the others: `{"email": "oncall@example.com"}` keeps the alert's `subjectPrefix`.
+- Switching `strategy` needs the new strategy's required setting in the same patch, `{"strategy": "discord", "webhookUrl": "..."}`, and drops the previous strategy's settings.
+
+`monitorType` and `monitorId` are the alert's scope, and they move as a pair: change either one and both are rewritten, so narrowing an alert to a whole kind of monitor cannot leave the previous monitor's id behind it. Mention neither and the scope is left exactly as it is.
 
 - `{"monitorType": "dns"}` — every DNS monitor
 - `{"monitorType": "dns", "monitorId": "..."}` — that one DNS monitor
-- `{"monitorId": null}` — back to team-wide
+- `{"monitorId": null}` or `{"monitorType": null}` — back to team-wide
 - `{"monitorId": "..."}` — that one HTTP monitor
 
 A `monitorId` that does not belong to the team, or that belongs to a different kind of monitor than `monitorType` names, answers a `404` `not-found` problem.
@@ -302,9 +307,9 @@ A `monitorId` that does not belong to the team, or that belongs to a different k
 #### cURL
 
 ```bash
-curl -X PUT https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123 \
+curl -X PATCH https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123 \
   -H "Authorization: Bearer uptime_your_api_key" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/merge-patch+json" \
   -d '{
     "name": "Updated Alert Name",
     "cooldownMinutes": 10,
@@ -337,6 +342,12 @@ The alert's `config` reports only its `strategy`.
 	}
 }
 ```
+
+### Update With PUT
+
+`PUT /api/v1/alerts/:id` updates `name`, `notifyOnRecovery`, `cooldownMinutes`, `monitorType` and `monitorId`, for integrations written before `PATCH` existed. Any other field, including `strategy` and the channel settings, is ignored, so the channel changes only through `PATCH`. A field you leave out keeps its value, and `null` is refused everywhere except `monitorId`. Sending either scope field rewrites both, as listed above: `{"monitorType": "dns"}` also clears a previous monitor id.
+
+<!-- operation: alertUpdate -->
 
 ## DELETE /api/v1/alerts/:id
 

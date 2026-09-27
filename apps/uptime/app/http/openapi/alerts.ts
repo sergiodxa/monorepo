@@ -107,7 +107,10 @@ const COMMON_ALERT_FIELDS = {
 /** The path params naming one alert. */
 export const ALERT_ID_PARAMS = s.object({ alertId: typedId("alt") });
 
-/** The body `POST /api/v1/alerts` accepts, one shape per channel strategy. */
+/**
+ * The body `POST /api/v1/alerts` accepts, one shape per channel strategy, and the shape a
+ * `PATCH`'s merge patch must leave an alert in.
+ */
 export const CREATE_ALERT_BODY = s.variant("strategy", {
 	email: s.object({
 		strategy: s.literal("email"),
@@ -146,6 +149,38 @@ export const UPDATE_ALERT_BODY = s.object({
 	monitorId: s.optional(s.nullable(s.string())),
 });
 
+/**
+ * The patch a `PATCH` documents: every member optional, and `null` removing one, which
+ * clears the scope or an optional channel setting and resets a defaulted member. The
+ * patched alert must pass {@link CREATE_ALERT_BODY}, so the limits are the create body's.
+ */
+const ALERT_PATCH = s.object({
+	name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
+	notifyOnRecovery: s.optional(s.nullable(s.boolean())),
+	cooldownMinutes: s.optional(s.nullable(s.number().pipe(checks.min(0), checks.max(1440)))),
+	monitorType: s.optional(
+		s.nullable(s.enum_(MONITOR_SCOPE_TYPES)).meta({
+			description: "Sent without `monitorId`, widens the alert to the whole type",
+		}),
+	),
+	monitorId: s.optional(
+		s.nullable(s.string()).meta({ description: "`null` widens the alert to every monitor" }),
+	),
+	strategy: s.optional(
+		s.enum_(ALERT_STRATEGIES).meta({
+			description: "Switching strategy requires the new strategy's settings",
+		}),
+	),
+	email: s.optional(s.string().pipe(checks.email()).meta({ description: "`email` strategy" })),
+	subjectPrefix: s.optional(s.nullable(s.string().pipe(checks.maxLength(100)))),
+	url: s.optional(s.string().pipe(checks.url()).meta({ description: "`webhook` strategy" })),
+	secret: s.optional(s.nullable(s.string().pipe(checks.maxLength(255)))),
+	webhookUrl: s.optional(
+		s.string().pipe(checks.url()).meta({ description: "`slack` and `discord` strategies" }),
+	),
+	channel: s.optional(s.nullable(s.string().pipe(checks.maxLength(100)))),
+});
+
 const ALERTS_INDEX = defineOperation("alertsIndex", routes.api.v1.alerts.index, {
 	summary: "List alerts",
 	tags: TAGS,
@@ -181,8 +216,22 @@ const ALERT_SHOW = defineOperation("alertShow", routes.api.v1.alerts.show, {
 	security: [{ apiKey: ["alerts:read"] }],
 });
 
-const ALERT_UPDATE = defineOperation("alertUpdate", routes.api.v1.alerts.update, {
+const ALERT_PATCH_OPERATION = defineOperation("alertPatch", routes.api.v1.alerts.patch, {
 	summary: "Update an alert",
+	description:
+		"An RFC 7396 JSON merge patch: send the members to change; `null` clears or resets one.",
+	tags: TAGS,
+	params: ALERT_ID_PARAMS,
+	body: { "application/merge-patch+json": ALERT_PATCH, "application/json": ALERT_PATCH },
+	responses: {
+		200: { description: "The updated alert", body: envelope({ alert: ALERT_SUMMARY }) },
+	},
+	problems: ["validationError", ...AUTH_PROBLEMS, "notFound", "unsupportedMediaType"],
+	security: [{ apiKey: ["alerts:write"] }],
+});
+
+const ALERT_UPDATE = defineOperation("alertUpdate", routes.api.v1.alerts.update, {
+	summary: "Update an alert (PUT)",
 	tags: TAGS,
 	params: ALERT_ID_PARAMS,
 	body: UPDATE_ALERT_BODY,
@@ -223,6 +272,7 @@ export const OPERATIONS = [
 	ALERTS_INDEX,
 	ALERTS_CREATE,
 	ALERT_SHOW,
+	ALERT_PATCH_OPERATION,
 	ALERT_UPDATE,
 	ALERT_DESTROY,
 	ALERT_EVENTS,

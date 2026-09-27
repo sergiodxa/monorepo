@@ -76,26 +76,35 @@ function windowName() {
 /** The path params naming one maintenance window. */
 export const MAINTENANCE_ID_PARAMS = s.object({ maintenanceId: typedId("mnt") });
 
+/** The members a window is created with; omitted defaulted ones take their defaults. */
+const MAINTENANCE_FIELDS = {
+	name: windowName(),
+	/**
+	 * Which monitor table `monitorId` names, or, alone, the whole type it covers.
+	 *
+	 * Stays optional beside an id for compatibility: `monitorId` alone meant an HTTP monitor
+	 * before this field existed, and requests still sending just that resolve the same way.
+	 */
+	monitorType: s.optional(
+		s.enum_(MONITOR_SCOPE_TYPES).meta({ description: "Defaults to `http` beside a `monitorId`" }),
+	),
+	monitorId: s.optional(s.nullable(s.string())),
+	startsAt: isoDateTime(),
+	endsAt: isoDateTime().meta({ description: "Must follow `startsAt`" }),
+	suppressAlerts: s.defaulted(s.boolean(), true),
+	showOnStatusPage: s.defaulted(s.boolean(), true),
+};
+
 /** The body `POST /api/v1/maintenance` accepts; `endsAt` must follow `startsAt`. */
 export const CREATE_MAINTENANCE_BODY = s
-	.object({
-		name: windowName(),
-		/**
-		 * Which monitor table `monitorId` names, or, alone, the whole type it covers.
-		 *
-		 * Stays optional beside an id for compatibility: `monitorId` alone meant an HTTP monitor
-		 * before this field existed, and requests still sending just that resolve the same way.
-		 */
-		monitorType: s.optional(
-			s.enum_(MONITOR_SCOPE_TYPES).meta({ description: "Defaults to `http` beside a `monitorId`" }),
-		),
-		monitorId: s.optional(s.nullable(s.string())),
-		startsAt: isoDateTime(),
-		endsAt: isoDateTime().meta({ description: "Must follow `startsAt`" }),
-		suppressAlerts: s.defaulted(s.boolean(), true),
-		showOnStatusPage: s.defaulted(s.boolean(), true),
-	})
+	.object(MAINTENANCE_FIELDS)
 	.refine((value) => value.endsAt > value.startsAt, "endsAt must be after startsAt");
+
+/**
+ * A window's writable members, which a `PATCH` merge patch must leave valid. The handler
+ * checks that `endsAt` follows `startsAt` itself, so the refusal points at `/endsAt`.
+ */
+export const WRITABLE_MAINTENANCE = s.object(MAINTENANCE_FIELDS);
 
 /**
  * The body `PUT /api/v1/maintenance/{maintenanceId}` accepts; every field is optional.
@@ -109,6 +118,27 @@ export const UPDATE_MAINTENANCE_BODY = s.object({
 	endsAt: s.optional(isoDateTime()),
 	suppressAlerts: s.optional(s.boolean()),
 	showOnStatusPage: s.optional(s.boolean()),
+});
+
+/**
+ * The patch a `PATCH` documents: every member optional, and `null` removing one, which
+ * clears the scope and resets a defaulted flag. The handler validates the patched window
+ * with {@link WRITABLE_MAINTENANCE}, so the limits are the create body's.
+ */
+const MAINTENANCE_PATCH = s.object({
+	name: s.optional(windowName()),
+	monitorType: s.optional(
+		s.nullable(s.enum_(MONITOR_SCOPE_TYPES)).meta({
+			description: "Sent without `monitorId`, widens the window to the whole type",
+		}),
+	),
+	monitorId: s.optional(
+		s.nullable(s.string()).meta({ description: "`null` widens the window to every monitor" }),
+	),
+	startsAt: s.optional(isoDateTime()),
+	endsAt: s.optional(isoDateTime().meta({ description: "Must follow `startsAt`" })),
+	suppressAlerts: s.optional(s.nullable(s.boolean())),
+	showOnStatusPage: s.optional(s.nullable(s.boolean())),
 });
 
 const MAINTENANCE_INDEX = defineOperation("maintenanceIndex", routes.api.v1.maintenance.index, {
@@ -152,8 +182,32 @@ const MAINTENANCE_SHOW = defineOperation("maintenanceShow", routes.api.v1.mainte
 	security: [{ apiKey: ["maintenance:read"] }],
 });
 
+const MAINTENANCE_PATCH_OPERATION = defineOperation(
+	"maintenancePatch",
+	routes.api.v1.maintenance.patch,
+	{
+		summary: "Update a maintenance window",
+		description:
+			"An RFC 7396 JSON merge patch: send the members to change; `null` clears or resets one.",
+		tags: TAGS,
+		params: MAINTENANCE_ID_PARAMS,
+		body: {
+			"application/merge-patch+json": MAINTENANCE_PATCH,
+			"application/json": MAINTENANCE_PATCH,
+		},
+		responses: {
+			200: {
+				description: "The updated maintenance window",
+				body: envelope({ maintenanceWindow: MAINTENANCE_WINDOW }),
+			},
+		},
+		problems: ["validationError", ...AUTH_PROBLEMS, "notFound", "unsupportedMediaType"],
+		security: [{ apiKey: ["maintenance:write"] }],
+	},
+);
+
 const MAINTENANCE_UPDATE = defineOperation("maintenanceUpdate", routes.api.v1.maintenance.update, {
-	summary: "Update a maintenance window",
+	summary: "Update a maintenance window (PUT)",
 	tags: TAGS,
 	params: MAINTENANCE_ID_PARAMS,
 	body: UPDATE_MAINTENANCE_BODY,
@@ -204,6 +258,7 @@ export const OPERATIONS = [
 	MAINTENANCE_INDEX,
 	MAINTENANCE_CREATE,
 	MAINTENANCE_SHOW,
+	MAINTENANCE_PATCH_OPERATION,
 	MAINTENANCE_UPDATE,
 	MAINTENANCE_DESTROY,
 	MAINTENANCE_END,

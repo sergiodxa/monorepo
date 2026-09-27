@@ -194,29 +194,31 @@ curl https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
 }
 ```
 
-## PUT /api/v1/maintenance/:id
+## PATCH /api/v1/maintenance/:id
 
-Updates an existing maintenance window.
+Updates an existing maintenance window with a [JSON merge patch](/docs/api/overview#updating-resources).
 
-<!-- operation: maintenanceUpdate -->
+<!-- operation: maintenancePatch -->
 
 ### Request Body
 
-| Field              | Type           | Required | Description                                                                          |
-| ------------------ | -------------- | -------- | ------------------------------------------------------------------------------------ |
-| `name`             | string         | No       | Name of the maintenance window (at least 1 character)                                |
-| `startsAt`         | string         | No       | Start time in ISO 8601 format                                                        |
-| `endsAt`           | string         | No       | End time in ISO 8601 format (must be after the window's start, sent or stored)       |
-| `monitorType`      | string         | No       | The kind of monitor the window is limited to: `http`, `dns`, `tcp`, `cron` or `flow` |
-| `monitorId`        | string \| null | No       | The single monitor the window is limited to, or `null` for all monitors              |
-| `suppressAlerts`   | boolean        | No       | Whether to suppress alerts during maintenance                                        |
-| `showOnStatusPage` | boolean        | No       | Whether to show maintenance on status page                                           |
+Include only the fields you want to change. `null` clears the scope and resets `suppressAlerts` and `showOnStatusPage` to `true`; `name`, `startsAt` and `endsAt` cannot be removed.
 
-`monitorType` and `monitorId` are the window's scope, and they move as a pair: send either one and both are rewritten, so narrowing a window to a whole kind of monitor cannot leave the previous monitor's id behind it. Mention neither and the scope is left exactly as it is.
+| Field              | Type            | Required | Description                                                                          |
+| ------------------ | --------------- | -------- | ------------------------------------------------------------------------------------ |
+| `name`             | string          | No       | Name of the maintenance window (at least 1 character)                                |
+| `startsAt`         | string          | No       | Start time in ISO 8601 format                                                        |
+| `endsAt`           | string          | No       | End time in ISO 8601 format (must be after the window's start, sent or stored)       |
+| `monitorType`      | string \| null  | No       | The kind of monitor the window is limited to: `http`, `dns`, `tcp`, `cron` or `flow` |
+| `monitorId`        | string \| null  | No       | The single monitor the window is limited to, or `null` for all monitors              |
+| `suppressAlerts`   | boolean \| null | No       | Whether to suppress alerts during maintenance; `null` resets it to `true`            |
+| `showOnStatusPage` | boolean \| null | No       | Whether to show maintenance on status page; `null` resets it to `true`               |
+
+`monitorType` and `monitorId` are the window's scope, and they move as a pair: change either one and both are rewritten, so narrowing a window to a whole kind of monitor cannot leave the previous monitor's id behind it. Mention neither and the scope is left exactly as it is.
 
 - `{"monitorType": "dns"}` — every DNS monitor
 - `{"monitorType": "dns", "monitorId": "..."}` — that one DNS monitor
-- `{"monitorId": null}` — back to team-wide
+- `{"monitorId": null}` or `{"monitorType": null}` — back to team-wide
 - `{"monitorId": "..."}` — that one HTTP monitor
 
 A `monitorId` that does not belong to the team, or that belongs to a different kind of monitor than `monitorType` names, answers a `404` `not-found` problem.
@@ -226,9 +228,9 @@ A `monitorId` that does not belong to the team, or that belongs to a different k
 #### cURL
 
 ```bash
-curl -X PUT https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
+curl -X PATCH https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
   -H "Authorization: Bearer uptime_your_api_key" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/merge-patch+json" \
   -d '{
     "name": "Extended Database Migration",
     "endsAt": "2026-02-15T06:00:00Z"
@@ -261,6 +263,12 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
 	}
 }
 ```
+
+### Update With PUT
+
+`PUT /api/v1/maintenance/:id` takes the same fields, for integrations written before `PATCH` existed. A field you leave out keeps its value, and `null` is refused everywhere except `monitorId`, where it widens the window back to team-wide. Sending either scope field rewrites both, and the window's `endsAt` must still follow its `startsAt`.
+
+<!-- operation: maintenanceUpdate -->
 
 ## DELETE /api/v1/maintenance/:id
 

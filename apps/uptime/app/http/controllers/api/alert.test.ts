@@ -17,6 +17,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
+import { DEFAULT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
@@ -549,5 +550,242 @@ describe("malformed alert ids", () => {
 
 		expect(response.status).toBe(400);
 		await expectProblem(response, "validationError");
+	});
+});
+
+describe("PATCH /api/v1/alerts/:alertId", () => {
+	/** A merge patch request, sent as `application/merge-patch+json` unless told otherwise. */
+	function mergePatch(
+		alertId: string,
+		body: unknown,
+		options: { key?: string; contentType?: string } = {},
+	) {
+		let headers: Record<string, string> = {
+			"content-type": options.contentType ?? "application/merge-patch+json",
+		};
+		if (options.key) headers.Authorization = `Bearer ${options.key}`;
+		return new Request(
+			`https://uptime.test${alertRoutes.alertPatch.href({ alertId: encodeId("alt", alertId) })}`,
+			{ method: "PATCH", headers, body: JSON.stringify(body) },
+		);
+	}
+
+	test("changes only the members the patch names", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+		let monitorId = crypto.randomUUID();
+		let alert = await createAlertRow(db, team.id, {
+			cooldown_minutes: 30,
+			monitor_type: "dns",
+			monitor_id: monitorId,
+		});
+
+		let response = await dispatch(db, mergePatch(alert.id, { name: "Patched" }, { key }));
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(alerts, { where: { id: alert.id } });
+		expect(updated?.name).toBe("Patched");
+		expect(updated?.cooldown_minutes).toBe(30);
+		expect(updated?.monitor_type).toBe("dns");
+		expect(updated?.monitor_id).toBe(monitorId);
+		expect(updated?.config).toEqual(alert.config);
+	});
+
+	test("null resets defaulted members", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+		let alert = await createAlertRow(db, team.id, {
+			notify_on_recovery: false,
+			cooldown_minutes: 30,
+		});
+
+		let response = await dispatch(
+			db,
+			mergePatch(alert.id, { notifyOnRecovery: null, cooldownMinutes: null }, { key }),
+		);
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(alerts, { where: { id: alert.id } });
+		expect(updated?.notify_on_recovery).toBe(true);
+		expect(updated?.cooldown_minutes).toBe(DEFAULT_COOLDOWN_MINUTES);
+	});
+
+	test("patches one channel setting and keeps the others", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+		let alert = await createAlertRow(db, team.id, {
+			config: { strategy: "email", config: { to: "ops@example.com", subjectPrefix: "[prod]" } },
+		});
+
+		let response = await dispatch(
+			db,
+			mergePatch(alert.id, { email: "oncall@example.com" }, { key }),
+		);
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(alerts, { where: { id: alert.id } });
+		expect(updated?.config).toEqual({
+			strategy: "email",
+			config: { to: "oncall@example.com", subjectPrefix: "[prod]" },
+		});
+	});
+
+	test("null clears an optional channel setting", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+		let alert = await createAlertRow(db, team.id, {
+			config: {
+				strategy: "slack",
+				config: { webhookUrl: "https://hooks.slack.test/a", channel: "#ops" },
+			},
+		});
+
+		let response = await dispatch(db, mergePatch(alert.id, { channel: null }, { key }));
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(alerts, { where: { id: alert.id } });
+		expect(updated?.config).toEqual({
+			strategy: "slack",
+			config: { webhookUrl: "https://hooks.slack.test/a" },
+		});
+	});
+
+	test("switches strategy when the patch carries the new strategy's settings", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+		let alert = await createAlertRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			mergePatch(
+				alert.id,
+				{ strategy: "discord", webhookUrl: "https://discord.test/hook" },
+				{ key },
+			),
+		);
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(alerts, { where: { id: alert.id } });
+		expect(updated?.config).toEqual({
+			strategy: "discord",
+			config: { webhookUrl: "https://discord.test/hook" },
+		});
+	});
+
+	test("switching strategy without its settings answers validation-error", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+		let alert = await createAlertRow(db, team.id);
+
+		let response = await dispatch(db, mergePatch(alert.id, { strategy: "slack" }, { key }));
+
+		expect(response.status).toBe(400);
+		let problem = await expectProblem(response, "validationError");
+		expect(problem.extensions.errors.map((issue) => issue.pointer)).toEqual(["/webhookUrl"]);
+		let unchanged = await db.findOne(alerts, { where: { id: alert.id } });
+		expect(unchanged?.config).toEqual(alert.config);
+	});
+
+	test("null on a required member answers validation-error at its pointer", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+		let alert = await createAlertRow(db, team.id);
+
+		let response = await dispatch(db, mergePatch(alert.id, { name: null }, { key }));
+
+		expect(response.status).toBe(400);
+		let problem = await expectProblem(response, "validationError");
+		expect(problem.extensions.errors.map((issue) => issue.pointer)).toEqual(["/name"]);
+	});
+
+	test("null monitorType widens the alert to every monitor", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+		let alert = await createAlertRow(db, team.id, { monitor_type: "dns", monitor_id: null });
+
+		let response = await dispatch(db, mergePatch(alert.id, { monitorType: null }, { key }));
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(alerts, { where: { id: alert.id } });
+		expect(updated?.monitor_type).toBeNull();
+		expect(updated?.monitor_id).toBeNull();
+	});
+
+	test("accepts application/json as a merge patch", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+		let alert = await createAlertRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			mergePatch(alert.id, { name: "Json" }, { key, contentType: "application/json" }),
+		);
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(alerts, { where: { id: alert.id } });
+		expect(updated?.name).toBe("Json");
+	});
+
+	test("answers unsupported-media-type with Accept-Patch for any other body", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+		let alert = await createAlertRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			mergePatch(alert.id, { name: "x" }, { key, contentType: "text/plain" }),
+		);
+
+		expect(response.status).toBe(415);
+		expect(response.headers.get("Accept-Patch")).toBe("application/merge-patch+json");
+		await expectProblem(response, "unsupportedMediaType");
+	});
+
+	test("PUT keeps ignoring channel settings and refusing null", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+		let alert = await createAlertRow(db, team.id, { cooldown_minutes: 30 });
+		let href = alertRoutes.alertUpdate.href({ alertId: encodeId("alt", alert.id) });
+
+		let ignored = await dispatch(
+			db,
+			req("PUT", href, key, { name: "Put", email: "oncall@example.com" }),
+		);
+		let refused = await dispatch(db, req("PUT", href, key, { cooldownMinutes: null }));
+
+		expect(ignored.status).toBe(200);
+		expect(refused.status).toBe(400);
+		await expectProblem(refused, "validationError");
+		let updated = await db.findOne(alerts, { where: { id: alert.id } });
+		expect(updated?.name).toBe("Put");
+		expect(updated?.config).toEqual(alert.config);
+		expect(updated?.cooldown_minutes).toBe(30);
+	});
+
+	test("404s for another team's alert, 401 without a key, 403 without alerts:write", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let otherTeam = await createTeamRow(db);
+		let writer = await createApiKey(db, team.id, ["alerts:write"]);
+		let reader = await createApiKey(db, team.id, ["alerts:read"]);
+		let foreign = await createAlertRow(db, otherTeam.id);
+		let own = await createAlertRow(db, team.id);
+
+		let notFound = await dispatch(db, mergePatch(foreign.id, { name: "x" }, { key: writer }));
+		let unauthorized = await dispatch(db, mergePatch(own.id, { name: "x" }));
+		let forbidden = await dispatch(db, mergePatch(own.id, { name: "x" }, { key: reader }));
+
+		expect([notFound.status, unauthorized.status, forbidden.status]).toEqual([404, 401, 403]);
 	});
 });

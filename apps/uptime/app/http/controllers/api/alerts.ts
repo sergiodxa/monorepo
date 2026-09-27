@@ -101,14 +101,14 @@ export function serializeAlertStrategyOnly(alert: SelectAlert) {
  * output widens the merged `strategy` field to `string`, so this type gives
  * `buildConfig`'s switch back the literal discriminant it needs to narrow.
  */
-type CreateAlertValues =
+export type CreateAlertValues =
 	| { strategy: "email"; email: string; subjectPrefix?: string; monitorId?: string }
 	| { strategy: "webhook"; url: string; secret?: string; monitorId?: string }
 	| { strategy: "slack"; webhookUrl: string; channel?: string; monitorId?: string }
 	| { strategy: "discord"; webhookUrl: string; monitorId?: string };
 
 /** Builds the strategy-specific `AlertConfig` JSON column from validated input. */
-function buildConfig(values: CreateAlertValues): AlertConfig {
+export function buildConfig(values: CreateAlertValues): AlertConfig {
 	switch (values.strategy) {
 		case "email":
 			return {
