@@ -1,7 +1,6 @@
 {
 	"name": "@sdxc/webmention",
 	"version": "0.0.1",
-	"private": true,
 	"description": "Receive, verify, discover and send Webmentions",
 	"license": "MIT",
 	"type": "module",
