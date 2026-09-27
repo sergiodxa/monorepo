@@ -44,6 +44,11 @@ export function createAuditEventsListAction(options: ManagementControllerOptions
 			managementTenant(options.resolveStub),
 			managementRateLimit(options.limiter, { bucket: "read" }),
 		],
+		/**
+		 * Answers one page, or `badCursor` for a cursor minted under another ordering. The
+		 * stub's answer is read as `readAuditPage`'s own union, so both of its branches stay
+		 * reachable through the RPC type.
+		 */
 		handler: async (ctx) => {
 			let refused = requireScope(ctx, "audit:read");
 			if (refused) return refused;
@@ -67,8 +72,6 @@ export function createAuditEventsListAction(options: ManagementControllerOptions
 				limit: paging.data.perPage,
 			});
 
-			// Named to the same union `readAuditPage` itself answers with, so both
-			// its success and its bad-cursor branch stay reachable through the stub.
 			let result = read as WithCost<ReadAuditPageResult>;
 
 			if (!result.ok) {
