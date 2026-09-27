@@ -1,15 +1,14 @@
 /**
- * View for the blog post detail page: tags, eyebrow, title, a "View as Markdown"
- * link, and the Markdown body, followed by a sponsor call-to-action and, for
- * tutorials, an embedded related-posts frame. Prose rhythm comes from the design
- * system's `Typeset` layer, with the code-block theme layered on top from
- * `highlight.css`.
+ * View for the blog post detail page, marked up as an `h-entry` (name, byline, date,
+ * content) so IndieWeb readers see who wrote it and when, followed by a sponsor
+ * call-to-action and, for tutorials, an embedded related-posts frame.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { toRemix } from "@sdxc/markdown/remix";
+import { MicroTime, mf } from "@sdxc/microformats/ui";
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { basis, contents, flexWrap, gap, grid, grow, hstack, shrink } from "@sdxc/u/layout";
@@ -50,71 +49,97 @@ export function PostView() {
 				meta={model.meta}
 			>
 				<main mix={[grid(), gap(4), mi("auto")]}>
-					<header mix={[contents()]}>
-						<div mix={[hstack({ gap: 2, align: "center" }), is("full"), flexWrap("wrap")]}>
-							{model.post.tags.length > 0 && (
-								<div mix={[hstack({ gap: 2 }), flexWrap("wrap")]}>
-									{model.post.tags.map((tag) => (
-										<Badge key={tag} color="brand" variant="secondary">
-											{tag}
-										</Badge>
-									))}
-								</div>
-							)}
-						</div>
-
-						<hgroup mix={[contents()]}>
-							<div
-								mix={[hstack({ gap: 3, align: "center", justify: "between" }), flexWrap("wrap")]}
-							>
-								<p
-									mix={[
-										m(0),
-										textTransform("uppercase"),
-										tracking("widest"),
-										text("sm"),
-										fg("neutral.muted"),
-										weight("bold"),
-									]}
-								>
-									{model.post.eyebrow}
-								</p>
-
-								<Link
-									href={routes.post.href({
-										postType: model.post.typePath,
-										postSlug: model.post.slug,
-										ext: "md",
-									})}
-									mix={[text("sm"), shrink(0)]}
-								>
-									View as Markdown
-								</Link>
+					<article mix={[mf("h-entry"), contents()]}>
+						<header mix={[contents()]}>
+							<div mix={[hstack({ gap: 2, align: "center" }), is("full"), flexWrap("wrap")]}>
+								{model.post.tags.length > 0 && (
+									<div mix={[hstack({ gap: 2 }), flexWrap("wrap")]}>
+										{model.post.tags.map((tag) => (
+											<Badge key={tag} color="brand" variant="secondary" mix={[mf("p-category")]}>
+												{tag}
+											</Badge>
+										))}
+									</div>
+								)}
 							</div>
 
-							<Heading level={1} mix={[m(0), text("4xl"), overflowWrap("break-word")]}>
-								{model.post.title}
-							</Heading>
-						</hgroup>
-					</header>
+							<hgroup mix={[contents()]}>
+								<div
+									mix={[hstack({ gap: 3, align: "center", justify: "between" }), flexWrap("wrap")]}
+								>
+									<p
+										mix={[
+											m(0),
+											textTransform("uppercase"),
+											tracking("widest"),
+											text("sm"),
+											fg("neutral.muted"),
+											weight("bold"),
+										]}
+									>
+										{model.post.eyebrow}
+									</p>
 
-					<article
-						mix={[
-							p(4),
-							border({ width: 1, color: "neutral" }),
-							rounded("lg"),
-							bg("neutral.bg-tint-hover"),
-							bleed(4),
-							overflowWrap("break-word"),
-							tabSize(),
-							minIs(0),
-						]}
-					>
-						{model.post.document ? (
-							<Typeset preset="reading">{toRemix(model.post.document)}</Typeset>
-						) : (
-							<p mix={[m(0)]}>No content.</p>
-						)}
+									<Link
+										href={routes.post.href({
+											postType: model.post.typePath,
+											postSlug: model.post.slug,
+											ext: "md",
+										})}
+										mix={[text("sm"), shrink(0)]}
+									>
+										View as Markdown
+									</Link>
+								</div>
+
+								<Heading
+									level={1}
+									mix={[mf("p-name"), m(0), text("4xl"), overflowWrap("break-word")]}
+								>
+									{model.post.title}
+								</Heading>
+
+								<p mix={[m(0), text("sm"), fg("neutral.muted")]}>
+									By{" "}
+									<a
+										href={PROFILE.canonical.origin}
+										mix={[mf("p-author", "h-card"), fg("neutral.muted")]}
+									>
+										{PROFILE.name}
+									</a>
+									{model.post.published && (
+										<>
+											{" · "}
+											<a href={model.post.url} mix={[mf("u-url", "u-uid"), fg("neutral.muted")]}>
+												<MicroTime property="dt-published" value={model.post.published}>
+													{model.post.publishedLabel}
+												</MicroTime>
+											</a>
+										</>
+									)}
+								</p>
+							</hgroup>
+						</header>
+
+						<div
+							mix={[
+								mf("e-content"),
+								p(4),
+								border({ width: 1, color: "neutral" }),
+								rounded("lg"),
+								bg("neutral.bg-tint-hover"),
+								bleed(4),
+								overflowWrap("break-word"),
+								tabSize(),
+								minIs(0),
+							]}
+						>
+							{model.post.document ? (
+								<Typeset preset="reading">{toRemix(model.post.document)}</Typeset>
+							) : (
+								<p mix={[m(0)]}>No content.</p>
+							)}
+						</div>
 					</article>
 
 					<Card

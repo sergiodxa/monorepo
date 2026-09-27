@@ -31,6 +31,11 @@ export namespace FeedViewModel {
 		date: string;
 		/** Whether the activity points to preview-only content. */
 		preview: boolean;
+		/**
+		 * `true` when `href` is someone else's page the author saved, which the view marks
+		 * up as the entry's `bookmark-of` rather than its own permalink.
+		 */
+		bookmark: boolean;
 		/** Emoji icon standing in for the activity type. */
 		icon: string;
 		/**
@@ -76,6 +81,7 @@ export class FeedViewModel {
 						label: `I wrote about ${item.title}`,
 						date: item.date,
 						preview: item.preview,
+						bookmark: false,
 						icon: "📝",
 						iconTint: "brand.emphasis",
 					};
@@ -89,6 +95,7 @@ export class FeedViewModel {
 						label: `I published how to ${item.title}`,
 						date: item.date,
 						preview: item.preview,
+						bookmark: false,
 						icon: "🛠️",
 						iconTint: "brand",
 					};
@@ -102,6 +109,7 @@ export class FeedViewModel {
 						label: `I saved ${item.title}`,
 						date: item.date,
 						preview: item.preview,
+						bookmark: true,
 						icon: "🔖",
 						iconTint: "neutral.emphasis",
 					};
@@ -114,6 +122,7 @@ export class FeedViewModel {
 					label: `I added the definition of ${item.title}`,
 					date: item.date,
 					preview: item.preview,
+					bookmark: false,
 					icon: "📘",
 					iconTint: "neutral",
 				};
@@ -137,6 +146,7 @@ export class FeedViewModel {
 			label: string;
 			date: string;
 			preview: boolean;
+			bookmark: boolean;
 			icon: string;
 			iconTint: string;
 		} | null,

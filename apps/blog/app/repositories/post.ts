@@ -133,6 +133,7 @@ export namespace Post {
 						content: string;
 					};
 					published_at: string | null;
+					created_at: string;
 				};
 		  }
 		| {
@@ -145,6 +146,7 @@ export namespace Post {
 						content: string;
 					};
 					published_at: string | null;
+					created_at: string;
 				};
 				tags: Array<string>;
 		  };
@@ -276,6 +278,7 @@ export class Post {
 						content: post.meta.content,
 					},
 					published_at: post.published_at,
+					created_at: post.created_at,
 				},
 			};
 		}
@@ -293,6 +296,7 @@ export class Post {
 					content: post.meta.content,
 				},
 				published_at: post.published_at,
+				created_at: post.created_at,
 			},
 			tags: TutorialPost.tags(post.meta.tags),
 		};

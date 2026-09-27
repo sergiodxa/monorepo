@@ -530,7 +530,9 @@ with `stringify(item)` (ADR-095).
   - [x] `./vocabulary`, tested against the IndieWeb wiki's examples
   - [x] `mf()`, `classes()`, `MicroTime`, with type tests for the class-name unions
   - [x] README and root README row
-- [ ] Phase 4: Mark up the blog
+- [x] Phase 4: Mark up the blog
+  - [x] `h-entry` on the post page (name, byline `h-card`, `u-url u-uid`, `dt-published`, `e-content`, `p-category`), `h-feed` on the home and bookmarks pages, the site `h-card` and `rel="me"` links
+  - [x] `microformats.workers.test.ts` parses the rendered pages with the package itself
 - [ ] Phase 5: Publish
 
 ## Notes

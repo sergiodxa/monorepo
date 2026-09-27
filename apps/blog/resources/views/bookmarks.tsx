@@ -1,13 +1,13 @@
 /**
- * View for the public bookmarks list page. Renders an intro, an RSS subscribe
- * link, and a dated list of bookmark rows with an optional suffix link (e.g. an
- * archive snapshot). Includes helpers to normalize bookmark URLs into safe hrefs
- * and to format dates. Exists to publish links the author read and liked.
+ * View for the public bookmarks list page: an intro, an RSS subscribe link, and an
+ * `h-feed` of dated bookmark rows, each an `h-entry` whose `u-bookmark-of` is the saved
+ * page, with an optional archive-snapshot link. Publishes links the author liked.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import { mf } from "@sdxc/microformats/ui";
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { listStyle } from "@sdxc/u/general";
@@ -72,6 +72,16 @@ function formatDate(value: string) {
 }
 
 /**
+ * The machine-readable instant for `<time datetime>`, which carries the `dt-published`
+ * a microformats parser reads; `undefined` for an unparseable value, omitting it.
+ */
+function isoDate(value: string) {
+	let date = new Date(value);
+	if (Number.isNaN(date.getTime())) return undefined;
+	return date.toISOString();
+}
+
+/**
  * Creates the bookmarks page renderer. The archive suffix is a native anchor
  * so the lone glyph renders free of the underline `@sdxc/ui`'s Link always
  * applies.
@@ -83,8 +93,8 @@ export function BookmarksView() {
 			description="Links that I read and liked."
 			activePath={routes.bookmarks.href()}
 		>
-			<main mix={[grid(), gap(4)]}>
-				<Heading level={1} mix={[text("3xl")]}>
+			<main mix={[mf("h-feed"), grid(), gap(4)]}>
+				<Heading level={1} mix={[mf("p-name"), text("3xl")]}>
 					Bookmarks
 				</Heading>
 				<p mix={[m(0), maxIs("52ch"), text("lg"), fg("neutral")]}>Links that I read and liked.</p>
@@ -99,6 +109,7 @@ export function BookmarksView() {
 							<li
 								key={item.href}
 								mix={[
+									mf("h-entry"),
 									grid(),
 									gridTemplate({ columns: "1fr auto" }),
 									gap(3),
@@ -110,7 +121,12 @@ export function BookmarksView() {
 								]}
 							>
 								<p mix={[m(0), text("lg"), fg("neutral.emphasis")]}>
-									<Link href={normalizeBookmarkHref(item.href)}>{item.label}</Link>
+									<Link
+										href={normalizeBookmarkHref(item.href)}
+										mix={[mf("u-bookmark-of", "p-name")]}
+									>
+										{item.label}
+									</Link>
 									{item.preview && (
 										<Badge color="warning" variant="secondary" mix={[mis(2)]}>
 											Preview
@@ -118,7 +134,10 @@ export function BookmarksView() {
 									)}
 								</p>
 								<div mix={[hstack({ gap: 2, align: "center" }), nowrap()]}>
-									<time mix={[text("sm"), fg("neutral.muted"), tabularNums()]}>
+									<time
+										datetime={isoDate(item.date)}
+										mix={[mf("dt-published"), text("sm"), fg("neutral.muted"), tabularNums()]}
+									>
 										{formatDate(item.date)}
 									</time>
 									{item.suffixHref && item.suffixLabel && (

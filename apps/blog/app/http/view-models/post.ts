@@ -11,6 +11,8 @@ import { highlight } from "@sdxc/highlight/markdown";
 import { Markdown } from "@sdxc/markdown";
 import { succeeded } from "@sdxc/result";
 
+import { Post } from "~/app/repositories/post";
+
 /**
  * Type contracts used to build the post page view model.
  *
@@ -42,6 +44,15 @@ export namespace PostViewModel {
 			eyebrow: string;
 			/** Raw DB publish timestamp where `null` means already published. */
 			publishedAt: string | null;
+			/** Absolute permalink, the entry's `u-url`, independent of any external canonical. */
+			url: string;
+			/**
+			 * When the post went public: its publish date, else its creation date for a post
+			 * published on save; `null` only when neither timestamp parses.
+			 */
+			published: Date | null;
+			/** `published` as the short English date shown under the title. */
+			publishedLabel: string;
 			format: "html" | "md" | undefined;
 			/** Tutorial tags, or an empty list for article posts. */
 			tags: Array<string>;
@@ -70,6 +81,7 @@ export namespace PostViewModel {
 			};
 			/** Publish timestamp in DB format; `null` means published. */
 			published_at: string | null;
+			created_at: string;
 		};
 	}
 
@@ -91,6 +103,7 @@ export namespace PostViewModel {
 			};
 			/** Publish timestamp in DB format; `null` means published. */
 			published_at: string | null;
+			created_at: string;
 		};
 		/** Tutorial tags shown as "Used" technologies in rendered markdown body. */
 		tags: Array<string>;
@@ -159,6 +172,7 @@ export class PostViewModel {
 					typePath: loadedPost.postType,
 					eyebrow: "Article",
 					publishedAt: post.published_at,
+					...this.publication(post, postUrl),
 					format,
 					tags: [],
 				},
@@ -195,11 +209,36 @@ export class PostViewModel {
 				typePath: loadedPost.postType,
 				eyebrow: "Tutorial",
 				publishedAt: post.published_at,
+				...this.publication(post, postUrl),
 				format,
 				tags: loadedPost.tags,
 			},
 			markdownBody: `# ${title}\n\nUsed: ${loadedPost.tags.join(" - ")}\n\n${post.meta.content}\n\n`,
 		};
+	}
+
+	/**
+	 * The permalink and publication date the page marks up as its `h-entry`, so a
+	 * parser reading the page finds the same instant the feed lists it under.
+	 *
+	 * @param post Stored timestamps of the post.
+	 * @param url The post's absolute permalink.
+	 */
+	private static publication(
+		post: { published_at: string | null; created_at: string },
+		url: string,
+	): { url: string; published: Date | null; publishedLabel: string } {
+		let timestamp = Post.timestampFromPublishedOrCreated(post);
+		if (Number.isNaN(timestamp)) return { url, published: null, publishedLabel: "" };
+
+		let published = new Date(timestamp);
+		let publishedLabel = published.toLocaleDateString("en", {
+			month: "long",
+			day: "numeric",
+			year: "numeric",
+			timeZone: "UTC",
+		});
+		return { url, published, publishedLabel };
 	}
 
 	/**

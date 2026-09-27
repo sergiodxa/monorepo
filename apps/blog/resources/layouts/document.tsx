@@ -15,8 +15,15 @@ import { colorScheme } from "@sdxc/u/color";
 import resetStyles from "@sdxc/ui/reset.css?url";
 import themeStyles from "@sdxc/ui/theme.css?url";
 
+import { PROFILE } from "~/config/profile";
 import colorStyles from "~/resources/css/colors.css?url";
 import codeStyles from "~/resources/css/highlight.css?url";
+
+/**
+ * The profiles `rel="me"` claims as the site owner's, which is how an IndieWeb reader
+ * (or a profile page linking back) verifies the identity across sites.
+ */
+const REL_ME = [PROFILE.github.profile, PROFILE.x.profile, PROFILE.youtube.profile];
 
 namespace DocumentLayout {
 	/**
@@ -102,6 +109,9 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 						<meta name="description" content={description} data-rmx-key="description" />
 					)}
 					{canonical && <link rel="canonical" href={canonical} data-rmx-key="canonical" />}
+					{REL_ME.map((href) => (
+						<link key={href} rel="me" href={href} data-rmx-key={`me:${href}`} />
+					))}
 					{meta.map((tag) => {
 						let identity = tag.property ?? tag.name ?? tag.content;
 

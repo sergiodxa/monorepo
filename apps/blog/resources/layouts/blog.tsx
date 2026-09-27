@@ -1,8 +1,8 @@
 /**
  * Layout component for public blog pages. Composes the shared document shell,
  * forwarding the page's title, description, canonical and social tags, and draws
- * the silvered body and main navigation bar before the page children. Exists to
- * give every public page a shared shell.
+ * the silvered body, the site's `h-card` and the main navigation bar before the page
+ * children, giving every public page a shared shell and identity.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,14 +10,16 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
+import { mf } from "@sdxc/microformats/ui";
 import { bg, border, fg, radialGradient } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { flexWrap, hstack } from "@sdxc/u/layout";
 import { m, maxIs, mbe, mbs, mi, minBs, pb, pbe, pbs, pi } from "@sdxc/u/size";
 import { color } from "@sdxc/u/tokens";
-import { font, text, textTransform, tracking } from "@sdxc/u/typography";
+import { font, text, textDecoration, textTransform, tracking } from "@sdxc/u/typography";
 import { NavLink } from "@sdxc/ui";
 
+import { PROFILE } from "~/config/profile";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
@@ -107,6 +109,7 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 					<header mix={[mbe(8)]}>
 						<p
 							mix={[
+								mf("h-card"),
 								m(0),
 								text("xs"),
 								textTransform("uppercase"),
@@ -114,7 +117,14 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 								fg("neutral.muted"),
 							]}
 						>
-							Sergio Xalambrí
+							<a
+								href={PROFILE.canonical.origin}
+								mix={[mf("p-name", "u-url", "u-uid"), fg("neutral.muted"), textDecoration("none")]}
+							>
+								{PROFILE.name}
+							</a>
+							<data mix={[mf("u-photo")]} value={PROFILE.github.avatar} />
+							<data mix={[mf("p-note")]} value={PROFILE.summary} />
 						</p>
 						<nav aria-label="Main" mix={[hstack({ gap: 2 }), flexWrap("wrap"), mbs(3)]}>
 							{navigationItems.map((item) => {

@@ -1,8 +1,8 @@
 /**
  * View for the site home/feed page. Renders the author intro, an RSS link, and
- * a chronological "Activity" timeline of posts, each with an icon, label, date,
- * and optional preview badge. Includes a helper to format activity dates for
- * compact display. Exists as the landing page of the public blog.
+ * a chronological "Activity" timeline of posts as an `h-feed` of `h-entry` rows, each
+ * with an icon, label, date, and optional preview badge. Exists as the landing page
+ * of the public blog.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,6 +10,7 @@
 
 import type { ColorValue } from "@sdxc/u";
 
+import { mf } from "@sdxc/microformats/ui";
 import { fg } from "@sdxc/u/color";
 import { listStyle } from "@sdxc/u/general";
 import { gap, grid, gridTemplate, inlineFlex, items, justify } from "@sdxc/u/layout";
@@ -33,6 +34,8 @@ export namespace FeedView {
 		label: string;
 		date: string;
 		preview: boolean;
+		/** Whether `href` is a saved external page, marked up as `u-bookmark-of`. */
+		bookmark: boolean;
 		icon: string;
 		/** Semantic tone the icon is tinted with, resolved through `fg()` at render. */
 		iconTint: ColorValue;
@@ -57,6 +60,16 @@ function formatDate(value: string) {
 }
 
 /**
+ * The machine-readable instant for `<time datetime>`, which carries the `dt-published`
+ * a microformats parser reads; `undefined` for an unparseable value, omitting it.
+ */
+function isoDate(value: string) {
+	let date = new Date(value);
+	if (Number.isNaN(date.getTime())) return undefined;
+	return date.toISOString();
+}
+
+/**
  * Builds the feed page renderer used by the feed route response. A fixed icon
  * column keeps every row's label at the same inline offset whatever the
  * emoji's intrinsic width.
@@ -64,8 +77,8 @@ function formatDate(value: string) {
 export function FeedView() {
 	return ({ model }: { model: FeedView.Model }) => (
 		<BlogLayout title="Sergio Xalambrí" description="Sergio Xalambrí" activePath="/">
-			<main mix={[grid(), gap(4)]}>
-				<Heading level={1} mix={[m(0), text("4xl")]}>
+			<main mix={[mf("h-feed"), grid(), gap(4)]}>
+				<Heading level={1} mix={[mf("p-name"), m(0), text("4xl")]}>
 					Sergio Xalambrí
 				</Heading>
 				<p mix={[m(0), fg("neutral"), maxIs("60ch"), text("lg")]}>
@@ -86,6 +99,7 @@ export function FeedView() {
 						<li
 							key={item.href + String(index)}
 							mix={[
+								mf("h-entry"),
 								grid(),
 								gridTemplate({ columns: `${spacing(7)} 1fr auto` }),
 								gap(3),
@@ -107,14 +121,22 @@ export function FeedView() {
 								{item.icon}
 							</span>
 							<p mix={[m(0), text("lg"), fg("neutral.emphasis")]}>
-								<Link href={item.href}>{item.label}</Link>
+								<Link
+									href={item.href}
+									mix={[mf(item.bookmark ? "u-bookmark-of" : "u-url", "p-name")]}
+								>
+									{item.label}
+								</Link>
 								{item.preview && (
 									<Badge color="warning" variant="secondary" mix={[mis(2)]}>
 										Preview
 									</Badge>
 								)}
 							</p>
-							<time mix={[fg("neutral.muted"), text("sm"), nowrap(), mbs(1)]}>
+							<time
+								datetime={isoDate(item.date)}
+								mix={[mf("dt-published"), fg("neutral.muted"), text("sm"), nowrap(), mbs(1)]}
+							>
 								{formatDate(item.date)}
 							</time>
 						</li>
