@@ -142,18 +142,29 @@ function dnsInterval() {
 		.pipe(checks.min(MIN_DNS_INTERVAL_SECONDS), checks.max(MAX_DNS_INTERVAL_SECONDS));
 }
 
-/** The body `POST /api/v1/dns-monitors` accepts; omitted fields take their defaults. */
-export const CREATE_DNS_MONITOR_BODY = s.object({
+/** The members a DNS monitor is created with and keeps; omitted ones take their defaults. */
+const DNS_MONITOR_FIELDS = {
 	name: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
 	domain: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
+	intervalSeconds: s.defaulted(dnsInterval(), DEFAULT_DNS_INTERVAL_SECONDS),
+	isEnabled: s.defaulted(s.boolean(), true),
+};
+
+/** The body `POST /api/v1/dns-monitors` accepts. */
+export const CREATE_DNS_MONITOR_BODY = s.object({
+	...DNS_MONITOR_FIELDS,
 	zoneFile: s.optional(
 		s.string().meta({
 			description: "A BIND zone file, parsed once; only the records it declares persist",
 		}),
 	),
-	intervalSeconds: s.defaulted(dnsInterval(), DEFAULT_DNS_INTERVAL_SECONDS),
-	isEnabled: s.defaulted(s.boolean(), true),
 });
+
+/**
+ * A DNS monitor's writable members, which an update's merge patch must leave valid. A zone
+ * file is re-imported through its own action, since its text is never persisted.
+ */
+export const WRITABLE_DNS_MONITOR = s.object(DNS_MONITOR_FIELDS);
 
 /**
  * The body `PUT /api/v1/dns-monitors/{dnsMonitorId}` accepts; every field is optional. A
@@ -164,6 +175,18 @@ export const UPDATE_DNS_MONITOR_BODY = s.object({
 	domain: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
 	intervalSeconds: s.optional(dnsInterval()),
 	isEnabled: s.optional(s.boolean()),
+});
+
+/**
+ * The patch an update documents: every member optional, and `null` removing one, which
+ * gives it its default. The handler validates the patched monitor with
+ * {@link WRITABLE_DNS_MONITOR}, so the limits are the create body's.
+ */
+const DNS_MONITOR_PATCH = s.object({
+	name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
+	domain: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
+	intervalSeconds: s.optional(s.nullable(dnsInterval())),
+	isEnabled: s.optional(s.nullable(s.boolean())),
 });
 
 /**
@@ -212,8 +235,29 @@ const DNS_MONITOR_SHOW = defineOperation("dnsMonitorShow", routes.api.v1.dnsMoni
 	security: [{ apiKey: ["dns-monitors:read"] }],
 });
 
+const DNS_MONITOR_PATCH_OPERATION = defineOperation(
+	"dnsMonitorPatch",
+	routes.api.v1.dnsMonitors.patch,
+	{
+		summary: "Update a DNS monitor",
+		description:
+			"An RFC 7396 JSON merge patch: send the members to change; `null` resets one to its default.",
+		tags: TAGS,
+		params: DNS_MONITOR_ID_PARAMS,
+		body: {
+			"application/merge-patch+json": DNS_MONITOR_PATCH,
+			"application/json": DNS_MONITOR_PATCH,
+		},
+		responses: {
+			200: { description: "The updated monitor", body: envelope({ dnsMonitor: DNS_MONITOR }) },
+		},
+		problems: ["validationError", ...AUTH_PROBLEMS, "notFound", "unsupportedMediaType"],
+		security: [{ apiKey: ["dns-monitors:write"] }],
+	},
+);
+
 const DNS_MONITOR_UPDATE = defineOperation("dnsMonitorUpdate", routes.api.v1.dnsMonitors.update, {
-	summary: "Update a DNS monitor",
+	summary: "Update a DNS monitor (PUT)",
 	tags: TAGS,
 	params: DNS_MONITOR_ID_PARAMS,
 	body: UPDATE_DNS_MONITOR_BODY,
@@ -282,7 +326,12 @@ const DNS_MONITOR_RECORD_UPDATE = defineOperation(
 		summary: "Enable or decline a tracked DNS record",
 		tags: TAGS,
 		params: DNS_MONITOR_RECORD_PARAMS,
-		body: UPDATE_DNS_MONITOR_RECORD_BODY,
+		description:
+			"`isEnabled` is required and no other member is accepted; a merge patch reads the same as a JSON body.",
+		body: {
+			"application/merge-patch+json": UPDATE_DNS_MONITOR_RECORD_BODY,
+			"application/json": UPDATE_DNS_MONITOR_RECORD_BODY,
+		},
 		responses: {
 			200: { description: "The updated record", body: envelope({ record: DNS_MONITOR_RECORD }) },
 		},
@@ -296,6 +345,7 @@ export const OPERATIONS = [
 	DNS_MONITORS_INDEX,
 	DNS_MONITORS_CREATE,
 	DNS_MONITOR_SHOW,
+	DNS_MONITOR_PATCH_OPERATION,
 	DNS_MONITOR_UPDATE,
 	DNS_MONITOR_DESTROY,
 	DNS_MONITOR_RESULTS,

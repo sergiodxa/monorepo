@@ -537,3 +537,85 @@ describe("malformed DNS monitor record ids", () => {
 		await expectProblem(response, "validationError");
 	});
 });
+
+describe("PATCH /api/v1/dns-monitors/:dnsMonitorId/records/:recordId media types", () => {
+	/** An update carrying `contentType`, which the default helper always sends as JSON. */
+	function updateAs(monitorId: string, recordId: string, contentType: string, key: string) {
+		return new Request(
+			`https://uptime.test${routes.api.v1.dnsMonitors.records.update.href({ dnsMonitorId: encodeId("dns", monitorId), recordId: encodeId("dnsrec", recordId) })}`,
+			{
+				method: "PATCH",
+				headers: { Authorization: `Bearer ${key}`, "content-type": contentType },
+				body: JSON.stringify({ isEnabled: false }),
+			},
+		);
+	}
+
+	test("accepts application/merge-patch+json", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+		let monitor = await createDnsMonitorRow(db, team.id);
+		let record = await createRecordRow(db, monitor.id);
+
+		let response = await dispatch(
+			db,
+			updateAs(monitor.id, record.id, "application/merge-patch+json", key),
+		);
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(dnsMonitorRecords, { where: { id: record.id } });
+		expect(updated?.is_enabled).toBe(false);
+	});
+
+	test("reads a form body and validates it as before, so a string isEnabled is refused", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+		let monitor = await createDnsMonitorRow(db, team.id);
+		let record = await createRecordRow(db, monitor.id);
+
+		let response = await dispatch(
+			db,
+			new Request(
+				`https://uptime.test${routes.api.v1.dnsMonitors.records.update.href({ dnsMonitorId: encodeId("dns", monitor.id), recordId: encodeId("dnsrec", record.id) })}`,
+				{
+					method: "PATCH",
+					headers: {
+						Authorization: `Bearer ${key}`,
+						"content-type": "application/x-www-form-urlencoded",
+					},
+					body: "isEnabled=false",
+				},
+			),
+		);
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "validationError");
+		let unchanged = await db.findOne(dnsMonitorRecords, { where: { id: record.id } });
+		expect(unchanged?.is_enabled).toBe(true);
+	});
+
+	test("answers validation-error for a body that is not JSON", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+		let monitor = await createDnsMonitorRow(db, team.id);
+		let record = await createRecordRow(db, monitor.id);
+
+		let response = await dispatch(
+			db,
+			new Request(
+				`https://uptime.test${routes.api.v1.dnsMonitors.records.update.href({ dnsMonitorId: encodeId("dns", monitor.id), recordId: encodeId("dnsrec", record.id) })}`,
+				{
+					method: "PATCH",
+					headers: { Authorization: `Bearer ${key}`, "content-type": "application/json" },
+					body: "{not json",
+				},
+			),
+		);
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "validationError");
+	});
+});

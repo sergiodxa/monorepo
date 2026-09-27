@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RequestContext } from "remix/router";
+
 import * as s from "@sdxc/json-schema";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
@@ -19,9 +21,14 @@ import type { InsertTcpMonitor, SelectTcpMonitor } from "~/database/schema";
 import TcpMonitor from "~/app/data/tcp-monitor";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { TCP_MONITOR_ID_PARAMS, UPDATE_TCP_MONITOR_BODY } from "~/app/http/openapi/tcp-monitors";
+import {
+	TCP_MONITOR_ID_PARAMS,
+	UPDATE_TCP_MONITOR_BODY,
+	WRITABLE_TCP_MONITOR,
+} from "~/app/http/openapi/tcp-monitors";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
+import { readApiUpdate } from "~/app/services/api-update";
 import { apiPage, newestFirst, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
 import { tcpMonitorRoutes } from "~/routes/api-groups";
@@ -43,6 +50,50 @@ function serializeTcpMonitor(monitor: SelectTcpMonitor) {
 	};
 }
 
+/**
+ * The TCP monitor's writable members as the API reads them, the target an update's merge
+ * patch applies to.
+ */
+function writableTcpMonitor(monitor: SelectTcpMonitor) {
+	return {
+		name: monitor.name,
+		host: monitor.host,
+		port: monitor.port,
+		timeoutMs: monitor.timeout_ms,
+		intervalSeconds: monitor.interval_seconds,
+		isEnabled: monitor.is_enabled,
+	};
+}
+
+/**
+ * Applies a `PATCH` merge patch to one TCP monitor. Only the members the patch changed
+ * are written, so re-sending the current interval or `isEnabled` leaves the schedule alone.
+ *
+ * @param ctx - The request, after `requireApiKey("tcp-monitors:write")`.
+ * @returns The updated monitor; a 404 for a monitor outside the team, before the body is read.
+ */
+async function patchTcpMonitor(ctx: RequestContext): Promise<Response> {
+	let { tcpMonitorId } = s.parse(TCP_MONITOR_ID_PARAMS, ctx.params);
+	let existing = await TcpMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, tcpMonitorId);
+	if (!existing)
+		return apiProblems.notFound({ detail: "TCP monitor not found", instance: problemInstance() });
+
+	let update = await readApiUpdate(ctx.request, writableTcpMonitor(existing), WRITABLE_TCP_MONITOR);
+	if (update instanceof Response) return update;
+	let { value, changed } = update;
+
+	let changes: Partial<InsertTcpMonitor> = {};
+	if (changed.has("name")) changes.name = value.name;
+	if (changed.has("host")) changes.host = value.host;
+	if (changed.has("port")) changes.port = value.port;
+	if (changed.has("timeoutMs")) changes.timeout_ms = value.timeoutMs;
+	if (changed.has("intervalSeconds")) changes.interval_seconds = value.intervalSeconds;
+	if (changed.has("isEnabled")) changes.is_enabled = value.isEnabled;
+
+	let monitor = await TcpMonitor.updateById(ctx.db, tcpMonitorId, changes);
+	return apiSuccess({ monitor: serializeTcpMonitor(monitor) });
+}
+
 export default createController(tcpMonitorRoutes, {
 	middleware: [catchValidationError()],
 	actions: {
@@ -59,6 +110,12 @@ export default createController(tcpMonitorRoutes, {
 					});
 				return apiSuccess({ monitor: serializeTcpMonitor(monitor) });
 			},
+		},
+
+		/** PATCH /api/v1/tcp-monitors/:tcpMonitorId — merge-patches a TCP monitor. */
+		tcpMonitorPatch: {
+			middleware: [requireApiKey("tcp-monitors:write")],
+			handler: patchTcpMonitor,
 		},
 
 		/** PUT /api/v1/tcp-monitors/:tcpMonitorId — updates a TCP monitor's editable fields. */

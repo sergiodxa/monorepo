@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RequestContext } from "remix/router";
+
 import * as s from "@sdxc/json-schema";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
@@ -19,9 +21,14 @@ import type { InsertDnsMonitor, SelectDnsMonitor } from "~/database/schema";
 import DnsMonitor from "~/app/data/dns-monitor";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { DNS_MONITOR_ID_PARAMS, UPDATE_DNS_MONITOR_BODY } from "~/app/http/openapi/dns-monitors";
+import {
+	DNS_MONITOR_ID_PARAMS,
+	UPDATE_DNS_MONITOR_BODY,
+	WRITABLE_DNS_MONITOR,
+} from "~/app/http/openapi/dns-monitors";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
+import { readApiUpdate } from "~/app/services/api-update";
 import { apiPage, newestFirst, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
 import { dnsMonitorRoutes } from "~/routes/api-groups";
@@ -42,6 +49,46 @@ function serializeDnsMonitor(monitor: SelectDnsMonitor) {
 	};
 }
 
+/**
+ * The DNS monitor's writable members as the API reads them, the target an update's merge
+ * patch applies to.
+ */
+function writableDnsMonitor(monitor: SelectDnsMonitor) {
+	return {
+		name: monitor.name,
+		domain: monitor.domain,
+		intervalSeconds: monitor.interval_seconds,
+		isEnabled: monitor.is_enabled,
+	};
+}
+
+/**
+ * Applies a `PATCH` merge patch to one DNS monitor. Only the members the patch changed
+ * are written, so re-sending the current interval or `isEnabled` leaves the schedule alone.
+ *
+ * @param ctx - The request, after `requireApiKey("dns-monitors:write")`.
+ * @returns The updated monitor; a 404 for a monitor outside the team, before the body is read.
+ */
+async function patchDnsMonitor(ctx: RequestContext): Promise<Response> {
+	let { dnsMonitorId } = s.parse(DNS_MONITOR_ID_PARAMS, ctx.params);
+	let existing = await DnsMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, dnsMonitorId);
+	if (!existing)
+		return apiProblems.notFound({ detail: "DNS monitor not found", instance: problemInstance() });
+
+	let update = await readApiUpdate(ctx.request, writableDnsMonitor(existing), WRITABLE_DNS_MONITOR);
+	if (update instanceof Response) return update;
+	let { value, changed } = update;
+
+	let changes: Partial<InsertDnsMonitor> = {};
+	if (changed.has("name")) changes.name = value.name;
+	if (changed.has("domain")) changes.domain = value.domain;
+	if (changed.has("intervalSeconds")) changes.interval_seconds = value.intervalSeconds;
+	if (changed.has("isEnabled")) changes.is_enabled = value.isEnabled;
+
+	let monitor = await DnsMonitor.updateById(ctx.db, dnsMonitorId, changes);
+	return apiSuccess({ dnsMonitor: serializeDnsMonitor(monitor) });
+}
+
 export default createController(dnsMonitorRoutes, {
 	middleware: [catchValidationError()],
 	actions: {
@@ -58,6 +105,12 @@ export default createController(dnsMonitorRoutes, {
 					});
 				return apiSuccess({ dnsMonitor: serializeDnsMonitor(monitor) });
 			},
+		},
+
+		/** PATCH /api/v1/dns-monitors/:dnsMonitorId — merge-patches a DNS monitor. */
+		dnsMonitorPatch: {
+			middleware: [requireApiKey("dns-monitors:write")],
+			handler: patchDnsMonitor,
 		},
 
 		/** PUT /api/v1/dns-monitors/:dnsMonitorId — updates a DNS monitor's editable fields. */

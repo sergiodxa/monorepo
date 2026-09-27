@@ -23,7 +23,7 @@ import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
-import { teams } from "~/database/schema";
+import { dnsMonitors, teams } from "~/database/schema";
 import { dnsMonitorRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
 
@@ -469,5 +469,142 @@ describe("malformed DNS monitor ids", () => {
 
 		expect(response.status).toBe(400);
 		await expectProblem(response, "validationError");
+	});
+});
+
+describe("PATCH /api/v1/dns-monitors/:dnsMonitorId", () => {
+	/** A merge patch request, sent as `application/merge-patch+json` unless told otherwise. */
+	function mergePatch(
+		dnsMonitorId: string,
+		body: unknown,
+		options: { key?: string; contentType?: string } = {},
+	) {
+		let headers: Record<string, string> = {
+			"content-type": options.contentType ?? "application/merge-patch+json",
+		};
+		if (options.key) headers.Authorization = `Bearer ${options.key}`;
+		return new Request(
+			`https://uptime.test${routes.api.v1.dnsMonitors.patch.href({ dnsMonitorId: encodeId("dns", dnsMonitorId) })}`,
+			{ method: "PATCH", headers, body: JSON.stringify(body) },
+		);
+	}
+
+	test("changes only the members the patch names", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+		let monitor = await createDnsMonitorRow(db, team.id, { interval_seconds: 3600 });
+
+		let response = await dispatch(db, mergePatch(monitor.id, { name: "Patched" }, { key }));
+
+		expect(response.status).toBe(200);
+		let updated = await DnsMonitor.findByIdForTeam(db, team.id, monitor.id);
+		expect(updated?.name).toBe("Patched");
+		expect(updated?.domain).toBe("example.com");
+		expect(updated?.interval_seconds).toBe(3600);
+	});
+
+	test("null resets a member to its default", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+		let monitor = await createDnsMonitorRow(db, team.id, {
+			interval_seconds: 3600,
+			is_enabled: false,
+		});
+
+		let response = await dispatch(
+			db,
+			mergePatch(monitor.id, { intervalSeconds: null, isEnabled: null }, { key }),
+		);
+
+		expect(response.status).toBe(200);
+		let updated = await DnsMonitor.findByIdForTeam(db, team.id, monitor.id);
+		expect(updated?.interval_seconds).toBe(86_400);
+		expect(updated?.is_enabled).toBe(true);
+	});
+
+	test("null on a required member answers validation-error at its pointer", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+		let monitor = await createDnsMonitorRow(db, team.id);
+
+		let response = await dispatch(db, mergePatch(monitor.id, { domain: null }, { key }));
+
+		expect(response.status).toBe(400);
+		let problem = await expectProblem(response, "validationError");
+		expect(problem.extensions.errors.map((issue) => issue.pointer)).toEqual(["/domain"]);
+	});
+
+	test("accepts application/json as a merge patch", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+		let monitor = await createDnsMonitorRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			mergePatch(monitor.id, { isEnabled: false }, { key, contentType: "application/json" }),
+		);
+
+		expect(response.status).toBe(200);
+		expect((await DnsMonitor.findByIdForTeam(db, team.id, monitor.id))?.is_enabled).toBe(false);
+	});
+
+	test("answers unsupported-media-type with Accept-Patch for any other body", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+		let monitor = await createDnsMonitorRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			mergePatch(monitor.id, { name: "x" }, { key, contentType: "text/plain" }),
+		);
+
+		expect(response.status).toBe(415);
+		expect(response.headers.get("Accept-Patch")).toBe("application/merge-patch+json");
+		await expectProblem(response, "unsupportedMediaType");
+	});
+
+	test("PUT keeps reading form bodies, refusing null, and rescheduling on a re-sent isEnabled", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+		let monitor = await createDnsMonitorRow(db, team.id);
+		await db.update(dnsMonitors, monitor.id, { next_due_at: 1000 });
+		let href = `https://uptime.test${routes.api.v1.dnsMonitors.update.href({ dnsMonitorId: encodeId("dns", monitor.id) })}`;
+		let put = (contentType: string, body: string) =>
+			new Request(href, {
+				method: "PUT",
+				headers: { Authorization: `Bearer ${key}`, "content-type": contentType },
+				body,
+			});
+
+		let form = await dispatch(db, put("application/x-www-form-urlencoded", "name=Form"));
+		let refused = await dispatch(db, put("application/json", JSON.stringify({ isEnabled: null })));
+		let resent = await dispatch(db, put("application/json", JSON.stringify({ isEnabled: true })));
+
+		expect([form.status, refused.status, resent.status]).toEqual([200, 400, 200]);
+		let updated = await db.findOne(dnsMonitors, { where: { id: monitor.id } });
+		expect(updated?.name).toBe("Form");
+		expect(updated?.next_due_at).not.toBe(1000);
+	});
+
+	test("404s for another team's monitor, 401 without a key, 403 without dns-monitors:write", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let otherTeam = await createTeamRow(db);
+		let writer = await createApiKey(db, team.id, ["dns-monitors:write"]);
+		let reader = await createApiKey(db, team.id, ["dns-monitors:read"]);
+		let foreign = await createDnsMonitorRow(db, otherTeam.id);
+		let own = await createDnsMonitorRow(db, team.id);
+
+		let notFound = await dispatch(db, mergePatch(foreign.id, { name: "x" }, { key: writer }));
+		let unauthorized = await dispatch(db, mergePatch(own.id, { name: "x" }));
+		let forbidden = await dispatch(db, mergePatch(own.id, { name: "x" }, { key: reader }));
+
+		expect([notFound.status, unauthorized.status, forbidden.status]).toEqual([404, 401, 403]);
 	});
 });

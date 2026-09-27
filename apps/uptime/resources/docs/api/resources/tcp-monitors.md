@@ -172,13 +172,13 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123 \
 
 ## Update a TCP Monitor
 
-Update an existing TCP monitor. Only include fields you want to change.
+Update an existing TCP monitor with a [JSON merge patch](/docs/api/overview#updating-resources). Only include fields you want to change.
 
 ```
-PUT /api/v1/tcp-monitors/:id
+PATCH /api/v1/tcp-monitors/:id
 ```
 
-<!-- operation: tcpMonitorUpdate -->
+<!-- operation: tcpMonitorPatch -->
 
 ### Request Body
 
@@ -191,13 +191,15 @@ PUT /api/v1/tcp-monitors/:id
 | `intervalSeconds` | integer | No       | Check interval in seconds (60-86400)           |
 | `isEnabled`       | boolean | No       | Whether the monitor is active                  |
 
+The limits are the ones [Create a TCP Monitor](#create-a-tcp-monitor) applies. `null` resets `timeoutMs` to `5000`, `intervalSeconds` to `60` and `isEnabled` to `true`; `name`, `host` and `port` cannot be removed, so `null` on any of them is a `400` `validation-error`.
+
 ### cURL
 
 ```bash
 curl https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123 \
-  -X PUT \
+  -X PATCH \
   -H "Authorization: Bearer uptime_your_api_key" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/merge-patch+json" \
   -d '{
     "timeoutMs": 15000,
     "isEnabled": false
@@ -226,6 +228,12 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123 \
 	}
 }
 ```
+
+### Update With PUT
+
+`PUT /api/v1/tcp-monitors/:id` takes the same fields, for integrations written before `PATCH` existed. A field you leave out keeps its value, `null` is refused, and sending `isEnabled` schedules the next check again on every request, even when the value is unchanged.
+
+<!-- operation: tcpMonitorUpdate -->
 
 ## Delete a TCP Monitor
 

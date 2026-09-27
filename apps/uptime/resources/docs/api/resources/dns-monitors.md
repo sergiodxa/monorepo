@@ -225,15 +225,15 @@ curl https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123 \
 
 ## Update a DNS Monitor
 
-Updates a DNS monitor's editable fields. All fields are optional; only provided fields are updated.
+Updates a DNS monitor with a [JSON merge patch](/docs/api/overview#updating-resources): send only the fields you want to change.
 
 There is no `zoneFile` here, and one sent is ignored rather than refused. The pasted text is never stored, so re-importing is a deliberate act rather than something carried along by a rename — import again from the dashboard, or create a new monitor.
 
 ```
-PUT /api/v1/dns-monitors/:dnsMonitorId
+PATCH /api/v1/dns-monitors/:dnsMonitorId
 ```
 
-<!-- operation: dnsMonitorUpdate -->
+<!-- operation: dnsMonitorPatch -->
 
 ### Request Body
 
@@ -244,15 +244,17 @@ PUT /api/v1/dns-monitors/:dnsMonitorId
 | `intervalSeconds` | integer | No       | Check interval in seconds (900-86400)             |
 | `isEnabled`       | boolean | No       | Whether the monitor is checked on its interval    |
 
+The limits are the ones [Create a DNS Monitor](#create-a-dns-monitor) applies. `null` resets `intervalSeconds` to `86400` and `isEnabled` to `true`; `name` and `domain` cannot be removed, so `null` on either is a `400` `validation-error`.
+
 Changing `domain` does not re-run discovery: the records already tracked stay as they are, so point a monitor at a different domain only if you also mean to review its records.
 
 ### cURL
 
 ```bash
 curl https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123 \
-  -X PUT \
+  -X PATCH \
   -H "Authorization: Bearer uptime_your_api_key" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/merge-patch+json" \
   -d '{ "intervalSeconds": 3600 }'
 ```
 
@@ -276,6 +278,12 @@ curl https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123 \
 	}
 }
 ```
+
+### Update With PUT
+
+`PUT /api/v1/dns-monitors/:dnsMonitorId` takes the same fields, for integrations written before `PATCH` existed. A field you leave out keeps its value, `null` is refused, and sending `isEnabled` schedules the next check again on every request, even when the value is unchanged.
+
+<!-- operation: dnsMonitorUpdate -->
 
 ## Delete a DNS Monitor
 
@@ -495,6 +503,8 @@ PATCH /api/v1/dns-monitors/:dnsMonitorId/records/:recordId
 
 ### Request Body
 
+Send the body as `application/merge-patch+json` or `application/json`; both read the same.
+
 ```json
 {
 	"isEnabled": false
@@ -517,15 +527,15 @@ an edit to it would silently retarget the expectation instead of changing it —
 that was quietly ignored is worse than one that was refused, because the caller goes on
 believing the edit landed. Change your DNS, or re-import your zone file.
 
-Omitting `isEnabled` is also a `400`: a request with nothing writable in it expresses no
-decision, and answering `200` would claim one was made.
+Omitting `isEnabled`, or sending it as `null`, is also a `400`: a request with nothing
+writable in it expresses no decision, and answering `200` would claim one was made.
 
 ### cURL
 
 ```bash
 curl -X PATCH "https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123/records/dnsrec_abc124" \
   -H "Authorization: Bearer uptime_your_api_key" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/merge-patch+json" \
   -d '{"isEnabled": true}'
 ```
 

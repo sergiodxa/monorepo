@@ -85,12 +85,18 @@ async function createTcpMonitorResultRow(
 
 async function dispatch(
 	db: Db,
-	request: { method: string; path: string; key?: string; body?: Record<string, unknown> },
+	request: {
+		method: string;
+		path: string;
+		key?: string;
+		body?: Record<string, unknown>;
+		headers?: Record<string, string>;
+	},
 ) {
 	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
 	router.map(tcpMonitorRoutes, tcpMonitorController);
 
-	let headers: Record<string, string> = { "content-type": "application/json" };
+	let headers: Record<string, string> = { "content-type": "application/json", ...request.headers };
 	if (request.key !== undefined) headers.Authorization = `Bearer ${request.key}`;
 
 	let httpRequest = new Request(`https://uptime.test${request.path}`, {
@@ -419,5 +425,143 @@ describe("malformed TCP monitor ids", () => {
 
 		expect(response.status).toBe(400);
 		await expectProblem(response, "validationError");
+	});
+});
+
+describe("PATCH /api/v1/tcp-monitors/:tcpMonitorId", () => {
+	/** A merge patch request, sent as `application/merge-patch+json` unless told otherwise. */
+	function mergePatch(
+		tcpMonitorId: string,
+		body: Record<string, unknown>,
+		options: { key?: string; contentType?: string } = {},
+	) {
+		return {
+			method: "PATCH",
+			path: routes.api.v1.tcpMonitors.patch.href({ tcpMonitorId: encodeId("tcpm", tcpMonitorId) }),
+			key: options.key,
+			headers: { "content-type": options.contentType ?? "application/merge-patch+json" },
+			body,
+		};
+	}
+
+	test("changes only the members the patch names", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["tcp-monitors:write"]);
+		let monitor = await createTcpMonitorRow(db, team.id);
+
+		let response = await dispatch(db, mergePatch(monitor.id, { port: 6380 }, { key }));
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(tcpMonitors, { where: { id: monitor.id } });
+		expect(updated?.port).toBe(6380);
+		expect(updated?.name).toBe("Redis");
+		expect(updated?.host).toBe("redis.example.com");
+	});
+
+	test("null resets a member to its default", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["tcp-monitors:write"]);
+		let monitor = await createTcpMonitorRow(db, team.id);
+		await db.update(tcpMonitors, monitor.id, {
+			timeout_ms: 1000,
+			interval_seconds: 300,
+			is_enabled: false,
+		});
+
+		let response = await dispatch(
+			db,
+			mergePatch(monitor.id, { timeoutMs: null, intervalSeconds: null, isEnabled: null }, { key }),
+		);
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(tcpMonitors, { where: { id: monitor.id } });
+		expect(updated?.timeout_ms).toBe(5000);
+		expect(updated?.interval_seconds).toBe(60);
+		expect(updated?.is_enabled).toBe(true);
+	});
+
+	test("null on a required member answers validation-error at its pointer", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["tcp-monitors:write"]);
+		let monitor = await createTcpMonitorRow(db, team.id);
+
+		let response = await dispatch(db, mergePatch(monitor.id, { port: null }, { key }));
+
+		expect(response.status).toBe(400);
+		let problem = await expectProblem(response, "validationError");
+		expect(problem.extensions.errors.map((issue) => issue.pointer)).toEqual(["/port"]);
+	});
+
+	test("accepts application/json as a merge patch", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["tcp-monitors:write"]);
+		let monitor = await createTcpMonitorRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			mergePatch(monitor.id, { isEnabled: false }, { key, contentType: "application/json" }),
+		);
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(tcpMonitors, { where: { id: monitor.id } });
+		expect(updated?.is_enabled).toBe(false);
+	});
+
+	test("answers unsupported-media-type with Accept-Patch for any other body", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["tcp-monitors:write"]);
+		let monitor = await createTcpMonitorRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			mergePatch(monitor.id, { name: "x" }, { key, contentType: "text/plain" }),
+		);
+
+		expect(response.status).toBe(415);
+		expect(response.headers.get("Accept-Patch")).toBe("application/merge-patch+json");
+		await expectProblem(response, "unsupportedMediaType");
+	});
+
+	test("PUT keeps refusing null and rescheduling on a re-sent isEnabled", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["tcp-monitors:write"]);
+		let monitor = await createTcpMonitorRow(db, team.id);
+		await db.update(tcpMonitors, monitor.id, { next_due_at: 1000 });
+		let put = (body: Record<string, unknown>) => ({
+			method: "PUT",
+			path: routes.api.v1.tcpMonitors.update.href({ tcpMonitorId: encodeId("tcpm", monitor.id) }),
+			key,
+			body,
+		});
+
+		let refused = await dispatch(db, put({ timeoutMs: null }));
+		let resent = await dispatch(db, put({ isEnabled: true }));
+
+		expect([refused.status, resent.status]).toEqual([400, 200]);
+		let updated = await db.findOne(tcpMonitors, { where: { id: monitor.id } });
+		expect(updated?.timeout_ms).toBe(monitor.timeout_ms);
+		expect(updated?.next_due_at).not.toBe(1000);
+	});
+
+	test("404s for another team's monitor, 401 without a key, 403 without tcp-monitors:write", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let otherTeam = await createTeamRow(db);
+		let writer = await createApiKey(db, team.id, ["tcp-monitors:write"]);
+		let reader = await createApiKey(db, team.id, ["tcp-monitors:read"]);
+		let foreign = await createTcpMonitorRow(db, otherTeam.id);
+		let own = await createTcpMonitorRow(db, team.id);
+
+		let notFound = await dispatch(db, mergePatch(foreign.id, { name: "x" }, { key: writer }));
+		let unauthorized = await dispatch(db, mergePatch(own.id, { name: "x" }));
+		let forbidden = await dispatch(db, mergePatch(own.id, { name: "x" }, { key: reader }));
+
+		expect([notFound.status, unauthorized.status, forbidden.status]).toEqual([404, 401, 403]);
 	});
 });
