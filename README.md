@@ -131,7 +131,7 @@ Run from the repository root:
 | [mail](packages/mail)                                           | Transactional email with pluggable transports                                                                     | ✅  |
 | [markdown](packages/markdown)                                   | GitHub Flavored Markdown: parse to a typed AST, transform it, write it back                                       | ✅  |
 | [mcp](packages/mcp)                                             | MCP servers over stateless Streamable HTTP                                                                        | ✅  |
-| [merge-patch](packages/merge-patch)                             | Apply, diff and read RFC 7396 JSON Merge Patch documents                                                          |     |
+| [merge-patch](packages/merge-patch)                             | Apply, diff and read RFC 7396 JSON Merge Patch documents                                                          | ✅  |
 | [messageformat](packages/messageformat)                         | Unicode MessageFormat 2 parser and formatter shaped like Intl.MessageFormat                                       | ✅  |
 | [microformats](packages/microformats)                           | Parse, read and write microformats2                                                                               | ✅  |
 | [micropub](packages/micropub)                                   | Read Micropub requests into typed operations and build the spec's responses                                       | ✅  |
