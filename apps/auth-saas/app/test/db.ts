@@ -21,6 +21,7 @@ import tenantImportRunsMigration from "~/database/migrations/0007-tenant-import-
 import transferDownloadTicketsMigration from "~/database/migrations/0008-transfer-download-tickets.sql?raw";
 import tenantExportRunsMigration from "~/database/migrations/0009-tenant-export-runs.sql?raw";
 import tenantMemberInvitationsMigration from "~/database/migrations/0010-tenant-member-invitations.sql?raw";
+import pendingSignupsMigration from "~/database/migrations/0011-pending-signups.sql?raw";
 
 /** Every control-plane migration, applied in order. */
 const MIGRATIONS = [
@@ -34,6 +35,7 @@ const MIGRATIONS = [
 	transferDownloadTicketsMigration,
 	tenantExportRunsMigration,
 	tenantMemberInvitationsMigration,
+	pendingSignupsMigration,
 ];
 
 /**

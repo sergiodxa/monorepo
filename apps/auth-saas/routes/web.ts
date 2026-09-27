@@ -32,4 +32,17 @@ export default route({
 		portal: post("/billing/tenants/:tenantId/portal"),
 		webhook: post("/webhooks/billing"),
 	},
+
+	/**
+	 * Self-serve platform onboarding: claims an email and an organization name,
+	 * verifies the email, and provisions a brand-new tenant owned by the
+	 * signed-up subject.
+	 */
+	signup: {
+		show: get("/signup"),
+		submit: post("/signup"),
+		pending: get("/signup/pending"),
+		verify: get("/signup/verify"),
+		resend: post("/signup/resend"),
+	},
 });

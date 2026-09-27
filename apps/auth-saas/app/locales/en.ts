@@ -279,6 +279,14 @@ export default {
 			action: "Accept invitation",
 			unexpected: "If you weren't expecting this, you can safely ignore this email.",
 		},
+		platformSignupVerify: {
+			subject: "Verify your email for {$tenantName}",
+			preview: "Confirm your email address to finish setting up your account and organization.",
+			heading: "Confirm your email address",
+			body: "Follow this link to finish setting up your {$tenantName} account and your new organization.",
+			action: "Verify email",
+			unexpected: "If you didn't request this, you can safely ignore this email.",
+		},
 	},
 
 	hostedError: {

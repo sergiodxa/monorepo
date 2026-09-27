@@ -27,7 +27,12 @@ import { cspReports } from "~/app/http/controllers/csp-reports";
 import health from "~/app/http/controllers/health";
 import index from "~/app/http/controllers/index";
 import notFound from "~/app/http/controllers/not-found";
+import signupPending from "~/app/http/controllers/signup/pending";
+import signupResend from "~/app/http/controllers/signup/resend";
+import { signupShow, signupSubmit } from "~/app/http/controllers/signup/show";
+import signupVerify from "~/app/http/controllers/signup/verify";
 import { database } from "~/app/http/middleware/database";
+import { mail } from "~/app/http/middleware/mail";
 import render from "~/app/http/middleware/render";
 import trailingSlash from "~/app/http/middleware/trailing-slash";
 import { PLATFORM_SECURITY_POLICY } from "~/app/http/security-policy";
@@ -55,6 +60,7 @@ let globalMiddleware: Middleware[] = [
 	securityHeaders(PLATFORM_SECURITY_POLICY) as Middleware,
 	wellKnown({ "security.txt": securityTxtEntry }),
 	database(createDatabase),
+	mail(),
 	render as Middleware,
 	formData() as Middleware,
 	methodOverride(),
@@ -80,3 +86,9 @@ router.map(routes.billing.checkout, billingCheckout);
 router.map(routes.billing.checkoutReturn, billingCheckoutReturn);
 router.map(routes.billing.portal, billingPortal);
 router.map(routes.billing.webhook, billingWebhook);
+
+router.map(routes.signup.show, signupShow);
+router.map(routes.signup.submit, signupSubmit);
+router.map(routes.signup.pending, signupPending);
+router.map(routes.signup.verify, signupVerify);
+router.map(routes.signup.resend, signupResend);
