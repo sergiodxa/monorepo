@@ -28,6 +28,7 @@ import { createRouter } from "remix/router";
 import { renderToStream } from "remix/ui/server";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
+import MaintenanceWindow from "~/app/data/maintenance-window";
 import { database } from "~/app/http/middleware/database";
 import { SEO } from "~/app/lib/seo";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -591,6 +592,54 @@ describe("GET /status/:slug", () => {
 	 * fresh as their source; `Vary` covers both dimensions the markup is
 	 * translated on, so a shared cache serves each viewer their own language.
 	 */
+	/**
+	 * Regression: `show_on_status_page` was stored and edited but the page never read
+	 * maintenance windows, so the flag customers set had no effect anywhere.
+	 */
+	test("lists maintenance the team published, and none it hid from status pages", async () => {
+		let { db, team } = await createFixture();
+		let page = await createPublicPage(db, team.id, "acme-maintenance");
+		let now = Date.now();
+		let shown = await MaintenanceWindow.create(db, team.id, {
+			name: "Database upgrade",
+			starts_at: now + 3_600_000,
+			ends_at: now + 7_200_000,
+			monitor_id: null,
+		});
+		await MaintenanceWindow.create(db, team.id, {
+			name: "Internal rotation",
+			starts_at: now + 3_600_000,
+			ends_at: now + 7_200_000,
+			monitor_id: null,
+			show_on_status_page: false,
+		});
+
+		serveSummaries([]);
+
+		let body = await (await get(db, page.slug)).text();
+
+		expect(body).toContain("Database upgrade");
+		expect(body).not.toContain("Internal rotation");
+		expect(body).toContain(
+			routes.statusPageMaintenanceEvent.href({ slug: page.slug, windowId: shown.id }),
+		);
+	});
+
+	test("offers the maintenance feed as a webcal subscription and a Google Calendar link", async () => {
+		let { db, team } = await createFixture();
+		let page = await createPublicPage(db, team.id, "acme-subscribe");
+
+		serveSummaries([]);
+
+		let body = await (await get(db, page.slug)).text();
+
+		expect(body).toContain("No maintenance is scheduled.");
+		expect(body).toContain('href="webcal://uptime.test/status/acme-subscribe/maintenance.ics"');
+		expect(body).toContain(
+			`https://calendar.google.com/calendar/render?cid=${encodeURIComponent("webcal://uptime.test/status/acme-subscribe/maintenance.ics")}`,
+		);
+	});
+
 	test("serves a public, revalidatable cache policy with a validator", async () => {
 		let { db, team } = await createFixture();
 		let page = await createPublicPage(db, team.id, "acme-cache");

@@ -5,7 +5,7 @@ section:
   title: Concepts
   order: 2
 order: 8
-lastUpdated: 2026-02-14
+lastUpdated: 2026-09-26
 ---
 
 Status pages provide a single place where users, customers, and stakeholders can check whether your systems are operational without contacting support.
@@ -96,14 +96,11 @@ This helps users understand whether background processes like data syncs or sche
 
 ## Maintenance Window Integration
 
-When you schedule a maintenance window for a monitor, it automatically appears on any status page that includes that monitor.
+A maintenance window with "Show on status page" enabled appears on every status page that shows a service it covers. A window for all monitors appears on every status page.
 
-During scheduled maintenance:
+The page lists each window that is in progress or upcoming, with its name, its time in UTC and the services it affects, plus an "Add to calendar" link for that one window.
 
-- The affected service shows a maintenance indicator instead of down status
-- A banner appears explaining the maintenance
-- The start time, expected end time, and description are displayed
-- The overall status indicator accounts for planned maintenance separately from unexpected outages
+Every status page also publishes a maintenance calendar at `/status/<slug>/maintenance.ics`. Readers can subscribe from the page with their calendar app or Google Calendar, and their calendar follows along when you move a window, end it early or delete it.
 
 This helps users distinguish between "something is broken" and "something is intentionally being worked on."
 

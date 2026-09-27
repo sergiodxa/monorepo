@@ -5,7 +5,7 @@ section:
   title: Concepts
   order: 2
 order: 9
-lastUpdated: 2026-08-11
+lastUpdated: 2026-09-26
 ---
 
 By defining maintenance windows in advance, you prevent false alerts during planned work and keep your team focused on real incidents.
@@ -82,6 +82,9 @@ When enabled, the maintenance window appears on your public status page. Users s
 - Upcoming maintenance with the scheduled time
 - Active maintenance while work is in progress
 - The maintenance name and affected services
+- An "Add to calendar" link that downloads the window as an `.ics` file
+
+Readers can also subscribe to the status page's maintenance calendar, which lists every window shown there and updates in their calendar app when you move, end or delete one.
 
 Enable this for any user-facing maintenance. Disable it for internal work that doesn't affect user experience.
 
@@ -92,6 +95,8 @@ For regular maintenance schedules, you can set up recurring windows:
 - Daily
 - Weekly (select specific days)
 - Monthly (select specific dates)
+
+Recurring times are in UTC. An end time earlier than the start time runs past midnight, so 23:00 to 01:00 is a two-hour window. A monthly window on the 29th, 30th or 31st falls on the last day of shorter months.
 
 Recurring windows are useful for:
 

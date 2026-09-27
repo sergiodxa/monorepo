@@ -1149,6 +1149,19 @@ export default {
 		dns: {
 			coverage: "All tracked DNS records for this domain",
 		},
+		maintenance: {
+			title: "Scheduled maintenance",
+			none: "No maintenance is scheduled.",
+			inProgress: "In progress",
+			when: "{$range} UTC",
+			affects: "Affects: {$services}",
+			addToCalendar: "Add to calendar",
+			subscribe: "Get maintenance in your calendar:",
+			subscribeCalendar: "Subscribe",
+			subscribeGoogle: "Add to Google Calendar",
+			feedUrl: "Calendar feed URL",
+			calendarName: "{$title} maintenance",
+		},
 	},
 
 	contentMonitoring: {

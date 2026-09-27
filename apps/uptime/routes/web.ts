@@ -22,6 +22,10 @@ export default route({
 	healthcheck: get("/healthcheck"),
 	healthcheckAnalyticsEngine: get("/healthcheck/analytics-engine"),
 	statusPage: get("/status/:slug"),
+	/** A status page's maintenance as an iCalendar feed that calendar clients subscribe to. */
+	statusPageCalendar: get("/status/:slug/maintenance.ics"),
+	/** One published maintenance window as an `.ics` download, sharing the feed's `UID`s. */
+	statusPageMaintenanceEvent: get("/status/:slug/maintenance/:windowId.ics"),
 
 	/**
 	 * The public try-it surface, reachable with no account. Every leaf carries its own

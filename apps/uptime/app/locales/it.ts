@@ -1116,6 +1116,19 @@ export default {
 		dns: {
 			coverage: "Tutti i record DNS tracciati per questo dominio",
 		},
+		maintenance: {
+			title: "Manutenzione programmata",
+			none: "Nessuna manutenzione programmata.",
+			inProgress: "In corso",
+			when: "{$range} UTC",
+			affects: "Interessa: {$services}",
+			addToCalendar: "Aggiungi al calendario",
+			subscribe: "Ricevi le manutenzioni nel tuo calendario:",
+			subscribeCalendar: "Iscriviti",
+			subscribeGoogle: "Aggiungi a Google Calendar",
+			feedUrl: "URL del feed del calendario",
+			calendarName: "Manutenzione di {$title}",
+		},
 	},
 
 	contentMonitoring: {

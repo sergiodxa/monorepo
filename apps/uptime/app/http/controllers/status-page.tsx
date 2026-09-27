@@ -4,7 +4,8 @@
  * monitor's current status and 90-day uptime bar into one page-level status,
  * cached per {@link withCachePolicy}. A DNS monitor's card always reports
  * whole-domain coverage in words, the fact a viewer of the page needs from it.
- * A flow's card carries its name and nothing else it was written from.
+ * A flow's card carries its name and nothing else it was written from; the maintenance
+ * list and its calendar links show only windows the team published on status pages.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,6 +16,7 @@ import type { Handle } from "remix/ui";
 import { conditional, etag, policy, vary } from "@sdxc/http/cache";
 import { notFound } from "@sdxc/http/response/html";
 import {
+	CalendarIcon,
 	CircleCheckBigIcon,
 	CircleMinusIcon,
 	CircleXIcon,
@@ -54,6 +56,7 @@ import {
 	deriveHttpStatus,
 	deriveTcpStatus,
 } from "~/app/services/status-page";
+import { listPublishedMaintenance, publicName } from "~/app/services/status-page-maintenance";
 import { badgeVariant } from "~/resources/components/badge";
 import DocumentLayout from "~/resources/layouts/document";
 import UptimeBar from "~/resources/views/shared/uptime-bar";
@@ -127,15 +130,6 @@ function CardStatusIcon(handle: Handle<CardStatusIcon.Props>) {
 		let Icon = STATUS_ICON[handle.props.status];
 		return <Icon size={16} mix={[ICON_COLOR_MIX[BADGE_TONE[handle.props.status]]]} />;
 	};
-}
-
-/**
- * The label a service is published under: the team's public name for it when
- * set, the monitor's internal name otherwise. An empty string falls back to
- * that name too, keeping every row named even after a team clears the field.
- */
-function publicName(displayName: string | null, fallback: string): string {
-	return displayName?.trim() || fallback;
 }
 
 /**
@@ -260,6 +254,28 @@ export default createAction(routes.statusPage, async (ctx) => {
 	]);
 
 	let barServices = [...httpServices, ...dnsServices, ...tcpServices, ...flowServices];
+
+	let now = Date.now();
+	let maintenance = (
+		await listPublishedMaintenance(
+			ctx.db,
+			page,
+			[...barServices, ...cronServices].map((service) => ({
+				type: service.kind,
+				id: service.id,
+				name: service.name,
+			})),
+			now,
+		)
+	).flatMap((entry) => (entry.next ? [{ ...entry, next: entry.next }] : []));
+	let maintenanceTime = new Intl.DateTimeFormat(ctx.locale, {
+		dateStyle: "medium",
+		timeStyle: "short",
+		timeZone: "UTC",
+	});
+	let feedUrl = new URL(routes.statusPageCalendar.href({ slug }), ctx.url);
+	let webcalUrl = `webcal://${feedUrl.host}${feedUrl.pathname}`;
+	let googleUrl = `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcalUrl)}`;
 	let isEmpty = barServices.length === 0 && cronServices.length === 0;
 	let BannerIcon = BANNER_ICON[overallStatus];
 
@@ -331,6 +347,77 @@ export default createAction(routes.statusPage, async (ctx) => {
 						<span>{bannerLabel[overallStatus]}</span>
 					</div>
 				)}
+
+				<section mix={[vstack({ gap: "8px" }), mbe("24px")]}>
+					<h2 mix={[m(0), fontSize("1.125rem"), weight(600)]}>
+						{ctx.intl.t("statusPage.maintenance.title")}
+					</h2>
+					{maintenance.length === 0 ? (
+						<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
+							{ctx.intl.t("statusPage.maintenance.none")}
+						</p>
+					) : (
+						maintenance.map((entry) => (
+							<div
+								key={entry.window.id}
+								mix={[
+									vstack({ gap: "4px" }),
+									p("12px", "16px"),
+									rounded("8px"),
+									border({ color: "neutral.border", width: 1 }),
+								]}
+							>
+								<div mix={[hstack({ align: "center", gap: "8px" })]}>
+									<CalendarIcon size={16} />
+									<strong>{entry.window.name}</strong>
+									{entry.next.start <= now && (
+										<Badge {...badgeVariant("degraded")}>
+											{ctx.intl.t("statusPage.maintenance.inProgress")}
+										</Badge>
+									)}
+								</div>
+								<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
+									{ctx.intl.t("statusPage.maintenance.when", {
+										range: maintenanceTime.formatRange(entry.next.start, entry.next.end),
+									})}
+								</p>
+								{entry.affected.length > 0 && (
+									<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
+										{ctx.intl.t("statusPage.maintenance.affects", {
+											services: entry.affected.join(", "),
+										})}
+									</p>
+								)}
+								<a
+									href={routes.statusPageMaintenanceEvent.href({ slug, windowId: entry.window.id })}
+									download="maintenance.ics"
+									mix={[
+										fontSize("0.8125rem"),
+										fg("brand"),
+										textDecoration("none"),
+										hover(textDecoration("underline")),
+									]}
+								>
+									{ctx.intl.t("statusPage.maintenance.addToCalendar")}
+								</a>
+							</div>
+						))
+					)}
+					<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
+						{ctx.intl.t("statusPage.maintenance.subscribe")}{" "}
+						<a href={webcalUrl} mix={[fg("brand")]}>
+							{ctx.intl.t("statusPage.maintenance.subscribeCalendar")}
+						</a>{" "}
+						·{" "}
+						<a href={googleUrl} target="_blank" rel="noopener noreferrer" mix={[fg("brand")]}>
+							{ctx.intl.t("statusPage.maintenance.subscribeGoogle")}
+						</a>{" "}
+						·{" "}
+						<a href={feedUrl.toString()} mix={[fg("brand")]}>
+							{ctx.intl.t("statusPage.maintenance.feedUrl")}
+						</a>
+					</p>
+				</section>
 
 				{isEmpty ? (
 					<Empty>

@@ -589,15 +589,21 @@ has to follow one.
 - Implementation: the §3.6.5 "fictitious" `VTIMEZONE` starts its second daylight rule on
   Saturday 1999-04-24; that `DTSTART` is an onset of its own, one day before the rule's first
   last-Sunday instance.
+- Uptime: an overnight pattern (`daily:23:00-01:00`) publishes a recurring event lasting the
+  hours it spans across midnight, and `isActiveAt` enforces the same occurrence, rather than the
+  Phase 2 table's "no recurring VEVENT"; a pattern whose end equals its start publishes none.
+  `DTSTART` is the first occurrence still running at `created_at`, and a monthly day outside
+  1-31 is no pattern. The page lists in-progress and upcoming windows, the feed also keeps
+  one-off windows for 30 days after they end.
 
 ## Current Progress
 
 - [x] Phase 1: Core format (`@sdxc/dates/zone` exported; `parse`, `parseAll`, `stringify`,
       `toInstant`, `utc`, `calendarResponse`; RRULE value type; README)
-- [ ] Phase 2: Uptime maintenance feed and download
-- [ ] Phase 3: Expansion and zones
+- [x] Phase 2: Uptime maintenance feed and download
+- [x] Phase 3: Expansion and zones
   - [x] `./rrule` `occurrences`, tested against every §3.8.5.3 example
   - [x] `./timezone` `vtimezone` and `TZID` resolution through parsed `VTIMEZONE`s
-  - [ ] Replace `isRecurringPatternActive` in uptime with `occurrences`
+  - [x] Replace `isRecurringPatternActive` in uptime with `occurrences`
 - [ ] Phase 4: Invitations
 - [ ] Phase 5: Publish

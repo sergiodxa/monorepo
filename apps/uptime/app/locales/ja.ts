@@ -1085,6 +1085,19 @@ export default {
 		dns: {
 			coverage: "このドメインで追跡中のすべての DNS レコード",
 		},
+		maintenance: {
+			title: "予定されたメンテナンス",
+			none: "予定されたメンテナンスはありません。",
+			inProgress: "実施中",
+			when: "{$range} UTC",
+			affects: "影響範囲: {$services}",
+			addToCalendar: "カレンダーに追加",
+			subscribe: "メンテナンスをカレンダーで受け取る:",
+			subscribeCalendar: "購読する",
+			subscribeGoogle: "Google カレンダーに追加",
+			feedUrl: "カレンダーフィードの URL",
+			calendarName: "{$title} のメンテナンス",
+		},
 	},
 
 	contentMonitoring: {

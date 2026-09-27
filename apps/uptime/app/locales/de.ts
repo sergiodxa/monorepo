@@ -1116,6 +1116,19 @@ export default {
 		dns: {
 			coverage: "Alle erfassten DNS-Einträge dieser Domain",
 		},
+		maintenance: {
+			title: "Geplante Wartung",
+			none: "Es ist keine Wartung geplant.",
+			inProgress: "Läuft",
+			when: "{$range} UTC",
+			affects: "Betrifft: {$services}",
+			addToCalendar: "Zum Kalender hinzufügen",
+			subscribe: "Wartungen im eigenen Kalender:",
+			subscribeCalendar: "Abonnieren",
+			subscribeGoogle: "Zu Google Kalender hinzufügen",
+			feedUrl: "URL des Kalender-Feeds",
+			calendarName: "Wartung: {$title}",
+		},
 	},
 
 	contentMonitoring: {

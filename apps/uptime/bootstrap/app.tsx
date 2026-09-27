@@ -217,6 +217,14 @@ export default function application(options: application.Options) {
 		lazy(() => import("~/app/http/controllers/status-page")),
 	);
 	router.map(
+		routes.statusPageCalendar,
+		lazy(() => import("~/app/http/controllers/status-page-calendar")),
+	);
+	router.map(
+		routes.statusPageMaintenanceEvent,
+		lazy(() => import("~/app/http/controllers/status-page-maintenance-event")),
+	);
+	router.map(
 		routes.invite,
 		lazy(() => import("~/app/http/controllers/invite")),
 	);
