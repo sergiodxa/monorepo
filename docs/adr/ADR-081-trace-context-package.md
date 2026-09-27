@@ -502,6 +502,7 @@ most joins.
 - [x] Phase 2: Jobs
 - [x] Phase 3: API client
 - [ ] Phase 4: Adopt in the workers
+  - [x] reader: `trace()` after `log(logger)`
 - [ ] Phase 5: Publish
 
 ## Alternatives Considered
@@ -578,3 +579,6 @@ headers are a small grammar; the value is in binding them to the existing wide e
   trace, or a new root, for contexts built directly in tests.
 - Implementation: no `@sdxc/logger` change was needed; the trace fields are ordinary
   `Log.set()` fields.
+- Reader adoption: the router continues a caller's trace; the Durable Objects keep their RPC
+  signatures and open their own logs untraced, the deferred join the Durable Objects section
+  describes, since every one of their methods would take a `traceparent` argument for it.

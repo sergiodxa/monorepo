@@ -18,6 +18,7 @@ import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { trace } from "@sdxc/trace-context/middleware";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
@@ -82,6 +83,11 @@ export default function application(options: application.Options) {
 		headRequests(),
 		asyncContext(),
 		log(logger) as Middleware,
+		/**
+		 * Right after the log, so every event the request writes carries its trace id, and a
+		 * caller that sent a `traceparent` finds this request's events under its own trace.
+		 */
+		trace() as Middleware,
 		formData() as Middleware,
 		methodOverride(),
 		createSessionMiddleware(options.kv, options.cookieSecret, options.secure) as Middleware,
