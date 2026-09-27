@@ -18,9 +18,8 @@ import type { Middleware } from "remix/router";
 
 import { Hex, sha256 } from "@sdxc/crypto";
 import { isFailure } from "@sdxc/result";
+import { errorResponse, ScimError } from "@sdxc/scim";
 import { createContextKey } from "remix/router";
-
-import { scimError } from "~/app/http/scim/response";
 
 /** The feature slug a SCIM connection's own add-on is sold under. */
 export const SCIM_FEATURE = "scim";
@@ -70,7 +69,7 @@ export function scimGate(limiter: RateLimit, options: ScimGateOptions = {}): Mid
 	return async (ctx, next) => {
 		let authorization = ctx.request.headers.get("Authorization");
 		if (!authorization?.startsWith("Bearer ") || authorization.length <= "Bearer ".length) {
-			return scimError({ status: 401, detail: "A bearer token is required." });
+			return errorResponse(new ScimError(401, "A bearer token is required."));
 		}
 
 		let token = authorization.slice("Bearer ".length);
@@ -78,9 +77,7 @@ export function scimGate(limiter: RateLimit, options: ScimGateOptions = {}): Mid
 		let key = await digestToken(token);
 		let { success } = await limiter.limit({ key });
 		if (!success) {
-			return scimError({
-				status: 429,
-				detail: "This connection has exceeded its write budget.",
+			return errorResponse(new ScimError(429, "This connection has exceeded its write budget."), {
 				headers: { "Retry-After": "1" },
 			});
 		}
@@ -88,10 +85,9 @@ export function scimGate(limiter: RateLimit, options: ScimGateOptions = {}): Mid
 		if (requireEntitlement) {
 			let { entitled } = await ctx.tenantStub.hasEntitlement({ feature: SCIM_FEATURE });
 			if (!entitled) {
-				return scimError({
-					status: 403,
-					detail: "SCIM provisioning is not entitled for this tenant.",
-				});
+				return errorResponse(
+					new ScimError(403, "SCIM provisioning is not entitled for this tenant."),
+				);
 			}
 		}
 

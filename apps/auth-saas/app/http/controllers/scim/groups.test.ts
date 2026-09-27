@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { PATCH_OP_SCHEMA } from "@sdxc/scim";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import { buildScimHarness, createScimConnectionToken, setScimEntitled } from "./test-harness";
@@ -62,6 +63,7 @@ describe("SCIM Groups lifecycle", () => {
 			harness.request(`/scim/v2/Groups/${id}`, token, {
 				method: "PATCH",
 				body: JSON.stringify({
+					schemas: [PATCH_OP_SCHEMA],
 					Operations: [
 						{ op: "add", path: "members", value: [{ value: secondMemberId }] },
 						{ op: "remove", path: `members[value eq "${memberId}"]` },
@@ -99,7 +101,10 @@ describe("SCIM Groups lifecycle", () => {
 		let response = await harness.router.fetch(
 			harness.request(`/scim/v2/Groups/${created.id}`, token, {
 				method: "PATCH",
-				body: JSON.stringify({ Operations: [{ op: "replace", path: "members", value: [] }] }),
+				body: JSON.stringify({
+					schemas: [PATCH_OP_SCHEMA],
+					Operations: [{ op: "replace", path: "externalId", value: "ext-other" }],
+				}),
 			}),
 		);
 

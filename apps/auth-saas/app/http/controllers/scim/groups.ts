@@ -15,22 +15,22 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { isFailure } from "@sdxc/result";
+import {
+	errorResponse,
+	listResponse,
+	parseGroup,
+	parseListQuery,
+	readBody,
+	scimResponse,
+} from "@sdxc/scim";
+import { parsePatch } from "@sdxc/scim/patch";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import { scimGate } from "~/app/http/middleware/scim-gate";
-import {
-	parseGroupPatchOperations,
-	parseScimGroupResource,
-	parseScimListQuery,
-} from "~/app/http/scim/request";
-import {
-	groupToScim,
-	scimError,
-	scimFailure,
-	scimJson,
-	scimListResponse,
-} from "~/app/http/scim/response";
+import { groupToScim, scimFailure } from "~/app/http/scim/response";
+import { SCIM_GROUP_DEFINITIONS, SCIM_MAX_PAGE_SIZE } from "~/database/scim-resources";
 import routes from "~/routes/tenant";
 
 /** Parses and requires the `:id` path param every single-resource group route matches. */
@@ -53,23 +53,18 @@ export function createScimGroupsController(limiter: RateLimit) {
 		create: createAction(routes.scimGroupsCreate, {
 			middleware: [gate],
 			handler: async (ctx) => {
-				let body = await ctx.request.json().catch(() => null);
-				let parsed = parseScimGroupResource(body);
-				if (!parsed.ok) {
-					return scimError({
-						status: 400,
-						scimType: "invalidValue",
-						detail: "The request body is not a valid SCIM Group resource.",
-					});
-				}
+				let body = await readBody(ctx.request);
+				if (isFailure(body)) return errorResponse(body.error);
+				let group = parseGroup(body.data);
+				if (isFailure(group)) return errorResponse(group.error);
 
 				let result = await ctx.tenantStub.scimProvisionGroup({
 					token: ctx.scimToken,
-					resource: parsed.resource,
+					resource: group.data,
 				});
 				if (!result.ok) return scimFailure(result);
 
-				return scimJson(groupToScim(result.representation), 201);
+				return scimResponse(groupToScim(result.representation, ctx.url), { status: 201 });
 			},
 		}),
 
@@ -77,11 +72,21 @@ export function createScimGroupsController(limiter: RateLimit) {
 		list: createAction(routes.scimGroupsList, {
 			middleware: [gate],
 			handler: async (ctx) => {
-				let query = parseScimListQuery(ctx.url);
-				let result = await ctx.tenantStub.scimReadGroupPage({ token: ctx.scimToken, ...query });
+				let query = parseListQuery(ctx.url, {
+					maxCount: SCIM_MAX_PAGE_SIZE,
+					attributes: SCIM_GROUP_DEFINITIONS,
+				});
+				if (isFailure(query)) return errorResponse(query.error);
+
+				let result = await ctx.tenantStub.scimReadGroupPage({
+					token: ctx.scimToken,
+					query: query.data,
+				});
 				if (!result.ok) return scimFailure(result);
 
-				return scimJson(scimListResponse(result, groupToScim), 200);
+				return listResponse({ ...result, resources: result.representations }, (representation) =>
+					groupToScim(representation, ctx.url),
+				);
 			},
 		}),
 
@@ -93,7 +98,7 @@ export function createScimGroupsController(limiter: RateLimit) {
 				let result = await ctx.tenantStub.scimReadGroup({ token: ctx.scimToken, id });
 				if (!result.ok) return scimFailure(result);
 
-				return scimJson(groupToScim(result.representation), 200);
+				return scimResponse(groupToScim(result.representation, ctx.url));
 			},
 		}),
 
@@ -102,56 +107,44 @@ export function createScimGroupsController(limiter: RateLimit) {
 			middleware: [gate],
 			handler: async (ctx) => {
 				let id = groupId(ctx);
-				let body = await ctx.request.json().catch(() => null);
-				let parsed = parseScimGroupResource(body);
-				if (!parsed.ok) {
-					return scimError({
-						status: 400,
-						scimType: "invalidValue",
-						detail: "The request body is not a valid SCIM Group resource.",
-					});
-				}
+				let body = await readBody(ctx.request);
+				if (isFailure(body)) return errorResponse(body.error);
+				let group = parseGroup(body.data);
+				if (isFailure(group)) return errorResponse(group.error);
 
 				let result = await ctx.tenantStub.scimReplaceGroup({
 					token: ctx.scimToken,
 					id,
-					resource: parsed.resource,
+					resource: group.data,
 				});
 				if (!result.ok) return scimFailure(result);
 
-				return scimJson(groupToScim(result.representation), 200);
+				return scimResponse(groupToScim(result.representation, ctx.url));
 			},
 		}),
 
 		/**
-		 * Applies a group PATCH: a `displayName` change, a membership `add`
-		 * with a value array, or a membership `remove` naming one subject.
+		 * Applies a group PATCH operation by operation: a `displayName` change,
+		 * or members added, replaced or removed, each touching only the rows it
+		 * names.
 		 */
 		patch: createAction(routes.scimGroupsPatch, {
 			middleware: [gate],
 			handler: async (ctx) => {
 				let id = groupId(ctx);
-				let body = await ctx.request.json().catch(() => null);
-				let translated = parseGroupPatchOperations(body);
-				if (!translated.ok) {
-					return scimError({
-						status: 400,
-						scimType: "invalidPath",
-						detail:
-							translated.index !== undefined
-								? `Operation ${translated.index} is not one of the supported PATCH forms.`
-								: "The request body is not a valid SCIM PATCH request.",
-					});
-				}
+				let body = await readBody(ctx.request);
+				if (isFailure(body)) return errorResponse(body.error);
+				let operations = parsePatch(body.data);
+				if (isFailure(operations)) return errorResponse(operations.error);
 
 				let result = await ctx.tenantStub.scimPatchGroup({
 					token: ctx.scimToken,
 					id,
-					operations: translated.operations,
+					operations: operations.data,
 				});
 				if (!result.ok) return scimFailure(result);
 
-				return scimJson(groupToScim(result.representation), 200);
+				return scimResponse(groupToScim(result.representation, ctx.url));
 			},
 		}),
 

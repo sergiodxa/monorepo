@@ -2382,12 +2382,12 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Applies `replace`/`add` PATCH operations on named user attributes.
-	 * `active: false` blocks the subject and revokes every session in the same
-	 * call.
+	 * Applies PATCH operations to a user's current representation and writes
+	 * the result the way a replace does. `active: false` blocks the subject and
+	 * revokes every session in the same call.
 	 *
-	 * @param input - The bearer token, the subject id, the operations to
-	 * apply, and the clock to write with.
+	 * @param input - The bearer token, the subject id, the parsed operations,
+	 * and the clock to write with.
 	 * @returns The updated representation, or which rule refused the call.
 	 */
 	async scimPatchUser(input: ScimPatchUserInput): Promise<WithCost<ScimPatchUserResult>> {
@@ -2442,8 +2442,7 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * A page of a SCIM connection's users, ordered by creation, with
 	 * `totalResults` exact.
 	 *
-	 * @param input - The bearer token, an optional `attribute eq "value"`
-	 * filter, and where to page from.
+	 * @param input - The bearer token and the parsed list query.
 	 * @returns The page and its exact total, or which rule refused the call.
 	 */
 	async scimReadUserPage(input: ScimReadUserPageInput): Promise<WithCost<ScimReadUserPageResult>> {
@@ -2519,8 +2518,7 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * A page of a SCIM connection's groups, ordered by creation, with
 	 * `totalResults` exact.
 	 *
-	 * @param input - The bearer token, an optional `attribute eq "value"`
-	 * filter, and where to page from.
+	 * @param input - The bearer token and the parsed list query.
 	 * @returns The page and its exact total, or which rule refused the call.
 	 */
 	async scimReadGroupPage(

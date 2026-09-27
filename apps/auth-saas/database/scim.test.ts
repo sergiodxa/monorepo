@@ -22,10 +22,13 @@ import type { DurableObjectStateMock } from "@sdxc/cloudflare-mocks";
 
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
+import { unwrap } from "@sdxc/result";
+import { parseListQuery, PATCH_OP_SCHEMA } from "@sdxc/scim";
+import { parsePatch } from "@sdxc/scim/patch";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { ScimUserResource } from "./scim";
+import type { ScimUserResource } from "./scim-resources";
 
 import { passwords } from "./passwords";
 import { scimConnections } from "./scim";
@@ -50,6 +53,16 @@ function testDb(): Database {
 	return new Database(createSQLStorageDatabaseAdapter(state.storage.sql));
 }
 
+/** A list query as `parseListQuery` reads it from a query string such as `count=2`. */
+function listQuery(search = "") {
+	return unwrap(parseListQuery(new URL(`https://tenant.example.com/scim/v2/Users?${search}`)));
+}
+
+/** PATCH operations as `parsePatch` reads them from a request body's `Operations`. */
+function patchOperations(operations: unknown[]) {
+	return unwrap(parsePatch({ schemas: [PATCH_OP_SCHEMA], Operations: operations }));
+}
+
 /** Creates a SCIM connection, throwing if the call was refused, for tests that need one already made. */
 async function createConnection(
 	overrides: { onDelete?: "block" | "delete"; groupSync?: boolean } = {},
@@ -66,11 +79,14 @@ async function createConnection(
 /** Provisions a user with a fresh email, throwing if the call was refused. */
 async function provisionUser(token: string, overrides: Partial<ScimUserResource> = {}) {
 	let externalId = overrides.externalId ?? `ext-${nextSuffix++}`;
+	let email = `user-${nextSuffix++}@example.com`;
 	let result = await tenant.scimProvisionUser({
 		token,
 		resource: {
 			externalId,
-			emails: [{ value: `user-${nextSuffix++}@example.com`, primary: true }],
+			userName: email,
+			emails: [{ value: email, primary: true }],
+			extensions: {},
 			...overrides,
 		},
 	});
@@ -153,7 +169,7 @@ describe("deleteScimConnection and describeScimConnections", () => {
 		let deleted = await tenant.deleteScimConnection({ connectionId: connection.connection.id });
 		expect(deleted).toMatchObject({ ok: true });
 
-		let refused = await tenant.scimReadUserPage({ token: connection.token });
+		let refused = await tenant.scimReadUserPage({ token: connection.token, query: listQuery() });
 		expect(refused).toMatchObject({ ok: false, reason: "invalid-token" });
 	});
 
@@ -181,6 +197,7 @@ describe("scimProvisionUser", () => {
 		let result = await tenant.scimProvisionUser({
 			token: connection.token,
 			resource: {
+				extensions: {},
 				externalId: "ext-fresh",
 				userName: "jane@example.com",
 				emails: [{ value: "jane@example.com", primary: true }],
@@ -205,7 +222,12 @@ describe("scimProvisionUser", () => {
 		let connection = await createConnection();
 		let result = await tenant.scimProvisionUser({
 			token: connection.token,
-			resource: { externalId: "ext-bob", emails: [{ value: "bob@example.com", primary: true }] },
+			resource: {
+				userName: "bob@example.com",
+				extensions: {},
+				externalId: "ext-bob",
+				emails: [{ value: "bob@example.com", primary: true }],
+			},
 		});
 
 		expect(result.ok).toBe(true);
@@ -227,6 +249,8 @@ describe("scimProvisionUser", () => {
 		let conflicted = await tenant.scimProvisionUser({
 			token: connection.token,
 			resource: {
+				userName: "carol@example.com",
+				extensions: {},
 				externalId: "ext-second",
 				emails: [{ value: "carol@example.com", primary: true }],
 			},
@@ -238,7 +262,12 @@ describe("scimProvisionUser", () => {
 	test("refuses a bad token cleanly", async () => {
 		let result = await tenant.scimProvisionUser({
 			token: "scim_not-a-real-token",
-			resource: { externalId: "ext-x", emails: [{ value: "nobody@example.com", primary: true }] },
+			resource: {
+				userName: "nobody@example.com",
+				extensions: {},
+				externalId: "ext-x",
+				emails: [{ value: "nobody@example.com", primary: true }],
+			},
 		});
 
 		expect(result).toMatchObject({ ok: false, reason: "invalid-token" });
@@ -250,6 +279,8 @@ describe("scimReplaceUser", () => {
 		let connection = await createConnection();
 		let resource: ScimUserResource = {
 			externalId: "ext-dana",
+			userName: "dana@example.com",
+			extensions: {},
 			emails: [{ value: "dana@example.com", primary: true }],
 			name: { givenName: "Dana" },
 		};
@@ -279,6 +310,8 @@ describe("scimReplaceUser", () => {
 			token: connection.token,
 			id: provisioned.representation.id,
 			resource: {
+				userName: "earl@example.com",
+				extensions: {},
 				externalId: "ext-earl",
 				emails: [{ value: "earl@example.com", primary: true }],
 				name: { givenName: "Earl", familyName: "Grey" },
@@ -288,7 +321,7 @@ describe("scimReplaceUser", () => {
 		expect(replaced.ok).toBe(true);
 		if (!replaced.ok) throw new Error("unreachable");
 		expect(replaced.unchanged).toBe(false);
-		expect(replaced.representation.name.familyName).toBe("Grey");
+		expect(replaced.representation.name?.familyName).toBe("Grey");
 		expect(replaced.cost.rowsWritten).toBeGreaterThan(0);
 	});
 
@@ -298,7 +331,11 @@ describe("scimReplaceUser", () => {
 		let result = await tenant.scimReplaceUser({
 			token: connection.token,
 			id: "sub_missing",
-			resource: { externalId: "ext-missing" },
+			resource: {
+				userName: "missing@example.com",
+				extensions: {},
+				externalId: "ext-missing",
+			},
 		});
 
 		expect(result).toMatchObject({ ok: false, reason: "not-found" });
@@ -320,7 +357,7 @@ describe("scimPatchUser", () => {
 		let patched = await tenant.scimPatchUser({
 			token: connection.token,
 			id: provisioned.representation.id,
-			operations: [{ op: "replace", attribute: "active", value: false }],
+			operations: patchOperations([{ op: "replace", path: "active", value: false }]),
 		});
 
 		expect(patched.ok).toBe(true);
@@ -341,7 +378,9 @@ describe("scimPatchUser", () => {
 		let patched = await tenant.scimPatchUser({
 			token: connection.token,
 			id: provisioned.representation.id,
-			operations: [{ op: "replace", attribute: "displayName", value: "New Display Name" }],
+			operations: patchOperations([
+				{ op: "replace", path: "displayName", value: "New Display Name" },
+			]),
 		});
 
 		expect(patched.ok).toBe(true);
@@ -349,20 +388,17 @@ describe("scimPatchUser", () => {
 		expect(patched.representation.displayName).toBe("New Display Name");
 	});
 
-	test("refuses an unsupported operation form cleanly", async () => {
+	test("refuses an operation the SCIM rules forbid, writing nothing", async () => {
 		let connection = await createConnection();
 		let provisioned = await provisionUser(connection.token);
 
 		let result = await tenant.scimPatchUser({
 			token: connection.token,
 			id: provisioned.representation.id,
-			operations: [
-				// @ts-expect-error - "remove" is not a supported user-patch operation.
-				{ op: "remove", attribute: "givenName", value: null },
-			],
+			operations: patchOperations([{ op: "replace", path: "id", value: "sub_other" }]),
 		});
 
-		expect(result).toMatchObject({ ok: false, reason: "unsupported-operation", index: 0 });
+		expect(result).toMatchObject({ ok: false, reason: "invalid-patch", scimType: "mutability" });
 	});
 });
 
@@ -445,7 +481,10 @@ describe("scimReadUser and scimReadUserPage", () => {
 		await provisionUser(connection.token);
 		await provisionUser(connection.token);
 
-		let page = await tenant.scimReadUserPage({ token: connection.token, count: 2 });
+		let page = await tenant.scimReadUserPage({
+			token: connection.token,
+			query: listQuery("count=2"),
+		});
 
 		expect(page.ok).toBe(true);
 		if (!page.ok) throw new Error("unreachable");
@@ -467,7 +506,7 @@ describe("scimReadUser and scimReadUserPage", () => {
 
 		let page = await tenant.scimReadUserPage({
 			token: connection.token,
-			filter: 'userName eq "match@example.com"',
+			query: listQuery(`filter=${encodeURIComponent('userName eq "match@example.com"')}`),
 		});
 
 		expect(page.ok).toBe(true);
@@ -481,7 +520,7 @@ describe("scimReadUser and scimReadUserPage", () => {
 
 		let result = await tenant.scimReadUserPage({
 			token: connection.token,
-			filter: 'userName co "jane"',
+			query: listQuery(`filter=${encodeURIComponent('displayName eq "Jane"')}`),
 		});
 
 		expect(result).toMatchObject({ ok: false, reason: "unsupported-filter" });
@@ -513,7 +552,7 @@ describe("group provisioning", () => {
 		expect(result.ok).toBe(true);
 		if (!result.ok) throw new Error("unreachable");
 		expect(result.representation.displayName).toBe("Engineering");
-		expect(result.representation.members).toEqual([memberId]);
+		expect(result.representation.members).toEqual([{ value: memberId }]);
 	});
 
 	test("refuses a member that does not name an existing subject", async () => {
@@ -545,20 +584,22 @@ describe("group provisioning", () => {
 		let added = await tenant.scimPatchGroup({
 			token: connection.token,
 			id: provisioned.representation.id,
-			operations: [{ op: "add", attribute: "members", values: [memberB] }],
+			operations: patchOperations([{ op: "add", path: "members", value: [{ value: memberB }] }]),
 		});
 		expect(added.ok).toBe(true);
 		if (!added.ok) throw new Error("unreachable");
-		expect(new Set(added.representation.members)).toEqual(new Set([memberA, memberB]));
+		expect(new Set(added.representation.members.map((member) => member.value))).toEqual(
+			new Set([memberA, memberB]),
+		);
 
 		let removed = await tenant.scimPatchGroup({
 			token: connection.token,
 			id: provisioned.representation.id,
-			operations: [{ op: "remove", attribute: "members", value: memberA }],
+			operations: patchOperations([{ op: "remove", path: `members[value eq "${memberA}"]` }]),
 		});
 		expect(removed.ok).toBe(true);
 		if (!removed.ok) throw new Error("unreachable");
-		expect(removed.representation.members).toEqual([memberB]);
+		expect(removed.representation.members).toEqual([{ value: memberB }]);
 	});
 
 	test("replaces a group's display name and whole membership set", async () => {
@@ -588,7 +629,7 @@ describe("group provisioning", () => {
 
 		expect(replaced).toMatchObject({
 			ok: true,
-			representation: { displayName: "New Name", members: [memberB] },
+			representation: { displayName: "New Name", members: [{ value: memberB }] },
 		});
 	});
 
@@ -628,10 +669,7 @@ describe("group provisioning", () => {
 		let result = await tenant.scimPatchGroup({
 			token: connection.token,
 			id: provisioned.representation.id,
-			operations: [
-				// @ts-expect-error - "remove" on "displayName" is not a supported group-patch operation.
-				{ op: "remove", attribute: "displayName", value: "x" },
-			],
+			operations: patchOperations([{ op: "remove", path: "displayName" }]),
 		});
 
 		expect(result).toMatchObject({ ok: false, reason: "unsupported-operation", index: 0 });
@@ -650,7 +688,7 @@ describe("group provisioning", () => {
 
 		let page = await tenant.scimReadGroupPage({
 			token: connection.token,
-			filter: 'displayName eq "Sales"',
+			query: listQuery(`filter=${encodeURIComponent('displayName eq "Sales"')}`),
 		});
 
 		expect(page.ok).toBe(true);
@@ -701,12 +739,20 @@ describe("bad tokens across operations", () => {
 			ok: false,
 			reason: "invalid-token",
 		});
-		expect(await tenant.scimReadUserPage({ token: bad })).toMatchObject({
+		expect(await tenant.scimReadUserPage({ token: bad, query: listQuery() })).toMatchObject({
 			ok: false,
 			reason: "invalid-token",
 		});
 		expect(
-			await tenant.scimReplaceUser({ token: bad, id: "sub_x", resource: { externalId: "x" } }),
+			await tenant.scimReplaceUser({
+				token: bad,
+				id: "sub_x",
+				resource: {
+					userName: "missing@example.com",
+					extensions: {},
+					externalId: "x",
+				},
+			}),
 		).toMatchObject({ ok: false, reason: "invalid-token" });
 		expect(await tenant.scimPatchUser({ token: bad, id: "sub_x", operations: [] })).toMatchObject({
 			ok: false,
@@ -722,9 +768,174 @@ describe("bad tokens across operations", () => {
 				resource: { displayName: "x", externalId: "x" },
 			}),
 		).toMatchObject({ ok: false, reason: "invalid-token" });
-		expect(await tenant.scimReadGroupPage({ token: bad })).toMatchObject({
+		expect(await tenant.scimReadGroupPage({ token: bad, query: listQuery() })).toMatchObject({
 			ok: false,
 			reason: "invalid-token",
+		});
+	});
+});
+
+describe("RFC 7643/7644 behaviors", () => {
+	test("userName eq folds case, as userName is caseExact: false", async () => {
+		let connection = await createConnection();
+		await provisionUser(connection.token, {
+			userName: "ana@example.com",
+			emails: [{ value: "ana@example.com", primary: true }],
+		});
+
+		let page = await tenant.scimReadUserPage({
+			token: connection.token,
+			query: listQuery(`filter=${encodeURIComponent('userName eq "Ana@Example.com"')}`),
+		});
+
+		expect(page.ok).toBe(true);
+		if (!page.ok) throw new Error("unreachable");
+		expect(page.representations.map((user) => user.userName)).toEqual(["ana@example.com"]);
+	});
+
+	test("the whole grammar is served on the allowlisted attributes", async () => {
+		let connection = await createConnection();
+		await provisionUser(connection.token, { externalId: "ext-jane" });
+		await provisionUser(connection.token, { externalId: "ext-john" });
+		await provisionUser(connection.token, { externalId: "other" });
+
+		let page = await tenant.scimReadUserPage({
+			token: connection.token,
+			query: listQuery(
+				`filter=${encodeURIComponent('externalId sw "ext-" and not (externalId eq "ext-john")')}`,
+			),
+		});
+
+		expect(page.ok).toBe(true);
+		if (!page.ok) throw new Error("unreachable");
+		expect(page.representations.map((user) => user.externalId)).toEqual(["ext-jane"]);
+	});
+
+	test("a negative count answers an empty page with the exact total", async () => {
+		let connection = await createConnection();
+		await provisionUser(connection.token);
+		await provisionUser(connection.token);
+
+		let page = await tenant.scimReadUserPage({
+			token: connection.token,
+			query: listQuery("count=-1"),
+		});
+
+		expect(page.ok).toBe(true);
+		if (!page.ok) throw new Error("unreachable");
+		expect(page.representations).toEqual([]);
+		expect(page.totalResults).toBe(2);
+	});
+
+	test("a PATCH without a path merges its value's members", async () => {
+		let connection = await createConnection();
+		let provisioned = await provisionUser(connection.token, { name: { givenName: "Old" } });
+
+		let patched = await tenant.scimPatchUser({
+			token: connection.token,
+			id: provisioned.representation.id,
+			operations: patchOperations([
+				{ op: "replace", value: { displayName: "Merged", "name.givenName": "New" } },
+			]),
+		});
+
+		expect(patched.ok).toBe(true);
+		if (!patched.ok) throw new Error("unreachable");
+		expect(patched.representation.displayName).toBe("Merged");
+		expect(patched.representation.name?.givenName).toBe("New");
+		expect(patched.representation.emails).toEqual(provisioned.representation.emails);
+	});
+
+	test("a PATCH keeps a picture it does not mention", async () => {
+		let connection = await createConnection();
+		let provisioned = await provisionUser(connection.token, {
+			photos: [{ value: "https://example.com/a.png", type: "photo" }],
+		});
+
+		let patched = await tenant.scimPatchUser({
+			token: connection.token,
+			id: provisioned.representation.id,
+			operations: patchOperations([{ op: "replace", path: "displayName", value: "Kept" }]),
+		});
+
+		expect(patched.ok).toBe(true);
+		if (!patched.ok) throw new Error("unreachable");
+		expect(patched.representation.photos).toEqual([
+			{ value: "https://example.com/a.png", type: "photo" },
+		]);
+	});
+
+	test("a PATCH that changes nothing writes nothing", async () => {
+		let connection = await createConnection();
+		let provisioned = await provisionUser(connection.token, { displayName: "Same" });
+
+		let patched = await tenant.scimPatchUser({
+			token: connection.token,
+			id: provisioned.representation.id,
+			operations: patchOperations([{ op: "replace", path: "displayName", value: "Same" }]),
+		});
+
+		expect(patched.ok).toBe(true);
+		expect(patched.cost.rowsWritten).toBe(0);
+	});
+
+	test("group displayName eq folds case in SQL, and a LIKE wildcard falls back in memory", async () => {
+		let connection = await createConnection();
+		await tenant.scimProvisionGroup({
+			token: connection.token,
+			resource: { displayName: "Sales_EU", externalId: "grp-eu" },
+		});
+		await tenant.scimProvisionGroup({
+			token: connection.token,
+			resource: { displayName: "SalesXEU", externalId: "grp-x" },
+		});
+
+		let folded = await tenant.scimReadGroupPage({
+			token: connection.token,
+			query: listQuery(`filter=${encodeURIComponent('displayName eq "salesxeu"')}`),
+		});
+		expect(folded).toMatchObject({ ok: true, totalResults: 1 });
+
+		let wildcard = await tenant.scimReadGroupPage({
+			token: connection.token,
+			query: listQuery(`filter=${encodeURIComponent('displayName eq "sales_eu"')}`),
+		});
+		expect(wildcard.ok).toBe(true);
+		if (!wildcard.ok) throw new Error("unreachable");
+		expect(wildcard.representations.map((group) => group.externalId)).toEqual(["grp-eu"]);
+	});
+
+	test("group PATCH replaces the membership and removes members by value list", async () => {
+		let connection = await createConnection();
+		let ids: string[] = [];
+		for (let index = 0; index < 3; index++) {
+			let created = await tenant.createSubject({
+				identifiers: [{ kind: "email", value: `gm-${nextSuffix++}@example.com` }],
+			});
+			if (!created.ok) throw new Error("setup failed");
+			ids.push(created.subjectId);
+		}
+		let [a, b, c] = ids as [string, string, string];
+
+		let group = await tenant.scimProvisionGroup({
+			token: connection.token,
+			resource: { displayName: "Team", externalId: "grp-ops", members: [{ value: a }] },
+		});
+		if (!group.ok) throw new Error("setup failed");
+
+		let replaced = await tenant.scimPatchGroup({
+			token: connection.token,
+			id: group.representation.id,
+			operations: patchOperations([
+				{ op: "replace", path: "members", value: [{ value: b }, { value: c }] },
+				{ op: "remove", path: "members", value: [{ value: b }] },
+				{ op: "replace", value: { displayName: "Renamed" } },
+			]),
+		});
+
+		expect(replaced).toMatchObject({
+			ok: true,
+			representation: { displayName: "Renamed", members: [{ value: c }] },
 		});
 	});
 });

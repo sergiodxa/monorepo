@@ -17,27 +17,70 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Patch } from "@sdxc/scim/patch";
+
+import { isFailure } from "@sdxc/result";
+import {
+	errorResponse,
+	listResponse,
+	parseListQuery,
+	parseUser,
+	readBody,
+	ScimError,
+	scimResponse,
+} from "@sdxc/scim";
+import { parsePatch } from "@sdxc/scim/patch";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import { SCIM_FEATURE, scimGate } from "~/app/http/middleware/scim-gate";
+import { scimFailure, userToScim } from "~/app/http/scim/response";
 import {
-	parseScimListQuery,
-	parseScimUserResource,
-	parseUserPatchOperations,
-} from "~/app/http/scim/request";
-import {
-	scimError,
-	scimFailure,
-	scimJson,
-	scimListResponse,
-	userToScim,
-} from "~/app/http/scim/response";
+	SCIM_MAX_PAGE_SIZE,
+	SCIM_USER_DEFINITIONS,
+	SCIM_USER_EXTENSIONS,
+} from "~/database/scim-resources";
 import routes from "~/routes/tenant";
 
 /** Parses and requires the `:id` path param every single-resource user route matches. */
 function userId(ctx: { params: Record<string, string | undefined> }): string {
 	return s.parse(s.object({ id: s.string() }), ctx.params).id;
+}
+
+/** Whether a PATCH value sets `active` to false, reading Entra ID's `"False"` string too. */
+function isFalse(value: unknown): boolean {
+	return value === false || (typeof value === "string" && value.toLowerCase() === "false");
+}
+
+/**
+ * Whether every operation only sets `active` to false — through `path: "active"`, or a
+ * path-less value holding `active` alone, as Okta sends it. Such a PATCH is the
+ * deactivation providers send in place of `DELETE`.
+ */
+function isPureDeactivation(operations: Patch.Operation[]): boolean {
+	return (
+		operations.length > 0 &&
+		operations.every((operation) => {
+			if (operation.op === "remove") return false;
+			if (operation.path === null) {
+				let value = operation.value as Record<string, unknown>;
+				let keys = Object.keys(value);
+				return (
+					keys.length === 1 &&
+					keys[0]?.toLowerCase() === "active" &&
+					isFalse(Object.values(value)[0])
+				);
+			}
+			let { attribute, filter, subAttribute } = operation.path;
+			return (
+				attribute.attribute.toLowerCase() === "active" &&
+				attribute.subAttribute === null &&
+				filter === null &&
+				subAttribute === null &&
+				isFalse(operation.value)
+			);
+		})
+	);
 }
 
 /**
@@ -60,23 +103,18 @@ export function createScimUsersController(limiter: RateLimit) {
 		create: createAction(routes.scimUsersCreate, {
 			middleware: [gate],
 			handler: async (ctx) => {
-				let body = await ctx.request.json().catch(() => null);
-				let parsed = parseScimUserResource(body);
-				if (!parsed.ok) {
-					return scimError({
-						status: 400,
-						scimType: "invalidValue",
-						detail: "The request body is not a valid SCIM User resource.",
-					});
-				}
+				let body = await readBody(ctx.request);
+				if (isFailure(body)) return errorResponse(body.error);
+				let user = parseUser(body.data, { extensions: SCIM_USER_EXTENSIONS });
+				if (isFailure(user)) return errorResponse(user.error);
 
 				let result = await ctx.tenantStub.scimProvisionUser({
 					token: ctx.scimToken,
-					resource: parsed.resource,
+					resource: user.data,
 				});
 				if (!result.ok) return scimFailure(result);
 
-				return scimJson(userToScim(result.representation), 201);
+				return scimResponse(userToScim(result.representation, ctx.url), { status: 201 });
 			},
 		}),
 
@@ -84,11 +122,21 @@ export function createScimUsersController(limiter: RateLimit) {
 		list: createAction(routes.scimUsersList, {
 			middleware: [gate],
 			handler: async (ctx) => {
-				let query = parseScimListQuery(ctx.url);
-				let result = await ctx.tenantStub.scimReadUserPage({ token: ctx.scimToken, ...query });
+				let query = parseListQuery(ctx.url, {
+					maxCount: SCIM_MAX_PAGE_SIZE,
+					attributes: SCIM_USER_DEFINITIONS,
+				});
+				if (isFailure(query)) return errorResponse(query.error);
+
+				let result = await ctx.tenantStub.scimReadUserPage({
+					token: ctx.scimToken,
+					query: query.data,
+				});
 				if (!result.ok) return scimFailure(result);
 
-				return scimJson(scimListResponse(result, userToScim), 200);
+				return listResponse({ ...result, resources: result.representations }, (representation) =>
+					userToScim(representation, ctx.url),
+				);
 			},
 		}),
 
@@ -100,7 +148,7 @@ export function createScimUsersController(limiter: RateLimit) {
 				let result = await ctx.tenantStub.scimReadUser({ token: ctx.scimToken, id });
 				if (!result.ok) return scimFailure(result);
 
-				return scimJson(userToScim(result.representation), 200);
+				return scimResponse(userToScim(result.representation, ctx.url));
 			},
 		}),
 
@@ -113,76 +161,56 @@ export function createScimUsersController(limiter: RateLimit) {
 			middleware: [gate],
 			handler: async (ctx) => {
 				let id = userId(ctx);
-				let body = await ctx.request.json().catch(() => null);
-				let parsed = parseScimUserResource(body);
-				if (!parsed.ok) {
-					return scimError({
-						status: 400,
-						scimType: "invalidValue",
-						detail: "The request body is not a valid SCIM User resource.",
-					});
-				}
+				let body = await readBody(ctx.request);
+				if (isFailure(body)) return errorResponse(body.error);
+				let user = parseUser(body.data, { extensions: SCIM_USER_EXTENSIONS });
+				if (isFailure(user)) return errorResponse(user.error);
 
 				let result = await ctx.tenantStub.scimReplaceUser({
 					token: ctx.scimToken,
 					id,
-					resource: parsed.resource,
+					resource: user.data,
 				});
 				if (!result.ok) return scimFailure(result);
 
-				return scimJson(userToScim(result.representation), 200);
+				return scimResponse(userToScim(result.representation, ctx.url));
 			},
 		}),
 
 		/**
-		 * Applies a PATCH's `replace`/`add` operations on named attributes. A
-		 * patch whose every operation sets `active` to `false` — the
-		 * deactivation most providers send in place of `DELETE` — is admitted
-		 * whatever this tenant's billing state; anything that also touches
-		 * another attribute still needs the entitlement, since it is
-		 * provisioning as much as a create or a replace.
+		 * Applies a PATCH to the user's current representation. A patch whose
+		 * every operation sets `active` to `false` — the deactivation most
+		 * providers send in place of `DELETE` — is admitted whatever this
+		 * tenant's billing state; anything that also touches another attribute
+		 * still needs the entitlement, since it is provisioning as much as a
+		 * create or a replace.
 		 */
 		patch: createAction(routes.scimUsersPatch, {
 			middleware: [lifecycleGate],
 			handler: async (ctx) => {
 				let id = userId(ctx);
-				let body = await ctx.request.json().catch(() => null);
-				let translated = parseUserPatchOperations(body);
-				if (!translated.ok) {
-					return scimError({
-						status: 400,
-						scimType: "invalidPath",
-						detail:
-							translated.index !== undefined
-								? `Operation ${translated.index} is not one of the supported PATCH forms.`
-								: "The request body is not a valid SCIM PATCH request.",
-					});
-				}
+				let body = await readBody(ctx.request);
+				if (isFailure(body)) return errorResponse(body.error);
+				let operations = parsePatch(body.data);
+				if (isFailure(operations)) return errorResponse(operations.error);
 
-				let isPureDeactivation =
-					translated.operations.length > 0 &&
-					translated.operations.every(
-						(operation) => operation.attribute === "active" && operation.value === false,
-					);
-
-				if (!isPureDeactivation) {
+				if (!isPureDeactivation(operations.data)) {
 					let { entitled } = await ctx.tenantStub.hasEntitlement({ feature: SCIM_FEATURE });
 					if (!entitled) {
-						return scimError({
-							status: 403,
-							detail: "SCIM provisioning is not entitled for this tenant.",
-						});
+						return errorResponse(
+							new ScimError(403, "SCIM provisioning is not entitled for this tenant."),
+						);
 					}
 				}
 
 				let result = await ctx.tenantStub.scimPatchUser({
 					token: ctx.scimToken,
 					id,
-					operations: translated.operations,
+					operations: operations.data,
 				});
 				if (!result.ok) return scimFailure(result);
 
-				return scimJson(userToScim(result.representation), 200);
+				return scimResponse(userToScim(result.representation, ctx.url));
 			},
 		}),
 

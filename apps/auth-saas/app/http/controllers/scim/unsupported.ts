@@ -10,20 +10,19 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { errorResponse, ScimError } from "@sdxc/scim";
 import { createAction } from "remix/router";
 
-import { scimError } from "~/app/http/scim/response";
 import routes from "~/routes/tenant";
 
 /** `POST /scim/v2/Bulk` — always `501`; `bulk.supported: false` in `ServiceProviderConfig`. */
 export const scimBulk = createAction(routes.scimBulk, async () => {
-	return scimError({ status: 501, detail: "Bulk operations are not supported." });
+	return errorResponse(new ScimError(501, "Bulk operations are not supported."));
 });
 
 /** `GET /scim/v2/Me` — always `501`; a connection's bearer token names no person. */
 export const scimMe = createAction(routes.scimMe, async () => {
-	return scimError({
-		status: 501,
-		detail: "/Me has no meaning for a connection's own bearer token.",
-	});
+	return errorResponse(
+		new ScimError(501, "/Me has no meaning for a connection's own bearer token."),
+	);
 });

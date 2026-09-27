@@ -647,8 +647,10 @@ PATCH-path grammars that the RFC defines together.
 - [x] Phase 1: `@sdxc/scim` built with its five subpaths, tested against every RFC 7644
       §3.4.2.2 filter and §3.5.2 PATCH example, the RFC 7643 §8 resources, and Okta and Entra
       ID request shapes
-- [ ] Phase 2: migrate auth-saas
-- [ ] Phase 3: update auth-saas ADR-029 and publish
+- [x] Phase 2: migrate auth-saas — definitions, resource shapes and wire form in
+      `database/scim-resources.ts`; `request.ts` deleted; user PATCH as read, apply, replace; group
+      list through `filterToWhere` with the in-memory fallback; group PATCH op by op
+- [ ] Phase 3: update auth-saas ADR-029 and publish — ADR-029 revised; publishing is pending
 
 ## References
 

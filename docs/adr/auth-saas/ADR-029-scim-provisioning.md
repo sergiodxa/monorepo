@@ -105,21 +105,37 @@ call, which is the whole point of buying this. `active: true` restores the subje
 ended. `DELETE` follows the connection's policy, which defaults to blocking, because a deleted subject
 retires its id and a relying party's rows lose their anchor.
 
-`filter` supports `eq` on `userName`, `externalId` and `emails.value` for users, and `displayName` and
-`externalId` for groups. `startIndex` is one-based, `count` defaults to 100 with a ceiling of 200,
-listing is ordered by creation from an index, and `totalResults` is exact because a directory is
-bounded by its plan's subject cap.
+`filter` accepts the whole RFC 7644 §3.4.2.2 grammar — every comparison operator, `pr`, `and`,
+`or`, `not` and grouping — on `userName`, `externalId` and `emails.value` for users, and
+`displayName` and `externalId` for groups. Comparisons follow each attribute's definition, so
+`userName`, `emails.value` and a group's `displayName` fold case while `externalId` does not.
+`startIndex` is one-based and below 1 reads as 1, `count` defaults to 100 with a ceiling of 200 and
+below 0 reads as 0, listing is ordered by creation from an index, and `totalResults` is exact
+because a directory is bounded by its plan's subject cap. Every representation carries `meta`
+(`resourceType`, `created`, `lastModified`, and `location` under the tenant's own hostname).
 
-| Request                                                                                                                              | Answer                                                  | Why that is the answer                                                                                                                          |
-| ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PATCH` outside `replace`/`add` on a named attribute, `add` on `members` with a value array, and `remove` on `members[value eq "…"]` | `400`, `scimType: "invalidPath"`                        | Those four forms are what the deployed clients send, and each maps to one whole operation                                                       |
-| A `filter` beyond the `eq` attributes above                                                                                          | `400`, `scimType: "invalidFilter"`                      | The grammar's remainder has no caller, and a half-implemented parser answers wrong rather than refusing                                         |
-| `POST /Bulk`                                                                                                                         | `501`, with `bulk.supported: false` advertised          | An envelope moves a burst rather than reducing it; each operation inside is still one write in one turn                                         |
-| `If-Match`, `meta.version`                                                                                                           | `etag.supported: false`, and the header is ignored      | Requests to one tenant are serialized by the object, so the ordering a tag detects conflicts against is the ordering that already happened      |
-| `/Me`                                                                                                                                | `501`                                                   | The token names a connection, so there is no person for the alias to resolve to                                                                 |
-| `sortBy`, `sortOrder`                                                                                                                | `sort.supported: false`, and creation order is returned | Creation order is what a full sync walks                                                                                                        |
-| `attributes`, `excludedAttributes`                                                                                                   | The full representation                                 | Over-returning leaves a client working; refusing stops the sync                                                                                 |
-| `password` on a user                                                                                                                 | Accepted and stored nowhere                             | An enterprise connection authenticates these subjects, and a credential set over a provisioning channel is a shared secret with an extra holder |
+A user `PATCH` is RFC 7644 §3.5.2 in full over the mapped attributes: `add`, `replace` and
+`remove` on any attribute path, value filters (`emails[type eq "work"].value`), and path-less
+`add`/`replace` whose value's members are merged. The operations apply to the current
+representation, all or none, and the result is written the way a `PUT` writes it, digest
+comparison included. A group `PATCH` is applied operation by operation, because a directory group
+holds thousands of members and each operation touches only the membership rows it names:
+`displayName` set, and `members` added, replaced, removed by value list, removed through a value
+filter, or removed wholesale.
+
+| Request                                                                   | Answer                                                  | Why that is the answer                                                                                                                          |
+| ------------------------------------------------------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| A user `PATCH` naming an attribute outside the mapped definitions         | `400`, `scimType: "invalidPath"`                        | `/Schemas` lists what is mapped, and PATCH evaluates against those same definitions                                                             |
+| A user `PATCH` writing `id` or another read-only attribute                | `400`, `scimType: "mutability"`                         | RFC 7643 marks them read-only                                                                                                                   |
+| A group `PATCH` on anything but `displayName` and `members`               | `400`, `scimType: "invalidPath"`                        | A synced group carries a name and a membership; its `externalId` is the link the directory keeps                                                |
+| A `filter` naming an attribute outside the lists above                    | `400`, `scimType: "invalidFilter"`                      | The list assembles its answer from the attributes it maps, and an allowlist refuses the rest rather than answering them wrong                   |
+| A `PATCH` body without the `PatchOp` schema, or a user without `userName` | `400`, `scimType: "invalidSyntax"` / `"invalidValue"`   | RFC 7644 and RFC 7643 require both, and every deployed client sends them                                                                        |
+| `POST /Bulk`                                                              | `501`, with `bulk.supported: false` advertised          | An envelope moves a burst rather than reducing it; each operation inside is still one write in one turn                                         |
+| `If-Match`, `meta.version`                                                | `etag.supported: false`, and the header is ignored      | Requests to one tenant are serialized by the object, so the ordering a tag detects conflicts against is the ordering that already happened      |
+| `/Me`                                                                     | `501`                                                   | The token names a connection, so there is no person for the alias to resolve to                                                                 |
+| `sortBy`, `sortOrder`                                                     | `sort.supported: false`, and creation order is returned | Creation order is what a full sync walks                                                                                                        |
+| `attributes`, `excludedAttributes` naming known attributes                | The full representation                                 | Over-returning leaves a client working; refusing stops the sync                                                                                 |
+| `password` on a user                                                      | Accepted and stored nowhere                             | An enterprise connection authenticates these subjects, and a credential set over a provisioning channel is a shared secret with an extra holder |
 
 ### Tables, RPC methods and the gate
 
@@ -134,8 +150,9 @@ directory change and the record of it land together.
   it created.
 - `scimReplaceUser({ token, id, resource, at })` — answers the current representation, flagged
   unchanged, when the mapped digest matches.
-- `scimPatchUser({ token, id, operations, at })` — the supported forms, where `active: false` revokes
-  every session in the same call.
+- `scimPatchUser({ token, id, operations, at })` — applies the parsed operations to the current
+  representation and writes it as a replace, where `active: false` revokes every session in the same
+  call.
 - `scimDeleteUser({ token, id, at })` — blocks or deletes per the connection's policy, with
   `scimReadUser`, `scimReadUserPage`, and the six matching group operations.
 - `createScimConnection({ name, onDelete, groupSync, actor, at })` and `rotateScimToken`, each
@@ -160,8 +177,8 @@ account open.
 
 ### Negative
 
-- The supported subset is a promise a future provider may not fit, and widening it means new endpoint
-  behaviour rather than a configuration change.
+- The filterable attributes are a promise a future provider may not fit; widening them is an
+  allowlist entry, and for users a mapped attribute in the definitions `/Schemas` serves.
 - Requests to one tenant are serialized, so a sync at its ceiling adds queueing delay to that tenant's
   sign-ins, and the ceiling is a number chosen ahead of any customer's traffic.
 - Adopting an existing subject lets a connection take over an account created by self-signup — the

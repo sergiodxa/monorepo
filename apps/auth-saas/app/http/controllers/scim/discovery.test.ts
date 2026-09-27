@@ -59,6 +59,7 @@ describe("SCIM discovery documents", () => {
 		let body = (await response.json()) as { Resources: Array<{ id: string }> };
 		expect(body.Resources.map((resource) => resource.id)).toEqual([
 			"urn:ietf:params:scim:schemas:core:2.0:User",
+			"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
 			"urn:ietf:params:scim:schemas:core:2.0:Group",
 		]);
 		expect(calls).toHaveLength(0);

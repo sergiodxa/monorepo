@@ -11,20 +11,43 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database, TableRow } from "remix/data-table";
+import type { Scim } from "@sdxc/scim";
+import type { Discovery } from "@sdxc/scim/discovery";
+import type { Filter } from "@sdxc/scim/filter";
+import type { Patch } from "@sdxc/scim/patch";
+import type { Database, Predicate, TableRow } from "remix/data-table";
 
 import { Hex, randomToken, sha256 } from "@sdxc/crypto";
-import { isFailure } from "@sdxc/result";
+import { isFailure, isSuccess } from "@sdxc/result";
+import { GROUP_SCHEMA, parseUser, ScimError } from "@sdxc/scim";
+import { filterToWhere } from "@sdxc/scim/data-table";
+import { compileFilter } from "@sdxc/scim/filter";
+import { applyPatch } from "@sdxc/scim/patch";
 import { typeid } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
 import * as s from "remix/data-schema";
 import { and, column as c, eq, table } from "remix/data-table";
 
 import type { AuditActor } from "./audit-events";
+import type {
+	ScimGroupRepresentation,
+	ScimGroupResource,
+	ScimUserRepresentation,
+	ScimUserResource,
+} from "./scim-resources";
 import type { IdentifierKind } from "./subject-identifiers";
 import type { AttributeValue, SubjectProfile } from "./subjects";
 
 import { writeAuditEvent } from "./audit-events";
+import {
+	groupWire,
+	SCIM_GROUP_DEFINITIONS,
+	SCIM_GROUP_FILTER_PATHS,
+	SCIM_USER_DEFINITIONS,
+	SCIM_USER_EXTENSIONS,
+	SCIM_USER_FILTER_PATHS,
+	userWire,
+} from "./scim-resources";
 import { revokeSubjectSessions } from "./sessions";
 import { foldIdentifier } from "./subject-identifiers";
 import {
@@ -43,12 +66,6 @@ const PLATFORM_ACTOR = { type: "platform", id: "system" } as const;
 
 /** How long a rotated token's outgoing digest keeps verifying, the window an administrator has to paste the new one in. */
 const PREVIOUS_TOKEN_GRACE_MS = 72 * 60 * 60 * 1000;
-
-/** How many representations one page answers when a caller does not choose. */
-const DEFAULT_PAGE_SIZE = 100;
-
-/** The largest page a caller may request, regardless of what it asks for. */
-const MAX_PAGE_SIZE = 200;
 
 /** Mints a `scimc` id for a new connection. */
 const scimConnectionId = typeid("scimc");
@@ -381,49 +398,6 @@ export async function resolveScimToken(
 	return { ok: false, reason: "invalid-token" };
 }
 
-/** One address a SCIM user resource carries. */
-export interface ScimEmail {
-	value: string;
-	primary?: boolean;
-}
-
-/** One photo a SCIM user resource carries. */
-export interface ScimPhoto {
-	value: string;
-	type?: string;
-}
-
-/** The `name` complex attribute a SCIM user resource carries. */
-export interface ScimName {
-	givenName?: string | null;
-	familyName?: string | null;
-	formatted?: string | null;
-}
-
-/**
- * The SCIM user resource shape this pass's RPC methods accept, already parsed out of
- * whatever JSON envelope the HTTP layer reads it from — turning a raw
- * `application/scim+json` body (including the enterprise extension's own
- * schema-qualified key) into this shape is that layer's job, not this one's.
- */
-export interface ScimUserResource {
-	externalId?: string | null;
-	userName?: string;
-	active?: boolean;
-	emails?: ScimEmail[];
-	name?: ScimName;
-	displayName?: string | null;
-	preferredLanguage?: string | null;
-	timezone?: string | null;
-	photos?: ScimPhoto[];
-	/** Accepted and stored nowhere: a phone number is not an identifier, a factor or a delivery channel in this series. */
-	phoneNumbers?: unknown;
-	/** Accepted and stored nowhere: the connection authenticates these subjects, and a credential sent over provisioning is a shared secret with an extra holder. */
-	password?: string;
-	/** The enterprise extension's own members, mapped onto declared subject attributes. */
-	enterprise?: Record<string, AttributeValue>;
-}
-
 /** A user resource's attribute-table mapping, resolved before anything is written or compared. */
 interface MappedUser {
 	primaryEmail: string | null;
@@ -464,7 +438,7 @@ function mapUserResource(resource: ScimUserResource): MappedUser {
 			picture: resource.photos?.find((photo) => photo.type === "photo")?.value ?? null,
 		},
 		active: resource.active ?? true,
-		attributes: resource.enterprise ?? {},
+		attributes: resource.extensions.enterprise ?? {},
 	};
 }
 
@@ -514,51 +488,11 @@ async function ensureAttributeDefinitions(
 	}
 }
 
-/** The current mapped state {@link scimPatchUser} recomputes its digest from, read back off the subject's own rows rather than carried from the request. */
-async function currentMappedStateFor(db: Database, subjectId: string): Promise<MappedUser> {
-	let subject = await db.find(subjects, { id: subjectId });
-	if (!subject) throw new Error("subject row missing while recomputing its SCIM digest");
-
-	let identifierRows = await db.findMany(subjectIdentifiers, { where: { subject_id: subjectId } });
-	let primaryEmail =
-		identifierRows.find((row) => row.kind === "email" && row.is_primary)?.value ?? null;
-	let username = identifierRows.find((row) => row.kind === "username")?.value ?? null;
-
-	let attributeRows = await db.findMany(subjectAttributes, { where: { subject_id: subjectId } });
-	let attributes: Record<string, AttributeValue> = {};
-	for (let row of attributeRows) attributes[row.key] = row.value as AttributeValue;
-
-	return {
-		primaryEmail,
-		username,
-		profile: {
-			givenName: subject.given_name,
-			familyName: subject.family_name,
-			name: subject.name,
-			nickname: subject.nickname,
-			locale: subject.locale,
-			zoneinfo: subject.zoneinfo,
-			picture: subject.picture,
-		},
-		active: subject.status === "active",
-		attributes,
-	};
-}
-
-/** A user as one provisioning call hands it back. */
-export interface ScimUserRepresentation {
-	id: string;
-	externalId: string | null;
-	userName: string | null;
-	active: boolean;
-	emails: { value: string; primary: boolean }[];
-	name: { givenName: string | null; familyName: string | null; formatted: string | null };
-	displayName: string | null;
-	preferredLanguage: string | null;
-	timezone: string | null;
-	attributes: Record<string, AttributeValue>;
-}
-
+/**
+ * Reads a subject back as the SCIM User it answers as. `userName` is the username
+ * identifier when there is one and the primary email otherwise, mirroring how a resource
+ * maps in, so a representation replaced unchanged digests the same.
+ */
 async function assembleUserRepresentation(
 	db: Database,
 	subjectId: string,
@@ -577,20 +511,33 @@ async function assembleUserRepresentation(
 
 	return {
 		id: subject.id,
-		externalId,
-		userName: username?.value ?? primaryEmail?.value ?? null,
+		...(externalId ? { externalId } : {}),
+		userName: username?.value ?? primaryEmail?.value ?? "",
 		active: subject.status === "active",
 		emails: primaryEmail ? [{ value: primaryEmail.value, primary: true }] : [],
-		name: {
+		name: withoutNull({
 			givenName: subject.given_name,
 			familyName: subject.family_name,
 			formatted: subject.name,
-		},
-		displayName: subject.nickname,
-		preferredLanguage: subject.locale,
-		timezone: subject.zoneinfo,
-		attributes,
+		}),
+		...withoutNull({
+			displayName: subject.nickname,
+			preferredLanguage: subject.locale,
+			timezone: subject.zoneinfo,
+		}),
+		...(subject.picture ? { photos: [{ value: subject.picture, type: "photo" }] } : {}),
+		extensions: Object.keys(attributes).length > 0 ? { enterprise: attributes } : {},
+		createdAt: subject.created_at,
+		updatedAt: subject.updated_at,
 	};
+}
+
+/** A copy without its `null` members, so a column holding nothing reads as an unassigned attribute. */
+function withoutNull<Value extends Record<string, string | null>>(
+	value: Value,
+): { [Key in keyof Value]?: string } {
+	let entries = Object.entries(value).filter(([, item]) => item !== null);
+	return Object.fromEntries(entries) as { [Key in keyof Value]?: string };
 }
 
 /** Blocks a subject and revokes its sessions in the same call, with the connection recorded as the actor — the PATCH `active: false` and DELETE-as-block effect every user-lifecycle operation here shares. */
@@ -872,98 +819,102 @@ export async function scimReplaceUser(
 	let now = input.at ?? Date.now();
 	let resolved = await resolveScimToken(db, input.token, now);
 	if (!resolved.ok) return { ok: false, reason: "invalid-token" };
-	let connection = resolved.connection;
 
 	let link = await db.findOne(scimLinks, {
-		where: and(eq("connection_id", connection.id), eq("subject_id", input.id)),
+		where: and(eq("connection_id", resolved.connection.id), eq("subject_id", input.id)),
 	});
 	if (!link) return { ok: false, reason: "not-found" };
 
-	let mapped = mapUserResource(input.resource);
+	return {
+		ok: true,
+		...(await replaceLinkedUser(db, link, input.resource, "scim.user.replaced", now)),
+	};
+}
+
+/**
+ * Writes a whole resource onto a linked subject, skipping every write when its mapped
+ * digest matches the link's, and records the change under `action`. A replace and a
+ * patch both land here, so both share the digest no-op and the `active` side effects.
+ */
+async function replaceLinkedUser(
+	db: Database,
+	link: ScimLinkRow,
+	resource: ScimUserResource,
+	action: "scim.user.replaced" | "scim.user.patched",
+	now: number,
+): Promise<{ unchanged: boolean; representation: ScimUserRepresentation }> {
+	let mapped = mapUserResource(resource);
 	await ensureAttributeDefinitions(db, mapped.attributes);
 	let digest = await digestMappedUser(mapped);
 
 	if (link.last_digest === digest) {
 		return {
-			ok: true,
 			unchanged: true,
-			representation: await assembleUserRepresentation(db, input.id, link.external_id),
+			representation: await assembleUserRepresentation(db, link.subject_id, link.external_id),
 		};
 	}
 
 	let updated = await updateSubject(db, {
-		subjectId: input.id,
+		subjectId: link.subject_id,
 		profile: mapped.profile,
 		attributes: mapped.attributes,
 		actor: { kind: "admin" },
 	});
 	if (!updated.ok) throw new Error("scim replace could not apply attributes it already validated");
 
-	await syncActiveStateInline(db, connection.id, input.id, mapped.active, now);
+	await syncActiveStateInline(db, link.connection_id, link.subject_id, mapped.active, now);
 
 	await db.update(
 		scimLinks,
-		{ connection_id: connection.id, external_id: link.external_id },
+		{ connection_id: link.connection_id, external_id: link.external_id },
 		{ last_digest: digest, updated_at: now },
 	);
 
 	await writeAuditEvent(db, {
-		action: "scim.user.replaced",
-		actor: { type: "client", id: connection.id },
+		action,
+		actor: { type: "client", id: link.connection_id },
 		targetType: "subject",
-		targetId: input.id,
+		targetId: link.subject_id,
 		outcome: "succeeded",
 		at: now,
 	});
 
 	return {
-		ok: true,
 		unchanged: false,
-		representation: await assembleUserRepresentation(db, input.id, link.external_id),
+		representation: await assembleUserRepresentation(db, link.subject_id, link.external_id),
 	};
-}
-
-/** The standard fields a user PATCH operation may target directly; anything else is treated as a declared attribute key. */
-const STANDARD_USER_PATCH_ATTRIBUTES = new Set([
-	"active",
-	"givenName",
-	"familyName",
-	"name",
-	"displayName",
-	"preferredLanguage",
-	"timezone",
-	"picture",
-]);
-
-/** One `replace`/`add` operation on a named user attribute — the only forms {@link scimPatchUser} supports. */
-export interface ScimUserPatchOperation {
-	op: "replace" | "add";
-	attribute: string;
-	value: AttributeValue;
 }
 
 export interface ScimPatchUserInput {
 	token: string;
 	id: string;
-	operations: ScimUserPatchOperation[];
+	operations: Patch.Operation[];
 	at?: number;
+}
+
+/** A PATCH the SCIM rules refuse, carrying the RFC 7644 error document's members. */
+export interface ScimPatchRefusal {
+	ok: false;
+	reason: "invalid-patch";
+	status: number;
+	scimType: Scim.ErrorType | null;
+	detail: string;
 }
 
 export type ScimPatchUserResult =
 	| { ok: true; representation: ScimUserRepresentation }
 	| { ok: false; reason: "invalid-token" }
 	| { ok: false; reason: "not-found" }
-	| { ok: false; reason: "unsupported-operation"; index: number };
+	| ScimPatchRefusal;
 
 /**
- * Applies `replace`/`add` operations on named user attributes, refusing any other
- * operation shape before writing anything. `active: false` blocks the subject and
- * revokes every session in the same call; `active: true` restores it, leaving sessions
- * as they were.
+ * Applies a PATCH as read, apply, replace: the operations run against the user's current
+ * wire representation, and the result is written the way a PUT writes it. Every operation
+ * applies or none does; `active: false` blocks the subject and revokes every session.
  *
  * @param db - The tenant's database.
- * @param input - The bearer token, the subject id, the operations to apply, and the
- * clock to write with.
+ * @param input - The bearer token, the subject id, the parsed operations, and the clock
+ * to write with.
  * @returns The updated representation, or which rule refused the call.
  */
 export async function scimPatchUser(
@@ -973,94 +924,33 @@ export async function scimPatchUser(
 	let now = input.at ?? Date.now();
 	let resolved = await resolveScimToken(db, input.token, now);
 	if (!resolved.ok) return { ok: false, reason: "invalid-token" };
-	let connection = resolved.connection;
 
 	let link = await db.findOne(scimLinks, {
-		where: and(eq("connection_id", connection.id), eq("subject_id", input.id)),
+		where: and(eq("connection_id", resolved.connection.id), eq("subject_id", input.id)),
 	});
 	if (!link) return { ok: false, reason: "not-found" };
 
-	for (let [index, operation] of input.operations.entries()) {
-		let validOp = operation.op === "replace" || operation.op === "add";
-		let validAttribute = typeof operation.attribute === "string" && operation.attribute.length > 0;
-		if (!validOp || !validAttribute) return { ok: false, reason: "unsupported-operation", index };
-	}
-
-	let profileChanges: SubjectProfile = {};
-	let attributeChanges: Record<string, AttributeValue> = {};
-	let activeChange: boolean | undefined;
-
-	for (let operation of input.operations) {
-		if (!STANDARD_USER_PATCH_ATTRIBUTES.has(operation.attribute)) {
-			attributeChanges[operation.attribute] = operation.value;
-			continue;
-		}
-
-		switch (operation.attribute) {
-			case "active":
-				activeChange = Boolean(operation.value);
-				break;
-			case "givenName":
-				profileChanges.givenName = operation.value as string | null;
-				break;
-			case "familyName":
-				profileChanges.familyName = operation.value as string | null;
-				break;
-			case "name":
-				profileChanges.name = operation.value as string | null;
-				break;
-			case "displayName":
-				profileChanges.nickname = operation.value as string | null;
-				break;
-			case "preferredLanguage":
-				profileChanges.locale = operation.value as string | null;
-				break;
-			case "timezone":
-				profileChanges.zoneinfo = operation.value as string | null;
-				break;
-			case "picture":
-				profileChanges.picture = operation.value as string | null;
-				break;
-		}
-	}
-
-	await ensureAttributeDefinitions(db, attributeChanges);
-
-	if (Object.keys(profileChanges).length > 0 || Object.keys(attributeChanges).length > 0) {
-		let updated = await updateSubject(db, {
-			subjectId: input.id,
-			profile: profileChanges,
-			attributes: attributeChanges,
-			actor: { kind: "admin" },
-		});
-		if (!updated.ok) throw new Error("scim patch could not apply attributes it already validated");
-	}
-
-	if (activeChange !== undefined) {
-		await syncActiveStateInline(db, connection.id, input.id, activeChange, now);
-	}
-
-	let recomputed = await currentMappedStateFor(db, input.id);
-	let digest = await digestMappedUser(recomputed);
-
-	await db.update(
-		scimLinks,
-		{ connection_id: connection.id, external_id: link.external_id },
-		{ last_digest: digest, updated_at: now },
-	);
-
-	await writeAuditEvent(db, {
-		action: "scim.user.patched",
-		actor: { type: "client", id: connection.id },
-		targetType: "subject",
-		targetId: input.id,
-		outcome: "succeeded",
-		at: now,
+	let current = await assembleUserRepresentation(db, link.subject_id, link.external_id);
+	let patched = applyPatch(userWire(current), input.operations, {
+		definitions: SCIM_USER_DEFINITIONS,
 	});
+	if (isFailure(patched)) return patchRefusal(patched.error);
 
+	let next = parseUser(patched.data, { extensions: SCIM_USER_EXTENSIONS });
+	if (isFailure(next)) return patchRefusal(next.error);
+
+	let replaced = await replaceLinkedUser(db, link, next.data, "scim.user.patched", now);
+	return { ok: true, representation: replaced.representation };
+}
+
+/** The refusal an RPC answer carries for a `ScimError`, as plain data that crosses the boundary. */
+function patchRefusal(error: ScimError): ScimPatchRefusal {
 	return {
-		ok: true,
-		representation: await assembleUserRepresentation(db, input.id, link.external_id),
+		ok: false,
+		reason: "invalid-patch",
+		status: error.status,
+		scimType: error.scimType,
+		detail: error.message,
 	};
 }
 
@@ -1175,28 +1065,16 @@ export async function scimReadUser(
 	};
 }
 
-/** The only attributes a user list `filter` may name with `eq`, per the ADR's own subset. */
-const USER_FILTER_ATTRIBUTES = ["userName", "externalId", "emails.value"] as const;
-
-/** Parses the one filter grammar this pass serves: `attribute eq "value"` over an allowed attribute. */
-function parseEqFilter(
-	filter: string,
-	allowed: readonly string[],
-): { ok: true; attribute: string; value: string } | { ok: false } {
-	let match = /^(\S+)\s+eq\s+"([^"]*)"$/i.exec(filter.trim());
-	if (!match) return { ok: false };
-
-	let [, attribute, value] = match;
-	if (!attribute || value === undefined || !allowed.includes(attribute)) return { ok: false };
-
-	return { ok: true, attribute, value };
-}
-
 export interface ScimReadUserPageInput {
 	token: string;
-	filter?: string;
-	startIndex?: number;
-	count?: number;
+	query: Scim.ListQuery;
+}
+
+/** A list filter this connection does not serve, with the reason for the error document. */
+export interface ScimFilterRefusal {
+	ok: false;
+	reason: "unsupported-filter";
+	detail: string;
 }
 
 export type ScimReadUserPageResult =
@@ -1207,16 +1085,16 @@ export type ScimReadUserPageResult =
 			startIndex: number;
 	  }
 	| { ok: false; reason: "invalid-token" }
-	| { ok: false; reason: "unsupported-filter" };
+	| ScimFilterRefusal;
 
 /**
  * A page of this connection's users, ordered by creation, with `totalResults` exact —
  * a directory is bounded by its plan's subject cap, so counting it exactly costs
- * nothing a cursor would have saved.
+ * nothing a cursor would have saved. A representation spans several tables, so the
+ * filter runs over the assembled resources, restricted to `SCIM_USER_FILTER_PATHS`.
  *
  * @param db - The tenant's database.
- * @param input - The bearer token, an optional `attribute eq "value"` filter, and
- * where to page from.
+ * @param input - The bearer token and the parsed list query.
  * @returns The page and its exact total, or which rule refused the call.
  */
 export async function scimReadUserPage(
@@ -1225,64 +1103,57 @@ export async function scimReadUserPage(
 ): Promise<ScimReadUserPageResult> {
 	let resolved = await resolveScimToken(db, input.token);
 	if (!resolved.ok) return { ok: false, reason: "invalid-token" };
-	let connection = resolved.connection;
 
-	let parsedFilter: { attribute: string; value: string } | null = null;
-	if (input.filter !== undefined) {
-		let parsed = parseEqFilter(input.filter, USER_FILTER_ATTRIBUTES);
-		if (!parsed.ok) return { ok: false, reason: "unsupported-filter" };
-		parsedFilter = parsed;
-	}
+	let matches = compileListFilter(
+		input.query.filter,
+		SCIM_USER_DEFINITIONS,
+		SCIM_USER_FILTER_PATHS,
+	);
+	if (matches instanceof ScimError) return filterRefusal(matches);
 
 	let links = await db.findMany(scimLinks, {
-		where: eq("connection_id", connection.id),
+		where: eq("connection_id", resolved.connection.id),
 		orderBy: ["created_at", "asc"],
 	});
 
 	let representations: ScimUserRepresentation[] = [];
 	for (let link of links) {
 		let representation = await assembleUserRepresentation(db, link.subject_id, link.external_id);
-
-		if (parsedFilter) {
-			let matches =
-				(parsedFilter.attribute === "userName" && representation.userName === parsedFilter.value) ||
-				(parsedFilter.attribute === "externalId" &&
-					representation.externalId === parsedFilter.value) ||
-				(parsedFilter.attribute === "emails.value" &&
-					representation.emails.some((email) => email.value === parsedFilter?.value));
-			if (!matches) continue;
-		}
-
+		if (matches && !matches(userWire(representation))) continue;
 		representations.push(representation);
 	}
 
-	let totalResults = representations.length;
-	let startIndex = Math.max(input.startIndex ?? 1, 1);
-	let count = Math.min(input.count ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
-
+	let offset = input.query.startIndex - 1;
 	return {
 		ok: true,
-		representations: representations.slice(startIndex - 1, startIndex - 1 + count),
-		totalResults,
-		startIndex,
+		representations: representations.slice(offset, offset + input.query.count),
+		totalResults: representations.length,
+		startIndex: input.query.startIndex,
 	};
 }
 
-/** A SCIM group resource, already parsed out of whatever JSON envelope the HTTP layer reads it from. */
-export interface ScimGroupResource {
-	displayName: string;
-	externalId?: string | null;
-	members?: { value: string }[];
+/**
+ * Compiles a list filter against the served definitions, allowing only `paths`: the
+ * grammar is complete, and the allowlist is what keeps a list to the attributes it serves.
+ *
+ * @returns The predicate, `null` for no filter, or why the filter is refused
+ */
+function compileListFilter(
+	filter: Filter.Expression | null,
+	definitions: Discovery.Definitions,
+	paths: string[],
+): ((resource: object) => boolean) | null | ScimError {
+	if (!filter) return null;
+	let compiled = compileFilter(filter, { definitions, allow: paths });
+	return isFailure(compiled) ? compiled.error : compiled.data;
 }
 
-/** A group as one provisioning call hands it back. */
-export interface ScimGroupRepresentation {
-	id: string;
-	externalId: string | null;
-	displayName: string;
-	members: string[];
+/** The refusal an RPC answer carries for a filter this connection does not serve. */
+function filterRefusal(error: ScimError): ScimFilterRefusal {
+	return { ok: false, reason: "unsupported-filter", detail: error.message };
 }
 
+/** Reads a synced group back as the SCIM Group it answers as, its whole membership included. */
 async function assembleGroupRepresentation(
 	db: Database,
 	groupId: string,
@@ -1292,11 +1163,21 @@ async function assembleGroupRepresentation(
 
 	let memberRows = await db.findMany(scimGroupMembers, { where: { group_id: groupId } });
 
+	return toGroupRepresentation(
+		group,
+		memberRows.map((row) => row.subject_id),
+	);
+}
+
+/** A group row and its member ids as the representation a provisioning call answers. */
+function toGroupRepresentation(group: ScimGroupRow, memberIds: string[]): ScimGroupRepresentation {
 	return {
 		id: group.id,
-		externalId: group.external_id,
+		...(group.external_id ? { externalId: group.external_id } : {}),
 		displayName: group.display_name,
-		members: memberRows.map((row) => row.subject_id),
+		members: memberIds.map((value) => ({ value })),
+		createdAt: group.created_at,
+		updatedAt: group.updated_at,
 	};
 }
 
@@ -1441,20 +1322,18 @@ export async function scimReplaceGroup(
 	return { ok: true, representation: await assembleGroupRepresentation(db, group.id) };
 }
 
-/**
- * A group PATCH operation: `replace`/`add` on `displayName`, `add` on `members` with a
- * value array, or `remove` on `members` naming one subject — the forms the ADR's own
- * table lists, nothing else.
- */
-export type ScimGroupPatchOperation =
-	| { op: "replace" | "add"; attribute: "displayName"; value: string }
-	| { op: "add"; attribute: "members"; values: string[] }
-	| { op: "remove"; attribute: "members"; value: string };
+/** One membership or name change a group PATCH operation stands for, in the order sent. */
+type GroupChange =
+	| { kind: "displayName"; value: string }
+	| { kind: "addMembers"; subjectIds: string[] }
+	| { kind: "replaceMembers"; subjectIds: string[] }
+	| { kind: "removeMembers"; subjectIds: string[] }
+	| { kind: "removeMatching"; matches: (resource: object) => boolean };
 
 export interface ScimPatchGroupInput {
 	token: string;
 	id: string;
-	operations: ScimGroupPatchOperation[];
+	operations: Patch.Operation[];
 	at?: number;
 }
 
@@ -1466,13 +1345,94 @@ export type ScimPatchGroupResult =
 	| { ok: false; reason: "unknown-member"; subjectId: string };
 
 /**
- * Applies group PATCH operations: a plain `displayName` change, or a membership `add`
- * or `remove`. Every operation is validated before any is applied, so a request mixing
- * one unsupported form with otherwise-valid ones writes nothing.
+ * Reads `[{ value }, …]` as subject ids.
+ *
+ * @returns The ids, or `null` when any entry names no string `value`
+ */
+function readMemberIds(value: unknown): string[] | null {
+	if (!Array.isArray(value)) return null;
+	let ids: string[] = [];
+	for (let entry of value) {
+		if (typeof entry !== "object" || entry === null) return null;
+		let id = (entry as { value?: unknown }).value;
+		if (typeof id !== "string") return null;
+		ids.push(id);
+	}
+	return ids;
+}
+
+/**
+ * The changes a path-less `add` or `replace` stands for: its `displayName` and `members`
+ * keys, matched in any case; any other key is unsupported.
+ *
+ * @returns The changes, or `null` when the value names anything else
+ */
+function translatePathlessGroupValue(op: "add" | "replace", value: unknown): GroupChange[] | null {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+	let changes: GroupChange[] = [];
+	for (let [key, item] of Object.entries(value)) {
+		let name = key.toLowerCase();
+		if (name === "displayname" && typeof item === "string") {
+			changes.push({ kind: "displayName", value: item });
+			continue;
+		}
+		let subjectIds = name === "members" ? readMemberIds(item) : null;
+		if (!subjectIds) return null;
+		changes.push({ kind: op === "add" ? "addMembers" : "replaceMembers", subjectIds });
+	}
+	return changes;
+}
+
+/**
+ * Interprets one PATCH operation as group changes: `displayName` set, and `members`
+ * added, replaced, removed by value list, removed wholesale, or removed through a value
+ * filter (`members[value eq "…"]`). A group holds thousands of members, so each change
+ * touches only the rows it names.
+ *
+ * @returns The changes, or `null` when the operation targets anything else
+ */
+function translateGroupOperation(operation: Patch.Operation): GroupChange[] | null {
+	let { op, path, value } = operation;
+	if (path === null) return op === "remove" ? null : translatePathlessGroupValue(op, value);
+
+	let attribute = path.attribute.attribute.toLowerCase();
+	let schema = path.attribute.schema;
+	if (schema !== null && schema.toLowerCase() !== GROUP_SCHEMA.toLowerCase()) return null;
+	if (path.attribute.subAttribute !== null || path.subAttribute !== null) return null;
+
+	if (attribute === "displayname") {
+		if (op === "remove" || path.filter || typeof value !== "string") return null;
+		return [{ kind: "displayName", value }];
+	}
+
+	if (attribute !== "members") return null;
+
+	if (path.filter) {
+		if (op !== "remove") return null;
+		let compiled = compileFilter(
+			{ kind: "valuePath", path: path.attribute, filter: path.filter },
+			{ definitions: SCIM_GROUP_DEFINITIONS },
+		);
+		return isFailure(compiled) ? null : [{ kind: "removeMatching", matches: compiled.data }];
+	}
+
+	if (op === "remove" && value === undefined) return [{ kind: "replaceMembers", subjectIds: [] }];
+
+	let subjectIds = readMemberIds(value);
+	if (!subjectIds) return null;
+	if (op === "add") return [{ kind: "addMembers", subjectIds }];
+	if (op === "replace") return [{ kind: "replaceMembers", subjectIds }];
+	return [{ kind: "removeMembers", subjectIds }];
+}
+
+/**
+ * Applies group PATCH operations one by one, each touching only the membership rows it
+ * names. Every operation is interpreted, and every added member checked, before any is
+ * applied, so a request mixing one unsupported form with valid ones writes nothing.
  *
  * @param db - The tenant's database.
- * @param input - The bearer token, the group id, the operations to apply, and the
- * clock to write with.
+ * @param input - The bearer token, the group id, the parsed operations, and the clock to
+ * write with.
  * @returns The updated representation, or which rule refused the call.
  */
 export async function scimPatchGroup(
@@ -1489,56 +1449,52 @@ export async function scimPatchGroup(
 	});
 	if (!group) return { ok: false, reason: "not-found" };
 
+	let changes: GroupChange[] = [];
 	for (let [index, operation] of input.operations.entries()) {
-		let validShape =
-			(operation.attribute === "displayName" &&
-				(operation.op === "replace" || operation.op === "add") &&
-				typeof operation.value === "string") ||
-			(operation.attribute === "members" &&
-				operation.op === "add" &&
-				Array.isArray(operation.values)) ||
-			(operation.attribute === "members" &&
-				operation.op === "remove" &&
-				typeof operation.value === "string");
-		if (!validShape) return { ok: false, reason: "unsupported-operation", index };
+		let translated = translateGroupOperation(operation);
+		if (!translated) return { ok: false, reason: "unsupported-operation", index };
+		changes.push(...translated);
 	}
 
-	for (let operation of input.operations) {
-		if (operation.attribute !== "members" || operation.op !== "add") continue;
-		for (let subjectId of operation.values) {
+	for (let change of changes) {
+		if (change.kind !== "addMembers" && change.kind !== "replaceMembers") continue;
+		for (let subjectId of change.subjectIds) {
 			let subject = await db.find(subjects, { id: subjectId });
 			if (!subject) return { ok: false, reason: "unknown-member", subjectId };
 		}
 	}
 
-	for (let operation of input.operations) {
-		if (operation.attribute === "displayName") {
-			await db.update(
-				scimGroups,
-				{ id: group.id },
-				{ display_name: operation.value, updated_at: now },
-			);
-			continue;
-		}
-
-		if (operation.op === "add") {
-			for (let subjectId of operation.values) {
-				let existing = await db.find(scimGroupMembers, {
-					group_id: group.id,
-					subject_id: subjectId,
-				});
-				if (!existing) {
-					await db.create(scimGroupMembers, {
-						group_id: group.id,
-						subject_id: subjectId,
-						created_at: now,
-					});
+	let displayName = group.display_name;
+	for (let change of changes) {
+		switch (change.kind) {
+			case "displayName":
+				displayName = change.value;
+				break;
+			case "replaceMembers":
+				await db.deleteMany(scimGroupMembers, { where: { group_id: group.id } });
+				await addGroupMembers(db, group.id, change.subjectIds, now);
+				break;
+			case "addMembers":
+				await addGroupMembers(db, group.id, change.subjectIds, now);
+				break;
+			case "removeMembers":
+				for (let subjectId of change.subjectIds) {
+					await db.delete(scimGroupMembers, { group_id: group.id, subject_id: subjectId });
 				}
+				break;
+			case "removeMatching": {
+				let rows = await db.findMany(scimGroupMembers, { where: { group_id: group.id } });
+				for (let row of rows) {
+					let member = { schemas: [GROUP_SCHEMA], members: [{ value: row.subject_id }] };
+					if (!change.matches(member)) continue;
+					await db.delete(scimGroupMembers, { group_id: group.id, subject_id: row.subject_id });
+				}
+				break;
 			}
-		} else {
-			await db.delete(scimGroupMembers, { group_id: group.id, subject_id: operation.value });
 		}
 	}
+
+	await db.update(scimGroups, { id: group.id }, { display_name: displayName, updated_at: now });
 
 	await writeAuditEvent(db, {
 		action: "scim.group.patched",
@@ -1550,6 +1506,25 @@ export async function scimPatchGroup(
 	});
 
 	return { ok: true, representation: await assembleGroupRepresentation(db, group.id) };
+}
+
+/** Adds each subject to a group, leaving a membership that already exists as it is. */
+async function addGroupMembers(
+	db: Database,
+	groupId: string,
+	subjectIds: string[],
+	now: number,
+): Promise<void> {
+	for (let subjectId of subjectIds) {
+		let existing = await db.find(scimGroupMembers, { group_id: groupId, subject_id: subjectId });
+		if (!existing) {
+			await db.create(scimGroupMembers, {
+				group_id: groupId,
+				subject_id: subjectId,
+				created_at: now,
+			});
+		}
+	}
 }
 
 export interface ScimDeleteGroupInput {
@@ -1634,14 +1609,9 @@ export async function scimReadGroup(
 	return { ok: true, representation: await assembleGroupRepresentation(db, group.id) };
 }
 
-/** The only attributes a group list `filter` may name with `eq`, per the ADR's own subset. */
-const GROUP_FILTER_ATTRIBUTES = ["displayName", "externalId"] as const;
-
 export interface ScimReadGroupPageInput {
 	token: string;
-	filter?: string;
-	startIndex?: number;
-	count?: number;
+	query: Scim.ListQuery;
 }
 
 export type ScimReadGroupPageResult =
@@ -1652,14 +1622,15 @@ export type ScimReadGroupPageResult =
 			startIndex: number;
 	  }
 	| { ok: false; reason: "invalid-token" }
-	| { ok: false; reason: "unsupported-filter" };
+	| ScimFilterRefusal;
 
 /**
  * A page of this connection's groups, ordered by creation, with `totalResults` exact.
+ * Groups live in one table, so the filter runs in SQL where it translates, and over the
+ * loaded rows where it does not (a value containing a `LIKE` wildcard, say).
  *
  * @param db - The tenant's database.
- * @param input - The bearer token, an optional `attribute eq "value"` filter, and
- * where to page from.
+ * @param input - The bearer token and the parsed list query.
  * @returns The page and its exact total, or which rule refused the call.
  */
 export async function scimReadGroupPage(
@@ -1668,33 +1639,50 @@ export async function scimReadGroupPage(
 ): Promise<ScimReadGroupPageResult> {
 	let resolved = await resolveScimToken(db, input.token);
 	if (!resolved.ok) return { ok: false, reason: "invalid-token" };
-	let connection = resolved.connection;
+	let scope = eq("connection_id", resolved.connection.id);
+	let { filter, startIndex, count } = input.query;
 
-	let parsedFilter: { attribute: string; value: string } | null = null;
-	if (input.filter !== undefined) {
-		let parsed = parseEqFilter(input.filter, GROUP_FILTER_ATTRIBUTES);
-		if (!parsed.ok) return { ok: false, reason: "unsupported-filter" };
-		parsedFilter = parsed;
+	let matches = compileListFilter(filter, SCIM_GROUP_DEFINITIONS, SCIM_GROUP_FILTER_PATHS);
+	if (matches instanceof ScimError) return filterRefusal(matches);
+
+	let where = filter
+		? filterToWhere(filter, {
+				displayName: { column: "display_name", caseExact: false },
+				externalId: "external_id",
+			})
+		: null;
+
+	if (matches && (!where || !isSuccess(where))) {
+		let rows = await db.findMany(scimGroups, { where: scope, orderBy: ["created_at", "asc"] });
+		let found = rows.filter((row) => matches(groupWire(toGroupRepresentation(row, []))));
+		let page = found.slice(startIndex - 1, startIndex - 1 + count);
+		return {
+			ok: true,
+			representations: await Promise.all(
+				page.map((row) => assembleGroupRepresentation(db, row.id)),
+			),
+			totalResults: found.length,
+			startIndex,
+		};
 	}
 
-	let groups = await db.findMany(scimGroups, {
-		where: eq("connection_id", connection.id),
-		orderBy: ["created_at", "asc"],
-	});
-
-	let filtered = groups.filter((group) => {
-		if (!parsedFilter) return true;
-		if (parsedFilter.attribute === "displayName") return group.display_name === parsedFilter.value;
-		return group.external_id === parsedFilter.value;
-	});
-
-	let totalResults = filtered.length;
-	let startIndex = Math.max(input.startIndex ?? 1, 1);
-	let count = Math.min(input.count ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
-	let page = filtered.slice(startIndex - 1, startIndex - 1 + count);
+	let scoped =
+		where && isSuccess(where)
+			? and(scope, where.data as Predicate<"display_name" | "external_id">)
+			: scope;
+	let totalResults = await db.count(scimGroups, { where: scoped });
+	let rows =
+		count === 0
+			? []
+			: await db.findMany(scimGroups, {
+					where: scoped,
+					orderBy: ["created_at", "asc"],
+					limit: count,
+					offset: startIndex - 1,
+				});
 
 	let representations: ScimGroupRepresentation[] = [];
-	for (let group of page) representations.push(await assembleGroupRepresentation(db, group.id));
+	for (let row of rows) representations.push(await assembleGroupRepresentation(db, row.id));
 
 	return { ok: true, representations, totalResults, startIndex };
 }

@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { PATCH_OP_SCHEMA } from "@sdxc/scim";
 import { describe, expect, test } from "vitest";
 
 import {
@@ -88,7 +89,11 @@ describe("SCIM Users lifecycle", () => {
 		// Confirms the replace above wrote nothing, the same way `scim.test.ts`'s own
 		// `scimReplaceUser` test does, by reading the `cost` envelope only the RPC
 		// surface (not the HTTP layer) exposes.
-		let replayed = await harness.tenantDO.scimReplaceUser({ token, id, resource: replaceBody });
+		let replayed = await harness.tenantDO.scimReplaceUser({
+			token,
+			id,
+			resource: { ...replaceBody, extensions: {} },
+		});
 		expect(replayed.ok).toBe(true);
 		if (!replayed.ok) throw new Error("unreachable");
 		expect(replayed.unchanged).toBe(true);
@@ -98,6 +103,7 @@ describe("SCIM Users lifecycle", () => {
 			harness.request(`/scim/v2/Users/${id}`, token, {
 				method: "PATCH",
 				body: JSON.stringify({
+					schemas: [PATCH_OP_SCHEMA],
 					Operations: [{ op: "replace", path: "displayName", value: "Dana D." }],
 				}),
 			}),
@@ -109,7 +115,10 @@ describe("SCIM Users lifecycle", () => {
 		let deactivateResponse = await harness.router.fetch(
 			harness.request(`/scim/v2/Users/${id}`, token, {
 				method: "PATCH",
-				body: JSON.stringify({ Operations: [{ op: "replace", path: "active", value: false }] }),
+				body: JSON.stringify({
+					schemas: [PATCH_OP_SCHEMA],
+					Operations: [{ op: "replace", path: "active", value: false }],
+				}),
 			}),
 		);
 		expect(deactivateResponse.status).toBe(200);
@@ -137,6 +146,7 @@ describe("SCIM Users lifecycle", () => {
 			harness.request("/scim/v2/Users", token, {
 				method: "POST",
 				body: JSON.stringify({
+					userName: "a@example.com",
 					externalId: "ext-a",
 					emails: [{ value: "a@example.com", primary: true }],
 				}),
@@ -146,6 +156,7 @@ describe("SCIM Users lifecycle", () => {
 			harness.request("/scim/v2/Users", token, {
 				method: "POST",
 				body: JSON.stringify({
+					userName: "b@example.com",
 					externalId: "ext-b",
 					emails: [{ value: "b@example.com", primary: true }],
 				}),
@@ -169,6 +180,7 @@ describe("SCIM entitlement gate", () => {
 			harness.request("/scim/v2/Users", token, {
 				method: "POST",
 				body: JSON.stringify({
+					userName: "x@example.com",
 					externalId: "ext-1",
 					emails: [{ value: "x@example.com", primary: true }],
 				}),
@@ -189,6 +201,7 @@ describe("SCIM entitlement gate", () => {
 			harness.request("/scim/v2/Users", token, {
 				method: "POST",
 				body: JSON.stringify({
+					userName: "x@example.com",
 					externalId: "ext-1",
 					emails: [{ value: "x@example.com", primary: true }],
 				}),
@@ -204,7 +217,12 @@ describe("SCIM entitlement gate", () => {
 		let token = await createScimConnectionToken(harness.tenantDO);
 		let provisioned = await harness.tenantDO.scimProvisionUser({
 			token,
-			resource: { externalId: "ext-1", emails: [{ value: "y@example.com", primary: true }] },
+			resource: {
+				externalId: "ext-1",
+				userName: "y@example.com",
+				emails: [{ value: "y@example.com", primary: true }],
+				extensions: {},
+			},
 		});
 		if (!provisioned.ok) throw new Error("unreachable");
 
@@ -224,7 +242,12 @@ describe("SCIM entitlement gate", () => {
 		let token = await createScimConnectionToken(harness.tenantDO);
 		let provisioned = await harness.tenantDO.scimProvisionUser({
 			token,
-			resource: { externalId: "ext-1", emails: [{ value: "y2@example.com", primary: true }] },
+			resource: {
+				externalId: "ext-1",
+				userName: "y2@example.com",
+				emails: [{ value: "y2@example.com", primary: true }],
+				extensions: {},
+			},
 		});
 		if (!provisioned.ok) throw new Error("unreachable");
 
@@ -233,7 +256,10 @@ describe("SCIM entitlement gate", () => {
 		let response = await harness.router.fetch(
 			harness.request(`/scim/v2/Users/${provisioned.representation.id}`, token, {
 				method: "PATCH",
-				body: JSON.stringify({ Operations: [{ op: "replace", path: "active", value: false }] }),
+				body: JSON.stringify({
+					schemas: [PATCH_OP_SCHEMA],
+					Operations: [{ op: "replace", path: "active", value: false }],
+				}),
 			}),
 		);
 		expect(response.status).toBe(200);
@@ -245,7 +271,12 @@ describe("SCIM entitlement gate", () => {
 		let token = await createScimConnectionToken(harness.tenantDO);
 		let provisioned = await harness.tenantDO.scimProvisionUser({
 			token,
-			resource: { externalId: "ext-1", emails: [{ value: "y3@example.com", primary: true }] },
+			resource: {
+				externalId: "ext-1",
+				userName: "y3@example.com",
+				emails: [{ value: "y3@example.com", primary: true }],
+				extensions: {},
+			},
 		});
 		if (!provisioned.ok) throw new Error("unreachable");
 
@@ -255,6 +286,7 @@ describe("SCIM entitlement gate", () => {
 			harness.request(`/scim/v2/Users/${provisioned.representation.id}`, token, {
 				method: "PATCH",
 				body: JSON.stringify({
+					schemas: [PATCH_OP_SCHEMA],
 					Operations: [
 						{ op: "replace", path: "active", value: false },
 						{ op: "replace", path: "displayName", value: "New Name" },
@@ -277,6 +309,7 @@ describe("SCIM rate limiting", () => {
 			harness.request("/scim/v2/Users", token, {
 				method: "POST",
 				body: JSON.stringify({
+					userName: "z@example.com",
 					externalId: "ext-1",
 					emails: [{ value: "z@example.com", primary: true }],
 				}),
@@ -297,6 +330,7 @@ describe("SCIM rate limiting", () => {
 			harness.request("/scim/v2/Users", token, {
 				method: "POST",
 				body: JSON.stringify({
+					userName: "z2@example.com",
 					externalId: "ext-1",
 					emails: [{ value: "z2@example.com", primary: true }],
 				}),
@@ -321,6 +355,7 @@ describe("SCIM bearer token", () => {
 				method: "POST",
 				headers: { "Content-Type": "application/scim+json" },
 				body: JSON.stringify({
+					userName: "w@example.com",
 					externalId: "ext-1",
 					emails: [{ value: "w@example.com", primary: true }],
 				}),
@@ -345,6 +380,7 @@ describe("SCIM bearer token", () => {
 					"Content-Type": "application/scim+json",
 				},
 				body: JSON.stringify({
+					userName: "w2@example.com",
 					externalId: "ext-1",
 					emails: [{ value: "w2@example.com", primary: true }],
 				}),
@@ -363,6 +399,7 @@ describe("SCIM bearer token", () => {
 			harness.request("/scim/v2/Users", "scim_not-a-real-token", {
 				method: "POST",
 				body: JSON.stringify({
+					userName: "w3@example.com",
 					externalId: "ext-1",
 					emails: [{ value: "w3@example.com", primary: true }],
 				}),
@@ -370,5 +407,86 @@ describe("SCIM bearer token", () => {
 		);
 
 		expect(response.status).toBe(401);
+	});
+});
+
+describe("SCIM Users conformance", () => {
+	test("representations carry meta locating them under the request's origin", async () => {
+		let harness = await buildScimHarness();
+		await setScimEntitled(harness.tenantDO, true);
+		let token = await createScimConnectionToken(harness.tenantDO);
+
+		let response = await harness.router.fetch(
+			harness.request("/scim/v2/Users", token, {
+				method: "POST",
+				body: JSON.stringify({
+					externalId: "ext-meta",
+					username: "meta@example.com",
+					Emails: [{ value: "meta@example.com", primary: true }],
+				}),
+			}),
+		);
+
+		expect(response.status).toBe(201);
+		let body = (await response.json()) as {
+			id: string;
+			userName: string;
+			meta: Record<string, string>;
+		};
+		expect(body.userName).toBe("meta@example.com");
+		expect(body.meta).toMatchObject({
+			resourceType: "User",
+			location: `${ISSUER}/scim/v2/Users/${body.id}`,
+		});
+		expect(Number.isNaN(Date.parse(body.meta.created ?? ""))).toBe(false);
+		expect(Number.isNaN(Date.parse(body.meta.lastModified ?? ""))).toBe(false);
+	});
+
+	test("a filter on an attribute outside the allowlist answers 400 invalidFilter", async () => {
+		let harness = await buildScimHarness();
+		await setScimEntitled(harness.tenantDO, true);
+		let token = await createScimConnectionToken(harness.tenantDO);
+
+		let response = await harness.router.fetch(
+			harness.request(
+				`/scim/v2/Users?filter=${encodeURIComponent('displayName eq "Dana"')}`,
+				token,
+			),
+		);
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as Record<string, unknown>;
+		expect(body.scimType).toBe("invalidFilter");
+	});
+
+	test.each([
+		["Entra ID's string value", { op: "Replace", path: "active", value: "False" }],
+		["Okta's path-less value", { op: "replace", value: { active: false } }],
+	])("admits %s as a pure deactivation after the entitlement lapsed", async (_, operation) => {
+		let harness = await buildScimHarness();
+		await setScimEntitled(harness.tenantDO, true);
+		let token = await createScimConnectionToken(harness.tenantDO);
+		let provisioned = await harness.tenantDO.scimProvisionUser({
+			token,
+			resource: {
+				externalId: "ext-deactivate",
+				userName: "deactivate@example.com",
+				extensions: {},
+			},
+		});
+		if (!provisioned.ok) throw new Error("unreachable");
+
+		await setScimEntitled(harness.tenantDO, false);
+
+		let response = await harness.router.fetch(
+			harness.request(`/scim/v2/Users/${provisioned.representation.id}`, token, {
+				method: "PATCH",
+				body: JSON.stringify({ schemas: [PATCH_OP_SCHEMA], Operations: [operation] }),
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as Record<string, unknown>;
+		expect(body.active).toBe(false);
 	});
 });
