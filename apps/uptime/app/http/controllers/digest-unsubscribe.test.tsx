@@ -11,19 +11,23 @@ import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
+import { Base64Url, Hex, hmac } from "@sdxc/crypto";
+import { signUnsubscribeToken } from "@sdxc/mail/unsubscribe";
 import { unwrap } from "@sdxc/result";
+import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { cop } from "remix/middleware/cop";
+import { formData } from "remix/middleware/form-data";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { renderToString } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 
 import UserPreferences from "~/app/data/user-preferences";
+import { DIGEST_UNSUBSCRIBE_TOKEN } from "~/app/emails/shared/team-digest";
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
-import { signDigestUnsubscribeToken } from "~/app/lib/digest-unsubscribe";
 import { createTestDatabase } from "~/app/lib/test/db";
 import routes from "~/routes/web";
 
@@ -43,14 +47,30 @@ function createTestRenderer(): Renderer<RemixNode> {
 
 /** A token for `subject-1`'s daily digest, signed the way the digest job signs it. */
 async function dailyToken(subjectId = "subject-1") {
-	return unwrap(await signDigestUnsubscribeToken({ subjectId, email: "teamDailyDigest" }));
+	return unwrap(
+		await signUnsubscribeToken(
+			env.COOKIE_SESSION_SECRET,
+			{ subject: subjectId, list: "teamDailyDigest" },
+			DIGEST_UNSUBSCRIBE_TOKEN,
+		),
+	);
+}
+
+/**
+ * A token in the shape digests were mailed with before issue times were signed in: the MAC
+ * over the purpose and `email:subject` alone. Links already sitting in inboxes look like this.
+ */
+async function deliveredToken(subjectId = "subject-1") {
+	let payload = `teamDailyDigest:${subjectId}`;
+	let mac = unwrap(await hmac.sign(env.COOKIE_SESSION_SECRET, `digest-unsubscribe:v1:${payload}`));
+	return `${Hex.encode(mac)}${Base64Url.encode(payload)}`;
 }
 
 /**
  * Dispatches one request with no session and no browser provenance headers, which is what a
  * provider's one-click POST looks like; the POST carries the RFC 8058 body.
  */
-async function visit(db: Db, token: string, method: "GET" | "POST") {
+async function visit(db: Db, token: string, method: "GET" | "POST", oneClick = true) {
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
@@ -60,6 +80,7 @@ async function visit(db: Db, token: string, method: "GET" | "POST") {
 				return next();
 			}) as Middleware,
 			i18n as Middleware,
+			formData() as Middleware,
 			cop(),
 			renderWith(createTestRenderer) as Middleware,
 		],
@@ -76,7 +97,7 @@ async function visit(db: Db, token: string, method: "GET" | "POST") {
 			? {
 					method,
 					headers: { "content-type": "application/x-www-form-urlencoded" },
-					body: "List-Unsubscribe=One-Click",
+					body: oneClick ? "List-Unsubscribe=One-Click" : "",
 				}
 			: { method };
 
@@ -107,13 +128,32 @@ describe("GET /digests/unsubscribe/:token", () => {
 });
 
 describe("POST /digests/unsubscribe/:token", () => {
-	test("turns the digest off with a valid token and no session", async () => {
+	test("turns the digest off for a provider's one-click POST, answering an empty 200", async () => {
 		let { db } = createTestDatabase();
 
 		let { response, body } = await visit(db, await dailyToken(), "POST");
 
 		expect(response.status).toBe(200);
+		expect(body).toBe("");
+		expect(await wantsDaily(db)).toBe(false);
+	});
+
+	test("shows a person who pressed the button that the digest is off", async () => {
+		let { db } = createTestDatabase();
+
+		let { response, body } = await visit(db, await dailyToken(), "POST", false);
+
+		expect(response.status).toBe(200);
 		expect(body).toContain("Digest turned off");
+		expect(await wantsDaily(db)).toBe(false);
+	});
+
+	test("still honours a link delivered before tokens carried an issue time", async () => {
+		let { db } = createTestDatabase();
+
+		let { response } = await visit(db, await deliveredToken(), "POST");
+
+		expect(response.status).toBe(200);
 		expect(await wantsDaily(db)).toBe(false);
 	});
 
@@ -123,7 +163,7 @@ describe("POST /digests/unsubscribe/:token", () => {
 		let token = await dailyToken();
 
 		await visit(db, token, "POST");
-		let second = await visit(db, token, "POST");
+		let second = await visit(db, token, "POST", false);
 
 		let preferences = await UserPreferences.findBySubjectId(db, "subject-1");
 		expect(second.response.status).toBe(200);

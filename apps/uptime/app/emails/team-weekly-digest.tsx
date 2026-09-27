@@ -10,7 +10,7 @@
  */
 
 import type { Translate } from "@sdxc/i18n";
-import type { Address } from "@sdxc/mail";
+import type { Address, MailingList, Unsubscribe } from "@sdxc/mail";
 import type { RemixElement } from "remix/ui";
 
 import { Email } from "@sdxc/mail";
@@ -25,7 +25,7 @@ import {
 	countHealthy,
 	sortTeamDigestMonitors,
 	teamDigestDay,
-	teamDigestUnsubscribeHeaders,
+	TEAM_DIGEST_MAILING_LISTS,
 } from "~/app/emails/shared/team-digest";
 import { UptimeBar } from "~/app/emails/shared/uptime-bar";
 
@@ -98,9 +98,14 @@ export class TeamWeeklyDigestEmail implements Email {
 		return t("emails.teamDigest.weekly.subject", { team: teamName, up, count: total });
 	}
 
-	/** One-click unsubscribe headers, for the clients that surface a native button. */
-	get headers(): Record<string, string> {
-		return teamDigestUnsubscribeHeaders(this.#digest.unsubscribeUrl);
+	/** One-click unsubscribe, for the clients that surface a native button. */
+	get unsubscribe(): Unsubscribe {
+		return { url: this.#digest.unsubscribeUrl };
+	}
+
+	/** This digest's own list, so unsubscribing from it leaves the other digest on. */
+	get list(): MailingList {
+		return TEAM_DIGEST_MAILING_LISTS.weekly;
 	}
 
 	/** Body tree: the headline, the roll-up, the week's bar, the monitor list, the link, the footer. */

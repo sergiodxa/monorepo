@@ -10,7 +10,7 @@
  */
 
 import type { Translate } from "@sdxc/i18n";
-import type { Address } from "@sdxc/mail";
+import type { Address, MailingList, Unsubscribe } from "@sdxc/mail";
 import type { Handle, RemixElement } from "remix/ui";
 
 import { Email } from "@sdxc/mail";
@@ -20,11 +20,12 @@ import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
 
 import { DARK_STYLES } from "~/app/emails/shared/palette";
 import {
-	TrialReport,
-	TrialFooter,
+	TRIAL_MAILING_LIST,
 	trialDisplayUrl,
+	TrialFooter,
+	TrialReport,
 	trialStatusKey,
-	trialUnsubscribeHeaders,
+	trialUnsubscribeUrl,
 } from "~/app/emails/shared/trial";
 
 export namespace TrialDailyDigestEmail {
@@ -46,7 +47,7 @@ export namespace TrialDailyDigestEmail {
 		to: string;
 		/** Every URL this address is watching, in the order they were added; never empty. */
 		targets: Target[];
-		/** The lead's unguessable token, which the footer link and the headers are built from. */
+		/** The lead's unguessable token, which the footer link and the one-click target are built from. */
 		unsubscribeToken: string;
 		/** Language the copy is produced in, recorded beside the translator it came from. */
 		locale: string;
@@ -131,8 +132,13 @@ export class TrialDailyDigestEmail implements Email {
 	}
 
 	/** One-click unsubscribe, for the clients that render their own button for it. */
-	get headers(): Record<string, string> {
-		return trialUnsubscribeHeaders(this.#digest.unsubscribeToken);
+	get unsubscribe(): Unsubscribe {
+		return { url: trialUnsubscribeUrl(this.#digest.unsubscribeToken) };
+	}
+
+	/** The trial list, shared by every trial email so one unsubscribe stops them all. */
+	get list(): MailingList {
+		return TRIAL_MAILING_LIST;
 	}
 
 	/** Body tree: the headline, the roll-up when there is one, a report per URL, the footer. */

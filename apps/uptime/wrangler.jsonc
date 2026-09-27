@@ -189,9 +189,9 @@
 	// retried, so the quota is worth watching while it is still being earned.
 	//
 	// Per-message limits the send paths stay well inside: 50 recipients across to/cc/bcc,
-	// 16 KB of custom headers combined, a 998-character subject, and 5 MiB total. The trial
-	// emails' RFC 8058 unsubscribe headers are the only custom headers sent and are two
-	// short lines.
+	// 16 KB of custom headers combined, a 998-character subject, and 5 MiB total. The only
+	// custom headers sent are the three short `List-Unsubscribe`, `List-Unsubscribe-Post`
+	// and `List-Id` lines the mailer writes for trial emails and team digests.
 	//
 	// The bare `name` form allows any verified sender and any destination, which is the only
 	// form that fits: alerts go to whoever a team invited, so the recipient set is the user

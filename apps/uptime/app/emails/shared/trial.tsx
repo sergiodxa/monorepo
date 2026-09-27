@@ -1,5 +1,5 @@
 /**
- * Pieces the five free-watch emails share: status vocabulary, the unsubscribe header, URL
+ * Pieces the five free-watch emails share: status vocabulary, the unsubscribe target, URL
  * and instant formatting, and the bar-plus-totals report the two digests are built around.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -7,7 +7,7 @@
  */
 
 import type { Translate } from "@sdxc/i18n";
-import type { EmailTableRow } from "@sdxc/mail";
+import type { EmailTableRow, MailingList } from "@sdxc/mail";
 import type { Handle } from "remix/ui";
 
 import { formatDateTime } from "@sdxc/dates";
@@ -39,20 +39,10 @@ export function trialUnsubscribeUrl(token: string): string {
 }
 
 /**
- * RFC 8058 headers giving the clients that support them a native unsubscribe button.
- *
- * Worth setting on every message here, since these recipients never created an account and
- * Gmail treats a bulk sender without one as a deliverability risk.
- *
- * @param token - The lead's unguessable unsubscribe token.
- * @returns The two headers, ready to merge over the mailer's configured ones.
+ * The list every trial email belongs to, so a recipient's filters and a provider's
+ * unsubscribe button treat the five of them as one stream to stop together.
  */
-export function trialUnsubscribeHeaders(token: string): Record<string, string> {
-	return {
-		"List-Unsubscribe": `<${trialUnsubscribeUrl(token)}>`,
-		"List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-	};
-}
+export const TRIAL_MAILING_LIST: MailingList = { id: `trial.${new URL(APP_ORIGIN).hostname}` };
 
 /**
  * The style every footer paragraph carries, since a mail client cannot be trusted to have a

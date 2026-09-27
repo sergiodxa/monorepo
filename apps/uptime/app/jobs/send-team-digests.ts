@@ -15,7 +15,9 @@ import type { CurrentJobContext } from "@sdxc/jobs";
 import type { Mailer } from "@sdxc/mail";
 
 import { subDays, toDayKey } from "@sdxc/dates";
+import { signUnsubscribeToken } from "@sdxc/mail/unsubscribe";
 import { isFailure } from "@sdxc/result";
+import { env } from "cloudflare:workers";
 
 import type { DigestPeriod, DigestRecipient, TeamDigestMonitor } from "~/app/data/team-digest";
 import type { TeamDigestMonitor as MonitorReport } from "~/app/emails/shared/team-digest";
@@ -26,11 +28,15 @@ import Team from "~/app/data/team";
 import TeamDigest from "~/app/data/team-digest";
 import UserPreferences from "~/app/data/user-preferences";
 import { emailTranslator } from "~/app/emails/locale";
-import { teamDigestDashboardUrl, teamDigestPreferencesUrl } from "~/app/emails/shared/team-digest";
+import {
+	DIGEST_UNSUBSCRIBE_TOKEN,
+	teamDigestDashboardUrl,
+	teamDigestPreferencesUrl,
+	teamDigestUnsubscribeUrl,
+} from "~/app/emails/shared/team-digest";
 import { TeamDailyDigestEmail } from "~/app/emails/team-daily-digest";
 import { TeamWeeklyDigestEmail } from "~/app/emails/team-weekly-digest";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
-import { digestUnsubscribeUrl, signDigestUnsubscribeToken } from "~/app/lib/digest-unsubscribe";
 import { features } from "~/app/lib/flags";
 import { formatUptime, worstStatus } from "~/app/lib/uptime-report";
 import { apportionCostByTeam, recordCost } from "~/app/services/cost";
@@ -249,10 +255,11 @@ async function digestTeam(
 		 * Every digest carries a one-click unsubscribe, so a token that cannot be signed is a
 		 * send this run skips, unstamped, rather than a digest mailed without its way out.
 		 */
-		let token = await signDigestUnsubscribeToken({
-			subjectId: member.subjectId,
-			email: PREFERENCE[period],
-		});
+		let token = await signUnsubscribeToken(
+			env.COOKIE_SESSION_SECRET,
+			{ subject: member.subjectId, list: PREFERENCE[period] },
+			DIGEST_UNSUBSCRIBE_TOKEN,
+		);
 		if (isFailure(token)) {
 			skipped++;
 			ctx.log.warn("digests.unsubscribe_token_failed", {
@@ -270,7 +277,7 @@ async function digestTeam(
 				period,
 				context,
 				to: profile.emailAddress,
-				unsubscribeUrl: digestUnsubscribeUrl(token.data),
+				unsubscribeUrl: teamDigestUnsubscribeUrl(token.data),
 				window: reported,
 				locale,
 				t,

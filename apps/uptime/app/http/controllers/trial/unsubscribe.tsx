@@ -16,6 +16,7 @@
 
 import type { RemixNode } from "remix/ui";
 
+import { isOneClickUnsubscribe } from "@sdxc/mail/unsubscribe";
 import { vstack } from "@sdxc/u/layout";
 import { m, maxIs, mi, minBs, p } from "@sdxc/u/size";
 import { textAlign } from "@sdxc/u/typography";
@@ -86,7 +87,8 @@ export default createController(routes.trial.unsubscribe, {
 		/**
 		 * POST /unsubscribe/:token — deletes the lead and everything attached to it, then
 		 * reports it plainly: the answer to "do you still have my address?" becomes genuinely
-		 * no. See `Lead.forget` for the reasoning behind the hard delete.
+		 * no. See `Lead.forget` for the reasoning behind the hard delete. A mailbox provider's
+		 * RFC 8058 one-click POST reads no body, so it gets an empty `200`.
 		 */
 		async action(ctx) {
 			let { token } = s.parse(ParamsSchema, ctx.params);
@@ -94,6 +96,7 @@ export default createController(routes.trial.unsubscribe, {
 
 			let lead = await Lead.findByUnsubscribeToken(ctx.db, token);
 			if (lead) await Lead.forget(ctx.db, lead.id);
+			if (isOneClickUnsubscribe(ctx.formData)) return new Response(null, { status: 200 });
 
 			return renderPage(
 				t("page.unsubscribe.done.title"),

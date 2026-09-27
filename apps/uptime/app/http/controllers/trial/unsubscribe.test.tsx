@@ -18,6 +18,7 @@ import type { RemixNode } from "remix/ui";
 
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
+import { formData } from "remix/middleware/form-data";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { renderToString } from "remix/ui/server";
@@ -59,7 +60,7 @@ async function createFixture() {
 }
 
 /** Dispatches one request at the unsubscribe URL, with the method the test cares about. */
-async function visit(db: Db, token: string, method: "GET" | "POST") {
+async function visit(db: Db, token: string, method: "GET" | "POST", body?: string) {
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
@@ -69,6 +70,7 @@ async function visit(db: Db, token: string, method: "GET" | "POST") {
 				return next();
 			}) as Middleware,
 			i18n as Middleware,
+			formData() as Middleware,
 			renderWith(createTestRenderer) as Middleware,
 		],
 	});
@@ -79,7 +81,11 @@ async function visit(db: Db, token: string, method: "GET" | "POST") {
 			? routes.trial.unsubscribe.index.href({ token })
 			: routes.trial.unsubscribe.action.href({ token });
 
-	let response = await router.fetch(new Request(`https://uptime.test${href}`, { method }));
+	let init: RequestInit =
+		body === undefined
+			? { method }
+			: { method, headers: { "content-type": "application/x-www-form-urlencoded" }, body };
+	let response = await router.fetch(new Request(`https://uptime.test${href}`, init));
 
 	return { response, body: await response.text() };
 }
@@ -146,6 +152,21 @@ describe("POST /unsubscribe/:token", () => {
 
 		expect(second.response.status).toBe(first.response.status);
 		expect(second.body).toContain("You are unsubscribed");
+	});
+
+	test("answers a mailbox provider's one-click POST with an empty 200", async () => {
+		let { db, lead } = await createFixture();
+
+		let { response, body } = await visit(
+			db,
+			lead.unsubscribe_token,
+			"POST",
+			"List-Unsubscribe=One-Click",
+		);
+
+		expect(response.status).toBe(200);
+		expect(body).toBe("");
+		expect(await Lead.findByEmail(db, "reader@example.com")).toBeNull();
 	});
 
 	test("leaves another lead's data alone", async () => {

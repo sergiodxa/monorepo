@@ -9,21 +9,41 @@
 
 import type { RemixNode } from "remix/ui";
 
+import { isOneClickUnsubscribe, verifyUnsubscribeToken } from "@sdxc/mail/unsubscribe";
+import { isFailure } from "@sdxc/result";
 import { vstack } from "@sdxc/u/layout";
 import { m, maxIs, mi, minBs, p } from "@sdxc/u/size";
 import { textAlign } from "@sdxc/u/typography";
 import { Button, Card, Heading, LinkButton, Text } from "@sdxc/ui";
+import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import UserPreferences from "~/app/data/user-preferences";
-import { verifyDigestUnsubscribeToken } from "~/app/lib/digest-unsubscribe";
+import { DIGEST_UNSUBSCRIBE_TOKEN } from "~/app/emails/shared/team-digest";
+import { optionalEmails } from "~/database/schema";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
 /** The one path param, parsed the way every other controller reads one. */
 const ParamsSchema = s.object({ token: s.string() });
+
+/**
+ * Reads a token back into the member and the optional email it turns off, or `null` for
+ * anything malformed, signed with another key, or naming an email that is no longer
+ * optional, so every failure closes the same way.
+ */
+async function readToken(token: string) {
+	let claims = await verifyUnsubscribeToken(
+		env.COOKIE_SESSION_SECRET,
+		token,
+		DIGEST_UNSUBSCRIBE_TOKEN,
+	);
+	if (isFailure(claims)) return null;
+	let email = optionalEmails.find((candidate) => candidate === claims.data.list);
+	return email ? { subjectId: claims.data.subject, email } : null;
+}
 
 /**
  * The centered single-purpose page every answer here uses, differing only in copy, status,
@@ -84,7 +104,7 @@ export default createController(routes.digestUnsubscribe, {
 			let { token } = s.parse(ParamsSchema, ctx.params);
 			let t = ctx.intl.t;
 
-			if (!(await verifyDigestUnsubscribeToken(token))) return renderInvalid();
+			if (!(await readToken(token))) return renderInvalid();
 
 			return renderPage(
 				{
@@ -101,16 +121,18 @@ export default createController(routes.digestUnsubscribe, {
 
 		/**
 		 * POST /digests/unsubscribe/:token — turns the named digest off for the member the token
-		 * names, answering a repeat the same way as the first, as a provider retry expects.
+		 * names, answering a repeat the same way as the first, as a provider retry expects. A
+		 * mailbox provider's RFC 8058 one-click POST reads no body, so it gets an empty `200`.
 		 */
 		async action(ctx) {
 			let { token } = s.parse(ParamsSchema, ctx.params);
 			let t = ctx.intl.t;
 
-			let unsubscribe = await verifyDigestUnsubscribeToken(token);
+			let unsubscribe = await readToken(token);
 			if (!unsubscribe) return renderInvalid();
 
 			await UserPreferences.unsubscribe(ctx.db, unsubscribe.subjectId, unsubscribe.email);
+			if (isOneClickUnsubscribe(ctx.formData)) return new Response(null, { status: 200 });
 
 			return renderPage(
 				{

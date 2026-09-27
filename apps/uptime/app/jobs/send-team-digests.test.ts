@@ -15,7 +15,9 @@ import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { Mailer, MailError } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
-import { failure, success } from "@sdxc/result";
+import { verifyUnsubscribeToken } from "@sdxc/mail/unsubscribe";
+import { failure, isSuccess, success } from "@sdxc/result";
+import { env } from "cloudflare:workers";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
@@ -25,6 +27,7 @@ import type { MonitorStatus, SelectTeam } from "~/database/schema";
 
 import Monitor from "~/app/data/monitor";
 import { MAIL_FROM } from "~/app/emails/sender";
+import { DIGEST_UNSUBSCRIBE_TOKEN } from "~/app/emails/shared/team-digest";
 import { TeamDailyDigestEmail } from "~/app/emails/team-daily-digest";
 import { TeamWeeklyDigestEmail } from "~/app/emails/team-weekly-digest";
 import jobs from "~/app/jobs";
@@ -33,7 +36,6 @@ import { Database as JobDatabase } from "~/app/jobs/middleware/database";
 import { Mailer as JobMailer } from "~/app/jobs/middleware/mailer";
 import sendTeamDailyDigests from "~/app/jobs/send-team-daily-digests";
 import sendTeamWeeklyDigests from "~/app/jobs/send-team-weekly-digests";
-import { verifyDigestUnsubscribeToken } from "~/app/lib/digest-unsubscribe";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { installFlags } from "~/app/lib/test/flags";
 import {
@@ -301,9 +303,15 @@ describe("sendTeamDigests period", () => {
 
 		expect(headers["List-Unsubscribe"]).not.toContain("/account");
 		expect(headers["List-Unsubscribe-Post"]).toBe("List-Unsubscribe=One-Click");
-		expect(await verifyDigestUnsubscribeToken(token ?? "")).toEqual({
-			subjectId: "subject-1",
-			email: "teamWeeklyDigest",
+		expect(headers["List-Id"]).toBe("<team-weekly-digest.uptime.sergiodxa.com>");
+		let claims = await verifyUnsubscribeToken(
+			env.COOKIE_SESSION_SECRET,
+			token ?? "",
+			DIGEST_UNSUBSCRIBE_TOKEN,
+		);
+		expect(isSuccess(claims) && claims.data).toMatchObject({
+			subject: "subject-1",
+			list: "teamWeeklyDigest",
 		});
 	});
 

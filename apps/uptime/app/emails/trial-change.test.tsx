@@ -91,7 +91,7 @@ describe("TrialChangeEmail", () => {
 		expect(html.split("<a ").length - 1).toBe(2);
 	});
 
-	test("carries the unsubscribe as a link and as one-click headers", async () => {
+	test("carries the unsubscribe as a link and as a one-click target", async () => {
 		let email = await makeEmail();
 
 		let { text } = await render(email.body());
@@ -99,10 +99,10 @@ describe("TrialChangeEmail", () => {
 		expect(text).toContain(
 			"Stop these emails (https://uptime.sergiodxa.com/unsubscribe/tok-abc123)",
 		);
-		expect(email.headers).toEqual({
-			"List-Unsubscribe": "<https://uptime.sergiodxa.com/unsubscribe/tok-abc123>",
-			"List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+		expect(email.unsubscribe).toEqual({
+			url: "https://uptime.sergiodxa.com/unsubscribe/tok-abc123",
 		});
+		expect(email.list).toEqual({ id: "trial.uptime.sergiodxa.com" });
 	});
 
 	test("writes the copy in the language it was constructed for", async () => {

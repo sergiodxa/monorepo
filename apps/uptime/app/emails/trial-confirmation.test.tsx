@@ -7,7 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { render } from "@sdxc/mail";
+import { Mailer, render } from "@sdxc/mail";
+import { MemoryTransport } from "@sdxc/mail/memory";
 import { describe, expect, test } from "vitest";
 
 import { emailTranslator } from "~/app/emails/locale";
@@ -93,7 +94,7 @@ describe("TrialConfirmationEmail", () => {
 		expect(html).toContain("https://uptime.sergiodxa.com/unsubscribe/tok-abc123");
 	});
 
-	test("carries the unsubscribe as a link and as one-click headers", async () => {
+	test("carries the unsubscribe as a link and as a one-click target", async () => {
 		let email = await makeEmail();
 
 		let { text } = await render(email.body());
@@ -102,9 +103,22 @@ describe("TrialConfirmationEmail", () => {
 			"Stop these emails (https://uptime.sergiodxa.com/unsubscribe/tok-abc123)",
 		);
 		expect(text).toContain("ends every URL you asked us to watch");
-		expect(email.headers).toEqual({
+		expect(email.unsubscribe).toEqual({
+			url: "https://uptime.sergiodxa.com/unsubscribe/tok-abc123",
+		});
+		expect(email.list).toEqual({ id: "trial.uptime.sergiodxa.com" });
+	});
+
+	test("goes out with the RFC 8058 one-click headers and the trial List-Id", async () => {
+		let transport = new MemoryTransport();
+		let mailer = new Mailer({ transport, from: { email: "uptime@sergiodxa.com" } });
+
+		await mailer.send(await makeEmail());
+
+		expect(transport.last?.headers).toMatchObject({
 			"List-Unsubscribe": "<https://uptime.sergiodxa.com/unsubscribe/tok-abc123>",
 			"List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+			"List-Id": "<trial.uptime.sergiodxa.com>",
 		});
 	});
 

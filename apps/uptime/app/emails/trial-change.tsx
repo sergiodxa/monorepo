@@ -9,7 +9,7 @@
  */
 
 import type { Translate } from "@sdxc/i18n";
-import type { Address, EmailTableRow } from "@sdxc/mail";
+import type { Address, EmailTableRow, MailingList, Unsubscribe } from "@sdxc/mail";
 import type { RemixElement } from "remix/ui";
 
 import { Email } from "@sdxc/mail";
@@ -17,11 +17,12 @@ import { Email } from "@sdxc/mail";
 import type { TrialStatus } from "~/app/emails/shared/trial";
 
 import {
-	TrialFooter,
+	TRIAL_MAILING_LIST,
 	trialDateTime,
 	trialDisplayUrl,
+	TrialFooter,
 	trialStatusKey,
-	trialUnsubscribeHeaders,
+	trialUnsubscribeUrl,
 } from "~/app/emails/shared/trial";
 
 export namespace TrialChangeEmail {
@@ -41,7 +42,7 @@ export namespace TrialChangeEmail {
 		responseTimeMs: number | null;
 		/** When the disagreeing check ran; passed in so a test can pin it. */
 		changedAt: Date;
-		/** The lead's unguessable token, which the footer link and the headers are built from. */
+		/** The lead's unguessable token, which the footer link and the one-click target are built from. */
 		unsubscribeToken: string;
 		/** Language the copy is produced in, recorded beside the translator it came from. */
 		locale: string;
@@ -86,8 +87,13 @@ export class TrialChangeEmail implements Email {
 	}
 
 	/** One-click unsubscribe, for the clients that render their own button for it. */
-	get headers(): Record<string, string> {
-		return trialUnsubscribeHeaders(this.#change.unsubscribeToken);
+	get unsubscribe(): Unsubscribe {
+		return { url: trialUnsubscribeUrl(this.#change.unsubscribeToken) };
+	}
+
+	/** The trial list, shared by every trial email so one unsubscribe stops them all. */
+	get list(): MailingList {
+		return TRIAL_MAILING_LIST;
 	}
 
 	/** Body tree: the headline, one sentence of context, the report, and the footer. */

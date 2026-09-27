@@ -127,11 +127,9 @@ describe("TeamWeeklyDigestEmail", () => {
 	test("offers a one-click unsubscribe that works without signing in", async () => {
 		let email = await makeEmail();
 
-		expect(email.headers["List-Unsubscribe"]).not.toBe(`<${PREFERENCES_URL}>`);
-		expect(email.headers).toEqual({
-			"List-Unsubscribe": `<${UNSUBSCRIBE_URL}>`,
-			"List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-		});
+		expect(email.unsubscribe).toEqual({ url: UNSUBSCRIBE_URL });
+		expect(email.unsubscribe?.url).not.toBe(PREFERENCES_URL);
+		expect(email.list).toEqual({ id: "team-weekly-digest.uptime.sergiodxa.com" });
 	});
 
 	describe("body", () => {

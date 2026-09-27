@@ -10,7 +10,7 @@
  */
 
 import type { Translate } from "@sdxc/i18n";
-import type { Address } from "@sdxc/mail";
+import type { Address, MailingList, Unsubscribe } from "@sdxc/mail";
 import type { RemixElement } from "remix/ui";
 
 import { Email } from "@sdxc/mail";
@@ -20,10 +20,11 @@ import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
 
 import { DARK_STYLES } from "~/app/emails/shared/palette";
 import {
-	TrialReport,
-	TrialFooter,
+	TRIAL_MAILING_LIST,
 	trialDisplayUrl,
-	trialUnsubscribeHeaders,
+	TrialFooter,
+	TrialReport,
+	trialUnsubscribeUrl,
 } from "~/app/emails/shared/trial";
 
 export namespace TrialWeeklyDigestEmail {
@@ -45,7 +46,7 @@ export namespace TrialWeeklyDigestEmail {
 		 * would be a 404 in somebody's inbox forever.
 		 */
 		reportToken?: string;
-		/** The lead's unguessable token, which the footer link and the headers are built from. */
+		/** The lead's unguessable token, which the footer link and the one-click target are built from. */
 		unsubscribeToken: string;
 		/** Language the copy is produced in, recorded beside the translator it came from. */
 		locale: string;
@@ -85,8 +86,13 @@ export class TrialWeeklyDigestEmail implements Email {
 	}
 
 	/** One-click unsubscribe, for the clients that render their own button for it. */
-	get headers(): Record<string, string> {
-		return trialUnsubscribeHeaders(this.#digest.unsubscribeToken);
+	get unsubscribe(): Unsubscribe {
+		return { url: trialUnsubscribeUrl(this.#digest.unsubscribeToken) };
+	}
+
+	/** The trial list, shared by every trial email so one unsubscribe stops them all. */
+	get list(): MailingList {
+		return TRIAL_MAILING_LIST;
 	}
 
 	/**

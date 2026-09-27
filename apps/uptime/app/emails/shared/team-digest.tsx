@@ -1,12 +1,14 @@
 /**
- * Pieces the two team digests share: the monitor list, its worst-first order, and the
- * footer that links to the reader's own settings.
+ * Pieces the two team digests share: the monitor list, its worst-first order, the footer
+ * that links to the reader's own settings, and the signed one-click unsubscribe scheme.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { Translate } from "@sdxc/i18n";
+import type { MailingList } from "@sdxc/mail";
+import type { UnsubscribeToken } from "@sdxc/mail/unsubscribe";
 import type { Handle } from "remix/ui";
 
 import { formatDate } from "@sdxc/dates";
@@ -16,7 +18,7 @@ import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
 
 import { BORDER_COLOR, MUTED_COLOR, TEXT_COLOR } from "~/app/emails/shared/palette";
 import { statusClass, statusFill } from "~/app/emails/shared/uptime-bar";
-import { absoluteUrl } from "~/app/lib/origin";
+import { absoluteUrl, APP_ORIGIN } from "~/app/lib/origin";
 import routes from "~/routes/web";
 
 /** Column header and caption style, matching the uptime bar's own captions. */
@@ -155,19 +157,29 @@ export function teamDigestDay(date: string, locale: string): string {
 }
 
 /**
- * RFC 8058 headers giving the clients that support them a native one-click unsubscribe button.
- *
- * The URL carries a signed token, so the provider's sessionless POST turns this digest off for
- * the one member it was sent to; the settings page stays in the footer for finer choices.
- *
- * @param unsubscribeUrl - Absolute URL of the member's tokenized digest unsubscribe endpoint.
- * @returns The two headers, ready to merge over the mailer's configured ones.
+ * How a digest unsubscribe token is signed and verified: under the session secret, with a
+ * purpose prefix so no other MAC made with that key passes as one. The prefix is the one
+ * every delivered digest link was signed with, so those links keep working.
  */
-export function teamDigestUnsubscribeHeaders(unsubscribeUrl: string): Record<string, string> {
-	return {
-		"List-Unsubscribe": `<${unsubscribeUrl}>`,
-		"List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-	};
+export const DIGEST_UNSUBSCRIBE_TOKEN: UnsubscribeToken.Options = {
+	purpose: "digest-unsubscribe:v1:",
+};
+
+/** The list each digest belongs to, one per period, so a reader can stop one and keep the other. */
+export const TEAM_DIGEST_MAILING_LISTS: Record<"daily" | "weekly", MailingList> = {
+	daily: { id: `team-daily-digest.${new URL(APP_ORIGIN).hostname}` },
+	weekly: { id: `team-weekly-digest.${new URL(APP_ORIGIN).hostname}` },
+};
+
+/**
+ * Absolute URL of the digest unsubscribe endpoint for a token: the confirmation page under
+ * `GET`, and the RFC 8058 one-click target under `POST`.
+ *
+ * @param token - A token signed with {@link DIGEST_UNSUBSCRIBE_TOKEN}.
+ * @returns The URL for both the footer and the `List-Unsubscribe` header.
+ */
+export function teamDigestUnsubscribeUrl(token: string): string {
+	return absoluteUrl(routes.digestUnsubscribe.index.href({ token }));
 }
 
 /**

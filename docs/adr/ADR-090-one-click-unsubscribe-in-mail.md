@@ -356,12 +356,11 @@ with an id, a signed token needs no storage.
 - [ADR-018: Mail Package with Pluggable Transports](./ADR-018-mail-package-with-pluggable-transports.md)
 - [ADR-030: Email Classes as the Authoring Contract](./ADR-030-email-classes-as-the-authoring-contract.md)
 - [ADR-023: Web Crypto Primitives Package](./ADR-023-web-crypto-primitives-package.md)
-
 ## Current Progress
 
 - [x] Phase 1: `unsubscribe` and `list` options, header generation and validation, and the
       `@sdxc/mail/unsubscribe` subpath in `@sdxc/mail`
-- [ ] Phase 2: Adopt in uptime
+- [x] Phase 2: Adopt in uptime
 - [ ] Phase 3: Verify delivery (DKIM `h=` coverage on Gmail and Yahoo) — procedure ready:
       `bun scripts/verify-dkim-headers.ts <message.eml>`; Cloudflare's docs say
       `List-Unsubscribe` is always signed and are silent on `List-Unsubscribe-Post`
@@ -416,3 +415,8 @@ with an id, a signed token needs no storage.
   on PASS, 1 on FAIL. This uses production as a visitor would, creating one lead that the
   email's own unsubscribe link removes; a local `vite dev` sends for real too, since the
   `send_email` binding is `remote: true`, but needs the same trial flow and gains nothing
+- Uptime: digest tokens stay signed with `COOKIE_SESSION_SECRET` under
+  `purpose: "digest-unsubscribe:v1:"` instead of a new `UNSUBSCRIBE_SECRET`, so every delivered
+  link keeps verifying and no secret has to be provisioned; the route stays
+  `/digests/unsubscribe/:token`. Lists carry ids only (`trial.`, `team-daily-digest.` and
+  `team-weekly-digest.` under the app's host); a translated `name` would need per-recipient copy
