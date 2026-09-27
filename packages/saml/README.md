@@ -279,34 +279,6 @@ A store that throws surfaces as `ReplayStoreError`, which is an infrastructure f
 than a verdict about the assertion: answer it as a failure to reach a decision, and let the
 person retry.
 
-## Pattern: Testing Your Own Integration
-
-`@sdxc/saml/testing` builds and signs the documents an integration test needs, so a suite
-covers the real verification rather than a stub of it:
-
-```typescript
-import { buildResponse, signDocument } from "@sdxc/saml/testing";
-
-let keys = await crypto.subtle.generateKey(
-	{
-		name: "RSASSA-PKCS1-v1_5",
-		modulusLength: 2048,
-		publicExponent: Uint8Array.of(1, 0, 1),
-		hash: "SHA-256",
-	},
-	true,
-	["sign", "verify"],
-);
-
-let tree = buildResponse({ audience, recipient, inResponseTo: requestId }, "assertion");
-let response = await signDocument(tree, keys.privateKey);
-```
-
-`buildResponse` returns plain tree data, so a test can plant a second assertion beside the
-signed one, or give two elements one id, and assert that the verification answers what it
-should. Signing happens after any such change, which is what makes the signature genuine and
-the document a real attack rather than a broken one.
-
 ## Versioning
 
 Releases are dated rather than semantic. A version is the UTC date it was published,
