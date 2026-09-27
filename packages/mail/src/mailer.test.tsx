@@ -607,3 +607,78 @@ describe("Mailer list headers", () => {
 		expect(lastMessage(transport).headers["List-Unsubscribe"]).toBe("<https://example.com/old>");
 	});
 });
+
+/** A minimal calendar body; the mailer carries it verbatim, so its content is immaterial. */
+const CALENDAR = "BEGIN:VCALENDAR\r\nMETHOD:REQUEST\r\nEND:VCALENDAR\r\n";
+
+/** Email class carrying an invitation, to check the calendar survives rendering. */
+class MaintenanceInviteEmail implements Email {
+	get to() {
+		return { email: "ada@example.com" };
+	}
+
+	/** Subject, already translated by the time it reaches the mailer. */
+	get subject() {
+		return "Scheduled maintenance";
+	}
+
+	/** Invitation the recipient's calendar offers to accept. */
+	get calendar() {
+		return { method: "REQUEST", content: CALENDAR, filename: "maintenance.ics" };
+	}
+
+	/** Body tree rendered by the mailer into both parts. */
+	body() {
+		return <InviteBody team="Acme" url="https://example.com/maintenance" />;
+	}
+}
+
+describe("Mailer calendar part", () => {
+	test("carries a message's calendar part to the transport", async () => {
+		let { mailer, transport } = createMailer();
+		await mailer.send({
+			to: { email: "ada@example.com" },
+			subject: "Maintenance",
+			text: "See the invitation.",
+			calendar: { method: "REQUEST", content: CALENDAR },
+		});
+
+		expect(lastMessage(transport).calendar).toEqual({ method: "REQUEST", content: CALENDAR });
+	});
+
+	test("reads the calendar part off an email and writes it into the MIME", async () => {
+		let transport = new MemoryTransport({ mime: true });
+		await new Mailer({ transport, from: SENDER }).send(new MaintenanceInviteEmail());
+
+		expect(lastMessage(transport).calendar?.filename).toBe("maintenance.ics");
+		expect(transport.lastMime).toContain("Content-Type: text/calendar; method=REQUEST");
+		expect(transport.lastMime).toContain('filename="maintenance.ics"');
+	});
+
+	test("leaves a message without a calendar part unchanged", async () => {
+		let { mailer, transport } = createMailer();
+		await mailer.send({ to: { email: "ada@example.com" }, subject: "Hi", text: "Hi" });
+
+		expect(lastMessage(transport).calendar).toBeUndefined();
+	});
+
+	test.each([
+		["a method with a space", { method: "REQUEST X", content: CALENDAR }],
+		["a method with a line break", { method: "REQUEST\r\nBcc: x@example.com", content: CALENDAR }],
+		["an empty method", { method: "", content: CALENDAR }],
+		["a filename with a quote", { method: "REQUEST", content: CALENDAR, filename: 'a".ics' }],
+		["a filename with a path", { method: "REQUEST", content: CALENDAR, filename: "../a.ics" }],
+		["a non-ASCII filename", { method: "REQUEST", content: CALENDAR, filename: "reunión.ics" }],
+	])("fails the send for %s", async (_, calendar) => {
+		let { mailer, transport } = createMailer();
+		let result = await mailer.send({
+			to: { email: "ada@example.com" },
+			subject: "Hi",
+			text: "Hi",
+			calendar,
+		});
+
+		expect(isFailure(result) && result.error).toBeInstanceOf(MailError);
+		expect(transport.messages).toHaveLength(0);
+	});
+});

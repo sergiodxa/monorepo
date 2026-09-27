@@ -51,6 +51,25 @@ function createMessage(overrides?: Partial<NormalizedMessage>): NormalizedMessag
 	};
 }
 
+/** An iTIP request as a calendar writer emits it, CRLF lines included. */
+const INVITATION = [
+	"BEGIN:VCALENDAR",
+	"PRODID:-//Example//Test//EN",
+	"VERSION:2.0",
+	"METHOD:REQUEST",
+	"BEGIN:VEVENT",
+	"UID:window-1@example.com",
+	"DTSTAMP:20260101T000000Z",
+	"DTSTART:20260102T020000Z",
+	"DTEND:20260102T040000Z",
+	"SUMMARY:Maintenance",
+	"ORGANIZER:mailto:ops@example.com",
+	"ATTENDEE;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:ada@example.com",
+	"END:VEVENT",
+	"END:VCALENDAR",
+	"",
+].join("\r\n");
+
 /** Rewrites plain newlines as CRLF, which is what the builder normalizes them to. */
 function withCrlf(value: string): string {
 	return value.replaceAll("\n", "\r\n");
@@ -477,5 +496,80 @@ describe("buildMimeMessage", () => {
 
 		expect(header(parsed, "content-type")).toBe("text/plain; charset=utf-8");
 		expect(parsed.body).toBe("\r\n");
+	});
+
+	test("adds a calendar as the last, most preferred, alternative part", () => {
+		let raw = buildMimeMessage(
+			createMessage({
+				text: "Hello there",
+				html: "<p>Hello there</p>",
+				calendar: { method: "REQUEST", content: INVITATION },
+			}),
+		);
+		let parsed = parseMessage(raw);
+		let parts = splitParts(parsed);
+
+		expect(header(parsed, "content-type")).toMatch(/^multipart\/alternative; boundary=/);
+		expect(parts).toHaveLength(3);
+		expect(header(partAt(parts, 0), "content-type")).toBe("text/plain; charset=utf-8");
+		expect(header(partAt(parts, 1), "content-type")).toBe("text/html; charset=utf-8");
+		expect(header(partAt(parts, 2), "content-type")).toBe(
+			"text/calendar; method=REQUEST; charset=UTF-8",
+		);
+		expect(optionalHeader(partAt(parts, 2), "content-disposition")).toBeUndefined();
+		expect(decodePart(partAt(parts, 2))).toBe(INVITATION);
+	});
+
+	test("pairs a calendar with an HTML-only body as a two-part alternative", () => {
+		let raw = buildMimeMessage(
+			createMessage({
+				text: undefined,
+				html: "<p>Hi</p>",
+				calendar: { method: "CANCEL", content: INVITATION },
+			}),
+		);
+		let parts = splitParts(parseMessage(raw));
+
+		expect(parts.map((part) => header(part, "content-type"))).toEqual([
+			"text/html; charset=utf-8",
+			"text/calendar; method=CANCEL; charset=UTF-8",
+		]);
+	});
+
+	test("wraps the alternative in multipart/mixed when the calendar is also attached", () => {
+		let raw = buildMimeMessage(
+			createMessage({
+				html: "<p>Hi</p>",
+				calendar: { method: "REQUEST", content: INVITATION, filename: "invite.ics" },
+			}),
+		);
+		let parsed = parseMessage(raw);
+		let [alternative, attachment] = splitParts(parsed);
+		if (!alternative || !attachment) throw new Error("The message has fewer than two parts.");
+
+		expect(header(parsed, "content-type")).toMatch(/^multipart\/mixed; boundary=/);
+		expect(boundaryOf(alternative)).not.toBe(boundaryOf(parsed));
+		expect(splitParts(alternative).map((part) => header(part, "content-type"))).toEqual([
+			"text/plain; charset=utf-8",
+			"text/html; charset=utf-8",
+			"text/calendar; method=REQUEST; charset=UTF-8",
+		]);
+		expect(header(attachment, "content-type")).toBe('application/ics; name="invite.ics"');
+		expect(header(attachment, "content-disposition")).toBe('attachment; filename="invite.ics"');
+		expect(header(attachment, "content-transfer-encoding")).toBe("base64");
+		expect(decodePart(attachment)).toBe(INVITATION);
+		expect(raw.endsWith(`--${boundaryOf(parsed)}--\r\n`)).toBe(true);
+	});
+
+	test("keeps non-ASCII calendar text intact through the transfer encoding", () => {
+		let content = INVITATION.replace("Maintenance", "Mantenimiento programado: migración ñandú");
+		let raw = buildMimeMessage(
+			createMessage({ calendar: { method: "REQUEST", content, filename: "invite.ics" } }),
+		);
+		let [alternative, attachment] = splitParts(parseMessage(raw));
+		if (!alternative || !attachment) throw new Error("The message has fewer than two parts.");
+
+		expect(decodePart(partAt(splitParts(alternative), 1))).toBe(content);
+		expect(decodePart(attachment)).toBe(content);
 	});
 });

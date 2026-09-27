@@ -42,6 +42,17 @@ export interface SendEmailMessage {
 	html?: string;
 	/** Extra headers to set on the assembled message. */
 	headers?: Record<string, string>;
+	/** Files the platform attaches after the bodies. */
+	attachments?: SendEmailAttachment[];
+}
+
+/** A file the binding attaches to the message it composes. */
+export interface SendEmailAttachment {
+	disposition: "attachment";
+	filename: string;
+	/** Media type of the file, parameters included. */
+	type: string;
+	content: string;
 }
 
 /** What the binding reports back for an accepted message. */
@@ -71,6 +82,27 @@ function optionalAddresses(addresses: NormalizedMessage["to"]): string[] | undef
 	return addresses.map(formatAddress);
 }
 
+/** Name a calendar attachment takes when the caller named none. */
+const CALENDAR_FILENAME = "invite.ics";
+
+/**
+ * Carries a calendar part as the one attachment the binding composes, since its
+ * payload has no alternative-part field; the `method=` parameter on the file's type
+ * is what calendar clients read to offer accept and decline.
+ */
+function calendarAttachments(message: NormalizedMessage): SendEmailAttachment[] | undefined {
+	if (!message.calendar) return undefined;
+	let { method, content, filename } = message.calendar;
+	return [
+		{
+			disposition: "attachment",
+			filename: filename ?? CALENDAR_FILENAME,
+			type: `text/calendar; method=${method}; charset=UTF-8`,
+			content,
+		},
+	];
+}
+
 /**
  * Maps a normalized message onto the binding's send payload. Only the first
  * reply-to mailbox survives, since the platform's field holds one address, so
@@ -89,6 +121,7 @@ function toPayload(message: NormalizedMessage): SendEmailMessage {
 		text: message.text,
 		html: message.html,
 		headers: message.headers,
+		attachments: calendarAttachments(message),
 	};
 }
 

@@ -14,6 +14,7 @@ import * as EmailComponents from "./components.js";
 
 export type {
 	Address,
+	CalendarPart,
 	MailingList,
 	Message,
 	NormalizedMessage,

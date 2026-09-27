@@ -155,4 +155,40 @@ describe("CloudflareTransport", () => {
 			expect(result.error.cause).toBeInstanceOf(Error);
 		}
 	});
+
+	test("carries a calendar part as an attachment whose type names the iTIP method", async () => {
+		let { binding, payloads } = createAcceptingBinding();
+
+		await new CloudflareTransport(binding).send(
+			createMessage({ calendar: { method: "REQUEST", content: "BEGIN:VCALENDAR\r\n" } }),
+		);
+
+		expect(payloads[0]?.attachments).toEqual([
+			{
+				disposition: "attachment",
+				filename: "invite.ics",
+				type: "text/calendar; method=REQUEST; charset=UTF-8",
+				content: "BEGIN:VCALENDAR\r\n",
+			},
+		]);
+	});
+
+	test("names the calendar attachment with the caller's filename", async () => {
+		let { binding, payloads } = createAcceptingBinding();
+
+		await new CloudflareTransport(binding).send(
+			createMessage({ calendar: { method: "CANCEL", content: "x", filename: "cancel.ics" } }),
+		);
+
+		expect(payloads[0]?.attachments?.[0]?.filename).toBe("cancel.ics");
+		expect(payloads[0]?.attachments?.[0]?.type).toContain("method=CANCEL");
+	});
+
+	test("sends no attachments for a message without a calendar part", async () => {
+		let { binding, payloads } = createAcceptingBinding();
+
+		await new CloudflareTransport(binding).send(createMessage());
+
+		expect(payloads[0]?.attachments).toBeUndefined();
+	});
 });

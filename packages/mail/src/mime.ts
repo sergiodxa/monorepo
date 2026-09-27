@@ -1,7 +1,7 @@
 /**
  * Assembles a normalized message into the raw RFC 5322 message a transport whose
  * provider takes MIME has to hand over: folded headers, encoded words for
- * non-ASCII text, a `multipart/alternative` body when both parts exist, and CRLF
+ * non-ASCII text, a `multipart/alternative` body when several parts exist, and CRLF
  * line endings throughout. It lives at the package root so any raw-MIME transport
  * can reuse it and so its tests need no runtime-specific import.
  *
@@ -114,11 +114,21 @@ const LAST_PRINTABLE = 126;
 
 /** One part of the message: its type, the encoding its body is in, and that body. */
 interface EncodedPart {
-	/** Media type of the part, such as `text/plain`. */
+	/** Full `Content-Type` value of the part, parameters included. */
 	contentType: string;
 	/** Value for the part's `Content-Transfer-Encoding` header. */
 	encoding: string;
+	/** `Content-Disposition` value, set on a part that travels as a file. */
+	disposition?: string;
 	/** The encoded body, already wrapped to the line limit with CRLF breaks. */
+	body: string;
+}
+
+/** A MIME entity ready to write: its `Content-*` header lines and its body. */
+interface Entity {
+	/** `Content-*` header lines, already folded. */
+	headers: string[];
+	/** Body lines joined by CRLF, with no trailing line break. */
 	body: string;
 }
 
@@ -340,7 +350,7 @@ function encodePart(contentType: string, content: string): EncodedPart {
  * and neither encoding can emit a line starting with `--` (base64 excludes `-`;
  * quoted-printable escapes a leading one), checked directly against the bodies too.
  */
-function selectBoundary(parts: EncodedPart[]): string {
+function selectBoundary(parts: Entity[]): string {
 	let boundary = `${BOUNDARY_PREFIX}${crypto.randomUUID()}`;
 	while (parts.some((part) => part.body.includes(boundary))) {
 		boundary = `${BOUNDARY_PREFIX}${crypto.randomUUID()}`;
@@ -389,47 +399,81 @@ function buildHeaders(message: NormalizedMessage): string[] {
 	return headers;
 }
 
-/** Writes the `Content-*` headers that describe one part's type and encoding. */
-function buildContentHeaders(part: EncodedPart): string[] {
-	return [
-		foldHeader("Content-Type", `${part.contentType}; charset=utf-8`),
+/** Writes the `Content-*` headers that describe one part's type, encoding and disposition. */
+function toEntity(part: EncodedPart): Entity {
+	let headers = [
+		foldHeader("Content-Type", part.contentType),
 		foldHeader("Content-Transfer-Encoding", part.encoding),
 	];
+	if (part.disposition) headers.push(foldHeader("Content-Disposition", part.disposition));
+	return { headers, body: part.body };
 }
 
 /**
- * Assembles a normalized message into a raw RFC 5322 message, ordering plain text
- * before HTML per RFC 2046 when both parts exist; with neither part, it yields an
- * empty text part, since validation guarantees that case never reaches a transport.
+ * Nests entities in one multipart entity. Each delimiter line is its own line, and the
+ * boundary is checked against the nested bodies, inner boundaries included.
+ */
+function toMultipart(subtype: "alternative" | "mixed", entities: Entity[]): Entity {
+	let boundary = selectBoundary(entities);
+	let lines: string[] = [];
+	for (let entity of entities) lines.push(`--${boundary}`, ...entity.headers, "", entity.body);
+	lines.push(`--${boundary}--`);
+	return {
+		headers: [foldHeader("Content-Type", `multipart/${subtype}; boundary="${boundary}"`)],
+		body: lines.join(CRLF),
+	};
+}
+
+/**
+ * The alternative parts, in increasing order of preference as RFC 2046 orders them:
+ * plain text, HTML, then the calendar, which clients that understand iTIP render as
+ * an invitation and every other client skips.
+ */
+function alternativeParts(message: NormalizedMessage): EncodedPart[] {
+	let parts: EncodedPart[] = [];
+	if (message.text) parts.push(encodePart("text/plain; charset=utf-8", message.text));
+	if (message.html) parts.push(encodePart("text/html; charset=utf-8", message.html));
+	if (message.calendar) {
+		let type = `text/calendar; method=${message.calendar.method}; charset=UTF-8`;
+		parts.push(encodePart(type, message.calendar.content));
+	}
+	return parts;
+}
+
+/**
+ * The calendar as a downloadable file. It is typed `application/ics` so a client that
+ * already acts on the `text/calendar` alternative does not process the invitation twice.
+ */
+function calendarAttachment(message: NormalizedMessage): EncodedPart | undefined {
+	let filename = message.calendar?.filename;
+	if (!message.calendar || filename === undefined) return undefined;
+	return {
+		contentType: `application/ics; name="${filename}"`,
+		encoding: "base64",
+		disposition: `attachment; filename="${filename}"`,
+		body: toBase64Body(message.calendar.content),
+	};
+}
+
+/**
+ * Assembles a normalized message into a raw RFC 5322 message: one part is written
+ * alone, several go in `multipart/alternative`, and a calendar attachment wraps that in
+ * `multipart/mixed`. With no part at all it writes an empty text part.
  *
  * @param message - The normalized message a transport received.
  * @returns The complete message, ready to hand to a provider that takes raw MIME.
  * @example let raw = buildMimeMessage(message); // "From: ...\r\n\r\n..."
  */
 export function buildMimeMessage(message: NormalizedMessage): string {
-	let text = message.text ? encodePart("text/plain", message.text) : undefined;
-	let html = message.html ? encodePart("text/html", message.html) : undefined;
-	let headers = buildHeaders(message);
+	let parts = alternativeParts(message);
+	if (parts.length === 0) parts.push(encodePart("text/plain; charset=utf-8", ""));
 
-	if (text && html) {
-		let boundary = selectBoundary([text, html]);
-		return [
-			...headers,
-			foldHeader("Content-Type", `multipart/alternative; boundary="${boundary}"`),
-			"",
-			`--${boundary}`,
-			...buildContentHeaders(text),
-			"",
-			text.body,
-			`--${boundary}`,
-			...buildContentHeaders(html),
-			"",
-			html.body,
-			`--${boundary}--`,
-			"",
-		].join(CRLF);
-	}
+	let [only] = parts;
+	let body =
+		parts.length === 1 && only ? toEntity(only) : toMultipart("alternative", parts.map(toEntity));
 
-	let part = text ?? html ?? encodePart("text/plain", "");
-	return [...headers, ...buildContentHeaders(part), "", part.body, ""].join(CRLF);
+	let attachment = calendarAttachment(message);
+	if (attachment) body = toMultipart("mixed", [body, toEntity(attachment)]);
+
+	return [...buildHeaders(message), ...body.headers, "", body.body, ""].join(CRLF);
 }

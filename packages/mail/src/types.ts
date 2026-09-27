@@ -49,6 +49,23 @@ export interface MailingList {
 }
 
 /**
+ * A calendar object carried beside the bodies, which is how an iTIP invitation reaches a
+ * calendar client: raw MIME places it last in `multipart/alternative` as
+ * `text/calendar; method=…`, so clients that understand it show accept and decline.
+ */
+export interface CalendarPart {
+	/** The iTIP method, e.g. `REQUEST`, `CANCEL` or `REPLY`; it must match the content's `METHOD`. */
+	method: string;
+	/** The serialized iCalendar object, CRLF lines as a calendar writer produces them. */
+	content: string;
+	/**
+	 * Attaches the same calendar as a file with this name, e.g. `invite.ics`, for clients that
+	 * only offer attachments; transports with no alternative part use it as the file's name.
+	 */
+	filename?: string;
+}
+
+/**
  * A message as callers write it. Everything the mailer can supply a default for
  * is optional, so a caller only states what is specific to this message.
  */
@@ -79,6 +96,8 @@ export interface Message {
 	unsubscribe?: Unsubscribe;
 	/** List the message belongs to, written as `List-Id`. */
 	list?: MailingList;
+	/** A calendar object, such as an invitation, sent alongside the bodies. */
+	calendar?: CalendarPart;
 }
 
 /**
@@ -116,6 +135,8 @@ export interface NormalizedMessage {
 	unsubscribe: Unsubscribe | null;
 	/** The list the `List-Id` header was written from, when set. */
 	list: MailingList | null;
+	/** The calendar object to send alongside the bodies, when set. */
+	calendar?: CalendarPart;
 	/**
 	 * The email object this message was produced from, when it came from one.
 	 * It exists so tests can identify a sent message by its type.
@@ -164,4 +185,6 @@ export interface Email {
 	readonly unsubscribe?: Unsubscribe;
 	/** List the email belongs to, written as `List-Id`. */
 	readonly list?: MailingList;
+	/** A calendar object, such as an invitation, sent alongside the rendered body. */
+	readonly calendar?: CalendarPart;
 }

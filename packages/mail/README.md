@@ -283,6 +283,17 @@ interface Message {
 	/** Optional mail only; see "Bulk Mail". */
 	unsubscribe?: Unsubscribe;
 	list?: MailingList;
+	/** A calendar object sent beside the bodies; see "Calendar Invitations". */
+	calendar?: CalendarPart;
+}
+
+interface CalendarPart {
+	/** iTIP method written as `method=`, e.g. `REQUEST`; must match the content's `METHOD`. */
+	method: string;
+	/** The serialized iCalendar object. */
+	content: string;
+	/** Also attach the calendar as a file with this name, e.g. `invite.ics`. */
+	filename?: string;
 }
 
 interface Unsubscribe {
@@ -308,6 +319,7 @@ interface Email {
 	readonly headers?: Record<string, string>;
 	readonly unsubscribe?: Unsubscribe;
 	readonly list?: MailingList;
+	readonly calendar?: CalendarPart;
 }
 
 interface Transport {
@@ -323,7 +335,7 @@ interface SentMessage {
 `NormalizedMessage` is what a transport receives: every field of `Message` with defaults
 applied, address fields as lists, `date` and `messageId` always present, a derived `text`
 part, `headers` including the generated `List-*` ones, `unsubscribe` and `list` as the
-option or `null`, and `email` carrying the source `Email` when the message came from one — which
+option or `null`, `calendar` when one was set, and `email` carrying the source `Email` when the message came from one — which
 transports ignore and tests use to identify a send by type. `RenderedEmail` is
 `{ html, text }`, `SendOptions` is `Partial<Message>`, `MailerOptions` is the
 constructor's options object, `EmailTableRow` is one `{ label, value }` row of an
@@ -378,7 +390,10 @@ class. Success carries the identifier the platform assigned; a refusal arrives a
 
 The binding writes its own `Date` and `Message-ID`, so the values a normalized message
 carries stay local, and it takes one `replyTo` mailbox rather than a list, so the first is
-the one that ships. `SendEmailBinding`, `SendEmailMessage` and `SendEmailResult` are
+the one that ships. Its payload has no field for an alternative part, so a `calendar`
+travels as one attachment typed `text/calendar; method=…; charset=UTF-8`, named by
+`filename` or `invite.ics`. `SendEmailBinding`, `SendEmailMessage`, `SendEmailAttachment`
+and `SendEmailResult` are
 exported as the seam those platform assumptions live behind, declared locally so this
 package typechecks outside a Workers project. See the
 [Cloudflare email routing docs](https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/)
@@ -482,13 +497,47 @@ is decided by the transport's platform (Cloudflare's `send_email` binding signs 
 verified domain); check a delivered message's `h=` tag lists `list-unsubscribe` and
 `list-unsubscribe-post`.
 
+## Calendar Invitations
+
+An iTIP invitation (RFC 5546) is a calendar object sent as a `text/calendar` part whose
+`method=` parameter repeats the object's `METHOD`; Gmail, Outlook and Apple Mail read it
+and show the event with accept and decline buttons. A message or an email carries one as
+`calendar`, with the content written by any iCalendar library:
+
+```typescript
+await mailer.send({
+	to: { email: "ada@example.com" },
+	subject: "Scheduled maintenance on Saturday",
+	html: "<p>The database is read-only from 02:00 to 04:00 UTC.</p>",
+	calendar: { method: "REQUEST", content: ics, filename: "invite.ics" },
+});
+```
+
+`buildMimeMessage` places the calendar last in `multipart/alternative`, the most
+preferred part, and with `filename` also attaches it as `application/ics` inside
+`multipart/mixed`, for clients that only offer attachments:
+
+```text
+multipart/mixed
+├── multipart/alternative
+│   ├── text/plain; charset=utf-8
+│   ├── text/html; charset=utf-8
+│   └── text/calendar; method=REQUEST; charset=UTF-8
+└── application/ics; name="invite.ics"  (attachment)
+```
+
+The send fails with a `MailError` when `method` is not a token or `filename` is not
+printable ASCII free of quotes, backslashes and slashes, since both are written into
+headers. A calendar still needs a body beside it, for clients that show no invitation.
+
 ## MIME Guarantees
 
 What `buildMimeMessage` produces, for a transport that speaks raw messages:
 
-- **Structure** — both body parts produce `multipart/alternative` with the plain-text part
-  first, which RFC 2046 reads as least to most preferred; a single part produces a
-  single-part message with no boundary.
+- **Structure** — several parts produce `multipart/alternative` ordered plain text, HTML,
+  calendar, which RFC 2046 reads as least to most preferred; a single part produces a
+  single-part message with no boundary, and a calendar attachment wraps the body in
+  `multipart/mixed`.
 - **Headers** — `From`, `To`, `Cc`, `Reply-To`, `Subject`, `Date`, `Message-ID`,
   `MIME-Version`, then custom headers, then the `Content-*` headers. `Bcc` is absent,
   since those recipients are addressed by the envelope, and a custom header repeating a

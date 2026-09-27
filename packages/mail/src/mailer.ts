@@ -28,6 +28,15 @@ import { htmlToText } from "./lib/html-to-text.js";
 import { buildListHeaders } from "./lib/list-headers.js";
 import { render } from "./render.js";
 
+/** An iTIP method is an iana-token or x-name, which is all a `method=` parameter may hold. */
+const METHOD = /^[A-Za-z0-9-]+$/;
+
+/**
+ * Printable ASCII without quotes, backslashes or path separators, so the name travels in
+ * a quoted `filename` parameter unchanged and no client reads a directory into it.
+ */
+const FILENAME = /^[\x20-\x21\x23-\x2E\x30-\x5B\x5D-\x7E]+$/;
+
 /**
  * Fields that replace what a `Message` or an `Email` already provides for a single
  * send, such as redirecting an email to a forwarded address.
@@ -88,9 +97,9 @@ function generateMessageId(from: Address): string {
 }
 
 /**
- * Rejects messages no transport could deliver, so the failure names the mistake
- * instead of surfacing as a provider error later: a missing sender or recipient,
- * an address that cannot be routed, or a message with no body at all.
+ * Rejects messages no transport could deliver, so the failure names the mistake instead of
+ * a provider error: a missing sender or recipient, an unroutable address, no body at all,
+ * or a calendar method or filename that would break the header it is written into.
  */
 function validate(message: NormalizedMessage): Result<NormalizedMessage, MailError> {
 	if (!message.from.email) return failure(new MailError("A message needs a sender address."));
@@ -106,6 +115,16 @@ function validate(message: NormalizedMessage): Result<NormalizedMessage, MailErr
 
 	if (!message.html && !message.text) {
 		return failure(new MailError("A message needs an HTML or a plain-text body."));
+	}
+
+	if (message.calendar) {
+		let { method, filename } = message.calendar;
+		if (!METHOD.test(method)) {
+			return failure(new MailError(`"${method}" is not a calendar method.`));
+		}
+		if (filename !== undefined && !FILENAME.test(filename)) {
+			return failure(new MailError(`"${filename}" is not a calendar attachment filename.`));
+		}
 	}
 
 	return success(message);
@@ -211,6 +230,7 @@ export class Mailer {
 			headers: input.headers,
 			unsubscribe: input.unsubscribe,
 			list: input.list,
+			calendar: input.calendar,
 			html: rendered.data.html,
 			text: rendered.data.text,
 		});
@@ -252,6 +272,7 @@ export class Mailer {
 			messageId: message.messageId ?? generateMessageId(from),
 			unsubscribe,
 			list,
+			calendar: message.calendar,
 			email: isEmail(input) ? input : undefined,
 		});
 	}
