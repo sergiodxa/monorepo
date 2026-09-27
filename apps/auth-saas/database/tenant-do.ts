@@ -703,8 +703,8 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * Provisions this tenant: waits on the schema the constructor already started
-	 * migrating, records the tenant's id and issuer in `settings`, and generates the
-	 * tenant's first signing key if it has none yet. A first boot and a catch-up boot
+	 * migrating, records the tenant's id and issuer in `settings`, and generates a
+	 * signing key for each algorithm that has none yet. A first boot and a catch-up boot
 	 * behind several releases take the same path, because both wait on the one migration
 	 * run the constructor starts; calling this again on an already-provisioned tenant
 	 * generates no redundant key.
@@ -731,7 +731,7 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 
 		this.#settingsRow = null;
 
-		await SigningKeys.ensureSigningKey(this.#db);
+		await SigningKeys.ensureSigningKeys(this.#db);
 		let keys = await SigningKeys.publishKeySet(this.#db);
 
 		return { applied, issuer: input.issuer, keys };
@@ -3861,8 +3861,8 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * and the JWKS document are built from, in one call.
 	 *
 	 * @param input - The clock the key set's publish window is measured against.
-	 * @returns Both metadata documents, the published key set, a version a caller can
-	 * compare against what it has cached, and how long the documents may be cached for.
+	 * @returns The tenant's scope and claim catalog, the published key set, and how long
+	 * the documents may be cached for.
 	 */
 	async publishMetadata(input: { now: number }): Promise<WithCost<PublishMetadataResult>> {
 		await this.#migrated;

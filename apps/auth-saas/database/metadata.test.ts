@@ -144,8 +144,8 @@ describe("publishMetadata", () => {
 			hasDeviceGrant: false,
 		});
 
-		expect(before.jwks.keys).toHaveLength(1);
-		expect(afterStaging.jwks.keys).toHaveLength(2);
+		expect(before.jwks.keys).toHaveLength(2);
+		expect(afterStaging.jwks.keys).toHaveLength(4);
 	});
 
 	test("omits device_authorization_endpoint and the device grant URN without the entitlement", async () => {

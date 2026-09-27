@@ -73,6 +73,7 @@ export const clients = table({
 		updated_at: c.integer(),
 		disabled_at: c.integer().nullable(),
 		include_permissions: c.boolean().default(false),
+		id_token_signed_response_alg: c.enum(["ES256", "RS256"] as const).default("ES256"),
 	},
 });
 
@@ -93,6 +94,12 @@ export const clientSecrets = table({
 
 export type ClientRow = TableRow<typeof clients>;
 export type ClientSecretRow = TableRow<typeof clientSecrets>;
+
+/**
+ * The algorithm a client's ID tokens are signed with (OIDC Dynamic Client Registration
+ * `id_token_signed_response_alg`); a client that states none gets ES256.
+ */
+export type IdTokenSignedResponseAlg = "ES256" | "RS256";
 
 /** Whether a client holds a secret at all: a confidential one does, a public one never. */
 export type ClientKind = "confidential" | "public";
@@ -288,6 +295,7 @@ export interface ClientRecord {
 	disabledAt: number | null;
 	/** Whether minting adds a `permissions` claim to this client's tokens, alongside the `roles` claim every client receives. */
 	includePermissions: boolean;
+	idTokenSignedResponseAlg: IdTokenSignedResponseAlg;
 }
 
 /** Maps a stored row's snake_case columns to the API's camelCase record. */
@@ -307,6 +315,7 @@ function toClientRecord(row: ClientRow): ClientRecord {
 		updatedAt: row.updated_at,
 		disabledAt: row.disabled_at,
 		includePermissions: row.include_permissions,
+		idTokenSignedResponseAlg: row.id_token_signed_response_alg as IdTokenSignedResponseAlg,
 	};
 }
 
@@ -348,6 +357,7 @@ async function liveSecretsFor(
 
 let ClientKindSchema = s.enum_(["confidential", "public"] as const);
 let AuthMethodSchema = s.enum_(["client_secret_basic", "client_secret_post", "none"] as const);
+let IdTokenAlgSchema = s.enum_(["ES256", "RS256"] as const);
 
 export interface RegisterClientInput {
 	name: string;
@@ -359,6 +369,8 @@ export interface RegisterClientInput {
 	scopes: string[];
 	tokenEndpointAuthMethod: TokenEndpointAuthMethod;
 	requireConsent: boolean;
+	/** @default "ES256" */
+	idTokenSignedResponseAlg?: IdTokenSignedResponseAlg;
 }
 
 export type RegisterClientResult =
@@ -376,6 +388,7 @@ let RegisterClientSchema = s.object({
 	scopes: s.array(s.string()),
 	tokenEndpointAuthMethod: AuthMethodSchema,
 	requireConsent: s.boolean(),
+	idTokenSignedResponseAlg: s.optional(IdTokenAlgSchema),
 });
 
 /**
@@ -411,6 +424,7 @@ export async function registerClient(
 		scopes: parsed.scopes,
 		token_endpoint_auth_method: parsed.tokenEndpointAuthMethod,
 		require_consent: parsed.requireConsent,
+		id_token_signed_response_alg: parsed.idTokenSignedResponseAlg ?? "ES256",
 		created_at: now,
 		updated_at: now,
 		disabled_at: null,
@@ -445,6 +459,8 @@ export interface UpdateClientInput {
 	scopes: string[];
 	tokenEndpointAuthMethod: TokenEndpointAuthMethod;
 	requireConsent: boolean;
+	/** Keeps the client's current algorithm when omitted. */
+	idTokenSignedResponseAlg?: IdTokenSignedResponseAlg;
 }
 
 export type UpdateClientResult =
@@ -465,6 +481,7 @@ let UpdateClientSchema = s.object({
 	scopes: s.array(s.string()),
 	tokenEndpointAuthMethod: AuthMethodSchema,
 	requireConsent: s.boolean(),
+	idTokenSignedResponseAlg: s.optional(IdTokenAlgSchema),
 });
 
 /**
@@ -501,6 +518,8 @@ export async function updateClient(
 			scopes: parsed.scopes,
 			token_endpoint_auth_method: parsed.tokenEndpointAuthMethod,
 			require_consent: parsed.requireConsent,
+			id_token_signed_response_alg:
+				parsed.idTokenSignedResponseAlg ?? existing.id_token_signed_response_alg,
 			updated_at: Date.now(),
 		},
 	);

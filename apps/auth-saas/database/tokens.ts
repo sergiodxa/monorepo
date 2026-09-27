@@ -34,7 +34,7 @@ import { clients, verifyClientSecret } from "./clients";
 import { scopes } from "./consent";
 import { resolveRoleAndPermissionClaims } from "./roles";
 import { revokeSession, sessions } from "./sessions";
-import { currentSigningKeyPair, customClaims } from "./signing-keys";
+import { currentSigningKeyPair, customClaims, ensureSigningKey } from "./signing-keys";
 import { subjectAttributes, subjectIdentifiers, subjects } from "./subjects";
 
 /** How long an access token signs for before a resource server must ask again. */
@@ -448,7 +448,12 @@ export async function mintTokens(db: Database, input: MintTokensInput): Promise<
 	}
 
 	let accessToken = await new AccessToken(accessClaims).sign(JWK.Algorithm.ES256, [keyPair]);
-	let idToken = idClaims ? await new IdToken(idClaims).sign(JWK.Algorithm.ES256, [keyPair]) : null;
+
+	let idToken: string | null = null;
+	if (idClaims) {
+		let idTokenKey = await idTokenSigningKey(db, input.client, keyPair, input.now);
+		idToken = await new IdToken(idClaims).sign(idTokenKey.alg, [idTokenKey]);
+	}
 
 	return {
 		kind: "minted",
@@ -456,6 +461,27 @@ export async function mintTokens(db: Database, input: MintTokensInput): Promise<
 		idToken,
 		expiresIn: Math.floor(ACCESS_TOKEN_TTL_MS / 1000),
 	};
+}
+
+/**
+ * The key a client's ID token is signed with: the access token's ES256 key, or the
+ * RS256 signing key for a client registered for RS256, generated on first use for a
+ * tenant provisioned before RS256 keys existed. The JWKS is read from the tenant on
+ * every request, so a relying party meeting the new `kid` finds it published.
+ */
+async function idTokenSigningKey(
+	db: Database,
+	client: ClientRow,
+	accessTokenKey: JWK.KeyPair,
+	now: number,
+): Promise<JWK.KeyPair> {
+	if (client.id_token_signed_response_alg !== JWK.Algorithm.RS256) return accessTokenKey;
+
+	await ensureSigningKey(db, now, JWK.Algorithm.RS256);
+	let keyPair = await currentSigningKeyPair(db, JWK.Algorithm.RS256);
+	if (!keyPair) throw new Error("RS256 signing key missing immediately after ensuring one");
+
+	return keyPair;
 }
 
 /** Revokes every row in a refresh token family, for a reuse response or a replayed code alike. */

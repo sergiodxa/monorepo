@@ -115,7 +115,9 @@ describe("GET /.well-known/jwks.json", () => {
 		let published = await tenantDO.publishMetadata({ now: Date.now() });
 		let body = (await response.json()) as { keys: unknown[] };
 		expect(body).toEqual(published.jwks);
-		expect(body.keys).toHaveLength(1);
-		expect(body.keys[0]).toMatchObject({ kty: "EC", alg: "ES256" });
+		expect(body.keys).toEqual([
+			expect.objectContaining({ kty: "EC", alg: "ES256" }),
+			expect.objectContaining({ kty: "RSA", alg: "RS256" }),
+		]);
 	});
 });

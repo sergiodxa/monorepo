@@ -94,6 +94,7 @@ belongs to the client, which is where OIDC registration puts it.
 
 ## Current Progress
 
-- [ ] Per-algorithm rotation, RS256 key generated at provisioning and on first use
-- [ ] `id_token_signed_response_alg` on clients, migration `0036`, management API fields
-- [ ] ID tokens signed per client; discovery lists both algorithms
+- [x] Per-algorithm rotation, RS256 key generated at provisioning and on first use
+- [x] `id_token_signed_response_alg` on clients, migration `0036`
+- [ ] Management API fields
+- [x] ID tokens signed per client; discovery lists both algorithms

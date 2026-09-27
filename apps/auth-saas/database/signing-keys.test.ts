@@ -41,22 +41,34 @@ afterEach(() => {
 	vi.useRealTimers();
 });
 
+/** The rows of one algorithm, since each algorithm rotates on its own. */
+async function rowsFor(alg: string) {
+	let rows = await db.findMany(signingKeys);
+	return rows.filter((row) => row.alg === alg);
+}
+
+/** The published keys of one algorithm. */
+function keysFor(published: { keys: Array<{ alg?: string }> }, alg: string) {
+	return published.keys.filter((key) => key.alg === alg);
+}
+
 describe("advanceSigningKeys", () => {
-	test("generates the tenant's first key, staged and signing at once", async () => {
+	test("generates the tenant's first key per algorithm, staged and signing at once", async () => {
 		let published = await advanceSigningKeys(db, { now: T0 });
 
-		expect(published.keys).toHaveLength(1);
-		expect(published.keys[0]).toMatchObject({ kty: "EC", alg: "ES256" });
-		expect(published.keys[0]).not.toHaveProperty("d");
+		expect(published.keys).toHaveLength(2);
+		expect(keysFor(published, "ES256")).toEqual([expect.objectContaining({ kty: "EC" })]);
+		expect(keysFor(published, "RS256")).toEqual([expect.objectContaining({ kty: "RSA" })]);
+		for (let key of published.keys) {
+			expect(key).not.toHaveProperty("d");
+			expect(key).not.toHaveProperty("p");
+		}
 
 		let rows = await db.findMany(signingKeys);
-		expect(rows).toEqual([
-			expect.objectContaining({
-				signing_from: T0,
-				retired_at: null,
-				publish_until: null,
-			}),
-		]);
+		expect(rows).toHaveLength(2);
+		for (let row of rows) {
+			expect(row).toMatchObject({ signing_from: T0, retired_at: null, publish_until: null });
+		}
 	});
 
 	test("does nothing further when nothing is due", async () => {
@@ -67,7 +79,7 @@ describe("advanceSigningKeys", () => {
 		let rowsAfter = await db.findMany(signingKeys);
 
 		expect(rowsAfter).toEqual(rows);
-		expect(published.keys).toHaveLength(1);
+		expect(published.keys).toHaveLength(2);
 	});
 
 	test("stages a successor once the signing key's window has elapsed", async () => {
@@ -75,14 +87,28 @@ describe("advanceSigningKeys", () => {
 
 		let published = await advanceSigningKeys(db, { now: T0 + 90 * DAY_MS });
 
-		let rows = await db.findMany(signingKeys);
+		let rows = await rowsFor("ES256");
 		expect(rows).toHaveLength(2);
 
 		let staged = rows.find((row) => row.signing_from === null);
 		expect(staged).toMatchObject({ created_at: T0 + 90 * DAY_MS, retired_at: null });
 
 		// The successor is published alongside the incumbent, ahead of ever signing.
-		expect(published.keys).toHaveLength(2);
+		expect(keysFor(published, "ES256")).toHaveLength(2);
+	});
+
+	test("rotates each algorithm on its own clock", async () => {
+		await advanceSigningKeys(db, { now: T0 });
+		await db.deleteMany(signingKeys, { where: { alg: "RS256" } });
+		await advanceSigningKeys(db, { now: T0 + 30 * DAY_MS });
+
+		let published = await advanceSigningKeys(db, { now: T0 + 90 * DAY_MS });
+
+		expect(keysFor(published, "ES256")).toHaveLength(2);
+		expect(keysFor(published, "RS256")).toHaveLength(1);
+		expect(await rowsFor("RS256")).toEqual([
+			expect.objectContaining({ signing_from: T0 + 30 * DAY_MS }),
+		]);
 	});
 
 	test("promotes a staged key once its staged window has elapsed, retiring the incumbent", async () => {
@@ -92,7 +118,7 @@ describe("advanceSigningKeys", () => {
 		let promotedAt = T0 + 90 * DAY_MS + 24 * 60 * 60 * 1000;
 		let published = await advanceSigningKeys(db, { now: promotedAt });
 
-		let rows = await db.findMany(signingKeys);
+		let rows = await rowsFor("ES256");
 		expect(rows).toHaveLength(2);
 
 		let signing = rows.find((row) => row.retired_at === null);
@@ -105,7 +131,7 @@ describe("advanceSigningKeys", () => {
 		});
 
 		// Both the freshly promoted key and its retired predecessor stay published.
-		expect(published.keys).toHaveLength(2);
+		expect(keysFor(published, "ES256")).toHaveLength(2);
 	});
 
 	test("writes a signing_key.rotated row when a staged key is promoted", async () => {
@@ -115,7 +141,7 @@ describe("advanceSigningKeys", () => {
 		let promotedAt = T0 + 90 * DAY_MS + 24 * 60 * 60 * 1000;
 		await advanceSigningKeys(db, { now: promotedAt });
 
-		let rows = await db.findMany(signingKeys);
+		let rows = await rowsFor("ES256");
 		let signing = rows.find((row) => row.retired_at === null);
 		let retired = rows.find((row) => row.retired_at !== null);
 
@@ -126,15 +152,17 @@ describe("advanceSigningKeys", () => {
 		});
 		if (!page.ok) throw new Error("unreachable");
 
-		expect(page.events).toMatchObject([
-			{
-				actorType: "platform",
-				targetType: "signing_key",
-				targetId: signing?.id,
-				outcome: "succeeded",
-				detail: { retiredKeyId: retired?.id },
-			},
-		]);
+		expect(page.events).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					actorType: "platform",
+					targetType: "signing_key",
+					targetId: signing?.id,
+					outcome: "succeeded",
+					detail: { retiredKeyId: retired?.id },
+				}),
+			]),
+		);
 	});
 
 	test("deletes a key once it is past its publish window", async () => {
@@ -145,9 +173,8 @@ describe("advanceSigningKeys", () => {
 
 		let published = await advanceSigningKeys(db, { now: promotedAt + 7 * DAY_MS });
 
-		let rows = await db.findMany(signingKeys);
-		expect(rows).toHaveLength(1);
-		expect(published.keys).toHaveLength(1);
+		expect(await rowsFor("ES256")).toHaveLength(1);
+		expect(keysFor(published, "ES256")).toHaveLength(1);
 	});
 
 	test("calling it twice at the same instant changes nothing the second time", async () => {

@@ -226,6 +226,40 @@ describe("registerClient", () => {
 	});
 });
 
+describe("idTokenSignedResponseAlg", () => {
+	test("defaults to ES256 when registration states none", async () => {
+		let created = await createTestClient();
+		expect(created.client.idTokenSignedResponseAlg).toBe("ES256");
+	});
+
+	test("records RS256 when registration asks for it", async () => {
+		let created = await createTestClient({ idTokenSignedResponseAlg: "RS256" });
+		expect(created.client.idTokenSignedResponseAlg).toBe("RS256");
+	});
+
+	test("an update that omits it keeps the client's algorithm, and one that states it changes it", async () => {
+		let created = await createTestClient({ idTokenSignedResponseAlg: "RS256" });
+		let record = {
+			clientId: created.client.id,
+			name: created.client.name,
+			kind: created.client.kind,
+			redirectUris: created.client.redirectUris,
+			postLogoutRedirectUris: created.client.postLogoutRedirectUris,
+			grantTypes: created.client.grantTypes,
+			responseTypes: created.client.responseTypes,
+			scopes: created.client.scopes,
+			tokenEndpointAuthMethod: created.client.tokenEndpointAuthMethod,
+			requireConsent: created.client.requireConsent,
+		};
+
+		let kept = await updateClient(db, record);
+		expect(kept).toMatchObject({ ok: true, client: { idTokenSignedResponseAlg: "RS256" } });
+
+		let changed = await updateClient(db, { ...record, idTokenSignedResponseAlg: "ES256" });
+		expect(changed).toMatchObject({ ok: true, client: { idTokenSignedResponseAlg: "ES256" } });
+	});
+});
+
 describe("updateClient", () => {
 	test("replaces the whole editable record in one call", async () => {
 		let created = await createTestClient();
@@ -260,6 +294,7 @@ describe("updateClient", () => {
 				updatedAt: expect.any(Number),
 				disabledAt: null,
 				includePermissions: false,
+				idTokenSignedResponseAlg: "ES256",
 			},
 		});
 	});

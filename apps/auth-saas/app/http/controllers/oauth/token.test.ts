@@ -12,6 +12,7 @@ import type { Middleware } from "remix/router";
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { Base64, Base64Url, Hex, randomToken, sha256 } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
+import { JWK } from "@sdxc/jwt";
 import { isFailure } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid";
 import { Database } from "remix/data-table";
@@ -28,8 +29,13 @@ import {
 import { authorizationCodes } from "~/database/authorization";
 import { DEVICE_CODE_GRANT_TYPE, deviceAuthorizations } from "~/database/device-authorization";
 import { openSession } from "~/database/sessions";
+import { signingKeys } from "~/database/signing-keys";
 import Tenant from "~/database/tenant-do";
+import { IdToken } from "~/database/tokens";
 import routes from "~/routes/tenant";
+
+import jwks from "../well-known/jwks";
+import openidConfiguration from "../well-known/openid-configuration";
 
 import token from "./token";
 
@@ -59,6 +65,8 @@ function buildRouter() {
 		],
 	});
 	router.map(routes.token, token);
+	router.map(routes.openidConfiguration, openidConfiguration);
+	router.map(routes.jwks, jwks);
 	return router;
 }
 
@@ -86,8 +94,9 @@ async function digestHex(text: string): Promise<string> {
 }
 
 /** Registers a confidential test client, throwing if the record was refused. */
-async function createTestClient() {
+async function createTestClient(idTokenSignedResponseAlg?: "ES256" | "RS256") {
 	let result = await tenantDO.registerClient({
+		idTokenSignedResponseAlg,
 		name: "Test Client",
 		kind: "confidential",
 		redirectUris: [REDIRECT_URI],
@@ -249,6 +258,92 @@ describe("authorization_code grant", () => {
 		expect(response.status).toBe(400);
 		let body = (await response.json()) as Record<string, unknown>;
 		expect(body.error).toBe("unsupported_grant_type");
+	});
+});
+
+/** A `GET` for one of the tenant's discovery documents, already resolved to the fixture tenant. */
+function discoveryRequest(path: string): Request {
+	return new Request(`https://${TENANT_ID}.example.com${path}`, {
+		headers: {
+			[TENANT_ID_HEADER]: TENANT_ID,
+			[TENANT_REGION_HEADER]: "wnam",
+			[TENANT_ISSUER_HEADER]: ISSUER,
+		},
+	});
+}
+
+/** Exchanges a fresh code for the given client and answers the ID token it minted. */
+async function exchangeForIdToken(client: { id: string }, secret: string | null): Promise<string> {
+	let { subjectId, sessionId } = await createTestSubjectAndSession();
+	let { code, codeVerifier } = await createTestCode({ clientId: client.id, subjectId, sessionId });
+
+	let response = await buildRouter().fetch(
+		tokenRequest(
+			{
+				grant_type: "authorization_code",
+				code,
+				code_verifier: codeVerifier,
+				redirect_uri: REDIRECT_URI,
+			},
+			{ Authorization: `Basic ${Base64.encode(`${client.id}:${secret}`)}` },
+		),
+	);
+	expect(response.status).toBe(200);
+
+	let body = (await response.json()) as { id_token: string };
+	return body.id_token;
+}
+
+/** The `alg` and `kid` a compact JWS names in its protected header. */
+function protectedHeader(jws: string): { alg: string; kid: string } {
+	let [encoded = ""] = jws.split(".");
+	let decoded = Base64Url.decode(encoded);
+	if (isFailure(decoded)) throw decoded.error;
+	return JSON.parse(new TextDecoder().decode(decoded.data)) as { alg: string; kid: string };
+}
+
+describe("ID token signing algorithm", () => {
+	test("discovery lists RS256 beside ES256", async () => {
+		let response = await buildRouter().fetch(discoveryRequest("/.well-known/openid-configuration"));
+		let body = (await response.json()) as { id_token_signing_alg_values_supported: string[] };
+
+		expect(body.id_token_signing_alg_values_supported).toEqual(["ES256", "RS256"]);
+	});
+
+	test("an RS256 client gets an RS256-signed ID token that verifies against the JWKS", async () => {
+		let { client, secret } = await createTestClient("RS256");
+		let idToken = await exchangeForIdToken(client, secret);
+
+		let response = await buildRouter().fetch(discoveryRequest("/.well-known/jwks.json"));
+		let keys = await JWK.importLocal((await response.json()) as { keys: [] });
+		let verified = await IdToken.verify(idToken, keys, {
+			issuer: ISSUER,
+			audience: client.id,
+			algorithms: [JWK.Algorithm.RS256],
+		});
+
+		expect(protectedHeader(idToken).alg).toBe("RS256");
+		expect(verified.audience).toBe(client.id);
+	});
+
+	test("a client registered without an algorithm keeps ES256 ID tokens", async () => {
+		let { client, secret } = await createTestClient();
+		let idToken = await exchangeForIdToken(client, secret);
+
+		expect(protectedHeader(idToken).alg).toBe("ES256");
+	});
+
+	test("a tenant provisioned before RS256 keys existed generates one on first use and publishes it", async () => {
+		await db.deleteMany(signingKeys, { where: { alg: "RS256" } });
+		let { client, secret } = await createTestClient("RS256");
+
+		let idToken = await exchangeForIdToken(client, secret);
+
+		let response = await buildRouter().fetch(discoveryRequest("/.well-known/jwks.json"));
+		let published = (await response.json()) as { keys: Array<{ kid: string; alg: string }> };
+		expect(published.keys).toContainEqual(
+			expect.objectContaining({ kid: protectedHeader(idToken).kid, alg: "RS256" }),
+		);
 	});
 });
 

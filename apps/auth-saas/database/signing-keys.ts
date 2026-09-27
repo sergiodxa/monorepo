@@ -1,10 +1,8 @@
 /**
- * A tenant's signing keys and its declared custom claims. The private half of a key
- * never leaves the object: every export here but `currentSigningKeyPair` returns a
- * published key set, never a `KeyPair`, so a caller holding the result has exactly
- * what a relying party is allowed to see. `currentSigningKeyPair` hands back the
- * live pair for the minting operation to sign with, and only a signed token string
- * ever crosses back out from there.
+ * A tenant's signing keys, one rotating per algorithm, and its declared custom claims.
+ * Every export here but `currentSigningKeyPair` returns a published key set, so a caller
+ * holds exactly what a relying party may see; `currentSigningKeyPair` hands the minting
+ * operation the live pair, and only a signed token string crosses back out from there.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,9 +12,15 @@ import type { Database, TableRow } from "remix/data-table";
 
 import { JWK } from "@sdxc/jwt";
 import * as s from "remix/data-schema";
-import { and, column as c, gt, isNull, lte, notNull, or, table } from "remix/data-table";
+import { and, column as c, eq, gt, isNull, lte, notNull, or, table } from "remix/data-table";
 
 import { writeAuditEvent } from "./audit-events";
+
+/**
+ * Every algorithm a tenant keeps a signing key for: ES256 signs every token by default,
+ * RS256 signs the ID tokens of clients registered for it.
+ */
+export const SIGNING_ALGORITHMS: JWK.Algorithm[] = [JWK.Algorithm.ES256, JWK.Algorithm.RS256];
 
 /** How long a staged key is published before it starts signing. */
 const STAGED_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -117,10 +121,10 @@ export interface AdvanceSigningKeysInput {
 let AdvanceSigningKeysSchema = s.object({ now: s.optional(s.number()) });
 
 /**
- * Performs every rotation transition due at the given time — staging a successor,
- * promoting a staged key and retiring the incumbent, deleting a key past its publish
- * window — and returns the resulting published set. Safe to call when nothing is due,
- * which is what lets a scheduled job page every tenant and call it on each one.
+ * Performs every rotation transition due at the given time, for each algorithm in
+ * {@link SIGNING_ALGORITHMS} — staging a successor, promoting a staged key and retiring
+ * the incumbent, deleting a key past its publish window — and returns the published set.
+ * Safe to call when nothing is due, which lets a scheduled job call it on every tenant.
  *
  * @param db - The tenant's database.
  * @param input - The clock to advance the rotation against.
@@ -133,13 +137,26 @@ export async function advanceSigningKeys(
 	let parsed = s.parse(AdvanceSigningKeysSchema, input);
 	let now = parsed.now ?? Date.now();
 
-	for (let step = 0; step < MAX_ROTATION_STEPS_PER_CALL; step++) {
-		if (await ensureSigningKey(db, now)) continue;
+	for (let alg of SIGNING_ALGORITHMS) await advanceAlgorithm(db, alg, now);
 
-		let signing = await currentSigningKey(db);
+	await db.deleteMany(signingKeys, {
+		where: and(notNull("publish_until"), lte("publish_until", now)),
+	});
+
+	return publishedKeySet(db, now);
+}
+
+/** Runs the rotation state machine for one algorithm's keys. */
+async function advanceAlgorithm(db: Database, alg: JWK.Algorithm, now: number): Promise<void> {
+	for (let step = 0; step < MAX_ROTATION_STEPS_PER_CALL; step++) {
+		if (await ensureSigningKey(db, now, alg)) continue;
+
+		let signing = await currentSigningKey(db, alg);
 		if (!signing || signing.signing_from === null) break;
 
-		let staged = await db.findOne(signingKeys, { where: isNull("signing_from") });
+		let staged = await db.findOne(signingKeys, {
+			where: and(eq("alg", alg), isNull("signing_from")),
+		});
 
 		if (staged && now - staged.created_at >= STAGED_WINDOW_MS) {
 			await promoteStagedKey(db, staged, signing, now);
@@ -147,18 +164,12 @@ export async function advanceSigningKeys(
 		}
 
 		if (!staged && now - signing.signing_from >= SIGNING_WINDOW_MS) {
-			await stageSuccessor(db, signing.alg as JWK.Algorithm, now);
+			await stageSuccessor(db, alg, now);
 			continue;
 		}
 
 		break;
 	}
-
-	await db.deleteMany(signingKeys, {
-		where: and(notNull("publish_until"), lte("publish_until", now)),
-	});
-
-	return publishedKeySet(db, now);
 }
 
 export interface PublishKeySetInput {
@@ -184,21 +195,37 @@ export async function publishKeySet(
 }
 
 /**
- * Generates this tenant's first signing key when it has none, staged and signing at
- * once — a tenant is never left in a state where a token can be requested and nothing
- * can sign it. Shared by provisioning, which calls it directly, and by
- * {@link advanceSigningKeys}, which calls it whenever every key has somehow lapsed.
+ * Generates a signing key for an algorithm that has none, staged and signing at once, so
+ * a token can always be signed. Provisioning calls it for every algorithm; minting calls
+ * it for a tenant provisioned before an algorithm existed; {@link advanceSigningKeys}
+ * calls it whenever an algorithm's keys have somehow lapsed.
  *
  * @param db - The tenant's database.
  * @param now - When the key starts signing.
+ * @param alg - The algorithm to hold a signing key for.
  * @returns Whether a key was generated; `false` when one was already signing.
  */
-export async function ensureSigningKey(db: Database, now: number = Date.now()): Promise<boolean> {
-	let signing = await currentSigningKey(db);
+export async function ensureSigningKey(
+	db: Database,
+	now: number = Date.now(),
+	alg: JWK.Algorithm = JWK.Algorithm.ES256,
+): Promise<boolean> {
+	let signing = await currentSigningKey(db, alg);
 	if (signing) return false;
 
-	await insertGeneratedKey(db, JWK.Algorithm.ES256, now, now);
+	await insertGeneratedKey(db, alg, now, now);
 	return true;
+}
+
+/**
+ * Generates a signing key for every algorithm in {@link SIGNING_ALGORITHMS} that has
+ * none, for provisioning a tenant that can sign every token it may be asked for.
+ *
+ * @param db - The tenant's database.
+ * @param now - When the generated keys start signing.
+ */
+export async function ensureSigningKeys(db: Database, now: number = Date.now()): Promise<void> {
+	for (let alg of SIGNING_ALGORITHMS) await ensureSigningKey(db, now, alg);
 }
 
 export interface CustomClaimDeclaration {
@@ -287,23 +314,27 @@ export async function setCustomClaims(
 	return { ok: true };
 }
 
-/** The one row, if any, whose `signing_from` is set and has not been retired. */
-async function currentSigningKey(db: Database): Promise<SigningKeyRow | null> {
-	return db.findOne(signingKeys, { where: and(notNull("signing_from"), isNull("retired_at")) });
+/** The one row of an algorithm, if any, whose `signing_from` is set and not yet retired. */
+async function currentSigningKey(db: Database, alg: JWK.Algorithm): Promise<SigningKeyRow | null> {
+	return db.findOne(signingKeys, {
+		where: and(eq("alg", alg), notNull("signing_from"), isNull("retired_at")),
+	});
 }
 
 /**
- * Hands back the tenant's current signing key as a usable `KeyPair`, private half
- * included, for the token endpoint to sign with. This is the one export from this
- * module that carries private key material — reserved for the minting operation
- * itself, since producing a token is the one thing worth crossing the object's
- * boundary for; the string a caller signs with this pair is all that leaves.
+ * Hands back an algorithm's current signing key as a usable `KeyPair`, private half
+ * included, for the token endpoint to sign with. The one export carrying private key
+ * material, reserved for minting; the string a caller signs with it is all that leaves.
  *
  * @param db - The tenant's database.
+ * @param alg - The algorithm the token is signed with.
  * @returns The current signing key pair, or `null` when somehow none is signing.
  */
-export async function currentSigningKeyPair(db: Database): Promise<JWK.KeyPair | null> {
-	let signing = await currentSigningKey(db);
+export async function currentSigningKeyPair(
+	db: Database,
+	alg: JWK.Algorithm = JWK.Algorithm.ES256,
+): Promise<JWK.KeyPair | null> {
+	let signing = await currentSigningKey(db, alg);
 	if (!signing) return null;
 
 	return JWK.importKeyPair(toSerializedKeyPair(signing));

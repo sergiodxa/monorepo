@@ -13,7 +13,6 @@ import type { AuthorizationServerMetadata } from "@sdxc/well-known/oauth-authori
 import type { OpenIdProviderMetadata } from "@sdxc/well-known/openid-configuration";
 import type { Database } from "remix/data-table";
 
-import { JWK } from "@sdxc/jwt";
 import { define as defineAuthorizationServerMetadata } from "@sdxc/well-known/oauth-authorization-server";
 import { define as defineOpenIdConfiguration } from "@sdxc/well-known/openid-configuration";
 import * as s from "remix/data-schema";
@@ -27,7 +26,7 @@ import { scopes } from "./consent";
 import { DEVICE_CODE_GRANT_TYPE } from "./device-authorization";
 import { resolveRoleAndPermissionClaims } from "./roles";
 import { sessions } from "./sessions";
-import { publishKeySet } from "./signing-keys";
+import { publishKeySet, SIGNING_ALGORITHMS } from "./signing-keys";
 import { subjectIdentifiers, subjects } from "./subjects";
 
 /** How long `Cache-Control` lets a cached copy of these documents stand, in seconds. */
@@ -135,8 +134,9 @@ function sharedMembers(published: PublishMetadataResult) {
 }
 
 /**
- * The tenant's OpenID Connect discovery document. `request_uri` is stated unsupported,
- * since OIDC Discovery reads an absent member as supported.
+ * The tenant's OpenID Connect discovery document. It lists RS256, which OIDC Discovery
+ * requires, beside ES256; `request_uri` is stated unsupported, since OIDC Discovery reads
+ * an absent member as supported.
  *
  * @param published - The facts {@link publishMetadata} read.
  * @returns The document `/.well-known/openid-configuration` serves.
@@ -146,7 +146,7 @@ export function openIdConfigurationFor(published: PublishMetadataResult): OpenId
 		...sharedMembers(published),
 		userinfoEndpoint: new URL("/userinfo", published.issuer),
 		subjectTypesSupported: ["public"],
-		idTokenSigningAlgValuesSupported: [JWK.Algorithm.ES256],
+		idTokenSigningAlgValuesSupported: SIGNING_ALGORITHMS,
 		claimsSupported: published.claimsSupported,
 		requestUriParameterSupported: false,
 	});
