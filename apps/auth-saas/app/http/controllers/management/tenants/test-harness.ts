@@ -54,7 +54,7 @@ import {
 	ISSUER,
 } from "~/app/http/controllers/management/test-harness";
 import { database } from "~/app/http/middleware/database";
-import { Mail } from "~/app/http/middleware/management-mail";
+import { Mail } from "~/app/http/middleware/mail";
 import routes from "~/routes/management";
 
 export {

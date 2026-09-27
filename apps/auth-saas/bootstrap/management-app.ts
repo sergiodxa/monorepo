@@ -121,7 +121,7 @@ import { createWebhookEndpointsUpdateAction } from "~/app/http/controllers/manag
 import notFound from "~/app/http/controllers/not-found";
 import { apiVersioning } from "~/app/http/lib/api-version";
 import { database } from "~/app/http/middleware/database";
-import { mail } from "~/app/http/middleware/management-mail";
+import { mail } from "~/app/http/middleware/mail";
 import { managementWellKnown } from "~/app/http/middleware/management-well-known";
 import trailingSlash from "~/app/http/middleware/trailing-slash";
 import { buildManagementDocument } from "~/app/http/openapi/document";
