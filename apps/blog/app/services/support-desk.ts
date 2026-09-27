@@ -23,7 +23,7 @@ import { EncoreSupportEmail } from "~/app/emails/encore-support";
  * email binding; the visitor's own address travels as Reply-To, never as From, because a
  * From on a domain the sender does not control fails DMARC.
  */
-export const SUPPORT_SENDER: Address = { email: "no-reply@sergiodxa.com", name: "Encore Support" };
+export const SUPPORT_SENDER: Address = { email: "support@sergiodxa.com", name: "Encore Support" };
 
 /**
  * Submissions one address may make per minute. Kept equal by hand to the
