@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import * as s from "@sdxc/json-schema";
 import { TypeID } from "@sdxc/typeid";
 import { assertUUID, isUUID } from "@sdxc/uuid";
-import * as s from "remix/data-schema";
 
 /**
  * Every prefix the API serializes, and the only values {@link encodeId} and
@@ -58,8 +58,19 @@ export function encodeId(prefix: Prefix, id: string): string {
 }
 
 /**
+ * The JSON Schema `pattern` a TypeID carrying `prefix` matches: the prefix, `_`, and 26
+ * Crockford base32 characters whose first cannot exceed `7`, as a 128-bit suffix requires.
+ *
+ * @param prefix Prefix the identifier carries.
+ */
+export function typeIdPattern(prefix: Prefix): string {
+	return `^${prefix}_[0-7][0-9a-hjkmnp-tv-z]{25}$`;
+}
+
+/**
  * Schema for an identifier arriving in a route param or a request body, decoding it
- * to the UUID the data layer queries with.
+ * to the UUID the data layer queries with. It documents the input as the TypeID
+ * {@link typeIdPattern} describes.
  *
  * `refine` rejects anything that is not a TypeID carrying `prefix` — a raw UUID and
  * an id borrowed from another resource both fail here — so `transform` only ever
@@ -75,6 +86,7 @@ export function typedId<const prefix extends Prefix>(prefix: prefix) {
 	return s
 		.string()
 		.refine((value) => TypeID.isValid(value, prefix), `Expected a ${prefix} identifier`)
+		.meta({ pattern: typeIdPattern(prefix) })
 		.transform((value) => TypeID.fromString(value, prefix).toUUID());
 }
 

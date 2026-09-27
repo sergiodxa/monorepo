@@ -17,6 +17,10 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { ApiKeyScope } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
+import { checkConformance } from "~/app/lib/test/openapi";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance({ backfillDailyStatsCreate: null });
 
 /**
  * The queue the endpoint enqueues onto, kept at module scope since the controller
@@ -54,7 +58,7 @@ async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]) {
 }
 
 async function dispatch(db: Db, request: Request) {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
 	router.map(routes.api.v1.backfillDailyStats, backfillDailyStatsCreate);
 
 	return router.fetch(request);

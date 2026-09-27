@@ -16,9 +16,7 @@ Returns the pending and accepted invitations for your team.
 
 The list is paginated. See [Pagination](/docs/api/pagination) for how to walk it a page at a time.
 
-### Required Scope
-
-`invites:read`
+<!-- operation: invitesIndex -->
 
 ### Query Parameters
 
@@ -94,111 +92,11 @@ curl -i "https://uptime.sergiodxa.com/api/v1/invites?perPage=100" \
 | `meta.pagination.perPage`   | integer         | Results this page was built with                   |
 | `meta.pagination.total`     | integer         | Invites matching, across every page                |
 
-### Possible Errors
-
-| Status | Type           | Description                               |
-| ------ | -------------- | ----------------------------------------- |
-| 400    | `bad-request`  | Invalid `perPage` or malformed cursor     |
-| 401    | `unauthorized` | Missing or invalid API key                |
-| 403    | `forbidden`    | API key doesn't have `invites:read` scope |
-| 500    | `internal`     | The page of results could not be read     |
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["data", "meta"],
-	"properties": {
-		"data": {
-			"type": "object",
-			"required": ["invites"],
-			"properties": {
-				"invites": {
-					"type": "array",
-					"items": {
-						"type": "object",
-						"required": [
-							"id",
-							"email",
-							"senderId",
-							"teamId",
-							"acceptedAt",
-							"createdAt",
-							"updatedAt"
-						],
-						"properties": {
-							"id": {
-								"type": "string"
-							},
-							"email": {
-								"type": "string",
-								"format": "email"
-							},
-							"senderId": {
-								"type": "string"
-							},
-							"teamId": {
-								"type": "string"
-							},
-							"acceptedAt": {
-								"type": ["integer", "null"]
-							},
-							"createdAt": {
-								"type": "integer"
-							},
-							"updatedAt": {
-								"type": "integer"
-							}
-						}
-					}
-				}
-			}
-		},
-		"meta": {
-			"type": "object",
-			"required": ["requestId", "timestamp"],
-			"properties": {
-				"requestId": {
-					"type": "string",
-					"format": "uuid"
-				},
-				"timestamp": {
-					"type": "string",
-					"format": "date-time"
-				},
-				"pagination": {
-					"type": "object",
-					"required": ["next", "prev", "perPage"],
-					"properties": {
-						"next": {
-							"type": ["string", "null"]
-						},
-						"prev": {
-							"type": ["string", "null"]
-						},
-						"perPage": {
-							"type": "integer"
-						},
-						"total": {
-							"type": "integer"
-						}
-					}
-				}
-			}
-		}
-	}
-}
-```
-
 ## POST /api/v1/invites
 
 Creates a pending invitation for the specified email address. The API records the invite; the invited person joins the team by accepting it. Answers `201 Created`.
 
-### Required Scope
-
-`invites:write`
+<!-- operation: invitesCreate -->
 
 ### Request Body
 
@@ -239,98 +137,11 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/invites \
 }
 ```
 
-### Possible Errors
-
-| Status | Type               | Description                                          |
-| ------ | ------------------ | ---------------------------------------------------- |
-| 400    | `validation-error` | Missing or invalid email address                     |
-| 401    | `unauthorized`     | Missing or invalid API key                           |
-| 403    | `forbidden`        | API key doesn't have `invites:write` scope           |
-| 409    | `conflict`         | This email was already invited (pending or accepted) |
-
-### Request Body Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["email"],
-	"properties": {
-		"email": {
-			"type": "string",
-			"format": "email"
-		}
-	}
-}
-```
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["data", "meta"],
-	"properties": {
-		"data": {
-			"type": "object",
-			"required": ["invite"],
-			"properties": {
-				"invite": {
-					"type": "object",
-					"required": ["id", "email", "senderId", "teamId", "acceptedAt", "createdAt", "updatedAt"],
-					"properties": {
-						"id": {
-							"type": "string"
-						},
-						"email": {
-							"type": "string",
-							"format": "email"
-						},
-						"senderId": {
-							"type": "string"
-						},
-						"teamId": {
-							"type": "string"
-						},
-						"acceptedAt": {
-							"type": ["integer", "null"]
-						},
-						"createdAt": {
-							"type": "integer"
-						},
-						"updatedAt": {
-							"type": "integer"
-						}
-					}
-				}
-			}
-		},
-		"meta": {
-			"type": "object",
-			"required": ["requestId", "timestamp"],
-			"properties": {
-				"requestId": {
-					"type": "string",
-					"format": "uuid"
-				},
-				"timestamp": {
-					"type": "string",
-					"format": "date-time"
-				}
-			}
-		}
-	}
-}
-```
-
 ## DELETE /api/v1/invites/:id
 
 Revokes a pending invitation, so the invited user can no longer join the team with it. An invite that was already accepted stays in place and answers `409 conflict`.
 
-### Required Scope
-
-`invites:write`
+<!-- operation: inviteDestroy -->
 
 ### Path Parameters
 
@@ -357,52 +168,6 @@ curl -X DELETE https://uptime.sergiodxa.com/api/v1/invites/inv_ghi789 \
 	"meta": {
 		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
 		"timestamp": "2026-02-14T17:00:00.000Z"
-	}
-}
-```
-
-### Possible Errors
-
-| Status | Type               | Description                                |
-| ------ | ------------------ | ------------------------------------------ |
-| 400    | `validation-error` | Malformed invite id                        |
-| 401    | `unauthorized`     | Missing or invalid API key                 |
-| 403    | `forbidden`        | API key doesn't have `invites:write` scope |
-| 404    | `not-found`        | Invite not found                           |
-| 409    | `conflict`         | The invite was already accepted            |
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["data", "meta"],
-	"properties": {
-		"data": {
-			"type": "object",
-			"required": ["deleted"],
-			"properties": {
-				"deleted": {
-					"type": "boolean",
-					"const": true
-				}
-			}
-		},
-		"meta": {
-			"type": "object",
-			"required": ["requestId", "timestamp"],
-			"properties": {
-				"requestId": {
-					"type": "string",
-					"format": "uuid"
-				},
-				"timestamp": {
-					"type": "string",
-					"format": "date-time"
-				}
-			}
-		}
 	}
 }
 ```

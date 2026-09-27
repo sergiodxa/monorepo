@@ -9,11 +9,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { idempotencyKeys } from "@sdxc/idempotency/data-table";
+import { DataTableStore, idempotencyKeys } from "@sdxc/idempotency/data-table";
+import { success } from "@sdxc/result";
 import { TypeID } from "@sdxc/typeid";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
 
@@ -21,10 +22,14 @@ import ApiKey, { MAX_API_KEYS_PER_TEAM } from "~/app/data/api-key";
 import apiKeysController from "~/app/http/controllers/api/api-keys";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem, problemMessages } from "~/app/lib/test/problem";
 import { apiKeys, teams } from "~/database/schema";
 import { apiKeysRoutes } from "~/routes/api-groups";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance(apiKeysRoutes);
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 
@@ -48,7 +53,7 @@ async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]) {
 }
 
 async function dispatch(db: Db, request: Request) {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
 	router.map(apiKeysRoutes, apiKeysController);
 
 	return router.fetch(request);
@@ -330,5 +335,47 @@ describe("POST /api/v1/api-keys with an Idempotency-Key", () => {
 		let secondBody = (await second.json()) as { data: { key: string } };
 		expect(secondBody.data.key).not.toBe(firstBody.data.key);
 		expect(await db.count(idempotencyKeys)).toBe(0);
+	});
+
+	test("an unquoted key answers idempotency-key-invalid and mints nothing", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["api-keys:write", "monitors:read"]);
+		let request = post(key, { name: "CI", scopes: ["monitors:read"] });
+		request.headers.set("Idempotency-Key", "unquoted");
+
+		let response = await dispatch(db, request);
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "idempotencyKeyInvalid");
+		expect(await db.count(apiKeys, { where: { team_id: team.id } })).toBe(1);
+	});
+
+	/**
+	 * A completed create releases its claim, so the first request is held "running" by
+	 * skipping that one release: its claim stays live, as a concurrent retry would find it.
+	 */
+	test("a retry while the first request runs answers idempotency-key-in-use", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["api-keys:write", "monitors:read"]);
+		let create = () => {
+			let request = post(key, { name: "CI", scopes: ["monitors:read"] });
+			request.headers.set("Idempotency-Key", '"in-flight"');
+			return request;
+		};
+
+		let release = vi
+			.spyOn(DataTableStore.prototype, "release")
+			.mockResolvedValueOnce(success(undefined));
+		let first = await dispatch(db, create());
+		let second = await dispatch(db, create());
+		release.mockRestore();
+
+		expect(first.status).toBe(201);
+		expect(second.status).toBe(409);
+		expect(second.headers.get("Retry-After")).toBe("1");
+		await expectProblem(second, "idempotencyKeyInUse");
+		expect(await db.count(apiKeys, { where: { team_id: team.id } })).toBe(2);
 	});
 });

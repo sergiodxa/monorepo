@@ -8,12 +8,11 @@
  */
 
 import { Created } from "@sdxc/http/status-code";
+import * as s from "@sdxc/json-schema";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import * as s from "remix/data-schema";
-import * as checks from "remix/data-schema/checks";
 import { createController } from "remix/router";
 
 import type { SelectMonitorContentCheck } from "~/database/schema";
@@ -23,19 +22,16 @@ import Monitor from "~/app/data/monitor";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
+import {
+	CONTENT_CHECK_PARAMS,
+	CREATE_CONTENT_CHECK_BODY,
+	MONITOR_ID_PARAMS,
+} from "~/app/http/openapi/monitors";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
-import { encodeId, typedId } from "~/app/services/typed-id";
+import { encodeId } from "~/app/services/typed-id";
 import { monitorContentChecksRoutes } from "~/routes/api-groups";
-
-const CONTENT_CHECK_TYPES = ["contains", "not_contains", "regex"] as const;
-
-const MonitorIdParams = s.object({ monitorId: typedId("mon") });
-const ContentCheckParams = s.object({
-	monitorId: typedId("mon"),
-	contentCheckId: typedId("chk"),
-});
 
 /** Maps a content-check row to its public camelCase JSON shape. */
 function serializeContentCheck(check: SelectMonitorContentCheck) {
@@ -51,23 +47,6 @@ function serializeContentCheck(check: SelectMonitorContentCheck) {
 	};
 }
 
-const CreateContentCheckSchema = s
-	.object({
-		type: s.enum_(CONTENT_CHECK_TYPES),
-		value: s.string().pipe(checks.minLength(1)),
-		caseSensitive: s.defaulted(s.boolean(), false),
-		isEnabled: s.defaulted(s.boolean(), true),
-	})
-	.refine((value) => {
-		if (value.type !== "regex") return true;
-		try {
-			new RegExp(value.value);
-			return true;
-		} catch {
-			return false;
-		}
-	}, "Invalid regular expression");
-
 export default createController(monitorContentChecksRoutes, {
 	middleware: [catchValidationError()],
 	actions: {
@@ -75,7 +54,7 @@ export default createController(monitorContentChecksRoutes, {
 		monitorContentChecksIndex: {
 			middleware: [requireApiKey("monitors:read")],
 			handler: async (ctx) => {
-				let { monitorId } = s.parse(MonitorIdParams, ctx.params);
+				let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
 				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
 				if (!monitor)
 					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
@@ -118,12 +97,12 @@ export default createController(monitorContentChecksRoutes, {
 		monitorContentChecksCreate: {
 			middleware: [requireApiKey("monitors:write"), idempotent],
 			handler: async (ctx) => {
-				let { monitorId } = s.parse(MonitorIdParams, ctx.params);
+				let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
 				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
 				if (!monitor)
 					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 
-				let result = await validate(ctx.request, CreateContentCheckSchema);
+				let result = await validate(ctx.request, CREATE_CONTENT_CHECK_BODY);
 				if (isFailure(result)) {
 					return apiProblems.validationError({
 						instance: problemInstance(),
@@ -146,7 +125,7 @@ export default createController(monitorContentChecksRoutes, {
 		monitorContentCheckDestroy: {
 			middleware: [requireApiKey("monitors:write")],
 			handler: async (ctx) => {
-				let { monitorId, contentCheckId } = s.parse(ContentCheckParams, ctx.params);
+				let { monitorId, contentCheckId } = s.parse(CONTENT_CHECK_PARAMS, ctx.params);
 				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
 				if (!monitor)
 					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });

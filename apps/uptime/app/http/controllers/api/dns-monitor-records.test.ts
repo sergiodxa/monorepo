@@ -24,12 +24,16 @@ import ApiKey from "~/app/data/api-key";
 import DnsMonitor from "~/app/data/dns-monitor";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem, problemMessages } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { dnsMonitorRecords, teams } from "~/database/schema";
 import { dnsMonitorRecordsRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance(dnsMonitorRecordsRoutes);
 
 let { default: dnsMonitorRecordsController } = await import("./dns-monitor-records");
 
@@ -89,7 +93,7 @@ async function createRecordRow(
 }
 
 async function dispatch(db: Db, request: Request): Promise<Response> {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
 	router.map(dnsMonitorRecordsRoutes, dnsMonitorRecordsController);
 
 	return router.fetch(request);
@@ -488,5 +492,48 @@ describe("GET /api/v1/dns-monitors/:dnsMonitorId/records total", () => {
 		};
 		expect(body.data.records).toHaveLength(1);
 		expect(body.meta.pagination.total).toBe(3);
+	});
+});
+
+describe("malformed DNS monitor record ids", () => {
+	test("listing answers validation-error for a raw monitor UUID", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:read"]);
+		let monitor = await createDnsMonitorRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			new Request(
+				`https://uptime.test${routes.api.v1.dnsMonitors.records.index.href({ dnsMonitorId: monitor.id })}`,
+				{ headers: { Authorization: `Bearer ${key}` } },
+			),
+		);
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "validationError");
+	});
+
+	test("updating answers validation-error for a raw record UUID", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+		let monitor = await createDnsMonitorRow(db, team.id);
+		let record = await createRecordRow(db, monitor.id);
+
+		let response = await dispatch(
+			db,
+			new Request(
+				`https://uptime.test${routes.api.v1.dnsMonitors.records.update.href({ dnsMonitorId: encodeId("dns", monitor.id), recordId: record.id })}`,
+				{
+					method: "PATCH",
+					headers: { Authorization: `Bearer ${key}`, "content-type": "application/json" },
+					body: JSON.stringify({ isEnabled: false }),
+				},
+			),
+		);
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "validationError");
 	});
 });

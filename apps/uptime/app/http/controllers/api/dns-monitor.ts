@@ -7,12 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import * as s from "@sdxc/json-schema";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import * as s from "remix/data-schema";
-import * as checks from "remix/data-schema/checks";
 import { createController } from "remix/router";
 
 import type { InsertDnsMonitor, SelectDnsMonitor } from "~/database/schema";
@@ -20,17 +19,12 @@ import type { InsertDnsMonitor, SelectDnsMonitor } from "~/database/schema";
 import DnsMonitor from "~/app/data/dns-monitor";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import {
-	MAX_DNS_INTERVAL_SECONDS,
-	MIN_DNS_INTERVAL_SECONDS,
-} from "~/app/http/validators/dns-monitor";
+import { DNS_MONITOR_ID_PARAMS, UPDATE_DNS_MONITOR_BODY } from "~/app/http/openapi/dns-monitors";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, newestFirst, PAGING } from "~/app/services/pagination";
-import { encodeId, typedId } from "~/app/services/typed-id";
+import { encodeId } from "~/app/services/typed-id";
 import { dnsMonitorRoutes } from "~/routes/api-groups";
-
-const DnsMonitorIdParams = s.object({ dnsMonitorId: typedId("dns") });
 
 /** Maps a DNS monitor row to its public camelCase JSON shape. */
 function serializeDnsMonitor(monitor: SelectDnsMonitor) {
@@ -48,20 +42,6 @@ function serializeDnsMonitor(monitor: SelectDnsMonitor) {
 	};
 }
 
-/**
- * `zoneFile` stays out of this schema: its text is never persisted, so re-importing runs as
- * its own action. `intervalSeconds` enforces the same floor and ceiling as monitor creation,
- * so an edited interval always stays one a fresh monitor could also be created with.
- */
-const UpdateDnsMonitorSchema = s.object({
-	name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
-	domain: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
-	intervalSeconds: s.optional(
-		s.number().pipe(checks.min(MIN_DNS_INTERVAL_SECONDS), checks.max(MAX_DNS_INTERVAL_SECONDS)),
-	),
-	isEnabled: s.optional(s.boolean()),
-});
-
 export default createController(dnsMonitorRoutes, {
 	middleware: [catchValidationError()],
 	actions: {
@@ -69,7 +49,7 @@ export default createController(dnsMonitorRoutes, {
 		dnsMonitorShow: {
 			middleware: [requireApiKey("dns-monitors:read")],
 			handler: async (ctx) => {
-				let { dnsMonitorId } = s.parse(DnsMonitorIdParams, ctx.params);
+				let { dnsMonitorId } = s.parse(DNS_MONITOR_ID_PARAMS, ctx.params);
 				let monitor = await DnsMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, dnsMonitorId);
 				if (!monitor)
 					return apiProblems.notFound({
@@ -84,7 +64,7 @@ export default createController(dnsMonitorRoutes, {
 		dnsMonitorUpdate: {
 			middleware: [requireApiKey("dns-monitors:write")],
 			handler: async (ctx) => {
-				let { dnsMonitorId } = s.parse(DnsMonitorIdParams, ctx.params);
+				let { dnsMonitorId } = s.parse(DNS_MONITOR_ID_PARAMS, ctx.params);
 				let existing = await DnsMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, dnsMonitorId);
 				if (!existing)
 					return apiProblems.notFound({
@@ -92,7 +72,7 @@ export default createController(dnsMonitorRoutes, {
 						instance: problemInstance(),
 					});
 
-				let result = await validate(ctx.request, UpdateDnsMonitorSchema);
+				let result = await validate(ctx.request, UPDATE_DNS_MONITOR_BODY);
 				if (isFailure(result)) {
 					return apiProblems.validationError({
 						instance: problemInstance(),
@@ -116,7 +96,7 @@ export default createController(dnsMonitorRoutes, {
 		dnsMonitorDestroy: {
 			middleware: [requireApiKey("dns-monitors:write")],
 			handler: async (ctx) => {
-				let { dnsMonitorId } = s.parse(DnsMonitorIdParams, ctx.params);
+				let { dnsMonitorId } = s.parse(DNS_MONITOR_ID_PARAMS, ctx.params);
 				let existing = await DnsMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, dnsMonitorId);
 				if (!existing)
 					return apiProblems.notFound({
@@ -133,7 +113,7 @@ export default createController(dnsMonitorRoutes, {
 		dnsMonitorResults: {
 			middleware: [requireApiKey("dns-monitors:read")],
 			handler: async (ctx) => {
-				let { dnsMonitorId } = s.parse(DnsMonitorIdParams, ctx.params);
+				let { dnsMonitorId } = s.parse(DNS_MONITOR_ID_PARAMS, ctx.params);
 				let monitor = await DnsMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, dnsMonitorId);
 				if (!monitor)
 					return apiProblems.notFound({

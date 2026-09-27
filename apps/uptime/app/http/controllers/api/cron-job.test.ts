@@ -19,11 +19,15 @@ import ApiKey from "~/app/data/api-key";
 import CronJobMonitor from "~/app/data/cron-job";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { checkConformance } from "~/app/lib/test/openapi";
 import { expectProblem, problemMessages } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { teams } from "~/database/schema";
 import { cronJobRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance(cronJobRoutes);
 
 let { default: cronJobController } = await import("./cron-job");
 
@@ -66,7 +70,7 @@ async function createCronJobRow(
 }
 
 async function dispatch(db: Db, request: Request) {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
 	router.map(cronJobRoutes, cronJobController);
 
 	return router.fetch(request);
@@ -373,5 +377,35 @@ describe("DELETE /api/v1/cron-jobs/:cronJobId", () => {
 
 		expect(response.status).toBe(404);
 		expect(await CronJobMonitor.findByIdForTeam(db, otherTeam.id, cronJob.id)).not.toBeNull();
+	});
+});
+
+describe("malformed cron job ids", () => {
+	test.each([
+		["GET", "show", "cron-jobs:read"],
+		["PUT", "update", "cron-jobs:write"],
+		["DELETE", "destroy", "cron-jobs:write"],
+	] as const)("%s %s answers validation-error for a raw UUID", async (method, leaf, scope) => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, [scope]);
+		let cronJob = await createCronJobRow(db, team.id);
+
+		let init: RequestInit = {
+			method,
+			headers: { Authorization: `Bearer ${key}`, "content-type": "application/json" },
+		};
+		if (method === "PUT") init.body = JSON.stringify({ name: "Renamed" });
+
+		let response = await dispatch(
+			db,
+			new Request(
+				`https://uptime.test${routes.api.v1.cronJobs[leaf].href({ cronJobId: cronJob.id })}`,
+				init,
+			),
+		);
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "validationError");
 	});
 });

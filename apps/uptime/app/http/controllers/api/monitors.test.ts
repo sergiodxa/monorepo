@@ -18,12 +18,17 @@ import type { ApiKeyScope } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { markInFlight } from "~/app/lib/test/idempotency";
+import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { monitors, teams } from "~/database/schema";
 import { monitorsRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance(monitorsRoutes);
 
 /**
  * `app/data/monitor.ts` reads `env` from `cloudflare:workers` at module load time, so it
@@ -84,7 +89,7 @@ async function createMonitorRow(db: Db, teamId: string, overrides: Record<string
 }
 
 async function dispatch(db: Db, request: Request): Promise<Response> {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
 	router.map(monitorsRoutes, monitorsController);
 
 	return router.fetch(request);
@@ -308,6 +313,22 @@ describe("POST /api/v1/monitors with an Idempotency-Key", () => {
 		expect(first.status).toBe(201);
 		expect(second.status).toBe(201);
 		expect(await second.json()).toEqual(await first.json());
+		expect(await db.count(monitors, { where: { team_id: team.id } })).toBe(1);
+	});
+
+	test("a retry while the first request runs answers idempotency-key-in-use", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["monitors:write"]);
+		let body = { name: "Slow", url: "https://example.com" };
+
+		await dispatch(db, idempotentCreate(key, '"in-flight"', body));
+		await markInFlight(db);
+		let response = await dispatch(db, idempotentCreate(key, '"in-flight"', body));
+
+		expect(response.status).toBe(409);
+		expect(response.headers.get("Retry-After")).toBe("1");
+		await expectProblem(response, "idempotencyKeyInUse");
 		expect(await db.count(monitors, { where: { team_id: team.id } })).toBe(1);
 	});
 

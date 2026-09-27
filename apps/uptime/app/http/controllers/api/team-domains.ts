@@ -11,8 +11,6 @@ import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import * as s from "remix/data-schema";
-import * as checks from "remix/data-schema/checks";
 import { createController } from "remix/router";
 
 import type { SelectTeamDomain } from "~/database/schema";
@@ -21,10 +19,11 @@ import TeamDomain from "~/app/data/team-domain";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
+import { CREATE_TEAM_DOMAIN_BODY, DELETE_TEAM_DOMAIN_BODY } from "~/app/http/openapi/team";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
-import { encodeId, typedId } from "~/app/services/typed-id";
+import { encodeId } from "~/app/services/typed-id";
 import { teamDomainsRoutes } from "~/routes/api-groups";
 
 /** Maps a team-domain row to its public camelCase JSON shape. */
@@ -38,12 +37,6 @@ function serializeTeamDomain(domain: SelectTeamDomain) {
 		updatedAt: domain.updated_at,
 	};
 }
-
-const CreateTeamDomainSchema = s.object({
-	hostname: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
-});
-
-const DeleteTeamDomainSchema = s.object({ id: typedId("dom") });
 
 export default createController(teamDomainsRoutes, {
 	middleware: [catchValidationError()],
@@ -93,7 +86,7 @@ export default createController(teamDomainsRoutes, {
 		teamDomainsCreate: {
 			middleware: [requireApiKey("team-domains:write"), idempotent],
 			handler: async (ctx) => {
-				let result = await validate(ctx.request, CreateTeamDomainSchema);
+				let result = await validate(ctx.request, CREATE_TEAM_DOMAIN_BODY);
 				if (isFailure(result)) {
 					return apiProblems.validationError({
 						instance: problemInstance(),
@@ -117,7 +110,7 @@ export default createController(teamDomainsRoutes, {
 		teamDomainsDestroy: {
 			middleware: [requireApiKey("team-domains:write")],
 			handler: async (ctx) => {
-				let result = await validate(ctx.request, DeleteTeamDomainSchema);
+				let result = await validate(ctx.request, DELETE_TEAM_DOMAIN_BODY);
 				if (isFailure(result)) {
 					return apiProblems.validationError({
 						instance: problemInstance(),

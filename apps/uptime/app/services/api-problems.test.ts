@@ -10,6 +10,7 @@
 import { isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
+import { expandReference } from "~/app/http/openapi/reference";
 import errorsDoc from "~/resources/docs/api/errors.md?raw";
 
 import { apiProblems, invalidField, problemInstance } from "./api-problems";
@@ -22,9 +23,11 @@ describe("apiProblems", () => {
 	});
 
 	test("is listed, type by type and with its status, in the error reference", () => {
+		let expanded = expandReference(errorsDoc);
+		if (!isSuccess(expanded)) return expect.unreachable(expanded.error.message);
 		for (let entry of apiProblems.entries()) {
 			let slug = entry.type.split("/").pop();
-			expect(errorsDoc).toMatch(new RegExp(`\\| ${entry.status}\\s+\\| \`${slug}\`\\s*\\|`));
+			expect(expanded.data).toContain(`| ${entry.status} | \`${slug}\` | ${entry.title} |`);
 		}
 	});
 

@@ -33,7 +33,7 @@ The single-probe DNS check on `POST /api/v1/ping` is **unchanged**: it still tak
 - **Detection latency is floored by your records' TTL**, not by the check interval.
 - **One check is one ping**, however many names and types it swept.
 
-Every response on this resource carries the standard envelope — `data` alongside `meta`, which holds the `requestId` to quote in a support request and the `timestamp` the response was written. The schema blocks below describe `data` only.
+Every response on this resource carries the standard envelope — `data` alongside `meta`, which holds the `requestId` to quote in a support request and the `timestamp` the response was written.
 
 ## The DNS monitor object
 
@@ -52,65 +52,6 @@ Every response on this resource carries the standard envelope — `data` alongsi
 }
 ```
 
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"id": { "type": "string", "description": "Unique identifier for the DNS monitor" },
-		"name": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 255,
-			"description": "Human-readable name for the monitor"
-		},
-		"domain": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 255,
-			"description": "The domain this monitor covers"
-		},
-		"zoneFileImportedAt": {
-			"type": ["integer", "null"],
-			"description": "When a zone file was last imported, in milliseconds since the epoch. Null means every tracked name was discovered by resolution, so only the apex is covered. The pasted text itself is never stored."
-		},
-		"intervalSeconds": {
-			"type": "integer",
-			"minimum": 900,
-			"maximum": 86400,
-			"default": 86400,
-			"description": "Check interval in seconds"
-		},
-		"isEnabled": {
-			"type": "boolean",
-			"default": true,
-			"description": "Whether the monitor is checked on its interval"
-		},
-		"lastCheckedAt": {
-			"type": ["integer", "null"],
-			"description": "Timestamp of the last check, in milliseconds since the epoch"
-		},
-		"lastStatus": {
-			"type": ["string", "null"],
-			"enum": ["ok", "changed", "error", null],
-			"description": "Status from the last check. `changed` means at least one watched record is missing or edited, or a record nobody configured appeared; `error` means at least one query did not answer."
-		},
-		"createdAt": { "type": "integer", "description": "When the monitor was created" },
-		"updatedAt": { "type": "integer", "description": "When the monitor was last updated" }
-	},
-	"required": [
-		"id",
-		"name",
-		"domain",
-		"zoneFileImportedAt",
-		"intervalSeconds",
-		"isEnabled",
-		"createdAt",
-		"updatedAt"
-	]
-}
-```
-
 ## List All DNS Monitors
 
 Retrieves your team's DNS monitors, newest first.
@@ -121,7 +62,7 @@ This endpoint is paginated. See [Pagination](/docs/api/pagination) for how to pa
 GET /api/v1/dns-monitors
 ```
 
-**Required Scope:** `dns-monitors:read`
+<!-- operation: dnsMonitorsIndex -->
 
 ### Query Parameters
 
@@ -170,15 +111,6 @@ curl "https://uptime.sergiodxa.com/api/v1/dns-monitors?perPage=25" \
 }
 ```
 
-### Errors
-
-| Status | Type           | Description                             |
-| ------ | -------------- | --------------------------------------- |
-| 400    | `bad-request`  | Invalid or malformed cursor             |
-| 401    | `unauthorized` | Missing or invalid API key              |
-| 403    | `forbidden`    | API key lacks `dns-monitors:read` scope |
-| 500    | `internal`     | A page of the list could not be read    |
-
 ## Create a DNS Monitor
 
 Creates a domain monitor and runs discovery immediately: every supported record type is queried at the domain, and at every name a pasted zone file declares.
@@ -193,7 +125,7 @@ The response is `201 Created`.
 POST /api/v1/dns-monitors
 ```
 
-**Required Scope:** `dns-monitors:write`
+<!-- operation: dnsMonitorsCreate -->
 
 ### Request Body
 
@@ -253,112 +185,6 @@ curl https://uptime.sergiodxa.com/api/v1/dns-monitors \
 
 `discovery.queriesFailed` counts queries that did not answer. Those names are not covered by this import and no record is inferred from them; the monitor's next scheduled check tries again.
 
-### Errors
-
-| Status | Type               | Description                                                                          |
-| ------ | ------------------ | ------------------------------------------------------------------------------------ |
-| 400    | `validation-error` | Invalid body, a zone file over 262144 bytes, or a zone declaring more than 100 names |
-| 400    | `limit-exceeded`   | The team already has 20 DNS monitors                                                 |
-| 401    | `unauthorized`     | Missing or invalid API key                                                           |
-| 403    | `forbidden`        | API key lacks `dns-monitors:write` scope                                             |
-
-### Request Body Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"name": { "type": "string", "minLength": 1, "maxLength": 255 },
-		"domain": { "type": "string", "minLength": 1, "maxLength": 255 },
-		"zoneFile": {
-			"type": "string",
-			"description": "A BIND zone file, up to 262144 bytes. Parsed and discarded; never stored."
-		},
-		"intervalSeconds": {
-			"type": "integer",
-			"minimum": 900,
-			"maximum": 86400,
-			"default": 86400
-		},
-		"isEnabled": { "type": "boolean", "default": true }
-	},
-	"required": ["name", "domain"]
-}
-```
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"data": {
-			"type": "object",
-			"properties": {
-				"dnsMonitor": { "$comment": "See “The DNS monitor object” above" },
-				"discovery": {
-					"type": "object",
-					"properties": {
-						"names": { "type": "integer", "description": "Names swept, and therefore tracked" },
-						"recordsImported": {
-							"type": "integer",
-							"description": "Records that were not already tracked"
-						},
-						"queriesFailed": {
-							"type": "integer",
-							"description": "Queries that did not answer, and whose names are therefore not covered by this import"
-						},
-						"rejectedLines": {
-							"type": "array",
-							"description": "Zone-file lines that did not become records. The line's text is never returned.",
-							"items": {
-								"type": "object",
-								"properties": {
-									"line": { "type": "integer" },
-									"reason": {
-										"type": "string",
-										"enum": [
-											"originDirective",
-											"ttlDirective",
-											"includeDirective",
-											"generateDirective",
-											"unsupportedDirective",
-											"multiLineRecord",
-											"blankOwnerContinuation",
-											"nonInternetClass",
-											"unsupportedType",
-											"outOfZone",
-											"malformed"
-										]
-									}
-								},
-								"required": ["line", "reason"]
-							}
-						},
-						"duplicateLines": {
-							"type": "array",
-							"description": "Lines redeclaring a record an earlier line already declared. Nothing was lost: DNS answers such a set once, and so do we.",
-							"items": { "type": "integer" }
-						}
-					},
-					"required": [
-						"names",
-						"recordsImported",
-						"queriesFailed",
-						"rejectedLines",
-						"duplicateLines"
-					]
-				}
-			},
-			"required": ["dnsMonitor", "discovery"]
-		}
-	},
-	"required": ["data"]
-}
-```
-
 ## Get a DNS Monitor
 
 Retrieves a single DNS monitor by ID.
@@ -367,7 +193,7 @@ Retrieves a single DNS monitor by ID.
 GET /api/v1/dns-monitors/:dnsMonitorId
 ```
 
-**Required Scope:** `dns-monitors:read`
+<!-- operation: dnsMonitorShow -->
 
 ### cURL
 
@@ -397,15 +223,6 @@ curl https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123 \
 }
 ```
 
-### Errors
-
-| Status | Type               | Description                             |
-| ------ | ------------------ | --------------------------------------- |
-| 400    | `validation-error` | Malformed DNS monitor id                |
-| 401    | `unauthorized`     | Missing or invalid API key              |
-| 403    | `forbidden`        | API key lacks `dns-monitors:read` scope |
-| 404    | `not-found`        | DNS monitor not found                   |
-
 ## Update a DNS Monitor
 
 Updates a DNS monitor's editable fields. All fields are optional; only provided fields are updated.
@@ -416,7 +233,7 @@ There is no `zoneFile` here, and one sent is ignored rather than refused. The pa
 PUT /api/v1/dns-monitors/:dnsMonitorId
 ```
 
-**Required Scope:** `dns-monitors:write`
+<!-- operation: dnsMonitorUpdate -->
 
 ### Request Body
 
@@ -460,31 +277,6 @@ curl https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123 \
 }
 ```
 
-### Errors
-
-| Status | Type               | Description                              |
-| ------ | ------------------ | ---------------------------------------- |
-| 400    | `validation-error` | Malformed DNS monitor id                 |
-| 400    | `validation-error` | Invalid request body                     |
-| 401    | `unauthorized`     | Missing or invalid API key               |
-| 403    | `forbidden`        | API key lacks `dns-monitors:write` scope |
-| 404    | `not-found`        | DNS monitor not found                    |
-
-### Request Body Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"name": { "type": "string", "minLength": 1, "maxLength": 255 },
-		"domain": { "type": "string", "minLength": 1, "maxLength": 255 },
-		"intervalSeconds": { "type": "integer", "minimum": 900, "maximum": 86400 },
-		"isEnabled": { "type": "boolean" }
-	}
-}
-```
-
 ## Delete a DNS Monitor
 
 Permanently deletes a DNS monitor, every record it tracks, and its check history.
@@ -493,7 +285,7 @@ Permanently deletes a DNS monitor, every record it tracks, and its check history
 DELETE /api/v1/dns-monitors/:dnsMonitorId
 ```
 
-**Required Scope:** `dns-monitors:write`
+<!-- operation: dnsMonitorDestroy -->
 
 ### cURL
 
@@ -509,15 +301,6 @@ curl https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123 \
 { "data": { "deleted": true } }
 ```
 
-### Errors
-
-| Status | Type               | Description                              |
-| ------ | ------------------ | ---------------------------------------- |
-| 400    | `validation-error` | Malformed DNS monitor id                 |
-| 401    | `unauthorized`     | Missing or invalid API key               |
-| 403    | `forbidden`        | API key lacks `dns-monitors:write` scope |
-| 404    | `not-found`        | DNS monitor not found                    |
-
 ## Get DNS Monitor Results
 
 Retrieves the check history for a DNS monitor: **one row per check of the monitor**, whatever the sweep cost in queries.
@@ -528,7 +311,7 @@ Results arrive newest first, a page at a time. See [Pagination](/docs/api/pagina
 GET /api/v1/dns-monitors/:dnsMonitorId/results
 ```
 
-**Required Scope:** `dns-monitors:read`
+<!-- operation: dnsMonitorResults -->
 
 ### Query Parameters
 
@@ -580,79 +363,6 @@ curl -i "https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123/results?per
 
 A value edited inside a record set holding several values reads as one missing record plus one new one. That is truthful rather than a bug: DNS gives an individual record no identity of its own, so editing one value is indistinguishable, on the wire, from removing one and adding another. `recordsChanged` counts only the case a diff can attribute without guessing — a name and type holding exactly one watched record and answering with exactly one differing value.
 
-### Errors
-
-| Status | Type               | Description                             |
-| ------ | ------------------ | --------------------------------------- |
-| 400    | `validation-error` | Malformed DNS monitor id                |
-| 400    | `bad-request`      | Invalid or malformed cursor             |
-| 401    | `unauthorized`     | Missing or invalid API key              |
-| 403    | `forbidden`        | API key lacks `dns-monitors:read` scope |
-| 404    | `not-found`        | DNS monitor not found                   |
-| 500    | `internal`         | A page of the list could not be read    |
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"data": {
-			"type": "object",
-			"properties": {
-				"results": {
-					"type": "array",
-					"items": {
-						"type": "object",
-						"properties": {
-							"id": { "type": "string", "description": "Unique identifier for the result" },
-							"status": {
-								"type": "string",
-								"enum": ["ok", "changed", "error"],
-								"description": "The monitor's status as of this check"
-							},
-							"recordsChecked": {
-								"type": "integer",
-								"description": "Records this check has an answer about, watched or not"
-							},
-							"recordsChanged": {
-								"type": "integer",
-								"description": "Watched records whose single value was edited"
-							},
-							"recordsMissing": {
-								"type": "integer",
-								"description": "Watched records that stopped resolving"
-							},
-							"recordsNew": {
-								"type": "integer",
-								"description": "Records that resolved without being tracked. Imported unwatched."
-							},
-							"queriesFailed": {
-								"type": "integer",
-								"description": "Queries that did not answer. No record is diffed on a failed query, so a bad resolver minute never reads as records vanishing."
-							},
-							"responseTimeMs": {
-								"type": ["integer", "null"],
-								"description": "The slowest single query in the sweep"
-							},
-							"errorMessage": { "type": ["string", "null"] },
-							"checkedAt": {
-								"type": "integer",
-								"description": "When the check ran, in milliseconds since the epoch"
-							}
-						},
-						"required": ["id", "status", "checkedAt"]
-					}
-				}
-			},
-			"required": ["results"]
-		}
-	},
-	"required": ["data"]
-}
-```
-
 ## Records
 
 Which records a monitor watches is edited through its records sub-resource, on the same `dns-monitors:read`/`dns-monitors:write` scopes — a key that may reconfigure a domain monitor may decide which of its records are watched, since the two authorities are the same authority.
@@ -680,7 +390,7 @@ being rediscovered as new on the next check.
 GET /api/v1/dns-monitors/:dnsMonitorId/records
 ```
 
-**Required Scope:** `dns-monitors:read`
+<!-- operation: dnsMonitorRecordsIndex -->
 
 Records read alphabetically by `name`, then by `recordType`, then by `value` — the order you
 review a zone in — and arrive a page at a time. See [Pagination](/docs/api/pagination) for how
@@ -766,96 +476,10 @@ curl -i "https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123/records?per
 
 Timestamps are epoch milliseconds.
 
-### Errors
-
-| Status | Type               | Description                             |
-| ------ | ------------------ | --------------------------------------- |
-| 400    | `validation-error` | Malformed DNS monitor id                |
-| 400    | `bad-request`      | Invalid or malformed cursor             |
-| 401    | `unauthorized`     | Missing or invalid API key              |
-| 403    | `forbidden`        | API key lacks `dns-monitors:read` scope |
-| 404    | `not-found`        | DNS monitor not found                   |
-| 500    | `internal`         | A page of the list could not be read    |
+### Ownership
 
 A monitor belonging to another team returns `404`, not `403`: a `403` would confirm the id
 names a real monitor somebody else owns.
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"data": {
-			"type": "object",
-			"properties": {
-				"records": {
-					"type": "array",
-					"items": {
-						"type": "object",
-						"properties": {
-							"id": { "type": "string", "description": "Unique identifier for the record" },
-							"dnsMonitorId": {
-								"type": "string",
-								"description": "The monitor tracking this record"
-							},
-							"name": { "type": "string", "description": "Absolute owner name, lowercased" },
-							"recordType": {
-								"type": "string",
-								"enum": ["A", "AAAA", "CNAME", "MX", "TXT", "NS"],
-								"description": "DNS record type"
-							},
-							"value": { "type": "string", "description": "Normalized record value" },
-							"source": {
-								"type": "string",
-								"enum": ["resolver", "zone_file"],
-								"description": "How the record first entered the table"
-							},
-							"isEnabled": {
-								"type": "boolean",
-								"description": "Whether a deviation from this record alerts"
-							},
-							"status": {
-								"type": "string",
-								"enum": ["ok", "changed", "missing", "new", "error"],
-								"description": "What the last check found for this record"
-							},
-							"firstSeenAt": {
-								"type": "integer",
-								"description": "When the record was first imported"
-							},
-							"lastSeenAt": {
-								"type": ["integer", "null"],
-								"description": "Last check at which this record resolved"
-							},
-							"lastCheckedAt": {
-								"type": ["integer", "null"],
-								"description": "Last check that had an answer about this record"
-							},
-							"createdAt": { "type": "integer" },
-							"updatedAt": { "type": "integer" }
-						},
-						"required": [
-							"id",
-							"dnsMonitorId",
-							"name",
-							"recordType",
-							"value",
-							"source",
-							"isEnabled",
-							"status",
-							"firstSeenAt"
-						]
-					}
-				}
-			},
-			"required": ["records"]
-		}
-	},
-	"required": ["data"]
-}
-```
 
 ## Update a DNS Monitor Record
 
@@ -867,7 +491,7 @@ reviewer standing at the other end of an API call.
 PATCH /api/v1/dns-monitors/:dnsMonitorId/records/:recordId
 ```
 
-**Required Scope:** `dns-monitors:write`
+<!-- operation: dnsMonitorRecordUpdate -->
 
 ### Request Body
 
@@ -877,7 +501,7 @@ PATCH /api/v1/dns-monitors/:dnsMonitorId/records/:recordId
 }
 ```
 
-### Request Body Schema
+### Accepted Fields
 
 | Field       | Type    | Required | Description                                       |
 | ----------- | ------- | -------- | ------------------------------------------------- |
@@ -939,19 +563,7 @@ it, and you have now said you want it watched, so leaving it `new` would keep it
 record that has never resolved leaves it `missing`, which is true and is presumably why you
 enabled it. Declining a record never changes its `status`.
 
-### Errors
-
-| Status | Type               | Description                                                         |
-| ------ | ------------------ | ------------------------------------------------------------------- |
-| 400    | `validation-error` | Malformed DNS monitor id or record id                               |
-| 400    | `validation-error` | `isEnabled` missing or not a boolean, or an unaccepted key was sent |
-| 401    | `unauthorized`     | Missing or invalid API key                                          |
-| 403    | `forbidden`        | API key lacks `dns-monitors:write` scope                            |
-| 404    | `not-found`        | DNS monitor not found, or the record does not belong to it          |
+### Ownership
 
 A record id belonging to a different monitor — including one on your own team — returns
 `404`. Records are addressable only through the monitor that tracks them.
-
-### Response Schema
-
-The `record` object has the same schema as one item of the list endpoint's `records` array.

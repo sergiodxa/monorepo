@@ -892,9 +892,9 @@ export default function application(options: application.Options) {
 	);
 
 	/**
-	 * Public, unauthenticated cron-job ping endpoint. Its `createAction()`
-	 * middleware bakes in a per-caller budget; see its controller's docblock
-	 * for the full authorization rationale.
+	 * Cron-job ping endpoint, authenticated by a `cron-jobs:ping` API key. Its
+	 * `createAction()` middleware bakes in a per-caller budget; see its controller's
+	 * docblock for the full authorization rationale.
 	 */
 	router.map(
 		routes.api.cronJobPing,
@@ -920,6 +920,10 @@ export default function application(options: application.Options) {
 	 * `createController()` call keyed by its own route-map object, declared in
 	 * `routes/api-groups.ts` so mapping a group here leaves its controller unloaded.
 	 */
+	router.map(
+		routes.api.v1.openapi,
+		lazy(() => import("~/app/http/controllers/api/openapi")),
+	);
 	router.map(
 		routes.api.v1.status,
 		lazy(() => import("~/app/http/controllers/api/status").then((it) => it.statusShow)),

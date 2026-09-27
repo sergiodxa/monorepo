@@ -12,8 +12,6 @@ import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import * as s from "remix/data-schema";
-import * as checks from "remix/data-schema/checks";
 import { createController } from "remix/router";
 
 import type { SelectTcpMonitor } from "~/database/schema";
@@ -22,6 +20,7 @@ import TcpMonitor from "~/app/data/tcp-monitor";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
+import { CREATE_TCP_MONITOR_BODY } from "~/app/http/openapi/tcp-monitors";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
@@ -45,15 +44,6 @@ function serializeTcpMonitor(monitor: SelectTcpMonitor) {
 		updatedAt: monitor.updated_at,
 	};
 }
-
-const CreateTcpMonitorSchema = s.object({
-	name: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
-	host: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
-	port: s.number().pipe(checks.min(1), checks.max(65_535)),
-	timeoutMs: s.defaulted(s.number().pipe(checks.min(100), checks.max(60_000)), 5000),
-	intervalSeconds: s.defaulted(s.number().pipe(checks.min(60), checks.max(86_400)), 60),
-	isEnabled: s.defaulted(s.boolean(), true),
-});
 
 export default createController(tcpMonitorsRoutes, {
 	middleware: [catchValidationError()],
@@ -102,7 +92,7 @@ export default createController(tcpMonitorsRoutes, {
 		tcpMonitorsCreate: {
 			middleware: [requireApiKey("tcp-monitors:write"), idempotent],
 			handler: async (ctx) => {
-				let result = await validate(ctx.request, CreateTcpMonitorSchema);
+				let result = await validate(ctx.request, CREATE_TCP_MONITOR_BODY);
 				if (isFailure(result)) {
 					return apiProblems.validationError({
 						instance: problemInstance(),

@@ -16,12 +16,16 @@ import type { ApiKeyScope } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { tcpMonitorResults, tcpMonitors, teams } from "~/database/schema";
 import { tcpMonitorRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance(tcpMonitorRoutes);
 
 let { default: tcpMonitorController } = await import("./tcp-monitor");
 
@@ -83,7 +87,7 @@ async function dispatch(
 	db: Db,
 	request: { method: string; path: string; key?: string; body?: Record<string, unknown> },
 ) {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
 	router.map(tcpMonitorRoutes, tcpMonitorController);
 
 	let headers: Record<string, string> = { "content-type": "application/json" };
@@ -370,5 +374,50 @@ describe("GET /api/v1/tcp-monitors/:tcpMonitorId/results", () => {
 			key,
 		});
 		expect(response.status).toBe(403);
+	});
+});
+
+describe("TCP monitor item requests without an API key", () => {
+	test.each([
+		["PUT", "update"],
+		["DELETE", "destroy"],
+		["GET", "results"],
+	] as const)("%s %s returns 401", async (method, leaf) => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let monitor = await createTcpMonitorRow(db, team.id);
+
+		let response = await dispatch(db, {
+			method,
+			path: routes.api.v1.tcpMonitors[leaf].href({ tcpMonitorId: encodeId("tcpm", monitor.id) }),
+			body: method === "PUT" ? { name: "Renamed" } : undefined,
+		});
+
+		expect(response.status).toBe(401);
+		await expectProblem(response, "unauthorized");
+	});
+});
+
+describe("malformed TCP monitor ids", () => {
+	test.each([
+		["GET", "show", "tcp-monitors:read"],
+		["PUT", "update", "tcp-monitors:write"],
+		["DELETE", "destroy", "tcp-monitors:write"],
+		["GET", "results", "tcp-monitors:read"],
+	] as const)("%s %s answers validation-error for a raw UUID", async (method, leaf, scope) => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, [scope]);
+		let monitor = await createTcpMonitorRow(db, team.id);
+
+		let response = await dispatch(db, {
+			method,
+			path: routes.api.v1.tcpMonitors[leaf].href({ tcpMonitorId: monitor.id }),
+			key,
+			body: method === "PUT" ? { name: "Renamed" } : undefined,
+		});
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "validationError");
 	});
 });

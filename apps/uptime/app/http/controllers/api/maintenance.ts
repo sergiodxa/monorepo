@@ -13,7 +13,6 @@ import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import * as s from "remix/data-schema";
 import { createController } from "remix/router";
 
 import type { MonitorScope, MonitorScopeType } from "~/app/lib/monitor-scope";
@@ -24,7 +23,8 @@ import { isResolvableScope } from "~/app/data/scope-monitors";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { MONITOR_SCOPE_TYPES, storedMonitorScope } from "~/app/lib/monitor-scope";
+import { CREATE_MAINTENANCE_BODY } from "~/app/http/openapi/maintenance";
+import { storedMonitorScope } from "~/app/lib/monitor-scope";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
@@ -75,30 +75,6 @@ export function serializeMaintenanceWindow(window: SelectMaintenanceWindow) {
 	};
 }
 
-/** An ISO-8601 date-time string, transformed into epoch milliseconds. */
-const isoDateTime = s
-	.string()
-	.refine((value: string) => Number.isFinite(new Date(value).getTime()), "Invalid date/time.")
-	.transform((value: string) => new Date(value).getTime());
-
-const CreateMaintenanceSchema = s
-	.object({
-		name: s.string().refine((value: string) => value.length > 0, "Name is required."),
-		/**
-		 * Which monitor table `monitorId` names, or, alone, the whole type it covers.
-		 *
-		 * Stays optional beside an id for compatibility: `monitorId` alone meant an HTTP monitor
-		 * before this field existed, and requests still sending just that resolve the same way.
-		 */
-		monitorType: s.optional(s.enum_(MONITOR_SCOPE_TYPES)),
-		monitorId: s.optional(s.nullable(s.string())),
-		startsAt: isoDateTime,
-		endsAt: isoDateTime,
-		suppressAlerts: s.defaulted(s.boolean(), true),
-		showOnStatusPage: s.defaulted(s.boolean(), true),
-	})
-	.refine((value) => value.endsAt > value.startsAt, "endsAt must be after startsAt");
-
 export default createController(maintenanceRoutes, {
 	middleware: [catchValidationError()],
 	actions: {
@@ -148,7 +124,7 @@ export default createController(maintenanceRoutes, {
 		maintenanceCreate: {
 			middleware: [requireApiKey("maintenance:write"), idempotent],
 			handler: async (ctx) => {
-				let result = await validate(ctx.request, CreateMaintenanceSchema);
+				let result = await validate(ctx.request, CREATE_MAINTENANCE_BODY);
 				if (isFailure(result)) {
 					return apiProblems.validationError({
 						instance: problemInstance(),

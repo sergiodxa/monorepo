@@ -19,12 +19,16 @@ import ApiKey from "~/app/data/api-key";
 import DnsMonitor from "~/app/data/dns-monitor";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { teams } from "~/database/schema";
 import { dnsMonitorRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance(dnsMonitorRoutes);
 
 let { default: dnsMonitorController } = await import("./dns-monitor");
 
@@ -64,7 +68,7 @@ async function createDnsMonitorRow(
 }
 
 async function dispatch(db: Db, request: Request) {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
 	router.map(dnsMonitorRoutes, dnsMonitorController);
 
 	return router.fetch(request);
@@ -441,5 +445,29 @@ describe("GET /api/v1/dns-monitors/:dnsMonitorId/results", () => {
 			resultsRequest(monitor.id, { Authorization: `Bearer ${key}` }),
 		);
 		expect(response.status).toBe(404);
+	});
+});
+
+describe("malformed DNS monitor ids", () => {
+	test.each([
+		["GET", "show", "dns-monitors:read"],
+		["DELETE", "destroy", "dns-monitors:write"],
+		["GET", "results", "dns-monitors:read"],
+	] as const)("%s %s answers validation-error for a raw UUID", async (method, leaf, scope) => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, [scope]);
+		let monitor = await createDnsMonitorRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			new Request(
+				`https://uptime.test${routes.api.v1.dnsMonitors[leaf].href({ dnsMonitorId: monitor.id })}`,
+				{ method, headers: { Authorization: `Bearer ${key}` } },
+			),
+		);
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "validationError");
 	});
 });

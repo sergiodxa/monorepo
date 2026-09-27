@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { InferOutput } from "@sdxc/json-schema";
 import type { Adapter, RateLimiterBinding } from "@sdxc/rate-limit";
 import type { Middleware } from "remix/router";
 
@@ -17,8 +18,6 @@ import { isFailure } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid";
 import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
-import * as s from "remix/data-schema";
-import * as checks from "remix/data-schema/checks";
 import { createAction } from "remix/router";
 
 import type { ContentCheckRule } from "~/app/data/content-check";
@@ -27,7 +26,7 @@ import type { PingStatus } from "~/app/services/analytics";
 
 import Subscription from "~/app/data/subscription";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { DNS_RECORD_TYPES } from "~/app/lib/dns-record-value";
+import { PING_BODY } from "~/app/http/openapi/ping";
 import { features } from "~/app/lib/flags";
 import { recordAdhocPing } from "~/app/services/adhoc-ping";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
@@ -38,18 +37,6 @@ import { HttpCheck } from "~/app/services/http-check";
 import { checkTcpConnection } from "~/app/services/tcp-check";
 import { encodeId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
-
-/**
- * Regions a ping may be probed from, matching the `location_hint` column HTTP monitors
- * carry so an ad-hoc check and a monitored one measure the same thing from the same place.
- */
-const LOCATION_HINTS = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"] as const;
-
-/** Methods a ping may use, matching what an HTTP monitor may be configured with. */
-const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"] as const;
-
-/** The subset of {@link HTTP_METHODS} the platform refuses to attach a request body to. */
-const BODYLESS_METHODS: readonly string[] = ["GET", "HEAD"];
 
 /**
  * Requests one API key may spend per {@link CALLER_WINDOW}; mirrors the `simple.limit` in
@@ -64,56 +51,10 @@ const CALLER_WINDOW = "1 minute";
 /** Key namespace for the caller budget, kept stable so the counters survive a deploy. */
 const CALLER_PREFIX = "api-ping";
 
-/** One content-check rule as the request body spells it, before it becomes a rule. */
-const ContentCheckSchema = s.object({
-	type: s.enum_(["contains", "not_contains", "regex"]),
-	value: s.string().pipe(checks.minLength(1), checks.maxLength(1000)),
-	caseSensitive: s.defaulted(s.boolean(), false),
-});
+type PingInput = InferOutput<typeof PING_BODY>;
 
-/**
- * The request body, discriminated on `type` with bounds mirroring the monitor
- * validators. Discriminators pass their literal type explicitly, since letting it
- * infer would widen `"http"` to `string` and leave {@link run} nothing to narrow on.
- */
-const PingSchema = s.variant("type", {
-	http: s
-		.object({
-			type: s.literal<"http">("http"),
-			url: s.string().pipe(checks.url()),
-			method: s.defaulted(s.enum_(HTTP_METHODS), "GET"),
-			expectedStatus: s.defaulted(s.number().pipe(checks.min(100), checks.max(599)), 200),
-			timeoutSeconds: s.defaulted(s.number().pipe(checks.min(1), checks.max(60)), 10),
-			degradedAfterMs: s.defaulted(s.number().pipe(checks.min(1), checks.max(60_000)), 5000),
-			region: s.defaulted(s.enum_(LOCATION_HINTS), "wnam"),
-			headers: s.optional(s.record(s.string(), s.string())),
-			body: s.optional(s.string().pipe(checks.maxLength(10_000))),
-			contentChecks: s.defaulted(s.array(ContentCheckSchema), []),
-		})
-		/**
-		 * Constructing a GET or HEAD request with a body throws a `TypeError` indistinguishable
-		 * from the Durable Object being unavailable; catching it here turns it into a normal
-		 * validation error on this, the only cross-field rule the body has.
-		 */
-		.refine(
-			(value) => value.body === undefined || !BODYLESS_METHODS.includes(value.method),
-			"A body cannot be sent with a GET or HEAD ping",
-		),
-	dns: s.object({
-		type: s.literal<"dns">("dns"),
-		domain: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
-		recordType: s.defaulted(s.enum_(DNS_RECORD_TYPES), "A"),
-		expectedValue: s.optional(s.string().pipe(checks.maxLength(1000))),
-	}),
-	tcp: s.object({
-		type: s.literal<"tcp">("tcp"),
-		host: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
-		port: s.number().pipe(checks.min(1), checks.max(65_535)),
-		timeoutMs: s.defaulted(s.number().pipe(checks.min(100), checks.max(60_000)), 5000),
-	}),
-});
-
-type PingInput = s.InferOutput<typeof PingSchema>;
+/** One content check an HTTP ping carries, as the body spells it. */
+type ContentCheckInput = Extract<PingInput, { type: "http" }>["contentChecks"][number];
 
 /** What one ad-hoc ping observed, in the shape the response carries it. */
 interface PingResult {
@@ -200,7 +141,7 @@ export default createAction(routes.api.v1.ping, {
 			});
 		}
 
-		let parsed = await validate(ctx.request, PingSchema);
+		let parsed = await validate(ctx.request, PING_BODY);
 		if (isFailure(parsed)) {
 			return apiProblems.validationError({
 				instance: problemInstance(),
@@ -333,7 +274,7 @@ async function runTcp(input: Extract<PingInput, { type: "tcp" }>): Promise<PingR
  * true by construction: a caller who wanted a rule skipped would simply not send it. A
  * toggle only matters for a check that outlives the request, as a stored one does.
  */
-function toContentCheckRule(check: s.InferOutput<typeof ContentCheckSchema>): ContentCheckRule {
+function toContentCheckRule(check: ContentCheckInput): ContentCheckRule {
 	return {
 		type: check.type,
 		value: check.value,

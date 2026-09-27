@@ -32,6 +32,10 @@ Every resource is identified by a prefixed string such as `mon_01h455vb4pex5vskn
 
 Send these ids back exactly as you received them, in both path segments and request bodies. An id whose prefix names another resource is refused rather than resolved, so a monitor id can never be mistaken for an alert id. Endpoints answer a `400` `validation-error` problem for an id they cannot read, except where a resource page documents otherwise.
 
+## OpenAPI Document
+
+The whole API is described by an [OpenAPI 3.1](https://spec.openapis.org/oas/v3.1.1.html) document at `https://uptime.sergiodxa.com/api/v1/openapi.json` (add `?format=yaml` for YAML). It needs no API key, and any OpenAPI tool can read it to generate a client or explore the endpoints. Each resource page's scopes, errors and schemas come from the same document.
+
 ## Available Resources
 
 - [Status](/docs/api/resources/status) - Check API health and your account status

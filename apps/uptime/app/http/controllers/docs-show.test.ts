@@ -116,6 +116,17 @@ describe("GET /docs/*slug", () => {
 		expect(body).toContain('class="token ');
 	});
 
+	test("renders an API page's scopes, errors and schemas from the OpenAPI document", async () => {
+		let response = await getDocsShow("api/resources/http-monitors");
+
+		expect(response.status).toBe(200);
+		let body = await response.text();
+		expect(body).not.toContain("<!-- operation:");
+		expect(body).toContain("Required scope:");
+		expect(body).toContain("idempotency-key-reused");
+		expect(body).toContain("Response Schema");
+	});
+
 	test("renders the signed-out dashboard CTA as a sign-in button", async () => {
 		let response = await getDocsShow("overview");
 

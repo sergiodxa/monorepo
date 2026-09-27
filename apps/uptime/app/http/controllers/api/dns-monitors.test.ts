@@ -22,12 +22,17 @@ import DnsMonitor, { MAX_DNS_MONITORS_PER_TEAM } from "~/app/data/dns-monitor";
 import DnsMonitorRecord from "~/app/data/dns-monitor-record";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { markInFlight } from "~/app/lib/test/idempotency";
+import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem, problemMessages } from "~/app/lib/test/problem";
 import { MAX_TRACKED_NAMES_PER_MONITOR } from "~/app/services/dns-discovery";
 import { dnsMonitorRecords, teams } from "~/database/schema";
 import { dnsMonitorsRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance(dnsMonitorsRoutes);
 
 const DOH_URL = "https://cloudflare-dns.com/dns-query";
 
@@ -89,7 +94,7 @@ async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]): Prom
 }
 
 async function dispatch(db: Db, request: Request) {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
 	router.map(dnsMonitorsRoutes, dnsMonitorsController);
 
 	return router.fetch(request);
@@ -544,6 +549,60 @@ describe("POST /api/v1/dns-monitors", () => {
 			createRequest(validDnsMonitorBody(), { Authorization: `Bearer ${key}` }),
 		);
 		expect(response.status).toBe(403);
+	});
+});
+
+describe("POST /api/v1/dns-monitors with an Idempotency-Key", () => {
+	function idempotentCreate(key: string, idempotencyKey: string, body: unknown) {
+		return createRequest(body, {
+			Authorization: `Bearer ${key}`,
+			"Idempotency-Key": idempotencyKey,
+		});
+	}
+
+	test("a retry while the first request runs answers idempotency-key-in-use", async () => {
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+
+		await dispatch(db, idempotentCreate(key, '"in-flight"', validDnsMonitorBody()));
+		await markInFlight(db);
+		let response = await dispatch(db, idempotentCreate(key, '"in-flight"', validDnsMonitorBody()));
+
+		expect(response.status).toBe(409);
+		await expectProblem(response, "idempotencyKeyInUse");
+		expect(await DnsMonitor.countByTeam(db, team.id)).toBe(1);
+	});
+
+	test("reusing a key for a different body answers idempotency-key-reused", async () => {
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+
+		await dispatch(db, idempotentCreate(key, '"reuse"', validDnsMonitorBody({ name: "A" })));
+		let response = await dispatch(
+			db,
+			idempotentCreate(key, '"reuse"', validDnsMonitorBody({ name: "B" })),
+		);
+
+		expect(response.status).toBe(422);
+		await expectProblem(response, "idempotencyKeyReused");
+		expect(await DnsMonitor.countByTeam(db, team.id)).toBe(1);
+	});
+
+	test("an unquoted key answers idempotency-key-invalid and creates nothing", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+
+		let response = await dispatch(db, idempotentCreate(key, "unquoted", validDnsMonitorBody()));
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "idempotencyKeyInvalid");
+		expect(queries).toBe(0);
+		expect(await DnsMonitor.countByTeam(db, team.id)).toBe(0);
 	});
 });
 

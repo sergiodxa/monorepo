@@ -20,11 +20,16 @@ import { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
 import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { markInFlight } from "~/app/lib/test/idempotency";
+import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { alerts, dnsMonitors, monitors, teams } from "~/database/schema";
 import { alertsRoutes } from "~/routes/api-groups";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance(alertsRoutes);
 
 /**
  * `~/app/data/monitor`, imported transitively for `monitorId` validation,
@@ -57,7 +62,7 @@ async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]) {
 }
 
 async function dispatch(db: Db, request: Request) {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
 	router.map(alertsRoutes, alertsController);
 
 	return router.fetch(request);
@@ -399,5 +404,56 @@ describe("POST /api/v1/alerts", () => {
 
 		let response = await dispatch(db, post(key, emailAlertBody()));
 		expect(response.status).toBe(403);
+	});
+});
+
+describe("POST /api/v1/alerts with an Idempotency-Key", () => {
+	/** A create carrying `idempotencyKey`, so a test can send the same one twice. */
+	function idempotentCreate(key: string, idempotencyKey: string, body: unknown) {
+		let request = post(key, body);
+		request.headers.set("Idempotency-Key", idempotencyKey);
+		return request;
+	}
+
+	test("a retry while the first request runs answers idempotency-key-in-use", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+
+		await dispatch(db, idempotentCreate(key, '"in-flight"', emailAlertBody()));
+		await markInFlight(db);
+		let response = await dispatch(db, idempotentCreate(key, '"in-flight"', emailAlertBody()));
+
+		expect(response.status).toBe(409);
+		await expectProblem(response, "idempotencyKeyInUse");
+		expect(await db.count(alerts, { where: { team_id: team.id } })).toBe(1);
+	});
+
+	test("reusing a key for a different body answers idempotency-key-reused", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+
+		await dispatch(db, idempotentCreate(key, '"reuse"', emailAlertBody({ name: "A" })));
+		let response = await dispatch(
+			db,
+			idempotentCreate(key, '"reuse"', emailAlertBody({ name: "B" })),
+		);
+
+		expect(response.status).toBe(422);
+		await expectProblem(response, "idempotencyKeyReused");
+		expect(await db.count(alerts, { where: { team_id: team.id } })).toBe(1);
+	});
+
+	test("an unquoted key answers idempotency-key-invalid and creates nothing", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+
+		let response = await dispatch(db, idempotentCreate(key, "unquoted", emailAlertBody()));
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "idempotencyKeyInvalid");
+		expect(await db.count(alerts, { where: { team_id: team.id } })).toBe(0);
 	});
 });

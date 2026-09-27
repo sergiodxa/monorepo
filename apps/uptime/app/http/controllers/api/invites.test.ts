@@ -19,12 +19,17 @@ import ApiKey from "~/app/data/api-key";
 import Invite from "~/app/data/invite";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { markInFlight } from "~/app/lib/test/idempotency";
+import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { teams } from "~/database/schema";
 import { invitesRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance(invitesRoutes);
 
 let { default: invitesController } = await import("./invites");
 
@@ -50,7 +55,7 @@ async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]): Prom
 }
 
 async function dispatch(db: Db, request: Request) {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
 	router.map(invitesRoutes, invitesController);
 
 	return router.fetch(request);
@@ -290,5 +295,65 @@ describe("POST /api/v1/invites", () => {
 			createRequest({ email: "new@example.com" }, { Authorization: `Bearer ${key}` }),
 		);
 		expect(response.status).toBe(403);
+	});
+});
+
+describe("POST /api/v1/invites with an Idempotency-Key", () => {
+	test("a retry with the same key replays the first response and creates one invite", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["invites:write"]);
+		let headers = { Authorization: `Bearer ${key}`, "Idempotency-Key": '"retry-1"' };
+
+		let first = await dispatch(db, createRequest({ email: "new@example.com" }, headers));
+		let second = await dispatch(db, createRequest({ email: "new@example.com" }, headers));
+
+		expect(first.status).toBe(201);
+		expect(second.status).toBe(201);
+		expect(await second.json()).toEqual(await first.json());
+		expect((await Invite.listByTeam(db, team.id)).length).toBe(1);
+	});
+
+	test("a retry while the first request runs answers idempotency-key-in-use", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["invites:write"]);
+		let headers = { Authorization: `Bearer ${key}`, "Idempotency-Key": '"in-flight"' };
+
+		await dispatch(db, createRequest({ email: "new@example.com" }, headers));
+		await markInFlight(db);
+		let response = await dispatch(db, createRequest({ email: "new@example.com" }, headers));
+
+		expect(response.status).toBe(409);
+		expect(response.headers.get("Retry-After")).toBe("1");
+		await expectProblem(response, "idempotencyKeyInUse");
+		expect((await Invite.listByTeam(db, team.id)).length).toBe(1);
+	});
+
+	test("reusing a key for a different body answers idempotency-key-reused", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["invites:write"]);
+		let headers = { Authorization: `Bearer ${key}`, "Idempotency-Key": '"reuse-1"' };
+
+		await dispatch(db, createRequest({ email: "a@example.com" }, headers));
+		let response = await dispatch(db, createRequest({ email: "b@example.com" }, headers));
+
+		expect(response.status).toBe(422);
+		await expectProblem(response, "idempotencyKeyReused");
+		expect((await Invite.listByTeam(db, team.id)).length).toBe(1);
+	});
+
+	test("an unquoted key answers idempotency-key-invalid and creates nothing", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["invites:write"]);
+		let headers = { Authorization: `Bearer ${key}`, "Idempotency-Key": "unquoted" };
+
+		let response = await dispatch(db, createRequest({ email: "new@example.com" }, headers));
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "idempotencyKeyInvalid");
+		expect((await Invite.listByTeam(db, team.id)).length).toBe(0);
 	});
 });

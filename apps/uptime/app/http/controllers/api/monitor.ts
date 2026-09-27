@@ -8,12 +8,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import * as s from "@sdxc/json-schema";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import * as s from "remix/data-schema";
-import * as checks from "remix/data-schema/checks";
 import { createController } from "remix/router";
 
 import type { InsertMonitor, SelectMonitor } from "~/database/schema";
@@ -22,16 +21,12 @@ import AlertEvent from "~/app/data/alert-event";
 import Monitor from "~/app/data/monitor";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
+import { MONITOR_ID_PARAMS, UPDATE_MONITOR_BODY } from "~/app/http/openapi/monitors";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, newestFirst, PAGING } from "~/app/services/pagination";
-import { encodeId, encodeMonitorId, typedId } from "~/app/services/typed-id";
+import { encodeId, encodeMonitorId } from "~/app/services/typed-id";
 import { monitorRoutes } from "~/routes/api-groups";
-
-const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"] as const;
-const LOCATION_HINTS = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"] as const;
-
-const MonitorIdParams = s.object({ monitorId: typedId("mon") });
 
 /** Maps a monitor row to its public camelCase JSON shape. */
 function serializeMonitor(monitor: SelectMonitor) {
@@ -57,20 +52,6 @@ function serializeMonitor(monitor: SelectMonitor) {
 	};
 }
 
-const UpdateMonitorSchema = s.object({
-	name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
-	url: s.optional(s.string().pipe(checks.url())),
-	method: s.optional(s.enum_(HTTP_METHODS)),
-	expectedStatus: s.optional(s.number().pipe(checks.min(100), checks.max(599))),
-	intervalSeconds: s.optional(s.number().pipe(checks.min(60), checks.max(3600))),
-	degradedAfterMs: s.optional(s.number().pipe(checks.min(1000), checks.max(30_000))),
-	timeoutSeconds: s.optional(s.number().pipe(checks.min(1), checks.max(60))),
-	locationHint: s.optional(s.enum_(LOCATION_HINTS)),
-	enabled: s.optional(s.boolean()),
-	sslMonitoringEnabled: s.optional(s.boolean()),
-	sslExpiryWarningDays: s.optional(s.number().pipe(checks.min(1), checks.max(365))),
-});
-
 export default createController(monitorRoutes, {
 	middleware: [catchValidationError()],
 	actions: {
@@ -78,7 +59,7 @@ export default createController(monitorRoutes, {
 		monitorShow: {
 			middleware: [requireApiKey("monitors:read")],
 			handler: async (ctx) => {
-				let { monitorId } = s.parse(MonitorIdParams, ctx.params);
+				let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
 				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
 				if (!monitor)
 					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
@@ -90,12 +71,12 @@ export default createController(monitorRoutes, {
 		monitorUpdate: {
 			middleware: [requireApiKey("monitors:write")],
 			handler: async (ctx) => {
-				let { monitorId } = s.parse(MonitorIdParams, ctx.params);
+				let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
 				let existing = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
 				if (!existing)
 					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 
-				let result = await validate(ctx.request, UpdateMonitorSchema);
+				let result = await validate(ctx.request, UPDATE_MONITOR_BODY);
 				if (isFailure(result)) {
 					return apiProblems.validationError({
 						instance: problemInstance(),
@@ -133,7 +114,7 @@ export default createController(monitorRoutes, {
 		monitorDestroy: {
 			middleware: [requireApiKey("monitors:write")],
 			handler: async (ctx) => {
-				let { monitorId } = s.parse(MonitorIdParams, ctx.params);
+				let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
 				let existing = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
 				if (!existing)
 					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
@@ -147,7 +128,7 @@ export default createController(monitorRoutes, {
 		monitorStats: {
 			middleware: [requireApiKey("monitors:read")],
 			handler: async (ctx) => {
-				let { monitorId } = s.parse(MonitorIdParams, ctx.params);
+				let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
 				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
 				if (!monitor)
 					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
@@ -161,7 +142,7 @@ export default createController(monitorRoutes, {
 		monitorResults: {
 			middleware: [requireApiKey("monitors:read")],
 			handler: async (ctx) => {
-				let { monitorId } = s.parse(MonitorIdParams, ctx.params);
+				let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
 				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
 				if (!monitor)
 					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
@@ -214,7 +195,7 @@ export default createController(monitorRoutes, {
 		monitorAlertEvents: {
 			middleware: [requireApiKey("alerts:read")],
 			handler: async (ctx) => {
-				let { monitorId } = s.parse(MonitorIdParams, ctx.params);
+				let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
 				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
 				if (!monitor)
 					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });

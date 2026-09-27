@@ -13,8 +13,6 @@ import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import * as s from "remix/data-schema";
-import * as checks from "remix/data-schema/checks";
 import { createController } from "remix/router";
 
 import type { SelectMonitor } from "~/database/schema";
@@ -22,14 +20,12 @@ import type { SelectMonitor } from "~/database/schema";
 import Monitor from "~/app/data/monitor";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
+import { CREATE_MONITOR_BODY } from "~/app/http/openapi/monitors";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
 import { monitorsRoutes } from "~/routes/api-groups";
-
-const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"] as const;
-const LOCATION_HINTS = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"] as const;
 
 /** Maps a monitor row to its public camelCase JSON shape. */
 function serializeMonitor(monitor: SelectMonitor) {
@@ -54,19 +50,6 @@ function serializeMonitor(monitor: SelectMonitor) {
 		updatedAt: monitor.updated_at,
 	};
 }
-
-const CreateMonitorSchema = s.object({
-	name: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
-	url: s.string().pipe(checks.url()),
-	method: s.defaulted(s.enum_(HTTP_METHODS), "HEAD"),
-	expectedStatus: s.defaulted(s.number().pipe(checks.min(100), checks.max(599)), 200),
-	intervalSeconds: s.defaulted(s.number().pipe(checks.min(60), checks.max(3600)), 60),
-	degradedAfterMs: s.defaulted(s.number().pipe(checks.min(1000), checks.max(30_000)), 5000),
-	timeoutSeconds: s.defaulted(s.number().pipe(checks.min(1), checks.max(60)), 10),
-	locationHint: s.defaulted(s.enum_(LOCATION_HINTS), "wnam"),
-	sslMonitoringEnabled: s.defaulted(s.boolean(), false),
-	sslExpiryWarningDays: s.defaulted(s.number().pipe(checks.min(1), checks.max(365)), 30),
-});
 
 export default createController(monitorsRoutes, {
 	actions: {
@@ -112,7 +95,7 @@ export default createController(monitorsRoutes, {
 		monitorsCreate: {
 			middleware: [requireApiKey("monitors:write"), idempotent],
 			handler: async (ctx) => {
-				let result = await validate(ctx.request, CreateMonitorSchema);
+				let result = await validate(ctx.request, CREATE_MONITOR_BODY);
 				if (isFailure(result)) {
 					return apiProblems.validationError({
 						instance: problemInstance(),

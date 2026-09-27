@@ -17,12 +17,11 @@
 import type { Database } from "remix/data-table";
 
 import { Created } from "@sdxc/http/status-code";
+import * as s from "@sdxc/json-schema";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import * as s from "remix/data-schema";
-import * as checks from "remix/data-schema/checks";
 import { createController } from "remix/router";
 
 import type { InsertFlowMonitor, SelectFlowMonitor } from "~/database/schema";
@@ -32,16 +31,17 @@ import TeamDomain from "~/app/data/team-domain";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { MAX_SOURCE_LENGTH } from "~/app/http/validators/flow-monitor";
-import { DEFAULT_FLOW_INTERVAL_SECONDS, FLOW_INTERVALS_SECONDS } from "~/app/lib/pricing";
+import {
+	CREATE_FLOW_MONITOR_BODY,
+	FLOW_MONITOR_ID_PARAMS,
+	UPDATE_FLOW_MONITOR_BODY,
+} from "~/app/http/openapi/flow-monitors";
 import { apiProblems, invalidField, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { inspectFlowSource } from "~/app/services/flow-check";
 import { apiPage, NEWEST_FIRST, newestFirst, PAGING } from "~/app/services/pagination";
-import { encodeId, typedId } from "~/app/services/typed-id";
+import { encodeId } from "~/app/services/typed-id";
 import { flowMonitorsRoutes } from "~/routes/api-groups";
-
-const FlowMonitorIdParams = s.object({ flowMonitorId: typedId("flow") });
 
 /**
  * Maps a flow monitor row to its public camelCase JSON shape.
@@ -61,29 +61,6 @@ function serializeFlowMonitor(monitor: SelectFlowMonitor) {
 		updatedAt: monitor.updated_at,
 	};
 }
-
-/**
- * The interval is an enum of {@link FLOW_INTERVALS_SECONDS} rather than a bounded number,
- * since each selectable value carries its own price — an unlisted one is refused, so nobody
- * discovers their monitor runs hourly after asking for every minute.
- */
-const IntervalSecondsSchema = s.enum_(FLOW_INTERVALS_SECONDS);
-
-const SourceSchema = s.string().pipe(checks.minLength(1), checks.maxLength(MAX_SOURCE_LENGTH));
-
-const CreateFlowMonitorSchema = s.object({
-	name: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
-	source: SourceSchema,
-	intervalSeconds: s.defaulted(IntervalSecondsSchema, DEFAULT_FLOW_INTERVAL_SECONDS),
-	isEnabled: s.defaulted(s.boolean(), true),
-});
-
-const UpdateFlowMonitorSchema = s.object({
-	name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
-	source: s.optional(SourceSchema),
-	intervalSeconds: s.optional(IntervalSecondsSchema),
-	isEnabled: s.optional(s.boolean()),
-});
 
 export default createController(flowMonitorsRoutes, {
 	middleware: [catchValidationError()],
@@ -130,7 +107,7 @@ export default createController(flowMonitorsRoutes, {
 		flowMonitorsCreate: {
 			middleware: [requireApiKey("flow-monitors:write"), idempotent],
 			handler: async (ctx) => {
-				let result = await validate(ctx.request, CreateFlowMonitorSchema);
+				let result = await validate(ctx.request, CREATE_FLOW_MONITOR_BODY);
 				if (isFailure(result)) {
 					return apiProblems.validationError({
 						instance: problemInstance(),
@@ -156,7 +133,7 @@ export default createController(flowMonitorsRoutes, {
 		flowMonitorShow: {
 			middleware: [requireApiKey("flow-monitors:read")],
 			handler: async (ctx) => {
-				let { flowMonitorId } = s.parse(FlowMonitorIdParams, ctx.params);
+				let { flowMonitorId } = s.parse(FLOW_MONITOR_ID_PARAMS, ctx.params);
 				let monitor = await FlowMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, flowMonitorId);
 				if (!monitor)
 					return apiProblems.notFound({
@@ -171,7 +148,7 @@ export default createController(flowMonitorsRoutes, {
 		flowMonitorUpdate: {
 			middleware: [requireApiKey("flow-monitors:write")],
 			handler: async (ctx) => {
-				let { flowMonitorId } = s.parse(FlowMonitorIdParams, ctx.params);
+				let { flowMonitorId } = s.parse(FLOW_MONITOR_ID_PARAMS, ctx.params);
 				let existing = await FlowMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, flowMonitorId);
 				if (!existing)
 					return apiProblems.notFound({
@@ -179,7 +156,7 @@ export default createController(flowMonitorsRoutes, {
 						instance: problemInstance(),
 					});
 
-				let result = await validate(ctx.request, UpdateFlowMonitorSchema);
+				let result = await validate(ctx.request, UPDATE_FLOW_MONITOR_BODY);
 				if (isFailure(result)) {
 					return apiProblems.validationError({
 						instance: problemInstance(),
@@ -208,7 +185,7 @@ export default createController(flowMonitorsRoutes, {
 		flowMonitorDestroy: {
 			middleware: [requireApiKey("flow-monitors:write")],
 			handler: async (ctx) => {
-				let { flowMonitorId } = s.parse(FlowMonitorIdParams, ctx.params);
+				let { flowMonitorId } = s.parse(FLOW_MONITOR_ID_PARAMS, ctx.params);
 				let existing = await FlowMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, flowMonitorId);
 				if (!existing)
 					return apiProblems.notFound({
@@ -225,7 +202,7 @@ export default createController(flowMonitorsRoutes, {
 		flowMonitorResults: {
 			middleware: [requireApiKey("flow-monitors:read")],
 			handler: async (ctx) => {
-				let { flowMonitorId } = s.parse(FlowMonitorIdParams, ctx.params);
+				let { flowMonitorId } = s.parse(FLOW_MONITOR_ID_PARAMS, ctx.params);
 				let monitor = await FlowMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, flowMonitorId);
 				if (!monitor)
 					return apiProblems.notFound({

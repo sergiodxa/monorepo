@@ -896,10 +896,24 @@ the two would still drift, which is the state `2796c090` inherited.
 - Implementation: every schema in the document describes its input side, response bodies
   included, because the conformance checker validates a response by passing its body to the
   schema. A request body is always `required: true`.
+- Adoption (uptime): handlers keep their own parsing (`s.parse` of the params, `validate` of the
+  body, `PAGING` for the query) with the operation module's schemas, rather than
+  `operation.parse`. Several handlers answer `404` before they read the body, and `parse`
+  validates params, query and body up front, which would reorder those answers.
+- Adoption (uptime): a reference page marks each endpoint with `<!-- operation: <id> -->`
+  where its generated scope line, error table and JSON Schema blocks go, in place of a
+  frontmatter list, so each endpoint's prose stays beside its reference. Field tables stay
+  hand-written, since their descriptions and defaults read better than a generated table.
+- Adoption (uptime): `checkConformance(routeMap)` in `app/lib/test/openapi.ts` limits
+  `uncovered()` to the file's own operations, since each API test file covers one
+  controller. Branches only a programming error reaches (the `internal` problem after
+  `Pagination.byKeyset`) are left undeclared.
 
 ## Current Progress
 
 - [x] Phase 1: `@sdxc/json-schema`
 - [x] Phase 2: `@sdxc/openapi` (with the `@sdxc/problem` change)
-- [ ] Phase 3: Adopt in uptime
+- [x] Phase 3: Adopt in uptime (`app/http/openapi/`: one module per resource, the document,
+      `/api/v1/openapi.json`, the snapshot test, the conformance recorder in every API test file,
+      and the reference's scope lines, error tables and schema blocks rendered from the document)
 - [ ] Phase 4: Adopt in auth-saas

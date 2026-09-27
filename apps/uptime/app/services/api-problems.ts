@@ -8,9 +8,9 @@
  */
 
 import { IDEMPOTENCY_PROBLEM_ENTRIES } from "@sdxc/idempotency";
+import * as s from "@sdxc/json-schema";
 import { defineProblems, ISSUES_SCHEMA } from "@sdxc/problem";
 import { generateUUID } from "@sdxc/uuid";
-import * as s from "remix/data-schema";
 
 /**
  * The API's problem catalog. Each slug is the kebab-case form of the error code the API

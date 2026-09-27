@@ -18,10 +18,15 @@ import type { ApiKeyScope } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { checkConformance } from "~/app/lib/test/openapi";
+import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { maintenanceWindows, monitors, teams } from "~/database/schema";
 import { maintenanceWindowRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance(maintenanceWindowRoutes);
 
 /**
  * `app/data/monitor.ts` reads `env` from `cloudflare:workers` at module load time, so it
@@ -107,7 +112,7 @@ async function createMaintenanceWindowRow(
 }
 
 async function dispatch(db: Db, request: Request): Promise<Response> {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
 	router.map(maintenanceWindowRoutes, maintenanceWindowController);
 
 	return router.fetch(request);
@@ -551,5 +556,30 @@ describe("POST /api/v1/maintenance/:maintenanceId/end", () => {
 			),
 		);
 		expect(response.status).toBe(403);
+	});
+});
+
+describe("malformed maintenance window ids", () => {
+	test.each([
+		["GET", "show", "maintenance:read"],
+		["PUT", "update", "maintenance:write"],
+		["DELETE", "destroy", "maintenance:write"],
+		["POST", "end", "maintenance:write"],
+	] as const)("%s %s answers validation-error for a raw UUID", async (method, leaf, scope) => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, [scope]);
+		let window = await createMaintenanceWindowRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			request(method, routes.api.v1.maintenance[leaf].href({ maintenanceId: window.id }), {
+				key,
+				body: method === "PUT" ? {} : undefined,
+			}),
+		);
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "validationError");
 	});
 });

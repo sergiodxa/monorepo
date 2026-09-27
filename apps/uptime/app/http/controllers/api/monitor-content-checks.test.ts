@@ -19,12 +19,17 @@ import type { ApiKeyScope } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { markInFlight } from "~/app/lib/test/idempotency";
+import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { monitorContentChecks, monitors, teams } from "~/database/schema";
 import { monitorContentChecksRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance(monitorContentChecksRoutes);
 
 /**
  * `app/data/monitor.ts` reads `env` from `cloudflare:workers` at module load time, so it
@@ -105,7 +110,7 @@ async function createContentCheckRow(
 }
 
 async function dispatch(db: Db, request: Request): Promise<Response> {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
 	router.map(monitorContentChecksRoutes, monitorContentChecksController);
 
 	return router.fetch(request);
@@ -499,5 +504,76 @@ describe("DELETE /api/v1/monitors/:monitorId/content-checks/:contentCheckId", ()
 			),
 		);
 		expect(response.status).toBe(403);
+	});
+});
+
+describe("POST /api/v1/monitors/:monitorId/content-checks with an Idempotency-Key", () => {
+	/** A create carrying `idempotencyKey`, so a test can send the same one twice. */
+	function idempotentCreate(key: string, monitorId: string, idempotencyKey: string, body: unknown) {
+		let created = request("POST", routes.api.v1.monitors.contentChecks.create.href({ monitorId }), {
+			key,
+			body,
+		});
+		created.headers.set("Idempotency-Key", idempotencyKey);
+		return created;
+	}
+
+	test("a retry while the first request runs answers idempotency-key-in-use", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["monitors:write"]);
+		let monitorId = encodeId("mon", (await createMonitorRow(db, team.id)).id);
+		let body = { type: "contains", value: "ok" };
+
+		await dispatch(db, idempotentCreate(key, monitorId, '"in-flight"', body));
+		await markInFlight(db);
+		let response = await dispatch(db, idempotentCreate(key, monitorId, '"in-flight"', body));
+
+		expect(response.status).toBe(409);
+		expect(response.headers.get("Retry-After")).toBe("1");
+		await expectProblem(response, "idempotencyKeyInUse");
+	});
+
+	test("reusing a key for a different body answers idempotency-key-reused", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["monitors:write"]);
+		let monitorId = encodeId("mon", (await createMonitorRow(db, team.id)).id);
+
+		await dispatch(
+			db,
+			idempotentCreate(key, monitorId, '"reused"', { type: "contains", value: "a" }),
+		);
+		let response = await dispatch(
+			db,
+			idempotentCreate(key, monitorId, '"reused"', { type: "contains", value: "b" }),
+		);
+
+		expect(response.status).toBe(422);
+		await expectProblem(response, "idempotencyKeyReused");
+	});
+});
+
+describe("DELETE /api/v1/monitors/:monitorId/content-checks/:contentCheckId malformed ids", () => {
+	test("answers validation-error for a content check id with another prefix", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["monitors:write"]);
+		let monitor = await createMonitorRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			request(
+				"DELETE",
+				routes.api.v1.monitors.contentChecks.destroy.href({
+					monitorId: encodeId("mon", monitor.id),
+					contentCheckId: encodeId("mon", monitor.id),
+				}),
+				{ key },
+			),
+		);
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "validationError");
 	});
 });

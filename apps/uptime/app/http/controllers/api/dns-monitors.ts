@@ -15,8 +15,6 @@ import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import * as s from "remix/data-schema";
-import * as checks from "remix/data-schema/checks";
 import { createController } from "remix/router";
 
 import type { ZoneFileImport } from "~/app/services/zone-file";
@@ -26,11 +24,7 @@ import DnsMonitor, { MAX_DNS_MONITORS_PER_TEAM } from "~/app/data/dns-monitor";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import {
-	DEFAULT_DNS_INTERVAL_SECONDS,
-	MAX_DNS_INTERVAL_SECONDS,
-	MIN_DNS_INTERVAL_SECONDS,
-} from "~/app/http/validators/dns-monitor";
+import { CREATE_DNS_MONITOR_BODY } from "~/app/http/openapi/dns-monitors";
 import { apiProblems, invalidField, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import {
@@ -58,18 +52,6 @@ function serializeDnsMonitor(monitor: SelectDnsMonitor) {
 		updatedAt: monitor.updated_at,
 	};
 }
-
-const CreateDnsMonitorSchema = s.object({
-	name: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
-	domain: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
-	/** Read once and parsed; only the records it declares persist beyond the request. */
-	zoneFile: s.optional(s.string()),
-	intervalSeconds: s.defaulted(
-		s.number().pipe(checks.min(MIN_DNS_INTERVAL_SECONDS), checks.max(MAX_DNS_INTERVAL_SECONDS)),
-		DEFAULT_DNS_INTERVAL_SECONDS,
-	),
-	isEnabled: s.defaulted(s.boolean(), true),
-});
 
 /** What a parsed paste amounts to here: the records it declared and the lines it rejected. */
 type ZoneFileParse = ZoneFileImport;
@@ -156,7 +138,7 @@ export default createController(dnsMonitorsRoutes, {
 					});
 				}
 
-				let result = await validate(ctx.request, CreateDnsMonitorSchema);
+				let result = await validate(ctx.request, CREATE_DNS_MONITOR_BODY);
 				if (isFailure(result)) {
 					return apiProblems.validationError({
 						instance: problemInstance(),

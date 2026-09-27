@@ -35,6 +35,7 @@ import { database } from "~/app/http/middleware/database";
 import { FLAG_SET, flags } from "~/app/lib/flags";
 import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { checkConformance } from "~/app/lib/test/openapi";
 import { expectProblem } from "~/app/lib/test/problem";
 import {
 	alertEvents,
@@ -46,6 +47,9 @@ import {
 	teams,
 } from "~/database/schema";
 import routes from "~/routes/web";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance({ pingCreate: null });
 
 /** The binding's declared `simple.limit` in `wrangler.jsonc`, mirrored by the controller. */
 let CALLER_LIMIT = 60;
@@ -193,6 +197,7 @@ async function dispatch(
 ) {
 	let router = createRouter({
 		middleware: [
+			CONFORMANCE,
 			asyncContext(),
 			database(() => db),
 			billing({ provider: () => testBilling }),

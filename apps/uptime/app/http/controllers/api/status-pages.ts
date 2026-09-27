@@ -13,8 +13,6 @@ import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import * as s from "remix/data-schema";
-import * as checks from "remix/data-schema/checks";
 import { createController } from "remix/router";
 
 import type { SelectStatusPage } from "~/database/schema";
@@ -23,13 +21,12 @@ import StatusPage from "~/app/data/status-page";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
+import { CREATE_STATUS_PAGE_BODY } from "~/app/http/openapi/status-pages";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
 import { statusPagesRoutes } from "~/routes/api-groups";
-
-const SLUG_PATTERN = /^[a-z0-9-]+$/;
 
 /** Maps a status-page row to its public camelCase JSON shape. */
 export function serializeStatusPage(page: SelectStatusPage) {
@@ -47,23 +44,6 @@ export function serializeStatusPage(page: SelectStatusPage) {
 		updatedAt: page.updated_at,
 	};
 }
-
-const CreateStatusPageSchema = s.object({
-	name: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
-	slug: s
-		.string()
-		.pipe(checks.minLength(1))
-		.refine(
-			(value: string) => SLUG_PATTERN.test(value),
-			"Slug must contain only lowercase letters, numbers, and hyphens",
-		),
-	title: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
-	description: s.optional(s.string().pipe(checks.maxLength(500))),
-	logoUrl: s.optional(s.string().pipe(checks.url())),
-	customDomain: s.optional(s.string().pipe(checks.minLength(1))),
-	isPublic: s.defaulted(s.boolean(), true),
-	showOverallStatus: s.defaulted(s.boolean(), true),
-});
 
 export default createController(statusPagesRoutes, {
 	middleware: [catchValidationError()],
@@ -110,7 +90,7 @@ export default createController(statusPagesRoutes, {
 		statusPagesCreate: {
 			middleware: [requireApiKey("status-pages:write"), idempotent],
 			handler: async (ctx) => {
-				let result = await validate(ctx.request, CreateStatusPageSchema);
+				let result = await validate(ctx.request, CREATE_STATUS_PAGE_BODY);
 				if (isFailure(result)) {
 					return apiProblems.validationError({
 						instance: problemInstance(),

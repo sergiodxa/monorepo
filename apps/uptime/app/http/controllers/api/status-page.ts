@@ -9,11 +9,10 @@
 
 import type { Database } from "remix/data-table";
 
+import * as s from "@sdxc/json-schema";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import * as s from "remix/data-schema";
-import * as checks from "remix/data-schema/checks";
 import { createController } from "remix/router";
 
 import type { InsertStatusPage } from "~/database/schema";
@@ -24,13 +23,15 @@ import StatusPage from "~/app/data/status-page";
 import { serializeStatusPage } from "~/app/http/controllers/api/status-pages";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
+import {
+	STATUS_PAGE_ID_PARAMS,
+	UPDATE_ATTACHMENTS_BODY,
+	UPDATE_STATUS_PAGE_BODY,
+} from "~/app/http/openapi/status-pages";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
-import { encodeId, typedId } from "~/app/services/typed-id";
+import { encodeId } from "~/app/services/typed-id";
 import { statusPageRoutes } from "~/routes/api-groups";
-
-const SLUG_PATTERN = /^[a-z0-9-]+$/;
-const StatusPageIdParams = s.object({ statusPageId: typedId("sp") });
 
 /** Loads a page plus its curated HTTP-monitor/cron-job id lists. */
 async function loadWithAttachments(db: Database, teamId: string, statusPageId: string) {
@@ -44,30 +45,6 @@ async function loadWithAttachments(db: Database, teamId: string, statusPageId: s
 	};
 }
 
-const UpdateStatusPageSchema = s.object({
-	name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
-	slug: s.optional(
-		s
-			.string()
-			.pipe(checks.minLength(1))
-			.refine(
-				(value: string) => SLUG_PATTERN.test(value),
-				"Slug must contain only lowercase letters, numbers, and hyphens",
-			),
-	),
-	title: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
-	description: s.optional(s.nullable(s.string().pipe(checks.maxLength(500)))),
-	logoUrl: s.optional(s.nullable(s.string().pipe(checks.url()))),
-	customDomain: s.optional(s.nullable(s.string().pipe(checks.minLength(1)))),
-	isPublic: s.optional(s.boolean()),
-	showOverallStatus: s.optional(s.boolean()),
-});
-
-const UpdateAssociationsSchema = s.object({
-	monitorIds: s.defaulted(s.array(typedId("mon")), []),
-	cronJobIds: s.defaulted(s.array(typedId("cron")), []),
-});
-
 export default createController(statusPageRoutes, {
 	middleware: [catchValidationError()],
 	actions: {
@@ -75,7 +52,7 @@ export default createController(statusPageRoutes, {
 		statusPageShow: {
 			middleware: [requireApiKey("status-pages:read")],
 			handler: async (ctx) => {
-				let { statusPageId } = s.parse(StatusPageIdParams, ctx.params);
+				let { statusPageId } = s.parse(STATUS_PAGE_ID_PARAMS, ctx.params);
 				let statusPage = await loadWithAttachments(ctx.db, ctx.apiTeam.id, statusPageId);
 				if (!statusPage)
 					return apiProblems.notFound({
@@ -90,7 +67,7 @@ export default createController(statusPageRoutes, {
 		statusPageUpdate: {
 			middleware: [requireApiKey("status-pages:write")],
 			handler: async (ctx) => {
-				let { statusPageId } = s.parse(StatusPageIdParams, ctx.params);
+				let { statusPageId } = s.parse(STATUS_PAGE_ID_PARAMS, ctx.params);
 				let existing = await StatusPage.findByIdForTeam(ctx.db, ctx.apiTeam.id, statusPageId);
 				if (!existing)
 					return apiProblems.notFound({
@@ -98,7 +75,7 @@ export default createController(statusPageRoutes, {
 						instance: problemInstance(),
 					});
 
-				let result = await validate(ctx.request, UpdateStatusPageSchema);
+				let result = await validate(ctx.request, UPDATE_STATUS_PAGE_BODY);
 				if (isFailure(result)) {
 					return apiProblems.validationError({
 						instance: problemInstance(),
@@ -146,7 +123,7 @@ export default createController(statusPageRoutes, {
 		statusPageDestroy: {
 			middleware: [requireApiKey("status-pages:write")],
 			handler: async (ctx) => {
-				let { statusPageId } = s.parse(StatusPageIdParams, ctx.params);
+				let { statusPageId } = s.parse(STATUS_PAGE_ID_PARAMS, ctx.params);
 				let existing = await StatusPage.findByIdForTeam(ctx.db, ctx.apiTeam.id, statusPageId);
 				if (!existing)
 					return apiProblems.notFound({
@@ -163,7 +140,7 @@ export default createController(statusPageRoutes, {
 		statusPageMonitors: {
 			middleware: [requireApiKey("status-pages:write")],
 			handler: async (ctx) => {
-				let { statusPageId } = s.parse(StatusPageIdParams, ctx.params);
+				let { statusPageId } = s.parse(STATUS_PAGE_ID_PARAMS, ctx.params);
 				let statusPage = await StatusPage.findByIdForTeam(ctx.db, ctx.apiTeam.id, statusPageId);
 				if (!statusPage)
 					return apiProblems.notFound({
@@ -171,7 +148,7 @@ export default createController(statusPageRoutes, {
 						instance: problemInstance(),
 					});
 
-				let result = await validate(ctx.request, UpdateAssociationsSchema);
+				let result = await validate(ctx.request, UPDATE_ATTACHMENTS_BODY);
 				if (isFailure(result)) {
 					return apiProblems.validationError({
 						instance: problemInstance(),

@@ -397,8 +397,8 @@ export default route({
 		metadata: get("/.well-known/oauth-protected-resource/api/v1"),
 
 		/**
-		 * Public, unauthenticated (see its controller's docblock) — kept separate from
-		 * the bearer-key-gated `v1` group below.
+		 * Authenticated by a `cron-jobs:ping` key and rate limited per caller (see its
+		 * controller's docblock) — kept separate from the `v1` group below.
 		 */
 		cronJobPing: post("/api/v1/cron-jobs/:cronJobId/ping"),
 
@@ -408,6 +408,8 @@ export default route({
 		 * maps each leaf with its own `requireApiKey(scope)` since read/write scopes differ.
 		 */
 		v1: {
+			/** The OpenAPI 3.1 document describing every `v1` endpoint; public, like a reference page. */
+			openapi: get("/api/v1/openapi.json"),
 			status: get("/api/v1/status"),
 			backfillDailyStats: post("/api/v1/backfill-daily-stats"),
 

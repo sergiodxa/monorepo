@@ -20,6 +20,7 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
+import { expandReference } from "~/app/http/openapi/reference";
 import { SEO } from "~/app/lib/seo";
 import { apiProblems } from "~/app/services/api-problems";
 import { getDocLoader, listDocs, MARKDOWN_OPTIONS } from "~/app/services/docs";
@@ -108,7 +109,21 @@ export default createAction(routes.docs.show, async (ctx) => {
 	let docLoader = getDocLoader(slug);
 	if (!docLoader) return renderNotFound();
 
-	let content = await docLoader.loader();
+	let source = await docLoader.loader();
+
+	/**
+	 * An API reference page names the operations whose scope, errors and schemas the
+	 * OpenAPI document renders into it. A placeholder naming no operation is logged and
+	 * the page renders its prose alone, since the rest of the page still holds.
+	 */
+	let expanded = expandReference(source);
+	if (isFailure(expanded)) {
+		ctx.log.warn("docs.reference_failed", {
+			file: docLoader.path,
+			message: expanded.error.message,
+		});
+	}
+	let content = isFailure(expanded) ? source : expanded.data;
 
 	let parsed = Markdown.parse(content, MARKDOWN_OPTIONS);
 	if (isFailure(parsed)) {

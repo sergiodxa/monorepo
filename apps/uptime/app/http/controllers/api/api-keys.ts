@@ -16,8 +16,6 @@ import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import * as s from "remix/data-schema";
-import * as checks from "remix/data-schema/checks";
 import { createController } from "remix/router";
 
 import type { SelectApiKey } from "~/database/schema";
@@ -26,11 +24,11 @@ import ApiKey, { MAX_API_KEYS_PER_TEAM } from "~/app/data/api-key";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import { idempotentUnstored } from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
+import { CREATE_API_KEY_BODY } from "~/app/http/openapi/api-keys";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
-import { apiKeyScopes } from "~/database/schema";
 import { apiKeysRoutes } from "~/routes/api-groups";
 
 /** Maps an API-key row to its public JSON shape (camelCase fields), omitting the key hash. */
@@ -45,19 +43,6 @@ function serializeApiKey(apiKey: SelectApiKey) {
 		keyPrefix: apiKey.key_prefix,
 	};
 }
-
-const CreateApiKeySchema = s.object({
-	name: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
-	scopes: s
-		.array(s.enum_(apiKeyScopes))
-		.refine((value) => value.length > 0, "At least one scope is required."),
-	expiresAt: s.optional(
-		s
-			.string()
-			.refine((value: string) => Number.isFinite(new Date(value).getTime()), "Invalid date/time.")
-			.transform((value: string) => new Date(value).getTime()),
-	),
-});
 
 export default createController(apiKeysRoutes, {
 	middleware: [catchValidationError()],
@@ -112,7 +97,7 @@ export default createController(apiKeysRoutes, {
 					});
 				}
 
-				let result = await validate(ctx.request, CreateApiKeySchema);
+				let result = await validate(ctx.request, CREATE_API_KEY_BODY);
 				if (isFailure(result)) {
 					return apiProblems.validationError({
 						instance: problemInstance(),

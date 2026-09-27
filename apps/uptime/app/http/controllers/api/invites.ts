@@ -13,8 +13,6 @@ import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import * as s from "remix/data-schema";
-import * as checks from "remix/data-schema/checks";
 import { createController } from "remix/router";
 
 import type { SelectInvite } from "~/database/schema";
@@ -23,6 +21,7 @@ import Invite from "~/app/data/invite";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
+import { CREATE_INVITE_BODY } from "~/app/http/openapi/team";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
@@ -41,8 +40,6 @@ function serializeInvite(invite: SelectInvite) {
 		updatedAt: invite.updated_at,
 	};
 }
-
-const CreateInviteSchema = s.object({ email: s.string().pipe(checks.email()) });
 
 export default createController(invitesRoutes, {
 	middleware: [catchValidationError()],
@@ -92,7 +89,7 @@ export default createController(invitesRoutes, {
 		invitesCreate: {
 			middleware: [requireApiKey("invites:write"), idempotent],
 			handler: async (ctx) => {
-				let result = await validate(ctx.request, CreateInviteSchema);
+				let result = await validate(ctx.request, CREATE_INVITE_BODY);
 				if (isFailure(result)) {
 					return apiProblems.validationError({
 						instance: problemInstance(),

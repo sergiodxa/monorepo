@@ -6,24 +6,22 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import * as s from "remix/data-schema";
+import * as s from "@sdxc/json-schema";
 import { createAction } from "remix/router";
 
 import ApiKey from "~/app/data/api-key";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
+import { API_KEY_ID_PARAMS } from "~/app/http/openapi/api-keys";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
-import { typedId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
-
-const ApiKeyIdParams = s.object({ apiKeyId: typedId("key") });
 
 /** DELETE /api/v1/api-keys/:apiKeyId — revokes an API key for the team. */
 export const apiKeyDestroy = createAction(routes.api.v1.apiKeys.destroy, {
 	middleware: [catchValidationError(), requireApiKey("api-keys:write")],
 	handler: async (ctx) => {
-		let { apiKeyId } = s.parse(ApiKeyIdParams, ctx.params);
+		let { apiKeyId } = s.parse(API_KEY_ID_PARAMS, ctx.params);
 		let existing = await ApiKey.findByIdForTeam(ctx.db, ctx.apiTeam.id, apiKeyId);
 		if (!existing)
 			return apiProblems.notFound({ detail: "API key not found", instance: problemInstance() });

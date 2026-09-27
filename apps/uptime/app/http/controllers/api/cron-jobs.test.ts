@@ -19,11 +19,16 @@ import ApiKey from "~/app/data/api-key";
 import CronJobMonitor from "~/app/data/cron-job";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { markInFlight } from "~/app/lib/test/idempotency";
+import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem, problemMessages } from "~/app/lib/test/problem";
 import { teams } from "~/database/schema";
 import { cronJobsRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance(cronJobsRoutes);
 
 let { default: cronJobsController } = await import("./cron-jobs");
 
@@ -49,7 +54,7 @@ async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]): Prom
 }
 
 async function dispatch(db: Db, request: Request) {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
 	router.map(cronJobsRoutes, cronJobsController);
 
 	return router.fetch(request);
@@ -353,5 +358,49 @@ describe("POST /api/v1/cron-jobs", () => {
 			createRequest(validCronJobBody(), { Authorization: `Bearer ${key}` }),
 		);
 		expect(response.status).toBe(403);
+	});
+});
+
+describe("POST /api/v1/cron-jobs with an Idempotency-Key", () => {
+	test("a retry while the first request runs answers idempotency-key-in-use", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["cron-jobs:write"]);
+		let headers = { Authorization: `Bearer ${key}`, "Idempotency-Key": '"in-flight"' };
+
+		await dispatch(db, createRequest(validCronJobBody(), headers));
+		await markInFlight(db);
+		let response = await dispatch(db, createRequest(validCronJobBody(), headers));
+
+		expect(response.status).toBe(409);
+		await expectProblem(response, "idempotencyKeyInUse");
+		expect(await CronJobMonitor.listByTeamQuery(db, team.id).count()).toBe(1);
+	});
+
+	test("reusing a key for a different body answers idempotency-key-reused", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["cron-jobs:write"]);
+		let headers = { Authorization: `Bearer ${key}`, "Idempotency-Key": '"reuse"' };
+
+		await dispatch(db, createRequest(validCronJobBody({ name: "A" }), headers));
+		let response = await dispatch(db, createRequest(validCronJobBody({ name: "B" }), headers));
+
+		expect(response.status).toBe(422);
+		await expectProblem(response, "idempotencyKeyReused");
+		expect(await CronJobMonitor.listByTeamQuery(db, team.id).count()).toBe(1);
+	});
+
+	test("an unquoted key answers idempotency-key-invalid and creates nothing", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["cron-jobs:write"]);
+		let headers = { Authorization: `Bearer ${key}`, "Idempotency-Key": "unquoted" };
+
+		let response = await dispatch(db, createRequest(validCronJobBody(), headers));
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "idempotencyKeyInvalid");
+		expect(await CronJobMonitor.listByTeamQuery(db, team.id).count()).toBe(0);
 	});
 });

@@ -9,11 +9,10 @@
  */
 
 import { Schedule } from "@sdxc/cron";
+import * as s from "@sdxc/json-schema";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import * as s from "remix/data-schema";
-import * as checks from "remix/data-schema/checks";
 import { createController } from "remix/router";
 
 import type { InsertCronJobMonitor, SelectCronJobMonitor } from "~/database/schema";
@@ -21,13 +20,11 @@ import type { InsertCronJobMonitor, SelectCronJobMonitor } from "~/database/sche
 import CronJobMonitor from "~/app/data/cron-job";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { isSupportedTimezone, UNKNOWN_TIMEZONE_MESSAGE } from "~/app/lib/timezones";
+import { CRON_JOB_ID_PARAMS, UPDATE_CRON_JOB_BODY } from "~/app/http/openapi/cron-jobs";
 import { apiProblems, invalidField, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
-import { encodeId, typedId } from "~/app/services/typed-id";
+import { encodeId } from "~/app/services/typed-id";
 import { cronJobRoutes } from "~/routes/api-groups";
-
-const CronJobIdParams = s.object({ cronJobId: typedId("cron") });
 
 /** Maps a cron-job monitor row to its public camelCase JSON shape. */
 function serializeCronJob(monitor: SelectCronJobMonitor) {
@@ -48,16 +45,6 @@ function serializeCronJob(monitor: SelectCronJobMonitor) {
 	};
 }
 
-const UpdateCronJobSchema = s.object({
-	name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(100))),
-	description: s.optional(s.string().pipe(checks.maxLength(500))),
-	cronExpression: s.optional(s.string().pipe(checks.minLength(1))),
-	gracePeriodSeconds: s.optional(s.number().pipe(checks.min(60), checks.max(86_400))),
-	timezone: s.optional(s.string().refine(isSupportedTimezone, UNKNOWN_TIMEZONE_MESSAGE)),
-	alertOnLate: s.optional(s.boolean()),
-	enabled: s.optional(s.boolean()),
-});
-
 export default createController(cronJobRoutes, {
 	middleware: [catchValidationError()],
 	actions: {
@@ -65,7 +52,7 @@ export default createController(cronJobRoutes, {
 		cronJobShow: {
 			middleware: [requireApiKey("cron-jobs:read")],
 			handler: async (ctx) => {
-				let { cronJobId } = s.parse(CronJobIdParams, ctx.params);
+				let { cronJobId } = s.parse(CRON_JOB_ID_PARAMS, ctx.params);
 				let cronJob = await CronJobMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, cronJobId);
 				if (!cronJob)
 					return apiProblems.notFound({
@@ -84,7 +71,7 @@ export default createController(cronJobRoutes, {
 		cronJobUpdate: {
 			middleware: [requireApiKey("cron-jobs:write")],
 			handler: async (ctx) => {
-				let { cronJobId } = s.parse(CronJobIdParams, ctx.params);
+				let { cronJobId } = s.parse(CRON_JOB_ID_PARAMS, ctx.params);
 				let existing = await CronJobMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, cronJobId);
 				if (!existing)
 					return apiProblems.notFound({
@@ -92,7 +79,7 @@ export default createController(cronJobRoutes, {
 						instance: problemInstance(),
 					});
 
-				let result = await validate(ctx.request, UpdateCronJobSchema);
+				let result = await validate(ctx.request, UPDATE_CRON_JOB_BODY);
 				if (isFailure(result)) {
 					return apiProblems.validationError({
 						instance: problemInstance(),
@@ -140,7 +127,7 @@ export default createController(cronJobRoutes, {
 		cronJobDestroy: {
 			middleware: [requireApiKey("cron-jobs:write")],
 			handler: async (ctx) => {
-				let { cronJobId } = s.parse(CronJobIdParams, ctx.params);
+				let { cronJobId } = s.parse(CRON_JOB_ID_PARAMS, ctx.params);
 				let existing = await CronJobMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, cronJobId);
 				if (!existing)
 					return apiProblems.notFound({

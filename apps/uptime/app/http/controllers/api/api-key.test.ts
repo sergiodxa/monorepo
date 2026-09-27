@@ -18,9 +18,14 @@ import ApiKey from "~/app/data/api-key";
 import { apiKeyDestroy } from "~/app/http/controllers/api/api-key";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { checkConformance } from "~/app/lib/test/openapi";
+import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { apiKeys, teams } from "~/database/schema";
 import routes from "~/routes/web";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance({ apiKeyDestroy: null });
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 
@@ -48,7 +53,7 @@ async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]) {
 }
 
 async function dispatch(db: Db, request: Request) {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
 	router.map(routes.api.v1.apiKeys.destroy, apiKeyDestroy);
 
 	return router.fetch(request);
@@ -118,5 +123,24 @@ describe("DELETE /api/v1/api-keys/:apiKeyId", () => {
 		let response = await dispatch(db, del(target.id, key));
 		expect(response.status).toBe(403);
 		expect(await db.findOne(apiKeys, { where: { id: target.id } })).not.toBeNull();
+	});
+
+	test("answers validation-error for a raw UUID in place of the key id", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let { key } = await createApiKey(db, team.id, ["api-keys:write"]);
+		let { record: target } = await createApiKey(db, team.id, ["monitors:read"]);
+
+		let response = await dispatch(
+			db,
+			new Request(
+				`https://uptime.test${routes.api.v1.apiKeys.destroy.href({ apiKeyId: target.id })}`,
+				{ method: "DELETE", headers: { Authorization: `Bearer ${key}` } },
+			),
+		);
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "validationError");
+		expect(await db.count(apiKeys, { where: { id: target.id } })).toBe(1);
 	});
 });

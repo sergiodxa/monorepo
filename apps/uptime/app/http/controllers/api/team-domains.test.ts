@@ -16,12 +16,17 @@ import type { ApiKeyScope } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { markInFlight } from "~/app/lib/test/idempotency";
+import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { teamDomains, teams } from "~/database/schema";
 import { teamDomainsRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance(teamDomainsRoutes);
 
 let { default: teamDomainsController } = await import("./team-domains");
 
@@ -56,12 +61,21 @@ async function createTeamDomainRow(db: Db, teamId: string, hostname: string = "e
 
 async function dispatch(
 	db: Db,
-	request: { method: string; path: string; key?: string; body?: Record<string, unknown> },
+	request: {
+		method: string;
+		path: string;
+		key?: string;
+		body?: Record<string, unknown>;
+		headers?: Record<string, string>;
+	},
 ) {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
 	router.map(teamDomainsRoutes, teamDomainsController);
 
-	let headers: Record<string, string> = { "content-type": "application/json" };
+	let headers: Record<string, string> = {
+		"content-type": "application/json",
+		...request.headers,
+	};
 	if (request.key !== undefined) headers.Authorization = `Bearer ${request.key}`;
 
 	let httpRequest = new Request(`https://uptime.test${request.path}`, {
@@ -365,5 +379,72 @@ describe("DELETE /api/v1/team-domains", () => {
 			body: { id: encodeId("dom", domain.id) },
 		});
 		expect(response.status).toBe(403);
+	});
+});
+
+describe("POST /api/v1/team-domains with an Idempotency-Key", () => {
+	/** A create carrying `idempotencyKey`, so a test can send the same one twice. */
+	function idempotentCreate(key: string, idempotencyKey: string, hostname: string) {
+		return {
+			method: "POST",
+			path: routes.api.v1.teamDomains.create.href(),
+			key,
+			body: { hostname },
+			headers: { "Idempotency-Key": idempotencyKey },
+		};
+	}
+
+	test("a retry with the same key replays the first response and adds one domain", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["team-domains:write"]);
+
+		let first = await dispatch(db, idempotentCreate(key, '"retry-1"', "status.example.com"));
+		let second = await dispatch(db, idempotentCreate(key, '"retry-1"', "status.example.com"));
+
+		expect(first.status).toBe(201);
+		expect(second.status).toBe(201);
+		expect(await second.json()).toEqual(await first.json());
+		expect(await db.count(teamDomains, { where: { team_id: team.id } })).toBe(1);
+	});
+
+	test("a retry while the first request runs answers idempotency-key-in-use", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["team-domains:write"]);
+
+		await dispatch(db, idempotentCreate(key, '"in-flight"', "status.example.com"));
+		await markInFlight(db);
+		let response = await dispatch(db, idempotentCreate(key, '"in-flight"', "status.example.com"));
+
+		expect(response.status).toBe(409);
+		expect(response.headers.get("Retry-After")).toBe("1");
+		await expectProblem(response, "idempotencyKeyInUse");
+		expect(await db.count(teamDomains, { where: { team_id: team.id } })).toBe(1);
+	});
+
+	test("reusing a key for a different body answers idempotency-key-reused", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["team-domains:write"]);
+
+		await dispatch(db, idempotentCreate(key, '"reuse-1"', "a.example.com"));
+		let response = await dispatch(db, idempotentCreate(key, '"reuse-1"', "b.example.com"));
+
+		expect(response.status).toBe(422);
+		await expectProblem(response, "idempotencyKeyReused");
+		expect(await db.count(teamDomains, { where: { team_id: team.id } })).toBe(1);
+	});
+
+	test("an unquoted key answers idempotency-key-invalid and adds nothing", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["team-domains:write"]);
+
+		let response = await dispatch(db, idempotentCreate(key, "unquoted", "status.example.com"));
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "idempotencyKeyInvalid");
+		expect(await db.count(teamDomains, { where: { team_id: team.id } })).toBe(0);
 	});
 });

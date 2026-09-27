@@ -14,9 +14,7 @@ Cron job monitors track scheduled tasks by receiving pings when jobs complete. I
 
 Returns the cron job monitors for your team. This endpoint is paginated; see [Pagination](/docs/api/pagination) for how to page through the full list.
 
-### Required Scope
-
-`cron-jobs:read`
+<!-- operation: cronJobsIndex -->
 
 ### Query Parameters
 
@@ -79,97 +77,11 @@ The cursors for this page arrive in `meta.pagination`:
 | `meta.pagination.perPage` | integer        | Results this page was built with                   |
 | `meta.pagination.total`   | integer        | Cron jobs matching, across every page              |
 
-### Possible Errors
-
-| Status | Type           | Description                                 |
-| ------ | -------------- | ------------------------------------------- |
-| 400    | `bad-request`  | Invalid or malformed cursor                 |
-| 401    | `unauthorized` | Missing or invalid API key                  |
-| 403    | `forbidden`    | API key doesn't have `cron-jobs:read` scope |
-| 500    | `internal`     | The page of results could not be read       |
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["data", "meta"],
-	"properties": {
-		"data": {
-			"type": "object",
-			"required": ["cronJobs"],
-			"properties": {
-				"cronJobs": {
-					"type": "array",
-					"items": { "$ref": "#/$defs/cronJob" }
-				}
-			}
-		},
-		"meta": {
-			"type": "object",
-			"required": ["requestId", "timestamp"],
-			"properties": {
-				"requestId": { "type": "string", "format": "uuid" },
-				"timestamp": { "type": "string", "format": "date-time" },
-				"pagination": {
-					"type": "object",
-					"required": ["next", "prev", "perPage"],
-					"properties": {
-						"next": { "type": ["string", "null"] },
-						"prev": { "type": ["string", "null"] },
-						"perPage": { "type": "integer" },
-						"total": { "type": "integer" }
-					}
-				}
-			}
-		}
-	},
-	"$defs": {
-		"cronJob": {
-			"type": "object",
-			"required": [
-				"id",
-				"name",
-				"description",
-				"cronExpression",
-				"gracePeriodSeconds",
-				"timezone",
-				"status",
-				"alertOnLate",
-				"lastPingAt",
-				"nextExpectedAt",
-				"enabledAt",
-				"createdAt",
-				"updatedAt"
-			],
-			"properties": {
-				"id": { "type": "string", "pattern": "^cron_[a-zA-Z0-9]+$" },
-				"name": { "type": "string", "minLength": 1, "maxLength": 100 },
-				"description": { "type": ["string", "null"], "maxLength": 500 },
-				"cronExpression": { "type": "string" },
-				"gracePeriodSeconds": { "type": "integer", "minimum": 60, "maximum": 86400 },
-				"timezone": { "type": "string" },
-				"status": { "type": "string", "enum": ["healthy", "late", "missed", "new"] },
-				"alertOnLate": { "type": "boolean" },
-				"lastPingAt": { "type": ["integer", "null"] },
-				"nextExpectedAt": { "type": ["integer", "null"] },
-				"enabledAt": { "type": ["integer", "null"] },
-				"createdAt": { "type": "integer" },
-				"updatedAt": { "type": "integer" }
-			}
-		}
-	}
-}
-```
-
 ## POST /api/v1/cron-jobs
 
 Creates a new cron job monitor and answers `201 Created`.
 
-### Required Scope
-
-`cron-jobs:write`
+<!-- operation: cronJobsCreate -->
 
 ### Request Body
 
@@ -229,102 +141,11 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs \
 }
 ```
 
-### Possible Errors
-
-| Status | Type               | Description                                  |
-| ------ | ------------------ | -------------------------------------------- |
-| 400    | `validation-error` | Invalid request body or cron expression      |
-| 401    | `unauthorized`     | Missing or invalid API key                   |
-| 403    | `forbidden`        | API key doesn't have `cron-jobs:write` scope |
-
-### Request Body Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["name", "cronExpression"],
-	"properties": {
-		"name": { "type": "string", "minLength": 1, "maxLength": 100 },
-		"cronExpression": { "type": "string", "minLength": 1 },
-		"description": { "type": "string", "maxLength": 500 },
-		"gracePeriodSeconds": { "type": "number", "minimum": 60, "maximum": 86400, "default": 300 },
-		"timezone": { "type": "string", "default": "UTC" },
-		"alertOnLate": { "type": "boolean", "default": false },
-		"enabled": { "type": "boolean", "default": true }
-	}
-}
-```
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["data", "meta"],
-	"properties": {
-		"data": {
-			"type": "object",
-			"required": ["cronJob"],
-			"properties": {
-				"cronJob": { "$ref": "#/$defs/cronJob" }
-			}
-		},
-		"meta": {
-			"type": "object",
-			"required": ["requestId", "timestamp"],
-			"properties": {
-				"requestId": { "type": "string", "format": "uuid" },
-				"timestamp": { "type": "string", "format": "date-time" }
-			}
-		}
-	},
-	"$defs": {
-		"cronJob": {
-			"type": "object",
-			"required": [
-				"id",
-				"name",
-				"description",
-				"cronExpression",
-				"gracePeriodSeconds",
-				"timezone",
-				"status",
-				"alertOnLate",
-				"lastPingAt",
-				"nextExpectedAt",
-				"enabledAt",
-				"createdAt",
-				"updatedAt"
-			],
-			"properties": {
-				"id": { "type": "string", "pattern": "^cron_[a-zA-Z0-9]+$" },
-				"name": { "type": "string", "minLength": 1, "maxLength": 100 },
-				"description": { "type": ["string", "null"], "maxLength": 500 },
-				"cronExpression": { "type": "string" },
-				"gracePeriodSeconds": { "type": "integer", "minimum": 60, "maximum": 86400 },
-				"timezone": { "type": "string" },
-				"status": { "type": "string", "enum": ["healthy", "late", "missed", "new"] },
-				"alertOnLate": { "type": "boolean" },
-				"lastPingAt": { "type": ["integer", "null"] },
-				"nextExpectedAt": { "type": ["integer", "null"] },
-				"enabledAt": { "type": ["integer", "null"] },
-				"createdAt": { "type": "integer" },
-				"updatedAt": { "type": "integer" }
-			}
-		}
-	}
-}
-```
-
 ## GET /api/v1/cron-jobs/:id
 
 Returns a single cron job monitor by ID.
 
-### Required Scope
-
-`cron-jobs:read`
+<!-- operation: cronJobShow -->
 
 ### Example Request
 
@@ -363,84 +184,11 @@ curl https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123 \
 }
 ```
 
-### Possible Errors
-
-| Status | Type               | Description                                 |
-| ------ | ------------------ | ------------------------------------------- |
-| 400    | `validation-error` | Malformed cron job id                       |
-| 401    | `unauthorized`     | Missing or invalid API key                  |
-| 403    | `forbidden`        | API key doesn't have `cron-jobs:read` scope |
-| 404    | `not-found`        | Cron job not found                          |
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["data", "meta"],
-	"properties": {
-		"data": {
-			"type": "object",
-			"required": ["cronJob"],
-			"properties": {
-				"cronJob": { "$ref": "#/$defs/cronJob" }
-			}
-		},
-		"meta": {
-			"type": "object",
-			"required": ["requestId", "timestamp"],
-			"properties": {
-				"requestId": { "type": "string", "format": "uuid" },
-				"timestamp": { "type": "string", "format": "date-time" }
-			}
-		}
-	},
-	"$defs": {
-		"cronJob": {
-			"type": "object",
-			"required": [
-				"id",
-				"name",
-				"description",
-				"cronExpression",
-				"gracePeriodSeconds",
-				"timezone",
-				"status",
-				"alertOnLate",
-				"lastPingAt",
-				"nextExpectedAt",
-				"enabledAt",
-				"createdAt",
-				"updatedAt"
-			],
-			"properties": {
-				"id": { "type": "string", "pattern": "^cron_[a-zA-Z0-9]+$" },
-				"name": { "type": "string", "minLength": 1, "maxLength": 100 },
-				"description": { "type": ["string", "null"], "maxLength": 500 },
-				"cronExpression": { "type": "string" },
-				"gracePeriodSeconds": { "type": "integer", "minimum": 60, "maximum": 86400 },
-				"timezone": { "type": "string" },
-				"status": { "type": "string", "enum": ["healthy", "late", "missed", "new"] },
-				"alertOnLate": { "type": "boolean" },
-				"lastPingAt": { "type": ["integer", "null"] },
-				"nextExpectedAt": { "type": ["integer", "null"] },
-				"enabledAt": { "type": ["integer", "null"] },
-				"createdAt": { "type": "integer" },
-				"updatedAt": { "type": "integer" }
-			}
-		}
-	}
-}
-```
-
 ## PUT /api/v1/cron-jobs/:id
 
 Updates an existing cron job monitor.
 
-### Required Scope
-
-`cron-jobs:write`
+<!-- operation: cronJobUpdate -->
 
 ### Request Body
 
@@ -498,103 +246,11 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123 \
 }
 ```
 
-### Possible Errors
-
-| Status | Type               | Description                                  |
-| ------ | ------------------ | -------------------------------------------- |
-| 400    | `validation-error` | Malformed cron job id                        |
-| 400    | `validation-error` | Invalid request body or cron expression      |
-| 401    | `unauthorized`     | Missing or invalid API key                   |
-| 403    | `forbidden`        | API key doesn't have `cron-jobs:write` scope |
-| 404    | `not-found`        | Cron job not found                           |
-
-### Request Body Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"name": { "type": "string", "minLength": 1, "maxLength": 100 },
-		"cronExpression": { "type": "string", "minLength": 1 },
-		"description": { "type": "string", "maxLength": 500 },
-		"gracePeriodSeconds": { "type": "number", "minimum": 60, "maximum": 86400 },
-		"timezone": { "type": "string" },
-		"alertOnLate": { "type": "boolean" },
-		"enabled": { "type": "boolean" }
-	}
-}
-```
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["data", "meta"],
-	"properties": {
-		"data": {
-			"type": "object",
-			"required": ["cronJob"],
-			"properties": {
-				"cronJob": { "$ref": "#/$defs/cronJob" }
-			}
-		},
-		"meta": {
-			"type": "object",
-			"required": ["requestId", "timestamp"],
-			"properties": {
-				"requestId": { "type": "string", "format": "uuid" },
-				"timestamp": { "type": "string", "format": "date-time" }
-			}
-		}
-	},
-	"$defs": {
-		"cronJob": {
-			"type": "object",
-			"required": [
-				"id",
-				"name",
-				"description",
-				"cronExpression",
-				"gracePeriodSeconds",
-				"timezone",
-				"status",
-				"alertOnLate",
-				"lastPingAt",
-				"nextExpectedAt",
-				"enabledAt",
-				"createdAt",
-				"updatedAt"
-			],
-			"properties": {
-				"id": { "type": "string", "pattern": "^cron_[a-zA-Z0-9]+$" },
-				"name": { "type": "string", "minLength": 1, "maxLength": 100 },
-				"description": { "type": ["string", "null"], "maxLength": 500 },
-				"cronExpression": { "type": "string" },
-				"gracePeriodSeconds": { "type": "integer", "minimum": 60, "maximum": 86400 },
-				"timezone": { "type": "string" },
-				"status": { "type": "string", "enum": ["healthy", "late", "missed", "new"] },
-				"alertOnLate": { "type": "boolean" },
-				"lastPingAt": { "type": ["integer", "null"] },
-				"nextExpectedAt": { "type": ["integer", "null"] },
-				"enabledAt": { "type": ["integer", "null"] },
-				"createdAt": { "type": "integer" },
-				"updatedAt": { "type": "integer" }
-			}
-		}
-	}
-}
-```
-
 ## DELETE /api/v1/cron-jobs/:id
 
 Deletes a cron job monitor. This action cannot be undone.
 
-### Required Scope
-
-`cron-jobs:write`
+<!-- operation: cronJobDestroy -->
 
 ### Example Request
 
@@ -619,42 +275,6 @@ curl -X DELETE https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123 \
 }
 ```
 
-### Possible Errors
-
-| Status | Type               | Description                                  |
-| ------ | ------------------ | -------------------------------------------- |
-| 400    | `validation-error` | Malformed cron job id                        |
-| 401    | `unauthorized`     | Missing or invalid API key                   |
-| 403    | `forbidden`        | API key doesn't have `cron-jobs:write` scope |
-| 404    | `not-found`        | Cron job not found                           |
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["data", "meta"],
-	"properties": {
-		"data": {
-			"type": "object",
-			"required": ["deleted"],
-			"properties": {
-				"deleted": { "type": "boolean", "const": true }
-			}
-		},
-		"meta": {
-			"type": "object",
-			"required": ["requestId", "timestamp"],
-			"properties": {
-				"requestId": { "type": "string", "format": "uuid" },
-				"timestamp": { "type": "string", "format": "date-time" }
-			}
-		}
-	}
-}
-```
-
 ## POST /api/v1/cron-jobs/:id/ping
 
 Records a ping for a cron job monitor. Call this endpoint when your scheduled task completes successfully.
@@ -668,9 +288,7 @@ Because this URL lives in crontabs and deploy scripts, it also accepts the monit
 - **Caller budget:** 60 requests per minute for each calling IP address (`CF-Connecting-IP`) and monitor pair, counted whether or not the ping is accepted. It is spent before the API key is checked, so requests with a missing or invalid key count against it too. Responses from this limit also carry the quota headers.
 - **Minimum interval:** a monitor accepts one ping every 30 seconds. A ping that arrives sooner after the previous accepted one is rejected.
 
-### Required Scope
-
-`cron-jobs:ping`
+<!-- operation: cronJobPing -->
 
 ### Example Request
 
@@ -692,29 +310,6 @@ Returns `201 Created`:
 ```
 
 Unlike the rest of `/api/v1`, this endpoint answers with the bare object above rather than the `{ data, meta }` envelope, so a shell script can read the result without unwrapping it.
-
-### Possible Errors
-
-| Status | Type           | Description                                                               |
-| ------ | -------------- | ------------------------------------------------------------------------- |
-| 401    | `unauthorized` | Missing, invalid, or expired API key                                      |
-| 403    | `forbidden`    | API key doesn't have `cron-jobs:ping` scope                               |
-| 404    | `not-found`    | Cron job not found, owned by another team, or a malformed id              |
-| 409    | `conflict`     | Cron job is disabled                                                      |
-| 429    | `rate-limited` | Less than 30 seconds since the last accepted ping, or caller budget spent |
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["wasOnTime"],
-	"properties": {
-		"wasOnTime": { "type": "boolean" }
-	}
-}
-```
 
 `wasOnTime` is `true` when the ping arrived within the job's grace period, and `false` when it arrived after it — a late ping is still recorded and still answers `201`.
 

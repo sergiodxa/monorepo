@@ -15,8 +15,6 @@ import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import * as s from "remix/data-schema";
-import * as checks from "remix/data-schema/checks";
 import { createController } from "remix/router";
 
 import type { SelectCronJobMonitor } from "~/database/schema";
@@ -25,11 +23,7 @@ import CronJobMonitor from "~/app/data/cron-job";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import {
-	DEFAULT_TIMEZONE,
-	isSupportedTimezone,
-	UNKNOWN_TIMEZONE_MESSAGE,
-} from "~/app/lib/timezones";
+import { CREATE_CRON_JOB_BODY } from "~/app/http/openapi/cron-jobs";
 import { apiProblems, invalidField, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
@@ -54,24 +48,6 @@ function serializeCronJob(monitor: SelectCronJobMonitor) {
 		updatedAt: monitor.updated_at,
 	};
 }
-
-/**
- * `timezone` is checked against the runtime's IANA list rather than taken as free text: the
- * zone decides when a job counts as late, so an unmatched value would schedule it against the
- * wrong wall clock.
- */
-const CreateCronJobSchema = s.object({
-	name: s.string().pipe(checks.minLength(1), checks.maxLength(100)),
-	description: s.optional(s.string().pipe(checks.maxLength(500))),
-	cronExpression: s.string().pipe(checks.minLength(1)),
-	gracePeriodSeconds: s.defaulted(s.number().pipe(checks.min(60), checks.max(86_400)), 300),
-	timezone: s.defaulted(
-		s.string().refine(isSupportedTimezone, UNKNOWN_TIMEZONE_MESSAGE),
-		DEFAULT_TIMEZONE,
-	),
-	alertOnLate: s.defaulted(s.boolean(), false),
-	enabled: s.defaulted(s.boolean(), true),
-});
 
 export default createController(cronJobsRoutes, {
 	middleware: [catchValidationError()],
@@ -122,7 +98,7 @@ export default createController(cronJobsRoutes, {
 		cronJobsCreate: {
 			middleware: [requireApiKey("cron-jobs:write"), idempotent],
 			handler: async (ctx) => {
-				let result = await validate(ctx.request, CreateCronJobSchema);
+				let result = await validate(ctx.request, CREATE_CRON_JOB_BODY);
 				if (isFailure(result)) {
 					return apiProblems.validationError({
 						instance: problemInstance(),

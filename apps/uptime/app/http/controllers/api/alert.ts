@@ -9,12 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import * as s from "@sdxc/json-schema";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import * as s from "remix/data-schema";
-import * as checks from "remix/data-schema/checks";
 import { createController } from "remix/router";
 
 import type { InsertAlert } from "~/database/schema";
@@ -29,22 +28,12 @@ import {
 } from "~/app/http/controllers/api/alerts";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { MONITOR_SCOPE_TYPES } from "~/app/lib/monitor-scope";
+import { ALERT_ID_PARAMS, UPDATE_ALERT_BODY } from "~/app/http/openapi/alerts";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, newestFirst, PAGING } from "~/app/services/pagination";
-import { encodeId, encodeMonitorId, typedId } from "~/app/services/typed-id";
+import { encodeId, encodeMonitorId } from "~/app/services/typed-id";
 import { alertRoutes } from "~/routes/api-groups";
-
-const AlertIdParams = s.object({ alertId: typedId("alt") });
-
-const UpdateAlertSchema = s.object({
-	name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
-	notifyOnRecovery: s.optional(s.boolean()),
-	cooldownMinutes: s.optional(s.number().pipe(checks.min(0), checks.max(1440))),
-	monitorType: s.optional(s.enum_(MONITOR_SCOPE_TYPES)),
-	monitorId: s.optional(s.nullable(s.string())),
-});
 
 export default createController(alertRoutes, {
 	middleware: [catchValidationError()],
@@ -53,7 +42,7 @@ export default createController(alertRoutes, {
 		alertShow: {
 			middleware: [requireApiKey("alerts:read")],
 			handler: async (ctx) => {
-				let { alertId } = s.parse(AlertIdParams, ctx.params);
+				let { alertId } = s.parse(ALERT_ID_PARAMS, ctx.params);
 				let alert = await Alert.findByIdForTeam(ctx.db, ctx.apiTeam.id, alertId);
 				if (!alert)
 					return apiProblems.notFound({ detail: "Alert not found", instance: problemInstance() });
@@ -65,12 +54,12 @@ export default createController(alertRoutes, {
 		alertUpdate: {
 			middleware: [requireApiKey("alerts:write")],
 			handler: async (ctx) => {
-				let { alertId } = s.parse(AlertIdParams, ctx.params);
+				let { alertId } = s.parse(ALERT_ID_PARAMS, ctx.params);
 				let existing = await Alert.findByIdForTeam(ctx.db, ctx.apiTeam.id, alertId);
 				if (!existing)
 					return apiProblems.notFound({ detail: "Alert not found", instance: problemInstance() });
 
-				let result = await validate(ctx.request, UpdateAlertSchema);
+				let result = await validate(ctx.request, UPDATE_ALERT_BODY);
 				if (isFailure(result)) {
 					return apiProblems.validationError({
 						instance: problemInstance(),
@@ -112,7 +101,7 @@ export default createController(alertRoutes, {
 		alertDestroy: {
 			middleware: [requireApiKey("alerts:write")],
 			handler: async (ctx) => {
-				let { alertId } = s.parse(AlertIdParams, ctx.params);
+				let { alertId } = s.parse(ALERT_ID_PARAMS, ctx.params);
 				let existing = await Alert.findByIdForTeam(ctx.db, ctx.apiTeam.id, alertId);
 				if (!existing)
 					return apiProblems.notFound({ detail: "Alert not found", instance: problemInstance() });
@@ -126,7 +115,7 @@ export default createController(alertRoutes, {
 		alertEvents: {
 			middleware: [requireApiKey("alerts:read")],
 			handler: async (ctx) => {
-				let { alertId } = s.parse(AlertIdParams, ctx.params);
+				let { alertId } = s.parse(ALERT_ID_PARAMS, ctx.params);
 				let alert = await Alert.findByIdForTeam(ctx.db, ctx.apiTeam.id, alertId);
 				if (!alert)
 					return apiProblems.notFound({ detail: "Alert not found", instance: problemInstance() });

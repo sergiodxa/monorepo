@@ -17,11 +17,15 @@ import type { ApiKeyScope } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { checkConformance } from "~/app/lib/test/openapi";
 import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { monitors, statusPageMonitors, statusPages, teams } from "~/database/schema";
 import { statusPageRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance(statusPageRoutes);
 
 /**
  * `app/data/monitor.ts` imports `env` from `cloudflare:workers` at module
@@ -95,7 +99,7 @@ async function dispatch(
 	db: Db,
 	request: { method: string; path: string; key?: string; body?: Record<string, unknown> },
 ) {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
 	router.map(statusPageRoutes, statusPageController);
 
 	let headers: Record<string, string> = { "content-type": "application/json" };
@@ -445,5 +449,50 @@ describe("PUT /api/v1/status-pages/:statusPageId/monitors", () => {
 			body: { monitorIds: [], cronJobIds: [] },
 		});
 		expect(response.status).toBe(403);
+	});
+});
+
+describe("every item endpoint", () => {
+	test.each([
+		["GET", "show"],
+		["PUT", "update"],
+		["DELETE", "destroy"],
+		["PUT", "monitors"],
+	] as const)("%s %s answers 401 without an API key", async (method, leaf) => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let statusPage = await createStatusPageRow(db, team.id);
+
+		let response = await dispatch(db, {
+			method,
+			path: routes.api.v1.statusPages[leaf].href({ statusPageId: encodeId("sp", statusPage.id) }),
+			body: method === "PUT" ? {} : undefined,
+		});
+
+		expect(response.status).toBe(401);
+		await expectProblem(response, "unauthorized");
+	});
+
+	test.each([
+		["GET", "show", "status-pages:read"],
+		["PUT", "update", "status-pages:write"],
+		["DELETE", "destroy", "status-pages:write"],
+		["PUT", "monitors", "status-pages:write"],
+	] as const)("%s %s answers validation-error for a raw UUID", async (method, leaf, scope) => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, [scope]);
+		let statusPage = await createStatusPageRow(db, team.id);
+
+		let response = await dispatch(db, {
+			method,
+			path: routes.api.v1.statusPages[leaf].href({ statusPageId: statusPage.id }),
+			key,
+			body: method === "PUT" ? {} : undefined,
+		});
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "validationError");
+		expect(await db.findOne(statusPages, { where: { id: statusPage.id } })).not.toBeNull();
 	});
 });

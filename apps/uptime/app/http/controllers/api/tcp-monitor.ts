@@ -7,12 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import * as s from "@sdxc/json-schema";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import * as s from "remix/data-schema";
-import * as checks from "remix/data-schema/checks";
 import { createController } from "remix/router";
 
 import type { InsertTcpMonitor, SelectTcpMonitor } from "~/database/schema";
@@ -20,13 +19,12 @@ import type { InsertTcpMonitor, SelectTcpMonitor } from "~/database/schema";
 import TcpMonitor from "~/app/data/tcp-monitor";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
+import { TCP_MONITOR_ID_PARAMS, UPDATE_TCP_MONITOR_BODY } from "~/app/http/openapi/tcp-monitors";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, newestFirst, PAGING } from "~/app/services/pagination";
-import { encodeId, typedId } from "~/app/services/typed-id";
+import { encodeId } from "~/app/services/typed-id";
 import { tcpMonitorRoutes } from "~/routes/api-groups";
-
-const TcpMonitorIdParams = s.object({ tcpMonitorId: typedId("tcpm") });
 
 function serializeTcpMonitor(monitor: SelectTcpMonitor) {
 	return {
@@ -45,15 +43,6 @@ function serializeTcpMonitor(monitor: SelectTcpMonitor) {
 	};
 }
 
-const UpdateTcpMonitorSchema = s.object({
-	name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
-	host: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
-	port: s.optional(s.number().pipe(checks.min(1), checks.max(65_535))),
-	timeoutMs: s.optional(s.number().pipe(checks.min(100), checks.max(60_000))),
-	intervalSeconds: s.optional(s.number().pipe(checks.min(60), checks.max(86_400))),
-	isEnabled: s.optional(s.boolean()),
-});
-
 export default createController(tcpMonitorRoutes, {
 	middleware: [catchValidationError()],
 	actions: {
@@ -61,7 +50,7 @@ export default createController(tcpMonitorRoutes, {
 		tcpMonitorShow: {
 			middleware: [requireApiKey("tcp-monitors:read")],
 			handler: async (ctx) => {
-				let { tcpMonitorId } = s.parse(TcpMonitorIdParams, ctx.params);
+				let { tcpMonitorId } = s.parse(TCP_MONITOR_ID_PARAMS, ctx.params);
 				let monitor = await TcpMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, tcpMonitorId);
 				if (!monitor)
 					return apiProblems.notFound({
@@ -76,7 +65,7 @@ export default createController(tcpMonitorRoutes, {
 		tcpMonitorUpdate: {
 			middleware: [requireApiKey("tcp-monitors:write")],
 			handler: async (ctx) => {
-				let { tcpMonitorId } = s.parse(TcpMonitorIdParams, ctx.params);
+				let { tcpMonitorId } = s.parse(TCP_MONITOR_ID_PARAMS, ctx.params);
 				let existing = await TcpMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, tcpMonitorId);
 				if (!existing)
 					return apiProblems.notFound({
@@ -84,7 +73,7 @@ export default createController(tcpMonitorRoutes, {
 						instance: problemInstance(),
 					});
 
-				let result = await validate(ctx.request, UpdateTcpMonitorSchema);
+				let result = await validate(ctx.request, UPDATE_TCP_MONITOR_BODY);
 				if (isFailure(result)) {
 					return apiProblems.validationError({
 						instance: problemInstance(),
@@ -110,7 +99,7 @@ export default createController(tcpMonitorRoutes, {
 		tcpMonitorDestroy: {
 			middleware: [requireApiKey("tcp-monitors:write")],
 			handler: async (ctx) => {
-				let { tcpMonitorId } = s.parse(TcpMonitorIdParams, ctx.params);
+				let { tcpMonitorId } = s.parse(TCP_MONITOR_ID_PARAMS, ctx.params);
 				let existing = await TcpMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, tcpMonitorId);
 				if (!existing)
 					return apiProblems.notFound({
@@ -127,7 +116,7 @@ export default createController(tcpMonitorRoutes, {
 		tcpMonitorResults: {
 			middleware: [requireApiKey("tcp-monitors:read")],
 			handler: async (ctx) => {
-				let { tcpMonitorId } = s.parse(TcpMonitorIdParams, ctx.params);
+				let { tcpMonitorId } = s.parse(TCP_MONITOR_ID_PARAMS, ctx.params);
 				let monitor = await TcpMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, tcpMonitorId);
 				if (!monitor)
 					return apiProblems.notFound({

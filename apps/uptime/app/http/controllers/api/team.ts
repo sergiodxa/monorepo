@@ -9,14 +9,13 @@
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import * as s from "remix/data-schema";
-import * as checks from "remix/data-schema/checks";
 import { createController } from "remix/router";
 
 import type { InsertTeam, SelectTeam } from "~/database/schema";
 
 import Team from "~/app/data/team";
 import requireApiKey from "~/app/http/middleware/require-api-key";
+import { UPDATE_TEAM_BODY } from "~/app/http/openapi/team";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { encodeId } from "~/app/services/typed-id";
@@ -35,16 +34,6 @@ function serializeTeam(team: SelectTeam) {
 	};
 }
 
-const UpdateTeamSchema = s
-	.object({
-		name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
-		logoUrl: s.optional(s.string().pipe(checks.url())),
-	})
-	.refine(
-		(value) => value.name !== undefined || value.logoUrl !== undefined,
-		"At least one field must be provided",
-	);
-
 export default createController(teamRoutes, {
 	actions: {
 		/** GET /api/v1/team — the authenticated team's profile. */
@@ -59,7 +48,7 @@ export default createController(teamRoutes, {
 		teamUpdate: {
 			middleware: [requireApiKey("teams:write")],
 			handler: async (ctx) => {
-				let result = await validate(ctx.request, UpdateTeamSchema);
+				let result = await validate(ctx.request, UPDATE_TEAM_BODY);
 				if (isFailure(result)) {
 					return apiProblems.validationError({
 						instance: problemInstance(),

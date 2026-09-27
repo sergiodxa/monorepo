@@ -19,12 +19,16 @@ import type { ApiKeyScope } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { alertEvents, monitorResults, monitors, teams } from "~/database/schema";
 import { monitorRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance(monitorRoutes);
 
 /**
  * `app/data/monitor.ts` reads `env` from `cloudflare:workers` at module load time, so it
@@ -104,7 +108,7 @@ async function createMonitorResultRow(
 }
 
 async function dispatch(db: Db, request: Request): Promise<Response> {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
 	router.map(monitorRoutes, monitorController);
 
 	return router.fetch(request);
@@ -667,5 +671,26 @@ describe("GET /api/v1/monitors/:monitorId/alert-events", () => {
 			),
 		);
 		expect(response.status).toBe(403);
+	});
+});
+
+describe("malformed monitor ids", () => {
+	test.each([
+		["DELETE", "destroy", "monitors:write"],
+		["GET", "itemStats", "monitors:read"],
+		["GET", "alertEvents", "alerts:read"],
+	] as const)("%s %s answers validation-error for a raw UUID", async (method, leaf, scope) => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, [scope]);
+		let monitor = await createMonitorRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			request(method, routes.api.v1.monitors[leaf].href({ monitorId: monitor.id }), { key }),
+		);
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "validationError");
 	});
 });

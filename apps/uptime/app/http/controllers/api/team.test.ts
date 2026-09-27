@@ -16,10 +16,14 @@ import type { ApiKeyScope } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { checkConformance } from "~/app/lib/test/openapi";
 import { encodeId } from "~/app/services/typed-id";
 import { teams } from "~/database/schema";
 import { teamRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance(teamRoutes);
 
 let { default: teamController } = await import("./team");
 
@@ -48,7 +52,7 @@ async function dispatch(
 	db: Db,
 	request: { method: string; path: string; key?: string; body?: Record<string, unknown> },
 ) {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
 	router.map(teamRoutes, teamController);
 
 	let headers: Record<string, string> = { "content-type": "application/json" };

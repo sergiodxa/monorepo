@@ -34,15 +34,19 @@ case "$status" in
 esac
 ```
 
-## Run an HTTP Ping
+## Run a Ping
 
-Probe an HTTP endpoint once and classify the response.
+Run one probe and get its result back. The body's `type` selects the kind of probe, and each kind's fields are described below.
 
 ```
 POST /api/v1/ping
 ```
 
-**Required scope:** `ping:trigger`
+<!-- operation: pingCreate -->
+
+## Run an HTTP Ping
+
+Probe an HTTP endpoint once and classify the response.
 
 ### Request Body
 
@@ -126,194 +130,9 @@ A target that fails returns the same `200` envelope with a different status:
 }
 ```
 
-### Errors
-
-| Status | Type                    | Description                                        |
-| ------ | ----------------------- | -------------------------------------------------- |
-| 400    | `validation-error`      | Invalid request body                               |
-| 401    | `unauthorized`          | Missing or invalid API key                         |
-| 402    | `subscription-required` | The team owner has no active subscription          |
-| 403    | `forbidden`             | API key missing `ping:trigger` scope               |
-| 429    | `rate-limited`          | More than 60 requests in a minute for this API key |
-| 503    | `endpoint-unavailable`  | Ad-hoc pings are unavailable to this team          |
-
-### Request Body Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"type": {
-			"const": "http",
-			"description": "Probe type discriminator"
-		},
-		"url": {
-			"type": "string",
-			"format": "uri",
-			"description": "Absolute URL to probe"
-		},
-		"method": {
-			"type": "string",
-			"enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"],
-			"description": "HTTP method",
-			"default": "GET"
-		},
-		"expectedStatus": {
-			"type": "integer",
-			"description": "Response status that counts as healthy",
-			"minimum": 100,
-			"maximum": 599,
-			"default": 200
-		},
-		"timeoutSeconds": {
-			"type": "integer",
-			"description": "Probe timeout in seconds",
-			"minimum": 1,
-			"maximum": 60,
-			"default": 10
-		},
-		"degradedAfterMs": {
-			"type": "integer",
-			"description": "Response time above which a correct response is degraded",
-			"minimum": 1,
-			"maximum": 60000,
-			"default": 5000
-		},
-		"region": {
-			"type": "string",
-			"enum": ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"],
-			"description": "Region the probe runs from",
-			"default": "wnam"
-		},
-		"headers": {
-			"type": "object",
-			"description": "Request headers",
-			"additionalProperties": { "type": "string" }
-		},
-		"body": {
-			"type": "string",
-			"maxLength": 10000,
-			"description": "Request body. Refused when `method` is `GET` or `HEAD`"
-		},
-		"contentChecks": {
-			"type": "array",
-			"description": "Assertions run against the response body",
-			"items": {
-				"type": "object",
-				"properties": {
-					"type": {
-						"type": "string",
-						"enum": ["contains", "not_contains", "regex"],
-						"description": "Assertion kind"
-					},
-					"value": {
-						"type": "string",
-						"minLength": 1,
-						"maxLength": 1000,
-						"description": "Text or pattern to assert against"
-					},
-					"caseSensitive": {
-						"type": "boolean",
-						"description": "Whether the assertion is case sensitive",
-						"default": false
-					}
-				},
-				"required": ["type", "value"]
-			}
-		}
-	},
-	"required": ["type", "url"]
-}
-```
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"data": {
-			"type": "object",
-			"properties": {
-				"ping": {
-					"type": "object",
-					"properties": {
-						"id": {
-							"type": "string",
-							"description": "Identifier for this ping. Not addressable; pings are not stored",
-							"pattern": "^ping_[a-zA-Z0-9]+$"
-						},
-						"type": {
-							"const": "http",
-							"description": "Probe type"
-						},
-						"status": {
-							"type": "string",
-							"enum": ["up", "degraded", "down"],
-							"description": "Outcome of the probe"
-						},
-						"responseStatus": {
-							"type": ["integer", "null"],
-							"description": "HTTP status returned by the target"
-						},
-						"responseTimeMs": {
-							"type": ["integer", "null"],
-							"description": "Response time in milliseconds"
-						},
-						"contentChecksPassed": {
-							"type": "boolean",
-							"description": "Whether every content check passed. True when none were supplied"
-						},
-						"checkedAt": {
-							"type": "string",
-							"format": "date-time",
-							"description": "Timestamp when the probe ran"
-						}
-					},
-					"required": [
-						"id",
-						"type",
-						"status",
-						"responseStatus",
-						"responseTimeMs",
-						"contentChecksPassed",
-						"checkedAt"
-					]
-				}
-			},
-			"required": ["ping"]
-		},
-		"meta": {
-			"type": "object",
-			"properties": {
-				"requestId": {
-					"type": "string",
-					"description": "Identifier for this API request"
-				},
-				"timestamp": {
-					"type": "string",
-					"format": "date-time",
-					"description": "Time the response was produced"
-				}
-			},
-			"required": ["requestId", "timestamp"]
-		}
-	},
-	"required": ["data", "meta"]
-}
-```
-
 ## Run a DNS Ping
 
 Resolve a DNS record once and optionally compare it against an expected value.
-
-```
-POST /api/v1/ping
-```
-
-**Required scope:** `ping:trigger`
 
 ### Request Body
 
@@ -364,139 +183,11 @@ curl https://uptime.sergiodxa.com/api/v1/ping \
 }
 ```
 
-### Errors
-
-| Status | Type                    | Description                                        |
-| ------ | ----------------------- | -------------------------------------------------- |
-| 400    | `validation-error`      | Invalid request body                               |
-| 401    | `unauthorized`          | Missing or invalid API key                         |
-| 402    | `subscription-required` | The team owner has no active subscription          |
-| 403    | `forbidden`             | API key missing `ping:trigger` scope               |
-| 429    | `rate-limited`          | More than 60 requests in a minute for this API key |
-| 503    | `endpoint-unavailable`  | Ad-hoc pings are unavailable to this team          |
-
 A domain that does not resolve is not an error. It returns `200` with status `error` and an `errorMessage`.
-
-### Request Body Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"type": {
-			"const": "dns",
-			"description": "Probe type discriminator"
-		},
-		"domain": {
-			"type": "string",
-			"description": "Domain to resolve",
-			"minLength": 1,
-			"maxLength": 255
-		},
-		"recordType": {
-			"type": "string",
-			"enum": ["A", "AAAA", "CNAME", "MX", "TXT", "NS"],
-			"description": "DNS record type",
-			"default": "A"
-		},
-		"expectedValue": {
-			"type": "string",
-			"maxLength": 1000,
-			"description": "Value the record must resolve to, comma-separated for multi-value records"
-		}
-	},
-	"required": ["type", "domain"]
-}
-```
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"data": {
-			"type": "object",
-			"properties": {
-				"ping": {
-					"type": "object",
-					"properties": {
-						"id": {
-							"type": "string",
-							"description": "Identifier for this ping. Not addressable; pings are not stored",
-							"pattern": "^ping_[a-zA-Z0-9]+$"
-						},
-						"type": {
-							"const": "dns",
-							"description": "Probe type"
-						},
-						"status": {
-							"type": "string",
-							"enum": ["ok", "changed", "error"],
-							"description": "Outcome of the probe. `changed` only occurs when `expectedValue` was supplied and did not match"
-						},
-						"resolvedValue": {
-							"type": ["string", "null"],
-							"description": "Value the record resolved to, comma-separated for multi-value records"
-						},
-						"responseTimeMs": {
-							"type": ["integer", "null"],
-							"description": "Resolution time in milliseconds"
-						},
-						"errorMessage": {
-							"type": ["string", "null"],
-							"description": "Why resolution failed, when status is error"
-						},
-						"checkedAt": {
-							"type": "string",
-							"format": "date-time",
-							"description": "Timestamp when the probe ran"
-						}
-					},
-					"required": [
-						"id",
-						"type",
-						"status",
-						"resolvedValue",
-						"responseTimeMs",
-						"errorMessage",
-						"checkedAt"
-					]
-				}
-			},
-			"required": ["ping"]
-		},
-		"meta": {
-			"type": "object",
-			"properties": {
-				"requestId": {
-					"type": "string",
-					"description": "Identifier for this API request"
-				},
-				"timestamp": {
-					"type": "string",
-					"format": "date-time",
-					"description": "Time the response was produced"
-				}
-			},
-			"required": ["requestId", "timestamp"]
-		}
-	},
-	"required": ["data", "meta"]
-}
-```
 
 ## Run a TCP Ping
 
 Open a TCP connection to a host and port once, and report whether it was accepted.
-
-```
-POST /api/v1/ping
-```
-
-**Required scope:** `ping:trigger`
 
 ### Request Body
 
@@ -542,119 +233,7 @@ curl https://uptime.sergiodxa.com/api/v1/ping \
 }
 ```
 
-### Errors
-
-| Status | Type                    | Description                                        |
-| ------ | ----------------------- | -------------------------------------------------- |
-| 400    | `validation-error`      | Invalid request body                               |
-| 401    | `unauthorized`          | Missing or invalid API key                         |
-| 402    | `subscription-required` | The team owner has no active subscription          |
-| 403    | `forbidden`             | API key missing `ping:trigger` scope               |
-| 429    | `rate-limited`          | More than 60 requests in a minute for this API key |
-| 503    | `endpoint-unavailable`  | Ad-hoc pings are unavailable to this team          |
-
 A refused connection returns `200` with status `down`; a connection that never completes returns `200` with status `timeout`.
-
-### Request Body Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"type": {
-			"const": "tcp",
-			"description": "Probe type discriminator"
-		},
-		"host": {
-			"type": "string",
-			"description": "Hostname or IP address",
-			"minLength": 1,
-			"maxLength": 255
-		},
-		"port": {
-			"type": "integer",
-			"description": "TCP port number",
-			"minimum": 1,
-			"maximum": 65535
-		},
-		"timeoutMs": {
-			"type": "integer",
-			"description": "Connection timeout in milliseconds",
-			"minimum": 100,
-			"maximum": 60000,
-			"default": 5000
-		}
-	},
-	"required": ["type", "host", "port"]
-}
-```
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"data": {
-			"type": "object",
-			"properties": {
-				"ping": {
-					"type": "object",
-					"properties": {
-						"id": {
-							"type": "string",
-							"description": "Identifier for this ping. Not addressable; pings are not stored",
-							"pattern": "^ping_[a-zA-Z0-9]+$"
-						},
-						"type": {
-							"const": "tcp",
-							"description": "Probe type"
-						},
-						"status": {
-							"type": "string",
-							"enum": ["up", "down", "timeout"],
-							"description": "Outcome of the probe"
-						},
-						"responseTimeMs": {
-							"type": ["integer", "null"],
-							"description": "Connection time in milliseconds"
-						},
-						"errorMessage": {
-							"type": ["string", "null"],
-							"description": "Why the connection failed, when status is down or timeout"
-						},
-						"checkedAt": {
-							"type": "string",
-							"format": "date-time",
-							"description": "Timestamp when the probe ran"
-						}
-					},
-					"required": ["id", "type", "status", "responseTimeMs", "errorMessage", "checkedAt"]
-				}
-			},
-			"required": ["ping"]
-		},
-		"meta": {
-			"type": "object",
-			"properties": {
-				"requestId": {
-					"type": "string",
-					"description": "Identifier for this API request"
-				},
-				"timestamp": {
-					"type": "string",
-					"format": "date-time",
-					"description": "Time the response was produced"
-				}
-			},
-			"required": ["requestId", "timestamp"]
-		}
-	},
-	"required": ["data", "meta"]
-}
-```
 
 ## Rate Limits
 

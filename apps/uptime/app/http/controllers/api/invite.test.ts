@@ -19,10 +19,14 @@ import ApiKey from "~/app/data/api-key";
 import Invite from "~/app/data/invite";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { checkConformance } from "~/app/lib/test/openapi";
 import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { teams } from "~/database/schema";
 import routes from "~/routes/web";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance({ inviteDestroy: null });
 
 let { inviteDestroy } = await import("./invite");
 
@@ -48,7 +52,7 @@ async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]): Prom
 }
 
 async function dispatch(db: Db, request: Request) {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
 	router.map(routes.api.v1.invites.destroy, inviteDestroy);
 
 	return router.fetch(request);
@@ -152,5 +156,24 @@ describe("DELETE /api/v1/invites/:inviteId", () => {
 
 		expect(response.status).toBe(404);
 		expect(await Invite.findByIdForTeam(db, otherTeam.id, invite.id)).not.toBeNull();
+	});
+
+	test("answers validation-error for a raw UUID in place of the invite id", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["invites:write"]);
+		let invite = await Invite.create(db, team.id, team.owner_id, "pending@example.com");
+
+		let response = await dispatch(
+			db,
+			new Request(
+				`https://uptime.test${routes.api.v1.invites.destroy.href({ inviteId: invite.id })}`,
+				{ method: "DELETE", headers: { Authorization: `Bearer ${key}` } },
+			),
+		);
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "validationError");
+		expect(await Invite.findByIdForTeam(db, team.id, invite.id)).not.toBeNull();
 	});
 });

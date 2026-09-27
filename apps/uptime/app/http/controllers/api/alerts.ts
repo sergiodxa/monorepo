@@ -14,8 +14,6 @@ import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import * as s from "remix/data-schema";
-import * as checks from "remix/data-schema/checks";
 import { createController } from "remix/router";
 
 import type { MonitorScope, MonitorScopeType } from "~/app/lib/monitor-scope";
@@ -26,8 +24,8 @@ import { isResolvableScope } from "~/app/data/scope-monitors";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { DEFAULT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
-import { MONITOR_SCOPE_TYPES, storedMonitorScope } from "~/app/lib/monitor-scope";
+import { CREATE_ALERT_BODY } from "~/app/http/openapi/alerts";
+import { storedMonitorScope } from "~/app/lib/monitor-scope";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
@@ -98,63 +96,8 @@ export function serializeAlertStrategyOnly(alert: SelectAlert) {
 	};
 }
 
-const commonAlertFields = {
-	name: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
-	notifyOnRecovery: s.defaulted(s.boolean(), true),
-	/**
-	 * Defaults to {@link DEFAULT_COOLDOWN_MINUTES}, matching the dashboard form's
-	 * cadence, so alerts behave consistently regardless of the creating surface.
-	 * Callers wanting immediate repeats can still send `0` explicitly.
-	 */
-	cooldownMinutes: s.defaulted(
-		s.number().pipe(checks.min(0), checks.max(1440)),
-		DEFAULT_COOLDOWN_MINUTES,
-	),
-	/**
-	 * Which monitor table `monitorId` names, or the whole type to watch on its own.
-	 * Optional for compatibility: `monitorId` shipped first and always meant an
-	 * HTTP monitor, so an id sent alone still resolves that way (see {@link apiScopeFrom}).
-	 */
-	monitorType: s.optional(s.enum_(MONITOR_SCOPE_TYPES)),
-	monitorId: s.optional(s.string()),
-};
-
-const emailAlertSchema = s.object({
-	strategy: s.literal("email"),
-	email: s.string().pipe(checks.email()),
-	subjectPrefix: s.optional(s.string().pipe(checks.maxLength(100))),
-	...commonAlertFields,
-});
-
-const webhookAlertSchema = s.object({
-	strategy: s.literal("webhook"),
-	url: s.string().pipe(checks.url()),
-	secret: s.optional(s.string().pipe(checks.maxLength(255))),
-	...commonAlertFields,
-});
-
-const slackAlertSchema = s.object({
-	strategy: s.literal("slack"),
-	webhookUrl: s.string().pipe(checks.url()),
-	channel: s.optional(s.string().pipe(checks.maxLength(100))),
-	...commonAlertFields,
-});
-
-const discordAlertSchema = s.object({
-	strategy: s.literal("discord"),
-	webhookUrl: s.string().pipe(checks.url()),
-	...commonAlertFields,
-});
-
-const CreateAlertSchema = s.variant("strategy", {
-	email: emailAlertSchema,
-	webhook: webhookAlertSchema,
-	slack: slackAlertSchema,
-	discord: discordAlertSchema,
-});
-
 /**
- * Restates `CreateAlertSchema`'s guaranteed shape by hand: `s.variant()`'s inferred
+ * Restates `CREATE_ALERT_BODY`'s guaranteed shape by hand: `s.variant()`'s inferred
  * output widens the merged `strategy` field to `string`, so this type gives
  * `buildConfig`'s switch back the literal discriminant it needs to narrow.
  */
@@ -240,7 +183,7 @@ export default createController(alertsRoutes, {
 					});
 				}
 
-				let result = await validate(ctx.request, CreateAlertSchema);
+				let result = await validate(ctx.request, CREATE_ALERT_BODY);
 				if (isFailure(result)) {
 					return apiProblems.validationError({
 						instance: problemInstance(),
@@ -254,7 +197,7 @@ export default createController(alertsRoutes, {
 				}
 
 				/**
-				 * `CreateAlertSchema`'s inferred output loses its per-branch literal discriminant
+				 * `CREATE_ALERT_BODY`'s inferred output loses its per-branch literal discriminant
 				 * (see `CreateAlertValues`'s comment); the runtime shape is still guaranteed by
 				 * that same schema, so this restates it for `buildConfig`'s exhaustive switch.
 				 */

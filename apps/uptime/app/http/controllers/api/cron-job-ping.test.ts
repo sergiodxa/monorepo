@@ -29,10 +29,14 @@ import { MAIL_FROM } from "~/app/emails/sender";
 import { database } from "~/app/http/middleware/database";
 import { billedEvents, createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { checkConformance } from "~/app/lib/test/openapi";
 import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { cronJobMonitors, cronJobPings, teams } from "~/database/schema";
 import routes from "~/routes/web";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance({ cronJobPing: null });
 
 /** The binding's declared `simple.limit` in `wrangler.jsonc`, mirrored by the controller. */
 const CALLER_LIMIT = 60;
@@ -150,6 +154,7 @@ async function createCaller(db: Db, overrides: Record<string, unknown> = {}) {
 async function dispatch(db: Db, request: Request) {
 	let router = createRouter({
 		middleware: [
+			CONFORMANCE,
 			asyncContext(),
 			database(() => db),
 			log() as Middleware,

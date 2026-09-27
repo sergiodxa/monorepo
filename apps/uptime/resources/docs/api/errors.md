@@ -34,24 +34,7 @@ Treat any `type` you do not recognize by its `status`, since new types may be ad
 
 ## Problem Types
 
-| Status | Type                      | Meaning                                                                           |
-| ------ | ------------------------- | --------------------------------------------------------------------------------- |
-| 400    | `bad-request`             | A malformed query parameter, such as a `perPage` out of range or an edited cursor |
-| 400    | `validation-error`        | The body or a path id failed validation; see `errors`                             |
-| 400    | `limit-exceeded`          | The team reached its limit for this resource (e.g., max 10 alerts)                |
-| 400    | `idempotency-key-missing` | The endpoint requires an `Idempotency-Key` header                                 |
-| 400    | `idempotency-key-invalid` | The `Idempotency-Key` value is not a quoted string                                |
-| 401    | `unauthorized`            | Missing, invalid, or expired API key                                              |
-| 402    | `subscription-required`   | The team's owner has no active subscription                                       |
-| 403    | `forbidden`               | The API key doesn't have the required scope                                       |
-| 404    | `not-found`               | The resource does not exist, or belongs to another team                           |
-| 409    | `conflict`                | The resource's state prevents the request (e.g., a slug already taken)            |
-| 409    | `idempotency-key-in-use`  | A request with this idempotency key is still running; retry after `Retry-After`   |
-| 422    | `idempotency-key-reused`  | This idempotency key was already used for a different request                     |
-| 429    | `rate-limited`            | Too many requests; wait for `Retry-After` seconds                                 |
-| 500    | `internal`                | The request failed on the server                                                  |
-| 500    | `internal-error`          | A change was saved but could not be read back                                     |
-| 503    | `endpoint-unavailable`    | The endpoint is switched off for this team                                        |
+<!-- problem-types -->
 
 Each type is `https://uptime.sergiodxa.com/docs/api/errors/` followed by the name above, so `not-found` is `https://uptime.sergiodxa.com/docs/api/errors/not-found`.
 

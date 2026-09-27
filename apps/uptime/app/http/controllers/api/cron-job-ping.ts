@@ -13,15 +13,16 @@ import type { Adapter, RateLimiterBinding } from "@sdxc/rate-limit";
 import type { Middleware } from "remix/router";
 
 import { created } from "@sdxc/http/response/json";
+import * as s from "@sdxc/json-schema";
 import { CloudflareAdapter, MemoryAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 import { env, waitUntil } from "cloudflare:workers";
-import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import Team from "~/app/data/team";
 import requireApiKey from "~/app/http/middleware/require-api-key";
+import { CRON_JOB_PING_PARAMS } from "~/app/http/openapi/cron-jobs";
 import { notifyCronJobResult } from "~/app/services/alerts";
 import { writePingResult } from "~/app/services/analytics";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
@@ -102,7 +103,7 @@ const limitByCaller: Middleware = (context, next) => {
 		adapter: createAdapter(),
 		prefix: CALLER_PREFIX,
 		key(ctx) {
-			let params = s.parseSafe(s.object({ cronJobId: s.string() }), ctx.params);
+			let params = s.parseSafe(CRON_JOB_PING_PARAMS, ctx.params);
 			/**
 			 * Both spellings of an id resolve to the UUID before it becomes a bucket, so
 			 * alternating between them spends one budget rather than two.
@@ -132,7 +133,7 @@ const limitByCaller: Middleware = (context, next) => {
 export default createAction(routes.api.cronJobPing, {
 	middleware: [limitByCaller, requireApiKey("cron-jobs:ping")],
 	handler: async (ctx) => {
-		let params = s.parse(s.object({ cronJobId: s.string() }), ctx.params);
+		let params = s.parse(CRON_JOB_PING_PARAMS, ctx.params);
 		/**
 		 * The API hands out `cron_…`, and a crontab written against the older raw UUID
 		 * still names the same monitor, so both reach it. An id in neither form answers

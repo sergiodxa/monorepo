@@ -114,7 +114,7 @@ This endpoint is paginated. See [Pagination](/docs/api/pagination) for how to pa
 GET /api/v1/flow-monitors
 ```
 
-**Required Scope:** `flow-monitors:read`
+<!-- operation: flowMonitorsIndex -->
 
 ### Query Parameters
 
@@ -161,15 +161,6 @@ curl -i "https://uptime.sergiodxa.com/api/v1/flow-monitors?perPage=25" \
 }
 ```
 
-### Errors
-
-| Status | Type           | Description                                    |
-| ------ | -------------- | ---------------------------------------------- |
-| 400    | `bad-request`  | `perPage` outside 1-200, or a malformed cursor |
-| 401    | `unauthorized` | Missing or invalid API key                     |
-| 403    | `forbidden`    | API key lacks `flow-monitors:read` scope       |
-| 500    | `internal`     | The page could not be read                     |
-
 ## Create a Flow Monitor
 
 Creates a flow monitor. The spec is checked before anything is stored: it has to parse, and every host it names has to be covered by one of the team's verified domains. A refused create leaves no row behind.
@@ -182,7 +173,7 @@ The response is `201 Created`.
 POST /api/v1/flow-monitors
 ```
 
-**Required Scope:** `flow-monitors:write`
+<!-- operation: flowMonitorsCreate -->
 
 ### Request Body
 
@@ -304,58 +295,6 @@ A spec that names no host at all is refused the same way, with:
 }
 ```
 
-### Errors
-
-| Status | Type               | Description                                                                            |
-| ------ | ------------------ | -------------------------------------------------------------------------------------- |
-| 400    | `validation-error` | Invalid body, an unlisted interval, a spec that will not parse, or an unreachable host |
-| 401    | `unauthorized`     | Missing or invalid API key                                                             |
-| 403    | `forbidden`        | API key lacks `flow-monitors:write` scope                                              |
-
-### Request Body Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"name": { "type": "string", "minLength": 1, "maxLength": 255 },
-		"source": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 20000,
-			"description": "The spec text. Stored so the flow can be run, and never returned by any endpoint."
-		},
-		"intervalSeconds": {
-			"type": "integer",
-			"enum": [900, 1800, 3600, 10800, 21600, 43200, 86400],
-			"default": 3600
-		},
-		"isEnabled": { "type": "boolean", "default": true }
-	},
-	"required": ["name", "source"]
-}
-```
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"data": {
-			"type": "object",
-			"properties": {
-				"flowMonitor": { "$comment": "See “The flow monitor object” above" }
-			},
-			"required": ["flowMonitor"]
-		}
-	},
-	"required": ["data"]
-}
-```
-
 ## Get a Flow Monitor
 
 Retrieves a single flow monitor by ID.
@@ -364,7 +303,9 @@ Retrieves a single flow monitor by ID.
 GET /api/v1/flow-monitors/:flowMonitorId
 ```
 
-**Required Scope:** `flow-monitors:read`
+<!-- operation: flowMonitorShow -->
+
+A monitor belonging to another team is `404`, not `403`: an id you may not read is an id that does not exist.
 
 ### cURL
 
@@ -398,17 +339,6 @@ curl https://uptime.sergiodxa.com/api/v1/flow-monitors/flow_abc123 \
 
 The detail response carries no more than the list response does: `source` is withheld from both, so neither is the place to read a spec back.
 
-### Errors
-
-| Status | Type               | Description                              |
-| ------ | ------------------ | ---------------------------------------- |
-| 400    | `validation-error` | Malformed flow monitor id                |
-| 401    | `unauthorized`     | Missing or invalid API key               |
-| 403    | `forbidden`        | API key lacks `flow-monitors:read` scope |
-| 404    | `not-found`        | Flow monitor not found                   |
-
-A monitor belonging to another team is `404`, not `403`: an id you may not read is an id that does not exist.
-
 ## Update a Flow Monitor
 
 Updates a flow monitor's editable fields. Every field is optional; only the ones you send change.
@@ -419,7 +349,7 @@ Sending `source` replaces the spec, and the replacement goes through the same ve
 PUT /api/v1/flow-monitors/:flowMonitorId
 ```
 
-**Required Scope:** `flow-monitors:write`
+<!-- operation: flowMonitorUpdate -->
 
 ### Request Body
 
@@ -465,34 +395,6 @@ curl https://uptime.sergiodxa.com/api/v1/flow-monitors/flow_abc123 \
 
 A refused update changes nothing: the stored spec, interval and schedule are exactly what they were before the call.
 
-### Errors
-
-| Status | Type               | Description                                                                           |
-| ------ | ------------------ | ------------------------------------------------------------------------------------- |
-| 400    | `validation-error` | Malformed flow monitor id                                                             |
-| 400    | `validation-error` | Invalid body, an unlisted interval, or a replacement spec reaching an unverified host |
-| 401    | `unauthorized`     | Missing or invalid API key                                                            |
-| 403    | `forbidden`        | API key lacks `flow-monitors:write` scope                                             |
-| 404    | `not-found`        | Flow monitor not found                                                                |
-
-### Request Body Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"name": { "type": "string", "minLength": 1, "maxLength": 255 },
-		"source": { "type": "string", "minLength": 1, "maxLength": 20000 },
-		"intervalSeconds": {
-			"type": "integer",
-			"enum": [900, 1800, 3600, 10800, 21600, 43200, 86400]
-		},
-		"isEnabled": { "type": "boolean" }
-	}
-}
-```
-
 ## Delete a Flow Monitor
 
 Permanently deletes a flow monitor, its spec, and its run history.
@@ -501,7 +403,7 @@ Permanently deletes a flow monitor, its spec, and its run history.
 DELETE /api/v1/flow-monitors/:flowMonitorId
 ```
 
-**Required Scope:** `flow-monitors:write`
+<!-- operation: flowMonitorDestroy -->
 
 ### cURL
 
@@ -523,15 +425,6 @@ curl https://uptime.sergiodxa.com/api/v1/flow-monitors/flow_abc123 \
 }
 ```
 
-### Errors
-
-| Status | Type               | Description                               |
-| ------ | ------------------ | ----------------------------------------- |
-| 400    | `validation-error` | Malformed flow monitor id                 |
-| 401    | `unauthorized`     | Missing or invalid API key                |
-| 403    | `forbidden`        | API key lacks `flow-monitors:write` scope |
-| 404    | `not-found`        | Flow monitor not found                    |
-
 ## Get Flow Monitor Results
 
 Retrieves the run history for a flow monitor: **one row per run**, however many requests that run made. Newest first.
@@ -542,7 +435,7 @@ Runs arrive a page at a time. See [Pagination](/docs/api/pagination) for how to 
 GET /api/v1/flow-monitors/:flowMonitorId/results
 ```
 
-**Required Scope:** `flow-monitors:read`
+<!-- operation: flowMonitorResults -->
 
 ### Query Parameters
 
@@ -611,78 +504,3 @@ Only the **first** failure of a run is recorded, in `failedTest`, `failedAtLine`
 `requestsMade` is what the run cost. A flow is metered as one ping per request it performed, so a three-request flow on the hourly interval bills like three hourly HTTP monitors.
 
 `durationMs` is the wall-clock of the whole run, which is also this monitor's latency series.
-
-### Errors
-
-| Status | Type               | Description                                    |
-| ------ | ------------------ | ---------------------------------------------- |
-| 400    | `bad-request`      | `perPage` outside 1-200, or a malformed cursor |
-| 400    | `validation-error` | Malformed flow monitor id                      |
-| 401    | `unauthorized`     | Missing or invalid API key                     |
-| 403    | `forbidden`        | API key lacks `flow-monitors:read` scope       |
-| 404    | `not-found`        | Flow monitor not found                         |
-| 500    | `internal`         | The page could not be read                     |
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"data": {
-			"type": "object",
-			"properties": {
-				"results": {
-					"type": "array",
-					"items": {
-						"type": "object",
-						"properties": {
-							"id": { "type": "string", "description": "Unique identifier for the run" },
-							"status": {
-								"type": "string",
-								"enum": ["up", "down", "error"],
-								"description": "What the run concluded. `down` is a failed assertion; `error` is a run that could not be performed."
-							},
-							"testsTotal": { "type": "integer", "description": "Tests the spec declares" },
-							"testsPassed": { "type": "integer" },
-							"testsFailed": { "type": "integer" },
-							"requestsMade": {
-								"type": "integer",
-								"description": "HTTP requests the run performed, and the quantity it is billed on"
-							},
-							"failedTest": {
-								"type": ["string", "null"],
-								"description": "Title of the first failing test"
-							},
-							"failedAtLine": {
-								"type": ["integer", "null"],
-								"description": "1-based line of the spec the first failure happened on, when it is known"
-							},
-							"failureDetail": {
-								"type": ["string", "null"],
-								"description": "The first failure formatted: what was expected, what was observed"
-							},
-							"durationMs": {
-								"type": ["integer", "null"],
-								"description": "Wall-clock of the whole run"
-							},
-							"errorMessage": {
-								"type": ["string", "null"],
-								"description": "Why the run could not be performed. Only set alongside an `error` status."
-							},
-							"checkedAt": {
-								"type": "integer",
-								"description": "When the run happened, in milliseconds since the epoch"
-							}
-						},
-						"required": ["id", "status", "checkedAt"]
-					}
-				}
-			},
-			"required": ["results"]
-		}
-	},
-	"required": ["data"]
-}
-```

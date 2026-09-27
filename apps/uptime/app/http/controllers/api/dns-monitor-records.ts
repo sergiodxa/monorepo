@@ -12,11 +12,11 @@
 import type { OrderByTuple } from "@sdxc/pagination";
 import type { Database } from "remix/data-table";
 
+import * as s from "@sdxc/json-schema";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import * as s from "remix/data-schema";
 import { and, eq } from "remix/data-table";
 import { createController } from "remix/router";
 
@@ -26,10 +26,15 @@ import DnsMonitor from "~/app/data/dns-monitor";
 import DnsMonitorRecord from "~/app/data/dns-monitor-record";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
+import {
+	DNS_MONITOR_ID_PARAMS,
+	DNS_MONITOR_RECORD_PARAMS,
+	UPDATE_DNS_MONITOR_RECORD_BODY,
+} from "~/app/http/openapi/dns-monitors";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, PAGING } from "~/app/services/pagination";
-import { encodeId, typedId } from "~/app/services/typed-id";
+import { encodeId } from "~/app/services/typed-id";
 import { dnsMonitorRecords } from "~/database/schema";
 import { dnsMonitorRecordsRoutes } from "~/routes/api-groups";
 
@@ -44,19 +49,6 @@ const BY_RECORD_IDENTITY: readonly OrderByTuple[] = [
 	["value", "asc"],
 	["id", "asc"],
 ];
-
-const DnsMonitorIdParams = s.object({ dnsMonitorId: typedId("dns") });
-const DnsMonitorRecordParams = s.object({
-	dnsMonitorId: typedId("dns"),
-	recordId: typedId("dnsrec"),
-});
-
-/**
- * The record's enable/decline decision, and nothing else. `unknownKeys: "error"` rejects a
- * body that also sends `name`/`recordType`/`value`, since those identify the record rather
- * than change it; `isEnabled` is required so every accepted body expresses one decision.
- */
-const UpdateDnsMonitorRecordSchema = s.object({ isEnabled: s.boolean() }, { unknownKeys: "error" });
 
 /** Maps a tracked-record row to its public camelCase JSON shape. */
 function serializeDnsMonitorRecord(record: SelectDnsMonitorRecord) {
@@ -88,7 +80,7 @@ export default createController(dnsMonitorRecordsRoutes, {
 		dnsMonitorRecordsIndex: {
 			middleware: [requireApiKey("dns-monitors:read")],
 			handler: async (ctx) => {
-				let { dnsMonitorId } = s.parse(DnsMonitorIdParams, ctx.params);
+				let { dnsMonitorId } = s.parse(DNS_MONITOR_ID_PARAMS, ctx.params);
 
 				let monitor = await DnsMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, dnsMonitorId);
 				if (!monitor)
@@ -139,7 +131,7 @@ export default createController(dnsMonitorRecordsRoutes, {
 		dnsMonitorRecordUpdate: {
 			middleware: [requireApiKey("dns-monitors:write")],
 			handler: async (ctx) => {
-				let { dnsMonitorId, recordId } = s.parse(DnsMonitorRecordParams, ctx.params);
+				let { dnsMonitorId, recordId } = s.parse(DNS_MONITOR_RECORD_PARAMS, ctx.params);
 
 				let monitor = await DnsMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, dnsMonitorId);
 				if (!monitor)
@@ -155,7 +147,7 @@ export default createController(dnsMonitorRecordsRoutes, {
 						instance: problemInstance(),
 					});
 
-				let result = await validate(ctx.request, UpdateDnsMonitorRecordSchema);
+				let result = await validate(ctx.request, UPDATE_DNS_MONITOR_RECORD_BODY);
 				if (isFailure(result)) {
 					return apiProblems.validationError({
 						instance: problemInstance(),

@@ -18,11 +18,15 @@ import type { ApiKeyScope } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { alertEvents, alerts, teams } from "~/database/schema";
 import { alertRoutes } from "~/routes/api-groups";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance(alertRoutes);
 
 /**
  * `~/app/data/monitor`, imported transitively for `monitorId` validation, reads `env`
@@ -91,7 +95,7 @@ async function createAlertEventRow(db: Db, alertId: string, overrides: Record<st
 }
 
 async function dispatch(db: Db, request: Request) {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
 	router.map(alertRoutes, alertController);
 
 	return router.fetch(request);
@@ -491,5 +495,59 @@ describe("GET /api/v1/alerts/:alertId/events", () => {
 			req("GET", alertRoutes.alertEvents.href({ alertId: encodeId("alt", alert.id) }), key),
 		);
 		expect(response.status).toBe(404);
+	});
+});
+
+describe("GET /api/v1/alerts/:alertId/events authentication", () => {
+	test("returns 401 for a missing Authorization header", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let alert = await createAlertRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			req("GET", alertRoutes.alertEvents.href({ alertId: encodeId("alt", alert.id) }), null),
+		);
+		expect(response.status).toBe(401);
+	});
+
+	test("returns 403 for a key missing the alerts:read scope", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["monitors:read"]);
+		let alert = await createAlertRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			req("GET", alertRoutes.alertEvents.href({ alertId: encodeId("alt", alert.id) }), key),
+		);
+		expect(response.status).toBe(403);
+	});
+});
+
+describe("malformed alert ids", () => {
+	test.each([
+		["GET", "alertShow", "alerts:read"],
+		["PUT", "alertUpdate", "alerts:write"],
+		["DELETE", "alertDestroy", "alerts:write"],
+		["GET", "alertEvents", "alerts:read"],
+	] as const)("%s %s answers validation-error for a raw UUID", async (method, name, scope) => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, [scope]);
+		let alert = await createAlertRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			req(
+				method,
+				alertRoutes[name].href({ alertId: alert.id }),
+				key,
+				method === "PUT" ? {} : undefined,
+			),
+		);
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "validationError");
 	});
 });

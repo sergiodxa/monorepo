@@ -16,11 +16,16 @@ import type { ApiKeyScope } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { markInFlight } from "~/app/lib/test/idempotency";
+import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem } from "~/app/lib/test/problem";
 import { tcpMonitors, teams } from "~/database/schema";
 import { tcpMonitorsRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance(tcpMonitorsRoutes);
 
 let { default: tcpMonitorsController } = await import("./tcp-monitors");
 
@@ -61,12 +66,18 @@ async function createTcpMonitorRow(db: Db, teamId: string, name: string = "Redis
 
 async function dispatch(
 	db: Db,
-	request: { method: string; path: string; key?: string; body?: Record<string, unknown> },
+	request: {
+		method: string;
+		path: string;
+		key?: string;
+		body?: Record<string, unknown>;
+		headers?: Record<string, string>;
+	},
 ) {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
 	router.map(tcpMonitorsRoutes, tcpMonitorsController);
 
-	let headers: Record<string, string> = { "content-type": "application/json" };
+	let headers: Record<string, string> = { "content-type": "application/json", ...request.headers };
 	if (request.key !== undefined) headers.Authorization = `Bearer ${request.key}`;
 
 	let httpRequest = new Request(`https://uptime.test${request.path}`, {
@@ -251,6 +262,57 @@ describe("POST /api/v1/tcp-monitors", () => {
 			body: { name: "Redis", host: "redis.example.com", port: 6379 },
 		});
 		expect(response.status).toBe(403);
+	});
+});
+
+describe("POST /api/v1/tcp-monitors with an Idempotency-Key", () => {
+	function idempotentCreate(key: string, idempotencyKey: string, name = "Redis") {
+		return {
+			method: "POST",
+			path: routes.api.v1.tcpMonitors.create.href(),
+			key,
+			headers: { "Idempotency-Key": idempotencyKey },
+			body: { name, host: "redis.example.com", port: 6379 },
+		};
+	}
+
+	test("a retry while the first request runs answers idempotency-key-in-use", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["tcp-monitors:write"]);
+
+		await dispatch(db, idempotentCreate(key, '"in-flight"'));
+		await markInFlight(db);
+		let response = await dispatch(db, idempotentCreate(key, '"in-flight"'));
+
+		expect(response.status).toBe(409);
+		await expectProblem(response, "idempotencyKeyInUse");
+		expect(await db.count(tcpMonitors, { where: { team_id: team.id } })).toBe(1);
+	});
+
+	test("reusing a key for a different body answers idempotency-key-reused", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["tcp-monitors:write"]);
+
+		await dispatch(db, idempotentCreate(key, '"reuse"', "A"));
+		let response = await dispatch(db, idempotentCreate(key, '"reuse"', "B"));
+
+		expect(response.status).toBe(422);
+		await expectProblem(response, "idempotencyKeyReused");
+		expect(await db.count(tcpMonitors, { where: { team_id: team.id } })).toBe(1);
+	});
+
+	test("an unquoted key answers idempotency-key-invalid and creates nothing", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["tcp-monitors:write"]);
+
+		let response = await dispatch(db, idempotentCreate(key, "unquoted"));
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "idempotencyKeyInvalid");
+		expect(await db.count(tcpMonitors, { where: { team_id: team.id } })).toBe(0);
 	});
 });
 

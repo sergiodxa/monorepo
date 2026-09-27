@@ -22,12 +22,17 @@ import ApiKey from "~/app/data/api-key";
 import FlowMonitor from "~/app/data/flow-monitor";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { markInFlight } from "~/app/lib/test/idempotency";
+import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { flowMonitorResults, flowMonitors, teamDomains, teams } from "~/database/schema";
 import { flowMonitorsRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance(flowMonitorsRoutes);
 
 const DOMAIN = "example.test";
 const ORIGIN = `https://app.${DOMAIN}`;
@@ -125,12 +130,21 @@ async function createResultRow(
 
 async function dispatch(
 	db: Db,
-	request: { method: string; path: string; key?: string; body?: Record<string, unknown> },
+	request: {
+		method: string;
+		path: string;
+		key?: string;
+		body?: Record<string, unknown>;
+		headers?: Record<string, string>;
+	},
 ) {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
 	router.map(flowMonitorsRoutes, flowMonitorsController);
 
-	let headers: Record<string, string> = { "content-type": "application/json" };
+	let headers: Record<string, string> = {
+		"content-type": "application/json",
+		...request.headers,
+	};
 	if (request.key !== undefined) headers.Authorization = `Bearer ${request.key}`;
 
 	let httpRequest = new Request(`https://uptime.test${request.path}`, {
@@ -861,4 +875,173 @@ describe("GET /api/v1/flow-monitors total", () => {
 		let body = (await response.json()) as { meta: { pagination: Record<string, unknown> } };
 		expect(body.meta.pagination).not.toHaveProperty("total");
 	});
+});
+
+describe("POST /api/v1/flow-monitors with an Idempotency-Key", () => {
+	test("a retry with the same key replays the first response and creates one monitor", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
+		let body = { name: "Login", source: validSource() };
+		let headers = { "Idempotency-Key": '"replay"' };
+
+		let first = await dispatch(db, {
+			method: "POST",
+			path: routes.api.v1.flowMonitors.create.href(),
+			key,
+			body,
+			headers,
+		});
+		let retry = await dispatch(db, {
+			method: "POST",
+			path: routes.api.v1.flowMonitors.create.href(),
+			key,
+			body,
+			headers,
+		});
+
+		expect(first.status).toBe(201);
+		expect(retry.status).toBe(201);
+		expect(await retry.json()).toEqual(await first.json());
+		expect(await db.count(flowMonitors, { where: { team_id: team.id } })).toBe(1);
+	});
+
+	test("a retry while the first request runs answers idempotency-key-in-use", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
+		let body = { name: "Login", source: validSource() };
+		let headers = { "Idempotency-Key": '"in-flight"' };
+		let path = routes.api.v1.flowMonitors.create.href();
+
+		await dispatch(db, { method: "POST", path, key, body, headers });
+		await markInFlight(db);
+		let response = await dispatch(db, { method: "POST", path, key, body, headers });
+
+		expect(response.status).toBe(409);
+		await expectProblem(response, "idempotencyKeyInUse");
+		expect(await db.count(flowMonitors, { where: { team_id: team.id } })).toBe(1);
+	});
+
+	test("reusing a key for a different body answers idempotency-key-reused", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
+		let headers = { "Idempotency-Key": '"reuse"' };
+		let path = routes.api.v1.flowMonitors.create.href();
+
+		await dispatch(db, {
+			method: "POST",
+			path,
+			key,
+			body: { name: "A", source: validSource() },
+			headers,
+		});
+		let response = await dispatch(db, {
+			method: "POST",
+			path,
+			key,
+			body: { name: "B", source: validSource() },
+			headers,
+		});
+
+		expect(response.status).toBe(422);
+		await expectProblem(response, "idempotencyKeyReused");
+		expect(await db.count(flowMonitors, { where: { team_id: team.id } })).toBe(1);
+	});
+
+	test("an unquoted key answers idempotency-key-invalid and creates nothing", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
+
+		let response = await dispatch(db, {
+			method: "POST",
+			path: routes.api.v1.flowMonitors.create.href(),
+			key,
+			body: { name: "A", source: validSource() },
+			headers: { "Idempotency-Key": "unquoted" },
+		});
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "idempotencyKeyInvalid");
+		expect(await db.count(flowMonitors, { where: { team_id: team.id } })).toBe(0);
+	});
+});
+
+describe("one flow monitor's routes", () => {
+	/** Every item route, with its method and the scope it requires. */
+	let itemRoutes = [
+		["GET", "show", "flow-monitors:read"],
+		["PUT", "update", "flow-monitors:write"],
+		["DELETE", "destroy", "flow-monitors:write"],
+		["GET", "results", "flow-monitors:read"],
+	] as const;
+
+	test.each(itemRoutes)("%s %s answers 401 without an API key", async (method, leaf) => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let monitor = await FlowMonitor.create(db, team.id, { name: "Login", source: validSource() });
+
+		let response = await dispatch(db, {
+			method,
+			path: routes.api.v1.flowMonitors[leaf].href({
+				flowMonitorId: encodeId("flow", monitor.id),
+			}),
+			body: method === "PUT" ? { name: "Renamed" } : undefined,
+		});
+
+		expect(response.status).toBe(401);
+		await expectProblem(response, "unauthorized");
+	});
+
+	test.each(itemRoutes)(
+		"%s %s answers 403 for a key without its scope",
+		async (method, leaf, scope) => {
+			let { db } = createTestDatabase();
+			let team = await createTeamRow(db);
+			let otherScope: ApiKeyScope =
+				scope === "flow-monitors:read" ? "flow-monitors:write" : "flow-monitors:read";
+			let key = await createApiKey(db, team.id, [otherScope]);
+			let monitor = await FlowMonitor.create(db, team.id, {
+				name: "Login",
+				source: validSource(),
+			});
+
+			let response = await dispatch(db, {
+				method,
+				path: routes.api.v1.flowMonitors[leaf].href({
+					flowMonitorId: encodeId("flow", monitor.id),
+				}),
+				key,
+				body: method === "PUT" ? { name: "Renamed" } : undefined,
+			});
+
+			expect(response.status).toBe(403);
+			await expectProblem(response, "forbidden");
+		},
+	);
+
+	test.each(itemRoutes)(
+		"%s %s answers validation-error for a raw UUID",
+		async (method, leaf, scope) => {
+			let { db } = createTestDatabase();
+			let team = await createTeamRow(db);
+			let key = await createApiKey(db, team.id, [scope]);
+			let monitor = await FlowMonitor.create(db, team.id, {
+				name: "Login",
+				source: validSource(),
+			});
+
+			let response = await dispatch(db, {
+				method,
+				path: routes.api.v1.flowMonitors[leaf].href({ flowMonitorId: monitor.id }),
+				key,
+				body: method === "PUT" ? { name: "Renamed" } : undefined,
+			});
+
+			expect(response.status).toBe(400);
+			await expectProblem(response, "validationError");
+		},
+	);
 });

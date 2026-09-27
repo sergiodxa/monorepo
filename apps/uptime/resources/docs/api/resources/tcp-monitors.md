@@ -20,7 +20,7 @@ This endpoint is paginated. See [Pagination](/docs/api/pagination) for how to pa
 GET /api/v1/tcp-monitors
 ```
 
-**Required scope:** `tcp-monitors:read`
+<!-- operation: tcpMonitorsIndex -->
 
 ### Query Parameters
 
@@ -71,115 +71,6 @@ curl -i "https://uptime.sergiodxa.com/api/v1/tcp-monitors?perPage=25" \
 }
 ```
 
-### Errors
-
-| Status | Type           | Description                               |
-| ------ | -------------- | ----------------------------------------- |
-| 400    | `bad-request`  | Invalid or malformed cursor               |
-| 401    | `unauthorized` | Missing or invalid API key                |
-| 403    | `forbidden`    | API key missing `tcp-monitors:read` scope |
-| 500    | `internal`     | A page of the list could not be read      |
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"data": {
-			"type": "object",
-			"properties": {
-				"monitors": {
-					"type": "array",
-					"items": {
-						"type": "object",
-						"properties": {
-							"id": {
-								"type": "string",
-								"description": "Unique identifier",
-								"pattern": "^tcpm_[a-zA-Z0-9]+$"
-							},
-							"name": {
-								"type": "string",
-								"description": "Monitor name",
-								"minLength": 1,
-								"maxLength": 255
-							},
-							"host": {
-								"type": "string",
-								"description": "Hostname or IP address",
-								"minLength": 1,
-								"maxLength": 255
-							},
-							"port": {
-								"type": "integer",
-								"description": "TCP port number",
-								"minimum": 1,
-								"maximum": 65535
-							},
-							"timeoutMs": {
-								"type": "integer",
-								"description": "Connection timeout in milliseconds",
-								"minimum": 100,
-								"maximum": 60000,
-								"default": 5000
-							},
-							"intervalSeconds": {
-								"type": "integer",
-								"description": "Check interval in seconds",
-								"minimum": 60,
-								"maximum": 86400,
-								"default": 60
-							},
-							"isEnabled": {
-								"type": "boolean",
-								"description": "Whether the monitor is active",
-								"default": true
-							},
-							"lastCheckedAt": {
-								"type": ["integer", "null"],
-								"description": "When the last check ran, in milliseconds since the epoch"
-							},
-							"lastStatus": {
-								"type": ["string", "null"],
-								"enum": ["up", "down", "timeout", null],
-								"description": "Status from the last check"
-							},
-							"lastResponseTimeMs": {
-								"type": ["integer", "null"],
-								"description": "Response time from the last check in milliseconds"
-							},
-							"createdAt": {
-								"type": "integer",
-								"description": "When the monitor was created, in milliseconds since the epoch"
-							},
-							"updatedAt": {
-								"type": "integer",
-								"description": "When the monitor was last updated, in milliseconds since the epoch"
-							}
-						},
-						"required": [
-							"id",
-							"name",
-							"host",
-							"port",
-							"timeoutMs",
-							"intervalSeconds",
-							"isEnabled",
-							"createdAt",
-							"updatedAt"
-						]
-					}
-				}
-			},
-			"required": ["monitors"]
-		}
-	},
-	"required": ["data"]
-}
-```
-
 ## Create a TCP Monitor
 
 Create a new TCP monitor to check port connectivity.
@@ -188,7 +79,7 @@ Create a new TCP monitor to check port connectivity.
 POST /api/v1/tcp-monitors
 ```
 
-**Required scope:** `tcp-monitors:write`
+<!-- operation: tcpMonitorsCreate -->
 
 ### Request Body
 
@@ -239,154 +130,6 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors \
 }
 ```
 
-### Errors
-
-| Status | Type               | Description                                |
-| ------ | ------------------ | ------------------------------------------ |
-| 400    | `validation-error` | Invalid request body                       |
-| 401    | `unauthorized`     | Missing or invalid API key                 |
-| 403    | `forbidden`        | API key missing `tcp-monitors:write` scope |
-
-### Request Body Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"name": {
-			"type": "string",
-			"description": "Monitor name",
-			"minLength": 1,
-			"maxLength": 255
-		},
-		"host": {
-			"type": "string",
-			"description": "Hostname or IP address",
-			"minLength": 1,
-			"maxLength": 255
-		},
-		"port": {
-			"type": "integer",
-			"description": "TCP port number",
-			"minimum": 1,
-			"maximum": 65535
-		},
-		"timeoutMs": {
-			"type": "integer",
-			"description": "Connection timeout in milliseconds",
-			"minimum": 100,
-			"maximum": 60000,
-			"default": 5000
-		},
-		"intervalSeconds": {
-			"type": "integer",
-			"description": "Check interval in seconds",
-			"minimum": 60,
-			"maximum": 86400,
-			"default": 60
-		},
-		"isEnabled": {
-			"type": "boolean",
-			"description": "Whether the monitor is active",
-			"default": true
-		}
-	},
-	"required": ["name", "host", "port"]
-}
-```
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"data": {
-			"type": "object",
-			"properties": {
-				"id": {
-					"type": "string",
-					"description": "Unique identifier",
-					"pattern": "^tcpm_[a-zA-Z0-9]+$"
-				},
-				"name": {
-					"type": "string",
-					"description": "Monitor name",
-					"minLength": 1,
-					"maxLength": 255
-				},
-				"host": {
-					"type": "string",
-					"description": "Hostname or IP address",
-					"minLength": 1,
-					"maxLength": 255
-				},
-				"port": {
-					"type": "integer",
-					"description": "TCP port number",
-					"minimum": 1,
-					"maximum": 65535
-				},
-				"timeoutMs": {
-					"type": "integer",
-					"description": "Connection timeout in milliseconds",
-					"minimum": 100,
-					"maximum": 60000,
-					"default": 5000
-				},
-				"intervalSeconds": {
-					"type": "integer",
-					"description": "Check interval in seconds",
-					"minimum": 60,
-					"maximum": 86400,
-					"default": 60
-				},
-				"isEnabled": {
-					"type": "boolean",
-					"description": "Whether the monitor is active",
-					"default": true
-				},
-				"lastCheckedAt": {
-					"type": ["integer", "null"],
-					"description": "When the last check ran, in milliseconds since the epoch"
-				},
-				"lastStatus": {
-					"type": ["string", "null"],
-					"enum": ["up", "down", "timeout", null],
-					"description": "Status from the last check"
-				},
-				"lastResponseTimeMs": {
-					"type": ["integer", "null"],
-					"description": "Response time from the last check in milliseconds"
-				},
-				"createdAt": {
-					"type": "integer",
-					"description": "When the monitor was created, in milliseconds since the epoch"
-				},
-				"updatedAt": {
-					"type": "integer",
-					"description": "When the monitor was last updated, in milliseconds since the epoch"
-				}
-			},
-			"required": [
-				"id",
-				"name",
-				"host",
-				"port",
-				"timeoutMs",
-				"intervalSeconds",
-				"isEnabled",
-				"createdAt",
-				"updatedAt"
-			]
-		}
-	},
-	"required": ["data"]
-}
-```
-
 ## Get a TCP Monitor
 
 Retrieve a single TCP monitor by ID.
@@ -395,7 +138,7 @@ Retrieve a single TCP monitor by ID.
 GET /api/v1/tcp-monitors/:id
 ```
 
-**Required scope:** `tcp-monitors:read`
+<!-- operation: tcpMonitorShow -->
 
 ### cURL
 
@@ -427,106 +170,6 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123 \
 }
 ```
 
-### Errors
-
-| Status | Type               | Description                               |
-| ------ | ------------------ | ----------------------------------------- |
-| 400    | `validation-error` | Malformed TCP monitor id                  |
-| 401    | `unauthorized`     | Missing or invalid API key                |
-| 403    | `forbidden`        | API key missing `tcp-monitors:read` scope |
-| 404    | `not-found`        | TCP monitor not found                     |
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"data": {
-			"type": "object",
-			"properties": {
-				"id": {
-					"type": "string",
-					"description": "Unique identifier",
-					"pattern": "^tcpm_[a-zA-Z0-9]+$"
-				},
-				"name": {
-					"type": "string",
-					"description": "Monitor name",
-					"minLength": 1,
-					"maxLength": 255
-				},
-				"host": {
-					"type": "string",
-					"description": "Hostname or IP address",
-					"minLength": 1,
-					"maxLength": 255
-				},
-				"port": {
-					"type": "integer",
-					"description": "TCP port number",
-					"minimum": 1,
-					"maximum": 65535
-				},
-				"timeoutMs": {
-					"type": "integer",
-					"description": "Connection timeout in milliseconds",
-					"minimum": 100,
-					"maximum": 60000,
-					"default": 5000
-				},
-				"intervalSeconds": {
-					"type": "integer",
-					"description": "Check interval in seconds",
-					"minimum": 60,
-					"maximum": 86400,
-					"default": 60
-				},
-				"isEnabled": {
-					"type": "boolean",
-					"description": "Whether the monitor is active",
-					"default": true
-				},
-				"lastCheckedAt": {
-					"type": ["integer", "null"],
-					"description": "When the last check ran, in milliseconds since the epoch"
-				},
-				"lastStatus": {
-					"type": ["string", "null"],
-					"enum": ["up", "down", "timeout", null],
-					"description": "Status from the last check"
-				},
-				"lastResponseTimeMs": {
-					"type": ["integer", "null"],
-					"description": "Response time from the last check in milliseconds"
-				},
-				"createdAt": {
-					"type": "integer",
-					"description": "When the monitor was created, in milliseconds since the epoch"
-				},
-				"updatedAt": {
-					"type": "integer",
-					"description": "When the monitor was last updated, in milliseconds since the epoch"
-				}
-			},
-			"required": [
-				"id",
-				"name",
-				"host",
-				"port",
-				"timeoutMs",
-				"intervalSeconds",
-				"isEnabled",
-				"createdAt",
-				"updatedAt"
-			]
-		}
-	},
-	"required": ["data"]
-}
-```
-
 ## Update a TCP Monitor
 
 Update an existing TCP monitor. Only include fields you want to change.
@@ -535,7 +178,7 @@ Update an existing TCP monitor. Only include fields you want to change.
 PUT /api/v1/tcp-monitors/:id
 ```
 
-**Required scope:** `tcp-monitors:write`
+<!-- operation: tcpMonitorUpdate -->
 
 ### Request Body
 
@@ -584,152 +227,6 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123 \
 }
 ```
 
-### Errors
-
-| Status | Type               | Description                                |
-| ------ | ------------------ | ------------------------------------------ |
-| 400    | `validation-error` | Malformed TCP monitor id                   |
-| 400    | `validation-error` | Invalid request body                       |
-| 401    | `unauthorized`     | Missing or invalid API key                 |
-| 403    | `forbidden`        | API key missing `tcp-monitors:write` scope |
-| 404    | `not-found`        | TCP monitor not found                      |
-
-### Request Body Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"name": {
-			"type": "string",
-			"description": "Monitor name",
-			"minLength": 1,
-			"maxLength": 255
-		},
-		"host": {
-			"type": "string",
-			"description": "Hostname or IP address",
-			"minLength": 1,
-			"maxLength": 255
-		},
-		"port": {
-			"type": "integer",
-			"description": "TCP port number",
-			"minimum": 1,
-			"maximum": 65535
-		},
-		"timeoutMs": {
-			"type": "integer",
-			"description": "Connection timeout in milliseconds",
-			"minimum": 100,
-			"maximum": 60000
-		},
-		"intervalSeconds": {
-			"type": "integer",
-			"description": "Check interval in seconds",
-			"minimum": 60,
-			"maximum": 86400
-		},
-		"isEnabled": {
-			"type": "boolean",
-			"description": "Whether the monitor is active"
-		}
-	}
-}
-```
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"data": {
-			"type": "object",
-			"properties": {
-				"id": {
-					"type": "string",
-					"description": "Unique identifier",
-					"pattern": "^tcpm_[a-zA-Z0-9]+$"
-				},
-				"name": {
-					"type": "string",
-					"description": "Monitor name",
-					"minLength": 1,
-					"maxLength": 255
-				},
-				"host": {
-					"type": "string",
-					"description": "Hostname or IP address",
-					"minLength": 1,
-					"maxLength": 255
-				},
-				"port": {
-					"type": "integer",
-					"description": "TCP port number",
-					"minimum": 1,
-					"maximum": 65535
-				},
-				"timeoutMs": {
-					"type": "integer",
-					"description": "Connection timeout in milliseconds",
-					"minimum": 100,
-					"maximum": 60000,
-					"default": 5000
-				},
-				"intervalSeconds": {
-					"type": "integer",
-					"description": "Check interval in seconds",
-					"minimum": 60,
-					"maximum": 86400,
-					"default": 60
-				},
-				"isEnabled": {
-					"type": "boolean",
-					"description": "Whether the monitor is active",
-					"default": true
-				},
-				"lastCheckedAt": {
-					"type": ["integer", "null"],
-					"description": "When the last check ran, in milliseconds since the epoch"
-				},
-				"lastStatus": {
-					"type": ["string", "null"],
-					"enum": ["up", "down", "timeout", null],
-					"description": "Status from the last check"
-				},
-				"lastResponseTimeMs": {
-					"type": ["integer", "null"],
-					"description": "Response time from the last check in milliseconds"
-				},
-				"createdAt": {
-					"type": "integer",
-					"description": "When the monitor was created, in milliseconds since the epoch"
-				},
-				"updatedAt": {
-					"type": "integer",
-					"description": "When the monitor was last updated, in milliseconds since the epoch"
-				}
-			},
-			"required": [
-				"id",
-				"name",
-				"host",
-				"port",
-				"timeoutMs",
-				"intervalSeconds",
-				"isEnabled",
-				"createdAt",
-				"updatedAt"
-			]
-		}
-	},
-	"required": ["data"]
-}
-```
-
 ## Delete a TCP Monitor
 
 Permanently delete a TCP monitor and all its check history.
@@ -738,7 +235,7 @@ Permanently delete a TCP monitor and all its check history.
 DELETE /api/v1/tcp-monitors/:id
 ```
 
-**Required scope:** `tcp-monitors:write`
+<!-- operation: tcpMonitorDestroy -->
 
 ### cURL
 
@@ -754,15 +251,6 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123 \
 { "data": { "deleted": true } }
 ```
 
-### Errors
-
-| Status | Type               | Description                                |
-| ------ | ------------------ | ------------------------------------------ |
-| 400    | `validation-error` | Malformed TCP monitor id                   |
-| 401    | `unauthorized`     | Missing or invalid API key                 |
-| 403    | `forbidden`        | API key missing `tcp-monitors:write` scope |
-| 404    | `not-found`        | TCP monitor not found                      |
-
 ## Get Check Results
 
 Retrieve the connection check history for a TCP monitor.
@@ -773,7 +261,7 @@ Results arrive newest first, a page at a time. See [Pagination](/docs/api/pagina
 GET /api/v1/tcp-monitors/:id/results
 ```
 
-**Required scope:** `tcp-monitors:read`
+<!-- operation: tcpMonitorResults -->
 
 ### Query Parameters
 
@@ -827,65 +315,5 @@ curl -i "https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123/results?pe
 			"perPage": 10
 		}
 	}
-}
-```
-
-### Errors
-
-| Status | Type               | Description                               |
-| ------ | ------------------ | ----------------------------------------- |
-| 400    | `validation-error` | Malformed TCP monitor id                  |
-| 400    | `bad-request`      | Invalid or malformed cursor               |
-| 401    | `unauthorized`     | Missing or invalid API key                |
-| 403    | `forbidden`        | API key missing `tcp-monitors:read` scope |
-| 404    | `not-found`        | TCP monitor not found                     |
-| 500    | `internal`         | A page of the list could not be read      |
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"data": {
-			"type": "object",
-			"properties": {
-				"results": {
-					"type": "array",
-					"items": {
-						"type": "object",
-						"properties": {
-							"id": {
-								"type": "string",
-								"description": "Unique identifier",
-								"pattern": "^tcpr_[a-zA-Z0-9]+$"
-							},
-							"status": {
-								"type": "string",
-								"enum": ["up", "down", "timeout"],
-								"description": "Result status"
-							},
-							"responseTimeMs": {
-								"type": ["integer", "null"],
-								"description": "Connection time in milliseconds"
-							},
-							"errorMessage": {
-								"type": ["string", "null"],
-								"description": "Error message when status is down or timeout"
-							},
-							"checkedAt": {
-								"type": "integer",
-								"description": "When the check ran, in milliseconds since the epoch"
-							}
-						},
-						"required": ["id", "status", "checkedAt"]
-					}
-				}
-			},
-			"required": ["results"]
-		}
-	},
-	"required": ["data"]
 }
 ```

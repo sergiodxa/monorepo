@@ -18,9 +18,13 @@ import type { ApiKeyScope } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { checkConformance } from "~/app/lib/test/openapi";
 import { encodeId } from "~/app/services/typed-id";
 import { monitorResults, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance({ statusShow: null });
 
 /** `app/data/monitor.ts` imports `env` from `cloudflare:workers` at module scope for `Monitor.ping()`, so the mock must resolve for the module to load. */
 vi.doMock("cloudflare:workers", () => ({
@@ -91,7 +95,7 @@ async function createMonitorResultRow(
 }
 
 async function dispatch(db: Db, key?: string) {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
 	router.map(routes.api.v1.status, statusShow);
 
 	let headers: Record<string, string> = {};

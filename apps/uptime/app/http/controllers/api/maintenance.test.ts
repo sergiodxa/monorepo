@@ -20,12 +20,17 @@ import type { ApiKeyScope } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { markInFlight } from "~/app/lib/test/idempotency";
+import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { maintenanceWindows, monitors, teams } from "~/database/schema";
 import { maintenanceRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
+
+/** Checks every exchange against the API document; see `checkConformance`. */
+const CONFORMANCE = checkConformance(maintenanceRoutes);
 
 /**
  * `app/data/monitor.ts` reads `env` from `cloudflare:workers` at module load time, so it
@@ -110,7 +115,7 @@ async function createMaintenanceWindowRow(
 }
 
 async function dispatch(db: Db, request: Request): Promise<Response> {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
 	router.map(maintenanceRoutes, maintenanceController);
 
 	return router.fetch(request);
@@ -455,5 +460,56 @@ describe("POST /api/v1/maintenance", () => {
 			}),
 		);
 		expect(response.status).toBe(403);
+	});
+});
+
+describe("POST /api/v1/maintenance with an Idempotency-Key", () => {
+	/** A create carrying `idempotencyKey`, so a test can send the same one twice. */
+	function idempotentCreate(key: string, idempotencyKey: string, name: string) {
+		let created = request("POST", routes.api.v1.maintenance.create.href(), {
+			key,
+			body: { name, startsAt: "2026-08-01T00:00:00.000Z", endsAt: "2026-08-01T02:00:00.000Z" },
+		});
+		created.headers.set("Idempotency-Key", idempotencyKey);
+		return created;
+	}
+
+	test("a retry while the first request runs answers idempotency-key-in-use", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["maintenance:write"]);
+
+		await dispatch(db, idempotentCreate(key, '"in-flight"', "Upgrade"));
+		await markInFlight(db);
+		let response = await dispatch(db, idempotentCreate(key, '"in-flight"', "Upgrade"));
+
+		expect(response.status).toBe(409);
+		await expectProblem(response, "idempotencyKeyInUse");
+		expect(await db.count(maintenanceWindows, { where: { team_id: team.id } })).toBe(1);
+	});
+
+	test("reusing a key for a different body answers idempotency-key-reused", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["maintenance:write"]);
+
+		await dispatch(db, idempotentCreate(key, '"reuse"', "A"));
+		let response = await dispatch(db, idempotentCreate(key, '"reuse"', "B"));
+
+		expect(response.status).toBe(422);
+		await expectProblem(response, "idempotencyKeyReused");
+		expect(await db.count(maintenanceWindows, { where: { team_id: team.id } })).toBe(1);
+	});
+
+	test("an unquoted key answers idempotency-key-invalid and creates nothing", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["maintenance:write"]);
+
+		let response = await dispatch(db, idempotentCreate(key, "unquoted", "A"));
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "idempotencyKeyInvalid");
+		expect(await db.count(maintenanceWindows, { where: { team_id: team.id } })).toBe(0);
 	});
 });

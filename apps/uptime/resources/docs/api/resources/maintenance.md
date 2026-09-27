@@ -26,9 +26,7 @@ A `monitorId` that does not belong to the team, or that belongs to a different k
 
 Returns the maintenance windows for your team. This endpoint is paginated; see [Pagination](/docs/api/pagination) for how to page through the full list.
 
-### Required Scope
-
-`maintenance:read`
+<!-- operation: maintenanceIndex -->
 
 ### Query Parameters
 
@@ -90,140 +88,11 @@ The cursors for this page arrive in `meta.pagination`:
 | `meta.pagination.perPage` | integer        | Results this page was built with                   |
 | `meta.pagination.total`   | integer        | Maintenance windows matching, across every page    |
 
-### Possible Errors
-
-| Status | Type           | Description                                   |
-| ------ | -------------- | --------------------------------------------- |
-| 400    | `bad-request`  | Invalid or malformed cursor                   |
-| 401    | `unauthorized` | Missing or invalid API key                    |
-| 403    | `forbidden`    | API key doesn't have `maintenance:read` scope |
-| 500    | `internal`     | The page of results could not be read         |
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["data", "meta"],
-	"properties": {
-		"data": {
-			"type": "object",
-			"required": ["maintenanceWindows"],
-			"properties": {
-				"maintenanceWindows": {
-					"type": "array",
-					"items": {
-						"$ref": "#/$defs/maintenanceWindow"
-					}
-				}
-			}
-		},
-		"meta": {
-			"type": "object",
-			"required": ["requestId", "timestamp"],
-			"properties": {
-				"requestId": {
-					"type": "string",
-					"format": "uuid"
-				},
-				"timestamp": {
-					"type": "string",
-					"format": "date-time"
-				},
-				"pagination": {
-					"type": "object",
-					"required": ["next", "prev", "perPage"],
-					"properties": {
-						"next": {
-							"type": ["string", "null"]
-						},
-						"prev": {
-							"type": ["string", "null"]
-						},
-						"perPage": {
-							"type": "integer"
-						},
-						"total": {
-							"type": "integer"
-						}
-					}
-				}
-			}
-		}
-	},
-	"$defs": {
-		"maintenanceWindow": {
-			"type": "object",
-			"required": [
-				"id",
-				"teamId",
-				"monitorType",
-				"monitorId",
-				"name",
-				"startsAt",
-				"endsAt",
-				"endedEarlyAt",
-				"suppressAlerts",
-				"showOnStatusPage",
-				"createdAt",
-				"updatedAt"
-			],
-			"properties": {
-				"id": {
-					"type": "string",
-					"pattern": "^mnt_[a-zA-Z0-9]+$"
-				},
-				"teamId": {
-					"type": "string",
-					"pattern": "^team_[a-zA-Z0-9]+$"
-				},
-				"monitorType": {
-					"type": ["string", "null"],
-					"enum": ["http", "dns", "tcp", "cron", "flow", null]
-				},
-				"monitorId": {
-					"type": ["string", "null"],
-					"pattern": "^(mon|dns|tcpm|cron|flow)_[a-zA-Z0-9]+$"
-				},
-				"name": {
-					"type": "string",
-					"minLength": 1
-				},
-				"startsAt": {
-					"type": "integer"
-				},
-				"endsAt": {
-					"type": "integer"
-				},
-				"endedEarlyAt": {
-					"type": ["integer", "null"]
-				},
-				"suppressAlerts": {
-					"type": "boolean"
-				},
-				"showOnStatusPage": {
-					"type": "boolean"
-				},
-				"createdAt": {
-					"type": "integer"
-				},
-				"updatedAt": {
-					"type": "integer"
-				}
-			}
-		}
-	}
-}
-```
-
 ## POST /api/v1/maintenance
 
 Creates a new maintenance window and answers `201 Created`.
 
-### Required Scope
-
-`maintenance:write`
+<!-- operation: maintenanceCreate -->
 
 ### Request Body
 
@@ -283,152 +152,11 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance \
 }
 ```
 
-### Possible Errors
-
-| Status | Type               | Description                                    |
-| ------ | ------------------ | ---------------------------------------------- |
-| 400    | `validation-error` | Invalid request body or validation failed      |
-| 400    | `validation-error` | `endsAt` must be after `startsAt`              |
-| 401    | `unauthorized`     | Missing or invalid API key                     |
-| 403    | `forbidden`        | API key doesn't have `maintenance:write` scope |
-| 404    | `not-found`        | Monitor not found for the given scope          |
-
-### Request Body Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["name", "startsAt", "endsAt"],
-	"properties": {
-		"name": {
-			"type": "string",
-			"minLength": 1
-		},
-		"startsAt": {
-			"type": "string",
-			"format": "date-time"
-		},
-		"endsAt": {
-			"type": "string",
-			"format": "date-time"
-		},
-		"monitorType": {
-			"type": "string",
-			"enum": ["http", "dns", "tcp", "cron", "flow"]
-		},
-		"monitorId": {
-			"type": ["string", "null"],
-			"pattern": "^(mon|dns|tcpm|cron|flow)_[a-zA-Z0-9]+$"
-		},
-		"suppressAlerts": {
-			"type": "boolean",
-			"default": true
-		},
-		"showOnStatusPage": {
-			"type": "boolean",
-			"default": true
-		}
-	}
-}
-```
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["data", "meta"],
-	"properties": {
-		"data": {
-			"type": "object",
-			"required": ["maintenanceWindow"],
-			"properties": {
-				"maintenanceWindow": { "$ref": "#/$defs/maintenanceWindow" }
-			}
-		},
-		"meta": {
-			"type": "object",
-			"required": ["requestId", "timestamp"],
-			"properties": {
-				"requestId": { "type": "string", "format": "uuid" },
-				"timestamp": { "type": "string", "format": "date-time" }
-			}
-		}
-	},
-	"$defs": {
-		"maintenanceWindow": {
-			"type": "object",
-			"required": [
-				"id",
-				"teamId",
-				"monitorType",
-				"monitorId",
-				"name",
-				"startsAt",
-				"endsAt",
-				"endedEarlyAt",
-				"suppressAlerts",
-				"showOnStatusPage",
-				"createdAt",
-				"updatedAt"
-			],
-			"properties": {
-				"id": {
-					"type": "string",
-					"pattern": "^mnt_[a-zA-Z0-9]+$"
-				},
-				"teamId": {
-					"type": "string",
-					"pattern": "^team_[a-zA-Z0-9]+$"
-				},
-				"monitorType": {
-					"type": ["string", "null"],
-					"enum": ["http", "dns", "tcp", "cron", "flow", null]
-				},
-				"monitorId": {
-					"type": ["string", "null"],
-					"pattern": "^(mon|dns|tcpm|cron|flow)_[a-zA-Z0-9]+$"
-				},
-				"name": {
-					"type": "string",
-					"minLength": 1
-				},
-				"startsAt": {
-					"type": "integer"
-				},
-				"endsAt": {
-					"type": "integer"
-				},
-				"endedEarlyAt": {
-					"type": ["integer", "null"]
-				},
-				"suppressAlerts": {
-					"type": "boolean"
-				},
-				"showOnStatusPage": {
-					"type": "boolean"
-				},
-				"createdAt": {
-					"type": "integer"
-				},
-				"updatedAt": {
-					"type": "integer"
-				}
-			}
-		}
-	}
-}
-```
-
 ## GET /api/v1/maintenance/:id
 
 Returns a single maintenance window by ID.
 
-### Required Scope
-
-`maintenance:read`
+<!-- operation: maintenanceShow -->
 
 ### Example Request
 
@@ -466,111 +194,11 @@ curl https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
 }
 ```
 
-### Possible Errors
-
-| Status | Type               | Description                                   |
-| ------ | ------------------ | --------------------------------------------- |
-| 400    | `validation-error` | Malformed maintenance window id               |
-| 401    | `unauthorized`     | Missing or invalid API key                    |
-| 403    | `forbidden`        | API key doesn't have `maintenance:read` scope |
-| 404    | `not-found`        | Maintenance window not found                  |
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["data", "meta"],
-	"properties": {
-		"data": {
-			"type": "object",
-			"required": ["maintenanceWindow"],
-			"properties": {
-				"maintenanceWindow": { "$ref": "#/$defs/maintenanceWindow" }
-			}
-		},
-		"meta": {
-			"type": "object",
-			"required": ["requestId", "timestamp"],
-			"properties": {
-				"requestId": { "type": "string", "format": "uuid" },
-				"timestamp": { "type": "string", "format": "date-time" }
-			}
-		}
-	},
-	"$defs": {
-		"maintenanceWindow": {
-			"type": "object",
-			"required": [
-				"id",
-				"teamId",
-				"monitorType",
-				"monitorId",
-				"name",
-				"startsAt",
-				"endsAt",
-				"endedEarlyAt",
-				"suppressAlerts",
-				"showOnStatusPage",
-				"createdAt",
-				"updatedAt"
-			],
-			"properties": {
-				"id": {
-					"type": "string",
-					"pattern": "^mnt_[a-zA-Z0-9]+$"
-				},
-				"teamId": {
-					"type": "string",
-					"pattern": "^team_[a-zA-Z0-9]+$"
-				},
-				"monitorType": {
-					"type": ["string", "null"],
-					"enum": ["http", "dns", "tcp", "cron", "flow", null]
-				},
-				"monitorId": {
-					"type": ["string", "null"],
-					"pattern": "^(mon|dns|tcpm|cron|flow)_[a-zA-Z0-9]+$"
-				},
-				"name": {
-					"type": "string",
-					"minLength": 1
-				},
-				"startsAt": {
-					"type": "integer"
-				},
-				"endsAt": {
-					"type": "integer"
-				},
-				"endedEarlyAt": {
-					"type": ["integer", "null"]
-				},
-				"suppressAlerts": {
-					"type": "boolean"
-				},
-				"showOnStatusPage": {
-					"type": "boolean"
-				},
-				"createdAt": {
-					"type": "integer"
-				},
-				"updatedAt": {
-					"type": "integer"
-				}
-			}
-		}
-	}
-}
-```
-
 ## PUT /api/v1/maintenance/:id
 
 Updates an existing maintenance window.
 
-### Required Scope
-
-`maintenance:write`
+<!-- operation: maintenanceUpdate -->
 
 ### Request Body
 
@@ -634,150 +262,11 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
 }
 ```
 
-### Possible Errors
-
-| Status | Type               | Description                                    |
-| ------ | ------------------ | ---------------------------------------------- |
-| 400    | `validation-error` | Malformed maintenance window id                |
-| 400    | `validation-error` | Invalid request body or validation failed      |
-| 400    | `validation-error` | `endsAt` must be after `startsAt`              |
-| 401    | `unauthorized`     | Missing or invalid API key                     |
-| 403    | `forbidden`        | API key doesn't have `maintenance:write` scope |
-| 404    | `not-found`        | Maintenance window or monitor not found        |
-
-### Request Body Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"name": {
-			"type": "string",
-			"minLength": 1
-		},
-		"startsAt": {
-			"type": "string",
-			"format": "date-time"
-		},
-		"endsAt": {
-			"type": "string",
-			"format": "date-time"
-		},
-		"monitorType": {
-			"type": "string",
-			"enum": ["http", "dns", "tcp", "cron", "flow"]
-		},
-		"monitorId": {
-			"type": ["string", "null"],
-			"pattern": "^(mon|dns|tcpm|cron|flow)_[a-zA-Z0-9]+$"
-		},
-		"suppressAlerts": {
-			"type": "boolean"
-		},
-		"showOnStatusPage": {
-			"type": "boolean"
-		}
-	}
-}
-```
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["data", "meta"],
-	"properties": {
-		"data": {
-			"type": "object",
-			"required": ["maintenanceWindow"],
-			"properties": {
-				"maintenanceWindow": { "$ref": "#/$defs/maintenanceWindow" }
-			}
-		},
-		"meta": {
-			"type": "object",
-			"required": ["requestId", "timestamp"],
-			"properties": {
-				"requestId": { "type": "string", "format": "uuid" },
-				"timestamp": { "type": "string", "format": "date-time" }
-			}
-		}
-	},
-	"$defs": {
-		"maintenanceWindow": {
-			"type": "object",
-			"required": [
-				"id",
-				"teamId",
-				"monitorType",
-				"monitorId",
-				"name",
-				"startsAt",
-				"endsAt",
-				"endedEarlyAt",
-				"suppressAlerts",
-				"showOnStatusPage",
-				"createdAt",
-				"updatedAt"
-			],
-			"properties": {
-				"id": {
-					"type": "string",
-					"pattern": "^mnt_[a-zA-Z0-9]+$"
-				},
-				"teamId": {
-					"type": "string",
-					"pattern": "^team_[a-zA-Z0-9]+$"
-				},
-				"monitorType": {
-					"type": ["string", "null"],
-					"enum": ["http", "dns", "tcp", "cron", "flow", null]
-				},
-				"monitorId": {
-					"type": ["string", "null"],
-					"pattern": "^(mon|dns|tcpm|cron|flow)_[a-zA-Z0-9]+$"
-				},
-				"name": {
-					"type": "string",
-					"minLength": 1
-				},
-				"startsAt": {
-					"type": "integer"
-				},
-				"endsAt": {
-					"type": "integer"
-				},
-				"endedEarlyAt": {
-					"type": ["integer", "null"]
-				},
-				"suppressAlerts": {
-					"type": "boolean"
-				},
-				"showOnStatusPage": {
-					"type": "boolean"
-				},
-				"createdAt": {
-					"type": "integer"
-				},
-				"updatedAt": {
-					"type": "integer"
-				}
-			}
-		}
-	}
-}
-```
-
 ## DELETE /api/v1/maintenance/:id
 
 Deletes a maintenance window.
 
-### Required Scope
-
-`maintenance:write`
+<!-- operation: maintenanceDestroy -->
 
 ### Example Request
 
@@ -802,49 +291,11 @@ curl -X DELETE https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
 }
 ```
 
-### Possible Errors
-
-| Status | Type               | Description                                    |
-| ------ | ------------------ | ---------------------------------------------- |
-| 400    | `validation-error` | Malformed maintenance window id                |
-| 401    | `unauthorized`     | Missing or invalid API key                     |
-| 403    | `forbidden`        | API key doesn't have `maintenance:write` scope |
-| 404    | `not-found`        | Maintenance window not found                   |
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["data", "meta"],
-	"properties": {
-		"data": {
-			"type": "object",
-			"required": ["deleted"],
-			"properties": {
-				"deleted": { "type": "boolean", "const": true }
-			}
-		},
-		"meta": {
-			"type": "object",
-			"required": ["requestId", "timestamp"],
-			"properties": {
-				"requestId": { "type": "string", "format": "uuid" },
-				"timestamp": { "type": "string", "format": "date-time" }
-			}
-		}
-	}
-}
-```
-
 ## POST /api/v1/maintenance/:id/end
 
 Ends a maintenance window early. Sets the `endedEarlyAt` timestamp to the current time.
 
-### Required Scope
-
-`maintenance:write`
+<!-- operation: maintenanceEnd -->
 
 ### Example Request
 
@@ -878,104 +329,6 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123/end \
 	"meta": {
 		"requestId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
 		"timestamp": "2026-02-14T12:00:00.000Z"
-	}
-}
-```
-
-### Possible Errors
-
-| Status | Type               | Description                                    |
-| ------ | ------------------ | ---------------------------------------------- |
-| 400    | `validation-error` | Malformed maintenance window id                |
-| 401    | `unauthorized`     | Missing or invalid API key                     |
-| 403    | `forbidden`        | API key doesn't have `maintenance:write` scope |
-| 404    | `not-found`        | Maintenance window not found                   |
-
-### Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["data", "meta"],
-	"properties": {
-		"data": {
-			"type": "object",
-			"required": ["maintenanceWindow"],
-			"properties": {
-				"maintenanceWindow": { "$ref": "#/$defs/maintenanceWindow" }
-			}
-		},
-		"meta": {
-			"type": "object",
-			"required": ["requestId", "timestamp"],
-			"properties": {
-				"requestId": { "type": "string", "format": "uuid" },
-				"timestamp": { "type": "string", "format": "date-time" }
-			}
-		}
-	},
-	"$defs": {
-		"maintenanceWindow": {
-			"type": "object",
-			"required": [
-				"id",
-				"teamId",
-				"monitorType",
-				"monitorId",
-				"name",
-				"startsAt",
-				"endsAt",
-				"endedEarlyAt",
-				"suppressAlerts",
-				"showOnStatusPage",
-				"createdAt",
-				"updatedAt"
-			],
-			"properties": {
-				"id": {
-					"type": "string",
-					"pattern": "^mnt_[a-zA-Z0-9]+$"
-				},
-				"teamId": {
-					"type": "string",
-					"pattern": "^team_[a-zA-Z0-9]+$"
-				},
-				"monitorType": {
-					"type": ["string", "null"],
-					"enum": ["http", "dns", "tcp", "cron", "flow", null]
-				},
-				"monitorId": {
-					"type": ["string", "null"],
-					"pattern": "^(mon|dns|tcpm|cron|flow)_[a-zA-Z0-9]+$"
-				},
-				"name": {
-					"type": "string",
-					"minLength": 1
-				},
-				"startsAt": {
-					"type": "integer"
-				},
-				"endsAt": {
-					"type": "integer"
-				},
-				"endedEarlyAt": {
-					"type": ["integer", "null"]
-				},
-				"suppressAlerts": {
-					"type": "boolean"
-				},
-				"showOnStatusPage": {
-					"type": "boolean"
-				},
-				"createdAt": {
-					"type": "integer"
-				},
-				"updatedAt": {
-					"type": "integer"
-				}
-			}
-		}
 	}
 }
 ```

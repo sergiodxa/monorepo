@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import * as s from "@sdxc/json-schema";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import * as s from "remix/data-schema";
 import { createController } from "remix/router";
 
 import type { InsertMaintenanceWindow } from "~/database/schema";
@@ -20,29 +20,10 @@ import { isResolvableScope } from "~/app/data/scope-monitors";
 import { apiScopeFrom, serializeMaintenanceWindow } from "~/app/http/controllers/api/maintenance";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { MONITOR_SCOPE_TYPES } from "~/app/lib/monitor-scope";
+import { MAINTENANCE_ID_PARAMS, UPDATE_MAINTENANCE_BODY } from "~/app/http/openapi/maintenance";
 import { apiProblems, invalidField, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
-import { typedId } from "~/app/services/typed-id";
 import { maintenanceWindowRoutes } from "~/routes/api-groups";
-
-const MaintenanceIdParams = s.object({ maintenanceId: typedId("mnt") });
-
-/** An ISO-8601 date-time string, transformed into epoch milliseconds. */
-const isoDateTime = s
-	.string()
-	.refine((value: string) => Number.isFinite(new Date(value).getTime()), "Invalid date/time.")
-	.transform((value: string) => new Date(value).getTime());
-
-const UpdateMaintenanceSchema = s.object({
-	name: s.optional(s.string().refine((value: string) => value.length > 0, "Name is required.")),
-	monitorType: s.optional(s.enum_(MONITOR_SCOPE_TYPES)),
-	monitorId: s.optional(s.nullable(s.string())),
-	startsAt: s.optional(isoDateTime),
-	endsAt: s.optional(isoDateTime),
-	suppressAlerts: s.optional(s.boolean()),
-	showOnStatusPage: s.optional(s.boolean()),
-});
 
 export default createController(maintenanceWindowRoutes, {
 	middleware: [catchValidationError()],
@@ -51,7 +32,7 @@ export default createController(maintenanceWindowRoutes, {
 		maintenanceShow: {
 			middleware: [requireApiKey("maintenance:read")],
 			handler: async (ctx) => {
-				let { maintenanceId } = s.parse(MaintenanceIdParams, ctx.params);
+				let { maintenanceId } = s.parse(MAINTENANCE_ID_PARAMS, ctx.params);
 				let window = await MaintenanceWindow.findByIdForTeam(ctx.db, ctx.apiTeam.id, maintenanceId);
 				if (!window)
 					return apiProblems.notFound({
@@ -66,7 +47,7 @@ export default createController(maintenanceWindowRoutes, {
 		maintenanceUpdate: {
 			middleware: [requireApiKey("maintenance:write")],
 			handler: async (ctx) => {
-				let { maintenanceId } = s.parse(MaintenanceIdParams, ctx.params);
+				let { maintenanceId } = s.parse(MAINTENANCE_ID_PARAMS, ctx.params);
 				let existing = await MaintenanceWindow.findByIdForTeam(
 					ctx.db,
 					ctx.apiTeam.id,
@@ -78,7 +59,7 @@ export default createController(maintenanceWindowRoutes, {
 						instance: problemInstance(),
 					});
 
-				let result = await validate(ctx.request, UpdateMaintenanceSchema);
+				let result = await validate(ctx.request, UPDATE_MAINTENANCE_BODY);
 				if (isFailure(result)) {
 					return apiProblems.validationError({
 						instance: problemInstance(),
@@ -129,7 +110,7 @@ export default createController(maintenanceWindowRoutes, {
 		maintenanceDestroy: {
 			middleware: [requireApiKey("maintenance:write")],
 			handler: async (ctx) => {
-				let { maintenanceId } = s.parse(MaintenanceIdParams, ctx.params);
+				let { maintenanceId } = s.parse(MAINTENANCE_ID_PARAMS, ctx.params);
 				let existing = await MaintenanceWindow.findByIdForTeam(
 					ctx.db,
 					ctx.apiTeam.id,
@@ -150,7 +131,7 @@ export default createController(maintenanceWindowRoutes, {
 		maintenanceEnd: {
 			middleware: [requireApiKey("maintenance:write")],
 			handler: async (ctx) => {
-				let { maintenanceId } = s.parse(MaintenanceIdParams, ctx.params);
+				let { maintenanceId } = s.parse(MAINTENANCE_ID_PARAMS, ctx.params);
 				let existing = await MaintenanceWindow.findByIdForTeam(
 					ctx.db,
 					ctx.apiTeam.id,
