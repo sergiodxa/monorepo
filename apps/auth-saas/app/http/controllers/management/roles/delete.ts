@@ -7,7 +7,7 @@
  */
 
 import { json } from "@sdxc/http/response";
-import * as s from "remix/data-schema";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -18,15 +18,14 @@ import {
 	roleNotFound,
 	rolesEntitlementRequired,
 } from "~/app/http/controllers/management/roles/shared";
-import { parseBody } from "~/app/http/lib/parse-body";
+import { operationInputProblem } from "~/app/http/lib/parse-body";
 import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { ROLES_DELETE } from "~/app/http/openapi/roles";
 import routes from "~/routes/management";
-
-let RolesDeleteQuerySchema = s.object({ scope: s.string(), reassignTo: s.string() });
 
 /** Maps every `deleteRole` refusal onto its own `problem+json` response. */
 function deleteRoleFailure(result: Exclude<DeleteRoleResult, { ok: true }>): Response {
@@ -67,13 +66,13 @@ export function createRolesDeleteAction(options: ManagementControllerOptions) {
 
 			let roleId = roleIdParam(ctx);
 
-			let query = parseBody(RolesDeleteQuerySchema, Object.fromEntries(ctx.url.searchParams));
-			if (!query.ok) return query.response;
+			let input = await ROLES_DELETE.parse(ctx.request, ctx.params);
+			if (isFailure(input)) return operationInputProblem(input.error);
 
 			let result = await ctx.tenantStub.deleteRole({
 				roleId,
-				scope: query.data.scope,
-				reassignTo: query.data.reassignTo,
+				scope: input.data.query.scope,
+				reassignTo: input.data.query.reassignTo,
 				actor: ctx.managementCaller.actor,
 			});
 			if (!result.ok) return deleteRoleFailure(result);

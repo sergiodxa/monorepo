@@ -38,6 +38,7 @@ import { createRolesSetPermissionsAction } from "~/app/http/controllers/manageme
 import { createRolesUpdateAction } from "~/app/http/controllers/management/roles/update";
 import {
 	buildManagementTestCore,
+	conformance,
 	fakeHostnameClient,
 	fakeLimiter,
 	grantEntitlement,
@@ -67,7 +68,7 @@ export function buildRolesRouter(
 		r2: createR2Bucket(),
 	};
 
-	let router = createRouter({ middleware: [database(() => db)] });
+	let router = createRouter({ middleware: [conformance, database(() => db)] });
 
 	router.map(routes.permissionsList, createPermissionsListAction(controllerOptions));
 	router.map(routes.permissionsDefine, createPermissionsDefineAction(controllerOptions));

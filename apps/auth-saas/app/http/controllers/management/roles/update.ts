@@ -7,7 +7,6 @@
  */
 
 import { json } from "@sdxc/http/response";
-import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -24,13 +23,8 @@ import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { ROLE_PATCH } from "~/app/http/openapi/roles";
 import routes from "~/routes/management";
-
-let UpdateRoleBodySchema = s.object({
-	scope: s.string(),
-	name: s.optional(s.string()),
-	description: s.optional(s.string()),
-});
 
 /** Maps every `updateRole` refusal onto its own `problem+json` response. */
 function updateRoleFailure(result: Exclude<UpdateRoleResult, { ok: true }>): Response {
@@ -67,7 +61,7 @@ export function createRolesUpdateAction(options: ManagementControllerOptions) {
 
 			let roleId = roleIdParam(ctx);
 
-			let parsed = await readPatchBody(ctx.request, UpdateRoleBodySchema);
+			let parsed = await readPatchBody(ctx.request, ROLE_PATCH);
 			if (!parsed.ok) return parsed.response;
 
 			let result = await ctx.tenantStub.updateRole({

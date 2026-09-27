@@ -7,7 +7,7 @@
  */
 
 import { json } from "@sdxc/http/response";
-import * as s from "remix/data-schema";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -18,15 +18,14 @@ import {
 	roleNotFound,
 	rolesEntitlementRequired,
 } from "~/app/http/controllers/management/roles/shared";
-import { parseBody } from "~/app/http/lib/parse-body";
+import { operationInputProblem } from "~/app/http/lib/parse-body";
 import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { ROLES_SET_PERMISSIONS } from "~/app/http/openapi/roles";
 import routes from "~/routes/management";
-
-let SetRolePermissionsBodySchema = s.object({ permissionKeys: s.array(s.string()) });
 
 /** Maps every `setRolePermissions` refusal onto its own `problem+json` response. */
 function setRolePermissionsFailure(
@@ -77,15 +76,12 @@ export function createRolesSetPermissionsAction(options: ManagementControllerOpt
 
 			let roleId = roleIdParam(ctx);
 
-			let parsed = parseBody(
-				SetRolePermissionsBodySchema,
-				await ctx.request.json().catch(() => null),
-			);
-			if (!parsed.ok) return parsed.response;
+			let input = await ROLES_SET_PERMISSIONS.parse(ctx.request, ctx.params);
+			if (isFailure(input)) return operationInputProblem(input.error);
 
 			let result = await ctx.tenantStub.setRolePermissions({
 				roleId,
-				permissionKeys: parsed.data.permissionKeys,
+				permissionKeys: input.data.body.permissionKeys,
 				actor: ctx.managementCaller.actor,
 			});
 			if (!result.ok) return setRolePermissionsFailure(result);

@@ -7,22 +7,21 @@
  */
 
 import { json } from "@sdxc/http/response";
-import * as s from "remix/data-schema";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 import type { AssignRoleResult } from "~/database/roles";
 
 import { subjectIdParam, subjectNotFound } from "~/app/http/controllers/management/subjects/shared";
-import { parseBody } from "~/app/http/lib/parse-body";
+import { operationInputProblem } from "~/app/http/lib/parse-body";
 import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { SUBJECT_ROLES_ASSIGN } from "~/app/http/openapi/roles";
 import routes from "~/routes/management";
-
-let AssignRoleBodySchema = s.object({ scope: s.string(), roleKey: s.string() });
 
 /** Maps every `assignRole` refusal onto its own `problem+json` response. */
 function assignRoleFailure(result: Exclude<AssignRoleResult, { ok: true }>): Response {
@@ -72,12 +71,12 @@ export function createSubjectRolesAssignAction(options: ManagementControllerOpti
 
 			let subjectId = subjectIdParam(ctx);
 
-			let parsed = parseBody(AssignRoleBodySchema, await ctx.request.json().catch(() => null));
-			if (!parsed.ok) return parsed.response;
+			let input = await SUBJECT_ROLES_ASSIGN.parse(ctx.request, ctx.params);
+			if (isFailure(input)) return operationInputProblem(input.error);
 
 			let result = await ctx.tenantStub.assignRole({
 				subjectId,
-				...parsed.data,
+				...input.data.body,
 				actor: ctx.managementCaller.actor,
 			});
 			if (!result.ok) return assignRoleFailure(result);

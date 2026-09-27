@@ -8,7 +8,7 @@
  */
 
 import { json } from "@sdxc/http/response";
-import * as s from "remix/data-schema";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -18,12 +18,13 @@ import {
 	permissionNotFound,
 	rolesEntitlementRequired,
 } from "~/app/http/controllers/management/roles/shared";
-import { parseBody } from "~/app/http/lib/parse-body";
+import { operationInputProblem } from "~/app/http/lib/parse-body";
 import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { PERMISSIONS_DEFINE, PERMISSIONS_REMOVE } from "~/app/http/openapi/roles";
 import routes from "~/routes/management";
 
 function mountedMiddleware(options: ManagementControllerOptions, bucket: "read" | "write") {
@@ -60,12 +61,6 @@ export function createPermissionsListAction(options: ManagementControllerOptions
 	});
 }
 
-let DefinePermissionBodySchema = s.object({
-	key: s.string(),
-	name: s.string(),
-	description: s.string(),
-});
-
 /** Maps every `definePermission` refusal onto its own `problem+json` response. */
 function definePermissionFailure(result: Exclude<DefinePermissionResult, { ok: true }>): Response {
 	if (result.reason === "entitlement-required") return rolesEntitlementRequired();
@@ -96,14 +91,11 @@ export function createPermissionsDefineAction(options: ManagementControllerOptio
 			let refused = requireScope(ctx, "members:write");
 			if (refused) return refused;
 
-			let parsed = parseBody(
-				DefinePermissionBodySchema,
-				await ctx.request.json().catch(() => null),
-			);
-			if (!parsed.ok) return parsed.response;
+			let input = await PERMISSIONS_DEFINE.parse(ctx.request, ctx.params);
+			if (isFailure(input)) return operationInputProblem(input.error);
 
 			let result = await ctx.tenantStub.definePermission({
-				...parsed.data,
+				...input.data.body,
 				actor: ctx.managementCaller.actor,
 			});
 			if (!result.ok) return definePermissionFailure(result);
@@ -112,8 +104,6 @@ export function createPermissionsDefineAction(options: ManagementControllerOptio
 		},
 	});
 }
-
-let RemovePermissionQuerySchema = s.object({ key: s.string() });
 
 /** Maps every `removePermission` refusal onto its own `problem+json` response. */
 function removePermissionFailure(result: Exclude<RemovePermissionResult, { ok: true }>): Response {
@@ -137,11 +127,11 @@ export function createPermissionsRemoveAction(options: ManagementControllerOptio
 			let refused = requireScope(ctx, "members:write");
 			if (refused) return refused;
 
-			let query = parseBody(RemovePermissionQuerySchema, Object.fromEntries(ctx.url.searchParams));
-			if (!query.ok) return query.response;
+			let input = await PERMISSIONS_REMOVE.parse(ctx.request, ctx.params);
+			if (isFailure(input)) return operationInputProblem(input.error);
 
 			let result = await ctx.tenantStub.removePermission({
-				key: query.data.key,
+				key: input.data.query.key,
 				actor: ctx.managementCaller.actor,
 			});
 			if (!result.ok) return removePermissionFailure(result);

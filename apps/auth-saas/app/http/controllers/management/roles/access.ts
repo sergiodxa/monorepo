@@ -7,20 +7,19 @@
  */
 
 import { json } from "@sdxc/http/response";
-import * as s from "remix/data-schema";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 
 import { subjectIdParam } from "~/app/http/controllers/management/subjects/shared";
-import { parseBody } from "~/app/http/lib/parse-body";
+import { operationInputProblem } from "~/app/http/lib/parse-body";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { SUBJECT_ACCESS_READ } from "~/app/http/openapi/roles";
 import routes from "~/routes/management";
-
-let SubjectAccessQuerySchema = s.object({ scope: s.string() });
 
 /**
  * Builds the `subjectAccessRead` action.
@@ -47,12 +46,12 @@ export function createSubjectAccessReadAction(options: ManagementControllerOptio
 
 			let subjectId = subjectIdParam(ctx);
 
-			let query = parseBody(SubjectAccessQuerySchema, Object.fromEntries(ctx.url.searchParams));
-			if (!query.ok) return query.response;
+			let input = await SUBJECT_ACCESS_READ.parse(ctx.request, ctx.params);
+			if (isFailure(input)) return operationInputProblem(input.error);
 
 			let result = await ctx.tenantStub.describeSubjectAccess({
 				subjectId,
-				scope: query.data.scope,
+				scope: input.data.query.scope,
 			});
 
 			let { cost: _cost, ...body } = result;
