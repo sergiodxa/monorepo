@@ -96,4 +96,16 @@ describe("the blog router", () => {
 		expect(parsed.data.contact.map(String)).toEqual(SECURITY_TXT.contact.map(String));
 		expect(parsed.data.expires).toEqual(SECURITY_TXT.expires);
 	});
+
+	test("sends the security headers, with the CSP only reported and no nonce", async () => {
+		let response = await fetchPath("/mcp");
+
+		expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+		expect(response.headers.get("strict-transport-security")).toBe("max-age=31536000");
+		expect(response.headers.get("content-security-policy")).toBeNull();
+
+		let reported = response.headers.get("content-security-policy-report-only");
+		expect(reported).toContain("default-src 'self'");
+		expect(reported).not.toContain("nonce-");
+	});
 });

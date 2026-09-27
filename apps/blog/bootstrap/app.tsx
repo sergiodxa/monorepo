@@ -18,6 +18,7 @@ import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { redirect } from "@sdxc/http/response";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
+import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { serve, wellKnown } from "@sdxc/well-known/middleware";
 import { securityTxt } from "@sdxc/well-known/security-txt";
 import workersCache from "@sdxc/workers-cache/middleware";
@@ -43,6 +44,7 @@ import purgePostList from "~/app/http/middleware/purge-post-list";
 import redirects from "~/app/http/middleware/redirects";
 import requireAdmin from "~/app/http/middleware/require-admin";
 import session from "~/app/http/middleware/session";
+import { SECURITY_POLICY } from "~/app/http/security-policy";
 import mcpRateLimit from "~/app/mcp/rate-limit";
 import { createDatabase } from "~/app/services/database";
 import { SECURITY_TXT } from "~/config/security-txt";
@@ -105,6 +107,8 @@ const CMS_WRITE_GUARDS: Middleware[] = [...CMS_GUARDS, purgePostList];
  * `log(logger)` follows it and opens the request's wide event around everything else.
  * `wellKnown()` answers the registered documents it lists before any session or cache
  * work, since they are static and the same for every visitor.
+ * `securityHeaders` sits just before the renderer, so it decorates the rendered response
+ * that `workersCache` then stores and replays.
  * `workersCache` sits outside session and auth so its refusal check reads the finished
  * response, downgrading a public declaration once the visitor turns out to be identified.
  * `database(createDatabase)` is global, so `ctx.db` is there for a route the app maps and
@@ -128,6 +132,7 @@ export default function createApplication(env: App.Env) {
 		methodOverride(),
 		htmlOnly(redirects),
 		htmlOnly(auth),
+		securityHeaders(SECURITY_POLICY),
 		renderWith(createHtmlRenderer),
 	];
 	let router = createRouter<AppContext>({
