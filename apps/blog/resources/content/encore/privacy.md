@@ -61,7 +61,7 @@ The support website is hosted on Cloudflare, which also delivers support request
 
 To limit spam, the support form includes a hidden field that automated tools tend to fill in, and it limits how many requests one IP address can send per minute. Your IP address is used only to count those requests and is not included in the support request I receive.
 
-The website’s own request logs record the page requested and the outcome, not your IP address or the contents of your request.
+The website keeps request logs through Cloudflare to diagnose problems. They record details of each request, such as the page requested and the outcome, and do not include the contents of your support request.
 
 The website uses [Cloudflare Web Analytics](https://www.cloudflare.com/web-analytics/) to measure visits, such as which pages are viewed and where visitors come from. Cloudflare Web Analytics does not use cookies or local storage and does not track you across websites. The website does not use advertising cookies.
 
@@ -75,7 +75,13 @@ Information may also be disclosed when required by law.
 
 Local app preferences remain on your device until removed or reset.
 
-[Before publication: specify the actual retention period or deletion criteria for support messages, email copies, website logs, and backups. Configure those services to follow the stated policy.]
+Support requests are kept in my email inbox until the issue or request is resolved, and then deleted.
+
+Website request logs are kept by Cloudflare for up to 7 days.
+
+Cloudflare Web Analytics keeps detailed visit data for 7 days, then reduces it to a sampled summary that is available for up to six months.
+
+The per-minute request counts used to limit spam reset after one minute. The `r3:session` cookie expires after one year.
 
 ## Your privacy choices
 
