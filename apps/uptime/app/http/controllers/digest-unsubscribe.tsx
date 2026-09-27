@@ -9,19 +9,18 @@
 
 import type { RemixNode } from "remix/ui";
 
-import { isOneClickUnsubscribe, verifyUnsubscribeToken } from "@sdxc/mail/unsubscribe";
+import { isOneClickUnsubscribe } from "@sdxc/mail/unsubscribe";
 import { isFailure } from "@sdxc/result";
 import { vstack } from "@sdxc/u/layout";
 import { m, maxIs, mi, minBs, p } from "@sdxc/u/size";
 import { textAlign } from "@sdxc/u/typography";
 import { Button, Card, Heading, LinkButton, Text } from "@sdxc/ui";
-import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import UserPreferences from "~/app/data/user-preferences";
-import { DIGEST_UNSUBSCRIBE_TOKEN } from "~/app/emails/shared/team-digest";
+import { verifyDigestUnsubscribeToken } from "~/app/lib/unsubscribe-token";
 import { optionalEmails } from "~/database/schema";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -35,11 +34,7 @@ const ParamsSchema = s.object({ token: s.string() });
  * optional, so every failure closes the same way.
  */
 async function readToken(token: string) {
-	let claims = await verifyUnsubscribeToken(
-		env.COOKIE_SESSION_SECRET,
-		token,
-		DIGEST_UNSUBSCRIBE_TOKEN,
-	);
+	let claims = await verifyDigestUnsubscribeToken(token);
 	if (isFailure(claims)) return null;
 	let email = optionalEmails.find((candidate) => candidate === claims.data.list);
 	return email ? { subjectId: claims.data.subject, email } : null;

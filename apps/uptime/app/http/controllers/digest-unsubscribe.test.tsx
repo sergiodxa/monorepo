@@ -22,13 +22,13 @@ import { formData } from "remix/middleware/form-data";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { renderToString } from "remix/ui/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import UserPreferences from "~/app/data/user-preferences";
-import { DIGEST_UNSUBSCRIBE_TOKEN } from "~/app/emails/shared/team-digest";
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { signDigestUnsubscribeToken } from "~/app/lib/unsubscribe-token";
 import routes from "~/routes/web";
 
 import digestUnsubscribe from "./digest-unsubscribe";
@@ -45,13 +45,24 @@ function createTestRenderer(): Renderer<RemixNode> {
 	};
 }
 
+vi.mock("cloudflare:workers", async (importOriginal) => {
+	let original = await importOriginal<typeof import("cloudflare:workers")>();
+	let { withUnsubscribeSecret } = await import("~/app/lib/test/unsubscribe-secret");
+	return { ...original, env: withUnsubscribeSecret(original.env) };
+});
+
 /** A token for `subject-1`'s daily digest, signed the way the digest job signs it. */
 async function dailyToken(subjectId = "subject-1") {
+	return unwrap(await signDigestUnsubscribeToken({ subject: subjectId, list: "teamDailyDigest" }));
+}
+
+/** A token with an issue time signed under the session secret, as digests were before the dedicated key. */
+async function sessionSecretToken(subjectId = "subject-1") {
 	return unwrap(
 		await signUnsubscribeToken(
 			env.COOKIE_SESSION_SECRET,
 			{ subject: subjectId, list: "teamDailyDigest" },
-			DIGEST_UNSUBSCRIBE_TOKEN,
+			{ purpose: "digest-unsubscribe:v1:" },
 		),
 	);
 }
@@ -155,6 +166,31 @@ describe("POST /digests/unsubscribe/:token", () => {
 
 		expect(response.status).toBe(200);
 		expect(await wantsDaily(db)).toBe(false);
+	});
+
+	test("still honours a link signed under the session secret before the dedicated key", async () => {
+		let { db } = createTestDatabase();
+
+		let { response } = await visit(db, await sessionSecretToken(), "POST");
+
+		expect(response.status).toBe(200);
+		expect(await wantsDaily(db)).toBe(false);
+	});
+
+	test("rejects a token signed with neither key", async () => {
+		let { db } = createTestDatabase();
+		let token = unwrap(
+			await signUnsubscribeToken(
+				"some-other-key",
+				{ subject: "subject-1", list: "teamDailyDigest" },
+				{ purpose: "digest-unsubscribe:v1:" },
+			),
+		);
+
+		let { response } = await visit(db, token, "POST");
+
+		expect(response.status).toBe(400);
+		expect(await wantsDaily(db)).toBe(true);
 	});
 
 	test("keeps the member's other choices and answers a repeat the same way", async () => {

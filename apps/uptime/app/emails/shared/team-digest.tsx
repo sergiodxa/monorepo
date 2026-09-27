@@ -8,7 +8,6 @@
 
 import type { Translate } from "@sdxc/i18n";
 import type { MailingList } from "@sdxc/mail";
-import type { UnsubscribeToken } from "@sdxc/mail/unsubscribe";
 import type { Handle } from "remix/ui";
 
 import { formatDate } from "@sdxc/dates";
@@ -156,15 +155,6 @@ export function teamDigestDay(date: string, locale: string): string {
 	return formatDate(new Date(`${date}T00:00:00.000Z`), { locale, timeZone: "UTC" });
 }
 
-/**
- * How a digest unsubscribe token is signed and verified: under the session secret, with a
- * purpose prefix so no other MAC made with that key passes as one. The prefix is the one
- * every delivered digest link was signed with, so those links keep working.
- */
-export const DIGEST_UNSUBSCRIBE_TOKEN: UnsubscribeToken.Options = {
-	purpose: "digest-unsubscribe:v1:",
-};
-
 /** The list each digest belongs to, one per period, so a reader can stop one and keep the other. */
 export const TEAM_DIGEST_MAILING_LISTS: Record<"daily" | "weekly", MailingList> = {
 	daily: { id: `team-daily-digest.${new URL(APP_ORIGIN).hostname}` },
@@ -175,7 +165,7 @@ export const TEAM_DIGEST_MAILING_LISTS: Record<"daily" | "weekly", MailingList> 
  * Absolute URL of the digest unsubscribe endpoint for a token: the confirmation page under
  * `GET`, and the RFC 8058 one-click target under `POST`.
  *
- * @param token - A token signed with {@link DIGEST_UNSUBSCRIBE_TOKEN}.
+ * @param token - A token from `signDigestUnsubscribeToken`.
  * @returns The URL for both the footer and the `List-Unsubscribe` header.
  */
 export function teamDigestUnsubscribeUrl(token: string): string {

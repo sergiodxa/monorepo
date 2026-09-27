@@ -76,6 +76,18 @@
 	// OLD APP (`apps/uptime/app/cookies.ts` reads `env.COOKIE_SESSION_SECRET` directly)
 	// and `apps/auth-saas`. Not declared here; only bindings need a wrangler.jsonc entry.
 
+	// The key digest unsubscribe links are signed with, kept apart from the session secret so
+	// rotating one leaves the other standing. Create it once per account with
+	// `bunx wrangler secrets-store secret create <store_id> --name UPTIME_UNSUBSCRIBE_SECRET
+	// --scopes workers --remote` before the deploy that reads it.
+	"secrets_store_secrets": [
+		{
+			"binding": "UNSUBSCRIBE_SECRET",
+			"store_id": "e8d9e39c4db6485bbd65a9658e8f9a71",
+			"secret_name": "UPTIME_UNSUBSCRIBE_SECRET",
+		},
+	],
+
 	"kv_namespaces": [
 		{
 			"binding": "KV",

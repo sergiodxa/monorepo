@@ -17,9 +17,8 @@ import { Mailer, MailError } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { verifyUnsubscribeToken } from "@sdxc/mail/unsubscribe";
 import { failure, isSuccess, success } from "@sdxc/result";
-import { env } from "cloudflare:workers";
 import { Database } from "remix/data-table";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { DailyStatsMonitorType } from "~/app/data/monitor-daily-stats";
 import type { DigestPeriod } from "~/app/data/team-digest";
@@ -27,7 +26,6 @@ import type { MonitorStatus, SelectTeam } from "~/database/schema";
 
 import Monitor from "~/app/data/monitor";
 import { MAIL_FROM } from "~/app/emails/sender";
-import { DIGEST_UNSUBSCRIBE_TOKEN } from "~/app/emails/shared/team-digest";
 import { TeamDailyDigestEmail } from "~/app/emails/team-daily-digest";
 import { TeamWeeklyDigestEmail } from "~/app/emails/team-weekly-digest";
 import jobs from "~/app/jobs";
@@ -38,6 +36,7 @@ import sendTeamDailyDigests from "~/app/jobs/send-team-daily-digests";
 import sendTeamWeeklyDigests from "~/app/jobs/send-team-weekly-digests";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { installFlags } from "~/app/lib/test/flags";
+import { UNSUBSCRIBE_SECRET_VALUE } from "~/app/lib/test/unsubscribe-secret";
 import {
 	flowMonitors,
 	memberships,
@@ -48,6 +47,12 @@ import {
 } from "~/database/schema";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+vi.mock("cloudflare:workers", async (importOriginal) => {
+	let original = await importOriginal<typeof import("cloudflare:workers")>();
+	let { withUnsubscribeSecret } = await import("~/app/lib/test/unsubscribe-secret");
+	return { ...original, env: withUnsubscribeSecret(original.env) };
+});
 
 let transport = new MemoryTransport();
 
@@ -304,11 +309,9 @@ describe("sendTeamDigests period", () => {
 		expect(headers["List-Unsubscribe"]).not.toContain("/account");
 		expect(headers["List-Unsubscribe-Post"]).toBe("List-Unsubscribe=One-Click");
 		expect(headers["List-Id"]).toBe("<team-weekly-digest.uptime.sergiodxa.com>");
-		let claims = await verifyUnsubscribeToken(
-			env.COOKIE_SESSION_SECRET,
-			token ?? "",
-			DIGEST_UNSUBSCRIBE_TOKEN,
-		);
+		let claims = await verifyUnsubscribeToken(UNSUBSCRIBE_SECRET_VALUE, token ?? "", {
+			purpose: "digest-unsubscribe:v1:",
+		});
 		expect(isSuccess(claims) && claims.data).toMatchObject({
 			subject: "subject-1",
 			list: "teamWeeklyDigest",
